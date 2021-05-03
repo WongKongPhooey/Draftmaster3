@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a51a2cf42041bf0478fcf6313a2d6bba
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - buttonSkin: {fileID: 11400000, guid: 0fb4f1f9dd093d74f83fc1e6f3622e78, type: 2}
+  - tileSkin: {fileID: 11400000, guid: da3e444a301515e4d9442430915f191d, type: 2}
+  - BoxTexture: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

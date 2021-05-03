@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<types>
+	<type>
+		<name>Intimidator</name>
+		<desc>Contact with other cars slows you down less, and slows them down more.</desc>
+		<levels>
+			<level>
+				<id>d</id>
+				<desc>-10% contact slowdown. +10% opponent slowdown.</desc>
+			</level>
+			<level>
+				<id>c</id>
+				<desc>-20% contact slowdown. +10% opponent slowdown.</desc>
+			</level>
+			<level>
+				<id>b</id>
+				<desc>-30% contact slowdown. +20% opponent slowdown.</desc>
+			</level>
+			<level>
+				<id>a</id>
+				<desc>-40% contact slowdown. +20% opponent slowdown.</desc>
+			</level>
+			<level>
+				<id>s</id>
+				<desc>-50% contact slowdown. +30% opponent slowdown.</desc>
+			</level>
+		</levels>
+	</type>
+	<type>
+		<name>Strategist</name>
+		<desc>Change lanes faster to make the most of gaps when they appear.</desc>
+		<levels>
+			<level>
+				<id>1</id>
+				<desc>10% faster lane change.</desc>
+			</level>
+			<level>
+				<id>2</id>
+				<desc>20% faster lane change.</desc>
+			</level>
+			<level>
+				<id>3</id>
+				<desc>30% faster lane change.</desc>
+			</level>
+			<level>
+				<id>4</id>
+				<desc>40% faster lane change.</desc>
+			</level>
+			<level>
+				<id>5</id>
+				<desc>50% faster lane change.</desc>
+			</level>
+		</levels>
+	</type>
+	<type>
+		<name>Aerodynamic</name>
+		<desc>Higher top speed to maximise the draft.</desc>
+		<levels>
+			<level>
+				<id>1</id>
+				<desc>1% higher top speed.</desc>
+			</level>
+			<level>
+				<id>2</id>
+				<desc>2% higher top speed.</desc>
+			</level>
+			<level>
+				<id>3</id>
+				<desc>3% higher top speed.</desc>
+			</level>
+			<level>
+				<id>4</id>
+				<desc>4% higher top speed.</desc>
+			</level>
+			<level>
+				<id>5</id>
+				<desc>5% higher top speed.</desc>
+			</level>
+		</levels>
+	</type>
+</types>

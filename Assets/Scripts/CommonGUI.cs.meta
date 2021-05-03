@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 988b1498bdff530419428e06acb4671c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - moneyTex: {fileID: 2800000, guid: c45ad03df625fec4491426cda34a857e, type: 3}
+  - gasCanTex: {fileID: 2800000, guid: b65609db2fd2f004da98706d8dc7f9ce, type: 3}
+  - gearTex: {fileID: 2800000, guid: 3676a1bacdbf8384ca946b2c84c3f70e, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

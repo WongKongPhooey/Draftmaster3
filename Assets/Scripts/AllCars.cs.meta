@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: cf9a849c283327c41b7f2bcbc8b7873d
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - buttonSkin: {instanceID: 0}
+  - tileSkin: {instanceID: 0}
+  - BoxTexture: {instanceID: 0}
+  - gasCanTex: {instanceID: 0}
+  - gearTex: {instanceID: 0}
+  - frdTex: {fileID: 2800000, guid: da51a27ff8454ff4b9c6df79997c3370, type: 3}
+  - chvTex: {fileID: 2800000, guid: 5ff5502f204ac6740ab5b2b236af9b2a, type: 3}
+  - tytTex: {fileID: 2800000, guid: 1e57680920989da429c0e77c0b23fc6e, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

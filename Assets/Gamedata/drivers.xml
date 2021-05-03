@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<drivers>
+    <driver>
+		<name>Earnhardt Snr</name>
+		<car>
+			<series>cup1987</series>
+			<livery>87livery3</livery>
+			<rarity>3</rarity>
+		</car>
+		<car>
+			<series>cup2000</series>
+			<livery>00livery3</livery>
+			<rarity>3</rarity>
+		</car>
+		<car>
+			<series>alltimegreats</series>
+			<livery>00livery3</livery>
+			<rarity>3</rarity>
+		</car>
+		<type>Intimidator</type>
+	</driver>
+</drivers>
