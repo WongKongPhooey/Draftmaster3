@@ -154,7 +154,7 @@ public class RaceResultsGUI : MonoBehaviour {
 	void FixedUpdate(){
 	}
 	
-	void AssignPrizes(string seriesPrefix, int carNumber){
+	/*void AssignPrizes(string seriesPrefix, int carNumber){
 		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Class");
@@ -174,7 +174,7 @@ public class RaceResultsGUI : MonoBehaviour {
 		} else {
 			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", 1);
 		}
-	}
+	}*/
 
 	void OnGUI() {
 

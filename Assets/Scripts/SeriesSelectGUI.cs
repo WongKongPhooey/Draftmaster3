@@ -26,6 +26,8 @@ public class SeriesSelectGUI : MonoBehaviour {
 		
 		level = PlayerPrefs.GetInt("Level");
 		
+		PlayerPrefs.SetString("SeriesPrize","");
+		
 		seriesMenu = "All";
 		menuIndex = 0;
 	}
@@ -154,6 +156,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetString("CurrentSeries",SeriesData.offlineSeries[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
+						PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
 						SceneManager.LoadScene("CarSelect");
 					} 
 				} else {

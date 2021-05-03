@@ -14,6 +14,8 @@ public class RaceRewards : MonoBehaviour
 	int raceWinnings;
 	int gears;
 	
+	string seriesPrize;
+	
 	public static string carReward;
 	public static int carCurrentGears;
 	public static int carClassMax;
@@ -25,7 +27,13 @@ public class RaceRewards : MonoBehaviour
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
-		validDriver.Add(0);
+		seriesPrize = PlayerPrefs.GetString("SeriesPrize");
+		if(seriesPrize != ""){
+			ListPrizeOptions(seriesPrize);
+		} else {
+			ListPrizeOptions("");
+		}
+		/*validDriver.Add(0);
 		validDriver.Add(1);
 		validDriver.Add(2);
 		validDriver.Add(3);
@@ -53,7 +61,7 @@ public class RaceRewards : MonoBehaviour
 		validDriver.Add(43);
 		validDriver.Add(47);
 		validDriver.Add(48);
-		validDriver.Add(95);
+		validDriver.Add(95);*/
 		int finishPos = Scoreboard.position;
 		AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)]);
 	}
@@ -104,6 +112,8 @@ public class RaceRewards : MonoBehaviour
 			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", 1);
 			carReward = "" + DriverNames.cup2020Names[carNumber] + " +1";
 		}
+		//Reset Prizes
+		PlayerPrefs.SetString("SeriesPrize","");
 	}
 	
 	void ListPrizeOptions(string category){
