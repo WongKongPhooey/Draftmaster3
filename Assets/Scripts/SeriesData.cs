@@ -54,11 +54,11 @@ public class SeriesData : MonoBehaviour{
 		offlineDescriptions[0,3] = "Try out some of the oldest circuits on the calendar.";
 		offlineDescriptions[0,4] = "Finish off rookies with the biggest races of the year.";
 		
-		offlineDailyPlays[0,0] = 100;
-		offlineDailyPlays[0,1] = 100;
-		offlineDailyPlays[0,2] = 100;
-		offlineDailyPlays[0,3] = 100;
-		offlineDailyPlays[0,4] = 100;
+		offlineDailyPlays[0,0] = 20;
+		offlineDailyPlays[0,1] = 20;
+		offlineDailyPlays[0,2] = 20;
+		offlineDailyPlays[0,3] = 20;
+		offlineDailyPlays[0,4] = 20;
 		
 		offlineAILevel[0,0] = -5;
 		offlineAILevel[0,0] = -5;
@@ -71,12 +71,6 @@ public class SeriesData : MonoBehaviour{
 		offlineMinType[0,2] = "Level";
 		offlineMinType[0,3] = "Level";
 		offlineMinType[0,4] = "Level";
-		
-		offlineMinLevel[0,0] = 1;
-		offlineMinLevel[0,1] = 2;
-		offlineMinLevel[0,2] = 5;
-		offlineMinLevel[0,3] = 7;
-		offlineMinLevel[0,4] = 10;
 		
 		offlineMinLevel[0,0] = 1;
 		offlineMinLevel[0,1] = 2;
@@ -122,6 +116,12 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[1,3] = 10;
 		offlineDailyPlays[1,4] = 10;
 		
+		offlineAILevel[1,0] = -2;
+		offlineAILevel[1,0] = 0;
+		offlineAILevel[1,0] = 2;
+		offlineAILevel[1,0] = 3;
+		offlineAILevel[1,0] = 5;
+				
 		offlineMinType[1,0] = "Level";
 		offlineMinType[1,1] = "Level";
 		offlineMinType[1,2] = "Level";
