@@ -140,11 +140,11 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[1,3] = "15,5,10,15";
 		offlineTracklists[1,4] = "10,1,15,5";
 		
-		offlinePrizes[1,0] = "Rookies";
-		offlinePrizes[1,1] = "Rookies";
+		offlinePrizes[1,0] = "Rookies,Plate";
+		offlinePrizes[1,1] = "Rookies,Plate";
 		offlinePrizes[1,2] = "Rookies,Plate";
-		offlinePrizes[1,3] = "Rookies,Plate";
-		offlinePrizes[1,4] = "All";
+		offlinePrizes[1,3] = "Plate";
+		offlinePrizes[1,4] = "Plate";
 		
 		
 		//Cookie Cutters
@@ -159,6 +159,30 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[2,2] = "cup20livery6";
 		offlineSeriesImage[2,3] = "cup20livery4";
 		offlineSeriesImage[2,4] = "cup20livery48";
+		
+		offlineDailyPlays[2,0] = 10;
+		offlineDailyPlays[2,1] = 10;
+		offlineDailyPlays[2,2] = 10;
+		offlineDailyPlays[2,3] = 10;
+		offlineDailyPlays[2,4] = 10;
+				
+		offlineAILevel[2,0] = -2;
+		offlineAILevel[2,0] = 0;
+		offlineAILevel[2,0] = 2;
+		offlineAILevel[2,0] = 3;
+		offlineAILevel[2,0] = 5;
+						
+		offlineMinType[2,0] = "Level";
+		offlineMinType[2,1] = "Level";
+		offlineMinType[2,2] = "Level";
+		offlineMinType[2,3] = "Level";
+		offlineMinType[2,4] = "Level";
+				
+		offlineMinLevel[2,0] = 7;
+		offlineMinLevel[2,1] = 12;
+		offlineMinLevel[2,2] = 22;
+		offlineMinLevel[2,3] = 32;
+		offlineMinLevel[2,4] = 42;
 		
 		//Short Tracks
 		offlineSeries[3,0] = "Push To Pass";
