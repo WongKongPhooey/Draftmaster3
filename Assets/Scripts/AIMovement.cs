@@ -172,13 +172,16 @@ public class AIMovement : MonoBehaviour
 			}
         }
         AISpeed -= 0.5f;
-		if(carHit.gameObject.name == "OuterWall"){
-			AISpeed -= 1f;
-		}
     }
 	
 	void OnCollisionStay(Collision carHit) {
-		//Debug.Log("Ouch! Ouch! Ouch!");
+		if(laneticker != 0){
+			antiGlitch++;
+		}
+    }
+	
+	void OnCollisionExit(Collision carHit) {
+		antiGlitch = 0;
     }
 	
 	void ReceivePush(float bumpSpeed){
@@ -220,7 +223,12 @@ public class AIMovement : MonoBehaviour
 				}
 			} else {
 				holdLane++;
-				speedLogic();
+				if(1==1){
+					speedLogic();
+				} else {
+					//Improve FPS by removing logic from far away opponents
+					dumbSpeed();
+				}
 			}
 			draftLogic();
 			updateMovement();
@@ -289,6 +297,10 @@ public class AIMovement : MonoBehaviour
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
 	}
+	
+	void dumbSpeed(){
+		
+	}
 
 	void updateMovement() {
 		
@@ -312,11 +324,24 @@ public class AIMovement : MonoBehaviour
         }
 		
 		if(AICar.transform.position.x <= apronLineX){
-			Debug.Log("Track Limits!");
+			//Debug.Log("Track Limits!");
 			if (backingOut == false) {
 				backingOut = true;
 				laneticker = -laneChangeDuration + laneticker;
 				lane--;
+            }
+		}
+		
+		if(AICar.transform.position.x >= 1.275f){
+			//Debug.Log("Wall!");
+			if (backingOut == false) {
+				backingOut = true;
+				Debug.Log("Was: " + laneticker);
+				laneticker = laneChangeDuration + laneticker;
+				//Debug.Log("Now: " + laneticker + " Dur:" + laneChangeDuration);
+				lane++;
+				//Wall hit decel
+				AISpeed -= 1f;
             }
 		}
 	}
