@@ -72,7 +72,7 @@ public class EventData : MonoBehaviour
 		offlineTracklists[0,2] = "1";
 		offlineTracklists[0,3] = "1";
 		offlineTracklists[0,4] = "3,6,2,4";
-		offlineTracklists[0,5] = "1,2,3,4,5";
+		offlineTracklists[0,5] = "1,2,3,4,6";
 		
 		//The Intimidator
 		offlineEventChapter[1,0] = "Where It All Began";
