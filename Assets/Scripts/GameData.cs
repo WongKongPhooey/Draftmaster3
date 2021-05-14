@@ -108,6 +108,9 @@ public class GameData : MonoBehaviour {
 		PlayerPrefs.SetString("LastTimeCheck",currentTimestamp.ToString());
 		
 		//Day of the week cycle
+		if(daysToAdd > 1){
+			resetDailies();
+		}
 		while(daysToAdd > 1){
 			//Add it
 			day++;
@@ -151,6 +154,11 @@ public class GameData : MonoBehaviour {
 		spareFuel = float.Parse(fuelToAdd.ToString());
 		PlayerPrefs.SetFloat("SpareFuel",spareFuel);
 		//Debug.Log("Spare Fuel: " + spareFuel);
+	}
+	
+	void resetDailies(){
+		PlayerPrefs.SetInt("DailyGarage",0);
+		PlayerPrefs.SetInt("DailySelects",0);
 	}
 	
 	public static int classMax(int carClass){
@@ -301,6 +309,36 @@ public class GameData : MonoBehaviour {
 				break;
 			case 20:
 				return 2250;
+				break;
+			case 21:
+				return 2500;
+				break;
+			case 22:
+				return 2750;
+				break;
+			case 23:
+				return 3000;
+				break;
+			case 24:
+				return 3250;
+				break;
+			case 25:
+				return 3600;
+				break;
+			case 26:
+				return 4000;
+				break;
+			case 27:
+				return 4450;
+				break;
+			case 28:
+				return 4950;
+				break;
+			case 29:
+				return 5500;
+				break;
+			case 30:
+				return 6100;
 				break;
 			default:
 				return 999999;

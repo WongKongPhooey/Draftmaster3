@@ -82,42 +82,6 @@ public class MainMenuGUI : MonoBehaviour {
 
 		PlayerPrefs.SetInt("ActiveCaution",0);
 
-		if(!PlayerPrefs.HasKey("Difficulty")){
-			PlayerPrefs.SetInt("Difficulty", 1);
-		}
-
-		if(!PlayerPrefs.HasKey("RaceLapsMultiplier")){
-			PlayerPrefs.SetInt("RaceLapsMultiplier", 1);
-		}
-
-		if(!PlayerPrefs.HasKey("CameraRotate")){
-			PlayerPrefs.SetInt("CameraRotate", 1);
-		}
-
-		if(!PlayerPrefs.HasKey("NoFuelRecord")){
-			PlayerPrefs.SetInt("NoFuelRecord", 43);
-		}
-
-		if(!PlayerPrefs.HasKey("LatePushRecord")){
-			PlayerPrefs.SetInt("LatePushRecord", 20);
-		}
-
-		if(!PlayerPrefs.HasKey("LastToFirstRecord")){
-			PlayerPrefs.SetInt("LastToFirstRecord", 999);
-		}
-
-		if(!PlayerPrefs.HasKey("TeamPlayerRecord")){
-			PlayerPrefs.SetInt("TeamPlayerRecord", 0);
-		}
-
-		if(!PlayerPrefs.HasKey("TrafficJamRecord")){
-			PlayerPrefs.SetInt("TrafficJamRecord", 999);
-		}
-
-		if(!PlayerPrefs.HasKey("PhotoFinishRecord")){
-			PlayerPrefs.SetInt("PhotoFinishRecord", 200);
-		}
-
 		if(!PlayerPrefs.HasKey("TotalStarts")){
 			PlayerPrefs.SetInt("TotalStarts", 0);
 			PlayerPrefs.SetInt("TotalWins", 0);
@@ -157,12 +121,6 @@ public class MainMenuGUI : MonoBehaviour {
 		GUI.skin.label.normal.textColor = Color.black;
 		
 		CommonGUI.TopBar();
-		
-		//All Cars
-		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-		if (GUI.Button(new Rect(Screen.width - (widthblock * 2.5f), Screen.height - (heightblock * 2.5f), widthblock * 2, heightblock * 2), "Cars")){
-			SceneManager.LoadScene("AllCars");
-		}
 		
 		//All Cars
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;

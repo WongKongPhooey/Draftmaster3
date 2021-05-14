@@ -12,9 +12,7 @@ public class Store : MonoBehaviour{
 	
 	string menuCat;
 	
-	public static string[] goodItems = new string[20];
-	public static string[] greatItems = new string[20];
-	public static string[] excellentItems = new string[20];
+	public static ArrayList dailySelects = new ArrayList();
 	
 	public Texture BoxTexture;
 
@@ -25,6 +23,9 @@ public class Store : MonoBehaviour{
 	int premiumTokens;
 	int gears;
 	
+	int dailyCollected;
+	int dailySelectsPicked;
+	
 	public Texture2D gasCanTex;
 	public Texture2D gearTex;
 
@@ -34,6 +35,22 @@ public class Store : MonoBehaviour{
 		playerLevel = 10;
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		menuCat = "DailySelects";
+		
+		dailyCollected = PlayerPrefs.GetInt("DailyGarage");
+		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
+		
+		//if(dailySelectsPicked == 0){
+			dailySelects.Add(0);
+			dailySelects.Add(7);
+			dailySelects.Add(8);
+			dailySelects.Add(13);
+			dailySelects.Add(15);
+			dailySelects.Add(16);
+			dailySelects.Add(17);
+			dailySelects.Add(20);
+			dailySelectsPicked = 1;
+			PlayerPrefs.SetInt("DailySelects",1);
+		//}
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
@@ -107,10 +124,18 @@ public class Store : MonoBehaviour{
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
 			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-			if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "Free")){
-				gears = PlayerPrefs.GetInt("Gears");
-				PlayerPrefs.SetString("PrizeType","FreeDaily");
-				Application.LoadLevel("PrizeCollection");
+			
+			if(dailyCollected == 0){
+				if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "Free")){
+					gears = PlayerPrefs.GetInt("Gears");
+					PlayerPrefs.SetString("PrizeType","FreeDaily");
+					PlayerPrefs.SetInt("DailyGarage",1);
+					dailyCollected = 1;
+					Application.LoadLevel("PrizeCollection");
+				}
+			} else {
+				if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "Collected")){
+				}
 			}
 			
 			//Premium Bags
@@ -171,43 +196,47 @@ public class Store : MonoBehaviour{
 		
 		if(menuCat == "DailySelects"){
 			
-			//Good Daily Coin Items
+			//1* Liveries
 			for(int columns = 1; columns < 5; columns++){
-				//string carLivery = "livery" + carCount;
+				string carNum = dailySelects[columns-1].ToString();
 				float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
-				float cardY = heightblock * 8 - (heightblock * 4);
+				float cardY = heightblock * (8 * 1) - (heightblock * 3.5f);
 				GUI.Box(new Rect(cardX, cardY, widthblock * 3, heightblock * 7.5f), "");
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), goodItems[columns-1]);
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20livery1") as Texture);
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.cup2020Names[int.Parse(carNum)]);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("cup20livery" + carNum) as Texture);
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "You Have 4");
+				//Progress Bar Box
+				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "");
+				//Progress Bar
+				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), ((widthblock * 2.5f)/30)*12, heightblock * 1f), "");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "12/30");
 
-				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-				if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "1000C")){
-					totalMoney-=1000;
+				if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "150G")){
 				}
 			}
 			
-			//Great Daily Coin Items
+			//1* Liveries
 			for(int columns = 1; columns < 5; columns++){
-				//string carLivery = "livery" + carCount;
+				string carLivery = seriesPrefix + "livery" + (columns-1);
 				float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
 				float cardY = heightblock * (8 * 2) - (heightblock * 3.5f);
 				GUI.Box(new Rect(cardX, cardY, widthblock * 3, heightblock * 7.5f), "");
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), greatItems[columns-1]);
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20livery1") as Texture);
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.cup2020Names[columns-1]);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "You Have 7");
+				//Progress Bar Box
+				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "");
+				//Progress Bar
+				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), ((widthblock * 2.5f)/30)*12, heightblock * 1f), "");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "12/30");
 
-				//Purchase
-				if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "5000C")){
-					totalMoney-=5000;
+				if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "150G")){
 				}
 			}
 			
-			//Premium Liveries
+			//2-3* Liveries
 			for(int columns = 1; columns < 5; columns++){
 				string carLivery = seriesPrefix + "livery" + (columns-1);
 				float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
