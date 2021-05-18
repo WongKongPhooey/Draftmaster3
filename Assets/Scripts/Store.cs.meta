@@ -6,7 +6,12 @@ MonoImporter:
   defaultReferences:
   - buttonSkin: {fileID: 11400000, guid: 0fb4f1f9dd093d74f83fc1e6f3622e78, type: 2}
   - tileSkin: {fileID: 11400000, guid: da3e444a301515e4d9442430915f191d, type: 2}
+  - blueGUI: {fileID: 11400000, guid: 8a81e0a99a846be48ae4cbb8121481cc, type: 2}
+  - redGUI: {fileID: 11400000, guid: 0a7ace482b34c934caa37e78ee125f00, type: 2}
+  - whiteGUI: {fileID: 11400000, guid: 46f5890d9c985f64a8122aa7e2c275e2, type: 2}
   - BoxTexture: {instanceID: 0}
+  - gasCanTex: {instanceID: 0}
+  - gearTex: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
