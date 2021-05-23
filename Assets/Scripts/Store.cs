@@ -365,7 +365,7 @@ public class Store : MonoBehaviour{
 				float cardX = widthblock * (columns * 7f) - (widthblock * 2f);
 				float cardY = heightblock * 8 - (heightblock * 4);
 				
-				GUI.skin = redGUI;
+				GUI.skin = whiteGUI;
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6.5f, heightblock * 7.5f), "");
 				GUI.skin = tileSkin;
 				
@@ -373,7 +373,7 @@ public class Store : MonoBehaviour{
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "A full tank of fuel to go racing without needing to wait!");
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 				
-				GUI.skin = whiteGUI;
+				GUI.skin = redGUI;
 				
 				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "Free")){
 					gears = PlayerPrefs.GetInt("Gears");
@@ -390,26 +390,72 @@ public class Store : MonoBehaviour{
 		//End Of Fuel
 		
 		if(menuCat == "Legends"){
+			
 			//Legends
 			for(int columns = 1; columns < 5; columns++){
-				//string carLivery = "livery" + carCount;
 				float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
-				float cardY = heightblock * 8 - (heightblock * 4);
-				GUI.Box(new Rect(cardX, cardY, widthblock * 3, heightblock * 7.5f), "");
+				float cardY = heightblock * (8.5f * 1) - (heightblock * 4.5f);
+				
+				int carGears = 0;
+				int carClass = 0;
+				
+				carGears = PlayerPrefs.GetInt(DriverNames.legendsLiveries[columns-1] + "Gears");
+				carClass = PlayerPrefs.GetInt(DriverNames.legendsLiveries[columns-1] + "Class");
+				
+				int unlockClass = 4;
+				int unlockGears = GameData.unlockGears(unlockClass);
+				
+				int classMax = 999;
+				classMax = GameData.classMax(carClass);
+				if(carClass < unlockClass){
+					classMax = unlockGears;
+				}
+				
+				GUI.skin = whiteGUI;
+				GUI.Box(new Rect(cardX, cardY, widthblock * 3, heightblock * 8f), "");
+				GUI.skin = tileSkin;
+				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.legendsNames[columns-1]);
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(DriverNames.legendsLiveries[columns-1]) as Texture);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("cup20livery" + columns) as Texture);
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+				
 				//Progress Bar Box
-				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "");
+				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "");
 				//Progress Bar
-				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), ((widthblock * 2.5f)/65)*4, heightblock * 1f), "");
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "4/65");
-
-				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-				if(GUI.Button(new Rect(cardX, cardY + (heightblock * 6), widthblock * 3, heightblock * 1.5f), "450G")){
-					totalMoney-=1000;
+				if((carGears > classMax)||(carClass == 6)){
+					GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "");
+				} else {
+					if(carGears > 0){
+						GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), (((widthblock * 2.5f)/classMax) * carGears) + 1, heightblock * 1f), "");
+					}
 				}
+				// Gears/Class 
+				if(carClass == 6){
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
+				} else {
+					if(carClass < unlockClass){
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
+					} else {
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
+					}
+				}
+
+				GUI.skin = redGUI;
+				if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "150G")){
+					gears = PlayerPrefs.GetInt("Gears");
+					if(gears >= 150){
+						gears -= 150;
+						if(PlayerPrefs.HasKey(DriverNames.legendsLiveries[columns-1] + "Gears")){
+							carGears = PlayerPrefs.GetInt(DriverNames.legendsLiveries[columns-1] + "Gears");
+						} else {
+							carGears = 0;
+						}
+						PlayerPrefs.SetInt(DriverNames.legendsLiveries[columns-1] + "Gears", carGears + 3);
+						PlayerPrefs.SetInt("Gears",gears);
+					}
+				}
+				GUI.skin = tileSkin;
 			}
 		}
 		

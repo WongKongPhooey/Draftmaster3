@@ -386,8 +386,13 @@ public class Movement : MonoBehaviour {
 				
 				//Look for teammates
 				RaycastHit DraftBehind;
-				string draftTeam = DraftCheck.transform.GetComponent<AIMovement>().carTeam;
-				string draftManu = DraftCheck.transform.GetComponent<AIMovement>().carManu;
+				string draftTeam = "NAN";
+				string draftManu = "NAN";
+				
+				if(DraftCheck.transform.GetComponent<AIMovement>()){
+					draftTeam = DraftCheck.transform.GetComponent<AIMovement>().carTeam;
+					draftManu = DraftCheck.transform.GetComponent<AIMovement>().carManu;
+				}
 				
 				if(carTeam == draftTeam){
 					canBuddy = true;
