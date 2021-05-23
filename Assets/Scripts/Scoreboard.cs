@@ -151,55 +151,23 @@ public class Scoreboard : MonoBehaviour {
 		}
 	}
 
-	/*public static void checkCautionPositions(){
-		playerCar = GameObject.FindGameObjectWithTag("Player");
-		carsArray = GameObject.FindGameObjectsWithTag("AICar");
-		playerPosition = playerCar.transform.position.z;
-		float tempPosition = 0;
-		string tempName = "";
-		int i = 0;
-		position = 1;
-		foreach (GameObject car in carsArray) {
-			carPositions[i] = car.transform.position.z;
-			carNames[i] = car.transform.name;
-			
-			if(carPositions[i] > playerPosition){
-				position++;
-			}
-			i++;
-		}
-		for(int repeats = 0; repeats < 45; repeats++){
-			for(i = 0; i < (carsArray.Length - 1); i++){
-				if(carPositions[i] <= carPositions[i+1]){
-					tempPosition = carPositions[i];
-					tempName = carNames[i];
-					carPositions[i] = carPositions[i + 1];
-					carNames[i] = carNames[i + 1];
-					carPositions[i + 1] = tempPosition;
-					carNames[i + 1] = tempName;
-				}
+	public static int checkPlayerPosition(){
+		for(int i=0;i<entrantList.Count;i++){
+			if(entrantList[i].name == playerCar.name){
+				return i;
 			}
 		}
-		for(i = carsArray.Length; i >=0; i--){
-			if(carPositions[i] < playerPosition){
-				carPositions[i + 1] = carPositions[i];
-				carNames[i + 1] = carNames[i];
-				carPositions[i] = 0;
-				carNames[i] = "";
+		return 0;
+	}
+
+	public static int checkSingleCarPosition(string carName){
+		for(int i=0;i<entrantList.Count;i++){
+			if(entrantList[i].name == carName){
+				return i;
 			}
 		}
-		carPositions[position - 1] = playerPosition;
-		carNames[position - 1] = "Player";
-		for(i = 0; i < carsArray.Length; i++){
-			Debug.Log(carPositions[i] + ") " + carNames[i]);
-			if(carNames[i] == "Player"){
-				PlayerPrefs.SetInt("CautionPlayerPosition", i+1);
-				PlayerPrefs.SetString("CautionPosition" + (i+1) + "", "AICar999");
-			}else{
-				PlayerPrefs.SetString("CautionPosition" + (i+1) + "", carNames[i]);
-			}
-		}
-	}*/
+		return 0;
+	}
 
 	public static void checkFinishPositions(){
 		playerCar = GameObject.FindGameObjectWithTag("Player");

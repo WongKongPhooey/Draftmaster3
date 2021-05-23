@@ -60,6 +60,8 @@ public class AIMovement : MonoBehaviour
     int wobbleTarget;
     int wobbleRand;
 	
+	int distFromPlayer;
+	
 	bool caution = false;
 
     public static bool crashActive;
@@ -192,12 +194,12 @@ public class AIMovement : MonoBehaviour
 			tandemDraft = true;
 			//Debug.Log("Impact levels out " + AICar.name);
 		}
-			//Send it back
-			RaycastHit DraftCheckBackward;
-			bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
-			if(HitBackward ){
-				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
-			}
+		//Send it back
+		RaycastHit DraftCheckBackward;
+		bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
+		if(HitBackward ){
+			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
+		}
 	}
 	
 	void GivePush(float bumpSpeed){
@@ -223,7 +225,8 @@ public class AIMovement : MonoBehaviour
 				}
 			} else {
 				holdLane++;
-				if(1==1){
+				distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
+				if(distFromPlayer<=10){
 					speedLogic();
 				} else {
 					//Improve FPS by removing logic from far away opponents
@@ -299,7 +302,12 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void dumbSpeed(){
+		AISpeed += 0.002f;
 		
+		//Speed difference between the player and the AI
+		speed = AISpeed - Movement.playerSpeed;
+		speed = speed / 100;
+		AICar.transform.Translate(0, 0, speed);
 	}
 
 	void updateMovement() {
@@ -348,29 +356,33 @@ public class AIMovement : MonoBehaviour
 
 	void draftLogic(){
 		RaycastHit DraftCheckForward;
-        bool HitForward = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForward, 10);
+        bool HitForward = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForward, 5);
 		//Debug.DrawRay(transform.position  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
 		
-		if((HitForward == true)&&(holdLane >= laneRest)){
-			carName = DraftCheckForward.collider.gameObject.name;
-			float carDist = DraftCheckForward.distance;
-			int opponentNum = 9999;
-			string opponentTeam = "";
-			if(carName != "Player") {
-				opponentNum = getCarNumFromName(carName);
-				if(opponentNum != 9999){
-					opponentTeam = DriverNames.cup2020Teams[opponentNum];
+		if(HitForward == true){
+			if(holdLane >= laneRest){
+				carName = DraftCheckForward.collider.gameObject.name;
+				float carDist = DraftCheckForward.distance;
+				int opponentNum = 9999;
+				string opponentTeam = "";
+				if(carName != "Player") {
+					opponentNum = getCarNumFromName(carName);
+					if(opponentNum != 9999){
+						opponentTeam = DriverNames.cup2020Teams[opponentNum];
+					}
+				}
+				//If teammate
+				if(opponentTeam == carTeam){
+					//Stay with unless near front
+				} else {
+					//Pass them
+					if(movingLane == false){
+						tryPass(50, false);
+					}
 				}
 			}
-			//If teammate
-			if(opponentTeam == carTeam){
-				//Stay with unless near front
-			} else {
-				//Pass them
-				if(movingLane == false){
-					tryPass(50, false);
-				}
-			}
+		} else {
+			findDraft();
 		}
 	}
 
@@ -391,7 +403,60 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public void findDraft(){
+		RaycastHit DraftCheckLaneLeft;
+		RaycastHit DraftCheckLaneRight;
+		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 5);
+		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 5);
+		string direction = "";
+		//Debug.DrawRay(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward * 5, Color.cyan);
+		//Debug.DrawRay(transform.position + new Vector3(1.2f,0,1.1f), transform.forward * 5, Color.cyan);
 		
+		if (HitLaneLeft){
+			if(leftSideClear()){
+				if(DraftCheckLaneLeft.distance >= 2f){
+					//Go for it, regardless of closing speed
+					direction = "Left";
+				} else {
+					//Only seek a close draft if faster than you
+					float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
+					direction = "Left";
+				}
+			}
+		}
+		
+		if (HitLaneRight){
+			if(rightSideClear()){
+				if(DraftCheckLaneRight.distance >= 2f){
+					if(direction == "Left"){
+						direction = "Both";
+					} else {
+						direction = "Right";
+					}
+				} else {
+					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
+					if(direction == "Left"){
+						direction = "Both";
+					} else {
+						direction = "Right";
+					}
+				}
+			}
+		}
+		
+		//If an option exists..
+		if(direction != ""){
+			if(direction == "Both"){
+				//Random choose one
+				float rng = Random.Range(0,2);
+				Debug.Log("Rnd /2 = " + rng);
+				if(rng > 1f){
+					direction = "Right";
+				} else {
+					direction = "Left";
+				}
+			}
+			changeLane(direction);
+		}
 	}
 	
 	public bool leftSideClear(){
@@ -531,6 +596,13 @@ public class AIMovement : MonoBehaviour
 		} else {
 			return 9999;
 		}
+	}
+	
+	float getOpponentSpeed(RaycastHit opponent){
+		if(opponent.transform.gameObject.name != null){
+			//opponent.transform.gameObject.SendMessage("GetSpeed",AISpeed);
+		}
+		return 9999;
 	}
 	
 	bool checkRaycast(string rayDirection, float rayLength){
