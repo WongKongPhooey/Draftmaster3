@@ -29,6 +29,9 @@ public class RaceResultsGUI : MonoBehaviour {
 	
 	void Awake(){
 
+		widthblock = Screen.width/20;
+		heightblock = Screen.height/20;
+
 		challengeComplete = false;
 
 		if(Scoreboard.position == 0){

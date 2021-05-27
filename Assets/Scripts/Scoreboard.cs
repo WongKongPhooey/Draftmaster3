@@ -54,6 +54,9 @@ public class Scoreboard : MonoBehaviour {
 	
 	void Awake (){
 		
+		widthblock = Screen.width/20;
+		heightblock = Screen.height/20;
+		
 		int i=0;
 		carsTagged = false;
 		playerCar = GameObject.FindGameObjectWithTag("Player");

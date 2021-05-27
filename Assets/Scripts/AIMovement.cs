@@ -418,8 +418,10 @@ public class AIMovement : MonoBehaviour
 					direction = "Left";
 				} else {
 					//Only seek a close draft if faster than you
-					float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
-					direction = "Left";
+					float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft.collider.gameObject);
+					if(AISpeed <= opponentSpeed){
+						direction = "Left";
+					}
 				}
 			}
 		}
@@ -433,11 +435,13 @@ public class AIMovement : MonoBehaviour
 						direction = "Right";
 					}
 				} else {
-					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
-					if(direction == "Left"){
-						direction = "Both";
-					} else {
-						direction = "Right";
+					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight.collider.gameObject);
+					if(AISpeed <= opponentSpeed){
+						if(direction == "Left"){
+							direction = "Both";
+						} else {
+							direction = "Right";
+						}
 					}
 				}
 			}
@@ -448,7 +452,6 @@ public class AIMovement : MonoBehaviour
 			if(direction == "Both"){
 				//Random choose one
 				float rng = Random.Range(0,2);
-				Debug.Log("Rnd /2 = " + rng);
 				if(rng > 1f){
 					direction = "Right";
 				} else {
@@ -598,11 +601,14 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	float getOpponentSpeed(RaycastHit opponent){
-		if(opponent.transform.gameObject.name != null){
-			//opponent.transform.gameObject.SendMessage("GetSpeed",AISpeed);
+	float getOpponentSpeed(GameObject opponent){
+		if(opponent.tag == "AICar"){
+			return opponent.GetComponent<AIMovement>().AISpeed;
 		}
-		return 9999;
+		if(opponent.tag == "Player"){
+			return Movement.playerSpeed;
+		}
+		return 0;
 	}
 	
 	bool checkRaycast(string rayDirection, float rayLength){

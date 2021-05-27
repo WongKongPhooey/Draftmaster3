@@ -24,6 +24,9 @@ public class RaceRewards : MonoBehaviour
 
 	void Awake(){
 
+		widthblock = Mathf.Round(Screen.width/20);
+		heightblock = Mathf.Round(Screen.height/20);
+
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
