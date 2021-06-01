@@ -58,6 +58,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	public static string circuitChoice;
 	
+	public static int seriesFuel;
+	
 	public Vector2 scrollPosition = Vector2.zero;
 	
 	void Awake(){
@@ -79,6 +81,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 		Daytona();
 		PlayerPrefs.SetString("CurrentTrack","0");
 		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Talladega") as Texture;
+
+		seriesFuel = 999;
+		seriesFuel = PlayerPrefs.GetInt("SeriesFuel");
 
 		PlayerPrefs.SetInt("TurnDir1",0);
 		PlayerPrefs.SetInt("TurnDir2",0);
@@ -311,8 +316,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 		if (GUI.Button(new Rect(widthblock * 15, heightblock * 17, widthblock * 3, heightblock * 2), "Race")){
 			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
 			PlayerPrefs.SetString("CurrentCircuit",circuitChoice);
-			if(GameData.gameFuel >= 4){
-				GameData.gameFuel-=4;
+			if(GameData.gameFuel >= seriesFuel){
+				GameData.gameFuel-=seriesFuel;
 				PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 				Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
 				SceneManager.LoadScene(circuitChoice);
@@ -357,6 +362,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",50);
 		PlayerPrefs.SetInt("SpeedOffset",2 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",3);
+		PlayerPrefs.SetString("TrackType","Plate");
 	}
 
 	static void Joliet(){
@@ -378,6 +384,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",5);
 		PlayerPrefs.SetInt("SpeedOffset",24 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 	
 	static void LasVegas(){
@@ -399,6 +406,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",5);
 		PlayerPrefs.SetInt("SpeedOffset",18 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	static void Bristol(){
@@ -420,6 +428,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",50);
 		PlayerPrefs.SetInt("SpeedOffset",65 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 	
 	static void NewHampshire(){
@@ -441,6 +450,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",100);
 		PlayerPrefs.SetInt("SpeedOffset",46 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 
 	static void Indianapolis(){
@@ -462,6 +472,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",250);
 		PlayerPrefs.SetInt("SpeedOffset",0 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Large");
 	}
 
 	static void Atlanta(){
@@ -483,6 +494,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",40);
 		PlayerPrefs.SetInt("SpeedOffset",16 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 	
 	static void Phoenix(){
@@ -504,6 +516,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",20);
 		PlayerPrefs.SetInt("SpeedOffset",55 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",3);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 
 	static void Motegi(){
@@ -525,6 +538,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",200);
 		PlayerPrefs.SetInt("SpeedOffset",25 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Alt");
 	}
 
 	static void LongPond(){
@@ -546,6 +560,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",200);
 		PlayerPrefs.SetInt("SpeedOffset",8 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",3);
+		PlayerPrefs.SetString("TrackType","Large");
 	}
 
 	static void Fontana(){
@@ -567,6 +582,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",10);
 		PlayerPrefs.SetInt("SpeedOffset",3 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Large");
 	}
 	
 	static void Michigan(){
@@ -588,27 +604,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",10);
 		PlayerPrefs.SetInt("SpeedOffset",3 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
-	}
-
-	static void SunsetSpeedway(){
-		circuitChoice = "SunsetSpeedway";
-		PlayerPrefs.SetInt("RaceLaps",8 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
-		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",80);
-		PlayerPrefs.SetInt("StraightLength2",80);
-		PlayerPrefs.SetInt("StraightLength3",0);
-		PlayerPrefs.SetInt("StraightLength4",0);
-		PlayerPrefs.SetInt("TurnLength1",180);
-		PlayerPrefs.SetInt("TurnLength2",180);
-		PlayerPrefs.SetInt("TurnLength3",0);
-		PlayerPrefs.SetInt("TurnLength4",0);
-		PlayerPrefs.SetInt("TurnAngle1",2);
-		PlayerPrefs.SetInt("TurnAngle2",2);
-		PlayerPrefs.SetInt("TurnAngle3",1);
-		PlayerPrefs.SetInt("TurnAngle4",1);
-		PlayerPrefs.SetInt("StartLine",40);
-		PlayerPrefs.SetInt("SpeedOffset",45 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Large");
 	}
 
 	static void Charlotte(){
@@ -630,6 +626,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",40);
 		PlayerPrefs.SetInt("SpeedOffset",22 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	static void FortWorth(){
@@ -651,6 +648,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",40);
 		PlayerPrefs.SetInt("SpeedOffset",22 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	static void Kentucky(){
@@ -672,27 +670,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",10);
 		PlayerPrefs.SetInt("SpeedOffset",28 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
-	}
-
-	static void Route67(){
-		circuitChoice = "Route67";
-		PlayerPrefs.SetInt("RaceLaps",4 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
-		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",150);
-		PlayerPrefs.SetInt("StraightLength2",500);
-		PlayerPrefs.SetInt("StraightLength3",400);
-		PlayerPrefs.SetInt("StraightLength4",0);
-		PlayerPrefs.SetInt("TurnLength1",180);
-		PlayerPrefs.SetInt("TurnLength2",160);
-		PlayerPrefs.SetInt("TurnLength3",20);
-		PlayerPrefs.SetInt("TurnLength4",0);
-		PlayerPrefs.SetInt("TurnAngle1",2);
-		PlayerPrefs.SetInt("TurnAngle2",1);
-		PlayerPrefs.SetInt("TurnAngle3",2);
-		PlayerPrefs.SetInt("TurnAngle4",1);
-		PlayerPrefs.SetInt("StartLine",50);
-		PlayerPrefs.SetInt("SpeedOffset",6 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",3);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	static void Darlington(){
@@ -714,6 +692,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",150);
 		PlayerPrefs.SetInt("SpeedOffset",22 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Alt");
 	}
 
 	static void Homestead(){
@@ -735,6 +714,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",150);
 		PlayerPrefs.SetInt("SpeedOffset",19 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	static void Dover(){
@@ -756,6 +736,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",75);
 		PlayerPrefs.SetInt("SpeedOffset",47 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 	
 	static void Kansas(){
@@ -777,52 +758,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",2);
 		PlayerPrefs.SetInt("SpeedOffset",17 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
-	}
-
-	static void MuteCity(){
-		circuitChoice = "MuteCity";
-		PlayerPrefs.SetInt("RaceLaps",8 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
-		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",100);
-		PlayerPrefs.SetInt("StraightLength2",0);
-		PlayerPrefs.SetInt("StraightLength3",0);
-		PlayerPrefs.SetInt("StraightLength4",50);
-		PlayerPrefs.SetInt("TurnLength1",180);
-		PlayerPrefs.SetInt("TurnLength2",20);
-		PlayerPrefs.SetInt("TurnLength3",140);
-		PlayerPrefs.SetInt("TurnLength4",20);
-		PlayerPrefs.SetInt("TurnAngle1",2);
-		PlayerPrefs.SetInt("TurnAngle2",8);
-		PlayerPrefs.SetInt("TurnAngle3",1);
-		PlayerPrefs.SetInt("TurnAngle4",4);
-		PlayerPrefs.SetInt("StartLine",5);
-		PlayerPrefs.SetInt("SpeedOffset",47 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",4);
-	}
-
-	static void DustyPlains(){
-		circuitChoice = "DustyPlains";
-		PlayerPrefs.SetInt("RaceLaps",8 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
-		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",200);
-		PlayerPrefs.SetInt("StraightLength2",150);
-		PlayerPrefs.SetInt("StraightLength3",150);
-		PlayerPrefs.SetInt("StraightLength4",170);
-		PlayerPrefs.SetInt("TurnLength1",90);
-		PlayerPrefs.SetInt("TurnLength2",90);
-		PlayerPrefs.SetInt("TurnLength3",70);
-		PlayerPrefs.SetInt("TurnLength4",110);
-		PlayerPrefs.SetInt("TurnDir1",1);
-		PlayerPrefs.SetInt("TurnDir2",1);
-		PlayerPrefs.SetInt("TurnDir3",1);
-		PlayerPrefs.SetInt("TurnDir4",1);
-		PlayerPrefs.SetInt("TurnAngle1",1);
-		PlayerPrefs.SetInt("TurnAngle2",1);
-		PlayerPrefs.SetInt("TurnAngle3",1);
-		PlayerPrefs.SetInt("TurnAngle4",1);
-		PlayerPrefs.SetInt("StartLine",100);
-		PlayerPrefs.SetInt("SpeedOffset",55 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Large");
 	}
 
 	static void Daytona(){
@@ -844,6 +780,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",10);
 		PlayerPrefs.SetInt("SpeedOffset",8 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Plate");
 	}
 
 	static void Martinsville(){
@@ -865,73 +802,11 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",50);
 		PlayerPrefs.SetInt("SpeedOffset",65 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
-	}
-
-	static void TritonRaceway(){
-		circuitChoice = "TritonRaceway";
-		PlayerPrefs.SetInt("RaceLaps",12 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
-		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",100);
-		PlayerPrefs.SetInt("StraightLength2",0);
-		PlayerPrefs.SetInt("StraightLength3",20);
-		PlayerPrefs.SetInt("StraightLength4",0);
-		PlayerPrefs.SetInt("TurnLength1",130);
-		PlayerPrefs.SetInt("TurnLength2",80);
-		PlayerPrefs.SetInt("TurnLength3",150);
-		PlayerPrefs.SetInt("TurnLength4",0);
-		PlayerPrefs.SetInt("TurnAngle1",1);
-		PlayerPrefs.SetInt("TurnAngle2",2);
-		PlayerPrefs.SetInt("TurnAngle3",1);
-		PlayerPrefs.SetInt("TurnAngle4",0);
-		PlayerPrefs.SetInt("StartLine",50);
-		PlayerPrefs.SetInt("SpeedOffset",62 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",3);
-	}
-
-	static void Redknife(){
-		circuitChoice = "Redknife";
-		PlayerPrefs.SetInt("RaceLaps",6 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
-		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",200);
-		PlayerPrefs.SetInt("StraightLength2",250);
-		PlayerPrefs.SetInt("StraightLength3",0);
-		PlayerPrefs.SetInt("StraightLength4",0);
-		PlayerPrefs.SetInt("TurnLength1",180);
-		PlayerPrefs.SetInt("TurnLength2",160);
-		PlayerPrefs.SetInt("TurnLength3",20);
-		PlayerPrefs.SetInt("TurnLength4",0);
-		PlayerPrefs.SetInt("TurnAngle1",2);
-		PlayerPrefs.SetInt("TurnAngle2",2);
-		PlayerPrefs.SetInt("TurnAngle3",8);
-		PlayerPrefs.SetInt("TurnAngle4",0);
-		PlayerPrefs.SetInt("StartLine",100);
-		PlayerPrefs.SetInt("SpeedOffset",18 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",3);
-	}
-
-	static void Driftenville(){
-		circuitChoice = "Driftenville";
-		PlayerPrefs.SetInt("RaceLaps",8 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
-		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",150);
-		PlayerPrefs.SetInt("StraightLength2",0);
-		PlayerPrefs.SetInt("StraightLength3",0);
-		PlayerPrefs.SetInt("StraightLength4",0);
-		PlayerPrefs.SetInt("TurnLength1",170);
-		PlayerPrefs.SetInt("TurnLength2",20);
-		PlayerPrefs.SetInt("TurnLength3",170);
-		PlayerPrefs.SetInt("TurnLength4",0);
-		PlayerPrefs.SetInt("TurnAngle1",2);
-		PlayerPrefs.SetInt("TurnAngle2",8);
-		PlayerPrefs.SetInt("TurnAngle3",2);
-		PlayerPrefs.SetInt("TurnAngle4",0);
-		PlayerPrefs.SetInt("StartLine",100);
-		PlayerPrefs.SetInt("SpeedOffset",31 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",3);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 
 	static void TestTrack(){
-		circuitChoice = "MuteCity";
+		circuitChoice = "TestTrack";
 		PlayerPrefs.SetInt("RaceLaps",1 * PlayerPrefs.GetInt("RaceLapsMultiplier"));
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",50);

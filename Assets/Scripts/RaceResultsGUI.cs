@@ -36,6 +36,8 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		if(Scoreboard.position == 0){
 			SceneManager.LoadScene("MainMenu");
+		} else {
+			PlayerPrefs.SetInt("FinishPos",Scoreboard.position);
 		}
 
 		exp = PlayerPrefs.GetInt("Exp");
@@ -156,28 +158,6 @@ public class RaceResultsGUI : MonoBehaviour {
 
 	void FixedUpdate(){
 	}
-	
-	/*void AssignPrizes(string seriesPrefix, int carNumber){
-		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
-			int carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
-			int carClass = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Class");
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + 10);
-			Debug.Log("You got new parts for car #" + carNumber + "!");
-			
-			int classMax = GameData.classMax(carClass);
-			//If gears hits max for class
-			if(carGears > classMax){
-				//Increment class
-				Debug.Log("Upgrade!");
-				PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears - classMax);
-				PlayerPrefs.SetInt(seriesPrefix + carNumber + "Class", carClass + 1);
-			} else {
-				Debug.Log("You have " + carGears + " of " + classMax + " needed");
-			}
-		} else {
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", 1);
-		}
-	}*/
 
 	void OnGUI() {
 
@@ -269,11 +249,6 @@ public class RaceResultsGUI : MonoBehaviour {
 		GUI.skin.button.alignment = TextAnchor.MiddleLeft;
 
 		if(GUI.Button(new Rect(widthblock * 2, Screen.height - (heightblock * 3), widthblock * 3, heightblock * 2), "Next")){
-
-			if(((RacePoints.championshipMode == false)&&(ChallengeSelectGUI.challengeMode == false))||((ChallengeSelectGUI.challengeMode == true)&&(challengeComplete == true))){
-				PlayerPrefs.SetInt("PrizeMoney",PlayerPrefs.GetInt("PrizeMoney") + (PrizeMoney.cashAmount[Scoreboard.position - 1] * winningsMultiplier * lapsBonus));
-
-			}
 			ChallengeSelectGUI.challengeMode = false;
 			Application.LoadLevel("RaceRewards");
 		}

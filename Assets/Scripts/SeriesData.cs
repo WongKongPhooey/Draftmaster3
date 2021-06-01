@@ -19,6 +19,7 @@ public class SeriesData : MonoBehaviour{
 	public static string[,] offlineMinTeam = new string[10,10];
 	public static string[,] offlineMinManu = new string[10,10];
 	public static string[,] offlineTracklists = new string[10,10];
+	public static int[,] offlineFuel = new int[10,10];
 	public static string[,] offlinePrizes = new string[10,10];
 	
     // Start is called before the first frame update
@@ -84,6 +85,12 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[0,3] = "12,9,15";
 		offlineTracklists[0,4] = "13,20,21";
 		
+		offlineFuel[0,0] = 4;
+		offlineFuel[0,1] = 4;
+		offlineFuel[0,2] = 4;
+		offlineFuel[0,3] = 4;
+		offlineFuel[0,4] = 4;
+		
 		offlinePrizes[0,0] = "Rookies";
 		offlinePrizes[0,1] = "Rookies";
 		offlinePrizes[0,2] = "Rookies";
@@ -140,6 +147,12 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[1,3] = "15,5,10,15";
 		offlineTracklists[1,4] = "10,1,15,5";
 		
+		offlineFuel[0,0] = 5;
+		offlineFuel[0,1] = 6;
+		offlineFuel[0,2] = 7;
+		offlineFuel[0,3] = 8;
+		offlineFuel[0,4] = 9;
+		
 		offlinePrizes[1,0] = "Rookies,Plate";
 		offlinePrizes[1,1] = "Rookies,Plate";
 		offlinePrizes[1,2] = "Rookies,Plate";
@@ -184,6 +197,24 @@ public class SeriesData : MonoBehaviour{
 		offlineMinLevel[2,3] = 32;
 		offlineMinLevel[2,4] = 42;
 		
+		offlineTracklists[2,0] = "2,3,7,13";
+		offlineTracklists[2,1] = "16,17,21,13";
+		offlineTracklists[2,2] = "7,2,19,12";
+		offlineTracklists[2,3] = "3,16,12,2";
+		offlineTracklists[2,4] = "13,19,7,21";
+		
+		offlineFuel[0,0] = 5;
+		offlineFuel[0,1] = 6;
+		offlineFuel[0,2] = 7;
+		offlineFuel[0,3] = 8;
+		offlineFuel[0,4] = 9;
+		
+		offlinePrizes[2,0] = "Rookies";
+		offlinePrizes[2,1] = "Rookies";
+		offlinePrizes[2,2] = "Rookies,Plate";
+		offlinePrizes[2,3] = "Rookies,Plate";
+		offlinePrizes[2,4] = "All";
+		
 		//Short Tracks
 		offlineSeries[3,0] = "Push To Pass";
 		offlineSeries[3,1] = "Bump And Run";
@@ -196,6 +227,36 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[3,2] = "cup20livery42";
 		offlineSeriesImage[3,3] = "cup20livery1";
 		offlineSeriesImage[3,4] = "cup20livery18";
+		
+		offlineDailyPlays[3,0] = 10;
+		offlineDailyPlays[3,1] = 10;
+		offlineDailyPlays[3,2] = 10;
+		offlineDailyPlays[3,3] = 10;
+		offlineDailyPlays[3,4] = 10;
+		
+		offlineAILevel[3,0] = -2;
+		offlineAILevel[3,0] = 0;
+		offlineAILevel[3,0] = 2;
+		offlineAILevel[3,0] = 3;
+		offlineAILevel[3,0] = 5;
+						
+		offlineMinType[3,0] = "Level";
+		offlineMinType[3,1] = "Level";
+		offlineMinType[3,2] = "Level";
+		offlineMinType[3,3] = "Level";
+		offlineMinType[3,4] = "Level";
+				
+		offlineMinLevel[3,0] = 7;
+		offlineMinLevel[3,1] = 12;
+		offlineMinLevel[3,2] = 22;
+		offlineMinLevel[3,3] = 32;
+		offlineMinLevel[3,4] = 42;
+		
+		offlineTracklists[3,0] = "4,8,6,9";
+		offlineTracklists[3,1] = "18,11,6,8";
+		offlineTracklists[3,2] = "9,11,4,18";
+		offlineTracklists[3,3] = "6,8,18,9";
+		offlineTracklists[3,4] = "8,6,11,4";
 		
 		//Class
 		offlineSeries[4,0] = "A Fan Favourite";
@@ -299,18 +360,6 @@ public class SeriesData : MonoBehaviour{
 		offlineDescriptions[9,1] = "Season Half 2";	
 		offlineDescriptions[9,2] = "Full 2019 Season";
 		
-		offlineMinType[2,0] = "Level";
-		offlineMinType[2,1] = "Level";
-		offlineMinType[2,2] = "Level";
-		offlineMinType[2,3] = "Level";
-		offlineMinType[2,4] = "Level";
-		
-		offlineMinType[3,0] = "Level";
-		offlineMinType[3,1] = "Level";
-		offlineMinType[3,2] = "Level";
-		offlineMinType[3,3] = "Level";
-		offlineMinType[3,4] = "Level";
-		
 		offlineMinType[4,0] = "Class";
 		offlineMinType[4,1] = "Class";
 		offlineMinType[4,2] = "Class";
@@ -335,12 +384,6 @@ public class SeriesData : MonoBehaviour{
 		offlineMinType[9,0] = "Level";
 		offlineMinType[9,1] = "Level";
 		offlineMinType[9,2] = "Level";
-		
-		offlineMinLevel[2,0] = 7;
-		offlineMinLevel[2,1] = 12;
-		offlineMinLevel[2,2] = 22;
-		offlineMinLevel[2,3] = 32;
-		offlineMinLevel[2,4] = 42;
 		
 		offlineMinLevel[3,0] = 10;
 		offlineMinLevel[3,1] = 15;
@@ -373,18 +416,6 @@ public class SeriesData : MonoBehaviour{
 		offlineMinManu[6,4] = "CHV";
 		offlineMinManu[6,5] = "TYT";
 		
-		offlineTracklists[2,0] = "2,3,7,13";
-		offlineTracklists[2,1] = "16,17,21,13";
-		offlineTracklists[2,2] = "7,2,19,12";
-		offlineTracklists[2,3] = "3,16,12,2";
-		offlineTracklists[2,4] = "13,19,7,21";
-		
-		offlineTracklists[3,0] = "4,8,6,9";
-		offlineTracklists[3,1] = "18,11,6,8";
-		offlineTracklists[3,2] = "9,11,4,18";
-		offlineTracklists[3,3] = "6,8,18,9";
-		offlineTracklists[3,4] = "8,6,11,4";
-		
 		offlineTracklists[4,0] = "1,12,16,18,5";
 		offlineTracklists[4,1] = "2,8,7,15,17";
 		offlineTracklists[4,2] = "3,9,19,14,20";
@@ -394,13 +425,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8";
 		offlineTracklists[9,1] = "1,2,3,4,5,6,7,8";
 		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8";
-		
-		//Cookie Cutters
-		offlinePrizes[2,0] = "Rookies";
-		offlinePrizes[2,1] = "Rookies";
-		offlinePrizes[2,2] = "Rookies,Plate";
-		offlinePrizes[2,3] = "Rookies,Plate";
-		offlinePrizes[2,4] = "All";
 		
 		//Team
 		offlinePrizes[5,0] = "IND";

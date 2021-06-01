@@ -73,6 +73,7 @@ public class MainMenuGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("PrizeMoney",10000);
 		}
 		
+		PlayerPrefs.DeleteKey("FinishPos");
 		PlayerPrefs.SetInt("TutorialActive",0);
 		PlayerPrefs.SetInt("CautionHasBeen",0);
 		PlayerPrefs.SetInt("TotalRivals",0);

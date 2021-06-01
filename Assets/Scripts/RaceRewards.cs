@@ -13,6 +13,7 @@ public class RaceRewards : MonoBehaviour
 	int moneyCount;
 	int raceWinnings;
 	int gears;
+	int position;
 	
 	string seriesPrize;
 	
@@ -36,37 +37,16 @@ public class RaceRewards : MonoBehaviour
 		} else {
 			ListPrizeOptions("");
 		}
-		/*validDriver.Add(0);
-		validDriver.Add(1);
-		validDriver.Add(2);
-		validDriver.Add(3);
-		validDriver.Add(4);
-		validDriver.Add(6);
-		validDriver.Add(7);
-		validDriver.Add(8);
-		validDriver.Add(9);
-		validDriver.Add(10);
-		validDriver.Add(11);
-		validDriver.Add(12);
-		validDriver.Add(13);
-		validDriver.Add(14);
-		validDriver.Add(15);
-		validDriver.Add(16);
-		validDriver.Add(17);
-		validDriver.Add(18);
-		validDriver.Add(19);
-		validDriver.Add(20);
-		validDriver.Add(21);
-		validDriver.Add(22);
-		validDriver.Add(24);
-		validDriver.Add(41);
-		validDriver.Add(42);
-		validDriver.Add(43);
-		validDriver.Add(47);
-		validDriver.Add(48);
-		validDriver.Add(95);*/
-		int finishPos = Scoreboard.position;
-		AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)]);
+		int finishPos = PlayerPrefs.GetInt("FinishPos");
+		if(finishPos < 10){
+			float chance = 10 - finishPos;
+			float rnd = Random.Range(0,10);
+			if(rnd <= chance){
+				AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)]);
+			} else {
+				carReward = "";
+			}
+		}
 	}
 
 	void FixedUpdate(){
@@ -88,8 +68,10 @@ public class RaceRewards : MonoBehaviour
 
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 
-		GUI.Label(new Rect(widthblock * 3, heightblock * 6, widthblock * 14, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
-
+		if(carReward != ""){
+			GUI.Label(new Rect(widthblock * 3, heightblock * 6, widthblock * 14, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
+		}
+		
 		GUI.Label(new Rect(widthblock * 3, heightblock * 8, widthblock * 14, heightblock * 2), " +10 Gears (" + gears + ")");
 
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
@@ -124,7 +106,7 @@ public class RaceRewards : MonoBehaviour
 			case "Rookies":
 				validDriver.Add(0); //Houff
 				validDriver.Add(41); //Custer
-				//Nemechek
+				validDriver.Add(38); //Nemechek
 				validDriver.Add(95); //Bell
 				validDriver.Add(8); //Reddick
 				validDriver.Add(15); //Poole
@@ -139,6 +121,47 @@ public class RaceRewards : MonoBehaviour
 				validDriver.Add(9);
 				validDriver.Add(18);
 				validDriver.Add(48);
+			break;
+			case "Rarity1":
+				validDriver.Add(0);
+				validDriver.Add(7);
+				validDriver.Add(8);
+				validDriver.Add(13);
+				validDriver.Add(15);
+				validDriver.Add(16);
+				validDriver.Add(17);
+				validDriver.Add(20);
+				validDriver.Add(21);
+				validDriver.Add(27);
+				validDriver.Add(32);
+				validDriver.Add(34);
+				validDriver.Add(37);
+				validDriver.Add(38);
+				validDriver.Add(41);
+				validDriver.Add(47);
+				validDriver.Add(49);
+				validDriver.Add(51);
+				validDriver.Add(52);
+				validDriver.Add(53);
+				validDriver.Add(54);
+				validDriver.Add(62);
+				validDriver.Add(66);
+				validDriver.Add(77);
+				validDriver.Add(78);
+				validDriver.Add(95);
+				validDriver.Add(96);
+			break;
+			case "Rarity2":
+				validDriver.Add(1);
+				validDriver.Add(3);
+				validDriver.Add(6);
+				validDriver.Add(10);
+				validDriver.Add(12);
+				validDriver.Add(14);
+				validDriver.Add(24);
+				validDriver.Add(42);
+				validDriver.Add(43);
+				validDriver.Add(88);
 			break;
 			case "Rarity3":
 				validDriver.Add(2);

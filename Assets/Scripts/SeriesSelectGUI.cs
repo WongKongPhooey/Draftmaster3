@@ -151,11 +151,10 @@ public class SeriesSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetString("carTexture", carLivery);
 						PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
 						PlayerPrefs.SetString("CurrentSubseries", menuIndex + "" + subMenu);
-						Debug.Log("Chosen Series: " + menuIndex + "" + subMenu);
-
 						PlayerPrefs.SetString("CurrentSeries",SeriesData.offlineSeries[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
+						PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
 						PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
 						SceneManager.LoadScene("CarSelect");
 					} 
