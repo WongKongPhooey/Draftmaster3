@@ -436,7 +436,7 @@ public class AIMovement : MonoBehaviour
 					}
 				} else {
 					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight.collider.gameObject);
-					if(AISpeed <= (opponentSpeed - 0.2f)){
+					if(AISpeed <= (opponentSpeed)){
 						if(direction == "Left"){
 							direction = "Both";
 						} else {

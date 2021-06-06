@@ -51,7 +51,7 @@ public class SpawnField : MonoBehaviour {
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
 		fastCars.Remove(carNumber);
 		carNumbers.Remove(carNumber);
-		gridRows = 10;
+		gridRows = 16;
 		playerRow = 2;
 
 		string challengeName = PlayerPrefs.GetString("ChallengeType");
@@ -346,7 +346,13 @@ public class SpawnField : MonoBehaviour {
 		carNumbers.Add("15");
 		carNumbers.Add("16");
 		carNumbers.Add("17");
+		carNumbers.Add("27");
+		carNumbers.Add("32");
+		carNumbers.Add("37");
+		carNumbers.Add("38");
 		carNumbers.Add("41");
+		carNumbers.Add("49");
+		carNumbers.Add("51");
 		
 	}
 	
