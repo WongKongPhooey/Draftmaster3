@@ -332,19 +332,16 @@ public class AIMovement : MonoBehaviour
         }
 		
 		if(AICar.transform.position.x <= apronLineX){
-			//Debug.Log("Track Limits!");
-			if (backingOut == false) {
-				backingOut = true;
-				laneticker = -laneChangeDuration + laneticker;
-				lane--;
-            }
+			Debug.Log("Track Limits!");
+			backingOut = true;
+			laneticker = -laneChangeDuration + laneticker;
+			lane--;
 		}
 		
 		if(AICar.transform.position.x >= 1.275f){
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
-				Debug.Log("Was: " + laneticker);
 				laneticker = laneChangeDuration + laneticker;
 				//Debug.Log("Now: " + laneticker + " Dur:" + laneChangeDuration);
 				lane++;
@@ -578,6 +575,7 @@ public class AIMovement : MonoBehaviour
 			}
 			laneRest = Random.Range(100, 1000);
 			movingLane = true;
+			backingOut = false;
 			holdLane = 0;
 		}
 	}

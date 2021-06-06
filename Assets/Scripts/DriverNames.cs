@@ -52,7 +52,6 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[51] = "Gase";
 		cup2020Names[52] = "Mcleod";
 		cup2020Names[53] = "Davison";
-		cup2020Names[54] = "Yeley";
 		cup2020Names[62] = "Gaughan";
 		cup2020Names[66] = "Hill";
 		cup2020Names[77] = "Chastain";
@@ -127,8 +126,8 @@ public class DriverNames : MonoBehaviour {
 		cup2020Manufacturer[48] = "CHV";
 		cup2020Manufacturer[49] = "TYT";
 		cup2020Manufacturer[51] = "FRD";
-		cup2020Manufacturer[53] = "CHV";
-		cup2020Manufacturer[54] = "FRD";
+		cup2020Manufacturer[52] = "CHV";
+		cup2020Manufacturer[53] = "FRD";
 		cup2020Manufacturer[62] = "CHV";
 		cup2020Manufacturer[66] = "FRD";
 		cup2020Manufacturer[77] = "CHV";
@@ -189,7 +188,6 @@ public class DriverNames : MonoBehaviour {
 		cup2020Rarity[51] = 1;
 		cup2020Rarity[52] = 1;
 		cup2020Rarity[53] = 1;
-		cup2020Rarity[54] = 1;
 		cup2020Rarity[62] = 1;
 		cup2020Rarity[66] = 1;
 		cup2020Rarity[77] = 1;
