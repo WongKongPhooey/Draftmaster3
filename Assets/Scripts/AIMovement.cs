@@ -152,38 +152,34 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 				
-            if ((laneticker != 0) && (backingOut == false))
-            {
+            //if ((laneticker != 0) && (backingOut == false) && (movingLane == true)){
+			if ((laneticker != 0) && (movingLane == true)){
 				if (laneticker > 0){
-					backingOut = true;
+					//backingOut = true;
 					laneticker = -laneChangeDuration + laneticker;
 					lane--;
 				}
 				if (laneticker < 0){
-					backingOut = true;
+					//backingOut = true;
 					laneticker = laneChangeDuration + laneticker;
 					lane++;
 				}
             } else {
 				if(doored("Left",25) == true){
 					changeLane("Right");
-				}
-				if(doored("Right",25) == true){
-					changeLane("Left");
+				} else {
+					if(doored("Right",25) == true){
+						changeLane("Left");
+					} else {
+						RaycastHit glitchLeftF;
+						RaycastHit glitchLeftB;
+						bool overlapLeftF = Physics.Raycast(transform.position + new Vector3(0.49f,0,0), transform.forward + transform.right * -1, out glitchLeftF, 2);
+						bool overlapLeftB = Physics.Raycast(transform.position + new Vector3(-0.49f,0,0), transform.forward + transform.right * -1, out glitchLeftB, 2);
+					}
 				}
 			}
         }
         AISpeed -= 0.5f;
-    }
-	
-	void OnCollisionStay(Collision carHit) {
-		if(laneticker != 0){
-			antiGlitch++;
-		}
-    }
-	
-	void OnCollisionExit(Collision carHit) {
-		antiGlitch = 0;
     }
 	
 	void ReceivePush(float bumpSpeed){
@@ -226,11 +222,18 @@ public class AIMovement : MonoBehaviour
 			} else {
 				holdLane++;
 				distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
-				if(distFromPlayer<=10){
+				if((distFromPlayer <= 10)&&(distFromPlayer >= -10)){
 					speedLogic();
 				} else {
 					//Improve FPS by removing logic from far away opponents
-					dumbSpeed();
+					//If player is 10+ cars ahead
+					if(distFromPlayer > 10){
+						dumbSpeed("+");
+					}
+					//If player is 10+ cars behind
+					if(distFromPlayer < -10){
+						dumbSpeed("-");
+					}
 				}
 			}
 			draftLogic();
@@ -278,8 +281,8 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		// If being bump-drafted from behind
-		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
-			AISpeed += 0.004f;
+		if (HitBackward && DraftCheckBackward.distance <= 1.05f){
+			AISpeed += 0.006f;
 			tandemDraft = true;
 		} else {
 			tandemDraft = false;
@@ -301,8 +304,14 @@ public class AIMovement : MonoBehaviour
 		AICar.transform.Translate(0, 0, speed);
 	}
 	
-	void dumbSpeed(){
+	void dumbSpeed(string symbol){
+		
+		if(symbol == "+"){
 		AISpeed += 0.002f;
+		}
+		if(symbol == "-"){
+		AISpeed -= 0.002f;
+		}
 		
 		//Speed difference between the player and the AI
 		speed = AISpeed - Movement.playerSpeed;
@@ -349,6 +358,25 @@ public class AIMovement : MonoBehaviour
 				AISpeed -= 1f;
             }
 		}
+		
+		wobbleCount++;
+		
+		if(wobbleCount >= wobbleRand){
+			wobbleRand = Random.Range(5,25);
+			wobbleTarget = Random.Range(-100,100);
+			wobbleCount = 1;
+		}
+		
+		//General wobble while in lane
+		if(wobbleTarget > wobblePos){
+			AICar.transform.Translate(-0.0015f,0,0);
+			wobblePos++;
+		}
+		
+		if(wobbleTarget < wobblePos){
+			AICar.transform.Translate(0.0015f,0,0);
+			wobblePos--;
+		}
 	}
 
 	void draftLogic(){
@@ -379,7 +407,9 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 		} else {
-			findDraft();
+			if(holdLane >= laneRest){
+				findDraft();
+			}
 		}
 	}
 
@@ -512,8 +542,8 @@ public class AIMovement : MonoBehaviour
 	
 	public bool doored(string side, float chance){
 		
+		//Randomness
 		float randChance = Random.Range(0,100);
-		
 		if (randChance > chance){
 			return false;
 		}
@@ -556,7 +586,7 @@ public class AIMovement : MonoBehaviour
 	
 	public void changeLane(string direction){
 		
-		if(laneticker == 0){
+		if((laneticker == 0)&&(movingLane == false)){
 			//Debug.Log("Lane change!");
 			if(direction == "Left"){
 				laneticker = laneChangeDuration;
@@ -582,8 +612,8 @@ public class AIMovement : MonoBehaviour
 	
 	public void setLaneRest(){
 		if(lap >= 3){
-			laneRest = Random.Range(0, 1);
-			Debug.Log("Get Lairy");
+			laneRest = Random.Range(0, 50);
+			//Debug.Log("Get Lairy");
 		}
 	}
 	

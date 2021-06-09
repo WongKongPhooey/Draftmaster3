@@ -506,7 +506,6 @@ public class Movement : MonoBehaviour {
 			vehicle.transform.Translate(-0.001f,0,0);
 			wobblePos++;
 		}
-		
 		if(wobbleTarget < wobblePos){
 			vehicle.transform.Translate(0.001f,0,0);
 			wobblePos--;

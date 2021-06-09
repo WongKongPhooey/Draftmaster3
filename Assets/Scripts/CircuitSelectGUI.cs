@@ -33,6 +33,7 @@ using UnityEngine.SceneManagement;
 26 North Wilkesboro, NC
 27 Nazareth, PN
 28 Iowa, IA
+29 Nashville, TN
 ----------------------*/
 
 public class CircuitSelectGUI : MonoBehaviour {
@@ -53,12 +54,12 @@ public class CircuitSelectGUI : MonoBehaviour {
 	int bestFinishPos;
 
 	public static int gameDifficulty;
-
 	public static int speedFactor;
-
 	public static string circuitChoice;
-	
 	public static int seriesFuel;
+	
+	int maxDailyPlays;
+	int dailyPlays;
 	
 	public Vector2 scrollPosition = Vector2.zero;
 	
@@ -66,6 +67,16 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		currentSeries = PlayerPrefs.GetString("CurrentSeries");
 		currentSubseries = PlayerPrefs.GetString("CurrentSubseries");
+		
+		maxDailyPlays = PlayerPrefs.GetInt("SubseriesDailyPlays");
+		
+		if(PlayerPrefs.HasKey("DailyPlays" + currentSubseries + "")){
+			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSubseries + "");
+			Debug.Log("DailyPlays" + currentSubseries + " = " + dailyPlays);
+		} else {
+			PlayerPrefs.SetInt("DailyPlays" + currentSubseries + "", maxDailyPlays);
+			dailyPlays = maxDailyPlays;
+		}
 		
 		seriesTrackList = PlayerPrefs.GetString("SeriesTrackList");
 		
@@ -289,7 +300,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		scrollPosition = GUI.BeginScrollView(new Rect(0, 0, widthblock * 9, Screen.height), scrollPosition, new Rect(0, 0, widthblock, Screen.height * 3.5f));
 
-		GUI.Label(new Rect(widthblock / 2, heightblock, widthblock * 7, heightblock * 2), currentSeries);
+		GUI.Label(new Rect(widthblock / 2, heightblock / 2, widthblock * 7, heightblock * 2), currentSeries);
+		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
 		int trackCount = 0;
 		foreach (string track in seriesTracks){
@@ -319,7 +332,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 			if(GameData.gameFuel >= seriesFuel){
 				GameData.gameFuel-=seriesFuel;
 				PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
-				Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
+				//Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
+				dailyPlays--;
+				PlayerPrefs.SetInt("DailyPlays" + currentSubseries + "", dailyPlays);
 				SceneManager.LoadScene(circuitChoice);
 			} else {
 				SceneManager.LoadScene("Store");

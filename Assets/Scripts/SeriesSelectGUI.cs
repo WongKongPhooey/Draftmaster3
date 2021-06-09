@@ -152,6 +152,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
 						PlayerPrefs.SetString("CurrentSubseries", menuIndex + "" + subMenu);
 						PlayerPrefs.SetString("CurrentSeries",SeriesData.offlineSeries[menuIndex,subMenu]);
+						PlayerPrefs.SetInt("SubseriesDailyPlays",SeriesData.offlineDailyPlays[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
 						PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
