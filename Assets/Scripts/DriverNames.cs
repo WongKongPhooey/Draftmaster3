@@ -3,14 +3,16 @@ using System.Collections;
 
 public class DriverNames : MonoBehaviour {
 
-	public static string[] cup2020Names = new string[100];
-	public static string[] cup2020Teams = new string[100];
-	public static string[] cup2020Manufacturer = new string[100];
-	public static int[] cup2020Rarity = new int[100];
-	public static string[] cup2020Types = new string[100];
+	public static string[] cup2020Names = new string[101];
+	public static string[] cup2020Teams = new string[101];
+	public static string[] cup2020Manufacturer = new string[101];
+	public static int[] cup2020Rarity = new int[101];
+	public static string[] cup2020Types = new string[101];
 	
 	public static string[] legendsNames = new string[10];
 	public static string[] legendsLiveries = new string[10];
+	
+	public static string[] cup2020AltNames = new string[20];
 
 	// Use this for initialization
 	void Start () {
@@ -59,6 +61,17 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[88] = "Bowman";
 		cup2020Names[95] = "Bell";
 		cup2020Names[96] = "Suarez";
+		
+		cup2020AltNames[0] = "Larson";
+		cup2020AltNames[1] = "Barrett";
+		cup2020AltNames[2] = "Gaulding";
+		cup2020AltNames[3] = "Bilicki";
+		cup2020AltNames[4] = "Ragan";
+		cup2020AltNames[5] = "Grala";
+		cup2020AltNames[6] = "Ware";
+		cup2020AltNames[7] = "Starr";
+		cup2020AltNames[8] = "Allgaier";
+		cup2020AltNames[9] = "Currey";
 		
 		cup2020Teams[0] = "IND";
 		cup2020Teams[1] = "CGR";
