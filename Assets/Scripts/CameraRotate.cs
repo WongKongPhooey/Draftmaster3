@@ -38,6 +38,10 @@ public class CameraRotate : MonoBehaviour {
 	public static float averageSpeedTotal;
 	public static int averageSpeedCount;
 	public static float lapRecord;
+	public static int lapRecordInt;
+	public static int currentLapRecord;
+	int speedOffset;
+	string circuit;
 	float kerbBlur;
 	
 	void Awake(){
@@ -97,9 +101,18 @@ public class CameraRotate : MonoBehaviour {
 		straight = 1;
 		turn = 1;
 		lap = 0;
+		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		lapRecord = 0;
+		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+			lapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
+			lapRecord = lapRecord / 1000;
+		} else {
+			PlayerPrefs.SetInt("FastestLap" + circuit, 0);
+		}
 		cornercounter = 0;
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
+
+		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
 
 		if((ChallengeSelectGUI.challengeMode == true)||(PlayerPrefs.GetInt("ActiveCaution") == 1)){
 			lap = PlayerPrefs.GetInt("StartingLap");
@@ -235,6 +248,17 @@ public class CameraRotate : MonoBehaviour {
 			crowdNoise.volume = 0;
 			RaceHUD.raceOver = true;
 			Scoreboard.checkFinishPositions();
+			if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+				currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
+				//if(lapRecord > currentLapRecord){
+					lapRecord -= speedOffset;
+					Debug.Log(lapRecord);
+					lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
+					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
+					Debug.Log(lapRecordInt);
+					PlayFabManager.SendLeaderboard(lapRecordInt, circuit);
+				//}
+			}
 			if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer")){
 				if((Movement.draftPercent) > PlayerPrefs.GetInt("TeamPlayerRecord")){
 					PlayerPrefs.SetInt("TeamPlayerRecord",int.Parse(Mathf.Round(Movement.draftPercent).ToString()));

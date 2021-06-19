@@ -296,16 +296,6 @@ public class RaceHUD : MonoBehaviour {
 			}
 		}
 		
-		//-----------HUD-----------
-
-		/*GUI.skin.label.alignment = TextAnchor.UpperLeft;
-		GUI.skin.label.normal.textColor = Color.black;
-		GUI.Label(new Rect(widthblock + 20 + (8 / (FontScale.fontScale * 2)), 10 + (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 3), "Lap:" + CameraRotate.lap + "/" + PlayerPrefs.GetInt("RaceLaps"));
-		GUI.Label(new Rect(widthblock + 20 + (8 / (FontScale.fontScale * 2)), 10 - (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 3), "Lap:" + CameraRotate.lap + "/" + PlayerPrefs.GetInt("RaceLaps"));
-		GUI.Label(new Rect(widthblock + 20 - (8 / (FontScale.fontScale * 2)), 10 + (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 3), "Lap:" + CameraRotate.lap + "/" + PlayerPrefs.GetInt("RaceLaps"));
-		GUI.Label(new Rect(widthblock + 20 - (8 / (FontScale.fontScale * 2)), 10 - (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 3), "Lap:" + CameraRotate.lap + "/" + PlayerPrefs.GetInt("RaceLaps"));
-		GUI.skin.label.normal.textColor = Color.cyan;
-		GUI.Label(new Rect(widthblock + 20, 10, widthblock * 7, heightblock * 3), "Lap:" + CameraRotate.lap + "/" + PlayerPrefs.GetInt("RaceLaps"));*/
 
 		if(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer"){
 			GUI.skin.label.fontSize = 56 / FontScale.fontScale;
@@ -487,14 +477,6 @@ public class RaceHUD : MonoBehaviour {
 		}
 
 		GUI.skin.label.alignment = TextAnchor.UpperRight;
-		//GUI.skin.label.normal.textColor = Color.black;
-		//GUI.Label(new Rect(Screen.width - (widthblock * 7) - 10 + (8 / (FontScale.fontScale * 2)), (heightblock * 2) + (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Spd:" + (Movement.playerSpeed - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
-		//GUI.Label(new Rect(Screen.width - (widthblock * 7) - 10 + (8 / (FontScale.fontScale * 2)), (heightblock * 2) - (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Spd:" + (Movement.playerSpeed - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
-		//GUI.Label(new Rect(Screen.width - (widthblock * 7) - 10 - (8 / (FontScale.fontScale * 2)), (heightblock * 2) + (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Spd:" + (Movement.playerSpeed - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
-		//GUI.Label(new Rect(Screen.width - (widthblock * 7) - 10 - (8 / (FontScale.fontScale * 2)), (heightblock * 2) - (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Spd:" + (Movement.playerSpeed - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
-		//GUI.skin.label.normal.textColor = Color.cyan;
-		//GUI.Label(new Rect(Screen.width - (widthblock * 7) - 10, (heightblock * 2), widthblock * 7, heightblock * 3), "Spd:" + (Movement.playerSpeed - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
-
 		GUI.skin.label.fontSize = 56 / FontScale.fontScale;
 	}
 	

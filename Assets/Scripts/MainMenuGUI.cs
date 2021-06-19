@@ -102,7 +102,6 @@ public class MainMenuGUI : MonoBehaviour {
 		} else {
 			crowdNoise.volume = 0.0f;
 		}
-		
 	}
 
 	void Update() {

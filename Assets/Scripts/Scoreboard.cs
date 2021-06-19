@@ -31,6 +31,8 @@ public class Scoreboard : MonoBehaviour {
 	public static float leaderDist;
 	public static float twoPlayerDist;
 
+	public int speedOffset;
+
 	public static GameObject[] carsArray = new GameObject[45];
 	public static float[] carPositions = new float[45];
 	public static string[] carNames = new string[45];
@@ -63,6 +65,8 @@ public class Scoreboard : MonoBehaviour {
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
 		fieldSize = carsArray.Length;
 		playerCarNum = PlayerPrefs.GetInt("CarChoice");
+		
+		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
 		
 		if(carsArray.Length > 0){
 			foreach (GameObject car in carsArray) {
@@ -249,9 +253,9 @@ public class Scoreboard : MonoBehaviour {
 		
 		//Lap timer
 		GUI.Box(new Rect(Screen.width - (widthblock * 4),heightblock * 3,widthblock * 3.5f, heightblock * 3.5f), "");
-		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
-		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
-		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - PlayerPrefs.GetInt("SpeedOffset")).ToString("F2") + "MpH");
+		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset).ToString("F2") + "MpH");
+		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
+		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
 		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 	}
 }

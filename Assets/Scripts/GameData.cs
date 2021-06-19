@@ -32,7 +32,7 @@ public class GameData : MonoBehaviour {
 		if(PlayerPrefs.HasKey("GameDay")){
 			//Get the last known cycle day
 			day = PlayerPrefs.GetInt("GameDay");
-			Debug.Log("Last known day: " + day);
+			//Debug.Log("Last known day: " + day);
 		} else {
 			//First login
 			day = 1;
@@ -41,7 +41,7 @@ public class GameData : MonoBehaviour {
 		if(PlayerPrefs.HasKey("GameWeek")){
 			//Get the last known cycle day
 			week = PlayerPrefs.GetInt("GameWeek");
-			Debug.Log("Last known week: " + week);
+			//Debug.Log("Last known week: " + week);
 		} else {
 			//First login
 			week = 1;
@@ -93,7 +93,7 @@ public class GameData : MonoBehaviour {
 		fuelToAdd+=spareFuel;
 		
 		daysToAdd = timeSinceLast / dayInterval;
-		Debug.Log("Days to add: " + daysToAdd);
+		//Debug.Log("Days to add: " + daysToAdd);
 		
 		//Debug.Log("Fuel To Add: " + fuelToAdd);
 		
