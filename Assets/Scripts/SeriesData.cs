@@ -88,8 +88,8 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[0,0] = 4;
 		offlineFuel[0,1] = 4;
 		offlineFuel[0,2] = 4;
-		offlineFuel[0,3] = 4;
-		offlineFuel[0,4] = 4;
+		offlineFuel[0,3] = 5;
+		offlineFuel[0,4] = 5;
 		
 		offlinePrizes[0,0] = "Rookies";
 		offlinePrizes[0,1] = "Rookies";
@@ -147,11 +147,11 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[1,3] = "15,5,10,15";
 		offlineTracklists[1,4] = "10,1,15,5";
 		
-		offlineFuel[0,0] = 5;
-		offlineFuel[0,1] = 6;
-		offlineFuel[0,2] = 7;
-		offlineFuel[0,3] = 8;
-		offlineFuel[0,4] = 9;
+		offlineFuel[1,0] = 5;
+		offlineFuel[1,1] = 6;
+		offlineFuel[1,2] = 7;
+		offlineFuel[1,3] = 8;
+		offlineFuel[1,4] = 9;
 		
 		offlinePrizes[1,0] = "Rookies,Plate";
 		offlinePrizes[1,1] = "Rookies,Plate";
@@ -203,11 +203,11 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[2,3] = "3,16,12,2";
 		offlineTracklists[2,4] = "13,19,7,21";
 		
-		offlineFuel[0,0] = 5;
-		offlineFuel[0,1] = 6;
-		offlineFuel[0,2] = 7;
-		offlineFuel[0,3] = 8;
-		offlineFuel[0,4] = 9;
+		offlineFuel[2,0] = 5;
+		offlineFuel[2,1] = 6;
+		offlineFuel[2,2] = 7;
+		offlineFuel[2,3] = 8;
+		offlineFuel[2,4] = 9;
 		
 		offlinePrizes[2,0] = "Rookies";
 		offlinePrizes[2,1] = "Rookies";
@@ -257,6 +257,12 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[3,2] = "9,11,4,18";
 		offlineTracklists[3,3] = "6,8,18,9";
 		offlineTracklists[3,4] = "8,6,11,4";
+		
+		offlineFuel[3,0] = 5;
+		offlineFuel[3,1] = 6;
+		offlineFuel[3,2] = 7;
+		offlineFuel[3,3] = 8;
+		offlineFuel[3,4] = 9;
 		
 		//Class
 		offlineSeries[4,0] = "A Fan Favourite";

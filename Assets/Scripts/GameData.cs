@@ -6,6 +6,7 @@ using UnityEngine;
 public class GameData : MonoBehaviour {
 	
 	public static int gameFuel;
+	public static int maxFuel;
 	public static int gears;
 	public static int level;
 	
@@ -47,6 +48,15 @@ public class GameData : MonoBehaviour {
 			week = 1;
 		}
 		
+		if(PlayerPrefs.HasKey("Level")){
+			//Get the last known fuel value
+			level = PlayerPrefs.GetInt("Level");
+		} else {
+			//First login
+			PlayerPrefs.SetInt("Level",1);
+			level = 1;
+		}
+		
 		if(PlayerPrefs.HasKey("GameFuel")){
 			//Get the last known fuel value
 			gameFuel = PlayerPrefs.GetInt("GameFuel");
@@ -55,21 +65,22 @@ public class GameData : MonoBehaviour {
 			gameFuel = 20;
 		}
 		
+		if(PlayerPrefs.HasKey("MaxFuel")){
+			//Get the maximum fuel
+			maxFuel = 20 + (level * 2);
+			PlayerPrefs.SetInt("MaxFuel", maxFuel);
+		} else {
+			//First login
+			maxFuel = 20;
+			PlayerPrefs.SetInt("MaxFuel", 20);
+		}
+		
 		if(PlayerPrefs.HasKey("Gears")){
 			//Get the last known fuel value
 			gears = PlayerPrefs.GetInt("Gears");
 		} else {
 			//First login
 			gears = 0;
-		}
-		
-		if(PlayerPrefs.HasKey("Level")){
-			//Get the last known fuel value
-			level = PlayerPrefs.GetInt("Level");
-		} else {
-			//First login
-			PlayerPrefs.SetInt("Level",1);
-			level = 1;
 		}
 		
 		//last saved timestamp
@@ -136,7 +147,7 @@ public class GameData : MonoBehaviour {
 		//If theres fuel to add from the last login
 		while(fuelToAdd > 1){
 			//If fuel isn't full
-			if(gameFuel < 20){
+			if(gameFuel < maxFuel){
 				//Add it
 				gameFuel++;
 				fuelToAdd--;

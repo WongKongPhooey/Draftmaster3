@@ -156,6 +156,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
 						PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
+						Debug.Log("Fuel cost: " + SeriesData.offlineFuel[menuIndex,subMenu]);
 						PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
 						SceneManager.LoadScene("CarSelect");
 					} 

@@ -52,7 +52,7 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Remove(carNumber);
 		carNumbers.Remove(carNumber);
 		gridRows = 16;
-		playerRow = 2;
+		playerRow = 8;
 
 		string challengeName = PlayerPrefs.GetString("ChallengeType");
 

@@ -92,7 +92,7 @@ public class CommonGUI : MonoBehaviour {
 		GUI.DrawTexture(new Rect((widthblock * 14f) + 10, 27, (heightblock * 1.5f) - 20, (heightblock * 1.5f) - 20), gearTexInst);
 		
 		//Fuel
-		if (GUI.Button(new Rect(widthblock * 17f, 20, widthblock * 2.5f, heightblock * 1.5f), GameData.gameFuel + "/20")){
+		if (GUI.Button(new Rect(widthblock * 17f, 20, widthblock * 2.5f, heightblock * 1.5f), GameData.gameFuel + "/" + GameData.maxFuel)){
 		}
 		GUI.DrawTexture(new Rect((widthblock * 17f) + 10, 27, (heightblock * 1.5f) - 20, (heightblock * 1.5f) - 20), gasCanTexInst);
 		
