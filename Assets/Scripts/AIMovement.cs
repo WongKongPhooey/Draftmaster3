@@ -23,11 +23,14 @@ public class AIMovement : MonoBehaviour
 	int holdLane;
 	int laneRest;
 	bool movingLane;
+	bool forcedMove;
     bool backingOut;
     bool laneSettled;
     int laneSettling;
 	int laneStagnant;
 	int stagnantMax;
+	
+	float bumpChanceFactor;
 	
 	int antiGlitch;
 	
@@ -115,7 +118,7 @@ public class AIMovement : MonoBehaviour
 		apronLineX = -2.7f;
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 		
-		Debug.Log("Apron Line: " + apronLineX);
+		Debug.Log("Apron Line: " + apronLineX + "(" + circuitLanes + " lanes)");
 
         speedRand = Random.Range(-150, 150);
         speedRand = speedRand / 100;
@@ -131,7 +134,15 @@ public class AIMovement : MonoBehaviour
             laneChangeSpeed = 0.015f;
             laneChangeBackout = 32;
         }
+		
+		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
+			bumpChanceFactor = 10 + (2.5f * PlayerPrefs.GetInt(seriesPrefix + carNum + "Class"));
+			//Debug.Log("Extra bump chance of " + bumpChanceFactor + " - #" + carNum);
+		} else {
+			bumpChanceFactor = 10;
+		}
 
+		forcedMove = false;
         movingLane = false;
         backingOut = false;
 
@@ -145,6 +156,14 @@ public class AIMovement : MonoBehaviour
 
     void OnCollisionEnter(Collision carHit) {
 		
+		if(forcedMove == true){
+			return;
+		}
+		
+		if(antiGlitch > 0){
+			antiGlitch = 0;
+		}
+		
         if ((carHit.gameObject.tag == "AICar") || 
 		    (carHit.gameObject.tag == "Player") || 
 			(carHit.gameObject.tag == "Barrier") || 
@@ -153,7 +172,7 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "FixedKerb")) {
 				
             //if ((laneticker != 0) && (backingOut == false) && (movingLane == true)){
-			if ((laneticker != 0) && (movingLane == true)){
+			if ((laneticker != 0) && (movingLane == true) && (forcedMove == false)){
 				if (laneticker > 0){
 					//backingOut = true;
 					laneticker = -laneChangeDuration + laneticker;
@@ -182,12 +201,69 @@ public class AIMovement : MonoBehaviour
         AISpeed -= 0.5f;
     }
 	
+	void OnCollisionStay(Collision carHit) {
+		antiGlitch++;
+		
+		if(forcedMove == true){
+			return;
+		}
+		
+		//Fallback forced backout
+		if (((carHit.gameObject.tag == "AICar") || 
+			(carHit.gameObject.tag == "Player")) && 
+			(antiGlitch > 2)){
+				
+			//Debug.Log("ANTI GLITCH - " + carHit.gameObject.name + ": " + antiGlitch);
+				
+			if (laneticker != 0){
+				if (laneticker > 0){
+					backingOut = true;
+					laneticker = -laneChangeDuration + laneticker;
+					lane--;
+				}
+				if (laneticker < 0){
+					backingOut = true;
+					laneticker = laneChangeDuration + laneticker;
+					lane++;
+				}
+			} else {
+				if(doored("Left",25) == true){
+					changeLane("Right");
+				} else {
+					if(doored("Right",25) == true){
+						changeLane("Left");
+					} else {
+						RaycastHit glitchLeftF;
+						RaycastHit glitchLeftB;
+						bool overlapLeftF = Physics.Raycast(transform.position + new Vector3(0.49f,0,0), transform.forward + transform.right * -1, out glitchLeftF, 2);
+						bool overlapLeftB = Physics.Raycast(transform.position + new Vector3(-0.49f,0,0), transform.forward + transform.right * -1, out glitchLeftB, 2);
+					}
+				}
+			}	
+		}
+	}
+	
+	void OnCollisionExit(Collision carHit) {
+		antiGlitch = 0;
+		Debug.Log("Left Collision with" + carHit.gameObject.name);
+	}
+	
 	void ReceivePush(float bumpSpeed){
 		
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
+			int bumpChance = (int)Mathf.Round(midSpeed * bumpChanceFactor);
+			if(bumpChance > 100){
+				bumpChance = 100;
+			}
 			AISpeed += midSpeed/4;
 			tandemDraft = true;
+			
+			//Hard bump -> Push to pass
+			float randChance = Random.Range(0,100);
+			if (randChance > bumpChance){
+				changeLane("Right");
+			}
 			//Debug.Log("Impact levels out " + AICar.name);
 		}
 		//Send it back
@@ -337,26 +413,27 @@ public class AIMovement : MonoBehaviour
         if (laneticker == 0)
         {
             movingLane = false;
+			forcedMove = false;
             backingOut = false;
         }
 		
 		if(AICar.transform.position.x <= apronLineX){
 			Debug.Log("Track Limits!");
 			backingOut = true;
+			forcedMove = true;
 			laneticker = -laneChangeDuration + laneticker;
 			lane--;
 		}
 		
 		if(AICar.transform.position.x >= 1.275f){
 			//Debug.Log("Wall!");
-			if (backingOut == false) {
-				backingOut = true;
-				laneticker = laneChangeDuration + laneticker;
-				//Debug.Log("Now: " + laneticker + " Dur:" + laneChangeDuration);
-				lane++;
-				//Wall hit decel
-				AISpeed -= 1f;
-            }
+			forcedMove = true;
+			backingOut = true;
+			laneticker = laneChangeDuration + laneticker;
+			//Debug.Log("Now: " + laneticker + " Dur:" + laneChangeDuration);
+			lane++;
+			//Wall hit decel
+			AISpeed -= 1f;
 		}
 		
 		wobbleCount++;
@@ -541,6 +618,9 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public bool doored(string side, float chance){
+		
+		//DISABLE DOORED
+		return false;
 		
 		//Randomness
 		float randChance = Random.Range(0,100);

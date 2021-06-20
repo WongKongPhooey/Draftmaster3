@@ -93,8 +93,11 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetString("CurrentTrack","0");
 		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Talladega") as Texture;
 
-		seriesFuel = 999;
+		seriesFuel = 10;
 		seriesFuel = PlayerPrefs.GetInt("SeriesFuel");
+		if (seriesFuel == 0){
+			seriesFuel = 10;
+		}
 
 		PlayerPrefs.SetInt("TurnDir1",0);
 		PlayerPrefs.SetInt("TurnDir2",0);
@@ -331,6 +334,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			PlayerPrefs.SetString("CurrentCircuit",circuitChoice);
 			if(GameData.gameFuel >= seriesFuel){
 				GameData.gameFuel-=seriesFuel;
+				Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
 				PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 				//Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
 				dailyPlays--;
