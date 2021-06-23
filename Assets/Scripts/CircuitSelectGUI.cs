@@ -334,7 +334,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			PlayerPrefs.SetString("CurrentCircuit",circuitChoice);
 			if(GameData.gameFuel >= seriesFuel){
 				GameData.gameFuel-=seriesFuel;
-				Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
+				//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
 				PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 				//Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
 				dailyPlays--;

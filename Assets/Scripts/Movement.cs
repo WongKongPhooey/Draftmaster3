@@ -31,6 +31,9 @@ public class Movement : MonoBehaviour {
 	float customDistFactor;
 	float customStrengthFactor;
 
+	int circuitLanes;
+	float apronLineX;
+
 	string seriesPrefix;
 	int customNum;
 
@@ -137,6 +140,12 @@ public class Movement : MonoBehaviour {
 			//numRend.enabled = false;
 			//Debug.Log("No custom number saved");
 		}
+
+				
+		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
+		
+		apronLineX = -2.7f;
+		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 
 		draftBuddy = "";
 		buddiedTime = 0;
@@ -472,7 +481,7 @@ public class Movement : MonoBehaviour {
 			carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20);
 		}
 		
-		//Brakes
+		/*//Brakes
 		if (Input.GetKeyDown("down")){
 			playerSpeed-=1;
 		}
@@ -491,7 +500,7 @@ public class Movement : MonoBehaviour {
 				//lane--;
 				laneticker = -1;
 			}
-		}
+		}*/
 
 		wobbleCount++;
 		
@@ -511,25 +520,12 @@ public class Movement : MonoBehaviour {
 			wobblePos--;
 		}
 
-		//How fast can you switch lanes
-		if(laneticker > 0){
-			vehicle.transform.Translate(-laneChangeSpeed,0,0);
-			laneticker--;
-		}
-		
-		if(laneticker < 0){
-			vehicle.transform.Translate(laneChangeSpeed,0,0);
-			laneticker++;
-		}
+		updateMovement();
 		
 		if(((laneticker == 2)||(laneticker == -2))&&(RaceHUD.tutorialBackingOut == false)){
 			if(RaceHUD.tutorialStage == 1){
 				RaceHUD.tutorialSteeringCount++;
 			}
-		}
-		
-		if(laneticker == 0){
-			backingOut = false;
 		}
 		
 		if(CameraRotate.lap == 0){
@@ -560,6 +556,48 @@ public class Movement : MonoBehaviour {
 			//liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum) as Texture;
 			numRend.enabled = false;
 			//Debug.Log("No custom number saved");
+		}
+	}
+	
+	void updateMovement() {
+		
+		//How fast can you switch lanes
+        if (laneticker > 0)
+        {
+            vehicle.transform.Translate(-laneChangeSpeed, 0, 0);
+            laneticker--;
+        }
+
+        if (laneticker < 0)
+        {
+            vehicle.transform.Translate(laneChangeSpeed, 0, 0);
+            laneticker++;
+        }
+
+        if (laneticker == 0)
+        {
+			//movingLane = false;
+            backingOut = false;
+        }
+		
+		if(vehicle.transform.position.x <= apronLineX){
+			//Debug.Log("Track Limits!");
+			if (backingOut == false) {
+				backingOut = true;
+			}
+			laneticker = -laneChangeDuration + laneticker;
+			lane--;
+		}
+		
+		if(vehicle.transform.position.x >= 1.35f){
+			//Debug.Log("Wall!");
+			if (backingOut == false) {
+				backingOut = true;
+			}
+			laneticker = laneChangeDuration + laneticker;
+			lane++;
+			//Wall hit decel
+			playerSpeed -= 1f;
 		}
 	}
 }

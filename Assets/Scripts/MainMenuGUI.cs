@@ -44,7 +44,7 @@ public class MainMenuGUI : MonoBehaviour {
 
 		exp = PlayerPrefs.GetInt("Exp");
 		level = PlayerPrefs.GetInt("Level");
-		Debug.Log("Level " + level);
+		//Debug.Log("Level " + level);
 		levelExp = GameData.levelExp(level);
 		
 		if(exp > levelExp){

@@ -7,10 +7,10 @@ public class MainMenuCars : MonoBehaviour {
 
 	// Update is called once per frame
 	void FixedUpdate () {
-		EnviroObject.transform.Translate(0,0,0.2f);
+		EnviroObject.transform.Translate(0.1f,0,0);
 		
-		if (EnviroObject.transform.position.z > 100){
-			EnviroObject.transform.Translate(0,0,-200);
+		if (EnviroObject.transform.position.z > 50){
+			EnviroObject.transform.Translate(-100,0,0);
 		}
 	}
 }

@@ -115,7 +115,7 @@ public class AIMovement : MonoBehaviour
 		apronLineX = -2.7f;
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 		
-		//Debug.Log("Apron Line: " + apronLineX);
+		Debug.Log("Apron Line: " + apronLineX);
 
         speedRand = Random.Range(-150, 150);
         speedRand = speedRand / 100;
@@ -335,20 +335,22 @@ public class AIMovement : MonoBehaviour
 			//Debug.Log("Track Limits!");
 			if (backingOut == false) {
 				backingOut = true;
-			}
-			laneticker = -laneChangeDuration + laneticker;
-			lane--;
+				laneticker = -laneChangeDuration + laneticker;
+				lane--;
+            }
 		}
 		
-		if(AICar.transform.position.x >= 1.35f){
+		if(AICar.transform.position.x >= 1.275f){
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
-			}
-			laneticker = laneChangeDuration + laneticker;
-			lane++;
-			//Wall hit decel
-			AISpeed -= 1f;
+				Debug.Log("Was: " + laneticker);
+				laneticker = laneChangeDuration + laneticker;
+				//Debug.Log("Now: " + laneticker + " Dur:" + laneChangeDuration);
+				lane++;
+				//Wall hit decel
+				AISpeed -= 1f;
+            }
 		}
 	}
 

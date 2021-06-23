@@ -104,9 +104,6 @@ public class GameData : MonoBehaviour {
 		fuelToAdd+=spareFuel;
 		
 		daysToAdd = timeSinceLast / dayInterval;
-		//Debug.Log("Days to add: " + daysToAdd);
-		
-		//Debug.Log("Fuel To Add: " + fuelToAdd);
 		
 		//20M represents a large timestamp from the default Jan 01 1970
 		if(fuelToAdd > 200000000){
@@ -120,6 +117,9 @@ public class GameData : MonoBehaviour {
 		
 		//Day of the week cycle
 		if(daysToAdd > 1){
+			resetDailies();
+		} else {
+			//For testing only
 			resetDailies();
 		}
 		while(daysToAdd > 1){
@@ -170,6 +170,16 @@ public class GameData : MonoBehaviour {
 	void resetDailies(){
 		PlayerPrefs.SetInt("DailyGarage",0);
 		PlayerPrefs.SetInt("DailySelects",0);
+		
+		for(int i=0;i<10;i++){
+			for(int j=0;j<10;j++){
+				if(PlayerPrefs.HasKey("DailyPlays" + i + j + "")){
+					int maxPlays = SeriesData.offlineDailyPlays[i,j];
+					PlayerPrefs.SetInt("DailyPlays" + i + j + "", maxPlays);
+					Debug.Log(i + "," + j + " max plays: " + maxPlays);
+				}
+			}
+		}
 	}
 	
 	public static int classMax(int carClass){
