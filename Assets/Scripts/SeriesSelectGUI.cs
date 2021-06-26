@@ -144,22 +144,30 @@ public class SeriesSelectGUI : MonoBehaviour {
 				}
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6f), widthblock * 5.5f, heightblock * 6), minRequirement + SeriesData.offlineDescriptions[menuIndex, subMenu] + "");
 				
-				
 				//Choose Subseries
 				if(meetsRequirements == true){
-					if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
-						PlayerPrefs.SetString("carTexture", carLivery);
-						PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
-						PlayerPrefs.SetString("CurrentSubseries", menuIndex + "" + subMenu);
-						PlayerPrefs.SetString("CurrentSeries",SeriesData.offlineSeries[menuIndex,subMenu]);
-						PlayerPrefs.SetInt("SubseriesDailyPlays",SeriesData.offlineDailyPlays[menuIndex,subMenu]);
-						PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
-						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
-						PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
-						Debug.Log("Fuel cost: " + SeriesData.offlineFuel[menuIndex,subMenu]);
-						PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
-						SceneManager.LoadScene("CarSelect");
-					} 
+					if(PlayerPrefs.GetInt("DailyPlays" + menuIndex + subMenu + "") > 0){
+						if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
+							PlayerPrefs.SetString("carTexture", carLivery);
+							PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
+							PlayerPrefs.SetString("CurrentSubseries", menuIndex + "" + subMenu);
+							PlayerPrefs.SetString("CurrentSeries",SeriesData.offlineSeries[menuIndex,subMenu]);
+							PlayerPrefs.SetInt("SubseriesDailyPlays",SeriesData.offlineDailyPlays[menuIndex,subMenu]);
+							PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
+							PlayerPrefs.SetString("RestrictionValue",restrictionValue);
+							PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
+							Debug.Log("Fuel cost: " + SeriesData.offlineFuel[menuIndex,subMenu]);
+							PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
+							SceneManager.LoadScene("CarSelect");
+						} 
+					} else {
+						//Grey out the event
+						GUI.skin = tileSkin;
+						GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
+						if(GUI.Button(new Rect(cardX + widthblock, cardY + (heightblock * 8), widthblock * 4, heightblock * 2), "Reset Plays")){
+							
+						}
+					}
 				} else {
 					//Grey out the event
 					GUI.skin = tileSkin;

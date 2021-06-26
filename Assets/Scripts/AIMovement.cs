@@ -152,19 +152,24 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 				
-            if ((laneticker != 0) && (backingOut == false))
-            {
-				if (laneticker > 0){
-					backingOut = true;
-					laneticker = -laneChangeDuration + laneticker;
-					lane--;
+			bool leftSideHit = checkRaycast("LeftCorners", 0.52f);
+			bool rightSideHit = checkRaycast("RightCorners", 0.52f);
+			
+			//if ((laneticker != 0) && (backingOut == false)){
+			if (laneticker != 0){
+				if ((leftSideHit == true) || (rightSideHit == true)){
+					if (laneticker > 0){
+						backingOut = true;
+						laneticker = -laneChangeDuration + laneticker;
+						lane--;
+					}
+					if (laneticker < 0){
+						backingOut = true;
+						laneticker = laneChangeDuration + laneticker;
+						lane++;
+					}
 				}
-				if (laneticker < 0){
-					backingOut = true;
-					laneticker = laneChangeDuration + laneticker;
-					lane++;
-				}
-            } else {
+			} else {
 				if(doored("Left",25) == true){
 					changeLane("Right");
 				}
@@ -606,7 +611,7 @@ public class AIMovement : MonoBehaviour
 	bool checkRaycast(string rayDirection, float rayLength){
 		bool rayHit;
 		RaycastHit DraftCheck;
-		if(rayLength != null){
+		if(rayLength == null){
 			rayLength = 100;
 		}
 		switch(rayDirection){
@@ -622,13 +627,25 @@ public class AIMovement : MonoBehaviour
 			case "Right":
 				rayHit = Physics.Raycast(transform.position, transform.right, out DraftCheck, rayLength);
 				break;
-			case "LeftCorners":
+			case "LeftDiags":
 				rayHit = Physics.Raycast(transform.position, transform.forward - transform.right, out DraftCheck, rayLength);
 				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) - transform.right, out DraftCheck, rayLength);
 				break;
-			case "RightCorners":
+			case "RightDiags":
 				rayHit = Physics.Raycast(transform.position, transform.forward + transform.right, out DraftCheck, rayLength);
 				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) + transform.right, out DraftCheck, rayLength);
+				break;
+			case "LeftCorners":
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right * -1, out DraftCheck, rayLength);
+				if(rayHit == false){
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right * -1, out DraftCheck, rayLength);
+				}
+				break;
+			case "RightCorners":
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right, out DraftCheck, rayLength);
+				if(rayHit == false){
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right, out DraftCheck, rayLength);
+				}
 				break;
 			case "LeftEdge":
 				rayHit = Physics.Raycast(transform.position + new Vector3(-1f,0,-1f), transform.forward, out DraftCheck, rayLength);

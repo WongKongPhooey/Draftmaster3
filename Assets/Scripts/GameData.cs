@@ -120,7 +120,7 @@ public class GameData : MonoBehaviour {
 			resetDailies();
 		} else {
 			//For testing only
-			resetDailies();
+			//resetDailies();
 		}
 		while(daysToAdd > 1){
 			//Add it
