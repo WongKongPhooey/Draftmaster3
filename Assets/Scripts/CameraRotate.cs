@@ -255,7 +255,7 @@ public class CameraRotate : MonoBehaviour {
 					Debug.Log(lapRecord);
 					lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
 					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-					Debug.Log(lapRecordInt);
+					Debug.Log(lapRecordInt + ": " + circuit);
 					PlayFabManager.SendLeaderboard(lapRecordInt, circuit);
 				//}
 			}

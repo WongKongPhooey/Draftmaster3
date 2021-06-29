@@ -34,7 +34,7 @@ public class PlayFabManager : MonoBehaviour
 		var request = new UpdatePlayerStatisticsRequest {
 			Statistics = new List<StatisticUpdate> {
 				new StatisticUpdate {
-					StatisticName = "FastestLapDaytona",
+					StatisticName = "FastestLap" + circuitName + "",
 					Value = score
 				}
 			}
