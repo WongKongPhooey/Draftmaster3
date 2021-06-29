@@ -22,6 +22,12 @@ public class SingleCar : MonoBehaviour {
 	int classMax;
 	
 	int currentCar;
+	
+	string currentCarManu;
+	string currentCarTeam;
+	string currentCarType;
+	int currentCarRarity;
+	
 	string seriesPrefix;
 	float windowscroll = 2.5f;
 	
@@ -45,7 +51,7 @@ public class SingleCar : MonoBehaviour {
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
 
-		carMenu = "Description";
+		carMenu = "Links";
 
 		numberPanel = false;
 
@@ -60,6 +66,12 @@ public class SingleCar : MonoBehaviour {
 		} else {
 			currentCar = 1;
 		}
+		
+		currentCarManu = DriverNames.cup2020Manufacturer[currentCar];
+		currentCarTeam = DriverNames.cup2020Teams[currentCar];
+		currentCarType = DriverNames.cup2020Types[currentCar];
+		currentCarRarity = DriverNames.cup2020Rarity[currentCar];
+		
 		seriesPrefix = "cup20";
 		windowscroll = 2.5f;
 		
@@ -76,13 +88,6 @@ public class SingleCar : MonoBehaviour {
 		}
 		
         classMax = GameData.classMax(carClass);
-		
-		classCriteria[1] = "1 win at Bristol";
-		classCriteria[2] = "1 win at New Hampshire";
-		classCriteria[3] = "1 win at Michigan";
-		classCriteria[4] = "1 win at California";
-		classCriteria[5] = "1 win at Miami";
-		classCriteria[6] = "1 win at Ridgeway";
 	}
 
     // Update is called once per frame
@@ -127,9 +132,9 @@ public class SingleCar : MonoBehaviour {
 		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
 		
-		GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.cup2020Teams[currentCar]);
+		GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 1.5f, heightblock * 1f), currentCarTeam);
 		Texture2D manufacturerTex = null;
-		switch(DriverNames.cup2020Manufacturer[currentCar]){
+		switch(currentCarManu){
 			case "FRD":
 				manufacturerTex = frdTex;
 				break;
@@ -207,7 +212,7 @@ public class SingleCar : MonoBehaviour {
 		
 		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 		GUI.skin.label.alignment = TextAnchor.LowerLeft;
-		GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + cardH - (heightblock * 2) - 10, widthblock * 2.5f, heightblock * 2), "Intim.");
+		GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + cardH - (heightblock * 2) - 10, widthblock * 2.5f, heightblock * 2), currentCarType);
 		GUI.skin.label.alignment = TextAnchor.UpperRight;
 		GUI.skin.label.alignment = TextAnchor.LowerRight;
 		GUI.Label(new Rect(cardX + (widthblock * 3.5f), cardY + cardH - (heightblock * 2) - 10, (widthblock * 2.5f) - (widthblock * 0.25f), heightblock * 2), "Class " + carClass);
@@ -221,19 +226,15 @@ public class SingleCar : MonoBehaviour {
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
-		if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 3.5f, widthblock * 3.5f, heightblock * 1.5f), "Description")){
-			carMenu = "Description";
-		}
-		
-		if (GUI.Button(new Rect(widthblock * 11.5f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Paints")){
-			carMenu = "Paints";
-		}
-		
-		if (GUI.Button(new Rect(widthblock * 14.5f, heightblock * 3.5f, widthblock * 2.25f, heightblock * 1.5f), "Links")){
+		if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Links")){
 			carMenu = "Links";
 		}
 		
-		if (GUI.Button(new Rect(widthblock * 17.25f, heightblock * 3.5f, widthblock * 2.25f, heightblock * 1.5f), "Stats")){
+		if (GUI.Button(new Rect(widthblock * 10.25f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Paints")){
+			carMenu = "Paints";
+		}
+		
+		if (GUI.Button(new Rect(widthblock * 13f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Stats")){
 			carMenu = "Stats";
 		}
 		
@@ -243,16 +244,30 @@ public class SingleCar : MonoBehaviour {
 		
 		//MENUS
 		switch(carMenu){
-			case "Description":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce molestie nisl et urna hendrerit, a pellentesque eros pulvinar. Etiam posuere in ex quis auctor. Nunc accumsan, orci eu pharetra fermentum, dui diam elementum nisl, quis tincidunt lorem sem quis magna. Aliquam non vehicula dui. In quis tellus bibendum, viverra ligula gravida, blandit odio.");			
-				break;
 			case "Paints":
 				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Alternate Paints Coming Soon");
 				break;
 			case "Links":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 2), "Can Draft With PEN Teammates:");
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7.5f, widthblock * 11.5f, heightblock * 2), "FRD Cars Will Push You:");
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Strategists Change Lane 5% Faster Per Class (15%)");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 2), currentCarTeam + " Teammates Will Help You");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7.5f, widthblock * 11.5f, heightblock * 2), "Other " + currentCarManu + " Cars Will Work With You:");
+				
+				switch(currentCarType){
+					case "Intimidator":
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Intimidators Push Cars Out Of Lanes More Often");
+						break;
+					case "Strategist":
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Strategists Change Lane Faster Per Class");
+						break;
+					case "Rookie":
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Rookies Are Blocked Less Often");
+						break;
+					case "Closer":
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Closers Pick Up A Draft From Further Away");
+						break;
+					case "Gentleman":
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Everyone Will Work With Gentleman Drivers");
+						break;
+				}
 				
 				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 15f, widthblock * 4.5f, heightblock * 1.5f), "Change Number")){
 					numberPanel = true;

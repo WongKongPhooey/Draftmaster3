@@ -161,11 +161,15 @@ public class SeriesSelectGUI : MonoBehaviour {
 							SceneManager.LoadScene("CarSelect");
 						} 
 					} else {
-						//Grey out the event
-						GUI.skin = tileSkin;
-						GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
-						if(GUI.Button(new Rect(cardX + widthblock, cardY + (heightblock * 8), widthblock * 4, heightblock * 2), "Reset Plays")){
-							
+						if(PlayerPrefs.HasKey("DailyPlays" + menuIndex + subMenu + "")){
+							//Grey out the event
+							GUI.skin = tileSkin;
+							GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
+							if(GUI.Button(new Rect(cardX + widthblock, cardY + (heightblock * 8), widthblock * 4, heightblock * 2), "Reset Plays 10G")){
+								
+							}
+						} else {
+							PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", 1);
 						}
 					}
 				} else {
