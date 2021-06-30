@@ -173,8 +173,9 @@ public class GameData : MonoBehaviour {
 		
 		for(int i=0;i<10;i++){
 			for(int j=0;j<10;j++){
-				if(PlayerPrefs.HasKey("DailyPlays" + i + j + "")){
-					int maxPlays = SeriesData.offlineDailyPlays[i,j];
+				if(SeriesData.offlineDailyPlays[i,j] != null){
+					int maxPlays = SeriesData.getMaxPlays(i,j);
+					//int maxPlays = SeriesData.offlineDailyPlays[i,j];
 					PlayerPrefs.SetInt("DailyPlays" + i + j + "", maxPlays);
 					Debug.Log(i + "," + j + " max plays: " + maxPlays);
 				}

@@ -215,9 +215,9 @@ public class SingleCar : MonoBehaviour {
 		GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + cardH - (heightblock * 2) - 10, widthblock * 2.5f, heightblock * 2), currentCarType);
 		GUI.skin.label.alignment = TextAnchor.UpperRight;
 		GUI.skin.label.alignment = TextAnchor.LowerRight;
-		GUI.Label(new Rect(cardX + (widthblock * 3.5f), cardY + cardH - (heightblock * 2) - 10, (widthblock * 2.5f) - (widthblock * 0.25f), heightblock * 2), "Class " + carClass);
-		GUI.skin.label.normal.textColor = Color.red;
-		GUI.Label(new Rect(cardX + (widthblock * 3.5f), cardY + cardH - (heightblock * 2) - 10, (widthblock * 2.5f) - (widthblock * 0.25f), heightblock * 2), "" + carClass);
+		GUI.Label(new Rect(cardX + (widthblock * 3.5f), cardY + cardH - (heightblock * 2) - 10, (widthblock * 2.5f) - (widthblock * 0.25f), heightblock * 2), "Class " + classAbbr(carClass));
+		GUI.skin.label.normal.textColor = classColours(carClass);
+		GUI.Label(new Rect(cardX + (widthblock * 3.5f), cardY + cardH - (heightblock * 2) - 10, (widthblock * 2.5f) - (widthblock * 0.25f), heightblock * 2), "" + classAbbr(carClass));
 		GUI.skin.label.normal.textColor = Color.black;
 		
 		//Right Side Panel
@@ -238,37 +238,47 @@ public class SingleCar : MonoBehaviour {
 			carMenu = "Stats";
 		}
 		
+		if (GUI.Button(new Rect(widthblock * 15.75f, heightblock * 3.5f, widthblock * 3.5f, heightblock * 1.5f), "Transfers")){
+			carMenu = "Transfers";
+		}
 		
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
 		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 		
 		//MENUS
 		switch(carMenu){
-			case "Paints":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Alternate Paints Coming Soon");
-				break;
 			case "Links":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 2), currentCarTeam + " Teammates Will Help You");
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7.5f, widthblock * 11.5f, heightblock * 2), "Other " + currentCarManu + " Cars Will Work With You:");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 2), currentCarTeam + " Teammates Will Help You");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 8.5f, widthblock * 11.5f, heightblock * 2), "Other " + currentCarManu + " Cars Will Work With You:");
 				
 				switch(currentCarType){
 					case "Intimidator":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Intimidators Push Cars Out Of Lanes More Often");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Intimidators Push Cars Out Of Lanes More Often");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 13f, widthblock * 11.5f, heightblock * 2), "Class B (+15%)");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 14.5f, widthblock * 11.5f, heightblock * 2), "3* Rarity (+15%)");
 						break;
 					case "Strategist":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Strategists Change Lane Faster Per Class");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Strategists Change Lane Faster Per Class");
 						break;
 					case "Rookie":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Rookies Are Blocked Less Often");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Rookies Are Blocked Less Often");
 						break;
 					case "Closer":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Closers Pick Up A Draft From Further Away");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Closers Pick Up A Draft From Further Away");
 						break;
 					case "Gentleman":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 9.5f, widthblock * 11.5f, heightblock * 2), "Everyone Will Work With Gentleman Drivers");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Everyone Will Work With Gentleman Drivers");
 						break;
 				}
-				
+				GUI.skin = buttonSkin;
+				break;
+			case "Paints":
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Alternate Paints Coming Soon");
+				break;
+			case "Stats":
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Starts");
+				break;
+			case "Transfers":
 				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 15f, widthblock * 4.5f, heightblock * 1.5f), "Change Number")){
 					numberPanel = true;
 					//PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, 1);
@@ -279,15 +289,12 @@ public class SingleCar : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 17f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
 				}
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
-				GUI.skin = redGUI;
-				if (GUI.Button(new Rect(widthblock * 15f, heightblock * 17f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
-					PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
+					GUI.skin = redGUI;
+					if (GUI.Button(new Rect(widthblock * 15f, heightblock * 17f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
+						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
+					}
 				}
-				}
-				GUI.skin = buttonSkin;
-				break;
-			case "Stats":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Starts");
+				
 				break;
 		}
 		
@@ -298,9 +305,16 @@ public class SingleCar : MonoBehaviour {
 		GUI.skin = buttonSkin;
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		
-		CommonGUI.TopBar();
+		GUI.skin = redGUI;
+		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 		
 		CommonGUI.BackButton("AllCars");
+		
+		GUI.skin = buttonSkin;
+		
+		GUI.skin.button.alignment = TextAnchor.MiddleRight;
+		
+		CommonGUI.TopBar();
 		
 		if(numberPanel == true){
 			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
@@ -328,5 +342,61 @@ public class SingleCar : MonoBehaviour {
 		if (Input.GetKeyDown(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
 		}
+	}
+	
+	string classAbbr(int carClass){
+		string classLetter;
+		switch(carClass){
+			case 1:
+				classLetter = "R";
+				break;
+		    case 2:
+				classLetter = "D";
+				break;
+			case 3:
+				classLetter = "C";
+				break;
+			case 4:
+				classLetter = "B";
+				break;
+			case 5:
+				classLetter = "A";
+				break;
+			case 6:
+				classLetter = "S";
+				break;
+		    default:
+				classLetter = "R";
+				break;
+		}
+		return classLetter;
+	}
+	
+	Color classColours(int carClass){
+		Color classColour;
+		switch(carClass){
+			case 1:
+				classColour = Color.red;
+				break;
+		    case 2:
+				classColour = Color.yellow;
+				break;
+			case 3:
+				classColour = Color.green;
+				break;
+			case 4:
+				classColour = Color.cyan;
+				break;
+			case 5:
+				classColour = Color.blue;
+				break;
+			case 6:
+				classColour = Color.red;
+				break;
+		    default:
+				classColour = Color.red;
+				break;
+		}
+		return classColour;
 	}
 }

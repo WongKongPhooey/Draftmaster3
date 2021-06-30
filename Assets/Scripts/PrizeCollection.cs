@@ -86,7 +86,7 @@ public class PrizeCollection : MonoBehaviour
 			case "Rookies":
 				validDriver.Add(0); //Houff
 				validDriver.Add(41); //Custer
-				//Nemechek
+				validDriver.Add(38); //Nemechek
 				validDriver.Add(95); //Bell
 				validDriver.Add(8); //Reddick
 				validDriver.Add(15); //Poole

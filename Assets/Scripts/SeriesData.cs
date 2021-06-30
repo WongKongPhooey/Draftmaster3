@@ -24,7 +24,10 @@ public class SeriesData : MonoBehaviour{
 	
     // Start is called before the first frame update
     void Start(){
-        
+		setData();
+	}
+	
+	public static void setData(){
 		offlineMenu[0] = "Rookies";
 		offlineMenu[1] = "Super Speedways";
 		offlineMenu[2] = "Cookie Cutters";
@@ -277,6 +280,18 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[4,3] = "cup20livery10";
 		offlineSeriesImage[4,4] = "cup20livery34";
 		
+		offlineDailyPlays[4,0] = 10;
+		offlineDailyPlays[4,1] = 10;
+		offlineDailyPlays[4,2] = 10;
+		offlineDailyPlays[4,3] = 10;
+		offlineDailyPlays[4,4] = 10;
+		
+		offlineMinType[4,0] = "Class";
+		offlineMinType[4,1] = "Class";
+		offlineMinType[4,2] = "Class";
+		offlineMinType[4,3] = "Class";
+		offlineMinType[4,4] = "Class";
+		
 		//Team
 		offlineSeries[5,0] = "Lone Ranger";
 		offlineSeries[5,1] = "Childress Of The Sea";
@@ -296,6 +311,12 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[5,5] = "cup20livery1";
 		offlineSeriesImage[5,6] = "cup20livery24";
 		
+		offlineDailyPlays[5,0] = 3;
+		offlineDailyPlays[5,1] = 3;
+		offlineDailyPlays[5,2] = 3;
+		offlineDailyPlays[5,3] = 3;
+		offlineDailyPlays[5,4] = 3;
+		
 		//Manufacturer
 		offlineSeries[6,0] = "Mustang Sally";
 		offlineSeries[6,1] = "American Pie";
@@ -310,6 +331,12 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[6,3] = "cup20livery22";
 		offlineSeriesImage[6,4] = "cup20livery43";
 		offlineSeriesImage[6,5] = "cup20livery11";
+		
+		offlineDailyPlays[6,0] = 3;
+		offlineDailyPlays[6,1] = 3;
+		offlineDailyPlays[6,2] = 3;
+		offlineDailyPlays[6,3] = 3;
+		offlineDailyPlays[6,4] = 3;
 		
 		//Type
 		offlineSeries[7,0] = "Rookie Season";
@@ -326,6 +353,12 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[7,4] = "cup20livery43";
 		offlineSeriesImage[7,5] = "cup20livery11";
 		
+		offlineDailyPlays[7,0] = 3;
+		offlineDailyPlays[7,1] = 3;
+		offlineDailyPlays[7,2] = 3;
+		offlineDailyPlays[7,3] = 3;
+		offlineDailyPlays[7,4] = 3;
+		
 		//Type
 		offlineSeries[8,0] = "Driver For Hire";
 		offlineSeries[8,1] = "Hot Property";
@@ -335,10 +368,26 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[8,1] = "cup20livery1";
 		offlineSeriesImage[8,2] = "cup20livery48";
 		
+		offlineDailyPlays[8,0] = 3;
+		offlineDailyPlays[8,1] = 3;
+		offlineDailyPlays[8,2] = 3;
+		
 		//Seasons
 		offlineSeries[9,0] = "Half Season 1";
 		offlineSeries[9,1] = "Half Season 2";
-		offlineSeries[9,2] = "2019 Calendar Season";
+		offlineSeries[9,2] = "2020 Calendar Season";
+		
+		offlineSeriesImage[9,0] = "cup20livery22";
+		offlineSeriesImage[9,1] = "cup20livery2";
+		offlineSeriesImage[9,2] = "cup20livery9";
+		
+		offlineDescriptions[9,0] = "Season Half 1";
+		offlineDescriptions[9,1] = "Season Half 2";	
+		offlineDescriptions[9,2] = "Full 2019 Season";
+		
+		offlineDailyPlays[9,0] = 20;
+		offlineDailyPlays[9,1] = 20;
+		offlineDailyPlays[9,2] = 20;
 		
 		offlineImage[0] = "cup20livery41";
 		offlineImage[1] = "cup20livery11";
@@ -361,16 +410,6 @@ public class SeriesData : MonoBehaviour{
 		seriesDescriptions[7] = "Some drive clean, some not so much. Play to your drivers strengths here.";
 		seriesDescriptions[8] = "Proven winners wear their stars with pride Rarer drivers win bigger rewards!";
 		seriesDescriptions[9] = "The complete calendars. The ultimate challenge!";
-		
-		offlineDescriptions[9,0] = "Season Half 1";
-		offlineDescriptions[9,1] = "Season Half 2";	
-		offlineDescriptions[9,2] = "Full 2019 Season";
-		
-		offlineMinType[4,0] = "Class";
-		offlineMinType[4,1] = "Class";
-		offlineMinType[4,2] = "Class";
-		offlineMinType[4,3] = "Class";
-		offlineMinType[4,4] = "Class";
 		
 		offlineMinType[5,0] = "Team";
 		offlineMinType[5,1] = "Team";
@@ -456,6 +495,11 @@ public class SeriesData : MonoBehaviour{
     void Update(){
         
     }
+	
+	public static int getMaxPlays(int i,int j){
+		setData();
+		return offlineDailyPlays[i,j];
+	}
 	
 	public static string classAbbr(int carClass){
 		string classLetter;

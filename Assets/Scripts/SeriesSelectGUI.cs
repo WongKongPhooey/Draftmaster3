@@ -166,10 +166,10 @@ public class SeriesSelectGUI : MonoBehaviour {
 							GUI.skin = tileSkin;
 							GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
 							if(GUI.Button(new Rect(cardX + widthblock, cardY + (heightblock * 8), widthblock * 4, heightblock * 2), "Reset Plays 10G")){
-								
+								PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
 							}
 						} else {
-							PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", 1);
+							PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
 						}
 					}
 				} else {

@@ -169,6 +169,8 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[3] = "Strategist";
 		cup2020Types[4] = "Gentleman";
 		cup2020Types[6] = "Closer";
+		cup2020Types[7] = "Strategist";
+		cup2020Types[8] = "Rookie";
 		cup2020Types[9] = "Closer";
 		cup2020Types[10] = "Strategist";
 		cup2020Types[11] = "Closer";
@@ -176,7 +178,19 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[13] = "Closer";
 		cup2020Types[14] = "Intimidator";
 		cup2020Types[15] = "Rookie";
+		cup2020Types[16] = "Strategist";
+		cup2020Types[17] = "Gentleman";
 		cup2020Types[18] = "Intimidator";
+		cup2020Types[19] = "Gentleman";
+		cup2020Types[20] = "Closer";
+		cup2020Types[21] = "Closer";
+		cup2020Types[22] = "Intimidator";
+		cup2020Types[24] = "Closer";
+		cup2020Types[27] = "Strategist";
+		cup2020Types[38] = "Rookie";
+		cup2020Types[41] = "Rookie";
+		cup2020Types[48] = "Gentleman";
+		cup2020Types[95] = "Rookie";
 		
 		cup2020Rarity[0] = 1;
 		cup2020Rarity[1] = 2;

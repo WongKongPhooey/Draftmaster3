@@ -124,7 +124,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Daytona Beach, FL")){
 					Daytona();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("PalmBeach") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Daytona") as Texture;
 				}
 				break;
 			case "2":
@@ -132,7 +132,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Atlanta, GA")){
 					Atlanta();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("MountPower") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Atlanta") as Texture;
 				}
 				break;
 			case "3":
@@ -140,7 +140,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Las Vegas, NV")){
 					LasVegas();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Miracle Mile") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LasVegas") as Texture;
 				}
 				break;
 			case "4":
@@ -148,7 +148,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Phoenix, AZ")){
 					Phoenix();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Miracle Mile") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Phoenix") as Texture;
 				}
 				break;
 			case "5":
@@ -156,7 +156,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Fontana, CA")){
 					Fontana();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Fontana") as Texture;
 				}
 				break;
 			case "6":
@@ -164,15 +164,15 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Martinsville, VA")){
 					Martinsville();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("UnionSpeedway") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Martinsville") as Texture;
 				}
 				break;
 			case "7":
 				showBestFinish(currentSubseries, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Fort Worth, TX")){
-					//Texas();
+					FortWorth();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("PowerBowl") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("FortWorth") as Texture;
 				}
 				break;
 			case "8":
