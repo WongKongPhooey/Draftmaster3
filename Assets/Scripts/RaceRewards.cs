@@ -38,8 +38,8 @@ public class RaceRewards : MonoBehaviour
 			ListPrizeOptions("");
 		}
 		int finishPos = PlayerPrefs.GetInt("FinishPos");
-		if(finishPos < 10){
-			float chance = 10 - finishPos;
+		if(finishPos < 11){
+			float chance = 11 - finishPos;
 			float rnd = Random.Range(0,10);
 			if(rnd <= chance){
 				AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)]);

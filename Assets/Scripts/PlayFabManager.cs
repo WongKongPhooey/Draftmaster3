@@ -1,15 +1,25 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using PlayFab;
 using PlayFab.ClientModels;
 
-public class PlayFabManager : MonoBehaviour
+public class PlayFabManager : MonoBehaviour 
 {
+	
+	public static GameObject rowPrefab;
+	public static Transform rowsParent;
+	
+	public GameObject thisRowPrefab;
+	public Transform thisRowsParent;
+	
     // Start is called before the first frame update
     void Start()
     {
        Login();
+	   rowPrefab = thisRowPrefab;
+	   rowsParent = thisRowsParent;
     }
 	
 	void Login(){
@@ -48,6 +58,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetLeaderboard(string circuit){
+		
 		var request = new GetLeaderboardRequest {
 			StatisticName = "FastestLap" + circuit,
 			StartPosition = 0,
@@ -57,7 +68,19 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void OnLeaderboardGet(GetLeaderboardResult result) {
+		
+		foreach(Transform item in rowsParent){
+			Destroy(item.gameObject);
+		}
+		
 		foreach(var item in result.Leaderboard) {
+			
+			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
+			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
+			tableLabels[0].text = (item.Position + 1).ToString();
+			tableLabels[1].text = item.PlayFabId.ToString();
+			tableLabels[2].text = item.StatValue.ToString() + " MpH";
+			
 			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
 	}

@@ -288,10 +288,10 @@ public class Store : MonoBehaviour{
 				}
 
 				GUI.skin = redGUI;
-				if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "150G")){
+				if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "50G")){
 					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 150){
-						gears -= 150;
+					if(gears >= 50){
+						gears -= 50;
 						if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
 							carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
 						} else {

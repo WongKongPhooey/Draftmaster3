@@ -118,6 +118,7 @@ public class GameData : MonoBehaviour {
 		//Day of the week cycle
 		if(daysToAdd > 1){
 			resetDailies();
+			Debug.Log("Reset the daily plays");
 		} else {
 			//For testing only
 			//resetDailies();
