@@ -23,7 +23,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[3] = "A. Dillon";
 		cup2020Names[4] = "Harvick";
 		cup2020Names[6] = "Newman";
-		cup2020Names[7] = "Sorenson";
+		cup2020Names[7] = "Bilicki";
 		cup2020Names[8] = "Reddick";
 		cup2020Names[9] = "Elliott";
 		cup2020Names[10] = "Almirola";
@@ -40,9 +40,10 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[21] = "Dibenedetto";
 		cup2020Names[22] = "Logano";
 		cup2020Names[24] = "Byron";
-		cup2020Names[27] = "Yeley";
+		cup2020Names[27] = "Gaulding";
 		cup2020Names[32] = "Lajoie";
 		cup2020Names[34] = "McDowell";
+		cup2020Names[36] = "Ragan";
 		cup2020Names[37] = "Preece";
 		cup2020Names[38] = "Nemechek";
 		cup2020Names[41] = "Custer";
@@ -54,8 +55,10 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[51] = "Gase";
 		cup2020Names[52] = "Mcleod";
 		cup2020Names[53] = "Davison";
+		cup2020Names[54] = "Yeley";
 		cup2020Names[62] = "Gaughan";
 		cup2020Names[66] = "Hill";
+		cup2020Names[74] = "Sorenson"
 		cup2020Names[77] = "Chastain";
 		cup2020Names[78] = "Smithley";
 		cup2020Names[88] = "Bowman";
@@ -64,14 +67,11 @@ public class DriverNames : MonoBehaviour {
 		
 		cup2020AltNames[0] = "Larson";
 		cup2020AltNames[1] = "Barrett";
-		cup2020AltNames[2] = "Gaulding";
-		cup2020AltNames[3] = "Bilicki";
-		cup2020AltNames[4] = "Ragan";
-		cup2020AltNames[5] = "Grala";
-		cup2020AltNames[6] = "Ware";
-		cup2020AltNames[7] = "Starr";
-		cup2020AltNames[8] = "Allgaier";
-		cup2020AltNames[9] = "Currey";
+		cup2020AltNames[2] = "Grala";
+		cup2020AltNames[3] = "Ware";
+		cup2020AltNames[4] = "Starr";
+		cup2020AltNames[5] = "Allgaier";
+		cup2020AltNames[6] = "Currey";
 		
 		cup2020Teams[0] = "IND";
 		cup2020Teams[1] = "CGR";
