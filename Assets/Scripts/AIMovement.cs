@@ -15,6 +15,7 @@ public class AIMovement : MonoBehaviour
     float speed;
     float speedRand;
     float accelRand;
+	int AILevel;
     int laneticker;
     int laneChangeDuration;
     int laneChangeBackout;
@@ -45,6 +46,10 @@ public class AIMovement : MonoBehaviour
 
     string carNumber;
 	string AICarNum;
+	
+	string currentSeriesStr;
+	char currentSeries;
+	char currentSubseries;
 	
 	string seriesPrefix;
 	int customNum;
@@ -77,6 +82,14 @@ public class AIMovement : MonoBehaviour
 		tandemDraft = false;
         AISpeed = 200;
         laneticker = 0;
+		
+		currentSeriesStr = PlayerPrefs.GetString("CurrentSubseries");
+		currentSubseries = currentSeriesStr[1];
+		currentSeries = currentSeriesStr[0];
+		
+		AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+		
+		Debug.Log("AILevel: " + AILevel);
 		
 		antiGlitch = 0;
 		
@@ -248,7 +261,7 @@ public class AIMovement : MonoBehaviour
 
 	void speedLogic(){
 		//Speed tops out
-        if (AISpeed > (204 + laneInv)){
+        if (AISpeed > (204 + laneInv + (AILevel / 5))){
 			//Reduce speed, proportionate to the amount 'over'
             AISpeed -= ((AISpeed - 204) / 100);
 		}
@@ -267,19 +280,19 @@ public class AIMovement : MonoBehaviour
 			//Speed up
 			if (AISpeed < (205)){
 				//Draft gets stronger as you get closer
-				AISpeed += ((10 - DraftCheckForward.distance)/1000);
+				AISpeed += ((10 - DraftCheckForward.distance)/ (1000 - (AILevel * 10)));
 			}
 		} else {
 			//Slow down
 			if (AISpeed > 200){
 				//No draft, slow with drag
-				AISpeed -= 0.003f;
+				AISpeed -= 0.003f + (AILevel / 10000);
 			}
 		}
 		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.5f){
-			AISpeed += (0.004f);
+			AISpeed += (0.004f) + (AILevel / 2000);
 		}
 		
 		// If being bump-drafted from behind
@@ -307,7 +320,7 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void dumbSpeed(){
-		AISpeed += 0.002f;
+		AISpeed += 0.002f + (AILevel / 5000);
 		
 		//Speed difference between the player and the AI
 		speed = AISpeed - Movement.playerSpeed;

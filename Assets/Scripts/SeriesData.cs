@@ -64,11 +64,11 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[0,3] = 20;
 		offlineDailyPlays[0,4] = 20;
 		
-		offlineAILevel[0,0] = -5;
-		offlineAILevel[0,0] = -5;
-		offlineAILevel[0,0] = -4;
-		offlineAILevel[0,0] = -4;
-		offlineAILevel[0,0] = -3;
+		offlineAILevel[0,0] = 0;
+		offlineAILevel[0,1] = 0;
+		offlineAILevel[0,2] = 1;
+		offlineAILevel[0,3] = 1;
+		offlineAILevel[0,4] = 2;
 		
 		offlineMinType[0,0] = "Level";
 		offlineMinType[0,1] = "Level";
@@ -126,11 +126,11 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[1,3] = 10;
 		offlineDailyPlays[1,4] = 10;
 		
-		offlineAILevel[1,0] = -2;
-		offlineAILevel[1,0] = 0;
 		offlineAILevel[1,0] = 2;
-		offlineAILevel[1,0] = 3;
-		offlineAILevel[1,0] = 5;
+		offlineAILevel[1,1] = 4;
+		offlineAILevel[1,2] = 6;
+		offlineAILevel[1,3] = 8;
+		offlineAILevel[1,4] = 10;
 				
 		offlineMinType[1,0] = "Level";
 		offlineMinType[1,1] = "Level";
@@ -182,11 +182,11 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[2,3] = 10;
 		offlineDailyPlays[2,4] = 10;
 				
-		offlineAILevel[2,0] = -2;
-		offlineAILevel[2,0] = 0;
 		offlineAILevel[2,0] = 2;
-		offlineAILevel[2,0] = 3;
-		offlineAILevel[2,0] = 5;
+		offlineAILevel[2,1] = 4;
+		offlineAILevel[2,2] = 6;
+		offlineAILevel[2,3] = 8;
+		offlineAILevel[2,4] = 10;
 						
 		offlineMinType[2,0] = "Level";
 		offlineMinType[2,1] = "Level";
@@ -237,11 +237,11 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[3,3] = 10;
 		offlineDailyPlays[3,4] = 10;
 		
-		offlineAILevel[3,0] = -2;
-		offlineAILevel[3,0] = 0;
 		offlineAILevel[3,0] = 2;
-		offlineAILevel[3,0] = 3;
-		offlineAILevel[3,0] = 5;
+		offlineAILevel[3,1] = 4;
+		offlineAILevel[3,2] = 6;
+		offlineAILevel[3,3] = 8;
+		offlineAILevel[3,4] = 10;
 						
 		offlineMinType[3,0] = "Level";
 		offlineMinType[3,1] = "Level";
@@ -286,6 +286,12 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[4,3] = 10;
 		offlineDailyPlays[4,4] = 10;
 		
+		offlineAILevel[4,0] = 2;
+		offlineAILevel[4,1] = 4;
+		offlineAILevel[4,2] = 6;
+		offlineAILevel[4,3] = 8;
+		offlineAILevel[4,4] = 10;
+		
 		offlineMinType[4,0] = "Class";
 		offlineMinType[4,1] = "Class";
 		offlineMinType[4,2] = "Class";
@@ -317,6 +323,16 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[5,3] = 3;
 		offlineDailyPlays[5,4] = 3;
 		
+		offlineAILevel[5,0] = 2;
+		offlineAILevel[5,1] = 3;
+		offlineAILevel[5,2] = 4;
+		offlineAILevel[5,3] = 5;
+		offlineAILevel[5,4] = 6;
+		offlineAILevel[5,5] = 7;
+		offlineAILevel[5,6] = 8;
+		offlineAILevel[5,7] = 9;
+		offlineAILevel[5,8] = 10;
+		
 		//Manufacturer
 		offlineSeries[6,0] = "Mustang Sally";
 		offlineSeries[6,1] = "American Pie";
@@ -337,6 +353,14 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[6,2] = 3;
 		offlineDailyPlays[6,3] = 3;
 		offlineDailyPlays[6,4] = 3;
+		offlineDailyPlays[6,5] = 3;
+		
+		offlineAILevel[6,0] = 4;
+		offlineAILevel[6,1] = 4;
+		offlineAILevel[6,2] = 4;
+		offlineAILevel[6,3] = 8;
+		offlineAILevel[6,4] = 8;
+		offlineAILevel[6,5] = 8;
 		
 		//Type
 		offlineSeries[7,0] = "Rookie Season";
@@ -359,6 +383,13 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[7,3] = 3;
 		offlineDailyPlays[7,4] = 3;
 		
+		offlineAILevel[7,0] = 2;
+		offlineAILevel[7,1] = 4;
+		offlineAILevel[7,2] = 6;
+		offlineAILevel[7,3] = 8;
+		offlineAILevel[7,4] = 10;
+		offlineAILevel[7,5] = 12;
+		
 		//Type
 		offlineSeries[8,0] = "Driver For Hire";
 		offlineSeries[8,1] = "Hot Property";
@@ -371,6 +402,10 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[8,0] = 3;
 		offlineDailyPlays[8,1] = 3;
 		offlineDailyPlays[8,2] = 3;
+		
+		offlineAILevel[8,0] = 4;
+		offlineAILevel[8,1] = 8;
+		offlineAILevel[8,2] = 12;
 		
 		//Seasons
 		offlineSeries[9,0] = "Half Season 1";
@@ -388,6 +423,10 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[9,0] = 20;
 		offlineDailyPlays[9,1] = 20;
 		offlineDailyPlays[9,2] = 20;
+		
+		offlineAILevel[9,0] = 4;
+		offlineAILevel[9,1] = 7;
+		offlineAILevel[9,2] = 10;
 		
 		offlineImage[0] = "cup20livery41";
 		offlineImage[1] = "cup20livery11";
@@ -493,7 +532,6 @@ public class SeriesData : MonoBehaviour{
 
     // Update is called once per frame
     void Update(){
-        
     }
 	
 	public static int getMaxPlays(int i,int j){

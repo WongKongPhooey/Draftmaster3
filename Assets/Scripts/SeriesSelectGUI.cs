@@ -142,7 +142,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 					default:
 					break;
 				}
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6f), widthblock * 5.5f, heightblock * 6), minRequirement + SeriesData.offlineDescriptions[menuIndex, subMenu] + "");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6f), widthblock * 5.5f, heightblock * 6), minRequirement + "AI Level: " + (SeriesData.offlineAILevel[menuIndex, subMenu] + level) + "\n" + SeriesData.offlineDescriptions[menuIndex, subMenu] + "");
 				
 				//Choose Subseries
 				if(meetsRequirements == true){

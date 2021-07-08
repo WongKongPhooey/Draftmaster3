@@ -480,27 +480,6 @@ public class Movement : MonoBehaviour {
 		} else {
 			carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20);
 		}
-		
-		/*//Brakes
-		if (Input.GetKeyDown("down")){
-			playerSpeed-=1;
-		}
-		
-		//Move lanes left
-		if (Input.GetKeyDown("left")){
-			if(laneticker == 0){
-				//lane++;
-				laneticker = 1;
-			}
-		}
-		
-		//Move lanes right
-		if (Input.GetKeyDown("right")){
-			if(laneticker == 0){
-				//lane--;
-				laneticker = -1;
-			}
-		}*/
 
 		wobbleCount++;
 		
