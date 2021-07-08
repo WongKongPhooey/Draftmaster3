@@ -128,6 +128,10 @@ public class MainMenuGUI : MonoBehaviour {
 			SceneManager.LoadScene("AllCars");
 		}
 		
+		if (GUI.Button(new Rect(Screen.width - (widthblock * 4f), Screen.height - (heightblock * 2.5f), widthblock * 1, heightblock * 2), "S")){
+			SceneManager.LoadScene("OptionsMenu");
+		}
+		
 		if(levelUpMenu == true){
 			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
 			GUI.skin = whiteGUI;

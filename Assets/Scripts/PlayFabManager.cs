@@ -32,7 +32,6 @@ public class PlayFabManager : MonoBehaviour
 	
 	void OnSuccess(LoginResult result){
 		Debug.Log("Login successful!");
-		PlayFabManager.GetLeaderboard("Daytona");
 	}
 	
 	static void OnError(PlayFabError error){

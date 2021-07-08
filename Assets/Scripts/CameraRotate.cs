@@ -250,14 +250,13 @@ public class CameraRotate : MonoBehaviour {
 			Scoreboard.checkFinishPositions();
 			if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 				currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-				//if(lapRecord > currentLapRecord){
-					lapRecord -= speedOffset;
-					Debug.Log(lapRecord);
-					lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
-					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-					Debug.Log(lapRecordInt + ": " + circuit);
-					PlayFabManager.SendLeaderboard(lapRecordInt, circuit);
-				//}
+				lapRecord -= speedOffset;
+				Debug.Log(lapRecord);
+				lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
+				PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
+				Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
+				PlayFabManager.SendLeaderboard(lapRecordInt, circuit);
+				
 			}
 			if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer")){
 				if((Movement.draftPercent) > PlayerPrefs.GetInt("TeamPlayerRecord")){
