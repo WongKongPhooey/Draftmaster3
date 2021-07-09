@@ -148,7 +148,7 @@ public class CarSelectGUI : MonoBehaviour {
 
 		int carCount = 0;
 		string seriesPrefix = "cup20";
-		float windowscroll = 4.4f;
+		float windowscroll = 4.8f;
 		int validCars = 0;
 		
 		int carUnlocked;
@@ -193,7 +193,7 @@ public class CarSelectGUI : MonoBehaviour {
 			}
 			
 			//Loop through unlocked cars
-			for(int rows = 1; rows < 10; rows++){
+			for(int rows = 1; rows < 11; rows++){
 				for(int columns = 1; columns < 6; columns++){
 					
 					carUnlocked = 0;

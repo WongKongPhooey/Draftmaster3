@@ -6,6 +6,9 @@ using UnityEngine.UI;
 public class LeaderboardManager : MonoBehaviour
 {
 	
+	public GUISkin buttonSkin;
+	public GUISkin redGUI;
+	
 	public Text leaderboardTitle;
 	public string circuitName;
 	
@@ -20,8 +23,15 @@ public class LeaderboardManager : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
-    {
-        
+    void Update(){ 
     }
+	
+	void OnGUI(){
+		GUI.skin = redGUI;
+		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+		
+		CommonGUI.BackButton("RaceResults");
+		
+		GUI.skin = buttonSkin;
+	}
 }

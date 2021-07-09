@@ -58,7 +58,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[54] = "Yeley";
 		cup2020Names[62] = "Gaughan";
 		cup2020Names[66] = "Hill";
-		cup2020Names[74] = "Sorenson"
+		cup2020Names[74] = "Sorenson";
 		cup2020Names[77] = "Chastain";
 		cup2020Names[78] = "Smithley";
 		cup2020Names[88] = "Bowman";
@@ -99,6 +99,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Teams[27] = "RWR";
 		cup2020Teams[32] = "IND";
 		cup2020Teams[34] = "FRM";
+		cup2020Teams[36] = "FRM";
 		cup2020Teams[37] = "JTG";
 		cup2020Teams[38] = "FRM";
 		cup2020Teams[41] = "SHR";
@@ -107,11 +108,13 @@ public class DriverNames : MonoBehaviour {
 		cup2020Teams[47] = "JTG";
 		cup2020Teams[48] = "HEN";
 		cup2020Teams[49] = "IND";
-		cup2020Teams[51] = "IND";
+		cup2020Teams[51] = "RWR";
+		cup2020Teams[52] = "RWR";
 		cup2020Teams[53] = "RWR";
-		cup2020Teams[54] = "IND";
+		cup2020Teams[54] = "RWR";
 		cup2020Teams[62] = "IND";
 		cup2020Teams[66] = "IND";
+		cup2020Teams[74] = "IND";
 		cup2020Teams[77] = "IND";
 		cup2020Teams[78] = "IND";
 		cup2020Teams[88] = "HEN";
@@ -144,6 +147,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Manufacturer[27] = "FRD";
 		cup2020Manufacturer[32] = "FRD";
 		cup2020Manufacturer[34] = "FRD";
+		cup2020Manufacturer[36] = "FRD";
 		cup2020Manufacturer[37] = "CHV";
 		cup2020Manufacturer[38] = "FRD";
 		cup2020Manufacturer[41] = "FRD";
@@ -153,10 +157,12 @@ public class DriverNames : MonoBehaviour {
 		cup2020Manufacturer[48] = "CHV";
 		cup2020Manufacturer[49] = "TYT";
 		cup2020Manufacturer[51] = "FRD";
-		cup2020Manufacturer[52] = "CHV";
+		cup2020Manufacturer[52] = "FRD";
 		cup2020Manufacturer[53] = "FRD";
+		cup2020Manufacturer[54] = "FRD";
 		cup2020Manufacturer[62] = "CHV";
 		cup2020Manufacturer[66] = "FRD";
+		cup2020Manufacturer[74] = "CHV";
 		cup2020Manufacturer[77] = "CHV";
 		cup2020Manufacturer[78] = "CHV";
 		cup2020Manufacturer[88] = "CHV";
@@ -187,9 +193,17 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[22] = "Intimidator";
 		cup2020Types[24] = "Closer";
 		cup2020Types[27] = "Strategist";
+		cup2020Types[32] = "Strategist";
+		cup2020Types[34] = "Intimidator";
+		cup2020Types[36] = "Closer";
+		cup2020Types[37] = "Rookie";
 		cup2020Types[38] = "Rookie";
 		cup2020Types[41] = "Rookie";
+		cup2020Types[42] = "Gentleman";
+		cup2020Types[43] = "Strategist";
+		cup2020Types[47] = "Intimidator";
 		cup2020Types[48] = "Gentleman";
+		cup2020Types[49] = "Closer";
 		cup2020Types[95] = "Rookie";
 		
 		cup2020Rarity[0] = 1;

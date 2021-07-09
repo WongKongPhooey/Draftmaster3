@@ -148,7 +148,7 @@ public class AllCars : MonoBehaviour {
 
 		int carCount = 0;
 		string seriesPrefix = "cup20";
-		float windowscroll = 4f;
+		float windowscroll = 4.7f;
 		
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 		
@@ -169,7 +169,7 @@ public class AllCars : MonoBehaviour {
 			int maxCars = DriverNames.cup2020Names.Length;
 			
 			//Loop through cars
-			for(int rows = 1; rows < 10; rows++){
+			for(int rows = 1; rows < 11; rows++){
 				for(int columns = 1; columns < 6; columns++){
 					
 					//If a driver # is not registered
