@@ -66,6 +66,8 @@ public class MainMenuGUI : MonoBehaviour {
 		goRaceMenu = false;
 		moreRaceMenu = false;
 		
+		PlayFabManager.LoginFromPrefs();
+		
 		//Reset the game to imitate new users
 		//PlayerPrefs.DeleteAll();
 		
@@ -121,6 +123,10 @@ public class MainMenuGUI : MonoBehaviour {
 		GUI.skin.label.normal.textColor = Color.black;
 		
 		CommonGUI.TopBar();
+		
+		if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 2, heightblock * 2), "Login")){
+			SceneManager.LoadScene("LoginRegister");
+		}
 		
 		//All Cars
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
