@@ -166,10 +166,10 @@ public class Store : MonoBehaviour{
 			
 			GUI.skin = redGUI;
 			
-			if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "300G")){
+			if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "1G")){
 				gears = PlayerPrefs.GetInt("Gears");
-				if(gears >= 300){
-					gears -= 300;
+				if(gears >= 1){
+					gears -= 1;
 					PlayerPrefs.SetInt("Gears",gears);
 					PlayerPrefs.SetString("PrizeType","PremiumBag");
 					Application.LoadLevel("PrizeCollection");

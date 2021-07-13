@@ -44,11 +44,11 @@ public class CircuitSelectGUI : MonoBehaviour {
 	static float widthblock = Mathf.Round(Screen.width/20);
 	static float heightblock = Mathf.Round(Screen.height/20);
 
-	string currentSeries;
+	string currentSeriesName;
+	string currentSeriesIndex;
 	string seriesTrackList;
 	string[] seriesTracks;
 	
-	string currentSubseriesStr;
 	static int currentSubseries;
 	string currentTrack;
 	
@@ -66,17 +66,17 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	void Awake(){
 		
-		currentSeries = PlayerPrefs.GetString("CurrentSeries");
-		currentSubseriesStr = PlayerPrefs.GetString("CurrentSubseries");
-		currentSubseries = int.Parse(currentSubseriesStr);
+		currentSeriesName = PlayerPrefs.GetString("CurrentSeriesName");
+		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
 		
 		maxDailyPlays = PlayerPrefs.GetInt("SubseriesDailyPlays");
 		
-		if(PlayerPrefs.HasKey("DailyPlays" + currentSubseries + "")){
-			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSubseries + "");
-			Debug.Log("DailyPlays" + currentSubseries + " = " + dailyPlays);
+		if(PlayerPrefs.HasKey("DailyPlays" + currentSeriesIndex + "")){
+			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSeriesIndex + "");
+			Debug.Log("DailyPlays" + currentSeriesIndex + " = " + dailyPlays);
 		} else {
-			PlayerPrefs.SetInt("DailyPlays" + currentSubseries + "", maxDailyPlays);
+			PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", maxDailyPlays);
 			dailyPlays = maxDailyPlays;
 		}
 		
@@ -122,7 +122,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	void getTrack(string track, int order){
 		switch(track){
 			case "1":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Daytona Beach, FL")){
 					Daytona();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -130,7 +130,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "2":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Atlanta, GA")){
 					Atlanta();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -138,7 +138,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "3":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Las Vegas, NV")){
 					LasVegas();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -146,7 +146,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "4":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Phoenix, AZ")){
 					Phoenix();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -154,7 +154,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "5":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Fontana, CA")){
 					Fontana();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -162,7 +162,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "6":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Martinsville, VA")){
 					Martinsville();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -170,7 +170,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "7":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Fort Worth, TX")){
 					FortWorth();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -178,7 +178,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "8":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Bristol, TN")){
 					Bristol();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -186,7 +186,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "9":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Richmond, VA")){
 					//Michigan();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -194,7 +194,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "10":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Talladega, AL")){
 					Talladega();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -202,7 +202,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "11":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Dover, DE")){
 					Dover();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -210,7 +210,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "12":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Kansas City, KS")){
 					Kansas();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -218,7 +218,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "13":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Charlotte, NC")){
 					Charlotte();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -226,7 +226,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "14":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Long Pond, PA")){
 					LongPond();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -234,7 +234,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "15":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Michigan, MI")){
 					Michigan();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -242,7 +242,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "16":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Joliet, IL")){
 					Joliet();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -250,7 +250,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "17":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Kentucky, KY")){
 					Kentucky();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -258,7 +258,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "18":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "New Hampshire, NH")){
 					NewHampshire();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -266,7 +266,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "19":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Darlington, SC")){
 					Darlington();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -274,7 +274,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "20":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Indianapolis, IN")){
 					Indianapolis();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -282,7 +282,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				}
 				break;
 			case "21":
-				showBestFinish(currentSubseriesStr, order);
+				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Homestead, FL")){
 					Homestead();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
@@ -305,7 +305,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		scrollPosition = GUI.BeginScrollView(new Rect(0, 0, widthblock * 9, Screen.height), scrollPosition, new Rect(0, 0, widthblock, Screen.height * 3.5f));
 
-		GUI.Label(new Rect(widthblock / 2, heightblock / 2, widthblock * 7, heightblock * 2), currentSeries);
+		GUI.Label(new Rect(widthblock / 2, heightblock / 2, widthblock * 7, heightblock * 2), currentSeriesName);
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
@@ -340,7 +340,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 				//Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
 				dailyPlays--;
-				PlayerPrefs.SetInt("DailyPlays" + currentSubseries + "", dailyPlays);
+				PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", dailyPlays);
 				SceneManager.LoadScene(circuitChoice);
 			} else {
 				SceneManager.LoadScene("Store");
@@ -352,10 +352,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 		}
 	}
 
-	public static void showBestFinish(string currentSubseries, int order){
+	public static void showBestFinish(string currentSeriesIndex, int order){
 		
-		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSubseries + order) == true){
-			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSubseries + order);
+		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex + order) == true){
+			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex + order);
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 			GUI.Label(new Rect(widthblock/2, heightblock * ((order*3) + 4), widthblock * 1.5f, heightblock * 2), "" + bestFinishPos);
 			//Debug.Log("Track " + order + " has a best finish of " + bestFinishPos);

@@ -31,7 +31,7 @@ public class PrizeCollection : MonoBehaviour
 			prizeType=PlayerPrefs.GetString("PrizeType");
 			switch(prizeType){
 				case "PremiumBag":
-					ListPrizeOptions("Rarity3");
+					ListPrizeOptions("Specific");
 					PremiumGarage("cup20",validDriver[Random.Range(0,validDriver.Count)]);
 					break;
 				case "FreeDaily":
@@ -111,6 +111,9 @@ public class PrizeCollection : MonoBehaviour
 				validDriver.Add(19);
 				validDriver.Add(22);
 				validDriver.Add(48);
+			break;
+			case "Specific":
+				validDriver.Add(18);
 			break;
 			default:
 				//All Drivers

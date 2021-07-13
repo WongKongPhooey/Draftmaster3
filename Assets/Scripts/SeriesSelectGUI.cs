@@ -150,8 +150,10 @@ public class SeriesSelectGUI : MonoBehaviour {
 						if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
 							PlayerPrefs.SetString("carTexture", carLivery);
 							PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
-							PlayerPrefs.SetString("CurrentSubseries", menuIndex + "" + subMenu);
-							PlayerPrefs.SetString("CurrentSeries",SeriesData.offlineSeries[menuIndex,subMenu]);
+							PlayerPrefs.SetString("CurrentSeriesIndex", menuIndex + "" + subMenu);
+							PlayerPrefs.SetString("CurrentSeriesName",SeriesData.offlineSeries[menuIndex,subMenu]);
+							PlayerPrefs.SetInt("CurrentSeries", menuIndex);
+							PlayerPrefs.SetInt("CurrentSubseries", subMenu);
 							PlayerPrefs.SetInt("SubseriesDailyPlays",SeriesData.offlineDailyPlays[menuIndex,subMenu]);
 							PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
 							PlayerPrefs.SetString("RestrictionValue",restrictionValue);

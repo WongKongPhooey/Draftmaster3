@@ -281,8 +281,6 @@ public class SingleCar : MonoBehaviour {
 			case "Transfers":
 				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 15f, widthblock * 4.5f, heightblock * 1.5f), "Change Number")){
 					numberPanel = true;
-					//PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, 1);
-					Debug.Log("Car #" + currentCar + " now uses #1. Var: " + "CustomNumber" + seriesPrefix + currentCar);
 				}
 				if (GUI.Button(new Rect(widthblock * 15.5f, heightblock * 15f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
 				}
@@ -326,10 +324,13 @@ public class SingleCar : MonoBehaviour {
 			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 			GUI.Label(new Rect(widthblock * 3.5f, heightblock * 4f, widthblock * 11f, heightblock * 2f), "Change Number");
 			
-			for(int i=0;i<8;i++){
-				if (GUI.Button(new Rect(widthblock * 4f + (widthblock * i * 1.5f), heightblock * 7f, widthblock * 1f, widthblock * 1f), Resources.Load(seriesPrefix + "num" + i) as Texture)){
-					PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, i);
-					numberPanel = false;
+			for(int i=0;i<3;i++){
+				for(int j=0;j<8;j++){
+					if (GUI.Button(new Rect(widthblock * 4f + (widthblock * j * 1.5f), (heightblock * 7f) + (heightblock * i * 2f), widthblock * 1f, widthblock * 1f), Resources.Load(seriesPrefix + "num" + ((i * 8) + j)) as Texture)){
+						PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, (i * 8) + j);
+						Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + currentCar);
+						numberPanel = false;
+					}
 				}
 			}
 			

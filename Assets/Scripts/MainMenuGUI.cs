@@ -124,8 +124,14 @@ public class MainMenuGUI : MonoBehaviour {
 		
 		CommonGUI.TopBar();
 		
-		if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 2, heightblock * 2), "Login")){
-			SceneManager.LoadScene("LoginRegister");
+		if(PlayerPrefs.HasKey("PlayerUsername")){
+			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 4.5f, heightblock * 2), PlayerPrefs.GetString("PlayerUsername"))){
+				//SceneManager.LoadScene("LoginRegister");
+			}
+		} else {
+			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 2, heightblock * 2), "Login")){
+				SceneManager.LoadScene("LoginRegister");
+			}
 		}
 		
 		//All Cars

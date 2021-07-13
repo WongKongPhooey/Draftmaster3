@@ -47,9 +47,8 @@ public class AIMovement : MonoBehaviour
     string carNumber;
 	string AICarNum;
 	
-	string currentSeriesStr;
-	char currentSeries;
-	char currentSubseries;
+	string currentSeries;
+	string currentSubseries;
 	
 	string seriesPrefix;
 	int customNum;
@@ -83,9 +82,8 @@ public class AIMovement : MonoBehaviour
         AISpeed = 200;
         laneticker = 0;
 		
-		currentSeriesStr = PlayerPrefs.GetString("CurrentSubseries");
-		currentSubseries = currentSeriesStr[1];
-		currentSeries = currentSeriesStr[0];
+		currentSeries = PlayerPrefs.GetInt("CurrentSeries").ToString();
+		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries").ToString();
 		
 		AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		
