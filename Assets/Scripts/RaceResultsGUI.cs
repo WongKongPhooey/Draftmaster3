@@ -51,18 +51,18 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		winningsMultiplier = 1;
 
-		string currentSubseries = PlayerPrefs.GetString("CurrentSubseries");
+		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
-		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSubseries + currentTrack) == true){
-			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSubseries + currentTrack);
+		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
+			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex+ currentTrack);
 			if((Scoreboard.position < bestFinishPos)&&(Scoreboard.position > 0)){
-				PlayerPrefs.SetInt("BestFinishPosition" + currentSubseries + currentTrack + "", Scoreboard.position);
+				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position);
 			}
-			Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSubseries + currentTrack);
+			Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
 		} else {
-			PlayerPrefs.SetInt("BestFinishPosition" + currentSubseries + currentTrack + "", Scoreboard.position);
-			Debug.Log("New best finish: " + Scoreboard.position + ". Track: " + currentSubseries + currentTrack);
+			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position);
+			Debug.Log("New best finish: " + Scoreboard.position + ". Track: " + currentSeriesIndex + currentTrack);
 		}
 
 		switch(PlayerPrefs.GetString("ChallengeType")){
