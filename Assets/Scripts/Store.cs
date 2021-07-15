@@ -112,7 +112,8 @@ public class Store : MonoBehaviour{
 		GUI.skin.verticalScrollbarThumb.fixedWidth = Screen.width / 20;
 		scrollPosition = GUI.BeginScrollView(new Rect(widthblock * 4, heightblock * 4, Screen.width - (widthblock * 4), Screen.height - (heightblock * 4)), scrollPosition, new Rect(widthblock * 4, heightblock * 4, Screen.width - (widthblock * 5.5f), Screen.height * windowscroll));
 
-		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
+	  GUI.skin.button.fontSize = 96 / FontScale.fontScale;
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
 		GUI.skin = tileSkin;
