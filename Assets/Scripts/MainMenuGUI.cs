@@ -66,13 +66,16 @@ public class MainMenuGUI : MonoBehaviour {
 		goRaceMenu = false;
 		moreRaceMenu = false;
 		
-		PlayFabManager.LoginFromPrefs();
+		if(PlayerPrefs.HasKey("PlayerUsername")){
+			PlayFabManager.LoginFromPrefs();
+		}
 		
 		//Reset the game to imitate new users
 		//PlayerPrefs.DeleteAll();
 		
 		if(!PlayerPrefs.HasKey("NewUser")){
 			PlayerPrefs.SetInt("PrizeMoney",10000);
+			firstTimeInit();
 		}
 		
 		PlayerPrefs.DeleteKey("FinishPos");
@@ -108,6 +111,10 @@ public class MainMenuGUI : MonoBehaviour {
 
 	void Update() {
 	}
+	
+	void firstTimeInit(){
+		PlayerPrefs.SetInt("CameraRotate", 1);
+	}
 
 	void OnGUI() {
 		
@@ -126,7 +133,7 @@ public class MainMenuGUI : MonoBehaviour {
 		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
 			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 4.5f, heightblock * 2), PlayerPrefs.GetString("PlayerUsername"))){
-				//SceneManager.LoadScene("LoginRegister");
+				SceneManager.LoadScene("MyAccount");
 			}
 		} else {
 			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 2, heightblock * 2), "Login")){

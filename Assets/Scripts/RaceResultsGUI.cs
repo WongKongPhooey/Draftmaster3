@@ -248,8 +248,10 @@ public class RaceResultsGUI : MonoBehaviour {
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
-		if(GUI.Button(new Rect(widthblock * 12, Screen.height - (heightblock * 3), widthblock * 6, heightblock * 2), "View Leaderboard")){
-			Application.LoadLevel("Leaderboard");
+		if(PlayerPrefs.HasKey("PlayerUsername")){
+			if(GUI.Button(new Rect(widthblock * 12, Screen.height - (heightblock * 3), widthblock * 6, heightblock * 2), "View Leaderboard")){
+				Application.LoadLevel("Leaderboard");
+			}
 		}
 
 		if(GUI.Button(new Rect(widthblock * 2, Screen.height - (heightblock * 3), widthblock * 3, heightblock * 2), "Next")){

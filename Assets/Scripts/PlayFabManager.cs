@@ -89,6 +89,13 @@ public class PlayFabManager : MonoBehaviour
 		Debug.Log(error.GenerateErrorReport());
 	}
 	
+	public static void Logout(){
+		PlayerPrefs.DeleteKey("PlayerUsername");
+		PlayerPrefs.DeleteKey("PlayerEmail");
+		PlayerPrefs.DeleteKey("PlayerPassword");
+		SceneManager.LoadScene("MainMenu");
+	}
+	
 	public static void SendLeaderboard(int score, string circuitName){
 		var request = new UpdatePlayerStatisticsRequest {
 			Statistics = new List<StatisticUpdate> {
@@ -123,7 +130,6 @@ public class PlayFabManager : MonoBehaviour
 		}
 		
 		foreach(var item in result.Leaderboard) {
-			
 			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
 			tableLabels[0].text = (item.Position + 1).ToString();

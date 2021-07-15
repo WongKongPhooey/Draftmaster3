@@ -72,13 +72,6 @@ public class OptionsMenuGUI : MonoBehaviour {
 			cameraRotate = 0;
 			cameraRotateName = "No";
 		}
-		local2Player = PlayerPrefs.GetInt("Local2Player");
-		if(local2Player == 1){
-			local2PlayerName = "Enabled";
-		} else {
-			local2Player = 0;
-			local2PlayerName = "Disabled";
-		}
 		if(PlayerPrefs.HasKey("AudioOn")){
 			audioOn = PlayerPrefs.GetInt("AudioOn");
 		} else {
@@ -154,143 +147,22 @@ public class OptionsMenuGUI : MonoBehaviour {
 		}
 		
 		GUI.Label(new Rect(widthblock * 2, heightblock * 8, widthblock * 9, heightblock * 3), "Audio/SFX: " + audioOnName);
+		
 
 		if (GUI.Button(new Rect(widthblock * 11, heightblock * 12, widthblock * 1, heightblock * 2), "<")){
-			switch(difficultyName){
-			case "Standard":
-				difficulty = 2;
-				difficultyName = "Hard";
+			switch(cameraRotate){
+			case 0:
+				cameraRotate = 1;
+				cameraRotateName = "Yes";
 				break;
-			case "Hard":
-				difficulty = 1;
-				difficultyName = "Standard";
+			case 1:
+				cameraRotate = 0;
+				cameraRotateName = "No";
 				break;
 			}
-			PlayerPrefs.SetInt("Difficulty", difficulty);
+			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
 		}
-		
 		if (GUI.Button(new Rect(widthblock * 12, heightblock * 12, widthblock * 1, heightblock * 2), ">")){
-			switch(difficultyName){
-			case "Standard":
-				difficulty = 2;
-				difficultyName = "Hard";
-				break;
-			case "Hard":
-				difficulty = 1;
-				difficultyName = "Standard";
-				break;
-			}
-			PlayerPrefs.SetInt("Difficulty", difficulty);
-		}
-
-		GUI.Label(new Rect(widthblock * 2, heightblock * 12, widthblock * 9, heightblock * 3), "Difficulty: " + difficultyName);
-
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 16, widthblock * 1, heightblock * 2), "<")){
-			if(raceLaps > 1){
-				raceLaps /= 2;
-				racePrize /= 2;
-				averageLaps /= 2;
-			} else {
-				raceLaps = 8;
-				racePrize = 8;
-				averageLaps = 64;
-			}
-			PlayerPrefs.SetInt("RaceLapsMultiplier", raceLaps);
-		}
-		if (GUI.Button(new Rect(widthblock * 12, heightblock * 16, widthblock * 1, heightblock * 2), ">")){
-			if(raceLaps < 5){
-				raceLaps *= 2;
-				racePrize *= 2;
-				averageLaps *= 2;
-			} else {
-				raceLaps = 1;
-				racePrize = 1;
-				averageLaps = 8;
-			}
-			PlayerPrefs.SetInt("RaceLapsMultiplier", raceLaps);
-		}
-		
-		GUI.Label(new Rect(widthblock * 2, heightblock * 16, widthblock * 9, heightblock * 3), "Laps: X" + raceLaps.ToString() + " (Avg. " + averageLaps.ToString() + ")");
-
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 20, widthblock * 1, heightblock * 2), "<")){
-			switch(laneChange){
-			case 0:
-				laneChange = 3;
-				laneChangeName = "Fastest";
-				laneChangeDuration = 40;
-				laneChangeSpeed = 30;
-				break;
-			case 1:
-				laneChange = 0;
-				laneChangeName = "Slow";
-				laneChangeDuration = 120;
-				laneChangeSpeed = 10;
-				break;
-			case 2:
-				laneChange = 1;
-				laneChangeName = "Regular";
-				laneChangeDuration = 80;
-				laneChangeSpeed = 15;
-				break;
-			case 3:
-				laneChange = 2;
-				laneChangeName = "Fast";
-				laneChangeDuration = 60;
-				laneChangeSpeed = 20;
-				break;
-			}
-			PlayerPrefs.SetInt("LaneChange", laneChange);
-			PlayerPrefs.SetInt("LaneChangeSpeed", laneChangeSpeed);
-			PlayerPrefs.SetInt("LaneChangeDuration", laneChangeDuration);
-		}
-		if (GUI.Button(new Rect(widthblock * 12, heightblock * 20, widthblock * 1, heightblock * 2), ">")){
-			switch(laneChange){
-			case 0:
-				laneChange = 1;
-				laneChangeName = "Regular";
-				laneChangeDuration = 80;
-				laneChangeSpeed = 15;
-				break;
-			case 1:
-				laneChange = 2;
-				laneChangeName = "Fast";
-				laneChangeDuration = 60;
-				laneChangeSpeed = 20;
-				break;
-			case 2:
-				laneChange = 3;
-				laneChangeName = "Fastest";
-				laneChangeDuration = 40;
-				laneChangeSpeed = 30;
-				break;
-			case 3:
-				laneChange = 0;
-				laneChangeName = "Slow";
-				laneChangeDuration = 120;
-				laneChangeSpeed = 10;
-				break;
-			}
-			PlayerPrefs.SetInt("LaneChange", laneChange);
-			PlayerPrefs.SetInt("LaneChangeSpeed", laneChangeSpeed);
-			PlayerPrefs.SetInt("LaneChangeDuration", laneChangeDuration);
-		}
-		
-		GUI.Label(new Rect(widthblock * 2, heightblock * 20, widthblock * 9, heightblock * 3), "Lane Changes: " + laneChangeName);
-
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 24, widthblock * 1, heightblock * 2), "<")){
-			switch(cameraRotate){
-			case 0:
-				cameraRotate = 1;
-				cameraRotateName = "Yes";
-				break;
-			case 1:
-				cameraRotate = 0;
-				cameraRotateName = "No";
-				break;
-			}
-			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
-		}
-		if (GUI.Button(new Rect(widthblock * 12, heightblock * 24, widthblock * 1, heightblock * 2), ">")){
 			switch(cameraRotate){
 			case 0:
 				cameraRotate = 1;
@@ -304,45 +176,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
 		}
 		
-		GUI.Label(new Rect(widthblock * 2, heightblock * 24, widthblock * 9, heightblock * 3), "Camera Rotation: " + cameraRotateName);
-		
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 28, widthblock * 1, heightblock * 2), "<")){
-			switch(local2Player){
-			case 0:
-				local2Player = 1;
-				local2PlayerName = "Enabled";
-				break;
-			case 1:
-				local2Player = 0;
-				local2PlayerName = "Disabled";
-				break;
-			}
-			PlayerPrefs.SetInt("Local2Player", local2Player);
-		}
-		if (GUI.Button(new Rect(widthblock * 12, heightblock * 28, widthblock * 1, heightblock * 2), ">")){
-			switch(local2Player){
-			case 0:
-				local2Player = 1;
-				local2PlayerName = "Enabled";
-				break;
-			case 1:
-				local2Player = 0;
-				local2PlayerName = "Disabled";
-				break;
-			}
-			PlayerPrefs.SetInt("Local2Player", local2Player);
-		}
-		
-		GUI.Label(new Rect(widthblock * 2, heightblock * 28, widthblock * 9, heightblock * 3), "Local 2 Player: " + local2PlayerName);
-
-		cheatCode = GUI.TextField(new Rect(widthblock * 11, heightblock * 32, widthblock * 3.5f, heightblock * 2), cheatCode, 30);
-
-		if (GUI.Button(new Rect(widthblock * 14.5f, heightblock * 32, widthblock * 1.5f, heightblock * 2), "Go!")){
-			MiscScripts.CheatCodes(cheatCode);
-		}
-
-		GUI.Label(new Rect(widthblock * 2, heightblock * 32, widthblock * 9, heightblock * 3), "Test Codes");
-
+		GUI.Label(new Rect(widthblock * 2, heightblock * 12, widthblock * 9, heightblock * 3), "Camera Rotation: " + cameraRotateName);
 
 		GUI.EndScrollView();
 

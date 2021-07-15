@@ -42,8 +42,8 @@ public class SpawnField : MonoBehaviour {
 			startLane = 2;
 		}
 
-		//spawnCup2020Cars();
-		spawnCup2020Scenario();
+		spawnCup2020Cars();
+		//spawnCup2020Scenario();
 		paceDistance = 2.5f;
 		string carNumber = PlayerPrefs.GetString("carTexture");
 		carNumber = PlayerPrefs.GetString("carTexture");			
@@ -51,10 +51,10 @@ public class SpawnField : MonoBehaviour {
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
 		fastCars.Remove(carNumber);
 		carNumbers.Remove(carNumber);
-		//gridRows = 16;
-		//playerRow = 8;
-		gridRows = 2;
-		playerRow = 2;
+		gridRows = 16;
+		playerRow = 8;
+		//gridRows = 2;
+		//playerRow = 2;
 
 		string challengeName = PlayerPrefs.GetString("ChallengeType");
 

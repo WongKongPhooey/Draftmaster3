@@ -14,6 +14,9 @@ public class PrizeCollection : MonoBehaviour
 	int raceWinnings;
 	
 	string prizeType;
+	int prizeCarNumber;
+	
+	public bool firstCar;
 	
 	public static string carReward;
 	public static int carCurrentGears;
@@ -26,24 +29,30 @@ public class PrizeCollection : MonoBehaviour
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
+		firstCar = false;
 		if(PlayerPrefs.HasKey("NewUser")){
 			PlayerPrefs.SetInt("NewUser",1);
 			prizeType=PlayerPrefs.GetString("PrizeType");
 			switch(prizeType){
 				case "PremiumBag":
 					ListPrizeOptions("Specific");
-					PremiumGarage("cup20",validDriver[Random.Range(0,validDriver.Count)]);
+					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
+					PremiumGarage("cup20",prizeCarNumber);
 					break;
 				case "FreeDaily":
 					ListPrizeOptions("");
-					DailyGarage("cup20",validDriver[Random.Range(0,validDriver.Count)]);
+					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
+					DailyGarage("cup20",prizeCarNumber);
 					break;
 				default:
 					break;
 			}
 		} else {
+			//First time user, Rookie unlock
+			firstCar = true;
 			ListPrizeOptions("Rookies");
-			StarterCar("cup20",validDriver[Random.Range(0,validDriver.Count)]);
+			prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
+			StarterCar("cup20",prizeCarNumber);
 			PlayerPrefs.SetInt("NewUser",1);
 			prizeType="Rookies";
 		}
@@ -76,7 +85,13 @@ public class PrizeCollection : MonoBehaviour
 			if(prizeType == "Dailies"){
 				Application.LoadLevel("Store");
 			} else {
-				Application.LoadLevel("MainMenu");
+				if(firstCar == true){
+					PlayerPrefs.SetInt("CarFocus",prizeCarNumber);
+					PlayerPrefs.SetString("SeriesFocus","cup20");
+					Application.LoadLevel("SingleCar");
+				} else {
+					Application.LoadLevel("MainMenu");
+				}
 			}
 		}
 	}

@@ -7,6 +7,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 	public GUISkin eightBitSkin;
 	public GUISkin buttonSkin;
 	public GUISkin tileSkin;
+	public GUISkin whiteGUI;
 
 	float widthblock = Screen.width/20;
 	float heightblock = Screen.height/20;
@@ -77,7 +78,9 @@ public class SeriesSelectGUI : MonoBehaviour {
 				string carLivery = "livery" + seriesCount;
 				float cardX = widthblock * (rootMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
+				GUI.skin = whiteGUI;
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
+				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2), SeriesData.offlineMenu[rootMenu]);
@@ -103,7 +106,9 @@ public class SeriesSelectGUI : MonoBehaviour {
 				float cardX = widthblock * (subMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
 				bool meetsRequirements = false;
+				GUI.skin = whiteGUI;
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
+				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2), SeriesData.offlineSeries[menuIndex,subMenu]);

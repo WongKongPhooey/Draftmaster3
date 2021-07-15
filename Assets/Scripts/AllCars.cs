@@ -317,9 +317,9 @@ public class AllCars : MonoBehaviour {
 							GUI.skin.label.normal.textColor = Color.black;
 							
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
-								Application.LoadLevel("SingleCar");
 								PlayerPrefs.SetInt("CarFocus",carCount);
 								PlayerPrefs.SetString("SeriesFocus","cup20");
+								Application.LoadLevel("SingleCar");
 							}
 						}
 						carCount++;

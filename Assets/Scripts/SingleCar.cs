@@ -35,6 +35,9 @@ public class SingleCar : MonoBehaviour {
 	
 	bool numberPanel;
 	
+	List<int> availableNumbers = new List<int>();
+	int[] availNums;
+	
 	public Texture2D gasCanTex;
 	public Texture2D gearTex;
 	
@@ -63,6 +66,7 @@ public class SingleCar : MonoBehaviour {
 		
 		if(PlayerPrefs.HasKey("CarFocus")){
 			currentCar = PlayerPrefs.GetInt("CarFocus");
+			PlayerPrefs.DeleteKey("CarFocus");
 		} else {
 			currentCar = 1;
 		}
@@ -323,6 +327,13 @@ public class SingleCar : MonoBehaviour {
 			GUI.skin.label.alignment = TextAnchor.UpperLeft;
 			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 			GUI.Label(new Rect(widthblock * 3.5f, heightblock * 4f, widthblock * 11f, heightblock * 2f), "Change Number");
+			
+			for(int car=0;car<100;car++){
+				if(Resources.Load(seriesPrefix + "num" + car) != null){
+					availableNumbers.Add(car);
+				}
+			}
+			availNums = availableNumbers.ToArray();
 			
 			for(int i=0;i<3;i++){
 				for(int j=0;j<8;j++){
