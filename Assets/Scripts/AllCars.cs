@@ -196,6 +196,7 @@ public class AllCars : MonoBehaviour {
 					
 					//Initialise
 					if(!PlayerPrefs.HasKey(seriesPrefix + carCount + "Gears")){
+						//Debug.Log("#" + carCount + " Not Initialised");
 						PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked",0);
 						PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears",0);
 						PlayerPrefs.SetInt(seriesPrefix + carCount + "Class",0);

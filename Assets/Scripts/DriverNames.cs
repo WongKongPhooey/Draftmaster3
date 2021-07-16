@@ -232,6 +232,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Rarity[27] = 1;
 		cup2020Rarity[32] = 1;
 		cup2020Rarity[34] = 1;
+		cup2020Rarity[36] = 1;
 		cup2020Rarity[37] = 1;
 		cup2020Rarity[38] = 1;
 		cup2020Rarity[41] = 1;
@@ -243,8 +244,10 @@ public class DriverNames : MonoBehaviour {
 		cup2020Rarity[51] = 1;
 		cup2020Rarity[52] = 1;
 		cup2020Rarity[53] = 1;
+		cup2020Rarity[54] = 1;
 		cup2020Rarity[62] = 1;
 		cup2020Rarity[66] = 1;
+		cup2020Rarity[74] = 1;
 		cup2020Rarity[77] = 1;
 		cup2020Rarity[78] = 1;
 		cup2020Rarity[88] = 2;

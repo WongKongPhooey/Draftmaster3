@@ -154,7 +154,14 @@ public class SingleCar : MonoBehaviour {
 		GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 1f), cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
 		
 		GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load("20liveryblank") as Texture);
-		GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load(carLivery) as Texture);
+		
+		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
+			int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar);
+			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load(carLivery + "blank") as Texture);
+			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f) + (((widthblock * 5f)/64)*34), cardY + (heightblock * 2) + ((widthblock * 2.5f)/4), widthblock * 1.25f, widthblock * 1.25f), Resources.Load("cup20num" + customNum) as Texture);
+		} else {
+			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load("carLivery") as Texture);
+		}
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), DriverNames.cup2020Names[currentCar]);
 		
@@ -252,26 +259,28 @@ public class SingleCar : MonoBehaviour {
 		//MENUS
 		switch(carMenu){
 			case "Links":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 2), currentCarTeam + " Teammates Will Help You");
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 8.5f, widthblock * 11.5f, heightblock * 2), "Other " + currentCarManu + " Cars Will Work With You:");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 2), currentCarTeam + " Teammates Will Help You More");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 10f, widthblock * 11.5f, heightblock * 2), "Other " + currentCarManu + " Cars Will Block You Less");
+				GUI.DrawTexture(new Rect(widthblock * 7.5f, heightblock * 11.5f, heightblock * 2f, heightblock * 1), manufacturerTex);
 				
 				switch(currentCarType){
 					case "Intimidator":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Intimidators Push Cars Out Of Lanes More Often");
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 13f, widthblock * 11.5f, heightblock * 2), "Class B (+15%)");
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 14.5f, widthblock * 11.5f, heightblock * 2), "3* Rarity (+15%)");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 13f, widthblock * 11.5f, heightblock * 2), "Intimidators Push Cars Out Of Lanes More Often");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 14.5f, widthblock * 11.5f, heightblock * 2), "Base (25%)");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 16f, widthblock * 11.5f, heightblock * 2), "Class " + classAbbr(carClass) + " (+" + carClass * 2 + "%)");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 17.5f, widthblock * 11.5f, heightblock * 2), "" + currentCarRarity + "* Rarity (+" + (currentCarRarity * 10) + "%)");
 						break;
 					case "Strategist":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Strategists Change Lane Faster Per Class");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 14.5f, widthblock * 11.5f, heightblock * 2), "Strategists Change Lane Faster Per Class");
 						break;
 					case "Rookie":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Rookies Are Blocked Less Often");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 14.5f, widthblock * 11.5f, heightblock * 2), "Rookies Are Blocked Less Often");
 						break;
 					case "Closer":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Closers Pick Up A Draft From Further Away");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 14.5f, widthblock * 11.5f, heightblock * 2), "Closers Pick Up A Draft From Further Away");
 						break;
 					case "Gentleman":
-						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11.5f, widthblock * 11.5f, heightblock * 2), "Everyone Will Work With Gentleman Drivers");
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 14.5f, widthblock * 11.5f, heightblock * 2), "Everyone Will Work With Gentleman Drivers");
 						break;
 				}
 				GUI.skin = buttonSkin;

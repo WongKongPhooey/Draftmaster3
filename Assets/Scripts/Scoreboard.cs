@@ -246,9 +246,9 @@ public class Scoreboard : MonoBehaviour {
 			GUI.Label(new Rect(widthblock * 16, heightblock * 1f, widthblock * 4, heightblock * 1), "4" + " " + driverNames[3] + "(+" + carDist[3].ToString("F3") + ")");
 		} else {
 			//Player Position
-			GUI.Label(new Rect(widthblock * 8, heightblock * 1f, widthblock * 6, heightblock * 1), (position) + " " + driverNames[position] + "(+" + carDist[position].ToString("F3") + ")");
-			GUI.Label(new Rect(widthblock * 12, heightblock * 1f, widthblock * 6, heightblock * 1), (position + 1) + " " + driverNames[position + 1] + "(+" + carDist[position + 1].ToString("F3") + ")");
-			GUI.Label(new Rect(widthblock * 16, heightblock * 1f, widthblock * 6, heightblock * 1), (position + 2) + " " + driverNames[position + 2] + "(+" + carDist[position + 1].ToString("F3") + ")");
+			GUI.Label(new Rect(widthblock * 8, heightblock * 1f, widthblock * 6, heightblock * 1), (position - 1) + " " + driverNames[position - 1] + "(+" + carDist[position - 1].ToString("F3") + ")");
+			GUI.Label(new Rect(widthblock * 12, heightblock * 1f, widthblock * 6, heightblock * 1), position + " " + driverNames[position] + "(+" + carDist[position].ToString("F3") + ")");
+			GUI.Label(new Rect(widthblock * 16, heightblock * 1f, widthblock * 6, heightblock * 1), (position + 1) + " " + driverNames[position + 1] + "(+" + carDist[position + 1].ToString("F3") + ")");
 		}
 		
 		//Lap timer
