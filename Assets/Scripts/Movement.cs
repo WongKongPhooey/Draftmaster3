@@ -242,7 +242,7 @@ public class Movement : MonoBehaviour {
 				playerSpeed-=0.5f;
 			}
 		}
-		playerSpeed-=0.02f;
+		playerSpeed-=0.5f;
 	}
 	
 	void ReceivePush(float bumpSpeed){

@@ -96,9 +96,9 @@ public class SeriesData : MonoBehaviour{
 		
 		offlinePrizes[0,0] = "Rookies";
 		offlinePrizes[0,1] = "Rookies";
-		offlinePrizes[0,2] = "Rookies";
-		offlinePrizes[0,3] = "Rookies";
-		offlinePrizes[0,4] = "Rookies";
+		offlinePrizes[0,2] = "Rarity1";
+		offlinePrizes[0,3] = "Rarity1";
+		offlinePrizes[0,4] = "Rarity2";
 		
 		
 		//Speedways
@@ -156,11 +156,11 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[1,3] = 8;
 		offlineFuel[1,4] = 9;
 		
-		offlinePrizes[1,0] = "Rookies,Plate";
-		offlinePrizes[1,1] = "Rookies,Plate";
-		offlinePrizes[1,2] = "Rookies,Plate";
-		offlinePrizes[1,3] = "Plate";
-		offlinePrizes[1,4] = "Plate";
+		offlinePrizes[1,0] = "Plate1";
+		offlinePrizes[1,1] = "Plate1";
+		offlinePrizes[1,2] = "Plate2";
+		offlinePrizes[1,3] = "Plate2";
+		offlinePrizes[1,4] = "Plate3";
 		
 		
 		//Cookie Cutters

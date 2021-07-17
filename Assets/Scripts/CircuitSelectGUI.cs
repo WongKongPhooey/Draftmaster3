@@ -631,10 +631,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 	static void Charlotte(){
 		circuitChoice = "Charlotte";
 		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
-		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",80);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",100);
 		PlayerPrefs.SetInt("StraightLength2",50);
-		PlayerPrefs.SetInt("StraightLength3",150);
+		PlayerPrefs.SetInt("StraightLength3",200);
 		PlayerPrefs.SetInt("StraightLength4",50);
 		PlayerPrefs.SetInt("TurnLength1",25);
 		PlayerPrefs.SetInt("TurnLength2",155);
@@ -645,7 +645,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TurnAngle3",2);
 		PlayerPrefs.SetInt("TurnAngle4",1);
 		PlayerPrefs.SetInt("StartLine",40);
-		PlayerPrefs.SetInt("SpeedOffset",22 - speedFactor);
+		PlayerPrefs.SetInt("SpeedOffset",19 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
 		PlayerPrefs.SetString("TrackType","Mid");
 	}

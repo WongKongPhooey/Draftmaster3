@@ -160,7 +160,7 @@ public class SingleCar : MonoBehaviour {
 			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load(carLivery + "blank") as Texture);
 			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f) + (((widthblock * 5f)/64)*34), cardY + (heightblock * 2) + ((widthblock * 2.5f)/4), widthblock * 1.25f, widthblock * 1.25f), Resources.Load("cup20num" + customNum) as Texture);
 		} else {
-			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load("carLivery") as Texture);
+			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load(carLivery) as Texture);
 		}
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), DriverNames.cup2020Names[currentCar]);
@@ -292,16 +292,16 @@ public class SingleCar : MonoBehaviour {
 				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Starts");
 				break;
 			case "Transfers":
-				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 15f, widthblock * 4.5f, heightblock * 1.5f), "Change Number")){
+				if (GUI.Button(new Rect(widthblock * 9f, heightblock * 10f, widthblock * 4.5f, heightblock * 1.5f), "Change Number")){
 					numberPanel = true;
 				}
-				if (GUI.Button(new Rect(widthblock * 15.5f, heightblock * 15f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
+				if (GUI.Button(new Rect(widthblock * 9.5f, heightblock * 12f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
 				}
-				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 17f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
+				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 14f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
 				}
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					GUI.skin = redGUI;
-					if (GUI.Button(new Rect(widthblock * 15f, heightblock * 17f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
+					if (GUI.Button(new Rect(widthblock * 9f, heightblock * 16f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
 						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
 					}
 				}

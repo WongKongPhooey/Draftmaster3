@@ -14,12 +14,23 @@ public class RaceRewards : MonoBehaviour
 	int raceWinnings;
 	int gears;
 	int position;
+	int finishPos;
 	
 	string seriesPrize;
+	int raceSubMenu;
 	
+	public static int carPrizeNum;
 	public static string carReward;
 	public static int carCurrentGears;
 	public static int carClassMax;
+	
+	public Texture2D moneyTex;
+	public Texture2D gasCanTex;
+	public Texture2D gearTex;
+	
+	public static Texture2D moneyTexInst;
+	public static Texture2D gasCanTexInst;
+	public static Texture2D gearTexInst;
 	
 	public List<int> validDriver = new List<int>();
 
@@ -28,16 +39,21 @@ public class RaceRewards : MonoBehaviour
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
 
+		moneyTexInst = moneyTex;
+		gasCanTexInst = gasCanTex;
+		gearTexInst = gearTex;
+
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
 		seriesPrize = PlayerPrefs.GetString("SeriesPrize");
+		raceSubMenu = PlayerPrefs.GetInt("CurrentSubseries");
 		if(seriesPrize != ""){
 			ListPrizeOptions(seriesPrize);
 		} else {
 			ListPrizeOptions("");
 		}
-		int finishPos = PlayerPrefs.GetInt("FinishPos");
+		finishPos = PlayerPrefs.GetInt("FinishPos");
 		if(finishPos < 11){
 			float chance = 11 - finishPos;
 			float rnd = Random.Range(0,10);
@@ -46,6 +62,13 @@ public class RaceRewards : MonoBehaviour
 			} else {
 				carReward = "";
 			}
+		} else {
+			carReward = "";
+		}
+		if(finishPos == 1){
+			gears = PlayerPrefs.GetInt("Gears");
+			gears += raceSubMenu;
+			PlayerPrefs.SetInt("Gears",gears);
 		}
 	}
 
@@ -69,11 +92,17 @@ public class RaceRewards : MonoBehaviour
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 
 		if(carReward != ""){
-			GUI.Label(new Rect(widthblock * 3, heightblock * 6, widthblock * 14, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
+			GUI.skin.label.alignment = TextAnchor.MiddleRight;
+			GUI.Label(new Rect(widthblock * 9, heightblock * 6, widthblock * 5, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
+			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + carPrizeNum) as Texture);
 		}
 		
-		GUI.Label(new Rect(widthblock * 3, heightblock * 8, widthblock * 14, heightblock * 2), " +10 Gears (" + gears + ")");
+		if(finishPos == 1){
+			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
+			GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +10 Gears (" + gears + ")");
+		}
 
+		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
 		if (GUI.Button(new Rect(widthblock * 7, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
@@ -86,15 +115,13 @@ public class RaceRewards : MonoBehaviour
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Class");
 			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + 1);
-			carReward = "" + DriverNames.cup2020Names[carNumber] + " +1";		
+			carReward = "" + DriverNames.cup2020Names[carNumber] + " +1";
+			carPrizeNum = carNumber;			
 			carCurrentGears = carGears + 1;
 			carClassMax = GameData.classMax(carClass);
-			
-			gears = PlayerPrefs.GetInt("Gears");
-			gears += 1;
-			PlayerPrefs.SetInt("Gears",gears);
 		} else {
 			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", 1);
+			carPrizeNum = carNumber;
 			carReward = "" + DriverNames.cup2020Names[carNumber] + " +1";
 		}
 		//Reset Prizes
@@ -172,6 +199,25 @@ public class RaceRewards : MonoBehaviour
 				validDriver.Add(19);
 				validDriver.Add(22);
 				validDriver.Add(48);
+			break;
+			case "Plate1":
+				validDriver.Add(16);
+				validDriver.Add(20);
+				validDriver.Add(34);
+				validDriver.Add(47);
+			break;
+			case "Plate2":
+				validDriver.Add(1);
+				validDriver.Add(3);
+				validDriver.Add(6);
+				validDriver.Add(10);
+				validDriver.Add(12);
+				validDriver.Add(24);
+			break;
+			case "Plate3":
+				validDriver.Add(2);
+				validDriver.Add(11);
+				validDriver.Add(22);
 			break;
 			default:
 				//All Drivers

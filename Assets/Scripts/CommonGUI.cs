@@ -71,12 +71,8 @@ public class CommonGUI : MonoBehaviour {
 			if (GUI.Button(new Rect(widthblock * 0.5f, 20, widthblock * 2f, heightblock * 1.5f), "Lvl " + level)){
 			}
 			
-			//Day
-			if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 1.5f, heightblock * 1.5f), "D" + day)){
-			}
-			
-			//Week
-			if (GUI.Button(new Rect(widthblock * 5f, 20, widthblock * 1.5f, heightblock * 1.5f), "W" + week)){
+			//Day/Week
+			if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 2.5f, heightblock * 1.5f), "W" + week + " / D" + day)){
 			}
 		}
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;

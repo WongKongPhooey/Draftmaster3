@@ -267,7 +267,14 @@ public class AllCars : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 1f), cardY + 10, widthblock * 0.75f, widthblock * 0.375f), rarityStars);
 						
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20liveryblank") as Texture);
-						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
+							//GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.25f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
+						} else {
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
