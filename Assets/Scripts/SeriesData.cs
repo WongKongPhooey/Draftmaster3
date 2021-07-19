@@ -298,6 +298,24 @@ public class SeriesData : MonoBehaviour{
 		offlineMinType[4,3] = "Class";
 		offlineMinType[4,4] = "Class";
 		
+		offlineMinClass[4,0] = 2;
+		offlineMinClass[4,1] = 3;
+		offlineMinClass[4,2] = 4;
+		offlineMinClass[4,3] = 5;
+		offlineMinClass[4,4] = 6;
+		
+		offlineTracklists[4,0] = "1,12,16,18,5";
+		offlineTracklists[4,1] = "2,8,7,15,17";
+		offlineTracklists[4,2] = "3,9,19,14,20";
+		offlineTracklists[4,3] = "11,10,7,15,6";
+		offlineTracklists[4,4] = "13,4,1,20,21";
+		
+		offlineFuel[4,0] = 5;
+		offlineFuel[4,1] = 6;
+		offlineFuel[4,2] = 7;
+		offlineFuel[4,3] = 8;
+		offlineFuel[4,4] = 9;
+		
 		//Team
 		offlineSeries[5,0] = "Lone Ranger";
 		offlineSeries[5,1] = "Childress Of The Sea";
@@ -332,6 +350,26 @@ public class SeriesData : MonoBehaviour{
 		offlineAILevel[5,6] = 8;
 		offlineAILevel[5,7] = 9;
 		offlineAILevel[5,8] = 10;
+		
+		offlineMinType[5,0] = "Team";
+		offlineMinType[5,1] = "Team";
+		offlineMinType[5,2] = "Team";
+		offlineMinType[5,3] = "Team";
+		offlineMinType[5,4] = "Team";
+		offlineMinType[5,5] = "Team";
+		offlineMinType[5,6] = "Team";
+		offlineMinType[5,7] = "Team";
+		offlineMinType[5,8] = "Team";
+		
+		offlineMinTeam[5,0] = "IND";
+		offlineMinTeam[5,1] = "RCR";
+		offlineMinTeam[5,2] = "JGR";
+		offlineMinTeam[5,3] = "PEN";
+		offlineMinTeam[5,4] = "RFR";
+		offlineMinTeam[5,5] = "FRM";
+		offlineMinTeam[5,6] = "SHR";
+		offlineMinTeam[5,7] = "CGR";
+		offlineMinTeam[5,8] = "HEN";
 		
 		//Manufacturer
 		offlineSeries[6,0] = "Mustang Sally";
@@ -450,14 +488,6 @@ public class SeriesData : MonoBehaviour{
 		seriesDescriptions[8] = "Proven winners wear their stars with pride Rarer drivers win bigger rewards!";
 		seriesDescriptions[9] = "The complete calendars. The ultimate challenge!";
 		
-		offlineMinType[5,0] = "Team";
-		offlineMinType[5,1] = "Team";
-		offlineMinType[5,2] = "Team";
-		offlineMinType[5,3] = "Team";
-		offlineMinType[5,4] = "Team";
-		offlineMinType[5,5] = "Team";
-		offlineMinType[5,6] = "Team";
-		
 		offlineMinType[6,0] = "Manufacturer";
 		offlineMinType[6,1] = "Manufacturer";
 		offlineMinType[6,2] = "Manufacturer";
@@ -469,29 +499,9 @@ public class SeriesData : MonoBehaviour{
 		offlineMinType[9,1] = "Level";
 		offlineMinType[9,2] = "Level";
 		
-		offlineMinLevel[3,0] = 10;
-		offlineMinLevel[3,1] = 15;
-		offlineMinLevel[3,2] = 25;
-		offlineMinLevel[3,3] = 35;
-		offlineMinLevel[3,4] = 45;
-		
 		offlineMinLevel[9,0] = 10;
 		offlineMinLevel[9,1] = 20;
 		offlineMinLevel[9,2] = 30;
-		
-		offlineMinClass[4,0] = 2;
-		offlineMinClass[4,1] = 3;
-		offlineMinClass[4,2] = 4;
-		offlineMinClass[4,3] = 5;
-		offlineMinClass[4,4] = 6;
-		
-		offlineMinTeam[5,0] = "IND";
-		offlineMinTeam[5,1] = "RCR";
-		offlineMinTeam[5,2] = "JGR";
-		offlineMinTeam[5,3] = "PEN";
-		offlineMinTeam[5,4] = "RFR";
-		offlineMinTeam[5,5] = "CGR";
-		offlineMinTeam[5,6] = "HEN";
 		
 		offlineMinManu[6,0] = "CHV";
 		offlineMinManu[6,1] = "FRD";
@@ -500,26 +510,9 @@ public class SeriesData : MonoBehaviour{
 		offlineMinManu[6,4] = "CHV";
 		offlineMinManu[6,5] = "TYT";
 		
-		offlineTracklists[4,0] = "1,12,16,18,5";
-		offlineTracklists[4,1] = "2,8,7,15,17";
-		offlineTracklists[4,2] = "3,9,19,14,20";
-		offlineTracklists[4,3] = "11,10,7,15,6";
-		offlineTracklists[4,4] = "13,4,1,20,21";
-		
 		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8";
 		offlineTracklists[9,1] = "1,2,3,4,5,6,7,8";
 		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8";
-		
-		//Team
-		offlinePrizes[5,0] = "IND";
-		offlinePrizes[5,1] = "RCR";
-		offlinePrizes[5,2] = "JGR";
-		offlinePrizes[5,3] = "PEN";
-		offlinePrizes[5,4] = "RFR";
-		offlinePrizes[5,5] = "FRM";
-		offlinePrizes[5,6] = "SHR";
-		offlinePrizes[5,7] = "CGR";
-		offlinePrizes[5,8] = "HEN";
 		
 		//Manufacturer
 		offlinePrizes[6,0] = "FRD";

@@ -142,7 +142,6 @@ public class AllCars : MonoBehaviour {
 		GUI.skin.label.normal.textColor = Color.black;
 
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
-		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock * 5, 20, widthblock * 5, heightblock * 2), "My Garage");
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
@@ -277,7 +276,6 @@ public class AllCars : MonoBehaviour {
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
-						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						//Progress Bar Box
 						GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						//Progress Bar
