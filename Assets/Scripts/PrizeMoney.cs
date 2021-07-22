@@ -51,4 +51,8 @@ public class PrizeMoney : MonoBehaviour {
 		cashAmount[41] = 200;
 		cashAmount[42] = 100;
 	}
+	
+	public static int getPrizeMoney(int position){
+		return cashAmount[position];
+	}
 }

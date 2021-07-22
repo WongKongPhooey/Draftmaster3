@@ -169,7 +169,7 @@ public class RaceResultsGUI : MonoBehaviour {
 		float windowscroll;
 
 		liveryName = "cup20livery";
-		resultsRows = 30;
+		resultsRows = 40;
 		windowscroll = 3.5f;
 
 		GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;

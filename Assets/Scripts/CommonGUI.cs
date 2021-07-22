@@ -22,6 +22,7 @@ public class CommonGUI : MonoBehaviour {
 	public static Texture2D moneyTexInst;
 	public static Texture2D gasCanTexInst;
 	public static Texture2D gearTexInst;
+
 	
     // Start is called before the first frame update
     void Awake(){

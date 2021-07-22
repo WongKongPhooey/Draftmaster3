@@ -16,8 +16,13 @@ public class RaceRewards : MonoBehaviour
 	int position;
 	int finishPos;
 	
+	int prizeMoney;
+	int maxRaceGears;
+	
 	string seriesPrize;
+	int raceMenu;
 	int raceSubMenu;
+	int offsetGears;
 	
 	public static int carPrizeNum;
 	public static string carReward;
@@ -47,6 +52,7 @@ public class RaceRewards : MonoBehaviour
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
 		seriesPrize = PlayerPrefs.GetString("SeriesPrize");
+		raceMenu = PlayerPrefs.GetInt("CurrentSeries");
 		raceSubMenu = PlayerPrefs.GetInt("CurrentSubseries");
 		if(seriesPrize != ""){
 			ListPrizeOptions(seriesPrize);
@@ -54,6 +60,11 @@ public class RaceRewards : MonoBehaviour
 			ListPrizeOptions("");
 		}
 		finishPos = PlayerPrefs.GetInt("FinishPos");
+		
+		prizeMoney = PrizeMoney.getPrizeMoney(finishPos);
+		playerMoney += prizeMoney;
+		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
+		
 		if(finishPos < 11){
 			float chance = 11 - finishPos;
 			float rnd = Random.Range(0,10);
@@ -65,10 +76,24 @@ public class RaceRewards : MonoBehaviour
 		} else {
 			carReward = "";
 		}
-		if(finishPos == 1){
-			gears = PlayerPrefs.GetInt("Gears");
-			gears += raceSubMenu;
-			PlayerPrefs.SetInt("Gears",gears);
+		
+		maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
+		if(maxRaceGears <= 0){
+			if(finishPos == 1){
+				offsetGears = 1;
+				gears = PlayerPrefs.GetInt("Gears");
+				gears += 1;
+				PlayerPrefs.SetInt("Gears",gears);
+			}
+		} else {
+			offsetGears = (maxRaceGears - finishPos) + 1;
+			if(offsetGears > 0){
+				gears = PlayerPrefs.GetInt("Gears");
+				gears += maxRaceGears - offsetGears;
+				PlayerPrefs.SetInt("Gears",gears);
+			} else {
+				offsetGears = 0;
+			}
 		}
 	}
 
@@ -97,9 +122,12 @@ public class RaceRewards : MonoBehaviour
 			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + carPrizeNum) as Texture);
 		}
 		
-		if(finishPos == 1){
-			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
-			GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +10 Gears (" + gears + ")");
+		GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
+		GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +" + offsetGears + " Gears (" + gears + ")");
+		
+		if(prizeMoney != 0){
+			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 12, widthblock * 1, widthblock * 1), moneyTexInst);
+			GUI.Label(new Rect(widthblock * 9, heightblock * 12, widthblock * 5, heightblock * 2), " +$" + prizeMoney + "");
 		}
 
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;

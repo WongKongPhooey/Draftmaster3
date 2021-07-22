@@ -48,14 +48,14 @@ public class Store : MonoBehaviour{
 		adWindow = false;
 		
 		//if(dailySelectsPicked == 0){
-			dailySelects.Add(0);
-			dailySelects.Add(7);
-			dailySelects.Add(8);
-			dailySelects.Add(13);
-			dailySelects.Add(15);
-			dailySelects.Add(16);
-			dailySelects.Add(17);
-			dailySelects.Add(20);
+			dailySelects.Add(21);
+			dailySelects.Add(77);
+			dailySelects.Add(78);
+			dailySelects.Add(96);
+			dailySelects.Add(6);
+			dailySelects.Add(10);
+			dailySelects.Add(12);
+			dailySelects.Add(88);
 			dailySelectsPicked = 1;
 			PlayerPrefs.SetInt("DailySelects",1);
 		//}
@@ -190,10 +190,10 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "50G")){
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "20G")){
 					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 50){
-						gears -= 50;
+					if(gears >= 20){
+						gears -= 20;
 						PlayerPrefs.SetInt("Gears",gears);
 						PlayerPrefs.SetString("PrizeType","PremiumBag");
 						Application.LoadLevel("PrizeCollection");
@@ -295,7 +295,7 @@ public class Store : MonoBehaviour{
 					GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 					
 					GUI.skin.label.alignment = TextAnchor.UpperCenter;
-					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.cup2020Names[int.Parse(carNum)]);
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.cup2020Names[int.Parse(carNum)] + " (+3)");
 					GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("cup20livery" + carNum) as Texture);
 					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 					
@@ -321,10 +321,10 @@ public class Store : MonoBehaviour{
 					}
 
 					GUI.skin = redGUI;
-					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "50G")){
+					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "5G")){
 						gears = PlayerPrefs.GetInt("Gears");
-						if(gears >= 50){
-							gears -= 50;
+						if(gears >= 5){
+							gears -= 5;
 							if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
 								carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
 							} else {

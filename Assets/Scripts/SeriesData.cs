@@ -318,37 +318,46 @@ public class SeriesData : MonoBehaviour{
 		
 		//Team
 		offlineSeries[5,0] = "Lone Ranger";
-		offlineSeries[5,1] = "Childress Of The Sea";
-		offlineSeries[5,2] = "Dibbs On Gibbs";
-		offlineSeries[5,3] = "Apres Penske";
+		offlineSeries[5,1] = "Ware In The World";
+		offlineSeries[5,2] = "Childress Of The Sea";
+		offlineSeries[5,3] = "Dibbs On Gibbs";
 		offlineSeries[5,4] = "Show Me The Fenway";
 		offlineSeries[5,5] = "Front Row Seats";
 		offlineSeries[5,6] = "The Real Haastle";
 		offlineSeries[5,7] = "Chip Off The Old Block";
-		offlineSeries[5,8] = "The Hendrick Experience";
+		offlineSeries[5,8] = "Apres Penske";
+		offlineSeries[5,9] = "The Hendrick Experience";
 		
-		offlineSeriesImage[5,0] = "cup20livery7";
-		offlineSeriesImage[5,1] = "cup20livery8";
-		offlineSeriesImage[5,2] = "cup20livery20";
-		offlineSeriesImage[5,3] = "cup20livery12";
+		offlineSeriesImage[5,0] = "cup20livery21";
+		offlineSeriesImage[5,1] = "cup20livery52";
+		offlineSeriesImage[5,2] = "cup20livery8";
+		offlineSeriesImage[5,3] = "cup20livery20";
 		offlineSeriesImage[5,4] = "cup20livery17";
-		offlineSeriesImage[5,5] = "cup20livery1";
-		offlineSeriesImage[5,6] = "cup20livery24";
+		offlineSeriesImage[5,5] = "cup20livery36";
+		offlineSeriesImage[5,6] = "cup20livery10";
+		offlineSeriesImage[5,7] = "cup20livery1";
+		offlineSeriesImage[5,8] = "cup20livery12";
+		offlineSeriesImage[5,9] = "cup20livery24";
 		
 		offlineDailyPlays[5,0] = 3;
 		offlineDailyPlays[5,1] = 3;
 		offlineDailyPlays[5,2] = 3;
 		offlineDailyPlays[5,3] = 3;
 		offlineDailyPlays[5,4] = 3;
+		offlineDailyPlays[5,5] = 3;
+		offlineDailyPlays[5,6] = 3;
+		offlineDailyPlays[5,7] = 3;
+		offlineDailyPlays[5,8] = 3;
+		offlineDailyPlays[5,9] = 3;
 		
 		offlineAILevel[5,0] = 2;
-		offlineAILevel[5,1] = 3;
-		offlineAILevel[5,2] = 4;
+		offlineAILevel[5,1] = 5;
+		offlineAILevel[5,2] = 5;
 		offlineAILevel[5,3] = 5;
-		offlineAILevel[5,4] = 6;
-		offlineAILevel[5,5] = 7;
+		offlineAILevel[5,4] = 5;
+		offlineAILevel[5,5] = 8;
 		offlineAILevel[5,6] = 8;
-		offlineAILevel[5,7] = 9;
+		offlineAILevel[5,7] = 10;
 		offlineAILevel[5,8] = 10;
 		
 		offlineMinType[5,0] = "Team";
@@ -360,16 +369,39 @@ public class SeriesData : MonoBehaviour{
 		offlineMinType[5,6] = "Team";
 		offlineMinType[5,7] = "Team";
 		offlineMinType[5,8] = "Team";
+		offlineMinType[5,9] = "Team";
 		
 		offlineMinTeam[5,0] = "IND";
-		offlineMinTeam[5,1] = "RCR";
-		offlineMinTeam[5,2] = "JGR";
-		offlineMinTeam[5,3] = "PEN";
+		offlineMinTeam[5,1] = "RWR";
+		offlineMinTeam[5,2] = "RCR";
+		offlineMinTeam[5,3] = "JGR";
 		offlineMinTeam[5,4] = "RFR";
 		offlineMinTeam[5,5] = "FRM";
 		offlineMinTeam[5,6] = "SHR";
 		offlineMinTeam[5,7] = "CGR";
-		offlineMinTeam[5,8] = "HEN";
+		offlineMinTeam[5,8] = "PEN";
+		offlineMinTeam[5,9] = "HEN";
+		
+		offlineTracklists[5,0] = "1,12,16,18,5";
+		offlineTracklists[5,1] = "2,8,7,15,17";
+		offlineTracklists[5,2] = "3,9,19,14,20";
+		offlineTracklists[5,3] = "11,10,7,15,6";
+		offlineTracklists[5,4] = "13,4,1,20,21";
+		offlineTracklists[5,5] = "2,15,5,10,16";
+		offlineTracklists[5,6] = "8,4,18,14,12";
+		offlineTracklists[5,7] = "11,9,6,3,21";
+		offlineTracklists[5,8] = "13,7,17,20,19";
+		offlineTracklists[5,9] = "15,18,1,5,2";
+		
+		offlineFuel[5,0] = 5;
+		offlineFuel[5,1] = 5;
+		offlineFuel[5,2] = 6;
+		offlineFuel[5,3] = 6;
+		offlineFuel[5,4] = 7;
+		offlineFuel[5,5] = 7;
+		offlineFuel[5,6] = 8;
+		offlineFuel[5,7] = 8;
+		offlineFuel[5,8] = 9;
 		
 		//Manufacturer
 		offlineSeries[6,0] = "Mustang Sally";
@@ -400,6 +432,20 @@ public class SeriesData : MonoBehaviour{
 		offlineAILevel[6,4] = 8;
 		offlineAILevel[6,5] = 8;
 		
+		offlineMinType[6,0] = "Manufacturer";
+		offlineMinType[6,1] = "Manufacturer";
+		offlineMinType[6,2] = "Manufacturer";
+		offlineMinType[6,3] = "Manufacturer";
+		offlineMinType[6,4] = "Manufacturer";
+		offlineMinType[6,5] = "Manufacturer";
+		
+		offlineMinManu[6,0] = "CHV";
+		offlineMinManu[6,1] = "FRD";
+		offlineMinManu[6,2] = "TYT";
+		offlineMinManu[6,3] = "FRD";
+		offlineMinManu[6,4] = "CHV";
+		offlineMinManu[6,5] = "TYT";
+		
 		//Type
 		offlineSeries[7,0] = "Rookie Season";
 		offlineSeries[7,1] = "Strategy Calls";
@@ -427,6 +473,20 @@ public class SeriesData : MonoBehaviour{
 		offlineAILevel[7,3] = 8;
 		offlineAILevel[7,4] = 10;
 		offlineAILevel[7,5] = 12;
+		
+		offlineMinType[7,0] = "Type";
+		offlineMinType[7,1] = "Type";
+		offlineMinType[7,2] = "Type";
+		offlineMinType[7,3] = "Type";
+		offlineMinType[7,4] = "Type";
+		offlineMinType[7,5] = "Type";
+		
+		offlineMinManu[7,0] = "Rookie";
+		offlineMinManu[7,1] = "Strategist";
+		offlineMinManu[7,2] = "Closer";
+		offlineMinManu[7,3] = "Intimidator";
+		offlineMinManu[7,4] = "Gentleman";
+		offlineMinManu[7,5] = "Legend";
 		
 		//Type
 		offlineSeries[8,0] = "Driver For Hire";

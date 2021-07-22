@@ -25,6 +25,8 @@ public class GameData : MonoBehaviour {
 	public static double weeksToAdd;
 	public static float spareFuel;
 	
+	public static string[,] levelUpRewards;
+	
 	void Start(){
 		
 		originTime = new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc);
@@ -90,6 +92,9 @@ public class GameData : MonoBehaviour {
 		//Spare fraction of fuel not added previously
 		if(PlayerPrefs.HasKey("SpareFuel")){
 			spareFuel = PlayerPrefs.GetFloat("SpareFuel");
+			if(spareFuel < 0){
+				spareFuel = 0;
+			}
 		} else {
 			spareFuel = 0;
 		}
@@ -166,6 +171,8 @@ public class GameData : MonoBehaviour {
 		spareFuel = float.Parse(fuelToAdd.ToString());
 		PlayerPrefs.SetFloat("SpareFuel",spareFuel);
 		//Debug.Log("Spare Fuel: " + spareFuel);
+		
+		setRewards();
 	}
 	
 	void resetDailies(){
@@ -182,6 +189,36 @@ public class GameData : MonoBehaviour {
 				}
 			}
 		}
+	}
+	
+	void setRewards(){
+		/*levelUpRewards[2,0] = "Gears";
+		levelUpRewards[2,1] = "5";
+		levelUpRewards[3,0] = "Coins";
+		levelUpRewards[3,1] = "5000";
+		levelUpRewards[4,0] = "Gears";
+		levelUpRewards[4,1] = "5";
+		levelUpRewards[5,0] = "Coins";
+		levelUpRewards[5,1] = "5000";
+		levelUpRewards[6,0] = "Gears";
+		levelUpRewards[6,1] = "5";
+		levelUpRewards[7,0] = "Coins";
+		levelUpRewards[7,1] = "5000";
+		levelUpRewards[8,0] = "Gears";
+		levelUpRewards[8,1] = "5";
+		levelUpRewards[9,0] = "Coins";
+		levelUpRewards[9,1] = "5000";
+		levelUpRewards[10,0] = "Transfer Token";
+		levelUpRewards[10,1] = "1";*/
+	}
+	
+	public static string levelUpReward(int level){
+		switch(level){
+			case 1:
+			break;
+		}
+		string levelUpText = "+" + levelUpRewards[level,1] + " " + levelUpRewards[level,0];
+		return levelUpText;
 	}
 	
 	public static int classMax(int carClass){

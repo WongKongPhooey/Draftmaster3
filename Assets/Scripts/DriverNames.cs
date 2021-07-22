@@ -72,6 +72,9 @@ public class DriverNames : MonoBehaviour {
 		cup2020AltNames[4] = "Starr";
 		cup2020AltNames[5] = "Allgaier";
 		cup2020AltNames[6] = "Currey";
+		cup2020AltNames[7] = "Hemric";
+		cup2020AltNames[8] = "McMurray";
+		cup2020AltNames[9] = "Mears";
 		
 		cup2020Teams[0] = "IND";
 		cup2020Teams[1] = "CGR";
@@ -184,7 +187,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[13] = "Closer";
 		cup2020Types[14] = "Intimidator";
 		cup2020Types[15] = "Rookie";
-		cup2020Types[16] = "Strategist";
+		cup2020Types[16] = "Rookie";
 		cup2020Types[17] = "Gentleman";
 		cup2020Types[18] = "Intimidator";
 		cup2020Types[19] = "Gentleman";
@@ -203,8 +206,19 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[43] = "Strategist";
 		cup2020Types[47] = "Intimidator";
 		cup2020Types[48] = "Gentleman";
-		cup2020Types[49] = "Closer";
+		cup2020Types[49] = "Rookie";
+		cup2020Types[51] = "Strategist";
+		cup2020Types[52] = "Closer";
+		cup2020Types[53] = "Strategist";
+		cup2020Types[54] = "Closer";
+		cup2020Types[62] = "Gentleman";
+		cup2020Types[66] = "Closer";
+		cup2020Types[74] = "Strategist";
+		cup2020Types[77] = "Intimidator";
+		cup2020Types[78] = "Closer";
+		cup2020Types[88] = "Strategist";
 		cup2020Types[95] = "Rookie";
+		cup2020Types[96] = "Closer";
 		
 		cup2020Rarity[0] = 1;
 		cup2020Rarity[1] = 2;

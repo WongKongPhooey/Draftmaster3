@@ -12,6 +12,8 @@ public class MainMenuGUI : MonoBehaviour {
 
 	public Texture2D polyforgeLogo;
 	
+	public Texture2D spannerTex;
+	
 	float widthblock; 
 	float heightblock;
 	bool mainMenu;
@@ -25,6 +27,8 @@ public class MainMenuGUI : MonoBehaviour {
 	int exp;
 	int level;
 	int levelExp;
+	
+	string rewardString;
 
 	int totalMoney;
 
@@ -47,12 +51,17 @@ public class MainMenuGUI : MonoBehaviour {
 		//Debug.Log("Level " + level);
 		levelExp = GameData.levelExp(level);
 		
+		rewardString = "";
+		
 		if(exp > levelExp){
 			exp-= levelExp;
 			level++;
 			PlayerPrefs.SetInt("Exp", exp);
 			PlayerPrefs.SetInt("Level", level);
-			Debug.Log("Level Up -> " + level);
+			
+			rewardString = GameData.levelUpReward(level);
+			
+			//Debug.Log("Level Up -> " + level);
 			levelUpMenu = true;
 		}
 		
@@ -131,25 +140,35 @@ public class MainMenuGUI : MonoBehaviour {
 		
 		CommonGUI.TopBar();
 		
+		//Level Progress Bar Box
+		GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, widthblock * 2f, 5), "");
+		//Progress Bar
+		GUI.skin = blueGUI;
+		GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, (((widthblock * 2f)/levelExp) * exp) + 1, 5), "");
+		GUI.skin = eightBitSkin;
+		
+		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
-			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 4.5f, heightblock * 2), PlayerPrefs.GetString("PlayerUsername"))){
+			
+			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 1.5f) - 20, widthblock * 4.5f, heightblock * 1.5f), PlayerPrefs.GetString("PlayerUsername"))){
 				SceneManager.LoadScene("MyAccount");
 			}
 		} else {
-			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 2.5f), widthblock * 2, heightblock * 2), "Login")){
+			if (GUI.Button(new Rect(widthblock * 0.5f, Screen.height - (heightblock * 1.5f) - 20, widthblock * 2, heightblock * 1.5f), "Login")){
 				SceneManager.LoadScene("LoginRegister");
 			}
 		}
 		
 		//All Cars
-		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-		if (GUI.Button(new Rect(Screen.width - (widthblock * 2.5f), Screen.height - (heightblock * 2.5f), widthblock * 2, heightblock * 2), "Cars")){
+		if (GUI.Button(new Rect(Screen.width - (widthblock * 2.5f), Screen.height - (heightblock * 1.5f) - 20, widthblock * 2f, heightblock * 1.5f), "Cars")){
 			SceneManager.LoadScene("AllCars");
 		}
 		
-		if (GUI.Button(new Rect(Screen.width - (widthblock * 4f), Screen.height - (heightblock * 2.5f), widthblock * 1, heightblock * 2), "S")){
+		if (GUI.Button(new Rect(Screen.width - (widthblock * 3f) - (heightblock * 1.5f), Screen.height - (heightblock * 1.5f) - 20, heightblock * 1.5f, heightblock * 1.5f), "")){
 			SceneManager.LoadScene("OptionsMenu");
 		}
+		GUI.DrawTexture(new Rect(Screen.width - (widthblock * 3f) - (heightblock * 1.5f) + 10, Screen.height - (heightblock * 1.5f) - 20 + 7, (heightblock * 1.5f) - 20, (heightblock * 1.5f) - 20), spannerTex);
 		
 		if(levelUpMenu == true){
 			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
@@ -159,8 +178,8 @@ public class MainMenuGUI : MonoBehaviour {
 			GUI.skin = buttonSkin;
 			GUI.skin.label.alignment = TextAnchor.UpperCenter;
 			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
-			GUI.Label(new Rect(widthblock * 3f, heightblock * 4f, widthblock * 14f, heightblock * 2f), "Level Up!");
-			GUI.Label(new Rect(widthblock * 3f, heightblock * 7f, widthblock * 14f, heightblock * 2f), "+10 Gears");
+			GUI.Label(new Rect(widthblock * 3f, heightblock * 4f, widthblock * 14f, heightblock * 2f), "Level " + level + "!");
+			GUI.Label(new Rect(widthblock * 3f, heightblock * 7f, widthblock * 14f, heightblock * 2f), rewardString);
 			
 			GUI.skin = blueGUI;
 			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
