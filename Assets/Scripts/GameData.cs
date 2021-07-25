@@ -17,11 +17,14 @@ public class GameData : MonoBehaviour {
 	public static double lastTimeCheck;
 	public static double currentTimestamp;
 	public static double fuelUpdate;
-	public static double dayInterval;
+	public static int dayInterval;
 	public static double weekInterval;
 	public static double timeSinceLast;
+	public static int lastSpareTime;
+	public static float spareTime;
 	public static double fuelToAdd;
 	public static double daysToAdd;
+	public static int daysToAddInt;
 	public static double weeksToAdd;
 	public static float spareFuel;
 	
@@ -88,6 +91,9 @@ public class GameData : MonoBehaviour {
 		//last saved timestamp
 		if(PlayerPrefs.HasKey("LastTimeCheck")){
 			lastTimeCheck = System.Convert.ToDouble(PlayerPrefs.GetString("LastTimeCheck"));
+			//Debug.Log("Last time check: " + lastTimeCheck);
+		} else {
+			lastTimeCheck = currentTimestamp;
 		}
 		//Spare fraction of fuel not added previously
 		if(PlayerPrefs.HasKey("SpareFuel")){
@@ -102,13 +108,35 @@ public class GameData : MonoBehaviour {
 		//5 Minute interval
 		fuelUpdate = 300;
 		
-		dayInterval = 60 * 60 * 24;
+		dayInterval = 86400;
 		
 		timeSinceLast = currentTimestamp - lastTimeCheck;
+		//Debug.Log("Seconds since last check: " + timeSinceLast);
+		
 		fuelToAdd = timeSinceLast / System.Convert.ToDouble(fuelUpdate);
 		fuelToAdd+=spareFuel;
 		
-		daysToAdd = timeSinceLast / dayInterval;
+		if(PlayerPrefs.HasKey("SpareTime")){
+			lastSpareTime = PlayerPrefs.GetInt("SpareTime");
+		} else {
+			lastSpareTime = 0;
+		}
+		
+		daysToAdd = ((timeSinceLast + lastSpareTime) / dayInterval);
+		//Debug.Log("Days to add: " + daysToAdd);
+		
+		daysToAddInt = (int)Mathf.Floor((float)daysToAdd);
+		
+		spareTime = (float)timeSinceLast - (daysToAddInt * dayInterval);
+		
+		//If no day cycle was completed, stack up the spare time
+		if(daysToAddInt == 0){
+			spareTime+=lastSpareTime;
+		}
+		//Debug.Log("Spare time: " + spareTime);
+		
+		//Save the new spare time
+		PlayerPrefs.SetInt("SpareTime",(int)Mathf.Floor(spareTime));
 		
 		//20M represents a large timestamp from the default Jan 01 1970
 		if(fuelToAdd > 200000000){

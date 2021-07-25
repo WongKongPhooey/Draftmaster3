@@ -76,8 +76,10 @@ public class PrizeCollection : MonoBehaviour
 		GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Collect Your Prize!");
 
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-
-		GUI.Label(new Rect(widthblock * 3, heightblock * 6, widthblock * 14, heightblock * 8), "" + carReward + "");
+		
+		GUI.skin.label.alignment = TextAnchor.MiddleRight;
+		GUI.Label(new Rect(widthblock * 9, heightblock * 6, widthblock * 5, heightblock * 2), "" + carReward + "");
+		GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + prizeCarNumber) as Texture);
 
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
@@ -132,35 +134,11 @@ public class PrizeCollection : MonoBehaviour
 			break;
 			default:
 				//All Drivers
-				validDriver.Add(0);
-				validDriver.Add(1);
-				validDriver.Add(2);
-				validDriver.Add(3);
-				validDriver.Add(4);
-				validDriver.Add(6);
-				validDriver.Add(7);
-				validDriver.Add(8);
-				validDriver.Add(9);
-				validDriver.Add(10);
-				validDriver.Add(11);
-				validDriver.Add(12);
-				validDriver.Add(13);
-				validDriver.Add(14);
-				validDriver.Add(15);
-				validDriver.Add(16);
-				validDriver.Add(17);
-				validDriver.Add(18);
-				validDriver.Add(19);
-				validDriver.Add(20);
-				validDriver.Add(21);
-				validDriver.Add(22);
-				validDriver.Add(24);
-				validDriver.Add(41);
-				validDriver.Add(42);
-				validDriver.Add(43);
-				validDriver.Add(47);
-				validDriver.Add(48);
-				validDriver.Add(95);
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						validDriver.Add(i);
+					}
+				}
 			break;
 		}
 	}

@@ -28,6 +28,8 @@ public class MainMenuGUI : MonoBehaviour {
 	int level;
 	int levelExp;
 	
+	int dayInterval;
+	
 	string rewardString;
 
 	int totalMoney;
@@ -50,6 +52,8 @@ public class MainMenuGUI : MonoBehaviour {
 		level = PlayerPrefs.GetInt("Level");
 		//Debug.Log("Level " + level);
 		levelExp = GameData.levelExp(level);
+		
+		dayInterval = 86400;
 		
 		rewardString = "";
 		
@@ -145,6 +149,13 @@ public class MainMenuGUI : MonoBehaviour {
 		//Progress Bar
 		GUI.skin = blueGUI;
 		GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, (((widthblock * 2f)/levelExp) * exp) + 1, 5), "");
+		GUI.skin = eightBitSkin;
+		
+		//Day Cycle Bar Box
+		GUI.Box(new Rect(widthblock * 3f, (heightblock * 1.5f) + 15, widthblock * 2.5f, 5), "");
+		//Progress Bar
+		GUI.skin = blueGUI;
+		GUI.Box(new Rect(widthblock * 3f, (heightblock * 1.5f) + 15, (((widthblock * 2.5f)/dayInterval) * GameData.spareTime) + 1, 5), "");
 		GUI.skin = eightBitSkin;
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
