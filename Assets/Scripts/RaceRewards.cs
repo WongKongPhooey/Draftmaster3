@@ -23,6 +23,7 @@ public class RaceRewards : MonoBehaviour
 	int raceMenu;
 	int raceSubMenu;
 	int offsetGears;
+    int rewardGears;
 	
 	public static int carPrizeNum;
 	public static string carReward;
@@ -48,6 +49,11 @@ public class RaceRewards : MonoBehaviour
 		gasCanTexInst = gasCanTex;
 		gearTexInst = gearTex;
 
+        gears = PlayerPrefs.GetInt("Gears");
+        offsetGears = 0;
+        rewardGears = 0;
+
+
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
@@ -65,7 +71,9 @@ public class RaceRewards : MonoBehaviour
 		playerMoney += prizeMoney;
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		
+        //If top 10 finish..
 		if(finishPos < 11){
+            //Inverted chance of reward (10th = 10%, 1st = 100%)
 			float chance = 11 - finishPos;
 			float rnd = Random.Range(0,10);
 			if(rnd <= chance){
@@ -78,22 +86,26 @@ public class RaceRewards : MonoBehaviour
 		}
 		
 		maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
-		if(maxRaceGears <= 0){
+		//If low strength AI Race (<+3)
+        if(maxRaceGears <= 0){
+            //Only reward the winner with gears
 			if(finishPos == 1){
-				offsetGears = 1;
-				gears = PlayerPrefs.GetInt("Gears");
-				gears += 1;
-				PlayerPrefs.SetInt("Gears",gears);
-			}
-		} else {
-			offsetGears = (maxRaceGears - finishPos) + 1;
-			if(offsetGears > 0){
-				gears = PlayerPrefs.GetInt("Gears");
-				gears += maxRaceGears - offsetGears;
+                rewardGears = 1;
+				gears += rewardGears;
 				PlayerPrefs.SetInt("Gears",gears);
 			} else {
-				offsetGears = 0;
-			}
+                rewardGears = 0;
+            }
+        //If stronger AI Race
+		} else {
+            //e.g. +8 AI Strength = +5 Max, - 3rd place finish, = 2, +1 = 3
+			rewardGears = (maxRaceGears - finishPos) + 1;
+			if(rewardGears > 0){
+				gears += rewardGears;
+			} else {
+                rewardGears = 0;
+            }
+            PlayerPrefs.SetInt("Gears",gears);
 		}
 	}
 
@@ -123,7 +135,7 @@ public class RaceRewards : MonoBehaviour
 		}
 		
 		GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
-		GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +" + offsetGears + " Gears (" + gears + ")");
+		GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +" + rewardGears + " Gears (" + gears + ")");
 		
 		if(prizeMoney != 0){
 			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 12, widthblock * 1, widthblock * 1), moneyTexInst);
