@@ -116,8 +116,13 @@ public class GameData : MonoBehaviour {
 		fuelToAdd = timeSinceLast / System.Convert.ToDouble(fuelUpdate);
 		fuelToAdd+=spareFuel;
 		
+		//Spare time left from last check
 		if(PlayerPrefs.HasKey("SpareTime")){
 			lastSpareTime = PlayerPrefs.GetInt("SpareTime");
+			if(lastSpareTime < 0){
+				lastSpareTime = 0;
+			}
+			//Debug.Log("Previous spare time" + lastSpareTime);
 		} else {
 			lastSpareTime = 0;
 		}
@@ -126,8 +131,10 @@ public class GameData : MonoBehaviour {
 		//Debug.Log("Days to add: " + daysToAdd);
 		
 		daysToAddInt = (int)Mathf.Floor((float)daysToAdd);
+		//Debug.Log("Days added: " + daysToAddInt);
 		
 		spareTime = (float)timeSinceLast - (daysToAddInt * dayInterval);
+		//Debug.Log("Spare Time: " + spareTime);
 		
 		//If no day cycle was completed, stack up the spare time
 		if(daysToAddInt == 0){
@@ -213,7 +220,7 @@ public class GameData : MonoBehaviour {
 					int maxPlays = SeriesData.getMaxPlays(i,j);
 					//int maxPlays = SeriesData.offlineDailyPlays[i,j];
 					PlayerPrefs.SetInt("DailyPlays" + i + j + "", maxPlays);
-					Debug.Log(i + "," + j + " max plays: " + maxPlays);
+					//Debug.Log(i + "," + j + " max plays: " + maxPlays);
 				}
 			}
 		}

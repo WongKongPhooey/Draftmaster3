@@ -155,7 +155,7 @@ public class MainMenuGUI : MonoBehaviour {
 		GUI.Box(new Rect(widthblock * 3f, (heightblock * 1.5f) + 15, widthblock * 2.5f, 5), "");
 		//Progress Bar
 		GUI.skin = blueGUI;
-		GUI.Box(new Rect(widthblock * 3f, (heightblock * 1.5f) + 15, (((widthblock * 2.5f)/dayInterval) * GameData.spareTime) + 1, 5), "");
+		GUI.Box(new Rect(widthblock * 3f, (heightblock * 1.5f) + 15, Mathf.Floor((((widthblock * 2.5f)/dayInterval) * PlayerPrefs.GetInt("SpareTime"))) + 1, 5), "");
 		GUI.skin = eightBitSkin;
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;

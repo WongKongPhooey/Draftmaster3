@@ -528,13 +528,14 @@ public class Store : MonoBehaviour{
 			
 			GUI.EndScrollView();
 			
+			GUI.skin = redGUI;
+			GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+		
+			CommonGUI.BackButton("MainMenu");
+			
 			GUI.skin = buttonSkin;
 			GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 			GUI.skin.button.alignment = TextAnchor.MiddleLeft;
-			
-			CommonGUI.BackButton("MainMenu");
-			
-			GUI.skin.button.alignment = TextAnchor.MiddleRight;
 			
 			CommonGUI.TopBar();
 

@@ -163,22 +163,19 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 				
-			bool leftSideHit = checkRaycast("LeftCorners", 0.52f);
-			bool rightSideHit = checkRaycast("RightCorners", 0.52f);
+			bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
+			bool rightSideHit = checkRaycast("RightCorners", 0.51f);
 			
-			//if ((laneticker != 0) && (backingOut == false)){
 			if (laneticker != 0){
-				if ((leftSideHit == true) || (rightSideHit == true)){
-					if (laneticker > 0){
-						backingOut = true;
-						laneticker = -laneChangeDuration + laneticker;
-						lane--;
-					}
-					if (laneticker < 0){
-						backingOut = true;
-						laneticker = laneChangeDuration + laneticker;
-						lane++;
-					}
+				if (laneticker > 0){
+					backingOut = true;
+					laneticker = -laneChangeDuration + laneticker;
+					lane--;
+				}
+				if (laneticker < 0){
+					backingOut = true;
+					laneticker = laneChangeDuration + laneticker;
+					lane++;
 				}
 			} else {
 				if(doored("Left",25) == true){
@@ -329,16 +326,28 @@ public class AIMovement : MonoBehaviour
 	void updateMovement() {
 		
 		//How fast can you switch lanes
-        if (laneticker > 0)
-        {
-            AICar.transform.Translate(-laneChangeSpeed, 0, 0);
-            laneticker--;
+        if (laneticker > 0){
+			bool leftCastHit = checkRaycast("LeftCorners", 0.51f);
+			if(leftCastHit == true){
+				backingOut = true;
+				laneticker = -laneChangeDuration + laneticker;
+				lane--;
+			} else {
+				AICar.transform.Translate(-laneChangeSpeed, 0, 0);
+				laneticker--;
+			}
         }
 
-        if (laneticker < 0)
-        {
-            AICar.transform.Translate(laneChangeSpeed, 0, 0);
-            laneticker++;
+        if (laneticker < 0){
+			bool rightCastHit = checkRaycast("RightCorners", 0.51f);
+			if(rightCastHit == true){
+				backingOut = true;
+				laneticker = laneChangeDuration + laneticker;
+				lane++;
+			} else {
+				AICar.transform.Translate(laneChangeSpeed, 0, 0);
+				laneticker++;
+			}
         }
 
         if (laneticker == 0)
@@ -648,19 +657,27 @@ public class AIMovement : MonoBehaviour
 				break;
 			case "LeftCorners":
 				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right * -1, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
 				if(rayHit == false){
 					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right * -1, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
 				}
 				break;
 			case "RightCorners":
 				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * 0.52f, Color.yellow);
 				if(rayHit == false){
 					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,-1f), transform.right * 0.52f, Color.yellow);
 				}
 				break;
 			case "LeftEdge":
 				rayHit = Physics.Raycast(transform.position + new Vector3(-1f,0,-1f), transform.forward, out DraftCheck, rayLength);
 				Debug.DrawRay(transform.position + new Vector3(-1f,0,-1f), Vector3.forward * 2, Color.red);
+				break;
+			case "RightEdge":
+				rayHit = Physics.Raycast(transform.position + new Vector3(1f,0,-1f), transform.forward, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(1f,0,-1f), Vector3.forward * 2, Color.red);
 				break;
 			default:
 				Debug.Log("Invalid Raycast Direction");

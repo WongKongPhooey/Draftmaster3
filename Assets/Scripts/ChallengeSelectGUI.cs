@@ -49,7 +49,7 @@ public class ChallengeSelectGUI : MonoBehaviour {
 			LastToFirstLaps(circuit,vehicle);
 		}
 
-		if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7, heightblock * 2), "No Fuel")){
+		/*if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7, heightblock * 2), "No Fuel")){
 			NoFuel(circuit,vehicle);
 		}
 
@@ -59,27 +59,27 @@ public class ChallengeSelectGUI : MonoBehaviour {
 
 		if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 7, heightblock * 2), "Team Player")){
 			TeamPlayer(circuit,vehicle);
-		}
+		}*/
 
-		if (GUI.Button(new Rect(widthblock / 2, heightblock * 13, widthblock * 7, heightblock * 2), "Clean Break")){
+		if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7, heightblock * 2), "Clean Break")){
 			CleanBreak(circuit,vehicle);
 		}
 
-		if (GUI.Button(new Rect(widthblock / 2, heightblock * 16, widthblock * 7, heightblock * 2), "Traffic Jam")){
+		/*if (GUI.Button(new Rect(widthblock / 2, heightblock * 16, widthblock * 7, heightblock * 2), "Traffic Jam")){
 			TrafficJam(circuit,vehicle);
-		}
+		}*/
 
-		if (GUI.Button(new Rect(widthblock / 2, heightblock * 19, widthblock * 7, heightblock * 2), "Photo Finish")){
+		if (GUI.Button(new Rect(widthblock / 2, heightblock * 7, widthblock * 7, heightblock * 2), "Photo Finish")){
 			PhotoFinish(circuit,vehicle);
 		}
 		
-		if (GUI.Button(new Rect(widthblock / 2, heightblock * 22, widthblock * 7, heightblock * 2), "All Wound Up")){
+		/*if (GUI.Button(new Rect(widthblock / 2, heightblock * 22, widthblock * 7, heightblock * 2), "All Wound Up")){
 			AllWoundUp(circuit,vehicle);
-		}
+		}*/
 
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.skin.label.alignment = TextAnchor.UpperCenter;
-		GUI.Label(new Rect(widthblock / 2, heightblock * 25, widthblock * 7, heightblock * 3), "More challenges coming soon!");
+		GUI.Label(new Rect(widthblock / 2, heightblock * 10, widthblock * 7, heightblock * 3), "More reworked challenges coming soon!");
 		GUI.skin.label.fontSize = 72 / FontScale.fontScale;
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
 		
@@ -109,9 +109,9 @@ public class ChallengeSelectGUI : MonoBehaviour {
 	}
 	
 	public static void LastToFirstLaps(GameObject circuit,GameObject vehicle){
-		circuitChoice = "ThunderAlley";
-		PlayerPrefs.SetInt("RaceLaps",200);
-		PlayerPrefs.SetInt("StartingLap",187);
+		circuitChoice = "Talladega";
+		PlayerPrefs.SetInt("RaceLaps",188);
+		PlayerPrefs.SetInt("StartingLap",163);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",200);
 		PlayerPrefs.SetInt("StraightLength2",500);
@@ -128,12 +128,12 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",50);
 		PlayerPrefs.SetInt("SpeedOffset",2 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",3);
+		PlayerPrefs.SetString("TrackType","Plate");
 		PlayerPrefs.SetString("ChallengeType","LastToFirstLaps");
-		PlayerPrefs.SetString("raceSeries", "StockCar");
-		PlayerPrefs.SetString("carTexture", "livery3");
-		PlayerPrefs.SetInt("CarChoice",3);
-		challengeTitle = "Last To First";
-		challengeDescription = "After a puncture and late caution, Earnhardt has been shuffled to the back of the pack. Cross the line in front in as few laps as possible to win big.";
+		PlayerPrefs.SetString("carTexture", "cup20livery18");
+		PlayerPrefs.SetInt("CarChoice",18);
+		challengeTitle = "Back To The Front";
+		challengeDescription = "After a puncture and late caution, KB18 has been shuffled to the back of the pack. Reach the front in as few laps/metres as possible to win big. Rewards are given out weekly for the fastest runs!";
 		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("ThunderAlley") as Texture;
 		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
@@ -230,32 +230,31 @@ public class ChallengeSelectGUI : MonoBehaviour {
 	}
 
 	static void CleanBreak(GameObject circuit,GameObject vehicle){
-		circuitChoice = "Redknife";
-		PlayerPrefs.SetInt("RaceLaps",100);
-		PlayerPrefs.SetInt("StartingLap",98);
-		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",200);
-		PlayerPrefs.SetInt("StraightLength2",250);
-		PlayerPrefs.SetInt("StraightLength3",0);
-		PlayerPrefs.SetInt("StraightLength4",0);
-		PlayerPrefs.SetInt("TurnLength1",180);
-		PlayerPrefs.SetInt("TurnLength2",160);
-		PlayerPrefs.SetInt("TurnLength3",20);
-		PlayerPrefs.SetInt("TurnLength4",0);
-		PlayerPrefs.SetInt("TurnAngle1",2);
+		circuitChoice = "Michigan";
+		PlayerPrefs.SetInt("RaceLaps",156);
+		PlayerPrefs.SetInt("StartingLap",154);
+		PlayerPrefs.SetInt("StraightLength1",1);
+		PlayerPrefs.SetInt("StraightLength2",1);
+		PlayerPrefs.SetInt("StraightLength3",250);
+		PlayerPrefs.SetInt("StraightLength4",20);
+		PlayerPrefs.SetInt("TurnLength1",10);
+		PlayerPrefs.SetInt("TurnLength2",170);
+		PlayerPrefs.SetInt("TurnLength3",170);
+		PlayerPrefs.SetInt("TurnLength4",10);
+		PlayerPrefs.SetInt("TurnAngle1",16);
 		PlayerPrefs.SetInt("TurnAngle2",2);
-		PlayerPrefs.SetInt("TurnAngle3",8);
-		PlayerPrefs.SetInt("TurnAngle4",0);
-		PlayerPrefs.SetInt("StartLine",100);
-		PlayerPrefs.SetInt("SpeedOffset",18 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",3);
+		PlayerPrefs.SetInt("TurnAngle3",2);
+		PlayerPrefs.SetInt("TurnAngle4",16);
+		PlayerPrefs.SetInt("StartLine",10);
+		PlayerPrefs.SetInt("SpeedOffset",3 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Large");
 		PlayerPrefs.SetString("ChallengeType","CleanBreak");
-		PlayerPrefs.SetString("raceSeries", "Truck");
-		PlayerPrefs.SetString("carTexture", "trucklivery40");
-		PlayerPrefs.SetInt("CarChoice",40);
-		challengeTitle = "Clean Break";
-		challengeDescription = "Win the title in style with the fastest car on the grid. Slingshot past the rest of the field and win by at least 0.150 seconds.";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Redknife") as Texture;
+		PlayerPrefs.SetString("carTexture", "cup20livery22");
+		PlayerPrefs.SetInt("CarChoice",22);
+		challengeTitle = "Fresh Air";
+		challengeDescription = "Win in Michigan with the fastest car in the field. Slingshot past the rest and win by the biggest margin possible. Rewards are handed out weekly for the biggest winning margins!";
+		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Michigan") as Texture;
 		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 
@@ -290,29 +289,30 @@ public class ChallengeSelectGUI : MonoBehaviour {
 	}
 
 	static void PhotoFinish(GameObject circuit,GameObject vehicle){
-		circuitChoice = "Motorland";
-		PlayerPrefs.SetInt("RaceLaps",100);
-		PlayerPrefs.SetInt("StartingLap",98);
-		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",1);
-		PlayerPrefs.SetInt("StraightLength2",1);
-		PlayerPrefs.SetInt("StraightLength3",250);
-		PlayerPrefs.SetInt("StraightLength4",20);
-		PlayerPrefs.SetInt("TurnLength1",30);
-		PlayerPrefs.SetInt("TurnLength2",150);
-		PlayerPrefs.SetInt("TurnLength3",150);
-		PlayerPrefs.SetInt("TurnLength4",30);
-		PlayerPrefs.SetInt("TurnAngle1",8);
-		PlayerPrefs.SetInt("TurnAngle2",2);
-		PlayerPrefs.SetInt("TurnAngle3",2);
-		PlayerPrefs.SetInt("TurnAngle4",8);
-		PlayerPrefs.SetInt("StartLine",10);
-		PlayerPrefs.SetInt("SpeedOffset",3 - speedFactor);
+		circuitChoice = "Darlington";
+		PlayerPrefs.SetInt("RaceLaps",228);
+		PlayerPrefs.SetInt("StartingLap",223);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",250);
+		PlayerPrefs.SetInt("StraightLength2",0);
+		PlayerPrefs.SetInt("StraightLength3",0);
+		PlayerPrefs.SetInt("StraightLength4",250);
+		PlayerPrefs.SetInt("TurnLength1",45);
+		PlayerPrefs.SetInt("TurnLength2",110);
+		PlayerPrefs.SetInt("TurnLength3",45);
+		PlayerPrefs.SetInt("TurnLength4",160);
+		PlayerPrefs.SetInt("TurnAngle1",1);
+		PlayerPrefs.SetInt("TurnAngle2",4);
+		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle4",2);
+		PlayerPrefs.SetInt("StartLine",150);
+		PlayerPrefs.SetInt("SpeedOffset",22 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Alt");
 		PlayerPrefs.SetString("ChallengeType","PhotoFinish");
 		PlayerPrefs.SetString("raceSeries", "StockCar");
-		PlayerPrefs.SetString("carTexture", "livery88");
-		PlayerPrefs.SetInt("CarChoice",88);
+		PlayerPrefs.SetString("carTexture", "cup20livery19");
+		PlayerPrefs.SetInt("CarChoice",19);
 		challengeTitle = "Photo Finish";
 		challengeDescription = "The pace is with you and the win is within reach, but the sponsors want a close finish. Win by no more than a car length.";
 		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;

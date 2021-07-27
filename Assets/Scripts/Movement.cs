@@ -219,6 +219,10 @@ public class Movement : MonoBehaviour {
 	
 	void OnCollisionEnter (Collision carHit)
 	{
+		
+		bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
+		bool rightSideHit = checkRaycast("RightCorners", 0.51f);
+		
 		//Debug.Log("Hit " + carHit.gameObject.name);
 		if((carHit.gameObject.tag == "AICar") || (carHit.gameObject.tag == "Barrier") || (carHit.gameObject.name == "OuterWall"))
 		{
@@ -541,16 +545,28 @@ public class Movement : MonoBehaviour {
 	void updateMovement() {
 		
 		//How fast can you switch lanes
-        if (laneticker > 0)
-        {
-            vehicle.transform.Translate(-laneChangeSpeed, 0, 0);
-            laneticker--;
+        if (laneticker > 0){
+			bool leftCastHit = checkRaycast("LeftCorners", 0.51f);
+			if(leftCastHit == true){
+				backingOut = true;
+				laneticker = -laneChangeDuration + laneticker;
+				lane--;
+			} else {
+				vehicle.transform.Translate(-laneChangeSpeed, 0, 0);
+				laneticker--;
+			}
         }
 
-        if (laneticker < 0)
-        {
-            vehicle.transform.Translate(laneChangeSpeed, 0, 0);
-            laneticker++;
+        if (laneticker < 0){
+			bool rightCastHit = checkRaycast("RightCorners", 0.51f);
+			if(rightCastHit == true){
+				backingOut = true;
+				laneticker = laneChangeDuration + laneticker;
+				lane++;
+			} else {
+				vehicle.transform.Translate(laneChangeSpeed, 0, 0);
+				laneticker++;
+			}
         }
 
         if (laneticker == 0)
@@ -579,4 +595,63 @@ public class Movement : MonoBehaviour {
 			playerSpeed -= 1f;
 		}
 	}
+	
+	bool checkRaycast(string rayDirection, float rayLength){
+		bool rayHit;
+		RaycastHit DraftCheck;
+		if(rayLength == null){
+			rayLength = 100;
+		}
+		switch(rayDirection){
+			case "Front":
+				rayHit = Physics.Raycast(transform.position, transform.forward, out DraftCheck, rayLength);
+				break;
+			case "Rear":
+				rayHit = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheck, rayLength);
+				break;
+			case "Left":
+				rayHit = Physics.Raycast(transform.position, transform.right * -1, out DraftCheck, rayLength);
+				break;
+			case "Right":
+				rayHit = Physics.Raycast(transform.position, transform.right, out DraftCheck, rayLength);
+				break;
+			case "LeftDiags":
+				rayHit = Physics.Raycast(transform.position, transform.forward - transform.right, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) - transform.right, out DraftCheck, rayLength);
+				break;
+			case "RightDiags":
+				rayHit = Physics.Raycast(transform.position, transform.forward + transform.right, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) + transform.right, out DraftCheck, rayLength);
+				break;
+			case "LeftCorners":
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right * -1, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
+				if(rayHit == false){
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right * -1, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
+				}
+				break;
+			case "RightCorners":
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * 0.52f, Color.yellow);
+				if(rayHit == false){
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,-1f), transform.right * 0.52f, Color.yellow);
+				}
+				break;
+			case "LeftEdge":
+				rayHit = Physics.Raycast(transform.position + new Vector3(-1f,0,-1f), transform.forward, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(-1f,0,-1f), Vector3.forward * 2, Color.red);
+				break;
+			case "RightEdge":
+				rayHit = Physics.Raycast(transform.position + new Vector3(1f,0,-1f), transform.forward, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(1f,0,-1f), Vector3.forward * 2, Color.red);
+				break;
+			default:
+				Debug.Log("Invalid Raycast Direction");
+				rayHit = false;
+				break;
+		}
+		return rayHit;
+	}	
 }

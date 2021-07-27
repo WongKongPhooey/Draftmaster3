@@ -366,7 +366,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	public static void Talladega(){
 		circuitChoice = "Talladega";
-		PlayerPrefs.SetInt("RaceLaps",3 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",200);
 		PlayerPrefs.SetInt("StraightLength2",500);
@@ -388,7 +388,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Joliet(){
 		circuitChoice = "Joliet";
-		PlayerPrefs.SetInt("RaceLaps",5 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -410,7 +410,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static void LasVegas(){
 		circuitChoice = "LasVegas";
-		PlayerPrefs.SetInt("RaceLaps",5 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -432,7 +432,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Bristol(){
 		circuitChoice = "Bristol";
-		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",8 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",100);
 		PlayerPrefs.SetInt("StraightLength2",100);
@@ -454,7 +454,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static void NewHampshire(){
 		circuitChoice = "NewHampshire";
-		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",8 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",200);
 		PlayerPrefs.SetInt("StraightLength2",200);
@@ -476,7 +476,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Indianapolis(){
 		circuitChoice = "Indianapolis";
-		PlayerPrefs.SetInt("RaceLaps",3 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",400);
 		PlayerPrefs.SetInt("StraightLength2",100);
@@ -498,7 +498,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Atlanta(){
 		circuitChoice = "Atlanta";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",100);
 		PlayerPrefs.SetInt("StraightLength2",50);
@@ -520,7 +520,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static void Phoenix(){
 		circuitChoice = "Phoenix";
-		PlayerPrefs.SetInt("RaceLaps",5 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",7 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",50);
 		PlayerPrefs.SetInt("StraightLength2",100);
@@ -542,7 +542,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Motegi(){
 		circuitChoice = "Motegi";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",300);
 		PlayerPrefs.SetInt("StraightLength2",300);
@@ -564,7 +564,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void LongPond(){
 		circuitChoice = "LongPond";
-		PlayerPrefs.SetInt("RaceLaps",3 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",5 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",350);
 		PlayerPrefs.SetInt("StraightLength2",250);
@@ -586,7 +586,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Fontana(){
 		circuitChoice = "Fontana";
-		PlayerPrefs.SetInt("RaceLaps",3 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -608,7 +608,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static void Michigan(){
 		circuitChoice = "Michigan";
-		PlayerPrefs.SetInt("RaceLaps",3 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -630,7 +630,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Charlotte(){
 		circuitChoice = "Charlotte";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",100);
 		PlayerPrefs.SetInt("StraightLength2",50);
@@ -652,7 +652,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void FortWorth(){
 		circuitChoice = "FortWorth";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",80);
 		PlayerPrefs.SetInt("StraightLength2",75);
@@ -674,7 +674,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Kentucky(){
 		circuitChoice = "Kentucky";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",20);
 		PlayerPrefs.SetInt("StraightLength2",25);
@@ -696,7 +696,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Darlington(){
 		circuitChoice = "Darlington";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",250);
 		PlayerPrefs.SetInt("StraightLength2",0);
@@ -718,7 +718,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Homestead(){
 		circuitChoice = "Homestead";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",300);
 		PlayerPrefs.SetInt("StraightLength2",300);
@@ -740,7 +740,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Dover(){
 		circuitChoice = "Dover";
-		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",7 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",150);
 		PlayerPrefs.SetInt("StraightLength2",150);
@@ -762,7 +762,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static void Kansas(){
 		circuitChoice = "Kansas";
-		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",5 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",5);
 		PlayerPrefs.SetInt("StraightLength2",50);
@@ -784,7 +784,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Daytona(){
 		circuitChoice = "Daytona";
-		PlayerPrefs.SetInt("RaceLaps",3 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -806,7 +806,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 	static void Martinsville(){
 		circuitChoice = "Martinsville";
-		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",8 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",150);
 		PlayerPrefs.SetInt("StraightLength2",150);
