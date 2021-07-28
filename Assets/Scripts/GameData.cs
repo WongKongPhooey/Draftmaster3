@@ -122,25 +122,25 @@ public class GameData : MonoBehaviour {
 			if(lastSpareTime < 0){
 				lastSpareTime = 0;
 			}
-			//Debug.Log("Previous spare time" + lastSpareTime);
+			Debug.Log("Previous spare time" + lastSpareTime);
 		} else {
 			lastSpareTime = 0;
 		}
 		
 		daysToAdd = ((timeSinceLast + lastSpareTime) / dayInterval);
-		//Debug.Log("Days to add: " + daysToAdd);
+		Debug.Log("Days to add: " + daysToAdd);
 		
 		daysToAddInt = (int)Mathf.Floor((float)daysToAdd);
-		//Debug.Log("Days added: " + daysToAddInt);
+		Debug.Log("Days added: " + daysToAddInt);
 		
 		spareTime = (float)timeSinceLast - (daysToAddInt * dayInterval);
-		//Debug.Log("Spare Time: " + spareTime);
+		Debug.Log("Spare Time: " + spareTime);
 		
 		//If no day cycle was completed, stack up the spare time
 		if(daysToAddInt == 0){
 			spareTime+=lastSpareTime;
 		}
-		//Debug.Log("Spare time: " + spareTime);
+		Debug.Log("Spare time: " + spareTime);
 		
 		//Save the new spare time
 		PlayerPrefs.SetInt("SpareTime",(int)Mathf.Floor(spareTime));

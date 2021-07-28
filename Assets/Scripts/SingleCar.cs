@@ -37,6 +37,10 @@ public class SingleCar : MonoBehaviour {
 	
 	List<int> availableNumbers = new List<int>();
 	int[] availNums;
+	int numsInd;
+	
+	int transferContracts;
+	int contractsUsed;
 	
 	public Texture2D gasCanTex;
 	public Texture2D gearTex;
@@ -92,6 +96,26 @@ public class SingleCar : MonoBehaviour {
 		}
 		
         classMax = GameData.classMax(carClass);
+		
+		availableNumbers.Clear();
+		
+		for(int car=0;car<100;car++){
+			if((Resources.Load(seriesPrefix + "num" + car) != null)
+			&&(PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked") == 1)){
+				availableNumbers.Add(car);
+			}
+		}
+		availNums = availableNumbers.ToArray();
+		
+		if(!PlayerPrefs.HasKey("TransferContracts")){
+			PlayerPrefs.SetInt("TransferContracts",0);
+		}
+		transferContracts = PlayerPrefs.GetInt("TransferContracts");
+		
+		if(!PlayerPrefs.HasKey("ContractsUsed")){
+			PlayerPrefs.SetInt("ContractsUsed",0);
+		}
+		contractsUsed = PlayerPrefs.GetInt("ContractsUsed");
 	}
 
     // Update is called once per frame
@@ -302,6 +326,8 @@ public class SingleCar : MonoBehaviour {
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					GUI.skin = redGUI;
 					if (GUI.Button(new Rect(widthblock * 9f, heightblock * 16f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
+						int currentNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar);
+						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentNum);
 						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
 					}
 				}
@@ -336,20 +362,20 @@ public class SingleCar : MonoBehaviour {
 			GUI.skin.label.alignment = TextAnchor.UpperLeft;
 			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 			GUI.Label(new Rect(widthblock * 3.5f, heightblock * 4f, widthblock * 11f, heightblock * 2f), "Change Number");
+
+			numsInd = 0;
 			
-			for(int car=0;car<100;car++){
-				if(Resources.Load(seriesPrefix + "num" + car) != null){
-					availableNumbers.Add(car);
-				}
-			}
-			availNums = availableNumbers.ToArray();
-			
-			for(int i=0;i<3;i++){
-				for(int j=0;j<8;j++){
-					if (GUI.Button(new Rect(widthblock * 4f + (widthblock * j * 1.5f), (heightblock * 7f) + (heightblock * i * 2f), widthblock * 1f, widthblock * 1f), Resources.Load(seriesPrefix + "num" + ((i * 8) + j)) as Texture)){
-						PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, (i * 8) + j);
-						Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + currentCar);
-						numberPanel = false;
+			for(int i=0;i<4;i++){
+				for(int j=0;j<10;j++){
+					if(numsInd < availNums.Length){
+						if (GUI.Button(new Rect(widthblock * 3.75f + (widthblock * j * 1.25f), (heightblock * 6f) + (heightblock * i * 2f), widthblock * 1f, widthblock * 1f), "")){
+							PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, availNums[numsInd]);
+							PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + availNums[numsInd], currentCar);
+							Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + availNums[numsInd]);
+							numberPanel = false;
+						}
+						GUI.DrawTexture(new Rect(widthblock * 3.75f + (widthblock * j * 1.25f) + 5, (heightblock * 6f) + (heightblock * i * 2f) + 5, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load(seriesPrefix + "num" + availNums[numsInd]) as Texture);
+						numsInd++;
 					}
 				}
 			}
