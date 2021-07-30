@@ -239,7 +239,7 @@ public class Scoreboard : MonoBehaviour {
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock * 4, heightblock * 1f, widthblock * 4, heightblock * 1), 1 + " " + driverNames[0] + "");
 		
-		if(position <= 2){
+		if(position <= 3){
 			//Just show the top 4
 			GUI.Label(new Rect(widthblock * 8, heightblock * 1f, widthblock * 4, heightblock * 1), "2" + " " + driverNames[1] + "(+" + carDist[1].ToString("F3") + ")");
 			GUI.Label(new Rect(widthblock * 12, heightblock * 1f, widthblock * 4, heightblock * 1), "3" + " " + driverNames[2] + "(+" + carDist[2].ToString("F3") + ")");

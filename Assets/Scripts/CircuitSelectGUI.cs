@@ -182,7 +182,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Bristol, TN")){
 					Bristol();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("PowerBowl") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Bristol") as Texture;
 				}
 				break;
 			case "9":
@@ -190,7 +190,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Richmond, VA")){
 					//Michigan();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Richmond") as Texture;
 				}
 				break;
 			case "10":
@@ -198,7 +198,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Talladega, AL")){
 					Talladega();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Talladega") as Texture;
 				}
 				break;
 			case "11":
@@ -206,7 +206,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Dover, DE")){
 					Dover();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Dover") as Texture;
 				}
 				break;
 			case "12":
@@ -214,7 +214,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Kansas City, KS")){
 					Kansas();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Kansas") as Texture;
 				}
 				break;
 			case "13":
@@ -222,7 +222,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Charlotte, NC")){
 					Charlotte();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Charlotte") as Texture;
 				}
 				break;
 			case "14":
@@ -230,7 +230,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Long Pond, PA")){
 					LongPond();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LongPond") as Texture;
 				}
 				break;
 			case "15":
@@ -238,7 +238,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Michigan, MI")){
 					Michigan();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Michigan") as Texture;
 				}
 				break;
 			case "16":
@@ -246,7 +246,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Joliet, IL")){
 					Joliet();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Joilet") as Texture;
 				}
 				break;
 			case "17":
@@ -254,7 +254,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Kentucky, KY")){
 					Kentucky();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Kentucky") as Texture;
 				}
 				break;
 			case "18":
@@ -283,10 +283,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "21":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Homestead, FL")){
-					Homestead();
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Miami, FL")){
+					Miami();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Miami") as Texture;
 				}
 				break;
 			default:
@@ -716,8 +716,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetString("TrackType","Alt");
 	}
 
-	static void Homestead(){
-		circuitChoice = "Homestead";
+	static void Miami(){
+		circuitChoice = "Miami";
 		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",300);

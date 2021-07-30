@@ -33,6 +33,7 @@ public class SingleCar : MonoBehaviour {
 	
 	public string carMenu;
 	
+	bool driverPanel;
 	bool numberPanel;
 	
 	List<int> availableNumbers = new List<int>();
@@ -316,6 +317,9 @@ public class SingleCar : MonoBehaviour {
 				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Starts");
 				break;
 			case "Transfers":
+				if (GUI.Button(new Rect(widthblock * 9f, heightblock * 8f, widthblock * 4.5f, heightblock * 1.5f), "Change Driver")){
+					driverPanel = true;
+				}
 				if (GUI.Button(new Rect(widthblock * 9f, heightblock * 10f, widthblock * 4.5f, heightblock * 1.5f), "Change Number")){
 					numberPanel = true;
 				}
