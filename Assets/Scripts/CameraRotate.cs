@@ -248,6 +248,7 @@ public class CameraRotate : MonoBehaviour {
 			crowdNoise.volume = 0;
 			RaceHUD.raceOver = true;
 			Scoreboard.checkFinishPositions();
+			PlayerPrefs.SetInt("ExpAdded",0);
 			if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 				currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
 				lapRecord -= speedOffset;

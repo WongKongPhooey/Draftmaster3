@@ -34,20 +34,19 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		challengeComplete = false;
 
-		if(Scoreboard.position == 0){
-			SceneManager.LoadScene("MainMenu");
-		} else {
-			PlayerPrefs.SetInt("FinishPos",Scoreboard.position);
-		}
+		PlayerPrefs.SetInt("FinishPos",(Scoreboard.position + 1));
 
 		exp = PlayerPrefs.GetInt("Exp");
 		level = PlayerPrefs.GetInt("Level");
 		
 		//Add XP
-		raceExp = 100 / Scoreboard.position;
-		exp += Mathf.RoundToInt(raceExp);
-		PlayerPrefs.SetInt("Exp",exp);
-		Debug.Log("Exp: " + exp);
+		if(PlayerPrefs.GetInt("ExpAdded") == 0){
+			raceExp = 100 / (Scoreboard.position + 1);
+			exp += Mathf.RoundToInt(raceExp);
+			PlayerPrefs.SetInt("Exp",exp);
+			Debug.Log("Exp: " + exp);
+			PlayerPrefs.SetInt("ExpAdded",1);
+		}
 
 		winningsMultiplier = 1;
 
@@ -139,7 +138,7 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
-		raceWinnings = PrizeMoney.cashAmount[Scoreboard.position - 1] * winningsMultiplier;
+		raceWinnings = PrizeMoney.cashAmount[Scoreboard.position] * winningsMultiplier;
 
 		if(ChallengeSelectGUI.challengeMode == false){
 			lapsBonus = PlayerPrefs.GetInt("RaceLapsMultiplier");
@@ -184,7 +183,7 @@ public class RaceResultsGUI : MonoBehaviour {
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
 
 		for( int i=0; i < resultsRows; i++){
-			if(i == (Scoreboard.position - 1)){
+			if(i == (Scoreboard.position)){
 				GUI.DrawTexture(new Rect(widthblock * 2, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture);
 				carNumber = PlayerPrefs.GetString("carTexture");			
 				string splitAfter = "livery";
@@ -194,32 +193,33 @@ public class RaceResultsGUI : MonoBehaviour {
 				GUI.DrawTexture(new Rect(widthblock * 2, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(liveryName + carNumber) as Texture);
 			}
 
-			if(i == (Scoreboard.position - 1)){
+			if(i == (Scoreboard.position)){
 				GUI.skin.label.normal.textColor = Color.red;
 			}
 			if((PlayerPrefs.GetInt("Local2Player") == 1)&&(int.Parse(carNumber) == PlayerPrefs.GetInt("Player2Num"))){
 				GUI.skin.label.normal.textColor = Color.blue;
 			}
 			GUI.Label(new Rect(widthblock * 4.5f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 2, heightblock * 2), "P" + (i + 1));
-			if(i == (Scoreboard.position - 1)){
+			if(i == (Scoreboard.position)){
 				//carDriver = PlayerPrefs.GetString("RacerName");
 				carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
 			} else {
-				if((PlayerPrefs.GetInt("Local2Player") == 1)&&(int.Parse(carNumber) == PlayerPrefs.GetInt("Player2Num"))){
-					carDriver = "Player.2";
-				} else {
-					switch (PlayerPrefs.GetString("raceSeries")){
-					case "StockCar":
-						carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
-						break;
-					default:
-						carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
-						break;
-					}
+				switch (PlayerPrefs.GetString("raceSeries")){
+				case "StockCar":
+					carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
+					break;
+				default:
+					//Debug.Log("Car Number: " + carNumber);
+					carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
+					break;
 				}
 			}
 			GUI.Label(new Rect(widthblock * 6.5f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "(" + carNumber + ")");
-			GUI.Label(new Rect(widthblock * 12, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + ((Scoreboard.carPositions[0] - Scoreboard.carPositions[i]) / 25).ToString("F3"));
+			if(i == (Scoreboard.position)){
+				GUI.Label(new Rect(widthblock * 12, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.leaderDist).ToString("F3"));
+			} else {
+				GUI.Label(new Rect(widthblock * 12, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.carDist[i]).ToString("F3"));
+			}	
 			if(RacePoints.championshipMode == true){
 				DriverPoints.pointsTotal[int.Parse(carNumber)] = PlayerPrefs.GetInt("ChampionshipPoints" + carNumber);
 			}

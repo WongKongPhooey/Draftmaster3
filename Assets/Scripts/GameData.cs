@@ -136,6 +136,11 @@ public class GameData : MonoBehaviour {
 		spareTime = (float)timeSinceLast - (daysToAddInt * dayInterval);
 		Debug.Log("Spare Time: " + spareTime);
 		
+		//Bugfix: Not sure why this happens?
+		if(spareTime < 0){
+			spareTime = 0;
+		}
+		
 		//If no day cycle was completed, stack up the spare time
 		if(daysToAddInt == 0){
 			spareTime+=lastSpareTime;

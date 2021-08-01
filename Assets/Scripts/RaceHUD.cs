@@ -270,12 +270,12 @@ public class RaceHUD : MonoBehaviour {
 					} else {
 						GUI.skin.label.fontSize = 512 / FontScale.fontScale;
 						GUI.skin.label.normal.textColor = Color.black;
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + Scoreboard.position);
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + Scoreboard.position);
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + Scoreboard.position);
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + Scoreboard.position);
+						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
+						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
+						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
+						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
 						GUI.skin.label.normal.textColor = Color.yellow;
-						GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + Scoreboard.position);
+						GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
 					}
 				}
 				GUI.skin.label.fontSize = 80 / FontScale.fontScale;

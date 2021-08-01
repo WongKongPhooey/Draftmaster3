@@ -177,49 +177,56 @@ public class Scoreboard : MonoBehaviour {
 	}
 
 	public static void checkFinishPositions(){
+		playerPosition = playerCar.transform.position.z;
+		
+		entrantList.Clear();
+		
+		int j=0;
 		playerCar = GameObject.FindGameObjectWithTag("Player");
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
-		playerPosition = playerCar.transform.position.z;
-		float tempPosition = 0;
-		string tempName = "";
-		int i = 0;
-		position = 1;
-		foreach (GameObject car in carsArray) {
-			carPositions[i] = car.transform.position.z;
-			carNames[i] = car.transform.name;
-			
-			if(carPositions[i] > playerPosition){
-				position++;
+		if(carsArray.Length > 0){
+			foreach (GameObject car in carsArray) {
+				entrantList.Add(car);
+				j++;
 			}
-			i++;
+			carsTagged = true;
 		}
-		for(int repeats = 0; repeats < 45; repeats++){
-			for(i = 0; i < (carsArray.Length - 1); i++){
-				if(carPositions[i] <= carPositions[i+1]){
-					tempPosition = carPositions[i];
-					tempName = carNames[i];
-					carPositions[i] = carPositions[i + 1];
-					carNames[i] = carNames[i + 1];
-					carPositions[i + 1] = tempPosition;
-					carNames[i + 1] = tempName;
-				}
+		entrantList.Add(playerCar);
+		
+		//Sort by z axis position
+        entrantList.Sort(delegate(GameObject a, GameObject b) {
+		  return (a.transform.position.z).CompareTo(b.transform.position.z);
+		});
+		//Reverse the sort
+		entrantList.Reverse(); 
+		
+		//Debug.Log(entrantList.Count + " cars to sort.");
+		
+		for(int i=0;i<entrantList.Count;i++){
+			if(entrantList[i].name == playerCar.name){
+				position = i;
+				carNames[i] = playerCar.transform.name;
+				carNumber[i] = "" + playerCarNum + "";
+				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
+				leaderDist = leaderDist / 25;
+			} else {
+				carNames[i] = "" + entrantList[i].name;
+				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
+				carDist[i] = carDist[i] / 25;
 			}
+			//Debug.Log(i + ": " + driverNames[i]);
 		}
-		for(i = carsArray.Length; i >=0; i--){
-			if(carPositions[i] < playerPosition){
-				carPositions[i + 1] = carPositions[i];
-				carNames[i + 1] = carNames[i];
-				carPositions[i] = 0;
-				carNames[i] = "";
-			}
-		}
-		carPositions[position - 1] = playerPosition;
-		carNames[position - 1] = PlayerPrefs.GetString("RacerName");
-		if(position == 1){
+		
+		if(position == 0){
 			PlayerPrefs.SetInt("TotalWins",PlayerPrefs.GetInt("TotalWins") + 1);
+			Debug.Log("Winner Winner!");
 		}
-		if(position <= 5){
+		if(position <= 4){
 			PlayerPrefs.SetInt("TotalTop5s",PlayerPrefs.GetInt("TotalTop5s") + 1);
+			Debug.Log("Another top 5!");
 		}
 	}
 	
@@ -239,16 +246,17 @@ public class Scoreboard : MonoBehaviour {
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock * 4, heightblock * 1f, widthblock * 4, heightblock * 1), 1 + " " + driverNames[0] + "");
 		
-		if(position <= 3){
+		//Note* Pos starts at index 0, not 1
+		if(position <= 2){
 			//Just show the top 4
 			GUI.Label(new Rect(widthblock * 8, heightblock * 1f, widthblock * 4, heightblock * 1), "2" + " " + driverNames[1] + "(+" + carDist[1].ToString("F3") + ")");
 			GUI.Label(new Rect(widthblock * 12, heightblock * 1f, widthblock * 4, heightblock * 1), "3" + " " + driverNames[2] + "(+" + carDist[2].ToString("F3") + ")");
 			GUI.Label(new Rect(widthblock * 16, heightblock * 1f, widthblock * 4, heightblock * 1), "4" + " " + driverNames[3] + "(+" + carDist[3].ToString("F3") + ")");
 		} else {
 			//Player Position
-			GUI.Label(new Rect(widthblock * 8, heightblock * 1f, widthblock * 6, heightblock * 1), (position - 1) + " " + driverNames[position - 1] + "(+" + carDist[position - 1].ToString("F3") + ")");
-			GUI.Label(new Rect(widthblock * 12, heightblock * 1f, widthblock * 6, heightblock * 1), position + " " + driverNames[position] + "(+" + carDist[position].ToString("F3") + ")");
-			GUI.Label(new Rect(widthblock * 16, heightblock * 1f, widthblock * 6, heightblock * 1), (position + 1) + " " + driverNames[position + 1] + "(+" + carDist[position + 1].ToString("F3") + ")");
+			GUI.Label(new Rect(widthblock * 8, heightblock * 1f, widthblock * 6, heightblock * 1), position + " " + driverNames[position - 1] + "(+" + carDist[position - 1].ToString("F3") + ")");
+			GUI.Label(new Rect(widthblock * 12, heightblock * 1f, widthblock * 6, heightblock * 1), (position + 1) + " " + driverNames[position] + "(+" + carDist[position].ToString("F3") + ")");
+			GUI.Label(new Rect(widthblock * 16, heightblock * 1f, widthblock * 6, heightblock * 1), (position + 2) + " " + driverNames[position + 1] + "(+" + carDist[position + 1].ToString("F3") + ")");
 		}
 		
 		//Lap timer

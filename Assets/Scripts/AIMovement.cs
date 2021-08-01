@@ -248,6 +248,8 @@ public class AIMovement : MonoBehaviour
 			}
 			draftLogic();
 			updateMovement();
+			this.gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+			this.gameObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
 		} else {
 			//Pacing speed
 			AISpeed = 200;
