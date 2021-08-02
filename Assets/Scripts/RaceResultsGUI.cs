@@ -55,12 +55,12 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
 			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex+ currentTrack);
-			if((Scoreboard.position < bestFinishPos)&&(Scoreboard.position > 0)){
-				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position);
+			if(((Scoreboard.position + 1) < bestFinishPos)||(bestFinishPos == 0)){
+				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position + 1);
 			}
 			Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
 		} else {
-			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position);
+			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position + 1);
 			Debug.Log("New best finish: " + Scoreboard.position + ". Track: " + currentSeriesIndex + currentTrack);
 		}
 

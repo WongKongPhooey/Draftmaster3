@@ -6,6 +6,8 @@ using UnityEngine.SceneManagement;
 
 public class IAPStore : MonoBehaviour {
 	
+	public static int gears;
+	
 	private const string gears20 = "com.DuffetyWong.Draftmaster2RollingThunder.gears20";
 	private const string gears60 = "com.DuffetyWong.Draftmaster2RollingThunder.gears60";
 	private const string gears125 = "com.DuffetyWong.Draftmaster2RollingThunder.gears125";
@@ -31,6 +33,14 @@ public class IAPStore : MonoBehaviour {
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 		GUI.skin.button.alignment = TextAnchor.MiddleLeft;
 		
+			
+		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
+
+		GUI.skin.label.normal.textColor = Color.black;
+
+		GUI.skin.label.alignment = TextAnchor.UpperLeft;
+		GUI.Label(new Rect(widthblock * 4, 20, widthblock * 5, heightblock * 2), "Premium Store");
+		
 		CommonGUI.TopBar();
 
 		if (Input.GetKeyDown(KeyCode.Escape)){
@@ -39,15 +49,24 @@ public class IAPStore : MonoBehaviour {
 	}
 	
 	public void OnPurchaseComplete(Product product){
+		
+		gears = PlayerPrefs.GetInt("Gears");
+		
 		switch(product.definition.id){
 			case gears20:
 				Debug.Log("Added 20 gears");
+				gears+=20;
+				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case gears60:
 				Debug.Log("Added 60 gears");
+				gears+=60;
+				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case gears125:
 				Debug.Log("Added 125 gears");
+				gears+=125;
+				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			default:
 				break;

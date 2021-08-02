@@ -81,8 +81,8 @@ public class Store : MonoBehaviour{
 
 			GUI.skin.label.normal.textColor = Color.black;
 
-			GUI.skin.label.alignment = TextAnchor.LowerLeft;
-			GUI.Label(new Rect(widthblock * 5, heightblock * 1.5f, widthblock * 5, heightblock * 2), "Store");
+			GUI.skin.label.alignment = TextAnchor.UpperLeft;
+			GUI.Label(new Rect(widthblock * 5.5f, 20, widthblock * 5, heightblock * 2), "Store");
 			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
 			int itemCount = 0;
@@ -103,7 +103,7 @@ public class Store : MonoBehaviour{
 				menuCat = "Fuel";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Gears")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Premium")){
 				Application.LoadLevel("GearsStore");
 			}
 			
