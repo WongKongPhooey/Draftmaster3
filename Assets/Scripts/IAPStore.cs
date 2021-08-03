@@ -11,6 +11,9 @@ public class IAPStore : MonoBehaviour {
 	private const string gears20 = "com.DuffetyWong.Draftmaster2RollingThunder.gears20";
 	private const string gears60 = "com.DuffetyWong.Draftmaster2RollingThunder.gears60";
 	private const string gears125 = "com.DuffetyWong.Draftmaster2RollingThunder.gears125";
+	private const string gearstest = "com.DuffetyWong.Draftmaster2RollingThunder.gearstest";
+	
+	private const string negotiator = "com.DuffetyWong.Draftmaster2RollingThunder.negotiator";
 	public GameObject restorePurchaseBtn;
 	
 	public GUISkin buttonSkin;
@@ -66,6 +69,11 @@ public class IAPStore : MonoBehaviour {
 			case gears125:
 				Debug.Log("Added 125 gears");
 				gears+=125;
+				PlayerPrefs.SetInt("Gears",gears);
+				break;
+			case gearstest:
+				Debug.Log("Added Test gears");
+				gears+=100;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			default:
