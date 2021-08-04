@@ -17,7 +17,7 @@ public class AdManager : MonoBehaviour, IUnityAdsListener
     // Initialize the Ads listener and service:
     void Start () {
         Advertisement.AddListener (this);
-        Advertisement.Initialize (gameId, testMode);
+        Advertisement.Initialize (gameId, testMode);	
     }
 
 	public static void ShowRewardedVideo(){
@@ -39,6 +39,7 @@ public class AdManager : MonoBehaviour, IUnityAdsListener
             Debug.LogWarning ("The ad failed due to an error");
         }
 		Store.adWindow = false;
+		Store.adFallbackStatic.SetActive(false);
     }
 
     public void OnUnityAdsReady (string placementId) {

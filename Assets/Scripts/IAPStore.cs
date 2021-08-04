@@ -8,12 +8,13 @@ public class IAPStore : MonoBehaviour {
 	
 	public static int gears;
 	
-	private const string gears20 = "com.DuffetyWong.Draftmaster2RollingThunder.gears20";
-	private const string gears60 = "com.DuffetyWong.Draftmaster2RollingThunder.gears60";
-	private const string gears125 = "com.DuffetyWong.Draftmaster2RollingThunder.gears125";
-	private const string gearstest = "com.DuffetyWong.Draftmaster2RollingThunder.gearstest";
+	private const string gears20 = "com.duffetywong.draftmaster2rollingthunder.gears20";
+	private const string gears60 = "com.duffetywong.draftmaster2rollingthunder.gears60";
+	private const string gears125 = "com.duffetywong.draftmaster2rollingthunder.gears125";
+	private const string gearstest = "com.duffetywong.draftmaster2rollingthunder.gearstest";
 	
-	private const string negotiator = "com.DuffetyWong.Draftmaster2RollingThunder.negotiator";
+	private const string negotiator = "com.duffetywong.draftmaster2rollingthunder.negotiator";
+	
 	public GameObject restorePurchaseBtn;
 	
 	public GUISkin buttonSkin;

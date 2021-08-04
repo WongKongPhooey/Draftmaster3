@@ -8,6 +8,8 @@ public class Scoreboard : MonoBehaviour {
 	float widthblock = Screen.width/20;
 	float heightblock = Screen.height/20;
 
+	public string circuitName;
+
 	public static int fieldSize;
 
 	public static GameObject playerCar;
@@ -58,6 +60,8 @@ public class Scoreboard : MonoBehaviour {
 		
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
+		
+		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		
 		int i=0;
 		carsTagged = false;
@@ -238,11 +242,14 @@ public class Scoreboard : MonoBehaviour {
 		
 		GUI.skin.label.normal.textColor = Color.white;
 		GUI.skin.label.fontSize = 40 / FontScale.fontScale;
-		
+	
+		GUI.DrawTexture(new Rect((widthblock * 1) + 20, 10, (widthblock * 3f) - 40, (heightblock * 2f) - 20), Resources.Load("SeriesSponsor") as Texture, ScaleMode.ScaleToFit);
+	
 		//Laps and Info
-		GUI.Label(new Rect(widthblock * 4, heightblock * 0f, widthblock * 2, heightblock * 1f), "STAGE 1");
-		GUI.Label(new Rect(widthblock * 6, heightblock * 0f, widthblock * 3, heightblock * 1f), "LAP " + CameraRotate.lap + " of " + PlayerPrefs.GetInt("RaceLaps"));
-		
+		GUI.Label(new Rect(widthblock * 4, 0, widthblock * 2, heightblock * 1f), "LAP " + CameraRotate.lap + " of " + PlayerPrefs.GetInt("RaceLaps"));	
+		GUI.Label(new Rect(widthblock * 6, 0, widthblock * 3, heightblock * 1f), circuitName.ToUpper());
+				
+		//Drivers loop start
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock * 4, heightblock * 1f, widthblock * 4, heightblock * 1), 1 + " " + driverNames[0] + "");
 		

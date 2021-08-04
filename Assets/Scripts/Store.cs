@@ -33,6 +33,8 @@ public class Store : MonoBehaviour{
 	int dailySelectsPicked;
 	
 	public static bool adWindow;
+	public GameObject adFallback;
+	public static GameObject adFallbackStatic;
 	
 	public Texture2D gasCanTex;
 	public Texture2D gearTex;
@@ -48,6 +50,8 @@ public class Store : MonoBehaviour{
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
 		
 		adWindow = false;
+		adFallback.SetActive(false);
+		adFallbackStatic = adFallback;
 		
 		//if(dailySelectsPicked == 0){
 			dailySelects.Add(21);
@@ -66,6 +70,11 @@ public class Store : MonoBehaviour{
 		heightblock = Mathf.Round(Screen.height/20);
 		
 		gears = PlayerPrefs.GetInt("Gears");
+	}
+
+	public void cancelAd(){
+		adWindow = false;
+		adFallback.SetActive(false);
 	}
 
     // Update is called once per frame
@@ -417,6 +426,7 @@ public class Store : MonoBehaviour{
 				
 				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "Ad")){
 					adWindow = true;
+					adFallback.SetActive(true);
 					AdManager.ShowRewardedVideo();
 				}
 				GUI.skin = tileSkin;

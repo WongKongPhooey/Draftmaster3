@@ -4,6 +4,7 @@ MonoImporter:
   externalObjects: {}
   serializedVersion: 2
   defaultReferences:
+  - scoreboardSponsor: {fileID: 2800000, guid: cacd23a54abebe94b99a061659cd6ea7, type: 3}
   - eightBitSkin: {instanceID: 0}
   - scoreboardGUI: {fileID: 11400000, guid: 49497470eef7a384b8586aac1f64ab27, type: 2}
   executionOrder: 0

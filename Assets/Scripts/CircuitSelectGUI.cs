@@ -74,7 +74,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		if(PlayerPrefs.HasKey("DailyPlays" + currentSeriesIndex + "")){
 			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSeriesIndex + "");
-			Debug.Log("DailyPlays" + currentSeriesIndex + " = " + dailyPlays);
+			//Debug.Log("DailyPlays" + currentSeriesIndex + " = " + dailyPlays);
 		} else {
 			PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", maxDailyPlays);
 			dailyPlays = maxDailyPlays;
@@ -270,7 +270,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Darlington, SC")){
 					Darlington();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
-					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Darlington") as Texture;
 				}
 				break;
 			case "20":
