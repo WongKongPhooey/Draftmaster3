@@ -162,20 +162,23 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "OuterWall") ||
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
-				
-			bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
-			bool rightSideHit = checkRaycast("RightCorners", 0.51f);
-			
+							
 			if (laneticker != 0){
 				if (laneticker > 0){
-					backingOut = true;
-					laneticker = -laneChangeDuration + laneticker;
-					lane--;
+					bool rightSideHit = checkRaycast("RightCorners", 0.51f);
+					if(rightSideHit == true){
+						backingOut = true;
+						laneticker = -laneChangeDuration + laneticker;
+						lane--;
+					}
 				}
 				if (laneticker < 0){
-					backingOut = true;
-					laneticker = laneChangeDuration + laneticker;
-					lane++;
+					bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
+					if(leftSideHit == true){
+						backingOut = true;
+						laneticker = laneChangeDuration + laneticker;
+						lane++;
+					}
 				}
 			} else {
 				if(doored("Left",25) == true){
@@ -209,8 +212,13 @@ public class AIMovement : MonoBehaviour
 		}
 		//Send it back
 		RaycastHit DraftCheckBackward;
-		bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
-		if(HitBackward ){
+		//bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
+		bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
+		if(HitBackward == false){
+			HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
+		}
+		
+		if(HitBackward == true){
 			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
 		}
 	}
@@ -649,6 +657,18 @@ public class AIMovement : MonoBehaviour
 			case "Right":
 				rayHit = Physics.Raycast(transform.position, transform.right, out DraftCheck, rayLength);
 				break;
+			case "FrontCorners":
+				rayHit = Physics.Raycast(transform.position + new Vector3(0.48f,0,0), transform.forward, out DraftCheck, rayLength);
+				if(rayHit == false){
+					rayHit = Physics.Raycast(transform.position + new Vector3(-0.48f,0,0), transform.forward, out DraftCheck, rayLength);
+				}
+				break;
+			case "RearCorners":
+				rayHit = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheck, rayLength);
+				if(rayHit == false){
+					rayHit = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheck, rayLength);
+				}
+				break;
 			case "LeftDiags":
 				rayHit = Physics.Raycast(transform.position, transform.forward - transform.right, out DraftCheck, rayLength);
 				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) - transform.right, out DraftCheck, rayLength);
@@ -658,19 +678,19 @@ public class AIMovement : MonoBehaviour
 				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) + transform.right, out DraftCheck, rayLength);
 				break;
 			case "LeftCorners":
-				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right * -1, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right * -1, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * -0.52f, Color.yellow);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right * -1, out DraftCheck, rayLength);
-					Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right * -1, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * -0.52f, Color.yellow);
 				}
 				break;
 			case "RightCorners":
-				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * 0.52f, Color.yellow);
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * 0.52f, Color.yellow);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right, out DraftCheck, rayLength);
-					Debug.DrawRay(transform.position + new Vector3(0,0,-1f), transform.right * 0.52f, Color.yellow);
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * 0.52f, Color.yellow);
 				}
 				break;
 			case "LeftEdge":

@@ -75,6 +75,9 @@ public class CarSelectGUI : MonoBehaviour {
 			case 5:
 				classLetter = "A";
 				break;
+			case 6:
+				classLetter = "S";
+				break;
 		    default:
 				classLetter = "R";
 				break;
@@ -99,6 +102,9 @@ public class CarSelectGUI : MonoBehaviour {
 				break;
 			case 5:
 				classColour = Color.blue;
+				break;
+			case 6:
+				classColour = Color.red;
 				break;
 		    default:
 				classColour = Color.red;

@@ -13,7 +13,7 @@ public class CustomNumbers : MonoBehaviour
     // Start is called before the first frame update
     void Awake()
     {
-		carNumber = PlayerPrefs.GetString("carTexture");			
+		/*carNumber = PlayerPrefs.GetString("carTexture");			
 		string splitAfter = "livery";
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
 		
@@ -32,13 +32,13 @@ public class CustomNumbers : MonoBehaviour
 			}
 		} else {
 			//Debug.Log("No custom number saved");
-		}
+		}*/
     }
 
     // Update is called once per frame
     void Update()
     {   
-		carNumber = PlayerPrefs.GetString("carTexture");			
+		/*carNumber = PlayerPrefs.GetString("carTexture");			
 		string splitAfter = "livery";
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
 		
@@ -57,6 +57,6 @@ public class CustomNumbers : MonoBehaviour
 			}
 		} else {
 			//Debug.Log("No custom number saved");
-		}
+		}*/
     }
 }

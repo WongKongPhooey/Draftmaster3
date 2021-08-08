@@ -102,7 +102,8 @@ public class SingleCar : MonoBehaviour {
 		
 		for(int car=0;car<100;car++){
 			if((Resources.Load(seriesPrefix + "num" + car) != null)
-			&&(PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked") == 1)){
+			&&(PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked") == 1)
+			&&(car != currentCar)){
 				availableNumbers.Add(car);
 			}
 		}
@@ -317,22 +318,29 @@ public class SingleCar : MonoBehaviour {
 				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Starts");
 				break;
 			case "Transfers":
-				if (GUI.Button(new Rect(widthblock * 9f, heightblock * 8f, widthblock * 4.5f, heightblock * 1.5f), "Change Driver")){
+			
+				if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 8f, widthblock * 4.5f, heightblock * 1.5f), "Driver Swap")){
 					driverPanel = true;
 				}
-				if (GUI.Button(new Rect(widthblock * 9f, heightblock * 10f, widthblock * 4.5f, heightblock * 1.5f), "Change Number")){
-					numberPanel = true;
+				
+				if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
+					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 10f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
+						numberPanel = true;
+					}
+				} else {
+					GUI.skin.label.alignment = TextAnchor.MiddleRight;
+					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 10f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
 				}
-				if (GUI.Button(new Rect(widthblock * 9.5f, heightblock * 12f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
+				
+				if (GUI.Button(new Rect(widthblock * 15.25f, heightblock * 12f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
 				}
-				if (GUI.Button(new Rect(widthblock * 7.5f, heightblock * 14f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
+				if (GUI.Button(new Rect(widthblock * 13.25f, heightblock * 14f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
 				}
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					GUI.skin = redGUI;
-					if (GUI.Button(new Rect(widthblock * 9f, heightblock * 16f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
-						int currentNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar);
-						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentNum);
+					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 16f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
 						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
+						checkNumberDupes(currentCar, seriesPrefix, currentCar);
 					}
 				}
 				
@@ -360,32 +368,55 @@ public class SingleCar : MonoBehaviour {
 		if(numberPanel == true){
 			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
 			GUI.skin = whiteGUI;
-			GUI.Box(new Rect(widthblock * 3f, heightblock * 3f, widthblock * 14f, heightblock * 14f),"");
+			GUI.Box(new Rect(widthblock * 2f, heightblock * 3f, widthblock * 16f, heightblock * 14f),"");
 			
 			GUI.skin = buttonSkin;
 			GUI.skin.label.alignment = TextAnchor.UpperLeft;
 			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
-			GUI.Label(new Rect(widthblock * 3.5f, heightblock * 4f, widthblock * 11f, heightblock * 2f), "Change Number");
+			GUI.Label(new Rect(widthblock * 2.5f, heightblock * 4f, widthblock * 7.5f, heightblock * 2f), "Change Number");
 
 			numsInd = 0;
 			
 			for(int i=0;i<4;i++){
-				for(int j=0;j<10;j++){
+				for(int j=0;j<12;j++){
 					if(numsInd < availNums.Length){
-						if (GUI.Button(new Rect(widthblock * 3.75f + (widthblock * j * 1.25f), (heightblock * 6f) + (heightblock * i * 2f), widthblock * 1f, widthblock * 1f), "")){
+						if (GUI.Button(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f), (heightblock * 6f) + (heightblock * i * 2f), widthblock * 1f, widthblock * 1f), "")){
+							
+							//Example: I swap car #4 with car #10..
+							//Set car #4 to become #10
 							PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, availNums[numsInd]);
-							PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + availNums[numsInd], currentCar);
+							
+							//Does car #10 actually has number 10 to swap with, or do they also have a custom number..
+							if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + availNums[numsInd])){
+								//Find who has number 10.. in this example, it is the #18
+								int currentNumHolder = findCustomNum(seriesPrefix, availNums[numsInd]);
+								//Set #18 as #4 instead, to preserve the numbers to and allow 3-way swaps
+								PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentNumHolder, currentCar);
+								
+								//Remove any dupes
+								checkNumberDupes(currentNumHolder, seriesPrefix, currentCar);
+								
+							} else {
+								//If not, set #10 as #4
+								PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + availNums[numsInd], currentCar);
+								
+								//Remove any dupes
+								checkNumberDupes(availNums[numsInd], seriesPrefix, currentCar);
+								checkNumberDupes(currentCar, seriesPrefix, availNums[numsInd]);
+							}
+							
 							Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + availNums[numsInd]);
+							
 							numberPanel = false;
 						}
-						GUI.DrawTexture(new Rect(widthblock * 3.75f + (widthblock * j * 1.25f) + 5, (heightblock * 6f) + (heightblock * i * 2f) + 5, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load(seriesPrefix + "num" + availNums[numsInd]) as Texture);
+						GUI.DrawTexture(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f) + 5, (heightblock * 6f) + (heightblock * i * 2f) + 5, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load(seriesPrefix + "num" + availNums[numsInd]) as Texture);
 						numsInd++;
 					}
 				}
 			}
 			
 			GUI.skin = redGUI;
-			if (GUI.Button(new Rect(widthblock * 14f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Back")){
+			if (GUI.Button(new Rect(widthblock * 15f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Back")){
 				numberPanel = false;
 			}
 		}
@@ -393,6 +424,30 @@ public class SingleCar : MonoBehaviour {
 		if (Input.GetKeyDown(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
 		}
+	}
+	
+	void checkNumberDupes(int change, string prefix, int number){
+		for(int i=0;i<99;i++){
+			if(i != change){
+				if(PlayerPrefs.HasKey("CustomNumber" + prefix + i)){
+					if(PlayerPrefs.GetInt("CustomNumber" + prefix + i) == number){
+						PlayerPrefs.DeleteKey("CustomNumber" + prefix + i);
+						Debug.Log("Removed dupe " + i + "(#" + number + ")");
+					}
+				}
+			}
+		}
+	}
+	
+	int findCustomNum(string prefix, int number){
+		for(int i=0;i<99;i++){
+			if(PlayerPrefs.HasKey("CustomNumber" + prefix + i)){
+				if(PlayerPrefs.GetInt("CustomNumber" + prefix + i) == number){
+					return i;
+				}
+			}
+		}
+		return 9999;
 	}
 	
 	string classAbbr(int carClass){

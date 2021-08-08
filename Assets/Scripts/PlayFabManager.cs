@@ -134,7 +134,8 @@ public class PlayFabManager : MonoBehaviour
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
 			tableLabels[0].text = (item.Position + 1).ToString();
 			tableLabels[1].text = item.DisplayName;
-			tableLabels[2].text = item.StatValue.ToString() + " MpH";
+			float leaderboardSpeed = item.StatValue/1000f;
+			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
 			
 			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}

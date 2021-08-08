@@ -126,20 +126,18 @@ public class Movement : MonoBehaviour {
 		seriesPrefix = "cup20";
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
-		//Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
+		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
-		liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
-		
-		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
-			//liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
-			//customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
-			//numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
+		/*if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
+			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
+			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
 			Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			//liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum) as Texture;
-			//numRend.enabled = false;
-			//Debug.Log("No custom number saved");
-		}
+			numRend.enabled = false;
+			Debug.Log("No custom number saved");
+		}*/
 
 				
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
@@ -217,28 +215,31 @@ public class Movement : MonoBehaviour {
 		wobbleRand = Random.Range(100,500);
 	}
 	
-	void OnCollisionEnter (Collision carHit)
-	{
-		
-		bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
-		bool rightSideHit = checkRaycast("RightCorners", 0.51f);
+	void OnCollisionEnter (Collision carHit){
 		
 		//Debug.Log("Hit " + carHit.gameObject.name);
-		if((carHit.gameObject.tag == "AICar") || (carHit.gameObject.tag == "Barrier") || (carHit.gameObject.name == "OuterWall"))
-		{
-			//print("Contact with " + carHit.gameObject.name);
+		if((carHit.gameObject.tag == "AICar") || 
+		   (carHit.gameObject.tag == "Barrier") || 
+		   (carHit.gameObject.name == "OuterWall")){
+			   
 			if((laneticker != 0)&&(backingOut == false)){
-				if(laneticker > laneChangeBackout){
-					backingOut = true;
-					RaceHUD.tutorialBackingOut = true;
-					laneticker = -laneChangeDuration + laneticker;
-					lane--;
-				} else {
-					if(laneticker < -laneChangeBackout){
+				if(laneticker > 0){
+					bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
+					if(leftSideHit == true){
 						backingOut = true;
 						RaceHUD.tutorialBackingOut = true;
-						laneticker = laneChangeDuration + laneticker;
-						lane++;
+						laneticker = -laneChangeDuration + laneticker;
+						lane--;
+					}
+				} else {
+					if(laneticker < 0){
+						bool rightSideHit = checkRaycast("RightCorners", 0.51f);
+						if(rightSideHit == true){
+							backingOut = true;
+							RaceHUD.tutorialBackingOut = true;
+							laneticker = laneChangeDuration + laneticker;
+							lane++;
+						}
 					}
 				}
 			}
@@ -530,11 +531,11 @@ public class Movement : MonoBehaviour {
 		liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
-			//liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
-			//customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
-			//numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
+			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
+			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
 			//Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
-			numRend.enabled = false;
+			numRend.enabled = true;
 		} else {
 			//liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum) as Texture;
 			numRend.enabled = false;
