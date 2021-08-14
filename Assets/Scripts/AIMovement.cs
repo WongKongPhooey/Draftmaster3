@@ -40,6 +40,7 @@ public class AIMovement : MonoBehaviour
 	public string carTeam;
 	public string carManu;
 	public string carType;
+	public int AICarClass;
 
     public static bool onTurn;
 	public bool tandemDraft;
@@ -105,6 +106,8 @@ public class AIMovement : MonoBehaviour
 		carManu = DriverNames.cup2020Manufacturer[carNum];
 		carType = DriverNames.cup2020Types[carNum];
 		
+		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
+		
 		seriesPrefix = "cup20";
 		
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
@@ -134,9 +137,40 @@ public class AIMovement : MonoBehaviour
         accelRand = accelRand / 5000;
 
         if (DriverNames.cup2020Types[carNum] == "Strategist"){
-            laneChangeDuration = 40;
-            laneChangeSpeed = 0.030f;
-            laneChangeBackout = 16;
+			switch(AICarClass){
+				case 1:
+					laneChangeDuration = 75;
+					laneChangeSpeed = 0.016f;
+					laneChangeBackout = 30;
+					break;
+				case 2:
+					laneChangeDuration = 64;
+					laneChangeSpeed = 0.01875f;
+					laneChangeBackout = 28;
+					break;
+				case 3:
+					laneChangeDuration = 60;
+					laneChangeSpeed = 0.02f;
+					laneChangeBackout = 24;
+					break;
+				case 4:
+					laneChangeDuration = 50;
+					laneChangeSpeed = 0.024f;
+					laneChangeBackout = 20;
+					break;
+				case 5:
+					laneChangeDuration = 48;
+					laneChangeSpeed = 0.025f;
+					laneChangeBackout = 16;
+					break;
+				case 6:
+					laneChangeDuration = 40;
+					laneChangeSpeed = 0.030f;
+					laneChangeBackout = 16;
+					break;
+				default:
+					break;
+			}
         } else {
             laneChangeDuration = 80;
             laneChangeSpeed = 0.015f;
@@ -206,7 +240,18 @@ public class AIMovement : MonoBehaviour
 		
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
-			AISpeed += midSpeed/4;
+			if(midSpeed < 0.25f){
+				AISpeed += midSpeed;
+			} else {
+				if(midSpeed < 1f){
+					AISpeed += midSpeed/2;
+				} else {
+					AISpeed += midSpeed/4;
+					if(doored("Left",50) == true){
+						changeLane("Right");
+					}
+				}
+			}
 			tandemDraft = true;
 			//Debug.Log("Impact levels out " + AICar.name);
 		}

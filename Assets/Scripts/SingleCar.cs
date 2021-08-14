@@ -312,10 +312,15 @@ public class SingleCar : MonoBehaviour {
 				GUI.skin = buttonSkin;
 				break;
 			case "Paints":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Alternate Paints Coming Soon");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 7), "Alternate Paints Coming Soon");
 				break;
 			case "Stats":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 5.5f, widthblock * 11.5f, heightblock * 7), "Starts");
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 4f, heightblock * 2), "Starts");
+				GUI.Label(new Rect(widthblock * 10.5f, heightblock * 7f, widthblock * 4f, heightblock * 2), "" + PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + currentCar));
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 8.5f, widthblock * 4f, heightblock * 2), "Wins");
+				GUI.Label(new Rect(widthblock * 10.5f, heightblock * 8.5f, widthblock * 4f, heightblock * 2), "" + PlayerPrefs.GetInt("TotalWins" + seriesPrefix + currentCar));
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 10f, widthblock * 4f, heightblock * 2), "Top 5s");
+				GUI.Label(new Rect(widthblock * 10.5f, heightblock * 10f, widthblock * 4f, heightblock * 2), "" + PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + currentCar));
 				break;
 			case "Transfers":
 			

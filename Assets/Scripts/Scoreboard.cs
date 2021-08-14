@@ -8,6 +8,8 @@ public class Scoreboard : MonoBehaviour {
 	float widthblock = Screen.width/20;
 	float heightblock = Screen.height/20;
 
+	public static string seriesPrefix;
+
 	public string circuitName;
 
 	public static int fieldSize;
@@ -53,6 +55,9 @@ public class Scoreboard : MonoBehaviour {
 	public static float[] orderedPositions = new float[45];
 	public static string[] orderedNames = new string[45];
 
+	public static int totalCarWins;
+	public static int totalCarTopFives;
+
 	public GUISkin eightBitSkin;
 	public GUISkin scoreboardGUI;
 	
@@ -60,6 +65,8 @@ public class Scoreboard : MonoBehaviour {
 		
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
+		
+		seriesPrefix = "cup20";
 		
 		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		
@@ -226,11 +233,21 @@ public class Scoreboard : MonoBehaviour {
 		
 		if(position == 0){
 			PlayerPrefs.SetInt("TotalWins",PlayerPrefs.GetInt("TotalWins") + 1);
-			Debug.Log("Winner Winner!");
+			if(PlayerPrefs.HasKey("TotalWins" + seriesPrefix + playerCarNum)){
+				totalCarWins = PlayerPrefs.GetInt("TotalWins" + seriesPrefix + playerCarNum);
+				PlayerPrefs.SetInt("TotalWins" + seriesPrefix + playerCarNum,totalCarWins + 1);
+			} else {
+				PlayerPrefs.SetInt("TotalWins" + seriesPrefix + playerCarNum, 1);
+			}
 		}
 		if(position <= 4){
 			PlayerPrefs.SetInt("TotalTop5s",PlayerPrefs.GetInt("TotalTop5s") + 1);
-			Debug.Log("Another top 5!");
+			if(PlayerPrefs.HasKey("TotalWins" + seriesPrefix + playerCarNum)){
+				totalCarTopFives = PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + playerCarNum);
+				PlayerPrefs.SetInt("TotalTop5s" + seriesPrefix + playerCarNum,totalCarTopFives + 1);
+			} else {
+				PlayerPrefs.SetInt("TotalTop5s" + seriesPrefix + playerCarNum, 1);
+			}
 		}
 	}
 	

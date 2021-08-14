@@ -16,7 +16,10 @@ public class SeriesSelectGUI : MonoBehaviour {
 	int menuIndex;
 	int subMenuSize;
 	string minRequirement;
+	string levelRequirement;	
+	string classRequirement;
 	string restrictionValue;
+	int minClass;
 	int level;
 
 	public Vector2 scrollPosition = Vector2.zero;
@@ -105,49 +108,57 @@ public class SeriesSelectGUI : MonoBehaviour {
 				string carLivery = SeriesData.offlineSeriesImage[menuIndex,subMenu];
 				float cardX = widthblock * (subMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
-				bool meetsRequirements = false;
+				bool meetsRequirements = true;
 				GUI.skin = whiteGUI;
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
 				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2), SeriesData.offlineSeries[menuIndex,subMenu]);
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, widthblock * 2.5f), Resources.Load(carLivery) as Texture);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 3) - (heightblock * 3.5f), cardY + (heightblock * 2f), heightblock * 7f, heightblock * 3.5f), Resources.Load(carLivery) as Texture);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 				
+				//Level Check
+				levelRequirement = "Min Level " + SeriesData.offlineMinLevel[menuIndex,subMenu] + "\n";
+				restrictionValue = "" + SeriesData.offlineMinLevel[menuIndex,subMenu];
+				if(level < SeriesData.offlineMinLevel[menuIndex,subMenu]){
+					meetsRequirements = false;
+				}
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), widthblock * 2.75f, heightblock * 1.5f), "Min Level " + (SeriesData.offlineMinLevel[menuIndex, subMenu]) + "");
+				
+				//Class Check
+				GUI.skin.label.alignment = TextAnchor.MiddleRight;
+				classRequirement = "Min Class " + SeriesData.offlineMinClass[menuIndex,subMenu] + "\n";
+				minClass = SeriesData.offlineMinClass[menuIndex,subMenu];
+				GUI.Label(new Rect(cardX + (widthblock * 3f), cardY + (heightblock * 7f), widthblock * 2.75f, heightblock * 1.5f), "Min Class " + classAbbr(SeriesData.offlineMinClass[menuIndex, subMenu]) + "");
+				GUI.skin.label.normal.textColor = classColours(SeriesData.offlineMinClass[menuIndex, subMenu]);
+				GUI.Label(new Rect(cardX + (widthblock * 3f), cardY + (heightblock * 7f), widthblock * 2.75f, heightblock * 1.5f), "" + classAbbr(SeriesData.offlineMinClass[menuIndex, subMenu]) + "");
+				GUI.skin.label.normal.textColor = Color.black;
+				
+				GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 				switch(SeriesData.offlineMinType[menuIndex,subMenu]){
-					case "Level":
-						minRequirement = "Min Level " + SeriesData.offlineMinLevel[menuIndex,subMenu] + "\n";
-						restrictionValue = "" + SeriesData.offlineMinLevel[menuIndex,subMenu];
-						if(level >= SeriesData.offlineMinLevel[menuIndex,subMenu]){
-							meetsRequirements = true;
-						}
-					break;
-					case "Class":
-						minRequirement = "Min Class " + SeriesData.classAbbr(SeriesData.offlineMinClass[menuIndex,subMenu]) + "\n";
-						restrictionValue = "" + SeriesData.offlineMinClass[menuIndex,subMenu];
-						meetsRequirements = true;
-					break;
 					case "Team":
-						minRequirement = "Requires Team " + SeriesData.offlineMinTeam[menuIndex,subMenu] + "\n";
+						minRequirement = "Requires Team " + SeriesData.offlineMinTeam[menuIndex,subMenu] + "";
 						restrictionValue = "" + SeriesData.offlineMinTeam[menuIndex,subMenu];
-						meetsRequirements = true;
 					break;
 					case "Manufacturer":
-						minRequirement = "Requires Manufacturer " + SeriesData.offlineMinManu[menuIndex,subMenu] + "\n";
+						minRequirement = "Requires Manufacturer " + SeriesData.offlineMinManu[menuIndex,subMenu] + "";
 						restrictionValue = "" + SeriesData.offlineMinManu[menuIndex,subMenu];
-						meetsRequirements = true;
+					break;
+					case "Type":
+						minRequirement = "Requires Type " + SeriesData.offlineMinDriverType[menuIndex,subMenu] + "";
+						restrictionValue = "" + SeriesData.offlineMinDriverType[menuIndex,subMenu];
 					break;
 					case "Rarity":
-						minRequirement = "Min Rarity " + SeriesData.offlineMinRarity[menuIndex,subMenu] + "\n";
+						minRequirement = "Min Rarity " + SeriesData.offlineMinRarity[menuIndex,subMenu] + "";
 						restrictionValue = "" + SeriesData.offlineMinRarity[menuIndex,subMenu];
-						meetsRequirements = true;
 					break;
 					default:
 					break;
 				}
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6f), widthblock * 5.5f, heightblock * 6), minRequirement + "AI Level: " + (SeriesData.offlineAILevel[menuIndex, subMenu] + level) + "\n" + SeriesData.offlineDescriptions[menuIndex, subMenu] + "");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6.5f), widthblock * 5.5f, heightblock * 4.5f), "" + minRequirement + "");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 8f), widthblock * 5.5f, heightblock * 4.5f), "" + SeriesData.offlineDescriptions[menuIndex, subMenu] + "");
 				
 				//Choose Subseries
 				if(meetsRequirements == true){
@@ -160,6 +171,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 							PlayerPrefs.SetInt("CurrentSeries", menuIndex);
 							PlayerPrefs.SetInt("CurrentSubseries", subMenu);
 							PlayerPrefs.SetInt("SubseriesDailyPlays",SeriesData.offlineDailyPlays[menuIndex,subMenu]);
+							PlayerPrefs.SetInt("SubseriesMinClass", minClass);
 							PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
 							PlayerPrefs.SetString("RestrictionValue",restrictionValue);
 							PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
@@ -197,8 +209,66 @@ public class SeriesSelectGUI : MonoBehaviour {
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		
+		CommonGUI.FuelUI();
+		
 		if (Input.GetKeyDown(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
 		}
+	}
+	
+		string classAbbr(int carClass){
+		string classLetter;
+		switch(carClass){
+			case 1:
+				classLetter = "R";
+				break;
+		    case 2:
+				classLetter = "D";
+				break;
+			case 3:
+				classLetter = "C";
+				break;
+			case 4:
+				classLetter = "B";
+				break;
+			case 5:
+				classLetter = "A";
+				break;
+			case 6:
+				classLetter = "S";
+				break;
+		    default:
+				classLetter = "R";
+				break;
+		}
+		return classLetter;
+	}
+	
+	Color classColours(int carClass){
+		Color classColour;
+		switch(carClass){
+			case 1:
+				classColour = Color.red;
+				break;
+		    case 2:
+				classColour = Color.yellow;
+				break;
+			case 3:
+				classColour = Color.green;
+				break;
+			case 4:
+				classColour = Color.cyan;
+				break;
+			case 5:
+				classColour = Color.blue;
+				break;
+			case 6:
+				classColour = Color.red;
+				break;
+		    default:
+				classColour = Color.red;
+				break;
+		}
+		return classColour;
 	}
 }

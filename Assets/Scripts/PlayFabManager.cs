@@ -42,6 +42,7 @@ public class PlayFabManager : MonoBehaviour
 	
 	public static void OnPrefLoginSuccess(LoginResult result){
 		Debug.Log("Login from prefs successful!");
+		GetTitleData();
 	}
 	
 	public void LoginButton(){
@@ -82,6 +83,7 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
 		PlayerPrefs.SetString("PlayerPassword", passwordInput.text);
 		LoginFromPrefs();
+		SceneManager.LoadScene("MainMenu");
 	}
 	
 	void OnLoginError(PlayFabError error){
@@ -94,6 +96,63 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.DeleteKey("PlayerEmail");
 		PlayerPrefs.DeleteKey("PlayerPassword");
 		SceneManager.LoadScene("MainMenu");
+	}
+	
+	public static void GetTitleData(){
+		PlayFabClientAPI.GetTitleData(new GetTitleDataRequest(), OnTitleDataReceived, OnTitleError);
+	}
+	
+	public static void OnTitleDataReceived(GetTitleDataResult result){
+		if(result.Data == null){
+			Debug.Log("No Title Data Found");
+			//Remove the last known store values
+			PlayerPrefs.SetString("StoreDailySelects", "");
+			PlayerPrefs.SetInt("FreeFuel", 0);
+			PlayerPrefs.SetInt("ShopDiscount", 0);
+		}
+		
+		//Custom store items in Daily Selects
+		if(result.Data.ContainsKey("StoreDailySelects") == false){
+			Debug.Log("No online Store Daily Selects");
+			//Remove the last known store values
+			PlayerPrefs.SetString("StoreDailySelects", "");
+		} else {
+			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
+			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
+		}
+		
+		//Free Fuel Promo
+		if(result.Data.ContainsKey("FreeFuel") == true){
+			if(result.Data["FreeFuel"] == "Yes"){
+				PlayerPrefs.SetInt("FreeFuel", 1);
+				Debug.Log("Free Fuel Activated");
+			} else {
+				PlayerPrefs.SetInt("FreeFuel", 0);
+			}
+		} else {
+			PlayerPrefs.SetInt("FreeFuel", 0);
+		}
+		
+		//Shop Discount Promo (~40%)
+		if(result.Data.ContainsKey("ShopDiscount") == true){
+			if(result.Data["ShopDiscount"] == "Yes"){
+				PlayerPrefs.SetInt("ShopDiscount", 1);
+				Debug.Log("Shop Discount Activated");
+			} else {
+				PlayerPrefs.SetInt("ShopDiscount", 0);
+			}
+		} else {
+			PlayerPrefs.SetInt("ShopDiscount", 0);
+		}
+	}
+	
+	static void OnTitleError(PlayFabError error){
+		Debug.Log("Something went wrong..");
+		Debug.Log(error.GenerateErrorReport());
+		
+		//Remove active online promos if cannot connect to PlayFab
+		PlayerPrefs.SetString("StoreDailySelects", "");
+		PlayerPrefs.SetInt("FreeFuel", 0);
 	}
 	
 	public static void SendLeaderboard(int score, string circuitName){

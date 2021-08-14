@@ -54,6 +54,17 @@ public class CommonGUI : MonoBehaviour {
 		}
 	}
 	
+	public static void FuelUI(){
+		//Fuel
+		if (GUI.Button(new Rect(widthblock * 17f, 20, widthblock * 2.5f, heightblock * 1.5f), GameData.gameFuel + "/" + GameData.maxFuel)){
+		}
+		GUI.DrawTexture(new Rect((widthblock * 17f) + 10, 27, (heightblock * 1.5f) - 20, (heightblock * 1.5f) - 20), gasCanTexInst);
+		
+		GUI.skin.button.alignment = TextAnchor.MiddleRight;
+		
+		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+	}
+	
 	public static void TopBar(){
 		
 		day = PlayerPrefs.GetInt("GameDay");
@@ -73,7 +84,7 @@ public class CommonGUI : MonoBehaviour {
 			}
 			
 			//Day/Week
-			if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 2.5f, heightblock * 1.5f), "W" + week + " / D" + day)){
+			if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3f, heightblock * 1.5f), "W" + week + " / D" + day)){
 			}
 		}
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;

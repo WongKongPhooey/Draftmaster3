@@ -33,8 +33,14 @@ public class PrizeCollection : MonoBehaviour
 		if(PlayerPrefs.HasKey("NewUser")){
 			PlayerPrefs.SetInt("NewUser",1);
 			prizeType=PlayerPrefs.GetString("PrizeType");
+			Debug.Log("Prize: " + prizeType);
 			switch(prizeType){
-				case "PremiumBag":
+				case "MysteryGarage":
+					ListPrizeOptions("");
+					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
+					PremiumGarage("cup20",prizeCarNumber);
+					break;
+				case "3RareGarage":
 					ListPrizeOptions("Specific");
 					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
 					PremiumGarage("cup20",prizeCarNumber);
@@ -100,6 +106,13 @@ public class PrizeCollection : MonoBehaviour
 	
 	void ListPrizeOptions(string category){
 		switch(category){
+			case "Everyone":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						validDriver.Add(i);
+					}
+				}
+			break;
 			case "Rookies":
 				validDriver.Add(0); //Houff
 				validDriver.Add(41); //Custer
@@ -178,6 +191,7 @@ public class PrizeCollection : MonoBehaviour
 	
 	void PremiumGarage(string seriesPrefix, int carNumber){
 
+		Debug.Log("Prize: #" + carNumber);
 		int carGears = 0;
 		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
 			carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");

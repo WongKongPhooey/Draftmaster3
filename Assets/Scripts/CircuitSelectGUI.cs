@@ -44,6 +44,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 	static float widthblock = Mathf.Round(Screen.width/20);
 	static float heightblock = Mathf.Round(Screen.height/20);
 
+	public string seriesPrefix;
+	public int carNumber;
+
 	string currentSeriesName;
 	string currentSeriesIndex;
 	string seriesTrackList;
@@ -65,6 +68,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 	public Vector2 scrollPosition = Vector2.zero;
 	
 	void Awake(){
+		
+		carNumber = PlayerPrefs.GetInt("CarChoice");
+		seriesPrefix = "cup20";
 		
 		currentSeriesName = PlayerPrefs.GetString("CurrentSeriesName");
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
@@ -332,6 +338,12 @@ public class CircuitSelectGUI : MonoBehaviour {
 		}
 		
 		if (GUI.Button(new Rect(widthblock * 15, heightblock * 17, widthblock * 3, heightblock * 2), "Race")){
+			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
+			if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
+				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
+			} else {
+				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
+			}
 			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
 			PlayerPrefs.SetString("CurrentCircuit",circuitChoice);
 			if(GameData.gameFuel >= seriesFuel){

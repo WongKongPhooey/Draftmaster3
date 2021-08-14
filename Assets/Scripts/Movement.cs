@@ -625,19 +625,19 @@ public class Movement : MonoBehaviour {
 				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) + transform.right, out DraftCheck, rayLength);
 				break;
 			case "LeftCorners":
-				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right * -1, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right * -1, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * -0.52f, Color.yellow);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right * -1, out DraftCheck, rayLength);
-					Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * -0.52f, Color.yellow);
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right * -1, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * -0.52f, Color.yellow);
 				}
 				break;
 			case "RightCorners":
-				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,1f), transform.right, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(0,0,1f), transform.right * 0.52f, Color.yellow);
+				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right, out DraftCheck, rayLength);
+				Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * 0.52f, Color.yellow);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-1f), transform.right, out DraftCheck, rayLength);
-					Debug.DrawRay(transform.position + new Vector3(0,0,-1f), transform.right * 0.52f, Color.yellow);
+					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right, out DraftCheck, rayLength);
+					Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * 0.52f, Color.yellow);
 				}
 				break;
 			case "LeftEdge":

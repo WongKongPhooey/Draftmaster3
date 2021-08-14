@@ -22,12 +22,15 @@ public class CarSelectGUI : MonoBehaviour {
 	int carMoney;
 	int moneyCount;
 	int premiumTokens;
+	int maxCars;
 	
 	string restrictionType;
 	string restrictionValue;
 	int seriesMinClass;
 	string seriesTeam;
 	string seriesManu;
+	string seriesDriverType;
+	int seriesRarity;
 	
 	public Texture2D gasCanTex;
 	public Texture2D gearTex;
@@ -35,6 +38,10 @@ public class CarSelectGUI : MonoBehaviour {
 	public Texture2D frdTex;
 	public Texture2D chvTex;
 	public Texture2D tytTex;
+
+	public Texture2D starOne;
+	public Texture2D starTwo;
+	public Texture2D starThree;
 
 	public Vector2 scrollPosition = Vector2.zero;
 	
@@ -46,10 +53,39 @@ public class CarSelectGUI : MonoBehaviour {
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
 		
+		maxCars = DriverNames.cup2020Names.Length;
+			
+		//Filter out cars below series restriction
+		
 		restrictionType = PlayerPrefs.GetString("RestrictionType");
 		restrictionValue = PlayerPrefs.GetString("RestrictionValue");
-		//Debug.Log("Restriction Type: " + restrictionType);
-		//Debug.Log("Restriction Val: " + restrictionValue);
+		
+		seriesTeam = "";
+		seriesManu = "";
+		seriesDriverType = "";
+		seriesRarity = 0;
+		
+		switch(restrictionType){
+			case "Team":
+				seriesTeam = restrictionValue;
+				break;
+			case "Manufacturer":
+				seriesManu = restrictionValue;
+				break;
+			case "Rarity":
+				seriesRarity = int.Parse(restrictionValue);
+				break;
+			case "Type":
+				seriesDriverType = restrictionValue;
+				Debug.Log("Driver Type: " + seriesDriverType);
+				break;
+			default:
+				break;
+		}
+		
+		seriesMinClass = PlayerPrefs.GetInt("SubseriesMinClass");
+		restrictionType = PlayerPrefs.GetString("RestrictionType");
+		restrictionValue = PlayerPrefs.GetString("RestrictionValue");
 	}
 
     // Update is called once per frame
@@ -175,29 +211,6 @@ public class CarSelectGUI : MonoBehaviour {
 		
 		if(filterSeries == ""){
 			
-			int maxCars = DriverNames.cup2020Names.Length;
-			
-			//Filter out cars below class restriction
-			seriesMinClass = 0;
-			seriesTeam = "";
-			seriesManu = "";
-			
-			switch(restrictionType){
-				case "Class":
-					seriesMinClass = int.Parse(restrictionValue);
-					break;
-				case "Team":
-					seriesTeam = restrictionValue;
-					break;
-				case "Manufacturer":
-					seriesManu = restrictionValue;
-					break;
-				case "Rarity":
-					break;
-				default:
-					break;
-			}
-			
 			//Loop through unlocked cars
 			for(int rows = 1; rows < 11; rows++){
 				for(int columns = 1; columns < 6; columns++){
@@ -214,6 +227,8 @@ public class CarSelectGUI : MonoBehaviour {
 					||(carClass < seriesMinClass)
 					||((seriesTeam != "")&&(DriverNames.cup2020Teams[carCount] != seriesTeam))
 					||((seriesManu != "")&&(DriverNames.cup2020Manufacturer[carCount] != seriesManu))
+					||((seriesDriverType != "")&&(DriverNames.cup2020Types[carCount] != seriesDriverType))
+					||((seriesRarity != 0)&&(DriverNames.cup2020Rarity[carCount] != seriesRarity))
 					)&&(carCount < 99)){
 						//Skip if necessary
 						if(carCount < 99){
@@ -277,9 +292,32 @@ public class CarSelectGUI : MonoBehaviour {
 							default:
 								break;
 						}
-						GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 1f), cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
+						GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 0.75f) - 10, cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
+						
+						Texture2D rarityStars = null;
+						switch(DriverNames.cup2020Rarity[carCount]){
+							case 1:
+								rarityStars = starOne;
+								break;
+							case 2:
+								rarityStars = starTwo;
+								break;
+							case 3:
+								rarityStars = starThree;
+								break;
+							default:
+								break;
+						}
+						GUI.DrawTexture(new Rect(cardX + (widthblock * 1f), cardY + 10, widthblock * 0.75f, widthblock * 0.375f), rarityStars);
+						
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20liveryblank") as Texture);
-						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
+							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.75f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
+						} else {
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;

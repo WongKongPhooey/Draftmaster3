@@ -247,7 +247,7 @@ public class AllCars : MonoBehaviour {
 							default:
 								break;
 						}
-						GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 1f), cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
+						GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 0.75f) - 10, cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
 						
 						Texture2D rarityStars = null;
 						switch(DriverNames.cup2020Rarity[carCount]){
@@ -267,7 +267,6 @@ public class AllCars : MonoBehaviour {
 						
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20liveryblank") as Texture);
 						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
-							//GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
 							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
 							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
 							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.25f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
@@ -293,7 +292,11 @@ public class AllCars : MonoBehaviour {
 							if(carClass < DriverNames.cup2020Rarity[carCount]){
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
+								if(carGears > classMax){
+									GUI.skin.label.normal.textColor = classColours(3);
+								}
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
+								GUI.skin.label.normal.textColor = Color.black;
 							}
 						}
 						if((carClass == 0)&&(carGears >= unlockGears)){
