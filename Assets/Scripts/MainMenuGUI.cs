@@ -35,8 +35,9 @@ public class MainMenuGUI : MonoBehaviour {
 	int totalMoney;
 
 	public bool levelUpMenu;
-
-	public bool proVersion;
+	public static bool newMessageAlert;
+	
+	public static string messageAlert;
 	
 	public AudioSource crowdNoise;
 	public static int audioOn;
@@ -46,8 +47,6 @@ public class MainMenuGUI : MonoBehaviour {
 	
 	void Awake(){
 
-		proVersion = MiscScripts.proVersion;
-
 		exp = PlayerPrefs.GetInt("Exp");
 		level = PlayerPrefs.GetInt("Level");
 		//Debug.Log("Level " + level);
@@ -56,6 +55,8 @@ public class MainMenuGUI : MonoBehaviour {
 		dayInterval = 86400;
 		
 		rewardString = "";
+		
+		newMessageAlert = false;
 		
 		if(exp > levelExp){
 			exp-= levelExp;
@@ -195,6 +196,22 @@ public class MainMenuGUI : MonoBehaviour {
 			GUI.skin = blueGUI;
 			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
 				levelUpMenu = false;
+			}
+		}
+		
+		if(newMessageAlert == true){
+			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
+			GUI.skin = whiteGUI;
+			GUI.Box(new Rect(widthblock * 3f, heightblock * 3f, widthblock * 14f, heightblock * 14f),"");
+			
+			GUI.skin = buttonSkin;
+			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+			GUI.Label(new Rect(widthblock * 4f, heightblock * 4f, widthblock * 12f, heightblock * 9f), messageAlert);
+			
+			GUI.skin = redGUI;
+			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
+				newMessageAlert = false;
 			}
 		}
 		

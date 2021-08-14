@@ -144,6 +144,34 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 		}
+		
+		//Message Alerts
+		if(result.Data.ContainsKey("MessageAlert") == true){
+			//If there's a message to show..
+			//Check for a message ID
+			if(result.Data.ContainsKey("MessageAlertId") == true){
+				//See if the ID has incremented
+				int lastMessageId = 0;
+				if(PlayerPrefs.HasKey("MessageAlertId")){
+					lastMessageId = PlayerPrefs.GetInt("MessageAlertId");
+				} else {
+					PlayerPrefs.SetInt("MessageAlertId", int.Parse(result.Data["MessageAlertId"]));
+				}
+				if(lastMessageId != int.Parse(result.Data["MessageAlertId"])){
+					//Debug.Log("New Message!");
+					PlayerPrefs.SetInt("MessageAlertId", int.Parse(result.Data["MessageAlertId"]));
+					PlayerPrefs.SetString("MessageAlert", result.Data["MessageAlert"]);
+					MainMenuGUI.messageAlert = result.Data["MessageAlert"];
+					MainMenuGUI.newMessageAlert = true;
+				} else {
+					//Debug.Log("No new messages.");
+				}
+			} else {
+				//Debug.Log("No message ID set");
+			}
+		} else {
+			//Debug.Log("No message set");
+		}
 	}
 	
 	static void OnTitleError(PlayFabError error){
