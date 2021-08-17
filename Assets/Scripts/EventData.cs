@@ -20,9 +20,9 @@ public class EventData : MonoBehaviour
     void Start(){
         
 		offlineEvent[0] = "Ol' Seven-Time";
-		offlineEvent[1] = "The Intimidator";
-		offlineEvent[2] = "Return Of The King";
-		offlineEvent[3] = "Wonder Boy";
+		//offlineEvent[1] = "The Intimidator";
+		//offlineEvent[2] = "Return Of The King";
+		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = 1;
 		offlineEventWeek[1] = 3;
@@ -99,10 +99,10 @@ public class EventData : MonoBehaviour
 		offlineEventChapter[3,5] = "Serial Champion";
 		
 		
-		offlineEventImage[0] = "cup20livery2";
-		offlineEventImage[1] = "cup20livery9";
-		offlineEventImage[2] = "cup20livery11";
-		offlineEventImage[3] = "cup20livery22";
+		offlineEventImage[0] = "cup20livery48";
+		offlineEventImage[1] = "cup20livery3";
+		offlineEventImage[2] = "cup20livery43";
+		offlineEventImage[3] = "cup20livery24";
 
 		
 		eventDescriptions[0] = "Relive Johnson's best moments en-route to an incredible 7 championships.";

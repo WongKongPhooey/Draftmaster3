@@ -577,7 +577,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	static void LongPond(){
 		circuitChoice = "LongPond";
 		PlayerPrefs.SetInt("RaceLaps",5 + currentSubseries);
-		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",350);
 		PlayerPrefs.SetInt("StraightLength2",250);
 		PlayerPrefs.SetInt("StraightLength3",300);

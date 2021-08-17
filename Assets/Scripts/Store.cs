@@ -30,6 +30,8 @@ public class Store : MonoBehaviour{
 	int gears;
 	int carGears;
 	
+	public static string fuelOutput;
+	
 	int dailyCollected;
 	int dailySelectsPicked;
 	
@@ -49,6 +51,8 @@ public class Store : MonoBehaviour{
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		menuCat = "DailySelects";
 		
+		fuelOutput = "";
+		
 		dailyCollected = PlayerPrefs.GetInt("DailyGarage");
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
 		
@@ -59,8 +63,6 @@ public class Store : MonoBehaviour{
 		customStoreDailySelects = "";
 		customStoreDailySelects = PlayerPrefs.GetString("StoreDailySelects");
 		Debug.Log("Online store: " + customStoreDailySelects);
-		
-		
 		
 		if(customStoreDailySelects != ""){
 			string[] onlineSelects = customStoreDailySelects.Split(',');
@@ -565,13 +567,19 @@ public class Store : MonoBehaviour{
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 20, widthblock * 5.5f, heightblock * 4), "Promote a sponsor! Watch an ad to get 5 gallons of fuel to get back on track.");
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+				GUI.Label(new Rect(cardX + (widthblock * 3.5f), cardY + (heightblock * 5.5f), widthblock * 3f, heightblock * 1.5f), fuelOutput);
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "Ad")){
-					adWindow = true;
-					adFallback.SetActive(true);
-					AdManager.ShowRewardedVideo();
+				if(GameData.gameFuel < GameData.maxFuel){
+					if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "Ad")){
+						adWindow = true;
+						adFallback.SetActive(true);
+						AdManager.ShowRewardedVideo();
+					}
+				} else {
+					if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "Full")){
+					}
 				}
 				GUI.skin = tileSkin;
 				

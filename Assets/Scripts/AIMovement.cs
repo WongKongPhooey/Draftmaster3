@@ -240,18 +240,19 @@ public class AIMovement : MonoBehaviour
 		
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
-			if(midSpeed < 0.25f){
+			//For some reason this change makes the player bump-draft mega fast!
+			/*if(midSpeed < 0.25f){
 				AISpeed += midSpeed;
 			} else {
 				if(midSpeed < 1f){
 					AISpeed += midSpeed/2;
-				} else {
+				} else {*/
 					AISpeed += midSpeed/4;
 					if(doored("Left",50) == true){
 						changeLane("Right");
 					}
-				}
-			}
+				//}
+			//}
 			tandemDraft = true;
 			//Debug.Log("Impact levels out " + AICar.name);
 		}
@@ -292,11 +293,17 @@ public class AIMovement : MonoBehaviour
 			} else {
 				holdLane++;
 				distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
-				if(distFromPlayer<=10){
+				if((distFromPlayer<=20)&&(distFromPlayer>=-20)){
 					speedLogic();
 				} else {
 					//Improve FPS by removing logic from far away opponents
-					dumbSpeed();
+					if(distFromPlayer>20){
+						dumbSpeed(1);
+					} else {
+						if(distFromPlayer<-20){
+							dumbSpeed(-1);
+						}
+					}
 				}
 			}
 			draftLogic();
@@ -328,7 +335,7 @@ public class AIMovement : MonoBehaviour
 		//If gaining draft of car in front
 		if (HitForward && DraftCheckForward.distance <= 10){
 			//Speed up
-			if (AISpeed < (205)){
+			if (AISpeed < (205 + (AILevel / 5))){
 				//Draft gets stronger as you get closer
 				AISpeed += ((10 - DraftCheckForward.distance)/ (1000 - (AILevel * 10)));
 			}
@@ -342,12 +349,16 @@ public class AIMovement : MonoBehaviour
 		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.5f){
-			AISpeed += (0.004f) + (AILevel / 2000);
+			if (AISpeed > (204 + laneInv + (AILevel / 5))){
+				AISpeed += (0.004f) + (AILevel / 2000);
+			}
 		}
 		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
-			AISpeed += 0.004f;
+			if (AISpeed > (204 + laneInv + (AILevel / 5))){
+				AISpeed += 0.004f;
+			}
 			tandemDraft = true;
 		} else {
 			tandemDraft = false;
@@ -369,8 +380,8 @@ public class AIMovement : MonoBehaviour
 		AICar.transform.Translate(0, 0, speed);
 	}
 	
-	void dumbSpeed(){
-		AISpeed += 0.002f + (AILevel / 5000);
+	void dumbSpeed(int direction){
+		AISpeed += ((0.001f + (AILevel / 5000)) * direction);
 		
 		//Speed difference between the player and the AI
 		speed = AISpeed - Movement.playerSpeed;
@@ -486,25 +497,26 @@ public class AIMovement : MonoBehaviour
 		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 5);
 		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 5);
 		string direction = "";
-		//Debug.DrawRay(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward * 5, Color.cyan);
-		//Debug.DrawRay(transform.position + new Vector3(1.2f,0,1.1f), transform.forward * 5, Color.cyan);
 		
 		if (HitLaneLeft){
 			if(leftSideClear()){
-				if(DraftCheckLaneLeft.distance >= 2f){
+				if(DraftCheckLaneLeft.distance >= 2.5f){
 					//Go for it, regardless of closing speed
 					direction = "Left";
 				} else {
 					//Only seek a close draft if faster than you
 					float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
-					direction = "Left";
+					if(opponentSpeed > (AISpeed + 0.1f)){
+						direction = "Left";
+						//Debug.Log("Opponent Speed " + opponentSpeed + " ahead of AISpeed " + AISpeed);
+					}
 				}
 			}
 		}
 		
 		if (HitLaneRight){
 			if(rightSideClear()){
-				if(DraftCheckLaneRight.distance >= 2f){
+				if(DraftCheckLaneRight.distance >= 2.5f){
 					if(direction == "Left"){
 						direction = "Both";
 					} else {
@@ -512,10 +524,12 @@ public class AIMovement : MonoBehaviour
 					}
 				} else {
 					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
-					if(direction == "Left"){
-						direction = "Both";
-					} else {
-						direction = "Right";
+					if(opponentSpeed > (AISpeed + 0.1f)){
+						if(direction == "Left"){
+							direction = "Both";
+						} else {
+							direction = "Right";
+						}
 					}
 				}
 			}
@@ -678,7 +692,12 @@ public class AIMovement : MonoBehaviour
 	
 	float getOpponentSpeed(RaycastHit opponent){
 		if(opponent.transform.gameObject.name != null){
-			//opponent.transform.gameObject.SendMessage("GetSpeed",AISpeed);
+			if(opponent.transform.gameObject.name == "Player"){
+				return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
+			} else {
+				Debug.Log("Speed returned " + opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed);
+				return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
+			}
 		}
 		return 9999;
 	}

@@ -72,7 +72,7 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		//Root Level Menu
 		if(seriesMenu == "All"){
-			for(int rootMenu = 0; rootMenu < 4; rootMenu++){
+			for(int rootMenu = 0; rootMenu < 1; rootMenu++){
 				string carLivery = "livery" + seriesCount;
 				float cardX = widthblock * (rootMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
@@ -82,13 +82,17 @@ public class EventSelectGUI : MonoBehaviour {
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 4.5f, heightblock * 2), EventData.offlineEvent[rootMenu]);
 				GUI.skin.label.alignment = TextAnchor.UpperRight;
 				if((EventData.offlineEventWeek[rootMenu] - week) == 0){
-					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
+					//GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
 				} else {
 					//Coming up soon
-					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
+					//GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
 				}
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, widthblock * 2.5f), Resources.Load(EventData.offlineEventImage[rootMenu]) as Texture);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+				GUI.skin.label.normal.textColor = Color.red;
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 8f), widthblock * 5.5f, heightblock * 4), "Coming Soon");
+				GUI.skin.label.normal.textColor = Color.black;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 8f), widthblock * 5.5f, heightblock * 4), "" + EventData.eventDescriptions[rootMenu] + "");
 

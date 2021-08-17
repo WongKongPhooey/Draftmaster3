@@ -12,7 +12,9 @@ public class AdManager : MonoBehaviour, IUnityAdsListener
     #endif
 
     static string myPlacementId = "rewardedVideo";
-    bool testMode = true;
+	public static int fuel;
+	public static bool advertLocked;
+    bool testMode = false;
 
     // Initialize the Ads listener and service:
     void Start () {
@@ -22,6 +24,8 @@ public class AdManager : MonoBehaviour, IUnityAdsListener
 
 	public static void ShowRewardedVideo(){
 		if(Advertisement.IsReady(myPlacementId)){
+			advertLocked = true;
+			fuel = PlayerPrefs.GetInt("GameFuel");
 			Advertisement.Show(myPlacementId);
 		} else {
 			Debug.Log("Ad could not be loaded");
@@ -33,11 +37,22 @@ public class AdManager : MonoBehaviour, IUnityAdsListener
         // Define conditional logic for each ad completion status:
         if (showResult == ShowResult.Finished) {
             // Reward the user for watching the ad to completion.
-			GameData.gameFuel+=5;
-			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
+			if(advertLocked == true){
+				fuel+=10;
+				if(fuel > GameData.maxFuel){
+					fuel = GameData.maxFuel;
+				}
+				Store.fuelOutput = "Fuel Added!";
+				PlayerPrefs.SetInt("GameFuel",fuel);
+				GameData.gameFuel = fuel;
+				advertLocked = false;
+			}
         } else if (showResult == ShowResult.Failed) {
             Debug.LogWarning ("The ad failed due to an error");
-        }
+			advertLocked = false;
+        } else {
+			advertLocked = false;
+		}
 		Store.adWindow = false;
 		Store.adFallbackStatic.SetActive(false);
     }

@@ -9,6 +9,7 @@ public class GameData : MonoBehaviour {
 	public static int maxFuel;
 	public static int gears;
 	public static int level;
+	public static int transferTokens;
 	
 	public static DateTime originTime;
 	public static int day;
@@ -28,7 +29,7 @@ public class GameData : MonoBehaviour {
 	public static double weeksToAdd;
 	public static float spareFuel;
 	
-	public static string[,] levelUpRewards;
+	public static string[,] levelUpRewards = new string[50,2];
 	
 	void Start(){
 		
@@ -81,11 +82,20 @@ public class GameData : MonoBehaviour {
 		}
 		
 		if(PlayerPrefs.HasKey("Gears")){
-			//Get the last known fuel value
+			//Get the last known value
 			gears = PlayerPrefs.GetInt("Gears");
 		} else {
 			//First login
 			gears = 0;
+			PlayerPrefs.SetInt("Gears",0);
+		}
+		
+		if(PlayerPrefs.HasKey("TransferTokens")){
+			//Get the last known value
+			transferTokens = PlayerPrefs.GetInt("TransferTokens");
+		} else {
+			//First login
+			PlayerPrefs.SetInt("TransferTokens",1);
 		}
 		
 		//last saved timestamp
@@ -232,14 +242,14 @@ public class GameData : MonoBehaviour {
 	}
 	
 	void setRewards(){
-		/*levelUpRewards[2,0] = "Gears";
+		levelUpRewards[2,0] = "Gears";
 		levelUpRewards[2,1] = "5";
 		levelUpRewards[3,0] = "Coins";
 		levelUpRewards[3,1] = "5000";
 		levelUpRewards[4,0] = "Gears";
 		levelUpRewards[4,1] = "5";
-		levelUpRewards[5,0] = "Coins";
-		levelUpRewards[5,1] = "5000";
+		levelUpRewards[5,0] = "Transfer Token";
+		levelUpRewards[5,1] = "1";
 		levelUpRewards[6,0] = "Gears";
 		levelUpRewards[6,1] = "5";
 		levelUpRewards[7,0] = "Coins";
@@ -249,13 +259,85 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[9,0] = "Coins";
 		levelUpRewards[9,1] = "5000";
 		levelUpRewards[10,0] = "Transfer Token";
-		levelUpRewards[10,1] = "1";*/
+		levelUpRewards[10,1] = "1";
+		levelUpRewards[11,0] = "Coins";
+		levelUpRewards[11,1] = "10000";
+		levelUpRewards[12,0] = "Gears";
+		levelUpRewards[12,1] = "10";
+		levelUpRewards[13,0] = "Coins";
+		levelUpRewards[13,1] = "10000";
+		levelUpRewards[14,0] = "Gears";
+		levelUpRewards[14,1] = "10";
+		levelUpRewards[15,0] = "Transfer Token";
+		levelUpRewards[15,1] = "1";
+		levelUpRewards[16,0] = "Gears";
+		levelUpRewards[16,1] = "10";
+		levelUpRewards[17,0] = "Coins";
+		levelUpRewards[17,1] = "10000";
+		levelUpRewards[18,0] = "Gears";
+		levelUpRewards[18,1] = "10";
+		levelUpRewards[19,0] = "Coins";
+		levelUpRewards[19,1] = "10000";
+		levelUpRewards[20,0] = "Transfer Token";
+		levelUpRewards[20,1] = "1";
+		levelUpRewards[21,0] = "Coins";
+		levelUpRewards[21,1] = "20000";
+		levelUpRewards[22,0] = "Gears";
+		levelUpRewards[22,1] = "15";
+		levelUpRewards[23,0] = "Coins";
+		levelUpRewards[23,1] = "20000";
+		levelUpRewards[24,0] = "Gears";
+		levelUpRewards[24,1] = "15";
+		levelUpRewards[25,0] = "Transfer Token";
+		levelUpRewards[25,1] = "1";
+		levelUpRewards[26,0] = "Gears";
+		levelUpRewards[26,1] = "15";
+		levelUpRewards[27,0] = "Coins";
+		levelUpRewards[27,1] = "20000";
+		levelUpRewards[28,0] = "Gears";
+		levelUpRewards[28,1] = "15";
+		levelUpRewards[29,0] = "Coins";
+		levelUpRewards[29,1] = "20000";
+		levelUpRewards[30,0] = "Transfer Token";
+		levelUpRewards[30,1] = "1";
+		levelUpRewards[31,0] = "Coins";
+		levelUpRewards[31,1] = "50000";
+		levelUpRewards[32,0] = "Gears";
+		levelUpRewards[32,1] = "20";
+		levelUpRewards[33,0] = "Coins";
+		levelUpRewards[33,1] = "50000";
+		levelUpRewards[34,0] = "Gears";
+		levelUpRewards[34,1] = "20";
+		levelUpRewards[35,0] = "Transfer Token";
+		levelUpRewards[35,1] = "1";
+		levelUpRewards[36,0] = "Gears";
+		levelUpRewards[36,1] = "20";
+		levelUpRewards[37,0] = "Coins";
+		levelUpRewards[37,1] = "50000";
+		levelUpRewards[38,0] = "Gears";
+		levelUpRewards[38,1] = "20";
+		levelUpRewards[39,0] = "Coins";
+		levelUpRewards[39,1] = "50000";
+		levelUpRewards[40,0] = "Transfer Token";
+		levelUpRewards[40,1] = "1";
 	}
 	
 	public static string levelUpReward(int level){
-		switch(level){
-			case 1:
-			break;
+		string rewardType = levelUpRewards[level,0];
+		int rewardValue = int.Parse(levelUpRewards[level,1]);
+		switch(rewardType){
+			case "Coins":
+				int coins = PlayerPrefs.GetInt("PrizeMoney");
+				PlayerPrefs.SetInt("PrizeMoney", coins + rewardValue);
+				break;
+			case "Gears":
+				int gears = PlayerPrefs.GetInt("Gears");
+				PlayerPrefs.SetInt("Gears", gears + rewardValue);
+				break;
+			case "Transfer Token":
+				int tokens = PlayerPrefs.GetInt("TransferTokens");
+				PlayerPrefs.SetInt("TransferTokens", tokens + rewardValue);
+				break;
 		}
 		string levelUpText = "+" + levelUpRewards[level,1] + " " + levelUpRewards[level,0];
 		return levelUpText;

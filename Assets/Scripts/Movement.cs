@@ -10,6 +10,7 @@ public class Movement : MonoBehaviour {
 
 	public GameObject vehicle;
 	public static float playerSpeed;
+	public float gettableSpeed;
 	public float topSpeed;
 	public static float enginetemp;
 	public static float speedRand;
@@ -101,6 +102,7 @@ public class Movement : MonoBehaviour {
 	void Start () {
 		enginetemp = 210;
 		playerSpeed = 200;
+		gettableSpeed = playerSpeed;
 		topSpeed = 208f + speedRand;
 		speedRand = Random.Range(0,50);
 		speedRand = speedRand / 100;
@@ -127,18 +129,6 @@ public class Movement : MonoBehaviour {
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
-		
-		/*if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
-			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
-			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
-			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
-			Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
-		} else {
-			//liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum) as Texture;
-			numRend.enabled = false;
-			Debug.Log("No custom number saved");
-		}*/
-
 				
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
 		
@@ -524,6 +514,8 @@ public class Movement : MonoBehaviour {
 				playerSpeed = 200;
 			}
 		}
+		
+		gettableSpeed = playerSpeed;
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();

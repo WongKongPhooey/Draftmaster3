@@ -83,25 +83,25 @@ public class AllCars : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = Color.red;
+				classColour = new Color32(255,0,0,255);
 				break;
 		    case 2:
-				classColour = Color.yellow;
+				classColour = new Color32(255,165,0,255);
 				break;
 			case 3:
-				classColour = Color.green;
+				classColour = new Color32(238,130,238,255);
 				break;
 			case 4:
-				classColour = Color.cyan;
+				classColour = new Color32(0,128,0,255);
 				break;
 			case 5:
-				classColour = Color.blue;
+				classColour = new Color32(0,0,255,255);
 				break;
 			case 6:
-				classColour = Color.red;
+				classColour = new Color32(75,0,130,255);
 				break;
 		    default:
-				classColour = Color.red;
+				classColour = new Color32(164,6,6,255);
 				break;
 		}
 		return classColour;
@@ -220,10 +220,6 @@ public class AllCars : MonoBehaviour {
 							classMax = unlockGears;
 						}
 						
-						GUI.skin = classSkin(carClass);
-						
-						GUI.Box(new Rect(cardX, cardY-4, cardW, cardH), "");
-						
 						GUI.skin = whiteGUI;
 						
 						GUI.Box(new Rect(cardX, cardY, cardW, cardH), "");
@@ -293,7 +289,7 @@ public class AllCars : MonoBehaviour {
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
 								if(carGears > classMax){
-									GUI.skin.label.normal.textColor = classColours(3);
+									GUI.skin.label.normal.textColor = new Color32(0,255,0,255);
 								}
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 								GUI.skin.label.normal.textColor = Color.black;

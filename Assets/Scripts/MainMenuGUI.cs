@@ -66,7 +66,7 @@ public class MainMenuGUI : MonoBehaviour {
 			
 			rewardString = GameData.levelUpReward(level);
 			
-			//Debug.Log("Level Up -> " + level);
+			Debug.Log("Level Up -> " + level);
 			levelUpMenu = true;
 		}
 		
@@ -190,10 +190,11 @@ public class MainMenuGUI : MonoBehaviour {
 			GUI.skin = buttonSkin;
 			GUI.skin.label.alignment = TextAnchor.UpperCenter;
 			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
-			GUI.Label(new Rect(widthblock * 3f, heightblock * 4f, widthblock * 14f, heightblock * 2f), "Level " + level + "!");
-			GUI.Label(new Rect(widthblock * 3f, heightblock * 7f, widthblock * 14f, heightblock * 2f), rewardString);
+			GUI.Label(new Rect(widthblock * 3f, heightblock * 4f, widthblock * 14f, heightblock * 2f), "You've Reached Level " + level + "!");
+			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+			GUI.Label(new Rect(widthblock * 3f, heightblock * 9f, widthblock * 14f, heightblock * 2f), rewardString);
 			
-			GUI.skin = blueGUI;
+			GUI.skin = redGUI;
 			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
 				levelUpMenu = false;
 			}

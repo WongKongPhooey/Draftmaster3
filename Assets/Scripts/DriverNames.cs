@@ -75,6 +75,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020AltNames[7] = "Hemric";
 		cup2020AltNames[8] = "McMurray";
 		cup2020AltNames[9] = "Mears";
+		cup2020AltNames[10] = "Allmendinger";
 		
 		cup2020Teams[0] = "IND";
 		cup2020Teams[1] = "CGR";
@@ -164,7 +165,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Manufacturer[53] = "FRD";
 		cup2020Manufacturer[54] = "FRD";
 		cup2020Manufacturer[62] = "CHV";
-		cup2020Manufacturer[66] = "FRD";
+		cup2020Manufacturer[66] = "TYT";
 		cup2020Manufacturer[74] = "CHV";
 		cup2020Manufacturer[77] = "CHV";
 		cup2020Manufacturer[78] = "CHV";
