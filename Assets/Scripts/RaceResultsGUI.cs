@@ -190,7 +190,7 @@ public class RaceResultsGUI : MonoBehaviour {
 				carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
 			} else {
 				carNumber = Scoreboard.carNames[i].Remove(0,6);
-				GUI.DrawTexture(new Rect(widthblock * 2, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(liveryName + carNumber) as Texture);
+				GUI.DrawTexture(new Rect(widthblock * 2, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(liveryName + carNumber + "blank") as Texture);
 			}
 
 			if(i == (Scoreboard.position)){
