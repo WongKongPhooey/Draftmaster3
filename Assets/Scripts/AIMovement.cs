@@ -349,14 +349,14 @@ public class AIMovement : MonoBehaviour
 		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.5f){
-			if (AISpeed > (204 + laneInv + (AILevel / 5))){
+			//if (AISpeed > (206 + laneInv + (AILevel / 5))){
 				AISpeed += (0.004f) + (AILevel / 2000);
-			}
+			//}
 		}
 		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
-			if (AISpeed > (204 + laneInv + (AILevel / 5))){
+			if (AISpeed > (208 + laneInv + (AILevel / 5))){
 				AISpeed += 0.004f;
 			}
 			tandemDraft = true;

@@ -169,7 +169,7 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		liveryName = "cup20livery";
 		resultsRows = 40;
-		windowscroll = 3.5f;
+		windowscroll = 4.2f;
 
 		GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;
 		GUI.skin.verticalScrollbarThumb.fixedWidth = Screen.width / 20;
@@ -184,22 +184,21 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		for( int i=0; i < resultsRows; i++){
 			if(i == (Scoreboard.position)){
-				GUI.DrawTexture(new Rect(widthblock * 2, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture);
+				GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(PlayerPrefs.GetString("carTexture") + "blank") as Texture);
 				carNumber = PlayerPrefs.GetString("carTexture");			
 				string splitAfter = "livery";
 				carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
 			} else {
 				carNumber = Scoreboard.carNames[i].Remove(0,6);
-				GUI.DrawTexture(new Rect(widthblock * 2, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(liveryName + carNumber + "blank") as Texture);
+				GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(liveryName + carNumber + "blank") as Texture);
 			}
+
+			GUI.DrawTexture(new Rect(widthblock * 7.5f, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 1.5f, heightblock * 1.5f), Resources.Load("cup20num" + carNumber + "") as Texture);
 
 			if(i == (Scoreboard.position)){
 				GUI.skin.label.normal.textColor = Color.red;
 			}
-			if((PlayerPrefs.GetInt("Local2Player") == 1)&&(int.Parse(carNumber) == PlayerPrefs.GetInt("Player2Num"))){
-				GUI.skin.label.normal.textColor = Color.blue;
-			}
-			GUI.Label(new Rect(widthblock * 4.5f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 2, heightblock * 2), "P" + (i + 1));
+			GUI.Label(new Rect(widthblock * 3.5f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 2, heightblock * 2), "P" + (i + 1));
 			if(i == (Scoreboard.position)){
 				//carDriver = PlayerPrefs.GetString("RacerName");
 				carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
@@ -214,11 +213,13 @@ public class RaceResultsGUI : MonoBehaviour {
 					break;
 				}
 			}
-			GUI.Label(new Rect(widthblock * 6.5f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "(" + carNumber + ")");
+			
+			GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "");
+			
 			if(i == (Scoreboard.position)){
-				GUI.Label(new Rect(widthblock * 12, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.leaderDist).ToString("F3"));
+				GUI.Label(new Rect(widthblock * 14, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.leaderDist).ToString("F3"));
 			} else {
-				GUI.Label(new Rect(widthblock * 12, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.carDist[i]).ToString("F3"));
+				GUI.Label(new Rect(widthblock * 14, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.carDist[i]).ToString("F3"));
 			}	
 			if(RacePoints.championshipMode == true){
 				DriverPoints.pointsTotal[int.Parse(carNumber)] = PlayerPrefs.GetInt("ChampionshipPoints" + carNumber);

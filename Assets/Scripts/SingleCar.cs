@@ -43,6 +43,10 @@ public class SingleCar : MonoBehaviour {
 	int[] availNums;
 	int numsInd;
 	
+	int transfersLeft;
+	int transfersMax;
+	
+	string transferError;
 	int transferContracts;
 	int contractsUsed;
 	
@@ -56,6 +60,8 @@ public class SingleCar : MonoBehaviour {
 	public Texture2D starOne;
 	public Texture2D starTwo;
 	public Texture2D starThree;
+	
+	public Texture2D contracts;
 	
 	public static string[] classCriteria = new string[7];
 
@@ -126,10 +132,14 @@ public class SingleCar : MonoBehaviour {
 		}
 		availNums = availableNumbers.ToArray();
 		
+		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
+		transfersMax = PlayerPrefs.GetInt("TransferTokens");
+		
 		if(!PlayerPrefs.HasKey("TransferContracts")){
 			PlayerPrefs.SetInt("TransferContracts",0);
 		}
 		transferContracts = PlayerPrefs.GetInt("TransferContracts");
+		transferError = "";
 		
 		if(!PlayerPrefs.HasKey("ContractsUsed")){
 			PlayerPrefs.SetInt("ContractsUsed",0);
@@ -364,31 +374,45 @@ public class SingleCar : MonoBehaviour {
 				break;
 			case "Transfers":
 			
-				if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 8f, widthblock * 4.5f, heightblock * 1.5f), "Driver Swap")){
+				GUI.DrawTexture(new Rect(widthblock * 7.5f, heightblock * 7f, heightblock * 1f, heightblock * 1), contracts);
+				GUI.Label(new Rect(widthblock * 8.5f, heightblock * 7f, widthblock * 11.75f, heightblock * 3f), "" + transfersLeft + "/" + transfersMax + " Transfer Contracts Available");
+				
+				GUI.skin.label.normal.textColor = Color.red;
+				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11f, widthblock * 6.25f, heightblock * 6f), transferError);
+				GUI.skin.label.normal.textColor = Color.black;
+			
+				if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 9f, widthblock * 4.5f, heightblock * 1.5f), "Driver Swap")){
 					driverPanel = true;
+					transferError = "Driver swap coming soon";
 				}
 				
 				if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
-					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 10f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
+					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
 						numberPanel = true;
 					}
 				} else {
 					GUI.skin.label.alignment = TextAnchor.MiddleRight;
-					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 10f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
+					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
 				}
 				
-				if (GUI.Button(new Rect(widthblock * 15.25f, heightblock * 12f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
+				if (GUI.Button(new Rect(widthblock * 15.25f, heightblock * 13f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
+					transferError = "Must purchase the " + currentCarTeam + " team to change its cars";
 				}
-				if (GUI.Button(new Rect(widthblock * 13.25f, heightblock * 14f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
+				if (GUI.Button(new Rect(widthblock * 13.25f, heightblock * 15f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
+					transferError = "Must purchase the " + currentCarTeam + " team to change its manufacturer";
 				}
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					GUI.skin = redGUI;
-					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 16f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
+					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 17f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
 						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
 						checkNumberDupes(currentCar, seriesPrefix, currentCar);
+						transfersLeft+=1;
+						if(transfersLeft > 999){
+							transfersLeft = 999;
+						}
+						PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
 					}
 				}
-				
 				break;
 		}
 		
@@ -440,6 +464,7 @@ public class SingleCar : MonoBehaviour {
 								
 								//Remove any dupes
 								checkNumberDupes(currentNumHolder, seriesPrefix, currentCar);
+								checkNumberDupes(currentCar, seriesPrefix, currentNumHolder);
 								
 							} else {
 								//If not, set #10 as #4
@@ -448,6 +473,13 @@ public class SingleCar : MonoBehaviour {
 								//Remove any dupes
 								checkNumberDupes(availNums[numsInd], seriesPrefix, currentCar);
 								checkNumberDupes(currentCar, seriesPrefix, availNums[numsInd]);
+							}
+							if(PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) == currentCar){
+								PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
+								transferError = "Transfer Rejected \n(#" + availNums[numsInd] + " Unavailable)";
+							} else {
+								transfersLeft-=1;
+								PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
 							}
 							
 							Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + availNums[numsInd]);
@@ -527,25 +559,25 @@ public class SingleCar : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = Color.red;
+				classColour = new Color32(255,0,0,255);
 				break;
 		    case 2:
-				classColour = Color.yellow;
+				classColour = new Color32(255,165,0,255);
 				break;
 			case 3:
-				classColour = Color.green;
+				classColour = new Color32(238,130,238,255);
 				break;
 			case 4:
-				classColour = Color.cyan;
+				classColour = new Color32(0,128,0,255);
 				break;
 			case 5:
-				classColour = Color.blue;
+				classColour = new Color32(0,0,255,255);
 				break;
 			case 6:
-				classColour = Color.red;
+				classColour = new Color32(75,0,130,255);
 				break;
 		    default:
-				classColour = Color.red;
+				classColour = new Color32(164,6,6,255);
 				break;
 		}
 		return classColour;

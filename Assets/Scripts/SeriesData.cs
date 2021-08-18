@@ -73,7 +73,7 @@ public class SeriesData : MonoBehaviour{
 		
 		offlineMinLevel[0,0] = 1;
 		offlineMinLevel[0,1] = 2;
-		offlineMinLevel[0,2] = 5;
+		offlineMinLevel[0,2] = 4;
 		offlineMinLevel[0,3] = 7;
 		offlineMinLevel[0,4] = 10;
 		
@@ -374,15 +374,15 @@ public class SeriesData : MonoBehaviour{
 		offlineMinLevel[5,9] = 37;
 		
 		offlineMinClass[5,0] = 2;
-		offlineMinClass[5,1] = 3;
-		offlineMinClass[5,2] = 3;
-		offlineMinClass[5,3] = 4;
-		offlineMinClass[5,4] = 4;
-		offlineMinClass[5,5] = 4;
-		offlineMinClass[5,6] = 4;
-		offlineMinClass[5,7] = 5;
-		offlineMinClass[5,8] = 5;
-		offlineMinClass[5,9] = 5;
+		offlineMinClass[5,1] = 2;
+		offlineMinClass[5,2] = 2;
+		offlineMinClass[5,3] = 3;
+		offlineMinClass[5,4] = 3;
+		offlineMinClass[5,5] = 3;
+		offlineMinClass[5,6] = 3;
+		offlineMinClass[5,7] = 4;
+		offlineMinClass[5,8] = 4;
+		offlineMinClass[5,9] = 4;
 		
 		offlineMinType[5,0] = "Team";
 		offlineMinType[5,1] = "Team";

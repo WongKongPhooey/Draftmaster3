@@ -128,6 +128,8 @@ public class MainMenuGUI : MonoBehaviour {
 	
 	void firstTimeInit(){
 		PlayerPrefs.SetInt("CameraRotate", 1);
+		PlayerPrefs.SetInt("TransferTokens", 1);
+		PlayerPrefs.SetInt("TransfersLeft", 1);
 	}
 
 	void OnGUI() {

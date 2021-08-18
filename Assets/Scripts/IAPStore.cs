@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 public class IAPStore : MonoBehaviour {
 	
 	public static int gears;
+	public static int transfersMax;
+	public static int transfersLeft;
 	
 	private const string gears20 = "com.duffetywong.draftmaster2rollingthunder.gears20";
 	private const string gears60 = "com.duffetywong.draftmaster2rollingthunder.gears60";
@@ -55,6 +57,8 @@ public class IAPStore : MonoBehaviour {
 	public void OnPurchaseComplete(Product product){
 		
 		gears = PlayerPrefs.GetInt("Gears");
+		transfersMax = PlayerPrefs.GetInt("TransferTokens");
+		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
 		
 		switch(product.definition.id){
 			case gears20:
@@ -76,6 +80,13 @@ public class IAPStore : MonoBehaviour {
 				Debug.Log("Added Test gears");
 				gears+=100;
 				PlayerPrefs.SetInt("Gears",gears);
+				break;
+			case negotiator:
+				Debug.Log("Added 999 contracts");
+				transfersMax=999;
+				transfersLeft=999;
+				PlayerPrefs.SetInt("TransferTokens",transfersMax);
+				PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
 				break;
 			default:
 				break;

@@ -157,9 +157,9 @@ public class Store : MonoBehaviour{
 				Application.LoadLevel("GearsStore");
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 12, widthblock * 4, heightblock * 1.5f), "Legends")){
-				menuCat = "Legends";
-			}
+			//if (GUI.Button(new Rect(widthblock / 2, heightblock * 12, widthblock * 4, heightblock * 1.5f), "Legends")){
+			//	menuCat = "Legends";
+			//}
 			
 			GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;
 			GUI.skin.verticalScrollbarThumb.fixedWidth = Screen.width / 20;

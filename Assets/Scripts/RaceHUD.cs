@@ -207,43 +207,6 @@ public class RaceHUD : MonoBehaviour {
 						}
 					}
 				}
-				if((Movement.canBuddy == true)&&(Movement.buddyUp == false)){
-					string BuddyNum = getCarNum(Movement.draftBuddy);
-					GUI.skin.button.fontSize = 48 / FontScale.fontScale;
-					if (GUI.Button(new Rect(10, Screen.height - (heightblock * 6) - 20, widthblock * 4, heightblock * 2), "Team Up With #" + BuddyNum + "?")){
-						Movement.buddyUp = true;
-						Movement.buddyMax = Random.Range(5000,20000);
-					}
-					GUI.skin.button.fontSize = 120 / FontScale.fontScale;
-				} else {
-					if(Movement.buddyUp == true){
-						GUI.skin.label.normal.textColor = Color.black;
-						string BuddyNum = getCarNum(Movement.draftBuddy);
-						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-						GUI.skin.label.alignment = TextAnchor.LowerLeft;
-						thiccLabel(10, Screen.height - (heightblock * 8), widthblock * 5, heightblock * 3, "Teamed Up (#" + BuddyNum + ")", Color.green);
-						GUI.skin.label.fontSize = 80 / FontScale.fontScale;
-						GUI.skin.label.alignment = TextAnchor.UpperLeft;
-					}
-				}
-				if(Movement.mostHits > 2){
-					string rivalsList = "";
-					for(int r = 0; r < thePlayer.GetComponent<Movement>().rivals.Count; r++){
-						PlayerPrefs.SetInt("TotalRivals",thePlayer.GetComponent<Movement>().rivals.Count);
-						string rivalNum = getCarNum(thePlayer.GetComponent<Movement>().rivals[r]);
-						if(rivalsList == ""){
-							rivalsList = rivalsList + "#" + rivalNum;
-						} else {
-							rivalsList = rivalsList + ", #" + rivalNum;
-						}
-					}
-					GUI.skin.label.alignment = TextAnchor.LowerRight;
-					GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-					thiccLabel((widthblock * 13)-10, Screen.height - (heightblock * 10), widthblock * 7, heightblock * 5, "Rivals " + rivalsList, Color.red);
-					GUI.skin.label.fontSize = 80 / FontScale.fontScale;
-					//GUI.Label(new Rect((widthblock * 15)-10, Screen.height - (heightblock * 7), widthblock * 4, heightblock * 2), "Rivals " + rivalsList);
-					GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				}
 			}
 		} else {
 			if(raceOver == true){

@@ -88,25 +88,17 @@ public class RaceRewards : MonoBehaviour
 		maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
 		//If low strength AI Race (<+3)
         if(maxRaceGears <= 0){
-            //Only reward the winner with gears
-			if(finishPos == 1){
-                rewardGears = 1;
-				gears += rewardGears;
-				PlayerPrefs.SetInt("Gears",gears);
-			} else {
-                rewardGears = 0;
-            }
-        //If stronger AI Race
-		} else {
-            //e.g. +8 AI Strength = +5 Max, - 3rd place finish, = 2, +1 = 3
-			rewardGears = (maxRaceGears - finishPos) + 1;
-			if(rewardGears > 0){
-				gears += rewardGears;
-			} else {
-                rewardGears = 0;
-            }
-            PlayerPrefs.SetInt("Gears",gears);
+            //Top 3 win gears
+			maxRaceGears = 3;
 		}
+		//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
+		rewardGears = (maxRaceGears - finishPos) + 1;
+		if(rewardGears > 0){
+			gears += rewardGears;
+		} else {
+			rewardGears = 0;
+		}
+		PlayerPrefs.SetInt("Gears",gears);
 	}
 
 	void FixedUpdate(){

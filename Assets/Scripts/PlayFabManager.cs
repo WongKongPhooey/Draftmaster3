@@ -205,7 +205,7 @@ public class PlayFabManager : MonoBehaviour
 		var request = new GetLeaderboardRequest {
 			StatisticName = "FastestLap" + circuit,
 			StartPosition = 0,
-			MaxResultsCount = 10
+			MaxResultsCount = 6
 		};
 		PlayFabClientAPI.GetLeaderboard(request, OnLeaderboardGet, OnError);
 	}

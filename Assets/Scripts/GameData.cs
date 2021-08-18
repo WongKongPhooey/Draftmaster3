@@ -248,7 +248,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[3,1] = "5000";
 		levelUpRewards[4,0] = "Gears";
 		levelUpRewards[4,1] = "5";
-		levelUpRewards[5,0] = "Transfer Token";
+		levelUpRewards[5,0] = "Transfer";
 		levelUpRewards[5,1] = "1";
 		levelUpRewards[6,0] = "Gears";
 		levelUpRewards[6,1] = "5";
@@ -258,7 +258,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[8,1] = "5";
 		levelUpRewards[9,0] = "Coins";
 		levelUpRewards[9,1] = "5000";
-		levelUpRewards[10,0] = "Transfer Token";
+		levelUpRewards[10,0] = "Transfer";
 		levelUpRewards[10,1] = "1";
 		levelUpRewards[11,0] = "Coins";
 		levelUpRewards[11,1] = "10000";
@@ -268,7 +268,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[13,1] = "10000";
 		levelUpRewards[14,0] = "Gears";
 		levelUpRewards[14,1] = "10";
-		levelUpRewards[15,0] = "Transfer Token";
+		levelUpRewards[15,0] = "Transfer";
 		levelUpRewards[15,1] = "1";
 		levelUpRewards[16,0] = "Gears";
 		levelUpRewards[16,1] = "10";
@@ -278,7 +278,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[18,1] = "10";
 		levelUpRewards[19,0] = "Coins";
 		levelUpRewards[19,1] = "10000";
-		levelUpRewards[20,0] = "Transfer Token";
+		levelUpRewards[20,0] = "Transfer";
 		levelUpRewards[20,1] = "1";
 		levelUpRewards[21,0] = "Coins";
 		levelUpRewards[21,1] = "20000";
@@ -288,7 +288,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[23,1] = "20000";
 		levelUpRewards[24,0] = "Gears";
 		levelUpRewards[24,1] = "15";
-		levelUpRewards[25,0] = "Transfer Token";
+		levelUpRewards[25,0] = "Transfer";
 		levelUpRewards[25,1] = "1";
 		levelUpRewards[26,0] = "Gears";
 		levelUpRewards[26,1] = "15";
@@ -298,7 +298,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[28,1] = "15";
 		levelUpRewards[29,0] = "Coins";
 		levelUpRewards[29,1] = "20000";
-		levelUpRewards[30,0] = "Transfer Token";
+		levelUpRewards[30,0] = "Transfer";
 		levelUpRewards[30,1] = "1";
 		levelUpRewards[31,0] = "Coins";
 		levelUpRewards[31,1] = "50000";
@@ -308,7 +308,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[33,1] = "50000";
 		levelUpRewards[34,0] = "Gears";
 		levelUpRewards[34,1] = "20";
-		levelUpRewards[35,0] = "Transfer Token";
+		levelUpRewards[35,0] = "Transfer";
 		levelUpRewards[35,1] = "1";
 		levelUpRewards[36,0] = "Gears";
 		levelUpRewards[36,1] = "20";
@@ -318,7 +318,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[38,1] = "20";
 		levelUpRewards[39,0] = "Coins";
 		levelUpRewards[39,1] = "50000";
-		levelUpRewards[40,0] = "Transfer Token";
+		levelUpRewards[40,0] = "Transfer";
 		levelUpRewards[40,1] = "1";
 	}
 	
@@ -334,7 +334,7 @@ public class GameData : MonoBehaviour {
 				int gears = PlayerPrefs.GetInt("Gears");
 				PlayerPrefs.SetInt("Gears", gears + rewardValue);
 				break;
-			case "Transfer Token":
+			case "Transfer":
 				int tokens = PlayerPrefs.GetInt("TransferTokens");
 				PlayerPrefs.SetInt("TransferTokens", tokens + rewardValue);
 				break;
