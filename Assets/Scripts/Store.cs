@@ -565,7 +565,7 @@ public class Store : MonoBehaviour{
 				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 20, widthblock * 5.5f, heightblock * 4), "Promote a sponsor! Watch an ad to get 5 gallons of fuel to get back on track.");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 20, widthblock * 5.5f, heightblock * 4), "Promote a sponsor! Watch an ad to get 10 gallons of fuel to get back on track.");
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 				GUI.Label(new Rect(cardX + (widthblock * 3.5f), cardY + (heightblock * 5.5f), widthblock * 3f, heightblock * 1.5f), fuelOutput);
 				
