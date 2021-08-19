@@ -163,125 +163,237 @@ public class RaceRewards : MonoBehaviour
 	void ListPrizeOptions(string category){
 		switch(category){
 			case "Rookies":
-				validDriver.Add(0); //Houff
-				validDriver.Add(41); //Custer
-				validDriver.Add(38); //Nemechek
-				validDriver.Add(95); //Bell
-				validDriver.Add(8); //Reddick
-				validDriver.Add(15); //Poole
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Types[i] == "Rookie"){
+							validDriver.Add(i);
+							//Debug.Log("Rookie Added: #" + i);
+						}
+					}
+				}
 			break;
-			case "Playoffs":
-				validDriver.Add(2);
-				validDriver.Add(9);
-				validDriver.Add(11);
-				validDriver.Add(22);
-			break;
-			case "Testing":
-				validDriver.Add(9);
-				validDriver.Add(18);
-				validDriver.Add(48);
-			break;
+			
 			case "Rarity1":
-				validDriver.Add(0);
-				validDriver.Add(7);
-				validDriver.Add(8);
-				validDriver.Add(13);
-				validDriver.Add(15);
-				validDriver.Add(16);
-				validDriver.Add(17);
-				validDriver.Add(20);
-				validDriver.Add(21);
-				validDriver.Add(27);
-				validDriver.Add(32);
-				validDriver.Add(34);
-				validDriver.Add(37);
-				validDriver.Add(38);
-				validDriver.Add(41);
-				validDriver.Add(47);
-				validDriver.Add(49);
-				validDriver.Add(51);
-				validDriver.Add(52);
-				validDriver.Add(53);
-				validDriver.Add(54);
-				validDriver.Add(62);
-				validDriver.Add(66);
-				validDriver.Add(77);
-				validDriver.Add(78);
-				validDriver.Add(95);
-				validDriver.Add(96);
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Rarity[i] == 1){
+							validDriver.Add(i);
+							Debug.Log("1* Rarity Added: #" + i);
+						}
+					}
+				}
 			break;
 			case "Rarity2":
-				validDriver.Add(1);
-				validDriver.Add(3);
-				validDriver.Add(6);
-				validDriver.Add(10);
-				validDriver.Add(12);
-				validDriver.Add(14);
-				validDriver.Add(24);
-				validDriver.Add(42);
-				validDriver.Add(43);
-				validDriver.Add(88);
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Rarity[i] == 2){
+							validDriver.Add(i);
+							Debug.Log("2* Rarity Added: #" + i);
+						}
+					}
+				}
 			break;
 			case "Rarity3":
-				validDriver.Add(2);
-				validDriver.Add(4);
-				validDriver.Add(9);
-				validDriver.Add(11);
-				validDriver.Add(18);
-				validDriver.Add(19);
-				validDriver.Add(22);
-				validDriver.Add(48);
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Rarity[i] == 3){
+							validDriver.Add(i);
+							Debug.Log("3* Rarity Added: #" + i);
+						}
+					}
+				}
 			break;
-			case "Plate1":
-				validDriver.Add(16);
-				validDriver.Add(20);
-				validDriver.Add(34);
-				validDriver.Add(47);
+			
+			case "CHV":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Manufacturer[i] == "CHV"){
+							validDriver.Add(i);
+							Debug.Log("CHV Added: #" + i);
+						}
+					}
+				}
 			break;
-			case "Plate2":
-				validDriver.Add(1);
-				validDriver.Add(3);
-				validDriver.Add(6);
-				validDriver.Add(10);
-				validDriver.Add(12);
-				validDriver.Add(24);
+			case "FRD":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Manufacturer[i] == "FRD"){
+							validDriver.Add(i);
+							Debug.Log("FRD Added: #" + i);
+						}
+					}
+				}
 			break;
-			case "Plate3":
-				validDriver.Add(2);
-				validDriver.Add(11);
-				validDriver.Add(22);
+			case "TYT":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Manufacturer[i] == "TYT"){
+							validDriver.Add(i);
+							Debug.Log("TYT Added: #" + i);
+						}
+					}
+				}
 			break;
+			
+			case "IND":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "IND"){
+							validDriver.Add(i);
+							Debug.Log("IND Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "RWR":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "RWR"){
+							validDriver.Add(i);
+							Debug.Log("RWR Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "FRM":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "FRM"){
+							validDriver.Add(i);
+							Debug.Log("FRM Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "RFR":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "RFR"){
+							validDriver.Add(i);
+							Debug.Log("RFR Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "RCR":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "RCR"){
+							validDriver.Add(i);
+							Debug.Log("RCR Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "CGR":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "CGR"){
+							validDriver.Add(i);
+							Debug.Log("CGR Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "SHR":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "SHR"){
+							validDriver.Add(i);
+							Debug.Log("SHR Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "PEN":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "PEN"){
+							validDriver.Add(i);
+							Debug.Log("PEN Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "JGR":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "JGR"){
+							validDriver.Add(i);
+							Debug.Log("JGR Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "HEN":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Teams[i] == "HEN"){
+							validDriver.Add(i);
+							Debug.Log("HEN Added: #" + i);
+						}
+					}
+				}
+			break;
+			
 			default:
-				//All Drivers
-				validDriver.Add(0);
-				validDriver.Add(1);
-				validDriver.Add(2);
-				validDriver.Add(3);
-				validDriver.Add(4);
-				validDriver.Add(6);
-				validDriver.Add(7);
-				validDriver.Add(8);
-				validDriver.Add(9);
-				validDriver.Add(10);
-				validDriver.Add(11);
-				validDriver.Add(12);
-				validDriver.Add(13);
-				validDriver.Add(14);
-				validDriver.Add(15);
-				validDriver.Add(16);
-				validDriver.Add(17);
-				validDriver.Add(18);
-				validDriver.Add(19);
-				validDriver.Add(20);
-				validDriver.Add(21);
-				validDriver.Add(22);
-				validDriver.Add(24);
-				validDriver.Add(41);
-				validDriver.Add(42);
-				validDriver.Add(43);
-				validDriver.Add(47);
-				validDriver.Add(48);
-				validDriver.Add(95);
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						validDriver.Add(i);
+						Debug.Log("All Car Added: #" + i);
+					}
+				}
+			break;
+			
+			case "Strategist":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Types[i] == "Strategist"){
+							validDriver.Add(i);
+							Debug.Log("Strategist Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "Closer":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Types[i] == "Closer"){
+							validDriver.Add(i);
+							Debug.Log("Closer Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "Intimidator":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Types[i] == "Intimidator"){
+							validDriver.Add(i);
+							Debug.Log("Intimidator Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "Gentleman":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Types[i] == "Gentleman"){
+							validDriver.Add(i);
+							Debug.Log("Gentleman Added: #" + i);
+						}
+					}
+				}
+			break;
+			case "Legend":
+				for(int i=0;i<99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						if(DriverNames.cup2020Types[i] == "Legend"){
+							validDriver.Add(i);
+							Debug.Log("Legend Added: #" + i);
+						}
+					}
+				}
 			break;
 		}
 	}

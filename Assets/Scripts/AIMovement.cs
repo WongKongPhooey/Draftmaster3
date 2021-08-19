@@ -248,9 +248,6 @@ public class AIMovement : MonoBehaviour
 					AISpeed += midSpeed/2;
 				} else {*/
 					AISpeed += midSpeed/4;
-					if(doored("Left",50) == true){
-						changeLane("Right");
-					}
 				//}
 			//}
 			tandemDraft = true;
@@ -695,7 +692,7 @@ public class AIMovement : MonoBehaviour
 			if(opponent.transform.gameObject.name == "Player"){
 				return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
 			} else {
-				Debug.Log("Speed returned " + opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed);
+				//Debug.Log("Speed returned " + opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed);
 				return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
 			}
 		}

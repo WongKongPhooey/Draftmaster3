@@ -157,11 +157,11 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[1,3] = 8;
 		offlineFuel[1,4] = 9;
 		
-		offlinePrizes[1,0] = "Plate1";
-		offlinePrizes[1,1] = "Plate1";
-		offlinePrizes[1,2] = "Plate2";
-		offlinePrizes[1,3] = "Plate2";
-		offlinePrizes[1,4] = "Plate3";
+		offlinePrizes[1,0] = "Rarity1";
+		offlinePrizes[1,1] = "Rarity1";
+		offlinePrizes[1,2] = "Rarity2";
+		offlinePrizes[1,3] = "Rarity2";
+		offlinePrizes[1,4] = "Rarity3";
 		
 		
 		//Cookie Cutters
@@ -212,12 +212,12 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[2,2] = 7;
 		offlineFuel[2,3] = 8;
 		offlineFuel[2,4] = 9;
-		
-		offlinePrizes[2,0] = "Rookies";
-		offlinePrizes[2,1] = "Rookies";
-		offlinePrizes[2,2] = "Rookies,Plate";
-		offlinePrizes[2,3] = "Rookies,Plate";
-		offlinePrizes[2,4] = "All";
+				
+		offlinePrizes[2,0] = "Rarity1";
+		offlinePrizes[2,1] = "Rarity1";
+		offlinePrizes[2,2] = "Rarity2";
+		offlinePrizes[2,3] = "Rarity2";
+		offlinePrizes[2,4] = "Rarity3";
 		
 		//Short Tracks
 		offlineSeries[3,0] = "Push To Pass";
@@ -267,6 +267,12 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[3,2] = 7;
 		offlineFuel[3,3] = 8;
 		offlineFuel[3,4] = 9;
+				
+		offlinePrizes[3,0] = "Rarity1";
+		offlinePrizes[3,1] = "Rarity1";
+		offlinePrizes[3,2] = "Rarity2";
+		offlinePrizes[3,3] = "Rarity2";
+		offlinePrizes[3,4] = "Rarity3";
 		
 		//Class
 		offlineSeries[4,0] = "A Fan Favourite";
@@ -316,6 +322,12 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[4,2] = 7;
 		offlineFuel[4,3] = 8;
 		offlineFuel[4,4] = 9;
+				
+		offlinePrizes[4,0] = "Rarity1";
+		offlinePrizes[4,1] = "Rarity1";
+		offlinePrizes[4,2] = "Rarity2";
+		offlinePrizes[4,3] = "Rarity2";
+		offlinePrizes[4,4] = "Rarity3";
 		
 		//Team
 		offlineSeries[5,0] = "Lone Ranger";
@@ -426,7 +438,18 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[5,6] = 8;
 		offlineFuel[5,7] = 9;
 		offlineFuel[5,8] = 9;
-		offlineFuel[5,8] = 9;
+		offlineFuel[5,9] = 9;
+				
+		offlinePrizes[5,0] = "IND";
+		offlinePrizes[5,1] = "RWR";
+		offlinePrizes[5,2] = "FRM";
+		offlinePrizes[5,3] = "RFR";
+		offlinePrizes[5,4] = "RCR";
+		offlinePrizes[5,5] = "CGR";
+		offlinePrizes[5,6] = "SHR";
+		offlinePrizes[5,7] = "PEN";
+		offlinePrizes[5,8] = "JGR";
+		offlinePrizes[5,9] = "HEN";
 		
 		//Manufacturer
 		offlineSeries[6,0] = "Mustang Sally";
@@ -499,13 +522,12 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[6,4] = 9;
 		offlineFuel[6,5] = 9;
 		
-		//Manufacturer
-		offlinePrizes[6,0] = "FRD2";
-		offlinePrizes[6,1] = "CHV2";
-		offlinePrizes[6,2] = "TYT2";
-		offlinePrizes[6,3] = "FRD3";
-		offlinePrizes[6,4] = "CHV3";
-		offlinePrizes[6,5] = "TYT3";
+		offlinePrizes[6,0] = "FRD";
+		offlinePrizes[6,1] = "CHV";
+		offlinePrizes[6,2] = "TYT";
+		offlinePrizes[6,3] = "FRD";
+		offlinePrizes[6,4] = "CHV";
+		offlinePrizes[6,5] = "TYT";
 		
 		//Type
 		offlineSeries[7,0] = "Rookie Season";
@@ -577,6 +599,13 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[7,4] = 7;
 		offlineFuel[7,5] = 10;
 		
+		offlinePrizes[7,0] = "Rookie";
+		offlinePrizes[7,1] = "Strategist";
+		offlinePrizes[7,2] = "Closer";
+		offlinePrizes[7,3] = "Intimidator";
+		offlinePrizes[7,4] = "Gentleman";
+		offlinePrizes[7,5] = "Legend";
+		
 		//Rarity
 		offlineSeries[8,0] = "Driver For Hire";
 		offlineSeries[8,1] = "Hot Property";
@@ -618,6 +647,10 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[8,1] = 7;
 		offlineFuel[8,2] = 7;
 		
+		offlinePrizes[8,0] = "Rarity1";
+		offlinePrizes[8,1] = "Rarity2";
+		offlinePrizes[8,2] = "Rarity3";
+		
 		//Seasons
 		offlineSeries[9,0] = "Half Season 1";
 		offlineSeries[9,1] = "Half Season 2";
@@ -627,8 +660,8 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[9,1] = "cup20livery2";
 		offlineSeriesImage[9,2] = "cup20livery9";
 		
-		offlineDailyPlays[9,0] = 20;
-		offlineDailyPlays[9,1] = 20;
+		offlineDailyPlays[9,0] = 10;
+		offlineDailyPlays[9,1] = 10;
 		offlineDailyPlays[9,2] = 20;
 		
 		offlineAILevel[9,0] = 4;
@@ -637,19 +670,23 @@ public class SeriesData : MonoBehaviour{
 		
 		offlineMinLevel[9,0] = 10;
 		offlineMinLevel[9,1] = 20;
-		offlineMinLevel[9,2] = 30;
+		offlineMinLevel[9,2] = 35;
 		
 		offlineMinClass[9,0] = 1;
 		offlineMinClass[9,1] = 1;
 		offlineMinClass[9,2] = 2;
 		
-		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8";
-		offlineTracklists[9,1] = "9,10,11,12,13,14,15,16";
-		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20";
+		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8,9,10,11";
+		offlineTracklists[9,1] = "12,13,14,15,16,17,18,19,20,21";
+		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21";
 			
 		offlineFuel[9,0] = 6;
 		offlineFuel[9,1] = 8;
 		offlineFuel[9,2] = 10;
+		
+		offlinePrizes[9,0] = "";
+		offlinePrizes[9,1] = "";
+		offlinePrizes[9,2] = "";
 		
 		
 		//--------Top Level---------
