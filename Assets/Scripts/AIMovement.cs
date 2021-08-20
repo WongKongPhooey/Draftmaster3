@@ -322,7 +322,7 @@ public class AIMovement : MonoBehaviour
 		//Minimum speed
 		if (AISpeed < (200)){
 			AISpeed = 200;
-        }
+    }
 		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
@@ -353,9 +353,7 @@ public class AIMovement : MonoBehaviour
 		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
-			if (AISpeed > (208 + laneInv + (AILevel / 5))){
 				AISpeed += 0.004f;
-			}
 			tandemDraft = true;
 		} else {
 			tandemDraft = false;
