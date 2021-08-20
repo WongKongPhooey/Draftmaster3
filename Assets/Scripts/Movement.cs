@@ -113,6 +113,8 @@ public class Movement : MonoBehaviour {
 		laneBias = 0;
 		challengeSpeedBoost = 0;
 		
+		seriesPrefix = "cup20";
+		
 		carName = PlayerPrefs.GetString("carTexture");
 		
 		string splitAfter = "livery";
@@ -120,14 +122,12 @@ public class Movement : MonoBehaviour {
 		
 		bool findCarNum = int.TryParse(Regex.Replace(carNumStr, "[^0-9]", ""), out carNum);
 		if(findCarNum == true){
-		  carClass = 1;
+		  carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
 			carTeam = DriverNames.cup2020Teams[carNum];
 			carManu = DriverNames.cup2020Manufacturer[carNum];
 		} else {
 			Debug.Log("Invalid Car #");
 		}
-		
-		seriesPrefix = "cup20";
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
