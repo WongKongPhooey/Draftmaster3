@@ -327,7 +327,7 @@ public class GameData : MonoBehaviour {
 		int rewardValue = int.Parse(levelUpRewards[level,1]);
 		switch(rewardType){
 			case "Coins":
-				int coins = PlayerPrefs.GetInt("PrizeMoney");
+				int coins = PlayerPrefs.GetInt("PrizeMoney"); 
 				PlayerPrefs.SetInt("PrizeMoney", coins + rewardValue);
 				break;
 			case "Gears":
@@ -336,7 +336,9 @@ public class GameData : MonoBehaviour {
 				break;
 			case "Transfer":
 				int tokens = PlayerPrefs.GetInt("TransferTokens");
+				int tokensleft = PlayerPrefs.GetInt("TransfersLeft");
 				PlayerPrefs.SetInt("TransferTokens", tokens + rewardValue);
+				PlayerPrefs.SetInt("TransfersLeft", tokensleft + rewardValue);
 				break;
 		}
 		string levelUpText = "+" + levelUpRewards[level,1] + " " + levelUpRewards[level,0];
