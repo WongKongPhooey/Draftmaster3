@@ -109,60 +109,52 @@ public class OptionsMenuGUI : MonoBehaviour {
 
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
 		
-		if (GUI.Button(new Rect(widthblock * 16.5f, heightblock * 0.5f, widthblock * 1.5f, heightblock * 1.5f), "Back")){
-			SceneManager.LoadScene("MainMenu");
-		}
+		CommonGUI.BackButton("MainMenu");
 
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 4, widthblock * 5, heightblock * 2), "Change Name")){
-			SceneManager.LoadScene("ChooseName");
+		if (GUI.Button(new Rect(widthblock * 11, heightblock * 4, widthblock * 1, heightblock * 2), "<")){
+			switch(audioOn){
+			case 0:
+				audioOn = 1;
+				audioOnName = "On";
+				break;
+			case 1:
+				audioOn = 0;
+				audioOnName = "Off (Muted)";
+				break;
+			}
+			PlayerPrefs.SetInt("AudioOn", audioOn);
 		}
-
-		GUI.Label(new Rect(widthblock * 2, heightblock * 4, widthblock * 9, heightblock * 3), "Driver: " + PlayerPrefs.GetString("RacerName"));
+		if (GUI.Button(new Rect(widthblock * 12, heightblock * 4, widthblock * 1, heightblock * 2), ">")){
+			switch(audioOn){
+			case 0:
+				audioOn = 1;
+				audioOnName = "On";
+				break;
+			case 1:
+				audioOn = 0;
+				audioOnName = "Off (Muted)";
+				break;
+			}
+			PlayerPrefs.SetInt("AudioOn", audioOn);
+		}
+		
+		GUI.Label(new Rect(widthblock * 2, heightblock * 4, widthblock * 9, heightblock * 3), "Audio/SFX: " + audioOnName);
+		
 
 		if (GUI.Button(new Rect(widthblock * 11, heightblock * 8, widthblock * 1, heightblock * 2), "<")){
-			switch(audioOn){
+			switch(cameraRotate){
 			case 0:
-				audioOn = 1;
-				audioOnName = "On";
+				cameraRotate = 1;
+				cameraRotateName = "Yes";
 				break;
 			case 1:
-				audioOn = 0;
-				audioOnName = "Off (Muted)";
+				cameraRotate = 0;
+				cameraRotateName = "No";
 				break;
 			}
-			PlayerPrefs.SetInt("AudioOn", audioOn);
+			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
 		}
 		if (GUI.Button(new Rect(widthblock * 12, heightblock * 8, widthblock * 1, heightblock * 2), ">")){
-			switch(audioOn){
-			case 0:
-				audioOn = 1;
-				audioOnName = "On";
-				break;
-			case 1:
-				audioOn = 0;
-				audioOnName = "Off (Muted)";
-				break;
-			}
-			PlayerPrefs.SetInt("AudioOn", audioOn);
-		}
-		
-		GUI.Label(new Rect(widthblock * 2, heightblock * 8, widthblock * 9, heightblock * 3), "Audio/SFX: " + audioOnName);
-		
-
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 12, widthblock * 1, heightblock * 2), "<")){
-			switch(cameraRotate){
-			case 0:
-				cameraRotate = 1;
-				cameraRotateName = "Yes";
-				break;
-			case 1:
-				cameraRotate = 0;
-				cameraRotateName = "No";
-				break;
-			}
-			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
-		}
-		if (GUI.Button(new Rect(widthblock * 12, heightblock * 12, widthblock * 1, heightblock * 2), ">")){
 			switch(cameraRotate){
 			case 0:
 				cameraRotate = 1;
@@ -176,7 +168,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
 		}
 		
-		GUI.Label(new Rect(widthblock * 2, heightblock * 12, widthblock * 9, heightblock * 3), "Camera Rotation: " + cameraRotateName);
+		GUI.Label(new Rect(widthblock * 2, heightblock * 8, widthblock * 9, heightblock * 3), "Camera Rotation: " + cameraRotateName);
 
 		GUI.EndScrollView();
 
