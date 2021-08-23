@@ -10,6 +10,8 @@ public class GameData : MonoBehaviour {
 	public static int gears;
 	public static int level;
 	public static int transferTokens;
+	public static int transfersLeft;
+	public static string rewardName;
 	
 	public static DateTime originTime;
 	public static int day;
@@ -98,6 +100,14 @@ public class GameData : MonoBehaviour {
 			PlayerPrefs.SetInt("TransferTokens",1);
 		}
 		
+		if(PlayerPrefs.HasKey("TransfersLeft")){
+			//Get the last known value
+			transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
+		} else {
+			//First login
+			PlayerPrefs.SetInt("TransfersLeft",1);
+		}
+		
 		//last saved timestamp
 		if(PlayerPrefs.HasKey("LastTimeCheck")){
 			lastTimeCheck = System.Convert.ToDouble(PlayerPrefs.GetString("LastTimeCheck"));
@@ -138,13 +148,13 @@ public class GameData : MonoBehaviour {
 		}
 		
 		daysToAdd = ((timeSinceLast + lastSpareTime) / dayInterval);
-		Debug.Log("Days to add: " + daysToAdd);
+		//Debug.Log("Days to add: " + daysToAdd);
 		
 		daysToAddInt = (int)Mathf.Floor((float)daysToAdd);
-		Debug.Log("Days added: " + daysToAddInt);
+		//Debug.Log("Days added: " + daysToAddInt);
 		
 		spareTime = (float)timeSinceLast - (daysToAddInt * dayInterval);
-		Debug.Log("Spare Time: " + spareTime);
+		//Debug.Log("Spare Time: " + spareTime);
 		
 		//Bugfix: Not sure why this happens?
 		if(spareTime < 0){
@@ -155,7 +165,7 @@ public class GameData : MonoBehaviour {
 		if(daysToAddInt == 0){
 			spareTime+=lastSpareTime;
 		}
-		Debug.Log("Spare time: " + spareTime);
+		//Debug.Log("Spare time: " + spareTime);
 		
 		//Save the new spare time
 		PlayerPrefs.SetInt("SpareTime",(int)Mathf.Floor(spareTime));
@@ -173,7 +183,7 @@ public class GameData : MonoBehaviour {
 		//Day of the week cycle
 		if(daysToAdd > 1){
 			resetDailies();
-			Debug.Log("Reset the daily plays");
+			//Debug.Log("Reset the daily plays");
 		} else {
 			//For testing only
 			//resetDailies();
@@ -241,7 +251,7 @@ public class GameData : MonoBehaviour {
 		}
 	}
 	
-	void setRewards(){
+	public static void setRewards(){
 		levelUpRewards[2,0] = "Gears";
 		levelUpRewards[2,1] = "5";
 		levelUpRewards[3,0] = "Coins";
@@ -324,24 +334,28 @@ public class GameData : MonoBehaviour {
 	
 	public static string levelUpReward(int level){
 		string rewardType = levelUpRewards[level,0];
+		Debug.Log("Loaded level up: " + level);
 		int rewardValue = int.Parse(levelUpRewards[level,1]);
 		switch(rewardType){
 			case "Coins":
 				int coins = PlayerPrefs.GetInt("PrizeMoney"); 
 				PlayerPrefs.SetInt("PrizeMoney", coins + rewardValue);
+				rewardName = "Coins";
 				break;
 			case "Gears":
 				int gears = PlayerPrefs.GetInt("Gears");
 				PlayerPrefs.SetInt("Gears", gears + rewardValue);
+				rewardName = "Gears";
 				break;
 			case "Transfer":
 				int tokens = PlayerPrefs.GetInt("TransferTokens");
 				int tokensleft = PlayerPrefs.GetInt("TransfersLeft");
 				PlayerPrefs.SetInt("TransferTokens", tokens + rewardValue);
 				PlayerPrefs.SetInt("TransfersLeft", tokensleft + rewardValue);
+				rewardName = "Transfer Token";
 				break;
 		}
-		string levelUpText = "+" + levelUpRewards[level,1] + " " + levelUpRewards[level,0];
+		string levelUpText = "+" + levelUpRewards[level,1] + " " + rewardName;
 		return levelUpText;
 	}
 	
@@ -523,6 +537,36 @@ public class GameData : MonoBehaviour {
 				break;
 			case 30:
 				return 6100;
+				break;
+			case 31:
+				return 6800;
+				break;
+			case 32:
+				return 7600;
+				break;
+			case 33:
+				return 8500;
+				break;
+			case 34:
+				return 9500;
+				break;
+			case 35:
+				return 10600;
+				break;
+			case 36:
+				return 11800;
+				break;
+			case 37:
+				return 13100;
+				break;
+			case 38:
+				return 14500;
+				break;
+			case 39:
+				return 16000;
+				break;
+			case 40:
+				return 17600;
 				break;
 			default:
 				return 999999;

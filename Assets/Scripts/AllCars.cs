@@ -188,11 +188,6 @@ public class AllCars : MonoBehaviour {
 					int carGears = 0;
 					int carClass = 0;
 					
-					//Reset Everything
-					/*PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked",0);
-					PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears",0);
-					PlayerPrefs.SetInt(seriesPrefix + carCount + "Class",0);*/
-					
 					//Initialise
 					if(!PlayerPrefs.HasKey(seriesPrefix + carCount + "Gears")){
 						//Debug.Log("#" + carCount + " Not Initialised");

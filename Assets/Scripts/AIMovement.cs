@@ -690,8 +690,10 @@ public class AIMovement : MonoBehaviour
 			if(opponent.transform.gameObject.name == "Player"){
 				return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
 			} else {
-				//Debug.Log("Speed returned " + opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed);
-				return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
+				if(opponent.transform.gameObject.tag == "AICar"){
+					Debug.Log(opponent.transform.gameObject.name);
+					return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
+				}
 			}
 		}
 		return 9999;

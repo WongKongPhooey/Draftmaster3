@@ -43,6 +43,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void OnPrefLoginSuccess(LoginResult result){
 		Debug.Log("Login from prefs successful!");
 		GetTitleData();
+		GetPlayerData();
 	}
 	
 	public void LoginButton(){
@@ -58,6 +59,7 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("PlayerUsername", usernameInput.text);
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
 		PlayerPrefs.SetString("PlayerPassword", passwordInput.text);
+		PlayerPrefs.SetString("PlayerPlayFabId", result.PlayFabId);
 		SceneManager.LoadScene("MainMenu");
 	}
 	
@@ -183,6 +185,41 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetInt("FreeFuel", 0);
 	}
 	
+	public static void GetPlayerData(){
+		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnDataReceived, OnError);
+	}
+	
+	static void OnDataReceived(GetUserDataResult result){
+		if(result.Data != null){
+			Debug.Log("Player data found");
+			if(result.Data.ContainsKey("RewardGears")){
+				int gears = PlayerPrefs.GetInt("Gears");
+				int rewardGears = int.Parse(result.Data["RewardGears"].Value);
+				if(rewardGears != 0){
+					gears += rewardGears;
+					rewardGears = 0;
+					PlayerPrefs.SetInt("Gears", gears);
+					emptyPlayerData("RewardGears");
+				}
+			}
+		} else {
+			Debug.Log("No player data found");
+		}
+	}
+	
+	static void emptyPlayerData(string playerDataKey){
+		var request = new UpdateUserDataRequest {
+			Data = new Dictionary<string, string> {
+				{playerDataKey, "0"}
+			}
+		};
+		PlayFabClientAPI.UpdateUserData(request, OnDataSend, OnError);
+	}
+	
+	public static void OnDataSend(UpdateUserDataResult result){
+		Debug.Log("Rewards Collected, Server Reset");
+	}
+	
 	public static void SendLeaderboard(int score, string circuitName){
 		var request = new UpdatePlayerStatisticsRequest {
 			Statistics = new List<StatisticUpdate> {
@@ -205,9 +242,18 @@ public class PlayFabManager : MonoBehaviour
 		var request = new GetLeaderboardRequest {
 			StatisticName = "FastestLap" + circuit,
 			StartPosition = 0,
-			MaxResultsCount = 6
+			MaxResultsCount = 5
 		};
 		PlayFabClientAPI.GetLeaderboard(request, OnLeaderboardGet, OnError);
+	}
+	
+	public static void GetLeaderboardAroundPlayer(string circuit){
+		
+		var request = new GetLeaderboardAroundPlayerRequest {
+			StatisticName = "FastestLap" + circuit,
+			MaxResultsCount = 1
+		};
+		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLeaderboardAroundPlayerGet, OnError);
 	}
 	
 	static void OnLeaderboardGet(GetLeaderboardResult result) {
@@ -223,6 +269,30 @@ public class PlayFabManager : MonoBehaviour
 			tableLabels[1].text = item.DisplayName;
 			float leaderboardSpeed = item.StatValue/1000f;
 			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
+			
+			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+		}
+	}
+	
+	static void OnLeaderboardAroundPlayerGet(GetLeaderboardAroundPlayerResult result) {
+		
+		Debug.Log("Got Leaderboard Around Player");
+		
+		foreach(var item in result.Leaderboard) {
+			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
+			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
+			tableLabels[0].text = (item.Position + 1).ToString();
+			tableLabels[1].text = item.DisplayName;
+			float leaderboardSpeed = item.StatValue/1000f;
+			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
+			
+			if(item.PlayFabId.ToString() == PlayerPrefs.GetString("PlayerPlayFabId")){
+				tableLabels[0].color = Color.red;
+				tableLabels[1].color = Color.red;
+				tableLabels[2].color = Color.red;
+			} else {
+				
+			}
 			
 			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}

@@ -20,6 +20,7 @@ public class LeaderboardManager : MonoBehaviour
 	   
 	   Debug.Log("Get leaderboard: " + circuitName);
 	   PlayFabManager.GetLeaderboard(circuitName);
+	   PlayFabManager.GetLeaderboardAroundPlayer(circuitName);
     }
 
     // Update is called once per frame

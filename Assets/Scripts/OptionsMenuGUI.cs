@@ -111,7 +111,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 		
 		CommonGUI.BackButton("MainMenu");
 
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 4, widthblock * 1, heightblock * 2), "<")){
+		if (GUI.Button(new Rect(widthblock * 13, heightblock * 4, widthblock * 1, heightblock * 2), "<")){
 			switch(audioOn){
 			case 0:
 				audioOn = 1;
@@ -124,7 +124,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 			}
 			PlayerPrefs.SetInt("AudioOn", audioOn);
 		}
-		if (GUI.Button(new Rect(widthblock * 12, heightblock * 4, widthblock * 1, heightblock * 2), ">")){
+		if (GUI.Button(new Rect(widthblock * 14, heightblock * 4, widthblock * 1, heightblock * 2), ">")){
 			switch(audioOn){
 			case 0:
 				audioOn = 1;
@@ -141,7 +141,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 		GUI.Label(new Rect(widthblock * 2, heightblock * 4, widthblock * 9, heightblock * 3), "Audio/SFX: " + audioOnName);
 		
 
-		if (GUI.Button(new Rect(widthblock * 11, heightblock * 8, widthblock * 1, heightblock * 2), "<")){
+		if (GUI.Button(new Rect(widthblock * 13, heightblock * 8, widthblock * 1, heightblock * 2), "<")){
 			switch(cameraRotate){
 			case 0:
 				cameraRotate = 1;
@@ -154,7 +154,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 			}
 			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
 		}
-		if (GUI.Button(new Rect(widthblock * 12, heightblock * 8, widthblock * 1, heightblock * 2), ">")){
+		if (GUI.Button(new Rect(widthblock * 14, heightblock * 8, widthblock * 1, heightblock * 2), ">")){
 			switch(cameraRotate){
 			case 0:
 				cameraRotate = 1;
@@ -167,7 +167,6 @@ public class OptionsMenuGUI : MonoBehaviour {
 			}
 			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
 		}
-		
 		GUI.Label(new Rect(widthblock * 2, heightblock * 8, widthblock * 9, heightblock * 3), "Camera Rotation: " + cameraRotateName);
 
 		GUI.EndScrollView();

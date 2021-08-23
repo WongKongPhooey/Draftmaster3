@@ -122,11 +122,11 @@ public class Movement : MonoBehaviour {
 		
 		bool findCarNum = int.TryParse(Regex.Replace(carNumStr, "[^0-9]", ""), out carNum);
 		if(findCarNum == true){
-		  carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
+		    carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
 			carTeam = DriverNames.cup2020Teams[carNum];
 			carManu = DriverNames.cup2020Manufacturer[carNum];
 		} else {
-			Debug.Log("Invalid Car #");
+			//Debug.Log("Invalid Car #");
 		}
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
@@ -155,45 +155,45 @@ public class Movement : MonoBehaviour {
 		}
 
 		if (DriverNames.cup2020Types[carNum] == "Strategist"){
-					switch(carClass){
-						case 1:
-							laneChangeDuration = 75;
-							laneChangeSpeed = 0.016f;
-							laneChangeBackout = 30;
-							break;
-						case 2:
-							laneChangeDuration = 64;
-							laneChangeSpeed = 0.01875f;
-							laneChangeBackout = 28;
-							break;
-						case 3:
-							laneChangeDuration = 60;
-							laneChangeSpeed = 0.02f;
-							laneChangeBackout = 24;
-							break;
-						case 4:
-							laneChangeDuration = 50;
-							laneChangeSpeed = 0.024f;
-							laneChangeBackout = 20;
-							break;
-						case 5:
-							laneChangeDuration = 48;
-							laneChangeSpeed = 0.025f;
-							laneChangeBackout = 16;
-							break;
-						case 6:
-							laneChangeDuration = 40;
-							laneChangeSpeed = 0.030f;
-							laneChangeBackout = 16;
-							break;
-						default:
-							break;
-					}
-		        } else {
-		            laneChangeDuration = 80;
-		            laneChangeSpeed = 0.015f;
-		            laneChangeBackout = 32;
-		        }
+			switch(carClass){
+				case 1:
+					laneChangeDuration = 75;
+					laneChangeSpeed = 0.016f;
+					laneChangeBackout = 30;
+					break;
+				case 2:
+					laneChangeDuration = 64;
+					laneChangeSpeed = 0.01875f;
+					laneChangeBackout = 28;
+					break;
+				case 3:
+					laneChangeDuration = 60;
+					laneChangeSpeed = 0.02f;
+					laneChangeBackout = 24;
+					break;
+				case 4:
+					laneChangeDuration = 50;
+					laneChangeSpeed = 0.024f;
+					laneChangeBackout = 20;
+					break;
+				case 5:
+					laneChangeDuration = 48;
+					laneChangeSpeed = 0.025f;
+					laneChangeBackout = 16;
+					break;
+				case 6:
+					laneChangeDuration = 40;
+					laneChangeSpeed = 0.030f;
+					laneChangeBackout = 16;
+					break;
+				default:
+					break;
+			}
+		} else {
+			laneChangeDuration = 80;
+			laneChangeSpeed = 0.015f;
+			laneChangeBackout = 32;
+		}
 
 		if(PlayerPrefs.HasKey("CustomAcceleration")){
 			customAccel = PlayerPrefs.GetInt("CustomAcceleration");

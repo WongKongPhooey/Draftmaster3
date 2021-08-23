@@ -17,6 +17,11 @@ public class RaceResultsGUI : MonoBehaviour {
 	int levelExp;
 	float raceExp;
 
+	string seriesPrefix;
+
+	string playerCarNumber;
+	string carNumber;
+
 	int playerMoney;
 	int moneyCount;
 	int raceWinnings;
@@ -31,6 +36,12 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
+
+		playerCarNumber = PlayerPrefs.GetString("carTexture");
+		string splitAfter = "livery";
+		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
+
+		seriesPrefix = "cup20";
 
 		challengeComplete = false;
 
@@ -161,13 +172,10 @@ public class RaceResultsGUI : MonoBehaviour {
 	void OnGUI() {
 
 		GUI.skin = eightBitSkin;
-		string carNumber;
 		string carDriver;
-		string liveryName;
 		int resultsRows;
 		float windowscroll;
 
-		liveryName = "cup20livery";
 		resultsRows = 40;
 		windowscroll = 4.2f;
 
@@ -180,20 +188,28 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		scrollPosition = GUI.BeginScrollView(new Rect(0, 0, Screen.width, Screen.height), scrollPosition, new Rect(0, 0, Screen.width - widthblock, Screen.height * windowscroll));
 
-		GUI.skin.label.alignment = TextAnchor.UpperLeft;
+		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 
 		for( int i=0; i < resultsRows; i++){
 			if(i == (Scoreboard.position)){
-				GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(PlayerPrefs.GetString("carTexture") + "blank") as Texture);
-				carNumber = PlayerPrefs.GetString("carTexture");			
-				string splitAfter = "livery";
-				carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
+				carNumber = playerCarNumber;
+				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
+					int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + playerCarNumber);
+					GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(seriesPrefix + "livery" + playerCarNumber + "blank") as Texture);
+					GUI.DrawTexture(new Rect((widthblock * 5) + (((heightblock * 3f)/64)*34), (heightblock * (i * 2)) + (heightblock * 2) + ((heightblock * 1.5f)/4), heightblock * 0.75f, heightblock * 0.75f), Resources.Load(seriesPrefix + "num" + customNum) as Texture);
+				} else {
+					GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(seriesPrefix + "livery" + playerCarNumber) as Texture);
+				}
 			} else {
 				carNumber = Scoreboard.carNames[i].Remove(0,6);
-				GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(liveryName + carNumber + "blank") as Texture);
+				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
+					int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
+					GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture);
+					GUI.DrawTexture(new Rect((widthblock * 5) + (((heightblock * 3f)/64)*34), (heightblock * (i * 2)) + (heightblock * 2) + ((heightblock * 1.5f)/4), heightblock * 0.75f, heightblock * 0.75f), Resources.Load(seriesPrefix + "num" + customNum) as Texture);
+				} else {
+					GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(seriesPrefix + "livery" + carNumber) as Texture);
+				}
 			}
-
-			GUI.DrawTexture(new Rect(widthblock * 7.5f, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 1.5f, heightblock * 1.5f), Resources.Load("cup20num" + carNumber + "") as Texture);
 
 			if(i == (Scoreboard.position)){
 				GUI.skin.label.normal.textColor = Color.red;

@@ -132,19 +132,17 @@ public class SingleCar : MonoBehaviour {
 		}
 		availNums = availableNumbers.ToArray();
 		
+		if(!PlayerPrefs.HasKey("TransfersLeft")){
+			PlayerPrefs.SetInt("TransfersLeft",1);
+		}
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
+		
+		if(!PlayerPrefs.HasKey("TransferTokens")){
+			PlayerPrefs.SetInt("TransferTokens",1);
+		}
 		transfersMax = PlayerPrefs.GetInt("TransferTokens");
 		
-		if(!PlayerPrefs.HasKey("TransferContracts")){
-			PlayerPrefs.SetInt("TransferContracts",0);
-		}
-		transferContracts = PlayerPrefs.GetInt("TransferContracts");
 		transferError = "";
-		
-		if(!PlayerPrefs.HasKey("ContractsUsed")){
-			PlayerPrefs.SetInt("ContractsUsed",0);
-		}
-		contractsUsed = PlayerPrefs.GetInt("ContractsUsed");
 	}
 
     // Update is called once per frame
@@ -396,10 +394,10 @@ public class SingleCar : MonoBehaviour {
 				}
 				
 				if (GUI.Button(new Rect(widthblock * 15.25f, heightblock * 13f, widthblock * 4f, heightblock * 1.5f), "Change Team")){
-					transferError = "Must purchase the " + currentCarTeam + " team to change its cars";
+					transferError = "Team changes coming soon";
 				}
 				if (GUI.Button(new Rect(widthblock * 13.25f, heightblock * 15f, widthblock * 6f, heightblock * 1.5f), "Change Manufacturer")){
-					transferError = "Must purchase the " + currentCarTeam + " team to change its manufacturer";
+					transferError = "Manufacturer changes coming soon";
 				}
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					GUI.skin = redGUI;
@@ -407,8 +405,8 @@ public class SingleCar : MonoBehaviour {
 						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
 						checkNumberDupes(currentCar, seriesPrefix, currentCar);
 						transfersLeft+=1;
-						if(transfersLeft > 999){
-							transfersLeft = 999;
+						if(transfersLeft > transfersMax){
+							transfersLeft = transfersMax;
 						}
 						PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
 					}

@@ -48,6 +48,7 @@ public class MainMenuGUI : MonoBehaviour {
 	void Awake(){
 
 		exp = PlayerPrefs.GetInt("Exp");
+		//exp = 10000;
 		level = PlayerPrefs.GetInt("Level");
 		//Debug.Log("Level " + level);
 		levelExp = GameData.levelExp(level);
@@ -64,6 +65,7 @@ public class MainMenuGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("Exp", exp);
 			PlayerPrefs.SetInt("Level", level);
 			
+			GameData.setRewards();
 			rewardString = GameData.levelUpReward(level);
 			
 			Debug.Log("Level Up -> " + level);
@@ -151,7 +153,11 @@ public class MainMenuGUI : MonoBehaviour {
 		GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, widthblock * 2f, 5), "");
 		//Progress Bar
 		GUI.skin = blueGUI;
-		GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, (((widthblock * 2f)/levelExp) * exp) + 1, 5), "");
+		if((((widthblock * 2f)/levelExp) * exp) >= (widthblock * 2f)){
+			GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, widthblock * 2f, 5), "");
+		} else {
+			GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, (((widthblock * 2f)/levelExp) * exp) + 1, 5), "");
+		}
 		GUI.skin = eightBitSkin;
 		
 		//Day Cycle Bar Box
