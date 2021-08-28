@@ -230,7 +230,6 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				
-				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "10-50 car parts from a random car!");
 				
 				
@@ -264,8 +263,14 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "25k Coins");
-				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-
+				
+				GUI.skin.label.alignment = TextAnchor.UpperLeft;
+								
+				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+								
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "25k investment for car upgrades.");
+								
+								
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 				
 				GUI.skin = redGUI;
@@ -601,11 +606,11 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "10G")){
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "5G")){
 					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 10){
-						gears -= 10;
-						GameData.gameFuel+=5;
+					if(gears >= 5){
+						gears -= 5;
+						GameData.gameFuel+=20;
 						PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 						PlayerPrefs.SetInt("Gears",gears);
 					}
