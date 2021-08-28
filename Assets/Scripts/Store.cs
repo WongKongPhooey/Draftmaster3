@@ -238,10 +238,10 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "1G")){
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "25G")){
 					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 1){
-						gears -= 1;
+					if(gears >= 25){
+						gears -= 25;
 						PlayerPrefs.SetInt("Gears",gears);
 						PlayerPrefs.SetString("PrizeType","MysteryGarage");
 						Application.LoadLevel("PrizeCollection");
