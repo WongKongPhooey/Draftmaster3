@@ -76,9 +76,13 @@ public class Store : MonoBehaviour{
 			dailySelects.Add(14);
 			dailySelects.Add(95);
 			dailySelects.Add(66);
+			dailySelects.Add(54);
 			dailySelects.Add(52);
 			dailySelects.Add(34);
+			dailySelects.Add(32);
 			dailySelects.Add(17);
+			dailySelects.Add(16);
+			dailySelects.Add(13);
 			dailySelects.Add(0);
 		}
 		
@@ -190,7 +194,7 @@ public class Store : MonoBehaviour{
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "Stop by the back of the garages for 3-10 free spare parts. Available every day!");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "Stop by the back of the garages for 3-10 free spare parts. Available once per day!");
 				
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
@@ -268,7 +272,7 @@ public class Store : MonoBehaviour{
 								
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 								
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "25k investment for car upgrades.");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "A sponsorship opportunity brings in 25k coins.");
 								
 								
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
@@ -299,7 +303,14 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "250k Coins");
-				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+				
+				GUI.skin.label.alignment = TextAnchor.UpperLeft;
+								
+				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+								
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "A large 250k investment for car upgrades.");
+								
+								
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 				
 				GUI.skin = redGUI;

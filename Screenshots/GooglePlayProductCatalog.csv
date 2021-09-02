@@ -1,0 +1,5 @@
+Product ID,Published State,Purchase Type,Auto Translate,Locale; Title; Description,Auto Fill Prices,Price,Pricing Template ID
+com.duffetywong.draftmaster2rollingthunder.negotiator,published,managed_by_android,false,en_US;Negotiator;Encourage anyone to sign any transfer contracts!,true,4990000,
+com.duffetywong.draftmaster2rollingthunder.gears60,published,managed_by_android,false,en_US;60 Gears;50 Gears (+10 Bonus) for use in the store.,true,1990000,
+com.duffetywong.draftmaster2rollingthunder.gears125,published,managed_by_android,false,en_US;125 Gears;100 Gears (+25 Bonus) to use in the store.,true,4990000,
+com.duffetywong.draftmaster2rollingthunder.gears200,published,managed_by_android,false,en_US;200 Gears;150 Gears (+50 Bonus) to use in the store.,true,9990000,

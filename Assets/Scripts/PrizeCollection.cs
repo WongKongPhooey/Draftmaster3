@@ -13,6 +13,8 @@ public class PrizeCollection : MonoBehaviour
 	int moneyCount;
 	int raceWinnings;
 	
+	string pageTitle;
+	
 	string prizeType;
 	int prizeCarNumber;
 	
@@ -30,6 +32,7 @@ public class PrizeCollection : MonoBehaviour
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
 		firstCar = false;
+		pageTitle = "Collect Your Prize!";
 		if(PlayerPrefs.HasKey("NewUser")){
 			PlayerPrefs.SetInt("NewUser",1);
 			prizeType=PlayerPrefs.GetString("PrizeType");
@@ -56,6 +59,7 @@ public class PrizeCollection : MonoBehaviour
 		} else {
 			//First time user, Rookie unlock
 			firstCar = true;
+			pageTitle = "Rookie, you need a ride!";
 			ListPrizeOptions("Rookies");
 			prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
 			StarterCar("cup20",prizeCarNumber);
@@ -79,7 +83,7 @@ public class PrizeCollection : MonoBehaviour
 
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		
-		GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Collect Your Prize!");
+		GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), pageTitle);
 
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		
@@ -207,6 +211,6 @@ public class PrizeCollection : MonoBehaviour
 			
 		carCurrentGears = carGears;
 		carClassMax = GameData.classMax(carClass);
-		carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + ramdAmt;
+		carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + randAmt;
 	}
 }

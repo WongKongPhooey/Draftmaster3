@@ -270,6 +270,17 @@ public class SingleCar : MonoBehaviour {
 						classMax = GameData.classMax(carClass);
 					}
 				}
+				
+				//Initial first unlocks
+				if(GameData.upgradeCost(carClass) == 0){
+					if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
+						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - classMax);
+						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", carClass+1);
+						carGears -= classMax;
+						carClass++;
+						classMax = GameData.classMax(carClass);
+					}
+				}
 			} else {
 				if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f), "$" + (GameData.upgradeCost(carClass) - totalMoney) + " More Required")){
 				}
@@ -386,7 +397,9 @@ public class SingleCar : MonoBehaviour {
 				
 				if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
-						numberPanel = true;
+						if(transfersLeft > 0){
+							numberPanel = true;
+						}
 					}
 				} else {
 					GUI.skin.label.alignment = TextAnchor.MiddleRight;

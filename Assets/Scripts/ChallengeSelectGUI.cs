@@ -14,9 +14,7 @@ public class ChallengeSelectGUI : MonoBehaviour {
 	float heightblock = Mathf.Round(Screen.height/20);
 
 	public static int gameDifficulty;
-
 	public static int speedFactor;
-
 	public static string circuitChoice;
 
 	public static string challengeTitle;
@@ -132,10 +130,8 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetString("ChallengeType","LastToFirstLaps");
 		PlayerPrefs.SetString("carTexture", "cup20livery18");
 		PlayerPrefs.SetInt("CarChoice",18);
-		challengeTitle = "Back To The Front";
+		challengeTitle = "Last To First";
 		challengeDescription = "After a puncture and late caution, KB18 has been shuffled to the back of the pack. Reach the front in as few laps/metres as possible to win big. Rewards are given out weekly for the fastest runs!";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("ThunderAlley") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 
 	public static void NoFuel(GameObject circuit,GameObject vehicle){
@@ -164,8 +160,6 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CarChoice",24);
 		challengeTitle = "No Fuel";
 		challengeDescription = "Gordon missed the last set of stops to hit the front but he's nearly out of gas! Coast to the line as high up the field as possible for a big payout.";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Legends500") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 
 	static void LatePush(GameObject circuit,GameObject vehicle){
@@ -194,8 +188,6 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CarChoice",0);
 		challengeTitle = "Late Push";
 		challengeDescription = "Andretti has battled through the field all race but with 5 laps to go only a top 3 finish will keep him in the championship hunt. The pressure is on.";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SunsetSpeedway") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 
 	static void TeamPlayer(GameObject circuit,GameObject vehicle){
@@ -225,8 +217,6 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("DraftPercent",0);
 		challengeTitle = "Team Player";
 		challengeDescription = "Your team mate in the No.2 car can win the title, but only if you push him to the top 3! Stay in his draft for at least 30% of the laps.";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Miracle Mile") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 
 	static void CleanBreak(GameObject circuit,GameObject vehicle){
@@ -252,10 +242,8 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetString("ChallengeType","CleanBreak");
 		PlayerPrefs.SetString("carTexture", "cup20livery22");
 		PlayerPrefs.SetInt("CarChoice",22);
-		challengeTitle = "Fresh Air";
+		challengeTitle = "Clean Break";
 		challengeDescription = "Win in Michigan with the fastest car in the field. Slingshot past the rest and win by the biggest margin possible. Rewards are handed out weekly for the biggest winning margins!";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Michigan") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 
 	static void TrafficJam(GameObject circuit,GameObject vehicle){
@@ -284,8 +272,6 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CarChoice",67);
 		challengeTitle = "Traffic Jam";
 		challengeDescription = "Battle and barge your way from the back to the front of a packed field on the tightest circuit on the calendar. Within 50 laps.";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Powerbowl") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 
 	static void PhotoFinish(GameObject circuit,GameObject vehicle){
@@ -315,8 +301,6 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CarChoice",19);
 		challengeTitle = "Photo Finish";
 		challengeDescription = "The pace is with you and the win is within reach, but the sponsors want a close finish. Win by no more than a car length.";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 	
 	static void AllWoundUp(GameObject circuit,GameObject vehicle){
@@ -345,7 +329,5 @@ public class ChallengeSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CarChoice",41);
 		challengeTitle = "All Wound Up";
 		challengeDescription = "After 147 laps, bitter rivalries will be formed. Make at least 1 rival by hitting an opponent 3 times and still take victory.";
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TwinLakes") as Texture;
-		vehicle.GetComponent<Renderer>().material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 	}
 }

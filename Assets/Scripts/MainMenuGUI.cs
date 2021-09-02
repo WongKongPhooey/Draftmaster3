@@ -119,7 +119,7 @@ public class MainMenuGUI : MonoBehaviour {
 			audioOn = PlayerPrefs.GetInt("AudioOn");
 		}
 		if(audioOn == 1){
-			crowdNoise.volume = 0.10f;
+			crowdNoise.volume = 0.25f;
 		} else {
 			crowdNoise.volume = 0.0f;
 		}

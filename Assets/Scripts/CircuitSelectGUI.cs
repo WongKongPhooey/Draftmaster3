@@ -194,7 +194,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			case "9":
 				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Richmond, VA")){
-					//Michigan();
+					Richmond();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Richmond") as Texture;
 				}
@@ -464,6 +464,28 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetString("TrackType","Short");
 	}
 	
+	static void Richmond(){
+		circuitChoice = "Richmond";
+		PlayerPrefs.SetInt("RaceLaps",8 + currentSubseries);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",1);
+		PlayerPrefs.SetInt("StraightLength2",1);
+		PlayerPrefs.SetInt("StraightLength3",150);
+		PlayerPrefs.SetInt("StraightLength4",10);
+		PlayerPrefs.SetInt("TurnLength1",15);
+		PlayerPrefs.SetInt("TurnLength2",165);
+		PlayerPrefs.SetInt("TurnLength3",165);
+		PlayerPrefs.SetInt("TurnLength4",15);
+		PlayerPrefs.SetInt("TurnAngle1",4);
+		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle4",4);
+		PlayerPrefs.SetInt("StartLine",5);
+		PlayerPrefs.SetInt("SpeedOffset",58 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Short");
+	}
+	
 	static void NewHampshire(){
 		circuitChoice = "NewHampshire";
 		PlayerPrefs.SetInt("RaceLaps",8 + currentSubseries);
@@ -684,28 +706,6 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
-	static void Kentucky(){
-		circuitChoice = "Kentucky";
-		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
-		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",20);
-		PlayerPrefs.SetInt("StraightLength2",25);
-		PlayerPrefs.SetInt("StraightLength3",150);
-		PlayerPrefs.SetInt("StraightLength4",25);
-		PlayerPrefs.SetInt("TurnLength1",20);
-		PlayerPrefs.SetInt("TurnLength2",160);
-		PlayerPrefs.SetInt("TurnLength3",160);
-		PlayerPrefs.SetInt("TurnLength4",20);
-		PlayerPrefs.SetInt("TurnAngle1",8);
-		PlayerPrefs.SetInt("TurnAngle2",4);
-		PlayerPrefs.SetInt("TurnAngle3",4);
-		PlayerPrefs.SetInt("TurnAngle4",8);
-		PlayerPrefs.SetInt("StartLine",10);
-		PlayerPrefs.SetInt("SpeedOffset",28 - speedFactor);
-		PlayerPrefs.SetInt("TotalTurns",4);
-		PlayerPrefs.SetString("TrackType","Mid");
-	}
-
 	static void Darlington(){
 		circuitChoice = "Darlington";
 		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
@@ -774,9 +774,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static void Kansas(){
 		circuitChoice = "Kansas";
-		PlayerPrefs.SetInt("RaceLaps",5 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",4 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",5);
+		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",50);
 		PlayerPrefs.SetInt("StraightLength3",200);
 		PlayerPrefs.SetInt("StraightLength4",50);
@@ -792,6 +792,28 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("SpeedOffset",17 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
 		PlayerPrefs.SetString("TrackType","Large");
+	}
+	
+	static void Kentucky(){
+		circuitChoice = "Kansas";
+		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
+		PlayerPrefs.SetInt("CircuitLanes",4);
+		PlayerPrefs.SetInt("StraightLength1",1);
+		PlayerPrefs.SetInt("StraightLength2",1);
+		PlayerPrefs.SetInt("StraightLength3",200);
+		PlayerPrefs.SetInt("StraightLength4",10);
+		PlayerPrefs.SetInt("TurnLength1",35);
+		PlayerPrefs.SetInt("TurnLength2",145);
+		PlayerPrefs.SetInt("TurnLength3",145);
+		PlayerPrefs.SetInt("TurnLength4",35);
+		PlayerPrefs.SetInt("TurnAngle1",4);
+		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle4",4);
+		PlayerPrefs.SetInt("StartLine",5);
+		PlayerPrefs.SetInt("SpeedOffset",31 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	static void Daytona(){

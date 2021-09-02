@@ -248,25 +248,25 @@ public class SeriesSelectGUI : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = Color.red;
+				classColour = new Color32(255,0,0,255);
 				break;
 		    case 2:
-				classColour = Color.yellow;
+				classColour = new Color32(255,165,0,255);
 				break;
 			case 3:
-				classColour = Color.green;
+				classColour = new Color32(238,130,238,255);
 				break;
 			case 4:
-				classColour = Color.cyan;
+				classColour = new Color32(0,128,0,255);
 				break;
 			case 5:
-				classColour = Color.blue;
+				classColour = new Color32(0,0,255,255);
 				break;
 			case 6:
-				classColour = Color.red;
+				classColour = new Color32(75,0,130,255);
 				break;
 		    default:
-				classColour = Color.red;
+				classColour = new Color32(164,6,6,255);
 				break;
 		}
 		return classColour;
