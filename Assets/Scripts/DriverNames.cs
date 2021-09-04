@@ -22,6 +22,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[2] = "Keselowski";
 		cup2020Names[3] = "A. Dillon";
 		cup2020Names[4] = "Harvick";
+		cup2020Names[5] = "Larson";
 		cup2020Names[6] = "Newman";
 		cup2020Names[7] = "Bilicki";
 		cup2020Names[8] = "Reddick";
@@ -65,23 +66,23 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[95] = "Bell";
 		cup2020Names[96] = "Suarez";
 		
-		cup2020AltNames[0] = "Larson";
-		cup2020AltNames[1] = "Barrett";
-		cup2020AltNames[2] = "Grala";
-		cup2020AltNames[3] = "Ware";
-		cup2020AltNames[4] = "Starr";
-		cup2020AltNames[5] = "Allgaier";
-		cup2020AltNames[6] = "Currey";
-		cup2020AltNames[7] = "Hemric";
-		cup2020AltNames[8] = "McMurray";
-		cup2020AltNames[9] = "Mears";
-		cup2020AltNames[10] = "Allmendinger";
+		cup2020AltNames[0] = "Barrett";
+		cup2020AltNames[1] = "Grala";
+		cup2020AltNames[2] = "Ware";
+		cup2020AltNames[3] = "Starr";
+		cup2020AltNames[4] = "Allgaier";
+		cup2020AltNames[5] = "Currey";
+		cup2020AltNames[6] = "Hemric";
+		cup2020AltNames[7] = "McMurray";
+		cup2020AltNames[8] = "Mears";
+		cup2020AltNames[9] = "Allmendinger";
 		
 		cup2020Teams[0] = "IND";
 		cup2020Teams[1] = "CGR";
 		cup2020Teams[2] = "PEN";
 		cup2020Teams[3] = "RCR";
 		cup2020Teams[4] = "SHR";
+		cup2020Teams[5] = "CGR";
 		cup2020Teams[6] = "RFR";
 		cup2020Teams[7] = "IND";
 		cup2020Teams[8] = "RCR";
@@ -130,6 +131,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Manufacturer[2] = "FRD";
 		cup2020Manufacturer[3] = "CHV";
 		cup2020Manufacturer[4] = "FRD";
+		cup2020Manufacturer[5] = "CHV";
 		cup2020Manufacturer[6] = "FRD";
 		cup2020Manufacturer[7] = "CHV";
 		cup2020Manufacturer[8] = "CHV";
@@ -178,6 +180,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[2] = "Intimidator";
 		cup2020Types[3] = "Strategist";
 		cup2020Types[4] = "Gentleman";
+		cup2020Types[5] = "Closer";
 		cup2020Types[6] = "Closer";
 		cup2020Types[7] = "Strategist";
 		cup2020Types[8] = "Rookie";
@@ -226,6 +229,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Rarity[2] = 3;
 		cup2020Rarity[3] = 2;
 		cup2020Rarity[4] = 3;
+		cup2020Rarity[5] = 3;
 		cup2020Rarity[6] = 2;
 		cup2020Rarity[7] = 1;
 		cup2020Rarity[8] = 1;

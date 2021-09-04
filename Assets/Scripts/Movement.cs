@@ -534,6 +534,16 @@ public class Movement : MonoBehaviour {
 			}
 		}
 		
+		//Speed tops out
+				//Speed tops out
+        if (playerSpeed > (205 + laneInv)){
+			//Reduce speed, proportionate to the amount 'over'
+            playerSpeed -= ((playerSpeed - 205) / 100);
+		}
+		if(playerSpeed > 210){
+			playerSpeed=210f;
+		}
+		
 		if(CameraRotate.lap == 0){
 			playerSpeed = 200;
 		}

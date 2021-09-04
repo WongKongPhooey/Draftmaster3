@@ -314,15 +314,6 @@ public class AIMovement : MonoBehaviour
 	}
 
 	void speedLogic(){
-		//Speed tops out
-        if (AISpeed > (204 + laneInv + (AILevel / 5))){
-			//Reduce speed, proportionate to the amount 'over'
-            AISpeed -= ((AISpeed - 204) / 100);
-		}
-		//Minimum speed
-		if (AISpeed < (200)){
-			AISpeed = 200;
-    }
 		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
@@ -367,6 +358,21 @@ public class AIMovement : MonoBehaviour
 			}
 		} else {
 			tandemDraft = false;
+		}
+		
+		//Speed tops out
+        if (AISpeed > (204 + laneInv + (AILevel / 5))){
+			//Reduce speed, proportionate to the amount 'over'
+            AISpeed -= ((AISpeed - 204) / 100);
+		}
+		if (AISpeed > 210){
+			//Hard limiter as a fallback
+            AISpeed = 210;
+		}
+		
+		//Minimum speed
+		if (AISpeed < (200)){
+			AISpeed = 200;
 		}
 		
 		//Speed difference between the player and the AI
