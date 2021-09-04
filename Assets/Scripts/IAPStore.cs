@@ -10,10 +10,10 @@ public class IAPStore : MonoBehaviour {
 	public static int transfersMax;
 	public static int transfersLeft;
 	
-	private const string gears20 = "com.duffetywong.draftmaster2rollingthunder.gears20";
 	private const string gears60 = "com.duffetywong.draftmaster2rollingthunder.gears60";
 	private const string gears125 = "com.duffetywong.draftmaster2rollingthunder.gears125";
-	private const string gearstest = "com.duffetywong.draftmaster2rollingthunder.gearstest";
+	private const string gears200 = "com.duffetywong.draftmaster2rollingthunder.gears200";
+	private const string gears500 = "com.duffetywong.draftmaster2rollingthunder.gears500";
 	
 	private const string negotiator = "com.duffetywong.draftmaster2rollingthunder.negotiator";
 	
@@ -61,11 +61,6 @@ public class IAPStore : MonoBehaviour {
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
 		
 		switch(product.definition.id){
-			case gears20:
-				Debug.Log("Added 20 gears");
-				gears+=20;
-				PlayerPrefs.SetInt("Gears",gears);
-				break;
 			case gears60:
 				Debug.Log("Added 60 gears");
 				gears+=60;
@@ -76,9 +71,14 @@ public class IAPStore : MonoBehaviour {
 				gears+=125;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
-			case gearstest:
-				Debug.Log("Added Test gears");
-				gears+=100;
+			case gears200:
+				Debug.Log("Added 200 gears");
+				gears+=200;
+				PlayerPrefs.SetInt("Gears",gears);
+				break;
+			case gears500:
+				Debug.Log("Added 500 gears");
+				gears+=500;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case negotiator:

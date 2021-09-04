@@ -172,7 +172,7 @@ public class PlayFabManager : MonoBehaviour
 				//Debug.Log("No message ID set");
 			}
 		} else {
-			//Debug.Log("No message set");
+			MainMenuGUI.messageAlert = "There are currently no new news items. Login to access the full online features";
 		}
 	}
 	

@@ -269,6 +269,12 @@ public class RaceResultsGUI : MonoBehaviour {
 			if(GUI.Button(new Rect(widthblock * 12, Screen.height - (heightblock * 3), widthblock * 6, heightblock * 2), "View Leaderboard")){
 				Application.LoadLevel("Leaderboard");
 			}
+		} else {
+			GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+			GUI.skin.label.alignment = TextAnchor.MiddleRight;
+			GUI.Label(new Rect(widthblock * 10, Screen.height - (heightblock * 3), widthblock * 8, heightblock * 2), "Login for online leaderboards");
+			GUI.skin.label.alignment = TextAnchor.UpperLeft;
+			GUI.skin.label.fontSize = 72 / FontScale.fontScale;
 		}
 
 		if(GUI.Button(new Rect(widthblock * 2, Screen.height - (heightblock * 3), widthblock * 3, heightblock * 2), "Next")){

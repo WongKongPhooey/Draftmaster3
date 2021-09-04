@@ -181,7 +181,7 @@ public class MainMenuGUI : MonoBehaviour {
 		}
 		
 		//All Cars
-		if (GUI.Button(new Rect(Screen.width - (widthblock * 2.5f), Screen.height - (heightblock * 1.5f) - 20, widthblock * 2f, heightblock * 1.5f), "Cars")){
+		/*if (GUI.Button(new Rect(Screen.width - (widthblock * 2.5f), Screen.height - (heightblock * 1.5f) - 20, widthblock * 2f, heightblock * 1.5f), "Cars")){
 			SceneManager.LoadScene("AllCars");
 		}
 		
@@ -189,6 +189,7 @@ public class MainMenuGUI : MonoBehaviour {
 			SceneManager.LoadScene("OptionsMenu");
 		}
 		GUI.DrawTexture(new Rect(Screen.width - (widthblock * 3f) - (heightblock * 1.5f) + 10, Screen.height - (heightblock * 1.5f) - 20 + 7, (heightblock * 1.5f) - 20, (heightblock * 1.5f) - 20), spannerTex);
+		*/
 		
 		if(levelUpMenu == true){
 			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");

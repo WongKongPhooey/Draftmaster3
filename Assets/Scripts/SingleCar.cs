@@ -399,6 +399,9 @@ public class SingleCar : MonoBehaviour {
 					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
 						if(transfersLeft > 0){
 							numberPanel = true;
+						} else {
+							transferError = "All transfer contracts are in use. Gain more by leveling up.";
+							Debug.Log("No transfer contracts left");
 						}
 					}
 				} else {

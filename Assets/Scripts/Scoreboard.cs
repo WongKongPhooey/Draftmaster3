@@ -263,8 +263,8 @@ public class Scoreboard : MonoBehaviour {
 		GUI.DrawTexture(new Rect((widthblock * 1) + 20, 10, (widthblock * 3f) - 40, (heightblock * 2f) - 20), Resources.Load("SeriesSponsor") as Texture, ScaleMode.ScaleToFit);
 	
 		//Laps and Info
-		GUI.Label(new Rect(widthblock * 4, 0, widthblock * 2, heightblock * 1f), "LAP " + CameraRotate.lap + " of " + PlayerPrefs.GetInt("RaceLaps"));	
-		GUI.Label(new Rect(widthblock * 6, 0, widthblock * 3, heightblock * 1f), circuitName.ToUpper());
+		GUI.Label(new Rect(widthblock * 4, 0, widthblock * 3, heightblock * 1f), "LAP " + CameraRotate.lap + " of " + PlayerPrefs.GetInt("RaceLaps"));	
+		GUI.Label(new Rect(widthblock * 8, 0, widthblock * 3, heightblock * 1f), circuitName.ToUpper());
 				
 		//Drivers loop start
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;

@@ -241,7 +241,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "15":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Michigan, MI")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Brooklyn, MI")){
 					Michigan();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Michigan") as Texture;
@@ -257,7 +257,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "17":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Kentucky, KY")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Sparta, KY")){
 					Kentucky();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Kentucky") as Texture;
@@ -265,7 +265,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "18":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "New Hampshire, NH")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Loudon, NH")){
 					NewHampshire();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Motorland") as Texture;
@@ -488,10 +488,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static void NewHampshire(){
 		circuitChoice = "NewHampshire";
-		PlayerPrefs.SetInt("RaceLaps",8 + currentSubseries);
+		PlayerPrefs.SetInt("RaceLaps",7 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
-		PlayerPrefs.SetInt("StraightLength1",200);
-		PlayerPrefs.SetInt("StraightLength2",200);
+		PlayerPrefs.SetInt("StraightLength1",250);
+		PlayerPrefs.SetInt("StraightLength2",250);
 		PlayerPrefs.SetInt("StraightLength3",0);
 		PlayerPrefs.SetInt("StraightLength4",0);
 		PlayerPrefs.SetInt("TurnLength1",180);
@@ -503,7 +503,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TurnAngle3",0);
 		PlayerPrefs.SetInt("TurnAngle4",0);
 		PlayerPrefs.SetInt("StartLine",100);
-		PlayerPrefs.SetInt("SpeedOffset",46 - speedFactor);
+		PlayerPrefs.SetInt("SpeedOffset",43 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
 		PlayerPrefs.SetString("TrackType","Short");
 	}

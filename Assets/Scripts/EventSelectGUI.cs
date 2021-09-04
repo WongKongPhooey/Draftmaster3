@@ -89,11 +89,12 @@ public class EventSelectGUI : MonoBehaviour {
 				}
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, widthblock * 2.5f), Resources.Load(EventData.offlineEventImage[rootMenu]) as Texture);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 8f), widthblock * 5.5f, heightblock * 4), "" + EventData.eventDescriptions[rootMenu] + "");
 
 				//Choose Series
 				//Week Cycler
-				if(1==1){
+				if(1!=1){
 				//if(week % 13 == EventData.offlineEventWeek[rootMenu]){
 					if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
 						menuIndex = rootMenu;
@@ -106,12 +107,12 @@ public class EventSelectGUI : MonoBehaviour {
 					//Grey out the event
 					GUI.skin = tileSkin;
 					GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
+					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+					GUI.skin.label.normal.textColor = Color.red;
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9f), widthblock * 5.5f, heightblock * 4), "Coming Soon");
+					GUI.skin.label.normal.textColor = Color.black;
+					GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				}
-				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.normal.textColor = Color.red;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9f), widthblock * 5.5f, heightblock * 4), "Coming Soon");
-				GUI.skin.label.normal.textColor = Color.black;
-				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 			}
 		} else {
 			//If in a sub menu

@@ -65,6 +65,7 @@ public class Store : MonoBehaviour{
 		Debug.Log("Online store: " + customStoreDailySelects);
 		
 		if(customStoreDailySelects != ""){
+			dailySelects.Clear();
 			string[] onlineSelects = customStoreDailySelects.Split(',');
 			foreach(string item in onlineSelects){
 				dailySelects.Add(int.Parse(item));
@@ -72,6 +73,7 @@ public class Store : MonoBehaviour{
 			}
 			Debug.Log("Total shop items added: " + dailySelects.Count);
 		} else {
+			dailySelects.Clear();
 			dailySelects.Add(43);
 			dailySelects.Add(14);
 			dailySelects.Add(95);
