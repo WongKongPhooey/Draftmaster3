@@ -159,9 +159,9 @@ public class Store : MonoBehaviour{
 				menuCat = "Fuel";
 			}
 			
-			//if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Premium")){
-			//	Application.LoadLevel("GearsStore");
-			//}
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Premium")){
+				Application.LoadLevel("GearsStore");
+			}
 			
 			//if (GUI.Button(new Rect(widthblock / 2, heightblock * 12, widthblock * 4, heightblock * 1.5f), "Legends")){
 			//	menuCat = "Legends";
