@@ -87,7 +87,7 @@ public class RaceRewards : MonoBehaviour
 		
 		maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
 		//If low strength AI Race (<+3)
-        if(maxRaceGears <= 0){
+        if(maxRaceGears <= 2){
             //Top 3 win gears
 			maxRaceGears = 3;
 		}

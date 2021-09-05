@@ -159,9 +159,9 @@ public class Store : MonoBehaviour{
 				menuCat = "Fuel";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Premium")){
-				Application.LoadLevel("GearsStore");
-			}
+			//if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Premium")){
+			//	Application.LoadLevel("GearsStore");
+			//}
 			
 			//if (GUI.Button(new Rect(widthblock / 2, heightblock * 12, widthblock * 4, heightblock * 1.5f), "Legends")){
 			//	menuCat = "Legends";
@@ -243,10 +243,10 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "25G")){
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "35G")){
 					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 25){
-						gears -= 25;
+					if(gears >= 35){
+						gears -= 35;
 						PlayerPrefs.SetInt("Gears",gears);
 						PlayerPrefs.SetString("PrizeType","MysteryGarage");
 						Application.LoadLevel("PrizeCollection");
