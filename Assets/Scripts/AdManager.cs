@@ -5,11 +5,11 @@ using UnityEngine.Advertisements;
 
 public class AdManager : MonoBehaviour, IUnityAdsListener
 {
-	#if UNITY_IOS
+    //#if UNITY_IOS
     private string gameId = "4061300";
-    #elif UNITY_ANDROID
-    private string gameId = "4061301";
-    #endif
+    //#elif UNITY_ANDROID
+    //private string gameId = "4061301";
+    //#endif
 
     static string myPlacementId = "rewardedVideo";
 	public static int fuel;
