@@ -687,7 +687,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	static void FortWorth(){
 		circuitChoice = "FortWorth";
 		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
-		PlayerPrefs.SetInt("CircuitLanes",4);
+		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",80);
 		PlayerPrefs.SetInt("StraightLength2",75);
 		PlayerPrefs.SetInt("StraightLength3",150);

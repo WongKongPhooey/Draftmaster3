@@ -283,7 +283,7 @@ public class AllCars : MonoBehaviour {
 							if(carClass < DriverNames.cup2020Rarity[carCount]){
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
-								if(carGears > classMax){
+								if(carGears >= classMax){
 									GUI.skin.label.normal.textColor = new Color32(0,255,0,255);
 								}
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);

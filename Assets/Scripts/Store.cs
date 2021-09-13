@@ -151,7 +151,7 @@ public class Store : MonoBehaviour{
 				menuCat = "Bundles";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 6, widthblock * 4, heightblock * 1.5f), "Daily Selects")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * 6, widthblock * 4, heightblock * 1.5f), "Weekly Selects")){
 				menuCat = "DailySelects";
 			}
 			
