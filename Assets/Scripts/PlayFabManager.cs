@@ -56,10 +56,22 @@ public class PlayFabManager : MonoBehaviour
 	
 	void OnLoginSuccess(LoginResult result){
 		Debug.Log("Login successful!");
-		PlayerPrefs.SetString("PlayerUsername", usernameInput.text);
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
 		PlayerPrefs.SetString("PlayerPassword", passwordInput.text);
 		PlayerPrefs.SetString("PlayerPlayFabId", result.PlayFabId);
+		GetPlayerInfo(result.PlayFabId);
+	}
+	
+	public static void GetPlayerInfo(string playFabID){
+		var request = new GetPlayerProfileRequest{
+			PlayFabId = playFabID
+		};
+		PlayFabClientAPI.GetPlayerProfile(request, OnGetUsernameSuccess, OnError);
+	}
+	
+	static void OnGetUsernameSuccess(GetPlayerProfileResult result){
+		Debug.Log("Retrieved Username!");
+		PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
 		SceneManager.LoadScene("MainMenu");
 	}
 	
