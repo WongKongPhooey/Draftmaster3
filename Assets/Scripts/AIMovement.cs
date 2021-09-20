@@ -719,7 +719,7 @@ public class AIMovement : MonoBehaviour
 				return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
 			} else {
 				if(opponent.transform.gameObject.tag == "AICar"){
-					Debug.Log(opponent.transform.gameObject.name);
+					//Debug.Log(opponent.transform.gameObject.name);
 					return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
 				}
 			}

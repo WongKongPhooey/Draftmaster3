@@ -482,6 +482,8 @@ public class Movement : MonoBehaviour {
 			buddyBehind = 0;
 		}
 		
+		Debug.Log(engineTemp);
+		
 		if((buddyInFront < 500)&&(buddyBehind < 500)){
 			canBuddy = false;
 			buddyUp = false;
