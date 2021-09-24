@@ -319,6 +319,7 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 			draftLogic();
+			carWobble();
 			updateMovement();
 			this.gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
 			this.gameObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
@@ -361,8 +362,13 @@ public class AIMovement : MonoBehaviour
 		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
-				AISpeed += 0.004f;
+			AISpeed += 0.004f;
 			tandemDraft = true;
+			int currentPos = Scoreboard.checkSingleCarPosition("AICar0" + carNum + "");
+			if(currentPos == 0){
+				//Debug.Log("Leader is #" + carNum);
+				evadeDraft();
+			}
 		} else {
 			tandemDraft = false;
 		}
@@ -497,6 +503,55 @@ public class AIMovement : MonoBehaviour
 			findDraft();
 		}
 	}
+	
+	void carWobble(){
+		wobbleCount++;
+		
+		if(wobbleCount >= wobbleRand){
+			wobbleRand = Random.Range(20,50);
+			wobbleTarget = Random.Range(-100,100);
+			wobbleCount = 1;
+		}
+		
+		//General wobble while in lane
+		if(wobbleTarget > wobblePos){
+			AICar.transform.Translate(-0.001f,0,0);
+			wobblePos++;
+		}
+		if(wobbleTarget < wobblePos){
+			AICar.transform.Translate(0.001f,0,0);
+			wobblePos--;
+		}
+	}
+
+	void evadeDraft(){
+		//Trying to pass nobody = Weaving to break the draft from behind
+		//tryPass(100, false);
+		
+		bool leftSideClr = leftSideClear();
+		bool rightSideClr = rightSideClear();
+		
+		//Can go either way
+		if((leftSideClr == true)&&(rightSideClr == true)){
+			//Rand pick
+			string direction = "";
+			float rng = Random.Range(0,2);
+			if(rng > 1f){
+				direction = "Right";
+			} else {
+				direction = "Left";
+			}
+			changeLane(direction);
+		} else {
+			if(rightSideClr == true) {
+				changeLane("Right");
+			} else {
+				if(leftSideClr == true) {
+					changeLane("Left");
+				}
+			}
+		}
+	}
 
 	void tryPass(int chance, bool forced) {
 		//Check Right Corners Clear
@@ -563,7 +618,7 @@ public class AIMovement : MonoBehaviour
 			if(direction == "Both"){
 				//Random choose one
 				float rng = Random.Range(0,2);
-				Debug.Log("Rnd /2 = " + rng);
+				//Debug.Log("Rnd /2 = " + rng);
 				if(rng > 1f){
 					direction = "Right";
 				} else {

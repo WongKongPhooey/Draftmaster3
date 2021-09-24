@@ -125,7 +125,7 @@ public class CarSelectGUI : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = new Color32(255,0,0,255);
+				classColour = new Color32(164,6,6,255);
 				break;
 		    case 2:
 				classColour = new Color32(255,165,0,255);

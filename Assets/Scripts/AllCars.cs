@@ -83,7 +83,7 @@ public class AllCars : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = new Color32(255,0,0,255);
+				classColour = new Color32(164,6,6,255);
 				break;
 		    case 2:
 				classColour = new Color32(255,165,0,255);
@@ -294,7 +294,6 @@ public class AllCars : MonoBehaviour {
 							GUI.skin = redGUI;
 							GUI.skin.button.fontSize = 48 / FontScale.fontScale;
 							if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Unlock")){
-								totalMoney -= GameData.upgradeCost(carClass);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked", 1);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears", carGears - unlockGears);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Class", DriverNames.cup2020Rarity[carCount]);

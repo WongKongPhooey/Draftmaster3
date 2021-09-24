@@ -178,13 +178,17 @@ public class Scoreboard : MonoBehaviour {
 		return 0;
 	}
 
-	public static int checkSingleCarPosition(string carName){
+	public static int checkSingleCarPosition(string thisCarName){
+		if(thisCarName == ""){
+			return 9999;
+		}
 		for(int i=0;i<entrantList.Count;i++){
-			if(entrantList[i].name == carName){
+			if(entrantList[i].name == thisCarName){
+				//Debug.Log("Car #" + thisCarName + " is in pos " + i);
 				return i;
 			}
 		}
-		return 0;
+		return 9999;
 	}
 
 	public static void checkFinishPositions(){
@@ -250,7 +254,7 @@ public class Scoreboard : MonoBehaviour {
 			}
 		}
 	}
-	
+
 	void OnGUI(){
 		GUI.skin = eightBitSkin;
 

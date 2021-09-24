@@ -21,6 +21,9 @@ public class SingleCar : MonoBehaviour {
 	int carClass;
 	int classMax;
 	
+	int unlockClass;
+	int unlockGears;
+	
 	int currentCar;
 	
 	string currentCarManu;
@@ -109,6 +112,10 @@ public class SingleCar : MonoBehaviour {
 		
 		carGears = 0;
 		carClass = 0;
+		
+		unlockClass = 1;
+		unlockClass = DriverNames.cup2020Rarity[currentCar];
+		unlockGears = GameData.unlockGears(unlockClass);
 		
 		if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Unlocked") != 1){
 			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Unlocked", 1);
@@ -274,10 +281,9 @@ public class SingleCar : MonoBehaviour {
 				//Initial first unlocks
 				if(GameData.upgradeCost(carClass) == 0){
 					if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
-						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - classMax);
-						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", carClass+1);
-						carGears -= classMax;
-						carClass++;
+						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - unlockGears);
+						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.cup2020Rarity[currentCar]);
+						carClass = DriverNames.cup2020Rarity[currentCar];
 						classMax = GameData.classMax(carClass);
 					}
 				}
@@ -573,7 +579,7 @@ public class SingleCar : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = new Color32(255,0,0,255);
+				classColour = new Color32(164,6,6,255);
 				break;
 		    case 2:
 				classColour = new Color32(255,165,0,255);
