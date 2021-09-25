@@ -500,7 +500,7 @@ public class SingleCar : MonoBehaviour {
 			
 			for(int i=0;i<4;i++){
 				if(numsInd < availNums.Length){
-					if (GUI.Button(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f), (heightblock * 6f) + (heightblock * i * 2f), widthblock * 1f, widthblock * 1f), "")){
+					if (GUI.Button(new Rect(widthblock * 2.5f, heightblock * 6f, widthblock * 1f, widthblock * 1f), "")){
 						
 						//Example: I swap car #4 with car #10..
 						//Set car #4 to become #10
@@ -537,7 +537,7 @@ public class SingleCar : MonoBehaviour {
 						
 						driverPanel = false;
 					}
-					GUI.DrawTexture(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f) + 5, (heightblock * 6f) + (heightblock * i * 2f) + 5, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load(seriesPrefix + "num" + availNums[numsInd]) as Texture);
+					GUI.DrawTexture(new Rect(widthblock * 2.5f, heightblock * 6f, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load(seriesPrefix + "num" + availNums[numsInd]) as Texture);
 					numsInd++;
 				}
 			}
