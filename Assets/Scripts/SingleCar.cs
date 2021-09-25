@@ -46,6 +46,11 @@ public class SingleCar : MonoBehaviour {
 	int[] availNums;
 	int numsInd;
 	
+	List<string> freeAgents = new List<string>();
+	List<string> availableDrivers = new List<string>();
+	string[] availFreeAgents;
+	int freeAgentsInd;
+	
 	int transfersLeft;
 	int transfersMax;
 	
@@ -138,6 +143,15 @@ public class SingleCar : MonoBehaviour {
 			}
 		}
 		availNums = availableNumbers.ToArray();
+		
+		freeAgents.Clear();
+		
+		for(int car=0;car<100;car++){
+			if(DriverNames.cup2020AltNames[car] != null){
+				freeAgents.Add(DriverNames.cup2020AltNames[car]);
+			}
+		}
+		availFreeAgents = freeAgents.ToArray();
 		
 		if(!PlayerPrefs.HasKey("TransfersLeft")){
 			PlayerPrefs.SetInt("TransfersLeft",1);
@@ -395,10 +409,19 @@ public class SingleCar : MonoBehaviour {
 				GUI.skin.label.normal.textColor = Color.red;
 				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11f, widthblock * 6.25f, heightblock * 6f), transferError);
 				GUI.skin.label.normal.textColor = Color.black;
-			
-				if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 9f, widthblock * 4.5f, heightblock * 1.5f), "Driver Swap")){
-					driverPanel = true;
-					transferError = "Driver swap coming soon";
+				
+				if(!PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + currentCar)){
+					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 9f, widthblock * 4.5f, heightblock * 1.5f), "Driver Swap")){
+						if(transfersLeft > 0){
+							driverPanel = true;
+						} else {
+							transferError = "All transfer contracts are in use. Gain more by leveling up or purchase the Negotiator pack in store.";
+							//Debug.Log("No transfer contracts left");
+						}
+					}
+				} else {
+					GUI.skin.label.alignment = TextAnchor.MiddleRight;
+					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
 				}
 				
 				if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
@@ -407,7 +430,7 @@ public class SingleCar : MonoBehaviour {
 							numberPanel = true;
 						} else {
 							transferError = "All transfer contracts are in use. Gain more by leveling up.";
-							Debug.Log("No transfer contracts left");
+							//Debug.Log("No transfer contracts left");
 						}
 					}
 				} else {
@@ -423,13 +446,22 @@ public class SingleCar : MonoBehaviour {
 				}
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					GUI.skin = redGUI;
-					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 17f, widthblock * 4.5f, heightblock * 1.5f), "Reset Changes")){
+					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 17f, widthblock * 4.5f, heightblock * 1.5f), "Reset Car")){
 						PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
 						checkNumberDupes(currentCar, seriesPrefix, currentCar);
 						transfersLeft+=1;
 						if(transfersLeft > transfersMax){
 							transfersLeft = transfersMax;
 						}
+						PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
+					}
+				}
+				//At least one transfer to reset
+				if(transfersLeft != transfersMax){
+					GUI.skin = redGUI;
+					if (GUI.Button(new Rect(widthblock * 13.25f, heightblock * 17f, widthblock * 6f, heightblock * 1.5f), "Reset All Transfers")){
+						resetAllTransfers(seriesPrefix);
+						transfersLeft = transfersMax;
 						PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
 					}
 				}
@@ -453,6 +485,68 @@ public class SingleCar : MonoBehaviour {
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		
 		CommonGUI.TopBar();
+		
+		if(driverPanel == true){
+			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
+			GUI.skin = whiteGUI;
+			GUI.Box(new Rect(widthblock * 2f, heightblock * 3f, widthblock * 16f, heightblock * 14f),"");
+			
+			GUI.skin = buttonSkin;
+			GUI.skin.label.alignment = TextAnchor.UpperLeft;
+			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+			GUI.Label(new Rect(widthblock * 2.5f, heightblock * 4f, widthblock * 7.5f, heightblock * 2f), "Change Driver");
+
+			numsInd = 0;
+			
+			for(int i=0;i<4;i++){
+				if(numsInd < availNums.Length){
+					if (GUI.Button(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f), (heightblock * 6f) + (heightblock * i * 2f), widthblock * 1f, widthblock * 1f), "")){
+						
+						//Example: I swap car #4 with car #10..
+						//Set car #4 to become #10
+						PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentCar, availNums[numsInd]);
+						
+						//Does car #10 actually has number 10 to swap with, or do they also have a custom number..
+						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + availNums[numsInd])){
+							//Find who has number 10.. in this example, it is the #18
+							int currentNumHolder = findCustomNum(seriesPrefix, availNums[numsInd]);
+							//Set #18 as #4 instead, to preserve the numbers to and allow 3-way swaps
+							PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + currentNumHolder, currentCar);
+							
+							//Remove any dupes
+							checkNumberDupes(currentNumHolder, seriesPrefix, currentCar);
+							checkNumberDupes(currentCar, seriesPrefix, currentNumHolder);
+							
+						} else {
+							//If not, set #10 as #4
+							PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + availNums[numsInd], currentCar);
+							
+							//Remove any dupes
+							checkNumberDupes(availNums[numsInd], seriesPrefix, currentCar);
+							checkNumberDupes(currentCar, seriesPrefix, availNums[numsInd]);
+						}
+						if(PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) == currentCar){
+							PlayerPrefs.DeleteKey("CustomNumber" + seriesPrefix + currentCar);
+							transferError = "Transfer Rejected \n(#" + availNums[numsInd] + " Unavailable)";
+						} else {
+							transfersLeft-=1;
+							PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
+						}
+						
+						Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + availNums[numsInd]);
+						
+						driverPanel = false;
+					}
+					GUI.DrawTexture(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f) + 5, (heightblock * 6f) + (heightblock * i * 2f) + 5, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load(seriesPrefix + "num" + availNums[numsInd]) as Texture);
+					numsInd++;
+				}
+			}
+			
+			GUI.skin = redGUI;
+			if (GUI.Button(new Rect(widthblock * 15f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Back")){
+				driverPanel = false;
+			}
+		}
 		
 		if(numberPanel == true){
 			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
@@ -520,6 +614,15 @@ public class SingleCar : MonoBehaviour {
 
 		if (Input.GetKeyDown(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
+		}
+	}
+	
+	void resetAllTransfers(string prefix){
+		for(int i=0;i<99;i++){
+			if(PlayerPrefs.HasKey("CustomNumber" + prefix + i)){
+				PlayerPrefs.DeleteKey("CustomNumber" + prefix + i);
+				Debug.Log("Reset transfer #" + i + "");
+			}
 		}
 	}
 	
