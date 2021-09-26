@@ -12,6 +12,8 @@ public class PlayFabManager : MonoBehaviour
 	public static GameObject rowPrefab;
 	public static Transform rowsParent;
 	
+	public static string errorMessageBuffer;
+	
 	public Text messageText;
 	public InputField usernameInput;
 	public InputField emailInput;
@@ -25,6 +27,10 @@ public class PlayFabManager : MonoBehaviour
 	   rowPrefab = thisRowPrefab;
 	   rowsParent = thisRowsParent;
     }
+	
+	void Update(){
+		messageText.text = errorMessageBuffer;
+	}
 	
 	public static void LoginFromPrefs(){
 		string playerEmail = PlayerPrefs.GetString("PlayerEmail");
@@ -75,9 +81,10 @@ public class PlayFabManager : MonoBehaviour
 		SceneManager.LoadScene("MainMenu");
 	}
 	
-	static void OnError(PlayFabError error){
+	public static void OnError(PlayFabError error){
 		Debug.Log("Something went wrong..");
 		Debug.Log(error.GenerateErrorReport());
+		errorMessageBuffer = error.GenerateErrorReport();
 	}
 	
 	public void RegisterButton(){
