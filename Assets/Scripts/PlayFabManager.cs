@@ -85,6 +85,11 @@ public class PlayFabManager : MonoBehaviour
 		Debug.Log("Something went wrong..");
 		Debug.Log(error.GenerateErrorReport());
 		errorMessageBuffer = error.GenerateErrorReport();
+		
+		if (errorMessageBuffer.Length > 0){
+		   int word = errorMessageBuffer.IndexOf(" ")+1;
+		   errorMessageBuffer ="Error: " + errorMessageBuffer.Substring(word);
+		}
 	}
 	
 	public void RegisterButton(){
