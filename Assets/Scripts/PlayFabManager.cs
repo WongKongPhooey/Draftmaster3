@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -29,7 +30,11 @@ public class PlayFabManager : MonoBehaviour
     }
 	
 	void Update(){
-		messageText.text = errorMessageBuffer;
+        try {
+            messageText.text = errorMessageBuffer;
+        }       
+        catch (NullReferenceException ex) {
+        }
 	}
 	
 	public static void LoginFromPrefs(){
