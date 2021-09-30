@@ -129,7 +129,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		switch(track){
 			case "1":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Daytona Beach, FL")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Daytona Beach, FL")){
 					Daytona();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SuperTriOval") as Texture;
@@ -137,7 +137,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "2":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Atlanta, GA")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Atlanta, GA")){
 					Atlanta();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("AngledTriOval") as Texture;
@@ -145,7 +145,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "3":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Las Vegas, NV")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Las Vegas, NV")){
 					LasVegas();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
@@ -153,7 +153,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "4":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Phoenix, AZ")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Phoenix, AZ")){
 					Phoenix();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Phoenix") as Texture;
@@ -161,7 +161,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "5":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Fontana, CA")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Fontana, CA")){
 					Fontana();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SuperTriOval") as Texture;
@@ -169,7 +169,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "6":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Martinsville, VA")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Martinsville, VA")){
 					Martinsville();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LongOval") as Texture;
@@ -177,7 +177,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "7":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Fort Worth, TX")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Fort Worth, TX")){
 					FortWorth();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("AngledTriOval") as Texture;
@@ -185,7 +185,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "8":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Bristol, TN")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Bristol, TN")){
 					Bristol();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TinyOval") as Texture;
@@ -193,7 +193,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "9":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Richmond, VA")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Richmond, VA")){
 					Richmond();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
@@ -201,7 +201,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "10":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Talladega, AL")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Talladega, AL")){
 					Talladega();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Talladega") as Texture;
@@ -209,7 +209,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "11":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Dover, DE")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Dover, DE")){
 					Dover();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SmallOval") as Texture;
@@ -217,7 +217,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "12":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Kansas City, KS")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Kansas City, KS")){
 					Kansas();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
@@ -225,7 +225,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "13":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Charlotte, NC")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Charlotte, NC")){
 					Charlotte();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("AngledTriOval") as Texture;
@@ -233,7 +233,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "14":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Long Pond, PA")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Long Pond, PA")){
 					LongPond();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LongPond") as Texture;
@@ -241,7 +241,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "15":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Brooklyn, MI")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Brooklyn, MI")){
 					Michigan();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SuperTriOval") as Texture;
@@ -249,7 +249,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "16":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Joliet, IL")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Joliet, IL")){
 					Joliet();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
@@ -257,7 +257,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "17":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Sparta, KY")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Sparta, KY")){
 					Kentucky();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
@@ -265,7 +265,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "18":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Loudon, NH")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Loudon, NH")){
 					NewHampshire();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LongOval") as Texture;
@@ -273,7 +273,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "19":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Darlington, SC")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Darlington, SC")){
 					Darlington();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Darlington") as Texture;
@@ -281,7 +281,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "20":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Indianapolis, IN")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Indianapolis, IN")){
 					Indianapolis();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Indianapolis") as Texture;
@@ -289,7 +289,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				break;
 			case "21":
 				showBestFinish(currentSeriesIndex, order);
-				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 4), widthblock * 5.5f, heightblock * 2), "Miami, FL")){
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Miami, FL")){
 					Miami();
 					PlayerPrefs.SetString("CurrentTrack","" + order);
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
@@ -314,6 +314,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 		GUI.Label(new Rect(widthblock / 2, heightblock / 2, widthblock * 7, heightblock * 2), currentSeriesName);
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
+
+		if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship (R2, 142pts)")){
+			circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
+		}
 
 		int trackCount = 0;
 		foreach (string track in seriesTracks){

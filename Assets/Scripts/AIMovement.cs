@@ -15,7 +15,6 @@ public class AIMovement : MonoBehaviour
     float speed;
     float speedRand;
     float accelRand;
-	float engineTemp;
 	int AILevel;
     int laneticker;
     int laneChangeDuration;
@@ -84,7 +83,6 @@ public class AIMovement : MonoBehaviour
 		tandemDraft = false;
         AISpeed = 200;
         laneticker = 0;
-		engineTemp = 210;
 		
 		currentSeries = PlayerPrefs.GetInt("CurrentSeries").ToString();
 		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries").ToString();
@@ -343,14 +341,12 @@ public class AIMovement : MonoBehaviour
 				//Draft gets stronger as you get closer
 				AISpeed += ((10 - DraftCheckForward.distance)/ (1000 - (AILevel * 10)));
 			}
-			engineTemp+=((10 - DraftCheckForward.distance)/1000);
 		} else {
 			//Slow down
 			if (AISpeed > 200){
 				//No draft, slow with drag
 				AISpeed -= 0.003f + (AILevel / 10000);
 			}
-			engineTemp-=0.02f;
 		}
 		
 		//If recieving backdraft from car behind
@@ -374,16 +370,10 @@ public class AIMovement : MonoBehaviour
 		}
 
 		//If bump-drafting the car in front
-		if (HitForward && DraftCheckForward.distance <= 1.01f)
-		{
-			if(engineTemp < 240){
-				if(DraftCheckForward.transform.gameObject.name != null){
-					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
-				}
-			} else {
-				AISpeed-=((engineTemp - 240)/500);
+		if (HitForward && DraftCheckForward.distance <= 1.01f){
+			if(DraftCheckForward.transform.gameObject.name != null){
+				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
 			}
-			engineTemp+=0.02f;
 		} else {
 			tandemDraft = false;
 		}

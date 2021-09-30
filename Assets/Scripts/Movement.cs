@@ -12,7 +12,6 @@ public class Movement : MonoBehaviour {
 	public static float playerSpeed;
 	public float gettableSpeed;
 	public float topSpeed;
-	public static float engineTemp;
 	public static float speedRand;
 
 	float challengeSpeedBoost;
@@ -102,7 +101,6 @@ public class Movement : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		engineTemp = 210;
 		playerSpeed = 200;
 		gettableSpeed = playerSpeed;
 		topSpeed = 208f + speedRand;
@@ -363,10 +361,7 @@ public class Movement : MonoBehaviour {
 					RaceHUD.tutorialDraftingCount++;
 				}
 			}
-			engineTemp+=((10 - DraftCheck.distance)/1000);
 		} else {
-			engineTemp-=0.02f;
-			
 			//Slow down if not in any draft
 			if(playerSpeed >= 200){
 				playerSpeed-=0.003f;
@@ -405,14 +400,9 @@ public class Movement : MonoBehaviour {
 				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",playerSpeed);
 			}
 			
-			engineTemp+=0.02f;
-			
 			//Bump drafting speeds both up
-			if(engineTemp < 240){
-				playerSpeed+=0.004f;
-			} else {
-				playerSpeed-=((engineTemp - 240)/500);
-			}
+			playerSpeed+=0.004f;
+
 		} else {
 			tandemDraft = false;
 		}
@@ -481,8 +471,6 @@ public class Movement : MonoBehaviour {
 		} else {
 			buddyBehind = 0;
 		}
-		
-		//Debug.Log(engineTemp);
 		
 		if((buddyInFront < 500)&&(buddyBehind < 500)){
 			canBuddy = false;
