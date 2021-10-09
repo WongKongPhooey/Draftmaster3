@@ -84,8 +84,6 @@ public class CarSelectGUI : MonoBehaviour {
 		}
 		
 		seriesMinClass = PlayerPrefs.GetInt("SubseriesMinClass");
-		restrictionType = PlayerPrefs.GetString("RestrictionType");
-		restrictionValue = PlayerPrefs.GetString("RestrictionValue");
 	}
 
     // Update is called once per frame

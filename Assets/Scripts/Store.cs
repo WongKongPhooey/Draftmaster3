@@ -17,6 +17,7 @@ public class Store : MonoBehaviour{
 	float heightblock = Mathf.Round(Screen.height/20);
 	
 	string menuCat;
+	string storeFocus;
 	
 	public static ArrayList dailySelects = new ArrayList();
 	
@@ -52,6 +53,11 @@ public class Store : MonoBehaviour{
 		menuCat = "DailySelects";
 		
 		fuelOutput = "";
+		
+		if(PlayerPrefs.HasKey("StoreFocus")){
+			menuCat = PlayerPrefs.GetString("StoreFocus");
+			PlayerPrefs.DeleteKey("StoreFocus");
+		}
 		
 		dailyCollected = PlayerPrefs.GetInt("DailyGarage");
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");

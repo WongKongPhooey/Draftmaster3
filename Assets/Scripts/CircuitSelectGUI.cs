@@ -54,6 +54,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	static int currentSubseries;
 	string currentTrack;
+	int championshipRound;
 	
 	int bestFinishPos;
 
@@ -78,6 +79,14 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		maxDailyPlays = PlayerPrefs.GetInt("SubseriesDailyPlays");
 		
+		//Check for an active championship
+		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
+				//Found a championship
+				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+			}
+		}
+		
 		if(PlayerPrefs.HasKey("DailyPlays" + currentSeriesIndex + "")){
 			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSeriesIndex + "");
 			//Debug.Log("DailyPlays" + currentSeriesIndex + " = " + dailyPlays);
@@ -92,20 +101,16 @@ public class CircuitSelectGUI : MonoBehaviour {
 		if(seriesTrackList != ""){
 			seriesTracks = seriesTrackList.Split(',');
 		} else {
-			seriesTrackList = "1,2,3";
+			seriesTrackList = "1,2,3,4,5";
 			seriesTracks = seriesTrackList.Split(',');
 		}
 		
 		gameDifficulty = PlayerPrefs.GetInt("Difficulty");
-		Daytona();
-		PlayerPrefs.SetString("CurrentTrack","0");
-		circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("numblank") as Texture;
+		circuit.GetComponent<Renderer>().material.mainTexture = null;
+		//Resources.Load("numblank") as Texture;
 
 		seriesFuel = 10;
 		seriesFuel = PlayerPrefs.GetInt("SeriesFuel");
-		if (seriesFuel == 0){
-			seriesFuel = 10;
-		}
 
 		PlayerPrefs.SetInt("TurnDir1",0);
 		PlayerPrefs.SetInt("TurnDir2",0);
@@ -315,8 +320,21 @@ public class CircuitSelectGUI : MonoBehaviour {
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
-		if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship (R2, 142pts)")){
-			circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
+		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship (R" + (championshipRound + 1) + ", 142pts)")){
+				championshipRound++;
+				PlayerPrefs.SetInt("ChampionshipSubseries",currentSubseries);
+				loadTrack(championshipRound.ToString(), 0);
+				PlayerPrefs.SetInt("ChampionshipRound",championshipRound);
+				startRace();
+			}
+		} else {
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship")){
+				PlayerPrefs.SetInt("ChampionshipSubseries",currentSubseries);
+				loadTrack(seriesTracks[0], 0);
+				PlayerPrefs.SetInt("ChampionshipRound",0);
+				startRace();
+			}
 		}
 
 		int trackCount = 0;
@@ -342,30 +360,108 @@ public class CircuitSelectGUI : MonoBehaviour {
 		}
 		
 		if (GUI.Button(new Rect(widthblock * 15, heightblock * 17, widthblock * 3, heightblock * 2), "Race")){
-			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
-			if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
-				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
-			} else {
-				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
-			}
-			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
-			PlayerPrefs.SetString("CurrentCircuit",circuitChoice);
-			if(GameData.gameFuel >= seriesFuel){
-				GameData.gameFuel-=seriesFuel;
-				//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
-				PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
-				//Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
-				dailyPlays--;
-				PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", dailyPlays);
-				SceneManager.LoadScene(circuitChoice);
-			} else {
-				SceneManager.LoadScene("Store");
-			}
+			startRace();
 		}
 		
 		if (GUI.Button(new Rect(widthblock * 11, heightblock * 17, widthblock * 3, heightblock * 2), "Back")){
 			SceneManager.LoadScene("SeriesSelect");
 		}
+	}
+
+	void startRace(){
+		PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
+		if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
+			PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
+		} else {
+			PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
+		}
+		PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
+		PlayerPrefs.SetString("CurrentCircuit",circuitChoice);
+		if(GameData.gameFuel >= seriesFuel){
+			GameData.gameFuel-=seriesFuel;
+			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
+			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
+			//Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
+			dailyPlays--;
+			PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", dailyPlays);
+			SceneManager.LoadScene(circuitChoice);
+		} else {
+			//Roll back and bail
+			championshipRound--;
+			PlayerPrefs.SetString("StoreFocus","Fuel");
+			SceneManager.LoadScene("Store");
+		}
+	}
+
+	void loadTrack(string track, int order){
+		switch(track){
+			case "1":
+				Daytona();
+				break;
+			case "2":
+				Atlanta();
+				break;
+			case "3":
+				LasVegas();
+				break;
+			case "4":
+				Phoenix();
+				break;
+			case "5":
+				Fontana();
+				break;
+			case "6":
+				Martinsville();
+				break;
+			case "7":
+				FortWorth();
+				break;
+			case "8":
+				Bristol();
+				break;
+			case "9":
+				Richmond();
+				break;
+			case "10":
+				Talladega();
+				break;
+			case "11":
+				Dover();
+				break;
+			case "12":
+				Kansas();
+				break;
+			case "13":
+				Charlotte();
+				break;
+			case "14":
+				LongPond();
+				break;
+			case "15":
+				Michigan();
+				break;
+			case "16":
+				Joliet();
+				break;
+			case "17":
+				Kentucky();
+				break;
+			case "18":
+				NewHampshire();
+				break;
+			case "19":
+				Darlington();
+				break;
+			case "20":
+				Indianapolis();
+				break;
+			case "21":
+				Miami();
+				break;
+			default:
+				break;
+		}
+		PlayerPrefs.SetString("CurrentTrack","" + order);
 	}
 
 	public static void showBestFinish(string currentSeriesIndex, int order){

@@ -270,6 +270,17 @@ public class AllCars : MonoBehaviour {
 						GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						//Progress Bar
 						if((carGears > classMax)||(carClass == 6)){
+							GUI.skin = redGUI;
+							GUI.skin.button.fontSize = 48 / FontScale.fontScale;
+							if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Upgrade")){
+								PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked", 1);
+								PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears", carGears - unlockGears);
+								PlayerPrefs.SetInt(seriesPrefix + carCount + "Class", DriverNames.cup2020Rarity[carCount]);
+								carClass = DriverNames.cup2020Rarity[carCount];
+								classMax = GameData.classMax(carClass);
+							}
+							GUI.skin = tileSkin;
+							
 							GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						} else {
 							if(carGears > 0){

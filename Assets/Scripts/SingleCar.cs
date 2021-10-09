@@ -391,12 +391,14 @@ public class SingleCar : MonoBehaviour {
 				GUI.skin = buttonSkin;
 				break;
 			case "Paints":
-				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 7), "No Alt Paints Exist For This Car");
+				if(AltPaints.cup2020AltPaintNames[currentCar,1] == null){
+					GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 7), "No Alt Paints Exist For This Car");
+				}
 				
 				//1st Row Offline
 				for(int columns = 1; columns < 4; columns++){
-					
-					if(Resources.Load("cup20livery" + currentCar) != null){
+
+					if(AltPaints.cup2020AltPaintNames[currentCar,columns] != null){
 					
 						cardX = widthblock * (columns * 4.25f) + (widthblock * 3.25f);
 						cardY = heightblock * 6f;
@@ -409,7 +411,7 @@ public class SingleCar : MonoBehaviour {
 						GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 						
 						GUI.skin.label.alignment = TextAnchor.UpperCenter;
-						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), "Alt " + columns);
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.cup2020AltPaintNames[currentCar,columns]);
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, widthblock * 1.5f), Resources.Load("cup20livery" + currentCar + "alt" + columns) as Texture);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
@@ -459,7 +461,7 @@ public class SingleCar : MonoBehaviour {
 						if(transfersLeft > 0){
 							numberPanel = true;
 						} else {
-							transferError = "All transfer contracts are in use. Gain more by leveling up.";
+							transferError = "All transfer contracts are in use. Gain more by leveling up or purchase the Negotiator pack in store.";
 							//Debug.Log("No transfer contracts left");
 						}
 					}
@@ -503,15 +505,6 @@ public class SingleCar : MonoBehaviour {
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
 		GUI.skin = buttonSkin;
-		GUI.skin.button.alignment = TextAnchor.MiddleRight;
-		
-		GUI.skin = redGUI;
-		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-		
-		CommonGUI.BackButton("AllCars");
-		
-		GUI.skin = buttonSkin;
-		
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		
 		CommonGUI.TopBar();
@@ -571,11 +564,6 @@ public class SingleCar : MonoBehaviour {
 					numsInd++;
 				}
 			}
-			
-			GUI.skin = redGUI;
-			if (GUI.Button(new Rect(widthblock * 15f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Back")){
-				driverPanel = false;
-			}
 		}
 		
 		if(numberPanel == true){
@@ -589,6 +577,10 @@ public class SingleCar : MonoBehaviour {
 			GUI.Label(new Rect(widthblock * 2.5f, heightblock * 4f, widthblock * 7.5f, heightblock * 2f), "Change Number");
 
 			numsInd = 0;
+			
+			if(availNums.Length == 0){
+				GUI.Label(new Rect(widthblock * 2.5f, heightblock * 6f, widthblock * 15f, heightblock * 2f), "You need at to own at least 2 cars to swap numbers!");
+			}
 			
 			for(int i=0;i<4;i++){
 				for(int j=0;j<12;j++){
@@ -626,7 +618,7 @@ public class SingleCar : MonoBehaviour {
 								PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
 							}
 							
-							Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + availNums[numsInd]);
+							//Debug.Log("Car #" + currentCar + " now uses #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar) + ". Var: " + "CustomNumber" + seriesPrefix + availNums[numsInd]);
 							
 							numberPanel = false;
 						}
@@ -635,15 +627,28 @@ public class SingleCar : MonoBehaviour {
 					}
 				}
 			}
-			
-			GUI.skin = redGUI;
-			if (GUI.Button(new Rect(widthblock * 15f, heightblock * 3.5f, widthblock * 2.5f, heightblock * 1.5f), "Back")){
-				numberPanel = false;
-			}
 		}
 
+		GUI.skin = redGUI;
+		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+		
+		if((numberPanel == true)||(driverPanel == true)){
+			if (GUI.Button(new Rect(widthblock * 0.5f, 20, widthblock * 2f, heightblock * 1.5f), "Back")){
+				driverPanel = false;
+				numberPanel = false;
+			}
+		} else {
+			CommonGUI.BackButton("AllCars");
+		}
+		GUI.skin = buttonSkin;
+
 		if (Input.GetKeyDown(KeyCode.Escape)){
-			SceneManager.LoadScene("MainMenu");
+			if((numberPanel == true)||(driverPanel == true)){
+				driverPanel = false;
+				numberPanel = false;
+			} else {
+				SceneManager.LoadScene("AllCars");
+			}
 		}
 	}
 	
