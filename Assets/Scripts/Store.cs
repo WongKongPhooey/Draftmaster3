@@ -38,6 +38,9 @@ public class Store : MonoBehaviour{
 	
 	string customStoreDailySelects;
 	
+	public bool eventActive;
+	public int offset;
+	
 	public static bool adWindow;
 	public GameObject adFallback;
 	public static GameObject adFallbackStatic;
@@ -61,6 +64,14 @@ public class Store : MonoBehaviour{
 		
 		dailyCollected = PlayerPrefs.GetInt("DailyGarage");
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
+		
+		offset = 0;
+		eventActive = false;
+		if(PlayerPrefs.GetInt("EventActive") == 1){
+			eventActive = true;
+			offset = 2;
+			menuCat = "Event";
+		}
 		
 		adWindow = false;
 		adFallback.SetActive(false);
@@ -153,23 +164,37 @@ public class Store : MonoBehaviour{
 			float windowscroll = 1.5f;
 			
 			GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 4, heightblock * 1.5f), "Bundles")){
+			
+			if(eventActive == true){
+				GUI.skin = redGUI;
+				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+				if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 4, heightblock * 1.5f), "Event")){
+					menuCat = "Event";
+				}
+				GUI.skin = buttonSkin;
+				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 96 / FontScale.fontScale;
+				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			}
+			
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (4 + offset), widthblock * 4, heightblock * 1.5f), "Bundles")){
 				menuCat = "Bundles";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 6, widthblock * 4, heightblock * 1.5f), "Weekly Selects")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (6 + offset), widthblock * 4, heightblock * 1.5f), "Weekly Selects")){
 				menuCat = "DailySelects";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 8, widthblock * 4, heightblock * 1.5f), "Fuel")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (8 + offset), widthblock * 4, heightblock * 1.5f), "Fuel")){
 				menuCat = "Fuel";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Premium")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (10 + offset), widthblock * 4, heightblock * 1.5f), "Premium")){
 				Application.LoadLevel("GearsStore");
 			}
 			
-			//if (GUI.Button(new Rect(widthblock / 2, heightblock * 12, widthblock * 4, heightblock * 1.5f), "Legends")){
+			//if (GUI.Button(new Rect(widthblock / 2, heightblock * (12 + offset), widthblock * 4, heightblock * 1.5f), "Legends")){
 			//	menuCat = "Legends";
 			//}
 			
