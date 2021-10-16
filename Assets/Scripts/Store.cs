@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine.SceneManagement;
 using UnityEngine.Purchasing;
+using Random=UnityEngine.Random;
 
 public class Store : MonoBehaviour{
 	
@@ -20,6 +21,11 @@ public class Store : MonoBehaviour{
 	string storeFocus;
 	
 	public static ArrayList dailySelects = new ArrayList();
+	
+	public static ArrayList eventPrizes = new ArrayList();
+	public static ArrayList eventDrawPicks = new ArrayList();
+	
+	string eventRewards;
 	
 	public Texture BoxTexture;
 
@@ -38,6 +44,7 @@ public class Store : MonoBehaviour{
 	
 	string customStoreDailySelects;
 	
+	int itemsRemaining;
 	public bool eventActive;
 	public int offset;
 	
@@ -71,6 +78,31 @@ public class Store : MonoBehaviour{
 			eventActive = true;
 			offset = 2;
 			menuCat = "Event";
+			
+			eventRewards = PlayerPrefs.GetString("EventRewards");
+		
+			if(eventRewards != ""){
+				eventPrizes.Clear();
+				string[] rewardsArray = eventRewards.Split(',');
+				foreach(string item in rewardsArray){
+					eventPrizes.Add(item);
+					//Debug.Log(item + " added to store");
+				}
+				Debug.Log("Total event prizes: " + eventPrizes.Count);
+				
+				//Set the random draw
+				if(!PlayerPrefs.HasKey("PrizePositions")){
+					for(int i=0;i<eventPrizes.Count;i++){
+						int rand = Random.Range(1,15);
+						while(eventDrawPicks.Contains(rand)){
+							rand = Random.Range(1,15);
+						}
+						eventDrawPicks.Add(rand);
+						Debug.Log("Draw position #" + rand);
+					}
+				}
+			}
+			//list[Random.Range(0, list.Count)];
 		}
 		
 		adWindow = false;
@@ -208,6 +240,47 @@ public class Store : MonoBehaviour{
 			
 			GUI.skin = tileSkin;
 			
+			if(menuCat == "Event"){
+				//Special Event Garage
+				float cardX = widthblock * 5f;
+				float cardY = heightblock * 4;
+				
+				GUI.skin = whiteGUI;
+				GUI.Box(new Rect(cardX, cardY, widthblock * 13.5f, heightblock * 12f), "");
+				GUI.skin = tileSkin;
+				
+				GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+				
+				GUI.skin.label.alignment = TextAnchor.UpperCenter;
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 13f, heightblock * 1.5f), "" + PlayerPrefs.GetString("EventName") + "");
+				
+				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+				
+				GUI.skin.label.alignment = TextAnchor.UpperLeft;
+				GUI.Label(new Rect(cardX + (widthblock * 7f), cardY + 10 + (heightblock * 2.5f), widthblock * 6f, heightblock * 9), "They say this abandoned garage is haunted, proceed with caution! There are 15 random items in here, including 5 Halloween themed alternate paint schemes! Empty the garage 1 item at a time, and guarantee to bag them all.");
+				
+				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+
+				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+				
+				GUI.skin = redGUI;
+				
+				if(GUI.Button(new Rect(cardX + (heightblock * 15f), cardY + (heightblock * 10f), widthblock * 3, heightblock * 1.5f), "10G")){
+					gears = PlayerPrefs.GetInt("Gears");
+					if(gears >= 10){
+						gears -= 10;
+						itemsRemaining--;
+						PlayerPrefs.SetInt("Gears",gears);
+						PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
+						PlayerPrefs.SetString("PrizeType","EventGarage");
+						Application.LoadLevel("PrizeCollection");
+					}
+				}
+				
+				GUI.skin = tileSkin;
+			}
+			
 			if(menuCat == "Bundles"){
 				
 				//Free Car Parts
@@ -299,26 +372,25 @@ public class Store : MonoBehaviour{
 				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "25k Coins");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "Cash 4 Gears");
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 								
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 								
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "A sponsorship opportunity brings in 25k coins.");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "Spend your spare cash on salvaged gears from the scrapyard.");
 								
 								
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "10G")){
-					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 10){
-						gears -= 10;
-						PlayerPrefs.SetInt("Gears",gears);
-						totalMoney = PlayerPrefs.GetInt("PrizeMoney");
-						PlayerPrefs.SetInt("PrizeMoney",totalMoney + 25000);
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "$50000")){
+					totalMoney = PlayerPrefs.GetInt("PrizeMoney");
+					if(totalMoney >= 50000){
+						totalMoney -= 50000;
+						gears = PlayerPrefs.GetInt("Gears");
+						PlayerPrefs.SetInt("Gears",gears + 5);
 					}
 				}
 				GUI.skin = tileSkin;
@@ -335,7 +407,7 @@ public class Store : MonoBehaviour{
 				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "250k Coins");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "Sponsorship Deal");
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 								
@@ -348,10 +420,10 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "50G")){
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "40G")){
 					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 50){
-						gears -= 50;
+					if(gears >= 40){
+						gears -= 40;
 						PlayerPrefs.SetInt("Gears",gears);
 						totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 						PlayerPrefs.SetInt("PrizeMoney",totalMoney + 250000);

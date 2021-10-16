@@ -159,6 +159,11 @@ public class PlayFabManager : MonoBehaviour
 				PlayerPrefs.SetInt("EventActive", 1);
 				PlayerPrefs.SetString("EventName", result.Data["EventActive"]);
 				Debug.Log(result.Data["EventActive"] + " Event Active");
+				
+				//Retrieve the event rewards (assume set)
+				PlayerPrefs.SetString("EventRewards", result.Data["EventRewards"]);
+				Debug.Log("Event Prizes: " + result.Data["EventRewards"]);
+				
 			} else {
 				PlayerPrefs.SetInt("EventActive", 0);
 				Debug.Log("No Active Event");
