@@ -44,9 +44,12 @@ public class Store : MonoBehaviour{
 	
 	string customStoreDailySelects;
 	
+	int paintsFound;
 	int itemsRemaining;
 	public bool eventActive;
 	public int offset;
+	
+	public Texture2D eventImage;
 	
 	public static bool adWindow;
 	public GameObject adFallback;
@@ -71,6 +74,9 @@ public class Store : MonoBehaviour{
 		
 		dailyCollected = PlayerPrefs.GetInt("DailyGarage");
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
+		
+		//Reset Event Picks
+		//PlayerPrefs.DeleteKey("PrizePositions");
 		
 		offset = 0;
 		eventActive = false;
@@ -99,7 +105,13 @@ public class Store : MonoBehaviour{
 						}
 						eventDrawPicks.Add(rand);
 						Debug.Log("Draw position #" + rand);
+						
+						PlayerPrefs.SetInt("PrizePositions",1);
+						itemsRemaining = 15;
+						PlayerPrefs.SetInt("EventItemsRemaining", itemsRemaining);
 					}
+				} else {
+					itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
 				}
 			}
 			//list[Random.Range(0, list.Count)];
@@ -255,10 +267,18 @@ public class Store : MonoBehaviour{
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 13f, heightblock * 1.5f), "" + PlayerPrefs.GetString("EventName") + "");
 				
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2.5f), widthblock * 5.5f, heightblock * 8.5f), eventImage, ScaleMode.ScaleToFit);
+				
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				GUI.Label(new Rect(cardX + (widthblock * 7f), cardY + 10 + (heightblock * 2.5f), widthblock * 6f, heightblock * 9), "They say this abandoned garage is haunted, proceed with caution! There are 15 random items in here, including 5 Halloween themed alternate paint schemes! Empty the garage 1 item at a time, and guarantee to bag them all.");
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), "They say this abandoned garage is haunted, proceed with caution! 15 random items inside, including 5 Halloween themed alternate paint schemes!");
+				
+				GUI.skin.label.alignment = TextAnchor.LowerLeft;
+				
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), paintsFound + "/5 paints found");
+				
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/15 items left");
 				
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
@@ -266,15 +286,17 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 15f), cardY + (heightblock * 10f), widthblock * 3, heightblock * 1.5f), "10G")){
-					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 10){
-						gears -= 10;
-						itemsRemaining--;
-						PlayerPrefs.SetInt("Gears",gears);
-						PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
-						PlayerPrefs.SetString("PrizeType","EventGarage");
-						Application.LoadLevel("PrizeCollection");
+				if(itemsRemaining > 0){
+					if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "10G")){
+						gears = PlayerPrefs.GetInt("Gears");
+						if(gears >= 10){
+							gears -= 10;
+							itemsRemaining--;
+							PlayerPrefs.SetInt("Gears",gears);
+							PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
+							PlayerPrefs.SetString("PrizeType","EventGarage");
+							Application.LoadLevel("PrizeCollection");
+						}
 					}
 				}
 				
