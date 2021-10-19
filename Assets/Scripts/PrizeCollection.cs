@@ -43,6 +43,16 @@ public class PrizeCollection : MonoBehaviour
 					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
 					PremiumGarage("cup20",prizeCarNumber);
 					break;
+				case "EventGarage":
+					ListPrizeOptions("Halloween");
+					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
+					EventGarage("cup20",prizeCarNumber);
+					break;
+				case "EventAlt":
+					ListPrizeOptions("Halloween");
+					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
+					EventAlt("cup20",prizeCarNumber);
+					break;
 				case "3RareGarage":
 					ListPrizeOptions("Specific");
 					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
@@ -117,6 +127,13 @@ public class PrizeCollection : MonoBehaviour
 					}
 				}
 			break;
+			case "Halloween":
+				validDriver.Add(3);
+				validDriver.Add(18);
+				validDriver.Add(32);
+				validDriver.Add(42);
+				validDriver.Add(88);
+			break;
 			case "Rookies":
 				validDriver.Add(0); //Houff
 				validDriver.Add(41); //Custer
@@ -176,34 +193,43 @@ public class PrizeCollection : MonoBehaviour
 	
 	void DailyGarage(string seriesPrefix, int carNumber){
 
-		int carGears = 0;
-		int randAmt = Random.Range(3,10);
-		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
-			carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + randAmt);
-		} else {
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", randAmt);
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Class", 0);
-		}
-		
-		int carClass = 0;
-			
-		carCurrentGears = carGears;
-		carClassMax = GameData.classMax(carClass);
-		carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + randAmt;
+		int randAmt = Random.Range(2,11);
+				
+		AddPrize(seriesPrefix, carNumber, randAmt);
 	}
 	
 	void PremiumGarage(string seriesPrefix, int carNumber){
 
-    int[] randAmtSet = {10,10,12,12,15,15,18,18,20,25,35,40,50};
-		Debug.Log("Prize: #" + carNumber);
+		int[] randAmtSet = {10,10,12,12,15,15,18,18,20,25,35,40,50};
 		int randAmt = randAmtSet[Random.Range(0,12)];
+
+		AddPrize(seriesPrefix, carNumber, randAmt);
+	}
+	
+	void EventAlt(string seriesPrefix, int carNumber){
+
+		int[] randAmtSet = {5,8,10,12,15};
+		int randAmt = randAmtSet[Random.Range(0,4)];
+
+		AddPrize(seriesPrefix, carNumber, randAmt);
+	}
+	
+	void EventGarage(string seriesPrefix, int carNumber){
+
+		int[] randAmtSet = {5,8,10,12,15};
+		int randAmt = randAmtSet[Random.Range(0,4)];
+
+		AddPrize(seriesPrefix, carNumber, randAmt);
+	}
+	
+	void AddPrize(string seriesPrefix, int carNumber, int amount){
+
 		int carGears = 0;
 		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
 			carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + randAmt);
+			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + amount);
 		} else {
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", randAmt);
+			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", amount);
 			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Class", 0);
 		}
 		
@@ -211,6 +237,6 @@ public class PrizeCollection : MonoBehaviour
 			
 		carCurrentGears = carGears;
 		carClassMax = GameData.classMax(carClass);
-		carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + randAmt;
+		carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + amount;
 	}
 }

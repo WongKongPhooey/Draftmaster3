@@ -104,6 +104,7 @@ public class Store : MonoBehaviour{
 							rand = Random.Range(1,15);
 						}
 						eventDrawPicks.Add(rand);
+						PlayerPrefs.SetInt("PrizePosition" + i, rand);
 						Debug.Log("Draw position #" + rand);
 						
 						PlayerPrefs.SetInt("PrizePositions",1);
@@ -166,6 +167,19 @@ public class Store : MonoBehaviour{
     // Update is called once per frame
     void Update(){
     }
+	
+	bool checkEventPickForAlt(int itemNum){
+		for(int i=0;i<10;i++){
+			if(PlayerPrefs.HasKey("PrizePosition" + i)){
+				if(PlayerPrefs.GetInt("PrizePosition" + i) == itemNum){
+					Debug.Log("Item #" + itemNum + " - Ooo a pick!");
+					return true;
+				}
+			}
+		}
+		Debug.Log("Item #" + itemNum + " - No alt here..");
+		return false;
+	}
 	
 	int getShopPriceByRarity(int rarity){
 		int price = 25;
@@ -291,10 +305,15 @@ public class Store : MonoBehaviour{
 						gears = PlayerPrefs.GetInt("Gears");
 						if(gears >= 10){
 							gears -= 10;
+							bool isPick = checkEventPickForAlt(itemsRemaining);
 							itemsRemaining--;
 							PlayerPrefs.SetInt("Gears",gears);
 							PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
-							PlayerPrefs.SetString("PrizeType","EventGarage");
+							if(isPick == true){
+								PlayerPrefs.SetString("PrizeType","EventAlt");
+							} else {
+								PlayerPrefs.SetString("PrizeType","EventGarage");
+							}
 							Application.LoadLevel("PrizeCollection");
 						}
 					}
