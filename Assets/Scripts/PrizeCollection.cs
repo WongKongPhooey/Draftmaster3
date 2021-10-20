@@ -20,6 +20,8 @@ public class PrizeCollection : MonoBehaviour
 	
 	public bool firstCar;
 	
+	public static string randAlt;
+	
 	public static string carReward;
 	public static int carCurrentGears;
 	public static int carClassMax;
@@ -50,8 +52,7 @@ public class PrizeCollection : MonoBehaviour
 					break;
 				case "EventAlt":
 					ListPrizeOptions("Halloween");
-					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
-					EventAlt("cup20",prizeCarNumber);
+					EventAlt("cup20");
 					break;
 				case "3RareGarage":
 					ListPrizeOptions("Specific");
@@ -98,9 +99,16 @@ public class PrizeCollection : MonoBehaviour
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		
 		GUI.skin.label.alignment = TextAnchor.MiddleRight;
-		GUI.Label(new Rect(widthblock * 9, heightblock * 6, widthblock * 5, heightblock * 2), "" + carReward + "");
-		GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + prizeCarNumber) as Texture);
 
+		if(PlayerPrefs.GetString("PrizeType") == "EventAlt"){
+			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+			GUI.Label(new Rect(widthblock * 4, heightblock * 6, widthblock * 12, heightblock * 2), "" + carReward + "");
+			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 8, widthblock * 6, widthblock * 3), Resources.Load(randAlt) as Texture);
+		} else {
+			GUI.Label(new Rect(widthblock * 9, heightblock * 6, widthblock * 5, heightblock * 2), "" + carReward + "");
+			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + prizeCarNumber) as Texture);
+		}
+		
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
 		if (GUI.Button(new Rect(widthblock * 7, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
@@ -206,12 +214,42 @@ public class PrizeCollection : MonoBehaviour
 		AddPrize(seriesPrefix, carNumber, randAmt);
 	}
 	
-	void EventAlt(string seriesPrefix, int carNumber){
+	void EventAlt(string seriesPrefix){
 
-		int[] randAmtSet = {5,8,10,12,15};
-		int randAmt = randAmtSet[Random.Range(0,4)];
+		ArrayList eventAlts = new ArrayList();
 
-		AddPrize(seriesPrefix, carNumber, randAmt);
+		string eventRewards = PlayerPrefs.GetString("EventRewards");
+		
+		eventAlts.Clear();
+		string[] rewardsArray = eventRewards.Split(',');
+		foreach(string item in rewardsArray){
+			eventAlts.Add(item);
+			//Debug.Log(item + " added to store");
+		}
+
+		randAlt = eventAlts[Random.Range(0,eventAlts.Count)].ToString();
+		Debug.Log("Rand Alt Picked - " + randAlt);
+		
+		//Extract the carNumber
+		int indexA = randAlt.IndexOf("livery") + "livery".Length;
+		int indexB = randAlt.LastIndexOf("alt");
+
+		string carNumber = randAlt.Substring(indexA, indexB - indexA);
+		
+		//Clean up to compare
+		string sanitisedAlt = randAlt.Replace("livery","");
+		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
+		//Find a not yet unlocked alt
+		while(PlayerPrefs.GetInt(sanitisedAlt + "Unlocked") == 1){
+			randAlt = eventAlts[Random.Range(0,eventAlts.Count)].ToString();
+			sanitisedAlt = randAlt.Replace("livery","");
+			sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
+		}
+		
+		//Unlock it
+		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
+		
+		carReward = "New " + DriverNames.cup2020Names[int.Parse(carNumber)] + " Alt Unlocked";
 	}
 	
 	void EventGarage(string seriesPrefix, int carNumber){
