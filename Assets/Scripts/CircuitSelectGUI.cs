@@ -79,22 +79,6 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		maxDailyPlays = PlayerPrefs.GetInt("SubseriesDailyPlays");
 		
-		//Check for an active championship
-		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
-				//Found a championship
-				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
-			}
-		}
-		
-		if(PlayerPrefs.HasKey("DailyPlays" + currentSeriesIndex + "")){
-			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSeriesIndex + "");
-			//Debug.Log("DailyPlays" + currentSeriesIndex + " = " + dailyPlays);
-		} else {
-			PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", maxDailyPlays);
-			dailyPlays = maxDailyPlays;
-		}
-		
 		seriesTrackList = PlayerPrefs.GetString("SeriesTrackList");
 		
 		//If there's a track list loaded
@@ -103,6 +87,25 @@ public class CircuitSelectGUI : MonoBehaviour {
 		} else {
 			seriesTrackList = "1,2,3,4,5";
 			seriesTracks = seriesTrackList.Split(',');
+		}
+		
+		//Check for an active championship
+		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
+				//Found a championship
+				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+				loadTrack(championshipRound.ToString(), 0);
+			}
+		} else {
+			loadTrack(seriesTracks[0], 0);
+		}
+		
+		if(PlayerPrefs.HasKey("DailyPlays" + currentSeriesIndex + "")){
+			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSeriesIndex + "");
+			//Debug.Log("DailyPlays" + currentSeriesIndex + " = " + dailyPlays);
+		} else {
+			PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", maxDailyPlays);
+			dailyPlays = maxDailyPlays;
 		}
 		
 		gameDifficulty = PlayerPrefs.GetInt("Difficulty");
@@ -321,26 +324,33 @@ public class CircuitSelectGUI : MonoBehaviour {
 		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship (R" + (championshipRound + 1) + ", 142pts)")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Next Round (R" + (championshipRound + 1) + ", 142pts)")){
 				championshipRound++;
 				PlayerPrefs.SetInt("ChampionshipSubseries",currentSubseries);
 				loadTrack(championshipRound.ToString(), 0);
 				PlayerPrefs.SetInt("ChampionshipRound",championshipRound);
-				startRace();
+				//startRace();
+				
+				/*int pointsTableInd = 0;
+				foreach (int points in pointsTable){
+					showPoints(points);
+					pointsTableInd++;
+				}*/
+				
 			}
 		} else {
 			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship")){
 				PlayerPrefs.SetInt("ChampionshipSubseries",currentSubseries);
 				loadTrack(seriesTracks[0], 0);
 				PlayerPrefs.SetInt("ChampionshipRound",0);
-				startRace();
+				//startRace();
 			}
-		}
-
-		int trackCount = 0;
-		foreach (string track in seriesTracks){
-			getTrack(track, trackCount);
-			trackCount++;
+			
+			int trackCount = 0;
+			foreach (string track in seriesTracks){
+				getTrack(track, trackCount);
+				trackCount++;
+			}
 		}
 		
 		GUI.EndScrollView();

@@ -110,6 +110,7 @@ public class Store : MonoBehaviour{
 						PlayerPrefs.SetInt("PrizePositions",1);
 						itemsRemaining = 15;
 						PlayerPrefs.SetInt("EventItemsRemaining", itemsRemaining);
+						PlayerPrefs.SetInt("EventAltsFound",0);
 					}
 				} else {
 					itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
@@ -290,7 +291,7 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin.label.alignment = TextAnchor.LowerLeft;
 				
-				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), paintsFound + "/5 paints found");
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), PlayerPrefs.GetInt("EventAltsFound") + "/5 paints found");
 				
 				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/15 items left");
 				
@@ -311,6 +312,7 @@ public class Store : MonoBehaviour{
 							PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
 							if(isPick == true){
 								PlayerPrefs.SetString("PrizeType","EventAlt");
+								PlayerPrefs.SetInt("EventAltsFound",PlayerPrefs.GetInt("EventAltsFound") + 1);
 							} else {
 								PlayerPrefs.SetString("PrizeType","EventGarage");
 							}
@@ -318,7 +320,6 @@ public class Store : MonoBehaviour{
 						}
 					}
 				}
-				
 				GUI.skin = tileSkin;
 			}
 			
