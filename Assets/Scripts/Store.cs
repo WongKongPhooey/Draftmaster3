@@ -420,7 +420,7 @@ public class Store : MonoBehaviour{
 								
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 								
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "Spend your spare cash on salvaged gears from the scrapyard.");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "Spend your spare cash on 5 salvaged gears from the scrapyard.");
 								
 								
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
@@ -431,6 +431,7 @@ public class Store : MonoBehaviour{
 					totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 					if(totalMoney >= 50000){
 						totalMoney -= 50000;
+						PlayerPrefs.SetInt("PrizeMoney", totalMoney);
 						gears = PlayerPrefs.GetInt("Gears");
 						PlayerPrefs.SetInt("Gears",gears + 5);
 					}

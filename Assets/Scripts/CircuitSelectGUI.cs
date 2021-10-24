@@ -323,7 +323,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
-		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries)){
 			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Next Round (R" + (championshipRound + 1) + ", 142pts)")){
 				championshipRound++;
 				PlayerPrefs.SetInt("ChampionshipSubseries",currentSubseries);
@@ -331,11 +331,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				PlayerPrefs.SetInt("ChampionshipRound",championshipRound);
 				//startRace();
 				
-				/*int pointsTableInd = 0;
-				foreach (int points in pointsTable){
-					showPoints(points);
-					pointsTableInd++;
-				}*/
+				showPoints(widthblock / 2, heightblock * 7);
 				
 			}
 		} else {
@@ -407,66 +403,87 @@ public class CircuitSelectGUI : MonoBehaviour {
 		switch(track){
 			case "1":
 				Daytona();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SuperTriOval") as Texture;
 				break;
 			case "2":
 				Atlanta();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("AngledTriOval") as Texture;
 				break;
 			case "3":
 				LasVegas();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
 				break;
 			case "4":
 				Phoenix();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Phoenix") as Texture;
 				break;
 			case "5":
 				Fontana();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SuperTriOval") as Texture;
 				break;
 			case "6":
 				Martinsville();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LongOval") as Texture;
 				break;
 			case "7":
 				FortWorth();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("AngledTriOval") as Texture;
 				break;
 			case "8":
 				Bristol();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TinyOval") as Texture;
 				break;
 			case "9":
 				Richmond();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
 				break;
 			case "10":
 				Talladega();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Talladega") as Texture;
 				break;
 			case "11":
 				Dover();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SmallOval") as Texture;
 				break;
 			case "12":
 				Kansas();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
 				break;
 			case "13":
 				Charlotte();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("AngledTriOval") as Texture;
 				break;
 			case "14":
 				LongPond();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LongPond") as Texture;
 				break;
 			case "15":
 				Michigan();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("SuperTriOval") as Texture;
 				break;
 			case "16":
 				Joliet();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
 				break;
 			case "17":
 				Kentucky();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
 				break;
 			case "18":
 				NewHampshire();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("LongOval") as Texture;
 				break;
 			case "19":
 				Darlington();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Darlington") as Texture;
 				break;
 			case "20":
 				Indianapolis();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Indianapolis") as Texture;
 				break;
 			case "21":
 				Miami();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
 				break;
 			default:
 				break;
@@ -474,12 +491,25 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetString("CurrentTrack","" + order);
 	}
 
+	public static void showPoints(float posX, float posY){
+		int pointsTableInd = 0;
+		for(int i=0;i<100;i++){
+			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
+				Debug.Log("Points found for " + ("ChampionshipPoints" + i));
+				GUI.Label(new Rect(widthblock/2, heightblock * ((pointsTableInd*3) + 7), widthblock * 1.5f, heightblock * 2), "" + PlayerPrefs.GetInt("ChampionshipPoints" + i));	
+				pointsTableInd++;
+			} else {
+				Debug.Log("No points found for " + ("ChampionshipPoints" + i));
+			}
+		}
+	}
+
 	public static void showBestFinish(string currentSeriesIndex, int order){
 		
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex + order) == true){
 			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex + order);
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.Label(new Rect(widthblock/2, heightblock * ((order*3) + 4), widthblock * 1.5f, heightblock * 2), "" + bestFinishPos);
+			GUI.Label(new Rect(widthblock/2, heightblock * ((order*3) + 7), widthblock * 1.5f, heightblock * 2), "" + bestFinishPos);
 			//Debug.Log("Track " + order + " has a best finish of " + bestFinishPos);
 		} else {
 			//Debug.Log("No finishes on Track " + currentSubseries + order);

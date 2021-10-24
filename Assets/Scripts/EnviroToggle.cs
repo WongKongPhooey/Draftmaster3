@@ -6,6 +6,7 @@ public class EnviroToggle : MonoBehaviour {
 	public bool onStraights;
 	public bool onCorners;
 	public bool oneStraight;
+	public bool onFinishLine;
 	public bool hideOnPit;
 	public bool triOvalPit;
 	public bool triOvalEntryExit;
@@ -92,8 +93,14 @@ public class EnviroToggle : MonoBehaviour {
 						}
 					}
 				} else {
-					foreach(Renderer asset in subAsset){
-						asset.enabled = false;
+					if((onFinishLine == true)&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter == 0)){
+						foreach(Renderer asset in subAsset){
+							asset.enabled = true;
+						}
+					} else {
+						foreach(Renderer asset in subAsset){
+							asset.enabled = false;
+						}
 					}
 				}
 			}

@@ -118,17 +118,23 @@ public class SingleCar : MonoBehaviour {
 		carGears = 0;
 		carClass = 0;
 		
+		
+		
 		unlockClass = 1;
 		unlockClass = DriverNames.cup2020Rarity[currentCar];
 		unlockGears = GameData.unlockGears(unlockClass);
 		
-		if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Unlocked") != 1){
-			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Unlocked", 1);
-		}
-		
 		if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
 			carGears = PlayerPrefs.GetInt(seriesPrefix + currentCar + "Gears");
 			carClass = PlayerPrefs.GetInt(seriesPrefix + currentCar + "Class");
+		}
+		
+		if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Unlocked") != 1){
+			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Unlocked", 1);
+			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - unlockGears);
+			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.cup2020Rarity[currentCar]);
+			carClass = DriverNames.cup2020Rarity[currentCar];
+			classMax = GameData.classMax(carClass);
 		}
 		
         classMax = GameData.classMax(carClass);
@@ -274,18 +280,22 @@ public class SingleCar : MonoBehaviour {
 			} else {
 				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9.5f), ((cardW - (widthblock * 0.5f))/classMax) * carGears, heightblock * 1.5f), "");
 			}
+			GUI.skin.label.normal.textColor = Color.black;
 		}
 		
 		if(carClass == 6){
 			GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9.5f), widthblock * 5.5f, heightblock * 1.5f), "Max Class");
 		} else {
+			GUI.skin.label.normal.textColor = Color.white;
 			GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9.5f), widthblock * 5.5f, heightblock * 1.5f), carGears + "/" + classMax);
 		}
+		GUI.skin.label.normal.textColor = Color.black;
 		
 		GUI.skin = redGUI;
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 		
 		//Upgrade
+		GUI.skin.label.normal.textColor = Color.white;
 		if((carGears >= classMax)&&(carClass < 6)){
 			if(totalMoney >= GameData.upgradeCost(carClass)){
 				if (GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f), "Upgrade ($" + GameData.upgradeCost(carClass) + ")")){

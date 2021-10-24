@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using Random=UnityEngine.Random;
 
 public class CameraRotate : MonoBehaviour {
 
@@ -7,6 +8,7 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject cornerKerb;
 	public GameObject apron;
 	public GameObject finishLine;
+	public GameObject tropicono;
 	
 	public AudioSource carEngine;
 	public AudioSource crowdNoise;
@@ -155,8 +157,6 @@ public class CameraRotate : MonoBehaviour {
 		straightcounter++;
 		
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
-			//finishLine.renderer.enabled = true;
-			//Scoreboard.checkPositions();
 			Scoreboard.updateScoreboard();
 			lap++;
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
@@ -244,6 +244,14 @@ public class CameraRotate : MonoBehaviour {
 			lap--;
 			Time.timeScale = 0.0f;
 			finishLine.GetComponent<Renderer>().enabled = true;
+			if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
+				int rand = Random.Range(1,100);
+				rand = 27;
+				//Lucky day
+				if((rand > 26)&&(rand < 28)){
+					tropicono.GetComponent<Renderer>().enabled = true;
+				}
+			}
 			carEngine.volume = 0;
 			crowdNoise.volume = 0;
 			RaceHUD.raceOver = true;
