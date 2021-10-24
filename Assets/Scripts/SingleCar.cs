@@ -118,8 +118,6 @@ public class SingleCar : MonoBehaviour {
 		carGears = 0;
 		carClass = 0;
 		
-		
-		
 		unlockClass = 1;
 		unlockClass = DriverNames.cup2020Rarity[currentCar];
 		unlockGears = GameData.unlockGears(unlockClass);
