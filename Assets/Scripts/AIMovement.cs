@@ -55,6 +55,8 @@ public class AIMovement : MonoBehaviour
 	string seriesPrefix;
 	int customNum;
 
+	public int maxDraftDistance;
+
 	public int lap;
     public int lane;
     public int laneInv;
@@ -105,6 +107,7 @@ public class AIMovement : MonoBehaviour
 		carTeam = DriverNames.cup2020Teams[carNum];
 		carManu = DriverNames.cup2020Manufacturer[carNum];
 		carType = DriverNames.cup2020Types[carNum];
+		carRarity = DriverNames.cup2020Rarity[carNum];	
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
@@ -188,6 +191,11 @@ public class AIMovement : MonoBehaviour
 			laneChangeDuration = 80;
 			laneChangeSpeed = 0.015f;
 			laneChangeBackout = 32;
+		}
+
+		maxDraftDistance = 9 + carRarity;
+		if (DriverNames.cup2020Types[carNum] == "Closer"){
+			maxDraftDistance = 9 + carRarity + AICarClass;		
 		}
 
         movingLane = false;
@@ -327,7 +335,7 @@ public class AIMovement : MonoBehaviour
         bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 100);
 		
 		//If gaining draft of car in front
-		if (HitForward && DraftCheckForward.distance <= 10){
+		if (HitForward && DraftCheckForward.distance <= maxDraftDistance){
 			//Speed up
 			if (AISpeed < (205 + (AILevel / 5))){
 				//Draft gets stronger as you get closer
