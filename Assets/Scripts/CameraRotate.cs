@@ -246,7 +246,6 @@ public class CameraRotate : MonoBehaviour {
 			finishLine.GetComponent<Renderer>().enabled = true;
 			if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 				int rand = Random.Range(1,100);
-				rand = 27;
 				//Lucky day
 				if((rand > 26)&&(rand < 28)){
 					tropicono.GetComponent<Renderer>().enabled = true;

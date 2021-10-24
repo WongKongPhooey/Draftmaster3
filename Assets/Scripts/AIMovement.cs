@@ -235,8 +235,8 @@ public class AIMovement : MonoBehaviour
 					changeLane("Left");
 				}
 			}
+			AISpeed -= 0.5f;
         }
-        AISpeed -= 0.5f;
     }
 	
 	void OnCollisionStay(Collision carHit) {
@@ -253,16 +253,8 @@ public class AIMovement : MonoBehaviour
 		
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
-			//For some reason this change makes the player bump-draft mega fast!
-			/*if(midSpeed < 0.25f){
-				AISpeed += midSpeed;
-			} else {
-				if(midSpeed < 1f){
-					AISpeed += midSpeed/2;
-				} else {*/
-					AISpeed += midSpeed/4;
-				//}
-			//}
+			//For some reason changing this makes the player bump-draft mega fast!
+			AISpeed += midSpeed/4;
 			tandemDraft = true;
 			//Debug.Log("Impact levels out " + AICar.name);
 		}
@@ -525,7 +517,7 @@ public class AIMovement : MonoBehaviour
 		if((leftSideClr == true)&&(rightSideClr == true)){
 			//Rand pick
 			string direction = "";
-			float rng = Random.Range(0,2);
+			float rng = Random.Range(0,1.99999f);
 			if(rng > 1f){
 				direction = "Right";
 			} else {
