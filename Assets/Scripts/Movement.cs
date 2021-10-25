@@ -13,6 +13,8 @@ public class Movement : MonoBehaviour {
 	public float gettableSpeed;
 	public float topSpeed;
 	public static float speedRand;
+	public static float randTopend;
+		
 
 	float challengeSpeedBoost;
 
@@ -106,6 +108,8 @@ public class Movement : MonoBehaviour {
 		topSpeed = 208f + speedRand;
 		speedRand = Random.Range(0,50);
 		speedRand = speedRand / 100;
+		randTopend = Random.Range(0,99);
+		randTopend = randTopend / 1000;
 		laneticker = 0;
 		onTurn = false;
 		lane = SpawnField.startLane;
@@ -126,6 +130,7 @@ public class Movement : MonoBehaviour {
 			carManu = DriverNames.cup2020Manufacturer[carNum];
 			carRarity = DriverNames.cup2020Rarity[carNum];
 		} else {
+			carRarity = 0;
 			//Debug.Log("Invalid Car #");
 		}
 		
@@ -351,7 +356,7 @@ public class Movement : MonoBehaviour {
 		//If in draft of car in front
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
 			//Speed up
-			if(playerSpeed <= topSpeed){
+			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
 				playerSpeed+=((10 - DraftCheck.distance)/1000);
 			} else {
 				playerSpeed-=((playerSpeed - topSpeed)/200);
@@ -371,7 +376,7 @@ public class Movement : MonoBehaviour {
 		// If recieving backdraft of car behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.5f)){
 			//Speed up
-			if(playerSpeed <= (205f + (speedRand + customSpeedF) + challengeSpeedBoost + laneInv + carRarity)){
+			if(playerSpeed <= (205f + (speedRand + customSpeedF) + challengeSpeedBoost + laneInv + carRarity + randTopend)){
 				playerSpeed+=(0.004f + customAccelF);
 				if(RaceHUD.tutorialStage == 4){
 					RaceHUD.tutorialBackdraftCount++;

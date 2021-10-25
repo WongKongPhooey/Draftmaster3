@@ -96,12 +96,18 @@ public class Store : MonoBehaviour{
 				}
 				Debug.Log("Total event prizes: " + eventPrizes.Count);
 				
+				//Reset For Testing
+				//PlayerPrefs.DeleteKey("PrizePositions");
+				//PlayerPrefs.SetInt("EventItemsRemaining", 15);
+				
 				//Set the random draw
 				if(!PlayerPrefs.HasKey("PrizePositions")){
 					for(int i=0;i<eventPrizes.Count;i++){
 						int rand = Random.Range(1,15);
-						while(eventDrawPicks.Contains(rand)){
+						int loopBailout = 45;
+						while((eventDrawPicks.Contains(rand))&&(loopBailout > 0)){
 							rand = Random.Range(1,15);
+							loopBailout--;
 						}
 						eventDrawPicks.Add(rand);
 						PlayerPrefs.SetInt("PrizePosition" + i, rand);
@@ -115,6 +121,7 @@ public class Store : MonoBehaviour{
 				} else {
 					itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
 				}
+				CountEventAltsFound();
 			}
 			//list[Random.Range(0, list.Count)];
 		}
@@ -173,12 +180,12 @@ public class Store : MonoBehaviour{
 		for(int i=0;i<10;i++){
 			if(PlayerPrefs.HasKey("PrizePosition" + i)){
 				if(PlayerPrefs.GetInt("PrizePosition" + i) == itemNum){
-					Debug.Log("Item #" + itemNum + " - Ooo a pick!");
+					//Debug.Log("Item #" + itemNum + " - Ooo a pick!");
 					return true;
 				}
 			}
 		}
-		Debug.Log("Item #" + itemNum + " - No alt here..");
+		//Debug.Log("Item #" + itemNum + " - No alt here..");
 		return false;
 	}
 	
@@ -202,6 +209,23 @@ public class Store : MonoBehaviour{
 				break;
 		}
 		return price;
+	}
+	
+	int CountEventAltsFound(){
+		int altsFound = 0;
+		string eventAlts = PlayerPrefs.GetString("EventRewards");
+		string[] allRewards = eventRewards.Split(',');
+		foreach(string alt in allRewards){
+			string sanitisedAlt = alt.Replace("livery","").Replace("alt","Alt");
+			if(PlayerPrefs.GetInt(sanitisedAlt + "Unlocked") == 1){
+				Debug.Log("Alt Found: " + sanitisedAlt);
+				altsFound++;
+			} else {
+				Debug.Log("Alt Not Found: " + sanitisedAlt);
+			}
+		}
+		PlayerPrefs.SetInt("EventAltsFound", altsFound);
+		return altsFound;
 	}
 	
 	void OnGUI(){
@@ -253,9 +277,13 @@ public class Store : MonoBehaviour{
 				Application.LoadLevel("GearsStore");
 			}
 			
-			//if (GUI.Button(new Rect(widthblock / 2, heightblock * (12 + offset), widthblock * 4, heightblock * 1.5f), "Legends")){
-			//	menuCat = "Legends";
-			//}
+			if(menuCat == "DailySelects"){
+				GUI.skin.label.fontSize = 40 / FontScale.fontScale;
+				if(PlayerPrefs.HasKey("PlayerUsername")){
+				} else {
+					GUI.Label(new Rect(widthblock * 5f, heightblock * 3f, widthblock * 12f, heightblock * 1), "Register with an account to see the online store that updates weekly!");
+				}
+			}
 			
 			GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;
 			GUI.skin.verticalScrollbarThumb.fixedWidth = Screen.width / 20;
@@ -287,7 +315,7 @@ public class Store : MonoBehaviour{
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), "They say this abandoned garage is haunted, proceed with caution! 15 random items inside, including 5 Halloween themed alternate paint schemes!");
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), "They say this abandoned garage is haunted, proceed with caution! 15 random prizes inside, including 5 Halloween themed alternate paint schemes and 10 sets of parts for those cars!");
 				
 				GUI.skin.label.alignment = TextAnchor.LowerLeft;
 				
@@ -311,6 +339,10 @@ public class Store : MonoBehaviour{
 							PlayerPrefs.SetInt("Gears",gears);
 							PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
 							if(isPick == true){
+								int failover = CountEventAltsFound();
+								if(failover >= 5){
+									Application.LoadLevel("MainMenu");
+								}
 								PlayerPrefs.SetString("PrizeType","EventAlt");
 								PlayerPrefs.SetInt("EventAltsFound",PlayerPrefs.GetInt("EventAltsFound") + 1);
 							} else {
@@ -526,11 +558,13 @@ public class Store : MonoBehaviour{
 					if(carClass == 6){
 						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 					} else {
+						GUI.skin.label.normal.textColor = Color.white;
 						if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 						} else {
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 						}
+						GUI.skin.label.normal.textColor = Color.black;
 					}
 
 					GUI.skin = redGUI;
@@ -605,11 +639,13 @@ public class Store : MonoBehaviour{
 						if(carClass == 6){
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 						} else {
+							GUI.skin.label.normal.textColor = Color.white;
 							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 							}
+							GUI.skin.label.normal.textColor = Color.black;
 						}
 
 						GUI.skin = redGUI;
@@ -684,11 +720,13 @@ public class Store : MonoBehaviour{
 						if(carClass == 6){
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 						} else {
+							GUI.skin.label.normal.textColor = Color.white;
 							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 							}
+							GUI.skin.label.normal.textColor = Color.black;
 						}
 
 						GUI.skin = redGUI;

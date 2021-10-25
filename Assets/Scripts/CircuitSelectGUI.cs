@@ -89,16 +89,18 @@ public class CircuitSelectGUI : MonoBehaviour {
 			seriesTracks = seriesTrackList.Split(',');
 		}
 		
+		circuit.GetComponent<Renderer>().material.mainTexture = null;
+		
 		//Check for an active championship
-		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+		/*if(PlayerPrefs.HasKey("ChampionshipSubseries")){
 			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
 				//Found a championship
 				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 				loadTrack(championshipRound.ToString(), 0);
 			}
-		} else {
+		} else {*/
 			loadTrack(seriesTracks[0], 0);
-		}
+		//}
 		
 		if(PlayerPrefs.HasKey("DailyPlays" + currentSeriesIndex + "")){
 			dailyPlays = PlayerPrefs.GetInt("DailyPlays" + currentSeriesIndex + "");
@@ -109,7 +111,6 @@ public class CircuitSelectGUI : MonoBehaviour {
 		}
 		
 		gameDifficulty = PlayerPrefs.GetInt("Difficulty");
-		circuit.GetComponent<Renderer>().material.mainTexture = null;
 		//Resources.Load("numblank") as Texture;
 
 		seriesFuel = 10;
@@ -323,7 +324,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
-		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries)){
+		/*if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries)){
 			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Next Round (R" + (championshipRound + 1) + ", 142pts)")){
 				championshipRound++;
 				PlayerPrefs.SetInt("ChampionshipSubseries",currentSubseries);
@@ -334,20 +335,20 @@ public class CircuitSelectGUI : MonoBehaviour {
 				showPoints(widthblock / 2, heightblock * 7);
 				
 			}
-		} else {
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship")){
+		} else {*/
+			/*if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship")){
 				PlayerPrefs.SetInt("ChampionshipSubseries",currentSubseries);
 				loadTrack(seriesTracks[0], 0);
 				PlayerPrefs.SetInt("ChampionshipRound",0);
 				//startRace();
-			}
+			}*/
 			
 			int trackCount = 0;
 			foreach (string track in seriesTracks){
 				getTrack(track, trackCount);
 				trackCount++;
 			}
-		}
+		//}
 		
 		GUI.EndScrollView();
 		
@@ -488,6 +489,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			default:
 				break;
 		}
+		Debug.Log(circuitChoice + " Loaded");
 		PlayerPrefs.SetString("CurrentTrack","" + order);
 	}
 
