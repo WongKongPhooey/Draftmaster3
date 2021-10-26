@@ -309,12 +309,27 @@ public class CarSelectGUI : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 1f), cardY + 10, widthblock * 0.75f, widthblock * 0.375f), rarityStars);
 						
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20liveryblank") as Texture);
-						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
+						/*if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
 							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
 							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
 							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.75f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
 						} else {
 							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+						}*/
+						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
+							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
+							if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltPaint")){
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carCount + "AltPaint")) as Texture);
+							} else {
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
+							}
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.75f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
+						} else {
+							if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltPaint")){
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "alt" + PlayerPrefs.GetInt(seriesPrefix + carCount + "AltPaint")) as Texture);
+							} else {
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+							}
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);

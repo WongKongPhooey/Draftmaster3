@@ -581,18 +581,24 @@ public class Movement : MonoBehaviour {
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
-		liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
+		if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
+			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "alt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+		} else {
+			liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
+		}
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
-			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+			if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+			} else {
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
 			//Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
 			numRend.enabled = true;
 		} else {
-			//liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum) as Texture;
 			numRend.enabled = false;
-			//Debug.Log("No custom number saved");
 		}
 	}
 	
