@@ -330,25 +330,28 @@ public class Store : MonoBehaviour{
 				GUI.skin = redGUI;
 				
 				if(itemsRemaining > 0){
-					if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "10G")){
-						gears = PlayerPrefs.GetInt("Gears");
+					gears = PlayerPrefs.GetInt("Gears");
 						if(gears >= 10){
-							gears -= 10;
-							bool isPick = checkEventPickForAlt(itemsRemaining);
-							itemsRemaining--;
-							PlayerPrefs.SetInt("Gears",gears);
-							PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
-							if(isPick == true){
-								int failover = CountEventAltsFound();
-								if(failover >= 5){
-									Application.LoadLevel("MainMenu");
+							if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "10G")){
+								gears -= 10;
+								bool isPick = checkEventPickForAlt(itemsRemaining);
+								itemsRemaining--;
+								PlayerPrefs.SetInt("Gears",gears);
+								PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
+								if(isPick == true){
+									int failover = CountEventAltsFound();
+									if(failover >= 5){
+										Application.LoadLevel("MainMenu");
+									}
+									PlayerPrefs.SetString("PrizeType","EventAlt");
+									PlayerPrefs.SetInt("EventAltsFound",PlayerPrefs.GetInt("EventAltsFound") + 1);
+								} else {
+									PlayerPrefs.SetString("PrizeType","EventGarage");
 								}
-								PlayerPrefs.SetString("PrizeType","EventAlt");
-								PlayerPrefs.SetInt("EventAltsFound",PlayerPrefs.GetInt("EventAltsFound") + 1);
-							} else {
-								PlayerPrefs.SetString("PrizeType","EventGarage");
+								Application.LoadLevel("PrizeCollection");
 							}
-							Application.LoadLevel("PrizeCollection");
+						} else {
+							if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "Need " + (10 - gears) + "G More!")){
 						}
 					}
 				}
