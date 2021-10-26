@@ -83,7 +83,7 @@ public class AllCars : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = new Color32(255,0,0,255);
+				classColour = new Color32(164,6,6,255);
 				break;
 		    case 2:
 				classColour = new Color32(255,165,0,255);
@@ -188,7 +188,7 @@ public class AllCars : MonoBehaviour {
 					int carGears = 0;
 					int carClass = 0;
 					
-					//Initialise
+					//Initialise (can be used for dev reset)
 					if(!PlayerPrefs.HasKey(seriesPrefix + carCount + "Gears")){
 						//Debug.Log("#" + carCount + " Not Initialised");
 						PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked",0);
@@ -259,10 +259,18 @@ public class AllCars : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20liveryblank") as Texture);
 						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
 							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
-							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
+							if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltPaint")){
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carCount + "AltPaint")) as Texture);
+							} else {
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
+							}
 							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.25f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
 						} else {
-							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+							if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltPaint")){
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "alt" + PlayerPrefs.GetInt(seriesPrefix + carCount + "AltPaint")) as Texture);
+							} else {
+								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
+							}
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
@@ -270,6 +278,8 @@ public class AllCars : MonoBehaviour {
 						GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						//Progress Bar
 						if((carGears > classMax)||(carClass == 6)){
+							GUI.skin = tileSkin;
+							
 							GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						} else {
 							if(carGears > 0){
@@ -281,10 +291,14 @@ public class AllCars : MonoBehaviour {
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 						} else {
 							if(carClass < DriverNames.cup2020Rarity[carCount]){
+								GUI.skin.label.normal.textColor = Color.white;
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
+								GUI.skin.label.normal.textColor = Color.black;
 							} else {
 								if(carGears >= classMax){
 									GUI.skin.label.normal.textColor = new Color32(0,255,0,255);
+								} else {
+									GUI.skin.label.normal.textColor = Color.white;
 								}
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 								GUI.skin.label.normal.textColor = Color.black;
@@ -294,7 +308,6 @@ public class AllCars : MonoBehaviour {
 							GUI.skin = redGUI;
 							GUI.skin.button.fontSize = 48 / FontScale.fontScale;
 							if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Unlock")){
-								totalMoney -= GameData.upgradeCost(carClass);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked", 1);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears", carGears - unlockGears);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Class", DriverNames.cup2020Rarity[carCount]);
@@ -302,6 +315,17 @@ public class AllCars : MonoBehaviour {
 								classMax = GameData.classMax(carClass);
 							}
 							GUI.skin = tileSkin;
+						} else {
+							if((carGears > classMax)&&(carClass > 0)&&(carClass < 6)){
+								GUI.skin = redGUI;
+								GUI.skin.button.fontSize = 48 / FontScale.fontScale;
+								if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Upgrade")){
+									PlayerPrefs.SetInt("CarFocus",carCount);
+									PlayerPrefs.SetString("SeriesFocus","cup20");
+									Application.LoadLevel("SingleCar");
+								}
+								GUI.skin = tileSkin;
+							}
 						}
 						GUI.skin.label.alignment = TextAnchor.LowerLeft;
 						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.cup2020Types[carCount]));

@@ -39,6 +39,7 @@ public class AIMovement : MonoBehaviour
 	public int carNum;
 	public string carTeam;
 	public string carManu;
+	public int carRarity;
 	public string carType;
 	public int AICarClass;
 
@@ -53,6 +54,8 @@ public class AIMovement : MonoBehaviour
 	
 	string seriesPrefix;
 	int customNum;
+
+	public int maxDraftDistance;
 
 	public int lap;
     public int lane;
@@ -92,7 +95,6 @@ public class AIMovement : MonoBehaviour
 		
 		antiGlitch = 0;
 		
-        //enginetemp = 210;
 		thePlayer = GameObject.Find("Player");
 		seriesPrefix = "cup2020";
 		
@@ -105,6 +107,7 @@ public class AIMovement : MonoBehaviour
 		carTeam = DriverNames.cup2020Teams[carNum];
 		carManu = DriverNames.cup2020Manufacturer[carNum];
 		carType = DriverNames.cup2020Types[carNum];
+		carRarity = DriverNames.cup2020Rarity[carNum];	
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
@@ -166,16 +169,34 @@ public class AIMovement : MonoBehaviour
 				case 6:
 					laneChangeDuration = 40;
 					laneChangeSpeed = 0.030f;
-					laneChangeBackout = 16;
+					laneChangeBackout = 14;
+					break;
+				case 7:
+					laneChangeDuration = 36;
+					laneChangeSpeed = 0.0333333f;
+					laneChangeBackout = 12;
+					break;
+				case 8:
+					laneChangeDuration = 32;
+					laneChangeSpeed = 0.0375f;
+					laneChangeBackout = 12;
 					break;
 				default:
+					laneChangeDuration = 80;
+					laneChangeSpeed = 0.015f;
+					laneChangeBackout = 32;
 					break;
 			}
-        } else {
-            laneChangeDuration = 80;
-            laneChangeSpeed = 0.015f;
-            laneChangeBackout = 32;
-        }
+		} else {
+			laneChangeDuration = 80;
+			laneChangeSpeed = 0.015f;
+			laneChangeBackout = 32;
+		}
+
+		maxDraftDistance = 9 + carRarity;
+		if (DriverNames.cup2020Types[carNum] == "Closer"){
+			maxDraftDistance = 9 + carRarity + AICarClass;		
+		}
 
         movingLane = false;
         backingOut = false;
@@ -222,8 +243,8 @@ public class AIMovement : MonoBehaviour
 					changeLane("Left");
 				}
 			}
+			AISpeed -= 0.5f;
         }
-        AISpeed -= 0.5f;
     }
 	
 	void OnCollisionStay(Collision carHit) {
@@ -240,16 +261,8 @@ public class AIMovement : MonoBehaviour
 		
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
-			//For some reason this change makes the player bump-draft mega fast!
-			/*if(midSpeed < 0.25f){
-				AISpeed += midSpeed;
-			} else {
-				if(midSpeed < 1f){
-					AISpeed += midSpeed/2;
-				} else {*/
-					AISpeed += midSpeed/4;
-				//}
-			//}
+			//For some reason changing this makes the player bump-draft mega fast!
+			AISpeed += midSpeed/4;
 			tandemDraft = true;
 			//Debug.Log("Impact levels out " + AICar.name);
 		}
@@ -304,6 +317,7 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 			draftLogic();
+			carWobble();
 			updateMovement();
 			this.gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
 			this.gameObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
@@ -321,7 +335,7 @@ public class AIMovement : MonoBehaviour
         bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 100);
 		
 		//If gaining draft of car in front
-		if (HitForward && DraftCheckForward.distance <= 10){
+		if (HitForward && DraftCheckForward.distance <= maxDraftDistance){
 			//Speed up
 			if (AISpeed < (205 + (AILevel / 5))){
 				//Draft gets stronger as you get closer
@@ -344,15 +358,19 @@ public class AIMovement : MonoBehaviour
 		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
-				AISpeed += 0.004f;
+			AISpeed += 0.004f;
 			tandemDraft = true;
+			int currentPos = Scoreboard.checkSingleCarPosition("AICar0" + carNum + "");
+			if(currentPos == 0){
+				//Debug.Log("Leader is #" + carNum);
+				evadeDraft();
+			}
 		} else {
 			tandemDraft = false;
 		}
 
 		//If bump-drafting the car in front
-		if (HitForward && DraftCheckForward.distance <= 1.01f)
-		{
+		if (HitForward && DraftCheckForward.distance <= 1.01f){
 			if(DraftCheckForward.transform.gameObject.name != null){
 				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
 			}
@@ -475,6 +493,55 @@ public class AIMovement : MonoBehaviour
 			findDraft();
 		}
 	}
+	
+	void carWobble(){
+		wobbleCount++;
+		
+		if(wobbleCount >= wobbleRand){
+			wobbleRand = Random.Range(20,50);
+			wobbleTarget = Random.Range(-100,100);
+			wobbleCount = 1;
+		}
+		
+		//General wobble while in lane
+		if(wobbleTarget > wobblePos){
+			AICar.transform.Translate(-0.001f,0,0);
+			wobblePos++;
+		}
+		if(wobbleTarget < wobblePos){
+			AICar.transform.Translate(0.001f,0,0);
+			wobblePos--;
+		}
+	}
+
+	void evadeDraft(){
+		//Trying to pass nobody = Weaving to break the draft from behind
+		//tryPass(100, false);
+		
+		bool leftSideClr = leftSideClear();
+		bool rightSideClr = rightSideClear();
+		
+		//Can go either way
+		if((leftSideClr == true)&&(rightSideClr == true)){
+			//Rand pick
+			string direction = "";
+			float rng = Random.Range(0,1.99999f);
+			if(rng > 1f){
+				direction = "Right";
+			} else {
+				direction = "Left";
+			}
+			changeLane(direction);
+		} else {
+			if(rightSideClr == true) {
+				changeLane("Right");
+			} else {
+				if(leftSideClr == true) {
+					changeLane("Left");
+				}
+			}
+		}
+	}
 
 	void tryPass(int chance, bool forced) {
 		//Check Right Corners Clear
@@ -541,7 +608,7 @@ public class AIMovement : MonoBehaviour
 			if(direction == "Both"){
 				//Random choose one
 				float rng = Random.Range(0,2);
-				Debug.Log("Rnd /2 = " + rng);
+				//Debug.Log("Rnd /2 = " + rng);
 				if(rng > 1f){
 					direction = "Right";
 				} else {
@@ -697,7 +764,7 @@ public class AIMovement : MonoBehaviour
 				return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
 			} else {
 				if(opponent.transform.gameObject.tag == "AICar"){
-					Debug.Log(opponent.transform.gameObject.name);
+					//Debug.Log(opponent.transform.gameObject.name);
 					return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
 				}
 			}

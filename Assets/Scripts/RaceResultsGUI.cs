@@ -22,6 +22,8 @@ public class RaceResultsGUI : MonoBehaviour {
 	string playerCarNumber;
 	string carNumber;
 
+	int resultsRows;
+
 	int playerMoney;
 	int moneyCount;
 	int raceWinnings;
@@ -36,6 +38,8 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
+
+		resultsRows = 40;
 
 		playerCarNumber = PlayerPrefs.GetString("carTexture");
 		string splitAfter = "livery";
@@ -61,6 +65,23 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		winningsMultiplier = 1;
 
+		int currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
+		
+		//Is this a championship round?
+		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
+				for( int i=0; i < resultsRows; i++){
+					if(i == (Scoreboard.position)){
+						carNumber = playerCarNumber;
+					} else {
+						carNumber = Scoreboard.carNames[i].Remove(0,6);
+					}
+					Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
+				}
+			}
+		}
+				
 		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
@@ -173,10 +194,8 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		GUI.skin = eightBitSkin;
 		string carDriver;
-		int resultsRows;
 		float windowscroll;
 
-		resultsRows = 40;
 		windowscroll = 4.5f;
 
 		GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;
@@ -281,5 +300,11 @@ public class RaceResultsGUI : MonoBehaviour {
 			ChallengeSelectGUI.challengeMode = false;
 			Application.LoadLevel("RaceRewards");
 		}
+	}
+	
+	void addChampionshipPoints(string carNumber, int points){
+		int currentPoints = PlayerPrefs.GetInt("ChampionshipPoints" + carNumber + "");
+		PlayerPrefs.SetInt("ChampionshipPoints" + carNumber + "", currentPoints + points);
+		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + points));
 	}
 }

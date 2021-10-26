@@ -12,8 +12,9 @@ public class Movement : MonoBehaviour {
 	public static float playerSpeed;
 	public float gettableSpeed;
 	public float topSpeed;
-	public static float enginetemp;
 	public static float speedRand;
+	public static float randTopend;
+		
 
 	float challengeSpeedBoost;
 
@@ -69,6 +70,7 @@ public class Movement : MonoBehaviour {
 	public int carClass;
 	public string carTeam;
 	public string carManu;
+	public int carRarity;
 	public int carNumber;
 	
 	public bool backingOut = false;
@@ -101,12 +103,13 @@ public class Movement : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		enginetemp = 210;
 		playerSpeed = 200;
 		gettableSpeed = playerSpeed;
 		topSpeed = 208f + speedRand;
 		speedRand = Random.Range(0,50);
 		speedRand = speedRand / 100;
+		randTopend = Random.Range(0,99);
+		randTopend = randTopend / 1000;
 		laneticker = 0;
 		onTurn = false;
 		lane = SpawnField.startLane;
@@ -125,7 +128,9 @@ public class Movement : MonoBehaviour {
 		    carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
 			carTeam = DriverNames.cup2020Teams[carNum];
 			carManu = DriverNames.cup2020Manufacturer[carNum];
+			carRarity = DriverNames.cup2020Rarity[carNum];
 		} else {
+			carRarity = 0;
 			//Debug.Log("Invalid Car #");
 		}
 		
@@ -184,9 +189,22 @@ public class Movement : MonoBehaviour {
 				case 6:
 					laneChangeDuration = 40;
 					laneChangeSpeed = 0.030f;
-					laneChangeBackout = 16;
+					laneChangeBackout = 14;
+					break;
+				case 7:
+					laneChangeDuration = 36;
+					laneChangeSpeed = 0.0333333f;
+					laneChangeBackout = 12;
+					break;
+				case 8:
+					laneChangeDuration = 32;
+					laneChangeSpeed = 0.0375f;
+					laneChangeBackout = 12;
 					break;
 				default:
+					laneChangeDuration = 80;
+					laneChangeSpeed = 0.015f;
+					laneChangeBackout = 32;
 					break;
 			}
 		} else {
@@ -338,10 +356,10 @@ public class Movement : MonoBehaviour {
 		//If in draft of car in front
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
 			//Speed up
-			if(playerSpeed <= topSpeed){
+			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
 				playerSpeed+=((10 - DraftCheck.distance)/1000);
 			} else {
-				playerSpeed-=((playerSpeed - topSpeed)/100);
+				playerSpeed-=((playerSpeed - topSpeed)/200);
 			}
 			if(PlayerPrefs.GetInt("TutorialActive") == 1){
 				if(RaceHUD.tutorialStage == 3){
@@ -358,7 +376,7 @@ public class Movement : MonoBehaviour {
 		// If recieving backdraft of car behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.5f)){
 			//Speed up
-			if(playerSpeed <= (206f + (speedRand + customSpeedF) + challengeSpeedBoost + laneInv)){
+			if(playerSpeed <= (205f + (speedRand + customSpeedF) + challengeSpeedBoost + laneInv + carRarity + randTopend)){
 				playerSpeed+=(0.004f + customAccelF);
 				if(RaceHUD.tutorialStage == 4){
 					RaceHUD.tutorialBackdraftCount++;
@@ -388,7 +406,8 @@ public class Movement : MonoBehaviour {
 			}
 			
 			//Bump drafting speeds both up
-			playerSpeed+=0.004f;	
+			playerSpeed+=0.004f;
+
 		} else {
 			tandemDraft = false;
 		}
@@ -536,9 +555,9 @@ public class Movement : MonoBehaviour {
 		
 		//Speed tops out
 				//Speed tops out
-        if (playerSpeed > (205 + laneInv)){
+        if (playerSpeed > (205 + carRarity + laneInv)){
 			//Reduce speed, proportionate to the amount 'over'
-            playerSpeed -= ((playerSpeed - 205) / 100);
+            playerSpeed -= ((playerSpeed - 205) / 200);
 		}
 		if(playerSpeed > 210){
 			playerSpeed=210f;

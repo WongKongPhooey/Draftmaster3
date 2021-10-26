@@ -140,6 +140,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetString("StoreDailySelects", "");
 			PlayerPrefs.SetInt("FreeFuel", 0);
 			PlayerPrefs.SetInt("ShopDiscount", 0);
+			PlayerPrefs.SetInt("EventActive", 0);
 		}
 		
 		//Custom store items in Daily Selects
@@ -150,6 +151,26 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
+		}
+		
+		//Event Store
+		if(result.Data.ContainsKey("EventActive") == true){
+			if(result.Data["EventActive"] != ""){
+				PlayerPrefs.SetInt("EventActive", 1);
+				PlayerPrefs.SetString("EventName", result.Data["EventActive"]);
+				Debug.Log(result.Data["EventActive"] + " Event Active");
+				
+				//Retrieve the event rewards (assume set)
+				PlayerPrefs.SetString("EventRewards", result.Data["EventRewards"]);
+				Debug.Log("Event Prizes: " + result.Data["EventRewards"]);
+				
+			} else {
+				PlayerPrefs.SetInt("EventActive", 0);
+				Debug.Log("No Active Event");
+			}
+		} else {
+			PlayerPrefs.SetInt("EventActive", 0);
+			Debug.Log("No Active Event");
 		}
 		
 		//Free Fuel Promo

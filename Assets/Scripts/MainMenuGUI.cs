@@ -37,6 +37,9 @@ public class MainMenuGUI : MonoBehaviour {
 	public bool levelUpMenu;
 	public static bool newMessageAlert;
 	
+	public static bool showInfoBox;
+	public static string infoBox;
+	
 	public static string messageAlert;
 	
 	public AudioSource crowdNoise;
@@ -58,6 +61,7 @@ public class MainMenuGUI : MonoBehaviour {
 		rewardString = "";
 		
 		newMessageAlert = false;
+		showInfoBox = false;
 		
 		if(exp > levelExp){
 			exp-= levelExp;
@@ -81,6 +85,8 @@ public class MainMenuGUI : MonoBehaviour {
 		mainMenu = true;
 		goRaceMenu = false;
 		moreRaceMenu = false;
+		
+		//PlayerPrefs.SetInt("cup2018Gears", 100);
 		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
 			PlayFabManager.LoginFromPrefs();
@@ -180,17 +186,6 @@ public class MainMenuGUI : MonoBehaviour {
 			}
 		}
 		
-		//All Cars
-		/*if (GUI.Button(new Rect(Screen.width - (widthblock * 2.5f), Screen.height - (heightblock * 1.5f) - 20, widthblock * 2f, heightblock * 1.5f), "Cars")){
-			SceneManager.LoadScene("AllCars");
-		}
-		
-		if (GUI.Button(new Rect(Screen.width - (widthblock * 3f) - (heightblock * 1.5f), Screen.height - (heightblock * 1.5f) - 20, heightblock * 1.5f, heightblock * 1.5f), "")){
-			SceneManager.LoadScene("OptionsMenu");
-		}
-		GUI.DrawTexture(new Rect(Screen.width - (widthblock * 3f) - (heightblock * 1.5f) + 10, Screen.height - (heightblock * 1.5f) - 20 + 7, (heightblock * 1.5f) - 20, (heightblock * 1.5f) - 20), spannerTex);
-		*/
-		
 		if(levelUpMenu == true){
 			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
 			GUI.skin = whiteGUI;
@@ -222,6 +217,24 @@ public class MainMenuGUI : MonoBehaviour {
 			GUI.skin = redGUI;
 			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
 				newMessageAlert = false;
+			}
+		}
+		
+		if(showInfoBox == true){
+			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
+			GUI.skin = whiteGUI;
+			GUI.Box(new Rect(widthblock * 4f, heightblock * 4f, widthblock * 12f, heightblock * 12f),"");
+			
+			GUI.skin = buttonSkin;
+			GUI.skin.label.alignment = TextAnchor.UpperCenter;
+			GUI.Label(new Rect(widthblock * 4.5f, heightblock * 5f, widthblock * 11f, heightblock * 2f), "F.A.Qs");
+			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+			GUI.Label(new Rect(widthblock * 4.5f, heightblock * 6f, widthblock * 11f, heightblock * 7f), infoBox);
+			
+			GUI.skin = redGUI;
+			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 13.5f, widthblock * 2.5f, heightblock * 2f), "Continue")){
+				showInfoBox = false;
 			}
 		}
 		

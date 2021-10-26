@@ -67,7 +67,7 @@ public class RaceRewards : MonoBehaviour
 		}
 		finishPos = PlayerPrefs.GetInt("FinishPos");
 		
-		prizeMoney = PrizeMoney.getPrizeMoney(finishPos);
+		prizeMoney = PrizeMoney.getPrizeMoney(finishPos-1);
 		playerMoney += prizeMoney;
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		

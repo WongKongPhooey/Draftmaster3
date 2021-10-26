@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System;
 using UnityEngine.SceneManagement;
 using UnityEngine.Purchasing;
+using Random=UnityEngine.Random;
 
 public class Store : MonoBehaviour{
 	
@@ -17,8 +18,14 @@ public class Store : MonoBehaviour{
 	float heightblock = Mathf.Round(Screen.height/20);
 	
 	string menuCat;
+	string storeFocus;
 	
 	public static ArrayList dailySelects = new ArrayList();
+	
+	public static ArrayList eventPrizes = new ArrayList();
+	public static ArrayList eventDrawPicks = new ArrayList();
+	
+	string eventRewards;
 	
 	public Texture BoxTexture;
 
@@ -37,6 +44,13 @@ public class Store : MonoBehaviour{
 	
 	string customStoreDailySelects;
 	
+	int paintsFound;
+	int itemsRemaining;
+	public bool eventActive;
+	public int offset;
+	
+	public Texture2D eventImage;
+	
 	public static bool adWindow;
 	public GameObject adFallback;
 	public static GameObject adFallbackStatic;
@@ -53,8 +67,64 @@ public class Store : MonoBehaviour{
 		
 		fuelOutput = "";
 		
+		if(PlayerPrefs.HasKey("StoreFocus")){
+			menuCat = PlayerPrefs.GetString("StoreFocus");
+			PlayerPrefs.DeleteKey("StoreFocus");
+		}
+		
 		dailyCollected = PlayerPrefs.GetInt("DailyGarage");
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
+		
+		//Reset Event Picks
+		//PlayerPrefs.DeleteKey("PrizePositions");
+		
+		offset = 0;
+		eventActive = false;
+		if(PlayerPrefs.GetInt("EventActive") == 1){
+			eventActive = true;
+			offset = 2;
+			menuCat = "Event";
+			
+			eventRewards = PlayerPrefs.GetString("EventRewards");
+		
+			if(eventRewards != ""){
+				eventPrizes.Clear();
+				string[] rewardsArray = eventRewards.Split(',');
+				foreach(string item in rewardsArray){
+					eventPrizes.Add(item);
+					//Debug.Log(item + " added to store");
+				}
+				Debug.Log("Total event prizes: " + eventPrizes.Count);
+				
+				//Reset For Testing
+				//PlayerPrefs.DeleteKey("PrizePositions");
+				//PlayerPrefs.SetInt("EventItemsRemaining", 15);
+				
+				//Set the random draw
+				if(!PlayerPrefs.HasKey("PrizePositions")){
+					for(int i=0;i<eventPrizes.Count;i++){
+						int rand = Random.Range(1,15);
+						int loopBailout = 45;
+						while((eventDrawPicks.Contains(rand))&&(loopBailout > 0)){
+							rand = Random.Range(1,15);
+							loopBailout--;
+						}
+						eventDrawPicks.Add(rand);
+						PlayerPrefs.SetInt("PrizePosition" + i, rand);
+						Debug.Log("Draw position #" + rand);
+						
+						PlayerPrefs.SetInt("PrizePositions",1);
+						itemsRemaining = 15;
+						PlayerPrefs.SetInt("EventItemsRemaining", itemsRemaining);
+						PlayerPrefs.SetInt("EventAltsFound",0);
+					}
+				} else {
+					itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
+				}
+				CountEventAltsFound();
+			}
+			//list[Random.Range(0, list.Count)];
+		}
 		
 		adWindow = false;
 		adFallback.SetActive(false);
@@ -106,6 +176,19 @@ public class Store : MonoBehaviour{
     void Update(){
     }
 	
+	bool checkEventPickForAlt(int itemNum){
+		for(int i=0;i<10;i++){
+			if(PlayerPrefs.HasKey("PrizePosition" + i)){
+				if(PlayerPrefs.GetInt("PrizePosition" + i) == itemNum){
+					//Debug.Log("Item #" + itemNum + " - Ooo a pick!");
+					return true;
+				}
+			}
+		}
+		//Debug.Log("Item #" + itemNum + " - No alt here..");
+		return false;
+	}
+	
 	int getShopPriceByRarity(int rarity){
 		int price = 25;
 		switch(rarity){
@@ -128,6 +211,23 @@ public class Store : MonoBehaviour{
 		return price;
 	}
 	
+	int CountEventAltsFound(){
+		int altsFound = 0;
+		string eventAlts = PlayerPrefs.GetString("EventRewards");
+		string[] allRewards = eventRewards.Split(',');
+		foreach(string alt in allRewards){
+			string sanitisedAlt = alt.Replace("livery","").Replace("alt","Alt");
+			if(PlayerPrefs.GetInt(sanitisedAlt + "Unlocked") == 1){
+				Debug.Log("Alt Found: " + sanitisedAlt);
+				altsFound++;
+			} else {
+				Debug.Log("Alt Not Found: " + sanitisedAlt);
+			}
+		}
+		PlayerPrefs.SetInt("EventAltsFound", altsFound);
+		return altsFound;
+	}
+	
 	void OnGUI(){
 		if(adWindow == false){
 			GUI.skin = buttonSkin;
@@ -147,25 +247,43 @@ public class Store : MonoBehaviour{
 			float windowscroll = 1.5f;
 			
 			GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 4, heightblock * 1.5f), "Bundles")){
+			
+			if(eventActive == true){
+				GUI.skin = redGUI;
+				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+				if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 4, heightblock * 1.5f), "Event")){
+					menuCat = "Event";
+				}
+				GUI.skin = buttonSkin;
+				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 96 / FontScale.fontScale;
+				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			}
+			
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (4 + offset), widthblock * 4, heightblock * 1.5f), "Bundles")){
 				menuCat = "Bundles";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 6, widthblock * 4, heightblock * 1.5f), "Weekly Selects")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (6 + offset), widthblock * 4, heightblock * 1.5f), "Weekly Selects")){
 				menuCat = "DailySelects";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 8, widthblock * 4, heightblock * 1.5f), "Fuel")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (8 + offset), widthblock * 4, heightblock * 1.5f), "Fuel")){
 				menuCat = "Fuel";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 10, widthblock * 4, heightblock * 1.5f), "Premium")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (10 + offset), widthblock * 4, heightblock * 1.5f), "Premium")){
 				Application.LoadLevel("GearsStore");
 			}
 			
-			//if (GUI.Button(new Rect(widthblock / 2, heightblock * 12, widthblock * 4, heightblock * 1.5f), "Legends")){
-			//	menuCat = "Legends";
-			//}
+			if(menuCat == "DailySelects"){
+				GUI.skin.label.fontSize = 40 / FontScale.fontScale;
+				if(PlayerPrefs.HasKey("PlayerUsername")){
+				} else {
+					GUI.Label(new Rect(widthblock * 5f, heightblock * 3f, widthblock * 12f, heightblock * 1), "Register with an account to see the online store that updates weekly!");
+				}
+			}
 			
 			GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;
 			GUI.skin.verticalScrollbarThumb.fixedWidth = Screen.width / 20;
@@ -176,6 +294,66 @@ public class Store : MonoBehaviour{
 			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 			
 			GUI.skin = tileSkin;
+			
+			if(menuCat == "Event"){
+				//Special Event Garage
+				float cardX = widthblock * 5f;
+				float cardY = heightblock * 4;
+				
+				GUI.skin = whiteGUI;
+				GUI.Box(new Rect(cardX, cardY, widthblock * 13.5f, heightblock * 12f), "");
+				GUI.skin = tileSkin;
+				
+				GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+				
+				GUI.skin.label.alignment = TextAnchor.UpperCenter;
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 13f, heightblock * 1.5f), "" + PlayerPrefs.GetString("EventName") + "");
+				
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2.5f), widthblock * 5.5f, heightblock * 8.5f), eventImage, ScaleMode.ScaleToFit);
+				
+				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+				
+				GUI.skin.label.alignment = TextAnchor.UpperLeft;
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), "They say this abandoned garage is haunted, proceed with caution! 15 random prizes inside, including 5 Halloween themed alternate paint schemes and 10 sets of parts for those cars!");
+				
+				GUI.skin.label.alignment = TextAnchor.LowerLeft;
+				
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), PlayerPrefs.GetInt("EventAltsFound") + "/5 paints found");
+				
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/15 items left");
+				
+				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+
+				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+				
+				GUI.skin = redGUI;
+				
+				if(itemsRemaining > 0){
+					if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "10G")){
+						gears = PlayerPrefs.GetInt("Gears");
+						if(gears >= 10){
+							gears -= 10;
+							bool isPick = checkEventPickForAlt(itemsRemaining);
+							itemsRemaining--;
+							PlayerPrefs.SetInt("Gears",gears);
+							PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
+							if(isPick == true){
+								int failover = CountEventAltsFound();
+								if(failover >= 5){
+									Application.LoadLevel("MainMenu");
+								}
+								PlayerPrefs.SetString("PrizeType","EventAlt");
+								PlayerPrefs.SetInt("EventAltsFound",PlayerPrefs.GetInt("EventAltsFound") + 1);
+							} else {
+								PlayerPrefs.SetString("PrizeType","EventGarage");
+							}
+							Application.LoadLevel("PrizeCollection");
+						}
+					}
+				}
+				GUI.skin = tileSkin;
+			}
 			
 			if(menuCat == "Bundles"){
 				
@@ -268,26 +446,26 @@ public class Store : MonoBehaviour{
 				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "25k Coins");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "Cash 4 Gears");
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 								
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 								
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "A sponsorship opportunity brings in 25k coins.");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "Spend your spare cash on 5 salvaged gears from the scrapyard.");
 								
 								
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "10G")){
-					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 10){
-						gears -= 10;
-						PlayerPrefs.SetInt("Gears",gears);
-						totalMoney = PlayerPrefs.GetInt("PrizeMoney");
-						PlayerPrefs.SetInt("PrizeMoney",totalMoney + 25000);
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "$50000")){
+					totalMoney = PlayerPrefs.GetInt("PrizeMoney");
+					if(totalMoney >= 50000){
+						totalMoney -= 50000;
+						PlayerPrefs.SetInt("PrizeMoney", totalMoney);
+						gears = PlayerPrefs.GetInt("Gears");
+						PlayerPrefs.SetInt("Gears",gears + 5);
 					}
 				}
 				GUI.skin = tileSkin;
@@ -304,7 +482,7 @@ public class Store : MonoBehaviour{
 				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "250k Coins");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 6.5f, heightblock * 4), "Sponsorship Deal");
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 								
@@ -317,10 +495,10 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin = redGUI;
 				
-				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "50G")){
+				if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "40G")){
 					gears = PlayerPrefs.GetInt("Gears");
-					if(gears >= 50){
-						gears -= 50;
+					if(gears >= 40){
+						gears -= 40;
 						PlayerPrefs.SetInt("Gears",gears);
 						totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 						PlayerPrefs.SetInt("PrizeMoney",totalMoney + 250000);
@@ -380,11 +558,13 @@ public class Store : MonoBehaviour{
 					if(carClass == 6){
 						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 					} else {
+						GUI.skin.label.normal.textColor = Color.white;
 						if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 						} else {
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 						}
+						GUI.skin.label.normal.textColor = Color.black;
 					}
 
 					GUI.skin = redGUI;
@@ -459,11 +639,13 @@ public class Store : MonoBehaviour{
 						if(carClass == 6){
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 						} else {
+							GUI.skin.label.normal.textColor = Color.white;
 							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 							}
+							GUI.skin.label.normal.textColor = Color.black;
 						}
 
 						GUI.skin = redGUI;
@@ -538,11 +720,13 @@ public class Store : MonoBehaviour{
 						if(carClass == 6){
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 						} else {
+							GUI.skin.label.normal.textColor = Color.white;
 							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
 							}
+							GUI.skin.label.normal.textColor = Color.black;
 						}
 
 						GUI.skin = redGUI;

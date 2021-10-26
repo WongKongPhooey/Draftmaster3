@@ -8,6 +8,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 	public GUISkin buttonSkin;
 	public GUISkin tileSkin;
 	public GUISkin whiteGUI;
+	public GUISkin redGUI;
 
 	float widthblock = Screen.width/20;
 	float heightblock = Screen.height/20;
@@ -205,7 +206,18 @@ public class SeriesSelectGUI : MonoBehaviour {
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 		GUI.skin.button.alignment = TextAnchor.MiddleLeft;
 
-		CommonGUI.BackButton("MainMenu");
+		GUI.skin = redGUI;
+		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+		
+		if(seriesMenu == "All"){
+			CommonGUI.BackButton("MainMenu");
+		} else {		
+			if (GUI.Button(new Rect(widthblock * 0.5f, 20, widthblock * 2f, heightblock * 1.5f), "Back")){
+				seriesMenu = "All";
+			}
+		}
+		
+		GUI.skin = buttonSkin;
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		
@@ -248,7 +260,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 		Color classColour;
 		switch(carClass){
 			case 1:
-				classColour = new Color32(255,0,0,255);
+				classColour = new Color32(164,6,6,255);
 				break;
 		    case 2:
 				classColour = new Color32(255,165,0,255);
