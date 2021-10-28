@@ -288,7 +288,9 @@ public class AllCars : MonoBehaviour {
 						}
 						// Gears/Class 
 						if(carClass == 6){
+							GUI.skin.label.normal.textColor = Color.white;
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
+							GUI.skin.label.normal.textColor = Color.black;
 						} else {
 							if(carClass < DriverNames.cup2020Rarity[carCount]){
 								GUI.skin.label.normal.textColor = Color.white;
@@ -316,7 +318,7 @@ public class AllCars : MonoBehaviour {
 							}
 							GUI.skin = tileSkin;
 						} else {
-							if((carGears > classMax)&&(carClass > 0)&&(carClass < 6)){
+							if((carGears >= classMax)&&(carClass > 0)&&(carClass < 6)){
 								GUI.skin = redGUI;
 								GUI.skin.button.fontSize = 48 / FontScale.fontScale;
 								if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Upgrade")){

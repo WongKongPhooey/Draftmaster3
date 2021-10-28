@@ -166,10 +166,12 @@ public class PlayFabManager : MonoBehaviour
 				
 			} else {
 				PlayerPrefs.SetInt("EventActive", 0);
+				PlayerPrefs.SetString("EventName", "");
 				Debug.Log("No Active Event");
 			}
 		} else {
 			PlayerPrefs.SetInt("EventActive", 0);
+			PlayerPrefs.SetString("EventName", "");
 			Debug.Log("No Active Event");
 		}
 		
