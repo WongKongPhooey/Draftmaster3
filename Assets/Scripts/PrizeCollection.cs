@@ -242,6 +242,11 @@ public class PrizeCollection : MonoBehaviour
 		//Find a not yet unlocked alt
 		while(PlayerPrefs.GetInt(sanitisedAlt + "Unlocked") == 1){
 			randAlt = eventAlts[Random.Range(0,eventAlts.Count)].ToString();
+			
+			indexA = randAlt.IndexOf("livery") + "livery".Length;
+			indexB = randAlt.LastIndexOf("alt");
+			carNumber = randAlt.Substring(indexA, indexB - indexA);
+			
 			sanitisedAlt = randAlt.Replace("livery","");
 			sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
 		}

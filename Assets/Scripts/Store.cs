@@ -144,18 +144,18 @@ public class Store : MonoBehaviour{
 			Debug.Log("Total shop items added: " + dailySelects.Count);
 		} else {
 			dailySelects.Clear();
-			dailySelects.Add(43);
-			dailySelects.Add(14);
-			dailySelects.Add(95);
-			dailySelects.Add(66);
-			dailySelects.Add(54);
-			dailySelects.Add(52);
-			dailySelects.Add(34);
+			dailySelects.Add(18);
+			dailySelects.Add(3);
+			dailySelects.Add(42);
+			dailySelects.Add(88);
+			dailySelects.Add(7);
+			dailySelects.Add(8);
+			dailySelects.Add(20);
 			dailySelects.Add(32);
-			dailySelects.Add(17);
-			dailySelects.Add(16);
-			dailySelects.Add(13);
-			dailySelects.Add(0);
+			dailySelects.Add(47);
+			dailySelects.Add(51);
+			dailySelects.Add(53);
+			dailySelects.Add(77);
 		}
 		
 		dailySelectsPicked = 1;

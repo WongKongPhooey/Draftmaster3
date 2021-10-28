@@ -334,6 +334,7 @@ public class SingleCar : MonoBehaviour {
 				}
 			}
 		}
+		GUI.skin.label.normal.textColor = Color.black;
 		
 		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 		GUI.skin.label.alignment = TextAnchor.LowerLeft;
