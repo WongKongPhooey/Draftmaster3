@@ -131,6 +131,7 @@ public class SingleCar : MonoBehaviour {
 			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Unlocked", 1);
 			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - unlockGears);
 			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.cup2020Rarity[currentCar]);
+			carGears = PlayerPrefs.GetInt(seriesPrefix + currentCar + "Gears");
 			carClass = DriverNames.cup2020Rarity[currentCar];
 			classMax = GameData.classMax(carClass);
 		}
