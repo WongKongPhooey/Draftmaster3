@@ -111,6 +111,13 @@ public class SeriesSelectGUI : MonoBehaviour {
 				float cardY = heightblock * 4;
 				bool meetsRequirements = true;
 				GUI.skin = whiteGUI;
+				
+				if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+					if(PlayerPrefs.GetString("ChampionshipSubseries") == menuIndex + "" + subMenu){
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY - (heightblock * 1f), widthblock * 5.5f, heightblock * 1), "Active Championship");
+					}
+				}
+				
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
 				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;

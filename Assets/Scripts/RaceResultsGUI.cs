@@ -70,15 +70,24 @@ public class RaceResultsGUI : MonoBehaviour {
 		//Is this a championship round?
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
 			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
+				
+				//Increment Championship Round
+				int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+				PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
+				
+				Debug.Log("Add Championship Points");
+				RacePoints.setCupPoints();
 				for( int i=0; i < resultsRows; i++){
 					if(i == (Scoreboard.position)){
 						carNumber = playerCarNumber;
 					} else {
 						carNumber = Scoreboard.carNames[i].Remove(0,6);
 					}
-					Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+					//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
 					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 				}
+			} else {
+				//Debug.Log("No Championship Points Here");
 			}
 		}
 				
@@ -305,6 +314,6 @@ public class RaceResultsGUI : MonoBehaviour {
 	void addChampionshipPoints(string carNumber, int points){
 		int currentPoints = PlayerPrefs.GetInt("ChampionshipPoints" + carNumber + "");
 		PlayerPrefs.SetInt("ChampionshipPoints" + carNumber + "", currentPoints + points);
-		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + points));
+		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + " + " + points));
 	}
 }

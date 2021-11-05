@@ -9,11 +9,11 @@ public class RacePoints : MonoBehaviour {
 	public static int[] placePoints = new int[43];
 	
 	// Use this for initialization
-	void Start(){
+	void Awake(){
 		setCupPoints();
 	}
 	
-	static void setCupPoints(){
+	public static void setCupPoints(){
 		placePoints[0] = 40;
 		placePoints[1] = 35;
 		placePoints[2] = 34;
