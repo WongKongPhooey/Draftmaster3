@@ -452,121 +452,121 @@ public class GameData : MonoBehaviour {
 				return 100;
 				break;
 			case 2:
-				return 150;
+				return 125;
 				break;
 			case 3:
-				return 200;
+				return 150;
 				break;
 			case 4:
-				return 250;
+				return 175;
 				break;
 			case 5:
-				return 300;
+				return 200;
 				break;
 			case 6:
-				return 350;
+				return 225;
 				break;
 			case 7:
-				return 400;
+				return 250;
 				break;
 			case 8:
-				return 450;
+				return 275;
 				break;
 			case 9:
-				return 500;
+				return 300;
 				break;
 			case 10:
-				return 600;
+				return 350;
 				break;
 			case 11:
-				return 700;
+				return 400;
 				break;
 			case 12:
-				return 800;
+				return 450;
 				break;
 			case 13:
-				return 900;
+				return 500;
 				break;
 			case 14:
-				return 1000;
+				return 550;
 				break;
 			case 15:
-				return 1200;
+				return 650;
 				break;
 			case 16:
-				return 1400;
+				return 750;
 				break;
 			case 17:
-				return 1600;
+				return 850;
 				break;
 			case 18:
-				return 1800;
+				return 950;
 				break;
 			case 19:
-				return 2000;
+				return 1050;
 				break;
 			case 20:
-				return 2250;
+				return 1250;
 				break;
 			case 21:
-				return 2500;
+				return 1450;
 				break;
 			case 22:
-				return 2750;
+				return 1650;
 				break;
 			case 23:
-				return 3000;
+				return 1850;
 				break;
 			case 24:
-				return 3250;
+				return 2050;
 				break;
 			case 25:
-				return 3600;
+				return 2300;
 				break;
 			case 26:
-				return 4000;
+				return 2550;
 				break;
 			case 27:
-				return 4450;
+				return 2800;
 				break;
 			case 28:
-				return 4950;
+				return 3050;
 				break;
 			case 29:
-				return 5500;
+				return 3300;
 				break;
 			case 30:
-				return 6100;
+				return 3600;
 				break;
 			case 31:
-				return 6800;
+				return 3900;
 				break;
 			case 32:
-				return 7600;
+				return 4200;
 				break;
 			case 33:
-				return 8500;
+				return 4500;
 				break;
 			case 34:
-				return 9500;
+				return 4800;
 				break;
 			case 35:
-				return 10600;
+				return 5300;
 				break;
 			case 36:
-				return 11800;
+				return 6000;
 				break;
 			case 37:
-				return 13100;
+				return 7000;
 				break;
 			case 38:
-				return 14500;
+				return 8000;
 				break;
 			case 39:
-				return 16000;
+				return 9000;
 				break;
 			case 40:
-				return 17600;
+				return 10000;
 				break;
 			default:
 				return 999999;

@@ -40,6 +40,7 @@ using UnityEngine.SceneManagement;
 public class CircuitSelectGUI : MonoBehaviour {
 
 	public GUISkin eightBitSkin;
+	public GUISkin redGUI;
 	public GameObject circuit;
 	
 	static float widthblock = Mathf.Round(Screen.width/20);
@@ -59,6 +60,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 	int championshipRound;	
 	static Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
 	
+	string activeMenu;
+	
 	int bestFinishPos;
 
 	public static int gameDifficulty;
@@ -76,6 +79,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		seriesPrefix = "cup20";
 		
+		activeMenu = "Schedule";
+		
 		currentSeriesName = PlayerPrefs.GetString("CurrentSeriesName");
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
@@ -92,6 +97,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			seriesTracks = seriesTrackList.Split(',');
 		}
 		seriesLength = seriesTracks.Length;
+		PlayerPrefs.SetInt("ChampionshipLength",seriesLength);
 		
 		circuit.GetComponent<Renderer>().material.mainTexture = null;
 		
@@ -102,9 +108,11 @@ public class CircuitSelectGUI : MonoBehaviour {
 			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 				//Found a championship
 				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+				Debug.Log("Current Round: " + championshipRound);
 				if(championshipRound >= seriesLength){
 					//Championship is over, reset
 					PlayerPrefs.DeleteKey("ChampionshipSubseries");
+					Debug.Log("End of season, round reset.");
 				} else {
 					loadTrack(seriesTracks[championshipRound].ToString(), 0);
 					loadPoints();
@@ -330,19 +338,37 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		scrollPosition = GUI.BeginScrollView(new Rect(0, 0, widthblock * 9, Screen.height), scrollPosition, new Rect(0, 0, widthblock, Screen.height * 3.5f));
 
-		GUI.Label(new Rect(widthblock / 2, heightblock / 2, widthblock * 7, heightblock * 2), currentSeriesName);
+		GUI.Label(new Rect(widthblock, heightblock / 2, widthblock * 7, heightblock * 2), currentSeriesName);
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-		GUI.Label(new Rect(widthblock / 2, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
+		GUI.Label(new Rect(widthblock, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
 		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex)){
-			showPoints(widthblock / 2, 4, carNumber);
+			GUI.skin.button.fontSize = 48 / FontScale.fontScale;
+			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			if (GUI.Button(new Rect(widthblock, heightblock * 4, widthblock * 2.75f, heightblock * 1.5f), "Points")){
+				activeMenu = "Points";
+			}
+			if (GUI.Button(new Rect(widthblock * 4.25f, heightblock * 4, widthblock * 2.75f, heightblock * 1.5f), "Schedule")){
+				activeMenu = "Schedule";
+			}
+			GUI.skin.button.fontSize = 72 / FontScale.fontScale;
+			if(activeMenu != "Schedule"){
+				showPoints(widthblock / 2, 6, carNumber);
+			} else {
+				showSchedule(widthblock / 2, 6, championshipRound);
+			}
 		} else {
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Championship")){
+			GUI.skin = redGUI;
+			GUI.skin.button.fontSize = 72 / FontScale.fontScale;
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Run As Championship")){
 				PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
 				loadTrack(seriesTracks[0], 0);
 				PlayerPrefs.SetInt("ChampionshipRound",0);
-				//startRace();
+				resetChampionshipPoints();
 			}
+			GUI.skin = eightBitSkin;
+			GUI.skin.button.fontSize = 72 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 			
 			int trackCount = 0;
 			foreach (string track in seriesTracks){
@@ -360,7 +386,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		GUI.Label(new Rect((widthblock * 12)-20, 0, widthblock * 8, heightblock * 1.5f), "Avg Speed: " + (202 - maxSpeed) + "MpH");
 		GUI.Label(new Rect((widthblock * 15)-20, heightblock * 1.5f, widthblock * 5, heightblock * 1.5f), "Laps: " + PlayerPrefs.GetInt("RaceLaps"));
 		GUI.Label(new Rect((widthblock * 15)-20, heightblock * 3, widthblock * 5, heightblock * 1.5f), "Lanes: " + PlayerPrefs.GetInt("CircuitLanes"));
-		GUI.skin.label.alignment = TextAnchor.UpperLeft;
+		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 		//GUI.skin.label.fontSize = 72 / FontScale.fontScale;
 		
 		if (Input.GetKeyDown(KeyCode.Escape)){
@@ -501,9 +527,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 		for(int i=0;i<100;i++){
 			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
 				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
+				Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
 				pointsTableInd++;
 			} else {
-				Debug.Log("No points found for " + ("ChampionshipPoints" + i));
+				Debug.Log("No points found for #" + i);
 			}
 		}
 	}
@@ -542,6 +569,13 @@ public class CircuitSelectGUI : MonoBehaviour {
 		}
 	}
 
+	static void showSchedule(float posX, float posY, int championshipRound){
+		
+		//Table header
+		GUI.Label(new Rect(widthblock, heightblock * posY, widthblock * 1.5f, heightblock * 2), "Round");	
+		GUI.Label(new Rect(widthblock * 3f, heightblock * posY, widthblock * 2.5f, heightblock * 2), "Location");	
+	}
+
 	static void showBestFinish(string currentSeriesIndex, int order){
 		
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex + order) == true){
@@ -552,6 +586,21 @@ public class CircuitSelectGUI : MonoBehaviour {
 		} else {
 			//Debug.Log("No finishes on Track " + currentSubseries + order);
 		}
+	}
+	
+	static void resetChampionshipPoints(){
+		championshipPoints.Clear();
+		for(int i=0;i<100;i++){
+			if(DriverNames.cup2020Names[i] != null){
+				PlayerPrefs.SetInt("ChampionshipPoints" + i,0);
+			}
+			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
+				PlayerPrefs.SetInt("ChampionshipPoints" + i,0);
+			} else {
+				//Debug.Log("No points found for " + ("ChampionshipPoints" + i));
+			}
+		}
+		loadPoints();
 	}
 
 	static void Talladega(){

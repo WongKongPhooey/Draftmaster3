@@ -23,6 +23,8 @@ public class RaceResultsGUI : MonoBehaviour {
 	string carNumber;
 
 	int resultsRows;
+	
+	string currentSeriesIndex;
 
 	int playerMoney;
 	int moneyCount;
@@ -47,6 +49,8 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		seriesPrefix = "cup20";
 
+		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+
 		challengeComplete = false;
 
 		PlayerPrefs.SetInt("FinishPos",(Scoreboard.position + 1));
@@ -64,18 +68,16 @@ public class RaceResultsGUI : MonoBehaviour {
 		}
 
 		winningsMultiplier = 1;
-
-		int currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
 		
 		//Is this a championship round?
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
+			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 				
 				//Increment Championship Round
 				int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 				PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
 				
-				Debug.Log("Add Championship Points");
+				Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
 				RacePoints.setCupPoints();
 				for( int i=0; i < resultsRows; i++){
 					if(i == (Scoreboard.position)){
@@ -87,11 +89,12 @@ public class RaceResultsGUI : MonoBehaviour {
 					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 				}
 			} else {
-				//Debug.Log("No Championship Points Here");
+				Debug.Log("No Championship Points Here");
 			}
+		} else {
+			Debug.Log("No Championship Here");
 		}
 				
-		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
@@ -307,7 +310,25 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		if(GUI.Button(new Rect(widthblock * 2, Screen.height - (heightblock * 3), widthblock * 3, heightblock * 2), "Next")){
 			ChallengeSelectGUI.challengeMode = false;
-			Application.LoadLevel("RaceRewards");
+			
+			int seriesLength = PlayerPrefs.GetInt("ChampionshipLength");
+			int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+			
+			//Is this a championship round?
+			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
+					if(championshipRound >= seriesLength){
+						//Season End
+						Application.LoadLevel("RaceRewards");
+					} else {
+						Application.LoadLevel("CircuitSelect");
+					}
+				} else {
+					Application.LoadLevel("RaceRewards");
+				}
+			} else {
+				Application.LoadLevel("RaceRewards");	
+			}
 		}
 	}
 	

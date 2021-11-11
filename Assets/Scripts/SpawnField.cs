@@ -8,8 +8,9 @@ public class SpawnField : MonoBehaviour {
 
 	string carNum;
 
-	public static ArrayList carNumbers = new ArrayList();
 	public static ArrayList fastCars = new ArrayList();
+	public static ArrayList midCars = new ArrayList();
+	public static ArrayList slowCars = new ArrayList();
 
 	public float paceDistance;
 
@@ -50,7 +51,8 @@ public class SpawnField : MonoBehaviour {
 		string splitAfter = "livery";
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
 		fastCars.Remove(carNumber);
-		carNumbers.Remove(carNumber);
+		midCars.Remove(carNumber);
+		slowCars.Remove(carNumber);
 		gridRows = 21;
 		playerRow = 8;
 		//gridRows = 2;
@@ -93,11 +95,19 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
-					carNumbers.RemoveAt(carChoice);
+					if(midCars.Count > 0){
+						carChoice = Random.Range(0,midCars.Count);
+						carNum = midCars[carChoice].ToString();
+						AICarInstance.name = ("AICar0" + carNum);
+						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
+						midCars.RemoveAt(carChoice);
+					} else {
+						carChoice = Random.Range(0,slowCars.Count);
+						carNum = slowCars[carChoice].ToString();
+						AICarInstance.name = ("AICar0" + carNum);
+						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
+						slowCars.RemoveAt(carChoice);
+					}
 				}
 			}
 			
@@ -111,11 +121,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 			
@@ -128,11 +138,11 @@ public class SpawnField : MonoBehaviour {
 				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
 				fastCars.RemoveAt(carChoice);
 			} else {
-				carChoice = Random.Range(0,carNumbers.Count);
-				carNum = carNumbers[carChoice].ToString();
+				carChoice = Random.Range(0,slowCars.Count);
+				carNum = slowCars[carChoice].ToString();
 				AICarInstance.name = ("AICar0" + carNum);
 				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				carNumbers.RemoveAt(carChoice);
+				slowCars.RemoveAt(carChoice);
 			}
 			
 			//Lane 4
@@ -145,11 +155,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 		}
@@ -168,11 +178,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 		}
@@ -188,11 +198,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 		}
@@ -207,11 +217,11 @@ public class SpawnField : MonoBehaviour {
 				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
 				fastCars.RemoveAt(carChoice);
 			} else {
-				carChoice = Random.Range(0,carNumbers.Count);
-				carNum = carNumbers[carChoice].ToString();
+				carChoice = Random.Range(0,slowCars.Count);
+				carNum = slowCars[carChoice].ToString();
 				AICarInstance.name = ("AICar0" + carNum);
 				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				carNumbers.RemoveAt(carChoice);
+				slowCars.RemoveAt(carChoice);
 			}
 		}
 
@@ -226,11 +236,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 		}
@@ -248,11 +258,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 			
@@ -266,11 +276,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 			
@@ -283,11 +293,11 @@ public class SpawnField : MonoBehaviour {
 				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
 				fastCars.RemoveAt(carChoice);
 			} else {
-				carChoice = Random.Range(0,carNumbers.Count);
-				carNum = carNumbers[carChoice].ToString();
+				carChoice = Random.Range(0,slowCars.Count);
+				carNum = slowCars[carChoice].ToString();
 				AICarInstance.name = ("AICar0" + carNum);
 				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				carNumbers.RemoveAt(carChoice);
+				slowCars.RemoveAt(carChoice);
 			}
 
 			//Lane 4
@@ -300,11 +310,11 @@ public class SpawnField : MonoBehaviour {
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,carNumbers.Count);
-					carNum = carNumbers[carChoice].ToString();
+					carChoice = Random.Range(0,slowCars.Count);
+					carNum = slowCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					carNumbers.RemoveAt(carChoice);
+					slowCars.RemoveAt(carChoice);
 				}
 			}
 		}
@@ -315,12 +325,14 @@ public class SpawnField : MonoBehaviour {
 	public static void spawnIndycars(){
 
 		fastCars.Clear();
-		carNumbers.Clear();
+		midCars.Clear();
+		slowCars.Clear();
 	}
 
 	public static void spawnCup2020Cars(){
 		fastCars.Clear();
-		carNumbers.Clear();
+		midCars.Clear();
+		slowCars.Clear();
 		
 		fastCars.Add("1");
 		fastCars.Add("2");
@@ -344,34 +356,35 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Add("48");
 		fastCars.Add("88");
 		fastCars.Add("95");
-		carNumbers.Add("0");
-		carNumbers.Add("7");
-		carNumbers.Add("15");
-		carNumbers.Add("16");
-		carNumbers.Add("17");
-		carNumbers.Add("27");
-		carNumbers.Add("32");
-		carNumbers.Add("34");
-		carNumbers.Add("36");
-		carNumbers.Add("37");
-		carNumbers.Add("38");
-		carNumbers.Add("41");
-		carNumbers.Add("47");
-		carNumbers.Add("49");
-		carNumbers.Add("51");
-		carNumbers.Add("52");
-		carNumbers.Add("53");
-		carNumbers.Add("62");
-		carNumbers.Add("74");
-		carNumbers.Add("77");
-		carNumbers.Add("78");
-		carNumbers.Add("96");
+		slowCars.Add("0");
+		slowCars.Add("7");
+		slowCars.Add("15");
+		slowCars.Add("16");
+		slowCars.Add("17");
+		slowCars.Add("27");
+		slowCars.Add("32");
+		slowCars.Add("34");
+		slowCars.Add("36");
+		slowCars.Add("37");
+		slowCars.Add("38");
+		slowCars.Add("41");
+		slowCars.Add("47");
+		slowCars.Add("49");
+		slowCars.Add("51");
+		slowCars.Add("52");
+		slowCars.Add("53");
+		slowCars.Add("62");
+		slowCars.Add("74");
+		slowCars.Add("77");
+		slowCars.Add("78");
+		slowCars.Add("96");
 		
 	}
 	
 	public static void spawnCup2020Scenario(){
 		fastCars.Clear();
-		carNumbers.Clear();
+		midCars.Clear();
+		slowCars.Clear();
 		
 		fastCars.Add("1");
 		fastCars.Add("18");
@@ -382,7 +395,8 @@ public class SpawnField : MonoBehaviour {
 	public static void spawnStockcars(){
 
 		fastCars.Clear();
-		carNumbers.Clear();
+		midCars.Clear();
+		slowCars.Clear();
 
 		fastCars.Add("3");
 		fastCars.Add("24");
@@ -392,53 +406,53 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Add("52");
 		fastCars.Add("88");
 		
-		carNumbers.Add("0");
-		carNumbers.Add("1");
-		carNumbers.Add("2");
-		carNumbers.Add("4");
-		carNumbers.Add("5");
-		carNumbers.Add("6");
-		carNumbers.Add("7");
-		carNumbers.Add("8");
-		carNumbers.Add("9");
-		carNumbers.Add("10");
-		carNumbers.Add("11");
-		carNumbers.Add("12");
-		carNumbers.Add("13");
-		carNumbers.Add("14");
-		carNumbers.Add("15");
-		carNumbers.Add("16");
-		carNumbers.Add("17");
-		carNumbers.Add("18");
-		carNumbers.Add("19");
-		carNumbers.Add("20");
-		carNumbers.Add("21");
-		carNumbers.Add("22");
-		carNumbers.Add("23");
-		carNumbers.Add("25");
-		carNumbers.Add("27");
-		carNumbers.Add("28");
-		carNumbers.Add("29");
-		carNumbers.Add("33");
-		carNumbers.Add("37");
-		carNumbers.Add("41");
-		carNumbers.Add("44");
-		carNumbers.Add("46");
-		carNumbers.Add("50");
-		carNumbers.Add("51");
-		carNumbers.Add("55");
-		carNumbers.Add("66");
-		carNumbers.Add("67");
+		slowCars.Add("0");
+		slowCars.Add("1");
+		slowCars.Add("2");
+		slowCars.Add("4");
+		slowCars.Add("5");
+		slowCars.Add("6");
+		slowCars.Add("7");
+		slowCars.Add("8");
+		slowCars.Add("9");
+		slowCars.Add("10");
+		slowCars.Add("11");
+		slowCars.Add("12");
+		slowCars.Add("13");
+		slowCars.Add("14");
+		slowCars.Add("15");
+		slowCars.Add("16");
+		slowCars.Add("17");
+		slowCars.Add("18");
+		slowCars.Add("19");
+		slowCars.Add("20");
+		slowCars.Add("21");
+		slowCars.Add("22");
+		slowCars.Add("23");
+		slowCars.Add("25");
+		slowCars.Add("27");
+		slowCars.Add("28");
+		slowCars.Add("29");
+		slowCars.Add("33");
+		slowCars.Add("37");
+		slowCars.Add("41");
+		slowCars.Add("44");
+		slowCars.Add("46");
+		slowCars.Add("50");
+		slowCars.Add("51");
+		slowCars.Add("55");
+		slowCars.Add("66");
+		slowCars.Add("67");
 		
 		if(RacePoints.championshipMode == true){
-			carNumbers.Add("71");
-			carNumbers.Add("77");
-			carNumbers.Add("80");
-			carNumbers.Add("89");
-			carNumbers.Add("91");
-			carNumbers.Add("92");
-			carNumbers.Add("94");
-			carNumbers.Add("99");
+			slowCars.Add("71");
+			slowCars.Add("77");
+			slowCars.Add("80");
+			slowCars.Add("89");
+			slowCars.Add("91");
+			slowCars.Add("92");
+			slowCars.Add("94");
+			slowCars.Add("99");
 		}
 	}
 }
