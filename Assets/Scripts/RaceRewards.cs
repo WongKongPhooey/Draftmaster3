@@ -25,8 +25,15 @@ public class RaceRewards : MonoBehaviour
 	int offsetGears;
     int rewardGears;
 	
+	int setPrize;
+	
+	bool championshipReward;
+	int championshipFinish;
+	int seriesLength;
+	
 	public static int carPrizeNum;
 	public static string carReward;
+	public static int rewardMultiplier;
 	public static int carCurrentGears;
 	public static int carClassMax;
 	
@@ -53,6 +60,7 @@ public class RaceRewards : MonoBehaviour
         offsetGears = 0;
         rewardGears = 0;
 
+		setPrize = 0;
 
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
@@ -65,10 +73,27 @@ public class RaceRewards : MonoBehaviour
 		} else {
 			ListPrizeOptions("");
 		}
+		Debug.Log("Series Prize: " + seriesPrize);
 		finishPos = PlayerPrefs.GetInt("FinishPos");
+		rewardMultiplier = 1;
+		
+		championshipReward = false;
+		championshipFinish = 40;
+		if(PlayerPrefs.GetInt("ChampionshipReward") == 1){
+			championshipReward = true;
+			championshipFinish = getChampionshipPosition();
+			seriesLength = PlayerPrefs.GetInt("ChampionshipLength");
+		}
+		
+		if(championshipReward == true){
+			finishPos = championshipFinish;
+			rewardMultiplier = seriesLength;
+			//Debug.Log("Multiplier Set as " + rewardMultiplier);
+			PlayerPrefs.DeleteKey("ChampionshipSubseries");
+		}
 		
 		prizeMoney = PrizeMoney.getPrizeMoney(finishPos-1);
-		playerMoney += prizeMoney;
+		playerMoney += prizeMoney * rewardMultiplier;
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		
         //If top 10 finish..
@@ -77,7 +102,7 @@ public class RaceRewards : MonoBehaviour
 			float chance = 11 - finishPos;
 			float rnd = Random.Range(0,10);
 			if(rnd <= chance){
-				AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)]);
+				AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 			} else {
 				carReward = "";
 			}
@@ -91,10 +116,14 @@ public class RaceRewards : MonoBehaviour
             //Top 3 win gears
 			maxRaceGears = 3;
 		}
+		if(maxRaceGears >= 9){
+			//Max for a win is 8
+			maxRaceGears = 8;
+		}
 		//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
 		rewardGears = (maxRaceGears - finishPos) + 1;
 		if(rewardGears > 0){
-			gears += rewardGears;
+			gears += rewardGears * rewardMultiplier;
 		} else {
 			rewardGears = 0;
 		}
@@ -127,11 +156,11 @@ public class RaceRewards : MonoBehaviour
 		}
 		
 		GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
-		GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +" + rewardGears + " Gears (" + gears + ")");
+		GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")");
 		
 		if(prizeMoney != 0){
 			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 12, widthblock * 1, widthblock * 1), moneyTexInst);
-			GUI.Label(new Rect(widthblock * 9, heightblock * 12, widthblock * 5, heightblock * 2), " +$" + prizeMoney + "");
+			GUI.Label(new Rect(widthblock * 9, heightblock * 12, widthblock * 5, heightblock * 2), " +$" + (prizeMoney * rewardMultiplier) + "");
 		}
 
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
@@ -142,19 +171,19 @@ public class RaceRewards : MonoBehaviour
 		}
 	}
 	
-	void AssignPrizes(string seriesPrefix, int carNumber){
+	void AssignPrizes(string seriesPrefix, int carNumber, int setPrize, int multiplier){
 		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Class");
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + 1);
-			carReward = "" + DriverNames.cup2020Names[carNumber] + " +1";
+			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + multiplier);
+			carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
 			carPrizeNum = carNumber;			
-			carCurrentGears = carGears + 1;
+			carCurrentGears = carGears + multiplier;
 			carClassMax = GameData.classMax(carClass);
 		} else {
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", 1);
+			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", multiplier);
 			carPrizeNum = carNumber;
-			carReward = "" + DriverNames.cup2020Names[carNumber] + " +1";
+			carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
 		}
 		//Reset Prizes
 		PlayerPrefs.SetString("SeriesPrize","");
@@ -395,6 +424,52 @@ public class RaceRewards : MonoBehaviour
 					}
 				}
 			break;
+			
+			//Event Specific
+			case "Johnson":
+				validDriver.Add(48);
+				setPrize = 65;
+			break;
 		}
+	}
+	
+	int getChampionshipPosition(){
+		Debug.Log("LOOKING FOR CHAMPIONSHIP POSITION");
+		string playerCarNumber = PlayerPrefs.GetString("carTexture");
+		string splitAfter = "livery";
+		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
+		int carNumber = int.Parse(playerCarNumber);
+		Debug.Log("CAR NUMBER IS " + carNumber.ToString());
+		Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
+		
+		championshipPoints.Clear();
+		int pointsTableInd = 0;
+		for(int i=0;i<100;i++){
+			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
+				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
+				pointsTableInd++;
+			}
+		}
+		
+		List<KeyValuePair<int, int>> pointsTable = new List<KeyValuePair<int, int>>(championshipPoints);
+		
+		pointsTable.Sort(
+			delegate(KeyValuePair<int, int> firstPair,
+			KeyValuePair<int, int> nextPair)
+			{
+				return nextPair.Value.CompareTo(firstPair.Value);
+			}
+		);
+		
+		int champPosition = 0;
+		pointsTableInd = 1;
+		foreach(var pointsRow in pointsTable){
+			if(pointsRow.Key == carNumber){
+				champPosition = pointsTableInd;
+				Debug.Log("CHAMPIONSHIP POSITION IS " + champPosition);
+			}
+			pointsTableInd++;
+		}
+		return champPosition;
 	}
 }

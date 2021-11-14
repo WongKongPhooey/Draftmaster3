@@ -319,6 +319,8 @@ public class RaceResultsGUI : MonoBehaviour {
 				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 					if(championshipRound >= seriesLength){
 						//Season End
+						//Set bool for rewards screen
+						PlayerPrefs.SetInt("ChampionshipReward",1);
 						Application.LoadLevel("RaceRewards");
 					} else {
 						Application.LoadLevel("CircuitSelect");

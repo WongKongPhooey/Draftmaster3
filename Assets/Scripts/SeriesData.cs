@@ -17,6 +17,7 @@ public class SeriesData : MonoBehaviour{
 	public static int[,] offlineMinClass = new int[10,10];
 	public static int[,] offlineMinRarity = new int[10,10];
 	public static string[,] offlineMinTeam = new string[10,10];
+	public static int[,] offlineExactCar = new int[10,10];
 	public static string[,] offlineMinManu = new string[10,10];
 	public static string[,] offlineMinDriverType = new string[10,10];
 	public static string[,] offlineTracklists = new string[10,10];

@@ -72,6 +72,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 	int maxDailyPlays;
 	int dailyPlays;
 	
+	public static string[] circuitNames = new string[30];
+	
 	public Vector2 scrollPosition = Vector2.zero;
 	
 	void Awake(){
@@ -79,7 +81,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		seriesPrefix = "cup20";
 		
-		activeMenu = "Schedule";
+		loadCircuitNames();
+		
+		activeMenu = "Points";
 		
 		currentSeriesName = PlayerPrefs.GetString("CurrentSeriesName");
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
@@ -97,6 +101,14 @@ public class CircuitSelectGUI : MonoBehaviour {
 			seriesTracks = seriesTrackList.Split(',');
 		}
 		seriesLength = seriesTracks.Length;
+		
+		if(seriesLength == 1){
+			//One race series = Challenge or Event
+			//Skip this screen
+			loadTrack(seriesTracks[0], 0);
+			startRace();
+		}
+		
 		PlayerPrefs.SetInt("ChampionshipLength",seriesLength);
 		
 		circuit.GetComponent<Renderer>().material.mainTexture = null;
@@ -336,7 +348,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;
 		GUI.skin.verticalScrollbarThumb.fixedWidth = Screen.width / 20;
 		
-		scrollPosition = GUI.BeginScrollView(new Rect(0, 0, widthblock * 9, Screen.height), scrollPosition, new Rect(0, 0, widthblock, Screen.height * 3.5f));
+		scrollPosition = GUI.BeginScrollView(new Rect(0, 0, widthblock * 9, Screen.height), scrollPosition, new Rect(0, 0, widthblock, Screen.height * 4.0f));
 
 		GUI.Label(new Rect(widthblock, heightblock / 2, widthblock * 7, heightblock * 2), currentSeriesName);
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -361,10 +373,14 @@ public class CircuitSelectGUI : MonoBehaviour {
 			GUI.skin = redGUI;
 			GUI.skin.button.fontSize = 72 / FontScale.fontScale;
 			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Run As Championship")){
+				activeMenu = "Schedule";
 				PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
 				loadTrack(seriesTracks[0], 0);
 				PlayerPrefs.SetInt("ChampionshipRound",0);
 				resetChampionshipPoints();
+				PlayerPrefs.SetString("ChampionshipCarTexture", PlayerPrefs.GetString("carTexture"));
+				PlayerPrefs.SetInt("ChampionshipCarChoice", PlayerPrefs.GetInt("CarChoice"));
+				
 			}
 			GUI.skin = eightBitSkin;
 			GUI.skin.button.fontSize = 72 / FontScale.fontScale;
@@ -569,11 +585,25 @@ public class CircuitSelectGUI : MonoBehaviour {
 		}
 	}
 
-	static void showSchedule(float posX, float posY, int championshipRound){
+	void showSchedule(float posX, float posY, int championshipRound){
 		
 		//Table header
 		GUI.Label(new Rect(widthblock, heightblock * posY, widthblock * 1.5f, heightblock * 2), "Round");	
 		GUI.Label(new Rect(widthblock * 3f, heightblock * posY, widthblock * 2.5f, heightblock * 2), "Location");	
+		
+		int scheduleInd = 0;
+		foreach(var track in seriesTracks){
+			
+			if(scheduleInd == championshipRound){
+				GUI.skin.label.normal.textColor = Color.red;
+			}
+			GUI.Label(new Rect(widthblock, heightblock * (((scheduleInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "R" + (scheduleInd + 1));	
+			GUI.Label(new Rect(widthblock * 3f, heightblock * (((scheduleInd + 1)*1.5f) + posY), widthblock * 5f, heightblock * 2), "" + circuitNames[int.Parse(track)]);	
+			if(scheduleInd == championshipRound){
+				GUI.skin.label.normal.textColor = Color.black;
+			}
+			scheduleInd++;
+		}
 	}
 
 	static void showBestFinish(string currentSeriesIndex, int order){
@@ -601,6 +631,40 @@ public class CircuitSelectGUI : MonoBehaviour {
 			}
 		}
 		loadPoints();
+	}
+
+	static void loadCircuitNames(){
+		circuitNames[1] = "Daytona Beach, FL";
+		circuitNames[2] = "Atlanta, GA";
+		circuitNames[3] = "Las Vegas, NV";
+		circuitNames[4] = "Phoenix, AZ";
+		circuitNames[5] = "Fontana, CA";
+		circuitNames[6] = "Martinsville, VA";
+		circuitNames[7] = "Fort Worth, TX";
+		circuitNames[8] = "Bristol, TN";
+		circuitNames[9] = "Richmond, VA";
+		circuitNames[10] = "Talladega, AL";
+		circuitNames[11] = "Dover, DE";
+		circuitNames[12] = "Kansas City, KS";
+		circuitNames[13] = "Charlotte, NC";
+		circuitNames[14] = "Long Pond, PA";
+		circuitNames[15] = "Brooklyn, MI";
+		circuitNames[16] = "Joliet, IL";
+		circuitNames[17] = "Sparta, KY";
+		circuitNames[18] = "Loudon, NH";
+		circuitNames[19] = "Darlington, SC";
+		circuitNames[20] = "Indianapolis, IN";
+		circuitNames[21] = "Homestead, FL";
+		
+		circuitNames[22] = "Motegi, Japan";
+		circuitNames[23] = "Lausitzring, Germany";
+		circuitNames[24] = "Rockingham, England";
+		
+		circuitNames[25] = "Rockingham, NC";
+		circuitNames[26] = "North Wilkesboro, NC";
+		circuitNames[27] = "Nazareth, PN";
+		circuitNames[28] = "Newton, IA";
+		circuitNames[29] = "Nashville, TN";
 	}
 
 	static void Talladega(){

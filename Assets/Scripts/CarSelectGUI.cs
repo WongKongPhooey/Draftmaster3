@@ -29,6 +29,7 @@ public class CarSelectGUI : MonoBehaviour {
 	int seriesMinClass;
 	string seriesTeam;
 	string seriesManu;
+	int seriesCar;
 	string seriesDriverType;
 	int seriesRarity;
 	
@@ -62,6 +63,7 @@ public class CarSelectGUI : MonoBehaviour {
 		
 		seriesTeam = "";
 		seriesManu = "";
+		seriesCar = 999;
 		seriesDriverType = "";
 		seriesRarity = 0;
 		
@@ -71,6 +73,9 @@ public class CarSelectGUI : MonoBehaviour {
 				break;
 			case "Manufacturer":
 				seriesManu = restrictionValue;
+				break;
+			case "Car":
+				seriesCar = int.Parse(restrictionValue);
 				break;
 			case "Rarity":
 				seriesRarity = int.Parse(restrictionValue);
@@ -225,6 +230,7 @@ public class CarSelectGUI : MonoBehaviour {
 					||(carClass < seriesMinClass)
 					||((seriesTeam != "")&&(DriverNames.cup2020Teams[carCount] != seriesTeam))
 					||((seriesManu != "")&&(DriverNames.cup2020Manufacturer[carCount] != seriesManu))
+					||((seriesCar != 999)&&(carCount != seriesCar))
 					||((seriesDriverType != "")&&(DriverNames.cup2020Types[carCount] != seriesDriverType))
 					||((seriesRarity != 0)&&(DriverNames.cup2020Rarity[carCount] != seriesRarity))
 					)&&(carCount < 99)){
@@ -458,7 +464,7 @@ public class CarSelectGUI : MonoBehaviour {
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
 								PlayerPrefs.SetString("carTexture", carLivery);
 								PlayerPrefs.SetInt("CarChoice",carCount);
-								Application.LoadLevel("CircuitSelect");
+								SceneManager.LoadScene("CircuitSelect");
 							}
 						}
 						carCount++;
