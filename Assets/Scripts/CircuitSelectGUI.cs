@@ -107,6 +107,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 			//Skip this screen
 			loadTrack(seriesTracks[0], 0);
 			startRace();
+		} else {
+			PlayerPrefs.SetString("RaceType","Single");
 		}
 		
 		PlayerPrefs.SetInt("ChampionshipLength",seriesLength);
@@ -118,12 +120,14 @@ public class CircuitSelectGUI : MonoBehaviour {
 		//Check for an active championship
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
 			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
+				PlayerPrefs.SetString("RaceType","Championship");
 				//Found a championship
 				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 				Debug.Log("Current Round: " + championshipRound);
 				if(championshipRound >= seriesLength){
 					//Championship is over, reset
 					PlayerPrefs.DeleteKey("ChampionshipSubseries");
+					PlayerPrefs.SetString("RaceType","Single");
 					Debug.Log("End of season, round reset.");
 				} else {
 					loadTrack(seriesTracks[championshipRound].ToString(), 0);
@@ -375,6 +379,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			if (GUI.Button(new Rect(widthblock / 2, heightblock * 4, widthblock * 7f, heightblock * 2), "Run As Championship")){
 				activeMenu = "Schedule";
 				PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
+				PlayerPrefs.SetString("RaceType","Championship");
 				loadTrack(seriesTracks[0], 0);
 				PlayerPrefs.SetInt("ChampionshipRound",0);
 				resetChampionshipPoints();

@@ -150,6 +150,7 @@ public class EventSelectGUI : MonoBehaviour {
 				
 				//If event is already won, lock.
 				if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0") == 1){
+					//PlayerPrefs.SetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0",0);
 					meetsRequirements = false;
 				}
 				
@@ -200,7 +201,8 @@ public class EventSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
 						PlayerPrefs.SetInt("SeriesFuel",5);
-						PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
+						PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[menuIndex,subMenu]);
+						PlayerPrefs.SetString("SeriesPrizeAmt",EventData.offlineSetPrizes[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RaceType","Event");
 						SceneManager.LoadScene("CarSelect");
 					}

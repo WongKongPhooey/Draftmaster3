@@ -315,7 +315,7 @@ public class RaceResultsGUI : MonoBehaviour {
 			int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 			
 			//Is this a championship round?
-			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+			if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("RaceType") == "Championship")){
 				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 					if(championshipRound >= seriesLength){
 						//Season End

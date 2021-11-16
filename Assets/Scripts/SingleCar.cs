@@ -409,9 +409,6 @@ public class SingleCar : MonoBehaviour {
 				GUI.skin = buttonSkin;
 				break;
 			case "Paints":
-				/*if(AltPaints.cup2020AltPaintNames[currentCar,1] == null){
-					GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 7), "No Alt Paints Exist For This Car");
-				}*/
 				
 				//Stock Paint
 				cardX = widthblock * 7.5f;

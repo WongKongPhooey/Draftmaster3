@@ -25,7 +25,9 @@ public class RaceRewards : MonoBehaviour
 	int offsetGears;
     int rewardGears;
 	
-	int setPrize;
+	string setPrize;
+	bool altPaintReward;
+	string raceType;
 	
 	bool championshipReward;
 	int championshipFinish;
@@ -60,7 +62,10 @@ public class RaceRewards : MonoBehaviour
         offsetGears = 0;
         rewardGears = 0;
 
-		setPrize = 0;
+		raceType = PlayerPrefs.GetString("RaceType");
+
+		setPrize = "0";
+		altPaintReward = false;
 
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
@@ -96,18 +101,31 @@ public class RaceRewards : MonoBehaviour
 		playerMoney += prizeMoney * rewardMultiplier;
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		
-        //If top 10 finish..
-		if(finishPos < 11){
-            //Inverted chance of reward (10th = 10%, 1st = 100%)
-			float chance = 11 - finishPos;
-			float rnd = Random.Range(0,10);
-			if(rnd <= chance){
-				AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
-			} else {
-				carReward = "";
-			}
-		} else {
-			carReward = "";
+		Debug.Log("Race Type: " + raceType);
+		switch(raceType){
+			case "Event":
+			//Must win
+				if(finishPos == 1){
+					AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+				} else {
+					carReward = "";
+				}
+				break;
+			default:
+				//If top 10 finish..
+				if(finishPos < 11){
+					//Inverted chance of reward (10th = 10%, 1st = 100%)
+					float chance = 11 - finishPos;
+					float rnd = Random.Range(0,10);
+					if(rnd <= chance){
+						AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+					} else {
+						carReward = "";
+					}
+				} else {
+					carReward = "";
+				}
+				break;
 		}
 		
 		maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
@@ -167,18 +185,33 @@ public class RaceRewards : MonoBehaviour
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
 		if (GUI.Button(new Rect(widthblock * 7, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
+			PlayerPrefs.SetInt("ChampionshipReward", 0);
 			Application.LoadLevel("MainMenu");
 		}
 	}
 	
-	void AssignPrizes(string seriesPrefix, int carNumber, int setPrize, int multiplier){
+	void AssignPrizes(string seriesPrefix, int carNumber, string setPrize, int multiplier){
 		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Class");
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + multiplier);
-			carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
-			carPrizeNum = carNumber;			
-			carCurrentGears = carGears + multiplier;
+			if(int.Parse(setPrize) > 1){
+				//Likely has a big fixed prize set e.g. 35 car parts
+				PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + int.Parse(setPrize));
+				carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + int.Parse(setPrize);			
+				carCurrentGears = carGears + int.Parse(setPrize);
+				carPrizeNum = carNumber;
+			} else {
+				if(altPaintReward == true){
+					//Win an alt paint rather than car parts
+					//PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
+					carReward = "New " + DriverNames.cup2020Names[carNumber] + " Alt Unlocked";
+				} else {
+					PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + multiplier);
+					carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
+					carPrizeNum = carNumber;			
+					carCurrentGears = carGears + multiplier;
+				}
+			}
 			carClassMax = GameData.classMax(carClass);
 		} else {
 			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", multiplier);
@@ -424,11 +457,15 @@ public class RaceRewards : MonoBehaviour
 					}
 				}
 			break;
+			case "AltPaint":
+				altPaintReward = true;
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
 			
 			//Event Specific
 			case "Johnson":
 				validDriver.Add(48);
-				setPrize = 65;
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 		}
 	}
