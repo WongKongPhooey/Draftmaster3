@@ -339,13 +339,13 @@ public class AIMovement : MonoBehaviour
 			//Speed up
 			if (AISpeed < (205 + (AILevel / 5))){
 				//Draft gets stronger as you get closer
-				AISpeed += ((10 - DraftCheckForward.distance)/ (1000 - (AILevel * 10)));
+				AISpeed += ((maxDraftDistance - DraftCheckForward.distance)/1000) + (AILevel / 2500);
 			}
 		} else {
 			//Slow down
 			if (AISpeed > 200){
 				//No draft, slow with drag
-				AISpeed -= 0.003f + (AILevel / 10000);
+				AISpeed -= (0.004f - (AILevel / 3200));
 			}
 		}
 		
@@ -358,7 +358,7 @@ public class AIMovement : MonoBehaviour
 		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
-			AISpeed += 0.004f;
+			AISpeed += 0.0035f;
 			tandemDraft = true;
 			int currentPos = Scoreboard.checkSingleCarPosition("AICar0" + carNum + "");
 			if(currentPos == 0){
@@ -379,9 +379,9 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Speed tops out
-        if (AISpeed > (204 + laneInv + (AILevel / 5))){
+        if (AISpeed > (205 + laneInv + (AILevel / 5))){
 			//Reduce speed, proportionate to the amount 'over'
-            AISpeed -= ((AISpeed - 204) / 100);
+            AISpeed -= ((AISpeed - 204) / (100 + (AILevel * 10)));
 		}
 		if (AISpeed > 210){
 			//Hard limiter as a fallback

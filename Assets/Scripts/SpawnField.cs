@@ -338,6 +338,7 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Add("2");
 		fastCars.Add("3");
 		fastCars.Add("4");
+		fastCars.Add("5");
 		fastCars.Add("6");
 		fastCars.Add("8");
 		fastCars.Add("9");
@@ -347,6 +348,7 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Add("13");
 		fastCars.Add("14");
 		fastCars.Add("18");
+		fastCars.Add("19");
 		fastCars.Add("20");
 		fastCars.Add("21");
 		fastCars.Add("22");
@@ -373,7 +375,9 @@ public class SpawnField : MonoBehaviour {
 		slowCars.Add("51");
 		slowCars.Add("52");
 		slowCars.Add("53");
+		slowCars.Add("54");
 		slowCars.Add("62");
+		slowCars.Add("66");
 		slowCars.Add("74");
 		slowCars.Add("77");
 		slowCars.Add("78");

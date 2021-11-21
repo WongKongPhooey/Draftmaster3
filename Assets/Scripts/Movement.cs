@@ -387,7 +387,7 @@ public class Movement : MonoBehaviour {
 		// If being bump-drafted from behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.01f)){
 			//Speed up
-			playerSpeed+=0.004f;
+			playerSpeed+=0.003f;
 			if(RaceHUD.tutorialStage == 4){
 				RaceHUD.tutorialBackdraftCount++;
 			}

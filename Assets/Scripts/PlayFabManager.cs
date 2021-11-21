@@ -254,6 +254,19 @@ public class PlayFabManager : MonoBehaviour
 					emptyPlayerData("RewardGears");
 				}
 			}
+			if(result.Data.ContainsKey("RewardCar")){
+				int rewardCarNum = int.Parse(result.Data["RewardCar"].Value);
+				if(rewardCarNum != 0){
+					Debug.Log("Rewarded Car #" + rewardCarNum);
+					int carClass = PlayerPrefs.GetInt("cup20" + rewardCarNum + "Class");
+					if(carClass == 0){
+						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", DriverNames.cup2020Rarity[rewardCarNum]);
+					} else {
+						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", carClass+1);
+					}
+					emptyPlayerData("RewardCar");
+				}
+			}
 		} else {
 			Debug.Log("No player data found");
 		}

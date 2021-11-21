@@ -415,7 +415,7 @@ public class SingleCar : MonoBehaviour {
 				cardY = heightblock * 6f;
 				
 				GUI.skin = whiteGUI;
-				GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 8f), "");
+				GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
 				GUI.skin = tileSkin;
 				
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -429,12 +429,12 @@ public class SingleCar : MonoBehaviour {
 				GUI.skin = redGUI;
 				
 				if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "AltPaint")){
-					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Select")){
+					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 						PlayerPrefs.DeleteKey(seriesPrefix + currentCar + "AltPaint");
 					}
 				} else {
 					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Selected");
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Selected");
 				}
 				GUI.skin = tileSkin;
 				
@@ -447,7 +447,7 @@ public class SingleCar : MonoBehaviour {
 						cardY = heightblock * 6f;
 						
 						GUI.skin = whiteGUI;
-						GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 8f), "");
+						GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
 						GUI.skin = tileSkin;
 						
 						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -462,16 +462,16 @@ public class SingleCar : MonoBehaviour {
 						
 						if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Alt" + columns + "Unlocked") == 1){
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != columns){
-								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Select")){
+								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns);
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Selected");
+								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Selected");
 							}
 						} else {
 							GUI.skin = tileSkin;
-							GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 8f), "");
+							GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
 						}
 						GUI.skin = tileSkin;
 					}

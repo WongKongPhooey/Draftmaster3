@@ -23,6 +23,9 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[27,1] = "#1 Cup";
 		cup2020AltPaintNames[32,1] = "#1 Halloween";
 		cup2020AltPaintNames[42,1] = "#1 Halloween";
+		cup2020AltPaintNames[48,1] = "#1 Champ";
+		cup2020AltPaintNames[48,2] = "#2 Cobalt";
+		cup2020AltPaintNames[48,3] = "#3 All Star";
 		cup2020AltPaintNames[88,1] = "#1 Cup";
 		cup2020AltPaintNames[88,2] = "#2 Halloween";
     }

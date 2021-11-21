@@ -106,7 +106,11 @@ public class RaceRewards : MonoBehaviour
 			case "Event":
 			//Must win
 				if(finishPos == 1){
-					AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+					if(seriesPrize == "AltPaint"){
+						UnlockAltPaint("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize);
+					} else {
+						AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+					}
 				} else {
 					carReward = "";
 				}
@@ -128,22 +132,25 @@ public class RaceRewards : MonoBehaviour
 				break;
 		}
 		
-		maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
-		//If low strength AI Race (<+3)
-        if(maxRaceGears <= 2){
-            //Top 3 win gears
-			maxRaceGears = 3;
-		}
-		if(maxRaceGears >= 9){
-			//Max for a win is 8
-			maxRaceGears = 8;
-		}
-		//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
-		rewardGears = (maxRaceGears - finishPos) + 1;
-		if(rewardGears > 0){
-			gears += rewardGears * rewardMultiplier;
-		} else {
-			rewardGears = 0;
+		if(raceType != "Event"){
+			maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
+			//If low strength AI Race (<+3)
+			if(maxRaceGears <= 2){
+				//Top 3 win gears
+				maxRaceGears = 3;
+			}
+			if(maxRaceGears >= 9){
+				//Max for a win is 8
+				maxRaceGears = 8;
+			}
+		
+			//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
+			rewardGears = (maxRaceGears - finishPos) + 1;
+			if(rewardGears > 0){
+				gears += rewardGears * rewardMultiplier;
+			} else {
+				rewardGears = 0;
+			}
 		}
 		PlayerPrefs.SetInt("Gears",gears);
 	}
@@ -163,7 +170,11 @@ public class RaceRewards : MonoBehaviour
 
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		
-		GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Race Rewards");
+		if(championshipReward == true){
+			GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Championship Rewards - " + finishPos + MiscScripts.PositionPostfix(finishPos));
+		} else {
+			GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Race Rewards");
+		}
 
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 
@@ -184,9 +195,19 @@ public class RaceRewards : MonoBehaviour
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 		
-		if (GUI.Button(new Rect(widthblock * 7, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
-			PlayerPrefs.SetInt("ChampionshipReward", 0);
-			Application.LoadLevel("MainMenu");
+		if(championshipReward == true){
+			if (GUI.Button(new Rect(widthblock * 4, heightblock * 17, widthblock * 6, heightblock * 2), "Points")){
+				Application.LoadLevel("PointsTable");
+			}
+			if (GUI.Button(new Rect(widthblock * 11, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
+				PlayerPrefs.SetInt("ChampionshipReward", 0);
+				Application.LoadLevel("MainMenu");
+			}
+		} else {
+			if (GUI.Button(new Rect(widthblock * 7, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
+				PlayerPrefs.SetInt("ChampionshipReward", 0);
+				Application.LoadLevel("MainMenu");
+			}
 		}
 	}
 	
@@ -201,16 +222,10 @@ public class RaceRewards : MonoBehaviour
 				carCurrentGears = carGears + int.Parse(setPrize);
 				carPrizeNum = carNumber;
 			} else {
-				if(altPaintReward == true){
-					//Win an alt paint rather than car parts
-					//PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
-					carReward = "New " + DriverNames.cup2020Names[carNumber] + " Alt Unlocked";
-				} else {
-					PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + multiplier);
-					carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
-					carPrizeNum = carNumber;			
-					carCurrentGears = carGears + multiplier;
-				}
+				PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + multiplier);
+				carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
+				carPrizeNum = carNumber;			
+				carCurrentGears = carGears + multiplier;
 			}
 			carClassMax = GameData.classMax(carClass);
 		} else {
@@ -220,6 +235,17 @@ public class RaceRewards : MonoBehaviour
 		}
 		//Reset Prizes
 		PlayerPrefs.SetString("SeriesPrize","");
+	}
+	
+	void UnlockAltPaint(string seriesPrefix, int carNumber, string setPrize){
+		//Win an alt paint rather than car parts
+		//setPrize format example: cup20livery48alt2
+		
+		string sanitisedAlt = setPrize.Replace("livery","");
+		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
+		
+		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
+		carReward = "New " + DriverNames.cup2020Names[carNumber] + " Alt Unlocked!";
 	}
 	
 	void ListPrizeOptions(string category){

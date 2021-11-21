@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Linq;
 using UnityEngine.SceneManagement;
 
 public class EventSelectGUI : MonoBehaviour {
@@ -19,6 +20,7 @@ public class EventSelectGUI : MonoBehaviour {
 	string restrictionValue;
 	
 	int week;
+	string[] eventWeeks;
 	
 	string seriesMenu;
 	int menuIndex;
@@ -69,7 +71,7 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		int seriesCount = 0;
 		int totalSeries = 7;
-		float windowscroll = 2.2f;
+		float windowscroll = 2.9f;
 		
 		GUI.skin = tileSkin;
 		
@@ -90,13 +92,14 @@ public class EventSelectGUI : MonoBehaviour {
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 4.5f, heightblock * 2), EventData.offlineEvent[rootMenu]);
 				GUI.skin.label.alignment = TextAnchor.UpperRight;
-				if(EventData.offlineEventWeek[rootMenu] == week){
+				
+				eventWeeks = EventData.offlineEventWeek[rootMenu].Split(',');
+				
+				if(eventWeeks.Any((week.ToString()).Contains)){
 					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
 				} else {
 					//Coming up soon
-					if(EventData.offlineEventWeek[rootMenu] != 0){
-						GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
-					}
+					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
 				}
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, heightblock * 5f), Resources.Load(EventData.offlineEventImage[rootMenu]) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -105,8 +108,8 @@ public class EventSelectGUI : MonoBehaviour {
 
 				//Choose Series
 				//Week Cycler
-				week = 6;
-				if(EventData.offlineEventWeek[rootMenu] == week){
+				week = 4;
+				if(eventWeeks.Any((week.ToString()).Contains)){
 				//if(week % 13 == EventData.offlineEventWeek[rootMenu]){
 					if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
 						menuIndex = rootMenu;
@@ -120,7 +123,7 @@ public class EventSelectGUI : MonoBehaviour {
 					GUI.skin = tileSkin;
 					GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
 					GUI.skin.label.alignment = TextAnchor.UpperRight;
-					if(EventData.offlineEventWeek[rootMenu] == 0){
+					if(EventData.offlineEventWeek[rootMenu] == "0"){
 						GUI.skin.label.normal.textColor = Color.white;
 						GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Coming Soon");
 						GUI.skin.label.normal.textColor = Color.black;
