@@ -187,7 +187,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 				
 				//Choose Subseries
 				if(meetsRequirements == true){
-					if(PlayerPrefs.GetInt("DailyPlays" + menuIndex + subMenu + "") > 0){
+					//if(PlayerPrefs.GetInt("DailyPlays" + menuIndex + subMenu + "") > 0){
 						if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
 							PlayerPrefs.SetString("carTexture", carLivery);
 							PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
@@ -215,7 +215,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 								SceneManager.LoadScene("CarSelect");
 							}
 						} 
-					} else {
+					/*} else {
 						if(PlayerPrefs.HasKey("DailyPlays" + menuIndex + subMenu + "")){
 							//Grey out the event
 							GUI.skin = tileSkin;
@@ -226,7 +226,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 						} else {
 							PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
 						}
-					}
+					}*/
 				} else {
 					//Grey out the event
 					GUI.skin = tileSkin;

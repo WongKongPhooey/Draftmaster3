@@ -61,7 +61,6 @@ public class Store : MonoBehaviour{
 	public Vector2 scrollPosition = Vector2.zero;
 	
 	void Awake(){
-		playerLevel = 10;
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		menuCat = "DailySelects";
 		
@@ -98,15 +97,15 @@ public class Store : MonoBehaviour{
 				
 				//Reset For Testing
 				//PlayerPrefs.DeleteKey("PrizePositions");
-				//PlayerPrefs.SetInt("EventItemsRemaining", 15);
+				//PlayerPrefs.SetInt("EventItemsRemaining", 20);
 				
 				//Set the random draw
 				if(!PlayerPrefs.HasKey("PrizePositions")){
 					for(int i=0;i<eventPrizes.Count;i++){
-						int rand = Random.Range(1,15);
+						int rand = Random.Range(1,20);
 						int loopBailout = 45;
 						while((eventDrawPicks.Contains(rand))&&(loopBailout > 0)){
-							rand = Random.Range(1,15);
+							rand = Random.Range(1,20);
 							loopBailout--;
 						}
 						eventDrawPicks.Add(rand);
@@ -114,7 +113,7 @@ public class Store : MonoBehaviour{
 						Debug.Log("Draw position #" + rand);
 						
 						PlayerPrefs.SetInt("PrizePositions",1);
-						itemsRemaining = 15;
+						itemsRemaining = 20;
 						PlayerPrefs.SetInt("EventItemsRemaining", itemsRemaining);
 						PlayerPrefs.SetInt("EventAltsFound",0);
 					}
@@ -144,18 +143,18 @@ public class Store : MonoBehaviour{
 			Debug.Log("Total shop items added: " + dailySelects.Count);
 		} else {
 			dailySelects.Clear();
-			dailySelects.Add(18);
-			dailySelects.Add(3);
-			dailySelects.Add(42);
-			dailySelects.Add(88);
-			dailySelects.Add(7);
-			dailySelects.Add(8);
-			dailySelects.Add(20);
-			dailySelects.Add(32);
-			dailySelects.Add(47);
-			dailySelects.Add(51);
-			dailySelects.Add(53);
-			dailySelects.Add(77);
+			dailySelects.Add(22);
+			dailySelects.Add(1);
+			dailySelects.Add(6);
+			dailySelects.Add(10);
+			dailySelects.Add(21);
+			dailySelects.Add(38);
+			dailySelects.Add(41);
+			dailySelects.Add(49);
+			dailySelects.Add(62);
+			dailySelects.Add(74);
+			dailySelects.Add(78);
+			dailySelects.Add(96);
 		}
 		
 		dailySelectsPicked = 1;
@@ -315,13 +314,13 @@ public class Store : MonoBehaviour{
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), "They say this abandoned garage is haunted, proceed with caution! 15 random prizes inside, including 5 Halloween themed alternate paint schemes and 10 sets of parts for those cars!");
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), "We're feeling patriotic this Thanksgiving! 5 new paints have been flown in from a top secret military base, as well as 15 crates of parts for these rare cars. Go get 'em!");
 				
 				GUI.skin.label.alignment = TextAnchor.LowerLeft;
 				
 				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), PlayerPrefs.GetInt("EventAltsFound") + "/5 paints found");
 				
-				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/15 items left");
+				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/20 items left");
 				
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
@@ -341,6 +340,7 @@ public class Store : MonoBehaviour{
 								if(isPick == true){
 									int failover = CountEventAltsFound();
 									if(failover >= 5){
+										Debug.Log("All alts found, event bugged? Failover.");
 										Application.LoadLevel("MainMenu");
 									}
 									PlayerPrefs.SetString("PrizeType","EventAlt");

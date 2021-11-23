@@ -46,12 +46,12 @@ public class PrizeCollection : MonoBehaviour
 					PremiumGarage("cup20",prizeCarNumber);
 					break;
 				case "EventGarage":
-					ListPrizeOptions("Halloween");
+					ListPrizeOptions("Thanksgiving");
 					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
 					EventGarage("cup20",prizeCarNumber);
 					break;
 				case "EventAlt":
-					ListPrizeOptions("Halloween");
+					ListPrizeOptions("Thanksgiving");
 					EventAlt("cup20");
 					break;
 				case "3RareGarage":
@@ -134,6 +134,13 @@ public class PrizeCollection : MonoBehaviour
 						validDriver.Add(i);
 					}
 				}
+			break;
+			case "Thanksgiving":
+				validDriver.Add(2);
+				validDriver.Add(13);
+				validDriver.Add(19);
+				validDriver.Add(22);
+				validDriver.Add(51);
 			break;
 			case "Halloween":
 				validDriver.Add(3);
@@ -259,7 +266,7 @@ public class PrizeCollection : MonoBehaviour
 	
 	void EventGarage(string seriesPrefix, int carNumber){
 
-		int[] randAmtSet = {5,8,10,12,15};
+		int[] randAmtSet = {10,10,10,12,12,12,15,15,25};
 		int randAmt = randAmtSet[Random.Range(0,4)];
 
 		AddPrize(seriesPrefix, carNumber, randAmt);

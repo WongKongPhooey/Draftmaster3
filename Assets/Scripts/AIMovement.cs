@@ -57,6 +57,8 @@ public class AIMovement : MonoBehaviour
 
 	public int maxDraftDistance;
 
+	int tick;
+
 	public int lap;
     public int lane;
     public int laneInv;
@@ -78,12 +80,14 @@ public class AIMovement : MonoBehaviour
     // Use this for initialization
     void Start(){
 		
+		tick=0;
+		
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
 		
         onTurn = false;
 		tandemDraft = false;
-        AISpeed = 200;
+        AISpeed = 203;
         laneticker = 0;
 		
 		currentSeries = PlayerPrefs.GetInt("CurrentSeries").ToString();
@@ -91,7 +95,7 @@ public class AIMovement : MonoBehaviour
 		
 		AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		
-		Debug.Log("AILevel: " + AILevel);
+		//Debug.Log("AILevel: " + AILevel);
 		
 		antiGlitch = 0;
 		
@@ -287,6 +291,11 @@ public class AIMovement : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate(){
 
+		tick++;
+		if(tick>=60){
+			tick-=60;
+		}
+
 		//Debug.Log(this.name + " Check");
 
 		lap = CameraRotate.lap;
@@ -316,7 +325,11 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 			}
-			draftLogic();
+			//Experimental, for CPU saves
+			if(carNum%20 == tick%20){
+				//Debug.Log("Draft Logic cycle save, frame: " + carNum%20);
+				draftLogic();
+			}
 			carWobble();
 			updateMovement();
 			this.gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
@@ -379,7 +392,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Speed tops out
-        if (AISpeed > (205 + laneInv + (AILevel / 5))){
+        if (AISpeed > (205 + (laneInv / 2) + (AILevel / 5))){
 			//Reduce speed, proportionate to the amount 'over'
             AISpeed -= ((AISpeed - 204) / (100 + (AILevel * 10)));
 		}
@@ -468,9 +481,13 @@ public class AIMovement : MonoBehaviour
 		//Debug.DrawRay(transform.position  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
 		
 		if(HitForward == true){
-			if(holdLane >= laneRest){
+			
+			float carDist = DraftCheckForward.distance;
+			float opponentSpeed = getOpponentSpeed(DraftCheckForward);
+			bool tryTimedPass = timedPass(carDist, opponentSpeed);
+			
+			if((holdLane >= laneRest)&&(tryTimedPass == false)){
 				carName = DraftCheckForward.collider.gameObject.name;
-				float carDist = DraftCheckForward.distance;
 				int opponentNum = 9999;
 				string opponentTeam = "";
 				if(carName != "Player") {
@@ -490,7 +507,18 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 		} else {
-			findDraft();
+			//Check further away
+			RaycastHit DraftCheckForwardLong;
+			bool HitForwardLong = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForwardLong, 10);
+			if(HitForwardLong == true){
+				float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
+				//Avoid slow moving draft
+				if(opponentSpeed > (AISpeed + 1.5f)){
+					findClearLane();
+				}
+			} else {
+				findDraft();
+			}
 		}
 	}
 	
@@ -559,6 +587,37 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
+	bool timedPass(float distance, float opponentSpeed) {
+		
+		if((AISpeed - opponentSpeed) > 2.5f){
+			tryPass(50, false);
+			//Debug.Log("Car #" + carNum + " attempts large pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
+			return true;
+		}
+		if(distance < 2.5f){
+			if((AISpeed - opponentSpeed) > 1.5f){
+				//Debug.Log("Car #" + carNum + " attempts long pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
+				tryPass(50, false);
+				return true;
+			}
+		}
+		if(distance < 1.5f){
+			if((AISpeed - opponentSpeed) > 1f){
+				//Debug.Log("Car #" + carNum + " attempts ideal pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
+				tryPass(50, false);
+				return true;
+			}
+		}
+		if(distance < 1.25f){
+			if((AISpeed - opponentSpeed) > 0.3f){
+				//Debug.Log("Car #" + carNum + " attempts close pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
+				tryPass(50, false);
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public void findDraft(){
 		RaycastHit DraftCheckLaneLeft;
 		RaycastHit DraftCheckLaneRight;
@@ -598,6 +657,61 @@ public class AIMovement : MonoBehaviour
 						} else {
 							direction = "Right";
 						}
+					}
+				}
+			}
+		}
+		
+		//If an option exists..
+		if(direction != ""){
+			if(direction == "Both"){
+				//Random choose one
+				float rng = Random.Range(0,2);
+				//Debug.Log("Rnd /2 = " + rng);
+				if(rng > 1f){
+					direction = "Right";
+				} else {
+					direction = "Left";
+				}
+			}
+			changeLane(direction);
+		}
+	}
+	
+	public void findClearLane(){
+		RaycastHit DraftCheckLaneLeft;
+		RaycastHit DraftCheckLaneRight;
+		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 10);
+		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 10);
+		string direction = "";
+		
+		if(leftSideClear()){
+			if(HitLaneLeft == false){
+				//Left lane is clear
+				direction = "Left";
+			} else {
+				//Left lane isn't clear, but is moving faster than yourself
+				float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
+				if(opponentSpeed > (AISpeed + 0.1f)){
+					direction = "Left";
+				}
+			}
+		}
+		
+		if(rightSideClear()){
+			if(HitLaneRight == false){
+				if(direction == "Left"){
+					direction = "Both";
+				} else {
+					direction = "Right";
+				}
+			} else {
+				float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
+				if(opponentSpeed > (AISpeed + 0.1f)){
+					if(direction == "Left"){
+						direction = "Both";
+					} else {
+						direction = "Right";
 					}
 				}
 			}
@@ -708,7 +822,7 @@ public class AIMovement : MonoBehaviour
 					return false;
 				}
 			} else {
-				Debug.Log("Invalid doored value");
+				//Debug.Log("Invalid doored value");
 				return false;
 			}
 		}
@@ -727,9 +841,9 @@ public class AIMovement : MonoBehaviour
 					lane--;
 				} else {
 					if(direction == "Find"){
-						Debug.Log("Not sure where to move");
+						//Debug.Log("Not sure where to move");
 					} else {
-						Debug.Log("Invalid lane change");
+						//Debug.Log("Invalid lane change");
 					}
 				}
 			}
@@ -742,7 +856,7 @@ public class AIMovement : MonoBehaviour
 	public void setLaneRest(){
 		if(lap >= 3){
 			laneRest = Random.Range(0, 1);
-			Debug.Log("Get Lairy");
+			//Debug.Log("Get Lairy");
 		}
 	}
 	

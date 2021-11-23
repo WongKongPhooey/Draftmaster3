@@ -16,6 +16,10 @@ public class SpawnField : MonoBehaviour {
 
 	int gridRows;
 	int gridLanes;
+	int AILevel;
+	
+	int currentSeries;
+	int currentSubseries;
 	
 	bool cautionRestart;
 	public static int startLane;
@@ -26,6 +30,9 @@ public class SpawnField : MonoBehaviour {
 		int playerRow;
 
 		gridLanes = 2;
+		
+		currentSeries = PlayerPrefs.GetInt("CurrentSeries");
+		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
 		
 		if(PlayerPrefs.GetInt("CircuitLanes") == 4){
 			startLane = Random.Range(3,5);
@@ -43,6 +50,11 @@ public class SpawnField : MonoBehaviour {
 			startLane = 2;
 		}
 
+		AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+		if(AILevel>15){
+			AILevel = 15;
+		}
+
 		spawnCup2020Cars();
 		//spawnCup2020Scenario();
 		paceDistance = 2.5f;
@@ -54,7 +66,7 @@ public class SpawnField : MonoBehaviour {
 		midCars.Remove(carNumber);
 		slowCars.Remove(carNumber);
 		gridRows = 21;
-		playerRow = 8;
+		playerRow = Random.Range(AILevel,AILevel+5);
 		//gridRows = 2;
 		//playerRow = 2;
 

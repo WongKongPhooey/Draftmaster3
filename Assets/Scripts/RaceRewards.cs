@@ -88,6 +88,7 @@ public class RaceRewards : MonoBehaviour
 			championshipReward = true;
 			championshipFinish = getChampionshipPosition();
 			seriesLength = PlayerPrefs.GetInt("ChampionshipLength");
+			PlayerPrefs.SetInt("ChampionshipReward", 0);
 		}
 		
 		if(championshipReward == true){
@@ -171,7 +172,7 @@ public class RaceRewards : MonoBehaviour
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		
 		if(championshipReward == true){
-			GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Championship Rewards - " + finishPos + MiscScripts.PositionPostfix(finishPos));
+			GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Championship Rewards - " + finishPos + MiscScripts.PositionPostfix(finishPos) + " Place");
 		} else {
 			GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Race Rewards");
 		}
@@ -200,12 +201,10 @@ public class RaceRewards : MonoBehaviour
 				Application.LoadLevel("PointsTable");
 			}
 			if (GUI.Button(new Rect(widthblock * 11, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
-				PlayerPrefs.SetInt("ChampionshipReward", 0);
 				Application.LoadLevel("MainMenu");
 			}
 		} else {
 			if (GUI.Button(new Rect(widthblock * 7, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
-				PlayerPrefs.SetInt("ChampionshipReward", 0);
 				Application.LoadLevel("MainMenu");
 			}
 		}

@@ -356,7 +356,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 
 		GUI.Label(new Rect(widthblock, heightblock / 2, widthblock * 7, heightblock * 2), currentSeriesName);
 		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-		GUI.Label(new Rect(widthblock, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
+		//GUI.Label(new Rect(widthblock, heightblock * 2, widthblock * 7, heightblock * 2), "Daily Attempts: " + dailyPlays + "/" + maxDailyPlays);
 
 		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex)){
 			GUI.skin.button.fontSize = 48 / FontScale.fontScale;
@@ -443,7 +443,6 @@ public class CircuitSelectGUI : MonoBehaviour {
 			SceneManager.LoadScene(circuitChoice);
 		} else {
 			//Roll back and bail
-			championshipRound--;
 			PlayerPrefs.SetString("StoreFocus","Fuel");
 			SceneManager.LoadScene("Store");
 		}
