@@ -93,10 +93,10 @@ public class PointsTableGUI : MonoBehaviour{
 		);
 		
 		//Table header
-		GUI.Label(new Rect(widthblock * 2.5f, heightblock * posY, widthblock * 3f, heightblock * 2), "Pos");	
-		GUI.Label(new Rect(widthblock * 6.5f, heightblock * posY, widthblock * 4.5f, heightblock * 2), "Driver");
-		GUI.Label(new Rect(widthblock * 12f, heightblock * posY, widthblock * 2.5f, heightblock * 2), "Team");
-		GUI.Label(new Rect(widthblock * 15.5f, heightblock * posY, widthblock * 2.5f, heightblock * 2), "Pts");	
+		GUI.Label(new Rect(widthblock * 2f, heightblock * posY, widthblock * 3f, heightblock * 2), "Pos");	
+		GUI.Label(new Rect(widthblock * 6f, heightblock * posY, widthblock * 4.5f, heightblock * 2), "Driver");
+		GUI.Label(new Rect(widthblock * 11.5f, heightblock * posY, widthblock * 2.5f, heightblock * 2), "Team");
+		GUI.Label(new Rect(widthblock * 15f, heightblock * posY, widthblock * 2.5f, heightblock * 2), "Pts");	
 			
 		
 		int pointsTableInd = 0;
@@ -105,10 +105,10 @@ public class PointsTableGUI : MonoBehaviour{
 			if(pointsRow.Key == carNumber){
 				GUI.skin.label.normal.textColor = Color.red;
 			}
-			GUI.Label(new Rect(widthblock * 2.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 3f, heightblock * 2), "" + (pointsTableInd + 1));	
-			GUI.Label(new Rect(widthblock * 6.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 4.5f, heightblock * 2), "" + DriverNames.cup2020Names[pointsRow.Key]);	
-			GUI.Label(new Rect(widthblock * 12f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.cup2020Teams[pointsRow.Key]);	
-			GUI.Label(new Rect(widthblock * 15.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + pointsRow.Value);	
+			GUI.Label(new Rect(widthblock * 2f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 3f, heightblock * 2), "" + (pointsTableInd + 1));	
+			GUI.Label(new Rect(widthblock * 6f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 4.5f, heightblock * 2), "" + DriverNames.cup2020Names[pointsRow.Key]);	
+			GUI.Label(new Rect(widthblock * 11.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.cup2020Teams[pointsRow.Key]);	
+			GUI.Label(new Rect(widthblock * 15f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + pointsRow.Value);	
 			if(pointsRow.Key == carNumber){
 				GUI.skin.label.normal.textColor = Color.black;
 			}
