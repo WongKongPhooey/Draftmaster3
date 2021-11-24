@@ -83,6 +83,16 @@ public class SeriesSelectGUI : MonoBehaviour {
 				float cardX = widthblock * (rootMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
 				GUI.skin = whiteGUI;
+				
+				if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+					if(PlayerPrefs.GetString("ChampionshipSubseries")[0].ToString() == rootMenu + ""){
+						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+						GUI.skin.label.normal.textColor = Color.red;
+						GUI.skin.label.alignment = TextAnchor.LowerCenter;
+						GUI.Label(new Rect(cardX, cardY - (heightblock * 1f), widthblock * 6f, heightblock * 1), "Active Championship");
+					}
+				}
+				
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
 				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -111,6 +121,16 @@ public class SeriesSelectGUI : MonoBehaviour {
 				float cardY = heightblock * 4;
 				bool meetsRequirements = true;
 				GUI.skin = whiteGUI;
+				
+				if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+					if(PlayerPrefs.GetString("ChampionshipSubseries") == menuIndex + "" + subMenu){
+						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+						GUI.skin.label.normal.textColor = Color.red;
+						GUI.skin.label.alignment = TextAnchor.LowerCenter;
+						GUI.Label(new Rect(cardX, cardY - (heightblock * 1f), widthblock * 6f, heightblock * 1), "Active Championship");
+					}
+				}
+				
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
 				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -147,6 +167,10 @@ public class SeriesSelectGUI : MonoBehaviour {
 						minRequirement = "Requires Manufacturer " + SeriesData.offlineMinManu[menuIndex,subMenu] + "";
 						restrictionValue = "" + SeriesData.offlineMinManu[menuIndex,subMenu];
 					break;
+					case "Car":
+						minRequirement = "Requires Car #" + SeriesData.offlineExactCar[menuIndex,subMenu] + "";
+						restrictionValue = "" + SeriesData.offlineExactCar[menuIndex,subMenu];
+					break;
 					case "Type":
 						minRequirement = "Requires Type " + SeriesData.offlineMinDriverType[menuIndex,subMenu] + "";
 						restrictionValue = "" + SeriesData.offlineMinDriverType[menuIndex,subMenu];
@@ -163,7 +187,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 				
 				//Choose Subseries
 				if(meetsRequirements == true){
-					if(PlayerPrefs.GetInt("DailyPlays" + menuIndex + subMenu + "") > 0){
+					//if(PlayerPrefs.GetInt("DailyPlays" + menuIndex + subMenu + "") > 0){
 						if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
 							PlayerPrefs.SetString("carTexture", carLivery);
 							PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
@@ -178,20 +202,31 @@ public class SeriesSelectGUI : MonoBehaviour {
 							PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
 							Debug.Log("Fuel cost: " + SeriesData.offlineFuel[menuIndex,subMenu]);
 							PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
-							SceneManager.LoadScene("CarSelect");
+							
+							if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+								if(PlayerPrefs.GetString("ChampionshipSubseries") == menuIndex + "" + subMenu){
+									PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("ChampionshipCarTexture"));
+									PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("ChampionshipCarChoice"));
+									SceneManager.LoadScene("CircuitSelect");
+								} else {
+									SceneManager.LoadScene("CarSelect");
+								}
+							} else {
+								SceneManager.LoadScene("CarSelect");
+							}
 						} 
-					} else {
+					/*} else {
 						if(PlayerPrefs.HasKey("DailyPlays" + menuIndex + subMenu + "")){
 							//Grey out the event
 							GUI.skin = tileSkin;
 							GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
-							if(GUI.Button(new Rect(cardX + widthblock, cardY + (heightblock * 8), widthblock * 4, heightblock * 2), "Reset Plays 10G")){
-								PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
-							}
+							//if(GUI.Button(new Rect(cardX + widthblock, cardY + (heightblock * 8), widthblock * 4, heightblock * 2), "Reset Plays 5G")){
+							//	PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
+							//}
 						} else {
 							PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
 						}
-					}
+					}*/
 				} else {
 					//Grey out the event
 					GUI.skin = tileSkin;

@@ -409,16 +409,13 @@ public class SingleCar : MonoBehaviour {
 				GUI.skin = buttonSkin;
 				break;
 			case "Paints":
-				/*if(AltPaints.cup2020AltPaintNames[currentCar,1] == null){
-					GUI.Label(new Rect(widthblock * 7.5f, heightblock * 7f, widthblock * 11.5f, heightblock * 7), "No Alt Paints Exist For This Car");
-				}*/
 				
 				//Stock Paint
 				cardX = widthblock * 7.5f;
 				cardY = heightblock * 6f;
 				
 				GUI.skin = whiteGUI;
-				GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 8f), "");
+				GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
 				GUI.skin = tileSkin;
 				
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -426,23 +423,23 @@ public class SingleCar : MonoBehaviour {
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), "Stock");
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, widthblock * 1.5f), Resources.Load("cup20livery" + currentCar) as Texture);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
 				GUI.skin = redGUI;
 				
 				if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "AltPaint")){
-					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Select")){
+					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 						PlayerPrefs.DeleteKey(seriesPrefix + currentCar + "AltPaint");
 					}
 				} else {
 					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Selected");
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Selected");
 				}
 				GUI.skin = tileSkin;
 				
 				//Alt Paints Row
-				for(int columns = 1; columns < 4; columns++){
+				for(int columns = 1; columns < 3; columns++){
 
 					if(AltPaints.cup2020AltPaintNames[currentCar,columns] != null){
 					
@@ -450,7 +447,7 @@ public class SingleCar : MonoBehaviour {
 						cardY = heightblock * 6f;
 						
 						GUI.skin = whiteGUI;
-						GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 8f), "");
+						GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
 						GUI.skin = tileSkin;
 						
 						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
@@ -458,23 +455,63 @@ public class SingleCar : MonoBehaviour {
 						
 						GUI.skin.label.alignment = TextAnchor.UpperCenter;
 						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.cup2020AltPaintNames[currentCar,columns]);
-						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, widthblock * 1.5f), Resources.Load("cup20livery" + currentCar + "alt" + columns) as Texture);
+						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar + "alt" + columns) as Texture, ScaleMode.ScaleToFit);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
 						GUI.skin = redGUI;
 						
 						if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Alt" + columns + "Unlocked") == 1){
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != columns){
-								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Select")){
+								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns);
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 3f, heightblock * 1.5f), "Selected");
+								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Selected");
 							}
 						} else {
 							GUI.skin = tileSkin;
-							GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 8f), "");
+							GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
+						}
+						GUI.skin = tileSkin;
+					}
+				}
+				
+				//Alt Paints 2nd Row
+				int offset = 2;
+				for(int columns = 1; columns < 4; columns++){
+
+					if(AltPaints.cup2020AltPaintNames[currentCar,columns+offset] != null){
+					
+						cardX = widthblock * (columns * 4.25f) + (widthblock * 3.25f);
+						cardY = heightblock * 12.5f;
+						
+						GUI.skin = whiteGUI;
+						GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
+						GUI.skin = tileSkin;
+						
+						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+						GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+						
+						GUI.skin.label.alignment = TextAnchor.UpperCenter;
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.cup2020AltPaintNames[currentCar,columns+offset]);
+						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar + "alt" + (columns + offset)) as Texture, ScaleMode.ScaleToFit);
+						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+
+						GUI.skin = redGUI;
+						
+						if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Alt" + (columns + offset) + "Unlocked") == 1){
+							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != (columns+offset)){
+								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 3f, heightblock * 1.5f), "Select")){
+									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns+offset);
+								}
+							} else {
+								GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 3f, heightblock * 1.5f), "Selected");
+							}
+						} else {
+							GUI.skin = tileSkin;
+							GUI.Box(new Rect(cardX, cardY, widthblock * 3.5f, heightblock * 6f), "");
 						}
 						GUI.skin = tileSkin;
 					}

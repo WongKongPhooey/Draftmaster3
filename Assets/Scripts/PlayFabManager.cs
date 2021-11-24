@@ -153,11 +153,21 @@ public class PlayFabManager : MonoBehaviour
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
 		}
 		
+		//Debug Add Event for testing
+		//result.Data["EventActive"] = "Patriots Thanksgiving Hangar";
+		//result.Data["EventRewards"] = "cup20livery2alt1,cup20livery13alt1,cup20livery19alt1,cup20livery22alt1,cup20livery51alt1";
+		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){
 			if(result.Data["EventActive"] != ""){
 				PlayerPrefs.SetInt("EventActive", 1);
-				PlayerPrefs.SetString("EventName", result.Data["EventActive"]);
+				//Last Known Event Name
+				string previousEvent = PlayerPrefs.GetString("EventName");
+				if(result.Data["EventActive"] != previousEvent){
+					PlayerPrefs.SetString("EventName", result.Data["EventActive"]);
+					Debug.Log("Event was: " + previousEvent + ". Now: " + result.Data["EventActive"]);
+					PlayerPrefs.DeleteKey("PrizePositions");
+				}
 				Debug.Log(result.Data["EventActive"] + " Event Active");
 				
 				//Retrieve the event rewards (assume set)
@@ -166,12 +176,10 @@ public class PlayFabManager : MonoBehaviour
 				
 			} else {
 				PlayerPrefs.SetInt("EventActive", 0);
-				PlayerPrefs.SetString("EventName", "");
 				Debug.Log("No Active Event");
 			}
 		} else {
 			PlayerPrefs.SetInt("EventActive", 0);
-			PlayerPrefs.SetString("EventName", "");
 			Debug.Log("No Active Event");
 		}
 		
@@ -252,6 +260,19 @@ public class PlayFabManager : MonoBehaviour
 					rewardGears = 0;
 					PlayerPrefs.SetInt("Gears", gears);
 					emptyPlayerData("RewardGears");
+				}
+			}
+			if(result.Data.ContainsKey("RewardCar")){
+				int rewardCarNum = int.Parse(result.Data["RewardCar"].Value);
+				if(rewardCarNum != 0){
+					Debug.Log("Rewarded Car #" + rewardCarNum);
+					int carClass = PlayerPrefs.GetInt("cup20" + rewardCarNum + "Class");
+					if(carClass == 0){
+						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", DriverNames.cup2020Rarity[rewardCarNum]);
+					} else {
+						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", carClass+1);
+					}
+					emptyPlayerData("RewardCar");
 				}
 			}
 		} else {

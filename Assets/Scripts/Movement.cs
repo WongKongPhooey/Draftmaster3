@@ -103,7 +103,7 @@ public class Movement : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		playerSpeed = 200;
+		playerSpeed = 203;
 		gettableSpeed = playerSpeed;
 		topSpeed = 208f + speedRand;
 		speedRand = Random.Range(0,50);
@@ -357,7 +357,7 @@ public class Movement : MonoBehaviour {
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
 			//Speed up
 			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
-				playerSpeed+=((10 - DraftCheck.distance)/1000);
+				playerSpeed+=((10 - DraftCheck.distance)/1500);
 			} else {
 				playerSpeed-=((playerSpeed - topSpeed)/200);
 			}
@@ -387,7 +387,7 @@ public class Movement : MonoBehaviour {
 		// If being bump-drafted from behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.01f)){
 			//Speed up
-			playerSpeed+=0.004f;
+			playerSpeed+=0.003f;
 			if(RaceHUD.tutorialStage == 4){
 				RaceHUD.tutorialBackdraftCount++;
 			}

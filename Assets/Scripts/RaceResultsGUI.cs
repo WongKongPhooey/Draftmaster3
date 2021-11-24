@@ -23,6 +23,8 @@ public class RaceResultsGUI : MonoBehaviour {
 	string carNumber;
 
 	int resultsRows;
+	
+	string currentSeriesIndex;
 
 	int playerMoney;
 	int moneyCount;
@@ -47,6 +49,8 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		seriesPrefix = "cup20";
 
+		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+
 		challengeComplete = false;
 
 		PlayerPrefs.SetInt("FinishPos",(Scoreboard.position + 1));
@@ -64,25 +68,33 @@ public class RaceResultsGUI : MonoBehaviour {
 		}
 
 		winningsMultiplier = 1;
-
-		int currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
 		
 		//Is this a championship round?
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			if(PlayerPrefs.GetInt("ChampionshipSubseries") == currentSubseries){
+			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
+				
+				//Increment Championship Round
+				int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+				PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
+				
+				Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
+				RacePoints.setCupPoints();
 				for( int i=0; i < resultsRows; i++){
 					if(i == (Scoreboard.position)){
 						carNumber = playerCarNumber;
 					} else {
 						carNumber = Scoreboard.carNames[i].Remove(0,6);
 					}
-					Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+					//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
 					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 				}
+			} else {
+				Debug.Log("No Championship Points Here");
 			}
+		} else {
+			Debug.Log("No Championship Here");
 		}
 				
-		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
@@ -298,13 +310,33 @@ public class RaceResultsGUI : MonoBehaviour {
 
 		if(GUI.Button(new Rect(widthblock * 2, Screen.height - (heightblock * 3), widthblock * 3, heightblock * 2), "Next")){
 			ChallengeSelectGUI.challengeMode = false;
-			Application.LoadLevel("RaceRewards");
+			
+			int seriesLength = PlayerPrefs.GetInt("ChampionshipLength");
+			int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+			
+			//Is this a championship round?
+			if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("RaceType") == "Championship")){
+				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
+					if(championshipRound >= seriesLength){
+						//Season End
+						//Set bool for rewards screen
+						PlayerPrefs.SetInt("ChampionshipReward",1);
+						Application.LoadLevel("RaceRewards");
+					} else {
+						Application.LoadLevel("CircuitSelect");
+					}
+				} else {
+					Application.LoadLevel("RaceRewards");
+				}
+			} else {
+				Application.LoadLevel("RaceRewards");	
+			}
 		}
 	}
 	
 	void addChampionshipPoints(string carNumber, int points){
 		int currentPoints = PlayerPrefs.GetInt("ChampionshipPoints" + carNumber + "");
 		PlayerPrefs.SetInt("ChampionshipPoints" + carNumber + "", currentPoints + points);
-		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + points));
+		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + " + " + points));
 	}
 }

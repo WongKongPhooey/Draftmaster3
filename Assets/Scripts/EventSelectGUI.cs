@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Linq;
 using UnityEngine.SceneManagement;
 
 public class EventSelectGUI : MonoBehaviour {
@@ -7,11 +8,19 @@ public class EventSelectGUI : MonoBehaviour {
 	public GUISkin eightBitSkin;
 	public GUISkin buttonSkin;
 	public GUISkin tileSkin;
+	public GUISkin redGUI;
+	public GUISkin whiteGUI;
 
 	float widthblock = Screen.width/20;
 	float heightblock = Screen.height/20;
 	
+	string minRequirement;
+	string levelRequirement;	
+	string classRequirement;
+	string restrictionValue;
+	
 	int week;
+	string[] eventWeeks;
 	
 	string seriesMenu;
 	int menuIndex;
@@ -62,7 +71,7 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		int seriesCount = 0;
 		int totalSeries = 7;
-		float windowscroll = 2.2f;
+		float windowscroll = 2.9f;
 		
 		GUI.skin = tileSkin;
 		
@@ -72,29 +81,35 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		//Root Level Menu
 		if(seriesMenu == "All"){
-			for(int rootMenu = 0; rootMenu < 1; rootMenu++){
+			for(int rootMenu = 0; rootMenu < 2; rootMenu++){
 				string carLivery = "livery" + seriesCount;
 				float cardX = widthblock * (rootMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
+				GUI.skin = whiteGUI;
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
+				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 4.5f, heightblock * 2), EventData.offlineEvent[rootMenu]);
 				GUI.skin.label.alignment = TextAnchor.UpperRight;
-				if((EventData.offlineEventWeek[rootMenu] - week) == 0){
-					//GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
+				
+				eventWeeks = EventData.offlineEventWeek[rootMenu].Split(',');
+				
+				if(eventWeeks.Any((week.ToString()).Contains)){
+					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
 				} else {
 					//Coming up soon
-					//GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
+					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
 				}
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, widthblock * 2.5f), Resources.Load(EventData.offlineEventImage[rootMenu]) as Texture);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, heightblock * 5f), Resources.Load(EventData.offlineEventImage[rootMenu]) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 8f), widthblock * 5.5f, heightblock * 4), "" + EventData.eventDescriptions[rootMenu] + "");
 
 				//Choose Series
 				//Week Cycler
-				if(1!=1){
+				week = 4;
+				if(eventWeeks.Any((week.ToString()).Contains)){
 				//if(week % 13 == EventData.offlineEventWeek[rootMenu]){
 					if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
 						menuIndex = rootMenu;
@@ -107,10 +122,12 @@ public class EventSelectGUI : MonoBehaviour {
 					//Grey out the event
 					GUI.skin = tileSkin;
 					GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
-					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-					GUI.skin.label.normal.textColor = Color.red;
-					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9f), widthblock * 5.5f, heightblock * 4), "Coming Soon");
-					GUI.skin.label.normal.textColor = Color.black;
+					GUI.skin.label.alignment = TextAnchor.UpperRight;
+					if(EventData.offlineEventWeek[rootMenu] == "0"){
+						GUI.skin.label.normal.textColor = Color.white;
+						GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Coming Soon");
+						GUI.skin.label.normal.textColor = Color.black;
+					}
 					GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				}
 			}
@@ -121,22 +138,82 @@ public class EventSelectGUI : MonoBehaviour {
 				string carLivery = "livery" + subMenu;
 				float cardX = widthblock * (subMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
+				bool meetsRequirements = true;
+				GUI.skin = whiteGUI;
 				GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
+				GUI.skin = tileSkin;
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2), EventData.offlineEventChapter[menuIndex,subMenu]);
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, widthblock * 2.5f), Resources.Load(EventData.offlineChapterImage[menuIndex,subMenu]) as Texture);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, heightblock * 3.5f), Resources.Load(EventData.offlineChapterImage[menuIndex,subMenu]) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), widthblock * 5.5f, heightblock * 5), "Min Class " + SeriesData.classAbbr(EventData.offlineMinClass[menuIndex,subMenu]) + "\n\n" + EventData.eventChapterDescriptions[menuIndex,subMenu] + "");
+				
+				//Event Progression Checks
+				
+				//If event is already won, lock.
+				if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0") == 1){
+					//Reset event for testing
+					//PlayerPrefs.SetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0",0);
+					meetsRequirements = false;
+				}
+				
+				//If previous event isn't won, lock.
+				if(subMenu > 0){
+					if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + (subMenu - 1) + "EVENT0") != 1){
+						meetsRequirements = false;
+					}
+				}
+				
+				switch(EventData.offlineMinType[menuIndex,subMenu]){
+					case "Team":
+						minRequirement = "Requires Team " + EventData.offlineMinTeam[menuIndex,subMenu] + "";
+						restrictionValue = "" + EventData.offlineMinTeam[menuIndex,subMenu];
+					break;
+					case "Manufacturer":
+						minRequirement = "Requires Manufacturer " + EventData.offlineMinManu[menuIndex,subMenu] + "";
+						restrictionValue = "" + EventData.offlineMinManu[menuIndex,subMenu];
+					break;
+					case "Car":
+						minRequirement = "Requires Car #" + EventData.offlineExactCar[menuIndex,subMenu] + "";
+						restrictionValue = "" + EventData.offlineExactCar[menuIndex,subMenu];
+					break;
+					case "Type":
+						minRequirement = "Requires Type " + EventData.offlineMinDriverType[menuIndex,subMenu] + "";
+						restrictionValue = "" + EventData.offlineMinDriverType[menuIndex,subMenu];
+					break;
+					case "Rarity":
+						minRequirement = "Min Rarity " + EventData.offlineMinRarity[menuIndex,subMenu] + "";
+						restrictionValue = "" + EventData.offlineMinRarity[menuIndex,subMenu];
+					break;
+					default:
+					break;
+				}
+				
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6f), widthblock * 5.5f, heightblock * 6f), minRequirement + "\n" + "Min Class " + SeriesData.classAbbr(EventData.offlineMinClass[menuIndex,subMenu]) + "\n\n" + EventData.eventChapterDescriptions[menuIndex,subMenu] + "");
 				
 				//Choose Series
-				if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
-					PlayerPrefs.SetString("carTexture", carLivery);
-					PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[menuIndex,subMenu]);
-					//PlayerPrefs.SetInt("MinClass",SeriesData.offlineMinClass[subMenu]);
-					PlayerPrefs.SetString("CurrentSeries",EventData.offlineEventChapter[menuIndex,subMenu]);
-					SceneManager.LoadScene("CarSelect");
+				if(meetsRequirements == true){
+					if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
+						PlayerPrefs.SetString("SeriesTrackList",EventData.offlineTracklists[menuIndex,subMenu]);
+						PlayerPrefs.SetString("CurrentSeriesIndex", menuIndex + "" + subMenu + "EVENT");
+						PlayerPrefs.SetString("CurrentSeriesName",EventData.offlineEventChapter[menuIndex,subMenu]);
+						PlayerPrefs.SetInt("CurrentSeries", menuIndex);
+						PlayerPrefs.SetInt("CurrentSubseries", subMenu);
+						PlayerPrefs.SetInt("SubseriesDailyPlays",999);
+						PlayerPrefs.SetInt("SubseriesMinClass", EventData.offlineMinClass[menuIndex,subMenu]);
+						PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[menuIndex,subMenu]);
+						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
+						PlayerPrefs.SetInt("SeriesFuel",5);
+						PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[menuIndex,subMenu]);
+						PlayerPrefs.SetString("SeriesPrizeAmt",EventData.offlineSetPrizes[menuIndex,subMenu]);
+						PlayerPrefs.SetString("RaceType","Event");
+						SceneManager.LoadScene("CarSelect");
+					}
+				} else {
+					//Grey out the event
+					GUI.skin = tileSkin;
+					GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
 				}
 			}
 		}
