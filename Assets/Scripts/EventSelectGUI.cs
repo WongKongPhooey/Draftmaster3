@@ -108,7 +108,7 @@ public class EventSelectGUI : MonoBehaviour {
 
 				//Choose Series
 				//Week Cycler
-				week = 4;
+				//week = 4;
 				if(eventWeeks.Any((week.ToString()).Contains)){
 				//if(week % 13 == EventData.offlineEventWeek[rootMenu]){
 					if(GUI.Button(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "")){
