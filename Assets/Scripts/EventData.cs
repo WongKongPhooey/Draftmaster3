@@ -33,9 +33,9 @@ public class EventData : MonoBehaviour
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
-		offlineEventWeek[1] = "2,6,10";
-		offlineEventWeek[2] = "5";
-		offlineEventWeek[3] = "7";
+		offlineEventWeek[1] = "0";
+		//offlineEventWeek[2] = "5";
+		//offlineEventWeek[3] = "7";
 		
 		//Ol' Seven-Time
 		offlineEventChapter[0,0] = "Where It All Began";
