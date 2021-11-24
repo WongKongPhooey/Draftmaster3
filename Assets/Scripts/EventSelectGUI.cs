@@ -99,7 +99,9 @@ public class EventSelectGUI : MonoBehaviour {
 					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
 				} else {
 					//Coming up soon
-					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
+					if(!eventWeeks.Any(("0").Contains)){
+						GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
+					}
 				}
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, heightblock * 5f), Resources.Load(EventData.offlineEventImage[rootMenu]) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
