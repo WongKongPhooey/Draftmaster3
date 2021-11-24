@@ -153,6 +153,7 @@ public class EventSelectGUI : MonoBehaviour {
 				
 				//If event is already won, lock.
 				if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0") == 1){
+					//Reset event for testing
 					//PlayerPrefs.SetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0",0);
 					meetsRequirements = false;
 				}
@@ -189,7 +190,7 @@ public class EventSelectGUI : MonoBehaviour {
 					break;
 				}
 				
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6f), widthblock * 5.5f, heightblock * 6f), "Min Class " + SeriesData.classAbbr(EventData.offlineMinClass[menuIndex,subMenu]) + "\n\n" + EventData.eventChapterDescriptions[menuIndex,subMenu] + "");
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6f), widthblock * 5.5f, heightblock * 6f), minRequirement + "\n" + "Min Class " + SeriesData.classAbbr(EventData.offlineMinClass[menuIndex,subMenu]) + "\n\n" + EventData.eventChapterDescriptions[menuIndex,subMenu] + "");
 				
 				//Choose Series
 				if(meetsRequirements == true){

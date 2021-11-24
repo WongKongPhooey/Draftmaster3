@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class RaceRewards : MonoBehaviour
@@ -34,6 +35,7 @@ public class RaceRewards : MonoBehaviour
 	int seriesLength;
 	
 	public static int carPrizeNum;
+	public static string carPrizeNumAlt;
 	public static string carReward;
 	public static int rewardMultiplier;
 	public static int carCurrentGears;
@@ -64,6 +66,8 @@ public class RaceRewards : MonoBehaviour
 
 		raceType = PlayerPrefs.GetString("RaceType");
 
+		carPrizeNumAlt = "";
+		
 		setPrize = "0";
 		altPaintReward = false;
 
@@ -106,9 +110,12 @@ public class RaceRewards : MonoBehaviour
 		switch(raceType){
 			case "Event":
 			//Must win
+				Debug.Log("Checking Event Rewards");
 				if(finishPos == 1){
+					Debug.Log("You won!");
 					if(seriesPrize == "AltPaint"){
-						UnlockAltPaint("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize);
+						Debug.Log("Unlocking Alt Paint: " + setPrize);
+						UnlockAltPaint(setPrize);
 					} else {
 						AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 					}
@@ -182,7 +189,11 @@ public class RaceRewards : MonoBehaviour
 		if(carReward != ""){
 			GUI.skin.label.alignment = TextAnchor.MiddleRight;
 			GUI.Label(new Rect(widthblock * 9, heightblock * 6, widthblock * 5, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
-			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + carPrizeNum) as Texture);
+			if(carPrizeNumAlt != ""){
+				GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + carPrizeNumAlt) as Texture);
+			} else {
+				GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + carPrizeNum) as Texture);
+			}
 		}
 		
 		GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
@@ -236,15 +247,25 @@ public class RaceRewards : MonoBehaviour
 		PlayerPrefs.SetString("SeriesPrize","");
 	}
 	
-	void UnlockAltPaint(string seriesPrefix, int carNumber, string setPrize){
+	void UnlockAltPaint(string setPrize){
 		//Win an alt paint rather than car parts
 		//setPrize format example: cup20livery48alt2
 		
 		string sanitisedAlt = setPrize.Replace("livery","");
 		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
 		
+		string extractedCarNum = setPrize.Split('y').Last();
+		carPrizeNumAlt = extractedCarNum;
+		
+		Debug.Log("Extracted Alt: " + extractedCarNum);
+		
+		extractedCarNum = extractedCarNum.Substring(0, extractedCarNum.IndexOf("alt")).Trim();
+		int parsedNum = int.Parse(extractedCarNum);
+		
+		Debug.Log("Extracted car number: #" + extractedCarNum);
+		
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
-		carReward = "New " + DriverNames.cup2020Names[carNumber] + " Alt Unlocked!";
+		carReward = "New " + DriverNames.cup2020Names[parsedNum] + " Alt Unlocked!";
 	}
 	
 	void ListPrizeOptions(string category){

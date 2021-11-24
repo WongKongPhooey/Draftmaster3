@@ -424,6 +424,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 	}
 
 	void startRace(){
+		
+		//Testing only
+		PlayerPrefs.SetInt("RaceLaps",1);
+		
 		PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
 		if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
 			PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);

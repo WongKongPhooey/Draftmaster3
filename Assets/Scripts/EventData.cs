@@ -94,14 +94,14 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[0,4] = "Nov 11, 2007. Johnson wins his 10th race in one season on his way to his 2nd championship.";
 		
 		offlineEventChapter[0,5] = "Daytona! Again!";
-		offlineChapterImage[0,5] = "cup20livery48alt2";
+		offlineChapterImage[0,5] = "cup20livery48alt3";
 		offlineMinClass[0,5] = 4;
 		offlineMinLevel[0,5] = 30;
 		offlineMinType[0,5] = "Car";
 		offlineExactCar[0,5] = 48;
 		offlineTracklists[0,5] = "1";
 		offlinePrizes[0,5] = "AltPaint";
-		offlineSetPrizes[0,5] = "cup20livery48alt2";
+		offlineSetPrizes[0,5] = "cup20livery48alt3";
 		eventChapterDescriptions[0,5] = "July 6, 2013. Johnson becomes the first driver since Allison to win both Daytona races in 1 season.";
 		
 		offlineEventChapter[0,6] = "Serial Champion";
@@ -116,14 +116,14 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[0,6] = "Nov 20, 2016. Johnson takes his 7th title, tying him with Earnhardt and Petty for the most titles.";
 		
 		offlineEventChapter[0,7] = "Eleventh Heaven";
-		offlineChapterImage[0,7] = "cup20livery48alt3";
+		offlineChapterImage[0,7] = "cup20livery48alt2";
 		offlineMinClass[0,7] = 5;
 		offlineMinLevel[0,7] = 40;
 		offlineMinType[0,7] = "Car";
 		offlineExactCar[0,7] = 48;
 		offlineTracklists[0,7] = "11";
 		offlinePrizes[0,7] = "AltPaint";
-		offlineSetPrizes[0,7] = "cup20livery48alt3";
+		offlineSetPrizes[0,7] = "cup20livery48alt2";
 		eventChapterDescriptions[0,7] = "June 4, 2017. Johnson wins in Dover for the 11th time, his 83rd and last Cup series win.";
 		
 

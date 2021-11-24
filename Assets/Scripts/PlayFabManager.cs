@@ -153,9 +153,9 @@ public class PlayFabManager : MonoBehaviour
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
 		}
 		
-		//Debug Add Event
-		result.Data["EventActive"] = "Patriots Thanksgiving Hangar";
-		result.Data["EventRewards"] = "cup20livery2alt1,cup20livery13alt1,cup20livery19alt1,cup20livery22alt1,cup20livery51alt1";
+		//Debug Add Event for testing
+		//result.Data["EventActive"] = "Patriots Thanksgiving Hangar";
+		//result.Data["EventRewards"] = "cup20livery2alt1,cup20livery13alt1,cup20livery19alt1,cup20livery22alt1,cup20livery51alt1";
 		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){
