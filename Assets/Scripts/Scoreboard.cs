@@ -293,5 +293,8 @@ public class Scoreboard : MonoBehaviour {
 		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
 		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
 		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+		
+		//Testing - Corner Speeds
+		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 6.75f, widthblock * 3f, heightblock * 1f), "Offset:" + (CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
 	}
 }

@@ -520,12 +520,7 @@ public class Movement : MonoBehaviour {
 		}
 
 		carEngine = audioHolder.GetComponent<AudioSource>();
-
-		if(PlayerPrefs.GetString("raceSeries") == "IndyCar"){
-			carEngine.pitch = 3f + ((playerSpeed - 200) / 10);
-		} else {
-			carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20);
-		}
+		carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20) - (CameraRotate.carSpeedOffset / 200);
 
 		wobbleCount++;
 		
