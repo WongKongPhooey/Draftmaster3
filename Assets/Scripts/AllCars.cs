@@ -15,6 +15,7 @@ public class AllCars : MonoBehaviour {
 	float heightblock = Mathf.Round(Screen.height/20);
 	
 	string filterSeries;
+	string seriesPrefix;
 	
 	public Texture BoxTexture;
 
@@ -42,8 +43,13 @@ public class AllCars : MonoBehaviour {
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		filterSeries = "";
 		
+		seriesPrefix = "cup20";
+		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
+		
+		string progressJSON = JSONifyProgress(seriesPrefix);
+		PlayFabManager.SavePlayerProgress(progressJSON);
 	}
 
     // Update is called once per frame
@@ -146,7 +152,6 @@ public class AllCars : MonoBehaviour {
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
 		int carCount = 0;
-		string seriesPrefix = "cup20";
 		float windowscroll = 4.7f;
 		
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
@@ -372,5 +377,35 @@ public class AllCars : MonoBehaviour {
 		if (Input.GetKeyDown(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
 		}
+	}
+	
+	string JSONifyProgress(string seriesPrefix){
+		string JSONOutput = "{";
+		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\"";
+		JSONOutput += "\"drivers\": [";
+		for(int car = 0; car < 100; car++){
+			//Initialise (can be used for dev reset)
+			int carUnlocked = 0;
+			int carClass = 0;
+			int carGears = 0;
+			if(PlayerPrefs.HasKey(seriesPrefix + car + "Gears")){
+				carUnlocked = PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked");
+				carClass = PlayerPrefs.GetInt(seriesPrefix + car + "Class");
+				carGears = PlayerPrefs.GetInt(seriesPrefix + car + "Gears");
+			}
+			if(car > 0){
+				JSONOutput += ",";
+			}
+			JSONOutput += "{";
+			JSONOutput += "\"carNo\": \"" + car + "\"";
+			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\"";
+			JSONOutput += "\"carClass\": \"" + carClass + "\"";
+			JSONOutput += "\"carGears\": \"" + carGears + "\"";
+			JSONOutput += "\"altPaints\": [\"stock\"";
+			JSONOutput += "]";
+			JSONOutput += "}";		
+		}
+		JSONOutput += "]}";
+		return JSONOutput;
 	}
 }

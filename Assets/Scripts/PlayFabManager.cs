@@ -293,6 +293,27 @@ public class PlayFabManager : MonoBehaviour
 		Debug.Log("Rewards Collected, Server Reset");
 	}
 	
+	public static void GetPlayerProgress(){
+		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressReceived, OnError);
+	}
+	
+	public static void OnProgressReceived(GetUserDataResult result){
+		
+	}
+	
+	public static void SavePlayerProgress(string progressJSON){
+		var request = new UpdateUserDataRequest {
+			Data = new Dictionary<string, string> {
+				{"PlayerProgress", progressJSON}
+			}
+		};
+		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
+	}
+	
+	public static void OnProgressSave(UpdateUserDataResult result){
+		Debug.Log("Player Progress Saved");
+	}
+	
 	public static void SendLeaderboard(int score, string circuitName){
 		var request = new UpdatePlayerStatisticsRequest {
 			Statistics = new List<StatisticUpdate> {
