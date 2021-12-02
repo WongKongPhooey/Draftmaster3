@@ -381,6 +381,7 @@ public class AllCars : MonoBehaviour {
 	
 	string JSONifyProgress(string seriesPrefix){
 		string JSONOutput = "{";
+		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level") + "\"";
 		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\"";
 		JSONOutput += "\"drivers\": [";
 		for(int car = 0; car < 100; car++){
