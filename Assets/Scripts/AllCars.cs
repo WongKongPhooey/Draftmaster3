@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -47,9 +48,6 @@ public class AllCars : MonoBehaviour {
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
-		
-		string progressJSON = JSONifyProgress(seriesPrefix);
-		PlayFabManager.SavePlayerProgress(progressJSON);
 	}
 
     // Update is called once per frame
@@ -357,6 +355,19 @@ public class AllCars : MonoBehaviour {
 					}
 				}
 			}
+			
+			//I
+			if(PlayerPrefs.HasKey("PlayerUsername")){
+				GUI.skin = redGUI;
+				if (GUI.Button(new Rect(widthblock * 3, (heightblock * (8f * 11)) + heightblock * 4f, widthblock * 6, heightblock * 2f), "Save To Server")){
+					string progressJSON = JSONifyProgress(seriesPrefix);
+					PlayFabManager.SavePlayerProgress(progressJSON);
+				}
+				if (GUI.Button(new Rect(widthblock * 11, (heightblock * (8f * 11)) + heightblock * 4f, widthblock * 6, heightblock * 2f), "Load From Server")){
+					PlayFabManager.GetSavedPlayerProgress();
+				}
+				GUI.skin = tileSkin;
+			}
 		}
 		
 		GUI.EndScrollView();
@@ -381,7 +392,7 @@ public class AllCars : MonoBehaviour {
 	
 	string JSONifyProgress(string seriesPrefix){
 		string JSONOutput = "{";
-		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\"";
+		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
 		JSONOutput += "\"drivers\": [";
 		for(int car = 0; car < 100; car++){
 			//Initialise (can be used for dev reset)
@@ -397,15 +408,36 @@ public class AllCars : MonoBehaviour {
 				JSONOutput += ",";
 			}
 			JSONOutput += "{";
-			JSONOutput += "\"carNo\": \"" + car + "\"";
-			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\"";
-			JSONOutput += "\"carClass\": \"" + carClass + "\"";
-			JSONOutput += "\"carGears\": \"" + carGears + "\"";
-			JSONOutput += "\"altPaints\": [\"stock\"";
-			JSONOutput += "]";
+			JSONOutput += "\"carNo\": \"" + car + "\",";
+			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\",";
+			JSONOutput += "\"carClass\": \"" + carClass + "\",";
+			JSONOutput += "\"carGears\": \"" + carGears + "\",";
+			JSONOutput += "\"altPaints\": [\"0";
+			for(int paint=1;paint<10;paint++){
+				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
+					//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
+					JSONOutput += "," + paint + "";
+				}
+			}
+			JSONOutput += "\"]";
 			JSONOutput += "}";		
 		}
 		JSONOutput += "]}";
 		return JSONOutput;
 	}
+}
+
+[Serializable]
+public class Driver {
+    public string carNo;
+    public string carUnlocked;
+    public string carClass;
+    public string carGears;
+    public List<string> altPaints;
+}
+
+[Serializable]
+public class Series {
+    public string seriesName;
+    public List<Driver> drivers;
 }

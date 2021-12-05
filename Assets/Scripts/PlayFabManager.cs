@@ -275,6 +275,13 @@ public class PlayFabManager : MonoBehaviour
 					emptyPlayerData("RewardCar");
 				}
 			}
+			if(result.Data.ContainsKey("RewardAlt")){
+				string rewardAlt = result.Data["RewardAlt"].Value;
+				if(rewardAlt != ""){
+					Debug.Log("Rewarded Alt #" + rewardAlt);
+					emptyPlayerData("RewardAlt");
+				}
+			}
 		} else {
 			Debug.Log("No player data found");
 		}
@@ -289,22 +296,45 @@ public class PlayFabManager : MonoBehaviour
 		PlayFabClientAPI.UpdateUserData(request, OnDataSend, OnError);
 	}
 	
-	public static void OnDataSend(UpdateUserDataResult result){
-		Debug.Log("Rewards Collected, Server Reset");
-	}
-	
-	public static void GetPlayerProgress(){
+	public static void GetSavedPlayerProgress(){
 		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressReceived, OnError);
 	}
 	
-	public static void OnProgressReceived(GetUserDataResult result){
-		
+	static void OnProgressReceived(GetUserDataResult result){
+		if(result.Data != null){
+			Debug.Log("Saved player progress found");
+			if(result.Data.ContainsKey("SavedPlayerProgress")){
+				string json = result.Data["SavedPlayerProgress"].Value;
+				 Series playerJson = JsonUtility.FromJson<Series>(json);
+				 string series = playerJson.seriesName;
+				 int unlockedCars = 0;
+				 for(int i=0;i<=99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(playerJson.drivers[i].carUnlocked));
+						if(playerJson.drivers[i].carUnlocked == "1"){
+							unlockedCars++;
+						}
+						PlayerPrefs.SetInt(series + i + "Class", int.Parse(playerJson.drivers[i].carClass));
+						PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
+					}
+				 }
+				 Debug.Log("Loaded data from server! " + unlockedCars + " unlocked cars.");
+			} else {
+				Debug.Log("No player data found");
+			}
+		} else {
+			Debug.Log("No player data found");
+		}
+	}
+	
+	public static void OnDataSend(UpdateUserDataResult result){
+		Debug.Log("Rewards Collected, Server Reset");
 	}
 	
 	public static void SavePlayerProgress(string progressJSON){
 		var request = new UpdateUserDataRequest {
 			Data = new Dictionary<string, string> {
-				{"PlayerProgress", progressJSON}
+				{"SavedPlayerProgress", progressJSON}
 			}
 		};
 		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
