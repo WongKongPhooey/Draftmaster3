@@ -48,6 +48,35 @@ public class AllCars : MonoBehaviour {
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
+		
+		//For returning PlayFab call outputs, reset on Awake
+		PlayerPrefs.SetString("SaveLoadOutput","");
+		
+		//Count Unlocks..
+		int totalUnlocks = 0;
+		for(int i=0;i<100;i++){
+			if(DriverNames.cup2020Names[i] != null){
+				if(PlayerPrefs.HasKey(seriesPrefix + i + "Gears")){
+					if(PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked") == 1){
+						totalUnlocks++;
+					}
+				}
+			}
+		}
+		if(PlayerPrefs.HasKey("TotalUnlocks")){
+			//If a new car has been unlocked, and you have more than just the starter car..
+			if((PlayerPrefs.GetInt("TotalUnlocks") < totalUnlocks)&&(totalUnlocks > 1)){
+				PlayerPrefs.SetInt("TotalUnlocks", totalUnlocks);
+				//If logged in as someone
+				if(PlayerPrefs.HasKey("PlayerUsername")){
+					//Then do an autosave
+					string progressJSON = JSONifyProgress(seriesPrefix);
+					PlayFabManager.AutosavePlayerProgress(progressJSON);
+				}
+			}
+		} else {
+			PlayerPrefs.SetInt("TotalUnlocks", totalUnlocks);
+		}
 	}
 
     // Update is called once per frame
@@ -356,17 +385,19 @@ public class AllCars : MonoBehaviour {
 				}
 			}
 			
-			//I
+			//Save/Load options
 			if(PlayerPrefs.HasKey("PlayerUsername")){
 				GUI.skin = redGUI;
-				if (GUI.Button(new Rect(widthblock * 3, (heightblock * (8f * 11)) + heightblock * 4f, widthblock * 6, heightblock * 2f), "Save To Server")){
+				if (GUI.Button(new Rect(widthblock * 3, (heightblock * (8f * 11)) + heightblock * 2f, widthblock * 6, heightblock * 2f), "Save To Server")){
 					string progressJSON = JSONifyProgress(seriesPrefix);
 					PlayFabManager.SavePlayerProgress(progressJSON);
 				}
-				if (GUI.Button(new Rect(widthblock * 11, (heightblock * (8f * 11)) + heightblock * 4f, widthblock * 6, heightblock * 2f), "Load From Server")){
+				if (GUI.Button(new Rect(widthblock * 11, (heightblock * (8f * 11)) + heightblock * 2f, widthblock * 6, heightblock * 2f), "Load From Server")){
 					PlayFabManager.GetSavedPlayerProgress();
 				}
 				GUI.skin = tileSkin;
+				GUI.skin.label.alignment = TextAnchor.UpperCenter;
+				GUI.Label(new Rect(widthblock * 3, (heightblock * (8f * 11)) + heightblock * 5f, widthblock * 14f, heightblock * 4f), "" + PlayerPrefs.GetString("SaveLoadOutput"));
 			}
 		}
 		
@@ -392,6 +423,7 @@ public class AllCars : MonoBehaviour {
 	
 	string JSONifyProgress(string seriesPrefix){
 		string JSONOutput = "{";
+		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
 		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
 		JSONOutput += "\"drivers\": [";
 		for(int car = 0; car < 100; car++){
@@ -412,14 +444,14 @@ public class AllCars : MonoBehaviour {
 			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\",";
 			JSONOutput += "\"carClass\": \"" + carClass + "\",";
 			JSONOutput += "\"carGears\": \"" + carGears + "\",";
-			JSONOutput += "\"altPaints\": [\"0";
+			JSONOutput += "\"altPaints\": \"0";
 			for(int paint=1;paint<10;paint++){
 				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
 					//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
 					JSONOutput += "," + paint + "";
 				}
 			}
-			JSONOutput += "\"]";
+			JSONOutput += "\"";
 			JSONOutput += "}";		
 		}
 		JSONOutput += "]}";
@@ -433,11 +465,12 @@ public class Driver {
     public string carUnlocked;
     public string carClass;
     public string carGears;
-    public List<string> altPaints;
+    public string altPaints;
 }
 
 [Serializable]
 public class Series {
+	public string playerLevel;
     public string seriesName;
     public List<Driver> drivers;
 }
