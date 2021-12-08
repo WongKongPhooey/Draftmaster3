@@ -83,6 +83,8 @@ public class PlayFabManager : MonoBehaviour
 	static void OnGetUsernameSuccess(GetPlayerProfileResult result){
 		Debug.Log("Retrieved Username!");
 		PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
+		//Attempt to load saved data
+		GetSavedPlayerProgress();
 		SceneManager.LoadScene("MainMenu");
 	}
 	
@@ -257,22 +259,46 @@ public class PlayFabManager : MonoBehaviour
 				int rewardGears = int.Parse(result.Data["RewardGears"].Value);
 				if(rewardGears != 0){
 					gears += rewardGears;
+					MainMenuGUI.giftAlert += "You've been gifted a crate of " + rewardGears + " gears! ";
+					MainMenuGUI.newGiftAlert = true;
 					rewardGears = 0;
 					PlayerPrefs.SetInt("Gears", gears);
 					emptyPlayerData("RewardGears");
 				}
 			}
+			//This only works with cup20 
+			//Todo: adapt to take any series prefix
 			if(result.Data.ContainsKey("RewardCar")){
 				int rewardCarNum = int.Parse(result.Data["RewardCar"].Value);
 				if(rewardCarNum != 0){
 					Debug.Log("Rewarded Car #" + rewardCarNum);
 					int carClass = PlayerPrefs.GetInt("cup20" + rewardCarNum + "Class");
 					if(carClass == 0){
+						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Unlocked", 1);
 						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", DriverNames.cup2020Rarity[rewardCarNum]);
 					} else {
+						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Unlocked", 1);
 						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", carClass+1);
 					}
+					MainMenuGUI.giftAlert += "You've been gifted a new " + DriverNames.cup2020Names[rewardCarNum] + " car! ";
+					MainMenuGUI.newGiftAlert = true;
 					emptyPlayerData("RewardCar");
+				}
+			}
+			if(result.Data.ContainsKey("RewardAlt")){
+				string rewardAlt = result.Data["RewardAlt"].Value;
+				//Example: cup20livery20alt1
+				if(rewardAlt != "0"){
+					Debug.Log("Rewarded Alt #" + rewardAlt);
+					
+					//Reformat it to match the PlayerPrefs var..
+					rewardAlt = rewardAlt.Replace("livery","");
+					rewardAlt = rewardAlt.Replace("alt","Alt");
+					
+					PlayerPrefs.SetInt(rewardAlt + "Unlocked",1);
+					MainMenuGUI.giftAlert += "You've been gifted the " + rewardAlt + " alt paint! ";
+					MainMenuGUI.newGiftAlert = true;
+					emptyPlayerData("RewardAlt");
 				}
 			}
 		} else {
@@ -289,8 +315,88 @@ public class PlayFabManager : MonoBehaviour
 		PlayFabClientAPI.UpdateUserData(request, OnDataSend, OnError);
 	}
 	
+	public static void GetSavedPlayerProgress(){
+		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressReceived, OnError);
+	}
+	
+	static void OnProgressReceived(GetUserDataResult result){
+		if(result.Data != null){
+			Debug.Log("Saved player progress found");
+			string json = "";
+			string saveType = "";
+			//Check for manual save
+			if(result.Data.ContainsKey("SavedPlayerProgress")){
+				json = result.Data["SavedPlayerProgress"].Value;
+				saveType = "manual ";
+			} else {
+				//No save data? Try to load from autosave
+				if(result.Data.ContainsKey("AutosavePlayerProgress")){
+					Debug.Log("No manual saves.. looking for an autosave");
+					json = result.Data["AutosavePlayerProgress"].Value;
+					saveType = "auto";
+				}
+			}
+			if(json != ""){
+				 PlayerPrefs.SetInt("NewUser",1);
+				 Series playerJson = JsonUtility.FromJson<Series>(json);
+				 int level = int.Parse(playerJson.playerLevel);
+				 PlayerPrefs.SetInt("Level", level);
+				 string series = playerJson.seriesName;
+				 int unlockedCars = 0;
+				 for(int i=0;i<=99;i++){
+					if(DriverNames.cup2020Names[i] != null){
+						PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(playerJson.drivers[i].carUnlocked));
+						if(playerJson.drivers[i].carUnlocked == "1"){
+							unlockedCars++;
+						}
+						PlayerPrefs.SetInt(series + i + "Class", int.Parse(playerJson.drivers[i].carClass));
+						PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
+						string altsList = playerJson.drivers[i].altPaints;
+						string[] altsArray = altsList.Split(',');
+						foreach(string alt in altsArray){
+							if(int.Parse(alt) > 0){
+								PlayerPrefs.SetInt(series + i + "Alt" + alt + "Unlocked", 1);
+								Debug.Log("Added #" + i + " alt " + alt);
+							}
+						}
+					}
+				 }
+				 Debug.Log("Loaded data from server! " + unlockedCars + " unlocked cars.");
+				 PlayerPrefs.SetString("SaveLoadOutput","Loaded " + saveType + "save - " + unlockedCars + " unlocked cars.");
+			} else {
+				Debug.Log("No player data found");
+				PlayerPrefs.SetString("SaveLoadOutput","No save data found for this player account.");
+			}
+		} else {
+			Debug.Log("No player data found");
+		}
+	}
+	
 	public static void OnDataSend(UpdateUserDataResult result){
 		Debug.Log("Rewards Collected, Server Reset");
+	}
+	
+	public static void AutosavePlayerProgress(string progressJSON){
+		var request = new UpdateUserDataRequest {
+			Data = new Dictionary<string, string> {
+				{"AutosavePlayerProgress", progressJSON}
+			}
+		};
+		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
+	}
+	
+	public static void SavePlayerProgress(string progressJSON){
+		var request = new UpdateUserDataRequest {
+			Data = new Dictionary<string, string> {
+				{"SavedPlayerProgress", progressJSON}
+			}
+		};
+		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
+	}
+	
+	public static void OnProgressSave(UpdateUserDataResult result){
+		Debug.Log("Player Progress Saved");
+		PlayerPrefs.SetString("SaveLoadOutput","Saved progress to the server");
 	}
 	
 	public static void SendLeaderboard(int score, string circuitName){

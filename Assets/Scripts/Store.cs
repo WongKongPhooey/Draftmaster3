@@ -77,6 +77,9 @@ public class Store : MonoBehaviour{
 		//Reset Event Picks
 		//PlayerPrefs.DeleteKey("PrizePositions");
 		
+		//Delete Alts - Testing
+		//PlayerPrefs.SetInt("cup2022Alt1Unlocked",0);
+		
 		offset = 0;
 		eventActive = false;
 		if(PlayerPrefs.GetInt("EventActive") == 1){
@@ -94,6 +97,7 @@ public class Store : MonoBehaviour{
 					//Debug.Log(item + " added to store");
 				}
 				Debug.Log("Total event prizes: " + eventPrizes.Count);
+				PlayerPrefs.SetInt("EventTotalPrizes",eventPrizes.Count);
 				
 				//Reset For Testing
 				//PlayerPrefs.DeleteKey("PrizePositions");
@@ -121,6 +125,13 @@ public class Store : MonoBehaviour{
 					itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
 				}
 				CountEventAltsFound();
+			}
+			itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
+			if(itemsRemaining <= 0){
+				if(CountEventAltsFound() < PlayerPrefs.GetInt("EventTotalPrizes")){
+					itemsRemaining = 20;
+					PlayerPrefs.SetInt("EventItemsRemaining", itemsRemaining);
+				}
 			}
 			//list[Random.Range(0, list.Count)];
 		}

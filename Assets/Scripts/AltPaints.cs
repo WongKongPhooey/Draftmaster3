@@ -4,8 +4,8 @@ using UnityEngine;
 
 public class AltPaints : MonoBehaviour {
 	
-	public static string[,] cup2020AltPaintNames = new string[101,6];
-	public static int[,] cup2020AltPaintRarity = new int[101,6];
+	public static string[,] cup2020AltPaintNames = new string[101,10];
+	public static int[,] cup2020AltPaintRarity = new int[101,10];
 	
     // Start is called before the first frame update
     void Start(){

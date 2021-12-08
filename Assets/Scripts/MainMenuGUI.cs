@@ -36,11 +36,13 @@ public class MainMenuGUI : MonoBehaviour {
 
 	public bool levelUpMenu;
 	public static bool newMessageAlert;
+	public static string messageAlert;
+	
+	public static bool newGiftAlert;
+	public static string giftAlert;
 	
 	public static bool showInfoBox;
 	public static string infoBox;
-	
-	public static string messageAlert;
 	
 	public AudioSource crowdNoise;
 	public static int audioOn;
@@ -61,6 +63,7 @@ public class MainMenuGUI : MonoBehaviour {
 		rewardString = "";
 		
 		newMessageAlert = false;
+		newGiftAlert = false;
 		showInfoBox = false;
 		
 		if(exp > levelExp){
@@ -217,6 +220,22 @@ public class MainMenuGUI : MonoBehaviour {
 			GUI.skin = redGUI;
 			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
 				newMessageAlert = false;
+			}
+		}
+		
+		if(newGiftAlert == true){
+			GUI.Box(new Rect(0, 0, Screen.width, Screen.height),"");
+			GUI.skin = whiteGUI;
+			GUI.Box(new Rect(widthblock * 3f, heightblock * 3f, widthblock * 14f, heightblock * 14f),"");
+			
+			GUI.skin = buttonSkin;
+			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+			GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+			GUI.Label(new Rect(widthblock * 4f, heightblock * 4f, widthblock * 12f, heightblock * 9f), giftAlert);
+			
+			GUI.skin = redGUI;
+			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
+				newGiftAlert = false;
 			}
 		}
 		

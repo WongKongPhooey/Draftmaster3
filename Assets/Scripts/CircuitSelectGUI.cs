@@ -131,6 +131,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 					Debug.Log("End of season, round reset.");
 				} else {
 					loadTrack(seriesTracks[championshipRound].ToString(), 0);
+					PlayerPrefs.SetString("CurrentTrack","" + championshipRound);
 					loadPoints();
 				}
 			}
@@ -551,10 +552,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 		for(int i=0;i<100;i++){
 			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
 				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
-				Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
+				//Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
 				pointsTableInd++;
 			} else {
-				Debug.Log("No points found for #" + i);
+				//Debug.Log("No points found for #" + i);
 			}
 		}
 	}
