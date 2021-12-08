@@ -288,7 +288,7 @@ public class PlayFabManager : MonoBehaviour
 			if(result.Data.ContainsKey("RewardAlt")){
 				string rewardAlt = result.Data["RewardAlt"].Value;
 				//Example: cup20livery20alt1
-				if(rewardAlt != "0"){
+				if((rewardAlt != "0")&&(rewardAlt != "")){
 					Debug.Log("Rewarded Alt #" + rewardAlt);
 					
 					//Reformat it to match the PlayerPrefs var..
