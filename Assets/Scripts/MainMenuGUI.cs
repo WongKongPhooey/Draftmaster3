@@ -141,6 +141,7 @@ public class MainMenuGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CameraRotate", 1);
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
+		PlayerPrefs.SetString("TargetVersion", Application.version);
 	}
 
 	void OnGUI() {
@@ -220,6 +221,7 @@ public class MainMenuGUI : MonoBehaviour {
 			GUI.skin = redGUI;
 			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
 				newMessageAlert = false;
+				messageAlert = "";
 			}
 		}
 		
@@ -236,6 +238,7 @@ public class MainMenuGUI : MonoBehaviour {
 			GUI.skin = redGUI;
 			if (GUI.Button(new Rect(widthblock * 8.75f, heightblock * 14f, widthblock * 2.5f, heightblock * 2f), "Continue")){
 				newGiftAlert = false;
+				giftAlert = "";
 			}
 		}
 		

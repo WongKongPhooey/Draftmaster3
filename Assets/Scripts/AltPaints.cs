@@ -20,6 +20,11 @@ public class AltPaints : MonoBehaviour {
 		
 		cup2020AltPaintNames[2,1] = "#1 Patriot";
 		cup2020AltPaintNames[3,1] = "#1 Halloween";
+		cup2020AltPaintNames[3,2] = "#2 Icon";
+		cup2020AltPaintNames[3,3] = "#3 Wrangled";
+		cup2020AltPaintNames[3,4] = "#4 All Star";
+		cup2020AltPaintNames[7,1] = "#1 Insure";
+		cup2020AltPaintNames[9,1] = "#1 Hoot";
 		cup2020AltPaintNames[13,1] = "#1 Military";
 		cup2020AltPaintNames[18,1] = "#1 Halloween";
 		cup2020AltPaintNames[19,1] = "#1 USO";

@@ -75,6 +75,7 @@ public class Movement : MonoBehaviour {
 	
 	public bool backingOut = false;
 	public bool tandemDraft = false;
+	public bool initialContact = false;
 
 	int wobbleCount;
 	int wobblePos;
@@ -292,11 +293,11 @@ public class Movement : MonoBehaviour {
 	
 	void ReceivePush(float bumpSpeed){
 		//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + "while I was going " + playerSpeed);
-		if(tandemDraft == false){
+		if(initialContact == false){
 			//if(bumpSpeed - playerSpeed > 1){
 				float midSpeed = bumpSpeed - playerSpeed;
-				playerSpeed += midSpeed/8;
-				tandemDraft = true;
+				playerSpeed += midSpeed/4;
+				initialContact = true;
 				//Debug.Log("Impact levels out Player");
 			//}
 		} else {
@@ -395,6 +396,7 @@ public class Movement : MonoBehaviour {
 			tandemDraft = true;
 		} else {
 			tandemDraft = false;
+			initialContact = false;
 		}
 
 		// If bump-drafting the car in front

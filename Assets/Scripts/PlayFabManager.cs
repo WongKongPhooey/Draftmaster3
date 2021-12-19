@@ -156,8 +156,10 @@ public class PlayFabManager : MonoBehaviour
 		}
 		
 		//Debug Add Event for testing
-		//result.Data["EventActive"] = "Patriots Thanksgiving Hangar";
-		//result.Data["EventRewards"] = "cup20livery2alt1,cup20livery13alt1,cup20livery19alt1,cup20livery22alt1,cup20livery51alt1";
+		//result.Data["EventActive"] = "End Of An Era - Set 1";
+		//result.Data["EventImage"] = "halloween";
+		//result.Data["EventDescription"] = "With the next gen cars on the horizon, we look back at some of the best paint schemes from the last few years. This is set 1!";
+		//result.Data["EventRewards"] = "cup20livery7alt1,cup20livery9alt1,cup20livery12alt1";
 		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){
@@ -172,6 +174,10 @@ public class PlayFabManager : MonoBehaviour
 				}
 				Debug.Log(result.Data["EventActive"] + " Event Active");
 				
+				//Update Event Meta
+				PlayerPrefs.SetString("EventImage", result.Data["EventImage"]);
+				PlayerPrefs.SetString("EventDescription", result.Data["EventDescription"]);
+				
 				//Retrieve the event rewards (assume set)
 				PlayerPrefs.SetString("EventRewards", result.Data["EventRewards"]);
 				Debug.Log("Event Prizes: " + result.Data["EventRewards"]);
@@ -183,6 +189,12 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			PlayerPrefs.SetInt("EventActive", 0);
 			Debug.Log("No Active Event");
+		}
+		
+		if(result.Data.ContainsKey("TargetVersion") == true){
+			PlayerPrefs.SetString("TargetVersion", result.Data["TargetVersion"]);
+		} else {
+			PlayerPrefs.SetString("TargetVersion", Application.version);
 		}
 		
 		//Free Fuel Promo
