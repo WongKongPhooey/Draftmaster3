@@ -47,9 +47,12 @@ public class Store : MonoBehaviour{
 	int paintsFound;
 	int itemsRemaining;
 	public bool eventActive;
+	public string eventImage;
+	public string eventDescription;
 	public int offset;
 	
-	public Texture2D eventImage;
+	public string currentVersion;
+	public string targetVersion;
 	
 	public static bool adWindow;
 	public GameObject adFallback;
@@ -77,10 +80,18 @@ public class Store : MonoBehaviour{
 		//Reset Event Picks
 		//PlayerPrefs.DeleteKey("PrizePositions");
 		
+		//Delete Alts - Testing
+		//PlayerPrefs.SetInt("cup2022Alt1Unlocked",0);
+		
+		currentVersion = Application.version;
+		targetVersion = PlayerPrefs.GetString("TargetVersion");
+		
 		offset = 0;
 		eventActive = false;
 		if(PlayerPrefs.GetInt("EventActive") == 1){
 			eventActive = true;
+			eventImage = PlayerPrefs.GetString("EventImage");
+			eventDescription = PlayerPrefs.GetString("EventDescription");
 			offset = 2;
 			menuCat = "Event";
 			
@@ -94,6 +105,7 @@ public class Store : MonoBehaviour{
 					//Debug.Log(item + " added to store");
 				}
 				Debug.Log("Total event prizes: " + eventPrizes.Count);
+				PlayerPrefs.SetInt("EventTotalPrizes",eventPrizes.Count);
 				
 				//Reset For Testing
 				//PlayerPrefs.DeleteKey("PrizePositions");
@@ -121,6 +133,13 @@ public class Store : MonoBehaviour{
 					itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
 				}
 				CountEventAltsFound();
+			}
+			itemsRemaining = PlayerPrefs.GetInt("EventItemsRemaining");
+			if(itemsRemaining <= 0){
+				if(CountEventAltsFound() < PlayerPrefs.GetInt("EventTotalPrizes")){
+					itemsRemaining = 20;
+					PlayerPrefs.SetInt("EventItemsRemaining", itemsRemaining);
+				}
 			}
 			//list[Random.Range(0, list.Count)];
 		}
@@ -299,59 +318,64 @@ public class Store : MonoBehaviour{
 				float cardX = widthblock * 5f;
 				float cardY = heightblock * 4;
 				
-				GUI.skin = whiteGUI;
-				GUI.Box(new Rect(cardX, cardY, widthblock * 13.5f, heightblock * 12f), "");
-				GUI.skin = tileSkin;
-				
-				GUI.skin.label.fontSize = 64 / FontScale.fontScale;
-				GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-				
-				GUI.skin.label.alignment = TextAnchor.UpperCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 13f, heightblock * 1.5f), "" + PlayerPrefs.GetString("EventName") + "");
-				
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2.5f), widthblock * 5.5f, heightblock * 8.5f), eventImage, ScaleMode.ScaleToFit);
-				
-				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-				
-				GUI.skin.label.alignment = TextAnchor.UpperLeft;
-				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), "We're feeling patriotic this Thanksgiving! 5 new paints have been flown in from a top secret military base, as well as 15 crates of parts for these rare cars. Go get 'em!");
-				
-				GUI.skin.label.alignment = TextAnchor.LowerLeft;
-				
-				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), PlayerPrefs.GetInt("EventAltsFound") + "/5 paints found");
-				
-				GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/20 items left");
-				
-				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+				if(currentVersion.ToString() != targetVersion){
+					GUI.skin.label.alignment = TextAnchor.UpperLeft;
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY, widthblock * 13f, heightblock * 12f), "Your installed version of the game (v" + currentVersion + ") is older than the required version (v" + targetVersion + "). Please update in order to play the current live Event! \n\nUpdates can be found here:\n\nAndroid - Google Play Store\nApple - Apple App Store\nAndroid (Legacy) - itch.io");
+				} else {
+					GUI.skin = whiteGUI;
+					GUI.Box(new Rect(cardX, cardY, widthblock * 13.5f, heightblock * 12f), "");
+					GUI.skin = tileSkin;
+					
+					GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+					GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+					
+					GUI.skin.label.alignment = TextAnchor.UpperCenter;
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 13f, heightblock * 1.5f), "" + PlayerPrefs.GetString("EventName") + "");
+					
+					GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2.5f), widthblock * 5.5f, heightblock * 8.5f), Resources.Load("Events/" + eventImage + "") as Texture, ScaleMode.ScaleToFit);
+					
+					GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+					
+					GUI.skin.label.alignment = TextAnchor.UpperLeft;
+					GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + 10 + (heightblock * 2.5f), widthblock * 7f, heightblock * 9), eventDescription);
+					
+					GUI.skin.label.alignment = TextAnchor.LowerLeft;
+					
+					GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), PlayerPrefs.GetInt("EventAltsFound") + "/5 paints found");
+					
+					GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/20 items left");
+					
+					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
-				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-				
-				GUI.skin = redGUI;
-				
-				if(itemsRemaining > 0){
-					gears = PlayerPrefs.GetInt("Gears");
-						if(gears >= 10){
-							if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "10G")){
-								gears -= 10;
-								bool isPick = checkEventPickForAlt(itemsRemaining);
-								itemsRemaining--;
-								PlayerPrefs.SetInt("Gears",gears);
-								PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
-								if(isPick == true){
-									int failover = CountEventAltsFound();
-									if(failover >= 5){
-										Debug.Log("All alts found, event bugged? Failover.");
-										Application.LoadLevel("MainMenu");
+					GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+					
+					GUI.skin = redGUI;
+					
+					if(itemsRemaining > 0){
+						gears = PlayerPrefs.GetInt("Gears");
+							if(gears >= 10){
+								if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "10G")){
+									gears -= 10;
+									bool isPick = checkEventPickForAlt(itemsRemaining);
+									itemsRemaining--;
+									PlayerPrefs.SetInt("Gears",gears);
+									PlayerPrefs.SetInt("EventItemsRemaining",itemsRemaining);
+									if(isPick == true){
+										int failover = CountEventAltsFound();
+										if(failover >= 5){
+											Debug.Log("All alts found, event bugged? Failover.");
+											Application.LoadLevel("MainMenu");
+										}
+										PlayerPrefs.SetString("PrizeType","EventAlt");
+										PlayerPrefs.SetInt("EventAltsFound",PlayerPrefs.GetInt("EventAltsFound") + 1);
+									} else {
+										PlayerPrefs.SetString("PrizeType","EventGarage");
 									}
-									PlayerPrefs.SetString("PrizeType","EventAlt");
-									PlayerPrefs.SetInt("EventAltsFound",PlayerPrefs.GetInt("EventAltsFound") + 1);
-								} else {
-									PlayerPrefs.SetString("PrizeType","EventGarage");
+									Application.LoadLevel("PrizeCollection");
 								}
-								Application.LoadLevel("PrizeCollection");
+							} else {
+								if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "Need " + (10 - gears) + "G!")){
 							}
-						} else {
-							if(GUI.Button(new Rect(cardX + (widthblock * 10f), cardY + (heightblock * 9.5f), widthblock * 3, heightblock * 1.5f), "Need " + (10 - gears) + "G More!")){
 						}
 					}
 				}

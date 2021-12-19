@@ -247,21 +247,30 @@ public class PrizeCollection : MonoBehaviour
 		string sanitisedAlt = randAlt.Replace("livery","");
 		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
 		//Find a not yet unlocked alt
+		int loopBailout = 25;
 		while(PlayerPrefs.GetInt(sanitisedAlt + "Unlocked") == 1){
-			randAlt = eventAlts[Random.Range(0,eventAlts.Count)].ToString();
-			
-			indexA = randAlt.IndexOf("livery") + "livery".Length;
-			indexB = randAlt.LastIndexOf("alt");
-			carNumber = randAlt.Substring(indexA, indexB - indexA);
-			
-			sanitisedAlt = randAlt.Replace("livery","");
-			sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
+			loopBailout--;
+			if(loopBailout > 0){
+				randAlt = eventAlts[Random.Range(0,eventAlts.Count)].ToString();
+				
+				indexA = randAlt.IndexOf("livery") + "livery".Length;
+				indexB = randAlt.LastIndexOf("alt");
+				carNumber = randAlt.Substring(indexA, indexB - indexA);
+				
+				sanitisedAlt = randAlt.Replace("livery","");
+				sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
+			} else {
+				carReward = "Duplicate Alt Found! Sorry..";
+				break;
+			}
 		}
 		
 		//Unlock it
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
 		
-		carReward = "New " + DriverNames.cup2020Names[int.Parse(carNumber)] + " Alt Unlocked";
+		if(loopBailout > 0){
+			carReward = "New " + DriverNames.cup2020Names[int.Parse(carNumber)] + " Alt Unlocked";
+		}
 	}
 	
 	void EventGarage(string seriesPrefix, int carNumber){

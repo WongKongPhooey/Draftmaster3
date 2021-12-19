@@ -45,6 +45,7 @@ public class AIMovement : MonoBehaviour
 
     public static bool onTurn;
 	public bool tandemDraft;
+	public bool initialContact = false;
 
     string carNumber;
 	string AICarNum;
