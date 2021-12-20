@@ -75,6 +75,7 @@ public class Movement : MonoBehaviour {
 	
 	public bool backingOut = false;
 	public bool tandemDraft = false;
+	public int tandemPosition;
 	public bool initialContact = false;
 
 	int wobbleCount;
@@ -116,6 +117,7 @@ public class Movement : MonoBehaviour {
 		lane = SpawnField.startLane;
 		laneBias = 0;
 		challengeSpeedBoost = 0;
+		tandemPosition = 1;
 		
 		seriesPrefix = "cup20";
 		
@@ -304,12 +306,22 @@ public class Movement : MonoBehaviour {
 			//Send it back
 			RaycastHit DraftCheckBackward;
 			bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
+			DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
 			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
 		}
 	}
 	
 	void GivePush(float bumpSpeed){
 		playerSpeed = bumpSpeed;
+		if(tandemPosition > 2){
+			playerSpeed-= 0.25f;
+			Debug.Log("Player speed reduced by " + (bumpSpeed - playerSpeed) + "");
+		}
+	}
+	
+	void UpdateTandemPosition(int tandemPosInFront){
+		tandemPosition = tandemPosInFront + 1;
+		Debug.Log("Player is in tandem position " + tandemPosition + "");
 	}
 	
 	// Update is called once per frame
@@ -412,6 +424,7 @@ public class Movement : MonoBehaviour {
 
 		} else {
 			tandemDraft = false;
+			tandemPosition = 1;
 		}
 		
 		// Draft Behind A Buddy

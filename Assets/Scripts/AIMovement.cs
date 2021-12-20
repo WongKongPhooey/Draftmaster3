@@ -45,6 +45,7 @@ public class AIMovement : MonoBehaviour
 
     public static bool onTurn;
 	public bool tandemDraft;
+	public int tandemPosition;
 	public bool initialContact = false;
 
     string carNumber;
@@ -55,6 +56,8 @@ public class AIMovement : MonoBehaviour
 	
 	string seriesPrefix;
 	int customNum;
+
+	bool coolEngine;
 
 	public int maxDraftDistance;
 
@@ -88,6 +91,7 @@ public class AIMovement : MonoBehaviour
 		
         onTurn = false;
 		tandemDraft = false;
+		tandemPosition = 1;
         AISpeed = 203;
         laneticker = 0;
 		
@@ -99,6 +103,8 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log("AILevel: " + AILevel);
 		
 		antiGlitch = 0;
+		
+		coolEngine = false;
 		
 		thePlayer = GameObject.Find("Player");
 		seriesPrefix = "cup2020";
@@ -280,13 +286,23 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(HitBackward == true){
+			DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
 			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
 		}
 	}
 	
 	void GivePush(float bumpSpeed){
 		AISpeed = bumpSpeed;
-		//Debug.Log("" + AICar.name + " is being speed matched");
+		//Discourage long draft trains
+		if(tandemPosition > 2){
+			AISpeed-=0.25f;
+			coolEngine=true;
+		}
+	}
+	
+	void UpdateTandemPosition(int tandemPosInFront){
+		tandemPosition = tandemPosInFront + 1;
+		//Debug.Log("" + AICar.name + " is in tandem position" + tandemPosition);
 	}
 
     // Update is called once per frame
@@ -313,14 +329,14 @@ public class AIMovement : MonoBehaviour
 			} else {
 				holdLane++;
 				distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
-				if((distFromPlayer<=20)&&(distFromPlayer>=-20)){
+				if((distFromPlayer<=30)&&(distFromPlayer>=-30)){
 					speedLogic();
 				} else {
 					//Improve FPS by removing logic from far away opponents
-					if(distFromPlayer>20){
+					if(distFromPlayer>30){
 						dumbSpeed(1);
 					} else {
-						if(distFromPlayer<-20){
+						if(distFromPlayer<-30){
 							dumbSpeed(-1);
 						}
 					}
@@ -370,6 +386,17 @@ public class AIMovement : MonoBehaviour
 			//}
 		}
 		
+		//If engine is too hot, stall out
+		if(coolEngine == true){
+			if (HitForward && DraftCheckForward.distance <= 1.5f){
+				//Draft gets stronger as you get closer
+				AISpeed -= (1.4f - DraftCheckForward.distance)/100;
+				Debug.Log("#" + carNumber + " cooling down");
+			} else {
+				coolEngine = false;
+			}
+		}
+		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
 			AISpeed += 0.0035f;
@@ -390,6 +417,7 @@ public class AIMovement : MonoBehaviour
 			}
 		} else {
 			tandemDraft = false;
+			tandemPosition = 1;
 		}
 		
 		//Speed tops out
@@ -507,6 +535,11 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 			}
+			
+			//Lift if about to bump draft with too much closing speed
+			if((carDist < 1.25f)&&((AISpeed - opponentSpeed) > 1f)){
+				slowUp(carDist);
+			}
 		} else {
 			//Check further away
 			RaycastHit DraftCheckForwardLong;
@@ -521,6 +554,11 @@ public class AIMovement : MonoBehaviour
 				findDraft();
 			}
 		}
+	}
+	
+	void slowUp(float carDist){
+		AISpeed -= (1.25f - carDist)/2;
+		//Debug.Log("BRAKE! #" + carNumber);
 	}
 	
 	void carWobble(){

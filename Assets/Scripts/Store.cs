@@ -583,7 +583,9 @@ public class Store : MonoBehaviour{
 					}
 					// Gears/Class 
 					if(carClass == 6){
+						GUI.skin.label.normal.textColor = Color.white;
 						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
+						GUI.skin.label.normal.textColor = Color.black;
 					} else {
 						GUI.skin.label.normal.textColor = Color.white;
 						if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
@@ -598,20 +600,22 @@ public class Store : MonoBehaviour{
 					
 					int itemPrice = getShopPriceByRarity(DriverNames.cup2020Rarity[carNumInt]);
 					
-					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
-						
-						gears = PlayerPrefs.GetInt("Gears");
-						if(gears >= itemPrice){
-							gears -= itemPrice;
-							if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
-								carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-							} else {
-								carGears = 0;
+					if(carClass < 6){
+						if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
+							
+							gears = PlayerPrefs.GetInt("Gears");
+							if(gears >= itemPrice){
+								gears -= itemPrice;
+								if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
+									carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
+								} else {
+									carGears = 0;
+								}
+								PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
+								PlayerPrefs.SetInt("Gears",gears);
 							}
-							PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
-							PlayerPrefs.SetInt("Gears",gears);
 						}
-					}
+					}	
 					GUI.skin = tileSkin;
 				}
 				
@@ -664,7 +668,9 @@ public class Store : MonoBehaviour{
 						}
 						// Gears/Class 
 						if(carClass == 6){
+							GUI.skin.label.normal.textColor = Color.white;
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
+							GUI.skin.label.normal.textColor = Color.black;
 						} else {
 							GUI.skin.label.normal.textColor = Color.white;
 							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
@@ -678,18 +684,20 @@ public class Store : MonoBehaviour{
 						GUI.skin = redGUI;
 						
 						int itemPrice = getShopPriceByRarity(DriverNames.cup2020Rarity[carNumInt]);
-						if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
-							
-							gears = PlayerPrefs.GetInt("Gears");
-							if(gears >= itemPrice){
-								gears -= itemPrice;
-								if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
-									carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-								} else {
-									carGears = 0;
+						if(carClass < 6){
+							if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
+								
+								gears = PlayerPrefs.GetInt("Gears");
+								if(gears >= itemPrice){
+									gears -= itemPrice;
+									if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
+										carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
+									} else {
+										carGears = 0;
+									}
+									PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
+									PlayerPrefs.SetInt("Gears",gears);
 								}
-								PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
-								PlayerPrefs.SetInt("Gears",gears);
 							}
 						}
 						GUI.skin = tileSkin;
@@ -745,7 +753,9 @@ public class Store : MonoBehaviour{
 						}
 						// Gears/Class 
 						if(carClass == 6){
+							GUI.skin.label.normal.textColor = Color.white;
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
+							GUI.skin.label.normal.textColor = Color.black;
 						} else {
 							GUI.skin.label.normal.textColor = Color.white;
 							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
@@ -759,18 +769,20 @@ public class Store : MonoBehaviour{
 						GUI.skin = redGUI;
 						
 						int itemPrice = getShopPriceByRarity(DriverNames.cup2020Rarity[carNumInt]);
-						if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
-							
-							gears = PlayerPrefs.GetInt("Gears");
-							if(gears >= itemPrice){
-								gears -= itemPrice;
-								if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
-									carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-								} else {
-									carGears = 0;
+						if(carClass < 6){
+							if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
+								
+								gears = PlayerPrefs.GetInt("Gears");
+								if(gears >= itemPrice){
+									gears -= itemPrice;
+									if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
+										carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
+									} else {
+										carGears = 0;
+									}
+									PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
+									PlayerPrefs.SetInt("Gears",gears);
 								}
-								PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
-								PlayerPrefs.SetInt("Gears",gears);
 							}
 						}
 						GUI.skin = tileSkin;
@@ -891,7 +903,9 @@ public class Store : MonoBehaviour{
 					}
 					// Gears/Class 
 					if(carClass == 6){
+						GUI.skin.label.normal.textColor = Color.white;
 						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
+						GUI.skin.label.normal.textColor = Color.black;
 					} else {
 						if(carClass < unlockClass){
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
