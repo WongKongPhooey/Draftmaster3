@@ -107,6 +107,7 @@ public class MainMenuGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TutorialActive",0);
 		PlayerPrefs.SetInt("CautionHasBeen",0);
 		PlayerPrefs.SetInt("TotalRivals",0);
+		PlayerPrefs.SetInt("ExpAdded",0);
 
 		ChallengeSelectGUI.challengeMode = false;
 		PlayerPrefs.SetString("ChallengeType","");

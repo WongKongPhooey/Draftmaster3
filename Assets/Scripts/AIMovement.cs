@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using Random=UnityEngine.Random;
@@ -42,6 +43,8 @@ public class AIMovement : MonoBehaviour
 	public int carRarity;
 	public string carType;
 	public int AICarClass;
+
+	List<string> altPaints;
 
     public static bool onTurn;
 	public bool tandemDraft;
@@ -126,14 +129,37 @@ public class AIMovement : MonoBehaviour
 		
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
+		altPaints = new List<string>();
+		altPaints.Add("0");
+		altPaints.Add("0");
+		altPaints.Add("0");
+		altPaints.Add("0");
+		AltPaints.loadAlts();
+		
+		for(int i=1;i<10;i++){
+			if(AltPaints.cup2020AltPaintNames[carNum,i] != null){
+				altPaints.Add(i.ToString());
+			}
+		}
+		int altIndex = Random.Range(0,altPaints.Count);
+		string chosenAlt = altPaints[altIndex];
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
-			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+			if(chosenAlt != "0"){
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blankalt" + chosenAlt) as Texture;
+			} else {
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
-			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
+			if(chosenAlt != "0"){
+				Debug.Log("Custom alt spawned - Car #" + carNumber);
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
+			} else {
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
+			}
 			numRend.enabled = false;
 			//Debug.Log("No custom number saved");
 		}
@@ -390,8 +416,8 @@ public class AIMovement : MonoBehaviour
 		if(coolEngine == true){
 			if (HitForward && DraftCheckForward.distance <= 1.5f){
 				//Draft gets stronger as you get closer
-				AISpeed -= (1.4f - DraftCheckForward.distance)/100;
-				Debug.Log("#" + carNumber + " cooling down");
+				AISpeed -= (1.5f - DraftCheckForward.distance)/75;
+				//Debug.Log("#" + carNumber + " cooling down");
 			} else {
 				coolEngine = false;
 			}

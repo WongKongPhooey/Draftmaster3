@@ -46,12 +46,12 @@ public class PrizeCollection : MonoBehaviour
 					PremiumGarage("cup20",prizeCarNumber);
 					break;
 				case "EventGarage":
-					ListPrizeOptions("Thanksgiving");
+					ListPrizeOptions("2020Pt1");
 					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
 					EventGarage("cup20",prizeCarNumber);
 					break;
 				case "EventAlt":
-					ListPrizeOptions("Thanksgiving");
+					ListPrizeOptions("2020Pt1");
 					EventAlt("cup20");
 					break;
 				case "3RareGarage":
@@ -148,6 +148,13 @@ public class PrizeCollection : MonoBehaviour
 				validDriver.Add(32);
 				validDriver.Add(42);
 				validDriver.Add(88);
+			break;
+			case "2020Pt1":
+				validDriver.Add(7);
+				validDriver.Add(9);
+				validDriver.Add(12);
+				validDriver.Add(17);
+				validDriver.Add(43);
 			break;
 			case "Rookies":
 				validDriver.Add(0); //Houff
