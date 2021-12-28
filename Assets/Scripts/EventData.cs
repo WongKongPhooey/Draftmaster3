@@ -33,7 +33,7 @@ public class EventData : MonoBehaviour
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
-		offlineEventWeek[1] = "2,6,10";
+		offlineEventWeek[1] = "0";
 		//offlineEventWeek[2] = "5";
 		//offlineEventWeek[3] = "7";
 		
@@ -150,7 +150,7 @@ public class EventData : MonoBehaviour
 		offlineSetPrizes[1,1] = "20";
 		eventChapterDescriptions[1,1] = "April 1, 1979. Earnhardt's first win comes at Bristol in the Southeastern 500.";
 		
-		offlineEventChapter[0,2] = "First Of Many";
+		offlineEventChapter[0,2] = "Sweet Home Alabama";
 		offlineChapterImage[0,2] = "BigOval";
 		offlineMinClass[0,2] = 4;
 		offlineMinLevel[0,2] = 15;
@@ -159,7 +159,7 @@ public class EventData : MonoBehaviour
 		offlineTracklists[0,2] = "21";
 		offlinePrizes[0,2] = "Johnson";
 		offlineSetPrizes[0,2] = "35";
-		eventChapterDescriptions[0,2] = "Nov 19, 2006. Johnson earned his first championship in the final race of the season at Homestead";
+		eventChapterDescriptions[0,2] = "July 31, 1983. Johnson earned his first championship in the final race of the season at Homestead";
 		
 		offlineEventChapter[0,3] = "Phoenix Nights";
 		offlineChapterImage[0,3] = "cup20livery48alt1";

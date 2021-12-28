@@ -1095,7 +1095,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	}
 	
 	static void Kentucky(){
-		circuitChoice = "Kansas";
+		circuitChoice = "Kentucky";
 		PlayerPrefs.SetInt("RaceLaps",6 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);

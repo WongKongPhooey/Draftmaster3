@@ -24,6 +24,7 @@ public class AIMovement : MonoBehaviour
 	bool changingLanes;
 	int holdLane;
 	int laneRest;
+	int dooredStrength;
 	bool movingLane;
     bool backingOut;
     bool laneSettled;
@@ -121,7 +122,7 @@ public class AIMovement : MonoBehaviour
 		carTeam = DriverNames.cup2020Teams[carNum];
 		carManu = DriverNames.cup2020Manufacturer[carNum];
 		carType = DriverNames.cup2020Types[carNum];
-		carRarity = DriverNames.cup2020Rarity[carNum];	
+		carRarity = DriverNames.cup2020Rarity[carNum];
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
@@ -229,6 +230,14 @@ public class AIMovement : MonoBehaviour
 			laneChangeSpeed = 0.015f;
 			laneChangeBackout = 32;
 		}
+		
+		dooredStrength = 25;
+		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
+			dooredStrength = 25 + (carRarity * 20);
+			if(dooredStrength > 95){
+				dooredStrength = 95;
+			}
+		}
 
 		maxDraftDistance = 9 + carRarity;
 		if (DriverNames.cup2020Types[carNum] == "Closer"){
@@ -273,10 +282,16 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 			} else {
-				if(doored("Left",25) == true){
+				int dooredStrength = 25;
+				if(carHit.gameObject.tag == "Player"){
+					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
+				} else {
+					dooredStrength = carHit.gameObject.GetComponent<AIMovement>().dooredStrength;
+				}
+				if(doored("Left",dooredStrength) == true){
 					changeLane("Right");
 				}
-				if(doored("Right",25) == true){
+				if(doored("Right",dooredStrength) == true){
 					changeLane("Left");
 				}
 			}

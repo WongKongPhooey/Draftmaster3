@@ -17,6 +17,7 @@ public class PrizeCollection : MonoBehaviour
 	
 	string prizeType;
 	int prizeCarNumber;
+	string eventPrizeset;
 	
 	public bool firstCar;
 	
@@ -31,6 +32,7 @@ public class PrizeCollection : MonoBehaviour
 	void Awake(){
 
 		moneyCount = 0;
+		eventPrizeset = PlayerPrefs.GetString("EventPrizeset");
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
 		firstCar = false;
@@ -46,13 +48,13 @@ public class PrizeCollection : MonoBehaviour
 					PremiumGarage("cup20",prizeCarNumber);
 					break;
 				case "EventGarage":
-					ListPrizeOptions("2020Pt1");
+					ListPrizeOptions(eventPrizeset);
 					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
 					EventGarage("cup20",prizeCarNumber);
 					break;
 				case "EventAlt":
-					ListPrizeOptions("2020Pt1");
-					EventAlt("cup20");
+					ListPrizeOptions(eventPrizeset);
+					EventAlt();
 					break;
 				case "3RareGarage":
 					ListPrizeOptions("Specific");
@@ -228,7 +230,7 @@ public class PrizeCollection : MonoBehaviour
 		AddPrize(seriesPrefix, carNumber, randAmt);
 	}
 	
-	void EventAlt(string seriesPrefix){
+	void EventAlt(){
 
 		ArrayList eventAlts = new ArrayList();
 

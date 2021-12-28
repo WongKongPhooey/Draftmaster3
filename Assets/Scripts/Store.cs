@@ -320,7 +320,7 @@ public class Store : MonoBehaviour{
 				
 				if(currentVersion.ToString() != targetVersion){
 					GUI.skin.label.alignment = TextAnchor.UpperLeft;
-					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY, widthblock * 13f, heightblock * 12f), "Your installed version of the game (v" + currentVersion + ") is older than the required version (v" + targetVersion + "). Please update in order to play the current live Event! \n\nUpdates can be found here:\n\nAndroid - Google Play Store\nApple - Apple App Store\nAndroid (Legacy) - itch.io");
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY, widthblock * 13f, heightblock * 12f), "Your installed version of the game (v" + currentVersion + ") does not match the required version (v" + targetVersion + "). Please update in order to play the current live Event! \n\nUpdates can be found here:\n\nAndroid - Google Play Store\nApple - Apple App Store\nAndroid (Legacy) - itch.io");
 				} else {
 					GUI.skin = whiteGUI;
 					GUI.Box(new Rect(cardX, cardY, widthblock * 13.5f, heightblock * 12f), "");

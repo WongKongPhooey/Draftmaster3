@@ -45,6 +45,7 @@ public class Movement : MonoBehaviour {
 	public static int laneBias;
 	public static int laneChangeDuration;
 	public static int laneChangeBackout;
+	public int dooredStrength;
 	float laneChangeSpeed;
 	float vStrongLane;
 	float strongLane;
@@ -214,6 +215,14 @@ public class Movement : MonoBehaviour {
 			laneChangeDuration = 80;
 			laneChangeSpeed = 0.015f;
 			laneChangeBackout = 32;
+		}
+
+		dooredStrength = 25;
+		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
+			dooredStrength = 25 + (carRarity * 10) + (carClass * 5);
+			if(dooredStrength > 95){
+				dooredStrength = 95;
+			}
 		}
 
 		if(PlayerPrefs.HasKey("CustomAcceleration")){

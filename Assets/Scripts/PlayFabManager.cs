@@ -157,9 +157,9 @@ public class PlayFabManager : MonoBehaviour
 		
 		//Debug Add Event for testing
 		//result.Data["EventActive"] = "End Of An Era - Set 1";
-		//result.Data["EventImage"] = "halloween";
+		//result.Data["EventShortcode"] = "2020Pt1";
 		//result.Data["EventDescription"] = "With the next gen cars on the horizon, we look back at some of the best paint schemes from the last few years. This is set 1!";
-		//result.Data["EventRewards"] = "cup20livery7alt1,cup20livery9alt1,cup20livery12alt1";
+		//result.Data["EventRewards"] = "cup20livery7alt1,cup20livery9alt1,cup20livery12alt1,cup20livery17alt1,cup20livery43alt1";
 		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){
@@ -175,8 +175,9 @@ public class PlayFabManager : MonoBehaviour
 				Debug.Log(result.Data["EventActive"] + " Event Active");
 				
 				//Update Event Meta
-				PlayerPrefs.SetString("EventImage", result.Data["EventImage"]);
+				PlayerPrefs.SetString("EventImage", result.Data["EventShortcode"]);
 				PlayerPrefs.SetString("EventDescription", result.Data["EventDescription"]);
+				PlayerPrefs.SetString("EventPrizeset", result.Data["EventShortcode"]);
 				
 				//Retrieve the event rewards (assume set)
 				PlayerPrefs.SetString("EventRewards", result.Data["EventRewards"]);
@@ -184,10 +185,20 @@ public class PlayFabManager : MonoBehaviour
 				
 			} else {
 				PlayerPrefs.SetInt("EventActive", 0);
+
+				PlayerPrefs.SetString("EventImage", "");
+				PlayerPrefs.SetString("EventDescription", "No active event.");
+				PlayerPrefs.SetString("EventPrizeset", "");
+				PlayerPrefs.SetString("EventRewards", "");
 				Debug.Log("No Active Event");
 			}
 		} else {
 			PlayerPrefs.SetInt("EventActive", 0);
+			
+			PlayerPrefs.SetString("EventImage", "");
+			PlayerPrefs.SetString("EventDescription", "No active event.");
+			PlayerPrefs.SetString("EventPrizeset", "");
+			PlayerPrefs.SetString("EventRewards", "");
 			Debug.Log("No Active Event");
 		}
 		
