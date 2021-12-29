@@ -283,6 +283,7 @@ public class SingleCar : MonoBehaviour {
 		}
 		
 		if(carClass == 6){
+			GUI.skin.label.normal.textColor = Color.white;
 			GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9.5f), widthblock * 5.5f, heightblock * 1.5f), "Max Class");
 		} else {
 			GUI.skin.label.normal.textColor = Color.white;

@@ -127,14 +127,94 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[0,7] = "June 4, 2017. Johnson wins in Dover for the 11th time, his 83rd and last Cup series win.";
 		
 
-		
 		//The Intimidator
-		offlineEventChapter[1,0] = "Where It All Began";
-		offlineEventChapter[1,1] = "Phoenix Nights";
-		offlineEventChapter[1,2] = "Daytona!";
-		offlineEventChapter[1,3] = "Daytona! Again!";
-		offlineEventChapter[1,4] = "Eleventh Heaven";
-		offlineEventChapter[1,5] = "Serial Champion";
+		offlineEventChapter[1,0] = "The Winston Way";
+		offlineChapterImage[1,0] = "TriOval";
+		offlineMinClass[1,0] = 2;
+		offlineMinLevel[1,0] = 5;
+		offlineMinType[1,0] = "Team";
+		offlineMinTeam[1,0] = "IND";
+		offlineTracklists[1,0] = "5";
+		offlinePrizes[1,0] = "Earnhardt";
+		offlineSetPrizes[1,0] = "10";
+		eventChapterDescriptions[1,0] = "May 25, 1975. Earnhardt makes his debut at the 1975 World 600, in Charlotte NC.";
+		
+		offlineEventChapter[1,1] = "South Southeast";
+		offlineChapterImage[1,1] = "Bristol";
+		offlineMinClass[1,1] = 3;
+		offlineMinLevel[1,1] = 10;
+		offlineMinType[1,1] = "Team";
+		offlineMinTeam[1,1] = "HEN";
+		offlineTracklists[1,1] = "1";
+		offlinePrizes[1,1] = "Johnson";
+		offlineSetPrizes[1,1] = "20";
+		eventChapterDescriptions[1,1] = "April 1, 1979. Earnhardt's first win comes at Bristol in the Southeastern 500.";
+		
+		offlineEventChapter[0,2] = "Sweet Home Alabama";
+		offlineChapterImage[0,2] = "BigOval";
+		offlineMinClass[0,2] = 4;
+		offlineMinLevel[0,2] = 15;
+		offlineMinType[0,2] = "Team";
+		offlineMinTeam[0,2] = "HEN";
+		offlineTracklists[0,2] = "21";
+		offlinePrizes[0,2] = "Johnson";
+		offlineSetPrizes[0,2] = "35";
+		eventChapterDescriptions[0,2] = "July 31, 1983. Johnson earned his first championship in the final race of the season at Homestead";
+		
+		offlineEventChapter[0,3] = "Phoenix Nights";
+		offlineChapterImage[0,3] = "cup20livery48alt1";
+		offlineMinClass[0,3] = 3;
+		offlineMinLevel[0,3] = 20;
+		offlineMinType[0,3] = "Car";
+		offlineExactCar[0,3] = 48;
+		offlineTracklists[0,3] = "4";
+		offlinePrizes[0,3] = "AltPaint";
+		offlineSetPrizes[0,3] = "cup20livery48alt1";
+		eventChapterDescriptions[0,3] = "Nov 11, 2007. Johnson wins his 10th race in one season on his way to his 2nd championship.";
+		
+		offlineEventChapter[0,4] = "Half Century";
+		offlineChapterImage[0,4] = "Bristol";
+		offlineMinClass[0,4] = 3;
+		offlineMinLevel[0,4] = 25;
+		offlineMinType[0,4] = "Car";
+		offlineExactCar[0,4] = 48;
+		offlinePrizes[0,4] = "Johnson";
+		offlineTracklists[0,4] = "8";
+		offlineSetPrizes[0,4] = "50";
+		eventChapterDescriptions[0,4] = "Nov 11, 2007. Johnson wins his 10th race in one season on his way to his 2nd championship.";
+		
+		offlineEventChapter[0,5] = "Daytona! Again!";
+		offlineChapterImage[0,5] = "cup20livery48alt3";
+		offlineMinClass[0,5] = 4;
+		offlineMinLevel[0,5] = 30;
+		offlineMinType[0,5] = "Car";
+		offlineExactCar[0,5] = 48;
+		offlineTracklists[0,5] = "1";
+		offlinePrizes[0,5] = "AltPaint";
+		offlineSetPrizes[0,5] = "cup20livery48alt3";
+		eventChapterDescriptions[0,5] = "July 6, 2013. Johnson becomes the first driver since Allison to win both Daytona races in 1 season.";
+		
+		offlineEventChapter[0,6] = "Serial Champion";
+		offlineChapterImage[0,6] = "BigOval";
+		offlineMinClass[0,6] = 4;
+		offlineMinLevel[0,6] = 35;
+		offlineMinType[0,6] = "Car";
+		offlineExactCar[0,6] = 48;
+		offlinePrizes[0,6] = "Johnson";
+		offlineTracklists[0,6] = "21";
+		offlineSetPrizes[0,6] = "70";
+		eventChapterDescriptions[0,6] = "Nov 20, 2016. Johnson takes his 7th title, tying him with Earnhardt and Petty for the most titles.";
+		
+		offlineEventChapter[0,7] = "Eleventh Heaven";
+		offlineChapterImage[0,7] = "cup20livery48alt2";
+		offlineMinClass[0,7] = 5;
+		offlineMinLevel[0,7] = 40;
+		offlineMinType[0,7] = "Car";
+		offlineExactCar[0,7] = 48;
+		offlineTracklists[0,7] = "11";
+		offlinePrizes[0,7] = "AltPaint";
+		offlineSetPrizes[0,7] = "cup20livery48alt2";
+		eventChapterDescriptions[0,7] = "June 4, 2017. Johnson wins in Dover for the 11th time, his 83rd and last Cup series win.";
 		
 		//Return Of The King
 		offlineEventChapter[2,0] = "Where It All Began";

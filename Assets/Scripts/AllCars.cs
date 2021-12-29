@@ -447,8 +447,10 @@ public class AllCars : MonoBehaviour {
 			JSONOutput += "\"altPaints\": \"0";
 			for(int paint=1;paint<10;paint++){
 				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
-					//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
-					JSONOutput += "," + paint + "";
+					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
+						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
+						JSONOutput += "," + paint + "";
+					}
 				}
 			}
 			JSONOutput += "\"";
