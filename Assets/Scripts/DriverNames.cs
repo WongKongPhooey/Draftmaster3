@@ -1,7 +1,20 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class DriverNames : MonoBehaviour {
+
+	public static string[] names = new string[101];
+	public static string[] teams = new string[101];
+	public static string[] manufacturer = new string[101];
+	public static int[] rarity = new int[101];
+	public static string[] types = new string[101];
+
+	public static Dictionary<string, string[]> allNames = new Dictionary<string, string[]>();
+	public static Dictionary<string, string[]> allTeams = new Dictionary<string, string[]>();
+	public static Dictionary<string, string[]> allManufacturer = new Dictionary<string, string[]>();
+	public static Dictionary<string, int[]> allRarity = new Dictionary<string, int[]>();
+	public static Dictionary<string, string[]> allTypes = new Dictionary<string, string[]>();
 
 	public static string[] cup2020Names = new string[101];
 	public static string[] cup2020Teams = new string[101];
@@ -22,12 +35,55 @@ public class DriverNames : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+		cup20();
+		cup22();
 		
-		cup2020();
-		cup2022();
+		if(allNames.ContainsKey("cup20") == false){
+			allNames.Add("cup20", cup2020Names);
+			allTeams.Add("cup20", cup2020Teams);
+			allManufacturer.Add("cup20", cup2020Manufacturer);
+			allRarity.Add("cup20", cup2020Rarity);
+			allTypes.Add("cup20", cup2020Types);
+			
+			allNames.Add("cup22", cup2022Names);
+			allTeams.Add("cup22", cup2022Teams);
+			allManufacturer.Add("cup22", cup2022Manufacturer);
+			allRarity.Add("cup22", cup2022Rarity);
+			allTypes.Add("cup22", cup2022Types);
+		}
 	}
 	
-	public static void cup2020(){
+	public static string getName(string seriesPrefix, int index){
+		string[] names = allNames[seriesPrefix];
+		return names[index];
+	}
+	
+	public static string getTeam(string seriesPrefix, int index){
+		string[] teams = allTeams[seriesPrefix];
+		return teams[index];
+	}
+	
+	public static string getManufacturer(string seriesPrefix, int index){
+		string[] manufacturer = allManufacturer[seriesPrefix];
+		return manufacturer[index];
+	}
+	
+	public static int getRarity(string seriesPrefix, int index){
+		int[] rarities = allRarity[seriesPrefix];
+		return rarities[index];
+	}
+	
+	public static string getType(string seriesPrefix, int index){
+		string[] types = allTypes[seriesPrefix];
+		return types[index];
+	}
+	
+	public static int getFieldSize(string seriesPrefix){
+		string[] nameSet = allNames[seriesPrefix];
+		return nameSet.Length;
+	}
+	
+	public static void cup20(){
 		cup2020Names[0] = "Houff";
 		cup2020Names[1] = "Ku. Busch";
 		cup2020Names[2] = "Keselowski";
@@ -190,7 +246,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[1] = "Intimidator";
 		cup2020Types[2] = "Intimidator";
 		cup2020Types[3] = "Strategist";
-		cup2020Types[4] = "Gentleman";
+		cup2020Types[4] = "Dominator";
 		cup2020Types[5] = "Closer";
 		cup2020Types[6] = "Closer";
 		cup2020Types[7] = "Strategist";
@@ -203,9 +259,9 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[14] = "Intimidator";
 		cup2020Types[15] = "Rookie";
 		cup2020Types[16] = "Rookie";
-		cup2020Types[17] = "Gentleman";
+		cup2020Types[17] = "Strategist";
 		cup2020Types[18] = "Intimidator";
-		cup2020Types[19] = "Gentleman";
+		cup2020Types[19] = "Dominator";
 		cup2020Types[20] = "Closer";
 		cup2020Types[21] = "Closer";
 		cup2020Types[22] = "Intimidator";
@@ -217,16 +273,16 @@ public class DriverNames : MonoBehaviour {
 		cup2020Types[37] = "Rookie";
 		cup2020Types[38] = "Rookie";
 		cup2020Types[41] = "Rookie";
-		cup2020Types[42] = "Gentleman";
+		cup2020Types[42] = "Strategist";
 		cup2020Types[43] = "Strategist";
 		cup2020Types[47] = "Intimidator";
-		cup2020Types[48] = "Gentleman";
+		cup2020Types[48] = "Legend";
 		cup2020Types[49] = "Rookie";
 		cup2020Types[51] = "Strategist";
 		cup2020Types[52] = "Closer";
 		cup2020Types[53] = "Strategist";
 		cup2020Types[54] = "Closer";
-		cup2020Types[62] = "Gentleman";
+		cup2020Types[62] = "Intimidator";
 		cup2020Types[66] = "Closer";
 		cup2020Types[74] = "Strategist";
 		cup2020Types[77] = "Intimidator";
@@ -295,7 +351,7 @@ public class DriverNames : MonoBehaviour {
 		legendsLiveries[3] = "76livery2";
 	}
 	
-	public static void cup2022(){
+	public static void cup22(){
 		cup2022Names[1] = "Chastain";
 		cup2022Names[2] = "Cindric";
 		cup2022Names[3] = "A. Dillon";
@@ -362,6 +418,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Teams[22] = "PEN";
 		cup2022Teams[23] = "23X";
 		cup2022Teams[24] = "HEN";
+		cup2022Teams[27] = "IND";
 		cup2022Teams[31] = "KAU";
 		cup2022Teams[34] = "FRM";
 		cup2022Teams[38] = "FRM";
@@ -449,6 +506,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Types[22] = "Intimidator";
 		cup2022Types[23] = "Strategist";
 		cup2022Types[24] = "Closer";
+		cup2022Types[27] = "Rookie";
 		cup2022Types[31] = "Strategist";
 		cup2022Types[34] = "Blocker";
 		cup2022Types[38] = "Rookie";
@@ -460,65 +518,57 @@ public class DriverNames : MonoBehaviour {
 		cup2022Types[48] = "Closer";
 		cup2022Types[51] = "Blocker";
 		cup2022Types[52] = "Closer";
-		cup2022Types[53] = "Strategist";
-		cup2022Types[54] = "Closer";
-		cup2022Types[62] = "Gentleman";
+		cup2022Types[53] = "Closer";
+		cup2022Types[62] = "Intimidator";
 		cup2022Types[66] = "Closer";
 		cup2022Types[74] = "Strategist";
-		cup2022Types[77] = "Intimidator";
-		cup2022Types[78] = "Closer";
-		cup2022Types[88] = "Strategist";
-		cup2022Types[95] = "Rookie";
-		cup2022Types[96] = "Closer";
+		cup2022Types[77] = "Rookie";
+		cup2022Types[78] = "Blocker";
+		cup2022Types[96] = "Rookie";
+		cup2022Types[99] = "Closer";
 		
-		cup2022Rarity[0] = 1;
-		cup2022Rarity[1] = 2;
-		cup2022Rarity[2] = 3;
+		cup2022Rarity[1] = 1;
+		cup2022Rarity[2] = 1;
 		cup2022Rarity[3] = 2;
-		cup2022Rarity[4] = 3;
-		cup2022Rarity[5] = 3;
-		cup2022Rarity[6] = 2;
+		cup2022Rarity[4] = 4;
+		cup2022Rarity[5] = 4;
+		cup2022Rarity[6] = 4;
 		cup2022Rarity[7] = 1;
 		cup2022Rarity[8] = 1;
-		cup2022Rarity[9] = 3;
+		cup2022Rarity[9] = 4;
 		cup2022Rarity[10] = 2;
-		cup2022Rarity[11] = 3;
-		cup2022Rarity[12] = 2;
-		cup2022Rarity[13] = 1;
-		cup2022Rarity[14] = 2;
+		cup2022Rarity[11] = 4;
+		cup2022Rarity[12] = 3;
+		cup2022Rarity[14] = 1;
 		cup2022Rarity[15] = 1;
 		cup2022Rarity[16] = 1;
 		cup2022Rarity[17] = 1;
-		cup2022Rarity[18] = 3;
+		cup2022Rarity[18] = 4;
 		cup2022Rarity[19] = 3;
-		cup2022Rarity[20] = 1;
+		cup2022Rarity[20] = 2;
 		cup2022Rarity[21] = 1;
 		cup2022Rarity[22] = 3;
+		cup2022Rarity[23] = 2;
 		cup2022Rarity[24] = 2;
 		cup2022Rarity[27] = 1;
-		cup2022Rarity[32] = 1;
+		cup2022Rarity[31] = 1;
 		cup2022Rarity[34] = 1;
-		cup2022Rarity[36] = 1;
-		cup2022Rarity[37] = 1;
 		cup2022Rarity[38] = 1;
-		cup2022Rarity[41] = 1;
-		cup2022Rarity[42] = 2;
+		cup2022Rarity[41] = 2;
+		cup2022Rarity[42] = 1;
 		cup2022Rarity[43] = 2;
-		cup2022Rarity[47] = 1;
+		cup2022Rarity[45] = 3;
+		cup2022Rarity[47] = 2;
 		cup2022Rarity[48] = 3;
-		cup2022Rarity[49] = 1;
 		cup2022Rarity[51] = 1;
 		cup2022Rarity[52] = 1;
 		cup2022Rarity[53] = 1;
-		cup2022Rarity[54] = 1;
 		cup2022Rarity[62] = 1;
 		cup2022Rarity[66] = 1;
-		cup2022Rarity[74] = 1;
 		cup2022Rarity[77] = 1;
 		cup2022Rarity[78] = 1;
-		cup2022Rarity[88] = 2;
-		cup2022Rarity[95] = 1;
 		cup2022Rarity[96] = 1;
+		cup2022Rarity[99] = 1;
 		
 		legendsNames[0] = "Petty";
 		legendsNames[1] = "Earnhardt";
@@ -533,6 +583,9 @@ public class DriverNames : MonoBehaviour {
 	
 	public static string shortenedType(string type){
 		switch(type){
+			case "Dominator":
+				type="Domin.";
+				break;
 			case "Intimidator":
 				type="Intim.";
 				break;
@@ -542,8 +595,11 @@ public class DriverNames : MonoBehaviour {
 			case "Closer":
 				type="Close.";
 				break;
-			case "Gentleman":
-				type="Gent.";
+			case "Blocker":
+				type="Block.";
+				break;
+			case "Legend":
+				type="Legen.";
 				break;
 			case "Rookie":
 				type="Rook.";
