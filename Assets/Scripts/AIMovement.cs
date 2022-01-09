@@ -126,7 +126,7 @@ public class AIMovement : MonoBehaviour
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
-		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();

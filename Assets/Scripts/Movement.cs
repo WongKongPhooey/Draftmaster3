@@ -120,7 +120,7 @@ public class Movement : MonoBehaviour {
 		challengeSpeedBoost = 0;
 		tandemPosition = 1;
 		
-		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		carName = PlayerPrefs.GetString("carTexture");
 		

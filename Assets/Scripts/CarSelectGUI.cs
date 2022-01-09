@@ -24,6 +24,8 @@ public class CarSelectGUI : MonoBehaviour {
 	int premiumTokens;
 	int maxCars;
 	
+	string seriesPrefix;
+	
 	string restrictionType;
 	string restrictionValue;
 	int seriesMinClass;
@@ -50,6 +52,8 @@ public class CarSelectGUI : MonoBehaviour {
 		playerLevel = 10;
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		filterSeries = "";
+		
+		seriesPrefix = "cup20";
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
@@ -192,7 +196,6 @@ public class CarSelectGUI : MonoBehaviour {
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
 		int carCount = 0;
-		string seriesPrefix = "cup20";
 		float windowscroll = 4.8f;
 		int validCars = 0;
 		
@@ -357,6 +360,7 @@ public class CarSelectGUI : MonoBehaviour {
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
 								PlayerPrefs.SetString("carTexture", carLivery);
 								PlayerPrefs.SetInt("CarChoice",carCount);
+								PlayerPrefs.SetString("carSeries", "cup22");
 								Application.LoadLevel("CircuitSelect");
 							}
 						}
@@ -460,13 +464,13 @@ public class CarSelectGUI : MonoBehaviour {
 						if((carUnlocked == 0)||(carClass < seriesMinClass)){
 							GUI.Box(new Rect(cardX, cardY, cardW, cardH), "");
 							//Debug.Log("#" + carCount + " isn't unlocked");
-						} else {
+						} /*else {
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
 								PlayerPrefs.SetString("carTexture", carLivery);
 								PlayerPrefs.SetInt("CarChoice",carCount);
 								SceneManager.LoadScene("CircuitSelect");
 							}
-						}
+						}*/
 						carCount++;
 					}
 				}

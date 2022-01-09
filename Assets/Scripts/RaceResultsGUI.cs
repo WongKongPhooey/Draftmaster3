@@ -47,7 +47,7 @@ public class RaceResultsGUI : MonoBehaviour {
 		string splitAfter = "livery";
 		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
 
-		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 
