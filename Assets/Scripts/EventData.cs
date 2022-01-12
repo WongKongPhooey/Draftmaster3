@@ -29,11 +29,13 @@ public class EventData : MonoBehaviour
         
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
+		offlineEvent[2] = "All Stars";
 		//offlineEvent[2] = "Return Of The King";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "0";
+		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		//offlineEventWeek[2] = "5";
 		//offlineEventWeek[3] = "7";
 		
@@ -216,13 +218,23 @@ public class EventData : MonoBehaviour
 		offlineSetPrizes[0,7] = "cup20livery48alt2";
 		eventChapterDescriptions[0,7] = "June 4, 2017. Johnson wins in Dover for the 11th time, his 83rd and last Cup series win.";
 		
+		//All Stars
+		offlineEventChapter[2,0] = "Gladiators";
+		offlineChapterImage[2,0] = "TinyOval";
+		offlineMinClass[2,0] = 1;
+		offlineMinLevel[2,0] = 1;
+		//offlineMinSeries[2,0] = "cup22";
+		offlineTracklists[2,0] = "30";
+		offlinePrizes[2,0] = "1Star";
+		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";
+		
 		//Return Of The King
-		offlineEventChapter[2,0] = "Where It All Began";
-		offlineEventChapter[2,1] = "Phoenix Nights";
-		offlineEventChapter[2,2] = "Daytona!";
-		offlineEventChapter[2,3] = "Daytona! Again!";
-		offlineEventChapter[2,4] = "Eleventh Heaven";
-		offlineEventChapter[2,5] = "Serial Champion";
+		//offlineEventChapter[2,0] = "Where It All Began";
+		//offlineEventChapter[2,1] = "Phoenix Nights";
+		//offlineEventChapter[2,2] = "Daytona!";
+		//offlineEventChapter[2,3] = "Daytona! Again!";
+		//offlineEventChapter[2,4] = "Eleventh Heaven";
+		//offlineEventChapter[2,5] = "Serial Champion";
 		
 		//Wonder Boy
 		offlineEventChapter[3,0] = "Where It All Began";
@@ -235,14 +247,15 @@ public class EventData : MonoBehaviour
 		
 		offlineEventImage[0] = "cup20livery48";
 		offlineEventImage[1] = "cup20livery3alt2";
-		offlineEventImage[2] = "cup20livery43";
+		offlineEventImage[2] = "cup22livery45";
 		offlineEventImage[3] = "cup20livery24";
 
 		
 		eventDescriptions[0] = "Relive Johnson's best moments leading to an incredible 7 championships.";
 		eventDescriptions[1] = "Do it for Dale! Revisit some of Earnhardt's finest drives.";
-		eventDescriptions[2] = "A variety of iconic circuits that witnessed the talent of King Petty.";
-		eventDescriptions[3] = "Moments in history that defined Gordon's timeless career.";
+		eventDescriptions[2] = "Touchdown in LA. The new season starts here.";
+		eventDescriptions[3] = "A variety of iconic circuits that witnessed the talent of King Petty.";
+		eventDescriptions[4] = "Moments in history that defined Gordon's timeless career.";
 	}
 
     // Update is called once per frame

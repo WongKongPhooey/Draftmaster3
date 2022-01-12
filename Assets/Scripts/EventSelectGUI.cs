@@ -81,7 +81,7 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		//Root Level Menu
 		if(seriesMenu == "All"){
-			for(int rootMenu = 0; rootMenu < 2; rootMenu++){
+			for(int rootMenu = 0; rootMenu < 3; rootMenu++){
 				string carLivery = "livery" + seriesCount;
 				float cardX = widthblock * (rootMenu * 7) + widthblock;
 				float cardY = heightblock * 4;

@@ -35,6 +35,7 @@ using UnityEngine.SceneManagement;
 27 Nazareth, PN
 28 Iowa, IA
 29 Nashville, TN
+30 LA Coliseum, CA
 ----------------------*/
 
 public class CircuitSelectGUI : MonoBehaviour {
@@ -339,6 +340,14 @@ public class CircuitSelectGUI : MonoBehaviour {
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
 				}
 				break;
+			case "30":
+				showBestFinish(currentSeriesIndex, order);
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Los Angeles, CA")){
+					LosAngeles();
+					PlayerPrefs.SetString("CurrentTrack","" + order);
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TinyOval") as Texture;
+				}
+				break;
 			default:
 				break;
 		}
@@ -538,6 +547,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 			case "21":
 				Miami();
 				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
+				break;
+			case "30":
+				LosAngeles();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TinyOval") as Texture;
 				break;
 			default:
 				break;
@@ -1157,6 +1170,30 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("StartLine",50);
 		PlayerPrefs.SetInt("SpeedOffset",65 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Short");
+	}
+	
+	static void LosAngeles(){
+		circuitChoice = "LosAngeles";
+		PlayerPrefs.SetInt("RaceLaps",10 + currentSubseries);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",2);
+		PlayerPrefs.SetInt("StraightLength2",0);
+		PlayerPrefs.SetInt("StraightLength3",0);
+		PlayerPrefs.SetInt("StraightLength4",0);
+		PlayerPrefs.SetInt("TurnLength1",5);
+		PlayerPrefs.SetInt("TurnLength2",170);
+		PlayerPrefs.SetInt("TurnLength3",10);
+		PlayerPrefs.SetInt("TurnLength4",170);
+		PlayerPrefs.SetInt("TurnLength5",5);
+		PlayerPrefs.SetInt("TurnAngle1",8);
+		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle3",8);
+		PlayerPrefs.SetInt("TurnAngle4",1);
+		PlayerPrefs.SetInt("TurnAngle5",8);
+		PlayerPrefs.SetInt("StartLine",1);
+		PlayerPrefs.SetInt("SpeedOffset",80 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",5);
 		PlayerPrefs.SetString("TrackType","Short");
 	}
 

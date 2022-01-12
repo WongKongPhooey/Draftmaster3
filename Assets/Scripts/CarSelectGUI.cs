@@ -360,7 +360,7 @@ public class CarSelectGUI : MonoBehaviour {
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
 								PlayerPrefs.SetString("carTexture", carLivery);
 								PlayerPrefs.SetInt("CarChoice",carCount);
-								PlayerPrefs.SetString("carSeries", "cup22");
+								PlayerPrefs.SetString("carSeries", "cup20");
 								Application.LoadLevel("CircuitSelect");
 							}
 						}

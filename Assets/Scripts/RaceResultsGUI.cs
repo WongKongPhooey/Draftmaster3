@@ -228,6 +228,7 @@ public class RaceResultsGUI : MonoBehaviour {
 					GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(seriesPrefix + "livery" + playerCarNumber) as Texture);
 				}
 			} else {
+				Debug.Log(Scoreboard.carNames[i]);
 				carNumber = Scoreboard.carNames[i].Remove(0,6);
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
 					int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
