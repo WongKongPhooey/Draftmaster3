@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -15,6 +16,8 @@ public class AllCars : MonoBehaviour {
 	float heightblock = Mathf.Round(Screen.height/20);
 	
 	string filterSeries;
+	string seriesPrefix;
+	bool seriesPanel;
 	
 	public Texture BoxTexture;
 
@@ -42,8 +45,40 @@ public class AllCars : MonoBehaviour {
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		filterSeries = "";
 		
+		seriesPrefix = "cup20";
+		seriesPanel = false;
+		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
+		
+		//For returning PlayFab call outputs, reset on Awake
+		PlayerPrefs.SetString("SaveLoadOutput","");
+		
+		//Count Unlocks..
+		int totalUnlocks = 0;
+		for(int i=0;i<100;i++){
+			if(DriverNames.getName(seriesPrefix, i) != null){
+				if(PlayerPrefs.HasKey(seriesPrefix + i + "Gears")){
+					if(PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked") == 1){
+						totalUnlocks++;
+					}
+				}
+			}
+		}
+		if(PlayerPrefs.HasKey("TotalUnlocks")){
+			//If a new car has been unlocked, and you have more than just the starter car..
+			if((PlayerPrefs.GetInt("TotalUnlocks") < totalUnlocks)&&(totalUnlocks > 1)){
+				PlayerPrefs.SetInt("TotalUnlocks", totalUnlocks);
+				//If logged in as someone
+				if(PlayerPrefs.HasKey("PlayerUsername")){
+					//Then do an autosave
+					string progressJSON = JSONifyProgress(seriesPrefix);
+					PlayFabManager.AutosavePlayerProgress(progressJSON);
+				}
+			}
+		} else {
+			PlayerPrefs.SetInt("TotalUnlocks", totalUnlocks);
+		}
 	}
 
     // Update is called once per frame
@@ -136,17 +171,21 @@ public class AllCars : MonoBehaviour {
 		
 		GUI.skin = buttonSkin;
 		
+		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), seriesPrefix)){
+			seriesPanel = true;
+		}
+		
 		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
 		GUI.skin.button.fontSize = 96 / FontScale.fontScale;
 
 		GUI.skin.label.normal.textColor = Color.black;
 
-		GUI.skin.label.alignment = TextAnchor.UpperLeft;
-		GUI.Label(new Rect(widthblock * 5, 20, widthblock * 5, heightblock * 2), "My Garage");
+		GUI.skin.label.alignment = TextAnchor.UpperRight;
+		GUI.Label(new Rect(widthblock * 6.5f, 20, widthblock * 3, heightblock * 2), "Garage");
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
 		int carCount = 0;
-		string seriesPrefix = "cup20";
 		float windowscroll = 4.7f;
 		
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
@@ -165,14 +204,15 @@ public class AllCars : MonoBehaviour {
 		
 		if(filterSeries == ""){
 			
-			int maxCars = DriverNames.cup2020Names.Length;
+			//int maxCars = DriverNames.cup2020Names.Length;
+			int maxCars = DriverNames.getFieldSize(seriesPrefix);
 			
 			//Loop through cars
 			for(int rows = 1; rows < 11; rows++){
 				for(int columns = 1; columns < 6; columns++){
 					
 					//If a driver # is not registered
-					while(DriverNames.cup2020Names[carCount] == null){
+					while(DriverNames.getName(seriesPrefix, carCount) == null){
 						if(carCount < 100){
 							carCount++;
 						} else {
@@ -200,7 +240,7 @@ public class AllCars : MonoBehaviour {
 					carClass = PlayerPrefs.GetInt(seriesPrefix + carCount + "Class");
 						
 					int unlockClass = 1;
-					unlockClass = DriverNames.cup2020Rarity[carCount];
+					unlockClass = DriverNames.getRarity(seriesPrefix, carCount);
 					int unlockGears = GameData.unlockGears(unlockClass);
 					
 					
@@ -223,9 +263,9 @@ public class AllCars : MonoBehaviour {
 						
 						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 						GUI.skin.label.alignment = TextAnchor.UpperLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.cup2020Teams[carCount]);
+						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.getTeam(seriesPrefix, carCount));
 						Texture2D manufacturerTex = null;
-						switch(DriverNames.cup2020Manufacturer[carCount]){
+						switch(DriverNames.getManufacturer(seriesPrefix, carCount)){
 							case "FRD":
 								manufacturerTex = frdTex;
 								break;
@@ -241,7 +281,7 @@ public class AllCars : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 0.75f) - 10, cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
 						
 						Texture2D rarityStars = null;
-						switch(DriverNames.cup2020Rarity[carCount]){
+						switch(DriverNames.getRarity(seriesPrefix, carCount)){
 							case 1:
 								rarityStars = starOne;
 								break;
@@ -273,7 +313,7 @@ public class AllCars : MonoBehaviour {
 							}
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-						GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
+						GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
 						//Progress Bar Box
 						GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						//Progress Bar
@@ -292,7 +332,7 @@ public class AllCars : MonoBehaviour {
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 							GUI.skin.label.normal.textColor = Color.black;
 						} else {
-							if(carClass < DriverNames.cup2020Rarity[carCount]){
+							if(carClass < DriverNames.getRarity(seriesPrefix, carCount)){
 								GUI.skin.label.normal.textColor = Color.white;
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 								GUI.skin.label.normal.textColor = Color.black;
@@ -312,8 +352,8 @@ public class AllCars : MonoBehaviour {
 							if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Unlock")){
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked", 1);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears", carGears - unlockGears);
-								PlayerPrefs.SetInt(seriesPrefix + carCount + "Class", DriverNames.cup2020Rarity[carCount]);
-								carClass = DriverNames.cup2020Rarity[carCount];
+								carClass = DriverNames.getRarity(seriesPrefix, carCount);
+								PlayerPrefs.SetInt(seriesPrefix + carCount + "Class", carClass);
 								classMax = GameData.classMax(carClass);
 							}
 							GUI.skin = tileSkin;
@@ -330,7 +370,7 @@ public class AllCars : MonoBehaviour {
 							}
 						}
 						GUI.skin.label.alignment = TextAnchor.LowerLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.cup2020Types[carCount]));
+						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carCount)));
 						GUI.skin.label.alignment = TextAnchor.LowerRight;
 						
 						//Locked cars go behind a box layer
@@ -352,6 +392,21 @@ public class AllCars : MonoBehaviour {
 					}
 				}
 			}
+			
+			//Save/Load options
+			if(PlayerPrefs.HasKey("PlayerUsername")){
+				GUI.skin = redGUI;
+				if (GUI.Button(new Rect(widthblock * 3, (heightblock * (8f * 11)) + heightblock * 2f, widthblock * 6, heightblock * 2f), "Save To Server")){
+					string progressJSON = JSONifyProgress(seriesPrefix);
+					PlayFabManager.SavePlayerProgress(progressJSON);
+				}
+				if (GUI.Button(new Rect(widthblock * 11, (heightblock * (8f * 11)) + heightblock * 2f, widthblock * 6, heightblock * 2f), "Load From Server")){
+					PlayFabManager.GetSavedPlayerProgress();
+				}
+				GUI.skin = tileSkin;
+				GUI.skin.label.alignment = TextAnchor.UpperCenter;
+				GUI.Label(new Rect(widthblock * 3, (heightblock * (8f * 11)) + heightblock * 5f, widthblock * 14f, heightblock * 4f), "" + PlayerPrefs.GetString("SaveLoadOutput"));
+			}
 		}
 		
 		GUI.EndScrollView();
@@ -365,6 +420,14 @@ public class AllCars : MonoBehaviour {
 		
 		GUI.skin = buttonSkin;
 		
+		if(seriesPanel == true){
+			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup22")){
+				seriesPrefix = "cup22";
+				seriesPanel = false;
+			}
+		}
+		
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		
 		CommonGUI.TopBar();
@@ -373,4 +436,59 @@ public class AllCars : MonoBehaviour {
 			SceneManager.LoadScene("MainMenu");
 		}
 	}
+	
+	string JSONifyProgress(string seriesPrefix){
+		string JSONOutput = "{";
+		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
+		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
+		JSONOutput += "\"drivers\": [";
+		for(int car = 0; car < 100; car++){
+			//Initialise (can be used for dev reset)
+			int carUnlocked = 0;
+			int carClass = 0;
+			int carGears = 0;
+			if(PlayerPrefs.HasKey(seriesPrefix + car + "Gears")){
+				carUnlocked = PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked");
+				carClass = PlayerPrefs.GetInt(seriesPrefix + car + "Class");
+				carGears = PlayerPrefs.GetInt(seriesPrefix + car + "Gears");
+			}
+			if(car > 0){
+				JSONOutput += ",";
+			}
+			JSONOutput += "{";
+			JSONOutput += "\"carNo\": \"" + car + "\",";
+			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\",";
+			JSONOutput += "\"carClass\": \"" + carClass + "\",";
+			JSONOutput += "\"carGears\": \"" + carGears + "\",";
+			JSONOutput += "\"altPaints\": \"0";
+			for(int paint=1;paint<10;paint++){
+				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
+					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
+						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
+						JSONOutput += "," + paint + "";
+					}
+				}
+			}
+			JSONOutput += "\"";
+			JSONOutput += "}";		
+		}
+		JSONOutput += "]}";
+		return JSONOutput;
+	}
+}
+
+[Serializable]
+public class Driver {
+    public string carNo;
+    public string carUnlocked;
+    public string carClass;
+    public string carGears;
+    public string altPaints;
+}
+
+[Serializable]
+public class Series {
+	public string playerLevel;
+    public string seriesName;
+    public List<Driver> drivers;
 }

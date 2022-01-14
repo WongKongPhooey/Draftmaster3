@@ -66,7 +66,7 @@ public class Scoreboard : MonoBehaviour {
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
 		
-		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		
@@ -84,7 +84,7 @@ public class Scoreboard : MonoBehaviour {
 				carPositions[i] = car.transform.position.z;
 				carNames[i] = car.transform.name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]+$", "");
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				entrantList.Add(car);
 				i++;
 			}
@@ -109,7 +109,7 @@ public class Scoreboard : MonoBehaviour {
 					carPositions[i] = car.transform.position.z;
 					carNames[i] = car.transform.name;
 					carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-					driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 					entrantList.Add(car);
 					i++;
 					//Debug.Log("Added car " + i);
@@ -155,13 +155,13 @@ public class Scoreboard : MonoBehaviour {
 				position = i;
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}
@@ -222,13 +222,13 @@ public class Scoreboard : MonoBehaviour {
 				position = i;
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}

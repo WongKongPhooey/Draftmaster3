@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 using Random=UnityEngine.Random;
@@ -23,6 +24,7 @@ public class AIMovement : MonoBehaviour
 	bool changingLanes;
 	int holdLane;
 	int laneRest;
+	int dooredStrength;
 	bool movingLane;
     bool backingOut;
     bool laneSettled;
@@ -43,8 +45,12 @@ public class AIMovement : MonoBehaviour
 	public string carType;
 	public int AICarClass;
 
+	List<string> altPaints;
+
     public static bool onTurn;
 	public bool tandemDraft;
+	public int tandemPosition;
+	public bool initialContact = false;
 
     string carNumber;
 	string AICarNum;
@@ -54,6 +60,8 @@ public class AIMovement : MonoBehaviour
 	
 	string seriesPrefix;
 	int customNum;
+
+	bool coolEngine;
 
 	public int maxDraftDistance;
 
@@ -87,6 +95,7 @@ public class AIMovement : MonoBehaviour
 		
         onTurn = false;
 		tandemDraft = false;
+		tandemPosition = 1;
         AISpeed = 203;
         laneticker = 0;
 		
@@ -98,6 +107,8 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log("AILevel: " + AILevel);
 		
 		antiGlitch = 0;
+		
+		coolEngine = false;
 		
 		thePlayer = GameObject.Find("Player");
 		seriesPrefix = "cup2020";
@@ -111,22 +122,45 @@ public class AIMovement : MonoBehaviour
 		carTeam = DriverNames.cup2020Teams[carNum];
 		carManu = DriverNames.cup2020Manufacturer[carNum];
 		carType = DriverNames.cup2020Types[carNum];
-		carRarity = DriverNames.cup2020Rarity[carNum];	
+		carRarity = DriverNames.cup2020Rarity[carNum];
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
-		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
+		altPaints = new List<string>();
+		altPaints.Add("0");
+		altPaints.Add("0");
+		altPaints.Add("0");
+		altPaints.Add("0");
+		AltPaints.loadAlts();
+		
+		for(int i=1;i<10;i++){
+			if(AltPaints.cup2020AltPaintNames[carNum,i] != null){
+				altPaints.Add(i.ToString());
+			}
+		}
+		int altIndex = Random.Range(0,altPaints.Count);
+		string chosenAlt = altPaints[altIndex];
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
-			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+			if(chosenAlt != "0"){
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blankalt" + chosenAlt) as Texture;
+			} else {
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
-			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
+			if(chosenAlt != "0"){
+				Debug.Log("Custom alt spawned - Car #" + carNumber);
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
+			} else {
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
+			}
 			numRend.enabled = false;
 			//Debug.Log("No custom number saved");
 		}
@@ -196,6 +230,14 @@ public class AIMovement : MonoBehaviour
 			laneChangeSpeed = 0.015f;
 			laneChangeBackout = 32;
 		}
+		
+		dooredStrength = 25;
+		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
+			dooredStrength = 25 + (carRarity * 20);
+			if(dooredStrength > 95){
+				dooredStrength = 95;
+			}
+		}
 
 		maxDraftDistance = 9 + carRarity;
 		if (DriverNames.cup2020Types[carNum] == "Closer"){
@@ -240,10 +282,16 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 			} else {
-				if(doored("Left",25) == true){
+				int dooredStrength = 25;
+				if(carHit.gameObject.tag == "Player"){
+					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
+				} else {
+					dooredStrength = carHit.gameObject.GetComponent<AIMovement>().dooredStrength;
+				}
+				if(doored("Left",dooredStrength) == true){
 					changeLane("Right");
 				}
-				if(doored("Right",25) == true){
+				if(doored("Right",dooredStrength) == true){
 					changeLane("Left");
 				}
 			}
@@ -279,13 +327,23 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(HitBackward == true){
+			DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
 			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
 		}
 	}
 	
 	void GivePush(float bumpSpeed){
 		AISpeed = bumpSpeed;
-		//Debug.Log("" + AICar.name + " is being speed matched");
+		//Discourage long draft trains
+		if(tandemPosition > 2){
+			AISpeed-=0.25f;
+			coolEngine=true;
+		}
+	}
+	
+	void UpdateTandemPosition(int tandemPosInFront){
+		tandemPosition = tandemPosInFront + 1;
+		//Debug.Log("" + AICar.name + " is in tandem position" + tandemPosition);
 	}
 
     // Update is called once per frame
@@ -312,14 +370,14 @@ public class AIMovement : MonoBehaviour
 			} else {
 				holdLane++;
 				distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
-				if((distFromPlayer<=20)&&(distFromPlayer>=-20)){
+				if((distFromPlayer<=30)&&(distFromPlayer>=-30)){
 					speedLogic();
 				} else {
 					//Improve FPS by removing logic from far away opponents
-					if(distFromPlayer>20){
+					if(distFromPlayer>30){
 						dumbSpeed(1);
 					} else {
-						if(distFromPlayer<-20){
+						if(distFromPlayer<-30){
 							dumbSpeed(-1);
 						}
 					}
@@ -369,6 +427,17 @@ public class AIMovement : MonoBehaviour
 			//}
 		}
 		
+		//If engine is too hot, stall out
+		if(coolEngine == true){
+			if (HitForward && DraftCheckForward.distance <= 1.5f){
+				//Draft gets stronger as you get closer
+				AISpeed -= (1.5f - DraftCheckForward.distance)/75;
+				//Debug.Log("#" + carNumber + " cooling down");
+			} else {
+				coolEngine = false;
+			}
+		}
+		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
 			AISpeed += 0.0035f;
@@ -389,6 +458,7 @@ public class AIMovement : MonoBehaviour
 			}
 		} else {
 			tandemDraft = false;
+			tandemPosition = 1;
 		}
 		
 		//Speed tops out
@@ -506,6 +576,11 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 			}
+			
+			//Lift if about to bump draft with too much closing speed
+			if((carDist < 1.25f)&&((AISpeed - opponentSpeed) > 1f)){
+				slowUp(carDist);
+			}
 		} else {
 			//Check further away
 			RaycastHit DraftCheckForwardLong;
@@ -520,6 +595,11 @@ public class AIMovement : MonoBehaviour
 				findDraft();
 			}
 		}
+	}
+	
+	void slowUp(float carDist){
+		AISpeed -= (1.25f - carDist)/2;
+		//Debug.Log("BRAKE! #" + carNumber);
 	}
 	
 	void carWobble(){

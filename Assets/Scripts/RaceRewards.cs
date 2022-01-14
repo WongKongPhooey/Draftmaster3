@@ -513,6 +513,11 @@ public class RaceRewards : MonoBehaviour
 				validDriver.Add(48);
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
+			
+			case "Earnhardt":
+				validDriver.Add(3);
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
 		}
 	}
 	

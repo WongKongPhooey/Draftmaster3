@@ -47,7 +47,7 @@ public class RaceResultsGUI : MonoBehaviour {
 		string splitAfter = "livery";
 		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
 
-		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 
@@ -58,42 +58,38 @@ public class RaceResultsGUI : MonoBehaviour {
 		exp = PlayerPrefs.GetInt("Exp");
 		level = PlayerPrefs.GetInt("Level");
 		
-		//Add XP
+		//Add XP and Increment Championship Round
 		if(PlayerPrefs.GetInt("ExpAdded") == 0){
 			raceExp = 100 / (Scoreboard.position + 1);
 			exp += Mathf.RoundToInt(raceExp);
 			PlayerPrefs.SetInt("Exp",exp);
 			Debug.Log("Exp: " + exp);
+			
+			//Is this a championship round?
+			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
+					
+					//Increment Championship Round
+					int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+					PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
+					
+					Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
+					RacePoints.setCupPoints();
+					for( int i=0; i < resultsRows; i++){
+						if(i == (Scoreboard.position)){
+							carNumber = playerCarNumber;
+						} else {
+							carNumber = Scoreboard.carNames[i].Remove(0,6);
+						}
+						//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+						addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
+					}
+				}
+			}
 			PlayerPrefs.SetInt("ExpAdded",1);
 		}
 
 		winningsMultiplier = 1;
-		
-		//Is this a championship round?
-		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
-				
-				//Increment Championship Round
-				int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
-				PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
-				
-				Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
-				RacePoints.setCupPoints();
-				for( int i=0; i < resultsRows; i++){
-					if(i == (Scoreboard.position)){
-						carNumber = playerCarNumber;
-					} else {
-						carNumber = Scoreboard.carNames[i].Remove(0,6);
-					}
-					//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
-					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
-				}
-			} else {
-				Debug.Log("No Championship Points Here");
-			}
-		} else {
-			Debug.Log("No Championship Here");
-		}
 				
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
@@ -232,6 +228,7 @@ public class RaceResultsGUI : MonoBehaviour {
 					GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(seriesPrefix + "livery" + playerCarNumber) as Texture);
 				}
 			} else {
+				Debug.Log(Scoreboard.carNames[i]);
 				carNumber = Scoreboard.carNames[i].Remove(0,6);
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
 					int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);

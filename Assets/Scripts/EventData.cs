@@ -29,11 +29,13 @@ public class EventData : MonoBehaviour
         
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
+		offlineEvent[2] = "All Stars";
 		//offlineEvent[2] = "Return Of The King";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "0";
+		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		//offlineEventWeek[2] = "5";
 		//offlineEventWeek[3] = "7";
 		
@@ -127,22 +129,112 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[0,7] = "June 4, 2017. Johnson wins in Dover for the 11th time, his 83rd and last Cup series win.";
 		
 
-		
 		//The Intimidator
-		offlineEventChapter[1,0] = "Where It All Began";
-		offlineEventChapter[1,1] = "Phoenix Nights";
-		offlineEventChapter[1,2] = "Daytona!";
-		offlineEventChapter[1,3] = "Daytona! Again!";
-		offlineEventChapter[1,4] = "Eleventh Heaven";
-		offlineEventChapter[1,5] = "Serial Champion";
+		offlineEventChapter[1,0] = "The Winston Way";
+		offlineChapterImage[1,0] = "TriOval";
+		offlineMinClass[1,0] = 2;
+		offlineMinLevel[1,0] = 5;
+		offlineMinType[1,0] = "Team";
+		offlineMinTeam[1,0] = "IND";
+		offlineTracklists[1,0] = "5";
+		offlinePrizes[1,0] = "Earnhardt";
+		offlineSetPrizes[1,0] = "10";
+		eventChapterDescriptions[1,0] = "May 25, 1975. Earnhardt makes his debut at the 1975 World 600, in Charlotte NC.";
+		
+		offlineEventChapter[1,1] = "South Southeast";
+		offlineChapterImage[1,1] = "Bristol";
+		offlineMinClass[1,1] = 3;
+		offlineMinLevel[1,1] = 10;
+		offlineMinType[1,1] = "Team";
+		offlineMinTeam[1,1] = "HEN";
+		offlineTracklists[1,1] = "1";
+		offlinePrizes[1,1] = "Johnson";
+		offlineSetPrizes[1,1] = "20";
+		eventChapterDescriptions[1,1] = "April 1, 1979. Earnhardt's first win comes at Bristol in the Southeastern 500.";
+		
+		offlineEventChapter[0,2] = "Sweet Home Alabama";
+		offlineChapterImage[0,2] = "BigOval";
+		offlineMinClass[0,2] = 4;
+		offlineMinLevel[0,2] = 15;
+		offlineMinType[0,2] = "Team";
+		offlineMinTeam[0,2] = "HEN";
+		offlineTracklists[0,2] = "21";
+		offlinePrizes[0,2] = "Johnson";
+		offlineSetPrizes[0,2] = "35";
+		eventChapterDescriptions[0,2] = "July 31, 1983. Johnson earned his first championship in the final race of the season at Homestead";
+		
+		offlineEventChapter[0,3] = "Phoenix Nights";
+		offlineChapterImage[0,3] = "cup20livery48alt1";
+		offlineMinClass[0,3] = 3;
+		offlineMinLevel[0,3] = 20;
+		offlineMinType[0,3] = "Car";
+		offlineExactCar[0,3] = 48;
+		offlineTracklists[0,3] = "4";
+		offlinePrizes[0,3] = "AltPaint";
+		offlineSetPrizes[0,3] = "cup20livery48alt1";
+		eventChapterDescriptions[0,3] = "Nov 11, 2007. Johnson wins his 10th race in one season on his way to his 2nd championship.";
+		
+		offlineEventChapter[0,4] = "Half Century";
+		offlineChapterImage[0,4] = "Bristol";
+		offlineMinClass[0,4] = 3;
+		offlineMinLevel[0,4] = 25;
+		offlineMinType[0,4] = "Car";
+		offlineExactCar[0,4] = 48;
+		offlinePrizes[0,4] = "Johnson";
+		offlineTracklists[0,4] = "8";
+		offlineSetPrizes[0,4] = "50";
+		eventChapterDescriptions[0,4] = "Nov 11, 2007. Johnson wins his 10th race in one season on his way to his 2nd championship.";
+		
+		offlineEventChapter[0,5] = "Daytona! Again!";
+		offlineChapterImage[0,5] = "cup20livery48alt3";
+		offlineMinClass[0,5] = 4;
+		offlineMinLevel[0,5] = 30;
+		offlineMinType[0,5] = "Car";
+		offlineExactCar[0,5] = 48;
+		offlineTracklists[0,5] = "1";
+		offlinePrizes[0,5] = "AltPaint";
+		offlineSetPrizes[0,5] = "cup20livery48alt3";
+		eventChapterDescriptions[0,5] = "July 6, 2013. Johnson becomes the first driver since Allison to win both Daytona races in 1 season.";
+		
+		offlineEventChapter[0,6] = "Serial Champion";
+		offlineChapterImage[0,6] = "BigOval";
+		offlineMinClass[0,6] = 4;
+		offlineMinLevel[0,6] = 35;
+		offlineMinType[0,6] = "Car";
+		offlineExactCar[0,6] = 48;
+		offlinePrizes[0,6] = "Johnson";
+		offlineTracklists[0,6] = "21";
+		offlineSetPrizes[0,6] = "70";
+		eventChapterDescriptions[0,6] = "Nov 20, 2016. Johnson takes his 7th title, tying him with Earnhardt and Petty for the most titles.";
+		
+		offlineEventChapter[0,7] = "Eleventh Heaven";
+		offlineChapterImage[0,7] = "cup20livery48alt2";
+		offlineMinClass[0,7] = 5;
+		offlineMinLevel[0,7] = 40;
+		offlineMinType[0,7] = "Car";
+		offlineExactCar[0,7] = 48;
+		offlineTracklists[0,7] = "11";
+		offlinePrizes[0,7] = "AltPaint";
+		offlineSetPrizes[0,7] = "cup20livery48alt2";
+		eventChapterDescriptions[0,7] = "June 4, 2017. Johnson wins in Dover for the 11th time, his 83rd and last Cup series win.";
+		
+		//All Stars
+		offlineEventChapter[2,0] = "Gladiators";
+		offlineChapterImage[2,0] = "TinyOval";
+		offlineMinClass[2,0] = 1;
+		offlineMinLevel[2,0] = 1;
+		//offlineMinSeries[2,0] = "cup22";
+		offlineTracklists[2,0] = "30";
+		offlinePrizes[2,0] = "1Star";
+		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";
 		
 		//Return Of The King
-		offlineEventChapter[2,0] = "Where It All Began";
-		offlineEventChapter[2,1] = "Phoenix Nights";
-		offlineEventChapter[2,2] = "Daytona!";
-		offlineEventChapter[2,3] = "Daytona! Again!";
-		offlineEventChapter[2,4] = "Eleventh Heaven";
-		offlineEventChapter[2,5] = "Serial Champion";
+		//offlineEventChapter[2,0] = "Where It All Began";
+		//offlineEventChapter[2,1] = "Phoenix Nights";
+		//offlineEventChapter[2,2] = "Daytona!";
+		//offlineEventChapter[2,3] = "Daytona! Again!";
+		//offlineEventChapter[2,4] = "Eleventh Heaven";
+		//offlineEventChapter[2,5] = "Serial Champion";
 		
 		//Wonder Boy
 		offlineEventChapter[3,0] = "Where It All Began";
@@ -155,14 +247,15 @@ public class EventData : MonoBehaviour
 		
 		offlineEventImage[0] = "cup20livery48";
 		offlineEventImage[1] = "cup20livery3alt2";
-		offlineEventImage[2] = "cup20livery43";
+		offlineEventImage[2] = "cup22livery45";
 		offlineEventImage[3] = "cup20livery24";
 
 		
 		eventDescriptions[0] = "Relive Johnson's best moments leading to an incredible 7 championships.";
 		eventDescriptions[1] = "Do it for Dale! Revisit some of Earnhardt's finest drives.";
-		eventDescriptions[2] = "A variety of iconic circuits that witnessed the talent of King Petty.";
-		eventDescriptions[3] = "Moments in history that defined Gordon's timeless career.";
+		eventDescriptions[2] = "Touchdown in LA. The new season starts here.";
+		eventDescriptions[3] = "A variety of iconic circuits that witnessed the talent of King Petty.";
+		eventDescriptions[4] = "Moments in history that defined Gordon's timeless career.";
 	}
 
     // Update is called once per frame

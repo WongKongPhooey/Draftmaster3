@@ -45,6 +45,7 @@ public class Movement : MonoBehaviour {
 	public static int laneBias;
 	public static int laneChangeDuration;
 	public static int laneChangeBackout;
+	public int dooredStrength;
 	float laneChangeSpeed;
 	float vStrongLane;
 	float strongLane;
@@ -75,6 +76,8 @@ public class Movement : MonoBehaviour {
 	
 	public bool backingOut = false;
 	public bool tandemDraft = false;
+	public int tandemPosition;
+	public bool initialContact = false;
 
 	int wobbleCount;
 	int wobblePos;
@@ -115,8 +118,9 @@ public class Movement : MonoBehaviour {
 		lane = SpawnField.startLane;
 		laneBias = 0;
 		challengeSpeedBoost = 0;
+		tandemPosition = 1;
 		
-		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		carName = PlayerPrefs.GetString("carTexture");
 		
@@ -213,6 +217,14 @@ public class Movement : MonoBehaviour {
 			laneChangeBackout = 32;
 		}
 
+		dooredStrength = 25;
+		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
+			dooredStrength = 25 + (carRarity * 10) + (carClass * 5);
+			if(dooredStrength > 95){
+				dooredStrength = 95;
+			}
+		}
+
 		if(PlayerPrefs.HasKey("CustomAcceleration")){
 			customAccel = PlayerPrefs.GetInt("CustomAcceleration");
 			customAccelFactor = 50000;
@@ -292,23 +304,33 @@ public class Movement : MonoBehaviour {
 	
 	void ReceivePush(float bumpSpeed){
 		//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + "while I was going " + playerSpeed);
-		if(tandemDraft == false){
+		if(initialContact == false){
 			//if(bumpSpeed - playerSpeed > 1){
 				float midSpeed = bumpSpeed - playerSpeed;
-				playerSpeed += midSpeed/8;
-				tandemDraft = true;
+				playerSpeed += midSpeed/4;
+				initialContact = true;
 				//Debug.Log("Impact levels out Player");
 			//}
 		} else {
 			//Send it back
 			RaycastHit DraftCheckBackward;
 			bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
+			DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
 			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
 		}
 	}
 	
 	void GivePush(float bumpSpeed){
 		playerSpeed = bumpSpeed;
+		if(tandemPosition > 2){
+			playerSpeed-= 0.25f;
+			Debug.Log("Player speed reduced by " + (bumpSpeed - playerSpeed) + "");
+		}
+	}
+	
+	void UpdateTandemPosition(int tandemPosInFront){
+		tandemPosition = tandemPosInFront + 1;
+		Debug.Log("Player is in tandem position " + tandemPosition + "");
 	}
 	
 	// Update is called once per frame
@@ -395,6 +417,7 @@ public class Movement : MonoBehaviour {
 			tandemDraft = true;
 		} else {
 			tandemDraft = false;
+			initialContact = false;
 		}
 
 		// If bump-drafting the car in front
@@ -410,6 +433,7 @@ public class Movement : MonoBehaviour {
 
 		} else {
 			tandemDraft = false;
+			tandemPosition = 1;
 		}
 		
 		// Draft Behind A Buddy

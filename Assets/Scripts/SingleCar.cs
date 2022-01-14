@@ -283,6 +283,7 @@ public class SingleCar : MonoBehaviour {
 		}
 		
 		if(carClass == 6){
+			GUI.skin.label.normal.textColor = Color.white;
 			GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9.5f), widthblock * 5.5f, heightblock * 1.5f), "Max Class");
 		} else {
 			GUI.skin.label.normal.textColor = Color.white;
@@ -502,12 +503,12 @@ public class SingleCar : MonoBehaviour {
 						
 						if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Alt" + (columns + offset) + "Unlocked") == 1){
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != (columns+offset)){
-								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 3f, heightblock * 1.5f), "Select")){
+								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4f), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns+offset);
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 3f, heightblock * 1.5f), "Selected");
+								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4f), widthblock * 3f, heightblock * 1.5f), "Selected");
 							}
 						} else {
 							GUI.skin = tileSkin;

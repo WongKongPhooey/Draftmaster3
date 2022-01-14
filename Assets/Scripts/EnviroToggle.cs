@@ -7,15 +7,21 @@ public class EnviroToggle : MonoBehaviour {
 	public bool onCorners;
 	public bool oneStraight;
 	public bool onFinishLine;
+	
+	//V2 enviro control
+	public bool advancedPlacement;
+	public bool[] straights = new bool[6];
+	public bool[] corners = new bool[6];
+	
 	public bool hideOnPit;
 	public bool triOvalPit;
 	public bool triOvalEntryExit;
-	public int pitLanePadding;
+	int pitLanePadding;
 	int pitLengthPadding;
-	public int triOvalAngleCount;
-	public int triOvalAngleMax;
-	public float triOvalBend;
-	public float triOvalPitZSlip;
+	int triOvalAngleCount;
+	int triOvalAngleMax;
+	float triOvalBend;
+	float triOvalPitZSlip;
 	public int straight;
 	public bool currentState;	
 
@@ -45,55 +51,81 @@ public class EnviroToggle : MonoBehaviour {
 		//IF ENTERING OR EXITING TURN
 		if(currentState != Movement.onTurn){
 			Renderer[] subAsset = GetComponentsInChildren<Renderer>();
-
-			if(Movement.onTurn == true){
-				if(onCorners == true){
-					foreach(Renderer asset in subAsset){
-						asset.enabled = true;
-					}
-					//Debug.Log(this.name + " is enabled on the corners");
-				} else {
-					foreach(Renderer asset in subAsset){
-						asset.enabled = false;
-					}
-					//Debug.Log(this.name + " is disabled on the corners");
-				}
-				if(triOvalPit == true){
-					if(triOvalEntryExit == true){
-						pitLengthPadding = 0;
-					} else {
-						pitLengthPadding = pitLanePadding;
-					}
-					if(((CameraRotate.turn == 4)&&(CameraRotate.cornercounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.cornercounter > CameraRotate.turnLength[4] - pitLengthPadding))){
+			
+			//If V1 enviro setup
+			if(advancedPlacement == false){
+				if(Movement.onTurn == true){
+					if(onCorners == true){
 						foreach(Renderer asset in subAsset){
 							asset.enabled = true;
 						}
+						//Debug.Log(this.name + " is enabled on the corners");
 					} else {
 						foreach(Renderer asset in subAsset){
 							asset.enabled = false;
+						}
+						//Debug.Log(this.name + " is disabled on the corners");
+					}
+					if(triOvalPit == true){
+						if(triOvalEntryExit == true){
+							pitLengthPadding = 0;
+						} else {
+							pitLengthPadding = pitLanePadding;
+						}
+						if(((CameraRotate.turn == 4)&&(CameraRotate.cornercounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.cornercounter > CameraRotate.turnLength[4] - pitLengthPadding))){
+							foreach(Renderer asset in subAsset){
+								asset.enabled = true;
+							}
+						} else {
+							foreach(Renderer asset in subAsset){
+								asset.enabled = false;
+							}
+						}
+					}
+				} else {
+					if(onStraights == true){
+						if((oneStraight == true)&&(CameraRotate.straight == straight)){
+							foreach(Renderer asset in subAsset){
+								asset.enabled = true;
+							}
+						} else {
+							if(oneStraight == false){
+								foreach(Renderer asset in subAsset){
+									asset.enabled = true;
+								}
+							}
+						}
+						if((hideOnPit == true)&&(CameraRotate.straight == 1)){
+							foreach(Renderer asset in subAsset){
+								asset.enabled = false;
+							}
+						}
+					} else {
+						if((onFinishLine == true)&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter == 0)){
+							foreach(Renderer asset in subAsset){
+								asset.enabled = true;
+							}
+						} else {
+							foreach(Renderer asset in subAsset){
+								asset.enabled = false;
+							}
 						}
 					}
 				}
 			} else {
-				if(onStraights == true){
-					if((oneStraight == true)&&(CameraRotate.straight == straight)){
+				//V2 enviro setup
+				if(Movement.onTurn == true){
+					if(corners[CameraRotate.cornercounter-1] == true){
 						foreach(Renderer asset in subAsset){
 							asset.enabled = true;
 						}
 					} else {
-						if(oneStraight == false){
-							foreach(Renderer asset in subAsset){
-								asset.enabled = true;
-							}
-						}
-					}
-					if((hideOnPit == true)&&(CameraRotate.straight == 1)){
 						foreach(Renderer asset in subAsset){
 							asset.enabled = false;
 						}
 					}
 				} else {
-					if((onFinishLine == true)&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter == 0)){
+					if(straights[CameraRotate.straightcounter-1] == true){
 						foreach(Renderer asset in subAsset){
 							asset.enabled = true;
 						}

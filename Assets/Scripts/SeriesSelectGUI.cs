@@ -136,6 +136,8 @@ public class SeriesSelectGUI : MonoBehaviour {
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2), SeriesData.offlineSeries[menuIndex,subMenu]);
+				GUI.skin.label.alignment = TextAnchor.UpperRight;
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2f), "" + (SeriesData.offlineAILevel[menuIndex, subMenu] * 10) + "% AI");
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 3) - (heightblock * 3.5f), cardY + (heightblock * 2f), heightblock * 7f, heightblock * 3.5f), Resources.Load(carLivery) as Texture);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.MiddleLeft;
