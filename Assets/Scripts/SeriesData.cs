@@ -260,8 +260,8 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[3,0] = "4,8,6,9";
 		offlineTracklists[3,1] = "18,11,6,8";
 		offlineTracklists[3,2] = "9,11,4,18";
-		offlineTracklists[3,3] = "6,8,18,9";
-		offlineTracklists[3,4] = "8,6,11,4";
+		offlineTracklists[3,3] = "6,8,18,9,30";
+		offlineTracklists[3,4] = "8,6,11,4,30";
 		
 		offlineFuel[3,0] = 5;
 		offlineFuel[3,1] = 6;
