@@ -34,6 +34,9 @@ public class AIMovement : MonoBehaviour
 	
 	int antiGlitch;
 	
+	public static int maxTandem;
+	public static float coolOffSpace;
+	public static int coolOffInv;
 	int circuitLanes;
 	float apronLineX;
 
@@ -96,6 +99,18 @@ public class AIMovement : MonoBehaviour
         onTurn = false;
 		tandemDraft = false;
 		tandemPosition = 1;
+		maxTandem = 2;
+		coolOffSpace = 2.0f;
+		coolOffInv = 75;
+		if(PlayerPrefs.GetString("TrackType") == "Short"){
+			maxTandem = 1;
+			coolOffSpace = 2.5f;
+			coolOffInv = 50;
+		}
+		if(PlayerPrefs.GetString("TrackType") == "Plate"){
+			maxTandem = 3;
+			coolOffSpace = 1.5f;
+		}
         AISpeed = 203;
         laneticker = 0;
 		
@@ -335,7 +350,7 @@ public class AIMovement : MonoBehaviour
 	void GivePush(float bumpSpeed){
 		AISpeed = bumpSpeed;
 		//Discourage long draft trains
-		if(tandemPosition > 2){
+		if(tandemPosition > maxTandem){
 			AISpeed-=0.25f;
 			coolEngine=true;
 		}
@@ -377,9 +392,9 @@ public class AIMovement : MonoBehaviour
 					if(distFromPlayer>30){
 						dumbSpeed(1);
 					} else {
-						if(distFromPlayer<-30){
-							dumbSpeed(-1);
-						}
+						//if(distFromPlayer<-30){
+						//	dumbSpeed(-1);
+						//}
 					}
 				}
 			}
@@ -429,9 +444,9 @@ public class AIMovement : MonoBehaviour
 		
 		//If engine is too hot, stall out
 		if(coolEngine == true){
-			if (HitForward && DraftCheckForward.distance <= 1.5f){
-				//Draft gets stronger as you get closer
-				AISpeed -= (1.5f - DraftCheckForward.distance)/75;
+			if (HitForward && DraftCheckForward.distance <= coolOffSpace){
+				//Overheat weakens as you back away
+				AISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
 				//Debug.Log("#" + carNumber + " cooling down");
 			} else {
 				coolEngine = false;

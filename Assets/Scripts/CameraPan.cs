@@ -22,8 +22,8 @@ public class CameraPan : MonoBehaviour {
 			  if(transform.position.x > 3f){
 				  transform.position = new Vector3(3f, transform.position.y, transform.position.z);
 			  }
-			  if(transform.position.x < -9f){
-				  transform.position = new Vector3(-9, transform.position.y, transform.position.z);
+			  if(transform.position.x < -10f){
+				  transform.position = new Vector3(-10, transform.position.y, transform.position.z);
 			  }
          }
     }
