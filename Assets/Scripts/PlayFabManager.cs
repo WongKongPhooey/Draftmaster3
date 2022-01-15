@@ -499,4 +499,31 @@ public class PlayFabManager : MonoBehaviour
 			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
 	}
+	
+	public static void GetHallOfFameLeaderboards(){
+		
+		var request = new GetLeaderboardRequest {
+			StatisticName = "AllTimeMostStarts",
+			StartPosition = 0,
+			MaxResultsCount = 10
+		};
+		PlayFabClientAPI.GetLeaderboard(request, OnHallOfFameLeaderboardGet, OnError);
+	}
+	
+	static void OnHallOfFameLeaderboardGet(GetLeaderboardResult result) {
+		
+		foreach(Transform item in rowsParent){
+			Destroy(item.gameObject);
+		}
+		
+		foreach(var item in result.Leaderboard) {
+			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
+			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
+			tableLabels[0].text = (item.Position + 1).ToString();
+			tableLabels[1].text = item.DisplayName;
+			tableLabels[2].text = item.StatValue.ToString();
+			
+			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+		}
+	}
 }
