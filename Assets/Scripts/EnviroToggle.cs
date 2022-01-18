@@ -115,17 +115,19 @@ public class EnviroToggle : MonoBehaviour {
 			} else {
 				//V2 enviro setup
 				if(Movement.onTurn == true){
-					if(corners[CameraRotate.cornercounter-1] == true){
+					if(corners[CameraRotate.turn] == true){
 						foreach(Renderer asset in subAsset){
 							asset.enabled = true;
+							Debug.Log("Enable kerb on turn " + corners[CameraRotate.cornercounter]);
 						}
 					} else {
 						foreach(Renderer asset in subAsset){
 							asset.enabled = false;
+							Debug.Log("Disable kerb on turn " + corners[CameraRotate.cornercounter]);
 						}
 					}
 				} else {
-					if(straights[CameraRotate.straightcounter-1] == true){
+					if(straights[CameraRotate.straight] == true){
 						foreach(Renderer asset in subAsset){
 							asset.enabled = true;
 						}

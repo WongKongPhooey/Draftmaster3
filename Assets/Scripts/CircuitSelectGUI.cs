@@ -1177,7 +1177,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		circuitChoice = "LosAngeles";
 		PlayerPrefs.SetInt("RaceLaps",10 + currentSubseries);
 		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",2);
+		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",0);
 		PlayerPrefs.SetInt("StraightLength3",0);
 		PlayerPrefs.SetInt("StraightLength4",0);
