@@ -13,8 +13,8 @@ public class CameraPan : MonoBehaviour {
          if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Moved) {
              Vector2 touchDeltaPosition = Input.GetTouch(0).deltaPosition;
               transform.Translate(-touchDeltaPosition.x * speed * Time.deltaTime, -touchDeltaPosition.y * speed * Time.deltaTime, 0);
-			  if(transform.position.z > 9f){
-				  transform.position = new Vector3(transform.position.x, transform.position.y, 9f);
+			  if(transform.position.z > 6f){
+				  transform.position = new Vector3(transform.position.x, transform.position.y, 6f);
 			  }
 			  if(transform.position.z < -6f){
 				  transform.position = new Vector3(transform.position.x, transform.position.y, -6f);

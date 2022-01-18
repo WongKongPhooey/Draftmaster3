@@ -103,7 +103,6 @@ public class AIMovement : MonoBehaviour
 		coolOffSpace = 2.0f;
 		coolOffInv = 75;
 		if(PlayerPrefs.GetString("TrackType") == "Short"){
-			maxTandem = 1;
 			coolOffSpace = 2.5f;
 			coolOffInv = 50;
 		}
