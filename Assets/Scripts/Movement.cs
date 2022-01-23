@@ -391,7 +391,7 @@ public class Movement : MonoBehaviour {
 		} else {
 			//Slow down if not in any draft
 			if(playerSpeed >= 200){
-				playerSpeed-=0.003f;
+				playerSpeed-=0.0035f;
 			}
 		}
 		

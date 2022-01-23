@@ -68,6 +68,8 @@ public class AIMovement : MonoBehaviour
 
 	public int maxDraftDistance;
 
+	bool dominator;
+
 	int tick;
 
 	public int lap;
@@ -116,7 +118,11 @@ public class AIMovement : MonoBehaviour
 		currentSeries = PlayerPrefs.GetInt("CurrentSeries").ToString();
 		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries").ToString();
 		
-		AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+		if(PlayerPrefs.GetString("RaceType") == "Event"){
+			AILevel = EventData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+		} else {
+			AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+		}
 		
 		//Debug.Log("AILevel: " + AILevel);
 		
@@ -125,7 +131,7 @@ public class AIMovement : MonoBehaviour
 		coolEngine = false;
 		
 		thePlayer = GameObject.Find("Player");
-		seriesPrefix = "cup2020";
+		seriesPrefix = "cup20";
 		
 		string splitAfter = "AICar0";
 		carNumber = this.name.Substring(this.name.IndexOf(splitAfter) + splitAfter.Length);
@@ -133,10 +139,10 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log(carNumber);
 		carNum = int.Parse(carNumber);
 		
-		carTeam = DriverNames.cup2020Teams[carNum];
-		carManu = DriverNames.cup2020Manufacturer[carNum];
-		carType = DriverNames.cup2020Types[carNum];
-		carRarity = DriverNames.cup2020Rarity[carNum];
+		carTeam = DriverNames.getTeam(seriesPrefix,carNum);
+		carManu = DriverNames.getManufacturer(seriesPrefix,carNum);
+		carType = DriverNames.getType(seriesPrefix,carNum);
+		carRarity = DriverNames.getRarity(seriesPrefix,carNum);
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
@@ -152,7 +158,7 @@ public class AIMovement : MonoBehaviour
 		AltPaints.loadAlts();
 		
 		for(int i=1;i<10;i++){
-			if(AltPaints.cup2020AltPaintNames[carNum,i] != null){
+			if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
 				altPaints.Add(i.ToString());
 			}
 		}
@@ -166,7 +172,7 @@ public class AIMovement : MonoBehaviour
 				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
-			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
+			numRend.material.mainTexture = Resources.Load(seriesPrefix + "num" + customNum) as Texture;
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			if(chosenAlt != "0"){
@@ -191,7 +197,13 @@ public class AIMovement : MonoBehaviour
         accelRand = Random.Range(-30, 60);
         accelRand = accelRand / 5000;
 
-        if (DriverNames.cup2020Types[carNum] == "Strategist"){
+		dominator = false;
+		
+		if (DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
+			dominator = true;
+		}
+
+        if (DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
 			switch(AICarClass){
 				case 1:
 					laneChangeDuration = 75;
@@ -246,7 +258,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		dooredStrength = 25;
-		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
+		if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
 			dooredStrength = 25 + (carRarity * 20);
 			if(dooredStrength > 95){
 				dooredStrength = 95;
@@ -254,7 +266,7 @@ public class AIMovement : MonoBehaviour
 		}
 
 		maxDraftDistance = 9 + carRarity;
-		if (DriverNames.cup2020Types[carNum] == "Closer"){
+		if (DriverNames.getType(seriesPrefix,carNum) == "Closer"){
 			maxDraftDistance = 9 + carRarity + AICarClass;		
 		}
 
@@ -430,7 +442,11 @@ public class AIMovement : MonoBehaviour
 			//Slow down
 			if (AISpeed > 200){
 				//No draft, slow with drag
-				AISpeed -= (0.004f - (AILevel / 3200));
+				if(dominator == true){
+					AISpeed -= (0.0015f - (AILevel / 12000));
+				} else {
+					AISpeed -= (0.004f - (AILevel / 5000));
+				}
 			}
 		}
 		
@@ -577,7 +593,7 @@ public class AIMovement : MonoBehaviour
 				if(carName != "Player") {
 					opponentNum = getCarNumFromName(carName);
 					if(opponentNum != 9999){
-						opponentTeam = DriverNames.cup2020Teams[opponentNum];
+						opponentTeam = DriverNames.getTeam(seriesPrefix,opponentNum);
 					}
 				}
 				//If teammate

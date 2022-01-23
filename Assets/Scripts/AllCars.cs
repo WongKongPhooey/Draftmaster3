@@ -313,7 +313,11 @@ public class AllCars : MonoBehaviour {
 							}
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-						GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
+						if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltDriver")){
+							GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), PlayerPrefs.GetString(seriesPrefix + carCount + "AltDriver"));
+						} else {
+							GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
+						}
 						//Progress Bar Box
 						GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						//Progress Bar

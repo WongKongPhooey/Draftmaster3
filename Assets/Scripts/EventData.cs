@@ -11,6 +11,7 @@ public class EventData : MonoBehaviour
 	public static string[,] offlineChapterImage = new string[10,10];
 	public static string[] eventDescriptions = new string[10];
 	public static string[,] eventChapterDescriptions = new string[10,10];
+	public static int[,] offlineAILevel = new int[10,10];
 	public static string[,] offlineMinType = new string[10,10];
 	public static int[,] offlineMinLevel = new int[10,10];
 	public static int[,] offlineMinClass = new int[10,10];
@@ -30,7 +31,7 @@ public class EventData : MonoBehaviour
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		offlineEvent[2] = "All Stars";
-		//offlineEvent[2] = "Return Of The King";
+		offlineEvent[3] = "Return Of The King";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
@@ -44,6 +45,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,0] = "SuperTriOval";
 		offlineMinClass[0,0] = 2;
 		offlineMinLevel[0,0] = 5;
+		offlineAILevel[0,0] = 8;
 		offlineMinType[0,0] = "Team";
 		offlineMinTeam[0,0] = "HEN";
 		offlineTracklists[0,0] = "5";
@@ -55,6 +57,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,1] = "SuperTriOval";
 		offlineMinClass[0,1] = 3;
 		offlineMinLevel[0,1] = 10;
+		offlineAILevel[0,1] = 9;
 		offlineMinType[0,1] = "Team";
 		offlineMinTeam[0,1] = "HEN";
 		offlineTracklists[0,1] = "1";
@@ -66,6 +69,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,2] = "BigOval";
 		offlineMinClass[0,2] = 4;
 		offlineMinLevel[0,2] = 15;
+		offlineAILevel[0,2] = 10;
 		offlineMinType[0,2] = "Team";
 		offlineMinTeam[0,2] = "HEN";
 		offlineTracklists[0,2] = "21";
@@ -77,6 +81,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,3] = "cup20livery48alt1";
 		offlineMinClass[0,3] = 3;
 		offlineMinLevel[0,3] = 20;
+		offlineAILevel[0,3] = 11;
 		offlineMinType[0,3] = "Car";
 		offlineExactCar[0,3] = 48;
 		offlineTracklists[0,3] = "4";
@@ -88,6 +93,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,4] = "Bristol";
 		offlineMinClass[0,4] = 3;
 		offlineMinLevel[0,4] = 25;
+		offlineAILevel[0,4] = 12;
 		offlineMinType[0,4] = "Car";
 		offlineExactCar[0,4] = 48;
 		offlinePrizes[0,4] = "Johnson";
@@ -99,6 +105,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,5] = "cup20livery48alt3";
 		offlineMinClass[0,5] = 4;
 		offlineMinLevel[0,5] = 30;
+		offlineAILevel[0,5] = 13;
 		offlineMinType[0,5] = "Car";
 		offlineExactCar[0,5] = 48;
 		offlineTracklists[0,5] = "1";
@@ -110,6 +117,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,6] = "BigOval";
 		offlineMinClass[0,6] = 4;
 		offlineMinLevel[0,6] = 35;
+		offlineAILevel[0,6] = 14;
 		offlineMinType[0,6] = "Car";
 		offlineExactCar[0,6] = 48;
 		offlinePrizes[0,6] = "Johnson";
@@ -121,6 +129,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[0,7] = "cup20livery48alt2";
 		offlineMinClass[0,7] = 5;
 		offlineMinLevel[0,7] = 40;
+		offlineAILevel[0,7] = 15;
 		offlineMinType[0,7] = "Car";
 		offlineExactCar[0,7] = 48;
 		offlineTracklists[0,7] = "11";
@@ -133,6 +142,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[1,0] = "TriOval";
 		offlineMinClass[1,0] = 2;
 		offlineMinLevel[1,0] = 5;
+		offlineAILevel[1,0] = 8;
 		offlineMinType[1,0] = "Team";
 		offlineMinTeam[1,0] = "IND";
 		offlineTracklists[1,0] = "13";
@@ -144,6 +154,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[1,1] = "Bristol";
 		offlineMinClass[1,1] = 3;
 		offlineMinLevel[1,1] = 10;
+		offlineAILevel[1,1] = 9;
 		offlineMinType[1,1] = "Team";
 		offlineMinTeam[1,1] = "IND";
 		offlineTracklists[1,1] = "8";
@@ -152,9 +163,10 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[1,1] = "April 1, 1979. Earnhardt's first win comes at Bristol in the Southeastern 500.";
 		
 		offlineEventChapter[1,2] = "Sophomore Season";
-		offlineChapterImage[1,2] = "TinyOval";
+		offlineChapterImage[1,2] = "LongOval";
 		offlineMinClass[1,2] = 4;
 		offlineMinLevel[1,2] = 15;
+		offlineAILevel[1,2] = 10;
 		offlineMinType[1,2] = "Team";
 		offlineMinTeam[1,2] = "IND";
 		offlineTracklists[1,2] = "6";
@@ -166,7 +178,8 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[1,3] = "cup20livery3alt3";
 		offlineMinClass[1,3] = 3;
 		offlineMinLevel[1,3] = 20;
-		offlineMinType[1,3] = "TEAM";
+		offlineAILevel[1,3] = 11;
+		offlineMinType[1,3] = "Team";
 		offlineMinTeam[1,3] = "RCR";
 		offlineTracklists[1,3] = "2";
 		offlinePrizes[1,3] = "AltPaint";
@@ -174,9 +187,10 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[1,3] = "Nov 2, 1986. Earnhardt wins his 2nd championship in style with a race to spare, his first with RCR.";
 		
 		offlineEventChapter[1,4] = "Pass In The Grass";
-		offlineChapterImage[1,4] = "Bristol";
+		offlineChapterImage[1,4] = "TriOval";
 		offlineMinClass[1,4] = 3;
 		offlineMinLevel[1,4] = 25;
+		offlineAILevel[1,4] = 12;
 		offlineMinType[1,4] = "Car";
 		offlineExactCar[1,4] = 3;
 		offlinePrizes[1,4] = "Earnhardt";
@@ -188,6 +202,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[1,5] = "cup20livery3alt4";
 		offlineMinClass[1,5] = 4;
 		offlineMinLevel[1,5] = 30;
+		offlineAILevel[1,5] = 13;
 		offlineMinType[1,5] = "Car";
 		offlineExactCar[1,5] = 3;
 		offlineTracklists[1,5] = "20";
@@ -199,6 +214,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[1,6] = "BigOval";
 		offlineMinClass[1,6] = 5;
 		offlineMinLevel[1,6] = 35;
+		offlineAILevel[1,6] = 14;
 		offlineMinType[1,6] = "Car";
 		offlineExactCar[1,6] = 3;
 		offlinePrizes[1,6] = "Earnhardt";
@@ -210,6 +226,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[1,7] = "cup20livery3alt2";
 		offlineMinClass[1,7] = 5;
 		offlineMinLevel[1,7] = 40;
+		offlineAILevel[1,7] = 15;
 		offlineMinType[1,7] = "Car";
 		offlineExactCar[1,7] = 3;
 		offlineTracklists[1,7] = "10";
@@ -222,6 +239,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[2,0] = "TinyOval";
 		offlineMinClass[2,0] = 1;
 		offlineMinLevel[2,0] = 1;
+		offlineAILevel[2,0] = 12;
 		//offlineMinSeries[2,0] = "cup22";
 		offlineTracklists[2,0] = "30";
 		offlinePrizes[2,0] = "1Star";

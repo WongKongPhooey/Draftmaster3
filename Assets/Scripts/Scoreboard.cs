@@ -130,10 +130,6 @@ public class Scoreboard : MonoBehaviour {
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
 		if(carsArray.Length > 0){
 			foreach (GameObject car in carsArray) {
-				//carPositions[j] = car.transform.position.z;
-				//carNames[j] = car.transform.name;
-				//carNumber[j] = Regex.Replace(carNames[j], "[^0-9]", "");
-				//driverNames[j] = DriverNames.cup2020Names[int.Parse(carNumber[j])];
 				entrantList.Add(car);
 				j++;
 			}

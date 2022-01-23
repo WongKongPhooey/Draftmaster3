@@ -98,7 +98,7 @@ public class CameraRotate : MonoBehaviour {
 			PlayerPrefs.SetInt("FastestLap" + circuit, 0);
 		}
 		cornercounter = 0;
-		carSpeedOffset = 0;
+		carSpeedOffset = 80;
 		cornerSpeed = 0;
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
 
@@ -288,19 +288,31 @@ public class CameraRotate : MonoBehaviour {
 			//Corner Decel
 			if(cornercounter < cornerMidpoint){
 				if(carSpeedOffset < cornerSpeed){
-					carSpeedOffset+=0.01f * cornerSpeed;
+					carSpeedOffset+=0.010f * cornerSpeed;
 				}
 			} else {
 				//Corner Accel
 				if(carSpeedOffset > 0){
-					carSpeedOffset-=0.01f * cornerSpeed;
+					carSpeedOffset-=0.0025f * cornerSpeed;
+				} else {
+					carSpeedOffset=0;
 				}
 			}
+			//Allows acceleration from a slow corner whilst on a following fast corner
+			if(carSpeedOffset > cornerSpeed){
+				carSpeedOffset-=0.0025f * cornerSpeed;
+			}
+		}
+
+		//Post turn accel
+		if(carSpeedOffset > 0){
+			carSpeedOffset-=0.0025f * cornerSpeed;
+		} else {
+			carSpeedOffset=0;
 		}
 
 		//End of turn
 		if(cornercounter >= (turnLength[turn-1] * turnAngle[turn-1])){
-			//Scoreboard.checkPositions();
 			Scoreboard.updateScoreboard();
 			onTurn = false;
 			Movement.onTurn = false;
@@ -324,6 +336,11 @@ public class CameraRotate : MonoBehaviour {
 	
 	int calcCornerSpeed(int corner){
 		int length = turnLength[corner];
+		if(PlayerPrefs.GetString("TrackType") == "Plate"){
+			if(turnAngle[corner] >= 4){
+				return 0;
+			}
+		}
 		switch(turnAngle[corner]){
 			case 1:
 				if(length > 160){

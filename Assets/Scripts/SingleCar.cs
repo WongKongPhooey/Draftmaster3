@@ -264,7 +264,11 @@ public class SingleCar : MonoBehaviour {
 			}
 		}
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-		GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), DriverNames.cup2020Names[currentCar]);
+		if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "AltDriver")){
+			GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), PlayerPrefs.GetString(seriesPrefix + currentCar + "AltDriver"));
+		} else {
+			GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), DriverNames.cup2020Names[currentCar]);
+		}
 		
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		//Progress Bar Box
@@ -465,6 +469,8 @@ public class SingleCar : MonoBehaviour {
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != columns){
 								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns);
+									PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
+									Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;
@@ -505,6 +511,8 @@ public class SingleCar : MonoBehaviour {
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != (columns+offset)){
 								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4f), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns+offset);
+									PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
+									Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;

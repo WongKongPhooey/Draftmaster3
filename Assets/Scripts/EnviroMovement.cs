@@ -19,7 +19,7 @@ public class EnviroMovement : MonoBehaviour {
 	void FixedUpdate () {
 		
 		carSpeedOffset = CameraRotate.carSpeedOffset;
-		enviroSpeed = -4 + (carSpeedOffset / 40) + (trackSpeedOffset / 40);
+		enviroSpeed = -3.8f + (carSpeedOffset / 60) + (trackSpeedOffset / 40);
 		Debug.Log("Enviro Speed: " + enviroSpeed);
 		
 		EnviroObject.transform.Translate(0,0,enviroSpeed);
