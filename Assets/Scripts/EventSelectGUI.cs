@@ -151,19 +151,19 @@ public class EventSelectGUI : MonoBehaviour {
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				
-				//Event Progression Checks
-				
-				//If event is already won, lock.
-				if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0") == 1){
-					//Reset event for testing
-					//PlayerPrefs.SetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0",0);
-					meetsRequirements = false;
-				}
-				
-				//If previous event isn't won, lock.
-				if(subMenu > 0){
-					if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + (subMenu - 1) + "EVENT0") != 1){
+				//Progression Event Checks
+				if(EventData.offlineEventType[menuIndex] == "Progression"){
+					//If event is already won, lock.
+					if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0") == 1){
+						//Reset event for testing
+						//PlayerPrefs.SetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0",0);
 						meetsRequirements = false;
+					}
+					//If previous event isn't won, lock.
+					if(subMenu > 0){
+						if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + (subMenu - 1) + "EVENT0") != 1){
+							meetsRequirements = false;
+						}
 					}
 				}
 				
@@ -210,6 +210,14 @@ public class EventSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[menuIndex,subMenu]);
 						PlayerPrefs.SetString("SeriesPrizeAmt",EventData.offlineSetPrizes[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RaceType","Event");
+						
+						if(EventData.offlineSeries[menuIndex,subMenu] != null){
+							PlayerPrefs.SetString("FixedSeries", EventData.offlineSeries[menuIndex,subMenu]);
+						}
+						if(EventData.offlineCustomField[menuIndex,subMenu] != null){
+							PlayerPrefs.SetString("CustomField", EventData.offlineCustomField[menuIndex,subMenu]);
+						}
+						
 						SceneManager.LoadScene("CarSelect");
 					}
 				} else {

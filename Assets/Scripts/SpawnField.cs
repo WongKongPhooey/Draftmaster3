@@ -34,7 +34,11 @@ public class SpawnField : MonoBehaviour {
 
 		int playerRow;
 		
-		seriesPrefix = PlayerPrefs.GetString("carSeries");
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
 
 		gridLanes = 2;
 		

@@ -324,7 +324,7 @@ public class Movement : MonoBehaviour {
 		playerSpeed = bumpSpeed;
 		if(tandemPosition > 2){
 			playerSpeed-= 0.25f;
-			Debug.Log("Player speed reduced by " + (bumpSpeed - playerSpeed) + "");
+			//Debug.Log("Player speed reduced by " + (bumpSpeed - playerSpeed) + "");
 		}
 	}
 	
@@ -544,7 +544,15 @@ public class Movement : MonoBehaviour {
 		}
 
 		carEngine = audioHolder.GetComponent<AudioSource>();
-		carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20) - (CameraRotate.carSpeedOffset / 200);
+		if(CameraRotate.carSpeedOffset < 35){
+			carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20) - (CameraRotate.carSpeedOffset / 200);
+		} else {
+			if(CameraRotate.carSpeedOffset > 70){
+				carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - (CameraRotate.carSpeedOffset / 200);
+			} else {
+				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - (CameraRotate.carSpeedOffset / 200);
+			}
+		}
 
 		wobbleCount++;
 		

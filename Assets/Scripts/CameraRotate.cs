@@ -86,8 +86,10 @@ public class CameraRotate : MonoBehaviour {
 			trackLength += (turnLength[i] * turnAngle[i]);
 			//Debug.Log("Track Length: " + trackLength);
 		}
-		straight = 1;
-		turn = 1;
+		straight = totalTurns;
+		turn = totalTurns;
+		TDCamera.transform.Rotate(0,0,turnLength[turn-1]);
+		
 		lap = 0;
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		lapRecord = 0;
@@ -270,7 +272,7 @@ public class CameraRotate : MonoBehaviour {
 				AIMovement.onTurn = true;
 				cornerSpeed = calcCornerSpeed(straight-1);
 				cornerMidpoint = (turnLength[straight-1] * turnAngle[straight-1]) / 2;
-				Debug.Log("Corner " + straight + " speed: -" + cornerSpeed);
+				Debug.Log("Corner " + straight + " speed: " + cornerSpeed);
 			}
 			if(cameraRotate == 1){
 				if(turnDir[turn-1] == 1){
@@ -285,30 +287,40 @@ public class CameraRotate : MonoBehaviour {
 			cornerKerb.GetComponent<Renderer>().material.mainTextureOffset = new Vector2(kerbBlur,0);
 			cornercounter++;
 			
-			//Corner Decel
-			if(cornercounter < cornerMidpoint){
-				if(carSpeedOffset < cornerSpeed){
-					carSpeedOffset+=0.010f * cornerSpeed;
-				}
-			} else {
-				//Corner Accel
-				if(carSpeedOffset > 0){
-					carSpeedOffset-=0.0025f * cornerSpeed;
+			
+			if(lap > 0){
+				//Corner Decel
+				if(cornercounter < cornerMidpoint){
+					if(carSpeedOffset < cornerSpeed){
+						carSpeedOffset+=0.010f * cornerSpeed;
+					}
 				} else {
-					carSpeedOffset=0;
+					//Corner Accel
+					if(carSpeedOffset > 0){
+						carSpeedOffset-=0.0025f * cornerSpeed;
+					} else {
+						carSpeedOffset=0;
+					}
 				}
-			}
-			//Allows acceleration from a slow corner whilst on a following fast corner
-			if(carSpeedOffset > cornerSpeed){
-				carSpeedOffset-=0.0025f * cornerSpeed;
+				//Allows acceleration from a slow corner whilst on a following fast corner
+				if(carSpeedOffset > cornerSpeed){
+					carSpeedOffset-=0.0025f * cornerSpeed;
+				}
 			}
 		}
 
-		//Post turn accel
-		if(carSpeedOffset > 0){
-			carSpeedOffset-=0.0025f * cornerSpeed;
-		} else {
-			carSpeedOffset=0;
+		if(lap > 0){
+			//Post turn accel
+			if(carSpeedOffset > 0){
+				if(cornerSpeed > 0){
+					carSpeedOffset-= 0.0025f * cornerSpeed;
+				} else {
+					//Flat acceleration on flatout corners
+					carSpeedOffset-= 0.0025f * 40;
+				}
+			} else {
+				carSpeedOffset=0;
+			}
 		}
 
 		//End of turn

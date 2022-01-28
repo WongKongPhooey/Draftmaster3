@@ -5,6 +5,7 @@ using UnityEngine;
 public class EventData : MonoBehaviour
 {
     public static string[] offlineEvent = new string[10];
+	public static string[] offlineEventType = new string[10];
 	public static string[] offlineEventWeek = new string[10];
 	public static string[,] offlineEventChapter = new string[10,10];
 	public static string[] offlineEventImage = new string[10];
@@ -12,6 +13,7 @@ public class EventData : MonoBehaviour
 	public static string[] eventDescriptions = new string[10];
 	public static string[,] eventChapterDescriptions = new string[10,10];
 	public static int[,] offlineAILevel = new int[10,10];
+	public static string[,] offlineSeries = new string[10,10];
 	public static string[,] offlineMinType = new string[10,10];
 	public static int[,] offlineMinLevel = new int[10,10];
 	public static int[,] offlineMinClass = new int[10,10];
@@ -24,6 +26,7 @@ public class EventData : MonoBehaviour
 	public static string[] offlineCircuits = new string[20];
 	public static string[,] offlinePrizes = new string[10,10];
 	public static string[,] offlineSetPrizes = new string[10,10];
+	public static string[,] offlineCustomField = new string[10,10];
 	
     // Start is called before the first frame update
     void Start(){
@@ -31,7 +34,13 @@ public class EventData : MonoBehaviour
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		offlineEvent[2] = "All Stars";
-		offlineEvent[3] = "Return Of The King";
+		//offlineEvent[3] = "Return Of The King";
+		//offlineEvent[3] = "Wonder Boy";
+		
+		offlineEventType[0] = "Progression";
+		offlineEventType[1] = "Progression";
+		offlineEventType[2] = "Replay";
+		//offlineEventType[3] = "Return Of The King";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
@@ -240,7 +249,8 @@ public class EventData : MonoBehaviour
 		offlineMinClass[2,0] = 1;
 		offlineMinLevel[2,0] = 1;
 		offlineAILevel[2,0] = 12;
-		//offlineMinSeries[2,0] = "cup22";
+		offlineSeries[2,0] = "cup22";
+		offlineCustomField[2,0] = "cup22AllStar";
 		offlineTracklists[2,0] = "30";
 		offlinePrizes[2,0] = "1Star";
 		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";

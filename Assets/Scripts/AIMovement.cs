@@ -131,7 +131,12 @@ public class AIMovement : MonoBehaviour
 		coolEngine = false;
 		
 		thePlayer = GameObject.Find("Player");
-		seriesPrefix = "cup20";
+		
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
 		
 		string splitAfter = "AICar0";
 		carNumber = this.name.Substring(this.name.IndexOf(splitAfter) + splitAfter.Length);

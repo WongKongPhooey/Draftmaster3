@@ -53,7 +53,16 @@ public class CarSelectGUI : MonoBehaviour {
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		filterSeries = "";
 		
-		seriesPrefix = "cup20";
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = "cup20";
+		}
+		
+		//Initialise a car for testing
+		PlayerPrefs.SetInt(seriesPrefix + "20" + "Gears", 10);
+		PlayerPrefs.SetInt(seriesPrefix + "20" + "Unlocked" ,1);
+		PlayerPrefs.SetInt(seriesPrefix + "20" + "Class", 1);
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
@@ -228,17 +237,17 @@ public class CarSelectGUI : MonoBehaviour {
 					
 					//Only valid drivers, unlocked and leveled up, and filtered
 					while((
-					(DriverNames.cup2020Names[carCount] == null)
+					(DriverNames.getName(seriesPrefix, carCount) == null)
 					||(carUnlocked == 0)
 					||(carClass < seriesMinClass)
-					||((seriesTeam != "")&&(DriverNames.cup2020Teams[carCount] != seriesTeam))
-					||((seriesManu != "")&&(DriverNames.cup2020Manufacturer[carCount] != seriesManu))
+					||((seriesTeam != "")&&(DriverNames.getTeam(seriesPrefix, carCount) != seriesTeam))
+					||((seriesManu != "")&&(DriverNames.getManufacturer(seriesPrefix, carCount) != seriesManu))
 					||((seriesCar != 999)&&(carCount != seriesCar))
-					||((seriesDriverType != "")&&(DriverNames.cup2020Types[carCount] != seriesDriverType))
-					||((seriesRarity != 0)&&(DriverNames.cup2020Rarity[carCount] != seriesRarity))
-					)&&(carCount < 99)){
+					||((seriesDriverType != "")&&(DriverNames.getType(seriesPrefix, carCount) != seriesDriverType))
+					||((seriesRarity != 0)&&(DriverNames.getRarity(seriesPrefix, carCount) != seriesRarity))
+					)&&(carCount < 100)){
 						//Skip if necessary
-						if(carCount < 99){
+						if(carCount < 100){
 							carCount++;
 							carUnlocked = 0;
 							carClass = 0;
@@ -249,7 +258,7 @@ public class CarSelectGUI : MonoBehaviour {
 						}
 					}
 					
-					if(DriverNames.cup2020Names[carCount] != null){
+					if(DriverNames.getName(seriesPrefix, carCount) != null){
 						string carLivery = seriesPrefix + "livery" + (carCount);
 						float cardX = widthblock * (columns * 3.5f) - (widthblock * 3f);
 						float cardY = heightblock * (8.5f * rows) - (heightblock * 4.5f);
@@ -284,9 +293,9 @@ public class CarSelectGUI : MonoBehaviour {
 						
 						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 						GUI.skin.label.alignment = TextAnchor.UpperLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.cup2020Teams[carCount]);
+						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.getTeam(seriesPrefix, carCount));
 						Texture2D manufacturerTex = null;
-						switch(DriverNames.cup2020Manufacturer[carCount]){
+						switch(DriverNames.getManufacturer(seriesPrefix, carCount)){
 							case "FRD":
 								manufacturerTex = frdTex;
 								break;
@@ -302,7 +311,7 @@ public class CarSelectGUI : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 0.75f) - 10, cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
 						
 						Texture2D rarityStars = null;
-						switch(DriverNames.cup2020Rarity[carCount]){
+						switch(DriverNames.getRarity(seriesPrefix, carCount)){
 							case 1:
 								rarityStars = starOne;
 								break;
@@ -318,13 +327,6 @@ public class CarSelectGUI : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 1f), cardY + 10, widthblock * 0.75f, widthblock * 0.375f), rarityStars);
 						
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20liveryblank") as Texture);
-						/*if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
-							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
-							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
-							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.75f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
-						} else {
-							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
-						}*/
 						if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carCount)){
 							int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carCount);
 							if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltPaint")){
@@ -341,11 +343,11 @@ public class CarSelectGUI : MonoBehaviour {
 							}
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-						GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
+						GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						
 						GUI.skin.label.alignment = TextAnchor.LowerLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.cup2020Types[carCount]));
+						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carCount)));
 						GUI.skin.label.alignment = TextAnchor.LowerRight;
 						GUI.Label(new Rect(cardX + (widthblock * 1.5f), cardY + cardH - (heightblock * 2) - 10, (widthblock * 1.5f) - 10, heightblock * 2), "Class " + classAbbr(carClass));
 						GUI.skin.label.normal.textColor = classColours(carClass);
@@ -385,8 +387,8 @@ public class CarSelectGUI : MonoBehaviour {
 					carUnlocked = PlayerPrefs.GetInt(seriesPrefix + carCount + "Unlocked");
 					
 					//If a driver # is not registered
-					while(((DriverNames.cup2020Names[carCount] == null)||(carUnlocked == 1))&&(carCount < 99)){
-						if(carCount < 99){
+					while(((DriverNames.getName(seriesPrefix, carCount) == null)||(carUnlocked == 1))&&(carCount < 99)){
+						if(carCount < 100){
 							carCount++;
 							carUnlocked = 0;
 							carUnlocked = PlayerPrefs.GetInt(seriesPrefix + carCount + "Unlocked");
@@ -394,7 +396,7 @@ public class CarSelectGUI : MonoBehaviour {
 							break;
 						}
 					}
-					if(DriverNames.cup2020Names[carCount] != null){
+					if(DriverNames.getName(seriesPrefix, carCount) != null){
 						string carLivery = seriesPrefix + "livery" + (carCount);
 						float cardX = widthblock * (columns * 3.5f) - (widthblock * 3f);
 						float cardY = heightblock * (8.5f * rows) - (heightblock * 3.5f) + cardH + (heightblock * Mathf.Floor(validCars / 5)) + (cardH * Mathf.Floor(validCars / 5));
@@ -427,9 +429,9 @@ public class CarSelectGUI : MonoBehaviour {
 						
 						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 						GUI.skin.label.alignment = TextAnchor.UpperLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.cup2020Teams[carCount]);
+						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.getTeam(seriesPrefix, carCount));
 						Texture2D manufacturerTex = null;
-						switch(DriverNames.cup2020Manufacturer[carCount]){
+						switch(DriverNames.getManufacturer(seriesPrefix, carCount)){
 							case "FRD":
 								manufacturerTex = frdTex;
 								break;
@@ -446,11 +448,11 @@ public class CarSelectGUI : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("20liveryblank") as Texture);
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery) as Texture);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-						GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
+						GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						
 						GUI.skin.label.alignment = TextAnchor.LowerLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.cup2020Types[carCount]));
+						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carCount)));
 						GUI.skin.label.alignment = TextAnchor.LowerRight;
 						GUI.Label(new Rect(cardX + (widthblock * 1.5f), cardY + cardH - (heightblock * 2) - 10, (widthblock * 1.5f) - 10, heightblock * 2), "Class " + classAbbr(carClass));
 						GUI.skin.label.normal.textColor = classColours(carClass);
@@ -464,13 +466,7 @@ public class CarSelectGUI : MonoBehaviour {
 						if((carUnlocked == 0)||(carClass < seriesMinClass)){
 							GUI.Box(new Rect(cardX, cardY, cardW, cardH), "");
 							//Debug.Log("#" + carCount + " isn't unlocked");
-						} /*else {
-							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
-								PlayerPrefs.SetString("carTexture", carLivery);
-								PlayerPrefs.SetInt("CarChoice",carCount);
-								SceneManager.LoadScene("CircuitSelect");
-							}
-						}*/
+						}
 						carCount++;
 					}
 				}
