@@ -4,8 +4,10 @@ MonoImporter:
   externalObjects: {}
   serializedVersion: 2
   defaultReferences:
-  - camera: {instanceID: 0}
+  - raceCam: {instanceID: 0}
   - eightBitSkin: {fileID: 11400000, guid: ab9ccf6ea87884049b42b1a9538bbb5b, type: 2}
+  - redGUI: {fileID: 11400000, guid: 0a7ace482b34c934caa37e78ee125f00, type: 2}
+  - thePlayer: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

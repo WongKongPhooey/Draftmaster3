@@ -6,12 +6,19 @@ MonoImporter:
   defaultReferences:
   - buttonSkin: {instanceID: 0}
   - tileSkin: {instanceID: 0}
+  - blueGUI: {instanceID: 0}
+  - redGUI: {instanceID: 0}
+  - whiteGUI: {instanceID: 0}
   - BoxTexture: {instanceID: 0}
   - gasCanTex: {instanceID: 0}
   - gearTex: {instanceID: 0}
   - frdTex: {fileID: 2800000, guid: da51a27ff8454ff4b9c6df79997c3370, type: 3}
   - chvTex: {fileID: 2800000, guid: 5ff5502f204ac6740ab5b2b236af9b2a, type: 3}
   - tytTex: {fileID: 2800000, guid: 1e57680920989da429c0e77c0b23fc6e, type: 3}
+  - starOne: {fileID: 2800000, guid: 475e1d6500089a148be0bace1b50abee, type: 3}
+  - starTwo: {fileID: 2800000, guid: 4bdaca9bf077f5d468745f0a7d28a4da, type: 3}
+  - starThree: {fileID: 2800000, guid: 59635769158ff1f4782a8ecf33058653, type: 3}
+  - starFour: {fileID: 2800000, guid: e4a10b4e9cecc01498e94aeefddf08a5, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

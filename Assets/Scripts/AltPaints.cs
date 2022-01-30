@@ -5,7 +5,9 @@ using UnityEngine;
 public class AltPaints : MonoBehaviour {
 	
 	public static string[,] cup2020AltPaintNames = new string[101,10];
+	public static string[,] cup22AltPaintNames = new string[101,10];
 	public static string[,] cup2020AltPaintDriver = new string[101,10];
+	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
 	
     // Start is called before the first frame update

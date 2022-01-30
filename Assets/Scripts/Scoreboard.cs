@@ -37,23 +37,23 @@ public class Scoreboard : MonoBehaviour {
 
 	public int speedOffset;
 
-	public static GameObject[] carsArray = new GameObject[45];
-	public static float[] carPositions = new float[45];
-	public static string[] carNames = new string[45];
-	public static string[] carNumber = new string[45];
-	public static string[] driverNames = new string[45];
-	public static float[] carDist = new float[45];
+	public static GameObject[] carsArray = new GameObject[50];
+	public static float[] carPositions = new float[50];
+	public static string[] carNames = new string[50];
+	public static string[] carNumber = new string[50];
+	public static string[] driverNames = new string[50];
+	public static float[] carDist = new float[50];
 	public static List<GameObject> entrantList = new List<GameObject>();
 
-	public static GameObject[] cautionCarsArray = new GameObject[45];
-	public static float[] cautionCarPositions = new float[45];
-	public static string[] cautionCarNames = new string[45];
+	public static GameObject[] cautionCarsArray = new GameObject[50];
+	public static float[] cautionCarPositions = new float[50];
+	public static string[] cautionCarNames = new string[50];
 
-	public static string[] carChampNames = new string[45];
-	public static int[] carChampPoints = new int[45];
+	public static string[] carChampNames = new string[50];
+	public static int[] carChampPoints = new int[50];
 	
-	public static float[] orderedPositions = new float[45];
-	public static string[] orderedNames = new string[45];
+	public static float[] orderedPositions = new float[50];
+	public static string[] orderedNames = new string[50];
 
 	public static int totalCarWins;
 	public static int totalCarTopFives;
@@ -66,7 +66,11 @@ public class Scoreboard : MonoBehaviour {
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
 		
-		seriesPrefix = PlayerPrefs.GetString("carSeries");
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
 		
 		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		

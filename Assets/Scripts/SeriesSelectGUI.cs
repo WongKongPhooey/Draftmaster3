@@ -201,6 +201,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 							PlayerPrefs.SetInt("SubseriesMinClass", minClass);
 							PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[menuIndex,subMenu]);
 							PlayerPrefs.SetString("RestrictionValue",restrictionValue);
+							PlayerPrefs.SetInt("AIDifficulty", SeriesData.offlineAILevel[menuIndex,subMenu]);
 							PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
 							Debug.Log("Fuel cost: " + SeriesData.offlineFuel[menuIndex,subMenu]);
 							PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
@@ -216,19 +217,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 							} else {
 								SceneManager.LoadScene("CarSelect");
 							}
-						} 
-					/*} else {
-						if(PlayerPrefs.HasKey("DailyPlays" + menuIndex + subMenu + "")){
-							//Grey out the event
-							GUI.skin = tileSkin;
-							GUI.Box(new Rect(cardX, cardY, widthblock * 6, heightblock * 12), "");
-							//if(GUI.Button(new Rect(cardX + widthblock, cardY + (heightblock * 8), widthblock * 4, heightblock * 2), "Reset Plays 5G")){
-							//	PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
-							//}
-						} else {
-							PlayerPrefs.SetInt("DailyPlays" + menuIndex + subMenu + "", SeriesData.offlineDailyPlays[menuIndex,subMenu]);
 						}
-					}*/
 				} else {
 					//Grey out the event
 					GUI.skin = tileSkin;

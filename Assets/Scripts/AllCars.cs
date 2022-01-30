@@ -37,6 +37,7 @@ public class AllCars : MonoBehaviour {
 	public Texture2D starOne;
 	public Texture2D starTwo;
 	public Texture2D starThree;
+	public Texture2D starFour;
 
 	public Vector2 scrollPosition = Vector2.zero;
 	
@@ -244,7 +245,7 @@ public class AllCars : MonoBehaviour {
 					int unlockGears = GameData.unlockGears(unlockClass);
 					
 					
-					if(carCount < 99){
+					if(carCount < 100){
 						string carLivery = seriesPrefix + "livery" + (carCount);
 						float cardX = widthblock * (columns * 3.5f) - (widthblock * 3f);
 						float cardY = heightblock * (8.5f * rows) - (heightblock * 4.5f);
@@ -290,6 +291,9 @@ public class AllCars : MonoBehaviour {
 								break;
 							case 3:
 								rarityStars = starThree;
+								break;
+							case 4:
+								rarityStars = starFour;
 								break;
 							default:
 								break;
@@ -388,7 +392,7 @@ public class AllCars : MonoBehaviour {
 							
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
 								PlayerPrefs.SetInt("CarFocus",carCount);
-								PlayerPrefs.SetString("SeriesFocus","cup20");
+								PlayerPrefs.SetString("SeriesFocus",seriesPrefix);
 								Application.LoadLevel("SingleCar");
 							}
 						}

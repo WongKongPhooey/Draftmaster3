@@ -44,12 +44,12 @@ public class EnviroToggle : MonoBehaviour {
 			}
 		}
 	}
-
+	
 	// Update is called once per frame
 	void FixedUpdate() {
 
 		//IF ENTERING OR EXITING TURN
-		if(currentState != Movement.onTurn){
+		if((currentState != Movement.onTurn)||(CameraRotate.lap == 0)){
 			Renderer[] subAsset = GetComponentsInChildren<Renderer>();
 			
 			//If V1 enviro setup
@@ -118,12 +118,10 @@ public class EnviroToggle : MonoBehaviour {
 					if(corners[CameraRotate.turn] == true){
 						foreach(Renderer asset in subAsset){
 							asset.enabled = true;
-							Debug.Log("Enable kerb on turn " + corners[CameraRotate.cornercounter]);
 						}
 					} else {
 						foreach(Renderer asset in subAsset){
 							asset.enabled = false;
-							Debug.Log("Disable kerb on turn " + corners[CameraRotate.cornercounter]);
 						}
 					}
 				} else {

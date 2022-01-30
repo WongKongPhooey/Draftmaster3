@@ -561,8 +561,8 @@ public class Store : MonoBehaviour{
 						int carGears = 0;
 						int carClass = 0;
 						
-						carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-						carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
+						carGears = PlayerPrefs.GetInt(carSeries + carNum + "Gears");
+						carClass = PlayerPrefs.GetInt(carSeries + carNum + "Class");
 						
 						int unlockClass = 1;
 						unlockClass = DriverNames.getRarity(carSeries, carNumInt);
@@ -624,12 +624,12 @@ public class Store : MonoBehaviour{
 								gears = PlayerPrefs.GetInt("Gears");
 								if(gears >= itemPrice){
 									gears -= itemPrice;
-									if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
-										carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
+									if(PlayerPrefs.HasKey(carSeries + carNum + "Gears")){
+										carGears = PlayerPrefs.GetInt(carSeries + carNum + "Gears");
 									} else {
 										carGears = 0;
 									}
-									PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
+									PlayerPrefs.SetInt(carSeries + carNum + "Gears", carGears + 3);
 									PlayerPrefs.SetInt("Gears",gears);
 								}
 							}

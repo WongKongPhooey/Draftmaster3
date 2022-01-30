@@ -147,6 +147,8 @@ public class EventSelectGUI : MonoBehaviour {
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2), EventData.offlineEventChapter[menuIndex,subMenu]);
+				GUI.skin.label.alignment = TextAnchor.UpperRight;
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2f), "" + (EventData.offlineAILevel[menuIndex, subMenu] * 10) + "% AI");
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, heightblock * 3.5f), Resources.Load(EventData.offlineChapterImage[menuIndex,subMenu]) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
@@ -206,6 +208,7 @@ public class EventSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetInt("SubseriesMinClass", EventData.offlineMinClass[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
+						PlayerPrefs.SetInt("AIDifficulty", EventData.offlineAILevel[menuIndex,subMenu]);
 						PlayerPrefs.SetInt("SeriesFuel",5);
 						PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[menuIndex,subMenu]);
 						PlayerPrefs.SetString("SeriesPrizeAmt",EventData.offlineSetPrizes[menuIndex,subMenu]);
