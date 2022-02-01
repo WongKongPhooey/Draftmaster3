@@ -141,15 +141,17 @@ public class RaceRewards : MonoBehaviour
 		}
 		
 		if(raceType != "Event"){
-			maxRaceGears = SeriesData.offlineAILevel[raceMenu,raceSubMenu] - 3;
+			//e.g. AI Level 14 = 14 / 5  = 2.x -> 2 + 3 = 5
+			float maxGearsFloat = Mathf.Floor(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5);
+			maxRaceGears = (int)maxGearsFloat + 3;
 			//If low strength AI Race (<+3)
 			if(maxRaceGears <= 2){
 				//Top 3 win gears
 				maxRaceGears = 3;
 			}
-			if(maxRaceGears >= 9){
+			if(maxRaceGears >= 6){
 				//Max for a win is 8
-				maxRaceGears = 8;
+				maxRaceGears = 5;
 			}
 		
 			//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
@@ -255,17 +257,24 @@ public class RaceRewards : MonoBehaviour
 		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
 		
 		string extractedCarNum = setPrize.Split('y').Last();
+		string extractedAltNum = setPrize.Split('t').Last();
 		carPrizeNumAlt = extractedCarNum;
 		
 		Debug.Log("Extracted Alt: " + extractedCarNum);
 		
 		extractedCarNum = extractedCarNum.Substring(0, extractedCarNum.IndexOf("alt")).Trim();
 		int parsedNum = int.Parse(extractedCarNum);
+		int parsedAlt = int.Parse(extractedAltNum);
 		
 		Debug.Log("Extracted car number: #" + extractedCarNum);
+		Debug.Log("Extracted alt number: #" + extractedAltNum);
 		
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
-		carReward = "New " + DriverNames.cup2020Names[parsedNum] + " Alt Unlocked!";
+		if(AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] != null){
+			carReward = "New " + AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] + " Alt Unlocked!";
+		} else {
+			carReward = "New " + DriverNames.cup2020Names[parsedNum] + " Alt Unlocked!";
+		}
 	}
 	
 	void ListPrizeOptions(string category){

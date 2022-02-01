@@ -5,6 +5,9 @@ using UnityEngine;
 public class AltPaints : MonoBehaviour {
 	
 	public static string[,] cup2020AltPaintNames = new string[101,10];
+	public static string[,] cup22AltPaintNames = new string[101,10];
+	public static string[,] cup2020AltPaintDriver = new string[101,10];
+	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
 	
     // Start is called before the first frame update
@@ -42,5 +45,39 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[51,1] = "#1 Warhawk";
 		cup2020AltPaintNames[88,1] = "#1 Cup";
 		cup2020AltPaintNames[88,2] = "#2 Halloween";
+		
+		cup2020AltPaintDriver[3,2] = "Earnhardt";
+		cup2020AltPaintDriver[3,3] = "Earnhardt";
+		cup2020AltPaintDriver[3,4] = "Earnhardt";
+	}
+	
+	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
+		switch(seriesPrefix){
+			case "cup20":
+				return cup2020AltPaintNames[carNum,altNum];
+				break;
+			case "cup22":
+				//return cup22AltPaintNames[carNum,altNum];
+				break;
+			default:
+				return null;
+				break;
+		}
+		return null;
+	}
+	
+	public static string getAltPaintDriver(string seriesPrefix, int carNum, int altNum){
+		switch(seriesPrefix){
+			case "cup20":
+				return cup2020AltPaintDriver[carNum,altNum];
+				break;
+			case "cup22":
+				//return cup22AltPaintDriver[carNum,altNum];
+				break;
+			default:
+				return "Unknown";
+				break;
+		}
+		return "Unknown";
 	}
 }

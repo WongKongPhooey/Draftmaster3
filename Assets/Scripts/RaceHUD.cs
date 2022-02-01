@@ -16,6 +16,7 @@ public class RaceHUD : MonoBehaviour {
 	public static bool raceOver = false;
 	
 	public GUISkin eightBitSkin;
+	public GUISkin redGUI;
 	public GameObject thePlayer;
 	public int player2Num;
 
@@ -84,7 +85,6 @@ public class RaceHUD : MonoBehaviour {
 		}
 
 		GUI.skin = eightBitSkin;
-
 		GUI.skin.label.fontSize = 80 / FontScale.fontScale;
 		GUI.skin.button.fontSize = 120 / FontScale.fontScale;
 		
@@ -102,25 +102,31 @@ public class RaceHUD : MonoBehaviour {
 			if(raceOver == false){
 				gamePaused = true;
 				Time.timeScale = 0.0f;
-				raceCam.GetComponent<AudioListener>().enabled = false;
+				this.gameObject.GetComponent<AudioListener>().enabled = false;
 				PlayerPrefs.SetInt("Volume",0);
 			}
 		}
 
 		if(gamePaused == true){
+			GUI.skin = redGUI;
+			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.button.fontSize = 120 / FontScale.fontScale;
 			if (GUI.Button(new Rect(widthblock * 3, heightblock * 8, widthblock * 6, heightblock * 4), "Resume")){
 				gamePaused = false;
 				Time.timeScale = 1.0f;
-				raceCam.GetComponent<AudioListener>().enabled = true;
+				this.gameObject.GetComponent<AudioListener>().enabled = true;
 				PlayerPrefs.SetInt("Volume",1);
 			}
 			if (GUI.Button(new Rect(widthblock * 11, heightblock * 8, widthblock * 6, heightblock * 4), "Quit")){
 				SceneManager.LoadScene("MainMenu");
 				gamePaused = false;
 				Time.timeScale = 1.0f;
-				raceCam.GetComponent<AudioListener>().enabled = true;
+				this.gameObject.GetComponent<AudioListener>().enabled = true;
 				PlayerPrefs.SetInt("Volume",1);
 			}
+			GUI.skin = eightBitSkin;
+			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.button.fontSize = 120 / FontScale.fontScale;
 		}
 
 		if((raceOver == false)&&(caution == false)){
@@ -232,6 +238,7 @@ public class RaceHUD : MonoBehaviour {
 						GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), (CameraRotate.lap - 150) + " LAPS");
 					} else {
 						GUI.skin.label.fontSize = 512 / FontScale.fontScale;
+						GUI.skin.label.alignment = TextAnchor.LowerLeft;
 						GUI.skin.label.normal.textColor = Color.black;
 						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
 						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
@@ -243,13 +250,18 @@ public class RaceHUD : MonoBehaviour {
 				}
 				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
 				
-				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 6), widthblock * 6, heightblock * 4), "Results")){
+				GUI.skin = redGUI;
+				GUI.skin.button.fontSize = 120 / FontScale.fontScale;
+				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Results")){
 					Time.timeScale = 1.0f;
 					raceOver = false;
 					SceneManager.LoadScene("RaceResults");
 				}
 			} else {
-				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 6), widthblock * 6, heightblock * 4), "Continue")){
+				
+				GUI.skin = redGUI;
+				GUI.skin.button.fontSize = 120 / FontScale.fontScale;
+				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Continue")){
 					Time.timeScale = 1.0f;
 					caution = false;
 					string circuitReload = PlayerPrefs.GetString("CurrentCircuit");
@@ -259,6 +271,7 @@ public class RaceHUD : MonoBehaviour {
 			}
 		}
 		
+		GUI.skin = eightBitSkin;
 
 		if(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer"){
 			GUI.skin.label.fontSize = 56 / FontScale.fontScale;

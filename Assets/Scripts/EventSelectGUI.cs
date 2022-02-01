@@ -34,6 +34,18 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		week = PlayerPrefs.GetInt("GameWeek");
 		
+		if(!PlayerPrefs.HasKey("EarnhardtEventInit")){
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 0 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 1 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 2 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 3 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 4 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 5 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 6 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 7 + "EVENT0",0);
+			PlayerPrefs.SetInt("EarnhardtEventInit", 1);
+		}
+		
 		seriesMenu = "All";
 		menuIndex = 0;
 	}
@@ -81,7 +93,7 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		//Root Level Menu
 		if(seriesMenu == "All"){
-			for(int rootMenu = 0; rootMenu < 2; rootMenu++){
+			for(int rootMenu = 0; rootMenu < 3; rootMenu++){
 				string carLivery = "livery" + seriesCount;
 				float cardX = widthblock * (rootMenu * 7) + widthblock;
 				float cardY = heightblock * 4;
@@ -99,7 +111,7 @@ public class EventSelectGUI : MonoBehaviour {
 					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
 				} else {
 					//Coming up soon
-					if(!eventWeeks.Any(("0").Contains)){
+					if(!eventWeeks.Any(("999").Contains)){
 						GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
 					}
 				}
@@ -147,23 +159,25 @@ public class EventSelectGUI : MonoBehaviour {
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2), EventData.offlineEventChapter[menuIndex,subMenu]);
+				GUI.skin.label.alignment = TextAnchor.UpperRight;
+				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 0.5f), widthblock * 5.5f, heightblock * 2f), "" + (EventData.offlineAILevel[menuIndex, subMenu] * 10) + "% AI");
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2f), widthblock * 5f, heightblock * 3.5f), Resources.Load(EventData.offlineChapterImage[menuIndex,subMenu]) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				GUI.skin.label.alignment = TextAnchor.UpperLeft;
 				
-				//Event Progression Checks
-				
-				//If event is already won, lock.
-				if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0") == 1){
-					//Reset event for testing
-					//PlayerPrefs.SetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0",0);
-					meetsRequirements = false;
-				}
-				
-				//If previous event isn't won, lock.
-				if(subMenu > 0){
-					if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + (subMenu - 1) + "EVENT0") != 1){
+				//Progression Event Checks
+				if(EventData.offlineEventType[menuIndex] == "Progression"){
+					//If event is already won, lock.
+					if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0") == 1){
+						//Reset event for testing
+						//PlayerPrefs.SetInt("BestFinishPosition" + menuIndex + "" + subMenu + "EVENT0",0);
 						meetsRequirements = false;
+					}
+					//If previous event isn't won, lock.
+					if(subMenu > 0){
+						if(PlayerPrefs.GetInt("BestFinishPosition" + menuIndex + "" + (subMenu - 1) + "EVENT0") != 1){
+							meetsRequirements = false;
+						}
 					}
 				}
 				
@@ -206,10 +220,19 @@ public class EventSelectGUI : MonoBehaviour {
 						PlayerPrefs.SetInt("SubseriesMinClass", EventData.offlineMinClass[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RestrictionValue",restrictionValue);
+						PlayerPrefs.SetInt("AIDifficulty", EventData.offlineAILevel[menuIndex,subMenu]);
 						PlayerPrefs.SetInt("SeriesFuel",5);
 						PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[menuIndex,subMenu]);
 						PlayerPrefs.SetString("SeriesPrizeAmt",EventData.offlineSetPrizes[menuIndex,subMenu]);
 						PlayerPrefs.SetString("RaceType","Event");
+						
+						if(EventData.offlineSeries[menuIndex,subMenu] != null){
+							PlayerPrefs.SetString("FixedSeries", EventData.offlineSeries[menuIndex,subMenu]);
+						}
+						if(EventData.offlineCustomField[menuIndex,subMenu] != null){
+							PlayerPrefs.SetString("CustomField", EventData.offlineCustomField[menuIndex,subMenu]);
+						}
+						
 						SceneManager.LoadScene("CarSelect");
 					}
 				} else {

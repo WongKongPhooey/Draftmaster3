@@ -14,6 +14,10 @@ public class IAPStore : MonoBehaviour {
 	private const string gears125 = "com.duffetywong.draftmaster2rollingthunder.gears125";
 	private const string gears200 = "com.duffetywong.draftmaster2rollingthunder.gears200";
 	private const string gears500 = "com.duffetywong.draftmaster2rollingthunder.gears500";
+	private const string smallgears = "com.duffetywong.draftmaster2rollingthunder.smallgears";
+	private const string mediumgears = "com.duffetywong.draftmaster2rollingthunder.mediumgears";
+	private const string largegears = "com.duffetywong.draftmaster2rollingthunder.largegears";
+	private const string extralargegears = "com.duffetywong.draftmaster2rollingthunder.extralargegears";
 	
 	private const string negotiator = "com.duffetywong.draftmaster2rollingthunder.negotiator";
 	
@@ -79,6 +83,26 @@ public class IAPStore : MonoBehaviour {
 			case gears500:
 				Debug.Log("Added 500 gears");
 				gears+=500;
+				PlayerPrefs.SetInt("Gears",gears);
+				break;
+			case smallgears:
+				Debug.Log("Added 80 gears");
+				gears+=80;
+				PlayerPrefs.SetInt("Gears",gears);
+				break;
+			case mediumgears:
+				Debug.Log("Added 250 gears");
+				gears+=250;
+				PlayerPrefs.SetInt("Gears",gears);
+				break;
+			case largegears:
+				Debug.Log("Added 600 gears");
+				gears+=600;
+				PlayerPrefs.SetInt("Gears",gears);
+				break;
+			case extralargegears:
+				Debug.Log("Added 1500 gears");
+				gears+=1500;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case negotiator:

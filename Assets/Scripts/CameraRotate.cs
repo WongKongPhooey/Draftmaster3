@@ -20,14 +20,17 @@ public class CameraRotate : MonoBehaviour {
 	public static int[] turnLength = new int[6];
 	public static int[] turnAngle = new int[6];
 	public static int[] turnDir = new int[6];
-	public static int[] brakingPoint = new int[6];
-	public static int[] brakingSpeed = new int[6];
-	public static int[] accelPoint = new int[6];
 	public static float turnSpeed;
 	public static int trackLength;
 	public static int totalTurns;
 	public static int straightcounter;
 	public static int cornercounter;
+	public static float carSpeedOffset;
+	public static int cornerSpeed;
+	public static int cornerMidpoint;
+	
+	public static bool onTurn;
+	
 	public static int lap;
 	public static int cautionLap;
 	public static int cautionProb;
@@ -42,7 +45,7 @@ public class CameraRotate : MonoBehaviour {
 	public static float lapRecord;
 	public static int lapRecordInt;
 	public static int currentLapRecord;
-	int speedOffset;
+	public static int trackSpeedOffset;
 	string circuit;
 	float kerbBlur;
 	
@@ -73,24 +76,7 @@ public class CameraRotate : MonoBehaviour {
 		turnDir[3] = 0;
 		turnDir[4] = 0;
 		turnDir[5] = 0;
-		brakingPoint[0] = 20;
-		brakingPoint[1] = 20;
-		brakingPoint[2] = 20;
-		brakingPoint[3] = 20;
-		brakingPoint[4] = 20;
-		brakingPoint[5] = 20;
-		brakingSpeed[0] = 20;
-		brakingSpeed[1] = 20;
-		brakingSpeed[2] = 20;
-		brakingSpeed[3] = 20;
-		brakingSpeed[4] = 20;
-		brakingSpeed[5] = 20;
-		accelPoint[0] = 20;
-		accelPoint[1] = 20;
-		accelPoint[2] = 20;
-		accelPoint[3] = 20;
-		accelPoint[4] = 20;
-		accelPoint[5] = 20;
+		onTurn = false;
 		turnSpeed = 0;
 		trackLength = 0;
 		totalTurns = PlayerPrefs.GetInt("TotalTurns");
@@ -100,8 +86,10 @@ public class CameraRotate : MonoBehaviour {
 			trackLength += (turnLength[i] * turnAngle[i]);
 			//Debug.Log("Track Length: " + trackLength);
 		}
-		straight = 1;
-		turn = 1;
+		straight = totalTurns;
+		turn = totalTurns;
+		TDCamera.transform.Rotate(0,0,turnLength[turn-1]);
+		
 		lap = 0;
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		lapRecord = 0;
@@ -112,9 +100,11 @@ public class CameraRotate : MonoBehaviour {
 			PlayerPrefs.SetInt("FastestLap" + circuit, 0);
 		}
 		cornercounter = 0;
+		carSpeedOffset = 80;
+		cornerSpeed = 0;
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
 
-		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
+		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 
 		if((ChallengeSelectGUI.challengeMode == true)||(PlayerPrefs.GetInt("ActiveCaution") == 1)){
 			lap = PlayerPrefs.GetInt("StartingLap");
@@ -150,7 +140,7 @@ public class CameraRotate : MonoBehaviour {
 		
 		//finishLine.renderer.enabled = false;
 		
-		averageSpeedTotal += Movement.playerSpeed;
+		averageSpeedTotal += (Movement.playerSpeed - carSpeedOffset);
 		averageSpeedCount++;
 		averageSpeed = averageSpeedTotal / averageSpeedCount;
 		
@@ -258,7 +248,7 @@ public class CameraRotate : MonoBehaviour {
 			PlayerPrefs.SetInt("ExpAdded",0);
 			if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 				currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-				lapRecord -= speedOffset;
+				lapRecord -= trackSpeedOffset;
 				Debug.Log(lapRecord);
 				lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
 				PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
@@ -274,13 +264,16 @@ public class CameraRotate : MonoBehaviour {
 			}
 		}
 
-		if((straightcounter + brakingPoint[straight-1]) > straightLength[straight-1]){
-			turnSpeed += 0.01f;
-		}
-
-		if( straightcounter > straightLength[straight-1]){
-			Movement.onTurn = true;
-			AIMovement.onTurn = true;
+		//Turning
+		if(straightcounter > straightLength[straight-1]){
+			if(onTurn == false){
+				onTurn = true;
+				Movement.onTurn = true;
+				AIMovement.onTurn = true;
+				cornerSpeed = calcCornerSpeed(straight-1);
+				cornerMidpoint = (turnLength[straight-1] * turnAngle[straight-1]) / 2;
+				Debug.Log("Corner " + straight + " speed: " + cornerSpeed);
+			}
 			if(cameraRotate == 1){
 				if(turnDir[turn-1] == 1){
 					TDCamera.transform.Rotate(0,0,(1.0f/turnAngle[turn-1]));
@@ -293,15 +286,47 @@ public class CameraRotate : MonoBehaviour {
 			//kerbBlur+=kerbBlur;
 			cornerKerb.GetComponent<Renderer>().material.mainTextureOffset = new Vector2(kerbBlur,0);
 			cornercounter++;
+			
+			
+			if(lap > 0){
+				//Corner Decel
+				if(cornercounter < cornerMidpoint){
+					if(carSpeedOffset < cornerSpeed){
+						carSpeedOffset+=0.010f * cornerSpeed;
+					}
+				} else {
+					//Corner Accel
+					if(carSpeedOffset > 0){
+						carSpeedOffset-=0.0025f * cornerSpeed;
+					} else {
+						carSpeedOffset=0;
+					}
+				}
+				//Allows acceleration from a slow corner whilst on a following fast corner
+				if(carSpeedOffset > cornerSpeed){
+					carSpeedOffset-=0.0025f * cornerSpeed;
+				}
+			}
 		}
 
-		if(cornercounter + accelPoint[turn-1] >= (turnLength[turn-1] * turnAngle[turn-1])){
-			turnSpeed-=0.01f;
+		if(lap > 0){
+			//Post turn accel
+			if(carSpeedOffset > 0){
+				if(cornerSpeed > 0){
+					carSpeedOffset-= 0.0025f * cornerSpeed;
+				} else {
+					//Flat acceleration on flatout corners
+					carSpeedOffset-= 0.0025f * 40;
+				}
+			} else {
+				carSpeedOffset=0;
+			}
 		}
 
+		//End of turn
 		if(cornercounter >= (turnLength[turn-1] * turnAngle[turn-1])){
-			//Scoreboard.checkPositions();
 			Scoreboard.updateScoreboard();
+			onTurn = false;
 			Movement.onTurn = false;
 			AIMovement.onTurn = false;
 			straightcounter = 0;
@@ -319,5 +344,48 @@ public class CameraRotate : MonoBehaviour {
 				apron.GetComponent<Renderer>().enabled = false;
 			}
 		}
+	}
+	
+	int calcCornerSpeed(int corner){
+		int length = turnLength[corner];
+		if(PlayerPrefs.GetString("TrackType") == "Plate"){
+			if(turnAngle[corner] >= 4){
+				return 0;
+			}
+		}
+		switch(turnAngle[corner]){
+			case 1:
+				if(length > 160){
+					return 60;
+				} else {
+					if(length > 45){
+						return 30;
+					} else {
+						return 15;
+					}
+				}
+				break;
+			case 2:
+				if(length > 45){
+					return 20;
+				} else {
+					return 0;
+				}
+				break;
+			case 4:
+				if(length > 90){
+					return 10;
+				} else {
+					return 0;
+				}
+				break;
+			case 8:
+				return 0;
+				break;
+			default:
+				return 0;
+				break;
+		}
+		return 0;
 	}
 }

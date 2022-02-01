@@ -41,6 +41,7 @@ public class Store : MonoBehaviour{
 	
 	int dailyCollected;
 	int dailySelectsPicked;
+	int dailySelectsRows;
 	
 	string customStoreDailySelects;
 	
@@ -156,28 +157,33 @@ public class Store : MonoBehaviour{
 			dailySelects.Clear();
 			string[] onlineSelects = customStoreDailySelects.Split(',');
 			foreach(string item in onlineSelects){
-				dailySelects.Add(int.Parse(item));
+				dailySelects.Add(item);
 				//Debug.Log(item + " added to store");
 			}
 			Debug.Log("Total shop items added: " + dailySelects.Count);
 		} else {
 			dailySelects.Clear();
-			dailySelects.Add(22);
-			dailySelects.Add(1);
-			dailySelects.Add(6);
-			dailySelects.Add(10);
-			dailySelects.Add(21);
+			dailySelects.Add(5);
+			dailySelects.Add(18);
+			dailySelects.Add(3);
+			dailySelects.Add(24);
+			dailySelects.Add(7);
+			dailySelects.Add(8);
+			dailySelects.Add(15);
 			dailySelects.Add(38);
-			dailySelects.Add(41);
-			dailySelects.Add(49);
-			dailySelects.Add(62);
-			dailySelects.Add(74);
-			dailySelects.Add(78);
-			dailySelects.Add(96);
+			dailySelects.Add(47);
+			dailySelects.Add(52);
+			dailySelects.Add(54);
+			dailySelects.Add(95);
 		}
 		
 		dailySelectsPicked = 1;
 		PlayerPrefs.SetInt("DailySelects",1);
+		
+		//Set store row counter
+		dailySelectsRows = 1;
+		if(dailySelects.Count >= 8){ dailySelectsRows = 2;}
+		if(dailySelects.Count >= 12){ dailySelectsRows = 3;}
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
@@ -536,106 +542,30 @@ public class Store : MonoBehaviour{
 			
 			if(menuCat == "DailySelects"){
 				
-				//1st Row Offline
-				for(int columns = 1; columns < 5; columns++){
-					string carNum = dailySelects[columns-1].ToString();
-					int carNumInt = int.Parse(carNum);
-					float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
-					float cardY = heightblock * (8.5f * 1) - (heightblock * 4.5f);
-					
-					int carGears = 0;
-					int carClass = 0;
-					
-					carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-					carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
-					
-					int unlockClass = 1;
-					unlockClass = DriverNames.cup2020Rarity[int.Parse(carNum)];
-					int unlockGears = GameData.unlockGears(unlockClass);
-					
-					int classMax = 999;
-					classMax = GameData.classMax(carClass);
-					if(carClass < unlockClass){
-						classMax = unlockGears;
-					}
-					
-					GUI.skin = whiteGUI;
-					GUI.Box(new Rect(cardX, cardY, widthblock * 3, heightblock * 8f), "");
-					GUI.skin = tileSkin;
-					
-					GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-					GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-					
-					GUI.skin.label.alignment = TextAnchor.UpperCenter;
-					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.cup2020Names[int.Parse(carNum)] + " (+3)");
-					GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("cup20livery" + carNum) as Texture);
-					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-					
-					//Progress Bar Box
-					GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "");
-					//Progress Bar
-					if((carGears > classMax)||(carClass == 6)){
-						GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "");
-					} else {
-						if(carGears > 0){
-							GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), (((widthblock * 2.5f)/classMax) * carGears) + 1, heightblock * 1f), "");
-						}
-					}
-					// Gears/Class 
-					if(carClass == 6){
-						GUI.skin.label.normal.textColor = Color.white;
-						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
-						GUI.skin.label.normal.textColor = Color.black;
-					} else {
-						GUI.skin.label.normal.textColor = Color.white;
-						if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
-							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
-						} else {
-							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
-						}
-						GUI.skin.label.normal.textColor = Color.black;
-					}
-
-					GUI.skin = redGUI;
-					
-					int itemPrice = getShopPriceByRarity(DriverNames.cup2020Rarity[carNumInt]);
-					
-					if(carClass < 6){
-						if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
-							
-							gears = PlayerPrefs.GetInt("Gears");
-							if(gears >= itemPrice){
-								gears -= itemPrice;
-								if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
-									carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-								} else {
-									carGears = 0;
-								}
-								PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
-								PlayerPrefs.SetInt("Gears",gears);
-							}
-						}
-					}	
-					GUI.skin = tileSkin;
-				}
-				
-				if(dailySelects.Count >= 8){
-				
-					//2nd Row Offline
+				//1st Row
+				for(int rows = 0; rows < dailySelectsRows; rows++){
 					for(int columns = 1; columns < 5; columns++){
-						string carNum = dailySelects[4 + columns-1].ToString();
-						int carNumInt = int.Parse(carNum);
+						string carNum = dailySelects[(rows * 4) + columns-1].ToString();
+						int carNumInt;
+						string carSeries = "cup20";
+						//if series is specified..
+						if(carNum.Length > 2){
+							//Get series, parse remainder
+							carSeries = carNum.Substring(0, 5);
+							carNum = carNum.Remove(0, 5);
+						}
+						carNumInt = int.Parse(carNum);
 						float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
-						float cardY = heightblock * (8.5f * 2) - (heightblock * 4f);
+						float cardY = heightblock * (8.5f * (rows + 1)) - (heightblock * 4.5f);
 						
 						int carGears = 0;
 						int carClass = 0;
 						
-						carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-						carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
+						carGears = PlayerPrefs.GetInt(carSeries + carNum + "Gears");
+						carClass = PlayerPrefs.GetInt(carSeries + carNum + "Class");
 						
 						int unlockClass = 1;
-						unlockClass = DriverNames.cup2020Rarity[int.Parse(carNum)];
+						unlockClass = DriverNames.getRarity(carSeries, carNumInt);
 						int unlockGears = GameData.unlockGears(unlockClass);
 						
 						int classMax = 999;
@@ -648,12 +578,15 @@ public class Store : MonoBehaviour{
 						GUI.Box(new Rect(cardX, cardY, widthblock * 3, heightblock * 8f), "");
 						GUI.skin = tileSkin;
 						
-						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+						GUI.skin.label.fontSize = 40 / FontScale.fontScale;
 						GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 						
 						GUI.skin.label.alignment = TextAnchor.UpperCenter;
-						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.cup2020Names[int.Parse(carNum)] + " (+3)");
-						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("cup20livery" + carNum) as Texture);
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 1.0f), DriverNames.getName(carSeries, carNumInt) + " (+3)");
+						GUI.skin.label.fontSize = 32 / FontScale.fontScale;
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.0f), widthblock * 2.5f, heightblock * 0.75f), DriverNames.getSeriesNiceName(carSeries));
+						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, heightblock * 2.25f), Resources.Load(carSeries + "livery" + carNum) as Texture, ScaleMode.ScaleToFit);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						
 						//Progress Bar Box
@@ -673,7 +606,7 @@ public class Store : MonoBehaviour{
 							GUI.skin.label.normal.textColor = Color.black;
 						} else {
 							GUI.skin.label.normal.textColor = Color.white;
-							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
+							if(carClass < DriverNames.getRarity(seriesPrefix,carNumInt)){
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 							} else {
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
@@ -683,108 +616,24 @@ public class Store : MonoBehaviour{
 
 						GUI.skin = redGUI;
 						
-						int itemPrice = getShopPriceByRarity(DriverNames.cup2020Rarity[carNumInt]);
+						int itemPrice = getShopPriceByRarity(DriverNames.getRarity(seriesPrefix,carNumInt));
+						
 						if(carClass < 6){
 							if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
 								
 								gears = PlayerPrefs.GetInt("Gears");
 								if(gears >= itemPrice){
 									gears -= itemPrice;
-									if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
-										carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
+									if(PlayerPrefs.HasKey(carSeries + carNum + "Gears")){
+										carGears = PlayerPrefs.GetInt(carSeries + carNum + "Gears");
 									} else {
 										carGears = 0;
 									}
-									PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
+									PlayerPrefs.SetInt(carSeries + carNum + "Gears", carGears + 3);
 									PlayerPrefs.SetInt("Gears",gears);
 								}
 							}
-						}
-						GUI.skin = tileSkin;
-					}
-				}
-				
-				if(dailySelects.Count >= 12){
-				
-					//3rd Row Offline
-					for(int columns = 1; columns < 5; columns++){
-						string carNum = dailySelects[8 + columns-1].ToString();
-						int carNumInt = int.Parse(carNum);
-						float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
-						float cardY = heightblock * (8.5f * 3) - (heightblock * 4f);
-						
-						int carGears = 0;
-						int carClass = 0;
-						
-						carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-						carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
-						
-						int unlockClass = 1;
-						unlockClass = DriverNames.cup2020Rarity[int.Parse(carNum)];
-						int unlockGears = GameData.unlockGears(unlockClass);
-						
-						int classMax = 999;
-						classMax = GameData.classMax(carClass);
-						if(carClass < unlockClass){
-							classMax = unlockGears;
-						}
-						
-						GUI.skin = whiteGUI;
-						GUI.Box(new Rect(cardX, cardY, widthblock * 3, heightblock * 8f), "");
-						GUI.skin = tileSkin;
-						
-						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-						GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-						
-						GUI.skin.label.alignment = TextAnchor.UpperCenter;
-						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 2.5f, heightblock * 2), DriverNames.cup2020Names[int.Parse(carNum)] + " (+3)");
-						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load("cup20livery" + carNum) as Texture);
-						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-						
-						//Progress Bar Box
-						GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "");
-						//Progress Bar
-						if((carGears > classMax)||(carClass == 6)){
-							GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "");
-						} else {
-							if(carGears > 0){
-								GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), (((widthblock * 2.5f)/classMax) * carGears) + 1, heightblock * 1f), "");
-							}
-						}
-						// Gears/Class 
-						if(carClass == 6){
-							GUI.skin.label.normal.textColor = Color.white;
-							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
-							GUI.skin.label.normal.textColor = Color.black;
-						} else {
-							GUI.skin.label.normal.textColor = Color.white;
-							if(carClass < DriverNames.cup2020Rarity[int.Parse(carNum)]){
-								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
-							} else {
-								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4.5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + classMax);
-							}
-							GUI.skin.label.normal.textColor = Color.black;
-						}
-
-						GUI.skin = redGUI;
-						
-						int itemPrice = getShopPriceByRarity(DriverNames.cup2020Rarity[carNumInt]);
-						if(carClass < 6){
-							if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){
-								
-								gears = PlayerPrefs.GetInt("Gears");
-								if(gears >= itemPrice){
-									gears -= itemPrice;
-									if(PlayerPrefs.HasKey(seriesPrefix + carNum + "Gears")){
-										carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
-									} else {
-										carGears = 0;
-									}
-									PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears", carGears + 3);
-									PlayerPrefs.SetInt("Gears",gears);
-								}
-							}
-						}
+						}	
 						GUI.skin = tileSkin;
 					}
 				}

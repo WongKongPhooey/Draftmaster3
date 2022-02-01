@@ -37,23 +37,23 @@ public class Scoreboard : MonoBehaviour {
 
 	public int speedOffset;
 
-	public static GameObject[] carsArray = new GameObject[45];
-	public static float[] carPositions = new float[45];
-	public static string[] carNames = new string[45];
-	public static string[] carNumber = new string[45];
-	public static string[] driverNames = new string[45];
-	public static float[] carDist = new float[45];
+	public static GameObject[] carsArray = new GameObject[50];
+	public static float[] carPositions = new float[50];
+	public static string[] carNames = new string[50];
+	public static string[] carNumber = new string[50];
+	public static string[] driverNames = new string[50];
+	public static float[] carDist = new float[50];
 	public static List<GameObject> entrantList = new List<GameObject>();
 
-	public static GameObject[] cautionCarsArray = new GameObject[45];
-	public static float[] cautionCarPositions = new float[45];
-	public static string[] cautionCarNames = new string[45];
+	public static GameObject[] cautionCarsArray = new GameObject[50];
+	public static float[] cautionCarPositions = new float[50];
+	public static string[] cautionCarNames = new string[50];
 
-	public static string[] carChampNames = new string[45];
-	public static int[] carChampPoints = new int[45];
+	public static string[] carChampNames = new string[50];
+	public static int[] carChampPoints = new int[50];
 	
-	public static float[] orderedPositions = new float[45];
-	public static string[] orderedNames = new string[45];
+	public static float[] orderedPositions = new float[50];
+	public static string[] orderedNames = new string[50];
 
 	public static int totalCarWins;
 	public static int totalCarTopFives;
@@ -66,7 +66,11 @@ public class Scoreboard : MonoBehaviour {
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
 		
-		seriesPrefix = "cup20";
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
 		
 		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		
@@ -84,7 +88,7 @@ public class Scoreboard : MonoBehaviour {
 				carPositions[i] = car.transform.position.z;
 				carNames[i] = car.transform.name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]+$", "");
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				entrantList.Add(car);
 				i++;
 			}
@@ -109,7 +113,7 @@ public class Scoreboard : MonoBehaviour {
 					carPositions[i] = car.transform.position.z;
 					carNames[i] = car.transform.name;
 					carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-					driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 					entrantList.Add(car);
 					i++;
 					//Debug.Log("Added car " + i);
@@ -130,10 +134,6 @@ public class Scoreboard : MonoBehaviour {
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
 		if(carsArray.Length > 0){
 			foreach (GameObject car in carsArray) {
-				//carPositions[j] = car.transform.position.z;
-				//carNames[j] = car.transform.name;
-				//carNumber[j] = Regex.Replace(carNames[j], "[^0-9]", "");
-				//driverNames[j] = DriverNames.cup2020Names[int.Parse(carNumber[j])];
 				entrantList.Add(car);
 				j++;
 			}
@@ -155,13 +155,18 @@ public class Scoreboard : MonoBehaviour {
 				position = i;
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
+					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
+				} else {
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				Debug.Log("Car #: " + carNumber[i]);
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}
@@ -222,13 +227,13 @@ public class Scoreboard : MonoBehaviour {
 				position = i;
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-				driverNames[i] = DriverNames.cup2020Names[int.Parse(carNumber[i])];
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}
@@ -289,9 +294,12 @@ public class Scoreboard : MonoBehaviour {
 		
 		//Lap timer
 		GUI.Box(new Rect(Screen.width - (widthblock * 4),heightblock * 3,widthblock * 3.5f, heightblock * 3.5f), "");
-		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset).ToString("F2") + "MpH");
+		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
 		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
 		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
 		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
+		
+		//Testing - Corner Speeds
+		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 6.75f, widthblock * 3f, heightblock * 1f), "Offset:" + (CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
 	}
 }

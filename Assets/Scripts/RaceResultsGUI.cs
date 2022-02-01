@@ -41,13 +41,21 @@ public class RaceResultsGUI : MonoBehaviour {
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
 
-		resultsRows = 40;
+		resultsRows = PlayerPrefs.GetInt("FieldSize");
+		if(resultsRows > 43){
+			resultsRows = 43;
+		}
+		Debug.Log("Total finishers: " + resultsRows);
 
 		playerCarNumber = PlayerPrefs.GetString("carTexture");
 		string splitAfter = "livery";
 		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
 
-		seriesPrefix = "cup20";
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
 
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 
@@ -175,7 +183,6 @@ public class RaceResultsGUI : MonoBehaviour {
 			}
 			break;
 		}
-
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PrizeMoney.cashAmount[Scoreboard.position] * winningsMultiplier;
@@ -204,7 +211,8 @@ public class RaceResultsGUI : MonoBehaviour {
 		string carDriver;
 		float windowscroll;
 
-		windowscroll = 4.5f;
+		windowscroll = (resultsRows + 5) * 0.1f;
+		//windowscroll = 4.5f;
 
 		GUI.skin.verticalScrollbar.fixedWidth = Screen.width / 20;
 		GUI.skin.verticalScrollbarThumb.fixedWidth = Screen.width / 20;
@@ -228,6 +236,7 @@ public class RaceResultsGUI : MonoBehaviour {
 					GUI.DrawTexture(new Rect(widthblock * 5, (heightblock * (i * 2)) + (heightblock * 2), heightblock * 3f, heightblock * 1.5f), Resources.Load(seriesPrefix + "livery" + playerCarNumber) as Texture);
 				}
 			} else {
+				Debug.Log("#" + i + " - " + Scoreboard.carNames[i]);
 				carNumber = Scoreboard.carNames[i].Remove(0,6);
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
 					int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
@@ -242,23 +251,17 @@ public class RaceResultsGUI : MonoBehaviour {
 				GUI.skin.label.normal.textColor = Color.red;
 			}
 			GUI.Label(new Rect(widthblock * 3.5f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 2, heightblock * 2), "P" + (i + 1));
+			carDriver = DriverNames.getName(seriesPrefix, int.Parse(carNumber));
+			
 			if(i == (Scoreboard.position)){
-				//carDriver = PlayerPrefs.GetString("RacerName");
-				carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
+				if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "AltDriver")){
+					GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), PlayerPrefs.GetString(seriesPrefix + carNumber + "AltDriver"));
+				} else {
+					GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "");
+				}	
 			} else {
-				switch (PlayerPrefs.GetString("raceSeries")){
-				case "StockCar":
-					carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
-					break;
-				default:
-					//Debug.Log("Car Number: " + carNumber);
-					carDriver = DriverNames.cup2020Names[int.Parse(carNumber)];
-					break;
-				}
-			}
-			
-			GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "");
-			
+				GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "");
+			} 
 			if(i == (Scoreboard.position)){
 				GUI.Label(new Rect(widthblock * 14, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.leaderDist).ToString("F3"));
 			} else {

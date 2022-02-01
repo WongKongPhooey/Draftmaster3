@@ -284,8 +284,8 @@ public class PrizeCollection : MonoBehaviour
 	
 	void EventGarage(string seriesPrefix, int carNumber){
 
-		int[] randAmtSet = {10,10,10,12,12,12,15,15,25};
-		int randAmt = randAmtSet[Random.Range(0,4)];
+		int[] randAmtSet = {5,5,7,10,10,12,12,15,25};
+		int randAmt = randAmtSet[Random.Range(0,randAmtSet.Length)];
 
 		AddPrize(seriesPrefix, carNumber, randAmt);
 	}

@@ -97,29 +97,27 @@ public class SingleCar : MonoBehaviour {
 			currentCar = 1;
 		}
 		
-		currentCarManu = DriverNames.cup2020Manufacturer[currentCar];
-		currentCarTeam = DriverNames.cup2020Teams[currentCar];
-		currentCarType = DriverNames.cup2020Types[currentCar];
-		currentCarRarity = DriverNames.cup2020Rarity[currentCar];
+		currentCarManu = DriverNames.getManufacturer(seriesPrefix, currentCar);
+		currentCarTeam = DriverNames.getTeam(seriesPrefix, currentCar);
+		currentCarType = DriverNames.getType(seriesPrefix, currentCar);
+		currentCarRarity = DriverNames.getRarity(seriesPrefix, currentCar);
 		
 		teamMates.Clear();
 		for(int car=0;car<100;car++){
-			if((DriverNames.cup2020Teams[car] == currentCarTeam)
+			if((DriverNames.getTeam(seriesPrefix, car) == currentCarTeam)
 				&&(car != currentCar)){
-				
 				teamMates.Add(car);
 			}
 		}
 		myTeamMates = teamMates.ToArray();
 		
-		seriesPrefix = "cup20";
 		windowscroll = 2.5f;
 		
 		carGears = 0;
 		carClass = 0;
 		
 		unlockClass = 1;
-		unlockClass = DriverNames.cup2020Rarity[currentCar];
+		unlockClass = DriverNames.getRarity(seriesPrefix, currentCar);
 		unlockGears = GameData.unlockGears(unlockClass);
 		
 		if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
@@ -130,9 +128,9 @@ public class SingleCar : MonoBehaviour {
 		if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "Unlocked") != 1){
 			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Unlocked", 1);
 			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - unlockGears);
-			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.cup2020Rarity[currentCar]);
+			PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.getRarity(seriesPrefix, currentCar));
 			carGears = PlayerPrefs.GetInt(seriesPrefix + currentCar + "Gears");
-			carClass = DriverNames.cup2020Rarity[currentCar];
+			carClass = DriverNames.getRarity(seriesPrefix, currentCar);
 			classMax = GameData.classMax(carClass);
 		}
 		
@@ -150,13 +148,6 @@ public class SingleCar : MonoBehaviour {
 		availNums = availableNumbers.ToArray();
 		
 		freeAgents.Clear();
-		
-		for(int car=0;car<10;car++){
-			if(DriverNames.cup2020AltNames[car] != null){
-				freeAgents.Add(DriverNames.cup2020AltNames[car]);
-			}
-		}
-		availFreeAgents = freeAgents.ToArray();
 		
 		if(!PlayerPrefs.HasKey("TransfersLeft")){
 			PlayerPrefs.SetInt("TransfersLeft",1);
@@ -231,7 +222,7 @@ public class SingleCar : MonoBehaviour {
 		GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 1.25f), cardY + 10, widthblock * 1f, widthblock * 0.5f), manufacturerTex);
 		
 		Texture2D rarityStars = null;
-		switch(DriverNames.cup2020Rarity[currentCar]){
+		switch(DriverNames.getRarity(seriesPrefix, currentCar)){
 			case 1:
 				rarityStars = starOne;
 				break;
@@ -264,7 +255,11 @@ public class SingleCar : MonoBehaviour {
 			}
 		}
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-		GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), DriverNames.cup2020Names[currentCar]);
+		if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "AltDriver")){
+			GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), PlayerPrefs.GetString(seriesPrefix + currentCar + "AltDriver"));
+		} else {
+			GUI.Label(new Rect(cardX, cardY + (heightblock * 7.5f), widthblock * 6, heightblock * 2), DriverNames.getName(seriesPrefix, currentCar));
+		}
 		
 		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 		//Progress Bar Box
@@ -314,8 +309,8 @@ public class SingleCar : MonoBehaviour {
 				if(GameData.upgradeCost(carClass) == 0){
 					if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
 						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - unlockGears);
-						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.cup2020Rarity[currentCar]);
-						carClass = DriverNames.cup2020Rarity[currentCar];
+						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.getRarity(seriesPrefix, currentCar));
+						carClass = DriverNames.getRarity(seriesPrefix, currentCar);
 						classMax = GameData.classMax(carClass);
 					}
 				}
@@ -424,7 +419,7 @@ public class SingleCar : MonoBehaviour {
 				
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
 				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), "Stock");
-				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar) as Texture, ScaleMode.ScaleToFit);
+				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load(seriesPrefix + "livery" + currentCar) as Texture, ScaleMode.ScaleToFit);
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
 				GUI.skin = redGUI;
@@ -432,6 +427,7 @@ public class SingleCar : MonoBehaviour {
 				if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "AltPaint")){
 					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 						PlayerPrefs.DeleteKey(seriesPrefix + currentCar + "AltPaint");
+						PlayerPrefs.DeleteKey(seriesPrefix + currentCar + "AltDriver");
 					}
 				} else {
 					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
@@ -442,7 +438,7 @@ public class SingleCar : MonoBehaviour {
 				//Alt Paints Row
 				for(int columns = 1; columns < 3; columns++){
 
-					if(AltPaints.cup2020AltPaintNames[currentCar,columns] != null){
+					if(AltPaints.getAltPaintName(seriesPrefix, currentCar,columns) != null){
 					
 						cardX = widthblock * (columns * 4.25f) + (widthblock * 7.25f);
 						cardY = heightblock * 6f;
@@ -455,7 +451,7 @@ public class SingleCar : MonoBehaviour {
 						GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 						
 						GUI.skin.label.alignment = TextAnchor.UpperCenter;
-						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.cup2020AltPaintNames[currentCar,columns]);
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.getAltPaintName(seriesPrefix, currentCar,columns));
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar + "alt" + columns) as Texture, ScaleMode.ScaleToFit);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
@@ -465,6 +461,10 @@ public class SingleCar : MonoBehaviour {
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != columns){
 								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns);
+									if(AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns) != null){
+										PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
+										Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
+									}
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;
@@ -482,7 +482,7 @@ public class SingleCar : MonoBehaviour {
 				int offset = 2;
 				for(int columns = 1; columns < 4; columns++){
 
-					if(AltPaints.cup2020AltPaintNames[currentCar,columns+offset] != null){
+					if(AltPaints.getAltPaintName(seriesPrefix, currentCar,columns+offset) != null){
 					
 						cardX = widthblock * (columns * 4.25f) + (widthblock * 3.25f);
 						cardY = heightblock * 12.5f;
@@ -495,7 +495,7 @@ public class SingleCar : MonoBehaviour {
 						GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 						
 						GUI.skin.label.alignment = TextAnchor.UpperCenter;
-						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.cup2020AltPaintNames[currentCar,columns+offset]);
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.getAltPaintName(seriesPrefix, currentCar,columns+offset));
 						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar + "alt" + (columns + offset)) as Texture, ScaleMode.ScaleToFit);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
@@ -505,6 +505,10 @@ public class SingleCar : MonoBehaviour {
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != (columns+offset)){
 								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4f), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns+offset);
+									if(AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset) != null){
+										PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
+										Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
+									}
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;

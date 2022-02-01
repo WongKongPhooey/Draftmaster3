@@ -104,6 +104,8 @@ public class MainMenuGUI : MonoBehaviour {
 		}
 		
 		PlayerPrefs.DeleteKey("FinishPos");
+		PlayerPrefs.DeleteKey("FixedSeries");
+		PlayerPrefs.DeleteKey("CustomField");
 		PlayerPrefs.SetInt("TutorialActive",0);
 		PlayerPrefs.SetInt("CautionHasBeen",0);
 		PlayerPrefs.SetInt("TotalRivals",0);

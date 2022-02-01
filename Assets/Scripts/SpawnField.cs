@@ -16,10 +16,15 @@ public class SpawnField : MonoBehaviour {
 
 	int gridRows;
 	int gridLanes;
+	int circuitLanes;
 	int AILevel;
+	
+	int fieldSize;
 	
 	int currentSeries;
 	int currentSubseries;
+	
+	string seriesPrefix;
 	
 	bool cautionRestart;
 	public static int startLane;
@@ -28,47 +33,74 @@ public class SpawnField : MonoBehaviour {
 	void Start () {
 
 		int playerRow;
+		
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
 
 		gridLanes = 2;
+		
+		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
 		
 		currentSeries = PlayerPrefs.GetInt("CurrentSeries");
 		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
 		
-		if(PlayerPrefs.GetInt("CircuitLanes") == 4){
-			startLane = Random.Range(3,5);
-		} else {
-			startLane = Random.Range(2,4);
-		}
+		startLane = Random.Range(1,3); //1 or 2
 		
-		if(PlayerPrefs.GetString("ChallengeType")=="LastToFirstLaps"){
-			startLane = 3;
+		if(PlayerPrefs.GetString("RaceType") == "Event"){
+			AILevel = EventData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+		} else {
+			AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		}
-		if(PlayerPrefs.GetString("ChallengeType")=="NoFuel"){
-			startLane = 2;
-		}
-		if(PlayerPrefs.GetString("ChallengeType")=="TrafficJam"){
-			startLane = 2;
-		}
-
-		AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		if(AILevel>15){
 			AILevel = 15;
 		}
 
-		spawnCup2020Cars();
+		if(PlayerPrefs.HasKey("CustomField")){
+			spawnCustomField(PlayerPrefs.GetString("CustomField"));
+		} else {
+			spawnCars(seriesPrefix);
+		}
 		//spawnCup2020Scenario();
 		paceDistance = 2.5f;
 		string carNumber = PlayerPrefs.GetString("carTexture");
 		carNumber = PlayerPrefs.GetString("carTexture");			
 		string splitAfter = "livery";
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
+		
 		fastCars.Remove(carNumber);
 		midCars.Remove(carNumber);
 		slowCars.Remove(carNumber);
-		gridRows = 21;
-		playerRow = Random.Range(AILevel,AILevel+5);
-		//gridRows = 2;
-		//playerRow = 2;
+		
+		// +1 for the Player's car
+		fieldSize = fastCars.Count + midCars.Count + slowCars.Count + 1;
+		
+		//Max field size
+		if(fieldSize > 45){
+			fieldSize = 45;
+		}
+		
+		PlayerPrefs.SetInt("FieldSize", fieldSize);
+		float gridRowsCalc = fieldSize * 0.5f;
+		
+		gridRows = Mathf.CeilToInt(gridRowsCalc);
+		
+		Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
+		
+		if(gridRows > (AILevel+5)){
+			playerRow = Random.Range(AILevel,AILevel+5);
+			Debug.Log("Full row selection: " + playerRow);
+		} else {
+			if(gridRows > AILevel){
+				playerRow = Random.Range(AILevel,gridRows);
+				Debug.Log("Shortened row selection: " + playerRow);
+			} else {
+				playerRow = gridRows;
+				Debug.Log("Back row: " + playerRow);
+			}
+		}
 
 		string challengeName = PlayerPrefs.GetString("ChallengeType");
 
@@ -96,305 +128,166 @@ public class SpawnField : MonoBehaviour {
 
 		//Cars In Front
 		for (int i = playerRow - 1; i >= 1; i--) {
-			
-			//The Indy Car "Legends 500" Always Starts 3 Wide!
-			if((PlayerPrefs.GetString("CurrentCircuit")=="Legends500")&&(PlayerPrefs.GetString("raceSeries")=="IndyCar")){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(1.2f, 0.4f, i * paceDistance), Quaternion.identity);
+			for(int j=1;j<=gridLanes;j++){
 				if(fastCars.Count > 0){
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 					carChoice = Random.Range(0,fastCars.Count);
 					carNum = fastCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
+					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 					fastCars.RemoveAt(carChoice);
 				} else {
 					if(midCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 						carChoice = Random.Range(0,midCars.Count);
 						carNum = midCars[carChoice].ToString();
 						AICarInstance.name = ("AICar0" + carNum);
-						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
+						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 						midCars.RemoveAt(carChoice);
 					} else {
-						carChoice = Random.Range(0,slowCars.Count);
-						carNum = slowCars[carChoice].ToString();
-						AICarInstance.name = ("AICar0" + carNum);
-						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
-						slowCars.RemoveAt(carChoice);
+						if(slowCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
+							carChoice = Random.Range(0,slowCars.Count);
+							carNum = slowCars[carChoice].ToString();
+							AICarInstance.name = ("AICar0" + carNum);
+							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							slowCars.RemoveAt(carChoice);
+						}
 					}
-				}
-			}
-			
-			//Lane 2
-			if(PlayerPrefs.GetInt("CircuitLanes") == 3){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(0, 0.4f, i * paceDistance), Quaternion.identity);
-				if(fastCars.Count > 0){
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					slowCars.RemoveAt(carChoice);
-				}
-			}
-			
-			//Lane 3
-			AICarInstance = Instantiate(AICarPrefab, new Vector3(-1.2f, 0.4f, i * paceDistance), Quaternion.identity);
-			if(fastCars.Count > 0){
-				carChoice = Random.Range(0,fastCars.Count);
-				carNum = fastCars[carChoice].ToString();
-				AICarInstance.name = ("AICar0" + carNum);
-				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				fastCars.RemoveAt(carChoice);
-			} else {
-				carChoice = Random.Range(0,slowCars.Count);
-				carNum = slowCars[carChoice].ToString();
-				AICarInstance.name = ("AICar0" + carNum);
-				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				slowCars.RemoveAt(carChoice);
-			}
-			
-			//Lane 4
-			if(PlayerPrefs.GetInt("CircuitLanes") == 4){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(-2.4f, 0.4f, i * paceDistance), Quaternion.identity);
-				if(fastCars.Count > 0){
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					slowCars.RemoveAt(carChoice);
 				}
 			}
 		}
 
 		//Position the player car in it's start lane
-		GameObject.Find("Player").transform.Translate(-1.2f * (startLane - 1),0f,0f);
+		GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
 
-		//Lane 1
-		if((PlayerPrefs.GetString("CurrentCircuit")=="Legends500")&&(PlayerPrefs.GetString("raceSeries")=="IndyCar")){
-			if(startLane != 1){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(1.2f, 0.4f, 0), Quaternion.identity);
+		for(int j=1;j<=gridLanes;j++){
+			if(j != startLane){
 				if(fastCars.Count > 0){
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 					carChoice = Random.Range(0,fastCars.Count);
 					carNum = fastCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
+					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
-					slowCars.RemoveAt(carChoice);
-				}
-			}
-		}
-
-		//Lane 2
-		if(PlayerPrefs.GetInt("CircuitLanes") == 3){
-			if(startLane != 2){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(0, 0.4f, 0), Quaternion.identity);
-				if(fastCars.Count > 0){
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					slowCars.RemoveAt(carChoice);
-				}
-			}
-		}
-		
-		//Lane 3
-		if(startLane != 3){
-			AICarInstance = Instantiate(AICarPrefab, new Vector3(-1.2f, 0.4f, 0), Quaternion.identity);
-			if(fastCars.Count > 0){
-				carChoice = Random.Range(0,fastCars.Count);
-				carNum = fastCars[carChoice].ToString();
-				AICarInstance.name = ("AICar0" + carNum);
-				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				fastCars.RemoveAt(carChoice);
-			} else {
-				carChoice = Random.Range(0,slowCars.Count);
-				carNum = slowCars[carChoice].ToString();
-				AICarInstance.name = ("AICar0" + carNum);
-				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				slowCars.RemoveAt(carChoice);
-			}
-		}
-
-		//Lane 4
-		if(PlayerPrefs.GetInt("CircuitLanes") == 4){
-			if(startLane != 4){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(-2.4f, 0.4f, 0), Quaternion.identity);
-				if(fastCars.Count > 0){
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					slowCars.RemoveAt(carChoice);
+					if(midCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
+						carChoice = Random.Range(0,midCars.Count);
+						carNum = midCars[carChoice].ToString();
+						AICarInstance.name = ("AICar0" + carNum);
+						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+						midCars.RemoveAt(carChoice);
+					} else {
+						if(slowCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
+							carChoice = Random.Range(0,slowCars.Count);
+							carNum = slowCars[carChoice].ToString();
+							AICarInstance.name = ("AICar0" + carNum);
+							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							slowCars.RemoveAt(carChoice);
+						}
+					}
 				}
 			}
 		}
 
 		//Cars Behind
 		for (int i = 1; i < (gridRows - playerRow); i++) {
-			
-			//Lane 1
-			if((PlayerPrefs.GetString("CurrentCircuit")=="Legends500")&&(PlayerPrefs.GetString("raceSeries")=="IndyCar")){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(1.2f, 0.4f, i * -paceDistance), Quaternion.identity);
+			for(int j=1;j<=gridLanes;j++){
 				if(fastCars.Count > 0){
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 					carChoice = Random.Range(0,fastCars.Count);
 					carNum = fastCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
+					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 					fastCars.RemoveAt(carChoice);
 				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 1;
-					slowCars.RemoveAt(carChoice);
-				}
-			}
-			
-			//Lane 2
-			if(PlayerPrefs.GetInt("CircuitLanes") == 3){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(0, 0.4f, i * -paceDistance), Quaternion.identity);
-				if(fastCars.Count > 0){
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 2;
-					slowCars.RemoveAt(carChoice);
-				}
-			}
-			
-			//Lane 3
-			AICarInstance = Instantiate(AICarPrefab, new Vector3(-1.2f, 0.4f, i * -paceDistance), Quaternion.identity);
-			if(fastCars.Count > 0){
-				carChoice = Random.Range(0,fastCars.Count);
-				carNum = fastCars[carChoice].ToString();
-				AICarInstance.name = ("AICar0" + carNum);
-				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				fastCars.RemoveAt(carChoice);
-			} else {
-				carChoice = Random.Range(0,slowCars.Count);
-				carNum = slowCars[carChoice].ToString();
-				AICarInstance.name = ("AICar0" + carNum);
-				GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 3;
-				slowCars.RemoveAt(carChoice);
-			}
-
-			//Lane 4
-			if(PlayerPrefs.GetInt("CircuitLanes") == 4){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(-2.4f, 0.4f, i * -paceDistance), Quaternion.identity);
-				if(fastCars.Count > 0){
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					carChoice = Random.Range(0,slowCars.Count);
-					carNum = slowCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = 4;
-					slowCars.RemoveAt(carChoice);
+					if(midCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
+						carChoice = Random.Range(0,midCars.Count);
+						carNum = midCars[carChoice].ToString();
+						AICarInstance.name = ("AICar0" + carNum);
+						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+						midCars.RemoveAt(carChoice);
+					} else {
+						if(slowCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
+							carChoice = Random.Range(0,slowCars.Count);
+							carNum = slowCars[carChoice].ToString();
+							AICarInstance.name = ("AICar0" + carNum);
+							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							slowCars.RemoveAt(carChoice);
+						}
+					}
 				}
 			}
 		}
-		//Scoreboard.checkPositions();
+		//Debug.Log("Cars Spawned: " + slowCars.Count);
+			
 		Scoreboard.updateScoreboard();
 	}
 
 	public static void spawnIndycars(){
-
 		fastCars.Clear();
 		midCars.Clear();
 		slowCars.Clear();
 	}
 
-	public static void spawnCup2020Cars(){
+	public static void spawnCars(string seriesPref){
 		fastCars.Clear();
 		midCars.Clear();
 		slowCars.Clear();
 		
-		fastCars.Add("1");
-		fastCars.Add("2");
-		fastCars.Add("3");
-		fastCars.Add("4");
-		fastCars.Add("5");
-		fastCars.Add("6");
-		fastCars.Add("8");
-		fastCars.Add("9");
-		fastCars.Add("10");
-		fastCars.Add("11");
-		fastCars.Add("12");
-		fastCars.Add("13");
-		fastCars.Add("14");
-		fastCars.Add("18");
-		fastCars.Add("19");
-		fastCars.Add("20");
-		fastCars.Add("21");
-		fastCars.Add("22");
-		fastCars.Add("24");
-		fastCars.Add("42");
-		fastCars.Add("43");
-		fastCars.Add("48");
-		fastCars.Add("88");
-		fastCars.Add("95");
-		slowCars.Add("0");
-		slowCars.Add("7");
-		slowCars.Add("15");
-		slowCars.Add("16");
-		slowCars.Add("17");
-		slowCars.Add("27");
-		slowCars.Add("32");
-		slowCars.Add("34");
-		slowCars.Add("36");
-		slowCars.Add("37");
-		slowCars.Add("38");
-		slowCars.Add("41");
-		slowCars.Add("47");
-		slowCars.Add("49");
-		slowCars.Add("51");
-		slowCars.Add("52");
-		slowCars.Add("53");
-		slowCars.Add("54");
-		slowCars.Add("62");
-		slowCars.Add("66");
-		slowCars.Add("74");
-		slowCars.Add("77");
-		slowCars.Add("78");
-		slowCars.Add("96");
+		for(int i=0;i<100;i++){
+			switch(DriverNames.getRarity(seriesPref, i)){
+				case 4:
+					fastCars.Add("" + i + "");
+					break;
+				case 3:
+					fastCars.Add("" + i + "");
+					break;
+				case 2:
+					midCars.Add("" + i + "");
+					break;
+				case 1:
+					slowCars.Add("" + i + "");
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	
+	public static void spawnCustomField(string customField){
+		fastCars.Clear();
+		midCars.Clear();
+		slowCars.Clear();
 		
+		switch(customField){
+			case "cup22AllStar":
+				fastCars.Add("4");
+				fastCars.Add("5");
+				fastCars.Add("6");
+				fastCars.Add("9");
+				fastCars.Add("11");
+				fastCars.Add("18");
+				fastCars.Add("19");
+				fastCars.Add("22");
+				midCars.Add("12");
+				midCars.Add("20");
+				midCars.Add("24");
+				midCars.Add("45");
+				midCars.Add("48");
+				slowCars.Add("10");
+				slowCars.Add("16");
+				slowCars.Add("23");
+				//slowCars.Add("34");
+				slowCars.Add("41");
+				break;
+			default:
+				break;
+		}
 	}
 	
 	public static void spawnCup2020Scenario(){

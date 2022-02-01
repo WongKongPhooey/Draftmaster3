@@ -17,6 +17,7 @@ public class AllCars : MonoBehaviour {
 	
 	string filterSeries;
 	string seriesPrefix;
+	bool seriesPanel;
 	
 	public Texture BoxTexture;
 
@@ -36,6 +37,7 @@ public class AllCars : MonoBehaviour {
 	public Texture2D starOne;
 	public Texture2D starTwo;
 	public Texture2D starThree;
+	public Texture2D starFour;
 
 	public Vector2 scrollPosition = Vector2.zero;
 	
@@ -45,6 +47,7 @@ public class AllCars : MonoBehaviour {
 		filterSeries = "";
 		
 		seriesPrefix = "cup20";
+		seriesPanel = false;
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
@@ -55,7 +58,7 @@ public class AllCars : MonoBehaviour {
 		//Count Unlocks..
 		int totalUnlocks = 0;
 		for(int i=0;i<100;i++){
-			if(DriverNames.cup2020Names[i] != null){
+			if(DriverNames.getName(seriesPrefix, i) != null){
 				if(PlayerPrefs.HasKey(seriesPrefix + i + "Gears")){
 					if(PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked") == 1){
 						totalUnlocks++;
@@ -169,13 +172,18 @@ public class AllCars : MonoBehaviour {
 		
 		GUI.skin = buttonSkin;
 		
+		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), seriesPrefix)){
+			seriesPanel = true;
+		}
+		
 		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
 		GUI.skin.button.fontSize = 96 / FontScale.fontScale;
 
 		GUI.skin.label.normal.textColor = Color.black;
 
-		GUI.skin.label.alignment = TextAnchor.UpperLeft;
-		GUI.Label(new Rect(widthblock * 5, 20, widthblock * 5, heightblock * 2), "My Garage");
+		GUI.skin.label.alignment = TextAnchor.UpperRight;
+		GUI.Label(new Rect(widthblock * 6.5f, 20, widthblock * 3, heightblock * 2), "Garage");
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
 		int carCount = 0;
@@ -197,14 +205,15 @@ public class AllCars : MonoBehaviour {
 		
 		if(filterSeries == ""){
 			
-			int maxCars = DriverNames.cup2020Names.Length;
+			//int maxCars = DriverNames.cup2020Names.Length;
+			int maxCars = DriverNames.getFieldSize(seriesPrefix);
 			
 			//Loop through cars
 			for(int rows = 1; rows < 11; rows++){
 				for(int columns = 1; columns < 6; columns++){
 					
 					//If a driver # is not registered
-					while(DriverNames.cup2020Names[carCount] == null){
+					while(DriverNames.getName(seriesPrefix, carCount) == null){
 						if(carCount < 100){
 							carCount++;
 						} else {
@@ -232,11 +241,11 @@ public class AllCars : MonoBehaviour {
 					carClass = PlayerPrefs.GetInt(seriesPrefix + carCount + "Class");
 						
 					int unlockClass = 1;
-					unlockClass = DriverNames.cup2020Rarity[carCount];
+					unlockClass = DriverNames.getRarity(seriesPrefix, carCount);
 					int unlockGears = GameData.unlockGears(unlockClass);
 					
 					
-					if(carCount < 99){
+					if(carCount < 100){
 						string carLivery = seriesPrefix + "livery" + (carCount);
 						float cardX = widthblock * (columns * 3.5f) - (widthblock * 3f);
 						float cardY = heightblock * (8.5f * rows) - (heightblock * 4.5f);
@@ -255,9 +264,9 @@ public class AllCars : MonoBehaviour {
 						
 						GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 						GUI.skin.label.alignment = TextAnchor.UpperLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.cup2020Teams[carCount]);
+						GUI.Label(new Rect(cardX + 10, cardY + 10, widthblock * 1.5f, heightblock * 1f), DriverNames.getTeam(seriesPrefix, carCount));
 						Texture2D manufacturerTex = null;
-						switch(DriverNames.cup2020Manufacturer[carCount]){
+						switch(DriverNames.getManufacturer(seriesPrefix, carCount)){
 							case "FRD":
 								manufacturerTex = frdTex;
 								break;
@@ -273,7 +282,7 @@ public class AllCars : MonoBehaviour {
 						GUI.DrawTexture(new Rect(cardX + cardW - (widthblock * 0.75f) - 10, cardY + 10, widthblock * 0.75f, widthblock * 0.375f), manufacturerTex);
 						
 						Texture2D rarityStars = null;
-						switch(DriverNames.cup2020Rarity[carCount]){
+						switch(DriverNames.getRarity(seriesPrefix, carCount)){
 							case 1:
 								rarityStars = starOne;
 								break;
@@ -282,6 +291,9 @@ public class AllCars : MonoBehaviour {
 								break;
 							case 3:
 								rarityStars = starThree;
+								break;
+							case 4:
+								rarityStars = starFour;
 								break;
 							default:
 								break;
@@ -305,7 +317,11 @@ public class AllCars : MonoBehaviour {
 							}
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-						GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.cup2020Names[carCount]);
+						if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltDriver")){
+							GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), PlayerPrefs.GetString(seriesPrefix + carCount + "AltDriver"));
+						} else {
+							GUI.Label(new Rect(cardX, cardY + (heightblock * 3.5f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
+						}
 						//Progress Bar Box
 						GUI.Box(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "");
 						//Progress Bar
@@ -324,7 +340,7 @@ public class AllCars : MonoBehaviour {
 							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), "Max Class");
 							GUI.skin.label.normal.textColor = Color.black;
 						} else {
-							if(carClass < DriverNames.cup2020Rarity[carCount]){
+							if(carClass < DriverNames.getRarity(seriesPrefix, carCount)){
 								GUI.skin.label.normal.textColor = Color.white;
 								GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 5f), widthblock * 2.5f, heightblock * 1f), carGears + "/" + unlockGears);
 								GUI.skin.label.normal.textColor = Color.black;
@@ -344,8 +360,8 @@ public class AllCars : MonoBehaviour {
 							if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Unlock")){
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked", 1);
 								PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears", carGears - unlockGears);
-								PlayerPrefs.SetInt(seriesPrefix + carCount + "Class", DriverNames.cup2020Rarity[carCount]);
-								carClass = DriverNames.cup2020Rarity[carCount];
+								carClass = DriverNames.getRarity(seriesPrefix, carCount);
+								PlayerPrefs.SetInt(seriesPrefix + carCount + "Class", carClass);
 								classMax = GameData.classMax(carClass);
 							}
 							GUI.skin = tileSkin;
@@ -362,7 +378,7 @@ public class AllCars : MonoBehaviour {
 							}
 						}
 						GUI.skin.label.alignment = TextAnchor.LowerLeft;
-						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.cup2020Types[carCount]));
+						GUI.Label(new Rect(cardX + 10, cardY + cardH - (heightblock * 2) - 10, widthblock * 1.5f, heightblock * 2), DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carCount)));
 						GUI.skin.label.alignment = TextAnchor.LowerRight;
 						
 						//Locked cars go behind a box layer
@@ -376,7 +392,7 @@ public class AllCars : MonoBehaviour {
 							
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
 								PlayerPrefs.SetInt("CarFocus",carCount);
-								PlayerPrefs.SetString("SeriesFocus","cup20");
+								PlayerPrefs.SetString("SeriesFocus",seriesPrefix);
 								Application.LoadLevel("SingleCar");
 							}
 						}
@@ -411,6 +427,21 @@ public class AllCars : MonoBehaviour {
 		CommonGUI.BackButton("MainMenu");
 		
 		GUI.skin = buttonSkin;
+		
+		if(seriesPanel == true){
+			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			if(seriesPrefix == "cup22"){
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup20")){
+					seriesPrefix = "cup20";
+					seriesPanel = false;
+				}
+			} else {
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup22")){
+					seriesPrefix = "cup22";
+					seriesPanel = false;
+				}
+			}
+		}
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		
