@@ -59,10 +59,12 @@ public class CarSelectGUI : MonoBehaviour {
 			seriesPrefix = "cup20";
 		}
 		
-		//Initialise a car for testing
-		PlayerPrefs.SetInt(seriesPrefix + "20" + "Gears", 10);
-		PlayerPrefs.SetInt(seriesPrefix + "20" + "Unlocked" ,1);
-		PlayerPrefs.SetInt(seriesPrefix + "20" + "Class", 1);
+		//Give a free Allmendinger for Cup '22
+		if(PlayerPrefs.GetInt("cup2216Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2216Unlocked",1);
+			PlayerPrefs.SetInt("cup2216Gears",0);
+			PlayerPrefs.SetInt("cup2216Class",1);
+		}
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);

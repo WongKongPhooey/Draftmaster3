@@ -102,24 +102,26 @@ public class RaceHUD : MonoBehaviour {
 			if(raceOver == false){
 				gamePaused = true;
 				Time.timeScale = 0.0f;
-				raceCam.GetComponent<AudioListener>().enabled = false;
+				this.gameObject.GetComponent<AudioListener>().enabled = false;
 				PlayerPrefs.SetInt("Volume",0);
 			}
 		}
 
 		if(gamePaused == true){
 			GUI.skin = redGUI;
+			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.button.fontSize = 120 / FontScale.fontScale;
 			if (GUI.Button(new Rect(widthblock * 3, heightblock * 8, widthblock * 6, heightblock * 4), "Resume")){
 				gamePaused = false;
 				Time.timeScale = 1.0f;
-				raceCam.GetComponent<AudioListener>().enabled = true;
+				this.gameObject.GetComponent<AudioListener>().enabled = true;
 				PlayerPrefs.SetInt("Volume",1);
 			}
 			if (GUI.Button(new Rect(widthblock * 11, heightblock * 8, widthblock * 6, heightblock * 4), "Quit")){
 				SceneManager.LoadScene("MainMenu");
 				gamePaused = false;
 				Time.timeScale = 1.0f;
-				raceCam.GetComponent<AudioListener>().enabled = true;
+				this.gameObject.GetComponent<AudioListener>().enabled = true;
 				PlayerPrefs.SetInt("Volume",1);
 			}
 			GUI.skin = eightBitSkin;
