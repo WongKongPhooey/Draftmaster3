@@ -34,6 +34,18 @@ public class EventSelectGUI : MonoBehaviour {
 		
 		week = PlayerPrefs.GetInt("GameWeek");
 		
+		if(!PlayerPrefs.HasKey("EarnhardtEventInit")){
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 0 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 1 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 2 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 3 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 4 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 5 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 6 + "EVENT0",0);
+			PlayerPrefs.SetInt("BestFinishPosition" + 1 + "" + 7 + "EVENT0",0);
+			PlayerPrefs.SetInt("EarnhardtEventInit", 1);
+		}
+		
 		seriesMenu = "All";
 		menuIndex = 0;
 	}
@@ -99,7 +111,7 @@ public class EventSelectGUI : MonoBehaviour {
 					GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Live!");
 				} else {
 					//Coming up soon
-					if(!eventWeeks.Any(("0").Contains)){
+					if(!eventWeeks.Any(("999").Contains)){
 						GUI.Label(new Rect(cardX + (widthblock * 3.75f), cardY + (heightblock * 0.5f), widthblock * 2f, heightblock * 2), "Week " + EventData.offlineEventWeek[rootMenu]);
 					}
 				}

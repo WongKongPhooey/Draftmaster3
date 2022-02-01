@@ -427,6 +427,7 @@ public class SingleCar : MonoBehaviour {
 				if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "AltPaint")){
 					if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 						PlayerPrefs.DeleteKey(seriesPrefix + currentCar + "AltPaint");
+						PlayerPrefs.DeleteKey(seriesPrefix + currentCar + "AltDriver");
 					}
 				} else {
 					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
@@ -460,8 +461,10 @@ public class SingleCar : MonoBehaviour {
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != columns){
 								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns);
-									PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
-									Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
+									if(AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns) != null){
+										PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
+										Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns));
+									}
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;
@@ -502,8 +505,10 @@ public class SingleCar : MonoBehaviour {
 							if(PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint") != (columns+offset)){
 								if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 4f), widthblock * 3f, heightblock * 1.5f), "Select")){
 									PlayerPrefs.SetInt(seriesPrefix + currentCar + "AltPaint", columns+offset);
-									PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
-									Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
+									if(AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset) != null){
+										PlayerPrefs.SetString(seriesPrefix + currentCar + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
+										Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(seriesPrefix,currentCar,columns+offset));
+									}
 								}
 							} else {
 								GUI.skin.label.alignment = TextAnchor.MiddleCenter;

@@ -140,7 +140,7 @@ public class CameraRotate : MonoBehaviour {
 		
 		//finishLine.renderer.enabled = false;
 		
-		averageSpeedTotal += Movement.playerSpeed;
+		averageSpeedTotal += (Movement.playerSpeed - carSpeedOffset);
 		averageSpeedCount++;
 		averageSpeed = averageSpeedTotal / averageSpeedCount;
 		

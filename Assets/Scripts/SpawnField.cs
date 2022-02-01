@@ -129,8 +129,8 @@ public class SpawnField : MonoBehaviour {
 		//Cars In Front
 		for (int i = playerRow - 1; i >= 1; i--) {
 			for(int j=1;j<=gridLanes;j++){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 				if(fastCars.Count > 0){
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 					carChoice = Random.Range(0,fastCars.Count);
 					carNum = fastCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
@@ -138,6 +138,7 @@ public class SpawnField : MonoBehaviour {
 					fastCars.RemoveAt(carChoice);
 				} else {
 					if(midCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 						carChoice = Random.Range(0,midCars.Count);
 						carNum = midCars[carChoice].ToString();
 						AICarInstance.name = ("AICar0" + carNum);
@@ -145,6 +146,7 @@ public class SpawnField : MonoBehaviour {
 						midCars.RemoveAt(carChoice);
 					} else {
 						if(slowCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 							carChoice = Random.Range(0,slowCars.Count);
 							carNum = slowCars[carChoice].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
@@ -161,8 +163,8 @@ public class SpawnField : MonoBehaviour {
 
 		for(int j=1;j<=gridLanes;j++){
 			if(j != startLane){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 				if(fastCars.Count > 0){
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 					carChoice = Random.Range(0,fastCars.Count);
 					carNum = fastCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
@@ -170,6 +172,7 @@ public class SpawnField : MonoBehaviour {
 					fastCars.RemoveAt(carChoice);
 				} else {
 					if(midCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 						carChoice = Random.Range(0,midCars.Count);
 						carNum = midCars[carChoice].ToString();
 						AICarInstance.name = ("AICar0" + carNum);
@@ -177,6 +180,7 @@ public class SpawnField : MonoBehaviour {
 						midCars.RemoveAt(carChoice);
 					} else {
 						if(slowCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 							carChoice = Random.Range(0,slowCars.Count);
 							carNum = slowCars[carChoice].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
@@ -191,8 +195,8 @@ public class SpawnField : MonoBehaviour {
 		//Cars Behind
 		for (int i = 1; i < (gridRows - playerRow); i++) {
 			for(int j=1;j<=gridLanes;j++){
-				AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 				if(fastCars.Count > 0){
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 					carChoice = Random.Range(0,fastCars.Count);
 					carNum = fastCars[carChoice].ToString();
 					AICarInstance.name = ("AICar0" + carNum);
@@ -200,6 +204,7 @@ public class SpawnField : MonoBehaviour {
 					fastCars.RemoveAt(carChoice);
 				} else {
 					if(midCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 						carChoice = Random.Range(0,midCars.Count);
 						carNum = midCars[carChoice].ToString();
 						AICarInstance.name = ("AICar0" + carNum);
@@ -207,6 +212,7 @@ public class SpawnField : MonoBehaviour {
 						midCars.RemoveAt(carChoice);
 					} else {
 						if(slowCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 							carChoice = Random.Range(0,slowCars.Count);
 							carNum = slowCars[carChoice].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
@@ -272,11 +278,11 @@ public class SpawnField : MonoBehaviour {
 				midCars.Add("20");
 				midCars.Add("24");
 				midCars.Add("45");
-				midCars.Add("88");
+				midCars.Add("48");
 				slowCars.Add("10");
 				slowCars.Add("16");
 				slowCars.Add("23");
-				slowCars.Add("34");
+				//slowCars.Add("34");
 				slowCars.Add("41");
 				break;
 			default:

@@ -343,7 +343,11 @@ public class CarSelectGUI : MonoBehaviour {
 							}
 						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-						GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
+						if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltDriver")){
+							GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), PlayerPrefs.GetString(seriesPrefix + carCount + "AltDriver"));
+						} else {
+							GUI.Label(new Rect(cardX, cardY + (heightblock * 4f), widthblock * 3, heightblock * 2), DriverNames.getName(seriesPrefix, carCount));
+						}
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 						
 						GUI.skin.label.alignment = TextAnchor.LowerLeft;

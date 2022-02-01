@@ -430,9 +430,16 @@ public class AllCars : MonoBehaviour {
 		
 		if(seriesPanel == true){
 			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-			if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup22")){
-				seriesPrefix = "cup22";
-				seriesPanel = false;
+			if(seriesPrefix == "cup22"){
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup20")){
+					seriesPrefix = "cup20";
+					seriesPanel = false;
+				}
+			} else {
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup22")){
+					seriesPrefix = "cup22";
+					seriesPanel = false;
+				}
 			}
 		}
 		

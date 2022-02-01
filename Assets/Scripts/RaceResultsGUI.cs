@@ -253,8 +253,15 @@ public class RaceResultsGUI : MonoBehaviour {
 			GUI.Label(new Rect(widthblock * 3.5f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 2, heightblock * 2), "P" + (i + 1));
 			carDriver = DriverNames.getName(seriesPrefix, int.Parse(carNumber));
 			
-			GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "");
-			
+			if(i == (Scoreboard.position)){
+				if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "AltDriver")){
+					GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), PlayerPrefs.GetString(seriesPrefix + carNumber + "AltDriver"));
+				} else {
+					GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "");
+				}	
+			} else {
+				GUI.Label(new Rect(widthblock * 9f, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 7, heightblock * 2), "" + carDriver + "");
+			} 
 			if(i == (Scoreboard.position)){
 				GUI.Label(new Rect(widthblock * 14, (heightblock * (i * 2)) + (heightblock * 2), widthblock * 3, heightblock * 2), "+" + (Scoreboard.leaderDist).ToString("F3"));
 			} else {
