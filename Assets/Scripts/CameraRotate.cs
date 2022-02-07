@@ -80,6 +80,9 @@ public class CameraRotate : MonoBehaviour {
 		turnSpeed = 0;
 		trackLength = 0;
 		totalTurns = PlayerPrefs.GetInt("TotalTurns");
+		
+		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
+		
 		for(int i=0;i<totalTurns;i++){
 			trackLength += straightLength[i];
 			//Debug.Log("Track Length: " + trackLength);
@@ -88,7 +91,9 @@ public class CameraRotate : MonoBehaviour {
 		}
 		straight = totalTurns;
 		turn = totalTurns;
-		TDCamera.transform.Rotate(0,0,turnLength[turn-1]);
+		if(cameraRotate == 1){
+			TDCamera.transform.Rotate(0,0,turnLength[turn-1]);
+		}
 		
 		lap = 0;
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
@@ -102,7 +107,6 @@ public class CameraRotate : MonoBehaviour {
 		cornercounter = 0;
 		carSpeedOffset = 80;
 		cornerSpeed = 0;
-		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
 
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 

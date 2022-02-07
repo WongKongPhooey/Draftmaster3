@@ -282,7 +282,7 @@ public class SpawnField : MonoBehaviour {
 				slowCars.Add("10");
 				slowCars.Add("16");
 				slowCars.Add("23");
-				//slowCars.Add("34");
+				slowCars.Add("34");
 				slowCars.Add("41");
 				break;
 			default:
