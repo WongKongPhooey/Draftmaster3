@@ -153,7 +153,7 @@ public class Store : MonoBehaviour{
 		customStoreDailySelects = PlayerPrefs.GetString("StoreDailySelects");
 		Debug.Log("Online store: " + customStoreDailySelects);
 		
-		if(customStoreDailySelects != ""){
+		/*if(customStoreDailySelects != ""){
 			dailySelects.Clear();
 			string[] onlineSelects = customStoreDailySelects.Split(',');
 			foreach(string item in onlineSelects){
@@ -161,9 +161,10 @@ public class Store : MonoBehaviour{
 				//Debug.Log(item + " added to store");
 			}
 			Debug.Log("Total shop items added: " + dailySelects.Count);
-		} else {
+		} else {*/
 			dailySelects.Clear();
 			dailySelects.Add(5);
+			dailySelects.Add("cup2222");
 			dailySelects.Add(18);
 			dailySelects.Add(3);
 			dailySelects.Add(24);
@@ -173,9 +174,9 @@ public class Store : MonoBehaviour{
 			dailySelects.Add(38);
 			dailySelects.Add(47);
 			dailySelects.Add(52);
-			dailySelects.Add(54);
+			//dailySelects.Add(54);
 			dailySelects.Add(95);
-		}
+		//}
 		
 		dailySelectsPicked = 1;
 		PlayerPrefs.SetInt("DailySelects",1);
