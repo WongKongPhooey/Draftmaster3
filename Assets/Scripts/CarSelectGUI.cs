@@ -13,8 +13,6 @@ public class CarSelectGUI : MonoBehaviour {
 	float widthblock = Mathf.Round(Screen.width/20);
 	float heightblock = Mathf.Round(Screen.height/20);
 	
-	string filterSeries;
-	
 	public Texture BoxTexture;
 
 	int playerLevel;
@@ -25,6 +23,8 @@ public class CarSelectGUI : MonoBehaviour {
 	int maxCars;
 	
 	string seriesPrefix;
+	string filterSeries;
+	bool seriesPanel;
 	
 	string restrictionType;
 	string restrictionValue;
@@ -51,8 +51,9 @@ public class CarSelectGUI : MonoBehaviour {
 	void Awake(){
 		playerLevel = 10;
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
-		filterSeries = "";
 		
+		filterSeries = "";
+		seriesPanel = false;		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
 		} else {
@@ -196,14 +197,18 @@ public class CarSelectGUI : MonoBehaviour {
 		
 		GUI.skin = buttonSkin;
 		
+		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), seriesPrefix)){
+			seriesPanel = true;
+		}
+		
 		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
 		GUI.skin.button.fontSize = 96 / FontScale.fontScale;
 
 		GUI.skin.label.normal.textColor = Color.black;
 
-		GUI.skin.label.alignment = TextAnchor.UpperLeft;
-		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
-		GUI.Label(new Rect(widthblock * 4, 20, widthblock * 5, heightblock * 2), "Choose A Car");
+		GUI.skin.label.alignment = TextAnchor.UpperRight;
+		GUI.Label(new Rect(widthblock * 6.5f, 20, widthblock * 3, heightblock * 2), "Pick Car");
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 
 		int carCount = 0;
@@ -368,7 +373,7 @@ public class CarSelectGUI : MonoBehaviour {
 							if(GUI.Button(new Rect(cardX, cardY, cardW, cardH), "")){
 								PlayerPrefs.SetString("carTexture", carLivery);
 								PlayerPrefs.SetInt("CarChoice",carCount);
-								PlayerPrefs.SetString("carSeries", "cup20");
+								PlayerPrefs.SetString("carSeries", seriesPrefix);
 								Application.LoadLevel("CircuitSelect");
 							}
 						}
@@ -489,6 +494,21 @@ public class CarSelectGUI : MonoBehaviour {
 		CommonGUI.BackButton("SeriesSelect");
 		
 		GUI.skin = buttonSkin;
+		
+		if(seriesPanel == true){
+			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			if(seriesPrefix == "cup22"){
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup20")){
+					seriesPrefix = "cup20";
+					seriesPanel = false;
+				}
+			} else {
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup22")){
+					seriesPrefix = "cup22";
+					seriesPanel = false;
+				}
+			}
+		}
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
 		

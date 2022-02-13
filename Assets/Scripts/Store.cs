@@ -164,7 +164,7 @@ public class Store : MonoBehaviour{
 		} else {*/
 			dailySelects.Clear();
 			dailySelects.Add(5);
-			dailySelects.Add("cup2222");
+			dailySelects.Add("cup224");
 			dailySelects.Add(18);
 			dailySelects.Add(3);
 			dailySelects.Add(24);
@@ -615,7 +615,11 @@ public class Store : MonoBehaviour{
 							GUI.skin.label.normal.textColor = Color.black;
 						}
 
-						GUI.skin = redGUI;
+						if(carSeries == "cup22"){
+							GUI.skin = blueGUI;
+						} else {
+							GUI.skin = redGUI;
+						}
 						
 						int itemPrice = getShopPriceByRarity(DriverNames.getRarity(seriesPrefix,carNumInt));
 						
