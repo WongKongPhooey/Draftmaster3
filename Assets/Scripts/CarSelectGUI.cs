@@ -374,6 +374,7 @@ public class CarSelectGUI : MonoBehaviour {
 								PlayerPrefs.SetString("carTexture", carLivery);
 								PlayerPrefs.SetInt("CarChoice",carCount);
 								PlayerPrefs.SetString("carSeries", seriesPrefix);
+								PlayerPrefs.SetString("CarSeries", seriesPrefix);
 								Application.LoadLevel("CircuitSelect");
 							}
 						}

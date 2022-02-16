@@ -21,7 +21,6 @@ public class EnviroMovement : MonoBehaviour {
 		minScrollSpeed = 0.175f;
 		carSpeedOffset = 0;
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
-		//Debug.Log("Track Speed Offset: " + trackSpeedOffset);
 		enviroSpeed = -3.8f;
 		scrollPos = 1;
 	}
@@ -35,7 +34,6 @@ public class EnviroMovement : MonoBehaviour {
 			//Slowest game speed is car:80, track:105 (LA start), Scaler = 0.066 + 0.131 = 0.197f		
 			float scrollCalc = (carSpeedOffset / 1200f) + (trackSpeedOffset / 800f);
 			scrollPos -= (minScrollSpeed - scrollCalc);
-			Debug.Log("Car Speed:" + carSpeedOffset + ", Track Speed:" + trackSpeedOffset + "Scroll Speed: " + scrollCalc);
 			if(scrollPos < 0){
 				scrollPos+=1;
 			}

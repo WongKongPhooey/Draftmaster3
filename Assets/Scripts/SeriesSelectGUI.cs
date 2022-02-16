@@ -210,6 +210,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 								if(PlayerPrefs.GetString("ChampionshipSubseries") == menuIndex + "" + subMenu){
 									PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("ChampionshipCarTexture"));
 									PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("ChampionshipCarChoice"));
+									PlayerPrefs.SetInt("CarSeries", PlayerPrefs.GetInt("ChampionshipCarSeries"));
 									SceneManager.LoadScene("CircuitSelect");
 								} else {
 									SceneManager.LoadScene("CarSelect");

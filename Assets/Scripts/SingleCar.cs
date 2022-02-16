@@ -398,6 +398,12 @@ public class SingleCar : MonoBehaviour {
 					case "Closer":
 						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 13f, widthblock * 11.5f, heightblock * 2), "Closers Pick Up A Draft From Further Away");
 						break;
+					case "Dominator":
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 13f, widthblock * 11.5f, heightblock * 2), "Dominators Lose Less Speed In Clean Air");
+						break;
+					case "Blocker":
+						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 13f, widthblock * 11.5f, heightblock * 2), "Blockers Hold More Speed When Bump Drafted");
+						break;
 					case "Gentleman":
 						GUI.Label(new Rect(widthblock * 7.5f, heightblock * 13f, widthblock * 11.5f, heightblock * 2), "Everyone Will Work With Gentleman Drivers");
 						break;

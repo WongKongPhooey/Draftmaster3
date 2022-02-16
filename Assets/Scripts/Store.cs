@@ -164,8 +164,8 @@ public class Store : MonoBehaviour{
 		} else {*/
 			dailySelects.Clear();
 			dailySelects.Add(5);
-			dailySelects.Add("cup224");
-			dailySelects.Add(18);
+			dailySelects.Add("cup2278");
+			dailySelects.Add("cup2255");
 			dailySelects.Add(3);
 			dailySelects.Add(24);
 			dailySelects.Add(7);
