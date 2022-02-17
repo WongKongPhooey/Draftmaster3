@@ -39,6 +39,7 @@ public class SpawnField : MonoBehaviour {
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
+		//Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
 
 		gridLanes = 2;
 		
@@ -60,7 +61,9 @@ public class SpawnField : MonoBehaviour {
 
 		if(PlayerPrefs.HasKey("CustomField")){
 			spawnCustomField(PlayerPrefs.GetString("CustomField"));
+			//Debug.Log("Spawn custom field");
 		} else {
+			//Debug.Log("Spawn standard field: " + seriesPrefix);
 			spawnCars(seriesPrefix);
 		}
 		//spawnCup2020Scenario();
@@ -91,14 +94,14 @@ public class SpawnField : MonoBehaviour {
 		
 		if(gridRows > (AILevel+5)){
 			playerRow = Random.Range(AILevel,AILevel+5);
-			Debug.Log("Full row selection: " + playerRow);
+			//Debug.Log("Full row selection: " + playerRow);
 		} else {
 			if(gridRows > AILevel){
 				playerRow = Random.Range(AILevel,gridRows);
-				Debug.Log("Shortened row selection: " + playerRow);
+				//Debug.Log("Shortened row selection: " + playerRow);
 			} else {
 				playerRow = gridRows;
-				Debug.Log("Back row: " + playerRow);
+				//Debug.Log("Back row: " + playerRow);
 			}
 		}
 
@@ -282,7 +285,7 @@ public class SpawnField : MonoBehaviour {
 				slowCars.Add("10");
 				slowCars.Add("16");
 				slowCars.Add("23");
-				//slowCars.Add("34");
+				slowCars.Add("34");
 				slowCars.Add("41");
 				break;
 			default:

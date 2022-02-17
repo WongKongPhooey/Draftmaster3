@@ -47,7 +47,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	static float widthblock = Mathf.Round(Screen.width/20);
 	static float heightblock = Mathf.Round(Screen.height/20);
 
-	public string seriesPrefix;
+	public static string seriesPrefix;
 	public int carNumber;
 
 	string currentSeriesName;
@@ -78,6 +78,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 	public Vector2 scrollPosition = Vector2.zero;
 	
 	void Awake(){
+		
+		widthblock = Mathf.Round(Screen.width/20);
+		heightblock = Mathf.Round(Screen.height/20);
 		
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		seriesPrefix = "cup20";
@@ -123,9 +126,13 @@ public class CircuitSelectGUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
 			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 				PlayerPrefs.SetString("RaceType","Championship");
+				seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
+				PlayerPrefs.SetString("carSeries", seriesPrefix);
+				Debug.Log("ChampionshipCarSeries loaded as " + PlayerPrefs.GetString("ChampionshipCarSeries") + ". CarSeries is " + PlayerPrefs.GetString("carSeries"));
+				
 				//Found a championship
 				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
-				Debug.Log("Current Round: " + championshipRound);
+				//Debug.Log("Current Round: " + championshipRound);
 				if(championshipRound >= seriesLength){
 					//Championship is over, reset
 					PlayerPrefs.DeleteKey("ChampionshipSubseries");
@@ -395,6 +402,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 				PlayerPrefs.SetInt("ChampionshipRound",0);
 				resetChampionshipPoints();
 				PlayerPrefs.SetString("ChampionshipCarTexture", PlayerPrefs.GetString("carTexture"));
+				PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("carSeries"));
+				//Debug.Log("Championship Carset Series set as " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 				PlayerPrefs.SetInt("ChampionshipCarChoice", PlayerPrefs.GetInt("CarChoice"));
 				
 			}
@@ -610,9 +619,11 @@ public class CircuitSelectGUI : MonoBehaviour {
 			if(pointsRow.Key == carNumber){
 				GUI.skin.label.normal.textColor = Color.red;
 			}
-			GUI.Label(new Rect(widthblock, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "" + (pointsTableInd + 1));	
-			GUI.Label(new Rect(widthblock * 3f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.cup2020Names[pointsRow.Key]);	
-			GUI.Label(new Rect(widthblock * 6.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "" + pointsRow.Value);	
+			if(pointsRow.Value > 0){
+				GUI.Label(new Rect(widthblock, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "" + (pointsTableInd + 1));	
+				GUI.Label(new Rect(widthblock * 3f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.getName(seriesPrefix, pointsRow.Key));	
+				GUI.Label(new Rect(widthblock * 6.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "" + pointsRow.Value);	
+			}
 			if(pointsRow.Key == carNumber){
 				GUI.skin.label.normal.textColor = Color.black;
 			}
@@ -860,9 +871,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 		circuitChoice = "Atlanta";
 		PlayerPrefs.SetInt("RaceLaps",5);
 		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",100);
+		PlayerPrefs.SetInt("StraightLength1",150);
 		PlayerPrefs.SetInt("StraightLength2",50);
-		PlayerPrefs.SetInt("StraightLength3",200);
+		PlayerPrefs.SetInt("StraightLength3",350);
 		PlayerPrefs.SetInt("StraightLength4",50);
 		PlayerPrefs.SetInt("TurnLength1",20);
 		PlayerPrefs.SetInt("TurnLength2",160);
@@ -1146,19 +1157,19 @@ public class CircuitSelectGUI : MonoBehaviour {
 		circuitChoice = "Daytona";
 		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",3);
-		PlayerPrefs.SetInt("StraightLength1",1);
-		PlayerPrefs.SetInt("StraightLength2",1);
-		PlayerPrefs.SetInt("StraightLength3",250);
-		PlayerPrefs.SetInt("StraightLength4",20);
+		PlayerPrefs.SetInt("StraightLength1",2);
+		PlayerPrefs.SetInt("StraightLength2",200);
+		PlayerPrefs.SetInt("StraightLength3",500);
+		PlayerPrefs.SetInt("StraightLength4",200);
 		PlayerPrefs.SetInt("TurnLength1",30);
 		PlayerPrefs.SetInt("TurnLength2",150);
 		PlayerPrefs.SetInt("TurnLength3",150);
 		PlayerPrefs.SetInt("TurnLength4",30);
-		PlayerPrefs.SetInt("TurnAngle1",8);
+		PlayerPrefs.SetInt("TurnAngle1",4);
 		PlayerPrefs.SetInt("TurnAngle2",4);
 		PlayerPrefs.SetInt("TurnAngle3",4);
-		PlayerPrefs.SetInt("TurnAngle4",8);
-		PlayerPrefs.SetInt("StartLine",10);
+		PlayerPrefs.SetInt("TurnAngle4",4);
+		PlayerPrefs.SetInt("StartLine",1);
 		PlayerPrefs.SetInt("SpeedOffset",8 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
 		PlayerPrefs.SetString("TrackType","Plate");
@@ -1205,7 +1216,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TurnAngle4",1);
 		PlayerPrefs.SetInt("TurnAngle5",8);
 		PlayerPrefs.SetInt("StartLine",10);
-		PlayerPrefs.SetInt("SpeedOffset",80 - speedFactor);
+		PlayerPrefs.SetInt("SpeedOffset",85 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",5);
 		PlayerPrefs.SetString("TrackType","Short");
 	}

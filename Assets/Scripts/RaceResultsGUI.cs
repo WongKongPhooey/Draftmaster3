@@ -84,6 +84,10 @@ public class RaceResultsGUI : MonoBehaviour {
 					Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
 					RacePoints.setCupPoints();
 					for( int i=0; i < resultsRows; i++){
+						if(Scoreboard.carNames[i] == null){
+							//Exit loop
+							break;
+						}
 						if(i == (Scoreboard.position)){
 							carNumber = playerCarNumber;
 						} else {
@@ -226,6 +230,12 @@ public class RaceResultsGUI : MonoBehaviour {
 		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 
 		for( int i=0; i < resultsRows; i++){
+			
+			if(Scoreboard.carNames[i] == null){
+				//Exit loop
+				break;
+			}
+			
 			if(i == (Scoreboard.position)){
 				carNumber = playerCarNumber;
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){

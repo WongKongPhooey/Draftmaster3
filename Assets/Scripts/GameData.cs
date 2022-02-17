@@ -142,7 +142,7 @@ public class GameData : MonoBehaviour {
 			if(lastSpareTime < 0){
 				lastSpareTime = 0;
 			}
-			Debug.Log("Previous spare time" + lastSpareTime);
+			//Debug.Log("Previous spare time" + lastSpareTime);
 		} else {
 			lastSpareTime = 0;
 		}
