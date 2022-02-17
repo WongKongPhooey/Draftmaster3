@@ -79,6 +79,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 	
 	void Awake(){
 		
+		widthblock = Mathf.Round(Screen.width/20);
+		heightblock = Mathf.Round(Screen.height/20);
+		
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		seriesPrefix = "cup20";
 		
@@ -124,6 +127,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 				PlayerPrefs.SetString("RaceType","Championship");
 				seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
+				PlayerPrefs.SetString("carSeries", seriesPrefix);
+				Debug.Log("ChampionshipCarSeries loaded as " + PlayerPrefs.GetString("ChampionshipCarSeries") + ". CarSeries is " + PlayerPrefs.GetString("carSeries"));
+				
 				//Found a championship
 				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 				//Debug.Log("Current Round: " + championshipRound);
@@ -396,7 +402,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 				PlayerPrefs.SetInt("ChampionshipRound",0);
 				resetChampionshipPoints();
 				PlayerPrefs.SetString("ChampionshipCarTexture", PlayerPrefs.GetString("carTexture"));
-				PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("CarSeries"));
+				PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("carSeries"));
 				//Debug.Log("Championship Carset Series set as " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 				PlayerPrefs.SetInt("ChampionshipCarChoice", PlayerPrefs.GetInt("CarChoice"));
 				

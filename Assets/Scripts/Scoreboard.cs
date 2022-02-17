@@ -165,7 +165,7 @@ public class Scoreboard : MonoBehaviour {
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-				Debug.Log("Car #: " + carNumber[i]);
+				//Debug.Log("Car #: " + carNumber[i]);
 				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;

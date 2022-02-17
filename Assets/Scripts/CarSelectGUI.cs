@@ -60,11 +60,11 @@ public class CarSelectGUI : MonoBehaviour {
 			seriesPrefix = "cup20";
 		}
 		
-		//Give a free Allmendinger for Cup '22
-		if(PlayerPrefs.GetInt("cup2216Unlocked") == 0){
-			PlayerPrefs.SetInt("cup2216Unlocked",1);
-			PlayerPrefs.SetInt("cup2216Gears",0);
-			PlayerPrefs.SetInt("cup2216Class",1);
+		//Give a free McLeod for Cup '22
+		if(PlayerPrefs.GetInt("cup2278Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2278Unlocked",1);
+			PlayerPrefs.SetInt("cup2278Gears",0);
+			PlayerPrefs.SetInt("cup2278Class",1);
 		}
 		
 		widthblock = Mathf.Round(Screen.width/20);
@@ -198,7 +198,7 @@ public class CarSelectGUI : MonoBehaviour {
 		GUI.skin = buttonSkin;
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), seriesPrefix)){
+		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), DriverNames.getSeriesNiceName(seriesPrefix))){
 			seriesPanel = true;
 		}
 		
@@ -374,7 +374,8 @@ public class CarSelectGUI : MonoBehaviour {
 								PlayerPrefs.SetString("carTexture", carLivery);
 								PlayerPrefs.SetInt("CarChoice",carCount);
 								PlayerPrefs.SetString("carSeries", seriesPrefix);
-								PlayerPrefs.SetString("CarSeries", seriesPrefix);
+								//PlayerPrefs.SetString("CarSeries", seriesPrefix);
+								//Debug.Log("Race Car Series is " + PlayerPrefs.GetString("carSeries"));
 								Application.LoadLevel("CircuitSelect");
 							}
 						}
@@ -499,12 +500,12 @@ public class CarSelectGUI : MonoBehaviour {
 		if(seriesPanel == true){
 			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 			if(seriesPrefix == "cup22"){
-				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup20")){
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '20")){
 					seriesPrefix = "cup20";
 					seriesPanel = false;
 				}
 			} else {
-				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup22")){
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '22")){
 					seriesPrefix = "cup22";
 					seriesPanel = false;
 				}

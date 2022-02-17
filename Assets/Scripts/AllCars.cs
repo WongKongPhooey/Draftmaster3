@@ -173,7 +173,7 @@ public class AllCars : MonoBehaviour {
 		GUI.skin = buttonSkin;
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), seriesPrefix)){
+		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), DriverNames.getSeriesNiceName(seriesPrefix))){
 			seriesPanel = true;
 		}
 		
@@ -371,7 +371,7 @@ public class AllCars : MonoBehaviour {
 								GUI.skin.button.fontSize = 48 / FontScale.fontScale;
 								if (GUI.Button(new Rect(cardX + 10, cardY + (heightblock * 5f), cardW - 20, heightblock * 1f), "Upgrade")){
 									PlayerPrefs.SetInt("CarFocus",carCount);
-									PlayerPrefs.SetString("SeriesFocus","cup20");
+									PlayerPrefs.SetString("SeriesFocus",seriesPrefix);
 									Application.LoadLevel("SingleCar");
 								}
 								GUI.skin = tileSkin;
@@ -431,12 +431,12 @@ public class AllCars : MonoBehaviour {
 		if(seriesPanel == true){
 			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
 			if(seriesPrefix == "cup22"){
-				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup20")){
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '20")){
 					seriesPrefix = "cup20";
 					seriesPanel = false;
 				}
 			} else {
-				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "cup22")){
+				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '22")){
 					seriesPrefix = "cup22";
 					seriesPanel = false;
 				}

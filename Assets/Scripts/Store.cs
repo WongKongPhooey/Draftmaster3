@@ -153,30 +153,28 @@ public class Store : MonoBehaviour{
 		customStoreDailySelects = PlayerPrefs.GetString("StoreDailySelects");
 		Debug.Log("Online store: " + customStoreDailySelects);
 		
-		/*if(customStoreDailySelects != ""){
+		if(customStoreDailySelects != ""){
 			dailySelects.Clear();
 			string[] onlineSelects = customStoreDailySelects.Split(',');
 			foreach(string item in onlineSelects){
 				dailySelects.Add(item);
-				//Debug.Log(item + " added to store");
 			}
 			Debug.Log("Total shop items added: " + dailySelects.Count);
-		} else {*/
+		} else {
 			dailySelects.Clear();
-			dailySelects.Add(5);
+			dailySelects.Add(4);
 			dailySelects.Add("cup2278");
-			dailySelects.Add("cup2255");
-			dailySelects.Add(3);
-			dailySelects.Add(24);
-			dailySelects.Add(7);
-			dailySelects.Add(8);
-			dailySelects.Add(15);
-			dailySelects.Add(38);
-			dailySelects.Add(47);
-			dailySelects.Add(52);
-			//dailySelects.Add(54);
-			dailySelects.Add(95);
-		//}
+			dailySelects.Add("cup2250");
+			dailySelects.Add(18);
+			dailySelects.Add(10);
+			dailySelects.Add(14);
+			dailySelects.Add(16);
+			dailySelects.Add(27);
+			dailySelects.Add(41);
+			dailySelects.Add(51);
+			dailySelects.Add(66);
+			dailySelects.Add(96);
+		}
 		
 		dailySelectsPicked = 1;
 		PlayerPrefs.SetInt("DailySelects",1);
@@ -214,8 +212,12 @@ public class Store : MonoBehaviour{
 		return false;
 	}
 	
-	int getShopPriceByRarity(int rarity){
-		int price = 25;
+	int getShopPriceByRarity(string seriesPref, int rarity){
+		int price = 50;
+		if(seriesPref == "cup22"){
+			//Newest series gets price bump
+			rarity++;
+		}
 		switch(rarity){
 			case 1:
 				price = 5;
@@ -229,8 +231,11 @@ public class Store : MonoBehaviour{
 			case 4:
 				price = 50;
 				break;
+			case 5:
+				price = 100;
+				break;
 		    default:
-				price = 25;
+				price = 50;
 				break;
 		}
 		return price;
@@ -620,8 +625,9 @@ public class Store : MonoBehaviour{
 						} else {
 							GUI.skin = redGUI;
 						}
+						GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 						
-						int itemPrice = getShopPriceByRarity(DriverNames.getRarity(seriesPrefix,carNumInt));
+						int itemPrice = getShopPriceByRarity(carSeries, DriverNames.getRarity(carSeries,carNumInt));
 						
 						if(carClass < 6){
 							if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 6), widthblock * 2.5f, heightblock * 1.5f), "" + itemPrice + "G")){

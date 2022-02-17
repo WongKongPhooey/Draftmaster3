@@ -276,7 +276,7 @@ public class CameraRotate : MonoBehaviour {
 				AIMovement.onTurn = true;
 				cornerSpeed = calcCornerSpeed(straight-1);
 				cornerMidpoint = (turnLength[straight-1] * turnAngle[straight-1]) / 2;
-				Debug.Log("Corner " + straight + " speed: " + cornerSpeed);
+				//Debug.Log("Corner " + straight + " speed: " + cornerSpeed);
 			}
 			if(cameraRotate == 1){
 				if(turnDir[turn-1] == 1){

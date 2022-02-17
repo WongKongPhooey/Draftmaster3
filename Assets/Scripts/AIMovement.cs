@@ -345,7 +345,6 @@ public class AIMovement : MonoBehaviour
 			//For some reason changing this makes the player bump-draft mega fast!
 			AISpeed += midSpeed/4;
 			tandemDraft = true;
-			//Debug.Log("Impact levels out " + AICar.name);
 		}
 		//Send it back
 		RaycastHit DraftCheckBackward;
