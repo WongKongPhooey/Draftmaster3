@@ -543,7 +543,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Types[99] = "Closer";
 		
 		cup2022Rarity[1] = 1;
-		cup2022Rarity[2] = 1;
+		cup2022Rarity[2] = 2;
 		cup2022Rarity[3] = 2;
 		cup2022Rarity[4] = 4;
 		cup2022Rarity[5] = 4;
@@ -567,7 +567,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[24] = 2;
 		cup2022Rarity[27] = 1;
 		cup2022Rarity[31] = 1;
-		cup2022Rarity[34] = 1;
+		cup2022Rarity[34] = 2;
 		cup2022Rarity[38] = 1;
 		cup2022Rarity[41] = 2;
 		cup2022Rarity[42] = 1;
