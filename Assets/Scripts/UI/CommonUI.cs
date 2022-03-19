@@ -26,4 +26,8 @@ public class CommonUI : MonoBehaviour
 	void screenHeader(){
 		
 	}
+	
+	public void closeUIPanel(){
+		gameObject.GetComponent<UIAnimate>().scaleOut();
+	}
 }

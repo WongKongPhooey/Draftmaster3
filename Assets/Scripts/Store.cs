@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System;
 using UnityEngine.SceneManagement;
 using UnityEngine.Purchasing;
@@ -21,6 +22,7 @@ public class Store : MonoBehaviour{
 	string storeFocus;
 	
 	public static ArrayList dailySelects = new ArrayList();
+	public static ArrayList dailyRandoms = new ArrayList();
 	
 	public static ArrayList eventPrizes = new ArrayList();
 	public static ArrayList eventDrawPicks = new ArrayList();
@@ -42,6 +44,7 @@ public class Store : MonoBehaviour{
 	int dailyCollected;
 	int dailySelectsPicked;
 	int dailySelectsRows;
+	int dailyRandomsPicked;
 	
 	string customStoreDailySelects;
 	
@@ -77,6 +80,7 @@ public class Store : MonoBehaviour{
 		
 		dailyCollected = PlayerPrefs.GetInt("DailyGarage");
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
+		dailyRandomsPicked = PlayerPrefs.GetInt("DailyRandomsPicked");
 		
 		//Reset Event Picks
 		//PlayerPrefs.DeleteKey("PrizePositions");
@@ -183,6 +187,36 @@ public class Store : MonoBehaviour{
 		dailySelectsRows = 1;
 		if(dailySelects.Count >= 8){ dailySelectsRows = 2;}
 		if(dailySelects.Count >= 12){ dailySelectsRows = 3;}
+		
+		//Testing - Generate new picks every reload
+		//PlayerPrefs.DeleteKey("DailyRandoms");
+		
+		if(!PlayerPrefs.HasKey("DailyRandoms")){
+			//Generate Daily Random Picks
+			string dailyRandomsList = "";
+			string randSeries = DriverNames.getRandomSeries();
+			
+			for(int i=0;i<=3;i++){
+				int rand = 100;
+				while((DriverNames.getRarity(randSeries,rand) == 0) || 
+					  (DriverNames.getRarity(randSeries,rand) > 3) ||
+					  (dailyRandoms.Contains("" + randSeries + rand + "") == true)){
+					randSeries = DriverNames.getRandomSeries();
+					rand = Mathf.FloorToInt(Random.Range(0,100));
+				}
+				Debug.Log(DriverNames.getRarity(randSeries,rand));
+				dailyRandoms.Add("" + randSeries + "" + rand + "");
+				dailyRandomsList += "" + randSeries + "" + rand + ",";
+			}
+			Debug.Log("Daily Picks: " + dailyRandomsList);
+			PlayerPrefs.SetString("DailyRandoms",dailyRandomsList);
+		} else {
+			//Retrieve Daily Random Picks
+			List<string> dailyRandomsList = PlayerPrefs.GetString("DailyRandoms").Split(',').ToList<string>();
+			foreach(string dailyRand in dailyRandomsList){
+				dailyRandoms.Add(dailyRand);
+			}
+		}
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
@@ -295,15 +329,19 @@ public class Store : MonoBehaviour{
 				menuCat = "Bundles";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * (6 + offset), widthblock * 4, heightblock * 1.5f), "Weekly Selects")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (6 + offset), widthblock * 4, heightblock * 1.5f), "Daily Picks")){
+				menuCat = "DailyPicks";
+			}
+			
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (8 + offset), widthblock * 4, heightblock * 1.5f), "Weekly Picks")){
 				menuCat = "DailySelects";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * (8 + offset), widthblock * 4, heightblock * 1.5f), "Fuel")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (10 + offset), widthblock * 4, heightblock * 1.5f), "Fuel")){
 				menuCat = "Fuel";
 			}
 			
-			if (GUI.Button(new Rect(widthblock / 2, heightblock * (10 + offset), widthblock * 4, heightblock * 1.5f), "Premium")){
+			if (GUI.Button(new Rect(widthblock / 2, heightblock * (12 + offset), widthblock * 4, heightblock * 1.5f), "Premium")){
 				Application.LoadLevel("GearsStore");
 			}
 			
@@ -453,7 +491,7 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "10-50 car parts from a random car!");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "5-25 car parts from a random Cup '20 car!");
 				
 				
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;
@@ -544,6 +582,106 @@ public class Store : MonoBehaviour{
 					}
 				}
 				GUI.skin = tileSkin;
+			}
+			
+			if(menuCat == "DailyPicks"){
+				for(int columns = 1; columns <= 3; columns++){
+					string carNum = dailyRandoms[columns-1].ToString();
+					int carNumInt;
+					string carSeries = "cup20";
+					//if series is specified..
+					if(carNum.Length > 2){
+						//Get series, parse remainder
+						carSeries = carNum.Substring(0, 5);
+						carNum = carNum.Remove(0, 5);
+					}
+					carNumInt = int.Parse(carNum);
+					float cardX = widthblock * (columns * 4.75f) + (widthblock * 0.25f);
+					float cardY = heightblock * 4f;
+					
+					int carGears = 0;
+					int carClass = 0;
+					
+					carGears = PlayerPrefs.GetInt(carSeries + carNum + "Gears");
+					carClass = PlayerPrefs.GetInt(carSeries + carNum + "Class");
+					
+					int unlockClass = 1;
+					unlockClass = DriverNames.getRarity(carSeries, carNumInt);
+					int unlockGears = GameData.unlockGears(unlockClass);
+					
+					int classMax = 999;
+					classMax = GameData.classMax(carClass);
+					if(carClass < unlockClass){
+						classMax = unlockGears;
+					}
+					
+					GUI.skin = whiteGUI;
+					GUI.Box(new Rect(cardX, cardY, widthblock * 4.25f, heightblock * 11.25f), "");
+					GUI.skin = tileSkin;
+					
+					GUI.skin.label.fontSize = 56 / FontScale.fontScale;
+					GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+					
+					GUI.skin.label.alignment = TextAnchor.UpperCenter;
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3.75f, heightblock * 1.0f), DriverNames.getName(carSeries, carNumInt) + " (+3)");
+					GUI.skin.label.fontSize = 40 / FontScale.fontScale;
+					GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 3.75f, heightblock * 0.75f), DriverNames.getSeriesNiceName(carSeries));
+					GUI.skin.label.fontSize = 48 / FontScale.fontScale;
+					GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 2.75f), widthblock * 3.75f, heightblock * 3.5f), Resources.Load(carSeries + "livery" + carNum) as Texture, ScaleMode.ScaleToFit);
+					GUI.skin.label.alignment = TextAnchor.MiddleCenter;
+					
+					//Progress Bar Box
+					GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), widthblock * 3.75f, heightblock * 1.5f), "");
+					//Progress Bar
+					if((carGears > classMax)||(carClass == 6)){
+						GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), widthblock * 3.75f, heightblock * 1.5f), "");
+					} else {
+						if(carGears > 0){
+							GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), (((widthblock * 3.75f)/classMax) * carGears) + 1, heightblock * 1.5f), "");
+						}
+					}
+					// Gears/Class 
+					if(carClass == 6){
+						GUI.skin.label.normal.textColor = Color.white;
+						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), widthblock * 3.75f, heightblock * 1.5f), "Max Class");
+						GUI.skin.label.normal.textColor = Color.black;
+					} else {
+						GUI.skin.label.normal.textColor = Color.white;
+						if(carClass < DriverNames.getRarity(seriesPrefix,carNumInt)){
+							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), widthblock * 3.75f, heightblock * 1.5f), carGears + "/" + unlockGears);
+						} else {
+							GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 7f), widthblock * 3.75f, heightblock * 1.5f), carGears + "/" + classMax);
+						}
+						GUI.skin.label.normal.textColor = Color.black;
+					}
+
+					if(carSeries == "cup22"){
+						GUI.skin = blueGUI;
+					} else {
+						GUI.skin = redGUI;
+					}
+					GUI.skin.button.fontSize = 64 / FontScale.fontScale;
+					
+					int itemPrice = getShopPriceByRarity(carSeries, DriverNames.getRarity(carSeries,carNumInt));
+					
+					if(carClass < 6){
+						if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 9), widthblock * 3.75f, heightblock * 1.5f), "" + itemPrice + "G")){
+							
+							gears = PlayerPrefs.GetInt("Gears");
+							if(gears >= itemPrice){
+								gears -= itemPrice;
+								if(PlayerPrefs.HasKey(carSeries + carNum + "Gears")){
+									carGears = PlayerPrefs.GetInt(carSeries + carNum + "Gears");
+								} else {
+									carGears = 0;
+								}
+								PlayerPrefs.SetInt(carSeries + carNum + "Gears", carGears + 3);
+								PlayerPrefs.SetInt("Gears",gears);
+							}
+						}
+					}	
+					GUI.skin = tileSkin;
+				}
 			}
 			
 			if(menuCat == "DailySelects"){

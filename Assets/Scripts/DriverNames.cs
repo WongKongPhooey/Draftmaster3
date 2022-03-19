@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public class DriverNames : MonoBehaviour {
 
+	public static ArrayList series = new ArrayList();
+
 	public static string[] names = new string[101];
 	public static string[] teams = new string[101];
 	public static string[] manufacturer = new string[101];
@@ -39,6 +41,8 @@ public class DriverNames : MonoBehaviour {
 		cup20();
 		cup22();
 		carsetNames();
+		series.Add("cup20");
+		series.Add("cup22");
 		
 		if(allNames.ContainsKey("cup20") == false){
 			allNames.Add("cup20", cup2020Names);
@@ -87,6 +91,10 @@ public class DriverNames : MonoBehaviour {
 	
 	public static string getSeriesNiceName(string seriesPrefix){
 		return allCarsetNames[seriesPrefix];
+	}
+	
+	public static string getRandomSeries(){
+		return series[Mathf.FloorToInt(Random.Range(0,series.Count))].ToString();
 	}
 	
 	public static void carsetNames(){
@@ -331,7 +339,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Rarity[27] = 1;
 		cup2020Rarity[32] = 1;
 		cup2020Rarity[34] = 1;
-		cup2020Rarity[36] = 1;
+		cup2020Rarity[36] = 2;
 		cup2020Rarity[37] = 1;
 		cup2020Rarity[38] = 1;
 		cup2020Rarity[41] = 1;
@@ -395,6 +403,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Names[41] = "Custer";
 		cup2022Names[42] = "T. Dillon";
 		cup2022Names[43] = "Jones";
+		cup2022Names[44] = "Biffle";
 		cup2022Names[45] = "Ku. Busch";
 		cup2022Names[47] = "Stenhouse Jr.";
 		cup2022Names[48] = "Bowman";
@@ -439,6 +448,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Teams[41] = "SHR";
 		cup2022Teams[42] = "GMS";
 		cup2022Teams[43] = "GMS";
+		cup2022Teams[44] = "IND";
 		cup2022Teams[45] = "23X";
 		cup2022Teams[47] = "IND";
 		cup2022Teams[48] = "HEN";
@@ -483,6 +493,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Manufacturer[41] = "FRD";
 		cup2022Manufacturer[42] = "CHV";
 		cup2022Manufacturer[43] = "CHV";
+		cup2022Manufacturer[44] = "CHV";
 		cup2022Manufacturer[45] = "TYT";
 		cup2022Manufacturer[47] = "CHV";
 		cup2022Manufacturer[48] = "CHV";
@@ -528,6 +539,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Types[41] = "Closer";
 		cup2022Types[42] = "Blocker";
 		cup2022Types[43] = "Strategist";
+		cup2022Types[44] = "Dominator";
 		cup2022Types[45] = "Intimidator";
 		cup2022Types[47] = "Intimidator";
 		cup2022Types[48] = "Closer";
@@ -554,7 +566,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[10] = 2;
 		cup2022Rarity[11] = 4;
 		cup2022Rarity[12] = 3;
-		cup2022Rarity[14] = 1;
+		cup2022Rarity[14] = 2;
 		cup2022Rarity[15] = 1;
 		cup2022Rarity[16] = 1;
 		cup2022Rarity[17] = 1;
@@ -568,10 +580,11 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[27] = 1;
 		cup2022Rarity[31] = 1;
 		cup2022Rarity[34] = 2;
-		cup2022Rarity[38] = 1;
+		cup2022Rarity[38] = 2;
 		cup2022Rarity[41] = 2;
 		cup2022Rarity[42] = 1;
 		cup2022Rarity[43] = 2;
+		cup2022Rarity[44] = 2;
 		cup2022Rarity[45] = 3;
 		cup2022Rarity[47] = 2;
 		cup2022Rarity[48] = 3;
