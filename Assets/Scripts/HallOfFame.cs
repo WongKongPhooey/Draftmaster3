@@ -13,9 +13,10 @@ public class HallOfFame : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-       leaderboardTitle.text = "Live Time Trial - " + PlayerPrefs.GetString("LiveTimeTrial") + " 2022"; 
+       leaderboardTitle.text = "Live Time Trial - " + PlayerPrefs.GetString("LiveTimeTrial"); 
 	   
 	   PlayFabManager.GetLiveTimeTrialLeaderboard();
+	   PlayFabManager.GetLiveTimeTrialAroundPlayer();
     }
 
     // Update is called once per frame

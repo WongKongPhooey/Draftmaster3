@@ -590,7 +590,7 @@ public class PlayFabManager : MonoBehaviour
 		var request = new GetLeaderboardRequest {
 			StatisticName = "LiveTimeTrial",
 			StartPosition = 0,
-			MaxResultsCount = 10
+			MaxResultsCount = 5
 		};
 		PlayFabClientAPI.GetLeaderboard(request, OnLiveTimeTrialLeaderboardGet, OnError);
 	}
@@ -608,6 +608,39 @@ public class PlayFabManager : MonoBehaviour
 			tableLabels[1].text = item.DisplayName;
 			float leaderboardSpeed = item.StatValue/1000f;
 			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
+			
+			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+		}
+	}
+	
+	public static void GetLiveTimeTrialAroundPlayer(){
+		
+		var request = new GetLeaderboardAroundPlayerRequest {
+			StatisticName = "LiveTimeTrial",
+			MaxResultsCount = 1
+		};
+		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLiveTimeTrialAroundPlayerGet, OnError);
+	}
+	
+	static void OnLiveTimeTrialAroundPlayerGet(GetLeaderboardAroundPlayerResult result) {
+		
+		//Debug.Log("Got Leaderboard Around Player");
+		
+		foreach(var item in result.Leaderboard) {
+			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
+			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
+			tableLabels[0].text = (item.Position + 1).ToString();
+			tableLabels[1].text = item.DisplayName;
+			float leaderboardSpeed = item.StatValue/1000f;
+			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
+			
+			if(item.PlayFabId.ToString() == PlayerPrefs.GetString("PlayerPlayFabId")){
+				tableLabels[0].color = Color.red;
+				tableLabels[1].color = Color.red;
+				tableLabels[2].color = Color.red;
+			} else {
+				
+			}
 			
 			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
