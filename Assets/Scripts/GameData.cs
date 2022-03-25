@@ -238,6 +238,8 @@ public class GameData : MonoBehaviour {
 	void resetDailies(){
 		PlayerPrefs.SetInt("DailyGarage",0);
 		PlayerPrefs.SetInt("DailySelects",0);
+		PlayerPrefs.DeleteKey("DailyRandoms");
+		PlayerPrefs.SetInt("DailyRandomsPicked",0);
 		
 		for(int i=0;i<10;i++){
 			for(int j=0;j<10;j++){

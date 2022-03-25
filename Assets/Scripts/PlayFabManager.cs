@@ -84,7 +84,7 @@ public class PlayFabManager : MonoBehaviour
 		Debug.Log("Retrieved Username!");
 		PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
 		//Attempt to load saved data
-		GetSavedPlayerProgress();
+		GetSavedPlayerProgress("cup20");
 		SceneManager.LoadScene("MainMenu");
 	}
 	
@@ -131,6 +131,29 @@ public class PlayFabManager : MonoBehaviour
 		SceneManager.LoadScene("MainMenu");
 	}
 	
+	public static void CheckLiveTimeTrial(){
+		PlayFabClientAPI.GetTitleData(new GetTitleDataRequest(), OnLiveTimeTrialReceived, OnTitleError);
+	}
+	
+	public static void OnLiveTimeTrialReceived(GetTitleDataResult result){
+		if(result.Data == null){
+			Debug.Log("No Live Time Trial Found");
+			PlayerPrefs.SetString("LiveTimeTrial","");
+		}
+
+		//Live Race Time Trial
+		if(result.Data.ContainsKey("LiveTimeTrial") == true){
+			if(result.Data["LiveTimeTrial"] != ""){
+				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
+				Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
+			} else {
+				PlayerPrefs.SetString("LiveTimeTrial","");
+			}
+		} else {
+			PlayerPrefs.SetString("LiveTimeTrial","");
+		}
+	}
+	
 	public static void GetTitleData(){
 		PlayFabClientAPI.GetTitleData(new GetTitleDataRequest(), OnTitleDataReceived, OnTitleError);
 	}
@@ -143,6 +166,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("FreeFuel", 0);
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 			PlayerPrefs.SetInt("EventActive", 0);
+			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 		
 		//Custom store items in Daily Selects
@@ -156,10 +180,10 @@ public class PlayFabManager : MonoBehaviour
 		}
 		
 		//Debug Add Event for testing
-		//result.Data["EventActive"] = "End Of An Era - Set 1";
-		//result.Data["EventShortcode"] = "2020Pt1";
-		//result.Data["EventDescription"] = "With the next gen cars on the horizon, we look back at some of the best paint schemes from the last few years. This is set 1!";
-		//result.Data["EventRewards"] = "cup20livery7alt1,cup20livery9alt1,cup20livery12alt1,cup20livery17alt1,cup20livery43alt1";
+		result.Data["EventActive"] = "Checkers Or Wreckers";
+		result.Data["EventShortcode"] = "CheckersWreckers";
+		result.Data["EventDescription"] = "3 times a car miraculously ended up in Victory Lane with damage, and 3 times a car miraculously left the pits at all! Featuring throwback drivers Edwards and Martin";
+		result.Data["EventRewards"] = "cup20livery5alt2,cup20livery6alt1,cup20livery20alt1,cup20livery41alt1,cup20livery88alt3,cup22livery99alt1";
 		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){
@@ -230,6 +254,19 @@ public class PlayFabManager : MonoBehaviour
 			}
 		} else {
 			PlayerPrefs.SetInt("ShopDiscount", 0);
+		}
+		
+		//Live Race Time Trial
+		if(result.Data.ContainsKey("LiveTimeTrial") == true){
+			//Debug.Log("Live Time Trial Check..");
+			if(result.Data["LiveTimeTrial"] != ""){
+				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
+				Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
+			} else {
+				PlayerPrefs.SetString("LiveTimeTrial","");
+			}
+		} else {
+			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 		
 		//Message Alerts
@@ -338,24 +375,72 @@ public class PlayFabManager : MonoBehaviour
 		PlayFabClientAPI.UpdateUserData(request, OnDataSend, OnError);
 	}
 	
-	public static void GetSavedPlayerProgress(){
+	public static void CountSavedProgressTotals(){
+		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressCounts, OnError);
+	}
+	
+	static void OnProgressCounts(GetUserDataResult result){
+		if(result.Data != null){
+			Debug.Log("Checking Saved Progress Counts..");
+			string json = "";
+			string saveType = "";
+			
+			//string[] seriesList={"cup20","cup22"};
+			
+			int unlockedCars;
+			unlockedCars = 0;
+			Debug.Log("Counting cars from " + unlockedCars);
+			foreach(string series in DriverNames.series){
+				json = "";
+				
+				//Try to load from autosave
+				if(result.Data.ContainsKey("AutosavePlayerProgress" + series)){
+					Debug.Log("No manual saves.. looking for an autosave");
+					json = result.Data["AutosavePlayerProgress" + series].Value;
+				}
+				
+				//Run the unlock count
+				if(json != ""){
+				    Series playerJson = JsonUtility.FromJson<Series>(json);
+				    for(int i=0;i<=99;i++){
+						if(DriverNames.getName(series, i) != null){
+							if(playerJson.drivers[i].carUnlocked == "1"){
+								//Debug.Log("Count " + series + " #" + i);
+								unlockedCars++;
+							}
+						}
+					}
+				}
+				Debug.Log("Counted " + unlockedCars + " cars in series " + series);
+			}
+			PlayerPrefs.SetInt("AutosavedCarCount",unlockedCars);
+		} else {
+			Debug.Log("No data returned from PlayFab");
+			//Remove the value, possible connection issue
+			PlayerPrefs.DeleteKey("AutosavedCarCount");
+		}
+	}
+	
+	public static void GetSavedPlayerProgress(string seriesPrefix){
+		PlayerPrefs.SetString("LoadedSeries", seriesPrefix);
 		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressReceived, OnError);
 	}
 	
 	static void OnProgressReceived(GetUserDataResult result){
 		if(result.Data != null){
 			Debug.Log("Saved player progress found");
+			string seriesPrefix = PlayerPrefs.GetString("LoadedSeries");
 			string json = "";
 			string saveType = "";
 			//Check for manual save
-			if(result.Data.ContainsKey("SavedPlayerProgress")){
-				json = result.Data["SavedPlayerProgress"].Value;
+			if(result.Data.ContainsKey("SavedPlayerProgress" + seriesPrefix)){
+				json = result.Data["SavedPlayerProgress" + seriesPrefix].Value;
 				saveType = "manual ";
 			} else {
 				//No save data? Try to load from autosave
-				if(result.Data.ContainsKey("AutosavePlayerProgress")){
+				if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
 					Debug.Log("No manual saves.. looking for an autosave");
-					json = result.Data["AutosavePlayerProgress"].Value;
+					json = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
 					saveType = "auto";
 				}
 			}
@@ -367,7 +452,7 @@ public class PlayFabManager : MonoBehaviour
 				 string series = playerJson.seriesName;
 				 int unlockedCars = 0;
 				 for(int i=0;i<=99;i++){
-					if(DriverNames.cup2020Names[i] != null){
+					if(DriverNames.getName(series,i) != null){
 						PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(playerJson.drivers[i].carUnlocked));
 						if(playerJson.drivers[i].carUnlocked == "1"){
 							unlockedCars++;
@@ -399,19 +484,19 @@ public class PlayFabManager : MonoBehaviour
 		Debug.Log("Rewards Collected, Server Reset");
 	}
 	
-	public static void AutosavePlayerProgress(string progressJSON){
+	public static void AutosavePlayerProgress(string seriesPrefix, string progressJSON){
 		var request = new UpdateUserDataRequest {
 			Data = new Dictionary<string, string> {
-				{"AutosavePlayerProgress", progressJSON}
+				{"AutosavePlayerProgress" + seriesPrefix, progressJSON}
 			}
 		};
 		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
 	}
 	
-	public static void SavePlayerProgress(string progressJSON){
+	public static void SavePlayerProgress(string seriesPrefix, string progressJSON){
 		var request = new UpdateUserDataRequest {
 			Data = new Dictionary<string, string> {
-				{"SavedPlayerProgress", progressJSON}
+				{"SavedPlayerProgress" + seriesPrefix, progressJSON}
 			}
 		};
 		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
@@ -422,21 +507,21 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("SaveLoadOutput","Saved progress to the server");
 	}
 	
-	public static void SendLeaderboard(int score, string circuitName){
+	public static void SendLeaderboard(int score, string circuitName, string prefix){
 		var request = new UpdatePlayerStatisticsRequest {
 			Statistics = new List<StatisticUpdate> {
 				new StatisticUpdate {
-					StatisticName = "FastestLap" + circuitName + "",
+					StatisticName = prefix + circuitName + "",
 					Value = score
 				}
 			}
 		};
 		PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
-		//Debug.Log("FastestLap" + circuitName);
+		Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
 	}
 	
 	static void OnLeaderboardUpdate(UpdatePlayerStatisticsResult result){
-		//Debug.Log("Leaderboard Updated " + result);
+		Debug.Log("Leaderboard Updated.");
 	}
 	
 	public static void GetLeaderboard(string circuit){
@@ -500,17 +585,17 @@ public class PlayFabManager : MonoBehaviour
 		}
 	}
 	
-	public static void GetHallOfFameLeaderboards(){
+	public static void GetLiveTimeTrialLeaderboard(){
 		
 		var request = new GetLeaderboardRequest {
-			StatisticName = "AllTimeMostStarts",
+			StatisticName = "LiveTimeTrial",
 			StartPosition = 0,
 			MaxResultsCount = 10
 		};
-		PlayFabClientAPI.GetLeaderboard(request, OnHallOfFameLeaderboardGet, OnError);
+		PlayFabClientAPI.GetLeaderboard(request, OnLiveTimeTrialLeaderboardGet, OnError);
 	}
 	
-	static void OnHallOfFameLeaderboardGet(GetLeaderboardResult result) {
+	static void OnLiveTimeTrialLeaderboardGet(GetLeaderboardResult result) {
 		
 		foreach(Transform item in rowsParent){
 			Destroy(item.gameObject);
@@ -521,7 +606,8 @@ public class PlayFabManager : MonoBehaviour
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
 			tableLabels[0].text = (item.Position + 1).ToString();
 			tableLabels[1].text = item.DisplayName;
-			tableLabels[2].text = item.StatValue.ToString();
+			float leaderboardSpeed = item.StatValue/1000f;
+			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
 			
 			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}

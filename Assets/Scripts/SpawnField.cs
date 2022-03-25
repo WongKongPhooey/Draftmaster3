@@ -65,6 +65,7 @@ public class SpawnField : MonoBehaviour {
 		} else {
 			//Debug.Log("Spawn standard field: " + seriesPrefix);
 			spawnCars(seriesPrefix);
+			//spawnCup2020Scenario();
 		}
 		//spawnCup2020Scenario();
 		paceDistance = 2.5f;
@@ -298,10 +299,10 @@ public class SpawnField : MonoBehaviour {
 		midCars.Clear();
 		slowCars.Clear();
 		
-		fastCars.Add("1");
-		fastCars.Add("18");
-		fastCars.Add("2");
-		//fastCars.Add("9");
+		fastCars.Add("11");
+		fastCars.Add("6");
+		fastCars.Add("3");
+		fastCars.Add("4");
 	}
 
 	public static void spawnStockcars(){

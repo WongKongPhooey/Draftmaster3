@@ -576,7 +576,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		setRaceLaps();
 		
 		//Testing only
-		//PlayerPrefs.SetInt("RaceLaps",1);
+		//PlayerPrefs.SetInt("RaceLaps",2);
 		
 		PlayerPrefs.SetString("CurrentTrack","" + order);
 	}

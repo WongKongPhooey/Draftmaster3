@@ -27,6 +27,9 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[3,2] = "#2 Icon";
 		cup2020AltPaintNames[3,3] = "#3 Wrangled";
 		cup2020AltPaintNames[3,4] = "#4 All Star";
+		cup2020AltPaintNames[5,1] = "#1 Dirty";
+		cup2020AltPaintNames[5,2] = "#2 Junked";
+		cup2020AltPaintNames[6,1] = "#1 Taped";
 		cup2020AltPaintNames[7,1] = "#1 Insure";
 		cup2020AltPaintNames[9,1] = "#1 Hoot";
 		cup2020AltPaintNames[12,1] = "#1 Kobe";
@@ -34,9 +37,11 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[17,1] = "#1 Sunny";
 		cup2020AltPaintNames[18,1] = "#1 Halloween";
 		cup2020AltPaintNames[19,1] = "#1 USO";
+		cup2020AltPaintNames[20,1] = "#1 Clashed";
 		cup2020AltPaintNames[22,1] = "#1 Tribute";
 		cup2020AltPaintNames[27,1] = "#1 Cup";
 		cup2020AltPaintNames[32,1] = "#1 Halloween";
+		cup2020AltPaintNames[41,1] = "#1 Un Aero";
 		cup2020AltPaintNames[42,1] = "#1 Halloween";
 		cup2020AltPaintNames[43,1] = "#1 BLM";
 		cup2020AltPaintNames[48,1] = "#1 Champ";
@@ -45,10 +50,18 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[51,1] = "#1 Warhawk";
 		cup2020AltPaintNames[88,1] = "#1 Cup";
 		cup2020AltPaintNames[88,2] = "#2 Halloween";
+		cup2020AltPaintNames[88,3] = "#3 Duck Num";
+		
+		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
 		cup2020AltPaintDriver[3,4] = "Earnhardt";
+		cup2020AltPaintDriver[6,1] = "Martin";
+		cup2020AltPaintDriver[41,1] = "Ku. Busch";
+		cup2020AltPaintDriver[88,3] = "Earnhardt Jr";
+		
+		cup22AltPaintDriver[99,1] = "Edwards";
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){

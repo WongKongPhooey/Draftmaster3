@@ -257,7 +257,14 @@ public class CameraRotate : MonoBehaviour {
 				lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
 				PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
 				Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
-				PlayFabManager.SendLeaderboard(lapRecordInt, circuit);
+				PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
+				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+					PlayFabManager.CheckLiveTimeTrial();
+					//Double checked
+					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+						PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrial","");
+					}
+				}
 				
 			}
 			if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer")){
@@ -286,8 +293,9 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			cornerKerb.GetComponent<Renderer>().enabled = true;
-			apron.GetComponent<Renderer>().enabled = true;
-			//kerbBlur+=kerbBlur;
+			if(apron != null){
+				apron.GetComponent<Renderer>().enabled = true;
+			}
 			cornerKerb.GetComponent<Renderer>().material.mainTextureOffset = new Vector2(kerbBlur,0);
 			cornercounter++;
 			

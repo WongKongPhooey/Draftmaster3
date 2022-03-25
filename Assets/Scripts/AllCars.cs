@@ -57,24 +57,41 @@ public class AllCars : MonoBehaviour {
 		
 		//Count Unlocks..
 		int totalUnlocks = 0;
-		for(int i=0;i<100;i++){
-			if(DriverNames.getName(seriesPrefix, i) != null){
-				if(PlayerPrefs.HasKey(seriesPrefix + i + "Gears")){
-					if(PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked") == 1){
+		foreach(string series in DriverNames.series){
+			for(int i=0;i<100;i++){
+				if(DriverNames.getName(series, i) != null){
+					if(PlayerPrefs.GetInt(series + i + "Unlocked") == 1){
 						totalUnlocks++;
 					}
 				}
 			}
 		}
+		Debug.Log("Local Car Count: " + totalUnlocks);
+		
 		if(PlayerPrefs.HasKey("TotalUnlocks")){
-			//If a new car has been unlocked, and you have more than just the starter car..
-			if((PlayerPrefs.GetInt("TotalUnlocks") < totalUnlocks)&&(totalUnlocks > 1)){
-				PlayerPrefs.SetInt("TotalUnlocks", totalUnlocks);
+			//If you have more than just the starter car..
+			if(totalUnlocks > 1){
+				//PlayerPrefs.SetInt("TotalUnlocks", totalUnlocks);
 				//If logged in as someone
 				if(PlayerPrefs.HasKey("PlayerUsername")){
-					//Then do an autosave
-					string progressJSON = JSONifyProgress(seriesPrefix);
-					PlayFabManager.AutosavePlayerProgress(progressJSON);
+					//Count the saved cars (returns as PlayerPref AutosavedCarCount)
+					PlayFabManager.CountSavedProgressTotals();
+					
+					if(PlayerPrefs.HasKey("AutosavedCarCount")){
+						if(totalUnlocks >= PlayerPrefs.GetInt("AutosavedCarCount")){
+							//Then do an autosave
+							foreach(string series in DriverNames.series){
+								string progressJSON = JSONifyProgress(series);
+								PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+							}
+						}
+					} else {
+						//First autosave, do it regardless
+						foreach(string series in DriverNames.series){
+							string progressJSON = JSONifyProgress(series);
+							PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+						}
+					}
 				}
 			}
 		} else {
@@ -406,10 +423,10 @@ public class AllCars : MonoBehaviour {
 				GUI.skin = redGUI;
 				if (GUI.Button(new Rect(widthblock * 3, (heightblock * (8f * 11)) + heightblock * 2f, widthblock * 6, heightblock * 2f), "Save To Server")){
 					string progressJSON = JSONifyProgress(seriesPrefix);
-					PlayFabManager.SavePlayerProgress(progressJSON);
+					PlayFabManager.SavePlayerProgress(seriesPrefix, progressJSON);
 				}
 				if (GUI.Button(new Rect(widthblock * 11, (heightblock * (8f * 11)) + heightblock * 2f, widthblock * 6, heightblock * 2f), "Load From Server")){
-					PlayFabManager.GetSavedPlayerProgress();
+					PlayFabManager.GetSavedPlayerProgress(seriesPrefix);
 				}
 				GUI.skin = tileSkin;
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;

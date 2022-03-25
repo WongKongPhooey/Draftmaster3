@@ -16,6 +16,8 @@ public class PrizeCollection : MonoBehaviour
 	string pageTitle;
 	
 	string prizeType;
+	string prizeCarString;
+	string prizeCarSeries;
 	int prizeCarNumber;
 	string eventPrizeset;
 	
@@ -27,7 +29,7 @@ public class PrizeCollection : MonoBehaviour
 	public static int carCurrentGears;
 	public static int carClassMax;
 	
-	public List<int> validDriver = new List<int>();
+	public List<string> validDriver = new List<string>();
 
 	void Awake(){
 
@@ -44,13 +46,20 @@ public class PrizeCollection : MonoBehaviour
 			switch(prizeType){
 				case "MysteryGarage":
 					ListPrizeOptions("");
-					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
-					PremiumGarage("cup20",prizeCarNumber);
+					prizeCarString = validDriver[Random.Range(0,validDriver.Count)];
+					prizeCarSeries = prizeCarString.Substring(0,5);
+					prizeCarNumber = int.Parse(prizeCarString.Substring(5,prizeCarString.Length - 5));
+					PremiumGarage(prizeCarSeries,prizeCarNumber);
 					break;
 				case "EventGarage":
 					ListPrizeOptions(eventPrizeset);
-					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
-					EventGarage("cup20",prizeCarNumber);
+					prizeCarString = validDriver[Random.Range(0,validDriver.Count)];
+					Debug.Log(prizeCarString);
+					prizeCarSeries = prizeCarString.Substring(0,5);
+					Debug.Log(prizeCarSeries);
+					prizeCarNumber = int.Parse(prizeCarString.Substring(5,prizeCarString.Length - 5));
+					Debug.Log(prizeCarNumber);
+					EventGarage(prizeCarSeries,prizeCarNumber);
 					break;
 				case "EventAlt":
 					ListPrizeOptions(eventPrizeset);
@@ -58,13 +67,17 @@ public class PrizeCollection : MonoBehaviour
 					break;
 				case "3RareGarage":
 					ListPrizeOptions("Specific");
-					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
-					PremiumGarage("cup20",prizeCarNumber);
+					prizeCarString = validDriver[Random.Range(0,validDriver.Count)];
+					prizeCarSeries = prizeCarString.Substring(0,5);
+					prizeCarNumber = int.Parse(prizeCarString.Substring(5,prizeCarString.Length - 5));
+					PremiumGarage(prizeCarSeries,prizeCarNumber);
 					break;
 				case "FreeDaily":
 					ListPrizeOptions("");
-					prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
-					DailyGarage("cup20",prizeCarNumber);
+					prizeCarString = validDriver[Random.Range(0,validDriver.Count)];
+					prizeCarSeries = prizeCarString.Substring(0,5);
+					prizeCarNumber = int.Parse(prizeCarString.Substring(5,prizeCarString.Length - 5));
+					DailyGarage(prizeCarSeries,prizeCarNumber);
 					break;
 				default:
 					break;
@@ -74,8 +87,10 @@ public class PrizeCollection : MonoBehaviour
 			firstCar = true;
 			pageTitle = "Rookie, you need a ride!";
 			ListPrizeOptions("Rookies");
-			prizeCarNumber = validDriver[Random.Range(0,validDriver.Count)];
-			StarterCar("cup20",prizeCarNumber);
+			prizeCarString = validDriver[Random.Range(0,validDriver.Count)];
+			prizeCarSeries = prizeCarString.Substring(0,5);
+			prizeCarNumber = int.Parse(prizeCarString.Substring(5,prizeCarString.Length - 5));
+			StarterCar(prizeCarSeries,prizeCarNumber);
 			PlayerPrefs.SetInt("NewUser",1);
 			prizeType="Rookies";
 		}
@@ -129,72 +144,82 @@ public class PrizeCollection : MonoBehaviour
 	}
 	
 	void ListPrizeOptions(string category){
+		//Debug.Log("Prize Category: " + category);
 		switch(category){
 			case "Everyone":
 				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						validDriver.Add(i);
+					if(DriverNames.getName("cup20", i) != null){
+						validDriver.Add("cup20" + i);
 					}
 				}
 			break;
 			case "Thanksgiving":
-				validDriver.Add(2);
-				validDriver.Add(13);
-				validDriver.Add(19);
-				validDriver.Add(22);
-				validDriver.Add(51);
+				validDriver.Add("cup202");
+				validDriver.Add("cup2013");
+				validDriver.Add("cup2019");
+				validDriver.Add("cup2022");
+				validDriver.Add("cup2051");
 			break;
 			case "Halloween":
-				validDriver.Add(3);
-				validDriver.Add(18);
-				validDriver.Add(32);
-				validDriver.Add(42);
-				validDriver.Add(88);
+				validDriver.Add("cup203");
+				validDriver.Add("cup2018");
+				validDriver.Add("cup2032");
+				validDriver.Add("cup2042");
+				validDriver.Add("cup2088");
 			break;
 			case "2020Pt1":
-				validDriver.Add(7);
-				validDriver.Add(9);
-				validDriver.Add(12);
-				validDriver.Add(17);
-				validDriver.Add(43);
+				validDriver.Add("cup207");
+				validDriver.Add("cup209");
+				validDriver.Add("cup2012");
+				validDriver.Add("cup2017");
+				validDriver.Add("cup2043");
+			break;
+			case "CheckersWreckers":
+				validDriver.Add("cup205");
+				validDriver.Add("cup206");
+				validDriver.Add("cup2020");
+				validDriver.Add("cup2041");
+				validDriver.Add("cup2088");
+				validDriver.Add("cup2299");
+				
 			break;
 			case "Rookies":
-				validDriver.Add(0); //Houff
-				validDriver.Add(41); //Custer
-				validDriver.Add(38); //Nemechek
-				validDriver.Add(95); //Bell
-				validDriver.Add(8); //Reddick
-				validDriver.Add(15); //Poole
+				validDriver.Add("cup200"); //Houff
+				validDriver.Add("cup2041"); //Custer
+				validDriver.Add("cup2038"); //Nemechek
+				validDriver.Add("cup2095"); //Bell
+				validDriver.Add("cup208"); //Reddick
+				validDriver.Add("cup2015"); //Poole
 			break;
 			case "Playoffs":
-				validDriver.Add(2);
-				validDriver.Add(9);
-				validDriver.Add(11);
-				validDriver.Add(22);
+				validDriver.Add("cup202");
+				validDriver.Add("cup209");
+				validDriver.Add("cup2011");
+				validDriver.Add("cup2022");
 			break;
 			case "Testing":
-				validDriver.Add(9);
-				validDriver.Add(18);
-				validDriver.Add(48);
+				validDriver.Add("cup209");
+				validDriver.Add("cup2018");
+				validDriver.Add("cup2048");
 			break;
 			case "Rarity3":
-				validDriver.Add(2);
-				validDriver.Add(4);
-				validDriver.Add(9);
-				validDriver.Add(11);
-				validDriver.Add(18);
-				validDriver.Add(19);
-				validDriver.Add(22);
-				validDriver.Add(48);
+				validDriver.Add("cup202");
+				validDriver.Add("cup204");
+				validDriver.Add("cup209");
+				validDriver.Add("cup2011");
+				validDriver.Add("cup2018");
+				validDriver.Add("cup2019");
+				validDriver.Add("cup2022");
+				validDriver.Add("cup2048");
 			break;
 			case "Specific":
-				validDriver.Add(18);
+				validDriver.Add("cup2018");
 			break;
 			default:
 				//All Drivers
 				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						validDriver.Add(i);
+					if(DriverNames.getName("cup20",i) != null){
+						validDriver.Add("cup20" + i);
 					}
 				}
 			break;
@@ -244,12 +269,13 @@ public class PrizeCollection : MonoBehaviour
 		}
 
 		randAlt = eventAlts[Random.Range(0,eventAlts.Count)].ToString();
-		Debug.Log("Rand Alt Picked - " + randAlt);
+		Debug.Log("Rand Alt Picked - " + randAlt);		
 		
-		//Extract the carNumber
+		//Extract the carNumber and carset series
 		int indexA = randAlt.IndexOf("livery") + "livery".Length;
 		int indexB = randAlt.LastIndexOf("alt");
 
+		string seriesPrefix = randAlt.Substring(0,5);
 		string carNumber = randAlt.Substring(indexA, indexB - indexA);
 		
 		//Clean up to compare
@@ -278,7 +304,7 @@ public class PrizeCollection : MonoBehaviour
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
 		
 		if(loopBailout > 0){
-			carReward = "New " + DriverNames.cup2020Names[int.Parse(carNumber)] + " Alt Unlocked";
+			carReward = "New " + DriverNames.getName(seriesPrefix, int.Parse(carNumber)) + " Alt Unlocked";
 		}
 	}
 	

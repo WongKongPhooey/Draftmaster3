@@ -38,9 +38,12 @@ public class DriverNames : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
+		
 		cup20();
 		cup22();
 		carsetNames();
+		
+		series.Clear();
 		series.Add("cup20");
 		series.Add("cup22");
 		
@@ -580,7 +583,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[27] = 1;
 		cup2022Rarity[31] = 1;
 		cup2022Rarity[34] = 2;
-		cup2022Rarity[38] = 2;
+		cup2022Rarity[38] = 1;
 		cup2022Rarity[41] = 2;
 		cup2022Rarity[42] = 1;
 		cup2022Rarity[43] = 2;

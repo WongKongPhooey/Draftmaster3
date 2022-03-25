@@ -146,7 +146,6 @@ public class Store : MonoBehaviour{
 					PlayerPrefs.SetInt("EventItemsRemaining", itemsRemaining);
 				}
 			}
-			//list[Random.Range(0, list.Count)];
 		}
 		
 		adWindow = false;
@@ -391,7 +390,7 @@ public class Store : MonoBehaviour{
 					
 					GUI.skin.label.alignment = TextAnchor.LowerLeft;
 					
-					GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), PlayerPrefs.GetInt("EventAltsFound") + "/5 paints found");
+					GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 9f), widthblock * 4f, heightblock * 1f), PlayerPrefs.GetInt("EventAltsFound") + " paints found");
 					
 					GUI.Label(new Rect(cardX + (widthblock * 6f), cardY + (heightblock * 10f), widthblock * 4f, heightblock * 1f), itemsRemaining + "/20 items left");
 					
