@@ -1192,7 +1192,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TurnAngle3",0);
 		PlayerPrefs.SetInt("TurnAngle4",0);
 		PlayerPrefs.SetInt("StartLine",50);
-		PlayerPrefs.SetInt("SpeedOffset",65 - speedFactor);
+		PlayerPrefs.SetInt("SpeedOffset",75 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
 		PlayerPrefs.SetString("TrackType","Short");
 	}

@@ -10,6 +10,9 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
 	
+	public static bool[,] cup2020AltPaintAISpawning = new bool[101,10];
+	public static bool[,] cup22AltPaintAISpawning = new bool[101,10];
+	
     // Start is called before the first frame update
     void Start(){
 		loadAlts();
@@ -62,6 +65,11 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintDriver[88,3] = "Earnhardt Jr";
 		
 		cup22AltPaintDriver[99,1] = "Edwards";
+		
+		cup2020AltPaintAISpawning[5,2] = false;
+		cup2020AltPaintAISpawning[6,1] = false;
+		cup2020AltPaintAISpawning[88,1] = false;
+		cup22AltPaintAISpawning[99,1] = false;
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
@@ -70,7 +78,7 @@ public class AltPaints : MonoBehaviour {
 				return cup2020AltPaintNames[carNum,altNum];
 				break;
 			case "cup22":
-				//return cup22AltPaintNames[carNum,altNum];
+				return cup22AltPaintNames[carNum,altNum];
 				break;
 			default:
 				return null;
@@ -85,12 +93,27 @@ public class AltPaints : MonoBehaviour {
 				return cup2020AltPaintDriver[carNum,altNum];
 				break;
 			case "cup22":
-				//return cup22AltPaintDriver[carNum,altNum];
+				return cup22AltPaintDriver[carNum,altNum];
 				break;
 			default:
 				return "Unknown";
 				break;
 		}
 		return "Unknown";
+	}
+	
+	public static bool getAltPaintAISpawning(string seriesPrefix, int carNum, int altNum){
+		switch(seriesPrefix){
+			case "cup20":
+				return cup2020AltPaintAISpawning[carNum,altNum];
+				break;
+			case "cup22":
+				return cup2020AltPaintAISpawning[carNum,altNum];
+				break;
+			default:
+				return false;
+				break;
+		}
+		return false;
 	}
 }

@@ -162,7 +162,9 @@ public class AIMovement : MonoBehaviour
 		
 		for(int i=1;i<10;i++){
 			if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-				altPaints.Add(i.ToString());
+				if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != false){
+					altPaints.Add(i.ToString());
+				}
 			}
 		}
 		int altIndex = Random.Range(0,altPaints.Count);

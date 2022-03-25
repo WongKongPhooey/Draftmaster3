@@ -351,7 +351,7 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[5,6] = "cup20livery10";
 		offlineSeriesImage[5,7] = "cup20livery12";
 		offlineSeriesImage[5,8] = "cup20livery20";
-		offlineSeriesImage[5,9] = "cup20livery24t";
+		offlineSeriesImage[5,9] = "cup20livery24";
 		
 		offlineDailyPlays[5,0] = 3;
 		offlineDailyPlays[5,1] = 3;
@@ -463,9 +463,9 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[6,0] = "cup20livery14";
 		offlineSeriesImage[6,1] = "cup20livery88";
 		offlineSeriesImage[6,2] = "cup20livery96";
-		offlineSeriesImage[6,3] = "cup20livery22";
-		offlineSeriesImage[6,4] = "cup20livery43";
-		offlineSeriesImage[6,5] = "cup20livery11";
+		offlineSeriesImage[6,3] = "cup22livery22";
+		offlineSeriesImage[6,4] = "cup22livery5";
+		offlineSeriesImage[6,5] = "cup22livery11";
 		
 		offlineDailyPlays[6,0] = 3;
 		offlineDailyPlays[6,1] = 3;

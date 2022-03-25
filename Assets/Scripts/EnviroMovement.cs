@@ -7,9 +7,10 @@ public class EnviroMovement : MonoBehaviour {
 	public bool staticScroll;
 	public bool scrollOnce;
 	float scrollSpeedScaler;
-	float carSpeedOffset;
-	int trackSpeedOffset;
+	public float carSpeedOffset;
+	public int trackSpeedOffset;
 	static float enviroSpeed;
+	public float enviroSpeedViewer;
 	static float minScrollSpeed;
 	static float scrollPos;
 	Renderer rend;
@@ -40,7 +41,7 @@ public class EnviroMovement : MonoBehaviour {
 			
 			rend.material.mainTextureOffset = new Vector2(0, scrollPos);
 		} else {
-			enviroSpeed = -3.8f + (carSpeedOffset / 60) + (trackSpeedOffset / 40);
+			enviroSpeed = -3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f);
 			
 			EnviroObject.transform.Translate(0,0,enviroSpeed);
 			
@@ -48,5 +49,6 @@ public class EnviroMovement : MonoBehaviour {
 				EnviroObject.transform.Translate(0,0,80);
 			}
 		}
+		enviroSpeedViewer = enviroSpeed;
 	}
 }
