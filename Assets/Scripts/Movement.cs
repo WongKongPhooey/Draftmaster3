@@ -141,6 +141,10 @@ public class Movement : MonoBehaviour {
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 				
+		if(seriesPrefix == "cup22"){
+			this.transform.Find("Number").Translate(0.1f,0f,0f);
+		}
+				
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
 		
 		apronLineX = -2.7f;
@@ -622,6 +626,7 @@ public class Movement : MonoBehaviour {
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
+		
 			//Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
 			numRend.enabled = true;
 		} else {

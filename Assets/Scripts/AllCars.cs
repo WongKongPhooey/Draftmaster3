@@ -11,6 +11,7 @@ public class AllCars : MonoBehaviour {
 	public GUISkin blueGUI;
 	public GUISkin redGUI;
 	public GUISkin whiteGUI;
+	public Texture2D yellowBox;
 
 	float widthblock = Mathf.Round(Screen.width/20);
 	float heightblock = Mathf.Round(Screen.height/20);
@@ -26,6 +27,8 @@ public class AllCars : MonoBehaviour {
 	int carMoney;
 	int moneyCount;
 	int premiumTokens;
+	
+	int customNumX;
 	
 	public Texture2D gasCanTex;
 	public Texture2D gearTex;
@@ -47,7 +50,12 @@ public class AllCars : MonoBehaviour {
 		filterSeries = "";
 		
 		seriesPrefix = "cup20";
+		if(PlayerPrefs.HasKey("LastSeriesPrefix")){
+			seriesPrefix = PlayerPrefs.GetString("LastSeriesPrefix");
+		}
+		
 		seriesPanel = false;
+		customNumX = 34;
 		
 		widthblock = Mathf.Round(Screen.width/20);
 		heightblock = Mathf.Round(Screen.height/20);
@@ -102,6 +110,13 @@ public class AllCars : MonoBehaviour {
     // Update is called once per frame
     void Update(){
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
+		
+		if(seriesPrefix == "cup22"){
+			customNumX = 30;
+		} else {
+			customNumX = 34;
+		}
+		
     }
 	
 	string classAbbr(int carClass){
@@ -188,11 +203,6 @@ public class AllCars : MonoBehaviour {
 	void OnGUI(){
 		
 		GUI.skin = buttonSkin;
-		
-		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-		if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), DriverNames.getSeriesNiceName(seriesPrefix))){
-			seriesPanel = true;
-		}
 		
 		GUI.skin.label.fontSize = 96 / FontScale.fontScale;
 		GUI.skin.button.fontSize = 96 / FontScale.fontScale;
@@ -325,7 +335,7 @@ public class AllCars : MonoBehaviour {
 							} else {
 								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
 							}
-							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.25f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*customNumX), cardY + (heightblock * 1.25f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
 						} else {
 							if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltPaint")){
 								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.25f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "alt" + PlayerPrefs.GetInt(seriesPrefix + carCount + "AltPaint")) as Texture);
@@ -447,16 +457,29 @@ public class AllCars : MonoBehaviour {
 		
 		if(seriesPanel == true){
 			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			//GUI.DrawTexture(new Rect(widthblock * 2.5f, (heightblock * 1f) + 20, widthblock * 4, heightblock * 3.5f), yellowBox, ScaleMode.StretchToFill);
+			
+			if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), DriverNames.getSeriesNiceName(seriesPrefix))){
+				seriesPanel = true;
+			}
+			
 			if(seriesPrefix == "cup22"){
 				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '20")){
 					seriesPrefix = "cup20";
+					PlayerPrefs.SetString("LastSeriesPrefix", seriesPrefix);
 					seriesPanel = false;
 				}
 			} else {
 				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '22")){
 					seriesPrefix = "cup22";
+					PlayerPrefs.SetString("LastSeriesPrefix", seriesPrefix);
 					seriesPanel = false;
 				}
+			}
+		} else {
+			GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+			if (GUI.Button(new Rect(widthblock * 3f, 20, widthblock * 3, heightblock * 1.5f), DriverNames.getSeriesNiceName(seriesPrefix))){
+				seriesPanel = true;
 			}
 		}
 		

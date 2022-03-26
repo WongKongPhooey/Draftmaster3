@@ -25,6 +25,7 @@ public class CarSelectGUI : MonoBehaviour {
 	string seriesPrefix;
 	string filterSeries;
 	bool seriesPanel;
+	int customNumX;
 	
 	string restrictionType;
 	string restrictionValue;
@@ -58,6 +59,16 @@ public class CarSelectGUI : MonoBehaviour {
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
 		} else {
 			seriesPrefix = "cup20";
+		}
+		if(PlayerPrefs.HasKey("LastSeriesPrefix")){
+			seriesPrefix = PlayerPrefs.GetString("LastSeriesPrefix");
+		}
+		
+		customNumX = 34;
+		if(seriesPrefix == "cup22"){
+			customNumX = 30;
+		} else {
+			customNumX = 34;
 		}
 		
 		//Give a free McLeod for Cup '22
@@ -110,6 +121,12 @@ public class CarSelectGUI : MonoBehaviour {
     // Update is called once per frame
     void Update(){
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
+		
+		if(seriesPrefix == "cup22"){
+			customNumX = 30;
+		} else {
+			customNumX = 34;
+		}
     }
 	
 	string classAbbr(int carClass){
@@ -341,7 +358,7 @@ public class CarSelectGUI : MonoBehaviour {
 							} else {
 								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "blank") as Texture);
 							}
-							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*34), cardY + (heightblock * 1.75f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
+							GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f) + (((widthblock * 2.5f)/64)*customNumX), cardY + (heightblock * 1.75f) + ((widthblock * 1.25f)/4), widthblock * 0.625f, widthblock * 0.625f), Resources.Load("cup20num" + customNum) as Texture);
 						} else {
 							if(PlayerPrefs.HasKey(seriesPrefix + carCount + "AltPaint")){
 								GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.75f), widthblock * 2.5f, widthblock * 1.25f), Resources.Load(carLivery + "alt" + PlayerPrefs.GetInt(seriesPrefix + carCount + "AltPaint")) as Texture);
@@ -502,11 +519,13 @@ public class CarSelectGUI : MonoBehaviour {
 			if(seriesPrefix == "cup22"){
 				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '20")){
 					seriesPrefix = "cup20";
+					PlayerPrefs.SetString("LastSeriesPrefix", seriesPrefix);
 					seriesPanel = false;
 				}
 			} else {
 				if (GUI.Button(new Rect(widthblock * 3f, (heightblock * 2f) + 20, widthblock * 3, heightblock * 1.5f), "Cup '22")){
 					seriesPrefix = "cup22";
+					PlayerPrefs.SetString("LastSeriesPrefix", seriesPrefix);
 					seriesPanel = false;
 				}
 			}

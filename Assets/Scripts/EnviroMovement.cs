@@ -45,8 +45,8 @@ public class EnviroMovement : MonoBehaviour {
 			
 			EnviroObject.transform.Translate(0,0,enviroSpeed);
 			
-			if (EnviroObject.transform.position.z <= -40){
-				EnviroObject.transform.Translate(0,0,80);
+			if (EnviroObject.transform.position.z <= -30){
+				EnviroObject.transform.Translate(0,0,60);
 			}
 		}
 		enviroSpeedViewer = enviroSpeed;

@@ -153,6 +153,11 @@ public class AIMovement : MonoBehaviour
 		
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
+		
+		if(seriesPrefix == "cup22"){
+			this.transform.Find("Number").Translate(0.1f,0f,0f);
+		}
+		
 		altPaints = new List<string>();
 		altPaints.Add("0");
 		altPaints.Add("0");
@@ -177,7 +182,7 @@ public class AIMovement : MonoBehaviour
 				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
-			numRend.material.mainTexture = Resources.Load(seriesPrefix + "num" + customNum) as Texture;
+			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			if(chosenAlt != "0"){

@@ -45,6 +45,7 @@ public class SingleCar : MonoBehaviour {
 	List<int> availableNumbers = new List<int>();
 	int[] availNums;
 	int numsInd;
+	int customNumX;
 	
 	List<string> freeAgents = new List<string>();
 	List<string> availableDrivers = new List<string>();
@@ -89,6 +90,7 @@ public class SingleCar : MonoBehaviour {
 		} else {
 			seriesPrefix = "cup20";
 		}
+		Debug.Log("Single Car Series Prefix: " + seriesPrefix);
 		
 		if(PlayerPrefs.HasKey("CarFocus")){
 			currentCar = PlayerPrefs.GetInt("CarFocus");
@@ -139,13 +141,25 @@ public class SingleCar : MonoBehaviour {
 		availableNumbers.Clear();
 		
 		for(int car=0;car<100;car++){
-			if((Resources.Load(seriesPrefix + "num" + car) != null)
-			&&(PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked") == 1)
-			&&(car != currentCar)){
-				availableNumbers.Add(car);
+			if(Resources.Load("cup20num" + car) != null){
+				if(PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked") == 1){
+					if(car != currentCar){
+						//Debug.Log("Can swap with car: " + car);
+						availableNumbers.Add(car);
+					}
+				} else {
+					//Debug.Log("Cannot swap with car: " + car + ". Unlocked = " + PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked"));
+				}
+			} else {
+				//Debug.Log("No number resource for: " + car);
 			}
 		}
 		availNums = availableNumbers.ToArray();
+		
+		customNumX = 34;
+		if(seriesPrefix == "cup22"){
+			customNumX = 30;
+		}
 		
 		freeAgents.Clear();
 		
@@ -246,7 +260,7 @@ public class SingleCar : MonoBehaviour {
 			} else {
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load(carLivery + "blank") as Texture);
 			}
-			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f) + (((widthblock * 5f)/64)*34), cardY + (heightblock * 2) + ((widthblock * 2.5f)/4), widthblock * 1.25f, widthblock * 1.25f), Resources.Load("cup20num" + customNum) as Texture);
+			GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f) + (((widthblock * 5f)/64)*customNumX), cardY + (heightblock * 2) + ((widthblock * 2.5f)/4), widthblock * 1.25f, widthblock * 1.25f), Resources.Load("cup20num" + customNum) as Texture);
 		} else {
 			if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "AltPaint")){
 				GUI.DrawTexture(new Rect(cardX + (widthblock * 0.5f), cardY + (heightblock * 2), widthblock * 5f, widthblock * 2.5f), Resources.Load(carLivery + "alt" + PlayerPrefs.GetInt(seriesPrefix + currentCar + "AltPaint")) as Texture);
@@ -458,7 +472,7 @@ public class SingleCar : MonoBehaviour {
 						
 						GUI.skin.label.alignment = TextAnchor.UpperCenter;
 						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.getAltPaintName(seriesPrefix, currentCar,columns));
-						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar + "alt" + columns) as Texture, ScaleMode.ScaleToFit);
+						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load(seriesPrefix + "livery" + currentCar + "alt" + columns) as Texture, ScaleMode.ScaleToFit);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
 						GUI.skin = redGUI;
@@ -502,7 +516,7 @@ public class SingleCar : MonoBehaviour {
 						
 						GUI.skin.label.alignment = TextAnchor.UpperCenter;
 						GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + 10, widthblock * 3f, heightblock * 2), AltPaints.getAltPaintName(seriesPrefix, currentCar,columns+offset));
-						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load("cup20livery" + currentCar + "alt" + (columns + offset)) as Texture, ScaleMode.ScaleToFit);
+						GUI.DrawTexture(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 1.5f), widthblock * 3f, heightblock * 2f), Resources.Load(seriesPrefix + "livery" + currentCar + "alt" + (columns + offset)) as Texture, ScaleMode.ScaleToFit);
 						GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 
 						GUI.skin = redGUI;
@@ -546,7 +560,7 @@ public class SingleCar : MonoBehaviour {
 				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11f, widthblock * 6.25f, heightblock * 6f), transferError);
 				GUI.skin.label.normal.textColor = Color.black;
 				
-				if(!PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + currentCar)){
+				/*if(!PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + currentCar)){
 					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 9f, widthblock * 4.5f, heightblock * 1.5f), "Driver Swap")){
 						if(transfersLeft > 0){
 							driverPanel = true;
@@ -558,14 +572,14 @@ public class SingleCar : MonoBehaviour {
 				} else {
 					GUI.skin.label.alignment = TextAnchor.MiddleRight;
 					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
-				}
+				}*/
 				
 				if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
 						if(transfersLeft > 0){
 							numberPanel = true;
 						} else {
-							transferError = "All transfer contracts are in use. Gain more by leveling up or purchase the Negotiator pack in store.";
+							transferError = "All transfer contracts are in use. Gain more by leveling up or purchase the Negotiator pack in the Store.";
 							//Debug.Log("No transfer contracts left");
 						}
 					}
@@ -726,7 +740,7 @@ public class SingleCar : MonoBehaviour {
 							
 							numberPanel = false;
 						}
-						GUI.DrawTexture(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f) + 5, (heightblock * 6f) + (heightblock * i * 2f) + 5, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load(seriesPrefix + "num" + availNums[numsInd]) as Texture);
+						GUI.DrawTexture(new Rect(widthblock * 2.5f + (widthblock * j * 1.25f) + 5, (heightblock * 6f) + (heightblock * i * 2f) + 5, widthblock * 1f - 10, widthblock * 1f - 10), Resources.Load("cup20num" + availNums[numsInd]) as Texture);
 						numsInd++;
 					}
 				}

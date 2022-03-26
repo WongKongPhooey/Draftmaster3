@@ -21,6 +21,7 @@ public class IAPStore : MonoBehaviour {
 	private const string extralargegears = "com.duffetywong.draftmaster2rollingthunder.extralargegears";
 	
 	private const string negotiator = "com.duffetywong.draftmaster2rollingthunder.negotiator";
+	private const string negotiatorios = "com.duffetywong.draftmaster2rollingthunder.negotiatorios";
 	
 	public GameObject restorePurchaseBtn;
 	
@@ -107,6 +108,7 @@ public class IAPStore : MonoBehaviour {
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case negotiator:
+			case negotiatorios:
 				Debug.Log("Added 999 contracts");
 				transfersMax=999;
 				transfersLeft=999;

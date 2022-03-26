@@ -54,9 +54,9 @@ public class PrizeCollection : MonoBehaviour
 				case "EventGarage":
 					ListPrizeOptions(eventPrizeset);
 					prizeCarString = validDriver[Random.Range(0,validDriver.Count)];
-					Debug.Log(prizeCarString);
+					//Debug.Log(prizeCarString);
 					prizeCarSeries = prizeCarString.Substring(0,5);
-					Debug.Log(prizeCarSeries);
+					//Debug.Log(prizeCarSeries);
 					prizeCarNumber = int.Parse(prizeCarString.Substring(5,prizeCarString.Length - 5));
 					Debug.Log(prizeCarNumber);
 					EventGarage(prizeCarSeries,prizeCarNumber);
@@ -123,7 +123,7 @@ public class PrizeCollection : MonoBehaviour
 			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 8, widthblock * 6, widthblock * 3), Resources.Load(randAlt) as Texture);
 		} else {
 			GUI.Label(new Rect(widthblock * 9, heightblock * 6, widthblock * 5, heightblock * 2), "" + carReward + "");
-			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + prizeCarNumber) as Texture);
+			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load(prizeCarSeries + "livery" + prizeCarNumber) as Texture);
 		}
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
@@ -304,6 +304,7 @@ public class PrizeCollection : MonoBehaviour
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
 		
 		if(loopBailout > 0){
+			//Debug.Log("Reward Car/Alt: " + seriesPrefix + ", " + carNumber);
 			carReward = "New " + DriverNames.getName(seriesPrefix, int.Parse(carNumber)) + " Alt Unlocked";
 		}
 	}
@@ -331,6 +332,6 @@ public class PrizeCollection : MonoBehaviour
 			
 		carCurrentGears = carGears;
 		carClassMax = GameData.classMax(carClass);
-		carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + amount;
+		carReward = "" + DriverNames.getName(seriesPrefix, carNumber) + " +" + amount;
 	}
 }
