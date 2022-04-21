@@ -180,10 +180,10 @@ public class PlayFabManager : MonoBehaviour
 		}
 		
 		//Debug Add Event for testing
-		result.Data["EventActive"] = "Checkers Or Wreckers Fake Test";
-		result.Data["EventShortcode"] = "CheckersWreckers";
-		result.Data["EventDescription"] = "3 times a car miraculously ended up in Victory Lane with damage, and 3 times a car miraculously left the pits at all! Featuring throwback drivers Edwards and Martin";
-		result.Data["EventRewards"] = "cup20livery5alt2,cup20livery6alt1,cup20livery20alt1,cup20livery41alt1,cup20livery88alt3,cup22livery99alt1";
+		//result.Data["EventActive"] = "Checkers Or Wreckers";
+		//result.Data["EventShortcode"] = "CheckersWreckers";
+		//result.Data["EventDescription"] = "3 times a car miraculously ended up in Victory Lane with damage, and 3 times a car miraculously left the pits at all! Featuring throwback drivers Edwards and Martin";
+		//result.Data["EventRewards"] = "cup20livery5alt2,cup20livery6alt1,cup20livery20alt1,cup20livery41alt1,cup20livery88alt3,cup22livery99alt1";
 		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){
