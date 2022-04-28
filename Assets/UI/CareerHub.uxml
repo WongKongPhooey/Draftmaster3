@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="Background" style="flex-grow: 1; align-items: center; justify-content: center;">
+        <ui:VisualElement style="height: 288px; width: 329px; -unity-background-image-tint-color: rgba(255, 255, 255, 255); background-color: rgb(255, 255, 255); border-top-left-radius: 5px; border-bottom-left-radius: 5px; border-top-right-radius: 5px; border-bottom-right-radius: 5px; justify-content: center; align-items: center;">
+            <ui:Label text="New Career" display-tooltip-when-elided="true" style="position: absolute; top: 5px; -unity-font: url(&apos;project://database/Assets/Fonts/mania.ttf?fileID=12800000&amp;guid=5488c3881589f8241b3fed7fd9da8084&amp;type=3#mania&apos;);" />
+            <ui:Button text="Continue" display-tooltip-when-elided="true" style="height: 50px; width: 147px; background-color: rgba(255, 0, 0, 255); -unity-font: url(&apos;project://database/Assets/Fonts/mania.ttf?fileID=12800000&amp;guid=5488c3881589f8241b3fed7fd9da8084&amp;type=3#mania&apos;); font-size: 20px; border-top-left-radius: 5px; border-bottom-left-radius: 5px; border-top-right-radius: 5px; border-bottom-right-radius: 5px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

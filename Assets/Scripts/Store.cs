@@ -813,7 +813,7 @@ public class Store : MonoBehaviour{
 					if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "Ad")){
 						adWindow = true;
 						adFallback.SetActive(true);
-						AdManager.ShowRewardedVideo();
+						//AdManager.ShowRewardedVideo();
 					}
 				} else {
 					if(GUI.Button(new Rect(cardX + (heightblock * 0.5f), cardY + (heightblock * 5.5f), widthblock * 3, heightblock * 1.5f), "Full")){
