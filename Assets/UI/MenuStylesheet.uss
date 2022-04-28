@@ -1,20 +1,23 @@
-.buttonSubmit {
+.body {
     justify-content: center;
     align-items: center;
+    background-color: rgb(255, 200, 0);
+    height: 100%;
+    width: 100%;
+    position: relative;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.H1 {
     -unity-font-definition: url('project://database/Assets/Fonts/mania%20SDF.asset?fileID=11400000&guid=9521b041e1c0440e583c8936b01fe2f9&type=2#mania SDF');
-    font-size: 18px;
-    background-color: rgba(255, 0, 0, 255);
-    border-top-left-radius: 5px;
-    border-bottom-left-radius: 5px;
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 5px;
-    border-left-color: rgba(0, 0, 0, 0);
-    border-right-color: rgba(0, 0, 0, 0);
-    border-top-color: rgba(0, 0, 0, 0);
-    border-bottom-color: rgba(0, 0, 0, 0);
-    -unity-text-align: middle-center;
-    -unity-font-style: normal;
-    color: rgba(255, 255, 255, 255);
+    -unity-text-align: middle-left;
+    font-size: 32px;
+    left: auto;
+    right: auto;
+    align-items: stretch;
 }
 
 .H2 {
@@ -26,8 +29,33 @@
     align-items: stretch;
 }
 
+.button {
+    -unity-font-definition: url('project://database/Assets/Fonts/mania%20SDF.asset?fileID=11400000&guid=9521b041e1c0440e583c8936b01fe2f9&type=2#mania SDF');
+    font-size: 18px;
+    background-color: rgb(255, 0, 0);
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-left-color: rgba(0, 0, 0, 0);
+    border-right-color: rgba(0, 0, 0, 0);
+    border-top-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgba(0, 0, 0, 0);
+    -unity-text-align: middle-center;
+    -unity-font-style: normal;
+    color: rgb(255, 255, 255);
+}
+
+.buttonSubmit {
+    background-color: rgb(255, 0, 0);
+    justify-content: center;
+    align-items: center;
+}
+
 .Dropdown {
     -unity-font-definition: url('project://database/Assets/Fonts/mania%20SDF.asset?fileID=11400000&guid=9521b041e1c0440e583c8936b01fe2f9&type=2#mania SDF');
     font-size: 16px;
     -unity-text-align: middle-left;
 }
+
+

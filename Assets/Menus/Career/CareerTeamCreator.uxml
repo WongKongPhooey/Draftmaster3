@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/MenuStylesheet.uss?fileID=7433441132597879392&amp;guid=248d238d18f53cd4d8a42576ed1f7f55&amp;type=3#MenuStylesheet" />
+	<ui:VisualElement name="Body" style="flex-grow: 1; justify-content: center; align-items: center; background-color: rgb(255, 200, 0);">
+        <ui:Label text="Team Creator" display-tooltip-when-elided="true" name="Title" class="H2" style="justify-content: space-around; margin-bottom: 0; padding-bottom: 0;" />
+        <ui:VisualElement name="Panel" style="background-color: rgb(255, 255, 255); height: 60%; width: 80%; justify-content: center; align-items: center; border-top-left-radius: 5px; border-bottom-left-radius: 5px; border-top-right-radius: 5px; border-bottom-right-radius: 5px; padding-left: 5px; padding-right: 5px; padding-top: 5px; padding-bottom: 5px; margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0; min-width: 335px; max-width: 450px; max-height: 300px;">
+            <ui:VisualElement name="Stages" style="margin-left: 5px; margin-right: 5px; margin-top: 5px; margin-bottom: 5px; padding-left: 5px; padding-right: 5px; padding-top: 5px; padding-bottom: 5px; width: 100%;" />
+            <ui:Button text="Continue" display-tooltip-when-elided="true" enable-rich-text="true" name="Continue" class="buttonSubmit" style="-unity-font-definition: url(&apos;project://database/Assets/Fonts/mania%20SDF.asset?fileID=11400000&amp;guid=9521b041e1c0440e583c8936b01fe2f9&amp;type=2#mania SDF&apos;); margin-top: 10px; transition-property: margin; transition-duration: 5s; transition-timing-function: ease-in-bounce; transition-delay: 2s;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:ProgressBar title="Step 1 of 5" high-value="5" tabindex="0" name="SetupProgress" />
+</ui:UXML>
