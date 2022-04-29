@@ -1,9 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Unity.Services.Mediation;
+using UnityEngine.Advertisements;
+//using Unity.Services.Mediation;
 
-public class AdManager : MonoBehaviour
+public class AdManager : MonoBehaviour, IUnityAdsListener
 {
 	#if UNITY_IOS
     private string gameId = "4061300";
@@ -18,11 +19,11 @@ public class AdManager : MonoBehaviour
 
     // Initialize the Ads listener and service:
     void Start () {
-        //Advertisement.AddListener (this);
-        //Advertisement.Initialize (gameId, testMode);	
+        Advertisement.AddListener (this);
+        Advertisement.Initialize (gameId, testMode);	
     }
 
-	/*public static void ShowRewardedVideo(){
+	public static void ShowRewardedVideo(){
 		if(Advertisement.IsReady(myPlacementId)){
 			advertLocked = true;
 			fuel = PlayerPrefs.GetInt("GameFuel");
@@ -70,5 +71,5 @@ public class AdManager : MonoBehaviour
 
     public void OnUnityAdsDidStart (string placementId) {
         // Optional actions to take when the end-users triggers an ad.
-    }*/
+    }
 }
