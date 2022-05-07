@@ -645,8 +645,8 @@ public class AIMovement : MonoBehaviour
 		wobbleCount++;
 		
 		if(wobbleCount >= wobbleRand){
-			wobbleRand = Random.Range(20,50);
-			wobbleTarget = Random.Range(-100,100);
+			wobbleRand = Random.Range(10,60);
+			wobbleTarget = Random.Range(-110,110);
 			wobbleCount = 1;
 		}
 		
@@ -746,12 +746,14 @@ public class AIMovement : MonoBehaviour
 		
 		if (HitLaneLeft){
 			if(leftSideClear()){
-				if(DraftCheckLaneLeft.distance >= 2.5f){
-					//Go for it, regardless of closing speed
-					direction = "Left";
+				float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
+				if(DraftCheckLaneLeft.distance >= 3.5f){
+					if(opponentSpeed > (AISpeed - 0.1f)){
+						//Go for it if slightly speed, just for the draft
+						direction = "Left";
+					}
 				} else {
 					//Only seek a close draft if faster than you
-					float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
 					if(opponentSpeed > (AISpeed + 0.1f)){
 						direction = "Left";
 						//Debug.Log("Opponent Speed " + opponentSpeed + " ahead of AISpeed " + AISpeed);
@@ -762,14 +764,16 @@ public class AIMovement : MonoBehaviour
 		
 		if (HitLaneRight){
 			if(rightSideClear()){
-				if(DraftCheckLaneRight.distance >= 2.5f){
-					if(direction == "Left"){
-						direction = "Both";
-					} else {
-						direction = "Right";
+				float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
+				if(DraftCheckLaneRight.distance >= 3.5f){
+					if(opponentSpeed > (AISpeed - 0.1f)){
+						if(direction == "Left"){
+							direction = "Both";
+						} else {
+							direction = "Right";
+						}
 					}
 				} else {
-					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
 					if(opponentSpeed > (AISpeed + 0.1f)){
 						if(direction == "Left"){
 							direction = "Both";

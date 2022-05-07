@@ -83,14 +83,24 @@ public class AllCars : MonoBehaviour {
 				//If logged in as someone
 				if(PlayerPrefs.HasKey("PlayerUsername")){
 					//Count the saved cars (returns as PlayerPref AutosavedCarCount)
-					PlayFabManager.CountSavedProgressTotals();
+					try{
+						PlayFabManager.CountSavedProgressTotals();
+					}
+					catch{
+						Debug.Log("PlayFab is currently Unavailable");
+					}
 					
 					if(PlayerPrefs.HasKey("AutosavedCarCount")){
 						if(totalUnlocks >= PlayerPrefs.GetInt("AutosavedCarCount")){
 							//Then do an autosave
 							foreach(string series in DriverNames.series){
 								string progressJSON = JSONifyProgress(series);
-								PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+								try{
+									PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+								}
+								catch{
+									Debug.Log("PlayFab is currently Unavailable");
+								}
 							}
 						}
 					} else {

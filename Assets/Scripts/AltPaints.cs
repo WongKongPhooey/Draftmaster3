@@ -44,17 +44,28 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[22,1] = "#1 Tribute";
 		cup2020AltPaintNames[27,1] = "#1 Cup";
 		cup2020AltPaintNames[32,1] = "#1 Halloween";
+		cup2020AltPaintNames[37,1] = "#1 Seltzer";
 		cup2020AltPaintNames[41,1] = "#1 Un Aero";
 		cup2020AltPaintNames[42,1] = "#1 Halloween";
 		cup2020AltPaintNames[43,1] = "#1 BLM";
+		cup2020AltPaintNames[47,1] = "#1 Nitro";
 		cup2020AltPaintNames[48,1] = "#1 Champ";
 		cup2020AltPaintNames[48,2] = "#2 Cobalt";
 		cup2020AltPaintNames[48,3] = "#3 All Star";
 		cup2020AltPaintNames[51,1] = "#1 Warhawk";
+		cup2020AltPaintNames[66,1] = "#1 Bandit";
+		cup2020AltPaintNames[77,1] = "#1 Melon";
 		cup2020AltPaintNames[88,1] = "#1 Cup";
 		cup2020AltPaintNames[88,2] = "#2 Halloween";
 		cup2020AltPaintNames[88,3] = "#3 Duck Num";
+		cup2020AltPaintNames[95,1] = "#1 Core";
 		
+		cup22AltPaintNames[15,1] = "Stock (Ragan)";
+		cup22AltPaintNames[16,1] = "Stock (Hemric)";
+		cup22AltPaintNames[27,1] = "Stock (Hezemans)";
+		cup22AltPaintNames[66,1] = "Stock (Said)";
+		cup22AltPaintNames[77,1] = "Stock (Bilicki)";
+		cup22AltPaintNames[78,1] = "Stock (Lally)";
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
@@ -64,6 +75,12 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintDriver[41,1] = "Ku. Busch";
 		cup2020AltPaintDriver[88,3] = "Earnhardt Jr";
 		
+		cup22AltPaintDriver[15,1] = "Ragan";
+		cup22AltPaintDriver[16,1] = "Hemric";
+		cup22AltPaintDriver[27,1] = "Hezemans";
+		cup22AltPaintDriver[66,1] = "Said";
+		cup22AltPaintDriver[77,1] = "Bilicki";
+		cup22AltPaintDriver[78,1] = "Lally";
 		cup22AltPaintDriver[99,1] = "Edwards";
 		
 		cup2020AltPaintAISpawning[5,2] = false;

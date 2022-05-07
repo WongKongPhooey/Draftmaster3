@@ -33,7 +33,7 @@ public class NewCareer : MonoBehaviour
 		
 		continueBtn.clicked += ContinueBtnPressed;
 		
-		continueBtn.experimental.animation.Scale(1.5f,5);
+		//continueBtn.experimental.animation.Scale(1.5f,5);
     }
 
     void ContinueBtnPressed(){

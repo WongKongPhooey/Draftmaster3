@@ -162,6 +162,8 @@ public class MainMenuGUI : MonoBehaviour {
 		
 		CommonGUI.TopBar();
 		
+		CommonGUI.SocialBar();
+		
 		//Level Progress Bar Box
 		GUI.Box(new Rect(widthblock * 0.5f, (heightblock * 1.5f) + 15, widthblock * 2f, 5), "");
 		//Progress Bar

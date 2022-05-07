@@ -561,8 +561,8 @@ public class Movement : MonoBehaviour {
 		wobbleCount++;
 		
 		if(wobbleCount >= wobbleRand){
-			wobbleRand = Random.Range(20,50);
-			wobbleTarget = Random.Range(-100,100);
+			wobbleRand = Random.Range(10,60);
+			wobbleTarget = Random.Range(-110,110);
 			wobbleCount = 1;
 		}
 		

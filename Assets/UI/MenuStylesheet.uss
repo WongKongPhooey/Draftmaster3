@@ -31,7 +31,7 @@
 
 .button {
     -unity-font-definition: url('project://database/Assets/Fonts/mania%20SDF.asset?fileID=11400000&guid=9521b041e1c0440e583c8936b01fe2f9&type=2#mania SDF');
-    font-size: 18px;
+    font-size: 28px;
     background-color: rgb(255, 0, 0);
     border-top-left-radius: 5px;
     border-bottom-left-radius: 5px;
@@ -58,4 +58,19 @@
     -unity-text-align: middle-left;
 }
 
+.twoColMenu {
+    flex-grow: 0;
+    min-height: 60px;
+    width: 100%;
+    padding-bottom: 0;
+    margin-bottom: 10px;
+    opacity: 0;
+}
 
+.fadeInPlusOne {
+	transition-property: opacity;
+    transition-duration: 1s;
+    transition-delay: 1s;
+    transition-timing-function: ease;
+	opacity: 1;
+}

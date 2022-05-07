@@ -19,9 +19,17 @@ public class CommonGUI : MonoBehaviour {
 	public Texture2D gasCanTex;
 	public Texture2D gearTex;
 	
+	public Texture2D fbTex;
+	public Texture2D twitterTex;
+	public Texture2D redditTex;
+	
 	public static Texture2D moneyTexInst;
 	public static Texture2D gasCanTexInst;
 	public static Texture2D gearTexInst;
+	
+	public static Texture2D fbTexInst;
+	public static Texture2D twitterTexInst;
+	public static Texture2D redditTexInst;
 
 	
     // Start is called before the first frame update
@@ -37,6 +45,10 @@ public class CommonGUI : MonoBehaviour {
 		moneyTexInst = moneyTex;
 		gasCanTexInst = gasCanTex;
 		gearTexInst = gearTex;
+		
+		fbTexInst = fbTex;
+		twitterTexInst = twitterTex;
+		redditTexInst = redditTex;
     }
 
     // Update is called once per frame
@@ -125,6 +137,31 @@ public class CommonGUI : MonoBehaviour {
 		GUI.DrawTexture(new Rect((widthblock * 17f) + 10, 27, (heightblock * 1.5f) - 20, (heightblock * 1.5f) - 20), gasCanTexInst);
 		
 		GUI.skin.button.alignment = TextAnchor.MiddleRight;
+		
+		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
+	}
+	
+	public static void SocialBar(){
+		
+		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+		
+		//Facebook
+		if (GUI.Button(new Rect(Screen.width - (heightblock * 4.5f) - 60, Screen.height - (heightblock * 1.5f) - 20, heightblock * 1.5f, heightblock * 1.5f), "")){
+			Application.OpenURL("https://www.facebook.com/draftmastergame/");
+		}
+		GUI.DrawTexture(new Rect(Screen.width - (heightblock * 4.5f) - 50, Screen.height - (heightblock * 1.5f) - 10, heightblock * 1.5f - 20, heightblock * 1.5f - 20), fbTexInst);
+		
+		//Twitter
+		if (GUI.Button(new Rect(Screen.width - (heightblock * 3f) - 40, Screen.height - (heightblock * 1.5f) - 20, heightblock * 1.5f, heightblock * 1.5f), "")){
+			Application.OpenURL("https://twitter.com/draftmastergame");
+		}
+		GUI.DrawTexture(new Rect(Screen.width - (heightblock * 3f) - 30, Screen.height - (heightblock * 1.5f) - 10, heightblock * 1.5f - 20, heightblock * 1.5f - 20), twitterTexInst);
+		
+		//Reddit
+		if (GUI.Button(new Rect(Screen.width - (heightblock * 1.5f) - 20, Screen.height - (heightblock * 1.5f) - 20, heightblock * 1.5f, heightblock * 1.5f), "")){
+			Application.OpenURL("https://www.reddit.com/r/RacingWithDraftmaster/");
+		}
+		GUI.DrawTexture(new Rect(Screen.width - (heightblock * 1.5f) - 10, Screen.height - (heightblock * 1.5f) - 10, heightblock * 1.5f - 20, heightblock * 1.5f - 20), redditTexInst);
 		
 		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 	}

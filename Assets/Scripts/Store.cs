@@ -490,7 +490,7 @@ public class Store : MonoBehaviour{
 				
 				GUI.skin.label.fontSize = 48 / FontScale.fontScale;
 				
-				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "5-25 car parts from a random Cup '20 car!");
+				GUI.Label(new Rect(cardX + (widthblock * 0.5f), cardY + 10 + (heightblock * 1.5f), widthblock * 5.5f, heightblock * 3), "8-25 car parts from a random car!");
 				
 				
 				GUI.skin.button.alignment = TextAnchor.MiddleCenter;

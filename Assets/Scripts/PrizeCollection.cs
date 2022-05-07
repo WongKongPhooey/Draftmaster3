@@ -216,10 +216,16 @@ public class PrizeCollection : MonoBehaviour
 				validDriver.Add("cup2018");
 			break;
 			default:
-				//All Drivers
+				//All '20 Drivers
 				for(int i=0;i<99;i++){
 					if(DriverNames.getName("cup20",i) != null){
 						validDriver.Add("cup20" + i);
+					}
+				}
+				//All '22 Drivers
+				for(int i=0;i<99;i++){
+					if(DriverNames.getName("cup22",i) != null){
+						validDriver.Add("cup22" + i);
 					}
 				}
 			break;
@@ -249,7 +255,7 @@ public class PrizeCollection : MonoBehaviour
 	
 	void PremiumGarage(string seriesPrefix, int carNumber){
 
-		int[] randAmtSet = {5,5,5,10,10,12,12,15,15,18,18,20,25};
+		int[] randAmtSet = {8,8,10,10,10,12,12,15,15,18,18,20,25};
 		int randAmt = randAmtSet[Random.Range(0,(randAmtSet.Length)-1)];
 
 		AddPrize(seriesPrefix, carNumber, randAmt);
