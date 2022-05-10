@@ -25,16 +25,14 @@ using UnityEngine.SceneManagement;
 19 Darlington, SC
 20 Indianapolis, IN
 21 Homestead, FL
+22 WWT Gateway - Madison, IL
+23 Nashville, TN
 
-22 Motegi, Japan
-23 Lausitzring, Germany
 24 Rockingham, England
-
 25 Rockingham, NC
 26 North Wilkesboro, NC
 27 Nazareth, PN
 28 Iowa, IA
-29 Nashville, TN
 30 LA Coliseum, CA
 ----------------------*/
 
@@ -73,7 +71,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 	int maxDailyPlays;
 	int dailyPlays;
 	
-	public static string[] circuitNames = new string[30];
+	public static string[] circuitNames = new string[50];
 	
 	public Vector2 scrollPosition = Vector2.zero;
 	
@@ -348,6 +346,22 @@ public class CircuitSelectGUI : MonoBehaviour {
 					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
 				}
 				break;
+			case "22":
+				showBestFinish(currentSeriesIndex, order);
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Madison, IL")){
+					Madison();
+					PlayerPrefs.SetString("CurrentTrack","" + order);
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Madison") as Texture;
+				}
+				break;
+			case "23":
+				showBestFinish(currentSeriesIndex, order);
+				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Nashville, TN")){
+					Nashville();
+					PlayerPrefs.SetString("CurrentTrack","" + order);
+					circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
+				}
+				break;
 			case "30":
 				showBestFinish(currentSeriesIndex, order);
 				if (GUI.Button(new Rect(widthblock * 2, heightblock * ((order*3) + 7), widthblock * 5.5f, heightblock * 2), "Los Angeles, CA")){
@@ -565,6 +579,14 @@ public class CircuitSelectGUI : MonoBehaviour {
 				Miami();
 				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("BigOval") as Texture;
 				break;
+			case "22":
+				Madison();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("Madison") as Texture;
+				break;
+			case "23":
+				Nashville();
+				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TriOval") as Texture;
+				break;
 			case "30":
 				LosAngeles();
 				circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("TinyOval") as Texture;
@@ -589,8 +611,6 @@ public class CircuitSelectGUI : MonoBehaviour {
 				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
 				//Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
 				pointsTableInd++;
-			} else {
-				//Debug.Log("No points found for #" + i);
 			}
 		}
 	}
@@ -620,8 +640,17 @@ public class CircuitSelectGUI : MonoBehaviour {
 				GUI.skin.label.normal.textColor = Color.red;
 			}
 			if(pointsRow.Value > 0){
-				GUI.Label(new Rect(widthblock, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "" + (pointsTableInd + 1));	
-				GUI.Label(new Rect(widthblock * 3f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.getName(seriesPrefix, pointsRow.Key));	
+				GUI.Label(new Rect(widthblock, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "" + (pointsTableInd + 1));
+				if(pointsRow.Key == carNumber){
+					if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "AltDriver")){
+						//Debug.Log("Using alt driver");
+						GUI.Label(new Rect(widthblock * 3f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + AltPaints.getAltPaintDriver(seriesPrefix,carNumber,PlayerPrefs.GetInt(seriesPrefix + carNumber + "AltPaint")));	
+					} else {
+						GUI.Label(new Rect(widthblock * 3f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.getName(seriesPrefix, pointsRow.Key));	
+					}
+				} else {
+					GUI.Label(new Rect(widthblock * 3f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.getName(seriesPrefix, pointsRow.Key));	
+				}
 				GUI.Label(new Rect(widthblock * 6.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 1.5f, heightblock * 2), "" + pointsRow.Value);	
 			}
 			if(pointsRow.Key == carNumber){
@@ -701,9 +730,10 @@ public class CircuitSelectGUI : MonoBehaviour {
 		circuitNames[19] = "Darlington, SC";
 		circuitNames[20] = "Indianapolis, IN";
 		circuitNames[21] = "Homestead, FL";
+		circuitNames[22] = "Madison, IL";
+		circuitNames[23] = "Nashville, TN";
+		circuitNames[30] = "Los Angeles, CA";
 		
-		circuitNames[22] = "Motegi, Japan";
-		circuitNames[23] = "Lausitzring, Germany";
 		circuitNames[24] = "Rockingham, England";
 		
 		circuitNames[25] = "Rockingham, NC";
@@ -1219,6 +1249,50 @@ public class CircuitSelectGUI : MonoBehaviour {
 		PlayerPrefs.SetInt("SpeedOffset",85 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",5);
 		PlayerPrefs.SetString("TrackType","Short");
+	}
+
+	static void Madison(){
+		circuitChoice = "Madison";
+		PlayerPrefs.SetInt("RaceLaps",7);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",250);
+		PlayerPrefs.SetInt("StraightLength2",250);
+		PlayerPrefs.SetInt("StraightLength3",0);
+		PlayerPrefs.SetInt("StraightLength4",0);
+		PlayerPrefs.SetInt("TurnLength1",170);
+		PlayerPrefs.SetInt("TurnLength2",190);
+		PlayerPrefs.SetInt("TurnLength3",0);
+		PlayerPrefs.SetInt("TurnLength4",0);
+		PlayerPrefs.SetInt("TurnAngle1",2);
+		PlayerPrefs.SetInt("TurnAngle2",2);
+		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle4",1);
+		PlayerPrefs.SetInt("StartLine",150);
+		PlayerPrefs.SetInt("SpeedOffset",36 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Mid");
+	}
+	
+	static void Nashville(){
+		circuitChoice = "Nashville";
+		PlayerPrefs.SetInt("RaceLaps",6);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",1);
+		PlayerPrefs.SetInt("StraightLength2",1);
+		PlayerPrefs.SetInt("StraightLength3",200);
+		PlayerPrefs.SetInt("StraightLength4",10);
+		PlayerPrefs.SetInt("TurnLength1",35);
+		PlayerPrefs.SetInt("TurnLength2",145);
+		PlayerPrefs.SetInt("TurnLength3",145);
+		PlayerPrefs.SetInt("TurnLength4",35);
+		PlayerPrefs.SetInt("TurnAngle1",4);
+		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle4",4);
+		PlayerPrefs.SetInt("StartLine",5);
+		PlayerPrefs.SetInt("SpeedOffset",17 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	static void TestTrack(){

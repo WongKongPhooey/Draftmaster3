@@ -180,10 +180,15 @@ public class PlayFabManager : MonoBehaviour
 		}
 		
 		//Debug Add Event for testing
-		//result.Data["EventActive"] = "Checkers Or Wreckers";
-		//result.Data["EventShortcode"] = "CheckersWreckers";
-		//result.Data["EventDescription"] = "3 times a car miraculously ended up in Victory Lane with damage, and 3 times a car miraculously left the pits at all! Featuring throwback drivers Edwards and Martin";
-		//result.Data["EventRewards"] = "cup20livery5alt2,cup20livery6alt1,cup20livery20alt1,cup20livery41alt1,cup20livery88alt3,cup22livery99alt1";
+		//result.Data["EventActive"] = "End Of An Era Pt.2";
+		//result.Data["EventShortcode"] = "2020Pt2";
+		//result.Data["EventDescription"] = "5 more of our favourite paints from the 2020 season. Featuring Bell, Hill, Stenhouse, Chastain and Preece!";
+		//result.Data["EventRewards"] = "cup20livery37alt1,cup20livery47alt1,cup20livery66alt1,cup20livery77alt1,cup20livery95alt1";
+		
+		//result.Data["EventActive"] = "Part Timers";
+		//result.Data["EventShortcode"] = "PartTimers";
+		//result.Data["EventDescription"] = "6 of our favourite 2022 part-time drivers! Unlock and race as Ragan, Hemric, Hezemans, Said, Bilicki and Lally.";
+		//result.Data["EventRewards"] = "cup22livery15alt1,cup22livery16alt1,cup22livery27alt1,cup22livery66alt1,cup22livery77alt1,cup22livery78alt1";
 		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){

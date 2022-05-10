@@ -174,6 +174,13 @@ public class PrizeCollection : MonoBehaviour
 				validDriver.Add("cup2017");
 				validDriver.Add("cup2043");
 			break;
+			case "2020Pt2":
+				validDriver.Add("cup2037");
+				validDriver.Add("cup2047");
+				validDriver.Add("cup2066");
+				validDriver.Add("cup2077");
+				validDriver.Add("cup2095");
+			break;
 			case "CheckersWreckers":
 				validDriver.Add("cup205");
 				validDriver.Add("cup206");
@@ -181,8 +188,16 @@ public class PrizeCollection : MonoBehaviour
 				validDriver.Add("cup2041");
 				validDriver.Add("cup2088");
 				validDriver.Add("cup2299");
-				
 			break;
+			case "PartTimers":
+				validDriver.Add("cup2215");
+				validDriver.Add("cup2216");
+				validDriver.Add("cup2227");
+				validDriver.Add("cup2266");
+				validDriver.Add("cup2277");
+				validDriver.Add("cup2278");
+			break;
+			
 			case "Rookies":
 				validDriver.Add("cup200"); //Houff
 				validDriver.Add("cup2041"); //Custer
@@ -283,6 +298,7 @@ public class PrizeCollection : MonoBehaviour
 
 		string seriesPrefix = randAlt.Substring(0,5);
 		string carNumber = randAlt.Substring(indexA, indexB - indexA);
+		int carAltNumber = int.Parse(randAlt.Substring(randAlt.Length-1));
 		
 		//Clean up to compare
 		string sanitisedAlt = randAlt.Replace("livery","");
@@ -297,6 +313,7 @@ public class PrizeCollection : MonoBehaviour
 				indexA = randAlt.IndexOf("livery") + "livery".Length;
 				indexB = randAlt.LastIndexOf("alt");
 				carNumber = randAlt.Substring(indexA, indexB - indexA);
+				carAltNumber = int.Parse(randAlt.Substring(randAlt.Length-1));
 				
 				sanitisedAlt = randAlt.Replace("livery","");
 				sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
@@ -311,7 +328,11 @@ public class PrizeCollection : MonoBehaviour
 		
 		if(loopBailout > 0){
 			//Debug.Log("Reward Car/Alt: " + seriesPrefix + ", " + carNumber);
-			carReward = "New " + DriverNames.getName(seriesPrefix, int.Parse(carNumber)) + " Alt Unlocked";
+			if(AltPaints.getAltPaintDriver(seriesPrefix,int.Parse(carNumber),carAltNumber) != null){
+				carReward = "New " + AltPaints.getAltPaintDriver(seriesPrefix,int.Parse(carNumber),carAltNumber) + " Alt Unlocked";
+			} else {
+				carReward = "New " + DriverNames.getName(seriesPrefix, int.Parse(carNumber)) + " Alt Unlocked";
+			}
 		}
 	}
 	

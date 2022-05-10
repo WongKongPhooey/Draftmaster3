@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions;
 
 public class SpawnField : MonoBehaviour {
@@ -28,6 +30,8 @@ public class SpawnField : MonoBehaviour {
 	
 	bool cautionRestart;
 	public static int startLane;
+	
+	static Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
 
 	// Use this for initialization
 	void Start () {
@@ -64,7 +68,15 @@ public class SpawnField : MonoBehaviour {
 			//Debug.Log("Spawn custom field");
 		} else {
 			//Debug.Log("Spawn standard field: " + seriesPrefix);
-			spawnCars(seriesPrefix);
+			if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries") == PlayerPrefs.GetString("CurrentSeriesIndex"))){
+				if(PlayerPrefs.GetInt("ChampionshipRound") > 7){
+					spawnCarsPointsAdjusted(seriesPrefix);
+				} else {
+					spawnCars(seriesPrefix);
+				}
+			} else {
+				spawnCars(seriesPrefix);
+			}
 			//spawnCup2020Scenario();
 		}
 		//spawnCup2020Scenario();
@@ -260,6 +272,48 @@ public class SpawnField : MonoBehaviour {
 				default:
 					break;
 			}
+		}
+	}
+	
+	public static void spawnCarsPointsAdjusted(string seriesPref){
+		
+		//Spawned field based on Championship points
+		championshipPoints.Clear();
+		int pointsInd = 0;
+		for(int i=0;i<100;i++){
+			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
+				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
+				pointsInd++;
+			}
+		}
+		
+		fastCars.Clear();
+		midCars.Clear();
+		slowCars.Clear();
+		
+		List<KeyValuePair<int, int>> pointsTable = new List<KeyValuePair<int, int>>(championshipPoints);
+		
+		pointsTable.Sort(
+			delegate(KeyValuePair<int, int> firstPair,
+			KeyValuePair<int, int> nextPair)
+			{
+				return nextPair.Value.CompareTo(firstPair.Value);
+			}
+		);
+		
+		int pointsTableInd = 0;
+		foreach(var pointsRow in pointsTable){
+			if(pointsTableInd < 5){
+				Debug.Log("Added fast car: #" + pointsRow.Key);
+				fastCars.Add("" + pointsRow.Key + "");
+			} else {
+				if(pointsTableInd > 20){
+					slowCars.Add("" + pointsRow.Key + "");
+				} else {
+					midCars.Add("" + pointsRow.Key + "");
+				}
+			}
+			pointsTableInd++;
 		}
 	}
 	

@@ -203,9 +203,9 @@ public class SeriesData : MonoBehaviour{
 		offlineMinClass[2,4] = 3;
 		
 		offlineTracklists[2,0] = "2,3,7,13";
-		offlineTracklists[2,1] = "16,17,21,13";
+		offlineTracklists[2,1] = "16,17,21,23";
 		offlineTracklists[2,2] = "7,2,19,12";
-		offlineTracklists[2,3] = "3,16,12,2";
+		offlineTracklists[2,3] = "3,16,12,23";
 		offlineTracklists[2,4] = "13,19,7,21";
 		
 		offlineFuel[2,0] = 5;
@@ -423,9 +423,9 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[5,1] = "2,8,7,15,17";
 		offlineTracklists[5,2] = "3,9,19,14,20";
 		offlineTracklists[5,3] = "11,10,7,15,6";
-		offlineTracklists[5,4] = "13,4,1,20,21";
-		offlineTracklists[5,5] = "2,15,5,10,16";
-		offlineTracklists[5,6] = "8,4,18,14,12";
+		offlineTracklists[5,4] = "13,4,1,22,21";
+		offlineTracklists[5,5] = "2,23,5,10,16";
+		offlineTracklists[5,6] = "8,4,22,14,12";
 		offlineTracklists[5,7] = "11,9,6,3,21";
 		offlineTracklists[5,8] = "13,7,17,20,19";
 		offlineTracklists[5,9] = "15,18,1,5,2";
@@ -511,8 +511,8 @@ public class SeriesData : MonoBehaviour{
 		
 		offlineTracklists[6,0] = "1,12,16,18,5";
 		offlineTracklists[6,1] = "2,8,7,15,17";
-		offlineTracklists[6,2] = "3,9,19,14,20";
-		offlineTracklists[6,3] = "11,10,7,15,6";
+		offlineTracklists[6,2] = "3,9,19,14,22";
+		offlineTracklists[6,3] = "11,10,23,15,6";
 		offlineTracklists[6,4] = "13,4,1,20,21";
 		offlineTracklists[6,5] = "2,15,5,10,16";
 		
@@ -589,8 +589,8 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[7,0] = "1,12,16,18,5";
 		offlineTracklists[7,1] = "2,8,7,15,17";
 		offlineTracklists[7,2] = "3,9,19,14,20";
-		offlineTracklists[7,3] = "11,10,7,15,6";
-		offlineTracklists[7,4] = "13,4,1,20,21";
+		offlineTracklists[7,3] = "11,10,23,15,6";
+		offlineTracklists[7,4] = "13,4,1,22,21";
 		offlineTracklists[7,5] = "2,15,5,10,16";
 		
 		offlineFuel[7,0] = 6;
@@ -656,52 +656,61 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[9,0] = "Half Season 1";
 		offlineSeries[9,1] = "Half Season 2";
 		offlineSeries[9,2] = "2020 Calendar Season";
+		offlineSeries[9,3] = "2022 Calendar Season";
 		
 		offlineSeriesImage[9,0] = "cup20livery22";
 		offlineSeriesImage[9,1] = "cup20livery2";
 		offlineSeriesImage[9,2] = "cup20livery9";
+		offlineSeriesImage[9,3] = "cup22livery5";
 		
 		offlineDailyPlays[9,0] = 10;
 		offlineDailyPlays[9,1] = 10;
 		offlineDailyPlays[9,2] = 20;
+		offlineDailyPlays[9,3] = 20;
 		
-		offlineAILevel[9,0] = 4;
-		offlineAILevel[9,1] = 7;
-		offlineAILevel[9,2] = 10;
+		offlineAILevel[9,0] = 5;
+		offlineAILevel[9,1] = 8;
+		offlineAILevel[9,2] = 11;
+		offlineAILevel[9,3] = 14;
 		
 		offlineMinLevel[9,0] = 10;
 		offlineMinLevel[9,1] = 20;
-		offlineMinLevel[9,2] = 35;
+		offlineMinLevel[9,2] = 30;
+		offlineMinLevel[9,3] = 35;
 		
 		offlineMinClass[9,0] = 1;
 		offlineMinClass[9,1] = 1;
 		offlineMinClass[9,2] = 2;
+		offlineMinClass[9,3] = 2;
 		
 		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8,9,10,11";
 		offlineTracklists[9,1] = "12,13,14,15,16,17,18,19,20,21";
 		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21";
+		offlineTracklists[9,3] = "30,1,5,3,4,2,9,6,8,10,11,19,12,7,13,22,23,2,18,14,20,15,9,1,19,12,8,7,10,3,21,6,4";
 			
 		offlineFuel[9,0] = 6;
 		offlineFuel[9,1] = 8;
 		offlineFuel[9,2] = 10;
+		offlineFuel[9,3] = 10;
 		
 		offlinePrizes[9,0] = "";
 		offlinePrizes[9,1] = "";
 		offlinePrizes[9,2] = "";
+		offlinePrizes[9,3] = "";
 		
 		
 		//--------Top Level---------
 		
 		offlineImage[0] = "cup20livery41";
 		offlineImage[1] = "cup20livery11";
-		offlineImage[2] = "cup20livery4";
+		offlineImage[2] = "cup22livery4";
 		offlineImage[3] = "cup20livery1";
 		offlineImage[4] = "cup20livery2";
-		offlineImage[5] = "cup20livery22";
-		offlineImage[6] = "cup20livery43";
+		offlineImage[5] = "cup22livery22";
+		offlineImage[6] = "cup22livery23";
 		offlineImage[7] = "cup20livery12";
 		offlineImage[8] = "cup20livery18";
-		offlineImage[9] = "cup20livery9";
+		offlineImage[9] = "cup22livery5";
 		
 		seriesDescriptions[0] = "The first step onto the oval racing ladder. Show 'em what you've got!";
 		seriesDescriptions[1] = "Learn the challenges of high speed pack racing.";

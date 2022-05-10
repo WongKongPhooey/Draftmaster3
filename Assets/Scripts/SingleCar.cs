@@ -457,7 +457,6 @@ public class SingleCar : MonoBehaviour {
 				
 				//Alt Paints Row
 				for(int columns = 1; columns < 3; columns++){
-
 					if(AltPaints.getAltPaintName(seriesPrefix, currentCar,columns) != null){
 					
 						cardX = widthblock * (columns * 4.25f) + (widthblock * 7.25f);
