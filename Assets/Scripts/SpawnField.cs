@@ -70,11 +70,14 @@ public class SpawnField : MonoBehaviour {
 			//Debug.Log("Spawn standard field: " + seriesPrefix);
 			if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries") == PlayerPrefs.GetString("CurrentSeriesIndex"))){
 				if(PlayerPrefs.GetInt("ChampionshipRound") > 7){
+					Debug.Log("Points Adjusted Field");
 					spawnCarsPointsAdjusted(seriesPrefix);
 				} else {
+					Debug.Log("Too early in the season for points adjusting");
 					spawnCars(seriesPrefix);
 				}
 			} else {
+				Debug.Log("Not a championship race");
 				spawnCars(seriesPrefix);
 			}
 			//spawnCup2020Scenario();
@@ -303,14 +306,16 @@ public class SpawnField : MonoBehaviour {
 		
 		int pointsTableInd = 0;
 		foreach(var pointsRow in pointsTable){
-			if(pointsTableInd < 5){
-				Debug.Log("Added fast car: #" + pointsRow.Key);
-				fastCars.Add("" + pointsRow.Key + "");
-			} else {
-				if(pointsTableInd > 20){
-					slowCars.Add("" + pointsRow.Key + "");
+			if(pointsRow.Value > 0){
+				if(pointsTableInd < 5){
+					Debug.Log("Added fast car: #" + pointsRow.Key);
+					fastCars.Add("" + pointsRow.Key + "");
 				} else {
-					midCars.Add("" + pointsRow.Key + "");
+					if(pointsTableInd > 20){
+						slowCars.Add("" + pointsRow.Key + "");
+					} else {
+						midCars.Add("" + pointsRow.Key + "");
+					}
 				}
 			}
 			pointsTableInd++;

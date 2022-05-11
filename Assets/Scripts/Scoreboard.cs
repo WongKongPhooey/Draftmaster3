@@ -227,7 +227,11 @@ public class Scoreboard : MonoBehaviour {
 				position = i;
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
-				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
+					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
+				} else {
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
 			} else {

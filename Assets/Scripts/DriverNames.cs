@@ -459,9 +459,9 @@ public class DriverNames : MonoBehaviour {
 		cup2022Teams[51] = "RWR";
 		cup2022Teams[52] = "RWR";
 		cup2022Teams[53] = "RWR";
-		cup2022Teams[55] = "IND";
+		cup2022Teams[55] = "MBM";
 		cup2022Teams[62] = "IND";
-		cup2022Teams[66] = "IND";
+		cup2022Teams[66] = "MBM";
 		cup2022Teams[77] = "SPI";
 		cup2022Teams[78] = "IND";
 		cup2022Teams[99] = "TRK";
