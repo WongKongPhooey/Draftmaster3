@@ -60,11 +60,12 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[88,3] = "#3 Duck Num";
 		cup2020AltPaintNames[95,1] = "#1 Core";
 		
+		cup22AltPaintNames[1,1] = "McMurray";
 		cup22AltPaintNames[15,1] = "Stock (Ragan)";
 		cup22AltPaintNames[16,1] = "Stock (Hemric)";
 		cup22AltPaintNames[27,1] = "Stock (Hezemans)";
 		cup22AltPaintNames[66,1] = "Stock (Said)";
-		cup22AltPaintNames[77,1] = "Stock (Bilicki)";
+		cup22AltPaintNames[77,1] = "Stock (Allgaier)";
 		cup22AltPaintNames[78,1] = "Stock (Lally)";
 		cup22AltPaintNames[1,1] = "#1 LTT Winner";
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
@@ -76,11 +77,12 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintDriver[41,1] = "Ku. Busch";
 		cup2020AltPaintDriver[88,3] = "Earnhardt Jr";
 		
+		cup22AltPaintDriver[1,1] = "McMurray";
 		cup22AltPaintDriver[15,1] = "Ragan";
 		cup22AltPaintDriver[16,1] = "Hemric";
 		cup22AltPaintDriver[27,1] = "Hezemans";
 		cup22AltPaintDriver[66,1] = "Said";
-		cup22AltPaintDriver[77,1] = "Bilicki";
+		cup22AltPaintDriver[77,1] = "Allgaier";
 		cup22AltPaintDriver[78,1] = "Lally";
 		cup22AltPaintDriver[99,1] = "Edwards";
 		
