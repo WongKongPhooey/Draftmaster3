@@ -10,7 +10,7 @@ public class PointsTableGUI : MonoBehaviour{
 	static float widthblock = Mathf.Round(Screen.width/20);
 	static float heightblock = Mathf.Round(Screen.height/20);
 
-	public string seriesPrefix;
+	public static string seriesPrefix;
 	public int carNumber;
 
 	int currentSeries;
@@ -32,6 +32,8 @@ public class PointsTableGUI : MonoBehaviour{
 		currentSeries = PlayerPrefs.GetInt("CurrentSeries");
 		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
 		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
+		Debug.Log("Car Series is: " + seriesPrefix);
         SeriesData.setData();
 		loadPoints(); 
     }
@@ -72,10 +74,10 @@ public class PointsTableGUI : MonoBehaviour{
 		for(int i=0;i<100;i++){
 			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
 				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
-				Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
+				//Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
 				pointsTableInd++;
 			} else {
-				Debug.Log("No points found for #" + i);
+				//Debug.Log("No points found for #" + i);
 			}
 		}
 	}
@@ -106,8 +108,8 @@ public class PointsTableGUI : MonoBehaviour{
 				GUI.skin.label.normal.textColor = Color.red;
 			}
 			GUI.Label(new Rect(widthblock * 2f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 3f, heightblock * 2), "" + (pointsTableInd + 1));	
-			GUI.Label(new Rect(widthblock * 6f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 4.5f, heightblock * 2), "" + DriverNames.cup2020Names[pointsRow.Key]);	
-			GUI.Label(new Rect(widthblock * 11.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.cup2020Teams[pointsRow.Key]);	
+			GUI.Label(new Rect(widthblock * 6f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 4.5f, heightblock * 2), "" + DriverNames.getName(seriesPrefix, pointsRow.Key));	
+			GUI.Label(new Rect(widthblock * 11.5f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + DriverNames.getTeam(seriesPrefix, pointsRow.Key));	
 			GUI.Label(new Rect(widthblock * 15f, heightblock * (((pointsTableInd + 1)*1.5f) + posY), widthblock * 2.5f, heightblock * 2), "" + pointsRow.Value);	
 			if(pointsRow.Key == carNumber){
 				GUI.skin.label.normal.textColor = Color.black;

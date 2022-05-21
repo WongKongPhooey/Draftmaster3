@@ -82,6 +82,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		loadCircuitNames();
 		
@@ -475,8 +476,15 @@ public class CircuitSelectGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
 			if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
 				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
+				Debug.Log("Increment Total Starts: " + seriesPrefix + ", " + carNumber);
 			} else {
+				Debug.Log("First Start: " + seriesPrefix + ", " + carNumber);
 				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
+			}
+			
+			//Legacy fix for incorrect start count
+			if(PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) < PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber)){
+				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber , PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber));
 			}
 			
 			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);

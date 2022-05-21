@@ -334,18 +334,21 @@ public class PlayFabManager : MonoBehaviour
 			//This only works with cup20 
 			//Todo: adapt to take any series prefix
 			if(result.Data.ContainsKey("RewardCar")){
-				int rewardCarNum = int.Parse(result.Data["RewardCar"].Value);
-				if(rewardCarNum != 0){
+				string rewardCar = result.Data["RewardCar"].Value;
+				string rewardCarSeries = rewardCar.Substring(0,5);
+				Debug.Log(rewardCar);
+				int rewardCarNum = int.Parse(rewardCar.Substring(5));
+				if(rewardCar != ""){
 					Debug.Log("Rewarded Car #" + rewardCarNum);
-					int carClass = PlayerPrefs.GetInt("cup20" + rewardCarNum + "Class");
+					int carClass = PlayerPrefs.GetInt(rewardCarSeries + rewardCarNum + "Class");
 					if(carClass == 0){
-						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Unlocked", 1);
-						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", DriverNames.cup2020Rarity[rewardCarNum]);
+						PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
+						PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", DriverNames.getRarity(rewardCarSeries,rewardCarNum));
 					} else {
-						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Unlocked", 1);
-						PlayerPrefs.SetInt("cup20" + rewardCarNum + "Class", carClass+1);
+						PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
+						PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", carClass+1);
 					}
-					MainMenuGUI.giftAlert += "You've been gifted a new " + DriverNames.cup2020Names[rewardCarNum] + " car! ";
+					MainMenuGUI.giftAlert += "You've been gifted a new " + DriverNames.getName(rewardCarSeries,rewardCarNum) + " car! ";
 					MainMenuGUI.newGiftAlert = true;
 					emptyPlayerData("RewardCar");
 				}

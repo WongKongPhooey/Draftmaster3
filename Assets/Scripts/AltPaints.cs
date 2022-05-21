@@ -66,6 +66,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintNames[66,1] = "Stock (Said)";
 		cup22AltPaintNames[77,1] = "Stock (Bilicki)";
 		cup22AltPaintNames[78,1] = "Stock (Lally)";
+		cup22AltPaintNames[1,1] = "#1 LTT Winner";
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
@@ -86,6 +87,8 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintAISpawning[5,2] = false;
 		cup2020AltPaintAISpawning[6,1] = false;
 		cup2020AltPaintAISpawning[88,1] = false;
+		
+		cup22AltPaintAISpawning[1,1] = false;
 		cup22AltPaintAISpawning[99,1] = false;
 	}
 	
@@ -125,7 +128,7 @@ public class AltPaints : MonoBehaviour {
 				return cup2020AltPaintAISpawning[carNum,altNum];
 				break;
 			case "cup22":
-				return cup2020AltPaintAISpawning[carNum,altNum];
+				return cup22AltPaintAISpawning[carNum,altNum];
 				break;
 			default:
 				return false;

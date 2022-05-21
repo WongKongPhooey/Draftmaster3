@@ -160,16 +160,19 @@ public class AIMovement : MonoBehaviour
 		
 		altPaints = new List<string>();
 		altPaints.Add("0");
-		altPaints.Add("0");
-		altPaints.Add("0");
-		altPaints.Add("0");
+		//altPaints.Add("0");
+		//altPaints.Add("0");
+		//altPaints.Add("0");
 		AltPaints.loadAlts();
 		
 		for(int i=1;i<10;i++){
 			if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
 				if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != false){
 					altPaints.Add(i.ToString());
+					Debug.Log("Alt spawned for #" + carNum);
 				}
+			} else {
+				
 			}
 		}
 		int altIndex = Random.Range(0,altPaints.Count);
