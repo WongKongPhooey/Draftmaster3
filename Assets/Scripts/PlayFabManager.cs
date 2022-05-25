@@ -261,6 +261,9 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 		}
 		
+		//Testing - Time Trials
+		//result.Data["LiveTimeTrial"] = "FortWorth";
+		
 		//Live Race Time Trial
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
 			//Debug.Log("Live Time Trial Check..");
