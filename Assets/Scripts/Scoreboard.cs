@@ -14,6 +14,8 @@ public class Scoreboard : MonoBehaviour {
 
 	public static int fieldSize;
 
+	public GameObject HUDSpeed;
+
 	public static GameObject playerCar;
 	public static int playerCarNum;
 	public static GameObject playerTwoCar;
@@ -301,6 +303,7 @@ public class Scoreboard : MonoBehaviour {
 		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
 		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
 		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
+		HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2");
 		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 		
 		//Testing - Corner Speeds

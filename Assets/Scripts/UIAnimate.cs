@@ -28,6 +28,22 @@ public class UIAnimate : MonoBehaviour
 		LeanTween.scale(gameObject, new Vector3(0f,0f,0f), 0.5f).setDelay(0.05f * animOffset).setEase(LeanTweenType.easeInOutCubic);
 	}
 	
+	public void setCardDown(){
+		LeanTween.rotateAround(gameObject, Vector3.up, 180, 0f);
+	}
+	
+	public void flipCardXStart(){
+		LeanTween.rotateAround(gameObject, Vector3.up, 90, 0.5f).setDelay(0.1f * animOffset).setEase(LeanTweenType.easeInOutCubic);
+	}
+	
+	public void flipCardBacking(){
+		LeanTween.scale(gameObject, new Vector3(0f,0f,0f), 0f).setDelay((0.1f * animOffset) + 0.5f);
+	}
+	
+	public void flipCardXEnd(){
+		LeanTween.rotateAround(gameObject, Vector3.up, 90, 0.5f).setEase(LeanTweenType.easeInOutCubic);
+	}
+	
 	public void show(){
 		LeanTween.scale(gameObject, new Vector3(1f,1f,1f), 0f);
 	}

@@ -60,7 +60,6 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[88,3] = "#3 Duck Num";
 		cup2020AltPaintNames[95,1] = "#1 Core";
 		
-		cup22AltPaintNames[1,1] = "McMurray";
 		cup22AltPaintNames[15,1] = "Stock (Ragan)";
 		cup22AltPaintNames[16,1] = "Stock (Hemric)";
 		cup22AltPaintNames[27,1] = "Stock (Hezemans)";

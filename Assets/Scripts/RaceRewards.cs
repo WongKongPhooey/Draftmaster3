@@ -34,7 +34,9 @@ public class RaceRewards : MonoBehaviour
 	int championshipFinish;
 	int seriesLength;
 	
+	public static string carPrize;
 	public static int carPrizeNum;
+	public static string carPrizeAlt;
 	public static string carPrizeNumAlt;
 	public static string carReward;
 	public static int rewardMultiplier;
@@ -49,7 +51,7 @@ public class RaceRewards : MonoBehaviour
 	public static Texture2D gasCanTexInst;
 	public static Texture2D gearTexInst;
 	
-	public List<int> validDriver = new List<int>();
+	public List<string> validDriver = new List<string>();
 
 	void Awake(){
 
@@ -117,7 +119,8 @@ public class RaceRewards : MonoBehaviour
 						Debug.Log("Unlocking Alt Paint: " + setPrize);
 						UnlockAltPaint(setPrize);
 					} else {
-						AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+						//Populate event reward pool
+						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 					}
 				} else {
 					carReward = "";
@@ -130,7 +133,8 @@ public class RaceRewards : MonoBehaviour
 					float chance = 11 - finishPos;
 					float rnd = Random.Range(0,10);
 					if(rnd <= chance){
-						AssignPrizes("cup20",validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+						Debug.Log("Top 10 finish, add rewards");
+						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 					} else {
 						carReward = "";
 					}
@@ -153,7 +157,7 @@ public class RaceRewards : MonoBehaviour
 				//Max for a win is 8
 				maxRaceGears = 5;
 			}
-		
+			
 			//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
 			rewardGears = (maxRaceGears - finishPos) + 1;
 			if(rewardGears > 0){
@@ -190,19 +194,19 @@ public class RaceRewards : MonoBehaviour
 
 		if(carReward != ""){
 			GUI.skin.label.alignment = TextAnchor.MiddleRight;
-			GUI.Label(new Rect(widthblock * 9, heightblock * 6, widthblock * 5, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
+			GUI.Label(new Rect(widthblock * 7, heightblock * 6, widthblock * 7, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
 			if(carPrizeNumAlt != ""){
-				GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + carPrizeNumAlt) as Texture);
+				GUI.DrawTexture(new Rect(widthblock * 5, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load(carPrizeAlt) as Texture);
 			} else {
-				GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load("cup20livery" + carPrizeNum) as Texture);
+				GUI.DrawTexture(new Rect(widthblock * 5, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load(carPrize) as Texture);
 			}
 		}
 		
-		GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
+		GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
 		GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")");
 		
 		if(prizeMoney != 0){
-			GUI.DrawTexture(new Rect(widthblock * 7, heightblock * 12, widthblock * 1, widthblock * 1), moneyTexInst);
+			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 12, widthblock * 1, widthblock * 1), moneyTexInst);
 			GUI.Label(new Rect(widthblock * 9, heightblock * 12, widthblock * 5, heightblock * 2), " +$" + (prizeMoney * rewardMultiplier) + "");
 		}
 
@@ -223,28 +227,28 @@ public class RaceRewards : MonoBehaviour
 		}
 	}
 	
-	void AssignPrizes(string seriesPrefix, int carNumber, string setPrize, int multiplier){
-		if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "Gears")){
-			int carGears = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Gears");
-			int carClass = PlayerPrefs.GetInt(seriesPrefix + carNumber + "Class");
-			if(int.Parse(setPrize) > 1){
-				//Likely has a big fixed prize set e.g. 35 car parts
-				PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + int.Parse(setPrize));
-				carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + int.Parse(setPrize);			
-				carCurrentGears = carGears + int.Parse(setPrize);
-				carPrizeNum = carNumber;
-			} else {
-				PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", carGears + multiplier);
-				carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
-				carPrizeNum = carNumber;			
-				carCurrentGears = carGears + multiplier;
-			}
-			carClassMax = GameData.classMax(carClass);
-		} else {
-			PlayerPrefs.SetInt(seriesPrefix + carNumber + "Gears", multiplier);
-			carPrizeNum = carNumber;
-			carReward = "" + DriverNames.cup2020Names[carNumber] + " +" + multiplier;
+	void AssignPrizes(string carId, string setPrize, int multiplier){
+		if(!PlayerPrefs.HasKey(carId + "Gears")){
+			PlayerPrefs.SetInt(carId + "Gears", multiplier);
 		}
+		int carGears = PlayerPrefs.GetInt(carId + "Gears");
+		string seriesPrefix = carId.Substring(0,5);
+		int carNum = int.Parse(carId.Substring(5));
+		if(int.Parse(setPrize) > 1){
+			//Likely has a big fixed prize set e.g. 35 car parts
+			PlayerPrefs.SetInt(carId + "Gears", carGears + int.Parse(setPrize));
+			
+			//Todo: make this take any seriesPrefix
+			carReward = "(" + DriverNames.getSeriesNiceName(seriesPrefix) + ") " + DriverNames.getName(seriesPrefix, carNum) + " +" + int.Parse(setPrize);			
+			carCurrentGears = carGears + int.Parse(setPrize);
+		} else {
+			PlayerPrefs.SetInt(carId + "Gears", carGears + multiplier);
+			carReward = "(" + DriverNames.getSeriesNiceName(seriesPrefix) + ") " + DriverNames.getName(seriesPrefix, carNum) + " +" + multiplier;			
+			carCurrentGears = carGears + multiplier;
+		}
+		carPrize = seriesPrefix + "livery" + carNum;
+		carPrizeNum = carNum;
+		
 		//Reset Prizes
 		PlayerPrefs.SetString("SeriesPrize","");
 	}
@@ -258,16 +262,17 @@ public class RaceRewards : MonoBehaviour
 		
 		string extractedCarNum = setPrize.Split('y').Last();
 		string extractedAltNum = setPrize.Split('t').Last();
+		carPrizeAlt = setPrize;
 		carPrizeNumAlt = extractedCarNum;
 		
-		Debug.Log("Extracted Alt: " + extractedCarNum);
+		//Debug.Log("Extracted Alt: " + extractedCarNum);
 		
 		extractedCarNum = extractedCarNum.Substring(0, extractedCarNum.IndexOf("alt")).Trim();
 		int parsedNum = int.Parse(extractedCarNum);
 		int parsedAlt = int.Parse(extractedAltNum);
 		
-		Debug.Log("Extracted car number: #" + extractedCarNum);
-		Debug.Log("Extracted alt number: #" + extractedAltNum);
+		//Debug.Log("Extracted car number: #" + extractedCarNum);
+		//Debug.Log("Extracted alt number: #" + extractedAltNum);
 		
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
 		if(AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] != null){
@@ -280,238 +285,132 @@ public class RaceRewards : MonoBehaviour
 	void ListPrizeOptions(string category){
 		switch(category){
 			case "Rookies":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Types[i] == "Rookie"){
-							validDriver.Add(i);
-							//Debug.Log("Rookie Added: #" + i);
+				//for(int i=0;i<DriverNames.allCarsets.Length;i++){
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("Rookie Added: #" + i);
+							}
 						}
 					}
 				}
 			break;
-			
 			case "Rarity1":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Rarity[i] == 1){
-							validDriver.Add(i);
-							Debug.Log("1* Rarity Added: #" + i);
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 1){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("1* Rarity Added: #" + i);
+							}
 						}
 					}
 				}
 			break;
 			case "Rarity2":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Rarity[i] == 2){
-							validDriver.Add(i);
-							Debug.Log("2* Rarity Added: #" + i);
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 2){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("2* Rarity Added: #" + i);
+							}
 						}
 					}
 				}
 			break;
 			case "Rarity3":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Rarity[i] == 3){
-							validDriver.Add(i);
-							Debug.Log("3* Rarity Added: #" + i);
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 3){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("3* Rarity Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			case "Rarity4":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 4){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("4* Rarity Added: #" + i);
+							}
 						}
 					}
 				}
 			break;
 			
+			//Manufacturer Rewards
 			case "CHV":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Manufacturer[i] == "CHV"){
-							validDriver.Add(i);
-							Debug.Log("CHV Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "FRD":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Manufacturer[i] == "FRD"){
-							validDriver.Add(i);
-							Debug.Log("FRD Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "TYT":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Manufacturer[i] == "TYT"){
-							validDriver.Add(i);
-							Debug.Log("TYT Added: #" + i);
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
 						}
 					}
 				}
 			break;
 			
+			//Team Rewards
 			case "IND":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "IND"){
-							validDriver.Add(i);
-							Debug.Log("IND Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "RWR":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "RWR"){
-							validDriver.Add(i);
-							Debug.Log("RWR Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "FRM":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "FRM"){
-							validDriver.Add(i);
-							Debug.Log("FRM Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "RFR":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "RFR"){
-							validDriver.Add(i);
-							Debug.Log("RFR Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "RCR":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "RCR"){
-							validDriver.Add(i);
-							Debug.Log("RCR Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "CGR":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "CGR"){
-							validDriver.Add(i);
-							Debug.Log("CGR Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "SHR":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "SHR"){
-							validDriver.Add(i);
-							Debug.Log("SHR Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "PEN":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "PEN"){
-							validDriver.Add(i);
-							Debug.Log("PEN Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "JGR":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "JGR"){
-							validDriver.Add(i);
-							Debug.Log("JGR Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "HEN":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Teams[i] == "HEN"){
-							validDriver.Add(i);
-							Debug.Log("HEN Added: #" + i);
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getTeam(seriesPrefix,j) == category){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
 						}
 					}
 				}
 			break;
 			
-			default:
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						validDriver.Add(i);
-						Debug.Log("All Car Added: #" + i);
-					}
-				}
-			break;
-			
+			//Driver Type Rewards
 			case "Strategist":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Types[i] == "Strategist"){
-							validDriver.Add(i);
-							Debug.Log("Strategist Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "Closer":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Types[i] == "Closer"){
-							validDriver.Add(i);
-							Debug.Log("Closer Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "Intimidator":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Types[i] == "Intimidator"){
-							validDriver.Add(i);
-							Debug.Log("Intimidator Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "Gentleman":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Types[i] == "Gentleman"){
-							validDriver.Add(i);
-							Debug.Log("Gentleman Added: #" + i);
-						}
-					}
-				}
-			break;
 			case "Legend":
-				for(int i=0;i<99;i++){
-					if(DriverNames.cup2020Names[i] != null){
-						if(DriverNames.cup2020Types[i] == "Legend"){
-							validDriver.Add(i);
-							Debug.Log("Legend Added: #" + i);
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getType(seriesPrefix,j) == category){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
 						}
 					}
 				}
 			break;
+
 			case "AltPaint":
 				altPaintReward = true;
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
@@ -519,13 +418,25 @@ public class RaceRewards : MonoBehaviour
 			
 			//Event Specific
 			case "Johnson":
-				validDriver.Add(48);
+				validDriver.Add("cup2048");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
 			case "Earnhardt":
-				validDriver.Add(3);
+				validDriver.Add("cup203");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			default:
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							validDriver.Add("" + seriesPrefix + j + "");
+							//Debug.Log("Added: #" + i);
+						}
+					}
+				}
 			break;
 		}
 	}

@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using TMPro;
 
 using Random=UnityEngine.Random;
 
@@ -55,10 +56,15 @@ public class Movement : MonoBehaviour {
 	float laneFactor;
 
 	public static bool onTurn;
+	public static bool brakesOn;
 	
 	public GameObject audioHolder;
 	AudioSource carEngine;
 	float engineRevs;
+	
+	public GameObject HUDGear;
+	public GameObject HUDRevs;
+	public GameObject HUDRevBarMask;
 	
 	public static bool carInside;
 	public static bool carOutside;
@@ -150,6 +156,7 @@ public class Movement : MonoBehaviour {
 		apronLineX = -2.7f;
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 
+		brakesOn = false;
 		draftBuddy = "";
 		buddiedTime = 0;
 		buddyMax = 10000;
@@ -221,9 +228,9 @@ public class Movement : MonoBehaviour {
 			laneChangeBackout = 32;
 		}
 
-		dooredStrength = 25;
+		dooredStrength = 40;
 		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
-			dooredStrength = 25 + (carRarity * 10) + (carClass * 5);
+			dooredStrength = 50 + (carRarity * 5) + (carClass * 5);
 			if(dooredStrength > 95){
 				dooredStrength = 95;
 			}
@@ -334,7 +341,7 @@ public class Movement : MonoBehaviour {
 	
 	void UpdateTandemPosition(int tandemPosInFront){
 		tandemPosition = tandemPosInFront + 1;
-		Debug.Log("Player is in tandem position " + tandemPosition + "");
+		//Debug.Log("Player is in tandem position " + tandemPosition + "");
 	}
 	
 	// Update is called once per frame
@@ -458,6 +465,12 @@ public class Movement : MonoBehaviour {
 			buddyInFront = 0;
 		}
 		
+		if(brakesOn == true){
+			if(playerSpeed > 195){
+				playerSpeed-=0.025f;
+			}
+		}
+		
 		// Receive A Buddy Backdraft
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 2.8f)){
 			string rearBuddy = DraftCheck.collider.gameObject.name;
@@ -548,13 +561,22 @@ public class Movement : MonoBehaviour {
 		}
 
 		carEngine = audioHolder.GetComponent<AudioSource>();
-		if(CameraRotate.carSpeedOffset < 35){
+		if(playerSpeed - CameraRotate.carSpeedOffset > 170){
 			carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20) - (CameraRotate.carSpeedOffset / 200);
+			HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 4";
+			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (7000 + ((70 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
+			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(400 - ((200 - CameraRotate.carSpeedOffset) * 10), 40);
 		} else {
-			if(CameraRotate.carSpeedOffset > 70){
+			if(playerSpeed - CameraRotate.carSpeedOffset < 135){
 				carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - (CameraRotate.carSpeedOffset / 200);
+				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
+				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (7000 + ((70 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
+				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(350 - ((70 - CameraRotate.carSpeedOffset) * 5), 40);
 			} else {
 				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - (CameraRotate.carSpeedOffset / 200);
+				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 3";
+				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (7000 + ((70 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
+				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(400 - ((200 - CameraRotate.carSpeedOffset) * 10), 40);
 			}
 		}
 
@@ -686,6 +708,28 @@ public class Movement : MonoBehaviour {
 			//Wall hit decel
 			playerSpeed -= 1f;
 		}
+	}
+	
+	public static void changeLaneLeft(){
+		if(laneticker == 0){
+			lane++;
+			laneticker = laneChangeDuration;
+		}
+	}
+	
+	public static void changeLaneRight(){
+		if(laneticker == 0){
+			lane--;
+			laneticker = -laneChangeDuration;
+		}
+	}
+	
+	public static void holdBrake(){
+		brakesOn = true;
+	}
+	
+	public static void releaseBrake(){
+		brakesOn = false;
 	}
 	
 	bool checkRaycast(string rayDirection, float rayLength){

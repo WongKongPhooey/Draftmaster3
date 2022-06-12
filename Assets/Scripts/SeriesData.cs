@@ -583,7 +583,7 @@ public class SeriesData : MonoBehaviour{
 		offlineMinDriverType[7,1] = "Strategist";
 		offlineMinDriverType[7,2] = "Closer";
 		offlineMinDriverType[7,3] = "Intimidator";
-		offlineMinDriverType[7,4] = "Gentleman";
+		offlineMinDriverType[7,4] = "Dominator";
 		offlineMinDriverType[7,5] = "Legend";
 		
 		offlineTracklists[7,0] = "1,12,16,18,5";

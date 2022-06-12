@@ -19,6 +19,8 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, string[]> allTypes = new Dictionary<string, string[]>();
 	public static Dictionary<string, string> allCarsetNames = new Dictionary<string, string>();
 
+	public static string[] allCarsets = new string[2];
+
 	public static string[] cup2020Names = new string[101];
 	public static string[] cup2020Teams = new string[101];
 	public static string[] cup2020Manufacturer = new string[101];
@@ -41,6 +43,7 @@ public class DriverNames : MonoBehaviour {
 		
 		cup20();
 		cup22();
+		listCarsets();
 		carsetNames();
 		
 		series.Clear();
@@ -60,6 +63,11 @@ public class DriverNames : MonoBehaviour {
 			allRarity.Add("cup22", cup2022Rarity);
 			allTypes.Add("cup22", cup2022Types);
 		}
+	}
+	
+	public static void listCarsets(){
+		allCarsets[0] = "cup20";
+		allCarsets[1] = "cup22";
 	}
 	
 	public static string getName(string seriesPrefix, int index){
@@ -133,7 +141,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[22] = "Logano";
 		cup2020Names[24] = "Byron";
 		cup2020Names[27] = "Gaulding";
-		cup2020Names[32] = "Lajoie";
+		cup2020Names[32] = "LaJoie";
 		cup2020Names[34] = "McDowell";
 		cup2020Names[36] = "Ragan";
 		cup2020Names[37] = "Preece";
@@ -511,7 +519,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Manufacturer[78] = "FRD";
 		cup2022Manufacturer[99] = "CHV";
 		
-		cup2022Types[1] = "Strategist";
+		cup2022Types[1] = "Intimidator";
 		cup2022Types[2] = "Rookie";
 		cup2022Types[3] = "Strategist";
 		cup2022Types[4] = "Dominator";

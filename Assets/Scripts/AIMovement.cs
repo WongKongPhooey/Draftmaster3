@@ -65,12 +65,14 @@ public class AIMovement : MonoBehaviour
 	int customNum;
 
 	bool coolEngine;
+	int sparksCooldown;
 
 	public int maxDraftDistance;
 
 	bool dominator;
 
 	int tick;
+	int particleDisableDelay;
 
 	public int lap;
     public int lane;
@@ -129,6 +131,8 @@ public class AIMovement : MonoBehaviour
 		antiGlitch = 0;
 		
 		coolEngine = false;
+		sparksCooldown = 0;
+		particleDisableDelay = 0;
 		
 		thePlayer = GameObject.Find("Player");
 		
@@ -270,9 +274,9 @@ public class AIMovement : MonoBehaviour
 			laneChangeBackout = 32;
 		}
 		
-		dooredStrength = 25;
+		dooredStrength = 40;
 		if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
-			dooredStrength = 25 + (carRarity * 20);
+			dooredStrength = 40 + (carRarity * 15);
 			if(dooredStrength > 95){
 				dooredStrength = 95;
 			}
@@ -336,6 +340,23 @@ public class AIMovement : MonoBehaviour
 			}
 			AISpeed -= 0.5f;
         }
+		
+		if(carHit.gameObject.name == "OuterWall"){
+			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+		}
+		
+		if ((carHit.gameObject.tag == "AICar") || 
+		    (carHit.gameObject.tag == "Player") || 
+			(carHit.gameObject.tag == "Barrier")){
+				if(leftSideClear(0.51f) == false){
+					this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+					sparksCooldown = Random.Range(5,20);
+				}
+				if(rightSideClear(0.51f) == false){
+					this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+					sparksCooldown = Random.Range(5,20);
+				}
+		}
     }
 	
 	void OnCollisionStay(Collision carHit) {
@@ -346,6 +367,7 @@ public class AIMovement : MonoBehaviour
 	
 	void OnCollisionExit(Collision carHit) {
 		antiGlitch = 0;
+		particleDisableDelay = 20;
     }
 	
 	void ReceivePush(float bumpSpeed){
@@ -392,6 +414,15 @@ public class AIMovement : MonoBehaviour
 			tick-=60;
 		}
 
+		if(sparksCooldown > 0){
+			sparksCooldown--;
+		}
+		if(sparksCooldown == 1){
+			sparksCooldown--;
+			this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
+			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();	
+		}
+		
 		//Debug.Log(this.name + " Check");
 
 		lap = CameraRotate.lap;
@@ -859,7 +890,7 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	public bool leftSideClear(){
+	public bool leftSideClear(float checkDist = 1.5f){
 		
         RaycastHit DraftCheckLeft;
         RaycastHit DraftCheckLeftForward;
@@ -884,7 +915,7 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	public bool rightSideClear(){
+	public bool rightSideClear(float checkDist = 1.5f){
 		
         RaycastHit DraftCheckRight;
         RaycastHit DraftCheckRightForward;

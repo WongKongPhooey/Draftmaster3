@@ -334,8 +334,7 @@ public class PlayFabManager : MonoBehaviour
 					emptyPlayerData("RewardGears");
 				}
 			}
-			//This only works with cup20 
-			//Todo: adapt to take any series prefix
+
 			if(result.Data.ContainsKey("RewardCar")){
 				string rewardCar = result.Data["RewardCar"].Value;
 				string rewardCarSeries = rewardCar.Substring(0,5);

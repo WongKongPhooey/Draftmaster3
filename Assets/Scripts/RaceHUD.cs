@@ -38,7 +38,7 @@ public class RaceHUD : MonoBehaviour {
 	void Start(){
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
-		thePlayer = thePlayer = GameObject.Find("Player");
+		thePlayer = GameObject.Find("Player");
 		tutorialSteeringCount = 0;
 		tutorialBrakingCount = 0;
 		tutorialDraftingCount = 0;
@@ -179,7 +179,7 @@ public class RaceHUD : MonoBehaviour {
 							//GameObject.Find("AICar0" + player2Num).GetComponent<AIMovement>().MultiplayerChangeLane("Right");
 						}
 					} else {
-						if (GUI.Button(new Rect(10, Screen.height - (heightblock * 4) - 10, widthblock * 4, heightblock * 4), "<")){
+						/*if (GUI.Button(new Rect(10, Screen.height - (heightblock * 4) - 10, widthblock * 4, heightblock * 4), "<")){
 							//if((Movement.laneticker == 0)&&(Movement.lane < PlayerPrefs.GetInt("CircuitLanes"))){
 							if(Movement.laneticker == 0){
 								Movement.lane++;
@@ -210,7 +210,7 @@ public class RaceHUD : MonoBehaviour {
 									tutorialBrakingCount++;
 								}
 							}
-						}
+						}*/
 					}
 				}
 			}

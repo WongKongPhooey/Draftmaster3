@@ -43,7 +43,7 @@ public class EnviroMovement : MonoBehaviour {
 		} else {
 			enviroSpeed = -3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f);
 			
-			EnviroObject.transform.Translate(0,0,enviroSpeed / 2);
+			EnviroObject.transform.Translate(0,0,enviroSpeed);
 			
 			if (EnviroObject.transform.position.z <= -30){
 				EnviroObject.transform.Translate(0,0,60);
