@@ -562,20 +562,25 @@ public class Movement : MonoBehaviour {
 
 		carEngine = audioHolder.GetComponent<AudioSource>();
 		if(playerSpeed - CameraRotate.carSpeedOffset > 170){
+			//Calculate revs
+			engineRevs = 4000;
+			engineRevs+=((80 - CameraRotate.carSpeedOffset) * 50);
+			engineRevs+=(playerSpeed - 195) * 50;
+			
 			carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20) - (CameraRotate.carSpeedOffset / 200);
 			HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 4";
-			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (7000 + ((70 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
-			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(400 - ((200 - CameraRotate.carSpeedOffset) * 10), 40);
+			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + engineRevs.ToString("F0");
+			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2((10000 - engineRevs) / 25, 40);
 		} else {
 			if(playerSpeed - CameraRotate.carSpeedOffset < 135){
 				carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - (CameraRotate.carSpeedOffset / 200);
 				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
-				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (7000 + ((70 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
+				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (3000 + ((80 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
 				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(350 - ((70 - CameraRotate.carSpeedOffset) * 5), 40);
 			} else {
 				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - (CameraRotate.carSpeedOffset / 200);
 				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 3";
-				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (7000 + ((70 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
+				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (6000 + ((80 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
 				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(400 - ((200 - CameraRotate.carSpeedOffset) * 10), 40);
 			}
 		}

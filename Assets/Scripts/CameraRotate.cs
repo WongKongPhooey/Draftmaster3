@@ -28,6 +28,7 @@ public class CameraRotate : MonoBehaviour {
 	public static float carSpeedOffset;
 	public static int cornerSpeed;
 	public static int cornerMidpoint;
+	public static float gearedAccel;
 	
 	public static bool onTurn;
 	
@@ -80,6 +81,8 @@ public class CameraRotate : MonoBehaviour {
 		turnSpeed = 0;
 		trackLength = 0;
 		totalTurns = PlayerPrefs.GetInt("TotalTurns");
+		
+		gearedAccel = calcCircuitGearing();
 		
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
 		
@@ -154,38 +157,6 @@ public class CameraRotate : MonoBehaviour {
 			Scoreboard.updateScoreboard();
 			lap++;
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
-
-			if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="LastToFirstLaps")&&(Scoreboard.position == 1)){
-				lap--;
-				PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") - 1);
-				Time.timeScale = 0.0f;
-				finishLine.GetComponent<Renderer>().enabled = true;
-				//carEngine = GetComponent<AudioSource>();
-				carEngine.volume = 0;
-				crowdNoise.volume = 0;
-				RaceHUD.raceOver = true;
-				//Scoreboard.championshipPointsOrder();
-				Scoreboard.checkFinishPositions();
-				if((lap - 187) < PlayerPrefs.GetInt("LastToFirstRecord")){
-					PlayerPrefs.SetInt("LastToFirstRecord",(lap - 187));
-				}
-			}
-
-			if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="TrafficJam")&&(Scoreboard.position == 1)){
-				lap--;
-				PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") - 1);
-				Time.timeScale = 0.0f;
-				finishLine.GetComponent<Renderer>().enabled = true;
-				//carEngine = GetComponent<AudioSource>();
-				carEngine.volume = 0;
-				crowdNoise.volume = 0;
-				RaceHUD.raceOver = true;
-				//Scoreboard.championshipPointsOrder();
-				Scoreboard.checkFinishPositions();
-				if((lap - 150) < PlayerPrefs.GetInt("TrafficJamRecord")){
-					PlayerPrefs.SetInt("TrafficJamRecord",(lap - 150));
-				}
-			}
 
 			if((lap == cautionLap)&&(cautionCleared == false)){
 				PlayerPrefs.SetInt("ActiveCaution",1);
@@ -267,12 +238,6 @@ public class CameraRotate : MonoBehaviour {
 				}
 				
 			}
-			if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer")){
-				if((Movement.draftPercent) > PlayerPrefs.GetInt("TeamPlayerRecord")){
-					PlayerPrefs.SetInt("TeamPlayerRecord",int.Parse(Mathf.Round(Movement.draftPercent).ToString()));
-				}
-				PlayerPrefs.SetInt("DraftPercent",int.Parse(Mathf.Round(Movement.draftPercent).ToString()));
-			}
 		}
 
 		//Turning
@@ -309,29 +274,28 @@ public class CameraRotate : MonoBehaviour {
 				} else {
 					//Corner Accel
 					if(carSpeedOffset > 0){
-						carSpeedOffset-=0.0025f * cornerSpeed;
+						//carSpeedOffset-=0.0025f * cornerSpeed;
+						Debug.Log("Accel off corner");
+						carSpeedOffset-= gearedAccel;
 					} else {
 						carSpeedOffset=0;
 					}
 				}
 				//Allows acceleration from a slow corner whilst on a following fast corner
 				if(carSpeedOffset > cornerSpeed){
-					carSpeedOffset-=0.0025f * cornerSpeed;
+					//carSpeedOffset-=0.0025f * cornerSpeed;
+					Debug.Log("Accel on following corner");
+					carSpeedOffset-= gearedAccel;
 				}
 			}
-		}
-
-		if(lap > 0){
-			//Post turn accel
-			if(carSpeedOffset > 0){
-				if(cornerSpeed > 0){
-					carSpeedOffset-= 0.0025f * cornerSpeed;
+		} else {
+			if(lap > 0){
+				//Post turn accel
+				if(carSpeedOffset > 0){
+					carSpeedOffset-= gearedAccel;
 				} else {
-					//Flat acceleration on flatout corners
-					carSpeedOffset-= 0.0025f * 40;
+					carSpeedOffset=0;
 				}
-			} else {
-				carSpeedOffset=0;
 			}
 		}
 
@@ -356,6 +320,40 @@ public class CameraRotate : MonoBehaviour {
 				apron.GetComponent<Renderer>().enabled = false;
 			}
 		}
+	}
+	
+	void OnGUI(){
+		GUI.Label(new Rect(200, 200, 300, 200), "Offset: " + carSpeedOffset);
+	}
+	
+	float calcCircuitGearing(){
+		int longestStraight = 1;
+		int slowestTurn = 1;
+		int slowestTurnLength = 1;
+		int turnSpeed = 0;
+		int straightDist = 0;
+		float calcdGear;
+		for(int i=0;i<6;i++){
+			turnSpeed = calcCornerSpeed(i);
+			
+			if(turnSpeed > slowestTurn){
+				slowestTurn = turnSpeed;
+				slowestTurnLength = (turnLength[i] * turnAngle[i]);
+			}
+		}
+		Debug.Log("Slowest Turn - " + slowestTurn + "MpH");
+		
+		for(int i=0;i<6;i++){
+			straightDist = straightLength[i];
+			if(straightDist > longestStraight){
+				longestStraight = straightDist;
+			}
+		}
+		Debug.Log("Longest Straight - " + longestStraight + "m");
+		
+		calcdGear = (float)slowestTurn / (float)(longestStraight + (float)(slowestTurnLength / 2));
+		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
+		return calcdGear;
 	}
 	
 	int calcCornerSpeed(int corner){
