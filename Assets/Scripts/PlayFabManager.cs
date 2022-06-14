@@ -237,6 +237,19 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetString("TargetVersion", Application.version);
 		}
 		
+		//In Form Driver
+		if(result.Data.ContainsKey("InForm") == true){
+			//Format example: "Larson"
+			if(result.Data["InForm"] != ""){
+				PlayerPrefs.SetString("InForm", result.Data["InForm"]);
+				Debug.Log("In Form Driver is " + result.Data["InForm"]);
+			} else {
+				PlayerPrefs.DeleteKey("InForm");
+			}
+		} else {
+			PlayerPrefs.DeleteKey("InForm");
+		}
+		
 		//Free Fuel Promo
 		if(result.Data.ContainsKey("FreeFuel") == true){
 			if(result.Data["FreeFuel"] == "Yes"){

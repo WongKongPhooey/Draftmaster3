@@ -14,8 +14,6 @@ public class Scoreboard : MonoBehaviour {
 
 	public static int fieldSize;
 
-	public GameObject HUDSpeed;
-
 	public static GameObject playerCar;
 	public static int playerCarNum;
 	public static GameObject playerTwoCar;
@@ -37,7 +35,6 @@ public class Scoreboard : MonoBehaviour {
 	public static float leaderDist;
 	public static float twoPlayerDist;
 
-	public int speedOffset;
 
 	public static GameObject[] carsArray = new GameObject[50];
 	public static float[] carPositions = new float[50];
@@ -82,8 +79,6 @@ public class Scoreboard : MonoBehaviour {
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
 		fieldSize = carsArray.Length;
 		playerCarNum = PlayerPrefs.GetInt("CarChoice");
-		
-		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
 		
 		if(carsArray.Length > 0){
 			foreach (GameObject car in carsArray) {
@@ -298,12 +293,12 @@ public class Scoreboard : MonoBehaviour {
 			GUI.Label(new Rect(widthblock * 16, heightblock * 1f, widthblock * 6, heightblock * 1), (position + 2) + " " + driverNames[position + 1] + "(+" + carDist[position + 1].ToString("F3") + ")");
 		}
 		
-		//Lap timer
-		GUI.Box(new Rect(Screen.width - (widthblock * 4),heightblock * 3,widthblock * 3.5f, heightblock * 3.5f), "");
-		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
-		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
-		GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
-		HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2");
+		//Lap timer (Legacy)
+		//GUI.Box(new Rect(Screen.width - (widthblock * 4),heightblock * 3,widthblock * 3.5f, heightblock * 3.5f), "");
+		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
+		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
+		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
+		
 		GUI.skin.label.alignment = TextAnchor.MiddleLeft;
 		
 		//Testing - Corner Speeds

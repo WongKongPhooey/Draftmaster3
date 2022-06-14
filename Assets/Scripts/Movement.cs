@@ -59,12 +59,24 @@ public class Movement : MonoBehaviour {
 	public static bool brakesOn;
 	
 	public GameObject audioHolder;
+	
 	AudioSource carEngine;
 	float engineRevs;
+	int revbarOffset;
+	
+	public static int speedOffset;
+	
+	int[] gearSpeeds = {999, 190, 110, 50, 25};
 	
 	public GameObject HUDGear;
 	public GameObject HUDRevs;
 	public GameObject HUDRevBarMask;
+	public GameObject HUDSpeed;
+	public GameObject HUDAccSpeed;
+	public GameObject HUDLastLap;
+	public GameObject HUDBestLap;
+	public GameObject HUDLapDelta;
+	public float calcLapDelta;
 	
 	public static bool carInside;
 	public static bool carOutside;
@@ -125,6 +137,10 @@ public class Movement : MonoBehaviour {
 		laneBias = 0;
 		challengeSpeedBoost = 0;
 		tandemPosition = 1;
+		
+		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
+		
+		revbarOffset = 10;
 		
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
@@ -561,29 +577,60 @@ public class Movement : MonoBehaviour {
 		}
 
 		carEngine = audioHolder.GetComponent<AudioSource>();
-		if(playerSpeed - CameraRotate.carSpeedOffset > 170){
+		
+		//4th GEAR
+		if(CameraRotate.carSpeedOffset < gearSpeeds[4]){
 			//Calculate revs
-			engineRevs = 4000;
-			engineRevs+=((80 - CameraRotate.carSpeedOffset) * 50);
-			engineRevs+=(playerSpeed - 195) * 50;
+			engineRevs = 3000;
+			engineRevs+=((gearSpeeds[3] - CameraRotate.carSpeedOffset) * 100);
+			engineRevs+=(playerSpeed - 195) * 100;
 			
-			carEngine.pitch = 1.2f + ((playerSpeed - 200) / 20) - (CameraRotate.carSpeedOffset / 200);
+			carEngine.pitch = 0.7f + (engineRevs / 10000f);
 			HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 4";
-			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + engineRevs.ToString("F0");
-			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2((10000 - engineRevs) / 25, 40);
+			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 		} else {
-			if(playerSpeed - CameraRotate.carSpeedOffset < 135){
+			//2nd GEAR 
+			if(CameraRotate.carSpeedOffset > gearSpeeds[3]){
+				engineRevs = 2000;
+				engineRevs+=((gearSpeeds[2] - CameraRotate.carSpeedOffset) * 100);
+				engineRevs+=(playerSpeed - 195) * 100;
+				
 				carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - (CameraRotate.carSpeedOffset / 200);
 				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
-				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (3000 + ((80 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
-				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(350 - ((70 - CameraRotate.carSpeedOffset) * 5), 40);
+				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
+				
 			} else {
+				//3rd GEAR
+				engineRevs = 5000;
+				engineRevs+=((gearSpeeds[3] - CameraRotate.carSpeedOffset) * 100);
+				engineRevs+=(playerSpeed - 195) * 100;
+				
 				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - (CameraRotate.carSpeedOffset / 200);
 				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 3";
-				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "RPM " + (6000 + ((80 - CameraRotate.carSpeedOffset) * 100)).ToString("F0");
-				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(400 - ((200 - CameraRotate.carSpeedOffset) * 10), 40);
+				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 			}
 		}
+		
+		HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F0");
+		HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2");
+
+		HUDLastLap.GetComponent<TMPro.TMP_Text>().text = "LAP " + (CameraRotate.averageSpeed - speedOffset).ToString("F2");
+		HUDBestLap.GetComponent<TMPro.TMP_Text>().text = "BEST " + (CameraRotate.lapRecord - speedOffset).ToString("F2");
+		
+		calcLapDelta = (CameraRotate.lapRecord - speedOffset)-(CameraRotate.averageSpeed - speedOffset);
+		if(calcLapDelta<0){
+			HUDLapDelta.GetComponent<TMPro.TMP_Text>().text = "DLT (" + calcLapDelta.ToString("F2") + ")";
+		} else {
+			HUDLapDelta.GetComponent<TMPro.TMP_Text>().text = "DLT (+" + calcLapDelta.ToString("F2") + ")";
+		}
+		
+		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
+		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
+		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
+		
 
 		wobbleCount++;
 		

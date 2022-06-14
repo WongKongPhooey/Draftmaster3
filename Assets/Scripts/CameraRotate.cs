@@ -322,10 +322,6 @@ public class CameraRotate : MonoBehaviour {
 		}
 	}
 	
-	void OnGUI(){
-		GUI.Label(new Rect(200, 200, 300, 200), "Offset: " + carSpeedOffset);
-	}
-	
 	float calcCircuitGearing(){
 		int longestStraight = 1;
 		int slowestTurn = 1;

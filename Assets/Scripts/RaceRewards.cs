@@ -368,6 +368,25 @@ public class RaceRewards : MonoBehaviour
 				}
 			break;
 			
+			//Manufacturer Rewards (Capped at 1*)
+			case "CHV1":
+			case "FRD1":
+			case "TYT1":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
+								if(DriverNames.getRarity(seriesPrefix,j) == 1){
+									validDriver.Add("" + seriesPrefix + j + "");
+									//Debug.Log(category + " Added: #" + i);
+								}
+							}
+						}
+					}
+				}
+			break;
+			
 			//Team Rewards
 			case "IND":
 			case "RWR":
@@ -396,7 +415,8 @@ public class RaceRewards : MonoBehaviour
 			case "Strategist":
 			case "Closer":
 			case "Intimidator":
-			case "Gentleman":
+			case "Blocker":
+			case "Dominator":
 			case "Legend":
 				for(int i=0;i<DriverNames.allCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allCarsets[i];

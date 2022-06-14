@@ -523,9 +523,9 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[6,4] = 9;
 		offlineFuel[6,5] = 9;
 		
-		offlinePrizes[6,0] = "FRD";
-		offlinePrizes[6,1] = "CHV";
-		offlinePrizes[6,2] = "TYT";
+		offlinePrizes[6,0] = "FRD1";
+		offlinePrizes[6,1] = "CHV1";
+		offlinePrizes[6,2] = "TYT1";
 		offlinePrizes[6,3] = "FRD";
 		offlinePrizes[6,4] = "CHV";
 		offlinePrizes[6,5] = "TYT";
@@ -535,7 +535,7 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[7,1] = "Strategy Calls";
 		offlineSeries[7,2] = "Closing In";
 		offlineSeries[7,3] = "Intimidating";
-		offlineSeries[7,4] = "Gentleman Driver";
+		offlineSeries[7,4] = "Downright Dominate";
 		offlineSeries[7,5] = "Legend Of The Sport";
 		
 		offlineSeriesImage[7,0] = "cup20livery14";
@@ -604,7 +604,7 @@ public class SeriesData : MonoBehaviour{
 		offlinePrizes[7,1] = "Strategist";
 		offlinePrizes[7,2] = "Closer";
 		offlinePrizes[7,3] = "Intimidator";
-		offlinePrizes[7,4] = "Gentleman";
+		offlinePrizes[7,4] = "Dominator";
 		offlinePrizes[7,5] = "Legend";
 		
 		//Rarity
