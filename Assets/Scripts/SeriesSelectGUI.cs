@@ -109,7 +109,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 					seriesMenu = SeriesData.offlineMenu[menuIndex];
 					subMenuSize = menuCount(menuIndex);
 					scrollPosition = Vector2.zero;
-					Debug.Log("We are now in menu #" + menuIndex);
+					//Debug.Log("We are now in menu #" + menuIndex);
 				}
 			}
 		} else {
@@ -203,7 +203,7 @@ public class SeriesSelectGUI : MonoBehaviour {
 							PlayerPrefs.SetString("RestrictionValue",restrictionValue);
 							PlayerPrefs.SetInt("AIDifficulty", SeriesData.offlineAILevel[menuIndex,subMenu]);
 							PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[menuIndex,subMenu]);
-							Debug.Log("Fuel cost: " + SeriesData.offlineFuel[menuIndex,subMenu]);
+							//Debug.Log("Fuel cost: " + SeriesData.offlineFuel[menuIndex,subMenu]);
 							PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[menuIndex,subMenu]);
 							
 							if(PlayerPrefs.HasKey("ChampionshipSubseries")){

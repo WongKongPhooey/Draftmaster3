@@ -70,14 +70,14 @@ public class SpawnField : MonoBehaviour {
 			//Debug.Log("Spawn standard field: " + seriesPrefix);
 			if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries") == PlayerPrefs.GetString("CurrentSeriesIndex"))){
 				if(PlayerPrefs.GetInt("ChampionshipRound") > 7){
-					Debug.Log("Points Adjusted Field");
+					//Debug.Log("Points Adjusted Field");
 					spawnCarsPointsAdjusted(seriesPrefix);
 				} else {
-					Debug.Log("Too early in the season for points adjusting");
+					//Debug.Log("Too early in the season for points adjusting");
 					spawnCars(seriesPrefix);
 				}
 			} else {
-				Debug.Log("Not a championship race");
+				//Debug.Log("Not a championship race");
 				spawnCars(seriesPrefix);
 			}
 			//spawnCup2020Scenario();
@@ -106,7 +106,7 @@ public class SpawnField : MonoBehaviour {
 		
 		gridRows = Mathf.CeilToInt(gridRowsCalc);
 		
-		Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
+		//Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
 		
 		if(gridRows > (AILevel+5)){
 			playerRow = Random.Range(AILevel,AILevel+5);

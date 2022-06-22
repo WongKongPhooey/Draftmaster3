@@ -32,6 +32,7 @@ public class AIMovement : MonoBehaviour
 	int laneStagnant;
 	int stagnantMax;
 	
+	public bool isWrecking;
 	int antiGlitch;
 	
 	public static int maxTandem;
@@ -99,6 +100,7 @@ public class AIMovement : MonoBehaviour
 		
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
+		isWrecking = false;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -306,7 +308,11 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "OuterWall") ||
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
-							
+
+			if (carHit.gameObject.tag == "AICar"){
+				startWreck();
+			}
+						
 			if (laneticker != 0){
 				if (laneticker > 0){
 					bool rightSideHit = checkRaycast("RightCorners", 0.51f);
@@ -430,6 +436,10 @@ public class AIMovement : MonoBehaviour
         laneInv = 4 - lane;
 		
 		if(lap > 0){
+			if(isWrecking == true){
+				//Bail, drop all Movement logic
+				return;
+			}
 			if(caution){
 				if (AISpeed > 200.5f){
 					AISpeed -= 0.02f;
@@ -1112,6 +1122,33 @@ public class AIMovement : MonoBehaviour
 				break;
 		}
 		return rayHit;
+	}
+	
+	void startWreck(){
+		isWrecking = true;
+		Debug.Log(this.name + " is wrecking");
+		
+		//Make the car light, more affected by physics
+		this.GetComponent<Rigidbody>().mass = 1;
+		
+		//Remove constraints, allowing it to impact/spin using physics
+		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
+		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezePositionX;
+		
+		//Remove forces, physics only
+		this.GetComponent<Rigidbody>().isKinematic = false;
+		this.GetComponent<Rigidbody>().useGravity = false;
+		
+		//Apply wind/drag
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,Random.Range(-1f, -5f));
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-1.0f, 1.0f), 0f);
+		
+		//Tire smoke
+		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+	}
+	
+	void wreckPhysics(){
+		
 	}
 	
 	void drawRaycasts(){

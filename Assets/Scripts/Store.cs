@@ -187,8 +187,9 @@ public class Store : MonoBehaviour{
 		
 		//Set store row counter
 		dailySelectsRows = 1;
-		if(dailySelects.Count >= 8){ dailySelectsRows = 2;}
-		if(dailySelects.Count >= 12){ dailySelectsRows = 3;}
+		if(dailySelects.Count >= 5){ dailySelectsRows = 2;}
+		if(dailySelects.Count >= 9){ dailySelectsRows = 3;}
+		if(dailySelects.Count >= 13){ dailySelectsRows = 4;}
 		
 		//Testing - Generate new picks every reload
 		//PlayerPrefs.DeleteKey("DailyRandoms");
@@ -310,7 +311,7 @@ public class Store : MonoBehaviour{
 			int itemCount = 0;
 			string seriesPrefix = "cup20";
 			int totalItems = 4;
-			float windowscroll = 1.5f;
+			float windowscroll = 0f + (0.5f * dailySelectsRows);
 			
 			GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 			
@@ -691,6 +692,11 @@ public class Store : MonoBehaviour{
 				//1st Row
 				for(int rows = 0; rows < dailySelectsRows; rows++){
 					for(int columns = 1; columns < 5; columns++){
+						
+						if(dailySelects[(rows * 4) + columns-1].ToString() == null){
+							//End row, must be out of picks
+							break;
+						}
 						string carNum = dailySelects[(rows * 4) + columns-1].ToString();
 						int carNumInt;
 						string carSeries = "cup20";

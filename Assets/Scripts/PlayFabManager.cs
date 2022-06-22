@@ -175,6 +175,10 @@ public class PlayFabManager : MonoBehaviour
 			//Remove the last known store values
 			PlayerPrefs.SetString("StoreDailySelects", "");
 		} else {
+			
+			//Fake store values for testing
+			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224";
+			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
 		}

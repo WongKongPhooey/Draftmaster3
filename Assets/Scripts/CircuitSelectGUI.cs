@@ -464,7 +464,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 		int baseLaps = PlayerPrefs.GetInt("RaceLaps");
 		int raceLapsMultiplier = (AIDiff / 8) + 1;
 		PlayerPrefs.SetInt("RaceLaps", Mathf.FloorToInt(baseLaps * raceLapsMultiplier));
-		Debug.Log("Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		//Debug.Log("Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
 	}
 
 	void startRace(){
@@ -476,9 +476,9 @@ public class CircuitSelectGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
 			if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
 				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
-				Debug.Log("Increment Total Starts: " + seriesPrefix + ", " + carNumber);
+				//Debug.Log("Increment Total Starts: " + seriesPrefix + ", " + carNumber);
 			} else {
-				Debug.Log("First Start: " + seriesPrefix + ", " + carNumber);
+				//Debug.Log("First Start: " + seriesPrefix + ", " + carNumber);
 				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
 			}
 			
@@ -492,7 +492,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			//Debug.Log("Track chosen: " + PlayerPrefs.GetString("CurrentTrack"));
 			//dailyPlays--;
 			//PlayerPrefs.SetInt("DailyPlays" + currentSeriesIndex + "", dailyPlays);
-			Debug.Log("Race Laps: " + PlayerPrefs.GetInt("RaceLaps"));
+			//Debug.Log("Race Laps: " + PlayerPrefs.GetInt("RaceLaps"));
 			SceneManager.LoadScene(circuitChoice);
 		} else {
 			//Roll back and bail
@@ -602,7 +602,7 @@ public class CircuitSelectGUI : MonoBehaviour {
 			default:
 				break;
 		}
-		Debug.Log(circuitChoice + " Loaded");
+		//Debug.Log(circuitChoice + " Loaded");
 		setRaceLaps();
 		
 		//Testing only

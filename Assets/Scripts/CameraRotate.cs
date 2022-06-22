@@ -224,10 +224,10 @@ public class CameraRotate : MonoBehaviour {
 			if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 				currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
 				lapRecord -= trackSpeedOffset;
-				Debug.Log(lapRecord);
+				//Debug.Log(lapRecord);
 				lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
 				PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-				Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
+				//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
 				PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
 				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 					PlayFabManager.CheckLiveTimeTrial();
@@ -275,7 +275,7 @@ public class CameraRotate : MonoBehaviour {
 					//Corner Accel
 					if(carSpeedOffset > 0){
 						//carSpeedOffset-=0.0025f * cornerSpeed;
-						Debug.Log("Accel off corner");
+						//Debug.Log("Accel off corner");
 						carSpeedOffset-= gearedAccel;
 					} else {
 						carSpeedOffset=0;
@@ -284,7 +284,7 @@ public class CameraRotate : MonoBehaviour {
 				//Allows acceleration from a slow corner whilst on a following fast corner
 				if(carSpeedOffset > cornerSpeed){
 					//carSpeedOffset-=0.0025f * cornerSpeed;
-					Debug.Log("Accel on following corner");
+					//Debug.Log("Accel on following corner");
 					carSpeedOffset-= gearedAccel;
 				}
 			}
@@ -337,7 +337,7 @@ public class CameraRotate : MonoBehaviour {
 				slowestTurnLength = (turnLength[i] * turnAngle[i]);
 			}
 		}
-		Debug.Log("Slowest Turn - " + slowestTurn + "MpH");
+		//Debug.Log("Slowest Turn - " + slowestTurn + "MpH");
 		
 		for(int i=0;i<6;i++){
 			straightDist = straightLength[i];
@@ -345,10 +345,10 @@ public class CameraRotate : MonoBehaviour {
 				longestStraight = straightDist;
 			}
 		}
-		Debug.Log("Longest Straight - " + longestStraight + "m");
+		//Debug.Log("Longest Straight - " + longestStraight + "m");
 		
 		calcdGear = (float)slowestTurn / (float)(longestStraight + (float)(slowestTurnLength / 2));
-		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
+		//Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
 		return calcdGear;
 	}
 	
