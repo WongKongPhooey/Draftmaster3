@@ -347,8 +347,14 @@ public class CameraRotate : MonoBehaviour {
 		}
 		//Debug.Log("Longest Straight - " + longestStraight + "m");
 		
+		//Default fallback for plate tracks (where slowest turn = 0)
+		if(slowestTurn == 1){
+			slowestTurn = 40;
+			slowestTurnLength = 200;
+		}
+		
 		calcdGear = (float)slowestTurn / (float)(longestStraight + (float)(slowestTurnLength / 2));
-		//Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
+		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
 		return calcdGear;
 	}
 	

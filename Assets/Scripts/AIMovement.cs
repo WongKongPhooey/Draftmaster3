@@ -33,6 +33,8 @@ public class AIMovement : MonoBehaviour
 	int stagnantMax;
 	
 	public bool isWrecking;
+	float wreckDecel;
+	float wreckAngleMultiplier;
 	int antiGlitch;
 	
 	public static int maxTandem;
@@ -309,7 +311,8 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 
-			if (carHit.gameObject.tag == "AICar"){
+			//Start wrecking
+			if (carHit.gameObject.tag == "Player"){
 				startWreck();
 			}
 						
@@ -438,6 +441,7 @@ public class AIMovement : MonoBehaviour
 		if(lap > 0){
 			if(isWrecking == true){
 				//Bail, drop all Movement logic
+				wreckPhysics();
 				return;
 			}
 			if(caution){
@@ -1126,7 +1130,7 @@ public class AIMovement : MonoBehaviour
 	
 	void startWreck(){
 		isWrecking = true;
-		Debug.Log(this.name + " is wrecking");
+		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
 		this.GetComponent<Rigidbody>().mass = 1;
@@ -1140,15 +1144,18 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,Random.Range(-1f, -5f));
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-1.0f, 1.0f), 0f);
+		wreckDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.5f, 0.5f), 0f);
 		
 		//Tire smoke
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 	}
 	
 	void wreckPhysics(){
-		
+		wreckAngleMultiplier = this.gameObject.transform.rotation.y;
+		wreckDecel -= 0.05f;
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
 	}
 	
 	void drawRaycasts(){

@@ -34,18 +34,19 @@ public class EventData : MonoBehaviour
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		offlineEvent[2] = "All Stars";
-		//offlineEvent[3] = "Return Of The King";
+		offlineEvent[3] = "The Closer";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventType[0] = "Progression";
 		offlineEventType[1] = "Progression";
 		offlineEventType[2] = "Replay";
-		//offlineEventType[3] = "Return Of The King";
+		offlineEventType[3] = "Progression";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "2,6,10";
 		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
+		offlineEventWeek[3] = "3,7,11";
 		//offlineEventWeek[2] = "5";
 		//offlineEventWeek[3] = "7";
 		
@@ -255,14 +256,6 @@ public class EventData : MonoBehaviour
 		offlinePrizes[2,0] = "1Star";
 		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";
 		
-		//Return Of The King
-		//offlineEventChapter[2,0] = "Where It All Began";
-		//offlineEventChapter[2,1] = "Phoenix Nights";
-		//offlineEventChapter[2,2] = "Daytona!";
-		//offlineEventChapter[2,3] = "Daytona! Again!";
-		//offlineEventChapter[2,4] = "Eleventh Heaven";
-		//offlineEventChapter[2,5] = "Serial Champion";
-		
 		//Wonder Boy
 		offlineEventChapter[3,0] = "Where It All Began";
 		offlineEventChapter[3,1] = "Phoenix Nights";
@@ -275,13 +268,13 @@ public class EventData : MonoBehaviour
 		offlineEventImage[0] = "cup20livery48";
 		offlineEventImage[1] = "cup20livery3alt2";
 		offlineEventImage[2] = "cup22livery45";
-		offlineEventImage[3] = "cup20livery24";
+		offlineEventImage[3] = "cup01livery29";
 
 		
 		eventDescriptions[0] = "Relive Johnson's best moments leading to an incredible 7 championships.";
 		eventDescriptions[1] = "Do it for Dale! Revisit some of Earnhardt's finest drives.";
 		eventDescriptions[2] = "Touchdown in LA. The new season starts here.";
-		eventDescriptions[3] = "A variety of iconic circuits that witnessed the talent of King Petty.";
+		eventDescriptions[3] = "Play out the biggest races in Harvick's career to date.";
 		eventDescriptions[4] = "Moments in history that defined Gordon's timeless career.";
 	}
 
