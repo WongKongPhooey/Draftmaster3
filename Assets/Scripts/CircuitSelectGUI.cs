@@ -465,6 +465,8 @@ public class CircuitSelectGUI : MonoBehaviour {
 		int raceLapsMultiplier = (AIDiff / 8) + 1;
 		PlayerPrefs.SetInt("RaceLaps", Mathf.FloorToInt(baseLaps * raceLapsMultiplier));
 		//Debug.Log("Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		//Testing
+		PlayerPrefs.SetInt("RaceLaps", 1);
 	}
 
 	void startRace(){

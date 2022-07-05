@@ -657,46 +657,55 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[9,1] = "Half Season 2";
 		offlineSeries[9,2] = "2020 Calendar Season";
 		offlineSeries[9,3] = "2022 Calendar Season";
+		offlineSeries[9,4] = "Test Season";
 		
 		offlineSeriesImage[9,0] = "cup20livery22";
 		offlineSeriesImage[9,1] = "cup20livery2";
 		offlineSeriesImage[9,2] = "cup20livery9";
 		offlineSeriesImage[9,3] = "cup22livery5";
+		offlineSeriesImage[9,4] = "cup22livery1alt1";
 		
 		offlineDailyPlays[9,0] = 10;
 		offlineDailyPlays[9,1] = 10;
 		offlineDailyPlays[9,2] = 20;
 		offlineDailyPlays[9,3] = 20;
+		offlineDailyPlays[9,4] = 20;
 		
 		offlineAILevel[9,0] = 5;
 		offlineAILevel[9,1] = 8;
 		offlineAILevel[9,2] = 11;
 		offlineAILevel[9,3] = 14;
+		offlineAILevel[9,4] = 1;
 		
 		offlineMinLevel[9,0] = 10;
 		offlineMinLevel[9,1] = 20;
 		offlineMinLevel[9,2] = 30;
 		offlineMinLevel[9,3] = 35;
+		offlineMinLevel[9,4] = 1;
 		
 		offlineMinClass[9,0] = 1;
 		offlineMinClass[9,1] = 1;
 		offlineMinClass[9,2] = 2;
 		offlineMinClass[9,3] = 2;
+		offlineMinClass[9,4] = 1;
 		
 		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8,9,10,11";
 		offlineTracklists[9,1] = "12,13,14,15,16,17,18,19,20,21";
 		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21";
 		offlineTracklists[9,3] = "30,1,5,3,4,2,9,6,8,10,11,19,12,7,13,22,23,2,18,14,20,15,9,1,19,12,8,7,10,3,21,6,4";
+		offlineTracklists[9,4] = "1,2,19";
 			
 		offlineFuel[9,0] = 6;
 		offlineFuel[9,1] = 8;
 		offlineFuel[9,2] = 10;
 		offlineFuel[9,3] = 10;
+		offlineFuel[9,4] = 1;
 		
 		offlinePrizes[9,0] = "";
 		offlinePrizes[9,1] = "";
 		offlinePrizes[9,2] = "";
 		offlinePrizes[9,3] = "";
+		offlinePrizes[9,4] = "";
 		
 		
 		//--------Top Level---------

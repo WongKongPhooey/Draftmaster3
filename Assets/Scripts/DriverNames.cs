@@ -19,7 +19,7 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, string[]> allTypes = new Dictionary<string, string[]>();
 	public static Dictionary<string, string> allCarsetNames = new Dictionary<string, string>();
 
-	public static string[] allCarsets = new string[2];
+	public static string[] allCarsets = new string[4];
 
 	public static string[] cup2020Names = new string[101];
 	public static string[] cup2020Teams = new string[101];
@@ -33,6 +33,18 @@ public class DriverNames : MonoBehaviour {
 	public static int[] cup2022Rarity = new int[101];
 	public static string[] cup2022Types = new string[101];
 	
+	public static string[] cup2001Names = new string[101];
+	public static string[] cup2001Teams = new string[101];
+	public static string[] cup2001Manufacturer = new string[101];
+	public static int[] cup2001Rarity = new int[101];
+	public static string[] cup2001Types = new string[101];
+	
+	public static string[] dmc2015Names = new string[101];
+	public static string[] dmc2015Teams = new string[101];
+	public static string[] dmc2015Manufacturer = new string[101];
+	public static int[] dmc2015Rarity = new int[101];
+	public static string[] dmc2015Types = new string[101];
+	
 	public static string[] legendsNames = new string[10];
 	public static string[] legendsLiveries = new string[10];
 	
@@ -43,12 +55,16 @@ public class DriverNames : MonoBehaviour {
 		
 		cup20();
 		cup22();
+		cup01();
+		dmc15();
 		listCarsets();
 		carsetNames();
 		
 		series.Clear();
 		series.Add("cup20");
 		series.Add("cup22");
+		series.Add("cup01");
+		series.Add("dmc15");
 		
 		if(allNames.ContainsKey("cup20") == false){
 			allNames.Add("cup20", cup2020Names);
@@ -62,12 +78,26 @@ public class DriverNames : MonoBehaviour {
 			allManufacturer.Add("cup22", cup2022Manufacturer);
 			allRarity.Add("cup22", cup2022Rarity);
 			allTypes.Add("cup22", cup2022Types);
+			
+			allNames.Add("cup01", cup2001Names);
+			allTeams.Add("cup01", cup2001Teams);
+			allManufacturer.Add("cup01", cup2001Manufacturer);
+			allRarity.Add("cup01", cup2001Rarity);
+			allTypes.Add("cup01", cup2001Types);
+			
+			allNames.Add("dmc15", dmc2015Names);
+			allTeams.Add("dmc15", dmc2015Teams);
+			allManufacturer.Add("dmc15", dmc2015Manufacturer);
+			allRarity.Add("dmc15", dmc2015Rarity);
+			allTypes.Add("dmc15", dmc2015Types);
 		}
 	}
 	
 	public static void listCarsets(){
 		allCarsets[0] = "cup20";
 		allCarsets[1] = "cup22";
+		allCarsets[2] = "cup01";
+		allCarsets[3] = "dmc15";
 	}
 	
 	public static string getName(string seriesPrefix, int index){
@@ -112,6 +142,8 @@ public class DriverNames : MonoBehaviour {
 		if(allNames.ContainsKey("cup20") == false){
 			allCarsetNames.Add("cup20", "Cup '20");
 			allCarsetNames.Add("cup22", "Cup '22");
+			allCarsetNames.Add("cup01", "Cup '01");
+			allCarsetNames.Add("dmc15", "DM1 '15");
 		}
 	}
 	
@@ -609,16 +641,106 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[77] = 1;
 		cup2022Rarity[78] = 1;
 		cup2022Rarity[99] = 1;
+	}
+	
+	public static void cup01(){
+
+		cup2001Names[24] = "Gordon";
+		cup2001Names[29] = "Harvick";
 		
-		legendsNames[0] = "Petty";
-		legendsNames[1] = "Earnhardt";
-		legendsNames[2] = "Johnson";
-		legendsNames[3] = "Yarborough";
+		cup2001Teams[24] = "HEN";
+		cup2001Teams[29] = "RCR";
 		
-		legendsLiveries[0] = "20livery2";
-		legendsLiveries[1] = "20livery0";
-		legendsLiveries[2] = "20livery1";
-		legendsLiveries[3] = "76livery2";
+		cup2001Manufacturer[24] = "CHV";
+		cup2001Manufacturer[29] = "CHV";
+		
+		cup2001Types[24] = "Closer";
+		cup2001Types[29] = "Rookie";
+
+		cup2001Rarity[24] = 4;
+		cup2001Rarity[29] = 2;
+	}
+	
+	public static void dmc15(){
+
+		dmc2015Names[0] = "Routermann";
+		dmc2015Names[1] = "D.Allman";
+		dmc2015Names[2] = "Rust";
+		dmc2015Names[3] = "Earnst";
+		dmc2015Names[4] = "Sterling";
+		dmc2015Names[5] = "T.Laborde";
+		dmc2015Names[6] = "Markin";
+		dmc2015Names[7] = "Kuwalski";
+		dmc2015Names[8] = "Earnst.Jr";
+		dmc2015Names[9] = "Orsonville";
+		dmc2015Names[10] = "Ruddy";
+		dmc2015Names[11] = "D.Walnutz";
+		dmc2015Names[12] = "B.Allman";
+		dmc2015Names[13] = "R.Gourd";
+		dmc2015Names[14] = "Fonte";
+		dmc2015Names[15] = "M.Walnutz";
+		dmc2015Names[16] = "Biffman";
+		dmc2015Names[17] = "Kenstone";
+		dmc2015Names[18] = "Ky.Bush";
+		dmc2015Names[19] = "Truman.Jr";
+		dmc2015Names[20] = "Toney";
+		dmc2015Names[21] = "Peartree";
+		dmc2015Names[22] = "Fireball";
+		dmc2015Names[23] = "Hollace";
+		dmc2015Names[24] = "S.Gourd";
+		dmc2015Names[25] = "Rich";
+		dmc2015Names[27] = "Junior";
+		dmc2015Names[28] = "Daveyson";
+		dmc2015Names[29] = "Harvey";
+		dmc2015Names[30] = "Wong";
+		dmc2015Names[33] = "Giant";
+		dmc2015Names[37] = "L.Schrader";
+		dmc2015Names[41] = "L.Petterson";
+		dmc2015Names[43] = "R.Petterson";
+		dmc2015Names[44] = "Laborde";
+		dmc2015Names[46] = "Speed";
+		dmc2015Names[48] = "Seventine";
+		dmc2015Names[50] = "Brodine";
+		dmc2015Names[51] = "Ku.Bush";
+		dmc2015Names[52] = "Smutt";
+		dmc2015Names[55] = "Minilund";
+		dmc2015Names[66] = "Dick";
+		dmc2015Names[67] = "Buddy";
+		dmc2015Names[71] = "Circus";
+		dmc2015Names[77] = "Hornet.Jr";
+		dmc2015Names[80] = "Kenny";
+		dmc2015Names[88] = "Jarrold";
+		dmc2015Names[89] = "Butcher";
+		dmc2015Names[91] = "Shepherd";
+		dmc2015Names[92] = "Herbie";
+		dmc2015Names[94] = "Elio";
+		dmc2015Names[97] = "Amiss";
+		dmc2015Names[99] = "Eddison";
+		
+		dmc2015Teams[0] = "DM1";
+		dmc2015Teams[1] = "DM1";
+		dmc2015Teams[2] = "DM1";
+		dmc2015Teams[3] = "DM1";
+		dmc2015Teams[4] = "DM1";
+		dmc2015Teams[5] = "DM1";
+		dmc2015Teams[6] = "DM1";
+		dmc2015Teams[7] = "DM1";
+		dmc2015Teams[8] = "DM1";
+		dmc2015Teams[9] = "DM1";
+		dmc2015Teams[10] = "DM1";
+		dmc2015Teams[11] = "DM1";
+		dmc2015Teams[12] = "DM1";
+		
+		dmc2015Manufacturer[0] = "CHV";
+		dmc2015Manufacturer[1] = "CHV";
+		dmc2015Manufacturer[2] = "CHV";
+		dmc2015Manufacturer[3] = "CHV";
+		
+		dmc2015Types[0] = "Closer";
+		dmc2015Types[1] = "Rookie";
+
+		dmc2015Rarity[0] = 2;
+		dmc2015Rarity[1] = 2;
 	}
 	
 	public static string shortenedType(string type){

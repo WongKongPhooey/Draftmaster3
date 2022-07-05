@@ -177,7 +177,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			
 			//Fake store values for testing
-			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224";
+			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224";
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
@@ -353,6 +353,7 @@ public class PlayFabManager : MonoBehaviour
 			}
 
 			if(result.Data.ContainsKey("RewardCar")){
+				//Example: cup2212
 				string rewardCar = result.Data["RewardCar"].Value;
 				string rewardCarSeries = rewardCar.Substring(0,5);
 				Debug.Log(rewardCar);

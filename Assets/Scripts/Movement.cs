@@ -766,6 +766,7 @@ public class Movement : MonoBehaviour {
 		if(laneticker == 0){
 			lane++;
 			laneticker = laneChangeDuration;
+			Debug.Log("Goin' Left!");
 		}
 	}
 	
@@ -773,6 +774,7 @@ public class Movement : MonoBehaviour {
 		if(laneticker == 0){
 			lane--;
 			laneticker = -laneChangeDuration;
+			Debug.Log("Goin' Right!");
 		}
 	}
 	

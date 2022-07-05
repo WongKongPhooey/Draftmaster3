@@ -308,12 +308,23 @@ public class AIMovement : MonoBehaviour
 		    (carHit.gameObject.tag == "Player") || 
 			(carHit.gameObject.tag == "Barrier") || 
 			(carHit.gameObject.name == "OuterWall") ||
+			(carHit.gameObject.name == "SaferBarrier") ||
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 
 			//Start wrecking
-			if (carHit.gameObject.tag == "Player"){
+			/*if((carHit.gameObject.tag == "Barrier") || 
+			  (carHit.gameObject.name == "OuterWall") ||
+			  (carHit.gameObject.name == "SaferBarrier")){*/
 				startWreck();
+			//}
+			
+			//Join wreck
+			if(carHit.gameObject.tag == "AICar"){
+				bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
+				if(joinWreck == true){
+					startWreck();
+				}
 			}
 						
 			if (laneticker != 0){
@@ -338,7 +349,9 @@ public class AIMovement : MonoBehaviour
 				if(carHit.gameObject.tag == "Player"){
 					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
 				} else {
-					dooredStrength = carHit.gameObject.GetComponent<AIMovement>().dooredStrength;
+					if(carHit.gameObject.tag == "AICar"){
+						dooredStrength = carHit.gameObject.GetComponent<AIMovement>().dooredStrength;
+					}
 				}
 				if(doored("Left",dooredStrength) == true){
 					changeLane("Right");
@@ -1146,16 +1159,24 @@ public class AIMovement : MonoBehaviour
 		//Apply wind/drag
 		wreckDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.5f, 0.5f), 0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-1f, 1f), 0f);
 		
 		//Tire smoke
-		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 	}
 	
 	void wreckPhysics(){
 		wreckAngleMultiplier = this.gameObject.transform.rotation.y;
 		wreckDecel -= 0.05f;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
+		
+		//Align particle system to global track direction
+		Vector3 carAlignL = new Vector3(transform.position.x - 0.5f, transform.position.y, transform.position.z - 2f);
+		Vector3 carAlignM = new Vector3(transform.position.x, transform.position.y + 0.6f, transform.position.z - 2f);
+		Vector3 carAlignR = new Vector3(transform.position.x + 0.5f, transform.position.y, transform.position.z - 2f);
+		this.transform.Find("SparksL").LookAt(carAlignL, Vector3.left);
+		this.transform.Find("TireSmoke").LookAt(carAlignM, Vector3.left);
+		this.transform.Find("SparksR").LookAt(carAlignR, Vector3.left);
 	}
 	
 	void drawRaycasts(){

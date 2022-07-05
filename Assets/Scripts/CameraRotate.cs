@@ -354,6 +354,9 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		calcdGear = (float)slowestTurn / (float)(longestStraight + (float)(slowestTurnLength / 2));
+		if(calcdGear > 0.25f){
+			calcdGear = 0.25f;
+		}
 		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
 		return calcdGear;
 	}

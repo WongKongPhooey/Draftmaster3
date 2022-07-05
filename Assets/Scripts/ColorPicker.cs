@@ -4,17 +4,13 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using UnityEngine.Events;
-
-[Serializable]
-public class ColorEvent : UnityEvent<Color>{
-	
-}
+using TMPro;
 
 public class ColorPicker : MonoBehaviour
 {
-	public ColorEvent onColorPreview;
-	public ColorEvent onColorSelect;
 	public GameObject carBase;
+	public GameObject carVinyl;
+	public GameObject activeLayer;
 	RectTransform Rect;
 	Texture2D ColorTexture;
 	
@@ -23,6 +19,7 @@ public class ColorPicker : MonoBehaviour
     {
         Rect = GetComponent<RectTransform>();
 		ColorTexture = GetComponent<Image>().mainTexture as Texture2D;
+		activeLayer = GameObject.Find("Base");
     }
 
     // Update is called once per frame
@@ -42,15 +39,16 @@ public class ColorPicker : MonoBehaviour
 			int texY = Mathf.RoundToInt(y * ColorTexture.height);
 			
 			Color color = ColorTexture.GetPixel(texX, texY);
-			//Debug.Log(color);
-			
-			onColorPreview?.Invoke(color);
 			
 			if(Input.GetMouseButtonDown(0)){
-				onColorSelect?.Invoke(color);
+				//carBase.GetComponent<Renderer>().material.color = color;
+				//carBase.GetComponent<Renderer>().material.SetColor("_TintColor", color);
+				activeLayer.GetComponent<Image>().color = color;
 			}
-			
-			carBase.GetComponent<Renderer>().material.color = color;
 		}
+	}
+	
+	public void changeLayer(){
+		activeLayer = GameObject.Find("Vinyl");
 	}
 }

@@ -20,6 +20,8 @@ public class GarageUI : MonoBehaviour
 			}
 			
 			GameObject tileInst = Instantiate(carTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			tileInst.GetComponent<GarageTileFunctions>().carSeriesPrefix = seriesPrefix;
+			tileInst.GetComponent<GarageTileFunctions>().carNum = i;
 			tileInst.transform.SetParent(tileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
 			tileInst.GetComponent<UIAnimate>().setCardDown();

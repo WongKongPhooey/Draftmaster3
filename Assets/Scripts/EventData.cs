@@ -29,8 +29,11 @@ public class EventData : MonoBehaviour
 	public static string[,] offlineCustomField = new string[10,10];
 	
     // Start is called before the first frame update
-    void Start(){
-        
+    void Start(){   
+		loadEvents();
+	}
+	
+	public static void loadEvents() {
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		offlineEvent[2] = "All Stars";
@@ -46,7 +49,7 @@ public class EventData : MonoBehaviour
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "2,6,10";
 		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
-		offlineEventWeek[3] = "3,7,11";
+		offlineEventWeek[3] = "1,5,9";
 		//offlineEventWeek[2] = "5";
 		//offlineEventWeek[3] = "7";
 		
@@ -218,7 +221,7 @@ public class EventData : MonoBehaviour
 		offlineTracklists[1,5] = "20";
 		offlinePrizes[1,5] = "AltPaint";
 		offlineSetPrizes[1,5] = "cup20livery3alt4";
-		eventChapterDescriptions[1,5] = "Aug 3, 1996. A week after breaking his collarbone, sternum, and shoulder at Talladega, Earnhardt starts the Brickyard 500.";
+		eventChapterDescriptions[1,5] = "Aug 3, 1996. 1 week after breaking his collarbone, sternum, and shoulder, Earnhardt starts the Brickyard 500.";
 		
 		offlineEventChapter[1,6] = "20th Time Lucky";
 		offlineChapterImage[1,6] = "BigOval";
@@ -256,14 +259,105 @@ public class EventData : MonoBehaviour
 		offlinePrizes[2,0] = "1Star";
 		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";
 		
-		//Wonder Boy
-		offlineEventChapter[3,0] = "Where It All Began";
-		offlineEventChapter[3,1] = "Phoenix Nights";
-		offlineEventChapter[3,2] = "Daytona!";
-		offlineEventChapter[3,3] = "Daytona! Again!";
-		offlineEventChapter[3,4] = "Eleventh Heaven";
-		offlineEventChapter[3,5] = "Serial Champion";
+		//The Closer (Harvick)
+		offlineEventChapter[3,0] = "Big Boots To Fill";
+		offlineChapterImage[3,0] = "cup01livery29";
+		offlineMinClass[3,0] = 2;
+		offlineMinLevel[3,0] = 10;
+		offlineAILevel[3,0] = 5;
+		offlineMinType[3,0] = "Type";
+		offlineMinTeam[3,0] = "Rookie";
+		offlineTracklists[3,0] = "2";
+		offlinePrizes[3,1] = "cup224";
+		offlineSetPrizes[3,1] = "15";
+		eventChapterDescriptions[3,0] = "Harvick steps into the RCR #29, following Earnhardt's untimely death.";
 		
+		offlineEventChapter[3,1] = "Rookie Of The Year";
+		offlineChapterImage[3,1] = "AngledTriOval";
+		offlineMinClass[3,1] = 2;
+		offlineMinLevel[3,1] = 15;
+		offlineAILevel[3,1] = 7;
+		offlineMinType[3,1] = "Rarity";
+		offlineMinRarity[3,1] = 2;
+		offlineSeries[2,0] = "cup01";
+		offlineCustomField[2,0] = "cup01HarvickGordon";
+		offlineTracklists[3,1] = "3";
+		offlinePrizes[3,1] = "cup224";
+		offlineSetPrizes[3,1] = "15";
+		eventChapterDescriptions[3,1] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
+		
+		/*offlineEventChapter[1,2] = "Sophomore Season";
+		offlineChapterImage[1,2] = "LongOval";
+		offlineMinClass[1,2] = 4;
+		offlineMinLevel[1,2] = 15;
+		offlineAILevel[1,2] = 10;
+		offlineMinType[1,2] = "Team";
+		offlineMinTeam[1,2] = "IND";
+		offlineTracklists[1,2] = "6";
+		offlinePrizes[1,2] = "Earnhardt";
+		offlineSetPrizes[1,2] = "20";
+		eventChapterDescriptions[1,2] = "September 28, 1980. Earnhardt gets his 4th of 5 wins, and later his first Cup series in only his 2nd season.";
+		
+		offlineEventChapter[1,3] = "RCR Enterprise";
+		offlineChapterImage[1,3] = "cup20livery3alt3";
+		offlineMinClass[1,3] = 3;
+		offlineMinLevel[1,3] = 20;
+		offlineAILevel[1,3] = 11;
+		offlineMinType[1,3] = "Team";
+		offlineMinTeam[1,3] = "RCR";
+		offlineTracklists[1,3] = "2";
+		offlinePrizes[1,3] = "AltPaint";
+		offlineSetPrizes[1,3] = "cup20livery3alt3";
+		eventChapterDescriptions[1,3] = "Nov 2, 1986. Earnhardt wins his 2nd championship in style with a race to spare, his first with RCR.";
+		
+		offlineEventChapter[1,4] = "Pass In The Grass";
+		offlineChapterImage[1,4] = "TriOval";
+		offlineMinClass[1,4] = 3;
+		offlineMinLevel[1,4] = 25;
+		offlineAILevel[1,4] = 12;
+		offlineMinType[1,4] = "Car";
+		offlineExactCar[1,4] = 3;
+		offlinePrizes[1,4] = "Earnhardt";
+		offlineTracklists[1,4] = "13";
+		offlineSetPrizes[1,4] = "25";
+		eventChapterDescriptions[1,4] = "May 17, 1987. The Intimidator makes the iconic 'Pass In The Grass' and goes on to win the All-Star race.";
+		
+		offlineEventChapter[1,5] = "It Hurt So Good";
+		offlineChapterImage[1,5] = "cup20livery3alt4";
+		offlineMinClass[1,5] = 4;
+		offlineMinLevel[1,5] = 30;
+		offlineAILevel[1,5] = 13;
+		offlineMinType[1,5] = "Car";
+		offlineExactCar[1,5] = 3;
+		offlineTracklists[1,5] = "20";
+		offlinePrizes[1,5] = "AltPaint";
+		offlineSetPrizes[1,5] = "cup20livery3alt4";
+		eventChapterDescriptions[1,5] = "Aug 3, 1996. A week after breaking his collarbone, sternum, and shoulder at Talladega, Earnhardt starts the Brickyard 500.";
+		
+		offlineEventChapter[1,6] = "20th Time Lucky";
+		offlineChapterImage[1,6] = "BigOval";
+		offlineMinClass[1,6] = 5;
+		offlineMinLevel[1,6] = 35;
+		offlineAILevel[1,6] = 14;
+		offlineMinType[1,6] = "Car";
+		offlineExactCar[1,6] = 3;
+		offlinePrizes[1,6] = "Earnhardt";
+		offlineTracklists[1,6] = "1";
+		offlineSetPrizes[1,6] = "30";
+		eventChapterDescriptions[1,6] = " Feb 15, 1998. Earnhardt finally wins the Daytona 500 in his 20th attempt.";
+		
+		offlineEventChapter[1,7] = "Talladega Tenth";
+		offlineChapterImage[1,7] = "cup20livery3alt2";
+		offlineMinClass[1,7] = 5;
+		offlineMinLevel[1,7] = 40;
+		offlineAILevel[1,7] = 15;
+		offlineMinType[1,7] = "Car";
+		offlineExactCar[1,7] = 3;
+		offlineTracklists[1,7] = "10";
+		offlinePrizes[1,7] = "AltPaint";
+		offlineSetPrizes[1,7] = "cup20livery3alt2";
+		eventChapterDescriptions[1,7] = "Oct 15, 2000. Earnhardt passes 17 cars in the last 6 laps to take his final ever win, and his 10th at Talladega.";
+		*/
 		
 		offlineEventImage[0] = "cup20livery48";
 		offlineEventImage[1] = "cup20livery3alt2";

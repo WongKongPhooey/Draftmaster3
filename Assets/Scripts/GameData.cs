@@ -5,6 +5,9 @@ using UnityEngine;
 
 public class GameData : MonoBehaviour {
 	
+	//Colours
+	//Halloween Orange #FF6800
+	
 	public static int gameFuel;
 	public static int maxFuel;
 	public static int gears;

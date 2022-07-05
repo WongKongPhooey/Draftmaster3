@@ -10,6 +10,10 @@ public class MenuButton : MonoBehaviour
 	public string URLName = "";
 	
 	void OnMouseUp(){
+		loadScene();
+    }
+	
+	public void loadScene(){
 		if(PlayerPrefs.HasKey("NewUser")){
 			if(URLName != ""){
 				Application.OpenURL(URLName);
@@ -20,5 +24,5 @@ public class MenuButton : MonoBehaviour
 			//If new player, they need their first car
 			SceneManager.LoadScene("PrizeCollection");
 		}
-    }
+	}
 }

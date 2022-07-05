@@ -49,9 +49,10 @@ public class AllCars : MonoBehaviour {
 		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		filterSeries = "";
 		
-		seriesPrefix = "cup20";
+		//seriesPrefix = "cup20";
+		seriesPrefix = "dmc15";
 		if(PlayerPrefs.HasKey("LastSeriesPrefix")){
-			seriesPrefix = PlayerPrefs.GetString("LastSeriesPrefix");
+			//seriesPrefix = PlayerPrefs.GetString("LastSeriesPrefix");
 		}
 		
 		seriesPanel = false;
