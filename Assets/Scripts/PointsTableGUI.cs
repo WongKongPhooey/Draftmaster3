@@ -34,7 +34,7 @@ public class PointsTableGUI : MonoBehaviour{
 		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		Debug.Log("Car Series is: " + seriesPrefix);
-        SeriesData.setData();
+        SeriesData.loadSeries();
 		loadPoints(); 
     }
 

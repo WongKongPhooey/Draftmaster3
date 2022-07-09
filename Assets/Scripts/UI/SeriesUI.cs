@@ -5,14 +5,14 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
-public class EventsUI : MonoBehaviour
+public class SeriesUI : MonoBehaviour
 {
-    public int week;
+	public int week;
 	string[] eventWeeks;
 	public List<RectTransform> shuffleArray;
 	public List<string> rewardsList = new List<string>();
-	public GameObject eventTile;
-	public GameObject eventChildTile;
+	public GameObject seriesTile;
+	public GameObject seriesChildTile;
 	public Transform tileFrame;
 	public GameObject rewardsPopup;
 	public GameObject rewardsGrid;
@@ -22,9 +22,10 @@ public class EventsUI : MonoBehaviour
 	public static int subMenuId;
 	public static int subEventId;
 	string seriesPrefix;
+	
     // Start is called before the first frame update
     void Start(){
-		
+        
 		//Hide rewards popup after storing the var
 		rewardsPopup = GameObject.Find("RewardsPopup");
 		rewardsPopup.SetActive(false);
@@ -34,94 +35,49 @@ public class EventsUI : MonoBehaviour
 		
 		reqListText = GameObject.Find("RequirementsList");
 		
-		if(PlayerPrefs.HasKey("GameWeek")){
-			//Get the last known cycle day
-			week = PlayerPrefs.GetInt("GameWeek");
-			//Debug.Log("Last known week: " + week);
-		} else {
-			//First login
-			week = 1;
-		}
-		
-		loadEvents();
+		loadSeries();
     }
 
-	public void loadEvents(){
+	public void loadAllSeries(){
 		subMenuId = 999;
-		for(int i=0;i<4;i++){
-			EventData.loadEvents();
+		for(int i=0;i<9;i++){
+			SeriesData.loadSeries();
 			//Skip through the non-driver #s
-			if(EventData.offlineEvent[i] == null){
+			if(SeriesData.offlineMenu[i] == null){
 				//Debug.Log("No Event here: " + i);
 				continue;
 			}
 			
-			GameObject tileInst = Instantiate(eventTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			GameObject tileInst = Instantiate(seriesTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			RectTransform tileObj = tileInst.GetComponent<RectTransform>();
 			tileInst.transform.SetParent(tileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
-			TMPro.TMP_Text eventWeek = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
-			RawImage eventImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
-			TMPro.TMP_Text eventName = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			TMPro.TMP_Text eventDesc = tileInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			RawImage seriesImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
+			TMPro.TMP_Text seriesName = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text seriesDesc = tileInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 			tileInst.transform.GetChild(4).GetComponent<EventUIFunctions>().subMenuId = i;
 			
-			//Is the event live?
-			eventWeeks = EventData.offlineEventWeek[i].Split(',');				
-			if(eventWeeks.Any((week.ToString()).Contains)){
-				eventWeek.text = "Live!";
-			} else {
-				eventWeek.text = "Week " + EventData.offlineEventWeek[i];
-			}
-			eventName.text = EventData.offlineEvent[i];
-			eventDesc.text = EventData.eventDescriptions[i];
-			//carClass.text = DriverNames.getClass(seriesPrefix, i);
-			eventImage.texture = Resources.Load<Texture2D>(EventData.offlineEventImage[i]); 
+			seriesName.text = SeriesData.offlineMenu[i];
+			seriesDesc.text = SeriesData.seriesDescriptions[i];
+			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineImage[i]); 
 		}
-		int sortCounter=0;
-		foreach (Transform child in tileFrame){
-			//Debug.Log("Found one!" + sortCounter);
-			TMPro.TMP_Text eventWeek = child.GetChild(0).GetComponent<TMPro.TMP_Text>();
-			TMPro.TMP_Text eventName = child.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			GameObject eventClickable = child.transform.GetChild(4).transform.gameObject;
-			GameObject eventCover = child.transform.GetChild(5).transform.gameObject;
-
-			if((!eventWeek.text.Contains(week.ToString()))
-			&&(!eventWeek.text.Contains("Live!"))){
-				RectTransform tileObj = child.GetComponent<RectTransform>();
-				Debug.Log(child);
-				if(tileObj != null){
-					shuffleArray.Add(tileObj);
-				}
-				//tileObj.SetAsLastSibling();
-				eventCover.SetActive(true);
-				eventClickable.SetActive(false);
-				//Debug.Log("Sort to end: " + eventName.text);
-			} else {
-				//Debug.Log("Event is live: " + eventName.text);
-			}
-			sortCounter++;
-		}
-		
-		sortTiles();
 	}
 
-	public void loadSubEvents(int subMenuId){
+	public void loadSubSeries(int subMenuId){
 		//Debug.Log("Loading sub events of event: " + subMenuId);
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
 		for(int i=0;i<10;i++){
-			//EventData.loadEvents();
 			//Skip through the non-driver #s
-			if(EventData.offlineEventChapter[subMenuId,i] == null){
+			if(SeriesData.offlineSeries[subMenuId,i] == null){
 				//Debug.Log("No Event here: " + i);
 				continue;
 			}
 			
-			GameObject tileInst = Instantiate(eventChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			GameObject tileInst = Instantiate(seriesChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			RectTransform tileObj = tileInst.GetComponent<RectTransform>();
 			tileInst.transform.SetParent(tileFrame, false);
 			
@@ -161,29 +117,25 @@ public class EventsUI : MonoBehaviour
 		}
 	}
 
-	public void loadEvent(){
-		Debug.Log("Load Event " + subMenuId + "," + subEventId + "");
+	public void loadSeries(){
+		Debug.Log("Load Series " + subMenuId + "," + subEventId + "");
 		
-		PlayerPrefs.SetString("SeriesTrackList",EventData.offlineTracklists[subMenuId,subEventId]);
+		PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[subMenuId,subEventId]);
 		PlayerPrefs.SetString("CurrentSeriesIndex", subMenuId + "" + subEventId + "EVENT");
-		PlayerPrefs.SetString("CurrentSeriesName",EventData.offlineEventChapter[subMenuId,subEventId]);
+		PlayerPrefs.SetString("CurrentSeriesName",SeriesData.offlineSeries[subMenuId,subEventId]);
 		PlayerPrefs.SetInt("CurrentSeries", subMenuId);
 		PlayerPrefs.SetInt("CurrentSubseries", subEventId);
 		PlayerPrefs.SetInt("SubseriesDailyPlays",999);
-		PlayerPrefs.SetInt("SubseriesMinClass", EventData.offlineMinClass[subMenuId,subEventId]);
-		PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[subMenuId,subEventId]);
+		PlayerPrefs.SetInt("SubseriesMinClass", SeriesData.offlineMinClass[subMenuId,subEventId]);
+		PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[subMenuId,subEventId]);
 		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue());
-		PlayerPrefs.SetInt("AIDifficulty", EventData.offlineAILevel[subMenuId,subEventId]);
+		PlayerPrefs.SetInt("AIDifficulty", SeriesData.offlineAILevel[subMenuId,subEventId]);
 		PlayerPrefs.SetInt("SeriesFuel",5);
-		PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[subMenuId,subEventId]);
-		PlayerPrefs.SetString("SeriesPrizeAmt",EventData.offlineSetPrizes[subMenuId,subEventId]);
+		PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[subMenuId,subEventId]);
 		PlayerPrefs.SetString("RaceType","Event");
 		
-		if(EventData.offlineSeries[subMenuId,subEventId] != null){
-			PlayerPrefs.SetString("FixedSeries", EventData.offlineSeries[subMenuId,subEventId]);
-		}
-		if(EventData.offlineCustomField[subMenuId,subEventId] != null){
-			PlayerPrefs.SetString("CustomField", EventData.offlineCustomField[subMenuId,subEventId]);
+		if(SeriesData.offlineSeries[subMenuId,subEventId] != null){
+			PlayerPrefs.SetString("FixedSeries", SeriesData.offlineSeries[subMenuId,subEventId]);
 		}
 		
 		SceneManager.LoadScene("CarSelect");
@@ -191,37 +143,28 @@ public class EventsUI : MonoBehaviour
 	
 	public string getRestrictionValue(){
 		string restrictionValue = "";
-		restrictionValue += "Driver Class: " + classAbbr(EventData.offlineMinClass[subMenuId,subEventId]) + "+ \n";
-		switch(EventData.offlineMinType[subMenuId,subEventId]){
+		restrictionValue += "Driver Class: " + classAbbr(SeriesData.offlineMinClass[subMenuId,subEventId]) + "+ \n";
+		switch(SeriesData.offlineMinType[subMenuId,subEventId]){
 			case "Team":
-				restrictionValue += "Team: " + EventData.offlineMinTeam[subMenuId,subEventId];
+				restrictionValue += "Team: " + SeriesData.offlineMinTeam[subMenuId,subEventId];
 			break;
 			case "Manufacturer":
-				restrictionValue += "Manufacturer: " + EventData.offlineMinManu[subMenuId,subEventId];
+				restrictionValue += "Manufacturer: " + SeriesData.offlineMinManu[subMenuId,subEventId];
 			break;
 			case "Car":
-				restrictionValue += "Exact Car: #" + EventData.offlineExactCar[subMenuId,subEventId];
+				restrictionValue += "Exact Car: #" + SeriesData.offlineExactCar[subMenuId,subEventId];
 			break;
 			case "Type":
-				restrictionValue += "Driver Type: " + EventData.offlineMinDriverType[subMenuId,subEventId];
+				restrictionValue += "Driver Type: " + SeriesData.offlineMinDriverType[subMenuId,subEventId];
 			break;
 			case "Rarity":
-				restrictionValue += "Driver Rarity: " + EventData.offlineMinRarity[subMenuId,subEventId];
+				restrictionValue += "Driver Rarity: " + SeriesData.offlineMinRarity[subMenuId,subEventId];
 			break;
 			default:
 				restrictionValue += "No Entry Requirements";
 			break;
 		}
 		return restrictionValue;
-	}
-
-	public void sortTiles(){
-		if (shuffleArray.Any()){
-			RectTransform tile = shuffleArray.First();
-			tile.SetAsLastSibling();
-			shuffleArray.Remove(tile);
-			sortTiles();
-		}
 	}
 
 	public void showEntryReqsPopup(int subMenu, int subEvent){
@@ -237,20 +180,17 @@ public class EventsUI : MonoBehaviour
 
 	public void showRewardsPopup(int subMenu, int subEvent){
 		rewardsList.Clear();
-		string rewardsCode = EventData.offlinePrizes[subMenu,subEvent];
-		if(EventData.offlinePrizes[subMenu,subEvent] != "AltPaint"){
-			//Generate the list of possible rewards
-			rewardsList = EventData.ListRewards(rewardsCode);
-		} else {
-			//Throw the alt paint into the list instead
-			rewardsList.Add(EventData.offlineSetPrizes[subMenu,subEvent]);
-		}
+		string rewardsCode = SeriesData.offlinePrizes[subMenu,subEvent];
+		
+		//Generate the list of possible rewards
+		rewardsList = SeriesData.ListRewards(rewardsCode);
+		
 		foreach(string reward in rewardsList){
 			GameObject rewardInst = Instantiate(rewardCar, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			rewardInst.transform.SetParent(rewardsGrid.GetComponent<RectTransform>(), false);
 			RawImage carPaint = rewardInst.GetComponent<RawImage>();
 			string rewardString;
-			if(EventData.offlinePrizes[subMenu,subEvent] != "AltPaint"){
+			if(SeriesData.offlinePrizes[subMenu,subEvent] != "AltPaint"){
 				rewardString = reward.Insert(5, "livery");
 			} else {
 				rewardString = reward;
@@ -272,7 +212,7 @@ public class EventsUI : MonoBehaviour
 		if(subMenuId == 999){
 			SceneManager.LoadScene("MainMenu");
 		} else {
-			loadEvents();
+			loadSeries();
 		}
 	}
 	

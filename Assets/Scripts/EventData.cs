@@ -266,10 +266,10 @@ public class EventData : MonoBehaviour
 		offlineMinLevel[3,0] = 10;
 		offlineAILevel[3,0] = 5;
 		offlineMinType[3,0] = "Type";
-		offlineMinTeam[3,0] = "Rookie";
+		offlineMinDriverType[3,0] = "Rookie";
 		offlineTracklists[3,0] = "2";
-		offlinePrizes[3,1] = "cup224";
-		offlineSetPrizes[3,1] = "15";
+		offlinePrizes[3,0] = "Harvick";
+		offlineSetPrizes[3,0] = "15";
 		eventChapterDescriptions[3,0] = "Harvick steps into the RCR #29, following Earnhardt's untimely death.";
 		
 		offlineEventChapter[3,1] = "Rookie Of The Year";
@@ -279,10 +279,10 @@ public class EventData : MonoBehaviour
 		offlineAILevel[3,1] = 7;
 		offlineMinType[3,1] = "Rarity";
 		offlineMinRarity[3,1] = 2;
-		offlineSeries[2,0] = "cup01";
-		offlineCustomField[2,0] = "cup01HarvickGordon";
+		offlineSeries[3,1] = "cup01";
+		offlineCustomField[3,1] = "cup01HarvickGordon";
 		offlineTracklists[3,1] = "3";
-		offlinePrizes[3,1] = "cup224";
+		offlinePrizes[3,1] = "Harvick";
 		offlineSetPrizes[3,1] = "15";
 		eventChapterDescriptions[3,1] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
 		
@@ -362,7 +362,7 @@ public class EventData : MonoBehaviour
 		offlineEventImage[0] = "cup20livery48";
 		offlineEventImage[1] = "cup20livery3alt2";
 		offlineEventImage[2] = "cup22livery45";
-		offlineEventImage[3] = "cup01livery29";
+		offlineEventImage[3] = "cup22livery4";
 
 		
 		eventDescriptions[0] = "Relive Johnson's best moments leading to an incredible 7 championships.";
@@ -377,4 +377,181 @@ public class EventData : MonoBehaviour
     {
         
     }
+	
+	public static List<string> ListRewards(string category){
+		List<string> validDriver = new List<string>();
+		switch(category){
+			case "Rookies":
+				//for(int i=0;i<DriverNames.allCarsets.Length;i++){
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("Rookie Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			case "Rarity1":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 1){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("1* Rarity Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			case "Rarity2":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 2){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("2* Rarity Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			case "Rarity3":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 3){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("3* Rarity Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			case "Rarity4":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) == 4){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("4* Rarity Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			
+			//Manufacturer Rewards
+			case "CHV":
+			case "FRD":
+			case "TYT":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			
+			//Manufacturer Rewards (Capped at 1*)
+			case "CHV1":
+			case "FRD1":
+			case "TYT1":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
+								if(DriverNames.getRarity(seriesPrefix,j) == 1){
+									validDriver.Add("" + seriesPrefix + j + "");
+									//Debug.Log(category + " Added: #" + i);
+								}
+							}
+						}
+					}
+				}
+			break;
+			
+			//Team Rewards
+			case "IND":
+			case "RWR":
+			case "FRM":
+			case "RFR":
+			case "RCR":
+			case "CGR":
+			case "SHR":
+			case "PEN":
+			case "JGR":
+			case "HEN":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getTeam(seriesPrefix,j) == category){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			
+			//Driver Type Rewards
+			case "Strategist":
+			case "Closer":
+			case "Intimidator":
+			case "Blocker":
+			case "Dominator":
+			case "Legend":
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getType(seriesPrefix,j) == category){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
+			
+			//Event Specific
+			case "Johnson":
+				validDriver.Add("cup2048");
+			break;
+			case "Earnhardt":
+				validDriver.Add("cup203");
+			break;
+			case "Harvick":
+				validDriver.Add("cup204");
+				validDriver.Add("cup224");
+			break;
+			
+			default:
+				for(int i=0;i<DriverNames.allCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allCarsets[i];
+					for(int j=0;j<99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							validDriver.Add("" + seriesPrefix + j + "");
+							//Debug.Log("Added: #" + i);
+						}
+					}
+				}
+			break;
+		}
+		return validDriver;
+	}
 }

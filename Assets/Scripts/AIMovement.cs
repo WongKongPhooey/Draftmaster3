@@ -316,14 +316,18 @@ public class AIMovement : MonoBehaviour
 			/*if((carHit.gameObject.tag == "Barrier") || 
 			  (carHit.gameObject.name == "OuterWall") ||
 			  (carHit.gameObject.name == "SaferBarrier")){*/
+			if(isWrecking == false){
 				startWreck();
+			}
 			//}
 			
 			//Join wreck
 			if(carHit.gameObject.tag == "AICar"){
 				bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
 				if(joinWreck == true){
-					startWreck();
+					if(isWrecking == false){
+						startWreck();
+					}
 				}
 			}
 						
@@ -1167,8 +1171,14 @@ public class AIMovement : MonoBehaviour
 	
 	void wreckPhysics(){
 		wreckAngleMultiplier = this.gameObject.transform.rotation.y;
-		wreckDecel -= 0.05f;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
+		wreckDecel -= 0.1f;
+		
+		if(CameraRotate.onTurn == true){
+			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,wreckDecel);
+			Debug.Log("Apply side force to wreck on turn");
+		} else {
+			this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
+		}
 		
 		//Align particle system to global track direction
 		Vector3 carAlignL = new Vector3(transform.position.x - 0.5f, transform.position.y, transform.position.z - 2f);
@@ -1176,6 +1186,10 @@ public class AIMovement : MonoBehaviour
 		Vector3 carAlignR = new Vector3(transform.position.x + 0.5f, transform.position.y, transform.position.z - 2f);
 		this.transform.Find("SparksL").LookAt(carAlignL, Vector3.left);
 		this.transform.Find("TireSmoke").LookAt(carAlignM, Vector3.left);
+		//Flatten the smoke
+		Transform tireSmoke = this.transform.Find("TireSmoke");
+		tireSmoke.rotation = Quaternion.Euler(0,tireSmoke.rotation.y,tireSmoke.rotation.z);
+		tireSmoke.position = new Vector3(tireSmoke.position.x, 0.6f, tireSmoke.position.z);
 		this.transform.Find("SparksR").LookAt(carAlignR, Vector3.left);
 	}
 	
