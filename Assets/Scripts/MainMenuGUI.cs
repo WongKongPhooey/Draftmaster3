@@ -66,6 +66,10 @@ public class MainMenuGUI : MonoBehaviour {
 		newGiftAlert = false;
 		showInfoBox = false;
 		
+		if(PlayerPrefs.HasKey("ActivePath")){
+			PlayerPrefs.DeleteKey("ActivePath");
+		}
+		
 		if(exp > levelExp){
 			exp-= levelExp;
 			level++;

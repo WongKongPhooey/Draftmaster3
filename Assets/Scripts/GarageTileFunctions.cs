@@ -18,10 +18,4 @@ public class GarageTileFunctions : MonoBehaviour
     {
         
     }
-	
-	public void openCarInfo(){
-		PlayerPrefs.SetInt("CarFocus",carNum);
-		PlayerPrefs.SetString("SeriesFocus",carSeriesPrefix);
-		SceneManager.LoadScene("Levels/SingleCar");
-	}
 }

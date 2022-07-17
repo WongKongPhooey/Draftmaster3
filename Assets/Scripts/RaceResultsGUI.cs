@@ -41,6 +41,8 @@ public class RaceResultsGUI : MonoBehaviour {
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
 
+		PlayerPrefs.DeleteKey("ActivePath");
+
 		resultsRows = PlayerPrefs.GetInt("FieldSize");
 		if(resultsRows > 43){
 			resultsRows = 43;

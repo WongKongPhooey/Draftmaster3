@@ -693,7 +693,7 @@ public class Store : MonoBehaviour{
 				for(int rows = 0; rows < dailySelectsRows; rows++){
 					for(int columns = 1; columns < 5; columns++){
 						
-						if(dailySelects[(rows * 4) + columns-1].ToString() == null){
+						if(dailySelects[(rows * 4) + columns-1].ToString() == ""){
 							//End row, must be out of picks
 							break;
 						}
@@ -706,6 +706,7 @@ public class Store : MonoBehaviour{
 							carSeries = carNum.Substring(0, 5);
 							carNum = carNum.Remove(0, 5);
 						}
+						Debug.Log(carNum);
 						carNumInt = int.Parse(carNum);
 						float cardX = widthblock * (columns * 3.5f) + (widthblock * 1.5f);
 						float cardY = heightblock * (8.5f * (rows + 1)) - (heightblock * 4.5f);

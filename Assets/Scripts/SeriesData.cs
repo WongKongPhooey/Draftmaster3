@@ -30,8 +30,11 @@ public class SeriesData : MonoBehaviour{
 	}
 	
 	public static void loadSeries(){
+		
+		//--------Top Level---------
+						
 		offlineMenu[0] = "Rookies";
-		offlineMenu[1] = "Super Speedways";
+		offlineMenu[1] = "Superspeedways";
 		offlineMenu[2] = "Cookie Cutters";
 		offlineMenu[3] = "Short Tracks";
 		offlineMenu[4] = "Class";
@@ -40,6 +43,28 @@ public class SeriesData : MonoBehaviour{
 		offlineMenu[7] = "Type";
 		offlineMenu[8] = "Rarity";
 		offlineMenu[9] = "Seasons";
+		
+		offlineImage[0] = "cup20livery41";
+		offlineImage[1] = "cup20livery11";
+		offlineImage[2] = "cup22livery4";
+		offlineImage[3] = "cup20livery1";
+		offlineImage[4] = "cup20livery2";
+		offlineImage[5] = "cup22livery22";
+		offlineImage[6] = "cup22livery23";
+		offlineImage[7] = "cup20livery12";
+		offlineImage[8] = "cup20livery18";
+		offlineImage[9] = "cup22livery5";
+		
+		seriesDescriptions[0] = "The first step onto the oval racing ladder. Show 'em what you've got!";
+		seriesDescriptions[1] = "Learn the challenges of high speed pack racing.";
+		seriesDescriptions[2] = "They say they all look the same, but the 1.5 mile oval is one you must master.";
+		seriesDescriptions[3] = "Time to get physical! These tracks are tight and congested, with little room for error.";
+		seriesDescriptions[4] = "Build your favourite driver's class to unlock the toughest challenges.";
+		seriesDescriptions[5] = "The weight of the team rests on your shoulders. Time to deliver!";
+		seriesDescriptions[6] = "Back your favourite manufacturer and take them to the top.";
+		seriesDescriptions[7] = "Some drive clean, some not so much. Play to your drivers strengths here.";
+		seriesDescriptions[8] = "Proven winners wear their stars with pride Rarer drivers win bigger rewards!";
+		seriesDescriptions[9] = "The complete calendars. The ultimate challenge!";
 		
 		//Rookies
 		offlineSeries[0,0] = "Take The Wheel";
@@ -538,12 +563,12 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[7,4] = "Downright Dominate";
 		offlineSeries[7,5] = "Legend Of The Sport";
 		
-		offlineSeriesImage[7,0] = "cup20livery14";
-		offlineSeriesImage[7,1] = "cup20livery88";
-		offlineSeriesImage[7,2] = "cup20livery96";
-		offlineSeriesImage[7,3] = "cup20livery22";
-		offlineSeriesImage[7,4] = "cup20livery43";
-		offlineSeriesImage[7,5] = "cup20livery11";
+		offlineSeriesImage[7,0] = "cup22livery2";
+		offlineSeriesImage[7,1] = "cup20livery12";
+		offlineSeriesImage[7,2] = "cup22livery9";
+		offlineSeriesImage[7,3] = "cup20livery18";
+		offlineSeriesImage[7,4] = "cup22livery19";
+		offlineSeriesImage[7,5] = "cup20livery48";
 		
 		offlineDailyPlays[7,0] = 3;
 		offlineDailyPlays[7,1] = 3;
@@ -706,31 +731,6 @@ public class SeriesData : MonoBehaviour{
 		offlinePrizes[9,2] = "";
 		offlinePrizes[9,3] = "";
 		offlinePrizes[9,4] = "";
-		
-		
-		//--------Top Level---------
-		
-		offlineImage[0] = "cup20livery41";
-		offlineImage[1] = "cup20livery11";
-		offlineImage[2] = "cup22livery4";
-		offlineImage[3] = "cup20livery1";
-		offlineImage[4] = "cup20livery2";
-		offlineImage[5] = "cup22livery22";
-		offlineImage[6] = "cup22livery23";
-		offlineImage[7] = "cup20livery12";
-		offlineImage[8] = "cup20livery18";
-		offlineImage[9] = "cup22livery5";
-		
-		seriesDescriptions[0] = "The first step onto the oval racing ladder. Show 'em what you've got!";
-		seriesDescriptions[1] = "Learn the challenges of high speed pack racing.";
-		seriesDescriptions[2] = "They say they all look the same, but the 1.5 mile oval is one you must master.";
-		seriesDescriptions[3] = "Time to get physical! These tracks are tight and congested, with little room for error.";
-		seriesDescriptions[4] = "Build your favourite driver's class to unlock the toughest challenges.";
-		seriesDescriptions[5] = "The weight of the team rests on your shoulders. Time to deliver!";
-		seriesDescriptions[6] = "Back your favourite manufacturer and take them to the top.";
-		seriesDescriptions[7] = "Some drive clean, some not so much. Play to your drivers strengths here.";
-		seriesDescriptions[8] = "Proven winners wear their stars with pride Rarer drivers win bigger rewards!";
-		seriesDescriptions[9] = "The complete calendars. The ultimate challenge!";
 	}
 
 	public static List<string> ListRewards(string category){

@@ -63,7 +63,7 @@ public class CarSelectGUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("LastSeriesPrefix")){
 			seriesPrefix = PlayerPrefs.GetString("LastSeriesPrefix");
 		}
-		seriesPrefix = "dmc15";
+		//seriesPrefix = "dmc15";
 		
 		customNumX = 34;
 		if(seriesPrefix == "cup22"){

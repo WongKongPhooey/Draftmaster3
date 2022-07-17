@@ -48,6 +48,9 @@ public class EventsUI : MonoBehaviour
 
 	public void loadEvents(){
 		subMenuId = 999;
+		foreach (Transform child in tileFrame){
+			Destroy(child.gameObject);
+		}
 		for(int i=0;i<4;i++){
 			EventData.loadEvents();
 			//Skip through the non-driver #s
@@ -177,6 +180,7 @@ public class EventsUI : MonoBehaviour
 		PlayerPrefs.SetInt("SeriesFuel",5);
 		PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[subMenuId,subEventId]);
 		PlayerPrefs.SetString("SeriesPrizeAmt",EventData.offlineSetPrizes[subMenuId,subEventId]);
+		PlayerPrefs.SetString("ActivePath","EventRace");
 		PlayerPrefs.SetString("RaceType","Event");
 		
 		if(EventData.offlineSeries[subMenuId,subEventId] != null){
@@ -186,7 +190,7 @@ public class EventsUI : MonoBehaviour
 			PlayerPrefs.SetString("CustomField", EventData.offlineCustomField[subMenuId,subEventId]);
 		}
 		
-		SceneManager.LoadScene("CarSelect");
+		SceneManager.LoadScene("Menus/Garage");
 	}
 	
 	public string getRestrictionValue(){
@@ -270,6 +274,7 @@ public class EventsUI : MonoBehaviour
 
 	public void dynamicBackButton(){
 		if(subMenuId == 999){
+			PlayerPrefs.DeleteKey("ActivePath");
 			SceneManager.LoadScene("MainMenu");
 		} else {
 			loadEvents();

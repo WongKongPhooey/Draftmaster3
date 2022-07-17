@@ -34,7 +34,7 @@ public class AIMovement : MonoBehaviour
 	
 	public bool isWrecking;
 	float wreckDecel;
-	float wreckAngleMultiplier;
+	float wreckAngle;
 	int antiGlitch;
 	
 	public static int maxTandem;
@@ -317,7 +317,7 @@ public class AIMovement : MonoBehaviour
 			  (carHit.gameObject.name == "OuterWall") ||
 			  (carHit.gameObject.name == "SaferBarrier")){*/
 			if(isWrecking == false){
-				startWreck();
+				//startWreck();
 			}
 			//}
 			
@@ -369,6 +369,7 @@ public class AIMovement : MonoBehaviour
 		
 		if(carHit.gameObject.name == "OuterWall"){
 			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+			sparksCooldown = Random.Range(5,20);
 		}
 		
 		if ((carHit.gameObject.tag == "AICar") || 
@@ -440,8 +441,10 @@ public class AIMovement : MonoBehaviour
 			tick-=60;
 		}
 
-		if(sparksCooldown > 0){
-			sparksCooldown--;
+		if(isWrecking == false){
+			if(sparksCooldown > 0){
+				sparksCooldown--;
+			}
 		}
 		if(sparksCooldown == 1){
 			sparksCooldown--;
@@ -642,6 +645,7 @@ public class AIMovement : MonoBehaviour
 			if (backingOut == false) {
 				backingOut = true;
 			}
+			startWreck();
 			laneticker = laneChangeDuration + laneticker;
 			lane++;
 			//Wall hit decel
@@ -1147,6 +1151,7 @@ public class AIMovement : MonoBehaviour
 	
 	void startWreck(){
 		isWrecking = true;
+		sparksCooldown = 99999;
 		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
@@ -1170,27 +1175,39 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void wreckPhysics(){
-		wreckAngleMultiplier = this.gameObject.transform.rotation.y;
-		wreckDecel -= 0.1f;
+		wreckAngle = this.gameObject.transform.rotation.y;
+		float wreckSine = Mathf.Sin(wreckAngle);
+		if(wreckSine < 0){
+			wreckSine = -wreckSine;
+		}
+		wreckDecel = -(10f * wreckSine);
 		
 		if(CameraRotate.onTurn == true){
 			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,wreckDecel);
-			Debug.Log("Apply side force to wreck on turn");
+			//Debug.Log("Apply side force to wreck on turn");
 		} else {
 			this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
 		}
 		
 		//Align particle system to global track direction
-		Vector3 carAlignL = new Vector3(transform.position.x - 0.5f, transform.position.y, transform.position.z - 2f);
-		Vector3 carAlignM = new Vector3(transform.position.x, transform.position.y + 0.6f, transform.position.z - 2f);
+		/*Vector3 carAlignL = new Vector3(transform.position.x - 0.5f, transform.position.y, transform.position.z - 2f);
+		Vector3 carAlignM = new Vector3(transform.position.x, transform.position.y + 0.4f, transform.position.z + 2f);
 		Vector3 carAlignR = new Vector3(transform.position.x + 0.5f, transform.position.y, transform.position.z - 2f);
 		this.transform.Find("SparksL").LookAt(carAlignL, Vector3.left);
-		this.transform.Find("TireSmoke").LookAt(carAlignM, Vector3.left);
-		//Flatten the smoke
-		Transform tireSmoke = this.transform.Find("TireSmoke");
-		tireSmoke.rotation = Quaternion.Euler(0,tireSmoke.rotation.y,tireSmoke.rotation.z);
-		tireSmoke.position = new Vector3(tireSmoke.position.x, 0.6f, tireSmoke.position.z);
 		this.transform.Find("SparksR").LookAt(carAlignR, Vector3.left);
+		this.transform.Find("TireSmoke").LookAt(carAlignM, Vector3.left);*/
+		//Flatten the smoke
+		this.transform.Find("SparksL").rotation = Quaternion.Euler(0,180,0);
+		this.transform.Find("SparksR").rotation = Quaternion.Euler(0,180,0);
+		Transform tireSmoke = this.transform.Find("TireSmoke");
+		tireSmoke.rotation = Quaternion.Euler(0,180,0);
+		float smokeMultiplier = Mathf.Sin(wreckAngle);
+		if(smokeMultiplier < 0){
+			smokeMultiplier = -smokeMultiplier;
+		}
+		smokeMultiplier = smokeMultiplier * 255;
+		smokeMultiplier = Mathf.Round(smokeMultiplier);
+		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
 	}
 	
 	void drawRaycasts(){
