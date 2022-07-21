@@ -14,6 +14,7 @@ public class CameraRotate : MonoBehaviour {
 	public AudioSource crowdNoise;
 	public static int audioOn;
 
+	public static bool cautionOut;
 	public static bool cautionCleared;
 
 	public static int[] straightLength = new int[6];

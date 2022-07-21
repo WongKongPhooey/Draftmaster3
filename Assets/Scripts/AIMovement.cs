@@ -632,12 +632,14 @@ public class AIMovement : MonoBehaviour
         }
 		
 		if(AICar.transform.position.x <= apronLineX){
-			//Debug.Log("Track Limits!");
-			if (backingOut == false) {
-				backingOut = true;
+			if(CameraRotate.cautionOut == false){
+				//Debug.Log("Track Limits!");
+				if (backingOut == false) {
+					backingOut = true;
+				}
+				laneticker = -laneChangeDuration + laneticker;
+				lane--;
 			}
-			laneticker = -laneChangeDuration + laneticker;
-			lane--;
 		}
 		
 		if(AICar.transform.position.x >= 1.35f){
@@ -646,6 +648,7 @@ public class AIMovement : MonoBehaviour
 				backingOut = true;
 			}
 			startWreck();
+			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 			laneticker = laneChangeDuration + laneticker;
 			lane++;
 			//Wall hit decel
@@ -870,7 +873,7 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	public void findClearLane(){
+	public void findClearLane(bool wrecking = false){
 		RaycastHit DraftCheckLaneLeft;
 		RaycastHit DraftCheckLaneRight;
 		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 10);
@@ -883,9 +886,16 @@ public class AIMovement : MonoBehaviour
 				direction = "Left";
 			} else {
 				//Left lane isn't clear, but is moving faster than yourself
-				float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
-				if(opponentSpeed > (AISpeed + 0.1f)){
-					direction = "Left";
+				//Or, simply aiming to follow non-wrecking cars
+				if(wrecking == true){
+					if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
+						direction = "Left";
+					}
+				} else {
+					float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
+					if(opponentSpeed > (AISpeed + 0.1f)){
+						direction = "Left";
+					}
 				}
 			}
 		}
@@ -898,12 +908,22 @@ public class AIMovement : MonoBehaviour
 					direction = "Right";
 				}
 			} else {
-				float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
-				if(opponentSpeed > (AISpeed + 0.1f)){
-					if(direction == "Left"){
-						direction = "Both";
-					} else {
-						direction = "Right";
+				if(wrecking == true){
+					if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
+						if(direction == "Left"){
+							direction = "Both";
+						} else {
+							direction = "Right";
+						}
+					}
+				} else {
+					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
+					if(opponentSpeed > (AISpeed + 0.1f)){
+						if(direction == "Left"){
+							direction = "Both";
+						} else {
+							direction = "Right";
+						}
 					}
 				}
 			}
@@ -1151,6 +1171,9 @@ public class AIMovement : MonoBehaviour
 	
 	void startWreck(){
 		isWrecking = true;
+		if(CameraRotate.cautionOut == false){
+			CameraRotate.cautionOut = true;
+		}
 		sparksCooldown = 99999;
 		//Debug.Log(this.name + " is wrecking");
 		
@@ -1168,10 +1191,10 @@ public class AIMovement : MonoBehaviour
 		//Apply wind/drag
 		wreckDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-1f, 1f), 0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.1f, 0.1f) * 10, 0f);
 		
 		//Tire smoke
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 	}
 	
 	void wreckPhysics(){
@@ -1180,13 +1203,13 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		wreckDecel = -(10f * wreckSine);
+		wreckDecel = -(15f * wreckSine);
 		
 		if(CameraRotate.onTurn == true){
 			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,wreckDecel);
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
-			this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
+			this.GetComponent<ConstantForce>().force = new Vector3(-1f, 0f,wreckDecel);
 		}
 		
 		//Align particle system to global track direction
@@ -1205,7 +1228,7 @@ public class AIMovement : MonoBehaviour
 		if(smokeMultiplier < 0){
 			smokeMultiplier = -smokeMultiplier;
 		}
-		smokeMultiplier = smokeMultiplier * 255;
+		smokeMultiplier = (smokeMultiplier * 200) + 55;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
 	}

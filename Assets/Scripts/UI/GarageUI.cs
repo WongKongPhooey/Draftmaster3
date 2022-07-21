@@ -8,6 +8,13 @@ using UnityEngine.SceneManagement;
 public class GarageUI : MonoBehaviour
 {
 	public GameObject carTile;
+	public GameObject halloweenTile;
+	public GameObject patriotTile;
+	public GameObject wreckedTile;
+	public GameObject twentytwentyTile;
+	public GameObject partTimersTile;
+	GameObject activeTile;
+	
 	public Transform tileFrame;
 	public static string seriesPrefix;
 	public List<RectTransform> shuffleArray;
@@ -30,7 +37,18 @@ public class GarageUI : MonoBehaviour
 				continue;
 			}
 			
-			GameObject tileInst = Instantiate(carTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
+				
+			}
+			
+			if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
+				int altId = PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint");
+				activeTile = getAltPaintTileDesign(seriesPrefix,i,altId);
+			} else {
+				activeTile = carTile;
+			}
+			
+			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;
 			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
 			tileInst.transform.SetParent(tileFrame, false);
@@ -41,29 +59,50 @@ public class GarageUI : MonoBehaviour
 			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
 			Text carTypeUI = tileInst.transform.GetChild(1).GetComponent<Text>();
 			Text carClassUI = tileInst.transform.GetChild(2).GetComponent<Text>();
+			Image carRarityUI = tileInst.transform.GetChild(3).GetComponent<Image>();
 			Image carManuUI = tileInst.transform.GetChild(4).GetComponent<Image>();
 			RawImage carPaint = tileInst.transform.GetChild(5).GetComponent<RawImage>();
 			TMPro.TMP_Text carName = tileInst.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
-			GameObject cardBack = tileInst.transform.GetChild(7).gameObject;
-			GameObject carClickable = tileInst.transform.GetChild(8).transform.gameObject;
-			GameObject carDisabled = tileInst.transform.GetChild(9).transform.gameObject;
+			RectTransform carGearsProgressUI = tileInst.transform.GetChild(7).transform.GetChild(0).GetComponent<RectTransform>();
+			TMPro.TMP_Text carGearsLabelUI = tileInst.transform.GetChild(7).transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
+			GameObject cardBack = tileInst.transform.GetChild(8).gameObject;
+			GameObject carClickable = tileInst.transform.GetChild(9).transform.gameObject;
+			GameObject carDisabled = tileInst.transform.GetChild(10).transform.gameObject;
 			
 			int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked");
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + i + "Gears");
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + i + "Class");
+			int classMax = getClassMax(carClass);
 			
 			string carTeam = DriverNames.getTeam(seriesPrefix, i);
 			string carType = DriverNames.getType(seriesPrefix, i);
+			string carRarity = DriverNames.getRarity(seriesPrefix, i).ToString();
 			string carManu = DriverNames.getManufacturer(seriesPrefix, i);
 			
 			carTeamUI.text = carTeam;
 			carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, i));
 			carClassUI.text = "Class " + classAbbr(carClass);
 			carClassUI.color = classColours(carClass);
+			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
 			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
-			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i); 
-
+			if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
+				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+			} else {
+				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i); 
+			}
 			carName.text = DriverNames.getName(seriesPrefix, i);
+			float gearsProgressUIWidth = Mathf.Round((110 / classMax) * carGears) + 1;
+			if(gearsProgressUIWidth > 110){
+				gearsProgressUIWidth = 110;
+			}
+			
+			if(carClass >= 6){
+				gearsProgressUIWidth = 110;
+				carGearsLabelUI.text = "Max Class";
+			} else {
+				carGearsLabelUI.text = carGears + "/" + classMax;
+			}
+			carGearsProgressUI.sizeDelta = new Vector2(gearsProgressUIWidth, 20);
 			
 			int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
 			string restrictionType = PlayerPrefs.GetString("RestrictionType");
@@ -83,7 +122,7 @@ public class GarageUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			GameObject eligibleEntry = child.transform.GetChild(9).transform.gameObject;
 
-			if(eligibleEntry.activeSelf == true){
+			if(eligibleEntry.activeSelf == false){
 				RectTransform tileObj = child.GetComponent<RectTransform>();
 				//Debug.Log(child);
 				if(tileObj != null){
@@ -163,6 +202,39 @@ public class GarageUI : MonoBehaviour
 				break;
 		}
 		return classColour;
+	}
+
+	public static int getClassMax(int carClass){
+		switch(carClass){
+			case 0:
+				return 10;
+				break;
+			case 1:
+				return 20;
+				break;
+		    case 2:
+				return 35;
+				break;
+			case 3:
+				return 50;
+				break;
+			case 4:
+				return 70;
+				break;
+			case 5:
+				return 100;
+				break;
+			case 6:
+				return 150;
+				break;
+		    default:
+				return 999;
+				break;
+		}
+	}
+
+	GameObject getAltPaintTileDesign(string seriesPrefix, int carId, int altId){
+		return halloweenTile;
 	}
 
     // Update is called once per frame

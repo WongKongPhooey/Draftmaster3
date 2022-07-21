@@ -21,11 +21,11 @@ public class UIAnimate : MonoBehaviour
     }
 	
 	public void scaleIn(){
-		LeanTween.scale(gameObject, new Vector3(1f,1f,1f), 0.5f).setDelay(0.05f * animOffset).setEase(LeanTweenType.easeInOutCubic);
+		LeanTween.scale(gameObject, new Vector3(1f,1f,1f), 0.5f).setDelay(0.01f * animOffset).setEase(LeanTweenType.easeInOutCubic);
 	}
 	
 	public void scaleOut(){
-		LeanTween.scale(gameObject, new Vector3(0f,0f,0f), 0.5f).setDelay(0.05f * animOffset).setEase(LeanTweenType.easeInOutCubic);
+		LeanTween.scale(gameObject, new Vector3(0f,0f,0f), 0.5f).setDelay(0.01f * animOffset).setEase(LeanTweenType.easeInOutCubic);
 	}
 	
 	public void setCardDown(){

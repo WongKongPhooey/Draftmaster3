@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Advertisements;
 //using Unity.Services.Mediation;
 
-public class AdManager : MonoBehaviour, IUnityAdsListener
+public class AdManager : MonoBehaviour//, IUnityAdsListener
 {
 	#if UNITY_IOS
     private string gameId = "4061300";
@@ -19,18 +19,18 @@ public class AdManager : MonoBehaviour, IUnityAdsListener
 
     // Initialize the Ads listener and service:
     void Start () {
-        Advertisement.AddListener (this);
+        //Advertisement.AddListener (this);
         Advertisement.Initialize (gameId, testMode);	
     }
 
 	public static void ShowRewardedVideo(){
-		if(Advertisement.IsReady(myPlacementId)){
+		/*if(Advertisement.IsReady(myPlacementId)){
 			advertLocked = true;
 			fuel = PlayerPrefs.GetInt("GameFuel");
 			Advertisement.Show(myPlacementId);
 		} else {
 			Debug.Log("Ad could not be loaded");
-		}
+		}*/
 	}
 
     // Implement IUnityAdsListener interface methods:
