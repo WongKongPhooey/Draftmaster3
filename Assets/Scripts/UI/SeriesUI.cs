@@ -97,7 +97,8 @@ public class SeriesUI : MonoBehaviour
 			
 			seriesName.text = SeriesData.offlineSeries[seriesId,i];
 			seriesDesc.text = (SeriesData.offlineAILevel[seriesId,i] * 10).ToString() + "% Difficulty";
-			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineSeriesImage[seriesId,i]);
+			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineSeriesImage[seriesId,i]); 
+			 
 		}
 	}
 

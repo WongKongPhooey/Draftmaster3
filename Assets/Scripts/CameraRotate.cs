@@ -404,4 +404,8 @@ public class CameraRotate : MonoBehaviour {
 		}
 		return 0;
 	}
+	
+	public static float currentTurnSharpness(){
+		return 8 / turnAngle[turn-1];
+	}
 }

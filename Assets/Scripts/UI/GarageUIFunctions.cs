@@ -33,7 +33,7 @@ public class GarageUIFunctions : MonoBehaviour
 		PlayerPrefs.SetString("carSeries", seriesPrefix);
 		PlayerPrefs.SetInt("CarChoice",carNum);
 		PlayerPrefs.SetString("carTexture", seriesPrefix + "livery" + carNum);
-		SceneManager.LoadScene("CircuitSelect");
+		SceneManager.LoadScene("Menus/TrackSelect");
 	}
 
 	public void openCarInfo(){

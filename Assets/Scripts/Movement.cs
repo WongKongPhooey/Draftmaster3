@@ -57,6 +57,13 @@ public class Movement : MonoBehaviour {
 
 	public static bool onTurn;
 	public static bool brakesOn;
+
+	public static bool isWrecking;
+	float baseDecel;
+	public static float playerWreckDecel;
+	float wreckAngle;
+	
+	int sparksCooldown;
 	
 	public GameObject audioHolder;
 	
@@ -139,6 +146,10 @@ public class Movement : MonoBehaviour {
 		tandemPosition = 1;
 		
 		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
+		
+		isWrecking = false;
+		playerWreckDecel = 0;
+		sparksCooldown = 0;
 		
 		revbarOffset = 10;
 		
@@ -301,6 +312,16 @@ public class Movement : MonoBehaviour {
 		   (carHit.gameObject.tag == "Barrier") || 
 		   (carHit.gameObject.name == "OuterWall")){
 			   
+			//Start wrecking
+			/*if((carHit.gameObject.tag == "Barrier") || 
+			  (carHit.gameObject.name == "OuterWall") ||
+			  (carHit.gameObject.name == "SaferBarrier")){*/
+			if(isWrecking == false){
+				//startWreck();
+				//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+			}
+			//}
+			   
 			if((laneticker != 0)&&(backingOut == false)){
 				if(laneticker > 0){
 					bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
@@ -330,20 +351,22 @@ public class Movement : MonoBehaviour {
 	}
 	
 	void ReceivePush(float bumpSpeed){
-		//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + "while I was going " + playerSpeed);
-		if(initialContact == false){
-			//if(bumpSpeed - playerSpeed > 1){
-				float midSpeed = bumpSpeed - playerSpeed;
-				playerSpeed += midSpeed/4;
-				initialContact = true;
-				//Debug.Log("Impact levels out Player");
-			//}
-		} else {
-			//Send it back
-			RaycastHit DraftCheckBackward;
-			bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
-			DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
-			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
+		if(isWrecking == false){
+			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + "while I was going " + playerSpeed);
+			if(initialContact == false){
+				//if(bumpSpeed - playerSpeed > 1){
+					float midSpeed = bumpSpeed - playerSpeed;
+					playerSpeed += midSpeed/4;
+					initialContact = true;
+					//Debug.Log("Impact levels out Player");
+				//}
+			} else {
+				//Send it back
+				RaycastHit DraftCheckBackward;
+				bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
+				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
+				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
+			}
 		}
 	}
 	
@@ -362,6 +385,13 @@ public class Movement : MonoBehaviour {
 	
 	// Update is called once per frame
 	void FixedUpdate () {
+				
+		if(isWrecking == true){
+			//Bail, drop all Movement logic
+			wreckPhysics();
+			lockCamera();
+			return;
+		}
 				
 		laneInv = 4 - lane;
 		laneFactor = 10000;
@@ -449,12 +479,12 @@ public class Movement : MonoBehaviour {
 
 		// If bump-drafting the car in front
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 1.01f)){
-			
-			//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to match speed of " + playerSpeed);
-			if(DraftCheck.transform.gameObject.tag == "AICar"){
-				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",playerSpeed);
+			if(isWrecking == false){
+				//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to match speed of " + playerSpeed);
+				if(DraftCheck.transform.gameObject.tag == "AICar"){
+					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",playerSpeed);
+				}
 			}
-			
 			//Bump drafting speeds both up
 			playerSpeed+=0.004f;
 
@@ -844,4 +874,67 @@ public class Movement : MonoBehaviour {
 		}
 		return rayHit;
 	}	
+	
+	void startWreck(){
+		isWrecking = true;
+		if(CameraRotate.cautionOut == false){
+			CameraRotate.cautionOut = true;
+		}
+		sparksCooldown = 99999;
+		//Debug.Log(this.name + " is wrecking");
+		
+		//Make the car light, more affected by physics
+		this.GetComponent<Rigidbody>().mass = 1;
+		
+		//Remove constraints, allowing it to impact/spin using physics
+		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
+		//this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezePositionX;
+		
+		//Remove forces, physics only
+		this.GetComponent<Rigidbody>().isKinematic = false;
+		this.GetComponent<Rigidbody>().useGravity = false;
+		
+		//Apply wind/drag
+		baseDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
+		playerWreckDecel = 0;
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,playerWreckDecel);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.1f, 0.1f) * 10, 0f);
+	}
+	
+	void wreckPhysics(){
+		wreckAngle = this.gameObject.transform.rotation.y;
+		float wreckSine = Mathf.Sin(wreckAngle);
+		if(wreckSine < 0){
+			wreckSine = -wreckSine;
+		}
+		baseDecel-=0.02f;
+		
+		if(CameraRotate.onTurn == true){
+			baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
+			Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
+			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,playerWreckDecel);
+			//Debug.Log("Apply side force to wreck on turn");
+		} else {
+			this.GetComponent<ConstantForce>().force = new Vector3(-1f, 0f,playerWreckDecel);
+		}
+		playerWreckDecel = baseDecel - (15f * wreckSine);
+		
+		//Align particle system to global track direction
+		//Flatten the smoke
+		this.transform.Find("SparksL").rotation = Quaternion.Euler(0,180,0);
+		this.transform.Find("SparksR").rotation = Quaternion.Euler(0,180,0);
+		Transform tireSmoke = this.transform.Find("TireSmoke");
+		tireSmoke.rotation = Quaternion.Euler(0,180,0);
+		float smokeMultiplier = Mathf.Sin(wreckAngle);
+		if(smokeMultiplier < 0){
+			smokeMultiplier = -smokeMultiplier;
+		}
+		smokeMultiplier = (smokeMultiplier * 60) + 0;
+		smokeMultiplier = Mathf.Round(smokeMultiplier);
+		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
+	}
+	
+	void lockCamera(){
+		
+	}
 }

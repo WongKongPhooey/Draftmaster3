@@ -51,7 +51,7 @@ public class EventsUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
-		for(int i=0;i<4;i++){
+		for(int i=0;i<5;i++){
 			EventData.loadEvents();
 			//Skip through the non-driver #s
 			if(EventData.offlineEvent[i] == null){
@@ -185,6 +185,9 @@ public class EventsUI : MonoBehaviour
 		
 		if(EventData.offlineSeries[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("FixedSeries", EventData.offlineSeries[subMenuId,subEventId]);
+		}
+		if(EventData.offlineCustomCar[subMenuId,subEventId] != null){
+			PlayerPrefs.SetString("CustomCar", EventData.offlineCustomCar[subMenuId,subEventId]);
 		}
 		if(EventData.offlineCustomField[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("CustomField", EventData.offlineCustomField[subMenuId,subEventId]);

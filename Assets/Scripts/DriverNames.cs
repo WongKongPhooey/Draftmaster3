@@ -39,6 +39,12 @@ public class DriverNames : MonoBehaviour {
 	public static int[] cup2001Rarity = new int[101];
 	public static string[] cup2001Types = new string[101];
 	
+	public static string[] cup1979Names = new string[101];
+	public static string[] cup1979Teams = new string[101];
+	public static string[] cup1979Manufacturer = new string[101];
+	public static int[] cup1979Rarity = new int[101];
+	public static string[] cup1979Types = new string[101];
+	
 	public static string[] dmc2015Names = new string[101];
 	public static string[] dmc2015Teams = new string[101];
 	public static string[] dmc2015Manufacturer = new string[101];
@@ -56,6 +62,7 @@ public class DriverNames : MonoBehaviour {
 		cup20();
 		cup22();
 		cup01();
+		cup79();
 		dmc15();
 		listCarsets();
 		carsetNames();
@@ -64,6 +71,7 @@ public class DriverNames : MonoBehaviour {
 		series.Add("cup20");
 		series.Add("cup22");
 		series.Add("cup01");
+		series.Add("cup79");
 		series.Add("dmc15");
 		
 		if(allNames.ContainsKey("cup20") == false){
@@ -85,6 +93,12 @@ public class DriverNames : MonoBehaviour {
 			allRarity.Add("cup01", cup2001Rarity);
 			allTypes.Add("cup01", cup2001Types);
 			
+			allNames.Add("cup79", cup1979Names);
+			allTeams.Add("cup79", cup1979Teams);
+			allManufacturer.Add("cup79", cup1979Manufacturer);
+			allRarity.Add("cup79", cup1979Rarity);
+			allTypes.Add("cup79", cup1979Types);
+			
 			allNames.Add("dmc15", dmc2015Names);
 			allTeams.Add("dmc15", dmc2015Teams);
 			allManufacturer.Add("dmc15", dmc2015Manufacturer);
@@ -97,6 +111,7 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[0] = "cup20";
 		allCarsets[1] = "cup22";
 		allCarsets[2] = "cup01";
+		allCarsets[2] = "cup79";
 		allCarsets[3] = "dmc15";
 	}
 	
@@ -143,6 +158,7 @@ public class DriverNames : MonoBehaviour {
 			allCarsetNames.Add("cup20", "Cup '20");
 			allCarsetNames.Add("cup22", "Cup '22");
 			allCarsetNames.Add("cup01", "Cup '01");
+			allCarsetNames.Add("cup79", "Cup '79");
 			allCarsetNames.Add("dmc15", "DM1 '15");
 		}
 	}
@@ -659,6 +675,24 @@ public class DriverNames : MonoBehaviour {
 
 		cup2001Rarity[24] = 4;
 		cup2001Rarity[29] = 2;
+	}
+	
+	public static void cup79(){
+
+		cup1979Names[1] = "Allison";
+		cup1979Names[11] = "Yarborough";
+		
+		cup1979Teams[1] = "ELL";
+		cup1979Teams[11] = "JJA";
+		
+		cup1979Manufacturer[1] = "OLD";
+		cup1979Manufacturer[11] = "OLD";
+		
+		cup1979Types[1] = "Intimidator";
+		cup1979Types[11] = "Legend";
+
+		cup1979Rarity[1] = 3;
+		cup1979Rarity[11] = 4;
 	}
 	
 	public static void dmc15(){

@@ -26,6 +26,8 @@ public class EventData : MonoBehaviour
 	public static string[] offlineCircuits = new string[20];
 	public static string[,] offlinePrizes = new string[10,10];
 	public static string[,] offlineSetPrizes = new string[10,10];
+	
+	public static string[,] offlineCustomCar = new string[10,10];
 	public static string[,] offlineCustomField = new string[10,10];
 	
     // Start is called before the first frame update
@@ -36,20 +38,22 @@ public class EventData : MonoBehaviour
 	public static void loadEvents() {
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
-		offlineEvent[2] = "All Stars";
+		//offlineEvent[2] = "All Stars";
 		offlineEvent[3] = "The Closer";
-		//offlineEvent[3] = "Wonder Boy";
+		offlineEvent[4] = "Moments";
 		
 		offlineEventType[0] = "Progression";
 		offlineEventType[1] = "Progression";
 		offlineEventType[2] = "Replay";
 		offlineEventType[3] = "Progression";
+		offlineEventType[4] = "Replay";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "2,6,10";
 		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[3] = "1,5,9";
+		offlineEventWeek[4] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		//offlineEventWeek[2] = "5";
 		//offlineEventWeek[3] = "7";
 		
@@ -359,17 +363,31 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[1,7] = "Oct 15, 2000. Earnhardt passes 17 cars in the last 6 laps to take his final ever win, and his 10th at Talladega.";
 		*/
 		
+		//Moments
+		offlineEventChapter[4,0] = "Daytona '79";
+		offlineChapterImage[4,0] = "cup79livery11";
+		offlineMinClass[4,0] = 1;
+		offlineMinLevel[4,0] = 1;
+		offlineAILevel[4,0] = 10;
+		offlineSeries[4,0] = "cup79";
+		offlineCustomCar[4,0] = "cup79livery1";
+		offlineCustomField[4,0] = "cup79MomentsDaytona";
+		offlineTracklists[4,0] = "1";
+		offlinePrizes[4,0] = "Rookies";
+		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
+		
 		offlineEventImage[0] = "cup20livery48";
 		offlineEventImage[1] = "cup20livery3alt2";
 		offlineEventImage[2] = "cup22livery45";
 		offlineEventImage[3] = "cup22livery4";
+		offlineEventImage[4] = "cup79livery1";
 
 		
 		eventDescriptions[0] = "Relive Johnson's best moments leading to an incredible 7 championships.";
 		eventDescriptions[1] = "Do it for Dale! Revisit some of Earnhardt's finest drives.";
 		eventDescriptions[2] = "Touchdown in LA. The new season starts here.";
 		eventDescriptions[3] = "Play out the biggest races in Harvick's career to date.";
-		eventDescriptions[4] = "Moments in history that defined Gordon's timeless career.";
+		eventDescriptions[4] = "Reliving wrecks and famous fueds. Wreck 'em and check 'em!";
 	}
 
     // Update is called once per frame

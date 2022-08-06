@@ -21,6 +21,9 @@ public class GarageUI : MonoBehaviour
     // Start is called before the first frame update
     void Start(){
 		seriesPrefix = "cup20";
+		if(PlayerPrefs.HasKey("CustomCar")){
+			autoSelectCar();
+		}
 		loadAllCars();
 	}
 	
@@ -234,7 +237,35 @@ public class GarageUI : MonoBehaviour
 	}
 
 	GameObject getAltPaintTileDesign(string seriesPrefix, int carId, int altId){
-		return halloweenTile;
+		GameObject cardPrefab;
+		string cardTheme = AltPaints.getAltPaintTheme(seriesPrefix, carId, altId);
+		switch(cardTheme){
+			case "Halloween":
+				cardPrefab = halloweenTile;
+				break;
+			case "Patriot":
+				cardPrefab = patriotTile;
+				break;
+			case "Wrecked":
+				cardPrefab = wreckedTile;
+				break;
+			default:
+				cardPrefab = carTile;
+				break;
+		}
+		return cardPrefab;
+	}
+
+	public void autoSelectCar(){
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("FixedSeries"));
+		}
+		string carTex = PlayerPrefs.GetString("CustomCar");
+		PlayerPrefs.SetString("carTexture",carTex);
+		string keyword = "livery";
+		string carNum = carTex.Substring(carTex.IndexOf(keyword) + keyword.Length);
+		PlayerPrefs.SetInt("CarChoice",int.Parse(carNum));
+		SceneManager.LoadScene("Menus/TrackSelect");
 	}
 
     // Update is called once per frame

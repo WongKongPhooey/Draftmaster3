@@ -9,6 +9,8 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup2020AltPaintDriver = new string[101,10];
 	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
+	public static string[,] cup2020AltPaintTheme = new string[101,10];
+	public static string[,] cup22AltPaintTheme = new string[101,10];
 	
 	public static bool[,] cup2020AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup22AltPaintAISpawning = new bool[101,10];
@@ -85,12 +87,56 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintDriver[78,1] = "Lally";
 		cup22AltPaintDriver[99,1] = "Edwards";
 		
+		cup2020AltPaintTheme[2,1] = "Patriot";
+		cup2020AltPaintTheme[3,1] = "Halloween";
+		cup2020AltPaintTheme[3,2] = "Earnhardt";
+		cup2020AltPaintTheme[3,3] = "Earnhardt";
+		cup2020AltPaintTheme[3,4] = "Earnhardt";
+		cup2020AltPaintTheme[5,1] = "Wrecked";
+		cup2020AltPaintTheme[5,2] = "Wrecked";
+		cup2020AltPaintTheme[6,1] = "Wrecked";
+		cup2020AltPaintTheme[7,1] = "2020";
+		cup2020AltPaintTheme[9,1] = "2020";
+		cup2020AltPaintTheme[12,1] = "2020";
+		cup2020AltPaintTheme[13,1] = "Patriot";
+		cup2020AltPaintTheme[17,1] = "2020";
+		cup2020AltPaintTheme[18,1] = "Halloween";
+		cup2020AltPaintTheme[19,1] = "Patriot";
+		cup2020AltPaintTheme[20,1] = "Wrecked";
+		cup2020AltPaintTheme[22,1] = "2020";
+		cup2020AltPaintTheme[27,1] = "2020";
+		cup2020AltPaintTheme[32,1] = "Halloween";
+		cup2020AltPaintTheme[37,1] = "2020";
+		cup2020AltPaintTheme[41,1] = "Wrecked";
+		cup2020AltPaintTheme[42,1] = "Halloween";
+		cup2020AltPaintTheme[43,1] = "2020";
+		cup2020AltPaintTheme[47,1] = "2020";
+		cup2020AltPaintTheme[48,1] = "Johnson";
+		cup2020AltPaintTheme[48,2] = "Johnson";
+		cup2020AltPaintTheme[48,3] = "Johnson";
+		cup2020AltPaintTheme[51,1] = "Patriot";
+		cup2020AltPaintTheme[66,1] = "2020";
+		cup2020AltPaintTheme[77,1] = "2020";
+		cup2020AltPaintTheme[88,1] = "2020";
+		cup2020AltPaintTheme[88,2] = "Halloween";
+		cup2020AltPaintTheme[88,3] = "Wrecked";
+		cup2020AltPaintTheme[95,1] = "2020";
+		
 		cup2020AltPaintAISpawning[5,2] = false;
 		cup2020AltPaintAISpawning[6,1] = false;
 		cup2020AltPaintAISpawning[88,1] = false;
 		
 		cup22AltPaintAISpawning[1,1] = false;
 		cup22AltPaintAISpawning[99,1] = false;
+		
+		cup22AltPaintTheme[1,1] = "Community";
+		cup22AltPaintTheme[15,1] = "Parttimer";
+		cup22AltPaintTheme[16,1] = "Parttimer";
+		cup22AltPaintTheme[27,1] = "Parttimer";
+		cup22AltPaintTheme[66,1] = "Parttimer";
+		cup22AltPaintTheme[77,1] = "Parttimer";
+		cup22AltPaintTheme[78,1] = "Parttimer";
+		cup22AltPaintTheme[99,1] = "Wrecked";
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
@@ -114,7 +160,7 @@ public class AltPaints : MonoBehaviour {
 				return cup2020AltPaintDriver[carNum,altNum];
 				break;
 			case "cup22":
-				return cup22AltPaintDriver[carNum,altNum];
+				return cup22AltPaintTheme[carNum,altNum];
 				break;
 			default:
 				return "Unknown";
@@ -136,5 +182,20 @@ public class AltPaints : MonoBehaviour {
 				break;
 		}
 		return false;
+	}
+	
+	public static string getAltPaintTheme(string seriesPrefix, int carNum, int altNum){
+		switch(seriesPrefix){
+			case "cup20":
+				return cup2020AltPaintTheme[carNum,altNum];
+				break;
+			case "cup22":
+				return cup22AltPaintTheme[carNum,altNum];
+				break;
+			default:
+				return "Blank";
+				break;
+		}
+		return "Blank";
 	}
 }

@@ -109,6 +109,7 @@ public class MainMenuGUI : MonoBehaviour {
 		
 		PlayerPrefs.DeleteKey("FinishPos");
 		PlayerPrefs.DeleteKey("FixedSeries");
+		PlayerPrefs.DeleteKey("CustomCar");
 		PlayerPrefs.DeleteKey("CustomField");
 		PlayerPrefs.SetInt("TutorialActive",0);
 		PlayerPrefs.SetInt("CautionHasBeen",0);

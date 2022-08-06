@@ -12,15 +12,30 @@ public class TrackUI : MonoBehaviour
 	public Transform tileFrame;
 	public static string[] tracksArray;
 	int seriesLength;
+	string currentSeriesIndex;
+	public static int seriesFuel;
+	public static string trackCodeName;
+	
+	public static string seriesPrefix;
+	public static int carNumber;
 	
     // Start is called before the first frame update
     void Start()
     {
 		string trackList = PlayerPrefs.GetString("SeriesTrackList");
+		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
         loadAllTracks(trackList);
+		
+		carNumber = PlayerPrefs.GetInt("CarChoice");
+		seriesPrefix = "cup20";
+		seriesPrefix = PlayerPrefs.GetString("carSeries");
+		
+		seriesFuel = PlayerPrefs.GetInt("SeriesFuel");
     }
 
 	public void loadAllTracks(string tracks){
+		
+		TrackData.loadTrackNames();
 		
 		foreach (Transform child in tileFrame){
 			//Destroy(child.gameObject);
@@ -37,12 +52,24 @@ public class TrackUI : MonoBehaviour
 		
 		for(int i=0;i<seriesLength;i++){
 			GameObject tileInst = Instantiate(trackTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-			tileInst.GetComponent<TrackUIFunctions>().trackId = int.Parse(tracksArray[i]);
+			int trackId = int.Parse(tracksArray[i]);
+			tileInst.GetComponent<TrackUIFunctions>().trackId = trackId;
+			tileInst.GetComponent<TrackUIFunctions>().trackCodeName = TrackData.getTrackCodeName(trackId);
 			tileInst.transform.SetParent(tileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
-			RawImage trackImage = tileInst.transform.GetChild(3).GetComponent<RawImage>();
+			TMPro.TMP_Text trackName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text raceLaps = tileInst.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text bestFinish = tileInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			RawImage trackImage = tileInst.transform.GetChild(4).GetComponent<RawImage>();
+			if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex + i) == true){
+				bestFinish.text = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex + i).ToString();
+			} else {
+				bestFinish.text = "N/A";
+			}
+			trackName.text = getTrackName(tracksArray[i]);
+			raceLaps.text = "Laps " + PlayerPrefs.GetInt("RaceLaps");
 			trackImage.texture = Resources.Load<Texture2D>(getTrackImage(tracksArray[i]));
 		}
 	}
@@ -133,6 +160,59 @@ public class TrackUI : MonoBehaviour
 		//PlayerPrefs.SetInt("RaceLaps",2);
 		
 		//PlayerPrefs.SetString("CurrentTrack","" + order);
+	}
+	
+	static string getTrackName(string trackId){
+		string trackName = "";
+		TrackData.loadTrackNames();
+		TrackData.loadTrackCodeNames();
+		trackName = TrackData.trackNames[int.Parse(trackId)];
+		return trackName;
+	}
+
+	void setRaceLaps(){
+		//Adjust laps based on AI difficulty
+		int AIDiff = PlayerPrefs.GetInt("AIDifficulty");
+		int baseLaps = PlayerPrefs.GetInt("RaceLaps");
+		int raceLapsMultiplier = (AIDiff / 8) + 1;
+		PlayerPrefs.SetInt("RaceLaps", Mathf.FloorToInt(baseLaps * raceLapsMultiplier));
+		//Debug.Log("Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		//Testing
+		//PlayerPrefs.SetInt("RaceLaps", 2);
+	}
+
+	public static void startRace(string track){
+		
+		PlayerPrefs.SetString("CurrentCircuit", track);
+		if(GameData.gameFuel >= seriesFuel){
+			GameData.gameFuel-=seriesFuel;
+			
+			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
+			if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
+				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
+				//Debug.Log("Increment Total Starts: " + seriesPrefix + ", " + carNumber);
+			} else {
+				//Debug.Log("First Start: " + seriesPrefix + ", " + carNumber);
+				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
+			}
+			
+			//Legacy fix for incorrect start count
+			if(PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) < PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber)){
+				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber , PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber));
+			}
+			
+			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
+			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
+			SceneManager.LoadScene(track);
+		} else {
+			//Roll back and bail
+			PlayerPrefs.SetString("StoreFocus","Fuel");
+			SceneManager.LoadScene("Store");
+		}
+	}
+
+	public void dynamicBackButton(){
+		SceneManager.LoadScene("Menus/Garage");
 	}
 
     // Update is called once per frame

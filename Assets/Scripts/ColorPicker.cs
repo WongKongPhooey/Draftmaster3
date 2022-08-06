@@ -11,15 +11,20 @@ public class ColorPicker : MonoBehaviour
 	public GameObject carBase;
 	public GameObject carVinyl;
 	public GameObject activeLayer;
+	TMPro.TMP_Text layerName;
 	RectTransform Rect;
 	Texture2D ColorTexture;
+	public GameObject[] paintableLayers;
+	int layerCounter;
 	
     // Start is called before the first frame update
     void Start()
     {
         Rect = GetComponent<RectTransform>();
 		ColorTexture = GetComponent<Image>().mainTexture as Texture2D;
-		activeLayer = GameObject.Find("Base");
+		layerName = GameObject.Find("LayerName").GetComponent<TMPro.TMP_Text>();
+		layerCounter = 0;
+		activeLayer = paintableLayers[layerCounter];
     }
 
     // Update is called once per frame
@@ -41,14 +46,24 @@ public class ColorPicker : MonoBehaviour
 			Color color = ColorTexture.GetPixel(texX, texY);
 			
 			if(Input.GetMouseButtonDown(0)){
-				//carBase.GetComponent<Renderer>().material.color = color;
-				//carBase.GetComponent<Renderer>().material.SetColor("_TintColor", color);
 				activeLayer.GetComponent<Image>().color = color;
 			}
 		}
 	}
 	
 	public void changeLayer(){
-		activeLayer = GameObject.Find("Vinyl");
+		layerCounter++;
+		if(layerCounter > 2){
+			layerCounter = 0;
+		}
+		activeLayer = paintableLayers[layerCounter];
+		layerName.text = activeLayer.name;
+	}
+	
+	public void savePaint(){
+		foreach(GameObject layer in paintableLayers){
+			PlayerPrefs.SetString("PaintBooth" + layer.name,layer.GetComponent<Image>().color.ToString());
+			Debug.Log("Saved PaintBooth" + layer.name + ": " + layer.GetComponent<Image>().color.ToString());
+		}
 	}
 }
