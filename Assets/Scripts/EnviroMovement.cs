@@ -29,7 +29,11 @@ public class EnviroMovement : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 		
-		carSpeedOffset = CameraRotate.carSpeedOffset;
+		if(Movement.wreckOver == true){
+			return;
+		}
+		
+		carSpeedOffset = CameraRotate.carSpeedOffset - Movement.playerWreckDecel;
 
 		if(staticScroll == true){
 			//Slowest game speed is car:80, track:105 (LA start), Scaler = 0.066 + 0.131 = 0.197f		

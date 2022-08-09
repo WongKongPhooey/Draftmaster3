@@ -244,7 +244,7 @@ public class SpawnField : MonoBehaviour {
 		}
 		//Debug.Log("Cars Spawned: " + slowCars.Count);
 			
-		Scoreboard.updateScoreboard();
+		Ticker.updateTicker();
 	}
 
 	public static void spawnIndycars(){

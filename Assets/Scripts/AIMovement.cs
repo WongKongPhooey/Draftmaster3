@@ -11,6 +11,7 @@ public class AIMovement : MonoBehaviour
 
     public GameObject AICar;
 	public GameObject thePlayer;
+	public GameObject controlCar;
 	public Camera player2Cam;
     public float AISpeed;
     float speed;
@@ -33,8 +34,9 @@ public class AIMovement : MonoBehaviour
 	int stagnantMax;
 	
 	public bool isWrecking;
+	public bool wreckOver;
 	float baseDecel;
-	float wreckDecel;
+	public float wreckDecel;
 	float wreckAngle;
 	int antiGlitch;
 	
@@ -104,6 +106,7 @@ public class AIMovement : MonoBehaviour
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
+		wreckOver = false;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -140,6 +143,7 @@ public class AIMovement : MonoBehaviour
 		particleDisableDelay = 0;
 		
 		thePlayer = GameObject.Find("Player");
+		controlCar = GameObject.Find("ControlCar");
 		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
@@ -312,15 +316,6 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "SaferBarrier") ||
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
-
-			//Start wrecking
-			/*if((carHit.gameObject.tag == "Barrier") || 
-			  (carHit.gameObject.name == "OuterWall") ||
-			  (carHit.gameObject.name == "SaferBarrier")){*/
-			if(isWrecking == false){
-				//startWreck();
-			}
-			//}
 			
 			//Join wreck
 			if(carHit.gameObject.tag == "AICar"){
@@ -329,6 +324,22 @@ public class AIMovement : MonoBehaviour
 					if(isWrecking == false){
 						startWreck();
 						this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+					} else {
+						//Share some wreck inertia
+						float opponentWreckDecel = carHit.gameObject.GetComponent<AIMovement>().wreckDecel;
+						wreckDecel += ((opponentWreckDecel - wreckDecel) / 2);
+					}
+				}
+			}
+			if(carHit.gameObject.tag == "Player"){
+				bool joinWreck = Movement.isWrecking;
+				if(joinWreck == true){
+					if(isWrecking == false){
+						startWreck();
+						this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+					} else {
+						//Share some wreck inertia
+						wreckDecel += ((Movement.playerWreckDecel - wreckDecel) / 2);
 					}
 				}
 			}
@@ -461,11 +472,17 @@ public class AIMovement : MonoBehaviour
         laneInv = 4 - lane;
 		
 		if(lap > 0){
-			if(isWrecking == true){
+			if((isWrecking == true)||(wreckOver == true)){
 				//Bail, drop all Movement logic
-				wreckPhysics();
+				if(wreckOver == false){
+					wreckPhysics();
+				} else {
+					AISpeed = 0;
+					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+				}
 				return;
 			}
+			
 			if(caution){
 				if (AISpeed > 200.5f){
 					AISpeed -= 0.02f;
@@ -586,7 +603,8 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Speed difference between the player and the AI
-		speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
+		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
+		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
 	}
@@ -595,7 +613,7 @@ public class AIMovement : MonoBehaviour
 		AISpeed += ((0.001f + (AILevel / 5000)) * direction);
 		
 		//Speed difference between the player and the AI
-		speed = AISpeed - Movement.playerSpeed;
+		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
 	}
@@ -1172,6 +1190,12 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void startWreck(){
+		
+		//Bailout
+		if((isWrecking == true)||(wreckOver == true)){
+			return;
+		}
+		
 		isWrecking = true;
 		if(CameraRotate.cautionOut == false){
 			CameraRotate.cautionOut = true;
@@ -1180,7 +1204,7 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
-		this.GetComponent<Rigidbody>().mass = 1;
+		this.GetComponent<Rigidbody>().mass = 5;
 		
 		//Remove constraints, allowing it to impact/spin using physics
 		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
@@ -1200,23 +1224,50 @@ public class AIMovement : MonoBehaviour
 		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 	}
 	
+	public void endWreck(){
+		Debug.Log(this.name + " WRECKED");
+		AISpeed = 0;
+		baseDecel = 0;
+		wreckDecel = 0;
+		isWrecking = false;
+		wreckOver = true;
+		sparksCooldown = 0;
+		this.GetComponent<Rigidbody>().mass = 100;
+		this.GetComponent<Rigidbody>().isKinematic = true;
+		this.GetComponent<Rigidbody>().useGravity = true;
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
+		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
+		
+		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
+		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
+		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+	}
+	
 	void wreckPhysics(){
 		wreckAngle = this.gameObject.transform.rotation.y;
 		float wreckSine = Mathf.Sin(wreckAngle);
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.02f;
+		baseDecel-=0.25f;
 		
 		if(CameraRotate.onTurn == true){
 			baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
-			Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
+			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,wreckDecel);
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
-			this.GetComponent<ConstantForce>().force = new Vector3(-1f, 0f,wreckDecel);
+			this.GetComponent<ConstantForce>().force = new Vector3(-2f, 0f,wreckDecel);
 		}
-		wreckDecel = baseDecel - (15f * wreckSine);
+		wreckDecel = baseDecel - (50f * wreckSine);
+		
+		if(AISpeed + wreckDecel < 0){
+			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+			endWreck();
+		}
+		
+		this.GetComponent<Rigidbody>().angularDrag += 0.01f;
 		
 		//Align particle system to global track direction
 		//Flatten the smoke

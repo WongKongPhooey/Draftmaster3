@@ -4,7 +4,9 @@ using Random=UnityEngine.Random;
 
 public class CameraRotate : MonoBehaviour {
 
+	public GameObject thePlayer;
 	public GameObject TDCamera;
+	public GameObject trackEnviro;
 	public GameObject cornerKerb;
 	public GameObject apron;
 	public GameObject finishLine;
@@ -83,6 +85,9 @@ public class CameraRotate : MonoBehaviour {
 		trackLength = 0;
 		totalTurns = PlayerPrefs.GetInt("TotalTurns");
 		
+		thePlayer = GameObject.Find("Player");
+		trackEnviro = GameObject.Find("Environment");
+		
 		gearedAccel = calcCircuitGearing();
 		
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
@@ -146,7 +151,15 @@ public class CameraRotate : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 		
+		if(Movement.wreckOver == true){
+			return;
+		}
+		
 		//finishLine.renderer.enabled = false;
+		
+		//Keep the camera and environment following the player on the z-axis
+		TDCamera.transform.position = new Vector3(TDCamera.transform.position.x,TDCamera.transform.position.y,thePlayer.transform.position.z);
+		trackEnviro.transform.position = new Vector3(trackEnviro.transform.position.x,trackEnviro.transform.position.y,thePlayer.transform.position.z);
 		
 		averageSpeedTotal += (Movement.playerSpeed - carSpeedOffset);
 		averageSpeedCount++;
@@ -155,7 +168,7 @@ public class CameraRotate : MonoBehaviour {
 		straightcounter++;
 		
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
-			Scoreboard.updateScoreboard();
+			Ticker.updateTicker();
 			lap++;
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
 
@@ -192,7 +205,7 @@ public class CameraRotate : MonoBehaviour {
 
 		if ((straightcounter % 100) == 1){
 			//Scoreboard.checkPositions();
-			Scoreboard.updateScoreboard();
+			Ticker.updateTicker();
 		}
 
 		if(audioOn == 1){
@@ -302,7 +315,7 @@ public class CameraRotate : MonoBehaviour {
 
 		//End of turn
 		if(cornercounter >= (turnLength[turn-1] * turnAngle[turn-1])){
-			Scoreboard.updateScoreboard();
+			Ticker.updateTicker();
 			onTurn = false;
 			Movement.onTurn = false;
 			AIMovement.onTurn = false;
