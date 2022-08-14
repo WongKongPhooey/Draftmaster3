@@ -23,8 +23,9 @@ public class GarageUI : MonoBehaviour
 		seriesPrefix = "cup20";
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
+		} else {
+			loadAllCars();
 		}
-		loadAllCars();
 	}
 	
 	public void loadAllCars(){
@@ -107,11 +108,19 @@ public class GarageUI : MonoBehaviour
 			}
 			carGearsProgressUI.sizeDelta = new Vector2(gearsProgressUIWidth, 20);
 			
-			int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
-			string restrictionType = PlayerPrefs.GetString("RestrictionType");
-			string restrictionValue = PlayerPrefs.GetString("RestrictionValue");
+			if(PlayerPrefs.HasKey("ActivePath")){
+				int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
+				string restrictionType = PlayerPrefs.GetString("RestrictionType");
+				string restrictionValue = PlayerPrefs.GetString("RestrictionValue");
 			
-			if(minClass > carClass){
+				if((minClass > carClass)||
+				(carUnlocked == 0)){
+					carClickable.SetActive(false);
+					carDisabled.SetActive(true);
+				}
+			}
+			
+			if(carUnlocked == 0){
 				carClickable.SetActive(false);
 				carDisabled.SetActive(true);
 			}

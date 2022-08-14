@@ -38,6 +38,7 @@ public class AIMovement : MonoBehaviour
 	float baseDecel;
 	public float wreckDecel;
 	float wreckAngle;
+	float sideForce;
 	int antiGlitch;
 	
 	public static int maxTandem;
@@ -317,6 +318,10 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 			
+			if((isWrecking == false)&&(Movement.delicateMod == true)){
+				startWreck();
+			}
+			
 			//Join wreck
 			if(carHit.gameObject.tag == "AICar"){
 				bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
@@ -476,8 +481,12 @@ public class AIMovement : MonoBehaviour
 				//Bail, drop all Movement logic
 				if(wreckOver == false){
 					wreckPhysics();
+					if(AISpeed > 200){
+						AISpeed -=0.005f;
+					}
 				} else {
-					AISpeed = 0;
+					AISpeed = 200;
+					this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,-200f);
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 				}
 				return;
@@ -491,19 +500,15 @@ public class AIMovement : MonoBehaviour
 				}
 			} else {
 				holdLane++;
-				distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
-				if((distFromPlayer<=30)&&(distFromPlayer>=-30)){
+				//distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
+				//if((distFromPlayer<=30)&&(distFromPlayer>=-30)){
 					speedLogic();
-				} else {
+				//} else {
 					//Improve FPS by removing logic from far away opponents
-					if(distFromPlayer>30){
+					/*if(distFromPlayer>30){
 						dumbSpeed(1);
-					} else {
-						//if(distFromPlayer<-30){
-						//	dumbSpeed(-1);
-						//}
-					}
-				}
+					}*/
+				//}
 			}
 			//Experimental, for CPU saves
 			if(carNum%20 == tick%20){
@@ -548,9 +553,7 @@ public class AIMovement : MonoBehaviour
 		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.5f){
-			//if (AISpeed > (206 + laneInv + (AILevel / 5))){
 				AISpeed += (0.004f) + (AILevel / 2000);
-			//}
 		}
 		
 		//If engine is too hot, stall out
@@ -616,6 +619,13 @@ public class AIMovement : MonoBehaviour
 		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
+	}
+	
+	void wreckSpeed(){		
+		//Speed difference between the player and the AI
+		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
+		speed = speed / 100;
+		AICar.transform.Translate(new Vector3(0, 0, speed),Space.World);
 	}
 
 	void updateMovement() {
@@ -1253,21 +1263,27 @@ public class AIMovement : MonoBehaviour
 		baseDecel-=0.25f;
 		
 		if(CameraRotate.onTurn == true){
-			baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
-			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
-			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,wreckDecel);
-			//Debug.Log("Apply side force to wreck on turn");
+			sideForce = 10f;
 		} else {
-			this.GetComponent<ConstantForce>().force = new Vector3(-2f, 0f,wreckDecel);
+			sideForce = -2f;
 		}
+		baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
+		//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
+		if(Movement.wreckOver == true){
+			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,wreckDecel + 200f);
+		} else {
+			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,Movement.playerWreckDecel - (Movement.playerWreckDecel - wreckDecel));
+		}
+
 		wreckDecel = baseDecel - (50f * wreckSine);
 		
-		if(AISpeed + wreckDecel < 0){
+		if(wreckDecel < -200){
 			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 			endWreck();
 		}
 		
-		this.GetComponent<Rigidbody>().angularDrag += 0.01f;
+		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 10) + 5;
+		this.GetComponent<Rigidbody>().angularDrag += 0.002f;
 		
 		//Align particle system to global track direction
 		//Flatten the smoke

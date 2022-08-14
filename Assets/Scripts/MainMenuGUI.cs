@@ -69,6 +69,7 @@ public class MainMenuGUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("ActivePath")){
 			PlayerPrefs.DeleteKey("ActivePath");
 		}
+		PlayerPrefs.DeleteKey("RaceModifier");
 		
 		if(exp > levelExp){
 			exp-= levelExp;

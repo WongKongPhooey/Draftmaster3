@@ -681,18 +681,23 @@ public class DriverNames : MonoBehaviour {
 
 		cup1979Names[1] = "Allison";
 		cup1979Names[11] = "Yarborough";
+		cup1979Names[43] = "Petty";
 		
 		cup1979Teams[1] = "ELL";
 		cup1979Teams[11] = "JJA";
+		cup1979Teams[43] = "PET";
 		
 		cup1979Manufacturer[1] = "OLD";
 		cup1979Manufacturer[11] = "OLD";
+		cup1979Manufacturer[43] = "CHV";
 		
 		cup1979Types[1] = "Intimidator";
 		cup1979Types[11] = "Legend";
+		cup1979Types[43] = "Legend";
 
 		cup1979Rarity[1] = 3;
 		cup1979Rarity[11] = 4;
+		cup1979Rarity[43] = 4;
 	}
 	
 	public static void dmc15(){

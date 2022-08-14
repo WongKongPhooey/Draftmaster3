@@ -16,6 +16,7 @@ public class Movement : MonoBehaviour {
 	public static float speedRand;
 	public static float randTopend;
 	float speed;
+	float draftDist;
 
 	float challengeSpeedBoost;
 
@@ -80,12 +81,14 @@ public class Movement : MonoBehaviour {
 	public GameObject HUDGear;
 	public GameObject HUDRevs;
 	public GameObject HUDRevBarMask;
+	public GameObject HUDDraftBarMask;
 	public GameObject HUDSpeed;
 	public GameObject HUDAccSpeed;
 	public GameObject HUDLastLap;
 	public GameObject HUDBestLap;
 	public GameObject HUDLapDelta;
 	public float calcLapDelta;
+	public float HUDDraftStrength;
 	
 	public static bool carInside;
 	public static bool carOutside;
@@ -130,6 +133,9 @@ public class Movement : MonoBehaviour {
 	public List<string> rivals = new List<string>();
 	public static int mostHits;
 	public static string currentRival;
+	
+	public static bool delicateMod;
+	public static bool invincibleMod;
 
 	// Use this for initialization
 	void Start () {
@@ -306,6 +312,11 @@ public class Movement : MonoBehaviour {
 		wobblePos = 0;
 		wobbleTarget = 0;
 		wobbleRand = Random.Range(100,500);
+		
+		delicateMod = false;
+		invincibleMod = false;
+		
+		RaceModifiers.checkModifiers();
 	}
 	
 	void OnCollisionEnter (Collision carHit){
@@ -314,24 +325,20 @@ public class Movement : MonoBehaviour {
 		if((carHit.gameObject.tag == "AICar") || 
 		   (carHit.gameObject.tag == "Barrier") || 
 		   (carHit.gameObject.name == "OuterWall")){
-			   
-			//Start wrecking
-			/*if((carHit.gameObject.tag == "Barrier") || 
-			  (carHit.gameObject.name == "OuterWall") ||
-			  (carHit.gameObject.name == "SaferBarrier")){*/
-			if(isWrecking == false){
-				//startWreck();
-				//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+			
+			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
+				startWreck();
 			}
-			//}
 			   
 			//Join wreck
 			if(carHit.gameObject.tag == "AICar"){
 				bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
 				if(joinWreck == true){
 					if(isWrecking == false){
-						startWreck();
-						this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+						if(wreckOver == false){
+							startWreck();
+							this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+						}
 					} else {
 						//Share some wreck inertia
 						float opponentWreckDecel = carHit.gameObject.GetComponent<AIMovement>().wreckDecel;
@@ -378,12 +385,10 @@ public class Movement : MonoBehaviour {
 		if(isWrecking == false){
 			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + "while I was going " + playerSpeed);
 			if(initialContact == false){
-				//if(bumpSpeed - playerSpeed > 1){
-					float midSpeed = bumpSpeed - playerSpeed;
-					playerSpeed += midSpeed/4;
-					initialContact = true;
-					//Debug.Log("Impact levels out Player");
-				//}
+				float midSpeed = bumpSpeed - playerSpeed;
+				playerSpeed += midSpeed/4;
+				initialContact = true;
+				//Debug.Log("Impact levels out Player");
 			} else {
 				//Send it back
 				RaycastHit DraftCheckBackward;
@@ -415,8 +420,12 @@ public class Movement : MonoBehaviour {
 			//Bail, drop all Movement logic
 			if(wreckOver == false){
 				wreckPhysics();
+				if(playerSpeed > 200){
+					playerSpeed-=0.005f;
+				}
 			} else {
-				playerSpeed = 0;
+				playerSpeed = 200;
+				this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,-200f);
 				this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 			}
 			return;
@@ -463,6 +472,7 @@ public class Movement : MonoBehaviour {
 		
 		//If in draft of car in front
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
+			draftDist = DraftCheck.distance;
 			//Speed up
 			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
 				playerSpeed+=((10 - DraftCheck.distance)/1500);
@@ -479,6 +489,8 @@ public class Movement : MonoBehaviour {
 			if(playerSpeed >= 200){
 				playerSpeed-=0.0035f;
 			}
+			//Empty the Draft Bar
+			draftDist= 10 + customDistF;
 		}
 		
 		// If recieving backdraft of car behind
@@ -720,7 +732,13 @@ public class Movement : MonoBehaviour {
 		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		vehicle.transform.Translate(0, 0, speed);
-		Debug.Log(speed + " Rel to Cam Speed");
+	}
+	
+	void wreckSpeed(){
+		//Speed difference between the Player and the Control Car
+		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
+		speed = speed / 100;
+		vehicle.transform.Translate(new Vector3(0, 0, speed),Space.World);
 	}
 	
 	void updateMovement() {
@@ -781,7 +799,7 @@ public class Movement : MonoBehaviour {
 		if(laneticker == 0){
 			lane++;
 			laneticker = laneChangeDuration;
-			Debug.Log("Goin' Left!");
+			//Debug.Log("Goin' Left!");
 		}
 	}
 	
@@ -789,7 +807,7 @@ public class Movement : MonoBehaviour {
 		if(laneticker == 0){
 			lane--;
 			laneticker = -laneChangeDuration;
-			Debug.Log("Goin' Right!");
+			//Debug.Log("Goin' Right!");
 		}
 	}
 	
@@ -806,10 +824,10 @@ public class Movement : MonoBehaviour {
 		carEngine = audioHolder.GetComponent<AudioSource>();
 		
 		//4th GEAR
-		if(CameraRotate.carSpeedOffset < gearSpeeds[4]){
+		if((CameraRotate.carSpeedOffset + playerWreckDecel) < gearSpeeds[4]){
 			//Calculate revs
-			engineRevs = 3000;
-			engineRevs+=((gearSpeeds[3] - CameraRotate.carSpeedOffset) * 100);
+			engineRevs = 6000;
+			engineRevs+=((gearSpeeds[4] - CameraRotate.carSpeedOffset) * 100);
 			engineRevs+=(playerSpeed - 195) * 100;
 			
 			carEngine.pitch = 0.7f + (engineRevs / 10000f);
@@ -817,27 +835,41 @@ public class Movement : MonoBehaviour {
 			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
 			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 		} else {
-			//2nd GEAR 
-			if(CameraRotate.carSpeedOffset > gearSpeeds[3]){
-				engineRevs = 2000;
-				engineRevs+=((gearSpeeds[2] - CameraRotate.carSpeedOffset) * 100);
-				engineRevs+=(playerSpeed - 195) * 100;
-				
-				carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - (CameraRotate.carSpeedOffset / 200);
-				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
-				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
-				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
-				
-			} else {
+			if((CameraRotate.carSpeedOffset + playerWreckDecel) < gearSpeeds[3]){
 				//3rd GEAR
 				engineRevs = 5000;
 				engineRevs+=((gearSpeeds[3] - CameraRotate.carSpeedOffset) * 100);
 				engineRevs+=(playerSpeed - 195) * 100;
 				
-				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - (CameraRotate.carSpeedOffset / 200);
+				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - ((CameraRotate.carSpeedOffset + playerWreckDecel) / 200);
 				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 3";
 				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
 				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
+			} else {
+				//2nd GEAR 
+				if((CameraRotate.carSpeedOffset + playerWreckDecel) < gearSpeeds[2]){
+					engineRevs = 2000;
+					engineRevs+=((gearSpeeds[2] - CameraRotate.carSpeedOffset) * 100);
+					engineRevs+=(playerSpeed - 195) * 100;
+					
+					carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset + playerWreckDecel) / 200);
+					HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
+					HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
+				} else {
+					//1st GEAR (wrecks only)
+					engineRevs = 0;
+					engineRevs+=((gearSpeeds[1] - (CameraRotate.carSpeedOffset + playerWreckDecel)) * 100);
+					engineRevs+=(playerSpeed - 195) * 100;
+					if(engineRevs < 0){
+						engineRevs = 0;
+					}
+					
+					carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset + playerWreckDecel) / 200);
+					HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
+					HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
+				}
 			}
 		}
 		
@@ -847,7 +879,20 @@ public class Movement : MonoBehaviour {
 		} else {
 			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD 0";
 			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD 0";
+		}
 
+		if(draftDist > HUDDraftStrength){
+			HUDDraftStrength+=0.5f;
+		}
+		if(draftDist < HUDDraftStrength){
+			HUDDraftStrength-=0.5f;
+		}
+		
+		if((isWrecking == false)&&(wreckOver == false)){
+			HUDDraftBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(80, (120f / (10f + customDistF)) * HUDDraftStrength);
+		} else {
+			//Cover it completely
+			HUDDraftBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 120f);
 		}
 
 		HUDLastLap.GetComponent<TMPro.TMP_Text>().text = "LAP " + (CameraRotate.averageSpeed - speedOffset).ToString("F2");
@@ -921,6 +966,9 @@ public class Movement : MonoBehaviour {
 	}	
 	
 	void startWreck(){
+		if(invincibleMod == true){
+			return;
+		}
 		if(wreckOver == false){
 			isWrecking = true;
 		}
@@ -959,7 +1007,7 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<Rigidbody>().mass = 100;
 		this.GetComponent<Rigidbody>().isKinematic = true;
 		this.GetComponent<Rigidbody>().useGravity = true;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,0f);
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,playerWreckDecel);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, 0f, 0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		
@@ -988,7 +1036,8 @@ public class Movement : MonoBehaviour {
 			endWreck();
 		}
 		
-		this.GetComponent<Rigidbody>().angularDrag += 0.01f;
+		this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 10) + 5;
+		this.GetComponent<Rigidbody>().angularDrag += 0.002f;
 		
 		/*if(wreckTorque > 0){
 			wreckTorque -= (0.2f * wreckSine);

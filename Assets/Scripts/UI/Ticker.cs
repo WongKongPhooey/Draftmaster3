@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Text.RegularExpressions;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,6 +25,7 @@ public class Ticker : MonoBehaviour
 	public static string liveryName;
 	public static float leaderDist;
 	public static GameObject ticker;
+	public static GameObject playerTicker;
 
 	public static GameObject[] carsArray = new GameObject[50];
 	public static float[] carPositions = new float[50];
@@ -61,6 +63,7 @@ public class Ticker : MonoBehaviour
 		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		
 		ticker = GameObject.Find("Ticker");
+		playerTicker = GameObject.Find("PlayerTicker");
 		
 		carsTagged = false;
 		playerCar = GameObject.FindGameObjectWithTag("Player");
@@ -72,11 +75,9 @@ public class Ticker : MonoBehaviour
 	public void populateTickerData(){
 
 		if((carsTagged == true)||(carsArray.Length == 0)){
-			Debug.Log("Oops! Leaving..");
+			//Debug.Log("Oops! Leaving..");
 			return;
 		}
-		//Debug.Log(carsArray.Length + " cars found");
-		Debug.Log("Tagged yet? " + carsTagged);
 		
 		if((carsTagged == false)&&(carsArray.Length > 0)){
 			for(int t=0;t<carsArray.Length;t++){
@@ -90,8 +91,8 @@ public class Ticker : MonoBehaviour
 			foreach (GameObject car in carsArray) {
 				carPositions[i] = car.transform.position.z;
 				carNames[i] = car.transform.name;
-				carNumber[i] = carNames[i].Remove(0,5);
-				Debug.Log(carNumber[i]);
+				carNumber[i] = carNames[i].Remove(0,6);
+				//Debug.Log(carNumber[i]);
 				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				entrantList.Add(car);
 				i++;
@@ -102,6 +103,7 @@ public class Ticker : MonoBehaviour
 			entrantList.Add(playerCar);
 			GameObject playerTick = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			playerTick.transform.SetParent(tickerObj, false);
+			updateTicker();
 		}
 	}
 
@@ -147,6 +149,12 @@ public class Ticker : MonoBehaviour
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
+				
+				TMPro.TMP_Text playerTickerPos = playerTicker.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+				TMPro.TMP_Text playerTickerName = playerTicker.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				playerTickerPos.text = (i+1).ToString();
+				playerTickerName.text = driverNames[i];
+				
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
@@ -157,9 +165,10 @@ public class Ticker : MonoBehaviour
 			}
 			
 			TMPro.TMP_Text tickerPos = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+			Image tickerNum = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
 			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			
 			tickerPos.text = (i+1).ToString();
+			tickerNum.overrideSprite = Resources.Load<Sprite>(seriesPrefix + "num" + carNumber[i]);
 			tickerName.text = driverNames[i];
 			//Debug.Log(i + ": " + driverNames[i]);
 		}

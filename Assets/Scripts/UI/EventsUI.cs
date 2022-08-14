@@ -192,6 +192,10 @@ public class EventsUI : MonoBehaviour
 		if(EventData.offlineCustomField[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("CustomField", EventData.offlineCustomField[subMenuId,subEventId]);
 		}
+		if(EventData.offlineModifier[subMenuId,subEventId] != null){
+			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);
+			Debug.Log("Race Modifier set: " + EventData.offlineModifier[subMenuId,subEventId]);
+		}
 		
 		SceneManager.LoadScene("Menus/Garage");
 	}

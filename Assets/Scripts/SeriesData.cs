@@ -63,7 +63,7 @@ public class SeriesData : MonoBehaviour{
 		seriesDescriptions[5] = "The weight of the team rests on your shoulders. Time to deliver!";
 		seriesDescriptions[6] = "Back your favourite manufacturer and take them to the top.";
 		seriesDescriptions[7] = "Some drive clean, some not so much. Play to your drivers strengths here.";
-		seriesDescriptions[8] = "Proven winners wear their stars with pride Rarer drivers win bigger rewards!";
+		seriesDescriptions[8] = "Proven winners wear their stars with pride. Rarer drivers win bigger rewards!";
 		seriesDescriptions[9] = "The complete calendars. The ultimate challenge!";
 		
 		//Rookies

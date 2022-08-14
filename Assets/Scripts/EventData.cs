@@ -29,6 +29,7 @@ public class EventData : MonoBehaviour
 	
 	public static string[,] offlineCustomCar = new string[10,10];
 	public static string[,] offlineCustomField = new string[10,10];
+	public static string[,] offlineModifier = new string[10,10];
 	
     // Start is called before the first frame update
     void Start(){   
@@ -372,6 +373,7 @@ public class EventData : MonoBehaviour
 		offlineSeries[4,0] = "cup79";
 		offlineCustomCar[4,0] = "cup79livery1";
 		offlineCustomField[4,0] = "cup79MomentsDaytona";
+		offlineModifier[4,0] = "delicate";
 		offlineTracklists[4,0] = "1";
 		offlinePrizes[4,0] = "Rookies";
 		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";

@@ -16,7 +16,7 @@ public class LockCamera : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(Movement.isWrecking == true){
+        if((Movement.isWrecking == true)||(Movement.wreckOver == true)){
 			this.transform.position = new Vector3(player.transform.position.x,camHeight,player.transform.position.z);
 		}
     }
