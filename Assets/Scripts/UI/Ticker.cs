@@ -51,6 +51,8 @@ public class Ticker : MonoBehaviour
 	public GameObject tickerChild;
 	public Transform tickerObj;
 	
+	public GameObject tickerFlag;
+	
     // Start is called before the first frame update
     void Awake(){
         
@@ -64,6 +66,7 @@ public class Ticker : MonoBehaviour
 		
 		ticker = GameObject.Find("Ticker");
 		playerTicker = GameObject.Find("PlayerTicker");
+		tickerFlag = GameObject.Find("RaceState");
 		
 		carsTagged = false;
 		playerCar = GameObject.FindGameObjectWithTag("Player");
@@ -157,7 +160,8 @@ public class Ticker : MonoBehaviour
 				
 			} else {
 				carNames[i] = "" + entrantList[i].name;
-				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				//carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				carNumber[i] = carNames[i].Remove(0,6);
 				//Debug.Log("Car #: " + carNumber[i]);
 				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
@@ -169,6 +173,7 @@ public class Ticker : MonoBehaviour
 			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 			tickerPos.text = (i+1).ToString();
 			tickerNum.overrideSprite = Resources.Load<Sprite>(seriesPrefix + "num" + carNumber[i]);
+			Debug.Log("Looking for: " + seriesPrefix + "num" + carNumber[i]);
 			tickerName.text = driverNames[i];
 			//Debug.Log(i + ": " + driverNames[i]);
 		}
@@ -267,12 +272,15 @@ public class Ticker : MonoBehaviour
     // Update is called once per frame
     void Update(){
 		if(carsTagged == false){
-			Debug.Log("Cars haven't been tagged yet..");
+			//Debug.Log("Cars haven't been tagged yet..");
 			populateTickerData();
 		}
 		if(carsArray.Length == 0){
-			Debug.Log("Waiting for AI spawn..");
+			//Debug.Log("Waiting for AI spawn..");
 			carsArray = GameObject.FindGameObjectsWithTag("AICar");
+		}
+		if(CameraRotate.cautionOut == true){
+			tickerFlag.GetComponent<Image>().color = new Color(255,255,0);
 		}
 	}
 }
