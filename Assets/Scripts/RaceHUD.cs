@@ -85,8 +85,8 @@ public class RaceHUD : MonoBehaviour {
 		}
 
 		GUI.skin = eightBitSkin;
-		GUI.skin.label.fontSize = 80 / FontScale.fontScale;
-		GUI.skin.button.fontSize = 120 / FontScale.fontScale;
+		GUI.skin.label.fontSize = 80 / 2;
+		GUI.skin.button.fontSize = 120 / 2;
 		
 		//-------CONTROLS--------
 
@@ -240,12 +240,12 @@ public class RaceHUD : MonoBehaviour {
 						GUI.skin.label.fontSize = 512 / FontScale.fontScale;
 						GUI.skin.label.alignment = TextAnchor.LowerLeft;
 						GUI.skin.label.normal.textColor = Color.black;
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
+						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
 						GUI.skin.label.normal.textColor = Color.yellow;
-						GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + (Scoreboard.position + 1));
+						GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
 					}
 				}
 				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
@@ -255,18 +255,7 @@ public class RaceHUD : MonoBehaviour {
 				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Results")){
 					Time.timeScale = 1.0f;
 					raceOver = false;
-					SceneManager.LoadScene("RaceResults");
-				}
-			} else {
-				
-				GUI.skin = redGUI;
-				GUI.skin.button.fontSize = 120 / FontScale.fontScale;
-				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Continue")){
-					Time.timeScale = 1.0f;
-					caution = false;
-					string circuitReload = PlayerPrefs.GetString("CurrentCircuit");
-					//PlayerPrefs.SetInt("ActiveCaution",0);
-					SceneManager.LoadScene(circuitReload);
+					SceneManager.LoadScene("Menus/RaceResults");
 				}
 			}
 		}
@@ -296,7 +285,7 @@ public class RaceHUD : MonoBehaviour {
 		if(CameraRotate.lap == 0){
 			GUI.skin.label.normal.textColor = Color.yellow;
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.skin.label.fontSize = 120 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 120 / 2;
 			GUI.skin.label.normal.textColor = Color.black;
 			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
 			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");

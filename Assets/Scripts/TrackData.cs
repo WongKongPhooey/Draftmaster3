@@ -59,7 +59,7 @@ public class TrackData : MonoBehaviour
 
 	public static string getTrackCodeName(int trackId){
 		loadTrackCodeNames();
-		Debug.Log("Track Codename is " + trackCodeNames[trackId]);
+		//Debug.Log("Track Codename is " + trackCodeNames[trackId]);
 		return trackCodeNames[trackId];
 	}
 

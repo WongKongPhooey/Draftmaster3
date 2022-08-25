@@ -120,6 +120,13 @@ public class SpawnField : MonoBehaviour {
 				//Debug.Log("Back row: " + playerRow);
 			}
 		}
+		
+		//If race is restarting..
+		if(PlayerPrefs.HasKey("SpawnFromCaution")){
+			playerRow = Mathf.CeilToInt(PlayerPrefs.GetInt("PlayerCautionPosition") / 2);
+			CameraRotate.lap = PlayerPrefs.GetInt("CautionLap") + 1;
+			PlayerPrefs.DeleteKey("SpawnFromCaution");
+		}
 
 		string challengeName = PlayerPrefs.GetString("ChallengeType");
 

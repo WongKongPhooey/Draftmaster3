@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Text.RegularExpressions;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public class Ticker : MonoBehaviour
 {
@@ -52,6 +53,7 @@ public class Ticker : MonoBehaviour
 	public Transform tickerObj;
 	
 	public GameObject tickerFlag;
+	public GameObject tickerLaps;
 	
     // Start is called before the first frame update
     void Awake(){
@@ -67,6 +69,7 @@ public class Ticker : MonoBehaviour
 		ticker = GameObject.Find("Ticker");
 		playerTicker = GameObject.Find("PlayerTicker");
 		tickerFlag = GameObject.Find("RaceState");
+		tickerLaps = GameObject.Find("RaceLaps");
 		
 		carsTagged = false;
 		playerCar = GameObject.FindGameObjectWithTag("Player");
@@ -172,14 +175,14 @@ public class Ticker : MonoBehaviour
 			Image tickerNum = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
 			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 			tickerPos.text = (i+1).ToString();
-			tickerNum.overrideSprite = Resources.Load<Sprite>(seriesPrefix + "num" + carNumber[i]);
-			Debug.Log("Looking for: " + seriesPrefix + "num" + carNumber[i]);
+			tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
 			tickerName.text = driverNames[i];
 			//Debug.Log(i + ": " + driverNames[i]);
 		}
 	}
 
-		public static int checkPlayerPosition(){
+	public static int checkPlayerPosition(){
 		for(int i=0;i<entrantList.Count;i++){
 			if(entrantList[i].name == playerCar.name){
 				return i;
@@ -199,6 +202,61 @@ public class Ticker : MonoBehaviour
 			}
 		}
 		return 9999;
+	}
+
+	public static void saveCautionPositions(){
+		entrantList.Clear();
+		
+		int j=0;
+		playerCar = GameObject.FindGameObjectWithTag("Player");
+		carsArray = GameObject.FindGameObjectsWithTag("AICar");
+		playerPosition = playerCar.transform.position.z;
+		
+		if(carsArray.Length > 0){
+			foreach (GameObject car in carsArray) {
+				entrantList.Add(car);
+				j++;
+			}
+			carsTagged = true;
+		}
+		entrantList.Add(playerCar);
+		
+		//Sort by z axis position
+        entrantList.Sort(delegate(GameObject a, GameObject b) {
+		  return (a.transform.position.z).CompareTo(b.transform.position.z);
+		});
+		//Reverse the sort
+		entrantList.Reverse(); 
+		
+		//Debug.Log(entrantList.Count + " cars to sort.");
+		
+		for(int i=0;i<entrantList.Count;i++){
+			if(entrantList[i].name == playerCar.name){
+				position = i;
+				carNames[i] = playerCar.transform.name;
+				carNumber[i] = "" + playerCarNum + "";
+				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
+					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
+				} else {
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				}
+				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
+				leaderDist = leaderDist / 25;
+				PlayerPrefs.SetInt("PlayerCautionPosition", i);
+				Debug.Log("Player is in P" + i);
+			} else {
+				carNames[i] = "" + entrantList[i].name;
+				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
+				carDist[i] = carDist[i] / 25;
+			}
+			PlayerPrefs.SetInt("CautionPosition" + i + "", int.Parse(carNumber[i]));
+			//Debug.Log(i + ": " + driverNames[i]);
+		}
+		PlayerPrefs.SetInt("CautionLap", CameraRotate.lap);
+		PlayerPrefs.SetInt("SpawnFromCaution", 1);
+		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 	}
 
 	public static void checkFinishPositions(){
@@ -239,6 +297,7 @@ public class Ticker : MonoBehaviour
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
+				Debug.Log("Player finishes in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
@@ -246,7 +305,8 @@ public class Ticker : MonoBehaviour
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}
-			//Debug.Log(i + ": " + driverNames[i]);
+			PlayerPrefs.SetInt("FinishPosition" + i + "", int.Parse(carNumber[i]));
+			PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
 		}
 		
 		if(position == 0){
@@ -271,6 +331,7 @@ public class Ticker : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
+		tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + PlayerPrefs.GetInt("RaceLaps");
 		if(carsTagged == false){
 			//Debug.Log("Cars haven't been tagged yet..");
 			populateTickerData();

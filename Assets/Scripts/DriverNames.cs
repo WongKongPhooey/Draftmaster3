@@ -57,7 +57,7 @@ public class DriverNames : MonoBehaviour {
 	public static string[] cup2020AltNames = new string[20];
 
 	// Use this for initialization
-	void Start () {
+	void Awake() {
 		
 		cup20();
 		cup22();

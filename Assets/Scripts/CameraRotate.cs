@@ -92,6 +92,8 @@ public class CameraRotate : MonoBehaviour {
 		
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
 		
+		cautionOut = false;
+		
 		for(int i=0;i<totalTurns;i++){
 			trackLength += straightLength[i];
 			//Debug.Log("Track Length: " + trackLength);
@@ -125,16 +127,6 @@ public class CameraRotate : MonoBehaviour {
 			RaceHUD.goingGreen = true;
 			restartLap = lap + 1;
 			PlayerPrefs.SetInt("ActiveCaution",0);
-		} else {
-			//cautionProb = Random.Range(1,100);
-			cautionProb = 1; //NO CAUTIONS
-			if((PlayerPrefs.GetInt("RaceLaps") > 4)&&(cautionProb > 1)){
-				cautionLap = Random.Range(2,PlayerPrefs.GetInt("RaceLaps")-3); //Random Caution
-				//Debug.Log("Caution will be on lap " + cautionLap);
-			} else {
-				cautionLap = 999;
-				//Debug.Log("No Cautions");
-			}
 		}
 
 		audioOn = PlayerPrefs.GetInt("AudioOn");
@@ -167,32 +159,19 @@ public class CameraRotate : MonoBehaviour {
 		
 		straightcounter++;
 		
+		//Increment Lap
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
 			Ticker.updateTicker();
 			lap++;
+			//Starts/Restarts
+			if(Movement.pacing == true){
+				Movement.pacingEnds();
+			}
+			//Caution, reset scene
+			if(cautionOut == true){
+				Ticker.saveCautionPositions();
+			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
-
-			if((lap == cautionLap)&&(cautionCleared == false)){
-				PlayerPrefs.SetInt("ActiveCaution",1);
-				//Debug.Log("Caution is out - lap " + lap);
-				//Scoreboard.checkCautionPositions();
-				RaceHUD.caution = true;
-				cautionCleared = true;
-			}
-
-			if(lap == cautionLap + 1){
-				Time.timeScale = 0.0f;
-				finishLine.GetComponent<Renderer>().enabled = true;
-				carEngine.volume = 0;
-				crowdNoise.volume = 0;
-				RaceHUD.caution = true;
-				PlayerPrefs.SetInt("StartingLap",lap);
-				PlayerPrefs.SetInt("CautionHasBeen",1);
-			}
-
-			if(lap == restartLap){
-				RaceHUD.goingGreen = false;
-			}
 
 			if((averageSpeed > lapRecord)&&(lap > 1)){
 				lapRecord = averageSpeed;
@@ -204,7 +183,6 @@ public class CameraRotate : MonoBehaviour {
 		}
 
 		if ((straightcounter % 100) == 1){
-			//Scoreboard.checkPositions();
 			Ticker.updateTicker();
 		}
 
@@ -219,6 +197,7 @@ public class CameraRotate : MonoBehaviour {
 			crowdNoise.volume = 0.0f;
 		}
 
+		//Race End
 		if(lap == (PlayerPrefs.GetInt("RaceLaps") + 1)){
 			lap--;
 			Time.timeScale = 0.0f;
@@ -233,7 +212,7 @@ public class CameraRotate : MonoBehaviour {
 			carEngine.volume = 0;
 			crowdNoise.volume = 0;
 			RaceHUD.raceOver = true;
-			Scoreboard.checkFinishPositions();
+			Ticker.checkFinishPositions();
 			PlayerPrefs.SetInt("ExpAdded",0);
 			if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 				currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);

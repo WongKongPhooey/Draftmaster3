@@ -40,6 +40,7 @@ public class AIMovement : MonoBehaviour
 	float wreckAngle;
 	float sideForce;
 	int antiGlitch;
+	public bool playerWrecked;
 	
 	public static int maxTandem;
 	public static float coolOffSpace;
@@ -476,7 +477,7 @@ public class AIMovement : MonoBehaviour
 		
         laneInv = 4 - lane;
 		
-		if(lap > 0){
+		if(Movement.pacing == false){
 			if((isWrecking == true)||(wreckOver == true)){
 				//Bail, drop all Movement logic
 				if(wreckOver == false){
@@ -485,8 +486,12 @@ public class AIMovement : MonoBehaviour
 						AISpeed -=0.005f;
 					}
 				} else {
-					AISpeed = 200;
-					this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,-200f);
+					AISpeed = 0;
+					if(Movement.wreckOver == true){
+						this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,0f);
+					} else {
+						this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,-200f - Movement.playerWreckDecel);
+					}
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 				}
 				return;
@@ -571,11 +576,11 @@ public class AIMovement : MonoBehaviour
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
 			AISpeed += 0.0035f;
 			tandemDraft = true;
-			int currentPos = Scoreboard.checkSingleCarPosition("AICar0" + carNum + "");
-			if(currentPos == 0){
+			//int currentPos = Scoreboard.checkSingleCarPosition("AICar0" + carNum + "");
+			//if(currentPos == 0){
 				//Debug.Log("Leader is #" + carNum);
-				evadeDraft();
-			}
+			//	evadeDraft();
+			//}
 		} else {
 			tandemDraft = false;
 		}
@@ -1225,7 +1230,7 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		baseDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
+		baseDecel = -0.2f;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.1f, 0.1f) * 10, 0f);
@@ -1235,16 +1240,16 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public void endWreck(){
-		Debug.Log(this.name + " WRECKED");
+		//Debug.Log(this.name + " WRECKED");
 		AISpeed = 0;
 		baseDecel = 0;
 		wreckDecel = 0;
 		isWrecking = false;
 		wreckOver = true;
 		sparksCooldown = 0;
-		this.GetComponent<Rigidbody>().mass = 100;
+		this.GetComponent<Rigidbody>().mass = 25;
 		this.GetComponent<Rigidbody>().isKinematic = true;
-		this.GetComponent<Rigidbody>().useGravity = true;
+		//this.GetComponent<Rigidbody>().useGravity = true;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,0f);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
@@ -1260,30 +1265,45 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.25f;
+		baseDecel-=0.20f;
 		
 		if(CameraRotate.onTurn == true){
 			sideForce = 10f;
 		} else {
 			sideForce = -2f;
 		}
-		baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
-		//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
+		//baseDecel-=0.02f * 1;//CameraRotate.currentTurnSharpness();
+		
+		// Move relative to stopped player
 		if(Movement.wreckOver == true){
+			if(playerWrecked == false){
+				//Acknowledge physics change when player is stopped, reset momentum this frame
+				playerWrecked = true;
+				this.GetComponent<Rigidbody>().velocity = Vector3.zero;
+				this.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+			}
 			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,wreckDecel + 200f);
 		} else {
-			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,Movement.playerWreckDecel - (Movement.playerWreckDecel - wreckDecel));
+			//Standard relativity
+			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,wreckDecel);
 		}
 
 		wreckDecel = baseDecel - (50f * wreckSine);
 		
-		if(wreckDecel < -200){
+		if(wreckDecel < -140){
+			sparksCooldown = 0;
+			this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
+			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
+		}
+		if(wreckDecel < -180){
 			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+		}
+		if(wreckDecel < -200){
 			endWreck();
 		}
 		
 		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 10) + 5;
-		this.GetComponent<Rigidbody>().angularDrag += 0.002f;
+		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		//Align particle system to global track direction
 		//Flatten the smoke

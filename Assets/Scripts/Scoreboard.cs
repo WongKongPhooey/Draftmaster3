@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public class Scoreboard : MonoBehaviour {
 
@@ -122,13 +123,13 @@ public class Scoreboard : MonoBehaviour {
 	}
 	
 	public static void updateScoreboard(){
-		playerPosition = playerCar.transform.position.z;
-		
 		entrantList.Clear();
 		
 		int j=0;
 		playerCar = GameObject.FindGameObjectWithTag("Player");
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
+		
+		playerPosition = playerCar.transform.position.z;
 		if(carsArray.Length > 0){
 			foreach (GameObject car in carsArray) {
 				entrantList.Add(car);
@@ -184,6 +185,7 @@ public class Scoreboard : MonoBehaviour {
 		if(thisCarName == ""){
 			return 9999;
 		}
+		//GameObject singleCar = GameObject.Find(thisCarName);
 		for(int i=0;i<entrantList.Count;i++){
 			if(entrantList[i].name == thisCarName){
 				//Debug.Log("Car #" + thisCarName + " is in pos " + i);
@@ -191,6 +193,60 @@ public class Scoreboard : MonoBehaviour {
 			}
 		}
 		return 9999;
+	}
+
+	public static void saveCautionPositions(){
+		
+		entrantList.Clear();
+		
+		int j=0;
+		playerCar = GameObject.FindGameObjectWithTag("Player");
+		carsArray = GameObject.FindGameObjectsWithTag("AICar");
+		
+		playerPosition = playerCar.transform.position.z;
+		if(carsArray.Length > 0){
+			foreach (GameObject car in carsArray) {
+				entrantList.Add(car);
+				j++;
+			}
+			carsTagged = true;
+		}
+		entrantList.Add(playerCar);
+		
+		//Sort by z axis position
+        entrantList.Sort(delegate(GameObject a, GameObject b) {
+		  return (a.transform.position.z).CompareTo(b.transform.position.z);
+		});
+		//Reverse the sort
+		entrantList.Reverse(); 
+		
+		//Debug.Log(entrantList.Count + " cars to sort.");
+		
+		for(int i=0;i<entrantList.Count;i++){
+			if(entrantList[i].name == playerCar.name){
+				position = i;
+				carNames[i] = playerCar.transform.name;
+				carNumber[i] = "" + playerCarNum + "";
+				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
+					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
+				} else {
+					Debug.Log(seriesPrefix + ", " + carNumber[i]);
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				}
+				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
+				leaderDist = leaderDist / 25;
+			} else {
+				carNames[i] = "" + entrantList[i].name;
+				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
+				carDist[i] = carDist[i] / 25;
+			}
+			PlayerPrefs.SetInt("CautionPosition" + i + "", int.Parse(carNumber[i]));
+			//Debug.Log(i + ": " + driverNames[i]);
+		}
+		PlayerPrefs.SetInt("SpawnFromCaution", 1);
+		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 	}
 
 	public static void checkFinishPositions(){
