@@ -53,6 +53,10 @@ public class PrizeMoney : MonoBehaviour {
 	}
 	
 	public static int getPrizeMoney(int position){
-		return cashAmount[position];
+		if((position > 0)&&(position < 43)){
+			return cashAmount[position];
+		} else {
+			return cashAmount[42];
+		}
 	}
 }

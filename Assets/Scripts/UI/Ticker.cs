@@ -331,6 +331,7 @@ public class Ticker : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
+		ticker.transform.Translate(-1.5f,0,0);
 		tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + PlayerPrefs.GetInt("RaceLaps");
 		if(carsTagged == false){
 			//Debug.Log("Cars haven't been tagged yet..");

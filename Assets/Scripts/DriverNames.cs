@@ -145,6 +145,47 @@ public class DriverNames : MonoBehaviour {
 		return nameSet.Length;
 	}
 	
+	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount){
+		int carRarity = getRarity(seriesPrefix, index);
+		int carPrice = 999;
+		if(storeDiscount == true){
+			carRarity -= 1;
+		}
+		if(alt == true){
+			carRarity += 3;
+		}
+		switch(carRarity){
+			case 0:
+				carPrice = 3;
+				break;
+			case 1:
+				carPrice = 5;
+				break;
+			case 2:
+				carPrice = 10;
+				break;
+			case 3:
+				carPrice = 20;
+				break;
+			case 4:
+				carPrice = 35;
+				break;
+			case 5:
+				carPrice = 50;
+				break;
+			case 6:
+				carPrice = 75;
+				break;
+			case 7:
+				carPrice = 100;
+				break;
+			default:
+				carPrice = 150;
+				break;
+		}
+		return carPrice;
+	}
+	
 	public static string getSeriesNiceName(string seriesPrefix){
 		return allCarsetNames[seriesPrefix];
 	}
@@ -620,7 +661,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[5] = 4;
 		cup2022Rarity[6] = 3;
 		cup2022Rarity[7] = 1;
-		cup2022Rarity[8] = 1;
+		cup2022Rarity[8] = 2;
 		cup2022Rarity[9] = 4;
 		cup2022Rarity[10] = 2;
 		cup2022Rarity[11] = 4;

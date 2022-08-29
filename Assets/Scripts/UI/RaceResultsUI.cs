@@ -10,6 +10,7 @@ public class RaceResultsUI : MonoBehaviour
 	
 	public GameObject resultRow;
 	public Transform resultsFrame;
+	public string seriesPrefix;
 	
 	
     // Start is called before the first frame update
@@ -24,7 +25,15 @@ public class RaceResultsUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
-		for(int i=0;i<30;i++){
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
+		
+		int fieldSize = PlayerPrefs.GetInt("FieldSize");
+		
+		for(int i=0;i<fieldSize;i++){
 			
 			int carNum = 999;
 			float carDist = 999.999f;
@@ -48,10 +57,14 @@ public class RaceResultsUI : MonoBehaviour
 			TMPro.TMP_Text resultTime = resultInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 			
 			resultPos.text = (i+1).ToString();
-			resultNumber.texture = Resources.Load<Texture2D>("cup20num" + carNum);
-			resultDriver.text = DriverNames.getName("cup20",carNum);
-			resultManu.texture = Resources.Load<Texture2D>("Icons/manu-frd");
-			resultTime.text = "+" + (carDist / 1000f);
+			resultNumber.texture = Resources.Load<Texture2D>(seriesPrefix + "num" + carNum);
+			resultDriver.text = DriverNames.getName(seriesPrefix,carNum);
+			resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, carNum));
+			if(i==0){
+				resultTime.text = "";
+			} else {
+				resultTime.text = "+" + (carDist / 1000f).ToString("f3");
+			}
 		}
 	}
 

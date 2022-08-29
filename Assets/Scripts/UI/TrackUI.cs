@@ -22,6 +22,7 @@ public class TrackUI : MonoBehaviour
 	public static string trackList;
 	
 	public static int championshipRound;
+	public GameObject championshipSelector;
 	
     // Start is called before the first frame update
     void Start()
@@ -29,6 +30,9 @@ public class TrackUI : MonoBehaviour
 		trackList = PlayerPrefs.GetString("SeriesTrackList");
 		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
         loadAllTracks(trackList);
+		championshipSelector = GameObject.Find("ChampionshipSelector");
+		championshipSelector.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "All " + seriesLength + " Rounds";
+		championshipSelector.transform.GetChild(1).GetComponent<TMPro.TMP_Text>().text = "x" + seriesLength + " race rewards received at the end of the season.";
 		
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		seriesPrefix = "cup20";
