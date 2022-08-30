@@ -612,7 +612,7 @@ public class AIMovement : MonoBehaviour
 		
 		//Speed difference between the player and the AI
 		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
-		speed = AISpeed - ControlCarMovement.controlSpeed;
+		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
 	}
@@ -621,14 +621,14 @@ public class AIMovement : MonoBehaviour
 		AISpeed += ((0.001f + (AILevel / 5000)) * direction);
 		
 		//Speed difference between the player and the AI
-		speed = AISpeed - ControlCarMovement.controlSpeed;
+		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
 	}
 	
 	void wreckSpeed(){		
 		//Speed difference between the player and the AI
-		speed = AISpeed - ControlCarMovement.controlSpeed;
+		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		AICar.transform.Translate(new Vector3(0, 0, speed),Space.World);
 	}
@@ -667,14 +667,14 @@ public class AIMovement : MonoBehaviour
         }
 		
 		if(AICar.transform.position.x <= apronLineX){
-			//if(CameraRotate.cautionOut == false){
+			if(CameraRotate.cautionOut == false){
 				//Debug.Log("Track Limits!");
 				if (backingOut == false) {
 					backingOut = true;
 				}
 				laneticker = -laneChangeDuration + laneticker;
 				lane--;
-			//}
+			}
 		}
 		
 		if(AICar.transform.position.x >= 1.35f){
@@ -746,10 +746,6 @@ public class AIMovement : MonoBehaviour
 	void slowUp(float carDist){
 		AISpeed -= (1.25f - carDist)/2;
 		//Debug.Log("BRAKE! #" + carNumber);
-	}
-	
-	void slowForWreck(){
-		AISpeed -= (0.01f);
 	}
 	
 	void carWobble(){
@@ -1210,12 +1206,6 @@ public class AIMovement : MonoBehaviour
 	
 	void startWreck(){
 		
-		//Random Chance
-		int wreckChance = Random.Range(0,100);
-		if(wreckChance > 25){
-			//return;
-		}
-		
 		//Bailout
 		if((isWrecking == true)||(wreckOver == true)){
 			return;
@@ -1240,8 +1230,9 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		baseDecel = 0.2f;
-		//this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
+		baseDecel = -0.2f;
+		wreckDecel = 0;
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.1f, 0.1f) * 10, 0f);
 		
 		//Tire smoke
@@ -1252,10 +1243,11 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log(this.name + " WRECKED");
 		AISpeed = 0;
 		baseDecel = 0;
+		wreckDecel = 0;
 		isWrecking = false;
 		wreckOver = true;
 		sparksCooldown = 0;
-		this.GetComponent<Rigidbody>().mass = 20;
+		this.GetComponent<Rigidbody>().mass = 25;
 		this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,0f);
@@ -1273,7 +1265,7 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel+=0.02f;
+		baseDecel-=0.20f;
 		
 		if(CameraRotate.onTurn == true){
 			sideForce = 10f;
@@ -1282,23 +1274,35 @@ public class AIMovement : MonoBehaviour
 		}
 		//baseDecel-=0.02f * 1;//CameraRotate.currentTurnSharpness();
 		
-		this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,0f);
+		// Move relative to stopped player
+		if(Movement.wreckOver == true){
+			if(playerWrecked == false){
+				//Acknowledge physics change when player is stopped, reset momentum this frame
+				playerWrecked = true;
+				this.GetComponent<Rigidbody>().velocity = Vector3.zero;
+				this.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+			}
+			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,wreckDecel + 200f);
+		} else {
+			//Standard relativity
+			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,wreckDecel);
+		}
 
-		AISpeed -= (baseDecel + (0.5f * wreckSine));
+		wreckDecel = baseDecel - (50f * wreckSine);
 		
-		if(AISpeed < 60){
+		if(wreckDecel < -140){
 			sparksCooldown = 0;
 			this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
 			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
 		}
-		if(AISpeed < 20){
+		if(wreckDecel < -180){
 			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		}
-		if(AISpeed <= 0){
+		if(wreckDecel < -200){
 			endWreck();
 		}
 		
-		//this.GetComponent<Rigidbody>().mass = (-wreckDecel / 10) + 5;
+		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 10) + 5;
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		//Align particle system to global track direction

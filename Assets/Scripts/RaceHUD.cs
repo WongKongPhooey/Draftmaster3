@@ -130,133 +130,26 @@ public class RaceHUD : MonoBehaviour {
 		}
 
 		if((raceOver == false)&&(caution == false)){
-			if(CameraRotate.lap != 0){
-				if((gamePaused == false)&&(tutorialStage != 5)){
-					if(PlayerPrefs.GetInt("Local2Player") == 1){
-						if (GUI.Button(new Rect(10, Screen.height - (heightblock * 2.5f) - 10, widthblock * 2.5f, heightblock * 2.5f), "<")){
-							if((Movement.laneticker == 0)&&(Movement.lane < PlayerPrefs.GetInt("CircuitLanes"))){
-								Movement.lane++;
-								Movement.laneticker = Movement.laneChangeDuration;
-								if(PlayerPrefs.GetInt("TutorialActive") == 1){
-									if(tutorialStage == 1){
-										tutorialBackingOut = false;
-									}
-								}
-							}
-						}
-						if (GUI.Button(new Rect((widthblock * 5) + 10, Screen.height - (heightblock * 2.5f) - 10, widthblock * 2.5f, heightblock * 2.5f), ">")){
-							if((Movement.laneticker == 0)&&(Movement.lane > 1)){
-								Movement.lane--;
-								Movement.laneticker = -Movement.laneChangeDuration;
-								if(PlayerPrefs.GetInt("TutorialActive") == 1){
-									if(tutorialStage == 1){
-										tutorialBackingOut = false;
-									}
-								}
-							}
-						}
-						if (GUI.Button(new Rect((widthblock * 2.5f) + 10, Screen.height - (heightblock * 2.5f) - 10, widthblock * 2.5f, heightblock * 2.5f), "Brake")){
-							if(Movement.playerSpeed > 195){
-								Movement.playerSpeed-=0.99f;
-								if(tutorialStage == 2){
-									tutorialBrakingCount++;
-								}
-							}
-						}
-						if (GUI.Button(new Rect(Screen.width - (widthblock * 7.5f) - 10, Screen.height - (heightblock * 2.5f) - 10, widthblock * 2.5f, heightblock * 2.5f), "<")){
-							player2Num = PlayerPrefs.GetInt("Player2Num");
-							Debug.Log("Player 2: Car " + player2Num);
-							//GameObject.Find("AICar0" + player2Num).GetComponent<AIMovement>().MultiplayerChangeLane("Left");
-						}
-						if (GUI.Button(new Rect(Screen.width - (widthblock * 5) - 10, Screen.height - (heightblock * 2.5f) - 10, widthblock * 2.5f, heightblock * 2.5f), "Brake")){
-							player2Num = PlayerPrefs.GetInt("Player2Num");
-							Debug.Log("Player 2: Car " + player2Num);
-							GameObject.Find("AICar0" + player2Num).GetComponent<AIMovement>().AISpeed-=0.99f;
-						}
-						if (GUI.Button(new Rect(Screen.width - (widthblock * 2.5f) - 10, Screen.height - (heightblock * 2.5f) - 10, widthblock * 2.5f, heightblock * 2.5f), ">")){
-							player2Num = PlayerPrefs.GetInt("Player2Num");
-							Debug.Log("Player 2: Car " + player2Num);
-							//GameObject.Find("AICar0" + player2Num).GetComponent<AIMovement>().MultiplayerChangeLane("Right");
-						}
-					} else {
-						/*if (GUI.Button(new Rect(10, Screen.height - (heightblock * 4) - 10, widthblock * 4, heightblock * 4), "<")){
-							//if((Movement.laneticker == 0)&&(Movement.lane < PlayerPrefs.GetInt("CircuitLanes"))){
-							if(Movement.laneticker == 0){
-								Movement.lane++;
-								Movement.laneticker = Movement.laneChangeDuration;
-								if(PlayerPrefs.GetInt("TutorialActive") == 1){
-									if(tutorialStage == 1){
-										tutorialBackingOut = false;
-									}
-								}
-							}
-						}
-						if (GUI.Button(new Rect(Screen.width - (widthblock * 4) - 10, Screen.height - (heightblock * 4) - 10, widthblock * 4, heightblock * 4), ">")){
-							//if((Movement.laneticker == 0)&&(Movement.lane > 1)){
-							if(Movement.laneticker == 0){
-								Movement.lane--;
-								Movement.laneticker = -Movement.laneChangeDuration;
-								if(PlayerPrefs.GetInt("TutorialActive") == 1){
-									if(tutorialStage == 1){
-										tutorialBackingOut = false;
-									}
-								}
-							}
-						}
-						if (GUI.Button(new Rect(widthblock*6, Screen.height - (heightblock * 4) - 10, widthblock * 8, heightblock * 4), "Brake")){
-							if(Movement.playerSpeed > 195){
-								Movement.playerSpeed-=0.99f;
-								if(tutorialStage == 2){
-									tutorialBrakingCount++;
-								}
-							}
-						}*/
-					}
-				}
-			}
 		} else {
 			if(raceOver == true){
-				if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="LastToFirstLaps")){
-					GUI.skin.label.fontSize = 256 / FontScale.fontScale;
-					GUI.skin.label.normal.textColor = Color.black;
-					GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 185) + " LAPS");
-					GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 185) + " LAPS");
-					GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 185) + " LAPS");
-					GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 185) + " LAPS");
-					GUI.skin.label.normal.textColor = Color.yellow;
-					GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), (CameraRotate.lap - 187) + " LAPS");
-				} else {
-					GUI.skin.label.alignment = TextAnchor.MiddleLeft;
-					if((ChallengeSelectGUI.challengeMode == true)&&(PlayerPrefs.GetString("ChallengeType")=="TrafficJam")){
-						GUI.skin.label.fontSize = 256 / FontScale.fontScale;
-						GUI.skin.label.normal.textColor = Color.black;
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 148) + " LAPS");
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 148) + " LAPS");
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 148) + " LAPS");
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), (CameraRotate.lap - 148) + " LAPS");
-						GUI.skin.label.normal.textColor = Color.yellow;
-						GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), (CameraRotate.lap - 150) + " LAPS");
-					} else {
-						GUI.skin.label.fontSize = 512 / FontScale.fontScale;
-						GUI.skin.label.alignment = TextAnchor.LowerLeft;
-						GUI.skin.label.normal.textColor = Color.black;
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-						GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-						GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-						GUI.skin.label.normal.textColor = Color.yellow;
-						GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-					}
-				}
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 512 / FontScale.fontScale;
+				GUI.skin.label.alignment = TextAnchor.LowerLeft;
+				GUI.skin.label.normal.textColor = Color.black;
+				GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.skin.label.normal.textColor = Color.yellow;
+				GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+			}
+			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
 				
-				GUI.skin = redGUI;
-				GUI.skin.button.fontSize = 120 / FontScale.fontScale;
-				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Results")){
-					Time.timeScale = 1.0f;
-					raceOver = false;
-					SceneManager.LoadScene("Menus/RaceResults");
-				}
+			GUI.skin = redGUI;
+			GUI.skin.button.fontSize = 120 / FontScale.fontScale;
+			if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Results")){
+				Time.timeScale = 1.0f;
+				raceOver = false;
+				SceneManager.LoadScene("Menus/RaceResults");
 			}
 		}
 		

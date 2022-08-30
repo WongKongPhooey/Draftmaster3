@@ -27,6 +27,7 @@ public class RaceResultsUI : MonoBehaviour
 		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+			Debug.Log("Series " + seriesPrefix);
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
