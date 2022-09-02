@@ -68,6 +68,10 @@ public class Movement : MonoBehaviour {
 	int wreckHits;
 	float wreckDamage;
 	
+	float targetForce;
+	float windForce;
+	float forceSmoothing;
+	
 	int sparksCooldown;
 	
 	public GameObject audioHolder;
@@ -491,7 +495,9 @@ public class Movement : MonoBehaviour {
 				}
 			} else {
 				playerSpeed = 0;
-				this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,0f);
+				targetForce = 0;
+				updateWindForce();
+				this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 				this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 			}
 			return;
@@ -831,6 +837,9 @@ public class Movement : MonoBehaviour {
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
+				if(CameraRotate.onTurn == true){
+					startWreck();
+				}
 			}
 			laneticker = laneChangeDuration + laneticker;
 			lane++;
@@ -1045,7 +1054,10 @@ public class Movement : MonoBehaviour {
 		//baseDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
 		baseDecel = -0.2f;
 		playerWreckDecel = 0;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,playerWreckDecel);
+		targetForce = 0;
+		forceSmoothing = 0.2f;
+		windForce = targetForce;
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,targetForce);
 		float wreckTorque = Random.Range(-0.1f, 0.1f) * 10;
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 	}
@@ -1054,13 +1066,15 @@ public class Movement : MonoBehaviour {
 		playerSpeed = 0;
 		baseDecel = -0.2f;
 		playerWreckDecel = 0;
+		targetForce = 0;
+		updateWindForce();
 		isWrecking = false;
 		wreckOver = true;
 		//Debug.Log("WRECK OVER");
 		this.GetComponent<Rigidbody>().mass = 25;
 		this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,playerWreckDecel);
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, 0f, 0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		
@@ -1076,18 +1090,19 @@ public class Movement : MonoBehaviour {
 			wreckSine = -wreckSine;
 		}
 		baseDecel-=0.2f;
-		
+		targetForce = playerWreckDecel;
+		updateWindForce();
 		if(CameraRotate.onTurn == true){
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
-			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,playerWreckDecel);
+			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,windForce);
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
-			this.GetComponent<ConstantForce>().force = new Vector3(-2f, 0f,playerWreckDecel);
+			this.GetComponent<ConstantForce>().force = new Vector3(-2f, 0f,windForce);
 		}
 		playerWreckDecel = baseDecel - (50f * wreckSine);
 		//Debug.Log("Wreck Decel: " + playerWreckDecel);
-		if(playerSpeed + playerWreckDecel < 0){
+		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce < 0){
 			endWreck();
 		}
 		
@@ -1105,5 +1120,14 @@ public class Movement : MonoBehaviour {
 		smokeMultiplier = (smokeMultiplier * 60) + 0;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
+	}
+	
+	void updateWindForce(){
+		if(windForce < targetForce - forceSmoothing){
+			windForce += forceSmoothing;
+		}
+		if(windForce > targetForce + forceSmoothing){
+			windForce -= forceSmoothing;
+		}
 	}
 }

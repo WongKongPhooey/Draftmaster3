@@ -167,9 +167,13 @@ public class CameraRotate : MonoBehaviour {
 			if(Movement.pacing == true){
 				Movement.pacingEnds();
 			}
+			
 			//Caution, reset scene
 			if(cautionOut == true){
-				Ticker.saveCautionPositions();
+				//Only save at the line if not currently wrecking
+				if(Movement.isWrecking == false){
+					Ticker.saveCautionPositions();
+				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
 

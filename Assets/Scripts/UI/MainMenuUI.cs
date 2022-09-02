@@ -13,11 +13,15 @@ public class MainMenuUI : MonoBehaviour {
 	int level;
 	int levelExp;
 	
+	int day;
+	int week;
 	int dayInterval;
+	
+	int gears;
 	
 	string rewardString;
 
-	int totalMoney;
+	int money;
 
 	public bool levelUpMenu;
 	public static bool newMessageAlert;
@@ -32,6 +36,11 @@ public class MainMenuUI : MonoBehaviour {
 	public AudioSource crowdNoise;
 	public static int audioOn;
 	
+	public GameObject levelLabel;
+	public GameObject gearsLabel;
+	public GameObject weekDayLabel;
+	public GameObject moneyLabel;
+	
     // Start is called before the first frame update
     void Start()
     {
@@ -41,6 +50,10 @@ public class MainMenuUI : MonoBehaviour {
 		level = PlayerPrefs.GetInt("Level");
 		//Debug.Log("Level " + level);
 		levelExp = GameData.levelExp(level);
+		
+		day = PlayerPrefs.GetInt("GameDay");
+		week = PlayerPrefs.GetInt("GameWeek");
+		gears = PlayerPrefs.GetInt("Gears");
 		
 		dayInterval = 86400;
 		
@@ -70,7 +83,19 @@ public class MainMenuUI : MonoBehaviour {
 			levelUpMenu = true;
 		}
 		
-		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
+		money = PlayerPrefs.GetInt("PrizeMoney");
+		
+		levelLabel = GameObject.Find("LevelLabel");
+		levelLabel.GetComponent<TMPro.TMP_Text>().text = "Level " + level;
+		
+		weekDayLabel = GameObject.Find("WeekDayLabel");
+		weekDayLabel.GetComponent<TMPro.TMP_Text>().text = "Week " + week + " / Day " + day;
+		
+		gearsLabel = GameObject.Find("GearsLabel");
+		gearsLabel.GetComponent<TMPro.TMP_Text>().text = gears.ToString();
+		
+		moneyLabel = GameObject.Find("MoneyLabel");
+		moneyLabel.GetComponent<TMPro.TMP_Text>().text = money.ToString();
 		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
 			PlayFabManager.LoginFromPrefs();

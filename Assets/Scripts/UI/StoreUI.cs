@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using FitMode = UnityEngine.UI.ContentSizeFitter.FitMode;
 
 public class StoreUI : MonoBehaviour
 {
@@ -16,12 +17,14 @@ public class StoreUI : MonoBehaviour
 	public static ArrayList weeklyPicks = new ArrayList();
 	public static ArrayList starterPicks = new ArrayList();
 	
+	public int fitHack;
+	public int loadHack;
+	
     // Start is called before the first frame update
     void Start()
     {
         loadWeeklyPicks();
 		loadStarterPicks();
-		reloadContentFitters();
     }
 
 	public void loadWeeklyPicks(){
@@ -137,13 +140,27 @@ public class StoreUI : MonoBehaviour
 		}
 	}
 	
-	public void reloadContentFitters(){
-		
+	public void reloadContentFitters(int fitHack){
+		if(fitHack == 1){
+			this.gameObject.GetComponent<ContentSizeFitter>().verticalFit = (UnityEngine.UI.ContentSizeFitter.FitMode)1;
+		} else {
+			this.gameObject.GetComponent<ContentSizeFitter>().verticalFit = (UnityEngine.UI.ContentSizeFitter.FitMode)2;
+		}
 	}
 
     // Update is called once per frame
     void Update()
     {
-        
+		if(loadHack < 10){
+			if(fitHack == 1){
+				fitHack = 2;
+			} else {
+				fitHack = 1;
+			}
+			loadHack++;
+		} else {
+			return;
+		}
+		reloadContentFitters(fitHack);
     }
 }

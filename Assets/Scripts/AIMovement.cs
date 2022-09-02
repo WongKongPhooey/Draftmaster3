@@ -41,6 +41,9 @@ public class AIMovement : MonoBehaviour
 	float sideForce;
 	int antiGlitch;
 	public bool playerWrecked;
+	float targetForce;
+	float windForce;
+	float forceSmoothing;
 	
 	public static int maxTandem;
 	public static float coolOffSpace;
@@ -488,10 +491,13 @@ public class AIMovement : MonoBehaviour
 				} else {
 					AISpeed = 0;
 					if(Movement.wreckOver == true){
-						this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,0f);
+						targetForce = 0;
 					} else {
-						this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,-200f - Movement.playerWreckDecel);
+						targetForce = 200f + Movement.playerWreckDecel;
 					}
+					updateWindForce();
+						
+					this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 				}
 				return;
@@ -1230,9 +1236,12 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
+		targetForce = 0;
+		windForce = targetForce;
+		forceSmoothing = 0.2f;
 		baseDecel = -0.2f;
 		wreckDecel = 0;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,wreckDecel);
+		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.1f, 0.1f) * 10, 0f);
 		
 		//Tire smoke
@@ -1244,13 +1253,17 @@ public class AIMovement : MonoBehaviour
 		AISpeed = 0;
 		baseDecel = 0;
 		wreckDecel = 0;
+		targetForce = 0;
 		isWrecking = false;
 		wreckOver = true;
+		
+		updateWindForce();
+		
 		sparksCooldown = 0;
 		this.GetComponent<Rigidbody>().mass = 25;
 		this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,0f);
+		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		
@@ -1267,6 +1280,8 @@ public class AIMovement : MonoBehaviour
 		}
 		baseDecel-=0.20f;
 		
+		updateWindForce();
+		
 		if(CameraRotate.onTurn == true){
 			sideForce = 10f;
 		} else {
@@ -1282,10 +1297,13 @@ public class AIMovement : MonoBehaviour
 				this.GetComponent<Rigidbody>().velocity = Vector3.zero;
 				this.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
 			}
-			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,wreckDecel + 200f);
+			targetForce = wreckDecel + 200f;
+			
+			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,windForce);
 		} else {
 			//Standard relativity
-			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,wreckDecel);
+			targetForce = wreckDecel;
+			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,windForce);
 		}
 
 		wreckDecel = baseDecel - (50f * wreckSine);
@@ -1318,6 +1336,15 @@ public class AIMovement : MonoBehaviour
 		smokeMultiplier = (smokeMultiplier * 60) + 0;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
+	}
+	
+	void updateWindForce(){
+		if(windForce < targetForce - forceSmoothing){
+			windForce += forceSmoothing;
+		}
+		if(windForce > targetForce + forceSmoothing){
+			windForce -= forceSmoothing;
+		}
 	}
 	
 	void drawRaycasts(){

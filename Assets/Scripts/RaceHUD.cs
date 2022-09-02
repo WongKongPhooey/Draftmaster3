@@ -11,6 +11,8 @@ public class RaceHUD : MonoBehaviour {
 
 	public GameObject raceCam;
 
+	public static int fontScale;
+
 	public static bool caution = false;
 	public static bool goingGreen = false;
 	public static bool raceOver = false;
@@ -52,6 +54,8 @@ public class RaceHUD : MonoBehaviour {
 		tutorialStage = 1;
 		gamePaused = false;
 		tutorialBackingOut = false;
+		
+		fontScale = FontScale.scale();
 	}
 	
 	void FixedUpdate(){
@@ -80,7 +84,8 @@ public class RaceHUD : MonoBehaviour {
 	
 	void OnGUI() {
 
-		if(FontScale.fontScale == 0){
+		if(fontScale == 0){
+			fontScale = FontScale.scale();
 			SceneManager.LoadScene("MainMenu");
 		}
 
@@ -109,8 +114,8 @@ public class RaceHUD : MonoBehaviour {
 
 		if(gamePaused == true){
 			GUI.skin = redGUI;
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
-			GUI.skin.button.fontSize = 120 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
+			GUI.skin.button.fontSize = 120 / fontScale;
 			if (GUI.Button(new Rect(widthblock * 3, heightblock * 8, widthblock * 6, heightblock * 4), "Resume")){
 				gamePaused = false;
 				Time.timeScale = 1.0f;
@@ -125,27 +130,27 @@ public class RaceHUD : MonoBehaviour {
 				PlayerPrefs.SetInt("Volume",1);
 			}
 			GUI.skin = eightBitSkin;
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
-			GUI.skin.button.fontSize = 120 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
+			GUI.skin.button.fontSize = 120 / fontScale;
 		}
 
 		if((raceOver == false)&&(caution == false)){
 		} else {
 			if(raceOver == true){
-				GUI.skin.label.fontSize = 512 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 512 / fontScale;
 				GUI.skin.label.alignment = TextAnchor.LowerLeft;
 				GUI.skin.label.normal.textColor = Color.black;
-				GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-				GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-				GUI.Label(new Rect(widthblock + (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-				GUI.Label(new Rect(widthblock - (8 / (FontScale.fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (FontScale.fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.Label(new Rect(widthblock + (8 / (fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.Label(new Rect(widthblock - (8 / (fontScale * 2)), Screen.height - (heightblock * 9) + (8 / (fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.Label(new Rect(widthblock + (8 / (fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
+				GUI.Label(new Rect(widthblock - (8 / (fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
 				GUI.skin.label.normal.textColor = Color.yellow;
 				GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
 			}
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
 				
 			GUI.skin = redGUI;
-			GUI.skin.button.fontSize = 120 / FontScale.fontScale;
+			GUI.skin.button.fontSize = 120 / fontScale;
 			if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Results")){
 				Time.timeScale = 1.0f;
 				raceOver = false;
@@ -156,12 +161,12 @@ public class RaceHUD : MonoBehaviour {
 		GUI.skin = eightBitSkin;
 
 		if(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer"){
-			GUI.skin.label.fontSize = 56 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 56 / fontScale;
 			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect(10 + (8 / (FontScale.fontScale * 2)), (heightblock * 2) + 10 + (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
-			GUI.Label(new Rect(10 + (8 / (FontScale.fontScale * 2)), (heightblock * 2) + 10 - (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
-			GUI.Label(new Rect(10 - (8 / (FontScale.fontScale * 2)), (heightblock * 2) + 10 + (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
-			GUI.Label(new Rect(10 - (8 / (FontScale.fontScale * 2)), (heightblock * 2) + 10 - (8 / (FontScale.fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
+			GUI.Label(new Rect(10 + (8 / (fontScale * 2)), (heightblock * 2) + 10 + (8 / (fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
+			GUI.Label(new Rect(10 + (8 / (fontScale * 2)), (heightblock * 2) + 10 - (8 / (fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
+			GUI.Label(new Rect(10 - (8 / (fontScale * 2)), (heightblock * 2) + 10 + (8 / (fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
+			GUI.Label(new Rect(10 - (8 / (fontScale * 2)), (heightblock * 2) + 10 - (8 / (fontScale * 2)), widthblock * 7, heightblock * 2), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
 			if(Movement.draftPercent > 30){
 				GUI.skin.label.normal.textColor = Color.green;
 			} else {
@@ -172,7 +177,7 @@ public class RaceHUD : MonoBehaviour {
 				}
 			}
 			GUI.Label(new Rect(10,(heightblock * 2) + 10, widthblock * 7, heightblock * 3), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
 		}
 		
 		if(CameraRotate.lap == 0){
@@ -180,42 +185,42 @@ public class RaceHUD : MonoBehaviour {
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
 			GUI.skin.label.fontSize = 120 / 2;
 			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
 			GUI.skin.label.normal.textColor = Color.yellow;
 			GUI.Label(new Rect(widthblock * 5, heightblock * 3, widthblock * 10, heightblock * 4), "GET READY");
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
 			GUI.skin.label.normal.textColor = Color.yellow;
 		}
 
 		if(goingGreen == true){
 			GUI.skin.label.normal.textColor = Color.yellow;
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.skin.label.fontSize = 120 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 120 / fontScale;
 			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
 			GUI.skin.label.normal.textColor = Color.yellow;
 			GUI.Label(new Rect(widthblock * 5, heightblock * 3, widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
 			GUI.skin.label.normal.textColor = Color.yellow;
 		}
 		if(caution == false){
 			if(((CameraRotate.lap == 1)||(CameraRotate.lap == CameraRotate.restartLap))&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter >= PlayerPrefs.GetInt("StartLine"))){
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.fontSize = 120 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 120 / fontScale;
 				GUI.skin.label.normal.textColor = Color.black;
-				GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
+				GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
+				GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
+				GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
+				GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
 				GUI.skin.label.normal.textColor = Color.green;
 				GUI.Label(new Rect(widthblock * 5, heightblock * 3, widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.yellow;
 			}
 		}
@@ -223,79 +228,79 @@ public class RaceHUD : MonoBehaviour {
 		if(PlayerPrefs.GetInt("TutorialActive") == 1){
 			if(tutorialStage == 1){
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.black;
 				if (tutorialBackingOut == true) {
-					GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
-					GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
-					GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
-					GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
 					GUI.skin.label.normal.textColor = Color.red;
 					GUI.Label(new Rect(widthblock * 3, heightblock * 10, widthblock * 14, heightblock * 5), "CONTACT WILL SLOW YOU DOWN AND BACK YOU OUT OF A MOVE. WAIT FOR A GAP! (" + tutorialSteeringCount + "/3)");
-					GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+					GUI.skin.label.fontSize = 80 / fontScale;
 					GUI.skin.label.normal.textColor = Color.yellow;
 
 				} else {
-					GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
-					GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
-					GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
-					GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
+					GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
 					GUI.skin.label.normal.textColor = Color.yellow;
 					GUI.Label(new Rect(widthblock * 3, heightblock * 10, widthblock * 14, heightblock * 5), "USE THE ARROW BUTTONS IN THE BOTTOM CORNERS TO CHANGE LANE. TRY IT NOW! (" + tutorialSteeringCount + "/3)");
-					GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+					GUI.skin.label.fontSize = 80 / fontScale;
 					GUI.skin.label.normal.textColor = Color.yellow;
 				}
 			}
 			if(tutorialStage == 2){
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.black;
-				GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
-				GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
-				GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
-				GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
+				GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
+				GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
+				GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
+				GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
 				GUI.skin.label.normal.textColor = Color.yellow;
 				GUI.Label(new Rect(widthblock * 3, heightblock * 10, widthblock * 14, heightblock * 5), "USE THE BRAKE TO SCRUB OFF SOME SPEED. BELOW THE MINIMUM SPEED YOU CANNOT GO ANY SLOWER! (" + tutorialBrakingCount + "/1)");
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.yellow;
 			}
 			if(tutorialStage == 3){
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.black;
-				GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
-				GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
-				GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
-				GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
+				GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
+				GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
+				GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
+				GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
 				GUI.skin.label.normal.textColor = Color.yellow;
 				GUI.Label(new Rect(widthblock * 3, heightblock * 10, widthblock * 14, heightblock * 5), "TIME TO DRAFT! TUCK IN CLOSE BEHIND ANOTHER CAR AND WATCH THE SPEED PICK UP! (" + tutorialDraftingCount + "/500)");
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.yellow;
 			}
 			if(tutorialStage == 4){
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.black;
-				GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
-				GUI.Label(new Rect((widthblock * 3) + (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
-				GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) + (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
-				GUI.Label(new Rect((widthblock * 3) - (8 / (FontScale.fontScale * 2)),(heightblock * 10) - (8 / (FontScale.fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
+				GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
+				GUI.Label(new Rect((widthblock * 3) + (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
+				GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) + (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
+				GUI.Label(new Rect((widthblock * 3) - (8 / (fontScale * 2)),(heightblock * 10) - (8 / (fontScale * 2)), widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
 				GUI.skin.label.normal.textColor = Color.yellow;
 				GUI.Label(new Rect(widthblock * 3, heightblock * 10, widthblock * 14, heightblock * 5), "SLOW UP IN FRONT OF ANOTHER CAR AND THEY WILL GIVE YOU A BACKDRAFT! A GREAT WAY TO KEEP UP SPEED! (" + tutorialBackdraftCount + "/100)");
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.yellow;
 			}
 			if(tutorialStage == 5){
 				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.black;
-				GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 6) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
-				GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 6) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
-				GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 6) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
-				GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 6) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
+				GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 6) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
+				GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 6) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
+				GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 6) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
+				GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 6) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
 				GUI.skin.label.normal.textColor = Color.green;
 				GUI.Label(new Rect(widthblock * 5, heightblock * 6, widthblock * 10, heightblock * 6), "LOOKS LIKE YOU ARE READY TO RACE! SEE YOU ON THE TRACK!");
-				GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+				GUI.skin.label.fontSize = 80 / fontScale;
 				GUI.skin.label.normal.textColor = Color.yellow;
 				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 6), widthblock * 6, heightblock * 4), "Continue")){
 					Time.timeScale = 1.0f;
@@ -308,34 +313,34 @@ public class RaceHUD : MonoBehaviour {
 		
 		if(PlayerPrefs.GetInt("ActiveCaution") == 1){
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.skin.label.fontSize = 120 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 120 / fontScale;
 			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 4) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 4) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 4) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 4) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 4) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 4) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 4) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 4) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
 			GUI.skin.label.normal.textColor = Color.yellow;
 			GUI.Label(new Rect(widthblock * 5, heightblock * 4, widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
 			GUI.skin.label.normal.textColor = Color.yellow;
 		}
 
 		if((CameraRotate.lap == PlayerPrefs.GetInt("RaceLaps"))&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter > (PlayerPrefs.GetInt("StartLine")+1))&&(raceOver == false)){
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.skin.label.fontSize = 120 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 120 / fontScale;
 			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
-			GUI.Label(new Rect((widthblock * 5) + (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) + (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (FontScale.fontScale * 2)),(heightblock * 3) - (8 / (FontScale.fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
+			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
+			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "FINAL LAP!");
 			GUI.skin.label.normal.textColor = Color.white;
 			GUI.Label(new Rect(widthblock * 5, heightblock * 3, widthblock * 10, heightblock * 4), "FINAL LAP!");
-			GUI.skin.label.fontSize = 80 / FontScale.fontScale;
+			GUI.skin.label.fontSize = 80 / fontScale;
 			GUI.skin.label.normal.textColor = Color.yellow;
 		}
 
 		GUI.skin.label.alignment = TextAnchor.UpperRight;
-		GUI.skin.label.fontSize = 56 / FontScale.fontScale;
+		GUI.skin.label.fontSize = 56 / fontScale;
 	}
 	
 	public string getCarNum(string name){
@@ -346,10 +351,10 @@ public class RaceHUD : MonoBehaviour {
 	
 	void thiccLabel(float posX, float posY, float sizeW, float sizeH, string text, UnityEngine.Color color){
 		GUI.skin.label.normal.textColor = Color.black;
-		GUI.Label(new Rect(posX + (8 / (FontScale.fontScale * 2)), posY + (8 / (FontScale.fontScale * 2)), sizeW, sizeH), text);
-		GUI.Label(new Rect(posX - (8 / (FontScale.fontScale * 2)), posY + (8 / (FontScale.fontScale * 2)), sizeW, sizeH), text);
-		GUI.Label(new Rect(posX + (8 / (FontScale.fontScale * 2)), posY - (8 / (FontScale.fontScale * 2)), sizeW, sizeH), text);
-		GUI.Label(new Rect(posX - (8 / (FontScale.fontScale * 2)), posY - (8 / (FontScale.fontScale * 2)), sizeW, sizeH), text);
+		GUI.Label(new Rect(posX + (8 / (fontScale * 2)), posY + (8 / (fontScale * 2)), sizeW, sizeH), text);
+		GUI.Label(new Rect(posX - (8 / (fontScale * 2)), posY + (8 / (fontScale * 2)), sizeW, sizeH), text);
+		GUI.Label(new Rect(posX + (8 / (fontScale * 2)), posY - (8 / (fontScale * 2)), sizeW, sizeH), text);
+		GUI.Label(new Rect(posX - (8 / (fontScale * 2)), posY - (8 / (fontScale * 2)), sizeW, sizeH), text);
 		GUI.skin.label.normal.textColor = color;
 		GUI.Label(new Rect(posX, posY, sizeW, sizeH), text);
 	} 
