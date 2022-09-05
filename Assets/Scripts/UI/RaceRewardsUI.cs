@@ -1,15 +1,13 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
-public class RaceRewards : MonoBehaviour
+public class RaceRewardsUI : MonoBehaviour
 {
-    public GUISkin eightBitSkin;
-		
-	float widthblock = Mathf.Round(Screen.width/20);
-	float heightblock = Mathf.Round(Screen.height/20);
-
+	
 	int playerMoney;
 	int moneyCount;
 	int raceWinnings;
@@ -42,26 +40,20 @@ public class RaceRewards : MonoBehaviour
 	public static int rewardMultiplier;
 	public static int carCurrentGears;
 	public static int carClassMax;
-	
-	public Texture2D moneyTex;
-	public Texture2D gasCanTex;
-	public Texture2D gearTex;
-	
-	public static Texture2D moneyTexInst;
-	public static Texture2D gasCanTexInst;
-	public static Texture2D gearTexInst;
-	
+
 	public List<string> validDriver = new List<string>();
-
-	void Awake(){
-
-		widthblock = Mathf.Round(Screen.width/20);
-		heightblock = Mathf.Round(Screen.height/20);
-
-		moneyTexInst = moneyTex;
-		gasCanTexInst = gasCanTex;
-		gearTexInst = gearTex;
-
+	
+	public GameObject rewardsTitle;
+	
+	public GameObject moneyTitle;
+	public GameObject gearsTitle;
+	public GameObject partsTitle;
+	public GameObject partsCar;
+	
+	
+    // Start is called before the first frame update
+    void Start()
+    {
         gears = PlayerPrefs.GetInt("Gears");
         offsetGears = 0;
         rewardGears = 0;
@@ -87,6 +79,13 @@ public class RaceRewards : MonoBehaviour
 		Debug.Log("Series Prize: " + seriesPrize);
 		finishPos = PlayerPrefs.GetInt("FinishPos");
 		rewardMultiplier = 1;
+		
+		rewardsTitle = GameObject.Find("Title");
+		
+		moneyTitle = GameObject.Find("MoneyTitle");
+		gearsTitle = GameObject.Find("GearsTitle");
+		partsTitle = GameObject.Find("PartsTitle");
+		partsCar = GameObject.Find("PartsCar");
 		
 		championshipReward = false;
 		championshipFinish = 40;
@@ -167,63 +166,33 @@ public class RaceRewards : MonoBehaviour
 			}
 		}
 		PlayerPrefs.SetInt("Gears",gears);
-	}
-
-	void FixedUpdate(){
-	}
-
-	void OnGUI() {
 		
-		GUI.skin = eightBitSkin;
-
-		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-
-		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
-
-		GUI.skin.label.normal.textColor = Color.black;
-
-		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-		
+		//Update UI
 		if(championshipReward == true){
-			GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Championship Rewards - " + finishPos + MiscScripts.PositionPostfix(finishPos) + " Place");
+			rewardsTitle.GetComponent<TMPro.TMP_Text>().text = "Championship Rewards - " + finishPos + MiscScripts.PositionPostfix(finishPos) + " Place";
 		} else {
-			GUI.Label(new Rect(widthblock * 3, heightblock * 2, widthblock * 14, heightblock * 4), "Race Rewards");
-		}
-
-		GUI.skin.label.fontSize = 48 / FontScale.fontScale;
-
-		if(carReward != ""){
-			GUI.skin.label.alignment = TextAnchor.MiddleRight;
-			GUI.Label(new Rect(widthblock * 7, heightblock * 6, widthblock * 7, heightblock * 2), "" + carReward + " (" + carCurrentGears + ")");
-			if(carPrizeNumAlt != ""){
-				GUI.DrawTexture(new Rect(widthblock * 5, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load(carPrizeAlt) as Texture);
-			} else {
-				GUI.DrawTexture(new Rect(widthblock * 5, heightblock * 6, widthblock * 2, widthblock * 1), Resources.Load(carPrize) as Texture);
-			}
+			rewardsTitle.GetComponent<TMPro.TMP_Text>().text = "Race Rewards";
 		}
 		
-		GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 9, widthblock * 1, widthblock * 1), gearTexInst);
-		GUI.Label(new Rect(widthblock * 9, heightblock * 9, widthblock * 5, heightblock * 2), " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")");
+		moneyTitle.GetComponent<TMPro.TMP_Text>().text = " +$" + (prizeMoney * rewardMultiplier) + "";
+		moneyTitle.GetComponent<UIAnimate>().animOffset = 40;
+		moneyTitle.GetComponent<UIAnimate>().scaleIn();
 		
-		if(prizeMoney != 0){
-			GUI.DrawTexture(new Rect(widthblock * 6, heightblock * 12, widthblock * 1, widthblock * 1), moneyTexInst);
-			GUI.Label(new Rect(widthblock * 9, heightblock * 12, widthblock * 5, heightblock * 2), " +$" + (prizeMoney * rewardMultiplier) + "");
-		}
-
-		GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-		GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+		gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
+		gearsTitle.GetComponent<UIAnimate>().animOffset = 80;
+		gearsTitle.GetComponent<UIAnimate>().scaleIn();	
 		
-		if(championshipReward == true){
-			if (GUI.Button(new Rect(widthblock * 11, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
-				Application.LoadLevel("Menus/ChampionshipHub");
-			}
+		partsTitle.GetComponent<TMPro.TMP_Text>().text = "" + carReward + "\n(" + carCurrentGears + ")";
+		partsTitle.GetComponent<UIAnimate>().animOffset = 120;
+		partsTitle.GetComponent<UIAnimate>().scaleIn();
+		
+		if(carPrizeNumAlt != ""){
+			partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrizeAlt);
 		} else {
-			if (GUI.Button(new Rect(widthblock * 7, heightblock * 17, widthblock * 6, heightblock * 2), "Continue")){
-				Application.LoadLevel("Menus/MainMenu");
-			}
+			partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrize);
 		}
 	}
-	
+
 	void AssignPrizes(string carId, string setPrize, int multiplier){
 		if(!PlayerPrefs.HasKey(carId + "Gears")){
 			PlayerPrefs.SetInt(carId + "Gears", multiplier);
@@ -497,4 +466,10 @@ public class RaceRewards : MonoBehaviour
 		}
 		return champPosition;
 	}
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
 }

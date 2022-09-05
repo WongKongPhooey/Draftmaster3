@@ -107,6 +107,7 @@ public class SeriesUI : MonoBehaviour
 		
 		PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("CurrentSeriesIndex", seriesId + "" + subSeriesId);
+		Debug.Log("Series Index: " + seriesId + "" + subSeriesId);
 		PlayerPrefs.SetString("CurrentSeriesName",SeriesData.offlineSeries[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("CurrentSeries", seriesId);
 		PlayerPrefs.SetInt("CurrentSubseries", subSeriesId);
@@ -127,7 +128,7 @@ public class SeriesUI : MonoBehaviour
 				PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("ChampionshipCarSeries"));
 				PlayerPrefs.SetString("ActivePath","ChampionshipRace");
 				//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
-				SceneManager.LoadScene("CircuitSelect");
+				SceneManager.LoadScene("Menus/ChampionshipHub");
 			} else {
 				SceneManager.LoadScene("Menus/Garage");
 			}

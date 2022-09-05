@@ -12,12 +12,13 @@ public class TrackUI : MonoBehaviour
 	public Transform tileFrame;
 	public static string[] tracksArray;
 	int seriesLength;
-	string currentSeriesIndex;
 	public static int seriesFuel;
 	public static string trackCodeName;
 	
 	public static string seriesPrefix;
 	public static int carNumber;
+	
+	public static string currentSeriesIndex;
 	
 	public static string trackList;
 	
@@ -28,7 +29,7 @@ public class TrackUI : MonoBehaviour
     void Start()
     {
 		trackList = PlayerPrefs.GetString("SeriesTrackList");
-		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
         loadAllTracks(trackList);
 		championshipSelector = GameObject.Find("ChampionshipSelector");
 		championshipSelector.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "All " + seriesLength + " Rounds";
@@ -285,6 +286,7 @@ public class TrackUI : MonoBehaviour
 	public void startChampionship(){
 		//activeMenu = "Schedule";
 		PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
+		Debug.Log("Championship: " + currentSeriesIndex);
 		PlayerPrefs.SetString("RaceType","Championship");
 		loadTrack(trackList, 0);
 		PlayerPrefs.SetInt("ChampionshipRound",0);
@@ -293,6 +295,7 @@ public class TrackUI : MonoBehaviour
 		PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("carSeries"));
 		//Debug.Log("Championship Carset Series set as " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 		PlayerPrefs.SetInt("ChampionshipCarChoice", PlayerPrefs.GetInt("CarChoice"));
+		startRace(TrackData.getTrackCodeName(int.Parse(tracksArray[0])));
 	}
 
 	public void dynamicBackButton(){

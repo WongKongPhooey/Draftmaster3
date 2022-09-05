@@ -1052,7 +1052,7 @@ public class Movement : MonoBehaviour {
 		
 		//Apply wind/drag
 		//baseDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
-		baseDecel = -0.2f;
+		baseDecel = -0.25f;
 		playerWreckDecel = 0;
 		targetForce = 0;
 		forceSmoothing = 0.2f;
@@ -1064,7 +1064,7 @@ public class Movement : MonoBehaviour {
 	
 	public void endWreck(){
 		playerSpeed = 0;
-		baseDecel = -0.2f;
+		baseDecel = -0.25f;
 		playerWreckDecel = 0;
 		targetForce = 0;
 		updateWindForce();
@@ -1089,7 +1089,7 @@ public class Movement : MonoBehaviour {
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.2f;
+		baseDecel-=0.25f;
 		targetForce = playerWreckDecel;
 		updateWindForce();
 		if(CameraRotate.onTurn == true){

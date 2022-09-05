@@ -1239,7 +1239,7 @@ public class AIMovement : MonoBehaviour
 		targetForce = 0;
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
-		baseDecel = -0.2f;
+		baseDecel = -0.25f;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.1f, 0.1f) * 10, 0f);
@@ -1251,7 +1251,7 @@ public class AIMovement : MonoBehaviour
 	public void endWreck(){
 		//Debug.Log(this.name + " WRECKED");
 		AISpeed = 0;
-		baseDecel = 0;
+		baseDecel = -0.25f;
 		wreckDecel = 0;
 		targetForce = 0;
 		isWrecking = false;
@@ -1261,7 +1261,7 @@ public class AIMovement : MonoBehaviour
 		
 		sparksCooldown = 0;
 		this.GetComponent<Rigidbody>().mass = 25;
-		this.GetComponent<Rigidbody>().isKinematic = true;
+		//this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
@@ -1278,7 +1278,7 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.20f;
+		baseDecel-=0.25f;
 		
 		updateWindForce();
 		
@@ -1294,11 +1294,16 @@ public class AIMovement : MonoBehaviour
 			if(playerWrecked == false){
 				//Acknowledge physics change when player is stopped, reset momentum this frame
 				playerWrecked = true;
-				this.GetComponent<Rigidbody>().velocity = Vector3.zero;
-				this.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+				this.GetComponent<Rigidbody>().mass = 5;
+				//this.GetComponent<Rigidbody>().velocity = Vector3.zero;
+				//this.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
 			}
 			targetForce = wreckDecel + 200f;
 			
+			//Can't move backwards if the player is stopped
+			if(windForce < 0){
+				windForce = -windForce;
+			}
 			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,windForce);
 		} else {
 			//Standard relativity

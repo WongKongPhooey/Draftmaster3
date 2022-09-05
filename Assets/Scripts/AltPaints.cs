@@ -163,10 +163,10 @@ public class AltPaints : MonoBehaviour {
 				return cup22AltPaintTheme[carNum,altNum];
 				break;
 			default:
-				return "Unknown";
+				return null;
 				break;
 		}
-		return "Unknown";
+		return null;
 	}
 	
 	public static bool getAltPaintAISpawning(string seriesPrefix, int carNum, int altNum){

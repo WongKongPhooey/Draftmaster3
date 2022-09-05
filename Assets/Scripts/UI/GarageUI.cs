@@ -15,17 +15,27 @@ public class GarageUI : MonoBehaviour
 	public GameObject partTimersTile;
 	GameObject activeTile;
 	
+	public static GameObject seriesDropdown;
+	public static GameObject currentSeries;
+	
 	public Transform tileFrame;
 	public static string seriesPrefix;
 	public List<RectTransform> shuffleArray;
     // Start is called before the first frame update
     void Start(){
 		seriesPrefix = "cup20";
+		
+		seriesDropdown = GameObject.Find("Dropdown");
+		seriesDropdown.SetActive(false);
+		currentSeries = GameObject.Find("CurrentSeries");
+		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
+		
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
 		} else {
 			loadAllCars();
 		}
+		
 	}
 	
 	public void loadAllCars(){
@@ -90,11 +100,16 @@ public class GarageUI : MonoBehaviour
 			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
 			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
 			if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
+				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltDriver")){
+					carName.text = PlayerPrefs.GetString(seriesPrefix + i + "AltDriver");
+				} else {
+					carName.text = DriverNames.getName(seriesPrefix, i);
+				}
 				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
 			} else {
+				carName.text = DriverNames.getName(seriesPrefix, i);
 				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i); 
 			}
-			carName.text = DriverNames.getName(seriesPrefix, i);
 			float gearsProgressUIWidth = Mathf.Round((110 / classMax) * carGears) + 1;
 			if(gearsProgressUIWidth > 110){
 				gearsProgressUIWidth = 110;
@@ -275,6 +290,15 @@ public class GarageUI : MonoBehaviour
 		string carNum = carTex.Substring(carTex.IndexOf(keyword) + keyword.Length);
 		PlayerPrefs.SetInt("CarChoice",int.Parse(carNum));
 		SceneManager.LoadScene("Menus/TrackSelect");
+	}
+
+	public void toggleDropdown(){
+		if(seriesDropdown.activeSelf == true){
+			seriesDropdown.SetActive(false);
+		} else {
+			seriesDropdown.SetActive(true);
+		}
+		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
 	}
 
     // Update is called once per frame

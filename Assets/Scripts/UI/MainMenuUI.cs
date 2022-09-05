@@ -41,6 +41,9 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject weekDayLabel;
 	public GameObject moneyLabel;
 	
+	public GameObject alertPopup;
+	public GameObject popupFrame;
+	
     // Start is called before the first frame update
     void Start()
     {
@@ -101,6 +104,10 @@ public class MainMenuUI : MonoBehaviour {
 			PlayFabManager.LoginFromPrefs();
 		}
 		
+		//Hide rewards popup after storing the var
+		alertPopup = GameObject.Find("AlertPopup");
+		alertPopup.SetActive(false);
+		
 		//Reset the game to imitate new users
 		//PlayerPrefs.DeleteAll();
 		
@@ -153,8 +160,9 @@ public class MainMenuUI : MonoBehaviour {
 			subSeriesId = PlayerPrefs.GetString("ChampionshipSubseries");
 			Debug.Log(subSeriesId);
 			int seriesInt = int.Parse(subSeriesId.Substring(0,1));
-			int subSeriesInt = int.Parse(subSeriesId.Substring(1,2));
-			subSeriesName = SeriesData.offlineSeries[seriesInt,subSeriesInt];
+			string subSeries = subSeriesId.Substring(subSeriesId.Length-1);
+			int subSeriesInt = int.Parse(subSeries);
+			subSeriesName = SeriesData.offlineMenu[seriesInt] + " - " + SeriesData.offlineSeries[seriesInt,subSeriesInt];
 		}
 		
 		GameObject championshipUI = GameObject.Find("ActiveChampionshipName");
@@ -167,9 +175,10 @@ public class MainMenuUI : MonoBehaviour {
 			PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("ChampionshipCarTexture"));
 			PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("ChampionshipCarChoice"));
 			PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("ChampionshipCarSeries"));
+			
 			PlayerPrefs.SetString("ActivePath","ChampionshipRace");
 			//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
-			SceneManager.LoadScene("CircuitSelect");
+			SceneManager.LoadScene("Menus/ChampionshipHub");
 		}
 	}
 
@@ -178,6 +187,15 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("TargetVersion", Application.version);
+		showAlert("Hey Rookie! You Need A Ride?", "A driver has given you access to their car for your debut.", "NewUser");
+	}
+	
+	void showAlert(string title, string message, string action){
+		alertPopup.SetActive(true);
+		popupFrame = GameObject.Find("PopupFrame");
+		
+		TMPro.TMP_Text popupTitle = popupFrame.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+		popupTitle.text = title;
 	}
 
     // Update is called once per frame

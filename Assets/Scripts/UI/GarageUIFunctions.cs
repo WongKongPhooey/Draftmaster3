@@ -18,6 +18,7 @@ public class GarageUIFunctions : MonoBehaviour
 	public void setSeries(){
 		GarageUI.seriesPrefix = seriesPrefix;
 		GameObject.Find("Main").GetComponent<GarageUI>().loadAllCars();
+		GameObject.Find("Main").GetComponent<GarageUI>().toggleDropdown();
 	}
 
 	public void carAction(){

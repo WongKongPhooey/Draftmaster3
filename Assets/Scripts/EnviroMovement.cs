@@ -38,7 +38,13 @@ public class EnviroMovement : MonoBehaviour {
 		if(staticScroll == true){
 			//Slowest game speed is car:80, track:105 (LA start), Scaler = 0.066 + 0.131 = 0.197f		
 			float scrollCalc = (carSpeedOffset / 1200f) + (trackSpeedOffset / 800f);
-			scrollPos -= ((minScrollSpeed - scrollCalc) / 2);
+			float scrollVX = ((minScrollSpeed - scrollCalc) / 2);
+			if(scrollVX >= 0){
+				scrollPos -= scrollVX;
+			} else {
+				//Can't go backwards..
+				scrollVX = 0;
+			}
 			if(scrollPos < 0){
 				scrollPos+=1;
 			}
@@ -47,7 +53,10 @@ public class EnviroMovement : MonoBehaviour {
 		} else {
 			enviroSpeed = -3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f);
 			
-			EnviroObject.transform.Translate(0,0,enviroSpeed);
+			//Can't go backwards..
+			if(enviroSpeed <= 0){
+				EnviroObject.transform.Translate(0,0,enviroSpeed);
+			}
 			
 			if (EnviroObject.transform.position.z <= -30){
 				EnviroObject.transform.Translate(0,0,60);
