@@ -66,7 +66,8 @@ public class Movement : MonoBehaviour {
 	float wreckAngle;
 	float wreckTorque;
 	int wreckHits;
-	float wreckDamage;
+	public static int totalWreckers;
+	public static float wreckDamage;
 	
 	float targetForce;
 	float windForce;
@@ -146,6 +147,9 @@ public class Movement : MonoBehaviour {
 	public static bool pacing;
 	
 	public GameObject cautionSummaryMenu;
+	public GameObject cautionSummaryTotalWreckers;
+	public GameObject cautionSummaryDamage;
+	public GameObject cautionSummaryRestartPos;
 	
 	public static bool delicateMod;
 	public static bool invincibleMod;
@@ -172,12 +176,17 @@ public class Movement : MonoBehaviour {
 		wreckOver = false;
 		playerWreckDecel = 0;
 		sparksCooldown = 0;
+		totalWreckers = 0;
+		wreckDamage = 0;
 		
 		pacing = true;
 		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
+		cautionSummaryTotalWreckers = GameObject.Find("CarsInvolved");
+		cautionSummaryDamage = GameObject.Find("WreckDamage");
+		cautionSummaryRestartPos = GameObject.Find("RestartPos");
 		HUD.SetActive(false);
 		HUDControls.SetActive(false);
 		cautionSummaryMenu.SetActive(false);
@@ -366,6 +375,7 @@ public class Movement : MonoBehaviour {
 		
 		if(isWrecking == true){
 			wreckHits++;
+			
 			if(carHit.gameObject.tag == "AICar"){
 				float hitSpeed = carHit.gameObject.GetComponent<AIMovement>().wreckDecel;
 				float netSpeed;
@@ -1080,6 +1090,11 @@ public class Movement : MonoBehaviour {
 		
 		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		
+		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";
+		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);
+		//If damage is above 1000, considered to be heavy, 2000+ is unrepairable
+		cautionSummaryRestartPos.GetComponent<TMPro.TMP_Text>().text = "Restarting ";
+		
 		cautionSummaryMenu.SetActive(true);
 	}
 	
@@ -1129,5 +1144,21 @@ public class Movement : MonoBehaviour {
 		if(windForce > targetForce + forceSmoothing){
 			windForce -= forceSmoothing;
 		}
+	}
+	
+	public string calculateDamageGrade(float damage){
+		if(damage > 1500){
+			return "Terminal (" + Mathf.Round(damage / 15) + "%)";
+		}
+		if(damage > 500){
+			return "Heavy (" + Mathf.Round(damage / 15) + "%)";
+		}
+		if(damage > 50){
+			return "Minor (" + Mathf.Round(damage / 15) + "%)";
+		}
+		if(damage > 1){
+			return "Cosmetic (" + Mathf.Round(damage / 15) + "%)";
+		}
+		return "None";
 	}
 }

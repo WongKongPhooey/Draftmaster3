@@ -18,6 +18,7 @@ public class CameraRotate : MonoBehaviour {
 
 	public static bool cautionOut;
 	public static bool cautionCleared;
+	public static bool overtime;
 
 	public static int[] straightLength = new int[6];
 	public static int[] turnLength = new int[6];
@@ -52,6 +53,8 @@ public class CameraRotate : MonoBehaviour {
 	public static int trackSpeedOffset;
 	string circuit;
 	float kerbBlur;
+	
+	public GameObject cautionSummaryMenu;
 	
 	void Awake(){
 		kerbBlur = 0.5f;
@@ -88,11 +91,14 @@ public class CameraRotate : MonoBehaviour {
 		thePlayer = GameObject.Find("Player");
 		trackEnviro = GameObject.Find("Environment");
 		
+		cautionSummaryMenu = GameObject.Find("CautionMenu");
+		
 		gearedAccel = calcCircuitGearing();
 		
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
 		
 		cautionOut = false;
+		overtime = false;
 		
 		for(int i=0;i<totalTurns;i++){
 			trackLength += straightLength[i];
@@ -107,6 +113,7 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		lap = 0;
+		raceEnd = PlayerPrefs.GetInt("RaceLaps");
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		lapRecord = 0;
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
@@ -121,9 +128,15 @@ public class CameraRotate : MonoBehaviour {
 
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 
-		if((ChallengeSelectGUI.challengeMode == true)||(PlayerPrefs.GetInt("ActiveCaution") == 1)){
+		if(PlayerPrefs.GetInt("ActiveCaution") == 1){
 			lap = PlayerPrefs.GetInt("StartingLap");
 			raceEnd = PlayerPrefs.GetInt("RaceLaps");
+			if(lap >= raceEnd){
+				//Unlimited Overtime
+				raceEnd = lap+2;
+				PlayerPrefs.SetInt("RaceLaps", raceEnd);
+				overtime = true;
+			}
 			RaceHUD.goingGreen = true;
 			restartLap = lap + 1;
 			PlayerPrefs.SetInt("ActiveCaution",0);
@@ -172,7 +185,7 @@ public class CameraRotate : MonoBehaviour {
 			if(cautionOut == true){
 				//Only save at the line if not currently wrecking
 				if(Movement.isWrecking == false){
-					Ticker.saveCautionPositions();
+					cautionSummaryMenu.SetActive(true);
 				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
@@ -202,7 +215,7 @@ public class CameraRotate : MonoBehaviour {
 		}
 
 		//Race End
-		if(lap == (PlayerPrefs.GetInt("RaceLaps") + 1)){
+		if(lap == (raceEnd + 1)){
 			lap--;
 			Time.timeScale = 0.0f;
 			finishLine.GetComponent<Renderer>().enabled = true;

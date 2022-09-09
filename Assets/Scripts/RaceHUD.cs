@@ -95,7 +95,7 @@ public class RaceHUD : MonoBehaviour {
 		
 		//-------CONTROLS--------
 
-		if (Input.GetKeyDown(KeyCode.Escape)){
+		/*if (Input.GetKeyDown(KeyCode.Escape)){
 			if(raceOver == false){
 				gamePaused = true;
 				Time.timeScale = 0.0f;
@@ -132,7 +132,7 @@ public class RaceHUD : MonoBehaviour {
 			GUI.skin = eightBitSkin;
 			GUI.skin.label.fontSize = 80 / fontScale;
 			GUI.skin.button.fontSize = 120 / fontScale;
-		}
+		}*/
 
 		if((raceOver == false)&&(caution == false)){
 		} else {

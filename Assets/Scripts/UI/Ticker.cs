@@ -11,6 +11,9 @@ public class Ticker : MonoBehaviour
 	public static string seriesPrefix;
 
 	public static string circuitName;
+	public static int raceLaps;
+
+	public static bool gamePaused;
 
 	public static int fieldSize;
 
@@ -52,12 +55,21 @@ public class Ticker : MonoBehaviour
 	public GameObject tickerChild;
 	public Transform tickerObj;
 	
-	public GameObject tickerFlag;
-	public GameObject tickerLaps;
+	public static GameObject tickerFlag;
+	public static GameObject tickerLaps;
+	public static GameObject tickerLocation;
+	public static GameObject cautionSummaryMenu;
+	public static GameObject mainCam;
+	public static GameObject pauseMenu;
 	
     // Start is called before the first frame update
     void Awake(){
         
+		cautionSummaryMenu = GameObject.Find("CautionMenu");
+		mainCam = GameObject.Find("Main Camera");
+		pauseMenu = GameObject.Find("PauseMenu");
+		gamePaused = false;
+		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
 		} else {
@@ -66,10 +78,14 @@ public class Ticker : MonoBehaviour
 		
 		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		
+		raceLaps = PlayerPrefs.GetInt("RaceLaps");
+		
 		ticker = GameObject.Find("Ticker");
 		playerTicker = GameObject.Find("PlayerTicker");
 		tickerFlag = GameObject.Find("RaceState");
 		tickerLaps = GameObject.Find("RaceLaps");
+		tickerLocation = GameObject.Find("RaceName");
+		tickerLocation.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("TrackLocation");
 		
 		carsTagged = false;
 		playerCar = GameObject.FindGameObjectWithTag("Player");
@@ -110,6 +126,13 @@ public class Ticker : MonoBehaviour
 			GameObject playerTick = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			playerTick.transform.SetParent(tickerObj, false);
 			updateTicker();
+		}
+		if(CameraRotate.overtime == true){
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
+		}
+		if(CameraRotate.lap == CameraRotate.raceEnd){
+			tickerFlag.GetComponent<Image>().color = new Color(255,255,255);
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "FINAL LAP";
 		}
 	}
 
@@ -179,6 +202,14 @@ public class Ticker : MonoBehaviour
 			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
 			tickerName.text = driverNames[i];
 			//Debug.Log(i + ": " + driverNames[i]);
+		}
+		
+		if(CameraRotate.overtime == true){
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
+		}
+		if(CameraRotate.lap == CameraRotate.raceEnd){
+			tickerFlag.GetComponent<Image>().color = new Color(255,255,255);
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "FINAL LAP";
 		}
 	}
 
@@ -256,6 +287,7 @@ public class Ticker : MonoBehaviour
 		}
 		PlayerPrefs.SetInt("CautionLap", CameraRotate.lap);
 		PlayerPrefs.SetInt("SpawnFromCaution", 1);
+		cautionSummaryMenu.SetActive(true);
 		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 	}
 
@@ -329,10 +361,20 @@ public class Ticker : MonoBehaviour
 		}
 	}
 
+	public static void togglePause(){
+		if(gamePaused == false){
+			gamePaused = true;
+			Time.timeScale = 0.0f;
+			mainCam.GetComponent<AudioListener>().enabled = false;
+			PlayerPrefs.SetInt("Volume",0);
+			pauseMenu.SetActive(true);
+		}
+	}
+
     // Update is called once per frame
     void Update(){
 		ticker.transform.Translate(-1.5f,0,0);
-		tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + PlayerPrefs.GetInt("RaceLaps");
+		tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + raceLaps;
 		if(carsTagged == false){
 			//Debug.Log("Cars haven't been tagged yet..");
 			populateTickerData();

@@ -44,6 +44,7 @@ public class AIMovement : MonoBehaviour
 	float targetForce;
 	float windForce;
 	float forceSmoothing;
+	public int wreckProbability;
 	
 	public static int maxTandem;
 	public static float coolOffSpace;
@@ -112,6 +113,7 @@ public class AIMovement : MonoBehaviour
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
 		wreckOver = false;
+		wreckProbability = 10;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -178,9 +180,9 @@ public class AIMovement : MonoBehaviour
 		
 		altPaints = new List<string>();
 		altPaints.Add("0");
-		//altPaints.Add("0");
-		//altPaints.Add("0");
-		//altPaints.Add("0");
+		altPaints.Add("0");
+		altPaints.Add("0");
+		altPaints.Add("0");
 		AltPaints.loadAlts();
 		
 		for(int i=1;i<10;i++){
@@ -688,7 +690,10 @@ public class AIMovement : MonoBehaviour
 			if (backingOut == false) {
 				backingOut = true;
 			}
-			startWreck();
+			float rng = Random.Range(0,100);
+			if((wreckProbability >= rng)||(Movement.delicateMod == true)){
+				startWreck();
+			}
 			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 			laneticker = laneChangeDuration + laneticker;
 			lane++;
@@ -1216,6 +1221,8 @@ public class AIMovement : MonoBehaviour
 		if((isWrecking == true)||(wreckOver == true)){
 			return;
 		}
+		
+		Movement.totalWreckers++;
 		
 		isWrecking = true;
 		if(CameraRotate.cautionOut == false){

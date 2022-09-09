@@ -15,6 +15,15 @@ public class GarageUI : MonoBehaviour
 	public GameObject partTimersTile;
 	GameObject activeTile;
 	
+	string restrictionType;
+	string restrictionValue;
+	int seriesMinClass;
+	string seriesTeam;
+	string seriesManu;
+	int seriesCar;
+	string seriesDriverType;
+	int seriesRarity;
+	
 	public static GameObject seriesDropdown;
 	public static GameObject currentSeries;
 	
@@ -29,6 +38,8 @@ public class GarageUI : MonoBehaviour
 		seriesDropdown.SetActive(false);
 		currentSeries = GameObject.Find("CurrentSeries");
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
+		
+		loadRaceRestrictions();
 		
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
@@ -125,11 +136,14 @@ public class GarageUI : MonoBehaviour
 			
 			if(PlayerPrefs.HasKey("ActivePath")){
 				int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
-				string restrictionType = PlayerPrefs.GetString("RestrictionType");
-				string restrictionValue = PlayerPrefs.GetString("RestrictionValue");
-			
+
 				if((minClass > carClass)||
 				(carUnlocked == 0)){
+					carClickable.SetActive(false);
+					carDisabled.SetActive(true);
+				}
+				
+				if(meetsRestrictions(seriesPrefix,i) == false){
 					carClickable.SetActive(false);
 					carDisabled.SetActive(true);
 				}
@@ -169,6 +183,60 @@ public class GarageUI : MonoBehaviour
 			shuffleArray.Remove(tile);
 			sortTiles();
 		}
+	}
+
+	public void loadRaceRestrictions(){
+		
+		restrictionType = PlayerPrefs.GetString("RestrictionType");
+		restrictionValue = PlayerPrefs.GetString("RestrictionValue");
+			
+		seriesTeam = "";
+		seriesManu = "";
+		seriesCar = 999;
+		seriesDriverType = "";
+		seriesRarity = 0;
+		
+		switch(restrictionType){
+			case "Team":
+				seriesTeam = restrictionValue;
+				Debug.Log("Driver Type: " + seriesTeam);
+				break;
+			case "Manufacturer":
+				seriesManu = restrictionValue;
+				break;
+			case "Car":
+				seriesCar = int.Parse(restrictionValue);
+				break;
+			case "Rarity":
+				seriesRarity = int.Parse(restrictionValue);
+				break;
+			case "Type":
+				seriesDriverType = restrictionValue;
+				Debug.Log("Driver Type: " + seriesDriverType);
+				break;
+			default:
+				break;
+		}
+	}
+
+	public bool meetsRestrictions(string series, int car){
+
+		if((seriesTeam != "")&&(DriverNames.getTeam(series, car) != seriesTeam)){
+			return false;
+		}
+		if((seriesManu != "")&&(DriverNames.getManufacturer(series, car) != seriesManu)){
+			return false;
+		}
+		if((seriesCar != 999)&&(car != seriesCar)){
+			return false;
+		}
+		if((seriesDriverType != "")&&(DriverNames.getType(series, car) != seriesDriverType)){
+			return false;
+		}
+		if((seriesRarity != 0)&&(DriverNames.getRarity(series, car) != seriesRarity)){
+			return false;
+		}
+		return true;
 	}
 
 	public void backButton(){

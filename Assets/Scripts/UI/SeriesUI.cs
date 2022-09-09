@@ -115,6 +115,7 @@ public class SeriesUI : MonoBehaviour
 		PlayerPrefs.SetInt("SubseriesMinClass", SeriesData.offlineMinClass[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue(seriesId,subSeriesId));
+		Debug.Log("Series Restriction: " + SeriesData.offlineMinType[seriesId,subSeriesId] + " - " + getRestrictionValue(seriesId,subSeriesId));
 		PlayerPrefs.SetInt("AIDifficulty", SeriesData.offlineAILevel[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[seriesId,subSeriesId]);
 		//Debug.Log("Fuel cost: " + SeriesData.offlineFuel[seriesId,subSeriesId]);
@@ -169,19 +170,19 @@ public class SeriesUI : MonoBehaviour
 		string restrictionValue = "";
 		switch(SeriesData.offlineMinType[series,subSeries]){
 			case "Team":
-				restrictionValue += SeriesData.offlineMinTeam[series,subSeries];
+				restrictionValue = SeriesData.offlineMinTeam[series,subSeries];
 			break;
 			case "Manufacturer":
-				restrictionValue += SeriesData.offlineMinManu[series,subSeries];
+				restrictionValue = SeriesData.offlineMinManu[series,subSeries];
 			break;
 			case "Car":
-				restrictionValue += SeriesData.offlineExactCar[series,subSeries];
+				restrictionValue = SeriesData.offlineExactCar[series,subSeries].ToString();
 			break;
 			case "Type":
-				restrictionValue += SeriesData.offlineMinDriverType[series,subSeries];
+				restrictionValue = SeriesData.offlineMinDriverType[series,subSeries];
 			break;
 			case "Rarity":
-				restrictionValue += SeriesData.offlineMinRarity[series,subSeries];
+				restrictionValue = SeriesData.offlineMinRarity[series,subSeries].ToString();
 			break;
 			default:
 				restrictionValue = "";
@@ -233,7 +234,7 @@ public class SeriesUI : MonoBehaviour
 	public void dynamicBackButton(){
 		if(seriesId == 999){
 			PlayerPrefs.DeleteKey("ActivePath");
-			SceneManager.LoadScene("MainMenu");
+			SceneManager.LoadScene("Menus/MainMenu");
 		} else {
 			loadAllSeries();
 		}
