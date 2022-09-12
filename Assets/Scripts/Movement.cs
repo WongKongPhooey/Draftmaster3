@@ -941,6 +941,8 @@ public class Movement : MonoBehaviour {
 		if(((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel) > 0){
 			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + ((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel).ToString("F0");
 			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + ((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel).ToString("F2");
+		} else {
+			endWreck();
 		}
 		
 		if(wreckOver == true){
@@ -1050,7 +1052,7 @@ public class Movement : MonoBehaviour {
 		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
-		this.GetComponent<Rigidbody>().mass = 5;
+		this.GetComponent<Rigidbody>().mass = 2;
 		
 		//Remove constraints, allowing it to impact/spin using physics
 		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
@@ -1068,7 +1070,7 @@ public class Movement : MonoBehaviour {
 		forceSmoothing = 0.2f;
 		windForce = targetForce;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,targetForce);
-		float wreckTorque = Random.Range(-0.1f, 0.1f) * 10;
+		float wreckTorque = Random.Range(-0.2f, 0.1f) * 10;
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 	}
 	
@@ -1121,7 +1123,7 @@ public class Movement : MonoBehaviour {
 			endWreck();
 		}
 		
-		this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 10) + 5;
+		this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 10) + 2;
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		this.transform.Find("SparksL").rotation = Quaternion.Euler(0,180,0);

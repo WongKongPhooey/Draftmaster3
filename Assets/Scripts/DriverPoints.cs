@@ -9,11 +9,17 @@ public class DriverPoints : MonoBehaviour {
 	void Start () {		
 	}
 
-	public static void resetPoints() {
+	public static void resetPoints(string seriesPrefix) {
 		
 		for(int i = 0; i < 100;i++){
-			PlayerPrefs.SetInt("ChampionshipPoints"  + i,0);
-			pointsTotal[i] = 0;
+			if(DriverNames.getName(seriesPrefix, i) == null){
+				if(PlayerPrefs.HasKey("ChampionshipPoints"  + i)){
+					PlayerPrefs.DeleteKey("ChampionshipPoints"  + i);
+				}
+			} else {
+				PlayerPrefs.SetInt("ChampionshipPoints"  + i,0);
+				pointsTotal[i] = 0;
+			}
 		}
 	}
 }

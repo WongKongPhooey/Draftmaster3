@@ -16,15 +16,19 @@ public class ChampionshipHubUI : MonoBehaviour
 	public GameObject hubTrackImage;
 	public GameObject hubTrackName;
 	
+	public GameObject nextRound;
+	
 	public static string seriesPrefix;
 	public int carNumber;
 
 	int currentSeries;
 	int currentSubseries;
+	string championshipSubseries;
 	string currentSeriesName;
 	string currentSubseriesName;
 	string currentTrack;
-	int championshipRound;	
+	int championshipRound;
+	int championshipLength;
 	static Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
 	
 	public static string circuitChoice;
@@ -33,18 +37,24 @@ public class ChampionshipHubUI : MonoBehaviour
     void Start()
     {
 		carNumber = PlayerPrefs.GetInt("CarChoice");
-				
-		currentSeries = PlayerPrefs.GetInt("CurrentSeries");
-		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries");
+		
+		championshipSubseries = PlayerPrefs.GetString("ChampionshipSubseries");
+		currentSeries = int.Parse(championshipSubseries.Substring(0,1));
+		currentSubseries = int.Parse(championshipSubseries.Substring(championshipSubseries.Length-1));
 		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+		championshipLength = PlayerPrefs.GetInt("ChampionshipLength");
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
         
 		SeriesData.loadSeries();
 		loadPoints();
 		
 		hubTitle = GameObject.Find("Title");
-		hubTitle.GetComponent<TMPro.TMP_Text>().text = "Championship - Round " + championshipRound + "/999";
-    }
+		hubTitle.GetComponent<TMPro.TMP_Text>().text = SeriesData.offlineSeries[currentSeries, currentSubseries];
+    
+		nextRound = GameObject.Find("NextRound");
+		nextRound.GetComponent<TMPro.TMP_Text>().text = "Round " + (championshipRound + 1) + "/" + championshipLength;
+    
+	}
 
 	public void loadPoints(){
 		championshipPoints.Clear();
@@ -82,7 +92,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		foreach(var pointsRow in pointsTable){
 			
 			if(pointsRow.Value == 0){
-				continue;
+				//continue;
 			}
 			
 			GameObject standingsInst = Instantiate(championshipRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);

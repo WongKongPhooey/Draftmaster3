@@ -528,6 +528,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Names[66] = "Hill";
 		cup2022Names[77] = "Cassill";
 		cup2022Names[78] = "McLeod";
+		cup2022Names[91] = "Raikkonen";
 		cup2022Names[99] = "Suarez";
 		
 		cup2022Teams[1] = "TRK";
@@ -573,6 +574,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Teams[66] = "MBM";
 		cup2022Teams[77] = "SPI";
 		cup2022Teams[78] = "IND";
+		cup2022Teams[91] = "TRK";
 		cup2022Teams[99] = "TRK";
 		
 		cup2022Manufacturer[1] = "CHV";
@@ -618,6 +620,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Manufacturer[66] = "TYT";
 		cup2022Manufacturer[77] = "CHV";
 		cup2022Manufacturer[78] = "FRD";
+		cup2022Manufacturer[91] = "CHV";
 		cup2022Manufacturer[99] = "CHV";
 		
 		cup2022Types[1] = "Intimidator";
@@ -664,6 +667,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Types[66] = "Closer";
 		cup2022Types[77] = "Strategist";
 		cup2022Types[78] = "Blocker";
+		cup2022Types[91] = "Rookie";
 		cup2022Types[99] = "Closer";
 		
 		cup2022Rarity[1] = 2;
@@ -709,6 +713,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[66] = 1;
 		cup2022Rarity[77] = 1;
 		cup2022Rarity[78] = 1;
+		cup2022Rarity[91] = 1;
 		cup2022Rarity[99] = 1;
 	}
 	

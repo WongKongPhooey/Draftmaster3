@@ -57,6 +57,9 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject cautionSummaryMenu;
 	
 	void Awake(){
+		
+		Time.timeScale = 1.0f;
+		
 		kerbBlur = 0.5f;
 		straightcounter = 0;
 		straightLength[0] = PlayerPrefs.GetInt("StraightLength1");
@@ -186,6 +189,10 @@ public class CameraRotate : MonoBehaviour {
 				//Only save at the line if not currently wrecking
 				if(Movement.isWrecking == false){
 					cautionSummaryMenu.SetActive(true);
+					Time.timeScale = 0.0f;
+					finishLine.GetComponent<Renderer>().enabled = true;
+					carEngine.volume = 0;
+					crowdNoise.volume = 0;
 				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
@@ -197,6 +204,42 @@ public class CameraRotate : MonoBehaviour {
 			averageSpeed = 0;
 			averageSpeedCount = 0;
 			averageSpeedTotal = 0;
+			
+			//Race End
+			if(lap == (raceEnd + 1)){
+				lap--;
+				Time.timeScale = 0.0f;
+				finishLine.GetComponent<Renderer>().enabled = true;
+				if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
+					int rand = Random.Range(1,100);
+					//Lucky day
+					if((rand > 26)&&(rand < 28)){
+						tropicono.GetComponent<Renderer>().enabled = true;
+					}
+				}
+				carEngine.volume = 0;
+				crowdNoise.volume = 0;
+				RaceHUD.raceOver = true;
+				Ticker.checkFinishPositions();
+				PlayerPrefs.SetInt("ExpAdded",0);
+				if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+					currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
+					lapRecord -= trackSpeedOffset;
+					//Debug.Log(lapRecord);
+					lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
+					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
+					//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
+					PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
+					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+						PlayFabManager.CheckLiveTimeTrial();
+						//Double checked
+						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+							PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrial","");
+						}
+					}
+					
+				}
+			}
 		}
 
 		if ((straightcounter % 100) == 1){
@@ -212,42 +255,6 @@ public class CameraRotate : MonoBehaviour {
 		} else {
 			carEngine.volume = 0.0f;
 			crowdNoise.volume = 0.0f;
-		}
-
-		//Race End
-		if(lap == (raceEnd + 1)){
-			lap--;
-			Time.timeScale = 0.0f;
-			finishLine.GetComponent<Renderer>().enabled = true;
-			if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
-				int rand = Random.Range(1,100);
-				//Lucky day
-				if((rand > 26)&&(rand < 28)){
-					tropicono.GetComponent<Renderer>().enabled = true;
-				}
-			}
-			carEngine.volume = 0;
-			crowdNoise.volume = 0;
-			RaceHUD.raceOver = true;
-			Ticker.checkFinishPositions();
-			PlayerPrefs.SetInt("ExpAdded",0);
-			if(PlayerPrefs.HasKey("FastestLap" + circuit)){
-				currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-				lapRecord -= trackSpeedOffset;
-				//Debug.Log(lapRecord);
-				lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
-				PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-				//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
-				PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
-				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-					PlayFabManager.CheckLiveTimeTrial();
-					//Double checked
-					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-						PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrial","");
-					}
-				}
-				
-			}
 		}
 
 		//Turning

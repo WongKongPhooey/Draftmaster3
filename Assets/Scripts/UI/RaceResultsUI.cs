@@ -8,13 +8,120 @@ using UnityEngine.SceneManagement;
 public class RaceResultsUI : MonoBehaviour
 {
 	
+	int exp;
+	int level;
+	int levelExp;
+	float raceExp;
+	
 	public GameObject resultRow;
 	public Transform resultsFrame;
 	public string seriesPrefix;
 	
+	string playerCarNumber;
+	string carNumber;
+
+	int resultsRows;
+	
+	string currentSeriesIndex;
+
+	int playerMoney;
+	int moneyCount;
+	int raceWinnings;
+	int winningsMultiplier;
+	int lapsBonus;
+
+	public static bool challengeComplete;
 	
     // Start is called before the first frame update
     void Start(){
+		
+		PlayerPrefs.DeleteKey("ActivePath");
+
+		playerCarNumber = PlayerPrefs.GetString("carTexture");
+		string splitAfter = "livery";
+		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
+
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
+
+		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+
+		PlayerPrefs.SetInt("FinishPos",(Scoreboard.position + 1));
+
+		exp = PlayerPrefs.GetInt("Exp");
+		level = PlayerPrefs.GetInt("Level");
+
+		//Add XP and Increment Championship Round
+		if(PlayerPrefs.GetInt("ExpAdded") == 0){
+			raceExp = 100 / (Scoreboard.position + 1);
+			exp += Mathf.RoundToInt(raceExp);
+			PlayerPrefs.SetInt("Exp",exp);
+			Debug.Log("Exp: " + exp);
+			
+			//Is this a championship round?
+			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
+					
+					//Increment Championship Round
+					int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
+					PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
+					
+					Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
+					RacePoints.setCupPoints();
+					for( int i=0; i < resultsRows; i++){
+						if(Scoreboard.carNames[i] == null){
+							//Exit loop
+							break;
+						}
+						if(i == (Scoreboard.position)){
+							carNumber = playerCarNumber;
+						} else {
+							carNumber = Scoreboard.carNames[i].Remove(0,6);
+						}
+						//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+						addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
+					}
+				}
+			}
+			PlayerPrefs.SetInt("ExpAdded",1);
+		}
+		
+		winningsMultiplier = 1;
+				
+		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
+
+		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
+			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex+ currentTrack);
+			if(((Scoreboard.position + 1) < bestFinishPos)||(bestFinishPos == 0)){
+				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position + 1);
+			}
+			Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
+		} else {
+			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position + 1);
+			Debug.Log("New best finish: " + Scoreboard.position + ". Track: " + currentSeriesIndex + currentTrack);
+		}
+
+		moneyCount = 0;
+		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
+		raceWinnings = PrizeMoney.cashAmount[Scoreboard.position] * winningsMultiplier;
+
+		if(ChallengeSelectGUI.challengeMode == false){
+			lapsBonus = PlayerPrefs.GetInt("RaceLapsMultiplier");
+			winningsMultiplier *= lapsBonus;
+		} else {
+			lapsBonus = 1;
+		}
+
+		if ((ChallengeSelectGUI.challengeMode == false)||(challengeComplete == true)){
+			PlayerPrefs.SetInt("raceWinnings",raceWinnings);
+		} else {
+			PlayerPrefs.SetInt("raceWinnings",0);
+			raceWinnings = 0;
+		}
+
 		loadResults();
     }
 
@@ -67,6 +174,12 @@ public class RaceResultsUI : MonoBehaviour
 				resultTime.text = "+" + (carDist / 1000f).ToString("f3");
 			}
 		}
+	}
+
+	void addChampionshipPoints(string carNumber, int points){
+		int currentPoints = PlayerPrefs.GetInt("ChampionshipPoints" + carNumber + "");
+		PlayerPrefs.SetInt("ChampionshipPoints" + carNumber + "", currentPoints + points);
+		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + " + " + points));
 	}
 
     // Update is called once per frame

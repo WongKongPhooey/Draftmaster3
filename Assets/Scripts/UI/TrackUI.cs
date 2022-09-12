@@ -275,7 +275,11 @@ public class TrackUI : MonoBehaviour
 			
 			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
 			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
-			SceneManager.LoadScene(track);
+			if((PlayerPrefs.GetString("RaceType") == "Championship")&&(PlayerPrefs.GetInt("ChampionshipRound") == 0)){
+				SceneManager.LoadScene("Menus/ChampionshipHub");
+			} else {
+				SceneManager.LoadScene(track);
+			}
 		} else {
 			//Roll back and bail
 			PlayerPrefs.SetString("StoreFocus","Fuel");
@@ -285,11 +289,13 @@ public class TrackUI : MonoBehaviour
 
 	public void startChampionship(){
 		//activeMenu = "Schedule";
+		DriverPoints.resetPoints(seriesPrefix);
 		PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
 		Debug.Log("Championship: " + currentSeriesIndex);
 		PlayerPrefs.SetString("RaceType","Championship");
 		loadTrack(trackList, 0);
 		PlayerPrefs.SetInt("ChampionshipRound",0);
+		PlayerPrefs.SetInt("ChampionshipLength", seriesLength);
 		//resetChampionshipPoints();
 		PlayerPrefs.SetString("ChampionshipCarTexture", PlayerPrefs.GetString("carTexture"));
 		PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("carSeries"));

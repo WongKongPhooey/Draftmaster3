@@ -84,6 +84,7 @@ public class MainMenuUI : MonoBehaviour {
 			
 			Debug.Log("Level Up -> " + level);
 			levelUpMenu = true;
+			AlertManager.showPopup("Level Up","You've leveled up matey!","dm2logo");
 		}
 		
 		money = PlayerPrefs.GetInt("PrizeMoney");
@@ -103,10 +104,6 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("PlayerUsername")){
 			PlayFabManager.LoginFromPrefs();
 		}
-		
-		//Hide rewards popup after storing the var
-		alertPopup = GameObject.Find("AlertPopup");
-		alertPopup.SetActive(false);
 		
 		//Reset the game to imitate new users
 		//PlayerPrefs.DeleteAll();
@@ -148,6 +145,10 @@ public class MainMenuUI : MonoBehaviour {
 			crowdNoise.volume = 0.0f;
 		}
 		
+		if(newGiftAlert == true){
+			AlertManager.showPopup("","","");
+		}
+		
         loadCurrentChampionshipInfo();
     }
 
@@ -187,15 +188,7 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("TargetVersion", Application.version);
-		showAlert("Hey Rookie! You Need A Ride?", "A driver has given you access to their car for your debut.", "NewUser");
-	}
-	
-	void showAlert(string title, string message, string action){
-		alertPopup.SetActive(true);
-		popupFrame = GameObject.Find("PopupFrame");
-		
-		TMPro.TMP_Text popupTitle = popupFrame.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
-		popupTitle.text = title;
+		AlertManager.showPopup("Hey Rookie! You Need A Ride?", "A driver has given you access to their car for your debut.", "");
 	}
 
     // Update is called once per frame

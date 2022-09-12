@@ -2,13 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class FuelUI : MonoBehaviour
+public class Commentary : MonoBehaviour
 {
-	int fuel;
     // Start is called before the first frame update
     void Start()
     {
-        fuel = PlayerPrefs.GetInt("GameFuel");
+        
     }
 
     // Update is called once per frame

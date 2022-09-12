@@ -184,13 +184,19 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		partsTitle.GetComponent<TMPro.TMP_Text>().text = "" + carReward + "\n(" + carCurrentGears + ")";
 		partsTitle.GetComponent<UIAnimate>().animOffset = 120;
-		partsTitle.GetComponent<UIAnimate>().scaleIn();
-		
-		if(carPrizeNumAlt != ""){
-			partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrizeAlt);
-		} else {
-			partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrize);
+		if(carReward != ""){
+			partsTitle.GetComponent<UIAnimate>().scaleIn();
+			
+			if(carPrizeNumAlt != ""){
+				partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrizeAlt);
+			} else {
+				partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrize);
+			}
 		}
+		
+		//Tidyup at the end
+		PlayerPrefs.DeleteKey("SeriesPrize");
+		PlayerPrefs.DeleteKey("RaceType");
 	}
 
 	void AssignPrizes(string carId, string setPrize, int multiplier){

@@ -11,7 +11,7 @@ public class GarageUI : MonoBehaviour
 	public GameObject halloweenTile;
 	public GameObject patriotTile;
 	public GameObject wreckedTile;
-	public GameObject twentytwentyTile;
+	public GameObject twentyTwentyTile;
 	public GameObject partTimersTile;
 	GameObject activeTile;
 	
@@ -78,7 +78,6 @@ public class GarageUI : MonoBehaviour
 			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
 			tileInst.transform.SetParent(tileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
-			//tileInst.GetComponent<UIAnimate>().setCardDown();
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
@@ -93,11 +92,31 @@ public class GarageUI : MonoBehaviour
 			GameObject cardBack = tileInst.transform.GetChild(8).gameObject;
 			GameObject carClickable = tileInst.transform.GetChild(9).transform.gameObject;
 			GameObject carDisabled = tileInst.transform.GetChild(10).transform.gameObject;
+			GameObject carActionBtn = tileInst.transform.GetChild(11).transform.gameObject;
+			carActionBtn.SetActive(false);
 			
 			int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked");
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + i + "Gears");
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + i + "Class");
 			int classMax = getClassMax(carClass);
+			int unlockClass = DriverNames.getRarity(seriesPrefix,i);
+			int unlockGears = GameData.unlockGears(unlockClass);
+			
+			if(carUnlocked == 1){
+				if(carGears >= classMax){
+					carActionBtn.SetActive(true);
+					TMPro.TMP_Text carActionBtnLbl = carActionBtn.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+					carActionBtnLbl.text = "Upgrade";
+				}
+			}
+			
+			if(carUnlocked == 0){
+				if(carGears >= unlockGears){
+					carActionBtn.SetActive(true);
+					TMPro.TMP_Text carActionBtnLbl = carActionBtn.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+					carActionBtnLbl.text = "Unlock";
+				}
+			}
 			
 			string carTeam = DriverNames.getTeam(seriesPrefix, i);
 			string carType = DriverNames.getType(seriesPrefix, i);
@@ -130,7 +149,12 @@ public class GarageUI : MonoBehaviour
 				gearsProgressUIWidth = 110;
 				carGearsLabelUI.text = "Max Class";
 			} else {
-				carGearsLabelUI.text = carGears + "/" + classMax;
+				if(carUnlocked == 0){
+					carGearsLabelUI.text = carGears + "/" + unlockGears;
+					gearsProgressUIWidth = Mathf.Round((110 / unlockGears) * carGears) + 1;
+				} else {
+					carGearsLabelUI.text = carGears + "/" + classMax;
+				}
 			}
 			carGearsProgressUI.sizeDelta = new Vector2(gearsProgressUIWidth, 20);
 			
@@ -340,6 +364,9 @@ public class GarageUI : MonoBehaviour
 				break;
 			case "Wrecked":
 				cardPrefab = wreckedTile;
+				break;
+			case "2020":
+				cardPrefab = twentyTwentyTile;
 				break;
 			default:
 				cardPrefab = carTile;

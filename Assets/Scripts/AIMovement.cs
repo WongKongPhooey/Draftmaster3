@@ -113,7 +113,7 @@ public class AIMovement : MonoBehaviour
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
 		wreckOver = false;
-		wreckProbability = 10;
+		wreckProbability = 4;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -296,11 +296,16 @@ public class AIMovement : MonoBehaviour
 			if(dooredStrength > 95){
 				dooredStrength = 95;
 			}
+			wreckProbability = 8;
 		}
 
 		maxDraftDistance = 9 + carRarity;
 		if (DriverNames.getType(seriesPrefix,carNum) == "Closer"){
 			maxDraftDistance = 9 + carRarity + AICarClass;		
+		}
+		
+		if (DriverNames.getType(seriesPrefix,carNum) == "Rookie"){
+			wreckProbability = 8;
 		}
 
         movingLane = false;
@@ -675,26 +680,25 @@ public class AIMovement : MonoBehaviour
         }
 		
 		if(AICar.transform.position.x <= apronLineX){
-			if(CameraRotate.cautionOut == false){
-				//Debug.Log("Track Limits!");
-				if (backingOut == false) {
-					backingOut = true;
-				}
-				laneticker = -laneChangeDuration + laneticker;
-				lane--;
+			//Debug.Log("Track Limits!");
+			if (backingOut == false) {
+				backingOut = true;
 			}
+			laneticker = -laneChangeDuration + laneticker;
+			lane--;
 		}
 		
 		if(AICar.transform.position.x >= 1.35f){
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
+				
+				float rng = Random.Range(0,100);
+				if((wreckProbability >= rng)||(Movement.delicateMod == true)){
+					startWreck();
+					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+				}
 			}
-			float rng = Random.Range(0,100);
-			if((wreckProbability >= rng)||(Movement.delicateMod == true)){
-				startWreck();
-			}
-			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 			laneticker = laneChangeDuration + laneticker;
 			lane++;
 			//Wall hit decel
@@ -1232,7 +1236,7 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
-		this.GetComponent<Rigidbody>().mass = 5;
+		this.GetComponent<Rigidbody>().mass = 2;
 		
 		//Remove constraints, allowing it to impact/spin using physics
 		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
@@ -1249,7 +1253,7 @@ public class AIMovement : MonoBehaviour
 		baseDecel = -0.25f;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.1f, 0.1f) * 10, 0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.2f, 0.1f) * 10, 0f);
 		
 		//Tire smoke
 		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
@@ -1301,9 +1305,8 @@ public class AIMovement : MonoBehaviour
 			if(playerWrecked == false){
 				//Acknowledge physics change when player is stopped, reset momentum this frame
 				playerWrecked = true;
-				this.GetComponent<Rigidbody>().mass = 5;
-				//this.GetComponent<Rigidbody>().velocity = Vector3.zero;
-				//this.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+				//Make them skate to a stop - amplified for effect
+				this.GetComponent<Rigidbody>().mass = 1f;
 			}
 			targetForce = wreckDecel + 200f;
 			
@@ -1312,10 +1315,13 @@ public class AIMovement : MonoBehaviour
 				windForce = -windForce;
 			}
 			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,windForce);
+			this.GetComponent<Rigidbody>().velocity = new Vector3(sideForce, 0f,windForce/10f);
 		} else {
 			//Standard relativity
 			targetForce = wreckDecel;
 			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,windForce);
+			//this.GetComponent<Rigidbody>().velocity = new Vector3(sideForce, 0f,windForce);
+		
 		}
 
 		wreckDecel = baseDecel - (50f * wreckSine);
@@ -1332,7 +1338,7 @@ public class AIMovement : MonoBehaviour
 			endWreck();
 		}
 		
-		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 10) + 5;
+		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 10) + 2;
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		//Align particle system to global track direction

@@ -85,7 +85,7 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
 		//Attempt to load saved data
 		GetSavedPlayerProgress("cup20");
-		SceneManager.LoadScene("MainMenu");
+		SceneManager.LoadScene("Menus/MainMenu");
 	}
 	
 	public static void OnError(PlayFabError error){
@@ -116,7 +116,7 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
 		PlayerPrefs.SetString("PlayerPassword", passwordInput.text);
 		LoginFromPrefs();
-		SceneManager.LoadScene("MainMenu");
+		SceneManager.LoadScene("Menus/MainMenu");
 	}
 	
 	void OnLoginError(PlayFabError error){
@@ -177,7 +177,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			
 			//Fake store values for testing
-			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224";
+			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155";
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
@@ -310,8 +310,9 @@ public class PlayFabManager : MonoBehaviour
 					//Debug.Log("New Message!");
 					PlayerPrefs.SetInt("MessageAlertId", int.Parse(result.Data["MessageAlertId"]));
 					PlayerPrefs.SetString("MessageAlert", result.Data["MessageAlert"]);
-					MainMenuGUI.messageAlert = result.Data["MessageAlert"];
-					MainMenuGUI.newMessageAlert = true;
+					//MainMenuGUI.messageAlert = result.Data["MessageAlert"];
+					//MainMenuGUI.newMessageAlert = true;
+					AlertManager.showPopup("News",result.Data["MessageAlert"],"cup22livery1alt1blank");
 				} else {
 					//Debug.Log("No new messages.");
 				}
@@ -339,13 +340,15 @@ public class PlayFabManager : MonoBehaviour
 	static void OnDataReceived(GetUserDataResult result){
 		if(result.Data != null){
 			Debug.Log("Player data found");
+			string rewardMessage = "";
+			string rewardCarImg = "dm2logo";
 			if(result.Data.ContainsKey("RewardGears")){
 				int gears = PlayerPrefs.GetInt("Gears");
 				int rewardGears = int.Parse(result.Data["RewardGears"].Value);
 				if(rewardGears != 0){
 					gears += rewardGears;
-					MainMenuGUI.giftAlert += "You've been gifted a crate of " + rewardGears + " gears! ";
-					MainMenuGUI.newGiftAlert = true;
+					rewardMessage += "You've received a crate of " + rewardGears + " gears!\n";
+					//MainMenuGUI.newGiftAlert = true;
 					rewardGears = 0;
 					PlayerPrefs.SetInt("Gears", gears);
 					emptyPlayerData("RewardGears");
@@ -368,8 +371,9 @@ public class PlayFabManager : MonoBehaviour
 						PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
 						PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", carClass+1);
 					}
-					MainMenuGUI.giftAlert += "You've been gifted a new " + DriverNames.getName(rewardCarSeries,rewardCarNum) + " car! ";
-					MainMenuGUI.newGiftAlert = true;
+					rewardMessage += "You've been gifted a new " + DriverNames.getSeriesNiceName(rewardCarSeries) + " " + DriverNames.getName(rewardCarSeries,rewardCarNum) + " car!\n";
+					rewardCarImg = rewardCarSeries + "livery" + rewardCarNum;
+					//MainMenuGUI.newGiftAlert = true;
 					emptyPlayerData("RewardCar");
 				}
 			}
@@ -379,16 +383,19 @@ public class PlayFabManager : MonoBehaviour
 				if((rewardAlt != "0")&&(rewardAlt != "")){
 					Debug.Log("Rewarded Alt #" + rewardAlt);
 					
+					rewardCarImg = rewardAlt;
+					
 					//Reformat it to match the PlayerPrefs var..
 					rewardAlt = rewardAlt.Replace("livery","");
 					rewardAlt = rewardAlt.Replace("alt","Alt");
 					
 					PlayerPrefs.SetInt(rewardAlt + "Unlocked",1);
-					MainMenuGUI.giftAlert += "You've been gifted the " + rewardAlt + " alt paint! ";
-					MainMenuGUI.newGiftAlert = true;
+					rewardMessage += "You've been gifted the " + rewardAlt + " alt paint! ";
+					//MainMenuGUI.newGiftAlert = true;
 					emptyPlayerData("RewardAlt");
 				}
 			}
+			AlertManager.showPopup("Rewards",rewardMessage,rewardCarImg);
 		} else {
 			Debug.Log("No player data found");
 		}
@@ -557,7 +564,7 @@ public class PlayFabManager : MonoBehaviour
 		var request = new GetLeaderboardRequest {
 			StatisticName = "FastestLap" + circuit,
 			StartPosition = 0,
-			MaxResultsCount = 5
+			MaxResultsCount = 10
 		};
 		PlayFabClientAPI.GetLeaderboard(request, OnLeaderboardGet, OnError);
 	}

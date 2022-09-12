@@ -18,7 +18,7 @@ public class ChampionshipHubGUI : MonoBehaviour {
 			PlayerPrefs.GetInt("ChampionshipRound");
 		} else {
 			PlayerPrefs.SetInt("ChampionshipRound", 1);
-			DriverPoints.resetPoints();
+			DriverPoints.resetPoints("cup20");
 		}
 
 		if(!PlayerPrefs.HasKey("raceSeries")){
@@ -34,7 +34,7 @@ public class ChampionshipHubGUI : MonoBehaviour {
 
 		switch(PlayerPrefs.GetInt("ChampionshipRound")){
 		case 1:
-			DriverPoints.resetPoints();
+			DriverPoints.resetPoints("cup20");
 			ThunderAlley();
 			circuit.GetComponent<Renderer>().material.mainTexture = Resources.Load("ThunderAlley") as Texture;
 			break;
