@@ -1230,7 +1230,7 @@ public class AIMovement : MonoBehaviour
 		
 		isWrecking = true;
 		if(CameraRotate.cautionOut == false){
-			CameraRotate.cautionOut = true;
+			CameraRotate.throwCaution();
 		}
 		sparksCooldown = 99999;
 		//Debug.Log(this.name + " is wrecking");

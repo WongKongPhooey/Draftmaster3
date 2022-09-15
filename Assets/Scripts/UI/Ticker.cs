@@ -127,13 +127,6 @@ public class Ticker : MonoBehaviour
 			playerTick.transform.SetParent(tickerObj, false);
 			updateTicker();
 		}
-		if(CameraRotate.overtime == true){
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
-		}
-		if(CameraRotate.lap == CameraRotate.raceEnd){
-			tickerFlag.GetComponent<Image>().color = new Color(255,255,255);
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "FINAL LAP";
-		}
 	}
 
 	public static void updateTicker(){
@@ -202,14 +195,6 @@ public class Ticker : MonoBehaviour
 			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
 			tickerName.text = driverNames[i];
 			//Debug.Log(i + ": " + driverNames[i]);
-		}
-		
-		if(CameraRotate.overtime == true){
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
-		}
-		if(CameraRotate.lap == CameraRotate.raceEnd){
-			tickerFlag.GetComponent<Image>().color = new Color(255,255,255);
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "FINAL LAP";
 		}
 	}
 
@@ -374,7 +359,15 @@ public class Ticker : MonoBehaviour
     // Update is called once per frame
     void Update(){
 		ticker.transform.Translate(-1.5f,0,0);
-		tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + raceLaps;
+		if(CameraRotate.overtime == true){
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
+		} else {
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
+		}
+		if(CameraRotate.lap == CameraRotate.raceEnd){
+			tickerFlag.GetComponent<Image>().color = new Color(255,255,255);
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "FINAL LAP";
+		}
 		if(carsTagged == false){
 			//Debug.Log("Cars haven't been tagged yet..");
 			populateTickerData();

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -64,30 +65,55 @@ public class StoreUI : MonoBehaviour
 			string carNum = weeklyPicks[i].ToString();
 			string carSeries = "cup20";
 			string carAlt = null;
+			int carAltInt = 0;
+			bool isAlt = false;
 			//if series is specified..
 			if((carNum.Length > 2)&&(carNum.Length <= 7)){
 				//Get series, parse remainder
 				carSeries = carNum.Substring(0, 5);
 				carNum = carNum.Remove(0, 5);
 			}
+			//This is an alt
 			if(carNum.Length > 7){
+				isAlt = true;
+				//Extract series from front
 				carSeries = carNum.Substring(0, 5);
-				carAlt = carNum.Remove(0, carNum.Length-1);
 				carNum = carNum.Remove(0, 5);
-				carNum = carNum.Remove(carNum.Length-1,-1);
+				Debug.Log("Series " + carSeries);
+				
+				//Extract alt from end
+				carAlt = carNum.Substring(carNum.Length-1);
+				carAltInt = int.Parse(carAlt);
+				carNum = carNum.Remove(carNum.Length-1);
+				
+				//Remove the remaining chars (livery/alt)
+				carNum = Regex.Replace(carNum, "[A-Za-z ]", "");
 			}
 			int carNumInt = int.Parse(carNum);
 			
 			tileSeries.text = DriverNames.getSeriesNiceName(carSeries);
-			tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
-			tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
-			
-			tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
+			if(isAlt == true){
+				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
+				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
+				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
+				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
+				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
+				
+				//Check we don't already have it..
+				if(PlayerPrefs.GetInt(carSeries + carNum + "Alt" + carAlt + "Unlocked") == 1){
+					tilePrice.transform.gameObject.SetActive(false);
+				}
+			} else {
+				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
+				tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
+				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
+				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
+			}
 			
 			tilePrice.GetComponent<StoreUIFunctions>().itemSeries = carSeries;
 			tilePrice.GetComponent<StoreUIFunctions>().itemNum = carNum;
-			
-			tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 		}
 	}
 	
@@ -147,31 +173,56 @@ public class StoreUI : MonoBehaviour
 			
 			string carSeries = "cup20";
 			string carAlt = null;
+			int carAltInt = 0;
+			bool isAlt = false;
 			//if series is specified..
 			if((carNum.Length > 2)&&(carNum.Length <= 7)){
 				//Get series, parse remainder
 				carSeries = carNum.Substring(0, 5);
 				carNum = carNum.Remove(0, 5);
 			}
+			
+			//This is an alt
 			if(carNum.Length > 7){
+				isAlt = true;
+				//Extract series from front
 				carSeries = carNum.Substring(0, 5);
-				carAlt = carNum.Remove(0, carNum.Length-1);
 				carNum = carNum.Remove(0, 5);
-				carNum = carNum.Remove(carNum.Length-1,-1);
+				Debug.Log("Series " + carSeries);
+				
+				//Extract alt from end
+				carAlt = carNum.Substring(carNum.Length-1);
+				carAltInt = int.Parse(carAlt);
+				carNum = carNum.Remove(carNum.Length-1);
+				Debug.Log("Alt " + carAlt);
+				
+				//Remove the remaining chars (livery/alt)
+				carNum = Regex.Replace(carNum, "[A-Za-z ]", "");
 			}
-			Debug.Log("Daily Random Pick: " + carSeries + " " + carNum);
 			int carNumInt = int.Parse(carNum);
 			
 			tileSeries.text = DriverNames.getSeriesNiceName(carSeries);
-			tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
-			tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
-			
-			tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
-			
+			if(isAlt == true){
+				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
+				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
+				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
+				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
+				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
+				
+				//Check we don't already have it..
+				if(PlayerPrefs.GetInt(carSeries + carNum + "Alt" + carAlt + "Unlocked") == 1){
+					tilePrice.transform.gameObject.SetActive(false);
+				}
+			} else {
+				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
+				tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
+				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
+				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
+			}
 			tilePrice.GetComponent<StoreUIFunctions>().itemSeries = carSeries;
 			tilePrice.GetComponent<StoreUIFunctions>().itemNum = carNum;
-			
-			tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 		}
 	}
 	
@@ -211,30 +262,58 @@ public class StoreUI : MonoBehaviour
 			string carNum = starterPicks[i].ToString();
 			string carSeries = "cup20";
 			string carAlt = null;
+			int carAltInt = 0;
+			bool isAlt = false;
 			//if series is specified..
 			if((carNum.Length > 2)&&(carNum.Length <= 7)){
 				//Get series, parse remainder
 				carSeries = carNum.Substring(0, 5);
 				carNum = carNum.Remove(0, 5);
 			}
+			
+			//This is an alt
 			if(carNum.Length > 7){
+				isAlt = true;
+				//Extract series from front
 				carSeries = carNum.Substring(0, 5);
-				carAlt = carNum.Remove(0, carNum.Length-1);
 				carNum = carNum.Remove(0, 5);
-				carNum = carNum.Remove(carNum.Length-1,-1);
+				Debug.Log("Series " + carSeries);
+				
+				//Extract alt from end
+				carAlt = carNum.Substring(carNum.Length-1);
+				Debug.Log("Alt " + carAlt);
+				carAltInt = int.Parse(carAlt);
+				carNum = carNum.Remove(carNum.Length-1);
+				Debug.Log("Alt " + carAlt);
+				
+				//Remove the remaining chars (livery/alt)
+				carNum = Regex.Replace(carNum, "[A-Za-z ]", "");
 			}
 			int carNumInt = int.Parse(carNum);
 			
 			tileSeries.text = DriverNames.getSeriesNiceName(carSeries);
-			tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
-			tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
-			
-			tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
+			if(isAlt == true){
+				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
+				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
+				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
+				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
+				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
+				
+				//Check we don't already have it..
+				if(PlayerPrefs.GetInt(carSeries + carNum + "Alt" + carAlt + "Unlocked") == 1){
+					tilePrice.transform.gameObject.SetActive(false);
+				}
+			} else {
+				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
+				tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
+				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
+				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
+			}
 			
 			tilePrice.GetComponent<StoreUIFunctions>().itemSeries = carSeries;
 			tilePrice.GetComponent<StoreUIFunctions>().itemNum = carNum;
-			
-			tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 		}
 	}
 	

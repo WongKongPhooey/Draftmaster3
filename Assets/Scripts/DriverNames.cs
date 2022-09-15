@@ -193,6 +193,7 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	public static string getSeriesNiceName(string seriesPrefix){
+		carsetNames();
 		return allCarsetNames[seriesPrefix];
 	}
 	

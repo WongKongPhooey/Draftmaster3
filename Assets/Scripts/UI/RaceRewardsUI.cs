@@ -78,6 +78,7 @@ public class RaceRewardsUI : MonoBehaviour
 		}
 		Debug.Log("Series Prize: " + seriesPrize);
 		finishPos = PlayerPrefs.GetInt("FinishPos");
+		Debug.Log("Finished: " + finishPos);
 		rewardMultiplier = 1;
 		
 		rewardsTitle = GameObject.Find("Title");

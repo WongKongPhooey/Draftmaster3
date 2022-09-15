@@ -1046,7 +1046,7 @@ public class Movement : MonoBehaviour {
 			isWrecking = true;
 		}
 		if(CameraRotate.cautionOut == false){
-			CameraRotate.cautionOut = true;
+			CameraRotate.throwCaution();
 		}
 		sparksCooldown = 99999;
 		//Debug.Log(this.name + " is wrecking");
@@ -1083,7 +1083,7 @@ public class Movement : MonoBehaviour {
 		isWrecking = false;
 		wreckOver = true;
 		//Debug.Log("WRECK OVER");
-		this.GetComponent<Rigidbody>().mass = 25;
+		this.GetComponent<Rigidbody>().mass = 5;
 		this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);

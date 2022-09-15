@@ -88,7 +88,7 @@ public class RaceHUD : MonoBehaviour {
 			fontScale = FontScale.scale();
 			SceneManager.LoadScene("MainMenu");
 		}
-
+		
 		GUI.skin = eightBitSkin;
 		GUI.skin.label.fontSize = 80 / 2;
 		GUI.skin.button.fontSize = 120 / 2;
@@ -102,36 +102,6 @@ public class RaceHUD : MonoBehaviour {
 				raceCam.GetComponent<AudioListener>().enabled = false;
 				PlayerPrefs.SetInt("Volume",0);
 			}
-		}
-		if (GUI.Button(new Rect(10, 10, widthblock, widthblock), "||")){
-			if(raceOver == false){
-				gamePaused = true;
-				Time.timeScale = 0.0f;
-				this.gameObject.GetComponent<AudioListener>().enabled = false;
-				PlayerPrefs.SetInt("Volume",0);
-			}
-		}
-
-		if(gamePaused == true){
-			GUI.skin = redGUI;
-			GUI.skin.label.fontSize = 80 / fontScale;
-			GUI.skin.button.fontSize = 120 / fontScale;
-			if (GUI.Button(new Rect(widthblock * 3, heightblock * 8, widthblock * 6, heightblock * 4), "Resume")){
-				gamePaused = false;
-				Time.timeScale = 1.0f;
-				this.gameObject.GetComponent<AudioListener>().enabled = true;
-				PlayerPrefs.SetInt("Volume",1);
-			}
-			if (GUI.Button(new Rect(widthblock * 11, heightblock * 8, widthblock * 6, heightblock * 4), "Quit")){
-				SceneManager.LoadScene("MainMenu");
-				gamePaused = false;
-				Time.timeScale = 1.0f;
-				this.gameObject.GetComponent<AudioListener>().enabled = true;
-				PlayerPrefs.SetInt("Volume",1);
-			}
-			GUI.skin = eightBitSkin;
-			GUI.skin.label.fontSize = 80 / fontScale;
-			GUI.skin.button.fontSize = 120 / fontScale;
 		}*/
 
 		if((raceOver == false)&&(caution == false)){
@@ -157,8 +127,10 @@ public class RaceHUD : MonoBehaviour {
 				SceneManager.LoadScene("Menus/RaceResults");
 			}
 		}
-		
-		GUI.skin = eightBitSkin;
+	}
+}
+
+		/* GUI.skin = eightBitSkin;
 
 		if(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer"){
 			GUI.skin.label.fontSize = 56 / fontScale;
@@ -178,51 +150,6 @@ public class RaceHUD : MonoBehaviour {
 			}
 			GUI.Label(new Rect(10,(heightblock * 2) + 10, widthblock * 7, heightblock * 3), "Pushing The 2: " + Movement.draftPercent.ToString("F0") + "%");
 			GUI.skin.label.fontSize = 80 / fontScale;
-		}
-		
-		if(CameraRotate.lap == 0){
-			GUI.skin.label.normal.textColor = Color.yellow;
-			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.skin.label.fontSize = 120 / 2;
-			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
-			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GET READY");
-			GUI.skin.label.normal.textColor = Color.yellow;
-			GUI.Label(new Rect(widthblock * 5, heightblock * 3, widthblock * 10, heightblock * 4), "GET READY");
-			GUI.skin.label.fontSize = 80 / fontScale;
-			GUI.skin.label.normal.textColor = Color.yellow;
-		}
-
-		if(goingGreen == true){
-			GUI.skin.label.normal.textColor = Color.yellow;
-			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.skin.label.fontSize = 120 / fontScale;
-			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.skin.label.normal.textColor = Color.yellow;
-			GUI.Label(new Rect(widthblock * 5, heightblock * 3, widthblock * 10, heightblock * 4), "GOING GREEN");
-			GUI.skin.label.fontSize = 80 / fontScale;
-			GUI.skin.label.normal.textColor = Color.yellow;
-		}
-		if(caution == false){
-			if(((CameraRotate.lap == 1)||(CameraRotate.lap == CameraRotate.restartLap))&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter >= PlayerPrefs.GetInt("StartLine"))){
-				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.skin.label.fontSize = 120 / fontScale;
-				GUI.skin.label.normal.textColor = Color.black;
-				GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 3) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.skin.label.normal.textColor = Color.green;
-				GUI.Label(new Rect(widthblock * 5, heightblock * 3, widthblock * 10, heightblock * 4), "GO! GO! GO!");
-				GUI.skin.label.fontSize = 80 / fontScale;
-				GUI.skin.label.normal.textColor = Color.yellow;
-			}
 		}
 
 		if(PlayerPrefs.GetInt("TutorialActive") == 1){
@@ -310,20 +237,6 @@ public class RaceHUD : MonoBehaviour {
 				}
 			}
 		}
-		
-		if(PlayerPrefs.GetInt("ActiveCaution") == 1){
-			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-			GUI.skin.label.fontSize = 120 / fontScale;
-			GUI.skin.label.normal.textColor = Color.black;
-			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 4) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.Label(new Rect((widthblock * 5) + (8 / (fontScale * 2)),(heightblock * 4) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 4) + (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.Label(new Rect((widthblock * 5) - (8 / (fontScale * 2)),(heightblock * 4) - (8 / (fontScale * 2)), widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.skin.label.normal.textColor = Color.yellow;
-			GUI.Label(new Rect(widthblock * 5, heightblock * 4, widthblock * 10, heightblock * 4), "CAUTION\nDEBRIS!");
-			GUI.skin.label.fontSize = 80 / fontScale;
-			GUI.skin.label.normal.textColor = Color.yellow;
-		}
 
 		if((CameraRotate.lap == PlayerPrefs.GetInt("RaceLaps"))&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter > (PlayerPrefs.GetInt("StartLine")+1))&&(raceOver == false)){
 			GUI.skin.label.alignment = TextAnchor.MiddleCenter;
@@ -358,4 +271,4 @@ public class RaceHUD : MonoBehaviour {
 		GUI.skin.label.normal.textColor = color;
 		GUI.Label(new Rect(posX, posY, sizeW, sizeH), text);
 	} 
-}
+}*/

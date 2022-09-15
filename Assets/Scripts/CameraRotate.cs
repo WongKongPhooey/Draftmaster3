@@ -131,18 +131,24 @@ public class CameraRotate : MonoBehaviour {
 
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 
-		if(PlayerPrefs.GetInt("ActiveCaution") == 1){
-			lap = PlayerPrefs.GetInt("StartingLap");
+		if(PlayerPrefs.GetInt("SpawnFromCaution") == 1){
+			Debug.Log("Caution Ending");
+			lap = PlayerPrefs.GetInt("CautionLap") + 1;
 			raceEnd = PlayerPrefs.GetInt("RaceLaps");
-			if(lap >= raceEnd){
+			if(lap >= (raceEnd - 1)){
 				//Unlimited Overtime
+				Debug.Log("Overtime");
 				raceEnd = lap+2;
 				PlayerPrefs.SetInt("RaceLaps", raceEnd);
 				overtime = true;
+			} else {
+				Debug.Log("Not Overtime");
 			}
 			RaceHUD.goingGreen = true;
-			restartLap = lap + 1;
-			PlayerPrefs.SetInt("ActiveCaution",0);
+			PlayerPrefs.DeleteKey("SpawnFromCaution");
+			PlayerPrefs.DeleteKey("CautionLap");
+		} else {
+			Debug.Log("No Active Caution");
 		}
 
 		audioOn = PlayerPrefs.GetInt("AudioOn");
@@ -336,6 +342,30 @@ public class CameraRotate : MonoBehaviour {
 			if(apron.name != "FixedApron"){
 				apron.GetComponent<Renderer>().enabled = false;
 			}
+		}
+	}
+	
+	public static void throwCaution(){
+		//No caution on the last lap
+		if(lap < raceEnd){
+			cautionOut = true;
+		}
+	}
+	
+	public void pauseGame(){
+		if(RaceHUD.raceOver == false){
+			RaceHUD.gamePaused = true;
+			Time.timeScale = 0.0f;
+			TDCamera.gameObject.GetComponent<AudioListener>().enabled = false;
+			PlayerPrefs.SetInt("Volume",0);
+		}
+	}
+	public void unpauseGame(){
+		if(RaceHUD.raceOver == false){
+			RaceHUD.gamePaused = false;
+			Time.timeScale = 1.0f;
+			TDCamera.gameObject.GetComponent<AudioListener>().enabled = true;
+			PlayerPrefs.SetInt("Volume",1);
 		}
 	}
 	

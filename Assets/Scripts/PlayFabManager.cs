@@ -177,7 +177,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			
 			//Fake store values for testing
-			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155";
+			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
@@ -239,6 +239,16 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetString("TargetVersion", result.Data["TargetVersion"]);
 		} else {
 			PlayerPrefs.SetString("TargetVersion", Application.version);
+		}
+		
+		if(result.Data.ContainsKey("GlobalGift") == true){
+			if((result.Data["GlobalGift"] != "")
+			&&(result.Data["GlobalGift"] != PlayerPrefs.GetString("GlobalGift"))){
+				PlayerPrefs.SetString("GlobalGift", result.Data["GlobalGift"]);
+				Debug.Log("Received Global Gift!");
+			} else {
+				PlayerPrefs.DeleteKey("InForm");
+			}
 		}
 		
 		//In Form Driver
@@ -357,7 +367,8 @@ public class PlayFabManager : MonoBehaviour
 
 			if(result.Data.ContainsKey("RewardCar")){
 				//Example: cup2212
-				string rewardCar = result.Data["RewardCar"].Value;
+				receiveCarGift(result.Data["RewardCar"].Value);
+				/*string rewardCar = result.Data["RewardCar"].Value;
 				string rewardCarSeries = rewardCar.Substring(0,5);
 				Debug.Log(rewardCar);
 				int rewardCarNum = int.Parse(rewardCar.Substring(5));
@@ -375,7 +386,7 @@ public class PlayFabManager : MonoBehaviour
 					rewardCarImg = rewardCarSeries + "livery" + rewardCarNum;
 					//MainMenuGUI.newGiftAlert = true;
 					emptyPlayerData("RewardCar");
-				}
+				}*/
 			}
 			if(result.Data.ContainsKey("RewardAlt")){
 				string rewardAlt = result.Data["RewardAlt"].Value;
@@ -398,6 +409,29 @@ public class PlayFabManager : MonoBehaviour
 			AlertManager.showPopup("Rewards",rewardMessage,rewardCarImg);
 		} else {
 			Debug.Log("No player data found");
+		}
+	}
+	
+	static void receiveCarGift(string car){
+		//Example: cup2212
+		string rewardCar = car;
+		string rewardCarSeries = rewardCar.Substring(0,5);
+		Debug.Log(rewardCar);
+		int rewardCarNum = int.Parse(rewardCar.Substring(5));
+		if(rewardCar != ""){
+			Debug.Log("Rewarded Car #" + rewardCarNum);
+			int carClass = PlayerPrefs.GetInt(rewardCarSeries + rewardCarNum + "Class");
+			if(carClass == 0){
+				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
+				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", DriverNames.getRarity(rewardCarSeries,rewardCarNum));
+			} else {
+				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
+				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", carClass+1);
+			}
+			rewardMessage += "You've been gifted a new " + DriverNames.getSeriesNiceName(rewardCarSeries) + " " + DriverNames.getName(rewardCarSeries,rewardCarNum) + " car!\n";
+			rewardCarImg = rewardCarSeries + "livery" + rewardCarNum;
+			//MainMenuGUI.newGiftAlert = true;
+			emptyPlayerData("RewardCar");
 		}
 	}
 	
