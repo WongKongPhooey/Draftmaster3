@@ -13,10 +13,20 @@ public class ChampionshipHubUI : MonoBehaviour
 	
 	public GameObject hubTitle;
 	public GameObject hubRound;
+	public GameObject nextTrackLabel;
 	public GameObject hubTrackImage;
+	
 	public GameObject hubTrackName;
+	public static string[] tracksArray;
+	
+	public GameObject hubCarImage;
 	
 	public GameObject nextRound;
+	
+	public GameObject goRaceBtn;
+	public GameObject endSeasonBtn;
+
+	public bool championshipOver;
 	
 	public static string seriesPrefix;
 	public int carNumber;
@@ -27,9 +37,12 @@ public class ChampionshipHubUI : MonoBehaviour
 	string currentSeriesName;
 	string currentSubseriesName;
 	string currentTrack;
+	string championshipTracklist;
 	int championshipRound;
 	int championshipLength;
 	static Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
+	
+	public int championshipPosition;
 	
 	public static string circuitChoice;
 	
@@ -39,11 +52,15 @@ public class ChampionshipHubUI : MonoBehaviour
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		
 		championshipSubseries = PlayerPrefs.GetString("ChampionshipSubseries");
+		PlayerPrefs.SetString("CurrentSeriesIndex",championshipSubseries);
 		currentSeries = int.Parse(championshipSubseries.Substring(0,1));
 		currentSubseries = int.Parse(championshipSubseries.Substring(championshipSubseries.Length-1));
+		championshipTracklist = PlayerPrefs.GetString("ChampionshipTracklist");
 		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 		championshipLength = PlayerPrefs.GetInt("ChampionshipLength");
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
+		
+		PlayerPrefs.SetString("RaceType","Championship");
         
 		SeriesData.loadSeries();
 		loadPoints();
@@ -53,7 +70,37 @@ public class ChampionshipHubUI : MonoBehaviour
     
 		nextRound = GameObject.Find("NextRound");
 		nextRound.GetComponent<TMPro.TMP_Text>().text = "Round " + (championshipRound + 1) + "/" + championshipLength;
-    
+		
+		championshipTracklist = PlayerPrefs.GetString("ChampionshipTrackList");
+		Debug.Log(championshipTracklist);
+		tracksArray = championshipTracklist.Split(',');
+		
+		hubCarImage = GameObject.Find("NextCar");
+		hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(PlayerPrefs.GetString("ChampionshipCarTexture"));
+		
+		nextTrackLabel = GameObject.Find("NextTrackLabel");
+		
+		if((championshipRound + 1) > championshipLength){
+			hubTitle.GetComponent<TMPro.TMP_Text>().text = "Championship Finished";
+			nextRound.GetComponent<TMPro.TMP_Text>().text = "Championship Over";
+			nextTrackLabel.GetComponent<TMPro.TMP_Text>().text = MiscScripts.PositionPostfix(championshipPosition) + " Place";
+			championshipOver = true;
+			championshipRound = 0;
+		} else {
+			nextTrackLabel.GetComponent<TMPro.TMP_Text>().text = TrackData.getTrackName(int.Parse(tracksArray[championshipRound]));
+		}
+		
+		hubTrackImage = GameObject.Find("NextTrack");
+		hubTrackImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(TrackData.getTrackImage(tracksArray[championshipRound]));
+
+		if(championshipOver == true){
+			goRaceBtn = GameObject.Find("GoRace");
+			goRaceBtn.SetActive(false);
+			PlayerPrefs.SetInt("PlayerFinishPosition", championshipPosition);
+		} else {
+			endSeasonBtn = GameObject.Find("EndSeason");
+			endSeasonBtn.SetActive(false);
+		}
 	}
 
 	public void loadPoints(){
@@ -107,9 +154,9 @@ public class ChampionshipHubUI : MonoBehaviour
 			RawImage champManu = standingsInst.transform.GetChild(3).GetComponent<RawImage>();
 			TMPro.TMP_Text champPoints = standingsInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 			
-			//if(pointsRow.Key == carNumber){
-			//	GUI.skin.label.normal.textColor = Color.red;
-			//}
+			if(pointsRow.Key == carNumber){
+				championshipPosition = pointsInd+1;
+			}
 			
 			champPos.text = (pointsInd+1).ToString();
 			champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);

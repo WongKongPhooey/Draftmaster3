@@ -85,7 +85,7 @@ public class RaceRewards : MonoBehaviour
 			ListPrizeOptions("");
 		}
 		Debug.Log("Series Prize: " + seriesPrize);
-		finishPos = PlayerPrefs.GetInt("FinishPos");
+		finishPos = PlayerPrefs.GetInt("PlayerFinishPosition");
 		rewardMultiplier = 1;
 		
 		championshipReward = false;

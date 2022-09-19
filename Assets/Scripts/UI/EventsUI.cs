@@ -139,16 +139,19 @@ public class EventsUI : MonoBehaviour
 			GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
 			tileInst.GetComponent<EventUIFunctions>().subMenuId = subMenuId;
 			tileInst.GetComponent<EventUIFunctions>().subEventId = i;
+			tileInst.GetComponent<EventUIFunctions>().rewardCollected = false;
 			
 			eventName.text = EventData.offlineEventChapter[subMenuId,i];
 			eventDesc.text = EventData.eventChapterDescriptions[subMenuId,i];
 			eventImage.texture = Resources.Load<Texture2D>(EventData.offlineChapterImage[subMenuId,i]);
 			
 			//No dupe rewards allowed in progression events
+			
 			if(EventData.offlineEventType[subMenuId] == "Progression"){
 				if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT0") == 1){
 					eventRewardsBtn.SetActive(false);
 					rewardCollected.SetActive(true);
+					tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
 				//} else {
 					//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT0"));
 				}
@@ -175,7 +178,7 @@ public class EventsUI : MonoBehaviour
 		PlayerPrefs.SetInt("SubseriesDailyPlays",999);
 		PlayerPrefs.SetInt("SubseriesMinClass", EventData.offlineMinClass[subMenuId,subEventId]);
 		PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[subMenuId,subEventId]);
-		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue());
+		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue(subMenuId,subEventId));
 		PlayerPrefs.SetInt("AIDifficulty", EventData.offlineAILevel[subMenuId,subEventId]);
 		PlayerPrefs.SetInt("SeriesFuel",5);
 		PlayerPrefs.SetString("SeriesPrize",EventData.offlinePrizes[subMenuId,subEventId]);
@@ -200,27 +203,52 @@ public class EventsUI : MonoBehaviour
 		SceneManager.LoadScene("Menus/Garage");
 	}
 	
-	public string getRestrictionValue(){
+	public string getEntryReqs(int subMenu, int subEvent){
 		string restrictionValue = "";
-		restrictionValue += "Driver Class: " + classAbbr(EventData.offlineMinClass[subMenuId,subEventId]) + "+ \n";
-		switch(EventData.offlineMinType[subMenuId,subEventId]){
+		restrictionValue += "Driver Class: " + classAbbr(EventData.offlineMinClass[subMenu,subEvent]) + "+ \n";
+		switch(EventData.offlineMinType[subMenu,subEvent]){
 			case "Team":
-				restrictionValue += "Team: " + EventData.offlineMinTeam[subMenuId,subEventId];
+				restrictionValue += "Team: " + EventData.offlineMinTeam[subMenu,subEvent];
 			break;
 			case "Manufacturer":
-				restrictionValue += "Manufacturer: " + EventData.offlineMinManu[subMenuId,subEventId];
+				restrictionValue += "Manufacturer: " + EventData.offlineMinManu[subMenu,subEvent];
 			break;
 			case "Car":
-				restrictionValue += "Exact Car: #" + EventData.offlineExactCar[subMenuId,subEventId];
+				restrictionValue += "Exact Car: #" + EventData.offlineExactCar[subMenu,subEvent];
 			break;
 			case "Type":
-				restrictionValue += "Driver Type: " + EventData.offlineMinDriverType[subMenuId,subEventId];
+				restrictionValue += "Driver Type: " + EventData.offlineMinDriverType[subMenu,subEvent];
 			break;
 			case "Rarity":
-				restrictionValue += "Driver Rarity: " + EventData.offlineMinRarity[subMenuId,subEventId];
+				restrictionValue += "Driver Rarity: " + EventData.offlineMinRarity[subMenu,subEvent];
 			break;
 			default:
 				restrictionValue += "No Entry Requirements";
+			break;
+		}
+		return restrictionValue;
+	}
+
+	public string getRestrictionValue(int subMenu, int subEvent){
+		string restrictionValue = "";
+		switch(EventData.offlineMinType[subMenu,subEvent]){
+			case "Team":
+				restrictionValue = EventData.offlineMinTeam[subMenu,subEvent];
+			break;
+			case "Manufacturer":
+				restrictionValue = EventData.offlineMinManu[subMenu,subEvent];
+			break;
+			case "Car":
+				restrictionValue = EventData.offlineExactCar[subMenu,subEvent].ToString();
+			break;
+			case "Type":
+				restrictionValue = EventData.offlineMinDriverType[subMenu,subEvent];
+			break;
+			case "Rarity":
+				restrictionValue = EventData.offlineMinRarity[subMenu,subEvent].ToString();
+			break;
+			default:
+				restrictionValue = "";
 			break;
 		}
 		return restrictionValue;
@@ -238,7 +266,7 @@ public class EventsUI : MonoBehaviour
 	public void showEntryReqsPopup(int subMenu, int subEvent){
 		entryReqsPopup.SetActive(true);
 		reqListText = GameObject.Find("RequirementsList");
-		reqListText.GetComponent<TMPro.TMP_Text>().text = getRestrictionValue();
+		reqListText.GetComponent<TMPro.TMP_Text>().text = getEntryReqs(subMenu,subEvent);
 		//reqListText.GetComponent<TMPro.TMP_Text>().text = "Test";
 	}
 

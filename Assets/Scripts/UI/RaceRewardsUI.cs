@@ -76,8 +76,8 @@ public class RaceRewardsUI : MonoBehaviour
 		} else {
 			ListPrizeOptions("");
 		}
-		Debug.Log("Series Prize: " + seriesPrize);
-		finishPos = PlayerPrefs.GetInt("FinishPos");
+		//Debug.Log("Series Prize: " + seriesPrize);
+		finishPos = PlayerPrefs.GetInt("PlayerFinishPosition");
 		Debug.Log("Finished: " + finishPos);
 		rewardMultiplier = 1;
 		
@@ -92,13 +92,11 @@ public class RaceRewardsUI : MonoBehaviour
 		championshipFinish = 40;
 		if(PlayerPrefs.GetInt("ChampionshipReward") == 1){
 			championshipReward = true;
-			championshipFinish = getChampionshipPosition();
 			seriesLength = PlayerPrefs.GetInt("ChampionshipLength");
 			PlayerPrefs.SetInt("ChampionshipReward", 0);
 		}
 		
 		if(championshipReward == true){
-			finishPos = championshipFinish;
 			rewardMultiplier = seriesLength;
 			//Debug.Log("Multiplier Set as " + rewardMultiplier);
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
@@ -122,6 +120,18 @@ public class RaceRewardsUI : MonoBehaviour
 						//Populate event reward pool
 						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 					}
+				} else {
+					carReward = "";
+				}
+				break;
+			case "Championship":
+				//If top 10 finish..
+				if(finishPos < 15){
+					//e.g. 10 race season / finished 5th = 2x
+					//e.g. 3 race season / finished 10th = 1x
+					//e.g. 20 race season / finished 10th = 2x
+					rewardMultiplier = Mathf.CeilToInt(rewardMultiplier / finishPos);
+					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 				} else {
 					carReward = "";
 				}
@@ -170,7 +180,7 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		//Update UI
 		if(championshipReward == true){
-			rewardsTitle.GetComponent<TMPro.TMP_Text>().text = "Championship Rewards - " + finishPos + MiscScripts.PositionPostfix(finishPos) + " Place";
+			rewardsTitle.GetComponent<TMPro.TMP_Text>().text = "Championship Rewards - " + MiscScripts.PositionPostfix(finishPos) + " Place";
 		} else {
 			rewardsTitle.GetComponent<TMPro.TMP_Text>().text = "Race Rewards";
 		}
@@ -211,7 +221,6 @@ public class RaceRewardsUI : MonoBehaviour
 			//Likely has a big fixed prize set e.g. 35 car parts
 			PlayerPrefs.SetInt(carId + "Gears", carGears + int.Parse(setPrize));
 			
-			//Todo: make this take any seriesPrefix
 			carReward = "(" + DriverNames.getSeriesNiceName(seriesPrefix) + ") " + DriverNames.getName(seriesPrefix, carNum) + " +" + int.Parse(setPrize);			
 			carCurrentGears = carGears + int.Parse(setPrize);
 		} else {

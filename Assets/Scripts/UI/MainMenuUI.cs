@@ -41,6 +41,8 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject weekDayLabel;
 	public GameObject moneyLabel;
 	
+	public GameObject loginBtnLabel;
+	
 	public GameObject alertPopup;
 	public GameObject popupFrame;
 	
@@ -101,8 +103,13 @@ public class MainMenuUI : MonoBehaviour {
 		moneyLabel = GameObject.Find("MoneyLabel");
 		moneyLabel.GetComponent<TMPro.TMP_Text>().text = money.ToString();
 		
+		loginBtnLabel = GameObject.Find("LoginButtonLabel");
+		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
 			PlayFabManager.LoginFromPrefs();
+			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("PlayerUsername");
+		} else {
+			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = "Login";
 		}
 		
 		//Reset the game to imitate new users
@@ -118,6 +125,7 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.DeleteKey("FixedSeries");
 		PlayerPrefs.DeleteKey("CustomCar");
 		PlayerPrefs.DeleteKey("CustomField");
+		PlayerPrefs.DeleteKey("EventReplay");
 		PlayerPrefs.SetInt("TutorialActive",0);
 		PlayerPrefs.SetInt("CautionHasBeen",0);
 		PlayerPrefs.SetInt("ExpAdded",0);

@@ -41,7 +41,7 @@ public class MiscScripts : MonoBehaviour {
 			postfix = "th";
 			break;
 		}
-		return postfix;
+		return position.ToString() + postfix;
 	}
 
 	public static void CheatCodes(string code){

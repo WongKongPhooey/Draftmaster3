@@ -62,6 +62,12 @@ public class TrackData : MonoBehaviour
 		//Debug.Log("Track Codename is " + trackCodeNames[trackId]);
 		return trackCodeNames[trackId];
 	}
+	
+	public static string getTrackName(int trackId){
+		loadTrackNames();
+		//Debug.Log("Track Codename is " + trackCodeNames[trackId]);
+		return trackNames[trackId];
+	}
 
 	public void loadTrackData(string trackCodeName){
 		//Get the method information using the method info class
@@ -140,6 +146,87 @@ public class TrackData : MonoBehaviour
 		trackCodeNames[27] = "Nazareth";
 		trackCodeNames[28] = "Iowa";
 		trackCodeNames[29] = "Nashville";
+	}
+	
+	public static string getTrackImage(string trackId){
+		string trackImageName = "";
+		switch(trackId){
+			case "1":
+				trackImageName = "SuperTriOval";
+				break;
+			case "2":
+				trackImageName = "AngledTriOval";
+				break;
+			case "3":
+				trackImageName = "TriOval";
+				break;
+			case "4":
+				trackImageName = "Phoenix";
+				break;
+			case "5":
+				trackImageName = "SuperTriOval";
+				break;
+			case "6":
+				trackImageName = "LongOval";
+				break;
+			case "7":
+				trackImageName = "AngledTriOval";
+				break;
+			case "8":
+				trackImageName = "TinyOval";
+				break;
+			case "9":
+				trackImageName = "TriOval";
+				break;
+			case "10":
+				trackImageName = "Talladega";
+				break;
+			case "11":
+				trackImageName = "SmallOval";
+				break;
+			case "12":
+				trackImageName = "TriOval";
+				break;
+			case "13":
+				trackImageName = "AngledTriOval";
+				break;
+			case "14":
+				trackImageName = "LongPond";
+				break;
+			case "15":
+				trackImageName = "SuperTriOval";
+				break;
+			case "16":
+				trackImageName = "TriOval";
+				break;
+			case "17":
+				trackImageName = "TriOval";
+				break;
+			case "18":
+				trackImageName = "LongOval";
+				break;
+			case "19":
+				trackImageName = "Darlington";
+				break;
+			case "20":
+				trackImageName = "Indianapolis";
+				break;
+			case "21":
+				trackImageName = "BigOval";
+				break;
+			case "22":
+				trackImageName = "Madison";
+				break;
+			case "23":
+				trackImageName = "TriOval";
+				break;
+			case "30":
+				trackImageName = "TinyOval";
+				break;
+			default:
+				break;
+		}
+		return trackImageName;
 	}
 	
 	public static void Talladega(){

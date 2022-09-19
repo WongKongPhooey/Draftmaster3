@@ -131,21 +131,19 @@ public class CameraRotate : MonoBehaviour {
 
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 
-		if(PlayerPrefs.GetInt("SpawnFromCaution") == 1){
-			Debug.Log("Caution Ending");
+		if(PlayerPrefs.HasKey("SpawnFromCaution")){
+			//Debug.Log("Caution Ending");
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
+			Debug.Log("Restarting on lap " + lap);
 			raceEnd = PlayerPrefs.GetInt("RaceLaps");
 			if(lap >= (raceEnd - 1)){
 				//Unlimited Overtime
-				Debug.Log("Overtime");
+				//Debug.Log("Overtime");
 				raceEnd = lap+2;
 				PlayerPrefs.SetInt("RaceLaps", raceEnd);
+				Debug.Log("Restarting Lap " + lap + " of " + raceEnd);
 				overtime = true;
-			} else {
-				Debug.Log("Not Overtime");
 			}
-			RaceHUD.goingGreen = true;
-			PlayerPrefs.DeleteKey("SpawnFromCaution");
 			PlayerPrefs.DeleteKey("CautionLap");
 		} else {
 			Debug.Log("No Active Caution");
@@ -166,6 +164,10 @@ public class CameraRotate : MonoBehaviour {
 	void FixedUpdate () {
 		
 		if(Movement.wreckOver == true){
+			//If last lap, no restart, it's over!
+			if(lap == raceEnd){
+				endRace();
+			}
 			return;
 		}
 		
@@ -213,38 +215,7 @@ public class CameraRotate : MonoBehaviour {
 			
 			//Race End
 			if(lap == (raceEnd + 1)){
-				lap--;
-				Time.timeScale = 0.0f;
-				finishLine.GetComponent<Renderer>().enabled = true;
-				if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
-					int rand = Random.Range(1,100);
-					//Lucky day
-					if((rand > 26)&&(rand < 28)){
-						tropicono.GetComponent<Renderer>().enabled = true;
-					}
-				}
-				carEngine.volume = 0;
-				crowdNoise.volume = 0;
-				RaceHUD.raceOver = true;
-				Ticker.checkFinishPositions();
-				PlayerPrefs.SetInt("ExpAdded",0);
-				if(PlayerPrefs.HasKey("FastestLap" + circuit)){
-					currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-					lapRecord -= trackSpeedOffset;
-					//Debug.Log(lapRecord);
-					lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
-					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-					//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
-					PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
-					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-						PlayFabManager.CheckLiveTimeTrial();
-						//Double checked
-						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-							PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrial","");
-						}
-					}
-					
-				}
+				endRace();
 			}
 		}
 
@@ -345,10 +316,49 @@ public class CameraRotate : MonoBehaviour {
 		}
 	}
 	
+	public void endRace(){
+		if(lap > raceEnd){
+			lap--;
+		}
+		Time.timeScale = 0.0f;
+		finishLine.GetComponent<Renderer>().enabled = true;
+		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
+			int rand = Random.Range(1,100);
+			//Lucky day
+			if((rand > 26)&&(rand < 28)){
+				tropicono.GetComponent<Renderer>().enabled = true;
+			}
+		}
+		carEngine.volume = 0;
+		crowdNoise.volume = 0;
+		RaceHUD.raceOver = true;
+		Ticker.checkFinishPositions();
+		PlayerPrefs.SetInt("ExpAdded",0);
+		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
+			lapRecord -= trackSpeedOffset;
+			//Debug.Log(lapRecord);
+			lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
+			PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
+			//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
+			PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
+			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+				PlayFabManager.CheckLiveTimeTrial();
+				//Double checked
+				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+					PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrial","");
+				}
+			}
+			
+		}
+	}
+	
 	public static void throwCaution(){
 		//No caution on the last lap
 		if(lap < raceEnd){
 			cautionOut = true;
+			PlayerPrefs.SetInt("SpawnFromCaution",1);
+			PlayerPrefs.SetInt("CautionLap", lap);
 		}
 	}
 	

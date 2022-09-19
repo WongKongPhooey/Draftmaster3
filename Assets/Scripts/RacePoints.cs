@@ -6,7 +6,7 @@ public class RacePoints : MonoBehaviour {
 	public static bool championshipMode;
 	public static bool challengeMode;
 
-	public static int[] placePoints = new int[43];
+	public static int[] placePoints = new int[50];
 	
 	// Use this for initialization
 	void Awake(){
@@ -57,6 +57,13 @@ public class RacePoints : MonoBehaviour {
 		placePoints[40] = 0;
 		placePoints[41] = 0;
 		placePoints[42] = 0;
+		placePoints[43] = 0;
+		placePoints[44] = 0;
+		placePoints[45] = 0;
+		placePoints[46] = 0;
+		placePoints[47] = 0;
+		placePoints[48] = 0;
+		placePoints[49] = 0;
 	}
 	
 	static void setLegacyPoints(){
@@ -103,5 +110,12 @@ public class RacePoints : MonoBehaviour {
 		placePoints[40] = 40;
 		placePoints[41] = 37;
 		placePoints[42] = 34;
+		placePoints[43] = 31;
+		placePoints[44] = 28;
+		placePoints[45] = 25;
+		placePoints[46] = 22;
+		placePoints[47] = 19;
+		placePoints[48] = 16;
+		placePoints[49] = 13;
 	}
 }

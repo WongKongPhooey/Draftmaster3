@@ -45,6 +45,7 @@ public class AIMovement : MonoBehaviour
 	float windForce;
 	float forceSmoothing;
 	public int wreckProbability;
+	public bool hitByPlayer;
 	
 	public static int maxTandem;
 	public static float coolOffSpace;
@@ -113,7 +114,8 @@ public class AIMovement : MonoBehaviour
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
 		wreckOver = false;
-		wreckProbability = 4;
+		wreckProbability = 2;
+		hitByPlayer = false;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -296,7 +298,7 @@ public class AIMovement : MonoBehaviour
 			if(dooredStrength > 95){
 				dooredStrength = 95;
 			}
-			wreckProbability = 8;
+			wreckProbability = 3;
 		}
 
 		maxDraftDistance = 9 + carRarity;
@@ -305,7 +307,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if (DriverNames.getType(seriesPrefix,carNum) == "Rookie"){
-			wreckProbability = 8;
+			wreckProbability = 4;
 		}
 
         movingLane = false;
@@ -329,6 +331,7 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 			
+			//Delicate mod - Everybody wrecks
 			if((isWrecking == false)&&(Movement.delicateMod == true)){
 				startWreck();
 			}
@@ -380,6 +383,7 @@ public class AIMovement : MonoBehaviour
 			} else {
 				int dooredStrength = 25;
 				if(carHit.gameObject.tag == "Player"){
+					hitByPlayer = true;
 					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
 				} else {
 					if(carHit.gameObject.tag == "AICar"){
@@ -484,6 +488,14 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log(this.name + " Check");
 
 		lap = CameraRotate.lap;
+		
+		if(CameraRotate.overtime == true){
+			wreckProbability = 1;
+			
+			if(CameraRotate.lap == CameraRotate.raceEnd){
+				wreckProbability = 5;
+			}
+		}
 		
         laneInv = 4 - lane;
 		
@@ -694,7 +706,9 @@ public class AIMovement : MonoBehaviour
 				backingOut = true;
 				
 				float rng = Random.Range(0,100);
-				if((wreckProbability >= rng)||(Movement.delicateMod == true)){
+				if((wreckProbability >= rng)||
+				(Movement.delicateMod == true)||
+				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
 					startWreck();
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 				}
@@ -1116,9 +1130,8 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public void setLaneRest(){
-		if(lap >= 3){
+		if(lap >= 4){
 			laneRest = Random.Range(0, 1);
-			//Debug.Log("Get Lairy");
 		}
 	}
 	

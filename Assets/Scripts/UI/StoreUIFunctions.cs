@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class StoreUIFunctions : MonoBehaviour
 {
@@ -10,7 +11,14 @@ public class StoreUIFunctions : MonoBehaviour
 	public string itemAlt;
 	public bool isAlt;
 	public bool staticBundle;
+	public string staticBundleName;
 	public bool moneyPurchase;
+	
+	int dailyCollected;
+	
+	int totalMoney;
+	int gears;
+	
     // Start is called before the first frame update
     void Start()
     {
@@ -59,6 +67,62 @@ public class StoreUIFunctions : MonoBehaviour
 			Debug.Log("Bought!");
 		} else {
 			AlertManager.showPopup("Oh no..","You do not have enough Gears to purchase this.","dm2logo");
+		}
+	}
+
+	public void makeBundlePurchase(){
+		if(staticBundle == true){
+			switch(staticBundleName){
+				case "DailyJunkSpares":
+					dailyCollected = PlayerPrefs.GetInt("DailyGarage");
+					if(dailyCollected == 0){
+					PlayerPrefs.SetString("PrizeType","FreeDaily");
+					PlayerPrefs.SetInt("DailyGarage",1);
+					dailyCollected = 1;
+					SceneManager.LoadScene("PrizeCollection");
+					} else {
+						AlertManager.showPopup("Collected","Check back tomorrow for more spares!","dm2logo");
+					}
+					break;
+				case "MysteryGarage":
+					gears = PlayerPrefs.GetInt("Gears");
+					if(gears >= itemPrice){
+						gears -= itemPrice;
+						PlayerPrefs.SetInt("Gears",gears);
+						PlayerPrefs.SetString("PrizeType","MysteryGarage");
+						SceneManager.LoadScene("PrizeCollection");
+					} else {
+						AlertManager.showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
+					}
+					break;
+				case "Cash4Gears":
+					totalMoney = PlayerPrefs.GetInt("PrizeMoney");
+					if(totalMoney >= itemPrice){
+						totalMoney -= itemPrice;
+						PlayerPrefs.SetInt("PrizeMoney", totalMoney);
+						gears = PlayerPrefs.GetInt("Gears");
+						PlayerPrefs.SetInt("Gears",gears + 5);
+						AlertManager.showPopup("Cash 4 Gears","You agree a deal to purchase 5 Gears from the broker.","Icons/gear");
+					} else {
+						AlertManager.showPopup("Oh no..","You need more Money to purchase this bundle.","dm2logo");
+					}
+					break;
+				case "SponsorshipDeal":
+					gears = PlayerPrefs.GetInt("Gears");
+					if(gears >= itemPrice){
+						gears -= itemPrice;
+						PlayerPrefs.SetInt("Gears",gears);
+						totalMoney = PlayerPrefs.GetInt("PrizeMoney");
+						PlayerPrefs.SetInt("PrizeMoney",totalMoney + 250000);
+						AlertManager.showPopup("Sponsorship Deal","You strike a deal with a wealthy sponsor, who agrees to give you 250000 coins in exchange for Gears","Icons/money");
+					} else {
+						AlertManager.showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
+					}
+					break;
+				default:
+					//Invalid code, do nothing
+					break;
+			}
 		}
 	}
 

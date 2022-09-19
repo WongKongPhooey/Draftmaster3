@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 public class Scoreboard : MonoBehaviour {
 
-	float widthblock = Screen.width/20;
+	/*float widthblock = Screen.width/20;
 	float heightblock = Screen.height/20;
 
 	public static string seriesPrefix;
@@ -318,7 +318,7 @@ public class Scoreboard : MonoBehaviour {
 	}
 
 	void OnGUI(){
-		/*GUI.skin = eightBitSkin;
+		GUI.skin = eightBitSkin;
 
 		//Timing screen
 		GUI.Box(new Rect(0,0,Screen.width, heightblock * 2), "");
@@ -359,5 +359,5 @@ public class Scoreboard : MonoBehaviour {
 		
 		//Testing - Corner Speeds
 		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 6.75f, widthblock * 3f, heightblock * 1f), "Offset:" + (CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
-	*/}
+	}*/
 }

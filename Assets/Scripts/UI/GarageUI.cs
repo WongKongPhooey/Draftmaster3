@@ -177,10 +177,6 @@ public class GarageUI : MonoBehaviour
 				carClickable.SetActive(false);
 				carDisabled.SetActive(true);
 			}
-			
-			//tileInst.GetComponent<UIAnimate>().flipCardXStart();
-			//cardBack.GetComponent<UIAnimate>().flipCardBacking();
-			//tileInst.GetComponent<UIAnimate>().flipCardXEnd();
 		}
 		
 		int sortCounter=0;
@@ -213,6 +209,8 @@ public class GarageUI : MonoBehaviour
 		
 		restrictionType = PlayerPrefs.GetString("RestrictionType");
 		restrictionValue = PlayerPrefs.GetString("RestrictionValue");
+		Debug.Log("Restriction " + restrictionType);
+		Debug.Log("Restricted to " + restrictionValue);
 			
 		seriesTeam = "";
 		seriesManu = "";
@@ -246,6 +244,7 @@ public class GarageUI : MonoBehaviour
 	public bool meetsRestrictions(string series, int car){
 
 		if((seriesTeam != "")&&(DriverNames.getTeam(series, car) != seriesTeam)){
+			//Debug.Log(seriesTeam + " is not " + DriverNames.getTeam(series, car) + " on #" + car);
 			return false;
 		}
 		if((seriesManu != "")&&(DriverNames.getManufacturer(series, car) != seriesManu)){

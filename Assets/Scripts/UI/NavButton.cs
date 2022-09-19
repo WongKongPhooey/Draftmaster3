@@ -22,4 +22,9 @@ public class NavButton : MonoBehaviour
 	public void loadScene(){
 		SceneManager.LoadScene(sceneName);
 	}
+	
+	public void endChampionship(){
+		PlayerPrefs.SetInt("ChampionshipReward",1);
+		SceneManager.LoadScene("Menus/RaceRewards");
+	}
 }

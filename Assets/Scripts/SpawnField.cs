@@ -94,14 +94,18 @@ public class SpawnField : MonoBehaviour {
 		slowCars.Remove(carNumber);
 		
 		// +1 for the Player's car
-		fieldSize = fastCars.Count + midCars.Count + slowCars.Count + 1;
+		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
+			fieldSize = fastCars.Count + midCars.Count + slowCars.Count + 1;
+		}
 		
 		//Max field size
 		if(fieldSize > 45){
 			fieldSize = 45;
 		}
 		
-		PlayerPrefs.SetInt("FieldSize", fieldSize);
+		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
+			PlayerPrefs.SetInt("FieldSize", fieldSize);
+		}
 		float gridRowsCalc = fieldSize * 0.5f;
 		
 		gridRows = Mathf.CeilToInt(gridRowsCalc);
@@ -124,8 +128,6 @@ public class SpawnField : MonoBehaviour {
 		//If race is restarting..
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			playerRow = Mathf.CeilToInt(PlayerPrefs.GetInt("PlayerCautionPosition") / 2);
-			CameraRotate.lap = PlayerPrefs.GetInt("CautionLap") + 1;
-			PlayerPrefs.DeleteKey("SpawnFromCaution");
 		}
 
 		string challengeName = PlayerPrefs.GetString("ChallengeType");
@@ -152,104 +154,156 @@ public class SpawnField : MonoBehaviour {
 
 		Object AICarInstance;
 
-		//Cars In Front
-		for (int i = playerRow - 1; i >= 1; i--) {
-			for(int j=1;j<=gridLanes;j++){
-				if(fastCars.Count > 0){
+		//In-race restart, set field from caution order
+		if(PlayerPrefs.HasKey("SpawnFromCaution")){
+			Debug.Log("Set Field From Caution");
+			int playerPos = PlayerPrefs.GetInt("PlayerCautionPosition");
+			int fieldIndex = 0;
+			
+			//Set field after caution
+			//Cars In Front
+			for (int i = playerRow - 1; i >= 1; i--) {
+				for(int j=1;j<=gridLanes;j++){
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
+					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					if(midCars.Count > 0){
-						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
-						carChoice = Random.Range(0,midCars.Count);
-						carNum = midCars[carChoice].ToString();
-						AICarInstance.name = ("AICar0" + carNum);
-						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-						midCars.RemoveAt(carChoice);
-					} else {
-						if(slowCars.Count > 0){
-							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
-							carChoice = Random.Range(0,slowCars.Count);
-							carNum = slowCars[carChoice].ToString();
-							AICarInstance.name = ("AICar0" + carNum);
-							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-							slowCars.RemoveAt(carChoice);
-						}
-					}
+					fieldIndex++;
 				}
 			}
-		}
 
-		//Position the player car in it's start lane
-		GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
-
-		for(int j=1;j<=gridLanes;j++){
-			if(j != startLane){
-				if(fastCars.Count > 0){
-					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
-					AICarInstance.name = ("AICar0" + carNum);
-					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					if(midCars.Count > 0){
-						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
-						carChoice = Random.Range(0,midCars.Count);
-						carNum = midCars[carChoice].ToString();
-						AICarInstance.name = ("AICar0" + carNum);
-						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-						midCars.RemoveAt(carChoice);
-					} else {
-						if(slowCars.Count > 0){
-							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
-							carChoice = Random.Range(0,slowCars.Count);
-							carNum = slowCars[carChoice].ToString();
-							AICarInstance.name = ("AICar0" + carNum);
-							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-							slowCars.RemoveAt(carChoice);
-						}
-					}
-				}
-			}
-		}
-
-		//Cars Behind
-		for (int i = 1; i < (gridRows - playerRow); i++) {
 			for(int j=1;j<=gridLanes;j++){
-				if(fastCars.Count > 0){
-					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
-					carChoice = Random.Range(0,fastCars.Count);
-					carNum = fastCars[carChoice].ToString();
+				if(playerPos == fieldIndex){
+					GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
+				} else {
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
+					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-					fastCars.RemoveAt(carChoice);
-				} else {
-					if(midCars.Count > 0){
-						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
-						carChoice = Random.Range(0,midCars.Count);
-						carNum = midCars[carChoice].ToString();
+					fieldIndex++;
+				}
+			}
+
+			//Cars Behind
+			for (int i = 1; i < (gridRows - playerRow); i++) {
+				for(int j=1;j<=gridLanes;j++){
+					if(playerPos == fieldIndex){
+						fieldIndex++;
+						continue;
+					}
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
+					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
+					AICarInstance.name = ("AICar0" + carNum);
+					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+					fieldIndex++;
+				}
+			}
+			Debug.Log(fieldIndex + " Cars Positioned After Caution");
+			PlayerPrefs.DeleteKey("SpawnFromCaution");
+			
+		} else {
+			
+			Debug.Log("Set Starting Field");
+			//Randomised field for start of race
+			//Cars In Front
+			for (int i = playerRow - 1; i >= 1; i--) {
+				for(int j=1;j<=gridLanes;j++){
+					if(fastCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
+						carChoice = Random.Range(0,fastCars.Count);
+						carNum = fastCars[carChoice].ToString();
 						AICarInstance.name = ("AICar0" + carNum);
 						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-						midCars.RemoveAt(carChoice);
+						fastCars.RemoveAt(carChoice);
 					} else {
-						if(slowCars.Count > 0){
-							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
-							carChoice = Random.Range(0,slowCars.Count);
-							carNum = slowCars[carChoice].ToString();
+						if(midCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
+							carChoice = Random.Range(0,midCars.Count);
+							carNum = midCars[carChoice].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-							slowCars.RemoveAt(carChoice);
+							midCars.RemoveAt(carChoice);
+						} else {
+							if(slowCars.Count > 0){
+								AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
+								carChoice = Random.Range(0,slowCars.Count);
+								carNum = slowCars[carChoice].ToString();
+								AICarInstance.name = ("AICar0" + carNum);
+								GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+								slowCars.RemoveAt(carChoice);
+							}
 						}
 					}
 				}
 			}
+
+			//Position the player car in it's start lane
+			GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
+
+			for(int j=1;j<=gridLanes;j++){
+				if(j != startLane){
+					if(fastCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
+						carChoice = Random.Range(0,fastCars.Count);
+						carNum = fastCars[carChoice].ToString();
+						AICarInstance.name = ("AICar0" + carNum);
+						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+						fastCars.RemoveAt(carChoice);
+					} else {
+						if(midCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
+							carChoice = Random.Range(0,midCars.Count);
+							carNum = midCars[carChoice].ToString();
+							AICarInstance.name = ("AICar0" + carNum);
+							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							midCars.RemoveAt(carChoice);
+						} else {
+							if(slowCars.Count > 0){
+								AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
+								carChoice = Random.Range(0,slowCars.Count);
+								carNum = slowCars[carChoice].ToString();
+								AICarInstance.name = ("AICar0" + carNum);
+								GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+								slowCars.RemoveAt(carChoice);
+							}
+						}
+					}
+				}
+			}
+
+			//Cars Behind
+			for (int i = 1; i < (gridRows - playerRow); i++) {
+				for(int j=1;j<=gridLanes;j++){
+					if(fastCars.Count > 0){
+						AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
+						carChoice = Random.Range(0,fastCars.Count);
+						carNum = fastCars[carChoice].ToString();
+						AICarInstance.name = ("AICar0" + carNum);
+						GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+						fastCars.RemoveAt(carChoice);
+					} else {
+						if(midCars.Count > 0){
+							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
+							carChoice = Random.Range(0,midCars.Count);
+							carNum = midCars[carChoice].ToString();
+							AICarInstance.name = ("AICar0" + carNum);
+							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							midCars.RemoveAt(carChoice);
+						} else {
+							if(slowCars.Count > 0){
+								AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
+								carChoice = Random.Range(0,slowCars.Count);
+								carNum = slowCars[carChoice].ToString();
+								AICarInstance.name = ("AICar0" + carNum);
+								GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+								slowCars.RemoveAt(carChoice);
+							}
+						}
+					}
+				}
+			}
+			//Debug.Log("Cars Spawned: " + slowCars.Count);
 		}
-		//Debug.Log("Cars Spawned: " + slowCars.Count);
 			
 		Ticker.updateTicker();
 	}

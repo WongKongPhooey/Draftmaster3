@@ -425,11 +425,13 @@ public class PlayFabManager : MonoBehaviour
 				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
 				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", DriverNames.getRarity(rewardCarSeries,rewardCarNum));
 			} else {
-				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
-				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", carClass+1);
+				if(carClass < 6){
+					PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Class", carClass+1);
+				}
 			}
-			rewardMessage += "You've been gifted a new " + DriverNames.getSeriesNiceName(rewardCarSeries) + " " + DriverNames.getName(rewardCarSeries,rewardCarNum) + " car!\n";
-			rewardCarImg = rewardCarSeries + "livery" + rewardCarNum;
+			string rewardMessage = "You've been gifted a new " + DriverNames.getSeriesNiceName(rewardCarSeries) + " " + DriverNames.getName(rewardCarSeries,rewardCarNum) + " car!\n";
+			string rewardCarImg = rewardCarSeries + "livery" + rewardCarNum;
+			AlertManager.showPopup("Thanks For Playing",rewardMessage,rewardCarImg);
 			//MainMenuGUI.newGiftAlert = true;
 			emptyPlayerData("RewardCar");
 		}
@@ -598,7 +600,7 @@ public class PlayFabManager : MonoBehaviour
 		var request = new GetLeaderboardRequest {
 			StatisticName = "FastestLap" + circuit,
 			StartPosition = 0,
-			MaxResultsCount = 10
+			MaxResultsCount = 5
 		};
 		PlayFabClientAPI.GetLeaderboard(request, OnLeaderboardGet, OnError);
 	}
@@ -659,7 +661,7 @@ public class PlayFabManager : MonoBehaviour
 		var request = new GetLeaderboardRequest {
 			StatisticName = "LiveTimeTrial",
 			StartPosition = 0,
-			MaxResultsCount = 5
+			MaxResultsCount = 20
 		};
 		PlayFabClientAPI.GetLeaderboard(request, OnLiveTimeTrialLeaderboardGet, OnError);
 	}

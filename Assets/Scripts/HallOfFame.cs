@@ -5,30 +5,18 @@ using UnityEngine.UI;
 
 public class HallOfFame : MonoBehaviour
 {	
-	public GUISkin buttonSkin;
-	public GUISkin redGUI;
-	
-	public Text leaderboardTitle;
+	public GameObject leaderboardTitle;
 	
     // Start is called before the first frame update
     void Start()
     {
-       leaderboardTitle.text = "Live Time Trial - " + PlayerPrefs.GetString("LiveTimeTrial"); 
+       leaderboardTitle.GetComponent<TMPro.TMP_Text>().text = "Live Time Trial - " + PlayerPrefs.GetString("LiveTimeTrial"); 
 	   
-	   PlayFabManager.GetLiveTimeTrialLeaderboard();
 	   PlayFabManager.GetLiveTimeTrialAroundPlayer();
+	   PlayFabManager.GetLiveTimeTrialLeaderboard();
     }
 
     // Update is called once per frame
     void Update(){ 
     }
-	
-	void OnGUI(){
-		GUI.skin = redGUI;
-		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-		
-		CommonGUI.BackButton("MainMenu");
-		
-		GUI.skin = buttonSkin;
-	}
 }

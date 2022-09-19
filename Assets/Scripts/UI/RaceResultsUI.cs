@@ -20,7 +20,7 @@ public class RaceResultsUI : MonoBehaviour
 	string playerCarNumber;
 	string carNumber;
 
-	int resultsRows;
+	int fieldSize;
 	
 	string currentSeriesIndex;
 
@@ -49,64 +49,82 @@ public class RaceResultsUI : MonoBehaviour
 
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 
-		PlayerPrefs.SetInt("FinishPos",(Scoreboard.position + 1));
+		PlayerPrefs.SetInt("FinishPos",(Ticker.position + 1));
 
 		exp = PlayerPrefs.GetInt("Exp");
 		level = PlayerPrefs.GetInt("Level");
 
 		//Add XP and Increment Championship Round
 		if(PlayerPrefs.GetInt("ExpAdded") == 0){
-			raceExp = 100 / (Scoreboard.position + 1);
+			raceExp = 100 / (Ticker.position + 1);
 			exp += Mathf.RoundToInt(raceExp);
 			PlayerPrefs.SetInt("Exp",exp);
 			Debug.Log("Exp: " + exp);
 			
 			//Is this a championship round?
 			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+				//Debug.Log("Yeah.. there's a championship around");
 				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
+					//Debug.Log("This is the active championship");
+					//Re-route to avoid the Race Rewards mid-season
+					GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/ChampionshipHub";
 					
 					//Increment Championship Round
 					int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 					PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
 					
-					Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
+					fieldSize = PlayerPrefs.GetInt("FieldSize");
+					
+					//Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
+					//Debug.Log("Field Size Loop: " + fieldSize);
 					RacePoints.setCupPoints();
-					for( int i=0; i < resultsRows; i++){
-						if(Scoreboard.carNames[i] == null){
+					for( int i=0; i < fieldSize; i++){
+						if(Ticker.carNames[i] == null){
 							//Exit loop
-							break;
+							Debug.Log("No name here, skip loop #" + i);
+							continue;
 						}
-						if(i == (Scoreboard.position)){
+						if(i == (Ticker.position)){
+							Debug.Log("We finished P" + i);
 							carNumber = playerCarNumber;
 						} else {
-							carNumber = Scoreboard.carNames[i].Remove(0,6);
+							carNumber = Ticker.carNames[i].Remove(0,6);
 						}
-						//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+						Debug.Log("Add " + RacePoints.placePoints[i] + " points");
 						addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 					}
+				} else {
+					//Debug.Log("This isn't an active championship race.");
 				}
+			} else {
+				//Debug.Log("No Active Championship Exists");
 			}
 			PlayerPrefs.SetInt("ExpAdded",1);
 		}
 		
+		//If Event Reward already collected, cannot claim again
+		if(PlayerPrefs.HasKey("EventReplay")){
+			GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
+		}
+
 		winningsMultiplier = 1;
 				
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
 			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex+ currentTrack);
-			if(((Scoreboard.position + 1) < bestFinishPos)||(bestFinishPos == 0)){
-				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position + 1);
+			if(((Ticker.position + 1) < bestFinishPos)||(bestFinishPos == 0)){
+				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Ticker.position + 1);
 			}
 			Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
 		} else {
-			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Scoreboard.position + 1);
-			Debug.Log("New best finish: " + Scoreboard.position + ". Track: " + currentSeriesIndex + currentTrack);
+			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Ticker.position + 1);
+			Debug.Log("New best finish: " + Ticker.position + ". Track: " + currentSeriesIndex + currentTrack);
 		}
 
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
-		raceWinnings = PrizeMoney.cashAmount[Scoreboard.position] * winningsMultiplier;
+		raceWinnings = PrizeMoney.cashAmount[Ticker.position] * winningsMultiplier;
 
 		if(ChallengeSelectGUI.challengeMode == false){
 			lapsBonus = PlayerPrefs.GetInt("RaceLapsMultiplier");

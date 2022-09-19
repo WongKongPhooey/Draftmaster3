@@ -43,6 +43,7 @@ public class TrackUI : MonoBehaviour
 		
 		//Check for an active championship
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+			Debug.Log("There's an active championship..");
 			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 				PlayerPrefs.SetString("RaceType","Championship");
 				seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
@@ -63,6 +64,8 @@ public class TrackUI : MonoBehaviour
 					//loadPoints();
 				}
 			}
+		} else {
+			Debug.Log("No active championship");
 		}
     }
 
@@ -82,6 +85,13 @@ public class TrackUI : MonoBehaviour
 			tracksArray = tracks.Split(',');
 		}
 		seriesLength = tracksArray.Length;
+		
+		if(seriesLength == 1){
+			//If there's only 1 race in this Event/Series
+			//Jump straight into it
+			loadTrack(tracks,0);
+			startRace(TrackData.getTrackCodeName(int.Parse(tracksArray[0])));
+		}
 		
 		for(int i=0;i<seriesLength;i++){
 			GameObject tileInst = Instantiate(trackTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -124,6 +134,7 @@ public class TrackUI : MonoBehaviour
 		}
 		seriesLength = tracksArray.Length;
 		int trackId = int.Parse(tracksArray[championshipRound]);
+		string trackCodeName = TrackData.trackCodeNames[trackId];
 		
 		GameObject tileInst = Instantiate(trackTile, new Vector3(transform.position.x,transform.position.y, transform.position.z), Quaternion.identity);
 		tileInst.GetComponent<TrackUIFunctions>().trackId = trackId;
@@ -144,6 +155,9 @@ public class TrackUI : MonoBehaviour
 		trackName.text = getTrackName(tracksArray[seriesIndex]);
 		raceLaps.text = "Laps " + PlayerPrefs.GetInt("RaceLaps");
 		trackImage.texture = Resources.Load<Texture2D>(getTrackImage(tracksArray[seriesIndex]));
+		if(PlayerPrefs.GetString("RaceType") == "Championship"){
+			startRace(trackCodeName);
+		}
 	}
 	
 	string getTrackImage(string trackId){
@@ -225,13 +239,6 @@ public class TrackUI : MonoBehaviour
 				break;
 		}
 		return trackImageName;
-		//Debug.Log(circuitChoice + " Loaded");
-		//setRaceLaps();
-		
-		//Testing only
-		//PlayerPrefs.SetInt("RaceLaps",2);
-		
-		//PlayerPrefs.SetString("CurrentTrack","" + order);
 	}
 	
 	static string getTrackName(string trackId){
@@ -249,12 +256,14 @@ public class TrackUI : MonoBehaviour
 		int raceLapsMultiplier = (AIDiff / 8) + 1;
 		PlayerPrefs.SetInt("RaceLaps", Mathf.FloorToInt(baseLaps * raceLapsMultiplier));
 		//Debug.Log("Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
-		//Testing
-		//PlayerPrefs.SetInt("RaceLaps", 2);
 	}
 
 	public static void startRace(string track){
 		
+		//This loads the track data
+		GameObject.Find("Main").GetComponent<TrackData>().loadTrackData(track);
+		
+		PlayerPrefs.SetString("TrackLocation",track);
 		PlayerPrefs.SetString("CurrentCircuit", track);
 		if(GameData.gameFuel >= seriesFuel){
 			GameData.gameFuel-=seriesFuel;
@@ -273,13 +282,12 @@ public class TrackUI : MonoBehaviour
 				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber , PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber));
 			}
 			
+			//Testing
+			PlayerPrefs.SetInt("RaceLaps",1);
+			
 			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
 			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
-			if((PlayerPrefs.GetString("RaceType") == "Championship")&&(PlayerPrefs.GetInt("ChampionshipRound") == 0)){
-				SceneManager.LoadScene("Menus/ChampionshipHub");
-			} else {
-				SceneManager.LoadScene(track);
-			}
+			SceneManager.LoadScene(track);
 		} else {
 			//Roll back and bail
 			PlayerPrefs.SetString("StoreFocus","Fuel");
@@ -288,20 +296,20 @@ public class TrackUI : MonoBehaviour
 	}
 
 	public void startChampionship(){
-		//activeMenu = "Schedule";
 		DriverPoints.resetPoints(seriesPrefix);
 		PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
-		Debug.Log("Championship: " + currentSeriesIndex);
+		PlayerPrefs.SetString("ChampionshipTrackList",PlayerPrefs.GetString("SeriesTrackList"));
 		PlayerPrefs.SetString("RaceType","Championship");
 		loadTrack(trackList, 0);
 		PlayerPrefs.SetInt("ChampionshipRound",0);
+		championshipRound = 0;
 		PlayerPrefs.SetInt("ChampionshipLength", seriesLength);
 		//resetChampionshipPoints();
 		PlayerPrefs.SetString("ChampionshipCarTexture", PlayerPrefs.GetString("carTexture"));
 		PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("carSeries"));
 		//Debug.Log("Championship Carset Series set as " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 		PlayerPrefs.SetInt("ChampionshipCarChoice", PlayerPrefs.GetInt("CarChoice"));
-		startRace(TrackData.getTrackCodeName(int.Parse(tracksArray[0])));
+		SceneManager.LoadScene("Menus/ChampionshipHub");
 	}
 
 	public void dynamicBackButton(){

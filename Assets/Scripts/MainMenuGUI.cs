@@ -52,6 +52,9 @@ public class MainMenuGUI : MonoBehaviour {
 	
 	void Awake(){
 
+		//Hard Redirect Away Fallback
+		SceneManager.LoadScene("Menus/MainMenu");
+
 		exp = PlayerPrefs.GetInt("Exp");
 		//exp = 10000;
 		level = PlayerPrefs.GetInt("Level");

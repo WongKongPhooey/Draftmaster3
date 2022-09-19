@@ -220,7 +220,7 @@ public class Ticker : MonoBehaviour
 		return 9999;
 	}
 
-	public static void saveCautionPositions(){
+	public static void saveCautionPositions(bool playerPitted = false){
 		entrantList.Clear();
 		
 		int j=0;
@@ -235,12 +235,19 @@ public class Ticker : MonoBehaviour
 			}
 			carsTagged = true;
 		}
-		entrantList.Add(playerCar);
+		if(playerPitted == false){
+			entrantList.Add(playerCar);
+		}
 		
 		//Sort by z axis position
         entrantList.Sort(delegate(GameObject a, GameObject b) {
 		  return (a.transform.position.z).CompareTo(b.transform.position.z);
 		});
+		
+		//Add after sort, tags onto back
+		if(playerPitted == true){
+			entrantList.Add(playerCar);
+		}
 		//Reverse the sort
 		entrantList.Reverse(); 
 		
@@ -314,7 +321,10 @@ public class Ticker : MonoBehaviour
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
-				Debug.Log("Player finishes in P" + i);
+				
+				//Adjust for array starting at index 0, not 1
+				PlayerPrefs.SetInt("PlayerFinishPosition", i+1);
+				//Debug.Log("Player finishes in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
@@ -360,7 +370,8 @@ public class Ticker : MonoBehaviour
     void Update(){
 		ticker.transform.Translate(-1.5f,0,0);
 		if(CameraRotate.overtime == true){
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
+			//tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OT LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
 		} else {
 			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
 		}

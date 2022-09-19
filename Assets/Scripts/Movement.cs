@@ -75,6 +75,7 @@ public class Movement : MonoBehaviour {
 	
 	int sparksCooldown;
 	
+	public GameObject mainCam;
 	public GameObject audioHolder;
 	
 	AudioSource carEngine;
@@ -187,6 +188,7 @@ public class Movement : MonoBehaviour {
 		cautionSummaryTotalWreckers = GameObject.Find("CarsInvolved");
 		cautionSummaryDamage = GameObject.Find("WreckDamage");
 		cautionSummaryRestartPos = GameObject.Find("RestartPos");
+		mainCam = GameObject.Find("Main Camera");
 		HUD.SetActive(false);
 		HUDControls.SetActive(false);
 		cautionSummaryMenu.SetActive(false);
@@ -557,7 +559,7 @@ public class Movement : MonoBehaviour {
 			draftDist = DraftCheck.distance;
 			//Speed up
 			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
-				playerSpeed+=((10 - DraftCheck.distance)/1500);
+				playerSpeed+=((10 - DraftCheck.distance)/1500) + (carRarity / 1000f);
 			} else {
 				playerSpeed-=((playerSpeed - topSpeed)/200);
 			}
@@ -710,7 +712,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Buddies won't help you if you're the leader
-		if(Scoreboard.position == 1){
+		if(Ticker.position == 1){
 			canBuddy = false;
 			buddyUp = false;
 		}
@@ -1082,6 +1084,7 @@ public class Movement : MonoBehaviour {
 		updateWindForce();
 		isWrecking = false;
 		wreckOver = true;
+		//Ticker.saveCautionPositions();
 		//Debug.Log("WRECK OVER");
 		this.GetComponent<Rigidbody>().mass = 5;
 		this.GetComponent<Rigidbody>().isKinematic = true;
@@ -1095,9 +1098,17 @@ public class Movement : MonoBehaviour {
 		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";
 		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);
 		//If damage is above 1000, considered to be heavy, 2000+ is unrepairable
-		cautionSummaryRestartPos.GetComponent<TMPro.TMP_Text>().text = "Restarting ";
+		cautionSummaryRestartPos.GetComponent<TMPro.TMP_Text>().text = "Restarting Row " + PlayerPrefs.GetInt("PlayerCautionPosition");
 		
 		cautionSummaryMenu.SetActive(true);
+		Time.timeScale = 0.0f;
+		mainCam.GetComponent<AudioListener>().enabled = false;
+		PlayerPrefs.SetInt("Volume",0);
+		
+		if(wreckDamage > 1000f){
+			//True means player pit, goes to the back
+			Ticker.saveCautionPositions(true);
+		}
 	}
 	
 	void wreckPhysics(){
@@ -1150,7 +1161,7 @@ public class Movement : MonoBehaviour {
 	
 	public string calculateDamageGrade(float damage){
 		if(damage > 1500){
-			return "Terminal (" + Mathf.Round(damage / 15) + "%)";
+			return "Crash Clock (" + Mathf.Round(damage / 15) + "%)";
 		}
 		if(damage > 500){
 			return "Heavy (" + Mathf.Round(damage / 15) + "%)";
