@@ -20,6 +20,8 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, string[]> allTypes = new Dictionary<string, string[]>();
 	public static Dictionary<string, string> allCarsetNames = new Dictionary<string, string>();
 
+	public static Dictionary<string, int> numXPos = new Dictionary<string, int>();
+
 	public static string[] allCarsets = new string[4];
 
 	public static string[] cup2020Names = new string[101];
@@ -58,8 +60,11 @@ public class DriverNames : MonoBehaviour {
 	public static string[] cup2020AltNames = new string[20];
 
 	// Use this for initialization
-	void Awake() {
-		
+	void Awake() {	
+		loadData();
+	}
+	
+	static void loadData(){
 		cup20();
 		cup22();
 		cup01();
@@ -110,6 +115,10 @@ public class DriverNames : MonoBehaviour {
 			allManufacturer.Add("dmc15", dmc2015Manufacturer);
 			allRarity.Add("dmc15", dmc2015Rarity);
 			allTypes.Add("dmc15", dmc2015Types);
+			
+			numXPos.Add("cup20", 17);
+			numXPos.Add("cup22", 10);
+			numXPos.Add("dmc15", 17);
 		}
 	}
 	
@@ -122,33 +131,44 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	public static string getName(string seriesPrefix, int index){
+		loadData();
 		string[] names = allNames[seriesPrefix];
 		return names[index];
 	}
 	
 	public static string getTeam(string seriesPrefix, int index){
+		loadData();
 		string[] teams = allTeams[seriesPrefix];
 		return teams[index];
 	}
 	
 	public static string getManufacturer(string seriesPrefix, int index){
+		loadData();
 		string[] manufacturer = allManufacturer[seriesPrefix];
 		return manufacturer[index];
 	}
 	
 	public static int getRarity(string seriesPrefix, int index){
+		loadData();
 		int[] rarities = allRarity[seriesPrefix];
 		return rarities[index];
 	}
 	
 	public static string getType(string seriesPrefix, int index){
+		loadData();
 		string[] types = allTypes[seriesPrefix];
 		return types[index];
 	}
 	
 	public static int getFieldSize(string seriesPrefix){
+		loadData();
 		string[] nameSet = allNames[seriesPrefix];
 		return nameSet.Length;
+	}
+	
+	public static int getNumXPos(string seriesPrefix){
+		loadData();
+		return numXPos[seriesPrefix];
 	}
 	
 	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount){
@@ -193,16 +213,19 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	public static string getSeriesNiceName(string seriesPrefix){
+		loadData();
 		carsetNames();
 		return allCarsetNames[seriesPrefix];
 	}
 	
 	public static string getRandomSeries(){
+		loadData();
 		string randSeries = series[Mathf.FloorToInt(Random.Range(0,series.Count))].ToString();
 		return randSeries;
 	}
 	
 	public static string getRandomWinnableSeries(){
+		loadData();
 		string randSeries = winnableSeries[Mathf.FloorToInt(Random.Range(0,winnableSeries.Count))].ToString();
 		return randSeries;
 	}

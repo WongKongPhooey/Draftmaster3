@@ -20,12 +20,4 @@ public class MyAccountGUI : MonoBehaviour
     {
         
     }
-	
-	void OnGUI()
-	{
-		GUI.skin = redGUI;
-		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
-		
-		CommonGUI.BackButton("MainMenu");
-	}
 }

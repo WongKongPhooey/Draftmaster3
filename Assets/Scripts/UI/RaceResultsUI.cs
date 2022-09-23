@@ -141,6 +141,9 @@ public class RaceResultsUI : MonoBehaviour
 		}
 
 		loadResults();
+		
+		//Update starts leaderboard
+		PlayFabManager.SendLeaderboard(PlayerPrefs.GetInt("TotalStarts"), "AllTimeMostStarts","");
     }
 
 	public void loadResults(){

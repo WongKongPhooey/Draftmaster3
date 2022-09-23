@@ -55,6 +55,8 @@ public class GarageUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
+		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
+		
 		for(int i=0;i<100;i++){
 			
 			//Skip through the non-driver #s
@@ -86,6 +88,8 @@ public class GarageUI : MonoBehaviour
 			Image carRarityUI = tileInst.transform.GetChild(3).GetComponent<Image>();
 			Image carManuUI = tileInst.transform.GetChild(4).GetComponent<Image>();
 			RawImage carPaint = tileInst.transform.GetChild(5).GetComponent<RawImage>();
+			RawImage carNumber = tileInst.transform.GetChild(5).transform.GetChild(0).GetComponent<RawImage>();
+			GameObject carNumberObj = tileInst.transform.GetChild(5).transform.GetChild(0).gameObject;
 			TMPro.TMP_Text carName = tileInst.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
 			RectTransform carGearsProgressUI = tileInst.transform.GetChild(7).transform.GetChild(0).GetComponent<RectTransform>();
 			TMPro.TMP_Text carGearsLabelUI = tileInst.transform.GetChild(7).transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
@@ -129,16 +133,34 @@ public class GarageUI : MonoBehaviour
 			carClassUI.color = classColours(carClass);
 			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
 			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
-			if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
-				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltDriver")){
-					carName.text = PlayerPrefs.GetString(seriesPrefix + i + "AltDriver");
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
+				int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + i);		
+				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
+					if(PlayerPrefs.HasKey(seriesPrefix + i + "AltDriver")){
+						carName.text = PlayerPrefs.GetString(seriesPrefix + i + "AltDriver");
+					} else {
+						carName.text = DriverNames.getName(seriesPrefix, i);
+					}
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
 				} else {
 					carName.text = DriverNames.getName(seriesPrefix, i);
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blank"); 
 				}
-				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+				carNumberObj.GetComponent<RectTransform>().anchoredPosition = numXPos;
+				carNumber.texture = Resources.Load<Texture2D>("cup20num" + customNum);
 			} else {
-				carName.text = DriverNames.getName(seriesPrefix, i);
-				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i); 
+				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
+					if(PlayerPrefs.HasKey(seriesPrefix + i + "AltDriver")){
+						carName.text = PlayerPrefs.GetString(seriesPrefix + i + "AltDriver");
+					} else {
+						carName.text = DriverNames.getName(seriesPrefix, i);
+					}
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+				} else {
+					carName.text = DriverNames.getName(seriesPrefix, i);
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i); 
+				}
+				carNumberObj.SetActive(false);
 			}
 			float gearsProgressUIWidth = Mathf.Round((110 / classMax) * carGears) + 1;
 			if(gearsProgressUIWidth > 110){
@@ -260,10 +282,6 @@ public class GarageUI : MonoBehaviour
 			return false;
 		}
 		return true;
-	}
-
-	public void backButton(){
-		SceneManager.LoadScene("Menus/SeriesSelect");
 	}
 
 	string classAbbr(int carClass){

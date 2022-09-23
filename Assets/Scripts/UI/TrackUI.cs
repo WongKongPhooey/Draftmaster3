@@ -72,6 +72,7 @@ public class TrackUI : MonoBehaviour
 	public void loadAllTracks(string tracks){
 		
 		TrackData.loadTrackNames();
+		TrackData.loadTrackCodeNames();
 		
 		foreach (Transform child in tileFrame){
 			//Destroy(child.gameObject);
@@ -283,7 +284,7 @@ public class TrackUI : MonoBehaviour
 			}
 			
 			//Testing
-			PlayerPrefs.SetInt("RaceLaps",1);
+			//PlayerPrefs.SetInt("RaceLaps",1);
 			
 			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
 			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);

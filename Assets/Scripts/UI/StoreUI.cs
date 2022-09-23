@@ -4,11 +4,32 @@ using System.Text.RegularExpressions;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Purchasing;
 using UnityEngine.SceneManagement;
 using FitMode = UnityEngine.UI.ContentSizeFitter.FitMode;
 
 public class StoreUI : MonoBehaviour
 {
+	
+	public static int gears;
+	public static int transfersMax;
+	public static int transfersLeft;
+	
+	private const string gears60 = "com.duffetywong.draftmaster2rollingthunder.gears60";
+	private const string gears125 = "com.duffetywong.draftmaster2rollingthunder.gears125";
+	private const string gears200 = "com.duffetywong.draftmaster2rollingthunder.gears200";
+	private const string gears500 = "com.duffetywong.draftmaster2rollingthunder.gears500";
+	
+	private const string smallgears = "com.duffetywong.draftmaster2rollingthunder.smallgears";
+	private const string mediumgears = "com.duffetywong.draftmaster2rollingthunder.mediumgears";
+	private const string largegears = "com.duffetywong.draftmaster2rollingthunder.largegears";
+	private const string extralargegears = "com.duffetywong.draftmaster2rollingthunder.extralargegears";
+	
+	private const string negotiator = "com.duffetywong.draftmaster2rollingthunder.negotiator";
+	private const string negotiatorios = "com.duffetywong.draftmaster2rollingthunder.negotiatorios";
+	
+	public GameObject restorePurchaseBtn;
+	
 	public GameObject storeTile;
 	
 	public Transform weeklyTileFrame;
@@ -28,6 +49,7 @@ public class StoreUI : MonoBehaviour
         loadWeeklyPicks();
 		loadDailyPicks();
 		loadStarterPicks();
+		DisableRestorePurchase();
     }
 
 	public void loadWeeklyPicks(){
@@ -240,8 +262,8 @@ public class StoreUI : MonoBehaviour
 		starterPicks.Add("cup2221");
 		starterPicks.Add(37);
 		starterPicks.Add("cup2250");
-		starterPicks.Add("dmc1555");
 		starterPicks.Add("cup2262");
+		starterPicks.Add("dmc1567");
 		starterPicks.Add("cup2278");
 		starterPicks.Add(95);
 		
@@ -322,6 +344,85 @@ public class StoreUI : MonoBehaviour
 			this.gameObject.GetComponent<ContentSizeFitter>().verticalFit = (UnityEngine.UI.ContentSizeFitter.FitMode)1;
 		} else {
 			this.gameObject.GetComponent<ContentSizeFitter>().verticalFit = (UnityEngine.UI.ContentSizeFitter.FitMode)2;
+		}
+	}
+
+	public void OnPurchaseComplete(Product product){
+		
+		gears = PlayerPrefs.GetInt("Gears");
+		transfersMax = PlayerPrefs.GetInt("TransferTokens");
+		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
+		
+		switch(product.definition.id){
+			case gears60:
+				Debug.Log("Added 80 gears");
+				gears+=80;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
+				break;
+			case gears125:
+				Debug.Log("Added 250 gears");
+				gears+=250;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
+				break;
+			case gears200:
+				Debug.Log("Added 600 gears");
+				gears+=600;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
+				break;
+			case gears500:
+				Debug.Log("Added 1500 gears");
+				gears+=1500;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
+				break;
+			case smallgears:
+				Debug.Log("Added 80 gears");
+				gears+=80;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
+				break;
+			case mediumgears:
+				Debug.Log("Added 250 gears");
+				gears+=250;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
+				break;
+			case largegears:
+				Debug.Log("Added 600 gears");
+				gears+=600;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
+				break;
+			case extralargegears:
+				Debug.Log("Added 1500 gears");
+				gears+=1500;
+				PlayerPrefs.SetInt("Gears",gears);
+				AlertManager.showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
+				break;
+			case negotiator:
+			case negotiatorios:
+				Debug.Log("Added 999 contracts");
+				transfersMax=999;
+				transfersLeft=999;
+				PlayerPrefs.SetInt("TransferTokens",transfersMax);
+				PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
+				AlertManager.showPopup("Purchase Successful","999 Transfer Tokens have been added!","dm2logo");
+				break;
+			default:
+				break;
+		}
+	}
+	
+	public void OnPurchaseFailed(Product product, PurchaseFailureReason reason){
+		Debug.Log("Purchase of " + product.definition.id + " failed. Reason: " + reason);
+	}
+	
+	private void DisableRestorePurchase(){
+		if(Application.platform != RuntimePlatform.IPhonePlayer){
+			restorePurchaseBtn.SetActive(false);
 		}
 	}
 

@@ -755,7 +755,7 @@ public class SingleCar : MonoBehaviour {
 				numberPanel = false;
 			}
 		} else {
-			CommonGUI.BackButton("Menus/Garage");
+			CommonGUI.BackButton("Menus/MainMenu");
 		}
 		GUI.skin = buttonSkin;
 

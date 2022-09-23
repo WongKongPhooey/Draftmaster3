@@ -55,6 +55,7 @@ public class CameraRotate : MonoBehaviour {
 	float kerbBlur;
 	
 	public GameObject cautionSummaryMenu;
+	public GameObject pauseMenu;
 	
 	void Awake(){
 		
@@ -95,6 +96,8 @@ public class CameraRotate : MonoBehaviour {
 		trackEnviro = GameObject.Find("Environment");
 		
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
+		pauseMenu = GameObject.Find("PauseMenu");
+		pauseMenu.SetActive(false);
 		
 		gearedAccel = calcCircuitGearing();
 		
@@ -310,7 +313,7 @@ public class CameraRotate : MonoBehaviour {
 			if(cornerKerb.name != "FixedKerb"){
 				cornerKerb.GetComponent<Renderer>().enabled = false;
 			}
-			if(apron.name != "FixedApron"){
+			if((apron)&&(apron.name != "FixedApron")){
 				apron.GetComponent<Renderer>().enabled = false;
 			}
 		}
@@ -368,6 +371,7 @@ public class CameraRotate : MonoBehaviour {
 			Time.timeScale = 0.0f;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = false;
 			PlayerPrefs.SetInt("Volume",0);
+			pauseMenu.SetActive(true);
 		}
 	}
 	public void unpauseGame(){
@@ -376,6 +380,7 @@ public class CameraRotate : MonoBehaviour {
 			Time.timeScale = 1.0f;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = true;
 			PlayerPrefs.SetInt("Volume",1);
+			pauseMenu.SetActive(false);
 		}
 	}
 	

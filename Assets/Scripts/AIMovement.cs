@@ -37,6 +37,7 @@ public class AIMovement : MonoBehaviour
 	public bool wreckOver;
 	float baseDecel;
 	public float wreckDecel;
+	public float speedDiffPadding;
 	float wreckAngle;
 	float sideForce;
 	int antiGlitch;
@@ -116,6 +117,7 @@ public class AIMovement : MonoBehaviour
 		wreckOver = false;
 		wreckProbability = 2;
 		hitByPlayer = false;
+		speedDiffPadding = 0.1f;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -637,7 +639,11 @@ public class AIMovement : MonoBehaviour
 		
 		//Speed difference between the player and the AI
 		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
-		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
+		if(Movement.isWrecking == true){
+			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed + (Movement.playerWreckDecel * speedDiffPadding);
+		} else {
+			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
+		}
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
 	}
@@ -1351,7 +1357,7 @@ public class AIMovement : MonoBehaviour
 			endWreck();
 		}
 		
-		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 10) + 2;
+		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 20) + 2;
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		//Align particle system to global track direction

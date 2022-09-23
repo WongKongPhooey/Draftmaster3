@@ -52,8 +52,10 @@ public class RaceRewardsUI : MonoBehaviour
 	
 	
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
+		PrizeMoney.setPrizeMoney();
+		
         gears = PlayerPrefs.GetInt("Gears");
         offsetGears = 0;
         rewardGears = 0;
@@ -98,61 +100,19 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		if(championshipReward == true){
 			rewardMultiplier = seriesLength;
-			//Debug.Log("Multiplier Set as " + rewardMultiplier);
+			Debug.Log("Multiplier Set as " + rewardMultiplier);
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
 		}
 		
 		prizeMoney = PrizeMoney.getPrizeMoney(finishPos-1);
+		Debug.Log("Won: " + prizeMoney);
 		playerMoney += prizeMoney * rewardMultiplier;
+		Debug.Log("Multiplied Win: " + (prizeMoney * rewardMultiplier));
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		
-		Debug.Log("Race Type: " + raceType);
-		switch(raceType){
-			case "Event":
-			//Must win
-				Debug.Log("Checking Event Rewards");
-				if(finishPos == 1){
-					Debug.Log("You won!");
-					if(seriesPrize == "AltPaint"){
-						Debug.Log("Unlocking Alt Paint: " + setPrize);
-						UnlockAltPaint(setPrize);
-					} else {
-						//Populate event reward pool
-						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
-					}
-				} else {
-					carReward = "";
-				}
-				break;
-			case "Championship":
-				//If top 10 finish..
-				if(finishPos < 15){
-					//e.g. 10 race season / finished 5th = 2x
-					//e.g. 3 race season / finished 10th = 1x
-					//e.g. 20 race season / finished 10th = 2x
-					rewardMultiplier = Mathf.CeilToInt(rewardMultiplier / finishPos);
-					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
-				} else {
-					carReward = "";
-				}
-				break;
-			default:
-				//If top 10 finish..
-				if(finishPos < 11){
-					//Inverted chance of reward (10th = 10%, 1st = 100%)
-					float chance = 11 - finishPos;
-					float rnd = Random.Range(0,10);
-					if(rnd <= chance){
-						Debug.Log("Top 10 finish, add rewards");
-						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
-					} else {
-						carReward = "";
-					}
-				} else {
-					carReward = "";
-				}
-				break;
-		}
+		moneyTitle.GetComponent<TMPro.TMP_Text>().text = " +$" + (prizeMoney * rewardMultiplier) + "";
+		moneyTitle.GetComponent<UIAnimate>().animOffset = 40;
+		moneyTitle.GetComponent<UIAnimate>().scaleIn();
 		
 		if(raceType != "Event"){
 			//e.g. AI Level 14 = 14 / 5  = 2.x -> 2 + 3 = 5
@@ -178,20 +138,69 @@ public class RaceRewardsUI : MonoBehaviour
 		}
 		PlayerPrefs.SetInt("Gears",gears);
 		
+		gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
+		gearsTitle.GetComponent<UIAnimate>().animOffset = 80;
+		gearsTitle.GetComponent<UIAnimate>().scaleIn();	
+		
+		Debug.Log("Race Type: " + raceType);
+		switch(raceType){
+			case "Event":
+			//Must win
+				Debug.Log("Checking Event Rewards");
+				if(finishPos == 1){
+					Debug.Log("You won!");
+					if(seriesPrize == "AltPaint"){
+						Debug.Log("Unlocking Alt Paint: " + setPrize);
+						UnlockAltPaint(setPrize);
+					} else {
+						//Populate event reward pool
+						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+					}
+				} else {
+					carReward = "";
+				}
+				break;
+			case "Championship":
+				//If top 10 finish..
+				if(finishPos < 15){
+					//e.g. 10 race season / finished 5th = 2x
+					//e.g. 3 race season / finished 10th = 1x
+					//e.g. 20 race season / finished 10th = 2x
+					float rewardRatio = rewardMultiplier / finishPos;
+					if(rewardRatio == 0){
+						rewardRatio = 1;
+					}
+					rewardMultiplier = Mathf.CeilToInt(rewardRatio);
+					Debug.Log("New reward multiplier: " + rewardMultiplier);
+					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+				} else {
+					carReward = "";
+				}
+				break;
+			default:
+				//If top 10 finish..
+				if(finishPos < 11){
+					//Inverted chance of reward (10th = 10%, 1st = 100%)
+					float chance = 11 - finishPos;
+					float rnd = Random.Range(0,10);
+					if(rnd <= chance){
+						Debug.Log("Top 10 finish, add rewards");
+						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+					} else {
+						carReward = "";
+					}
+				} else {
+					carReward = "";
+				}
+				break;
+		}
+		
 		//Update UI
 		if(championshipReward == true){
 			rewardsTitle.GetComponent<TMPro.TMP_Text>().text = "Championship Rewards - " + MiscScripts.PositionPostfix(finishPos) + " Place";
 		} else {
 			rewardsTitle.GetComponent<TMPro.TMP_Text>().text = "Race Rewards";
 		}
-		
-		moneyTitle.GetComponent<TMPro.TMP_Text>().text = " +$" + (prizeMoney * rewardMultiplier) + "";
-		moneyTitle.GetComponent<UIAnimate>().animOffset = 40;
-		moneyTitle.GetComponent<UIAnimate>().scaleIn();
-		
-		gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
-		gearsTitle.GetComponent<UIAnimate>().animOffset = 80;
-		gearsTitle.GetComponent<UIAnimate>().scaleIn();	
 		
 		partsTitle.GetComponent<TMPro.TMP_Text>().text = "" + carReward + "\n(" + carCurrentGears + ")";
 		partsTitle.GetComponent<UIAnimate>().animOffset = 120;

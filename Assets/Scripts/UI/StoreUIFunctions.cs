@@ -114,9 +114,21 @@ public class StoreUIFunctions : MonoBehaviour
 						PlayerPrefs.SetInt("Gears",gears);
 						totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 						PlayerPrefs.SetInt("PrizeMoney",totalMoney + 250000);
-						AlertManager.showPopup("Sponsorship Deal","You strike a deal with a wealthy sponsor, who agrees to give you 250000 coins in exchange for Gears","Icons/money");
+						AlertManager.showPopup("Sponsorship Deal","You strike a deal with a wealthy sponsor, who agrees to give you 250000 coins in exchange for Gears.","Icons/money");
 					} else {
 						AlertManager.showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
+					}
+					break;
+				case "FuelHalfTank":
+					gears = PlayerPrefs.GetInt("Gears");
+					if(gears >= itemPrice){
+						gears -= itemPrice;
+						GameData.gameFuel+=(GameData.maxFuel / 2);
+						PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
+						PlayerPrefs.SetInt("Gears",gears);
+						AlertManager.showPopup("Half Tank","You buy half a tank of fuel and head back to the track!","Icons/gascan");
+					} else {
+						AlertManager.showPopup("Oh no..","You need more Gears to purchase fuel. Fuel will slowly refill every 5 minutes.","dm2logo");
 					}
 					break;
 				default:

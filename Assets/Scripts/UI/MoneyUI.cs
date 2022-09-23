@@ -28,11 +28,19 @@ public class MoneyUI : MonoBehaviour
 			updateMoney();
 		}
 		if(moneyVisual > money){
-			moneyVisual--;
+			if((moneyVisual - money) > 1000){
+				moneyVisual-= 1000;
+			} else {
+				moneyVisual--;
+			}
 			updateMoney();
 		}
 		if(moneyVisual < money){
-			moneyVisual++;
+			if((money - moneyVisual) > 1000){
+			moneyVisual+=1000;
+			} else {
+				moneyVisual++;
+			}
 			updateMoney();
 		}
     }

@@ -177,7 +177,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			
 			//Fake store values for testing
-			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
+			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
@@ -350,6 +350,10 @@ public class PlayFabManager : MonoBehaviour
 	static void OnDataReceived(GetUserDataResult result){
 		if(result.Data != null){
 			Debug.Log("Player data found");
+			
+			//Fake testing values
+			//result.Data["RewardGears"].Value = "69";
+			
 			string rewardMessage = "";
 			string rewardCarImg = "dm2logo";
 			if(result.Data.ContainsKey("RewardGears")){
@@ -365,14 +369,17 @@ public class PlayFabManager : MonoBehaviour
 				}
 			}
 
+			//Fake testing values
+			//result.Data["RewardCar"].Value = "cup2291";
+
 			if(result.Data.ContainsKey("RewardCar")){
 				//Example: cup2212
-				receiveCarGift(result.Data["RewardCar"].Value);
-				/*string rewardCar = result.Data["RewardCar"].Value;
-				string rewardCarSeries = rewardCar.Substring(0,5);
-				Debug.Log(rewardCar);
-				int rewardCarNum = int.Parse(rewardCar.Substring(5));
-				if(rewardCar != ""){
+				string rewardCar = result.Data["RewardCar"].Value;
+				Debug.Log("RewardCar: " + rewardCar);
+				if((rewardCar != "")&&(rewardCar != "0")){
+					string rewardCarSeries = rewardCar.Substring(0,5);
+					Debug.Log(rewardCar);
+					int rewardCarNum = int.Parse(rewardCar.Substring(5));
 					Debug.Log("Rewarded Car #" + rewardCarNum);
 					int carClass = PlayerPrefs.GetInt(rewardCarSeries + rewardCarNum + "Class");
 					if(carClass == 0){
@@ -386,7 +393,7 @@ public class PlayFabManager : MonoBehaviour
 					rewardCarImg = rewardCarSeries + "livery" + rewardCarNum;
 					//MainMenuGUI.newGiftAlert = true;
 					emptyPlayerData("RewardCar");
-				}*/
+				}
 			}
 			if(result.Data.ContainsKey("RewardAlt")){
 				string rewardAlt = result.Data["RewardAlt"].Value;
@@ -401,7 +408,7 @@ public class PlayFabManager : MonoBehaviour
 					rewardAlt = rewardAlt.Replace("alt","Alt");
 					
 					PlayerPrefs.SetInt(rewardAlt + "Unlocked",1);
-					rewardMessage += "You've been gifted the " + rewardAlt + " alt paint! ";
+					rewardMessage += "You've been gifted a new alt paint! ";
 					//MainMenuGUI.newGiftAlert = true;
 					emptyPlayerData("RewardAlt");
 				}
@@ -668,10 +675,6 @@ public class PlayFabManager : MonoBehaviour
 	
 	static void OnLiveTimeTrialLeaderboardGet(GetLeaderboardResult result) {
 		
-		foreach(Transform item in rowsParent){
-			Destroy(item.gameObject);
-		}
-		
 		foreach(var item in result.Leaderboard) {
 			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
@@ -696,6 +699,9 @@ public class PlayFabManager : MonoBehaviour
 	static void OnLiveTimeTrialAroundPlayerGet(GetLeaderboardAroundPlayerResult result) {
 		
 		//Debug.Log("Got Leaderboard Around Player");
+		foreach(Transform item in rowsParent){
+			Destroy(item.gameObject);
+		}
 		
 		foreach(var item in result.Leaderboard) {
 			GameObject tableRows = Instantiate(rowPrefab, rowsParent);

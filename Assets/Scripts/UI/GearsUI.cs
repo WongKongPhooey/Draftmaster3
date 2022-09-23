@@ -28,11 +28,19 @@ public class GearsUI : MonoBehaviour
 			updateGears();
 		}
 		if(gearsVisual > gears){
-			gearsVisual--;
+			if((gearsVisual - gears) > 100){
+				gearsVisual-=10;
+			} else {
+				gearsVisual--;
+			}
 			updateGears();
 		}
 		if(gearsVisual < gears){
-			gearsVisual++;
+			if((gears - gearsVisual) > 100){
+				gearsVisual+=10;
+			} else {
+				gearsVisual++;
+			}
 			updateGears();
 		}
     }

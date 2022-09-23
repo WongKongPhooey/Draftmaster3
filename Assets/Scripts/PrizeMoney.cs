@@ -6,7 +6,11 @@ public class PrizeMoney : MonoBehaviour {
 	public static int[] cashAmount = new int[43];
 	
 	// Use this for initialization
-	void Start () {
+	void Awake () {
+		setPrizeMoney();
+	}
+	
+	public static void setPrizeMoney(){
 		cashAmount[0] = 10000;
 		cashAmount[1] = 7500;
 		cashAmount[2] = 6000;
@@ -53,6 +57,7 @@ public class PrizeMoney : MonoBehaviour {
 	}
 	
 	public static int getPrizeMoney(int position){
+		setPrizeMoney();
 		if((position > 0)&&(position < 43)){
 			return cashAmount[position];
 		} else {

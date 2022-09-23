@@ -86,7 +86,7 @@ public class MainMenuUI : MonoBehaviour {
 			
 			Debug.Log("Level Up -> " + level);
 			levelUpMenu = true;
-			AlertManager.showPopup("Level Up","You've leveled up matey!","dm2logo");
+			AlertManager.showPopup("Level Up","You've leveled up! You've been rewarded " + rewardString,"dm2logo");
 		}
 		
 		money = PlayerPrefs.GetInt("PrizeMoney");

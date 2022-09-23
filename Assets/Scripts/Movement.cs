@@ -1107,7 +1107,7 @@ public class Movement : MonoBehaviour {
 		
 		if(wreckDamage > 1000f){
 			//True means player pit, goes to the back
-			Ticker.saveCautionPositions(true);
+			//Ticker.saveCautionPositions(true);
 		}
 	}
 	

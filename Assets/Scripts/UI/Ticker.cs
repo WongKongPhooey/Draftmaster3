@@ -344,6 +344,7 @@ public class Ticker : MonoBehaviour
 			} else {
 				PlayerPrefs.SetInt("TotalWins" + seriesPrefix + playerCarNum, 1);
 			}
+			PlayFabManager.SendLeaderboard(PlayerPrefs.GetInt("TotalWins"), "AllTimeMostWins","");
 		}
 		if(position <= 4){
 			PlayerPrefs.SetInt("TotalTop5s",PlayerPrefs.GetInt("TotalTop5s") + 1);
