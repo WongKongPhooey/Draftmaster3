@@ -573,18 +573,20 @@ public class SingleCar : MonoBehaviour {
 					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
 				}*/
 				
-				if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
-					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
-						if(transfersLeft > 0){
-							numberPanel = true;
-						} else {
-							transferError = "All transfer contracts are in use. Gain more by leveling up or purchase the Negotiator pack in the Store.";
-							//Debug.Log("No transfer contracts left");
+				if(seriesPrefix != "dmc15"){
+					if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
+						if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
+							if(transfersLeft > 0){
+								numberPanel = true;
+							} else {
+								transferError = "All transfer contracts are in use. Gain more by leveling up or purchase the Negotiator pack in the Store.";
+								//Debug.Log("No transfer contracts left");
+							}
 						}
+					} else {
+						GUI.skin.label.alignment = TextAnchor.MiddleRight;
+						GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
 					}
-				} else {
-					GUI.skin.label.alignment = TextAnchor.MiddleRight;
-					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
 				}
 				
 				if (GUI.Button(new Rect(widthblock * 15.25f, heightblock * 13f, widthblock * 4f, heightblock * 1.5f), "Change Team")){

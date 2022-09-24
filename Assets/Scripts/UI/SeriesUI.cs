@@ -22,9 +22,13 @@ public class SeriesUI : MonoBehaviour
 	public static int subSeriesId;
 	string seriesPrefix;
 	
+	int level;
+	
     // Start is called before the first frame update
     void Start(){
         
+		level = PlayerPrefs.GetInt("Level");
+		
 		//Hide rewards popup after storing the var
 		rewardsPopup = GameObject.Find("RewardsPopup");
 		rewardsPopup.SetActive(false);
@@ -89,8 +93,8 @@ public class SeriesUI : MonoBehaviour
 			TMPro.TMP_Text seriesName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage seriesImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
 			TMPro.TMP_Text seriesDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			GameObject seriesRewardsBtn = tileInst.transform.GetChild(5).transform.gameObject;
-			GameObject seriesCover = tileInst.transform.GetChild(6).transform.gameObject;
+			GameObject seriesRewardsBtn = tileInst.transform.GetChild(6).transform.gameObject;
+			GameObject seriesCover = tileInst.transform.GetChild(4).transform.gameObject;
 			GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
 			tileInst.GetComponent<SeriesUIFunctions>().seriesId = seriesId;
 			tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = i;
@@ -98,7 +102,10 @@ public class SeriesUI : MonoBehaviour
 			seriesName.text = SeriesData.offlineSeries[seriesId,i];
 			seriesDesc.text = (SeriesData.offlineAILevel[seriesId,i] * 10).ToString() + "% Difficulty";
 			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineSeriesImage[seriesId,i]); 
-			 
+		
+			if(SeriesData.offlineMinLevel[seriesId,i] > level){
+				seriesCover.SetActive(true);
+			}
 		}
 	}
 

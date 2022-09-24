@@ -47,6 +47,10 @@ public class GarageUI : MonoBehaviour
 			loadAllCars();
 		}
 		
+		//No starter cars? Auto-unlock them
+		if(PlayerPrefs.GetInt("cup2278Unlocked") == 0){
+			starterCars();
+		}
 	}
 	
 	public void loadAllCars(){
@@ -411,6 +415,39 @@ public class GarageUI : MonoBehaviour
 			seriesDropdown.SetActive(true);
 		}
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
+	}
+
+	public void starterCars(){
+		//Give a free McLeod for Cup '22
+		if(PlayerPrefs.GetInt("cup2278Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2278Unlocked",1);
+			PlayerPrefs.SetInt("cup2278Gears",0);
+			PlayerPrefs.SetInt("cup2278Class",1);
+		}
+		
+		//Give a free Mcleod for Cup '20
+		if(PlayerPrefs.GetInt("cup2052Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2052Unlocked",1);
+			PlayerPrefs.SetInt("cup2052Gears",0);
+			PlayerPrefs.SetInt("cup2052Class",1);
+		}
+		
+		//Give free Starters for DM1 '15
+		if(PlayerPrefs.GetInt("dmc150Unlocked") == 0){
+			PlayerPrefs.SetInt("dmc150Unlocked",1);
+			PlayerPrefs.SetInt("dmc150Gears",0);
+			PlayerPrefs.SetInt("dmc150Class",1);
+		}
+		if(PlayerPrefs.GetInt("dmc151Unlocked") == 0){
+			PlayerPrefs.SetInt("dmc151Unlocked",1);
+			PlayerPrefs.SetInt("dmc151Gears",0);
+			PlayerPrefs.SetInt("dmc151Class",1);
+		}
+		if(PlayerPrefs.GetInt("dmc152Unlocked") == 0){
+			PlayerPrefs.SetInt("dmc152Unlocked",1);
+			PlayerPrefs.SetInt("dmc152Gears",0);
+			PlayerPrefs.SetInt("dmc152Class",1);
+		}
 	}
 
     // Update is called once per frame

@@ -85,6 +85,8 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
 		//Attempt to load saved data
 		GetSavedPlayerProgress("cup20");
+		GetSavedPlayerProgress("cup22");
+		GetSavedPlayerProgress("dmc15");
 		SceneManager.LoadScene("Menus/MainMenu");
 	}
 	
@@ -116,6 +118,9 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
 		PlayerPrefs.SetString("PlayerPassword", passwordInput.text);
 		LoginFromPrefs();
+		GetSavedPlayerProgress("cup20");
+		GetSavedPlayerProgress("cup22");
+		GetSavedPlayerProgress("dmc15");
 		SceneManager.LoadScene("Menus/MainMenu");
 	}
 	
@@ -322,7 +327,7 @@ public class PlayFabManager : MonoBehaviour
 					PlayerPrefs.SetString("MessageAlert", result.Data["MessageAlert"]);
 					//MainMenuGUI.messageAlert = result.Data["MessageAlert"];
 					//MainMenuGUI.newMessageAlert = true;
-					AlertManager.showPopup("News",result.Data["MessageAlert"],"cup22livery1alt1blank");
+					AlertManager.showPopup("News",result.Data["MessageAlert"],"cup22livery1blankalt1");
 				} else {
 					//Debug.Log("No new messages.");
 				}
@@ -413,7 +418,9 @@ public class PlayFabManager : MonoBehaviour
 					emptyPlayerData("RewardAlt");
 				}
 			}
-			AlertManager.showPopup("Rewards",rewardMessage,rewardCarImg);
+			if(rewardMessage != ""){
+				AlertManager.showPopup("Rewards",rewardMessage,rewardCarImg);
+			}
 		} else {
 			Debug.Log("No player data found");
 		}

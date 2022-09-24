@@ -40,8 +40,8 @@ public class EventData : MonoBehaviour
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		//offlineEvent[2] = "All Stars";
-		offlineEvent[3] = "The Closer";
-		offlineEvent[4] = "Moments";
+		//offlineEvent[3] = "The Closer";
+		//offlineEvent[4] = "Moments";
 		
 		offlineEventType[0] = "Progression";
 		offlineEventType[1] = "Progression";
@@ -55,8 +55,6 @@ public class EventData : MonoBehaviour
 		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[3] = "1,5,9";
 		offlineEventWeek[4] = "1,2,3,4,5,6,7,8,9,10,11,12";
-		//offlineEventWeek[2] = "5";
-		//offlineEventWeek[3] = "7";
 		
 		//Ol' Seven-Time
 		offlineEventChapter[0,0] = "Where It All Began";

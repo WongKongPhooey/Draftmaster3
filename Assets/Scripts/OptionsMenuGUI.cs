@@ -31,6 +31,9 @@ public class OptionsMenuGUI : MonoBehaviour {
 	public string cheatCode = "";
 
 	void Awake(){
+		
+		FontScale.scale();
+		
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
 		difficulty = PlayerPrefs.GetInt("Difficulty");

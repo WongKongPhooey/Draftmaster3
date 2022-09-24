@@ -33,6 +33,8 @@ public class PrizeCollection : MonoBehaviour
 
 	void Awake(){
 
+		FontScale.scale();
+
 		moneyCount = 0;
 		eventPrizeset = PlayerPrefs.GetString("EventPrizeset");
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");

@@ -41,7 +41,10 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject weekDayLabel;
 	public GameObject moneyLabel;
 	
+	public GameObject loginBtn;
 	public GameObject loginBtnLabel;
+	
+	public GameObject latestNews;
 	
 	public GameObject alertPopup;
 	public GameObject popupFrame;
@@ -103,10 +106,17 @@ public class MainMenuUI : MonoBehaviour {
 		moneyLabel = GameObject.Find("MoneyLabel");
 		moneyLabel.GetComponent<TMPro.TMP_Text>().text = money.ToString();
 		
+		loginBtn = GameObject.Find("LoginButton");
 		loginBtnLabel = GameObject.Find("LoginButtonLabel");
+		
+		if(PlayerPrefs.GetString("MessageAlert") != ""){
+			latestNews = GameObject.Find("LatestNews");
+			latestNews.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("MessageAlert");
+		}
 		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
 			PlayFabManager.LoginFromPrefs();
+			loginBtn.GetComponent<NavButton>().sceneName = "Levels/MyAccount";
 			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("PlayerUsername");
 		} else {
 			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = "Login";
@@ -117,6 +127,7 @@ public class MainMenuUI : MonoBehaviour {
 		
 		if(!PlayerPrefs.HasKey("NewUser")){
 			PlayerPrefs.SetInt("PrizeMoney",10000);
+			PlayerPrefs.SetInt("Gears",10);
 			firstTimeInit();
 		}
 		
@@ -151,10 +162,6 @@ public class MainMenuUI : MonoBehaviour {
 			crowdNoise.volume = 0.25f;
 		} else {
 			crowdNoise.volume = 0.0f;
-		}
-		
-		if(newGiftAlert == true){
-			AlertManager.showPopup("","","");
 		}
 		
         loadCurrentChampionshipInfo();
@@ -196,7 +203,8 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("TargetVersion", Application.version);
-		AlertManager.showPopup("Hey Rookie! You Need A Ride?", "A driver has given you access to their car for your debut.", "");
+		AlertManager.showPopup("Hey Rookie! You Need A Ride?", "Mcleod is sharing their 2020 and 2022 Cup cars to get you started!", "cup22livery78");
+		PlayerPrefs.SetInt("NewUser",1);
 	}
 
     // Update is called once per frame

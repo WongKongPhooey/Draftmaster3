@@ -96,6 +96,9 @@ public class SpawnField : MonoBehaviour {
 		// +1 for the Player's car
 		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
 			fieldSize = fastCars.Count + midCars.Count + slowCars.Count + 1;
+		} else {
+			//Just remember count from the initial race start
+			fieldSize = PlayerPrefs.GetInt("FieldSize");
 		}
 		
 		//Max field size
@@ -110,7 +113,7 @@ public class SpawnField : MonoBehaviour {
 		
 		gridRows = Mathf.CeilToInt(gridRowsCalc);
 		
-		//Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
+		Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
 		
 		if(gridRows > (AILevel+5)){
 			playerRow = Random.Range(AILevel,AILevel+5);
@@ -127,27 +130,9 @@ public class SpawnField : MonoBehaviour {
 		
 		//If race is restarting..
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
-			playerRow = Mathf.CeilToInt(PlayerPrefs.GetInt("PlayerCautionPosition") / 2);
-		}
-
-		string challengeName = PlayerPrefs.GetString("ChallengeType");
-
-		switch(challengeName){
-		case "NoFuel":
-		case "CleanBreak":
-		case "PhotoFinish":
-			playerRow = 1;
-			break;
-		case "TeamPlayer":
-		case "LatePush":
-			playerRow = 5;
-			break;
-		case "LastToFirstLaps":
-		case "TrafficJam":
-			playerRow = gridRows - 1;
-			break;
-		default:
-			break;
+			float playerRowCalc = PlayerPrefs.GetInt("PlayerCautionPosition") / 2;
+			//If I don't add the +1, you get a dupe car spawn in 0_o
+			playerRow = Mathf.CeilToInt(playerRowCalc) + 1;
 		}
 
 		int carChoice;
@@ -157,12 +142,14 @@ public class SpawnField : MonoBehaviour {
 		//In-race restart, set field from caution order
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			Debug.Log("Set Field From Caution");
-			int playerPos = PlayerPrefs.GetInt("PlayerCautionPosition");
 			int fieldIndex = 0;
+			
+			Debug.Log("Player starting row: " + playerRow);
 			
 			//Set field after caution
 			//Cars In Front
 			for (int i = playerRow - 1; i >= 1; i--) {
+				Debug.Log("Field Row In Front: " + i);
 				for(int j=1;j<=gridLanes;j++){
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
@@ -172,25 +159,23 @@ public class SpawnField : MonoBehaviour {
 				}
 			}
 
+			//Position the player car in it's start lane
+			GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
+
 			for(int j=1;j<=gridLanes;j++){
-				if(playerPos == fieldIndex){
-					GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
-				} else {
+				if(j != startLane){
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-					fieldIndex++;
 				}
+				fieldIndex++;
 			}
 
 			//Cars Behind
 			for (int i = 1; i < (gridRows - playerRow); i++) {
+				Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
-					if(playerPos == fieldIndex){
-						fieldIndex++;
-						continue;
-					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
 					AICarInstance.name = ("AICar0" + carNum);
@@ -203,7 +188,7 @@ public class SpawnField : MonoBehaviour {
 			
 		} else {
 			
-			Debug.Log("Set Starting Field");
+			//Debug.Log("Set Starting Field");
 			//Randomised field for start of race
 			//Cars In Front
 			for (int i = playerRow - 1; i >= 1; i--) {

@@ -116,6 +116,7 @@ public class Ticker : MonoBehaviour
 				carNumber[i] = carNames[i].Remove(0,6);
 				//Debug.Log(carNumber[i]);
 				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				carDist[i] = 0.000f;
 				entrantList.Add(car);
 				i++;
 			}
@@ -174,8 +175,10 @@ public class Ticker : MonoBehaviour
 				
 				TMPro.TMP_Text playerTickerPos = playerTicker.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text playerTickerName = playerTicker.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				TMPro.TMP_Text playerTickerDist = playerTicker.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 				playerTickerPos.text = (i+1).ToString();
 				playerTickerName.text = driverNames[i];
+				playerTickerDist.text = leaderDist.ToString("f3");
 				
 			} else {
 				carNames[i] = "" + entrantList[i].name;
@@ -190,10 +193,12 @@ public class Ticker : MonoBehaviour
 			TMPro.TMP_Text tickerPos = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			Image tickerNum = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
 			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 			tickerPos.text = (i+1).ToString();
 			tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
 			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
 			tickerName.text = driverNames[i];
+			tickerDist.text = "+" + carDist[i].ToString("f3");
 			//Debug.Log(i + ": " + driverNames[i]);
 		}
 	}
@@ -369,10 +374,9 @@ public class Ticker : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
-		ticker.transform.Translate(-1.5f,0,0);
+		//ticker.transform.Translate(-1.5f,0,0);
 		if(CameraRotate.overtime == true){
-			//tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OT LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
+			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
 		} else {
 			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
 		}

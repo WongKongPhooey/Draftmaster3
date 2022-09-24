@@ -682,13 +682,13 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[9,1] = "Half Season 2";
 		offlineSeries[9,2] = "2020 Calendar Season";
 		offlineSeries[9,3] = "2022 Calendar Season";
-		offlineSeries[9,4] = "Test Season";
+		//offlineSeries[9,4] = "Test Season";
 		
 		offlineSeriesImage[9,0] = "cup20livery22";
 		offlineSeriesImage[9,1] = "cup20livery2";
 		offlineSeriesImage[9,2] = "cup20livery9";
 		offlineSeriesImage[9,3] = "cup22livery5";
-		offlineSeriesImage[9,4] = "cup22livery1alt1";
+		//offlineSeriesImage[9,4] = "cup22livery1alt1";
 		
 		offlineDailyPlays[9,0] = 10;
 		offlineDailyPlays[9,1] = 10;
