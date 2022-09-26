@@ -204,6 +204,7 @@ public class Movement : MonoBehaviour {
 		
 		bool findCarNum = int.TryParse(Regex.Replace(carNumStr, "[^0-9]", ""), out carNum);
 		if(findCarNum == true){
+			PlayerPrefs.SetInt("carNumber",carNum);
 		    carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
 			carTeam = DriverNames.cup2020Teams[carNum];
 			carManu = DriverNames.cup2020Manufacturer[carNum];
@@ -1084,6 +1085,7 @@ public class Movement : MonoBehaviour {
 		updateWindForce();
 		isWrecking = false;
 		wreckOver = true;
+		hideHUD();
 		//Ticker.saveCautionPositions();
 		//Debug.Log("WRECK OVER");
 		this.GetComponent<Rigidbody>().mass = 5;
@@ -1100,7 +1102,9 @@ public class Movement : MonoBehaviour {
 		//If damage is above 1000, considered to be heavy, 2000+ is unrepairable
 		cautionSummaryRestartPos.GetComponent<TMPro.TMP_Text>().text = "Restarting Row " + PlayerPrefs.GetInt("PlayerCautionPosition");
 		
-		cautionSummaryMenu.SetActive(true);
+		if(RaceHUD.raceOver == false){
+			cautionSummaryMenu.SetActive(true);
+		}
 		Time.timeScale = 0.0f;
 		mainCam.GetComponent<AudioListener>().enabled = false;
 		PlayerPrefs.SetInt("Volume",0);
@@ -1161,7 +1165,7 @@ public class Movement : MonoBehaviour {
 	
 	public string calculateDamageGrade(float damage){
 		if(damage > 1500){
-			return "Crash Clock (" + Mathf.Round(damage / 15) + "%)";
+			return "DVP Clock (" + Mathf.Round(damage / 15) + "%)";
 		}
 		if(damage > 500){
 			return "Heavy (" + Mathf.Round(damage / 15) + "%)";
@@ -1173,5 +1177,10 @@ public class Movement : MonoBehaviour {
 			return "Cosmetic (" + Mathf.Round(damage / 15) + "%)";
 		}
 		return "None";
+	}
+	
+	public void hideHUD(){
+		HUD.SetActive(false);
+		HUDControls.SetActive(false);
 	}
 }

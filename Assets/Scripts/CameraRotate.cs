@@ -34,6 +34,9 @@ public class CameraRotate : MonoBehaviour {
 	public static int cornerMidpoint;
 	public static float gearedAccel;
 	
+	public static float maxCornerFactor;
+	public static float wreckingCornerCounter;
+	
 	public static bool onTurn;
 	
 	public static int lap;
@@ -245,13 +248,28 @@ public class CameraRotate : MonoBehaviour {
 				AIMovement.onTurn = true;
 				cornerSpeed = calcCornerSpeed(straight-1);
 				cornerMidpoint = (turnLength[straight-1] * turnAngle[straight-1]) / 2;
+				wreckingCornerCounter = 0;
 				//Debug.Log("Corner " + straight + " speed: " + cornerSpeed);
 			}
 			if(cameraRotate == 1){
-				if(turnDir[turn-1] == 1){
-					TDCamera.transform.Rotate(0,0,(1.0f/turnAngle[turn-1]));
+				if(Movement.isWrecking == true){
+					maxCornerFactor = Movement.playerSpeed - Movement.speedOffset;
+					float cornerAngleFactor = (1 / maxCornerFactor) * (maxCornerFactor + Movement.playerWreckDecel);
+					Debug.Log("Corner Angle Factor:" + cornerAngleFactor + " - maxFactor:" + maxCornerFactor);
+					TDCamera.transform.Rotate(0,0,(-1.0f/turnAngle[turn-1]) * cornerAngleFactor);
+					wreckingCornerCounter += cornerAngleFactor;
+					Debug.Log(wreckingCornerCounter + " so far, out of " + (turnLength[turn-1] * turnAngle[turn-1]));
+					//if(wreckingCornerCounter > (turnLength[turn-1] * turnAngle[turn-1])){
+						//float cornerFinalDiff = wreckingCornerCounter - (turnLength[turn-1] * turnAngle[turn-1]);
+						//TDCamera.transform.Rotate(0,0,(-1.0f/cornerFinalDiff));
+					//}
 				} else {
-					TDCamera.transform.Rotate(0,0,(-1.0f/turnAngle[turn-1]));
+					wreckingCornerCounter++;
+					if(turnDir[turn-1] == 1){
+						TDCamera.transform.Rotate(0,0,(1.0f/turnAngle[turn-1]));
+					} else {
+						TDCamera.transform.Rotate(0,0,(-1.0f/turnAngle[turn-1]));
+					}
 				}
 			}
 			cornerKerb.GetComponent<Renderer>().enabled = true;
@@ -297,24 +315,47 @@ public class CameraRotate : MonoBehaviour {
 		}
 
 		//End of turn
-		if(cornercounter >= (turnLength[turn-1] * turnAngle[turn-1])){
-			Ticker.updateTicker();
-			onTurn = false;
-			Movement.onTurn = false;
-			AIMovement.onTurn = false;
-			straightcounter = 0;
-			cornercounter = 0;
-			straight++;
-			turn++;
-			if(straight > PlayerPrefs.GetInt("TotalTurns")){
-				straight = 1;
-				turn = 1;
+		if(Movement.isWrecking == true){
+			if(wreckingCornerCounter >= (turnLength[turn-1] * turnAngle[turn-1])){
+				Ticker.updateTicker();
+				onTurn = false;
+				Movement.onTurn = false;
+				AIMovement.onTurn = false;
+				straightcounter = 0;
+				cornercounter = 0;
+				straight++;
+				turn++;
+				if(straight > PlayerPrefs.GetInt("TotalTurns")){
+					straight = 1;
+					turn = 1;
+				}
+				if(cornerKerb.name != "FixedKerb"){
+					cornerKerb.GetComponent<Renderer>().enabled = false;
+				}
+				if((apron)&&(apron.name != "FixedApron")){
+					apron.GetComponent<Renderer>().enabled = false;
+				}
 			}
-			if(cornerKerb.name != "FixedKerb"){
-				cornerKerb.GetComponent<Renderer>().enabled = false;
-			}
-			if((apron)&&(apron.name != "FixedApron")){
-				apron.GetComponent<Renderer>().enabled = false;
+		} else {
+			if(cornercounter >= (turnLength[turn-1] * turnAngle[turn-1])){
+				Ticker.updateTicker();
+				onTurn = false;
+				Movement.onTurn = false;
+				AIMovement.onTurn = false;
+				straightcounter = 0;
+				cornercounter = 0;
+				straight++;
+				turn++;
+				if(straight > PlayerPrefs.GetInt("TotalTurns")){
+					straight = 1;
+					turn = 1;
+				}
+				if(cornerKerb.name != "FixedKerb"){
+					cornerKerb.GetComponent<Renderer>().enabled = false;
+				}
+				if((apron)&&(apron.name != "FixedApron")){
+					apron.GetComponent<Renderer>().enabled = false;
+				}
 			}
 		}
 	}
@@ -335,6 +376,7 @@ public class CameraRotate : MonoBehaviour {
 		carEngine.volume = 0;
 		crowdNoise.volume = 0;
 		RaceHUD.raceOver = true;
+		GameObject.Find("Player").GetComponent<Movement>().hideHUD();
 		Ticker.checkFinishPositions();
 		PlayerPrefs.SetInt("ExpAdded",0);
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){

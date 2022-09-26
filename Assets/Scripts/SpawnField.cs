@@ -151,6 +151,10 @@ public class SpawnField : MonoBehaviour {
 			for (int i = playerRow - 1; i >= 1; i--) {
 				Debug.Log("Field Row In Front: " + i);
 				for(int j=1;j<=gridLanes;j++){
+					//Skip whenever the player number appears in the field
+					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
+						fieldIndex++;
+					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
 					AICarInstance.name = ("AICar0" + carNum);
@@ -161,8 +165,11 @@ public class SpawnField : MonoBehaviour {
 
 			//Position the player car in it's start lane
 			GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
-
+			
 			for(int j=1;j<=gridLanes;j++){
+				if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
+					fieldIndex++;
+				}
 				if(j != startLane){
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
@@ -176,6 +183,9 @@ public class SpawnField : MonoBehaviour {
 			for (int i = 1; i < (gridRows - playerRow); i++) {
 				Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
+					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
+						fieldIndex++;
+					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
 					AICarInstance.name = ("AICar0" + carNum);

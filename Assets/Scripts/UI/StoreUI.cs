@@ -165,6 +165,7 @@ public class StoreUI : MonoBehaviour
 		} else {
 			//Retrieve Daily Random Picks
 			List<string> dailyRandomsList = PlayerPrefs.GetString("DailyRandoms").Split(',').ToList<string>();
+			dailyRandoms.Clear();
 			foreach(string dailyRand in dailyRandomsList){
 				dailyRandoms.Add(dailyRand);
 				Debug.Log(dailyRand);

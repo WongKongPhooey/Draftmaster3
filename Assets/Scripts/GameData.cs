@@ -78,12 +78,12 @@ public class GameData : MonoBehaviour {
 		
 		if(PlayerPrefs.HasKey("MaxFuel")){
 			//Get the maximum fuel
-			maxFuel = 20 + (level * 2);
+			maxFuel = 40 + (level * 2);
 			PlayerPrefs.SetInt("MaxFuel", maxFuel);
 		} else {
 			//First login
-			maxFuel = 20;
-			PlayerPrefs.SetInt("MaxFuel", 20);
+			maxFuel = 40;
+			PlayerPrefs.SetInt("MaxFuel", 30);
 		}
 		
 		if(PlayerPrefs.HasKey("Gears")){

@@ -291,8 +291,9 @@ public class TrackUI : MonoBehaviour
 			SceneManager.LoadScene(track);
 		} else {
 			//Roll back and bail
-			PlayerPrefs.SetString("StoreFocus","Fuel");
-			SceneManager.LoadScene("Store");
+			//PlayerPrefs.SetString("StoreFocus","Fuel");
+			//SceneManager.LoadScene("Menus/StoreUI");
+			AlertManager.showPopup("Not Enough Fuel", "You need more fuel to race. Watch an ad or buy fuel in the Store, or simply wait for the fuel to refill.", "Icons/fuel");
 		}
 	}
 

@@ -41,9 +41,7 @@ public class RewardedAdsButton : MonoBehaviour, IUnityAdsLoadListener, IUnityAds
             // Configure the button to call the ShowAd() method when clicked:
             _showAdButton.onClick.AddListener(ShowAd);
             // Enable the button for users to click:
-			if(GameData.gameFuel < GameData.maxFuel){
-				_showAdButton.interactable = true;
-			}
+			_showAdButton.interactable = true;
         }
     }
  
