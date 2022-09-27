@@ -413,6 +413,7 @@ public class CameraRotate : MonoBehaviour {
 			Time.timeScale = 0.0f;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = false;
 			PlayerPrefs.SetInt("Volume",0);
+			PlayerPrefs.SetInt("MidRaceLoading", 1);
 			pauseMenu.SetActive(true);
 		}
 	}

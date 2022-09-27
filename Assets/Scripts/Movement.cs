@@ -150,7 +150,6 @@ public class Movement : MonoBehaviour {
 	public GameObject cautionSummaryMenu;
 	public GameObject cautionSummaryTotalWreckers;
 	public GameObject cautionSummaryDamage;
-	public GameObject cautionSummaryRestartPos;
 	
 	public static bool delicateMod;
 	public static bool invincibleMod;
@@ -187,7 +186,6 @@ public class Movement : MonoBehaviour {
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		cautionSummaryTotalWreckers = GameObject.Find("CarsInvolved");
 		cautionSummaryDamage = GameObject.Find("WreckDamage");
-		cautionSummaryRestartPos = GameObject.Find("RestartPos");
 		mainCam = GameObject.Find("Main Camera");
 		HUD.SetActive(false);
 		HUDControls.SetActive(false);
@@ -1100,7 +1098,6 @@ public class Movement : MonoBehaviour {
 		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";
 		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);
 		//If damage is above 1000, considered to be heavy, 2000+ is unrepairable
-		cautionSummaryRestartPos.GetComponent<TMPro.TMP_Text>().text = "Restarting Row " + PlayerPrefs.GetInt("PlayerCautionPosition");
 		
 		if(RaceHUD.raceOver == false){
 			cautionSummaryMenu.SetActive(true);
@@ -1170,7 +1167,7 @@ public class Movement : MonoBehaviour {
 		if(damage > 500){
 			return "Heavy (" + Mathf.Round(damage / 15) + "%)";
 		}
-		if(damage > 50){
+		if(damage > 200){
 			return "Minor (" + Mathf.Round(damage / 15) + "%)";
 		}
 		if(damage > 1){

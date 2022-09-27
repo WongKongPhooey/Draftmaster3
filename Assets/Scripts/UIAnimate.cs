@@ -8,7 +8,7 @@ public class UIAnimate : MonoBehaviour
 	public bool startHidden;
 	
     // Start is called before the first frame update
-    void Start(){
+    void Awake(){
 		if(startHidden == true){
 			hide();
 		}
@@ -17,7 +17,6 @@ public class UIAnimate : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
     }
 	
 	public void scaleIn(){

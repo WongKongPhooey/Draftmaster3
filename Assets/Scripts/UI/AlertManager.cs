@@ -10,7 +10,7 @@ public class AlertManager : MonoBehaviour
 	public static GameObject alertImage;
 	public static GameObject alertText;
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
         alertPopup = GameObject.Find("AlertPopup");
 		alertPopup.GetComponent<UIAnimate>().hide();
@@ -19,6 +19,7 @@ public class AlertManager : MonoBehaviour
 		//Assume image is always a 2:1 Rectangle
 		alertImage = GameObject.Find("AlertImage");
 		alertText = GameObject.Find("AlertText");
+		hidePopup();
     }
 
 	public static void showPopup(string title, string content, string image){
@@ -35,8 +36,12 @@ public class AlertManager : MonoBehaviour
 		alertText.GetComponent<UIAnimate>().scaleIn();
 	}
 	public static void hidePopup(){
+		alertPopup = GameObject.Find("AlertPopup");
+		LeanTween.scale(alertPopup, new Vector3(0f,0f,0f), 0f);
 		alertText.GetComponent<UIAnimate>().hide();
 		alertImage.GetComponent<UIAnimate>().hide();
 		alertPopup.GetComponent<UIAnimate>().hide();
+		//alertPopup.SetActive(false);
+		//Debug.Log("Popup Hidden");
 	}
 }

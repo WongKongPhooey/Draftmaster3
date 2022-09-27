@@ -36,6 +36,7 @@ public class RaceResultsUI : MonoBehaviour
     void Start(){
 		
 		PlayerPrefs.DeleteKey("ActivePath");
+		PlayerPrefs.DeleteKey("MidRaceLoading");
 
 		playerCarNumber = PlayerPrefs.GetString("carTexture");
 		string splitAfter = "livery";

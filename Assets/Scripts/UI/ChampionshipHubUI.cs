@@ -58,6 +58,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		championshipTracklist = PlayerPrefs.GetString("ChampionshipTracklist");
 		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 		championshipLength = PlayerPrefs.GetInt("ChampionshipLength");
+		Debug.Log("Season Length: " + championshipLength);
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		PlayerPrefs.SetString("RaceType","Championship");
@@ -71,8 +72,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		nextRound = GameObject.Find("NextRound");
 		nextRound.GetComponent<TMPro.TMP_Text>().text = "Round " + (championshipRound + 1) + "/" + championshipLength;
 		
-		championshipTracklist = PlayerPrefs.GetString("ChampionshipTrackList");
-		Debug.Log(championshipTracklist);
+		Debug.Log("Tracklist: " + championshipTracklist);
 		tracksArray = championshipTracklist.Split(',');
 		
 		hubCarImage = GameObject.Find("NextCar");

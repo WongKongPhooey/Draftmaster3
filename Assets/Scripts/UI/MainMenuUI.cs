@@ -52,7 +52,6 @@ public class MainMenuUI : MonoBehaviour {
     // Start is called before the first frame update
     void Start()
     {
-		
 		exp = PlayerPrefs.GetInt("Exp");
 		//exp = 10000;
 		level = PlayerPrefs.GetInt("Level");
@@ -71,9 +70,17 @@ public class MainMenuUI : MonoBehaviour {
 		newGiftAlert = false;
 		showInfoBox = false;
 		
+		if(PlayerPrefs.HasKey("MidRaceLoading")){
+			GameObject.Find("AlertPopup").SetActive(false);
+			PlayerPrefs.DeleteKey("MidRaceLoading");
+			//Debug.Log("Alerts Forced Off");
+		}
+		
 		//Delete Pre-Race Stored Variables
 		if(PlayerPrefs.HasKey("ActivePath")){
+			GameObject.Find("AlertPopup").SetActive(false);
 			PlayerPrefs.DeleteKey("ActivePath");
+			Debug.Log("Alerts Forced Off");
 		}
 		PlayerPrefs.DeleteKey("RaceModifier");
 		

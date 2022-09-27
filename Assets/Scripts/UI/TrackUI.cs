@@ -300,7 +300,7 @@ public class TrackUI : MonoBehaviour
 	public void startChampionship(){
 		DriverPoints.resetPoints(seriesPrefix);
 		PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
-		PlayerPrefs.SetString("ChampionshipTrackList",PlayerPrefs.GetString("SeriesTrackList"));
+		PlayerPrefs.SetString("ChampionshipTracklist",PlayerPrefs.GetString("SeriesTrackList"));
 		PlayerPrefs.SetString("RaceType","Championship");
 		loadTrack(trackList, 0);
 		PlayerPrefs.SetInt("ChampionshipRound",0);
