@@ -171,7 +171,7 @@ public class CameraRotate : MonoBehaviour {
 		
 		if(Movement.wreckOver == true){
 			//If last lap, no restart, it's over!
-			if(lap == raceEnd){
+			if(lap >= raceEnd){
 				endRace();
 			}
 			return;
@@ -201,7 +201,7 @@ public class CameraRotate : MonoBehaviour {
 			//Caution, reset scene
 			if(cautionOut == true){
 				//Only save at the line if not currently wrecking
-				if(Movement.isWrecking == false){
+				if((Movement.isWrecking == false)||(lap >= (raceEnd + 1))){
 					cautionSummaryMenu.SetActive(true);
 					Time.timeScale = 0.0f;
 					finishLine.GetComponent<Renderer>().enabled = true;
@@ -220,7 +220,7 @@ public class CameraRotate : MonoBehaviour {
 			averageSpeedTotal = 0;
 			
 			//Race End
-			if(lap == (raceEnd + 1)){
+			if(lap >= (raceEnd + 1)){
 				endRace();
 			}
 		}
@@ -252,7 +252,8 @@ public class CameraRotate : MonoBehaviour {
 				//Debug.Log("Corner " + straight + " speed: " + cornerSpeed);
 			}
 			if(cameraRotate == 1){
-				if(Movement.isWrecking == true){
+				//If wrecking and not on last lap (the finish trigger screws up with this enabled)
+				if((Movement.isWrecking == true)&&(lap < raceEnd)){
 					maxCornerFactor = Movement.playerSpeed - Movement.speedOffset;
 					float cornerAngleFactor = (1 / maxCornerFactor) * (maxCornerFactor + Movement.playerWreckDecel);
 					Debug.Log("Corner Angle Factor:" + cornerAngleFactor + " - maxFactor:" + maxCornerFactor);

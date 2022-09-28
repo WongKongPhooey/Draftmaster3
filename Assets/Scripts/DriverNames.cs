@@ -174,7 +174,8 @@ public class DriverNames : MonoBehaviour {
 	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount){
 		int carRarity = getRarity(seriesPrefix, index);
 		int carPrice = 999;
-		if(storeDiscount == true){
+		int shopDiscount = PlayerPrefs.GetInt("ShopDiscount");
+		if(shopDiscount == 1){
 			carRarity -= 1;
 		}
 		if(alt == true){

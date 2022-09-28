@@ -182,7 +182,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			
 			//Fake store values for testing
-			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
+			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
@@ -281,7 +281,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("FreeFuel", 0);
 		}
 		
-		//Shop Discount Promo (~40%)
+		//Shop Discount Promo (Everything moves down 1 price tier)
 		if(result.Data.ContainsKey("ShopDiscount") == true){
 			if(result.Data["ShopDiscount"] == "Yes"){
 				PlayerPrefs.SetInt("ShopDiscount", 1);
@@ -419,7 +419,10 @@ public class PlayFabManager : MonoBehaviour
 				}
 			}
 			if(rewardMessage != ""){
-				AlertManager.showPopup("Rewards",rewardMessage,rewardCarImg);
+				GameObject mainMenuUI = GameObject.Find("Main Camera");
+				 if(mainMenuUI.GetComponent<MainMenuUI>() != null){
+					mainMenuUI.GetComponent<MainMenuUI>().showAlert("Rewards",rewardMessage,rewardCarImg);
+				 }
 			}
 		} else {
 			Debug.Log("No player data found");

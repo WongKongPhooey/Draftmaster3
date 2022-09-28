@@ -46,6 +46,10 @@ public class MainMenuUI : MonoBehaviour {
 	
 	public GameObject latestNews;
 	
+	GameObject alertTitle;
+	GameObject alertImage;
+	GameObject alertText;
+	
 	public GameObject alertPopup;
 	public GameObject popupFrame;
 	
@@ -66,21 +70,26 @@ public class MainMenuUI : MonoBehaviour {
 		
 		rewardString = "";
 		
+		alertPopup = GameObject.Find("AlertPopup");
+		alertPopup.GetComponent<UIAnimate>().hide();
+		
+		alertTitle = GameObject.Find("AlertTitle");
+		//Assume image is always a 2:1 Rectangle
+		alertImage = GameObject.Find("AlertImage");
+		alertText = GameObject.Find("AlertText");
+		hideAlert();
+		
 		newMessageAlert = false;
 		newGiftAlert = false;
 		showInfoBox = false;
 		
 		if(PlayerPrefs.HasKey("MidRaceLoading")){
-			GameObject.Find("AlertPopup").SetActive(false);
 			PlayerPrefs.DeleteKey("MidRaceLoading");
-			//Debug.Log("Alerts Forced Off");
 		}
 		
 		//Delete Pre-Race Stored Variables
 		if(PlayerPrefs.HasKey("ActivePath")){
-			GameObject.Find("AlertPopup").SetActive(false);
 			PlayerPrefs.DeleteKey("ActivePath");
-			Debug.Log("Alerts Forced Off");
 		}
 		PlayerPrefs.DeleteKey("RaceModifier");
 		
@@ -96,7 +105,7 @@ public class MainMenuUI : MonoBehaviour {
 			
 			Debug.Log("Level Up -> " + level);
 			levelUpMenu = true;
-			AlertManager.showPopup("Level Up","You've leveled up! You've been rewarded " + rewardString,"dm2logo");
+			showAlert("Level Up","You've leveled up! You've been rewarded " + rewardString,"dm2logo");
 		}
 		
 		money = PlayerPrefs.GetInt("PrizeMoney");
@@ -210,8 +219,30 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("TargetVersion", Application.version);
-		AlertManager.showPopup("Hey Rookie! You Need A Ride?", "Mcleod is sharing their 2020 and 2022 Cup cars to get you started!", "cup22livery78");
+		showAlert("Hey Rookie! You Need A Ride?", "Mcleod is sharing their 2020 and 2022 Cup cars to get you started!", "cup22livery78");
 		PlayerPrefs.SetInt("NewUser",1);
+	}
+	
+	public void showAlert(string title, string content, string image){
+		alertTitle.GetComponent<TMPro.TMP_Text>().text = title;
+		alertText.GetComponent<TMPro.TMP_Text>().text = content;
+		if(content == ""){
+			return;
+		}
+		alertPopup.GetComponent<UIAnimate>().show();
+		if(image != ""){
+			alertImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(image);
+			alertImage.GetComponent<UIAnimate>().scaleIn();
+		}
+		alertText.GetComponent<UIAnimate>().scaleIn();
+	}
+	public void hideAlert(){
+		LeanTween.scale(alertPopup, new Vector3(0f,0f,0f), 0f);
+		alertText.GetComponent<UIAnimate>().hide();
+		alertImage.GetComponent<UIAnimate>().hide();
+		alertPopup.GetComponent<UIAnimate>().hide();
+		//alertPopup.SetActive(false);
+		//Debug.Log("Popup Hidden");
 	}
 
     // Update is called once per frame

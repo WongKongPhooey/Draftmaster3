@@ -119,14 +119,14 @@ public class StoreUIFunctions : MonoBehaviour
 						AlertManager.showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
 					}
 					break;
-				case "FuelHalfTank":
+				case "FullTank":
 					gears = PlayerPrefs.GetInt("Gears");
 					if(gears >= itemPrice){
 						gears -= itemPrice;
-						GameData.gameFuel+=(GameData.maxFuel / 2);
+						GameData.gameFuel=(GameData.maxFuel);
 						PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 						PlayerPrefs.SetInt("Gears",gears);
-						AlertManager.showPopup("Half Tank","You buy half a tank of fuel and head back to the track!","Icons/gascan");
+						AlertManager.showPopup("Full Tank","You fill the fuel tank and head back to the track!","Icons/gascan");
 					} else {
 						AlertManager.showPopup("Oh no..","You need more Gears to purchase fuel. Fuel will slowly refill every 5 minutes.","dm2logo");
 					}

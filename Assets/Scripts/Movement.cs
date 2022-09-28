@@ -1099,17 +1099,18 @@ public class Movement : MonoBehaviour {
 		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);
 		//If damage is above 1000, considered to be heavy, 2000+ is unrepairable
 		
-		if(RaceHUD.raceOver == false){
+		//No cautions on the last lap, race is over
+		if(CameraRotate.lap < CameraRotate.raceEnd){
 			cautionSummaryMenu.SetActive(true);
 		}
 		Time.timeScale = 0.0f;
 		mainCam.GetComponent<AudioListener>().enabled = false;
 		PlayerPrefs.SetInt("Volume",0);
 		
-		if(wreckDamage > 1000f){
+		//if(wreckDamage > 1000f){
 			//True means player pit, goes to the back
 			//Ticker.saveCautionPositions(true);
-		}
+		//}
 	}
 	
 	void wreckPhysics(){

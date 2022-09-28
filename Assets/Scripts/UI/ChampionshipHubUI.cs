@@ -54,12 +54,13 @@ public class ChampionshipHubUI : MonoBehaviour
 		championshipSubseries = PlayerPrefs.GetString("ChampionshipSubseries");
 		PlayerPrefs.SetString("CurrentSeriesIndex",championshipSubseries);
 		currentSeries = int.Parse(championshipSubseries.Substring(0,1));
-		currentSubseries = int.Parse(championshipSubseries.Substring(championshipSubseries.Length-1));
+		currentSubseries = int.Parse(championshipSubseries.Substring(1));
 		championshipTracklist = PlayerPrefs.GetString("ChampionshipTracklist");
 		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 		championshipLength = PlayerPrefs.GetInt("ChampionshipLength");
 		Debug.Log("Season Length: " + championshipLength);
-		seriesPrefix = PlayerPrefs.GetString("carSeries");
+		seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
+		PlayerPrefs.SetString("carSeries",PlayerPrefs.GetString("ChampionshipCarSeries"));
 		
 		PlayerPrefs.SetString("RaceType","Championship");
         
