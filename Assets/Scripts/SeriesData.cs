@@ -163,7 +163,7 @@ public class SeriesData : MonoBehaviour{
 		offlineMinLevel[1,1] = 10;
 		offlineMinLevel[1,2] = 20;
 		offlineMinLevel[1,3] = 30;
-		offlineMinLevel[1,4] = 40;
+		offlineMinLevel[1,4] = 35;
 		
 		offlineMinClass[1,0] = 1;
 		offlineMinClass[1,1] = 2;
@@ -219,7 +219,7 @@ public class SeriesData : MonoBehaviour{
 		offlineMinLevel[2,1] = 11;
 		offlineMinLevel[2,2] = 21;
 		offlineMinLevel[2,3] = 31;
-		offlineMinLevel[2,4] = 41;
+		offlineMinLevel[2,4] = 36;
 		
 		offlineMinClass[2,0] = 1;
 		offlineMinClass[2,1] = 2;
@@ -274,7 +274,7 @@ public class SeriesData : MonoBehaviour{
 		offlineMinLevel[3,1] = 12;
 		offlineMinLevel[3,2] = 22;
 		offlineMinLevel[3,3] = 32;
-		offlineMinLevel[3,4] = 42;
+		offlineMinLevel[3,4] = 37;
 		
 		offlineMinClass[3,0] = 1;
 		offlineMinClass[3,1] = 2;
@@ -329,7 +329,7 @@ public class SeriesData : MonoBehaviour{
 		offlineMinLevel[4,1] = 13;
 		offlineMinLevel[4,2] = 23;
 		offlineMinLevel[4,3] = 33;
-		offlineMinLevel[4,4] = 43;
+		offlineMinLevel[4,4] = 38;
 		
 		offlineMinClass[4,0] = 2;
 		offlineMinClass[4,1] = 3;

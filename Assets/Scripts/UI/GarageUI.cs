@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +34,11 @@ public class GarageUI : MonoBehaviour
     // Start is called before the first frame update
     void Start(){
 		seriesPrefix = "cup20";
+		
+		//For returning PlayFab call outputs, reset on Awake
+		PlayerPrefs.SetString("SaveLoadOutput","");
+		
+		autosaveGarageToCloud();
 		
 		seriesDropdown = GameObject.Find("Dropdown");
 		seriesDropdown.SetActive(false);
@@ -425,6 +431,13 @@ public class GarageUI : MonoBehaviour
 			PlayerPrefs.SetInt("cup2278Class",1);
 		}
 		
+		//Give a free Raikkonen for Cup '22
+		if(PlayerPrefs.GetInt("cup2291Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2291Unlocked",1);
+			PlayerPrefs.SetInt("cup2291Gears",0);
+			PlayerPrefs.SetInt("cup2291Class",1);
+		}
+		
 		//Give a free Mcleod for Cup '20
 		if(PlayerPrefs.GetInt("cup2052Unlocked") == 0){
 			PlayerPrefs.SetInt("cup2052Unlocked",1);
@@ -450,9 +463,112 @@ public class GarageUI : MonoBehaviour
 		}
 	}
 
+	public void autosaveGarageToCloud(){
+		
+		//Count Unlocks..
+		int level = PlayerPrefs.GetInt("Level");
+		int totalUnlocks = 0;
+		
+		ArrayList allSeries = new ArrayList(); 
+		allSeries.Add("cup20");
+		allSeries.Add("cup22");
+		allSeries.Add("dmc15");
+		
+		foreach(string series in allSeries){
+			for(int i=0;i<100;i++){
+				if(DriverNames.getName(series, i) != null){
+					if(PlayerPrefs.GetInt(series + i + "Unlocked") == 1){
+						totalUnlocks++;
+					}
+				}
+			}
+		}
+
+		//If you have more than just the starter cars..
+		if((level >= 5)&&(totalUnlocks > 5)){
+			Debug.Log("Level: " + level + " - Cars:" + totalUnlocks);
+			//If logged in as someone
+			if(PlayerPrefs.HasKey("PlayerUsername")){
+				
+				//Try an autosave
+				foreach(string series in allSeries){
+					string progressJSON = JSONifyProgress(series);
+					PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+				}
+			}
+		} else {
+			//Seems like an empty account.. check for a cloud save to reload
+			// ..just in case
+			Debug.Log("Check for a cloud save..");
+			PlayFabManager.GetSavedPlayerProgress();
+		}
+	}
+
+	string JSONifyProgress(string seriesPrefix){
+		string JSONOutput = "{";
+		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
+		JSONOutput += "\"totalCars\": \"" + PlayerPrefs.GetInt("LocalTotalUnlocks").ToString() + "\",";
+		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
+		JSONOutput += "\"drivers\": [";
+		for(int car = 0; car < 100; car++){
+			//Initialise (can be used for dev reset)
+			int carUnlocked = 0;
+			int carClass = 0;
+			int carGears = 0;
+			if(PlayerPrefs.HasKey(seriesPrefix + car + "Gears")){
+				carUnlocked = PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked");
+				carClass = PlayerPrefs.GetInt(seriesPrefix + car + "Class");
+				carGears = PlayerPrefs.GetInt(seriesPrefix + car + "Gears");
+			}
+			if(car > 0){
+				JSONOutput += ",";
+			}
+			JSONOutput += "{";
+			JSONOutput += "\"carNo\": \"" + car + "\",";
+			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\",";
+			JSONOutput += "\"carClass\": \"" + carClass + "\",";
+			JSONOutput += "\"carGears\": \"" + carGears + "\",";
+			JSONOutput += "\"altPaints\": \"0";
+			for(int paint=1;paint<10;paint++){
+				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
+					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
+						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
+						JSONOutput += "," + paint + "";
+					}
+				}
+			}
+			JSONOutput += "\"";
+			JSONOutput += "}";		
+		}
+		JSONOutput += "]}";
+		return JSONOutput;
+	}
+
+	public void syncWithCloud(){
+		PlayFabManager.GetSavedPlayerProgress();
+		loadAllCars();
+	}
+
     // Update is called once per frame
     void Update()
     {
         
     }
+}
+
+[Serializable]
+public class Driver {
+    public string carNo;
+    public string carUnlocked;
+    public string carClass;
+    public string carGears;
+    public string altPaints;
+}
+
+[Serializable]
+public class Series {
+	public string playerLevel;
+	public int totalCars;
+    public string seriesName;
+    public List<Driver> drivers;
 }

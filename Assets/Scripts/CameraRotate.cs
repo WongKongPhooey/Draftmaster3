@@ -366,7 +366,9 @@ public class CameraRotate : MonoBehaviour {
 			lap--;
 		}
 		Time.timeScale = 0.0f;
-		finishLine.GetComponent<Renderer>().enabled = true;
+		if(Movement.wreckOver == false){
+			finishLine.GetComponent<Renderer>().enabled = true;
+		}
 		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 			int rand = Random.Range(1,100);
 			//Lucky day

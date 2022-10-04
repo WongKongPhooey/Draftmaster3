@@ -64,7 +64,7 @@ public class DriverNames : MonoBehaviour {
 		loadData();
 	}
 	
-	static void loadData(){
+	public static void loadData(){
 		cup20();
 		cup22();
 		cup01();

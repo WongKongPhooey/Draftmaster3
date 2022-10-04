@@ -57,8 +57,12 @@ public class PrizeMoney : MonoBehaviour {
 	}
 	
 	public static int getPrizeMoney(int position){
+		//Fixes negative championship finish bug
+		if(position < 0){
+			position = 0;
+		}
 		setPrizeMoney();
-		if((position > 0)&&(position < 43)){
+		if((position >= 0)&&(position < 43)){
 			return cashAmount[position];
 		} else {
 			return cashAmount[42];

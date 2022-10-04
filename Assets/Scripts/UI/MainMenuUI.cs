@@ -6,8 +6,6 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 public class MainMenuUI : MonoBehaviour {
-	
-	string versionLabel;
 
 	int exp;
 	int level;
@@ -40,6 +38,7 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject gearsLabel;
 	public GameObject weekDayLabel;
 	public GameObject moneyLabel;
+	public GameObject versionLabel;
 	
 	public GameObject loginBtn;
 	public GameObject loginBtnLabel;
@@ -124,6 +123,9 @@ public class MainMenuUI : MonoBehaviour {
 		
 		loginBtn = GameObject.Find("LoginButton");
 		loginBtnLabel = GameObject.Find("LoginButtonLabel");
+		
+		versionLabel = GameObject.Find("VersionLabel");
+		versionLabel.GetComponent<TMPro.TMP_Text>().text = "v" + Application.version;
 		
 		if(PlayerPrefs.GetString("MessageAlert") != ""){
 			latestNews = GameObject.Find("LatestNews");

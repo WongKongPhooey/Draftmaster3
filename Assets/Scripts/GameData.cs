@@ -574,7 +574,7 @@ public class GameData : MonoBehaviour {
 				return 10000;
 				break;
 			default:
-				return 999999;
+				return 9999999;
 				break;
 		}
 	}

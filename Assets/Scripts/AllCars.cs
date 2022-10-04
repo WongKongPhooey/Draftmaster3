@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 public class AllCars : MonoBehaviour {
 	
-    public GUISkin buttonSkin;
+    /*public GUISkin buttonSkin;
 	public GUISkin tileSkin;
 	public GUISkin blueGUI;
 	public GUISkin redGUI;
@@ -85,7 +85,7 @@ public class AllCars : MonoBehaviour {
 				if(PlayerPrefs.HasKey("PlayerUsername")){
 					//Count the saved cars (returns as PlayerPref AutosavedCarCount)
 					try{
-						PlayFabManager.CountSavedProgressTotals();
+						//PlayFabManager.CountSavedProgressTotals();
 					}
 					catch{
 						Debug.Log("PlayFab is currently Unavailable");
@@ -447,7 +447,7 @@ public class AllCars : MonoBehaviour {
 					PlayFabManager.SavePlayerProgress(seriesPrefix, progressJSON);
 				}
 				if (GUI.Button(new Rect(widthblock * 11, (heightblock * (8f * 11)) + heightblock * 2f, widthblock * 6, heightblock * 2f), "Load From Server")){
-					PlayFabManager.GetSavedPlayerProgress(seriesPrefix);
+					//PlayFabManager.GetSavedPlayerProgress(seriesPrefix);
 				}
 				GUI.skin = tileSkin;
 				GUI.skin.label.alignment = TextAnchor.UpperCenter;
@@ -540,9 +540,9 @@ public class AllCars : MonoBehaviour {
 		}
 		JSONOutput += "]}";
 		return JSONOutput;
-	}
+	}*/
 }
-
+/*
 [Serializable]
 public class Driver {
     public string carNo;
@@ -557,4 +557,4 @@ public class Series {
 	public string playerLevel;
     public string seriesName;
     public List<Driver> drivers;
-}
+}*/

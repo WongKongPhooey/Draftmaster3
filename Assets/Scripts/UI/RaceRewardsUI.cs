@@ -104,7 +104,7 @@ public class RaceRewardsUI : MonoBehaviour
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
 		}
 		
-		prizeMoney = PrizeMoney.getPrizeMoney(finishPos-1);
+		prizeMoney = PrizeMoney.getPrizeMoney(finishPos);
 		Debug.Log("Won: " + prizeMoney);
 		playerMoney += prizeMoney * rewardMultiplier;
 		Debug.Log("Multiplied Win: " + (prizeMoney * rewardMultiplier));

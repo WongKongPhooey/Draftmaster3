@@ -84,9 +84,7 @@ public class PlayFabManager : MonoBehaviour
 		Debug.Log("Retrieved Username!");
 		PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
 		//Attempt to load saved data
-		GetSavedPlayerProgress("cup20");
-		GetSavedPlayerProgress("cup22");
-		GetSavedPlayerProgress("dmc15");
+		GetSavedPlayerProgress();
 		SceneManager.LoadScene("Menus/MainMenu");
 	}
 	
@@ -118,9 +116,6 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
 		PlayerPrefs.SetString("PlayerPassword", passwordInput.text);
 		LoginFromPrefs();
-		GetSavedPlayerProgress("cup20");
-		GetSavedPlayerProgress("cup22");
-		GetSavedPlayerProgress("dmc15");
 		SceneManager.LoadScene("Menus/MainMenu");
 	}
 	
@@ -176,13 +171,13 @@ public class PlayFabManager : MonoBehaviour
 		
 		//Custom store items in Daily Selects
 		if(result.Data.ContainsKey("StoreDailySelects") == false){
-			Debug.Log("No online Store Daily Selects");
+			//Debug.Log("No online Store Daily Selects");
 			//Remove the last known store values
 			PlayerPrefs.SetString("StoreDailySelects", "");
 		} else {
 			
 			//Fake store values for testing
-			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
+			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
@@ -463,105 +458,104 @@ public class PlayFabManager : MonoBehaviour
 		PlayFabClientAPI.UpdateUserData(request, OnDataSend, OnError);
 	}
 	
-	public static void CountSavedProgressTotals(){
-		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressCounts, OnError);
-	}
-	
-	static void OnProgressCounts(GetUserDataResult result){
-		if(result.Data != null){
-			Debug.Log("Checking Saved Progress Counts..");
-			string json = "";
-			string saveType = "";
-			
-			//string[] seriesList={"cup20","cup22"};
-			
-			int unlockedCars;
-			unlockedCars = 0;
-			Debug.Log("Counting cars from " + unlockedCars);
-			foreach(string series in DriverNames.series){
-				json = "";
-				
-				//Try to load from autosave
-				if(result.Data.ContainsKey("AutosavePlayerProgress" + series)){
-					Debug.Log("No manual saves.. looking for an autosave");
-					json = result.Data["AutosavePlayerProgress" + series].Value;
-				}
-				
-				//Run the unlock count
-				if(json != ""){
-				    Series playerJson = JsonUtility.FromJson<Series>(json);
-				    for(int i=0;i<=99;i++){
-						if(DriverNames.getName(series, i) != null){
-							if(playerJson.drivers[i].carUnlocked == "1"){
-								//Debug.Log("Count " + series + " #" + i);
-								unlockedCars++;
-							}
-						}
-					}
-				}
-				Debug.Log("Counted " + unlockedCars + " cars in series " + series);
-			}
-			PlayerPrefs.SetInt("AutosavedCarCount",unlockedCars);
-		} else {
-			Debug.Log("No data returned from PlayFab");
-			//Remove the value, possible connection issue
-			PlayerPrefs.DeleteKey("AutosavedCarCount");
-		}
-	}
-	
-	public static void GetSavedPlayerProgress(string seriesPrefix){
-		PlayerPrefs.SetString("LoadedSeries", seriesPrefix);
+	public static void GetSavedPlayerProgress(){
 		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressReceived, OnError);
 	}
 	
 	static void OnProgressReceived(GetUserDataResult result){
 		if(result.Data != null){
-			Debug.Log("Saved player progress found");
-			string seriesPrefix = PlayerPrefs.GetString("LoadedSeries");
+			string seriesPrefix = "cup20";
 			string json = "";
 			string saveType = "";
+			int cloudLevel = 0;
+			
+			//Check the latest autosave
+			if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
+				Debug.Log("No manual save.. looking for an autosave");
+				json = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
+				Series playerJson = JsonUtility.FromJson<Series>(json);
+				if(cloudLevel < int.Parse(playerJson.playerLevel)){
+					cloudLevel = int.Parse(playerJson.playerLevel);
+					Debug.Log("Autosave is at level " + cloudLevel);
+				}
+				saveType = "automatic";
+			}
+			
 			//Check for manual save
 			if(result.Data.ContainsKey("SavedPlayerProgress" + seriesPrefix)){
-				json = result.Data["SavedPlayerProgress" + seriesPrefix].Value;
-				saveType = "manual ";
-			} else {
-				//No save data? Try to load from autosave
-				if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
-					Debug.Log("No manual saves.. looking for an autosave");
-					json = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
-					saveType = "auto";
+				json = result.Data["SavedPlayerProgresscup20"].Value;
+				Series playerJson = JsonUtility.FromJson<Series>(json);
+				if(cloudLevel < int.Parse(playerJson.playerLevel)){
+					cloudLevel = int.Parse(playerJson.playerLevel);
+					Debug.Log("Manual Save is at level " + cloudLevel);
+					saveType = "manual";
+				} else {
+					//Try to revert back to using the autosave
+					if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
+						json = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
+						playerJson = JsonUtility.FromJson<Series>(json);
+					}
 				}
-			}
+			} 
+			
 			if(json != ""){
+				//We found some form of save data, but should we load it?
 				 PlayerPrefs.SetInt("NewUser",1);
 				 Series playerJson = JsonUtility.FromJson<Series>(json);
 				 int level = int.Parse(playerJson.playerLevel);
-				 PlayerPrefs.SetInt("Level", level);
-				 string series = playerJson.seriesName;
+				 
+				 if(level <= PlayerPrefs.GetInt("Level")){
+					Debug.Log("Your save is not a higher level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + "). Load aborted.");
+					return;
+				 } else {
+					PlayerPrefs.SetInt("Level", level);
+				 }
+				 
+				 ArrayList allSeries = new ArrayList(); 
+				 allSeries.Add("cup20");
+				 allSeries.Add("cup22");
+				 allSeries.Add("dmc15");
+				 
 				 int unlockedCars = 0;
-				 for(int i=0;i<=99;i++){
-					if(DriverNames.getName(series,i) != null){
-						PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(playerJson.drivers[i].carUnlocked));
-						if(playerJson.drivers[i].carUnlocked == "1"){
-							unlockedCars++;
-						}
-						PlayerPrefs.SetInt(series + i + "Class", int.Parse(playerJson.drivers[i].carClass));
-						PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
-						string altsList = playerJson.drivers[i].altPaints;
-						string[] altsArray = altsList.Split(',');
-						foreach(string alt in altsArray){
-							if(int.Parse(alt) > 0){
-								PlayerPrefs.SetInt(series + i + "Alt" + alt + "Unlocked", 1);
-								Debug.Log("Added #" + i + " alt " + alt);
+				 foreach(string series in allSeries){
+					 if(saveType == "manual"){
+						json = result.Data["SavedPlayerProgress" + series].Value;
+						playerJson = JsonUtility.FromJson<Series>(json);
+					 }
+					 if(saveType == "automatic"){
+						json = result.Data["AutosavePlayerProgress" + series].Value;
+						playerJson = JsonUtility.FromJson<Series>(json);
+					 }
+					 for(int i=0;i<=99;i++){
+						if(DriverNames.getName(series,i) != null){
+							if(PlayerPrefs.GetInt(series + i + "Unlocked") < int.Parse(playerJson.drivers[i].carUnlocked)){
+								PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(playerJson.drivers[i].carUnlocked));
+								Debug.Log("New unlock on load, " + series + " #" + i);
+							}
+							if(playerJson.drivers[i].carUnlocked == "1"){
+								unlockedCars++;
+							}
+							if(PlayerPrefs.GetInt(series + i + "Class") < int.Parse(playerJson.drivers[i].carClass)){
+								PlayerPrefs.SetInt(series + i + "Class", int.Parse(playerJson.drivers[i].carClass));
+								PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
+								Debug.Log("Updated class on load, " + series + " #" + i);
+							}
+							string altsList = playerJson.drivers[i].altPaints;
+							string[] altsArray = altsList.Split(',');
+							foreach(string alt in altsArray){
+								if(int.Parse(alt) > 0){
+									PlayerPrefs.SetInt(series + i + "Alt" + alt + "Unlocked", 1);
+									Debug.Log("Unlocked Alt on load, " + series + " #" + i + " alt " + alt);
+								}
 							}
 						}
-					}
+					 }
 				 }
 				 Debug.Log("Loaded data from server! " + unlockedCars + " unlocked cars.");
 				 PlayerPrefs.SetString("SaveLoadOutput","Loaded " + saveType + "save - " + unlockedCars + " unlocked cars.");
 			} else {
 				Debug.Log("No player data found");
-				PlayerPrefs.SetString("SaveLoadOutput","No save data found for this player account.");
+				PlayerPrefs.SetString("SaveLoadOutput","No autosave or manual save data found for this player account.");
 			}
 		} else {
 			Debug.Log("No player data found");
@@ -591,7 +585,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void OnProgressSave(UpdateUserDataResult result){
-		Debug.Log("Player Progress Saved");
+		//Debug.Log("Player Progress Saved");
 		PlayerPrefs.SetString("SaveLoadOutput","Saved progress to the server");
 	}
 	

@@ -250,19 +250,21 @@ public class TrackUI : MonoBehaviour
 		return trackName;
 	}
 
-	void setRaceLaps(){
+	public static void setRaceLaps(){
 		//Adjust laps based on AI difficulty
 		int AIDiff = PlayerPrefs.GetInt("AIDifficulty");
 		int baseLaps = PlayerPrefs.GetInt("RaceLaps");
-		int raceLapsMultiplier = (AIDiff / 8) + 1;
+		int raceLapsMultiplier = (AIDiff / 4) + 1;
 		PlayerPrefs.SetInt("RaceLaps", Mathf.FloorToInt(baseLaps * raceLapsMultiplier));
-		//Debug.Log("Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
 	}
 
 	public static void startRace(string track){
 		
 		//This loads the track data
 		GameObject.Find("Main").GetComponent<TrackData>().loadTrackData(track);
+		
+		setRaceLaps();
 		
 		PlayerPrefs.SetString("TrackLocation",track);
 		PlayerPrefs.SetString("CurrentCircuit", track);
