@@ -66,7 +66,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	void OnLoginSuccess(LoginResult result){
-		Debug.Log("Login successful!");
+		//Debug.Log("Login successful!");
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
 		PlayerPrefs.SetString("PlayerPassword", passwordInput.text);
 		PlayerPrefs.SetString("PlayerPlayFabId", result.PlayFabId);
@@ -81,11 +81,20 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void OnGetUsernameSuccess(GetPlayerProfileResult result){
-		Debug.Log("Retrieved Username!");
-		PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
-		//Attempt to load saved data
-		GetSavedPlayerProgress();
-		SceneManager.LoadScene("Menus/MainMenu");
+		//Debug.Log("Retrieved Username!");
+		string username = result.PlayerProfile.DisplayName;
+		if(username.StartsWith("DELETED")){
+			Debug.Log("That account was deleted..");
+			PlayerPrefs.DeleteKey("PlayerUsername");
+			PlayerPrefs.DeleteKey("PlayerEmail");
+			PlayerPrefs.DeleteKey("PlayerPassword");
+			SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+		} else {
+			PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
+			//Attempt to load saved data
+			GetSavedPlayerProgress();
+			SceneManager.LoadScene("Menus/MainMenu");
+		}
 	}
 	
 	public static void OnError(PlayFabError error){
@@ -129,6 +138,23 @@ public class PlayFabManager : MonoBehaviour
 		PlayerPrefs.DeleteKey("PlayerEmail");
 		PlayerPrefs.DeleteKey("PlayerPassword");
 		SceneManager.LoadScene("MainMenu");
+	}
+	
+	//Junks the username to DelXXXX and logs out.
+	public static void DeleteAccount(){
+		string playFabId = PlayerPrefs.GetString("PlayerPlayFabId");
+		var request = new UpdateUserTitleDisplayNameRequest{
+			DisplayName = "DELETED" + playFabId
+		};
+		PlayFabClientAPI.UpdateUserTitleDisplayName(request, OnDeletePlayerSuccess, OnError);
+	}
+	
+	public static void OnDeletePlayerSuccess(UpdateUserTitleDisplayNameResult result){
+		Debug.Log("Player Deleted" + result);
+		PlayerPrefs.DeleteKey("PlayerUsername");
+		PlayerPrefs.DeleteKey("PlayerEmail");
+		PlayerPrefs.DeleteKey("PlayerPassword");
+		SceneManager.LoadScene("Menus/MainMenu");
 	}
 	
 	public static void CheckLiveTimeTrial(){
