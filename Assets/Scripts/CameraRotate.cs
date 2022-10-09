@@ -256,10 +256,10 @@ public class CameraRotate : MonoBehaviour {
 				if((Movement.isWrecking == true)&&(lap < raceEnd)){
 					maxCornerFactor = Movement.playerSpeed - Movement.speedOffset;
 					float cornerAngleFactor = (1 / maxCornerFactor) * (maxCornerFactor + Movement.playerWreckDecel);
-					Debug.Log("Corner Angle Factor:" + cornerAngleFactor + " - maxFactor:" + maxCornerFactor);
+					//Debug.Log("Corner Angle Factor:" + cornerAngleFactor + " - maxFactor:" + maxCornerFactor);
 					TDCamera.transform.Rotate(0,0,(-1.0f/turnAngle[turn-1]) * cornerAngleFactor);
 					wreckingCornerCounter += cornerAngleFactor;
-					Debug.Log(wreckingCornerCounter + " so far, out of " + (turnLength[turn-1] * turnAngle[turn-1]));
+					//Debug.Log(wreckingCornerCounter + " so far, out of " + (turnLength[turn-1] * turnAngle[turn-1]));
 					//if(wreckingCornerCounter > (turnLength[turn-1] * turnAngle[turn-1])){
 						//float cornerFinalDiff = wreckingCornerCounter - (turnLength[turn-1] * turnAngle[turn-1]);
 						//TDCamera.transform.Rotate(0,0,(-1.0f/cornerFinalDiff));

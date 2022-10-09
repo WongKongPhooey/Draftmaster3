@@ -241,8 +241,8 @@ public class GarageUI : MonoBehaviour
 		
 		restrictionType = PlayerPrefs.GetString("RestrictionType");
 		restrictionValue = PlayerPrefs.GetString("RestrictionValue");
-		Debug.Log("Restriction " + restrictionType);
-		Debug.Log("Restricted to " + restrictionValue);
+		//Debug.Log("Restriction " + restrictionType);
+		//Debug.Log("Restricted to " + restrictionValue);
 			
 		seriesTeam = "";
 		seriesManu = "";
@@ -486,7 +486,7 @@ public class GarageUI : MonoBehaviour
 
 		//If you have more than just the starter cars..
 		if((level >= 5)&&(totalUnlocks > 5)){
-			Debug.Log("Level: " + level + " - Cars:" + totalUnlocks);
+			//Debug.Log("Level: " + level + " - Cars:" + totalUnlocks);
 			//If logged in as someone
 			if(PlayerPrefs.HasKey("PlayerUsername")){
 				
@@ -499,7 +499,7 @@ public class GarageUI : MonoBehaviour
 		} else {
 			//Seems like an empty account.. check for a cloud save to reload
 			// ..just in case
-			Debug.Log("Check for a cloud save..");
+			//Debug.Log("Check for a cloud save..");
 			PlayFabManager.GetSavedPlayerProgress();
 		}
 	}

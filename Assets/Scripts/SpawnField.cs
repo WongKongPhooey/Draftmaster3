@@ -43,7 +43,7 @@ public class SpawnField : MonoBehaviour {
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
-		//Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
+		Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
 
 		gridLanes = 2;
 		
@@ -102,8 +102,8 @@ public class SpawnField : MonoBehaviour {
 		}
 		
 		//Max field size
-		if(fieldSize > 45){
-			fieldSize = 45;
+		if(fieldSize > 43){
+			fieldSize = 43;
 		}
 		
 		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
@@ -303,12 +303,6 @@ public class SpawnField : MonoBehaviour {
 		Ticker.updateTicker();
 	}
 
-	public static void spawnIndycars(){
-		fastCars.Clear();
-		midCars.Clear();
-		slowCars.Clear();
-	}
-
 	public static void spawnCars(string seriesPref){
 		fastCars.Clear();
 		midCars.Clear();
@@ -426,69 +420,5 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Add("6");
 		fastCars.Add("3");
 		fastCars.Add("4");
-	}
-
-	public static void spawnStockcars(){
-
-		fastCars.Clear();
-		midCars.Clear();
-		slowCars.Clear();
-
-		fastCars.Add("3");
-		fastCars.Add("24");
-		fastCars.Add("30");
-		fastCars.Add("43");
-		fastCars.Add("48");
-		fastCars.Add("52");
-		fastCars.Add("88");
-		
-		slowCars.Add("0");
-		slowCars.Add("1");
-		slowCars.Add("2");
-		slowCars.Add("4");
-		slowCars.Add("5");
-		slowCars.Add("6");
-		slowCars.Add("7");
-		slowCars.Add("8");
-		slowCars.Add("9");
-		slowCars.Add("10");
-		slowCars.Add("11");
-		slowCars.Add("12");
-		slowCars.Add("13");
-		slowCars.Add("14");
-		slowCars.Add("15");
-		slowCars.Add("16");
-		slowCars.Add("17");
-		slowCars.Add("18");
-		slowCars.Add("19");
-		slowCars.Add("20");
-		slowCars.Add("21");
-		slowCars.Add("22");
-		slowCars.Add("23");
-		slowCars.Add("25");
-		slowCars.Add("27");
-		slowCars.Add("28");
-		slowCars.Add("29");
-		slowCars.Add("33");
-		slowCars.Add("37");
-		slowCars.Add("41");
-		slowCars.Add("44");
-		slowCars.Add("46");
-		slowCars.Add("50");
-		slowCars.Add("51");
-		slowCars.Add("55");
-		slowCars.Add("66");
-		slowCars.Add("67");
-		
-		if(RacePoints.championshipMode == true){
-			slowCars.Add("71");
-			slowCars.Add("77");
-			slowCars.Add("80");
-			slowCars.Add("89");
-			slowCars.Add("91");
-			slowCars.Add("92");
-			slowCars.Add("94");
-			slowCars.Add("99");
-		}
 	}
 }
