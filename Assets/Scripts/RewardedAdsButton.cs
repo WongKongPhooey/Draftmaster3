@@ -5,30 +5,34 @@ using UnityEngine.Advertisements;
 public class RewardedAdsButton : MonoBehaviour, IUnityAdsLoadListener, IUnityAdsShowListener
 {
     [SerializeField] Button _showAdButton;
-    [SerializeField] string _androidAdUnitId = "Rewarded_Android";
-    [SerializeField] string _iOSAdUnitId = "Rewarded_iOS";
+    string androidAdUnitId = "Rewarded_Android";
+    string iOSAdUnitId = "Rewarded_iOS";
 	
-    string _adUnitId = null; // This will remain null for unsupported platforms
+	public GameObject alertPopup;
+	
+    string adUnitId; // This will remain null for unsupported platforms
  
     void Awake()
     {   
         // Get the Ad Unit ID for the current platform:
-#if UNITY_IOS
-        _adUnitId = _iOSAdUnitId;
-#elif UNITY_ANDROID
-        _adUnitId = _androidAdUnitId;
-#endif
+		adUnitId = "Rewarded_Android";
+		#if UNITY_IOS
+        adUnitId = "Rewarded_iOS";
+		#endif
+		
+		//alertPopup = GameObject.Find("AlertPopup");
+		Debug.Log("Popup Set");
 
         //Disable the button until the ad is ready to show:
-        _showAdButton.interactable = false;
+        //_showAdButton.interactable = false;
     }
  
     // Load content to the Ad Unit:
     public void LoadAd()
     {
         // IMPORTANT! Only load content AFTER initialization (in this example, initialization is handled in a different script).
-        Debug.Log("Loading Ad: " + _adUnitId);
-        Advertisement.Load(_adUnitId, this);
+        Debug.Log("Loading Ad: " + adUnitId);
+        Advertisement.Load(adUnitId, this);
     }
  
     // If the ad successfully loads, add a listener to the button and enable it:
@@ -36,7 +40,7 @@ public class RewardedAdsButton : MonoBehaviour, IUnityAdsLoadListener, IUnityAds
     {
         Debug.Log("Ad Loaded: " + adUnitId);
  
-        if (adUnitId.Equals(_adUnitId))
+        if (adUnitId.Equals(adUnitId))
         {
             // Configure the button to call the ShowAd() method when clicked:
             _showAdButton.onClick.AddListener(ShowAd);
@@ -51,13 +55,13 @@ public class RewardedAdsButton : MonoBehaviour, IUnityAdsLoadListener, IUnityAds
         // Disable the button:
         _showAdButton.interactable = false;
         // Then show the ad:
-        Advertisement.Show(_adUnitId, this);
+        Advertisement.Show(adUnitId, this);
     }
  
     // Implement the Show Listener's OnUnityAdsShowComplete callback method to determine if the user gets a reward:
     public void OnUnityAdsShowComplete(string adUnitId, UnityAdsShowCompletionState showCompletionState)
     {
-        if (adUnitId.Equals(_adUnitId) && showCompletionState.Equals(UnityAdsShowCompletionState.COMPLETED))
+        if (adUnitId.Equals(adUnitId) && showCompletionState.Equals(UnityAdsShowCompletionState.COMPLETED))
         {
             Debug.Log("Unity Ads Rewarded Ad Completed");
             // Grant a reward.
@@ -69,10 +73,10 @@ public class RewardedAdsButton : MonoBehaviour, IUnityAdsLoadListener, IUnityAds
 			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 
 			Debug.Log("Rewarded with fuel");
-			AlertManager.showPopup("Sponsor Work","The sponsor thanks you for your help, and pays for a half tank of fuel.","Icons/gascan");
+			alertPopup.GetComponent<AlertManager>().showPopup("Sponsor Work","The sponsor thanks you for your help, and pays for a half tank of fuel.","Icons/gascan");
 
             // Load another ad:
-            Advertisement.Load(_adUnitId, this);
+            Advertisement.Load(adUnitId, this);
         }
     }
  

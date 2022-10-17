@@ -22,7 +22,8 @@ public class DriverNames : MonoBehaviour {
 
 	public static Dictionary<string, int> numXPos = new Dictionary<string, int>();
 
-	public static string[] allCarsets = new string[4];
+	public static string[] allCarsets = new string[5];
+	public static string[] allWinnableCarsets = new string[3];
 
 	public static string[] cup2020Names = new string[101];
 	public static string[] cup2020Teams = new string[101];
@@ -71,6 +72,7 @@ public class DriverNames : MonoBehaviour {
 		cup79();
 		dmc15();
 		listCarsets();
+		listWinnableCarsets();
 		carsetNames();
 		
 		series.Clear();
@@ -126,8 +128,14 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[0] = "cup20";
 		allCarsets[1] = "cup22";
 		allCarsets[2] = "cup01";
-		allCarsets[2] = "cup79";
-		allCarsets[3] = "dmc15";
+		allCarsets[3] = "cup79";
+		allCarsets[4] = "dmc15";
+	}
+	
+	public static void listWinnableCarsets(){
+		allWinnableCarsets[0] = "cup20";
+		allWinnableCarsets[1] = "cup22";
+		allWinnableCarsets[2] = "dmc15";
 	}
 	
 	public static string getName(string seriesPrefix, int index){
@@ -533,6 +541,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Names[22] = "Logano";
 		cup2022Names[23] = "Wallace";
 		cup2022Names[24] = "Byron";
+		cup2022Names[26] = "Kvyat";
 		cup2022Names[27] = "Villeneuve";
 		cup2022Names[31] = "Haley";
 		cup2022Names[34] = "McDowell";
@@ -579,6 +588,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Teams[22] = "PEN";
 		cup2022Teams[23] = "23X";
 		cup2022Teams[24] = "HEN";
+		cup2022Teams[26] = "IND";
 		cup2022Teams[27] = "IND";
 		cup2022Teams[31] = "KAU";
 		cup2022Teams[34] = "FRM";
@@ -625,6 +635,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Manufacturer[22] = "FRD";
 		cup2022Manufacturer[23] = "TYT";
 		cup2022Manufacturer[24] = "CHV";
+		cup2022Manufacturer[26] = "TYT";
 		cup2022Manufacturer[27] = "FRD";
 		cup2022Manufacturer[31] = "CHV";
 		cup2022Manufacturer[34] = "FRD";
@@ -672,6 +683,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Types[22] = "Intimidator";
 		cup2022Types[23] = "Strategist";
 		cup2022Types[24] = "Closer";
+		cup2022Types[26] = "Rookie";
 		cup2022Types[27] = "Intimidator";
 		cup2022Types[31] = "Strategist";
 		cup2022Types[34] = "Blocker";
@@ -718,6 +730,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[22] = 3;
 		cup2022Rarity[23] = 2;
 		cup2022Rarity[24] = 3;
+		cup2022Rarity[26] = 1;
 		cup2022Rarity[27] = 1;
 		cup2022Rarity[31] = 1;
 		cup2022Rarity[34] = 2;

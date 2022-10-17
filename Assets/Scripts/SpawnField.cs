@@ -9,6 +9,7 @@ public class SpawnField : MonoBehaviour {
 	public Transform AICarPrefab;
 
 	string carNum;
+	int carNumInt;
 
 	public static ArrayList fastCars = new ArrayList();
 	public static ArrayList midCars = new ArrayList();
@@ -32,6 +33,7 @@ public class SpawnField : MonoBehaviour {
 	public static int startLane;
 	
 	static Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
+	public List<int> spawnedCars = new List<int>();
 
 	// Use this for initialization
 	void Start () {
@@ -155,8 +157,26 @@ public class SpawnField : MonoBehaviour {
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
 						fieldIndex++;
 					}
+					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+					carNum = carNumInt.ToString();
+					//If car already exists in field
+					while(spawnedCars.Contains(carNumInt) == true){
+						//As long as this index has a car saved
+						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+							//Loop to the next car in the field
+							fieldIndex++;
+							carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+							carNum = carNumInt.ToString();
+						} else {
+							//We've hit the end, stop spawning
+							break;
+						}
+					}
+					if(spawnedCars.Contains(carNumInt) == true){
+						continue;
+					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
-					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
+					spawnedCars.Add(carNumInt);
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 					fieldIndex++;
@@ -171,8 +191,22 @@ public class SpawnField : MonoBehaviour {
 					fieldIndex++;
 				}
 				if(j != startLane){
+					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+					carNum = carNumInt.ToString();
+					while(spawnedCars.Contains(carNumInt) == true){
+						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+							fieldIndex++;
+							carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+							carNum = carNumInt.ToString();
+						} else {
+							break;
+						}
+					}
+					if(spawnedCars.Contains(carNumInt) == true){
+						continue;
+					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
-					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
+					spawnedCars.Add(carNumInt);
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 				}
@@ -186,8 +220,22 @@ public class SpawnField : MonoBehaviour {
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
 						fieldIndex++;
 					}
+					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+					carNum = carNumInt.ToString();
+					while(spawnedCars.Contains(carNumInt) == true){
+						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+							fieldIndex++;
+							carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+							carNum = carNumInt.ToString();
+						} else {
+							break;
+						}
+					}
+					if(spawnedCars.Contains(carNumInt) == true){
+						continue;
+					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
-					carNum = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "").ToString();
+					spawnedCars.Add(carNumInt);
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 					fieldIndex++;

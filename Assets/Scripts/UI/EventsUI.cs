@@ -134,8 +134,8 @@ public class EventsUI : MonoBehaviour
 			TMPro.TMP_Text eventName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage eventImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
 			TMPro.TMP_Text eventDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			GameObject eventRewardsBtn = tileInst.transform.GetChild(5).transform.gameObject;
-			GameObject eventCover = tileInst.transform.GetChild(6).transform.gameObject;
+			GameObject eventCover = tileInst.transform.GetChild(4).transform.gameObject;
+			GameObject eventRewardsBtn = tileInst.transform.GetChild(6).transform.gameObject;
 			GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
 			tileInst.GetComponent<EventUIFunctions>().subMenuId = subMenuId;
 			tileInst.GetComponent<EventUIFunctions>().subEventId = i;

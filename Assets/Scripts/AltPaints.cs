@@ -37,6 +37,7 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[6,1] = "#1 Taped";
 		cup2020AltPaintNames[7,1] = "#1 Insure";
 		cup2020AltPaintNames[9,1] = "#1 Hoot";
+		cup2020AltPaintNames[11,1] = "#1 Pace Car";
 		cup2020AltPaintNames[12,1] = "#1 Kobe";
 		cup2020AltPaintNames[13,1] = "#1 Military";
 		cup2020AltPaintNames[17,1] = "#1 Sunny";
@@ -68,6 +69,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintNames[16,1] = "Stock (Hemric)";
 		cup22AltPaintNames[24,1] = "#1 Winner";
 		cup22AltPaintNames[27,1] = "Stock (Hezemans)";
+		cup22AltPaintNames[50,1] = "Stock (Daly)";
 		cup22AltPaintNames[66,1] = "Stock (Said)";
 		cup22AltPaintNames[77,1] = "Stock (Allgaier)";
 		cup22AltPaintNames[78,1] = "Stock (Lally)";
@@ -77,6 +79,7 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
 		cup2020AltPaintDriver[3,4] = "Earnhardt";
 		cup2020AltPaintDriver[6,1] = "Martin";
+		cup2020AltPaintDriver[11,1] = "Bodine";
 		cup2020AltPaintDriver[41,1] = "Ku. Busch";
 		cup2020AltPaintDriver[88,3] = "Earnhardt Jr";
 		
@@ -84,6 +87,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintDriver[15,1] = "Ragan";
 		cup22AltPaintDriver[16,1] = "Hemric";
 		cup22AltPaintDriver[27,1] = "Hezemans";
+		cup22AltPaintDriver[50,1] = "Daly";
 		cup22AltPaintDriver[66,1] = "Said";
 		cup22AltPaintDriver[77,1] = "Allgaier";
 		cup22AltPaintDriver[78,1] = "Lally";
@@ -99,6 +103,7 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintTheme[6,1] = "Wrecked";
 		cup2020AltPaintTheme[7,1] = "2020";
 		cup2020AltPaintTheme[9,1] = "2020";
+		cup2020AltPaintTheme[11,1] = "Community";
 		cup2020AltPaintTheme[12,1] = "2020";
 		cup2020AltPaintTheme[13,1] = "Patriot";
 		cup2020AltPaintTheme[17,1] = "2020";
@@ -137,6 +142,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintTheme[16,1] = "Parttimer";
 		cup22AltPaintTheme[24,1] = "Winners";
 		cup22AltPaintTheme[27,1] = "Parttimer";
+		cup22AltPaintTheme[50,1] = "Parttimer";
 		cup22AltPaintTheme[66,1] = "Parttimer";
 		cup22AltPaintTheme[77,1] = "Parttimer";
 		cup22AltPaintTheme[78,1] = "Parttimer";

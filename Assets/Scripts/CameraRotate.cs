@@ -169,7 +169,7 @@ public class CameraRotate : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 		
-		if(Movement.wreckOver == true){
+		if((Movement.wreckOver == true)&&(Movement.isWrecking == false)){
 			//If last lap, no restart, it's over!
 			if(lap >= raceEnd){
 				endRace();
@@ -204,9 +204,22 @@ public class CameraRotate : MonoBehaviour {
 				if((Movement.isWrecking == false)||(lap >= (raceEnd + 1))){
 					cautionSummaryMenu.SetActive(true);
 					Time.timeScale = 0.0f;
+					Debug.Log("Crossed line, show the finish line");
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0;
 					crowdNoise.volume = 0;
+					//Debug.Log(lapRecord);
+					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
+					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
+					//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
+					PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
+					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+						PlayFabManager.CheckLiveTimeTrial();
+						//Double checked
+						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+							PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrial","");
+						}
+					}
 				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
@@ -362,13 +375,26 @@ public class CameraRotate : MonoBehaviour {
 	}
 	
 	public void endRace(){
-		if(lap > raceEnd){
+		if(lap >= (raceEnd + 1)){
+			//Bug catch, again no idea on this one
+			if((straight == 1)||(turn == 1)){
+				//Do nothing
+			} else {
+				//Not on the finish straight, must have wrecked somewhere..
+				if(Movement.wreckOver == false){
+					//Wait! I haven't wrecked..
+					if(lap <= raceEnd + 1){
+						return;
+					}
+					//Don't end the race
+				}
+			}
 			lap--;
-		}
-		Time.timeScale = 0.0f;
-		if(Movement.wreckOver == false){
+			//Weird bug fix, no idea, just works, urghh
+			Debug.Log("Lap " + lap + " is now beyond finish lap " + raceEnd + ". Race must be over, show finish line");
 			finishLine.GetComponent<Renderer>().enabled = true;
 		}
+		Time.timeScale = 0.0f;
 		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 			int rand = Random.Range(1,100);
 			//Lucky day
@@ -384,9 +410,8 @@ public class CameraRotate : MonoBehaviour {
 		PlayerPrefs.SetInt("ExpAdded",0);
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-			lapRecord -= trackSpeedOffset;
 			//Debug.Log(lapRecord);
-			lapRecordInt = (int)Mathf.Round(lapRecord * 1000);
+			lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 			PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
 			//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
 			PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
@@ -397,7 +422,6 @@ public class CameraRotate : MonoBehaviour {
 					PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrial","");
 				}
 			}
-			
 		}
 	}
 	

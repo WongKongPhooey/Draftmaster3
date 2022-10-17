@@ -22,12 +22,13 @@ public class AlertManager : MonoBehaviour
 		hidePopup();
     }
 
-	public static void showPopup(string title, string content, string image){
+	public void showPopup(string title, string content, string image){
 		alertTitle.GetComponent<TMPro.TMP_Text>().text = title;
 		alertText.GetComponent<TMPro.TMP_Text>().text = content;
 		if(content == ""){
 			return;
 		}
+		alertPopup.SetActive(true);
 		alertPopup.GetComponent<UIAnimate>().show();
 		if(image != ""){
 			alertImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(image);
@@ -35,13 +36,13 @@ public class AlertManager : MonoBehaviour
 		}
 		alertText.GetComponent<UIAnimate>().scaleIn();
 	}
-	public static void hidePopup(){
-		alertPopup = GameObject.Find("AlertPopup");
+	public void hidePopup(){
+		//alertPopup = GameObject.Find("AlertPopup");
 		LeanTween.scale(alertPopup, new Vector3(0f,0f,0f), 0f);
 		alertText.GetComponent<UIAnimate>().hide();
 		alertImage.GetComponent<UIAnimate>().hide();
 		alertPopup.GetComponent<UIAnimate>().hide();
-		//alertPopup.SetActive(false);
+		alertPopup.SetActive(false);
 		//Debug.Log("Popup Hidden");
 	}
 }

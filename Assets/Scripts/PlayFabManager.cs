@@ -23,10 +23,14 @@ public class PlayFabManager : MonoBehaviour
 	public GameObject thisRowPrefab;
 	public Transform thisRowsParent;
 	
+	public static GameObject alertPopup;
+	
     // Start is called before the first frame update
-    void Start(){
+    void Awake(){
 	   rowPrefab = thisRowPrefab;
 	   rowsParent = thisRowsParent;
+	   
+	   alertPopup = GameObject.Find("AlertPopup");
     }
 	
 	void Update(){
@@ -330,6 +334,10 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 		
+		//Testing
+		//result.Data["MessageAlert"] = "This is a testier message!";
+		//result.Data["MessageAlertId"] = "6969";
+		
 		//Message Alerts
 		if(result.Data.ContainsKey("MessageAlert") == true){
 			//If there's a message to show..
@@ -343,12 +351,12 @@ public class PlayFabManager : MonoBehaviour
 					PlayerPrefs.SetInt("MessageAlertId", int.Parse(result.Data["MessageAlertId"]));
 				}
 				if(lastMessageId != int.Parse(result.Data["MessageAlertId"])){
-					//Debug.Log("New Message!");
+					Debug.Log("New Message!");
 					PlayerPrefs.SetInt("MessageAlertId", int.Parse(result.Data["MessageAlertId"]));
 					PlayerPrefs.SetString("MessageAlert", result.Data["MessageAlert"]);
 					//MainMenuGUI.messageAlert = result.Data["MessageAlert"];
 					//MainMenuGUI.newMessageAlert = true;
-					AlertManager.showPopup("News",result.Data["MessageAlert"],"cup22livery1blankalt1");
+					alertPopup.GetComponent<AlertManager>().showPopup("News",result.Data["MessageAlert"],"dm2logo");
 				} else {
 					//Debug.Log("No new messages.");
 				}
@@ -440,11 +448,13 @@ public class PlayFabManager : MonoBehaviour
 				}
 			}
 			if(rewardMessage != ""){
-				GameObject mainMenuUI = GameObject.Find("Main Camera");
-				 if(mainMenuUI.GetComponent<MainMenuUI>() != null){
-					mainMenuUI.GetComponent<MainMenuUI>().showAlert("Rewards",rewardMessage,rewardCarImg);
-				 }
+				GameObject alertPopup = GameObject.Find("AlertPopup");
+				alertPopup.GetComponent<AlertManager>().showPopup("Rewards",rewardMessage,rewardCarImg);
 			}
+			//GameObject mainMenuUI = GameObject.Find("Main Camera");
+			//if(mainMenuUI.GetComponent<MainMenuUI>() != null){
+			//mainMenuUI.GetComponent<MainMenuUI>().showAlert("Rewards",rewardMessage,rewardCarImg);
+			//}
 		} else {
 			Debug.Log("No player data found");
 		}
@@ -469,7 +479,8 @@ public class PlayFabManager : MonoBehaviour
 			}
 			string rewardMessage = "You've been gifted a new " + DriverNames.getSeriesNiceName(rewardCarSeries) + " " + DriverNames.getName(rewardCarSeries,rewardCarNum) + " car!\n";
 			string rewardCarImg = rewardCarSeries + "livery" + rewardCarNum;
-			AlertManager.showPopup("Thanks For Playing",rewardMessage,rewardCarImg);
+			GameObject alertPopup = GameObject.Find("AlertPopup");
+			alertPopup.GetComponent<AlertManager>().showPopup("Thanks For Playing",rewardMessage,rewardCarImg);
 			//MainMenuGUI.newGiftAlert = true;
 			emptyPlayerData("RewardCar");
 		}
@@ -624,8 +635,12 @@ public class PlayFabManager : MonoBehaviour
 				}
 			}
 		};
-		PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
-		Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
+		try {
+			PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
+			Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
+		} catch (Exception e){
+			Debug.Log("Cannot reach Playfab to send time");
+		}
 	}
 	
 	static void OnLeaderboardUpdate(UpdatePlayerStatisticsResult result){

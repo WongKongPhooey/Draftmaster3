@@ -6,11 +6,15 @@ public class UIAnimate : MonoBehaviour
 {
 	public int animOffset = 0;
 	public bool startHidden;
+	public bool fadeInStart;
 	
     // Start is called before the first frame update
     void Awake(){
 		if(startHidden == true){
 			hide();
+		}
+		if(fadeInStart == true){
+			scaleIn();
 		}
 	}
 
@@ -49,5 +53,6 @@ public class UIAnimate : MonoBehaviour
 	
 	public void hide(){
 		LeanTween.scale(gameObject, new Vector3(0f,0f,0f), 0f);
+		//Debug.Log("Hide the popup");
 	}
 }

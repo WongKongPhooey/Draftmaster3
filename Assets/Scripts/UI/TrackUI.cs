@@ -25,6 +25,8 @@ public class TrackUI : MonoBehaviour
 	public static int championshipRound;
 	public GameObject championshipSelector;
 	
+	public GameObject alertPopup;
+	
     // Start is called before the first frame update
     void Start()
     {
@@ -40,6 +42,8 @@ public class TrackUI : MonoBehaviour
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
 		seriesFuel = PlayerPrefs.GetInt("SeriesFuel");
+		
+		alertPopup = GameObject.Find("AlertPopup");
 		
 		//Check for an active championship
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
@@ -263,6 +267,7 @@ public class TrackUI : MonoBehaviour
 		
 		//This loads the track data
 		GameObject.Find("Main").GetComponent<TrackData>().loadTrackData(track);
+		GameObject alertPopup = GameObject.Find("AlertPopup");
 		
 		setRaceLaps();
 		
@@ -295,7 +300,7 @@ public class TrackUI : MonoBehaviour
 			//Roll back and bail
 			//PlayerPrefs.SetString("StoreFocus","Fuel");
 			//SceneManager.LoadScene("Menus/StoreUI");
-			AlertManager.showPopup("Not Enough Fuel", "You need more fuel to race. Watch an ad or buy fuel in the Store, or simply wait for the fuel to refill.", "Icons/fuel");
+			alertPopup.GetComponent<AlertManager>().showPopup("Not Enough Fuel", "You need more fuel to race. Watch an ad or buy fuel in the Store, or simply wait for the fuel to refill.", "Icons/fuel");
 		}
 	}
 

@@ -32,6 +32,8 @@ public class StoreUI : MonoBehaviour
 	
 	public GameObject storeTile;
 	
+	public GameObject alertPopup;
+	
 	public Transform weeklyTileFrame;
 	public Transform dailyTileFrame;
 	public Transform starterTileFrame;
@@ -50,6 +52,9 @@ public class StoreUI : MonoBehaviour
 		loadDailyPicks();
 		loadStarterPicks();
 		DisableRestorePurchase();
+		this.gameObject.GetComponent<AdsInitializer>().InitializeAds();
+		
+		alertPopup = GameObject.Find("AlertPopup");
     }
 
 	public void loadWeeklyPicks(){
@@ -156,11 +161,11 @@ public class StoreUI : MonoBehaviour
 					randSeries = DriverNames.getRandomWinnableSeries();
 					rand = Mathf.FloorToInt(Random.Range(0,100));
 				}
-				Debug.Log(DriverNames.getRarity(randSeries,rand));
+				//Debug.Log(DriverNames.getRarity(randSeries,rand));
 				dailyRandoms.Add("" + randSeries + "" + rand + "");
 				dailyRandomsList += "" + randSeries + "" + rand + ",";
 			}
-			Debug.Log("Daily Picks: " + dailyRandomsList);
+			//Debug.Log("Daily Picks: " + dailyRandomsList);
 			PlayerPrefs.SetString("DailyRandoms",dailyRandomsList);
 		} else {
 			//Retrieve Daily Random Picks
@@ -168,7 +173,7 @@ public class StoreUI : MonoBehaviour
 			dailyRandoms.Clear();
 			foreach(string dailyRand in dailyRandomsList){
 				dailyRandoms.Add(dailyRand);
-				Debug.Log(dailyRand);
+				//Debug.Log(dailyRand);
 			}
 		}
 		
@@ -359,49 +364,49 @@ public class StoreUI : MonoBehaviour
 				Debug.Log("Added 80 gears");
 				gears+=80;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
 				break;
 			case gears125:
 				Debug.Log("Added 250 gears");
 				gears+=250;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
 				break;
 			case gears200:
 				Debug.Log("Added 600 gears");
 				gears+=600;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
 				break;
 			case gears500:
 				Debug.Log("Added 1500 gears");
 				gears+=1500;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
 				break;
 			case smallgears:
 				Debug.Log("Added 80 gears");
 				gears+=80;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
 				break;
 			case mediumgears:
 				Debug.Log("Added 250 gears");
 				gears+=250;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
 				break;
 			case largegears:
 				Debug.Log("Added 600 gears");
 				gears+=600;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
 				break;
 			case extralargegears:
 				Debug.Log("Added 1500 gears");
 				gears+=1500;
 				PlayerPrefs.SetInt("Gears",gears);
-				AlertManager.showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
 				break;
 			case negotiator:
 			case negotiatorios:
@@ -410,7 +415,7 @@ public class StoreUI : MonoBehaviour
 				transfersLeft=999;
 				PlayerPrefs.SetInt("TransferTokens",transfersMax);
 				PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
-				AlertManager.showPopup("Purchase Successful","999 Transfer Tokens have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","999 Transfer Tokens have been added!","dm2logo");
 				break;
 			default:
 				break;

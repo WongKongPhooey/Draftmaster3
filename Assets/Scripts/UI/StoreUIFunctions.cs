@@ -19,6 +19,12 @@ public class StoreUIFunctions : MonoBehaviour
 	int totalMoney;
 	int gears;
 	
+	public GameObject alertPopup;
+	
+	void Awake(){
+		alertPopup = GameObject.Find("AlertPopup");
+	}
+	
     // Start is called before the first frame update
     void Start()
     {
@@ -49,7 +55,7 @@ public class StoreUIFunctions : MonoBehaviour
 				Debug.Log(alertContent);
 				string alertImage = itemSeries + "livery" + itemNum + "alt" + itemAlt + "";
 				Debug.Log(alertImage);
-				AlertManager.showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) + " Alt Paint Unlocked!", itemSeries + "livery" + itemNum + "alt" + itemAlt + "");
+				alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) + " Alt Paint Unlocked!", itemSeries + "livery" + itemNum + "alt" + itemAlt + "");
 			} else {
 				//Increment the car parts
 				if(PlayerPrefs.HasKey(itemSeries + itemNum + "Gears")){
@@ -59,14 +65,14 @@ public class StoreUIFunctions : MonoBehaviour
 				}
 				PlayerPrefs.SetInt(itemSeries + itemNum + "Gears", carGears + 3);
 				//Pay
-				AlertManager.showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + carGears + " -> " + (carGears + 3) + " Car Parts (+3)",itemSeries + "livery" + itemNum);
+				alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + carGears + " -> " + (carGears + 3) + " Car Parts (+3)",itemSeries + "livery" + itemNum);
 		
 			}
 			gears -= itemPrice;
 			PlayerPrefs.SetInt("Gears",gears);
 			Debug.Log("Bought!");
 		} else {
-			AlertManager.showPopup("Oh no..","You do not have enough Gears to purchase this.","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You do not have enough Gears to purchase this.","dm2logo");
 		}
 	}
 
@@ -81,7 +87,7 @@ public class StoreUIFunctions : MonoBehaviour
 					dailyCollected = 1;
 					SceneManager.LoadScene("PrizeCollection");
 					} else {
-						AlertManager.showPopup("Collected","Check back tomorrow for more spares!","dm2logo");
+						alertPopup.GetComponent<AlertManager>().showPopup("Collected","Check back tomorrow for more spares!","dm2logo");
 					}
 					break;
 				case "MysteryGarage":
@@ -92,7 +98,7 @@ public class StoreUIFunctions : MonoBehaviour
 						PlayerPrefs.SetString("PrizeType","MysteryGarage");
 						SceneManager.LoadScene("PrizeCollection");
 					} else {
-						AlertManager.showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
+						alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
 					}
 					break;
 				case "Cash4Gears":
@@ -102,9 +108,9 @@ public class StoreUIFunctions : MonoBehaviour
 						PlayerPrefs.SetInt("PrizeMoney", totalMoney);
 						gears = PlayerPrefs.GetInt("Gears");
 						PlayerPrefs.SetInt("Gears",gears + 5);
-						AlertManager.showPopup("Cash 4 Gears","You agree a deal to purchase 5 Gears from the broker.","Icons/gear");
+						alertPopup.GetComponent<AlertManager>().showPopup("Cash 4 Gears","You agree a deal to purchase 5 Gears from the broker.","Icons/gear");
 					} else {
-						AlertManager.showPopup("Oh no..","You need more Money to purchase this bundle.","dm2logo");
+						alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You need more Money to purchase this bundle.","dm2logo");
 					}
 					break;
 				case "SponsorshipDeal":
@@ -114,9 +120,9 @@ public class StoreUIFunctions : MonoBehaviour
 						PlayerPrefs.SetInt("Gears",gears);
 						totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 						PlayerPrefs.SetInt("PrizeMoney",totalMoney + 250000);
-						AlertManager.showPopup("Sponsorship Deal","You strike a deal with a wealthy sponsor, who agrees to give you 250000 coins in exchange for Gears.","Icons/money");
+						alertPopup.GetComponent<AlertManager>().showPopup("Sponsorship Deal","You strike a deal with a wealthy sponsor, who agrees to give you 250000 coins in exchange for Gears.","Icons/money");
 					} else {
-						AlertManager.showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
+						alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
 					}
 					break;
 				case "FullTank":
@@ -126,9 +132,9 @@ public class StoreUIFunctions : MonoBehaviour
 						GameData.gameFuel=(GameData.maxFuel);
 						PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
 						PlayerPrefs.SetInt("Gears",gears);
-						AlertManager.showPopup("Full Tank","You fill the fuel tank and head back to the track!","Icons/gascan");
+						alertPopup.GetComponent<AlertManager>().showPopup("Full Tank","You fill the fuel tank and head back to the track!","Icons/gascan");
 					} else {
-						AlertManager.showPopup("Oh no..","You need more Gears to purchase fuel. Fuel will slowly refill every 5 minutes.","dm2logo");
+						alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You need more Gears to purchase fuel. Fuel will slowly refill every 5 minutes.","dm2logo");
 					}
 					break;
 				default:

@@ -174,9 +174,11 @@ public class Ticker : MonoBehaviour
 				leaderDist = leaderDist / 25;
 				
 				TMPro.TMP_Text playerTickerPos = playerTicker.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+				Image playerTickerNum = playerTicker.transform.GetChild(1).GetComponent<Image>();
 				TMPro.TMP_Text playerTickerName = playerTicker.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text playerTickerDist = playerTicker.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 				playerTickerPos.text = (i+1).ToString();
+				playerTickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
 				playerTickerName.text = driverNames[i];
 				playerTickerDist.text = leaderDist.ToString("f3");
 				
@@ -199,6 +201,9 @@ public class Ticker : MonoBehaviour
 			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
 			tickerName.text = driverNames[i];
 			tickerDist.text = "+" + carDist[i].ToString("f3");
+			if(entrantList[i].name == playerCar.name){
+				tickerDist.text = leaderDist.ToString("f3");
+			}
 			//Debug.Log(i + ": " + driverNames[i]);
 		}
 	}

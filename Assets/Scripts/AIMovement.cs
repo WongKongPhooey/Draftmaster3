@@ -436,6 +436,9 @@ public class AIMovement : MonoBehaviour
 		
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
+			//if(midSpeed > 3f){
+				//startWreck();
+			//}
 			//For some reason changing this makes the player bump-draft mega fast!
 			AISpeed += midSpeed/4;
 			tandemDraft = true;
@@ -603,11 +606,13 @@ public class AIMovement : MonoBehaviour
 		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
 			AISpeed += 0.0035f;
 			tandemDraft = true;
-			//int currentPos = Scoreboard.checkSingleCarPosition("AICar0" + carNum + "");
-			//if(currentPos == 0){
-				//Debug.Log("Leader is #" + carNum);
-			//	evadeDraft();
-			//}
+			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
+			if(currentPos == 0){
+				if (AISpeed > (204f + (laneInv / 2) + (AILevel / 5))){
+				Debug.Log("Leader is #" + carNum);
+				evadeDraft();
+				}
+			}
 		} else {
 			tandemDraft = false;
 		}

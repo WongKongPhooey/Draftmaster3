@@ -25,6 +25,8 @@ public class GarageUI : MonoBehaviour
 	string seriesDriverType;
 	int seriesRarity;
 	
+	public GameObject alertPopup;
+	
 	public static GameObject seriesDropdown;
 	public static GameObject currentSeries;
 	
@@ -47,6 +49,8 @@ public class GarageUI : MonoBehaviour
 		
 		loadRaceRestrictions();
 		
+		alertPopup = GameObject.Find("AlertPopup");
+		
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
 		} else {
@@ -54,9 +58,7 @@ public class GarageUI : MonoBehaviour
 		}
 		
 		//No starter cars? Auto-unlock them
-		if(PlayerPrefs.GetInt("cup2278Unlocked") == 0){
-			starterCars();
-		}
+		starterCars();
 	}
 	
 	public void loadAllCars(){
@@ -424,11 +426,14 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void starterCars(){
+		Debug.Log("Check starters");
+		bool carsAdded = false;
 		//Give a free McLeod for Cup '22
 		if(PlayerPrefs.GetInt("cup2278Unlocked") == 0){
 			PlayerPrefs.SetInt("cup2278Unlocked",1);
 			PlayerPrefs.SetInt("cup2278Gears",0);
 			PlayerPrefs.SetInt("cup2278Class",1);
+			carsAdded = true;
 		}
 		
 		//Give a free Raikkonen for Cup '22
@@ -436,6 +441,7 @@ public class GarageUI : MonoBehaviour
 			PlayerPrefs.SetInt("cup2291Unlocked",1);
 			PlayerPrefs.SetInt("cup2291Gears",0);
 			PlayerPrefs.SetInt("cup2291Class",1);
+			carsAdded = true;
 		}
 		
 		//Give a free Mcleod for Cup '20
@@ -443,6 +449,7 @@ public class GarageUI : MonoBehaviour
 			PlayerPrefs.SetInt("cup2052Unlocked",1);
 			PlayerPrefs.SetInt("cup2052Gears",0);
 			PlayerPrefs.SetInt("cup2052Class",1);
+			carsAdded = true;
 		}
 		
 		//Give free Starters for DM1 '15
@@ -450,16 +457,22 @@ public class GarageUI : MonoBehaviour
 			PlayerPrefs.SetInt("dmc150Unlocked",1);
 			PlayerPrefs.SetInt("dmc150Gears",0);
 			PlayerPrefs.SetInt("dmc150Class",1);
+			carsAdded = true;
 		}
 		if(PlayerPrefs.GetInt("dmc151Unlocked") == 0){
 			PlayerPrefs.SetInt("dmc151Unlocked",1);
 			PlayerPrefs.SetInt("dmc151Gears",0);
 			PlayerPrefs.SetInt("dmc151Class",1);
+			carsAdded = true;
 		}
 		if(PlayerPrefs.GetInt("dmc152Unlocked") == 0){
 			PlayerPrefs.SetInt("dmc152Unlocked",1);
 			PlayerPrefs.SetInt("dmc152Gears",0);
 			PlayerPrefs.SetInt("dmc152Class",1);
+			carsAdded = true;
+		}
+		if(carsAdded == true){
+			loadAllCars();
 		}
 	}
 
@@ -493,14 +506,23 @@ public class GarageUI : MonoBehaviour
 				//Try an autosave
 				foreach(string series in allSeries){
 					string progressJSON = JSONifyProgress(series);
+					try {
 					PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+					}
+					catch(Exception e){
+						Debug.Log("Cannot reach PlayFab");
+					}
 				}
 			}
 		} else {
 			//Seems like an empty account.. check for a cloud save to reload
 			// ..just in case
 			//Debug.Log("Check for a cloud save..");
-			PlayFabManager.GetSavedPlayerProgress();
+			try{
+				PlayFabManager.GetSavedPlayerProgress();
+			} catch (Exception e){
+				Debug.Log("Cannot reach PlayFab");
+			}
 		}
 	}
 
@@ -545,7 +567,13 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void syncWithCloud(){
-		PlayFabManager.GetSavedPlayerProgress();
+		try {
+			PlayFabManager.GetSavedPlayerProgress();
+		}
+		catch(Exception e){
+			Debug.Log("Cannot reach PlayFab");
+			alertPopup.GetComponent<AlertManager>().showPopup("Cannot Reach Cloud","Cannot currently reach retrieve and sync your save data. Do you have an internet connection?","dm2logo");
+		}
 		loadAllCars();
 	}
 

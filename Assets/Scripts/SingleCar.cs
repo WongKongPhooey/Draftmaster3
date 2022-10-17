@@ -756,8 +756,6 @@ public class SingleCar : MonoBehaviour {
 				driverPanel = false;
 				numberPanel = false;
 			}
-		} else {
-			CommonGUI.BackButton("Menus/MainMenu");
 		}
 		GUI.skin = buttonSkin;
 

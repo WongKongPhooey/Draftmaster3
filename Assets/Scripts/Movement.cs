@@ -253,15 +253,8 @@ public class Movement : MonoBehaviour {
 		currentRival = "";
 		mostHits = 0;
 		rivals = new List<string>();
-		if(PlayerPrefs.GetString("ChallengeType")=="TeamPlayer"){
-			draftChallenge = true;
-		}
 		draftCounter = 0;
 		raceCounter = 0;
-
-		if(PlayerPrefs.GetString("ChallengeType")=="CleanBreak"){
-			challengeSpeedBoost = 1.0f;
-		}
 
 		if (DriverNames.cup2020Types[carNum] == "Strategist"){
 			switch(carClass){
@@ -590,7 +583,7 @@ public class Movement : MonoBehaviour {
 		// If being bump-drafted from behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.01f)){
 			//Speed up
-			playerSpeed+=0.003f;
+			playerSpeed+=0.0035f;
 			if(RaceHUD.tutorialStage == 4){
 				RaceHUD.tutorialBackdraftCount++;
 			}
