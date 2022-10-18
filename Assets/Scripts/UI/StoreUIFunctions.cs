@@ -76,6 +76,9 @@ public class StoreUIFunctions : MonoBehaviour
 
 	public void makeBundlePurchase(){
 		if(staticBundle == true){
+			
+			alertPopup = GameObject.Find("Main").GetComponent<StoreUI>().alertPopup;
+			
 			switch(staticBundleName){
 				case "DailyJunkSpares":
 					dailyCollected = PlayerPrefs.GetInt("DailyGarage");

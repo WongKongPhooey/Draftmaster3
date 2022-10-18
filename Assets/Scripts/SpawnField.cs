@@ -94,6 +94,7 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Remove(carNumber);
 		midCars.Remove(carNumber);
 		slowCars.Remove(carNumber);
+		spawnedCars.Add(int.Parse(carNumber));
 		
 		// +1 for the Player's car
 		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
@@ -155,24 +156,35 @@ public class SpawnField : MonoBehaviour {
 				for(int j=1;j<=gridLanes;j++){
 					//Skip whenever the player number appears in the field
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
-						fieldIndex++;
+						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+							fieldIndex++;
+						} else {
+							break;
+						}
 					}
 					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
 					carNum = carNumInt.ToString();
-					//If car already exists in field
-					while(spawnedCars.Contains(carNumInt) == true){
+					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
+					//If car already exists in field, loop..
+					//If car has no default paint texture, loop..
+					while((spawnedCars.Contains(carNumInt) == true)
+						&&(carTex != null)){
 						//As long as this index has a car saved
 						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
 							//Loop to the next car in the field
 							fieldIndex++;
 							carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
 							carNum = carNumInt.ToString();
+							carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
 						} else {
 							//We've hit the end, stop spawning
 							break;
 						}
 					}
-					if(spawnedCars.Contains(carNumInt) == true){
+					//We never found a suitable car to spawn, and ran out of cars to check
+					if((spawnedCars.Contains(carNumInt) == true)
+						&&(carTex != null)){
+						//Exit loop
 						continue;
 					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
@@ -187,54 +199,86 @@ public class SpawnField : MonoBehaviour {
 			GameObject.Find("Player").transform.Translate(0-(1.2f * startLane),0f,0f);
 			
 			for(int j=1;j<=gridLanes;j++){
+				//Skip whenever the player number appears in the field
 				if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
-					fieldIndex++;
+					if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+						fieldIndex++;
+					} else {
+						break;
+					}
 				}
 				if(j != startLane){
 					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
 					carNum = carNumInt.ToString();
-					while(spawnedCars.Contains(carNumInt) == true){
+					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
+					//If car already exists in field, loop..
+					//If car has no default paint texture, loop..
+					while((spawnedCars.Contains(carNumInt) == true)
+						&&(carTex != null)){
+						//As long as this index has a car saved
 						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+							//Loop to the next car in the field
 							fieldIndex++;
 							carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
 							carNum = carNumInt.ToString();
+							carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
 						} else {
+							//We've hit the end, stop spawning
 							break;
 						}
 					}
-					if(spawnedCars.Contains(carNumInt) == true){
+					//We never found a suitable car to spawn, and ran out of cars to check
+					if((spawnedCars.Contains(carNumInt) == true)
+						&&(carTex != null)){
+						//Exit loop
 						continue;
 					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 					spawnedCars.Add(carNumInt);
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+					fieldIndex++;
 				}
-				fieldIndex++;
 			}
 
 			//Cars Behind
 			for (int i = 1; i < (gridRows - playerRow); i++) {
 				Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
+					//Skip whenever the player number appears in the field
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
-						fieldIndex++;
-					}
-					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
-					carNum = carNumInt.ToString();
-					while(spawnedCars.Contains(carNumInt) == true){
 						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
 							fieldIndex++;
-							carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
-							carNum = carNumInt.ToString();
 						} else {
 							break;
 						}
 					}
-					if(spawnedCars.Contains(carNumInt) == true){
+					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+					carNum = carNumInt.ToString();
+					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
+					//If car already exists in field, loop..
+					//If car has no default paint texture, loop..
+					while((spawnedCars.Contains(carNumInt) == true)
+						&&(carTex != null)){	
+						//As long as this index has a car saved
+						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+							//Loop to the next car in the field
+							fieldIndex++;
+							carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+							carNum = carNumInt.ToString();
+							carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
+						} else {
+							//We've hit the end, stop spawning
+							break;
+						}
+					}
+					//We never found a suitable car to spawn, and ran out of cars to check
+					if((spawnedCars.Contains(carNumInt) == true)
+						&&(carTex != null)){
+						//Exit loop
 						continue;
 					}
-					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 					spawnedCars.Add(carNumInt);
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
@@ -347,7 +391,6 @@ public class SpawnField : MonoBehaviour {
 			}
 			//Debug.Log("Cars Spawned: " + slowCars.Count);
 		}
-			
 		Ticker.updateTicker();
 	}
 
