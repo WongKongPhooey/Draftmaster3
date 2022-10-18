@@ -19,7 +19,10 @@ public class AlertManager : MonoBehaviour
 		//Assume image is always a 2:1 Rectangle
 		alertImage = GameObject.Find("AlertImage");
 		alertText = GameObject.Find("AlertText");
-		hidePopup();
+    }
+    
+    void Start(){
+        hidePopup();
     }
 
 	public void showPopup(string title, string content, string image){

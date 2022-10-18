@@ -46,6 +46,11 @@ public class StoreUI : MonoBehaviour
 	public int loadHack;
 	
     // Start is called before the first frame update
+    void Awake(){
+        //Drag define this manually in the scene
+        //alertPopup = GameObject.Find("AlertPopup");
+    }
+    
     void Start()
     {
         loadWeeklyPicks();
@@ -53,8 +58,6 @@ public class StoreUI : MonoBehaviour
 		loadStarterPicks();
 		DisableRestorePurchase();
 		this.gameObject.GetComponent<AdsInitializer>().InitializeAds();
-		
-		alertPopup = GameObject.Find("AlertPopup");
     }
 
 	public void loadWeeklyPicks(){

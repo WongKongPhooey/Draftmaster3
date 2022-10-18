@@ -19,11 +19,7 @@ public class StoreUIFunctions : MonoBehaviour
 	int totalMoney;
 	int gears;
 	
-	public GameObject alertPopup;
-	
-	void Awake(){
-		alertPopup = GameObject.Find("AlertPopup");
-	}
+	public static GameObject alertPopup;
 	
     // Start is called before the first frame update
     void Start()
@@ -40,6 +36,8 @@ public class StoreUIFunctions : MonoBehaviour
 		if(gears >= itemPrice){
 			int carGears = 0;
 			
+            alertPopup = GameObject.Find("Main").GetComponent<StoreUI>().alertPopup;
+            
 			if(isAlt == true){
 				//Unlock the alt
 				if(PlayerPrefs.GetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked") != 1){

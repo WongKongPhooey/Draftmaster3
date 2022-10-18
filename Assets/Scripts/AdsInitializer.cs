@@ -15,9 +15,12 @@ public class AdsInitializer : MonoBehaviour, IUnityAdsInitializationListener
  
     public void InitializeAds()
     {
-        _gameId = (Application.platform == RuntimePlatform.IPhonePlayer)
-            ? "4061300"
-            : "4061301";
+        _gameId = "4061301";
+        
+        #if UNITY_IOS
+        _gameId = "4061300";
+        #endif
+        
         Advertisement.Initialize(_gameId, _testMode, this);
 		rewardedAdsButton.LoadAd();
     }
