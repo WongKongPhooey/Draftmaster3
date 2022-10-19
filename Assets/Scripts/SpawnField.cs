@@ -278,7 +278,7 @@ public class SpawnField : MonoBehaviour {
 						//Exit loop
 						continue;
 					}
-					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
+					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 					spawnedCars.Add(carNumInt);
 					AICarInstance.name = ("AICar0" + carNum);
 					GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;

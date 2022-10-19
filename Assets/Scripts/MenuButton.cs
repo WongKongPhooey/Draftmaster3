@@ -15,14 +15,11 @@ public class MenuButton : MonoBehaviour
 	
 	public void loadScene(){
 		//if(PlayerPrefs.HasKey("NewUser")){
+		LeanTween.reset();
 		if(URLName != ""){
 			Application.OpenURL(URLName);
 		} else {
 			SceneManager.LoadScene(SceneName);
 		}
-		/*} else {
-			//If new player, they need their first car
-			SceneManager.LoadScene("PrizeCollection");
-		}*/
 	}
 }

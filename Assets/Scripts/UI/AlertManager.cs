@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class AlertManager : MonoBehaviour
 {
@@ -14,11 +15,16 @@ public class AlertManager : MonoBehaviour
     {
         alertPopup = GameObject.Find("AlertPopup");
 		alertPopup.GetComponent<UIAnimate>().hide();
-		
 		alertTitle = GameObject.Find("AlertTitle");
 		//Assume image is always a 2:1 Rectangle
 		alertImage = GameObject.Find("AlertImage");
 		alertText = GameObject.Find("AlertText");
+		
+		Scene currentScene = SceneManager.GetActiveScene ();
+        string sceneName = currentScene.name;
+        if (sceneName == "MainMenu"){
+			alertPopup = GameObject.Find("Main Camera").GetComponent<MainMenuUI>().alertPopup;
+		}
     }
     
     void Start(){
