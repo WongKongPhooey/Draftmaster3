@@ -88,6 +88,10 @@ public class MainMenuUI : MonoBehaviour {
 		}
 		PlayerPrefs.DeleteKey("RaceModifier");
 		
+		if(PlayerPrefs.HasKey("SpawnFromCaution")){
+			PlayerPrefs.DeleteKey("SpawnFromCaution");
+		}
+		
 		//Level Up?
 		if(exp > levelExp){
 			exp-= levelExp;

@@ -197,6 +197,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 			PlayerPrefs.SetInt("EventActive", 0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
+			PlayerPrefs.SetString("SpecialEvent","Cup22Final4");
 		}
 		
 		//Custom store items in Daily Selects
@@ -205,12 +206,24 @@ public class PlayFabManager : MonoBehaviour
 			//Remove the last known store values
 			PlayerPrefs.SetString("StoreDailySelects", "");
 		} else {
-			
 			//Fake store values for testing
 			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
 			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
+		}
+		
+		//Trigger a Special Challenge Event
+		if(result.Data.ContainsKey("SpecialEvent") == false){
+			//Debug.Log("No online Store Daily Selects");
+			//Remove the last known store values
+			PlayerPrefs.SetString("SpecialEvent", "");
+		} else {
+			//Fake store values for testing
+			//result.Data["SpecialEvent"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup20livery9alt1,cup20livery47alt1,cup20livery27alt1,cup20livery18alt1";
+			
+			PlayerPrefs.SetString("SpecialEvent", result.Data["SpecialEvent"]);
+			//Debug.Log("Store Updated " + PlayerPrefs.GetString("SpecialEvent"));
 		}
 		
 		//Debug Add Event for testing

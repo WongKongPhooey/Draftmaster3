@@ -18,6 +18,7 @@ public class NavButton : MonoBehaviour
     }
 	
 	public void loadScene(){
+		Time.timeScale = 1.0f;
 		LeanTween.reset();
 		SceneManager.LoadScene(sceneName);
 	}

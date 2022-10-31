@@ -72,7 +72,9 @@ public class MainMenuGUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("ActivePath")){
 			PlayerPrefs.DeleteKey("ActivePath");
 		}
+		PlayerPrefs.DeleteKey("SpawnFromCaution");
 		PlayerPrefs.DeleteKey("RaceModifier");
+		PlayerPrefs.DeleteKey("CautionLap");
 		
 		if(exp > levelExp){
 			exp-= levelExp;

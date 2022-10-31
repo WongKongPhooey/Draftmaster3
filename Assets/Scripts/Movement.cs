@@ -153,6 +153,7 @@ public class Movement : MonoBehaviour {
 	
 	public static bool delicateMod;
 	public static bool invincibleMod;
+	public static bool wallrideMod;
 
 	// Use this for initialization
 	void Start () {
@@ -1113,23 +1114,35 @@ public class Movement : MonoBehaviour {
 			wreckSine = -wreckSine;
 		}
 		baseDecel-=0.25f;
-		targetForce = playerWreckDecel;
+		
+		if(wallrideMod == false){
+			targetForce = playerWreckDecel;
+		}
 		updateWindForce();
 		if(CameraRotate.onTurn == true){
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
-			this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,windForce);
+			if(wallrideMod == true){
+				this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,20f);
+			} else {
+				this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,windForce);
+			}
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
 			this.GetComponent<ConstantForce>().force = new Vector3(-2f, 0f,windForce);
 		}
 		playerWreckDecel = baseDecel - (50f * wreckSine);
+		
 		//Debug.Log("Wreck Decel: " + playerWreckDecel);
 		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce < 0){
 			endWreck();
 		}
 		
-		this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 10) + 2;
+		if(wallrideMod == true){
+			this.GetComponent<Rigidbody>().mass = 2;
+		} else {
+			this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 10) + 2;
+		}
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		this.transform.Find("SparksL").rotation = Quaternion.Euler(0,180,0);

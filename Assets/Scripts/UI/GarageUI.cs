@@ -46,6 +46,13 @@ public class GarageUI : MonoBehaviour
 		seriesDropdown.SetActive(false);
 		currentSeries = GameObject.Find("CurrentSeries");
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
+		if(PlayerPrefs.GetString("ExactSeries") != ""){
+			seriesPrefix = PlayerPrefs.GetString("ExactSeries");
+			loadAllCars();
+			GameObject seriesSelector = GameObject.Find("SeriesSelect");
+			seriesSelector.SetActive(false);
+			PlayerPrefs.DeleteKey("ExactSeries");
+		}
 		
 		loadRaceRestrictions();
 		

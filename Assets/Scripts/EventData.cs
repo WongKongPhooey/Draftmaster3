@@ -19,6 +19,7 @@ public class EventData : MonoBehaviour
 	public static int[,] offlineMinClass = new int[10,10];
 	public static int[,] offlineMinRarity = new int[10,10];
 	public static string[,] offlineMinTeam = new string[10,10];
+	public static string[,] offlineExactSeries = new string[10,10];
 	public static int[,] offlineExactCar = new int[10,10];
 	public static string[,] offlineMinManu = new string[10,10];
 	public static string[,] offlineMinDriverType = new string[10,10];
@@ -41,13 +42,23 @@ public class EventData : MonoBehaviour
 		offlineEvent[1] = "The Intimidator";
 		//offlineEvent[2] = "All Stars";
 		//offlineEvent[3] = "The Closer";
-		//offlineEvent[4] = "Moments";
+		offlineEvent[4] = "Moments";
+		
+		switch(PlayerPrefs.GetString("SpecialEvent")){
+			case "Cup22Final4":
+				offlineEvent[9] = "The Final 4";
+				eventDescriptions[9] = "Play out the race of each possible champion to win their alt paint!";
+				break;
+			default:
+				break;
+		}
 		
 		offlineEventType[0] = "Progression";
 		offlineEventType[1] = "Progression";
 		offlineEventType[2] = "Replay";
 		offlineEventType[3] = "Progression";
 		offlineEventType[4] = "Replay";
+		offlineEventType[9] = "Replay";
 		//offlineEvent[3] = "Wonder Boy";
 		
 		offlineEventWeek[0] = "4,8,12";
@@ -55,6 +66,7 @@ public class EventData : MonoBehaviour
 		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[3] = "1,5,9";
 		offlineEventWeek[4] = "1,2,3,4,5,6,7,8,9,10,11,12";
+		offlineEventWeek[9] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		
 		//Ol' Seven-Time
 		offlineEventChapter[0,0] = "Where It All Began";
@@ -376,18 +388,139 @@ public class EventData : MonoBehaviour
 		offlinePrizes[4,0] = "Rookies";
 		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
 		
+		offlineEventChapter[4,1] = "Chastain's Wallride";
+		offlineChapterImage[4,1] = "cup22livery1alt2";
+		offlineMinClass[4,1] = 1;
+		offlineMinLevel[4,1] = 1;
+		offlineAILevel[4,1] = 10;
+		offlineSeries[4,1] = "cup22";
+		offlineCustomCar[4,1] = "cup22livery1";
+		//offlineCustomField[4,1] = "cup79MomentsDaytona";
+		offlineModifier[4,1] = "wallride";
+		offlineTracklists[4,1] = "6";
+		offlinePrizes[4,1] = "Rookies";
+		eventChapterDescriptions[4,1] = "October 30th 2022, Chastain goes full speed along the wall to qualify for the playoffs final.";
+		
+		
+		//Special Event - Final 4
+		offlineEventChapter[9,0] = "Unlock Logano";
+		offlineChapterImage[9,0] = "cup22livery22";
+		offlineMinClass[9,0] = 1;
+		offlineMinLevel[9,0] = 1;
+		offlineAILevel[9,0] = 15;
+		offlineExactSeries[9,0] = "cup22";
+		offlineMinType[9,0] = "Manufacturer";
+		offlineMinManu[9,0] = "FRD";
+		offlinePrizes[9,0] = "Logano";
+		offlineTracklists[9,0] = "3";
+		offlineSetPrizes[9,0] = "65";
+		eventChapterDescriptions[9,0] = "Logano's win in Las Vegas guaranteed his place in the final 4. Replicate it with any FRD car.";
+		
+		offlineEventChapter[9,1] = "Unlock Elliott";
+		offlineChapterImage[9,1] = "cup22livery9";
+		offlineMinClass[9,1] = 1;
+		offlineMinLevel[9,1] = 1;
+		offlineAILevel[9,1] = 15;
+		offlineExactSeries[9,1] = "cup22";
+		offlineMinType[9,1] = "Manufacturer";
+		offlineMinManu[9,1] = "CHV";
+		offlinePrizes[9,1] = "Elliott";
+		offlineTracklists[9,1] = "23";
+		offlineSetPrizes[9,1] = "65";
+		eventChapterDescriptions[9,1] = "Elliott won the regular points season, including this win in Nashville. Copy him in a CHV car.";
+		
+		offlineEventChapter[9,2] = "Unlock Bell";
+		offlineChapterImage[9,2] = "cup22livery20";
+		offlineMinClass[9,2] = 1;
+		offlineMinLevel[9,2] = 1;
+		offlineAILevel[9,2] = 15;
+		offlineExactSeries[9,2] = "cup22";
+		offlineMinType[9,2] = "Manufacturer";
+		offlineMinManu[9,2] = "TYT";
+		offlinePrizes[9,2] = "Bell";
+		offlineTracklists[9,2] = "18";
+		offlineSetPrizes[9,2] = "65";
+		eventChapterDescriptions[9,2] = "Bell's win at New Hampshire saw him reach the playoffs. Do the same in any TYT car.";
+		
+		offlineEventChapter[9,3] = "Unlock Chastain";
+		offlineChapterImage[9,3] = "cup22livery1";
+		offlineMinClass[9,3] = 1;
+		offlineMinLevel[9,3] = 1;
+		offlineAILevel[9,3] = 15;
+		offlineExactSeries[9,3] = "cup22";
+		offlineMinType[9,3] = "Team";
+		offlineMinTeam[9,3] = "TRK";
+		offlinePrizes[9,3] = "Chastain";
+		offlineTracklists[9,3] = "10";
+		offlineSetPrizes[9,3] = "65";
+		eventChapterDescriptions[9,3] = "Chastain got his first plate track win at Talladega. Get a TRK team car and win yourself.";
+		
+		
+		offlineEventChapter[9,4] = "Joy For Joey";
+		offlineChapterImage[9,4] = "cup22livery22alt1";
+		offlineMinClass[9,4] = 1;
+		offlineMinLevel[9,4] = 1;
+		offlineAILevel[9,4] = 15;
+		offlineSeries[4,0] = "cup22";
+		offlineCustomCar[4,0] = "cup22livery22";
+		offlineTracklists[9,4] = "4";
+		offlinePrizes[9,4] = "AltPaint";
+		offlineSetPrizes[9,4] = "cup22livery22alt1";
+		eventChapterDescriptions[9,4] = "Logano can win a 2nd Cup series championship, following his success in 2018. Requires Cup '22 Logano to enter.";
+		
+		offlineEventChapter[9,5] = "Chase For The Cup";
+		offlineChapterImage[9,5] = "cup22livery9alt1";
+		offlineMinClass[9,5] = 1;
+		offlineMinLevel[9,5] = 1;
+		offlineAILevel[9,5] = 15;
+		offlineMinType[9,6] = "Car";
+		offlineSeries[4,0] = "cup22";
+		offlineExactCar[9,6] = 9;
+		offlineTracklists[9,5] = "4";
+		offlinePrizes[9,5] = "AltPaint";
+		offlineSetPrizes[9,5] = "cup22livery9alt1";
+		eventChapterDescriptions[9,5] = "He's won it before, in the same car, with the same team, at the same track. Requires Cup '22 Elliott to enter.";
+		
+		offlineEventChapter[9,6] = "Victory Bell";
+		offlineChapterImage[9,6] = "cup22livery20alt1";
+		offlineMinClass[9,6] = 1;
+		offlineMinLevel[9,6] = 1;
+		offlineAILevel[9,6] = 15;
+		offlineMinType[9,6] = "Car";
+		offlineExactSeries[9,6] = "cup22";
+		offlineExactCar[9,6] = 20;
+		offlineTracklists[9,6] = "4";
+		offlinePrizes[9,6] = "AltPaint";
+		offlineSetPrizes[9,6] = "cup22livery20alt1";
+		eventChapterDescriptions[9,6] = "All of Bell's 3 wins have been clutched when he had to progress. Make it 4. Requires Cup '22 Bell to enter.";
+		
+		offlineEventChapter[9,7] = "Hail Melon";
+		offlineChapterImage[9,7] = "cup22livery1alt2";
+		offlineMinClass[9,7] = 1;
+		offlineMinLevel[9,7] = 1;
+		offlineAILevel[9,7] = 15;
+		offlineMinType[9,7] = "Car";
+		offlineExactSeries[9,7] = "cup22";
+		offlineExactCar[9,7] = 1;
+		offlineTracklists[9,7] = "4";
+		offlinePrizes[9,7] = "AltPaint";
+		offlineSetPrizes[9,7] = "cup22livery1alt2";
+		eventChapterDescriptions[9,7] = "The melon man put it all on the line to progress. He'll do it one more time. Requires Cup '22 Chastain.";
+		
+		
 		offlineEventImage[0] = "cup20livery48";
 		offlineEventImage[1] = "cup20livery3alt2";
 		offlineEventImage[2] = "cup22livery45";
 		offlineEventImage[3] = "cup22livery4";
 		offlineEventImage[4] = "cup79livery1";
-
+		offlineEventImage[9] = "cup22livery1alt1";
 		
 		eventDescriptions[0] = "Relive Johnson's best moments leading to an incredible 7 championships.";
 		eventDescriptions[1] = "Do it for Dale! Revisit some of Earnhardt's finest drives.";
 		eventDescriptions[2] = "Touchdown in LA. The new season starts here.";
 		eventDescriptions[3] = "Play out the biggest races in Harvick's career to date.";
 		eventDescriptions[4] = "Reliving wrecks and famous fueds. Wreck 'em and check 'em!";
+		
 	}
 
     // Update is called once per frame
@@ -554,8 +687,19 @@ public class EventData : MonoBehaviour
 				validDriver.Add("cup203");
 			break;
 			case "Harvick":
-				validDriver.Add("cup204");
 				validDriver.Add("cup224");
+			break;
+			case "Logano":
+				validDriver.Add("cup2222");
+			break;
+			case "Elliott":
+				validDriver.Add("cup229");
+			break;
+			case "Bell":
+				validDriver.Add("cup2220");
+			break;
+			case "Chastain":
+				validDriver.Add("cup221");
 			break;
 			
 			default:

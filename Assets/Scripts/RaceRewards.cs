@@ -444,6 +444,30 @@ public class RaceRewards : MonoBehaviour
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
+			case "Harvick":
+				validDriver.Add("cup224");
+			break;
+			
+			case "Logano":
+				validDriver.Add("cup2222");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			case "Elliott":
+				validDriver.Add("cup229");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			case "Bell":
+				validDriver.Add("cup2220");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			case "Chastain":
+				validDriver.Add("cup221");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
 			default:
 				for(int i=0;i<DriverNames.allCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allCarsets[i];

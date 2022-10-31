@@ -169,6 +169,8 @@ public class CameraRotate : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 		
+		straightcounter++;
+		
 		if((Movement.wreckOver == true)&&(Movement.isWrecking == false)){
 			//If last lap, no restart, it's over!
 			if(lap >= raceEnd){
@@ -187,12 +189,12 @@ public class CameraRotate : MonoBehaviour {
 		averageSpeedCount++;
 		averageSpeed = averageSpeedTotal / averageSpeedCount;
 		
-		straightcounter++;
-		
 		//Increment Lap
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
+			Debug.Log("Crossing the line at " + straightcounter + "m, straight: " + straight);
 			Ticker.updateTicker();
 			lap++;
+			Debug.Log("Add on a lap, now on lap " + lap);
 			//Starts/Restarts
 			if(Movement.pacing == true){
 				Movement.pacingEnds();
@@ -337,6 +339,7 @@ public class CameraRotate : MonoBehaviour {
 				AIMovement.onTurn = false;
 				straightcounter = 0;
 				cornercounter = 0;
+				wreckingCornerCounter = 0;
 				straight++;
 				turn++;
 				if(straight > PlayerPrefs.GetInt("TotalTurns")){

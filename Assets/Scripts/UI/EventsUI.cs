@@ -51,7 +51,7 @@ public class EventsUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
-		for(int i=0;i<5;i++){
+		for(int i=0;i<10;i++){
 			EventData.loadEvents();
 			//Skip through the non-driver #s
 			if(EventData.offlineEvent[i] == null){
@@ -155,13 +155,13 @@ public class EventsUI : MonoBehaviour
 				//} else {
 					//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT0"));
 				}
-			}
-			
-			//Never lock the first sub-event
-			if(i>0){
-				//If previous sub-event hasn't been won, lock.
-				if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + (i-1) + "EVENT0") != 1){
-					eventCover.SetActive(true);
+				
+				//Never lock the first sub-event
+				if(i>0){
+					//If previous sub-event hasn't been won, lock.
+					if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + (i-1) + "EVENT0") != 1){
+						eventCover.SetActive(true);
+					}
 				}
 			}
 		}
@@ -177,6 +177,7 @@ public class EventsUI : MonoBehaviour
 		PlayerPrefs.SetInt("CurrentSubseries", subEventId);
 		PlayerPrefs.SetInt("SubseriesDailyPlays",999);
 		PlayerPrefs.SetInt("SubseriesMinClass", EventData.offlineMinClass[subMenuId,subEventId]);
+		PlayerPrefs.SetString("ExactSeries",EventData.offlineExactSeries[subMenuId,subEventId]);
 		PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[subMenuId,subEventId]);
 		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue(subMenuId,subEventId));
 		PlayerPrefs.SetInt("AIDifficulty", EventData.offlineAILevel[subMenuId,subEventId]);
