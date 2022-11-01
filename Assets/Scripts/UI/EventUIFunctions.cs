@@ -29,7 +29,9 @@ public class EventUIFunctions : MonoBehaviour
 	public void loadEvent(){
 		EventsUI.subMenuId = subMenuId;
 		EventsUI.subEventId = subEventId;
-		PlayerPrefs.SetInt("EventReplay",1);
+		if(rewardCollected == true){
+			PlayerPrefs.SetInt("EventReplay",1);
+		}
 		Debug.Log("Event Replay, No Rewards");
 		GameObject.Find("Main").GetComponent<EventsUI>().loadEvent();
 	}

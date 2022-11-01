@@ -78,7 +78,7 @@ public class RaceRewardsUI : MonoBehaviour
 		} else {
 			ListPrizeOptions("");
 		}
-		//Debug.Log("Series Prize: " + seriesPrize);
+		Debug.Log("Series Prize: " + seriesPrize);
 		finishPos = PlayerPrefs.GetInt("PlayerFinishPosition");
 		Debug.Log("Finished: " + finishPos);
 		rewardMultiplier = 1;
@@ -436,6 +436,30 @@ public class RaceRewardsUI : MonoBehaviour
 			
 			case "Earnhardt":
 				validDriver.Add("cup203");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			case "Harvick":
+				validDriver.Add("cup224");
+			break;
+			
+			case "Logano":
+				validDriver.Add("cup2222");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			case "Elliott":
+				validDriver.Add("cup229");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			case "Bell":
+				validDriver.Add("cup2220");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
+			case "Chastain":
+				validDriver.Add("cup221");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			

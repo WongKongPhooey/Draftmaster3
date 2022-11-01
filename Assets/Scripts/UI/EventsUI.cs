@@ -147,19 +147,19 @@ public class EventsUI : MonoBehaviour
 			
 			//No dupe rewards allowed in progression events
 			
-			if(EventData.offlineEventType[subMenuId] == "Progression"){
-				if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT0") == 1){
-					eventRewardsBtn.SetActive(false);
-					rewardCollected.SetActive(true);
-					tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
-				//} else {
-					//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT0"));
-				}
+			if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1") == 1){
+				eventRewardsBtn.SetActive(false);
+				rewardCollected.SetActive(true);
+				tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
+			} else {
+				Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
+			}
 				
+			if(EventData.offlineEventType[subMenuId] == "Progression"){
 				//Never lock the first sub-event
 				if(i>0){
 					//If previous sub-event hasn't been won, lock.
-					if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + (i-1) + "EVENT0") != 1){
+					if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + (i-1) + "EVENT1") != 1){
 						eventCover.SetActive(true);
 					}
 				}

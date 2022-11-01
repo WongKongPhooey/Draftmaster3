@@ -37,7 +37,7 @@ public class AlertManager : MonoBehaviour
 		if(content == ""){
 			return;
 		}
-		alertPopup.SetActive(true);
+		//alertPopup.SetActive(true);
 		alertPopup.GetComponent<UIAnimate>().show();
 		if(image != ""){
 			alertImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(image);
@@ -51,7 +51,7 @@ public class AlertManager : MonoBehaviour
 		alertText.GetComponent<UIAnimate>().hide();
 		alertImage.GetComponent<UIAnimate>().hide();
 		alertPopup.GetComponent<UIAnimate>().hide();
-		alertPopup.SetActive(false);
+		//alertPopup.SetActive(false);
 		//Debug.Log("Popup Hidden");
 	}
 }

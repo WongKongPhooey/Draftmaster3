@@ -59,6 +59,12 @@ public class StoreUI : MonoBehaviour
 		DisableRestorePurchase();
 		this.gameObject.GetComponent<AdsInitializer>().InitializeAds();
     }
+	
+	public void reloadStore(){
+        loadWeeklyPicks();
+		loadDailyPicks();
+		loadStarterPicks();
+	}
 
 	public void loadWeeklyPicks(){
 		

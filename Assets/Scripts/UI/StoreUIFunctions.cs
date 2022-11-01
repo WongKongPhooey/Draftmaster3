@@ -42,6 +42,7 @@ public class StoreUIFunctions : MonoBehaviour
 				//Unlock the alt
 				if(PlayerPrefs.GetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked") != 1){
 					PlayerPrefs.SetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked",1);
+					GameObject.Find("Main").GetComponent<StoreUI>().reloadStore();
 				} else {
 					return;
 				}

@@ -105,6 +105,7 @@ public class RaceResultsUI : MonoBehaviour
 		
 		//If Event Reward already collected, cannot claim again
 		if(PlayerPrefs.HasKey("EventReplay")){
+			Debug.Log("Event replay, no dupe rewards");
 			GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
 		}
 
@@ -113,9 +114,11 @@ public class RaceResultsUI : MonoBehaviour
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
-			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex+ currentTrack);
+			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex + currentTrack);
+			//If better than previous (or 0 if it glitched a result)
 			if(((Ticker.position + 1) < bestFinishPos)||(bestFinishPos == 0)){
 				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Ticker.position + 1);
+				Debug.Log("New best finish: " + (Ticker.position + 1) + "Track: " + currentSeriesIndex + currentTrack);
 			}
 			Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
 		} else {
