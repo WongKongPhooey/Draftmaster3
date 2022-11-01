@@ -715,9 +715,9 @@ public class DriverNames : MonoBehaviour {
 		cup2022Rarity[6] = 3;
 		cup2022Rarity[7] = 1;
 		cup2022Rarity[8] = 2;
-		cup2022Rarity[9] = 4;
+		cup2022Rarity[9] = 3;
 		cup2022Rarity[10] = 2;
-		cup2022Rarity[11] = 4;
+		cup2022Rarity[11] = 3;
 		cup2022Rarity[12] = 3;
 		cup2022Rarity[14] = 2;
 		cup2022Rarity[15] = 1;

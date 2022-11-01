@@ -113,6 +113,11 @@ public class RaceResultsUI : MonoBehaviour
 				
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
+		if(PlayerPrefs.GetString("RaceType") == "EVENT"){
+			Debug.Log("This is an Event Race (Challenge), set track index to 1");
+			currentTrack = "1";
+		}
+
 		if(PlayerPrefs.HasKey("BestFinishPosition" + currentSeriesIndex+ currentTrack) == true){
 			int bestFinishPos = PlayerPrefs.GetInt("BestFinishPosition" + currentSeriesIndex + currentTrack);
 			//If better than previous (or 0 if it glitched a result)

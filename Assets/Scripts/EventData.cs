@@ -419,7 +419,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[9,1] = "cup22livery9";
 		offlineMinClass[9,1] = 1;
 		offlineMinLevel[9,1] = 1;
-		offlineAILevel[9,1] = 6;
+		offlineAILevel[9,1] = 1;
 		offlineExactSeries[9,1] = "cup22";
 		offlineMinType[9,1] = "Manufacturer";
 		offlineMinManu[9,1] = "CHV";
@@ -460,8 +460,9 @@ public class EventData : MonoBehaviour
 		offlineMinClass[9,4] = 1;
 		offlineMinLevel[9,4] = 1;
 		offlineAILevel[9,4] = 12;
-		offlineSeries[9,4] = "cup22";
-		offlineCustomCar[9,4] = "cup22livery22";
+		offlineMinType[9,4] = "Car";
+		offlineExactSeries[9,4] = "cup22";
+		offlineExactCar[9,4] = 22;
 		offlineTracklists[9,4] = "4";
 		offlinePrizes[9,4] = "AltPaint";
 		offlineSetPrizes[9,4] = "cup22livery22alt1";
@@ -473,7 +474,7 @@ public class EventData : MonoBehaviour
 		offlineMinLevel[9,5] = 1;
 		offlineAILevel[9,5] = 12;
 		offlineMinType[9,5] = "Car";
-		offlineSeries[9,5] = "cup22";
+		offlineExactSeries[9,5] = "cup22";
 		offlineExactCar[9,5] = 9;
 		offlineTracklists[9,5] = "4";
 		offlinePrizes[9,5] = "AltPaint";
