@@ -151,6 +151,7 @@ public class EventsUI : MonoBehaviour
 				eventRewardsBtn.SetActive(false);
 				rewardCollected.SetActive(true);
 				tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
+				Debug.Log("BestFinishPosition" + subMenuId + "" + i + "EVENT1 : " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
 			} else {
 				Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
 			}

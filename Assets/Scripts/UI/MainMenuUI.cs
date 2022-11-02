@@ -171,6 +171,20 @@ public class MainMenuUI : MonoBehaviour {
 			PlayerPrefs.SetInt("TotalTop5s", 0);
 		}
 		
+		//Emergency Patching
+		if(PlayerPrefs.GetInt("BestFinishPosition94EVENT1") == 1){
+			PlayerPrefs.SetInt("cup2222Alt1Unlocked",1);
+		}
+		if(PlayerPrefs.GetInt("BestFinishPosition95EVENT1") == 1){
+			PlayerPrefs.SetInt("cup229Alt1Unlocked",1);
+		}
+		if(PlayerPrefs.GetInt("BestFinishPosition96EVENT1") == 1){
+			PlayerPrefs.SetInt("cup2220Alt1Unlocked",1);
+		}
+		if(PlayerPrefs.GetInt("BestFinishPosition97EVENT1") == 1){
+			PlayerPrefs.SetInt("cup221Alt2Unlocked",1);
+		}
+		
 		//Menu Sounds
 		if(!PlayerPrefs.HasKey("AudioOn")){
 			PlayerPrefs.SetInt("AudioOn",1);

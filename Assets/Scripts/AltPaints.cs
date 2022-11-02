@@ -64,9 +64,12 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintNames[95,1] = "#1 Core";
 		
 		cup22AltPaintNames[1,1] = "#1 LTT Winner";
-		cup22AltPaintNames[1,2] = "#1 Winner";
+		cup22AltPaintNames[1,2] = "#2 Final 4";
+		cup22AltPaintNames[9,1] = "#1 Final 4";
 		cup22AltPaintNames[15,1] = "Stock (Ragan)";
 		cup22AltPaintNames[16,1] = "Stock (Hemric)";
+		cup22AltPaintNames[20,1] = "#1 Final 4";
+		cup22AltPaintNames[22,1] = "#1 Final 4";
 		cup22AltPaintNames[24,1] = "#1 Winner";
 		cup22AltPaintNames[27,1] = "Stock (Hezemans)";
 		cup22AltPaintNames[50,1] = "Stock (Daly)";
@@ -138,8 +141,11 @@ public class AltPaints : MonoBehaviour {
 		
 		cup22AltPaintTheme[1,1] = "Community";
 		cup22AltPaintTheme[1,2] = "Winners";
+		cup22AltPaintTheme[9,1] = "Winners";
 		cup22AltPaintTheme[15,1] = "Parttimer";
 		cup22AltPaintTheme[16,1] = "Parttimer";
+		cup22AltPaintTheme[20,1] = "Winners";
+		cup22AltPaintTheme[22,1] = "Winners";
 		cup22AltPaintTheme[24,1] = "Winners";
 		cup22AltPaintTheme[27,1] = "Parttimer";
 		cup22AltPaintTheme[50,1] = "Parttimer";

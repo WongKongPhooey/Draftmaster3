@@ -419,7 +419,7 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[9,1] = "cup22livery9";
 		offlineMinClass[9,1] = 1;
 		offlineMinLevel[9,1] = 1;
-		offlineAILevel[9,1] = 1;
+		offlineAILevel[9,1] = 6;
 		offlineExactSeries[9,1] = "cup22";
 		offlineMinType[9,1] = "Manufacturer";
 		offlineMinManu[9,1] = "CHV";

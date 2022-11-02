@@ -574,7 +574,7 @@ public class Movement : MonoBehaviour {
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.5f)){
 			//Speed up
 			if(playerSpeed <= (205f + (speedRand + customSpeedF) + challengeSpeedBoost + laneInv + carRarity + randTopend)){
-				playerSpeed+=(0.004f + customAccelF);
+				playerSpeed+=(0.005f + customAccelF);
 				if(RaceHUD.tutorialStage == 4){
 					RaceHUD.tutorialBackdraftCount++;
 				}
@@ -584,7 +584,7 @@ public class Movement : MonoBehaviour {
 		// If being bump-drafted from behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.01f)){
 			//Speed up
-			playerSpeed+=0.0035f;
+			playerSpeed+=0.0045f;
 			if(RaceHUD.tutorialStage == 4){
 				RaceHUD.tutorialBackdraftCount++;
 			}

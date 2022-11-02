@@ -252,6 +252,8 @@ public class RaceRewardsUI : MonoBehaviour
 		string sanitisedAlt = setPrize.Replace("livery","");
 		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
 		
+		//Sanitised example: cup2048Alt2Unlocked
+		
 		string extractedCarNum = setPrize.Split('y').Last();
 		string extractedAltNum = setPrize.Split('t').Last();
 		carPrizeAlt = setPrize;
