@@ -87,6 +87,9 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("ActivePath")){
 			PlayerPrefs.DeleteKey("ActivePath");
 		}
+        if(PlayerPrefs.HasKey("RaceType")){
+			PlayerPrefs.DeleteKey("RaceType");
+		}
 		PlayerPrefs.DeleteKey("RaceModifier");
 		
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
