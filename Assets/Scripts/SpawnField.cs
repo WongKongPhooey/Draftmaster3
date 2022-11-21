@@ -45,7 +45,10 @@ public class SpawnField : MonoBehaviour {
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
-		Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
+		if(PlayerPrefs.GetString("RaceType") == "Championship"){
+			seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
+		}
+		//Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
 
 		gridLanes = 2;
 		
@@ -116,7 +119,7 @@ public class SpawnField : MonoBehaviour {
 		
 		gridRows = Mathf.CeilToInt(gridRowsCalc);
 		
-		Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
+		//Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
 		
 		if(gridRows > (AILevel+5)){
 			playerRow = Random.Range(AILevel,AILevel+5);

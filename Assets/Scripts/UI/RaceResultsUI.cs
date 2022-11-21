@@ -113,7 +113,7 @@ public class RaceResultsUI : MonoBehaviour
 				
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
-		if(PlayerPrefs.GetString("RaceType") == "EVENT"){
+		if(PlayerPrefs.GetString("RaceType") == "Event"){
 			Debug.Log("This is an Event Race (Challenge), set track index to 1");
 			currentTrack = "1";
 		}

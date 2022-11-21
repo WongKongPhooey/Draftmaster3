@@ -77,7 +77,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		tracksArray = championshipTracklist.Split(',');
 		
 		hubCarImage = GameObject.Find("NextCar");
-		hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(PlayerPrefs.GetString("ChampionshipCarTexture"));
+		hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(PlayerPrefs.GetString("carTexture"));
 		
 		nextTrackLabel = GameObject.Find("NextTrackLabel");
 		

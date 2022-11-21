@@ -50,6 +50,8 @@ public class CameraRotate : MonoBehaviour {
 	public static float averageSpeed;
 	public static float averageSpeedTotal;
 	public static int averageSpeedCount;
+	public static float raceLapRecord;
+	public static int raceLapRecordInt;
 	public static float lapRecord;
 	public static int lapRecordInt;
 	public static int currentLapRecord;
@@ -103,17 +105,13 @@ public class CameraRotate : MonoBehaviour {
 		pauseMenu.SetActive(false);
 		
 		gearedAccel = calcCircuitGearing();
-		
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
-		
 		cautionOut = false;
 		overtime = false;
 		
 		for(int i=0;i<totalTurns;i++){
 			trackLength += straightLength[i];
-			//Debug.Log("Track Length: " + trackLength);
 			trackLength += (turnLength[i] * turnAngle[i]);
-			//Debug.Log("Track Length: " + trackLength);
 		}
 		straight = totalTurns;
 		turn = totalTurns;
@@ -138,21 +136,25 @@ public class CameraRotate : MonoBehaviour {
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
-			//Debug.Log("Caution Ending");
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
 			Debug.Log("Restarting on lap " + lap);
 			raceEnd = PlayerPrefs.GetInt("RaceLaps");
 			if(lap >= (raceEnd - 1)){
 				//Unlimited Overtime
-				//Debug.Log("Overtime");
 				raceEnd = lap+2;
 				PlayerPrefs.SetInt("RaceLaps", raceEnd);
 				Debug.Log("Restarting Lap " + lap + " of " + raceEnd);
 				overtime = true;
 			}
 			PlayerPrefs.DeleteKey("CautionLap");
+			if(PlayerPrefs.HasKey("RaceFastestLap" + circuit)){
+				raceLapRecord = PlayerPrefs.GetInt("RaceFastestLap" + circuit);
+				raceLapRecord = raceLapRecord / 1000;
+				PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
+			}
 		} else {
-			Debug.Log("No Active Caution");
+			//Delete any Race Fastest Lap time if not a caution restart
+			PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 		}
 
 		audioOn = PlayerPrefs.GetInt("AudioOn");
@@ -191,14 +193,27 @@ public class CameraRotate : MonoBehaviour {
 		
 		//Increment Lap
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
-			Debug.Log("Crossing the line at " + straightcounter + "m, straight: " + straight);
 			Ticker.updateTicker();
 			lap++;
-			Debug.Log("Add on a lap, now on lap " + lap);
+			//Debug.Log("Add on a lap, now on lap " + lap);
 			//Starts/Restarts
 			if(Movement.pacing == true){
 				Movement.pacingEnds();
 			}
+			
+			if((averageSpeed > raceLapRecord)&&(lap > 1)){
+				raceLapRecord = averageSpeed;
+			}
+			if((averageSpeed > lapRecord)&&(lap > 1)){
+				lapRecord = averageSpeed;
+			}
+			if(raceLapRecord > lapRecord){
+				lapRecord = raceLapRecord;
+			}
+
+			averageSpeed = 0;
+			averageSpeedCount = 0;
+			averageSpeedTotal = 0;
 			
 			//Caution, reset scene
 			if(cautionOut == true){
@@ -210,11 +225,12 @@ public class CameraRotate : MonoBehaviour {
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0;
 					crowdNoise.volume = 0;
-					//Debug.Log(lapRecord);
+					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
+					PlayerPrefs.SetInt("RaceFastestLap" + circuit, lapRecordInt);
 					//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
-					PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
+					PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
 					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 						PlayFabManager.CheckLiveTimeTrial();
 						//Double checked
@@ -225,14 +241,6 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
-
-			if((averageSpeed > lapRecord)&&(lap > 1)){
-				lapRecord = averageSpeed;
-			}
-
-			averageSpeed = 0;
-			averageSpeedCount = 0;
-			averageSpeedTotal = 0;
 			
 			//Race End
 			if(lap >= (raceEnd + 1)){
@@ -492,7 +500,7 @@ public class CameraRotate : MonoBehaviour {
 		if(calcdGear > 0.25f){
 			calcdGear = 0.25f;
 		}
-		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
+		//Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
 		return calcdGear;
 	}
 	

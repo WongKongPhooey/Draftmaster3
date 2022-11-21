@@ -200,6 +200,9 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetString("SpecialEvent","Cup22Final4");
 		}
 		
+		//Testing
+		//result.Data["LiveTimeTrial"] = "Atlanta";
+		
 		//Custom store items in Daily Selects
 		if(result.Data.ContainsKey("StoreDailySelects") == false){
 			//Debug.Log("No online Store Daily Selects");
@@ -652,7 +655,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
 			Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
 		} catch (Exception e){
-			Debug.Log("Cannot reach Playfab to send time");
+			Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
 		}
 	}
 	

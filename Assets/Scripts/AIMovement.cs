@@ -609,7 +609,7 @@ public class AIMovement : MonoBehaviour
 			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
 			if(currentPos == 0){
 				if (AISpeed > (204f + (laneInv / 2) + (AILevel / 5))){
-				Debug.Log("Leader is #" + carNum);
+				//Debug.Log("Leader is #" + carNum);
 				evadeDraft();
 				}
 			}

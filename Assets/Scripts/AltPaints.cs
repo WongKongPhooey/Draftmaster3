@@ -176,7 +176,7 @@ public class AltPaints : MonoBehaviour {
 				return cup2020AltPaintDriver[carNum,altNum];
 				break;
 			case "cup22":
-				return cup22AltPaintTheme[carNum,altNum];
+				return cup22AltPaintDriver[carNum,altNum];
 				break;
 			default:
 				return null;

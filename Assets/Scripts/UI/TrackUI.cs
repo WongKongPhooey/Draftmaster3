@@ -291,7 +291,9 @@ public class TrackUI : MonoBehaviour
 			}
 			
 			//Testing
+			#if UNITY_EDITOR
 			//PlayerPrefs.SetInt("RaceLaps",1);
+			#endif
 			
 			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
 			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);

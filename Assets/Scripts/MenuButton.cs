@@ -10,16 +10,31 @@ public class MenuButton : MonoBehaviour
 	public string URLName = "";
 	
 	void OnMouseUp(){
-		loadScene();
+		//loadScene();
     }
 	
 	public void loadScene(){
-		//if(PlayerPrefs.HasKey("NewUser")){
 		LeanTween.reset();
 		if(URLName != ""){
 			Application.OpenURL(URLName);
 		} else {
 			SceneManager.LoadScene(SceneName);
+		}
+	}
+	
+	public void loadTimeTrial(){
+		LeanTween.reset();
+		if(PlayerPrefs.GetString("LiveTimeTrial") != ""){
+			SceneManager.LoadScene("Levels/HallOfFame");
+		}
+	}
+	
+	public void loadInProgressChampionship(){
+		LeanTween.reset();
+		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries").Length > 0)){
+			SceneManager.LoadScene("Menus/ChampionshipHub");
+		} else {
+			SceneManager.LoadScene("Menus/SeriesSelect");
 		}
 	}
 }

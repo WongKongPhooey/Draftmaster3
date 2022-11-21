@@ -439,7 +439,7 @@ public class Movement : MonoBehaviour {
 				playerSpeed-=0.5f;
 			}
 		}
-		playerSpeed-=0.5f;
+		playerSpeed-=0.2f;
 	}
 	
 	void OnCollisionExit (Collision carHit){
@@ -1100,11 +1100,6 @@ public class Movement : MonoBehaviour {
 		Time.timeScale = 0.0f;
 		mainCam.GetComponent<AudioListener>().enabled = false;
 		PlayerPrefs.SetInt("Volume",0);
-		
-		//if(wreckDamage > 1000f){
-			//True means player pit, goes to the back
-			//Ticker.saveCautionPositions(true);
-		//}
 	}
 	
 	void wreckPhysics(){

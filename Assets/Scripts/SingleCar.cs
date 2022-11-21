@@ -307,9 +307,7 @@ public class SingleCar : MonoBehaviour {
 		GUI.skin.label.normal.textColor = Color.white;
 		if((carGears >= classMax)&&(carClass < 6)){
 			if(totalMoney >= GameData.upgradeCost(carClass)){
-				if (GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f), "Upgrade ($" + GameData.upgradeCost(carClass) + ")")){
-					totalMoney -= GameData.upgradeCost(carClass);
-					PlayerPrefs.SetInt("PrizeMoney",totalMoney);
+				if (GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f), "Upgrade")){
 					if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
 						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - classMax);
 						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", carClass+1);

@@ -111,8 +111,6 @@ public class OptionsMenuGUI : MonoBehaviour {
 		GUI.Label(new Rect(widthblock * 4, heightblock/2, widthblock * 12, heightblock * 2), "General Settings");
 
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
-		
-		CommonGUI.BackButton("MainMenu");
 
 		if (GUI.Button(new Rect(widthblock * 13, heightblock * 4, widthblock * 1, heightblock * 2), "<")){
 			switch(audioOn){

@@ -43,6 +43,9 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject loginBtn;
 	public GameObject loginBtnLabel;
 	
+	public GameObject timeTrialDescUI;	
+	TMPro.TMP_Text timeTrialDescUILabel;
+	
 	public GameObject latestNews;
 	
 	GameObject alertTitle;
@@ -53,8 +56,6 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject popupFrame;
 	
 	void Awake(){
-		//alertPopup = GameObject.Find("AlertPopup");
-		//alertPopup.GetComponent<UIAnimate>().hide();
 	}
 	
     // Start is called before the first frame update
@@ -127,6 +128,10 @@ public class MainMenuUI : MonoBehaviour {
 		versionLabel = GameObject.Find("VersionLabel");
 		versionLabel.GetComponent<TMPro.TMP_Text>().text = "v" + Application.version;
 		
+		timeTrialDescUI = GameObject.Find("TimeTrialDesc");
+		timeTrialDescUILabel = timeTrialDescUI.GetComponent<TMPro.TMP_Text>();
+			
+		
 		if(PlayerPrefs.GetString("MessageAlert") != ""){
 			latestNews = GameObject.Find("LatestNews");
 			latestNews.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("MessageAlert");
@@ -171,20 +176,6 @@ public class MainMenuUI : MonoBehaviour {
 			PlayerPrefs.SetInt("TotalTop5s", 0);
 		}
 		
-		//Emergency Patching
-		if(PlayerPrefs.GetInt("BestFinishPosition94EVENT1") == 1){
-			PlayerPrefs.SetInt("cup2222Alt1Unlocked",1);
-		}
-		if(PlayerPrefs.GetInt("BestFinishPosition95EVENT1") == 1){
-			PlayerPrefs.SetInt("cup229Alt1Unlocked",1);
-		}
-		if(PlayerPrefs.GetInt("BestFinishPosition96EVENT1") == 1){
-			PlayerPrefs.SetInt("cup2220Alt1Unlocked",1);
-		}
-		if(PlayerPrefs.GetInt("BestFinishPosition97EVENT1") == 1){
-			PlayerPrefs.SetInt("cup221Alt2Unlocked",1);
-		}
-		
 		//Menu Sounds
 		if(!PlayerPrefs.HasKey("AudioOn")){
 			PlayerPrefs.SetInt("AudioOn",1);
@@ -199,7 +190,16 @@ public class MainMenuUI : MonoBehaviour {
 		}
 		
         loadCurrentChampionshipInfo();
+		checkForTimeTrial();
     }
+
+	void checkForTimeTrial(){
+		if(PlayerPrefs.GetString("LiveTimeTrial") == ""){
+			timeTrialDescUILabel.text = "There is No Active Time Trial";
+		} else {
+			timeTrialDescUILabel.text = "Set your fastest lap in any race series at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
+		}
+	}
 
 	void loadCurrentChampionshipInfo(){
 		
@@ -244,6 +244,6 @@ public class MainMenuUI : MonoBehaviour {
     // Update is called once per frame
     void Update()
     {
-        
+        checkForTimeTrial();
     }
 }
