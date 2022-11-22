@@ -228,7 +228,6 @@ public class MainMenuUI : MonoBehaviour {
 			PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("ChampionshipCarTexture"));
 			PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("ChampionshipCarChoice"));
 			PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("ChampionshipCarSeries"));
-			
 			PlayerPrefs.SetString("ActivePath","ChampionshipRace");
 			//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 			SceneManager.LoadScene("Menus/ChampionshipHub");
