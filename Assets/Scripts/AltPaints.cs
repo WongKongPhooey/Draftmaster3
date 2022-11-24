@@ -65,13 +65,17 @@ public class AltPaints : MonoBehaviour {
 		
 		cup22AltPaintNames[1,1] = "#1 LTT Winner";
 		cup22AltPaintNames[1,2] = "#2 Final 4";
+		cup22AltPaintNames[7,1] = "#1 Robbins";
 		cup22AltPaintNames[9,1] = "#1 Final 4";
 		cup22AltPaintNames[15,1] = "Stock (Ragan)";
 		cup22AltPaintNames[16,1] = "Stock (Hemric)";
 		cup22AltPaintNames[20,1] = "#1 Final 4";
+		cup22AltPaintNames[21,1] = "#1 Throwback";
 		cup22AltPaintNames[22,1] = "#1 Final 4";
 		cup22AltPaintNames[24,1] = "#1 Winner";
 		cup22AltPaintNames[27,1] = "Stock (Hezemans)";
+		cup22AltPaintNames[42,1] = "#1 Throwback";
+		cup22AltPaintNames[43,1] = "#1 Throwback";
 		cup22AltPaintNames[50,1] = "Stock (Daly)";
 		cup22AltPaintNames[66,1] = "Stock (Said)";
 		cup22AltPaintNames[77,1] = "Stock (Allgaier)";
@@ -140,14 +144,18 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintAISpawning[99,1] = false;
 		
 		cup22AltPaintTheme[1,1] = "Community";
-		cup22AltPaintTheme[1,2] = "Winners";
-		cup22AltPaintTheme[9,1] = "Winners";
+		cup22AltPaintTheme[1,2] = "Final4";
+		cup22AltPaintTheme[7,1] = "Throwback";
+		cup22AltPaintTheme[9,1] = "Final4";
 		cup22AltPaintTheme[15,1] = "Parttimer";
 		cup22AltPaintTheme[16,1] = "Parttimer";
-		cup22AltPaintTheme[20,1] = "Winners";
-		cup22AltPaintTheme[22,1] = "Winners";
+		cup22AltPaintTheme[20,1] = "Final4";
+		cup22AltPaintTheme[21,1] = "Throwback";
+		cup22AltPaintTheme[22,1] = "Final4";
 		cup22AltPaintTheme[24,1] = "Winners";
 		cup22AltPaintTheme[27,1] = "Parttimer";
+		cup22AltPaintTheme[42,1] = "Throwback";
+		cup22AltPaintTheme[43,1] = "Throwback";
 		cup22AltPaintTheme[50,1] = "Parttimer";
 		cup22AltPaintTheme[66,1] = "Parttimer";
 		cup22AltPaintTheme[77,1] = "Parttimer";

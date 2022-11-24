@@ -14,6 +14,8 @@ public class GarageUI : MonoBehaviour
 	public GameObject wreckedTile;
 	public GameObject twentyTwentyTile;
 	public GameObject partTimersTile;
+	public GameObject finaleTile;
+	public GameObject throwbackTile;
 	GameObject activeTile;
 	
 	string restrictionType;
@@ -403,6 +405,12 @@ public class GarageUI : MonoBehaviour
 				break;
 			case "2020":
 				cardPrefab = twentyTwentyTile;
+				break;
+			case "Throwback":
+				cardPrefab = throwbackTile;
+				break;
+			case "Final4":
+				cardPrefab = finaleTile;
 				break;
 			default:
 				cardPrefab = carTile;

@@ -191,12 +191,14 @@ public class AIMovement : MonoBehaviour
 		
 		for(int i=1;i<10;i++){
 			if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-				if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != false){
+				if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) == true){
+					//Debug.Log("There's an alt.. but we won't show it.");
+				} else {
 					altPaints.Add(i.ToString());
-					Debug.Log("Alt spawned for #" + carNum);
+					//Debug.Log("Alt available for #" + carNum);
 				}
 			} else {
-				
+				//Debug.Log("No alt for " + seriesPrefix + " " + carNum + " " + i);
 			}
 		}
 		int altIndex = Random.Range(0,altPaints.Count);
