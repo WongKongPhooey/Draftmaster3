@@ -12,6 +12,9 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject finishLine;
 	public GameObject tropicono;
 	
+	public Camera MainCam;
+	public int cameraZoom;
+	
 	public AudioSource carEngine;
 	public AudioSource crowdNoise;
 	public static int audioOn;
@@ -65,6 +68,14 @@ public class CameraRotate : MonoBehaviour {
 	void Awake(){
 		
 		Time.timeScale = 1.0f;
+		
+		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
+		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
+		if(cameraZoom == 1){
+			MainCam.orthographicSize = 7.0f;
+		} else {
+			MainCam.orthographicSize = 5.0f;
+		}
 		
 		kerbBlur = 0.5f;
 		straightcounter = 0;

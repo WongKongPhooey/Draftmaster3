@@ -13,6 +13,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 	public static string difficultyName;
 	public static string difficultyDistance;
 	public static int cameraRotate;
+	public static int cameraZoom;
 	public static int local2Player;
 	public static int audioOn;
 	public static int laneChange;
@@ -23,6 +24,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 	public static int averageLaps;
 	public static string audioOnName;
 	public static string cameraRotateName;
+	public static string cameraZoomName;
 	public static string local2PlayerName;
 	public static string laneChangeName;
 	public Vector2 scrollPosition = Vector2.zero;
@@ -74,6 +76,13 @@ public class OptionsMenuGUI : MonoBehaviour {
 		} else {
 			cameraRotate = 0;
 			cameraRotateName = "No";
+		}
+		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
+		if(cameraZoom == 1){
+			cameraZoomName = "Far";
+		} else {
+			cameraZoom = 0;
+			cameraZoomName = "Close";
 		}
 		if(PlayerPrefs.HasKey("AudioOn")){
 			audioOn = PlayerPrefs.GetInt("AudioOn");
@@ -169,6 +178,34 @@ public class OptionsMenuGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("CameraRotate", cameraRotate);
 		}
 		GUI.Label(new Rect(widthblock * 2, heightblock * 8, widthblock * 9, heightblock * 3), "Camera Rotation: " + cameraRotateName);
+
+		if (GUI.Button(new Rect(widthblock * 13, heightblock * 12, widthblock * 1, heightblock * 2), "<")){
+			switch(cameraZoom){
+			case 0:
+				cameraZoom = 1;
+				cameraZoomName = "Far";
+				break;
+			case 1:
+				cameraZoom = 0;
+				cameraZoomName = "Close";
+				break;
+			}
+			PlayerPrefs.SetInt("CameraZoom", cameraZoom);
+		}
+		if (GUI.Button(new Rect(widthblock * 14, heightblock * 12, widthblock * 1, heightblock * 2), ">")){
+			switch(cameraZoom){
+			case 0:
+				cameraZoom = 1;
+				cameraZoomName = "Far";
+				break;
+			case 1:
+				cameraZoom = 0;
+				cameraZoomName = "Close";
+				break;
+			}
+			PlayerPrefs.SetInt("CameraZoom", cameraZoom);
+		}
+		GUI.Label(new Rect(widthblock * 2, heightblock * 12, widthblock * 9, heightblock * 3), "Camera Zoom: " + cameraZoomName);
 
 		GUI.EndScrollView();
 
