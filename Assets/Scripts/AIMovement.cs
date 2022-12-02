@@ -182,27 +182,41 @@ public class AIMovement : MonoBehaviour
 			this.transform.Find("Number").Translate(0.1f,0f,0f);
 		}
 		
-		altPaints = new List<string>();
-		altPaints.Add("0");
-		altPaints.Add("0");
-		altPaints.Add("0");
-		altPaints.Add("0");
-		AltPaints.loadAlts();
-		
-		for(int i=1;i<10;i++){
-			if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-				if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) == true){
-					//Debug.Log("There's an alt.. but we won't show it.");
-				} else {
-					altPaints.Add(i.ToString());
-					//Debug.Log("Alt available for #" + carNum);
-				}
+		string chosenAlt;
+		if(PlayerPrefs.HasKey("RaceAltPaint" + carNumber)){
+			//Load the pre-picked alt paint
+			chosenAlt = PlayerPrefs.GetString("RaceAltPaint" + carNumber);
+			Debug.Log("Remembered to show the #" + carNumber + " Alt");
+		} else {
+			if(PlayerPrefs.HasKey("RaceAltPaintsChosen")){
+				chosenAlt = "0";
 			} else {
-				//Debug.Log("No alt for " + seriesPrefix + " " + carNum + " " + i);
+				altPaints = new List<string>();
+				altPaints.Add("0");
+				altPaints.Add("0");
+				altPaints.Add("0");
+				altPaints.Add("0");
+				//altPaints.Add("0");
+				AltPaints.loadAlts();
+				for(int i=1;i<10;i++){
+					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
+						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) == true){
+							//Do nothing, it has to both exist and not be true
+						} else {
+							//It must be 'false'
+							altPaints.Add(i.ToString());
+						}
+					}
+				}
+				int altIndex = Random.Range(0,altPaints.Count);
+				chosenAlt = altPaints[altIndex];
+				if(chosenAlt != "0"){
+					PlayerPrefs.SetInt("RaceAltPaintsChosen",1);
+					PlayerPrefs.SetString("RaceAltPaint" + carNumber,chosenAlt);
+					Debug.Log("Set the #" + carNumber + " Alt");
+				}
 			}
 		}
-		int altIndex = Random.Range(0,altPaints.Count);
-		string chosenAlt = altPaints[altIndex];
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
 			if(chosenAlt != "0"){

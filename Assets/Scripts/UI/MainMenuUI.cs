@@ -96,6 +96,14 @@ public class MainMenuUI : MonoBehaviour {
 			PlayerPrefs.DeleteKey("SpawnFromCaution");
 		}
 		
+		for(int i=0;i<100;i++){
+			if(PlayerPrefs.HasKey("RaceAltPaint" + i)){
+				PlayerPrefs.DeleteKey("RaceAltPaint" + i);
+				//Debug.Log("Reset Alt Paints");
+			}
+		}
+		PlayerPrefs.DeleteKey("RaceAltPaintsChosen");
+		
 		//Level Up?
 		if(exp > levelExp){
 			exp-= levelExp;
