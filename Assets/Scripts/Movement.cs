@@ -964,7 +964,7 @@ public class Movement : MonoBehaviour {
 		}
 
 		HUDLastLap.GetComponent<TMPro.TMP_Text>().text = "LAP " + (CameraRotate.averageSpeed - speedOffset).ToString("F2");
-		HUDBestLap.GetComponent<TMPro.TMP_Text>().text = "BEST " + (CameraRotate.lapRecord - speedOffset).ToString("F2");
+		HUDBestLap.GetComponent<TMPro.TMP_Text>().text = "BEST " + (CameraRotate.raceLapRecord - speedOffset).ToString("F2");
 		
 		calcLapDelta = (CameraRotate.lapRecord - speedOffset)-(CameraRotate.averageSpeed - speedOffset);
 		if(calcLapDelta<0){

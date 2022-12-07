@@ -240,13 +240,13 @@ public class CameraRotate : MonoBehaviour {
 					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
 					PlayerPrefs.SetInt("RaceFastestLap" + circuit, lapRecordInt);
-					//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
+					//Debug.Log("Send to leaderboard - " + raceLapRecordInt + ": " + circuit);
 					PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
 					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 						PlayFabManager.CheckLiveTimeTrial();
 						//Double checked
 						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-							PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrialV2","");
+							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR87","");
 						}
 					}
 				}
@@ -441,7 +441,7 @@ public class CameraRotate : MonoBehaviour {
 				PlayFabManager.CheckLiveTimeTrial();
 				//Double checked
 				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-					PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrialV2","");
+					PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrialR87","");
 				}
 			}
 		}
