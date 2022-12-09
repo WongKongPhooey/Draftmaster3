@@ -139,7 +139,7 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintAISpawning[5,2] = false;
 		cup2020AltPaintAISpawning[6,1] = false;
 		cup2020AltPaintAISpawning[11,1] = false;
-		cup2020AltPaintAISpawning[88,1] = false;
+		cup2020AltPaintAISpawning[88,3] = false;
 		
 		cup22AltPaintAISpawning[1,1] = false;
 		cup22AltPaintAISpawning[99,1] = false;
