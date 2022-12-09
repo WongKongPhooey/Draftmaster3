@@ -1096,6 +1096,7 @@ public class Movement : MonoBehaviour {
 		//No cautions on the last lap, race is over
 		if(CameraRotate.lap < CameraRotate.raceEnd){
 			cautionSummaryMenu.SetActive(true);
+			mainCam.GetComponent<CameraRotate>().saveRaceFastestLap();
 		}
 		Time.timeScale = 0.0f;
 		mainCam.GetComponent<AudioListener>().enabled = false;
