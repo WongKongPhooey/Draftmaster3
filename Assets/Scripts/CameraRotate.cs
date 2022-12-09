@@ -252,7 +252,7 @@ public class CameraRotate : MonoBehaviour {
 						PlayFabManager.CheckLiveTimeTrial();
 						//Double checked
 						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR88","");
+							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR89","");
 						}
 					}
 				}
@@ -446,7 +446,7 @@ public class CameraRotate : MonoBehaviour {
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR88","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR89","");
 			}
 		}
 	}
@@ -466,7 +466,7 @@ public class CameraRotate : MonoBehaviour {
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR88","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR89","");
 			}
 		}
 	}
