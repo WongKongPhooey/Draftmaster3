@@ -133,6 +133,7 @@ public class CameraRotate : MonoBehaviour {
 		lap = 0;
 		raceEnd = PlayerPrefs.GetInt("RaceLaps");
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
+		
 		lapRecord = 0;
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 			lapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
@@ -239,8 +240,13 @@ public class CameraRotate : MonoBehaviour {
 					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-					PlayerPrefs.SetInt("RaceFastestLap" + circuit, lapRecordInt);
-					//Debug.Log("Send to leaderboard - " + raceLapRecordInt + ": " + circuit);
+					if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+						currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
+						if(raceLapRecord > currentLapRecord){
+							PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
+						}
+					}
+					PlayerPrefs.SetInt("RaceFastestLap" + circuit, raceLapRecordInt);
 					PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
 					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 						PlayFabManager.CheckLiveTimeTrial();
@@ -294,10 +300,6 @@ public class CameraRotate : MonoBehaviour {
 					TDCamera.transform.Rotate(0,0,(-1.0f/turnAngle[turn-1]) * cornerAngleFactor);
 					wreckingCornerCounter += cornerAngleFactor;
 					//Debug.Log(wreckingCornerCounter + " so far, out of " + (turnLength[turn-1] * turnAngle[turn-1]));
-					//if(wreckingCornerCounter > (turnLength[turn-1] * turnAngle[turn-1])){
-						//float cornerFinalDiff = wreckingCornerCounter - (turnLength[turn-1] * turnAngle[turn-1]);
-						//TDCamera.transform.Rotate(0,0,(-1.0f/cornerFinalDiff));
-					//}
 				} else {
 					wreckingCornerCounter++;
 					if(turnDir[turn-1] == 1){
@@ -432,17 +434,39 @@ public class CameraRotate : MonoBehaviour {
 		PlayerPrefs.SetInt("ExpAdded",0);
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-			//Debug.Log(lapRecord);
-			lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
-			PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-			//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
-			PlayFabManager.SendLeaderboard(lapRecordInt, circuit, "FastestLap");
+			if(raceLapRecord > currentLapRecord){
+				raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
+				PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
+			}
+		}
+		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
+		//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
+		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
+		if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+			PlayFabManager.CheckLiveTimeTrial();
+			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.CheckLiveTimeTrial();
-				//Double checked
-				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-					PlayFabManager.SendLeaderboard(lapRecordInt, "LiveTimeTrialR88","");
-				}
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR88","");
+			}
+		}
+	}
+	
+	public void saveRaceFastestLap(){
+		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
+			if(raceLapRecord > currentLapRecord){
+				raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
+				PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
+			}
+		}
+		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
+		//Debug.Log("Send to leaderboard after wreck - " + raceLapRecordInt + ": " + circuit);
+		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
+		if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+			PlayFabManager.CheckLiveTimeTrial();
+			//Double checked
+			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR88","");
 			}
 		}
 	}
