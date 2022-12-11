@@ -200,10 +200,10 @@ public class AIMovement : MonoBehaviour
 				AltPaints.loadAlts();
 				for(int i=1;i<10;i++){
 					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) == true){
+						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) == false){
 							//Do nothing, it has to both exist and not be true
 						} else {
-							//It must be 'false'
+							//It must be null (array only holds 'false' values)
 							altPaints.Add(i.ToString());
 						}
 					}
