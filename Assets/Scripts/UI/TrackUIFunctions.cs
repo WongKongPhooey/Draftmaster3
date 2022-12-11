@@ -17,6 +17,9 @@ public class TrackUIFunctions : MonoBehaviour
 		PlayerPrefs.SetString("TrackLocation", TrackData.trackNames[trackId]);
 		TrackUI.trackCodeName = trackCodeName;
 		GameObject.Find("Main").GetComponent<TrackData>().loadTrackData(trackCodeName);
+		if(PlayerPrefs.HasKey("RaceFastestLap" + trackCodeName)){
+			PlayerPrefs.DeleteKey("RaceFastestLap" + trackCodeName);
+		}
 		TrackUI.startRace(trackCodeName);
 	}
 

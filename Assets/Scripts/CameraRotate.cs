@@ -147,6 +147,7 @@ public class CameraRotate : MonoBehaviour {
 
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 
+		raceLapRecord = 0;
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
 			Debug.Log("Restarting on lap " + lap);
@@ -162,6 +163,7 @@ public class CameraRotate : MonoBehaviour {
 			if(PlayerPrefs.HasKey("RaceFastestLap" + circuit)){
 				raceLapRecord = PlayerPrefs.GetInt("RaceFastestLap" + circuit);
 				raceLapRecord = raceLapRecord / 1000;
+				Debug.Log("Pulled existing fastest lap of " + raceLapRecord);
 				PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 			}
 		} else {
@@ -460,7 +462,7 @@ public class CameraRotate : MonoBehaviour {
 			}
 		}
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
-		//Debug.Log("Send to leaderboard after wreck - " + raceLapRecordInt + ": " + circuit);
+		Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
 		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
 		if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 			PlayFabManager.CheckLiveTimeTrial();
