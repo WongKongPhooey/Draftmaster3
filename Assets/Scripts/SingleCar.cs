@@ -457,7 +457,7 @@ public class SingleCar : MonoBehaviour {
 				for(int columns = 1; columns < 3; columns++){
 					if(AltPaints.getAltPaintName(seriesPrefix, currentCar,columns) != null){
 					
-						cardX = widthblock * (columns * 4.25f) + (widthblock * 7.25f);
+						cardX = widthblock * (columns * 4.15f) + (widthblock * 7.5f);
 						cardY = heightblock * 6f;
 						
 						GUI.skin = whiteGUI;
@@ -501,7 +501,7 @@ public class SingleCar : MonoBehaviour {
 
 					if(AltPaints.getAltPaintName(seriesPrefix, currentCar,columns+offset) != null){
 					
-						cardX = widthblock * (columns * 4.25f) + (widthblock * 3.25f);
+						cardX = widthblock * (columns * 4.15f) + (widthblock * 3.35f);
 						cardY = heightblock * 12.5f;
 						
 						GUI.skin = whiteGUI;
