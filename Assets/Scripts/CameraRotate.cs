@@ -69,6 +69,8 @@ public class CameraRotate : MonoBehaviour {
 		
 		Time.timeScale = 1.0f;
 		
+		this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
+		
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
 		if(cameraZoom == 1){

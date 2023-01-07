@@ -182,6 +182,9 @@ public class Movement : MonoBehaviour {
 		
 		pacing = true;
 		
+		carEngine = audioHolder.GetComponent<AudioSource>();
+		carEngine.volume = 0.2f;
+		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
@@ -391,7 +394,7 @@ public class Movement : MonoBehaviour {
 		//Debug.Log("Hit " + carHit.gameObject.name);
 		if((carHit.gameObject.tag == "AICar") || 
 		   (carHit.gameObject.tag == "Barrier") || 
-		   (carHit.gameObject.name == "OuterWall")){
+		   (carHit.gameObject.name == "InnerEdge")){
 			
 			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
 				startWreck();
@@ -435,9 +438,12 @@ public class Movement : MonoBehaviour {
 					}
 				}
 			}
-			if(carHit.gameObject.name == "OuterWall"){
+			if(carHit.gameObject.name == "InnerEdge"){
 				playerSpeed-=0.5f;
 			}
+		}
+		if(carHit.gameObject.name == "InnerEdge"){
+			GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("Wallhit");
 		}
 		playerSpeed-=0.2f;
 	}
@@ -1039,6 +1045,7 @@ public class Movement : MonoBehaviour {
 		}
 		if(wreckOver == false){
 			isWrecking = true;
+			GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("Crash");
 		}
 		if(CameraRotate.cautionOut == false){
 			CameraRotate.throwCaution();
