@@ -452,9 +452,9 @@ public class AIMovement : MonoBehaviour
 		
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
-			//if(midSpeed > 3f){
-				//startWreck();
-			//}
+			if((midSpeed > 5f)||(midSpeed < -5f)){
+				startWreck();
+			}
 			//For some reason changing this makes the player bump-draft mega fast!
 			AISpeed += midSpeed/4;
 			tandemDraft = true;
@@ -514,7 +514,7 @@ public class AIMovement : MonoBehaviour
 			wreckProbability = 1;
 			
 			if(CameraRotate.lap == CameraRotate.raceEnd){
-				wreckProbability = 5;
+				wreckProbability = 4;
 			}
 		}
 		
@@ -545,7 +545,9 @@ public class AIMovement : MonoBehaviour
 			
 			if(caution){
 				if (AISpeed > 200.5f){
-					AISpeed -= 0.02f;
+					if(CameraRotate.lap != CameraRotate.raceEnd){
+						AISpeed -= 0.02f;
+					}
 				} else {
 					AISpeed = 200;
 				}
@@ -624,9 +626,9 @@ public class AIMovement : MonoBehaviour
 			tandemDraft = true;
 			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
 			if(currentPos == 0){
-				if (AISpeed > (204f + (laneInv / 2) + (AILevel / 5))){
-				//Debug.Log("Leader is #" + carNum);
-				evadeDraft();
+				if (AISpeed > (204.5f + (laneInv / 2) + (AILevel / 5))){
+					//Debug.Log("Leader is #" + carNum);
+					evadeDraft();
 				}
 			}
 		} else {
@@ -661,7 +663,10 @@ public class AIMovement : MonoBehaviour
 		//Speed difference between the player and the AI
 		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
 		if(Movement.isWrecking == true){
-			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed + (Movement.playerWreckDecel * speedDiffPadding);
+			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed - (Movement.playerWreckDecel * speedDiffPadding);
+			//if(carNum == 9){
+				//Debug.Log("Speed: " + speed + " - AISpeed: " + AISpeed + " - Wreck Decel: " + wreckDecel + " - Player Decel: " + Movement.playerWreckDecel + " - Padding: " + speedDiffPadding);
+			//}
 		} else {
 			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		}

@@ -5,15 +5,16 @@ using UnityEngine;
 public class CommentaryManager : MonoBehaviour
 {
 	public static int cooldown;
+	int commsFreqGap;
 	int rand;
 	public AudioSource audioSource;
 	AudioClip phraseClip;
 	public CommentaryLines commentaryLines;
 	
-    // Start is called before the first frame update
-    void Start(){
+    void Awake(){
 		cooldown = 0;
-		Debug.Log("Found" + audioSource);
+		commsFreqGap = 120; //2 seconds
+		//Debug.Log("Found" + audioSource);
 	}
 
     // Update is called once per frame
@@ -23,11 +24,16 @@ public class CommentaryManager : MonoBehaviour
 		} else {
 			cooldown = 0;
 		}
+		//Debug.Log("Cooldown: " + cooldown);
     }
 	
 	public void commentate(string phrase){
-		Debug.Log("Commentary Triggered..");
+		//Debug.Log("Commentary Triggered..");
 		bool canSpeak = checkCommentaryCooldown(cooldown);
+		//No interrupting
+		if(cooldown != 0){
+			return;
+		}
 		if(canSpeak == true){
 			switch(phrase){
 				case "Start":
@@ -48,8 +54,12 @@ public class CommentaryManager : MonoBehaviour
 				default:
 					break;
 			}
+			cooldown = ((int)phraseClip.length * 60) + commsFreqGap;
+			Debug.Log("Cooldown: " + cooldown);
 			// phraseClip = (AudioClip)Resources.Load("Commentary/caution1");
-			audioSource.PlayOneShot(phraseClip);
+			if (!audioSource.isPlaying){
+				audioSource.PlayOneShot(phraseClip);
+			}
 		}
 	}
 	

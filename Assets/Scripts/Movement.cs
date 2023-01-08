@@ -438,12 +438,6 @@ public class Movement : MonoBehaviour {
 					}
 				}
 			}
-			if(carHit.gameObject.name == "InnerEdge"){
-				playerSpeed-=0.5f;
-			}
-		}
-		if(carHit.gameObject.name == "InnerEdge"){
-			GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("Wallhit");
 		}
 		playerSpeed-=0.2f;
 	}
@@ -729,12 +723,6 @@ public class Movement : MonoBehaviour {
 			raceCounter++;
 			draftPercent = (draftCounter / raceCounter) * 100;
 		}
-		
-		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 3.25f, widthblock * 3f, heightblock * 1f), "Spd:" + (Movement.playerSpeed - speedOffset - CameraRotate.carSpeedOffset).ToString("F2") + "MpH");
-		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 4.25f, widthblock * 3f, heightblock * 1f), "This:" + (CameraRotate.averageSpeed - speedOffset).ToString("F2") + "MpH");
-		//GUI.Label(new Rect(Screen.width - (widthblock * 3.5f),heightblock * 5.25f, widthblock * 3f, heightblock * 1f), "Best:" + (CameraRotate.lapRecord - speedOffset).ToString("F2") + "MpH");
-		
-
 		wobbleCount++;
 		
 		if(wobbleCount >= wobbleRand){
@@ -762,7 +750,6 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Speed tops out
-				//Speed tops out
         if (playerSpeed > (205 + carRarity + laneInv)){
 			//Reduce speed, proportionate to the amount 'over'
             playerSpeed -= ((playerSpeed - 205) / 200);
@@ -850,6 +837,8 @@ public class Movement : MonoBehaviour {
 				backingOut = true;
 				if(CameraRotate.onTurn == true){
 					startWreck();
+				} else {
+					GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("Wallhit");
 				}
 			}
 			laneticker = laneChangeDuration + laneticker;
@@ -1045,6 +1034,9 @@ public class Movement : MonoBehaviour {
 		}
 		if(wreckOver == false){
 			isWrecking = true;
+			totalWreckers++;
+			wreckHits++;
+			wreckDamage+=1;
 			GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("Crash");
 		}
 		if(CameraRotate.cautionOut == false){
@@ -1180,7 +1172,7 @@ public class Movement : MonoBehaviour {
 		if(damage > 200){
 			return "Minor (" + Mathf.Round(damage / 15) + "%)";
 		}
-		if(damage > 1){
+		if(damage > 20){
 			return "Cosmetic (" + Mathf.Round(damage / 15) + "%)";
 		}
 		return "None";
