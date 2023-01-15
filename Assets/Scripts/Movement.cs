@@ -1057,7 +1057,6 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		//baseDecel = -1f * (float)(1 + CameraRotate.carSpeedOffset / 10f);
 		baseDecel = -0.25f;
 		playerWreckDecel = 0;
 		targetForce = 0;
@@ -1066,6 +1065,8 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,targetForce);
 		float wreckTorque = Random.Range(-0.2f, 0.1f) * 10;
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
+		
+		MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
 	}
 	
 	public void endWreck(){
@@ -1089,6 +1090,7 @@ public class Movement : MonoBehaviour {
 		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		
 		MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
+		MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString());
 		
 		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";
 		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);

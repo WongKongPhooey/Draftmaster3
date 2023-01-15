@@ -237,38 +237,38 @@ public class TrackData : MonoBehaviour
 	}
 	
 	public static void loadTrackLaps(){
-		trackNames[1] = 4;
-		trackNames[2] = 5;
-		trackNames[3] = 6;
-		trackNames[4] = 7;
-		trackNames[5] = 4;
-		trackNames[6] = 9;
-		trackNames[7] = 6;
-		trackNames[8] = 10;
-		trackNames[9] = 9;
-		trackNames[10] = 4;
-		trackNames[11] = 8;
-		trackNames[12] = 5;
-		trackNames[13] = 6;
-		trackNames[14] = 4;
-		trackNames[15] = 4;
-		trackNames[16] = 6;
-		trackNames[17] = 6;
-		trackNames[18] = 6;
-		trackNames[19] = 6;
-		trackNames[20] = 4;
-		trackNames[21] = 6;
-		trackNames[22] = 7;
-		trackNames[23] = 6;
-		trackNames[30] = 10;
+		trackLaps[1] = 4;
+		trackLaps[2] = 5;
+		trackLaps[3] = 6;
+		trackLaps[4] = 7;
+		trackLaps[5] = 4;
+		trackLaps[6] = 9;
+		trackLaps[7] = 6;
+		trackLaps[8] = 10;
+		trackLaps[9] = 9;
+		trackLaps[10] = 4;
+		trackLaps[11] = 8;
+		trackLaps[12] = 5;
+		trackLaps[13] = 6;
+		trackLaps[14] = 4;
+		trackLaps[15] = 4;
+		trackLaps[16] = 6;
+		trackLaps[17] = 6;
+		trackLaps[18] = 6;
+		trackLaps[19] = 6;
+		trackLaps[20] = 4;
+		trackLaps[21] = 6;
+		trackLaps[22] = 7;
+		trackLaps[23] = 6;
+		trackLaps[30] = 10;
 		
-		trackNames[24] = 6;
+		trackLaps[24] = 6;
 		
-		trackNames[25] = 7;
-		trackNames[26] = 9;
-		trackNames[27] = 6;
-		trackNames[28] = 9;
-		trackNames[29] = 6;
+		trackLaps[25] = 7;
+		trackLaps[26] = 9;
+		trackLaps[27] = 6;
+		trackLaps[28] = 9;
+		trackLaps[29] = 6;
 	}
 	
 	public static void Talladega(){

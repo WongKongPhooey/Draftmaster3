@@ -117,7 +117,7 @@ public class TrackUI : MonoBehaviour
 				bestFinish.text = "N/A";
 			}
 			trackName.text = getTrackName(tracksArray[i]);
-			raceLaps.text = "Laps " + calcRaceLaps();
+			raceLaps.text = "Laps " + calcRaceLaps(TrackData.getTrackLaps(trackId));
 			trackImage.texture = Resources.Load<Texture2D>(getTrackImage(tracksArray[i]));
 		}
 	}
