@@ -201,7 +201,10 @@ public class EventsUI : MonoBehaviour
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);
 			Debug.Log("Race Modifier set: " + EventData.offlineModifier[subMenuId,subEventId]);
 		}
-		
+		if(EventData.offlineMoment[subMenuId,subEventId] != null){
+			PlayerPrefs.SetString("RaceMoment", EventData.offlineMoment[subMenuId,subEventId]);
+			Debug.Log("Race Moment set: " + EventData.offlineMoment[subMenuId,subEventId]);
+		}
 		SceneManager.LoadScene("Menus/Garage");
 	}
 	

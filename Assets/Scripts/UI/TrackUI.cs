@@ -117,7 +117,7 @@ public class TrackUI : MonoBehaviour
 				bestFinish.text = "N/A";
 			}
 			trackName.text = getTrackName(tracksArray[i]);
-			raceLaps.text = "Laps " + PlayerPrefs.GetInt("RaceLaps");
+			raceLaps.text = "Laps " + calcRaceLaps();
 			trackImage.texture = Resources.Load<Texture2D>(getTrackImage(tracksArray[i]));
 		}
 	}
@@ -252,6 +252,13 @@ public class TrackUI : MonoBehaviour
 		TrackData.loadTrackCodeNames();
 		trackName = TrackData.trackNames[int.Parse(trackId)];
 		return trackName;
+	}
+
+	public static int calcRaceLaps(int baseLaps){
+		int AIDiff = PlayerPrefs.GetInt("AIDifficulty");
+		int raceLapsMultiplier = (AIDiff / 4) + 1;
+		//Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		return Mathf.FloorToInt(baseLaps * raceLapsMultiplier);
 	}
 
 	public static void setRaceLaps(){

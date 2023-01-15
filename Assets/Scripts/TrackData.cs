@@ -41,6 +41,7 @@ public class TrackData : MonoBehaviour
 	
 	public static string[] trackNames = new string[50];
 	public static string[] trackCodeNames = new string[50];
+	public static int[] trackLaps = new int[50];
 	public static string trackCodeName;
 	public static int speedFactor;
 	
@@ -67,6 +68,12 @@ public class TrackData : MonoBehaviour
 		loadTrackNames();
 		//Debug.Log("Track Codename is " + trackCodeNames[trackId]);
 		return trackNames[trackId];
+	}
+
+	public static int getTrackLaps(int trackId){
+		loadTrackLaps();
+		//Debug.Log("Track Codename is " + trackCodeNames[trackId]);
+		return trackLaps[trackId];
 	}
 
 	public void loadTrackData(string trackCodeName){
@@ -227,6 +234,41 @@ public class TrackData : MonoBehaviour
 				break;
 		}
 		return trackImageName;
+	}
+	
+	public static void loadTrackLaps(){
+		trackNames[1] = 4;
+		trackNames[2] = 5;
+		trackNames[3] = 6;
+		trackNames[4] = 7;
+		trackNames[5] = 4;
+		trackNames[6] = 9;
+		trackNames[7] = 6;
+		trackNames[8] = 10;
+		trackNames[9] = 9;
+		trackNames[10] = 4;
+		trackNames[11] = 8;
+		trackNames[12] = 5;
+		trackNames[13] = 6;
+		trackNames[14] = 4;
+		trackNames[15] = 4;
+		trackNames[16] = 6;
+		trackNames[17] = 6;
+		trackNames[18] = 6;
+		trackNames[19] = 6;
+		trackNames[20] = 4;
+		trackNames[21] = 6;
+		trackNames[22] = 7;
+		trackNames[23] = 6;
+		trackNames[30] = 10;
+		
+		trackNames[24] = 6;
+		
+		trackNames[25] = 7;
+		trackNames[26] = 9;
+		trackNames[27] = 6;
+		trackNames[28] = 9;
+		trackNames[29] = 6;
 	}
 	
 	public static void Talladega(){
@@ -473,7 +515,7 @@ public class TrackData : MonoBehaviour
 
 	public static void Fontana(){
 		trackCodeName = "Fontana";
-		PlayerPrefs.SetInt("RaceLaps",5);
+		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);

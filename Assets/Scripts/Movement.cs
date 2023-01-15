@@ -1088,6 +1088,8 @@ public class Movement : MonoBehaviour {
 		
 		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		
+		MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
+		
 		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";
 		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);
 		//If damage is above 1000, considered to be heavy, 2000+ is unrepairable

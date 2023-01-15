@@ -31,6 +31,7 @@ public class EventData : MonoBehaviour
 	public static string[,] offlineCustomCar = new string[10,10];
 	public static string[,] offlineCustomField = new string[10,10];
 	public static string[,] offlineModifier = new string[10,10];
+	public static string[,] offlineMoment = new string[10,10];
 	
     // Start is called before the first frame update
     void Start(){   
@@ -40,9 +41,9 @@ public class EventData : MonoBehaviour
 	public static void loadEvents() {
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
-		//offlineEvent[2] = "All Stars";
-		//offlineEvent[3] = "The Closer";
-		//offlineEvent[4] = "Moments";
+		offlineEvent[2] = "All Stars";
+		offlineEvent[3] = "The Closer";
+		offlineEvent[4] = "Moments";
 		
 		switch(PlayerPrefs.GetString("SpecialEvent")){
 			case "Cup22Final4":
@@ -383,6 +384,7 @@ public class EventData : MonoBehaviour
 		offlineCustomCar[4,0] = "cup79livery1";
 		offlineCustomField[4,0] = "cup79MomentsDaytona";
 		offlineModifier[4,0] = "delicate";
+		offlineMoment[4,0] = "Daytona79";
 		offlineTracklists[4,0] = "1";
 		offlinePrizes[4,0] = "Rookies";
 		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
@@ -394,11 +396,24 @@ public class EventData : MonoBehaviour
 		offlineAILevel[4,1] = 10;
 		offlineSeries[4,1] = "cup22";
 		offlineCustomCar[4,1] = "cup22livery1";
-		//offlineCustomField[4,1] = "cup79MomentsDaytona";
 		offlineModifier[4,1] = "wallride";
+		offlineMoment[4,1] = "ChastainWallride";
 		offlineTracklists[4,1] = "6";
 		offlinePrizes[4,1] = "Rookies";
 		eventChapterDescriptions[4,1] = "October 30th 2022, Chastain goes full speed along the wall to qualify for the playoffs final.";
+		
+		offlineEventChapter[4,2] = "Austin As Moses";
+		offlineChapterImage[4,2] = "cup22livery3";
+		offlineMinClass[4,2] = 1;
+		offlineMinLevel[4,2] = 1;
+		offlineAILevel[4,2] = 12;
+		offlineSeries[4,2] = "cup22";
+		offlineCustomCar[4,2] = "cup22livery3";
+		offlineModifier[4,2] = "suddenshower";
+		offlineMoment[4,2] = "DaytonaRain22";
+		offlineTracklists[4,2] = "1";
+		offlinePrizes[4,2] = "Rookies";
+		eventChapterDescriptions[4,2] = "August 28th 2022, everyone hits the rain and spins, except A.Dillon, who moves from 16th to 1st.";
 		
 		
 		//Special Event - Final 4
