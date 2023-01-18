@@ -22,8 +22,8 @@ public class DriverNames : MonoBehaviour {
 
 	public static Dictionary<string, int> numXPos = new Dictionary<string, int>();
 
-	public static string[] allCarsets = new string[5];
-	public static string[] allWinnableCarsets = new string[3];
+	public static string[] allCarsets = new string[6];
+	public static string[] allWinnableCarsets = new string[4];
 
 	public static string[] cup2020Names = new string[101];
 	public static string[] cup2020Teams = new string[101];
@@ -49,6 +49,12 @@ public class DriverNames : MonoBehaviour {
 	public static int[] cup1979Rarity = new int[101];
 	public static string[] cup1979Types = new string[101];
 	
+	public static string[] irc2000Names = new string[101];
+	public static string[] irc2000Teams = new string[101];
+	public static string[] irc2000Manufacturer = new string[101];
+	public static int[] irc2000Rarity = new int[101];
+	public static string[] irc2000Types = new string[101];
+	
 	public static string[] dmc2015Names = new string[101];
 	public static string[] dmc2015Teams = new string[101];
 	public static string[] dmc2015Manufacturer = new string[101];
@@ -71,6 +77,7 @@ public class DriverNames : MonoBehaviour {
 		cup01();
 		cup79();
 		dmc15();
+		irc00();
 		listCarsets();
 		listWinnableCarsets();
 		carsetNames();
@@ -81,11 +88,13 @@ public class DriverNames : MonoBehaviour {
 		series.Add("cup01");
 		series.Add("cup79");
 		series.Add("dmc15");
+		series.Add("irc00");
 		
 		winnableSeries.Clear();
 		winnableSeries.Add("cup20");
 		winnableSeries.Add("cup22");
 		winnableSeries.Add("dmc15");
+		winnableSeries.Add("irc00");
 		
 		if(allNames.ContainsKey("cup20") == false){
 			allNames.Add("cup20", cup2020Names);
@@ -112,6 +121,12 @@ public class DriverNames : MonoBehaviour {
 			allRarity.Add("cup79", cup1979Rarity);
 			allTypes.Add("cup79", cup1979Types);
 			
+			allNames.Add("irc00", irc2000Names);
+			allTeams.Add("irc00", irc2000Teams);
+			allManufacturer.Add("irc00", irc2000Manufacturer);
+			allRarity.Add("irc00", irc2000Rarity);
+			allTypes.Add("irc00", irc2000Types);
+			
 			allNames.Add("dmc15", dmc2015Names);
 			allTeams.Add("dmc15", dmc2015Teams);
 			allManufacturer.Add("dmc15", dmc2015Manufacturer);
@@ -121,6 +136,7 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("cup20", 17);
 			numXPos.Add("cup22", 10);
 			numXPos.Add("dmc15", 17);
+			numXPos.Add("irc00", 17);
 		}
 	}
 	
@@ -130,12 +146,14 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[2] = "cup01";
 		allCarsets[3] = "cup79";
 		allCarsets[4] = "dmc15";
+		allCarsets[5] = "irc00";
 	}
 	
 	public static void listWinnableCarsets(){
 		allWinnableCarsets[0] = "cup20";
 		allWinnableCarsets[1] = "cup22";
 		allWinnableCarsets[2] = "dmc15";
+		allWinnableCarsets[3] = "irc00";
 	}
 	
 	public static string getName(string seriesPrefix, int index){
@@ -245,6 +263,7 @@ public class DriverNames : MonoBehaviour {
 			allCarsetNames.Add("cup22", "Cup '22");
 			allCarsetNames.Add("cup01", "Cup '01");
 			allCarsetNames.Add("cup79", "Cup '79");
+			allCarsetNames.Add("irc00", "IROC '00");
 			allCarsetNames.Add("dmc15", "DM1 '15");
 		}
 	}
@@ -794,6 +813,74 @@ public class DriverNames : MonoBehaviour {
 		cup1979Rarity[1] = 3;
 		cup1979Rarity[11] = 4;
 		cup1979Rarity[43] = 4;
+	}
+	
+	public static void irc00(){
+
+		irc2000Names[1] = "Earnhardt";
+		irc2000Names[2] = "Stewart";
+		irc2000Names[3] = "Earnhardt Jr";
+		irc2000Names[4] = "Cheever Jr";
+		irc2000Names[5] = "Labonte";
+		irc2000Names[6] = "Gordon";
+		irc2000Names[7] = "Ray";
+		irc2000Names[8] = "Dismore";
+		irc2000Names[9] = "Martin";
+		irc2000Names[10] = "Jarrett";
+		irc2000Names[11] = "Burton";
+		irc2000Names[12] = "Wallace";
+		
+		irc2000Teams[1] = "ROC";
+		irc2000Teams[2] = "ROC";
+		irc2000Teams[3] = "ROC";
+		irc2000Teams[4] = "ROC";
+		irc2000Teams[5] = "ROC";
+		irc2000Teams[6] = "ROC";
+		irc2000Teams[7] = "ROC";
+		irc2000Teams[8] = "ROC";
+		irc2000Teams[9] = "ROC";
+		irc2000Teams[10] = "ROC";
+		irc2000Teams[11] = "ROC";
+		irc2000Teams[12] = "ROC";
+		
+		irc2000Manufacturer[1] = "PNT";
+		irc2000Manufacturer[2] = "PNT";
+		irc2000Manufacturer[3] = "PNT";
+		irc2000Manufacturer[4] = "PNT";
+		irc2000Manufacturer[5] = "PNT";
+		irc2000Manufacturer[6] = "PNT";
+		irc2000Manufacturer[7] = "PNT";
+		irc2000Manufacturer[8] = "PNT";
+		irc2000Manufacturer[9] = "PNT";
+		irc2000Manufacturer[10] = "PNT";
+		irc2000Manufacturer[11] = "PNT";
+		irc2000Manufacturer[12] = "PNT";
+		
+		irc2000Types[1] = "Legend";
+		irc2000Types[2] = "Legend";
+		irc2000Types[3] = "Legend";
+		irc2000Types[4] = "Legend";
+		irc2000Types[5] = "Legend";
+		irc2000Types[6] = "Legend";
+		irc2000Types[7] = "Legend";
+		irc2000Types[8] = "Legend";
+		irc2000Types[9] = "Legend";
+		irc2000Types[10] = "Legend";
+		irc2000Types[11] = "Legend";
+		irc2000Types[12] = "Legend";
+
+		irc2000Rarity[1] = 3;
+		irc2000Rarity[2] = 3;
+		irc2000Rarity[3] = 3;
+		irc2000Rarity[4] = 3;
+		irc2000Rarity[5] = 3;
+		irc2000Rarity[6] = 3;
+		irc2000Rarity[7] = 3;
+		irc2000Rarity[8] = 3;
+		irc2000Rarity[9] = 3;
+		irc2000Rarity[10] = 3;
+		irc2000Rarity[11] = 3;
+		irc2000Rarity[12] = 3;
 	}
 	
 	public static void dmc15(){

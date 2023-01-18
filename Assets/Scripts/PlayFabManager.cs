@@ -567,6 +567,7 @@ public class PlayFabManager : MonoBehaviour
 				 ArrayList allSeries = new ArrayList(); 
 				 allSeries.Add("cup20");
 				 allSeries.Add("cup22");
+				 allSeries.Add("irc00");
 				 allSeries.Add("dmc15");
 				 
 				 int unlockedCars = 0;
