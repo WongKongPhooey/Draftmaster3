@@ -8,7 +8,6 @@ using Random=UnityEngine.Random;
 
 public class AIMovement : MonoBehaviour
 {
-
     public GameObject AICar;
 	public GameObject thePlayer;
 	public GameObject controlCar;
@@ -426,14 +425,15 @@ public class AIMovement : MonoBehaviour
 		if ((carHit.gameObject.tag == "AICar") || 
 		    (carHit.gameObject.tag == "Player") || 
 			(carHit.gameObject.tag == "Barrier")){
-				if(leftSideClear(0.51f) == false){
-					this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-					sparksCooldown = Random.Range(5,20);
-				}
-				if(rightSideClear(0.51f) == false){
-					this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
-					sparksCooldown = Random.Range(5,20);
-				}
+				
+			if(leftSideClear(0.51f) == false){
+				this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+				sparksCooldown = Random.Range(5,20);
+			}
+			if(rightSideClear(0.51f) == false){
+				this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+				sparksCooldown = Random.Range(5,20);
+			}
 		}
     }
 	
@@ -1298,7 +1298,7 @@ public class AIMovement : MonoBehaviour
 		baseDecel = -0.25f;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.2f, 0.1f) * 10, 0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.15f, 0.15f) * 10, 0f);
 		
 		//Tire smoke
 		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
@@ -1334,7 +1334,7 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.25f;
+		baseDecel-=0.3f;
 		
 		updateWindForce();
 		

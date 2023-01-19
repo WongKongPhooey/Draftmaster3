@@ -1063,7 +1063,14 @@ public class Movement : MonoBehaviour {
 		forceSmoothing = 0.2f;
 		windForce = targetForce;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,targetForce);
-		float wreckTorque = Random.Range(-0.2f, 0.1f) * 10;
+		float wreckTorque;
+		if(wreckHits > 1){
+			//Subsequent hits based on rotation angle
+			wreckTorque = Random.Range(-0.15f, 0.15f) * 10;
+		} else {
+			//First impact, car will start straight
+			wreckTorque = Random.Range(-0.15f, 0.15f) * 10;
+		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 		
 		MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
@@ -1112,7 +1119,7 @@ public class Movement : MonoBehaviour {
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.25f;
+		baseDecel-=0.3f;
 		
 		if(wallrideMod == false){
 			targetForce = playerWreckDecel;
