@@ -1066,6 +1066,8 @@ public class Movement : MonoBehaviour {
 		float wreckTorque;
 		if(wreckHits > 1){
 			//Subsequent hits based on rotation angle
+			float spinAngle = this.transform.localRotation.eulerAngles.y;
+			Debug.Log("Car rotation: " + spinAngle);
 			wreckTorque = Random.Range(-0.15f, 0.15f) * 10;
 		} else {
 			//First impact, car will start straight

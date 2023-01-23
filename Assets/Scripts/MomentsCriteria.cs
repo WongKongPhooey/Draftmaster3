@@ -18,10 +18,31 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("WreckStartLocationStraight","3");
 					momentsCriteria.Add("WreckEndLocationCorner","3");
 					momentsCriteria.Add("WreckEndLocationLessThanX","-4");
+					momentsCriteria.Add("CarAvoidsWreck","43");
 				break;	
 			}
 		}
     }
+
+	public static string getMomentsCriteriaName(string criteriaSearchTerm){
+		switch(criteriaSearchTerm){
+			case "WreckStartLocationStraight":
+				return "Wreck On The Back Straight";
+				break;
+			case "WreckEndLocationCorner":
+				return "Stop In Turn - ";
+				break;
+			case "WreckEndLocationLessThanX":
+				return "Stop In The Infield";
+				break;
+			case "CarAvoidsWreck":
+				return " Does Not Wreck";
+				break;
+			default:
+				return criteriaSearchTerm;
+				break;
+		}
+	}
 
 	public static bool checkMomentsCriteria(string criteriaSearchTerm, string criteriaCheckA, string criteriaCheckB = "", string criteriaCheckC = ""){
 		bool complete = false;

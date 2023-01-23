@@ -465,6 +465,14 @@ public class GarageUI : MonoBehaviour
 			PlayerPrefs.SetInt("cup2052Gears",0);
 			PlayerPrefs.SetInt("cup2052Class",1);
 			carsAdded = true;
+		}	
+		
+		//Give a free Dismore for IROC '00
+		if(PlayerPrefs.GetInt("irc008Unlocked") == 0){
+			PlayerPrefs.SetInt("irc008Unlocked",1);
+			PlayerPrefs.SetInt("irc008Gears",0);
+			PlayerPrefs.SetInt("irc008Class",1);
+			carsAdded = true;
 		}
 		
 		//Give free Starters for DM1 '15
@@ -501,6 +509,7 @@ public class GarageUI : MonoBehaviour
 		allSeries.Add("cup20");
 		allSeries.Add("cup22");
 		allSeries.Add("dmc15");
+		allSeries.Add("irc00");
 		
 		foreach(string series in allSeries){
 			for(int i=0;i<100;i++){
