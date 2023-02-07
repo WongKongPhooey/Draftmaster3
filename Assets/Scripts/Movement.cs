@@ -62,6 +62,7 @@ public class Movement : MonoBehaviour {
 	public static bool isWrecking;
 	public static bool wreckOver;
 	float baseDecel;
+	float slideX;
 	public static float playerWreckDecel;
 	float wreckAngle;
 	float wreckTorque;
@@ -1058,6 +1059,7 @@ public class Movement : MonoBehaviour {
 		
 		//Apply wind/drag
 		baseDecel = -0.25f;
+		slideX = 0;
 		playerWreckDecel = 0;
 		targetForce = 0;
 		forceSmoothing = 0.2f;
@@ -1067,7 +1069,7 @@ public class Movement : MonoBehaviour {
 		if(wreckHits > 1){
 			//Subsequent hits based on rotation angle
 			float spinAngle = this.transform.localRotation.eulerAngles.y;
-			Debug.Log("Car rotation: " + spinAngle);
+			//Debug.Log("Car rotation: " + spinAngle);
 			wreckTorque = Random.Range(-0.15f, 0.15f) * 10;
 		} else {
 			//First impact, car will start straight
@@ -1081,6 +1083,7 @@ public class Movement : MonoBehaviour {
 	public void endWreck(){
 		playerSpeed = 0;
 		baseDecel = -0.25f;
+		slideX = 0;
 		playerWreckDecel = 0;
 		targetForce = 0;
 		updateWindForce();
@@ -1099,7 +1102,9 @@ public class Movement : MonoBehaviour {
 		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		
 		MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
-		MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString());
+		MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString(), onTurn.ToString());
+		MomentsCriteria.checkMomentsCriteria("CarWrecks","");
+		MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
 		
 		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";
 		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);
@@ -1122,6 +1127,12 @@ public class Movement : MonoBehaviour {
 			wreckSine = -wreckSine;
 		}
 		baseDecel-=0.3f;
+		slideX = ((baseDecel + 1) / 3f) + 20f;
+		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
+		//         -200f = -20x, -100f = -10x, 0f = 0x
+		//         -200f = -6x, -140f = 0x, 0f = 14f
+		//slideX = ((baseDecel + 1) / 10f) + 14f
+		//Reduce division factor to increase effect
 		
 		if(wallrideMod == false){
 			targetForce = playerWreckDecel;
@@ -1133,11 +1144,12 @@ public class Movement : MonoBehaviour {
 			if(wallrideMod == true){
 				this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,20f);
 			} else {
-				this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,windForce);
+				this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+				//Debug.Log("Side Force: " + slideX);
 			}
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
-			this.GetComponent<ConstantForce>().force = new Vector3(-2f, 0f,windForce);
+			this.GetComponent<ConstantForce>().force = new Vector3(-3f, 0f,windForce);
 		}
 		playerWreckDecel = baseDecel - (50f * wreckSine);
 		

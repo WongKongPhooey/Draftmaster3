@@ -151,9 +151,9 @@ public class EventsUI : MonoBehaviour
 				eventRewardsBtn.SetActive(false);
 				rewardCollected.SetActive(true);
 				tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
-				Debug.Log("BestFinishPosition" + subMenuId + "" + i + "EVENT1 : " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
+				//Debug.Log("BestFinishPosition" + subMenuId + "" + i + "EVENT1 : " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
 			} else {
-				Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
+				//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
 			}
 				
 			if(EventData.offlineEventType[subMenuId] == "Progression"){
@@ -196,6 +196,13 @@ public class EventsUI : MonoBehaviour
 		}
 		if(EventData.offlineCustomField[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("CustomField", EventData.offlineCustomField[subMenuId,subEventId]);
+		}
+		if(EventData.offlineCustomFieldOrder[subMenuId,subEventId] != null){
+			PlayerPrefs.SetString("CustomFieldOrder", EventData.offlineCustomFieldOrder[subMenuId,subEventId]);
+		}
+		if(EventData.offlineStartingLap[subMenuId,subEventId] != null){
+			PlayerPrefs.SetInt("StartingLap", EventData.offlineStartingLap[subMenuId,subEventId]);
+			Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
 		}
 		if(EventData.offlineModifier[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);

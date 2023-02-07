@@ -30,6 +30,8 @@ public class EventData : MonoBehaviour
 	
 	public static string[,] offlineCustomCar = new string[10,10];
 	public static string[,] offlineCustomField = new string[10,10];
+	public static string[,] offlineCustomFieldOrder = new string[10,10];
+	public static int[,] offlineStartingLap = new int[10,10];
 	public static string[,] offlineModifier = new string[10,10];
 	public static string[,] offlineMoment = new string[10,10];
 	
@@ -381,12 +383,14 @@ public class EventData : MonoBehaviour
 		offlineMinLevel[4,0] = 1;
 		offlineAILevel[4,0] = 10;
 		offlineSeries[4,0] = "cup79";
-		offlineCustomCar[4,0] = "cup79livery1";
+		offlineCustomCar[4,0] = "cup79livery11";
 		offlineCustomField[4,0] = "cup79MomentsDaytona";
+		offlineStartingLap[4,0] = 12;
 		offlineModifier[4,0] = "delicate";
 		offlineMoment[4,0] = "Daytona79";
 		offlineTracklists[4,0] = "1";
 		offlinePrizes[4,0] = "Rookies";
+		offlineCustomFieldOrder[4,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,43";
 		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
 		
 		offlineEventChapter[4,1] = "Chastain's Wallride";

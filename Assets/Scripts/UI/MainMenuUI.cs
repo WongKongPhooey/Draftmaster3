@@ -90,7 +90,18 @@ public class MainMenuUI : MonoBehaviour {
         if(PlayerPrefs.HasKey("RaceType")){
 			PlayerPrefs.DeleteKey("RaceType");
 		}
-		PlayerPrefs.DeleteKey("RaceModifier");
+		if(PlayerPrefs.HasKey("RaceMoment")){
+			PlayerPrefs.DeleteKey("RaceMoment");
+		}
+		if(PlayerPrefs.HasKey("StartingLap")){
+			PlayerPrefs.DeleteKey("StartingLap");
+		}
+		if(PlayerPrefs.HasKey("RaceModifier")){
+			PlayerPrefs.DeleteKey("RaceModifier");
+		}
+		if(PlayerPrefs.HasKey("CustomFieldOrder")){
+			PlayerPrefs.DeleteKey("CustomFieldOrder");
+		}
 		
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			PlayerPrefs.DeleteKey("SpawnFromCaution");

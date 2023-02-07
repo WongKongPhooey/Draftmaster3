@@ -35,10 +35,10 @@ public class AIMovement : MonoBehaviour
 	public bool isWrecking;
 	public bool wreckOver;
 	float baseDecel;
+	float slideX;
 	public float wreckDecel;
 	public float speedDiffPadding;
 	float wreckAngle;
-	float sideForce;
 	int antiGlitch;
 	public bool playerWrecked;
 	float targetForce;
@@ -116,7 +116,7 @@ public class AIMovement : MonoBehaviour
 		wreckOver = false;
 		wreckProbability = 2;
 		hitByPlayer = false;
-		speedDiffPadding = 0.1f;
+		speedDiffPadding = 0.2f;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -553,16 +553,9 @@ public class AIMovement : MonoBehaviour
 				}
 			} else {
 				holdLane++;
-				//distFromPlayer = Scoreboard.checkSingleCarPosition(carName) - Scoreboard.checkPlayerPosition();
-				//if((distFromPlayer<=30)&&(distFromPlayer>=-30)){
-					speedLogic();
-				//} else {
-					//Improve FPS by removing logic from far away opponents
-					/*if(distFromPlayer>30){
-						dumbSpeed(1);
-					}*/
-				//}
+				speedLogic();
 			}
+			
 			//Experimental, for CPU saves
 			if(carNum%20 == tick%20){
 				//Debug.Log("Draft Logic cycle save, frame: " + carNum%20);
@@ -664,9 +657,6 @@ public class AIMovement : MonoBehaviour
 		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
 		if(Movement.isWrecking == true){
 			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed - (Movement.playerWreckDecel * speedDiffPadding);
-			//if(carNum == 9){
-				//Debug.Log("Speed: " + speed + " - AISpeed: " + AISpeed + " - Wreck Decel: " + wreckDecel + " - Player Decel: " + Movement.playerWreckDecel + " - Padding: " + speedDiffPadding);
-			//}
 		} else {
 			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		}
@@ -756,12 +746,28 @@ public class AIMovement : MonoBehaviour
 		RaycastHit DraftCheckForward;
         bool HitForward = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForward, 5);
 		//Debug.DrawRay(transform.position  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
-		
+		Debug.Log("Checking Draft Logic.. ");
 		if(HitForward == true){
-			
 			float carDist = DraftCheckForward.distance;
 			float opponentSpeed = getOpponentSpeed(DraftCheckForward);
 			bool tryTimedPass = timedPass(carDist, opponentSpeed);
+			if(CameraRotate.cautionOut == true){
+				//Debug.Log("Caution Weighted Draft Logic");
+				GameObject oppCar = DraftCheckForward.transform.gameObject;
+				if(oppCar.GetComponent<AIMovement>() != null){
+					if(oppCar.GetComponent<AIMovement>().isWrecking == true){
+						avoidWreck();
+						Debug.Log(carName + " Avoids Wreck");
+					}
+				} else {
+					if(oppCar.GetComponent<Movement>() != null){
+						if(Movement.isWrecking == true){
+							avoidWreck();
+							Debug.Log(carName + " Avoids Wrecking Player");
+						}
+					}
+				}
+			}
 			
 			if((holdLane >= laneRest)&&(tryTimedPass == false)){
 				carName = DraftCheckForward.collider.gameObject.name;
@@ -791,12 +797,32 @@ public class AIMovement : MonoBehaviour
 		} else {
 			//Check further away
 			RaycastHit DraftCheckForwardLong;
-			bool HitForwardLong = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForwardLong, 10);
+			bool HitForwardLong = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForwardLong, 20);
 			if(HitForwardLong == true){
 				float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
+				Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
 				//Avoid slow moving draft
-				if(opponentSpeed > (AISpeed + 1.5f)){
-					findClearLane();
+				if(CameraRotate.cautionOut == true){
+					//Debug.Log("Caution Weighted Draft Logic");
+					GameObject oppCar = DraftCheckForwardLong.transform.gameObject;
+					if(oppCar.GetComponent<AIMovement>() != null){
+						if(oppCar.GetComponent<AIMovement>().isWrecking == true){
+							avoidWreck();
+							Debug.Log(carName + " Avoids Wreck");
+						}
+					} else {
+						if(oppCar.GetComponent<Movement>() != null){
+							if(Movement.isWrecking == true){
+								avoidWreck();
+								Debug.Log(carName + " Avoids Wrecking Player");
+							}
+						}
+					}
+				} else {
+					Debug.Log("Nothing in front..");
+					if(opponentSpeed > (AISpeed + 1.5f)){
+						findClearLane();
+					}
 				}
 			} else {
 				findDraft();
@@ -912,7 +938,7 @@ public class AIMovement : MonoBehaviour
 		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 5);
 		string direction = "";
 		
-		if (HitLaneLeft){
+		if(HitLaneLeft){
 			if(leftSideClear()){
 				float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
 				if(DraftCheckLaneLeft.distance >= 3.5f){
@@ -930,7 +956,7 @@ public class AIMovement : MonoBehaviour
 			}
 		}
 		
-		if (HitLaneRight){
+		if(HitLaneRight){
 			if(rightSideClear()){
 				float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
 				if(DraftCheckLaneRight.distance >= 3.5f){
@@ -984,8 +1010,10 @@ public class AIMovement : MonoBehaviour
 				//Left lane isn't clear, but is moving faster than yourself
 				//Or, simply aiming to follow non-wrecking cars
 				if(wrecking == true){
-					if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
-						direction = "Left";
+					if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>() != null){
+						if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
+							direction = "Left";
+						}
 					}
 				} else {
 					float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
@@ -1005,16 +1033,76 @@ public class AIMovement : MonoBehaviour
 				}
 			} else {
 				if(wrecking == true){
-					if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
+					if(DraftCheckLaneRight.transform.gameObject.GetComponent<AIMovement>() != null){
+						if(DraftCheckLaneRight.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
+							if(direction == "Left"){
+								direction = "Both";
+							} else {
+								direction = "Right";
+							}
+						}
+					}
+				} else {
+					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
+					if(opponentSpeed > (AISpeed + 0.1f)){
 						if(direction == "Left"){
 							direction = "Both";
 						} else {
 							direction = "Right";
 						}
 					}
+				}
+			}
+		}
+		
+		//If an option exists..
+		if(direction != ""){
+			if(direction == "Both"){
+				//Random choose one
+				float rng = Random.Range(0,2);
+				//Debug.Log("Rnd /2 = " + rng);
+				if(rng > 1f){
+					direction = "Right";
 				} else {
-					float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
-					if(opponentSpeed > (AISpeed + 0.1f)){
+					direction = "Left";
+				}
+			}
+			changeLane(direction);
+		}
+	}
+	
+	public void avoidWreck(){
+		RaycastHit DraftCheckLaneLeft;
+		RaycastHit DraftCheckLaneRight;
+		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 20);
+		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 20);
+		string direction = "";
+		
+		if(leftSideClear()){
+			if(HitLaneLeft == false){
+				//Left lane is clear
+				direction = "Left";
+			} else {
+				//Left lane isn't clear, but is moving faster than yourself
+				//Or, simply aiming to follow non-wrecking cars
+				if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>() != null){
+					if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
+						direction = "Left";
+					}
+				}
+			}
+		}
+		
+		if(rightSideClear()){
+			if(HitLaneRight == false){
+				if(direction == "Left"){
+					direction = "Both";
+				} else {
+					direction = "Right";
+				}
+			} else {
+				if(DraftCheckLaneRight.transform.gameObject.GetComponent<AIMovement>() != null){
+					if(DraftCheckLaneRight.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
 						if(direction == "Left"){
 							direction = "Both";
 						} else {
@@ -1296,6 +1384,7 @@ public class AIMovement : MonoBehaviour
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
 		baseDecel = -0.25f;
+		slideX = 0;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.15f, 0.15f) * 10, 0f);
@@ -1308,6 +1397,7 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log(this.name + " WRECKED");
 		AISpeed = 0;
 		baseDecel = -0.25f;
+		slideX = 0;
 		wreckDecel = 0;
 		targetForce = 0;
 		isWrecking = false;
@@ -1335,13 +1425,19 @@ public class AIMovement : MonoBehaviour
 			wreckSine = -wreckSine;
 		}
 		baseDecel-=0.3f;
+		slideX = ((baseDecel + 1) / 3f) + 20f;
+		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
+		//         -200f = -20x, -100f = -10x, 0f = 0x
+		//         -200f = -6x, -140f = 0x, 0f = 14f
+		//slideX = ((baseDecel + 1) / 10f) + 14f
+		//Reduce division factor to increase effect
 		
 		updateWindForce();
 		
 		if(CameraRotate.onTurn == true){
-			sideForce = 10f;
+			slideX = 10f;
 		} else {
-			sideForce = -2f;
+			slideX = -3f;
 		}
 		//baseDecel-=0.02f * 1;//CameraRotate.currentTurnSharpness();
 		
@@ -1359,13 +1455,13 @@ public class AIMovement : MonoBehaviour
 			if(windForce < 0){
 				windForce = -windForce;
 			}
-			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,windForce);
-			this.GetComponent<Rigidbody>().velocity = new Vector3(sideForce, 0f,windForce/10f);
+			this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+			this.GetComponent<Rigidbody>().velocity = new Vector3(slideX, 0f,windForce/10f);
 		} else {
 			//Standard relativity
 			targetForce = wreckDecel;
-			this.GetComponent<ConstantForce>().force = new Vector3(sideForce, 0f,windForce);
-			//this.GetComponent<Rigidbody>().velocity = new Vector3(sideForce, 0f,windForce);
+			this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+			//this.GetComponent<Rigidbody>().velocity = new Vector3(slideX, 0f,windForce);
 		
 		}
 

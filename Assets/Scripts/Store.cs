@@ -82,15 +82,6 @@ public class Store : MonoBehaviour{
 		dailySelectsPicked = PlayerPrefs.GetInt("DailySelects");
 		dailyRandomsPicked = PlayerPrefs.GetInt("DailyRandomsPicked");
 		
-		//Reset Event Picks
-		//PlayerPrefs.DeleteKey("PrizePositions");
-		
-		//Delete Alts - Testing
-		//PlayerPrefs.SetInt("cup2216Alt1Unlocked",0);
-		//PlayerPrefs.SetInt("cup2215Alt1Unlocked",0);
-		//PlayerPrefs.SetInt("cup2278Alt1Unlocked",0);
-		//PlayerPrefs.SetInt("cup2227Alt1Unlocked",0);
-		
 		currentVersion = Application.version;
 		targetVersion = PlayerPrefs.GetString("TargetVersion");
 		
