@@ -14,7 +14,6 @@ public class CommentaryManager : MonoBehaviour
     void Awake(){
 		cooldown = 0;
 		commsFreqGap = 120; //2 seconds
-		//Debug.Log("Found" + audioSource);
 	}
 
     // Update is called once per frame
@@ -24,7 +23,6 @@ public class CommentaryManager : MonoBehaviour
 		} else {
 			cooldown = 0;
 		}
-		//Debug.Log("Cooldown: " + cooldown);
     }
 	
 	public void commentate(string phrase){
@@ -49,6 +47,10 @@ public class CommentaryManager : MonoBehaviour
 					rand = Random.Range(0,commentaryLines.cautionClips.Length);
 					phraseClip = commentaryLines.cautionClips[rand];
 					break;
+				case "LastLap":
+					rand = Random.Range(0,commentaryLines.whiteFlagClips.Length);
+					phraseClip = commentaryLines.whiteFlagClips[rand];
+					break;
 				case "":
 					break;
 				default:
@@ -56,7 +58,6 @@ public class CommentaryManager : MonoBehaviour
 			}
 			cooldown = ((int)phraseClip.length * 60) + commsFreqGap;
 			Debug.Log("Cooldown: " + cooldown);
-			// phraseClip = (AudioClip)Resources.Load("Commentary/caution1");
 			if (!audioSource.isPlaying){
 				audioSource.PlayOneShot(phraseClip);
 			}
