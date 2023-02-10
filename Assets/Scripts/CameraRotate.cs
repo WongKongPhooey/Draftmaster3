@@ -65,6 +65,8 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject cautionSummaryMenu;
 	public GameObject pauseMenu;
 	
+	public static bool momentChecks;
+	
 	void Awake(){
 		
 		Time.timeScale = 1.0f;
@@ -176,7 +178,12 @@ public class CameraRotate : MonoBehaviour {
 			//Delete any Race Fastest Lap time if not a caution restart
 			PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 		}
-
+		
+		momentChecks = false;
+		if(PlayerPrefs.HasKey("RaceMoment")){
+			momentChecks = true;
+		}
+		
 		audioOn = PlayerPrefs.GetInt("AudioOn");
 		if(audioOn == 1){
 			carEngine.volume = 0.25f;
@@ -383,7 +390,7 @@ public class CameraRotate : MonoBehaviour {
 						straight = 1;
 						turn = 1;
 					}
-					Debug.Log("Straight:" + straight + " - Turn:" + turn);
+					//Debug.Log("Straight:" + straight + " - Turn:" + turn);
 					if(cornerKerb.name != "FixedKerb"){
 						cornerKerb.GetComponent<Renderer>().enabled = false;
 					}
@@ -436,9 +443,17 @@ public class CameraRotate : MonoBehaviour {
 			}
 			lap--;
 			//Weird bug fix, no idea, just works, urghh
-			Debug.Log("Lap " + lap + " is now beyond finish lap " + raceEnd + ". Race must be over, show finish line");
+			//Debug.Log("Lap " + lap + " is now beyond finish lap " + raceEnd + ". Race must be over, show finish line");
 			finishLine.GetComponent<Renderer>().enabled = true;
 		}
+		
+		if(momentChecks == true){
+			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
+			MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
+			MomentsCriteria.checkMomentsCriteria("FinishPositionLowerThan","");
+			MomentsCriteria.checkEndCriteria();
+		}
+		
 		Time.timeScale = 0.0f;
 		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 			int rand = Random.Range(1,100);

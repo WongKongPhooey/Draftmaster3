@@ -7,6 +7,8 @@ public class UIAnimate : MonoBehaviour
 	public int animOffset = 0;
 	public bool startHidden;
 	public bool fadeInStart;
+	Vector3 shakeStartPos;
+	float shakeStrength;
 	
     // Start is called before the first frame update
     void Awake(){
@@ -29,6 +31,21 @@ public class UIAnimate : MonoBehaviour
 	
 	public void scaleOut(){
 		LeanTween.scale(gameObject, new Vector3(0f,0f,0f), 0.5f).setDelay(0.01f * animOffset).setEase(LeanTweenType.easeInOutCubic);
+	}
+	
+	public void shakeCamX(Vector3 startPos, float strength){
+		shakeStartPos = startPos;
+		shakeStrength = strength;
+		LeanTween.moveX(gameObject, shakeStrength, 0.1f).setOnComplete(resetCam);
+	}
+	public void shakeCamZ(Vector3 startPos, float strength){
+		shakeStartPos = startPos;
+		shakeStrength = strength;
+		LeanTween.moveZ(gameObject, shakeStrength, 0.1f).setOnComplete(resetCam);
+	}
+	void resetCam(){
+		LeanTween.move(gameObject, shakeStartPos, 0.1f);
+		Debug.Log("Shake Strength: " + shakeStrength);
 	}
 	
 	public void setCardDown(){

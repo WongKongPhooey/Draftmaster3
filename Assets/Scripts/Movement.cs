@@ -155,6 +155,8 @@ public class Movement : MonoBehaviour {
 	public static bool delicateMod;
 	public static bool invincibleMod;
 	public static bool wallrideMod;
+	
+	public static bool momentChecks;
 
 	// Use this for initialization
 	void Start () {
@@ -367,6 +369,11 @@ public class Movement : MonoBehaviour {
 		delicateMod = false;
 		invincibleMod = false;
 		
+		momentChecks = false;
+		if(PlayerPrefs.HasKey("RaceMoment")){
+			momentChecks = true;
+		}
+		
 		RaceModifiers.checkModifiers();
 	}
 	
@@ -387,8 +394,10 @@ public class Movement : MonoBehaviour {
 					netSpeed = -netSpeed;
 				}
 				wreckDamage += netSpeed;
+				//mainCam.GetComponent<UIAnimate>().shakeCamZ(mainCam.transform.position, wreckDamage / 100f);
 			} else {
 				wreckDamage += (200 - playerWreckDecel) / 100;
+				//mainCam.GetComponent<UIAnimate>().shakeCamX(mainCam.transform.position, wreckDamage / 50f);
 			}
 		}
 		
@@ -1077,7 +1086,9 @@ public class Movement : MonoBehaviour {
 		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 		
-		MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
+		if(momentChecks == true){
+			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
+		}
 	}
 	
 	public void endWreck(){
@@ -1101,10 +1112,12 @@ public class Movement : MonoBehaviour {
 		
 		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		
-		MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
-		MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString(), onTurn.ToString());
-		MomentsCriteria.checkMomentsCriteria("CarWrecks","");
-		MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
+		if(momentChecks == true){
+			MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
+			MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString(), onTurn.ToString());
+			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
+			MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
+		}
 		
 		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";
 		cautionSummaryDamage.GetComponent<TMPro.TMP_Text>().text = "Damage? " + calculateDamageGrade(wreckDamage);
@@ -1118,6 +1131,10 @@ public class Movement : MonoBehaviour {
 		Time.timeScale = 0.0f;
 		mainCam.GetComponent<AudioListener>().enabled = false;
 		PlayerPrefs.SetInt("Volume",0);
+		
+		if(momentChecks == true){
+			MomentsCriteria.checkEndCriteria();
+		}
 	}
 	
 	void wreckPhysics(){

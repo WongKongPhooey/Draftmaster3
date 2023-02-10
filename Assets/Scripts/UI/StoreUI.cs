@@ -57,7 +57,7 @@ public class StoreUI : MonoBehaviour
 		loadDailyPicks();
 		loadStarterPicks();
 		DisableRestorePurchase();
-		this.gameObject.GetComponent<AdsInitializer>().InitializeAds();
+		//this.gameObject.GetComponent<AdsInitializer>().InitializeAds();
     }
 	
 	public void reloadStore(){

@@ -1,7 +1,7 @@
 using UnityEngine;
-using UnityEngine.Advertisements;
+//using UnityEngine.Advertisements;
  
-public class AdsInitializer : MonoBehaviour, IUnityAdsInitializationListener
+/*public class AdsInitializer : MonoBehaviour, IUnityAdsInitializationListener
 {
     [SerializeField] bool _testMode = false;
     private string _gameId;
@@ -35,4 +35,4 @@ public class AdsInitializer : MonoBehaviour, IUnityAdsInitializationListener
     {
         Debug.Log($"Unity Ads Initialization Failed: {error.ToString()} - {message}");
     }
-}
+}*/

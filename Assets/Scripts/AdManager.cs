@@ -18,7 +18,7 @@ public class AdManager : MonoBehaviour//, IUnityAdsListener
     bool testMode = false;
 
     // Initialize the Ads listener and service:
-    void Start () {
+    /*void Start () {
         //Advertisement.AddListener (this);
         Advertisement.Initialize (gameId, testMode);	
     }
@@ -30,7 +30,7 @@ public class AdManager : MonoBehaviour//, IUnityAdsListener
 			Advertisement.Show(myPlacementId);
 		} else {
 			Debug.Log("Ad could not be loaded");
-		}*/
+		}
 	}
 
     // Implement IUnityAdsListener interface methods:
@@ -71,5 +71,5 @@ public class AdManager : MonoBehaviour//, IUnityAdsListener
 
     public void OnUnityAdsDidStart (string placementId) {
         // Optional actions to take when the end-users triggers an ad.
-    }
+    }*/
 }

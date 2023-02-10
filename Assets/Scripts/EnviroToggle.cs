@@ -9,6 +9,7 @@ public class EnviroToggle : MonoBehaviour {
 	public bool onFinishLine;
 	
 	//V2 enviro control
+	public bool hideOnStart;
 	public bool advancedPlacement;
 	public bool[] straights = new bool[6];
 	public bool[] corners = new bool[6];
@@ -38,7 +39,8 @@ public class EnviroToggle : MonoBehaviour {
 		}
 
 		Renderer[] subAsset = GetComponentsInChildren<Renderer>();
-		if((hideOnPit == true)&&(CameraRotate.straight == 1)){
+		if(((hideOnPit == true)&&(CameraRotate.straight == 1))
+		  || (hideOnStart == true)){
 			foreach(Renderer asset in subAsset){
 				asset.enabled = false;
 			}

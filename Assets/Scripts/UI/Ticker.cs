@@ -377,6 +377,24 @@ public class Ticker : MonoBehaviour
 		}
 	}
 
+	public static void endChallenge(){
+		Time.timeScale = 1.0f;
+		RaceHUD.raceOver = false;
+		SceneManager.LoadScene("Menus/RaceResults");
+	}
+	
+	public static void retryChallenge(){
+		Time.timeScale = 1.0f;
+		RaceHUD.raceOver = false;
+		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+	}
+	
+	public static void quitChallenge(){
+		Time.timeScale = 1.0f;
+		RaceHUD.raceOver = false;
+		SceneManager.LoadScene("Menus/MainMenu");
+	}
+
     // Update is called once per frame
     void Update(){
 		//ticker.transform.Translate(-1.5f,0,0);

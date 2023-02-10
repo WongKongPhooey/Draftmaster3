@@ -13,22 +13,27 @@ public class MomentsCriteria : MonoBehaviour
 	public static int completeCriteria;
 	
 	public static bool momentComplete;
+	public static bool momentOver;
 	
-	public static GameObject challengeEndState;
+	static GameObject challengeWon;
+	static GameObject challengeLost;
 	public GameObject challengeItem;
 	Transform challengesContainer;
 	
 	// Start is called before the first frame update
     void Awake(){
 		momentSet = null;
-		challengeEndState = GameObject.Find("ChallengeEndState");
-		challengeEndState.SetActive(false);
+		challengeWon = GameObject.Find("ChallengeWon");
+		challengeLost = GameObject.Find("ChallengeLost");
+		challengeWon.SetActive(false);
+		challengeLost.SetActive(false);
 		
         if(PlayerPrefs.HasKey("RaceMoment")){
 			momentsCriteria.Clear();
 			completedCriteria.Clear();
 			totalCriteria = 0;
 			completeCriteria = 0;
+			momentOver = false;
 			momentComplete = false;
 			momentSet = PlayerPrefs.GetString("RaceMoment");
 			switch(momentSet){
@@ -38,6 +43,11 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("WreckEndLocationLessThanX","-3.5");
 					momentsCriteria.Add("CarWrecks","1");
 					momentsCriteria.Add("CarAvoidsWreck","43");
+				break;	
+				case "ChastainWallride":
+					momentsCriteria.Add("WreckStartLocationStraight","2");
+					momentsCriteria.Add("WreckStartPositionHigherThan","9");
+					momentsCriteria.Add("FinishPositionLowerThan","5");
 				break;	
 			}
 		
@@ -65,17 +75,29 @@ public class MomentsCriteria : MonoBehaviour
 			case "WreckStartLocationStraight":
 				return "Wreck On The Back Straight";
 				break;
+			case "WreckStartLocationCorner":
+				return "Wreck In Turn " + criteriaValue;
+				break;
+			case "WreckStartPositionHigherThan":
+				return "Wreck From Position " + criteriaValue + "+";
+				break;
 			case "WreckEndLocationCorner":
 				return "Stop In Turn " + criteriaValue;
 				break;
 			case "WreckEndLocationLessThanX":
 				return "Stop In The Infield";
 				break;
+			case "FinishPositionLowerThan":
+				return "Finish In The Top " + criteriaValue;
+				break;
 			case "CarWrecks":
 				return "#" + criteriaValue + " Wrecks";
 				break;
 			case "CarAvoidsWreck":
 				return "#" + criteriaValue + " Does Not Wreck";
+				break;
+			case "PlayerWrecks":
+				return "You Wreck";
 				break;
 			default:
 				return criteriaSearchTerm;
@@ -96,6 +118,26 @@ public class MomentsCriteria : MonoBehaviour
 		}
 		//Debug.Log("All criteria checked");
 		return complete;
+	}
+	
+	public static void checkEndCriteria(){
+		if(momentSet == null){
+			return;
+		}
+		if(momentOver == false){
+			if(completeCriteria >= totalCriteria){
+				momentComplete = true;
+				challengeWon.SetActive(true);
+				//Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
+			} else {
+				momentComplete = false;
+				challengeLost.SetActive(true);
+				//Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
+				TMPro.TMP_Text challengeLostMessage = GameObject.Find("ChallengeEndMessage").GetComponent<TMPro.TMP_Text>();
+				challengeLostMessage.text = "Almost.. (" + completeCriteria + "/" + totalCriteria + ")";
+			}
+		}
+		momentOver = true;
 	}
 	
 	public static bool checkCriteriaCompletion(string criteriaSearchTerm, string criteriaValue, string criteriaCheckA, string criteriaCheckB = "", string criteriaCheckC = ""){
@@ -122,10 +164,13 @@ public class MomentsCriteria : MonoBehaviour
 				}
 				break;
 			case "CarWrecks":
+				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);
 				//If wrecked is true, true
-				if((GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().isWrecking == true)
-				  ||(GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().wreckOver == true)){
-					complete = true;
+				if((AICar != null)&&(AICar.GetComponent<AIMovement>() != null)){
+					if((AICar.GetComponent<AIMovement>().isWrecking == true)
+					  ||(AICar.GetComponent<AIMovement>().wreckOver == true)){
+						complete = true;
+					}
 				}
 				break;
 			case "CarAvoidsWreck":
@@ -141,7 +186,7 @@ public class MomentsCriteria : MonoBehaviour
 		if(complete == true){
 			updateCriteriaCompletion(criteriaSearchTerm, complete);
 		} else {
-			Debug.Log("Criteria failed: " + criteriaSearchTerm + " - " + criteriaValue + "(" + criteriaCheckA + "," + criteriaCheckB + "," + criteriaCheckC + ")");
+			//Debug.Log("Criteria failed: " + criteriaSearchTerm + " - " + criteriaValue + "(" + criteriaCheckA + "," + criteriaCheckB + "," + criteriaCheckC + ")");
 		}
 		return complete;
 	}
@@ -152,13 +197,7 @@ public class MomentsCriteria : MonoBehaviour
 		RawImage criteriaTick = criteriaObj.transform.GetChild(1).GetComponent<RawImage>();
 		criteriaTick.texture = Resources.Load<Texture2D>("Icons/tick");
 		completeCriteria++;
-		Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete);
-		
-		if(completeCriteria >= totalCriteria){
-			momentComplete = true;
-			challengeEndState.SetActive(true);
-			Debug.Log("Moment Complete!");
-		}
+		//Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete);
 	}
 
     // Update is called once per frame

@@ -59,7 +59,9 @@ public class EnviroMovement : MonoBehaviour {
 			}
 			
 			if (EnviroObject.transform.position.z <= -30){
-				EnviroObject.transform.Translate(0,0,60);
+				if(scrollOnce == false){
+					EnviroObject.transform.Translate(0,0,60);
+				}
 			}
 		}
 		enviroSpeedViewer = enviroSpeed;

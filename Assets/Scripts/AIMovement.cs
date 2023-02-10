@@ -800,7 +800,7 @@ public class AIMovement : MonoBehaviour
 			bool HitForwardLong = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForwardLong, 20);
 			if(HitForwardLong == true){
 				float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
-				Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
+				//Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
 				//Avoid slow moving draft
 				if(CameraRotate.cautionOut == true){
 					//Debug.Log("Caution Weighted Draft Logic");
@@ -1409,7 +1409,7 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().mass = 25;
 		//this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
+		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,-windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		
@@ -1467,12 +1467,12 @@ public class AIMovement : MonoBehaviour
 
 		wreckDecel = baseDecel - (50f * wreckSine);
 		
-		if(wreckDecel < -140){
+		if(wreckDecel < -100){
 			sparksCooldown = 0;
 			this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
 			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
 		}
-		if(wreckDecel < -180){
+		if(wreckDecel < -160){
 			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		}
 		if(wreckDecel < -200){
