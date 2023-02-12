@@ -891,7 +891,11 @@ public class AIMovement : MonoBehaviour
 		if(chance >= rng) {
 			bool rightSideClr = rightSideClear();
 			if((rightSideClr == true)||(forced == true)) {
-				changeLane("Right");
+				if(Movement.wallrideMod == true){
+					//This hack keeps the top lane empty for a wallride
+				} else {
+					changeLane("Right");
+				}
 			} else {
 				bool leftSideClr = leftSideClear();
 				if(leftSideClr == true) {
@@ -1409,7 +1413,7 @@ public class AIMovement : MonoBehaviour
 		windForce = 0 - Movement.speedoSpeed;
 		
 		sparksCooldown = 0;
-		this.GetComponent<Rigidbody>().mass = 1;
+		this.GetComponent<Rigidbody>().mass = 25;
 		//this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);

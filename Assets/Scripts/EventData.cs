@@ -401,12 +401,12 @@ public class EventData : MonoBehaviour
 		offlineSeries[4,1] = "cup22";
 		offlineCustomCar[4,1] = "cup22livery1";
 		offlineCustomField[4,1] = "cup22Chastain";
-		offlineStartingLap[4,1] = 26;
+		offlineStartingLap[4,1] = 27;
 		offlineModifier[4,1] = "wallride";
 		offlineMoment[4,1] = "ChastainWallride";
 		offlineTracklists[4,1] = "6";
 		offlinePrizes[4,1] = "1Star";
-		offlineCustomFieldOrder[4,1] = "20,x,x,x,5,x,2,x,x,x,6,x,11,x,22,24,x,45,x,14,x,player,x,9,21";
+		offlineCustomFieldOrder[4,1] = "20,x,x,x,x,x,5,x,x,x,2,x,x,x,6,x,x,x,11,x,22,x,24,x,45,x,x,x,14,x,player,x,9,x,x,x,21";
 		eventChapterDescriptions[4,1] = "October 30th 2022, Chastain goes full speed along the wall to qualify for the playoffs final.";
 		
 		offlineEventChapter[4,2] = "Austin As Moses";

@@ -405,12 +405,22 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Debug.Log("Hit " + carHit.gameObject.name);
-		if((carHit.gameObject.tag == "AICar") || 
-		   (carHit.gameObject.tag == "Barrier") || 
-		   (carHit.gameObject.name == "InnerEdge")){
+		if ((carHit.gameObject.tag == "AICar") || 
+			(carHit.gameObject.tag == "Barrier") || 
+			(carHit.gameObject.name == "OuterWall") ||
+			(carHit.gameObject.name == "SaferBarrier") ||
+			(carHit.gameObject.name == "TrackLimit") ||
+			(carHit.gameObject.name == "FixedKerb")) {
 			
 			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
 				startWreck();
+			}
+			if((isWrecking == false)&&(wreckOver == false)&&(wallrideMod == true)){
+				if((carHit.gameObject.tag == "Barrier") || 
+				  (carHit.gameObject.name == "OuterWall") ||
+				  (carHit.gameObject.name == "SaferBarrier")){
+					startWreck();  
+				}
 			}
 			   
 			//Join wreck
@@ -845,10 +855,9 @@ public class Movement : MonoBehaviour {
 		}
 		
 		if(vehicle.transform.position.x >= 1.35f){
-			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
-				if(CameraRotate.onTurn == true){
+				if((CameraRotate.onTurn == true)||(wallrideMod == true)){
 					startWreck();
 				} else {
 					GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("Wallhit");
@@ -1093,6 +1102,7 @@ public class Movement : MonoBehaviour {
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
+			MomentsCriteria.checkMomentsCriteria("WreckStartPositionHigherThan",Ticker.position.ToString());
 		}
 	}
 	

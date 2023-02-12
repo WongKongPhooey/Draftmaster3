@@ -31,6 +31,8 @@ public class CommentaryManager : MonoBehaviour
 		//No interrupting
 		if(cooldown != 0){
 			return;
+		} else {
+			audioSource.Stop();
 		}
 		if(canSpeak == true){
 			switch(phrase){

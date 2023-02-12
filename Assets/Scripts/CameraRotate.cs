@@ -447,14 +447,6 @@ public class CameraRotate : MonoBehaviour {
 			finishLine.GetComponent<Renderer>().enabled = true;
 		}
 		
-		if(momentChecks == true){
-			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
-			MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
-			MomentsCriteria.checkMomentsCriteria("FinishPositionLowerThan","");
-			MomentsCriteria.checkEndCriteria();
-		}
-		
-		Time.timeScale = 0.0f;
 		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 			int rand = Random.Range(1,100);
 			//Lucky day
@@ -475,6 +467,16 @@ public class CameraRotate : MonoBehaviour {
 				PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
 			}
 		}
+		
+		if(momentChecks == true){
+			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
+			MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
+			MomentsCriteria.checkMomentsCriteria("FinishPositionLowerThan",Ticker.position.ToString());
+			MomentsCriteria.checkEndCriteria();
+		}
+		
+		Time.timeScale = 0.0f;
+		
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 		//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
 		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");

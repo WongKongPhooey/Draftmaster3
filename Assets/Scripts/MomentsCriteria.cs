@@ -181,6 +181,18 @@ public class MomentsCriteria : MonoBehaviour
 					complete = true;
 				}
 				break;
+			case "WreckStartPositionHigherThan":
+				//If position at time of wreck (A) is equal or lower, true
+				if(int.Parse(criteriaValue) <= int.Parse(criteriaCheckA)){
+					complete = true;
+				}
+				break;
+			case "FinishPositionLowerThan":
+				//If finish position (A) is equal or lower, true
+				if(int.Parse(criteriaValue) >= int.Parse(criteriaCheckA)){
+					complete = true;
+				}
+				break;
 			case "CarWrecks":
 				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);
 				//If wrecked is true, true
@@ -227,7 +239,7 @@ public class MomentsCriteria : MonoBehaviour
 		RawImage criteriaTick = criteriaObj.transform.GetChild(1).GetComponent<RawImage>();
 		criteriaTick.texture = Resources.Load<Texture2D>("Icons/tick");
 		completeCriteria++;
-		//Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete);
+		Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete + ". Total: " + completeCriteria);
 	}
 
     // Update is called once per frame
