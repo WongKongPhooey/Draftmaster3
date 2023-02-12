@@ -26,6 +26,12 @@ public class RaceModifiers : MonoBehaviour
 			case "invincible":
 				Movement.invincibleMod = true;
 				break;
+			case "bulldozer":
+				Movement.bulldozerMod = true;
+				break;
+			case "suddenshower":
+				Movement.suddenshowerMod = true;
+				break;
 			case "wallride":
 				Movement.wallrideMod = true;
 				break;

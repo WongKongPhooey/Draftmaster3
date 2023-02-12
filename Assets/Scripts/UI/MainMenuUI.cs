@@ -102,6 +102,12 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("CustomFieldOrder")){
 			PlayerPrefs.DeleteKey("CustomFieldOrder");
 		}
+		if(PlayerPrefs.HasKey("MomentComplete")){
+			PlayerPrefs.DeleteKey("MomentComplete");
+		}
+		if(PlayerPrefs.HasKey("RaceModifier")){
+			PlayerPrefs.DeleteKey("RaceModifier");
+		}
 		
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			PlayerPrefs.DeleteKey("SpawnFromCaution");

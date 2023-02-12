@@ -32,6 +32,8 @@ public class RaceRewardsUI : MonoBehaviour
 	int championshipFinish;
 	int seriesLength;
 	
+	int momentComplete;
+	
 	public static string carPrize;
 	public static int carPrizeNum;
 	public static string carPrizeAlt;
@@ -78,9 +80,9 @@ public class RaceRewardsUI : MonoBehaviour
 		} else {
 			ListPrizeOptions("");
 		}
-		Debug.Log("Series Prize: " + seriesPrize);
+		//Debug.Log("Series Prize: " + seriesPrize);
 		finishPos = PlayerPrefs.GetInt("PlayerFinishPosition");
-		Debug.Log("Finished: " + finishPos);
+		//Debug.Log("Finished: " + finishPos);
 		rewardMultiplier = 1;
 		
 		rewardsTitle = GameObject.Find("Title");
@@ -142,13 +144,13 @@ public class RaceRewardsUI : MonoBehaviour
 		gearsTitle.GetComponent<UIAnimate>().animOffset = 80;
 		gearsTitle.GetComponent<UIAnimate>().scaleIn();	
 		
-		Debug.Log("Race Type: " + raceType);
+		//Debug.Log("Race Type: " + raceType);
 		switch(raceType){
 			case "Event":
-			//Must win
 				Debug.Log("Checking Event Rewards");
-				if(finishPos == 1){
-					Debug.Log("You won!");
+				//Int as bool
+				momentComplete = PlayerPrefs.GetInt("MomentComplete");
+				if((finishPos == 1)||(momentComplete == 1)){
 					if(seriesPrize == "AltPaint"){
 						Debug.Log("Unlocking Alt Paint: " + setPrize);
 						UnlockAltPaint(setPrize);
@@ -218,6 +220,7 @@ public class RaceRewardsUI : MonoBehaviour
 		//Tidyup at the end
 		PlayerPrefs.DeleteKey("SeriesPrize");
 		PlayerPrefs.DeleteKey("RaceType");
+		PlayerPrefs.DeleteKey("MomentComplete");
 	}
 
 	void AssignPrizes(string carId, string setPrize, int multiplier){

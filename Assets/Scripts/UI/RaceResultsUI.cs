@@ -86,16 +86,16 @@ public class RaceResultsUI : MonoBehaviour
 					for( int i=0; i < fieldSize; i++){
 						if(Ticker.carNames[i] == null){
 							//Exit loop
-							Debug.Log("No name here, skip loop #" + i);
+							//Debug.Log("No name here, skip loop #" + i);
 							continue;
 						}
 						if(i == (Ticker.position)){
-							Debug.Log("We finished P" + i);
+							//Debug.Log("We finished P" + i);
 							carNumber = playerCarNumber;
 						} else {
 							carNumber = Ticker.carNames[i].Remove(0,6);
 						}
-						Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+						//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
 						addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 					}
 				} else {
@@ -109,7 +109,7 @@ public class RaceResultsUI : MonoBehaviour
 		
 		//If Event Reward already collected, cannot claim again
 		if(PlayerPrefs.HasKey("EventReplay")){
-			Debug.Log("Event replay, no dupe rewards");
+			//Debug.Log("Event replay, no dupe rewards");
 			GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
 		}
 

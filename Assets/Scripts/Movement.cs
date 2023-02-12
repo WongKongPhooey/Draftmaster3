@@ -11,6 +11,7 @@ public class Movement : MonoBehaviour {
 
 	public GameObject vehicle;
 	public static float playerSpeed;
+	public static float speedoSpeed;
 	public float gettableSpeed;
 	public float topSpeed;
 	public static float speedRand;
@@ -154,6 +155,8 @@ public class Movement : MonoBehaviour {
 	
 	public static bool delicateMod;
 	public static bool invincibleMod;
+	public static bool suddenshowerMod;
+	public static bool bulldozerMod;
 	public static bool wallrideMod;
 	
 	public static bool momentChecks;
@@ -937,10 +940,12 @@ public class Movement : MonoBehaviour {
 			}
 		}
 		
+		//The speed shown on the HUD
+		speedoSpeed = (playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel;
 		
-		if(((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel) > 0){
-			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + ((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel).ToString("F0");
-			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + ((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel).ToString("F2");
+		if(speedoSpeed > 0){
+			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F0");
+			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F2");
 		} else {
 			endWreck();
 		}
@@ -1117,6 +1122,8 @@ public class Movement : MonoBehaviour {
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString(), onTurn.ToString());
 			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
 			MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
+			MomentsCriteria.checkMomentsCriteria("PlayerWrecks","");
+			MomentsCriteria.checkMomentsCriteria("PlayerAvoidsWreck","");
 		}
 		
 		cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = totalWreckers + " Cars Involved";

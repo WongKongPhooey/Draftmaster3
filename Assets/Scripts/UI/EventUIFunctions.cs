@@ -30,9 +30,11 @@ public class EventUIFunctions : MonoBehaviour
 		EventsUI.subMenuId = subMenuId;
 		EventsUI.subEventId = subEventId;
 		if(rewardCollected == true){
-			PlayerPrefs.SetInt("EventReplay",1);
+			if(EventData.offlineEventType[subMenuId] != "Replay"){
+				PlayerPrefs.SetInt("EventReplay",1);
+				//Debug.Log("Event Replay, No Rewards");
+			}
 		}
-		Debug.Log("Event Replay, No Rewards");
 		GameObject.Find("Main").GetComponent<EventsUI>().loadEvent();
 	}
 }

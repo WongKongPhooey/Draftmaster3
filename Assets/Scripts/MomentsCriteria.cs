@@ -113,6 +113,9 @@ public class MomentsCriteria : MonoBehaviour
 			case "PlayerWrecks":
 				return "You Wreck";
 				break;
+			case "PlayerAvoidsWreck":
+				return "You Do Not Wreck";
+				break;
 			default:
 				return criteriaSearchTerm;
 				break;
@@ -142,6 +145,7 @@ public class MomentsCriteria : MonoBehaviour
 			if(completeCriteria >= totalCriteria){
 				momentComplete = true;
 				challengeWon.SetActive(true);
+				PlayerPrefs.SetInt("MomentComplete",1);
 				//Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
 			} else {
 				momentComplete = false;
@@ -191,6 +195,18 @@ public class MomentsCriteria : MonoBehaviour
 				//If wrecked is false, true
 				if((GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().isWrecking == false)
 				  &&(GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().wreckOver == false)){
+					complete = true;
+				}
+				break;
+			case "PlayerWrecks":
+				if((Movement.isWrecking == true)
+				  ||(Movement.wreckOver == true)){
+					complete = true;
+				}
+				break;
+			case "PlayerAvoidsWreck":
+				if((Movement.isWrecking == false)
+				  &&(Movement.wreckOver == false)){
 					complete = true;
 				}
 				break;

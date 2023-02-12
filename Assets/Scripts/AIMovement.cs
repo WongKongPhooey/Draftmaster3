@@ -505,8 +505,6 @@ public class AIMovement : MonoBehaviour
 			this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
 			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();	
 		}
-		
-		//Debug.Log(this.name + " Check");
 
 		lap = CameraRotate.lap;
 		
@@ -532,8 +530,11 @@ public class AIMovement : MonoBehaviour
 					AISpeed = 0;
 					if(Movement.wreckOver == true){
 						targetForce = 0;
+						//Make the crashed cars stay still if the player is also still
+						this.GetComponent<Rigidbody>().mass = 25;
+						this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 					} else {
-						targetForce = 200f + Movement.playerWreckDecel;
+						targetForce = 0 - Movement.speedoSpeed;
 					}
 					updateWindForce();
 						
@@ -746,7 +747,7 @@ public class AIMovement : MonoBehaviour
 		RaycastHit DraftCheckForward;
         bool HitForward = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForward, 5);
 		//Debug.DrawRay(transform.position  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
-		Debug.Log("Checking Draft Logic.. ");
+		//Debug.Log("Checking Draft Logic.. ");
 		if(HitForward == true){
 			float carDist = DraftCheckForward.distance;
 			float opponentSpeed = getOpponentSpeed(DraftCheckForward);
@@ -1403,16 +1404,19 @@ public class AIMovement : MonoBehaviour
 		isWrecking = false;
 		wreckOver = true;
 		
-		updateWindForce();
+		//Skip force smoothing updateWindforce() on this transition frame
+		targetForce = 0 - Movement.speedoSpeed;
+		windForce = 0 - Movement.speedoSpeed;
 		
 		sparksCooldown = 0;
-		this.GetComponent<Rigidbody>().mass = 25;
+		this.GetComponent<Rigidbody>().mass = 1;
 		//this.GetComponent<Rigidbody>().isKinematic = true;
 		//this.GetComponent<Rigidbody>().useGravity = true;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,-windForce);
+		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
-		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
-		
+		if(Movement.wreckOver == true){
+			this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
+		}
 		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
 		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
 		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
