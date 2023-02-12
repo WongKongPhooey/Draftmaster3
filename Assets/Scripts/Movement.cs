@@ -1159,7 +1159,8 @@ public class Movement : MonoBehaviour {
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			if(wallrideMod == true){
-				this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,20f);
+				baseDecel+=0.15f;
+				this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,40f);
 			} else {
 				this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
 				//Debug.Log("Side Force: " + slideX);

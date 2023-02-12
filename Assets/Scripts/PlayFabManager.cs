@@ -197,11 +197,45 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 			PlayerPrefs.SetInt("EventActive", 0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
-			PlayerPrefs.SetString("SpecialEvent","Cup22Final4");
+			PlayerPrefs.SetString("SpecialEvent","");
 		}
 		
 		//Testing
 		//result.Data["LiveTimeTrial"] = "Atlanta";
+		
+		if(result.Data.ContainsKey("MomentName") == false){
+			PlayerPrefs.SetString("MomentName", "");
+		} else {
+			//There's a Live Moment set
+			if((result.Data["MomentName"] != "")
+				&&(result.Data["MomentVisibility"] == "Public")){
+				PlayerPrefs.SetString("MomentName", result.Data["MomentName"]);
+				PlayerPrefs.SetString("MomentDescription", result.Data["MomentDescription"]);
+				PlayerPrefs.SetString("MomentImage", result.Data["MomentImage"]);
+				PlayerPrefs.SetString("MomentAILevel", result.Data["MomentAILevel"]);
+				PlayerPrefs.SetString("MomentSeries", result.Data["MomentSeries"]);
+				PlayerPrefs.SetString("MomentCar", result.Data["MomentCar"]);
+				PlayerPrefs.SetString("MomentTrack", result.Data["MomentTrack"]);
+				PlayerPrefs.SetString("MomentLap", result.Data["MomentLap"]);
+				PlayerPrefs.SetString("MomentCriteria1", result.Data["MomentCriteria1"]);
+			} else {
+				PlayerPrefs.SetString("MomentName", "");
+				
+				#if UNITY_EDITOR
+				if(result.Data["MomentName"] != ""){
+				PlayerPrefs.SetString("MomentName", result.Data["MomentName"]);
+				PlayerPrefs.SetString("MomentDescription", result.Data["MomentDescription"]);
+				PlayerPrefs.SetString("MomentImage", result.Data["MomentImage"]);
+				PlayerPrefs.SetString("MomentAILevel", result.Data["MomentAILevel"]);
+				PlayerPrefs.SetString("MomentSeries", result.Data["MomentSeries"]);
+				PlayerPrefs.SetString("MomentCar", result.Data["MomentCar"]);
+				PlayerPrefs.SetString("MomentTrack", result.Data["MomentTrack"]);
+				PlayerPrefs.SetString("MomentLap", result.Data["MomentLap"]);
+				PlayerPrefs.SetString("MomentCriteria1", result.Data["MomentCriteria1"]);
+				}
+				#endif
+			}
+		}
 		
 		//Custom store items in Daily Selects
 		if(result.Data.ContainsKey("StoreDailySelects") == false){

@@ -48,7 +48,21 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("WreckStartLocationStraight","2");
 					momentsCriteria.Add("WreckStartPositionHigherThan","9");
 					momentsCriteria.Add("FinishPositionLowerThan","5");
-				break;	
+				break;
+				case "LiveMoment":
+					for(int i=1;i<=5;i++){
+						if(PlayerPrefs.GetString("MomentCriteria" + i) != ""){
+							string criteriaList = PlayerPrefs.GetString("MomentCriteria" + i);
+							string[] criteriaParts = criteriaList.Split(",");
+							Debug.Log("Live Criteria Added: " + criteriaParts[0] + " - " + criteriaParts[1]);
+							momentsCriteria.Add(criteriaParts[0],criteriaParts[1]);
+						}
+					}
+				break;
+				case "":
+				break;
+				default:
+				break;
 			}
 		
 			challengesContainer = GameObject.Find("ChallengesContainer").transform;

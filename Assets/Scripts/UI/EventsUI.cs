@@ -51,8 +51,8 @@ public class EventsUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
-		for(int i=0;i<10;i++){
-			EventData.loadEvents();
+		EventData.loadEvents();
+		for(int i=9;i>=0;i--){
 			//Skip through the non-driver #s
 			if(EventData.offlineEvent[i] == null){
 				//Debug.Log("No Event here: " + i);
@@ -116,11 +116,10 @@ public class EventsUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
-		for(int i=0;i<10;i++){
+		for(int i=9;i>=0;i--){
 			//EventData.loadEvents();
 			//Skip through the non-driver #s
 			if(EventData.offlineEventChapter[subMenuId,i] == null){
-				//Debug.Log("No Event here: " + i);
 				continue;
 			}
 			

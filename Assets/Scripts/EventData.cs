@@ -422,6 +422,24 @@ public class EventData : MonoBehaviour
 		offlinePrizes[4,2] = "Rookies";
 		eventChapterDescriptions[4,2] = "August 28th 2022, everyone hits the rain and spins, except A.Dillon, who moves from 16th to 1st.";
 		
+		if(PlayerPrefs.GetString("MomentName") != ""){
+			//There's a Live Moment to add
+			offlineEventChapter[4,9] = PlayerPrefs.GetString("MomentName");
+			offlineChapterImage[4,9] = PlayerPrefs.GetString("MomentImage");
+			offlineMinClass[4,9] = 1;
+			offlineMinLevel[4,9] = 1;
+			Debug.Log("Live Moment AI Level: " + PlayerPrefs.GetString("MomentAILevel"));
+			offlineAILevel[4,9] = int.Parse(PlayerPrefs.GetString("MomentAILevel"));
+			offlineSeries[4,9] = PlayerPrefs.GetString("MomentSeries");
+			offlineCustomCar[4,9] = PlayerPrefs.GetString("MomentCar");
+			offlineStartingLap[4,9] = int.Parse(PlayerPrefs.GetString("MomentLap"));
+			offlineModifier[4,9] = "delicate";
+			offlineMoment[4,9] = "LiveMoment";
+			offlineTracklists[4,9] = PlayerPrefs.GetString("MomentTrack");
+			eventChapterDescriptions[4,9] = PlayerPrefs.GetString("MomentDescription");
+		} else {
+			Debug.Log("No Live Moment Currently");
+		}
 		
 		//Special Event - Final 4
 		offlineEventChapter[9,0] = "Unlock Logano";
