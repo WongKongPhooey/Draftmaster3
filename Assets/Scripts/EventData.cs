@@ -406,7 +406,7 @@ public class EventData : MonoBehaviour
 		offlineMoment[4,1] = "ChastainWallride";
 		offlineTracklists[4,1] = "6";
 		offlinePrizes[4,1] = "1Star";
-		offlineCustomFieldOrder[4,1] = "20,x,x,x,x,x,5,x,x,x,2,x,x,x,6,x,x,x,11,x,22,x,24,x,45,x,x,x,14,x,player,x,9,x,x,x,21";
+		offlineCustomFieldOrder[4,1] = "20,x,x,x,x,x,x,x,5,x,x,x,x,x,2,x,x,x,x,x,6,x,x,x,11,x,x,x,22,x,24,x,x,x,45,x,x,x,14,x,player,x,9,x,x,x,21";
 		eventChapterDescriptions[4,1] = "October 30th 2022, Chastain goes full speed along the wall to qualify for the playoffs final.";
 		
 		offlineEventChapter[4,2] = "Austin As Moses";
