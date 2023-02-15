@@ -6,7 +6,6 @@ public class RaceModifiers : MonoBehaviour
 {
 	
 	public static string modifier;
-	public string activeModifier;
 	
     // Start is called before the first frame update
     void Awake(){
@@ -39,9 +38,4 @@ public class RaceModifiers : MonoBehaviour
 				break;
 		}
 	}
-
-    // Update is called once per frame
-    void Update(){
-        //activeModifier = modifier;
-    }
 }

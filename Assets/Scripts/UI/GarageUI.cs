@@ -189,6 +189,7 @@ public class GarageUI : MonoBehaviour
 			}
 			
 			if(carClass >= 6){
+				carClass = 6;
 				gearsProgressUIWidth = 110;
 				carGearsLabelUI.text = "Max Class";
 			} else {
@@ -554,6 +555,7 @@ public class GarageUI : MonoBehaviour
 		string JSONOutput = "{";
 		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
 		JSONOutput += "\"totalCars\": \"" + PlayerPrefs.GetInt("LocalTotalUnlocks").ToString() + "\",";
+		JSONOutput += "\"transferTokens\": \"" + PlayerPrefs.GetInt("TransferTokens").ToString() + "\",";
 		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
 		JSONOutput += "\"drivers\": [";
 		for(int car = 0; car < 100; car++){
@@ -621,6 +623,7 @@ public class Driver {
 public class Series {
 	public string playerLevel;
 	public int totalCars;
+	public string transferTokens;
     public string seriesName;
     public List<Driver> drivers;
 }

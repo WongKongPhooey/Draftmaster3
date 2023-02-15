@@ -371,6 +371,9 @@ public class Movement : MonoBehaviour {
 		
 		delicateMod = false;
 		invincibleMod = false;
+		suddenshowerMod = false;
+		bulldozerMod = false;
+		wallrideMod = false;
 		
 		momentChecks = false;
 		if(PlayerPrefs.HasKey("RaceMoment")){
@@ -952,11 +955,16 @@ public class Movement : MonoBehaviour {
 		//The speed shown on the HUD
 		speedoSpeed = (playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel;
 		
-		if(speedoSpeed > 0){
+		if(speedoSpeed > 1){
 			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F0");
 			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F2");
 		} else {
-			endWreck();
+			//Update the final position GUI slightly before the Time.timeScale freezes to 0
+			if(speedoSpeed > 0){
+				RaceHUD.racePreover = true;
+			} else {
+				endWreck();
+			}
 		}
 		
 		if(wreckOver == true){

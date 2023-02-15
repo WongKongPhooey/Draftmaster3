@@ -590,6 +590,7 @@ public class PlayFabManager : MonoBehaviour
 				 PlayerPrefs.SetInt("NewUser",1);
 				 Series playerJson = JsonUtility.FromJson<Series>(json);
 				 int level = int.Parse(playerJson.playerLevel);
+				 int transferTokens = int.Parse(playerJson.transferTokens);
 				 
 				 if(level <= PlayerPrefs.GetInt("Level")){
 					Debug.Log("Your save is not a higher level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + "). Load aborted.");

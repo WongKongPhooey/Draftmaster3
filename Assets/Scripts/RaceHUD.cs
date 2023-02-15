@@ -15,6 +15,7 @@ public class RaceHUD : MonoBehaviour {
 
 	public static bool caution = false;
 	public static bool goingGreen = false;
+	public static bool racePreover = false;
 	public static bool raceOver = false;
 	public static bool challengeActive;
 	
@@ -103,7 +104,7 @@ public class RaceHUD : MonoBehaviour {
 			//Do nothing
 		} else {
 			if(challengeActive == false){
-				if(raceOver == true){
+				if((raceOver == true)||(racePreover == true)){
 					GUI.skin.label.fontSize = 512 / fontScale;
 					GUI.skin.label.alignment = TextAnchor.LowerLeft;
 					GUI.skin.label.normal.textColor = Color.black;
