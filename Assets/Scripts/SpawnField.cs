@@ -295,9 +295,18 @@ public class SpawnField : MonoBehaviour {
 			
 		} else {
 			
-			if(PlayerPrefs.HasKey("CustomFieldOrder")){
+			if((PlayerPrefs.HasKey("CustomFieldOrder"))||
+			  ((PlayerPrefs.HasKey("LiveMomentCustomField"))&&(PlayerPrefs.GetString("CurrentSeriesIndex") == "49EVENT"))){
 				
-				string customFieldOrderStr = PlayerPrefs.GetString("CustomFieldOrder");
+				//If the Current Index is the Live Moments Event
+				string customFieldOrderStr = "";
+				if(PlayerPrefs.GetString("CurrentSeriesIndex") == "49EVENT"){
+					Debug.Log("Live Moment Custom Field Set");
+					customFieldOrderStr = PlayerPrefs.GetString("LiveMomentCustomField");
+				} else {
+					Debug.Log("Custom Field Order Set" + PlayerPrefs.GetString("CurrentSeriesIndex"));
+					customFieldOrderStr = PlayerPrefs.GetString("CustomFieldOrder");
+				}
 				
 				string[] fieldOrderArr = customFieldOrderStr.Split(',');
 				customFieldOrder.Clear();

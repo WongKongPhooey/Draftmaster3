@@ -106,7 +106,12 @@ public class RaceRewardsUI : MonoBehaviour
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
 		}
 		
-		prizeMoney = PrizeMoney.getPrizeMoney(finishPos);
+		if(raceType == "Event"){
+			//Nominal amount for an event win
+			prizeMoney = 1000;
+		} else {
+			prizeMoney = PrizeMoney.getPrizeMoney(finishPos);
+		}
 		Debug.Log("Won: " + prizeMoney);
 		playerMoney += prizeMoney * rewardMultiplier;
 		Debug.Log("Multiplied Win: " + (prizeMoney * rewardMultiplier));

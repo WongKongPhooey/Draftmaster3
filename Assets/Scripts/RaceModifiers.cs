@@ -18,6 +18,16 @@ public class RaceModifiers : MonoBehaviour
 			//Debug.Log("Modifier Active: " + modifier);
 		}
 		
+		//Live Modifier overwrites if necessary
+		if(PlayerPrefs.HasKey("LiveMomentMods")){
+			//If current event matches the Live Moment ID
+			if(PlayerPrefs.GetString("CurrentSeriesIndex") == "49EVENT"){
+				modifier = PlayerPrefs.GetString("LiveMomentMods");
+				Debug.Log("Live Modifier Active: " + modifier);
+			}
+			Debug.Log("Live Modifier Not A Match");
+		}
+		
         switch(modifier){
 			case "delicate":
 				Movement.delicateMod = true;

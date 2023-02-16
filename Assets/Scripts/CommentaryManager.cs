@@ -23,7 +23,7 @@ public class CommentaryManager : MonoBehaviour
 		} else {
 			cooldown = 0;
 		}
-		if(Movement.wreckOver == true){
+		if((Movement.wreckOver == true)||(RaceHUD.raceOver == true)){
 			audioSource.Stop();
 		}
     }

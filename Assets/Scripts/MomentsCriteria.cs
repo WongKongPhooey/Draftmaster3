@@ -102,7 +102,14 @@ public class MomentsCriteria : MonoBehaviour
 				return "Stop In The Infield";
 				break;
 			case "FinishPositionLowerThan":
-				return "Finish In The Top " + criteriaValue;
+				if(criteriaValue == "1"){
+					return "Win The Race";
+				} else {
+					return "Finish In The Top " + criteriaValue;
+				}
+				break;
+			case "WreckTotalCars":
+				return "At Least " + criteriaValue + " Cars Wreck";
 				break;
 			case "CarWrecks":
 				return "#" + criteriaValue + " Wrecks";
@@ -192,6 +199,13 @@ public class MomentsCriteria : MonoBehaviour
 				if(int.Parse(criteriaValue) >= int.Parse(criteriaCheckA)){
 					complete = true;
 				}
+				break;
+			case "WreckTotalCars":
+				//If more cars in wreck than the minimum, true
+				if(int.Parse(criteriaCheckA) >= int.Parse(criteriaValue)){
+					complete = true;
+				}
+				Debug.Log(criteriaCheckA + " Cars In Wreck. Need " + criteriaValue);
 				break;
 			case "CarWrecks":
 				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);

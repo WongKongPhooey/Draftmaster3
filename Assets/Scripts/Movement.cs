@@ -1138,6 +1138,7 @@ public class Movement : MonoBehaviour {
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString(), onTurn.ToString());
+			MomentsCriteria.checkMomentsCriteria("WreckTotalCars",totalWreckers.ToString());
 			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
 			MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
 			MomentsCriteria.checkMomentsCriteria("PlayerWrecks","");

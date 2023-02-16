@@ -218,20 +218,96 @@ public class PlayFabManager : MonoBehaviour
 				PlayerPrefs.SetString("MomentTrack", result.Data["MomentTrack"]);
 				PlayerPrefs.SetString("MomentLap", result.Data["MomentLap"]);
 				PlayerPrefs.SetString("MomentCriteria1", result.Data["MomentCriteria1"]);
+				if(result.Data.ContainsKey("MomentCriteria2") == true){
+					if(result.Data["MomentCriteria2"] != ""){
+						PlayerPrefs.SetString("MomentCriteria2", result.Data["MomentCriteria2"]);
+					}
+				}
+				if(result.Data.ContainsKey("MomentCriteria3") == true){
+					if(result.Data["MomentCriteria3"] != ""){
+						PlayerPrefs.SetString("MomentCriteria3", result.Data["MomentCriteria3"]);
+					}
+				}
+				if(result.Data.ContainsKey("MomentCriteria4") == true){
+					if(result.Data["MomentCriteria4"] != ""){	
+						PlayerPrefs.SetString("MomentCriteria4", result.Data["MomentCriteria4"]);
+					}
+				}
+				if(result.Data.ContainsKey("MomentCriteria5") == true){
+					if(result.Data["MomentCriteria5"] != ""){
+						PlayerPrefs.SetString("MomentCriteria5", result.Data["MomentCriteria5"]);
+					}
+				}
+				if(result.Data.ContainsKey("MomentCustomField") == true){
+					if(result.Data["MomentCustomField"] != ""){
+						PlayerPrefs.SetString("LiveMomentCustomField", result.Data["MomentCustomField"]);
+					}
+				}
+				if(result.Data.ContainsKey("MomentMods") == true){
+					if(result.Data["MomentMods"] != ""){
+						PlayerPrefs.SetString("LiveMomentMods", result.Data["MomentMods"]);
+					}
+				}
 			} else {
 				PlayerPrefs.SetString("MomentName", "");
+				PlayerPrefs.DeleteKey("MomentDescription");
+				PlayerPrefs.DeleteKey("MomentImage");
+				PlayerPrefs.DeleteKey("MomentAILevel");
+				PlayerPrefs.DeleteKey("MomentSeries");
+				PlayerPrefs.DeleteKey("MomentCar");
+				PlayerPrefs.DeleteKey("MomentTrack");
+				PlayerPrefs.DeleteKey("MomentLap");
+				PlayerPrefs.DeleteKey("MomentCriteria1");
+				PlayerPrefs.DeleteKey("MomentCriteria2");
+				PlayerPrefs.DeleteKey("MomentCriteria3");
+				PlayerPrefs.DeleteKey("MomentCriteria4");
+				PlayerPrefs.DeleteKey("MomentCriteria5");
+				PlayerPrefs.DeleteKey("LiveMomentCustomField");
+				PlayerPrefs.DeleteKey("LiveMomentMods");
+				
+				//Debug.Log("Removed Live Moment From Local Storage");
 				
 				#if UNITY_EDITOR
 				if(result.Data["MomentName"] != ""){
-				PlayerPrefs.SetString("MomentName", result.Data["MomentName"]);
-				PlayerPrefs.SetString("MomentDescription", result.Data["MomentDescription"]);
-				PlayerPrefs.SetString("MomentImage", result.Data["MomentImage"]);
-				PlayerPrefs.SetString("MomentAILevel", result.Data["MomentAILevel"]);
-				PlayerPrefs.SetString("MomentSeries", result.Data["MomentSeries"]);
-				PlayerPrefs.SetString("MomentCar", result.Data["MomentCar"]);
-				PlayerPrefs.SetString("MomentTrack", result.Data["MomentTrack"]);
-				PlayerPrefs.SetString("MomentLap", result.Data["MomentLap"]);
-				PlayerPrefs.SetString("MomentCriteria1", result.Data["MomentCriteria1"]);
+					PlayerPrefs.SetString("MomentName", result.Data["MomentName"]);
+					PlayerPrefs.SetString("MomentDescription", result.Data["MomentDescription"]);
+					PlayerPrefs.SetString("MomentImage", result.Data["MomentImage"]);
+					PlayerPrefs.SetString("MomentAILevel", result.Data["MomentAILevel"]);
+					PlayerPrefs.SetString("MomentSeries", result.Data["MomentSeries"]);
+					PlayerPrefs.SetString("MomentCar", result.Data["MomentCar"]);
+					PlayerPrefs.SetString("MomentTrack", result.Data["MomentTrack"]);
+					PlayerPrefs.SetString("MomentLap", result.Data["MomentLap"]);
+					PlayerPrefs.SetString("MomentCriteria1", result.Data["MomentCriteria1"]);
+					if(result.Data.ContainsKey("MomentCriteria2") == true){
+						if(result.Data["MomentCriteria2"] != ""){
+							PlayerPrefs.SetString("MomentCriteria2", result.Data["MomentCriteria2"]);
+						}
+					}
+					if(result.Data.ContainsKey("MomentCriteria3") == true){
+						if(result.Data["MomentCriteria3"] != ""){
+							PlayerPrefs.SetString("MomentCriteria3", result.Data["MomentCriteria3"]);
+						}
+					}
+					if(result.Data.ContainsKey("MomentCriteria4") == true){
+						if(result.Data["MomentCriteria4"] != ""){	
+							PlayerPrefs.SetString("MomentCriteria4", result.Data["MomentCriteria4"]);
+						}
+					}
+					if(result.Data.ContainsKey("MomentCriteria5") == true){
+						if(result.Data["MomentCriteria5"] != ""){
+							PlayerPrefs.SetString("MomentCriteria5", result.Data["MomentCriteria5"]);
+						}
+					}
+					if(result.Data.ContainsKey("MomentCustomField") == true){
+						if(result.Data["MomentCustomField"] != ""){
+							PlayerPrefs.SetString("LiveMomentCustomField", result.Data["MomentCustomField"]);
+						}
+					}
+					if(result.Data.ContainsKey("MomentMods") == true){
+						if(result.Data["MomentMods"] != ""){
+							PlayerPrefs.SetString("LiveMomentMods", result.Data["MomentMods"]);
+						}
+					}
 				}
 				#endif
 			}
