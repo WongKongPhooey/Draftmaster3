@@ -34,8 +34,6 @@ public class CommentaryManager : MonoBehaviour
 		//No interrupting
 		if(cooldown != 0){
 			return;
-		} else {
-			audioSource.Stop();
 		}
 		if(canSpeak == true){
 			switch(phrase){
@@ -62,7 +60,7 @@ public class CommentaryManager : MonoBehaviour
 					break;
 			}
 			cooldown = ((int)phraseClip.length * 60) + commsFreqGap;
-			Debug.Log("Cooldown: " + cooldown);
+			//Debug.Log("Cooldown: " + cooldown);
 			if (!audioSource.isPlaying){
 				audioSource.PlayOneShot(phraseClip);
 			}

@@ -199,10 +199,13 @@ public class AIMovement : MonoBehaviour
 				AltPaints.loadAlts();
 				for(int i=1;i<10;i++){
 					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
+						Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
 						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) == false){
 							//Do nothing, it has to both exist and not be true
+							Debug.Log(carNum + " Alt " + i + " was not added, either false or null");
 						} else {
 							//It must be null (array only holds 'false' values)
+							Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
 							altPaints.Add(i.ToString());
 						}
 					}
@@ -809,18 +812,18 @@ public class AIMovement : MonoBehaviour
 					if(oppCar.GetComponent<AIMovement>() != null){
 						if(oppCar.GetComponent<AIMovement>().isWrecking == true){
 							avoidWreck();
-							Debug.Log(carName + " Avoids Wreck");
+							//Debug.Log(carName + " Avoids Wreck");
 						}
 					} else {
 						if(oppCar.GetComponent<Movement>() != null){
 							if(Movement.isWrecking == true){
 								avoidWreck();
-								Debug.Log(carName + " Avoids Wrecking Player");
+								//Debug.Log(carName + " Avoids Wrecking Player");
 							}
 						}
 					}
 				} else {
-					Debug.Log("Nothing in front..");
+					//Debug.Log("Nothing in front..");
 					if(opponentSpeed > (AISpeed + 1.5f)){
 						findClearLane();
 					}
