@@ -140,13 +140,14 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintTheme[88,3] = "Wrecked";
 		cup2020AltPaintTheme[95,1] = "2020";
 		
-		cup2020AltPaintAISpawning[5,2] = false;
-		cup2020AltPaintAISpawning[6,1] = false;
-		cup2020AltPaintAISpawning[11,1] = false;
-		cup2020AltPaintAISpawning[88,3] = false;
+		//true = don't spawn. I know this is backwards..
+		cup2020AltPaintAISpawning[5,2] = true;
+		cup2020AltPaintAISpawning[6,1] = true;
+		cup2020AltPaintAISpawning[11,1] = true;
+		cup2020AltPaintAISpawning[88,3] = true;
 		
-		cup22AltPaintAISpawning[1,1] = false;
-		cup22AltPaintAISpawning[99,1] = false;
+		cup22AltPaintAISpawning[1,1] = true;
+		cup22AltPaintAISpawning[99,1] = true;
 		
 		cup22AltPaintTheme[1,1] = "Community";
 		cup22AltPaintTheme[1,2] = "Final4";
@@ -173,18 +174,18 @@ public class AltPaints : MonoBehaviour {
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
+		string altPaintName = null;
 		switch(seriesPrefix){
 			case "cup20":
-				return cup2020AltPaintNames[carNum,altNum];
+				altPaintName = cup2020AltPaintNames[carNum,altNum];
 				break;
 			case "cup22":
-				return cup22AltPaintNames[carNum,altNum];
+				altPaintName = cup22AltPaintNames[carNum,altNum];
 				break;
 			default:
-				return null;
 				break;
 		}
-		return null;
+		return altPaintName;
 	}
 	
 	public static string getAltPaintDriver(string seriesPrefix, int carNum, int altNum){
@@ -203,18 +204,22 @@ public class AltPaints : MonoBehaviour {
 	}
 	
 	public static bool getAltPaintAISpawning(string seriesPrefix, int carNum, int altNum){
+		bool canSpawn = false;
 		switch(seriesPrefix){
 			case "cup20":
-				return cup2020AltPaintAISpawning[carNum,altNum];
+				if(cup2020AltPaintAISpawning[carNum,altNum] == true){
+					canSpawn = true;
+				}
 				break;
 			case "cup22":
-				return cup22AltPaintAISpawning[carNum,altNum];
+				if(cup22AltPaintAISpawning[carNum,altNum] == true){
+					canSpawn = true;
+				}
 				break;
 			default:
-				return false;
 				break;
 		}
-		return false;
+		return canSpawn;
 	}
 	
 	public static string getAltPaintTheme(string seriesPrefix, int carNum, int altNum){

@@ -104,15 +104,20 @@ public class RaceRewards : MonoBehaviour
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
 		}
 		
-		prizeMoney = PrizeMoney.getPrizeMoney(finishPos-1);
+		if(raceType == "Event"){
+			//Nominal amount for an event win
+			prizeMoney = 1000;
+		} else {
+			prizeMoney = PrizeMoney.getPrizeMoney(finishPos-1);
+		}
 		playerMoney += prizeMoney * rewardMultiplier;
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		
-		Debug.Log("Race Type: " + raceType);
+		//Debug.Log("Race Type: " + raceType);
 		switch(raceType){
 			case "Event":
 			//Must win
-				Debug.Log("Checking Event Rewards");
+				//Debug.Log("Checking Event Rewards");
 				if(finishPos == 1){
 					Debug.Log("You won!");
 					if(seriesPrize == "AltPaint"){

@@ -191,22 +191,18 @@ public class AIMovement : MonoBehaviour
 				chosenAlt = "0";
 			} else {
 				altPaints = new List<string>();
-				altPaints.Add("0");
-				altPaints.Add("0");
-				altPaints.Add("0");
-				altPaints.Add("0");
 				//altPaints.Add("0");
+				altPaints.Add("0");
+				altPaints.Add("0");
+				altPaints.Add("0");
+				altPaints.Add("0");
 				AltPaints.loadAlts();
 				for(int i=1;i<10;i++){
 					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
 						Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
-						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) == false){
-							//Do nothing, it has to both exist and not be true
-							Debug.Log(carNum + " Alt " + i + " was not added, either false or null");
-						} else {
-							//It must be null (array only holds 'false' values)
-							Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
+						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != true){
 							altPaints.Add(i.ToString());
+							Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
 						}
 					}
 				}
