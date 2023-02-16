@@ -280,37 +280,37 @@ public class TrackUI : MonoBehaviour
 		
 		PlayerPrefs.SetString("TrackLocation",track);
 		PlayerPrefs.SetString("CurrentCircuit", track);
-		if(GameData.gameFuel >= seriesFuel){
-			GameData.gameFuel-=seriesFuel;
-			
-			PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
-			if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
-				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
-				//Debug.Log("Increment Total Starts: " + seriesPrefix + ", " + carNumber);
-			} else {
-				//Debug.Log("First Start: " + seriesPrefix + ", " + carNumber);
-				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
-			}
-			
-			//Legacy fix for incorrect start count
-			if(PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) < PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber)){
-				PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber , PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber));
-			}
-			
-			//Testing
-			#if UNITY_EDITOR
-			//PlayerPrefs.SetInt("RaceLaps",1);
-			#endif
-			
-			//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
-			PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
-			SceneManager.LoadScene(track);
+		//if(GameData.gameFuel >= seriesFuel){
+			//GameData.gameFuel-=seriesFuel;
+		
+		PlayerPrefs.SetInt("TotalStarts",PlayerPrefs.GetInt("TotalStarts") + 1);
+		if(PlayerPrefs.HasKey("TotalStarts" + seriesPrefix + carNumber)){
+			PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber,PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) + 1);
+			//Debug.Log("Increment Total Starts: " + seriesPrefix + ", " + carNumber);
 		} else {
+			//Debug.Log("First Start: " + seriesPrefix + ", " + carNumber);
+			PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber, 1);
+		}
+		
+		//Legacy fix for incorrect start count
+		if(PlayerPrefs.GetInt("TotalStarts" + seriesPrefix + carNumber) < PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber)){
+			PlayerPrefs.SetInt("TotalStarts" + seriesPrefix + carNumber , PlayerPrefs.GetInt("TotalTop5s" + seriesPrefix + carNumber));
+		}
+		
+		//Testing
+		#if UNITY_EDITOR
+		//PlayerPrefs.SetInt("RaceLaps",1);
+		#endif
+		
+		//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
+		//PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
+		SceneManager.LoadScene(track);
+		/*} else {
 			//Roll back and bail
 			//PlayerPrefs.SetString("StoreFocus","Fuel");
 			//SceneManager.LoadScene("Menus/StoreUI");
 			alertPopup.GetComponent<AlertManager>().showPopup("Not Enough Fuel", "You need more fuel to race. Watch an ad or buy fuel in the Store, or simply wait for the fuel to refill.", "Icons/fuel");
-		}
+		}*/
 	}
 
 	public void startChampionship(){

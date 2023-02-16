@@ -453,6 +453,17 @@ public class PlayFabManager : MonoBehaviour
 				}
 			}
 
+			if(result.Data.ContainsKey("RewardTokens")){
+				int transferTokens = PlayerPrefs.GetInt("TransferTokens");
+				int rewardTokens = int.Parse(result.Data["RewardTokens"].Value);
+				if(rewardTokens != 0){
+					transferTokens += rewardTokens;
+					rewardMessage += "You've received " + rewardTokens + " transfer tokens!\n";
+					rewardTokens = 0;
+					PlayerPrefs.SetInt("TransferTokens", transferTokens);
+					emptyPlayerData("RewardTokens");
+				}
+			}
 			//Fake testing values
 			//result.Data["RewardCar"].Value = "cup2291";
 

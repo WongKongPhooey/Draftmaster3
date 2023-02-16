@@ -174,7 +174,7 @@ public class RaceResultsUI : MonoBehaviour
 		}
 		
 		int fieldSize = PlayerPrefs.GetInt("FieldSize");
-		
+		//Debug.Log("Field Size: " + fieldSize);
 		for(int i=0;i<fieldSize;i++){
 			
 			int carNum = 999;

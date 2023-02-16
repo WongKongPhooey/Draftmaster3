@@ -308,6 +308,7 @@ public class SpawnField : MonoBehaviour {
 				gridRowsCalc = customFieldOrder.Count * 0.5f;
 				gridRows = Mathf.CeilToInt(gridRowsCalc);
 				int fieldInd = 0;
+				int carsTotal = 0;
 				
 				for(int i = 0; i < customFieldOrder.Count;i++){
 					int playerPos = 0;
@@ -330,6 +331,7 @@ public class SpawnField : MonoBehaviour {
 							carNum = customFieldOrder[fieldInd].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							carsTotal++;
 						}
 						fieldInd++;
 					}
@@ -346,6 +348,7 @@ public class SpawnField : MonoBehaviour {
 							carNum = customFieldOrder[fieldInd].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							carsTotal++;
 						}
 						fieldInd++;
 					}
@@ -361,6 +364,7 @@ public class SpawnField : MonoBehaviour {
 							carNum = customFieldOrder[fieldInd].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+							carsTotal++;
 						}
 						if(fieldInd+1 < customFieldOrder.Count){
 							fieldInd++;
@@ -370,6 +374,7 @@ public class SpawnField : MonoBehaviour {
 						}
 					}
 				}
+				PlayerPrefs.SetInt("FieldSize",carsTotal + 1);
 			} else {
 			
 				//Randomised field for start of race

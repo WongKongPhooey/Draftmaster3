@@ -277,7 +277,7 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";
 		
 		//The Closer (Harvick)
-		offlineEventChapter[3,0] = "Big Boots To Fill";
+		/*offlineEventChapter[3,0] = "Big Boots To Fill";
 		offlineChapterImage[3,0] = "cup01livery29";
 		offlineMinClass[3,0] = 2;
 		offlineMinLevel[3,0] = 10;
@@ -303,7 +303,7 @@ public class EventData : MonoBehaviour
 		offlineSetPrizes[3,1] = "15";
 		eventChapterDescriptions[3,1] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
 		
-		/*offlineEventChapter[1,2] = "Sophomore Season";
+		offlineEventChapter[1,2] = "Sophomore Season";
 		offlineChapterImage[1,2] = "LongOval";
 		offlineMinClass[1,2] = 4;
 		offlineMinLevel[1,2] = 15;
@@ -409,7 +409,7 @@ public class EventData : MonoBehaviour
 		offlineCustomFieldOrder[4,1] = "20,x,x,x,x,x,x,x,5,x,x,x,x,x,2,x,x,x,x,x,6,x,x,x,11,x,x,x,22,x,24,x,x,x,45,x,x,x,14,x,player,x,9,x,x,x,21";
 		eventChapterDescriptions[4,1] = "October 30th 2022, Chastain goes full speed along the wall to qualify for the playoffs final.";
 		
-		offlineEventChapter[4,2] = "Austin As Moses";
+		/*offlineEventChapter[4,2] = "Austin As Moses";
 		offlineChapterImage[4,2] = "cup22livery3";
 		offlineMinClass[4,2] = 1;
 		offlineMinLevel[4,2] = 1;
@@ -420,7 +420,7 @@ public class EventData : MonoBehaviour
 		offlineMoment[4,2] = "DaytonaRain22";
 		offlineTracklists[4,2] = "1";
 		offlinePrizes[4,2] = "1Star";
-		eventChapterDescriptions[4,2] = "August 28th 2022, everyone hits the rain and spins, except A.Dillon, who moves from 16th to 1st.";
+		eventChapterDescriptions[4,2] = "August 28th 2022, everyone hits the rain and spins, except A.Dillon, who moves from 16th to 1st.";*/
 		
 		if(PlayerPrefs.GetString("MomentName") != ""){
 			//There's a Live Moment to add

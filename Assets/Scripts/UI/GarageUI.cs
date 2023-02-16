@@ -128,10 +128,14 @@ public class GarageUI : MonoBehaviour
 			int unlockGears = GameData.unlockGears(unlockClass);
 			
 			if(carUnlocked == 1){
-				if(carGears >= classMax){
+				if((carGears >= classMax)&&(carClass < 6)){
 					carActionBtn.SetActive(true);
 					TMPro.TMP_Text carActionBtnLbl = carActionBtn.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 					carActionBtnLbl.text = "Upgrade";
+				}
+				if(carClass > 6){
+					PlayerPrefs.SetInt(seriesPrefix + i + "Class",6);
+					carClass = 6;
 				}
 			}
 			

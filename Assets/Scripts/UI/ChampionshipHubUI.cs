@@ -82,6 +82,11 @@ public class ChampionshipHubUI : MonoBehaviour
 		nextTrackLabel = GameObject.Find("NextTrackLabel");
 		
 		if((championshipRound + 1) > championshipLength){
+			if(championshipLength <= 1){
+				//Bugged? Stop the infinite rewards glitch
+				PlayerPrefs.DeleteKey("ChampionshipSubseries");
+				SceneManager.LoadScene("Menus/MainMenu");
+			}
 			hubTitle.GetComponent<TMPro.TMP_Text>().text = "Championship Finished";
 			nextRound.GetComponent<TMPro.TMP_Text>().text = "Championship Over";
 			nextTrackLabel.GetComponent<TMPro.TMP_Text>().text = MiscScripts.PositionPostfix(championshipPosition) + " Place";

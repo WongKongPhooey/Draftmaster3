@@ -23,6 +23,9 @@ public class CommentaryManager : MonoBehaviour
 		} else {
 			cooldown = 0;
 		}
+		if(Movement.wreckOver == true){
+			audioSource.Stop();
+		}
     }
 	
 	public void commentate(string phrase){
