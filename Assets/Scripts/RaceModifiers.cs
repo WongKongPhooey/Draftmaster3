@@ -9,6 +9,7 @@ public class RaceModifiers : MonoBehaviour
 	
     // Start is called before the first frame update
     void Awake(){
+		modifier = "";
 		checkModifiers();
     }
 
