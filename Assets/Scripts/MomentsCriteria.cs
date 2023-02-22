@@ -204,8 +204,9 @@ public class MomentsCriteria : MonoBehaviour
 				//If more cars in wreck than the minimum, true
 				if(int.Parse(criteriaCheckA) >= int.Parse(criteriaValue)){
 					complete = true;
+					Debug.Log(criteriaCheckA + " Cars In Wreck ,More Than " + criteriaValue);
 				}
-				Debug.Log(criteriaCheckA + " Cars In Wreck. Need " + criteriaValue);
+				Debug.Log(criteriaCheckA + " Cars In Wreck. Needed " + criteriaValue);
 				break;
 			case "CarWrecks":
 				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);

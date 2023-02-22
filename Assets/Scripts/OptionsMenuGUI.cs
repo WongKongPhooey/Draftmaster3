@@ -14,6 +14,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 	public static string difficultyDistance;
 	public static int cameraRotate;
 	public static int cameraZoom;
+	public static int wreckFreq;
 	public static int local2Player;
 	public static int audioOn;
 	public static int laneChange;
@@ -25,6 +26,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 	public static string audioOnName;
 	public static string cameraRotateName;
 	public static string cameraZoomName;
+	public static string wreckFreqName;
 	public static string local2PlayerName;
 	public static string laneChangeName;
 	public Vector2 scrollPosition = Vector2.zero;
@@ -83,6 +85,19 @@ public class OptionsMenuGUI : MonoBehaviour {
 		} else {
 			cameraZoom = 0;
 			cameraZoomName = "Close";
+		}
+		wreckFreq = 20;
+		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
+		switch(wreckFreq){
+		case 0:
+			wreckFreqName = "Rare";
+			break;
+		case 20:
+			wreckFreqName = "Normal";
+			break;
+		case 40:
+			wreckFreqName = "Often";
+			break;
 		}
 		if(PlayerPrefs.HasKey("AudioOn")){
 			audioOn = PlayerPrefs.GetInt("AudioOn");
@@ -206,6 +221,44 @@ public class OptionsMenuGUI : MonoBehaviour {
 			PlayerPrefs.SetInt("CameraZoom", cameraZoom);
 		}
 		GUI.Label(new Rect(widthblock * 2, heightblock * 12, widthblock * 9, heightblock * 3), "Camera Zoom: " + cameraZoomName);
+
+		if (GUI.Button(new Rect(widthblock * 13, heightblock * 16, widthblock * 1, heightblock * 2), "<")){
+			wreckFreq-=20;
+			if(wreckFreq < 0){
+				wreckFreq = 40;
+			}
+			switch(wreckFreq){
+				case 0:
+					wreckFreqName = "Rare";
+					break;
+				case 20:
+					wreckFreqName = "Normal";
+					break;
+				case 40:
+					wreckFreqName = "Often";
+					break;
+			}
+			PlayerPrefs.SetInt("WreckFreq", wreckFreq);
+		}
+		if (GUI.Button(new Rect(widthblock * 14, heightblock * 16, widthblock * 1, heightblock * 2), ">")){
+			wreckFreq+=20;
+			if(wreckFreq > 40){
+				wreckFreq = 0;
+			}
+			switch(wreckFreq){
+				case 0:
+					wreckFreqName = "Rare";
+					break;
+				case 20:
+					wreckFreqName = "Normal";
+					break;
+				case 40:
+					wreckFreqName = "Often";
+					break;
+			}
+			PlayerPrefs.SetInt("WreckFreq", wreckFreq);
+		}
+		GUI.Label(new Rect(widthblock * 2, heightblock * 16, widthblock * 9, heightblock * 3), "Wrecks: " + wreckFreqName);
 
 		GUI.EndScrollView();
 

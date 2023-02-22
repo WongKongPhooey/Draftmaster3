@@ -46,6 +46,9 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject timeTrialDescUI;	
 	TMPro.TMP_Text timeTrialDescUILabel;
 	
+	public GameObject liveChallengeDescUI;	
+	TMPro.TMP_Text liveChallengeDescUILabel;
+	
 	public GameObject latestNews;
 	
 	GameObject alertTitle;
@@ -159,6 +162,8 @@ public class MainMenuUI : MonoBehaviour {
 		timeTrialDescUI = GameObject.Find("TimeTrialDesc");
 		timeTrialDescUILabel = timeTrialDescUI.GetComponent<TMPro.TMP_Text>();
 			
+		liveChallengeDescUI = GameObject.Find("LiveChallenge");
+		liveChallengeDescUILabel = liveChallengeDescUI.GetComponent<TMPro.TMP_Text>();
 		
 		if(PlayerPrefs.GetString("MessageAlert") != ""){
 			latestNews = GameObject.Find("LatestNews");
@@ -212,20 +217,26 @@ public class MainMenuUI : MonoBehaviour {
 			audioOn = PlayerPrefs.GetInt("AudioOn");
 		}
 		if(audioOn == 1){
-			crowdNoise.volume = 0.25f;
+			crowdNoise.volume = 0.15f;
 		} else {
 			crowdNoise.volume = 0.0f;
 		}
 		
         loadCurrentChampionshipInfo();
-		checkForTimeTrial();
+		checkForPlayfabUpdates();
     }
 
-	void checkForTimeTrial(){
+	void checkForPlayfabUpdates(){
 		if(PlayerPrefs.GetString("LiveTimeTrial") == ""){
 			timeTrialDescUILabel.text = "There is No Active Time Trial";
 		} else {
 			timeTrialDescUILabel.text = "Set your fastest lap in any race series at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
+		}
+		
+		if(PlayerPrefs.GetString("MomentName") == ""){
+			liveChallengeDescUILabel.text = "";
+		} else {
+			liveChallengeDescUILabel.text = "Live Moments Challenge\n" + PlayerPrefs.GetString("MomentName") + "";
 		}
 	}
 
@@ -261,6 +272,8 @@ public class MainMenuUI : MonoBehaviour {
 
 	void firstTimeInit(){
 		PlayerPrefs.SetInt("CameraRotate", 1);
+		PlayerPrefs.SetInt("CameraZoom", 1);
+		PlayerPrefs.SetInt("WreckFreq", 20);
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("TargetVersion", Application.version);
@@ -271,6 +284,6 @@ public class MainMenuUI : MonoBehaviour {
     // Update is called once per frame
     void Update()
     {
-        checkForTimeTrial();
+        checkForPlayfabUpdates();
     }
 }

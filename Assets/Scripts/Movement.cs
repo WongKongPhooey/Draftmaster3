@@ -71,6 +71,8 @@ public class Movement : MonoBehaviour {
 	public static int totalWreckers;
 	public static float wreckDamage;
 	
+	int wreckFreq;
+	
 	float targetForce;
 	float windForce;
 	float forceSmoothing;
@@ -186,10 +188,12 @@ public class Movement : MonoBehaviour {
 		totalWreckers = 0;
 		wreckDamage = 0;
 		
+		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
+		
 		pacing = true;
 		
 		carEngine = audioHolder.GetComponent<AudioSource>();
-		carEngine.volume = 0.2f;
+		carEngine.volume = 0.15f;
 		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
@@ -1101,10 +1105,10 @@ public class Movement : MonoBehaviour {
 			//Subsequent hits based on rotation angle
 			float spinAngle = this.transform.localRotation.eulerAngles.y;
 			//Debug.Log("Car rotation: " + spinAngle);
-			wreckTorque = Random.Range(-0.15f, 0.15f) * 10;
+			wreckTorque = Random.Range(-0.25f, 0.25f) * 10;
 		} else {
 			//First impact, car will start straight
-			wreckTorque = Random.Range(-0.15f, 0.15f) * 10;
+			wreckTorque = Random.Range(-0.25f, 0.25f) * 10;
 		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 		
@@ -1169,8 +1173,8 @@ public class Movement : MonoBehaviour {
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.3f;
-		slideX = ((baseDecel + 1) / 3f) + 20f;
+		baseDecel-=0.27f;
+		slideX = ((baseDecel + 1) / 4f) + 20f;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
 		//         -200f = -6x, -140f = 0x, 0f = 14f
@@ -1186,9 +1190,9 @@ public class Movement : MonoBehaviour {
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			if(wallrideMod == true){
 				baseDecel+=0.15f;
-				this.GetComponent<ConstantForce>().force = new Vector3(10f, 0f,40f);
+				this.GetComponent<ConstantForce>().force = new Vector3(10f,0f,40f);
 			} else {
-				this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+				this.GetComponent<ConstantForce>().force = new Vector3(slideX,0f,windForce);
 				//Debug.Log("Side Force: " + slideX);
 			}
 			//Debug.Log("Apply side force to wreck on turn");
@@ -1205,7 +1209,7 @@ public class Movement : MonoBehaviour {
 		if(wallrideMod == true){
 			this.GetComponent<Rigidbody>().mass = 2;
 		} else {
-			this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 10) + 2;
+			this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 20) + 2;
 		}
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		

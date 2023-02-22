@@ -54,15 +54,17 @@ public class CommentaryManager : MonoBehaviour
 					rand = Random.Range(0,commentaryLines.whiteFlagClips.Length);
 					phraseClip = commentaryLines.whiteFlagClips[rand];
 					break;
-				case "":
-					break;
 				default:
+					phraseClip = null;
 					break;
 			}
 			cooldown = ((int)phraseClip.length * 60) + commsFreqGap;
 			//Debug.Log("Cooldown: " + cooldown);
 			if (!audioSource.isPlaying){
-				audioSource.PlayOneShot(phraseClip);
+				if(phraseClip != null){
+					//Debug.Log("Play Commentary" + phraseClip.name);
+					audioSource.PlayOneShot(phraseClip);
+				}
 			}
 		}
 	}

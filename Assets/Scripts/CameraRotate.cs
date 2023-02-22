@@ -186,7 +186,7 @@ public class CameraRotate : MonoBehaviour {
 		
 		audioOn = PlayerPrefs.GetInt("AudioOn");
 		if(audioOn == 1){
-			carEngine.volume = 0.25f;
+			carEngine.volume = 0.15f;
 			crowdNoise.volume = 0.05f;
 		} else {
 			carEngine.volume = 0.0f;
@@ -251,11 +251,11 @@ public class CameraRotate : MonoBehaviour {
 				//Only save at the line if not currently wrecking
 				if((Movement.isWrecking == false)||(lap >= (raceEnd + 1))){
 					cautionSummaryMenu.SetActive(true);
-					Time.timeScale = 0.0f;
 					Debug.Log("Crossed line, show the finish line");
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0;
 					crowdNoise.volume = 0;
+					Time.timeScale = 0.0f;
 					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
@@ -290,7 +290,7 @@ public class CameraRotate : MonoBehaviour {
 
 		if(audioOn == 1){
 			if(lap == (PlayerPrefs.GetInt("RaceLaps"))){
-				if(crowdNoise.volume < 0.25f){
+				if(crowdNoise.volume < 0.15f){
 					crowdNoise.volume += 0.002f;
 				}
 			}

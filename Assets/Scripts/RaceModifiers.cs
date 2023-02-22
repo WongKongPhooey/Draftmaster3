@@ -13,7 +13,17 @@ public class RaceModifiers : MonoBehaviour
 		checkModifiers();
     }
 
+	public static void resetModifiers(){
+		Movement.delicateMod = false;
+		Movement.invincibleMod = false;
+		Movement.bulldozerMod = false;
+		Movement.suddenshowerMod = false;
+		Movement.wallrideMod = false;
+	}
+
 	public static void checkModifiers(){
+		resetModifiers();
+		
 		if(PlayerPrefs.HasKey("RaceModifier")){
 			modifier = PlayerPrefs.GetString("RaceModifier");
 			//Debug.Log("Modifier Active: " + modifier);
@@ -24,9 +34,9 @@ public class RaceModifiers : MonoBehaviour
 			//If current event matches the Live Moment ID
 			if(PlayerPrefs.GetString("CurrentSeriesIndex") == "49EVENT"){
 				modifier = PlayerPrefs.GetString("LiveMomentMods");
-				Debug.Log("Live Modifier Active: " + modifier);
+				//Debug.Log("Live Modifier Active: " + modifier);
 			}
-			Debug.Log("Live Modifier Not A Match");
+			//Debug.Log("Live Modifier Not A Match");
 		}
 		
         switch(modifier){

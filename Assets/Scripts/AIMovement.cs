@@ -35,10 +35,13 @@ public class AIMovement : MonoBehaviour
 	public bool isWrecking;
 	public bool wreckOver;
 	float baseDecel;
+	float randDecel;
 	float slideX;
 	public float wreckDecel;
 	public float speedDiffPadding;
 	float wreckAngle;
+	float wreckSlideRand;
+	float wreckFlatRand;
 	int antiGlitch;
 	public bool playerWrecked;
 	float targetForce;
@@ -46,6 +49,8 @@ public class AIMovement : MonoBehaviour
 	float forceSmoothing;
 	public int wreckProbability;
 	public bool hitByPlayer;
+	
+	int wreckFreq;
 	
 	public static int maxTandem;
 	public static float coolOffSpace;
@@ -114,9 +119,13 @@ public class AIMovement : MonoBehaviour
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
 		wreckOver = false;
-		wreckProbability = 2;
+		wreckSlideRand = Random.Range(5f,15f);
+		wreckFlatRand = Random.Range(0f,-3f);
 		hitByPlayer = false;
 		speedDiffPadding = 0.2f;
+		
+		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
+		wreckProbability = (wreckFreq * 2) + 1;
 		
         onTurn = false;
 		tandemDraft = false;
@@ -185,7 +194,7 @@ public class AIMovement : MonoBehaviour
 		if(PlayerPrefs.HasKey("RaceAltPaint" + carNumber)){
 			//Load the pre-picked alt paint
 			chosenAlt = PlayerPrefs.GetString("RaceAltPaint" + carNumber);
-			Debug.Log("Remembered to show the #" + carNumber + " Alt");
+			//Debug.Log("Remembered to show the #" + carNumber + " Alt");
 		} else {
 			if(PlayerPrefs.HasKey("RaceAltPaintsChosen")){
 				chosenAlt = "0";
@@ -199,10 +208,10 @@ public class AIMovement : MonoBehaviour
 				AltPaints.loadAlts();
 				for(int i=1;i<10;i++){
 					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-						Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
+						//Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
 						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != true){
 							altPaints.Add(i.ToString());
-							Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
+							//Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
 						}
 					}
 				}
@@ -211,7 +220,7 @@ public class AIMovement : MonoBehaviour
 				if(chosenAlt != "0"){
 					PlayerPrefs.SetInt("RaceAltPaintsChosen",1);
 					PlayerPrefs.SetString("RaceAltPaint" + carNumber,chosenAlt);
-					Debug.Log("Set the #" + carNumber + " Alt");
+					//Debug.Log("Set the #" + carNumber + " Alt");
 				}
 			}
 		}
@@ -227,7 +236,7 @@ public class AIMovement : MonoBehaviour
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			if(chosenAlt != "0"){
-				Debug.Log("Custom alt spawned - Car #" + carNumber);
+				//Debug.Log("Custom alt spawned - Car #" + carNumber);
 				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
 			} else {
 				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
@@ -314,7 +323,7 @@ public class AIMovement : MonoBehaviour
 			if(dooredStrength > 95){
 				dooredStrength = 95;
 			}
-			wreckProbability = 3;
+			wreckProbability = (wreckFreq * 3) + 1;
 		}
 
 		maxDraftDistance = 9 + carRarity;
@@ -323,7 +332,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if (DriverNames.getType(seriesPrefix,carNum) == "Rookie"){
-			wreckProbability = 4;
+			wreckProbability = (wreckFreq * 3) + 1;
 		}
 
         movingLane = false;
@@ -349,6 +358,7 @@ public class AIMovement : MonoBehaviour
 			
 			//Delicate mod - Everybody wrecks
 			if((isWrecking == false)&&(Movement.delicateMod == true)){
+				//Debug.Log("Wreck: Delicate Mod");
 				startWreck();
 			}
 			
@@ -357,6 +367,7 @@ public class AIMovement : MonoBehaviour
 				bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
 				if(joinWreck == true){
 					if(isWrecking == false){
+						//Debug.Log("Wreck: Joining In");
 						startWreck();
 						this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 					} else {
@@ -370,6 +381,7 @@ public class AIMovement : MonoBehaviour
 				bool joinWreck = Movement.isWrecking;
 				if(joinWreck == true){
 					if(isWrecking == false){
+						//Debug.Log("Wreck: Joining Player");
 						startWreck();
 						this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 					} else {
@@ -440,6 +452,35 @@ public class AIMovement : MonoBehaviour
 		if(laneticker != 0){
 			antiGlitch++;
 		}
+		
+		//Join wreck
+		if(carHit.gameObject.tag == "AICar"){
+			bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
+			if(joinWreck == true){
+				if(isWrecking == false){
+					//Debug.Log("Wreck: Joining In");
+					startWreck();
+					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+				} else {
+					//Share some wreck inertia
+					float opponentWreckDecel = carHit.gameObject.GetComponent<AIMovement>().wreckDecel;
+					wreckDecel += ((opponentWreckDecel - wreckDecel) / 2);
+				}
+			}
+		}
+		if(carHit.gameObject.tag == "Player"){
+			bool joinWreck = Movement.isWrecking;
+			if(joinWreck == true){
+				if(isWrecking == false){
+					//Debug.Log("Wreck: Joining Player");
+					startWreck();
+					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+				} else {
+					//Share some wreck inertia
+					wreckDecel += ((Movement.playerWreckDecel - wreckDecel) / 2);
+				}
+			}
+		}
     }
 	
 	void OnCollisionExit(Collision carHit) {
@@ -452,7 +493,12 @@ public class AIMovement : MonoBehaviour
 		if(tandemDraft == false){
 			float midSpeed = bumpSpeed - AISpeed;
 			if((midSpeed > 5f)||(midSpeed < -5f)){
-				startWreck();
+				//Debug.Log("Wreck: Strong Push");
+				float rng = Random.Range(0,500);
+				//Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
+				if(wreckProbability >= rng){
+					startWreck();
+				}
 			}
 			//For some reason changing this makes the player bump-draft mega fast!
 			AISpeed += midSpeed/4;
@@ -508,10 +554,10 @@ public class AIMovement : MonoBehaviour
 		lap = CameraRotate.lap;
 		
 		if(CameraRotate.overtime == true){
-			wreckProbability = 1;
+			wreckProbability = wreckFreq + 1;
 			
 			if(CameraRotate.lap == CameraRotate.raceEnd){
-				wreckProbability = 4;
+				wreckProbability = (wreckFreq * 5) + 1;
 			}
 		}
 		
@@ -726,12 +772,13 @@ public class AIMovement : MonoBehaviour
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
-				
-				float rng = Random.Range(0,100);
+				float rng = Random.Range(0,500);
+				Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
 				if((wreckProbability >= rng)||
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
 					startWreck();
+					Debug.Log("Wreck: Random Wall");
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 				}
 			}
@@ -757,13 +804,13 @@ public class AIMovement : MonoBehaviour
 				if(oppCar.GetComponent<AIMovement>() != null){
 					if(oppCar.GetComponent<AIMovement>().isWrecking == true){
 						avoidWreck();
-						Debug.Log(carName + " Avoids Wreck");
+						//Debug.Log(carName + " Avoids Wreck");
 					}
 				} else {
 					if(oppCar.GetComponent<Movement>() != null){
 						if(Movement.isWrecking == true){
 							avoidWreck();
-							Debug.Log(carName + " Avoids Wrecking Player");
+							//Debug.Log(carName + " Avoids Wrecking Player");
 						}
 					}
 				}
@@ -1388,10 +1435,11 @@ public class AIMovement : MonoBehaviour
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
 		baseDecel = -0.25f;
+		randDecel = Random.Range(0.01f,0.05f);
 		slideX = 0;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.15f, 0.15f) * 10, 0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.25f, 0.25f) * 10, 0f);
 		
 		//Tire smoke
 		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
@@ -1431,8 +1479,8 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.3f;
-		slideX = ((baseDecel + 1) / 3f) + 20f;
+		baseDecel-=(0.3f - randDecel);
+		slideX = ((baseDecel + 1) / 5f) + wreckSlideRand;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
 		//         -200f = -6x, -140f = 0x, 0f = 14f
@@ -1441,11 +1489,6 @@ public class AIMovement : MonoBehaviour
 		
 		updateWindForce();
 		
-		if(CameraRotate.onTurn == true){
-			slideX = 10f;
-		} else {
-			slideX = -3f;
-		}
 		//baseDecel-=0.02f * 1;//CameraRotate.currentTurnSharpness();
 		
 		// Move relative to stopped player
@@ -1462,14 +1505,22 @@ public class AIMovement : MonoBehaviour
 			if(windForce < 0){
 				windForce = -windForce;
 			}
-			this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+			if(CameraRotate.onTurn == true){
+				this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+			} else {
+				this.GetComponent<ConstantForce>().force = new Vector3(wreckFlatRand, 0f,windForce);
+			}
 			this.GetComponent<Rigidbody>().velocity = new Vector3(slideX, 0f,windForce/10f);
 		} else {
 			//Standard relativity
 			targetForce = wreckDecel;
-			this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+			//this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+			if(CameraRotate.onTurn == true){
+				this.GetComponent<ConstantForce>().force = new Vector3(slideX, 0f,windForce);
+			} else {
+				this.GetComponent<ConstantForce>().force = new Vector3(wreckFlatRand, 0f,windForce);
+			}
 			//this.GetComponent<Rigidbody>().velocity = new Vector3(slideX, 0f,windForce);
-		
 		}
 
 		wreckDecel = baseDecel - (50f * wreckSine);

@@ -44,7 +44,7 @@ public class EventData : MonoBehaviour
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		offlineEvent[2] = "All Stars";
-		offlineEvent[3] = "The Closer";
+		//offlineEvent[3] = "The Closer";
 		offlineEvent[4] = "Moments";
 		
 		switch(PlayerPrefs.GetString("SpecialEvent")){
@@ -59,14 +59,14 @@ public class EventData : MonoBehaviour
 		offlineEventType[0] = "Progression";
 		offlineEventType[1] = "Progression";
 		offlineEventType[2] = "Replay";
-		offlineEventType[3] = "Progression";
+		//offlineEventType[3] = "Progression";
 		offlineEventType[4] = "Replay";
 		offlineEventType[9] = "Replay";
 		
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "2,6,10";
 		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
-		offlineEventWeek[3] = "1,5,9";
+		//offlineEventWeek[3] = "1,5,9";
 		offlineEventWeek[4] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[9] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		
