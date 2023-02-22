@@ -86,7 +86,7 @@ public class OptionsMenuGUI : MonoBehaviour {
 			cameraZoom = 0;
 			cameraZoomName = "Close";
 		}
-		wreckFreq = 20;
+		wreckFreq = 10;
 		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
 		switch(wreckFreq){
 		case 0:
@@ -223,36 +223,36 @@ public class OptionsMenuGUI : MonoBehaviour {
 		GUI.Label(new Rect(widthblock * 2, heightblock * 12, widthblock * 9, heightblock * 3), "Camera Zoom: " + cameraZoomName);
 
 		if (GUI.Button(new Rect(widthblock * 13, heightblock * 16, widthblock * 1, heightblock * 2), "<")){
-			wreckFreq-=20;
+			wreckFreq-=10;
 			if(wreckFreq < 0){
-				wreckFreq = 40;
+				wreckFreq = 20;
 			}
 			switch(wreckFreq){
 				case 0:
 					wreckFreqName = "Rare";
 					break;
-				case 20:
+				case 10:
 					wreckFreqName = "Normal";
 					break;
-				case 40:
+				case 20:
 					wreckFreqName = "Often";
 					break;
 			}
 			PlayerPrefs.SetInt("WreckFreq", wreckFreq);
 		}
 		if (GUI.Button(new Rect(widthblock * 14, heightblock * 16, widthblock * 1, heightblock * 2), ">")){
-			wreckFreq+=20;
-			if(wreckFreq > 40){
+			wreckFreq+=10;
+			if(wreckFreq > 20){
 				wreckFreq = 0;
 			}
 			switch(wreckFreq){
 				case 0:
 					wreckFreqName = "Rare";
 					break;
-				case 20:
+				case 10:
 					wreckFreqName = "Normal";
 					break;
-				case 40:
+				case 20:
 					wreckFreqName = "Often";
 					break;
 			}
