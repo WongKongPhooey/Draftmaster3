@@ -92,10 +92,10 @@ public class OptionsMenuGUI : MonoBehaviour {
 		case 0:
 			wreckFreqName = "Rare";
 			break;
-		case 20:
+		case 10:
 			wreckFreqName = "Normal";
 			break;
-		case 40:
+		case 20:
 			wreckFreqName = "Often";
 			break;
 		}
