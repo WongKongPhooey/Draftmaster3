@@ -448,6 +448,23 @@ public class GarageUI : MonoBehaviour
 	public void starterCars(){
 		Debug.Log("Check starters");
 		bool carsAdded = false;
+		
+		//Give a free Gragson for Cup '23
+		if(PlayerPrefs.GetInt("cup2342Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2342Unlocked",1);
+			PlayerPrefs.SetInt("cup2342Gears",0);
+			PlayerPrefs.SetInt("cup2342Class",1);
+			carsAdded = true;
+		}
+		
+		//Give a free Pastrana for Cup '23
+		if(PlayerPrefs.GetInt("cup2367Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2367Unlocked",1);
+			PlayerPrefs.SetInt("cup2367Gears",0);
+			PlayerPrefs.SetInt("cup2367Class",1);
+			carsAdded = true;
+		}
+		
 		//Give a free McLeod for Cup '22
 		if(PlayerPrefs.GetInt("cup2278Unlocked") == 0){
 			PlayerPrefs.SetInt("cup2278Unlocked",1);
