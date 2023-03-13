@@ -258,83 +258,93 @@ public class GameData : MonoBehaviour {
 	
 	public static void setRewards(){
 		levelUpRewards[2,0] = "Gears";
-		levelUpRewards[2,1] = "5";
-		levelUpRewards[3,0] = "Coins";
-		levelUpRewards[3,1] = "5000";
+		levelUpRewards[2,1] = "10";
+		levelUpRewards[3,0] = "Gears";
+		levelUpRewards[3,1] = "10";
 		levelUpRewards[4,0] = "Gears";
-		levelUpRewards[4,1] = "5";
+		levelUpRewards[4,1] = "10";
 		levelUpRewards[5,0] = "Transfer";
 		levelUpRewards[5,1] = "1";
 		levelUpRewards[6,0] = "Gears";
-		levelUpRewards[6,1] = "5";
-		levelUpRewards[7,0] = "Coins";
-		levelUpRewards[7,1] = "5000";
+		levelUpRewards[6,1] = "20";
+		levelUpRewards[7,0] = "Gears";
+		levelUpRewards[7,1] = "20";
 		levelUpRewards[8,0] = "Gears";
-		levelUpRewards[8,1] = "5";
-		levelUpRewards[9,0] = "Coins";
-		levelUpRewards[9,1] = "5000";
+		levelUpRewards[8,1] = "20";
+		levelUpRewards[9,0] = "Gears";
+		levelUpRewards[9,1] = "20";
 		levelUpRewards[10,0] = "Transfer";
 		levelUpRewards[10,1] = "1";
-		levelUpRewards[11,0] = "Coins";
-		levelUpRewards[11,1] = "10000";
+		levelUpRewards[11,0] = "Gears";
+		levelUpRewards[11,1] = "35";
 		levelUpRewards[12,0] = "Gears";
-		levelUpRewards[12,1] = "10";
-		levelUpRewards[13,0] = "Coins";
-		levelUpRewards[13,1] = "10000";
+		levelUpRewards[12,1] = "35";
+		levelUpRewards[13,0] = "Gears";
+		levelUpRewards[13,1] = "35";
 		levelUpRewards[14,0] = "Gears";
-		levelUpRewards[14,1] = "10";
+		levelUpRewards[14,1] = "35";
 		levelUpRewards[15,0] = "Transfer";
-		levelUpRewards[15,1] = "1";
+		levelUpRewards[15,1] = "2";
 		levelUpRewards[16,0] = "Gears";
-		levelUpRewards[16,1] = "10";
-		levelUpRewards[17,0] = "Coins";
-		levelUpRewards[17,1] = "10000";
+		levelUpRewards[16,1] = "50";
+		levelUpRewards[17,0] = "Gears";
+		levelUpRewards[17,1] = "50";
 		levelUpRewards[18,0] = "Gears";
-		levelUpRewards[18,1] = "10";
-		levelUpRewards[19,0] = "Coins";
-		levelUpRewards[19,1] = "10000";
+		levelUpRewards[18,1] = "50";
+		levelUpRewards[19,0] = "Gears";
+		levelUpRewards[19,1] = "50";
 		levelUpRewards[20,0] = "Transfer";
-		levelUpRewards[20,1] = "1";
-		levelUpRewards[21,0] = "Coins";
-		levelUpRewards[21,1] = "20000";
+		levelUpRewards[20,1] = "2";
+		levelUpRewards[21,0] = "Gears";
+		levelUpRewards[21,1] = "75";
 		levelUpRewards[22,0] = "Gears";
-		levelUpRewards[22,1] = "15";
-		levelUpRewards[23,0] = "Coins";
-		levelUpRewards[23,1] = "20000";
+		levelUpRewards[22,1] = "75";
+		levelUpRewards[23,0] = "Gears";
+		levelUpRewards[23,1] = "75";
 		levelUpRewards[24,0] = "Gears";
-		levelUpRewards[24,1] = "15";
+		levelUpRewards[24,1] = "75";
 		levelUpRewards[25,0] = "Transfer";
-		levelUpRewards[25,1] = "1";
+		levelUpRewards[25,1] = "3";
 		levelUpRewards[26,0] = "Gears";
-		levelUpRewards[26,1] = "15";
-		levelUpRewards[27,0] = "Coins";
-		levelUpRewards[27,1] = "20000";
+		levelUpRewards[26,1] = "100";
+		levelUpRewards[27,0] = "Gears";
+		levelUpRewards[27,1] = "100";
 		levelUpRewards[28,0] = "Gears";
-		levelUpRewards[28,1] = "15";
-		levelUpRewards[29,0] = "Coins";
-		levelUpRewards[29,1] = "20000";
+		levelUpRewards[28,1] = "100";
+		levelUpRewards[29,0] = "Gears";
+		levelUpRewards[29,1] = "100";
 		levelUpRewards[30,0] = "Transfer";
-		levelUpRewards[30,1] = "1";
-		levelUpRewards[31,0] = "Coins";
-		levelUpRewards[31,1] = "50000";
+		levelUpRewards[30,1] = "3";
+		levelUpRewards[31,0] = "Gears";
+		levelUpRewards[31,1] = "150";
 		levelUpRewards[32,0] = "Gears";
-		levelUpRewards[32,1] = "20";
-		levelUpRewards[33,0] = "Coins";
-		levelUpRewards[33,1] = "50000";
+		levelUpRewards[32,1] = "150";
+		levelUpRewards[33,0] = "Gears";
+		levelUpRewards[33,1] = "150";
 		levelUpRewards[34,0] = "Gears";
-		levelUpRewards[34,1] = "20";
+		levelUpRewards[34,1] = "150";
 		levelUpRewards[35,0] = "Transfer";
-		levelUpRewards[35,1] = "1";
+		levelUpRewards[35,1] = "5";
 		levelUpRewards[36,0] = "Gears";
-		levelUpRewards[36,1] = "20";
-		levelUpRewards[37,0] = "Coins";
-		levelUpRewards[37,1] = "50000";
+		levelUpRewards[36,1] = "200";
+		levelUpRewards[37,0] = "Gears";
+		levelUpRewards[37,1] = "200";
 		levelUpRewards[38,0] = "Gears";
-		levelUpRewards[38,1] = "20";
-		levelUpRewards[39,0] = "Coins";
-		levelUpRewards[39,1] = "50000";
+		levelUpRewards[38,1] = "200";
+		levelUpRewards[39,0] = "Gears";
+		levelUpRewards[39,1] = "200";
 		levelUpRewards[40,0] = "Transfer";
-		levelUpRewards[40,1] = "1";
+		levelUpRewards[40,1] = "5";
+		levelUpRewards[41,0] = "Gears";
+		levelUpRewards[41,1] = "250";
+		levelUpRewards[42,0] = "Gears";
+		levelUpRewards[42,1] = "250";
+		levelUpRewards[43,0] = "Gears";
+		levelUpRewards[43,1] = "250";
+		levelUpRewards[44,0] = "Gears";
+		levelUpRewards[44,1] = "250";
+		levelUpRewards[45,0] = "Transfer";
+		levelUpRewards[45,1] = "10";
 	}
 	
 	public static string levelUpReward(int level){
@@ -559,19 +569,34 @@ public class GameData : MonoBehaviour {
 				return 5300;
 				break;
 			case 36:
-				return 6000;
+				return 5800;
 				break;
 			case 37:
-				return 7000;
+				return 6500;
 				break;
 			case 38:
-				return 8000;
+				return 7200;
 				break;
 			case 39:
-				return 9000;
+				return 8000;
 				break;
 			case 40:
+				return 9000;
+				break;
+			case 41:
 				return 10000;
+				break;
+			case 42:
+				return 11200;
+				break;
+			case 43:
+				return 12500;
+				break;
+			case 44:
+				return 14000;
+				break;
+			case 45:
+				return 16000;
 				break;
 			default:
 				return 9999999;

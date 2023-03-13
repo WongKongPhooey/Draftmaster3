@@ -85,16 +85,17 @@ public class GarageUI : MonoBehaviour
 				continue;
 			}
 			
-			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
-				
-			}
-			
 			if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
 				int altId = PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint");
 				activeTile = getAltPaintTileDesign(seriesPrefix,i,altId);
 			} else {
 				activeTile = carTile;
 			}
+			
+			//Testing - Unlock All		
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",10);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;

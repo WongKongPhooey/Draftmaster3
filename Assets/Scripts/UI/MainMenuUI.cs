@@ -111,6 +111,9 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("RaceModifier")){
 			PlayerPrefs.DeleteKey("RaceModifier");
 		}
+		if(PlayerPrefs.HasKey("RaceAILevel")){
+			PlayerPrefs.DeleteKey("RaceAILevel");
+		}
 		
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			PlayerPrefs.DeleteKey("SpawnFromCaution");
@@ -143,6 +146,11 @@ public class MainMenuUI : MonoBehaviour {
 		
 		levelLabel = GameObject.Find("LevelLabel");
 		levelLabel.GetComponent<TMPro.TMP_Text>().text = "Level " + level;
+		
+		RectTransform carGearsProgressUI = GameObject.Find("LevelProgress").GetComponent<RectTransform>();
+		float gearsProgressUIWidth = Mathf.Round((100 / (float)levelExp) * (float)exp) + 1;
+		Debug.Log(exp + " / " + levelExp);
+		carGearsProgressUI.sizeDelta = new Vector2(gearsProgressUIWidth, 12);
 		
 		weekDayLabel = GameObject.Find("WeekDayLabel");
 		weekDayLabel.GetComponent<TMPro.TMP_Text>().text = "Week " + week + " / Day " + day;

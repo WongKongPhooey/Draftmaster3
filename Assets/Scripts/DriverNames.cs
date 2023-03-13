@@ -169,9 +169,9 @@ public class DriverNames : MonoBehaviour {
 	public static void listWinnableCarsets(){
 		allWinnableCarsets[0] = "cup20";
 		allWinnableCarsets[1] = "cup22";
-		allWinnableCarsets[1] = "cup23";
-		allWinnableCarsets[2] = "dmc15";
-		allWinnableCarsets[3] = "irc00";
+		allWinnableCarsets[2] = "cup23";
+		allWinnableCarsets[3] = "dmc15";
+		allWinnableCarsets[4] = "irc00";
 	}
 	
 	public static string getName(string seriesPrefix, int index){
@@ -835,6 +835,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Names[77] = "T.Dillon";
 		cup2023Names[78] = "McLeod";
 		cup2023Names[84] = "Johnson";
+		cup2023Names[91] = "Raikkonen";
 		cup2023Names[99] = "Suarez";
 		
 		cup2023Teams[1] = "TRK";
@@ -877,6 +878,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Teams[67] = "23X";
 		cup2023Teams[77] = "SPI";
 		cup2023Teams[78] = "IND";
+		cup2023Teams[91] = "TRK";
 		cup2023Teams[99] = "TRK";
 		
 		cup2023Manufacturer[1] = "CHV";
@@ -919,6 +921,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Manufacturer[67] = "TYT";
 		cup2023Manufacturer[77] = "CHV";
 		cup2023Manufacturer[78] = "CHV";
+		cup2023Manufacturer[91] = "CHV";
 		cup2023Manufacturer[99] = "CHV";
 		
 		cup2023Types[1] = "Intimidator";
@@ -961,6 +964,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Types[67] = "Rookie";
 		cup2023Types[77] = "Blocker";
 		cup2023Types[78] = "Blocker";
+		cup2023Types[91] = "Closer";
 		cup2023Types[99] = "Closer";
 		
 		cup2023Rarity[1] = 3;
@@ -1004,6 +1008,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Rarity[77] = 1;
 		cup2023Rarity[78] = 1;
 		cup2023Rarity[84] = 4;
+		cup2023Rarity[91] = 1;
 		cup2023Rarity[99] = 2;
 	}
 	

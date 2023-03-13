@@ -57,14 +57,24 @@ public class RaceResultsUI : MonoBehaviour
 
 		//Add XP and Increment Championship Round
 		if(PlayerPrefs.GetInt("ExpAdded") == 0){
-			//Example 1st = 110, 5th = 30, 10th = 20, 30th = 13
-			raceExp = (100 / (Ticker.position + 1)) + 10;
 			
+			int level = PlayerPrefs.GetInt("Level");
+			//Debug.Log("Level " + level);
+			int levelExp = GameData.levelExp(level);
+			
+			int AILevel = PlayerPrefs.GetInt("RaceAILevel");
+			
+			//Example 1st = 110, 5th = 30, 10th = 20, 30th = 13
+			raceExp = Mathf.Round(((90 / (Ticker.position + 1)) + 10) * (float)(1 + (float)(AILevel / 10f)));
+			Debug.Log(Mathf.Round(((90 / (Ticker.position + 1)) + 10)));
+			Debug.Log((float)(1 + (float)(AILevel / 10f)));
 			//Example 1st = 100, 10th = 70, 20th = 40, 30th = 10
 			//raceExp = ((30 - Ticker.position) * 3) + 10;
 			exp += Mathf.RoundToInt(raceExp);
 			PlayerPrefs.SetInt("Exp",exp);
 			Debug.Log("Exp: " + exp);
+			
+			PlayerPrefs.SetString("ExpInfo","+" + raceExp + " (" + exp + "/" + levelExp + ")");
 			
 			//Is this a championship round?
 			if(PlayerPrefs.HasKey("ChampionshipSubseries")){

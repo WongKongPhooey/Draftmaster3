@@ -152,6 +152,7 @@ public class AIMovement : MonoBehaviour
 		} else {
 			AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		}
+		PlayerPrefs.SetInt("RaceAILevel", AILevel);
 		
 		//Debug.Log("AILevel: " + AILevel);
 		

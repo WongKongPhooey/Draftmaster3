@@ -47,6 +47,7 @@ public class RaceRewardsUI : MonoBehaviour
 	
 	public GameObject rewardsTitle;
 	
+	public GameObject expTitle;
 	public GameObject moneyTitle;
 	public GameObject gearsTitle;
 	public GameObject partsTitle;
@@ -87,10 +88,15 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		rewardsTitle = GameObject.Find("Title");
 		
+		expTitle = GameObject.Find("ExpTitle");
 		moneyTitle = GameObject.Find("MoneyTitle");
 		gearsTitle = GameObject.Find("GearsTitle");
 		partsTitle = GameObject.Find("PartsTitle");
 		partsCar = GameObject.Find("PartsCar");
+		
+		expTitle.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("ExpInfo");
+		expTitle.GetComponent<UIAnimate>().animOffset = 40;
+		expTitle.GetComponent<UIAnimate>().scaleIn();
 		
 		championshipReward = false;
 		championshipFinish = 40;
@@ -118,7 +124,7 @@ public class RaceRewardsUI : MonoBehaviour
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		
 		moneyTitle.GetComponent<TMPro.TMP_Text>().text = " +$" + (prizeMoney * rewardMultiplier) + "";
-		moneyTitle.GetComponent<UIAnimate>().animOffset = 40;
+		moneyTitle.GetComponent<UIAnimate>().animOffset = 80;
 		moneyTitle.GetComponent<UIAnimate>().scaleIn();
 		
 		if(raceType != "Event"){
@@ -136,7 +142,7 @@ public class RaceRewardsUI : MonoBehaviour
 			}
 			
 			//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
-			rewardGears = (maxRaceGears - finishPos) + 1;
+			rewardGears = (int)Mathf.Round(maxRaceGears - Mathf.Ceil(finishPos/2)) + 1;
 			if(rewardGears > 0){
 				gears += rewardGears * rewardMultiplier;
 			} else {
@@ -146,7 +152,7 @@ public class RaceRewardsUI : MonoBehaviour
 		PlayerPrefs.SetInt("Gears",gears);
 		
 		gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
-		gearsTitle.GetComponent<UIAnimate>().animOffset = 80;
+		gearsTitle.GetComponent<UIAnimate>().animOffset = 120;
 		gearsTitle.GetComponent<UIAnimate>().scaleIn();	
 		
 		//Debug.Log("Race Type: " + raceType);
@@ -211,7 +217,7 @@ public class RaceRewardsUI : MonoBehaviour
 		}
 		
 		partsTitle.GetComponent<TMPro.TMP_Text>().text = "" + carReward + "\n(" + carCurrentGears + ")";
-		partsTitle.GetComponent<UIAnimate>().animOffset = 120;
+		partsTitle.GetComponent<UIAnimate>().animOffset = 160;
 		if(carReward != ""){
 			partsTitle.GetComponent<UIAnimate>().scaleIn();
 			
