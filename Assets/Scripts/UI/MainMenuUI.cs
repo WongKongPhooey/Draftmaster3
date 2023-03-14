@@ -64,6 +64,10 @@ public class MainMenuUI : MonoBehaviour {
     // Start is called before the first frame update
     void Start()
     {
+		//Testing
+		//PlayerPrefs.SetInt("Exp",7250);
+		//PlayerPrefs.SetInt("Level",34);
+		
 		exp = PlayerPrefs.GetInt("Exp");
 		//exp = 10000;
 		level = PlayerPrefs.GetInt("Level");
@@ -139,7 +143,7 @@ public class MainMenuUI : MonoBehaviour {
 			
 			Debug.Log("Level Up -> " + level);
 			levelUpMenu = true;
-			alertPopup.GetComponent<AlertManager>().showPopup("Level Up","You've leveled up! You've been rewarded " + rewardString,"dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Level Up","You've reached level " + level + ", and have been rewarded " + rewardString + "!","dm2logo");
 		}
 		
 		money = PlayerPrefs.GetInt("PrizeMoney");

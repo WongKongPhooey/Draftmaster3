@@ -367,10 +367,14 @@ public class GameData : MonoBehaviour {
 				int tokensleft = PlayerPrefs.GetInt("TransfersLeft");
 				PlayerPrefs.SetInt("TransferTokens", tokens + rewardValue);
 				PlayerPrefs.SetInt("TransfersLeft", tokensleft + rewardValue);
-				rewardName = "Transfer Token";
+				if(rewardValue != 1){
+					rewardName = "Transfer Tokens";
+				} else {
+					rewardName = "Transfer Token";
+				}
 				break;
 		}
-		string levelUpText = "+" + levelUpRewards[level,1] + " " + rewardName;
+		string levelUpText = "" + levelUpRewards[level,1] + " " + rewardName;
 		return levelUpText;
 	}
 	

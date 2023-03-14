@@ -736,6 +736,25 @@ public class SeriesData : MonoBehaviour{
 	public static List<string> ListRewards(string category){
 		List<string> validDriver = new List<string>();
 		switch(category){
+			
+			//Team Rewards
+			case "cup20":
+			case "cup22":
+			case "cup23":
+			case "dmc15":
+			case "irc00":
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
+					if(seriesPrefix == category){
+						for(int j=0;j<99;j++){
+							if(DriverNames.getName(seriesPrefix,j) != null){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
 			case "Rookies":
 				//for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
