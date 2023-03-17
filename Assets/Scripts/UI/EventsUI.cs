@@ -144,9 +144,13 @@ public class EventsUI : MonoBehaviour
 			eventDesc.text = EventData.eventChapterDescriptions[subMenuId,i];
 			eventImage.texture = Resources.Load<Texture2D>(EventData.offlineChapterImage[subMenuId,i]);
 			
-			//No dupe rewards allowed in progression events
+			//Testing
+			#if UNITY_EDITOR
+			//PlayerPrefs.SetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1", 2);
+			#endif
 			
-			if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1") == 1){
+			//No dupe rewards allowed in progression events
+			if((PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1") == 1)&&(EventData.offlineEventType[subMenuId] != "Replay")){
 				eventRewardsBtn.SetActive(false);
 				rewardCollected.SetActive(true);
 				tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;

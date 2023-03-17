@@ -59,6 +59,11 @@ public class GameData : MonoBehaviour {
 			week = 1;
 		}
 		
+		//Testing
+		#if UNITY_EDITOR
+		week = 1;
+		#endif
+		
 		if(PlayerPrefs.HasKey("Level")){
 			//Get the last known fuel value
 			level = PlayerPrefs.GetInt("Level");

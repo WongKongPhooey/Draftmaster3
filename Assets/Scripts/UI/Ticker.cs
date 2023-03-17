@@ -341,6 +341,9 @@ public class Ticker : MonoBehaviour
 				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
+				if(i == 1){
+					MomentsCriteria.checkMomentsCriteria("WinByLessThan",carDist[i].ToString());
+				}
 			}
 			PlayerPrefs.SetInt("FinishPosition" + i + "", int.Parse(carNumber[i]));
 			PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));

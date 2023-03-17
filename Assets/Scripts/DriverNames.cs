@@ -222,10 +222,19 @@ public class DriverNames : MonoBehaviour {
 		if(shopDiscount == 1){
 			carRarity -= 1;
 		}
+		if(seriesPrefix == "cup23"){
+			carRarity += 1;
+		}
+		if(seriesPrefix == "irc00"){
+			carRarity -= 1;
+		}
 		if(alt == true){
 			carRarity += 3;
 		}
 		switch(carRarity){
+			case -1:
+				carPrice = 1;
+				break;
 			case 0:
 				carPrice = 3;
 				break;
@@ -878,6 +887,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Teams[67] = "23X";
 		cup2023Teams[77] = "SPI";
 		cup2023Teams[78] = "IND";
+		cup2023Teams[84] = "IND";
 		cup2023Teams[91] = "TRK";
 		cup2023Teams[99] = "TRK";
 		
@@ -921,6 +931,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Manufacturer[67] = "TYT";
 		cup2023Manufacturer[77] = "CHV";
 		cup2023Manufacturer[78] = "CHV";
+		cup2023Manufacturer[84] = "CHV";
 		cup2023Manufacturer[91] = "CHV";
 		cup2023Manufacturer[99] = "CHV";
 		
@@ -964,6 +975,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Types[67] = "Rookie";
 		cup2023Types[77] = "Blocker";
 		cup2023Types[78] = "Blocker";
+		cup2023Types[84] = "Legend";
 		cup2023Types[91] = "Closer";
 		cup2023Types[99] = "Closer";
 		

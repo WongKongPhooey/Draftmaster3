@@ -74,6 +74,11 @@ public class RaceRewardsUI : MonoBehaviour
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PlayerPrefs.GetInt("raceWinnings");
 		seriesPrize = PlayerPrefs.GetString("SeriesPrize");
+		if(PlayerPrefs.HasKey("SeriesPrizeAmt")){
+			if(PlayerPrefs.GetString("SeriesPrizeAmt") != ""){
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			}
+		}
 		raceMenu = PlayerPrefs.GetInt("CurrentSeries");
 		raceSubMenu = PlayerPrefs.GetInt("CurrentSubseries");
 		if(seriesPrize != ""){
@@ -167,6 +172,7 @@ public class RaceRewardsUI : MonoBehaviour
 						UnlockAltPaint(setPrize);
 					} else {
 						//Populate event reward pool
+						Debug.Log("Assign Event Prize");
 						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 					}
 				} else {
@@ -235,6 +241,7 @@ public class RaceRewardsUI : MonoBehaviour
 	}
 
 	void AssignPrizes(string carId, string setPrize, int multiplier){
+		Debug.Log("Set Prize: " + setPrize);
 		if(!PlayerPrefs.HasKey(carId + "Gears")){
 			PlayerPrefs.SetInt(carId + "Gears", multiplier);
 		}
@@ -257,6 +264,7 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		//Reset Prizes
 		PlayerPrefs.SetString("SeriesPrize","");
+		PlayerPrefs.DeleteKey("SeriesPrizeAmt");
 	}
 	
 	void UnlockAltPaint(string setPrize){
@@ -456,7 +464,7 @@ public class RaceRewardsUI : MonoBehaviour
 			break;
 			
 			case "Harvick":
-				validDriver.Add("cup224");
+				validDriver.Add("cup234");
 			break;
 			
 			case "Logano":

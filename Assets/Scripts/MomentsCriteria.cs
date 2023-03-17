@@ -43,7 +43,12 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("WreckEndLocationLessThanX","-3.5");
 					momentsCriteria.Add("CarWrecks","1");
 					momentsCriteria.Add("CarAvoidsWreck","43");
-				break;	
+				break;
+				case "Atlanta01":
+					momentsCriteria.Add("FinishPositionLowerThan","1");
+					momentsCriteria.Add("CarAvoidsWreck","24");
+					momentsCriteria.Add("WinByLessThan","0.02");
+				break;
 				case "ChastainWallride":
 					momentsCriteria.Add("WreckStartLocationStraight","2");
 					momentsCriteria.Add("WreckStartPositionHigherThan","9");
@@ -107,6 +112,9 @@ public class MomentsCriteria : MonoBehaviour
 				} else {
 					return "Finish In The Top " + criteriaValue;
 				}
+				break;
+			case "WinByLessThan":
+				return "Win By Less Than " + criteriaValue + "s";
 				break;
 			case "WreckTotalCars":
 				return "At Least " + criteriaValue + " Cars Wreck";
@@ -195,8 +203,16 @@ public class MomentsCriteria : MonoBehaviour
 				}
 				break;
 			case "FinishPositionLowerThan":
-				//If finish position (A) is equal or lower, true
-				if(int.Parse(criteriaValue) >= int.Parse(criteriaCheckA)){
+				//If finish position (A) is lower, true
+				if(int.Parse(criteriaValue) > int.Parse(criteriaCheckA)){
+					complete = true;
+				}
+				break;
+			case "WinByLessThan":
+				//If finish gap to leader (A) is lower than the max, true
+				//This check only triggers on the 2nd place car
+				Debug.Log("Win By Less Than: " + criteriaValue + "? " + criteriaCheckA);
+				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
 					complete = true;
 				}
 				break;

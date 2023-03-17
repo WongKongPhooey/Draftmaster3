@@ -44,7 +44,7 @@ public class EventData : MonoBehaviour
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		offlineEvent[2] = "All Stars";
-		//offlineEvent[3] = "The Closer";
+		offlineEvent[3] = "The Closer";
 		offlineEvent[4] = "Moments";
 		
 		switch(PlayerPrefs.GetString("SpecialEvent")){
@@ -59,14 +59,14 @@ public class EventData : MonoBehaviour
 		offlineEventType[0] = "Progression";
 		offlineEventType[1] = "Progression";
 		offlineEventType[2] = "Replay";
-		//offlineEventType[3] = "Progression";
+		offlineEventType[3] = "Progression";
 		offlineEventType[4] = "Replay";
 		offlineEventType[9] = "Replay";
 		
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "2,6,10";
 		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
-		//offlineEventWeek[3] = "1,5,9";
+		offlineEventWeek[3] = "1,5,9";
 		offlineEventWeek[4] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[9] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		
@@ -277,104 +277,21 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";
 		
 		//The Closer (Harvick)
-		/*offlineEventChapter[3,0] = "Big Boots To Fill";
+		offlineEventChapter[3,0] = "Big Boots To Fill";
 		offlineChapterImage[3,0] = "cup01livery29";
-		offlineMinClass[3,0] = 2;
-		offlineMinLevel[3,0] = 10;
-		offlineAILevel[3,0] = 5;
-		offlineMinType[3,0] = "Type";
-		offlineMinDriverType[3,0] = "Rookie";
+		offlineMinClass[3,0] = 1;
+		offlineMinLevel[3,0] = 1;
+		offlineAILevel[3,0] = 10;
+		offlineSeries[3,0] = "cup01";
+		offlineCustomCar[3,0] = "cup01livery29";
+		offlineCustomField[3,0] = "cup01MomentsAtlanta";
+		offlineStartingLap[3,0] = 14;
+		offlineMoment[3,0] = "Atlanta01";
 		offlineTracklists[3,0] = "2";
 		offlinePrizes[3,0] = "Harvick";
 		offlineSetPrizes[3,0] = "15";
-		eventChapterDescriptions[3,0] = "Harvick steps into the RCR #29, following Earnhardt's untimely death.";
-		
-		offlineEventChapter[3,1] = "Rookie Of The Year";
-		offlineChapterImage[3,1] = "AngledTriOval";
-		offlineMinClass[3,1] = 2;
-		offlineMinLevel[3,1] = 15;
-		offlineAILevel[3,1] = 7;
-		offlineMinType[3,1] = "Rarity";
-		offlineMinRarity[3,1] = 2;
-		offlineSeries[3,1] = "cup01";
-		offlineCustomField[3,1] = "cup01HarvickGordon";
-		offlineTracklists[3,1] = "3";
-		offlinePrizes[3,1] = "Harvick";
-		offlineSetPrizes[3,1] = "15";
-		eventChapterDescriptions[3,1] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
-		
-		offlineEventChapter[1,2] = "Sophomore Season";
-		offlineChapterImage[1,2] = "LongOval";
-		offlineMinClass[1,2] = 4;
-		offlineMinLevel[1,2] = 15;
-		offlineAILevel[1,2] = 10;
-		offlineMinType[1,2] = "Team";
-		offlineMinTeam[1,2] = "IND";
-		offlineTracklists[1,2] = "6";
-		offlinePrizes[1,2] = "Earnhardt";
-		offlineSetPrizes[1,2] = "20";
-		eventChapterDescriptions[1,2] = "September 28, 1980. Earnhardt gets his 4th of 5 wins, and later his first Cup series in only his 2nd season.";
-		
-		offlineEventChapter[1,3] = "RCR Enterprise";
-		offlineChapterImage[1,3] = "cup20livery3alt3";
-		offlineMinClass[1,3] = 3;
-		offlineMinLevel[1,3] = 20;
-		offlineAILevel[1,3] = 11;
-		offlineMinType[1,3] = "Team";
-		offlineMinTeam[1,3] = "RCR";
-		offlineTracklists[1,3] = "2";
-		offlinePrizes[1,3] = "AltPaint";
-		offlineSetPrizes[1,3] = "cup20livery3alt3";
-		eventChapterDescriptions[1,3] = "Nov 2, 1986. Earnhardt wins his 2nd championship in style with a race to spare, his first with RCR.";
-		
-		offlineEventChapter[1,4] = "Pass In The Grass";
-		offlineChapterImage[1,4] = "TriOval";
-		offlineMinClass[1,4] = 3;
-		offlineMinLevel[1,4] = 25;
-		offlineAILevel[1,4] = 12;
-		offlineMinType[1,4] = "Car";
-		offlineExactCar[1,4] = 3;
-		offlinePrizes[1,4] = "Earnhardt";
-		offlineTracklists[1,4] = "13";
-		offlineSetPrizes[1,4] = "25";
-		eventChapterDescriptions[1,4] = "May 17, 1987. The Intimidator makes the iconic 'Pass In The Grass' and goes on to win the All-Star race.";
-		
-		offlineEventChapter[1,5] = "It Hurt So Good";
-		offlineChapterImage[1,5] = "cup20livery3alt4";
-		offlineMinClass[1,5] = 4;
-		offlineMinLevel[1,5] = 30;
-		offlineAILevel[1,5] = 13;
-		offlineMinType[1,5] = "Car";
-		offlineExactCar[1,5] = 3;
-		offlineTracklists[1,5] = "20";
-		offlinePrizes[1,5] = "AltPaint";
-		offlineSetPrizes[1,5] = "cup20livery3alt4";
-		eventChapterDescriptions[1,5] = "Aug 3, 1996. A week after breaking his collarbone, sternum, and shoulder at Talladega, Earnhardt starts the Brickyard 500.";
-		
-		offlineEventChapter[1,6] = "20th Time Lucky";
-		offlineChapterImage[1,6] = "BigOval";
-		offlineMinClass[1,6] = 5;
-		offlineMinLevel[1,6] = 35;
-		offlineAILevel[1,6] = 14;
-		offlineMinType[1,6] = "Car";
-		offlineExactCar[1,6] = 3;
-		offlinePrizes[1,6] = "Earnhardt";
-		offlineTracklists[1,6] = "1";
-		offlineSetPrizes[1,6] = "30";
-		eventChapterDescriptions[1,6] = " Feb 15, 1998. Earnhardt finally wins the Daytona 500 in his 20th attempt.";
-		
-		offlineEventChapter[1,7] = "Talladega Tenth";
-		offlineChapterImage[1,7] = "cup20livery3alt2";
-		offlineMinClass[1,7] = 5;
-		offlineMinLevel[1,7] = 40;
-		offlineAILevel[1,7] = 15;
-		offlineMinType[1,7] = "Car";
-		offlineExactCar[1,7] = 3;
-		offlineTracklists[1,7] = "10";
-		offlinePrizes[1,7] = "AltPaint";
-		offlineSetPrizes[1,7] = "cup20livery3alt2";
-		eventChapterDescriptions[1,7] = "Oct 15, 2000. Earnhardt passes 17 cars in the last 6 laps to take his final ever win, and his 10th at Talladega.";
-		*/
+		offlineCustomFieldOrder[3,0] = "x,player,x,x,x,x,24";
+		eventChapterDescriptions[3,0] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
 		
 		//Moments
 		offlineEventChapter[4,0] = "Daytona '79";
@@ -574,9 +491,9 @@ public class EventData : MonoBehaviour
 		List<string> validDriver = new List<string>();
 		switch(category){
 			case "Rookies":
-				//for(int i=0;i<DriverNames.allCarsets.Length;i++){
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				//for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
@@ -588,8 +505,8 @@ public class EventData : MonoBehaviour
 				}
 			break;
 			case "Rarity1":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 1){
@@ -601,8 +518,8 @@ public class EventData : MonoBehaviour
 				}
 			break;
 			case "Rarity2":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 2){
@@ -614,8 +531,8 @@ public class EventData : MonoBehaviour
 				}
 			break;
 			case "Rarity3":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 3){
@@ -627,8 +544,8 @@ public class EventData : MonoBehaviour
 				}
 			break;
 			case "Rarity4":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 4){
@@ -644,8 +561,8 @@ public class EventData : MonoBehaviour
 			case "CHV":
 			case "FRD":
 			case "TYT":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
@@ -661,8 +578,8 @@ public class EventData : MonoBehaviour
 			case "CHV1":
 			case "FRD1":
 			case "TYT1":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
@@ -687,8 +604,8 @@ public class EventData : MonoBehaviour
 			case "PEN":
 			case "JGR":
 			case "HEN":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getTeam(seriesPrefix,j) == category){
@@ -707,8 +624,8 @@ public class EventData : MonoBehaviour
 			case "Blocker":
 			case "Dominator":
 			case "Legend":
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == category){
@@ -728,7 +645,7 @@ public class EventData : MonoBehaviour
 				validDriver.Add("cup203");
 			break;
 			case "Harvick":
-				validDriver.Add("cup224");
+				validDriver.Add("cup234");
 			break;
 			case "Logano":
 				validDriver.Add("cup2222");
@@ -744,8 +661,8 @@ public class EventData : MonoBehaviour
 			break;
 			
 			default:
-				for(int i=0;i<DriverNames.allCarsets.Length;i++){
-					string seriesPrefix = DriverNames.allCarsets[i];
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							validDriver.Add("" + seriesPrefix + j + "");

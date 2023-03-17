@@ -162,7 +162,7 @@ public class StoreUI : MonoBehaviour
 			string dailyRandomsList = "";
 			string randSeries = DriverNames.getRandomWinnableSeries();
 			
-			for(int i=0;i<5;i++){
+			for(int i=0;i<10;i++){
 				int rand = 100;
 				while((DriverNames.getRarity(randSeries,rand) == 0) || 
 					  (DriverNames.getRarity(randSeries,rand) > 3) ||
@@ -271,16 +271,16 @@ public class StoreUI : MonoBehaviour
 		
 		starterPicks.Clear();
 		
-		starterPicks.Add(7);
-		starterPicks.Add("dmc1516");
-		starterPicks.Add(17);
-		starterPicks.Add("cup2221");
-		starterPicks.Add(37);
-		starterPicks.Add("cup2250");
-		starterPicks.Add(52);
+		starterPicks.Add("cup2313");
+		starterPicks.Add("cup2227");
+		starterPicks.Add(34);
+		starterPicks.Add("dmc1546");
+		starterPicks.Add("cup2252");
+		starterPicks.Add("cup2253");
 		starterPicks.Add("cup2262");
-		starterPicks.Add("dmc1567");
-		starterPicks.Add("cup2278");
+		starterPicks.Add(74);
+		starterPicks.Add("cup2377");
+		starterPicks.Add("dmc1591");
 		
 		for(int i=0;i<starterPicks.Count;i++){
 			GameObject tileInst = Instantiate(storeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);

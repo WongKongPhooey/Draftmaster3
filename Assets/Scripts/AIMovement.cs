@@ -774,7 +774,7 @@ public class AIMovement : MonoBehaviour
 			if (backingOut == false) {
 				backingOut = true;
 				float rng = Random.Range(0,500);
-				Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
+				//Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
 				if((wreckProbability >= rng)||
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
@@ -986,21 +986,21 @@ public class AIMovement : MonoBehaviour
 	public void findDraft(){
 		RaycastHit DraftCheckLaneLeft;
 		RaycastHit DraftCheckLaneRight;
-		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 5);
-		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 5);
+		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 6);
+		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 6);
 		string direction = "";
 		
 		if(HitLaneLeft){
 			if(leftSideClear()){
 				float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
 				if(DraftCheckLaneLeft.distance >= 3.5f){
-					if(opponentSpeed > (AISpeed - 0.1f)){
-						//Go for it if slightly speed, just for the draft
+					if((opponentSpeed >= (AISpeed - 0.1f))||(AISpeed < 201)){
+						//Go for it if slight speed diff, just for the draft
 						direction = "Left";
 					}
 				} else {
 					//Only seek a close draft if faster than you
-					if(opponentSpeed > (AISpeed + 0.1f)){
+					if((opponentSpeed >= (AISpeed + 0.1f))||(AISpeed < 201)){
 						direction = "Left";
 						//Debug.Log("Opponent Speed " + opponentSpeed + " ahead of AISpeed " + AISpeed);
 					}
@@ -1012,7 +1012,7 @@ public class AIMovement : MonoBehaviour
 			if(rightSideClear()){
 				float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
 				if(DraftCheckLaneRight.distance >= 3.5f){
-					if(opponentSpeed > (AISpeed - 0.1f)){
+					if((opponentSpeed >= (AISpeed - 0.1f))||(AISpeed < 201)){
 						if(direction == "Left"){
 							direction = "Both";
 						} else {
@@ -1020,7 +1020,7 @@ public class AIMovement : MonoBehaviour
 						}
 					}
 				} else {
-					if(opponentSpeed > (AISpeed + 0.1f)){
+					if((opponentSpeed >= (AISpeed + 0.1f))||(AISpeed < 201)){
 						if(direction == "Left"){
 							direction = "Both";
 						} else {
