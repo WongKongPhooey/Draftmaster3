@@ -847,10 +847,9 @@ public class SeriesData : MonoBehaviour{
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
-							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
+							if(DriverNames.getManufacturer(seriesPrefix,j) == category.Substring(0,3)){
 								if(DriverNames.getRarity(seriesPrefix,j) == 1){
 									validDriver.Add("" + seriesPrefix + j + "");
-									//Debug.Log(category + " Added: #" + i);
 								}
 							}
 						}

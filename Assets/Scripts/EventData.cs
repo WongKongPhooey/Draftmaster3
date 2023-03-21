@@ -43,7 +43,7 @@ public class EventData : MonoBehaviour
 	public static void loadEvents() {
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
-		offlineEvent[2] = "All Stars";
+		//offlineEvent[2] = "All Stars";
 		offlineEvent[3] = "The Closer";
 		offlineEvent[4] = "Moments";
 		
@@ -58,14 +58,14 @@ public class EventData : MonoBehaviour
 		
 		offlineEventType[0] = "Progression";
 		offlineEventType[1] = "Progression";
-		offlineEventType[2] = "Replay";
+		//offlineEventType[2] = "Replay";
 		offlineEventType[3] = "Progression";
 		offlineEventType[4] = "Replay";
 		offlineEventType[9] = "Replay";
 		
 		offlineEventWeek[0] = "4,8,12";
 		offlineEventWeek[1] = "2,6,10";
-		offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
+		//offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[3] = "1,5,9";
 		offlineEventWeek[4] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[9] = "1,2,3,4,5,6,7,8,9,10,11,12";
@@ -265,7 +265,7 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[1,7] = "Oct 15, 2000. Earnhardt passes 17 cars in the last 6 laps to take his final ever win, and his 10th at Talladega.";
 		
 		//All Stars
-		offlineEventChapter[2,0] = "Gladiators";
+		/*offlineEventChapter[2,0] = "Gladiators";
 		offlineChapterImage[2,0] = "TinyOval";
 		offlineMinClass[2,0] = 1;
 		offlineMinLevel[2,0] = 1;
@@ -275,6 +275,7 @@ public class EventData : MonoBehaviour
 		offlineTracklists[2,0] = "30";
 		offlinePrizes[2,0] = "1Star";
 		eventChapterDescriptions[2,0] = "February 6th, 2022. The next generation starts here. Let battle commence in the Coliseum.";
+		*/
 		
 		//The Closer (Harvick)
 		offlineEventChapter[3,0] = "Big Boots To Fill";

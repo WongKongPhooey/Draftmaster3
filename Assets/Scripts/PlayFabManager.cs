@@ -677,7 +677,11 @@ public class PlayFabManager : MonoBehaviour
 				 PlayerPrefs.SetInt("NewUser",1);
 				 Series playerJson = JsonUtility.FromJson<Series>(json);
 				 int level = int.Parse(playerJson.playerLevel);
-				 int transferTokens = int.Parse(playerJson.transferTokens);
+				 int transferTokens = 0;
+				 //Old save files don't have this field, now skippable
+				 if(playerJson.transferTokens != null){
+					transferTokens = int.Parse(playerJson.transferTokens);
+				 }
 				 
 				 if(level <= PlayerPrefs.GetInt("Level")){
 					Debug.Log("Your save is not a higher level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + "). Load aborted.");
@@ -699,6 +703,10 @@ public class PlayFabManager : MonoBehaviour
 						playerJson = JsonUtility.FromJson<Series>(json);
 					 }
 					 if(saveType == "automatic"){
+						//Drop out if no save for this car set
+						if(result.Data["AutosavePlayerProgress" + series].Value == null){
+							break;
+						}
 						json = result.Data["AutosavePlayerProgress" + series].Value;
 						playerJson = JsonUtility.FromJson<Series>(json);
 					 }

@@ -6,14 +6,18 @@ public class AltPaints : MonoBehaviour {
 	
 	public static string[,] cup2020AltPaintNames = new string[101,10];
 	public static string[,] cup22AltPaintNames = new string[101,10];
+	public static string[,] cup23AltPaintNames = new string[101,10];
 	public static string[,] cup2020AltPaintDriver = new string[101,10];
 	public static string[,] cup22AltPaintDriver = new string[101,10];
+	public static string[,] cup23AltPaintDriver = new string[101,10];
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
 	public static string[,] cup2020AltPaintTheme = new string[101,10];
 	public static string[,] cup22AltPaintTheme = new string[101,10];
+	public static string[,] cup23AltPaintTheme = new string[101,10];
 	
 	public static bool[,] cup2020AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup22AltPaintAISpawning = new bool[101,10];
+	public static bool[,] cup23AltPaintAISpawning = new bool[101,10];
 	
     // Start is called before the first frame update
     void Start(){
@@ -86,6 +90,8 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintNames[78,1] = "Stock (Lally)";
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
+		cup23AltPaintNames[9,1] = "Stock (Berry)";
+		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
 		cup2020AltPaintDriver[3,4] = "Earnhardt";
@@ -103,6 +109,8 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintDriver[77,1] = "Allgaier";
 		cup22AltPaintDriver[78,1] = "Lally";
 		cup22AltPaintDriver[99,1] = "Edwards";
+		
+		cup23AltPaintDriver[9,1] = "Berry";
 		
 		cup2020AltPaintTheme[2,1] = "Patriot";
 		cup2020AltPaintTheme[3,1] = "Halloween";
@@ -171,6 +179,8 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintTheme[77,1] = "Parttimer";
 		cup22AltPaintTheme[78,1] = "Parttimer";
 		cup22AltPaintTheme[99,1] = "Wrecked";
+		
+		cup23AltPaintTheme[9,1] = "Parttimer";
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){

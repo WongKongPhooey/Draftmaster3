@@ -300,6 +300,24 @@ public class RaceRewardsUI : MonoBehaviour
 	
 	void ListPrizeOptions(string category){
 		switch(category){
+			//Team Rewards
+			case "cup20":
+			case "cup22":
+			case "cup23":
+			case "dmc15":
+			case "irc00":
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
+					if(seriesPrefix == category){
+						for(int j=0;j<99;j++){
+							if(DriverNames.getName(seriesPrefix,j) != null){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log(category + " Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
 			case "Rookies":
 				//for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
@@ -392,7 +410,7 @@ public class RaceRewardsUI : MonoBehaviour
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
-							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
+							if(DriverNames.getManufacturer(seriesPrefix,j) == category.Substring(0,3)){
 								if(DriverNames.getRarity(seriesPrefix,j) == 1){
 									validDriver.Add("" + seriesPrefix + j + "");
 									//Debug.Log(category + " Added: #" + i);
