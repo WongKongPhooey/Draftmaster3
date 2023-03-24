@@ -157,8 +157,16 @@ public class SingleCar : MonoBehaviour {
 		availNums = availableNumbers.ToArray();
 		
 		customNumX = 34;
-		if(seriesPrefix == "cup22"){
-			customNumX = 30;
+		switch(seriesPrefix){
+			case "cup22":
+				customNumX = 30;
+				break;
+			case "cup23":
+				customNumX = 31;
+				break;
+			default:
+				customNumX = 34;
+				break;
 		}
 		
 		freeAgents.Clear();

@@ -187,8 +187,16 @@ public class AIMovement : MonoBehaviour
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
-		if(seriesPrefix == "cup22"){
-			this.transform.Find("Number").Translate(0.1f,0f,0f);
+		switch(seriesPrefix){
+			case "cup22":
+				this.transform.Find("Number").Translate(0.1f,0f,0f);
+				break;
+			case "cup23":
+				Debug.Log("Cup '23 Number Shift");
+				this.transform.Find("Number").Translate(0.1f,0f,0f);
+				break;
+			default:
+				break;
 		}
 		
 		string chosenAlt;
