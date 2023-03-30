@@ -175,6 +175,7 @@ public class AIMovement : MonoBehaviour
 		carNumber = this.name.Substring(this.name.IndexOf(splitAfter) + splitAfter.Length);
 		
 		//Debug.Log(carNumber);
+		carName = AICar.name;
 		carNum = int.Parse(carNumber);
 		
 		carTeam = DriverNames.getTeam(seriesPrefix,carNum);
@@ -826,11 +827,11 @@ public class AIMovement : MonoBehaviour
 			}
 			
 			if((holdLane >= laneRest)&&(tryTimedPass == false)){
-				carName = DraftCheckForward.collider.gameObject.name;
+				string opponentName = DraftCheckForward.collider.gameObject.name;
 				int opponentNum = 9999;
 				string opponentTeam = "";
-				if(carName != "Player") {
-					opponentNum = getCarNumFromName(carName);
+				if(opponentName != "Player") {
+					opponentNum = getCarNumFromName(opponentName);
 					if(opponentNum != 9999){
 						opponentTeam = DriverNames.getTeam(seriesPrefix,opponentNum);
 					}
@@ -1315,9 +1316,9 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	int getCarNumFromName(string carName){
+	int getCarNumFromName(string theName){
 		string splitAfter = "AICar0";
-		carNumber = carName.Substring(carName.IndexOf(splitAfter) + splitAfter.Length);
+		carNumber = theName.Substring(theName.IndexOf(splitAfter) + splitAfter.Length);
 		int parsedNum;
 		bool isNum = int.TryParse(carNumber, out parsedNum);
 		if(isNum == true) {
