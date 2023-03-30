@@ -91,6 +91,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
 		cup23AltPaintNames[9,1] = "Stock (Berry)";
+		cup23AltPaintNames[9,2] = "Stock (Taylor)";
 		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
@@ -111,6 +112,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintDriver[99,1] = "Edwards";
 		
 		cup23AltPaintDriver[9,1] = "Berry";
+		cup23AltPaintDriver[9,2] = "Taylor";
 		
 		cup2020AltPaintTheme[2,1] = "Patriot";
 		cup2020AltPaintTheme[3,1] = "Halloween";
@@ -181,6 +183,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintTheme[99,1] = "Wrecked";
 		
 		cup23AltPaintTheme[9,1] = "Parttimer";
+		cup23AltPaintTheme[9,2] = "Parttimer";
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
@@ -191,6 +194,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup22":
 				altPaintName = cup22AltPaintNames[carNum,altNum];
+				break;
+			case "cup23":
+				altPaintName = cup23AltPaintNames[carNum,altNum];
 				break;
 			default:
 				break;
@@ -205,6 +211,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup22":
 				return cup22AltPaintDriver[carNum,altNum];
+				break;
+			case "cup23":
+				return cup23AltPaintDriver[carNum,altNum];
 				break;
 			default:
 				return null;
@@ -226,6 +235,11 @@ public class AltPaints : MonoBehaviour {
 					canSpawn = true;
 				}
 				break;
+			case "cup23":
+				if(cup23AltPaintAISpawning[carNum,altNum] == true){
+					canSpawn = true;
+				}
+				break;
 			default:
 				break;
 		}
@@ -239,6 +253,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup22":
 				return cup22AltPaintTheme[carNum,altNum];
+				break;
+			case "cup23":
+				return cup23AltPaintTheme[carNum,altNum];
 				break;
 			default:
 				return "Blank";

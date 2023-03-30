@@ -94,9 +94,10 @@ public class StoreUI : MonoBehaviour
 			TMPro.TMP_Text tileSeries = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage tilePaint = tileInst.transform.GetChild(1).GetComponent<RawImage>();
 			TMPro.TMP_Text tileName = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			Transform tilePrice = tileInst.transform.GetChild(3);
-			GameObject carClickable = tileInst.transform.GetChild(3).transform.gameObject;
-			GameObject carDisabled = tileInst.transform.GetChild(4).transform.gameObject;
+			TMPro.TMP_Text tileQuantity = tileInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			Transform tilePrice = tileInst.transform.GetChild(4);
+			GameObject carClickable = tileInst.transform.GetChild(4).transform.gameObject;
+			GameObject carDisabled = tileInst.transform.GetChild(5).transform.gameObject;
 			
 			string carNum = weeklyPicks[i].ToString();
 			string carSeries = "cup20";
@@ -142,7 +143,7 @@ public class StoreUI : MonoBehaviour
 				}
 			} else {
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
-				tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
+				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
@@ -204,9 +205,10 @@ public class StoreUI : MonoBehaviour
 			TMPro.TMP_Text tileSeries = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage tilePaint = tileInst.transform.GetChild(1).GetComponent<RawImage>();
 			TMPro.TMP_Text tileName = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			Transform tilePrice = tileInst.transform.GetChild(3);
-			GameObject carClickable = tileInst.transform.GetChild(3).transform.gameObject;
-			GameObject carDisabled = tileInst.transform.GetChild(4).transform.gameObject;
+			TMPro.TMP_Text tileQuantity = tileInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			Transform tilePrice = tileInst.transform.GetChild(4);
+			GameObject carClickable = tileInst.transform.GetChild(4).transform.gameObject;
+			GameObject carDisabled = tileInst.transform.GetChild(5).transform.gameObject;
 			
 			string carSeries = "cup20";
 			string carAlt = null;
@@ -253,7 +255,7 @@ public class StoreUI : MonoBehaviour
 				}
 			} else {
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
-				tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
+				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
@@ -292,9 +294,10 @@ public class StoreUI : MonoBehaviour
 			TMPro.TMP_Text tileSeries = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage tilePaint = tileInst.transform.GetChild(1).GetComponent<RawImage>();
 			TMPro.TMP_Text tileName = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			Transform tilePrice = tileInst.transform.GetChild(3);
-			GameObject carClickable = tileInst.transform.GetChild(3).transform.gameObject;
-			GameObject carDisabled = tileInst.transform.GetChild(4).transform.gameObject;
+			TMPro.TMP_Text tileQuantity = tileInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			Transform tilePrice = tileInst.transform.GetChild(4);
+			GameObject carClickable = tileInst.transform.GetChild(4).transform.gameObject;
+			GameObject carDisabled = tileInst.transform.GetChild(5).transform.gameObject;
 			
 			string carNum = starterPicks[i].ToString();
 			string carSeries = "cup20";
@@ -343,7 +346,7 @@ public class StoreUI : MonoBehaviour
 				}
 			} else {
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
-				tileName.text = DriverNames.getName(carSeries, carNumInt) + " +3";
+				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;

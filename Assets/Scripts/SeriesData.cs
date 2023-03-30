@@ -44,16 +44,16 @@ public class SeriesData : MonoBehaviour{
 		offlineMenu[8] = "Rarity";
 		offlineMenu[9] = "Seasons";
 		
-		offlineImage[0] = "cup20livery41";
-		offlineImage[1] = "cup20livery11";
-		offlineImage[2] = "cup22livery4";
-		offlineImage[3] = "cup20livery1";
-		offlineImage[4] = "cup20livery2";
+		offlineImage[0] = "cup23livery42";
+		offlineImage[1] = "cup23livery11";
+		offlineImage[2] = "cup23livery4";
+		offlineImage[3] = "cup23livery8";
+		offlineImage[4] = "cup23livery1";
 		offlineImage[5] = "cup22livery22";
 		offlineImage[6] = "cup22livery23";
 		offlineImage[7] = "cup20livery12";
 		offlineImage[8] = "cup20livery18";
-		offlineImage[9] = "cup22livery5";
+		offlineImage[9] = "cup23livery22";
 		
 		seriesDescriptions[0] = "The first step onto the oval racing ladder. Show 'em what you've got!";
 		seriesDescriptions[1] = "Learn the challenges of high speed pack racing.";
@@ -359,7 +359,7 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[5,0] = "Lone Ranger";
 		offlineSeries[5,1] = "Ware In The World";
 		offlineSeries[5,2] = "Front Row Seats";
-		offlineSeries[5,3] = "Show Me The Fenway";
+		offlineSeries[5,3] = "Brad Jackeroushki";
 		offlineSeries[5,4] = "Childress Of The Sea";
 		offlineSeries[5,5] = "Chip Off The Old Block";
 		offlineSeries[5,6] = "The Real Haastle";
@@ -370,13 +370,13 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[5,0] = "cup20livery77";
 		offlineSeriesImage[5,1] = "cup20livery52";
 		offlineSeriesImage[5,2] = "cup20livery38";
-		offlineSeriesImage[5,3] = "cup20livery6";
-		offlineSeriesImage[5,4] = "cup20livery3";
+		offlineSeriesImage[5,3] = "cup23livery6";
+		offlineSeriesImage[5,4] = "cup23livery8";
 		offlineSeriesImage[5,5] = "cup20livery42";
 		offlineSeriesImage[5,6] = "cup20livery10";
 		offlineSeriesImage[5,7] = "cup20livery12";
-		offlineSeriesImage[5,8] = "cup20livery20";
-		offlineSeriesImage[5,9] = "cup20livery24";
+		offlineSeriesImage[5,8] = "cup23livery20";
+		offlineSeriesImage[5,9] = "cup23livery9";
 		
 		offlineDailyPlays[5,0] = 3;
 		offlineDailyPlays[5,1] = 3;

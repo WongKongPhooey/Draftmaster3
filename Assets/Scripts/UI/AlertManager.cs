@@ -10,16 +10,21 @@ public class AlertManager : MonoBehaviour
 	public static GameObject alertTitle;
 	public static GameObject alertImage;
 	public static GameObject alertText;
+	public static GameObject alertLabel;
+	public static GameObject alertProgressBar;
+	public static GameObject alertProgress;
     // Start is called before the first frame update
-    void Awake()
-    {
+    void Awake(){
         alertPopup = GameObject.Find("AlertPopup");
 		alertPopup.GetComponent<UIAnimate>().hide();
 		alertTitle = GameObject.Find("AlertTitle");
 		//Assume image is always a 2:1 Rectangle
 		alertImage = GameObject.Find("AlertImage");
 		alertText = GameObject.Find("AlertText");
-		
+		alertLabel = GameObject.Find("AlertLabel");
+		alertProgressBar = GameObject.Find("AlertProgressBar");
+		alertProgress = GameObject.Find("AlertProgress");
+
 		Scene currentScene = SceneManager.GetActiveScene ();
         string sceneName = currentScene.name;
         if (sceneName == "MainMenu"){
@@ -31,11 +36,24 @@ public class AlertManager : MonoBehaviour
         hidePopup();
     }
 
-	public void showPopup(string title, string content, string image){
+	public void showPopup(string title, string content, string image, bool progress = false, int progressCurrent = 0, int progressTarget = 999){
 		alertTitle.GetComponent<TMPro.TMP_Text>().text = title;
 		alertText.GetComponent<TMPro.TMP_Text>().text = content;
 		if(content == ""){
 			return;
+		}
+		if(progress == true){
+			alertLabel.GetComponent<TMPro.TMP_Text>().text = progressCurrent + "/" + progressTarget;
+			RectTransform alertProgressRect = alertProgress.GetComponent<RectTransform>();
+			
+			float alertProgressWidth = Mathf.Round((330 / progressTarget) * progressCurrent) + 1;
+			if(alertProgressWidth > 330){
+				alertProgressWidth = 330;
+			}			
+			alertProgressRect.sizeDelta = new Vector2(alertProgressWidth, 25);
+			alertProgressBar.GetComponent<UIAnimate>().scaleIn();
+		} else {
+			alertProgressBar.GetComponent<UIAnimate>().hide();
 		}
 		//alertPopup.SetActive(true);
 		alertPopup.GetComponent<UIAnimate>().show();
@@ -45,13 +63,13 @@ public class AlertManager : MonoBehaviour
 		}
 		alertText.GetComponent<UIAnimate>().scaleIn();
 	}
+	
 	public void hidePopup(){
 		//alertPopup = GameObject.Find("AlertPopup");
 		LeanTween.scale(alertPopup, new Vector3(0f,0f,0f), 0f);
 		alertText.GetComponent<UIAnimate>().hide();
 		alertImage.GetComponent<UIAnimate>().hide();
+		alertProgressBar.GetComponent<UIAnimate>().hide();
 		alertPopup.GetComponent<UIAnimate>().hide();
-		//alertPopup.SetActive(false);
-		//Debug.Log("Popup Hidden");
 	}
 }

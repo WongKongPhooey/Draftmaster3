@@ -118,11 +118,13 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("RaceAILevel")){
 			PlayerPrefs.DeleteKey("RaceAILevel");
 		}
-		
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			PlayerPrefs.DeleteKey("SpawnFromCaution");
 		}
-		
+		if(PlayerPrefs.HasKey("SeriesPrizeAmt")){
+			PlayerPrefs.DeleteKey("SeriesPrizeAmt");
+		}
+
 		for(int i=0;i<100;i++){
 			if(PlayerPrefs.HasKey("RaceAltPaint" + i)){
 				PlayerPrefs.DeleteKey("RaceAltPaint" + i);

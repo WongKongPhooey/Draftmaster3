@@ -48,12 +48,15 @@ public class StoreUIFunctions : MonoBehaviour
 				}
 				string alertContent = "" + DriverNames.getSeriesNiceName(itemSeries);
 					   alertContent += " " + DriverNames.getName(itemSeries, int.Parse(itemNum));
-					   Debug.Log(itemSeries + " " + itemNum + " " + itemAlt);
+					   //Debug.Log(itemSeries + " " + itemNum + " " + itemAlt);
 					   alertContent += "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt));
 					   alertContent += " Alt Paint Unlocked!";
-				Debug.Log(alertContent);
+				//Debug.Log(alertContent);
 				string alertImage = itemSeries + "livery" + itemNum + "alt" + itemAlt + "";
-				Debug.Log(alertImage);
+				
+				gears -= itemPrice;
+				PlayerPrefs.SetInt("Gears",gears);
+				
 				alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) + " Alt Paint Unlocked!", itemSeries + "livery" + itemNum + "alt" + itemAlt + "");
 			} else {
 				//Increment the car parts
@@ -63,15 +66,74 @@ public class StoreUIFunctions : MonoBehaviour
 					carGears = 0;
 				}
 				PlayerPrefs.SetInt(itemSeries + itemNum + "Gears", carGears + 3);
-				//Pay
-				alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + carGears + " -> " + (carGears + 3) + " Car Parts (+3)",itemSeries + "livery" + itemNum);
-		
+				
+				int carUnlocked = PlayerPrefs.GetInt(itemSeries + itemNum + "Unlocked");
+				int carClass = PlayerPrefs.GetInt(itemSeries + itemNum + "Class");
+				int progressTarget = 0;
+				
+				if(carUnlocked == 1){
+					int classMax = getClassMax(carClass);
+					progressTarget = classMax;
+				} else {
+					int unlockClass = DriverNames.getRarity(itemSeries,int.Parse(itemNum));
+					int unlockGears = GameData.unlockGears(unlockClass);
+					progressTarget = unlockGears;
+				}
+				
+				gears -= itemPrice;
+				PlayerPrefs.SetInt("Gears",gears);
+				
+				//If beyond or at the target..
+				if((carGears + 3) >= progressTarget){
+					classUp(carGears + 3, progressTarget);
+				} else {
+					//Just pay and go
+					if(carUnlocked == 1){
+						alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts", itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+					} else {
+						alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts. Unlocks at " + progressTarget, itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+					}
+				}
 			}
-			gears -= itemPrice;
-			PlayerPrefs.SetInt("Gears",gears);
-			Debug.Log("Bought!");
 		} else {
 			alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You do not have enough Gears to purchase this.","dm2logo");
+		}
+	}
+
+	public void classUp(int carGears, int targetGears){
+		Debug.Log("Class Me Up Scotty!");
+		int carUnlocked = PlayerPrefs.GetInt(itemSeries + itemNum + "Unlocked");
+		int carClass = PlayerPrefs.GetInt(itemSeries + itemNum + "Class");
+		
+		if(carUnlocked == 0){
+			int unlockClass = DriverNames.getRarity(itemSeries, int.Parse(itemNum));
+			int unlockGears = GameData.unlockGears(unlockClass);
+			if(carGears >= unlockGears){
+				carUnlocked = 1;
+				carGears-= unlockGears;
+				carClass = unlockClass;
+				PlayerPrefs.SetInt(itemSeries + itemNum + "Unlocked",1);
+				PlayerPrefs.SetInt(itemSeries + itemNum + "Gears",carGears);
+				PlayerPrefs.SetInt(itemSeries + itemNum + "Class",carClass);
+				
+				//Update the 'class up' Gears value
+				int classUpGears = GameData.classMax(carClass);
+				
+				alertPopup.GetComponent<AlertManager>().showPopup("Car Unlocked!", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\nCar Unlocked!", itemSeries + "livery" + itemNum, true, carGears, classUpGears);
+			}
+		} else {
+			int classMax = getClassMax(carClass);
+			if(carGears >= classMax){
+				carGears-= classMax;
+				carClass++;
+				PlayerPrefs.SetInt(itemSeries + itemNum + "Gears",carGears);
+				PlayerPrefs.SetInt(itemSeries + itemNum + "Class",carClass);
+				
+				//Update the 'class up' Gears value
+				int classUpGears = GameData.classMax(carClass);
+				
+				alertPopup.GetComponent<AlertManager>().showPopup("Car Leveled Up!", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\nClass Upgrade! -> Class " + classAbbr(carClass), itemSeries + "livery" + itemNum, true, carGears, classUpGears);
+			}
 		}
 	}
 
@@ -154,9 +216,60 @@ public class StoreUIFunctions : MonoBehaviour
 		}
 	}
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+	public static int getClassMax(int carClass){
+		switch(carClass){
+			case 0:
+				return 10;
+				break;
+			case 1:
+				return 20;
+				break;
+		    case 2:
+				return 35;
+				break;
+			case 3:
+				return 50;
+				break;
+			case 4:
+				return 70;
+				break;
+			case 5:
+				return 100;
+				break;
+			case 6:
+				return 150;
+				break;
+		    default:
+				return 999;
+				break;
+		}
+	}
+
+	string classAbbr(int carClass){
+		string classLetter;
+		switch(carClass){
+			case 1:
+				classLetter = "R";
+				break;
+		    case 2:
+				classLetter = "D";
+				break;
+			case 3:
+				classLetter = "C";
+				break;
+			case 4:
+				classLetter = "B";
+				break;
+			case 5:
+				classLetter = "A";
+				break;
+			case 6:
+				classLetter = "S";
+				break;
+		    default:
+				classLetter = "R";
+				break;
+		}
+		return classLetter;
+	}
 }

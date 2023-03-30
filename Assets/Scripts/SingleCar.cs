@@ -311,48 +311,6 @@ public class SingleCar : MonoBehaviour {
 		GUI.skin = redGUI;
 		GUI.skin.button.fontSize = 64 / FontScale.fontScale;
 		
-		//Upgrade
-		GUI.skin.label.normal.textColor = Color.white;
-		if((carGears >= classMax)&&(carClass < 6)){
-			if(totalMoney >= GameData.upgradeCost(carClass)){
-				if (GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f), "Upgrade")){
-					if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
-						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - classMax);
-						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", carClass+1);
-						carGears -= classMax;
-						carClass++;
-						classMax = GameData.classMax(carClass);
-					}
-				}
-				
-				//Initial first unlocks
-				if(GameData.upgradeCost(carClass) == 0){
-					if(PlayerPrefs.HasKey(seriesPrefix + currentCar + "Gears")){
-						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", carGears - unlockGears);
-						PlayerPrefs.SetInt(seriesPrefix + currentCar + "Class", DriverNames.getRarity(seriesPrefix, currentCar));
-						carClass = DriverNames.getRarity(seriesPrefix, currentCar);
-						classMax = GameData.classMax(carClass);
-					}
-				}
-			} else {
-				if(GUI.Button(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f), "$" + (GameData.upgradeCost(carClass) - totalMoney) + " More Required")){
-				}
-			}
-		} else {
-			if(carClass != 6){
-				GUI.Box(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f),"");
-				GUI.skin.label.fontSize = 64 / FontScale.fontScale;
-				GUI.skin.label.alignment = TextAnchor.MiddleCenter;
-				GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + (heightblock * 11.5f), cardW - (widthblock * 0.5f), heightblock * 1.5f), "" + (classMax - carGears) + " More Required");
-			
-				if(carGears < 0){
-					carGears = 0;
-					PlayerPrefs.SetInt(seriesPrefix + currentCar + "Gears", 0);
-				}
-			}
-		}
-		GUI.skin.label.normal.textColor = Color.black;
-		
 		GUI.skin.label.fontSize = 64 / FontScale.fontScale;
 		GUI.skin.label.alignment = TextAnchor.LowerLeft;
 		GUI.Label(new Rect(cardX + (widthblock * 0.25f), cardY + cardH - (heightblock * 2) - 10, widthblock * 2.5f, heightblock * 2), currentCarType);
