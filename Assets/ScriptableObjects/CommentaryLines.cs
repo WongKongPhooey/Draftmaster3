@@ -7,5 +7,5 @@ using Random=UnityEngine.Random;
 public class CommentaryLines : ScriptableObject {	
 
 	public string commentator;
-	public AudioClip[] startClips, wallHitClips, cautionClips, whiteFlagClips, moveLowClips, moveHighClips;
+	public AudioClip[] startClips, restartFrontClips, restartMiddleClips, restartBackClips, wallHitClips, crashClips, bigCrashClips, cautionClips, cautionTAClips, cautionTBClips, cautionTCClips, cautionTDClips, cautionSAClips, cautionSBClips, whiteFlagClips, whiteFlagLeaderClips, moveLowClips, moveMiddleClips, moveHighClips, atTheBackClips, newLeaderClips, bumpDraftClips, draftTrainClips, newSeasonClips, seasonFinaleClips, noDraftClips, stuckClips;
 }

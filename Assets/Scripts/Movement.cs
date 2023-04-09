@@ -88,6 +88,7 @@ public class Movement : MonoBehaviour {
 	
 	public static int speedOffset;
 	
+	public static int currentGear;
 	int[] gearSpeeds = {999, 190, 110, 50, 25};
 	
 	public static GameObject HUD;
@@ -434,7 +435,8 @@ public class Movement : MonoBehaviour {
 				if((carHit.gameObject.tag == "Barrier") || 
 				  (carHit.gameObject.name == "OuterWall") ||
 				  (carHit.gameObject.name == "SaferBarrier")){
-					startWreck();  
+					startWreck();
+					GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Scrape");
 				}
 			}
 			   
@@ -463,6 +465,7 @@ public class Movement : MonoBehaviour {
 						RaceHUD.tutorialBackingOut = true;
 						laneticker = -laneChangeDuration + laneticker;
 						lane--;
+						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Impact");
 					}
 				} else {
 					if(laneticker < 0){
@@ -472,6 +475,7 @@ public class Movement : MonoBehaviour {
 							RaceHUD.tutorialBackingOut = true;
 							laneticker = laneChangeDuration + laneticker;
 							lane++;
+							//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Impact");
 						}
 					}
 				}
@@ -778,7 +782,6 @@ public class Movement : MonoBehaviour {
 			vehicle.transform.Translate(0.001f,0,0);
 			wobblePos--;
 		}
-
 		updateMovement();
 		
 		if(((laneticker == 2)||(laneticker == -2))&&(RaceHUD.tutorialBackingOut == false)){
@@ -788,12 +791,14 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Speed tops out
-        if (playerSpeed > (205 + carRarity + laneInv)){
+        if(playerSpeed > (205.5f + (carRarity / 2) + (laneInv / 2))){
+			//Debug.Log("Overspeed: " + (playerSpeed > (205 + carRarity + laneInv)));
 			//Reduce speed, proportionate to the amount 'over'
-            playerSpeed -= ((playerSpeed - 205) / 200);
+            playerSpeed -= ((playerSpeed - 205.5f) / 200f);
+			//Debug.Log("Reduced by: " + ((playerSpeed - 205) / 200));
 		}
-		if(playerSpeed > 210){
-			playerSpeed=210f;
+		if(playerSpeed > 209f){
+			playerSpeed=209f;
 		}
 
 		//Caution decel
@@ -922,6 +927,11 @@ public class Movement : MonoBehaviour {
 			
 			carEngine.pitch = 0.7f + (engineRevs / 10000f);
 			carEngine.pitch = 0.7f + (engineRevs / 10000f) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+			if(currentGear != 4){
+				currentGear = 4;
+				//SFX
+				//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
+			}
 			HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 4";
 			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
 			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
@@ -933,6 +943,11 @@ public class Movement : MonoBehaviour {
 				engineRevs+=(playerSpeed - 195) * 100;
 				
 				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+				if(currentGear != 3){
+					currentGear = 3;
+					//SFX
+					//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
+				}
 				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 3";
 				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
 				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
@@ -944,6 +959,11 @@ public class Movement : MonoBehaviour {
 					engineRevs+=(playerSpeed - 195) * 100;
 					
 					carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+					if(currentGear != 2){
+						currentGear = 2;
+						//SFX
+						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
+					}
 					HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
 					HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
 					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
@@ -957,6 +977,11 @@ public class Movement : MonoBehaviour {
 					}
 					
 					carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+					if(currentGear != 1){
+						currentGear = 1;
+						//SFX
+						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
+					}
 					HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
 					HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
 					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);

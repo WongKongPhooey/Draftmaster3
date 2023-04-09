@@ -112,9 +112,6 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("MomentComplete")){
 			PlayerPrefs.DeleteKey("MomentComplete");
 		}
-		if(PlayerPrefs.HasKey("RaceModifier")){
-			PlayerPrefs.DeleteKey("RaceModifier");
-		}
 		if(PlayerPrefs.HasKey("RaceAILevel")){
 			PlayerPrefs.DeleteKey("RaceAILevel");
 		}

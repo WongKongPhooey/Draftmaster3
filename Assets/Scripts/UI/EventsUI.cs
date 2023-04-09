@@ -42,7 +42,6 @@ public class EventsUI : MonoBehaviour
 			//First login
 			week = 1;
 		}
-		
 		loadEvents();
     }
 
@@ -107,8 +106,57 @@ public class EventsUI : MonoBehaviour
 			}
 			sortCounter++;
 		}
-		
 		sortTiles();
+	}
+
+	public void loadSubEvent(int i, bool reversed = false){
+		//EventData.loadEvents();
+		
+		GameObject tileInst = Instantiate(eventChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+		RectTransform tileObj = tileInst.GetComponent<RectTransform>();
+		tileInst.transform.SetParent(tileFrame, false);
+		
+		tileInst.GetComponent<UIAnimate>().animOffset = i+1;
+		tileInst.GetComponent<UIAnimate>().scaleIn();
+		
+		TMPro.TMP_Text eventName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+		RawImage eventImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
+		TMPro.TMP_Text eventDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+		GameObject eventCover = tileInst.transform.GetChild(4).transform.gameObject;
+		GameObject eventRewardsBtn = tileInst.transform.GetChild(6).transform.gameObject;
+		GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
+		tileInst.GetComponent<EventUIFunctions>().subMenuId = subMenuId;
+		tileInst.GetComponent<EventUIFunctions>().subEventId = i;
+		tileInst.GetComponent<EventUIFunctions>().rewardCollected = false;
+		
+		eventName.text = EventData.offlineEventChapter[subMenuId,i];
+		eventDesc.text = EventData.eventChapterDescriptions[subMenuId,i];
+		eventImage.texture = Resources.Load<Texture2D>(EventData.offlineChapterImage[subMenuId,i]);
+		
+		//Testing
+		#if UNITY_EDITOR
+		//PlayerPrefs.SetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1", 2);
+		#endif
+		
+		//No dupe rewards allowed in progression events
+		if((PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1") == 1)&&(EventData.offlineEventType[subMenuId] != "Replay")){
+			eventRewardsBtn.SetActive(false);
+			rewardCollected.SetActive(true);
+			tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
+			//Debug.Log("BestFinishPosition" + subMenuId + "" + i + "EVENT1 : " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
+		} else {
+			//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
+		}
+			
+		if(EventData.offlineEventType[subMenuId] == "Progression"){
+			//Never lock the first sub-event
+			if(i>0){
+				//If previous sub-event hasn't been won, lock.
+				if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + (i-1) + "EVENT1") != 1){
+					eventCover.SetActive(true);
+				}
+			}
+		}
 	}
 
 	public void loadSubEvents(int subMenuId){
@@ -116,57 +164,21 @@ public class EventsUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
-		for(int i=9;i>=0;i--){
-			//EventData.loadEvents();
-			//Skip through the non-driver #s
-			if(EventData.offlineEventChapter[subMenuId,i] == null){
-				continue;
-			}
-			
-			GameObject tileInst = Instantiate(eventChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-			RectTransform tileObj = tileInst.GetComponent<RectTransform>();
-			tileInst.transform.SetParent(tileFrame, false);
-			
-			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
-			tileInst.GetComponent<UIAnimate>().scaleIn();
-			
-			TMPro.TMP_Text eventName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
-			RawImage eventImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
-			TMPro.TMP_Text eventDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			GameObject eventCover = tileInst.transform.GetChild(4).transform.gameObject;
-			GameObject eventRewardsBtn = tileInst.transform.GetChild(6).transform.gameObject;
-			GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
-			tileInst.GetComponent<EventUIFunctions>().subMenuId = subMenuId;
-			tileInst.GetComponent<EventUIFunctions>().subEventId = i;
-			tileInst.GetComponent<EventUIFunctions>().rewardCollected = false;
-			
-			eventName.text = EventData.offlineEventChapter[subMenuId,i];
-			eventDesc.text = EventData.eventChapterDescriptions[subMenuId,i];
-			eventImage.texture = Resources.Load<Texture2D>(EventData.offlineChapterImage[subMenuId,i]);
-			
-			//Testing
-			#if UNITY_EDITOR
-			//PlayerPrefs.SetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1", 2);
-			#endif
-			
-			//No dupe rewards allowed in progression events
-			if((PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1") == 1)&&(EventData.offlineEventType[subMenuId] != "Replay")){
-				eventRewardsBtn.SetActive(false);
-				rewardCollected.SetActive(true);
-				tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
-				//Debug.Log("BestFinishPosition" + subMenuId + "" + i + "EVENT1 : " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
-			} else {
-				//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
-			}
-				
-			if(EventData.offlineEventType[subMenuId] == "Progression"){
-				//Never lock the first sub-event
-				if(i>0){
-					//If previous sub-event hasn't been won, lock.
-					if(PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + (i-1) + "EVENT1") != 1){
-						eventCover.SetActive(true);
-					}
+		//Moments show newest first
+		if(subMenuId == 4){
+			for(int i=9;i>=0;i--){
+				//Skip through the empty chapters
+				if(EventData.offlineEventChapter[subMenuId,i] == null){
+					continue;
 				}
+				loadSubEvent(i,true);
+			}
+		} else {
+			for(int i=0;i<=9;i++){
+				if(EventData.offlineEventChapter[subMenuId,i] == null){
+					continue;
+				}
+				loadSubEvent(i,false);
 			}
 		}
 	}

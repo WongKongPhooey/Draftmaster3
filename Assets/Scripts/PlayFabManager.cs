@@ -569,7 +569,7 @@ public class PlayFabManager : MonoBehaviour
 			if(result.Data.ContainsKey("RewardAlt")){
 				string rewardAlt = result.Data["RewardAlt"].Value;
 				//Example: cup20livery20alt1
-				if((rewardAlt != "0")&&(rewardAlt != "")){
+				if((rewardAlt != "0")&&(rewardAlt != "")&&(rewardAlt != null)){
 					Debug.Log("Rewarded Alt #" + rewardAlt);
 					
 					rewardCarImg = rewardAlt;

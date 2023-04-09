@@ -132,6 +132,7 @@ public class StoreUI : MonoBehaviour
 			if(isAlt == true){
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
+				tileQuantity.text = "Paint Scheme";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
@@ -144,6 +145,7 @@ public class StoreUI : MonoBehaviour
 			} else {
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
 				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
+				tileQuantity.text = "+3 Parts";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
@@ -244,6 +246,7 @@ public class StoreUI : MonoBehaviour
 			if(isAlt == true){
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
+				tileQuantity.text = "Paint Scheme";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
@@ -256,6 +259,7 @@ public class StoreUI : MonoBehaviour
 			} else {
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
 				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
+				tileQuantity.text = "+3 Parts";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
@@ -335,6 +339,7 @@ public class StoreUI : MonoBehaviour
 			if(isAlt == true){
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
+				tileQuantity.text = "Paint Scheme";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
@@ -347,6 +352,7 @@ public class StoreUI : MonoBehaviour
 			} else {
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
 				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
+				tileQuantity.text = "+3 Parts";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
@@ -373,28 +379,28 @@ public class StoreUI : MonoBehaviour
 		
 		switch(product.definition.id){
 			case gears60:
-				Debug.Log("Added 80 gears");
-				gears+=80;
+				Debug.Log("Added 150 gears");
+				gears+=150;
 				PlayerPrefs.SetInt("Gears",gears);
-				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","150 Gears have been added!","dm2logo");
 				break;
 			case gears125:
-				Debug.Log("Added 250 gears");
-				gears+=250;
+				Debug.Log("Added 450 gears");
+				gears+=450;
 				PlayerPrefs.SetInt("Gears",gears);
-				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","550 Gears have been added!","dm2logo");
 				break;
 			case gears200:
-				Debug.Log("Added 600 gears");
-				gears+=600;
+				Debug.Log("Added 1100 gears");
+				gears+=1100;
 				PlayerPrefs.SetInt("Gears",gears);
-				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","1100 Gears have been added!","dm2logo");
 				break;
 			case gears500:
-				Debug.Log("Added 1500 gears");
-				gears+=1500;
+				Debug.Log("Added 2500 gears");
+				gears+=2500;
 				PlayerPrefs.SetInt("Gears",gears);
-				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","2500 Gears have been added!","dm2logo");
 				break;
 			case smallgears:
 				Debug.Log("Added 80 gears");

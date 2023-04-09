@@ -71,8 +71,6 @@ public class CameraRotate : MonoBehaviour {
 		
 		Time.timeScale = 1.0f;
 		
-		this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
-		
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
 		if(cameraZoom == 1){
@@ -174,9 +172,28 @@ public class CameraRotate : MonoBehaviour {
 				Debug.Log("Pulled existing fastest lap of " + raceLapRecord);
 				PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 			}
+			
+			//Race Restart Comms
+			if(Ticker.position <= 2){
+				this.gameObject.GetComponent<CommentaryManager>().commentate("RestartFront");
+			} else {
+				if(Ticker.position >= 35){
+					this.gameObject.GetComponent<CommentaryManager>().commentate("RestartBack");
+				} else {
+					if((Ticker.position >= 18)&&(Ticker.position <= 26)){
+						this.gameObject.GetComponent<CommentaryManager>().commentate("RestartMiddle");
+					} else {
+						this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
+					}
+				}
+			}
+		
 		} else {
 			//Delete any Race Fastest Lap time if not a caution restart
 			PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
+			
+			//Initial Race Start
+			this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
 		}
 		
 		momentChecks = false;
@@ -223,8 +240,14 @@ public class CameraRotate : MonoBehaviour {
 			Ticker.updateTicker();
 			lap++;
 			
+			//Final Lap
 			if(CameraRotate.lap == CameraRotate.raceEnd){
-				this.gameObject.GetComponent<CommentaryManager>().commentate("LastLap");
+				Debug.Log("LAST LAP! Pos:" + Ticker.position);
+				if(Ticker.position == 0){
+					this.gameObject.GetComponent<CommentaryManager>().commentate("LastLapLeader");
+				} else {
+					this.gameObject.GetComponent<CommentaryManager>().commentate("LastLap");
+				}
 			}
 			//Debug.Log("Add on a lap, now on lap " + lap);
 			//Starts/Restarts

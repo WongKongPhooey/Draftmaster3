@@ -389,6 +389,8 @@ public class Ticker : MonoBehaviour
 	public static void retryChallenge(){
 		Time.timeScale = 1.0f;
 		RaceHUD.raceOver = false;
+		PlayerPrefs.DeleteKey("CautionLap");
+		PlayerPrefs.DeleteKey("SpawnFromCaution");
 		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 	}
 	

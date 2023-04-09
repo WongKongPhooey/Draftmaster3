@@ -294,6 +294,20 @@ public class EventData : MonoBehaviour
 		offlineCustomFieldOrder[3,0] = "x,player,x,x,x,x,24";
 		eventChapterDescriptions[3,0] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
 		
+		offlineEventChapter[3,1] = "The Yard Of Bricks";
+		offlineChapterImage[3,1] = "cup20livery4";
+		offlineMinClass[3,1] = 2;
+		offlineMinLevel[3,1] = 5;
+		offlineMinTeam[3,1] = "RCR";
+		offlineAILevel[3,1] = 10;
+		offlineSeries[3,1] = "cup20";
+		offlineStartingLap[3,1] = 8;
+		offlineTracklists[3,1] = "20";
+		offlinePrizes[3,1] = "Harvick";
+		offlineSetPrizes[3,1] = "15";
+		eventChapterDescriptions[3,1] = "Harvick's first crown jewel victory came in 2003, winning the Brickyard 400 for RCR.";
+		
+		
 		//Moments
 		offlineEventChapter[4,0] = "Daytona '79";
 		offlineChapterImage[4,0] = "cup79livery11";

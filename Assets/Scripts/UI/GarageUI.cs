@@ -78,6 +78,7 @@ public class GarageUI : MonoBehaviour
 		
 		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
 		
+		int validCars = 0;
 		for(int i=0;i<100;i++){
 			
 			//Skip through the non-driver #s
@@ -207,24 +208,34 @@ public class GarageUI : MonoBehaviour
 			}
 			carGearsProgressUI.sizeDelta = new Vector2(gearsProgressUIWidth, 20);
 			
+			//If choosing a car to race with..
 			if(PlayerPrefs.HasKey("ActivePath")){
+				validCars++;
 				int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
 
 				if((minClass > carClass)||
 				(carUnlocked == 0)){
 					carClickable.SetActive(false);
 					carDisabled.SetActive(true);
+					validCars--;
 				}
 				
 				if(meetsRestrictions(seriesPrefix,i) == false){
 					carClickable.SetActive(false);
 					carDisabled.SetActive(true);
+					validCars--;
 				}
 			}
 			
 			if(carUnlocked == 0){
 				carClickable.SetActive(false);
 				carDisabled.SetActive(true);
+			}
+		}
+		
+		if(PlayerPrefs.HasKey("ActivePath")){
+			if(validCars == 0){
+				alertPopup.GetComponent<AlertManager>().showPopup("No Valid Car","No Car In This Set Meets The Entry Requirements For This Series.","dm2logo");
 			}
 		}
 		
@@ -241,7 +252,6 @@ public class GarageUI : MonoBehaviour
 			}
 			sortCounter++;
 		}
-		
 		sortTiles();
 	}
 

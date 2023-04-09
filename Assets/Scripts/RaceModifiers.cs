@@ -8,12 +8,13 @@ public class RaceModifiers : MonoBehaviour
 	public static string modifier;
 	
     // Start is called before the first frame update
-    void Awake(){
+    void Start(){
 		modifier = "";
 		checkModifiers();
     }
 
 	public static void resetModifiers(){
+		modifier = "";
 		Movement.delicateMod = false;
 		Movement.invincibleMod = false;
 		Movement.bulldozerMod = false;
@@ -56,6 +57,11 @@ public class RaceModifiers : MonoBehaviour
 				Movement.wallrideMod = true;
 				break;
 			default:
+				Movement.delicateMod = false;
+				Movement.invincibleMod = false;
+				Movement.bulldozerMod = false;
+				Movement.suddenshowerMod = false;
+				Movement.wallrideMod = false;
 				break;
 		}
 	}

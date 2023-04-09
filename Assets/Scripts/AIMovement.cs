@@ -695,13 +695,13 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Speed tops out
-        if (AISpeed > (205 + (laneInv / 2) + (AILevel / 5))){
+        if (AISpeed > (205.5f + (laneInv / 2f) + (AILevel / 10f))){
 			//Reduce speed, proportionate to the amount 'over'
-            AISpeed -= ((AISpeed - 204) / (100 + (AILevel * 10)));
+            AISpeed -= ((AISpeed - 204f) / (100 + (AILevel * 10f)));
 		}
-		if (AISpeed > 210){
+		if (AISpeed > 209f){
 			//Hard limiter as a fallback
-            AISpeed = 210;
+            AISpeed = 209f;
 		}
 		
 		//Minimum speed
