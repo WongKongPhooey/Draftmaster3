@@ -157,7 +157,7 @@ public class SpawnField : MonoBehaviour {
 			//Set field after caution
 			//Cars In Front
 			for (int i = playerRow - 1; i >= 1; i--) {
-				Debug.Log("Field Row In Front: " + i);
+				//Debug.Log("Field Row In Front: " + i);
 				for(int j=1;j<=gridLanes;j++){
 					//Skip whenever the player number appears in the field
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
@@ -248,7 +248,7 @@ public class SpawnField : MonoBehaviour {
 
 			//Cars Behind
 			for (int i = 1; i < (gridRows - playerRow); i++) {
-				Debug.Log("Field Row Behind: " + i);
+				//Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
 					//Skip whenever the player number appears in the field
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
@@ -290,7 +290,7 @@ public class SpawnField : MonoBehaviour {
 					fieldIndex++;
 				}
 			}
-			Debug.Log(fieldIndex + " Cars Positioned After Caution");
+			//Debug.Log(fieldIndex + " Cars Positioned After Caution");
 			PlayerPrefs.DeleteKey("SpawnFromCaution");
 			
 		} else {

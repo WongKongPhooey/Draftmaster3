@@ -256,7 +256,7 @@ public class Movement : MonoBehaviour {
 				this.transform.Find("Number").Translate(0.1f,0f,0f);
 				break;
 			case "cup23":
-				Debug.Log("Cup '23 Number Shift");
+				//Debug.Log("Cup '23 Number Shift");
 				this.transform.Find("Number").Translate(0.1f,0f,0f);
 				break;
 			default:
@@ -584,7 +584,7 @@ public class Movement : MonoBehaviour {
 
 		laneBias = 0;
 
-		//Speed up if under max non-draft speed
+		//Speed up if under min non-draft speed
 		if(playerSpeed < 199){
 			playerSpeed=199f;
 		}
@@ -594,7 +594,21 @@ public class Movement : MonoBehaviour {
 			draftDist = DraftCheck.distance;
 			//Speed up
 			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
-				playerSpeed+=((10 - DraftCheck.distance)/1500) + (carRarity / 1000f);
+				
+				float draftStrength = ((10 - DraftCheck.distance)/1500) + (carRarity / 1000f);
+				
+				float diffToMax = (topSpeed + (carRarity/5f) + randTopend) - playerSpeed;
+				//If approaching max speed, taper off
+				if((diffToMax) < 2){
+					//If speed above max, it zeros the draft out (rev limiter)
+					if(diffToMax < 0){
+						diffToMax = 0;
+					}
+					draftStrength *= (diffToMax / 2);
+					Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
+				}
+				playerSpeed += draftStrength;
+				
 			} else {
 				playerSpeed-=((playerSpeed - topSpeed)/200);
 			}
@@ -606,7 +620,13 @@ public class Movement : MonoBehaviour {
 		} else {
 			//Slow down if not in any draft
 			if(playerSpeed >= 200){
-				playerSpeed-=0.0035f;
+				float diffToMax = topSpeed - playerSpeed;
+				if((diffToMax) < 2){
+					if(diffToMax < 0){
+						diffToMax = 0;
+					}
+				playerSpeed-=(0.0035f * (2 - (diffToMax / 2)));
+				}
 			}
 			//Empty the Draft Bar
 			draftDist= 10 + customDistF;
@@ -617,9 +637,6 @@ public class Movement : MonoBehaviour {
 			//Speed up
 			if(playerSpeed <= (205f + (speedRand + customSpeedF) + challengeSpeedBoost + laneInv + carRarity + randTopend)){
 				playerSpeed+=(0.005f + customAccelF);
-				if(RaceHUD.tutorialStage == 4){
-					RaceHUD.tutorialBackdraftCount++;
-				}
 			}
 		}
 
@@ -627,9 +644,6 @@ public class Movement : MonoBehaviour {
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.01f)){
 			//Speed up
 			playerSpeed+=0.0045f;
-			if(RaceHUD.tutorialStage == 4){
-				RaceHUD.tutorialBackdraftCount++;
-			}
 			//DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
 			tandemDraft = true;
 		} else {
@@ -791,15 +805,15 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Speed tops out
-        if(playerSpeed > (205.5f + (carRarity / 2) + (laneInv / 2))){
+        //if(playerSpeed > (205.5f + (carRarity / 2) + (laneInv / 2))){
 			//Debug.Log("Overspeed: " + (playerSpeed > (205 + carRarity + laneInv)));
 			//Reduce speed, proportionate to the amount 'over'
-            playerSpeed -= ((playerSpeed - 205.5f) / 200f);
+            //playerSpeed -= ((playerSpeed - 205.5f) / 200f);
 			//Debug.Log("Reduced by: " + ((playerSpeed - 205) / 200));
-		}
-		if(playerSpeed > 209f){
-			playerSpeed=209f;
-		}
+		//}
+		//if(playerSpeed > 209f){
+		//	playerSpeed=209f;
+		//}
 
 		//Caution decel
 		if(RaceHUD.caution == true){
@@ -859,8 +873,7 @@ public class Movement : MonoBehaviour {
 			}
         }
 
-        if (laneticker == 0)
-        {
+        if (laneticker == 0){
 			//movingLane = false;
             backingOut = false;
         }
@@ -1259,6 +1272,10 @@ public class Movement : MonoBehaviour {
 		smokeMultiplier = (smokeMultiplier * 60) + 0;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
+		
+		if(Mathf.Round(playerWreckDecel) == -90){
+			this.gameObject.GetComponent<CommentaryManager>().commentate("Caution");
+		}
 	}
 	
 	void updateWindForce(){
@@ -1270,6 +1287,15 @@ public class Movement : MonoBehaviour {
 		}
 	}
 	
+	public static void incrTotalWreckers(){
+		totalWreckers++;
+		if(totalWreckers == 20){
+			//Debug.Log("BIG CRASH");
+			GameObject theCamera = GameObject.Find("Main Camera");
+			theCamera.GetComponent<CommentaryManager>().commentate("BigCrash");
+		}
+	}
+		
 	public string calculateDamageGrade(float damage){
 		if(damage > 1500){
 			return "DVP Clock (" + Mathf.Round(damage / 15) + "%)";

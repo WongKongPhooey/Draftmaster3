@@ -29,17 +29,28 @@ public class CommentaryManager : MonoBehaviour
     }
 	
 	public void commentate(string phrase){
-		//Debug.Log("Commentary Triggered..");
+		Debug.Log("Commentary Triggered.. " + phrase);
 		bool canSpeak = checkCommentaryCooldown(cooldown);
+		
 		//No interrupting
 		if(cooldown != 0){
 			return;
 		}
+		//Are we allowed to repeat this phrase?
+		//And if not, has it already been said?
+		if(checkCommentaryOneTime(phrase) == false){
+			//return;
+		}
 		if(canSpeak == true){
+			Debug.Log("Loading Phrase: " + phrase);
 			switch(phrase){
 				case "Start":
 					rand = Random.Range(0,commentaryLines.startClips.Length);
 					phraseClip = commentaryLines.startClips[rand];
+					break;
+				case "GreenFlag":
+					rand = Random.Range(0,commentaryLines.greenFlagClips.Length);
+					phraseClip = commentaryLines.greenFlagClips[rand];
 					break;
 				case "RestartFront":
 					rand = Random.Range(0,commentaryLines.restartFrontClips.Length);
@@ -131,8 +142,6 @@ public class CommentaryManager : MonoBehaviour
 			case "Start":
 			case "Restart":
 			case "Wallhit":
-			case "Crash":
-			case "Caution":
 			case "LaneChange":
 				oneTime = false;
 				break;
@@ -140,6 +149,8 @@ public class CommentaryManager : MonoBehaviour
 			case "NewLeader":
 			case "BumpDraft":
 			case "DraftTrain":
+			case "Crash":
+			case "Caution":
 			case "BigCrash":
 			case "NewSeason":
 			case "NoDraft":

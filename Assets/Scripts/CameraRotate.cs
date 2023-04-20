@@ -173,17 +173,17 @@ public class CameraRotate : MonoBehaviour {
 				PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 			}
 			
-			//Race Restart Comms
-			if(Ticker.position <= 2){
+			//Race Restart Comms (1st pos = 0)
+			if(Ticker.position < 10){
 				this.gameObject.GetComponent<CommentaryManager>().commentate("RestartFront");
 			} else {
-				if(Ticker.position >= 35){
+				if(Ticker.position > 35){
 					this.gameObject.GetComponent<CommentaryManager>().commentate("RestartBack");
 				} else {
-					if((Ticker.position >= 18)&&(Ticker.position <= 26)){
+					if((Ticker.position > 16)&&(Ticker.position < 26)){
 						this.gameObject.GetComponent<CommentaryManager>().commentate("RestartMiddle");
 					} else {
-						this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
+						this.gameObject.GetComponent<CommentaryManager>().commentate("GreenFlag");
 					}
 				}
 			}
@@ -193,7 +193,7 @@ public class CameraRotate : MonoBehaviour {
 			PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 			
 			//Initial Race Start
-			this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
+			this.gameObject.GetComponent<CommentaryManager>().commentate("GreenFlag");
 		}
 		
 		momentChecks = false;
@@ -253,6 +253,7 @@ public class CameraRotate : MonoBehaviour {
 			//Starts/Restarts
 			if(Movement.pacing == true){
 				Movement.pacingEnds();
+				this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
 			}
 			
 			if((averageSpeed > raceLapRecord)&&(lap > 1)){
@@ -437,6 +438,11 @@ public class CameraRotate : MonoBehaviour {
 						straight = 1;
 						turn = 1;
 					}
+					
+					if(cautionOut == true){
+						this.gameObject.GetComponent<CommentaryManager>().commentate("Caution");
+					}
+					
 					//Debug.Log("Straight:" + straight + " - Turn:" + turn);
 					if(cornerKerb.name != "FixedKerb"){
 						cornerKerb.GetComponent<Renderer>().enabled = false;

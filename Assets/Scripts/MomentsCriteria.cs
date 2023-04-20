@@ -54,6 +54,10 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("WreckStartPositionHigherThan","9");
 					momentsCriteria.Add("FinishPositionLowerThan","5");
 				break;
+				case "WideOpenWheels":
+					momentsCriteria.Add("FinishPositionLowerThan","1");
+					momentsCriteria.Add("CarAvoidsWreck","5");
+				break;
 				case "LiveMoment":
 					for(int i=1;i<=5;i++){
 						if(PlayerPrefs.GetString("MomentCriteria" + i) != ""){

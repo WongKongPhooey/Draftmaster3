@@ -58,7 +58,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		championshipTracklist = PlayerPrefs.GetString("ChampionshipTracklist");
 		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
 		championshipLength = PlayerPrefs.GetInt("ChampionshipLength");
-		Debug.Log("Season Length: " + championshipLength);
+		//Debug.Log("Season Length: " + championshipLength);
 		seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
 		PlayerPrefs.SetString("carSeries",PlayerPrefs.GetString("ChampionshipCarSeries"));
 		

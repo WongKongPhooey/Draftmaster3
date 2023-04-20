@@ -38,7 +38,8 @@ public class EnviroMovement : MonoBehaviour {
 		if(staticScroll == true){
 			//Slowest game speed is car:80, track:105 (LA start), Scaler = 0.066 + 0.131 = 0.197f		
 			float scrollCalc = (carSpeedOffset / 1200f) + (trackSpeedOffset / 800f);
-			float scrollVX = ((minScrollSpeed - scrollCalc) / 2);
+			//float scrollVX = ((minScrollSpeed - scrollCalc) / 2);
+			float scrollVX = (minScrollSpeed - scrollCalc);
 			if(scrollVX >= 0){
 				scrollPos -= scrollVX;
 			} else {

@@ -30,6 +30,8 @@ public class Ticker : MonoBehaviour
 	public static float leaderDist;
 	public static GameObject ticker;
 	public static GameObject playerTicker;
+	
+	public static bool hasLed;
 
 	public static GameObject[] carsArray = new GameObject[50];
 	public static float[] carPositions = new float[50];
@@ -92,6 +94,8 @@ public class Ticker : MonoBehaviour
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
 		fieldSize = carsArray.Length;
 		playerCarNum = PlayerPrefs.GetInt("CarChoice");
+		
+		hasLed = false;
     }
 
 	public void populateTickerData(){
@@ -163,6 +167,12 @@ public class Ticker : MonoBehaviour
 			
 			if(entrantList[i].name == playerCar.name){
 				position = i;
+				if(position == 0){
+					if(hasLed == false){
+						hasLed = true;
+						GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("NewLeader");
+					}
+				}
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
 				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){

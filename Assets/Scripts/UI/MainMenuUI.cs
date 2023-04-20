@@ -186,7 +186,8 @@ public class MainMenuUI : MonoBehaviour {
 			loginBtn.GetComponent<NavButton>().sceneName = "Levels/MyAccount";
 			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("PlayerUsername");
 		} else {
-			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = "Login";
+			clearOnlineData();
+			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = "Login/Register";
 		}
 		
 		//Reset the game to imitate new users
@@ -239,7 +240,11 @@ public class MainMenuUI : MonoBehaviour {
 
 	void checkForPlayfabUpdates(){
 		if(PlayerPrefs.GetString("LiveTimeTrial") == ""){
-			timeTrialDescUILabel.text = "There is No Active Time Trial";
+			if(!PlayerPrefs.HasKey("PlayerUsername")){
+				timeTrialDescUILabel.text = "Register a free account to use the online features of the game. This includes the weekly Time Trial leaderboard, and live Challenges!";
+			} else {
+				timeTrialDescUILabel.text = "There is No Active Time Trial";
+			}
 		} else {
 			timeTrialDescUILabel.text = "Set your fastest lap in any race series at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
 		}
@@ -290,6 +295,11 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetString("TargetVersion", Application.version);
 		alertPopup.GetComponent<AlertManager>().showPopup("Hey Rookie! You Need A Ride?", "Mcleod is sharing their 2020 and 2022 Cup cars to get you started!", "cup22livery78");
 		PlayerPrefs.SetInt("NewUser",1);
+	}
+	
+	void clearOnlineData(){
+		PlayerPrefs.SetString("StoreDailySelects","");
+		PlayerPrefs.SetString("LiveTimeTrial","");
 	}
 
     // Update is called once per frame

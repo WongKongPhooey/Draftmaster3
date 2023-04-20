@@ -538,9 +538,12 @@ public class GarageUI : MonoBehaviour
 		int level = PlayerPrefs.GetInt("Level");
 		int totalUnlocks = 0;
 		
+		//Add all autosavable series here
+		//should probably be hooked up to the Series Data file instead
 		ArrayList allSeries = new ArrayList(); 
 		allSeries.Add("cup20");
 		allSeries.Add("cup22");
+		allSeries.Add("cup23");
 		allSeries.Add("dmc15");
 		allSeries.Add("irc00");
 		
@@ -556,7 +559,6 @@ public class GarageUI : MonoBehaviour
 
 		//If you have more than just the starter cars..
 		if((level >= 5)&&(totalUnlocks > 5)){
-			//Debug.Log("Level: " + level + " - Cars:" + totalUnlocks);
 			//If logged in as someone
 			if(PlayerPrefs.HasKey("PlayerUsername")){
 				
@@ -564,7 +566,7 @@ public class GarageUI : MonoBehaviour
 				foreach(string series in allSeries){
 					string progressJSON = JSONifyProgress(series);
 					try {
-					PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+						PlayFabManager.AutosavePlayerProgress(series, progressJSON);
 					}
 					catch(Exception e){
 						Debug.Log("Cannot reach PlayFab");
@@ -574,7 +576,6 @@ public class GarageUI : MonoBehaviour
 		} else {
 			//Seems like an empty account.. check for a cloud save to reload
 			// ..just in case
-			//Debug.Log("Check for a cloud save..");
 			try{
 				PlayFabManager.GetSavedPlayerProgress();
 			} catch (Exception e){

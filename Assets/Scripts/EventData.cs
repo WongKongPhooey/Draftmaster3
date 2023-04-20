@@ -341,6 +341,23 @@ public class EventData : MonoBehaviour
 		offlineCustomFieldOrder[4,1] = "20,x,x,x,x,x,x,x,5,x,x,x,x,x,2,x,x,x,x,x,6,x,x,x,11,x,x,x,22,x,24,x,x,x,45,x,x,x,14,x,player,x,9,x,x,x,21";
 		eventChapterDescriptions[4,1] = "October 30th 2022, Chastain goes full speed along the wall to qualify for the playoffs final.";
 		
+		offlineEventChapter[4,2] = "Wide Open Wheels";
+		offlineChapterImage[4,2] = "irl23livery2";
+		offlineMinClass[4,2] = 1;
+		offlineMinLevel[4,2] = 1;
+		offlineAILevel[4,2] = 10;
+		offlineSeries[4,2] = "irl23";
+		offlineCustomCar[4,2] = "irl23livery2";
+		//offlineCustomField[4,2] = "cup22Chastain";
+		offlineStartingLap[4,2] = 14;
+		//offlineModifier[4,2] = "wallride";
+		offlineMoment[4,2] = "WideOpenWheels";
+		offlineTracklists[4,2] = "7";
+		offlinePrizes[4,2] = "1Star";
+		offlineCustomFieldOrder[4,2] = "player,x,5,x,x,x,10,x,18";
+		eventChapterDescriptions[4,2] = "March 30th 2023";
+		
+		
 		/*offlineEventChapter[4,2] = "Austin As Moses";
 		offlineChapterImage[4,2] = "cup22livery3";
 		offlineMinClass[4,2] = 1;

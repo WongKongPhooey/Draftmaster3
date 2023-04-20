@@ -22,7 +22,7 @@ public class DriverNames : MonoBehaviour {
 
 	public static Dictionary<string, int> numXPos = new Dictionary<string, int>();
 
-	public static string[] allCarsets = new string[7];
+	public static string[] allCarsets = new string[8];
 	public static string[] allWinnableCarsets = new string[5];
 
 	public static string[] cup2020Names = new string[101];
@@ -42,6 +42,12 @@ public class DriverNames : MonoBehaviour {
 	public static string[] cup2023Manufacturer = new string[101];
 	public static int[] cup2023Rarity = new int[101];
 	public static string[] cup2023Types = new string[101];
+	
+	public static string[] irl2023Names = new string[101];
+	public static string[] irl2023Teams = new string[101];
+	public static string[] irl2023Manufacturer = new string[101];
+	public static int[] irl2023Rarity = new int[101];
+	public static string[] irl2023Types = new string[101];
 	
 	public static string[] cup2001Names = new string[101];
 	public static string[] cup2001Teams = new string[101];
@@ -81,6 +87,7 @@ public class DriverNames : MonoBehaviour {
 		cup20();
 		cup22();
 		cup23();
+		irl23();
 		cup01();
 		cup79();
 		dmc15();
@@ -93,6 +100,7 @@ public class DriverNames : MonoBehaviour {
 		series.Add("cup20");
 		series.Add("cup22");
 		series.Add("cup23");
+		series.Add("irl23");
 		series.Add("cup01");
 		series.Add("cup79");
 		series.Add("dmc15");
@@ -124,6 +132,12 @@ public class DriverNames : MonoBehaviour {
 			allRarity.Add("cup23", cup2023Rarity);
 			allTypes.Add("cup23", cup2023Types);
 			
+			allNames.Add("irl23", irl2023Names);
+			allTeams.Add("irl23", irl2023Teams);
+			allManufacturer.Add("irl23", irl2023Manufacturer);
+			allRarity.Add("irl23", irl2023Rarity);
+			allTypes.Add("irl23", irl2023Types);
+			
 			allNames.Add("cup01", cup2001Names);
 			allTeams.Add("cup01", cup2001Teams);
 			allManufacturer.Add("cup01", cup2001Manufacturer);
@@ -151,6 +165,7 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("cup20", 17);
 			numXPos.Add("cup22", 10);
 			numXPos.Add("cup23", 11);
+			numXPos.Add("irl23", 25);
 			numXPos.Add("dmc15", 17);
 			numXPos.Add("irc00", 17);
 		}
@@ -164,6 +179,7 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[4] = "cup79";
 		allCarsets[5] = "dmc15";
 		allCarsets[6] = "irc00";
+		allCarsets[7] = "irl23";
 	}
 	
 	public static void listWinnableCarsets(){
@@ -223,6 +239,9 @@ public class DriverNames : MonoBehaviour {
 			carRarity -= 1;
 		}
 		if(seriesPrefix == "cup23"){
+			carRarity += 1;
+		}
+		if(seriesPrefix == "irl23"){
 			carRarity += 1;
 		}
 		if(seriesPrefix == "irc00"){
@@ -289,6 +308,7 @@ public class DriverNames : MonoBehaviour {
 			allCarsetNames.Add("cup20", "Cup '20");
 			allCarsetNames.Add("cup22", "Cup '22");
 			allCarsetNames.Add("cup23", "Cup '23");
+			allCarsetNames.Add("irl23", "Indy '23");
 			allCarsetNames.Add("cup01", "Cup '01");
 			allCarsetNames.Add("cup79", "Cup '79");
 			allCarsetNames.Add("irc00", "IROC '00");
@@ -1022,6 +1042,39 @@ public class DriverNames : MonoBehaviour {
 		cup2023Rarity[84] = 4;
 		cup2023Rarity[91] = 1;
 		cup2023Rarity[99] = 2;
+	}
+	
+	public static void irl23(){
+
+		irl2023Names[2] = "Newgarden";
+		irl2023Names[5] = "O Ward";
+		irl2023Names[7] = "Rossi";
+		irl2023Names[10] = "Palou";
+		irl2023Names[18] = "Malukas";
+		
+		irl2023Teams[2] = "PEN";
+		irl2023Teams[5] = "ARR";
+		irl2023Teams[7] = "ARR";
+		irl2023Teams[10] = "CGR";
+		irl2023Teams[18] = "DCR";
+		
+		irl2023Manufacturer[2] = "CHV";
+		irl2023Manufacturer[5] = "CHV";
+		irl2023Manufacturer[7] = "CHV";
+		irl2023Manufacturer[10] = "HON";
+		irl2023Manufacturer[18] = "HON";
+		
+		irl2023Types[2] = "Closer";
+		irl2023Types[5] = "Closer";
+		irl2023Types[7] = "Closer";
+		irl2023Types[10] = "Closer";
+		irl2023Types[18] = "Closer";
+
+		irl2023Rarity[2] = 2;
+		irl2023Rarity[5] = 2;
+		irl2023Rarity[7] = 2;
+		irl2023Rarity[10] = 2;
+		irl2023Rarity[18] = 2;
 	}
 	
 	public static void cup01(){

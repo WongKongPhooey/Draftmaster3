@@ -14,6 +14,7 @@ public class AIMovement : MonoBehaviour
 	public Camera player2Cam;
     public float AISpeed;
     float speed;
+	public float AITopSpeed;
     float speedRand;
     float accelRand;
 	int AILevel;
@@ -154,7 +155,7 @@ public class AIMovement : MonoBehaviour
 		}
 		PlayerPrefs.SetInt("RaceAILevel", AILevel);
 		
-		//Debug.Log("AILevel: " + AILevel);
+		AITopSpeed = 206f + (AILevel / 5);
 		
 		antiGlitch = 0;
 		
@@ -193,7 +194,7 @@ public class AIMovement : MonoBehaviour
 				this.transform.Find("Number").Translate(0.1f,0f,0f);
 				break;
 			case "cup23":
-				Debug.Log("Cup '23 Number Shift");
+				//Debug.Log("Cup '23 Number Shift");
 				this.transform.Find("Number").Translate(0.1f,0f,0f);
 				break;
 			default:
@@ -637,9 +638,19 @@ public class AIMovement : MonoBehaviour
 		//If gaining draft of car in front
 		if (HitForward && DraftCheckForward.distance <= maxDraftDistance){
 			//Speed up
-			if (AISpeed < (205 + (AILevel / 5))){
+			if (AISpeed < AITopSpeed){
 				//Draft gets stronger as you get closer
-				AISpeed += ((maxDraftDistance - DraftCheckForward.distance)/1000) + (AILevel / 2500);
+				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/1000) + (AILevel / 2500);
+				//If approaching max speed, taper off
+				float diffToMax = AITopSpeed - AISpeed;
+				if((diffToMax) < 2){
+					//If speed above max, it zeros the draft out (rev limiter)
+					if(diffToMax < 0){
+						diffToMax = 0;
+					}
+					draftStrength *= (diffToMax / 2);
+				}
+				AISpeed += draftStrength;
 			}
 		} else {
 			//Slow down
@@ -648,7 +659,15 @@ public class AIMovement : MonoBehaviour
 				if(dominator == true){
 					AISpeed -= (0.0015f - (AILevel / 12000));
 				} else {
-					AISpeed -= (0.004f - (AILevel / 5000));
+					float diffToMax = AITopSpeed - AISpeed;
+					if((diffToMax) < 2){
+						if(diffToMax < 0){
+							diffToMax = 0;
+						}
+						AISpeed -= (0.004f - (AILevel / 5000)) * (2 - (diffToMax / 2));
+					} else {
+						AISpeed -= (0.004f - (AILevel / 5000));
+					}
 				}
 			}
 		}
@@ -695,9 +714,9 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Speed tops out
-        if (AISpeed > (205.5f + (laneInv / 2f) + (AILevel / 10f))){
+        if (AISpeed > (206.5f + (laneInv / 2f) + (AILevel / 10f))){
 			//Reduce speed, proportionate to the amount 'over'
-            AISpeed -= ((AISpeed - 204f) / (100 + (AILevel * 10f)));
+            AISpeed -= ((AISpeed - 205f) / (100 + (AILevel * 10f)));
 		}
 		if (AISpeed > 209f){
 			//Hard limiter as a fallback
@@ -1420,7 +1439,7 @@ public class AIMovement : MonoBehaviour
 			return;
 		}
 		
-		Movement.totalWreckers++;
+		Movement.incrTotalWreckers();
 		
 		isWrecking = true;
 		if(CameraRotate.cautionOut == false){
