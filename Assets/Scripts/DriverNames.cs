@@ -857,7 +857,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Names[47] = "Stenhouse Jr.";
 		cup2023Names[48] = "Bowman";
 		cup2023Names[50] = "Daly";
-		cup2023Names[51] = "Ware";
+		cup2023Names[51] = "Crafton";
 		cup2023Names[54] = "Gibbs";
 		cup2023Names[62] = "Hill";
 		cup2023Names[67] = "Pastrana";

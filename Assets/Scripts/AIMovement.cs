@@ -33,6 +33,13 @@ public class AIMovement : MonoBehaviour
 	int laneStagnant;
 	int stagnantMax;
 	
+	//These can adjust per race series (e.g. Indy)
+	float draftStrengthRatio;
+	float dragDecelMulti;
+	float backdraftMulti;
+	float bumpDraftDistTrigger;
+	float passDistMulti;
+	
 	public bool isWrecking;
 	public bool wreckOver;
 	float baseDecel;
@@ -135,6 +142,7 @@ public class AIMovement : MonoBehaviour
 		coolOffSpace = 2.0f;
 		coolOffInv = 75;
 		if(PlayerPrefs.GetString("TrackType") == "Short"){
+			//maxTandem = 1;
 			coolOffSpace = 2.5f;
 			coolOffInv = 50;
 		}
@@ -171,6 +179,8 @@ public class AIMovement : MonoBehaviour
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
+		
+		setCarPhysics(seriesPrefix);  
 		
 		string splitAfter = "AICar0";
 		carNumber = this.name.Substring(this.name.IndexOf(splitAfter) + splitAfter.Length);
@@ -640,7 +650,7 @@ public class AIMovement : MonoBehaviour
 			//Speed up
 			if (AISpeed < AITopSpeed){
 				//Draft gets stronger as you get closer
-				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/1000) + (AILevel / 2500);
+				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 2500);
 				//If approaching max speed, taper off
 				float diffToMax = AITopSpeed - AISpeed;
 				if((diffToMax) < 2){
@@ -650,23 +660,24 @@ public class AIMovement : MonoBehaviour
 					}
 					draftStrength *= (diffToMax / 2);
 				}
+				//AISpeed += draftStrength;
 				AISpeed += draftStrength;
 			}
 		} else {
 			//Slow down
-			if (AISpeed > 200){
+			if (AISpeed > 200){ 
 				//No draft, slow with drag
 				if(dominator == true){
-					AISpeed -= (0.0015f - (AILevel / 12000));
+					AISpeed -= ((dragDecelMulti * 3) - (AILevel / 12000));
 				} else {
 					float diffToMax = AITopSpeed - AISpeed;
 					if((diffToMax) < 2){
 						if(diffToMax < 0){
 							diffToMax = 0;
 						}
-						AISpeed -= (0.004f - (AILevel / 5000)) * (2 - (diffToMax / 2));
+						AISpeed -= (dragDecelMulti - (AILevel / 5000)) * (2 - (diffToMax / 2));
 					} else {
-						AISpeed -= (0.004f - (AILevel / 5000));
+						AISpeed -= (dragDecelMulti - (AILevel / 5000));
 					}
 				}
 			}
@@ -674,7 +685,10 @@ public class AIMovement : MonoBehaviour
 		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.5f){
-				AISpeed += (0.004f) + (AILevel / 2000);
+			//Bump draft can't exceed slingshot speed (for balance)
+			if(AISpeed <= (AITopSpeed - 2f)){
+				AISpeed += backdraftMulti + (AILevel / 2000);
+			}
 		}
 		
 		//If engine is too hot, stall out
@@ -682,14 +696,14 @@ public class AIMovement : MonoBehaviour
 			if (HitForward && DraftCheckForward.distance <= coolOffSpace){
 				//Overheat weakens as you back away
 				AISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
-				//Debug.Log("#" + carNumber + " cooling down");
+				//Debug.Log("#" + carNumber + " cooling down, factor " + (coolOffSpace - DraftCheckForward.distance)/coolOffInv);
 			} else {
 				coolEngine = false;
 			}
 		}
 		
 		// If being bump-drafted from behind
-		if (HitBackward && DraftCheckBackward.distance <= 1.01f){
+		if (HitBackward && DraftCheckBackward.distance <= bumpDraftDistTrigger){
 			AISpeed += 0.0035f;
 			tandemDraft = true;
 			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
@@ -707,6 +721,9 @@ public class AIMovement : MonoBehaviour
 		if (HitForward && DraftCheckForward.distance <= 1.01f){
 			if(DraftCheckForward.transform.gameObject.name != null){
 				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
+			}
+			if(seriesPrefix == "irl23"){
+				coolEngine = true;
 			}
 		} else {
 			tandemDraft = false;
@@ -746,6 +763,27 @@ public class AIMovement : MonoBehaviour
 		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		AICar.transform.Translate(0, 0, speed);
+	}
+	
+	void setCarPhysics(string seriesPrefix){
+		switch(seriesPrefix){
+			case "irl23":
+				draftStrengthRatio = 500;
+				dragDecelMulti = 0.002f;
+				backdraftMulti = 0.015f;
+				bumpDraftDistTrigger = 1.25f;
+				passDistMulti = 1.5f;
+				coolOffSpace = 2f;
+				coolOffInv = 5;
+				break;
+			default:
+				draftStrengthRatio = 1000;
+				dragDecelMulti = 0.004f;
+				backdraftMulti = 0.004f;
+				bumpDraftDistTrigger = 1.01f;
+				passDistMulti = 1f;
+				break;
+		}
 	}
 	
 	void wreckSpeed(){		
@@ -807,7 +845,7 @@ public class AIMovement : MonoBehaviour
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
 					startWreck();
-					Debug.Log("Wreck: Random Wall");
+					//Debug.Log("Wreck: Random Wall");
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 				}
 			}
@@ -982,27 +1020,27 @@ public class AIMovement : MonoBehaviour
 	
 	bool timedPass(float distance, float opponentSpeed) {
 		
-		if((AISpeed - opponentSpeed) > 2.5f){
+		if((AISpeed - opponentSpeed) > (2.5f * passDistMulti)){
 			tryPass(50, false);
 			//Debug.Log("Car #" + carNum + " attempts large pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
 			return true;
 		}
-		if(distance < 2.5f){
-			if((AISpeed - opponentSpeed) > 1.5f){
+		if(distance < (2.5f * passDistMulti)){
+			if((AISpeed - opponentSpeed) > (1.5f * passDistMulti)){
 				//Debug.Log("Car #" + carNum + " attempts long pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
 				tryPass(50, false);
 				return true;
 			}
 		}
-		if(distance < 1.5f){
-			if((AISpeed - opponentSpeed) > 1f){
+		if(distance < (1.5f * passDistMulti)){
+			if((AISpeed - opponentSpeed) > (1f * passDistMulti)){
 				//Debug.Log("Car #" + carNum + " attempts ideal pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
 				tryPass(50, false);
 				return true;
 			}
 		}
-		if(distance < 1.25f){
-			if((AISpeed - opponentSpeed) > 0.3f){
+		if(distance < (1.25f * passDistMulti)){
+			if((AISpeed - opponentSpeed) > (0.3f * passDistMulti)){
 				//Debug.Log("Car #" + carNum + " attempts close pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
 				tryPass(50, false);
 				return true;

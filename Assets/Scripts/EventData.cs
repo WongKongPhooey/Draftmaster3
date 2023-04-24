@@ -355,7 +355,7 @@ public class EventData : MonoBehaviour
 		offlineTracklists[4,2] = "7";
 		offlinePrizes[4,2] = "1Star";
 		offlineCustomFieldOrder[4,2] = "player,x,5,x,x,x,10,x,18";
-		eventChapterDescriptions[4,2] = "March 30th 2023";
+		eventChapterDescriptions[4,2] = "April 2nd 2023, Newgarden wins out after a thrilling 4 car battle for the win in Texas.";
 		
 		
 		/*offlineEventChapter[4,2] = "Austin As Moses";

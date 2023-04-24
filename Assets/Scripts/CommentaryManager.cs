@@ -29,7 +29,7 @@ public class CommentaryManager : MonoBehaviour
     }
 	
 	public void commentate(string phrase){
-		Debug.Log("Commentary Triggered.. " + phrase);
+		//Debug.Log("Commentary Triggered.. " + phrase);
 		bool canSpeak = checkCommentaryCooldown(cooldown);
 		
 		//No interrupting
@@ -42,7 +42,7 @@ public class CommentaryManager : MonoBehaviour
 			//return;
 		}
 		if(canSpeak == true){
-			Debug.Log("Loading Phrase: " + phrase);
+			//Debug.Log("Loading Phrase: " + phrase);
 			switch(phrase){
 				case "Start":
 					rand = Random.Range(0,commentaryLines.startClips.Length);

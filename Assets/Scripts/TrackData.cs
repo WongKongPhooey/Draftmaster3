@@ -27,13 +27,13 @@ using System.Reflection;
 21 Homestead, FL
 22 WWT Gateway - Madison, IL
 23 Nashville, TN
+26 North Wilkesboro, NC
+30 LA Coliseum, CA
 
 24 Rockingham, England
 25 Rockingham, NC
-26 North Wilkesboro, NC
 27 Nazareth, PN
 28 Iowa, IA
-30 LA Coliseum, CA
 ----------------------*/
 
 public class TrackData : MonoBehaviour
@@ -149,7 +149,7 @@ public class TrackData : MonoBehaviour
 		trackCodeNames[24] = "RockinghamUK";
 		
 		trackCodeNames[25] = "Rockingham";
-		trackCodeNames[26] = "NorthWilkes";
+		trackCodeNames[26] = "NorthWilkesboro";
 		trackCodeNames[27] = "Nazareth";
 		trackCodeNames[28] = "Iowa";
 		trackCodeNames[29] = "Nashville";
@@ -227,6 +227,9 @@ public class TrackData : MonoBehaviour
 			case "23":
 				trackImageName = "TriOval";
 				break;
+			case "26":
+				trackImageName = "SmallOval";
+				break;
 			case "30":
 				trackImageName = "TinyOval";
 				break;
@@ -260,12 +263,12 @@ public class TrackData : MonoBehaviour
 		trackLaps[21] = 6;
 		trackLaps[22] = 7;
 		trackLaps[23] = 6;
+		trackLaps[26] = 8;
 		trackLaps[30] = 10;
 		
 		trackLaps[24] = 6;
 		
 		trackLaps[25] = 7;
-		trackLaps[26] = 9;
 		trackLaps[27] = 6;
 		trackLaps[28] = 9;
 		trackLaps[29] = 6;
@@ -437,10 +440,10 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("TurnLength2",160);
 		PlayerPrefs.SetInt("TurnLength3",160);
 		PlayerPrefs.SetInt("TurnLength4",20);
-		PlayerPrefs.SetInt("TurnAngle1",1);
+		PlayerPrefs.SetInt("TurnAngle1",2);
 		PlayerPrefs.SetInt("TurnAngle2",2);
 		PlayerPrefs.SetInt("TurnAngle3",2);
-		PlayerPrefs.SetInt("TurnAngle4",1);
+		PlayerPrefs.SetInt("TurnAngle4",2);
 		PlayerPrefs.SetInt("StartLine",40);
 		PlayerPrefs.SetInt("SpeedOffset",16 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
@@ -821,6 +824,28 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("SpeedOffset",17 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
 		PlayerPrefs.SetString("TrackType","Mid");
+	}
+	
+	public static void NorthWilkesboro(){
+		trackCodeName = "NorthWilkesboro";
+		PlayerPrefs.SetInt("RaceLaps",8);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",150);
+		PlayerPrefs.SetInt("StraightLength2",1);
+		PlayerPrefs.SetInt("StraightLength3",1);
+		PlayerPrefs.SetInt("StraightLength4",150);
+		PlayerPrefs.SetInt("TurnLength1",5);
+		PlayerPrefs.SetInt("TurnLength2",165);
+		PlayerPrefs.SetInt("TurnLength3",10);
+		PlayerPrefs.SetInt("TurnLength4",180);
+		PlayerPrefs.SetInt("TurnAngle1",2);
+		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle3",4);
+		PlayerPrefs.SetInt("TurnAngle4",1);
+		PlayerPrefs.SetInt("StartLine",75);
+		PlayerPrefs.SetInt("SpeedOffset",73 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 
 	public static void TestTrack(){

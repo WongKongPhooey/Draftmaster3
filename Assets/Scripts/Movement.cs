@@ -60,6 +60,15 @@ public class Movement : MonoBehaviour {
 	public static bool onTurn;
 	public static bool brakesOn;
 
+	//These can adjust per race series (e.g. Indy)
+	int seriesSpeedDiff;
+	float draftStrengthRatio;
+	float dragDecelMulti;
+	float backdraftMulti;
+	float bumpDraftDistTrigger;
+	float passDistMulti;
+	float revLimiterBoost;
+
 	public static bool isWrecking;
 	public static bool wreckOver;
 	float baseDecel;
@@ -209,6 +218,8 @@ public class Movement : MonoBehaviour {
 		revbarOffset = 10;
 		
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
+		
+		setCarPhysics(seriesPrefix);
 		
 		carName = PlayerPrefs.GetString("carTexture");
 		
@@ -595,7 +606,7 @@ public class Movement : MonoBehaviour {
 			//Speed up
 			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
 				
-				float draftStrength = ((10 - DraftCheck.distance)/1500) + (carRarity / 1000f);
+				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 1000f);
 				
 				float diffToMax = (topSpeed + (carRarity/5f) + randTopend) - playerSpeed;
 				//If approaching max speed, taper off
@@ -605,7 +616,7 @@ public class Movement : MonoBehaviour {
 						diffToMax = 0;
 					}
 					draftStrength *= (diffToMax / 2);
-					Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
+					//Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
 				}
 				playerSpeed += draftStrength;
 				
@@ -625,7 +636,9 @@ public class Movement : MonoBehaviour {
 					if(diffToMax < 0){
 						diffToMax = 0;
 					}
-				playerSpeed-=(0.0035f * (2 - (diffToMax / 2)));
+					playerSpeed-=(dragDecelMulti * (2 - (diffToMax / 2)));
+				} else {
+					playerSpeed-=dragDecelMulti;
 				}
 			}
 			//Empty the Draft Bar
@@ -635,8 +648,8 @@ public class Movement : MonoBehaviour {
 		// If recieving backdraft of car behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.5f)){
 			//Speed up
-			if(playerSpeed <= (205f + (speedRand + customSpeedF) + challengeSpeedBoost + laneInv + carRarity + randTopend)){
-				playerSpeed+=(0.005f + customAccelF);
+			if(playerSpeed <= (205f + speedRand + laneInv + carRarity + randTopend)){
+				playerSpeed+=(backdraftMulti + customAccelF);
 			}
 		}
 
@@ -661,6 +674,9 @@ public class Movement : MonoBehaviour {
 			}
 			//Bump drafting speeds both up
 			playerSpeed+=0.004f;
+			if(playerSpeed >= (topSpeed - 1f)){
+				//Stall out?
+			}
 
 		} else {
 			tandemDraft = false;
@@ -805,15 +821,15 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Speed tops out
-        //if(playerSpeed > (205.5f + (carRarity / 2) + (laneInv / 2))){
+        if(playerSpeed > (205.5f + (carRarity / 2) + (laneInv / 2))){
 			//Debug.Log("Overspeed: " + (playerSpeed > (205 + carRarity + laneInv)));
 			//Reduce speed, proportionate to the amount 'over'
-            //playerSpeed -= ((playerSpeed - 205.5f) / 200f);
+            playerSpeed -= ((playerSpeed - (205.5f + (carRarity / 2) + (laneInv / 2))) / 200f);
 			//Debug.Log("Reduced by: " + ((playerSpeed - 205) / 200));
-		//}
-		//if(playerSpeed > 209f){
-		//	playerSpeed=209f;
-		//}
+		}
+		if(playerSpeed > 209f){
+			playerSpeed=209f;
+		}
 
 		//Caution decel
 		if(RaceHUD.caution == true){
@@ -831,6 +847,27 @@ public class Movement : MonoBehaviour {
 		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		vehicle.transform.Translate(0, 0, speed);
+	}
+	
+	void setCarPhysics(string seriesPrefix){
+		switch(seriesPrefix){
+			case "irl23":
+				seriesSpeedDiff = -20;
+				draftStrengthRatio = 750f;
+				dragDecelMulti = 0.0018f;
+				backdraftMulti = 0.015f;
+				bumpDraftDistTrigger = 1.25f;
+				revLimiterBoost = 1.0f;
+				break;
+			default:
+				seriesSpeedDiff = 0;
+				draftStrengthRatio = 1500f;
+				dragDecelMulti = 0.0035f;
+				backdraftMulti = 0.005f;
+				bumpDraftDistTrigger = 1.01f;
+				revLimiterBoost = 0f;
+				break;
+		}
 	}
 	
 	public static void pacingEnds(){
@@ -938,7 +975,6 @@ public class Movement : MonoBehaviour {
 			engineRevs+=((gearSpeeds[4] - CameraRotate.carSpeedOffset) * 100);
 			engineRevs+=(playerSpeed - 195) * 200;
 			
-			carEngine.pitch = 0.7f + (engineRevs / 10000f);
 			carEngine.pitch = 0.7f + (engineRevs / 10000f) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
 			if(currentGear != 4){
 				currentGear = 4;
@@ -1003,7 +1039,12 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//The speed shown on the HUD
-		speedoSpeed = (playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel;
+		speedoSpeed = (playerSpeed + seriesSpeedDiff - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel;
+		
+		//When debugging the real speed
+		#if UNITY_EDITOR
+		//speedoSpeed = playerSpeed + playerWreckDecel;
+		#endif
 		
 		if(speedoSpeed > 1){
 			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F0");
@@ -1274,7 +1315,8 @@ public class Movement : MonoBehaviour {
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
 		
 		if(Mathf.Round(playerWreckDecel) == -90){
-			this.gameObject.GetComponent<CommentaryManager>().commentate("Caution");
+			GameObject theCamera = GameObject.Find("Main Camera");
+			theCamera.GetComponent<CommentaryManager>().commentate("Caution");
 		}
 	}
 	
