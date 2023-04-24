@@ -189,6 +189,17 @@ public class StoreUIFunctions : MonoBehaviour
 						alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
 					}
 					break;
+				case "MysteryPaint":
+					gears = PlayerPrefs.GetInt("Gears");
+					if(gears >= itemPrice){
+						gears -= itemPrice;
+						PlayerPrefs.SetInt("Gears",gears);
+						PlayerPrefs.SetString("PrizeType","MysteryPaint");
+						SceneManager.LoadScene("PrizeCollection");
+					} else {
+						alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You need more Gears to purchase this bundle.","dm2logo");
+					}
+					break;
 				case "FullTank":
 					gears = PlayerPrefs.GetInt("Gears");
 					if(gears >= itemPrice){

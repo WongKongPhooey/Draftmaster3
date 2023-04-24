@@ -291,6 +291,9 @@ public class Movement : MonoBehaviour {
 		raceCounter = 0;
 
 		if (DriverNames.cup2020Types[carNum] == "Strategist"){
+			if(seriesPrefix == "irl23"){
+				carClass+=4;
+			}
 			switch(carClass){
 				case 1:
 					laneChangeDuration = 75;
@@ -332,6 +335,16 @@ public class Movement : MonoBehaviour {
 					laneChangeSpeed = 0.0375f;
 					laneChangeBackout = 12;
 					break;
+				case 9:
+					laneChangeDuration = 25;
+					laneChangeSpeed = 0.048f;
+					laneChangeBackout = 10;
+					break;
+				case 10:
+					laneChangeDuration = 20;
+					laneChangeSpeed = 0.06f;
+					laneChangeBackout = 8;
+					break;
 				default:
 					laneChangeDuration = 80;
 					laneChangeSpeed = 0.015f;
@@ -339,9 +352,15 @@ public class Movement : MonoBehaviour {
 					break;
 			}
 		} else {
-			laneChangeDuration = 80;
-			laneChangeSpeed = 0.015f;
-			laneChangeBackout = 32;
+			if(seriesPrefix == "irl23"){
+				laneChangeDuration = 48;
+				laneChangeSpeed = 0.025f;
+				laneChangeBackout = 16;
+			} else {
+				laneChangeDuration = 80;
+				laneChangeSpeed = 0.015f;
+				laneChangeBackout = 32;
+			}
 		}
 
 		dooredStrength = 40;
@@ -975,7 +994,7 @@ public class Movement : MonoBehaviour {
 			engineRevs+=((gearSpeeds[4] - CameraRotate.carSpeedOffset) * 100);
 			engineRevs+=(playerSpeed - 195) * 200;
 			
-			carEngine.pitch = 0.7f + (engineRevs / 10000f) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+			carEngine.pitch = 0.7f + revLimiterBoost + (engineRevs / 10000f) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
 			if(currentGear != 4){
 				currentGear = 4;
 				//SFX
@@ -991,7 +1010,7 @@ public class Movement : MonoBehaviour {
 				engineRevs+=((gearSpeeds[3] - CameraRotate.carSpeedOffset) * 100);
 				engineRevs+=(playerSpeed - 195) * 100;
 				
-				carEngine.pitch = 1.4f + ((playerSpeed - 200) / 10) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+				carEngine.pitch = 1.4f + revLimiterBoost + ((playerSpeed - 200) / 10) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
 				if(currentGear != 3){
 					currentGear = 3;
 					//SFX
@@ -1007,7 +1026,7 @@ public class Movement : MonoBehaviour {
 					engineRevs+=((gearSpeeds[2] - CameraRotate.carSpeedOffset) * 100);
 					engineRevs+=(playerSpeed - 195) * 100;
 					
-					carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+					carEngine.pitch = 1.6f + revLimiterBoost + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
 					if(currentGear != 2){
 						currentGear = 2;
 						//SFX
@@ -1025,7 +1044,7 @@ public class Movement : MonoBehaviour {
 						engineRevs = 0;
 					}
 					
-					carEngine.pitch = 1.6f + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
+					carEngine.pitch = 1.6f + revLimiterBoost + ((playerSpeed - 200) / 5) - ((CameraRotate.carSpeedOffset - playerWreckDecel) / 200);
 					if(currentGear != 1){
 						currentGear = 1;
 						//SFX

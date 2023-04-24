@@ -279,7 +279,6 @@ public class CameraRotate : MonoBehaviour {
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0;
 					crowdNoise.volume = 0;
-					Time.timeScale = 0.0f;
 					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
@@ -295,9 +294,10 @@ public class CameraRotate : MonoBehaviour {
 						PlayFabManager.CheckLiveTimeTrial();
 						//Double checked
 						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR97","");
+							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
 						}
 					}
+					Time.timeScale = 0.0f;
 				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
@@ -504,8 +504,6 @@ public class CameraRotate : MonoBehaviour {
 			MomentsCriteria.checkEndCriteria();
 		}
 		
-		Time.timeScale = 0.0f;
-		
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 		//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
 		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
@@ -513,9 +511,10 @@ public class CameraRotate : MonoBehaviour {
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR97","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
 			}
 		}
+		Time.timeScale = 0.0f;
 	}
 	
 	public void saveRaceFastestLap(){
@@ -533,7 +532,7 @@ public class CameraRotate : MonoBehaviour {
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR97","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
 			}
 		}
 	}

@@ -52,6 +52,7 @@ public class EnviroMovement : MonoBehaviour {
 			
 			rend.material.mainTextureOffset = new Vector2(0, scrollPos);
 		} else {
+			//Slowest game speed is car:80, track:105 (LA start), Scaler = 1.33 + 2.63 = 0.36f
 			enviroSpeed = -3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f);
 			
 			//Can't go backwards..

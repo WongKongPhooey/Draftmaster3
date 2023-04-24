@@ -858,7 +858,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void GetLiveTimeTrialLeaderboard(){
 		
 		var request = new GetLeaderboardRequest {
-			StatisticName = "LiveTimeTrialR97",
+			StatisticName = "LiveTimeTrialR109",
 			StartPosition = 0,
 			MaxResultsCount = 20
 		};
@@ -882,7 +882,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void GetLiveTimeTrialAroundPlayer(){
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
-			StatisticName = "LiveTimeTrialR97",
+			StatisticName = "LiveTimeTrialR109",
 			MaxResultsCount = 1
 		};
 		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLiveTimeTrialAroundPlayerGet, OnError);
