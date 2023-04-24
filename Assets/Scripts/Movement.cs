@@ -872,8 +872,8 @@ public class Movement : MonoBehaviour {
 		switch(seriesPrefix){
 			case "irl23":
 				seriesSpeedDiff = -20;
-				draftStrengthRatio = 750f;
-				dragDecelMulti = 0.0018f;
+				draftStrengthRatio = 600f;
+				dragDecelMulti = 0.005f;
 				backdraftMulti = 0.015f;
 				bumpDraftDistTrigger = 1.25f;
 				revLimiterBoost = 1.0f;

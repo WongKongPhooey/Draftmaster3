@@ -285,6 +285,9 @@ public class AIMovement : MonoBehaviour
 		}
 
         if (DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
+			if(seriesPrefix == "irl23"){
+				AICarClass+=4;
+			}
 			switch(AICarClass){
 				case 1:
 					laneChangeDuration = 75;
@@ -326,6 +329,16 @@ public class AIMovement : MonoBehaviour
 					laneChangeSpeed = 0.0375f;
 					laneChangeBackout = 12;
 					break;
+				case 9:
+					laneChangeDuration = 25;
+					laneChangeSpeed = 0.048f;
+					laneChangeBackout = 10;
+					break;
+				case 10:
+					laneChangeDuration = 20;
+					laneChangeSpeed = 0.06f;
+					laneChangeBackout = 8;
+					break;
 				default:
 					laneChangeDuration = 80;
 					laneChangeSpeed = 0.015f;
@@ -333,9 +346,15 @@ public class AIMovement : MonoBehaviour
 					break;
 			}
 		} else {
-			laneChangeDuration = 80;
-			laneChangeSpeed = 0.015f;
-			laneChangeBackout = 32;
+			if(seriesPrefix == "irl23"){
+				laneChangeDuration = 48;
+				laneChangeSpeed = 0.025f;
+				laneChangeBackout = 16;
+			} else {
+				laneChangeDuration = 80;
+				laneChangeSpeed = 0.015f;
+				laneChangeBackout = 32;
+			}
 		}
 		
 		dooredStrength = 40;
@@ -768,7 +787,7 @@ public class AIMovement : MonoBehaviour
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
-				draftStrengthRatio = 500;
+				draftStrengthRatio = 450f;
 				dragDecelMulti = 0.002f;
 				backdraftMulti = 0.015f;
 				bumpDraftDistTrigger = 1.25f;
@@ -777,7 +796,7 @@ public class AIMovement : MonoBehaviour
 				coolOffInv = 5;
 				break;
 			default:
-				draftStrengthRatio = 1000;
+				draftStrengthRatio = 1000f;
 				dragDecelMulti = 0.004f;
 				backdraftMulti = 0.004f;
 				bumpDraftDistTrigger = 1.01f;
