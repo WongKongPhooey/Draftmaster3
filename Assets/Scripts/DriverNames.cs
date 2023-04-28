@@ -279,7 +279,7 @@ public class DriverNames : MonoBehaviour {
 				carPrice = 100;
 				break;
 			default:
-				carPrice = 150;
+				carPrice = 100;
 				break;
 		}
 		return carPrice;

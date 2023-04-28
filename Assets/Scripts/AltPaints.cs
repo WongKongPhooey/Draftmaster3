@@ -90,8 +90,13 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintNames[78,1] = "Stock (Lally)";
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
+		cup23AltPaintNames[8,1] = "#1 Winner";
 		cup23AltPaintNames[9,1] = "Stock (Berry)";
 		cup23AltPaintNames[9,2] = "Stock (Taylor)";
+		cup23AltPaintNames[15,1] = "Stock (Button)";
+		cup23AltPaintNames[20,1] = "#1 Winner";
+		cup23AltPaintNames[22,1] = "#1 Winner";
+		cup23AltPaintNames[24,1] = "#1 Winner";
 		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
@@ -113,6 +118,7 @@ public class AltPaints : MonoBehaviour {
 		
 		cup23AltPaintDriver[9,1] = "Berry";
 		cup23AltPaintDriver[9,2] = "Taylor";
+		cup23AltPaintDriver[15,1] = "Button";
 		
 		cup2020AltPaintTheme[2,1] = "Patriot";
 		cup2020AltPaintTheme[3,1] = "Halloween";
@@ -182,8 +188,13 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintTheme[78,1] = "Parttimer";
 		cup22AltPaintTheme[99,1] = "Wrecked";
 		
+		cup23AltPaintTheme[8,1] = "Winners";
 		cup23AltPaintTheme[9,1] = "Parttimer";
 		cup23AltPaintTheme[9,2] = "Parttimer";
+		cup23AltPaintTheme[15,1] = "Parttimer";
+		cup23AltPaintTheme[20,1] = "Winners";
+		cup23AltPaintTheme[22,1] = "Winners";
+		cup23AltPaintTheme[24,1] = "Winners";
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
