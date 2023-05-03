@@ -793,7 +793,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void OnLeaderboardUpdate(UpdatePlayerStatisticsResult result){
-		Debug.Log("Leaderboard Updated.");
+		//Debug.Log("Leaderboard Updated.");
 	}
 	
 	public static void GetLeaderboard(string circuit){

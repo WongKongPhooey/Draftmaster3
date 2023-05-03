@@ -64,12 +64,11 @@ public class CameraRotate : MonoBehaviour {
 	
 	public GameObject cautionSummaryMenu;
 	public GameObject pauseMenu;
+	public static bool gamePausedLate;
 	
 	public static bool momentChecks;
 	
 	void Awake(){
-		
-		Time.timeScale = 1.0f;
 		
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
@@ -297,7 +296,7 @@ public class CameraRotate : MonoBehaviour {
 							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
 						}
 					}
-					Time.timeScale = 0.0f;
+					gamePausedLate = true;
 				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
@@ -455,6 +454,12 @@ public class CameraRotate : MonoBehaviour {
 		}
 	}
 	
+	void LateUpdate(){
+		if(gamePausedLate == true){
+			Time.timeScale = 0.0f;
+		}
+	}
+	
 	public void endRace(){
 		if(lap >= (raceEnd + 1)){
 			//Bug catch, again no idea on this one
@@ -514,7 +519,7 @@ public class CameraRotate : MonoBehaviour {
 				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
 			}
 		}
-		Time.timeScale = 0.0f;
+		gamePausedLate = true;
 	}
 	
 	public void saveRaceFastestLap(){
@@ -549,7 +554,7 @@ public class CameraRotate : MonoBehaviour {
 	public void pauseGame(){
 		if(RaceHUD.raceOver == false){
 			RaceHUD.gamePaused = true;
-			Time.timeScale = 0.0f;
+			gamePausedLate = true;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = false;
 			PlayerPrefs.SetInt("Volume",0);
 			PlayerPrefs.SetInt("MidRaceLoading", 1);
@@ -559,6 +564,7 @@ public class CameraRotate : MonoBehaviour {
 	public void unpauseGame(){
 		if(RaceHUD.raceOver == false){
 			RaceHUD.gamePaused = false;
+			gamePausedLate = false;
 			Time.timeScale = 1.0f;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = true;
 			PlayerPrefs.SetInt("Volume",1);

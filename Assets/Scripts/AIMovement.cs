@@ -15,6 +15,7 @@ public class AIMovement : MonoBehaviour
     public float AISpeed;
     float speed;
 	public float AITopSpeed;
+	float AIVariTopSpeed;
     float speedRand;
     float accelRand;
 	int AILevel;
@@ -123,6 +124,13 @@ public class AIMovement : MonoBehaviour
 		
 		tick=0;
 		
+		AISpeed = 203f;
+        speedRand = Random.Range(-150, 150);
+        speedRand = speedRand / 100;
+        accelRand = Random.Range(-30, 60);
+        accelRand = accelRand / 5000;	
+		AITopSpeed = 206f + speedRand;
+		
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
@@ -150,7 +158,6 @@ public class AIMovement : MonoBehaviour
 			maxTandem = 3;
 			coolOffSpace = 1.5f;
 		}
-        AISpeed = 203;
         laneticker = 0;
 		
 		currentSeries = PlayerPrefs.GetInt("CurrentSeries").ToString();
@@ -162,8 +169,6 @@ public class AIMovement : MonoBehaviour
 			AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		}
 		PlayerPrefs.SetInt("RaceAILevel", AILevel);
-		
-		AITopSpeed = 206f + (AILevel / 5);
 		
 		antiGlitch = 0;
 		
@@ -270,13 +275,8 @@ public class AIMovement : MonoBehaviour
 		
 		apronLineX = -2.7f;
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
-		
-		//Debug.Log("Apron Line: " + apronLineX);
 
-        speedRand = Random.Range(-150, 150);
-        speedRand = speedRand / 100;
-        accelRand = Random.Range(-30, 60);
-        accelRand = accelRand / 5000;
+		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 4f) + (laneInv / 4f);
 
 		dominator = false;
 		
@@ -603,6 +603,8 @@ public class AIMovement : MonoBehaviour
 		
         laneInv = 4 - lane;
 		
+		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 4f) + (laneInv / 4f);
+		
 		if(Movement.pacing == false){
 			if((isWrecking == true)||(wreckOver == true)){
 				//Bail, drop all Movement logic
@@ -667,17 +669,17 @@ public class AIMovement : MonoBehaviour
 		//If gaining draft of car in front
 		if (HitForward && DraftCheckForward.distance <= maxDraftDistance){
 			//Speed up
-			if (AISpeed < AITopSpeed){
+			if (AISpeed < AIVariTopSpeed){
 				//Draft gets stronger as you get closer
 				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 2500);
 				//If approaching max speed, taper off
-				float diffToMax = AITopSpeed - AISpeed;
+				float diffToMax = AIVariTopSpeed - AISpeed;
 				if((diffToMax) < 2){
 					//If speed above max, it zeros the draft out (rev limiter)
 					if(diffToMax < 0){
 						diffToMax = 0;
 					}
-					draftStrength *= (diffToMax / 2);
+					draftStrength *= (diffToMax / 2) + 0.01f;
 				}
 				//AISpeed += draftStrength;
 				AISpeed += draftStrength;
@@ -689,7 +691,7 @@ public class AIMovement : MonoBehaviour
 				if(dominator == true){
 					AISpeed -= ((dragDecelMulti * 3) - (AILevel / 12000));
 				} else {
-					float diffToMax = AITopSpeed - AISpeed;
+					float diffToMax = AIVariTopSpeed - AISpeed;
 					if((diffToMax) < 2){
 						if(diffToMax < 0){
 							diffToMax = 0;
@@ -705,7 +707,7 @@ public class AIMovement : MonoBehaviour
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= 1.5f){
 			//Bump draft can't exceed slingshot speed (for balance)
-			if(AISpeed <= (AITopSpeed - 2f)){
+			if(AISpeed <= (AIVariTopSpeed - 2f)){
 				AISpeed += backdraftMulti + (AILevel / 2000);
 			}
 		}
@@ -723,11 +725,13 @@ public class AIMovement : MonoBehaviour
 		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= bumpDraftDistTrigger){
-			AISpeed += 0.0035f;
+			if(AISpeed <= (AIVariTopSpeed - 1f)){
+				AISpeed+=backdraftMulti;
+			}
 			tandemDraft = true;
 			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
 			if(currentPos == 0){
-				if (AISpeed > (204.5f + (laneInv / 2) + (AILevel / 5))){
+				if (AISpeed > (AIVariTopSpeed - 2f)){
 					//Debug.Log("Leader is #" + carNum);
 					evadeDraft();
 				}
@@ -741,6 +745,10 @@ public class AIMovement : MonoBehaviour
 			if(DraftCheckForward.transform.gameObject.name != null){
 				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
 			}
+			//Bump drafting speeds both up
+			if(AISpeed <= (AIVariTopSpeed - 2f)){
+				AISpeed+=backdraftMulti + 0.01f;
+			}
 			if(seriesPrefix == "irl23"){
 				coolEngine = true;
 			}
@@ -750,18 +758,14 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Speed tops out
-        if (AISpeed > (206.5f + (laneInv / 2f) + (AILevel / 10f))){
-			//Reduce speed, proportionate to the amount 'over'
-            AISpeed -= ((AISpeed - 205f) / (100 + (AILevel * 10f)));
-		}
-		if (AISpeed > 209f){
-			//Hard limiter as a fallback
-            AISpeed = 209f;
+        if (AISpeed > AIVariTopSpeed){
+			//Hard limiter
+            AISpeed = AIVariTopSpeed;
 		}
 		
 		//Minimum speed
-		if (AISpeed < (200)){
-			AISpeed = 200;
+		if (AISpeed < (200 + (carRarity / 4f) + speedRand + (laneInv / 4f))){
+			AISpeed = (200 + (carRarity / 4f) + speedRand);
 		}
 		
 		//Speed difference between the player and the AI

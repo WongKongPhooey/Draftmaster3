@@ -14,6 +14,7 @@ public class Movement : MonoBehaviour {
 	public static float speedoSpeed;
 	public float gettableSpeed;
 	public float topSpeed;
+	float variTopSpeed;
 	public static float speedRand;
 	public static float randTopend;
 	static float overspeed;
@@ -91,6 +92,7 @@ public class Movement : MonoBehaviour {
 	
 	public GameObject mainCam;
 	public GameObject audioHolder;
+	public static bool gamePausedLate;
 	
 	AudioSource carEngine;
 	float engineRevs;
@@ -173,6 +175,7 @@ public class Movement : MonoBehaviour {
 	public static bool wallrideMod;
 	
 	public static bool momentChecks;
+	public static bool fastestLapSaved;
 
 	// Use this for initialization
 	void Start () {
@@ -215,6 +218,7 @@ public class Movement : MonoBehaviour {
 		HUD.SetActive(false);
 		HUDControls.SetActive(false);
 		cautionSummaryMenu.SetActive(false);
+		fastestLapSaved = false;
 		
 		revbarOffset = 10;
 		
@@ -281,13 +285,6 @@ public class Movement : MonoBehaviour {
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 
 		brakesOn = false;
-		draftBuddy = "";
-		buddiedTime = 0;
-		buddyMax = 10000;
-		incidents.Clear();
-		currentRival = "";
-		mostHits = 0;
-		rivals = new List<string>();
 		draftCounter = 0;
 		raceCounter = 0;
 
@@ -493,7 +490,6 @@ public class Movement : MonoBehaviour {
 					bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
 					if(leftSideHit == true){
 						backingOut = true;
-						RaceHUD.tutorialBackingOut = true;
 						laneticker = -laneChangeDuration + laneticker;
 						lane--;
 						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Impact");
@@ -503,7 +499,6 @@ public class Movement : MonoBehaviour {
 						bool rightSideHit = checkRaycast("RightCorners", 0.51f);
 						if(rightSideHit == true){
 							backingOut = true;
-							RaceHUD.tutorialBackingOut = true;
 							laneticker = laneChangeDuration + laneticker;
 							lane++;
 							//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Impact");
@@ -556,6 +551,11 @@ public class Movement : MonoBehaviour {
 	void FixedUpdate () {
 			
 		updateHUD();
+		
+		if(gamePausedLate == true){
+			Debug.Log("Pausing now..");
+			Time.timeScale = 0.0f;
+		}
 		
 		if(pacing == true){
 			playerSpeed = 200;
@@ -621,7 +621,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//The top speed factoring in car spec and track lane
-		variTopSpeed = topSpeed + (carRarity/5f) + (laneInv / 4f) + randTopend;
+		variTopSpeed = topSpeed + (carRarity / 4f) + (laneInv / 4f) + randTopend;
 		
 		//If in draft of car in front
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
@@ -638,7 +638,7 @@ public class Movement : MonoBehaviour {
 					if(diffToMax < 0){
 						diffToMax = 0;
 					}
-					draftStrength *= (diffToMax / 2) + 0.1f;
+					draftStrength *= (diffToMax / 2) + 0.01f;
 					//Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
 				}
 				playerSpeed += draftStrength;
@@ -646,14 +646,9 @@ public class Movement : MonoBehaviour {
 			} else {
 				playerSpeed-=((playerSpeed - topSpeed)/200);
 			}
-			if(PlayerPrefs.GetInt("TutorialActive") == 1){
-				if(RaceHUD.tutorialStage == 3){
-					RaceHUD.tutorialDraftingCount++;
-				}
-			}
 		} else {
 			//Slow down if not in any draft
-			if(playerSpeed >= 200){
+			if(playerSpeed > 200){
 				float diffToMax = variTopSpeed - playerSpeed;
 				if((diffToMax) < 2){
 					if(diffToMax < 0){
@@ -701,32 +696,10 @@ public class Movement : MonoBehaviour {
 				if(playerSpeed <= (variTopSpeed - 2f)){
 					playerSpeed+=(backdraftMulti + customAccelF);
 				}
-				//playerSpeed+=0.004f;
-				//if(playerSpeed >= (topSpeed - 1f)){
-					//Stall out?
-				//}
 			}
 		} else {
 			tandemDraft = false;
 			tandemPosition = 1;
-		}
-		
-		// Draft Behind A Buddy
-		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 2.8f)){
-			
-			string frontBuddy = DraftCheck.collider.gameObject.name;
-			if(draftBuddyF != frontBuddy){
-				draftBuddyF = frontBuddy;
-				buddyInFront = 0;
-			} else {
-				buddyInFront++;
-				if((buddyInFront >= 500)||(buddyBehind >= 500)){
-					canBuddy = true;
-					buddiedTime = 0;
-				}
-			}
-		} else {
-			buddyInFront = 0;
 		}
 		
 		if(brakesOn == true){
@@ -734,97 +707,8 @@ public class Movement : MonoBehaviour {
 				playerSpeed-=0.025f;
 			}
 		}
-		
-		// Receive A Buddy Backdraft
-		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 2.8f)){
-			string rearBuddy = DraftCheck.collider.gameObject.name;
-			if(draftBuddyR != rearBuddy){
-				draftBuddyR = rearBuddy;
-				buddyBehind = 0;
-			} else {
-				buddyBehind++;
-				
-				//Look for teammates
-				RaycastHit DraftBehind;
-				string draftTeam = "NAN";
-				string draftManu = "NAN";
-				
-				if(DraftCheck.transform.GetComponent<AIMovement>()){
-					draftTeam = DraftCheck.transform.GetComponent<AIMovement>().carTeam;
-					draftManu = DraftCheck.transform.GetComponent<AIMovement>().carManu;
-				}
-				
-				if(carTeam == draftTeam){
-					canBuddy = true;
-					//buddyCrit = "Team Draft #" + draftNum + "";
-					//Debug.Log("Draft from a " + draftTeam + " team mate to my " + carTeam + " car");
-				} else {
-					//Debug.Log("No draft from a " + draftTeam + " car to your " + carTeam + " car");
-				}
-				
-				if(carManu == draftManu){
-					canBuddy = true;
-					buddiedTime = 0;
-					buddyBehind = 999;
-					//buddyCrit = "Team Draft #" + draftNum + "";
-					//Debug.Log("Draft from a " + draftManu + " team mate to my " + carManu + " car");
-				} else {
-					//Debug.Log("No draft from a " + draftManu + " car to your " + carManu + " car");
-				}
-					
-				//Resetter
-				if((buddyInFront >= 500)||(buddyBehind >= 500)){
-					canBuddy = true;
-					buddiedTime = 0;
-				}
-			}
-		} else {
-			buddyBehind = 0;
-		}
-		
-		if((buddyInFront < 500)&&(buddyBehind < 500)){
-			canBuddy = false;
-			buddyUp = false;
-		}
-		if((buddyInFront >= 500)||(buddyBehind >= 500)){
-			if(buddyInFront >= buddyBehind){
-				draftBuddy = draftBuddyF;
-			} else {
-				draftBuddy = draftBuddyR;
-			}
-		}
-		
-		if(buddyUp == true){
-			buddiedTime++;
-		}
-		
-		//Buddies will not help you forever
-		if(buddiedTime >= buddyMax){
-			canBuddy = false;
-			buddyUp = false;
-		}
-		
-		//Buddies won't help you if you're the leader
-		if(Ticker.position == 1){
-			canBuddy = false;
-			buddyUp = false;
-		}
-		
-		//Last lap
-		if(CameraRotate.lap == PlayerPrefs.GetInt("RaceLaps")){
-			canBuddy = false;
-			buddyUp = false;
-		}
 
-		if(draftChallenge == true){
-			if(pushingPartner == true){
-				draftCounter++;
-			}
-			raceCounter++;
-			draftPercent = (draftCounter / raceCounter) * 100;
-		}
-		wobbleCount++;
-		
+		wobbleCount++;		
 		if(wobbleCount >= wobbleRand){
 			wobbleRand = Random.Range(10,60);
 			wobbleTarget = Random.Range(-110,110);
@@ -842,17 +726,11 @@ public class Movement : MonoBehaviour {
 		}
 		updateMovement();
 		
-		if(((laneticker == 2)||(laneticker == -2))&&(RaceHUD.tutorialBackingOut == false)){
-			if(RaceHUD.tutorialStage == 1){
-				RaceHUD.tutorialSteeringCount++;
-			}
-		}
-		
 		//Speed tops out
-		if(playerSpeed > (topSpeed + (carRarity/5f) + (laneInv / 4f) + randTopend)){
+		if(playerSpeed > variTopSpeed){
 			overspeed += 0.001f;
-			playerSpeed = (topSpeed + (carRarity/5f) + (laneInv / 4f) + randTopend) + overspeed;
-			Debug.Log("Overspeed: " + overspeed);
+			playerSpeed = variTopSpeed + overspeed;
+			//Debug.Log("Overspeed: " + overspeed);
 		} else {
 			//Overspeed disappears
 			if(overspeed > 0){
@@ -861,8 +739,8 @@ public class Movement : MonoBehaviour {
 				overspeed = 0;
 			}
 		}
-		if(playerSpeed > 209.5f){
-			playerSpeed=209.5f;
+		if(playerSpeed > variTopSpeed + 1f){
+			playerSpeed = variTopSpeed + 1f;
 		}
 
 		//Caution decel
@@ -881,6 +759,13 @@ public class Movement : MonoBehaviour {
 		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		vehicle.transform.Translate(0, 0, speed);
+	}
+	
+	void LateUpdate(){
+		if(gamePausedLate == true){
+			Debug.Log("Pausing now..");
+			Time.timeScale = 0.0f;
+		}
 	}
 	
 	void setCarPhysics(string seriesPrefix){
@@ -1277,11 +1162,16 @@ public class Movement : MonoBehaviour {
 		//No cautions on the last lap, race is over
 		if(CameraRotate.lap < CameraRotate.raceEnd){
 			if(!PlayerPrefs.HasKey("RaceMoment")){
+				//Open the caution menu
 				cautionSummaryMenu.SetActive(true);
 			}
-			mainCam.GetComponent<CameraRotate>().saveRaceFastestLap();
+			if(fastestLapSaved == false){
+				mainCam.GetComponent<CameraRotate>().saveRaceFastestLap();
+				fastestLapSaved = true;
+			}
 		}
-		Time.timeScale = 0.0f;
+		gamePausedLate = true;
+		Debug.Log("Pause the game!");
 		mainCam.GetComponent<AudioListener>().enabled = false;
 		PlayerPrefs.SetInt("Volume",0);
 		
