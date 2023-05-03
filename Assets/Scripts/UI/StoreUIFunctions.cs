@@ -32,12 +32,12 @@ public class StoreUIFunctions : MonoBehaviour
 	public void makePurchase(){
 		
 		int gears = PlayerPrefs.GetInt("Gears");
+		alertPopup = GameObject.Find("Main").GetComponent<StoreUI>().alertPopup;
+		
 		//Do you have enough?
 		if(gears >= itemPrice){
 			int carGears = 0;
-			
-            alertPopup = GameObject.Find("Main").GetComponent<StoreUI>().alertPopup;
-            
+
 			if(isAlt == true){
 				//Unlock the alt
 				if(PlayerPrefs.GetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked") != 1){

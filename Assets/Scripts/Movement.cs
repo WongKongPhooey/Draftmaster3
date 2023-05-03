@@ -16,6 +16,7 @@ public class Movement : MonoBehaviour {
 	public float topSpeed;
 	public static float speedRand;
 	public static float randTopend;
+	static float overspeed;
 	float speed;
 	float draftDist;
 
@@ -177,9 +178,9 @@ public class Movement : MonoBehaviour {
 	void Start () {
 		playerSpeed = 203;
 		gettableSpeed = playerSpeed;
-		topSpeed = 208f + speedRand;
 		speedRand = Random.Range(0,50);
 		speedRand = speedRand / 100;
+		topSpeed = 208f + speedRand;
 		randTopend = Random.Range(0,99);
 		randTopend = randTopend / 1000;
 		laneticker = 0;
@@ -619,22 +620,25 @@ public class Movement : MonoBehaviour {
 			playerSpeed=199f;
 		}
 		
+		//The top speed factoring in car spec and track lane
+		variTopSpeed = topSpeed + (carRarity/5f) + (laneInv / 4f) + randTopend;
+		
 		//If in draft of car in front
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
 			draftDist = DraftCheck.distance;
 			//Speed up
-			if(playerSpeed <= topSpeed + (carRarity/5f) + randTopend){
+			if(playerSpeed <= variTopSpeed){
 				
 				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 1000f);
 				
-				float diffToMax = (topSpeed + (carRarity/5f) + randTopend) - playerSpeed;
+				float diffToMax = variTopSpeed - playerSpeed;
 				//If approaching max speed, taper off
 				if((diffToMax) < 2){
 					//If speed above max, it zeros the draft out (rev limiter)
 					if(diffToMax < 0){
 						diffToMax = 0;
 					}
-					draftStrength *= (diffToMax / 2);
+					draftStrength *= (diffToMax / 2) + 0.1f;
 					//Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
 				}
 				playerSpeed += draftStrength;
@@ -650,7 +654,7 @@ public class Movement : MonoBehaviour {
 		} else {
 			//Slow down if not in any draft
 			if(playerSpeed >= 200){
-				float diffToMax = topSpeed - playerSpeed;
+				float diffToMax = variTopSpeed - playerSpeed;
 				if((diffToMax) < 2){
 					if(diffToMax < 0){
 						diffToMax = 0;
@@ -667,7 +671,7 @@ public class Movement : MonoBehaviour {
 		// If recieving backdraft of car behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.5f)){
 			//Speed up
-			if(playerSpeed <= (205f + speedRand + laneInv + carRarity + randTopend)){
+			if(playerSpeed <= (variTopSpeed - 2f)){
 				playerSpeed+=(backdraftMulti + customAccelF);
 			}
 		}
@@ -675,7 +679,10 @@ public class Movement : MonoBehaviour {
 		// If being bump-drafted from behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.01f)){
 			//Speed up
-			playerSpeed+=0.0045f;
+			if(playerSpeed <= (variTopSpeed - 1f)){
+				playerSpeed+=(backdraftMulti + customAccelF);
+			}
+			//playerSpeed+=0.0045f;
 			//DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
 			tandemDraft = true;
 		} else {
@@ -690,13 +697,15 @@ public class Movement : MonoBehaviour {
 				if(DraftCheck.transform.gameObject.tag == "AICar"){
 					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",playerSpeed);
 				}
+				//Bump drafting speeds both up
+				if(playerSpeed <= (variTopSpeed - 2f)){
+					playerSpeed+=(backdraftMulti + customAccelF);
+				}
+				//playerSpeed+=0.004f;
+				//if(playerSpeed >= (topSpeed - 1f)){
+					//Stall out?
+				//}
 			}
-			//Bump drafting speeds both up
-			playerSpeed+=0.004f;
-			if(playerSpeed >= (topSpeed - 1f)){
-				//Stall out?
-			}
-
 		} else {
 			tandemDraft = false;
 			tandemPosition = 1;
@@ -840,14 +849,20 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Speed tops out
-        if(playerSpeed > (205.5f + (carRarity / 2) + (laneInv / 2))){
-			//Debug.Log("Overspeed: " + (playerSpeed > (205 + carRarity + laneInv)));
-			//Reduce speed, proportionate to the amount 'over'
-            playerSpeed -= ((playerSpeed - (205.5f + (carRarity / 2) + (laneInv / 2))) / 200f);
-			//Debug.Log("Reduced by: " + ((playerSpeed - 205) / 200));
+		if(playerSpeed > (topSpeed + (carRarity/5f) + (laneInv / 4f) + randTopend)){
+			overspeed += 0.001f;
+			playerSpeed = (topSpeed + (carRarity/5f) + (laneInv / 4f) + randTopend) + overspeed;
+			Debug.Log("Overspeed: " + overspeed);
+		} else {
+			//Overspeed disappears
+			if(overspeed > 0){
+				overspeed -= 0.01f;
+			} else {
+				overspeed = 0;
+			}
 		}
-		if(playerSpeed > 209f){
-			playerSpeed=209f;
+		if(playerSpeed > 209.5f){
+			playerSpeed=209.5f;
 		}
 
 		//Caution decel

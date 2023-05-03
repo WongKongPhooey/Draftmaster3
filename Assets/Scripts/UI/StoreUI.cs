@@ -388,7 +388,7 @@ public class StoreUI : MonoBehaviour
 				Debug.Log("Added 450 gears");
 				gears+=450;
 				PlayerPrefs.SetInt("Gears",gears);
-				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","550 Gears have been added!","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","450 Gears have been added!","dm2logo");
 				break;
 			case gears200:
 				Debug.Log("Added 1100 gears");
