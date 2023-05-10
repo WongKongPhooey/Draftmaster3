@@ -11,6 +11,7 @@ public class Movement : MonoBehaviour {
 
 	public GameObject vehicle;
 	public static float playerSpeed;
+	public static float affectedPlayerSpeed;
 	public static float speedoSpeed;
 	public float gettableSpeed;
 	public float topSpeed;
@@ -194,6 +195,9 @@ public class Movement : MonoBehaviour {
 		tandemPosition = 1;
 		
 		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
+		
+		gamePausedLate = false;
+		Time.timeScale = 1.0f;
 		
 		isWrecking = false;
 		wreckOver = false;
@@ -458,12 +462,14 @@ public class Movement : MonoBehaviour {
 			
 			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
 				startWreck();
+				this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 			}
 			if((isWrecking == false)&&(wreckOver == false)&&(wallrideMod == true)){
 				if((carHit.gameObject.tag == "Barrier") || 
 				  (carHit.gameObject.name == "OuterWall") ||
 				  (carHit.gameObject.name == "SaferBarrier")){
 					startWreck();
+					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 					GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Scrape");
 				}
 			}
@@ -518,7 +524,7 @@ public class Movement : MonoBehaviour {
 	
 	void ReceivePush(float bumpSpeed){
 		if(isWrecking == false){
-			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + "while I was going " + playerSpeed);
+			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + " while I was going " + playerSpeed);
 			if(initialContact == false){
 				float midSpeed = bumpSpeed - playerSpeed;
 				playerSpeed += midSpeed/4;
@@ -526,8 +532,16 @@ public class Movement : MonoBehaviour {
 				//Debug.Log("Impact levels out Player");
 			} else {
 				//Send it back
-				RaycastHit DraftCheckBackward;
-				bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
+				playerSpeed += backdraftMulti;
+			}
+			//Send it back
+			RaycastHit DraftCheckBackward;
+			bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
+			if(HitBackward == false){
+				HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
+			}
+			
+			if(HitBackward == true){
 				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
 				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
 			}
@@ -535,11 +549,12 @@ public class Movement : MonoBehaviour {
 	}
 	
 	void GivePush(float bumpSpeed){
-		playerSpeed = bumpSpeed;
+		Debug.Log("Return to player speed " + bumpSpeed + " (was " + playerSpeed + ")");
 		if(tandemPosition > 2){
 			playerSpeed-= 0.25f;
 			//Debug.Log("Player speed reduced by " + (bumpSpeed - playerSpeed) + "");
 		}
+		affectedPlayerSpeed = bumpSpeed;
 	}
 	
 	void UpdateTandemPosition(int tandemPosInFront){
@@ -558,7 +573,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		if(pacing == true){
-			playerSpeed = 200;
+			playerSpeed = 202;
 			HUD.SetActive(false);
 			HUDControls.SetActive(false);
 			return;
@@ -664,7 +679,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		// If recieving backdraft of car behind
-		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.5f)){
+		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.2f)){
 			//Speed up
 			if(playerSpeed <= (variTopSpeed - 2f)){
 				playerSpeed+=(backdraftMulti + customAccelF);
@@ -688,13 +703,14 @@ public class Movement : MonoBehaviour {
 		// If bump-drafting the car in front
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 1.01f)){
 			if(isWrecking == false){
-				//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to match speed of " + playerSpeed);
-				if(DraftCheck.transform.gameObject.tag == "AICar"){
-					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",playerSpeed);
-				}
 				//Bump drafting speeds both up
 				if(playerSpeed <= (variTopSpeed - 2f)){
+					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
 					playerSpeed+=(backdraftMulti + customAccelF);
+				}
+				if(DraftCheck.transform.gameObject.tag == "AICar"){
+					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
+					DraftCheck.transform.gameObject.SendMessage("ReceivePush",playerSpeed);
 				}
 			}
 		} else {
@@ -743,6 +759,12 @@ public class Movement : MonoBehaviour {
 			playerSpeed = variTopSpeed + 1f;
 		}
 
+		if(affectedPlayerSpeed != 0){
+			Debug.Log("Player speed equalised to " + affectedPlayerSpeed + ". Was " + playerSpeed);
+			playerSpeed = affectedPlayerSpeed;
+			affectedPlayerSpeed = 0;
+		}
+
 		//Caution decel
 		if(RaceHUD.caution == true){
 			if(playerSpeed > 200){
@@ -763,7 +785,7 @@ public class Movement : MonoBehaviour {
 	
 	void LateUpdate(){
 		if(gamePausedLate == true){
-			Debug.Log("Pausing now..");
+			//Debug.Log("Pausing now..");
 			Time.timeScale = 0.0f;
 		}
 	}
@@ -781,8 +803,8 @@ public class Movement : MonoBehaviour {
 			default:
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 1500f;
-				dragDecelMulti = 0.0035f;
-				backdraftMulti = 0.005f;
+				dragDecelMulti = 0.0025f;
+				backdraftMulti = 0.002f;
 				bumpDraftDistTrigger = 1.01f;
 				revLimiterBoost = 0f;
 				break;
@@ -966,7 +988,7 @@ public class Movement : MonoBehaviour {
 		#endif
 		
 		if(speedoSpeed > 1){
-			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F0");
+			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F2");
 			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F2");
 		} else {
 			//Update the final position GUI slightly before the Time.timeScale freezes to 0

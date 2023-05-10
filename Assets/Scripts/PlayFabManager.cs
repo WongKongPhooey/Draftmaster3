@@ -548,10 +548,10 @@ public class PlayFabManager : MonoBehaviour
 			if(result.Data.ContainsKey("RewardCar")){
 				//Example: cup2212
 				string rewardCar = result.Data["RewardCar"].Value;
-				Debug.Log("RewardCar: " + rewardCar);
+				//Debug.Log("RewardCar: " + rewardCar);
 				if((rewardCar != "")&&(rewardCar != "0")){
 					string rewardCarSeries = rewardCar.Substring(0,5);
-					Debug.Log(rewardCar);
+					//Debug.Log(rewardCar);
 					int rewardCarNum = int.Parse(rewardCar.Substring(5));
 					Debug.Log("Rewarded Car #" + rewardCarNum);
 					int carClass = PlayerPrefs.GetInt(rewardCarSeries + rewardCarNum + "Class");
@@ -860,7 +860,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void GetLiveTimeTrialLeaderboard(){
 		
 		var request = new GetLeaderboardRequest {
-			StatisticName = "LiveTimeTrialR109",
+			StatisticName = "LiveTimeTrialR112",
 			StartPosition = 0,
 			MaxResultsCount = 20
 		};
@@ -884,7 +884,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void GetLiveTimeTrialAroundPlayer(){
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
-			StatisticName = "LiveTimeTrialR109",
+			StatisticName = "LiveTimeTrialR112",
 			MaxResultsCount = 1
 		};
 		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLiveTimeTrialAroundPlayerGet, OnError);

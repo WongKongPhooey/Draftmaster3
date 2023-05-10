@@ -13,6 +13,7 @@ public class AIMovement : MonoBehaviour
 	public GameObject controlCar;
 	public Camera player2Cam;
     public float AISpeed;
+	float affectedAISpeed;
     float speed;
 	public float AITopSpeed;
 	float AIVariTopSpeed;
@@ -530,9 +531,9 @@ public class AIMovement : MonoBehaviour
 	
 	void ReceivePush(float bumpSpeed){
 		
-		if(tandemDraft == false){
+		if(initialContact == false){
 			float midSpeed = bumpSpeed - AISpeed;
-			if((midSpeed > 5f)||(midSpeed < -5f)){
+			if((midSpeed > 4f)||(midSpeed < -4f)){
 				//Debug.Log("Wreck: Strong Push");
 				float rng = Random.Range(0,500);
 				//Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
@@ -542,27 +543,35 @@ public class AIMovement : MonoBehaviour
 			}
 			//For some reason changing this makes the player bump-draft mega fast!
 			AISpeed += midSpeed/4;
+			initialContact = true;
 			tandemDraft = true;
+		} else {
+			AISpeed += backdraftMulti;
 		}
-		//Send it back
-		RaycastHit DraftCheckBackward;
-		//bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 1.1f);
-		bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-		if(HitBackward == false){
-			HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-		}
-		
-		if(HitBackward == true){
-			DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
-			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
+		if(isWrecking == false){
+			//Send it back
+			RaycastHit DraftCheckBackward;
+			bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
+			if(HitBackward == false){
+				HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
+			}
+			
+			if(HitBackward == true){
+				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
+				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
+			
+			}
 		}
 	}
 	
 	void GivePush(float bumpSpeed){
-		AISpeed = bumpSpeed;
+		if(carRarity == 4){
+			Debug.Log("Return to #" + carNum + " speed " + bumpSpeed + " (was " + AISpeed + ")");
+		}
+		affectedAISpeed = bumpSpeed;
 		//Discourage long draft trains
 		if(tandemPosition > maxTandem){
-			AISpeed-=0.25f;
+			affectedAISpeed-=0.25f;
 			coolEngine=true;
 		}
 	}
@@ -655,7 +664,7 @@ public class AIMovement : MonoBehaviour
 			this.gameObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
 		} else {
 			//Pacing speed
-			AISpeed = 200;
+			AISpeed = 202;
 		}
 	}
 
@@ -705,7 +714,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//If recieving backdraft from car behind
-		if (HitBackward && DraftCheckBackward.distance <= 1.5f){
+		if (HitBackward && DraftCheckBackward.distance <= 1.2f){
 			//Bump draft can't exceed slingshot speed (for balance)
 			if(AISpeed <= (AIVariTopSpeed - 2f)){
 				AISpeed += backdraftMulti + (AILevel / 2000);
@@ -717,6 +726,9 @@ public class AIMovement : MonoBehaviour
 			if (HitForward && DraftCheckForward.distance <= coolOffSpace){
 				//Overheat weakens as you back away
 				AISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
+				if(affectedAISpeed != 0){
+					affectedAISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
+				}
 				//Debug.Log("#" + carNumber + " cooling down, factor " + (coolOffSpace - DraftCheckForward.distance)/coolOffInv);
 			} else {
 				coolEngine = false;
@@ -726,7 +738,7 @@ public class AIMovement : MonoBehaviour
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= bumpDraftDistTrigger){
 			if(AISpeed <= (AIVariTopSpeed - 1f)){
-				AISpeed+=backdraftMulti;
+				AISpeed+=(backdraftMulti / 5f);
 			}
 			tandemDraft = true;
 			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
@@ -746,9 +758,9 @@ public class AIMovement : MonoBehaviour
 				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
 			}
 			//Bump drafting speeds both up
-			if(AISpeed <= (AIVariTopSpeed - 2f)){
-				AISpeed+=backdraftMulti + 0.01f;
-			}
+			//if(AISpeed <= (AIVariTopSpeed - 2f)){
+			//	AISpeed+=backdraftMulti + 0.01f;
+			//}
 			if(seriesPrefix == "irl23"){
 				coolEngine = true;
 			}
@@ -764,8 +776,13 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Minimum speed
-		if (AISpeed < (200 + (carRarity / 4f) + speedRand + (laneInv / 4f))){
-			AISpeed = (200 + (carRarity / 4f) + speedRand);
+		if (AISpeed < (200 + speedRand + (carRarity / 8f) + (laneInv / 8f))){
+			AISpeed = (200 + speedRand + (carRarity / 8f) + (laneInv / 8f));
+		}
+		
+		if(affectedAISpeed != 0){
+			AISpeed = affectedAISpeed;
+			affectedAISpeed = 0;
 		}
 		
 		//Speed difference between the player and the AI
@@ -801,8 +818,8 @@ public class AIMovement : MonoBehaviour
 				break;
 			default:
 				draftStrengthRatio = 1000f;
-				dragDecelMulti = 0.004f;
-				backdraftMulti = 0.004f;
+				dragDecelMulti = 0.003f;
+				backdraftMulti = 0.002f;
 				bumpDraftDistTrigger = 1.01f;
 				passDistMulti = 1f;
 				break;

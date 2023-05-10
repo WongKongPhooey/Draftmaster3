@@ -100,9 +100,8 @@ public class Ticker : MonoBehaviour
 
 	void LateUpdate(){
 		if(gamePaused == true){
+			Debug.Log("Time Paused");
 			Time.timeScale = 0.0f;
-		} else {
-			Time.timeScale = 1.0f;
 		}
 	}
 
