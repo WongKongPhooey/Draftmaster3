@@ -21,6 +21,7 @@ public class CameraRotate : MonoBehaviour {
 
 	public static bool cautionOut;
 	public static bool cautionCleared;
+	public static bool acknowledgeWreck;
 	public static bool overtime;
 
 	public static int[] straightLength = new int[6];
@@ -64,12 +65,11 @@ public class CameraRotate : MonoBehaviour {
 	
 	public GameObject cautionSummaryMenu;
 	public GameObject pauseMenu;
+	public static bool gamePausedLate;
 	
 	public static bool momentChecks;
 	
 	void Awake(){
-		
-		Time.timeScale = 1.0f;
 		
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
@@ -117,9 +117,13 @@ public class CameraRotate : MonoBehaviour {
 		pauseMenu = GameObject.Find("PauseMenu");
 		pauseMenu.SetActive(false);
 		
+		gamePausedLate = false;
+		Time.timeScale = 1.0f;
+		
 		gearedAccel = calcCircuitGearing();
 		cameraRotate = PlayerPrefs.GetInt("CameraRotate");
 		cautionOut = false;
+		acknowledgeWreck = false;
 		overtime = false;
 		
 		for(int i=0;i<totalTurns;i++){
@@ -169,7 +173,7 @@ public class CameraRotate : MonoBehaviour {
 			if(PlayerPrefs.HasKey("RaceFastestLap" + circuit)){
 				raceLapRecord = PlayerPrefs.GetInt("RaceFastestLap" + circuit);
 				raceLapRecord = raceLapRecord / 1000;
-				Debug.Log("Pulled existing fastest lap of " + raceLapRecord);
+				//Debug.Log("Pulled existing fastest lap of " + raceLapRecord);
 				PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 			}
 			
@@ -214,6 +218,20 @@ public class CameraRotate : MonoBehaviour {
 
 	// Update is called once per frame
 	void FixedUpdate () {
+		
+		//LateUpdate was unreliable..
+		//..so run this at next frame start instead.
+		if(gamePausedLate == true){
+			Debug.Log("Time Paused");
+			Time.timeScale = 0.0f;
+		}
+		
+		//Commentary hasn't mentioned the wreck yet..
+		if((cautionOut == true)&&(acknowledgeWreck == false)){
+			acknowledgeWreck = true;
+			//To be replaced with turn-based commentary
+			this.gameObject.GetComponent<CommentaryManager>().commentate("Crash");
+		}
 		
 		straightcounter++;
 		
@@ -294,10 +312,10 @@ public class CameraRotate : MonoBehaviour {
 						PlayFabManager.CheckLiveTimeTrial();
 						//Double checked
 						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
+							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR112","");
 						}
 					}
-					Time.timeScale = 0.0f;
+					gamePausedLate = true;
 				}
 			}
 			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
@@ -511,10 +529,10 @@ public class CameraRotate : MonoBehaviour {
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR112","");
 			}
 		}
-		Time.timeScale = 0.0f;
+		gamePausedLate = true;
 	}
 	
 	public void saveRaceFastestLap(){
@@ -532,7 +550,7 @@ public class CameraRotate : MonoBehaviour {
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR109","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR112","");
 			}
 		}
 	}
@@ -541,6 +559,7 @@ public class CameraRotate : MonoBehaviour {
 		//No caution on the last lap
 		if(lap < raceEnd){
 			cautionOut = true;
+			acknowledgeWreck = false;
 			PlayerPrefs.SetInt("SpawnFromCaution",1);
 			PlayerPrefs.SetInt("CautionLap", lap);
 		}
@@ -549,7 +568,7 @@ public class CameraRotate : MonoBehaviour {
 	public void pauseGame(){
 		if(RaceHUD.raceOver == false){
 			RaceHUD.gamePaused = true;
-			Time.timeScale = 0.0f;
+			gamePausedLate = true;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = false;
 			PlayerPrefs.SetInt("Volume",0);
 			PlayerPrefs.SetInt("MidRaceLoading", 1);
@@ -559,10 +578,12 @@ public class CameraRotate : MonoBehaviour {
 	public void unpauseGame(){
 		if(RaceHUD.raceOver == false){
 			RaceHUD.gamePaused = false;
+			gamePausedLate = false;
 			Time.timeScale = 1.0f;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = true;
 			PlayerPrefs.SetInt("Volume",1);
 			pauseMenu.SetActive(false);
+			Debug.Log("Unpause the game");
 		}
 	}
 	

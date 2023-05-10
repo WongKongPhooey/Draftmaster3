@@ -98,6 +98,13 @@ public class Ticker : MonoBehaviour
 		hasLed = false;
     }
 
+	void LateUpdate(){
+		if(gamePaused == true){
+			Debug.Log("Time Paused");
+			Time.timeScale = 0.0f;
+		}
+	}
+
 	public void populateTickerData(){
 
 		if((carsTagged == true)||(carsArray.Length == 0)){
@@ -383,7 +390,6 @@ public class Ticker : MonoBehaviour
 	public static void togglePause(){
 		if(gamePaused == false){
 			gamePaused = true;
-			Time.timeScale = 0.0f;
 			mainCam.GetComponent<AudioListener>().enabled = false;
 			PlayerPrefs.SetInt("Volume",0);
 			pauseMenu.SetActive(true);

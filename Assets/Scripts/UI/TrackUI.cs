@@ -47,12 +47,12 @@ public class TrackUI : MonoBehaviour
 		
 		//Check for an active championship
 		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			Debug.Log("There's an active championship..");
+			//Debug.Log("There's an active championship..");
 			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
 				PlayerPrefs.SetString("RaceType","Championship");
 				seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
 				PlayerPrefs.SetString("carSeries", seriesPrefix);
-				Debug.Log("ChampionshipCarSeries loaded as " + PlayerPrefs.GetString("ChampionshipCarSeries") + ". CarSeries is " + PlayerPrefs.GetString("carSeries"));
+				//Debug.Log("ChampionshipCarSeries loaded as " + PlayerPrefs.GetString("ChampionshipCarSeries") + ". CarSeries is " + PlayerPrefs.GetString("carSeries"));
 				
 				//Found a championship
 				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
@@ -69,7 +69,7 @@ public class TrackUI : MonoBehaviour
 				}
 			}
 		} else {
-			Debug.Log("No active championship");
+			//Debug.Log("No active championship");
 		}
     }
 
@@ -267,7 +267,7 @@ public class TrackUI : MonoBehaviour
 		int baseLaps = PlayerPrefs.GetInt("RaceLaps");
 		int raceLapsMultiplier = (AIDiff / 4) + 1;
 		PlayerPrefs.SetInt("RaceLaps", Mathf.FloorToInt(baseLaps * raceLapsMultiplier));
-		Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		//Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
 	}
 
 	public static void startRace(string track){

@@ -13,7 +13,6 @@ public class TutorialGUI : MonoBehaviour {
 	public string lastName = "Racer";
 	
 	void Awake() {
-		RaceHUD.tutorialStage = 1;
 	}
 
 	// Use this for initialization

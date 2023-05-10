@@ -8,6 +8,7 @@ public class RaceHUD : MonoBehaviour {
 	public float widthblock;
 	public float heightblock;
 	public static bool gamePaused;
+	public static bool gamePausedLate;
 
 	public GameObject raceCam;
 
@@ -26,29 +27,13 @@ public class RaceHUD : MonoBehaviour {
 
 	public float engineVol;
 	public float crowdVol;
-	public static int tutorialStage = 1;
-	public static int tutorialSteeringCount;
-	public static int tutorialBrakingCount;
-	public static int tutorialDraftingCount;
-	public static int tutorialBackdraftCount;
-	public static int tutorialSteeringMax = 3;
-	public static int tutorialBrakingMax = 1;
-	public static int tutorialDraftingMax = 500;
-	public static int tutorialBackdraftMax = 100;
-	public static bool tutorialTopSpeed = false;
-	public static bool tutorialBackingOut = false;
-	
 	
 	void Start(){
 		widthblock = Screen.width/20;
 		heightblock = Screen.height/20;
 		thePlayer = GameObject.Find("Player");
-		tutorialSteeringCount = 0;
-		tutorialBrakingCount = 0;
-		tutorialDraftingCount = 0;
-		tutorialBackdraftCount = 0;
+
 		gamePaused = false;
-		tutorialBackingOut = false;
 		
 		challengeActive = false;
 		if(PlayerPrefs.HasKey("RaceMoment")){
@@ -58,35 +43,9 @@ public class RaceHUD : MonoBehaviour {
 	
 	
 	void Awake(){
-		tutorialStage = 1;
 		gamePaused = false;
-		tutorialBackingOut = false;
 		
 		fontScale = FontScale.scale();
-	}
-	
-	void FixedUpdate(){
-		if (tutorialSteeringCount >= tutorialSteeringMax){
-			tutorialStage++;
-			tutorialSteeringCount = 0;
-		}
-		if (tutorialBrakingCount >= tutorialBrakingMax){
-			tutorialStage++;
-			tutorialBrakingCount = 0;
-		}
-		if (tutorialDraftingCount >= tutorialDraftingMax){
-			tutorialStage++;
-			tutorialDraftingCount = 0;
-		}
-		if (tutorialBackdraftCount >= tutorialBackdraftMax){
-			tutorialStage++;
-			tutorialBackdraftCount = 0;
-		}
-		if (tutorialStage == 5){
-			Time.timeScale = 0.0f;
-			raceCam.GetComponent<AudioListener>().enabled = false;
-			PlayerPrefs.SetInt("Volume",0);
-		}
 	}
 	
 	void OnGUI() {
