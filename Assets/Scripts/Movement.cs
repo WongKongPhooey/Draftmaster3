@@ -531,7 +531,7 @@ public class Movement : MonoBehaviour {
 				initialContact = true;
 				//Debug.Log("Impact levels out Player");
 			} else {
-				//Send it back
+				//Speed up
 				playerSpeed += backdraftMulti;
 			}
 			//Send it back
@@ -544,12 +544,13 @@ public class Movement : MonoBehaviour {
 			if(HitBackward == true){
 				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
 				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
+				//Debug.Log("Send to pusher: " + playerSpeed);
 			}
 		}
 	}
 	
 	void GivePush(float bumpSpeed){
-		Debug.Log("Return to player speed " + bumpSpeed + " (was " + playerSpeed + ")");
+		//Debug.Log("Return to player speed " + bumpSpeed + " (was " + playerSpeed + ")");
 		if(tandemPosition > 2){
 			playerSpeed-= 0.25f;
 			//Debug.Log("Player speed reduced by " + (bumpSpeed - playerSpeed) + "");
@@ -611,8 +612,8 @@ public class Movement : MonoBehaviour {
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
 
-		bool HitForward = Physics.Raycast(transform.position, transform.forward, out DraftCheckForward, 100);
-        bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 100);
+		bool HitForward = Physics.Raycast(transform.position, transform.forward, out DraftCheckForward, 25);
+        bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 25);
 
 		//Frontward Draft
 		Debug.DrawRay (transform.position + new Vector3(0.0f, 0.0f, 1f), Vector3.forward * 8, Color.green);
@@ -760,7 +761,7 @@ public class Movement : MonoBehaviour {
 		}
 
 		if(affectedPlayerSpeed != 0){
-			Debug.Log("Player speed equalised to " + affectedPlayerSpeed + ". Was " + playerSpeed);
+			//Debug.Log("Player speed equalised to " + affectedPlayerSpeed + ". Was " + playerSpeed);
 			playerSpeed = affectedPlayerSpeed;
 			affectedPlayerSpeed = 0;
 		}
@@ -802,10 +803,10 @@ public class Movement : MonoBehaviour {
 				break;
 			default:
 				seriesSpeedDiff = 0;
-				draftStrengthRatio = 1500f;
+				draftStrengthRatio = 1200f;
 				dragDecelMulti = 0.0025f;
-				backdraftMulti = 0.002f;
-				bumpDraftDistTrigger = 1.01f;
+				backdraftMulti = 0.004f;
+				bumpDraftDistTrigger = 1.1f;
 				revLimiterBoost = 0f;
 				break;
 		}

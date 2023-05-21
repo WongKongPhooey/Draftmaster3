@@ -93,7 +93,7 @@ public class GarageUI : MonoBehaviour
 				activeTile = carTile;
 			}
 			
-			//Testing - Unlock All		
+			//Testing - Unlock All
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",10);
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
@@ -544,6 +544,7 @@ public class GarageUI : MonoBehaviour
 		allSeries.Add("cup20");
 		allSeries.Add("cup22");
 		allSeries.Add("cup23");
+		allSeries.Add("irl23");
 		allSeries.Add("dmc15");
 		allSeries.Add("irc00");
 		

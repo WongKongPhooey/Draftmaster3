@@ -565,9 +565,9 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void GivePush(float bumpSpeed){
-		if(carRarity == 4){
-			Debug.Log("Return to #" + carNum + " speed " + bumpSpeed + " (was " + AISpeed + ")");
-		}
+		//if(carRarity == 4){
+			//Debug.Log("Return to #" + carNum + " speed " + bumpSpeed + " (was " + AISpeed + ")");
+		//}
 		affectedAISpeed = bumpSpeed;
 		//Discourage long draft trains
 		if(tandemPosition > maxTandem){
@@ -672,8 +672,8 @@ public class AIMovement : MonoBehaviour
 		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
-        bool HitForward = Physics.Raycast(transform.position, transform.forward, out DraftCheckForward, 100);
-        bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 100);
+        bool HitForward = Physics.Raycast(transform.position, transform.forward, out DraftCheckForward, 25);
+        bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 25);
 		
 		//If gaining draft of car in front
 		if (HitForward && DraftCheckForward.distance <= maxDraftDistance){
@@ -753,18 +753,25 @@ public class AIMovement : MonoBehaviour
 		}
 
 		//If bump-drafting the car in front
-		if (HitForward && DraftCheckForward.distance <= 1.01f){
+		if (HitForward && DraftCheckForward.distance <= (bumpDraftDistTrigger - 0.01f)){
+			//Frontward draft
+			Debug.DrawRay(transform.position, Vector3.forward * bumpDraftDistTrigger, Color.green);
+       
 			if(DraftCheckForward.transform.gameObject.name != null){
+				//if(DraftCheckForward.transform.gameObject.name == "Player"){
+					//Debug.Log("#" + carNum + "Bump drafting the player!");
+				//}
 				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
 			}
-			//Bump drafting speeds both up
-			//if(AISpeed <= (AIVariTopSpeed - 2f)){
-			//	AISpeed+=backdraftMulti + 0.01f;
-			//}
 			if(seriesPrefix == "irl23"){
 				coolEngine = true;
 			}
 		} else {
+			//if(HitForward){
+				//if(DraftCheckForward.transform.gameObject.name == "Player"){
+					//Debug.Log("#" + carNum + "Not close enough to the player! " + DraftCheckForward.distance);
+				//}
+			//}
 			tandemDraft = false;
 			tandemPosition = 1;
 		}
@@ -783,6 +790,10 @@ public class AIMovement : MonoBehaviour
 		if(affectedAISpeed != 0){
 			AISpeed = affectedAISpeed;
 			affectedAISpeed = 0;
+		}
+		
+		if(carNum == 9){
+			//Debug.Log("Car #9 speed: " + AISpeed);
 		}
 		
 		//Speed difference between the player and the AI
@@ -817,10 +828,10 @@ public class AIMovement : MonoBehaviour
 				coolOffInv = 5;
 				break;
 			default:
-				draftStrengthRatio = 1000f;
+				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.003f;
-				backdraftMulti = 0.002f;
-				bumpDraftDistTrigger = 1.01f;
+				backdraftMulti = 0.004f;
+				bumpDraftDistTrigger = 1.1f;
 				passDistMulti = 1f;
 				break;
 		}
@@ -1480,30 +1491,30 @@ public class AIMovement : MonoBehaviour
 				break;
 			case "LeftCorners":
 				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right * -1, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * -0.52f, Color.yellow);
+				//Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * -0.52f, Color.yellow);
 				if(rayHit == false){
 					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right * -1, out DraftCheck, rayLength);
-					Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * -0.52f, Color.yellow);
+					//Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * -0.52f, Color.yellow);
 				}
 				break;
 			case "RightCorners":
 				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * 0.52f, Color.yellow);
+				//Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * 0.52f, Color.yellow);
 				if(rayHit == false){
 					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right, out DraftCheck, rayLength);
-					Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * 0.52f, Color.yellow);
+					//Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * 0.52f, Color.yellow);
 				}
 				break;
 			case "LeftEdge":
 				rayHit = Physics.Raycast(transform.position + new Vector3(-1f,0,-1f), transform.forward, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(-1f,0,-1f), Vector3.forward * 2, Color.red);
+				//Debug.DrawRay(transform.position + new Vector3(-1f,0,-1f), Vector3.forward * 2, Color.red);
 				break;
 			case "RightEdge":
 				rayHit = Physics.Raycast(transform.position + new Vector3(1f,0,-1f), transform.forward, out DraftCheck, rayLength);
-				Debug.DrawRay(transform.position + new Vector3(1f,0,-1f), Vector3.forward * 2, Color.red);
+				//Debug.DrawRay(transform.position + new Vector3(1f,0,-1f), Vector3.forward * 2, Color.red);
 				break;
 			default:
-				Debug.Log("Invalid Raycast Direction");
+				//Debug.Log("Invalid Raycast Direction");
 				rayHit = false;
 				break;
 		}
@@ -1646,6 +1657,11 @@ public class AIMovement : MonoBehaviour
 		
 		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 20) + 2;
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
+		
+		//Prevent landing in the crowd
+		if(this.gameObject.transform.position.x > 2f){
+			this.gameObject.transform.position = new Vector3(2f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
+		}
 		
 		//Align particle system to global track direction
 		//Flatten the smoke
