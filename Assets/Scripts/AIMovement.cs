@@ -40,6 +40,7 @@ public class AIMovement : MonoBehaviour
 	float dragDecelMulti;
 	float backdraftMulti;
 	float bumpDraftDistTrigger;
+	float draftAirCushion;
 	float passDistMulti;
 	
 	public bool isWrecking;
@@ -819,13 +820,21 @@ public class AIMovement : MonoBehaviour
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
-				draftStrengthRatio = 450f;
+				/*draftStrengthRatio = 450f;
 				dragDecelMulti = 0.002f;
 				backdraftMulti = 0.015f;
 				bumpDraftDistTrigger = 1.25f;
 				draftAirCushion = 1.6f;
 				passDistMulti = 1.5f;
 				coolOffSpace = 2f;
+				coolOffInv = 5;*/
+				draftStrengthRatio = 450f;
+				dragDecelMulti = 0.005f;
+				backdraftMulti = 0.015f;
+				bumpDraftDistTrigger = 1.2f;
+				draftAirCushion = 1.8f;
+				passDistMulti = 1.5f;
+				coolOffSpace = 1.5f;
 				coolOffInv = 5;
 				break;
 			default:

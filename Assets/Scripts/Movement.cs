@@ -69,6 +69,7 @@ public class Movement : MonoBehaviour {
 	float dragDecelMulti;
 	float backdraftMulti;
 	float bumpDraftDistTrigger;
+	float draftAirCushion;
 	float passDistMulti;
 	float revLimiterBoost;
 
@@ -680,7 +681,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		// If recieving backdraft of car behind
-		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.2f)){
+		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, draftAirCushion)){
 			//Speed up
 			if(playerSpeed <= (variTopSpeed - 2f)){
 				playerSpeed+=(backdraftMulti + customAccelF);
@@ -688,7 +689,7 @@ public class Movement : MonoBehaviour {
 		}
 
 		// If being bump-drafted from behind
-		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, 1.01f)){
+		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, bumpDraftDistTrigger)){
 			//Speed up
 			if(playerSpeed <= (variTopSpeed - 1f)){
 				playerSpeed+=(backdraftMulti + customAccelF);
@@ -702,7 +703,7 @@ public class Movement : MonoBehaviour {
 		}
 
 		// If bump-drafting the car in front
-		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 1.01f)){
+		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, bumpDraftDistTrigger)){
 			if(isWrecking == false){
 				//Bump drafting speeds both up
 				if(playerSpeed <= (variTopSpeed - 2f)){
@@ -794,11 +795,12 @@ public class Movement : MonoBehaviour {
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
-				seriesSpeedDiff = -20;
+				seriesSpeedDiff = 30;
 				draftStrengthRatio = 600f;
-				dragDecelMulti = 0.005f;
+				dragDecelMulti = 0.002f;
 				backdraftMulti = 0.015f;
-				bumpDraftDistTrigger = 1.25f;
+				bumpDraftDistTrigger = 1.1f;
+				draftAirCushion = 1.8f;
 				revLimiterBoost = 1.0f;
 				break;
 			default:
@@ -807,6 +809,7 @@ public class Movement : MonoBehaviour {
 				dragDecelMulti = 0.0025f;
 				backdraftMulti = 0.004f;
 				bumpDraftDistTrigger = 1.1f;
+				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
 				break;
 		}
