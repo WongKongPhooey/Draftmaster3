@@ -714,7 +714,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//If recieving backdraft from car behind
-		if (HitBackward && DraftCheckBackward.distance <= 1.2f){
+		if (HitBackward && DraftCheckBackward.distance <= draftAirCushion){
 			//Bump draft can't exceed slingshot speed (for balance)
 			if(AISpeed <= (AIVariTopSpeed - 2f)){
 				AISpeed += backdraftMulti + (AILevel / 2000);
@@ -823,6 +823,7 @@ public class AIMovement : MonoBehaviour
 				dragDecelMulti = 0.002f;
 				backdraftMulti = 0.015f;
 				bumpDraftDistTrigger = 1.25f;
+				draftAirCushion = 1.6f;
 				passDistMulti = 1.5f;
 				coolOffSpace = 2f;
 				coolOffInv = 5;
@@ -833,6 +834,7 @@ public class AIMovement : MonoBehaviour
 				backdraftMulti = 0.004f;
 				bumpDraftDistTrigger = 1.1f;
 				passDistMulti = 1f;
+				draftAirCushion = 1.2f;
 				break;
 		}
 	}

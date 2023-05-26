@@ -1287,7 +1287,7 @@ public class Movement : MonoBehaviour {
 		
 	public string calculateDamageGrade(float damage){
 		if(damage > 1500){
-			return "DVP Clock (" + Mathf.Round(damage / 15) + "%)";
+			return "DVP Clock (100%)";
 		}
 		if(damage > 500){
 			return "Heavy (" + Mathf.Round(damage / 15) + "%)";
