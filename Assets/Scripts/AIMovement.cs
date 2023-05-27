@@ -677,7 +677,7 @@ public class AIMovement : MonoBehaviour
         bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 25);
 		
 		//If gaining draft of car in front
-		if (HitForward && DraftCheckForward.distance <= maxDraftDistance){
+		if((HitForward && DraftCheckForward.distance <= maxDraftDistance)&&(coolEngine == false)){
 			//Speed up
 			if (AISpeed < AIVariTopSpeed){
 				//Draft gets stronger as you get closer
@@ -744,7 +744,7 @@ public class AIMovement : MonoBehaviour
 			tandemDraft = true;
 			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
 			if(currentPos == 0){
-				if (AISpeed > (AIVariTopSpeed - 2f)){
+				if (AISpeed > (AIVariTopSpeed - 3f)){
 					//Debug.Log("Leader is #" + carNum);
 					evadeDraft();
 				}
@@ -756,13 +756,16 @@ public class AIMovement : MonoBehaviour
 		//If bump-drafting the car in front
 		if (HitForward && DraftCheckForward.distance <= (bumpDraftDistTrigger - 0.01f)){
 			//Frontward draft
-			Debug.DrawRay(transform.position, Vector3.forward * bumpDraftDistTrigger, Color.green);
-       
 			if(DraftCheckForward.transform.gameObject.name != null){
 				//if(DraftCheckForward.transform.gameObject.name == "Player"){
 					//Debug.Log("#" + carNum + "Bump drafting the player!");
+					//Debug.DrawRay(transform.position, Vector3.forward * bumpDraftDistTrigger, Color.red);
 				//}
 				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
+				if (AISpeed > (AIVariTopSpeed - 2f)){
+					coolEngine = true;
+					//Debug.Log("Hot Bump Draft. Cool Engine #" + carNum);
+				}
 			}
 			if(seriesPrefix == "irl23"){
 				coolEngine = true;
@@ -771,6 +774,7 @@ public class AIMovement : MonoBehaviour
 			//if(HitForward){
 				//if(DraftCheckForward.transform.gameObject.name == "Player"){
 					//Debug.Log("#" + carNum + "Not close enough to the player! " + DraftCheckForward.distance);
+					//Debug.DrawRay(transform.position, Vector3.forward * bumpDraftDistTrigger, Color.red);
 				//}
 			//}
 			tandemDraft = false;
@@ -841,9 +845,11 @@ public class AIMovement : MonoBehaviour
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.003f;
 				backdraftMulti = 0.004f;
-				bumpDraftDistTrigger = 1.1f;
+				bumpDraftDistTrigger = 1.11f;
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
+				coolOffSpace = 1.4f;
+				coolOffInv = 3;
 				break;
 		}
 	}
@@ -1700,20 +1706,20 @@ public class AIMovement : MonoBehaviour
 	
 	void drawRaycasts(){
 		//Frontward draft
-        Debug.DrawRay(transform.position + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
+        //Debug.DrawRay(transform.position + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
         //Backdraft
-        Debug.DrawRay(transform.position, Vector3.back * 2, Color.red);
+        //Debug.DrawRay(transform.position, Vector3.back * 2, Color.red);
         //Leftdraft
-        Debug.DrawRay(transform.position, Vector3.left * 1, Color.yellow);
+        //Debug.DrawRay(transform.position, Vector3.left * 1, Color.yellow);
         //Rightdraft
-        Debug.DrawRay(transform.position, Vector3.right * 1, Color.yellow);
+        //Debug.DrawRay(transform.position, Vector3.right * 1, Color.yellow);
         //FrontLeftdraft
-        Debug.DrawRay(transform.position, (Vector3.left + Vector3.forward) * 1.5f, Color.magenta);
+        //Debug.DrawRay(transform.position, (Vector3.left + Vector3.forward) * 1.5f, Color.magenta);
         //FrontRightdraft
-        Debug.DrawRay(transform.position, (Vector3.right + Vector3.forward) * 1.5f, Color.magenta);
+        //Debug.DrawRay(transform.position, (Vector3.right + Vector3.forward) * 1.5f, Color.magenta);
         //RearLeftdraft
-        Debug.DrawRay(transform.position, (Vector3.left + Vector3.back) * 1.5f, Color.magenta);
+        //Debug.DrawRay(transform.position, (Vector3.left + Vector3.back) * 1.5f, Color.magenta);
         //RearRightdraft
-        Debug.DrawRay(transform.position, (Vector3.right + Vector3.back) * 1.5f, Color.magenta);
+        //Debug.DrawRay(transform.position, (Vector3.right + Vector3.back) * 1.5f, Color.magenta);
 	}
 }

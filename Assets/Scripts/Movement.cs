@@ -617,16 +617,16 @@ public class Movement : MonoBehaviour {
         bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 25);
 
 		//Frontward Draft
-		Debug.DrawRay (transform.position + new Vector3(0.0f, 0.0f, 1f), Vector3.forward * 8, Color.green);
+		//Debug.DrawRay (transform.position + new Vector3(0.0f, 0.0f, 1f), Vector3.forward * 8, Color.green);
 		
 		//Leftward Cast
-		Debug.DrawRay (transform.position, Vector3.left * 1, Color.yellow);
+		//Debug.DrawRay (transform.position, Vector3.left * 1, Color.yellow);
 		
 		//Rightward Cast
-		Debug.DrawRay (transform.position, Vector3.right * 1, Color.yellow);
+		//Debug.DrawRay (transform.position, Vector3.right * 1, Color.yellow);
 		
 		//Backdraft
-		Debug.DrawRay (transform.position, Vector3.back * 2, Color.red);
+		//Debug.DrawRay (transform.position, Vector3.back * 2, Color.red);
 		
 		RaycastHit DraftCheck;
 
@@ -695,7 +695,7 @@ public class Movement : MonoBehaviour {
 				playerSpeed+=(backdraftMulti + customAccelF);
 			}
 			//playerSpeed+=0.0045f;
-			//DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
+			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
 			tandemDraft = true;
 		} else {
 			tandemDraft = false;
@@ -799,7 +799,7 @@ public class Movement : MonoBehaviour {
 				draftStrengthRatio = 600f;
 				dragDecelMulti = 0.002f;
 				backdraftMulti = 0.015f;
-				bumpDraftDistTrigger = 1.1f;
+				bumpDraftDistTrigger = 1.2f;
 				draftAirCushion = 1.8f;
 				revLimiterBoost = 1.0f;
 				break;
@@ -808,7 +808,7 @@ public class Movement : MonoBehaviour {
 				draftStrengthRatio = 1200f;
 				dragDecelMulti = 0.0025f;
 				backdraftMulti = 0.004f;
-				bumpDraftDistTrigger = 1.1f;
+				bumpDraftDistTrigger = 1.11f;
 				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
 				break;

@@ -500,6 +500,14 @@ public class GarageUI : MonoBehaviour
 			carsAdded = true;
 		}	
 		
+		//Give a free Robb for IRL '23
+		if(PlayerPrefs.GetInt("irl2351Unlocked") == 0){
+			PlayerPrefs.SetInt("irl2351Unlocked",1);
+			PlayerPrefs.SetInt("irl2351Gears",0);
+			PlayerPrefs.SetInt("irl2351Class",1);
+			carsAdded = true;
+		}
+		
 		//Give a free Dismore for IROC '00
 		if(PlayerPrefs.GetInt("irc008Unlocked") == 0){
 			PlayerPrefs.SetInt("irc008Unlocked",1);
