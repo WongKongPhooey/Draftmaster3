@@ -537,7 +537,7 @@ public class SingleCar : MonoBehaviour {
 					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
 				}*/
 				
-				if(seriesPrefix != "dmc15"){
+				if((seriesPrefix != "dmc15")&&(seriesPrefix != "irl23")){
 					if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 						if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){
 							if(transfersLeft > 0){

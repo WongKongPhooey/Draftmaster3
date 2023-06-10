@@ -23,6 +23,7 @@ public class Movement : MonoBehaviour {
 	float draftDist;
 
 	float challengeSpeedBoost;
+	float dominatorDrag;
 
 	int customAccel;
 	int customSpeed;
@@ -293,7 +294,7 @@ public class Movement : MonoBehaviour {
 		draftCounter = 0;
 		raceCounter = 0;
 
-		if (DriverNames.cup2020Types[carNum] == "Strategist"){
+		if(DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
 			if(seriesPrefix == "irl23"){
 				carClass+=4;
 			}
@@ -367,11 +368,18 @@ public class Movement : MonoBehaviour {
 		}
 
 		dooredStrength = 40;
-		if (DriverNames.cup2020Types[carNum] == "Intimidator"){
+		if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
 			dooredStrength = 50 + (carRarity * 5) + (carClass * 5);
 			if(dooredStrength > 95){
 				dooredStrength = 95;
 			}
+		}
+
+		if(DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
+			//e.g. Class 6(S) reduces drag from 0.004f to 0.002f
+			dominatorDrag = carClass / 3000f;
+		} else {
+			dominatorDrag = 0;
 		}
 
 		if(PlayerPrefs.HasKey("CustomAcceleration")){
@@ -616,18 +624,6 @@ public class Movement : MonoBehaviour {
 		bool HitForward = Physics.Raycast(transform.position, transform.forward, out DraftCheckForward, 25);
         bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 25);
 
-		//Frontward Draft
-		//Debug.DrawRay (transform.position + new Vector3(0.0f, 0.0f, 1f), Vector3.forward * 8, Color.green);
-		
-		//Leftward Cast
-		//Debug.DrawRay (transform.position, Vector3.left * 1, Color.yellow);
-		
-		//Rightward Cast
-		//Debug.DrawRay (transform.position, Vector3.right * 1, Color.yellow);
-		
-		//Backdraft
-		//Debug.DrawRay (transform.position, Vector3.back * 2, Color.red);
-		
 		RaycastHit DraftCheck;
 
 		laneBias = 0;
@@ -673,7 +669,7 @@ public class Movement : MonoBehaviour {
 					}
 					playerSpeed-=(dragDecelMulti * (2 - (diffToMax / 2)));
 				} else {
-					playerSpeed-=dragDecelMulti;
+					playerSpeed-=(dragDecelMulti + dominatorDrag);
 				}
 			}
 			//Empty the Draft Bar
@@ -684,15 +680,15 @@ public class Movement : MonoBehaviour {
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, draftAirCushion)){
 			//Speed up
 			if(playerSpeed <= (variTopSpeed - 2f)){
-				playerSpeed+=(backdraftMulti + customAccelF);
+				playerSpeed+=(backdraftMulti);
 			}
 		}
 
 		// If being bump-drafted from behind
 		if (Physics.Raycast(transform.position,transform.forward * -1, out DraftCheck, bumpDraftDistTrigger)){
 			//Speed up
-			if(playerSpeed <= (variTopSpeed - 1f)){
-				playerSpeed+=(backdraftMulti + customAccelF);
+			if(playerSpeed <= (variTopSpeed - 2f)){
+				playerSpeed+=(backdraftMulti / 5f);
 			}
 			//playerSpeed+=0.0045f;
 			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
@@ -797,7 +793,7 @@ public class Movement : MonoBehaviour {
 			case "irl23":
 				seriesSpeedDiff = 30;
 				draftStrengthRatio = 600f;
-				dragDecelMulti = 0.002f;
+				dragDecelMulti = 0.0025f;
 				backdraftMulti = 0.015f;
 				bumpDraftDistTrigger = 1.2f;
 				draftAirCushion = 1.8f;
@@ -806,7 +802,7 @@ public class Movement : MonoBehaviour {
 			default:
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 1200f;
-				dragDecelMulti = 0.0025f;
+				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.004f;
 				bumpDraftDistTrigger = 1.11f;
 				draftAirCushion = 1.2f;

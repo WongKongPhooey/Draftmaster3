@@ -685,21 +685,23 @@ public class PlayFabManager : MonoBehaviour
 					transferTokens = int.Parse(playerJson.transferTokens);
 				 }
 				 
-				 if(level <= PlayerPrefs.GetInt("Level")){
-					Debug.Log("Your save is not a higher level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + "). Load aborted.");
-					return;
-				 } else {
+				 if(level > PlayerPrefs.GetInt("Level")){
 					PlayerPrefs.SetInt("Level", level);
+					//Debug.Log("Your save is not a lower level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + ").");
 				 }
 				 
+				 //Every car set has to be in here to be loaded
 				 ArrayList allSeries = new ArrayList(); 
 				 allSeries.Add("cup20");
 				 allSeries.Add("cup22");
+				 allSeries.Add("cup23");
 				 allSeries.Add("irc00");
 				 allSeries.Add("dmc15");
+				 allSeries.Add("irl23");
 				 
 				 int unlockedCars = 0;
 				 foreach(string series in allSeries){
+					 Debug.Log("Loading " + series);
 					 if(saveType == "manual"){
 						json = result.Data["SavedPlayerProgress" + series].Value;
 						playerJson = JsonUtility.FromJson<Series>(json);
@@ -725,6 +727,13 @@ public class PlayFabManager : MonoBehaviour
 								PlayerPrefs.SetInt(series + i + "Class", int.Parse(playerJson.drivers[i].carClass));
 								PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
 								Debug.Log("Updated class on load, " + series + " #" + i);
+							} else {
+								if(PlayerPrefs.GetInt(series + i + "Class") == int.Parse(playerJson.drivers[i].carClass)){
+									//If the class hasn't changed but the gears have increased
+									if(PlayerPrefs.GetInt(series + i + "Gears") < int.Parse(playerJson.drivers[i].carGears)){
+										PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
+									}
+								}
 							}
 							string altsList = playerJson.drivers[i].altPaints;
 							string[] altsArray = altsList.Split(',');
@@ -738,14 +747,17 @@ public class PlayFabManager : MonoBehaviour
 					 }
 				 }
 				 Debug.Log("Loaded data from server! " + unlockedCars + " unlocked cars.");
-				 PlayerPrefs.SetString("SaveLoadOutput","Loaded " + saveType + "save - " + unlockedCars + " unlocked cars.");
+				 PlayerPrefs.SetString("LoadOutput","Loaded " + saveType + " save - " + unlockedCars + " unlocked cars.");
 			} else {
 				Debug.Log("No player data found");
-				PlayerPrefs.SetString("SaveLoadOutput","No autosave or manual save data found for this player account.");
+				PlayerPrefs.SetString("LoadOutput","No autosave or manual save data found for this player account.");
 			}
 		} else {
 			Debug.Log("No player data found");
 		}
+		
+		//Save this newly merged load back to PlayFab
+		autosaveGarageToCloud();
 	}
 	
 	public static void OnDataSend(UpdateUserDataResult result){
@@ -758,6 +770,7 @@ public class PlayFabManager : MonoBehaviour
 				{"AutosavePlayerProgress" + seriesPrefix, progressJSON}
 			}
 		};
+		//Debug.Log("Saved series " + seriesPrefix + " to cloud");
 		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
 	}
 	
@@ -772,7 +785,97 @@ public class PlayFabManager : MonoBehaviour
 	
 	public static void OnProgressSave(UpdateUserDataResult result){
 		//Debug.Log("Player Progress Saved");
-		PlayerPrefs.SetString("SaveLoadOutput","Saved progress to the server");
+		PlayerPrefs.SetString("SaveOutput","Saved progress to the server");
+	}
+	
+	public static void autosaveGarageToCloud(){
+		
+		//Count Unlocks..
+		int level = PlayerPrefs.GetInt("Level");
+		int totalUnlocks = 0;
+		
+		//Add all autosavable series here
+		//should probably be hooked up to the Series Data file instead
+		ArrayList allSeries = new ArrayList(); 
+		allSeries.Add("cup20");
+		allSeries.Add("cup22");
+		allSeries.Add("cup23");
+		allSeries.Add("irl23");
+		allSeries.Add("dmc15");
+		allSeries.Add("irc00");
+		
+		foreach(string series in allSeries){
+			for(int i=0;i<100;i++){
+				if(DriverNames.getName(series, i) != null){
+					if(PlayerPrefs.GetInt(series + i + "Unlocked") == 1){
+						totalUnlocks++;
+					}
+				}
+			}
+		}
+
+		//If logged in as someone
+		if(PlayerPrefs.HasKey("PlayerUsername")){
+			
+			//Try an autosave
+			foreach(string series in allSeries){
+				string progressJSON = JSONifyProgress(series);
+				try {
+					PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+					//Debug.Log(progressJSON);
+				}
+				catch(Exception e){
+					Debug.Log("Cannot reach PlayFab");
+				}
+			}
+		}
+	}
+
+	public static string JSONifyProgress(string seriesPrefix){
+		string JSONOutput = "{";
+		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
+		JSONOutput += "\"transferTokens\": \"" + PlayerPrefs.GetInt("TransferTokens").ToString() + "\",";
+		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
+		JSONOutput += "\"drivers\": [";
+		int totalCars = 0;
+		int unlockedCars = 0;
+		for(int car = 0; car < 100; car++){
+			//Initialise (can be used for dev reset)
+			int carUnlocked = 0;
+			int carClass = 0;
+			int carGears = 0;
+			if(PlayerPrefs.HasKey(seriesPrefix + car + "Gears")){
+				carUnlocked = PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked");
+				carClass = PlayerPrefs.GetInt(seriesPrefix + car + "Class");
+				carGears = PlayerPrefs.GetInt(seriesPrefix + car + "Gears");
+				totalCars++;
+				if(carUnlocked == 1){
+					unlockedCars++;
+				}
+			}
+			if(car > 0){
+				JSONOutput += ",";
+			}
+			JSONOutput += "{";
+			JSONOutput += "\"carNo\": \"" + car + "\",";
+			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\",";
+			JSONOutput += "\"carClass\": \"" + carClass + "\",";
+			JSONOutput += "\"carGears\": \"" + carGears + "\",";
+			JSONOutput += "\"altPaints\": \"0";
+			for(int paint=1;paint<10;paint++){
+				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
+					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
+						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
+						JSONOutput += "," + paint + "";
+					}
+				}
+			}
+			JSONOutput += "\"";
+			JSONOutput += "}";		
+		}
+		JSONOutput += "],";
+		JSONOutput += "\"totalCars\": \"" + unlockedCars + "\"}";
+		return JSONOutput;
 	}
 	
 	public static void SendLeaderboard(int score, string circuitName, string prefix){
@@ -860,7 +963,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void GetLiveTimeTrialLeaderboard(){
 		
 		var request = new GetLeaderboardRequest {
-			StatisticName = "LiveTimeTrialR112",
+			StatisticName = "LiveTimeTrialR118",
 			StartPosition = 0,
 			MaxResultsCount = 20
 		};
@@ -884,7 +987,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void GetLiveTimeTrialAroundPlayer(){
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
-			StatisticName = "LiveTimeTrialR112",
+			StatisticName = "LiveTimeTrialR118",
 			MaxResultsCount = 1
 		};
 		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLiveTimeTrialAroundPlayerGet, OnError);

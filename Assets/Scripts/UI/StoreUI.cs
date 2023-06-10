@@ -165,7 +165,7 @@ public class StoreUI : MonoBehaviour
 			string dailyRandomsList = "";
 			string randSeries = DriverNames.getRandomWinnableSeries();
 			
-			for(int i=0;i<10;i++){
+			for(int i=0;i<20;i++){
 				int rand = 100;
 				while((DriverNames.getRarity(randSeries,rand) == 0) || 
 					  (DriverNames.getRarity(randSeries,rand) > 3) ||
