@@ -43,7 +43,11 @@ public class GarageUI : MonoBehaviour
 		PlayerPrefs.SetString("SaveLoadOutput","");
 		
 		//Run a load before any saves to merge in any missing unlocks
-		PlayFabManager.GetSavedPlayerProgress();
+		if(Application.internetReachability != NetworkReachability.NotReachable){
+			PlayFabManager.GetSavedPlayerProgress();
+		} else {
+			Debug.Log("No Internet Connection");
+		}
 		
 		seriesDropdown = GameObject.Find("Dropdown");
 		seriesDropdown.SetActive(false);

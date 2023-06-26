@@ -182,7 +182,11 @@ public class MainMenuUI : MonoBehaviour {
 		}
 		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
-			PlayFabManager.LoginFromPrefs();
+			if(Application.internetReachability != NetworkReachability.NotReachable){
+				PlayFabManager.LoginFromPrefs();
+			} else {
+				Debug.Log("No Internet Connection");
+			}
 			loginBtn.GetComponent<NavButton>().sceneName = "Levels/MyAccount";
 			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("PlayerUsername");
 		} else {

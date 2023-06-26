@@ -7,17 +7,24 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup2020AltPaintNames = new string[101,10];
 	public static string[,] cup22AltPaintNames = new string[101,10];
 	public static string[,] cup23AltPaintNames = new string[101,10];
+	public static string[,] irl23AltPaintNames = new string[101,10];
+	
 	public static string[,] cup2020AltPaintDriver = new string[101,10];
 	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static string[,] cup23AltPaintDriver = new string[101,10];
+	public static string[,] irl23AltPaintDriver = new string[101,10];
+	
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
+	
 	public static string[,] cup2020AltPaintTheme = new string[101,10];
 	public static string[,] cup22AltPaintTheme = new string[101,10];
 	public static string[,] cup23AltPaintTheme = new string[101,10];
+	public static string[,] irl23AltPaintTheme = new string[101,10];
 	
 	public static bool[,] cup2020AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup22AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup23AltPaintAISpawning = new bool[101,10];
+	public static bool[,] irl23AltPaintAISpawning = new bool[101,10];
 	
     // Start is called before the first frame update
     void Start(){
@@ -98,6 +105,8 @@ public class AltPaints : MonoBehaviour {
 		cup23AltPaintNames[22,1] = "#1 Winner";
 		cup23AltPaintNames[24,1] = "#1 Winner";
 		
+		irl23AltPaintNames[2,1] = "#1 The 500";
+		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
 		cup2020AltPaintDriver[3,4] = "Earnhardt";
@@ -156,15 +165,6 @@ public class AltPaints : MonoBehaviour {
 		cup2020AltPaintTheme[88,3] = "Wrecked";
 		cup2020AltPaintTheme[95,1] = "2020";
 		
-		//true = don't spawn. I know this is backwards..
-		cup2020AltPaintAISpawning[5,2] = true;
-		cup2020AltPaintAISpawning[6,1] = true;
-		cup2020AltPaintAISpawning[11,1] = true;
-		cup2020AltPaintAISpawning[88,3] = true;
-		
-		cup22AltPaintAISpawning[1,1] = true;
-		cup22AltPaintAISpawning[99,1] = true;
-		
 		cup22AltPaintTheme[1,1] = "Community";
 		cup22AltPaintTheme[1,2] = "Final4";
 		cup22AltPaintTheme[7,1] = "Throwback";
@@ -195,6 +195,17 @@ public class AltPaints : MonoBehaviour {
 		cup23AltPaintTheme[20,1] = "Winners";
 		cup23AltPaintTheme[22,1] = "Winners";
 		cup23AltPaintTheme[24,1] = "Winners";
+		
+		irl23AltPaintTheme[2,1] = "Winners";
+		
+		//true = don't spawn. I know this is backwards..
+		cup2020AltPaintAISpawning[5,2] = true;
+		cup2020AltPaintAISpawning[6,1] = true;
+		cup2020AltPaintAISpawning[11,1] = true;
+		cup2020AltPaintAISpawning[88,3] = true;
+		
+		cup22AltPaintAISpawning[1,1] = true;
+		cup22AltPaintAISpawning[99,1] = true;
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
@@ -208,6 +219,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup23":
 				altPaintName = cup23AltPaintNames[carNum,altNum];
+				break;
+			case "irl23":
+				altPaintName = irl23AltPaintNames[carNum,altNum];
 				break;
 			default:
 				break;
@@ -225,6 +239,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup23":
 				return cup23AltPaintDriver[carNum,altNum];
+				break;
+			case "irl23":
+				return irl23AltPaintDriver[carNum,altNum];
 				break;
 			default:
 				return null;
@@ -251,6 +268,11 @@ public class AltPaints : MonoBehaviour {
 					canSpawn = true;
 				}
 				break;
+			case "irl23":
+				if(irl23AltPaintAISpawning[carNum,altNum] == true){
+					canSpawn = true;
+				}
+				break;
 			default:
 				break;
 		}
@@ -267,6 +289,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup23":
 				return cup23AltPaintTheme[carNum,altNum];
+				break;
+			case "irl23":
+				return irl23AltPaintTheme[carNum,altNum];
 				break;
 			default:
 				return "Blank";
