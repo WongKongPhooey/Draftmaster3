@@ -780,7 +780,7 @@ public class AIMovement : MonoBehaviour
 		//Speed tops out
         if (AISpeed > AIVariTopSpeed){
 			//Hard limiter
-            AISpeed = AIVariTopSpeed;
+            AISpeed = AIVariTopSpeed - 0.1f;
 		}
 		
 		//Minimum speed

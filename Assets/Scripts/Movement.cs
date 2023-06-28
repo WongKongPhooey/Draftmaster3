@@ -742,8 +742,8 @@ public class Movement : MonoBehaviour {
 		
 		//Speed tops out
 		if(playerSpeed > variTopSpeed){
-			overspeed += 0.001f;
-			playerSpeed = variTopSpeed + overspeed;
+			overspeed += 0.0001f;
+			playerSpeed += overspeed;
 			//Debug.Log("Overspeed: " + overspeed);
 		} else {
 			//Overspeed disappears
@@ -752,9 +752,6 @@ public class Movement : MonoBehaviour {
 			} else {
 				overspeed = 0;
 			}
-		}
-		if(playerSpeed > variTopSpeed + 1f){
-			playerSpeed = variTopSpeed + 1f;
 		}
 
 		if(affectedPlayerSpeed != 0){

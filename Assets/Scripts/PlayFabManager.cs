@@ -736,11 +736,14 @@ public class PlayFabManager : MonoBehaviour
 								}
 							}
 							string altsList = playerJson.drivers[i].altPaints;
-							string[] altsArray = altsList.Split(',');
-							foreach(string alt in altsArray){
-								if(int.Parse(alt) > 0){
-									PlayerPrefs.SetInt(series + i + "Alt" + alt + "Unlocked", 1);
-									Debug.Log("Unlocked Alt on load, " + series + " #" + i + " alt " + alt);
+							if(altsList != "0"){
+								string[] altsArray = altsList.Split(',');
+								foreach(string alt in altsArray){
+									//Debug.Log(series + " #" + i + " alt " + alt + " alts loop");
+									if(int.Parse(alt) > 0){
+										PlayerPrefs.SetInt(series + i + "Alt" + alt + "Unlocked", 1);
+										//Debug.Log("Unlocked Alt on load, " + series + " #" + i + " alt " + alt);
+									}
 								}
 							}
 						}
