@@ -640,7 +640,7 @@ public class Movement : MonoBehaviour {
 		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
 			draftDist = DraftCheck.distance;
 			//Speed up
-			if(playerSpeed <= variTopSpeed){
+			if(playerSpeed < variTopSpeed){
 				
 				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 1000f);
 				
@@ -658,6 +658,10 @@ public class Movement : MonoBehaviour {
 				
 			} else {
 				playerSpeed-=((playerSpeed - topSpeed)/200);
+				
+				//Over the top speed and still in the draft
+				overspeed += 0.0001f;
+				playerSpeed = variTopSpeed + overspeed;
 			}
 		} else {
 			//Slow down if not in any draft
@@ -672,6 +676,14 @@ public class Movement : MonoBehaviour {
 					playerSpeed-=(dragDecelMulti + dominatorDrag);
 				}
 			}
+			
+			//Overspeed disappears
+			if(overspeed > 0){
+				overspeed -= 0.01f;
+			} else {
+				overspeed = 0;
+			}
+					
 			//Empty the Draft Bar
 			draftDist= 10 + customDistF;
 		}
@@ -739,20 +751,6 @@ public class Movement : MonoBehaviour {
 			wobblePos--;
 		}
 		updateMovement();
-		
-		//Speed tops out
-		if(playerSpeed > variTopSpeed){
-			overspeed += 0.0001f;
-			playerSpeed += overspeed;
-			//Debug.Log("Overspeed: " + overspeed);
-		} else {
-			//Overspeed disappears
-			if(overspeed > 0){
-				overspeed -= 0.01f;
-			} else {
-				overspeed = 0;
-			}
-		}
 
 		if(affectedPlayerSpeed != 0){
 			//Debug.Log("Player speed equalised to " + affectedPlayerSpeed + ". Was " + playerSpeed);
@@ -1260,6 +1258,10 @@ public class Movement : MonoBehaviour {
 		if(Mathf.Round(playerWreckDecel) == -90){
 			GameObject theCamera = GameObject.Find("Main Camera");
 			theCamera.GetComponent<CommentaryManager>().commentate("Caution");
+		}
+		
+		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce > 30){
+			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		}
 	}
 	

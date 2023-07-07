@@ -1693,21 +1693,6 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void drawRaycasts(){
-		//Frontward draft
-        //Debug.DrawRay(transform.position + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
-        //Backdraft
-        //Debug.DrawRay(transform.position, Vector3.back * 2, Color.red);
-        //Leftdraft
-        //Debug.DrawRay(transform.position, Vector3.left * 1, Color.yellow);
-        //Rightdraft
-        //Debug.DrawRay(transform.position, Vector3.right * 1, Color.yellow);
-        //FrontLeftdraft
-        //Debug.DrawRay(transform.position, (Vector3.left + Vector3.forward) * 1.5f, Color.magenta);
-        //FrontRightdraft
-        //Debug.DrawRay(transform.position, (Vector3.right + Vector3.forward) * 1.5f, Color.magenta);
-        //RearLeftdraft
-        //Debug.DrawRay(transform.position, (Vector3.left + Vector3.back) * 1.5f, Color.magenta);
-        //RearRightdraft
-        //Debug.DrawRay(transform.position, (Vector3.right + Vector3.back) * 1.5f, Color.magenta);
+
 	}
 }

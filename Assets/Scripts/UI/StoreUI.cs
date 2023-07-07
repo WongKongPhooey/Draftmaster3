@@ -34,6 +34,8 @@ public class StoreUI : MonoBehaviour
 	
 	public GameObject alertPopup;
 	
+	public Texture2D altButton;
+	
 	public Transform weeklyTileFrame;
 	public Transform dailyTileFrame;
 	public Transform starterTileFrame;
@@ -116,7 +118,7 @@ public class StoreUI : MonoBehaviour
 				//Extract series from front
 				carSeries = carNum.Substring(0, 5);
 				carNum = carNum.Remove(0, 5);
-				Debug.Log("Series " + carSeries);
+				//Debug.Log("Series " + carSeries);
 				
 				//Extract alt from end
 				carAlt = carNum.Substring(carNum.Length-1);
@@ -134,6 +136,7 @@ public class StoreUI : MonoBehaviour
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
 				tileQuantity.text = "Paint Scheme";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
+				tilePrice.GetComponent<RawImage>().texture = altButton;
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
 				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
@@ -166,6 +169,7 @@ public class StoreUI : MonoBehaviour
 			string randSeries = DriverNames.getRandomWinnableSeries();
 			
 			for(int i=0;i<20;i++){
+				//Starts on an invalid number so the while runs at least once
 				int rand = 100;
 				while((DriverNames.getRarity(randSeries,rand) == 0) || 
 					  (DriverNames.getRarity(randSeries,rand) > 3) ||
@@ -173,9 +177,19 @@ public class StoreUI : MonoBehaviour
 					randSeries = DriverNames.getRandomWinnableSeries();
 					rand = Mathf.FloorToInt(Random.Range(0,100));
 				}
-				//Debug.Log(DriverNames.getRarity(randSeries,rand));
-				dailyRandoms.Add("" + randSeries + "" + rand + "");
-				dailyRandomsList += "" + randSeries + "" + rand + ",";
+				string randAlt = DriverNames.getRandomAltPaint(randSeries,rand,true,10);
+				if(randAlt != null){
+					if(AltPaints.getAltPaintCanBuy(randSeries,rand,int.Parse(randAlt.Substring(randAlt.Length - 1))) != true){
+						dailyRandoms.Add(randAlt);
+						dailyRandomsList += randAlt + ",";
+					} else {
+						dailyRandoms.Add("" + randSeries + "" + rand + "");
+						dailyRandomsList += "" + randSeries + "" + rand + ",";
+					}
+				} else {	
+					dailyRandoms.Add("" + randSeries + "" + rand + "");
+					dailyRandomsList += "" + randSeries + "" + rand + ",";
+				}
 			}
 			//Debug.Log("Daily Picks: " + dailyRandomsList);
 			PlayerPrefs.SetString("DailyRandoms",dailyRandomsList);
@@ -235,7 +249,7 @@ public class StoreUI : MonoBehaviour
 				carAlt = carNum.Substring(carNum.Length-1);
 				carAltInt = int.Parse(carAlt);
 				carNum = carNum.Remove(carNum.Length-1);
-				Debug.Log("Alt " + carAlt);
+				//Debug.Log("Alt " + carAlt);
 				
 				//Remove the remaining chars (livery/alt)
 				carNum = Regex.Replace(carNum, "[A-Za-z ]", "");
@@ -248,6 +262,7 @@ public class StoreUI : MonoBehaviour
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
 				tileQuantity.text = "Paint Scheme";
 				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
+				tilePrice.GetComponent<RawImage>().texture = altButton;
 				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
 				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
@@ -277,16 +292,16 @@ public class StoreUI : MonoBehaviour
 		
 		starterPicks.Clear();
 		
-		starterPicks.Add("cup2313");
-		starterPicks.Add("cup2227");
-		starterPicks.Add(34);
-		starterPicks.Add("dmc1546");
+		starterPicks.Add("dmc1513");
+		starterPicks.Add("irl2324");
+		starterPicks.Add(32);
+		starterPicks.Add("cup2336");
+		starterPicks.Add("irl2344");
+		starterPicks.Add("cup2351");
 		starterPicks.Add("cup2252");
-		starterPicks.Add("cup2253");
-		starterPicks.Add("cup2262");
-		starterPicks.Add(74);
-		starterPicks.Add("cup2377");
-		starterPicks.Add("dmc1591");
+		starterPicks.Add(77);
+		starterPicks.Add("cup2277");
+		starterPicks.Add("dmc1597");
 		
 		for(int i=0;i<starterPicks.Count;i++){
 			GameObject tileInst = Instantiate(storeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
