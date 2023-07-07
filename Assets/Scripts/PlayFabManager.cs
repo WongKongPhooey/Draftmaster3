@@ -866,7 +866,7 @@ public class PlayFabManager : MonoBehaviour
 			JSONOutput += "\"carGears\": \"" + carGears + "\",";
 			JSONOutput += "\"altPaints\": \"0";
 			for(int paint=1;paint<10;paint++){
-				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
+				if(AltPaints.getAltPaintName(seriesPrefix,car,paint) != null){
 					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
 						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
 						JSONOutput += "," + paint + "";
