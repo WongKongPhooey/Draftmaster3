@@ -523,20 +523,6 @@ public class SingleCar : MonoBehaviour {
 				GUI.Label(new Rect(widthblock * 7.5f, heightblock * 11f, widthblock * 6.25f, heightblock * 6f), transferError);
 				GUI.skin.label.normal.textColor = Color.black;
 				
-				/*if(!PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + currentCar)){
-					if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 9f, widthblock * 4.5f, heightblock * 1.5f), "Driver Swap")){
-						if(transfersLeft > 0){
-							driverPanel = true;
-						} else {
-							transferError = "All transfer contracts are in use. Gain more by leveling up or purchase the Negotiator pack in store.";
-							//Debug.Log("No transfer contracts left");
-						}
-					}
-				} else {
-					GUI.skin.label.alignment = TextAnchor.MiddleRight;
-					GUI.Label(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Custom Number: #" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + currentCar));
-				}*/
-				
 				if((seriesPrefix != "dmc15")&&(seriesPrefix != "irl23")){
 					if(!PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + currentCar)){
 						if (GUI.Button(new Rect(widthblock * 14.75f, heightblock * 11f, widthblock * 4.5f, heightblock * 1.5f), "Number Swap")){

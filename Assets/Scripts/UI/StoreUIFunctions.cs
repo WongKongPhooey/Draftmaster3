@@ -58,6 +58,14 @@ public class StoreUIFunctions : MonoBehaviour
 				PlayerPrefs.SetInt("Gears",gears);
 				
 				alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) + " Alt Paint Unlocked!", itemSeries + "livery" + itemNum + "alt" + itemAlt + "");
+			
+				PlayerPrefs.SetInt(itemSeries + itemNum + "AltPaint",int.Parse(itemAlt));
+				
+				if(AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) != null){
+					PlayerPrefs.SetString(itemSeries + itemNum + "AltDriver", AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
+					Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
+				}
+			
 			} else {
 				//Increment the car parts
 				if(PlayerPrefs.HasKey(itemSeries + itemNum + "Gears")){
