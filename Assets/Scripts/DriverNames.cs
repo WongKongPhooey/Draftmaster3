@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 
+using Random=UnityEngine.Random;
+
 public class DriverNames : MonoBehaviour {
 
 	public static ArrayList series = new ArrayList();
@@ -110,6 +112,7 @@ public class DriverNames : MonoBehaviour {
 		winnableSeries.Add("cup20");
 		winnableSeries.Add("cup22");
 		winnableSeries.Add("cup23");
+		winnableSeries.Add("irl23");
 		winnableSeries.Add("dmc15");
 		winnableSeries.Add("irc00");
 		
@@ -302,6 +305,27 @@ public class DriverNames : MonoBehaviour {
 		loadData();
 		string randSeries = winnableSeries[Mathf.FloorToInt(Random.Range(0,winnableSeries.Count))].ToString();
 		return randSeries;
+	}
+	
+	public static string getRandomAltPaint(string seriesPrefix,int index,bool canNull=false,int altProb=100){
+		ArrayList randomAlts = new ArrayList();
+		string randAlt = null;
+		
+		for(int i=0;i<10;i++){
+			if(AltPaints.getAltPaintName(seriesPrefix,index,i) != null){
+				//Debug.Log("Alt found " + seriesPrefix + "livery" + index + "alt" + i);
+				randomAlts.Add("" + seriesPrefix + "livery" + index + "alt" + i);
+			}
+		}
+		//If nulls are impossible, pick an alt
+		//If nulls are possible, roll random against probability
+		if((canNull == false)||
+		  ((canNull == true)&&(altProb >= Random.Range(0,100)))){
+			if(randomAlts.Count > 0){
+				randAlt = (string)randomAlts[Random.Range(0,randomAlts.Count)];
+			}
+		}
+		return randAlt;
 	}
 	
 	public static void carsetNames(){

@@ -42,7 +42,12 @@ public class GarageUI : MonoBehaviour
 		//For returning PlayFab call outputs, reset on Awake
 		PlayerPrefs.SetString("SaveLoadOutput","");
 		
-		autosaveGarageToCloud();
+		//Run a load before any saves to merge in any missing unlocks
+		if(Application.internetReachability != NetworkReachability.NotReachable){
+			PlayFabManager.GetSavedPlayerProgress();
+		} else {
+			Debug.Log("No Internet Connection");
+		}
 		
 		seriesDropdown = GameObject.Find("Dropdown");
 		seriesDropdown.SetActive(false);
@@ -94,9 +99,11 @@ public class GarageUI : MonoBehaviour
 			}
 			
 			//Testing - Unlock All
+			#if UNITY_EDITOR
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",10);
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
+			#endif
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;
@@ -540,115 +547,20 @@ public class GarageUI : MonoBehaviour
 		}
 	}
 
-	public void autosaveGarageToCloud(){
-		
-		//Count Unlocks..
-		int level = PlayerPrefs.GetInt("Level");
-		int totalUnlocks = 0;
-		
-		//Add all autosavable series here
-		//should probably be hooked up to the Series Data file instead
-		ArrayList allSeries = new ArrayList(); 
-		allSeries.Add("cup20");
-		allSeries.Add("cup22");
-		allSeries.Add("cup23");
-		allSeries.Add("irl23");
-		allSeries.Add("dmc15");
-		allSeries.Add("irc00");
-		
-		foreach(string series in allSeries){
-			for(int i=0;i<100;i++){
-				if(DriverNames.getName(series, i) != null){
-					if(PlayerPrefs.GetInt(series + i + "Unlocked") == 1){
-						totalUnlocks++;
-					}
-				}
-			}
-		}
-
-		//If you have more than just the starter cars..
-		if((level >= 5)&&(totalUnlocks > 5)){
-			//If logged in as someone
-			if(PlayerPrefs.HasKey("PlayerUsername")){
-				
-				//Try an autosave
-				foreach(string series in allSeries){
-					string progressJSON = JSONifyProgress(series);
-					try {
-						PlayFabManager.AutosavePlayerProgress(series, progressJSON);
-					}
-					catch(Exception e){
-						Debug.Log("Cannot reach PlayFab");
-					}
-				}
-			}
-		} else {
-			//Seems like an empty account.. check for a cloud save to reload
-			// ..just in case
-			try{
-				PlayFabManager.GetSavedPlayerProgress();
-			} catch (Exception e){
-				Debug.Log("Cannot reach PlayFab");
-			}
-		}
-	}
-
-	string JSONifyProgress(string seriesPrefix){
-		string JSONOutput = "{";
-		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
-		JSONOutput += "\"totalCars\": \"" + PlayerPrefs.GetInt("LocalTotalUnlocks").ToString() + "\",";
-		JSONOutput += "\"transferTokens\": \"" + PlayerPrefs.GetInt("TransferTokens").ToString() + "\",";
-		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
-		JSONOutput += "\"drivers\": [";
-		for(int car = 0; car < 100; car++){
-			//Initialise (can be used for dev reset)
-			int carUnlocked = 0;
-			int carClass = 0;
-			int carGears = 0;
-			if(PlayerPrefs.HasKey(seriesPrefix + car + "Gears")){
-				carUnlocked = PlayerPrefs.GetInt(seriesPrefix + car + "Unlocked");
-				carClass = PlayerPrefs.GetInt(seriesPrefix + car + "Class");
-				carGears = PlayerPrefs.GetInt(seriesPrefix + car + "Gears");
-			}
-			if(car > 0){
-				JSONOutput += ",";
-			}
-			JSONOutput += "{";
-			JSONOutput += "\"carNo\": \"" + car + "\",";
-			JSONOutput += "\"carUnlocked\": \"" + carUnlocked + "\",";
-			JSONOutput += "\"carClass\": \"" + carClass + "\",";
-			JSONOutput += "\"carGears\": \"" + carGears + "\",";
-			JSONOutput += "\"altPaints\": \"0";
-			for(int paint=1;paint<10;paint++){
-				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
-					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
-						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
-						JSONOutput += "," + paint + "";
-					}
-				}
-			}
-			JSONOutput += "\"";
-			JSONOutput += "}";		
-		}
-		JSONOutput += "]}";
-		return JSONOutput;
-	}
-
 	public void syncWithCloud(){
 		try {
 			PlayFabManager.GetSavedPlayerProgress();
+			alertPopup.GetComponent<AlertManager>().showPopup("Cloud Sync",PlayerPrefs.GetString("LoadOutput"),"dm2logo");
 		}
 		catch(Exception e){
 			Debug.Log("Cannot reach PlayFab");
-			alertPopup.GetComponent<AlertManager>().showPopup("Cannot Reach Cloud","Cannot currently reach retrieve and sync your save data. Do you have an internet connection?","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Cannot Reach Cloud","Sorry, we can't currently retrieve and sync your save data. Do you have an internet connection?","dm2logo");
 		}
 		loadAllCars();
 	}
 
     // Update is called once per frame
-    void Update()
-    {
-        
+    void Update(){
     }
 }
 

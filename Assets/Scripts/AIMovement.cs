@@ -42,6 +42,7 @@ public class AIMovement : MonoBehaviour
 	float bumpDraftDistTrigger;
 	float draftAirCushion;
 	float passDistMulti;
+	bool tandemDrafting;
 	
 	public bool isWrecking;
 	public bool wreckOver;
@@ -65,7 +66,7 @@ public class AIMovement : MonoBehaviour
 	
 	public static int maxTandem;
 	public static float coolOffSpace;
-	public static int coolOffInv;
+	public static float coolOffInv;
 	int circuitLanes;
 	float apronLineX;
 
@@ -699,16 +700,16 @@ public class AIMovement : MonoBehaviour
 			if (AISpeed > 200){ 
 				//No draft, slow with drag
 				if(dominator == true){
-					AISpeed -= ((dragDecelMulti * 3) - (AILevel / 12000));
+					AISpeed -= (dragDecelMulti - (AILevel / 12000));
 				} else {
 					float diffToMax = AIVariTopSpeed - AISpeed;
 					if((diffToMax) < 2){
 						if(diffToMax < 0){
 							diffToMax = 0;
 						}
-						AISpeed -= (dragDecelMulti - (AILevel / 5000)) * (2 - (diffToMax / 2));
+						AISpeed -= (dragDecelMulti - (AILevel / 3000f)) * (2 - (diffToMax / 2));
 					} else {
-						AISpeed -= (dragDecelMulti - (AILevel / 5000));
+						AISpeed -= (dragDecelMulti - (AILevel / 3000f));
 					}
 				}
 			}
@@ -722,23 +723,9 @@ public class AIMovement : MonoBehaviour
 			}
 		}
 		
-		//If engine is too hot, stall out
-		if(coolEngine == true){
-			if (HitForward && DraftCheckForward.distance <= coolOffSpace){
-				//Overheat weakens as you back away
-				AISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
-				if(affectedAISpeed != 0){
-					affectedAISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
-				}
-				//Debug.Log("#" + carNumber + " cooling down, factor " + (coolOffSpace - DraftCheckForward.distance)/coolOffInv);
-			} else {
-				coolEngine = false;
-			}
-		}
-		
 		// If being bump-drafted from behind
 		if (HitBackward && DraftCheckBackward.distance <= bumpDraftDistTrigger){
-			if(AISpeed <= (AIVariTopSpeed - 1f)){
+			if(AISpeed <= (AIVariTopSpeed - 2f)){
 				AISpeed+=(backdraftMulti / 5f);
 			}
 			tandemDraft = true;
@@ -754,37 +741,46 @@ public class AIMovement : MonoBehaviour
 		}
 
 		//If bump-drafting the car in front
-		if (HitForward && DraftCheckForward.distance <= (bumpDraftDistTrigger - 0.01f)){
+		if (HitForward && DraftCheckForward.distance <= (bumpDraftDistTrigger + 0.1f)){
 			//Frontward draft
 			if(DraftCheckForward.transform.gameObject.name != null){
-				//if(DraftCheckForward.transform.gameObject.name == "Player"){
-					//Debug.Log("#" + carNum + "Bump drafting the player!");
-					//Debug.DrawRay(transform.position, Vector3.forward * bumpDraftDistTrigger, Color.red);
-				//}
-				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
-				if (AISpeed > (AIVariTopSpeed - 2f)){
+
+				if (DraftCheckForward.distance <= bumpDraftDistTrigger){
+					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
+				}
+				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;
 					//Debug.Log("Hot Bump Draft. Cool Engine #" + carNum);
+					if(HitForward && DraftCheckForward.transform.gameObject.name == "Player"){
+						Debug.Log("Cooling down behind player #" + carNum);
+					}
 				}
 			}
 			if(seriesPrefix == "irl23"){
 				coolEngine = true;
 			}
 		} else {
-			//if(HitForward){
-				//if(DraftCheckForward.transform.gameObject.name == "Player"){
-					//Debug.Log("#" + carNum + "Not close enough to the player! " + DraftCheckForward.distance);
-					//Debug.DrawRay(transform.position, Vector3.forward * bumpDraftDistTrigger, Color.red);
-				//}
-			//}
 			tandemDraft = false;
 			tandemPosition = 1;
+		}
+		
+		//If engine is too hot, stall out
+		if(coolEngine == true){
+			if (HitForward && DraftCheckForward.distance <= coolOffSpace){
+				//Overheat weakens as you back away
+				AISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
+				if(affectedAISpeed != 0){
+					affectedAISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
+				}
+			} else {
+				coolEngine = false;
+			}
 		}
 		
 		//Speed tops out
         if (AISpeed > AIVariTopSpeed){
 			//Hard limiter
-            AISpeed = AIVariTopSpeed;
+            AISpeed = AIVariTopSpeed - 0.1f;
 		}
 		
 		//Minimum speed
@@ -795,10 +791,6 @@ public class AIMovement : MonoBehaviour
 		if(affectedAISpeed != 0){
 			AISpeed = affectedAISpeed;
 			affectedAISpeed = 0;
-		}
-		
-		if(carNum == 9){
-			//Debug.Log("Car #9 speed: " + AISpeed);
 		}
 		
 		//Speed difference between the player and the AI
@@ -824,32 +816,26 @@ public class AIMovement : MonoBehaviour
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
-				/*draftStrengthRatio = 450f;
-				dragDecelMulti = 0.002f;
-				backdraftMulti = 0.015f;
-				bumpDraftDistTrigger = 1.25f;
-				draftAirCushion = 1.6f;
-				passDistMulti = 1.5f;
-				coolOffSpace = 2f;
-				coolOffInv = 5;*/
 				draftStrengthRatio = 450f;
-				dragDecelMulti = 0.005f;
+				dragDecelMulti = 0.003f;
 				backdraftMulti = 0.015f;
 				bumpDraftDistTrigger = 1.2f;
 				draftAirCushion = 1.8f;
-				passDistMulti = 1.5f;
+				passDistMulti = 1.8f;
 				coolOffSpace = 1.5f;
-				coolOffInv = 5;
+				coolOffInv = 2.4f;
+				tandemDrafting = false;
 				break;
 			default:
 				draftStrengthRatio = 900f;
-				dragDecelMulti = 0.003f;
+				dragDecelMulti = 0.004f;
 				backdraftMulti = 0.004f;
-				bumpDraftDistTrigger = 1.11f;
+				bumpDraftDistTrigger = 1.1f;
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
 				coolOffSpace = 1.4f;
 				coolOffInv = 3;
+				tandemDrafting = true;
 				break;
 		}
 	}
@@ -961,19 +947,15 @@ public class AIMovement : MonoBehaviour
 						opponentTeam = DriverNames.getTeam(seriesPrefix,opponentNum);
 					}
 				}
-				//If teammate
-				if(opponentTeam == carTeam){
-					//Stay with unless near front
-				} else {
-					//Pass them
-					if(movingLane == false){
-						tryPass(50, false);
-					}
+
+				//Pass them
+				if(movingLane == false){
+					tryPass(50, false);
 				}
 			}
 			
 			//Lift if about to bump draft with too much closing speed
-			if((carDist < 1.25f)&&((AISpeed - opponentSpeed) > 1f)){
+			if((carDist < draftAirCushion)&&((AISpeed - opponentSpeed) > 1f)){
 				slowUp(carDist);
 			}
 		} else {
@@ -1013,7 +995,7 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void slowUp(float carDist){
-		AISpeed -= (1.25f - carDist)/2;
+		AISpeed -= (draftAirCushion - carDist)/2;
 		//Debug.Log("BRAKE! #" + carNumber);
 	}
 	
@@ -1112,6 +1094,12 @@ public class AIMovement : MonoBehaviour
 				//Debug.Log("Car #" + carNum + " attempts close pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
 				tryPass(50, false);
 				return true;
+			}
+			if(tandemDrafting == false){
+				if((AISpeed - opponentSpeed) >= 0){
+					tryPass(50, false);
+					return true;
+				}
 			}
 		}
 		return false;
@@ -1705,21 +1693,6 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void drawRaycasts(){
-		//Frontward draft
-        //Debug.DrawRay(transform.position + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
-        //Backdraft
-        //Debug.DrawRay(transform.position, Vector3.back * 2, Color.red);
-        //Leftdraft
-        //Debug.DrawRay(transform.position, Vector3.left * 1, Color.yellow);
-        //Rightdraft
-        //Debug.DrawRay(transform.position, Vector3.right * 1, Color.yellow);
-        //FrontLeftdraft
-        //Debug.DrawRay(transform.position, (Vector3.left + Vector3.forward) * 1.5f, Color.magenta);
-        //FrontRightdraft
-        //Debug.DrawRay(transform.position, (Vector3.right + Vector3.forward) * 1.5f, Color.magenta);
-        //RearLeftdraft
-        //Debug.DrawRay(transform.position, (Vector3.left + Vector3.back) * 1.5f, Color.magenta);
-        //RearRightdraft
-        //Debug.DrawRay(transform.position, (Vector3.right + Vector3.back) * 1.5f, Color.magenta);
+
 	}
 }
