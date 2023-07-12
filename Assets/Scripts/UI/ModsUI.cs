@@ -31,7 +31,7 @@ public class ModsUI : MonoBehaviour {
 		foreach (Transform child in modsFrame){
 			Destroy(child.gameObject);
 		}
-		
+		PlayerPrefs.DeleteKey("ModsList");
 		
         if (Directory.Exists(Application.persistentDataPath)){
 			
@@ -43,18 +43,25 @@ public class ModsUI : MonoBehaviour {
 			}
 			
 			int i=0;
+			string modList = "";
 			foreach (var directory in d.GetDirectories()){
-                if((directory.Name == "Unity")||
+                //Avoid these default folders
+				if((directory.Name == "Unity")||
 				   (directory.Name == "il2cpp")){
 					continue;
 				}
-				Debug.Log(directory);
+				//Debug.Log(directory);
+				if(modList != ""){
+					modList += ",";
+				}
+				modList += directory.Name;
 				
 				string modFolderName = loadJson(directory.Name);
 				string modFullName;
 				string modAuthor;
 				string modJsonValid;
 				
+				//Check the json is valid
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
 					modFullName = modJson.modName;
@@ -92,6 +99,7 @@ public class ModsUI : MonoBehaviour {
 				
 				i++;
             }
+			PlayerPrefs.SetString("ModsList",modList);
         }
     }
 	

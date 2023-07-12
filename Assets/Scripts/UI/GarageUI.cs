@@ -55,10 +55,14 @@ public class GarageUI : MonoBehaviour
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
 		if(PlayerPrefs.GetString("ExactSeries") != ""){
 			seriesPrefix = PlayerPrefs.GetString("ExactSeries");
-			loadAllCars();
 			GameObject seriesSelector = GameObject.Find("SeriesSelect");
+			loadAllCars();
 			seriesSelector.SetActive(false);
 			PlayerPrefs.DeleteKey("ExactSeries");
+		}
+		
+		if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
+			loadModCarsets(seriesDropdown,PlayerPrefs.GetString("ModsList"));
 		}
 		
 		loadRaceRestrictions();
@@ -326,6 +330,10 @@ public class GarageUI : MonoBehaviour
 			return false;
 		}
 		return true;
+	}
+
+	public void loadModCarsets(GameObject dropdown, string modList){
+		Debug.Log(modList);
 	}
 
 	string classAbbr(int carClass){
