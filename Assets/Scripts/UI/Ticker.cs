@@ -9,6 +9,7 @@ public class Ticker : MonoBehaviour
 {
 	
 	public static string seriesPrefix;
+	public static bool officialSeries;
 
 	public static string circuitName;
 	public static int raceLaps;
@@ -78,6 +79,12 @@ public class Ticker : MonoBehaviour
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
 		
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			officialSeries = true;
+		} else {
+			officialSeries = false;
+		}
+		
 		circuitName = PlayerPrefs.GetString("CurrentCircuit");
 		
 		raceLaps = PlayerPrefs.GetInt("RaceLaps");
@@ -126,7 +133,11 @@ public class Ticker : MonoBehaviour
 				carNames[i] = car.transform.name;
 				carNumber[i] = carNames[i].Remove(0,6);
 				//Debug.Log(carNumber[i]);
-				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				} else {
+					driverNames[i] = ModData.getName(seriesPrefix,int.Parse(carNumber[i]));
+				}
 				carDist[i] = 0.000f;
 				entrantList.Add(car);
 				i++;
@@ -185,7 +196,11 @@ public class Ticker : MonoBehaviour
 				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
 					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
 				} else {
-					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+					if(officialSeries == true){
+						driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+					} else {
+						driverNames[i] = ModData.getName(seriesPrefix,int.Parse(carNumber[i]));
+					}
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
@@ -204,7 +219,12 @@ public class Ticker : MonoBehaviour
 				//carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
 				carNumber[i] = carNames[i].Remove(0,6);
 				//Debug.Log("Car #: " + carNumber[i]);
-				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				if(officialSeries == true){
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				} else {
+					driverNames[i] = ModData.getName(seriesPrefix,int.Parse(carNumber[i]));
+				}
+				
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}

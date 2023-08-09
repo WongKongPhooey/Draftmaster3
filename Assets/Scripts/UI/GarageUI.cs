@@ -17,6 +17,7 @@ public class GarageUI : MonoBehaviour
 	public GameObject finaleTile;
 	public GameObject throwbackTile;
 	GameObject activeTile;
+	public GameObject seriesDropdownRow;
 	
 	string restrictionType;
 	string restrictionValue;
@@ -32,6 +33,7 @@ public class GarageUI : MonoBehaviour
 	public static GameObject seriesDropdown;
 	public static GameObject currentSeries;
 	
+	public Transform seriesDropdownFrame;
 	public Transform tileFrame;
 	public static string seriesPrefix;
 	public List<RectTransform> shuffleArray;
@@ -62,7 +64,7 @@ public class GarageUI : MonoBehaviour
 		}
 		
 		if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
-			loadModCarsets(seriesDropdown,PlayerPrefs.GetString("ModsList"));
+			loadModCarsets(PlayerPrefs.GetString("ModsList"));
 		}
 		
 		loadRaceRestrictions();
@@ -266,6 +268,84 @@ public class GarageUI : MonoBehaviour
 		sortTiles();
 	}
 
+	public void loadAllModCars(){
+		
+		foreach (Transform child in tileFrame){
+			Destroy(child.gameObject);
+		}
+		
+		int validCars = 0;
+		for(int i=0;i<100;i++){
+			
+			int carNum = ModData.getCarNum(seriesPrefix, i);
+			
+			//Skip through the non-driver #s
+			if(ModData.getName(seriesPrefix, i) == null){
+				continue;
+			}
+			
+			activeTile = carTile;
+			
+			//Testing - Unlock All
+			#if UNITY_EDITOR
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",10);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
+			#endif
+			
+			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;
+			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
+			tileInst.transform.SetParent(tileFrame, false);
+			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
+			tileInst.GetComponent<UIAnimate>().scaleIn();
+			
+			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
+			Text carTypeUI = tileInst.transform.GetChild(1).GetComponent<Text>();
+			Text carClassUI = tileInst.transform.GetChild(2).GetComponent<Text>();
+			Image carRarityUI = tileInst.transform.GetChild(3).GetComponent<Image>();
+			Image carManuUI = tileInst.transform.GetChild(4).GetComponent<Image>();
+			RawImage carPaint = tileInst.transform.GetChild(5).GetComponent<RawImage>();
+			RawImage carNumber = tileInst.transform.GetChild(5).transform.GetChild(0).GetComponent<RawImage>();
+			GameObject carNumberObj = tileInst.transform.GetChild(5).transform.GetChild(0).gameObject;
+			TMPro.TMP_Text carName = tileInst.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
+			RectTransform carGearsProgressUI = tileInst.transform.GetChild(7).transform.GetChild(0).GetComponent<RectTransform>();
+			TMPro.TMP_Text carGearsLabelUI = tileInst.transform.GetChild(7).transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
+			GameObject cardBack = tileInst.transform.GetChild(8).gameObject;
+			GameObject carClickable = tileInst.transform.GetChild(9).transform.gameObject;
+			GameObject carDisabled = tileInst.transform.GetChild(10).transform.gameObject;
+			GameObject carActionBtn = tileInst.transform.GetChild(11).transform.gameObject;
+			carActionBtn.SetActive(false);
+			
+			//Mod cars are auto-unlocked, but limited to a low class and rarity
+			PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked", 1);
+			PlayerPrefs.SetInt(seriesPrefix + i + "Gears", 0);
+			PlayerPrefs.SetInt(seriesPrefix + i + "Class", 2);
+			
+			int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked");
+			int carGears = PlayerPrefs.GetInt(seriesPrefix + i + "Gears");
+			int carClass = PlayerPrefs.GetInt(seriesPrefix + i + "Class");
+			int classMax = 999;
+			int unlockClass = ModData.getRarity(seriesPrefix,i);
+			int unlockGears = 999;
+			
+			string carTeam = ModData.getTeam(seriesPrefix, i);
+			string carType = ModData.getType(seriesPrefix, i);
+			string carRarity = ModData.getRarity(seriesPrefix, i).ToString();
+			string carManu = ModData.getManufacturer(seriesPrefix, i);
+			
+			carTeamUI.text = carTeam;
+			carTypeUI.text = DriverNames.shortenedType(ModData.getType(seriesPrefix, i));
+			carClassUI.text = "";
+			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
+			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
+			carName.text = ModData.getName(seriesPrefix, i);
+			carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
+			//No custom numbers on mod cars.. for now.
+			carNumberObj.SetActive(false);
+		}
+	}
+
 	public void sortTiles(){
 		if (shuffleArray.Any()){
 			RectTransform tile = shuffleArray.First();
@@ -332,8 +412,20 @@ public class GarageUI : MonoBehaviour
 		return true;
 	}
 
-	public void loadModCarsets(GameObject dropdown, string modList){
+	public void loadModCarsets(string modList){
 		Debug.Log(modList);
+		
+		string[] modsArray = modList.Split(',');
+		foreach(string modSet in modsArray){
+			string[] modData = modSet.Split('-');
+			GameObject modCarsetInst = Instantiate(seriesDropdownRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			
+			modCarsetInst.transform.SetParent(seriesDropdownFrame, false);
+			
+			modCarsetInst.name = modData[0];
+			TMPro.TMP_Text modCarsetName = modCarsetInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+			modCarsetName.text = modData[1];
+		}
 	}
 
 	string classAbbr(int carClass){
@@ -462,13 +554,17 @@ public class GarageUI : MonoBehaviour
 		SceneManager.LoadScene("Menus/TrackSelect");
 	}
 
-	public void toggleDropdown(){
+	public void toggleDropdown(bool modSet = false){
 		if(seriesDropdown.activeSelf == true){
 			seriesDropdown.SetActive(false);
+			//Debug.Log("Deactivate Dropdown");
 		} else {
 			seriesDropdown.SetActive(true);
+			//Debug.Log("Activate Dropdown");
 		}
-		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
+		if(modSet == true){
+			currentSeries.GetComponent<TMPro.TMP_Text>().text = ModData.getSeriesNiceName(seriesPrefix);
+		}
 	}
 
 	public void starterCars(){

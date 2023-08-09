@@ -10,15 +10,13 @@ public class GarageUIFunctions : MonoBehaviour
 	public string carLivery;
 	public int carNum;
     // Start is called before the first frame update
-    void Start()
-    {
-        
+    void Start(){
     }
 
 	public void setSeries(){
 		GarageUI.seriesPrefix = seriesPrefix;
 		GameObject.Find("Main").GetComponent<GarageUI>().loadAllCars();
-		GameObject.Find("Main").GetComponent<GarageUI>().toggleDropdown();
+		GameObject.Find("Main").GetComponent<GarageUI>().toggleDropdown(false);
 	}
 
 	public void carAction(){

@@ -54,7 +54,6 @@ public class ModsUI : MonoBehaviour {
 				if(modList != ""){
 					modList += ",";
 				}
-				modList += directory.Name;
 				
 				string modFolderName = loadJson(directory.Name);
 				string modFullName;
@@ -67,6 +66,8 @@ public class ModsUI : MonoBehaviour {
 					modFullName = modJson.modName;
 					modAuthor = modJson.modAuthor;
 					modJsonValid = "OK";
+					
+					modList += directory.Name + "-" + modFullName;
 				} catch(Exception e){
 					modFullName = "";
 					modAuthor = "";
@@ -121,22 +122,4 @@ public class ModsUI : MonoBehaviour {
 		Debug.Log(json);
 		return json;
 	}
-}
-
-[Serializable]
-public class modDriver {
-    public int carNum;
-	public string carDriver;
-    public int carRarity;
-    public string carTeam;
-    public string carManufacturer;
-	public string carType;
-}
-
-[Serializable]
-public class modCarset {
-	public string modName;
-	public string modAuthor;
-	public string modPhysics;
-    public List<Driver> drivers;
 }

@@ -701,7 +701,7 @@ public class PlayFabManager : MonoBehaviour
 				 
 				 int unlockedCars = 0;
 				 foreach(string series in allSeries){
-					 Debug.Log("Loading " + series);
+					 //Debug.Log("Loading " + series);
 					 if(saveType == "manual"){
 						json = result.Data["SavedPlayerProgress" + series].Value;
 						playerJson = JsonUtility.FromJson<Series>(json);

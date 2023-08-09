@@ -90,8 +90,8 @@ public class AIMovement : MonoBehaviour
 	
 	string currentSeries;
 	string currentSubseries;
-	
 	string seriesPrefix;
+	bool officialSeries;
 	int customNum;
 
 	bool coolEngine;
@@ -118,7 +118,6 @@ public class AIMovement : MonoBehaviour
 	int distFromPlayer;
 	
 	bool caution = false;
-
     public static bool crashActive;
     public static int crashTime;
 
@@ -197,10 +196,20 @@ public class AIMovement : MonoBehaviour
 		carName = AICar.name;
 		carNum = int.Parse(carNumber);
 		
-		carTeam = DriverNames.getTeam(seriesPrefix,carNum);
-		carManu = DriverNames.getManufacturer(seriesPrefix,carNum);
-		carType = DriverNames.getType(seriesPrefix,carNum);
-		carRarity = DriverNames.getRarity(seriesPrefix,carNum);
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			officialSeries = true;
+		}
+		if(officialSeries == true){
+			carTeam = DriverNames.getTeam(seriesPrefix,carNum);
+			carManu = DriverNames.getManufacturer(seriesPrefix,carNum);
+			carType = DriverNames.getType(seriesPrefix,carNum);
+			carRarity = DriverNames.getRarity(seriesPrefix,carNum);
+		} else {
+			carTeam = ModData.getTeam(seriesPrefix,carNum);
+			carManu = ModData.getManufacturer(seriesPrefix,carNum);
+			carType = ModData.getType(seriesPrefix,carNum);
+			carRarity = ModData.getRarity(seriesPrefix,carNum);
+		}
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
@@ -268,7 +277,11 @@ public class AIMovement : MonoBehaviour
 				//Debug.Log("Custom alt spawned - Car #" + carNumber);
 				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
 			} else {
-				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
+				if(officialSeries == true){
+					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
+				} else {
+					liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum) as Texture;
+				}
 			}
 			numRend.enabled = false;
 			//Debug.Log("No custom number saved");
@@ -283,99 +296,109 @@ public class AIMovement : MonoBehaviour
 
 		dominator = false;
 		
-		if (DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
-			dominator = true;
+		if(officialSeries == true){
+			if (DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
+				dominator = true;
+			}
 		}
 
-        if (DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
-			if(seriesPrefix == "irl23"){
-				AICarClass+=4;
-			}
-			switch(AICarClass){
-				case 1:
-					laneChangeDuration = 75;
-					laneChangeSpeed = 0.016f;
-					laneChangeBackout = 30;
-					break;
-				case 2:
-					laneChangeDuration = 64;
-					laneChangeSpeed = 0.01875f;
-					laneChangeBackout = 28;
-					break;
-				case 3:
-					laneChangeDuration = 60;
-					laneChangeSpeed = 0.02f;
-					laneChangeBackout = 24;
-					break;
-				case 4:
-					laneChangeDuration = 50;
-					laneChangeSpeed = 0.024f;
-					laneChangeBackout = 20;
-					break;
-				case 5:
+		if(officialSeries == true){
+			if (DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
+				if(seriesPrefix == "irl23"){
+					AICarClass+=4;
+				}
+				switch(AICarClass){
+					case 1:
+						laneChangeDuration = 75;
+						laneChangeSpeed = 0.016f;
+						laneChangeBackout = 30;
+						break;
+					case 2:
+						laneChangeDuration = 64;
+						laneChangeSpeed = 0.01875f;
+						laneChangeBackout = 28;
+						break;
+					case 3:
+						laneChangeDuration = 60;
+						laneChangeSpeed = 0.02f;
+						laneChangeBackout = 24;
+						break;
+					case 4:
+						laneChangeDuration = 50;
+						laneChangeSpeed = 0.024f;
+						laneChangeBackout = 20;
+						break;
+					case 5:
+						laneChangeDuration = 48;
+						laneChangeSpeed = 0.025f;
+						laneChangeBackout = 16;
+						break;
+					case 6:
+						laneChangeDuration = 40;
+						laneChangeSpeed = 0.030f;
+						laneChangeBackout = 14;
+						break;
+					case 7:
+						laneChangeDuration = 36;
+						laneChangeSpeed = 0.0333333f;
+						laneChangeBackout = 12;
+						break;
+					case 8:
+						laneChangeDuration = 32;
+						laneChangeSpeed = 0.0375f;
+						laneChangeBackout = 12;
+						break;
+					case 9:
+						laneChangeDuration = 25;
+						laneChangeSpeed = 0.048f;
+						laneChangeBackout = 10;
+						break;
+					case 10:
+						laneChangeDuration = 20;
+						laneChangeSpeed = 0.06f;
+						laneChangeBackout = 8;
+						break;
+					default:
+						laneChangeDuration = 80;
+						laneChangeSpeed = 0.015f;
+						laneChangeBackout = 32;
+						break;
+				}
+			} else {
+				if(seriesPrefix == "irl23"){
 					laneChangeDuration = 48;
 					laneChangeSpeed = 0.025f;
 					laneChangeBackout = 16;
-					break;
-				case 6:
-					laneChangeDuration = 40;
-					laneChangeSpeed = 0.030f;
-					laneChangeBackout = 14;
-					break;
-				case 7:
-					laneChangeDuration = 36;
-					laneChangeSpeed = 0.0333333f;
-					laneChangeBackout = 12;
-					break;
-				case 8:
-					laneChangeDuration = 32;
-					laneChangeSpeed = 0.0375f;
-					laneChangeBackout = 12;
-					break;
-				case 9:
-					laneChangeDuration = 25;
-					laneChangeSpeed = 0.048f;
-					laneChangeBackout = 10;
-					break;
-				case 10:
-					laneChangeDuration = 20;
-					laneChangeSpeed = 0.06f;
-					laneChangeBackout = 8;
-					break;
-				default:
+				} else {
 					laneChangeDuration = 80;
 					laneChangeSpeed = 0.015f;
 					laneChangeBackout = 32;
-					break;
-			}
-		} else {
-			if(seriesPrefix == "irl23"){
-				laneChangeDuration = 48;
-				laneChangeSpeed = 0.025f;
-				laneChangeBackout = 16;
-			} else {
-				laneChangeDuration = 80;
-				laneChangeSpeed = 0.015f;
-				laneChangeBackout = 32;
+				}
 			}
 		}
 		
 		dooredStrength = 40;
-		if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
-			dooredStrength = 40 + (carRarity * 15);
-			if(dooredStrength > 95){
-				dooredStrength = 95;
+		if(officialSeries == true){
+			if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
+				dooredStrength = 40 + (carRarity * 15);
+				if(dooredStrength > 95){
+					dooredStrength = 95;
+				}
+				wreckProbability = (wreckFreq * 3) + 1;
 			}
-			wreckProbability = (wreckFreq * 3) + 1;
 		}
 
 		maxDraftDistance = 9 + carRarity;
-		if (DriverNames.getType(seriesPrefix,carNum) == "Closer"){
-			maxDraftDistance = 9 + carRarity + AICarClass;		
+		if(officialSeries == true){
+			if (DriverNames.getType(seriesPrefix,carNum) == "Closer"){
+				maxDraftDistance = 9 + carRarity + AICarClass;		
+			}
 		}
 		
-		if (DriverNames.getType(seriesPrefix,carNum) == "Rookie"){
-			wreckProbability = (wreckFreq * 3) + 1;
+		if(officialSeries == true){
+			if (DriverNames.getType(seriesPrefix,carNum) == "Rookie"){
+				wreckProbability = (wreckFreq * 3) + 1;
+			}
 		}
 
         movingLane = false;
@@ -751,9 +774,9 @@ public class AIMovement : MonoBehaviour
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;
 					//Debug.Log("Hot Bump Draft. Cool Engine #" + carNum);
-					if(HitForward && DraftCheckForward.transform.gameObject.name == "Player"){
-						Debug.Log("Cooling down behind player #" + carNum);
-					}
+					//if(HitForward && DraftCheckForward.transform.gameObject.name == "Player"){
+						//Debug.Log("Cooling down behind player #" + carNum);
+					//}
 				}
 			}
 			if(seriesPrefix == "irl23"){
@@ -944,7 +967,11 @@ public class AIMovement : MonoBehaviour
 				if(opponentName != "Player") {
 					opponentNum = getCarNumFromName(opponentName);
 					if(opponentNum != 9999){
-						opponentTeam = DriverNames.getTeam(seriesPrefix,opponentNum);
+						if(officialSeries == true){
+							opponentTeam = DriverNames.getTeam(seriesPrefix,opponentNum);
+						} else {
+							opponentTeam = ModData.getTeam(seriesPrefix,opponentNum);
+						}
 					}
 				}
 

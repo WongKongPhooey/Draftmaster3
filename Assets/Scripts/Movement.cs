@@ -44,6 +44,7 @@ public class Movement : MonoBehaviour {
 	float apronLineX;
 
 	string seriesPrefix;
+	bool officialSeries;
 	int customNum;
 
 	public static int lane = 2;
@@ -200,6 +201,7 @@ public class Movement : MonoBehaviour {
 		
 		gamePausedLate = false;
 		Time.timeScale = 1.0f;
+		//safePause = false;
 		
 		isWrecking = false;
 		wreckOver = false;
@@ -230,6 +232,12 @@ public class Movement : MonoBehaviour {
 		
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			officialSeries = true;
+		} else {
+			officialSeries = false;
+		}
+		
 		setCarPhysics(seriesPrefix);
 		
 		carName = PlayerPrefs.GetString("carTexture");
@@ -240,10 +248,16 @@ public class Movement : MonoBehaviour {
 		bool findCarNum = int.TryParse(Regex.Replace(carNumStr, "[^0-9]", ""), out carNum);
 		if(findCarNum == true){
 			PlayerPrefs.SetInt("carNumber",carNum);
-		    carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
-			carTeam = DriverNames.cup2020Teams[carNum];
-			carManu = DriverNames.cup2020Manufacturer[carNum];
-			carRarity = DriverNames.cup2020Rarity[carNum];
+			carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
+			if(officialSeries == true){
+				carTeam = DriverNames.getTeam(seriesPrefix,carNum);
+				carManu = DriverNames.getManufacturer(seriesPrefix,carNum);
+				carRarity = DriverNames.getRarity(seriesPrefix,carNum);
+			} else {
+				carTeam = ModData.getTeam(seriesPrefix,carNum);
+				carManu = ModData.getManufacturer(seriesPrefix,carNum);
+				carRarity = ModData.getRarity(seriesPrefix,carNum);
+			}
 		} else {
 			carRarity = 0;
 			//Debug.Log("Invalid Car #");
@@ -255,7 +269,11 @@ public class Movement : MonoBehaviour {
 		if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
 			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "alt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
 		} else {
-			liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
+			if(officialSeries == true){
+				liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
+			} else {
+				liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum) as Texture;
+			}
 		}
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
@@ -294,92 +312,97 @@ public class Movement : MonoBehaviour {
 		draftCounter = 0;
 		raceCounter = 0;
 
-		if(DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
-			if(seriesPrefix == "irl23"){
-				carClass+=4;
-			}
-			switch(carClass){
-				case 1:
-					laneChangeDuration = 75;
-					laneChangeSpeed = 0.016f;
-					laneChangeBackout = 30;
-					break;
-				case 2:
-					laneChangeDuration = 64;
-					laneChangeSpeed = 0.01875f;
-					laneChangeBackout = 28;
-					break;
-				case 3:
-					laneChangeDuration = 60;
-					laneChangeSpeed = 0.02f;
-					laneChangeBackout = 24;
-					break;
-				case 4:
-					laneChangeDuration = 50;
-					laneChangeSpeed = 0.024f;
-					laneChangeBackout = 20;
-					break;
-				case 5:
+		if(officialSeries == true){
+			if(DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
+				if(seriesPrefix == "irl23"){
+					carClass+=4;
+				}
+				switch(carClass){
+					case 1:
+						laneChangeDuration = 75;
+						laneChangeSpeed = 0.016f;
+						laneChangeBackout = 30;
+						break;
+					case 2:
+						laneChangeDuration = 64;
+						laneChangeSpeed = 0.01875f;
+						laneChangeBackout = 28;
+						break;
+					case 3:
+						laneChangeDuration = 60;
+						laneChangeSpeed = 0.02f;
+						laneChangeBackout = 24;
+						break;
+					case 4:
+						laneChangeDuration = 50;
+						laneChangeSpeed = 0.024f;
+						laneChangeBackout = 20;
+						break;
+					case 5:
+						laneChangeDuration = 48;
+						laneChangeSpeed = 0.025f;
+						laneChangeBackout = 16;
+						break;
+					case 6:
+						laneChangeDuration = 40;
+						laneChangeSpeed = 0.030f;
+						laneChangeBackout = 14;
+						break;
+					case 7:
+						laneChangeDuration = 36;
+						laneChangeSpeed = 0.0333333f;
+						laneChangeBackout = 12;
+						break;
+					case 8:
+						laneChangeDuration = 32;
+						laneChangeSpeed = 0.0375f;
+						laneChangeBackout = 12;
+						break;
+					case 9:
+						laneChangeDuration = 25;
+						laneChangeSpeed = 0.048f;
+						laneChangeBackout = 10;
+						break;
+					case 10:
+						laneChangeDuration = 20;
+						laneChangeSpeed = 0.06f;
+						laneChangeBackout = 8;
+						break;
+					default:
+						laneChangeDuration = 80;
+						laneChangeSpeed = 0.015f;
+						laneChangeBackout = 32;
+						break;
+				}
+			} else {
+				if(seriesPrefix == "irl23"){
 					laneChangeDuration = 48;
 					laneChangeSpeed = 0.025f;
 					laneChangeBackout = 16;
-					break;
-				case 6:
-					laneChangeDuration = 40;
-					laneChangeSpeed = 0.030f;
-					laneChangeBackout = 14;
-					break;
-				case 7:
-					laneChangeDuration = 36;
-					laneChangeSpeed = 0.0333333f;
-					laneChangeBackout = 12;
-					break;
-				case 8:
-					laneChangeDuration = 32;
-					laneChangeSpeed = 0.0375f;
-					laneChangeBackout = 12;
-					break;
-				case 9:
-					laneChangeDuration = 25;
-					laneChangeSpeed = 0.048f;
-					laneChangeBackout = 10;
-					break;
-				case 10:
-					laneChangeDuration = 20;
-					laneChangeSpeed = 0.06f;
-					laneChangeBackout = 8;
-					break;
-				default:
+				} else {
 					laneChangeDuration = 80;
 					laneChangeSpeed = 0.015f;
 					laneChangeBackout = 32;
-					break;
-			}
-		} else {
-			if(seriesPrefix == "irl23"){
-				laneChangeDuration = 48;
-				laneChangeSpeed = 0.025f;
-				laneChangeBackout = 16;
-			} else {
-				laneChangeDuration = 80;
-				laneChangeSpeed = 0.015f;
-				laneChangeBackout = 32;
+				}
 			}
 		}
 
 		dooredStrength = 40;
-		if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
-			dooredStrength = 50 + (carRarity * 5) + (carClass * 5);
-			if(dooredStrength > 95){
-				dooredStrength = 95;
+		if(officialSeries == true){
+			if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
+				dooredStrength = 50 + (carRarity * 5) + (carClass * 5);
+				if(dooredStrength > 95){
+					dooredStrength = 95;
+				}
 			}
 		}
 
-		if(DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
-			//e.g. Class 6(S) reduces drag from 0.004f to 0.002f
-			dominatorDrag = carClass / 3000f;
-		} else {
-			dominatorDrag = 0;
+		dominatorDrag = 0;
+		if(officialSeries == true){
+			if(DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
+				//e.g. Class 6(S) reduces drag from 0.004f to 0.002f
+				dominatorDrag = carClass / 3000f;
+			}
 		}
 
 		if(PlayerPrefs.HasKey("CustomAcceleration")){
@@ -579,6 +602,7 @@ public class Movement : MonoBehaviour {
 		
 		if(gamePausedLate == true){
 			Debug.Log("Pausing now..");
+			//safePause = true;
 			Time.timeScale = 0.0f;
 		}
 		

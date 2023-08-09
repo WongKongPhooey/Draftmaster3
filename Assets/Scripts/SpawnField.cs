@@ -496,23 +496,37 @@ public class SpawnField : MonoBehaviour {
 		fastCars.Clear();
 		midCars.Clear();
 		slowCars.Clear();
-		
-		for(int i=0;i<100;i++){
-			switch(DriverNames.getRarity(seriesPref, i)){
-				case 4:
-					fastCars.Add("" + i + "");
-					break;
-				case 3:
-					fastCars.Add("" + i + "");
-					break;
-				case 2:
-					midCars.Add("" + i + "");
-					break;
-				case 1:
-					slowCars.Add("" + i + "");
-					break;
-				default:
-					break;
+		if(DriverNames.isOfficialSeries(seriesPref) == true){
+			for(int i=0;i<100;i++){
+				switch(DriverNames.getRarity(seriesPref, i)){
+					case 4:
+					case 3:
+						fastCars.Add("" + i + "");
+						break;
+					case 2:
+						midCars.Add("" + i + "");
+						break;
+					case 1:
+						slowCars.Add("" + i + "");
+						break;
+					default:
+						break;
+				}
+			}
+		} else {
+			for(int i=0;i<10;i++){
+				switch(ModData.getRarity(seriesPref, i)){
+					case 4:
+					case 3:
+					case 2:
+						fastCars.Add("" + i + "");
+						break;
+					case 1:
+						slowCars.Add("" + i + "");
+						break;
+					default:
+						break;
+				}
 			}
 		}
 	}

@@ -81,7 +81,7 @@ public class DriverNames : MonoBehaviour {
 	public static string[] cup2020AltNames = new string[20];
 
 	// Use this for initialization
-	void Awake() {	
+	void Awake() {
 		loadData();
 	}
 	
@@ -192,6 +192,16 @@ public class DriverNames : MonoBehaviour {
 		allWinnableCarsets[3] = "dmc15";
 		allWinnableCarsets[4] = "irc00";
 		allWinnableCarsets[5] = "irl23";
+	}
+	
+	public static bool isOfficialSeries(string seriesPrefix){
+		loadData();
+		for(int i=0;i<allCarsets.Length;i++){
+			if(seriesPrefix == allCarsets[i]){
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	public static string getName(string seriesPrefix, int index){
