@@ -16,6 +16,7 @@ public class RaceResultsUI : MonoBehaviour
 	public GameObject resultRow;
 	public Transform resultsFrame;
 	public string seriesPrefix;
+	bool officialSeries;
 	
 	string playerCarNumber;
 	string carNumber;
@@ -37,6 +38,10 @@ public class RaceResultsUI : MonoBehaviour
 		
 		PlayerPrefs.DeleteKey("ActivePath");
 		PlayerPrefs.DeleteKey("MidRaceLoading");
+
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			officialSeries = true;
+		}
 
 		playerCarNumber = PlayerPrefs.GetString("carTexture");
 		string splitAfter = "livery";
@@ -210,8 +215,14 @@ public class RaceResultsUI : MonoBehaviour
 			
 			resultPos.text = (i+1).ToString();
 			resultNumber.texture = Resources.Load<Texture2D>("cup20num" + carNum);
-			resultDriver.text = DriverNames.getName(seriesPrefix,carNum);
-			resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, carNum));
+			if(officialSeries == true){
+				resultDriver.text = DriverNames.getName(seriesPrefix,carNum);
+				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, carNum));
+			} else {
+				resultDriver.text = ModData.getName(seriesPrefix,carNum);
+				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
+				Debug.Log("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
+			}
 			if(i==0){
 				resultTime.text = "";
 			} else {

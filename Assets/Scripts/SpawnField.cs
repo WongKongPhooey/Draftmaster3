@@ -98,7 +98,7 @@ public class SpawnField : MonoBehaviour {
 		carNumber = PlayerPrefs.GetString("carTexture");			
 		string splitAfter = "livery";
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
-		
+		Debug.Log("Player car num: " + carNumber);
 		fastCars.Remove(carNumber);
 		midCars.Remove(carNumber);
 		slowCars.Remove(carNumber);
@@ -514,15 +514,20 @@ public class SpawnField : MonoBehaviour {
 				}
 			}
 		} else {
-			for(int i=0;i<10;i++){
+			int tempCarNum = 999;
+			for(int i=0;i<100;i++){
 				switch(ModData.getRarity(seriesPref, i)){
 					case 4:
 					case 3:
 					case 2:
-						fastCars.Add("" + i + "");
+						tempCarNum = 999;
+						tempCarNum = ModData.getCarNum(seriesPref, i);
+						fastCars.Add("" + tempCarNum + "");
 						break;
 					case 1:
-						slowCars.Add("" + i + "");
+						tempCarNum = 999;
+						tempCarNum = ModData.getCarNum(seriesPref, i);
+						slowCars.Add("" + tempCarNum + "");
 						break;
 					default:
 						break;

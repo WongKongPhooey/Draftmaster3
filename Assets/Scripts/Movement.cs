@@ -122,6 +122,8 @@ public class Movement : MonoBehaviour {
 	public float calcLapDelta;
 	public float HUDDraftStrength;
 	
+	public Texture2D modTex;
+	
 	public static bool carInside;
 	public static bool carOutside;
 	public static bool almostInside;
@@ -272,7 +274,9 @@ public class Movement : MonoBehaviour {
 			if(officialSeries == true){
 				liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 			} else {
-				liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum) as Texture;
+				Debug.Log("Non official series, get mod texture");
+				modTex = ModData.getTexture(seriesPrefix,carNum);
+				liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum);
 			}
 		}
 		
@@ -385,6 +389,10 @@ public class Movement : MonoBehaviour {
 					laneChangeBackout = 32;
 				}
 			}
+		} else {
+			laneChangeDuration = 80;
+			laneChangeSpeed = 0.015f;
+			laneChangeBackout = 32;
 		}
 
 		dooredStrength = 40;

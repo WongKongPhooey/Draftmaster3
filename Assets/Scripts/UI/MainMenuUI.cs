@@ -68,6 +68,8 @@ public class MainMenuUI : MonoBehaviour {
 		//PlayerPrefs.SetInt("Exp",7250);
 		//PlayerPrefs.SetInt("Level",34);
 		
+		Time.timeScale = 1.0f;
+		
 		exp = PlayerPrefs.GetInt("Exp");
 		//exp = 10000;
 		level = PlayerPrefs.GetInt("Level");
@@ -182,11 +184,7 @@ public class MainMenuUI : MonoBehaviour {
 		}
 		
 		if(PlayerPrefs.HasKey("PlayerUsername")){
-			if(Application.internetReachability != NetworkReachability.NotReachable){
-				PlayFabManager.LoginFromPrefs();
-			} else {
-				Debug.Log("No Internet Connection");
-			}
+			PlayFabManager.LoginFromPrefs();
 			loginBtn.GetComponent<NavButton>().sceneName = "Levels/MyAccount";
 			loginBtnLabel.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("PlayerUsername");
 		} else {

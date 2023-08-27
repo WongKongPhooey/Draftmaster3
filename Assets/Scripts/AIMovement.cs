@@ -280,7 +280,8 @@ public class AIMovement : MonoBehaviour
 				if(officialSeries == true){
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
 				} else {
-					liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum) as Texture;
+					Debug.Log("Non official series, get mod texture");
+					liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum);
 				}
 			}
 			numRend.enabled = false;
@@ -375,6 +376,10 @@ public class AIMovement : MonoBehaviour
 					laneChangeBackout = 32;
 				}
 			}
+		} else {
+			laneChangeDuration = 80;
+			laneChangeSpeed = 0.015f;
+			laneChangeBackout = 32;
 		}
 		
 		dooredStrength = 40;

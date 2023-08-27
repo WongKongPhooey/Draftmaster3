@@ -278,6 +278,7 @@ public class GarageUI : MonoBehaviour
 		for(int i=0;i<100;i++){
 			
 			int carNum = ModData.getCarNum(seriesPrefix, i);
+			int carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, carNum);
 			
 			//Skip through the non-driver #s
 			if(ModData.getName(seriesPrefix, i) == null){
@@ -295,7 +296,7 @@ public class GarageUI : MonoBehaviour
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;
-			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
+			tileInst.GetComponent<GarageUIFunctions>().carNum = carNum;
 			tileInst.transform.SetParent(tileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
 			tileInst.GetComponent<UIAnimate>().scaleIn();

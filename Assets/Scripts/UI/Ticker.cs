@@ -193,13 +193,17 @@ public class Ticker : MonoBehaviour
 				}
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
+				int carJsonIndex = 999;
+				if(officialSeries == false){
+					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
+				}
 				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
 					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
 				} else {
 					if(officialSeries == true){
 						driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 					} else {
-						driverNames[i] = ModData.getName(seriesPrefix,int.Parse(carNumber[i]));
+						driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
 					}
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
@@ -213,16 +217,17 @@ public class Ticker : MonoBehaviour
 				playerTickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
 				playerTickerName.text = driverNames[i];
 				playerTickerDist.text = leaderDist.ToString("f3");
-				
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				//carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
 				carNumber[i] = carNames[i].Remove(0,6);
 				//Debug.Log("Car #: " + carNumber[i]);
+				int carJsonIndex = 999;
 				if(officialSeries == true){
 					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				} else {
-					driverNames[i] = ModData.getName(seriesPrefix,int.Parse(carNumber[i]));
+					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
+					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
 				}
 				
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
@@ -308,7 +313,13 @@ public class Ticker : MonoBehaviour
 				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
 					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
 				} else {
-					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+					int carJsonIndex = 999;
+					if(officialSeries == true){
+						driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+					} else {
+						carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
+						driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
+					}
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
@@ -317,7 +328,13 @@ public class Ticker : MonoBehaviour
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				int carJsonIndex = 999;
+				if(officialSeries == true){
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				} else {
+					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
+					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
+				}
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}
@@ -364,7 +381,13 @@ public class Ticker : MonoBehaviour
 				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
 					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
 				} else {
-					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+					int carJsonIndex = 999;
+					if(officialSeries == true){
+						driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+					} else {
+						carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
+						driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
+					}
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
@@ -375,7 +398,15 @@ public class Ticker : MonoBehaviour
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
-				driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				
+				int carJsonIndex = 999;
+				if(officialSeries == true){
+					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
+				} else {
+					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
+					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
+				}
+					
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 				if(i == 1){

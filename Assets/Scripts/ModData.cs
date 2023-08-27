@@ -65,6 +65,32 @@ public class ModData : MonoBehaviour
 		}
 		return carNum;
 	}
+	
+	//Heavy looping function to find the link between JSON index and car number
+	//Should only run this once per car, to avoid performance issues.
+	public static int getJsonIndexFromCarNum(string seriesPrefix, int carNum){
+		loadModData();
+		int jsonIndex = 999;
+		foreach(var directory in d.GetDirectories()){
+			//Avoid these default folders
+			if(directory.Name == seriesPrefix){
+				string modFolderName = loadJson(directory.Name);
+				try {
+					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
+					
+					for(int i=0;i<100;i++){
+						if(modJson.drivers[i].carNum == carNum){
+							return i;
+						}
+					}
+					return 999;
+				} catch(Exception e){
+					return 999;
+				}
+			}
+		}
+		return 999;
+	}
 
 	public static string getName(string seriesPrefix, int index){
 		loadModData();
@@ -131,9 +157,9 @@ public class ModData : MonoBehaviour
 				string modFolderName = loadJson(directory.Name);
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
-					driverManufacturer = modJson.drivers[index].carType;
+					driverManufacturer = modJson.drivers[index].carManufacturer;
 				} catch(Exception e){
-					driverManufacturer = "Error";
+					driverManufacturer = "CHV";
 				}
 			}
 		}
@@ -142,7 +168,7 @@ public class ModData : MonoBehaviour
 	
 	public static int getRarity(string seriesPrefix, int index){
 		loadModData();
-		int driverRarity = 1;
+		int driverRarity = 0;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
@@ -153,7 +179,7 @@ public class ModData : MonoBehaviour
 					//modAuthor = modJson.modAuthor;
 					driverRarity = modJson.drivers[index].carRarity;
 				} catch(Exception e){
-					driverRarity = 1;
+					driverRarity = 0;
 				}
 			}
 		}
@@ -162,10 +188,12 @@ public class ModData : MonoBehaviour
 	
 	public static Texture2D getTexture(string seriesPrefix, int index){
 		loadModData();
+		Debug.Log("Looking for a mod texture..");
 		Texture2D carTex = null;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
+				Debug.Log("Found the correct mod carset..");
 				string modFolderName = loadJson(directory.Name);
 				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
 				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png")){
@@ -174,6 +202,8 @@ public class ModData : MonoBehaviour
 					carTex = new Texture2D(2,2,TextureFormat.RGBA32, false);
 					carTex.filterMode = FilterMode.Point;
 					carTex.LoadImage(bytes);
+				} else {
+					Debug.Log("Texture isn't where it should be.. " + d + directory.Name + "/" + seriesPrefix + "-" + index + ".png" );
 				}
 			}
 		}

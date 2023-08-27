@@ -41,7 +41,17 @@ public class PlayFabManager : MonoBehaviour
         }
 	}
 	
+	public static bool checkInternet(){
+		if(Application.internetReachability != NetworkReachability.NotReachable){
+			return true;
+		} else {
+			Debug.Log("No Internet Connection");
+			return false;
+		}
+	}
+	
 	public static void LoginFromPrefs(){
+		if(checkInternet() == false){return;}
 		string playerEmail = PlayerPrefs.GetString("PlayerEmail");
 		string playerPassword = PlayerPrefs.GetString("PlayerPassword");
 		var request = new LoginWithEmailAddressRequest{
@@ -62,6 +72,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public void LoginButton(){
+		if(checkInternet() == false){return;}
 		var request = new LoginWithEmailAddressRequest{
 			Email = emailInput.text,
 			Password = passwordInput.text
@@ -113,6 +124,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public void RegisterButton(){
+		if(checkInternet() == false){return;}
 		var request = new RegisterPlayFabUserRequest {
 			Username = usernameInput.text,
 			DisplayName = usernameInput.text,
@@ -146,6 +158,7 @@ public class PlayFabManager : MonoBehaviour
 	
 	//Junks the username to DelXXXX and logs out.
 	public static void DeleteAccount(){
+		if(checkInternet() == false){return;}
 		string playFabId = PlayerPrefs.GetString("PlayerPlayFabId");
 		var request = new UpdateUserTitleDisplayNameRequest{
 			DisplayName = "DELETED" + playFabId
@@ -162,6 +175,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void CheckLiveTimeTrial(){
+		if(checkInternet() == false){return;}
 		PlayFabClientAPI.GetTitleData(new GetTitleDataRequest(), OnLiveTimeTrialReceived, OnTitleError);
 	}
 	
@@ -185,6 +199,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetTitleData(){
+		if(checkInternet() == false){return;}
 		PlayFabClientAPI.GetTitleData(new GetTitleDataRequest(), OnTitleDataReceived, OnTitleError);
 	}
 	
@@ -506,6 +521,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetPlayerData(){
+		if(checkInternet() == false){return;}
 		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnDataReceived, OnError);
 	}
 	
@@ -635,6 +651,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetSavedPlayerProgress(){
+		if(checkInternet() == false){return;}
 		PlayFabClientAPI.GetUserData(new GetUserDataRequest(), OnProgressReceived, OnError);
 	}
 	
@@ -768,6 +785,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void AutosavePlayerProgress(string seriesPrefix, string progressJSON){
+		if(checkInternet() == false){return;}
 		var request = new UpdateUserDataRequest {
 			Data = new Dictionary<string, string> {
 				{"AutosavePlayerProgress" + seriesPrefix, progressJSON}
@@ -778,6 +796,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void SavePlayerProgress(string seriesPrefix, string progressJSON){
+		if(checkInternet() == false){return;}
 		var request = new UpdateUserDataRequest {
 			Data = new Dictionary<string, string> {
 				{"SavedPlayerProgress" + seriesPrefix, progressJSON}
@@ -792,6 +811,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void autosaveGarageToCloud(){
+		if(checkInternet() == false){return;}
 		
 		//Count Unlocks..
 		int level = PlayerPrefs.GetInt("Level");
@@ -882,6 +902,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void SendLeaderboard(int score, string circuitName, string prefix){
+		if(checkInternet() == false){return;}
 		var request = new UpdatePlayerStatisticsRequest {
 			Statistics = new List<StatisticUpdate> {
 				new StatisticUpdate {
@@ -903,6 +924,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetLeaderboard(string circuit){
+		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardRequest {
 			StatisticName = "FastestLap" + circuit,
@@ -913,6 +935,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetLeaderboardAroundPlayer(string circuit){
+		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
 			StatisticName = "FastestLap" + circuit,
@@ -964,6 +987,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetLiveTimeTrialLeaderboard(){
+		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardRequest {
 			StatisticName = "LiveTimeTrialR118",
@@ -988,6 +1012,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetLiveTimeTrialAroundPlayer(){
+		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
 			StatisticName = "LiveTimeTrialR118",
