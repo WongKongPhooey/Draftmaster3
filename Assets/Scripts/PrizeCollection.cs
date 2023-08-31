@@ -265,14 +265,14 @@ public class PrizeCollection : MonoBehaviour
 	
 	void DailyGarage(string seriesPrefix, int carNumber){
 
-		int randAmt = Random.Range(2,11);
+		int randAmt = Random.Range(3,13);
 				
 		AddPrize(seriesPrefix, carNumber, randAmt);
 	}
 	
 	void PremiumGarage(string seriesPrefix, int carNumber){
 
-		int[] randAmtSet = {8,8,10,10,10,12,12,15,15,18,18,20,25};
+		int[] randAmtSet = {10,10,10,12,12,12,15,15,15,18,18,20,25};
 		int randAmt = randAmtSet[Random.Range(0,(randAmtSet.Length)-1)];
 
 		AddPrize(seriesPrefix, carNumber, randAmt);

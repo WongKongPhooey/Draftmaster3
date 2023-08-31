@@ -37,6 +37,7 @@ public class StoreUI : MonoBehaviour
 	public Texture2D altButton;
 	
 	public Transform weeklyTileFrame;
+	public GameObject weeklyPicksMessage;
 	public Transform dailyTileFrame;
 	public Transform starterTileFrame;
 	
@@ -50,7 +51,8 @@ public class StoreUI : MonoBehaviour
     // Start is called before the first frame update
     void Awake(){
         //Drag define this manually in the scene
-        //alertPopup = GameObject.Find("AlertPopup");
+        weeklyPicksMessage = GameObject.Find("WeeklyPicksMsg");
+		weeklyPicksMessage.SetActive(false);
     }
     
     void Start()
@@ -84,6 +86,8 @@ public class StoreUI : MonoBehaviour
 				weeklyPicks.Add(item);
 			}
 			Debug.Log("Total shop items added: " + weeklyPicks.Count);
+		} else {
+			weeklyPicksMessage.SetActive(true);
 		}
 		
 		for(int i=0;i<weeklyPicks.Count;i++){

@@ -39,10 +39,6 @@ public class RaceResultsUI : MonoBehaviour
 		PlayerPrefs.DeleteKey("ActivePath");
 		PlayerPrefs.DeleteKey("MidRaceLoading");
 
-		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
-			officialSeries = true;
-		}
-
 		playerCarNumber = PlayerPrefs.GetString("carTexture");
 		string splitAfter = "livery";
 		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
@@ -51,6 +47,12 @@ public class RaceResultsUI : MonoBehaviour
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
+
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			officialSeries = true;
+		} else {
+			Debug.Log("Must be a mod.. " + seriesPrefix);
 		}
 
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
@@ -221,7 +223,7 @@ public class RaceResultsUI : MonoBehaviour
 			} else {
 				resultDriver.text = ModData.getName(seriesPrefix,carNum);
 				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
-				Debug.Log("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
+				//Debug.Log("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
 			}
 			if(i==0){
 				resultTime.text = "";

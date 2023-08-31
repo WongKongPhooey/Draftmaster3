@@ -106,10 +106,13 @@ public class Ticker : MonoBehaviour
     }
 
 	void LateUpdate(){
-		if(gamePaused == true){
-			Debug.Log("Time Paused");
-			Time.timeScale = 0.0f;
-		}
+		/*if(gamePaused == true){
+			if((pauseMenu.activeSelf == true)||
+			   (cautionSummaryMenu.activeSelf == true)){
+				Debug.Log("Time Paused (Ticker)");
+				Time.timeScale = 0.0f;
+			}
+		}*/
 	}
 
 	public void populateTickerData(){

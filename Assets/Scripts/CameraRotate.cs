@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using Random=UnityEngine.Random;
 
 public class CameraRotate : MonoBehaviour {
@@ -115,7 +118,6 @@ public class CameraRotate : MonoBehaviour {
 		
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		pauseMenu = GameObject.Find("PauseMenu");
-		pauseMenu.SetActive(false);
 		
 		gamePausedLate = false;
 		Time.timeScale = 1.0f;
@@ -222,8 +224,21 @@ public class CameraRotate : MonoBehaviour {
 		//LateUpdate was unreliable..
 		//..so run this at next frame start instead.
 		if(gamePausedLate == true){
-			Debug.Log("Time Paused");
-			Time.timeScale = 0.0f;
+			if((cautionSummaryMenu.activeSelf == true)||
+			   (RaceHUD.raceOver == true)){
+				Debug.Log("Time Paused (Camera Rotate)");
+				Time.timeScale = 0.0f;
+			}
+			try {
+				pauseMenu = GameObject.Find("PauseMenu");
+				if(pauseMenu.activeSelf == true){
+					Debug.Log("Time Paused (Camera Rotate)");
+					Time.timeScale = 0.0f;
+				}
+			}
+			catch (Exception e){}
+		} else {
+			pauseMenu.SetActive(false);
 		}
 		
 		//Commentary hasn't mentioned the wreck yet..

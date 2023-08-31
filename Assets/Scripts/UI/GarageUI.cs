@@ -39,16 +39,16 @@ public class GarageUI : MonoBehaviour
 	public List<RectTransform> shuffleArray;
     // Start is called before the first frame update
     void Start(){
-		seriesPrefix = "cup20";
+		seriesPrefix = "cup23";
 		
 		//For returning PlayFab call outputs, reset on Awake
 		PlayerPrefs.SetString("SaveLoadOutput","");
 		
 		//Run a load before any saves to merge in any missing unlocks
-		if(Application.internetReachability != NetworkReachability.NotReachable){
+		if(PlayerPrefs.HasKey("PlayerUsername")){
 			PlayFabManager.GetSavedPlayerProgress();
 		} else {
-			Debug.Log("No Internet Connection");
+			Debug.Log("Not Logged In");
 		}
 		
 		seriesDropdown = GameObject.Find("Dropdown");

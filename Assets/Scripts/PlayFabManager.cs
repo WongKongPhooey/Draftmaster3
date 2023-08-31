@@ -89,6 +89,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void GetPlayerInfo(string playFabID){
+		if(checkInternet() == false){return;}
 		var request = new GetPlayerProfileRequest{
 			PlayFabId = playFabID
 		};
@@ -136,6 +137,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	void OnRegisterSuccess(RegisterPlayFabUserResult result){
+		if(checkInternet() == false){return;}
 		messageText.text = "User Registered Successfully";
 		PlayerPrefs.SetString("PlayerUsername", usernameInput.text);
 		PlayerPrefs.SetString("PlayerEmail", emailInput.text);
@@ -145,8 +147,12 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	void OnLoginError(PlayFabError error){
-		messageText.text = error.GenerateErrorReport();
-		Debug.Log(error.GenerateErrorReport());
+		errorMessageBuffer = error.GenerateErrorReport();
+		
+		if (errorMessageBuffer.Length > 0){
+		   int word = errorMessageBuffer.IndexOf(" ")+1;
+		   errorMessageBuffer ="Error: " + errorMessageBuffer.Substring(word);
+		}
 	}
 	
 	public static void Logout(){
@@ -180,6 +186,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void OnLiveTimeTrialReceived(GetTitleDataResult result){
+		if(checkInternet() == false){return;}
 		if(result.Data == null){
 			Debug.Log("No Live Time Trial Found");
 			PlayerPrefs.SetString("LiveTimeTrial","");
@@ -204,6 +211,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void OnTitleDataReceived(GetTitleDataResult result){
+		if(checkInternet() == false){return;}
 		if(result.Data == null){
 			Debug.Log("No Title Data Found");
 			//Remove the last known store values
@@ -512,6 +520,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void OnTitleError(PlayFabError error){
+		if(checkInternet() == false){return;}
 		Debug.Log("Something went wrong..");
 		Debug.Log(error.GenerateErrorReport());
 		
@@ -526,6 +535,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void OnDataReceived(GetUserDataResult result){
+		if(checkInternet() == false){return;}
 		if(result.Data != null){
 			Debug.Log("Player data found");
 			
@@ -642,6 +652,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void emptyPlayerData(string playerDataKey){
+		if(checkInternet() == false){return;}
 		var request = new UpdateUserDataRequest {
 			Data = new Dictionary<string, string> {
 				{playerDataKey, "0"}

@@ -170,6 +170,7 @@ public class Movement : MonoBehaviour {
 	
 	public static bool pacing;
 	
+	public GameObject pauseMenu;
 	public GameObject cautionSummaryMenu;
 	public GameObject cautionSummaryTotalWreckers;
 	public GameObject cautionSummaryDamage;
@@ -221,6 +222,7 @@ public class Movement : MonoBehaviour {
 		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
+		pauseMenu = GameObject.Find("PauseMenu");
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		cautionSummaryTotalWreckers = GameObject.Find("CarsInvolved");
 		cautionSummaryDamage = GameObject.Find("WreckDamage");
@@ -609,9 +611,12 @@ public class Movement : MonoBehaviour {
 		updateHUD();
 		
 		if(gamePausedLate == true){
-			Debug.Log("Pausing now..");
-			//safePause = true;
-			Time.timeScale = 0.0f;
+			if(cautionSummaryMenu.activeSelf == true){
+				Debug.Log("Time Paused (Movement)");
+				Time.timeScale = 0.0f;
+			} else {
+				Debug.Log("Pause wasn't ready..");
+			}
 		}
 		
 		if(pacing == true){
@@ -810,8 +815,11 @@ public class Movement : MonoBehaviour {
 	
 	void LateUpdate(){
 		if(gamePausedLate == true){
-			//Debug.Log("Pausing now..");
-			Time.timeScale = 0.0f;
+			if((cautionSummaryMenu.activeSelf == true)&&
+			   (Time.timeScale != 0.0f)){
+				Debug.Log("Time Paused (Movement)");
+				Time.timeScale = 0.0f;
+			}
 		}
 	}
 	
@@ -1210,9 +1218,11 @@ public class Movement : MonoBehaviour {
 		
 		//No cautions on the last lap, race is over
 		if(CameraRotate.lap < CameraRotate.raceEnd){
-			if(!PlayerPrefs.HasKey("RaceMoment")){
+			if(momentChecks == false){
 				//Open the caution menu
 				cautionSummaryMenu.SetActive(true);
+			} else {
+				//Moment status replaces caution stats
 			}
 			if(fastestLapSaved == false){
 				mainCam.GetComponent<CameraRotate>().saveRaceFastestLap();
