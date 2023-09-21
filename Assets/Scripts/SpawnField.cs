@@ -1,9 +1,14 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.SceneManagement;
+using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+using Random=UnityEngine.Random;
+using Object=UnityEngine.Object;
 
 public class SpawnField : MonoBehaviour {
 
@@ -516,20 +521,33 @@ public class SpawnField : MonoBehaviour {
 		} else {
 			int tempCarNum = 999;
 			for(int i=0;i<100;i++){
+				tempCarNum = 999;
 				switch(ModData.getRarity(seriesPref, i)){
 					case 4:
 					case 3:
-					case 2:
-						tempCarNum = 999;
 						tempCarNum = ModData.getCarNum(seriesPref, i);
-						fastCars.Add("" + tempCarNum + "");
+						//Debug.Log(tempCarNum + " returned from index " + i);
+						if(tempCarNum < 100){
+							fastCars.Add("" + tempCarNum + "");
+						}
+						break;
+					case 2:
+						tempCarNum = ModData.getCarNum(seriesPref, i);
+						if(tempCarNum < 100){
+							midCars.Add("" + tempCarNum + "");
+						}
 						break;
 					case 1:
-						tempCarNum = 999;
 						tempCarNum = ModData.getCarNum(seriesPref, i);
-						slowCars.Add("" + tempCarNum + "");
+						if(tempCarNum < 100){
+							slowCars.Add("" + tempCarNum + "");
+						}
 						break;
 					default:
+						tempCarNum = ModData.getCarNum(seriesPref, i);
+						if(tempCarNum < 100){
+							slowCars.Add("" + tempCarNum + "");
+						}
 						break;
 				}
 			}

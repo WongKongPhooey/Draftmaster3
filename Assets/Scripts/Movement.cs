@@ -638,7 +638,7 @@ public class Movement : MonoBehaviour {
 				targetForce = 0;
 				updateWindForce();
 				this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
-				this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+				//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 			}
 			return;
 		}
@@ -834,13 +834,22 @@ public class Movement : MonoBehaviour {
 				draftAirCushion = 1.8f;
 				revLimiterBoost = 1.0f;
 				break;
-			default:
+			case "Cushion":
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 1200f;
 				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.004f;
 				bumpDraftDistTrigger = 1.11f;
 				draftAirCushion = 1.2f;
+				revLimiterBoost = 0f;
+				break;
+			default:
+				seriesSpeedDiff = 0;
+				draftStrengthRatio = 1050f;
+				dragDecelMulti = 0.0035f;
+				backdraftMulti = 0.005f;
+				bumpDraftDistTrigger = 1.11f;
+				draftAirCushion = 1.1f;
 				revLimiterBoost = 0f;
 				break;
 		}
@@ -1175,6 +1184,8 @@ public class Movement : MonoBehaviour {
 		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 		
+		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
 			MomentsCriteria.checkMomentsCriteria("WreckStartPositionHigherThan",Ticker.position.ToString());
@@ -1200,7 +1211,7 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, 0f, 0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
@@ -1285,8 +1296,16 @@ public class Movement : MonoBehaviour {
 		}
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
+		//Prevent landing in the crowd
+		if(this.gameObject.transform.position.x > 2f){
+			this.gameObject.transform.position = new Vector3(2f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
+		}
+		
 		this.transform.Find("SparksL").rotation = Quaternion.Euler(0,180,0);
 		this.transform.Find("SparksR").rotation = Quaternion.Euler(0,180,0);
+		this.transform.Find("SparksL").GetComponent<ParticleSystem>().startSpeed = 50 + (playerWreckDecel / 4);
+		this.transform.Find("SparksR").GetComponent<ParticleSystem>().startSpeed = 50 + (playerWreckDecel / 4);
+		
 		Transform tireSmoke = this.transform.Find("TireSmoke");
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
 		float smokeMultiplier = Mathf.Sin(wreckAngle);
@@ -1295,7 +1314,9 @@ public class Movement : MonoBehaviour {
 		}
 		smokeMultiplier = (smokeMultiplier * 60) + 0;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
-		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
+		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,60);
+		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (playerWreckDecel / 5);
+		tireSmoke.GetComponent<ParticleSystem>().startSize = 12 + (playerWreckDecel / 30);
 		
 		if(Mathf.Round(playerWreckDecel) == -90){
 			GameObject theCamera = GameObject.Find("Main Camera");
@@ -1303,7 +1324,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce > 30){
-			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+			//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		}
 	}
 	

@@ -26,43 +26,54 @@ public class ModData : MonoBehaviour
 		}
 	}
 
+	public static bool isModSeries(string seriesPrefix){
+		loadModData();
+		foreach(var directory in d.GetDirectories()){
+			//Avoid these default folders
+			if(directory.Name == seriesPrefix){
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static string getSeriesNiceName(string seriesPrefix){
 		loadModData();
 		string seriesNiceName = null;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
-				Debug.Log("Found the mod..");
+				//Debug.Log("Found the mod..");
 				string modFolderName = loadJson(directory.Name);
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
-					Debug.Log("Parsed json, found: " + modJson.modName);
+					//Debug.Log("Parsed json, found: " + modJson.modName);
 					seriesNiceName = modJson.modName;
 				} catch(Exception e){
 					seriesNiceName = "Error";
 				}
 			}
 		}
-		return seriesNiceName;
+		return stringLimit(seriesNiceName,8);
 	}
 
 	public static int getCarNum(string seriesPrefix, int index){
 		loadModData();
-		int carNum = 999;
+		int carNum = 998;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
 				string modFolderName = loadJson(directory.Name);
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
-					//modFullName = modJson.modName;
-					//modAuthor = modJson.modAuthor;
 					carNum = modJson.drivers[index].carNum;
 				} catch(Exception e){
-					return 999;
+					Debug.Log(e.Message);
+					return 997;
 				}
 			}
 		}
+		//Debug.Log("Loaded car #" + carNum);
 		return carNum;
 	}
 	
@@ -70,7 +81,7 @@ public class ModData : MonoBehaviour
 	//Should only run this once per car, to avoid performance issues.
 	public static int getJsonIndexFromCarNum(string seriesPrefix, int carNum){
 		loadModData();
-		int jsonIndex = 999;
+		int jsonIndex = 996;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
@@ -83,13 +94,12 @@ public class ModData : MonoBehaviour
 							return i;
 						}
 					}
-					return 999;
 				} catch(Exception e){
-					return 999;
+					return 995;
 				}
 			}
 		}
-		return 999;
+		return 994;
 	}
 
 	public static string getName(string seriesPrefix, int index){
@@ -101,15 +111,13 @@ public class ModData : MonoBehaviour
 				string modFolderName = loadJson(directory.Name);
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
-					//modFullName = modJson.modName;
-					//modAuthor = modJson.modAuthor;
 					driverName = modJson.drivers[index].carDriver;
 				} catch(Exception e){
 					return null;
 				}
 			}
 		}
-		return driverName;
+		return stringLimit(driverName,12);
 	}
 	
 	public static string getType(string seriesPrefix, int index){
@@ -126,6 +134,26 @@ public class ModData : MonoBehaviour
 					driverType = "Error";
 				}
 			}
+		}
+		//Max rarity is 4
+		switch(driverType){
+			case "Rookie":
+			case "Rook":
+			case "Intimidator":
+			case "Intim":
+			case "Closer":
+			case "Close":
+			case "Strategist":
+			case "Strat":
+			case "Dominator":
+			case "Domin":
+			case "Legend":
+			case "Legen":
+				//Valid, no change required
+				break;
+			default:
+				driverType = "Rookie";
+				break;
 		}
 		return driverType;
 	}
@@ -145,7 +173,7 @@ public class ModData : MonoBehaviour
 				}
 			}
 		}
-		return driverTeam;
+		return stringLimit(driverTeam,3).ToUpper();
 	}
 	
 	public static string getManufacturer(string seriesPrefix, int index){
@@ -163,7 +191,7 @@ public class ModData : MonoBehaviour
 				}
 			}
 		}
-		return driverManufacturer;
+		return stringLimit(driverManufacturer,3).ToUpper();
 	}
 	
 	public static int getRarity(string seriesPrefix, int index){
@@ -179,9 +207,20 @@ public class ModData : MonoBehaviour
 					//modAuthor = modJson.modAuthor;
 					driverRarity = modJson.drivers[index].carRarity;
 				} catch(Exception e){
-					driverRarity = 0;
+					driverRarity = 1;
 				}
 			}
+		}
+		//Max rarity is 4
+		switch(driverRarity){
+			case 1:
+			case 2:
+			case 3:
+				//Valid, no change required
+				break;
+			default:
+				driverRarity = 1;
+				break;
 		}
 		return driverRarity;
 	}
@@ -193,17 +232,16 @@ public class ModData : MonoBehaviour
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
-				Debug.Log("Found the correct mod carset..");
+				//Debug.Log("Found the correct mod carset..");
 				string modFolderName = loadJson(directory.Name);
 				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
 				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png")){
-					Debug.Log("Found Driver Texture: " + seriesPrefix + "-" + index + ".png");
 				    byte[] bytes = System.IO.File.ReadAllBytes(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png");
 					carTex = new Texture2D(2,2,TextureFormat.RGBA32, false);
 					carTex.filterMode = FilterMode.Point;
 					carTex.LoadImage(bytes);
 				} else {
-					Debug.Log("Texture isn't where it should be.. " + d + directory.Name + "/" + seriesPrefix + "-" + index + ".png" );
+					//Debug.Log("Texture isn't where it should be.. " + d + directory.Name + "/" + seriesPrefix + "-" + index + ".png" );
 				}
 			}
 		}
@@ -227,7 +265,16 @@ public class ModData : MonoBehaviour
 		//Debug.Log(json);
 		return json;
 	}
+	
+	public static string stringLimit(string data, int limit){
+		if(data.Length > limit){
+			data = data.Substring(0,limit);
+		}
+		return data;
+	}
 }
+
+
 
 [Serializable]
 public class modDriver {

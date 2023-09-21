@@ -854,7 +854,7 @@ public class AIMovement : MonoBehaviour
 				coolOffInv = 2.4f;
 				tandemDrafting = false;
 				break;
-			default:
+			case "Cushion":
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.004f;
 				backdraftMulti = 0.004f;
@@ -862,7 +862,18 @@ public class AIMovement : MonoBehaviour
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
 				coolOffSpace = 1.4f;
-				coolOffInv = 3;
+				coolOffInv = 3f;
+				tandemDrafting = true;
+				break;
+			default:
+				draftStrengthRatio = 900f;
+				dragDecelMulti = 0.004f;
+				backdraftMulti = 0.005f;
+				bumpDraftDistTrigger = 1.1f;
+				passDistMulti = 1f;
+				draftAirCushion = 1.1f;
+				coolOffSpace = 1.2f;
+				coolOffInv = 4f;
 				tandemDrafting = true;
 				break;
 		}
@@ -1680,14 +1691,6 @@ public class AIMovement : MonoBehaviour
 
 		wreckDecel = baseDecel - (50f * wreckSine);
 		
-		if(wreckDecel < -100){
-			sparksCooldown = 0;
-			this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
-			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
-		}
-		if(wreckDecel < -160){
-			this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-		}
 		if(wreckDecel < -200){
 			endWreck();
 		}
@@ -1701,9 +1704,12 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Align particle system to global track direction
-		//Flatten the smoke
 		this.transform.Find("SparksL").rotation = Quaternion.Euler(0,180,0);
 		this.transform.Find("SparksR").rotation = Quaternion.Euler(0,180,0);
+		this.transform.Find("SparksL").GetComponent<ParticleSystem>().startSpeed = 50 + (wreckDecel / 4);
+		this.transform.Find("SparksR").GetComponent<ParticleSystem>().startSpeed = 50 + (wreckDecel / 4);
+		
+		//Flatten the smoke
 		Transform tireSmoke = this.transform.Find("TireSmoke");
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
 		float smokeMultiplier = Mathf.Sin(wreckAngle);
@@ -1712,7 +1718,9 @@ public class AIMovement : MonoBehaviour
 		}
 		smokeMultiplier = (smokeMultiplier * 60) + 0;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
-		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(255,255,255,(byte)smokeMultiplier);
+		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
+		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (wreckDecel / 5);
+		tireSmoke.GetComponent<ParticleSystem>().startSize = 12 + (wreckDecel / 30); //Max 12, Min 4.5
 	}
 	
 	void updateWindForce(){

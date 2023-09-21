@@ -46,8 +46,10 @@ public class ModsUI : MonoBehaviour {
 			string modList = "";
 			foreach (var directory in d.GetDirectories()){
                 //Avoid these default folders
+				//All mod folders must be 5 characters long
 				if((directory.Name == "Unity")||
-				   (directory.Name == "il2cpp")){
+				   (directory.Name == "il2cpp")||
+				   (directory.Name.Length != 5)){
 					continue;
 				}
 				//Debug.Log(directory);
@@ -63,8 +65,8 @@ public class ModsUI : MonoBehaviour {
 				//Check the json is valid
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
-					modFullName = modJson.modName;
-					modAuthor = modJson.modAuthor;
+					modFullName = stringLimit(modJson.modName,8);
+					modAuthor = stringLimit(modJson.modAuthor,14);
 					modJsonValid = "OK";
 					
 					modList += directory.Name + "-" + modFullName;
@@ -113,13 +115,20 @@ public class ModsUI : MonoBehaviour {
 		string json = System.IO.File.ReadAllText(directoryPath + "/" + folderName + ".json");
 
 		try{
-		modCarset modJson = JsonUtility.FromJson<modCarset>(json);
-		string modName = modJson.modName;
+			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+			string modName = modJson.modName;
 		} catch(Exception e){
 			string jsonValid = "Error";
 		}
 		
 		Debug.Log(json);
 		return json;
+	}
+	
+	public static string stringLimit(string data, int limit){
+		if(data.Length > limit){
+			data = data.Substring(0,limit);
+		}
+		return data;
 	}
 }

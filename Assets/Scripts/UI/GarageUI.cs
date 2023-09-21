@@ -16,6 +16,7 @@ public class GarageUI : MonoBehaviour
 	public GameObject partTimersTile;
 	public GameObject finaleTile;
 	public GameObject throwbackTile;
+	public GameObject modCarTile;
 	GameObject activeTile;
 	public GameObject seriesDropdownRow;
 	
@@ -87,6 +88,8 @@ public class GarageUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
+		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
+		
 		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
 		
 		int validCars = 0;
@@ -114,6 +117,7 @@ public class GarageUI : MonoBehaviour
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;
 			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
+			tileInst.GetComponent<GarageUIFunctions>().modCar = false;
 			tileInst.transform.SetParent(tileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
@@ -274,18 +278,19 @@ public class GarageUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
+		currentSeries.GetComponent<TMPro.TMP_Text>().text = ModData.getSeriesNiceName(seriesPrefix);
+		
 		int validCars = 0;
 		for(int i=0;i<100;i++){
-			
-			int carNum = ModData.getCarNum(seriesPrefix, i);
-			int carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, carNum);
+			//int carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, carNum);
 			
 			//Skip through the non-driver #s
 			if(ModData.getName(seriesPrefix, i) == null){
 				continue;
 			}
+			int carNum = ModData.getCarNum(seriesPrefix, i);
 			
-			activeTile = carTile;
+			activeTile = modCarTile;
 			
 			//Testing - Unlock All
 			#if UNITY_EDITOR
@@ -297,6 +302,7 @@ public class GarageUI : MonoBehaviour
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;
 			tileInst.GetComponent<GarageUIFunctions>().carNum = carNum;
+			tileInst.GetComponent<GarageUIFunctions>().modCar = true;
 			tileInst.transform.SetParent(tileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
@@ -310,25 +316,17 @@ public class GarageUI : MonoBehaviour
 			RawImage carNumber = tileInst.transform.GetChild(5).transform.GetChild(0).GetComponent<RawImage>();
 			GameObject carNumberObj = tileInst.transform.GetChild(5).transform.GetChild(0).gameObject;
 			TMPro.TMP_Text carName = tileInst.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
-			RectTransform carGearsProgressUI = tileInst.transform.GetChild(7).transform.GetChild(0).GetComponent<RectTransform>();
-			TMPro.TMP_Text carGearsLabelUI = tileInst.transform.GetChild(7).transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
-			GameObject cardBack = tileInst.transform.GetChild(8).gameObject;
 			GameObject carClickable = tileInst.transform.GetChild(9).transform.gameObject;
-			GameObject carDisabled = tileInst.transform.GetChild(10).transform.gameObject;
-			GameObject carActionBtn = tileInst.transform.GetChild(11).transform.gameObject;
-			carActionBtn.SetActive(false);
 			
 			//Mod cars are auto-unlocked, but limited to a low class and rarity
 			PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked", 1);
 			PlayerPrefs.SetInt(seriesPrefix + i + "Gears", 0);
-			PlayerPrefs.SetInt(seriesPrefix + i + "Class", 2);
+			PlayerPrefs.SetInt(seriesPrefix + i + "Class", 4);
 			
 			int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked");
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + i + "Gears");
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + i + "Class");
-			int classMax = 999;
 			int unlockClass = ModData.getRarity(seriesPrefix,i);
-			int unlockGears = 999;
 			
 			string carTeam = ModData.getTeam(seriesPrefix, i);
 			string carType = ModData.getType(seriesPrefix, i);

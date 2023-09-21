@@ -29,6 +29,7 @@ public class ChampionshipHubUI : MonoBehaviour
 	public bool championshipOver;
 	
 	public static string seriesPrefix;
+	public static bool modSeries;
 	public int carNumber;
 
 	int currentSeries;
@@ -64,6 +65,11 @@ public class ChampionshipHubUI : MonoBehaviour
 		
 		PlayerPrefs.SetString("RaceType","Championship");
         
+		modSeries = false;
+		if(ModData.isModSeries(seriesPrefix) == true){
+			modSeries = true;
+		}
+		
 		SeriesData.loadSeries();
 		loadPoints();
 		
@@ -166,8 +172,14 @@ public class ChampionshipHubUI : MonoBehaviour
 			
 			champPos.text = (pointsInd+1).ToString();
 			champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);
-			champDriver.text = DriverNames.getName(seriesPrefix, pointsRow.Key);
-			champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, pointsRow.Key));
+			if(modSeries == true){
+				champDriver.text = ModData.getName(seriesPrefix, pointsRow.Key);
+				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, pointsRow.Key));
+			} else {
+				champDriver.text = DriverNames.getName(seriesPrefix, pointsRow.Key);
+				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, pointsRow.Key));
+			
+			}
 			champPoints.text = pointsRow.Value.ToString();
 			pointsInd++;
 		}

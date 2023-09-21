@@ -10,15 +10,27 @@ public class DriverPoints : MonoBehaviour {
 	}
 
 	public static void resetPoints(string seriesPrefix) {
-		
-		for(int i = 0; i < 100;i++){
-			if(DriverNames.getName(seriesPrefix, i) == null){
-				if(PlayerPrefs.HasKey("ChampionshipPoints"  + i)){
-					PlayerPrefs.DeleteKey("ChampionshipPoints"  + i);
+		if(ModData.isModSeries(seriesPrefix) == true){
+			for(int i = 0; i < 100;i++){
+				if(ModData.getName(seriesPrefix, i) == null){
+					if(PlayerPrefs.HasKey("ChampionshipPoints"  + i)){
+						PlayerPrefs.DeleteKey("ChampionshipPoints"  + i);
+					}
+				} else {
+					PlayerPrefs.SetInt("ChampionshipPoints"  + i,0);
+					pointsTotal[i] = 0;
 				}
-			} else {
-				PlayerPrefs.SetInt("ChampionshipPoints"  + i,0);
-				pointsTotal[i] = 0;
+			}
+		} else {
+			for(int i = 0; i < 100;i++){
+				if(DriverNames.getName(seriesPrefix, i) == null){
+					if(PlayerPrefs.HasKey("ChampionshipPoints"  + i)){
+						PlayerPrefs.DeleteKey("ChampionshipPoints"  + i);
+					}
+				} else {
+					PlayerPrefs.SetInt("ChampionshipPoints"  + i,0);
+					pointsTotal[i] = 0;
+				}
 			}
 		}
 	}

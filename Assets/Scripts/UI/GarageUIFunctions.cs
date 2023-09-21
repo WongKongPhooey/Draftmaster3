@@ -8,6 +8,7 @@ public class GarageUIFunctions : MonoBehaviour
 {
 	public string seriesPrefix;
 	public string carLivery;
+	public bool modCar;
 	public int carNum;
     // Start is called before the first frame update
     void Start(){
@@ -24,7 +25,9 @@ public class GarageUIFunctions : MonoBehaviour
 		if(PlayerPrefs.HasKey("ActivePath")){
 			selectCar();
 		} else {
-			openCarInfo();
+			if(modCar == false){
+				openCarInfo();
+			}
 		}
 	}
 
