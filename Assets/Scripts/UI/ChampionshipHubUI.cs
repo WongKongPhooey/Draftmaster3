@@ -83,8 +83,11 @@ public class ChampionshipHubUI : MonoBehaviour
 		tracksArray = championshipTracklist.Split(',');
 		
 		hubCarImage = GameObject.Find("NextCar");
-		hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(PlayerPrefs.GetString("carTexture"));
-		
+		if(ModData.isModSeries(seriesPrefix) == true){
+			hubCarImage.GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix,carNumber);
+		} else {
+			hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(PlayerPrefs.GetString("carTexture"));
+		}
 		nextTrackLabel = GameObject.Find("NextTrackLabel");
 		
 		if((championshipRound + 1) > championshipLength){
