@@ -322,12 +322,19 @@ public class TrackUI : MonoBehaviour
 		PlayerPrefs.SetInt("ChampionshipRound",0);
 		championshipRound = 0;
 		PlayerPrefs.SetInt("ChampionshipLength", seriesLength);
-		//resetChampionshipPoints();
+		resetChampionshipPoints();
 		PlayerPrefs.SetString("ChampionshipCarTexture", PlayerPrefs.GetString("carTexture"));
 		PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("carSeries"));
 		//Debug.Log("Championship Carset Series set as " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 		PlayerPrefs.SetInt("ChampionshipCarChoice", PlayerPrefs.GetInt("CarChoice"));
 		SceneManager.LoadScene("Menus/ChampionshipHub");
+	}
+
+	public void resetChampionshipPoints(){
+		for(int i=0;i<100;i++){
+			//Empty them all out
+			PlayerPrefs.DeleteKey("ChampionshipPoints" + i);
+		}
 	}
 
 	public void dynamicBackButton(){

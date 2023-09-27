@@ -105,16 +105,6 @@ public class Ticker : MonoBehaviour
 		hasLed = false;
     }
 
-	void LateUpdate(){
-		/*if(gamePaused == true){
-			if((pauseMenu.activeSelf == true)||
-			   (cautionSummaryMenu.activeSelf == true)){
-				Debug.Log("Time Paused (Ticker)");
-				Time.timeScale = 0.0f;
-			}
-		}*/
-	}
-
 	public void populateTickerData(){
 
 		if((carsTagged == true)||(carsArray.Length == 0)){
@@ -180,9 +170,7 @@ public class Ticker : MonoBehaviour
 		  return (a.transform.position.z).CompareTo(b.transform.position.z);
 		});
 		//Reverse the sort
-		entrantList.Reverse(); 
-		
-		//Debug.Log(entrantList.Count + " cars to sort.");
+		entrantList.Reverse();
 		
 		for(int i=0;i<entrantList.Count;i++){
 			

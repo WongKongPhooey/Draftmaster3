@@ -122,13 +122,27 @@ public class ChampionshipHubUI : MonoBehaviour
 		championshipPoints.Clear();
 		int pointsTableInd = 0;
 		for(int i=0;i<100;i++){
-			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
-				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
-				//Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
-				pointsTableInd++;
+			if(modSeries == true){
+				if(ModData.getCarNum(seriesPrefix,i) == 999){
+					//Non-valid car number
+					continue;
+				}
+				int carNo = ModData.getCarNum(seriesPrefix,i);
+				if(!PlayerPrefs.HasKey("ChampionshipPoints" + carNo)){
+					PlayerPrefs.SetInt("ChampionshipPoints" + carNo,0);
+				}
+				championshipPoints.Add(carNo,PlayerPrefs.GetInt("ChampionshipPoints" + carNo));
 			} else {
-				//Debug.Log("No points found for #" + i);
+				if(DriverNames.getName(seriesPrefix,i) == null){
+					continue;
+				}
+				if(!PlayerPrefs.HasKey("ChampionshipPoints" + i)){
+					PlayerPrefs.SetInt("ChampionshipPoints" + i,0);
+				}
+				championshipPoints.Add(i,PlayerPrefs.GetInt("ChampionshipPoints" + i));
 			}
+			//Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
+			pointsTableInd++;
 		}
 		showPoints();
 	}
@@ -156,6 +170,11 @@ public class ChampionshipHubUI : MonoBehaviour
 			if(pointsRow.Value == 0){
 				//continue;
 			}
+			if(modSeries == true){
+				if(ModData.getName(seriesPrefix, pointsRow.Key) == null){
+					continue;
+				}
+			}
 			
 			GameObject standingsInst = Instantiate(championshipRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			RectTransform resultObj = standingsInst.GetComponent<RectTransform>();
@@ -174,23 +193,18 @@ public class ChampionshipHubUI : MonoBehaviour
 			}
 			
 			champPos.text = (pointsInd+1).ToString();
-			champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);
 			if(modSeries == true){
+				Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
+				champNum.texture = Resources.Load<Texture2D>("cup20num" + ModData.getJsonIndexFromCarNum(seriesPrefix, pointsRow.Key));
 				champDriver.text = ModData.getName(seriesPrefix, pointsRow.Key);
 				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, pointsRow.Key));
 			} else {
+				champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);
 				champDriver.text = DriverNames.getName(seriesPrefix, pointsRow.Key);
 				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, pointsRow.Key));
-			
 			}
 			champPoints.text = pointsRow.Value.ToString();
 			pointsInd++;
 		}
 	}
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

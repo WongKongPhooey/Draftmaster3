@@ -469,6 +469,18 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 		}
 		
+		//Shop Discount Promo (Everything moves down 1 price tier)
+		if(result.Data.ContainsKey("FreeModding") == true){
+			if(result.Data["FreeModding"] == "Yes"){
+				PlayerPrefs.SetInt("FreeModding", 1);
+				Debug.Log("Free Modding Activated");
+			} else {
+				PlayerPrefs.SetInt("FreeModding", 0);
+			}
+		} else {
+			PlayerPrefs.SetInt("FreeModding", 0);
+		}
+		
 		//Testing - Time Trials
 		//result.Data["LiveTimeTrial"] = "FortWorth";
 		

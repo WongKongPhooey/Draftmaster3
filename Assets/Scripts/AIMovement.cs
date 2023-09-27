@@ -866,7 +866,7 @@ public class AIMovement : MonoBehaviour
 				tandemDrafting = true;
 				break;
 			default:
-				draftStrengthRatio = 900f;
+				draftStrengthRatio = 700f;
 				dragDecelMulti = 0.004f;
 				backdraftMulti = 0.005f;
 				bumpDraftDistTrigger = 1.1f;

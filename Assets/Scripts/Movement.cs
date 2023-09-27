@@ -845,7 +845,7 @@ public class Movement : MonoBehaviour {
 				break;
 			default:
 				seriesSpeedDiff = 0;
-				draftStrengthRatio = 1050f;
+				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.005f;
 				bumpDraftDistTrigger = 1.11f;

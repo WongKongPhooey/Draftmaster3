@@ -201,6 +201,7 @@ public class RaceResultsUI : MonoBehaviour
 			} else {
 				carNum = PlayerPrefs.GetInt("FinishPosition" + i + "");
 				carDist = PlayerPrefs.GetInt("FinishTime" + i + "");
+				Debug.Log("Pos: " + i + " Num: " + carNum);
 			}
 			
 			GameObject resultInst = Instantiate(resultRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -221,14 +222,18 @@ public class RaceResultsUI : MonoBehaviour
 				resultDriver.text = DriverNames.getName(seriesPrefix,carNum);
 				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, carNum));
 			} else {
+				carNum = ModData.getJsonIndexFromCarNum(seriesPrefix,carNum);
 				resultDriver.text = ModData.getName(seriesPrefix,carNum);
 				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
-				//Debug.Log("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
 			}
 			if(i==0){
 				resultTime.text = "";
 			} else {
-				resultTime.text = "+" + (carDist / 1000f).ToString("f3");
+				if(carDist > 50000f){
+					resultTime.text = "+1 LAP";
+				} else {
+					resultTime.text = "+" + (carDist / 1000f).ToString("f3");
+				}
 			}
 		}
 	}

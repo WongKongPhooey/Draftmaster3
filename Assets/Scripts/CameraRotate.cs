@@ -15,6 +15,9 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject finishLine;
 	public GameObject tropicono;
 	
+	public static string seriesPrefix;
+	public static bool officialSeries;
+	
 	public Camera MainCam;
 	public int cameraZoom;
 	
@@ -158,6 +161,18 @@ public class CameraRotate : MonoBehaviour {
 		cornerSpeed = 0;
 
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
+
+		if(PlayerPrefs.HasKey("FixedSeries")){
+			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
+		} else {
+			seriesPrefix = PlayerPrefs.GetString("carSeries");
+		}
+
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			officialSeries = true;
+		} else {
+			officialSeries = false;
+		}
 
 		raceLapRecord = 0;
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
@@ -326,7 +341,8 @@ public class CameraRotate : MonoBehaviour {
 					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 						PlayFabManager.CheckLiveTimeTrial();
 						//Double checked
-						if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+						if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
+						  &&(officialSeries == true)){
 							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR118","");
 						}
 					}
@@ -543,7 +559,8 @@ public class CameraRotate : MonoBehaviour {
 		if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
-			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
+			  &&(officialSeries == true)){
 				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR118","");
 			}
 		}
@@ -561,7 +578,8 @@ public class CameraRotate : MonoBehaviour {
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 		Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
 		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
-		if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+		if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
+		  &&(officialSeries == true)){
 			PlayFabManager.CheckLiveTimeTrial();
 			//Double checked
 			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){

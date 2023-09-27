@@ -59,7 +59,7 @@ public class ModData : MonoBehaviour
 
 	public static int getCarNum(string seriesPrefix, int index){
 		loadModData();
-		int carNum = 998;
+		int carNum = 999;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
@@ -69,7 +69,7 @@ public class ModData : MonoBehaviour
 					carNum = modJson.drivers[index].carNum;
 				} catch(Exception e){
 					Debug.Log(e.Message);
-					return 997;
+					return 999;
 				}
 			}
 		}
@@ -81,7 +81,7 @@ public class ModData : MonoBehaviour
 	//Should only run this once per car, to avoid performance issues.
 	public static int getJsonIndexFromCarNum(string seriesPrefix, int carNum){
 		loadModData();
-		int jsonIndex = 996;
+		int jsonIndex = 999;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
@@ -95,11 +95,11 @@ public class ModData : MonoBehaviour
 						}
 					}
 				} catch(Exception e){
-					return 995;
+					return 999;
 				}
 			}
 		}
-		return 994;
+		return 999;
 	}
 
 	public static string getName(string seriesPrefix, int index){
