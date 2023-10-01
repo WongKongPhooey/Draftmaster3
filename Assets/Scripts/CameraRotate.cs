@@ -144,6 +144,10 @@ public class CameraRotate : MonoBehaviour {
 		lap = 0;
 		if(PlayerPrefs.HasKey("StartingLap")){
 			lap = PlayerPrefs.GetInt("StartingLap") - 1;
+			PlayerPrefs.DeleteKey("StartingLap");
+		}
+		if(lap < 0){
+			lap = 0;
 		}
 		
 		raceEnd = PlayerPrefs.GetInt("RaceLaps");

@@ -323,11 +323,11 @@ public class EventData : MonoBehaviour
 		offlineMinClass[3,3] = 3;
 		offlineMinLevel[3,3] = 20;
 		offlineSeries[3,3] = "cup23";
-		offlineCustomCar[3,3] = "cup23livery4alt1";
+		offlineCustomCar[3,3] = "cup23livery4";
 		offlineAILevel[3,3] = 14;
 		offlineTracklists[3,3] = "13";
-		offlinePrizes[3,3] = "Harvick";
-		offlineSetPrizes[3,3] = "15";
+		offlinePrizes[3,3] = "AltPaint";
+		offlineSetPrizes[3,3] = "cup23livery4alt1";
 		eventChapterDescriptions[3,3] = "With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
 		
 		//Moments
