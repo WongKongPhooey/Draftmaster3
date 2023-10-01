@@ -248,7 +248,7 @@ public class MainMenuUI : MonoBehaviour {
 				timeTrialDescUILabel.text = "There is No Active Time Trial";
 			}
 		} else {
-			timeTrialDescUILabel.text = "Set your fastest lap in any race series at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
+			timeTrialDescUILabel.text = "Set your fastest lap in any race series with an official Cup car at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
 		}
 		
 		if(PlayerPrefs.GetString("MomentName") == ""){
@@ -271,7 +271,6 @@ public class MainMenuUI : MonoBehaviour {
 			int subSeriesInt = int.Parse(subSeries);
 			subSeriesName = SeriesData.offlineMenu[seriesInt] + " - " + SeriesData.offlineSeries[seriesInt,subSeriesInt];
 		}
-		
 		GameObject championshipUI = GameObject.Find("ActiveChampionshipName");
 		TMPro.TMP_Text championshipUILabel = championshipUI.GetComponent<TMPro.TMP_Text>();
 		championshipUILabel.text = subSeriesName;
@@ -283,7 +282,6 @@ public class MainMenuUI : MonoBehaviour {
 			PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("ChampionshipCarChoice"));
 			PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("ChampionshipCarSeries"));
 			PlayerPrefs.SetString("ActivePath","ChampionshipRace");
-			//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 			SceneManager.LoadScene("Menus/ChampionshipHub");
 		}
 	}
@@ -305,8 +303,7 @@ public class MainMenuUI : MonoBehaviour {
 	}
 
     // Update is called once per frame
-    void Update()
-    {
+    void Update(){
         checkForPlayfabUpdates();
     }
 }

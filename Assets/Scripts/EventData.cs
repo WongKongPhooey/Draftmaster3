@@ -300,13 +300,35 @@ public class EventData : MonoBehaviour
 		offlineMinLevel[3,1] = 5;
 		offlineMinTeam[3,1] = "RCR";
 		offlineAILevel[3,1] = 10;
-		offlineSeries[3,1] = "cup20";
 		offlineStartingLap[3,1] = 8;
 		offlineTracklists[3,1] = "20";
 		offlinePrizes[3,1] = "Harvick";
 		offlineSetPrizes[3,1] = "15";
 		eventChapterDescriptions[3,1] = "Harvick's first crown jewel victory came in 2003, winning the Brickyard 400 for RCR.";
 		
+		offlineEventChapter[3,2] = "The Great American";
+		offlineChapterImage[3,2] = "cup22livery4";
+		offlineMinClass[3,2] = 3;
+		offlineMinLevel[3,2] = 10;
+		offlineMinTeam[3,2] = "RCR";
+		offlineAILevel[3,2] = 12;
+		offlineStartingLap[3,2] = 8;
+		offlineTracklists[3,2] = "1";
+		offlinePrizes[3,2] = "Harvick";
+		offlineSetPrizes[3,2] = "15";
+		eventChapterDescriptions[3,2] = "As the field wrecked behind them, Harvick edged out Martin to win the 500 by a nose.";
+		
+		offlineEventChapter[3,3] = "Heartbreaker";
+		offlineChapterImage[3,3] = "cup23livery4alt1";
+		offlineMinClass[3,3] = 3;
+		offlineMinLevel[3,3] = 20;
+		offlineSeries[3,3] = "cup23";
+		offlineCustomCar[3,3] = "cup23livery4alt1";
+		offlineAILevel[3,3] = 14;
+		offlineTracklists[3,3] = "13";
+		offlinePrizes[3,3] = "Harvick";
+		offlineSetPrizes[3,3] = "15";
+		eventChapterDescriptions[3,3] = "With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
 		
 		//Moments
 		offlineEventChapter[4,0] = "Daytona '79";

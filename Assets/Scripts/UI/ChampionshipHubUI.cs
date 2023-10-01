@@ -112,6 +112,10 @@ public class ChampionshipHubUI : MonoBehaviour
 			goRaceBtn = GameObject.Find("GoRace");
 			goRaceBtn.SetActive(false);
 			PlayerPrefs.SetInt("PlayerFinishPosition", championshipPosition);
+			
+			if(ModData.isModSeries(seriesPrefix) == true){
+				GameObject.Find("EndSeason").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
+			}
 		} else {
 			endSeasonBtn = GameObject.Find("EndSeason");
 			endSeasonBtn.SetActive(false);
@@ -167,9 +171,6 @@ public class ChampionshipHubUI : MonoBehaviour
 		int pointsInd = 0;
 		foreach(var pointsRow in pointsTable){
 			
-			if(pointsRow.Value == 0){
-				//continue;
-			}
 			if(modSeries == true){
 				if(ModData.getName(seriesPrefix, pointsRow.Key) == null){
 					continue;

@@ -299,18 +299,10 @@ public class TrackUI : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
-		//PlayerPrefs.SetInt("RaceLaps",3);
+		PlayerPrefs.SetInt("RaceLaps",1);
 		#endif
-		
-		//Debug.Log("-" + seriesFuel + " Fuel, now " + GameData.gameFuel);
-		//PlayerPrefs.SetInt("GameFuel",GameData.gameFuel);
+
 		SceneManager.LoadScene(track);
-		/*} else {
-			//Roll back and bail
-			//PlayerPrefs.SetString("StoreFocus","Fuel");
-			//SceneManager.LoadScene("Menus/StoreUI");
-			alertPopup.GetComponent<AlertManager>().showPopup("Not Enough Fuel", "You need more fuel to race. Watch an ad or buy fuel in the Store, or simply wait for the fuel to refill.", "Icons/fuel");
-		}*/
 	}
 
 	public void startChampionship(){

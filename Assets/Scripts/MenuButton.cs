@@ -8,6 +8,8 @@ public class MenuButton : MonoBehaviour
 	
 	public string SceneName = "";
 	public string URLName = "";
+	public bool hasLogic = false;
+	public GameObject alertPopup;
 	
 	void OnMouseUp(){
 		//loadScene();
@@ -15,11 +17,32 @@ public class MenuButton : MonoBehaviour
 	
 	public void loadScene(){
 		LeanTween.reset();
+		if(hasLogic == true){
+			SceneName = checkLogic(SceneName);
+		}
 		if(URLName != ""){
 			Application.OpenURL(URLName);
 		} else {
-			SceneManager.LoadScene(SceneName);
+			if(SceneName != ""){
+				SceneManager.LoadScene(SceneName);
+			}
 		}
+	}
+	
+	public string checkLogic(string link){
+		switch(link){
+			case "Menus/Mods":
+				if((PlayerPrefs.GetInt("FreeModding") != 1)
+				  &&(PlayerPrefs.GetInt("TransferTokens") < 999)){
+					Debug.Log("You Don't Have Mod Access");
+					link = "";
+					alertPopup.GetComponent<AlertManager>().showPopup("No Mods Access","You Need To Purchase The Editor Pack In The Store To Access Modding", "cup22livery1alt1");
+				}
+				break;
+			default:
+				break;
+		}
+		return link;
 	}
 	
 	public void loadTimeTrial(){

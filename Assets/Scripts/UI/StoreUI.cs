@@ -452,7 +452,8 @@ public class StoreUI : MonoBehaviour
 				transfersLeft=999;
 				PlayerPrefs.SetInt("TransferTokens",transfersMax);
 				PlayerPrefs.SetInt("TransfersLeft",transfersLeft);
-				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","999 Transfer Tokens have been added!","dm2logo");
+				PlayerPrefs.SetInt("ModAccess",1);
+				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","Mod Support Unlocked!\n999 Transfer Tokens have been added!","dm2logo");
 				break;
 			default:
 				break;
@@ -470,8 +471,7 @@ public class StoreUI : MonoBehaviour
 	}
 
     // Update is called once per frame
-    void Update()
-    {
+    void Update(){
 		if(loadHack < 10){
 			if(fitHack == 1){
 				fitHack = 2;

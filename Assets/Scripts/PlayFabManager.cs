@@ -344,7 +344,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			//Fake store values for testing
 			#if UNITY_EDITOR
-			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,7,8,9,10,11,12,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup238,cup239,cup2315,cup2320,cup2322,cup2324,cup23livery8alt1,cup23livery9alt1,cup23livery9alt2,cup23livery15alt1,cup23livery20alt1,cup23livery22alt1,cup23livery24alt1";
+			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup238,cup239,cup2315,cup2320,cup2322,cup2324,irl23livery5alt1,irl23livery6alt1,irl23livery7alt1,irl23livery28alt1,cup23livery8alt1,cup23livery9alt1,cup23livery9alt2,cup23livery15alt1,cup23livery20alt1,cup23livery22alt1,cup23livery24alt1,cup23livery14alt1,cup23livery41alt1";
 			#endif
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
@@ -723,6 +723,10 @@ public class PlayFabManager : MonoBehaviour
 				 //Old save files don't have this field, now skippable
 				 if(playerJson.transferTokens != null){
 					transferTokens = int.Parse(playerJson.transferTokens);
+					if(PlayerPrefs.GetInt("TransferTokens") < transferTokens){
+						PlayerPrefs.SetInt("TransferTokens", transferTokens);
+					}
+					Debug.Log("Received " + transferTokens + " Transfer Tokens");
 				 }
 				 
 				 if(level > PlayerPrefs.GetInt("Level")){
@@ -1013,7 +1017,7 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardRequest {
-			StatisticName = "LiveTimeTrialR118",
+			StatisticName = "LiveTimeTrialR135",
 			StartPosition = 0,
 			MaxResultsCount = 20
 		};
@@ -1038,7 +1042,7 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
-			StatisticName = "LiveTimeTrialR118",
+			StatisticName = "LiveTimeTrialR135",
 			MaxResultsCount = 1
 		};
 		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLiveTimeTrialAroundPlayerGet, OnError);

@@ -1605,7 +1605,7 @@ public class AIMovement : MonoBehaviour
 		slideX = 0;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.25f, 0.25f) * 10, 0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.35f, 0.35f) * 10, 0f);
 		
 		//Tire smoke
 		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();

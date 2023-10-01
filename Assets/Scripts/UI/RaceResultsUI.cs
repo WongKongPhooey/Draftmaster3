@@ -82,6 +82,10 @@ public class RaceResultsUI : MonoBehaviour
 			Debug.Log("Exp: " + exp);
 			
 			PlayerPrefs.SetString("ExpInfo","+" + raceExp + " (" + exp + "/" + levelExp + ")");
+
+			if(ModData.isModSeries(seriesPrefix) == true){
+				GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
+			}
 			
 			//Is this a championship round?
 			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
@@ -212,12 +216,19 @@ public class RaceResultsUI : MonoBehaviour
 			
 			TMPro.TMP_Text resultPos = resultInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage resultNumber = resultInst.transform.GetChild(1).GetComponent<RawImage>();
-			TMPro.TMP_Text resultDriver = resultInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			RawImage resultManu = resultInst.transform.GetChild(3).GetComponent<RawImage>();
-			TMPro.TMP_Text resultTime = resultInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text resultFallbackNumber = resultInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text resultDriver = resultInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			RawImage resultManu = resultInst.transform.GetChild(4).GetComponent<RawImage>();
+			TMPro.TMP_Text resultTime = resultInst.transform.GetChild(5).GetComponent<TMPro.TMP_Text>();
 			
 			resultPos.text = (i+1).ToString();
-			resultNumber.texture = Resources.Load<Texture2D>("cup20num" + carNum);
+			if (Resources.Load<Texture2D>("cup20num" + carNum) != null) {
+				resultNumber.texture = Resources.Load<Texture2D>("cup20num" + carNum);
+				resultFallbackNumber.enabled = false;
+			} else {
+				resultNumber.enabled = false;
+				resultFallbackNumber.text = carNum.ToString();
+			}
 			if(officialSeries == true){
 				resultDriver.text = DriverNames.getName(seriesPrefix,carNum);
 				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, carNum));
@@ -229,7 +240,7 @@ public class RaceResultsUI : MonoBehaviour
 			if(i==0){
 				resultTime.text = "";
 			} else {
-				if(carDist > 50000f){
+				if((carDist > 32000f)||((i == (fieldSize - 1))&&(fieldSize > 16))){
 					resultTime.text = "+1 LAP";
 				} else {
 					resultTime.text = "+" + (carDist / 1000f).ToString("f3");

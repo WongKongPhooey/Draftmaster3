@@ -103,16 +103,23 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintNames[78,1] = "Stock (Lally)";
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
+		cup23AltPaintNames[4,1] = "#1 Throwback";
 		cup23AltPaintNames[8,1] = "#1 Winner";
 		cup23AltPaintNames[9,1] = "Stock (Berry)";
 		cup23AltPaintNames[9,2] = "Stock (Taylor)";
+		cup23AltPaintNames[14,1] = "#1 Naughton";
 		cup23AltPaintNames[15,1] = "Stock (Button)";
 		cup23AltPaintNames[20,1] = "#1 Winner";
 		cup23AltPaintNames[22,1] = "#1 Winner";
 		cup23AltPaintNames[24,1] = "#1 Winner";
+		cup23AltPaintNames[41,1] = "#1 Bobby";
 		cup23AltPaintNames[91,1] = "#1 Winner";
 		
 		irl23AltPaintNames[2,1] = "#1 The 500";
+		irl23AltPaintNames[5,1] = "#1 Le Triple";
+		irl23AltPaintNames[6,1] = "#1 500 Triple";
+		irl23AltPaintNames[7,1] = "#1 Azure Triple";
+		irl23AltPaintNames[28,1] = "#1 LGBTQ";
 		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
