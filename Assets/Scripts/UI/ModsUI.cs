@@ -9,9 +9,14 @@ using System.Linq;
 public class ModsUI : MonoBehaviour {
 	
 	public GameObject pathName;
-	
 	public GameObject modRow;
 	public Transform modsFrame;
+	
+	public GameObject alertPopup;
+	
+	public string pickedJSON;
+	public string pickedCarPNG;
+	public string[] pickedCarPNGs;
 	
     // Start is called before the first frame update
 	void Start(){
@@ -47,35 +52,43 @@ public class ModsUI : MonoBehaviour {
 			foreach (var directory in d.GetDirectories()){
                 //Avoid these default folders
 				//All mod folders must be 5 characters long
+				Debug.Log(directory);
 				if((directory.Name == "Unity")||
 				   (directory.Name == "il2cpp")||
-				   (directory.Name.Length != 5)){
+				   (DriverNames.isOfficialSeries(directory.Name) == true)||
+				   (directory.Name.Length > 5)){
 					continue;
 				}
-				//Debug.Log(directory);
 				if(modList != ""){
 					modList += ",";
 				}
 				
-				string modFolderName = loadJson(directory.Name);
+				string modJsonRaw;
+				try {
+					modJsonRaw = loadJson(directory.Name);
+				} catch(Exception e){
+					modJsonRaw = directory.Name;
+				}
+				
 				string modFullName;
 				string modAuthor;
 				string modJsonValid;
+				int totalCars = 0;
 				
 				//Check the json is valid
 				try {
-					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
+					modCarset modJson = JsonUtility.FromJson<modCarset>(modJsonRaw);
 					modFullName = stringLimit(modJson.modName,8);
-					modAuthor = stringLimit(modJson.modAuthor,14);
+					modAuthor = stringLimit(modJson.modAuthor,14);					
 					modJsonValid = "OK";
 					
 					modList += directory.Name + "-" + modFullName;
 				} catch(Exception e){
-					modFullName = "";
-					modAuthor = "";
+					modFullName = "?";
+					modAuthor = "?";
 					modJsonValid = "Error";
 				}
-		
+				
 				GameObject modInst = Instantiate(modRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				RectTransform modObj = modInst.GetComponent<RectTransform>();
 				modInst.transform.SetParent(modsFrame, false);
@@ -97,7 +110,7 @@ public class ModsUI : MonoBehaviour {
 				foreach (var file in directory.GetFiles("*.png")){
 					modCars++;
 				}
-				Debug.Log(modCars);
+				//Debug.Log(modCars);
 				modSize.text = modCars.ToString();
 				
 				i++;
@@ -121,8 +134,141 @@ public class ModsUI : MonoBehaviour {
 			string jsonValid = "Error";
 		}
 		
-		Debug.Log(json);
+		//Debug.Log(json);
 		return json;
+	}
+	
+	public static void openCreate(){
+		PromptManager.showPopup();
+	}
+	
+	public void createModFolder(){
+		DirectoryInfo d;
+		GameObject promptInputValue = GameObject.Find("PromptInputValue");
+		string folderName = promptInputValue.GetComponent<TMPro.TMP_Text>().text;
+		if(folderName != null){
+			if(!Directory.Exists(Application.persistentDataPath + "/Mods/" + folderName)){
+				d = Directory.CreateDirectory(Application.persistentDataPath + "/Mods/" + folderName); // returns a DirectoryInfo object
+			}
+			LoadMods();
+			PromptManager.hidePopup();
+		}
+	}
+	
+	public void pickJsonFile(){
+		string fileType = NativeFilePicker.ConvertExtensionToFileType("txt");
+		
+		NativeFilePicker.Permission hasPermission = NativeFilePicker.CheckPermission();
+		//Debug.Log(hasPermission);
+		if(hasPermission != NativeFilePicker.Permission.Granted){
+			NativeFilePicker.Permission askedPermission = NativeFilePicker.RequestPermission();
+			Debug.Log(askedPermission);
+		}
+		
+		NativeFilePicker.Permission permission = NativeFilePicker.PickFile((path) => {
+			if(path != null){
+				pickedJSON = path;
+				Debug.Log("Picked file: " + path);
+			} else {
+				return;
+			}
+		}, new string[]{ fileType });
+		if(pickedJSON == ""){
+			return;
+		}
+		string json = System.IO.File.ReadAllText(pickedJSON);
+		string modName = null;
+		string modFolder = null;
+		try{
+			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+			modName = modJson.modName;
+			modFolder = modJson.modFolder;
+		} catch(Exception e){
+			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file contains errors. Try using an online JSON validator to check.","dm2logo");
+			return;
+		}
+		if(modName == null){
+			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no mod name specified. Download the example files to check the format required.","dm2logo");
+			return;
+		}
+		if(modFolder == null){
+			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no folder specified. Download the example files to check the format required.","dm2logo");
+			return;
+		}
+		
+		string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
+		if(!Directory.Exists(directoryPath)){
+			System.IO.Directory.CreateDirectory(directoryPath);
+		}
+		System.IO.File.WriteAllText(directoryPath + "/" + modFolder + ".json",json);
+		LoadMods();
+		alertPopup.GetComponent<AlertManager>().showPopup("JSON File Uploaded","A JSON file has been uploaded for the " + modFolder + " mod","dm2logo");
+	}
+	
+	public void pickCarFiles(){
+		Texture2D carTex = null;
+
+		#if UNITY_ANDROID
+			// Use MIMEs on Android
+			string fileType = "image/*";
+		#else
+			// Use UTIs on iOS
+			string fileType = "public.image";
+		#endif
+		
+		NativeFilePicker.Permission hasPermission = NativeFilePicker.CheckPermission();
+		if(hasPermission != NativeFilePicker.Permission.Granted){
+			NativeFilePicker.Permission askedPermission = NativeFilePicker.RequestPermission();
+			Debug.Log(askedPermission);
+		}
+		
+		bool multiFile = NativeFilePicker.CanPickMultipleFiles();
+		
+		if(multiFile == true){
+			NativeFilePicker.Permission permission = NativeFilePicker.PickMultipleFiles((paths) => {
+				if(paths != null){
+					pickedCarPNGs = paths;
+					Debug.Log("Picked files: " + paths);
+				}
+			}, new string[]{ fileType });
+			
+			foreach(string pickedPNG in pickedCarPNGs){
+				writeCarToFolder(pickedPNG);
+			}
+		} else {
+			NativeFilePicker.Permission permission = NativeFilePicker.PickFile((path) => {
+				if(path != null){
+					pickedCarPNG = path;
+					Debug.Log("Picked file: " + path);
+				}
+			}, new string[]{ fileType });
+			
+			writeCarToFolder(pickedCarPNG);
+		}
+	}
+	
+	public void writeCarToFolder(string pickedCar){
+		string[] pathDepths = pickedCar.Split("/");
+		string fileName = pathDepths[pathDepths.Length - 1];
+		string modFolder = fileName.Substring(0,5);
+		string carNum = fileName.Substring(6);
+		carNum = carNum.Split(".")[0];
+		bool hasNum = int.TryParse(carNum,out int carNumInt);
+		if(hasNum == false){
+			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","File " + fileName + " is not in the correct format.\n\nExample: cup15-43.png","dm2logo");
+			return;
+		}
+		byte[] bytes = System.IO.File.ReadAllBytes(pickedCar);
+			
+		string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
+		if(!Directory.Exists(Application.persistentDataPath + "/Mods/" + modFolder)){
+			//Debug.Log("No mod folder " + modFolder + " was found.");
+			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Mod folder " + modFolder + " was not found. Either create this folder, or upload the mod's JSON file first.","dm2logo");
+		} else {
+			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName,bytes);
+			Texture2D uploadedCar = ModData.getTexture(modFolder,carNumInt);
+			alertPopup.GetComponent<AlertManager>().showPopup("Car Uploaded","Car #" + carNum + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
+		}
 	}
 	
 	public static string stringLimit(string data, int limit){

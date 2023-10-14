@@ -145,6 +145,8 @@ public class ModData : MonoBehaviour
 			case "Close":
 			case "Strategist":
 			case "Strat":
+			case "Blocker":
+			case "Block":
 			case "Dominator":
 			case "Domin":
 			case "Legend":
@@ -240,8 +242,6 @@ public class ModData : MonoBehaviour
 					carTex = new Texture2D(2,2,TextureFormat.RGBA32, false);
 					carTex.filterMode = FilterMode.Point;
 					carTex.LoadImage(bytes);
-				} else {
-					//Debug.Log("Texture isn't where it should be.. " + d + directory.Name + "/" + seriesPrefix + "-" + index + ".png" );
 				}
 			}
 		}
@@ -275,7 +275,6 @@ public class ModData : MonoBehaviour
 }
 
 
-
 [Serializable]
 public class modDriver {
     public int carNum;
@@ -289,6 +288,8 @@ public class modDriver {
 [Serializable]
 public class modCarset {
 	public string modName;
+	public string modFolder;
+	public string modVersion;
 	public string modAuthor;
 	public string modPhysics;
     public List<modDriver> drivers;

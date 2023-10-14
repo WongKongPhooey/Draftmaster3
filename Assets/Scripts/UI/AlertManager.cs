@@ -36,7 +36,7 @@ public class AlertManager : MonoBehaviour
         hidePopup();
     }
 
-	public void showPopup(string title, string content, string image, bool progress = false, int progressCurrent = 0, int progressTarget = 999){
+	public void showPopup(string title, string content, string image, bool progress = false, int progressCurrent = 0, int progressTarget = 999, Texture2D rawImage = null){
 		alertTitle.GetComponent<TMPro.TMP_Text>().text = title;
 		alertText.GetComponent<TMPro.TMP_Text>().text = content;
 		if(content == ""){
@@ -57,9 +57,14 @@ public class AlertManager : MonoBehaviour
 		}
 		//alertPopup.SetActive(true);
 		alertPopup.GetComponent<UIAnimate>().show();
-		if(image != ""){
-			alertImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(image);
+		if(rawImage != null){
+			alertImage.GetComponent<RawImage>().texture = rawImage;
 			alertImage.GetComponent<UIAnimate>().scaleIn();
+		} else {
+			if(image != ""){
+				alertImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(image);
+				alertImage.GetComponent<UIAnimate>().scaleIn();
+			}
 		}
 		alertText.GetComponent<UIAnimate>().scaleIn();
 	}
