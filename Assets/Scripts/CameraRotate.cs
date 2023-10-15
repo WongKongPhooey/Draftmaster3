@@ -37,6 +37,7 @@ public class CameraRotate : MonoBehaviour {
 	public static float turnSpeed;
 	public static int trackLength;
 	public static int totalTurns;
+	public static int lengthcounter;
 	public static int straightcounter;
 	public static int cornercounter;
 	public static float carSpeedOffset;
@@ -267,7 +268,11 @@ public class CameraRotate : MonoBehaviour {
 			this.gameObject.GetComponent<CommentaryManager>().commentate("Crash");
 		}
 		
-		straightcounter++;
+		//Prevent the counters running when game is pausing
+		if(gamePausedLate == false){
+			lengthcounter++;
+			straightcounter++;
+		}
 		
 		if((Movement.wreckOver == true)&&(Movement.isWrecking == false)){
 			//If last lap, no restart, it's over!
@@ -276,8 +281,6 @@ public class CameraRotate : MonoBehaviour {
 			}
 			return;
 		}
-		
-		//finishLine.renderer.enabled = false;
 		
 		//Keep the camera and environment following the player on the z-axis
 		TDCamera.transform.position = new Vector3(TDCamera.transform.position.x,TDCamera.transform.position.y,thePlayer.transform.position.z);
@@ -291,6 +294,7 @@ public class CameraRotate : MonoBehaviour {
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
 			Ticker.updateTicker();
 			lap++;
+			lengthcounter=0;
 			
 			//Final Lap
 			if(CameraRotate.lap == CameraRotate.raceEnd){

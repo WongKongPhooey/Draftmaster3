@@ -118,6 +118,7 @@ public class AIMovement : MonoBehaviour
 	int distFromPlayer;
 	
 	bool caution = false;
+	static bool prePause = false;
     public static bool crashActive;
     public static int crashTime;
 
@@ -632,6 +633,13 @@ public class AIMovement : MonoBehaviour
 
 		lap = CameraRotate.lap;
 		
+		//Handle the time between pausing and Time setting to 0
+		if(CameraRotate.gamePausedLate == true){
+			prePause = true;
+		} else {
+			prePause = false;
+		}
+		
 		if(CameraRotate.overtime == true){
 			wreckProbability = wreckFreq + 1;
 			
@@ -829,7 +837,9 @@ public class AIMovement : MonoBehaviour
 			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		}
 		speed = speed / 100;
-		AICar.transform.Translate(0, 0, speed);
+		if(prePause != true){
+			AICar.transform.Translate(0, 0, speed);
+		}
 	}
 	
 	void dumbSpeed(int direction){
@@ -838,7 +848,9 @@ public class AIMovement : MonoBehaviour
 		//Speed difference between the player and the AI
 		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
-		AICar.transform.Translate(0, 0, speed);
+		if(prePause != true){
+			AICar.transform.Translate(0, 0, speed);
+		}
 	}
 	
 	void setCarPhysics(string seriesPrefix){
@@ -883,7 +895,9 @@ public class AIMovement : MonoBehaviour
 		//Speed difference between the player and the AI
 		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
-		AICar.transform.Translate(new Vector3(0, 0, speed),Space.World);
+		if(prePause != true){
+			AICar.transform.Translate(new Vector3(0, 0, speed),Space.World);
+		}
 	}
 
 	void updateMovement() {

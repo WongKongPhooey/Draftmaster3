@@ -157,56 +157,59 @@ public class ModsUI : MonoBehaviour {
 	
 	public void pickJsonFile(){
 		string fileType = NativeFilePicker.ConvertExtensionToFileType("txt");
+		pickedJSON = null;
 		
 		NativeFilePicker.Permission hasPermission = NativeFilePicker.CheckPermission();
 		//Debug.Log(hasPermission);
 		if(hasPermission != NativeFilePicker.Permission.Granted){
 			NativeFilePicker.Permission askedPermission = NativeFilePicker.RequestPermission();
-			Debug.Log(askedPermission);
+			//Debug.Log(askedPermission);
 		}
 		
 		NativeFilePicker.Permission permission = NativeFilePicker.PickFile((path) => {
 			if(path != null){
 				pickedJSON = path;
-				Debug.Log("Picked file: " + path);
+				//Debug.Log("Picked file: " + path);
 			} else {
 				return;
 			}
 		}, new string[]{ fileType });
-		if(pickedJSON == ""){
-			return;
-		}
-		string json = System.IO.File.ReadAllText(pickedJSON);
-		string modName = null;
-		string modFolder = null;
-		try{
-			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
-			modName = modJson.modName;
-			modFolder = modJson.modFolder;
-		} catch(Exception e){
-			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file contains errors. Try using an online JSON validator to check.","dm2logo");
-			return;
-		}
-		if(modName == null){
-			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no mod name specified. Download the example files to check the format required.","dm2logo");
-			return;
-		}
-		if(modFolder == null){
-			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no folder specified. Download the example files to check the format required.","dm2logo");
-			return;
-		}
 		
-		string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
-		if(!Directory.Exists(directoryPath)){
-			System.IO.Directory.CreateDirectory(directoryPath);
+		if(pickedJSON != null){
+			string json = System.IO.File.ReadAllText(pickedJSON);
+			string modName = null;
+			string modFolder = null;
+			try{
+				modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+				modName = modJson.modName;
+				modFolder = modJson.modFolder;
+			} catch(Exception e){
+				alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file contains errors. Try using an online JSON validator to check.","dm2logo");
+				return;
+			}
+			if(modName == null){
+				alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no mod name specified. Download the example files to check the format required.","dm2logo");
+				return;
+			}
+			if(modFolder == null){
+				alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no folder specified. Download the example files to check the format required.","dm2logo");
+				return;
+			}
+			
+			string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
+			if(!Directory.Exists(directoryPath)){
+				System.IO.Directory.CreateDirectory(directoryPath);
+			}
+			System.IO.File.WriteAllText(directoryPath + "/" + modFolder + ".json",json);
+			LoadMods();
+			alertPopup.GetComponent<AlertManager>().showPopup("JSON File Uploaded","A JSON file has been uploaded for the " + modFolder + " mod","dm2logo");
 		}
-		System.IO.File.WriteAllText(directoryPath + "/" + modFolder + ".json",json);
-		LoadMods();
-		alertPopup.GetComponent<AlertManager>().showPopup("JSON File Uploaded","A JSON file has been uploaded for the " + modFolder + " mod","dm2logo");
 	}
 	
 	public void pickCarFiles(){
 		Texture2D carTex = null;
+		pickedCarPNGs = null;
+		pickedCarPNG = null;
 
 		#if UNITY_ANDROID
 			// Use MIMEs on Android
@@ -219,7 +222,7 @@ public class ModsUI : MonoBehaviour {
 		NativeFilePicker.Permission hasPermission = NativeFilePicker.CheckPermission();
 		if(hasPermission != NativeFilePicker.Permission.Granted){
 			NativeFilePicker.Permission askedPermission = NativeFilePicker.RequestPermission();
-			Debug.Log(askedPermission);
+			//Debug.Log(askedPermission);
 		}
 		
 		bool multiFile = NativeFilePicker.CanPickMultipleFiles();
@@ -243,7 +246,9 @@ public class ModsUI : MonoBehaviour {
 				}
 			}, new string[]{ fileType });
 			
-			writeCarToFolder(pickedCarPNG);
+			if(pickedCarPNG != null){
+				writeCarToFolder(pickedCarPNG);
+			}
 		}
 	}
 	

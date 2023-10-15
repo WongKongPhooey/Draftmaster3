@@ -71,6 +71,10 @@ public class AlertManager : MonoBehaviour
 	
 	public void hidePopup(){
 		//alertPopup = GameObject.Find("AlertPopup");
+		alertTitle.GetComponent<TMPro.TMP_Text>().text = "Waiting..";
+		alertText.GetComponent<TMPro.TMP_Text>().text = "";
+		alertImage.GetComponent<RawImage>().texture = null;
+		
 		LeanTween.scale(alertPopup, new Vector3(0f,0f,0f), 0f);
 		alertText.GetComponent<UIAnimate>().hide();
 		alertImage.GetComponent<UIAnimate>().hide();
