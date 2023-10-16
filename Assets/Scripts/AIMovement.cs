@@ -877,7 +877,7 @@ public class AIMovement : MonoBehaviour
 				coolOffInv = 3f;
 				tandemDrafting = true;
 				break;
-			default:
+			case "V3Weaker":
 				draftStrengthRatio = 700f;
 				dragDecelMulti = 0.004f;
 				backdraftMulti = 0.005f;
@@ -886,6 +886,17 @@ public class AIMovement : MonoBehaviour
 				draftAirCushion = 1.1f;
 				coolOffSpace = 1.2f;
 				coolOffInv = 4f;
+				tandemDrafting = true;
+				break;
+			default:
+				draftStrengthRatio = 900f;
+				dragDecelMulti = 0.004f;
+				backdraftMulti = 0.004f;
+				bumpDraftDistTrigger = 1.1f;
+				passDistMulti = 1f;
+				draftAirCushion = 1.2f;
+				coolOffSpace = 1.4f;
+				coolOffInv = 3f;
 				tandemDrafting = true;
 				break;
 		}

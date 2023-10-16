@@ -16,7 +16,8 @@ public class ModsUI : MonoBehaviour {
 	
 	public string pickedJSON;
 	public string pickedCarPNG;
-	public string[] pickedCarPNGs;
+	
+	public bool fileQueued;
 	
     // Start is called before the first frame update
 	void Start(){
@@ -24,10 +25,30 @@ public class ModsUI : MonoBehaviour {
 		TMPro.TMP_Text pathNameText = pathName.GetComponent<TMPro.TMP_Text>();
 		pathNameText.text = Application.persistentDataPath + "/Mods";
 		LoadMods();
+		
+		pickedJSON = null;
+		pickedCarPNG = null;
+		fileQueued = false;
     }
 
     // Update is called once per frame
-    void Update(){  
+    void Update(){
+		//Keep checking for an uploaded file..
+		bool isPicking = NativeFilePicker.IsFilePickerBusy();
+		
+		if(isPicking == false){
+			//A Config file waiting
+			if(pickedJSON != null){
+				writeJSONToFolder(pickedJSON);
+				fileQueued = false;
+			}
+			
+			//A single car file waiting
+			if(pickedCarPNG != null){
+				writeCarToFolder(pickedCarPNG);
+			}
+			fileQueued = false;
+		}
     }
 	
 	void LoadMods(){
@@ -52,7 +73,6 @@ public class ModsUI : MonoBehaviour {
 			foreach (var directory in d.GetDirectories()){
                 //Avoid these default folders
 				//All mod folders must be 5 characters long
-				Debug.Log(directory);
 				if((directory.Name == "Unity")||
 				   (directory.Name == "il2cpp")||
 				   (DriverNames.isOfficialSeries(directory.Name) == true)||
@@ -175,40 +195,11 @@ public class ModsUI : MonoBehaviour {
 			}
 		}, new string[]{ fileType });
 		
-		if(pickedJSON != null){
-			string json = System.IO.File.ReadAllText(pickedJSON);
-			string modName = null;
-			string modFolder = null;
-			try{
-				modCarset modJson = JsonUtility.FromJson<modCarset>(json);
-				modName = modJson.modName;
-				modFolder = modJson.modFolder;
-			} catch(Exception e){
-				alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file contains errors. Try using an online JSON validator to check.","dm2logo");
-				return;
-			}
-			if(modName == null){
-				alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no mod name specified. Download the example files to check the format required.","dm2logo");
-				return;
-			}
-			if(modFolder == null){
-				alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no folder specified. Download the example files to check the format required.","dm2logo");
-				return;
-			}
-			
-			string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
-			if(!Directory.Exists(directoryPath)){
-				System.IO.Directory.CreateDirectory(directoryPath);
-			}
-			System.IO.File.WriteAllText(directoryPath + "/" + modFolder + ".json",json);
-			LoadMods();
-			alertPopup.GetComponent<AlertManager>().showPopup("JSON File Uploaded","A JSON file has been uploaded for the " + modFolder + " mod","dm2logo");
-		}
+		fileQueued = true;
 	}
 	
 	public void pickCarFiles(){
 		Texture2D carTex = null;
-		pickedCarPNGs = null;
 		pickedCarPNG = null;
 
 		#if UNITY_ANDROID
@@ -222,34 +213,45 @@ public class ModsUI : MonoBehaviour {
 		NativeFilePicker.Permission hasPermission = NativeFilePicker.CheckPermission();
 		if(hasPermission != NativeFilePicker.Permission.Granted){
 			NativeFilePicker.Permission askedPermission = NativeFilePicker.RequestPermission();
-			//Debug.Log(askedPermission);
 		}
 		
-		bool multiFile = NativeFilePicker.CanPickMultipleFiles();
-		
-		if(multiFile == true){
-			NativeFilePicker.Permission permission = NativeFilePicker.PickMultipleFiles((paths) => {
-				if(paths != null){
-					pickedCarPNGs = paths;
-					Debug.Log("Picked files: " + paths);
-				}
-			}, new string[]{ fileType });
-			
-			foreach(string pickedPNG in pickedCarPNGs){
-				writeCarToFolder(pickedPNG);
+		NativeFilePicker.Permission permission = NativeFilePicker.PickFile((path) => {
+			if(path != null){
+				pickedCarPNG = path;
+				Debug.Log("Picked file: " + path);
 			}
-		} else {
-			NativeFilePicker.Permission permission = NativeFilePicker.PickFile((path) => {
-				if(path != null){
-					pickedCarPNG = path;
-					Debug.Log("Picked file: " + path);
-				}
-			}, new string[]{ fileType });
-			
-			if(pickedCarPNG != null){
-				writeCarToFolder(pickedCarPNG);
-			}
+		}, new string[]{ fileType });
+	}
+	
+	public void writeJSONToFolder(string pickedTxt){
+		string json = System.IO.File.ReadAllText(pickedTxt);
+		string modName = null;
+		string modFolder = null;
+		pickedJSON = null;
+		try{
+			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+			modName = modJson.modName;
+			modFolder = modJson.modFolder;
+		} catch(Exception e){
+			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file contains errors. Try using an online JSON validator to check.","dm2logo");
+			return;
 		}
+		if(modName == null){
+			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no mod name specified. Download the example files to check the format required.","dm2logo");
+			return;
+		}
+		if(modFolder == null){
+			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no folder specified. Download the example files to check the format required.","dm2logo");
+			return;
+		}
+		
+		string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
+		if(!Directory.Exists(directoryPath)){
+			System.IO.Directory.CreateDirectory(directoryPath);
+		}
+		System.IO.File.WriteAllText(directoryPath + "/" + modFolder + ".json",json);
+		LoadMods();
+		alertPopup.GetComponent<AlertManager>().showPopup("JSON File Uploaded","A JSON file has been uploaded for the " + modFolder + " mod","dm2logo");
 	}
 	
 	public void writeCarToFolder(string pickedCar){
@@ -258,6 +260,7 @@ public class ModsUI : MonoBehaviour {
 		string modFolder = fileName.Substring(0,5);
 		string carNum = fileName.Substring(6);
 		carNum = carNum.Split(".")[0];
+		pickedCarPNG = null;
 		bool hasNum = int.TryParse(carNum,out int carNumInt);
 		if(hasNum == false){
 			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","File " + fileName + " is not in the correct format.\n\nExample: cup15-43.png","dm2logo");
@@ -268,9 +271,10 @@ public class ModsUI : MonoBehaviour {
 		string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
 		if(!Directory.Exists(Application.persistentDataPath + "/Mods/" + modFolder)){
 			//Debug.Log("No mod folder " + modFolder + " was found.");
-			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Mod folder " + modFolder + " was not found. Either create this folder, or upload the mod's JSON file first.","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Folder " + modFolder + " was not found. Create this folder, or upload a " + modFolder + ".txt config file first.","dm2logo");
 		} else {
 			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName,bytes);
+			LoadMods();
 			Texture2D uploadedCar = ModData.getTexture(modFolder,carNumInt);
 			alertPopup.GetComponent<AlertManager>().showPopup("Car Uploaded","Car #" + carNum + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
 		}

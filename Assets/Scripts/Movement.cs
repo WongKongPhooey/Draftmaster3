@@ -843,13 +843,22 @@ public class Movement : MonoBehaviour {
 				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
 				break;
-			default:
+			case "V3Weaker":
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.005f;
 				bumpDraftDistTrigger = 1.11f;
 				draftAirCushion = 1.1f;
+				revLimiterBoost = 0f;
+				break;
+			default:
+				seriesSpeedDiff = 0;
+				draftStrengthRatio = 1050f;
+				dragDecelMulti = 0.0035f;
+				backdraftMulti = 0.004f;
+				bumpDraftDistTrigger = 1.11f;
+				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
 				break;
 		}
