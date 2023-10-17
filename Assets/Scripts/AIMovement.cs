@@ -650,7 +650,7 @@ public class AIMovement : MonoBehaviour
 		
         laneInv = 4 - lane;
 		
-		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 4f) + (laneInv / 4f);
+		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 5f) + (laneInv / 4f);
 		
 		if(Movement.pacing == false){
 			if((isWrecking == true)||(wreckOver == true)){
@@ -890,7 +890,7 @@ public class AIMovement : MonoBehaviour
 				break;
 			default:
 				draftStrengthRatio = 900f;
-				dragDecelMulti = 0.004f;
+				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.004f;
 				bumpDraftDistTrigger = 1.1f;
 				passDistMulti = 1f;

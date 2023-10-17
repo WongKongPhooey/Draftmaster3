@@ -92,8 +92,6 @@ public class Movement : MonoBehaviour {
 	float windForce;
 	float forceSmoothing;
 	
-	int sparksCooldown;
-	
 	public GameObject mainCam;
 	public GameObject audioHolder;
 	public static bool gamePausedLate;
@@ -209,7 +207,6 @@ public class Movement : MonoBehaviour {
 		isWrecking = false;
 		wreckOver = false;
 		playerWreckDecel = 0;
-		sparksCooldown = 0;
 		totalWreckers = 0;
 		wreckDamage = 0;
 		
@@ -505,6 +502,8 @@ public class Movement : MonoBehaviour {
 			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
 				startWreck();
 				this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+				this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+				this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 			}
 			if((isWrecking == false)&&(wreckOver == false)&&(wallrideMod == true)){
 				if((carHit.gameObject.tag == "Barrier") || 
@@ -512,6 +511,8 @@ public class Movement : MonoBehaviour {
 				  (carHit.gameObject.name == "SaferBarrier")){
 					startWreck();
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+					this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+					this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 					GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Scrape");
 				}
 			}
@@ -524,6 +525,8 @@ public class Movement : MonoBehaviour {
 						if(wreckOver == false){
 							startWreck();
 							this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+							this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+							this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 						}
 					} else {
 						//Share some wreck inertia
@@ -638,7 +641,6 @@ public class Movement : MonoBehaviour {
 				targetForce = 0;
 				updateWindForce();
 				this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
-				//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 			}
 			return;
 		}
@@ -855,7 +857,7 @@ public class Movement : MonoBehaviour {
 			default:
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 1050f;
-				dragDecelMulti = 0.0035f;
+				dragDecelMulti = 0.003f;
 				backdraftMulti = 0.004f;
 				bumpDraftDistTrigger = 1.11f;
 				draftAirCushion = 1.2f;
@@ -1159,8 +1161,6 @@ public class Movement : MonoBehaviour {
 		if(CameraRotate.cautionOut == false){
 			CameraRotate.throwCaution();
 		}
-		sparksCooldown = 99999;
-		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
 		this.GetComponent<Rigidbody>().mass = 2;
@@ -1194,6 +1194,8 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 		
 		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
@@ -1219,8 +1221,6 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, 0f, 0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
-		
-		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
@@ -1330,10 +1330,6 @@ public class Movement : MonoBehaviour {
 		if(Mathf.Round(playerWreckDecel) == -90){
 			GameObject theCamera = GameObject.Find("Main Camera");
 			theCamera.GetComponent<CommentaryManager>().commentate("Caution");
-		}
-		
-		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce > 30){
-			//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		}
 	}
 	
