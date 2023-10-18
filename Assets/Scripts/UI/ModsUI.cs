@@ -158,17 +158,59 @@ public class ModsUI : MonoBehaviour {
 		return json;
 	}
 	
-	public static void openCreate(){
-		PromptManager.showPopup();
+	public static void openCreate(GameObject prompt){
+		PromptManager.showPopup(prompt);
 	}
 	
-	public void createModFolder(){
+	public static void openDelete(GameObject prompt){
+		PromptManager.showPopup(prompt);
+	}
+	
+	public void createModFolder(string inputName){
 		DirectoryInfo d;
-		GameObject promptInputValue = GameObject.Find("PromptInputValue");
+		GameObject promptInputValue = GameObject.Find(inputName);
 		string folderName = promptInputValue.GetComponent<TMPro.TMP_Text>().text;
+		if(folderName.Length > 5){
+			folderName = folderName.Substring(0, 5);
+		}
+		if(folderName.Length < 5){
+			for(int i=folderName.Length;i<=5;i++){
+				folderName+="x";
+			}
+		}
 		if(folderName != null){
 			if(!Directory.Exists(Application.persistentDataPath + "/Mods/" + folderName)){
 				d = Directory.CreateDirectory(Application.persistentDataPath + "/Mods/" + folderName); // returns a DirectoryInfo object
+			}
+			LoadMods();
+			PromptManager.hidePopup();
+		}
+	}
+	
+	public void deleteModFolder(string inputName){
+		Debug.Log("Deleting " + inputName);
+		DirectoryInfo d;
+		GameObject promptInputValue = GameObject.Find(inputName);
+		string folderName = promptInputValue.GetComponent<TMPro.TMP_Text>().text;
+		if(folderName.Length > 5){
+			folderName = folderName.Substring(0, 5);
+		}
+		if(folderName.Length < 5){
+			for(int i=folderName.Length;i<=5;i++){
+				folderName+="x";
+			}
+		}
+		if((folderName == "Unity")||
+		(folderName == "il2cpp")){
+			return;
+		}
+		if(folderName != null){
+			Debug.Log("Attempt Delete");
+			if(Directory.Exists(Application.persistentDataPath + "/Mods/" + folderName)){
+				Debug.Log("Folder Exists: " + Application.persistentDataPath + "/Mods/" + folderName);
+				Directory.Delete(Application.persistentDataPath + "/Mods/" + folderName,true);
+			} else {
+				Debug.Log("Folder Doesn't Exist: " + Application.persistentDataPath + "/Mods/" + folderName);
 			}
 			LoadMods();
 			PromptManager.hidePopup();
