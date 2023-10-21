@@ -64,11 +64,15 @@ public class GarageUI : MonoBehaviour
 			PlayerPrefs.DeleteKey("ExactSeries");
 		}
 		
-		if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
-			loadModCarsets(PlayerPrefs.GetString("ModsList"));
-		}
-		
 		loadRaceRestrictions();
+		
+		if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
+			try{
+			loadModCarsets(PlayerPrefs.GetString("ModsList"));
+			} catch (Exception e){
+				Debug.Log(e.Message);
+			}
+		}
 		
 		alertPopup = GameObject.Find("AlertPopup");
 		
@@ -416,7 +420,9 @@ public class GarageUI : MonoBehaviour
 		
 		string[] modsArray = modList.Split(',');
 		foreach(string modSet in modsArray){
-			string[] modData = modSet.Split('-');
+			Debug.Log(modSet);
+			string[] modData = modSet.Split('|');
+			
 			GameObject modCarsetInst = Instantiate(seriesDropdownRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			
 			modCarsetInst.transform.SetParent(seriesDropdownFrame, false);

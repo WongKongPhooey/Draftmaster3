@@ -896,7 +896,7 @@ public class AIMovement : MonoBehaviour
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
 				coolOffSpace = 1.4f;
-				coolOffInv = 3f;
+				coolOffInv = 5f;
 				tandemDrafting = true;
 				break;
 		}

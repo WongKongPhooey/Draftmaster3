@@ -293,7 +293,10 @@ public class CameraRotate : MonoBehaviour {
 		//Increment Lap
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
 			Ticker.updateTicker();
-			lap++;
+			//Freeze lap count at a caution
+			if(cautionOut == false){;
+				lap++;
+			}
 			lengthcounter=0;
 			
 			//Final Lap

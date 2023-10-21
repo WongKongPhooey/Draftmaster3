@@ -76,6 +76,7 @@ public class ModsUI : MonoBehaviour {
 				if((directory.Name == "Unity")||
 				   (directory.Name == "il2cpp")||
 				   (DriverNames.isOfficialSeries(directory.Name) == true)||
+				   (directory.Name.Length <= 1)||
 				   (directory.Name.Length > 5)){
 					continue;
 				}
@@ -102,7 +103,7 @@ public class ModsUI : MonoBehaviour {
 					modAuthor = stringLimit(modJson.modAuthor,14);					
 					modJsonValid = "OK";
 					
-					modList += directory.Name + "-" + modFullName;
+					modList += directory.Name + "|" + modFullName;
 				} catch(Exception e){
 					modFullName = "?";
 					modAuthor = "?";
@@ -170,17 +171,19 @@ public class ModsUI : MonoBehaviour {
 		DirectoryInfo d;
 		GameObject promptInputValue = GameObject.Find(inputName);
 		string folderName = promptInputValue.GetComponent<TMPro.TMP_Text>().text;
-		if(folderName.Length > 5){
-			folderName = folderName.Substring(0, 5);
-		}
 		if(folderName.Length < 5){
 			for(int i=folderName.Length;i<=5;i++){
 				folderName+="x";
 			}
 		}
+		if(folderName.Length > 5){
+			folderName = folderName.Substring(0, 5);
+		}
 		if(folderName != null){
 			if(!Directory.Exists(Application.persistentDataPath + "/Mods/" + folderName)){
 				d = Directory.CreateDirectory(Application.persistentDataPath + "/Mods/" + folderName); // returns a DirectoryInfo object
+			} else {
+				alertPopup.GetComponent<AlertManager>().showPopup("Mod Already Exists","The mod folder " + folderName + " already exists.","dm2logo");
 			}
 			LoadMods();
 			PromptManager.hidePopup();
@@ -195,11 +198,6 @@ public class ModsUI : MonoBehaviour {
 		if(folderName.Length > 5){
 			folderName = folderName.Substring(0, 5);
 		}
-		if(folderName.Length < 5){
-			for(int i=folderName.Length;i<=5;i++){
-				folderName+="x";
-			}
-		}
 		if((folderName == "Unity")||
 		(folderName == "il2cpp")){
 			return;
@@ -207,10 +205,9 @@ public class ModsUI : MonoBehaviour {
 		if(folderName != null){
 			Debug.Log("Attempt Delete");
 			if(Directory.Exists(Application.persistentDataPath + "/Mods/" + folderName)){
-				Debug.Log("Folder Exists: " + Application.persistentDataPath + "/Mods/" + folderName);
 				Directory.Delete(Application.persistentDataPath + "/Mods/" + folderName,true);
 			} else {
-				Debug.Log("Folder Doesn't Exist: " + Application.persistentDataPath + "/Mods/" + folderName);
+				alertPopup.GetComponent<AlertManager>().showPopup("Mod Delete Failed","The mod folder " + folderName + " could not be found.","dm2logo");
 			}
 			LoadMods();
 			PromptManager.hidePopup();
@@ -275,15 +272,15 @@ public class ModsUI : MonoBehaviour {
 			modName = modJson.modName;
 			modFolder = modJson.modFolder;
 		} catch(Exception e){
-			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file contains errors. Try using an online JSON validator to check.","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Config File Error","The config file contains errors. Try using an online JSON validator to check.","dm2logo");
 			return;
 		}
 		if(modName == null){
-			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no mod name specified. Download the example files to check the format required.","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Config File Invalid","The config file uploaded has no 'modName' specified. Download the example files to check the format required.","dm2logo");
 			return;
 		}
 		if(modFolder == null){
-			alertPopup.GetComponent<AlertManager>().showPopup("JSON Upload Failed","The JSON file uploaded has no folder specified. Download the example files to check the format required.","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Config File Invalid","The config file uploaded has no 'modFolder' specified. Download the example files to check the format required.","dm2logo");
 			return;
 		}
 		
@@ -293,7 +290,7 @@ public class ModsUI : MonoBehaviour {
 		}
 		System.IO.File.WriteAllText(directoryPath + "/" + modFolder + ".json",json);
 		LoadMods();
-		alertPopup.GetComponent<AlertManager>().showPopup("JSON File Uploaded","A JSON file has been uploaded for the " + modFolder + " mod","dm2logo");
+		alertPopup.GetComponent<AlertManager>().showPopup("Config File Uploaded","A config file has been uploaded for the " + modFolder + " mod!","dm2logo");
 	}
 	
 	public void writeCarToFolder(string pickedCar){
@@ -313,7 +310,7 @@ public class ModsUI : MonoBehaviour {
 		string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
 		if(!Directory.Exists(Application.persistentDataPath + "/Mods/" + modFolder)){
 			//Debug.Log("No mod folder " + modFolder + " was found.");
-			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Folder " + modFolder + " was not found. Create this folder, or upload a " + modFolder + ".txt config file first.","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Folder " + modFolder + " was not found. Is your image named correctly?\n\nExample: cup15-43.png","dm2logo");
 		} else {
 			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName,bytes);
 			LoadMods();
