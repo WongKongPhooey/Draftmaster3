@@ -680,9 +680,11 @@ public class SeriesData : MonoBehaviour{
 		//Seasons
 		offlineSeries[9,0] = "Half Season 1";
 		offlineSeries[9,1] = "Half Season 2";
-		offlineSeries[9,2] = "2020 Calendar Season";
-		offlineSeries[9,3] = "2022 Calendar Season";
-		offlineSeries[9,4] = "2023 Calendar Season";
+		offlineSeries[9,2] = "2020 Cup Season";
+		offlineSeries[9,3] = "2022 Cup Season";
+		offlineSeries[9,4] = "2023 Cup (Easy)";
+		offlineSeries[9,5] = "2023 Cup (Hard)";
+		offlineSeries[9,6] = "2023 Cup (Extra Hard)";
 		//offlineSeries[9,9] = "Test Season";
 		
 		offlineSeriesImage[9,0] = "cup20livery22";
@@ -690,6 +692,8 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[9,2] = "cup20livery9";
 		offlineSeriesImage[9,3] = "cup22livery5";
 		offlineSeriesImage[9,4] = "cup23livery22";
+		offlineSeriesImage[9,5] = "cup23livery4";
+		offlineSeriesImage[9,6] = "cup23livery84";
 		//offlineSeriesImage[9,9] = "cup22livery1alt1";
 		
 		offlineDailyPlays[9,0] = 10;
@@ -697,42 +701,57 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[9,2] = 20;
 		offlineDailyPlays[9,3] = 20;
 		offlineDailyPlays[9,4] = 20;
+		offlineDailyPlays[9,5] = 20;
+		offlineDailyPlays[9,6] = 20;
 		
 		offlineAILevel[9,0] = 5;
-		offlineAILevel[9,1] = 8;
-		offlineAILevel[9,2] = 10;
-		offlineAILevel[9,3] = 15;
-		offlineAILevel[9,4] = 15;
+		offlineAILevel[9,1] = 5;
+		offlineAILevel[9,2] = 8;
+		offlineAILevel[9,3] = 10;
+		offlineAILevel[9,4] = 5;
+		offlineAILevel[9,5] = 10;
+		offlineAILevel[9,6] = 15;
 		
 		offlineMinLevel[9,0] = 10;
-		offlineMinLevel[9,1] = 20;
-		offlineMinLevel[9,2] = 25;
-		offlineMinLevel[9,3] = 30;
-		offlineMinLevel[9,4] = 35;
+		offlineMinLevel[9,1] = 15;
+		offlineMinLevel[9,2] = 20;
+		offlineMinLevel[9,3] = 20;
+		offlineMinLevel[9,4] = 25;
+		offlineMinLevel[9,5] = 30;
+		offlineMinLevel[9,6] = 35;
 		
 		offlineMinClass[9,0] = 1;
 		offlineMinClass[9,1] = 1;
 		offlineMinClass[9,2] = 1;
 		offlineMinClass[9,3] = 1;
 		offlineMinClass[9,4] = 1;
+		offlineMinClass[9,5] = 1;
+		offlineMinClass[9,6] = 1;
 		
 		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8,9,10,11";
 		offlineTracklists[9,1] = "12,13,14,15,16,17,18,19,20,21";
 		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21";
 		offlineTracklists[9,3] = "30,1,5,3,4,2,9,6,8,10,11,19,12,7,13,22,23,2,18,14,20,15,9,1,19,12,8,7,10,3,21,6,4";
 		offlineTracklists[9,4] = "30,1,5,3,4,2,9,8,6,10,11,12,19,26,13,22,23,2,18,14,9,20,1,19,12,8,7,10,3,21,6,4";
+		offlineTracklists[9,5] = "30,1,5,3,4,2,9,8,6,10,11,12,19,26,13,22,23,2,18,14,9,20,1,19,12,8,7,10,3,21,6,4";
+		offlineTracklists[9,6] = "30,1,5,3,4,2,9,8,6,10,11,12,19,26,13,22,23,2,18,14,9,20,1,19,12,8,7,10,3,21,6,4";
+			
 			
 		offlineFuel[9,0] = 6;
 		offlineFuel[9,1] = 8;
 		offlineFuel[9,2] = 10;
 		offlineFuel[9,3] = 10;
 		offlineFuel[9,4] = 10;
+		offlineFuel[9,5] = 10;
+		offlineFuel[9,6] = 10;
 		
 		offlinePrizes[9,0] = "";
 		offlinePrizes[9,1] = "";
 		offlinePrizes[9,2] = "cup20";
 		offlinePrizes[9,3] = "cup22";
-		offlinePrizes[9,4] = "cup23";
+		offlinePrizes[9,4] = "Rarity1";
+		offlinePrizes[9,5] = "Rarity2";
+		offlinePrizes[9,6] = "Rarity3";
 	}
 
 	public static List<string> ListRewards(string category){
