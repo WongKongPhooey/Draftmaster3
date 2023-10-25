@@ -182,13 +182,17 @@ public class AIMovement : MonoBehaviour
 		thePlayer = GameObject.Find("Player");
 		controlCar = GameObject.Find("ControlCar");
 		
+		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
-		
-		setCarPhysics(seriesPrefix);  
+		if(officialSeries == true){
+			setCarPhysics(seriesPrefix);
+		} else {
+			setCarPhysics(ModData.getPhysicsModel(seriesPrefix));
+		}
 		
 		string splitAfter = "AICar0";
 		carNumber = this.name.Substring(this.name.IndexOf(splitAfter) + splitAfter.Length);
@@ -856,6 +860,9 @@ public class AIMovement : MonoBehaviour
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
+			case "indy":
+			case "indycar":
+			case "openwheel":
 				draftStrengthRatio = 450f;
 				dragDecelMulti = 0.003f;
 				backdraftMulti = 0.015f;

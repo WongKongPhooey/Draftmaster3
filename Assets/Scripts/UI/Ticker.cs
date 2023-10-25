@@ -202,10 +202,19 @@ public class Ticker : MonoBehaviour
 				
 				TMPro.TMP_Text playerTickerPos = playerTicker.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 				Image playerTickerNum = playerTicker.transform.GetChild(1).GetComponent<Image>();
-				TMPro.TMP_Text playerTickerName = playerTicker.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-				TMPro.TMP_Text playerTickerDist = playerTicker.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+				TMPro.TMP_Text playerTickerFallbackNum = playerTicker.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				TMPro.TMP_Text playerTickerName = playerTicker.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+				TMPro.TMP_Text playerTickerDist = playerTicker.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 				playerTickerPos.text = (i+1).ToString();
-				playerTickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+				
+				if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
+					playerTickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+					playerTickerNum.color = new Color32(255,255,225,255);
+					playerTickerFallbackNum.text = "";
+				} else {
+					playerTickerNum.color = new Color32(255,255,225,0);
+					playerTickerFallbackNum.text = carNumber[i];
+				}
 				playerTickerName.text = driverNames[i];
 				playerTickerDist.text = leaderDist.ToString("f3");
 			} else {
@@ -227,10 +236,19 @@ public class Ticker : MonoBehaviour
 			
 			TMPro.TMP_Text tickerPos = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			Image tickerNum = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
-			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text tickerFallbackNum = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 			tickerPos.text = (i+1).ToString();
-			tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+			
+			if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
+				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+				tickerNum.color = new Color32(255,255,225,255);
+				tickerFallbackNum.text = "";
+			} else {
+				tickerNum.color = new Color32(255,255,225,0);
+				tickerFallbackNum.text = carNumber[i];
+			}
 			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
 			tickerName.text = driverNames[i];
 			tickerDist.text = "+" + carDist[i].ToString("f3");

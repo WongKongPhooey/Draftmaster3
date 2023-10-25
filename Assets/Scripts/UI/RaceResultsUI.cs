@@ -205,7 +205,7 @@ public class RaceResultsUI : MonoBehaviour
 			} else {
 				carNum = PlayerPrefs.GetInt("FinishPosition" + i + "");
 				carDist = PlayerPrefs.GetInt("FinishTime" + i + "");
-				Debug.Log("Pos: " + i + " Num: " + carNum);
+				//Debug.Log("Pos: " + i + " Num: " + carNum);
 			}
 			
 			GameObject resultInst = Instantiate(resultRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);

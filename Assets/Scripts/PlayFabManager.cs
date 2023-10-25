@@ -348,7 +348,7 @@ public class PlayFabManager : MonoBehaviour
 			#endif
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
-			Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
+			//Debug.Log("Store Updated " + PlayerPrefs.GetString("StoreDailySelects"));
 		}
 		
 		//Trigger a Special Challenge Event
@@ -383,10 +383,10 @@ public class PlayFabManager : MonoBehaviour
 				string previousEvent = PlayerPrefs.GetString("EventName");
 				if(result.Data["EventActive"] != previousEvent){
 					PlayerPrefs.SetString("EventName", result.Data["EventActive"]);
-					Debug.Log("Event was: " + previousEvent + ". Now: " + result.Data["EventActive"]);
+					//Debug.Log("Event was: " + previousEvent + ". Now: " + result.Data["EventActive"]);
 					PlayerPrefs.DeleteKey("PrizePositions");
 				}
-				Debug.Log(result.Data["EventActive"] + " Event Active");
+				//Debug.Log(result.Data["EventActive"] + " Event Active");
 				
 				//Update Event Meta
 				PlayerPrefs.SetString("EventImage", result.Data["EventShortcode"]);
@@ -395,7 +395,7 @@ public class PlayFabManager : MonoBehaviour
 				
 				//Retrieve the event rewards (assume set)
 				PlayerPrefs.SetString("EventRewards", result.Data["EventRewards"]);
-				Debug.Log("Event Prizes: " + result.Data["EventRewards"]);
+				//Debug.Log("Event Prizes: " + result.Data["EventRewards"]);
 				
 			} else {
 				PlayerPrefs.SetInt("EventActive", 0);
@@ -404,7 +404,7 @@ public class PlayFabManager : MonoBehaviour
 				PlayerPrefs.SetString("EventDescription", "No active event.");
 				PlayerPrefs.SetString("EventPrizeset", "");
 				PlayerPrefs.SetString("EventRewards", "");
-				Debug.Log("No Active Event");
+				//Debug.Log("No Active Event");
 			}
 		} else {
 			PlayerPrefs.SetInt("EventActive", 0);
@@ -413,7 +413,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetString("EventDescription", "No active event.");
 			PlayerPrefs.SetString("EventPrizeset", "");
 			PlayerPrefs.SetString("EventRewards", "");
-			Debug.Log("No Active Event");
+			//Debug.Log("No Active Event");
 		}
 		
 		if(result.Data.ContainsKey("TargetVersion") == true){
@@ -489,7 +489,7 @@ public class PlayFabManager : MonoBehaviour
 			//Debug.Log("Live Time Trial Check..");
 			if(result.Data["LiveTimeTrial"] != ""){
 				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
-				Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
+				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
 			} else {
 				PlayerPrefs.SetString("LiveTimeTrial","");
 			}
@@ -549,7 +549,6 @@ public class PlayFabManager : MonoBehaviour
 	static void OnDataReceived(GetUserDataResult result){
 		if(checkInternet() == false){return;}
 		if(result.Data != null){
-			Debug.Log("Player data found");
 			
 			//Fake testing values
 			//result.Data["RewardGears"].Value = "69";

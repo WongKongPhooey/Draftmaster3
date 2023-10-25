@@ -57,6 +57,26 @@ public class ModData : MonoBehaviour
 		return stringLimit(seriesNiceName,8);
 	}
 
+	public static string getPhysicsModel(string seriesPrefix){
+		loadModData();
+		string physicsModel = null;
+		foreach(var directory in d.GetDirectories()){
+			//Avoid these default folders
+			if(directory.Name == seriesPrefix){
+				//Debug.Log("Found the mod..");
+				string modFolderName = loadJson(directory.Name);
+				try {
+					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
+					//Debug.Log("Parsed json, found: " + modJson.modName);
+					physicsModel = modJson.modPhysics.ToLower();
+				} catch(Exception e){
+					physicsModel = "Default";
+				}
+			}
+		}
+		return stringLimit(physicsModel,10);
+	}
+
 	public static int getCarNum(string seriesPrefix, int index){
 		loadModData();
 		int carNum = 999;
@@ -218,6 +238,7 @@ public class ModData : MonoBehaviour
 			case 1:
 			case 2:
 			case 3:
+			case 4:
 				//Valid, no change required
 				break;
 			default:

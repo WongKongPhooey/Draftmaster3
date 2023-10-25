@@ -399,7 +399,7 @@ public class EventData : MonoBehaviour
 			offlineChapterImage[4,9] = PlayerPrefs.GetString("MomentImage");
 			offlineMinClass[4,9] = 1;
 			offlineMinLevel[4,9] = 1;
-			Debug.Log("Live Moment AI Level: " + PlayerPrefs.GetString("MomentAILevel"));
+			//Debug.Log("Live Moment AI Level: " + PlayerPrefs.GetString("MomentAILevel"));
 			offlineAILevel[4,9] = int.Parse(PlayerPrefs.GetString("MomentAILevel"));
 			offlineSeries[4,9] = PlayerPrefs.GetString("MomentSeries");
 			offlineCustomCar[4,9] = PlayerPrefs.GetString("MomentCar");
