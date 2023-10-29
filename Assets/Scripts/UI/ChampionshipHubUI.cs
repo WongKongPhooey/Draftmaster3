@@ -79,7 +79,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		nextRound = GameObject.Find("NextRound");
 		nextRound.GetComponent<TMPro.TMP_Text>().text = "Round " + (championshipRound + 1) + "/" + championshipLength;
 		
-		Debug.Log("Tracklist: " + championshipTracklist);
+		//Debug.Log("Tracklist: " + championshipTracklist);
 		tracksArray = championshipTracklist.Split(',');
 		
 		hubCarImage = GameObject.Find("NextCar");
@@ -133,8 +133,10 @@ public class ChampionshipHubUI : MonoBehaviour
 				}
 				int carNo = ModData.getCarNum(seriesPrefix,i);
 				if(!PlayerPrefs.HasKey("ChampionshipPoints" + carNo)){
+					//Debug.Log("Set points for: " + carNo);
 					PlayerPrefs.SetInt("ChampionshipPoints" + carNo,0);
 				}
+				//Debug.Log("Index:" + i + " - Num:" + carNo);
 				championshipPoints.Add(carNo,PlayerPrefs.GetInt("ChampionshipPoints" + carNo));
 			} else {
 				if(DriverNames.getName(seriesPrefix,i) == null){
@@ -145,7 +147,6 @@ public class ChampionshipHubUI : MonoBehaviour
 				}
 				championshipPoints.Add(i,PlayerPrefs.GetInt("ChampionshipPoints" + i));
 			}
-			//Debug.Log("# " + i + " has " + PlayerPrefs.GetInt("ChampionshipPoints" + i) + " points.");
 			pointsTableInd++;
 		}
 		showPoints();
@@ -171,8 +172,12 @@ public class ChampionshipHubUI : MonoBehaviour
 		int pointsInd = 0;
 		foreach(var pointsRow in pointsTable){
 			
+			//Debug.Log("Points Row, Key:" + pointsRow.Key + " - Value:" + pointsRow.Value);
+			
+			int carInd = 999;
 			if(modSeries == true){
-				if(ModData.getName(seriesPrefix, pointsRow.Key) == null){
+				carInd = ModData.getJsonIndexFromCarNum(seriesPrefix, pointsRow.Key);
+				if(ModData.getName(seriesPrefix, carInd) == null){
 					continue;
 				}
 			}
@@ -185,9 +190,10 @@ public class ChampionshipHubUI : MonoBehaviour
 			
 			TMPro.TMP_Text champPos = standingsInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage champNum = standingsInst.transform.GetChild(1).GetComponent<RawImage>();
-			TMPro.TMP_Text champDriver = standingsInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			RawImage champManu = standingsInst.transform.GetChild(3).GetComponent<RawImage>();
-			TMPro.TMP_Text champPoints = standingsInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text champFallbackNum = standingsInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text champDriver = standingsInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			RawImage champManu = standingsInst.transform.GetChild(4).GetComponent<RawImage>();
+			TMPro.TMP_Text champPoints = standingsInst.transform.GetChild(5).GetComponent<TMPro.TMP_Text>();
 			
 			if(pointsRow.Key == carNumber){
 				championshipPosition = pointsInd+1;
@@ -195,10 +201,16 @@ public class ChampionshipHubUI : MonoBehaviour
 			
 			champPos.text = (pointsInd+1).ToString();
 			if(modSeries == true){
-				Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
-				champNum.texture = Resources.Load<Texture2D>("cup20num" + ModData.getJsonIndexFromCarNum(seriesPrefix, pointsRow.Key));
-				champDriver.text = ModData.getName(seriesPrefix, pointsRow.Key);
-				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, pointsRow.Key));
+				//Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
+				if (Resources.Load<Texture2D>("cup20num" + pointsRow.Key) != null) {
+					champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);
+					champFallbackNum.enabled = false;
+				} else {
+					champNum.enabled = false;
+					champFallbackNum.text = pointsRow.Key.ToString();
+				}
+				champDriver.text = ModData.getName(seriesPrefix, carInd);
+				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carInd));
 			} else {
 				champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);
 				champDriver.text = DriverNames.getName(seriesPrefix, pointsRow.Key);

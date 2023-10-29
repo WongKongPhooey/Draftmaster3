@@ -107,7 +107,7 @@ public class RaceResultsUI : MonoBehaviour
 					for( int i=0; i < fieldSize; i++){
 						if(Ticker.carNames[i] == null){
 							//Exit loop
-							//Debug.Log("No name here, skip loop #" + i);
+							Debug.Log("No name here, skip adding points #" + i);
 							continue;
 						}
 						if(i == (Ticker.position)){
@@ -116,7 +116,7 @@ public class RaceResultsUI : MonoBehaviour
 						} else {
 							carNumber = Ticker.carNames[i].Remove(0,6);
 						}
-						//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+						Debug.Log("Add " + RacePoints.placePoints[i] + " points");
 						addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 					}
 				} else {

@@ -29,6 +29,7 @@ public class GarageUI : MonoBehaviour
 	string seriesDriverType;
 	int seriesRarity;
 	
+	public GameObject restrictionLabel;
 	public GameObject alertPopup;
 	
 	public static GameObject seriesDropdown;
@@ -231,20 +232,21 @@ public class GarageUI : MonoBehaviour
 			
 			//If choosing a car to race with..
 			if(PlayerPrefs.HasKey("ActivePath")){
-				validCars++;
+				bool isValid = true;
 				int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
 
-				if((minClass > carClass)||
-				(carUnlocked == 0)){
+				if((minClass > carClass)||(carUnlocked == 0)){
 					carClickable.SetActive(false);
 					carDisabled.SetActive(true);
-					validCars--;
+					isValid = false;
 				}
-				
 				if(meetsRestrictions(seriesPrefix,i) == false){
 					carClickable.SetActive(false);
 					carDisabled.SetActive(true);
-					validCars--;
+					isValid = false;
+				}
+				if(isValid == true){
+					validCars++;
 				}
 			}
 			
@@ -255,9 +257,12 @@ public class GarageUI : MonoBehaviour
 		}
 		
 		if(PlayerPrefs.HasKey("ActivePath")){
+			restrictionLabel = GameObject.Find("SeriesRestriction");
+			restrictionLabel.GetComponent<TMPro.TMP_Text>().text = showRestrictions();
 			if(validCars == 0){
-				alertPopup.GetComponent<AlertManager>().showPopup("No Valid Car","No Car In This Set Meets The Entry Requirements For This Series.","dm2logo");
+				alertPopup.GetComponent<AlertManager>().showPopup("No Eligible Car","No Car In This Set Meets The Entry Requirements. \n\n" + showRestrictions() + "","dm2logo");
 			}
+			Debug.Log("Valid cars: " + validCars);
 		}
 		
 		int sortCounter=0;
@@ -414,13 +419,35 @@ public class GarageUI : MonoBehaviour
 		}
 		return true;
 	}
+	
+	public string showRestrictions(){
+		string restriction = "";
+		if(seriesTeam != ""){
+			restriction += "Team " + seriesTeam + "\n";
+		}
+		if(seriesManu != ""){
+			restriction += "Manufacturer " + seriesManu + "\n";
+		}
+		if(seriesCar != 999){
+			restriction += "Car " + seriesCar + "\n";
+		}
+		if(seriesDriverType != ""){
+			restriction += "Type " + seriesDriverType + "\n";
+		}
+		if(seriesRarity != 0){
+			restriction += "Rarity " + seriesRarity + "\n";
+		}
+		int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
+		restriction += "Minimum Class " + classAbbr(minClass);
+		return restriction;
+	}
 
 	public void loadModCarsets(string modList){
-		Debug.Log(modList);
+		//Debug.Log(modList);
 		
 		string[] modsArray = modList.Split(',');
 		foreach(string modSet in modsArray){
-			Debug.Log(modSet);
+			//Debug.Log(modSet);
 			string[] modData = modSet.Split('|');
 			
 			GameObject modCarsetInst = Instantiate(seriesDropdownRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -573,7 +600,7 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void starterCars(){
-		Debug.Log("Check starters");
+		//Debug.Log("Check starters");
 		bool carsAdded = false;
 		
 		//Give a free Gragson for Cup '23

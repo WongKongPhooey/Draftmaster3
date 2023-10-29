@@ -60,13 +60,11 @@ public class PlayFabManager : MonoBehaviour
 		};
 		if(PlayerPrefs.HasKey("PlayerEmail")){
 			PlayFabClientAPI.LoginWithEmailAddress(request, OnPrefLoginSuccess, OnError);
-		} else {
-			Debug.Log("No saved login");
 		}
 	}
 	
 	public static void OnPrefLoginSuccess(LoginResult result){
-		Debug.Log("Login from prefs successful!");
+		//Debug.Log("Login from prefs successful!");
 		GetTitleData();
 		GetPlayerData();
 	}
@@ -188,7 +186,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void OnLiveTimeTrialReceived(GetTitleDataResult result){
 		if(checkInternet() == false){return;}
 		if(result.Data == null){
-			Debug.Log("No Live Time Trial Found");
+			//Debug.Log("No Live Time Trial Found");
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 
@@ -196,7 +194,7 @@ public class PlayFabManager : MonoBehaviour
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
 			if(result.Data["LiveTimeTrial"] != ""){
 				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
-				Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
+				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
 			} else {
 				PlayerPrefs.SetString("LiveTimeTrial","");
 			}
@@ -213,7 +211,7 @@ public class PlayFabManager : MonoBehaviour
 	public static void OnTitleDataReceived(GetTitleDataResult result){
 		if(checkInternet() == false){return;}
 		if(result.Data == null){
-			Debug.Log("No Title Data Found");
+			//Debug.Log("No Title Data Found");
 			//Remove the last known store values
 			PlayerPrefs.SetString("StoreDailySelects", "");
 			PlayerPrefs.SetInt("FreeFuel", 0);
@@ -426,7 +424,7 @@ public class PlayFabManager : MonoBehaviour
 			if((result.Data["GlobalGift"] != "")
 			&&(result.Data["GlobalGift"] != PlayerPrefs.GetString("GlobalGift"))){
 				PlayerPrefs.SetString("GlobalGift", result.Data["GlobalGift"]);
-				Debug.Log("Received Global Gift!");
+				//Debug.Log("Received Global Gift!");
 			} else {
 				PlayerPrefs.DeleteKey("InForm");
 			}
@@ -437,7 +435,7 @@ public class PlayFabManager : MonoBehaviour
 			//Format example: "Larson"
 			if(result.Data["InForm"] != ""){
 				PlayerPrefs.SetString("InForm", result.Data["InForm"]);
-				Debug.Log("In Form Driver is " + result.Data["InForm"]);
+				//Debug.Log("In Form Driver is " + result.Data["InForm"]);
 			} else {
 				PlayerPrefs.DeleteKey("InForm");
 			}
@@ -449,7 +447,7 @@ public class PlayFabManager : MonoBehaviour
 		if(result.Data.ContainsKey("FreeFuel") == true){
 			if(result.Data["FreeFuel"] == "Yes"){
 				PlayerPrefs.SetInt("FreeFuel", 1);
-				Debug.Log("Free Fuel Activated");
+				//Debug.Log("Free Fuel Activated");
 			} else {
 				PlayerPrefs.SetInt("FreeFuel", 0);
 			}
@@ -461,7 +459,7 @@ public class PlayFabManager : MonoBehaviour
 		if(result.Data.ContainsKey("ShopDiscount") == true){
 			if(result.Data["ShopDiscount"] == "Yes"){
 				PlayerPrefs.SetInt("ShopDiscount", 1);
-				Debug.Log("Shop Discount Activated");
+				//Debug.Log("Shop Discount Activated");
 			} else {
 				PlayerPrefs.SetInt("ShopDiscount", 0);
 			}
@@ -473,7 +471,7 @@ public class PlayFabManager : MonoBehaviour
 		if(result.Data.ContainsKey("FreeModding") == true){
 			if(result.Data["FreeModding"] == "Yes"){
 				PlayerPrefs.SetInt("FreeModding", 1);
-				Debug.Log("Free Modding Activated");
+				//Debug.Log("Free Modding Activated");
 			} else {
 				PlayerPrefs.SetInt("FreeModding", 0);
 			}
@@ -514,7 +512,7 @@ public class PlayFabManager : MonoBehaviour
 					PlayerPrefs.SetInt("MessageAlertId", int.Parse(result.Data["MessageAlertId"]));
 				}
 				if(lastMessageId != int.Parse(result.Data["MessageAlertId"])){
-					Debug.Log("New Message!");
+					//Debug.Log("New Message!");
 					PlayerPrefs.SetInt("MessageAlertId", int.Parse(result.Data["MessageAlertId"]));
 					PlayerPrefs.SetString("MessageAlert", result.Data["MessageAlert"]);
 					//MainMenuGUI.messageAlert = result.Data["MessageAlert"];
@@ -590,7 +588,7 @@ public class PlayFabManager : MonoBehaviour
 					string rewardCarSeries = rewardCar.Substring(0,5);
 					//Debug.Log(rewardCar);
 					int rewardCarNum = int.Parse(rewardCar.Substring(5));
-					Debug.Log("Rewarded Car #" + rewardCarNum);
+					//Debug.Log("Rewarded Car #" + rewardCarNum);
 					int carClass = PlayerPrefs.GetInt(rewardCarSeries + rewardCarNum + "Class");
 					if(carClass == 0){
 						PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
@@ -609,7 +607,7 @@ public class PlayFabManager : MonoBehaviour
 				string rewardAlt = result.Data["RewardAlt"].Value;
 				//Example: cup20livery20alt1
 				if((rewardAlt != "0")&&(rewardAlt != "")&&(rewardAlt != null)){
-					Debug.Log("Rewarded Alt #" + rewardAlt);
+					//Debug.Log("Rewarded Alt #" + rewardAlt);
 					
 					rewardCarImg = rewardAlt;
 					
@@ -632,7 +630,7 @@ public class PlayFabManager : MonoBehaviour
 			//mainMenuUI.GetComponent<MainMenuUI>().showAlert("Rewards",rewardMessage,rewardCarImg);
 			//}
 		} else {
-			Debug.Log("No player data found");
+			//Debug.Log("No player data found");
 		}
 	}
 	
@@ -640,10 +638,10 @@ public class PlayFabManager : MonoBehaviour
 		//Example: cup2212
 		string rewardCar = car;
 		string rewardCarSeries = rewardCar.Substring(0,5);
-		Debug.Log(rewardCar);
+		//Debug.Log(rewardCar);
 		int rewardCarNum = int.Parse(rewardCar.Substring(5));
 		if(rewardCar != ""){
-			Debug.Log("Rewarded Car #" + rewardCarNum);
+			//Debug.Log("Rewarded Car #" + rewardCarNum);
 			int carClass = PlayerPrefs.GetInt(rewardCarSeries + rewardCarNum + "Class");
 			if(carClass == 0){
 				PlayerPrefs.SetInt(rewardCarSeries + rewardCarNum + "Unlocked", 1);
@@ -686,12 +684,12 @@ public class PlayFabManager : MonoBehaviour
 			
 			//Check the latest autosave
 			if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
-				Debug.Log("No manual save.. looking for an autosave");
+				//Debug.Log("No manual save.. looking for an autosave");
 				json = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
 				Series playerJson = JsonUtility.FromJson<Series>(json);
 				if(cloudLevel < int.Parse(playerJson.playerLevel)){
 					cloudLevel = int.Parse(playerJson.playerLevel);
-					Debug.Log("Autosave is at level " + cloudLevel);
+					//Debug.Log("Autosave is at level " + cloudLevel);
 				}
 				saveType = "automatic";
 			}
@@ -702,7 +700,7 @@ public class PlayFabManager : MonoBehaviour
 				Series playerJson = JsonUtility.FromJson<Series>(json);
 				if(cloudLevel < int.Parse(playerJson.playerLevel)){
 					cloudLevel = int.Parse(playerJson.playerLevel);
-					Debug.Log("Manual Save is at level " + cloudLevel);
+					//Debug.Log("Manual Save is at level " + cloudLevel);
 					saveType = "manual";
 				} else {
 					//Try to revert back to using the autosave
@@ -725,7 +723,7 @@ public class PlayFabManager : MonoBehaviour
 					if(PlayerPrefs.GetInt("TransferTokens") < transferTokens){
 						PlayerPrefs.SetInt("TransferTokens", transferTokens);
 					}
-					Debug.Log("Received " + transferTokens + " Transfer Tokens");
+					//Debug.Log("Received " + transferTokens + " Transfer Tokens");
 				 }
 				 
 				 if(level > PlayerPrefs.GetInt("Level")){
@@ -761,7 +759,7 @@ public class PlayFabManager : MonoBehaviour
 						if(DriverNames.getName(series,i) != null){
 							if(PlayerPrefs.GetInt(series + i + "Unlocked") < int.Parse(playerJson.drivers[i].carUnlocked)){
 								PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(playerJson.drivers[i].carUnlocked));
-								Debug.Log("New unlock on load, " + series + " #" + i);
+								//Debug.Log("New unlock on load, " + series + " #" + i);
 							}
 							if(playerJson.drivers[i].carUnlocked == "1"){
 								unlockedCars++;
@@ -769,7 +767,7 @@ public class PlayFabManager : MonoBehaviour
 							if(PlayerPrefs.GetInt(series + i + "Class") < int.Parse(playerJson.drivers[i].carClass)){
 								PlayerPrefs.SetInt(series + i + "Class", int.Parse(playerJson.drivers[i].carClass));
 								PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
-								Debug.Log("Updated class on load, " + series + " #" + i);
+								//Debug.Log("Updated class on load, " + series + " #" + i);
 							} else {
 								if(PlayerPrefs.GetInt(series + i + "Class") == int.Parse(playerJson.drivers[i].carClass)){
 									//If the class hasn't changed but the gears have increased
@@ -792,14 +790,14 @@ public class PlayFabManager : MonoBehaviour
 						}
 					 }
 				 }
-				 Debug.Log("Loaded data from server! " + unlockedCars + " unlocked cars.");
+				 //Debug.Log("Loaded data from server! " + unlockedCars + " unlocked cars.");
 				 PlayerPrefs.SetString("LoadOutput","Loaded " + saveType + " save - " + unlockedCars + " unlocked cars.");
 			} else {
-				Debug.Log("No player data found");
+				//Debug.Log("No player data found");
 				PlayerPrefs.SetString("LoadOutput","No autosave or manual save data found for this player account.");
 			}
 		} else {
-			Debug.Log("No player data found");
+			//Debug.Log("No player data found");
 		}
 		
 		//Save this newly merged load back to PlayFab
@@ -807,7 +805,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void OnDataSend(UpdateUserDataResult result){
-		Debug.Log("Rewards Collected, Server Reset");
+		//Debug.Log("Rewards Collected, Server Reset");
 	}
 	
 	public static void AutosavePlayerProgress(string seriesPrefix, string progressJSON){
@@ -939,9 +937,9 @@ public class PlayFabManager : MonoBehaviour
 		};
 		try {
 			PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
-			Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
+			//Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
 		} catch (Exception e){
-			Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
+			//Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
 		}
 	}
 	
@@ -984,13 +982,13 @@ public class PlayFabManager : MonoBehaviour
 			float leaderboardSpeed = item.StatValue/1000f;
 			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
 			
-			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
 	}
 	
 	static void OnLeaderboardAroundPlayerGet(GetLeaderboardAroundPlayerResult result) {
 		
-		Debug.Log("Got Leaderboard Around Player");
+		//Debug.Log("Got Leaderboard Around Player");
 		
 		foreach(var item in result.Leaderboard) {
 			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
@@ -1008,7 +1006,7 @@ public class PlayFabManager : MonoBehaviour
 				
 			}
 			
-			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
 	}
 	
@@ -1033,7 +1031,7 @@ public class PlayFabManager : MonoBehaviour
 			float leaderboardSpeed = item.StatValue/1000f;
 			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
 			
-			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
 	}
 	
@@ -1070,7 +1068,7 @@ public class PlayFabManager : MonoBehaviour
 				
 			}
 			
-			Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
 	}
 }

@@ -154,7 +154,7 @@ public class MainMenuUI : MonoBehaviour {
 		
 		RectTransform carGearsProgressUI = GameObject.Find("LevelProgress").GetComponent<RectTransform>();
 		float gearsProgressUIWidth = Mathf.Round((100 / (float)levelExp) * (float)exp) + 1;
-		Debug.Log(exp + " / " + levelExp);
+		//Debug.Log(exp + " / " + levelExp);
 		carGearsProgressUI.sizeDelta = new Vector2(gearsProgressUIWidth, 12);
 		
 		weekDayLabel = GameObject.Find("WeekDayLabel");
@@ -265,7 +265,7 @@ public class MainMenuUI : MonoBehaviour {
 		
 		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries").Length > 0)){
 			subSeriesId = PlayerPrefs.GetString("ChampionshipSubseries");
-			Debug.Log(subSeriesId);
+			//Debug.Log(subSeriesId);
 			int seriesInt = int.Parse(subSeriesId.Substring(0,1));
 			string subSeries = subSeriesId.Substring(subSeriesId.Length-1);
 			int subSeriesInt = int.Parse(subSeries);

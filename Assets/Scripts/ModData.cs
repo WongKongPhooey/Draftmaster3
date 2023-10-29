@@ -88,7 +88,6 @@ public class ModData : MonoBehaviour
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
 					carNum = modJson.drivers[index].carNum;
 				} catch(Exception e){
-					Debug.Log(e.Message);
 					return 999;
 				}
 			}
@@ -250,7 +249,7 @@ public class ModData : MonoBehaviour
 	
 	public static Texture2D getTexture(string seriesPrefix, int index){
 		loadModData();
-		Debug.Log("Looking for a mod texture..");
+		//Debug.Log("Looking for a mod texture..");
 		Texture2D carTex = null;
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
