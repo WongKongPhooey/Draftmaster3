@@ -296,10 +296,34 @@ public class ModsUI : MonoBehaviour {
 	public void writeCarToFolder(string pickedCar){
 		string[] pathDepths = pickedCar.Split("/");
 		string fileName = pathDepths[pathDepths.Length - 1];
+		int nameLength = fileName.Length;
+		Debug.Log(nameLength);
 		string modFolder = fileName.Substring(0,5);
-		string carNum = fileName.Substring(6);
-		carNum = carNum.Split(".")[0];
-		pickedCarPNG = null;
+		string carNum;
+		string altNum;
+		int altNumInt = 999;
+		bool validAlt;
+		bool isAlt = false;
+		
+		//Is it a car or an alt paint?
+		if(nameLength > 12){
+			string[] altSplit = fileName.Split("alt");
+			carNum = altSplit[0].Substring(6);
+			//Debug.Log(carNum);
+			altNum = altSplit[altSplit.Length - 1];
+			altNum = altNum.Split(".")[0];
+			//Debug.Log(altNum);
+			validAlt = int.TryParse(altNum,out altNumInt);
+			if(validAlt == false){
+				alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","File " + fileName + " is not in the correct alt paint format.\n\nExample: cup15-43alt1.png","dm2logo");
+				return;
+			}
+			isAlt = true;
+		} else {
+			carNum = fileName.Substring(6);
+			carNum = carNum.Split(".")[0];
+		}
+		
 		bool hasNum = int.TryParse(carNum,out int carNumInt);
 		if(hasNum == false){
 			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","File " + fileName + " is not in the correct format.\n\nExample: cup15-43.png","dm2logo");
@@ -314,8 +338,14 @@ public class ModsUI : MonoBehaviour {
 		} else {
 			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName,bytes);
 			LoadMods();
-			Texture2D uploadedCar = ModData.getTexture(modFolder,carNumInt);
-			alertPopup.GetComponent<AlertManager>().showPopup("Car Uploaded","Car #" + carNum + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
+			
+			if(isAlt == true){
+				Texture2D uploadedCar = ModData.getAltTexture(modFolder,carNumInt,altNumInt);
+				alertPopup.GetComponent<AlertManager>().showPopup("Alt Paint Uploaded","Car #" + carNum + " Alt Paint #" + altNumInt.ToString() + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
+			} else {
+				Texture2D uploadedCar = ModData.getTexture(modFolder,carNumInt);
+				alertPopup.GetComponent<AlertManager>().showPopup("Car Uploaded","Car #" + carNum + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
+			}
 		}
 	}
 	

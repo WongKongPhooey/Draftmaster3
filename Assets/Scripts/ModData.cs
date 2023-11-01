@@ -252,13 +252,32 @@ public class ModData : MonoBehaviour
 		//Debug.Log("Looking for a mod texture..");
 		Texture2D carTex = null;
 		foreach(var directory in d.GetDirectories()){
-			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
 				//Debug.Log("Found the correct mod carset..");
 				string modFolderName = loadJson(directory.Name);
 				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
 				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png")){
 				    byte[] bytes = System.IO.File.ReadAllBytes(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png");
+					carTex = new Texture2D(2,2,TextureFormat.RGBA32, false);
+					carTex.filterMode = FilterMode.Point;
+					carTex.LoadImage(bytes);
+				}
+			}
+		}
+		return carTex;
+	}
+	
+	public static Texture2D getAltTexture(string seriesPrefix, int index, int alt){
+		loadModData();
+		//Debug.Log("Looking for a mod texture..");
+		Texture2D carTex = null;
+		foreach(var directory in d.GetDirectories()){
+			if(directory.Name == seriesPrefix){
+				//Debug.Log("Found the correct mod carset..");
+				string modFolderName = loadJson(directory.Name);
+				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
+				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + index + "alt" + alt + ".png")){
+				    byte[] bytes = System.IO.File.ReadAllBytes(d + directory.Name + "/" + seriesPrefix + "-" + index + "alt" + alt + ".png");
 					carTex = new Texture2D(2,2,TextureFormat.RGBA32, false);
 					carTex.filterMode = FilterMode.Point;
 					carTex.LoadImage(bytes);
