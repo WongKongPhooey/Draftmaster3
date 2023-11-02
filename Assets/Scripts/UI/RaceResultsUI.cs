@@ -84,7 +84,7 @@ public class RaceResultsUI : MonoBehaviour
 			PlayerPrefs.SetString("ExpInfo","+" + raceExp + " (" + exp + "/" + levelExp + ")");
 
 			if(ModData.isModSeries(seriesPrefix) == true){
-				GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
+				GameObject.Find("EndSeason").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
 			}
 			
 			//Is this a championship round?

@@ -301,13 +301,6 @@ public class GarageUI : MonoBehaviour
 			
 			activeTile = modCarTile;
 			
-			//Testing - Unlock All
-			#if UNITY_EDITOR
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",10);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
-			#endif
-			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.GetComponent<GarageUIFunctions>().seriesPrefix = seriesPrefix;
 			tileInst.GetComponent<GarageUIFunctions>().carNum = carNum;
@@ -326,6 +319,7 @@ public class GarageUI : MonoBehaviour
 			GameObject carNumberObj = tileInst.transform.GetChild(5).transform.GetChild(0).gameObject;
 			TMPro.TMP_Text carName = tileInst.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
 			GameObject carClickable = tileInst.transform.GetChild(9).transform.gameObject;
+			GameObject carDisabled = tileInst.transform.GetChild(10).transform.gameObject;
 			
 			//Mod cars are auto-unlocked, but limited to a low class and rarity
 			PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked", 1);
@@ -351,6 +345,29 @@ public class GarageUI : MonoBehaviour
 			carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
 			//No custom numbers on mod cars.. for now.
 			carNumberObj.SetActive(false);
+			
+			//If choosing a car to race with..
+			if(PlayerPrefs.HasKey("ActivePath")){
+				bool isValid = true;
+				
+				if(meetsModRestrictions(seriesPrefix,i) == false){
+					carClickable.SetActive(false);
+					carDisabled.SetActive(true);
+					isValid = false;
+				}
+				if(isValid == true){
+					validCars++;
+				}
+			}
+		}
+		
+		if(PlayerPrefs.HasKey("ActivePath")){
+			restrictionLabel = GameObject.Find("SeriesRestriction");
+			restrictionLabel.GetComponent<TMPro.TMP_Text>().text = showRestrictions();
+			if(validCars == 0){
+				alertPopup.GetComponent<AlertManager>().showPopup("No Eligible Car","No Car In This Set Meets The Entry Requirements. \n\n" + showRestrictions() + "","dm2logo");
+			}
+			Debug.Log("Valid cars: " + validCars);
 		}
 	}
 
@@ -415,6 +432,27 @@ public class GarageUI : MonoBehaviour
 			return false;
 		}
 		if((seriesRarity != 0)&&(DriverNames.getRarity(series, car) != seriesRarity)){
+			return false;
+		}
+		return true;
+	}
+	
+	public bool meetsModRestrictions(string series, int car){
+
+		if((seriesTeam != "")&&(ModData.getTeam(series, car) != seriesTeam)){
+			//Debug.Log(seriesTeam + " is not " + ModData.getTeam(series, car) + " on #" + car);
+			return false;
+		}
+		if((seriesManu != "")&&(ModData.getManufacturer(series, car) != seriesManu)){
+			return false;
+		}
+		if((seriesCar != 999)&&(car != seriesCar)){
+			return false;
+		}
+		if((seriesDriverType != "")&&(ModData.getType(series, car) != seriesDriverType)){
+			return false;
+		}
+		if((seriesRarity != 0)&&(ModData.getRarity(series, car) != seriesRarity)){
 			return false;
 		}
 		return true;

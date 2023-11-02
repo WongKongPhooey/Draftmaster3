@@ -104,14 +104,19 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintNames[99,1] = "#1 Lawnmower";
 		
 		cup23AltPaintNames[4,1] = "#1 Throwback";
+		cup23AltPaintNames[4,2] = "#2 Champion";
+		cup23AltPaintNames[5,1] = "#1 Final 4";
 		cup23AltPaintNames[8,1] = "#1 Winner";
 		cup23AltPaintNames[9,1] = "Stock (Berry)";
 		cup23AltPaintNames[9,2] = "Stock (Taylor)";
+		cup23AltPaintNames[12,1] = "#1 Final 4";
 		cup23AltPaintNames[14,1] = "#1 Naughton";
 		cup23AltPaintNames[15,1] = "Stock (Button)";
 		cup23AltPaintNames[20,1] = "#1 Winner";
+		cup23AltPaintNames[20,2] = "#2 Final 4";
 		cup23AltPaintNames[22,1] = "#1 Winner";
 		cup23AltPaintNames[24,1] = "#1 Winner";
+		cup23AltPaintNames[24,2] = "#2 Final 4";
 		cup23AltPaintNames[41,1] = "#1 Bobby";
 		cup23AltPaintNames[91,1] = "#1 Winner";
 		
@@ -205,17 +210,22 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintTheme[78,1] = "Parttimer";
 		cup22AltPaintTheme[99,1] = "Wrecked";
 		
+		cup23AltPaintTheme[5,1] = "Final 4";
 		cup23AltPaintTheme[8,1] = "Winners";
 		cup23AltPaintTheme[9,1] = "Parttimer";
 		cup23AltPaintTheme[9,2] = "Parttimer";
+		cup23AltPaintTheme[12,1] = "Final 4";
 		cup23AltPaintTheme[15,1] = "Parttimer";
 		cup23AltPaintTheme[20,1] = "Winners";
+		cup23AltPaintTheme[20,2] = "Final 4";
 		cup23AltPaintTheme[22,1] = "Winners";
 		cup23AltPaintTheme[24,1] = "Winners";
+		cup23AltPaintTheme[24,2] = "Final 4";
 		cup23AltPaintTheme[91,1] = "Winners";
 		
 		irl23AltPaintTheme[2,1] = "Winners";
 		
+		//True = can't buy.. I know.. I know..
 		cup2020AltCanBuy[11,1] = true;
 		cup2020AltCanBuy[3,2] = true;
 		cup2020AltCanBuy[3,3] = true;

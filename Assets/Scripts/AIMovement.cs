@@ -248,13 +248,22 @@ public class AIMovement : MonoBehaviour
 				altPaints.Add("0");
 				altPaints.Add("0");
 				altPaints.Add("0");
-				AltPaints.loadAlts();
-				for(int i=1;i<10;i++){
-					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-						//Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
-						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != true){
+				if(officialSeries == true){
+					AltPaints.loadAlts();
+					for(int i=1;i<10;i++){
+						if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
+							//Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
+							if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != true){
+								altPaints.Add(i.ToString());
+								//Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
+							}
+						}
+					}
+				} else {
+					for(int i=1;i<10;i++){
+						if(ModData.getAltTexture(seriesPrefix,carNum,i) != null){
+							Debug.Log("Mod Alt Paint #" + carNum + " Alt " + i + " could spawn");
 							altPaints.Add(i.ToString());
-							//Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
 						}
 					}
 				}
@@ -279,8 +288,12 @@ public class AIMovement : MonoBehaviour
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			if(chosenAlt != "0"){
-				//Debug.Log("Custom alt spawned - Car #" + carNumber);
-				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
+				Debug.Log("Custom alt spawned - Car #" + carNumber);
+				if(officialSeries == true){
+					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
+				} else {
+					liveryRend.material.mainTexture = ModData.getAltTexture(seriesPrefix,int.Parse(carNumber),int.Parse(chosenAlt));
+				}
 			} else {
 				if(officialSeries == true){
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;

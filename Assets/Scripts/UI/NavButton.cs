@@ -23,8 +23,12 @@ public class NavButton : MonoBehaviour
 		SceneManager.LoadScene(sceneName);
 	}
 	
-	public void endChampionship(){
+	public void endChampionship(string seriesPrefix){
 		PlayerPrefs.SetInt("ChampionshipReward",1);
-		SceneManager.LoadScene("Menus/RaceRewards");
+		if(ModData.isModSeries(seriesPrefix) == true){
+			SceneManager.LoadScene("Menus/MainMenu");
+		} else {
+			SceneManager.LoadScene("Menus/RaceRewards");
+		}
 	}
 }
