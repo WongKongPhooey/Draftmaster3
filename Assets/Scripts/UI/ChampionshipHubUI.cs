@@ -196,6 +196,7 @@ public class ChampionshipHubUI : MonoBehaviour
 			}
 			
 			champPos.text = (pointsInd+1).ToString();
+			
 			if(modSeries == true){
 				//Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
 				if (Resources.Load<Texture2D>("cup20num" + pointsRow.Key) != null) {
@@ -211,6 +212,7 @@ public class ChampionshipHubUI : MonoBehaviour
 				champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);
 				champDriver.text = DriverNames.getName(seriesPrefix, pointsRow.Key);
 				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, pointsRow.Key));
+				champFallbackNum.enabled = false;
 			}
 			champPoints.text = pointsRow.Value.ToString();
 			pointsInd++;
