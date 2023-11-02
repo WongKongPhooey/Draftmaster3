@@ -112,10 +112,6 @@ public class ChampionshipHubUI : MonoBehaviour
 			goRaceBtn = GameObject.Find("GoRace");
 			goRaceBtn.SetActive(false);
 			PlayerPrefs.SetInt("PlayerFinishPosition", championshipPosition);
-			
-			if(ModData.isModSeries(seriesPrefix) == true){
-				GameObject.Find("EndSeason").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
-			}
 		} else {
 			endSeasonBtn = GameObject.Find("EndSeason");
 			endSeasonBtn.SetActive(false);
