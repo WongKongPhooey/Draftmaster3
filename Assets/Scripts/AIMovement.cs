@@ -188,11 +188,6 @@ public class AIMovement : MonoBehaviour
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
-		if(officialSeries == true){
-			setCarPhysics(seriesPrefix);
-		} else {
-			setCarPhysics(ModData.getPhysicsModel(seriesPrefix));
-		}
 		
 		string splitAfter = "AICar0";
 		carNumber = this.name.Substring(this.name.IndexOf(splitAfter) + splitAfter.Length);
@@ -204,6 +199,13 @@ public class AIMovement : MonoBehaviour
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			officialSeries = true;
 		}
+		
+		if(officialSeries == true){
+			setCarPhysics(seriesPrefix);
+		} else {
+			setCarPhysics(ModData.getPhysicsModel(seriesPrefix));
+		}
+		
 		if(officialSeries == true){
 			carTeam = DriverNames.getTeam(seriesPrefix,carNum);
 			carManu = DriverNames.getManufacturer(seriesPrefix,carNum);
@@ -290,12 +292,15 @@ public class AIMovement : MonoBehaviour
 			if(chosenAlt != "0"){
 				Debug.Log("Custom alt spawned - Car #" + carNumber);
 				if(officialSeries == true){
+					Debug.Log("Stock Series - Spawn car paint");
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
 				} else {
+					Debug.Log("Mod Series - Spawn car paint");
 					liveryRend.material.mainTexture = ModData.getAltTexture(seriesPrefix,int.Parse(carNumber),int.Parse(chosenAlt));
 				}
 			} else {
 				if(officialSeries == true){
+					Debug.Log("Stock Series - Spawn car paint");
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
 				} else {
 					Debug.Log("Non official series, get mod texture");
@@ -886,7 +891,7 @@ public class AIMovement : MonoBehaviour
 				coolOffInv = 2.4f;
 				tandemDrafting = false;
 				break;
-			case "Cushion":
+			case "cushion":
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.004f;
 				backdraftMulti = 0.004f;
@@ -897,7 +902,7 @@ public class AIMovement : MonoBehaviour
 				coolOffInv = 3f;
 				tandemDrafting = true;
 				break;
-			case "V3Weaker":
+			case "v3weaker":
 				draftStrengthRatio = 700f;
 				dragDecelMulti = 0.004f;
 				backdraftMulti = 0.005f;
