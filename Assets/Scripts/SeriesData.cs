@@ -44,7 +44,7 @@ public class SeriesData : MonoBehaviour{
 		offlineMenu[8] = "Rarity";
 		offlineMenu[9] = "Seasons";
 		
-		offlineImage[0] = "cup23livery42";
+		offlineImage[0] = "cup23livery54";
 		offlineImage[1] = "cup23livery11";
 		offlineImage[2] = "cup23livery4";
 		offlineImage[3] = "cup23livery8";

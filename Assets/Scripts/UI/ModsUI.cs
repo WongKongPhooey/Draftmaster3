@@ -40,11 +40,11 @@ public class ModsUI : MonoBehaviour {
 			//A Config file waiting
 			if(pickedJSON != null){
 				writeJSONToFolder(pickedJSON);
-				fileQueued = false;
 			}
 			
 			//A single car file waiting
 			if(pickedCarPNG != null){
+				Debug.Log("Picked car waiting: " + pickedCarPNG);
 				writeCarToFolder(pickedCarPNG);
 			}
 			fileQueued = false;
@@ -294,16 +294,17 @@ public class ModsUI : MonoBehaviour {
 	}
 	
 	public void writeCarToFolder(string pickedCar){
+		//Debug.Log("Attempting Write Car To Folder");
 		string[] pathDepths = pickedCar.Split("/");
 		string fileName = pathDepths[pathDepths.Length - 1];
 		int nameLength = fileName.Length;
-		Debug.Log(nameLength);
 		string modFolder = fileName.Substring(0,5);
 		string carNum;
 		string altNum;
 		int altNumInt = 999;
 		bool validAlt;
 		bool isAlt = false;
+		pickedCarPNG = null;
 		
 		//Is it a car or an alt paint?
 		if(nameLength > 12){

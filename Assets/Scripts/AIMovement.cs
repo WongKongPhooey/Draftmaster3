@@ -13,6 +13,7 @@ public class AIMovement : MonoBehaviour
 	public GameObject controlCar;
 	public Camera player2Cam;
     public float AISpeed;
+	public float relativeZToPlayer;
 	float affectedAISpeed;
     float speed;
 	public float AITopSpeed;
@@ -50,7 +51,7 @@ public class AIMovement : MonoBehaviour
 	float randDecel;
 	float slideX;
 	public float wreckDecel;
-	public float speedDiffPadding;
+	float speedDiffPadding;
 	float wreckAngle;
 	float wreckSlideRand;
 	float wreckFlatRand;
@@ -59,14 +60,14 @@ public class AIMovement : MonoBehaviour
 	float targetForce;
 	float windForce;
 	float forceSmoothing;
-	public int wreckProbability;
-	public bool hitByPlayer;
+	int wreckProbability;
+	bool hitByPlayer;
 	
 	int wreckFreq;
 	
-	public static int maxTandem;
-	public static float coolOffSpace;
-	public static float coolOffInv;
+	static int maxTandem;
+	static float coolOffSpace;
+	static float coolOffInv;
 	int circuitLanes;
 	float apronLineX;
 
@@ -97,7 +98,7 @@ public class AIMovement : MonoBehaviour
 	bool coolEngine;
 	int sparksCooldown;
 
-	public int maxDraftDistance;
+	int maxDraftDistance;
 
 	bool dominator;
 
@@ -133,6 +134,7 @@ public class AIMovement : MonoBehaviour
         accelRand = Random.Range(-30, 60);
         accelRand = accelRand / 5000;	
 		AITopSpeed = 206f + speedRand;
+		relativeZToPlayer = 0;
 		
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
@@ -861,6 +863,7 @@ public class AIMovement : MonoBehaviour
 		speed = speed / 100;
 		if(prePause != true){
 			AICar.transform.Translate(0, 0, speed);
+			relativeZToPlayer = speed;
 		}
 	}
 	
