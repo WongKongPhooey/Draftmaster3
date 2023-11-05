@@ -36,6 +36,8 @@ public class AIMovement : MonoBehaviour
 	int laneStagnant;
 	int stagnantMax;
 	
+	int[,] raycastMatrix;
+	
 	//These can adjust per race series (e.g. Indy)
 	float draftStrengthRatio;
 	float dragDecelMulti;
@@ -135,6 +137,13 @@ public class AIMovement : MonoBehaviour
         accelRand = accelRand / 5000;	
 		AITopSpeed = 206f + speedRand;
 		relativeZToPlayer = 0;
+		
+		//Raycast matrix for optimising all of the casts!
+		//
+		// Front left (left), front sphere, front right (right)
+		// Left side, bump draft check, Right side
+		// Rear left (left), rear sphere, rear right (right)
+		raycastMatrix = new int[3,3]{{99,99,99},{99,99,99},{99,99,99}};
 		
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
@@ -606,11 +615,9 @@ public class AIMovement : MonoBehaviour
 		if(isWrecking == false){
 			//Send it back
 			RaycastHit DraftCheckBackward;
-			bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			if(HitBackward == false){
-				HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			}
-			
+			//Check the length of the rear fender 
+			bool HitBackward = Physics.Raycast(transform.position + new Vector3(-0.49f,0,-1.01f), transform.right, out DraftCheckBackward, 0.98f);
+			Debug.DrawRay(transform.position + new Vector3(-0.49f,0,-1.01f), transform.right, Color.red);
 			if(HitBackward == true){
 				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
 				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
