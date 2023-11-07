@@ -735,6 +735,9 @@ public class AIMovement : MonoBehaviour
 			//Pacing speed
 			AISpeed = 202;
 		}
+		#if UNITY_EDITOR
+		drawRaycasts();
+		#endif
 	}
 
 	void speedLogic(){
@@ -1409,23 +1412,9 @@ public class AIMovement : MonoBehaviour
 	public bool leftSideClear(float checkDist = 1.5f){
 		
         RaycastHit DraftCheckLeft;
-        RaycastHit DraftCheckLeftForward;
-        RaycastHit DraftCheckLeftBackward;
-        bool HitLeft = Physics.Raycast(transform.position, transform.right * -1, out DraftCheckLeft, 100);
-        bool HitLeftForward = Physics.Raycast(transform.position, transform.forward - transform.right, out DraftCheckLeftForward, 100);
-        bool HitLeftBackward = Physics.Raycast(transform.position, (transform.forward * -1) - transform.right, out DraftCheckLeftBackward, 100);
-		
-		//Check Left Corners Clear
-		if (!(HitLeftForward && DraftCheckLeftForward.distance <= 1.5f)){
-			if (!(HitLeftBackward && DraftCheckLeftBackward.distance <= 1.5f)){
-				if (!(HitLeft && DraftCheckLeft.distance <= 1)){
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
-			}
+		bool HitLeft = Physics.Raycast(transform.position + new Vector3(-1f,0,1.25f), transform.forward * -1, out DraftCheckLeft, 2.5f);
+		if (!(HitLeft && DraftCheckLeft.distance <= 2.5f)){
+			return true;
 		} else {
 			return false;
 		}
@@ -1434,24 +1423,9 @@ public class AIMovement : MonoBehaviour
 	public bool rightSideClear(float checkDist = 1.5f){
 		
         RaycastHit DraftCheckRight;
-        RaycastHit DraftCheckRightForward;
-        RaycastHit DraftCheckRightBackward;
         bool HitRight = Physics.Raycast(transform.position, transform.right, out DraftCheckRight, 100);
-        bool HitRightForward = Physics.Raycast(transform.position, transform.forward + transform.right, out DraftCheckRightForward, 100);
-        bool HitRightBackward = Physics.Raycast(transform.position, (transform.forward * -1) + transform.right, out DraftCheckRightBackward, 100);
-		
-		//Check Right Corners Clear
-		if (!(HitRightForward && DraftCheckRightForward.distance <= 1.5f)){
-			if (!(HitRightBackward && DraftCheckRightBackward.distance <= 1.5f)){
-				//Check Right Side Clear
-				if (!(HitRight && DraftCheckRight.distance <= 1)){
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
-			}
+		if (!(HitRight && DraftCheckRight.distance <= 1)){
+			return true;
 		} else {
 			return false;
 		}
@@ -1793,6 +1767,6 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void drawRaycasts(){
-
+		//Debug.DrawRay(transform.position + new Vector3(-1f,0,1.25f), transform.forward * -2.5f, Color.cyan);
 	}
 }

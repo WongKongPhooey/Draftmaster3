@@ -26,6 +26,7 @@ public class DriverNames : MonoBehaviour {
 
 	public static string[] allCarsets = new string[8];
 	public static string[] allWinnableCarsets = new string[6];
+	public static string[] allManufacturers = new string[7];
 
 	public static string[] cup2020Names = new string[101];
 	public static string[] cup2020Teams = new string[101];
@@ -95,6 +96,7 @@ public class DriverNames : MonoBehaviour {
 		dmc15();
 		irc00();
 		listCarsets();
+		listManufacturers();
 		listWinnableCarsets();
 		carsetNames();
 		
@@ -185,6 +187,16 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[7] = "irl23";
 	}
 	
+	public static void listManufacturers(){
+		allManufacturers[0] = "CHV";
+		allManufacturers[1] = "FRD";
+		allManufacturers[2] = "TYT";
+		allManufacturers[3] = "HON";
+		allManufacturers[4] = "OLD";
+		allManufacturers[5] = "PNT";
+		allManufacturers[6] = "DDG";
+	}
+	
 	public static void listWinnableCarsets(){
 		allWinnableCarsets[0] = "cup20";
 		allWinnableCarsets[1] = "cup22";
@@ -198,6 +210,17 @@ public class DriverNames : MonoBehaviour {
 		loadData();
 		for(int i=0;i<allCarsets.Length;i++){
 			if(seriesPrefix == allCarsets[i]){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static bool isOfficialManu(string manu){
+		Debug.Log(manu);
+		loadData();
+		for(int i=0;i<allManufacturers.Length;i++){
+			if(manu == allManufacturers[i]){
 				return true;
 			}
 		}

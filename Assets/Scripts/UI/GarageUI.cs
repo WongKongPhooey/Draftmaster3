@@ -340,7 +340,11 @@ public class GarageUI : MonoBehaviour
 			carTypeUI.text = DriverNames.shortenedType(ModData.getType(seriesPrefix, i));
 			carClassUI.text = "";
 			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
-			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
+			if(DriverNames.isOfficialManu(carManu) == true){
+				carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
+			} else {
+				carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, carManu); 
+			}
 			carName.text = ModData.getName(seriesPrefix, i);
 			carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
 			//No custom numbers on mod cars.. for now.

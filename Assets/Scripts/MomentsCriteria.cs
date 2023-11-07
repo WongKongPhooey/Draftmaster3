@@ -40,7 +40,7 @@ public class MomentsCriteria : MonoBehaviour
 				case "Daytona79":
 					momentsCriteria.Add("WreckStartLocationStraight","3");
 					momentsCriteria.Add("WreckEndLocationCorner","3");
-					momentsCriteria.Add("WreckEndLocationLessThanX","-3.5");
+					momentsCriteria.Add("WreckEndLocationLessThanX","-2.2");
 					momentsCriteria.Add("CarWrecks","1");
 					momentsCriteria.Add("CarAvoidsWreck","43");
 				break;
@@ -63,7 +63,7 @@ public class MomentsCriteria : MonoBehaviour
 						if(PlayerPrefs.GetString("MomentCriteria" + i) != ""){
 							string criteriaList = PlayerPrefs.GetString("MomentCriteria" + i);
 							string[] criteriaParts = criteriaList.Split(",");
-							Debug.Log("Live Criteria Added: " + criteriaParts[0] + " - " + criteriaParts[1]);
+							//Debug.Log("Live Criteria Added: " + criteriaParts[0] + " - " + criteriaParts[1]);
 							momentsCriteria.Add(criteriaParts[0],criteriaParts[1]);
 						}
 					}
@@ -108,7 +108,7 @@ public class MomentsCriteria : MonoBehaviour
 				return "Stop In Turn " + criteriaValue;
 				break;
 			case "WreckEndLocationLessThanX":
-				return "Stop In The Infield";
+				return "Stop Below The Apron";
 				break;
 			case "FinishPositionLowerThan":
 				if(criteriaValue == "1"){
@@ -215,7 +215,7 @@ public class MomentsCriteria : MonoBehaviour
 			case "WinByLessThan":
 				//If finish gap to leader (A) is lower than the max, true
 				//This check only triggers on the 2nd place car
-				Debug.Log("Win By Less Than: " + criteriaValue + "? " + criteriaCheckA);
+				//Debug.Log("Win By Less Than: " + criteriaValue + "? " + criteriaCheckA);
 				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
 					complete = true;
 				}
@@ -224,9 +224,9 @@ public class MomentsCriteria : MonoBehaviour
 				//If more cars in wreck than the minimum, true
 				if(int.Parse(criteriaCheckA) >= int.Parse(criteriaValue)){
 					complete = true;
-					Debug.Log(criteriaCheckA + " Cars In Wreck ,More Than " + criteriaValue);
+					//Debug.Log(criteriaCheckA + " Cars In Wreck ,More Than " + criteriaValue);
 				}
-				Debug.Log(criteriaCheckA + " Cars In Wreck. Needed " + criteriaValue);
+				//Debug.Log(criteriaCheckA + " Cars In Wreck. Needed " + criteriaValue);
 				break;
 			case "CarWrecks":
 				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);
@@ -274,7 +274,7 @@ public class MomentsCriteria : MonoBehaviour
 		RawImage criteriaTick = criteriaObj.transform.GetChild(1).GetComponent<RawImage>();
 		criteriaTick.texture = Resources.Load<Texture2D>("Icons/tick");
 		completeCriteria++;
-		Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete + ". Total: " + completeCriteria);
+		//Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete + ". Total: " + completeCriteria);
 	}
 
     // Update is called once per frame

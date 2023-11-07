@@ -72,6 +72,7 @@ public class CameraRotate : MonoBehaviour {
 	
 	public GameObject cautionSummaryMenu;
 	public GameObject pauseMenu;
+	public GameObject challengeLost;
 	public static bool gamePausedLate;
 	
 	public static bool momentChecks;
@@ -256,7 +257,19 @@ public class CameraRotate : MonoBehaviour {
 					Time.timeScale = 0.0f;
 				}
 			}
-			catch (Exception e){}
+			catch (Exception e){
+				Debug.Log("Failed To Pause: " + e.Message);
+			}
+			try {
+				challengeLost = GameObject.Find("ChallengeLost");
+				if(challengeLost.activeSelf == true){
+					Debug.Log("Time Paused (Moment Failed)");
+					Time.timeScale = 0.0f;
+				}
+			}
+			catch (Exception e){
+				Debug.Log("Failed To End Moment Challenge: " + e.Message);
+			}
 		} else {
 			pauseMenu.SetActive(false);
 		}
