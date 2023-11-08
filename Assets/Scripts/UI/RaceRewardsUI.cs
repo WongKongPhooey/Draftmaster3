@@ -311,7 +311,7 @@ public class RaceRewardsUI : MonoBehaviour
 					if(seriesPrefix == category){
 						for(int j=0;j<99;j++){
 							if(DriverNames.getName(seriesPrefix,j) != null){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log(category + " Added: #" + i);
 							}
 						}
@@ -325,7 +325,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log("Rookie Added: #" + i);
 							}
 						}
@@ -338,7 +338,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 1){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log("1* Rarity Added: #" + i);
 							}
 						}
@@ -351,7 +351,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 2){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log("2* Rarity Added: #" + i);
 							}
 						}
@@ -364,7 +364,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 3){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log("3* Rarity Added: #" + i);
 							}
 						}
@@ -377,7 +377,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 4){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log("4* Rarity Added: #" + i);
 							}
 						}
@@ -394,7 +394,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log(category + " Added: #" + i);
 							}
 						}
@@ -412,7 +412,7 @@ public class RaceRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category.Substring(0,3)){
 								if(DriverNames.getRarity(seriesPrefix,j) == 1){
-									validDriver.Add("" + seriesPrefix + j + "");
+									addReward(seriesPrefix, j);
 									//Debug.Log(category + " Added: #" + i);
 								}
 							}
@@ -437,7 +437,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getTeam(seriesPrefix,j) == category){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log(category + " Added: #" + i);
 							}
 						}
@@ -457,7 +457,7 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == category){
-								validDriver.Add("" + seriesPrefix + j + "");
+								addReward(seriesPrefix, j);
 								//Debug.Log(category + " Added: #" + i);
 							}
 						}
@@ -510,12 +510,19 @@ public class RaceRewardsUI : MonoBehaviour
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
-							validDriver.Add("" + seriesPrefix + j + "");
+							addReward(seriesPrefix, j);
 							//Debug.Log("Added: #" + i);
 						}
 					}
 				}
 			break;
+		}
+	}
+	
+	void addReward(string seriesPrefix, int index){
+		//Check for max class
+		if(PlayerPrefs.GetInt(seriesPrefix + index + "Class") < 6){
+			validDriver.Add("" + seriesPrefix + index + "");
 		}
 	}
 	
