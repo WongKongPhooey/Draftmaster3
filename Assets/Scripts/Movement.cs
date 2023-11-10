@@ -586,10 +586,7 @@ public class Movement : MonoBehaviour {
 			}
 			//Send it back
 			RaycastHit DraftCheckBackward;
-			bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			if(HitBackward == false){
-				HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			}
+			bool HitBackward = Physics.SphereCast(transform.position + new Vector3(-0.48f,0,-1f), 0.01f, transform.right, out DraftCheckBackward, 0.96f);
 			
 			if(HitBackward == true){
 				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);

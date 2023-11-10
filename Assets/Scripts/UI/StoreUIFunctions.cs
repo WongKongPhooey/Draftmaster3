@@ -8,6 +8,7 @@ public class StoreUIFunctions : MonoBehaviour
 	public int itemPrice;
 	public string itemSeries;
 	public string itemNum;
+	public int itemRarity;
 	public string itemAlt;
 	public bool isAlt;
 	public bool staticBundle;
@@ -31,80 +32,155 @@ public class StoreUIFunctions : MonoBehaviour
 
 	public void makePurchase(){
 		
-		int gears = PlayerPrefs.GetInt("Gears");
+		gears = PlayerPrefs.GetInt("Gears");
+		totalMoney = PlayerPrefs.GetInt("PrizeMoney");
 		alertPopup = GameObject.Find("Main").GetComponent<StoreUI>().alertPopup;
 		
-		//Do you have enough?
-		if(gears >= itemPrice){
-			int carGears = 0;
+		if(itemRarity == 1){
+			//Money purchase
+			if(totalMoney >= itemPrice){
+				int carGears = 0;
 
-			if(isAlt == true){
-				//Unlock the alt
-				if(PlayerPrefs.GetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked") != 1){
-					PlayerPrefs.SetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked",1);
-					GameObject.Find("Main").GetComponent<StoreUI>().reloadStore();
-				} else {
-					return;
-				}
-				string alertContent = "" + DriverNames.getSeriesNiceName(itemSeries);
-					   alertContent += " " + DriverNames.getName(itemSeries, int.Parse(itemNum));
-					   //Debug.Log(itemSeries + " " + itemNum + " " + itemAlt);
-					   alertContent += "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt));
-					   alertContent += " Alt Paint Unlocked!";
-				//Debug.Log(alertContent);
-				string alertImage = itemSeries + "livery" + itemNum + "alt" + itemAlt + "";
-				
-				gears -= itemPrice;
-				PlayerPrefs.SetInt("Gears",gears);
-				
-				alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) + " Alt Paint Unlocked!", itemSeries + "livery" + itemNum + "alt" + itemAlt + "");
-			
-				PlayerPrefs.SetInt(itemSeries + itemNum + "AltPaint",int.Parse(itemAlt));
-				
-				if(AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) != null){
-					PlayerPrefs.SetString(itemSeries + itemNum + "AltDriver", AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
-					Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
-				}
-			
-			} else {
-				//Increment the car parts
-				if(PlayerPrefs.HasKey(itemSeries + itemNum + "Gears")){
-					carGears = PlayerPrefs.GetInt(itemSeries + itemNum + "Gears");
-				} else {
-					carGears = 0;
-				}
-				PlayerPrefs.SetInt(itemSeries + itemNum + "Gears", carGears + 3);
-				
-				int carUnlocked = PlayerPrefs.GetInt(itemSeries + itemNum + "Unlocked");
-				int carClass = PlayerPrefs.GetInt(itemSeries + itemNum + "Class");
-				int progressTarget = 0;
-				
-				if(carUnlocked == 1){
-					int classMax = getClassMax(carClass);
-					progressTarget = classMax;
-				} else {
-					int unlockClass = DriverNames.getRarity(itemSeries,int.Parse(itemNum));
-					int unlockGears = GameData.unlockGears(unlockClass);
-					progressTarget = unlockGears;
-				}
-				
-				gears -= itemPrice;
-				PlayerPrefs.SetInt("Gears",gears);
-				
-				//If beyond or at the target..
-				if((carGears + 3) >= progressTarget){
-					classUp(carGears + 3, progressTarget);
-				} else {
-					//Just pay and go
-					if(carUnlocked == 1){
-						alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts", itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+				if(isAlt == true){
+					//Unlock the alt
+					if(PlayerPrefs.GetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked") != 1){
+						PlayerPrefs.SetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked",1);
+						GameObject.Find("Main").GetComponent<StoreUI>().reloadStore();
 					} else {
-						alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts. Unlocks at " + progressTarget, itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+						return;
+					}
+					string alertContent = "" + DriverNames.getSeriesNiceName(itemSeries);
+						   alertContent += " " + DriverNames.getName(itemSeries, int.Parse(itemNum));
+						   //Debug.Log(itemSeries + " " + itemNum + " " + itemAlt);
+						   alertContent += "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt));
+						   alertContent += " Alt Paint Unlocked!";
+					//Debug.Log(alertContent);
+					string alertImage = itemSeries + "livery" + itemNum + "alt" + itemAlt + "";
+					
+					totalMoney -= itemPrice;
+					PlayerPrefs.SetInt("PrizeMoney",totalMoney);
+					
+					alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) + " Alt Paint Unlocked!", itemSeries + "livery" + itemNum + "alt" + itemAlt + "");
+				
+					PlayerPrefs.SetInt(itemSeries + itemNum + "AltPaint",int.Parse(itemAlt));
+					if(AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) != null){
+						PlayerPrefs.SetString(itemSeries + itemNum + "AltDriver", AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
+						//Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
+					}
+				
+				} else {
+					//Increment the car parts
+					if(PlayerPrefs.HasKey(itemSeries + itemNum + "Gears")){
+						carGears = PlayerPrefs.GetInt(itemSeries + itemNum + "Gears");
+					} else {
+						carGears = 0;
+					}
+					PlayerPrefs.SetInt(itemSeries + itemNum + "Gears", carGears + 3);
+					
+					int carUnlocked = PlayerPrefs.GetInt(itemSeries + itemNum + "Unlocked");
+					int carClass = PlayerPrefs.GetInt(itemSeries + itemNum + "Class");
+					int progressTarget = 0;
+					
+					if(carUnlocked == 1){
+						int classMax = getClassMax(carClass);
+						progressTarget = classMax;
+					} else {
+						int unlockClass = DriverNames.getRarity(itemSeries,int.Parse(itemNum));
+						int unlockGears = GameData.unlockGears(unlockClass);
+						progressTarget = unlockGears;
+					}
+					
+					totalMoney -= itemPrice;
+					PlayerPrefs.SetInt("PrizeMoney",totalMoney);
+					
+					//If beyond or at the target..
+					if((carGears + 3) >= progressTarget){
+						classUp(carGears + 3, progressTarget);
+					} else {
+						//Just pay and go
+						if(carUnlocked == 1){
+							alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts", itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+						} else {
+							alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts. Unlocks at " + progressTarget, itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+						}
 					}
 				}
+			} else {
+				alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You do not have enough money to purchase this.","dm2logo");
 			}
 		} else {
-			alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You do not have enough Gears to purchase this.","dm2logo");
+			//Gears purchase
+			if(gears >= itemPrice){
+				int carGears = 0;
+
+				if(isAlt == true){
+					//Unlock the alt
+					if(PlayerPrefs.GetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked") != 1){
+						PlayerPrefs.SetInt(itemSeries + itemNum + "Alt" + itemAlt + "Unlocked",1);
+						GameObject.Find("Main").GetComponent<StoreUI>().reloadStore();
+					} else {
+						return;
+					}
+					string alertContent = "" + DriverNames.getSeriesNiceName(itemSeries);
+						   alertContent += " " + DriverNames.getName(itemSeries, int.Parse(itemNum));
+						   //Debug.Log(itemSeries + " " + itemNum + " " + itemAlt);
+						   alertContent += "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt));
+						   alertContent += " Alt Paint Unlocked!";
+					//Debug.Log(alertContent);
+					string alertImage = itemSeries + "livery" + itemNum + "alt" + itemAlt + "";
+					
+					gears -= itemPrice;
+					PlayerPrefs.SetInt("Gears",gears);
+					
+					alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) + " Alt Paint Unlocked!", itemSeries + "livery" + itemNum + "alt" + itemAlt + "");
+				
+					PlayerPrefs.SetInt(itemSeries + itemNum + "AltPaint",int.Parse(itemAlt));
+					
+					if(AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) != null){
+						PlayerPrefs.SetString(itemSeries + itemNum + "AltDriver", AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
+						Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
+					}
+				
+				} else {
+					//Increment the car parts
+					if(PlayerPrefs.HasKey(itemSeries + itemNum + "Gears")){
+						carGears = PlayerPrefs.GetInt(itemSeries + itemNum + "Gears");
+					} else {
+						carGears = 0;
+					}
+					PlayerPrefs.SetInt(itemSeries + itemNum + "Gears", carGears + 3);
+					
+					int carUnlocked = PlayerPrefs.GetInt(itemSeries + itemNum + "Unlocked");
+					int carClass = PlayerPrefs.GetInt(itemSeries + itemNum + "Class");
+					int progressTarget = 0;
+					
+					if(carUnlocked == 1){
+						int classMax = getClassMax(carClass);
+						progressTarget = classMax;
+					} else {
+						int unlockClass = DriverNames.getRarity(itemSeries,int.Parse(itemNum));
+						int unlockGears = GameData.unlockGears(unlockClass);
+						progressTarget = unlockGears;
+					}
+					
+					gears -= itemPrice;
+					PlayerPrefs.SetInt("Gears",gears);
+					
+					//If beyond or at the target..
+					if((carGears + 3) >= progressTarget){
+						classUp(carGears + 3, progressTarget);
+					} else {
+						//Just pay and go
+						if(carUnlocked == 1){
+							alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts", itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+						} else {
+							alertPopup.GetComponent<AlertManager>().showPopup("Shop Purchase", DriverNames.getSeriesNiceName(itemSeries) + " " + DriverNames.getName(itemSeries, int.Parse(itemNum)) + "\n+3 Car Parts. Unlocks at " + progressTarget, itemSeries + "livery" + itemNum, true, (carGears + 3), progressTarget);
+						}
+					}
+				}
+			} else {
+				alertPopup.GetComponent<AlertManager>().showPopup("Oh no..","You do not have enough Gears to purchase this.","dm2logo");
+			}
 		}
 	}
 

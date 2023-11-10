@@ -268,26 +268,99 @@ public class DriverNames : MonoBehaviour {
 		return numXPos[seriesPrefix];
 	}
 	
-	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount){
-		int carRarity = getRarity(seriesPrefix, index);
+	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount, int rarity){
+		int price = 999999;
+		//1* cars are bought with coins
+		if(rarity == 1){
+			price = getStoreCoinPrice(seriesPrefix, index, alt, storeDiscount, rarity);
+		} else {
+			price = getStoreGearPrice(seriesPrefix, index, alt, storeDiscount, rarity);
+		}
+		return price;
+	}
+	
+	public static Texture2D getStoreBtnIcon(int rarity){
+		Texture2D texture = null;
+		if(rarity == 1){
+			texture = Resources.Load<Texture2D>("Icons/money");
+		} else {
+			texture = Resources.Load<Texture2D>("Icons/gear");
+		}
+		return texture;
+	}
+	
+	public static int getStoreCoinPrice(string seriesPrefix, int index, bool alt, bool storeDiscount, int rarity){
 		int carPrice = 999;
 		int shopDiscount = PlayerPrefs.GetInt("ShopDiscount");
 		if(shopDiscount == 1){
-			carRarity -= 1;
+			rarity -= 1;
 		}
 		if(seriesPrefix == "cup23"){
-			carRarity += 1;
+			rarity += 1;
 		}
 		if(seriesPrefix == "irl23"){
-			carRarity += 1;
+			rarity += 1;
 		}
 		if(seriesPrefix == "irc00"){
-			carRarity -= 1;
+			rarity -= 1;
 		}
 		if(alt == true){
-			carRarity += 3;
+			rarity += 3;
 		}
-		switch(carRarity){
+		switch(rarity){
+			case -1:
+				carPrice = 5000;
+				break;
+			case 0:
+				carPrice = 10000;
+				break;
+			case 1:
+				carPrice = 20000;
+				break;
+			case 2:
+				carPrice = 50000;
+				break;
+			case 3:
+				carPrice = 75000;
+				break;
+			case 4:
+				carPrice = 100000;
+				break;
+			case 5:
+				carPrice = 200000;
+				break;
+			case 6:
+				carPrice = 250000;
+				break;
+			case 7:
+				carPrice = 400000;
+				break;
+			default:
+				carPrice = 400000;
+				break;
+		}
+		return carPrice;
+	}
+	
+	public static int getStoreGearPrice(string seriesPrefix, int index, bool alt, bool storeDiscount, int rarity){
+		int carPrice = 999;
+		int shopDiscount = PlayerPrefs.GetInt("ShopDiscount");
+		if(shopDiscount == 1){
+			rarity -= 1;
+		}
+		if(seriesPrefix == "cup23"){
+			rarity += 1;
+		}
+		if(seriesPrefix == "irl23"){
+			rarity += 1;
+		}
+		if(seriesPrefix == "irc00"){
+			rarity -= 1;
+		}
+		if(alt == true){
+			rarity += 3;
+		}
+		switch(rarity){
 			case -1:
 				carPrice = 1;
 				break;

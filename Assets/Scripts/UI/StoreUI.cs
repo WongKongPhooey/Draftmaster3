@@ -135,15 +135,19 @@ public class StoreUI : MonoBehaviour
 			int carNumInt = int.Parse(carNum);
 			
 			tileSeries.text = DriverNames.getSeriesNiceName(carSeries);
+			int itemPrice = 999999;
+			int itemRarity = DriverNames.getRarity(carSeries, carNumInt);
+			tilePrice.GetComponent<StoreUIFunctions>().itemRarity = itemRarity;
 			if(isAlt == true){
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
 				tileQuantity.text = "Paint Scheme";
-				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
 				tilePrice.GetComponent<RawImage>().texture = altButton;
-				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
+				tilePrice.GetComponent<StoreUIFunctions>().itemRarity = itemRarity;
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
 				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
+				itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false, itemRarity);
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = itemPrice;
 				
 				//Check we don't already have it..
 				if(PlayerPrefs.GetInt(carSeries + carNum + "Alt" + carAlt + "Unlocked") == 1){
@@ -153,11 +157,12 @@ public class StoreUI : MonoBehaviour
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
 				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
 				tileQuantity.text = "+3 Parts";
-				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
-				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
+				itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false, itemRarity);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
 			}
-			
+			tilePrice.GetComponent<StoreUIFunctions>().itemPrice = itemPrice;
+			tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = itemPrice.ToString();
+			tilePrice.transform.GetChild(1).GetComponent<RawImage>().texture = DriverNames.getStoreBtnIcon(itemRarity);
 			tilePrice.GetComponent<StoreUIFunctions>().itemSeries = carSeries;
 			tilePrice.GetComponent<StoreUIFunctions>().itemNum = carNum;
 		}
@@ -247,7 +252,6 @@ public class StoreUI : MonoBehaviour
 				//Extract series from front
 				carSeries = carNum.Substring(0, 5);
 				carNum = carNum.Remove(0, 5);
-				Debug.Log("Series " + carSeries);
 				
 				//Extract alt from end
 				carAlt = carNum.Substring(carNum.Length-1);
@@ -261,15 +265,19 @@ public class StoreUI : MonoBehaviour
 			int carNumInt = int.Parse(carNum);
 			
 			tileSeries.text = DriverNames.getSeriesNiceName(carSeries);
+			int itemPrice = 999999;
+			int itemRarity = DriverNames.getRarity(carSeries, carNumInt);
+			tilePrice.GetComponent<StoreUIFunctions>().itemRarity = itemRarity;
 			if(isAlt == true){
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
 				tileQuantity.text = "Paint Scheme";
-				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
 				tilePrice.GetComponent<RawImage>().texture = altButton;
-				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
+				tilePrice.GetComponent<StoreUIFunctions>().itemRarity = itemRarity;
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
 				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
+				itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false, itemRarity);
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = itemPrice;
 				
 				//Check we don't already have it..
 				if(PlayerPrefs.GetInt(carSeries + carNum + "Alt" + carAlt + "Unlocked") == 1){
@@ -279,10 +287,12 @@ public class StoreUI : MonoBehaviour
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
 				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
 				tileQuantity.text = "+3 Parts";
-				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
-				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
+				itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false, itemRarity);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
 			}
+			tilePrice.GetComponent<StoreUIFunctions>().itemPrice = itemPrice;
+			tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = itemPrice.ToString();
+			tilePrice.transform.GetChild(1).GetComponent<RawImage>().texture = DriverNames.getStoreBtnIcon(itemRarity);
 			tilePrice.GetComponent<StoreUIFunctions>().itemSeries = carSeries;
 			tilePrice.GetComponent<StoreUIFunctions>().itemNum = carNum;
 		}
@@ -355,14 +365,19 @@ public class StoreUI : MonoBehaviour
 			int carNumInt = int.Parse(carNum);
 			
 			tileSeries.text = DriverNames.getSeriesNiceName(carSeries);
+			int itemPrice = 999999;
+			int itemRarity = DriverNames.getRarity(carSeries, carNumInt);
+			tilePrice.GetComponent<StoreUIFunctions>().itemRarity = itemRarity;
 			if(isAlt == true){
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum + "alt" + carAlt);
 				tileName.text = AltPaints.getAltPaintName(carSeries, carNumInt, carAltInt);
 				tileQuantity.text = "Paint Scheme";
-				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, true, false).ToString();
-				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false);
+				tilePrice.GetComponent<RawImage>().texture = altButton;
+				tilePrice.GetComponent<StoreUIFunctions>().itemRarity = itemRarity;
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = true;
 				tilePrice.GetComponent<StoreUIFunctions>().itemAlt = carAlt;
+				itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, true, false, itemRarity);
+				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = itemPrice;
 				
 				//Check we don't already have it..
 				if(PlayerPrefs.GetInt(carSeries + carNum + "Alt" + carAlt + "Unlocked") == 1){
@@ -372,11 +387,12 @@ public class StoreUI : MonoBehaviour
 				tilePaint.texture = Resources.Load<Texture2D>(carSeries + "livery" + carNum);
 				tileName.text = DriverNames.getName(carSeries, carNumInt) + "";
 				tileQuantity.text = "+3 Parts";
-				tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getStorePrice(carSeries, carNumInt, false, false).ToString();
-				tilePrice.GetComponent<StoreUIFunctions>().itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false);
+				itemPrice = DriverNames.getStorePrice(carSeries, carNumInt, false, false, itemRarity);
 				tilePrice.GetComponent<StoreUIFunctions>().isAlt = false;
 			}
-			
+			tilePrice.GetComponent<StoreUIFunctions>().itemPrice = itemPrice;
+			tilePrice.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = itemPrice.ToString();
+			tilePrice.transform.GetChild(1).GetComponent<RawImage>().texture = DriverNames.getStoreBtnIcon(itemRarity);
 			tilePrice.GetComponent<StoreUIFunctions>().itemSeries = carSeries;
 			tilePrice.GetComponent<StoreUIFunctions>().itemNum = carNum;
 		}
