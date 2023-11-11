@@ -348,7 +348,7 @@ public class ModsUI : MonoBehaviour {
 			//Debug.Log("No mod folder " + modFolder + " was found.");
 			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Folder " + modFolder + " was not found. Is your image named correctly?\n\nExample: cup15-43.png","dm2logo");
 		} else {
-			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName,bytes);
+			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName.ToLower(),bytes);
 			LoadMods();
 			
 			if(isAlt == true){

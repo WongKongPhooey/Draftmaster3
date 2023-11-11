@@ -312,31 +312,31 @@ public class DriverNames : MonoBehaviour {
 				carPrice = 5000;
 				break;
 			case 0:
-				carPrice = 10000;
+				carPrice = 7500;
 				break;
 			case 1:
-				carPrice = 20000;
+				carPrice = 10000;
 				break;
 			case 2:
-				carPrice = 50000;
+				carPrice = 25000;
 				break;
 			case 3:
-				carPrice = 75000;
+				carPrice = 50000;
 				break;
 			case 4:
-				carPrice = 100000;
+				carPrice = 75000;
 				break;
 			case 5:
-				carPrice = 200000;
+				carPrice = 100000;
 				break;
 			case 6:
-				carPrice = 250000;
+				carPrice = 200000;
 				break;
 			case 7:
-				carPrice = 400000;
+				carPrice = 250000;
 				break;
 			default:
-				carPrice = 400000;
+				carPrice = 250000;
 				break;
 		}
 		return carPrice;
