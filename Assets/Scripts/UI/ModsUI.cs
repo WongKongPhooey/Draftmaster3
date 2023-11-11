@@ -45,7 +45,7 @@ public class ModsUI : MonoBehaviour {
 			//A single car file waiting
 			if(pickedCarPNG != null){
 				Debug.Log("Picked car waiting: " + pickedCarPNG);
-				writeCarToFolder(pickedCarPNG);
+				writeImageToFolder(pickedCarPNG);
 			}
 			fileQueued = false;
 		}
@@ -293,7 +293,7 @@ public class ModsUI : MonoBehaviour {
 		alertPopup.GetComponent<AlertManager>().showPopup("Config File Uploaded","A config file has been uploaded for the " + modFolder + " mod!","dm2logo");
 	}
 	
-	public void writeCarToFolder(string pickedCar){
+	public void writeImageToFolder(string pickedCar){
 		//Debug.Log("Attempting Write Car To Folder");
 		string[] pathDepths = pickedCar.Split("/");
 		string fileName = pathDepths[pathDepths.Length - 1];
@@ -303,11 +303,13 @@ public class ModsUI : MonoBehaviour {
 		string altNum;
 		int altNumInt = 999;
 		bool validAlt;
+		bool iconImage = false;
+		string iconName = null;
 		bool isAlt = false;
 		pickedCarPNG = null;
 		
 		//Is it a car or an alt paint?
-		if(nameLength > 12){
+		if(nameLength > 13){
 			string[] altSplit = fileName.Split("alt");
 			carNum = altSplit[0].Substring(6);
 			//Debug.Log(carNum);
@@ -321,14 +323,23 @@ public class ModsUI : MonoBehaviour {
 			}
 			isAlt = true;
 		} else {
+			if(nameLength == 13){
+				//Assume it's an icon
+				iconImage = true;
+				iconName = fileName.Substring(6);
+				iconName = iconName.Split(".")[0];
+			}
 			carNum = fileName.Substring(6);
 			carNum = carNum.Split(".")[0];
 		}
 		
-		bool hasNum = int.TryParse(carNum,out int carNumInt);
-		if(hasNum == false){
-			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","File " + fileName + " is not in the correct format.\n\nExample: cup15-43.png","dm2logo");
-			return;
+		int carNumInt = 999;
+		if(iconImage == false){
+			bool hasNum = int.TryParse(carNum,out carNumInt);
+			if(hasNum == false){
+				alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","File " + fileName + " is not in the correct format.\n\nExample: cup15-43.png","dm2logo");
+				return;
+			}
 		}
 		byte[] bytes = System.IO.File.ReadAllBytes(pickedCar);
 			
@@ -337,15 +348,20 @@ public class ModsUI : MonoBehaviour {
 			//Debug.Log("No mod folder " + modFolder + " was found.");
 			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Folder " + modFolder + " was not found. Is your image named correctly?\n\nExample: cup15-43.png","dm2logo");
 		} else {
-			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName,bytes);
+			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName.ToLower(),bytes);
 			LoadMods();
 			
 			if(isAlt == true){
 				Texture2D uploadedCar = ModData.getAltTexture(modFolder,carNumInt,altNumInt);
 				alertPopup.GetComponent<AlertManager>().showPopup("Alt Paint Uploaded","Car #" + carNum + " Alt Paint #" + altNumInt.ToString() + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
 			} else {
-				Texture2D uploadedCar = ModData.getTexture(modFolder,carNumInt);
-				alertPopup.GetComponent<AlertManager>().showPopup("Car Uploaded","Car #" + carNum + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
+				if(iconImage == true){
+					Texture2D uploadedIcon = ModData.getManuTexture(modFolder,iconName);
+					alertPopup.GetComponent<AlertManager>().showPopup("Badge Uploaded","Badge " + iconName.ToUpper() + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedIcon);
+				} else {
+					Texture2D uploadedCar = ModData.getTexture(modFolder,carNumInt);
+					alertPopup.GetComponent<AlertManager>().showPopup("Car Uploaded","Car #" + carNum + " has been uploaded to the " + modFolder + " mod!","",false,0,999,uploadedCar);
+				}
 			}
 		}
 	}

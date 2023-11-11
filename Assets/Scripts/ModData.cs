@@ -201,12 +201,12 @@ public class ModData : MonoBehaviour
 		loadModData();
 		string driverManufacturer = null;
 		foreach(var directory in d.GetDirectories()){
-			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
 				string modFolderName = loadJson(directory.Name);
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
 					driverManufacturer = modJson.drivers[index].carManufacturer;
+					Debug.Log(driverManufacturer);
 				} catch(Exception e){
 					driverManufacturer = "CHV";
 				}
@@ -285,6 +285,47 @@ public class ModData : MonoBehaviour
 			}
 		}
 		return carTex;
+	}
+	
+	public static Texture2D getManuTexture(string seriesPrefix, string manu){
+		loadModData();
+		Texture2D manuTex = null;
+		foreach(var directory in d.GetDirectories()){
+			if(directory.Name == seriesPrefix){
+				Debug.Log("Found the correct mod carset..");
+				string modFolderName = loadJson(directory.Name);
+				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
+				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + manu + ".png")){
+				    Debug.Log("Found a manufacturer!");
+					byte[] bytes = System.IO.File.ReadAllBytes(d + directory.Name + "/" + seriesPrefix + "-" + manu + ".png");
+					manuTex = new Texture2D(16,16,TextureFormat.RGBA32, false);
+					manuTex.filterMode = FilterMode.Point;
+					manuTex.LoadImage(bytes);
+				}
+			}
+		}
+		return manuTex;
+	}
+	
+	public static Sprite getManuSprite(string seriesPrefix, string manu){
+		loadModData();
+		Sprite manuSpr = null;
+		foreach(var directory in d.GetDirectories()){
+			if(directory.Name == seriesPrefix){
+				Debug.Log("Found the correct mod carset..");
+				string modFolderName = loadJson(directory.Name);
+				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
+				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + manu + ".png")){
+				    Debug.Log("Found a manufacturer!");
+					byte[] bytes = System.IO.File.ReadAllBytes(d + directory.Name + "/" + seriesPrefix + "-" + manu + ".png");
+					Texture2D manuTex = new Texture2D(16,16,TextureFormat.RGBA32, false);
+					manuTex.filterMode = FilterMode.Point;
+					manuTex.LoadImage(bytes);
+					manuSpr = Sprite.Create(manuTex,new Rect(0, 0, manuTex.width, manuTex.height),new Vector2(0,0));
+				}
+			}
+		}
+		return manuSpr;
 	}
 	
 	public static string loadJson(string folderName){

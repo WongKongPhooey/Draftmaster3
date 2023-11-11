@@ -24,6 +24,7 @@ public class NavButton : MonoBehaviour
 	}
 	
 	public void endChampionship(){
+		Debug.Log("Championship Ended");
 		PlayerPrefs.SetInt("ChampionshipReward",1);
 		string seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
 		if(ModData.isModSeries(seriesPrefix) == true){
@@ -33,6 +34,7 @@ public class NavButton : MonoBehaviour
 			PlayerPrefs.DeleteKey("RaceType");
 			PlayerPrefs.DeleteKey("MomentComplete");
 			PlayerPrefs.DeleteKey("SeriesPrizeAmt");
+			PlayerPrefs.SetInt("ChampionshipReward",0);
 			SceneManager.LoadScene("Menus/MainMenu");
 		} else {
 			SceneManager.LoadScene("Menus/RaceRewards");

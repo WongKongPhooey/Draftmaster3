@@ -26,6 +26,7 @@ public class DriverNames : MonoBehaviour {
 
 	public static string[] allCarsets = new string[8];
 	public static string[] allWinnableCarsets = new string[6];
+	public static string[] allManufacturers = new string[7];
 
 	public static string[] cup2020Names = new string[101];
 	public static string[] cup2020Teams = new string[101];
@@ -95,6 +96,7 @@ public class DriverNames : MonoBehaviour {
 		dmc15();
 		irc00();
 		listCarsets();
+		listManufacturers();
 		listWinnableCarsets();
 		carsetNames();
 		
@@ -185,6 +187,16 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[7] = "irl23";
 	}
 	
+	public static void listManufacturers(){
+		allManufacturers[0] = "CHV";
+		allManufacturers[1] = "FRD";
+		allManufacturers[2] = "TYT";
+		allManufacturers[3] = "HON";
+		allManufacturers[4] = "OLD";
+		allManufacturers[5] = "PNT";
+		allManufacturers[6] = "DDG";
+	}
+	
 	public static void listWinnableCarsets(){
 		allWinnableCarsets[0] = "cup20";
 		allWinnableCarsets[1] = "cup22";
@@ -198,6 +210,17 @@ public class DriverNames : MonoBehaviour {
 		loadData();
 		for(int i=0;i<allCarsets.Length;i++){
 			if(seriesPrefix == allCarsets[i]){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static bool isOfficialManu(string manu){
+		Debug.Log(manu);
+		loadData();
+		for(int i=0;i<allManufacturers.Length;i++){
+			if(manu == allManufacturers[i]){
 				return true;
 			}
 		}
@@ -245,26 +268,99 @@ public class DriverNames : MonoBehaviour {
 		return numXPos[seriesPrefix];
 	}
 	
-	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount){
-		int carRarity = getRarity(seriesPrefix, index);
+	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount, int rarity){
+		int price = 999999;
+		//1* cars are bought with coins
+		if(rarity == 1){
+			price = getStoreCoinPrice(seriesPrefix, index, alt, storeDiscount, rarity);
+		} else {
+			price = getStoreGearPrice(seriesPrefix, index, alt, storeDiscount, rarity);
+		}
+		return price;
+	}
+	
+	public static Texture2D getStoreBtnIcon(int rarity){
+		Texture2D texture = null;
+		if(rarity == 1){
+			texture = Resources.Load<Texture2D>("Icons/money");
+		} else {
+			texture = Resources.Load<Texture2D>("Icons/gear");
+		}
+		return texture;
+	}
+	
+	public static int getStoreCoinPrice(string seriesPrefix, int index, bool alt, bool storeDiscount, int rarity){
 		int carPrice = 999;
 		int shopDiscount = PlayerPrefs.GetInt("ShopDiscount");
 		if(shopDiscount == 1){
-			carRarity -= 1;
+			rarity -= 1;
 		}
 		if(seriesPrefix == "cup23"){
-			carRarity += 1;
+			rarity += 1;
 		}
 		if(seriesPrefix == "irl23"){
-			carRarity += 1;
+			rarity += 1;
 		}
 		if(seriesPrefix == "irc00"){
-			carRarity -= 1;
+			rarity -= 1;
 		}
 		if(alt == true){
-			carRarity += 3;
+			rarity += 3;
 		}
-		switch(carRarity){
+		switch(rarity){
+			case -1:
+				carPrice = 5000;
+				break;
+			case 0:
+				carPrice = 7500;
+				break;
+			case 1:
+				carPrice = 10000;
+				break;
+			case 2:
+				carPrice = 25000;
+				break;
+			case 3:
+				carPrice = 50000;
+				break;
+			case 4:
+				carPrice = 75000;
+				break;
+			case 5:
+				carPrice = 100000;
+				break;
+			case 6:
+				carPrice = 200000;
+				break;
+			case 7:
+				carPrice = 250000;
+				break;
+			default:
+				carPrice = 250000;
+				break;
+		}
+		return carPrice;
+	}
+	
+	public static int getStoreGearPrice(string seriesPrefix, int index, bool alt, bool storeDiscount, int rarity){
+		int carPrice = 999;
+		int shopDiscount = PlayerPrefs.GetInt("ShopDiscount");
+		if(shopDiscount == 1){
+			rarity -= 1;
+		}
+		if(seriesPrefix == "cup23"){
+			rarity += 1;
+		}
+		if(seriesPrefix == "irl23"){
+			rarity += 1;
+		}
+		if(seriesPrefix == "irc00"){
+			rarity -= 1;
+		}
+		if(alt == true){
+			rarity += 3;
+		}
+		switch(rarity){
 			case -1:
 				carPrice = 1;
 				break;

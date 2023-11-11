@@ -235,7 +235,12 @@ public class RaceResultsUI : MonoBehaviour
 			} else {
 				carNum = ModData.getJsonIndexFromCarNum(seriesPrefix,carNum);
 				resultDriver.text = ModData.getName(seriesPrefix,carNum);
-				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carNum));
+				string carManu = ModData.getManufacturer(seriesPrefix, carNum);
+				if(DriverNames.isOfficialManu(carManu) == true){
+					resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + carManu);
+				} else {
+					resultManu.texture = ModData.getManuTexture(seriesPrefix, carManu); 
+				}
 			}
 			if(i==0){
 				resultTime.text = "";
