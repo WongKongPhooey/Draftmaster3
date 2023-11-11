@@ -169,6 +169,7 @@ public class Movement : MonoBehaviour {
 	public static bool pacing;
 	
 	public GameObject pauseMenu;
+	public GameObject challengeLost;
 	public GameObject cautionSummaryMenu;
 	public GameObject cautionSummaryTotalWreckers;
 	public GameObject cautionSummaryDamage;
@@ -239,7 +240,11 @@ public class Movement : MonoBehaviour {
 			officialSeries = false;
 		}
 		
-		setCarPhysics(seriesPrefix);
+		if(officialSeries == true){
+			setCarPhysics(seriesPrefix);
+		} else {
+			setCarPhysics(ModData.getPhysicsModel(seriesPrefix));
+		}
 		
 		carName = PlayerPrefs.GetString("carTexture");
 		
@@ -617,8 +622,26 @@ public class Movement : MonoBehaviour {
 			if(cautionSummaryMenu.activeSelf == true){
 				Debug.Log("Time Paused (Movement)");
 				Time.timeScale = 0.0f;
-			} else {
-				Debug.Log("Pause wasn't ready..");
+			}
+			try {
+				pauseMenu = GameObject.Find("PauseMenu");
+				if(pauseMenu.activeSelf == true){
+					Debug.Log("Time Paused (Camera Rotate)");
+					Time.timeScale = 0.0f;
+				}
+			}
+			catch (Exception e){
+				Debug.Log("Failed To Pause: " + e.Message);
+			}
+			try {
+				challengeLost = GameObject.Find("ChallengeLost");
+				if(challengeLost.activeSelf == true){
+					Debug.Log("Time Paused (Moment Failed)");
+					Time.timeScale = 0.0f;
+				}
+			}
+			catch (Exception e){
+				Debug.Log("Failed To End Moment Challenge: " + e.Message);
 			}
 		}
 		
@@ -828,6 +851,9 @@ public class Movement : MonoBehaviour {
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
+			case "indy":
+			case "indycar":
+			case "openwheel":
 				seriesSpeedDiff = 30;
 				draftStrengthRatio = 600f;
 				dragDecelMulti = 0.0025f;
@@ -836,7 +862,7 @@ public class Movement : MonoBehaviour {
 				draftAirCushion = 1.8f;
 				revLimiterBoost = 1.0f;
 				break;
-			case "Cushion":
+			case "cushion":
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 1200f;
 				dragDecelMulti = 0.0035f;
@@ -845,7 +871,7 @@ public class Movement : MonoBehaviour {
 				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
 				break;
-			case "V3Weaker":
+			case "v3weaker":
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.0035f;
