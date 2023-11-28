@@ -15,6 +15,8 @@ public class DriverNames : MonoBehaviour {
 	public static int[] rarity = new int[101];
 	public static string[] types = new string[101];
 
+	public static List<string> driverPool = new List<string>();
+
 	public static Dictionary<string, string[]> allNames = new Dictionary<string, string[]>();
 	public static Dictionary<string, string[]> allTeams = new Dictionary<string, string[]>();
 	public static Dictionary<string, string[]> allManufacturer = new Dictionary<string, string[]>();
@@ -99,6 +101,7 @@ public class DriverNames : MonoBehaviour {
 		listManufacturers();
 		listWinnableCarsets();
 		carsetNames();
+		populateDriverPool();
 		
 		series.Clear();
 		series.Add("cup20");
@@ -206,6 +209,20 @@ public class DriverNames : MonoBehaviour {
 		allWinnableCarsets[5] = "irl23";
 	}
 	
+	public static void populateDriverPool(){
+		driverPool.Add("Alfredo");
+		driverPool.Add("Berry");
+		driverPool.Add("Bilicki");
+		driverPool.Add("Button");
+		driverPool.Add("Crafton");
+		driverPool.Add("Creed");
+		driverPool.Add("Custer");
+		driverPool.Add("Daly");
+		driverPool.Add("Davenport");
+		driverPool.Add("Enfinger");
+		driverPool.Add("Gaulding");
+	}
+	
 	public static bool isOfficialSeries(string seriesPrefix){
 		loadData();
 		for(int i=0;i<allCarsets.Length;i++){
@@ -255,6 +272,16 @@ public class DriverNames : MonoBehaviour {
 		loadData();
 		string[] types = allTypes[seriesPrefix];
 		return types[index];
+	}
+	
+	public static int getNumber(string seriesPrefix, int index){
+		loadData();
+		
+		int customNum = index;
+		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + index)){
+			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + index);
+		}
+		return customNum;
 	}
 	
 	public static int getFieldSize(string seriesPrefix){

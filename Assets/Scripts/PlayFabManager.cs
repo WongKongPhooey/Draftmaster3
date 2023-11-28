@@ -15,6 +15,8 @@ public class PlayFabManager : MonoBehaviour
 	
 	public static string errorMessageBuffer;
 	
+	public static int garageValue;
+	
 	public Text messageText;
 	public InputField usernameInput;
 	public InputField emailInput;
@@ -864,6 +866,7 @@ public class PlayFabManager : MonoBehaviour
 		//If logged in as someone
 		if(PlayerPrefs.HasKey("PlayerUsername")){
 			
+			garageValue = 0;
 			//Try an autosave
 			foreach(string series in allSeries){
 				string progressJSON = JSONifyProgress(series);
@@ -875,6 +878,8 @@ public class PlayFabManager : MonoBehaviour
 					Debug.Log("Cannot reach PlayFab");
 				}
 			}
+			Debug.Log("Garage Value: " + garageValue);
+			PlayerPrefs.SetInt("GarageValue",garageValue);
 		}
 	}
 
@@ -897,6 +902,8 @@ public class PlayFabManager : MonoBehaviour
 				carGears = PlayerPrefs.GetInt(seriesPrefix + car + "Gears");
 				totalCars++;
 				if(carUnlocked == 1){
+					int carRarity = DriverNames.getRarity(seriesPrefix,car);
+					garageValue += (GameData.unlockGears(carClass) * carRarity) + carGears;
 					unlockedCars++;
 				}
 			}
@@ -997,6 +1004,66 @@ public class PlayFabManager : MonoBehaviour
 			tableLabels[1].text = item.DisplayName;
 			float leaderboardSpeed = item.StatValue/1000f;
 			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
+			
+			if(item.PlayFabId.ToString() == PlayerPrefs.GetString("PlayerPlayFabId")){
+				tableLabels[0].color = Color.red;
+				tableLabels[1].color = Color.red;
+				tableLabels[2].color = Color.red;
+			} else {
+				
+			}
+			
+			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+		}
+	}
+	
+	public static void GetRecordLeaderboard(string name){
+		if(checkInternet() == false){return;}
+		
+		var request = new GetLeaderboardRequest {
+			StatisticName = name,
+			StartPosition = 0,
+			MaxResultsCount = 50
+		};
+		PlayFabClientAPI.GetLeaderboard(request, OnRecordLeaderboardGet, OnError);
+	}
+	
+	static void OnRecordLeaderboardGet(GetLeaderboardResult result) {
+		
+		foreach(var item in result.Leaderboard) {
+			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
+			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
+			tableLabels[0].text = (item.Position + 1).ToString();
+			tableLabels[1].text = item.DisplayName;
+			tableLabels[2].text = item.StatValue.ToString();
+			
+			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+		}
+	}
+	
+	public static void GetRecordAroundPlayer(string name){
+		if(checkInternet() == false){return;}
+		
+		var request = new GetLeaderboardAroundPlayerRequest {
+			StatisticName = name,
+			MaxResultsCount = 1
+		};
+		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnRecordAroundPlayerGet, OnError);
+	}
+	
+	static void OnRecordAroundPlayerGet(GetLeaderboardAroundPlayerResult result) {
+		
+		//Debug.Log("Got Leaderboard Around Player");
+		foreach(Transform item in rowsParent){
+			Destroy(item.gameObject);
+		}
+		
+		foreach(var item in result.Leaderboard) {
+			GameObject tableRows = Instantiate(rowPrefab, rowsParent);
+			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
+			tableLabels[0].text = (item.Position + 1).ToString();
+			tableLabels[1].text = item.DisplayName;
+			tableLabels[2].text = item.StatValue.ToString();
 			
 			if(item.PlayFabId.ToString() == PlayerPrefs.GetString("PlayerPlayFabId")){
 				tableLabels[0].color = Color.red;

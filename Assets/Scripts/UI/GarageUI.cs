@@ -17,6 +17,7 @@ public class GarageUI : MonoBehaviour
 	public GameObject finaleTile;
 	public GameObject throwbackTile;
 	public GameObject modCarTile;
+	public GameObject optionTile;
 	GameObject activeTile;
 	public GameObject seriesDropdownRow;
 	
@@ -31,12 +32,18 @@ public class GarageUI : MonoBehaviour
 	
 	public GameObject restrictionLabel;
 	public GameObject alertPopup;
+	GameObject garagePopup;
+	GameObject garagePopupFrame;
+	GameObject garagePopupTile;
+	Transform teamListFrame;
+	public GameObject teammateIcon;
 	
 	public static GameObject seriesDropdown;
 	public static GameObject currentSeries;
 	
 	public Transform seriesDropdownFrame;
 	public Transform tileFrame;
+	public Transform driverPanel;
 	public static string seriesPrefix;
 	public List<RectTransform> shuffleArray;
     // Start is called before the first frame update
@@ -76,6 +83,12 @@ public class GarageUI : MonoBehaviour
 		}
 		
 		alertPopup = GameObject.Find("AlertPopup");
+		garagePopup = GameObject.Find("GaragePopup");
+		garagePopupFrame = GameObject.Find("GaragePopupFrame");
+		garagePopupTile = GameObject.Find("GaragePopupTile");
+		teamListFrame = GameObject.Find("TeamList").transform;
+		
+		showGaragePopup("cup23",5,3);
 		
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
@@ -85,6 +98,8 @@ public class GarageUI : MonoBehaviour
 		
 		//No starter cars? Auto-unlock them
 		starterCars();
+		
+		loadTransferPanels();
 	}
 	
 	public void loadAllCars(){
@@ -502,6 +517,16 @@ public class GarageUI : MonoBehaviour
 		}
 	}
 
+	public void loadTransferPanels(){
+		loadTransferPanel(DriverNames.driverPool,driverPanel);
+	}
+	
+	public void loadTransferPanel(List<string> optionList, Transform parentGrid){
+		GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+		optionInst.GetComponent<GridSelector>().optionName = "Alan";
+		optionInst.transform.SetParent(parentGrid, false);
+	}
+
 	string classAbbr(int carClass){
 		string classLetter;
 		switch(carClass){
@@ -735,6 +760,61 @@ public class GarageUI : MonoBehaviour
 			alertPopup.GetComponent<AlertManager>().showPopup("Cannot Reach Cloud","Sorry, we can't currently retrieve and sync your save data. Do you have an internet connection?","dm2logo");
 		}
 		loadAllCars();
+	}
+
+	public void showGaragePopup(string seriesPrefix, int carNum, int carClass){
+		Text carTeamUI = garagePopupTile.transform.GetChild(0).GetComponent<Text>();
+		Text carTypeUI = garagePopupTile.transform.GetChild(1).GetComponent<Text>();
+		Text carClassUI = garagePopupTile.transform.GetChild(2).GetComponent<Text>();
+		Image carRarityUI = garagePopupTile.transform.GetChild(3).GetComponent<Image>();
+		Image carManuUI = garagePopupTile.transform.GetChild(4).GetComponent<Image>();
+		RawImage carPaint = garagePopupTile.transform.GetChild(5).GetComponent<RawImage>();
+		TMPro.TMP_Text carNameUI = garagePopupTile.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
+		
+		TMPro.TMP_Text carManuText = garagePopupFrame.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
+		TMPro.TMP_Text carTeamText = garagePopupFrame.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+		
+		string carTeam = DriverNames.getTeam(seriesPrefix,carNum);
+		string carDriver = DriverNames.getName(seriesPrefix,carNum);
+		carTeamUI.text = carTeam;
+		carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carNum));
+		carClassUI.text = "Class " + classAbbr(carClass);
+		carClassUI.color = classColours(carClass);
+		carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + DriverNames.getRarity(seriesPrefix,carNum) + "-star"); 
+		carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carNum)); 
+		carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carNum);
+		carNameUI.text = carDriver;
+		
+		carManuText.text = DriverNames.getManufacturer(seriesPrefix,carNum) + " cars will push you for longer";
+		carManuText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getManufacturer(seriesPrefix,carNum);
+		carTeamText.text = DriverNames.getTeam(seriesPrefix,carNum) + " teammates will block you less often";
+		carTeamText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getTeam(seriesPrefix,carNum);
+		
+		TMPro.TMP_Text driverName = GameObject.Find("DriverName").GetComponent<TMPro.TMP_Text>();
+		TMPro.TMP_Text manuName = GameObject.Find("ManufacturerName").GetComponent<TMPro.TMP_Text>();
+		TMPro.TMP_Text teamName = GameObject.Find("TeamName").GetComponent<TMPro.TMP_Text>();
+		TMPro.TMP_Text numberName = GameObject.Find("NumberName").GetComponent<TMPro.TMP_Text>();
+		
+		driverName.text = carDriver;
+		manuName.text = DriverNames.getManufacturer(seriesPrefix,carNum);
+		teamName.text = DriverNames.getTeam(seriesPrefix,carNum);
+		numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carNum).ToString();
+		
+		for(int car=0;car<100;car++){
+			if((DriverNames.getTeam(seriesPrefix, car) == carTeam)&&(car != carNum)){
+				//Add a new car tile
+				GameObject teammateInst = Instantiate(teammateIcon, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+				teammateInst.transform.SetParent(teamListFrame, false);
+				teammateInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + car);
+			}
+		}
+		
+		garagePopup.GetComponent<UIAnimate>().show();
+	}
+	
+	public void hideGaragePopup(){
+		LeanTween.scale(garagePopup, new Vector3(0f,0f,0f), 0f);
+		garagePopup.GetComponent<UIAnimate>().hide();
 	}
 
     // Update is called once per frame
