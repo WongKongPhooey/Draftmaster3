@@ -518,13 +518,17 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void loadTransferPanels(){
-		loadTransferPanel(DriverNames.driverPool,driverPanel);
+		loadTransferPanel(driverPanel);
 	}
 	
-	public void loadTransferPanel(List<string> optionList, Transform parentGrid){
-		GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-		optionInst.GetComponent<GridSelector>().optionName = "Alan";
-		optionInst.transform.SetParent(parentGrid, false);
+	public void loadTransferPanel(Transform parentGrid){
+		string[] driverPool = DriverNames.getDriverPool("irc00");
+		foreach(string driver in driverPool){
+			GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			optionInst.GetComponent<GridSelector>().optionName = driver;
+			optionInst.GetComponent<TMPro.TMP_Text>().text = driver;
+			optionInst.transform.SetParent(parentGrid, false);
+		}
 	}
 
 	string classAbbr(int carClass){

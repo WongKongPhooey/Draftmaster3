@@ -284,6 +284,13 @@ public class DriverNames : MonoBehaviour {
 		return customNum;
 	}
 	
+	public static string[] getDriverPool(string seriesPrefix){
+		loadData();
+		string[] pooledDrivers = null;
+		pooledDrivers = driverPool.ToArray();
+		return pooledDrivers;
+	}
+	
 	public static int getFieldSize(string seriesPrefix){
 		loadData();
 		string[] nameSet = allNames[seriesPrefix];
