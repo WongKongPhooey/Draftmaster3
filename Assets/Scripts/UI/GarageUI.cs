@@ -41,6 +41,9 @@ public class GarageUI : MonoBehaviour
 	public static GameObject seriesDropdown;
 	public static GameObject currentSeries;
 	
+	public string chosenOption;
+	public GameObject optionObject;
+	
 	public Transform seriesDropdownFrame;
 	public Transform tileFrame;
 	public Transform driverPanel;
@@ -88,7 +91,7 @@ public class GarageUI : MonoBehaviour
 		garagePopupTile = GameObject.Find("GaragePopupTile");
 		teamListFrame = GameObject.Find("TeamList").transform;
 		
-		showGaragePopup("cup23",5,3);
+		showGaragePopup("cup23",91,3);
 		
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
@@ -99,6 +102,7 @@ public class GarageUI : MonoBehaviour
 		//No starter cars? Auto-unlock them
 		starterCars();
 		
+		chosenOption = null;
 		loadTransferPanels();
 	}
 	
@@ -522,6 +526,10 @@ public class GarageUI : MonoBehaviour
 	}
 	
 	public void loadTransferPanel(Transform parentGrid){
+		//Empty the panel
+		foreach (Transform child in parentGrid){
+			Destroy(child.gameObject);
+		}
 		string[] driverPool = DriverNames.getDriverPool("irc00");
 		foreach(string driver in driverPool){
 			GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -529,6 +537,25 @@ public class GarageUI : MonoBehaviour
 			optionInst.GetComponent<TMPro.TMP_Text>().text = driver;
 			optionInst.transform.SetParent(parentGrid, false);
 		}
+	}
+	
+	public void dropDriverToPool(){
+		Destroy(optionObject);
+		if(chosenOption != null){
+			GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			optionInst.GetComponent<GridSelector>().optionName = chosenOption;
+			optionInst.GetComponent<TMPro.TMP_Text>().text = chosenOption;
+			optionInst.transform.SetParent(driverPanel, false);
+		}
+	}
+
+	public void confirmTransfer(){
+		PlayerPrefs.SetString("CustomDriver" + seriesPrefix + "1", chosenOption);
+		Debug.Log("Transfer made!");
+		chosenOption = null;
+		showGaragePopup(seriesPrefix,91,3);
+		loadTransferPanels();
+		loadAllCars();
 	}
 
 	string classAbbr(int carClass){
@@ -780,6 +807,10 @@ public class GarageUI : MonoBehaviour
 		
 		string carTeam = DriverNames.getTeam(seriesPrefix,carNum);
 		string carDriver = DriverNames.getName(seriesPrefix,carNum);
+		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carNum)){
+			carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carNum);
+		}
+		
 		carTeamUI.text = carTeam;
 		carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carNum));
 		carClassUI.text = "Class " + classAbbr(carClass);
@@ -804,9 +835,13 @@ public class GarageUI : MonoBehaviour
 		teamName.text = DriverNames.getTeam(seriesPrefix,carNum);
 		numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carNum).ToString();
 		
+		//Empty the teammate frame
+		foreach (Transform child in teamListFrame){
+			Destroy(child.gameObject);
+		}
 		for(int car=0;car<100;car++){
 			if((DriverNames.getTeam(seriesPrefix, car) == carTeam)&&(car != carNum)){
-				//Add a new car tile
+				//Add a new teammate tile
 				GameObject teammateInst = Instantiate(teammateIcon, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				teammateInst.transform.SetParent(teamListFrame, false);
 				teammateInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + car);

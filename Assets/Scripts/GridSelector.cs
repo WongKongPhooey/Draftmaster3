@@ -7,18 +7,19 @@ public class GridSelector : MonoBehaviour{
 	public string optionName;
 	
     // Start is called before the first frame update
-    void Start()
-    {
+    void Start(){
         
     }
 
     // Update is called once per frame
-    void Update()
-    {
+    void Update(){
         
     }
 	
 	public void setOption(){
-		Debug.Log("Option name chosen: " + optionName);
+		GameObject.Find("Main").GetComponent<GarageUI>().dropDriverToPool();
+		this.gameObject.GetComponent<TMPro.TMP_Text>().color = new Color32(255,0,0,255);
+		GameObject.Find("Main").GetComponent<GarageUI>().chosenOption = optionName;
+		GameObject.Find("Main").GetComponent<GarageUI>().optionObject = this.gameObject;
 	}
 }

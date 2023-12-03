@@ -89,6 +89,12 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	public static void loadData(){
+		
+		//Check if already loaded
+		if(allNames.ContainsKey("cup20") == true){
+			return;
+		}
+		
 		cup20();
 		cup22();
 		cup23();
@@ -211,16 +217,38 @@ public class DriverNames : MonoBehaviour {
 	
 	public static void populateDriverPool(){
 		driverPool.Add("Alfredo");
+		driverPool.Add("Allgaier");
 		driverPool.Add("Berry");
 		driverPool.Add("Bilicki");
+		driverPool.Add("Brown");
+		driverPool.Add("Burton");
 		driverPool.Add("Button");
+		driverPool.Add("Cassill");
+		driverPool.Add("Clements");
 		driverPool.Add("Crafton");
 		driverPool.Add("Creed");
+		driverPool.Add("Currey");
 		driverPool.Add("Custer");
 		driverPool.Add("Daly");
 		driverPool.Add("Davenport");
 		driverPool.Add("Enfinger");
 		driverPool.Add("Gaulding");
+		driverPool.Add("Graf Jr");
+		driverPool.Add("Hemric");
+		driverPool.Add("Herbst");
+		driverPool.Add("A.Hill");
+		driverPool.Add("Hocevar");
+		driverPool.Add("Kobayashi");
+		driverPool.Add("Kostecki");
+		driverPool.Add("Lally");
+		driverPool.Add("McLeod");
+		driverPool.Add("Nemechek");
+		driverPool.Add("Newman");
+		driverPool.Add("Rockenfeller");
+		driverPool.Add("Poole");
+		driverPool.Add("C.Smith");
+		driverPool.Add("Z.Smith");
+		driverPool.Add("Yeley");
 	}
 	
 	public static bool isOfficialSeries(string seriesPrefix){
