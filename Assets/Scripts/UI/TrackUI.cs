@@ -45,31 +45,29 @@ public class TrackUI : MonoBehaviour
 		
 		alertPopup = GameObject.Find("AlertPopup");
 		
-		//Check for an active championship
-		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			//Debug.Log("There's an active championship..");
-			if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
-				PlayerPrefs.SetString("RaceType","Championship");
-				seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
-				PlayerPrefs.SetString("carSeries", seriesPrefix);
-				//Debug.Log("ChampionshipCarSeries loaded as " + PlayerPrefs.GetString("ChampionshipCarSeries") + ". CarSeries is " + PlayerPrefs.GetString("carSeries"));
+		//Check for an active championship in this subseries
+		if(PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Round")){
+			//Debug.Log("There's an active championship here.. " + currentSeriesIndex);
+			PlayerPrefs.SetString("RaceType","Championship");
+			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
+			PlayerPrefs.SetString("carSeries", seriesPrefix);
+			Debug.Log("SeriesChampionship" + currentSeriesIndex + "Car loaded as " + seriesPrefix);
 				
-				//Found a championship
-				championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
-				//Debug.Log("Current Round: " + championshipRound);
-				if(championshipRound >= seriesLength){
-					//Championship is over, reset
-					PlayerPrefs.DeleteKey("ChampionshipSubseries");
-					PlayerPrefs.SetString("RaceType","Single");
-					Debug.Log("End of season, round reset.");
-				} else {
-					loadTrack(trackList, championshipRound);
-					PlayerPrefs.SetString("CurrentTrack","" + championshipRound);
-					//loadPoints();
-				}
+			//Found a championship round set
+			championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesPrefix + "Round");
+			Debug.Log("Current Round: " + championshipRound);
+			if(championshipRound >= seriesLength){
+				//Championship is over, reset
+				PlayerPrefs.DeleteKey("ChampionshipSubseries");
+				PlayerPrefs.SetString("RaceType","Single");
+				Debug.Log("End of season, round reset.");
+			} else {
+				loadTrack(trackList, championshipRound);
+				PlayerPrefs.SetString("CurrentTrack","" + championshipRound);
+				//loadPoints();
 			}
 		} else {
-			//Debug.Log("No active championship");
+			Debug.Log("No active championship for this series " + currentSeriesIndex);
 		}
     }
 
@@ -307,25 +305,25 @@ public class TrackUI : MonoBehaviour
 
 	public void startChampionship(){
 		DriverPoints.resetPoints(seriesPrefix);
-		PlayerPrefs.SetString("ChampionshipSubseries",currentSeriesIndex);
-		PlayerPrefs.SetString("ChampionshipTracklist",PlayerPrefs.GetString("SeriesTrackList"));
 		PlayerPrefs.SetString("RaceType","Championship");
+		//Debug.Log("Championship Started: " + currentSeriesIndex);
+		PlayerPrefs.SetString("SeriesChampionship", currentSeriesIndex);
+		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
+		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "Tracklist",PlayerPrefs.GetString("SeriesTrackList"));
+		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
+		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "CarTexture", PlayerPrefs.GetString("carTexture"));
+		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "CarSeries", PlayerPrefs.GetString("carSeries"));
+		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "CarChoice", PlayerPrefs.GetInt("CarChoice"));
 		loadTrack(trackList, 0);
-		PlayerPrefs.SetInt("ChampionshipRound",0);
 		championshipRound = 0;
-		PlayerPrefs.SetInt("ChampionshipLength", seriesLength);
-		resetChampionshipPoints();
-		PlayerPrefs.SetString("ChampionshipCarTexture", PlayerPrefs.GetString("carTexture"));
-		PlayerPrefs.SetString("ChampionshipCarSeries", PlayerPrefs.GetString("carSeries"));
-		//Debug.Log("Championship Carset Series set as " + PlayerPrefs.GetString("ChampionshipCarSeries"));
-		PlayerPrefs.SetInt("ChampionshipCarChoice", PlayerPrefs.GetInt("CarChoice"));
+		resetChampionshipPoints(currentSeriesIndex);
 		SceneManager.LoadScene("Menus/ChampionshipHub");
 	}
 
-	public void resetChampionshipPoints(){
+	public void resetChampionshipPoints(string seriesIndex){
 		for(int i=0;i<100;i++){
 			//Empty them all out
-			PlayerPrefs.DeleteKey("ChampionshipPoints" + i);
+			PlayerPrefs.DeleteKey("SeriesChampionship" + seriesIndex + "Points" + i);
 		}
 	}
 
@@ -334,8 +332,6 @@ public class TrackUI : MonoBehaviour
 	}
 
     // Update is called once per frame
-    void Update()
-    {
-        
+    void Update(){
     }
 }

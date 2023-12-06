@@ -32,6 +32,7 @@ public class ChampionshipHubUI : MonoBehaviour
 	public static bool modSeries;
 	public int carNumber;
 
+	string currentSeriesIndex;
 	int currentSeries;
 	int currentSubseries;
 	string championshipSubseries;
@@ -48,21 +49,16 @@ public class ChampionshipHubUI : MonoBehaviour
 	public static string circuitChoice;
 	
     // Start is called before the first frame update
-    void Start()
-    {
+    void Start(){
+		currentSeriesIndex = PlayerPrefs.GetString("SeriesChampionship");
 		carNumber = PlayerPrefs.GetInt("CarChoice");
-		
-		championshipSubseries = PlayerPrefs.GetString("ChampionshipSubseries");
-		PlayerPrefs.SetString("CurrentSeriesIndex",championshipSubseries);
-		currentSeries = int.Parse(championshipSubseries.Substring(0,1));
-		currentSubseries = int.Parse(championshipSubseries.Substring(1));
-		championshipTracklist = PlayerPrefs.GetString("ChampionshipTracklist");
-		championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
-		championshipLength = PlayerPrefs.GetInt("ChampionshipLength");
-		//Debug.Log("Season Length: " + championshipLength);
-		seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
-		PlayerPrefs.SetString("carSeries",PlayerPrefs.GetString("ChampionshipCarSeries"));
-		
+		currentSeries = int.Parse(currentSeriesIndex.Substring(0,1));
+		currentSubseries = int.Parse(currentSeriesIndex.Substring(1));
+		championshipTracklist = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "Tracklist");
+		championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
+		championshipLength = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Length");
+		seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
+		PlayerPrefs.SetString("carSeries",seriesPrefix);
 		PlayerPrefs.SetString("RaceType","Championship");
         
 		modSeries = false;

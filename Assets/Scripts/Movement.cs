@@ -233,13 +233,13 @@ public class Movement : MonoBehaviour {
 		revbarOffset = 10;
 		
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
-		
+
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			officialSeries = true;
 		} else {
 			officialSeries = false;
 		}
-		
+
 		if(officialSeries == true){
 			setCarPhysics(seriesPrefix);
 		} else {

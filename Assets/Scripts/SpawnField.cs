@@ -35,6 +35,7 @@ public class SpawnField : MonoBehaviour {
 	int currentSubseries;
 	
 	string seriesPrefix;
+	string currentSeriesIndex;
 	
 	bool cautionRestart;
 	public static int startLane;
@@ -53,7 +54,8 @@ public class SpawnField : MonoBehaviour {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
-			seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
+			currentSeriesIndex = PlayerPrefs.GetString("SeriesChampionship");
+			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 		}
 		//Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
 
@@ -80,8 +82,8 @@ public class SpawnField : MonoBehaviour {
 			//Debug.Log("Spawn custom field");
 		} else {
 			//Debug.Log("Spawn standard field: " + seriesPrefix);
-			if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries") == PlayerPrefs.GetString("CurrentSeriesIndex"))){
-				if(PlayerPrefs.GetInt("ChampionshipRound") > 7){
+			if((PlayerPrefs.HasKey("SeriesChampionship"))&&(PlayerPrefs.GetString("CurrentSeriesIndex") == PlayerPrefs.GetString("SeriesChampionship"))){
+				if(PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "ChampionshipRound") > 7){
 					//Debug.Log("Points Adjusted Field");
 					spawnCarsPointsAdjusted(seriesPrefix);
 				} else {

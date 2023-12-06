@@ -59,7 +59,7 @@ public class ModData : MonoBehaviour
 
 	public static string getPhysicsModel(string seriesPrefix){
 		loadModData();
-		string physicsModel = null;
+		string physicsModel = "default";
 		foreach(var directory in d.GetDirectories()){
 			//Avoid these default folders
 			if(directory.Name == seriesPrefix){
