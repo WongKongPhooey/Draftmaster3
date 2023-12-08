@@ -91,7 +91,7 @@ public class GarageUI : MonoBehaviour
 		garagePopupTile = GameObject.Find("GaragePopupTile");
 		teamListFrame = GameObject.Find("TeamList").transform;
 		
-		showGaragePopup("cup23",91,3);
+		//showGaragePopup("cup23",91,3);
 		
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
@@ -817,7 +817,11 @@ public class GarageUI : MonoBehaviour
 		carClassUI.color = classColours(carClass);
 		carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + DriverNames.getRarity(seriesPrefix,carNum) + "-star"); 
 		carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carNum)); 
-		carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carNum);
+		if(DriverNames.isOfficialSeries(seriesPrefix)){
+			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carNum);
+		} else {
+			carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
+		}
 		carNameUI.text = carDriver;
 		
 		carManuText.text = DriverNames.getManufacturer(seriesPrefix,carNum) + " cars will push you for longer";
@@ -844,7 +848,11 @@ public class GarageUI : MonoBehaviour
 				//Add a new teammate tile
 				GameObject teammateInst = Instantiate(teammateIcon, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				teammateInst.transform.SetParent(teamListFrame, false);
-				teammateInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + car);
+				if(DriverNames.isOfficialSeries(seriesPrefix)){
+					teammateInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + car);
+				} else {
+					teammateInst.GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix, car);
+				}
 			}
 		}
 		

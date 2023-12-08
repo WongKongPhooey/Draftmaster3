@@ -25,9 +25,7 @@ public class GarageUIFunctions : MonoBehaviour
 		if(PlayerPrefs.HasKey("ActivePath")){
 			selectCar();
 		} else {
-			if(modCar == false){
-				openCarInfo();
-			}
+			openCarInfo();
 		}
 	}
 
@@ -39,9 +37,8 @@ public class GarageUIFunctions : MonoBehaviour
 	}
 
 	public void openCarInfo(){
-		PlayerPrefs.SetInt("CarFocus",carNum);
-		PlayerPrefs.SetString("SeriesFocus",seriesPrefix);
-		SceneManager.LoadScene("Levels/SingleCar");
+		int carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
+		GameObject.Find("Main").GetComponent<GarageUI>().showGaragePopup(seriesPrefix, carNum, carClass);
 	}
 
 	public void classUp(){

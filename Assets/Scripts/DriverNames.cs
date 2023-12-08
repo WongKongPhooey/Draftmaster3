@@ -274,32 +274,72 @@ public class DriverNames : MonoBehaviour {
 	
 	public static string getName(string seriesPrefix, int index){
 		loadData();
-		string[] names = allNames[seriesPrefix];
-		return names[index];
+		if(allNames.ContainsKey(seriesPrefix)){
+			string[] names = allNames[seriesPrefix];
+			return names[index];
+		} else {
+			if(ModData.isModSeries(seriesPrefix)){
+				return ModData.getName(seriesPrefix, index, true);
+			} else {
+				return null;
+			}
+		}
 	}
 	
 	public static string getTeam(string seriesPrefix, int index){
 		loadData();
-		string[] teams = allTeams[seriesPrefix];
-		return teams[index];
+		if(allTeams.ContainsKey(seriesPrefix)){
+			string[] teams = allTeams[seriesPrefix];
+			return teams[index];
+		} else {
+			if(ModData.isModSeries(seriesPrefix)){
+				return ModData.getTeam(seriesPrefix, index, true);
+			} else {
+				return null;
+			}
+		}
 	}
 	
 	public static string getManufacturer(string seriesPrefix, int index){
 		loadData();
-		string[] manufacturer = allManufacturer[seriesPrefix];
-		return manufacturer[index];
+		if(allManufacturer.ContainsKey(seriesPrefix)){
+			string[] manufacturer = allManufacturer[seriesPrefix];
+			return manufacturer[index];
+		} else {
+			if(ModData.isModSeries(seriesPrefix)){
+				return ModData.getManufacturer(seriesPrefix, index, true);
+			} else {
+				return null;
+			}
+		}
 	}
 	
 	public static int getRarity(string seriesPrefix, int index){
 		loadData();
-		int[] rarities = allRarity[seriesPrefix];
-		return rarities[index];
+		if(allRarity.ContainsKey(seriesPrefix)){
+			int[] rarities = allRarity[seriesPrefix];
+			return rarities[index];
+		} else {
+			if(ModData.isModSeries(seriesPrefix)){
+				return ModData.getRarity(seriesPrefix, index, true);
+			} else {
+				return 1;
+			}
+		}
 	}
 	
 	public static string getType(string seriesPrefix, int index){
 		loadData();
-		string[] types = allTypes[seriesPrefix];
-		return types[index];
+		if(allRarity.ContainsKey(seriesPrefix)){
+			string[] types = allTypes[seriesPrefix];
+			return types[index];
+		} else {
+			if(ModData.isModSeries(seriesPrefix)){
+				return ModData.getType(seriesPrefix, index);
+			} else {
+				return null;
+			}
+		}
 	}
 	
 	public static int getNumber(string seriesPrefix, int index){
