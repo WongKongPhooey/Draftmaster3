@@ -43,6 +43,7 @@ public class GarageUI : MonoBehaviour
 	
 	public string chosenOption;
 	public GameObject optionObject;
+	public int popupCarInd;
 	
 	public Transform seriesDropdownFrame;
 	public Transform tileFrame;
@@ -281,7 +282,7 @@ public class GarageUI : MonoBehaviour
 			if(validCars == 0){
 				alertPopup.GetComponent<AlertManager>().showPopup("No Eligible Car","No Car In This Set Meets The Entry Requirements. \n\n" + showRestrictions() + "","dm2logo");
 			}
-			Debug.Log("Valid cars: " + validCars);
+			//Debug.Log("Valid cars: " + validCars);
 		}
 		
 		int sortCounter=0;
@@ -364,7 +365,12 @@ public class GarageUI : MonoBehaviour
 			} else {
 				carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, carManu); 
 			}
-			carName.text = ModData.getName(seriesPrefix, i);
+			carName.text = ModData.getName(seriesPrefix,i,false);
+			if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+				carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+				//Debug.Log("Transferred Name! " + "Pref:" + ("CustomDriver" + seriesPrefix + i) + " Val:" + PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i));
+		
+			}
 			carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
 			//No custom numbers on mod cars.. for now.
 			carNumberObj.SetActive(false);
@@ -390,7 +396,7 @@ public class GarageUI : MonoBehaviour
 			if(validCars == 0){
 				alertPopup.GetComponent<AlertManager>().showPopup("No Eligible Car","No Car In This Set Meets The Entry Requirements. \n\n" + showRestrictions() + "","dm2logo");
 			}
-			Debug.Log("Valid cars: " + validCars);
+			//Debug.Log("Valid cars: " + validCars);
 		}
 	}
 
@@ -419,7 +425,7 @@ public class GarageUI : MonoBehaviour
 		switch(restrictionType){
 			case "Team":
 				seriesTeam = restrictionValue;
-				Debug.Log("Driver Type: " + seriesTeam);
+				//Debug.Log("Driver Type: " + seriesTeam);
 				break;
 			case "Manufacturer":
 				seriesManu = restrictionValue;
@@ -432,7 +438,7 @@ public class GarageUI : MonoBehaviour
 				break;
 			case "Type":
 				seriesDriverType = restrictionValue;
-				Debug.Log("Driver Type: " + seriesDriverType);
+				//Debug.Log("Driver Type: " + seriesDriverType);
 				break;
 			default:
 				break;
@@ -512,7 +518,6 @@ public class GarageUI : MonoBehaviour
 			string[] modData = modSet.Split('|');
 			
 			GameObject modCarsetInst = Instantiate(seriesDropdownRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-			
 			modCarsetInst.transform.SetParent(seriesDropdownFrame, false);
 			
 			modCarsetInst.name = modData[0];
@@ -550,12 +555,20 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void confirmTransfer(){
-		PlayerPrefs.SetString("CustomDriver" + seriesPrefix + "1", chosenOption);
-		Debug.Log("Transfer made!");
+		PlayerPrefs.SetString("CustomDriver" + seriesPrefix + popupCarInd, chosenOption);
+		//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
+		int popupCarNum = popupCarInd;
+		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
+			popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
+		}
+		showGaragePopup(seriesPrefix,popupCarNum,3);
 		chosenOption = null;
-		showGaragePopup(seriesPrefix,91,3);
 		loadTransferPanels();
-		loadAllCars();
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			loadAllCars();
+		} else {
+			loadAllModCars();
+		}
 	}
 
 	string classAbbr(int carClass){
@@ -794,6 +807,16 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void showGaragePopup(string seriesPrefix, int carNum, int carClass){
+		int carInd;
+		Debug.Log("Series Prefix on Garage popup open: " + seriesPrefix);
+		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
+			//Convert mods from number to index
+			carInd = ModData.getJsonIndexFromCarNum(seriesPrefix, carNum);
+		} else {
+			carInd = carNum;
+		}
+		popupCarInd = carInd;
+		
 		Text carTeamUI = garagePopupTile.transform.GetChild(0).GetComponent<Text>();
 		Text carTypeUI = garagePopupTile.transform.GetChild(1).GetComponent<Text>();
 		Text carClassUI = garagePopupTile.transform.GetChild(2).GetComponent<Text>();
@@ -805,29 +828,30 @@ public class GarageUI : MonoBehaviour
 		TMPro.TMP_Text carManuText = garagePopupFrame.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text carTeamText = garagePopupFrame.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 		
-		string carTeam = DriverNames.getTeam(seriesPrefix,carNum);
-		string carDriver = DriverNames.getName(seriesPrefix,carNum);
-		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carNum)){
-			carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carNum);
+		string carTeam = DriverNames.getTeam(seriesPrefix,carInd);
+		string carDriver = DriverNames.getName(seriesPrefix,carInd);
+		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carInd)){
+			carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carInd);
 		}
 		
 		carTeamUI.text = carTeam;
-		carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carNum));
+		carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carInd));
 		carClassUI.text = "Class " + classAbbr(carClass);
 		carClassUI.color = classColours(carClass);
-		carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + DriverNames.getRarity(seriesPrefix,carNum) + "-star"); 
-		carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carNum)); 
-		if(DriverNames.isOfficialSeries(seriesPrefix)){
-			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carNum);
+		carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + DriverNames.getRarity(seriesPrefix,carInd) + "-star"); 
+		carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carInd)); 
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
 		} else {
-			carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
+			//Debug.Log("Get Texture #" + carInd);
+			carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true);
 		}
 		carNameUI.text = carDriver;
 		
-		carManuText.text = DriverNames.getManufacturer(seriesPrefix,carNum) + " cars will push you for longer";
-		carManuText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getManufacturer(seriesPrefix,carNum);
-		carTeamText.text = DriverNames.getTeam(seriesPrefix,carNum) + " teammates will block you less often";
-		carTeamText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getTeam(seriesPrefix,carNum);
+		carManuText.text = DriverNames.getManufacturer(seriesPrefix,carInd) + " cars will push you for longer";
+		carManuText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getManufacturer(seriesPrefix,carInd);
+		carTeamText.text = DriverNames.getTeam(seriesPrefix,carInd) + " teammates will block you less often";
+		carTeamText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getTeam(seriesPrefix,carInd);
 		
 		TMPro.TMP_Text driverName = GameObject.Find("DriverName").GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text manuName = GameObject.Find("ManufacturerName").GetComponent<TMPro.TMP_Text>();
@@ -835,23 +859,23 @@ public class GarageUI : MonoBehaviour
 		TMPro.TMP_Text numberName = GameObject.Find("NumberName").GetComponent<TMPro.TMP_Text>();
 		
 		driverName.text = carDriver;
-		manuName.text = DriverNames.getManufacturer(seriesPrefix,carNum);
-		teamName.text = DriverNames.getTeam(seriesPrefix,carNum);
-		numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carNum).ToString();
+		manuName.text = DriverNames.getManufacturer(seriesPrefix,carInd);
+		teamName.text = DriverNames.getTeam(seriesPrefix,carInd);
+		numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carInd).ToString();
 		
 		//Empty the teammate frame
 		foreach (Transform child in teamListFrame){
 			Destroy(child.gameObject);
 		}
 		for(int car=0;car<100;car++){
-			if((DriverNames.getTeam(seriesPrefix, car) == carTeam)&&(car != carNum)){
+			if((DriverNames.getTeam(seriesPrefix, car) == carTeam)&&(car != carInd)){
 				//Add a new teammate tile
 				GameObject teammateInst = Instantiate(teammateIcon, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				teammateInst.transform.SetParent(teamListFrame, false);
 				if(DriverNames.isOfficialSeries(seriesPrefix)){
 					teammateInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + car);
 				} else {
-					teammateInst.GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix, car);
+					teammateInst.GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix, car, true);
 				}
 			}
 		}
@@ -861,6 +885,7 @@ public class GarageUI : MonoBehaviour
 	
 	public void hideGaragePopup(){
 		LeanTween.scale(garagePopup, new Vector3(0f,0f,0f), 0f);
+		popupCarInd = 999;
 		garagePopup.GetComponent<UIAnimate>().hide();
 	}
 

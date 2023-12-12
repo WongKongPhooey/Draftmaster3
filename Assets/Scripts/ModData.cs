@@ -47,7 +47,7 @@ public class ModData : MonoBehaviour
 				string modFolderName = loadJson(directory.Name);
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
-					//Debug.Log("Parsed json, found: " + modJson.modName);
+					Debug.Log("Parsed json, found: " + modJson.modName);
 					seriesNiceName = modJson.modName;
 				} catch(Exception e){
 					seriesNiceName = "Error";
@@ -217,7 +217,7 @@ public class ModData : MonoBehaviour
 				try {
 					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
 					driverManufacturer = modJson.drivers[index].carManufacturer;
-					Debug.Log(driverManufacturer);
+					//Debug.Log(driverManufacturer);
 				} catch(Exception e){
 					driverManufacturer = "CHV";
 				}
@@ -261,7 +261,7 @@ public class ModData : MonoBehaviour
 		return driverRarity;
 	}
 	
-	public static Texture2D getTexture(string seriesPrefix, int index, bool convertedIndex = false){
+	public static Texture2D getTexture(string seriesPrefix, int index, bool convertToNum = false){
 		loadModData();
 		//Debug.Log("Looking for a mod texture..");
 		Texture2D carTex = null;
@@ -269,8 +269,8 @@ public class ModData : MonoBehaviour
 			if(directory.Name == seriesPrefix){
 				//Debug.Log("Found the correct mod carset..");
 				string modFolderName = loadJson(directory.Name);
-				if(convertedIndex){
-					index = getJsonIndexFromCarNum(seriesPrefix, index);
+				if(convertToNum == true){
+					index = getCarNum(seriesPrefix, index);
 				}
 				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
 				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png")){

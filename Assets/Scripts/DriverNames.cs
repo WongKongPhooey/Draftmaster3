@@ -262,7 +262,6 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	public static bool isOfficialManu(string manu){
-		Debug.Log(manu);
 		loadData();
 		for(int i=0;i<allManufacturers.Length;i++){
 			if(manu == allManufacturers[i]){
@@ -279,7 +278,7 @@ public class DriverNames : MonoBehaviour {
 			return names[index];
 		} else {
 			if(ModData.isModSeries(seriesPrefix)){
-				return ModData.getName(seriesPrefix, index, true);
+				return ModData.getName(seriesPrefix, index, false);
 			} else {
 				return null;
 			}
@@ -293,7 +292,7 @@ public class DriverNames : MonoBehaviour {
 			return teams[index];
 		} else {
 			if(ModData.isModSeries(seriesPrefix)){
-				return ModData.getTeam(seriesPrefix, index, true);
+				return ModData.getTeam(seriesPrefix, index, false);
 			} else {
 				return null;
 			}
@@ -307,7 +306,7 @@ public class DriverNames : MonoBehaviour {
 			return manufacturer[index];
 		} else {
 			if(ModData.isModSeries(seriesPrefix)){
-				return ModData.getManufacturer(seriesPrefix, index, true);
+				return ModData.getManufacturer(seriesPrefix, index, false);
 			} else {
 				return null;
 			}
@@ -321,7 +320,7 @@ public class DriverNames : MonoBehaviour {
 			return rarities[index];
 		} else {
 			if(ModData.isModSeries(seriesPrefix)){
-				return ModData.getRarity(seriesPrefix, index, true);
+				return ModData.getRarity(seriesPrefix, index, false);
 			} else {
 				return 1;
 			}
@@ -367,7 +366,11 @@ public class DriverNames : MonoBehaviour {
 	
 	public static int getNumXPos(string seriesPrefix){
 		loadData();
-		return numXPos[seriesPrefix];
+		if(numXPos.ContainsKey(seriesPrefix)){
+			return numXPos[seriesPrefix];
+		} else {
+			return 14;
+		}
 	}
 	
 	public static int getStorePrice(string seriesPrefix, int index, bool alt, bool storeDiscount, int rarity){
@@ -500,7 +503,11 @@ public class DriverNames : MonoBehaviour {
 	public static string getSeriesNiceName(string seriesPrefix){
 		loadData();
 		carsetNames();
-		return allCarsetNames[seriesPrefix];
+		if(allCarsetNames.ContainsKey(seriesPrefix)){
+			return allCarsetNames[seriesPrefix];
+		} else {
+			return seriesPrefix;
+		}
 	}
 	
 	public static string getRandomSeries(){
