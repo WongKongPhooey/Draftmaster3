@@ -1,4 +1,7 @@
 ﻿using UnityEngine;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Jobs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -123,6 +126,10 @@ public class AIMovement : MonoBehaviour
     public static bool crashActive;
     public static int crashTime;
 
+	NativeArray<RaycastCommand> raycastBatch;
+	NativeArray<RaycastHit> raycastHits;
+	JobHandle raycastHandler;
+
     // Use this for initialization
     void Start(){
 		
@@ -174,6 +181,9 @@ public class AIMovement : MonoBehaviour
 			AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		}
 		PlayerPrefs.SetInt("RaceAILevel", AILevel);
+		
+		raycastBatch = new NativeArray<RaycastCommand>(1, Allocator.Persistent);
+		raycastHits = new NativeArray<RaycastHit>(1, Allocator.Persistent);
 		
 		antiGlitch = 0;
 		
@@ -441,6 +451,11 @@ public class AIMovement : MonoBehaviour
         wobbleTarget = 0;
         wobbleRand = Random.Range(100, 500);
     }
+
+	void OnDestroy(){
+		raycastBatch.Dispose();
+		raycastHits.Dispose();
+	}
 
     void OnCollisionEnter(Collision carHit) {
 		
@@ -732,9 +747,12 @@ public class AIMovement : MonoBehaviour
 
 	void speedLogic(){
 		
-		RaycastHit DraftCheckForward;
+		//Complete the raycasting that was scheduled during the previous frame
+		raycastHandler.Complete();
+		
+		RaycastHit DraftCheckForward = raycastHits[0];
         RaycastHit DraftCheckBackward;
-        bool HitForward = Physics.Raycast(transform.position, transform.forward, out DraftCheckForward, 25);
+        bool HitForward = DraftCheckForward.distance > 0;
         bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 25);
 		
 		//If gaining draft of car in front
@@ -774,6 +792,11 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 		}
+		
+		//Schedule the next raycast to run during this frame in a batch job
+		raycastBatch[0] = new RaycastCommand(transform.position, transform.forward);
+		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 1);
+		
 		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= draftAirCushion){
