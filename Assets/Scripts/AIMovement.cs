@@ -182,8 +182,8 @@ public class AIMovement : MonoBehaviour
 		}
 		PlayerPrefs.SetInt("RaceAILevel", AILevel);
 		
-		raycastBatch = new NativeArray<RaycastCommand>(1, Allocator.Persistent);
-		raycastHits = new NativeArray<RaycastHit>(1, Allocator.Persistent);
+		raycastBatch = new NativeArray<RaycastCommand>(4, Allocator.Persistent);
+		raycastHits = new NativeArray<RaycastHit>(4, Allocator.Persistent);
 		
 		antiGlitch = 0;
 		
@@ -743,6 +743,15 @@ public class AIMovement : MonoBehaviour
 			//Pacing speed
 			AISpeed = 202;
 		}
+		
+		//Schedule the next raycast to run during this frame in a batch job
+		raycastBatch[0] = new RaycastCommand(transform.position, transform.forward, 25); //Forward centered
+		raycastBatch[1] = new RaycastCommand(transform.position, transform.forward * -1, 25); //Backward centered
+		raycastBatch[2] = new RaycastCommand(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //Forward Z Offset
+		raycastBatch[3] = new RaycastCommand(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward * -1, 20); //Forward Long Dist
+		//raycastBatch[4] = new RaycastCommand(transform.position, transform.forward * -1, 25); //Backward centered
+		
+		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 4);
 	}
 
 	void speedLogic(){
@@ -751,9 +760,9 @@ public class AIMovement : MonoBehaviour
 		raycastHandler.Complete();
 		
 		RaycastHit DraftCheckForward = raycastHits[0];
-        RaycastHit DraftCheckBackward;
+        RaycastHit DraftCheckBackward = raycastHits[1];
         bool HitForward = DraftCheckForward.distance > 0;
-        bool HitBackward = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheckBackward, 25);
+        bool HitBackward = DraftCheckBackward.distance > 0;
 		
 		//If gaining draft of car in front
 		if((HitForward && DraftCheckForward.distance <= maxDraftDistance)&&(coolEngine == false)){
@@ -792,11 +801,6 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 		}
-		
-		//Schedule the next raycast to run during this frame in a batch job
-		raycastBatch[0] = new RaycastCommand(transform.position, transform.forward);
-		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 1);
-		
 		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= draftAirCushion){
@@ -1026,17 +1030,19 @@ public class AIMovement : MonoBehaviour
 	}
 
 	void draftLogic(){
-		RaycastHit DraftCheckForward;
-        bool HitForward = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForward, 5);
-		//Debug.DrawRay(transform.position  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
+		
+		RaycastHit DraftCheckForwardZOffset = raycastHits[2];
+        bool HitForwardZOffset = DraftCheckForwardZOffset.distance > 0;
+		
+        //Debug.DrawRay(transform.position  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
 		//Debug.Log("Checking Draft Logic.. ");
-		if(HitForward == true){
-			float carDist = DraftCheckForward.distance;
-			float opponentSpeed = getOpponentSpeed(DraftCheckForward);
+		if(HitForwardZOffset == true){
+			float carDist = DraftCheckForwardZOffset.distance;
+			float opponentSpeed = getOpponentSpeed(DraftCheckForwardZOffset);
 			bool tryTimedPass = timedPass(carDist, opponentSpeed);
 			if(CameraRotate.cautionOut == true){
 				//Debug.Log("Caution Weighted Draft Logic");
-				GameObject oppCar = DraftCheckForward.transform.gameObject;
+				GameObject oppCar = DraftCheckForwardZOffset.transform.gameObject;
 				if(oppCar.GetComponent<AIMovement>() != null){
 					if(oppCar.GetComponent<AIMovement>().isWrecking == true){
 						avoidWreck();
@@ -1053,7 +1059,7 @@ public class AIMovement : MonoBehaviour
 			}
 			
 			if((holdLane >= laneRest)&&(tryTimedPass == false)){
-				string opponentName = DraftCheckForward.collider.gameObject.name;
+				string opponentName = DraftCheckForwardZOffset.collider.gameObject.name;
 				int opponentNum = 9999;
 				string opponentTeam = "";
 				if(opponentName != "Player") {
@@ -1079,8 +1085,9 @@ public class AIMovement : MonoBehaviour
 			}
 		} else {
 			//Check further away
-			RaycastHit DraftCheckForwardLong;
-			bool HitForwardLong = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, out DraftCheckForwardLong, 20);
+			RaycastHit DraftCheckForwardLong = raycastHits[3];
+			bool HitForwardLong = DraftCheckForwardLong.distance > 0;
+			
 			if(HitForwardLong == true){
 				float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
 				//Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);

@@ -792,7 +792,7 @@ public class Movement : MonoBehaviour {
 		
 		if(brakesOn == true){
 			if(playerSpeed > 195){
-				playerSpeed-=0.025f;
+				playerSpeed-=0.05f;
 			}
 		}
 
