@@ -97,18 +97,21 @@ public class Ticker : MonoBehaviour
 		tickerLocation.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("TrackLocation");
 		
 		carsTagged = false;
-		playerCar = GameObject.FindGameObjectWithTag("Player");
-		carsArray = GameObject.FindGameObjectsWithTag("AICar");
-		fieldSize = carsArray.Length;
+		findAllCars();
 		playerCarNum = PlayerPrefs.GetInt("CarChoice");
 		
 		hasLed = false;
     }
 
+	public void findAllCars(){
+		playerCar = GameObject.FindGameObjectWithTag("Player");
+		carsArray = GameObject.FindGameObjectsWithTag("AICar");
+		fieldSize = carsArray.Length;
+	}
+
 	public void populateTickerData(){
 
 		if((carsTagged == true)||(carsArray.Length == 0)){
-			//Debug.Log("Oops! Leaving..");
 			return;
 		}
 		
@@ -116,11 +119,11 @@ public class Ticker : MonoBehaviour
 			for(int t=0;t<carsArray.Length;t++){
 				//Initiate ticker object
 				GameObject tickerInst = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-				//Debug.Log(tickerInst.name + "#" + t + " created");
 				tickerInst.transform.SetParent(tickerObj, false);
 			}
 			
 			int i=0;
+			entrantList.Clear();
 			foreach (GameObject car in carsArray) {
 				carPositions[i] = car.transform.position.z;
 				carNames[i] = car.transform.name;
@@ -152,18 +155,19 @@ public class Ticker : MonoBehaviour
 		
 		playerPosition = playerCar.transform.position.z;
 		
-		entrantList.Clear();
-		
 		int j=0;
-		playerCar = GameObject.FindGameObjectWithTag("Player");
-		carsArray = GameObject.FindGameObjectsWithTag("AICar");
-		if(carsArray.Length > 0){
+		if(carsArray.Length == 0){
+			playerCar = GameObject.FindGameObjectWithTag("Player");
+			carsArray = GameObject.FindGameObjectsWithTag("AICar");
 			foreach (GameObject car in carsArray) {
 				entrantList.Add(car);
 				j++;
 			}
+			entrantList.Add(playerCar);
 		}
-		entrantList.Add(playerCar);
+		if(entrantList.Count == 0){
+			return;
+		}
 		
 		//Sort by z axis position
         entrantList.Sort(delegate(GameObject a, GameObject b) {
@@ -489,12 +493,11 @@ public class Ticker : MonoBehaviour
 			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "FINAL LAP";
 		}
 		if(carsTagged == false){
-			//Debug.Log("Cars haven't been tagged yet..");
-			populateTickerData();
-		}
-		if(carsArray.Length == 0){
-			//Debug.Log("Waiting for AI spawn..");
-			carsArray = GameObject.FindGameObjectsWithTag("AICar");
+			if(carsArray.Length == 0){
+				findAllCars();
+			} else {
+				populateTickerData();
+			}
 		}
 		if(CameraRotate.cautionOut == true){
 			tickerFlag.GetComponent<Image>().color = new Color(255,255,0);

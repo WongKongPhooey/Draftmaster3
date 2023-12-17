@@ -15,6 +15,7 @@ public class AIMovement : MonoBehaviour
 	public GameObject thePlayer;
 	public GameObject controlCar;
 	public Camera player2Cam;
+	public Vector3 pos;
     public float AISpeed;
 	public float relativeZToPlayer;
 	float affectedAISpeed;
@@ -135,6 +136,8 @@ public class AIMovement : MonoBehaviour
 		
 		tick=0;
 		
+		pos = transform.position;
+		
 		AISpeed = 203f;
         speedRand = Random.Range(-150, 150);
         speedRand = speedRand / 100;
@@ -182,8 +185,8 @@ public class AIMovement : MonoBehaviour
 		}
 		PlayerPrefs.SetInt("RaceAILevel", AILevel);
 		
-		raycastBatch = new NativeArray<RaycastCommand>(4, Allocator.Persistent);
-		raycastHits = new NativeArray<RaycastHit>(4, Allocator.Persistent);
+		raycastBatch = new NativeArray<RaycastCommand>(6, Allocator.Persistent);
+		raycastHits = new NativeArray<RaycastHit>(6, Allocator.Persistent);
 		
 		antiGlitch = 0;
 		
@@ -304,18 +307,18 @@ public class AIMovement : MonoBehaviour
 			if(chosenAlt != "0"){
 				Debug.Log("Custom alt spawned - Car #" + carNumber);
 				if(officialSeries == true){
-					Debug.Log("Stock Series - Spawn car paint");
+					//Debug.Log("Stock Series - Spawn car paint");
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
 				} else {
-					Debug.Log("Mod Series - Spawn car paint");
+					//Debug.Log("Mod Series - Spawn car paint");
 					liveryRend.material.mainTexture = ModData.getAltTexture(seriesPrefix,int.Parse(carNumber),int.Parse(chosenAlt));
 				}
 			} else {
 				if(officialSeries == true){
-					Debug.Log("Stock Series - Spawn car paint");
+					//Debug.Log("Stock Series - Spawn car paint");
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
 				} else {
-					Debug.Log("Non official series, get mod texture");
+					//Debug.Log("Non official series, get mod texture");
 					liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum);
 				}
 			}
@@ -599,9 +602,10 @@ public class AIMovement : MonoBehaviour
 		particleDisableDelay = 20;
     }
 	
-	void ReceivePush(float bumpSpeed){
+	void ReceivePush(GameObject pushedBy){
 		
 		if(initialContact == false){
+			float bumpSpeed = pushedBy.GetComponent<AIMovement>().AISpeed;
 			float midSpeed = bumpSpeed - AISpeed;
 			if((midSpeed > 4f)||(midSpeed < -4f)){
 				//Debug.Log("Wreck: Strong Push");
@@ -618,19 +622,9 @@ public class AIMovement : MonoBehaviour
 		} else {
 			AISpeed += backdraftMulti;
 		}
-		if(isWrecking == false){
-			//Send it back
-			RaycastHit DraftCheckBackward;
-			bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			if(HitBackward == false){
-				HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			}
-			
-			if(HitBackward == true){
-				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
-				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",AISpeed);
-			
-			}
+		if(isWrecking == false){			
+			pushedBy.SendMessage("UpdateTandemPosition",tandemPosition);
+			pushedBy.SendMessage("GivePush",AISpeed);
 		}
 	}
 	
@@ -658,6 +652,8 @@ public class AIMovement : MonoBehaviour
 		if(tick>=60){
 			tick-=60;
 		}
+
+		pos = transform.position;
 
 		if(isWrecking == false){
 			if(sparksCooldown > 0){
@@ -715,16 +711,6 @@ public class AIMovement : MonoBehaviour
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 				}
 				return;
-			}
-			
-			if(caution){
-				if (AISpeed > 200.5f){
-					if(CameraRotate.lap != CameraRotate.raceEnd){
-						AISpeed -= 0.02f;
-					}
-				} else {
-					AISpeed = 200;
-				}
 			} else {
 				holdLane++;
 				speedLogic();
@@ -744,14 +730,15 @@ public class AIMovement : MonoBehaviour
 			AISpeed = 202;
 		}
 		
-		//Schedule the next raycast to run during this frame in a batch job
-		raycastBatch[0] = new RaycastCommand(transform.position, transform.forward, 25); //Forward centered
-		raycastBatch[1] = new RaycastCommand(transform.position, transform.forward * -1, 25); //Backward centered
-		raycastBatch[2] = new RaycastCommand(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //Forward Z Offset
-		raycastBatch[3] = new RaycastCommand(transform.position + new Vector3(0.0f, 0.0f, 1.2f), transform.forward * -1, 20); //Forward Long Dist
-		//raycastBatch[4] = new RaycastCommand(transform.position, transform.forward * -1, 25); //Backward centered
+		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
+		raycastBatch[0] = new RaycastCommand(pos, transform.forward, 25); //Forward centered
+		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, 25); //Backward centered
+		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //Forward Z Offset
+		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward * -1, 20); //Forward Long Dist
+		//raycastBatch[6] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //?
+		//raycastBatch[7] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //?
 		
-		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 4);
+		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
 	}
 
 	void speedLogic(){
@@ -833,7 +820,7 @@ public class AIMovement : MonoBehaviour
 			if(DraftCheckForward.transform.gameObject.name != null){
 
 				if (DraftCheckForward.distance <= bumpDraftDistTrigger){
-					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AISpeed);
+					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AICar);
 				}
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;
@@ -970,7 +957,13 @@ public class AIMovement : MonoBehaviour
 		
 		//How fast can you switch lanes
         if (laneticker > 0){
-			bool leftCastHit = checkRaycast("LeftCorners", 0.51f);
+			
+			RaycastHit leftCastCheck;
+			bool leftCastHit = Physics.Raycast(pos + new Vector3(0,0,0.98f), transform.right * -1, out leftCastCheck, 0.51f);
+			if(leftCastHit == false){
+				leftCastHit = Physics.Raycast(pos + new Vector3(0,0,-0.98f), transform.right * -1, out leftCastCheck, 0.51f);
+			}
+			
 			if(leftCastHit == true){
 				backingOut = true;
 				laneticker = -laneChangeDuration + laneticker;
@@ -982,6 +975,7 @@ public class AIMovement : MonoBehaviour
         }
 
         if (laneticker < 0){
+			
 			bool rightCastHit = checkRaycast("RightCorners", 0.51f);
 			if(rightCastHit == true){
 				backingOut = true;
@@ -999,7 +993,7 @@ public class AIMovement : MonoBehaviour
             backingOut = false;
         }
 		
-		if(AICar.transform.position.x <= apronLineX){
+		if(pos.x <= apronLineX){
 			//Debug.Log("Track Limits!");
 			if (backingOut == false) {
 				backingOut = true;
@@ -1008,7 +1002,7 @@ public class AIMovement : MonoBehaviour
 			lane--;
 		}
 		
-		if(AICar.transform.position.x >= 1.35f){
+		if(pos.x >= 1.35f){
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
@@ -1034,7 +1028,7 @@ public class AIMovement : MonoBehaviour
 		RaycastHit DraftCheckForwardZOffset = raycastHits[2];
         bool HitForwardZOffset = DraftCheckForwardZOffset.distance > 0;
 		
-        //Debug.DrawRay(transform.position  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
+        //Debug.DrawRay(pos  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
 		//Debug.Log("Checking Draft Logic.. ");
 		if(HitForwardZOffset == true){
 			float carDist = DraftCheckForwardZOffset.distance;
@@ -1234,8 +1228,8 @@ public class AIMovement : MonoBehaviour
 	public void findDraft(){
 		RaycastHit DraftCheckLaneLeft;
 		RaycastHit DraftCheckLaneRight;
-		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 6);
-		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 6);
+		bool HitLaneLeft = Physics.Raycast(pos + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 6);
+		bool HitLaneRight = Physics.Raycast(pos + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 6);
 		string direction = "";
 		
 		if(HitLaneLeft){
@@ -1298,8 +1292,8 @@ public class AIMovement : MonoBehaviour
 	public void findClearLane(bool wrecking = false){
 		RaycastHit DraftCheckLaneLeft;
 		RaycastHit DraftCheckLaneRight;
-		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 10);
-		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 10);
+		bool HitLaneLeft = Physics.Raycast(pos + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 10);
+		bool HitLaneRight = Physics.Raycast(pos + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 10);
 		string direction = "";
 		
 		if(leftSideClear()){
@@ -1374,8 +1368,8 @@ public class AIMovement : MonoBehaviour
 	public void avoidWreck(){
 		RaycastHit DraftCheckLaneLeft;
 		RaycastHit DraftCheckLaneRight;
-		bool HitLaneLeft = Physics.Raycast(transform.position + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 20);
-		bool HitLaneRight = Physics.Raycast(transform.position + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 20);
+		bool HitLaneLeft = Physics.Raycast(pos + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 20);
+		bool HitLaneRight = Physics.Raycast(pos + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 20);
 		string direction = "";
 		
 		if(leftSideClear()){
@@ -1431,53 +1425,32 @@ public class AIMovement : MonoBehaviour
 	
 	public bool leftSideClear(float checkDist = 1.5f){
 		
-        RaycastHit DraftCheckLeft;
-        RaycastHit DraftCheckLeftForward;
-        RaycastHit DraftCheckLeftBackward;
-        bool HitLeft = Physics.Raycast(transform.position, transform.right * -1, out DraftCheckLeft, 100);
-        bool HitLeftForward = Physics.Raycast(transform.position, transform.forward - transform.right, out DraftCheckLeftForward, 100);
-        bool HitLeftBackward = Physics.Raycast(transform.position, (transform.forward * -1) - transform.right, out DraftCheckLeftBackward, 100);
+		RaycastHit checkLaneLeft = raycastHits[4];
+        bool hitLaneLeft = checkLaneLeft.distance > 0;
 		
-		//Check Left Corners Clear
-		if (!(HitLeftForward && DraftCheckLeftForward.distance <= 1.5f)){
-			if (!(HitLeftBackward && DraftCheckLeftBackward.distance <= 1.5f)){
-				if (!(HitLeft && DraftCheckLeft.distance <= 1)){
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
-			}
+		//Check Left Lane Clear
+		if (!(hitLaneLeft)){
+			return true;
 		} else {
 			return false;
 		}
+		
+		raycastBatch[4] = new RaycastCommand(pos + new Vector3(-1f,0,-1f), transform.forward, 2); //Lane Left of Car
 	}
 	
 	public bool rightSideClear(float checkDist = 1.5f){
 		
-        RaycastHit DraftCheckRight;
-        RaycastHit DraftCheckRightForward;
-        RaycastHit DraftCheckRightBackward;
-        bool HitRight = Physics.Raycast(transform.position, transform.right, out DraftCheckRight, 100);
-        bool HitRightForward = Physics.Raycast(transform.position, transform.forward + transform.right, out DraftCheckRightForward, 100);
-        bool HitRightBackward = Physics.Raycast(transform.position, (transform.forward * -1) + transform.right, out DraftCheckRightBackward, 100);
+		RaycastHit checkLaneRight = raycastHits[5];		
+        bool hitLaneRight = checkLaneRight.distance > 0;
 		
-		//Check Right Corners Clear
-		if (!(HitRightForward && DraftCheckRightForward.distance <= 1.5f)){
-			if (!(HitRightBackward && DraftCheckRightBackward.distance <= 1.5f)){
-				//Check Right Side Clear
-				if (!(HitRight && DraftCheckRight.distance <= 1)){
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
-			}
+		//Check Right Lane Clear
+		if (!(hitLaneRight)){
+			return true;
 		} else {
 			return false;
 		}
+		
+		raycastBatch[5] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //Lane Right of Car
 	}
 	
 	public bool doored(string side, float chance){
@@ -1492,8 +1465,8 @@ public class AIMovement : MonoBehaviour
 			
 			RaycastHit collisionLeftF;
 			RaycastHit collisionLeftB;
-			bool dooredLeftF = Physics.Raycast(transform.position + new Vector3(-0.52f,0,-1f), transform.forward, out collisionLeftF, 2);
-			bool dooredLeftB = Physics.Raycast(transform.position + new Vector3(-0.52f,0,1f), transform.forward * -1, out collisionLeftB, 2);
+			bool dooredLeftF = Physics.Raycast(pos + new Vector3(-0.52f,0,-1f), transform.forward, out collisionLeftF, 2);
+			bool dooredLeftB = Physics.Raycast(pos + new Vector3(-0.52f,0,1f), transform.forward * -1, out collisionLeftB, 2);
 			
 			if (((dooredLeftF) && (collisionLeftF.distance <= 2)) ||
 			   ((dooredLeftB) && (collisionLeftB.distance <= 2))) {
@@ -1507,8 +1480,8 @@ public class AIMovement : MonoBehaviour
 				
 				RaycastHit collisionRightF;
 				RaycastHit collisionRightB;
-				bool dooredRightF = Physics.Raycast(transform.position + new Vector3(0.52f,0,-1f), transform.forward, out collisionRightF, 2);
-				bool dooredRightB = Physics.Raycast(transform.position + new Vector3(0.52f,0,1f), transform.forward * -1, out collisionRightB, 2);
+				bool dooredRightF = Physics.Raycast(pos + new Vector3(0.52f,0,-1f), transform.forward, out collisionRightF, 2);
+				bool dooredRightB = Physics.Raycast(pos + new Vector3(0.52f,0,1f), transform.forward * -1, out collisionRightB, 2);
 				
 				if (((dooredRightF) && (collisionRightF.distance <= 2)) ||
 				   ((dooredRightB) && (collisionRightB.distance <= 2))) {
@@ -1589,60 +1562,60 @@ public class AIMovement : MonoBehaviour
 		}
 		switch(rayDirection){
 			case "Front":
-				rayHit = Physics.Raycast(transform.position, transform.forward, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, transform.forward, out DraftCheck, rayLength);
 				break;
 			case "Rear":
-				rayHit = Physics.Raycast(transform.position, transform.forward * -1, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, transform.forward * -1, out DraftCheck, rayLength);
 				break;
 			case "Left":
-				rayHit = Physics.Raycast(transform.position, transform.right * -1, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, transform.right * -1, out DraftCheck, rayLength);
 				break;
 			case "Right":
-				rayHit = Physics.Raycast(transform.position, transform.right, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, transform.right, out DraftCheck, rayLength);
 				break;
 			case "FrontCorners":
-				rayHit = Physics.Raycast(transform.position + new Vector3(0.48f,0,0), transform.forward, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos + new Vector3(0.48f,0,0), transform.forward, out DraftCheck, rayLength);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position + new Vector3(-0.48f,0,0), transform.forward, out DraftCheck, rayLength);
+					rayHit = Physics.Raycast(pos + new Vector3(-0.48f,0,0), transform.forward, out DraftCheck, rayLength);
 				}
 				break;
 			case "RearCorners":
-				rayHit = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheck, rayLength);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheck, rayLength);
+					rayHit = Physics.Raycast(pos - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheck, rayLength);
 				}
 				break;
 			case "LeftDiags":
-				rayHit = Physics.Raycast(transform.position, transform.forward - transform.right, out DraftCheck, rayLength);
-				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) - transform.right, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, transform.forward - transform.right, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, (transform.forward * -1) - transform.right, out DraftCheck, rayLength);
 				break;
 			case "RightDiags":
-				rayHit = Physics.Raycast(transform.position, transform.forward + transform.right, out DraftCheck, rayLength);
-				rayHit = Physics.Raycast(transform.position, (transform.forward * -1) + transform.right, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, transform.forward + transform.right, out DraftCheck, rayLength);
+				rayHit = Physics.Raycast(pos, (transform.forward * -1) + transform.right, out DraftCheck, rayLength);
 				break;
 			case "LeftCorners":
-				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right * -1, out DraftCheck, rayLength);
-				//Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * -0.52f, Color.yellow);
+				rayHit = Physics.Raycast(pos + new Vector3(0,0,0.98f), transform.right * -1, out DraftCheck, rayLength);
+				//Debug.DrawRay(pos + new Vector3(0,0,0.98f), transform.right * -0.52f, Color.yellow);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right * -1, out DraftCheck, rayLength);
-					//Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * -0.52f, Color.yellow);
+					rayHit = Physics.Raycast(pos + new Vector3(0,0,-0.98f), transform.right * -1, out DraftCheck, rayLength);
+					//Debug.DrawRay(pos + new Vector3(0,0,-0.98f), transform.right * -0.52f, Color.yellow);
 				}
 				break;
 			case "RightCorners":
-				rayHit = Physics.Raycast(transform.position + new Vector3(0,0,0.98f), transform.right, out DraftCheck, rayLength);
-				//Debug.DrawRay(transform.position + new Vector3(0,0,0.98f), transform.right * 0.52f, Color.yellow);
+				rayHit = Physics.Raycast(pos + new Vector3(0,0,0.98f), transform.right, out DraftCheck, rayLength);
+				//Debug.DrawRay(pos + new Vector3(0,0,0.98f), transform.right * 0.52f, Color.yellow);
 				if(rayHit == false){
-					rayHit = Physics.Raycast(transform.position + new Vector3(0,0,-0.98f), transform.right, out DraftCheck, rayLength);
-					//Debug.DrawRay(transform.position + new Vector3(0,0,-0.98f), transform.right * 0.52f, Color.yellow);
+					rayHit = Physics.Raycast(pos + new Vector3(0,0,-0.98f), transform.right, out DraftCheck, rayLength);
+					//Debug.DrawRay(pos + new Vector3(0,0,-0.98f), transform.right * 0.52f, Color.yellow);
 				}
 				break;
 			case "LeftEdge":
-				rayHit = Physics.Raycast(transform.position + new Vector3(-1f,0,-1f), transform.forward, out DraftCheck, rayLength);
-				//Debug.DrawRay(transform.position + new Vector3(-1f,0,-1f), Vector3.forward * 2, Color.red);
+				rayHit = Physics.Raycast(pos + new Vector3(-1f,0,-1f), transform.forward, out DraftCheck, rayLength);
+				//Debug.DrawRay(pos + new Vector3(-1f,0,-1f), Vector3.forward * 2, Color.red);
 				break;
 			case "RightEdge":
-				rayHit = Physics.Raycast(transform.position + new Vector3(1f,0,-1f), transform.forward, out DraftCheck, rayLength);
-				//Debug.DrawRay(transform.position + new Vector3(1f,0,-1f), Vector3.forward * 2, Color.red);
+				rayHit = Physics.Raycast(pos + new Vector3(1f,0,-1f), transform.forward, out DraftCheck, rayLength);
+				//Debug.DrawRay(pos + new Vector3(1f,0,-1f), Vector3.forward * 2, Color.red);
 				break;
 			default:
 				//Debug.Log("Invalid Raycast Direction");
@@ -1782,8 +1755,8 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		//Prevent landing in the crowd
-		if(this.gameObject.transform.position.x > 2f){
-			this.gameObject.transform.position = new Vector3(2f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
+		if(pos.x > 2f){
+			this.gameObject.transform.position = new Vector3(2f,pos.y,pos.z);
 		}
 		
 		//Align particle system to global track direction
