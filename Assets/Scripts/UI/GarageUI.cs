@@ -35,6 +35,9 @@ public class GarageUI : MonoBehaviour
 	GameObject garagePopup;
 	GameObject garagePopupFrame;
 	GameObject garagePopupTile;
+	GameObject actionPanel;
+	GameObject transferPanel;
+	GameObject transferDriverPanel;
 	Transform teamListFrame;
 	public GameObject teammateIcon;
 	
@@ -90,6 +93,9 @@ public class GarageUI : MonoBehaviour
 		garagePopup = GameObject.Find("GaragePopup");
 		garagePopupFrame = GameObject.Find("GaragePopupFrame");
 		garagePopupTile = GameObject.Find("GaragePopupTile");
+		actionPanel = GameObject.Find("ActionPanel");
+		transferPanel = GameObject.Find("TransferPanels");
+		transferDriverPanel = GameObject.Find("DriverPanel");
 		teamListFrame = GameObject.Find("TeamList").transform;
 		
 		//showGaragePopup("cup23",91,3);
@@ -879,8 +885,14 @@ public class GarageUI : MonoBehaviour
 				}
 			}
 		}
-		
 		garagePopup.GetComponent<UIAnimate>().show();
+	}
+
+	public void showGarageTransferPanel(){
+		transferPanel.GetComponent<UIAnimate>().show();
+		actionPanel.GetComponent<UIAnimate>().show();
+		//Dependant on chosen transfer action
+		transferDriverPanel.GetComponent<UIAnimate>().show();
 	}
 	
 	public void hideGaragePopup(){
