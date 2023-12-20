@@ -9,21 +9,26 @@ public class EnviroMovement : MonoBehaviour {
 	float scrollSpeedScaler;
 	public float carSpeedOffset;
 	public int trackSpeedOffset;
+	public float wreckOffsetMulti;
 	static float enviroSpeed;
 	public float enviroSpeedViewer;
-	static float minScrollSpeed;
+	public float maxScrollSpeed;
 	static float scrollPos;
+	public float scrollVX;
+	public float sizeMulti;
+	//public float fixedScroll;
 	Renderer rend;
 
 	void Awake(){
 		if(staticScroll == true){
 			rend = GetComponent<Renderer>();
 		}
-		minScrollSpeed = 0.175f;
+		maxScrollSpeed = -0.15f;
 		carSpeedOffset = 0;
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 		enviroSpeed = -3.8f;
 		scrollPos = 1;
+		sizeMulti = EnviroObject.transform.localScale.z / 32f;
 	}
 
 	// Update is called once per frame
@@ -32,22 +37,27 @@ public class EnviroMovement : MonoBehaviour {
 		if(Movement.wreckOver == true){
 			return;
 		}
-		
-		carSpeedOffset = CameraRotate.carSpeedOffset - Movement.playerWreckDecel;
+		wreckOffsetMulti = (200 - trackSpeedOffset + Movement.playerWreckDecel) / 200;
+		carSpeedOffset = CameraRotate.carSpeedOffset;
 
 		if(staticScroll == true){
-			//Slowest game speed is car:80, track:105 (LA start), Scaler = 0.066 + 0.131 = 0.197f		
-			float scrollCalc = (carSpeedOffset / 1200f) + (trackSpeedOffset / 800f);
-			//float scrollVX = ((minScrollSpeed - scrollCalc) / 2);
-			float scrollVX = (minScrollSpeed - scrollCalc);
-			if(scrollVX >= 0){
-				scrollPos -= scrollVX;
-			} else {
+			//Max offsets are car:80, track:105 (LA start)
+			//Slowest pacing = 0.02f, Stock pacing = 0.05f, Fastest scroll = 0.15f	
+			float scrollCalc = (carSpeedOffset / 900f) + (trackSpeedOffset / 3500f);
+			//maxScroll will always be negative
+			//scrollCalc should generally not exceed about 1.2f to look realistic
+			//trackSpeedOffset should aim to shift the calc by about 0.3f at most
+			scrollVX = (maxScrollSpeed + scrollCalc) * sizeMulti * wreckOffsetMulti;
+			//if(scrollVX >= 0){
+				scrollPos += scrollVX;
+				//Swap to this for testing
+				//scrollPos -= fixedScroll;
+			//} else {
 				//Can't go backwards..
-				scrollVX = 0;
-			}
-			if(scrollPos < 0){
-				scrollPos+=1;
+				//scrollVX = 0;
+			//}
+			if(scrollPos > 10){
+				scrollPos-=10;
 			}
 			
 			rend.material.mainTextureOffset = new Vector2(0, scrollPos);
