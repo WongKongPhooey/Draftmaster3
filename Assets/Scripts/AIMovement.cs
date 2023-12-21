@@ -605,7 +605,12 @@ public class AIMovement : MonoBehaviour
 	void ReceivePush(GameObject pushedBy){
 		
 		if(initialContact == false){
-			float bumpSpeed = pushedBy.GetComponent<AIMovement>().AISpeed;
+			float bumpSpeed;
+			if(pushedBy.tag == "AICar"){
+				bumpSpeed = pushedBy.GetComponent<AIMovement>().AISpeed;
+			} else {
+				bumpSpeed = pushedBy.GetComponent<Movement>().AISpeed;
+			}	
 			float midSpeed = bumpSpeed - AISpeed;
 			if((midSpeed > 4f)||(midSpeed < -4f)){
 				//Debug.Log("Wreck: Strong Push");
@@ -820,7 +825,7 @@ public class AIMovement : MonoBehaviour
 			if(DraftCheckForward.transform.gameObject.name != null){
 
 				if (DraftCheckForward.distance <= bumpDraftDistTrigger){
-					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AICar);
+					//DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AICar);
 				}
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;

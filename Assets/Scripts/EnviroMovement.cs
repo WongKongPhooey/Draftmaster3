@@ -48,14 +48,14 @@ public class EnviroMovement : MonoBehaviour {
 			//scrollCalc should generally not exceed about 1.2f to look realistic
 			//trackSpeedOffset should aim to shift the calc by about 0.3f at most
 			scrollVX = (maxScrollSpeed + scrollCalc) * sizeMulti * wreckOffsetMulti;
-			//if(scrollVX >= 0){
+			if(scrollVX <= 0){
 				scrollPos += scrollVX;
 				//Swap to this for testing
 				//scrollPos -= fixedScroll;
-			//} else {
+			} else {
 				//Can't go backwards..
-				//scrollVX = 0;
-			//}
+				scrollVX = 0;
+			}
 			if(scrollPos > 10){
 				scrollPos-=10;
 			}

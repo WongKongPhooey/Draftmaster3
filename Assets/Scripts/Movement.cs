@@ -782,7 +782,7 @@ public class Movement : MonoBehaviour {
 				}
 				if(DraftCheck.transform.gameObject.tag == "AICar"){
 					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
-					DraftCheck.transform.gameObject.SendMessage("ReceivePush",playerSpeed);
+					DraftCheck.transform.gameObject.SendMessage("ReceivePush",vehicle);
 				}
 			}
 		} else {
