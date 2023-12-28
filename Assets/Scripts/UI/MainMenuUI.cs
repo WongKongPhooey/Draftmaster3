@@ -59,6 +59,7 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject popupFrame;
 	
 	void Awake(){
+		Application.targetFrameRate = 30;
 	}
 	
     // Start is called before the first frame update

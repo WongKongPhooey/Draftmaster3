@@ -107,6 +107,7 @@ public class AIMovement : MonoBehaviour
 	bool dominator;
 
 	int tick;
+	int logicCycle;
 	int particleDisableDelay;
 
 	public int lap;
@@ -135,6 +136,7 @@ public class AIMovement : MonoBehaviour
     void Start(){
 		
 		tick=0;
+		logicCycle = 20;
 		
 		pos = transform.position;
 		
@@ -609,7 +611,7 @@ public class AIMovement : MonoBehaviour
 			if(pushedBy.tag == "AICar"){
 				bumpSpeed = pushedBy.GetComponent<AIMovement>().AISpeed;
 			} else {
-				bumpSpeed = pushedBy.GetComponent<Movement>().AISpeed;
+				bumpSpeed = Movement.playerSpeed;
 			}	
 			float midSpeed = bumpSpeed - AISpeed;
 			if((midSpeed > 4f)||(midSpeed < -4f)){
@@ -653,9 +655,10 @@ public class AIMovement : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate(){
 
+		logicCycle = 20;
 		tick++;
-		if(tick>=60){
-			tick-=60;
+		if(tick>=logicCycle){
+			tick=0;
 		}
 
 		pos = transform.position;
@@ -722,8 +725,8 @@ public class AIMovement : MonoBehaviour
 			}
 			
 			//Experimental, for CPU saves
-			if(carNum%20 == tick%20){
-				//Debug.Log("Draft Logic cycle save, frame: " + carNum%20);
+			if(carNum%logicCycle == tick){
+				//Debug.Log("Draft Logic cycle save, frame: " + carNum);
 				draftLogic();
 			}
 			carWobble();
@@ -825,7 +828,7 @@ public class AIMovement : MonoBehaviour
 			if(DraftCheckForward.transform.gameObject.name != null){
 
 				if (DraftCheckForward.distance <= bumpDraftDistTrigger){
-					//DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AICar);
+					DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AICar);
 				}
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;

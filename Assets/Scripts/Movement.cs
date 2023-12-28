@@ -572,10 +572,11 @@ public class Movement : MonoBehaviour {
 		}
 	}
 	
-	void ReceivePush(float bumpSpeed){
+	void ReceivePush(GameObject pushedBy){
 		if(isWrecking == false){
 			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + " while I was going " + playerSpeed);
 			if(initialContact == false){
+				float bumpSpeed = pushedBy.GetComponent<AIMovement>().AISpeed;
 				float midSpeed = bumpSpeed - playerSpeed;
 				playerSpeed += midSpeed/4;
 				initialContact = true;
@@ -867,7 +868,7 @@ public class Movement : MonoBehaviour {
 				draftStrengthRatio = 1200f;
 				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.004f;
-				bumpDraftDistTrigger = 1.11f;
+				bumpDraftDistTrigger = 1.05f;
 				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
 				break;
@@ -876,7 +877,7 @@ public class Movement : MonoBehaviour {
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.005f;
-				bumpDraftDistTrigger = 1.11f;
+				bumpDraftDistTrigger = 1.05f;
 				draftAirCushion = 1.1f;
 				revLimiterBoost = 0f;
 				break;
@@ -885,7 +886,7 @@ public class Movement : MonoBehaviour {
 				draftStrengthRatio = 1050f;
 				dragDecelMulti = 0.003f;
 				backdraftMulti = 0.0045f;
-				bumpDraftDistTrigger = 1.11f;
+				bumpDraftDistTrigger = 1.05f;
 				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
 				break;
