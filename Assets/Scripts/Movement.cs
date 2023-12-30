@@ -778,7 +778,6 @@ public class Movement : MonoBehaviour {
 			if(isWrecking == false){
 				//Bump drafting speeds both up
 				if(playerSpeed <= (variTopSpeed - 2f)){
-					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
 					playerSpeed+=(backdraftMulti + customAccelF);
 				}
 				if(DraftCheck.transform.gameObject.tag == "AICar"){

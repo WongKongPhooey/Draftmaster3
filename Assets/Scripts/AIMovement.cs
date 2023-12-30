@@ -823,7 +823,7 @@ public class AIMovement : MonoBehaviour
 		}
 
 		//If bump-drafting the car in front
-		if (HitForward && DraftCheckForward.distance <= (bumpDraftDistTrigger + 0.1f)){
+		if (HitForward && DraftCheckForward.distance <= bumpDraftDistTrigger){
 			//Frontward draft
 			if(DraftCheckForward.transform.gameObject.name != null){
 
@@ -1661,11 +1661,11 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		targetForce = 0;
+		targetForce = 50;
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
 		baseDecel = -0.25f;
-		randDecel = Random.Range(0.01f,0.05f);
+		randDecel = Random.Range(0.01f,0.1f);
 		slideX = 0;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);

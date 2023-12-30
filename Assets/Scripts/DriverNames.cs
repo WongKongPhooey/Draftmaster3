@@ -16,6 +16,7 @@ public class DriverNames : MonoBehaviour {
 	public static string[] types = new string[101];
 
 	public static List<string> driverPool = new List<string>();
+	public static List<string> manufacturerPool = new List<string>();
 
 	public static Dictionary<string, string[]> allNames = new Dictionary<string, string[]>();
 	public static Dictionary<string, string[]> allTeams = new Dictionary<string, string[]>();
@@ -108,6 +109,7 @@ public class DriverNames : MonoBehaviour {
 		listWinnableCarsets();
 		carsetNames();
 		populateDriverPool();
+		populateManufacturerPool();
 		
 		series.Clear();
 		series.Add("cup20");
@@ -251,6 +253,16 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Yeley");
 	}
 	
+	public static void populateManufacturerPool(){
+		manufacturerPool.Add("CHV");
+		manufacturerPool.Add("FRD");
+		manufacturerPool.Add("TYT");
+		manufacturerPool.Add("DDG");
+		manufacturerPool.Add("HON");
+		manufacturerPool.Add("OLD");
+		manufacturerPool.Add("PNT");
+	}
+	
 	public static bool isOfficialSeries(string seriesPrefix){
 		loadData();
 		for(int i=0;i<allCarsets.Length;i++){
@@ -351,11 +363,18 @@ public class DriverNames : MonoBehaviour {
 		return customNum;
 	}
 	
-	public static string[] getDriverPool(string seriesPrefix){
+	public static string[] getDriverPool(){
 		loadData();
 		string[] pooledDrivers = null;
 		pooledDrivers = driverPool.ToArray();
 		return pooledDrivers;
+	}
+	
+	public static string[] getManufacturerPool(){
+		loadData();
+		string[] pooledManufacturers = null;
+		pooledManufacturers = manufacturerPool.ToArray();
+		return pooledManufacturers;
 	}
 	
 	public static int getFieldSize(string seriesPrefix){

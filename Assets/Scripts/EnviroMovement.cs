@@ -56,6 +56,9 @@ public class EnviroMovement : MonoBehaviour {
 				//Can't go backwards..
 				scrollVX = 0;
 			}
+			if(scrollPos < 0){
+				scrollPos+=10;
+			}
 			if(scrollPos > 10){
 				scrollPos-=10;
 			}
@@ -63,7 +66,7 @@ public class EnviroMovement : MonoBehaviour {
 			rend.material.mainTextureOffset = new Vector2(0, scrollPos);
 		} else {
 			//Slowest game speed is car:80, track:105 (LA start), Scaler = 1.33 + 2.63 = 0.36f
-			enviroSpeed = -3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f);
+			enviroSpeed = (-3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f)) * wreckOffsetMulti;
 			
 			//Can't go backwards..
 			if(enviroSpeed <= 0){
