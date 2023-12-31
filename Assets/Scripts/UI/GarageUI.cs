@@ -54,6 +54,7 @@ public class GarageUI : MonoBehaviour
 	
 	public string chosenOption;
 	public GameObject optionObject;
+	public string optionType;
 	public int popupCarInd;
 	
 	public Transform seriesDropdownFrame;
@@ -221,7 +222,11 @@ public class GarageUI : MonoBehaviour
 			carClassUI.text = "Class " + classAbbr(carClass);
 			carClassUI.color = classColours(carClass);
 			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
-			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
+			if(PlayerPrefs.HasKey("CustomManufacturer" + seriesPrefix + i)){
+				carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + i));
+			} else {
+				carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu);
+			}
 			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
 				int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + i);		
 				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
@@ -580,6 +585,7 @@ public class GarageUI : MonoBehaviour
 				foreach(string driver in driverPool){
 					GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 					optionInst.GetComponent<GridSelector>().optionName = driver;
+					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<TMPro.TMP_Text>().text = driver;
 					optionInst.transform.SetParent(parentGrid, false);
 				}
@@ -589,6 +595,7 @@ public class GarageUI : MonoBehaviour
 				foreach(string manu in manufacturerPool){
 					GameObject optionInst = Instantiate(optionImageTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 					optionInst.GetComponent<GridSelector>().optionName = manu;
+					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("Icons/manu-" + manu);
 					optionInst.transform.SetParent(parentGrid, false);
 				}
@@ -600,13 +607,36 @@ public class GarageUI : MonoBehaviour
 		}
 	}
 	
-	public void dropDriverToPool(){
+	public void dropOptionToPool(){
 		Destroy(optionObject);
 		if(chosenOption != null){
-			GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-			optionInst.GetComponent<GridSelector>().optionName = chosenOption;
-			optionInst.GetComponent<TMPro.TMP_Text>().text = chosenOption;
-			optionInst.transform.SetParent(driverPanel, false);
+			GameObject optionInst;
+			switch(optionType){
+				case "Driver":
+					optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+					optionInst.GetComponent<GridSelector>().optionName = chosenOption;
+					optionInst.GetComponent<GridSelector>().optionType = optionType;
+					optionInst.GetComponent<TMPro.TMP_Text>().text = chosenOption;
+					optionInst.transform.SetParent(driverPanel, false);
+				break;
+				case "Manufacturer":
+					optionInst = Instantiate(optionImageTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+					optionInst.GetComponent<GridSelector>().optionName = chosenOption;
+					optionInst.GetComponent<GridSelector>().optionType = optionType;
+					optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("Icons/manu-" + chosenOption);
+					optionInst.transform.SetParent(manufacturerPanel, false);
+				break;
+				case "Team":
+					optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+					optionInst.GetComponent<GridSelector>().optionName = chosenOption;
+					optionInst.GetComponent<GridSelector>().optionType = optionType;
+					optionInst.GetComponent<TMPro.TMP_Text>().text = chosenOption;
+					optionInst.transform.SetParent(teamPanel, false);
+				break;
+				default:
+					//Throw error here
+					break;
+			}
 		}
 	}
 
@@ -616,11 +646,28 @@ public class GarageUI : MonoBehaviour
 		} else {
 			transfersLeft--;
 			PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
-			PlayerPrefs.SetString("CustomDriver" + seriesPrefix + popupCarInd, chosenOption);
-			//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
-			int popupCarNum = popupCarInd;
-			if(DriverNames.isOfficialSeries(seriesPrefix) == false){
-				popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
+			int popupCarNum = 999;
+			switch(optionType){
+				case "Driver":
+					PlayerPrefs.SetString("CustomDriver" + seriesPrefix + popupCarInd, chosenOption);
+					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
+					popupCarNum = popupCarInd;
+					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
+						popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
+					}
+					break;
+				case "Manufacturer":
+					PlayerPrefs.SetString("CustomManufacturer" + seriesPrefix + popupCarInd, chosenOption);
+					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
+					popupCarNum = popupCarInd;
+					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
+						popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
+					}
+					break;
+				case "Team":
+					break;
+				default:
+					break;
 			}
 			updateTransferCount();
 			showGaragePopup(seriesPrefix,popupCarNum,3);
@@ -912,7 +959,11 @@ public class GarageUI : MonoBehaviour
 		carClassUI.text = "Class " + classAbbr(carClass);
 		carClassUI.color = classColours(carClass);
 		carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + DriverNames.getRarity(seriesPrefix,carInd) + "-star"); 
-		carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carInd)); 
+		if(PlayerPrefs.HasKey("CustomManufacturer" + seriesPrefix + carInd)){
+			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + carInd));
+		} else {
+			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carInd)); 
+		}
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
 		} else {
