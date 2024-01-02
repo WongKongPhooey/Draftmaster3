@@ -601,6 +601,14 @@ public class GarageUI : MonoBehaviour
 				}
 				break;
 			case "Team":
+				string[] teamPool = DriverNames.getTeamPool();
+				foreach(string team in teamPool){
+					GameObject optionInst = Instantiate(optionTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+					optionInst.GetComponent<GridSelector>().optionName = team;
+					optionInst.GetComponent<GridSelector>().optionType = panelType;
+					optionInst.GetComponent<TMPro.TMP_Text>().text = team;
+					optionInst.transform.SetParent(parentGrid, false);
+				}
 				break;
 			case "Number":
 				break;
@@ -665,6 +673,12 @@ public class GarageUI : MonoBehaviour
 					}
 					break;
 				case "Team":
+					PlayerPrefs.SetString("CustomTeam" + seriesPrefix + popupCarInd, chosenOption);
+					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
+					popupCarNum = popupCarInd;
+					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
+						popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
+					}
 					break;
 				default:
 					break;
@@ -948,18 +962,23 @@ public class GarageUI : MonoBehaviour
 		TMPro.TMP_Text carManuText = garagePopupFrame.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text carTeamText = garagePopupFrame.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 		
-		string carTeam = DriverNames.getTeam(seriesPrefix,carInd);
 		string carDriver = DriverNames.getName(seriesPrefix,carInd);
 		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carInd)){
 			carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carInd);
 		}
 		
+		string carTeam = DriverNames.getTeam(seriesPrefix,carInd);
+		if(PlayerPrefs.HasKey("CustomTeam" + seriesPrefix + carInd)){
+			carTeam = PlayerPrefs.GetString("CustomTeam" + seriesPrefix + carInd);
+		}
 		carTeamUI.text = carTeam;
 		carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carInd));
 		carClassUI.text = "Class " + classAbbr(carClass);
 		carClassUI.color = classColours(carClass);
 		carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + DriverNames.getRarity(seriesPrefix,carInd) + "-star"); 
+		string carManu = DriverNames.getManufacturer(seriesPrefix,carInd);
 		if(PlayerPrefs.HasKey("CustomManufacturer" + seriesPrefix + carInd)){
+			carManu = PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + carInd);
 			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + carInd));
 		} else {
 			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carInd)); 
@@ -972,9 +991,9 @@ public class GarageUI : MonoBehaviour
 		}
 		carNameUI.text = carDriver;
 		
-		carManuText.text = DriverNames.getManufacturer(seriesPrefix,carInd) + " cars will push you for longer";
+		carManuText.text = carManu + " cars will push you for longer";
 		carManuText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getManufacturer(seriesPrefix,carInd);
-		carTeamText.text = DriverNames.getTeam(seriesPrefix,carInd) + " teammates will block you less often";
+		carTeamText.text = carTeam + " teammates will block you less often";
 		carTeamText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getTeam(seriesPrefix,carInd);
 		
 		TMPro.TMP_Text driverName = GameObject.Find("DriverName").GetComponent<TMPro.TMP_Text>();
@@ -983,8 +1002,8 @@ public class GarageUI : MonoBehaviour
 		TMPro.TMP_Text numberName = GameObject.Find("NumberName").GetComponent<TMPro.TMP_Text>();
 		
 		driverName.text = carDriver;
-		manuName.text = DriverNames.getManufacturer(seriesPrefix,carInd);
-		teamName.text = DriverNames.getTeam(seriesPrefix,carInd);
+		manuName.text = carManu;
+		teamName.text = carTeam;
 		numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carInd).ToString();
 		
 		//Empty the teammate frame

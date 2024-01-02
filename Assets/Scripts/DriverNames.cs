@@ -17,6 +17,8 @@ public class DriverNames : MonoBehaviour {
 
 	public static List<string> driverPool = new List<string>();
 	public static List<string> manufacturerPool = new List<string>();
+	public static List<string> teamPool = new List<string>();
+	public static List<string> numberPool = new List<string>();
 
 	public static Dictionary<string, string[]> allNames = new Dictionary<string, string[]>();
 	public static Dictionary<string, string[]> allTeams = new Dictionary<string, string[]>();
@@ -108,8 +110,8 @@ public class DriverNames : MonoBehaviour {
 		listManufacturers();
 		listWinnableCarsets();
 		carsetNames();
-		populateDriverPool();
-		populateManufacturerPool();
+		//populateTeamPool();
+		//populateNumberPool();
 		
 		series.Clear();
 		series.Add("cup20");
@@ -185,6 +187,9 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("dmc15", 17);
 			numXPos.Add("irc00", 17);
 		}
+		populateDriverPool();
+		populateManufacturerPool();
+		populateTeamPool();
 	}
 	
 	public static void listCarsets(){
@@ -218,49 +223,77 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	public static void populateDriverPool(){
+		
 		driverPool.Add("Alfredo");
 		driverPool.Add("Allgaier");
 		driverPool.Add("Berry");
-		driverPool.Add("Bilicki");
 		driverPool.Add("Brown");
 		driverPool.Add("Burton");
-		driverPool.Add("Button");
-		driverPool.Add("Cassill");
 		driverPool.Add("Clements");
 		driverPool.Add("Crafton");
 		driverPool.Add("Creed");
 		driverPool.Add("Currey");
-		driverPool.Add("Custer");
 		driverPool.Add("Daly");
 		driverPool.Add("Davenport");
 		driverPool.Add("Enfinger");
-		driverPool.Add("Gaulding");
 		driverPool.Add("Graf Jr");
 		driverPool.Add("Hemric");
 		driverPool.Add("Herbst");
 		driverPool.Add("A.Hill");
 		driverPool.Add("Hocevar");
-		driverPool.Add("Kobayashi");
-		driverPool.Add("Kostecki");
 		driverPool.Add("Lally");
-		driverPool.Add("McLeod");
 		driverPool.Add("Nemechek");
 		driverPool.Add("Newman");
 		driverPool.Add("Rockenfeller");
-		driverPool.Add("Poole");
 		driverPool.Add("C.Smith");
 		driverPool.Add("Z.Smith");
-		driverPool.Add("Yeley");
+		
+		foreach(KeyValuePair<string, string[]> seriesDrivers in allNames){
+			if(seriesDrivers.Key == "dmc15"){
+				continue;
+			}
+			Debug.Log("Getting names in " + seriesDrivers.Key);
+			// do something with entry.Value or entry.Key
+			foreach(string name in seriesDrivers.Value){
+				if((driverPool.Contains(name) == false)&&(name != null)){
+					driverPool.Add(name);
+					Debug.Log(name + " added to pool");
+				}
+			}
+		}
+		
+		driverPool.Sort();
 	}
 	
 	public static void populateManufacturerPool(){
-		manufacturerPool.Add("CHV");
-		manufacturerPool.Add("FRD");
-		manufacturerPool.Add("TYT");
-		manufacturerPool.Add("DDG");
-		manufacturerPool.Add("HON");
-		manufacturerPool.Add("OLD");
-		manufacturerPool.Add("PNT");
+		
+		foreach(KeyValuePair<string, string[]> seriesManus in allManufacturer){
+			//Debug.Log("Getting teams in " + seriesManus.Key);
+			// do something with entry.Value or entry.Key
+			foreach(string team in seriesManus.Value){
+				if((manufacturerPool.Contains(team) == false)&&(team != null)&&(team.Length == 3)){
+					manufacturerPool.Add(team);
+					//Debug.Log(team + " added to pool");
+				}
+			}
+		}
+		
+		manufacturerPool.Sort();
+	}
+	
+	public static void populateTeamPool(){
+		
+		foreach(KeyValuePair<string, string[]> seriesTeams in allTeams){
+			//Debug.Log("Getting teams in " + seriesTeams.Key);
+			// do something with entry.Value or entry.Key
+			foreach(string team in seriesTeams.Value){
+				if((teamPool.Contains(team) == false)&&(team != null)&&(team.Length == 3)){
+					teamPool.Add(team);
+					//Debug.Log(team + " added to pool");
+				}
+			}
+		}
+		teamPool.Sort();
 	}
 	
 	public static bool isOfficialSeries(string seriesPrefix){
@@ -375,6 +408,13 @@ public class DriverNames : MonoBehaviour {
 		string[] pooledManufacturers = null;
 		pooledManufacturers = manufacturerPool.ToArray();
 		return pooledManufacturers;
+	}
+	
+	public static string[] getTeamPool(){
+		loadData();
+		string[] pooledTeams = null;
+		pooledTeams = teamPool.ToArray();
+		return pooledTeams;
 	}
 	
 	public static int getFieldSize(string seriesPrefix){
@@ -577,9 +617,9 @@ public class DriverNames : MonoBehaviour {
 	
 	public static void cup20(){
 		cup2020Names[0] = "Houff";
-		cup2020Names[1] = "Ku. Busch";
+		cup2020Names[1] = "Ku.Busch";
 		cup2020Names[2] = "Keselowski";
-		cup2020Names[3] = "A. Dillon";
+		cup2020Names[3] = "A.Dillon";
 		cup2020Names[4] = "Harvick";
 		cup2020Names[5] = "Larson";
 		cup2020Names[6] = "Newman";
@@ -589,12 +629,12 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[10] = "Almirola";
 		cup2020Names[11] = "Hamlin";
 		cup2020Names[12] = "Blaney";
-		cup2020Names[13] = "T. Dillon";
+		cup2020Names[13] = "T.Dillon";
 		cup2020Names[14] = "Bowyer";
 		cup2020Names[15] = "Poole";
 		cup2020Names[16] = "Haley";
 		cup2020Names[17] = "Buescher";
-		cup2020Names[18] = "Ky. Busch";
+		cup2020Names[18] = "Ky.Busch";
 		cup2020Names[19] = "Truex Jr";
 		cup2020Names[20] = "Jones";
 		cup2020Names[21] = "Dibenedetto";
@@ -846,7 +886,7 @@ public class DriverNames : MonoBehaviour {
 	public static void cup22(){
 		cup2022Names[1] = "Chastain";
 		cup2022Names[2] = "Cindric";
-		cup2022Names[3] = "A. Dillon";
+		cup2022Names[3] = "A.Dillon";
 		cup2022Names[4] = "Harvick";
 		cup2022Names[5] = "Larson";
 		cup2022Names[6] = "Keselowski";
@@ -860,7 +900,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Names[15] = "Preece";
 		cup2022Names[16] = "Allmendinger";
 		cup2022Names[17] = "Buescher";
-		cup2022Names[18] = "Ky. Busch";
+		cup2022Names[18] = "Ky.Busch";
 		cup2022Names[19] = "Truex Jr";
 		cup2022Names[20] = "Bell";
 		cup2022Names[21] = "Burton";
@@ -873,10 +913,10 @@ public class DriverNames : MonoBehaviour {
 		cup2022Names[34] = "McDowell";
 		cup2022Names[38] = "Gilliland";
 		cup2022Names[41] = "Custer";
-		cup2022Names[42] = "T. Dillon";
+		cup2022Names[42] = "T.Dillon";
 		cup2022Names[43] = "Jones";
 		cup2022Names[44] = "Biffle";
-		cup2022Names[45] = "Ku. Busch";
+		cup2022Names[45] = "Ku.Busch";
 		cup2022Names[47] = "Stenhouse Jr.";
 		cup2022Names[48] = "Bowman";
 		cup2022Names[50] = "Grala";
