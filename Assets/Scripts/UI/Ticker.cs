@@ -18,6 +18,8 @@ public class Ticker : MonoBehaviour
 
 	public static int fieldSize;
 
+	public static int tickerUpdateIndex;
+
 	public static GameObject playerCar;
 	public static int playerCarNum;
 	public static float playerPosition;
@@ -72,6 +74,8 @@ public class Ticker : MonoBehaviour
 		mainCam = GameObject.Find("Main Camera");
 		pauseMenu = GameObject.Find("PauseMenu");
 		gamePaused = false;
+		
+		tickerUpdateIndex = 0;
 		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
@@ -243,7 +247,7 @@ public class Ticker : MonoBehaviour
 			TMPro.TMP_Text tickerFallbackNum = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
-			tickerPos.text = (i+1).ToString();
+			//tickerPos.text = (i+1).ToString();
 			
 			if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
 				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
@@ -254,10 +258,10 @@ public class Ticker : MonoBehaviour
 				tickerFallbackNum.text = carNumber[i];
 			}
 			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
-			tickerName.text = driverNames[i];
-			tickerDist.text = "+" + carDist[i].ToString("f3");
+			//tickerName.text = driverNames[i];
+			//tickerDist.text = "+" + carDist[i].ToString("f3");
 			if(entrantList[i].name == playerCar.name){
-				tickerDist.text = leaderDist.ToString("f3");
+				//tickerDist.text = leaderDist.ToString("f3");
 			}
 			//Debug.Log(i + ": " + driverNames[i]);
 		}
@@ -272,17 +276,12 @@ public class Ticker : MonoBehaviour
 		return 0;
 	}
 
-	public static int checkSingleCarPosition(string thisCarName){
-		if(thisCarName == ""){
+	public static int checkSingleCarPosition(GameObject thisCarName){
+		int pos = entrantList.IndexOf(thisCarName); // Returns 1.
+		if(pos == -1){
 			return 9999;
 		}
-		for(int i=0;i<entrantList.Count;i++){
-			if(entrantList[i].name == thisCarName){
-				//Debug.Log("Car #" + thisCarName + " is in pos " + i);
-				return i;
-			}
-		}
-		return 9999;
+		return pos;
 	}
 
 	public static void saveCautionPositions(bool playerPitted = false){

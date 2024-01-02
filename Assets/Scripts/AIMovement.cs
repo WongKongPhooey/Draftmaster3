@@ -811,7 +811,7 @@ public class AIMovement : MonoBehaviour
 				AISpeed+=(backdraftMulti / 5f);
 			}
 			tandemDraft = true;
-			int currentPos = Ticker.checkSingleCarPosition("AICar0" + carNum + "");
+			int currentPos = Ticker.checkSingleCarPosition(AICar);
 			if(currentPos == 0){
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					//Debug.Log("Leader is #" + carNum);
