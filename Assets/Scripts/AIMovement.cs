@@ -187,8 +187,8 @@ public class AIMovement : MonoBehaviour
 		}
 		PlayerPrefs.SetInt("RaceAILevel", AILevel);
 		
-		raycastBatch = new NativeArray<RaycastCommand>(6, Allocator.Persistent);
-		raycastHits = new NativeArray<RaycastHit>(6, Allocator.Persistent);
+		raycastBatch = new NativeArray<RaycastCommand>(8, Allocator.Persistent);
+		raycastHits = new NativeArray<RaycastHit>(8, Allocator.Persistent);
 		
 		antiGlitch = 0;
 		
@@ -742,11 +742,13 @@ public class AIMovement : MonoBehaviour
 		raycastBatch[0] = new RaycastCommand(pos, transform.forward, 25); //Forward centered
 		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, 25); //Backward centered
 		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //Forward Z Offset
-		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward * -1, 20); //Forward Long Dist
-		//raycastBatch[6] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //?
-		//raycastBatch[7] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //?
+		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, maxDraftDistance); //Forward Long Dist
+		//4. Car Left Of Player
+		//5. Car Right Of Player
+		//6. Seek Draft Lane Left
+		//7. Seek Draft Lane Right
 		
-		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
+		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 8);
 	}
 
 	void speedLogic(){
@@ -1234,10 +1236,10 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public void findDraft(){
-		RaycastHit DraftCheckLaneLeft;
-		RaycastHit DraftCheckLaneRight;
-		bool HitLaneLeft = Physics.Raycast(pos + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 6);
-		bool HitLaneRight = Physics.Raycast(pos + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 6);
+		RaycastHit DraftCheckLaneLeft = raycastHits[6];
+		RaycastHit DraftCheckLaneRight = raycastHits[7];
+		bool HitLaneLeft = DraftCheckLaneLeft.distance > 0;
+		bool HitLaneRight = DraftCheckLaneRight.distance > 0;
 		string direction = "";
 		
 		if(HitLaneLeft){
@@ -1286,7 +1288,7 @@ public class AIMovement : MonoBehaviour
 			if(direction == "Both"){
 				//Random choose one
 				float rng = Random.Range(0,2);
-				//Debug.Log("Rnd /2 = " + rng);
+				Debug.Log("Rnd /2 = " + rng);
 				if(rng > 1f){
 					direction = "Right";
 				} else {
@@ -1661,7 +1663,7 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		targetForce = 50;
+		targetForce = 0;
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
 		baseDecel = -0.25f;
@@ -1670,9 +1672,6 @@ public class AIMovement : MonoBehaviour
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.35f, 0.35f) * 10, 0f);
-		
-		//Tire smoke
-		//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 	}
 	
 	public void endWreck(){

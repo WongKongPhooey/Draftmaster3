@@ -15,6 +15,9 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject finishLine;
 	public GameObject tropicono;
 	
+	Renderer cornerKerbRenderer;
+	Renderer apronRenderer;
+	
 	public static string seriesPrefix;
 	public static bool officialSeries;
 	
@@ -79,7 +82,7 @@ public class CameraRotate : MonoBehaviour {
 	
 	void Awake(){
 		
-		Application.targetFrameRate = 60;
+		Application.targetFrameRate = -1;
 
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
@@ -88,6 +91,9 @@ public class CameraRotate : MonoBehaviour {
 		} else {
 			MainCam.orthographicSize = 5.0f;
 		}
+		
+		cornerKerbRenderer = cornerKerb.GetComponent<Renderer>();
+		apronRenderer = apron.GetComponent<Renderer>();
 		
 		kerbBlur = 0.5f;
 		straightcounter = 0;
@@ -427,11 +433,11 @@ public class CameraRotate : MonoBehaviour {
 					}
 				}
 			}
-			cornerKerb.GetComponent<Renderer>().enabled = true;
+			cornerKerbRenderer.enabled = true;
 			if(apron != null){
-				apron.GetComponent<Renderer>().enabled = true;
+				apronRenderer.enabled = true;
 			}
-			cornerKerb.GetComponent<Renderer>().material.mainTextureOffset = new Vector2(kerbBlur,0);
+			cornerKerbRenderer.material.mainTextureOffset = new Vector2(kerbBlur,0);
 			cornercounter++;
 			
 			
@@ -491,10 +497,10 @@ public class CameraRotate : MonoBehaviour {
 					}
 					//Debug.Log("Straight:" + straight + " - Turn:" + turn);
 					if(cornerKerb.name != "FixedKerb"){
-						cornerKerb.GetComponent<Renderer>().enabled = false;
+						cornerKerbRenderer.enabled = false;
 					}
 					if((apron)&&(apron.name != "FixedApron")){
-						apron.GetComponent<Renderer>().enabled = false;
+						apronRenderer.enabled = false;
 					}
 				}
 			}
@@ -520,10 +526,10 @@ public class CameraRotate : MonoBehaviour {
 					
 					//Debug.Log("Straight:" + straight + " - Turn:" + turn);
 					if(cornerKerb.name != "FixedKerb"){
-						cornerKerb.GetComponent<Renderer>().enabled = false;
+						cornerKerbRenderer.enabled = false;
 					}
 					if((apron)&&(apron.name != "FixedApron")){
-						apron.GetComponent<Renderer>().enabled = false;
+						apronRenderer.enabled = false;
 					}
 				}
 			}
