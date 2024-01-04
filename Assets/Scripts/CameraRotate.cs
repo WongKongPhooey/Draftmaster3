@@ -389,7 +389,7 @@ public class CameraRotate : MonoBehaviour {
 			}
 		}
 
-		if ((straightcounter % 5) == 1){
+		if ((straightcounter % 20) == 1){
 			Ticker.updateTicker();
 		}
 

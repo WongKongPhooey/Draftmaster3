@@ -19,6 +19,8 @@ public class Ticker : MonoBehaviour
 	public static int fieldSize;
 
 	public static int tickerUpdateIndex;
+	public static int frameRedraws;
+	public static int maxFrameRedraws;
 
 	public static GameObject playerCar;
 	public static int playerCarNum;
@@ -76,6 +78,8 @@ public class Ticker : MonoBehaviour
 		gamePaused = false;
 		
 		tickerUpdateIndex = 0;
+		frameRedraws = 0;
+		maxFrameRedraws = 2;
 		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
@@ -150,6 +154,47 @@ public class Ticker : MonoBehaviour
 			playerTick.transform.SetParent(tickerObj, false);
 			updateTicker();
 		}
+	}
+
+	public static void updateTickerDisplay(){
+		//Start updating the ticker timer
+		//from wherever it stopped on the previous frame
+		frameRedraws=0;
+		for(int i=tickerUpdateIndex;i<entrantList.Count;i++){
+			//Only update a limited number per frame, for performance
+			if(frameRedraws >= maxFrameRedraws){
+				tickerUpdateIndex = i;
+				return;
+			}
+			
+			//Redraw the TMPText (heavy performance hit)
+			
+			TMPro.TMP_Text tickerPos = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+			Image tickerNum = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
+			TMPro.TMP_Text tickerFallbackNum = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
+			
+			if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
+				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+				tickerNum.color = new Color32(255,255,225,255);
+				tickerFallbackNum.text = "";
+			} else {
+				tickerNum.color = new Color32(255,255,225,0);
+				tickerFallbackNum.text = carNumber[i];
+			}
+			tickerName.text = driverNames[i];
+			tickerDist.text = "+" + carDist[i].ToString("f3");
+			if(entrantList[i].name == playerCar.name){
+				tickerDist.text = leaderDist.ToString("f3");
+			}
+			
+			frameRedraws++;
+		}
+		//If it ever completes this loop, 
+		//then it must have reached the end of the list.
+		//So reset the start index
+		tickerUpdateIndex = 0;
 	}
 
 	public static void updateTicker(){
@@ -241,30 +286,8 @@ public class Ticker : MonoBehaviour
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}
-			
-			TMPro.TMP_Text tickerPos = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
-			Image tickerNum = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
-			TMPro.TMP_Text tickerFallbackNum = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
-			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
-			//tickerPos.text = (i+1).ToString();
-			
-			if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
-				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
-				tickerNum.color = new Color32(255,255,225,255);
-				tickerFallbackNum.text = "";
-			} else {
-				tickerNum.color = new Color32(255,255,225,0);
-				tickerFallbackNum.text = carNumber[i];
-			}
-			//Debug.Log("Looking for: " + "cup20num" + carNumber[i]);
-			//tickerName.text = driverNames[i];
-			//tickerDist.text = "+" + carDist[i].ToString("f3");
-			if(entrantList[i].name == playerCar.name){
-				//tickerDist.text = leaderDist.ToString("f3");
-			}
-			//Debug.Log(i + ": " + driverNames[i]);
 		}
+		updateTickerDisplay();
 	}
 
 	public static int checkPlayerPosition(){
@@ -481,6 +504,13 @@ public class Ticker : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
+		
+		//If the index isn't 0
+		//The ticker hasn't finished updating yet
+		if(tickerUpdateIndex != 0){
+			updateTickerDisplay();
+		}
+		
 		//ticker.transform.Translate(-1.5f,0,0);
 		if(CameraRotate.overtime == true){
 			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";

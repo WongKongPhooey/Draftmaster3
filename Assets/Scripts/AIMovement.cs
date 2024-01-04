@@ -128,6 +128,9 @@ public class AIMovement : MonoBehaviour
     public static bool crashActive;
     public static int crashTime;
 
+	//Debug tool
+	public bool debugPlayer;
+
 	NativeArray<RaycastCommand> raycastBatch;
 	NativeArray<RaycastHit> raycastHits;
 	JobHandle raycastHandler;
@@ -605,7 +608,7 @@ public class AIMovement : MonoBehaviour
     }
 	
 	void ReceivePush(GameObject pushedBy){
-		
+		//Debug.Log(AICar.name + " gets pushed at speed of " + AISpeed);
 		if(initialContact == false){
 			float bumpSpeed;
 			if(pushedBy.tag == "AICar"){
@@ -624,6 +627,7 @@ public class AIMovement : MonoBehaviour
 			}
 			//For some reason changing this makes the player bump-draft mega fast!
 			AISpeed += midSpeed/4;
+			//Debug.Log(AICar.name + " is now at speed of " + AISpeed);
 			initialContact = true;
 			tandemDraft = true;
 		} else {
@@ -631,6 +635,7 @@ public class AIMovement : MonoBehaviour
 		}
 		if(isWrecking == false){			
 			pushedBy.SendMessage("UpdateTandemPosition",tandemPosition);
+			//Debug.Log(AICar.name + " sends push back to " + pushedBy.name);
 			pushedBy.SendMessage("GivePush",AISpeed);
 		}
 	}
@@ -739,10 +744,10 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
-		raycastBatch[0] = new RaycastCommand(pos, transform.forward, 25); //Forward centered
-		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, 25); //Backward centered
+		raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //Forward centered
+		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, maxDraftDistance); //Backward centered
 		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //Forward Z Offset
-		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, maxDraftDistance); //Forward Long Dist
+		//3. Forward Long Dist
 		//4. Car Left Of Player
 		//5. Car Right Of Player
 		//6. Seek Draft Lane Left
@@ -761,8 +766,17 @@ public class AIMovement : MonoBehaviour
         bool HitForward = DraftCheckForward.distance > 0;
         bool HitBackward = DraftCheckBackward.distance > 0;
 		
+		if(debugPlayer == true){
+			Debug.Log(AICar.name + " speedLogic start - " + AISpeed);
+		}
+		
 		//If gaining draft of car in front
 		if((HitForward && DraftCheckForward.distance <= maxDraftDistance)&&(coolEngine == false)){
+			
+			/*if(debugPlayer == true){
+				Debug.Log(AICar.name + " found draft");
+			}*/
+			
 			//Speed up
 			if (AISpeed < AIVariTopSpeed){
 				//Draft gets stronger as you get closer
@@ -778,32 +792,80 @@ public class AIMovement : MonoBehaviour
 				}
 				//AISpeed += draftStrength;
 				AISpeed += draftStrength;
+				
+				/*
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " speeding up - speed " + AISpeed + " , variTopSpeed " + AIVariTopSpeed);
+				}
+				*/
 			}
 		} else {
 			//Slow down
-			if (AISpeed > 200){ 
+			if (AISpeed > 200){
+				
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " slowing down, no forward draft");
+				}
 				//No draft, slow with drag
 				if(dominator == true){
-					AISpeed -= (dragDecelMulti - (AILevel / 12000));
+					AISpeed -= ((dragDecelMulti - (AILevel / 6000f)) / 2);
+					
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " dominator slowing down by " + ((dragDecelMulti - (AILevel / 6000f)) / 2) + " , variTopSpeed " + AIVariTopSpeed);
+					}
+					#endif
 				} else {
 					float diffToMax = AIVariTopSpeed - AISpeed;
 					if((diffToMax) < 2){
 						if(diffToMax < 0){
 							diffToMax = 0;
 						}
-						AISpeed -= (dragDecelMulti - (AILevel / 3000f)) * (2 - (diffToMax / 2));
+						AISpeed -= (dragDecelMulti - (AILevel / 6000f)) * (2 - (diffToMax / 2));
+						
+						#if UNITY_EDITOR
+						if(debugPlayer == true){
+							Debug.Log(AICar.name + " close to max speed, slowing down by " + (dragDecelMulti - (AILevel / 6000f)) * (2 - (diffToMax / 2)));
+						}
+						#endif
 					} else {
-						AISpeed -= (dragDecelMulti - (AILevel / 3000f));
+						AISpeed -= (dragDecelMulti - (AILevel / 6000f));
+						
+						#if UNITY_EDITOR
+						if(debugPlayer == true){
+							Debug.Log(AICar.name + " slowing down by " + (dragDecelMulti - (AILevel / 6000f)));
+						}
+						#endif
 					}
 				}
 			}
 		}
 		
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log(AICar.name + " speedLogic front draft end - " + AISpeed);
+		}
+		#endif
+		
 		//If recieving backdraft from car behind
 		if (HitBackward && DraftCheckBackward.distance <= draftAirCushion){
+			
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log(AICar.name + " has backdraft");
+			}
+			#endif
+			
 			//Bump draft can't exceed slingshot speed (for balance)
 			if(AISpeed <= (AIVariTopSpeed - 2f)){
-				AISpeed += backdraftMulti + (AILevel / 2000);
+				
+				AISpeed += (backdraftMulti + (AILevel / 2000));
+				
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " backdraft speed up by " + (backdraftMulti + (AILevel / 2000)));
+				}
+				#endif
 			}
 		}
 		
@@ -1121,6 +1183,7 @@ public class AIMovement : MonoBehaviour
 			} else {
 				findDraft();
 			}
+			raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, maxDraftDistance); //Forward Long Dist
 		}
 	}
 	
@@ -1779,7 +1842,7 @@ public class AIMovement : MonoBehaviour
 		if(smokeMultiplier < 0){
 			smokeMultiplier = -smokeMultiplier;
 		}
-		smokeMultiplier = (smokeMultiplier * 60) + 0;
+		smokeMultiplier = (smokeMultiplier * 30) + 0;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (wreckDecel / 5);
