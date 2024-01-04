@@ -1349,10 +1349,11 @@ public class Movement : MonoBehaviour {
 		}
 		smokeMultiplier = (smokeMultiplier * 60) + 0;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
-		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,60);
+		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (playerWreckDecel / 5);
 		tireSmoke.GetComponent<ParticleSystem>().startSize = 12 + (playerWreckDecel / 30);
-		
+		tireSmoke.GetComponent<ParticleSystem>().maxParticles = (int)(70 + Mathf.Round(playerWreckDecel / 2)); //Max 70, Hits 0 at -140 decel
+	
 		if(Mathf.Round(playerWreckDecel) == -90){
 			GameObject theCamera = GameObject.Find("Main Camera");
 			theCamera.GetComponent<CommentaryManager>().commentate("Caution");

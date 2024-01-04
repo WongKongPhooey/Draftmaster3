@@ -1847,6 +1847,7 @@ public class AIMovement : MonoBehaviour
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (wreckDecel / 5);
 		tireSmoke.GetComponent<ParticleSystem>().startSize = 12 + (wreckDecel / 30); //Max 12, Min 4.5
+		tireSmoke.GetComponent<ParticleSystem>().maxParticles = (int)(70 + Mathf.Round(wreckDecel / 2)); //Max 70, Hits 0 at -140 decel
 	}
 	
 	void updateWindForce(){
