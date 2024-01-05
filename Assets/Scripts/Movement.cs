@@ -1215,7 +1215,7 @@ public class Movement : MonoBehaviour {
 			wreckTorque = Random.Range(-0.25f, 0.25f) * 10;
 		} else {
 			//First impact, car will start straight
-			wreckTorque = Random.Range(-0.25f, 0.25f) * 10;
+			wreckTorque = Random.Range(-0.35f, 0.35f) * 10;
 		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 		
@@ -1291,7 +1291,7 @@ public class Movement : MonoBehaviour {
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.27f;
+		baseDecel-=0.37f;
 		slideX = ((baseDecel + 1) / 4f) + 20f;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
@@ -1347,7 +1347,7 @@ public class Movement : MonoBehaviour {
 		if(smokeMultiplier < 0){
 			smokeMultiplier = -smokeMultiplier;
 		}
-		smokeMultiplier = (smokeMultiplier * 60) + 0;
+		smokeMultiplier = (smokeMultiplier * 60) + 15;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (playerWreckDecel / 5);

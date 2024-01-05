@@ -252,12 +252,12 @@ public class DriverNames : MonoBehaviour {
 			if(seriesDrivers.Key == "dmc15"){
 				continue;
 			}
-			Debug.Log("Getting names in " + seriesDrivers.Key);
+			//Debug.Log("Getting names in " + seriesDrivers.Key);
 			// do something with entry.Value or entry.Key
 			foreach(string name in seriesDrivers.Value){
 				if((driverPool.Contains(name) == false)&&(name != null)){
 					driverPool.Add(name);
-					Debug.Log(name + " added to pool");
+					//Debug.Log(name + " added to pool");
 				}
 			}
 		}

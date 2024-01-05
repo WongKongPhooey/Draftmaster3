@@ -59,6 +59,7 @@ public class AIMovement : MonoBehaviour
 	float wreckAngle;
 	float wreckSlideRand;
 	float wreckFlatRand;
+	float wreckMassRand;
 	int antiGlitch;
 	public bool playerWrecked;
 	float targetForce;
@@ -157,6 +158,7 @@ public class AIMovement : MonoBehaviour
 		wreckOver = false;
 		wreckSlideRand = Random.Range(5f,15f);
 		wreckFlatRand = Random.Range(0f,-3f);
+		wreckMassRand = Random.Range(-0.5f,0.5f);
 		hitByPlayer = false;
 		speedDiffPadding = 0.2f;
 		
@@ -744,12 +746,12 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
-		raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //Forward centered
-		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, maxDraftDistance); //Backward centered
-		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //Forward Z Offset
+		raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //0. Forward centered
+		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, maxDraftDistance); //1. Backward centered
+		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //2. Forward Z Offset
 		//3. Forward Long Dist
-		//4. Car Left Of Player
-		//5. Car Right Of Player
+		raycastBatch[4] = new RaycastCommand(pos + new Vector3(-1f,0,-1f), transform.forward, 2); //4. Car Left Of Player
+		raycastBatch[5] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //5. Car Right Of Player
 		//6. Seek Draft Lane Left
 		//7. Seek Draft Lane Right
 		
@@ -1506,9 +1508,7 @@ public class AIMovement : MonoBehaviour
 			return true;
 		} else {
 			return false;
-		}
-		
-		raycastBatch[4] = new RaycastCommand(pos + new Vector3(-1f,0,-1f), transform.forward, 2); //Lane Left of Car
+		}	
 	}
 	
 	public bool rightSideClear(float checkDist = 1.5f){
@@ -1522,8 +1522,6 @@ public class AIMovement : MonoBehaviour
 		} else {
 			return false;
 		}
-		
-		raycastBatch[5] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //Lane Right of Car
 	}
 	
 	public bool doored(string side, float chance){
@@ -1715,7 +1713,7 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
-		this.GetComponent<Rigidbody>().mass = 2;
+		this.GetComponent<Rigidbody>().mass = 2 + wreckMassRand;
 		
 		//Remove constraints, allowing it to impact/spin using physics
 		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
@@ -1734,7 +1732,7 @@ public class AIMovement : MonoBehaviour
 		slideX = 0;
 		wreckDecel = 0;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.35f, 0.35f) * 10, 0f);
+		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.5f, 0.35f) * 10, 0f);
 	}
 	
 	public void endWreck(){
@@ -1771,7 +1769,7 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=(0.3f - randDecel);
+		baseDecel-=(0.4f - randDecel);
 		slideX = ((baseDecel + 1) / 5f) + wreckSlideRand;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
@@ -1785,11 +1783,11 @@ public class AIMovement : MonoBehaviour
 		
 		// Move relative to stopped player
 		if(Movement.wreckOver == true){
-			if(playerWrecked == false){
+			/*if(playerWrecked == false){
 				//Acknowledge physics change when player is stopped, reset momentum this frame
 				playerWrecked = true;
 				//Make them skate to a stop - amplified for effect
-				this.GetComponent<Rigidbody>().mass = 1f;
+				this.GetComponent<Rigidbody>().mass = 2.5f;
 			}
 			targetForce = wreckDecel + 200f;
 			
@@ -1802,7 +1800,7 @@ public class AIMovement : MonoBehaviour
 			} else {
 				this.GetComponent<ConstantForce>().force = new Vector3(wreckFlatRand, 0f,windForce);
 			}
-			this.GetComponent<Rigidbody>().velocity = new Vector3(slideX, 0f,windForce/10f);
+			this.GetComponent<Rigidbody>().velocity = new Vector3(slideX, 0f,windForce/10f);*/
 		} else {
 			//Standard relativity
 			targetForce = wreckDecel;
@@ -1821,7 +1819,7 @@ public class AIMovement : MonoBehaviour
 			endWreck();
 		}
 		
-		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 20) + 2;
+		this.GetComponent<Rigidbody>().mass = (-wreckDecel / 20) + 2 + wreckMassRand;
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		//Prevent landing in the crowd
@@ -1842,7 +1840,7 @@ public class AIMovement : MonoBehaviour
 		if(smokeMultiplier < 0){
 			smokeMultiplier = -smokeMultiplier;
 		}
-		smokeMultiplier = (smokeMultiplier * 30) + 0;
+		smokeMultiplier = (smokeMultiplier * 60) + 15;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (wreckDecel / 5);
