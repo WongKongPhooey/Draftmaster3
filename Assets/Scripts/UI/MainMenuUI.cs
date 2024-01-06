@@ -291,6 +291,7 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CameraRotate", 1);
 		PlayerPrefs.SetInt("CameraZoom", 1);
 		PlayerPrefs.SetInt("WreckFreq", 0);
+		PlayerPrefs.SetInt("FPSLimit", 1);
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("TargetVersion", Application.version);

@@ -65,6 +65,7 @@ public class GarageUI : MonoBehaviour
 	public Transform numberPanel;
 	public static string seriesPrefix;
 	public List<RectTransform> shuffleArray;
+	
     // Start is called before the first frame update
     void Start(){
 		seriesPrefix = "cup23";
