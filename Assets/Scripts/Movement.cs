@@ -1347,7 +1347,7 @@ public class Movement : MonoBehaviour {
 		if(smokeMultiplier < 0){
 			smokeMultiplier = -smokeMultiplier;
 		}
-		smokeMultiplier = (smokeMultiplier * 60) + 15;
+		smokeMultiplier = (smokeMultiplier * 60) + 5;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (playerWreckDecel / 5);

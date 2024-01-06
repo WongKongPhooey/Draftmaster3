@@ -175,6 +175,7 @@ public class Ticker : MonoBehaviour
 			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 			
+			tickerPos.text = (i+1).ToString();
 			if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
 				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
 				tickerNum.color = new Color32(255,255,225,255);

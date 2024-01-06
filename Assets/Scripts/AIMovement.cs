@@ -745,17 +745,17 @@ public class AIMovement : MonoBehaviour
 			AISpeed = 202;
 		}
 		
+		/*if(debugPlayer == true){
+			Debug.Log(AICar.name + " found draft");
+		}*/
+		
 		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
 		raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //0. Forward centered
-		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, maxDraftDistance); //1. Backward centered
-		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, 5); //2. Forward Z Offset
-		//3. Forward Long Dist
-		raycastBatch[4] = new RaycastCommand(pos + new Vector3(-1f,0,-1f), transform.forward, 2); //4. Car Left Of Player
-		raycastBatch[5] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 2); //5. Car Right Of Player
-		//6. Seek Draft Lane Left
-		//7. Seek Draft Lane Right
+		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, draftAirCushion); //1. Backward centered
+		raycastBatch[2] = new RaycastCommand(pos + new Vector3(-1f,0,-1f), transform.forward, 1.5f); //2. Car Left Of Player
+		raycastBatch[3] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 1.5f); //3. Car Right Of Player
 		
-		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 8);
+		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 4);
 	}
 
 	void speedLogic(){
@@ -1099,8 +1099,8 @@ public class AIMovement : MonoBehaviour
 
 	void draftLogic(){
 		
-		RaycastHit DraftCheckForwardZOffset = raycastHits[2];
-        bool HitForwardZOffset = DraftCheckForwardZOffset.distance > 0;
+		RaycastHit DraftCheckForwardZOffset;
+        bool HitForwardZOffset = Physics.Raycast(transform.position + new Vector3(0.0f, 0.0f, 1.05f), transform.forward, out DraftCheckForwardZOffset, 5);
 		
         //Debug.DrawRay(pos  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
 		//Debug.Log("Checking Draft Logic.. ");
@@ -1153,7 +1153,7 @@ public class AIMovement : MonoBehaviour
 			}
 		} else {
 			//Check further away
-			RaycastHit DraftCheckForwardLong = raycastHits[3];
+			RaycastHit DraftCheckForwardLong = raycastHits[0];
 			bool HitForwardLong = DraftCheckForwardLong.distance > 0;
 			
 			if(HitForwardLong == true){
@@ -1185,7 +1185,7 @@ public class AIMovement : MonoBehaviour
 			} else {
 				findDraft();
 			}
-			raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, maxDraftDistance); //Forward Long Dist
+			//raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, maxDraftDistance); //Forward Long Dist
 		}
 	}
 	
@@ -1301,10 +1301,10 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public void findDraft(){
-		RaycastHit DraftCheckLaneLeft = raycastHits[6];
-		RaycastHit DraftCheckLaneRight = raycastHits[7];
-		bool HitLaneLeft = DraftCheckLaneLeft.distance > 0;
-		bool HitLaneRight = DraftCheckLaneRight.distance > 0;
+		RaycastHit DraftCheckLaneLeft;
+		RaycastHit DraftCheckLaneRight;
+		bool HitLaneLeft = Physics.Raycast(pos + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 10);
+		bool HitLaneRight = Physics.Raycast(pos + new Vector3(1.2f,0,1.1f), transform.forward, out DraftCheckLaneRight, 10);
 		string direction = "";
 		
 		if(HitLaneLeft){
@@ -1429,7 +1429,7 @@ public class AIMovement : MonoBehaviour
 			if(direction == "Both"){
 				//Random choose one
 				float rng = Random.Range(0,2);
-				//Debug.Log("Rnd /2 = " + rng);
+				Debug.Log("Rnd /2 = " + rng);
 				if(rng > 1f){
 					direction = "Right";
 				} else {
@@ -1500,7 +1500,7 @@ public class AIMovement : MonoBehaviour
 	
 	public bool leftSideClear(float checkDist = 1.5f){
 		
-		RaycastHit checkLaneLeft = raycastHits[4];
+		RaycastHit checkLaneLeft = raycastHits[2];
         bool hitLaneLeft = checkLaneLeft.distance > 0;
 		
 		//Check Left Lane Clear
@@ -1513,7 +1513,7 @@ public class AIMovement : MonoBehaviour
 	
 	public bool rightSideClear(float checkDist = 1.5f){
 		
-		RaycastHit checkLaneRight = raycastHits[5];		
+		RaycastHit checkLaneRight = raycastHits[3];		
         bool hitLaneRight = checkLaneRight.distance > 0;
 		
 		//Check Right Lane Clear
@@ -1840,7 +1840,7 @@ public class AIMovement : MonoBehaviour
 		if(smokeMultiplier < 0){
 			smokeMultiplier = -smokeMultiplier;
 		}
-		smokeMultiplier = (smokeMultiplier * 60) + 15;
+		smokeMultiplier = (smokeMultiplier * 60) + 5;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (wreckDecel / 5);

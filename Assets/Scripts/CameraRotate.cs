@@ -82,7 +82,7 @@ public class CameraRotate : MonoBehaviour {
 	
 	void Awake(){
 		
-		Application.targetFrameRate = -1;
+		Application.targetFrameRate = 120;
 
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
