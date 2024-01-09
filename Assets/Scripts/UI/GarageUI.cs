@@ -115,9 +115,9 @@ public class GarageUI : MonoBehaviour
 		transfersMax = PlayerPrefs.GetInt("TransferTokens");
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
 		if(transfersMax >= 999){
-			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = (transfersMax - transfersLeft).ToString() + " Used Transfers.";
+			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + " Used Transfers";
 		} else {
-			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + "/" + transfersMax.ToString() + " Used Transfers.";
+			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + "/" + transfersMax.ToString() + " Used Transfers";
 		}
 		
 		if(PlayerPrefs.HasKey("CustomCar")){
@@ -721,9 +721,9 @@ public class GarageUI : MonoBehaviour
 		transfersMax = PlayerPrefs.GetInt("TransferTokens");
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
 		if(transfersMax >= 999){
-			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = (transfersMax - transfersLeft).ToString() + " Used Transfers.";
+			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = (transfersMax - transfersLeft).ToString() + " Used Transfers";
 		} else {
-			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + "/" + transfersMax.ToString() + " Used Transfers.";
+			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + "/" + transfersMax.ToString() + " Used Transfers";
 		}
 	}
 
@@ -901,6 +901,33 @@ public class GarageUI : MonoBehaviour
 		if(modSet == true){
 			currentSeries.GetComponent<TMPro.TMP_Text>().text = ModData.getSeriesNiceName(seriesPrefix);
 		}
+	}
+
+	public void resetAllTransfers(){
+		foreach(string carset in DriverNames.series){
+			for(int i=0;i<100;i++){
+				
+				//Skip through the non-driver #s
+				if(DriverNames.getName(seriesPrefix, i)== null){
+					continue;
+				}
+				
+				if(PlayerPrefs.HasKey("CustomDriver" + carset + i)){
+					PlayerPrefs.DeleteKey("CustomDriver" + carset + i);
+				}
+				if(PlayerPrefs.HasKey("CustomManufacturer" + carset + i)){
+					PlayerPrefs.DeleteKey("CustomManufacturer" + carset + i);
+				}
+				if(PlayerPrefs.HasKey("CustomTeam" + carset + i)){
+					PlayerPrefs.DeleteKey("CustomTeam" + carset + i);
+				}
+				if(PlayerPrefs.HasKey("CustomNumber" + carset + i)){
+					PlayerPrefs.DeleteKey("CustomNumber" + carset + i);
+				}
+			}
+		}
+		PlayerPrefs.SetInt("TransfersLeft",transfersMax);
+		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
 	}
 
 	public void starterCars(){
