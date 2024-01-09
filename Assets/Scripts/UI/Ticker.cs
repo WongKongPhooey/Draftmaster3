@@ -300,6 +300,10 @@ public class Ticker : MonoBehaviour
 		return 0;
 	}
 
+	public static GameObject getRaceLeader(){
+		return entrantList[0];
+	}
+
 	public static int checkSingleCarPosition(GameObject thisCarName){
 		int pos = entrantList.IndexOf(thisCarName); // Returns 1.
 		if(pos == -1){

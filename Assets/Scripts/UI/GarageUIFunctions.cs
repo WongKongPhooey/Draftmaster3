@@ -41,7 +41,7 @@ public class GarageUIFunctions : MonoBehaviour
 		GameObject.Find("Main").GetComponent<GarageUI>().showGaragePopup(seriesPrefix, carNum, carClass);
 	}
 
-	public void classUp(){
+	public void classUp(bool reloadFrame = true){
 		Debug.Log("Class Me Up Scotty!");
 		int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + carNum + "Unlocked");
 		int carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
@@ -71,7 +71,9 @@ public class GarageUIFunctions : MonoBehaviour
 				Debug.Log("Not Enough!");
 			}
 		}
-		reloadGarage();
+		if(reloadFrame == true){
+			reloadGarage();
+		}
 	}
 
 	public void reloadGarage(){

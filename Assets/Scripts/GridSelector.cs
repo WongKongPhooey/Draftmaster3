@@ -23,7 +23,6 @@ public class GridSelector : MonoBehaviour{
 		GameObject.Find("Main").GetComponent<GarageUI>().chosenOption = optionName;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionType = optionType;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionObject = this.gameObject;
-		GameObject.Find("Main").GetComponent<GarageUI>().dropOptionToPool();
 	}
 	
 	public void setManufacturerOption(){
@@ -31,7 +30,6 @@ public class GridSelector : MonoBehaviour{
 		GameObject.Find("Main").GetComponent<GarageUI>().chosenOption = optionName;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionType = optionType;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionObject = this.gameObject;
-		GameObject.Find("Main").GetComponent<GarageUI>().dropOptionToPool();
 	}
 	
 	public void setTeamOption(){
@@ -39,7 +37,6 @@ public class GridSelector : MonoBehaviour{
 		GameObject.Find("Main").GetComponent<GarageUI>().chosenOption = optionName;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionType = optionType;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionObject = this.gameObject;
-		GameObject.Find("Main").GetComponent<GarageUI>().dropOptionToPool();
 	}
 	
 	public void setNumberOption(){
@@ -47,6 +44,5 @@ public class GridSelector : MonoBehaviour{
 		GameObject.Find("Main").GetComponent<GarageUI>().chosenOption = optionName;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionType = optionType;
 		GameObject.Find("Main").GetComponent<GarageUI>().optionObject = this.gameObject;
-		GameObject.Find("Main").GetComponent<GarageUI>().dropOptionToPool();
 	}
 }

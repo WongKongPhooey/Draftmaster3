@@ -37,6 +37,10 @@ public class GarageUI : MonoBehaviour
 	GameObject garagePopupFrame;
 	GameObject garagePopupTile;
 	GameObject actionPanel;
+	public string currentDriver;
+	public string currentManufacturer;
+	public string currentTeam;
+	public string currentNumber;
 	public GameObject transferPanelContainer;
 	public GameObject transferDriverPanel;
 	public GameObject transferManufacturerPanel;
@@ -139,6 +143,8 @@ public class GarageUI : MonoBehaviour
 		
 		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
 		
+		bool autoClassUps = false;
+		
 		int validCars = 0;
 		for(int i=0;i<100;i++){
 			
@@ -183,8 +189,6 @@ public class GarageUI : MonoBehaviour
 			GameObject cardBack = tileInst.transform.GetChild(8).gameObject;
 			GameObject carClickable = tileInst.transform.GetChild(9).transform.gameObject;
 			GameObject carDisabled = tileInst.transform.GetChild(10).transform.gameObject;
-			GameObject carActionBtn = tileInst.transform.GetChild(11).transform.gameObject;
-			carActionBtn.SetActive(false);
 			
 			int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked");
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + i + "Gears");
@@ -195,21 +199,18 @@ public class GarageUI : MonoBehaviour
 			
 			if(carUnlocked == 1){
 				if((carGears >= classMax)&&(carClass < 6)){
-					carActionBtn.SetActive(true);
-					TMPro.TMP_Text carActionBtnLbl = carActionBtn.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
-					carActionBtnLbl.text = "Upgrade";
+					tileInst.GetComponent<GarageUIFunctions>().classUp(false);
+					autoClassUps = true;
 				}
 				if(carClass > 6){
 					PlayerPrefs.SetInt(seriesPrefix + i + "Class",6);
 					carClass = 6;
 				}
-			}
-			
-			if(carUnlocked == 0){
+			} else {
 				if(carGears >= unlockGears){
-					carActionBtn.SetActive(true);
-					TMPro.TMP_Text carActionBtnLbl = carActionBtn.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
-					carActionBtnLbl.text = "Unlock";
+					tileInst.GetComponent<GarageUIFunctions>().classUp(false);
+					autoClassUps = true;
+					Debug.Log("Auto Unlock");
 				}
 			}
 			
@@ -341,6 +342,9 @@ public class GarageUI : MonoBehaviour
 			sortCounter++;
 		}
 		sortTiles();
+		if(autoClassUps == true){
+			loadAllCars();
+		}
 	}
 
 	public void loadAllModCars(){
@@ -386,7 +390,7 @@ public class GarageUI : MonoBehaviour
 			//Mod cars are auto-unlocked, but limited to a low class and rarity
 			PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked", 1);
 			PlayerPrefs.SetInt(seriesPrefix + i + "Gears", 0);
-			PlayerPrefs.SetInt(seriesPrefix + i + "Class", 4);
+			PlayerPrefs.SetInt(seriesPrefix + i + "Class", 3);
 			
 			int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + i + "Unlocked");
 			int carGears = PlayerPrefs.GetInt(seriesPrefix + i + "Gears");
@@ -651,14 +655,26 @@ public class GarageUI : MonoBehaviour
 
 	public void confirmTransfer(){
 		if(transfersLeft <= 0){
-			alertPopup.GetComponent<AlertManager>().showPopup("No Transfers Remaining","You have used all of your available transfer tokens. Level up to get more, or purchase the Editor pack in the Store for unlimited tokens.","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("No Transfers Remaining","You have used all of your available transfer tokens. You can level up to get more, reset your existing transfers to get all your tokens back, or purchase the Editor pack in the Store for unlimited tokens.","dm2logo");
 		} else {
-			transfersLeft--;
-			PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
+			if(chosenOption == null){
+				//No transfer to action
+				return;
+			}
+			if(optionAvailable(seriesPrefix, optionType,chosenOption) == false){
+				alertPopup.GetComponent<AlertManager>().showPopup("Driver Unavailable", chosenOption + " is already contracted to drive another car in the series. The driver needs to be made available first to be able to sign the new contract.","dm2logo");
+				return;
+			}
 			int popupCarNum = 999;
+			dropOptionToPool();
 			switch(optionType){
 				case "Driver":
+					if(chosenOption == currentDriver){
+						alertPopup.GetComponent<AlertManager>().showPopup("Driver Already Contracted","This driver is already contracted to drive this car!","dm2logo");
+					}
 					PlayerPrefs.SetString("CustomDriver" + seriesPrefix + popupCarInd, chosenOption);
+					transfersLeft--;
+					PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
 					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
 					popupCarNum = popupCarInd;
 					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
@@ -667,6 +683,8 @@ public class GarageUI : MonoBehaviour
 					break;
 				case "Manufacturer":
 					PlayerPrefs.SetString("CustomManufacturer" + seriesPrefix + popupCarInd, chosenOption);
+					transfersLeft--;
+					PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
 					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
 					popupCarNum = popupCarInd;
 					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
@@ -675,6 +693,8 @@ public class GarageUI : MonoBehaviour
 					break;
 				case "Team":
 					PlayerPrefs.SetString("CustomTeam" + seriesPrefix + popupCarInd, chosenOption);
+					transfersLeft--;
+					PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
 					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
 					popupCarNum = popupCarInd;
 					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
@@ -685,6 +705,7 @@ public class GarageUI : MonoBehaviour
 					break;
 			}
 			updateTransferCount();
+			hideGarageTransferPanels();
 			showGaragePopup(seriesPrefix,popupCarNum,3);
 		}
 		chosenOption = null;
@@ -695,7 +716,7 @@ public class GarageUI : MonoBehaviour
 			loadAllModCars();
 		}
 	}
-	
+
 	public void updateTransferCount(){
 		transfersMax = PlayerPrefs.GetInt("TransferTokens");
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
@@ -704,6 +725,43 @@ public class GarageUI : MonoBehaviour
 		} else {
 			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + "/" + transfersMax.ToString() + " Used Transfers.";
 		}
+	}
+
+	public bool optionAvailable(string currentSeries, string optionType, string chosenOption){
+		switch(optionType){
+			case "Driver":
+				for(int i=0;i<100;i++){
+					//Skip through the non-driver #s
+					if(DriverNames.getName(seriesPrefix, i)== null){
+						continue;
+					}
+					//Load each driver in the series in
+					string carDriver;
+					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+						carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+					} else {
+						carDriver = DriverNames.getName(seriesPrefix,i);
+					}
+					//Check they aren't already driving a car
+					if(chosenOption == carDriver){
+						return false;
+					}
+				}
+				return true;
+				break;
+			case "Manufacturer":
+				return true;
+				break;
+			case "Team":
+				return true;
+				break;
+			case "Number":
+				return true;
+			default:
+				return false;
+				break;
+		}
+		return false;
 	}
 
 	string classAbbr(int carClass){
@@ -967,11 +1025,13 @@ public class GarageUI : MonoBehaviour
 		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carInd)){
 			carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carInd);
 		}
+		currentDriver = carDriver;
 		
 		string carTeam = DriverNames.getTeam(seriesPrefix,carInd);
 		if(PlayerPrefs.HasKey("CustomTeam" + seriesPrefix + carInd)){
 			carTeam = PlayerPrefs.GetString("CustomTeam" + seriesPrefix + carInd);
 		}
+		currentTeam = carTeam;
 		carTeamUI.text = carTeam;
 		carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, carInd));
 		carClassUI.text = "Class " + classAbbr(carClass);
@@ -984,6 +1044,7 @@ public class GarageUI : MonoBehaviour
 		} else {
 			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carInd)); 
 		}
+		currentManufacturer = carManu;
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
 		} else {
@@ -993,9 +1054,11 @@ public class GarageUI : MonoBehaviour
 		carNameUI.text = carDriver;
 		
 		carManuText.text = carManu + " cars will push you for longer";
-		carManuText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getManufacturer(seriesPrefix,carInd);
+		carManuText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = carManu;
 		carTeamText.text = carTeam + " teammates will block you less often";
-		carTeamText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = DriverNames.getTeam(seriesPrefix,carInd);
+		carTeamText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = carTeam;
+		
+		TMPro.TMP_Text transferPreview = GameObject.Find("ContractsPreview").GetComponent<TMPro.TMP_Text>();
 		
 		TMPro.TMP_Text driverName = GameObject.Find("DriverName").GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text manuName = GameObject.Find("ManufacturerName").GetComponent<TMPro.TMP_Text>();
@@ -1062,6 +1125,8 @@ public class GarageUI : MonoBehaviour
 		transferManufacturerPanel.GetComponent<UIAnimate>().hide();
 		transferTeamPanel.GetComponent<UIAnimate>().hide();
 		transferNumberPanel.GetComponent<UIAnimate>().hide();
+		//Reloading drops any chosen options that weren't confirmed
+		loadTransferPanels();
 	}
 	
 	public void hideGaragePopup(){

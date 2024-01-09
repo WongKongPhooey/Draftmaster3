@@ -59,7 +59,25 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject popupFrame;
 	
 	void Awake(){
-		Application.targetFrameRate = 120;
+		
+		if(!PlayerPrefs.HasKey("FPSLimit")){
+			PlayerPrefs.SetInt("FPSLimit",2);
+		}
+		int fpsCap = PlayerPrefs.GetInt("FPSLimit");
+		switch(fpsCap){
+			case 1:
+				Application.targetFrameRate = 30;
+				break;
+			case 2:
+				Application.targetFrameRate = 60;
+				break;
+			case 3:
+				Application.targetFrameRate = 120;
+				break;
+			default:
+				Application.targetFrameRate = 60;
+				break;
+		}
 	}
 	
     // Start is called before the first frame update
@@ -68,6 +86,13 @@ public class MainMenuUI : MonoBehaviour {
 		//Testing
 		//PlayerPrefs.SetInt("Exp",7250);
 		//PlayerPrefs.SetInt("Level",34);
+		
+		//Testing - Reset a car
+		#if UNITY_EDITOR
+		//PlayerPrefs.SetInt("cup231" + "Unlocked",0);
+		//PlayerPrefs.SetInt("cup231" + "Gears",66);
+		//PlayerPrefs.SetInt("cup231" + "Class",0);
+		#endif
 		
 		Time.timeScale = 1.0f;
 		

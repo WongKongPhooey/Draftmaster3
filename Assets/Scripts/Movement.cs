@@ -1291,7 +1291,7 @@ public class Movement : MonoBehaviour {
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.37f;
+		baseDecel-=0.32f;
 		slideX = ((baseDecel + 1) / 4f) + 20f;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
