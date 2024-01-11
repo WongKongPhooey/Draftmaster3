@@ -115,9 +115,9 @@ public class GarageUI : MonoBehaviour
 		transfersMax = PlayerPrefs.GetInt("TransferTokens");
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
 		if(transfersMax >= 999){
-			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + " Used Transfers";
+			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = (transfersMax - transfersLeft).ToString() + " Used Transfers";
 		} else {
-			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = transfersLeft.ToString() + "/" + transfersMax.ToString() + " Used Transfers";
+			transferTokensLabel.GetComponent<TMPro.TMP_Text>().text = (transfersMax - transfersLeft).ToString() + "/" + transfersMax.ToString() + " Used Transfers";
 		}
 		
 		if(PlayerPrefs.HasKey("CustomCar")){
