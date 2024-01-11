@@ -219,6 +219,10 @@ public class GarageUI : MonoBehaviour
 			string carRarity = DriverNames.getRarity(seriesPrefix, i).ToString();
 			string carManu = DriverNames.getManufacturer(seriesPrefix, i);
 			
+			if(PlayerPrefs.HasKey("CustomTeam" + seriesPrefix + i)){
+				carTeam = PlayerPrefs.GetString("CustomTeam" + seriesPrefix + i);
+			}
+			
 			carTeamUI.text = carTeam;
 			carTypeUI.text = DriverNames.shortenedType(DriverNames.getType(seriesPrefix, i));
 			carClassUI.text = "Class " + classAbbr(carClass);
@@ -673,40 +677,31 @@ public class GarageUI : MonoBehaviour
 						alertPopup.GetComponent<AlertManager>().showPopup("Driver Already Contracted","This driver is already contracted to drive this car!","dm2logo");
 					}
 					PlayerPrefs.SetString("CustomDriver" + seriesPrefix + popupCarInd, chosenOption);
-					transfersLeft--;
-					PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
-					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
-					popupCarNum = popupCarInd;
-					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
-						popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
-					}
 					break;
 				case "Manufacturer":
 					PlayerPrefs.SetString("CustomManufacturer" + seriesPrefix + popupCarInd, chosenOption);
-					transfersLeft--;
-					PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
-					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
-					popupCarNum = popupCarInd;
-					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
-						popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
-					}
 					break;
 				case "Team":
 					PlayerPrefs.SetString("CustomTeam" + seriesPrefix + popupCarInd, chosenOption);
-					transfersLeft--;
-					PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
-					//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
-					popupCarNum = popupCarInd;
-					if(DriverNames.isOfficialSeries(seriesPrefix) == false){
-						popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
-					}
 					break;
 				default:
+					return;
 					break;
 			}
+			
+			transfersLeft--;
+			PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
+			//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
+			popupCarNum = popupCarInd;
+			if(DriverNames.isOfficialSeries(seriesPrefix) == false){
+				popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
+			}
+			
+			int popupCarClass = PlayerPrefs.GetInt(seriesPrefix + popupCarInd + "Class");
+			int popupCarRarity = DriverNames.getRarity(seriesPrefix, popupCarInd);
 			updateTransferCount();
 			hideGarageTransferPanels();
-			showGaragePopup(seriesPrefix,popupCarNum,3);
+			showGaragePopup(seriesPrefix,popupCarNum,popupCarClass,popupCarRarity);
 		}
 		chosenOption = null;
 		loadTransferPanels();
@@ -847,6 +842,34 @@ public class GarageUI : MonoBehaviour
 				return 999;
 				break;
 		}
+	}
+
+	string carTypeDesc(string type, int total = 0){
+		string desc = null;
+		switch(type){
+			case "Intimidator":
+				desc = "Can knock other cars out of line " + total + "% easier";
+				break;
+			case "Strategist":
+				desc = "Can change lanes " + total + "% faster";
+				break;
+			case "Closer":
+				desc = "Can draft from " + total + "% further away";
+				break;
+			case "Dominator":
+				desc = "Slows down " + total + "% slower when not drafting";
+				break;
+			case "Blocker":
+				desc = "Slows down " + total + "% slower when not drafting";
+				break;
+			case "Legend":
+				desc = "Gets a " + total + "% boost to all other types";
+				break;
+			case "Rookie":
+				desc = "Get blocked " + total + "% less often";
+				break;
+		}
+		return desc;
 	}
 
 	GameObject getAltPaintTileDesign(string seriesPrefix, int carId, int altId){
@@ -1026,7 +1049,7 @@ public class GarageUI : MonoBehaviour
 		loadAllCars();
 	}
 
-	public void showGaragePopup(string seriesPrefix, int carNum, int carClass){
+	public void showGaragePopup(string seriesPrefix, int carNum, int carClass, int carRarity){
 		int carInd;
 		Debug.Log("Series Prefix on Garage popup open: " + seriesPrefix);
 		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
@@ -1047,6 +1070,8 @@ public class GarageUI : MonoBehaviour
 		
 		TMPro.TMP_Text carManuText = garagePopupFrame.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text carTeamText = garagePopupFrame.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+		TMPro.TMP_Text carTypeText = garagePopupFrame.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
+		TMPro.TMP_Text carTypeTotalText = garagePopupFrame.transform.GetChild(5).GetComponent<TMPro.TMP_Text>();
 		
 		string carDriver = DriverNames.getName(seriesPrefix,carInd);
 		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carInd)){
@@ -1072,6 +1097,11 @@ public class GarageUI : MonoBehaviour
 			carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix,carInd)); 
 		}
 		currentManufacturer = carManu;
+		
+		int carTypeTotal = 25 + (carRarity * 10) + (carClass * 2);
+		string carTypeTotalDesc = "Base (25%) + " + carRarity + "* Rarity (+" + (carRarity * 10) + "%) + Class " + classAbbr(carClass) + " (+" + (carClass * 2) + "%)";
+		string carType = DriverNames.getType(seriesPrefix,carInd);
+		
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
 		} else {
@@ -1084,6 +1114,10 @@ public class GarageUI : MonoBehaviour
 		carManuText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = carManu;
 		carTeamText.text = carTeam + " teammates will block you less often";
 		carTeamText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = carTeam;
+		carTypeText.text = carType + " - " + carTypeDesc(carType,carTypeTotal);
+		carTypeText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = carType;
+		carTypeTotalText.text = carTypeTotal + "% - " + carTypeTotalDesc;
+		carTypeTotalText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = carTypeTotal + "%";
 		
 		TMPro.TMP_Text transferPreview = GameObject.Find("ContractsPreview").GetComponent<TMPro.TMP_Text>();
 		

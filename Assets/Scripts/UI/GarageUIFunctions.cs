@@ -38,7 +38,8 @@ public class GarageUIFunctions : MonoBehaviour
 
 	public void openCarInfo(){
 		int carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
-		GameObject.Find("Main").GetComponent<GarageUI>().showGaragePopup(seriesPrefix, carNum, carClass);
+		int carRarity = DriverNames.getRarity(seriesPrefix, carNum);
+		GameObject.Find("Main").GetComponent<GarageUI>().showGaragePopup(seriesPrefix, carNum, carClass, carRarity);
 	}
 
 	public void classUp(bool reloadFrame = true){
