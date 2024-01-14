@@ -96,8 +96,24 @@ public class SeriesUI : MonoBehaviour
 			GameObject seriesRewardsBtn = tileInst.transform.GetChild(6).transform.gameObject;
 			GameObject seriesCover = tileInst.transform.GetChild(4).transform.gameObject;
 			GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
+			TMPro.TMP_Text champsProgress = tileInst.transform.GetChild(8).GetComponent<TMPro.TMP_Text>();
+			
+			int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round");
+			int totalRounds = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Length");
+			if(PlayerPrefs.HasKey("SeriesChampionship" + seriesId + i + "Active")){
+				if(PlayerPrefs.HasKey("SeriesChampionship" + seriesId + i + "Active")){
+					champsProgress.text = "Championship In Progress\n" + nextRound + "/" + totalRounds;
+				}
+			}
+			
 			tileInst.GetComponent<SeriesUIFunctions>().seriesId = seriesId;
 			tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = i;
+			
+			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
+				if(PlayerPrefs.GetString("ChampionshipSubseries") == seriesId + "" + i){
+					champsProgress.text = "Championship In Progress\n" + 2 + "/" + 5;
+				}
+			}
 			
 			seriesName.text = SeriesData.offlineSeries[seriesId,i];
 			seriesDesc.text = (SeriesData.offlineAILevel[seriesId,i] * 10).ToString() + "% Difficulty";
@@ -110,11 +126,9 @@ public class SeriesUI : MonoBehaviour
 	}
 
 	public void loadSeries(){
-		//Debug.Log("Load Series " + seriesId + "," + subSeriesId + "");
 		
 		PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("CurrentSeriesIndex", seriesId + "" + subSeriesId);
-		Debug.Log("Series Index: " + seriesId + "" + subSeriesId);
 		PlayerPrefs.SetString("CurrentSeriesName",SeriesData.offlineSeries[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("CurrentSeries", seriesId);
 		PlayerPrefs.SetInt("CurrentSubseries", subSeriesId);
@@ -122,26 +136,20 @@ public class SeriesUI : MonoBehaviour
 		PlayerPrefs.SetInt("SubseriesMinClass", SeriesData.offlineMinClass[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue(seriesId,subSeriesId));
-		Debug.Log("Series Restriction: " + SeriesData.offlineMinType[seriesId,subSeriesId] + " - " + getRestrictionValue(seriesId,subSeriesId));
+		//Debug.Log("Series Restriction: " + SeriesData.offlineMinType[seriesId,subSeriesId] + " - " + getRestrictionValue(seriesId,subSeriesId));
 		PlayerPrefs.SetInt("AIDifficulty", SeriesData.offlineAILevel[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[seriesId,subSeriesId]);
-		//Debug.Log("Fuel cost: " + SeriesData.offlineFuel[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("ActivePath","SingleRace");
 		
-		if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-			if(PlayerPrefs.GetString("ChampionshipSubseries") == seriesId + "" + subSeriesId){
-				PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("ChampionshipCarTexture"));
-				PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("ChampionshipCarChoice"));
-				PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("ChampionshipCarSeries"));
-				PlayerPrefs.SetString("ActivePath","ChampionshipRace");
-				//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
-				SceneManager.LoadScene("Menus/ChampionshipHub");
-			} else {
-				SceneManager.LoadScene("Menus/Garage");
-			}
+		if(PlayerPrefs.HasKey("SeriesChampionship" + seriesId + subSeriesId + "Active")){
+			PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("SeriesChampionship" + seriesId + subSeriesId + "CarTexture"));
+			PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("SeriesChampionship" + seriesId + subSeriesId + "CarChoice"));
+			PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("SeriesChampionship" + seriesId + subSeriesId + "CarSeries"));
+			PlayerPrefs.SetString("ActivePath","ChampionshipRace");
+			//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
+			SceneManager.LoadScene("Menus/ChampionshipHub");
 		} else {
-			//Debug.Log("Loading Garage..");
 			SceneManager.LoadScene("Menus/Garage");
 		}
 	}
