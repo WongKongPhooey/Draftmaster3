@@ -86,8 +86,17 @@ public class Movement : MonoBehaviour {
 	public static int totalWreckers;
 	public static float wreckDamage;
 	
-	int wreckFreq;
+	ConstantForce wreckForce;
+	Rigidbody wreckRigidbody;
+	Transform leftSparks;
+	Transform rightSparks;
+	ParticleSystem leftSparksParticles;
+	ParticleSystem rightSparksParticles;
+	Transform tireSmoke;
+	ParticleSystem tireSmokeParticles;
 	
+	int wreckFreq;
+		
 	float targetForce;
 	float windForce;
 	float forceSmoothing;
@@ -212,6 +221,15 @@ public class Movement : MonoBehaviour {
 		wreckDamage = 0;
 		
 		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
+		
+		wreckForce = this.GetComponent<ConstantForce>();
+		wreckRigidbody = this.GetComponent<Rigidbody>();
+		leftSparks = this.transform.Find("SparksL");
+		rightSparks = this.transform.Find("SparksR");
+		leftSparksParticles = this.transform.Find("SparksL").GetComponent<ParticleSystem>();
+		rightSparksParticles = this.transform.Find("SparksR").GetComponent<ParticleSystem>();
+		tireSmoke = this.transform.Find("TireSmoke");
+		tireSmokeParticles = tireSmoke.GetComponent<ParticleSystem>();
 		
 		pacing = true;
 		
@@ -1336,12 +1354,13 @@ public class Movement : MonoBehaviour {
 			this.gameObject.transform.position = new Vector3(2f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
 		}
 		
-		this.transform.Find("SparksL").rotation = Quaternion.Euler(0,180,0);
-		this.transform.Find("SparksR").rotation = Quaternion.Euler(0,180,0);
-		this.transform.Find("SparksL").GetComponent<ParticleSystem>().startSpeed = 50 + (playerWreckDecel / 4);
-		this.transform.Find("SparksR").GetComponent<ParticleSystem>().startSpeed = 50 + (playerWreckDecel / 4);
-		
-		Transform tireSmoke = this.transform.Find("TireSmoke");
+		//Align particle system to global track direction
+		leftSparks.rotation = Quaternion.Euler(0,180,0);
+		rightSparks.rotation = Quaternion.Euler(0,180,0);
+		leftSparksParticles.startSpeed = 50 + (playerWreckDecel / 4);
+		rightSparksParticles.startSpeed = 50 + (playerWreckDecel / 4);
+	
+		//Flatten the smoke
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
 		float smokeMultiplier = Mathf.Sin(wreckAngle);
 		if(smokeMultiplier < 0){
@@ -1349,10 +1368,10 @@ public class Movement : MonoBehaviour {
 		}
 		smokeMultiplier = (smokeMultiplier * 60) + 5;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
-		tireSmoke.GetComponent<ParticleSystem>().startColor = new Color32(200,200,200,(byte)smokeMultiplier);
-		tireSmoke.GetComponent<ParticleSystem>().startSpeed = 40 + (playerWreckDecel / 5);
-		tireSmoke.GetComponent<ParticleSystem>().startSize = 12 + (playerWreckDecel / 30);
-		tireSmoke.GetComponent<ParticleSystem>().maxParticles = (int)(70 + Mathf.Round(playerWreckDecel / 2)); //Max 70, Hits 0 at -140 decel
+		tireSmokeParticles.startColor = new Color32(200,200,200,(byte)smokeMultiplier);
+		tireSmokeParticles.startSpeed = 40 + (playerWreckDecel / 5);
+		tireSmokeParticles.startSize = 12 + (playerWreckDecel / 30); //Max 12, Min 4.5
+		tireSmokeParticles.maxParticles = (int)(70 + Mathf.Round(playerWreckDecel / 2)); //Max 70, Hits 0 at -140 decel
 	
 		if(Mathf.Round(playerWreckDecel) == -90){
 			GameObject theCamera = GameObject.Find("Main Camera");

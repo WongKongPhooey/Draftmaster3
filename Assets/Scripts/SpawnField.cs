@@ -54,7 +54,7 @@ public class SpawnField : MonoBehaviour {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
-			currentSeriesIndex = PlayerPrefs.GetString("SeriesChampionship");
+			currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 		}
 		//Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
@@ -82,8 +82,8 @@ public class SpawnField : MonoBehaviour {
 			//Debug.Log("Spawn custom field");
 		} else {
 			//Debug.Log("Spawn standard field: " + seriesPrefix);
-			if((PlayerPrefs.HasKey("SeriesChampionship"))&&(PlayerPrefs.GetString("CurrentSeriesIndex") == PlayerPrefs.GetString("SeriesChampionship"))){
-				if(PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "ChampionshipRound") > 7){
+			if(PlayerPrefs.GetString("RaceType") == "Championship"){
+				if(PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round") > 7){
 					//Debug.Log("Points Adjusted Field");
 					spawnCarsPointsAdjusted(seriesPrefix);
 				} else {

@@ -35,11 +35,13 @@ public class TrackUI : MonoBehaviour
         loadAllTracks(trackList);
 		
 		if(PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Round")){
-			seriesLength = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
+			if(PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round") > 0){
+				seriesLength = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
+				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
+				PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "Tracklist",PlayerPrefs.GetString("SeriesTrackList"));
+				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
+			}
 		}
-		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
-		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "Tracklist",PlayerPrefs.GetString("SeriesTrackList"));
-		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
 		
 		championshipSelector = GameObject.Find("ChampionshipSelector");
 		championshipSelector.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "All " + seriesLength + " Rounds";
@@ -53,13 +55,13 @@ public class TrackUI : MonoBehaviour
 		
 		alertPopup = GameObject.Find("AlertPopup");
 		
-		//Check for an active championship in this subseries
-		if(PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Round")){
-			//Debug.Log("There's an active championship here.. " + currentSeriesIndex);
+		//If race type is Championship (Set in the Championship Hub screen)
+		if(PlayerPrefs.GetString("RaceType") == "Championship"){
+			Debug.Log("There's an active championship here.. " + currentSeriesIndex);
 			PlayerPrefs.SetString("RaceType","Championship");
 			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 			PlayerPrefs.SetString("carSeries", seriesPrefix);
-			//Debug.Log("SeriesChampionship" + currentSeriesIndex + "Car loaded as " + seriesPrefix);
+			Debug.Log("SeriesChampionship" + currentSeriesIndex + "Carset loaded as " + seriesPrefix);
 			
 			//Found a championship round set
 			championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
@@ -67,9 +69,11 @@ public class TrackUI : MonoBehaviour
 			if(championshipRound >= seriesLength){
 				//Championship is over, reset
 				PlayerPrefs.DeleteKey("ChampionshipSubseries");
+				PlayerPrefs.DeleteKey("SeriesChampionship" + currentSeriesIndex + "Round");
 				PlayerPrefs.SetString("RaceType","Single");
 				Debug.Log("End of season, round reset.");
 			} else {
+				Debug.Log("Championship - Round " + championshipRound + "/" + seriesLength);
 				loadTrack(trackList, championshipRound);
 				PlayerPrefs.SetString("CurrentTrack","" + championshipRound);
 			}

@@ -50,8 +50,9 @@ public class ChampionshipHubUI : MonoBehaviour
 	
     // Start is called before the first frame update
     void Start(){
-		currentSeriesIndex = PlayerPrefs.GetString("SeriesChampionship");
+		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		carNumber = PlayerPrefs.GetInt("CarChoice");
+		Debug.Log("Current Series Index: " + currentSeriesIndex);
 		currentSeries = int.Parse(currentSeriesIndex.Substring(0,1));
 		currentSubseries = int.Parse(currentSeriesIndex.Substring(1));
 		championshipTracklist = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "Tracklist");
@@ -67,7 +68,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		}
 		
 		SeriesData.loadSeries();
-		loadPoints();
+		loadPoints(currentSeriesIndex);
 		
 		hubTitle = GameObject.Find("Title");
 		hubTitle.GetComponent<TMPro.TMP_Text>().text = SeriesData.offlineSeries[currentSeries, currentSubseries];
@@ -114,7 +115,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		}
 	}
 
-	public void loadPoints(){
+	public void loadPoints(string currentSeriesIndex){
 		championshipPoints.Clear();
 		int pointsTableInd = 0;
 		for(int i=0;i<100;i++){
@@ -134,8 +135,8 @@ public class ChampionshipHubUI : MonoBehaviour
 				if(DriverNames.getName(seriesPrefix,i) == null){
 					continue;
 				}
-				if(!PlayerPrefs.HasKey("ChampionshipPoints" + i)){
-					PlayerPrefs.SetInt("ChampionshipPoints" + i,0);
+				if(!PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Points" + i)){
+					PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points" + i,0);
 				}
 				championshipPoints.Add(i,PlayerPrefs.GetInt("ChampionshipPoints" + i));
 			}

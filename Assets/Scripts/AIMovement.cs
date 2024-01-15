@@ -1801,8 +1801,6 @@ public class AIMovement : MonoBehaviour
 		
 		sparksCooldown = 0;
 		this.GetComponent<Rigidbody>().mass = 25;
-		//this.GetComponent<Rigidbody>().isKinematic = true;
-		//this.GetComponent<Rigidbody>().useGravity = true;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
 		if(Movement.wreckOver == true){
