@@ -115,6 +115,8 @@ public class ChampionshipHubUI : MonoBehaviour
 		}
 	}
 
+	//PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber, currentPoints + points);
+
 	public void loadPoints(string currentSeriesIndex){
 		championshipPoints.Clear();
 		int pointsTableInd = 0;
@@ -125,12 +127,12 @@ public class ChampionshipHubUI : MonoBehaviour
 					continue;
 				}
 				int carNo = ModData.getCarNum(seriesPrefix,i);
-				if(!PlayerPrefs.HasKey("ChampionshipPoints" + carNo)){
+				if(!PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Points"  + carNo)){
 					//Debug.Log("Set points for: " + carNo);
-					PlayerPrefs.SetInt("ChampionshipPoints" + carNo,0);
+					PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNo,0);
 				}
 				//Debug.Log("Index:" + i + " - Num:" + carNo);
-				championshipPoints.Add(carNo,PlayerPrefs.GetInt("ChampionshipPoints" + carNo));
+				championshipPoints.Add(carNo,PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNo));
 			} else {
 				if(DriverNames.getName(seriesPrefix,i) == null){
 					continue;
@@ -138,7 +140,7 @@ public class ChampionshipHubUI : MonoBehaviour
 				if(!PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Points" + i)){
 					PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points" + i,0);
 				}
-				championshipPoints.Add(i,PlayerPrefs.GetInt("ChampionshipPoints" + i));
+				championshipPoints.Add(i,PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + i));
 			}
 			pointsTableInd++;
 		}

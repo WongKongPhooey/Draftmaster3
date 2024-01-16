@@ -88,42 +88,33 @@ public class RaceResultsUI : MonoBehaviour
 			}
 			
 			//Is this a championship round?
-			if(PlayerPrefs.HasKey("ChampionshipSubseries")){
-				//Debug.Log("Yeah.. there's a championship around");
-				if(PlayerPrefs.GetString("ChampionshipSubseries") == currentSeriesIndex){
-					//Debug.Log("This is the active championship");
-					//Re-route to avoid the Race Rewards mid-season
-					GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/ChampionshipHub";
+			if(PlayerPrefs.GetString("RaceType") == "Championship"){
+				//Debug.Log("Yeah.. this is a championship event");
+				//Re-route to avoid the Race Rewards mid-season
+				GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/ChampionshipHub";
 					
-					//Increment Championship Round
-					int championshipRound = PlayerPrefs.GetInt("ChampionshipRound");
-					PlayerPrefs.SetInt("ChampionshipRound",championshipRound+1);
-					
-					fieldSize = PlayerPrefs.GetInt("FieldSize");
-					
-					//Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
-					//Debug.Log("Field Size Loop: " + fieldSize);
-					RacePoints.setCupPoints();
-					for( int i=0; i < fieldSize; i++){
-						if(Ticker.carNames[i] == null){
-							//Exit loop
-							Debug.Log("No name here, skip adding points #" + i);
-							continue;
-						}
-						if(i == (Ticker.position)){
-							//Debug.Log("We finished P" + i);
-							carNumber = playerCarNumber;
-						} else {
-							carNumber = Ticker.carNames[i].Remove(0,6);
-						}
-						Debug.Log("Add " + RacePoints.placePoints[i] + " points");
-						addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
+				//Increment Championship Round
+				int championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
+				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round",championshipRound+1);
+				
+				fieldSize = PlayerPrefs.GetInt("FieldSize");
+				
+				//Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
+				RacePoints.setCupPoints();
+				for( int i=0; i < fieldSize; i++){
+					if(Ticker.carNames[i] == null){
+						//Exit loop
+						Debug.Log("No name here, skip adding points #" + i);
+						continue;
 					}
-				} else {
-					//Debug.Log("This isn't an active championship race.");
+					if(i == (Ticker.position)){
+						carNumber = playerCarNumber;
+					} else {
+						carNumber = Ticker.carNames[i].Remove(0,6);
+					}
+					Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 				}
-			} else {
-				//Debug.Log("No Active Championship Exists");
 			}
 			PlayerPrefs.SetInt("ExpAdded",1);
 		}
@@ -255,8 +246,8 @@ public class RaceResultsUI : MonoBehaviour
 	}
 
 	void addChampionshipPoints(string carNumber, int points){
-		int currentPoints = PlayerPrefs.GetInt("ChampionshipPoints" + carNumber + "");
-		PlayerPrefs.SetInt("ChampionshipPoints" + carNumber + "", currentPoints + points);
+		int currentPoints = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber);
+		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber, currentPoints + points);
 		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + " + " + points));
 	}
 

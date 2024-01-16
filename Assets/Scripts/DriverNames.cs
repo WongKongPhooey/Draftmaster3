@@ -318,6 +318,9 @@ public class DriverNames : MonoBehaviour {
 	
 	public static string getName(string seriesPrefix, int index){
 		loadData();
+		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
+			return PlayerPrefs.GetString("CustomDriver" + seriesPrefix + index);
+		}
 		if(allNames.ContainsKey(seriesPrefix)){
 			string[] names = allNames[seriesPrefix];
 			return names[index];
@@ -332,6 +335,9 @@ public class DriverNames : MonoBehaviour {
 	
 	public static string getTeam(string seriesPrefix, int index){
 		loadData();
+		if(PlayerPrefs.HasKey("CustomTeam" + seriesPrefix + index)){
+			return PlayerPrefs.GetString("CustomTeam" + seriesPrefix + index);
+		}
 		if(allTeams.ContainsKey(seriesPrefix)){
 			string[] teams = allTeams[seriesPrefix];
 			return teams[index];
@@ -346,6 +352,9 @@ public class DriverNames : MonoBehaviour {
 	
 	public static string getManufacturer(string seriesPrefix, int index){
 		loadData();
+		if(PlayerPrefs.HasKey("CustomManufacturer" + seriesPrefix + index)){
+			return PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + index);
+		}
 		if(allManufacturer.ContainsKey(seriesPrefix)){
 			string[] manufacturer = allManufacturer[seriesPrefix];
 			return manufacturer[index];
@@ -388,11 +397,10 @@ public class DriverNames : MonoBehaviour {
 	
 	public static int getNumber(string seriesPrefix, int index){
 		loadData();
-		
-		int customNum = index;
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + index)){
-			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + index);
+			return PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + index);
 		}
+		int customNum = index;
 		return customNum;
 	}
 	

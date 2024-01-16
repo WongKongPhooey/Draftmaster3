@@ -315,9 +315,8 @@ public class TrackUI : MonoBehaviour
 	}
 
 	public void startChampionship(){
-		DriverPoints.resetPoints(seriesPrefix);
+		DriverPoints.resetPoints(currentSeriesIndex,seriesPrefix);
 		PlayerPrefs.SetString("RaceType","Championship");
-		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Active", 1);
 		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
 		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "Tracklist",PlayerPrefs.GetString("SeriesTrackList"));
 		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);

@@ -1136,7 +1136,8 @@ public class GarageUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		for(int car=0;car<100;car++){
-			if((DriverNames.getTeam(seriesPrefix, car) == carTeam)&&(car != carInd)){
+			if((DriverNames.getTeam(seriesPrefix, car) == carTeam)
+			  &&(car != carInd)){
 				//Add a new teammate tile
 				GameObject teammateInst = Instantiate(teammateIcon, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				teammateInst.transform.SetParent(teamListFrame, false);
