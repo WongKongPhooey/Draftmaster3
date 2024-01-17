@@ -73,13 +73,13 @@ public class RaceResultsUI : MonoBehaviour
 			
 			//Example 1st = 110, 5th = 30, 10th = 20, 30th = 13
 			raceExp = Mathf.Round(((90 / (Ticker.position + 1)) + 10) * (float)(1 + (float)(AILevel / 10f)));
-			Debug.Log(Mathf.Round(((90 / (Ticker.position + 1)) + 10)));
-			Debug.Log((float)(1 + (float)(AILevel / 10f)));
+			//Debug.Log(Mathf.Round(((90 / (Ticker.position + 1)) + 10)));
+			//Debug.Log((float)(1 + (float)(AILevel / 10f)));
 			//Example 1st = 100, 10th = 70, 20th = 40, 30th = 10
 			//raceExp = ((30 - Ticker.position) * 3) + 10;
 			exp += Mathf.RoundToInt(raceExp);
 			PlayerPrefs.SetInt("Exp",exp);
-			Debug.Log("Exp: " + exp);
+			//Debug.Log("Exp: " + exp);
 			
 			PlayerPrefs.SetString("ExpInfo","+" + raceExp + " (" + exp + "/" + levelExp + ")");
 
@@ -96,6 +96,7 @@ public class RaceResultsUI : MonoBehaviour
 				//Increment Championship Round
 				int championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
 				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round",championshipRound+1);
+				Debug.Log("Next Round " + PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round"));
 				
 				fieldSize = PlayerPrefs.GetInt("FieldSize");
 				
@@ -112,7 +113,7 @@ public class RaceResultsUI : MonoBehaviour
 					} else {
 						carNumber = Ticker.carNames[i].Remove(0,6);
 					}
-					Debug.Log("Add " + RacePoints.placePoints[i] + " points");
+					//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
 					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 				}
 			}
@@ -248,7 +249,7 @@ public class RaceResultsUI : MonoBehaviour
 	void addChampionshipPoints(string carNumber, int points){
 		int currentPoints = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber);
 		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber, currentPoints + points);
-		Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + " + " + points));
+		//Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + " + " + points));
 	}
 
 	public static int levelUpExp(int level){

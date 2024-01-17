@@ -367,7 +367,7 @@ public class Ticker : MonoBehaviour
 				Debug.Log("Player is in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
-				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				carNumber[i] = carNames[i].Remove(0,6);
 				int carJsonIndex = 999;
 				if(officialSeries == true){
 					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));

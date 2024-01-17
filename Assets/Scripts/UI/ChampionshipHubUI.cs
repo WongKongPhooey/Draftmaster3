@@ -62,6 +62,8 @@ public class ChampionshipHubUI : MonoBehaviour
 		PlayerPrefs.SetString("carSeries",seriesPrefix);
 		PlayerPrefs.SetString("RaceType","Championship");
         
+		Debug.Log("Championship Round " + (championshipRound + 1));
+		
 		modSeries = false;
 		if(ModData.isModSeries(seriesPrefix) == true){
 			modSeries = true;

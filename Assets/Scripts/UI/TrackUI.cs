@@ -34,10 +34,9 @@ public class TrackUI : MonoBehaviour
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
         loadAllTracks(trackList);
 		
-		if(PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Round")){
-			if(PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round") > 0){
+		if(PlayerPrefs.GetString("RaceType") == "Championship"){
+			if(PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Round")){
 				seriesLength = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
-				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
 				PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "Tracklist",PlayerPrefs.GetString("SeriesTrackList"));
 				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
 			}
@@ -58,7 +57,6 @@ public class TrackUI : MonoBehaviour
 		//If race type is Championship (Set in the Championship Hub screen)
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
 			Debug.Log("There's an active championship here.. " + currentSeriesIndex);
-			PlayerPrefs.SetString("RaceType","Championship");
 			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 			PlayerPrefs.SetString("carSeries", seriesPrefix);
 			Debug.Log("SeriesChampionship" + currentSeriesIndex + "Carset loaded as " + seriesPrefix);
@@ -69,7 +67,7 @@ public class TrackUI : MonoBehaviour
 			if(championshipRound >= seriesLength){
 				//Championship is over, reset
 				PlayerPrefs.DeleteKey("ChampionshipSubseries");
-				PlayerPrefs.DeleteKey("SeriesChampionship" + currentSeriesIndex + "Round");
+				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
 				PlayerPrefs.SetString("RaceType","Single");
 				Debug.Log("End of season, round reset.");
 			} else {

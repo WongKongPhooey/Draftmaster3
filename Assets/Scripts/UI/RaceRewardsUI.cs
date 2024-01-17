@@ -23,6 +23,7 @@ public class RaceRewardsUI : MonoBehaviour
 	int raceSubMenu;
 	int offsetGears;
     int rewardGears;
+	string currentSeriesIndex;
 	
 	string setPrize;
 	bool altPaintReward;
@@ -79,6 +80,7 @@ public class RaceRewardsUI : MonoBehaviour
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			}
 		}
+		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		raceMenu = PlayerPrefs.GetInt("CurrentSeries");
 		raceSubMenu = PlayerPrefs.GetInt("CurrentSubseries");
 		if(seriesPrize != ""){
@@ -107,7 +109,7 @@ public class RaceRewardsUI : MonoBehaviour
 		championshipFinish = 40;
 		if(PlayerPrefs.GetInt("ChampionshipReward") == 1){
 			championshipReward = true;
-			seriesLength = PlayerPrefs.GetInt("ChampionshipLength");
+			seriesLength = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Length");
 			PlayerPrefs.SetInt("ChampionshipReward", 0);
 		}
 		
@@ -115,6 +117,7 @@ public class RaceRewardsUI : MonoBehaviour
 			rewardMultiplier = seriesLength;
 			Debug.Log("Multiplier Set as " + rewardMultiplier);
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
+			PlayerPrefs.DeleteKey("SeriesChampionship" + currentSeriesIndex + "Round");
 		}
 		
 		if(raceType == "Event"){
@@ -527,12 +530,12 @@ public class RaceRewardsUI : MonoBehaviour
 	}
 	
 	int getChampionshipPosition(){
-		Debug.Log("LOOKING FOR CHAMPIONSHIP POSITION");
+		//Debug.Log("LOOKING FOR CHAMPIONSHIP POSITION");
 		string playerCarNumber = PlayerPrefs.GetString("carTexture");
 		string splitAfter = "livery";
 		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
 		int carNumber = int.Parse(playerCarNumber);
-		Debug.Log("CAR NUMBER IS " + carNumber.ToString());
+		//Debug.Log("CAR NUMBER IS " + carNumber.ToString());
 		Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
 		
 		championshipPoints.Clear();
@@ -559,7 +562,7 @@ public class RaceRewardsUI : MonoBehaviour
 		foreach(var pointsRow in pointsTable){
 			if(pointsRow.Key == carNumber){
 				champPosition = pointsTableInd;
-				Debug.Log("CHAMPIONSHIP POSITION IS " + champPosition);
+				//Debug.Log("CHAMPIONSHIP POSITION IS " + champPosition);
 			}
 			pointsTableInd++;
 		}

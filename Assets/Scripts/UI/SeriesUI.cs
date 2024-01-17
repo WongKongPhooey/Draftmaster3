@@ -100,9 +100,9 @@ public class SeriesUI : MonoBehaviour
 			
 			if(PlayerPrefs.HasKey("SeriesChampionship" + seriesId + i + "Round")){
 				if(PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round") > 0){
-					int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round");
+					int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round") + 1;
 					int totalRounds = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Length");
-					champsProgress.text = "Championship In Progress\n" + nextRound + "/" + totalRounds;
+					champsProgress.text = "Championship In Progress \nRound " + nextRound + "/" + totalRounds;
 				}
 			}
 			
@@ -110,7 +110,7 @@ public class SeriesUI : MonoBehaviour
 			tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = i;
 			
 			seriesName.text = SeriesData.offlineSeries[seriesId,i];
-			seriesDesc.text = (SeriesData.offlineAILevel[seriesId,i] * 10).ToString() + "% Difficulty";
+			seriesDesc.text = ((SeriesData.offlineAILevel[seriesId,i] * 10) + 50).ToString() + "% Difficulty";
 			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineSeriesImage[seriesId,i]); 
 		
 			if(SeriesData.offlineMinLevel[seriesId,i] > level){

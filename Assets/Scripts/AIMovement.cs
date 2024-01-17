@@ -676,7 +676,7 @@ public class AIMovement : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate(){
 
-		logicCycle = 20;
+		logicCycle = 10;
 		tick++;
 		if(tick>=logicCycle){
 			tick=0;
