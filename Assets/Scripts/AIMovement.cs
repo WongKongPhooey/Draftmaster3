@@ -1073,6 +1073,11 @@ public class AIMovement : MonoBehaviour
 			//Debug.Log("Track Limits!");
 			if (backingOut == false) {
 				backingOut = true;
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " hit the apron! Moving back up ");
+				}
+				#endif
 			}
 			laneticker = -laneChangeDuration + laneticker;
 			lane--;
@@ -1082,13 +1087,17 @@ public class AIMovement : MonoBehaviour
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " hit the wall! Moving back up ");
+				}
+				#endif
 				float rng = Random.Range(0,1000);
 				//Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
 				if((wreckProbability >= rng)||
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
 					startWreck();
-					//Debug.Log("Wreck: Random Wall");
 					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 				}
 			}
@@ -1116,6 +1125,11 @@ public class AIMovement : MonoBehaviour
 			float carDist = DraftCheckForwardZOffset.distance;
 			float opponentSpeed = getOpponentSpeed(DraftCheckForwardZOffset);
 			bool tryTimedPass = timedPass(carDist, opponentSpeed);
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log(AICar.name + " have the setup for a timed pass? " + tryTimedPass);
+			}
+			#endif
 			if(CameraRotate.cautionOut == true){
 				//Debug.Log("Caution Weighted Draft Logic");
 				GameObject oppCar = DraftCheckForwardZOffset.transform.gameObject;
@@ -1157,7 +1171,7 @@ public class AIMovement : MonoBehaviour
 
 				//Pass them
 				if(movingLane == false){
-					tryPass(50, false);
+					//tryPass(50, false);
 				}
 			}
 			
@@ -1293,38 +1307,29 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " trying a timed pass: dist - " + distance + " , opp Speed - " + opponentSpeed);
+			Debug.Log(AICar.name + " might try a timed pass: dist - " + distance + " , opp Speed - " + opponentSpeed);
 		}
 		#endif
 		
 		if((AISpeed - opponentSpeed) > (2.5f * passDistMulti)){
-			//tryPass(50, false);
-			//Debug.Log("Car #" + carNum + " attempts large pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
 			return true;
 		}
 		if(distance < (2.5f * passDistMulti)){
 			if((AISpeed - opponentSpeed) > (1.5f * passDistMulti)){
-				//Debug.Log("Car #" + carNum + " attempts long pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
-				//tryPass(50, false);
 				return true;
 			}
 		}
 		if(distance < (1.5f * passDistMulti)){
 			if((AISpeed - opponentSpeed) > (1f * passDistMulti)){
-				//Debug.Log("Car #" + carNum + " attempts ideal pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
-				//tryPass(50, false);
 				return true;
 			}
 		}
 		if(distance < (1.25f * passDistMulti)){
 			if((AISpeed - opponentSpeed) > (0.3f * passDistMulti)){
-				//Debug.Log("Car #" + carNum + " attempts close pass. Speed diff:" + (AISpeed - opponentSpeed) + " Distance:" + distance);
-				//tryPass(50, false);
 				return true;
 			}
 			if(tandemDrafting == false){
 				if((AISpeed - opponentSpeed) >= 0){
-					//tryPass(50, false);
 					return true;
 				}
 			}

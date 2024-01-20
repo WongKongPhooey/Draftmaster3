@@ -102,7 +102,11 @@ public class SeriesUI : MonoBehaviour
 				if(PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round") > 0){
 					int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round") + 1;
 					int totalRounds = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Length");
-					champsProgress.text = "Championship In Progress \nRound " + nextRound + "/" + totalRounds;
+					if(nextRound > totalRounds){
+						champsProgress.text = "Championship Finished \nCollect Rewards";
+					} else {
+						champsProgress.text = "Championship In Progress \nRound " + nextRound + "/" + totalRounds;
+					}
 				}
 			}
 			

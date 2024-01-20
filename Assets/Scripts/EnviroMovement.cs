@@ -17,6 +17,7 @@ public class EnviroMovement : MonoBehaviour {
 	public float scrollVX;
 	public float sizeMulti;
 	//public float fixedScroll;
+	public static float hackScaler;
 	Renderer rend;
 
 	void Awake(){
@@ -29,6 +30,8 @@ public class EnviroMovement : MonoBehaviour {
 		enviroSpeed = -3.8f;
 		scrollPos = 1;
 		sizeMulti = EnviroObject.transform.localScale.z / 32f;
+		//This is for manually matching up static scrolling to non-static
+		hackScaler = 0.2f;
 	}
 
 	// Update is called once per frame
@@ -47,7 +50,10 @@ public class EnviroMovement : MonoBehaviour {
 			//maxScroll will always be negative
 			//scrollCalc should generally not exceed about 1.2f to look realistic
 			//trackSpeedOffset should aim to shift the calc by about 0.3f at most
-			scrollVX = (maxScrollSpeed + scrollCalc) * sizeMulti * wreckOffsetMulti;
+			scrollVX = (((maxScrollSpeed + scrollCalc) / sizeMulti) * wreckOffsetMulti) * hackScaler;
+			#if UNITY_EDITOR
+			Debug.Log("Max Scroll:" + maxScrollSpeed + ", Scroll Calc:" + scrollCalc + ", Size Multi:" + sizeMulti + " , Wreck Offset Multi:" + wreckOffsetMulti);
+			#endif
 			if(scrollVX <= 0){
 				scrollPos += scrollVX;
 				//Swap to this for testing
