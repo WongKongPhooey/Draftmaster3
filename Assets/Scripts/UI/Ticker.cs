@@ -364,7 +364,7 @@ public class Ticker : MonoBehaviour
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
 				PlayerPrefs.SetInt("PlayerCautionPosition", i);
-				Debug.Log("Player is in P" + i);
+				//Debug.Log("Player is in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = carNames[i].Remove(0,6);
@@ -437,7 +437,8 @@ public class Ticker : MonoBehaviour
 				//Debug.Log("Player finishes in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
-				carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				//carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
+				carNumber[i] = carNames[i].Remove(0,6);
 				
 				int carJsonIndex = 999;
 				if(officialSeries == true){
