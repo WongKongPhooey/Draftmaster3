@@ -19,6 +19,7 @@ public class GarageUI : MonoBehaviour
 	public GameObject modCarTile;
 	public GameObject optionTile;
 	public GameObject optionImageTile;
+	public GameObject paintTile;
 	GameObject activeTile;
 	public GameObject seriesDropdownRow;
 	
@@ -46,11 +47,13 @@ public class GarageUI : MonoBehaviour
 	public GameObject transferManufacturerPanel;
 	public GameObject transferTeamPanel;
 	public GameObject transferNumberPanel;
+	public GameObject transferPaintPanel;
 	Transform teamListFrame;
 	public GameObject teammateIcon;
 	
 	public static GameObject seriesDropdown;
 	public static GameObject currentSeries;
+	public static int openCarNum;
 	
 	public GameObject transferTokensLabel;
 	int transfersLeft;
@@ -67,6 +70,7 @@ public class GarageUI : MonoBehaviour
 	public Transform manufacturerPanel;
 	public Transform teamPanel;
 	public Transform numberPanel;
+	public Transform paintPanel;
 	public static string seriesPrefix;
 	public List<RectTransform> shuffleArray;
 	
@@ -581,6 +585,7 @@ public class GarageUI : MonoBehaviour
 		loadTransferPanel("Manufacturer",manufacturerPanel);
 		loadTransferPanel("Team",teamPanel);
 		loadTransferPanel("Number",numberPanel);
+		loadTransferPanel("Paint",paintPanel);
 	}
 	
 	public void loadTransferPanel(string panelType, Transform parentGrid){
@@ -620,6 +625,35 @@ public class GarageUI : MonoBehaviour
 				}
 				break;
 			case "Number":
+				for(int i=0;i<=99;i++){
+					if(Resources.Load<Texture2D>("cup20num" + i) != null){
+						GameObject optionInst = Instantiate(optionImageTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+						optionInst.GetComponent<GridSelector>().optionName = i.ToString();
+						optionInst.GetComponent<GridSelector>().optionType = panelType;
+						optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("cup20num" + i);
+						optionInst.transform.SetParent(numberPanel, false);
+					}
+				}
+				break;
+			case "Paint":
+				GameObject stockInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+				stockInst.GetComponent<GridSelector>().optionType = panelType;
+				stockInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "Stock";
+				stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum);
+				stockInst.transform.SetParent(paintPanel, false);
+				
+				for(int i=0;i<=9;i++){
+					if(Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "alt" + i) != null){
+						GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+						paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
+						paintInst.GetComponent<GridSelector>().optionType = panelType;
+						paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = AltPaints.getAltPaintName(seriesPrefix,openCarNum,i);
+						paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "alt" + i);
+						paintInst.transform.SetParent(paintPanel, false);
+					}
+				}
+				break;
+			default:
 				break;
 		}
 	}
@@ -650,6 +684,13 @@ public class GarageUI : MonoBehaviour
 					optionInst.GetComponent<TMPro.TMP_Text>().text = chosenOption;
 					optionInst.transform.SetParent(teamPanel, false);
 				break;
+				case "Number":
+					optionInst = Instantiate(optionImageTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+					optionInst.GetComponent<GridSelector>().optionName = chosenOption;
+					optionInst.GetComponent<GridSelector>().optionType = optionType;
+					optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("cup20num" + chosenOption);
+					optionInst.transform.SetParent(numberPanel, false);
+				break;
 				default:
 					//Throw error here
 					break;
@@ -660,6 +701,7 @@ public class GarageUI : MonoBehaviour
 	public void confirmTransfer(){
 		if(transfersLeft <= 0){
 			alertPopup.GetComponent<AlertManager>().showPopup("No Transfers Remaining","You have used all of your available transfer tokens. You can level up to get more, reset your existing transfers to get all your tokens back, or purchase the Editor pack in the Store for unlimited tokens.","dm2logo");
+			return;
 		} else {
 			if(chosenOption == null){
 				//No transfer to action
@@ -675,14 +717,30 @@ public class GarageUI : MonoBehaviour
 				case "Driver":
 					if(chosenOption == currentDriver){
 						alertPopup.GetComponent<AlertManager>().showPopup("Driver Already Contracted","This driver is already contracted to drive this car!","dm2logo");
+						return;
 					}
 					PlayerPrefs.SetString("CustomDriver" + seriesPrefix + popupCarInd, chosenOption);
 					break;
 				case "Manufacturer":
+					if(chosenOption == currentManufacturer){
+						alertPopup.GetComponent<AlertManager>().showPopup("Car Already Contracted","This car is already contracted to ths manufacturer!","dm2logo");
+						return;
+					}
 					PlayerPrefs.SetString("CustomManufacturer" + seriesPrefix + popupCarInd, chosenOption);
 					break;
 				case "Team":
+					if(chosenOption == currentTeam){
+						alertPopup.GetComponent<AlertManager>().showPopup("Car Already Contracted","This car is already owned by this team!","dm2logo");
+						return;
+					}
 					PlayerPrefs.SetString("CustomTeam" + seriesPrefix + popupCarInd, chosenOption);
+					break;
+				case "Number":
+					if(chosenOption == currentNumber){
+						alertPopup.GetComponent<AlertManager>().showPopup("Number Already In Use","This car is already running with this number!","dm2logo");
+						return;
+					}
+					PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + popupCarInd, int.Parse(chosenOption));
 					break;
 				default:
 					return;
@@ -930,11 +988,6 @@ public class GarageUI : MonoBehaviour
 		foreach(string carset in DriverNames.series){
 			for(int i=0;i<100;i++){
 				
-				//Skip through the non-driver #s
-				if(DriverNames.getName(seriesPrefix, i)== null){
-					continue;
-				}
-				
 				if(PlayerPrefs.HasKey("CustomDriver" + carset + i)){
 					PlayerPrefs.DeleteKey("CustomDriver" + carset + i);
 				}
@@ -951,6 +1004,13 @@ public class GarageUI : MonoBehaviour
 		}
 		PlayerPrefs.SetInt("TransfersLeft",transfersMax);
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
+		loadTransferPanels();
+		hideGaragePopup();
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			loadAllCars();
+		} else {
+			loadAllModCars();
+		}
 	}
 
 	public void starterCars(){
@@ -1050,6 +1110,7 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void showGaragePopup(string seriesPrefix, int carNum, int carClass, int carRarity){
+		openCarNum = carNum;
 		int carInd;
 		Debug.Log("Series Prefix on Garage popup open: " + seriesPrefix);
 		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
@@ -1066,6 +1127,7 @@ public class GarageUI : MonoBehaviour
 		Image carRarityUI = garagePopupTile.transform.GetChild(3).GetComponent<Image>();
 		Image carManuUI = garagePopupTile.transform.GetChild(4).GetComponent<Image>();
 		RawImage carPaint = garagePopupTile.transform.GetChild(5).GetComponent<RawImage>();
+		RawImage carPaintNumber = garagePopupTile.transform.GetChild(5).transform.GetChild(0).GetComponent<RawImage>();
 		TMPro.TMP_Text carNameUI = garagePopupTile.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
 		
 		TMPro.TMP_Text carManuText = garagePopupFrame.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
@@ -1108,6 +1170,9 @@ public class GarageUI : MonoBehaviour
 			//Debug.Log("Get Texture #" + carInd);
 			carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true);
 		}
+		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
+			carPaintNumber.texture =  Resources.Load<Texture2D>("cup20num" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carInd).ToString());
+		}
 		carNameUI.text = carDriver;
 		
 		carManuText.text = carManu + " cars will push you for longer";
@@ -1119,8 +1184,6 @@ public class GarageUI : MonoBehaviour
 		carTypeTotalText.text = carTypeTotal + "% - " + carTypeTotalDesc;
 		carTypeTotalText.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = carTypeTotal + "%";
 		
-		TMPro.TMP_Text transferPreview = GameObject.Find("ContractsPreview").GetComponent<TMPro.TMP_Text>();
-		
 		TMPro.TMP_Text driverName = GameObject.Find("DriverName").GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text manuName = GameObject.Find("ManufacturerName").GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text teamName = GameObject.Find("TeamName").GetComponent<TMPro.TMP_Text>();
@@ -1129,7 +1192,11 @@ public class GarageUI : MonoBehaviour
 		driverName.text = carDriver;
 		manuName.text = carManu;
 		teamName.text = carTeam;
-		numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carInd).ToString();
+		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
+			numberName.text = "#" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carInd).ToString();
+		} else {
+			numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carInd).ToString();
+		}
 		
 		//Empty the teammate frame
 		foreach (Transform child in teamListFrame){
@@ -1159,25 +1226,36 @@ public class GarageUI : MonoBehaviour
 	public void showGarageTransferDriverPanel(){
 		showGarageTransferPanelContainer();
 		//Dependant on chosen transfer action
+		transferPanelContainer.GetComponent<ScrollRect>().content = (RectTransform)driverPanel;
 		transferDriverPanel.GetComponent<UIAnimate>().show();
 	}
 	
 	public void showGarageTransferManufacturerPanel(){
 		showGarageTransferPanelContainer();
 		//Dependant on chosen transfer action
+		transferPanelContainer.GetComponent<ScrollRect>().content = (RectTransform)manufacturerPanel;
 		transferManufacturerPanel.GetComponent<UIAnimate>().show();
 	}
 	
 	public void showGarageTransferTeamPanel(){
 		showGarageTransferPanelContainer();
 		//Dependant on chosen transfer action
+		transferPanelContainer.GetComponent<ScrollRect>().content = (RectTransform)teamPanel;
 		transferTeamPanel.GetComponent<UIAnimate>().show();
 	}
 	
 	public void showGarageTransferNumberPanel(){
 		showGarageTransferPanelContainer();
 		//Dependant on chosen transfer action
+		transferPanelContainer.GetComponent<ScrollRect>().content = (RectTransform)numberPanel;
 		transferNumberPanel.GetComponent<UIAnimate>().show();
+	}
+	
+	public void showGarageChangePaintPanel(){
+		showGarageTransferPanelContainer();
+		//Dependant on chosen transfer action
+		transferPanelContainer.GetComponent<ScrollRect>().content = (RectTransform)paintPanel;
+		transferPaintPanel.GetComponent<UIAnimate>().show();
 	}
 	
 	public void hideGarageTransferPanels(){
@@ -1187,6 +1265,7 @@ public class GarageUI : MonoBehaviour
 		transferManufacturerPanel.GetComponent<UIAnimate>().hide();
 		transferTeamPanel.GetComponent<UIAnimate>().hide();
 		transferNumberPanel.GetComponent<UIAnimate>().hide();
+		transferPaintPanel.GetComponent<UIAnimate>().hide();
 		//Reloading drops any chosen options that weren't confirmed
 		loadTransferPanels();
 	}
