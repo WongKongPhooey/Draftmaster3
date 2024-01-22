@@ -639,16 +639,16 @@ public class GarageUI : MonoBehaviour
 				GameObject stockInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				stockInst.GetComponent<GridSelector>().optionType = panelType;
 				stockInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "Stock";
-				stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum);
+				stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blank");
 				stockInst.transform.SetParent(paintPanel, false);
 				
 				for(int i=0;i<=9;i++){
-					if(Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "alt" + i) != null){
+					if(Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i) != null){
 						GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 						paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
 						paintInst.GetComponent<GridSelector>().optionType = panelType;
 						paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = AltPaints.getAltPaintName(seriesPrefix,openCarNum,i);
-						paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "alt" + i);
+						paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i);
 						paintInst.transform.SetParent(paintPanel, false);
 					}
 				}
@@ -1111,6 +1111,8 @@ public class GarageUI : MonoBehaviour
 
 	public void showGaragePopup(string seriesPrefix, int carNum, int carClass, int carRarity){
 		openCarNum = carNum;
+		//Load this here to get the paints from the params passed in
+		loadTransferPanel("Paint",paintPanel);
 		int carInd;
 		Debug.Log("Series Prefix on Garage popup open: " + seriesPrefix);
 		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
