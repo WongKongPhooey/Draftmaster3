@@ -37,6 +37,7 @@ public class GarageUI : MonoBehaviour
 	GameObject garagePopup;
 	GameObject garagePopupFrame;
 	GameObject garagePopupTile;
+	GameObject carPaintNumberObj;
 	GameObject actionPanel;
 	public string currentDriver;
 	public string currentManufacturer;
@@ -114,6 +115,7 @@ public class GarageUI : MonoBehaviour
 		garagePopup = GameObject.Find("GaragePopup");
 		garagePopupFrame = GameObject.Find("GaragePopupFrame");
 		garagePopupTile = GameObject.Find("GaragePopupTile");
+		carPaintNumberObj = garagePopupTile.transform.GetChild(5).transform.GetChild(0).gameObject;
 		actionPanel = GameObject.Find("ActionPanel");
 		teamListFrame = GameObject.Find("TeamList").transform;
 		transfersMax = PlayerPrefs.GetInt("TransferTokens");
@@ -809,6 +811,23 @@ public class GarageUI : MonoBehaviour
 				return true;
 				break;
 			case "Number":
+				for(int i=0;i<100;i++){
+					//Skip through the non-driver #s
+					if(DriverNames.getName(seriesPrefix, i)== null){
+						continue;
+					}
+					//Load each car in the series in
+					int carNum;
+					if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
+						carNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + i);
+					} else {
+						carNum = i;
+					}
+					//Check there isn't already a car using this number
+					if(int.Parse(chosenOption) == carNum){
+						return false;
+					}
+				}
 				return true;
 			default:
 				return false;
@@ -1115,6 +1134,9 @@ public class GarageUI : MonoBehaviour
 		loadTransferPanel("Paint",paintPanel);
 		int carInd;
 		Debug.Log("Series Prefix on Garage popup open: " + seriesPrefix);
+
+		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
+
 		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
 			//Convert mods from number to index
 			carInd = ModData.getJsonIndexFromCarNum(seriesPrefix, carNum);
@@ -1136,7 +1158,7 @@ public class GarageUI : MonoBehaviour
 		TMPro.TMP_Text carTeamText = garagePopupFrame.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text carTypeText = garagePopupFrame.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 		TMPro.TMP_Text carTypeTotalText = garagePopupFrame.transform.GetChild(5).GetComponent<TMPro.TMP_Text>();
-		
+
 		string carDriver = DriverNames.getName(seriesPrefix,carInd);
 		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carInd)){
 			carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carInd);
@@ -1167,13 +1189,21 @@ public class GarageUI : MonoBehaviour
 		string carType = DriverNames.getType(seriesPrefix,carInd);
 		
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
-			carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
+				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank");
+			} else {
+				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);				
+			}
 		} else {
 			//Debug.Log("Get Texture #" + carInd);
 			carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true);
 		}
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
+			carPaintNumberObj.SetActive(true);
+			carPaintNumberObj.GetComponent<RectTransform>().anchoredPosition = numXPos;
 			carPaintNumber.texture =  Resources.Load<Texture2D>("cup20num" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carInd).ToString());
+		} else {
+			carPaintNumberObj.SetActive(false);
 		}
 		carNameUI.text = carDriver;
 		
