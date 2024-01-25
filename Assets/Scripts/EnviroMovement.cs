@@ -52,7 +52,7 @@ public class EnviroMovement : MonoBehaviour {
 			//trackSpeedOffset should aim to shift the calc by about 0.3f at most
 			scrollVX = (((maxScrollSpeed + scrollCalc) / sizeMulti) * wreckOffsetMulti) * hackScaler;
 			#if UNITY_EDITOR
-			Debug.Log("Max Scroll:" + maxScrollSpeed + ", Scroll Calc:" + scrollCalc + ", Size Multi:" + sizeMulti + " , Wreck Offset Multi:" + wreckOffsetMulti);
+			//Debug.Log("Max Scroll:" + maxScrollSpeed + ", Scroll Calc:" + scrollCalc + ", Size Multi:" + sizeMulti + " , Wreck Offset Multi:" + wreckOffsetMulti);
 			#endif
 			if(scrollVX <= 0){
 				scrollPos += scrollVX;

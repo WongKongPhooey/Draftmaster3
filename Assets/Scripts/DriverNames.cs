@@ -254,10 +254,13 @@ public class DriverNames : MonoBehaviour {
 			}
 			//Debug.Log("Getting names in " + seriesDrivers.Key);
 			// do something with entry.Value or entry.Key
-			foreach(string name in seriesDrivers.Value){
-				if((driverPool.Contains(name) == false)&&(name != null)){
-					driverPool.Add(name);
-					//Debug.Log(name + " added to pool");
+			for(int i=0;i<100;i++){
+				//Only unlocked drivers for each series appear in the pool
+				if(PlayerPrefs.GetInt(seriesDrivers.Key + i + "Unlocked") == 1){
+					string name = DriverNames.getDefaultName(seriesDrivers.Key,i);
+					if((driverPool.Contains(name) == false)&&(name != null)){
+						driverPool.Add(name);
+					}
 				}
 			}
 		}
@@ -321,6 +324,20 @@ public class DriverNames : MonoBehaviour {
 		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
 			return PlayerPrefs.GetString("CustomDriver" + seriesPrefix + index);
 		}
+		if(allNames.ContainsKey(seriesPrefix)){
+			string[] names = allNames[seriesPrefix];
+			return names[index];
+		} else {
+			if(ModData.isModSeries(seriesPrefix)){
+				return ModData.getName(seriesPrefix, index, false);
+			} else {
+				return null;
+			}
+		}
+	}
+
+	public static string getDefaultName(string seriesPrefix, int index){
+		loadData();
 		if(allNames.ContainsKey(seriesPrefix)){
 			string[] names = allNames[seriesPrefix];
 			return names[index];

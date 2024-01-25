@@ -555,9 +555,19 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 				if(doored("Left",dooredStrength) == true){
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " got doored! Moving right");
+					}
+					#endif
 					changeLane("Right");
 				}
 				if(doored("Right",dooredStrength) == true){
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " got doored! Moving left");
+					}
+					#endif
 					changeLane("Left");
 				}
 			}
@@ -766,10 +776,12 @@ public class AIMovement : MonoBehaviour
 		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
 		raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //0. Forward centered
 		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, draftAirCushion); //1. Backward centered
-		raycastBatch[2] = new RaycastCommand(pos + new Vector3(-1f,0,-1f), transform.forward, 1.5f); //2. Car Left Of Player
-		raycastBatch[3] = new RaycastCommand(pos + new Vector3(1f,0,-1f), transform.forward, 1.5f); //3. Car Right Of Player
+		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right * -1, 1f); //2. Car Left Of FQ
+		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right * -1, 1f); //3. Car Left Of RQ
+		raycastBatch[4] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right, 1f); //2. Car Right Of FQ
+		raycastBatch[5] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right, 1f); //3. Car Right Of RQ
 		
-		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 4);
+		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
 	}
 
 	void speedLogic(){
@@ -907,12 +919,14 @@ public class AIMovement : MonoBehaviour
 				//}
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;
-					//Debug.Log("Hot Bump Draft. Cool Engine #" + carNum);
-					//if(HitForward && DraftCheckForward.transform.gameObject.name == "Player"){
-						//Debug.Log("Cooling down behind player #" + carNum);
-					//}
 				}
 			}
+			//If pushing into the bump draft cushion (below the dist trigger for a bump draft)
+			if (DraftCheckForward.distance < bumpDraftDistTrigger){
+				//The cushion gives resistance to prevent jagged motion and stackups
+				AISpeed -= (bumpDraftDistTrigger - DraftCheckForward.distance)/coolOffInv;
+			}
+
 			if(seriesPrefix == "irl23"){
 				coolEngine = true;
 			}
@@ -920,7 +934,7 @@ public class AIMovement : MonoBehaviour
 			tandemDraft = false;
 			tandemPosition = 1;
 		}
-		
+
 		//If engine is too hot, stall out
 		if(coolEngine == true){
 			if (HitForward && DraftCheckForward.distance <= coolOffSpace){
@@ -944,7 +958,7 @@ public class AIMovement : MonoBehaviour
 		if (AISpeed < (200 + speedRand + (carRarity / 8f) + (laneInv / 8f))){
 			AISpeed = (200 + speedRand + (carRarity / 8f) + (laneInv / 8f));
 		}
-		
+
 		if(affectedAISpeed != 0){
 			AISpeed = affectedAISpeed;
 			affectedAISpeed = 0;
@@ -1148,20 +1162,7 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 			
-			if((holdLane >= laneRest)&&(tryTimedPass == false)){
-				string opponentName = DraftCheckForwardZOffset.collider.gameObject.name;
-				int opponentNum = 9999;
-				string opponentTeam = "";
-				if(opponentName != "Player") {
-					opponentNum = getCarNumFromName(opponentName);
-					if(opponentNum != 9999){
-						if(officialSeries == true){
-							opponentTeam = DriverNames.getTeam(seriesPrefix,opponentNum);
-						} else {
-							opponentTeam = ModData.getTeam(seriesPrefix,opponentNum);
-						}
-					}
-				}
+			if((holdLane >= laneRest)||(tryTimedPass == true)){
 
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
@@ -1171,7 +1172,7 @@ public class AIMovement : MonoBehaviour
 
 				//Pass them
 				if(movingLane == false){
-					//tryPass(50, false);
+					tryPass(25, false);
 				}
 			}
 			
@@ -1292,11 +1293,21 @@ public class AIMovement : MonoBehaviour
 				if(Movement.wallrideMod == true){
 					//This hack keeps the top lane empty for a wallride
 				} else {
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " try pass opportunity taken (right)");
+					}
+					#endif
 					changeLane("Right");
 				}
 			} else {
 				bool leftSideClr = leftSideClear();
 				if(leftSideClr == true) {
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " try pass opportunity taken (left)");
+					}
+					#endif
 					changeLane("Left");
 				}
 			}
@@ -1334,6 +1345,11 @@ public class AIMovement : MonoBehaviour
 				}
 			}
 		}
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log(AICar.name + " decided not to do a timed pass. " + distance);
+		}
+		#endif
 		return false;
 	}
 	
@@ -1351,7 +1367,9 @@ public class AIMovement : MonoBehaviour
 		#endif
 		
 		if(HitLaneLeft){
-			if(leftSideClear()){
+			//Left lane has a clear draft
+			if(leftSideClear() == true){
+				//And I can move into that lane
 				float opponentSpeed = getOpponentSpeed(DraftCheckLaneLeft);
 				if(DraftCheckLaneLeft.distance >= 3.5f){
 					if((opponentSpeed >= (AISpeed - 0.1f))||(AISpeed < 201)){
@@ -1369,7 +1387,9 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(HitLaneRight){
-			if(rightSideClear()){
+			//Right lane has a clear draft
+			if(rightSideClear() == true){
+				//And I can move into that lane
 				float opponentSpeed = getOpponentSpeed(DraftCheckLaneRight);
 				if(DraftCheckLaneRight.distance >= 3.5f){
 					if((opponentSpeed >= (AISpeed - 0.1f))||(AISpeed < 201)){
@@ -1403,6 +1423,11 @@ public class AIMovement : MonoBehaviour
 					direction = "Left";
 				}
 			}
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log(AICar.name + " found a better draft; moving " + direction);
+			}
+			#endif
 			changeLane(direction);
 		}
 	}
@@ -1479,6 +1504,11 @@ public class AIMovement : MonoBehaviour
 					direction = "Left";
 				}
 			}
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log(AICar.name + " found a clear lane; moving " + direction);
+			}
+			#endif
 			changeLane(direction);
 		}
 	}
@@ -1541,14 +1571,15 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	public bool leftSideClear(float checkDist = 1.5f){
+	public bool leftSideClear(float maxDist = 5f){
 		
-		RaycastHit checkLaneLeft = raycastHits[2];
-        bool hitLaneLeft = checkLaneLeft.distance > 0;
+		RaycastHit checkFrontLeft = raycastHits[2];
+		RaycastHit checkRearLeft = raycastHits[3];
+        bool hitLaneLeft = ((checkFrontLeft.distance > 0)&&(checkFrontLeft.distance < maxDist))||((checkRearLeft.distance > 0)&&(checkRearLeft.distance < maxDist));
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " right side clear? " + hitLaneLeft + " , dist " + checkLaneLeft.distance);
+			Debug.Log(AICar.name + " right side blocked? " + hitLaneLeft + " , dist to FQ " + checkFrontLeft.distance + " , dist to RQ " + checkRearLeft.distance);
 		}
 		#endif
 		
@@ -1560,14 +1591,15 @@ public class AIMovement : MonoBehaviour
 		}	
 	}
 	
-	public bool rightSideClear(float checkDist = 1.5f){
+	public bool rightSideClear(float maxDist = 5f){
 		
-		RaycastHit checkLaneRight = raycastHits[3];		
-        bool hitLaneRight = checkLaneRight.distance > 0;
+		RaycastHit checkFrontRight = raycastHits[4];
+		RaycastHit checkRearRight = raycastHits[5];		
+        bool hitLaneRight = ((checkFrontRight.distance > 0)&&(checkFrontRight.distance < maxDist))||((checkRearRight.distance > 0)&&(checkRearRight.distance < maxDist));
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " right side clear? " + hitLaneRight + " , dist " + checkLaneRight.distance);
+			Debug.Log(AICar.name + " right side blocked? " + hitLaneRight + " , dist to FQ " + checkFrontRight.distance + " , dist to RQ " + checkRearRight.distance);
 		}
 		#endif
 		
@@ -1589,14 +1621,7 @@ public class AIMovement : MonoBehaviour
 		
 		if(side == "Left"){
 			
-			RaycastHit collisionLeftF;
-			RaycastHit collisionLeftB;
-			bool dooredLeftF = Physics.Raycast(pos + new Vector3(-0.52f,0,-1f), transform.forward, out collisionLeftF, 2);
-			bool dooredLeftB = Physics.Raycast(pos + new Vector3(-0.52f,0,1f), transform.forward * -1, out collisionLeftB, 2);
-			
-			if (((dooredLeftF) && (collisionLeftF.distance <= 2)) ||
-			   ((dooredLeftB) && (collisionLeftB.distance <= 2))) {
-				//Debug.Log("Doored!");
+			if(leftSideClear(0.51f) == false) {
 				return true;
 			} else {
 				return false;
@@ -1604,20 +1629,12 @@ public class AIMovement : MonoBehaviour
 		} else {
 			if(side == "Right"){
 				
-				RaycastHit collisionRightF;
-				RaycastHit collisionRightB;
-				bool dooredRightF = Physics.Raycast(pos + new Vector3(0.52f,0,-1f), transform.forward, out collisionRightF, 2);
-				bool dooredRightB = Physics.Raycast(pos + new Vector3(0.52f,0,1f), transform.forward * -1, out collisionRightB, 2);
-				
-				if (((dooredRightF) && (collisionRightF.distance <= 2)) ||
-				   ((dooredRightB) && (collisionRightB.distance <= 2))) {
-					//Debug.Log("Doored!");
+				if(rightSideClear(0.51f) == false) {
 					return true;
 				} else {
 					return false;
 				}
 			} else {
-				//Debug.Log("Invalid doored value");
 				return false;
 			}
 		}
@@ -1634,15 +1651,9 @@ public class AIMovement : MonoBehaviour
 				if(direction == "Right"){
 					laneticker = -laneChangeDuration;
 					lane--;
-				} else {
-					if(direction == "Find"){
-						//Debug.Log("Not sure where to move");
-					} else {
-						//Debug.Log("Invalid lane change");
-					}
 				}
 			}
-			laneRest = Random.Range(100, 1000);
+			laneRest = Random.Range(200, 2000);
 			movingLane = true;
 			holdLane = 0;
 		}

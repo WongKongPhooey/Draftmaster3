@@ -92,6 +92,9 @@ public class CameraRotate : MonoBehaviour {
 				break;
 			case 3:
 				Application.targetFrameRate = 120;
+				#if UNITY_EDITOR
+				Application.targetFrameRate = -1;
+				#endif
 				break;
 			default:
 				Application.targetFrameRate = 60;
