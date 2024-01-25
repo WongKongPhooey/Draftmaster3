@@ -1790,7 +1790,7 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		targetForce = 0;
+		targetForce = Random.Range(10f,-10f);
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
 		baseDecel = -0.25f;
@@ -1804,23 +1804,22 @@ public class AIMovement : MonoBehaviour
 	public void endWreck(){
 		//Debug.Log(this.name + " WRECKED");
 		AISpeed = 0;
-		baseDecel = -0.25f;
+		//baseDecel = -0.25f;
 		slideX = 0;
-		wreckDecel = 0;
-		targetForce = 0;
+		//wreckDecel = 0;
 		isWrecking = false;
 		wreckOver = true;
 		
 		//Skip force smoothing updateWindforce() on this transition frame
-		targetForce = 0 - Movement.speedoSpeed;
-		windForce = 0 - Movement.speedoSpeed;
+		//targetForce = 0 - Movement.speedoSpeed;
+		//windForce = 0 - Movement.speedoSpeed;
 		
 		sparksCooldown = 0;
-		this.GetComponent<Rigidbody>().mass = 25;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
+		//this.GetComponent<Rigidbody>().mass = 25;
+		//this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
+		//this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
 		if(Movement.wreckOver == true){
-			this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
+			//this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		}
 		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
 		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
