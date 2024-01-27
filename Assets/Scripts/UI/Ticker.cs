@@ -313,6 +313,10 @@ public class Ticker : MonoBehaviour
 	}
 
 	public static void saveCautionPositions(bool playerPitted = false){
+		
+		//Lock in any alt paints for the restart
+		PlayerPrefs.SetInt("RaceAltPaintsChosen",1);
+		
 		entrantList.Clear();
 		
 		int j=0;

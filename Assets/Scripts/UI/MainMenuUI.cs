@@ -146,6 +146,9 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			PlayerPrefs.DeleteKey("SpawnFromCaution");
 		}
+		if(PlayerPrefs.HasKey("RaceAltPaintsChosen")){
+			PlayerPrefs.DeleteKey("RaceAltPaintsChosen");
+		}
 		if(PlayerPrefs.HasKey("SeriesPrizeAmt")){
 			PlayerPrefs.DeleteKey("SeriesPrizeAmt");
 		}

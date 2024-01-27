@@ -276,46 +276,42 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		string chosenAlt;
-		if(PlayerPrefs.HasKey("RaceAltPaint" + carNumber)){
-			//Load the pre-picked alt paint
-			chosenAlt = PlayerPrefs.GetString("RaceAltPaint" + carNumber);
-			//Debug.Log("Remembered to show the #" + carNumber + " Alt");
-		} else {
-			if(PlayerPrefs.HasKey("RaceAltPaintsChosen")){
-				chosenAlt = "0";
-			} else {
-				altPaints = new List<string>();
-				//altPaints.Add("0");
-				altPaints.Add("0");
-				altPaints.Add("0");
-				altPaints.Add("0");
-				altPaints.Add("0");
-				if(officialSeries == true){
-					AltPaints.loadAlts();
-					for(int i=1;i<10;i++){
-						if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-							//Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
-							if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != true){
-								altPaints.Add(i.ToString());
-								//Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
-							}
-						}
-					}
-				} else {
-					for(int i=1;i<10;i++){
-						if(ModData.getAltTexture(seriesPrefix,carNum,i) != null){
-							Debug.Log("Mod Alt Paint #" + carNum + " Alt " + i + " could spawn");
+		Debug.Log("#" + carNumber + " checking for alt paints");
+		if(!PlayerPrefs.HasKey("RaceAltPaintsChosen")){
+			altPaints = new List<string>();
+			altPaints.Add("0");
+			altPaints.Add("0");
+			altPaints.Add("0");
+			if(officialSeries == true){
+				AltPaints.loadAlts();
+				for(int i=1;i<10;i++){
+					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
+						//Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
+						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != true){
 							altPaints.Add(i.ToString());
+							Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
 						}
 					}
 				}
-				int altIndex = Random.Range(0,altPaints.Count);
-				chosenAlt = altPaints[altIndex];
-				if(chosenAlt != "0"){
-					PlayerPrefs.SetInt("RaceAltPaintsChosen",1);
-					PlayerPrefs.SetString("RaceAltPaint" + carNumber,chosenAlt);
-					//Debug.Log("Set the #" + carNumber + " Alt");
+			} else {
+				for(int i=1;i<10;i++){
+					if(ModData.getAltTexture(seriesPrefix,carNum,i) != null){
+						Debug.Log("Mod Alt Paint #" + carNum + " Alt " + i + " could spawn");
+						altPaints.Add(i.ToString());
+					}
 				}
+			}
+			int altIndex = Random.Range(0,altPaints.Count);
+			Debug.Log("#" + carNumber + " - " + altPaints.Count + " possible paints. Chose " + altIndex);
+			chosenAlt = altPaints[altIndex];
+			PlayerPrefs.SetString("RaceAltPaint" + carNumber,chosenAlt);
+		} else {
+			if(PlayerPrefs.HasKey("RaceAltPaint" + carNumber)){
+				//Load the pre-picked alt paint
+				chosenAlt = PlayerPrefs.GetString("RaceAltPaint" + carNumber);
+				//Debug.Log("Remembered to show the #" + carNumber + " Alt");
+			} else {
+				chosenAlt = "0";
 			}
 		}
 		

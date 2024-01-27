@@ -26,7 +26,8 @@ public class NavButton : MonoBehaviour
 	public void endChampionship(){
 		Debug.Log("Championship Ended");
 		PlayerPrefs.SetInt("ChampionshipReward",1);
-		string seriesPrefix = PlayerPrefs.GetString("ChampionshipCarSeries");
+		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+		string seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 		if(ModData.isModSeries(seriesPrefix) == true){
 			//Pref deletes from the RaceRewards screen that's being skipped
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
@@ -37,6 +38,7 @@ public class NavButton : MonoBehaviour
 			PlayerPrefs.SetInt("ChampionshipReward",0);
 			SceneManager.LoadScene("Menus/MainMenu");
 		} else {
+			Debug.Log("To Race Rewards");
 			SceneManager.LoadScene("Menus/RaceRewards");
 		}
 	}
