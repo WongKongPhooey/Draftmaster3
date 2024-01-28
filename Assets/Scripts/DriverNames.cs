@@ -28,6 +28,8 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, string> allCarsetNames = new Dictionary<string, string>();
 
 	public static Dictionary<string, int> numXPos = new Dictionary<string, int>();
+	public static Dictionary<string, float> numXScale = new Dictionary<string, float>();
+	public static Dictionary<string, int> numXRotation = new Dictionary<string, int>();
 
 	public static string[] allCarsets = new string[8];
 	public static string[] allWinnableCarsets = new string[6];
@@ -183,9 +185,12 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("cup20", 17);
 			numXPos.Add("cup22", 10);
 			numXPos.Add("cup23", 11);
-			numXPos.Add("irl23", 25);
+			numXPos.Add("irl23", -34);
 			numXPos.Add("dmc15", 17);
 			numXPos.Add("irc00", 17);
+			
+			numXScale.Add("irl23", 0.45f);
+			numXRotation.Add("irl23", 270);
 		}
 		populateDriverPool();
 		populateManufacturerPool();
@@ -454,6 +459,24 @@ public class DriverNames : MonoBehaviour {
 			return numXPos[seriesPrefix];
 		} else {
 			return 14;
+		}
+	}
+	
+	public static float getNumXScale(string seriesPrefix){
+		loadData();
+		if(numXScale.ContainsKey(seriesPrefix)){
+			return numXScale[seriesPrefix];
+		} else {
+			return 1f;
+		}
+	}
+	
+	public static int getNumXRotation(string seriesPrefix){
+		loadData();
+		if(numXRotation.ContainsKey(seriesPrefix)){
+			return numXRotation[seriesPrefix];
+		} else {
+			return 0;
 		}
 	}
 	

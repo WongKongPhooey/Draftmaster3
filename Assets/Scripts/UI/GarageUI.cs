@@ -148,6 +148,8 @@ public class GarageUI : MonoBehaviour
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
 		
 		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
+		Vector3 numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
+		Vector3 numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
 		
 		bool autoClassUps = false;
 		
@@ -251,16 +253,26 @@ public class GarageUI : MonoBehaviour
 							carName.text = DriverNames.getName(seriesPrefix, i);
 						}
 					}
-					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					if(Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint")) != null){
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					} else {
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					}
 				} else {
 					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
 						carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
 					} else {
 						carName.text = DriverNames.getName(seriesPrefix, i);
 					}
-					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blank"); 
+					if(Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blank") != null){
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "blank");
+					} else {
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i);
+					}
 				}
 				carNumberObj.GetComponent<RectTransform>().anchoredPosition = numXPos;
+				carNumberObj.GetComponent<RectTransform>().localScale = numXScale;
+				carNumberObj.GetComponent<RectTransform>().rotation = Quaternion.Euler(numXRotation.x, numXRotation.y, numXRotation.z);
 				carNumber.texture = Resources.Load<Texture2D>("cup20num" + customNum);
 			} else {
 				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
