@@ -261,7 +261,7 @@ public class ModData : MonoBehaviour
 		return driverRarity;
 	}
 	
-	public static Texture2D getTexture(string seriesPrefix, int index, bool convertToNum = false){
+	public static Texture2D getTexture(string seriesPrefix, int index, bool convertToNum = false, string altPrefix = ""){
 		loadModData();
 		//Debug.Log("Looking for a mod texture..");
 		Texture2D carTex = null;
@@ -273,8 +273,8 @@ public class ModData : MonoBehaviour
 					index = getCarNum(seriesPrefix, index);
 				}
 				d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
-				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png")){
-				    byte[] bytes = System.IO.File.ReadAllBytes(d + directory.Name + "/" + seriesPrefix + "-" + index + ".png");
+				if(System.IO.File.Exists(d + directory.Name + "/" + seriesPrefix + "-" + index + altPrefix + ".png")){
+				    byte[] bytes = System.IO.File.ReadAllBytes(d + directory.Name + "/" + seriesPrefix + "-" + index + altPrefix + ".png");
 					carTex = new Texture2D(2,2,TextureFormat.RGBA32, false);
 					carTex.filterMode = FilterMode.Point;
 					carTex.LoadImage(bytes);
