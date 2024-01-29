@@ -236,6 +236,7 @@ public class GarageUI : MonoBehaviour
 			carClassUI.text = "Class " + classAbbr(carClass);
 			carClassUI.color = classColours(carClass);
 			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
+			
 			if(PlayerPrefs.HasKey("CustomManufacturer" + seriesPrefix + i)){
 				carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + i));
 			} else {
@@ -375,6 +376,10 @@ public class GarageUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
+		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
+		Vector3 numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
+		Vector3 numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
+		
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = ModData.getSeriesNiceName(seriesPrefix);
 		
 		int validCars = 0;
@@ -428,18 +433,66 @@ public class GarageUI : MonoBehaviour
 			carTypeUI.text = DriverNames.shortenedType(ModData.getType(seriesPrefix, i));
 			carClassUI.text = "";
 			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
-			if(DriverNames.isOfficialManu(carManu) == true){
-				carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu); 
+			
+			if(PlayerPrefs.HasKey("CustomManufacturer" + seriesPrefix + i)){
+				carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + i));
 			} else {
 				carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, carManu); 
 			}
-			carName.text = ModData.getName(seriesPrefix,i,false);
-			if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
-				carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
-				//Debug.Log("Transferred Name! " + "Pref:" + ("CustomDriver" + seriesPrefix + i) + " Val:" + PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i));
-		
+
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
+				int customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + i);		
+				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
+					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+						carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+					} else {
+						carName.text = DriverNames.getName(seriesPrefix, i);
+					}
+					if(ModData.getTexture(seriesPrefix, carNum, false, "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint")) != null){
+						carPaint.texture = ModData.getTexture(seriesPrefix, carNum, false, "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					} else {
+							carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					}
+				} else {
+					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+						carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+					} else {
+						carName.text = DriverNames.getName(seriesPrefix, i);
+					}
+					if(ModData.getTexture(seriesPrefix, carNum, false, "blank") != null){
+						carPaint.texture = ModData.getTexture(seriesPrefix, carNum, false, "blank");
+					} else {
+						carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
+					}
+				}
+				carNumberObj.GetComponent<RectTransform>().anchoredPosition = numXPos;
+				carNumberObj.GetComponent<RectTransform>().localScale = numXScale;
+				carNumberObj.GetComponent<RectTransform>().rotation = Quaternion.Euler(numXRotation.x, numXRotation.y, numXRotation.z);
+				carNumber.texture = Resources.Load<Texture2D>("cup20num" + customNum);
+			} else {
+				if(PlayerPrefs.HasKey(seriesPrefix + i + "AltPaint")){
+					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+						carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+					} else {
+						if(PlayerPrefs.HasKey(seriesPrefix + i + "AltDriver")){
+							carName.text = PlayerPrefs.GetString(seriesPrefix + i + "AltDriver");
+						} else {
+							carName.text = DriverNames.getName(seriesPrefix, i);
+						}
+					}
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+				} else {
+					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+						carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+					} else {
+						carName.text = DriverNames.getName(seriesPrefix, i);
+					}
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i); 
+				}
+				carNumberObj.SetActive(false);
 			}
-			carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
+
+
 			//No custom numbers on mod cars.. for now.
 			carNumberObj.SetActive(false);
 			
@@ -1148,6 +1201,8 @@ public class GarageUI : MonoBehaviour
 		Debug.Log("Series Prefix on Garage popup open: " + seriesPrefix);
 
 		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
+		Vector3 numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
+		Vector3 numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
 
 		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
 			//Convert mods from number to index
@@ -1202,7 +1257,11 @@ public class GarageUI : MonoBehaviour
 		
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
-				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank");
+				if(Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank") != null){
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank");
+				} else {
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
+				}
 			} else {
 				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);				
 			}
@@ -1213,6 +1272,9 @@ public class GarageUI : MonoBehaviour
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
 			carPaintNumberObj.SetActive(true);
 			carPaintNumberObj.GetComponent<RectTransform>().anchoredPosition = numXPos;
+			carPaintNumberObj.GetComponent<RectTransform>().localScale = numXScale;
+			carPaintNumberObj.GetComponent<RectTransform>().rotation = Quaternion.Euler(numXRotation.x, numXRotation.y, numXRotation.z);
+				
 			carPaintNumber.texture =  Resources.Load<Texture2D>("cup20num" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carInd).ToString());
 		} else {
 			carPaintNumberObj.SetActive(false);
