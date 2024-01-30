@@ -316,13 +316,27 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
-			if(chosenAlt != "0"){
-				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blankalt" + chosenAlt) as Texture;
+			if(officialSeries == true){
+				if(chosenAlt != "0"){
+					if(Resources.Load(seriesPrefix + "livery" + carNumber + "blankalt" + chosenAlt) != null){
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blankalt" + chosenAlt) as Texture;
+					} else {
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
+					}
+				} else {
+					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+				}
 			} else {
-				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+				if(chosenAlt != "0"){
+					//liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix, carNumber,false,"alt" + chosenAlt);
+				} else {
+					//liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix, carNumber);
+				}
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
+			//Todo add the rotated/scaled number support here
+
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			if(chosenAlt != "0"){
