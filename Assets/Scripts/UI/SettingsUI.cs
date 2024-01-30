@@ -9,16 +9,19 @@ public class SettingsUI : MonoBehaviour
 	public GameObject cameraRotateSetting;
 	public GameObject cautionsSetting;
 	public GameObject qualitySetting;
+	public GameObject overtimeSetting;
 	
 	Slider audioSlider;
 	Slider cameraRotateSlider;
 	Slider cautionsSlider;
 	Slider qualitySlider;
+	Slider overtimeSlider;
 	
 	TMPro.TMP_Text audioSliderLabel;
 	TMPro.TMP_Text cameraRotateSliderLabel;
 	TMPro.TMP_Text cautionsSliderLabel;
 	TMPro.TMP_Text qualitySliderLabel;
+	TMPro.TMP_Text overtimeSliderLabel;
 	
     // Start is called before the first frame update
     void Start(){
@@ -28,21 +31,25 @@ public class SettingsUI : MonoBehaviour
 		cameraRotateSlider = cameraRotateSetting.transform.GetChild(1).GetComponent<Slider>();
 		cautionsSlider = cautionsSetting.transform.GetChild(1).GetComponent<Slider>();
 		qualitySlider = qualitySetting.transform.GetChild(1).GetComponent<Slider>();
-		
+		overtimeSlider = overtimeSetting.transform.GetChild(1).GetComponent<Slider>();
+
 		audioSliderLabel = audioSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		cameraRotateSliderLabel = cameraRotateSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		cautionsSliderLabel = cautionsSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		qualitySliderLabel = qualitySlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
-		
+		overtimeSliderLabel = overtimeSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+
 		audioSlider.value = PlayerPrefs.GetInt("AudioOn");
 		cameraRotateSlider.value = PlayerPrefs.GetInt("CameraRotate");
 		cautionsSlider.value = PlayerPrefs.GetInt("WreckFreq");
 		qualitySlider.value = PlayerPrefs.GetInt("FPSLimit");
-		
+		overtimeSlider.value = PlayerPrefs.GetInt("MaxOvertime");
+
 		audioSliderLabel.text = SliderValueDesc("Audio",audioSlider.value);
 		cameraRotateSliderLabel.text = SliderValueDesc("CameraRotate",cameraRotateSlider.value);
 		cautionsSliderLabel.text = SliderValueDesc("Cautions",cautionsSlider.value);
 		qualitySliderLabel.text = SliderValueDesc("FPSLimit",qualitySlider.value);
+		overtimeSliderLabel.text = SliderValueDesc("MaxOvertime",overtimeSlider.value);
     }
 
 	public void SaveAudioSlider(){
@@ -63,6 +70,11 @@ public class SettingsUI : MonoBehaviour
 	public void SaveQualitySlider(){
 		PlayerPrefs.SetInt("FPSLimit",(int)qualitySlider.value);
 		qualitySliderLabel.text = SliderValueDesc("FPSLimit",qualitySlider.value);
+	}
+
+	public void SaveOvertimeSlider(){
+		PlayerPrefs.SetInt("MaxOvertime",(int)overtimeSlider.value);
+		overtimeSliderLabel.text = SliderValueDesc("MaxOvertime",overtimeSlider.value);
 	}
 
 	string SliderValueDesc(string sliderName, float sliderValue){
@@ -112,6 +124,19 @@ public class SettingsUI : MonoBehaviour
 						break;
 					case 3:
 						desc = "Max";
+						break;
+				}
+				break;
+			case "MaxOvertime":
+				switch(sliderValue){
+					case 1:
+						desc = "1";
+						break;
+					case 2:
+						desc = "3";
+						break;
+					case 3:
+						desc = "5";
 						break;
 				}
 				break;

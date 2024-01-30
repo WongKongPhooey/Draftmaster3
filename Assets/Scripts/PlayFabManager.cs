@@ -636,6 +636,23 @@ public class PlayFabManager : MonoBehaviour
 		}
 	}
 	
+	public static void ResetPassword(){
+		if(checkInternet() == false){return;}
+		/*var request = new SendAccountRecoveryEmailRequest{
+			Email = "josh@duffety-wong.com",
+			TitleId = "5A7C1",
+			EmailTemplateId = "2A23AFCBE9D2560C"
+		};
+		PlayFabClientAPI.SendAccountRecoveryEmail(request, PasswordResetSent, OnError);*/
+	}
+	
+	static void PasswordResetSent(SendAccountRecoveryEmailResult result){
+		if(checkInternet() == false){return;}
+		if(result != null){
+			Debug.Log(result);
+		}
+	}
+
 	static void receiveCarGift(string car){
 		//Example: cup2212
 		string rewardCar = car;

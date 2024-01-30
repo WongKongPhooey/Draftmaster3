@@ -89,6 +89,8 @@ public class GarageUI : MonoBehaviour
 			Debug.Log("Not Logged In");
 		}
 		
+		//PlayFabManager.ResetPassword();
+
 		seriesDropdown = GameObject.Find("Dropdown");
 		seriesDropdown.SetActive(false);
 		currentSeries = GameObject.Find("CurrentSeries");
@@ -224,6 +226,7 @@ public class GarageUI : MonoBehaviour
 			
 			string carTeam = DriverNames.getTeam(seriesPrefix, i);
 			string carType = DriverNames.getType(seriesPrefix, i);
+			Debug.Log("Car Type #" + i + ": " + carType);
 			string carRarity = DriverNames.getRarity(seriesPrefix, i).ToString();
 			string carManu = DriverNames.getManufacturer(seriesPrefix, i);
 			
@@ -451,7 +454,7 @@ public class GarageUI : MonoBehaviour
 					if(ModData.getTexture(seriesPrefix, carNum, false, "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint")) != null){
 						carPaint.texture = ModData.getTexture(seriesPrefix, carNum, false, "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
 					} else {
-							carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+							carPaint.texture = ModData.getTexture(seriesPrefix, carNum, false, "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
 					}
 				} else {
 					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
@@ -480,14 +483,18 @@ public class GarageUI : MonoBehaviour
 							carName.text = DriverNames.getName(seriesPrefix, i);
 						}
 					}
-					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i + "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					if(ModData.getTexture(seriesPrefix, carNum, false, "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint")) != null){
+						carPaint.texture = ModData.getTexture(seriesPrefix, carNum, false, "blankalt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					} else {
+							carPaint.texture = ModData.getTexture(seriesPrefix, carNum, false, "alt" + PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+					}
 				} else {
 					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
 						carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
 					} else {
 						carName.text = DriverNames.getName(seriesPrefix, i);
 					}
-					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + i); 
+					carPaint.texture = ModData.getTexture(seriesPrefix, carNum);
 				}
 				carNumberObj.SetActive(false);
 			}
@@ -706,17 +713,34 @@ public class GarageUI : MonoBehaviour
 				GameObject stockInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				stockInst.GetComponent<GridSelector>().optionType = panelType;
 				stockInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "Stock";
-				stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blank");
+				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+					stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum);
+				} else {
+					stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix,openCarNum);			
+				}
 				stockInst.transform.SetParent(paintPanel, false);
 				
-				for(int i=0;i<=9;i++){
-					if(Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i) != null){
-						GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-						paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
-						paintInst.GetComponent<GridSelector>().optionType = panelType;
-						paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = AltPaints.getAltPaintName(seriesPrefix,openCarNum,i);
-						paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i);
-						paintInst.transform.SetParent(paintPanel, false);
+				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+					for(int i=0;i<=9;i++){
+						if(Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i) != null){
+							GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+							paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
+							paintInst.GetComponent<GridSelector>().optionType = panelType;
+							paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = AltPaints.getAltPaintName(seriesPrefix,openCarNum,i);
+							paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i);
+							paintInst.transform.SetParent(paintPanel, false);
+						}
+					}
+				} else {
+					for(int i=0;i<=9;i++){
+						if(ModData.getTexture(seriesPrefix,openCarNum,false,"alt" + i) != null){
+							GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+							paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
+							paintInst.GetComponent<GridSelector>().optionType = panelType;
+							paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "Alt Paint " + i;
+							paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix,openCarNum,false,"alt" + i);
+							paintInst.transform.SetParent(paintPanel, false);
+						}
 					}
 				}
 				break;
