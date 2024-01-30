@@ -11,12 +11,10 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject TDCamera;
 	public GameObject trackEnviro;
 	public GameObject cornerKerb;
-	public GameObject apron;
 	public GameObject finishLine;
 	public GameObject tropicono;
 	
 	Renderer cornerKerbRenderer;
-	Renderer apronRenderer;
 	
 	public static string seriesPrefix;
 	public static bool officialSeries;
@@ -110,7 +108,6 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		cornerKerbRenderer = cornerKerb.GetComponent<Renderer>();
-		apronRenderer = apron.GetComponent<Renderer>();
 		
 		kerbBlur = 0.5f;
 		straightcounter = 0;
@@ -451,9 +448,6 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			cornerKerbRenderer.enabled = true;
-			if(apron != null){
-				apronRenderer.enabled = true;
-			}
 			cornerKerbRenderer.material.mainTextureOffset = new Vector2(kerbBlur,0);
 			cornercounter++;
 			
@@ -516,9 +510,6 @@ public class CameraRotate : MonoBehaviour {
 					if(cornerKerb.name != "FixedKerb"){
 						cornerKerbRenderer.enabled = false;
 					}
-					if((apron)&&(apron.name != "FixedApron")){
-						apronRenderer.enabled = false;
-					}
 				}
 			}
 		} else {
@@ -544,9 +535,6 @@ public class CameraRotate : MonoBehaviour {
 					//Debug.Log("Straight:" + straight + " - Turn:" + turn);
 					if(cornerKerb.name != "FixedKerb"){
 						cornerKerbRenderer.enabled = false;
-					}
-					if((apron)&&(apron.name != "FixedApron")){
-						apronRenderer.enabled = false;
 					}
 				}
 			}
