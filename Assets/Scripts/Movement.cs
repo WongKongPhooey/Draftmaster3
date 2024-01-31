@@ -291,12 +291,16 @@ public class Movement : MonoBehaviour {
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
 		if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
-			liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "alt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+			if(officialSeries == true){
+				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "alt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+			} else {
+				modTex = ModData.getTexture(seriesPrefix,carNum);
+				liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum,false,"alt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint"));
+			}
 		} else {
 			if(officialSeries == true){
 				liveryRend.material.mainTexture = Resources.Load(PlayerPrefs.GetString("carTexture")) as Texture;
 			} else {
-				Debug.Log("Non official series, get mod texture");
 				modTex = ModData.getTexture(seriesPrefix,carNum);
 				liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum);
 			}
@@ -304,9 +308,13 @@ public class Movement : MonoBehaviour {
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
 			if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
-				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+				if(officialSeries == true){
+					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+				}
 			} else {
-				liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+				if(officialSeries == true){
+					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+				}
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;

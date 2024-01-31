@@ -42,7 +42,7 @@ public class GarageUI : MonoBehaviour
 	public string currentDriver;
 	public string currentManufacturer;
 	public string currentTeam;
-	public string currentNumber;
+	public int currentNumber;
 	public GameObject transferPanelContainer;
 	public GameObject transferDriverPanel;
 	public GameObject transferManufacturerPanel;
@@ -56,6 +56,10 @@ public class GarageUI : MonoBehaviour
 	public static GameObject currentSeries;
 	public static int openCarNum;
 	
+	Vector3 numXPos;
+	Vector3 numXScale;
+	Vector3 numXRotation;
+
 	public GameObject transferTokensLabel;
 	int transfersLeft;
 	int transfersMax;
@@ -149,9 +153,9 @@ public class GarageUI : MonoBehaviour
 		
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
 		
-		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
-		Vector3 numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
-		Vector3 numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
+		numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
+		numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
+		numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
 		
 		bool autoClassUps = false;
 		
@@ -226,7 +230,6 @@ public class GarageUI : MonoBehaviour
 			
 			string carTeam = DriverNames.getTeam(seriesPrefix, i);
 			string carType = DriverNames.getType(seriesPrefix, i);
-			Debug.Log("Car Type #" + i + ": " + carType);
 			string carRarity = DriverNames.getRarity(seriesPrefix, i).ToString();
 			string carManu = DriverNames.getManufacturer(seriesPrefix, i);
 			
@@ -379,10 +382,10 @@ public class GarageUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
-		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
-		Vector3 numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
-		Vector3 numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
-		
+		numXPos = new Vector3(ModData.getNumberPosition(seriesPrefix),0,0);
+		numXScale = new Vector3(ModData.getNumberScale(seriesPrefix),ModData.getNumberScale(seriesPrefix),1);
+		numXRotation = new Vector3(0,0,ModData.getNumberRotation(seriesPrefix));
+
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = ModData.getSeriesNiceName(seriesPrefix);
 		
 		int validCars = 0;
@@ -498,10 +501,6 @@ public class GarageUI : MonoBehaviour
 				}
 				carNumberObj.SetActive(false);
 			}
-
-
-			//No custom numbers on mod cars.. for now.
-			carNumberObj.SetActive(false);
 			
 			//If choosing a car to race with..
 			if(PlayerPrefs.HasKey("ActivePath")){
@@ -712,6 +711,9 @@ public class GarageUI : MonoBehaviour
 			case "Paint":
 				GameObject stockInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				stockInst.GetComponent<GridSelector>().optionType = panelType;
+				stockInst.GetComponent<GridSelector>().seriesPrefix = seriesPrefix;
+				stockInst.GetComponent<GridSelector>().carNum = openCarNum;
+				stockInst.GetComponent<GridSelector>().altNum = 0;
 				stockInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "Stock";
 				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 					stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum);
@@ -719,6 +721,9 @@ public class GarageUI : MonoBehaviour
 					stockInst.transform.GetChild(1).GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix,openCarNum);			
 				}
 				stockInst.transform.SetParent(paintPanel, false);
+				if(!PlayerPrefs.HasKey(seriesPrefix + openCarNum + "AltPaint")){
+					stockInst.transform.GetChild(3).gameObject.SetActive(false);
+				}
 				
 				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 					for(int i=0;i<=9;i++){
@@ -726,9 +731,16 @@ public class GarageUI : MonoBehaviour
 							GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 							paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
 							paintInst.GetComponent<GridSelector>().optionType = panelType;
+							paintInst.GetComponent<GridSelector>().seriesPrefix = seriesPrefix;
+							paintInst.GetComponent<GridSelector>().carNum = openCarNum;
+							paintInst.GetComponent<GridSelector>().altNum = i;
 							paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = AltPaints.getAltPaintName(seriesPrefix,openCarNum,i);
 							paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i);
 							paintInst.transform.SetParent(paintPanel, false);
+
+							if(PlayerPrefs.GetInt(seriesPrefix + openCarNum + "AltPaint") == i){
+								paintInst.transform.GetChild(3).gameObject.SetActive(false);
+							}
 						}
 					}
 				} else {
@@ -737,9 +749,16 @@ public class GarageUI : MonoBehaviour
 							GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 							paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
 							paintInst.GetComponent<GridSelector>().optionType = panelType;
+							paintInst.GetComponent<GridSelector>().seriesPrefix = seriesPrefix;
+							paintInst.GetComponent<GridSelector>().carNum = openCarNum;
+							paintInst.GetComponent<GridSelector>().altNum = i;
 							paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "Alt Paint " + i;
 							paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix,openCarNum,false,"alt" + i);
 							paintInst.transform.SetParent(paintPanel, false);
+
+							if(PlayerPrefs.GetInt(seriesPrefix + openCarNum + "AltPaint") == i){
+								paintInst.transform.GetChild(3).gameObject.SetActive(false);
+							}
 						}
 					}
 				}
@@ -798,14 +817,14 @@ public class GarageUI : MonoBehaviour
 				//No transfer to action
 				return;
 			}
-			if(optionAvailable(seriesPrefix, optionType,chosenOption) == false){
-				alertPopup.GetComponent<AlertManager>().showPopup("Driver Unavailable", chosenOption + " is already contracted to drive another car in the series. The driver needs to be made available first to be able to sign the new contract.","dm2logo");
-				return;
-			}
 			int popupCarNum = 999;
 			dropOptionToPool();
 			switch(optionType){
 				case "Driver":
+					if(optionAvailable(seriesPrefix, optionType, chosenOption) == false){
+						alertPopup.GetComponent<AlertManager>().showPopup("Driver Unavailable", chosenOption + " is already contracted to drive another car in the series. The driver needs to be made available first to be able to sign the new contract.","dm2logo");
+						return;
+					}
 					if(chosenOption == currentDriver){
 						alertPopup.GetComponent<AlertManager>().showPopup("Driver Already Contracted","This driver is already contracted to drive this car!","dm2logo");
 						return;
@@ -827,7 +846,7 @@ public class GarageUI : MonoBehaviour
 					PlayerPrefs.SetString("CustomTeam" + seriesPrefix + popupCarInd, chosenOption);
 					break;
 				case "Number":
-					if(chosenOption == currentNumber){
+					if(chosenOption == currentNumber.ToString()){
 						alertPopup.GetComponent<AlertManager>().showPopup("Number Already In Use","This car is already running with this number!","dm2logo");
 						return;
 					}
@@ -853,6 +872,11 @@ public class GarageUI : MonoBehaviour
 			showGaragePopup(seriesPrefix,popupCarNum,popupCarClass,popupCarRarity);
 		}
 		chosenOption = null;
+		resetUI();
+	}
+
+	public void resetUI(){
+		hideGarageTransferPanels();
 		loadTransferPanels();
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			loadAllCars();
@@ -902,8 +926,14 @@ public class GarageUI : MonoBehaviour
 			case "Number":
 				for(int i=0;i<100;i++){
 					//Skip through the non-driver #s
-					if(DriverNames.getName(seriesPrefix, i)== null){
-						continue;
+					if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+						if(DriverNames.getName(seriesPrefix, i)== null){
+							continue;
+						}
+					} else {
+						if(ModData.getName(seriesPrefix, i,true)== null){
+							continue;
+						}
 					}
 					//Load each car in the series in
 					int carNum;
@@ -1110,6 +1140,7 @@ public class GarageUI : MonoBehaviour
 				}
 			}
 		}
+		ModData.resetAllTransfers();
 		PlayerPrefs.SetInt("TransfersLeft",transfersMax);
 		transfersLeft = PlayerPrefs.GetInt("TransfersLeft");
 		loadTransferPanels();
@@ -1222,11 +1253,6 @@ public class GarageUI : MonoBehaviour
 		//Load this here to get the paints from the params passed in
 		loadTransferPanel("Paint",paintPanel);
 		int carInd;
-		Debug.Log("Series Prefix on Garage popup open: " + seriesPrefix);
-
-		Vector3 numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
-		Vector3 numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
-		Vector3 numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
 
 		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
 			//Convert mods from number to index
@@ -1235,7 +1261,7 @@ public class GarageUI : MonoBehaviour
 			carInd = carNum;
 		}
 		popupCarInd = carInd;
-		
+
 		Text carTeamUI = garagePopupTile.transform.GetChild(0).GetComponent<Text>();
 		Text carTypeUI = garagePopupTile.transform.GetChild(1).GetComponent<Text>();
 		Text carClassUI = garagePopupTile.transform.GetChild(2).GetComponent<Text>();
@@ -1278,20 +1304,42 @@ public class GarageUI : MonoBehaviour
 		int carTypeTotal = 25 + (carRarity * 10) + (carClass * 2);
 		string carTypeTotalDesc = "Base (25%) + " + carRarity + "* Rarity (+" + (carRarity * 10) + "%) + Class " + classAbbr(carClass) + " (+" + (carClass * 2) + "%)";
 		string carType = DriverNames.getType(seriesPrefix,carInd);
-		
+		int altPaint = 0;
+		if(PlayerPrefs.HasKey(seriesPrefix + carInd + "AltPaint")){
+			altPaint = PlayerPrefs.GetInt(seriesPrefix + carInd + "AltPaint");
+		}
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
+				currentNumber = DriverNames.getNumber(seriesPrefix, carInd);
 				if(Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank") != null){
-					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank");
+					if(altPaint != 0){
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blankalt" + altPaint);
+					} else {
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank");
+					}
 				} else {
-					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
+					if(altPaint != 0){
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "alt" + altPaint);
+					} else {
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
+					}
 				}
 			} else {
-				carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);				
+				currentNumber = carInd;
+				if(altPaint != 0){
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "alt" + altPaint);
+				} else {
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
+				}		
 			}
 		} else {
 			//Debug.Log("Get Texture #" + carInd);
-			carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true);
+			currentNumber = ModData.getCarNum(seriesPrefix, carInd);
+			if(altPaint != 0){
+				carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true, "alt" + altPaint);
+			} else {
+				carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true);
+			}
 		}
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
 			carPaintNumberObj.SetActive(true);
@@ -1322,10 +1370,10 @@ public class GarageUI : MonoBehaviour
 		driverName.text = carDriver;
 		manuName.text = carManu;
 		teamName.text = carTeam;
-		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
-			numberName.text = "#" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carInd).ToString();
+		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + popupCarInd)){
+			numberName.text = "#" + PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + popupCarInd).ToString();
 		} else {
-			numberName.text = "#" + DriverNames.getNumber(seriesPrefix,carInd).ToString();
+			numberName.text = "#" + DriverNames.getNumber(seriesPrefix, popupCarInd).ToString();
 		}
 		
 		//Empty the teammate frame
@@ -1346,6 +1394,56 @@ public class GarageUI : MonoBehaviour
 			}
 		}
 		garagePopup.GetComponent<UIAnimate>().show();
+	}
+
+	public void reloadGaragePopupPaint(){
+
+		//Load this here to get the paints from the params passed in
+		int carInd;
+
+		if(DriverNames.isOfficialSeries(seriesPrefix) == false){
+			//Convert mods from number to index
+			carInd = ModData.getJsonIndexFromCarNum(seriesPrefix, openCarNum);
+		} else {
+			carInd = openCarNum;
+		}
+		popupCarInd = carInd;
+		
+		RawImage carPaint = garagePopupTile.transform.GetChild(5).GetComponent<RawImage>();
+		int altPaint = 0;
+		if(PlayerPrefs.HasKey(seriesPrefix + carInd + "AltPaint")){
+			altPaint = PlayerPrefs.GetInt(seriesPrefix + carInd + "AltPaint");
+		}
+		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
+				if(Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank") != null){
+					if(altPaint != 0){
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blankalt" + altPaint);
+					} else {
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank");
+					}
+				} else {
+					if(altPaint != 0){
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "alt" + altPaint);
+					} else {
+						carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
+					}
+				}
+			} else {
+				if(altPaint != 0){
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "alt" + altPaint);
+				} else {
+					carPaint.texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd);
+				}		
+			}
+		} else {
+			//Debug.Log("Get Texture #" + carInd);
+			if(altPaint != 0){
+				carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true, "alt" + altPaint);
+			} else {
+				carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true);
+			}
+		}
 	}
 
 	public void showGarageTransferPanelContainer(){

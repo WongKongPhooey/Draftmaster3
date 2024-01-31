@@ -419,11 +419,20 @@ public class DriverNames : MonoBehaviour {
 	
 	public static int getNumber(string seriesPrefix, int index){
 		loadData();
-		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + index)){
-			return PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + index);
+		if(allRarity.ContainsKey(seriesPrefix)){
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + index)){
+				return PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + index);
+			} else {
+				int customNum = index;
+				return customNum;
+			}
+		} else {
+			if(ModData.isModSeries(seriesPrefix)){
+				return ModData.getCarNum(seriesPrefix, index);
+			} else {
+				return 999;
+			}
 		}
-		int customNum = index;
-		return customNum;
 	}
 	
 	public static string[] getDriverPool(){

@@ -169,8 +169,6 @@ public class ChampionshipHubUI : MonoBehaviour
 		int pointsInd = 0;
 		foreach(var pointsRow in pointsTable){
 			
-			//Debug.Log("Points Row, Key:" + pointsRow.Key + " - Value:" + pointsRow.Value);
-			
 			int carInd = 999;
 			if(modSeries == true){
 				carInd = ModData.getJsonIndexFromCarNum(seriesPrefix, pointsRow.Key);
@@ -199,13 +197,17 @@ public class ChampionshipHubUI : MonoBehaviour
 			champPos.text = (pointsInd+1).ToString();
 			
 			if(modSeries == true){
-				//Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
-				if (Resources.Load<Texture2D>("cup20num" + pointsRow.Key) != null) {
-					champNum.texture = Resources.Load<Texture2D>("cup20num" + pointsRow.Key);
+				Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
+				int carNum = pointsRow.Key;
+				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,pointsRow.Key))){
+					carNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,pointsRow.Key));
+				}
+				if (Resources.Load<Texture2D>("cup20num" + carNum) != null) {
+					champNum.texture = Resources.Load<Texture2D>("cup20num" + carNum);
 					champFallbackNum.enabled = false;
 				} else {
 					champNum.enabled = false;
-					champFallbackNum.text = pointsRow.Key.ToString();
+					champFallbackNum.text = carNum.ToString();
 				}
 				champDriver.text = ModData.getName(seriesPrefix, carInd);
 				champManu.texture = Resources.Load<Texture2D>("Icons/manu-" + ModData.getManufacturer(seriesPrefix, carInd));

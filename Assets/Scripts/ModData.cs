@@ -77,6 +77,64 @@ public class ModData : MonoBehaviour
 		return stringLimit(physicsModel,10);
 	}
 
+	public static int getNumberPosition(string seriesPrefix){
+		loadModData();
+		int numPos = 0;
+		foreach(var directory in d.GetDirectories()){
+			//Avoid these default folders
+			if(directory.Name == seriesPrefix){
+				//Debug.Log("Found the mod..");
+				string modFolderName = loadJson(directory.Name);
+				try {
+					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
+					//Debug.Log("Parsed json, found: " + modJson.modName);
+					numPos = int.Parse(modJson.modNumberPosition);
+				} catch(Exception e){
+					numPos = 0;
+				}
+			}
+		}
+		return numPos;
+	}
+	public static float getNumberScale(string seriesPrefix){
+		loadModData();
+		float numScale = 1;
+		foreach(var directory in d.GetDirectories()){
+			//Avoid these default folders
+			if(directory.Name == seriesPrefix){
+				//Debug.Log("Found the mod..");
+				string modFolderName = loadJson(directory.Name);
+				try {
+					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
+					//Debug.Log("Parsed json, found: " + modJson.modName);
+					numScale = float.Parse(modJson.modNumberScale);
+				} catch(Exception e){
+					numScale = 1;
+				}
+			}
+		}
+		return numScale;
+	}
+	public static int getNumberRotation(string seriesPrefix){
+		loadModData();
+		int numRot = 0;
+		foreach(var directory in d.GetDirectories()){
+			//Avoid these default folders
+			if(directory.Name == seriesPrefix){
+				//Debug.Log("Found the mod..");
+				string modFolderName = loadJson(directory.Name);
+				try {
+					modCarset modJson = JsonUtility.FromJson<modCarset>(modFolderName);
+					//Debug.Log("Parsed json, found: " + modJson.modName);
+					numRot = int.Parse(modJson.modNumberRotation);
+				} catch(Exception e){
+					numRot = 0;
+				}
+			}
+		}
+		return numRot;
+	}
+
 	public static int getCarNum(string seriesPrefix, int index){
 		loadModData();
 		int carNum = 999;
@@ -345,6 +403,26 @@ public class ModData : MonoBehaviour
 		return manuSpr;
 	}
 	
+	public static void resetAllTransfers(){
+		loadModData();
+		foreach(var directory in d.GetDirectories()){
+			for(int i=0;i<100;i++){
+				if(PlayerPrefs.HasKey("CustomDriver" + directory.Name + i)){
+					PlayerPrefs.DeleteKey("CustomDriver" + directory.Name + i);
+				}
+				if(PlayerPrefs.HasKey("CustomManufacturer" + directory.Name + i)){
+					PlayerPrefs.DeleteKey("CustomManufacturer" + directory.Name + i);
+				}
+				if(PlayerPrefs.HasKey("CustomTeam" + directory.Name + i)){
+					PlayerPrefs.DeleteKey("CustomTeam" + directory.Name + i);
+				}
+				if(PlayerPrefs.HasKey("CustomNumber" + directory.Name + i)){
+					PlayerPrefs.DeleteKey("CustomNumber" + directory.Name + i);
+				}
+			}
+		}
+	}
+
 	public static string loadJson(string folderName){
 		
 		TextAsset jsonFile;
@@ -389,5 +467,8 @@ public class modCarset {
 	public string modVersion;
 	public string modAuthor;
 	public string modPhysics;
+	public string modNumberPosition;
+	public string modNumberScale;
+	public string modNumberRotation;
     public List<modDriver> drivers;
 }
