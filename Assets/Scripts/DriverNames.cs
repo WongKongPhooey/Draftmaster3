@@ -185,10 +185,12 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("cup20", 17);
 			numXPos.Add("cup22", 10);
 			numXPos.Add("cup23", 11);
+			numXPos.Add("dmc15", 19);
+
+			numXPos.Add("irc00", 4);
+			numXScale.Add("irc00", 0.85f);
+
 			numXPos.Add("irl23", -34);
-			numXPos.Add("dmc15", 17);
-			numXPos.Add("irc00", 17);
-			
 			numXScale.Add("irl23", 0.45f);
 			numXRotation.Add("irl23", 270);
 		}

@@ -350,6 +350,16 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[44,1] = "250";
 		levelUpRewards[45,0] = "Transfer";
 		levelUpRewards[45,1] = "10";
+		levelUpRewards[46,0] = "Gears";
+		levelUpRewards[46,1] = "400";
+		levelUpRewards[47,0] = "Gears";
+		levelUpRewards[47,1] = "400";
+		levelUpRewards[48,0] = "Gears";
+		levelUpRewards[48,1] = "400";
+		levelUpRewards[49,0] = "Gears";
+		levelUpRewards[49,1] = "400";
+		levelUpRewards[50,0] = "Transfer";
+		levelUpRewards[50,1] = "15";
 	}
 	
 	public static string levelUpReward(int level){
@@ -606,6 +616,21 @@ public class GameData : MonoBehaviour {
 				break;
 			case 45:
 				return 16000;
+				break;
+			case 46:
+				return 20000;
+				break;
+			case 47:
+				return 25000;
+				break;
+			case 48:
+				return 32500;
+				break;
+			case 49:
+				return 41000;
+				break;
+			case 50:
+				return 50000;
 				break;
 			default:
 				return 9999999;

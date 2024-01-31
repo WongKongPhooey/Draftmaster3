@@ -19,11 +19,15 @@ public class EnviroMovement : MonoBehaviour {
 	//public float fixedScroll;
 	public static float hackScaler;
 	Renderer rend;
+	int tick;
+	float playerZ;
 
 	void Awake(){
+		tick=0;
 		if(staticScroll == true){
 			rend = GetComponent<Renderer>();
 		}
+		playerZ = 0;
 		maxScrollSpeed = -0.15f;
 		carSpeedOffset = 0;
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
@@ -37,6 +41,12 @@ public class EnviroMovement : MonoBehaviour {
 	// Update is called once per frame
 	void FixedUpdate () {
 		
+		tick++;
+		if(tick%60 == 0){
+			tick = 0;
+			playerZ = Movement.playerZ;
+		}
+
 		if(Movement.wreckOver == true){
 			return;
 		}
@@ -79,7 +89,7 @@ public class EnviroMovement : MonoBehaviour {
 				EnviroObject.transform.Translate(0,0,enviroSpeed);
 			}
 			
-			if (EnviroObject.transform.position.z <= -30){
+			if (EnviroObject.transform.position.z <= (playerZ-30)){
 				if(scrollOnce == false){
 					EnviroObject.transform.Translate(0,0,60);
 				}

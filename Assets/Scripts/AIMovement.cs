@@ -276,7 +276,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		string chosenAlt;
-		Debug.Log("#" + carNumber + " checking for alt paints");
+		//Debug.Log("#" + carNumber + " checking for alt paints");
 		if(!PlayerPrefs.HasKey("RaceAltPaintsChosen")){
 			altPaints = new List<string>();
 			altPaints.Add("0");

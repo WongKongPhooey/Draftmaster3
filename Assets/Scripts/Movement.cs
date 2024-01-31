@@ -10,6 +10,7 @@ using Random=UnityEngine.Random;
 public class Movement : MonoBehaviour {
 
 	public GameObject vehicle;
+	public static float playerZ;
 	public static float playerSpeed;
 	public static float affectedPlayerSpeed;
 	public static float speedoSpeed;
@@ -195,6 +196,7 @@ public class Movement : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		playerSpeed = 203;
+		playerZ = 0;
 		gettableSpeed = playerSpeed;
 		speedRand = Random.Range(0,50);
 		speedRand = speedRand / 100;
@@ -861,6 +863,7 @@ public class Movement : MonoBehaviour {
 		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
 		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
+		playerZ = vehicle.transform.position.z;
 		vehicle.transform.Translate(0, 0, speed);
 	}
 	

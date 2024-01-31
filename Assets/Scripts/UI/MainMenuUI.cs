@@ -265,7 +265,7 @@ public class MainMenuUI : MonoBehaviour {
 			crowdNoise.volume = 0.0f;
 		}
 		
-        loadCurrentChampionshipInfo();
+        //loadCurrentChampionshipInfo();
 		checkForPlayfabUpdates();
     }
 
@@ -289,7 +289,7 @@ public class MainMenuUI : MonoBehaviour {
 
 	void loadCurrentChampionshipInfo(){
 		
-		string subSeriesId;
+		/*string subSeriesId;
 		string subSeriesName = "No Active Championship";
 		
 		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries").Length > 0)){
@@ -302,7 +302,7 @@ public class MainMenuUI : MonoBehaviour {
 		}
 		GameObject championshipUI = GameObject.Find("ActiveChampionshipName");
 		TMPro.TMP_Text championshipUILabel = championshipUI.GetComponent<TMPro.TMP_Text>();
-		championshipUILabel.text = subSeriesName;
+		championshipUILabel.text = subSeriesName;*/
 	}
 
 	void loadCurrentChampionship(){

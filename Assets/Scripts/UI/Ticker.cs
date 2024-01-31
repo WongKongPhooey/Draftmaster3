@@ -24,6 +24,7 @@ public class Ticker : MonoBehaviour
 
 	public static GameObject playerCar;
 	public static int playerCarNum;
+	public static string playerCarName;
 	public static float playerPosition;
 	public static int position;
 	public static int championshipPosition;
@@ -37,6 +38,8 @@ public class Ticker : MonoBehaviour
 	public static GameObject playerTicker;
 	
 	public static bool hasLed;
+
+	public static string[] cachedCarNames = new string[100];
 
 	public static GameObject[] carsArray = new GameObject[50];
 	public static float[] carPositions = new float[50];
@@ -140,8 +143,13 @@ public class Ticker : MonoBehaviour
 				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
 				} else {
-					driverNames[i] = ModData.getName(seriesPrefix,int.Parse(carNumber[i]));
+					int carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
+					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
 				}
+				//Cache in a dictionary to avoid calls during runtime
+				cachedCarNames[int.Parse(carNumber[i])] = driverNames[i];
+				//Debug.Log("Cached car #" + carNumber[i] + " is " + driverNames[i]);
+
 				carDist[i] = 0.000f;
 				entrantList.Add(car);
 				i++;
@@ -152,6 +160,11 @@ public class Ticker : MonoBehaviour
 			entrantList.Add(playerCar);
 			GameObject playerTick = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			playerTick.transform.SetParent(tickerObj, false);
+			if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+				playerCarName = DriverNames.getName(seriesPrefix,playerCarNum);
+			} else {
+				playerCarName = ModData.getName(seriesPrefix,playerCarNum);
+			}
 			updateTicker();
 		}
 	}
@@ -199,6 +212,7 @@ public class Ticker : MonoBehaviour
 	}
 
 	public static void updateTicker(){
+		//Don't update the ticker until the game has loaded all the car data into it
 		if(carsTagged == false){
 			return;
 		}
@@ -238,18 +252,14 @@ public class Ticker : MonoBehaviour
 				}
 				carNames[i] = playerCar.transform.name;
 				carNumber[i] = "" + playerCarNum + "";
-				int carJsonIndex = 999;
+				/*int carJsonIndex = 999;
 				if(officialSeries == false){
 					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
-				}
+				}*/
 				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
 					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
 				} else {
-					if(officialSeries == true){
-						driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
-					} else {
-						driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
-					}
+					driverNames[i] = playerCarName;
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
@@ -277,12 +287,7 @@ public class Ticker : MonoBehaviour
 				carNumber[i] = carNames[i].Remove(0,6);
 				//Debug.Log("Car #: " + carNumber[i]);
 				int carJsonIndex = 999;
-				if(officialSeries == true){
-					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
-				} else {
-					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
-					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
-				}
+				driverNames[i] = cachedCarNames[int.Parse(carNumber[i])];
 				
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
