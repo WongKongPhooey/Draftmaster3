@@ -34,7 +34,7 @@ public class GameData : MonoBehaviour {
 	public static double weeksToAdd;
 	public static float spareFuel;
 	
-	public static string[,] levelUpRewards = new string[50,2];
+	public static string[,] levelUpRewards = new string[60,2];
 	
 	void Start(){
 		
