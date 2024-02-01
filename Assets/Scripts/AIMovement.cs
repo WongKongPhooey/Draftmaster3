@@ -261,6 +261,7 @@ public class AIMovement : MonoBehaviour
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
+		GameObject numberObj = this.transform.Find("Number").transform.gameObject;
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
 		switch(seriesPrefix){
@@ -316,6 +317,9 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
+			Vector3 numXPos;
+			Vector3 numScale;
+			Vector3 numRotation;
 			if(officialSeries == true){
 				if(chosenAlt != "0"){
 					if(Resources.Load(seriesPrefix + "livery" + carNumber + "blankalt" + chosenAlt) != null){
@@ -326,17 +330,27 @@ public class AIMovement : MonoBehaviour
 				} else {
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
 				}
+				Debug.Log("AI: " + (0-DriverNames.getNumXPos(seriesPrefix)/55.75f));
+				numXPos = new Vector3(0,0.52f,0-DriverNames.getNumXPos(seriesPrefix)/55.75f);
+				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.5f,0,ModData.getNumberScale(seriesPrefix) * 0.5f);
+				numRotation = new Vector3(0,-90f-DriverNames.getNumRotation(seriesPrefix),0);
 			} else {
 				if(chosenAlt != "0"){
-					//liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix, carNumber,false,"alt" + chosenAlt);
+					liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix, int.Parse(carNumber),false,"alt" + chosenAlt);
 				} else {
-					//liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix, carNumber);
+					liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix, int.Parse(carNumber));
 				}
+				numXPos = new Vector3(0,0.52f,0-ModData.getNumberPosition(seriesPrefix)/55.75f);
+				numScale = new Vector3(ModData.getNumberScale(seriesPrefix) * 0.5f,0,ModData.getNumberScale(seriesPrefix) * 0.5f);
+				numRotation = new Vector3(0,-90f-ModData.getNumberRotation(seriesPrefix),0);
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
+			//Why is it scaled by 55.75? Your guess is as good as mine..
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
-			//Todo add the rotated/scaled number support here
-
+			numberObj.GetComponent<Transform>().localPosition = numXPos;
+			numberObj.GetComponent<Transform>().localScale = numScale;
+			numberObj.GetComponent<Transform>().localRotation = Quaternion.Euler(numRotation.x, numRotation.y, numRotation.z);
+				
 			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			if(chosenAlt != "0"){

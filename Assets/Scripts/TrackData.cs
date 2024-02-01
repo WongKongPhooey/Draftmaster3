@@ -588,15 +588,15 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",80);
 		PlayerPrefs.SetInt("StraightLength2",75);
-		PlayerPrefs.SetInt("StraightLength3",150);
+		PlayerPrefs.SetInt("StraightLength3",200);
 		PlayerPrefs.SetInt("StraightLength4",75);
 		PlayerPrefs.SetInt("TurnLength1",35);
 		PlayerPrefs.SetInt("TurnLength2",145);
 		PlayerPrefs.SetInt("TurnLength3",145);
 		PlayerPrefs.SetInt("TurnLength4",35);
 		PlayerPrefs.SetInt("TurnAngle1",1);
-		PlayerPrefs.SetInt("TurnAngle2",1);
-		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle2",2);
+		PlayerPrefs.SetInt("TurnAngle3",2);
 		PlayerPrefs.SetInt("TurnAngle4",1);
 		PlayerPrefs.SetInt("StartLine",40);
 		PlayerPrefs.SetInt("SpeedOffset",22 - speedFactor);

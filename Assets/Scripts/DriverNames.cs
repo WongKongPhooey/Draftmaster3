@@ -27,7 +27,7 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, string[]> allTypes = new Dictionary<string, string[]>();
 	public static Dictionary<string, string> allCarsetNames = new Dictionary<string, string>();
 
-	public static Dictionary<string, int> numXPos = new Dictionary<string, int>();
+	public static Dictionary<string, float> numXPos = new Dictionary<string, float>();
 	public static Dictionary<string, float> numXScale = new Dictionary<string, float>();
 	public static Dictionary<string, int> numXRotation = new Dictionary<string, int>();
 
@@ -184,7 +184,7 @@ public class DriverNames : MonoBehaviour {
 			
 			numXPos.Add("cup20", 17);
 			numXPos.Add("cup22", 10);
-			numXPos.Add("cup23", 11);
+			numXPos.Add("cup23", 11.7f);
 			numXPos.Add("dmc15", 19);
 
 			numXPos.Add("irc00", 4);
@@ -464,16 +464,16 @@ public class DriverNames : MonoBehaviour {
 		return nameSet.Length;
 	}
 	
-	public static int getNumXPos(string seriesPrefix){
+	public static float getNumXPos(string seriesPrefix){
 		loadData();
 		if(numXPos.ContainsKey(seriesPrefix)){
 			return numXPos[seriesPrefix];
 		} else {
-			return 14;
+			return 14f;
 		}
 	}
 	
-	public static float getNumXScale(string seriesPrefix){
+	public static float getNumScale(string seriesPrefix){
 		loadData();
 		if(numXScale.ContainsKey(seriesPrefix)){
 			return numXScale[seriesPrefix];
@@ -482,7 +482,7 @@ public class DriverNames : MonoBehaviour {
 		}
 	}
 	
-	public static int getNumXRotation(string seriesPrefix){
+	public static int getNumRotation(string seriesPrefix){
 		loadData();
 		if(numXRotation.ContainsKey(seriesPrefix)){
 			return numXRotation[seriesPrefix];

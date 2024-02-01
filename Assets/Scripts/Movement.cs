@@ -290,6 +290,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
+		GameObject numberObj = this.transform.Find("Number").transform.gameObject;
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
 		if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
@@ -309,6 +310,9 @@ public class Movement : MonoBehaviour {
 		}
 		
 		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
+			Vector3 numXPos;
+			Vector3 numScale;
+			Vector3 numRotation;
 			if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
 				if(officialSeries == true){
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
@@ -318,8 +322,20 @@ public class Movement : MonoBehaviour {
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
 				}
 			}
+			if(officialSeries == true){
+				numXPos = new Vector3(0,0.52f,-0.1f-DriverNames.getNumXPos(seriesPrefix)/55.75f);
+				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.05f,0,DriverNames.getNumScale(seriesPrefix) * 0.05f);
+				numRotation = new Vector3(0,-90f-DriverNames.getNumRotation(seriesPrefix),0);
+			} else {
+				numXPos = new Vector3(0,0.52f,0-ModData.getNumberPosition(seriesPrefix)/55.75f);
+				numScale = new Vector3(ModData.getNumberScale(seriesPrefix) * 0.05f,0,ModData.getNumberScale(seriesPrefix) * 0.05f);
+				numRotation = new Vector3(0,-90f-ModData.getNumberRotation(seriesPrefix),0);
+			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
+			numberObj.GetComponent<Transform>().localPosition = numXPos;
+			numberObj.GetComponent<Transform>().localScale = numScale;
+			numberObj.GetComponent<Transform>().localRotation = Quaternion.Euler(numRotation.x, numRotation.y, numRotation.z);
 		
 			//Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
 			numRend.enabled = true;

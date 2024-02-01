@@ -154,8 +154,8 @@ public class GarageUI : MonoBehaviour
 		currentSeries.GetComponent<TMPro.TMP_Text>().text = DriverNames.getSeriesNiceName(seriesPrefix);
 		
 		numXPos = new Vector3(DriverNames.getNumXPos(seriesPrefix),0,0);
-		numXScale = new Vector3(DriverNames.getNumXScale(seriesPrefix),DriverNames.getNumXScale(seriesPrefix),1);
-		numXRotation = new Vector3(0,0,DriverNames.getNumXRotation(seriesPrefix));
+		numXScale = new Vector3(DriverNames.getNumScale(seriesPrefix),DriverNames.getNumScale(seriesPrefix),1);
+		numXRotation = new Vector3(0,0,DriverNames.getNumRotation(seriesPrefix));
 		
 		bool autoClassUps = false;
 		
