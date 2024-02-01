@@ -430,20 +430,33 @@ public class GarageUI : MonoBehaviour
 			int carClass = PlayerPrefs.GetInt(seriesPrefix + i + "Class");
 			int unlockClass = ModData.getRarity(seriesPrefix,i);
 			
-			string carTeam = ModData.getTeam(seriesPrefix, i);
+			string carTeam;
+			if(PlayerPrefs.HasKey("CustomTeam" + seriesPrefix + i)){
+				carTeam = PlayerPrefs.GetString("CustomTeam" + seriesPrefix + i);
+			} else {
+				carTeam = ModData.getTeam(seriesPrefix, i);
+			}
 			string carType = ModData.getType(seriesPrefix, i);
 			string carRarity = ModData.getRarity(seriesPrefix, i).ToString();
 			string carManu = ModData.getManufacturer(seriesPrefix, i);
-			
+
 			carTeamUI.text = carTeam;
 			carTypeUI.text = DriverNames.shortenedType(ModData.getType(seriesPrefix, i));
 			carClassUI.text = "";
 			carRarityUI.overrideSprite = Resources.Load<Sprite>("Icons/" + carRarity + "-star"); 
 			
 			if(PlayerPrefs.HasKey("CustomManufacturer" + seriesPrefix + i)){
-				carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + i));
+				if(DriverNames.isOfficialManu(carManu) == true){
+					carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + i));
+				} else {
+					carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, PlayerPrefs.GetString("CustomManufacturer" + seriesPrefix + i));
+				}
 			} else {
-				carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, carManu); 
+				if(DriverNames.isOfficialManu(carManu) == true){
+					carManuUI.overrideSprite = Resources.Load<Sprite>("Icons/manu-" + carManu);
+				} else {
+					carManuUI.overrideSprite = ModData.getManuSprite(seriesPrefix, carManu);
+				}
 			}
 
 			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
@@ -821,6 +834,7 @@ public class GarageUI : MonoBehaviour
 			dropOptionToPool();
 			switch(optionType){
 				case "Driver":
+					Debug.Log("Is this transfer allowed?");
 					if(optionAvailable(seriesPrefix, optionType, chosenOption) == false){
 						alertPopup.GetComponent<AlertManager>().showPopup("Driver Unavailable", chosenOption + " is already contracted to drive another car in the series. The driver needs to be made available first to be able to sign the new contract.","dm2logo");
 						return;
@@ -846,11 +860,16 @@ public class GarageUI : MonoBehaviour
 					PlayerPrefs.SetString("CustomTeam" + seriesPrefix + popupCarInd, chosenOption);
 					break;
 				case "Number":
+					if(optionAvailable(seriesPrefix, optionType, chosenOption) == false){
+						alertPopup.GetComponent<AlertManager>().showPopup("Number Already In Use","#" + chosenOption + " is already in use on another car in this series.","dm2logo");
+						return;
+					}
 					if(chosenOption == currentNumber.ToString()){
 						alertPopup.GetComponent<AlertManager>().showPopup("Number Already In Use","This car is already running with this number!","dm2logo");
 						return;
 					}
 					PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + popupCarInd, int.Parse(chosenOption));
+					Debug.Log("Setting CustomNumber" + seriesPrefix + popupCarInd + " as " + chosenOption);
 					break;
 				default:
 					return;
@@ -899,28 +918,50 @@ public class GarageUI : MonoBehaviour
 		switch(optionType){
 			case "Driver":
 				for(int i=0;i<100;i++){
-					//Skip through the non-driver #s
-					if(DriverNames.getName(seriesPrefix, i)== null){
-						continue;
-					}
-					//Load each driver in the series in
 					string carDriver;
-					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
-						carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+					if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+						//Skip through the non-driver #s
+						if(DriverNames.getName(seriesPrefix, i) == null){
+							continue;
+						}
+
+						//Load each driver in the series in
+						if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+							carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+						} else {
+							carDriver = DriverNames.getName(seriesPrefix,i);
+						}
 					} else {
-						carDriver = DriverNames.getName(seriesPrefix,i);
+
+						if(ModData.getName(seriesPrefix,i) == null){
+							Debug.Log("No car at index " + i);
+							continue;
+						}
+
+						//Load each driver in the series in
+						if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
+							carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
+							Debug.Log("Custom Driver: " + carDriver);
+						} else {
+							carDriver = ModData.getName(seriesPrefix,i);
+							Debug.Log("Driver: " + carDriver);
+						}
 					}
 					//Check they aren't already driving a car
 					if(chosenOption == carDriver){
+						Debug.Log("Oops! That's a dupe");
 						return false;
 					}
 				}
 				return true;
 				break;
 			case "Manufacturer":
+				//No restriction on number of cars in a series with the same manufacturer
 				return true;
 				break;
 			case "Team":
+				//No restriction on number of cars in a series with the same team
+				//Maybe in future this could be limited to 5 etc.
 				return true;
 				break;
 			case "Number":
@@ -940,7 +981,11 @@ public class GarageUI : MonoBehaviour
 					if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
 						carNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + i);
 					} else {
-						carNum = i;
+						if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+							carNum = i;
+						} else {
+							carNum = ModData.getCarNum(seriesPrefix,i);
+						}
 					}
 					//Check there isn't already a car using this number
 					if(int.Parse(chosenOption) == carNum){
