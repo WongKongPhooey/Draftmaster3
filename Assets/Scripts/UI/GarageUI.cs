@@ -968,11 +968,13 @@ public class GarageUI : MonoBehaviour
 				for(int i=0;i<100;i++){
 					//Skip through the non-driver #s
 					if(DriverNames.isOfficialSeries(seriesPrefix) == true){
-						if(DriverNames.getName(seriesPrefix, i)== null){
+						if(DriverNames.getName(seriesPrefix, i) == null){
+							//Debug.Log("#" + i + " Skipped");
 							continue;
 						}
 					} else {
-						if(ModData.getName(seriesPrefix, i,true)== null){
+						if(ModData.getName(seriesPrefix, i,false) == null){
+							//Debug.Log("#" + i + " Skipped");
 							continue;
 						}
 					}
@@ -985,6 +987,7 @@ public class GarageUI : MonoBehaviour
 							carNum = i;
 						} else {
 							carNum = ModData.getCarNum(seriesPrefix,i);
+							//Debug.Log("#" + i + " " + carNum);
 						}
 					}
 					//Check there isn't already a car using this number

@@ -87,6 +87,7 @@ public class AIMovement : MonoBehaviour
 
 	public string carName;
 	public int carNum;
+	public int carNumInd;
 	public string carTeam;
 	public string carManu;
 	public int carRarity;
@@ -232,9 +233,10 @@ public class AIMovement : MonoBehaviour
 		string splitAfter = "AICar0";
 		carNumber = this.name.Substring(this.name.IndexOf(splitAfter) + splitAfter.Length);
 		
-		//Debug.Log(carNumber);
 		carName = AICar.name;
 		carNum = int.Parse(carNumber);
+		//Mods will have this updated further down
+		carNumInd = carNum;
 		
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			officialSeries = true;
@@ -256,6 +258,7 @@ public class AIMovement : MonoBehaviour
 			carManu = ModData.getManufacturer(seriesPrefix,carNum);
 			carType = ModData.getType(seriesPrefix,carNum);
 			carRarity = ModData.getRarity(seriesPrefix,carNum);
+			carNumInd = ModData.getJsonIndexFromCarNum(seriesPrefix,carNum);
 		}
 		
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
@@ -305,18 +308,18 @@ public class AIMovement : MonoBehaviour
 			int altIndex = Random.Range(0,altPaints.Count);
 			//Debug.Log("#" + carNumber + " - " + altPaints.Count + " possible paints. Chose " + altIndex);
 			chosenAlt = altPaints[altIndex];
-			PlayerPrefs.SetString("RaceAltPaint" + carNumber,chosenAlt);
+			PlayerPrefs.SetString("RaceAltPaint" + carNum,chosenAlt);
 		} else {
-			if(PlayerPrefs.HasKey("RaceAltPaint" + carNumber)){
+			if(PlayerPrefs.HasKey("RaceAltPaint" + carNum)){
 				//Load the pre-picked alt paint
-				chosenAlt = PlayerPrefs.GetString("RaceAltPaint" + carNumber);
+				chosenAlt = PlayerPrefs.GetString("RaceAltPaint" + carNum);
 				//Debug.Log("Remembered to show the #" + carNumber + " Alt");
 			} else {
 				chosenAlt = "0";
 			}
 		}
 		
-		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber)){
+		if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumInd)){
 			Vector3 numXPos;
 			Vector3 numScale;
 			Vector3 numRotation;
@@ -330,7 +333,7 @@ public class AIMovement : MonoBehaviour
 				} else {
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
 				}
-				Debug.Log("AI: " + (0-DriverNames.getNumXPos(seriesPrefix)/55.75f));
+				//Debug.Log("AI: " + (0-DriverNames.getNumXPos(seriesPrefix)/55.75f));
 				numXPos = new Vector3(0,0.52f,0-DriverNames.getNumXPos(seriesPrefix)/55.75f);
 				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.5f,0,ModData.getNumberScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-DriverNames.getNumRotation(seriesPrefix),0);
@@ -344,7 +347,7 @@ public class AIMovement : MonoBehaviour
 				numScale = new Vector3(ModData.getNumberScale(seriesPrefix) * 0.5f,0,ModData.getNumberScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-ModData.getNumberRotation(seriesPrefix),0);
 			}
-			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber);
+			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumInd);
 			//Why is it scaled by 55.75? Your guess is as good as mine..
 			numRend.material.mainTexture = Resources.Load("cup20num" + customNum) as Texture;
 			numberObj.GetComponent<Transform>().localPosition = numXPos;

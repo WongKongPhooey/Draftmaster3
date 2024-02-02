@@ -25,6 +25,8 @@ public class Ticker : MonoBehaviour
 	public static GameObject playerCar;
 	public static int playerCarNum;
 	public static string playerCarName;
+	public static string playerDisplayName;
+	public static int playerDisplayNum;
 	public static float playerPosition;
 	public static int position;
 	public static int championshipPosition;
@@ -40,6 +42,8 @@ public class Ticker : MonoBehaviour
 	public static bool hasLed;
 
 	public static string[] cachedCarNames = new string[100];
+	public static int[] cachedCarNumbers = new int[100];
+	public static int[] cachedCarIndexes = new int[100];
 
 	public static GameObject[] carsArray = new GameObject[50];
 	public static float[] carPositions = new float[50];
@@ -110,6 +114,36 @@ public class Ticker : MonoBehaviour
 		carsTagged = false;
 		findAllCars();
 		playerCarNum = PlayerPrefs.GetInt("CarChoice");
+		if(officialSeries == true){
+			//Grab any custom values
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + playerCarNum)){
+				playerDisplayNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + playerCarNum);
+			} else {
+				playerDisplayNum = playerCarNum;
+			}
+			if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + playerCarNum)){
+				playerDisplayName = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + playerCarNum);
+			} else {
+				if(PlayerPrefs.HasKey(seriesPrefix + playerCarNum + "AltDriver")){
+					playerDisplayName = PlayerPrefs.GetString(seriesPrefix + playerCarNum + "AltDriver");
+				} else {
+					playerDisplayName = DriverNames.getName(seriesPrefix,playerCarNum);
+				}
+			}
+		} else {
+			//Mod series
+			int playerCarInd = ModData.getJsonIndexFromCarNum(seriesPrefix,playerCarNum);
+			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + playerCarInd)){
+				playerDisplayNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + playerCarInd);
+			} else {
+				playerDisplayNum = playerCarNum;
+			}
+			if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + playerCarInd)){
+				playerDisplayName = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + playerCarInd);
+			} else {
+				playerDisplayName = ModData.getName(seriesPrefix,playerCarInd);
+			}
+		}
 		
 		hasLed = false;
     }
@@ -135,26 +169,41 @@ public class Ticker : MonoBehaviour
 			
 			int i=0;
 			entrantList.Clear();
-			foreach (GameObject car in carsArray) {
+			foreach(GameObject car in carsArray){
 				carPositions[i] = car.transform.position.z;
 				carNames[i] = car.transform.name;
 				carNumber[i] = carNames[i].Remove(0,6);
-
-				//Debug.Log(carNumber[i]);
+				//Debug.Log("Car #" + carNumber[i]);
 				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
+					cachedCarIndexes[int.Parse(carNumber[i])] = int.Parse(carNumber[i]);
 					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
-					if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + i)){
-						carNumber[i] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber[i]).ToString();
+					//Debug.Log("Car #" + carNumber[i] + " - Driver: " + driverNames[i]);
+					if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber[i])){
+						//carNumber[i] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber[i]).ToString();
+						cachedCarNumbers[int.Parse(carNumber[i])] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber[i]);
+					} else {
+						cachedCarNumbers[int.Parse(carNumber[i])] = int.Parse(carNumber[i]);
 					}
+					//Debug.Log("Car #" + carNumber[i] + " - Driver: " + driverNames[i]);
+					
+					//Cache in an array to avoid calls during runtime
+					cachedCarNames[int.Parse(carNumber[i])] = driverNames[i];
 				} else {
-					Debug.Log("Car " + carNumber[i]);
 					int carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
-					Debug.Log("Car " + carNumber[i] + " is index: " + carJsonIndex);
+					cachedCarIndexes[int.Parse(carNumber[i])] = carJsonIndex;
 					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
+					
+					//Debug.Log("Index " + cachedCarIndexes[int.Parse(carNumber[i])] + " holds car #" + int.Parse(carNumber[i]) + " with driver: " + driverNames[i]);
+					
+					if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carJsonIndex)){
+						cachedCarNumbers[int.Parse(carNumber[i])] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carJsonIndex);
+					} else {
+						cachedCarNumbers[int.Parse(carNumber[i])] = int.Parse(carNumber[i]);
+					}
+					
+					//Cache in an array to avoid calls during runtime
+					cachedCarNames[int.Parse(carNumber[i])] = driverNames[i];
 				}
-				//Cache in a dictionary to avoid calls during runtime
-				cachedCarNames[int.Parse(carNumber[i])] = driverNames[i];
-				Debug.Log("Cached car at index " + i + " #" + carNumber[i] + " is " + driverNames[i]);
 
 				carDist[i] = 0.000f;
 				entrantList.Add(car);
@@ -166,19 +215,6 @@ public class Ticker : MonoBehaviour
 			entrantList.Add(playerCar);
 			GameObject playerTick = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			playerTick.transform.SetParent(tickerObj, false);
-			if(DriverNames.isOfficialSeries(seriesPrefix) == true){
-				if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + playerCarNum)){
-					playerCarName = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + playerCarNum);
-				} else {
-					playerCarName = DriverNames.getName(seriesPrefix,playerCarNum);
-				}
-			} else {
-				if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + playerCarNum)){
-					playerCarName = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + playerCarNum);
-				} else {
-					playerCarName = ModData.getName(seriesPrefix,playerCarNum);
-				}
-			}
 			updateTicker();
 		}
 	}
@@ -203,17 +239,27 @@ public class Ticker : MonoBehaviour
 			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 			
 			tickerPos.text = (i+1).ToString();
-			if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
-				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+			
+			int displayNumber = cachedCarNumbers[int.Parse(carNumber[i])];
+			if(entrantList[i].name == playerCar.name){
+				displayNumber = playerDisplayNum;
+			}
+			
+			//Show the correct number icon, or a fallback number
+			if(Resources.Load<Sprite>("cup20num" + displayNumber) != null){
+				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
 				tickerNum.color = new Color32(255,255,225,255);
 				tickerFallbackNum.text = "";
 			} else {
 				tickerNum.color = new Color32(255,255,225,0);
 				tickerFallbackNum.text = carNumber[i];
 			}
-			tickerName.text = driverNames[i];
+			
+			tickerName.text = cachedCarNames[int.Parse(carNumber[i])];
+			
 			tickerDist.text = "+" + carDist[i].ToString("f3");
 			if(entrantList[i].name == playerCar.name){
+				tickerName.text = playerDisplayName;
 				tickerDist.text = leaderDist.ToString("f3");
 			}
 			
@@ -264,21 +310,7 @@ public class Ticker : MonoBehaviour
 						GameObject.Find("Main Camera").GetComponent<CommentaryManager>().commentate("NewLeader");
 					}
 				}
-				carNames[i] = playerCar.transform.name;
-				carNumber[i] = "" + playerCarNum + "";
-				/*int carJsonIndex = 999;
-				if(officialSeries == false){
-					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
-				}*/
-				if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
-					driverNames[i] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber[i]).ToString();
-				} else {
-					if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
-						driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
-					} else {
-						driverNames[i] = playerCarName;
-					}
-				}
+				
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
 				
@@ -289,22 +321,19 @@ public class Ticker : MonoBehaviour
 				TMPro.TMP_Text playerTickerDist = playerTicker.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 				playerTickerPos.text = (i+1).ToString();
 				
-				if(Resources.Load<Sprite>("cup20num" + carNumber[i]) != null){
-					playerTickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + carNumber[i]);
+				if(Resources.Load<Sprite>("cup20num" + playerDisplayNum) != null){
+					playerTickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + playerDisplayNum);
 					playerTickerNum.color = new Color32(255,255,225,255);
 					playerTickerFallbackNum.text = "";
 				} else {
 					playerTickerNum.color = new Color32(255,255,225,0);
-					playerTickerFallbackNum.text = carNumber[i];
+					playerTickerFallbackNum.text = playerDisplayNum.ToString();
 				}
-				playerTickerName.text = driverNames[i];
+				playerTickerName.text = playerDisplayName;
 				playerTickerDist.text = leaderDist.ToString("f3");
 			} else {
 				carNames[i] = "" + entrantList[i].name;
-				//carNumber[i] = Regex.Replace(carNames[i], "[^0-9]", "");
 				carNumber[i] = carNames[i].Remove(0,6);
-				Debug.Log("Position: " + i + " Car #: " + carNumber[i]);
-				int carJsonIndex = 999;
 				driverNames[i] = cachedCarNames[int.Parse(carNumber[i])];
 				
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
