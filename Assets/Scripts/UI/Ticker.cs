@@ -124,8 +124,8 @@ public class Ticker : MonoBehaviour
 			if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + playerCarNum)){
 				playerDisplayName = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + playerCarNum);
 			} else {
-				if(PlayerPrefs.HasKey(seriesPrefix + playerCarNum + "AltDriver")){
-					playerDisplayName = PlayerPrefs.GetString(seriesPrefix + playerCarNum + "AltDriver");
+				if(AltPaints.getAltPaintDriver(seriesPrefix,playerCarNum,PlayerPrefs.GetInt(seriesPrefix + playerCarNum + "AltPaint")) != null){
+					playerDisplayName = AltPaints.getAltPaintDriver(seriesPrefix,playerCarNum,PlayerPrefs.GetInt(seriesPrefix + playerCarNum + "AltPaint"));
 				} else {
 					playerDisplayName = DriverNames.getName(seriesPrefix,playerCarNum);
 				}
@@ -173,18 +173,15 @@ public class Ticker : MonoBehaviour
 				carPositions[i] = car.transform.position.z;
 				carNames[i] = car.transform.name;
 				carNumber[i] = carNames[i].Remove(0,6);
-				//Debug.Log("Car #" + carNumber[i]);
 				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 					cachedCarIndexes[int.Parse(carNumber[i])] = int.Parse(carNumber[i]);
 					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
-					//Debug.Log("Car #" + carNumber[i] + " - Driver: " + driverNames[i]);
 					if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNumber[i])){
 						//carNumber[i] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber[i]).ToString();
 						cachedCarNumbers[int.Parse(carNumber[i])] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNumber[i]);
 					} else {
 						cachedCarNumbers[int.Parse(carNumber[i])] = int.Parse(carNumber[i]);
 					}
-					//Debug.Log("Car #" + carNumber[i] + " - Driver: " + driverNames[i]);
 					
 					//Cache in an array to avoid calls during runtime
 					cachedCarNames[int.Parse(carNumber[i])] = driverNames[i];
@@ -192,8 +189,6 @@ public class Ticker : MonoBehaviour
 					int carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
 					cachedCarIndexes[int.Parse(carNumber[i])] = carJsonIndex;
 					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
-					
-					//Debug.Log("Index " + cachedCarIndexes[int.Parse(carNumber[i])] + " holds car #" + int.Parse(carNumber[i]) + " with driver: " + driverNames[i]);
 					
 					if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carJsonIndex)){
 						cachedCarNumbers[int.Parse(carNumber[i])] = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carJsonIndex);

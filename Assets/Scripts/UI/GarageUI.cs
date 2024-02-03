@@ -109,11 +109,13 @@ public class GarageUI : MonoBehaviour
 		
 		loadRaceRestrictions();
 		
-		if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
-			try{
-			loadModCarsets(PlayerPrefs.GetString("ModsList"));
-			} catch (Exception e){
-				Debug.Log(e.Message);
+		if((PlayerPrefs.GetInt("FreeModding") == 1)||(PlayerPrefs.GetInt("TransferTokens") >= 999)){
+			if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
+				try{
+				loadModCarsets(PlayerPrefs.GetString("ModsList"));
+				} catch (Exception e){
+					Debug.Log(e.Message);
+				}
 			}
 		}
 		
@@ -286,8 +288,9 @@ public class GarageUI : MonoBehaviour
 					if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
 						carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
 					} else {
-						if(PlayerPrefs.HasKey(seriesPrefix + i + "AltDriver")){
-							carName.text = PlayerPrefs.GetString(seriesPrefix + i + "AltDriver");
+						string altDriver = AltPaints.getAltPaintDriver(seriesPrefix, i, PlayerPrefs.GetInt(seriesPrefix + i + "AltPaint"));
+						if(altDriver != null){
+							carName.text = altDriver;
 						} else {
 							carName.text = DriverNames.getName(seriesPrefix, i);
 						}

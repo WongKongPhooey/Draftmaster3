@@ -36,7 +36,7 @@ public class MenuButton : MonoBehaviour
 				  &&(PlayerPrefs.GetInt("TransferTokens") < 999)){
 					Debug.Log("You Don't Have Mod Access");
 					link = "";
-					alertPopup.GetComponent<AlertManager>().showPopup("No Mods Access","You Need To Purchase The Editor Pack In The Store To Access Modding", "cup22livery1alt1");
+					alertPopup.GetComponent<AlertManager>().showPopup("No Mods Access","The free beta for modding has now ended. You need to purchase the Editor pack in the Store to use mods.", "cup22livery1alt1");
 				}
 				break;
 			default:

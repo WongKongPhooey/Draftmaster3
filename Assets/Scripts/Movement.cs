@@ -315,11 +315,19 @@ public class Movement : MonoBehaviour {
 			Vector3 numRotation;
 			if(PlayerPrefs.HasKey(seriesPrefix + carNum + "AltPaint")){
 				if(officialSeries == true){
-					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+					if(Resources.Load(seriesPrefix + "livery" + carNum + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) != null){
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blankalt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+					} else {
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "alt" + PlayerPrefs.GetInt(seriesPrefix + carNum + "AltPaint")) as Texture;
+					}
 				}
 			} else {
 				if(officialSeries == true){
-					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+					if(Resources.Load(seriesPrefix + "livery" + carNum + "blank") != null){
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum + "blank") as Texture;
+					} else {
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNum) as Texture;
+					}
 				}
 			}
 			if(officialSeries == true){

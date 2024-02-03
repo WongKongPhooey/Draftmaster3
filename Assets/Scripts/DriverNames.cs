@@ -378,6 +378,7 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Tinkle");
 		driverPool.Add("Tuttle");
 		driverPool.Add("Van Alst");
+		driverPool.Add("Van Gisbergen");
 		driverPool.Add("Vips");
 		driverPool.Add("Williams");
 		driverPool.Add("Wilson");
@@ -699,10 +700,7 @@ public class DriverNames : MonoBehaviour {
 		if(shopDiscount == 1){
 			rarity -= 1;
 		}
-		if(seriesPrefix == "cup23"){
-			rarity += 1;
-		}
-		if(seriesPrefix == "irl23"){
+		if(seriesPrefix == "cup24"){
 			rarity += 1;
 		}
 		if(seriesPrefix == "irc00"){

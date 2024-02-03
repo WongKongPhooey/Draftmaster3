@@ -331,11 +331,15 @@ public class AIMovement : MonoBehaviour
 						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
 					}
 				} else {
-					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+					if(Resources.Load(seriesPrefix + "livery" + carNumber + "blank" + chosenAlt) != null){
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
+					} else {
+						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
+					}
 				}
 				//Debug.Log("AI: " + (0-DriverNames.getNumXPos(seriesPrefix)/55.75f));
 				numXPos = new Vector3(0,0.52f,0-DriverNames.getNumXPos(seriesPrefix)/55.75f);
-				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.5f,0,ModData.getNumberScale(seriesPrefix) * 0.5f);
+				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.5f,0,DriverNames.getNumScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-DriverNames.getNumRotation(seriesPrefix),0);
 			} else {
 				if(chosenAlt != "0"){
