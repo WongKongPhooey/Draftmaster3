@@ -580,6 +580,7 @@ public class AIMovement : MonoBehaviour
 				if(carHit.gameObject.tag == "Player"){
 					hitByPlayer = true;
 					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
+					Debug.Log("Doored by the player! Strength of " + dooredStrength);
 				} else {
 					if(carHit.gameObject.tag == "AICar"){
 						dooredStrength = carHit.gameObject.GetComponent<AIMovement>().dooredStrength;
@@ -1610,7 +1611,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " right side blocked? " + hitLaneLeft + " , dist to FQ " + checkFrontLeft.distance + " , dist to RQ " + checkRearLeft.distance);
+			//Debug.Log(AICar.name + " right side blocked? " + hitLaneLeft + " , dist to FQ " + checkFrontLeft.distance + " , dist to RQ " + checkRearLeft.distance);
 		}
 		#endif
 		
@@ -1630,7 +1631,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " right side blocked? " + hitLaneRight + " , dist to FQ " + checkFrontRight.distance + " , dist to RQ " + checkRearRight.distance);
+			//Debug.Log(AICar.name + " right side blocked? " + hitLaneRight + " , dist to FQ " + checkFrontRight.distance + " , dist to RQ " + checkRearRight.distance);
 		}
 		#endif
 		
@@ -1646,12 +1647,19 @@ public class AIMovement : MonoBehaviour
 		
 		float randChance = Random.Range(0,100);
 		
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log(AICar.name + " doored - Strength: " + chance + " - Rnd: " + randChance);
+		}
+		#endif
+		
 		if (randChance > chance){
 			return false;
+		} else {
+			return true;
 		}
 		
-		if(side == "Left"){
-			
+		/*if(side == "Left"){
 			if(leftSideClear(0.51f) == false) {
 				return true;
 			} else {
@@ -1668,7 +1676,7 @@ public class AIMovement : MonoBehaviour
 			} else {
 				return false;
 			}
-		}
+		}*/
 	}
 	
 	public void changeLane(string direction){

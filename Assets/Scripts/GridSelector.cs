@@ -56,10 +56,16 @@ public class GridSelector : MonoBehaviour{
 	public void setAltPaint(){
 		if(altNum != 0){
 			PlayerPrefs.SetInt(seriesPrefix + carNum + "AltPaint", altNum);
+			if(AltPaints.getAltPaintDriver(seriesPrefix, carNum, altNum) != null){
+				PlayerPrefs.SetString(seriesPrefix + carNum + "AltDriver", AltPaints.getAltPaintDriver(seriesPrefix, carNum, altNum));
+			} else {
+				PlayerPrefs.DeleteKey(seriesPrefix + carNum + "AltDriver");
+			}
 		} else {
 			PlayerPrefs.DeleteKey(seriesPrefix + carNum + "AltPaint");
+			PlayerPrefs.DeleteKey(seriesPrefix + carNum + "AltDriver");
 		}
-		Debug.Log("Alt Paint Set: " + seriesPrefix + " " + carNum + " - #" + altNum);
+		//Debug.Log("Alt Paint Set: " + seriesPrefix + " " + carNum + " - #" + altNum);
 		GameObject mainUI = GameObject.Find("Main");
 		mainUI.GetComponent<GarageUI>().resetUI();
 		mainUI.GetComponent<GarageUI>().reloadGaragePopupPaint();

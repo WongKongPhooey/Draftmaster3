@@ -1335,6 +1335,10 @@ public class GarageUI : MonoBehaviour
 		string carDriver = DriverNames.getName(seriesPrefix,carInd);
 		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carInd)){
 			carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carInd);
+		} else {
+			if(PlayerPrefs.HasKey(seriesPrefix + carInd + "AltDriver")){
+				carDriver = PlayerPrefs.GetString(seriesPrefix + carInd + "AltDriver");
+			}
 		}
 		currentDriver = carDriver;
 		
@@ -1470,6 +1474,22 @@ public class GarageUI : MonoBehaviour
 		if(PlayerPrefs.HasKey(seriesPrefix + carInd + "AltPaint")){
 			altPaint = PlayerPrefs.GetInt(seriesPrefix + carInd + "AltPaint");
 		}
+		
+		TMPro.TMP_Text carName = garagePopupTile.transform.GetChild(6).GetComponent<TMPro.TMP_Text>();
+		TMPro.TMP_Text driverName = GameObject.Find("DriverName").GetComponent<TMPro.TMP_Text>();
+		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + carInd)){
+			carName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carInd);
+			driverName.text = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + carInd);
+		} else {
+			if(PlayerPrefs.HasKey(seriesPrefix + carInd + "AltDriver")){
+				carName.text = PlayerPrefs.GetString(seriesPrefix + carInd + "AltDriver");
+				driverName.text = PlayerPrefs.GetString(seriesPrefix + carInd + "AltDriver");
+			} else {
+				carName.text = DriverNames.getName(seriesPrefix, carInd);
+				driverName.text = DriverNames.getName(seriesPrefix, carInd);
+			}
+		}
+		
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carInd)){
 				if(Resources.Load<Texture2D>(seriesPrefix + "livery" + carInd + "blank") != null){

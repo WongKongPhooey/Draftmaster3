@@ -142,7 +142,7 @@ public class ChampionshipHubUI : MonoBehaviour
 				if(!PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Points" + i)){
 					PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points" + i,0);
 				}
-				championshipPoints.Add(i,PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + i));
+				championshipPoints.Add(i,PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points" + i));
 			}
 			pointsTableInd++;
 		}

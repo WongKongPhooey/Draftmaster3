@@ -35,7 +35,7 @@ public class SpawnField : MonoBehaviour {
 	int currentSubseries;
 	
 	string seriesPrefix;
-	string currentSeriesIndex;
+	static string currentSeriesIndex;
 	
 	bool cautionRestart;
 	public static int startLane;
@@ -562,8 +562,8 @@ public class SpawnField : MonoBehaviour {
 		championshipPoints.Clear();
 		int pointsInd = 0;
 		for(int i=0;i<100;i++){
-			if(PlayerPrefs.HasKey("ChampionshipPoints" + i)){
-				championshipPoints.Add(i, PlayerPrefs.GetInt("ChampionshipPoints" + i));
+			if(PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Points" + i)){
+				championshipPoints.Add(i, PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points" + i));
 				pointsInd++;
 			}
 		}
