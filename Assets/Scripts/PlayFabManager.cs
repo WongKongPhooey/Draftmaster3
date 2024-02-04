@@ -344,7 +344,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			//Fake store values for testing
 			#if UNITY_EDITOR
-			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup238,cup239,cup2315,cup2320,cup2322,cup2324,irl23livery5alt1,irl23livery6alt1,irl23livery7alt1,irl23livery28alt1,cup23livery8alt1,cup23livery9alt1,cup23livery9alt2,cup23livery15alt1,cup23livery4alt2,cup23livery5alt1,cup23livery12alt1,cup23livery20alt2,cup23livery24alt2";
+			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup238,cup239,cup2315,cup2320,cup2322,cup2324,cup22livery1alt2,irl23livery5alt1,irl23livery6alt1,irl23livery7alt1,irl23livery28alt1,cup23livery8alt1,cup23livery9alt1,cup23livery9alt2,cup23livery15alt1,cup23livery4alt2,cup23livery5alt1,cup23livery12alt1,cup23livery20alt2,cup23livery24alt2";
 			#endif
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);

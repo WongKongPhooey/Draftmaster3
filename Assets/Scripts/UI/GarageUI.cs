@@ -743,7 +743,7 @@ public class GarageUI : MonoBehaviour
 				
 				if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 					for(int i=0;i<=9;i++){
-						if(Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i) != null){
+						if(Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "alt" + i) != null){
 							GameObject paintInst = Instantiate(paintTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 							paintInst.GetComponent<GridSelector>().optionName = (seriesPrefix + "livery" + openCarNum + "alt" + i).ToString();
 							paintInst.GetComponent<GridSelector>().optionType = panelType;
@@ -751,11 +751,16 @@ public class GarageUI : MonoBehaviour
 							paintInst.GetComponent<GridSelector>().carNum = openCarNum;
 							paintInst.GetComponent<GridSelector>().altNum = i;
 							paintInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = AltPaints.getAltPaintName(seriesPrefix,openCarNum,i);
-							paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "blankalt" + i);
+							paintInst.transform.GetChild(1).GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + openCarNum + "alt" + i);
 							paintInst.transform.SetParent(paintPanel, false);
 
 							if(PlayerPrefs.GetInt(seriesPrefix + openCarNum + "AltPaint") == i){
 								paintInst.transform.GetChild(3).gameObject.SetActive(false);
+								paintInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = "Active";
+							}
+							if(PlayerPrefs.GetInt(seriesPrefix + openCarNum + "Alt" + i + "Unlocked") != 1){
+								paintInst.transform.GetChild(3).gameObject.SetActive(false);
+								paintInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = "Locked";
 							}
 						}
 					}
