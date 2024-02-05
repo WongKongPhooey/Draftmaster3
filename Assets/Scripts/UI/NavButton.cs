@@ -31,6 +31,7 @@ public class NavButton : MonoBehaviour
 		if(ModData.isModSeries(seriesPrefix) == true){
 			//Pref deletes from the RaceRewards screen that's being skipped
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
+			PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
 			PlayerPrefs.DeleteKey("SeriesPrize");
 			PlayerPrefs.DeleteKey("RaceType");
 			PlayerPrefs.DeleteKey("MomentComplete");

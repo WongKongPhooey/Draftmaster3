@@ -197,7 +197,7 @@ public class ChampionshipHubUI : MonoBehaviour
 			champPos.text = (pointsInd+1).ToString();
 			
 			if(modSeries == true){
-				Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
+				//Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
 				int carNum = pointsRow.Key;
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,pointsRow.Key))){
 					carNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,pointsRow.Key));

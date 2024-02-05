@@ -69,7 +69,6 @@ public class TrackUI : MonoBehaviour
 				PlayerPrefs.DeleteKey("ChampionshipSubseries");
 				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
 				PlayerPrefs.SetString("RaceType","Single");
-				Debug.Log("End of season, round reset.");
 			} else {
 				Debug.Log("Championship - Round " + championshipRound + "/" + seriesLength);
 				loadTrack(trackList, championshipRound);
