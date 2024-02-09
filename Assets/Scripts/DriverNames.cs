@@ -31,8 +31,8 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, float> numXScale = new Dictionary<string, float>();
 	public static Dictionary<string, int> numXRotation = new Dictionary<string, int>();
 
-	public static string[] allCarsets = new string[9];
-	public static string[] allWinnableCarsets = new string[7];
+	public static string[] allCarsets = new string[8];
+	public static string[] allWinnableCarsets = new string[6];
 	public static string[] allManufacturers = new string[7];
 
 	public static string[] cup2020Names = new string[101];
@@ -126,7 +126,7 @@ public class DriverNames : MonoBehaviour {
 		series.Add("cup20");
 		series.Add("cup22");
 		series.Add("cup23");
-		series.Add("cup24");
+		//series.Add("cup24");
 		series.Add("irl23");
 		series.Add("cup01");
 		series.Add("cup79");
@@ -137,7 +137,7 @@ public class DriverNames : MonoBehaviour {
 		winnableSeries.Add("cup20");
 		winnableSeries.Add("cup22");
 		winnableSeries.Add("cup23");
-		winnableSeries.Add("cup24");
+		//winnableSeries.Add("cup24");
 		winnableSeries.Add("irl23");
 		winnableSeries.Add("dmc15");
 		winnableSeries.Add("irc00");
@@ -161,11 +161,11 @@ public class DriverNames : MonoBehaviour {
 			allRarity.Add("cup23", cup2023Rarity);
 			allTypes.Add("cup23", cup2023Types);
 			
-			allNames.Add("cup24", cup2023Names);
+			/*allNames.Add("cup24", cup2023Names);
 			allTeams.Add("cup24", cup2023Teams);
 			allManufacturer.Add("cup24", cup2023Manufacturer);
 			allRarity.Add("cup24", cup2023Rarity);
-			allTypes.Add("cup24", cup2023Types);
+			allTypes.Add("cup24", cup2023Types);*/
 
 			allNames.Add("irl23", irl2023Names);
 			allTeams.Add("irl23", irl2023Teams);
@@ -200,7 +200,7 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("cup20", 17);
 			numXPos.Add("cup22", 10);
 			numXPos.Add("cup23", 11.7f);
-			numXPos.Add("cup24", 12f);
+			//numXPos.Add("cup24", 12f);
 			numXPos.Add("dmc15", 19);
 
 			numXPos.Add("irc00", 4);
@@ -216,15 +216,15 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	public static void listCarsets(){
-		allCarsets[0] = "cup24";
-		allCarsets[1] = "cup23";
-		allCarsets[2] = "cup22";
-		allCarsets[3] = "cup20";
-		allCarsets[4] = "cup01";
-		allCarsets[5] = "cup79";
-		allCarsets[6] = "dmc15";
-		allCarsets[7] = "irc00";
-		allCarsets[8] = "irl23";
+		//allCarsets[0] = "cup24";
+		allCarsets[0] = "cup23";
+		allCarsets[1] = "cup22";
+		allCarsets[2] = "cup20";
+		allCarsets[3] = "cup01";
+		allCarsets[4] = "cup79";
+		allCarsets[5] = "dmc15";
+		allCarsets[6] = "irc00";
+		allCarsets[7] = "irl23";
 	}
 	
 	public static void listManufacturers(){
@@ -241,10 +241,10 @@ public class DriverNames : MonoBehaviour {
 		allWinnableCarsets[0] = "cup20";
 		allWinnableCarsets[1] = "cup22";
 		allWinnableCarsets[2] = "cup23";
-		allWinnableCarsets[3] = "cup24";
-		allWinnableCarsets[4] = "dmc15";
-		allWinnableCarsets[5] = "irc00";
-		allWinnableCarsets[6] = "irl23";
+		//allWinnableCarsets[3] = "cup24";
+		allWinnableCarsets[3] = "dmc15";
+		allWinnableCarsets[4] = "irc00";
+		allWinnableCarsets[5] = "irl23";
 	}
 	
 	public static void populateDriverPool(){
