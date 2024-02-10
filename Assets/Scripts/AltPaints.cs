@@ -117,6 +117,7 @@ public class AltPaints : MonoBehaviour {
 		cup23AltPaintNames[22,1] = "#1 Winner";
 		cup23AltPaintNames[24,1] = "#1 Winner";
 		cup23AltPaintNames[24,2] = "#2 Final 4";
+		cup23AltPaintNames[34,1] = "#1 Valentine";
 		cup23AltPaintNames[41,1] = "#1 Bobby";
 		cup23AltPaintNames[91,1] = "#1 Winner";
 		
