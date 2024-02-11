@@ -25,18 +25,21 @@ public class AlertManager : MonoBehaviour
 		alertProgressBar = GameObject.Find("AlertProgressBar");
 		alertProgress = GameObject.Find("AlertProgress");
 
-		Scene currentScene = SceneManager.GetActiveScene ();
+		Scene currentScene = SceneManager.GetActiveScene();
         string sceneName = currentScene.name;
         if (sceneName == "MainMenu"){
 			alertPopup = GameObject.Find("Main Camera").GetComponent<MainMenuUI>().alertPopup;
 		}
+		hidePopup();
     }
     
     void Start(){
-        hidePopup();
     }
 
 	public void showPopup(string title, string content, string image, bool progress = false, int progressCurrent = 0, int progressTarget = 999, Texture2D rawImage = null){
+		
+		Debug.Log("Show Popup");
+		
 		alertTitle.GetComponent<TMPro.TMP_Text>().text = title;
 		alertText.GetComponent<TMPro.TMP_Text>().text = content;
 		if(content == ""){
@@ -70,7 +73,6 @@ public class AlertManager : MonoBehaviour
 	}
 	
 	public void hidePopup(){
-		//alertPopup = GameObject.Find("AlertPopup");
 		alertTitle.GetComponent<TMPro.TMP_Text>().text = "Waiting..";
 		alertText.GetComponent<TMPro.TMP_Text>().text = "";
 		alertImage.GetComponent<RawImage>().texture = null;

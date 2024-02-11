@@ -351,15 +351,6 @@ public class GarageUI : MonoBehaviour
 			}
 		}
 		
-		if(PlayerPrefs.HasKey("ActivePath")){
-			restrictionLabel = GameObject.Find("SeriesRestriction");
-			restrictionLabel.GetComponent<TMPro.TMP_Text>().text = showRestrictions();
-			if(validCars == 0){
-				alertPopup.GetComponent<AlertManager>().showPopup("No Eligible Car","No Car In This Set Meets The Entry Requirements. \n\n" + showRestrictions() + "","dm2logo");
-			}
-			//Debug.Log("Valid cars: " + validCars);
-		}
-		
 		int sortCounter=0;
 		foreach (Transform child in tileFrame){
 			GameObject eligibleEntry = child.transform.GetChild(9).transform.gameObject;
@@ -376,6 +367,17 @@ public class GarageUI : MonoBehaviour
 		sortTiles();
 		if(autoClassUps == true){
 			loadAllCars();
+		}
+		
+		if(PlayerPrefs.HasKey("ActivePath")){
+			restrictionLabel = GameObject.Find("SeriesRestriction");
+			restrictionLabel.GetComponent<TMPro.TMP_Text>().text = showRestrictions();
+			if(validCars == 0){
+				alertPopup.GetComponent<AlertManager>().showPopup("No Eligible Car","No Car In This Set Meets The Entry Requirements. \n\n" + showRestrictions() + "","dm2logo");
+			} else {
+				alertPopup.GetComponent<AlertManager>().hidePopup();
+			}
+			Debug.Log("Valid cars: " + validCars);
 		}
 	}
 

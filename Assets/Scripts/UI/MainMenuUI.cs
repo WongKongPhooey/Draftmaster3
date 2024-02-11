@@ -60,12 +60,8 @@ public class MainMenuUI : MonoBehaviour {
 	
 	void Awake(){
 		
-		if(!PlayerPrefs.HasKey("FPSLimit")){
-			PlayerPrefs.SetInt("FPSLimit",2);
-		}
-		
 		#if UNITY_EDITOR
-			PlayerPrefs.SetInt("Gears",500);
+			//PlayerPrefs.SetInt("Gears",500);
 		#endif
 		
 		int fpsCap = PlayerPrefs.GetInt("FPSLimit");
@@ -118,6 +114,10 @@ public class MainMenuUI : MonoBehaviour {
 		newMessageAlert = false;
 		newGiftAlert = false;
 		showInfoBox = false;
+		
+		if(!PlayerPrefs.HasKey("FPSLimit")){
+			PlayerPrefs.SetInt("FPSLimit",2);
+		}
 		
 		if(PlayerPrefs.HasKey("MidRaceLoading")){
 			PlayerPrefs.DeleteKey("MidRaceLoading");
@@ -321,14 +321,16 @@ public class MainMenuUI : MonoBehaviour {
 	}
 
 	void firstTimeInit(){
+		Debug.Log("New User Setup");
 		PlayerPrefs.SetInt("CameraRotate", 1);
 		PlayerPrefs.SetInt("CameraZoom", 1);
 		PlayerPrefs.SetInt("WreckFreq", 0);
-		PlayerPrefs.SetInt("FPSLimit", 1);
+		PlayerPrefs.SetInt("FPSLimit", 2);
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("TargetVersion", Application.version);
-		alertPopup.GetComponent<AlertManager>().showPopup("Hey Rookie! You Need A Ride?", "Mcleod is sharing their 2020 and 2022 Cup cars to get you started!", "cup22livery78");
+		alertPopup.GetComponent<AlertManager>().showPopup("Hey Rookie! You Need A Ride?", "Some of the drivers have let you use their cars to get you started!", "cup22livery78");
+		Debug.Log("Open popup");
 		PlayerPrefs.SetInt("NewUser",1);
 	}
 	
