@@ -63,6 +63,11 @@ public class MainMenuUI : MonoBehaviour {
 		if(!PlayerPrefs.HasKey("FPSLimit")){
 			PlayerPrefs.SetInt("FPSLimit",2);
 		}
+		
+		#if UNITY_EDITOR
+			PlayerPrefs.SetInt("Gears",500);
+		#endif
+		
 		int fpsCap = PlayerPrefs.GetInt("FPSLimit");
 		switch(fpsCap){
 			case 1:
