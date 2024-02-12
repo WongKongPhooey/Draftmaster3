@@ -318,6 +318,7 @@ public class GarageUI : MonoBehaviour
 			} else {
 				if(carUnlocked == 0){
 					carGearsLabelUI.text = carGears + "/" + unlockGears;
+					//Debug.Log("Car:" + i + " Gears:" + carGears + " Unlocks At:" + unlockGears);
 					gearsProgressUIWidth = Mathf.Round((110 / unlockGears) * carGears) + 1;
 				} else {
 					carGearsLabelUI.text = carGears + "/" + classMax;
