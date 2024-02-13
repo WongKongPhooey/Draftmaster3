@@ -330,7 +330,7 @@ public class GarageUI : MonoBehaviour
 			if(PlayerPrefs.HasKey("ActivePath")){
 				bool isValid = true;
 				int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
-
+				
 				if((minClass > carClass)||(carUnlocked == 0)){
 					carClickable.SetActive(false);
 					carDisabled.SetActive(true);
@@ -349,6 +349,10 @@ public class GarageUI : MonoBehaviour
 			if(carUnlocked == 0){
 				carClickable.SetActive(false);
 				carDisabled.SetActive(true);
+			}
+			if(carClass == 0){
+				carClickable.SetActive(false);
+				carDisabled.SetActive(true);	
 			}
 		}
 		
