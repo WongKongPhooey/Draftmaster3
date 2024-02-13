@@ -13,7 +13,6 @@ public class TimeTrial : MonoBehaviour
        leaderboardTitle.GetComponent<TMPro.TMP_Text>().text = "Live Time Trial - " + PlayerPrefs.GetString("LiveTimeTrial"); 
 	   
 	   PlayFabManager.GetLiveTimeTrialAroundPlayer();
-	   PlayFabManager.GetLiveTimeTrialLeaderboard();
     }
 
     // Update is called once per frame

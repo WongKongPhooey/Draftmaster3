@@ -51,7 +51,7 @@ public class MenuButton : MonoBehaviour
 	public void loadTimeTrial(){
 		LeanTween.reset();
 		if(PlayerPrefs.GetString("LiveTimeTrial") != ""){
-			SceneManager.LoadScene("Levels/HallOfFame");
+			SceneManager.LoadScene("Menus/TimeTrial");
 		}
 	}
 	
