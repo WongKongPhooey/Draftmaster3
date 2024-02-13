@@ -613,14 +613,16 @@ public class CameraRotate : MonoBehaviour {
 			}
 		}
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
-		Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
-		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
-		if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
-		  &&(officialSeries == true)){
-			PlayFabManager.CheckLiveTimeTrial();
-			//Double checked
-			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR166","");
+		if(raceLapRecordInt > 0){
+			Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
+			PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
+			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
+			  &&(officialSeries == true)){
+				PlayFabManager.CheckLiveTimeTrial();
+				//Double checked
+				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR166","");
+				}
 			}
 		}
 	}
