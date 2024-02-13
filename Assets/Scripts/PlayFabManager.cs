@@ -364,17 +364,6 @@ public class PlayFabManager : MonoBehaviour
 			//Debug.Log("Store Updated " + PlayerPrefs.GetString("SpecialEvent"));
 		}
 		
-		//Debug Add Event for testing
-		//result.Data["EventActive"] = "End Of An Era Pt.2";
-		//result.Data["EventShortcode"] = "2020Pt2";
-		//result.Data["EventDescription"] = "5 more of our favourite paints from the 2020 season. Featuring Bell, Hill, Stenhouse, Chastain and Preece!";
-		//result.Data["EventRewards"] = "cup20livery37alt1,cup20livery47alt1,cup20livery66alt1,cup20livery77alt1,cup20livery95alt1";
-		
-		//result.Data["EventActive"] = "Part Timers";
-		//result.Data["EventShortcode"] = "PartTimers";
-		//result.Data["EventDescription"] = "6 of our favourite 2022 part-time drivers! Unlock and race as Ragan, Hemric, Hezemans, Said, Bilicki and Lally.";
-		//result.Data["EventRewards"] = "cup22livery15alt1,cup22livery16alt1,cup22livery27alt1,cup22livery66alt1,cup22livery77alt1,cup22livery78alt1";
-		
 		//Event Store
 		if(result.Data.ContainsKey("EventActive") == true){
 			if(result.Data["EventActive"] != ""){
@@ -487,6 +476,7 @@ public class PlayFabManager : MonoBehaviour
 		//Live Race Time Trial
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
 			//Debug.Log("Live Time Trial Check..");
+			result.Data["LiveTimeTrial"] = "Daytona";
 			if(result.Data["LiveTimeTrial"] != ""){
 				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
@@ -1151,8 +1141,7 @@ public class PlayFabManager : MonoBehaviour
 			} else {
 				
 			}
-			
-			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
 		}
+		GetLiveTimeTrialLeaderboard();
 	}
 }
