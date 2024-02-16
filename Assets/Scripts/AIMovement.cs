@@ -476,7 +476,7 @@ public class AIMovement : MonoBehaviour
 			laneChangeBackout = 32;
 		}
 		
-		dooredStrength = 40;
+		dooredStrength = 25;
 		if(officialSeries == true){
 			if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
 				dooredStrength = 40 + (carRarity * 15);
@@ -576,7 +576,7 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 			} else {
-				int dooredStrength = 25;
+				int dooredStrength = 0;
 				if(carHit.gameObject.tag == "Player"){
 					hitByPlayer = true;
 					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
@@ -1350,7 +1350,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " might try a timed pass: dist - " + distance + " , opp Speed - " + opponentSpeed);
+			//Debug.Log(AICar.name + " might try a timed pass: dist - " + distance + " , opp Speed - " + opponentSpeed);
 		}
 		#endif
 		
@@ -1379,7 +1379,7 @@ public class AIMovement : MonoBehaviour
 		}
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " decided not to do a timed pass. " + distance);
+			//Debug.Log(AICar.name + " decided not to do a timed pass. " + distance);
 		}
 		#endif
 		return false;
@@ -1658,25 +1658,6 @@ public class AIMovement : MonoBehaviour
 		} else {
 			return true;
 		}
-		
-		/*if(side == "Left"){
-			if(leftSideClear(0.51f) == false) {
-				return true;
-			} else {
-				return false;
-			}
-		} else {
-			if(side == "Right"){
-				
-				if(rightSideClear(0.51f) == false) {
-					return true;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		}*/
 	}
 	
 	public void changeLane(string direction){

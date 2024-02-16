@@ -81,7 +81,7 @@ public class GarageUI : MonoBehaviour
 	
     // Start is called before the first frame update
     void Start(){
-		seriesPrefix = "cup23";
+		seriesPrefix = "cup24";
 		
 		//For returning PlayFab call outputs, reset on Awake
 		PlayerPrefs.SetString("SaveLoadOutput","");
@@ -1218,6 +1218,22 @@ public class GarageUI : MonoBehaviour
 	public void starterCars(){
 		//Debug.Log("Check starters");
 		bool carsAdded = false;
+		
+		//Give a free Hocevar for Cup '24
+		if(PlayerPrefs.GetInt("cup2477Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2477Unlocked",1);
+			PlayerPrefs.SetInt("cup2477Gears",0);
+			PlayerPrefs.SetInt("cup2477Class",1);
+			carsAdded = true;
+		}
+		
+		//Give a free Van Gisbergen for Cup '24
+		if(PlayerPrefs.GetInt("cup2497Unlocked") == 0){
+			PlayerPrefs.SetInt("cup2497Unlocked",1);
+			PlayerPrefs.SetInt("cup2497Gears",0);
+			PlayerPrefs.SetInt("cup2497Class",1);
+			carsAdded = true;
+		}
 		
 		//Give a free Gragson for Cup '23
 		if(PlayerPrefs.GetInt("cup2342Unlocked") == 0){

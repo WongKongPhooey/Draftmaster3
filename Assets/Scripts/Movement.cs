@@ -451,7 +451,7 @@ public class Movement : MonoBehaviour {
 			laneChangeBackout = 32;
 		}
 
-		dooredStrength = 40;
+		dooredStrength = 25;
 		if(officialSeries == true){
 			if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
 				dooredStrength = 50 + (carRarity * 5) + (carClass * 5);
