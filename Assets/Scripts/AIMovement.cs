@@ -331,7 +331,7 @@ public class AIMovement : MonoBehaviour
 						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
 					}
 				} else {
-					if(Resources.Load(seriesPrefix + "livery" + carNumber + "blank" + chosenAlt) != null){
+					if(Resources.Load(seriesPrefix + "livery" + carNumber + "blank") != null){
 						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "blank") as Texture;
 					} else {
 						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
@@ -1304,6 +1304,8 @@ public class AIMovement : MonoBehaviour
 
 	void tryPass(int chance, bool forced) {
 		
+		string direction = "";
+		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
 			Debug.Log(AICar.name + " tryPass start");
@@ -1321,28 +1323,56 @@ public class AIMovement : MonoBehaviour
 			#endif
 			
 			bool rightSideClr = rightSideClear();
+			bool leftSideClr = leftSideClear();
 			if((rightSideClr == true)||(forced == true)) {
 				if(Movement.wallrideMod == true){
 					//This hack keeps the top lane empty for a wallride
 				} else {
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " try pass opportunity taken (right)");
+						Debug.Log(AICar.name + " try pass opportunity (right)");
 					}
 					#endif
-					changeLane("Right");
-				}
-			} else {
-				bool leftSideClr = leftSideClear();
-				if(leftSideClr == true) {
-					#if UNITY_EDITOR
-					if(debugPlayer == true){
-						Debug.Log(AICar.name + " try pass opportunity taken (left)");
-					}
-					#endif
-					changeLane("Left");
+					direction = "Right";
 				}
 			}
+			if(leftSideClr == true) {
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " try pass opportunity (left)");
+				}
+				#endif
+				if(direction == "Right"){
+					direction = "Both";
+				} else {
+					direction = "Left";
+				}
+			}
+		}
+		switch(direction){
+			case "Left":
+				changeLane("Left");
+				break;
+			case "Right":
+				changeLane("Right");
+				break;
+			case "Both":
+				//Random choose one
+				float rngDir = Random.Range(0,2);
+				#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " try pass opportunity (either). Random choose.." + rngDir + "/2");
+					}
+				#endif
+				if(rngDir > 1f){
+					changeLane("Right");
+				} else {
+					changeLane("Left");
+				}
+				break;
+			default:
+				//Do nothing, no move direction available
+				break;
 		}
 	}
 	
@@ -1448,7 +1478,6 @@ public class AIMovement : MonoBehaviour
 			if(direction == "Both"){
 				//Random choose one
 				float rng = Random.Range(0,2);
-				//Debug.Log("Rnd /2 = " + rng);
 				if(rng > 1f){
 					direction = "Right";
 				} else {
@@ -1603,7 +1632,7 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	public bool leftSideClear(float maxDist = 5f){
+	public bool leftSideClear(float maxDist = 1f){
 		
 		RaycastHit checkFrontLeft = raycastHits[2];
 		RaycastHit checkRearLeft = raycastHits[3];
@@ -1623,7 +1652,7 @@ public class AIMovement : MonoBehaviour
 		}	
 	}
 	
-	public bool rightSideClear(float maxDist = 5f){
+	public bool rightSideClear(float maxDist = 1f){
 		
 		RaycastHit checkFrontRight = raycastHits[4];
 		RaycastHit checkRearRight = raycastHits[5];		
@@ -1653,9 +1682,37 @@ public class AIMovement : MonoBehaviour
 		}
 		#endif
 		
+		//Luck - you stay in lane
 		if (randChance > chance){
 			return false;
 		} else {
+			//Bad luck..
+			switch(side){
+				case "Left":
+					if(leftSideClear(0.05f) == true){
+						return false;
+					}
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " doored from the left");
+					}
+					#endif
+					break;
+				case "Right":
+					if(rightSideClear(0.05f) == true){
+						return false;
+					}
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " doored from the right");
+					}
+					#endif
+					break;
+				default:
+					return false;
+					break;
+			}
+			//Side was not clear, you've been doored!
 			return true;
 		}
 	}

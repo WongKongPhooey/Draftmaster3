@@ -331,12 +331,12 @@ public class Movement : MonoBehaviour {
 				}
 			}
 			if(officialSeries == true){
-				numXPos = new Vector3(0,0.52f,-0.1f-DriverNames.getNumXPos(seriesPrefix)/55.75f);
-				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.05f,0,DriverNames.getNumScale(seriesPrefix) * 0.05f);
+				numXPos = new Vector3(0,0.52f,0-DriverNames.getNumXPos(seriesPrefix)/55.75f);
+				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.5f,0,DriverNames.getNumScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-DriverNames.getNumRotation(seriesPrefix),0);
 			} else {
 				numXPos = new Vector3(0,0.52f,0-ModData.getNumberPosition(seriesPrefix)/55.75f);
-				numScale = new Vector3(ModData.getNumberScale(seriesPrefix) * 0.05f,0,ModData.getNumberScale(seriesPrefix) * 0.05f);
+				numScale = new Vector3(ModData.getNumberScale(seriesPrefix) * 0.5f,0,ModData.getNumberScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-ModData.getNumberRotation(seriesPrefix),0);
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);

@@ -200,7 +200,7 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("cup20", 17);
 			numXPos.Add("cup22", 10);
 			numXPos.Add("cup23", 11.7f);
-			numXPos.Add("cup24", 12f);
+			numXPos.Add("cup24", 9.5f);
 			numXPos.Add("dmc15", 19);
 
 			numXPos.Add("irc00", 4);

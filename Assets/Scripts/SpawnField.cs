@@ -105,7 +105,7 @@ public class SpawnField : MonoBehaviour {
 		carNumber = PlayerPrefs.GetString("carTexture");			
 		string splitAfter = "livery";
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
-		Debug.Log("Player car num: " + carNumber);
+		//Debug.Log("Player car num: " + carNumber);
 		fastCars.Remove(carNumber);
 		midCars.Remove(carNumber);
 		slowCars.Remove(carNumber);
@@ -159,10 +159,10 @@ public class SpawnField : MonoBehaviour {
 
 		//In-race restart, set field from caution order
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
-			Debug.Log("Set Field From Caution");
+			//Debug.Log("Set Field From Caution");
 			int fieldIndex = 0;
 			
-			Debug.Log("Player starting row: " + playerRow);
+			//Debug.Log("Player starting row: " + playerRow);
 			
 			//Set field after caution
 			//Cars In Front
