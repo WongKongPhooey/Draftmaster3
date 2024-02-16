@@ -10,10 +10,17 @@ public class CommentaryManager : MonoBehaviour
 	public AudioSource audioSource;
 	AudioClip phraseClip;
 	public CommentaryLines commentaryLines;
+	bool muted;
 	
     void Awake(){
+		muted = false;
 		cooldown = 0;
 		commsFreqGap = 120; //2 seconds
+		
+		if((PlayerPrefs.GetInt("AudioOn") == 0)
+		||(PlayerPrefs.GetInt("CommsOn") == 0)){
+			muted = true;
+		}
 	}
 
     // Update is called once per frame
@@ -32,6 +39,10 @@ public class CommentaryManager : MonoBehaviour
 		//Debug.Log("Commentary Triggered.. " + phrase);
 		bool canSpeak = checkCommentaryCooldown(cooldown);
 		
+		//Muted?
+		if(muted == true){
+			return;
+		}
 		//No interrupting
 		if(cooldown != 0){
 			return;

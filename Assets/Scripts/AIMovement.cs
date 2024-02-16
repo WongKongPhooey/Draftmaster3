@@ -139,6 +139,8 @@ public class AIMovement : MonoBehaviour
     public static bool crashActive;
     public static int crashTime;
 
+	public static int cautionSetting;
+
 	//Debug tool
 	public bool debugPlayer;
 
@@ -496,6 +498,8 @@ public class AIMovement : MonoBehaviour
 
         movingLane = false;
         backingOut = false;
+
+		cautionSetting = PlayerPrefs.GetInt("WreckFreq");
 
         crashTime = 50;
 
@@ -1689,7 +1693,7 @@ public class AIMovement : MonoBehaviour
 			//Bad luck..
 			switch(side){
 				case "Left":
-					if(leftSideClear(0.05f) == true){
+					if(leftSideClear(0.52f) == true){
 						return false;
 					}
 					#if UNITY_EDITOR
@@ -1699,7 +1703,7 @@ public class AIMovement : MonoBehaviour
 					#endif
 					break;
 				case "Right":
-					if(rightSideClear(0.05f) == true){
+					if(rightSideClear(0.52f) == true){
 						return false;
 					}
 					#if UNITY_EDITOR
@@ -1842,7 +1846,7 @@ public class AIMovement : MonoBehaviour
 	void startWreck(){
 		
 		//Bailout
-		if((isWrecking == true)||(wreckOver == true)){
+		if((isWrecking == true)||(wreckOver == true)||(cautionSetting == 1)){
 			return;
 		}
 		

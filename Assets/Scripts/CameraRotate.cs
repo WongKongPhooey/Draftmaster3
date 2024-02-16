@@ -221,28 +221,10 @@ public class CameraRotate : MonoBehaviour {
 				//Debug.Log("Pulled existing fastest lap of " + raceLapRecord);
 				PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
 			}
-			
-			//Race Restart Comms (1st pos = 0)
-			if(Ticker.position < 10){
-				this.gameObject.GetComponent<CommentaryManager>().commentate("RestartFront");
-			} else {
-				if(Ticker.position > 35){
-					this.gameObject.GetComponent<CommentaryManager>().commentate("RestartBack");
-				} else {
-					if((Ticker.position > 16)&&(Ticker.position < 26)){
-						this.gameObject.GetComponent<CommentaryManager>().commentate("RestartMiddle");
-					} else {
-						this.gameObject.GetComponent<CommentaryManager>().commentate("GreenFlag");
-					}
-				}
-			}
 		
 		} else {
 			//Delete any Race Fastest Lap time if not a caution restart
 			PlayerPrefs.DeleteKey("RaceFastestLap" + circuit);
-			
-			//Initial Race Start
-			this.gameObject.GetComponent<CommentaryManager>().commentate("GreenFlag");
 		}
 		
 		momentChecks = false;
@@ -261,8 +243,31 @@ public class CameraRotate : MonoBehaviour {
 		
 	}
 
+	void Start(){
+		if(PlayerPrefs.HasKey("SpawnFromCaution")){
+			
+			//Race Restart Comms (1st pos = 0)
+			if(Ticker.position < 10){
+				this.gameObject.GetComponent<CommentaryManager>().commentate("RestartFront");
+			} else {
+				if(Ticker.position > 35){
+					this.gameObject.GetComponent<CommentaryManager>().commentate("RestartBack");
+				} else {
+					if((Ticker.position > 16)&&(Ticker.position < 26)){
+						this.gameObject.GetComponent<CommentaryManager>().commentate("RestartMiddle");
+					} else {
+						this.gameObject.GetComponent<CommentaryManager>().commentate("GreenFlag");
+					}
+				}
+			}
+		} else {
+			//Initial Race Start
+			this.gameObject.GetComponent<CommentaryManager>().commentate("GreenFlag");
+		}
+	}
+
 	// Update is called once per frame
-	void FixedUpdate () {
+	void FixedUpdate() {
 		
 		//LateUpdate was unreliable..
 		//..so run this at next frame start instead.
@@ -557,8 +562,7 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			lap--;
-			//Weird bug fix, no idea, just works, urghh
-			//Debug.Log("Lap " + lap + " is now beyond finish lap " + raceEnd + ". Race must be over, show finish line");
+			finishLine.transform.position = new Vector3(finishLine.transform.position.x,finishLine.transform.position.y,thePlayer.transform.position.z + 1f);
 			finishLine.GetComponent<Renderer>().enabled = true;
 		}
 		

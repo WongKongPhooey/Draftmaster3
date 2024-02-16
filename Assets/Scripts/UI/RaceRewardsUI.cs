@@ -426,9 +426,12 @@ public class RaceRewardsUI : MonoBehaviour
 			
 			//Team Rewards
 			case "IND":
+			case "SPI":
 			case "RWR":
 			case "FRM":
 			case "RFR":
+			case "RFK":
+			case "TRK":
 			case "RCR":
 			case "CGR":
 			case "SHR":

@@ -306,16 +306,16 @@ public class StoreUI : MonoBehaviour
 		
 		starterPicks.Clear();
 		
-		starterPicks.Add("dmc1513");
-		starterPicks.Add("irl2324");
-		starterPicks.Add(32);
-		starterPicks.Add("cup2336");
-		starterPicks.Add("irl2344");
-		starterPicks.Add("cup2351");
-		starterPicks.Add("cup2252");
-		starterPicks.Add(77);
-		starterPicks.Add("cup2277");
-		starterPicks.Add("dmc1597");
+		starterPicks.Add("dmc155");
+		starterPicks.Add("cup237");
+		starterPicks.Add(20);
+		starterPicks.Add("cup2431");
+		starterPicks.Add("cup2442");
+		starterPicks.Add("irl2345");
+		starterPicks.Add("dmc1550");
+		starterPicks.Add("cup2354");
+		starterPicks.Add("irl2377");
+		starterPicks.Add("cup2278");
 		
 		for(int i=0;i<starterPicks.Count;i++){
 			GameObject tileInst = Instantiate(storeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);

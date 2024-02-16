@@ -1634,7 +1634,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Teams[41] = "SHR";
 		cup2024Teams[42] = "LMC";
 		cup2024Teams[43] = "LMC";
-		cup2024Teams[16] = "IND";
+		cup2024Teams[44] = "IND";
 		cup2024Teams[45] = "23X";
 		cup2024Teams[47] = "IND";
 		cup2024Teams[48] = "HEN";

@@ -44,16 +44,16 @@ public class SeriesData : MonoBehaviour{
 		offlineMenu[8] = "Rarity";
 		offlineMenu[9] = "Seasons";
 		
-		offlineImage[0] = "cup23livery54";
-		offlineImage[1] = "cup23livery11";
-		offlineImage[2] = "cup23livery4";
-		offlineImage[3] = "cup23livery8";
-		offlineImage[4] = "cup23livery1";
-		offlineImage[5] = "cup22livery22";
-		offlineImage[6] = "cup22livery23";
-		offlineImage[7] = "cup20livery12";
-		offlineImage[8] = "cup20livery18";
-		offlineImage[9] = "cup23livery22";
+		offlineImage[0] = "cup24livery4";
+		offlineImage[1] = "cup24livery11";
+		offlineImage[2] = "cup24livery24";
+		offlineImage[3] = "cup24livery22";
+		offlineImage[4] = "cup24livery5";
+		offlineImage[5] = "cup24livery6";
+		offlineImage[6] = "cup24livery8";
+		offlineImage[7] = "cup24livery47";
+		offlineImage[8] = "cup24livery48";
+		offlineImage[9] = "cup24livery12";
 		
 		seriesDescriptions[0] = "The first step onto the oval racing ladder. Show 'em what you've got!";
 		seriesDescriptions[1] = "Learn the challenges of high speed pack racing.";
@@ -73,11 +73,11 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[0,3] = "Hold The Line";
 		offlineSeries[0,4] = "Take The Win";
 		
-		offlineSeriesImage[0,0] = "cup20livery0";
-		offlineSeriesImage[0,1] = "cup20livery15";
-		offlineSeriesImage[0,2] = "cup20livery95";
-		offlineSeriesImage[0,3] = "cup20livery8";
-		offlineSeriesImage[0,4] = "cup20livery41";
+		offlineSeriesImage[0,0] = "cup24livery97";
+		offlineSeriesImage[0,1] = "cup24livery62";
+		offlineSeriesImage[0,2] = "cup24livery77";
+		offlineSeriesImage[0,3] = "cup24livery31";
+		offlineSeriesImage[0,4] = "cup24livery4";
 		
 		offlineDescriptions[0,0] = "The first step onto the oval racing ladder. Show 'em what you've got!";
 		offlineDescriptions[0,1] = "These circuits are wider, meaning more room for overtaking!.";
@@ -135,11 +135,11 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[1,3] = "Aboard The Train";
 		offlineSeries[1,4] = "The Big One";
 		
-		offlineSeriesImage[1,0] = "cup20livery47";
-		offlineSeriesImage[1,1] = "cup20livery22";
-		offlineSeriesImage[1,2] = "cup20livery11";
-		offlineSeriesImage[1,3] = "cup20livery48";
-		offlineSeriesImage[1,4] = "cup20livery2";
+		offlineSeriesImage[1,0] = "cup24livery47";
+		offlineSeriesImage[1,1] = "cup24livery43";
+		offlineSeriesImage[1,2] = "cup24livery23";
+		offlineSeriesImage[1,3] = "cup24livery34";
+		offlineSeriesImage[1,4] = "cup24livery11";
 		
 		offlineDescriptions[1,0] = "Superspeedways are a different beast. Time to learn to tame them!";
 		offlineDescriptions[1,1] = "With pack racing, strategy and timing is key to success.";
@@ -197,11 +197,11 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[2,3] = "Feels Familiar";
 		offlineSeries[2,4] = "Victory Vacuum";
 		
-		offlineSeriesImage[2,0] = "cup20livery14";
-		offlineSeriesImage[2,1] = "cup20livery19";
-		offlineSeriesImage[2,2] = "cup20livery6";
-		offlineSeriesImage[2,3] = "cup20livery4";
-		offlineSeriesImage[2,4] = "cup20livery48";
+		offlineSeriesImage[2,0] = "cup24livery6";
+		offlineSeriesImage[2,1] = "cup24livery17";
+		offlineSeriesImage[2,2] = "cup24livery5";
+		offlineSeriesImage[2,3] = "cup24livery24";
+		offlineSeriesImage[2,4] = "cup24livery84";
 		
 		offlineDailyPlays[2,0] = 10;
 		offlineDailyPlays[2,1] = 10;
@@ -252,11 +252,11 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[3,3] = "Hot Headed";
 		offlineSeries[3,4] = "Clean Air";
 		
-		offlineSeriesImage[3,0] = "cup20livery21";
-		offlineSeriesImage[3,1] = "cup20livery10";
-		offlineSeriesImage[3,2] = "cup20livery14";
-		offlineSeriesImage[3,3] = "cup20livery18";
-		offlineSeriesImage[3,4] = "cup20livery19";
+		offlineSeriesImage[3,0] = "cup24livery14";
+		offlineSeriesImage[3,1] = "cup24livery20";
+		offlineSeriesImage[3,2] = "cup24livery1";
+		offlineSeriesImage[3,3] = "cup24livery8";
+		offlineSeriesImage[3,4] = "cup24livery22";
 		
 		offlineDailyPlays[3,0] = 10;
 		offlineDailyPlays[3,1] = 10;
@@ -307,11 +307,11 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[4,3] = "Proven Winner";
 		offlineSeries[4,4] = "Unbreakable Bond";
 		
-		offlineSeriesImage[4,0] = "cup20livery95";
-		offlineSeriesImage[4,1] = "cup20livery22";
-		offlineSeriesImage[4,2] = "cup20livery11";
-		offlineSeriesImage[4,3] = "cup20livery3";
-		offlineSeriesImage[4,4] = "cup20livery4";
+		offlineSeriesImage[4,0] = "cup24livery10";
+		offlineSeriesImage[4,1] = "cup24livery3";
+		offlineSeriesImage[4,2] = "cup24livery7";
+		offlineSeriesImage[4,3] = "cup24livery23";
+		offlineSeriesImage[4,4] = "cup24livery9";
 		
 		offlineDailyPlays[4,0] = 10;
 		offlineDailyPlays[4,1] = 10;
@@ -357,26 +357,26 @@ public class SeriesData : MonoBehaviour{
 		
 		//Team
 		offlineSeries[5,0] = "Lone Ranger";
-		offlineSeries[5,1] = "Ware In The World";
+		offlineSeries[5,1] = "The Tallest Spire";
 		offlineSeries[5,2] = "Front Row Seats";
 		offlineSeries[5,3] = "Brad Jackeroushki";
 		offlineSeries[5,4] = "Childress Of The Sea";
-		offlineSeries[5,5] = "Chip Off The Old Block";
+		offlineSeries[5,5] = "Trackhouse Rock";
 		offlineSeries[5,6] = "The Real Haastle";
 		offlineSeries[5,7] = "Apres Penske";
 		offlineSeries[5,8] = "Dibbs On Gibbs";
 		offlineSeries[5,9] = "The Hendrick Experience";
 		
-		offlineSeriesImage[5,0] = "cup20livery77";
-		offlineSeriesImage[5,1] = "cup20livery52";
-		offlineSeriesImage[5,2] = "cup20livery38";
-		offlineSeriesImage[5,3] = "cup23livery6";
-		offlineSeriesImage[5,4] = "cup23livery8";
-		offlineSeriesImage[5,5] = "cup20livery42";
-		offlineSeriesImage[5,6] = "cup20livery10";
-		offlineSeriesImage[5,7] = "cup20livery12";
-		offlineSeriesImage[5,8] = "cup23livery20";
-		offlineSeriesImage[5,9] = "cup23livery9";
+		offlineSeriesImage[5,0] = "cup24livery21";
+		offlineSeriesImage[5,1] = "cup24livery77";
+		offlineSeriesImage[5,2] = "cup24livery34";
+		offlineSeriesImage[5,3] = "cup24livery6";
+		offlineSeriesImage[5,4] = "cup24livery8";
+		offlineSeriesImage[5,5] = "cup24livery1";
+		offlineSeriesImage[5,6] = "cup24livery10";
+		offlineSeriesImage[5,7] = "cup24livery12";
+		offlineSeriesImage[5,8] = "cup24livery19";
+		offlineSeriesImage[5,9] = "cup24livery24";
 		
 		offlineDailyPlays[5,0] = 3;
 		offlineDailyPlays[5,1] = 3;
@@ -389,7 +389,7 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[5,8] = 3;
 		offlineDailyPlays[5,9] = 3;
 
-		offlineAILevel[5,0] = 2;
+		offlineAILevel[5,0] = 5;
 		offlineAILevel[5,1] = 5;
 		offlineAILevel[5,2] = 5;
 		offlineAILevel[5,3] = 5;
@@ -434,11 +434,11 @@ public class SeriesData : MonoBehaviour{
 		offlineMinType[5,9] = "Team";
 		
 		offlineMinTeam[5,0] = "IND";
-		offlineMinTeam[5,1] = "RWR";
+		offlineMinTeam[5,1] = "SPI";
 		offlineMinTeam[5,2] = "FRM";
-		offlineMinTeam[5,3] = "RFR";
+		offlineMinTeam[5,3] = "RFK";
 		offlineMinTeam[5,4] = "RCR";
-		offlineMinTeam[5,5] = "CGR";
+		offlineMinTeam[5,5] = "TRK";
 		offlineMinTeam[5,6] = "SHR";
 		offlineMinTeam[5,7] = "PEN";
 		offlineMinTeam[5,8] = "JGR";
@@ -467,11 +467,11 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[5,9] = 9;
 				
 		offlinePrizes[5,0] = "IND";
-		offlinePrizes[5,1] = "RWR";
+		offlinePrizes[5,1] = "SPI";
 		offlinePrizes[5,2] = "FRM";
-		offlinePrizes[5,3] = "RFR";
+		offlinePrizes[5,3] = "RFK";
 		offlinePrizes[5,4] = "RCR";
-		offlinePrizes[5,5] = "CGR";
+		offlinePrizes[5,5] = "TRK";
 		offlinePrizes[5,6] = "SHR";
 		offlinePrizes[5,7] = "PEN";
 		offlinePrizes[5,8] = "JGR";
@@ -485,12 +485,12 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[6,4] = "Heavy Chevy";
 		offlineSeries[6,5] = "Big In Japan";
 		
-		offlineSeriesImage[6,0] = "cup20livery14";
-		offlineSeriesImage[6,1] = "cup20livery88";
-		offlineSeriesImage[6,2] = "cup20livery96";
-		offlineSeriesImage[6,3] = "cup22livery22";
-		offlineSeriesImage[6,4] = "cup22livery5";
-		offlineSeriesImage[6,5] = "cup22livery11";
+		offlineSeriesImage[6,0] = "cup24livery41";
+		offlineSeriesImage[6,1] = "cup24livery62";
+		offlineSeriesImage[6,2] = "cup24livery43";
+		offlineSeriesImage[6,3] = "cup24livery22";
+		offlineSeriesImage[6,4] = "cup24livery5";
+		offlineSeriesImage[6,5] = "cup24livery11";
 		
 		offlineDailyPlays[6,0] = 3;
 		offlineDailyPlays[6,1] = 3;
@@ -563,12 +563,12 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[7,4] = "Downright Dominate";
 		offlineSeries[7,5] = "Legend Of The Sport";
 		
-		offlineSeriesImage[7,0] = "cup22livery2";
-		offlineSeriesImage[7,1] = "cup20livery12";
-		offlineSeriesImage[7,2] = "cup22livery9";
-		offlineSeriesImage[7,3] = "cup20livery18";
-		offlineSeriesImage[7,4] = "cup22livery19";
-		offlineSeriesImage[7,5] = "cup20livery48";
+		offlineSeriesImage[7,0] = "cup24livery77";
+		offlineSeriesImage[7,1] = "cup24livery60";
+		offlineSeriesImage[7,2] = "cup24livery17";
+		offlineSeriesImage[7,3] = "cup24livery10";
+		offlineSeriesImage[7,4] = "cup24livery5";
+		offlineSeriesImage[7,5] = "cup24livery84";
 		
 		offlineDailyPlays[7,0] = 3;
 		offlineDailyPlays[7,1] = 3;
@@ -636,46 +636,57 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[8,0] = "Driver For Hire";
 		offlineSeries[8,1] = "Hot Property";
 		offlineSeries[8,2] = "Proven Talent";
+		offlineSeries[8,3] = "Born To Win";
 		
-		offlineSeriesImage[8,0] = "cup20livery21";
-		offlineSeriesImage[8,1] = "cup20livery1";
-		offlineSeriesImage[8,2] = "cup20livery48";
+		offlineSeriesImage[8,0] = "cup24livery2";
+		offlineSeriesImage[8,1] = "cup24livery45";
+		offlineSeriesImage[8,2] = "cup24livery6";
+		offlineSeriesImage[8,3] = "cup24livery22";
 		
 		offlineDailyPlays[8,0] = 3;
 		offlineDailyPlays[8,1] = 3;
 		offlineDailyPlays[8,2] = 3;
+		offlineDailyPlays[8,3] = 3;
 		
 		offlineAILevel[8,0] = 4;
 		offlineAILevel[8,1] = 8;
 		offlineAILevel[8,2] = 12;
+		offlineAILevel[8,3] = 15;
 		
 		offlineMinLevel[8,0] = 10;
 		offlineMinLevel[8,1] = 25;
-		offlineMinLevel[8,2] = 40;
+		offlineMinLevel[8,2] = 35;
+		offlineMinLevel[8,3] = 40;
 		
 		offlineMinClass[8,0] = 1;
-		offlineMinClass[8,1] = 2;
-		offlineMinClass[8,2] = 3;
+		offlineMinClass[8,1] = 3;
+		offlineMinClass[8,2] = 4;
+		offlineMinClass[8,3] = 5;
 		
 		offlineMinType[8,0] = "Rarity";
 		offlineMinType[8,1] = "Rarity";
 		offlineMinType[8,2] = "Rarity";
+		offlineMinType[8,3] = "Rarity";
 		
 		offlineMinRarity[8,0] = 1;
 		offlineMinRarity[8,1] = 2;
 		offlineMinRarity[8,2] = 3;
+		offlineMinRarity[8,3] = 4;
 		
 		offlineTracklists[8,0] = "1,12,16,18,5";
 		offlineTracklists[8,1] = "2,8,7,15,17";
 		offlineTracklists[8,2] = "3,9,19,14,20";
+		offlineTracklists[8,3] = "6,15,21,7,11";
 		
 		offlineFuel[8,0] = 6;
 		offlineFuel[8,1] = 7;
 		offlineFuel[8,2] = 7;
+		offlineFuel[8,3] = 8;
 		
 		offlinePrizes[8,0] = "Rarity1";
 		offlinePrizes[8,1] = "Rarity2";
 		offlinePrizes[8,2] = "Rarity3";
+		offlinePrizes[8,3] = "Rarity3Plus";
 		
 		//Seasons
 		offlineSeries[9,0] = "Half Season 1";

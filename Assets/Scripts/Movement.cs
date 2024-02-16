@@ -184,6 +184,7 @@ public class Movement : MonoBehaviour {
 	public GameObject cautionSummaryTotalWreckers;
 	public GameObject cautionSummaryDamage;
 	
+	public static int cautionSetting;
 	public static bool delicateMod;
 	public static bool invincibleMod;
 	public static bool suddenshowerMod;
@@ -522,6 +523,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		RaceModifiers.checkModifiers();
+		cautionSetting = PlayerPrefs.GetInt("WreckFreq");
 	}
 	
 	void OnCollisionEnter (Collision carHit){
@@ -558,18 +560,12 @@ public class Movement : MonoBehaviour {
 			
 			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
 				startWreck();
-				this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-				this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-				this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 			}
 			if((isWrecking == false)&&(wreckOver == false)&&(wallrideMod == true)){
 				if((carHit.gameObject.tag == "Barrier") || 
 				  (carHit.gameObject.name == "OuterWall") ||
 				  (carHit.gameObject.name == "SaferBarrier")){
 					startWreck();
-					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-					this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-					this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 					GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Scrape");
 				}
 			}
@@ -581,9 +577,6 @@ public class Movement : MonoBehaviour {
 					if(isWrecking == false){
 						if(wreckOver == false){
 							startWreck();
-							this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-							this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-							this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 						}
 					} else {
 						//Share some wreck inertia
@@ -1227,9 +1220,14 @@ public class Movement : MonoBehaviour {
 	}	
 	
 	void startWreck(){
-		if(invincibleMod == true){
+		if(((invincibleMod == true)||(cautionSetting == 1))&&(wallrideMod == false)){
 			return;
 		}
+		
+		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+		
 		if(wreckOver == false){
 			isWrecking = true;
 			totalWreckers++;

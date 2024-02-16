@@ -52,7 +52,7 @@ public class SettingsUI : MonoBehaviour
 		overtimeSlider.value = PlayerPrefs.GetInt("MaxOvertime");
 
 		audioSliderLabel.text = SliderValueDesc("Audio",audioSlider.value);
-		commentarySliderLabel.text = SliderValueDesc("Audio",commentarySlider.value);
+		commentarySliderLabel.text = SliderValueDesc("Comms",commentarySlider.value);
 		cameraRotateSliderLabel.text = SliderValueDesc("CameraRotate",cameraRotateSlider.value);
 		cautionsSliderLabel.text = SliderValueDesc("Cautions",cautionsSlider.value);
 		qualitySliderLabel.text = SliderValueDesc("FPSLimit",qualitySlider.value);
@@ -66,7 +66,7 @@ public class SettingsUI : MonoBehaviour
 	
 	public void SaveCommentarySlider(){
 		PlayerPrefs.SetInt("CommsOn",(int)commentarySlider.value);
-		commentarySliderLabel.text = SliderValueDesc("Audio",commentarySlider.value);
+		commentarySliderLabel.text = SliderValueDesc("Comms",commentarySlider.value);
 	}
 	
 	public void SaveCameraRotateSlider(){
@@ -94,6 +94,7 @@ public class SettingsUI : MonoBehaviour
 		
 		switch(sliderName){
 			case "Audio":
+			case "Comms":
 				switch(sliderValue){
 					case 0:
 						desc = "Muted";
@@ -116,13 +117,13 @@ public class SettingsUI : MonoBehaviour
 			case "Cautions":
 				switch(sliderValue){
 					case 1:
-						desc = "White Flag";
+						desc = "Off";
 						break;
 					case 2:
-						desc = "Low";
+						desc = "Less";
 						break;
 					case 3:
-						desc = "High";
+						desc = "More";
 						break;
 				}
 				break;
@@ -166,6 +167,9 @@ public class SettingsUI : MonoBehaviour
 	void InitialiseSettings(){
 		if(!PlayerPrefs.HasKey("AudioOn")){
 			PlayerPrefs.SetInt("AudioOn",1);
+		}
+		if(!PlayerPrefs.HasKey("CommsOn")){
+			PlayerPrefs.SetInt("CommsOn",1);
 		}
 		if(!PlayerPrefs.HasKey("CameraRotate")){
 			PlayerPrefs.SetInt("CameraRotate",1);
