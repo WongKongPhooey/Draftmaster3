@@ -84,12 +84,12 @@ public class MainMenuUI : MonoBehaviour {
     // Start is called before the first frame update
     void Start()
     {
-		//Testing
+		
+		#if UNITY_EDITOR
+				//Testing
 		//PlayerPrefs.SetInt("Exp",7250);
 		//PlayerPrefs.SetInt("Level",34);
 		
-		//Testing - Reset a car
-		#if UNITY_EDITOR
 		//PlayerPrefs.SetInt("cup231" + "Unlocked",0);
 		//PlayerPrefs.SetInt("cup231" + "Gears",66);
 		//PlayerPrefs.SetInt("cup231" + "Class",0);
@@ -294,20 +294,6 @@ public class MainMenuUI : MonoBehaviour {
 
 	void loadCurrentChampionshipInfo(){
 		
-		/*string subSeriesId;
-		string subSeriesName = "No Active Championship";
-		
-		if((PlayerPrefs.HasKey("ChampionshipSubseries"))&&(PlayerPrefs.GetString("ChampionshipSubseries").Length > 0)){
-			subSeriesId = PlayerPrefs.GetString("ChampionshipSubseries");
-			//Debug.Log(subSeriesId);
-			int seriesInt = int.Parse(subSeriesId.Substring(0,1));
-			string subSeries = subSeriesId.Substring(subSeriesId.Length-1);
-			int subSeriesInt = int.Parse(subSeries);
-			subSeriesName = SeriesData.offlineMenu[seriesInt] + " - " + SeriesData.offlineSeries[seriesInt,subSeriesInt];
-		}
-		GameObject championshipUI = GameObject.Find("ActiveChampionshipName");
-		TMPro.TMP_Text championshipUILabel = championshipUI.GetComponent<TMPro.TMP_Text>();
-		championshipUILabel.text = subSeriesName;*/
 	}
 
 	void loadCurrentChampionship(){
@@ -322,9 +308,11 @@ public class MainMenuUI : MonoBehaviour {
 
 	void firstTimeInit(){
 		Debug.Log("New User Setup");
+		PlayerPrefs.SetInt("AudioOn", 1);
+		PlayerPrefs.SetInt("CommsOn", 1);
 		PlayerPrefs.SetInt("CameraRotate", 1);
 		PlayerPrefs.SetInt("CameraZoom", 1);
-		PlayerPrefs.SetInt("WreckFreq", 0);
+		PlayerPrefs.SetInt("WreckFreq", 2);
 		PlayerPrefs.SetInt("FPSLimit", 2);
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
