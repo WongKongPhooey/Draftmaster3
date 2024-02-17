@@ -7,11 +7,13 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup2020AltPaintNames = new string[101,10];
 	public static string[,] cup22AltPaintNames = new string[101,10];
 	public static string[,] cup23AltPaintNames = new string[101,10];
+	public static string[,] cup24AltPaintNames = new string[101,10];
 	public static string[,] irl23AltPaintNames = new string[101,10];
 	
 	public static string[,] cup2020AltPaintDriver = new string[101,10];
 	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static string[,] cup23AltPaintDriver = new string[101,10];
+	public static string[,] cup24AltPaintDriver = new string[101,10];
 	public static string[,] irl23AltPaintDriver = new string[101,10];
 	
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
@@ -19,16 +21,19 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup2020AltPaintTheme = new string[101,10];
 	public static string[,] cup22AltPaintTheme = new string[101,10];
 	public static string[,] cup23AltPaintTheme = new string[101,10];
+	public static string[,] cup24AltPaintTheme = new string[101,10];
 	public static string[,] irl23AltPaintTheme = new string[101,10];
 	
 	public static bool[,] cup2020AltCanBuy = new bool[101,10];
 	public static bool[,] cup22AltCanBuy = new bool[101,10];
 	public static bool[,] cup23AltCanBuy = new bool[101,10];
+	public static bool[,] cup24AltCanBuy = new bool[101,10];
 	public static bool[,] irl23AltCanBuy = new bool[101,10];
 	
 	public static bool[,] cup2020AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup22AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup23AltPaintAISpawning = new bool[101,10];
+	public static bool[,] cup24AltPaintAISpawning = new bool[101,10];
 	public static bool[,] irl23AltPaintAISpawning = new bool[101,10];
 	
     // Start is called before the first frame update
@@ -117,9 +122,15 @@ public class AltPaints : MonoBehaviour {
 		cup23AltPaintNames[22,1] = "#1 Winner";
 		cup23AltPaintNames[24,1] = "#1 Winner";
 		cup23AltPaintNames[24,2] = "#2 Final 4";
-		cup23AltPaintNames[34,1] = "#1 Valentine";
+		cup23AltPaintNames[34,1] = "#1 McLovin";
 		cup23AltPaintNames[41,1] = "#1 Bobby";
 		cup23AltPaintNames[91,1] = "#1 Winner";
+		
+		cup24AltPaintNames[3,1] = "#1 Lion";
+		cup24AltPaintNames[5,1] = "#1 Indy";
+		cup24AltPaintNames[6,1] = "#1 Half Off";
+		cup24AltPaintNames[17,1] = "#1 Submarine";
+		cup24AltPaintNames[99,1] = "#1 Time Trial";
 		
 		irl23AltPaintNames[2,1] = "#1 The 500";
 		irl23AltPaintNames[5,1] = "#1 Le Triple";
@@ -150,6 +161,8 @@ public class AltPaints : MonoBehaviour {
 		cup23AltPaintDriver[9,2] = "Taylor";
 		cup23AltPaintDriver[15,1] = "Button";
 		cup23AltPaintDriver[91,1] = "V. Gisbergen";
+		
+		cup24AltPaintDriver[99,1] = "Edwards";
 		
 		cup2020AltPaintTheme[2,1] = "Patriot";
 		cup2020AltPaintTheme[3,1] = "Halloween";
@@ -224,6 +237,8 @@ public class AltPaints : MonoBehaviour {
 		cup23AltPaintTheme[24,2] = "Final 4";
 		cup23AltPaintTheme[91,1] = "Winners";
 		
+		cup24AltPaintTheme[99,1] = "Community";
+		
 		irl23AltPaintTheme[2,1] = "Winners";
 		
 		//True = can't buy.. I know.. I know..
@@ -237,6 +252,8 @@ public class AltPaints : MonoBehaviour {
 		
 		cup22AltCanBuy[1,1] = true;
 		
+		cup24AltCanBuy[99,1] = true;
+		
 		//true = don't spawn. I know this is backwards..
 		cup2020AltPaintAISpawning[5,2] = true;
 		cup2020AltPaintAISpawning[6,1] = true;
@@ -245,6 +262,9 @@ public class AltPaints : MonoBehaviour {
 		
 		cup22AltPaintAISpawning[1,1] = true;
 		cup22AltPaintAISpawning[99,1] = true;
+		
+		cup24AltPaintAISpawning[6,1] = true;
+		cup24AltPaintAISpawning[99,1] = true;
 	}
 	
 	public static string getAltPaintName(string seriesPrefix, int carNum, int altNum){
@@ -258,6 +278,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup23":
 				altPaintName = cup23AltPaintNames[carNum,altNum];
+				break;
+			case "cup24":
+				altPaintName = cup24AltPaintNames[carNum,altNum];
 				break;
 			case "irl23":
 				altPaintName = irl23AltPaintNames[carNum,altNum];
@@ -278,6 +301,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup23":
 				return cup23AltPaintDriver[carNum,altNum];
+				break;
+			case "cup24":
+				return cup24AltPaintDriver[carNum,altNum];
 				break;
 			case "irl23":
 				return irl23AltPaintDriver[carNum,altNum];
@@ -304,6 +330,11 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup23":
 				if(cup23AltCanBuy[carNum,altNum] == true){
+					canBuy = true;
+				}
+				break;
+			case "cup24":
+				if(cup24AltCanBuy[carNum,altNum] == true){
 					canBuy = true;
 				}
 				break;
@@ -336,6 +367,11 @@ public class AltPaints : MonoBehaviour {
 					canSpawn = true;
 				}
 				break;
+			case "cup24":
+				if(cup24AltPaintAISpawning[carNum,altNum] == true){
+					canSpawn = true;
+				}
+				break;
 			case "irl23":
 				if(irl23AltPaintAISpawning[carNum,altNum] == true){
 					canSpawn = true;
@@ -357,6 +393,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "cup23":
 				return cup23AltPaintTheme[carNum,altNum];
+				break;
+			case "cup24":
+				return cup24AltPaintTheme[carNum,altNum];
 				break;
 			case "irl23":
 				return irl23AltPaintTheme[carNum,altNum];

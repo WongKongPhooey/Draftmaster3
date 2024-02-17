@@ -184,6 +184,7 @@ public class Movement : MonoBehaviour {
 	public GameObject cautionSummaryTotalWreckers;
 	public GameObject cautionSummaryDamage;
 	
+	public static int cautionSetting;
 	public static bool delicateMod;
 	public static bool invincibleMod;
 	public static bool suddenshowerMod;
@@ -331,12 +332,12 @@ public class Movement : MonoBehaviour {
 				}
 			}
 			if(officialSeries == true){
-				numXPos = new Vector3(0,0.52f,-0.1f-DriverNames.getNumXPos(seriesPrefix)/55.75f);
-				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.05f,0,DriverNames.getNumScale(seriesPrefix) * 0.05f);
+				numXPos = new Vector3(0,0.52f,0-DriverNames.getNumXPos(seriesPrefix)/55.75f);
+				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.5f,0,DriverNames.getNumScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-DriverNames.getNumRotation(seriesPrefix),0);
 			} else {
 				numXPos = new Vector3(0,0.52f,0-ModData.getNumberPosition(seriesPrefix)/55.75f);
-				numScale = new Vector3(ModData.getNumberScale(seriesPrefix) * 0.05f,0,ModData.getNumberScale(seriesPrefix) * 0.05f);
+				numScale = new Vector3(ModData.getNumberScale(seriesPrefix) * 0.5f,0,ModData.getNumberScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-ModData.getNumberRotation(seriesPrefix),0);
 			}
 			customNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
@@ -451,7 +452,7 @@ public class Movement : MonoBehaviour {
 			laneChangeBackout = 32;
 		}
 
-		dooredStrength = 40;
+		dooredStrength = 25;
 		if(officialSeries == true){
 			if (DriverNames.getType(seriesPrefix,carNum) == "Intimidator"){
 				dooredStrength = 50 + (carRarity * 5) + (carClass * 5);
@@ -522,6 +523,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		RaceModifiers.checkModifiers();
+		cautionSetting = PlayerPrefs.GetInt("WreckFreq");
 	}
 	
 	void OnCollisionEnter (Collision carHit){
@@ -558,18 +560,12 @@ public class Movement : MonoBehaviour {
 			
 			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
 				startWreck();
-				this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-				this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-				this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 			}
 			if((isWrecking == false)&&(wreckOver == false)&&(wallrideMod == true)){
 				if((carHit.gameObject.tag == "Barrier") || 
 				  (carHit.gameObject.name == "OuterWall") ||
 				  (carHit.gameObject.name == "SaferBarrier")){
 					startWreck();
-					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-					this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-					this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 					GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Scrape");
 				}
 			}
@@ -581,9 +577,6 @@ public class Movement : MonoBehaviour {
 					if(isWrecking == false){
 						if(wreckOver == false){
 							startWreck();
-							this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-							this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-							this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 						}
 					} else {
 						//Share some wreck inertia
@@ -1227,9 +1220,14 @@ public class Movement : MonoBehaviour {
 	}	
 	
 	void startWreck(){
-		if(invincibleMod == true){
+		if(((invincibleMod == true)||(cautionSetting == 1))&&(wallrideMod == false)){
 			return;
 		}
+		
+		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+		
 		if(wreckOver == false){
 			isWrecking = true;
 			totalWreckers++;
