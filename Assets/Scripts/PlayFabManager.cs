@@ -476,7 +476,7 @@ public class PlayFabManager : MonoBehaviour
 		//Live Race Time Trial
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
 			//Debug.Log("Live Time Trial Check..");
-			result.Data["LiveTimeTrial"] = "Daytona";
+			//result.Data["LiveTimeTrial"] = "Daytona";
 			if(result.Data["LiveTimeTrial"] != ""){
 				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);

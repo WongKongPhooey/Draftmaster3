@@ -100,12 +100,7 @@ public class CameraRotate : MonoBehaviour {
 		}
 
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
-		cameraZoom = PlayerPrefs.GetInt("CameraZoom");
-		if(cameraZoom == 1){
-			MainCam.orthographicSize = 7.0f;
-		} else {
-			MainCam.orthographicSize = 5.0f;
-		}
+		MainCam.orthographicSize = 7.0f;
 		
 		cornerKerbRenderer = cornerKerb.GetComponent<Renderer>();
 		
@@ -617,14 +612,16 @@ public class CameraRotate : MonoBehaviour {
 			}
 		}
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
-		Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
-		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
-		if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
-		  &&(officialSeries == true)){
-			PlayFabManager.CheckLiveTimeTrial();
-			//Double checked
-			if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR166","");
+		if(raceLapRecordInt > 0){
+			Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
+			PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
+			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
+			  &&(officialSeries == true)){
+				PlayFabManager.CheckLiveTimeTrial();
+				//Double checked
+				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR166","");
+				}
 			}
 		}
 	}
