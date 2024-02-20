@@ -111,6 +111,8 @@ public class Movement : MonoBehaviour {
 	int revbarOffset;
 	
 	public static int speedOffset;
+	public static float carSpeedOffset;
+	public static float draftFactor;
 	
 	public static int currentGear;
 	int[] gearSpeeds = {999, 190, 110, 50, 25};
@@ -127,6 +129,7 @@ public class Movement : MonoBehaviour {
 	public GameObject HUDLastLap;
 	public GameObject HUDBestLap;
 	public GameObject HUDLapDelta;
+	public GameObject HUDTemps;
 	public float calcLapDelta;
 	public float HUDDraftStrength;
 	
@@ -212,6 +215,7 @@ public class Movement : MonoBehaviour {
 		tandemPosition = 1;
 		
 		speedOffset = PlayerPrefs.GetInt("SpeedOffset");
+		carSpeedOffset = 80;
 		
 		gamePausedLate = false;
 		Time.timeScale = 1.0f;
@@ -241,6 +245,7 @@ public class Movement : MonoBehaviour {
 		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
+		//HUDTemps
 		pauseMenu = GameObject.Find("PauseMenu");
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		cautionSummaryTotalWreckers = GameObject.Find("CarsInvolved");
@@ -726,6 +731,10 @@ public class Movement : MonoBehaviour {
 		laneFactor = 2;
 		vStrongLane = laneInv/laneFactor;
 		
+		carSpeedOffset = CameraRotate.carSpeedOffset;
+		draftFactor = (200 - carSpeedOffset)/200;
+		//Debug.Log("Draft Factor: " + draftFactor);
+		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
 
@@ -762,10 +771,10 @@ public class Movement : MonoBehaviour {
 					draftStrength *= (diffToMax / 2) + 0.01f;
 					//Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
 				}
-				playerSpeed += draftStrength;
+				playerSpeed += (draftStrength * draftFactor);
 				
 			} else {
-				playerSpeed-=((playerSpeed - topSpeed)/200);
+				playerSpeed-=((playerSpeed - topSpeed)/200) * draftFactor;
 				
 				//Over the top speed and still in the draft
 				overspeed += 0.0001f;
@@ -779,9 +788,9 @@ public class Movement : MonoBehaviour {
 					if(diffToMax < 0){
 						diffToMax = 0;
 					}
-					playerSpeed-=(dragDecelMulti * (2 - (diffToMax / 2)));
+					playerSpeed-=(dragDecelMulti * (2 - (diffToMax / 2))) * draftFactor;
 				} else {
-					playerSpeed-=(dragDecelMulti + dominatorDrag);
+					playerSpeed-=(dragDecelMulti + dominatorDrag) * draftFactor;
 				}
 			}
 			
