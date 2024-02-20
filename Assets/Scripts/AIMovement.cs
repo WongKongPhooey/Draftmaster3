@@ -1270,11 +1270,11 @@ public class AIMovement : MonoBehaviour
 		
 		//General wobble while in lane
 		if(wobbleTarget > wobblePos){
-			AICar.transform.Translate(-0.001f,0,0);
+			AICar.transform.Translate(-0.002f,0,0);
 			wobblePos++;
 		}
 		if(wobbleTarget < wobblePos){
-			AICar.transform.Translate(0.001f,0,0);
+			AICar.transform.Translate(0.002f,0,0);
 			wobblePos--;
 		}
 	}
