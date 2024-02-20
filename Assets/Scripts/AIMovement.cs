@@ -101,6 +101,9 @@ public class AIMovement : MonoBehaviour
 	public int tandemPosition;
 	public bool initialContact = false;
 
+	public static float carSpeedOffset;
+	public static float draftFactor;
+
     string carNumber;
 	string AICarNum;
 	
@@ -163,6 +166,8 @@ public class AIMovement : MonoBehaviour
         accelRand = accelRand / 5000;	
 		AITopSpeed = 206f + speedRand;
 		relativeZToPlayer = 0;
+		
+		carSpeedOffset = 80;
 		
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
@@ -388,6 +393,7 @@ public class AIMovement : MonoBehaviour
 		
 		apronLineX = -2.7f;
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
+		//Debug.Log("Apron X: " + apronLineX);
 
 		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 4f) + (laneInv / 4f);
 
@@ -834,6 +840,9 @@ public class AIMovement : MonoBehaviour
 			//Debug.Log(AICar.name + " speedLogic start - " + AISpeed);
 		}
 		
+		carSpeedOffset = CameraRotate.carSpeedOffset;
+		draftFactor = (200 - carSpeedOffset)/200;
+		
 		//If gaining draft of car in front
 		if((HitForward && DraftCheckForward.distance <= maxDraftDistance)&&(coolEngine == false)){
 			
@@ -848,10 +857,10 @@ public class AIMovement : MonoBehaviour
 					if(diffToMax < 0){
 						diffToMax = 0;
 					}
-					draftStrength *= (diffToMax / 2) + 0.01f;
+					draftStrength *= ((diffToMax / 2) + 0.01f) * draftFactor;
 				}
 				//AISpeed += draftStrength;
-				AISpeed += draftStrength;
+				AISpeed += (draftStrength * draftFactor);
 				
 				/*
 				if(debugPlayer == true){
@@ -868,7 +877,7 @@ public class AIMovement : MonoBehaviour
 				}
 				//No draft, slow with drag
 				if(dominator == true){
-					AISpeed -= ((dragDecelMulti - (AILevel / 6000f)) / 2);
+					AISpeed -= ((dragDecelMulti - (AILevel / 6000f)) / 2) * draftFactor;
 					
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
@@ -881,7 +890,7 @@ public class AIMovement : MonoBehaviour
 						if(diffToMax < 0){
 							diffToMax = 0;
 						}
-						AISpeed -= (dragDecelMulti - (AILevel / 6000f)) * (2 - (diffToMax / 2));
+						AISpeed -= ((dragDecelMulti - (AILevel / 6000f)) * (2 - (diffToMax / 2))) * draftFactor;
 						
 						#if UNITY_EDITOR
 						if(debugPlayer == true){
@@ -889,7 +898,7 @@ public class AIMovement : MonoBehaviour
 						}
 						#endif
 					} else {
-						AISpeed -= (dragDecelMulti - (AILevel / 6000f));
+						AISpeed -= (dragDecelMulti - (AILevel / 6000f)) * draftFactor;
 						
 						#if UNITY_EDITOR
 						if(debugPlayer == true){
@@ -1208,7 +1217,7 @@ public class AIMovement : MonoBehaviour
 
 				//Pass them
 				if(movingLane == false){
-					tryPass(25, false);
+					tryPass(25, false, tryTimedPass, carDist);
 				}
 			}
 			
@@ -1255,7 +1264,11 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void slowUp(float carDist){
-		AISpeed -= (draftAirCushion - carDist)/2;
+		if(carDist < draftAirCushion){
+			AISpeed -= (draftAirCushion - carDist)/2;
+		} else {
+			AISpeed -= (5 - carDist)/50f;
+		}
 		//Debug.Log("BRAKE! #" + carNumber);
 	}
 	
@@ -1306,7 +1319,7 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 
-	void tryPass(int chance, bool forced) {
+	void tryPass(int chance, bool forced, bool timed = false, float oppDist = 5f) {
 		
 		string direction = "";
 		
@@ -1340,7 +1353,7 @@ public class AIMovement : MonoBehaviour
 					direction = "Right";
 				}
 			}
-			if(leftSideClr == true) {
+			if((leftSideClr == true)&&(pos.x > (apronLineX + 1f))){
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
 					Debug.Log(AICar.name + " try pass opportunity (left)");
@@ -1375,6 +1388,11 @@ public class AIMovement : MonoBehaviour
 				}
 				break;
 			default:
+				//Lift if boxed in, coast up to the car in front
+				if(timed == true){
+					slowUp(oppDist);
+				}
+				
 				//Do nothing, no move direction available
 				break;
 		}
