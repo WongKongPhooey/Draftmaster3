@@ -62,6 +62,8 @@ public class AIMovement : MonoBehaviour
 	float wreckMassRand;
 	int antiGlitch;
 	public bool playerWrecked;
+	float sparksEndSpeed;
+	float maxSparksRand;
 	float targetForce;
 	float windForce;
 	float forceSmoothing;
@@ -74,6 +76,8 @@ public class AIMovement : MonoBehaviour
 	Transform rightSparks;
 	ParticleSystem leftSparksParticles;
 	ParticleSystem rightSparksParticles;
+	ParticleSystemRenderer leftSparksParticleRenderer;
+	ParticleSystemRenderer rightSparksParticleRenderer;
 	Transform tireSmoke;
 	ParticleSystem tireSmokeParticles;
 
@@ -186,8 +190,10 @@ public class AIMovement : MonoBehaviour
 		wreckRigidbody = this.GetComponent<Rigidbody>();
 		leftSparks = this.transform.Find("SparksL");
 		rightSparks = this.transform.Find("SparksR");
-		leftSparksParticles = this.transform.Find("SparksL").GetComponent<ParticleSystem>();
-		rightSparksParticles = this.transform.Find("SparksR").GetComponent<ParticleSystem>();
+		leftSparksParticles = leftSparks.GetComponent<ParticleSystem>();
+		rightSparksParticles = rightSparks.GetComponent<ParticleSystem>();
+		leftSparksParticleRenderer = leftSparks.GetComponent<ParticleSystemRenderer>();
+		rightSparksParticleRenderer = rightSparks.GetComponent<ParticleSystemRenderer>();
 		tireSmoke = this.transform.Find("TireSmoke");
 		tireSmokeParticles = tireSmoke.GetComponent<ParticleSystem>();
 		
@@ -547,7 +553,7 @@ public class AIMovement : MonoBehaviour
 					if(joinWreck == true){
 						//Debug.Log("Wreck: Joining In");
 						startWreck();
-						this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+						//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 					}
 				}
 			}
@@ -560,7 +566,7 @@ public class AIMovement : MonoBehaviour
 					if(joinWreck == true){
 						//Debug.Log("Wreck: Joining Player");
 						startWreck();
-						this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
+						//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 					}
 				}
 			}
@@ -1277,7 +1283,7 @@ public class AIMovement : MonoBehaviour
 		
 		if(wobbleCount >= wobbleRand){
 			wobbleRand = Random.Range(10,60);
-			wobbleTarget = Random.Range(-110,110);
+			wobbleTarget = Random.Range(-100,100);
 			wobbleCount = 1;
 		}
 		
@@ -1868,6 +1874,10 @@ public class AIMovement : MonoBehaviour
 			return;
 		}
 		
+		tireSmokeParticles.Play();
+		leftSparksParticles.Play();
+		rightSparksParticles.Play();
+		
 		Movement.incrTotalWreckers();
 		
 		isWrecking = true;
@@ -1889,6 +1899,8 @@ public class AIMovement : MonoBehaviour
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
+		sparksEndSpeed = Random.Range(-140,-190);
+		maxSparksRand = Random.Range(10,30);
 		targetForce = Random.Range(10f,-10f);
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
@@ -1920,9 +1932,9 @@ public class AIMovement : MonoBehaviour
 		if(Movement.wreckOver == true){
 			//this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		}
-		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
-		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+		tireSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+		leftSparksParticles.Stop();
+		rightSparksParticles.Stop();
 	}
 	
 	void wreckPhysics(){
@@ -1964,11 +1976,23 @@ public class AIMovement : MonoBehaviour
 			this.gameObject.transform.position = new Vector3(2f,pos.y,pos.z);
 		}
 		
-		//Align particle system to global track direction
-		leftSparks.rotation = Quaternion.Euler(0,180,0);
-		rightSparks.rotation = Quaternion.Euler(0,180,0);
-		leftSparksParticles.startSpeed = 50 + (wreckDecel / 4);
-		rightSparksParticles.startSpeed = 50 + (wreckDecel / 4);
+		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + wreckDecel);
+		if(sparksEndSpeed < wreckDecel){
+			//Align particle system to global track direction
+			leftSparks.rotation = Quaternion.Euler(0,180,0);
+			rightSparks.rotation = Quaternion.Euler(0,180,0);
+			leftSparksParticles.startSpeed = 150 + (wreckDecel / 2);
+			rightSparksParticles.startSpeed = 150 + (wreckDecel / 2);
+			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 8));
+			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 8));
+			leftSparksParticles.startLifetime = 0.2f + ((0-wreckDecel) / 50);
+			rightSparksParticles.startLifetime = 0.2f + ((0-wreckDecel) / 50);
+			leftSparksParticleRenderer.lengthScale = 0.5f + (wreckDecel / 200);
+			rightSparksParticleRenderer.lengthScale = 0.5f + (wreckDecel / 200);
+		} else {
+			leftSparksParticles.Stop();
+			rightSparksParticles.Stop();
+		}
 		
 		//Flatten the smoke
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);

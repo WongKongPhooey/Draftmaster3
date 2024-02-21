@@ -678,9 +678,6 @@ public class DriverNames : MonoBehaviour {
 		if(seriesPrefix == "cup24"){
 			rarity += 1;
 		}
-		if(seriesPrefix == "irl23"){
-			rarity += 1;
-		}
 		if(seriesPrefix == "irc00"){
 			rarity -= 1;
 		}
