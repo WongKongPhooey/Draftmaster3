@@ -93,6 +93,13 @@ public class GarageUI : MonoBehaviour
 			Debug.Log("Not Logged In");
 		}
 		
+		//Testing - Unlock All
+		#if UNITY_EDITOR
+		PlayerPrefs.SetInt("cup2422Unlocked",1);
+		PlayerPrefs.SetInt("cup2422Gears",10);
+		PlayerPrefs.SetInt("cup2422Class",5);
+		#endif
+		
 		//PlayFabManager.ResetPassword();
 
 		seriesDropdown = GameObject.Find("Dropdown");

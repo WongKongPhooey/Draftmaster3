@@ -851,14 +851,7 @@ public class PlayFabManager : MonoBehaviour
 		int totalUnlocks = 0;
 		
 		//Add all autosavable series here
-		//should probably be hooked up to the Series Data file instead
-		ArrayList allSeries = new ArrayList(); 
-		allSeries.Add("cup20");
-		allSeries.Add("cup22");
-		allSeries.Add("cup23");
-		allSeries.Add("irl23");
-		allSeries.Add("dmc15");
-		allSeries.Add("irc00");
+		string[] allSeries = DriverNames.getAllSeries();
 		
 		foreach(string series in allSeries){
 			for(int i=0;i<100;i++){
@@ -926,7 +919,6 @@ public class PlayFabManager : MonoBehaviour
 			for(int paint=1;paint<10;paint++){
 				if(AltPaints.getAltPaintName(seriesPrefix,car,paint) != null){
 					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
-						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
 						JSONOutput += "," + paint + "";
 					}
 				}

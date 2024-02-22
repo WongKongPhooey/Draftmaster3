@@ -81,6 +81,8 @@ public class Movement : MonoBehaviour {
 	float baseDecel;
 	float slideX;
 	public static float playerWreckDecel;
+	float sparksEndSpeed;
+	float maxSparksRand;
 	float wreckAngle;
 	float wreckTorque;
 	int wreckHits;
@@ -93,6 +95,8 @@ public class Movement : MonoBehaviour {
 	Transform rightSparks;
 	ParticleSystem leftSparksParticles;
 	ParticleSystem rightSparksParticles;
+	ParticleSystemRenderer leftSparksParticleRenderer;
+	ParticleSystemRenderer rightSparksParticleRenderer;
 	Transform tireSmoke;
 	ParticleSystem tireSmokeParticles;
 	
@@ -233,8 +237,10 @@ public class Movement : MonoBehaviour {
 		wreckRigidbody = this.GetComponent<Rigidbody>();
 		leftSparks = this.transform.Find("SparksL");
 		rightSparks = this.transform.Find("SparksR");
-		leftSparksParticles = this.transform.Find("SparksL").GetComponent<ParticleSystem>();
-		rightSparksParticles = this.transform.Find("SparksR").GetComponent<ParticleSystem>();
+		leftSparksParticles = leftSparks.GetComponent<ParticleSystem>();
+		rightSparksParticles = rightSparks.GetComponent<ParticleSystem>();
+		leftSparksParticleRenderer = leftSparks.GetComponent<ParticleSystemRenderer>();
+		rightSparksParticleRenderer = rightSparks.GetComponent<ParticleSystemRenderer>();
 		tireSmoke = this.transform.Find("TireSmoke");
 		tireSmokeParticles = tireSmoke.GetComponent<ParticleSystem>();
 		
@@ -732,8 +738,9 @@ public class Movement : MonoBehaviour {
 		vStrongLane = laneInv/laneFactor;
 		
 		carSpeedOffset = CameraRotate.carSpeedOffset;
+		
+		//Draft increases with track speed
 		draftFactor = (200 - carSpeedOffset)/200;
-		//Debug.Log("Draft Factor: " + draftFactor);
 		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
@@ -759,7 +766,10 @@ public class Movement : MonoBehaviour {
 			//Speed up
 			if(playerSpeed < variTopSpeed){
 				
-				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 1000f);
+				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f);
+				#if UNITY_EDITOR
+				Debug.Log("Total Player draft strength: " + draftStrength + " - " + (10 - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
+				#endif
 				
 				float diffToMax = variTopSpeed - playerSpeed;
 				//If approaching max speed, taper off
@@ -1233,9 +1243,9 @@ public class Movement : MonoBehaviour {
 			return;
 		}
 		
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+		tireSmokeParticles.Play();
+		leftSparksParticles.Play();
+		rightSparksParticles.Play();
 		
 		if(wreckOver == false){
 			isWrecking = true;
@@ -1263,6 +1273,8 @@ public class Movement : MonoBehaviour {
 		baseDecel = -0.25f;
 		slideX = 0;
 		playerWreckDecel = 0;
+		sparksEndSpeed = Random.Range(-140,-190);
+		maxSparksRand = Random.Range(5,30);
 		targetForce = 0;
 		forceSmoothing = 0.2f;
 		windForce = targetForce;
@@ -1278,10 +1290,6 @@ public class Movement : MonoBehaviour {
 			wreckTorque = Random.Range(-0.35f, 0.35f) * 10;
 		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
-		
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
@@ -1396,12 +1404,24 @@ public class Movement : MonoBehaviour {
 			this.gameObject.transform.position = new Vector3(2f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
 		}
 		
-		//Align particle system to global track direction
-		leftSparks.rotation = Quaternion.Euler(0,180,0);
-		rightSparks.rotation = Quaternion.Euler(0,180,0);
-		leftSparksParticles.startSpeed = 50 + (playerWreckDecel / 4);
-		rightSparksParticles.startSpeed = 50 + (playerWreckDecel / 4);
-	
+		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + playerWreckDecel);
+		if(sparksEndSpeed < playerWreckDecel){
+			//Align particle system to global track direction
+			leftSparks.rotation = Quaternion.Euler(0,180,0);
+			rightSparks.rotation = Quaternion.Euler(0,180,0);
+			leftSparksParticles.startSpeed = 150 + (playerWreckDecel / 2);
+			rightSparksParticles.startSpeed = 150 + (playerWreckDecel / 2);
+			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (playerWreckDecel / 12));
+			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (playerWreckDecel / 12));
+			leftSparksParticles.startLifetime = 0.2f + ((0-playerWreckDecel) / 50);
+			rightSparksParticles.startLifetime = 0.2f + ((0-playerWreckDecel) / 50);
+			leftSparksParticleRenderer.lengthScale = 0.5f + (playerWreckDecel / 200);
+			rightSparksParticleRenderer.lengthScale = 0.5f + (playerWreckDecel / 200);
+		} else {
+			leftSparksParticles.Stop();
+			rightSparksParticles.Stop();
+		}
+		
 		//Flatten the smoke
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
 		float smokeMultiplier = Mathf.Sin(wreckAngle);

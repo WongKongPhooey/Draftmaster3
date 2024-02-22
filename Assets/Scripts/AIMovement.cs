@@ -553,7 +553,6 @@ public class AIMovement : MonoBehaviour
 					if(joinWreck == true){
 						//Debug.Log("Wreck: Joining In");
 						startWreck();
-						//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 					}
 				}
 			}
@@ -566,7 +565,6 @@ public class AIMovement : MonoBehaviour
 					if(joinWreck == true){
 						//Debug.Log("Wreck: Joining Player");
 						startWreck();
-						//this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 					}
 				}
 			}
@@ -654,7 +652,6 @@ public class AIMovement : MonoBehaviour
 				if(isWrecking == false){
 					//Debug.Log("Wreck: Joining In");
 					startWreck();
-					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 				} else {
 					//Share some wreck inertia
 					float opponentWreckDecel = carHit.gameObject.GetComponent<AIMovement>().wreckDecel;
@@ -668,7 +665,6 @@ public class AIMovement : MonoBehaviour
 				if(isWrecking == false){
 					//Debug.Log("Wreck: Joining Player");
 					startWreck();
-					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 				} else {
 					//Share some wreck inertia
 					wreckDecel += ((Movement.playerWreckDecel - wreckDecel) / 2);
@@ -749,8 +745,8 @@ public class AIMovement : MonoBehaviour
 		}
 		if(sparksCooldown == 1){
 			sparksCooldown--;
-			this.transform.Find("SparksL").GetComponent<ParticleSystem>().Stop();
-			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Stop();	
+			leftSparksParticles.Stop();
+			rightSparksParticles.Stop();	
 		}
 
 		lap = CameraRotate.lap;
@@ -772,7 +768,7 @@ public class AIMovement : MonoBehaviour
 		
         laneInv = 4 - lane;
 		
-		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 5f) + (laneInv / 4f);
+		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 4f) + (laneInv / 5f);
 		
 		if(Movement.pacing == false){
 			if((isWrecking == true)||(wreckOver == true)){
@@ -784,32 +780,26 @@ public class AIMovement : MonoBehaviour
 					}
 				} else {
 					AISpeed = 0;
-					if(Movement.wreckOver == true){
-						targetForce = 0;
-						//Make the crashed cars stay still if the player is also still
-						this.GetComponent<Rigidbody>().mass = 25;
-						this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
-					} else {
-						targetForce = 0 - Movement.speedoSpeed;
-					}
+					targetForce = 0 - Movement.speedoSpeed;
 					updateWindForce();
 						
 					this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
-					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+					tireSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 				}
 				return;
 			} else {
 				holdLane++;
 				speedLogic();
+				
+				//Experimental, for CPU saves
+				if(carNum%logicCycle == tick){
+					//Debug.Log("Draft Logic cycle save, frame: " + carNum);
+					draftLogic();
+				}
+				carWobble();
+				updateMovement();
 			}
-			
-			//Experimental, for CPU saves
-			if(carNum%logicCycle == tick){
-				//Debug.Log("Draft Logic cycle save, frame: " + carNum);
-				draftLogic();
-			}
-			carWobble();
-			updateMovement();
+
 			this.gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
 			this.gameObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
 		} else {
@@ -842,10 +832,6 @@ public class AIMovement : MonoBehaviour
         bool HitForward = DraftCheckForward.distance > 0;
         bool HitBackward = DraftCheckBackward.distance > 0;
 		
-		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " speedLogic start - " + AISpeed);
-		}
-		
 		carSpeedOffset = CameraRotate.carSpeedOffset;
 		draftFactor = (200 - carSpeedOffset)/200;
 		
@@ -855,7 +841,13 @@ public class AIMovement : MonoBehaviour
 			//Speed up
 			if (AISpeed < AIVariTopSpeed){
 				//Draft gets stronger as you get closer
-				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 2500);
+				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 2500f);
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log("Total AI draft strength: " + draftStrength + " - " + (maxDraftDistance - DraftCheckForward.distance) + " " + draftStrengthRatio + " " + (AILevel / 2500f));
+				}
+				#endif
+				
 				//If approaching max speed, taper off
 				float diffToMax = AIVariTopSpeed - AISpeed;
 				if((diffToMax) < 2){
@@ -867,12 +859,6 @@ public class AIMovement : MonoBehaviour
 				}
 				//AISpeed += draftStrength;
 				AISpeed += (draftStrength * draftFactor);
-				
-				/*
-				if(debugPlayer == true){
-					Debug.Log(AICar.name + " speeding up - speed " + AISpeed + " , variTopSpeed " + AIVariTopSpeed);
-				}
-				*/
 			}
 		} else {
 			//Slow down
@@ -942,23 +928,26 @@ public class AIMovement : MonoBehaviour
 				}
 				#endif
 			}
-		}
-		
-		// If being bump-drafted from behind
-		if (HitBackward && DraftCheckBackward.distance <= bumpDraftDistTrigger){
-			if(AISpeed <= (AIVariTopSpeed - 2f)){
-				AISpeed+=(backdraftMulti / 5f);
-			}
-			tandemDraft = true;
-			if(Ticker.getRaceLeader() == AICar){
-				if (AISpeed > (AIVariTopSpeed - 3f)){
-					//Debug.Log("Leader is #" + carNum);
-					evadeDraft();
+			
+			// If being bump-drafted from behind
+			if(DraftCheckBackward.distance <= bumpDraftDistTrigger){
+				if(AISpeed <= (AIVariTopSpeed - 2f)){
+					AISpeed+=(backdraftMulti / 5f);
 				}
+				tandemDraft = true;
+				if(Ticker.getRaceLeader() == AICar){
+					if (AISpeed > (AIVariTopSpeed - 3f)){
+						//Debug.Log("Leader is #" + carNum);
+						evadeDraft();
+					}
+				}
+			} else {
+				tandemDraft = false;
 			}
 		} else {
 			tandemDraft = false;
 		}
+		
 
 		//If bump-drafting the car in front
 		if (HitForward && DraftCheckForward.distance <= bumpDraftDistTrigger){
@@ -1163,7 +1152,6 @@ public class AIMovement : MonoBehaviour
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
 					startWreck();
-					this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
 				}
 			}
 			laneticker = laneChangeDuration + laneticker;
@@ -1289,11 +1277,11 @@ public class AIMovement : MonoBehaviour
 		
 		//General wobble while in lane
 		if(wobbleTarget > wobblePos){
-			AICar.transform.Translate(-0.002f,0,0);
+			AICar.transform.Translate(-0.001f,0,0);
 			wobblePos++;
 		}
 		if(wobbleTarget < wobblePos){
-			AICar.transform.Translate(0.002f,0,0);
+			AICar.transform.Translate(0.001f,0,0);
 			wobblePos--;
 		}
 	}
@@ -1875,8 +1863,11 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		tireSmokeParticles.Play();
-		leftSparksParticles.Play();
-		rightSparksParticles.Play();
+		
+		if(Random.Range(1,10) <= 2){
+			leftSparksParticles.Play();
+			rightSparksParticles.Play();
+		}
 		
 		Movement.incrTotalWreckers();
 		
@@ -1885,22 +1876,23 @@ public class AIMovement : MonoBehaviour
 			CameraRotate.throwCaution();
 		}
 		sparksCooldown = 99999;
+
 		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
-		this.GetComponent<Rigidbody>().mass = 2 + wreckMassRand;
+		wreckRigidbody.mass = 2 + wreckMassRand;
 		
 		//Remove constraints, allowing it to impact/spin using physics
-		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
-		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezePositionX;
+		wreckRigidbody.constraints &= ~RigidbodyConstraints.FreezeRotationY;
+		wreckRigidbody.constraints &= ~RigidbodyConstraints.FreezePositionX;
 		
 		//Remove forces, physics only
-		this.GetComponent<Rigidbody>().isKinematic = false;
-		this.GetComponent<Rigidbody>().useGravity = false;
+		wreckRigidbody.isKinematic = false;
+		wreckRigidbody.useGravity = false;
 		
 		//Apply wind/drag
 		sparksEndSpeed = Random.Range(-140,-190);
-		maxSparksRand = Random.Range(10,30);
+		maxSparksRand = Random.Range(5,15);
 		targetForce = Random.Range(10f,-10f);
 		windForce = targetForce;
 		forceSmoothing = 0.2f;
@@ -1915,20 +1907,12 @@ public class AIMovement : MonoBehaviour
 	public void endWreck(){
 		//Debug.Log(this.name + " WRECKED");
 		AISpeed = 0;
-		//baseDecel = -0.25f;
 		slideX = 0;
-		//wreckDecel = 0;
 		isWrecking = false;
 		wreckOver = true;
 		
-		//Skip force smoothing updateWindforce() on this transition frame
-		//targetForce = 0 - Movement.speedoSpeed;
-		//windForce = 0 - Movement.speedoSpeed;
-		
 		sparksCooldown = 0;
-		//this.GetComponent<Rigidbody>().mass = 25;
-		//this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
-		//this.GetComponent<ConstantForce>().torque = new Vector3(0f,0f,0f);
+
 		if(Movement.wreckOver == true){
 			//this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		}
@@ -1983,8 +1967,8 @@ public class AIMovement : MonoBehaviour
 			rightSparks.rotation = Quaternion.Euler(0,180,0);
 			leftSparksParticles.startSpeed = 150 + (wreckDecel / 2);
 			rightSparksParticles.startSpeed = 150 + (wreckDecel / 2);
-			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 8));
-			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 8));
+			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 12));
+			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 12));
 			leftSparksParticles.startLifetime = 0.2f + ((0-wreckDecel) / 50);
 			rightSparksParticles.startLifetime = 0.2f + ((0-wreckDecel) / 50);
 			leftSparksParticleRenderer.lengthScale = 0.5f + (wreckDecel / 200);
@@ -1996,10 +1980,7 @@ public class AIMovement : MonoBehaviour
 		
 		//Flatten the smoke
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
-		float smokeMultiplier = Mathf.Sin(wreckAngle);
-		if(smokeMultiplier < 0){
-			smokeMultiplier = -smokeMultiplier;
-		}
+		float smokeMultiplier = wreckSine;
 		smokeMultiplier = (smokeMultiplier * 60) + 5;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
 		tireSmokeParticles.startColor = new Color32(200,200,200,(byte)smokeMultiplier);
