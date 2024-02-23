@@ -730,16 +730,9 @@ public class PlayFabManager : MonoBehaviour
 					//Debug.Log("Your save is not a lower level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + ").");
 				 }
 				 
-				 //Every car set has to be in here to be loaded
-				 ArrayList allSeries = new ArrayList(); 
-				 allSeries.Add("cup20");
-				 allSeries.Add("cup22");
-				 allSeries.Add("cup23");
-				 allSeries.Add("cup24");
-				 allSeries.Add("irc00");
-				 allSeries.Add("dmc15");
-				 allSeries.Add("irl23");
-				 
+				 //Car sets have to be in here to be loaded
+				 string[] allSeries = DriverNames.getAllSeries();
+
 				 int unlockedCars = 0;
 				 foreach(string series in allSeries){
 					 //Debug.Log("Loading " + series);
