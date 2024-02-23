@@ -88,7 +88,12 @@ public class GarageUI : MonoBehaviour
 		
 		//Run a load before any saves to merge in any missing unlocks
 		if(PlayerPrefs.HasKey("PlayerUsername")){
-			PlayFabManager.GetSavedPlayerProgress();
+			try{
+				PlayFabManager.GetSavedPlayerProgress();
+			} catch (Exception e){
+  				Debug.Log("Failed to autoload from Playfab. Retrying login..");
+				PlayFabManager.LoginFromPrefs();
+			}
 		} else {
 			Debug.Log("Not Logged In");
 		}
@@ -1330,6 +1335,7 @@ public class GarageUI : MonoBehaviour
 		catch(Exception e){
 			Debug.Log("Cannot reach PlayFab");
 			alertPopup.GetComponent<AlertManager>().showPopup("Cannot Reach Cloud","Sorry, we can't currently retrieve and sync your save data. Do you have an internet connection?","dm2logo");
+			PlayFabManager.LoginFromPrefs();
 		}
 		loadAllCars();
 	}
