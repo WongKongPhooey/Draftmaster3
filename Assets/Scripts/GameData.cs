@@ -451,7 +451,7 @@ public class GameData : MonoBehaviour {
 		}
 	}
 	
-	public static int minTransferTokensFromLevel(in level){
+	public static int minTransferTokensFromLevel(int level){
 		switch(level){
 			case 1:
 			case 2:

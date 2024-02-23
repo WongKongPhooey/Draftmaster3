@@ -720,7 +720,7 @@ public class PlayFabManager : MonoBehaviour
 					}
 					//Debug.Log("Received " + transferTokens + " Transfer Tokens");
 				 }
-				 int minTokens = minTransferTokensFromLevel(level);
+				 int minTokens = GameData.minTransferTokensFromLevel(level);
 				 if(minTokens > savedTokens){
 					PlayerPrefs.SetInt("TransferTokens", minTokens);
 				 }
