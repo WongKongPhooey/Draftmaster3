@@ -383,7 +383,6 @@ public class CameraRotate : MonoBehaviour {
 						}
 					}
 					PlayerPrefs.SetInt("RaceFastestLap" + circuit, raceLapRecordInt);
-					PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
 					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 						PlayFabManager.CheckLiveTimeTrial();
 						//Double checked

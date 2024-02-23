@@ -923,14 +923,14 @@ public class PlayFabManager : MonoBehaviour
 		};
 		try {
 			PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
-			//Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
+			Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
 		} catch (Exception e){
-			//Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
+			Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
 		}
 	}
 	
 	static void OnLeaderboardUpdate(UpdatePlayerStatisticsResult result){
-		//Debug.Log("Leaderboard Updated.");
+		Debug.Log("Leaderboard Updated.");
 	}
 	
 	public static void GetLeaderboard(string circuit){

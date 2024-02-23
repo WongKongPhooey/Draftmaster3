@@ -719,7 +719,7 @@ public class Movement : MonoBehaviour {
 			} else {
 				playerSpeed = 0;
 				targetForce = 0;
-				updateWindForce();
+				updateWindForce(1);
 				this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 			}
 			return;
@@ -768,7 +768,7 @@ public class Movement : MonoBehaviour {
 				
 				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f);
 				#if UNITY_EDITOR
-				Debug.Log("Total Player draft strength: " + draftStrength + " - " + (10 - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
+				//Debug.Log("Total Player draft strength: " + draftStrength + " - " + (10 - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
 				#endif
 				
 				float diffToMax = variTopSpeed - playerSpeed;
@@ -1270,13 +1270,13 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		baseDecel = -0.25f;
+		baseDecel = -0.35f;
 		slideX = 0;
 		playerWreckDecel = 0;
 		sparksEndSpeed = Random.Range(-140,-190);
 		maxSparksRand = Random.Range(5,30);
 		targetForce = 0;
-		forceSmoothing = 0.2f;
+		forceSmoothing = 0.5f;
 		windForce = targetForce;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,targetForce);
 		float wreckTorque;
@@ -1299,11 +1299,11 @@ public class Movement : MonoBehaviour {
 	
 	public void endWreck(){
 		playerSpeed = 0;
-		baseDecel = -0.25f;
+		baseDecel = 0;
 		slideX = 0;
 		playerWreckDecel = 0;
 		targetForce = 0;
-		updateWindForce();
+		updateWindForce(0);
 		isWrecking = false;
 		wreckOver = true;
 		hideHUD();
@@ -1359,7 +1359,7 @@ public class Movement : MonoBehaviour {
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.32f;
+		baseDecel-=0.42f;
 		slideX = ((baseDecel + 1) / 4f) + 20f;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
@@ -1370,7 +1370,7 @@ public class Movement : MonoBehaviour {
 		if(wallrideMod == false){
 			targetForce = playerWreckDecel;
 		}
-		updateWindForce();
+		updateWindForce(wreckSine);
 		if(CameraRotate.onTurn == true){
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
@@ -1379,16 +1379,17 @@ public class Movement : MonoBehaviour {
 				this.GetComponent<ConstantForce>().force = new Vector3(10f,0f,40f);
 			} else {
 				this.GetComponent<ConstantForce>().force = new Vector3(slideX,0f,windForce);
-				//Debug.Log("Side Force: " + slideX);
+				Debug.Log("Windforce: " + windForce);
 			}
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
 			this.GetComponent<ConstantForce>().force = new Vector3(-3f, 0f,windForce);
+			Debug.Log("Windforce: " + windForce);
 		}
 		playerWreckDecel = baseDecel - (50f * wreckSine);
 		
 		//Debug.Log("Wreck Decel: " + playerWreckDecel);
-		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce < 0){
+		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce <= 0){
 			endWreck();
 		}
 		
@@ -1441,12 +1442,13 @@ public class Movement : MonoBehaviour {
 		}
 	}
 	
-	void updateWindForce(){
-		if(windForce < targetForce - forceSmoothing){
-			windForce += forceSmoothing;
+	void updateWindForce(float angleSin){
+		Debug.Log("Wreck Angle Sin: " + (forceSmoothing * (angleSin * 2)));
+		if(windForce < targetForce - (forceSmoothing * (angleSin * 2))){
+			windForce += forceSmoothing * (angleSin * 2);
 		}
-		if(windForce > targetForce + forceSmoothing){
-			windForce -= forceSmoothing;
+		if(windForce > targetForce + (forceSmoothing * (angleSin * 2))){
+			windForce -= forceSmoothing * (angleSin * 2);
 		}
 	}
 	

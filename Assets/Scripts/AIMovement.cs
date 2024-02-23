@@ -781,7 +781,7 @@ public class AIMovement : MonoBehaviour
 				} else {
 					AISpeed = 0;
 					targetForce = 0 - Movement.speedoSpeed;
-					updateWindForce();
+					updateWindForce(1);
 						
 					this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 					tireSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -1895,8 +1895,8 @@ public class AIMovement : MonoBehaviour
 		maxSparksRand = Random.Range(5,15);
 		targetForce = Random.Range(10f,-10f);
 		windForce = targetForce;
-		forceSmoothing = 0.2f;
-		baseDecel = -0.25f;
+		forceSmoothing = 0.5f;
+		baseDecel = -0.35f;
 		randDecel = Random.Range(0.01f,0.1f);
 		slideX = 0;
 		wreckDecel = 0;
@@ -1928,7 +1928,7 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=(0.35f - randDecel);
+		baseDecel-=(0.45f - randDecel);
 		slideX = ((baseDecel + 1) / 5f) + wreckSlideRand;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
@@ -1936,7 +1936,7 @@ public class AIMovement : MonoBehaviour
 		//slideX = ((baseDecel + 1) / 10f) + 14f
 		//Reduce division factor to increase effect
 		
-		updateWindForce();
+		updateWindForce(wreckSine);
 
 		//Standard relativity
 		targetForce = wreckDecel;
@@ -1989,12 +1989,12 @@ public class AIMovement : MonoBehaviour
 		tireSmokeParticles.maxParticles = (int)(70 + Mathf.Round(wreckDecel / 2)); //Max 70, Hits 0 at -140 decel
 	}
 	
-	void updateWindForce(){
-		if(windForce < targetForce - forceSmoothing){
-			windForce += forceSmoothing;
+	void updateWindForce(float angleSin){
+		if(windForce < targetForce - (forceSmoothing * (angleSin * 2))){
+			windForce += forceSmoothing * (angleSin * 2);
 		}
-		if(windForce > targetForce + forceSmoothing){
-			windForce -= forceSmoothing;
+		if(windForce > targetForce + (forceSmoothing * (angleSin * 2))){
+			windForce -= forceSmoothing * (angleSin * 2);
 		}
 	}
 	
