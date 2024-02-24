@@ -230,6 +230,9 @@ public class TrackData : MonoBehaviour
 			case "26":
 				trackImageName = "SmallOval";
 				break;
+			case "28":
+				trackImageName = "TriOval";
+				break;
 			case "30":
 				trackImageName = "TinyOval";
 				break;
@@ -811,19 +814,41 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
 		PlayerPrefs.SetInt("StraightLength3",200);
-		PlayerPrefs.SetInt("StraightLength4",10);
+		PlayerPrefs.SetInt("StraightLength4",1);
 		PlayerPrefs.SetInt("TurnLength1",35);
 		PlayerPrefs.SetInt("TurnLength2",145);
 		PlayerPrefs.SetInt("TurnLength3",145);
 		PlayerPrefs.SetInt("TurnLength4",35);
 		PlayerPrefs.SetInt("TurnAngle1",4);
-		PlayerPrefs.SetInt("TurnAngle2",1);
-		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle2",2);
+		PlayerPrefs.SetInt("TurnAngle3",2);
 		PlayerPrefs.SetInt("TurnAngle4",4);
-		PlayerPrefs.SetInt("StartLine",5);
+		PlayerPrefs.SetInt("StartLine",1);
 		PlayerPrefs.SetInt("SpeedOffset",17 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
-		PlayerPrefs.SetString("TrackType","Mid");
+		PlayerPrefs.SetString("TrackType","Short");
+	}
+	
+	public static void Iowa(){
+		trackCodeName = "Iowa";
+		PlayerPrefs.SetInt("RaceLaps",9);
+		PlayerPrefs.SetInt("CircuitLanes",4);
+		PlayerPrefs.SetInt("StraightLength1",150);
+		PlayerPrefs.SetInt("StraightLength2",1);
+		PlayerPrefs.SetInt("StraightLength3",1);
+		PlayerPrefs.SetInt("StraightLength4",150);
+		PlayerPrefs.SetInt("TurnLength1",5);
+		PlayerPrefs.SetInt("TurnLength2",165);
+		PlayerPrefs.SetInt("TurnLength3",10);
+		PlayerPrefs.SetInt("TurnLength4",180);
+		PlayerPrefs.SetInt("TurnAngle1",2);
+		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle3",4);
+		PlayerPrefs.SetInt("TurnAngle4",1);
+		PlayerPrefs.SetInt("StartLine",75);
+		PlayerPrefs.SetInt("SpeedOffset",73 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 	
 	public static void NorthWilkesboro(){

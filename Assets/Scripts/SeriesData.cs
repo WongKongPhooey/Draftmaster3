@@ -719,9 +719,10 @@ public class SeriesData : MonoBehaviour{
 		offlineAILevel[9,1] = 5;
 		offlineAILevel[9,2] = 8;
 		offlineAILevel[9,3] = 10;
-		offlineAILevel[9,4] = 5;
-		offlineAILevel[9,5] = 10;
-		offlineAILevel[9,6] = 15;
+		offlineAILevel[9,4] = 10;
+		offlineAILevel[9,5] = 5;
+		offlineAILevel[9,6] = 10;
+		offlineAILevel[9,7] = 15;
 		
 		offlineMinLevel[9,0] = 10;
 		offlineMinLevel[9,1] = 15;
