@@ -705,6 +705,7 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[9,4] = "cup23livery22";
 		offlineSeriesImage[9,5] = "cup23livery4";
 		offlineSeriesImage[9,6] = "cup23livery84";
+		offlineSeriesImage[9,7] = "cup23livery84";
 		//offlineSeriesImage[9,9] = "cup22livery1alt1";
 		
 		offlineDailyPlays[9,0] = 10;
@@ -714,6 +715,7 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[9,4] = 20;
 		offlineDailyPlays[9,5] = 20;
 		offlineDailyPlays[9,6] = 20;
+		offlineDailyPlays[9,7] = 20;
 		
 		offlineAILevel[9,0] = 5;
 		offlineAILevel[9,1] = 5;

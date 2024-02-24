@@ -1288,6 +1288,9 @@ public class Movement : MonoBehaviour {
 		} else {
 			//First impact, car will start straight
 			wreckTorque = Random.Range(-0.35f, 0.35f) * 10;
+			if(wallrideMod == true){
+				wreckTorque = 0;
+			}
 		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
 		
@@ -1375,7 +1378,7 @@ public class Movement : MonoBehaviour {
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			if(wallrideMod == true){
-				baseDecel+=0.15f;
+				baseDecel+=0.35f;
 				this.GetComponent<ConstantForce>().force = new Vector3(10f,0f,40f);
 			} else {
 				this.GetComponent<ConstantForce>().force = new Vector3(slideX,0f,windForce);
