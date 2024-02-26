@@ -163,7 +163,9 @@ public class CameraRotate : MonoBehaviour {
 		lap = 0;
 		if(PlayerPrefs.HasKey("StartingLap")){
 			lap = PlayerPrefs.GetInt("StartingLap") - 1;
-			PlayerPrefs.DeleteKey("StartingLap");
+			if(PlayerPrefs.GetString("RaceType") != "Event"){
+				PlayerPrefs.DeleteKey("StartingLap");
+			}
 		}
 		if(lap < 0){
 			lap = 0;

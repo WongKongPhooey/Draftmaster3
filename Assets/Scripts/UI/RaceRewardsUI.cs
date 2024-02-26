@@ -307,6 +307,8 @@ public class RaceRewardsUI : MonoBehaviour
 			case "cup20":
 			case "cup22":
 			case "cup23":
+			case "cup24":
+			case "irl23":
 			case "dmc15":
 			case "irc00":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
@@ -392,6 +394,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "CHV":
 			case "FRD":
 			case "TYT":
+			case "HON":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
@@ -409,6 +412,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "CHV1":
 			case "FRD1":
 			case "TYT1":
+			case "HON1":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
