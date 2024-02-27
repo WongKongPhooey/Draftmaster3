@@ -181,7 +181,7 @@ public class AIMovement : MonoBehaviour
 		wreckFlatRand = Random.Range(0f,-3f);
 		wreckMassRand = Random.Range(-0.5f,0.5f);
 		hitByPlayer = false;
-		speedDiffPadding = 0.2f;
+		speedDiffPadding = 0.4f;
 		
 		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
 		wreckProbability = (wreckFreq * 2) + 1;
@@ -833,7 +833,7 @@ public class AIMovement : MonoBehaviour
         bool HitBackward = DraftCheckBackward.distance > 0;
 		
 		carSpeedOffset = CameraRotate.carSpeedOffset;
-		draftFactor = (200 - carSpeedOffset)/200;
+		draftFactor = (200 - carSpeedOffset / 2)/200;
 		
 		//If gaining draft of car in front
 		if((HitForward && DraftCheckForward.distance <= maxDraftDistance)&&(coolEngine == false)){
@@ -1004,8 +1004,6 @@ public class AIMovement : MonoBehaviour
 			affectedAISpeed = 0;
 		}
 		
-		//Speed difference between the player and the AI
-		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
 		if(Movement.isWrecking == true){
 			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed - (Movement.playerWreckDecel * speedDiffPadding);
 		} else {

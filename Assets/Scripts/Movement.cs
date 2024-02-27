@@ -741,6 +741,7 @@ public class Movement : MonoBehaviour {
 		
 		//Draft increases with track speed
 		draftFactor = (200 - carSpeedOffset)/200;
+		//Debug.Log("Draft Factor: " + draftFactor);
 		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
@@ -896,7 +897,6 @@ public class Movement : MonoBehaviour {
 		gettableSpeed = playerSpeed;
 		
 		//Speed difference between the Player and the Control Car
-		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
 		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		playerZ = vehicle.transform.position.z;
