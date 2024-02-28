@@ -1382,14 +1382,15 @@ public class Movement : MonoBehaviour {
 				this.GetComponent<ConstantForce>().force = new Vector3(10f,0f,40f);
 			} else {
 				this.GetComponent<ConstantForce>().force = new Vector3(slideX,0f,windForce);
-				Debug.Log("Windforce: " + windForce);
+				//Debug.Log("Windforce: " + windForce);
 			}
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
 			this.GetComponent<ConstantForce>().force = new Vector3(-3f, 0f,windForce);
-			Debug.Log("Windforce: " + windForce);
+			//Debug.Log("Windforce: " + windForce);
 		}
-		playerWreckDecel = baseDecel - (50f * wreckSine);
+		playerWreckDecel = baseDecel - (60f * wreckSine);
+		Debug.Log(playerWreckDecel);
 		
 		//Debug.Log("Wreck Decel: " + playerWreckDecel);
 		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce <= 0){
@@ -1446,7 +1447,7 @@ public class Movement : MonoBehaviour {
 	}
 	
 	void updateWindForce(float angleSin){
-		Debug.Log("Wreck Angle Sin: " + (forceSmoothing * (angleSin * 2)));
+		//Debug.Log("Wreck Angle Sin: " + (forceSmoothing * (angleSin * 2)));
 		if(windForce < targetForce - (forceSmoothing * (angleSin * 2))){
 			windForce += forceSmoothing * (angleSin * 2);
 		}

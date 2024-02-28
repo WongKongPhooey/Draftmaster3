@@ -181,7 +181,7 @@ public class AIMovement : MonoBehaviour
 		wreckFlatRand = Random.Range(0f,-3f);
 		wreckMassRand = Random.Range(-0.5f,0.5f);
 		hitByPlayer = false;
-		speedDiffPadding = 0.4f;
+		speedDiffPadding = 0.2f;
 		
 		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
 		wreckProbability = (wreckFreq * 2) + 1;
@@ -1944,7 +1944,7 @@ public class AIMovement : MonoBehaviour
 			wreckForce.force = new Vector3(wreckFlatRand, 0f,windForce);
 		}
 
-		wreckDecel = baseDecel - (50f * wreckSine);
+		wreckDecel = baseDecel - (60f * wreckSine);
 		
 		if(wreckDecel < -200){
 			endWreck();
