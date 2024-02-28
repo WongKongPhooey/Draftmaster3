@@ -333,9 +333,11 @@ public class ModsUI : MonoBehaviour {
 				iconName = iconName.Split(".")[0];
 				iconName = iconName.ToUpper();
 			} else {
-				carNum = fileName.Substring(6);
-				carNum = carNum.Split(".")[0];
+				//Only icons should be uppercased
+				fileName = fileName.ToLower();
 			}
+			carNum = fileName.Substring(6);
+			carNum = carNum.Split(".")[0];
 		}
 		
 		int carNumInt = 999;
