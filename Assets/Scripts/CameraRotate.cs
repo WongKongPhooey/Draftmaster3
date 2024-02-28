@@ -390,7 +390,7 @@ public class CameraRotate : MonoBehaviour {
 						//Double checked
 						if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
 						  &&(officialSeries == true)){
-							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR166","");
+							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR181","");
 						}
 					}
 					gamePausedLate = true;
@@ -598,7 +598,7 @@ public class CameraRotate : MonoBehaviour {
 			//Double checked
 			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
 			  &&(officialSeries == true)){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR166","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR181","");
 			}
 		}
 		gamePausedLate = true;
@@ -621,7 +621,7 @@ public class CameraRotate : MonoBehaviour {
 				PlayFabManager.CheckLiveTimeTrial();
 				//Double checked
 				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR166","");
+					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR181","");
 				}
 			}
 		}
