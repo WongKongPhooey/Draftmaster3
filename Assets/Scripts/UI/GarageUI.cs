@@ -100,9 +100,9 @@ public class GarageUI : MonoBehaviour
 		
 		//Testing - Unlock All
 		#if UNITY_EDITOR
-		PlayerPrefs.SetInt("cup2422Unlocked",1);
-		PlayerPrefs.SetInt("cup2422Gears",10);
-		PlayerPrefs.SetInt("cup2422Class",5);
+		//PlayerPrefs.SetInt("cup2420Unlocked",1);
+		//PlayerPrefs.SetInt("cup2420Gears",180);
+		//PlayerPrefs.SetInt("cup2422Class",1);
 		#endif
 		
 		//PlayFabManager.ResetPassword();
@@ -191,8 +191,8 @@ public class GarageUI : MonoBehaviour
 			//Testing - Unlock All
 			#if UNITY_EDITOR
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",10);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",15);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",6);
 			#endif
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -365,6 +365,12 @@ public class GarageUI : MonoBehaviour
 			if(carClass == 0){
 				carClickable.SetActive(false);
 				carDisabled.SetActive(true);	
+			}
+			//Bug fix, for when cars get incorrectly unlocked early
+			if((carClass < unlockClass)&&(carUnlocked == 1)){
+				carClickable.SetActive(false);
+				carDisabled.SetActive(true);
+				carUnlocked = 0;
 			}
 		}
 		
