@@ -212,9 +212,6 @@ public class RaceRewardsUI : MonoBehaviour
 					float rnd = Random.Range(0,10);
 					//Top 3 = guaranteed reward
 					if((rnd <= chance)||(finishPos <= 3)){
-						while(validDriver == null){
-							Debug.Log("Awaiting driver rewards..");
-						}
 						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 						Debug.Log("Top 10 finish, add rewards. Valid Drivers: " + validDriver.Count);
 					} else {
@@ -335,7 +332,6 @@ public class RaceRewardsUI : MonoBehaviour
 				}
 			break;
 			case "Rookies":
-				//for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){

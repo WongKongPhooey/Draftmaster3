@@ -192,7 +192,7 @@ public class GarageUI : MonoBehaviour
 			#if UNITY_EDITOR
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",15);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",6);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
 			#endif
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
