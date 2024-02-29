@@ -83,10 +83,11 @@ public class RaceRewardsUI : MonoBehaviour
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		raceMenu = PlayerPrefs.GetInt("CurrentSeries");
 		raceSubMenu = PlayerPrefs.GetInt("CurrentSubseries");
+		validDriver = null;
 		if(seriesPrize != ""){
-			ListPrizeOptions(seriesPrize);
+			validDriver = ListPrizeOptions(seriesPrize);
 		} else {
-			ListPrizeOptions("");
+			validDriver = ListPrizeOptions("");
 		}
 		//Debug.Log("Series Prize: " + seriesPrize);
 		finishPos = PlayerPrefs.GetInt("PlayerFinishPosition");
@@ -176,7 +177,9 @@ public class RaceRewardsUI : MonoBehaviour
 					} else {
 						//Populate event reward pool
 						Debug.Log("Assign Event Prize");
-						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+						while(validDriver == null){
+							AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+						}
 					}
 				} else {
 					carReward = "";
@@ -194,7 +197,9 @@ public class RaceRewardsUI : MonoBehaviour
 					}
 					rewardMultiplier = Mathf.CeilToInt(rewardRatio);
 					Debug.Log("New reward multiplier: " + rewardMultiplier);
-					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+					while(validDriver == null){
+						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+					}
 				} else {
 					carReward = "";
 				}
@@ -207,8 +212,11 @@ public class RaceRewardsUI : MonoBehaviour
 					float rnd = Random.Range(0,10);
 					//Top 3 = guaranteed reward
 					if((rnd <= chance)||(finishPos <= 3)){
-						Debug.Log("Top 10 finish, add rewards");
+						while(validDriver == null){
+							Debug.Log("Awaiting driver rewards..");
+						}
 						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+						Debug.Log("Top 10 finish, add rewards. Valid Drivers: " + validDriver.Count);
 					} else {
 						carReward = "";
 					}
@@ -301,7 +309,9 @@ public class RaceRewardsUI : MonoBehaviour
 		}
 	}
 	
-	void ListPrizeOptions(string category){
+	List<string> ListPrizeOptions(string category){
+		List<string> prizeOptions = null;
+		Debug.Log("Looping through reward options.. Type: " + category);
 		switch(category){
 			//Team Rewards
 			case "cup20":
@@ -316,8 +326,9 @@ public class RaceRewardsUI : MonoBehaviour
 					if(seriesPrefix == category){
 						for(int j=0;j<99;j++){
 							if(DriverNames.getName(seriesPrefix,j) != null){
-								addReward(seriesPrefix, j);
-								//Debug.Log(category + " Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -330,8 +341,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
-								addReward(seriesPrefix, j);
-								//Debug.Log("Rookie Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -343,8 +355,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 1){
-								addReward(seriesPrefix, j);
-								//Debug.Log("1* Rarity Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -356,8 +369,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 2){
-								addReward(seriesPrefix, j);
-								//Debug.Log("2* Rarity Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -369,8 +383,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 3){
-								addReward(seriesPrefix, j);
-								//Debug.Log("3* Rarity Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -382,8 +397,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 4){
-								addReward(seriesPrefix, j);
-								//Debug.Log("4* Rarity Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -400,8 +416,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
-								addReward(seriesPrefix, j);
-								//Debug.Log(category + " Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -419,8 +436,9 @@ public class RaceRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category.Substring(0,3)){
 								if(DriverNames.getRarity(seriesPrefix,j) == 1){
-									addReward(seriesPrefix, j);
-									//Debug.Log(category + " Added: #" + i);
+									if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+										prizeOptions.Add("" + seriesPrefix + j + "");
+									}
 								}
 							}
 						}
@@ -447,8 +465,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getTeam(seriesPrefix,j) == category){
-								addReward(seriesPrefix, j);
-								//Debug.Log(category + " Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -467,8 +486,9 @@ public class RaceRewardsUI : MonoBehaviour
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == category){
-								addReward(seriesPrefix, j);
-								//Debug.Log(category + " Added: #" + i);
+								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									prizeOptions.Add("" + seriesPrefix + j + "");
+								}
 							}
 						}
 					}
@@ -520,20 +540,15 @@ public class RaceRewardsUI : MonoBehaviour
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
-							addReward(seriesPrefix, j);
-							//Debug.Log("Added: #" + i);
+							if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+								prizeOptions.Add("" + seriesPrefix + j + "");
+							}
 						}
 					}
 				}
 			break;
 		}
-	}
-	
-	void addReward(string seriesPrefix, int index){
-		//Check for max class
-		if(PlayerPrefs.GetInt(seriesPrefix + index + "Class") < 6){
-			validDriver.Add("" + seriesPrefix + index + "");
-		}
+		return prizeOptions;
 	}
 	
 	int getChampionshipPosition(){

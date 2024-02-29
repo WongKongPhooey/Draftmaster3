@@ -727,7 +727,7 @@ public class Movement : MonoBehaviour {
 		//Immediately stop calculating
 		if((gamePausedLate == true)||(RaceHUD.raceOver == true)){
 			return;
-		}		
+		}
 			
 		laneInv = 4 - lane;
 		laneFactor = 10000;
