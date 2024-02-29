@@ -770,6 +770,11 @@ public class AIMovement : MonoBehaviour
 		
 		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 4f) + (laneInv / 5f);
 		
+		//Immediately stop calculating
+		if((RaceHUD.raceOver == true)||(prePause == true)){
+			return;
+		}
+		
 		if(Movement.pacing == false){
 			if((isWrecking == true)||(wreckOver == true)){
 				//Bail, drop all Movement logic

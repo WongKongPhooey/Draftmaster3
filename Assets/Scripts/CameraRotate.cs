@@ -265,7 +265,7 @@ public class CameraRotate : MonoBehaviour {
 
 	// Update is called once per frame
 	void FixedUpdate() {
-		
+
 		//LateUpdate was unreliable..
 		//..so run this at next frame start instead.
 		if(gamePausedLate == true){
@@ -273,6 +273,7 @@ public class CameraRotate : MonoBehaviour {
 			   (RaceHUD.raceOver == true)){
 				Debug.Log("Time Paused (Camera Rotate)");
 				Time.timeScale = 0.0f;
+				return;
 			}
 			try {
 				pauseMenu = GameObject.Find("PauseMenu");
@@ -293,6 +294,10 @@ public class CameraRotate : MonoBehaviour {
 			}
 			catch (Exception e){
 				Debug.Log("Failed To End Moment Challenge: " + e.Message);
+			}
+			if(RaceHUD.raceOver == true){
+				Debug.Log("Time Paused (Race Over)");
+				Time.timeScale = 0.0f;
 			}
 		} else {
 			pauseMenu.SetActive(false);
@@ -400,6 +405,7 @@ public class CameraRotate : MonoBehaviour {
 			
 			//Race End
 			if(lap >= (raceEnd + 1)){
+				gamePausedLate = true;
 				endRace();
 			}
 		}
@@ -543,6 +549,12 @@ public class CameraRotate : MonoBehaviour {
 	}
 	
 	public void endRace(){
+		if(RaceHUD.raceOver == true){
+			//We've already ended the race.. waiting for logic elsewhere to finish
+			return;
+		} else {
+			RaceHUD.raceOver = true;
+		}
 		if(lap >= (raceEnd + 1)){
 			//Bug catch, again no idea on this one
 			if((straight == 1)||(turn == 1)){
@@ -561,7 +573,6 @@ public class CameraRotate : MonoBehaviour {
 			finishLine.transform.position = new Vector3(finishLine.transform.position.x,finishLine.transform.position.y,thePlayer.transform.position.z + 1f);
 			finishLine.GetComponent<Renderer>().enabled = true;
 		}
-		
 		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 			int rand = Random.Range(1,100);
 			//Lucky day
@@ -571,7 +582,6 @@ public class CameraRotate : MonoBehaviour {
 		}
 		carEngine.volume = 0;
 		crowdNoise.volume = 0;
-		RaceHUD.raceOver = true;
 		GameObject.Find("Player").GetComponent<Movement>().hideHUD();
 		Ticker.checkFinishPositions();
 		PlayerPrefs.SetInt("ExpAdded",0);
@@ -601,7 +611,6 @@ public class CameraRotate : MonoBehaviour {
 				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR181","");
 			}
 		}
-		gamePausedLate = true;
 	}
 	
 	public void saveRaceFastestLap(){
