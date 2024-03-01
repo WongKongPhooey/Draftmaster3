@@ -703,36 +703,26 @@ public class PlayFabManager : MonoBehaviour
 				saveType = "automatic";
 			}
 			
-			//Check for manual save
-			if(result.Data.ContainsKey("SavedPlayerProgress" + seriesPrefix)){
-				json = result.Data["SavedPlayerProgresscup20"].Value;
-				Series playerJson = JsonUtility.FromJson<Series>(json);
-				if(cloudLevel < int.Parse(playerJson.playerLevel)){
-					cloudLevel = int.Parse(playerJson.playerLevel);
-					//Debug.Log("Manual Save is at level " + cloudLevel);
-					saveType = "manual";
-				} else {
-					//Try to revert back to using the autosave
-					if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
-						json = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
-						playerJson = JsonUtility.FromJson<Series>(json);
-					}
-				}
-			} 
-			
 			if(json != ""){
 				//We found some form of save data, but should we load it?
 				 PlayerPrefs.SetInt("NewUser",1);
 				 Series playerJson = JsonUtility.FromJson<Series>(json);
 				 int level = int.Parse(playerJson.playerLevel);
 				 int transferTokens = 0;
+				 int savedTokens = 0;
 				 //Old save files don't have this field, now skippable
 				 if(playerJson.transferTokens != null){
 					transferTokens = int.Parse(playerJson.transferTokens);
-					if(PlayerPrefs.GetInt("TransferTokens") < transferTokens){
+					savedTokens = PlayerPrefs.GetInt("TransferTokens");
+					if(savedTokens < transferTokens){
 						PlayerPrefs.SetInt("TransferTokens", transferTokens);
+						savedTokens = PlayerPrefs.GetInt("TransferTokens");
 					}
 					//Debug.Log("Received " + transferTokens + " Transfer Tokens");
+				 }
+				 int minTokens = GameData.minTransferTokensFromLevel(level);
+				 if(minTokens > savedTokens){
+					PlayerPrefs.SetInt("TransferTokens", minTokens);
 				 }
 				 
 				 if(level > PlayerPrefs.GetInt("Level")){
@@ -740,22 +730,12 @@ public class PlayFabManager : MonoBehaviour
 					//Debug.Log("Your save is not a lower level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + ").");
 				 }
 				 
-				 //Every car set has to be in here to be loaded
-				 ArrayList allSeries = new ArrayList(); 
-				 allSeries.Add("cup20");
-				 allSeries.Add("cup22");
-				 allSeries.Add("cup23");
-				 allSeries.Add("irc00");
-				 allSeries.Add("dmc15");
-				 allSeries.Add("irl23");
-				 
+				 //Car sets have to be in here to be loaded
+				 string[] allSeries = DriverNames.getAllSeries();
+
 				 int unlockedCars = 0;
 				 foreach(string series in allSeries){
 					 //Debug.Log("Loading " + series);
-					 if(saveType == "manual"){
-						json = result.Data["SavedPlayerProgress" + series].Value;
-						playerJson = JsonUtility.FromJson<Series>(json);
-					 }
 					 if(saveType == "automatic"){
 						//Drop out if no save for this car set
 						if(result.Data["AutosavePlayerProgress" + series].Value == null){
@@ -851,14 +831,7 @@ public class PlayFabManager : MonoBehaviour
 		int totalUnlocks = 0;
 		
 		//Add all autosavable series here
-		//should probably be hooked up to the Series Data file instead
-		ArrayList allSeries = new ArrayList(); 
-		allSeries.Add("cup20");
-		allSeries.Add("cup22");
-		allSeries.Add("cup23");
-		allSeries.Add("irl23");
-		allSeries.Add("dmc15");
-		allSeries.Add("irc00");
+		string[] allSeries = DriverNames.getAllSeries();
 		
 		foreach(string series in allSeries){
 			for(int i=0;i<100;i++){
@@ -926,7 +899,6 @@ public class PlayFabManager : MonoBehaviour
 			for(int paint=1;paint<10;paint++){
 				if(AltPaints.getAltPaintName(seriesPrefix,car,paint) != null){
 					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
-						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
 						JSONOutput += "," + paint + "";
 					}
 				}
@@ -951,14 +923,14 @@ public class PlayFabManager : MonoBehaviour
 		};
 		try {
 			PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
-			//Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
+			Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
 		} catch (Exception e){
-			//Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
+			Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
 		}
 	}
 	
 	static void OnLeaderboardUpdate(UpdatePlayerStatisticsResult result){
-		//Debug.Log("Leaderboard Updated.");
+		Debug.Log("Leaderboard Updated.");
 	}
 	
 	public static void GetLeaderboard(string circuit){
@@ -1088,7 +1060,7 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardRequest {
-			StatisticName = "LiveTimeTrialR166",
+			StatisticName = "LiveTimeTrialR181",
 			StartPosition = 0,
 			MaxResultsCount = 20
 		};
@@ -1113,7 +1085,7 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
-			StatisticName = "LiveTimeTrialR166",
+			StatisticName = "LiveTimeTrialR181",
 			MaxResultsCount = 1
 		};
 		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLiveTimeTrialAroundPlayerGet, OnError);

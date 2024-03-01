@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Random=UnityEngine.Random;
 
 public class GarageUI : MonoBehaviour
 {
@@ -88,10 +89,22 @@ public class GarageUI : MonoBehaviour
 		
 		//Run a load before any saves to merge in any missing unlocks
 		if(PlayerPrefs.HasKey("PlayerUsername")){
-			PlayFabManager.GetSavedPlayerProgress();
+			try{
+				PlayFabManager.GetSavedPlayerProgress();
+			} catch (Exception e){
+  				Debug.Log("Failed to autoload from Playfab. Retrying login..");
+				PlayFabManager.LoginFromPrefs();
+			}
 		} else {
 			Debug.Log("Not Logged In");
 		}
+		
+		//Testing - Unlock All
+		#if UNITY_EDITOR
+		//PlayerPrefs.SetInt("cup2420Unlocked",1);
+		//PlayerPrefs.SetInt("cup2420Gears",180);
+		//PlayerPrefs.SetInt("cup2422Class",1);
+		#endif
 		
 		//PlayFabManager.ResetPassword();
 
@@ -178,9 +191,9 @@ public class GarageUI : MonoBehaviour
 			
 			//Testing - Unlock All
 			#if UNITY_EDITOR
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",10);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",0);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",Random.Range(0,9));
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",Random.Range(0,4));
 			#endif
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -353,6 +366,12 @@ public class GarageUI : MonoBehaviour
 			if(carClass == 0){
 				carClickable.SetActive(false);
 				carDisabled.SetActive(true);	
+			}
+			//Bug fix, for when cars get incorrectly unlocked early
+			if((carClass < unlockClass)&&(carUnlocked == 1)){
+				carClickable.SetActive(false);
+				carDisabled.SetActive(true);
+				carUnlocked = 0;
 			}
 		}
 		
@@ -1323,6 +1342,7 @@ public class GarageUI : MonoBehaviour
 		catch(Exception e){
 			Debug.Log("Cannot reach PlayFab");
 			alertPopup.GetComponent<AlertManager>().showPopup("Cannot Reach Cloud","Sorry, we can't currently retrieve and sync your save data. Do you have an internet connection?","dm2logo");
+			PlayFabManager.LoginFromPrefs();
 		}
 		loadAllCars();
 	}

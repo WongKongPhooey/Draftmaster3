@@ -279,7 +279,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[9,0] = "Gears";
 		levelUpRewards[9,1] = "20";
 		levelUpRewards[10,0] = "Transfer";
-		levelUpRewards[10,1] = "1";
+		levelUpRewards[10,1] = "2";
 		levelUpRewards[11,0] = "Gears";
 		levelUpRewards[11,1] = "35";
 		levelUpRewards[12,0] = "Gears";
@@ -289,7 +289,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[14,0] = "Gears";
 		levelUpRewards[14,1] = "35";
 		levelUpRewards[15,0] = "Transfer";
-		levelUpRewards[15,1] = "2";
+		levelUpRewards[15,1] = "3";
 		levelUpRewards[16,0] = "Gears";
 		levelUpRewards[16,1] = "50";
 		levelUpRewards[17,0] = "Gears";
@@ -299,7 +299,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[19,0] = "Gears";
 		levelUpRewards[19,1] = "50";
 		levelUpRewards[20,0] = "Transfer";
-		levelUpRewards[20,1] = "2";
+		levelUpRewards[20,1] = "4";
 		levelUpRewards[21,0] = "Gears";
 		levelUpRewards[21,1] = "75";
 		levelUpRewards[22,0] = "Gears";
@@ -309,7 +309,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[24,0] = "Gears";
 		levelUpRewards[24,1] = "75";
 		levelUpRewards[25,0] = "Transfer";
-		levelUpRewards[25,1] = "3";
+		levelUpRewards[25,1] = "5";
 		levelUpRewards[26,0] = "Gears";
 		levelUpRewards[26,1] = "100";
 		levelUpRewards[27,0] = "Gears";
@@ -319,7 +319,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[29,0] = "Gears";
 		levelUpRewards[29,1] = "100";
 		levelUpRewards[30,0] = "Transfer";
-		levelUpRewards[30,1] = "3";
+		levelUpRewards[30,1] = "7";
 		levelUpRewards[31,0] = "Gears";
 		levelUpRewards[31,1] = "150";
 		levelUpRewards[32,0] = "Gears";
@@ -329,7 +329,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[34,0] = "Gears";
 		levelUpRewards[34,1] = "150";
 		levelUpRewards[35,0] = "Transfer";
-		levelUpRewards[35,1] = "5";
+		levelUpRewards[35,1] = "8";
 		levelUpRewards[36,0] = "Gears";
 		levelUpRewards[36,1] = "200";
 		levelUpRewards[37,0] = "Gears";
@@ -339,7 +339,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[39,0] = "Gears";
 		levelUpRewards[39,1] = "200";
 		levelUpRewards[40,0] = "Transfer";
-		levelUpRewards[40,1] = "5";
+		levelUpRewards[40,1] = "10";
 		levelUpRewards[41,0] = "Gears";
 		levelUpRewards[41,1] = "250";
 		levelUpRewards[42,0] = "Gears";
@@ -349,7 +349,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[44,0] = "Gears";
 		levelUpRewards[44,1] = "250";
 		levelUpRewards[45,0] = "Transfer";
-		levelUpRewards[45,1] = "10";
+		levelUpRewards[45,1] = "15";
 		levelUpRewards[46,0] = "Gears";
 		levelUpRewards[46,1] = "400";
 		levelUpRewards[47,0] = "Gears";
@@ -359,7 +359,7 @@ public class GameData : MonoBehaviour {
 		levelUpRewards[49,0] = "Gears";
 		levelUpRewards[49,1] = "400";
 		levelUpRewards[50,0] = "Transfer";
-		levelUpRewards[50,1] = "15";
+		levelUpRewards[50,1] = "20";
 	}
 	
 	public static string levelUpReward(int level){
@@ -451,6 +451,86 @@ public class GameData : MonoBehaviour {
 		}
 	}
 	
+	public static int minTransferTokensFromLevel(int level){
+		switch(level){
+			case 1:
+			case 2:
+			case 3:
+			case 4:
+				return 0;
+				break;
+			case 5:
+			case 6:
+			case 7:
+			case 8:
+			case 9:
+				return 1;
+				break;
+			case 10:
+			case 11:
+			case 12:
+			case 13:
+			case 14:
+				return 3;
+				break;
+			case 15:
+			case 16:
+			case 17:
+			case 18:
+			case 19:
+				return 6;
+				break;
+			case 20:
+			case 21:
+			case 22:
+			case 23:
+			case 24:
+				return 10;
+				break;
+			case 25:
+			case 26:
+			case 27:
+			case 28:
+			case 29:
+				return 15;
+				break;
+			case 30:
+			case 31:
+			case 32:
+			case 33:
+			case 34:
+				return 22;
+				break;
+			case 35:
+			case 36:
+			case 37:
+			case 38:
+			case 39:
+				return 30;
+				break;
+			case 40:
+			case 41:
+			case 42:
+			case 43:
+			case 44:
+				return 40;
+				break;
+			case 45:
+			case 46:
+			case 47:
+			case 48:
+			case 49:
+				return 55;
+				break;
+			case 50:
+				return 75;
+				break;
+			default:
+				return 1;
+				break;
+		}
+	}
+
 	public static int upgradeCost(int carClass){
 		switch(carClass){
 			case 0:

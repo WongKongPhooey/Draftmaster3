@@ -230,10 +230,10 @@ public class StoreUIFunctions : MonoBehaviour
 				case "DailyJunkSpares":
 					dailyCollected = PlayerPrefs.GetInt("DailyGarage");
 					if(dailyCollected == 0){
-					PlayerPrefs.SetString("PrizeType","FreeDaily");
-					PlayerPrefs.SetInt("DailyGarage",1);
-					dailyCollected = 1;
-					SceneManager.LoadScene("PrizeCollection");
+						PlayerPrefs.SetString("PrizeType","FreeDaily");
+						PlayerPrefs.SetInt("DailyGarage",1);
+						dailyCollected = 1;
+						SceneManager.LoadScene("PrizeCollection");
 					} else {
 						alertPopup.GetComponent<AlertManager>().showPopup("Collected","Check back tomorrow for more spares!","dm2logo");
 					}

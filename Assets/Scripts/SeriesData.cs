@@ -693,9 +693,10 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[9,1] = "Half Season 2";
 		offlineSeries[9,2] = "2020 Cup Season";
 		offlineSeries[9,3] = "2022 Cup Season";
-		offlineSeries[9,4] = "2023 Cup (Easy)";
-		offlineSeries[9,5] = "2023 Cup (Hard)";
-		offlineSeries[9,6] = "2023 Cup (Extra Hard)";
+		offlineSeries[9,4] = "2023 Cup Season";
+		offlineSeries[9,5] = "2024 Cup (Easy)";
+		offlineSeries[9,6] = "2024 Cup (Hard)";
+		offlineSeries[9,7] = "2024 Cup (Extra Hard)";
 		//offlineSeries[9,9] = "Test Season";
 		
 		offlineSeriesImage[9,0] = "cup20livery22";
@@ -703,8 +704,9 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[9,2] = "cup20livery9";
 		offlineSeriesImage[9,3] = "cup22livery5";
 		offlineSeriesImage[9,4] = "cup23livery22";
-		offlineSeriesImage[9,5] = "cup23livery4";
-		offlineSeriesImage[9,6] = "cup23livery84";
+		offlineSeriesImage[9,5] = "cup24livery84";
+		offlineSeriesImage[9,6] = "cup24livery8";
+		offlineSeriesImage[9,7] = "cup24livery12";
 		//offlineSeriesImage[9,9] = "cup22livery1alt1";
 		
 		offlineDailyPlays[9,0] = 10;
@@ -714,22 +716,25 @@ public class SeriesData : MonoBehaviour{
 		offlineDailyPlays[9,4] = 20;
 		offlineDailyPlays[9,5] = 20;
 		offlineDailyPlays[9,6] = 20;
+		offlineDailyPlays[9,7] = 20;
 		
 		offlineAILevel[9,0] = 5;
 		offlineAILevel[9,1] = 5;
-		offlineAILevel[9,2] = 8;
-		offlineAILevel[9,3] = 10;
-		offlineAILevel[9,4] = 5;
-		offlineAILevel[9,5] = 10;
-		offlineAILevel[9,6] = 15;
+		offlineAILevel[9,2] = 7;
+		offlineAILevel[9,3] = 9;
+		offlineAILevel[9,4] = 12;
+		offlineAILevel[9,5] = 5;
+		offlineAILevel[9,6] = 10;
+		offlineAILevel[9,7] = 15;
 		
 		offlineMinLevel[9,0] = 10;
 		offlineMinLevel[9,1] = 15;
 		offlineMinLevel[9,2] = 20;
 		offlineMinLevel[9,3] = 20;
-		offlineMinLevel[9,4] = 25;
-		offlineMinLevel[9,5] = 30;
-		offlineMinLevel[9,6] = 35;
+		offlineMinLevel[9,4] = 20;
+		offlineMinLevel[9,5] = 25;
+		offlineMinLevel[9,6] = 30;
+		offlineMinLevel[9,7] = 35;
 		
 		offlineMinClass[9,0] = 1;
 		offlineMinClass[9,1] = 1;
@@ -738,16 +743,17 @@ public class SeriesData : MonoBehaviour{
 		offlineMinClass[9,4] = 1;
 		offlineMinClass[9,5] = 1;
 		offlineMinClass[9,6] = 1;
+		offlineMinClass[9,7] = 1;
 		
 		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8,9,10,11";
 		offlineTracklists[9,1] = "12,13,14,15,16,17,18,19,20,21";
 		offlineTracklists[9,2] = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21";
 		offlineTracklists[9,3] = "30,1,5,3,4,2,9,6,8,10,11,19,12,7,13,22,23,2,18,14,20,15,9,1,19,12,8,7,10,3,21,6,4";
 		offlineTracklists[9,4] = "30,1,5,3,4,2,9,8,6,10,11,12,19,26,13,22,23,2,18,14,9,20,1,19,12,8,7,10,3,21,6,4";
-		offlineTracklists[9,5] = "30,1,5,3,4,2,9,8,6,10,11,12,19,26,13,22,23,2,18,14,9,20,1,19,12,8,7,10,3,21,6,4";
-		offlineTracklists[9,6] = "30,1,5,3,4,2,9,8,6,10,11,12,19,26,13,22,23,2,18,14,9,20,1,19,12,8,7,10,3,21,6,4";
-			
-			
+		offlineTracklists[9,5] = "30,1,2,3,4,8,9,6,7,10,11,12,19,26,13,22,28,18,23,14,20,9,15,1,19,2,8,12,10,3,21,6,4";
+		offlineTracklists[9,6] = "30,1,2,3,4,8,9,6,7,10,11,12,19,26,13,22,28,18,23,14,20,9,15,1,19,2,8,12,10,3,21,6,4";
+		offlineTracklists[9,7] = "30,1,2,3,4,8,9,6,7,10,11,12,19,26,13,22,28,18,23,14,20,9,15,1,19,2,8,12,10,3,21,6,4";
+		
 		offlineFuel[9,0] = 6;
 		offlineFuel[9,1] = 8;
 		offlineFuel[9,2] = 10;
@@ -755,14 +761,16 @@ public class SeriesData : MonoBehaviour{
 		offlineFuel[9,4] = 10;
 		offlineFuel[9,5] = 10;
 		offlineFuel[9,6] = 10;
+		offlineFuel[9,7] = 10;
 		
 		offlinePrizes[9,0] = "";
 		offlinePrizes[9,1] = "";
 		offlinePrizes[9,2] = "cup20";
 		offlinePrizes[9,3] = "cup22";
-		offlinePrizes[9,4] = "Rarity1";
-		offlinePrizes[9,5] = "Rarity2";
-		offlinePrizes[9,6] = "Rarity3";
+		offlinePrizes[9,4] = "cup23";
+		offlinePrizes[9,5] = "Rarity1";
+		offlinePrizes[9,6] = "Rarity2";
+		offlinePrizes[9,7] = "Rarity3";
 	}
 
 	public static List<string> ListRewards(string category){
@@ -773,6 +781,8 @@ public class SeriesData : MonoBehaviour{
 			case "cup20":
 			case "cup22":
 			case "cup23":
+			case "cup24":
+			case "irl23":
 			case "dmc15":
 			case "irc00":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
@@ -858,6 +868,7 @@ public class SeriesData : MonoBehaviour{
 			case "CHV":
 			case "FRD":
 			case "TYT":
+			case "HON":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
@@ -875,6 +886,7 @@ public class SeriesData : MonoBehaviour{
 			case "CHV1":
 			case "FRD1":
 			case "TYT1":
+			case "HON1":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<99;j++){
@@ -891,9 +903,12 @@ public class SeriesData : MonoBehaviour{
 			
 			//Team Rewards
 			case "IND":
+			case "SPI":
 			case "RWR":
 			case "FRM":
 			case "RFR":
+			case "RFK":
+			case "TRK":
 			case "RCR":
 			case "CGR":
 			case "SHR":

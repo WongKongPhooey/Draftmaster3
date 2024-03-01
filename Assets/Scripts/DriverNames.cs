@@ -483,6 +483,12 @@ public class DriverNames : MonoBehaviour {
 		return false;
 	}
 	
+	public static string[] getAllSeries(){
+		loadData();
+		return allCarsets;
+	}
+	
+	
 	public static string getName(string seriesPrefix, int index){
 		loadData();
 		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
@@ -678,7 +684,7 @@ public class DriverNames : MonoBehaviour {
 		if(seriesPrefix == "cup24"){
 			rarity += 1;
 		}
-		if(seriesPrefix == "irl23"){
+		if(seriesPrefix == "irl24"){
 			rarity += 1;
 		}
 		if(seriesPrefix == "irc00"){

@@ -124,7 +124,7 @@ public class TrackUI : MonoBehaviour
 			}
 			trackName.text = getTrackName(tracksArray[i]);
 			raceLaps.text = "Laps " + calcRaceLaps(TrackData.getTrackLaps(trackId));
-			trackImage.texture = Resources.Load<Texture2D>(getTrackImage(tracksArray[i]));
+			trackImage.texture = Resources.Load<Texture2D>(TrackData.getTrackImage(tracksArray[i]));
 		}
 	}
 
@@ -165,91 +165,10 @@ public class TrackUI : MonoBehaviour
 		}
 		trackName.text = getTrackName(tracksArray[seriesIndex]);
 		raceLaps.text = "Laps " + PlayerPrefs.GetInt("RaceLaps");
-		trackImage.texture = Resources.Load<Texture2D>(getTrackImage(tracksArray[seriesIndex]));
+		trackImage.texture = Resources.Load<Texture2D>(TrackData.getTrackImage(tracksArray[seriesIndex]));
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
 			startRace(trackCodeName);
 		}
-	}
-	
-	string getTrackImage(string trackId){
-		string trackImageName = "";
-		switch(trackId){
-			case "1":
-				trackImageName = "SuperTriOval";
-				break;
-			case "2":
-				trackImageName = "AngledTriOval";
-				break;
-			case "3":
-				trackImageName = "TriOval";
-				break;
-			case "4":
-				trackImageName = "Phoenix";
-				break;
-			case "5":
-				trackImageName = "SuperTriOval";
-				break;
-			case "6":
-				trackImageName = "LongOval";
-				break;
-			case "7":
-				trackImageName = "AngledTriOval";
-				break;
-			case "8":
-				trackImageName = "TinyOval";
-				break;
-			case "9":
-				trackImageName = "TriOval";
-				break;
-			case "10":
-				trackImageName = "Talladega";
-				break;
-			case "11":
-				trackImageName = "SmallOval";
-				break;
-			case "12":
-				trackImageName = "TriOval";
-				break;
-			case "13":
-				trackImageName = "AngledTriOval";
-				break;
-			case "14":
-				trackImageName = "LongPond";
-				break;
-			case "15":
-				trackImageName = "SuperTriOval";
-				break;
-			case "16":
-				trackImageName = "TriOval";
-				break;
-			case "17":
-				trackImageName = "TriOval";
-				break;
-			case "18":
-				trackImageName = "LongOval";
-				break;
-			case "19":
-				trackImageName = "Darlington";
-				break;
-			case "20":
-				trackImageName = "Indianapolis";
-				break;
-			case "21":
-				trackImageName = "BigOval";
-				break;
-			case "22":
-				trackImageName = "Madison";
-				break;
-			case "23":
-				trackImageName = "TriOval";
-				break;
-			case "30":
-				trackImageName = "TinyOval";
-				break;
-			default:
-				break;
-		}
-		return trackImageName;
 	}
 	
 	static string getTrackName(string trackId){
@@ -305,7 +224,7 @@ public class TrackUI : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
-		//PlayerPrefs.SetInt("RaceLaps",1);
+		PlayerPrefs.SetInt("RaceLaps",1);
 		#endif
 
 		SceneManager.LoadScene(track);

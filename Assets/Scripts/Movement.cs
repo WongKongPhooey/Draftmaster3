@@ -81,6 +81,8 @@ public class Movement : MonoBehaviour {
 	float baseDecel;
 	float slideX;
 	public static float playerWreckDecel;
+	float sparksEndSpeed;
+	float maxSparksRand;
 	float wreckAngle;
 	float wreckTorque;
 	int wreckHits;
@@ -93,6 +95,8 @@ public class Movement : MonoBehaviour {
 	Transform rightSparks;
 	ParticleSystem leftSparksParticles;
 	ParticleSystem rightSparksParticles;
+	ParticleSystemRenderer leftSparksParticleRenderer;
+	ParticleSystemRenderer rightSparksParticleRenderer;
 	Transform tireSmoke;
 	ParticleSystem tireSmokeParticles;
 	
@@ -233,8 +237,10 @@ public class Movement : MonoBehaviour {
 		wreckRigidbody = this.GetComponent<Rigidbody>();
 		leftSparks = this.transform.Find("SparksL");
 		rightSparks = this.transform.Find("SparksR");
-		leftSparksParticles = this.transform.Find("SparksL").GetComponent<ParticleSystem>();
-		rightSparksParticles = this.transform.Find("SparksR").GetComponent<ParticleSystem>();
+		leftSparksParticles = leftSparks.GetComponent<ParticleSystem>();
+		rightSparksParticles = rightSparks.GetComponent<ParticleSystem>();
+		leftSparksParticleRenderer = leftSparks.GetComponent<ParticleSystemRenderer>();
+		rightSparksParticleRenderer = rightSparks.GetComponent<ParticleSystemRenderer>();
 		tireSmoke = this.transform.Find("TireSmoke");
 		tireSmokeParticles = tireSmoke.GetComponent<ParticleSystem>();
 		
@@ -713,12 +719,16 @@ public class Movement : MonoBehaviour {
 			} else {
 				playerSpeed = 0;
 				targetForce = 0;
-				updateWindForce();
+				updateWindForce(1);
 				this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
 			}
 			return;
 		}
-				
+		//Immediately stop calculating
+		if((gamePausedLate == true)||(RaceHUD.raceOver == true)){
+			return;
+		}
+			
 		laneInv = 4 - lane;
 		laneFactor = 10000;
 		weakestLane = laneInv/laneFactor;
@@ -732,6 +742,8 @@ public class Movement : MonoBehaviour {
 		vStrongLane = laneInv/laneFactor;
 		
 		carSpeedOffset = CameraRotate.carSpeedOffset;
+		
+		//Draft increases with track speed
 		draftFactor = (200 - carSpeedOffset)/200;
 		//Debug.Log("Draft Factor: " + draftFactor);
 		
@@ -759,7 +771,10 @@ public class Movement : MonoBehaviour {
 			//Speed up
 			if(playerSpeed < variTopSpeed){
 				
-				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 1000f);
+				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f);
+				#if UNITY_EDITOR
+				//Debug.Log("Total Player draft strength: " + draftStrength + " - " + (10 - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
+				#endif
 				
 				float diffToMax = variTopSpeed - playerSpeed;
 				//If approaching max speed, taper off
@@ -886,7 +901,6 @@ public class Movement : MonoBehaviour {
 		gettableSpeed = playerSpeed;
 		
 		//Speed difference between the Player and the Control Car
-		//speed = (AISpeed + wreckDecel) - (Movement.playerSpeed + Movement.playerWreckDecel);
 		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
 		playerZ = vehicle.transform.position.z;
@@ -1233,9 +1247,9 @@ public class Movement : MonoBehaviour {
 			return;
 		}
 		
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+		tireSmokeParticles.Play();
+		leftSparksParticles.Play();
+		rightSparksParticles.Play();
 		
 		if(wreckOver == false){
 			isWrecking = true;
@@ -1260,11 +1274,13 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<Rigidbody>().useGravity = false;
 		
 		//Apply wind/drag
-		baseDecel = -0.25f;
+		baseDecel = -0.35f;
 		slideX = 0;
 		playerWreckDecel = 0;
+		sparksEndSpeed = Random.Range(-140,-190);
+		maxSparksRand = Random.Range(5,30);
 		targetForce = 0;
-		forceSmoothing = 0.2f;
+		forceSmoothing = 0.5f;
 		windForce = targetForce;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,targetForce);
 		float wreckTorque;
@@ -1276,12 +1292,11 @@ public class Movement : MonoBehaviour {
 		} else {
 			//First impact, car will start straight
 			wreckTorque = Random.Range(-0.35f, 0.35f) * 10;
+			if(wallrideMod == true){
+				wreckTorque = 0;
+			}
 		}
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
-		
-		this.transform.Find("TireSmoke").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
-		this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
@@ -1291,11 +1306,11 @@ public class Movement : MonoBehaviour {
 	
 	public void endWreck(){
 		playerSpeed = 0;
-		baseDecel = -0.25f;
+		baseDecel = 0;
 		slideX = 0;
 		playerWreckDecel = 0;
 		targetForce = 0;
-		updateWindForce();
+		updateWindForce(0);
 		isWrecking = false;
 		wreckOver = true;
 		hideHUD();
@@ -1351,7 +1366,7 @@ public class Movement : MonoBehaviour {
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
-		baseDecel-=0.32f;
+		baseDecel-=0.42f;
 		slideX = ((baseDecel + 1) / 4f) + 20f;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
 		//         -200f = -20x, -100f = -10x, 0f = 0x
@@ -1362,25 +1377,27 @@ public class Movement : MonoBehaviour {
 		if(wallrideMod == false){
 			targetForce = playerWreckDecel;
 		}
-		updateWindForce();
+		updateWindForce(wreckSine);
 		if(CameraRotate.onTurn == true){
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			if(wallrideMod == true){
-				baseDecel+=0.15f;
+				baseDecel+=0.35f;
 				this.GetComponent<ConstantForce>().force = new Vector3(10f,0f,40f);
 			} else {
 				this.GetComponent<ConstantForce>().force = new Vector3(slideX,0f,windForce);
-				//Debug.Log("Side Force: " + slideX);
+				//Debug.Log("Windforce: " + windForce);
 			}
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
 			this.GetComponent<ConstantForce>().force = new Vector3(-3f, 0f,windForce);
+			//Debug.Log("Windforce: " + windForce);
 		}
-		playerWreckDecel = baseDecel - (50f * wreckSine);
+		playerWreckDecel = baseDecel - (60f * wreckSine);
+		//Debug.Log(playerWreckDecel);
 		
 		//Debug.Log("Wreck Decel: " + playerWreckDecel);
-		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce < 0){
+		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce <= 0){
 			endWreck();
 		}
 		
@@ -1396,12 +1413,24 @@ public class Movement : MonoBehaviour {
 			this.gameObject.transform.position = new Vector3(2f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
 		}
 		
-		//Align particle system to global track direction
-		leftSparks.rotation = Quaternion.Euler(0,180,0);
-		rightSparks.rotation = Quaternion.Euler(0,180,0);
-		leftSparksParticles.startSpeed = 50 + (playerWreckDecel / 4);
-		rightSparksParticles.startSpeed = 50 + (playerWreckDecel / 4);
-	
+		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + playerWreckDecel);
+		if(sparksEndSpeed < playerWreckDecel){
+			//Align particle system to global track direction
+			leftSparks.rotation = Quaternion.Euler(0,180,0);
+			rightSparks.rotation = Quaternion.Euler(0,180,0);
+			leftSparksParticles.startSpeed = 150 + (playerWreckDecel / 2);
+			rightSparksParticles.startSpeed = 150 + (playerWreckDecel / 2);
+			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (playerWreckDecel / 12));
+			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (playerWreckDecel / 12));
+			leftSparksParticles.startLifetime = 0.2f + ((0-playerWreckDecel) / 50);
+			rightSparksParticles.startLifetime = 0.2f + ((0-playerWreckDecel) / 50);
+			leftSparksParticleRenderer.lengthScale = 0.5f + (playerWreckDecel / 200);
+			rightSparksParticleRenderer.lengthScale = 0.5f + (playerWreckDecel / 200);
+		} else {
+			leftSparksParticles.Stop();
+			rightSparksParticles.Stop();
+		}
+		
 		//Flatten the smoke
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
 		float smokeMultiplier = Mathf.Sin(wreckAngle);
@@ -1421,12 +1450,13 @@ public class Movement : MonoBehaviour {
 		}
 	}
 	
-	void updateWindForce(){
-		if(windForce < targetForce - forceSmoothing){
-			windForce += forceSmoothing;
+	void updateWindForce(float angleSin){
+		//Debug.Log("Wreck Angle Sin: " + (forceSmoothing * (angleSin * 2)));
+		if(windForce < targetForce - (forceSmoothing * (angleSin * 2))){
+			windForce += forceSmoothing * (angleSin * 2);
 		}
-		if(windForce > targetForce + forceSmoothing){
-			windForce -= forceSmoothing;
+		if(windForce > targetForce + (forceSmoothing * (angleSin * 2))){
+			windForce -= forceSmoothing * (angleSin * 2);
 		}
 	}
 	

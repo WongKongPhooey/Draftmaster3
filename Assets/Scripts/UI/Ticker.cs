@@ -528,6 +528,8 @@ public class Ticker : MonoBehaviour
 				PlayerPrefs.SetInt("TotalTop5s" + seriesPrefix + playerCarNum, 1);
 			}
 		}
+		maxFrameRedraws = 50;
+		updateTickerDisplay();
 	}
 
 	public static void togglePause(){
