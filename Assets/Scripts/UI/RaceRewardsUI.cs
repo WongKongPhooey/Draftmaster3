@@ -307,7 +307,7 @@ public class RaceRewardsUI : MonoBehaviour
 	}
 	
 	List<string> ListPrizeOptions(string category){
-		List<string> prizeOptions = null;
+		List<string> prizeOptions = new List<string>();
 		Debug.Log("Looping through reward options.. Type: " + category);
 		switch(category){
 			//Team Rewards

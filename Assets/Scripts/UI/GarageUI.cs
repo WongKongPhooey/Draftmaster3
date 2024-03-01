@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Random=UnityEngine.Random;
 
 public class GarageUI : MonoBehaviour
 {
@@ -190,9 +191,9 @@ public class GarageUI : MonoBehaviour
 			
 			//Testing - Unlock All
 			#if UNITY_EDITOR
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",15);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",4);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",0);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",Random.Range(0,9));
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",Random.Range(0,4));
 			#endif
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);

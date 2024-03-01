@@ -1394,7 +1394,7 @@ public class Movement : MonoBehaviour {
 			//Debug.Log("Windforce: " + windForce);
 		}
 		playerWreckDecel = baseDecel - (60f * wreckSine);
-		Debug.Log(playerWreckDecel);
+		//Debug.Log(playerWreckDecel);
 		
 		//Debug.Log("Wreck Decel: " + playerWreckDecel);
 		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce <= 0){

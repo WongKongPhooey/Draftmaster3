@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CollectRewardsUI : MonoBehaviour
 {
@@ -44,14 +45,8 @@ public class CollectRewardsUI : MonoBehaviour
 	public static int rewardMultiplier;
 	public static int carCurrentGears;
 	public static int carClassMax;
-
-	public List<string> validDriver = new List<string>();
 	
 	public GameObject rewardsTitle;
-	
-	public GameObject expTitle;
-	public GameObject moneyTitle;
-	public GameObject gearsTitle;
 	public GameObject partsTitle;
 	public GameObject partsCar;
 	
@@ -77,15 +72,16 @@ public class CollectRewardsUI : MonoBehaviour
         prizeType=PlayerPrefs.GetString("PrizeType");
         Debug.Log(prizeType);
 
-        List<string> validRewards;
+        List<string> validRewards = new List<string>();
         switch(prizeType){
             case "MysteryGarage":
                 validRewards = getValidRewards("");
-                AssignPrizes(validRewards[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+				Debug.Log("Valid Rewards: " + validRewards.Count);
+                AssignPrizes(validRewards[Random.Range(0,validRewards.Count)], randCarPartsAmt(25));
                 break;
             case "FreeDaily":
                 validRewards = getValidRewards("");
-                AssignPrizes(validRewards[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+                AssignPrizes(validRewards[Random.Range(0,validRewards.Count)], randCarPartsAmt(13));
                 break;
             default:
                 break;
@@ -96,16 +92,11 @@ public class CollectRewardsUI : MonoBehaviour
 		partsCar = GameObject.Find("PartsCar");
 		
 		partsTitle.GetComponent<TMPro.TMP_Text>().text = "" + carReward + "\n(" + carCurrentGears + ")";
-		partsTitle.GetComponent<UIAnimate>().animOffset = 160;
-		if(carReward != ""){
-			partsTitle.GetComponent<UIAnimate>().scaleIn();
-			
-			if(carPrizeNumAlt != ""){
-				//partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrizeAlt);
-			} else {
-				//partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrize);
-			}
-		}
+		partsCar.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(carPrize);
+		
+		partsTitle.GetComponent<UIAnimate>().scaleIn();
+		partsCar.GetComponent<UIAnimate>().scaleIn();
+
 		
 		//Tidyup at the end
 		PlayerPrefs.DeleteKey("SeriesPrize");
@@ -113,25 +104,18 @@ public class CollectRewardsUI : MonoBehaviour
 		PlayerPrefs.DeleteKey("MomentComplete");
     }
 
-   void AssignPrizes(string carId, string setPrize, int multiplier){
-		Debug.Log("Set Prize: " + setPrize);
+   void AssignPrizes(string carId, int amount){
 		if(!PlayerPrefs.HasKey(carId + "Gears")){
-			PlayerPrefs.SetInt(carId + "Gears", multiplier);
+			PlayerPrefs.SetInt(carId + "Gears", 0);
 		}
 		int carGears = PlayerPrefs.GetInt(carId + "Gears");
 		string seriesPrefix = carId.Substring(0,5);
 		int carNum = int.Parse(carId.Substring(5));
-		if(int.Parse(setPrize) > 1){
-			//Likely has a big fixed prize set e.g. 35 car parts
-			PlayerPrefs.SetInt(carId + "Gears", carGears + int.Parse(setPrize));
+		
+		PlayerPrefs.SetInt(carId + "Gears", carGears + amount);
+		carReward = "(" + DriverNames.getSeriesNiceName(seriesPrefix) + ") " + DriverNames.getName(seriesPrefix, carNum) + " +" + amount;			
+		carCurrentGears = carGears + amount;
 			
-			carReward = "(" + DriverNames.getSeriesNiceName(seriesPrefix) + ") " + DriverNames.getName(seriesPrefix, carNum) + " +" + int.Parse(setPrize);			
-			carCurrentGears = carGears + int.Parse(setPrize);
-		} else {
-			PlayerPrefs.SetInt(carId + "Gears", carGears + multiplier);
-			carReward = "(" + DriverNames.getSeriesNiceName(seriesPrefix) + ") " + DriverNames.getName(seriesPrefix, carNum) + " +" + multiplier;			
-			carCurrentGears = carGears + multiplier;
-		}
 		carPrize = seriesPrefix + "livery" + carNum;
 		carPrizeNum = carNum;
 		
@@ -141,7 +125,7 @@ public class CollectRewardsUI : MonoBehaviour
 	}
 	
 	List<string> getValidRewards(string category){
-        List<string> validRewards = null;
+        List<string> rewardsList = new List<string>();
 		switch(category){
 			//Team Rewards
 			case "cup20":
@@ -157,7 +141,7 @@ public class CollectRewardsUI : MonoBehaviour
 						for(int j=0;j<99;j++){
 							if(DriverNames.getName(seriesPrefix,j) != null){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 								//Debug.Log(category + " Added: #" + i);
 							}
@@ -173,7 +157,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -187,7 +171,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 1){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -201,7 +185,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 2){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -215,7 +199,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 3){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -229,7 +213,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 4){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -248,7 +232,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -268,7 +252,7 @@ public class CollectRewardsUI : MonoBehaviour
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category.Substring(0,3)){
 								if(DriverNames.getRarity(seriesPrefix,j) == 1){
 									if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                        validRewards.Add("" + seriesPrefix + j + "");
+                                        rewardsList.Add("" + seriesPrefix + j + "");
                                     }
 								}
 							}
@@ -297,7 +281,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getTeam(seriesPrefix,j) == category){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -318,7 +302,7 @@ public class CollectRewardsUI : MonoBehaviour
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == category){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                                    validRewards.Add("" + seriesPrefix + j + "");
+                                    rewardsList.Add("" + seriesPrefix + j + "");
                                 }
 							}
 						}
@@ -326,19 +310,23 @@ public class CollectRewardsUI : MonoBehaviour
 				}
 			    break;			
 			default:
+				//Debug.Log("Looping through possible rewards");
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
+					//Debug.Log("Looping through " + seriesPrefix);
 					for(int j=0;j<99;j++){
+						//Debug.Log("Looping through " + seriesPrefix + " #" + j);
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-                               validRewards.Add("" + seriesPrefix + j + "");
+								//Debug.Log("Adding " + seriesPrefix + j + "");
+                                rewardsList.Add("" + seriesPrefix + j + "");
                             }    
 						}
 					}
 				}
 			break;
 		}
-        return validRewards;
+        return rewardsList;
 	}
 	
 	public static int randCarPartsAmt(int maxParts){

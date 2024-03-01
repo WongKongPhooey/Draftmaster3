@@ -566,12 +566,19 @@ public class CameraRotate : MonoBehaviour {
 					if(lap <= raceEnd + 1){
 						return;
 					}
+					
 					//Don't end the race
 				}
 			}
 			lap--;
 			finishLine.transform.position = new Vector3(finishLine.transform.position.x,finishLine.transform.position.y,thePlayer.transform.position.z + 1f);
 			finishLine.GetComponent<Renderer>().enabled = true;
+		}
+		if(lap == raceEnd){
+			if(Movement.wreckOver == true){
+				Debug.Log("We've wrecked on the last lap!");
+				gamePausedLate = true;
+			}
 		}
 		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 			int rand = Random.Range(1,100);
