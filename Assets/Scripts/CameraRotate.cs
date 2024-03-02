@@ -339,7 +339,6 @@ public class CameraRotate : MonoBehaviour {
 			if(cautionOut == false){;
 				lap++;
 			}
-			lengthcounter=0;
 			
 			//Final Lap
 			if(CameraRotate.lap == CameraRotate.raceEnd){
@@ -357,15 +356,20 @@ public class CameraRotate : MonoBehaviour {
 				this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
 			}
 			
-			if((averageSpeed > raceLapRecord)&&(lap > 1)){
-				raceLapRecord = averageSpeed;
+			if(lengthcounter >= 100){		
+				if((averageSpeed > raceLapRecord)&&(lap > 1)){
+					raceLapRecord = averageSpeed;
+				}
+				if((averageSpeed > lapRecord)&&(lap > 1)){
+					lapRecord = averageSpeed;
+				}
+				if(raceLapRecord > lapRecord){
+					lapRecord = raceLapRecord;
+				}
+				Debug.Log("Checked for a lap record. Track length checked at: " + lengthcounter);
 			}
-			if((averageSpeed > lapRecord)&&(lap > 1)){
-				lapRecord = averageSpeed;
-			}
-			if(raceLapRecord > lapRecord){
-				lapRecord = raceLapRecord;
-			}
+			
+			lengthcounter=0;
 
 			averageSpeed = 0;
 			averageSpeedCount = 0;
@@ -381,6 +385,9 @@ public class CameraRotate : MonoBehaviour {
 					carEngine.volume = 0;
 					crowdNoise.volume = 0;
 					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
+					if(raceLapRecordInt < 0){
+						raceLapRecordInt = 0;
+					}
 					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
 					if(PlayerPrefs.HasKey("FastestLap" + circuit)){
@@ -566,7 +573,6 @@ public class CameraRotate : MonoBehaviour {
 					if(lap <= raceEnd + 1){
 						return;
 					}
-					
 					//Don't end the race
 				}
 			}
@@ -658,6 +664,10 @@ public class CameraRotate : MonoBehaviour {
 			RaceHUD.gamePaused = true;
 			gamePausedLate = true;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = false;
+			AudioSource[] sounds = TDCamera.gameObject.GetComponents<AudioSource>();
+			for(int i=0;i < sounds.Length;i++){
+				sounds[i].mute = true;
+			}
 			PlayerPrefs.SetInt("Volume",0);
 			PlayerPrefs.SetInt("MidRaceLoading", 1);
 			pauseMenu.SetActive(true);
@@ -669,6 +679,10 @@ public class CameraRotate : MonoBehaviour {
 			gamePausedLate = false;
 			Time.timeScale = 1.0f;
 			TDCamera.gameObject.GetComponent<AudioListener>().enabled = true;
+			AudioSource[] sounds = TDCamera.gameObject.GetComponents<AudioSource>();
+			for(int i=0;i < sounds.Length;i++){
+				sounds[i].mute = false;
+			}
 			PlayerPrefs.SetInt("Volume",1);
 			pauseMenu.SetActive(false);
 			Debug.Log("Unpause the game");

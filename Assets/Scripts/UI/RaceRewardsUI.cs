@@ -177,9 +177,7 @@ public class RaceRewardsUI : MonoBehaviour
 					} else {
 						//Populate event reward pool
 						Debug.Log("Assign Event Prize");
-						while(validDriver == null){
-							AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
-						}
+						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 					}
 				} else {
 					carReward = "";
@@ -197,9 +195,7 @@ public class RaceRewardsUI : MonoBehaviour
 					}
 					rewardMultiplier = Mathf.CeilToInt(rewardRatio);
 					Debug.Log("New reward multiplier: " + rewardMultiplier);
-					while(validDriver == null){
-						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
-					}
+					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 				} else {
 					carReward = "";
 				}
@@ -321,7 +317,7 @@ public class RaceRewardsUI : MonoBehaviour
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					if(seriesPrefix == category){
-						for(int j=0;j<99;j++){
+						for(int j=0;j<=99;j++){
 							if(DriverNames.getName(seriesPrefix,j) != null){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
 									prizeOptions.Add("" + seriesPrefix + j + "");
@@ -334,10 +330,12 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Rookies":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					Debug.Log("Searching " + seriesPrefix);
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
+									Debug.Log("Adding " + seriesPrefix + j + "");
 									prizeOptions.Add("" + seriesPrefix + j + "");
 								}
 							}
@@ -348,7 +346,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Rarity1":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 1){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
@@ -362,7 +360,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Rarity2":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 2){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
@@ -376,7 +374,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Rarity3":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 3){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
@@ -390,7 +388,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Rarity4":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 4){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
@@ -409,7 +407,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "HON":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
@@ -428,7 +426,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "HON1":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category.Substring(0,3)){
 								if(DriverNames.getRarity(seriesPrefix,j) == 1){
@@ -458,7 +456,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "HEN":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getTeam(seriesPrefix,j) == category){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
@@ -479,7 +477,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Legend":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == category){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
@@ -534,7 +532,7 @@ public class RaceRewardsUI : MonoBehaviour
 			default:
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
 								prizeOptions.Add("" + seriesPrefix + j + "");

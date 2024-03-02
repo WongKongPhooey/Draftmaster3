@@ -251,6 +251,7 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("CautionHasBeen",0);
 		PlayerPrefs.SetInt("ExpAdded",0);
 		PlayerPrefs.SetInt("ActiveCaution",0);
+		PlayerPrefs.SetInt("Volume",1);
 
 		//First Time Init
 		if(!PlayerPrefs.HasKey("TotalStarts")){
