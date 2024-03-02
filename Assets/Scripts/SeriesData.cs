@@ -392,13 +392,13 @@ public class SeriesData : MonoBehaviour{
 		offlineAILevel[5,0] = 5;
 		offlineAILevel[5,1] = 5;
 		offlineAILevel[5,2] = 5;
-		offlineAILevel[5,3] = 5;
-		offlineAILevel[5,4] = 5;
+		offlineAILevel[5,3] = 8;
+		offlineAILevel[5,4] = 8;
 		offlineAILevel[5,5] = 8;
-		offlineAILevel[5,6] = 8;
-		offlineAILevel[5,7] = 10;
-		offlineAILevel[5,8] = 10;
-		offlineAILevel[5,9] = 10;
+		offlineAILevel[5,6] = 10;
+		offlineAILevel[5,7] = 12;
+		offlineAILevel[5,8] = 12;
+		offlineAILevel[5,9] = 12;
 		
 		offlineMinLevel[5,0] = 10;
 		offlineMinLevel[5,1] = 13;
@@ -788,7 +788,7 @@ public class SeriesData : MonoBehaviour{
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					if(seriesPrefix == category){
-						for(int j=0;j<99;j++){
+						for(int j=0;j<=99;j++){
 							if(DriverNames.getName(seriesPrefix,j) != null){
 								validDriver.Add("" + seriesPrefix + j + "");
 								//Debug.Log(category + " Added: #" + i);
@@ -801,7 +801,7 @@ public class SeriesData : MonoBehaviour{
 				//for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -814,7 +814,7 @@ public class SeriesData : MonoBehaviour{
 			case "Rarity1":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 1){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -827,7 +827,7 @@ public class SeriesData : MonoBehaviour{
 			case "Rarity2":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 2){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -840,7 +840,7 @@ public class SeriesData : MonoBehaviour{
 			case "Rarity3":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 3){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -850,10 +850,23 @@ public class SeriesData : MonoBehaviour{
 					}
 				}
 			break;
+			case "Rarity3Plus":
+				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
+					string seriesPrefix = DriverNames.allWinnableCarsets[i];
+					for(int j=0;j<=99;j++){
+						if(DriverNames.getName(seriesPrefix,j) != null){
+							if(DriverNames.getRarity(seriesPrefix,j) >= 3){
+								validDriver.Add("" + seriesPrefix + j + "");
+								//Debug.Log("4* Rarity Added: #" + i);
+							}
+						}
+					}
+				}
+			break;
 			case "Rarity4":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 4){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -871,7 +884,7 @@ public class SeriesData : MonoBehaviour{
 			case "HON":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -889,7 +902,7 @@ public class SeriesData : MonoBehaviour{
 			case "HON1":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category.Substring(0,3)){
 								if(DriverNames.getRarity(seriesPrefix,j) == 1){
@@ -917,7 +930,7 @@ public class SeriesData : MonoBehaviour{
 			case "HEN":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getTeam(seriesPrefix,j) == category){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -937,7 +950,7 @@ public class SeriesData : MonoBehaviour{
 			case "Legend":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == category){
 								validDriver.Add("" + seriesPrefix + j + "");
@@ -951,7 +964,7 @@ public class SeriesData : MonoBehaviour{
 			default:
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					for(int j=0;j<99;j++){
+					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							validDriver.Add("" + seriesPrefix + j + "");
 							//Debug.Log("Added: #" + i);
