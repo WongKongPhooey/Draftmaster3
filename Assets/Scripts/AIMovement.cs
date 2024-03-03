@@ -24,7 +24,7 @@ public class AIMovement : MonoBehaviour
 	float AIVariTopSpeed;
     float speedRand;
     float accelRand;
-	int AILevel;
+	float AILevel;
     int laneticker;
     int laneChangeDuration;
     int laneChangeBackout;
@@ -218,11 +218,12 @@ public class AIMovement : MonoBehaviour
 		currentSubseries = PlayerPrefs.GetInt("CurrentSubseries").ToString();
 		
 		if(PlayerPrefs.GetString("RaceType") == "Event"){
-			AILevel = EventData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			AILevel = (float)EventData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		} else {
-			AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			AILevel = (float)SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			//Debug.Log("AILevel: " + AILevel);
 		}
-		PlayerPrefs.SetInt("RaceAILevel", AILevel);
+		PlayerPrefs.SetInt("RaceAILevel", (int)AILevel);
 		
 		raycastBatch = new NativeArray<RaycastCommand>(8, Allocator.Persistent);
 		raycastHits = new NativeArray<RaycastHit>(8, Allocator.Persistent);
@@ -869,9 +870,12 @@ public class AIMovement : MonoBehaviour
 			//Slow down
 			if (AISpeed > 200){
 				
+				#if UNITY_EDITOR
 				if(debugPlayer == true){
 					Debug.Log(AICar.name + " slowing down, no forward draft");
 				}
+				#endif
+				
 				//No draft, slow with drag
 				if(dominator == true){
 					AISpeed -= ((dragDecelMulti - (AILevel / 6000f)) / 2) * draftFactor;
@@ -925,11 +929,11 @@ public class AIMovement : MonoBehaviour
 			//Bump draft can't exceed slingshot speed (for balance)
 			if(AISpeed <= (AIVariTopSpeed - 2f)){
 				
-				AISpeed += (backdraftMulti + (AILevel / 2000));
+				AISpeed += (backdraftMulti + (AILevel / 1500f));
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					//Debug.Log(AICar.name + " backdraft speed up by " + (backdraftMulti + (AILevel / 2000)));
+					Debug.Log(AICar.name + " backdraft speed up by " + (backdraftMulti + (AILevel / 1500f)) + " ( BD:" + backdraftMulti + " , AI:" + (AILevel / 1500f));
 				}
 				#endif
 			}
@@ -1022,7 +1026,7 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void dumbSpeed(int direction){
-		AISpeed += ((0.001f + (AILevel / 5000)) * direction);
+		AISpeed += ((0.001f + (AILevel / 5000f)) * direction);
 		
 		//Speed difference between the player and the AI
 		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
@@ -1073,7 +1077,7 @@ public class AIMovement : MonoBehaviour
 			default:
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.0035f;
-				backdraftMulti = 0.004f;
+				backdraftMulti = 0.0035f;
 				bumpDraftDistTrigger = 1.1f;
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
