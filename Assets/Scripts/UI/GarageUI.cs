@@ -1303,10 +1303,10 @@ public class GarageUI : MonoBehaviour
 		}
 		
 		//Give a free Dismore for IROC '00
-		if(PlayerPrefs.GetInt("irc008Unlocked") == 0){
+		if((PlayerPrefs.GetInt("irc008Unlocked") == 0)||(PlayerPrefs.GetInt("irc008Class") < 3)){
 			PlayerPrefs.SetInt("irc008Unlocked",1);
 			PlayerPrefs.SetInt("irc008Gears",0);
-			PlayerPrefs.SetInt("irc008Class",1);
+			PlayerPrefs.SetInt("irc008Class",3);
 			carsAdded = true;
 		}
 		
