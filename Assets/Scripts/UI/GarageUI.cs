@@ -101,9 +101,9 @@ public class GarageUI : MonoBehaviour
 		
 		//Testing - Unlock All
 		#if UNITY_EDITOR
-		//PlayerPrefs.SetInt("cup2420Unlocked",1);
-		//PlayerPrefs.SetInt("cup2420Gears",180);
-		//PlayerPrefs.SetInt("cup2422Class",1);
+		//PlayerPrefs.SetInt("cup249Unlocked",1);
+		//PlayerPrefs.SetInt("cup249Gears",180);
+		//PlayerPrefs.SetInt("cup249Class",4);
 		#endif
 		
 		//PlayFabManager.ResetPassword();
@@ -191,9 +191,9 @@ public class GarageUI : MonoBehaviour
 			
 			//Testing - Unlock All
 			#if UNITY_EDITOR
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",0);
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
 			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",Random.Range(0,9));
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",Random.Range(0,4));
+			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",Random.Range(4));
 			#endif
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -1303,10 +1303,10 @@ public class GarageUI : MonoBehaviour
 		}
 		
 		//Give a free Dismore for IROC '00
-		if(PlayerPrefs.GetInt("irc008Unlocked") == 0){
+		if((PlayerPrefs.GetInt("irc008Unlocked") == 0)||(PlayerPrefs.GetInt("irc008Class") < 3)){
 			PlayerPrefs.SetInt("irc008Unlocked",1);
 			PlayerPrefs.SetInt("irc008Gears",0);
-			PlayerPrefs.SetInt("irc008Class",1);
+			PlayerPrefs.SetInt("irc008Class",3);
 			carsAdded = true;
 		}
 		

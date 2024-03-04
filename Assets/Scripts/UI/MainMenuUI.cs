@@ -233,6 +233,7 @@ public class MainMenuUI : MonoBehaviour {
 		#if UNITY_EDITOR
 		//PlayerPrefs.DeleteAll();
 		//PlayerPrefs.SetInt("Gears",1000);
+		//PlayerPrefs.SetInt("Level", 45);
 		#endif
 		
 		if(!PlayerPrefs.HasKey("NewUser")){

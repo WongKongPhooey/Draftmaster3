@@ -342,7 +342,7 @@ public class CameraRotate : MonoBehaviour {
 			
 			//Final Lap
 			if(CameraRotate.lap == CameraRotate.raceEnd){
-				Debug.Log("LAST LAP! Pos:" + Ticker.position);
+				//Debug.Log("LAST LAP! Pos:" + Ticker.position);
 				if(Ticker.position == 0){
 					this.gameObject.GetComponent<CommentaryManager>().commentate("LastLapLeader");
 				} else {
@@ -366,7 +366,7 @@ public class CameraRotate : MonoBehaviour {
 				if(raceLapRecord > lapRecord){
 					lapRecord = raceLapRecord;
 				}
-				Debug.Log("Checked for a lap record. Track length checked at: " + lengthcounter);
+				//Debug.Log("Checked for a lap record. Track length checked at: " + lengthcounter);
 			}
 			
 			lengthcounter=0;
@@ -380,7 +380,7 @@ public class CameraRotate : MonoBehaviour {
 				//Only save at the line if not currently wrecking
 				if((Movement.isWrecking == false)||(lap >= (raceEnd + 1))){
 					cautionSummaryMenu.SetActive(true);
-					Debug.Log("Crossed line, show the finish line");
+					//Debug.Log("Crossed line, show the finish line");
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0;
 					crowdNoise.volume = 0;
@@ -402,7 +402,7 @@ public class CameraRotate : MonoBehaviour {
 						//Double checked
 						if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
 						  &&(officialSeries == true)){
-							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR181","");
+							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
 						}
 					}
 					gamePausedLate = true;
@@ -621,7 +621,7 @@ public class CameraRotate : MonoBehaviour {
 			//Double checked
 			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
 			  &&(officialSeries == true)){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR181","");
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
 			}
 		}
 	}
@@ -643,7 +643,7 @@ public class CameraRotate : MonoBehaviour {
 				PlayFabManager.CheckLiveTimeTrial();
 				//Double checked
 				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR181","");
+					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
 				}
 			}
 		}
