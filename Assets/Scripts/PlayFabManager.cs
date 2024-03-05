@@ -627,13 +627,15 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void ResetPassword(){
+		Debug.Log("Resetting Password..");
 		if(checkInternet() == false){return;}
-		/*var request = new SendAccountRecoveryEmailRequest{
+		var request = new SendAccountRecoveryEmailRequest{
 			Email = "josh@duffety-wong.com",
 			TitleId = "5A7C1",
 			EmailTemplateId = "2A23AFCBE9D2560C"
 		};
-		PlayFabClientAPI.SendAccountRecoveryEmail(request, PasswordResetSent, OnError);*/
+		request.RequestHeader.Add("X-SecretKey","ZNGMGNF3TA3WKBID11HIHAQGARBWZUBKIG9EZKS4DBFAXOCWAA");
+		PlayFabServerAPI.SendCustomAccountRecoveryEmailRequest(request, PasswordResetSent, OnError);
 	}
 	
 	static void PasswordResetSent(SendAccountRecoveryEmailResult result){
