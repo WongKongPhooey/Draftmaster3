@@ -102,6 +102,9 @@ public class SettingsUI : MonoBehaviour
 					case 1:
 						desc = "On";
 						break;
+					default:
+						desc = "On";
+						break;
 				}
 				break;
 			case "CameraRotate":
@@ -110,6 +113,9 @@ public class SettingsUI : MonoBehaviour
 						desc = "Off";
 						break;
 					case 1:
+						desc = "On";
+						break;
+					default:
 						desc = "On";
 						break;
 				}
@@ -125,6 +131,9 @@ public class SettingsUI : MonoBehaviour
 					case 3:
 						desc = "More";
 						break;
+					default:
+						desc = "Less";
+						break;
 				}
 				break;
 			case "FPSLimit":
@@ -138,6 +147,9 @@ public class SettingsUI : MonoBehaviour
 					case 3:
 						desc = "Max";
 						break;
+					default:
+						desc = "High";
+						break;
 				}
 				break;
 			case "MaxOvertime":
@@ -150,6 +162,9 @@ public class SettingsUI : MonoBehaviour
 						break;
 					case 3:
 						desc = "5";
+						break;
+					default:
+						desc = "3";
 						break;
 				}
 				break;

@@ -344,7 +344,7 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			//Fake store values for testing
 			#if UNITY_EDITOR
-			result.Data["StoreDailySelects"] = "1,2,3,4,5,6,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup238,cup239,cup2315,cup2320,cup2322,cup2334,cup23livery34alt1,irl23livery5alt1,irl23livery6alt1,irl23livery7alt1,irl23livery28alt1,cup23livery8alt1,cup23livery9alt1,cup23livery9alt2,cup23livery15alt1,cup23livery4alt2,cup23livery5alt1,cup23livery12alt1,cup23livery20alt2,cup23livery24alt2";
+			//result.Data["StoreDailySelects"] = "1,2,3,4,5,6,cup221,cup222,cup223,cup224,dmc151,dmc152,dmc153,dmc154,dmc155,cup238,cup239,cup2315,cup2320,cup2322,cup2334,cup23livery34alt1,irl23livery5alt1,irl23livery6alt1,irl23livery7alt1,irl23livery28alt1,cup23livery8alt1,cup23livery9alt1,cup23livery9alt2,cup23livery15alt1,cup23livery4alt2,cup23livery5alt1,cup23livery12alt1,cup23livery20alt2,cup23livery24alt2";
 			#endif
 			
 			PlayerPrefs.SetString("StoreDailySelects", result.Data["StoreDailySelects"]);
@@ -736,14 +736,19 @@ public class PlayFabManager : MonoBehaviour
 				 int unlockedCars = 0;
 				 foreach(string series in allSeries){
 					 //Debug.Log("Loading " + series);
-					 if(saveType == "automatic"){
-						//Drop out if no save for this car set
+					 //Drop out if no save for this car set
+					 try{
 						if(result.Data["AutosavePlayerProgress" + series].Value == null){
-							break;
+							//break;
+							continue;
 						}
-						json = result.Data["AutosavePlayerProgress" + series].Value;
-						playerJson = JsonUtility.FromJson<Series>(json);
+					 } catch(Exception e){
+						 Debug.Log(e.Message);
+						 continue;
 					 }
+					 json = result.Data["AutosavePlayerProgress" + series].Value;
+					 playerJson = JsonUtility.FromJson<Series>(json);
+					 
 					 for(int i=0;i<=99;i++){
 						if(DriverNames.getName(series,i) != null){
 							if(PlayerPrefs.GetInt(series + i + "Unlocked") < int.Parse(playerJson.drivers[i].carUnlocked)){
@@ -852,7 +857,6 @@ public class PlayFabManager : MonoBehaviour
 				string progressJSON = JSONifyProgress(series);
 				try {
 					PlayFabManager.AutosavePlayerProgress(series, progressJSON);
-					//Debug.Log(progressJSON);
 				}
 				catch(Exception e){
 					Debug.Log("Cannot reach PlayFab");
