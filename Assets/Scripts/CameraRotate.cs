@@ -230,7 +230,7 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		audioOn = PlayerPrefs.GetInt("AudioOn");
-		if(audioOn == 1){
+		if(audioOn != 0){
 			carEngine.volume = 0.15f;
 			crowdNoise.volume = 0.05f;
 		} else {
@@ -421,15 +421,12 @@ public class CameraRotate : MonoBehaviour {
 			Ticker.updateTicker();
 		}
 
-		if(audioOn == 1){
+		if(audioOn != 0){
 			if(lap == (PlayerPrefs.GetInt("RaceLaps"))){
 				if(crowdNoise.volume < 0.15f){
 					crowdNoise.volume += 0.002f;
 				}
 			}
-		} else {
-			carEngine.volume = 0.0f;
-			crowdNoise.volume = 0.0f;
 		}
 
 		//Turning

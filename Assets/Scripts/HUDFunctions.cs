@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class HUDFunctions : MonoBehaviour
 {
-	
+	public GameObject HUD;
+	public GameObject HUDOpener;
 	public GameObject HUDScreen1;
 	public GameObject HUDScreen2;
 	
@@ -27,6 +28,16 @@ public class HUDFunctions : MonoBehaviour
 		} else {
 			HUDScreen2.SetActive(false);
 			HUDScreen1.SetActive(true);
+		}
+	}
+	
+	public void HUDToggle(){
+		if(HUD.activeSelf){
+			HUD.SetActive(false);
+			HUDOpener.SetActive(true);
+		} else {
+			HUD.SetActive(true);
+			HUDOpener.SetActive(false);
 		}
 	}
 }

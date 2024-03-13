@@ -232,7 +232,7 @@ public class MainMenuUI : MonoBehaviour {
 		//Reset the game to imitate new users
 		#if UNITY_EDITOR
 		//PlayerPrefs.DeleteAll();
-		//PlayerPrefs.SetInt("Gears",1000);
+		PlayerPrefs.SetInt("Gears",1000);
 		//PlayerPrefs.SetInt("Level", 45);
 		#endif
 		
@@ -269,6 +269,11 @@ public class MainMenuUI : MonoBehaviour {
 			audioOn = 1;
 		} else {
 			audioOn = PlayerPrefs.GetInt("AudioOn");
+			//Possible muted games fix
+			if((audioOn != 0)&&(audioOn != 1)){
+				PlayerPrefs.SetInt("AudioOn",1);
+				audioOn = 1;
+			}
 		}
 		if(audioOn == 1){
 			crowdNoise.volume = 0.15f;
