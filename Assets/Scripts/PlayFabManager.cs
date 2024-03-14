@@ -626,22 +626,27 @@ public class PlayFabManager : MonoBehaviour
 		}
 	}
 	
-	public static void ResetPassword(){
+	public void ResetPassword(){
 		Debug.Log("Resetting Password..");
 		if(checkInternet() == false){return;}
 		var request = new SendAccountRecoveryEmailRequest{
-			Email = "josh@duffety-wong.com",
+			Email = emailInput.text,
 			TitleId = "5A7C1",
 			EmailTemplateId = "2A23AFCBE9D2560C"
 		};
-		request.RequestHeader.Add("X-SecretKey","ZNGMGNF3TA3WKBID11HIHAQGARBWZUBKIG9EZKS4DBFAXOCWAA");
-		PlayFabServerAPI.SendCustomAccountRecoveryEmailRequest(request, PasswordResetSent, OnError);
+		PlayFabClientAPI.SendAccountRecoveryEmail(request, PasswordResetSent, OnError);
 	}
 	
 	static void PasswordResetSent(SendAccountRecoveryEmailResult result){
 		if(checkInternet() == false){return;}
 		if(result != null){
 			Debug.Log(result);
+		
+			if (errorMessageBuffer.Length > 0){
+			   int word = errorMessageBuffer.IndexOf(" ")+1;
+			   errorMessageBuffer ="Account Recovery Email has been sent.";
+			   SceneManager.LoadScene("Menus/ResetPassword");
+			}
 		}
 	}
 

@@ -62,7 +62,7 @@ public class MainMenuUI : MonoBehaviour {
 		
 		#if UNITY_EDITOR
 			//PlayerPrefs.SetInt("Gears",500);
-			PlayFabManager.ResetPassword();
+			//PlayFabManager.ResetPassword();
 		#endif
 		
 		int fpsCap = PlayerPrefs.GetInt("FPSLimit");
