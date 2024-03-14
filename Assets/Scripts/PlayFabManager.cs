@@ -627,7 +627,6 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public void ResetPassword(){
-		Debug.Log("Resetting Password..");
 		if(checkInternet() == false){return;}
 		var request = new SendAccountRecoveryEmailRequest{
 			Email = emailInput.text,
@@ -641,12 +640,25 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		if(result != null){
 			Debug.Log(result);
-		
-			if (errorMessageBuffer.Length > 0){
-			   int word = errorMessageBuffer.IndexOf(" ")+1;
-			   errorMessageBuffer ="Account Recovery Email has been sent.";
-			   SceneManager.LoadScene("Menus/ResetPassword");
-			}
+			errorMessageBuffer ="Account Recovery Email has been sent. Follow the instructions in the email to receive a Recovery Code, that can then be used to reset your password.";
+			SceneManager.LoadScene("Menus/ResetPassword");
+		}
+	}
+
+	public void ChangePassword(){
+		if(checkInternet() == false){return;}
+		var request = new ResetPasswordRequest{
+			Password = newPassword.text,
+			Token = recoveryCode.text
+		};
+		PlayFabAdminAPI.ResetPassword(request, PasswordChanged, OnError);
+	}
+	
+	static void PasswordChanged(SendAccountRecoveryEmailResult result){
+		if(checkInternet() == false){return;}
+		if(result != null){
+			Debug.Log(result);
+			errorMessageBuffer ="Your password has been updated successfully.";
 		}
 	}
 
