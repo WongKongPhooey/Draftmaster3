@@ -73,6 +73,10 @@ public class PlayFabManager : MonoBehaviour
 		//Debug.Log("Login from prefs successful!");
 		GetTitleData();
 		GetPlayerData();
+		if(!PlayerPrefs.HasKey("ContactEmailSet")){
+			Debug.Log("No Recovery Email Set.. Let's Set One");
+			AddContactEmail();
+		}
 	}
 	
 	public void LoginButton(){
@@ -95,17 +99,12 @@ public class PlayFabManager : MonoBehaviour
 	public static void GetPlayerInfo(string playFabID){
 		if(checkInternet() == false){return;}
 		var request = new GetPlayerProfileRequest{
-			PlayFabId = playFabID,
-			ProfileConstraints = new PlayerProfileViewConstraints() {
-				ShowDisplayName = true,
-				ShowContactEmailAddresses = true
-			}
+			PlayFabId = playFabID
 		};
 		PlayFabClientAPI.GetPlayerProfile(request, OnGetUsernameSuccess, OnError);
 	}
 	
 	static void OnGetUsernameSuccess(GetPlayerProfileResult result){
-		Debug.Log(result);
 		string username = result.PlayerProfile.DisplayName;
 		if(username.StartsWith("DELETED")){
 			Debug.Log("That account was deleted..");
@@ -115,16 +114,21 @@ public class PlayFabManager : MonoBehaviour
 			SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 		} else {
 			PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
-			List<string> emailAddresses = result.PlayerProfile.ContactEmailAddresses;
-			if(result.PlayerProfile.ContactEmailAddresses.Count > 1){
-				Debug.Log("We have a contact email: " + result.PlayerProfile.ContactEmailAddresses.Count);
-			} else {
-				Debug.Log("No contact email: " + result.PlayerProfile.ContactEmailAddresses.Count);
-			}
+			AddContactEmail();
 			//Attempt to load saved data
 			GetSavedPlayerProgress();
 			SceneManager.LoadScene("Menus/MainMenu");
 		}
+	}
+	
+	static void AddContactEmail(){
+		if(checkInternet() == false){return;}
+		var request = new AddOrUpdateContactEmailRequest{
+			EmailAddress = PlayerPrefs.GetString("PlayerEmail")
+		};
+		PlayFabClientAPI.AddOrUpdateContactEmail(request, result => {
+			PlayerPrefs.SetString("ContactEmailSet",PlayerPrefs.GetString("PlayerEmail"));
+		}, OnError);
 	}
 	
 	public static void OnError(PlayFabError error){
