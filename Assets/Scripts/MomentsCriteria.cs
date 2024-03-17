@@ -62,8 +62,8 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("FinishPositionLowerThan","1");
 					momentsCriteria.Add("WinningMargin","0.05");
 					momentsCriteria.Add("WinToThirdLessThan","0.1");
-					momentsCriteria.Add("Top2Finish","12");
-					momentsCriteria.Add("Top3Finish","8");
+					momentsCriteria.Add("Top3Finish","12");
+					momentsCriteria.Add("Top3FinishAlso","8");
 				break;
 				case "LiveMoment":
 					for(int i=1;i<=5;i++){
@@ -131,21 +131,26 @@ public class MomentsCriteria : MonoBehaviour
 				return "First To Third Less Than " + criteriaValue + "s";
 				break;
 			case "Top2Finish":
+			case "Top2FinishAlso":
 				return "Top 2 Finish - # " + criteriaValue;
 				break;
 			case "Top3Finish":
+			case "Top3FinishAlso":
 				return "Top 3 Finish - # " + criteriaValue;
 				break;
 			case "Top5Finish":
+			case "Top5FinishAlso":
 				return "Top 5 Finish - # " + criteriaValue;
 				break;
 			case "WreckTotalCars":
 				return "At Least " + criteriaValue + " Cars Wreck";
 				break;
 			case "CarWrecks":
+			case "CarWrecksAlso":
 				return "#" + criteriaValue + " Wrecks";
 				break;
 			case "CarAvoidsWreck":
+			case "CarAvoidsWreckAlso":
 				return "#" + criteriaValue + " Does Not Wreck";
 				break;
 			case "PlayerWrecks":
@@ -262,24 +267,28 @@ public class MomentsCriteria : MonoBehaviour
 				}
 				break;
 			case "Top2Finish":
+			case "Top2FinishAlso":
 				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
 				  (int.Parse(criteriaCheckB) < 2)){
 					complete = true;
 				}
 				break;
 			case "Top3Finish":
+			case "Top3FinishAlso":
 				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
 				  (int.Parse(criteriaCheckB) < 3)){
 					complete = true;
 				}
 				break;
 			case "Top5Finish":
+			case "Top5FinishAlso":
 				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
 				  (int.Parse(criteriaCheckB) < 5)){
 					complete = true;
 				}
 				break;
 			case "CarWrecks":
+			case "CarWrecksAlso":
 				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);
 				//If wrecked is true, true
 				if((AICar != null)&&(AICar.GetComponent<AIMovement>() != null)){
@@ -290,6 +299,7 @@ public class MomentsCriteria : MonoBehaviour
 				}
 				break;
 			case "CarAvoidsWreck":
+			case "CarAvoidsWreckAlso":
 				//If wrecked is false, true
 				if((GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().isWrecking == false)
 				  &&(GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().wreckOver == false)){

@@ -510,12 +510,15 @@ public class Ticker : MonoBehaviour
 				}
 				if(i < 2){
 					MomentsCriteria.checkMomentsCriteria("Top2Finish",carNumber[i],i.ToString());
+					MomentsCriteria.checkMomentsCriteria("Top2FinishAlso",carNumber[i],i.ToString());
 				} else {
 					if(i < 3){
 						MomentsCriteria.checkMomentsCriteria("Top3Finish",carNumber[i],i.ToString());
+						MomentsCriteria.checkMomentsCriteria("Top3FinishAlso",carNumber[i],i.ToString());
 					} else {
 						if(i < 5){
 							MomentsCriteria.checkMomentsCriteria("Top5Finish",carNumber[i],i.ToString());
+							MomentsCriteria.checkMomentsCriteria("Top5FinishAlso",carNumber[i],i.ToString());
 						}
 					}
 				}

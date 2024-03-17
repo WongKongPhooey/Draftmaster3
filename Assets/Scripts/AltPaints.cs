@@ -134,6 +134,7 @@ public class AltPaints : MonoBehaviour {
 		cup24AltPaintNames[23,1] = "#1 Money";
 		cup24AltPaintNames[42,1] = "#1 Dolla";
 		cup24AltPaintNames[99,1] = "#1 Time Trial";
+		cup24AltPaintNames[99,2] = "#2 Worldwide";
 		
 		irl23AltPaintNames[2,1] = "#1 The 500";
 		irl23AltPaintNames[5,1] = "#1 Le Triple";
@@ -256,6 +257,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltCanBuy[1,1] = true;
 		
 		cup24AltCanBuy[99,1] = true;
+		cup24AltCanBuy[99,2] = true;
 		
 		//true = don't spawn. I know this is backwards..
 		cup2020AltPaintAISpawning[5,2] = true;
