@@ -1,0 +1,708 @@
+{
+  "playerLevel": "1",
+  "totalCars": "0",
+  "transferTokens": "10",
+  "seriesName": "cup24",
+  "drivers": [
+    {
+      "carNo": "0",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "1",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "2",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "3",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "4",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "5",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "6",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "7",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "8",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "9",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "10",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "11",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "12",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "13",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "14",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "15",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "16",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "17",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "18",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "19",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "20",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "21",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "22",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "23",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "24",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "25",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "26",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "27",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "28",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "29",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "30",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "31",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "32",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "33",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "34",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "35",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "36",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "37",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "38",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "39",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "40",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "41",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "42",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "43",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "44",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "45",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "46",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "47",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "48",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "49",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "50",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "51",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "52",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "53",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "54",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "55",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "56",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "57",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "58",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "59",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "60",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "61",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "62",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "63",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "64",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "65",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "66",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "67",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "68",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "69",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "70",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "71",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "72",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "73",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "74",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "75",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "76",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "77",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "78",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "79",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "80",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "81",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "82",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "83",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "84",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "85",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "86",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "87",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "88",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "89",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "90",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "91",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "92",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "93",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "94",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "95",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "96",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "97",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "98",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    },
+    {
+      "carNo": "99",
+      "carUnlocked": "0",
+      "carClass": "0",
+      "carGears": "0",
+      "altPaints": "0"
+    }
+  ]
+}

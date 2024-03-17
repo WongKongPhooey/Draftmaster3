@@ -502,7 +502,22 @@ public class Ticker : MonoBehaviour
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 				if(i == 1){
-					MomentsCriteria.checkMomentsCriteria("WinByLessThan",carDist[i].ToString());
+					MomentsCriteria.checkMomentsCriteria("WinningMargin",carDist[i].ToString());
+					MomentsCriteria.checkMomentsCriteria("AIMustWin",carDist[i].ToString());
+				}
+				if(i == 2){
+					MomentsCriteria.checkMomentsCriteria("WinToThirdLessThan",carDist[i].ToString());
+				}
+				if(i < 2){
+					MomentsCriteria.checkMomentsCriteria("Top2Finish",carNumber[i],i.ToString());
+				} else {
+					if(i < 3){
+						MomentsCriteria.checkMomentsCriteria("Top3Finish",carNumber[i],i.ToString());
+					} else {
+						if(i < 5){
+							MomentsCriteria.checkMomentsCriteria("Top5Finish",carNumber[i],i.ToString());
+						}
+					}
 				}
 			}
 			PlayerPrefs.SetInt("FinishPosition" + i + "", int.Parse(carNumber[i]));

@@ -47,7 +47,7 @@ public class MomentsCriteria : MonoBehaviour
 				case "Atlanta01":
 					momentsCriteria.Add("FinishPositionLowerThan","1");
 					momentsCriteria.Add("CarAvoidsWreck","24");
-					momentsCriteria.Add("WinByLessThan","0.02");
+					momentsCriteria.Add("WinningMargin","0.02");
 				break;
 				case "ChastainWallride":
 					momentsCriteria.Add("WreckStartLocationStraight","2");
@@ -57,6 +57,13 @@ public class MomentsCriteria : MonoBehaviour
 				case "WideOpenWheels":
 					momentsCriteria.Add("FinishPositionLowerThan","1");
 					momentsCriteria.Add("CarAvoidsWreck","5");
+				break;
+				case "PhotoForThree":
+					momentsCriteria.Add("FinishPositionLowerThan","1");
+					momentsCriteria.Add("WinningMargin","0.05");
+					momentsCriteria.Add("WinToThirdLessThan","0.1");
+					momentsCriteria.Add("Top2Finish","12");
+					momentsCriteria.Add("Top3Finish","8");
 				break;
 				case "LiveMoment":
 					for(int i=1;i<=5;i++){
@@ -117,8 +124,20 @@ public class MomentsCriteria : MonoBehaviour
 					return "Finish In The Top " + criteriaValue;
 				}
 				break;
-			case "WinByLessThan":
-				return "Win By Less Than " + criteriaValue + "s";
+			case "WinningMargin":
+				return "Winning Margin Less Than " + criteriaValue + "s";
+				break;
+			case "WinToThirdLessThan":
+				return "First To Third Less Than " + criteriaValue + "s";
+				break;
+			case "Top2Finish":
+				return "Top 2 Finish - # " + criteriaValue;
+				break;
+			case "Top3Finish":
+				return "Top 3 Finish - # " + criteriaValue;
+				break;
+			case "Top5Finish":
+				return "Top 5 Finish - # " + criteriaValue;
 				break;
 			case "WreckTotalCars":
 				return "At Least " + criteriaValue + " Cars Wreck";
@@ -212,10 +231,18 @@ public class MomentsCriteria : MonoBehaviour
 					complete = true;
 				}
 				break;
-			case "WinByLessThan":
+			case "WinningMargin":
 				//If finish gap to leader (A) is lower than the max, true
 				//This check only triggers on the 2nd place car
 				//Debug.Log("Win By Less Than: " + criteriaValue + "? " + criteriaCheckA);
+				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
+					complete = true;
+				}
+				break;
+			case "WinToThirdLessThan":
+				//If finish gap to leader (A) is lower than the max, true
+				//This check only triggers on the 3rd place car
+				Debug.Log("Beat Third Place By Less Than: " + criteriaValue + "? " + criteriaCheckA);
 				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
 					complete = true;
 				}
@@ -227,6 +254,30 @@ public class MomentsCriteria : MonoBehaviour
 					//Debug.Log(criteriaCheckA + " Cars In Wreck ,More Than " + criteriaValue);
 				}
 				//Debug.Log(criteriaCheckA + " Cars In Wreck. Needed " + criteriaValue);
+				break;
+			case "AIMustWin":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) == 0)){
+					complete = true;
+				}
+				break;
+			case "Top2Finish":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) < 2)){
+					complete = true;
+				}
+				break;
+			case "Top3Finish":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) < 3)){
+					complete = true;
+				}
+				break;
+			case "Top5Finish":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) < 5)){
+					complete = true;
+				}
 				break;
 			case "CarWrecks":
 				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);
