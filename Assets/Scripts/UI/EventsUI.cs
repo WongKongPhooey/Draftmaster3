@@ -215,13 +215,13 @@ public class EventsUI : MonoBehaviour
 		if(EventData.offlineCustomFieldOrder[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("CustomFieldOrder", EventData.offlineCustomFieldOrder[subMenuId,subEventId]);
 		}
-		if(EventData.offlineStartingLap[subMenuId,subEventId] != null){
+		if(EventData.offlineStartingLap[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("StartingLap", EventData.offlineStartingLap[subMenuId,subEventId]);
-			//Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
+			Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
 		}
-		if(EventData.offlineRaceLaps[subMenuId,subEventId] != null){
+		if(EventData.offlineRaceLaps[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("CustomRaceLaps", EventData.offlineRaceLaps[subMenuId,subEventId]);
-			//Debug.Log("Starting Lap set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
+			Debug.Log("Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
 		}
 		if(EventData.offlineModifier[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);

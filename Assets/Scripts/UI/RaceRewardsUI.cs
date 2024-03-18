@@ -529,6 +529,14 @@ public class RaceRewardsUI : MonoBehaviour
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
+			case "Suarez":
+				validDriver.Add("cup2096");
+				validDriver.Add("cup2299");
+				validDriver.Add("cup2399");
+				validDriver.Add("cup2499");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			
 			default:
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];

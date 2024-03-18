@@ -94,9 +94,9 @@ public class MainMenuUI : MonoBehaviour {
 		//PlayerPrefs.SetInt("Exp",7250);
 		//PlayerPrefs.SetInt("Level",34);
 		
-		PlayerPrefs.SetInt("cup2499" + "Unlocked",1);
-		PlayerPrefs.SetInt("cup2499" + "Gears",21);
-		PlayerPrefs.SetInt("cup2499" + "Class",3);
+		//PlayerPrefs.SetInt("cup2499" + "Unlocked",1);
+		//PlayerPrefs.SetInt("cup2499" + "Gears",21);
+		//PlayerPrefs.SetInt("cup2499" + "Class",3);
 		#endif
 		
 		Time.timeScale = 1.0f;
@@ -139,6 +139,9 @@ public class MainMenuUI : MonoBehaviour {
 		}
 		if(PlayerPrefs.HasKey("StartingLap")){
 			PlayerPrefs.DeleteKey("StartingLap");
+		}
+		if(PlayerPrefs.HasKey("CustomRaceLaps")){
+			PlayerPrefs.DeleteKey("CustomRaceLaps");
 		}
 		if(PlayerPrefs.HasKey("RaceModifier")){
 			PlayerPrefs.DeleteKey("RaceModifier");

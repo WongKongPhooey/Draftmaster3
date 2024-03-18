@@ -383,15 +383,15 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[4,3] = "cup24livery99";
 		offlineMinClass[4,3] = 1;
 		offlineMinLevel[4,3] = 1;
-		offlineAILevel[4,3] = 10;
+		offlineAILevel[4,3] = 1;
 		offlineSeries[4,3] = "cup24";
 		offlineCustomCar[4,3] = "cup24livery99";
 		offlineRaceLaps[4,3] = 261;
 		offlineStartingLap[4,3] = 259;
 		offlineMoment[4,3] = "PhotoForThree";
 		offlineTracklists[4,3] = "2";
-		offlinePrizes[3,3] = "AltPaint";
-		offlineSetPrizes[3,3] = "cup24livery99alt2";
+		offlinePrizes[4,3] = "AltPaint";
+		offlineSetPrizes[4,3] = "cup24livery99alt2";
 		offlineCustomFieldOrder[4,3] = "12,x,8,x,player,x,x,2,23,x,47,1,x,34,x,54,19,17,x,7,41,x,x,31,21,15,x,24,9";
 		eventChapterDescriptions[4,3] = "February 25th 2024, an incredible 3-wide finish at Atlanta sees Suarez win by 0.003s.";
 		
