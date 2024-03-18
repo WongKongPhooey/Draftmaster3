@@ -311,7 +311,7 @@ public class StoreUI : MonoBehaviour
 		starterPicks.Add(20);
 		starterPicks.Add("cup2431");
 		starterPicks.Add("cup2442");
-		starterPicks.Add("irl2345");
+		starterPicks.Add("irl2348");
 		starterPicks.Add("dmc1550");
 		starterPicks.Add("cup2354");
 		starterPicks.Add("irl2377");
