@@ -217,15 +217,19 @@ public class EventsUI : MonoBehaviour
 		}
 		if(EventData.offlineStartingLap[subMenuId,subEventId] != null){
 			PlayerPrefs.SetInt("StartingLap", EventData.offlineStartingLap[subMenuId,subEventId]);
-			Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
+			//Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
+		}
+		if(EventData.offlineRaceLaps[subMenuId,subEventId] != null){
+			PlayerPrefs.SetInt("CustomRaceLaps", EventData.offlineRaceLaps[subMenuId,subEventId]);
+			//Debug.Log("Starting Lap set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
 		}
 		if(EventData.offlineModifier[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);
-			Debug.Log("Race Modifier set: " + EventData.offlineModifier[subMenuId,subEventId]);
+			//Debug.Log("Race Modifier set: " + EventData.offlineModifier[subMenuId,subEventId]);
 		}
 		if(EventData.offlineMoment[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceMoment", EventData.offlineMoment[subMenuId,subEventId]);
-			Debug.Log("Race Moment set: " + EventData.offlineMoment[subMenuId,subEventId]);
+			//Debug.Log("Race Moment set: " + EventData.offlineMoment[subMenuId,subEventId]);
 		}
 		SceneManager.LoadScene("Menus/Garage");
 	}

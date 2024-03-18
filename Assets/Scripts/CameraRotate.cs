@@ -172,6 +172,16 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		raceEnd = PlayerPrefs.GetInt("RaceLaps");
+		if(PlayerPrefs.HasKey("CustomRaceLaps")){
+			if(PlayerPrefs.GetString("RaceType") != "Event"){
+				//This should not be here..
+				PlayerPrefs.DeleteKey("CustomRaceLaps");
+			} else {
+				//Set custom race length for events
+				raceEnd = PlayerPrefs.GetInt("CustomRaceLaps") - 1;
+			}
+		}
+		
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		
 		lapRecord = 0;

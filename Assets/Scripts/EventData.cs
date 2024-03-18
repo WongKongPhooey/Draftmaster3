@@ -31,6 +31,7 @@ public class EventData : MonoBehaviour
 	public static string[,] offlineCustomCar = new string[10,10];
 	public static string[,] offlineCustomField = new string[10,10];
 	public static string[,] offlineCustomFieldOrder = new string[10,10];
+	public static int[,] offlineRaceLaps = new int[10,10];
 	public static int[,] offlineStartingLap = new int[10,10];
 	public static string[,] offlineModifier = new string[10,10];
 	public static string[,] offlineMoment = new string[10,10];
@@ -43,7 +44,6 @@ public class EventData : MonoBehaviour
 	public static void loadEvents() {
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
-		//offlineEvent[2] = "All Stars";
 		offlineEvent[3] = "The Closer";
 		offlineEvent[4] = "Moments";
 		
@@ -378,6 +378,22 @@ public class EventData : MonoBehaviour
 		offlinePrizes[4,2] = "1Star";
 		offlineCustomFieldOrder[4,2] = "player,x,5,x,x,x,10,x,18";
 		eventChapterDescriptions[4,2] = "April 2nd 2023, Newgarden wins out after a thrilling 4 car battle for the win in Texas.";
+		
+		offlineEventChapter[4,3] = "A Photo For Three";
+		offlineChapterImage[4,3] = "cup24livery99";
+		offlineMinClass[4,3] = 1;
+		offlineMinLevel[4,3] = 1;
+		offlineAILevel[4,3] = 10;
+		offlineSeries[4,3] = "cup24";
+		offlineCustomCar[4,3] = "cup24livery99";
+		offlineRaceLaps[4,3] = 261;
+		offlineStartingLap[4,3] = 259;
+		offlineMoment[4,3] = "PhotoForThree";
+		offlineTracklists[4,3] = "2";
+		offlinePrizes[3,3] = "AltPaint";
+		offlineSetPrizes[3,3] = "cup24livery99alt2";
+		offlineCustomFieldOrder[4,3] = "12,x,8,x,player,x,x,2,23,x,47,1,x,34,x,54,19,17,x,7,41,x,x,31,21,15,x,24,9";
+		eventChapterDescriptions[4,3] = "February 25th 2024, an incredible 3-wide finish at Atlanta sees Suarez win by 0.003s.";
 		
 		
 		/*offlineEventChapter[4,2] = "Austin As Moses";

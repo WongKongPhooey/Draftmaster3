@@ -62,6 +62,7 @@ public class MainMenuUI : MonoBehaviour {
 		
 		#if UNITY_EDITOR
 			//PlayerPrefs.SetInt("Gears",500);
+			//PlayFabManager.ResetPassword();
 		#endif
 		
 		int fpsCap = PlayerPrefs.GetInt("FPSLimit");
@@ -93,9 +94,9 @@ public class MainMenuUI : MonoBehaviour {
 		//PlayerPrefs.SetInt("Exp",7250);
 		//PlayerPrefs.SetInt("Level",34);
 		
-		//PlayerPrefs.SetInt("cup231" + "Unlocked",0);
-		//PlayerPrefs.SetInt("cup231" + "Gears",66);
-		//PlayerPrefs.SetInt("cup231" + "Class",0);
+		PlayerPrefs.SetInt("cup2499" + "Unlocked",1);
+		PlayerPrefs.SetInt("cup2499" + "Gears",21);
+		PlayerPrefs.SetInt("cup2499" + "Class",3);
 		#endif
 		
 		Time.timeScale = 1.0f;

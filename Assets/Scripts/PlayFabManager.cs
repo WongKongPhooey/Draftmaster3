@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using PlayFab;
 using PlayFab.ClientModels;
@@ -21,6 +22,9 @@ public class PlayFabManager : MonoBehaviour
 	public InputField usernameInput;
 	public InputField emailInput;
 	public InputField passwordInput;
+	
+	public InputField newPasswordInput;
+	public InputField recoveryCodeInput;
 	
 	public GameObject thisRowPrefab;
 	public Transform thisRowsParent;
@@ -69,6 +73,10 @@ public class PlayFabManager : MonoBehaviour
 		//Debug.Log("Login from prefs successful!");
 		GetTitleData();
 		GetPlayerData();
+		if(!PlayerPrefs.HasKey("ContactEmailSet")){
+			Debug.Log("No Recovery Email Set.. Let's Set One");
+			AddContactEmail();
+		}
 	}
 	
 	public void LoginButton(){
@@ -97,7 +105,6 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void OnGetUsernameSuccess(GetPlayerProfileResult result){
-		//Debug.Log("Retrieved Username!");
 		string username = result.PlayerProfile.DisplayName;
 		if(username.StartsWith("DELETED")){
 			Debug.Log("That account was deleted..");
@@ -107,10 +114,21 @@ public class PlayFabManager : MonoBehaviour
 			SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 		} else {
 			PlayerPrefs.SetString("PlayerUsername", result.PlayerProfile.DisplayName);
+			AddContactEmail();
 			//Attempt to load saved data
 			GetSavedPlayerProgress();
 			SceneManager.LoadScene("Menus/MainMenu");
 		}
+	}
+	
+	static void AddContactEmail(){
+		if(checkInternet() == false){return;}
+		var request = new AddOrUpdateContactEmailRequest{
+			EmailAddress = PlayerPrefs.GetString("PlayerEmail")
+		};
+		PlayFabClientAPI.AddOrUpdateContactEmail(request, result => {
+			PlayerPrefs.SetString("ContactEmailSet",PlayerPrefs.GetString("PlayerEmail"));
+		}, OnError);
 	}
 	
 	public static void OnError(PlayFabError error){
@@ -626,20 +644,52 @@ public class PlayFabManager : MonoBehaviour
 		}
 	}
 	
-	public static void ResetPassword(){
+	public void ResetPassword(){
 		if(checkInternet() == false){return;}
-		/*var request = new SendAccountRecoveryEmailRequest{
-			Email = "josh@duffety-wong.com",
+		var request = new SendAccountRecoveryEmailRequest{
+			Email = emailInput.text,
 			TitleId = "5A7C1",
 			EmailTemplateId = "2A23AFCBE9D2560C"
 		};
-		PlayFabClientAPI.SendAccountRecoveryEmail(request, PasswordResetSent, OnError);*/
+		PlayFabClientAPI.SendAccountRecoveryEmail(request, PasswordResetSent, OnError);
 	}
 	
 	static void PasswordResetSent(SendAccountRecoveryEmailResult result){
 		if(checkInternet() == false){return;}
 		if(result != null){
 			Debug.Log(result);
+			errorMessageBuffer ="Account Recovery Email has been sent. Follow the instructions in the email to receive a Recovery Code, that can then be used to reset your password.";
+			SceneManager.LoadScene("Menus/ResetPassword");
+		}
+	}
+
+	public void ChangePassword(){
+		if(checkInternet() == false){return;}
+		StartCoroutine(PostPasswordChange());
+	}
+	
+	IEnumerator PostPasswordChange(){
+		
+		using UnityWebRequest www = UnityWebRequest.Post("https://5A7C1.playfabapi.com/Admin/ResetPassword?Password=" + newPasswordInput.text + "&Token=" + recoveryCodeInput.text,"");
+		www.SetRequestHeader("X-SecretKey", "ZNGMGNF3TA3WKBID11HIHAQGARBWZUBKIG9EZKS4DBFAXOCWAA");
+		www.SetRequestHeader("Content-Type", "application/json");
+		
+		errorMessageBuffer = "Waiting..";
+		yield return www.SendWebRequest();
+
+		if (www.result != UnityWebRequest.Result.Success){
+			errorMessageBuffer = www.error;
+		} else {
+			errorMessageBuffer = "Password Changed Successfully!";
+			Debug.Log("Password changed!");
+		}
+	}
+	
+	static void PasswordChanged(SendAccountRecoveryEmailResult result){
+		if(checkInternet() == false){return;}
+		if(result != null){
+			Debug.Log(result);
+			errorMessageBuffer ="Your password has been updated successfully.";
 		}
 	}
 

@@ -47,7 +47,7 @@ public class MomentsCriteria : MonoBehaviour
 				case "Atlanta01":
 					momentsCriteria.Add("FinishPositionLowerThan","1");
 					momentsCriteria.Add("CarAvoidsWreck","24");
-					momentsCriteria.Add("WinByLessThan","0.02");
+					momentsCriteria.Add("WinningMargin","0.02");
 				break;
 				case "ChastainWallride":
 					momentsCriteria.Add("WreckStartLocationStraight","2");
@@ -57,6 +57,13 @@ public class MomentsCriteria : MonoBehaviour
 				case "WideOpenWheels":
 					momentsCriteria.Add("FinishPositionLowerThan","1");
 					momentsCriteria.Add("CarAvoidsWreck","5");
+				break;
+				case "PhotoForThree":
+					momentsCriteria.Add("FinishPositionLowerThan","1");
+					momentsCriteria.Add("WinningMargin","0.05");
+					momentsCriteria.Add("WinToThirdLessThan","0.1");
+					momentsCriteria.Add("Top3Finish","12");
+					momentsCriteria.Add("Top3FinishAlso","8");
 				break;
 				case "LiveMoment":
 					for(int i=1;i<=5;i++){
@@ -117,16 +124,33 @@ public class MomentsCriteria : MonoBehaviour
 					return "Finish In The Top " + criteriaValue;
 				}
 				break;
-			case "WinByLessThan":
-				return "Win By Less Than " + criteriaValue + "s";
+			case "WinningMargin":
+				return "Winning Margin Less Than " + criteriaValue + "s";
+				break;
+			case "WinToThirdLessThan":
+				return "First To Third Less Than " + criteriaValue + "s";
+				break;
+			case "Top2Finish":
+			case "Top2FinishAlso":
+				return "Top 2 Finish - # " + criteriaValue;
+				break;
+			case "Top3Finish":
+			case "Top3FinishAlso":
+				return "Top 3 Finish - # " + criteriaValue;
+				break;
+			case "Top5Finish":
+			case "Top5FinishAlso":
+				return "Top 5 Finish - # " + criteriaValue;
 				break;
 			case "WreckTotalCars":
 				return "At Least " + criteriaValue + " Cars Wreck";
 				break;
 			case "CarWrecks":
+			case "CarWrecksAlso":
 				return "#" + criteriaValue + " Wrecks";
 				break;
 			case "CarAvoidsWreck":
+			case "CarAvoidsWreckAlso":
 				return "#" + criteriaValue + " Does Not Wreck";
 				break;
 			case "PlayerWrecks":
@@ -212,10 +236,18 @@ public class MomentsCriteria : MonoBehaviour
 					complete = true;
 				}
 				break;
-			case "WinByLessThan":
+			case "WinningMargin":
 				//If finish gap to leader (A) is lower than the max, true
 				//This check only triggers on the 2nd place car
 				//Debug.Log("Win By Less Than: " + criteriaValue + "? " + criteriaCheckA);
+				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
+					complete = true;
+				}
+				break;
+			case "WinToThirdLessThan":
+				//If finish gap to leader (A) is lower than the max, true
+				//This check only triggers on the 3rd place car
+				Debug.Log("Beat Third Place By Less Than: " + criteriaValue + "? " + criteriaCheckA);
 				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
 					complete = true;
 				}
@@ -228,7 +260,35 @@ public class MomentsCriteria : MonoBehaviour
 				}
 				//Debug.Log(criteriaCheckA + " Cars In Wreck. Needed " + criteriaValue);
 				break;
+			case "AIMustWin":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) == 0)){
+					complete = true;
+				}
+				break;
+			case "Top2Finish":
+			case "Top2FinishAlso":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) < 2)){
+					complete = true;
+				}
+				break;
+			case "Top3Finish":
+			case "Top3FinishAlso":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) < 3)){
+					complete = true;
+				}
+				break;
+			case "Top5Finish":
+			case "Top5FinishAlso":
+				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
+				  (int.Parse(criteriaCheckB) < 5)){
+					complete = true;
+				}
+				break;
 			case "CarWrecks":
+			case "CarWrecksAlso":
 				GameObject AICar = GameObject.Find("AICar0" + criteriaValue);
 				//If wrecked is true, true
 				if((AICar != null)&&(AICar.GetComponent<AIMovement>() != null)){
@@ -239,6 +299,7 @@ public class MomentsCriteria : MonoBehaviour
 				}
 				break;
 			case "CarAvoidsWreck":
+			case "CarAvoidsWreckAlso":
 				//If wrecked is false, true
 				if((GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().isWrecking == false)
 				  &&(GameObject.Find("AICar0" + criteriaValue).GetComponent<AIMovement>().wreckOver == false)){
