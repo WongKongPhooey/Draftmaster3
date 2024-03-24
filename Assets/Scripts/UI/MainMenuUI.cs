@@ -268,12 +268,14 @@ public class MainMenuUI : MonoBehaviour {
 		if(!PlayerPrefs.HasKey("AudioOn")){
 			PlayerPrefs.SetInt("AudioOn",1);
 			audioOn = 1;
+			//Debug.Log("Audio bug caught: " + audioOn);
 		} else {
 			audioOn = PlayerPrefs.GetInt("AudioOn");
 			//Possible muted games fix
 			if((audioOn != 0)&&(audioOn != 1)){
 				PlayerPrefs.SetInt("AudioOn",1);
 				audioOn = 1;
+				//Debug.Log("Audio bug caught: " + audioOn);
 			}
 		}
 		if(audioOn == 1){

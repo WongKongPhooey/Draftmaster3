@@ -243,9 +243,11 @@ public class CameraRotate : MonoBehaviour {
 		if(audioOn != 0){
 			carEngine.volume = 0.15f;
 			crowdNoise.volume = 0.05f;
+			Debug.Log("Audio is on: " + audioOn);
 		} else {
 			carEngine.volume = 0.0f;
 			crowdNoise.volume = 0.0f;
+			Debug.Log("Audio is off: " + audioOn);
 		}
 		
 	}
@@ -392,8 +394,8 @@ public class CameraRotate : MonoBehaviour {
 					cautionSummaryMenu.SetActive(true);
 					//Debug.Log("Crossed line, show the finish line");
 					finishLine.GetComponent<Renderer>().enabled = true;
-					carEngine.volume = 0;
-					crowdNoise.volume = 0;
+					carEngine.volume = 0.0f;
+					crowdNoise.volume = 0.0f;
 					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 					if(raceLapRecordInt < 0){
 						raceLapRecordInt = 0;

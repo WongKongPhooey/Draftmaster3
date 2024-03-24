@@ -247,7 +247,6 @@ public class Movement : MonoBehaviour {
 		pacing = true;
 		
 		carEngine = audioHolder.GetComponent<AudioSource>();
-		carEngine.volume = 0.15f;
 		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
