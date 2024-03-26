@@ -14,6 +14,9 @@ public class EnviroToggle : MonoBehaviour {
 	public bool[] straights = new bool[6];
 	public bool[] corners = new bool[6];
 	
+	Renderer[] childRenderers;
+	BoxCollider[] childColliders;
+	
 	public bool hideOnPit;
 	public bool triOvalPit;
 	public bool triOvalEntryExit;
@@ -38,12 +41,11 @@ public class EnviroToggle : MonoBehaviour {
 			triOvalBend = 0.03f;
 		}
 
-		Renderer[] subAsset = GetComponentsInChildren<Renderer>();
+		childRenderers = GetComponentsInChildren<Renderer>();
+		childColliders = GetComponentsInChildren<BoxCollider>();
 		if(((hideOnPit == true)&&(CameraRotate.straight == 1))
 		  || (hideOnStart == true)){
-			foreach(Renderer asset in subAsset){
-				asset.enabled = false;
-			}
+			toggleElement(false);
 		}
 	}
 	
@@ -52,21 +54,14 @@ public class EnviroToggle : MonoBehaviour {
 
 		//IF ENTERING OR EXITING TURN
 		if((currentState != Movement.onTurn)||(CameraRotate.lap == 0)){
-			Renderer[] subAsset = GetComponentsInChildren<Renderer>();
 			
 			//If V1 enviro setup
 			if(advancedPlacement == false){
 				if(Movement.onTurn == true){
 					if(onCorners == true){
-						foreach(Renderer asset in subAsset){
-							asset.enabled = true;
-						}
-						//Debug.Log(this.name + " is enabled on the corners");
+						toggleElement(true);
 					} else {
-						foreach(Renderer asset in subAsset){
-							asset.enabled = false;
-						}
-						//Debug.Log(this.name + " is disabled on the corners");
+						toggleElement(false);
 					}
 					if(triOvalPit == true){
 						if(triOvalEntryExit == true){
@@ -75,42 +70,28 @@ public class EnviroToggle : MonoBehaviour {
 							pitLengthPadding = pitLanePadding;
 						}
 						if(((CameraRotate.turn == 4)&&(CameraRotate.cornercounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.cornercounter > CameraRotate.turnLength[4] - pitLengthPadding))){
-							foreach(Renderer asset in subAsset){
-								asset.enabled = true;
-							}
+							toggleElement(true);
 						} else {
-							foreach(Renderer asset in subAsset){
-								asset.enabled = false;
-							}
+							toggleElement(false);
 						}
 					}
 				} else {
 					if(onStraights == true){
 						if((oneStraight == true)&&(CameraRotate.straight == straight)){
-							foreach(Renderer asset in subAsset){
-								asset.enabled = true;
-							}
+							toggleElement(true);
 						} else {
 							if(oneStraight == false){
-								foreach(Renderer asset in subAsset){
-									asset.enabled = true;
-								}
+								toggleElement(true);
 							}
 						}
 						if((hideOnPit == true)&&(CameraRotate.straight == 1)){
-							foreach(Renderer asset in subAsset){
-								asset.enabled = false;
-							}
+							toggleElement(false);
 						}
 					} else {
 						if((onFinishLine == true)&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter == 0)){
-							foreach(Renderer asset in subAsset){
-								asset.enabled = true;
-							}
+							toggleElement(true);
 						} else {
-							foreach(Renderer asset in subAsset){
-								asset.enabled = false;
-							}
+							toggleElement(false);
 						}
 					}
 				}
@@ -118,23 +99,15 @@ public class EnviroToggle : MonoBehaviour {
 				//V2 enviro setup
 				if(Movement.onTurn == true){
 					if(corners[CameraRotate.turn] == true){
-						foreach(Renderer asset in subAsset){
-							asset.enabled = true;
-						}
+						toggleElement(true);
 					} else {
-						foreach(Renderer asset in subAsset){
-							asset.enabled = false;
-						}
+						toggleElement(false);
 					}
 				} else {
 					if(straights[CameraRotate.straight] == true){
-						foreach(Renderer asset in subAsset){
-							asset.enabled = true;
-						}
+						toggleElement(true);
 					} else {
-						foreach(Renderer asset in subAsset){
-							asset.enabled = false;
-						}
+						toggleElement(false);
 					}
 				}
 			}
@@ -151,13 +124,9 @@ public class EnviroToggle : MonoBehaviour {
 			}
 			if(((CameraRotate.turn == 4)&&(CameraRotate.cornercounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.cornercounter < ((CameraRotate.turnAngle[3] * CameraRotate.turnLength[3]) - pitLengthPadding)))){
 				//Debug.Log("Corner Count:" + CameraRotate.cornercounter + ", Padding:" + pitLengthPadding);
-				foreach(Renderer asset in subAsset){
-					asset.enabled = true;
-				}
+				toggleElement(true);
 			} else {
-				foreach(Renderer asset in subAsset){
-					asset.enabled = false;
-				}
+				toggleElement(false);
 			}
 			if(CameraRotate.turn == 4){
 				triOvalAngleCount++;
@@ -178,6 +147,15 @@ public class EnviroToggle : MonoBehaviour {
 					}
 				}
 			}
+		}
+	}
+
+	void toggleElement(bool isShowing = false){
+		foreach(Renderer rend in childRenderers){
+			rend.enabled = isShowing;
+		}
+		foreach(BoxCollider col in childColliders){
+			col.enabled = isShowing;
 		}
 	}
 }
