@@ -1935,6 +1935,14 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
+		if(wreckSine < 0.2f){
+			wreckSine = 0.2f;
+		}
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log(AICar.name + " wreck angle: " + wreckAngle + " sine: " + wreckSine);
+		}
+		#endif
 		baseDecel-=(0.45f - randDecel);
 		slideX = ((baseDecel + 1) / 5f) + wreckSlideRand;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
