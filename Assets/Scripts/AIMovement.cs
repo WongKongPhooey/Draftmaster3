@@ -1232,7 +1232,6 @@ public class AIMovement : MonoBehaviour
 			bool HitForwardLong = DraftCheckForwardLong.distance > 0;
 			
 			if(HitForwardLong == true){
-				float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
 				//Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
 				//Avoid slow moving draft
 				if(CameraRotate.cautionOut == true){
@@ -1252,6 +1251,7 @@ public class AIMovement : MonoBehaviour
 						}
 					}
 				} else {
+					float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
 					//Debug.Log("Nothing in front..");
 					if(opponentSpeed > (AISpeed + 1.5f)){
 						findClearLane();
@@ -1778,14 +1778,12 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	float getOpponentSpeed(RaycastHit opponent){
-		if(opponent.transform.gameObject.name != null){
-			if(opponent.transform.gameObject.name == "Player"){
-				return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
-			} else {
-				if(opponent.transform.gameObject.tag == "AICar"){
-					//Debug.Log(opponent.transform.gameObject.name);
-					return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
-				}
+		if(opponent.transform.gameObject.tag == "Player"){
+			return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
+		} else {
+			if(opponent.transform.gameObject.tag == "AICar"){
+				//Debug.Log(opponent.transform.gameObject.name);
+				return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
 			}
 		}
 		return 9999;
@@ -1971,8 +1969,8 @@ public class AIMovement : MonoBehaviour
 		wreckRigidbody.angularDrag += 0.001f;
 		
 		//Prevent landing in the crowd
-		if(pos.x > 2f){
-			this.gameObject.transform.position = new Vector3(2f,pos.y,pos.z);
+		if(pos.x > 1.5f){
+			this.gameObject.transform.position = new Vector3(1.5f,pos.y,pos.z);
 		}
 		
 		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + wreckDecel);

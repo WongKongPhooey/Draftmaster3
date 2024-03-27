@@ -36,9 +36,14 @@ public class EnviroMovement : MonoBehaviour {
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 		enviroSpeed = -3.8f;
 		scrollPos = 1;
-		sizeMulti = EnviroObject.transform.localScale.z / 256f;
-		//This is for manually matching up static scrolling to non-static
-		hackScaler = 0.25f;
+		if(staticScroll == true){
+			sizeMulti = EnviroObject.transform.localScale.z / 256f;
+		} else {
+			//Not sure why this value works, may need some thought
+			sizeMulti = 0.19f;
+		}
+		//This is for manually tuning the 'feeling of speed'
+		hackScaler = 0.3f;
 	}
 
 	// Update is called once per frame
@@ -99,18 +104,17 @@ public class EnviroMovement : MonoBehaviour {
 		} else {
 			//Slowest game speed is car:80, track:105 (LA start), Scaler = 1.33 + 2.63 = 0.36f
 			//enviroSpeed = (-3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f)) * wreckOffsetMulti;
-
 			float scrollCalc = (carSpeedOffset / 900f) + (trackSpeedOffset / 3500f);
-			enviroSpeed = (((maxScrollSpeed + scrollCalc) / sizeMulti) * wreckOffsetMulti) * hackScaler;
+			enviroSpeed = (((maxScrollSpeed + scrollCalc) / 0.04f) * wreckOffsetMulti) * hackScaler;
 
 			//Can't go backwards..
 			if(enviroSpeed <= 0){
 				EnviroObject.transform.Translate(0,0,enviroSpeed);
 			}
 			
-			if (EnviroObject.transform.position.z <= (playerZ-30)){
+			if (EnviroObject.transform.position.z <= (playerZ-32)){
 				if(scrollOnce == false){
-					EnviroObject.transform.Translate(0,0,60);
+					EnviroObject.transform.Translate(0,0,64);
 				}
 			}
 		}

@@ -14,6 +14,8 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject finishLine;
 	public GameObject tropicono;
 	
+	public int customFrameRate;
+	
 	Renderer cornerKerbRenderer;
 	
 	public static string seriesPrefix;
@@ -98,6 +100,7 @@ public class CameraRotate : MonoBehaviour {
 				Application.targetFrameRate = 60;
 				break;
 		}
+		customFrameRate = -1;
 
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		MainCam.orthographicSize = 7.0f;
@@ -277,6 +280,11 @@ public class CameraRotate : MonoBehaviour {
 
 	// Update is called once per frame
 	void FixedUpdate() {
+
+		//Manipulate time to help solve bugs etc.
+		#if UNITY_EDITOR
+		Application.targetFrameRate = customFrameRate;
+		#endif
 
 		//LateUpdate was unreliable..
 		//..so run this at next frame start instead.
