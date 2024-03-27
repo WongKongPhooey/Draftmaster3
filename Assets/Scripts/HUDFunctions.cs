@@ -8,11 +8,14 @@ public class HUDFunctions : MonoBehaviour
 	public GameObject HUDOpener;
 	public GameObject HUDScreen1;
 	public GameObject HUDScreen2;
+	GameObject Ticker;
+	GameObject ShowTickerBtn;
 	
     // Start is called before the first frame update
     void Start()
     {
-		
+		Ticker = GameObject.Find("Scoreboard");
+		ShowTickerBtn = GameObject.Find("ShowScoreboard");
     }
 
     // Update is called once per frame
@@ -39,5 +42,13 @@ public class HUDFunctions : MonoBehaviour
 			HUD.SetActive(true);
 			HUDOpener.SetActive(false);
 		}
+	}
+	
+	public void HideTicker(){
+		Ticker.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f,120f);
+		ShowTickerBtn.GetComponent<UIAnimate>().show();
+	}
+	public void ShowTicker(){
+		Ticker.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f,0f);
 	}
 }
