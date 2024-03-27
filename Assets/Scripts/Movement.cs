@@ -1395,8 +1395,12 @@ public class Movement : MonoBehaviour {
 		playerWreckDecel = baseDecel - (60f * wreckSine);
 		//Debug.Log(playerWreckDecel);
 		
+		if(seriesSpeedDiff > 0){
+			seriesSpeedDiff -= 1;
+		}
+
 		//Debug.Log("Wreck Decel: " + playerWreckDecel);
-		if((playerSpeed - speedOffset - CameraRotate.carSpeedOffset) + windForce <= 0){
+		if((playerSpeed - speedOffset - seriesSpeedDiff - CameraRotate.carSpeedOffset) + windForce <= 0){
 			endWreck();
 		}
 		
