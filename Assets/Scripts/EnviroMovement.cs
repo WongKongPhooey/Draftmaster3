@@ -11,16 +11,19 @@ public class EnviroMovement : MonoBehaviour {
 	float scrollSpeedScaler;
 	public float carSpeedOffset;
 	public int trackSpeedOffset;
+	public float scrollCalc;
+	public float minPacingSpeed;
 	public float wreckOffsetMulti;
 	static float enviroSpeed;
 	public float enviroSpeedViewer;
-	public float maxScrollSpeed;
+	static float maxScrollSpeed;
 	public float scrollPos;
 	static float syncedScroll;
 	public float scrollVX;
 	public float sizeMulti;
 	//public float fixedScroll;
 	public static float hackScaler;
+	public bool debugObject;
 	Renderer rend;
 	int tick;
 	float playerZ;
@@ -35,6 +38,7 @@ public class EnviroMovement : MonoBehaviour {
 		carSpeedOffset = 0;
 		trackSpeedOffset = PlayerPrefs.GetInt("SpeedOffset");
 		enviroSpeed = -3.8f;
+		minPacingSpeed = 1f/(trackSpeedOffset + 1f);
 		scrollPos = 1;
 		if(staticScroll == true){
 			sizeMulti = EnviroObject.transform.localScale.z / 256f;
@@ -43,7 +47,8 @@ public class EnviroMovement : MonoBehaviour {
 			sizeMulti = 0.19f;
 		}
 		//This is for manually tuning the 'feeling of speed'
-		hackScaler = 0.3f;
+		hackScaler = 0.25f;
+		debugObject = false;
 	}
 
 	// Update is called once per frame
@@ -60,6 +65,11 @@ public class EnviroMovement : MonoBehaviour {
 		}
 		wreckOffsetMulti = (200 - trackSpeedOffset + Movement.playerWreckDecel) / 200;
 		carSpeedOffset = CameraRotate.carSpeedOffset;
+		//Max offsets are car:80, track:105 (LA Coliseum start)
+		//Slowest pacing = 0.02f, Stock pacing = 0.05f, Fastest scroll = 0.15f	
+		scrollCalc = (carSpeedOffset / 750f) + (trackSpeedOffset / 3500f);
+		//e.g. 80/450 = 0.177, 105/3500 = 0.03 , total = 0.207
+		//e.g. 80/900 = 0.088, 105/3500 = 0.03 , total = 0.0.118
 
 		if(staticScroll == true){
 			//If the scroll should be synced to a master object (e.g. the ground)..
@@ -68,15 +78,14 @@ public class EnviroMovement : MonoBehaviour {
 			if((syncedStaticScroll == true) && (syncedScrollMaster == false)){
 				rend.material.mainTextureOffset = new Vector2(0, syncedScroll);
 			} else {
-				//Max offsets are car:80, track:105 (LA start)
-				//Slowest pacing = 0.02f, Stock pacing = 0.05f, Fastest scroll = 0.15f	
-				float scrollCalc = (carSpeedOffset / 900f) + (trackSpeedOffset / 3500f);
 				//maxScroll will always be negative
 				//scrollCalc should generally not exceed about 1.2f to look realistic
 				//trackSpeedOffset should aim to shift the calc by about 0.3f at most
-				scrollVX = (((maxScrollSpeed + scrollCalc) / sizeMulti) * wreckOffsetMulti) * hackScaler;
+				scrollVX = ((((maxScrollSpeed + scrollCalc) / sizeMulti) * wreckOffsetMulti) * hackScaler) - minPacingSpeed;
 				#if UNITY_EDITOR
-				//Debug.Log("Max Scroll:" + maxScrollSpeed + ", Scroll Calc:" + scrollCalc + ", Size Multi:" + sizeMulti + " , Wreck Offset Multi:" + wreckOffsetMulti);
+				if(debugObject == true){
+					Debug.Log("Name:" + this.gameObject.name + ", ScrollVX:" + scrollVX + " , Max Scroll:" + maxScrollSpeed + ", Scroll Calc:" + scrollCalc + ", Size Multi:" + sizeMulti + " , Wreck Offset Multi:" + wreckOffsetMulti + ", Min Pacing Speed:" + minPacingSpeed);
+				}
 				#endif
 				if(scrollVX <= 0){
 					scrollPos += scrollVX;
@@ -102,10 +111,13 @@ public class EnviroMovement : MonoBehaviour {
 				rend.material.mainTextureOffset = new Vector2(0, scrollPos);
 			}
 		} else {
-			//Slowest game speed is car:80, track:105 (LA start), Scaler = 1.33 + 2.63 = 0.36f
-			//enviroSpeed = (-3.6f + (carSpeedOffset / 60f) + (trackSpeedOffset / 40f)) * wreckOffsetMulti;
-			float scrollCalc = (carSpeedOffset / 900f) + (trackSpeedOffset / 3500f);
-			enviroSpeed = (((maxScrollSpeed + scrollCalc) / 0.04f) * wreckOffsetMulti) * hackScaler;
+			enviroSpeed = ((((maxScrollSpeed + scrollCalc) / 0.04f) * wreckOffsetMulti) * hackScaler) - minPacingSpeed;
+
+			#if UNITY_EDITOR
+			if(debugObject == true){
+				Debug.Log("Name:" + this.gameObject.name + ", EnviroSpeed:" + enviroSpeed + " , Max Scroll:" + maxScrollSpeed + ", Scroll Calc:" + scrollCalc + ", Hack Scaler:" + hackScaler + " , Wreck Offset Multi:" + wreckOffsetMulti + ", Min Pacing Speed:" + minPacingSpeed);
+			}
+			#endif
 
 			//Can't go backwards..
 			if(enviroSpeed <= 0){
