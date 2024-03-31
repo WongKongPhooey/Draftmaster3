@@ -283,7 +283,7 @@ public class CameraRotate : MonoBehaviour {
 
 		//Manipulate time to help solve bugs etc.
 		#if UNITY_EDITOR
-		Application.targetFrameRate = customFrameRate;
+		//Application.targetFrameRate = customFrameRate;
 		#endif
 
 		//LateUpdate was unreliable..
@@ -733,15 +733,15 @@ public class CameraRotate : MonoBehaviour {
 		
 		//Default fallback for plate tracks (where slowest turn = 0)
 		if(slowestTurn == 1){
-			slowestTurn = 40;
+			slowestTurn = 20;
 			slowestTurnLength = 200;
 		}
 		
-		calcdGear = (float)slowestTurn / (float)(longestStraight + (float)(slowestTurnLength / 2));
+		calcdGear = (float)(slowestTurn * 2f) / (float)(longestStraight + (float)(slowestTurnLength / 2));
 		if(calcdGear > 0.25f){
 			calcdGear = 0.25f;
 		}
-		//Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
+		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)longestStraight + " + " + (float)(slowestTurnLength / 2) + ")");
 		return calcdGear;
 	}
 	
