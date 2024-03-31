@@ -737,7 +737,7 @@ public class CameraRotate : MonoBehaviour {
 			slowestTurnLength = 200;
 		}
 		
-		calcdGear = (float)(slowestTurn * 2f) / (float)(longestStraight + (float)(slowestTurnLength / 2));
+		calcdGear = (float)(slowestTurn * 1.5f) / (float)(longestStraight + (float)(slowestTurnLength / 2));
 		if(calcdGear > 0.25f){
 			calcdGear = 0.25f;
 		}
