@@ -104,6 +104,9 @@ public class CameraRotate : MonoBehaviour {
 
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		MainCam.orthographicSize = 7.0f;
+		if(PlayerPrefs.HasKey("CameraZoom")){
+			MainCam.orthographicSize = 8.0f - PlayerPrefs.GetInt("CameraZoom");
+		}
 		
 		cornerKerbRenderer = cornerKerb.GetComponent<Renderer>();
 		
