@@ -135,7 +135,10 @@ public class EnviroMovement : MonoBehaviour {
 			//Convert this percentage to a distance along the 64 length track
 			//e.g. 0.08 = 8% of 64 = 5.12
 			if(enviroSpeedCurrentZ != enviroSpeedNewZ){
-				enviroSpeed = enviroSpeedCurrentZ - enviroSpeedNewZ;
+				//Occasionally weird values < 0 sneak in here..
+				if(enviroSpeedCurrentZ - enviroSpeedNewZ > 0){
+					enviroSpeed = enviroSpeedCurrentZ - enviroSpeedNewZ;
+				}
 			}
 
 			#if UNITY_EDITOR
@@ -147,6 +150,8 @@ public class EnviroMovement : MonoBehaviour {
 			//Can't go backwards..
 			if(enviroSpeed >= 0){
 				EnviroObject.transform.Translate(0,0,-enviroSpeed);
+			} else {
+				//Debug.Log("Name:" + this.gameObject.name + ", EnviroSpeed < 0:" + enviroSpeed);
 			}
 			
 			if (EnviroObject.transform.position.z <= (playerZ-32)){

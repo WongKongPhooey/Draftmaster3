@@ -586,7 +586,7 @@ public class SpawnField : MonoBehaviour {
 		foreach(var pointsRow in pointsTable){
 			if(pointsRow.Value > 0){
 				if(pointsTableInd < 5){
-					Debug.Log("Added fast car: #" + pointsRow.Key);
+					//Debug.Log("Added fast car: #" + pointsRow.Key);
 					fastCars.Add("" + pointsRow.Key + "");
 				} else {
 					if(pointsTableInd > 20){
