@@ -52,7 +52,6 @@ public class ChampionshipHubUI : MonoBehaviour
     void Start(){
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		carNumber = PlayerPrefs.GetInt("CarChoice");
-		Debug.Log("Current Series Index: " + currentSeriesIndex);
 		currentSeries = int.Parse(currentSeriesIndex.Substring(0,1));
 		currentSubseries = int.Parse(currentSeriesIndex.Substring(1));
 		championshipTracklist = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "Tracklist");
@@ -85,7 +84,11 @@ public class ChampionshipHubUI : MonoBehaviour
 		if(ModData.isModSeries(seriesPrefix) == true){
 			hubCarImage.GetComponent<RawImage>().texture = ModData.getTexture(seriesPrefix,carNumber);
 		} else {
-			hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(PlayerPrefs.GetString("carTexture"));
+			if(PlayerPrefs.HasKey(seriesPrefix + carNumber + "AltPaint")){
+				hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(seriesPrefix + "livery" + carNumber + "alt" + PlayerPrefs.GetInt(seriesPrefix + carNumber + "AltPaint"));
+			} else {
+				hubCarImage.GetComponent<RawImage>().texture = Resources.Load<Texture2D>(PlayerPrefs.GetString("carTexture"));
+			}
 		}
 		nextTrackLabel = GameObject.Find("NextTrackLabel");
 		

@@ -184,7 +184,7 @@ public class AIMovement : MonoBehaviour
 		speedDiffPadding = 0.2f;
 		
 		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
-		wreckProbability = (wreckFreq * 2) + 1;
+		wreckProbability = calcWreckProb(wreckFreq);
 		
 		wreckForce = this.GetComponent<ConstantForce>();
 		wreckRigidbody = this.GetComponent<Rigidbody>();
@@ -498,7 +498,6 @@ public class AIMovement : MonoBehaviour
 				if(dooredStrength > 95){
 					dooredStrength = 95;
 				}
-				wreckProbability = (wreckFreq * 3) + 1;
 			}
 		}
 
@@ -689,7 +688,7 @@ public class AIMovement : MonoBehaviour
 				bumpSpeed = Movement.playerSpeed;
 			}	
 			float midSpeed = bumpSpeed - AISpeed;
-			if((midSpeed > 4f)||(midSpeed < -4f)){
+			if((midSpeed > (6f - wreckFreq))||(midSpeed < (-6f + wreckFreq))){
 				//Debug.Log("Wreck: Strong Push");
 				float rng = Random.Range(0,1000);
 				if(wreckProbability >= rng){
@@ -760,10 +759,11 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(CameraRotate.overtime == true){
-			wreckProbability = 0;
-			
-			if(CameraRotate.lap == CameraRotate.raceEnd){
-				wreckProbability = (wreckFreq * 5) + 1;
+			if(CameraRotate.lap != CameraRotate.raceEnd){
+				//Prevents multiple overtimes caused by AI
+				wreckProbability = 0;
+			} else {
+				wreckProbability = calcWreckProb(wreckFreq);
 			}
 		}
 		
@@ -1153,8 +1153,8 @@ public class AIMovement : MonoBehaviour
 					Debug.Log(AICar.name + " hit the wall! Moving back up ");
 				}
 				#endif
-				float rng = Random.Range(0,1000);
-				//Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
+				float rng = Random.Range(0,100);
+				Debug.Log("Wall Wreck Rng: " + rng + " < " + wreckProbability);
 				if((wreckProbability >= rng)||
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
@@ -1232,7 +1232,6 @@ public class AIMovement : MonoBehaviour
 			bool HitForwardLong = DraftCheckForwardLong.distance > 0;
 			
 			if(HitForwardLong == true){
-				float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
 				//Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
 				//Avoid slow moving draft
 				if(CameraRotate.cautionOut == true){
@@ -1252,6 +1251,7 @@ public class AIMovement : MonoBehaviour
 						}
 					}
 				} else {
+					float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
 					//Debug.Log("Nothing in front..");
 					if(opponentSpeed > (AISpeed + 1.5f)){
 						findClearLane();
@@ -1778,14 +1778,12 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	float getOpponentSpeed(RaycastHit opponent){
-		if(opponent.transform.gameObject.name != null){
-			if(opponent.transform.gameObject.name == "Player"){
-				return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
-			} else {
-				if(opponent.transform.gameObject.tag == "AICar"){
-					//Debug.Log(opponent.transform.gameObject.name);
-					return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
-				}
+		if(opponent.transform.gameObject.tag == "Player"){
+			return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
+		} else {
+			if(opponent.transform.gameObject.tag == "AICar"){
+				//Debug.Log(opponent.transform.gameObject.name);
+				return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
 			}
 		}
 		return 9999;
@@ -1935,6 +1933,14 @@ public class AIMovement : MonoBehaviour
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
 		}
+		if(wreckSine < 0.2f){
+			wreckSine = 0.2f;
+		}
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log(AICar.name + " wreck angle: " + wreckAngle + " sine: " + wreckSine);
+		}
+		#endif
 		baseDecel-=(0.45f - randDecel);
 		slideX = ((baseDecel + 1) / 5f) + wreckSlideRand;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
@@ -1963,8 +1969,8 @@ public class AIMovement : MonoBehaviour
 		wreckRigidbody.angularDrag += 0.001f;
 		
 		//Prevent landing in the crowd
-		if(pos.x > 2f){
-			this.gameObject.transform.position = new Vector3(2f,pos.y,pos.z);
+		if(pos.x > 1.5f){
+			this.gameObject.transform.position = new Vector3(1.5f,pos.y,pos.z);
 		}
 		
 		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + wreckDecel);
@@ -2005,7 +2011,23 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	void drawRaycasts(){
-
+	int calcWreckProb(int wreckFreq){
+		//Debug.Log("Wreck Frequency: " + wreckFreq);
+		int probability = 5;
+		switch(wreckFreq){
+			case 1:
+				probability = 0;
+				break;
+			case 2:
+				probability = 5;
+				break;
+			case 3:
+				probability = 25;
+				break;
+			default:
+				probability = 5;
+				break;
+		}
+		return probability;
 	}
 }

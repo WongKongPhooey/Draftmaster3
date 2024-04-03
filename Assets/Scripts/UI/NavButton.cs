@@ -43,4 +43,21 @@ public class NavButton : MonoBehaviour
 			SceneManager.LoadScene("Menus/RaceRewards");
 		}
 	}
+	
+	public void quitChampionship(){
+		Debug.Log("Championship Quit");
+		PlayerPrefs.SetInt("ChampionshipReward",1);
+		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+		string seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
+
+		//Pref deletes from the RaceRewards screen that's being skipped
+		PlayerPrefs.DeleteKey("ChampionshipSubseries");
+		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
+		PlayerPrefs.DeleteKey("SeriesPrize");
+		PlayerPrefs.DeleteKey("RaceType");
+		PlayerPrefs.DeleteKey("MomentComplete");
+		PlayerPrefs.DeleteKey("SeriesPrizeAmt");
+		PlayerPrefs.SetInt("ChampionshipReward",0);
+		SceneManager.LoadScene("Menus/MainMenu");
+	}
 }

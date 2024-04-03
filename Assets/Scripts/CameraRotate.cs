@@ -14,6 +14,8 @@ public class CameraRotate : MonoBehaviour {
 	public GameObject finishLine;
 	public GameObject tropicono;
 	
+	public int customFrameRate;
+	
 	Renderer cornerKerbRenderer;
 	
 	public static string seriesPrefix;
@@ -98,9 +100,13 @@ public class CameraRotate : MonoBehaviour {
 				Application.targetFrameRate = 60;
 				break;
 		}
+		customFrameRate = -1;
 
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 		MainCam.orthographicSize = 7.0f;
+		if(PlayerPrefs.HasKey("CameraZoom")){
+			MainCam.orthographicSize = 8.0f - PlayerPrefs.GetInt("CameraZoom");
+		}
 		
 		cornerKerbRenderer = cornerKerb.GetComponent<Renderer>();
 		
@@ -243,9 +249,11 @@ public class CameraRotate : MonoBehaviour {
 		if(audioOn != 0){
 			carEngine.volume = 0.15f;
 			crowdNoise.volume = 0.05f;
+			Debug.Log("Audio is on: " + audioOn);
 		} else {
 			carEngine.volume = 0.0f;
 			crowdNoise.volume = 0.0f;
+			Debug.Log("Audio is off: " + audioOn);
 		}
 		
 	}
@@ -275,6 +283,11 @@ public class CameraRotate : MonoBehaviour {
 
 	// Update is called once per frame
 	void FixedUpdate() {
+
+		//Manipulate time to help solve bugs etc.
+		#if UNITY_EDITOR
+		//Application.targetFrameRate = customFrameRate;
+		#endif
 
 		//LateUpdate was unreliable..
 		//..so run this at next frame start instead.
@@ -392,8 +405,8 @@ public class CameraRotate : MonoBehaviour {
 					cautionSummaryMenu.SetActive(true);
 					//Debug.Log("Crossed line, show the finish line");
 					finishLine.GetComponent<Renderer>().enabled = true;
-					carEngine.volume = 0;
-					crowdNoise.volume = 0;
+					carEngine.volume = 0.0f;
+					crowdNoise.volume = 0.0f;
 					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 					if(raceLapRecordInt < 0){
 						raceLapRecordInt = 0;
@@ -723,15 +736,15 @@ public class CameraRotate : MonoBehaviour {
 		
 		//Default fallback for plate tracks (where slowest turn = 0)
 		if(slowestTurn == 1){
-			slowestTurn = 40;
+			slowestTurn = 20;
 			slowestTurnLength = 200;
 		}
 		
-		calcdGear = (float)slowestTurn / (float)(longestStraight + (float)(slowestTurnLength / 2));
+		calcdGear = (float)(slowestTurn * 1.5f) / (float)(longestStraight + (float)(slowestTurnLength / 2));
 		if(calcdGear > 0.25f){
 			calcdGear = 0.25f;
 		}
-		//Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)(longestStraight + (float)(slowestTurnLength / 2)) + ")");
+		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)longestStraight + " + " + (float)(slowestTurnLength / 2) + ")");
 		return calcdGear;
 	}
 	

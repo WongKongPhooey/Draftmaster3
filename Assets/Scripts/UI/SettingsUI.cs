@@ -8,6 +8,7 @@ public class SettingsUI : MonoBehaviour
 	public GameObject audioSetting;
 	public GameObject commentarySetting;
 	public GameObject cameraRotateSetting;
+	public GameObject cameraZoomSetting;
 	public GameObject cautionsSetting;
 	public GameObject qualitySetting;
 	public GameObject overtimeSetting;
@@ -15,6 +16,7 @@ public class SettingsUI : MonoBehaviour
 	Slider audioSlider;
 	Slider commentarySlider;
 	Slider cameraRotateSlider;
+	Slider cameraZoomSlider;
 	Slider cautionsSlider;
 	Slider qualitySlider;
 	Slider overtimeSlider;
@@ -22,6 +24,7 @@ public class SettingsUI : MonoBehaviour
 	TMPro.TMP_Text audioSliderLabel;
 	TMPro.TMP_Text commentarySliderLabel;
 	TMPro.TMP_Text cameraRotateSliderLabel;
+	TMPro.TMP_Text cameraZoomSliderLabel;
 	TMPro.TMP_Text cautionsSliderLabel;
 	TMPro.TMP_Text qualitySliderLabel;
 	TMPro.TMP_Text overtimeSliderLabel;
@@ -33,6 +36,7 @@ public class SettingsUI : MonoBehaviour
         audioSlider = audioSetting.transform.GetChild(1).GetComponent<Slider>();
 		commentarySlider = commentarySetting.transform.GetChild(1).GetComponent<Slider>();
 		cameraRotateSlider = cameraRotateSetting.transform.GetChild(1).GetComponent<Slider>();
+		cameraZoomSlider = cameraZoomSetting.transform.GetChild(1).GetComponent<Slider>();
 		cautionsSlider = cautionsSetting.transform.GetChild(1).GetComponent<Slider>();
 		qualitySlider = qualitySetting.transform.GetChild(1).GetComponent<Slider>();
 		overtimeSlider = overtimeSetting.transform.GetChild(1).GetComponent<Slider>();
@@ -40,6 +44,7 @@ public class SettingsUI : MonoBehaviour
 		audioSliderLabel = audioSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		commentarySliderLabel = commentarySlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		cameraRotateSliderLabel = cameraRotateSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+		cameraZoomSliderLabel = cameraZoomSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		cautionsSliderLabel = cautionsSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		qualitySliderLabel = qualitySlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		overtimeSliderLabel = overtimeSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
@@ -47,6 +52,7 @@ public class SettingsUI : MonoBehaviour
 		audioSlider.value = PlayerPrefs.GetInt("AudioOn");
 		commentarySlider.value = PlayerPrefs.GetInt("CommsOn");
 		cameraRotateSlider.value = PlayerPrefs.GetInt("CameraRotate");
+		cameraZoomSlider.value = PlayerPrefs.GetInt("CameraZoom");
 		cautionsSlider.value = PlayerPrefs.GetInt("WreckFreq");
 		qualitySlider.value = PlayerPrefs.GetInt("FPSLimit");
 		overtimeSlider.value = PlayerPrefs.GetInt("MaxOvertime");
@@ -54,6 +60,7 @@ public class SettingsUI : MonoBehaviour
 		audioSliderLabel.text = SliderValueDesc("Audio",audioSlider.value);
 		commentarySliderLabel.text = SliderValueDesc("Comms",commentarySlider.value);
 		cameraRotateSliderLabel.text = SliderValueDesc("CameraRotate",cameraRotateSlider.value);
+		cameraZoomSliderLabel.text = SliderValueDesc("CameraZoom",cameraZoomSlider.value);
 		cautionsSliderLabel.text = SliderValueDesc("Cautions",cautionsSlider.value);
 		qualitySliderLabel.text = SliderValueDesc("FPSLimit",qualitySlider.value);
 		overtimeSliderLabel.text = SliderValueDesc("MaxOvertime",overtimeSlider.value);
@@ -72,6 +79,10 @@ public class SettingsUI : MonoBehaviour
 	public void SaveCameraRotateSlider(){
 		PlayerPrefs.SetInt("CameraRotate",(int)cameraRotateSlider.value);
 		cameraRotateSliderLabel.text = SliderValueDesc("CameraRotate",cameraRotateSlider.value);
+	}
+	public void SaveCameraZoomSlider(){
+		PlayerPrefs.SetInt("CameraZoom",(int)cameraZoomSlider.value);
+		cameraZoomSliderLabel.text = SliderValueDesc("CameraZoom",cameraZoomSlider.value);
 	}
 	
 	public void SaveCautionsSlider(){
@@ -117,6 +128,22 @@ public class SettingsUI : MonoBehaviour
 						break;
 					default:
 						desc = "On";
+						break;
+				}
+				break;
+			case "CameraZoom":
+				switch(sliderValue){
+					case 1:
+						desc = "Far";
+						break;
+					case 2:
+						desc = "Mid";
+						break;
+					case 3:
+						desc = "Close";
+						break;
+					default:
+						desc = "Far";
 						break;
 				}
 				break;
@@ -188,6 +215,9 @@ public class SettingsUI : MonoBehaviour
 		}
 		if(!PlayerPrefs.HasKey("CameraRotate")){
 			PlayerPrefs.SetInt("CameraRotate",1);
+		}
+		if(!PlayerPrefs.HasKey("CameraZoom")){
+			PlayerPrefs.SetInt("CameraZoom",1);
 		}
 		if(!PlayerPrefs.HasKey("WreckFreq")){
 			PlayerPrefs.SetInt("WreckFreq",2);

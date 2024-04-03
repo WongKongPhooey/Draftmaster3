@@ -76,7 +76,7 @@ public class MainMenuUI : MonoBehaviour {
 			case 3:
 				Application.targetFrameRate = 120;
 				#if UNITY_EDITOR
-					Application.targetFrameRate = -1;
+					//Application.targetFrameRate = -1;
 				#endif
 				break;
 			default:
@@ -236,7 +236,7 @@ public class MainMenuUI : MonoBehaviour {
 		//Reset the game to imitate new users
 		#if UNITY_EDITOR
 		//PlayerPrefs.DeleteAll();
-		PlayerPrefs.SetInt("Gears",1000);
+		//PlayerPrefs.SetInt("Gears",1000);
 		//PlayerPrefs.SetInt("Level", 45);
 		#endif
 		
@@ -271,12 +271,14 @@ public class MainMenuUI : MonoBehaviour {
 		if(!PlayerPrefs.HasKey("AudioOn")){
 			PlayerPrefs.SetInt("AudioOn",1);
 			audioOn = 1;
+			//Debug.Log("Audio bug caught: " + audioOn);
 		} else {
 			audioOn = PlayerPrefs.GetInt("AudioOn");
 			//Possible muted games fix
 			if((audioOn != 0)&&(audioOn != 1)){
 				PlayerPrefs.SetInt("AudioOn",1);
 				audioOn = 1;
+				//Debug.Log("Audio bug caught: " + audioOn);
 			}
 		}
 		if(audioOn == 1){
