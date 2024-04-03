@@ -1153,8 +1153,8 @@ public class AIMovement : MonoBehaviour
 					Debug.Log(AICar.name + " hit the wall! Moving back up ");
 				}
 				#endif
-				float rng = Random.Range(0,1000);
-				//Debug.Log("Wreck Rng: " + rng + " < " + wreckProbability);
+				float rng = Random.Range(0,100);
+				Debug.Log("Wall Wreck Rng: " + rng + " < " + wreckProbability);
 				if((wreckProbability >= rng)||
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
