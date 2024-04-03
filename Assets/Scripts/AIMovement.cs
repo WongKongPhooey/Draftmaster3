@@ -184,7 +184,7 @@ public class AIMovement : MonoBehaviour
 		speedDiffPadding = 0.2f;
 		
 		wreckFreq = PlayerPrefs.GetInt("WreckFreq");
-		wreckProbability = (wreckFreq * 2) + 1;
+		wreckProbability = calcWreckProb(wreckFreq);
 		
 		wreckForce = this.GetComponent<ConstantForce>();
 		wreckRigidbody = this.GetComponent<Rigidbody>();
@@ -498,7 +498,6 @@ public class AIMovement : MonoBehaviour
 				if(dooredStrength > 95){
 					dooredStrength = 95;
 				}
-				wreckProbability = (wreckFreq * 3) + 1;
 			}
 		}
 
@@ -689,7 +688,7 @@ public class AIMovement : MonoBehaviour
 				bumpSpeed = Movement.playerSpeed;
 			}	
 			float midSpeed = bumpSpeed - AISpeed;
-			if((midSpeed > 4f)||(midSpeed < -4f)){
+			if((midSpeed > (6f - wreckFreq))||(midSpeed < (-6f + wreckFreq))){
 				//Debug.Log("Wreck: Strong Push");
 				float rng = Random.Range(0,1000);
 				if(wreckProbability >= rng){
@@ -760,10 +759,11 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(CameraRotate.overtime == true){
-			wreckProbability = 0;
-			
-			if(CameraRotate.lap == CameraRotate.raceEnd){
-				wreckProbability = (wreckFreq * 5) + 1;
+			if(CameraRotate.lap != CameraRotate.raceEnd){
+				//Prevents multiple overtimes caused by AI
+				wreckProbability = 0;
+			} else {
+				wreckProbability = calcWreckProb(wreckFreq);
 			}
 		}
 		
@@ -2011,7 +2011,23 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
-	void drawRaycasts(){
-
+	int calcWreckProb(int wreckFreq){
+		//Debug.Log("Wreck Frequency: " + wreckFreq);
+		int probability = 5;
+		switch(wreckFreq){
+			case 1:
+				probability = 0;
+				break;
+			case 2:
+				probability = 5;
+				break;
+			case 3:
+				probability = 25;
+				break;
+			default:
+				probability = 5;
+				break;
+		}
+		return probability;
 	}
 }
