@@ -341,10 +341,12 @@ public class EventData : MonoBehaviour
 		offlineCustomField[4,0] = "cup79MomentsDaytona";
 		offlineStartingLap[4,0] = 12;
 		offlineModifier[4,0] = "delicate";
+		offlineRaceLaps[4,0] = 201;
+		offlineStartingLap[4,0] = 200;
 		offlineMoment[4,0] = "Daytona79";
 		offlineTracklists[4,0] = "1";
 		offlinePrizes[4,0] = "1Star";
-		offlineCustomFieldOrder[4,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,43";
+		offlineCustomFieldOrder[4,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,43";
 		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
 		
 		offlineEventChapter[4,1] = "Chastain's Wallride";
@@ -357,6 +359,8 @@ public class EventData : MonoBehaviour
 		offlineCustomField[4,1] = "cup22Chastain";
 		offlineStartingLap[4,1] = 27;
 		offlineModifier[4,1] = "wallride";
+		offlineRaceLaps[4,1] = 501;
+		offlineStartingLap[4,1] = 500;
 		offlineMoment[4,1] = "ChastainWallride";
 		offlineTracklists[4,1] = "6";
 		offlinePrizes[4,1] = "1Star";
@@ -370,9 +374,7 @@ public class EventData : MonoBehaviour
 		offlineAILevel[4,2] = 10;
 		offlineSeries[4,2] = "irl23";
 		offlineCustomCar[4,2] = "irl23livery2";
-		//offlineCustomField[4,2] = "cup22Chastain";
 		offlineStartingLap[4,2] = 14;
-		//offlineModifier[4,2] = "wallride";
 		offlineMoment[4,2] = "WideOpenWheels";
 		offlineTracklists[4,2] = "7";
 		offlinePrizes[4,2] = "1Star";
