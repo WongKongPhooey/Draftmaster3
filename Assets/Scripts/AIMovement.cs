@@ -413,78 +413,7 @@ public class AIMovement : MonoBehaviour
 		}
 
 		if(officialSeries == true){
-			if (DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
-				if(seriesPrefix == "irl23"){
-					AICarClass+=4;
-				}
-				switch(AICarClass){
-					case 1:
-						laneChangeDuration = 75;
-						laneChangeSpeed = 0.016f;
-						laneChangeBackout = 30;
-						break;
-					case 2:
-						laneChangeDuration = 64;
-						laneChangeSpeed = 0.01875f;
-						laneChangeBackout = 28;
-						break;
-					case 3:
-						laneChangeDuration = 60;
-						laneChangeSpeed = 0.02f;
-						laneChangeBackout = 24;
-						break;
-					case 4:
-						laneChangeDuration = 50;
-						laneChangeSpeed = 0.024f;
-						laneChangeBackout = 20;
-						break;
-					case 5:
-						laneChangeDuration = 48;
-						laneChangeSpeed = 0.025f;
-						laneChangeBackout = 16;
-						break;
-					case 6:
-						laneChangeDuration = 40;
-						laneChangeSpeed = 0.030f;
-						laneChangeBackout = 14;
-						break;
-					case 7:
-						laneChangeDuration = 36;
-						laneChangeSpeed = 0.0333333f;
-						laneChangeBackout = 12;
-						break;
-					case 8:
-						laneChangeDuration = 32;
-						laneChangeSpeed = 0.0375f;
-						laneChangeBackout = 12;
-						break;
-					case 9:
-						laneChangeDuration = 25;
-						laneChangeSpeed = 0.048f;
-						laneChangeBackout = 10;
-						break;
-					case 10:
-						laneChangeDuration = 20;
-						laneChangeSpeed = 0.06f;
-						laneChangeBackout = 8;
-						break;
-					default:
-						laneChangeDuration = 80;
-						laneChangeSpeed = 0.015f;
-						laneChangeBackout = 32;
-						break;
-				}
-			} else {
-				if(seriesPrefix == "irl23"){
-					laneChangeDuration = 48;
-					laneChangeSpeed = 0.025f;
-					laneChangeBackout = 16;
-				} else {
-					laneChangeDuration = 80;
-					laneChangeSpeed = 0.015f;
-					laneChangeBackout = 32;
-				}
-			}
+			setLaneChangeSpeed();
 		} else {
 			laneChangeDuration = 80;
 			laneChangeSpeed = 0.015f;
@@ -813,10 +742,6 @@ public class AIMovement : MonoBehaviour
 			AISpeed = 202;
 		}
 		
-		/*if(debugPlayer == true){
-			Debug.Log(AICar.name + " found draft");
-		}*/
-		
 		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
 		raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //0. Forward centered
 		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, draftAirCushion); //1. Backward centered
@@ -1088,6 +1013,102 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
+	void setLaneChangeSpeed(int overrideValue = 0){
+		int laneChangeSpeedIndex = 0;
+		//If strategist, or if override has been applied (avoiding wrecks etc.)
+		if((DriverNames.getType(seriesPrefix,carNum) == "Strategist")||(overrideValue != 0)){
+			laneChangeSpeedIndex = AICarClass;
+			if(seriesPrefix == "irl23"){
+				laneChangeSpeedIndex+=4;
+			}
+			if(overrideValue != 0){
+				laneChangeSpeedIndex+=overrideValue;
+				Debug.Log("Faster lane change: " + laneChangeSpeedIndex);
+			}
+			switch(laneChangeSpeedIndex){
+				case 1:
+					laneChangeDuration = 75;
+					laneChangeSpeed = 0.016f;
+					laneChangeBackout = 30;
+					break;
+				case 2:
+					laneChangeDuration = 64;
+					laneChangeSpeed = 0.01875f;
+					laneChangeBackout = 28;
+					break;
+				case 3:
+					laneChangeDuration = 60;
+					laneChangeSpeed = 0.02f;
+					laneChangeBackout = 24;
+					break;
+				case 4:
+					laneChangeDuration = 50;
+					laneChangeSpeed = 0.024f;
+					laneChangeBackout = 20;
+					break;
+				case 5:
+					laneChangeDuration = 48;
+					laneChangeSpeed = 0.025f;
+					laneChangeBackout = 16;
+					break;
+				case 6:
+					laneChangeDuration = 40;
+					laneChangeSpeed = 0.030f;
+					laneChangeBackout = 14;
+					break;
+				case 7:
+					laneChangeDuration = 36;
+					laneChangeSpeed = 0.0333333f;
+					laneChangeBackout = 12;
+					break;
+				case 8:
+					laneChangeDuration = 32;
+					laneChangeSpeed = 0.0375f;
+					laneChangeBackout = 12;
+					break;
+				case 9:
+					laneChangeDuration = 25;
+					laneChangeSpeed = 0.048f;
+					laneChangeBackout = 10;
+					break;
+				case 10:
+					laneChangeDuration = 20;
+					laneChangeSpeed = 0.06f;
+					laneChangeBackout = 8;
+					break;
+				case 11:
+					laneChangeDuration = 16;
+					laneChangeSpeed = 0.075f;
+					laneChangeBackout = 6;
+					break;
+				case 12:
+				case 13:
+				case 14:
+				case 15:
+				case 16:
+					laneChangeDuration = 12;
+					laneChangeSpeed = 0.1f;
+					laneChangeBackout = 5;
+					break;
+				default:
+					laneChangeDuration = 80;
+					laneChangeSpeed = 0.015f;
+					laneChangeBackout = 32;
+					break;
+			}
+		} else {
+			if(seriesPrefix == "irl23"){
+				laneChangeDuration = 48;
+				laneChangeSpeed = 0.025f;
+				laneChangeBackout = 16;
+			} else {
+				laneChangeDuration = 80;
+				laneChangeSpeed = 0.015f;
+				laneChangeBackout = 32;
+			}
+		}
+	}
+	
 	void wreckSpeed(){		
 		//Speed difference between the player and the AI
 		speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
@@ -1154,7 +1175,7 @@ public class AIMovement : MonoBehaviour
 				}
 				#endif
 				float rng = Random.Range(0,100);
-				Debug.Log("Wall Wreck Rng: " + rng + " < " + wreckProbability);
+				//Debug.Log("Wall Wreck Rng: " + rng + " < " + wreckProbability);
 				if((wreckProbability >= rng)||
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
@@ -1179,8 +1200,6 @@ public class AIMovement : MonoBehaviour
 		}
 		#endif
 		
-        //Debug.DrawRay(pos  + new Vector3(0.0f, 0.0f, 1.2f), Vector3.forward * 10, Color.green);
-		//Debug.Log("Checking Draft Logic.. ");
 		if(HitForwardZOffset == true){
 			float carDist = DraftCheckForwardZOffset.distance;
 			float opponentSpeed = getOpponentSpeed(DraftCheckForwardZOffset);
@@ -1229,18 +1248,18 @@ public class AIMovement : MonoBehaviour
 		} else {
 			//Check further away
 			RaycastHit DraftCheckForwardLong = raycastHits[0];
+			//Debug.Log("Longer dist:" + DraftCheckForwardLong.distance);
 			bool HitForwardLong = DraftCheckForwardLong.distance > 0;
 			
 			if(HitForwardLong == true){
-				//Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
-				//Avoid slow moving draft
-				if(CameraRotate.cautionOut == true){
-					//Debug.Log("Caution Weighted Draft Logic");
+				Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
+				//Caution is out or last lap
+				if((CameraRotate.cautionOut == true)||(CameraRotate.lap == CameraRotate.raceEnd)){
 					GameObject oppCar = DraftCheckForwardLong.transform.gameObject;
 					if(oppCar.GetComponent<AIMovement>() != null){
 						if(oppCar.GetComponent<AIMovement>().isWrecking == true){
 							avoidWreck();
-							//Debug.Log(carName + " Avoids Wreck");
+							//Debug.Log(carName + " Avoids Wrecking AI");
 						}
 					} else {
 						if(oppCar.GetComponent<Movement>() != null){
@@ -1252,15 +1271,15 @@ public class AIMovement : MonoBehaviour
 					}
 				} else {
 					float opponentSpeed = getOpponentSpeed(DraftCheckForwardLong);
-					//Debug.Log("Nothing in front..");
 					if(opponentSpeed > (AISpeed + 1.5f)){
 						findClearLane();
 					}
 				}
 			} else {
-				findDraft();
+				if(CameraRotate.cautionOut == false){
+					findDraft();
+				}
 			}
-			//raycastBatch[3] = new RaycastCommand(pos + new Vector3(0.0f, 0.0f, 1.2f), transform.forward, maxDraftDistance); //Forward Long Dist
 		}
 	}
 	
@@ -1452,6 +1471,12 @@ public class AIMovement : MonoBehaviour
 		#endif
 		
 		if(HitLaneLeft){
+			//No cautions on the last lap, so have to avoid wrecks here
+			if(CameraRotate.lap == CameraRotate.raceEnd){
+				if(opponentIsWrecking(DraftCheckLaneLeft) == true){
+					return;
+				}
+			}
 			//Left lane has a clear draft
 			if(leftSideClear() == true){
 				//And I can move into that lane
@@ -1472,6 +1497,11 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if(HitLaneRight){
+			if(CameraRotate.lap == CameraRotate.raceEnd){
+				if(opponentIsWrecking(DraftCheckLaneRight) == true){
+					return;
+				}
+			}
 			//Right lane has a clear draft
 			if(rightSideClear() == true){
 				//And I can move into that lane
@@ -1598,6 +1628,16 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public void avoidWreck(){
+		
+		//Increase lane change speed index by +3
+		setLaneChangeSpeed(5);
+		
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log(AICar.name + " avoiding wreck.");
+		}
+		#endif
+			
 		RaycastHit DraftCheckLaneLeft;
 		RaycastHit DraftCheckLaneRight;
 		bool HitLaneLeft = Physics.Raycast(pos + new Vector3(-1.2f,0,1.1f), transform.forward, out DraftCheckLaneLeft, 20);
@@ -1642,15 +1682,14 @@ public class AIMovement : MonoBehaviour
 		//If an option exists..
 		if(direction != ""){
 			if(direction == "Both"){
-				//Random choose one
-				float rng = Random.Range(0,2);
-				//Debug.Log("Rnd /2 = " + rng);
-				if(rng > 1f){
-					direction = "Right";
-				} else {
+				//Cars tend to slide up the track so the inside should be clearer
+				if(CameraRotate.onTurn == true){
 					direction = "Left";
+				} else {
+					direction = "Right";
 				}
 			}
+			Debug.Log(AICar.name + " avoids wreck in direction " + direction);
 			changeLane(direction);
 		}
 	}
@@ -1743,12 +1782,13 @@ public class AIMovement : MonoBehaviour
 	public void changeLane(string direction){
 		
 		if(laneticker == 0){
-			//Debug.Log("Lane change!");
 			if(direction == "Left"){
+				Debug.Log("Go Left!");
 				laneticker = laneChangeDuration;
 				lane++;
 			} else {
 				if(direction == "Right"){
+					Debug.Log("Go Right!");
 					laneticker = -laneChangeDuration;
 					lane--;
 				}
@@ -1756,6 +1796,8 @@ public class AIMovement : MonoBehaviour
 			laneRest = Random.Range(200, 2000);
 			movingLane = true;
 			holdLane = 0;
+		} else {
+			Debug.Log("Already changing lane..");
 		}
 	}
 	
@@ -1787,6 +1829,18 @@ public class AIMovement : MonoBehaviour
 			}
 		}
 		return 9999;
+	}
+	
+	bool opponentIsWrecking(RaycastHit opponent){
+		if(opponent.transform.gameObject.tag == "Player"){
+			return Movement.isWrecking;
+		} else {
+			if(opponent.transform.gameObject.tag == "AICar"){
+				//Debug.Log(opponent.transform.gameObject.name);
+				return opponent.transform.gameObject.GetComponent<AIMovement>().isWrecking;
+			}
+		}
+		return false;
 	}
 	
 	bool checkRaycast(string rayDirection, float rayLength){
@@ -2022,7 +2076,7 @@ public class AIMovement : MonoBehaviour
 				probability = 5;
 				break;
 			case 3:
-				probability = 25;
+				probability = 20;
 				break;
 			default:
 				probability = 5;

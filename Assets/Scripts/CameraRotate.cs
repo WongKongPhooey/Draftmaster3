@@ -184,7 +184,9 @@ public class CameraRotate : MonoBehaviour {
 				PlayerPrefs.DeleteKey("CustomRaceLaps");
 			} else {
 				//Set custom race length for events
-				raceEnd = PlayerPrefs.GetInt("CustomRaceLaps") - 1;
+				if(PlayerPrefs.GetInt("CustomRaceLaps") > 0){
+					raceEnd = PlayerPrefs.GetInt("CustomRaceLaps") - 1;
+				}
 			}
 		}
 		
@@ -218,10 +220,10 @@ public class CameraRotate : MonoBehaviour {
 		raceLapRecord = 0;
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
-			Debug.Log("Restarting on lap " + lap);
+			//Debug.Log("Restarting on lap " + lap);
 			raceEnd = PlayerPrefs.GetInt("RaceLaps");
 			if(lap >= (raceEnd - 1)){
-				//Unlimited Overtime
+				//Overtime
 				raceEnd = lap+2;
 				PlayerPrefs.SetInt("RaceLaps", raceEnd);
 				Debug.Log("Restarting Lap " + lap + " of " + raceEnd);

@@ -346,7 +346,7 @@ public class EventData : MonoBehaviour
 		offlineMoment[4,0] = "Daytona79";
 		offlineTracklists[4,0] = "1";
 		offlinePrizes[4,0] = "1Star";
-		offlineCustomFieldOrder[4,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,43";
+		offlineCustomFieldOrder[4,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,43";
 		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
 		
 		offlineEventChapter[4,1] = "Chastain's Wallride";

@@ -125,7 +125,7 @@ public class GarageUI : MonoBehaviour
 		if((PlayerPrefs.GetInt("FreeModding") == 1)||(PlayerPrefs.GetInt("TransferTokens") >= 999)){
 			if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
 				try{
-				loadModCarsets(PlayerPrefs.GetString("ModsList"));
+					loadModCarsets(PlayerPrefs.GetString("ModsList"));
 				} catch (Exception e){
 					Debug.Log(e.Message);
 				}
