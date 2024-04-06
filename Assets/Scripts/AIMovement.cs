@@ -523,7 +523,7 @@ public class AIMovement : MonoBehaviour
 				if(carHit.gameObject.tag == "Player"){
 					hitByPlayer = true;
 					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
-					Debug.Log("Doored by the player! Strength of " + dooredStrength);
+					//Debug.Log("Doored by the player! Strength of " + dooredStrength);
 				} else {
 					if(carHit.gameObject.tag == "AICar"){
 						dooredStrength = carHit.gameObject.GetComponent<AIMovement>().dooredStrength;
@@ -1023,7 +1023,7 @@ public class AIMovement : MonoBehaviour
 			}
 			if(overrideValue != 0){
 				laneChangeSpeedIndex+=overrideValue;
-				Debug.Log("Faster lane change: " + laneChangeSpeedIndex);
+				//Debug.Log("Faster lane change: " + laneChangeSpeedIndex);
 			}
 			switch(laneChangeSpeedIndex){
 				case 1:
@@ -1252,7 +1252,7 @@ public class AIMovement : MonoBehaviour
 			bool HitForwardLong = DraftCheckForwardLong.distance > 0;
 			
 			if(HitForwardLong == true){
-				Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
+				//Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
 				//Caution is out or last lap
 				if((CameraRotate.cautionOut == true)||(CameraRotate.lap == CameraRotate.raceEnd)){
 					GameObject oppCar = DraftCheckForwardLong.transform.gameObject;
@@ -1689,7 +1689,7 @@ public class AIMovement : MonoBehaviour
 					direction = "Right";
 				}
 			}
-			Debug.Log(AICar.name + " avoids wreck in direction " + direction);
+			//Debug.Log(AICar.name + " avoids wreck in direction " + direction);
 			changeLane(direction);
 		}
 	}
@@ -1783,12 +1783,12 @@ public class AIMovement : MonoBehaviour
 		
 		if(laneticker == 0){
 			if(direction == "Left"){
-				Debug.Log("Go Left!");
+				//Debug.Log("Go Left!");
 				laneticker = laneChangeDuration;
 				lane++;
 			} else {
 				if(direction == "Right"){
-					Debug.Log("Go Right!");
+					//Debug.Log("Go Right!");
 					laneticker = -laneChangeDuration;
 					lane--;
 				}
@@ -1796,8 +1796,6 @@ public class AIMovement : MonoBehaviour
 			laneRest = Random.Range(200, 2000);
 			movingLane = true;
 			holdLane = 0;
-		} else {
-			Debug.Log("Already changing lane..");
 		}
 	}
 	
