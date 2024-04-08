@@ -39,6 +39,7 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject weekDayLabel;
 	public GameObject moneyLabel;
 	public GameObject versionLabel;
+	public GameObject updateLabel;
 	
 	public GameObject loginBtn;
 	public GameObject loginBtnLabel;
@@ -90,7 +91,7 @@ public class MainMenuUI : MonoBehaviour {
     {
 		
 		#if UNITY_EDITOR
-				//Testing
+		//Testing
 		//PlayerPrefs.SetInt("Exp",7250);
 		//PlayerPrefs.SetInt("Level",34);
 		
@@ -210,6 +211,16 @@ public class MainMenuUI : MonoBehaviour {
 		versionLabel = GameObject.Find("VersionLabel");
 		versionLabel.GetComponent<TMPro.TMP_Text>().text = "v" + Application.version;
 		
+		updateLabel = GameObject.Find("VersionNotice");
+		string latestVersion = PlayerPrefs.GetString("LatestVersion");
+		if(latestVersion != Application.version){
+			bool latestUpdate = isLatestVersion();
+			if(latestUpdate == false){
+				updateLabel.GetComponent<TMPro.TMP_Text>().text = "Latest Is v" + latestVersion + "";
+			}
+		}
+		
+		
 		timeTrialDescUI = GameObject.Find("TimeTrialDesc");
 		timeTrialDescUILabel = timeTrialDescUI.GetComponent<TMPro.TMP_Text>();
 			
@@ -293,7 +304,11 @@ public class MainMenuUI : MonoBehaviour {
 			if(!PlayerPrefs.HasKey("PlayerUsername")){
 				timeTrialDescUILabel.text = "Register a free account to use the online features of the game. This includes the weekly Time Trial leaderboard, and live Challenges!";
 			} else {
-				timeTrialDescUILabel.text = "There is No Active Time Trial";
+				if(isLatestVersion() == false){
+					timeTrialDescUILabel.text = "You must be on the latest version of the game (v" + PlayerPrefs.GetString("LatestVersion") + ") to take part in the Live Time Trial";
+				} else {
+					timeTrialDescUILabel.text = "There is No Active Time Trial";
+				}
 			}
 		} else {
 			timeTrialDescUILabel.text = "Set your fastest lap in any race series with an official Cup car at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
@@ -304,6 +319,20 @@ public class MainMenuUI : MonoBehaviour {
 		} else {
 			liveChallengeDescUILabel.text = "Live Moments Challenge\n" + PlayerPrefs.GetString("MomentName") + "";
 		}
+	}
+
+	bool isLatestVersion(){
+		if(PlayerPrefs.GetString("LatestVersion") == ""){
+			return true;
+		}
+		string[] latestSubVersions = PlayerPrefs.GetString("LatestVersion").Split(".");
+		string[] currentSubVersions = Application.version.Split(".");
+		for(int i=0;i<latestSubVersions.Length;i++){
+			if(int.Parse(latestSubVersions[i]) > int.Parse(currentSubVersions[i])){
+				return false;
+			}
+		}
+		return true;
 	}
 
 	void loadCurrentChampionshipInfo(){
