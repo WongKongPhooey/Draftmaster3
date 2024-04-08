@@ -1313,11 +1313,9 @@ public class Movement : MonoBehaviour {
 		isWrecking = false;
 		wreckOver = true;
 		hideHUD();
-		//Ticker.saveCautionPositions();
 		//Debug.Log("WRECK OVER");
 		this.GetComponent<Rigidbody>().mass = 5;
 		this.GetComponent<Rigidbody>().isKinematic = true;
-		//this.GetComponent<Rigidbody>().useGravity = true;
 		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
 		this.GetComponent<ConstantForce>().torque = new Vector3(0f, 0f, 0f);
 		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
@@ -1341,8 +1339,6 @@ public class Movement : MonoBehaviour {
 			if(momentChecks == false){
 				//Open the caution menu
 				cautionSummaryMenu.SetActive(true);
-			} else {
-				//Moment status replaces caution stats
 			}
 			if(fastestLapSaved == false){
 				mainCam.GetComponent<CameraRotate>().saveRaceFastestLap();

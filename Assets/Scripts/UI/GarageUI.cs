@@ -125,7 +125,7 @@ public class GarageUI : MonoBehaviour
 		if((PlayerPrefs.GetInt("FreeModding") == 1)||(PlayerPrefs.GetInt("TransferTokens") >= 999)){
 			if((PlayerPrefs.HasKey("ModsList")) && (PlayerPrefs.GetString("ModsList") != "")){
 				try{
-				loadModCarsets(PlayerPrefs.GetString("ModsList"));
+					loadModCarsets(PlayerPrefs.GetString("ModsList"));
 				} catch (Exception e){
 					Debug.Log(e.Message);
 				}
@@ -191,9 +191,9 @@ public class GarageUI : MonoBehaviour
 			
 			//Testing - Unlock All
 			#if UNITY_EDITOR
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",0);
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Gears",Random.Range(0,100));
-			//PlayerPrefs.SetInt(seriesPrefix + i + "Class",0);
+			PlayerPrefs.SetInt(seriesPrefix + i + "Unlocked",1);
+			PlayerPrefs.SetInt(seriesPrefix + i + "Gears",Random.Range(0,9));
+			PlayerPrefs.SetInt(seriesPrefix + i + "Class",Random.Range(0,4));
 			#endif
 			
 			GameObject tileInst = Instantiate(activeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);

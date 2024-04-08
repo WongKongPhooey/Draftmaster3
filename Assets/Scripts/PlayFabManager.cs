@@ -191,7 +191,6 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static void OnDeletePlayerSuccess(UpdateUserTitleDisplayNameResult result){
-		Debug.Log("Player Deleted" + result);
 		PlayerPrefs.DeleteKey("PlayerUsername");
 		PlayerPrefs.DeleteKey("PlayerEmail");
 		PlayerPrefs.DeleteKey("PlayerPassword");
@@ -207,11 +206,17 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		if(result.Data == null){
 			//Debug.Log("No Live Time Trial Found");
+			PlayerPrefs.SetString("LatestVersion", Application.version);
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 
 		//Live Race Time Trial
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
+			if(result.Data["TargetVersion"] != ""){
+				PlayerPrefs.SetString("LatestVersion", result.Data["TargetVersion"]);
+			} else {
+				PlayerPrefs.SetString("LatestVersion", Application.version);
+			}
 			if(result.Data["LiveTimeTrial"] != ""){
 				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
@@ -239,6 +244,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("EventActive", 0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
 			PlayerPrefs.SetString("SpecialEvent","");
+			PlayerPrefs.SetString("LatestVersion", Application.version);
 		}
 		
 		//Testing
@@ -382,47 +388,6 @@ public class PlayFabManager : MonoBehaviour
 			//Debug.Log("Store Updated " + PlayerPrefs.GetString("SpecialEvent"));
 		}
 		
-		//Event Store
-		if(result.Data.ContainsKey("EventActive") == true){
-			if(result.Data["EventActive"] != ""){
-				PlayerPrefs.SetInt("EventActive", 1);
-				//Last Known Event Name
-				string previousEvent = PlayerPrefs.GetString("EventName");
-				if(result.Data["EventActive"] != previousEvent){
-					PlayerPrefs.SetString("EventName", result.Data["EventActive"]);
-					//Debug.Log("Event was: " + previousEvent + ". Now: " + result.Data["EventActive"]);
-					PlayerPrefs.DeleteKey("PrizePositions");
-				}
-				//Debug.Log(result.Data["EventActive"] + " Event Active");
-				
-				//Update Event Meta
-				PlayerPrefs.SetString("EventImage", result.Data["EventShortcode"]);
-				PlayerPrefs.SetString("EventDescription", result.Data["EventDescription"]);
-				PlayerPrefs.SetString("EventPrizeset", result.Data["EventShortcode"]);
-				
-				//Retrieve the event rewards (assume set)
-				PlayerPrefs.SetString("EventRewards", result.Data["EventRewards"]);
-				//Debug.Log("Event Prizes: " + result.Data["EventRewards"]);
-				
-			} else {
-				PlayerPrefs.SetInt("EventActive", 0);
-
-				PlayerPrefs.SetString("EventImage", "");
-				PlayerPrefs.SetString("EventDescription", "No active event.");
-				PlayerPrefs.SetString("EventPrizeset", "");
-				PlayerPrefs.SetString("EventRewards", "");
-				//Debug.Log("No Active Event");
-			}
-		} else {
-			PlayerPrefs.SetInt("EventActive", 0);
-			
-			PlayerPrefs.SetString("EventImage", "");
-			PlayerPrefs.SetString("EventDescription", "No active event.");
-			PlayerPrefs.SetString("EventPrizeset", "");
-			PlayerPrefs.SetString("EventRewards", "");
-			//Debug.Log("No Active Event");
-		}
-		
 		if(result.Data.ContainsKey("TargetVersion") == true){
 			PlayerPrefs.SetString("TargetVersion", result.Data["TargetVersion"]);
 		} else {
@@ -487,17 +452,25 @@ public class PlayFabManager : MonoBehaviour
 		} else {
 			PlayerPrefs.SetInt("FreeModding", 0);
 		}
-		
-		//Testing - Time Trials
-		//result.Data["LiveTimeTrial"] = "FortWorth";
-		
+
+		#if UNITY_EDITOR
+		result.Data["LiveTimeTrial"] = "FortWorth";
+		Debug.Log("Time Trial Testing");
+		#endif
+
 		//Live Race Time Trial
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
-			//Debug.Log("Live Time Trial Check..");
-			//result.Data["LiveTimeTrial"] = "Daytona";
+			if(result.Data["TargetVersion"] != ""){
+				PlayerPrefs.SetString("LatestVersion", result.Data["TargetVersion"]);
+			} else {
+				PlayerPrefs.SetString("LatestVersion", Application.version);
+			}
 			if(result.Data["LiveTimeTrial"] != ""){
-				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
-				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
+				if(PlayerPrefs.GetString("LatestVersion") == Application.version){
+					PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
+				} else {
+					
+				}
 			} else {
 				PlayerPrefs.SetString("LiveTimeTrial","");
 			}
@@ -1114,7 +1087,7 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardRequest {
-			StatisticName = "LiveTimeTrialR184",
+			StatisticName = "FastestLapChallenge",
 			StartPosition = 0,
 			MaxResultsCount = 20
 		};
@@ -1128,10 +1101,11 @@ public class PlayFabManager : MonoBehaviour
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
 			tableLabels[0].text = (item.Position + 1).ToString();
 			tableLabels[1].text = item.DisplayName;
-			float leaderboardSpeed = item.StatValue/1000f;
-			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
-			
-			//Debug.Log(item.Position + " " + item.PlayFabId + " " + item.StatValue);
+			float leaderboardTime = item.StatValue/1000f;
+			if(leaderboardTime == 0){
+				leaderboardTime = 999.999f;
+			}
+			tableLabels[2].text = leaderboardTime.ToString() + "s";
 		}
 	}
 	
@@ -1139,7 +1113,7 @@ public class PlayFabManager : MonoBehaviour
 		if(checkInternet() == false){return;}
 		
 		var request = new GetLeaderboardAroundPlayerRequest {
-			StatisticName = "LiveTimeTrialR184",
+			StatisticName = "FastestLapChallenge",
 			MaxResultsCount = 1
 		};
 		PlayFabClientAPI.GetLeaderboardAroundPlayer(request, OnLiveTimeTrialAroundPlayerGet, OnError);
@@ -1157,8 +1131,11 @@ public class PlayFabManager : MonoBehaviour
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
 			tableLabels[0].text = (item.Position + 1).ToString();
 			tableLabels[1].text = item.DisplayName;
-			float leaderboardSpeed = item.StatValue/1000f;
-			tableLabels[2].text = leaderboardSpeed.ToString() + " MpH";
+			float leaderboardTime = item.StatValue/1000f;
+			if(leaderboardTime == 0){
+				leaderboardTime = 999.999f;
+			}
+			tableLabels[2].text = leaderboardTime.ToString() + "s";
 			
 			if(item.PlayFabId.ToString() == PlayerPrefs.GetString("PlayerPlayFabId")){
 				tableLabels[0].color = Color.red;

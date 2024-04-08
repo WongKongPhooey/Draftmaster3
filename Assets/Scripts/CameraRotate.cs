@@ -28,6 +28,7 @@ public class CameraRotate : MonoBehaviour {
 	public AudioSource crowdNoise;
 	public static int audioOn;
 
+	public static bool pacing;
 	public static bool cautionOut;
 	public static bool cautionCleared;
 	public static bool acknowledgeWreck;
@@ -61,9 +62,16 @@ public class CameraRotate : MonoBehaviour {
 	public static int straight;
 	public static int turn;
 	public static int cameraRotate;
+	
 	public static float averageSpeed;
 	public static float averageSpeedTotal;
 	public static int averageSpeedCount;
+	
+	public static float lapTime;
+	public static float frameTime;
+	public static float fastestRaceLap;
+	public static int fastestRaceLapInt;
+	
 	public static float raceLapRecord;
 	public static int raceLapRecordInt;
 	public static float lapRecord;
@@ -147,6 +155,7 @@ public class CameraRotate : MonoBehaviour {
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		pauseMenu = GameObject.Find("PauseMenu");
 		
+		pacing = true;
 		gamePausedLate = false;
 		Time.timeScale = 1.0f;
 		
@@ -184,7 +193,9 @@ public class CameraRotate : MonoBehaviour {
 				PlayerPrefs.DeleteKey("CustomRaceLaps");
 			} else {
 				//Set custom race length for events
-				raceEnd = PlayerPrefs.GetInt("CustomRaceLaps") - 1;
+				if(PlayerPrefs.GetInt("CustomRaceLaps") > 0){
+					raceEnd = PlayerPrefs.GetInt("CustomRaceLaps") - 1;
+				}
 			}
 		}
 		
@@ -215,13 +226,14 @@ public class CameraRotate : MonoBehaviour {
 			officialSeries = false;
 		}
 
+		fastestRaceLap = 999.99f;
 		raceLapRecord = 0;
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
-			Debug.Log("Restarting on lap " + lap);
+			//Debug.Log("Restarting on lap " + lap);
 			raceEnd = PlayerPrefs.GetInt("RaceLaps");
 			if(lap >= (raceEnd - 1)){
-				//Unlimited Overtime
+				//Overtime
 				raceEnd = lap+2;
 				PlayerPrefs.SetInt("RaceLaps", raceEnd);
 				Debug.Log("Restarting Lap " + lap + " of " + raceEnd);
@@ -351,15 +363,20 @@ public class CameraRotate : MonoBehaviour {
 		TDCamera.transform.position = new Vector3(TDCamera.transform.position.x,TDCamera.transform.position.y,thePlayer.transform.position.z);
 		trackEnviro.transform.position = new Vector3(trackEnviro.transform.position.x,trackEnviro.transform.position.y,thePlayer.transform.position.z);
 		
-		averageSpeedTotal += (Movement.playerSpeed - carSpeedOffset);
-		averageSpeedCount++;
-		averageSpeed = averageSpeedTotal / averageSpeedCount;
+		if(pacing == false){
+			averageSpeedTotal += (Movement.playerSpeed - carSpeedOffset);
+			averageSpeedCount++;
+			averageSpeed = averageSpeedTotal / averageSpeedCount;
+			
+			frameTime = (1/(Movement.playerSpeed / 200f));
+			lapTime += (frameTime * Time.deltaTime);
+		}
 		
 		//Increment Lap
 		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
 			Ticker.updateTicker();
 			//Freeze lap count at a caution
-			if(cautionOut == false){;
+			if(cautionOut == false){
 				lap++;
 			}
 			
@@ -374,22 +391,29 @@ public class CameraRotate : MonoBehaviour {
 			}
 			//Debug.Log("Add on a lap, now on lap " + lap);
 			//Starts/Restarts
-			if(Movement.pacing == true){
+			if(pacing == true){
 				Movement.pacingEnds();
 				this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
-			}
-			
-			if(lengthcounter >= 100){		
-				if((averageSpeed > raceLapRecord)&&(lap > 1)){
-					raceLapRecord = averageSpeed;
+				pacing = false;
+			} else {			
+				if(lengthcounter >= 100){		
+					if((averageSpeed > raceLapRecord)&&(lap > 1)){
+						raceLapRecord = averageSpeed;
+					}
+					if((averageSpeed > lapRecord)&&(lap > 1)){
+						lapRecord = averageSpeed;
+					}
+					if(raceLapRecord > lapRecord){
+						lapRecord = raceLapRecord;
+					}
+					
+					if((lapTime < fastestRaceLap)&&(lap > 1)&&(lapTime != 0)){
+						fastestRaceLap = lapTime;
+						Debug.Log("New Fastest Lap: " + fastestRaceLap);
+					} else {
+						
+					}
 				}
-				if((averageSpeed > lapRecord)&&(lap > 1)){
-					lapRecord = averageSpeed;
-				}
-				if(raceLapRecord > lapRecord){
-					lapRecord = raceLapRecord;
-				}
-				//Debug.Log("Checked for a lap record. Track length checked at: " + lengthcounter);
 			}
 			
 			lengthcounter=0;
@@ -398,15 +422,19 @@ public class CameraRotate : MonoBehaviour {
 			averageSpeedCount = 0;
 			averageSpeedTotal = 0;
 			
+			lapTime = 0;
+			frameTime = 0;
+			
 			//Caution, reset scene
 			if(cautionOut == true){
 				//Only save at the line if not currently wrecking
-				if((Movement.isWrecking == false)||(lap >= (raceEnd + 1))){
+				if(Movement.isWrecking == false){
 					cautionSummaryMenu.SetActive(true);
 					//Debug.Log("Crossed line, show the finish line");
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0.0f;
 					crowdNoise.volume = 0.0f;
+					fastestRaceLapInt = (int)Mathf.Round(fastestRaceLap * 1000);
 					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 					if(raceLapRecordInt < 0){
 						raceLapRecordInt = 0;
@@ -426,6 +454,9 @@ public class CameraRotate : MonoBehaviour {
 						if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
 						  &&(officialSeries == true)){
 							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
+							PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
+							//This seems to be working
+							Debug.Log("Sent Leaderboards (Caution)");
 						}
 					}
 					gamePausedLate = true;
@@ -633,6 +664,7 @@ public class CameraRotate : MonoBehaviour {
 			MomentsCriteria.checkEndCriteria();
 		}
 		
+		fastestRaceLapInt = (int)Mathf.Round(fastestRaceLap * 1000);
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 		//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
 		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
@@ -642,6 +674,8 @@ public class CameraRotate : MonoBehaviour {
 			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
 			  &&(officialSeries == true)){
 				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
+				PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
+				Debug.Log("Sent Leaderboards (End Race)");
 			}
 		}
 	}
@@ -654,6 +688,7 @@ public class CameraRotate : MonoBehaviour {
 				PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
 			}
 		}
+		fastestRaceLapInt = (int)Mathf.Round(fastestRaceLap * 1000);
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 		if(raceLapRecordInt > 0){
 			Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
@@ -664,6 +699,8 @@ public class CameraRotate : MonoBehaviour {
 				//Double checked
 				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
 					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
+					PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
+					Debug.Log("Sent Leaderboards (Movement)");
 				}
 			}
 		}
