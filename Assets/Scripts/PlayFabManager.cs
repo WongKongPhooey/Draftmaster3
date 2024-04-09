@@ -454,7 +454,8 @@ public class PlayFabManager : MonoBehaviour
 		}
 
 		#if UNITY_EDITOR
-		result.Data["LiveTimeTrial"] = "FortWorth";
+		//result.Data["LiveTimeTrial"] = "FortWorth";
+		//result.Data["TargetVersion"] = "7.6.4";
 		Debug.Log("Time Trial Testing");
 		#endif
 
@@ -469,7 +470,7 @@ public class PlayFabManager : MonoBehaviour
 				if(PlayerPrefs.GetString("LatestVersion") == Application.version){
 					PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				} else {
-					
+					Debug.Log("Time Trial not set (not on latest version)");
 				}
 			} else {
 				PlayerPrefs.SetString("LiveTimeTrial","");

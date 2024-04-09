@@ -1948,7 +1948,7 @@ public class AIMovement : MonoBehaviour
 		wreckRigidbody.useGravity = false;
 		
 		//Apply wind/drag
-		sparksEndSpeed = Random.Range(-140,-190);
+		sparksEndSpeed = Random.Range(-130,-180);
 		maxSparksRand = Random.Range(5,15);
 		targetForce = Random.Range(10f,-10f);
 		windForce = targetForce;
@@ -2030,8 +2030,8 @@ public class AIMovement : MonoBehaviour
 			//Align particle system to global track direction
 			leftSparks.rotation = Quaternion.Euler(0,180,0);
 			rightSparks.rotation = Quaternion.Euler(0,180,0);
-			leftSparksParticles.startSpeed = 150 + (wreckDecel / 2);
-			rightSparksParticles.startSpeed = 150 + (wreckDecel / 2);
+			leftSparksParticles.startSpeed = 100 + (wreckDecel / 2);
+			rightSparksParticles.startSpeed = 100 + (wreckDecel / 2);
 			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 12));
 			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 12));
 			leftSparksParticles.startLifetime = 0.2f + ((0-wreckDecel) / 50);

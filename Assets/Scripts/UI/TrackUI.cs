@@ -75,6 +75,7 @@ public class TrackUI : MonoBehaviour
 				PlayerPrefs.SetString("CurrentTrack","" + championshipRound);
 			}
 		} else {
+			championshipRound = 0;
 			Debug.Log("No active championship for this series " + currentSeriesIndex);
 		}
     }
@@ -100,6 +101,7 @@ public class TrackUI : MonoBehaviour
 		if(seriesLength == 1){
 			//If there's only 1 race in this Event/Series
 			//Jump straight into it
+			championshipRound = 0;
 			loadTrack(tracks,0);
 			startRace(TrackData.getTrackCodeName(int.Parse(tracksArray[0])));
 		}
@@ -136,6 +138,8 @@ public class TrackUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
+		Debug.Log("Championship Round: " + championshipRound);
+
 		//If there's a track list loaded
 		if(tracks != ""){
 			tracksArray = tracks.Split(',');
@@ -144,6 +148,7 @@ public class TrackUI : MonoBehaviour
 			tracksArray = tracks.Split(',');
 		}
 		seriesLength = tracksArray.Length;
+		//Debug.Log("Track ID:" + tracksArray[championshipRound] );
 		int trackId = int.Parse(tracksArray[championshipRound]);
 		string trackCodeName = TrackData.trackCodeNames[trackId];
 		

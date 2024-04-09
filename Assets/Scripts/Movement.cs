@@ -1276,7 +1276,7 @@ public class Movement : MonoBehaviour {
 		baseDecel = -0.35f;
 		slideX = 0;
 		playerWreckDecel = 0;
-		sparksEndSpeed = Random.Range(-140,-190);
+		sparksEndSpeed = Random.Range(-130,-180);
 		maxSparksRand = Random.Range(5,30);
 		targetForce = 0;
 		forceSmoothing = 0.5f;
@@ -1417,8 +1417,8 @@ public class Movement : MonoBehaviour {
 			//Align particle system to global track direction
 			leftSparks.rotation = Quaternion.Euler(0,180,0);
 			rightSparks.rotation = Quaternion.Euler(0,180,0);
-			leftSparksParticles.startSpeed = 150 + (playerWreckDecel / 2);
-			rightSparksParticles.startSpeed = 150 + (playerWreckDecel / 2);
+			leftSparksParticles.startSpeed = 100 + (playerWreckDecel / 2);
+			rightSparksParticles.startSpeed = 100 + (playerWreckDecel / 2);
 			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (playerWreckDecel / 12));
 			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (playerWreckDecel / 12));
 			leftSparksParticles.startLifetime = 0.2f + ((0-playerWreckDecel) / 50);
