@@ -191,7 +191,6 @@ public class EventsUI : MonoBehaviour
 		PlayerPrefs.SetString("CurrentSeriesName",EventData.offlineEventChapter[subMenuId,subEventId]);
 		PlayerPrefs.SetInt("CurrentSeries", subMenuId);
 		PlayerPrefs.SetInt("CurrentSubseries", subEventId);
-		PlayerPrefs.SetInt("SubseriesDailyPlays",999);
 		PlayerPrefs.SetInt("SubseriesMinClass", EventData.offlineMinClass[subMenuId,subEventId]);
 		PlayerPrefs.SetString("ExactSeries",EventData.offlineExactSeries[subMenuId,subEventId]);
 		PlayerPrefs.SetString("RestrictionType",EventData.offlineMinType[subMenuId,subEventId]);

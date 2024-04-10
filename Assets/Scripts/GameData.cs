@@ -248,17 +248,6 @@ public class GameData : MonoBehaviour {
 		PlayerPrefs.SetInt("DailySelects",0);
 		PlayerPrefs.DeleteKey("DailyRandoms");
 		PlayerPrefs.SetInt("DailyRandomsPicked",0);
-		
-		for(int i=0;i<10;i++){
-			for(int j=0;j<10;j++){
-				if(SeriesData.offlineDailyPlays[i,j] != null){
-					int maxPlays = SeriesData.getMaxPlays(i,j);
-					//int maxPlays = SeriesData.offlineDailyPlays[i,j];
-					PlayerPrefs.SetInt("DailyPlays" + i + j + "", maxPlays);
-					//Debug.Log(i + "," + j + " max plays: " + maxPlays);
-				}
-			}
-		}
 	}
 	
 	public static void setRewards(){

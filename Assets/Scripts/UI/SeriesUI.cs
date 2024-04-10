@@ -63,11 +63,16 @@ public class SeriesUI : MonoBehaviour
 			RawImage seriesImage = tileInst.transform.GetChild(0).GetComponent<RawImage>();
 			TMPro.TMP_Text seriesName = tileInst.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
 			TMPro.TMP_Text seriesDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+			GameObject seriesCover = tileInst.transform.GetChild(4).transform.gameObject;
 			tileInst.GetComponent<SeriesUIFunctions>().seriesId = i;
 			
 			seriesName.text = SeriesData.offlineMenu[i];
 			seriesDesc.text = SeriesData.seriesDescriptions[i];
-			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineImage[i]); 
+			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineImage[i]);
+
+			if(SeriesData.offlineMinLevel[i,0] > level){
+				seriesCover.SetActive(true);
+			}
 		}
 	}
 
@@ -76,7 +81,7 @@ public class SeriesUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
-		for(int i=0;i<10;i++){
+		for(int i=0;i<25;i++){
 			//Skip through the non-driver #s
 			if(SeriesData.offlineSeries[seriesId,i] == null){
 				//Debug.Log("No Series here: " + i);

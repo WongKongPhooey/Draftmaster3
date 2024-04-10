@@ -5,24 +5,25 @@ using UnityEngine;
 public class SeriesData : MonoBehaviour{
 	
 	public static string[] offlineMenu = new string[10];
-	public static string[,] offlineSeries = new string[10,10];
+	public static string[,] offlineSeries = new string[10,25];
 	public static string[] offlineImage = new string[10];
-	public static string[,] offlineSeriesImage = new string[10,10];
+	public static string[,] offlineSeriesImage = new string[10,25];
 	public static string[] seriesDescriptions = new string[10];
-	public static string[,] offlineDescriptions = new string[10,10];
-	public static int[,] offlineDailyPlays = new int[10,10];
-	public static int[,] offlineAILevel = new int[10,10];
-	public static string[,] offlineMinType = new string[10,10];
-	public static int[,] offlineMinLevel = new int[10,10];
-	public static int[,] offlineMinClass = new int[10,10];
-	public static int[,] offlineMinRarity = new int[10,10];
-	public static string[,] offlineMinTeam = new string[10,10];
-	public static int[,] offlineExactCar = new int[10,10];
-	public static string[,] offlineMinManu = new string[10,10];
-	public static string[,] offlineMinDriverType = new string[10,10];
-	public static string[,] offlineTracklists = new string[10,10];
-	public static int[,] offlineFuel = new int[10,10];
-	public static string[,] offlinePrizes = new string[10,10];
+	public static string[,] offlineDescriptions = new string[10,25];
+	public static int[,] offlineDailyPlays = new int[10,25];
+	public static int[,] offlineAILevel = new int[10,25];
+	public static string[,] offlineMinType = new string[10,25];
+	public static int[,] offlineMinLevel = new int[10,25];
+	public static int[,] offlineMinClass = new int[10,25];
+	public static int[,] offlineMinRarity = new int[10,25];
+	public static string[,] offlineMinTeam = new string[10,25];
+	public static int[,] offlineExactCar = new int[10,25];
+	public static string[,] offlineMinManu = new string[10,25];
+	public static string[,] offlineMinDriverType = new string[10,25];
+	public static string[,] offlineTracklists = new string[10,25];
+	public static string[] offlineCustomListOrder = new string[10];
+	public static int[,] offlineFuel = new int[10,25];
+	public static string[,] offlinePrizes = new string[10,25];
 	
     // Start is called before the first frame update
     void Start(){
@@ -366,7 +367,24 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[5,7] = "Apres Penske";
 		offlineSeries[5,8] = "Dibbs On Gibbs";
 		offlineSeries[5,9] = "The Hendrick Experience";
+
+		offlineSeries[5,10] = "Kauligraphy";
+		offlineSeries[5,11] = "Ware On Earth";
+		offlineSeries[5,12] = "Air Jordans";
+		offlineSeries[5,13] = "Lasting Legacy";
+		offlineSeries[5,14] = "Street Foyter";
+		offlineSeries[5,15] = "Andretti Confetti";
+		offlineSeries[5,16] = "Follow The Arrow";
+		offlineSeries[5,17] = "Chip Off The Block";
+		offlineSeries[5,18] = "Flip Of A Coyne";
+		offlineSeries[5,19] = "The Rein Of Dr Drey";
+		offlineSeries[5,20] = "The Carpenters";
+		offlineSeries[5,21] = "Holliwood Juncyard";
+		offlineSeries[5,22] = "Meyer Of Shankville";
+		offlineSeries[5,23] = "Guest On Letterman";
 		
+		offlineCustomListOrder[5] = "0,11,18,1,14,21,2,19,22,23,10,15,13,20,3,12,16,4,5,6,17,7,8,9";
+
 		offlineSeriesImage[5,0] = "cup24livery21";
 		offlineSeriesImage[5,1] = "cup24livery77";
 		offlineSeriesImage[5,2] = "cup24livery34";
@@ -377,6 +395,20 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[5,7] = "cup24livery12";
 		offlineSeriesImage[5,8] = "cup24livery19";
 		offlineSeriesImage[5,9] = "cup24livery24";
+		offlineSeriesImage[5,10] = "cup24livery16";
+		offlineSeriesImage[5,11] = "cup24livery51";
+		offlineSeriesImage[5,12] = "cup24livery23";
+		offlineSeriesImage[5,13] = "cup24livery43";
+		offlineSeriesImage[5,14] = "irl24livery41";
+		offlineSeriesImage[5,15] = "irl24livery98";
+		offlineSeriesImage[5,16] = "irl24livery5";
+		offlineSeriesImage[5,17] = "irl24livery9";
+		offlineSeriesImage[5,18] = "irl24livery18";
+		offlineSeriesImage[5,19] = "irl24livery24";
+		offlineSeriesImage[5,20] = "irl24livery20";
+		offlineSeriesImage[5,21] = "irl24livery77";
+		offlineSeriesImage[5,22] = "irl24livery60";
+		offlineSeriesImage[5,23] = "irl24livery15";
 		
 		offlineDailyPlays[5,0] = 3;
 		offlineDailyPlays[5,1] = 3;
