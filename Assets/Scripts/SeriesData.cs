@@ -10,7 +10,6 @@ public class SeriesData : MonoBehaviour{
 	public static string[,] offlineSeriesImage = new string[10,25];
 	public static string[] seriesDescriptions = new string[10];
 	public static string[,] offlineDescriptions = new string[10,25];
-	public static int[,] offlineDailyPlays = new int[10,25];
 	public static int[,] offlineAILevel = new int[10,25];
 	public static string[,] offlineMinType = new string[10,25];
 	public static int[,] offlineMinLevel = new int[10,25];
@@ -86,12 +85,6 @@ public class SeriesData : MonoBehaviour{
 		offlineDescriptions[0,3] = "Try out some of the oldest circuits on the calendar.";
 		offlineDescriptions[0,4] = "Finish off rookies with the biggest races of the year.";
 		
-		offlineDailyPlays[0,0] = 20;
-		offlineDailyPlays[0,1] = 20;
-		offlineDailyPlays[0,2] = 20;
-		offlineDailyPlays[0,3] = 20;
-		offlineDailyPlays[0,4] = 20;
-		
 		offlineAILevel[0,0] = 0;
 		offlineAILevel[0,1] = 0;
 		offlineAILevel[0,2] = 1;
@@ -148,12 +141,6 @@ public class SeriesData : MonoBehaviour{
 		offlineDescriptions[1,3] = "Tandem draft like it's 2010 and take a friend to victory lane!";
 		offlineDescriptions[1,4] = "Some drivers just know how to win at plate tracks. How about you?";
 		
-		offlineDailyPlays[1,0] = 10;
-		offlineDailyPlays[1,1] = 10;
-		offlineDailyPlays[1,2] = 10;
-		offlineDailyPlays[1,3] = 10;
-		offlineDailyPlays[1,4] = 10;
-		
 		offlineAILevel[1,0] = 2;
 		offlineAILevel[1,1] = 4;
 		offlineAILevel[1,2] = 6;
@@ -203,12 +190,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[2,2] = "cup24livery5";
 		offlineSeriesImage[2,3] = "cup24livery24";
 		offlineSeriesImage[2,4] = "cup24livery84";
-		
-		offlineDailyPlays[2,0] = 10;
-		offlineDailyPlays[2,1] = 10;
-		offlineDailyPlays[2,2] = 10;
-		offlineDailyPlays[2,3] = 10;
-		offlineDailyPlays[2,4] = 10;
 				
 		offlineAILevel[2,0] = 2;
 		offlineAILevel[2,1] = 4;
@@ -259,12 +240,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[3,3] = "cup24livery8";
 		offlineSeriesImage[3,4] = "cup24livery22";
 		
-		offlineDailyPlays[3,0] = 10;
-		offlineDailyPlays[3,1] = 10;
-		offlineDailyPlays[3,2] = 10;
-		offlineDailyPlays[3,3] = 10;
-		offlineDailyPlays[3,4] = 10;
-		
 		offlineAILevel[3,0] = 2;
 		offlineAILevel[3,1] = 4;
 		offlineAILevel[3,2] = 6;
@@ -313,12 +288,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[4,2] = "cup24livery7";
 		offlineSeriesImage[4,3] = "cup24livery23";
 		offlineSeriesImage[4,4] = "cup24livery9";
-		
-		offlineDailyPlays[4,0] = 10;
-		offlineDailyPlays[4,1] = 10;
-		offlineDailyPlays[4,2] = 10;
-		offlineDailyPlays[4,3] = 10;
-		offlineDailyPlays[4,4] = 10;
 		
 		offlineAILevel[4,0] = 2;
 		offlineAILevel[4,1] = 4;
@@ -409,17 +378,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[5,21] = "irl24livery77";
 		offlineSeriesImage[5,22] = "irl24livery60";
 		offlineSeriesImage[5,23] = "irl24livery15";
-		
-		offlineDailyPlays[5,0] = 3;
-		offlineDailyPlays[5,1] = 3;
-		offlineDailyPlays[5,2] = 3;
-		offlineDailyPlays[5,3] = 3;
-		offlineDailyPlays[5,4] = 3;
-		offlineDailyPlays[5,5] = 3;
-		offlineDailyPlays[5,6] = 3;
-		offlineDailyPlays[5,7] = 3;
-		offlineDailyPlays[5,8] = 3;
-		offlineDailyPlays[5,9] = 3;
 
 		offlineAILevel[5,0] = 5;
 		offlineAILevel[5,1] = 5;
@@ -524,13 +482,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[6,4] = "cup24livery5";
 		offlineSeriesImage[6,5] = "cup24livery11";
 		
-		offlineDailyPlays[6,0] = 3;
-		offlineDailyPlays[6,1] = 3;
-		offlineDailyPlays[6,2] = 3;
-		offlineDailyPlays[6,3] = 3;
-		offlineDailyPlays[6,4] = 3;
-		offlineDailyPlays[6,5] = 3;
-		
 		offlineAILevel[6,0] = 5;
 		offlineAILevel[6,1] = 5;
 		offlineAILevel[6,2] = 5;
@@ -602,12 +553,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[7,4] = "cup24livery5";
 		offlineSeriesImage[7,5] = "cup24livery84";
 		
-		offlineDailyPlays[7,0] = 3;
-		offlineDailyPlays[7,1] = 3;
-		offlineDailyPlays[7,2] = 3;
-		offlineDailyPlays[7,3] = 3;
-		offlineDailyPlays[7,4] = 3;
-		
 		offlineAILevel[7,0] = 2;
 		offlineAILevel[7,1] = 4;
 		offlineAILevel[7,2] = 6;
@@ -675,11 +620,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[8,2] = "cup24livery6";
 		offlineSeriesImage[8,3] = "cup24livery22";
 		
-		offlineDailyPlays[8,0] = 3;
-		offlineDailyPlays[8,1] = 3;
-		offlineDailyPlays[8,2] = 3;
-		offlineDailyPlays[8,3] = 3;
-		
 		offlineAILevel[8,0] = 4;
 		offlineAILevel[8,1] = 8;
 		offlineAILevel[8,2] = 12;
@@ -740,15 +680,6 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[9,6] = "cup24livery8";
 		offlineSeriesImage[9,7] = "cup24livery12";
 		//offlineSeriesImage[9,9] = "cup22livery1alt1";
-		
-		offlineDailyPlays[9,0] = 10;
-		offlineDailyPlays[9,1] = 10;
-		offlineDailyPlays[9,2] = 20;
-		offlineDailyPlays[9,3] = 20;
-		offlineDailyPlays[9,4] = 20;
-		offlineDailyPlays[9,5] = 20;
-		offlineDailyPlays[9,6] = 20;
-		offlineDailyPlays[9,7] = 20;
 		
 		offlineAILevel[9,0] = 5;
 		offlineAILevel[9,1] = 5;
@@ -1011,11 +942,6 @@ public class SeriesData : MonoBehaviour{
     // Update is called once per frame
     void Update(){
     }
-	
-	public static int getMaxPlays(int i,int j){
-		loadSeries();
-		return offlineDailyPlays[i,j];
-	}
 	
 	public static string classAbbr(int carClass){
 		string classLetter;

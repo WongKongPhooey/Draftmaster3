@@ -135,7 +135,6 @@ public class SeriesUI : MonoBehaviour
 		PlayerPrefs.SetString("CurrentSeriesName",SeriesData.offlineSeries[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("CurrentSeries", seriesId);
 		PlayerPrefs.SetInt("CurrentSubseries", subSeriesId);
-		PlayerPrefs.SetInt("SubseriesDailyPlays",SeriesData.offlineDailyPlays[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("SubseriesMinClass", SeriesData.offlineMinClass[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue(seriesId,subSeriesId));
