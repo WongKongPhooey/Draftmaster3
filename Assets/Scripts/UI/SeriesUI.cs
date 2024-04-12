@@ -10,6 +10,7 @@ public class SeriesUI : MonoBehaviour
 
 	public List<RectTransform> shuffleArray;
 	public List<string> rewardsList = new List<string>();
+	public GameObject scrollFrame;
 	public GameObject seriesTile;
 	public GameObject seriesChildTile;
 	public Transform tileFrame;
@@ -21,13 +22,14 @@ public class SeriesUI : MonoBehaviour
 	public static int seriesId;
 	public static int subSeriesId;
 	string seriesPrefix;
-	
 	int level;
 	
     // Start is called before the first frame update
     void Start(){
         
 		level = PlayerPrefs.GetInt("Level");
+		
+		scrollFrame = GameObject.Find("Main");
 		
 		//Hide rewards popup after storing the var
 		rewardsPopup = GameObject.Find("RewardsPopup");
@@ -46,6 +48,7 @@ public class SeriesUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
+		
 		for(int i=0;i<10;i++){
 			SeriesData.loadSeries();
 			//Skip through the non-driver #s
@@ -81,18 +84,36 @@ public class SeriesUI : MonoBehaviour
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
+		
+		scrollFrame.GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
+
+		//Custom ordering
+		string customListOrderStr = SeriesData.offlineCustomListOrder[seriesId];
+		string[] customListOrder = null;
+		if(customListOrderStr != null){
+			customListOrder = customListOrderStr.Split(',');
+		}
+		
 		for(int i=0;i<25;i++){
+			
+			int k=i;
+			
 			//Skip through the non-driver #s
-			if(SeriesData.offlineSeries[seriesId,i] == null){
+			if(SeriesData.offlineSeries[seriesId,k] == null){
 				//Debug.Log("No Series here: " + i);
 				continue;
+			}
+			
+			//Reordered index
+			if(customListOrderStr != null){
+				k=int.Parse(customListOrder[i]);
 			}
 			
 			GameObject tileInst = Instantiate(seriesChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			RectTransform tileObj = tileInst.GetComponent<RectTransform>();
 			tileInst.transform.SetParent(tileFrame, false);
 			
-			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
+			tileInst.GetComponent<UIAnimate>().animOffset = k+1;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			TMPro.TMP_Text seriesName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
@@ -103,10 +124,10 @@ public class SeriesUI : MonoBehaviour
 			GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
 			TMPro.TMP_Text champsProgress = tileInst.transform.GetChild(8).GetComponent<TMPro.TMP_Text>();
 			
-			if(PlayerPrefs.HasKey("SeriesChampionship" + seriesId + i + "Round")){
-				if(PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round") > 0){
-					int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Round") + 1;
-					int totalRounds = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + i + "Length");
+			if(PlayerPrefs.HasKey("SeriesChampionship" + seriesId + k + "Round")){
+				if(PlayerPrefs.GetInt("SeriesChampionship" + seriesId + k + "Round") > 0){
+					int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + k + "Round") + 1;
+					int totalRounds = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + k + "Length");
 					if(nextRound > totalRounds){
 						champsProgress.text = "Championship Finished \nCollect Rewards";
 					} else {
@@ -116,13 +137,13 @@ public class SeriesUI : MonoBehaviour
 			}
 			
 			tileInst.GetComponent<SeriesUIFunctions>().seriesId = seriesId;
-			tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = i;
+			tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = k;
 			
-			seriesName.text = SeriesData.offlineSeries[seriesId,i];
-			seriesDesc.text = ((SeriesData.offlineAILevel[seriesId,i] * 10) + 50).ToString() + "% Difficulty";
-			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineSeriesImage[seriesId,i]); 
+			seriesName.text = SeriesData.offlineSeries[seriesId,k];
+			seriesDesc.text = ((SeriesData.offlineAILevel[seriesId,k] * 10) + 50).ToString() + "% Difficulty";
+			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineSeriesImage[seriesId,k]); 
 		
-			if(SeriesData.offlineMinLevel[seriesId,i] > level){
+			if(SeriesData.offlineMinLevel[seriesId,k] > level){
 				seriesCover.SetActive(true);
 			}
 		}

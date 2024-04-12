@@ -30,10 +30,14 @@ using System.Reflection;
 26 North Wilkesboro, NC
 30 LA Coliseum, CA
 
-24 Rockingham, England
+24 Rockingham, UK
 25 Rockingham, NC
 27 Nazareth, PN
 28 Iowa, IA
+29 Pikes Peak - Fountain, CO
+31 Motegi, JPN
+32 Lausitzring, GER
+33 Milwaukee, WI
 ----------------------*/
 
 public class TrackData : MonoBehaviour

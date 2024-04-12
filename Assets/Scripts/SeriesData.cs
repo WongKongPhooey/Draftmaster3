@@ -109,12 +109,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[0,3] = "12,9,15";
 		offlineTracklists[0,4] = "13,20,21";
 		
-		offlineFuel[0,0] = 4;
-		offlineFuel[0,1] = 4;
-		offlineFuel[0,2] = 4;
-		offlineFuel[0,3] = 5;
-		offlineFuel[0,4] = 5;
-		
 		offlinePrizes[0,0] = "Rookies";
 		offlinePrizes[0,1] = "Rookies";
 		offlinePrizes[0,2] = "Rarity1";
@@ -165,12 +159,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[1,3] = "15,5,10,15";
 		offlineTracklists[1,4] = "10,1,15,4";
 		
-		offlineFuel[1,0] = 5;
-		offlineFuel[1,1] = 6;
-		offlineFuel[1,2] = 7;
-		offlineFuel[1,3] = 8;
-		offlineFuel[1,4] = 9;
-		
 		offlinePrizes[1,0] = "Rarity1";
 		offlinePrizes[1,1] = "Rarity1";
 		offlinePrizes[1,2] = "Rarity2";
@@ -214,12 +202,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[2,2] = "7,2,19,12";
 		offlineTracklists[2,3] = "3,16,12,23";
 		offlineTracklists[2,4] = "13,19,7,21";
-		
-		offlineFuel[2,0] = 5;
-		offlineFuel[2,1] = 6;
-		offlineFuel[2,2] = 7;
-		offlineFuel[2,3] = 8;
-		offlineFuel[2,4] = 9;
 				
 		offlinePrizes[2,0] = "Rarity1";
 		offlinePrizes[2,1] = "Rarity1";
@@ -263,12 +245,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[3,2] = "9,11,4,18";
 		offlineTracklists[3,3] = "6,8,18,9,30";
 		offlineTracklists[3,4] = "8,6,11,4,30";
-		
-		offlineFuel[3,0] = 5;
-		offlineFuel[3,1] = 6;
-		offlineFuel[3,2] = 7;
-		offlineFuel[3,3] = 8;
-		offlineFuel[3,4] = 9;
 				
 		offlinePrizes[3,0] = "Rarity1";
 		offlinePrizes[3,1] = "Rarity1";
@@ -312,12 +288,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[4,2] = "3,9,19,14,20";
 		offlineTracklists[4,3] = "11,10,7,15,6";
 		offlineTracklists[4,4] = "13,4,1,20,21";
-		
-		offlineFuel[4,0] = 5;
-		offlineFuel[4,1] = 6;
-		offlineFuel[4,2] = 7;
-		offlineFuel[4,3] = 8;
-		offlineFuel[4,4] = 9;
 				
 		offlinePrizes[4,0] = "Rarity1";
 		offlinePrizes[4,1] = "Rarity1";
@@ -444,17 +414,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[5,7] = "11,9,6,3,21";
 		offlineTracklists[5,8] = "13,7,17,20,19";
 		offlineTracklists[5,9] = "15,18,1,5,2";
-		
-		offlineFuel[5,0] = 6;
-		offlineFuel[5,1] = 7;
-		offlineFuel[5,2] = 7;
-		offlineFuel[5,3] = 8;
-		offlineFuel[5,4] = 8;
-		offlineFuel[5,5] = 8;
-		offlineFuel[5,6] = 8;
-		offlineFuel[5,7] = 9;
-		offlineFuel[5,8] = 9;
-		offlineFuel[5,9] = 9;
 				
 		offlinePrizes[5,0] = "IND";
 		offlinePrizes[5,1] = "SPI";
@@ -524,13 +483,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[6,4] = "13,4,1,20,21";
 		offlineTracklists[6,5] = "2,15,5,10,16";
 		
-		offlineFuel[6,0] = 7;
-		offlineFuel[6,1] = 7;
-		offlineFuel[6,2] = 7;
-		offlineFuel[6,3] = 9;
-		offlineFuel[6,4] = 9;
-		offlineFuel[6,5] = 9;
-		
 		offlinePrizes[6,0] = "FRD1";
 		offlinePrizes[6,1] = "CHV1";
 		offlinePrizes[6,2] = "TYT1";
@@ -595,13 +547,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[7,4] = "13,4,1,22,21";
 		offlineTracklists[7,5] = "2,15,5,10,16";
 		
-		offlineFuel[7,0] = 6;
-		offlineFuel[7,1] = 7;
-		offlineFuel[7,2] = 7;
-		offlineFuel[7,3] = 7;
-		offlineFuel[7,4] = 7;
-		offlineFuel[7,5] = 10;
-		
 		offlinePrizes[7,0] = "Rookie";
 		offlinePrizes[7,1] = "Strategist";
 		offlinePrizes[7,2] = "Closer";
@@ -650,11 +595,6 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[8,2] = "3,9,19,14,20";
 		offlineTracklists[8,3] = "6,15,21,7,11";
 		
-		offlineFuel[8,0] = 6;
-		offlineFuel[8,1] = 7;
-		offlineFuel[8,2] = 7;
-		offlineFuel[8,3] = 8;
-		
 		offlinePrizes[8,0] = "Rarity1";
 		offlinePrizes[8,1] = "Rarity2";
 		offlinePrizes[8,2] = "Rarity3";
@@ -669,7 +609,12 @@ public class SeriesData : MonoBehaviour{
 		offlineSeries[9,5] = "2024 Cup (Easy)";
 		offlineSeries[9,6] = "2024 Cup (Hard)";
 		offlineSeries[9,7] = "2024 Cup (Extra Hard)";
-		//offlineSeries[9,9] = "Test Season";
+		
+		offlineSeries[9,8] = "2024 Indy Ovals";
+		offlineSeries[9,9] = "2003 Indy Ovals";
+		
+		offlineCustomListOrder[9] = "0,1,8,5,2,3,4,6,9,7";
+
 		
 		offlineSeriesImage[9,0] = "cup20livery22";
 		offlineSeriesImage[9,1] = "cup20livery2";
@@ -679,7 +624,8 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[9,5] = "cup24livery84";
 		offlineSeriesImage[9,6] = "cup24livery8";
 		offlineSeriesImage[9,7] = "cup24livery12";
-		//offlineSeriesImage[9,9] = "cup22livery1alt1";
+		offlineSeriesImage[9,8] = "cup24livery10";
+		offlineSeriesImage[9,9] = "cup24livery9";
 		
 		offlineAILevel[9,0] = 5;
 		offlineAILevel[9,1] = 5;
@@ -689,15 +635,19 @@ public class SeriesData : MonoBehaviour{
 		offlineAILevel[9,5] = 5;
 		offlineAILevel[9,6] = 10;
 		offlineAILevel[9,7] = 15;
+		offlineAILevel[9,8] = 8;
+		offlineAILevel[9,9] = 12;
 		
-		offlineMinLevel[9,0] = 10;
-		offlineMinLevel[9,1] = 15;
+		offlineMinLevel[9,0] = 5;
+		offlineMinLevel[9,1] = 10;
 		offlineMinLevel[9,2] = 20;
 		offlineMinLevel[9,3] = 20;
 		offlineMinLevel[9,4] = 20;
 		offlineMinLevel[9,5] = 25;
-		offlineMinLevel[9,6] = 30;
+		offlineMinLevel[9,6] = 28;
 		offlineMinLevel[9,7] = 35;
+		offlineMinLevel[9,8] = 15;
+		offlineMinLevel[9,9] = 30;
 		
 		offlineMinClass[9,0] = 1;
 		offlineMinClass[9,1] = 1;
@@ -707,6 +657,9 @@ public class SeriesData : MonoBehaviour{
 		offlineMinClass[9,5] = 1;
 		offlineMinClass[9,6] = 1;
 		offlineMinClass[9,7] = 1;
+		offlineMinClass[9,8] = 1;
+		offlineMinClass[9,9] = 1;
+		
 		
 		offlineTracklists[9,0] = "1,2,3,4,5,6,7,8,9,10,11";
 		offlineTracklists[9,1] = "12,13,14,15,16,17,18,19,20,21";
@@ -716,15 +669,8 @@ public class SeriesData : MonoBehaviour{
 		offlineTracklists[9,5] = "30,1,2,3,4,8,9,6,7,10,11,12,19,26,13,22,28,18,23,14,20,9,15,1,19,2,8,12,10,3,21,6,4";
 		offlineTracklists[9,6] = "30,1,2,3,4,8,9,6,7,10,11,12,19,26,13,22,28,18,23,14,20,9,15,1,19,2,8,12,10,3,21,6,4";
 		offlineTracklists[9,7] = "30,1,2,3,4,8,9,6,7,10,11,12,19,26,13,22,28,18,23,14,20,9,15,1,19,2,8,12,10,3,21,6,4";
-		
-		offlineFuel[9,0] = 6;
-		offlineFuel[9,1] = 8;
-		offlineFuel[9,2] = 10;
-		offlineFuel[9,3] = 10;
-		offlineFuel[9,4] = 10;
-		offlineFuel[9,5] = 10;
-		offlineFuel[9,6] = 10;
-		offlineFuel[9,7] = 10;
+		offlineTracklists[9,8] = "20,28,28,22,33,23";
+		offlineTracklists[9,9] = "21,4,31,20,7,29,9,12,23,15,22,17,27,16,5,7";
 		
 		offlinePrizes[9,0] = "";
 		offlinePrizes[9,1] = "";
@@ -734,6 +680,8 @@ public class SeriesData : MonoBehaviour{
 		offlinePrizes[9,5] = "Rarity1";
 		offlinePrizes[9,6] = "Rarity2";
 		offlinePrizes[9,7] = "Rarity3";
+		offlinePrizes[9,8] = "Indy1";
+		offlinePrizes[9,9] = "Indy";
 	}
 
 	public static List<string> ListRewards(string category){
