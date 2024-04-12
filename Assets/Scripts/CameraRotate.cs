@@ -681,7 +681,7 @@ public class CameraRotate : MonoBehaviour {
 	}
 	
 	public void saveRaceFastestLap(){
-		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+		/*if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
 			if(raceLapRecord > currentLapRecord){
 				raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
@@ -702,6 +702,32 @@ public class CameraRotate : MonoBehaviour {
 					PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
 					Debug.Log("Sent Leaderboards (Movement)");
 				}
+			}
+		}*/
+		
+		fastestRaceLapInt = (int)Mathf.Round(fastestRaceLap * 1000);
+		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
+		if(raceLapRecordInt < 0){
+			raceLapRecordInt = 0;
+		}
+		lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
+		PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
+		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
+			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
+			if(raceLapRecord > currentLapRecord){
+				PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
+			}
+		}
+		PlayerPrefs.SetInt("RaceFastestLap" + circuit, raceLapRecordInt);
+		if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
+			PlayFabManager.CheckLiveTimeTrial();
+			//Double checked
+			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
+			  &&(officialSeries == true)){
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
+				PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
+				//This seems to be working
+				Debug.Log("Sent Leaderboards (Caution)");
 			}
 		}
 	}
