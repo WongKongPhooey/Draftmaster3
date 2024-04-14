@@ -676,28 +676,28 @@ public class Movement : MonoBehaviour {
 		
 		if(gamePausedLate == true){
 			if(cautionSummaryMenu.activeSelf == true){
-				Debug.Log("Time Paused (Movement)");
+				//Debug.Log("Time Paused (Movement)");
 				Time.timeScale = 0.0f;
 			}
 			try {
 				pauseMenu = GameObject.Find("PauseMenu");
 				if(pauseMenu.activeSelf == true){
-					Debug.Log("Time Paused (Camera Rotate)");
+					//Debug.Log("Time Paused (Camera Rotate)");
 					Time.timeScale = 0.0f;
 				}
 			}
 			catch (Exception e){
-				Debug.Log("Failed To Pause: " + e.Message);
+				//Debug.Log("Failed To Pause: " + e.Message);
 			}
 			try {
 				challengeLost = GameObject.Find("ChallengeLost");
 				if(challengeLost.activeSelf == true){
-					Debug.Log("Time Paused (Moment Failed)");
+					//Debug.Log("Time Paused (Moment Failed)");
 					Time.timeScale = 0.0f;
 				}
 			}
 			catch (Exception e){
-				Debug.Log("Failed To End Moment Challenge: " + e.Message);
+				//Debug.Log("Failed To End Moment Challenge: " + e.Message);
 			}
 		}
 		
@@ -1301,6 +1301,12 @@ public class Movement : MonoBehaviour {
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
 			MomentsCriteria.checkMomentsCriteria("WreckStartPositionHigherThan",Ticker.position.ToString());
 		}
+		
+		if(fastestLapSaved == false){
+			Debug.Log("Haven't saved fastest lap yet.. (Movement)");
+			CameraRotate.saveRaceFastestLap();
+			fastestLapSaved = true;
+		}
 	}
 	
 	public void endWreck(){
@@ -1336,17 +1342,19 @@ public class Movement : MonoBehaviour {
 		
 		//No cautions on the last lap, race is over
 		if(CameraRotate.lap < CameraRotate.raceEnd){
+			Debug.Log("Wreck Over (Movement)");
 			if(momentChecks == false){
 				//Open the caution menu
 				cautionSummaryMenu.SetActive(true);
 			}
 			if(fastestLapSaved == false){
-				mainCam.GetComponent<CameraRotate>().saveRaceFastestLap();
+				Debug.Log("Haven't saved fastest lap yet.. (Movement)");
+				CameraRotate.saveRaceFastestLap();
 				fastestLapSaved = true;
 			}
 		}
 		gamePausedLate = true;
-		Debug.Log("Pause the game!");
+		//Debug.Log("Pause the game!");
 		mainCam.GetComponent<AudioListener>().enabled = false;
 		PlayerPrefs.SetInt("Volume",0);
 		
@@ -1356,6 +1364,7 @@ public class Movement : MonoBehaviour {
 	}
 	
 	void wreckPhysics(){
+		
 		wreckAngle = this.gameObject.transform.rotation.y;
 		float wreckSine = Mathf.Sin(wreckAngle);
 		if(wreckSine < 0){
@@ -1408,8 +1417,8 @@ public class Movement : MonoBehaviour {
 		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
 		
 		//Prevent landing in the crowd
-		if(this.gameObject.transform.position.x > 2f){
-			this.gameObject.transform.position = new Vector3(2f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
+		if(this.gameObject.transform.position.x > 1.5f){
+			this.gameObject.transform.position = new Vector3(1.5f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
 		}
 		
 		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + playerWreckDecel);
@@ -1432,7 +1441,7 @@ public class Movement : MonoBehaviour {
 		
 		//Flatten the smoke
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
-		float smokeMultiplier = Mathf.Sin(wreckAngle);
+		float smokeMultiplier = wreckSine;
 		if(smokeMultiplier < 0){
 			smokeMultiplier = -smokeMultiplier;
 		}

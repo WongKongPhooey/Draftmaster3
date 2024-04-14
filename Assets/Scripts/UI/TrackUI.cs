@@ -76,7 +76,7 @@ public class TrackUI : MonoBehaviour
 			}
 		} else {
 			championshipRound = 0;
-			Debug.Log("No active championship for this series " + currentSeriesIndex);
+			//Debug.Log("No active championship for this series " + currentSeriesIndex);
 		}
     }
 

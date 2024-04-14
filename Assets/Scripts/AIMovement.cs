@@ -1949,7 +1949,7 @@ public class AIMovement : MonoBehaviour
 		
 		//Apply wind/drag
 		sparksEndSpeed = Random.Range(-130,-180);
-		maxSparksRand = Random.Range(5,15);
+		maxSparksRand = Random.Range(5,30);
 		targetForce = Random.Range(10f,-10f);
 		windForce = targetForce;
 		forceSmoothing = 0.5f;

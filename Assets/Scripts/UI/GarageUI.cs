@@ -401,7 +401,7 @@ public class GarageUI : MonoBehaviour
 			} else {
 				alertPopup.GetComponent<AlertManager>().hidePopup();
 			}
-			Debug.Log("Valid cars: " + validCars);
+			//Debug.Log("Valid cars: " + validCars);
 		}
 	}
 
