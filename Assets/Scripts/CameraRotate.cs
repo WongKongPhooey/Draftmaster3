@@ -653,6 +653,11 @@ public class CameraRotate : MonoBehaviour {
 			raceLapRecordInt = 0;
 			return;
 		}
+		if(fastestRaceLapInt < 0){
+			Debug.Log("No fastest lap set.. bail");
+			fastestRaceLapInt = 0;
+			return;
+		}
 		Debug.Log("Fastest Lap Save Call (Reusable)");
 		lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 		PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
