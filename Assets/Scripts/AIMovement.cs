@@ -550,7 +550,7 @@ public class AIMovement : MonoBehaviour
         }
 		
 		if(carHit.gameObject.name == "OuterWall"){
-			this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+			rightSparksParticles.Play();
 			sparksCooldown = Random.Range(5,20);
 		}
 		
@@ -559,11 +559,11 @@ public class AIMovement : MonoBehaviour
 			(carHit.gameObject.tag == "Barrier")){
 				
 			if(leftSideClear(0.51f) == false){
-				this.transform.Find("SparksL").GetComponent<ParticleSystem>().Play();
+				leftSparksParticles.Play();
 				sparksCooldown = Random.Range(5,20);
 			}
 			if(rightSideClear(0.51f) == false){
-				this.transform.Find("SparksR").GetComponent<ParticleSystem>().Play();
+				rightSparksParticles.Play();
 				sparksCooldown = Random.Range(5,20);
 			}
 		}
@@ -718,7 +718,7 @@ public class AIMovement : MonoBehaviour
 					targetForce = 0 - Movement.speedoSpeed;
 					updateWindForce(1);
 						
-					this.GetComponent<ConstantForce>().force = new Vector3(0f,0f,windForce);
+					wreckForce.force = new Vector3(0f,0f,windForce);
 					tireSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 				}
 				return;
@@ -735,8 +735,8 @@ public class AIMovement : MonoBehaviour
 				updateMovement();
 			}
 
-			this.gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
-			this.gameObject.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+			wreckRigidbody.velocity = Vector3.zero;
+			wreckRigidbody.angularVelocity = Vector3.zero;
 		} else {
 			//Pacing speed
 			AISpeed = 202;
@@ -1819,7 +1819,7 @@ public class AIMovement : MonoBehaviour
 	
 	float getOpponentSpeed(RaycastHit opponent){
 		if(opponent.transform.gameObject.tag == "Player"){
-			return opponent.transform.gameObject.GetComponent<Movement>().gettableSpeed;
+			return Movement.playerSpeed;
 		} else {
 			if(opponent.transform.gameObject.tag == "AICar"){
 				//Debug.Log(opponent.transform.gameObject.name);
@@ -1957,8 +1957,8 @@ public class AIMovement : MonoBehaviour
 		randDecel = Random.Range(0.01f,0.1f);
 		slideX = 0;
 		wreckDecel = 0;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, Random.Range(-0.5f, 0.35f) * 10, 0f);
+		wreckForce.force = new Vector3(0f, 0f,windForce);
+		wreckForce.torque = new Vector3(0f, Random.Range(-0.5f, 0.35f) * 10, 0f);
 	}
 	
 	public void endWreck(){
@@ -1970,9 +1970,6 @@ public class AIMovement : MonoBehaviour
 		
 		sparksCooldown = 0;
 
-		if(Movement.wreckOver == true){
-			//this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
-		}
 		tireSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 		leftSparksParticles.Stop();
 		rightSparksParticles.Stop();

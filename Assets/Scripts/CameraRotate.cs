@@ -41,6 +41,7 @@ public class CameraRotate : MonoBehaviour {
 	public static float turnSpeed;
 	public static int trackLength;
 	public static int totalTurns;
+	public static int currentLapLength;
 	public static int lengthcounter;
 	public static int straightcounter;
 	public static int cornercounter;
@@ -72,6 +73,7 @@ public class CameraRotate : MonoBehaviour {
 	public static float fastestRaceLap;
 	public static int fastestRaceLapInt;
 	
+	public static float calcLapDelta;
 	public static float raceLapRecord;
 	public static int raceLapRecordInt;
 	public static float lapRecord;
@@ -234,7 +236,7 @@ public class CameraRotate : MonoBehaviour {
 			officialSeries = false;
 		}
 
-		fastestRaceLap = 999.99f;
+		fastestRaceLap = 99.999f;
 		raceLapRecord = 0;
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
@@ -303,11 +305,6 @@ public class CameraRotate : MonoBehaviour {
 
 	// Update is called once per frame
 	void FixedUpdate() {
-
-		//Manipulate time to help solve bugs etc.
-		#if UNITY_EDITOR
-		//Application.targetFrameRate = customFrameRate;
-		#endif
 
 		//LateUpdate was unreliable..
 		//..so run this at next frame start instead.
@@ -378,6 +375,13 @@ public class CameraRotate : MonoBehaviour {
 			
 			frameTime = (1/(Movement.playerSpeed / 200f));
 			lapTime += (frameTime * Time.deltaTime);
+
+			if(fastestRaceLap < 99f){
+				calcLapDelta = lapTime-((fastestRaceLap / trackLength) * currentLapLength);
+			} else {
+				calcLapDelta = 99.999f;
+			}
+			//Debug.Log("Delta:" + calcLapDelta + " - Lap Time:" + lapTime + " - Fastest Lap:" + fastestRaceLap + " - Track Length:" + trackLength + " - Current Lap Length:" + currentLapLength);
 		}
 		
 		//Increment Lap
@@ -424,6 +428,7 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			
+			currentLapLength = 0;
 			lengthcounter=0;
 
 			averageSpeed = 0;
@@ -466,6 +471,7 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 		}
+		currentLapLength++;
 
 		//Turning
 		if(straightcounter > straightLength[straight-1]){

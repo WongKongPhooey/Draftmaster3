@@ -125,14 +125,19 @@ public class Movement : MonoBehaviour {
 	public static GameObject HUDControls;
 	
 	public GameObject HUDGear;
+	public TMPro.TMP_Text HUDGearLbl;
 	public GameObject HUDRevs;
+	public TMPro.TMP_Text HUDRevsLbl;
 	public GameObject HUDRevBarMask;
 	public GameObject HUDDraftBarMask;
 	public GameObject HUDSpeed;
 	public GameObject HUDAccSpeed;
 	public GameObject HUDLastLap;
+	public TMPro.TMP_Text HUDLastLapLbl;
 	public GameObject HUDBestLap;
+	public TMPro.TMP_Text HUDBestLapLbl;
 	public GameObject HUDLapDelta;
+	public TMPro.TMP_Text HUDLapDeltaLbl;
 	public GameObject HUDTemps;
 	public float calcLapDelta;
 	public float HUDDraftStrength;
@@ -250,7 +255,12 @@ public class Movement : MonoBehaviour {
 		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
-		//HUDTemps
+		HUDGearLbl = HUDGear.GetComponent<TMPro.TMP_Text>();
+		HUDRevsLbl = HUDRevs.GetComponent<TMPro.TMP_Text>();
+		HUDLastLapLbl = HUDLastLap.GetComponent<TMPro.TMP_Text>();
+		HUDBestLapLbl = HUDBestLap.GetComponent<TMPro.TMP_Text>();
+		HUDLapDeltaLbl = HUDLapDelta.GetComponent<TMPro.TMP_Text>();
+
 		pauseMenu = GameObject.Find("PauseMenu");
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		cautionSummaryTotalWreckers = GameObject.Find("CarsInvolved");
@@ -1071,8 +1081,8 @@ public class Movement : MonoBehaviour {
 				//SFX
 				//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 			}
-			HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 4";
-			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+			HUDGearLbl.text = "GEAR 4";
+			HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
 			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 		} else {
 			if((CameraRotate.carSpeedOffset - playerWreckDecel) < gearSpeeds[3]){
@@ -1087,8 +1097,8 @@ public class Movement : MonoBehaviour {
 					//SFX
 					//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 				}
-				HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 3";
-				HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+				HUDGearLbl.text = "GEAR 3";
+				HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
 				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 			} else {
 				//2nd GEAR 
@@ -1103,8 +1113,8 @@ public class Movement : MonoBehaviour {
 						//SFX
 						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 					}
-					HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
-					HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+					HUDGearLbl.text = "GEAR 2";
+					HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
 					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 				} else {
 					//1st GEAR (wrecks only)
@@ -1121,8 +1131,8 @@ public class Movement : MonoBehaviour {
 						//SFX
 						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 					}
-					HUDGear.GetComponent<TMPro.TMP_Text>().text = "GEAR 2";
-					HUDRevs.GetComponent<TMPro.TMP_Text>().text = "" + engineRevs.ToString("F0") + " RPM";
+					HUDGearLbl.text = "GEAR 2";
+					HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
 					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 				}
 			}
@@ -1150,8 +1160,8 @@ public class Movement : MonoBehaviour {
 		
 		if(wreckOver == true){
 			carEngine.pitch = 0f;
-			HUDGear.GetComponent<TMPro.TMP_Text>().text = "NO GEAR";
-			HUDRevs.GetComponent<TMPro.TMP_Text>().text = "0 RPM";
+			HUDGearLbl.text = "NO GEAR";
+			HUDRevsLbl.text = "0 RPM";
 			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(430, 40);
 			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD 0";
 			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD 0";
@@ -1163,7 +1173,8 @@ public class Movement : MonoBehaviour {
 		if(draftDist < HUDDraftStrength){
 			HUDDraftStrength-=0.5f;
 		}
-		
+
+		//Todo - Optimise all of these GetComponent calls and CameraRotate calls		
 		if((isWrecking == false)&&(wreckOver == false)){
 			HUDDraftBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(80, (120f / (10f + customDistF)) * HUDDraftStrength);
 		} else {
@@ -1171,14 +1182,23 @@ public class Movement : MonoBehaviour {
 			HUDDraftBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 120f);
 		}
 
-		HUDLastLap.GetComponent<TMPro.TMP_Text>().text = "LAP " + (CameraRotate.averageSpeed - speedOffset).ToString("F2");
-		HUDBestLap.GetComponent<TMPro.TMP_Text>().text = "BEST " + (CameraRotate.raceLapRecord - speedOffset).ToString("F2");
-		
-		calcLapDelta = (CameraRotate.lapRecord - speedOffset)-(CameraRotate.averageSpeed - speedOffset);
-		if(calcLapDelta<0){
-			HUDLapDelta.GetComponent<TMPro.TMP_Text>().text = "DLT (" + calcLapDelta.ToString("F2") + ")";
+		HUDLastLapLbl.text = "LAP " + CameraRotate.lapTime.ToString("F3");
+		if(CameraRotate.fastestRaceLap < 99f){
+			HUDBestLapLbl.text = "BEST " + CameraRotate.fastestRaceLap.ToString("F3");
 		} else {
-			HUDLapDelta.GetComponent<TMPro.TMP_Text>().text = "DLT (+" + calcLapDelta.ToString("F2") + ")";
+			HUDBestLapLbl.text = "BEST N/A";
+		}
+		
+		calcLapDelta = CameraRotate.calcLapDelta;
+
+		if(calcLapDelta<0){
+			HUDLapDeltaLbl.text = "DLT " + calcLapDelta.ToString("F3");
+		} else {
+			if(calcLapDelta<=99f){
+				HUDLapDeltaLbl.text = "DLT +" + calcLapDelta.ToString("F3");
+			} else {
+				HUDLapDeltaLbl.text = "DLT -N/A";
+			}
 		}
 	}
 	
