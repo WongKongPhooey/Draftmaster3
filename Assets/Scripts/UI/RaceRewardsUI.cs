@@ -208,8 +208,15 @@ public class RaceRewardsUI : MonoBehaviour
 					float rnd = Random.Range(0,10);
 					//Top 3 = guaranteed reward
 					if((rnd <= chance)||(finishPos <= 3)){
-						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
-						Debug.Log("Top 10 finish, add rewards. Valid Drivers: " + validDriver.Count);
+						//Debug.Log("Top 10 finish, add rewards. Valid Drivers: " + validDriver.Count);
+						if(validDriver.Count > 0){
+							AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+						} else {
+							//Double the gears if no prize car available
+							gears += rewardGears;
+							PlayerPrefs.SetInt("Gears",gears);
+							gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + rewardGears + " Gears (" + gears + ")";
+						}
 					} else {
 						carReward = "";
 					}
