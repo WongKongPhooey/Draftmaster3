@@ -1,5 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:VisualElement name="Body" style="left: auto; bottom: auto; right: auto; top: auto; position: relative; background-color: rgb(224, 181, 0); -unity-font-definition: url(&apos;project://database/Assets/Fonts/mania%20SDF.asset?fileID=11400000&amp;guid=9521b041e1c0440e583c8936b01fe2f9&amp;type=2#mania SDF&apos;); flex-grow: 1; align-items: center; justify-content: center; width: 100%; height: 100%; -unity-text-align: upper-center;">
-        <ui:Button text="Test" display-tooltip-when-elided="true" name="Button" enable-rich-text="true" style="overflow: visible;" />
-    </ui:VisualElement>
-</ui:UXML>
