@@ -41,6 +41,7 @@ public class CameraRotate : MonoBehaviour {
 	public static float turnSpeed;
 	public static int trackLength;
 	public static int totalTurns;
+	public static int currentLapLength;
 	public static int lengthcounter;
 	public static int straightcounter;
 	public static int cornercounter;
@@ -72,18 +73,21 @@ public class CameraRotate : MonoBehaviour {
 	public static float fastestRaceLap;
 	public static int fastestRaceLapInt;
 	
+	public static float calcLapDelta;
 	public static float raceLapRecord;
 	public static int raceLapRecordInt;
 	public static float lapRecord;
 	public static int lapRecordInt;
 	public static int currentLapRecord;
 	public static int trackSpeedOffset;
-	string circuit;
+	static string circuit;
+	static string liveTimeTrial;
 	float kerbBlur;
 	
 	public GameObject cautionSummaryMenu;
 	public GameObject pauseMenu;
 	public GameObject challengeLost;
+	public static bool isLiveTimeTrial;
 	public static bool gamePausedLate;
 	
 	public static bool momentChecks;
@@ -200,6 +204,12 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
+		liveTimeTrial = PlayerPrefs.GetString("LiveTimeTrial");
+		isLiveTimeTrial = false;
+		if(circuit == liveTimeTrial){
+			isLiveTimeTrial = true;
+		}
+		
 		
 		lapRecord = 0;
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
@@ -226,7 +236,7 @@ public class CameraRotate : MonoBehaviour {
 			officialSeries = false;
 		}
 
-		fastestRaceLap = 999.99f;
+		fastestRaceLap = 99.999f;
 		raceLapRecord = 0;
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
@@ -261,11 +271,11 @@ public class CameraRotate : MonoBehaviour {
 		if(audioOn != 0){
 			carEngine.volume = 0.15f;
 			crowdNoise.volume = 0.05f;
-			Debug.Log("Audio is on: " + audioOn);
+			//Debug.Log("Audio is on: " + audioOn);
 		} else {
 			carEngine.volume = 0.0f;
 			crowdNoise.volume = 0.0f;
-			Debug.Log("Audio is off: " + audioOn);
+			//Debug.Log("Audio is off: " + audioOn);
 		}
 		
 	}
@@ -295,11 +305,6 @@ public class CameraRotate : MonoBehaviour {
 
 	// Update is called once per frame
 	void FixedUpdate() {
-
-		//Manipulate time to help solve bugs etc.
-		#if UNITY_EDITOR
-		//Application.targetFrameRate = customFrameRate;
-		#endif
 
 		//LateUpdate was unreliable..
 		//..so run this at next frame start instead.
@@ -370,6 +375,13 @@ public class CameraRotate : MonoBehaviour {
 			
 			frameTime = (1/(Movement.playerSpeed / 200f));
 			lapTime += (frameTime * Time.deltaTime);
+
+			if(fastestRaceLap < 99f){
+				calcLapDelta = lapTime-((fastestRaceLap / trackLength) * currentLapLength);
+			} else {
+				calcLapDelta = 99.999f;
+			}
+			//Debug.Log("Delta:" + calcLapDelta + " - Lap Time:" + lapTime + " - Fastest Lap:" + fastestRaceLap + " - Track Length:" + trackLength + " - Current Lap Length:" + currentLapLength);
 		}
 		
 		//Increment Lap
@@ -416,6 +428,7 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			
+			currentLapLength = 0;
 			lengthcounter=0;
 
 			averageSpeed = 0;
@@ -429,36 +442,12 @@ public class CameraRotate : MonoBehaviour {
 			if(cautionOut == true){
 				//Only save at the line if not currently wrecking
 				if(Movement.isWrecking == false){
+					saveRaceFastestLap();
+					//Debug.Log("Saved fastest lap on lap count");
 					cautionSummaryMenu.SetActive(true);
-					//Debug.Log("Crossed line, show the finish line");
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0.0f;
 					crowdNoise.volume = 0.0f;
-					fastestRaceLapInt = (int)Mathf.Round(fastestRaceLap * 1000);
-					raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
-					if(raceLapRecordInt < 0){
-						raceLapRecordInt = 0;
-					}
-					lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
-					PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
-					if(PlayerPrefs.HasKey("FastestLap" + circuit)){
-						currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-						if(raceLapRecord > currentLapRecord){
-							PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
-						}
-					}
-					PlayerPrefs.SetInt("RaceFastestLap" + circuit, raceLapRecordInt);
-					if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-						PlayFabManager.CheckLiveTimeTrial();
-						//Double checked
-						if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
-						  &&(officialSeries == true)){
-							PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
-							PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
-							//This seems to be working
-							Debug.Log("Sent Leaderboards (Caution)");
-						}
-					}
 					gamePausedLate = true;
 				}
 			}
@@ -482,6 +471,7 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 		}
+		currentLapLength++;
 
 		//Turning
 		if(straightcounter > straightLength[straight-1]){
@@ -649,13 +639,6 @@ public class CameraRotate : MonoBehaviour {
 		GameObject.Find("Player").GetComponent<Movement>().hideHUD();
 		Ticker.checkFinishPositions();
 		PlayerPrefs.SetInt("ExpAdded",0);
-		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
-			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
-			if(raceLapRecord > currentLapRecord){
-				raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
-				PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
-			}
-		}
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
@@ -664,45 +647,43 @@ public class CameraRotate : MonoBehaviour {
 			MomentsCriteria.checkEndCriteria();
 		}
 		
-		fastestRaceLapInt = (int)Mathf.Round(fastestRaceLap * 1000);
-		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
-		//Debug.Log("Send to leaderboard - " + lapRecordInt + ": " + circuit);
-		PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
-		if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-			PlayFabManager.CheckLiveTimeTrial();
-			//Double checked
-			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
-			  &&(officialSeries == true)){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
-				PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
-				Debug.Log("Sent Leaderboards (End Race)");
-			}
-		}
+		saveRaceFastestLap();
 	}
 	
-	public void saveRaceFastestLap(){
+	public static void saveRaceFastestLap(){
+		//Invert the fastest times so they order right in the leaderboard
+		fastestRaceLapInt = 100000 - (int)Mathf.Round(fastestRaceLap * 1000);
+		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
+		if(raceLapRecordInt < 0){
+			Debug.Log("No complete lap set.. bail");
+			raceLapRecordInt = 0;
+			return;
+		}
+		if(fastestRaceLapInt < 0){
+			Debug.Log("No fastest lap set.. bail");
+			fastestRaceLapInt = 0;
+			return;
+		}
+		Debug.Log("Fastest Lap Save Call (Reusable)");
+		lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
+		PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
 			currentLapRecord = PlayerPrefs.GetInt("FastestLap" + circuit);
 			if(raceLapRecord > currentLapRecord){
-				raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 				PlayerPrefs.SetInt("FastestLap" + circuit, raceLapRecordInt);
 			}
 		}
-		fastestRaceLapInt = (int)Mathf.Round(fastestRaceLap * 1000);
-		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
-		if(raceLapRecordInt > 0){
-			Debug.Log("Send to leaderboard via callable function - " + raceLapRecordInt + ": " + circuit);
-			PlayFabManager.SendLeaderboard(raceLapRecordInt, circuit, "FastestLap");
-			if((PlayerPrefs.GetString("LiveTimeTrial") == circuit)
-			  &&(officialSeries == true)){
-				PlayFabManager.CheckLiveTimeTrial();
-				//Double checked
-				if(PlayerPrefs.GetString("LiveTimeTrial") == circuit){
-					PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
-					PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
-					Debug.Log("Sent Leaderboards (Movement)");
-				}
+		PlayerPrefs.SetInt("RaceFastestLap" + circuit, raceLapRecordInt);
+		if(isLiveTimeTrial == true){
+			//Double checked
+			if(officialSeries == true){
+				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
+				PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
+				//This seems to be working
+				Debug.Log("Sent Leaderboards (Reusable)");
 			}
+		} else {
+			Debug.Log("Not The Live Circuit");
 		}
 	}
 	

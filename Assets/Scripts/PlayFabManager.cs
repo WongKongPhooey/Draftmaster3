@@ -454,9 +454,9 @@ public class PlayFabManager : MonoBehaviour
 		}
 
 		#if UNITY_EDITOR
-		//result.Data["LiveTimeTrial"] = "FortWorth";
+		result.Data["LiveTimeTrial"] = "FortWorth";
 		//result.Data["TargetVersion"] = "7.6.4";
-		Debug.Log("Time Trial Testing");
+		//Debug.Log("Time Trial Testing");
 		#endif
 
 		//Live Race Time Trial
@@ -467,7 +467,7 @@ public class PlayFabManager : MonoBehaviour
 				PlayerPrefs.SetString("LatestVersion", Application.version);
 			}
 			if(result.Data["LiveTimeTrial"] != ""){
-				if(PlayerPrefs.GetString("LatestVersion") == Application.version){
+				if(isLatestVersion() == true){
 					PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				} else {
 					Debug.Log("Time Trial not set (not on latest version)");
@@ -956,7 +956,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	static void OnLeaderboardUpdate(UpdatePlayerStatisticsResult result){
-		Debug.Log("Leaderboard Updated.");
+		//Debug.Log("Leaderboard Updated.");
 	}
 	
 	public static void GetLeaderboard(string circuit){
@@ -1088,7 +1088,7 @@ public class PlayFabManager : MonoBehaviour
 		var request = new GetLeaderboardRequest {
 			StatisticName = "FastestLapChallenge",
 			StartPosition = 0,
-			MaxResultsCount = 20
+			MaxResultsCount = 50
 		};
 		PlayFabClientAPI.GetLeaderboard(request, OnLiveTimeTrialLeaderboardGet, OnError);
 	}
@@ -1100,7 +1100,7 @@ public class PlayFabManager : MonoBehaviour
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
 			tableLabels[0].text = (item.Position + 1).ToString();
 			tableLabels[1].text = item.DisplayName;
-			float leaderboardTime = item.StatValue/1000f;
+			float leaderboardTime = (100000 - item.StatValue)/1000f;
 			if(leaderboardTime == 0){
 				leaderboardTime = 999.999f;
 			}
@@ -1130,7 +1130,7 @@ public class PlayFabManager : MonoBehaviour
 			Text[] tableLabels = tableRows.GetComponentsInChildren<Text>();
 			tableLabels[0].text = (item.Position + 1).ToString();
 			tableLabels[1].text = item.DisplayName;
-			float leaderboardTime = item.StatValue/1000f;
+			float leaderboardTime = (100000 - item.StatValue)/1000f;
 			if(leaderboardTime == 0){
 				leaderboardTime = 999.999f;
 			}
@@ -1145,5 +1145,19 @@ public class PlayFabManager : MonoBehaviour
 			}
 		}
 		GetLiveTimeTrialLeaderboard();
+	}
+	
+	static bool isLatestVersion(){
+		if(PlayerPrefs.GetString("LatestVersion") == ""){
+			return true;
+		}
+		string[] latestSubVersions = PlayerPrefs.GetString("LatestVersion").Split(".");
+		string[] currentSubVersions = Application.version.Split(".");
+		for(int i=0;i<latestSubVersions.Length;i++){
+			if(int.Parse(latestSubVersions[i]) > int.Parse(currentSubVersions[i])){
+				return false;
+			}
+		}
+		return true;
 	}
 }
