@@ -70,12 +70,20 @@ public class Ticker : MonoBehaviour
 	public Transform tickerObj;
 	
 	public static GameObject tickerFlag;
+	public static Image tickerFlagImg;
 	public static GameObject tickerLaps;
+	public static TMPro.TMP_Text tickerLapsLbl;
 	public static GameObject tickerLocation;
 	public static GameObject cautionSummaryMenu;
 	public static GameObject mainCam;
 	public static GameObject pauseMenu;
 	
+	public static TMPro.TMP_Text[] tickerPositions;
+	public static Image[] tickerNums;
+	public static TMPro.TMP_Text[] tickerFallbackNums;
+	public static TMPro.TMP_Text[] tickerNames;
+	public static TMPro.TMP_Text[] tickerDists;
+
     // Start is called before the first frame update
     void Awake(){
         
@@ -107,7 +115,9 @@ public class Ticker : MonoBehaviour
 		ticker = GameObject.Find("Ticker");
 		playerTicker = GameObject.Find("PlayerTicker");
 		tickerFlag = GameObject.Find("RaceState");
+		tickerFlagImg = tickerFlag.GetComponent<Image>();
 		tickerLaps = GameObject.Find("RaceLaps");
+		tickerLapsLbl = tickerLaps.GetComponent<TMPro.TMP_Text>();
 		tickerLocation = GameObject.Find("RaceName");
 		tickerLocation.GetComponent<TMPro.TMP_Text>().text = PlayerPrefs.GetString("TrackLocation");
 		
@@ -225,15 +235,17 @@ public class Ticker : MonoBehaviour
 				return;
 			}
 			
+			//Fill the static arrays (heavy, on start frames)
+			if(tickerPositions[i] == null){
+				tickerPositions[i] = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+				tickerNums[i] = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
+				tickerFallbackNums[i] = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				tickerNames[i] = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+				tickerDists[i] = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
+			}
+
 			//Redraw the TMPText (heavy performance hit)
-			
-			TMPro.TMP_Text tickerPos = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
-			Image tickerNum = ticker.transform.GetChild(i).transform.GetChild(1).GetComponent<Image>();
-			TMPro.TMP_Text tickerFallbackNum = ticker.transform.GetChild(i).transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			TMPro.TMP_Text tickerName = ticker.transform.GetChild(i).transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
-			TMPro.TMP_Text tickerDist = ticker.transform.GetChild(i).transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
-			
-			tickerPos.text = (i+1).ToString();
+			tickerPositions[i].text = (i+1).ToString();
 			
 			int displayNumber = cachedCarNumbers[int.Parse(carNumber[i])];
 			if(entrantList[i].name == playerCar.name){
@@ -242,20 +254,20 @@ public class Ticker : MonoBehaviour
 			
 			//Show the correct number icon, or a fallback number
 			if(Resources.Load<Sprite>("cup20num" + displayNumber) != null){
-				tickerNum.overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
-				tickerNum.color = new Color32(255,255,225,255);
-				tickerFallbackNum.text = "";
+				tickerNums[i].overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
+				tickerNums[i].color = new Color32(255,255,225,255);
+				tickerFallbackNums[i].text = "";
 			} else {
-				tickerNum.color = new Color32(255,255,225,0);
-				tickerFallbackNum.text = carNumber[i];
+				tickerNums[i].color = new Color32(255,255,225,0);
+				tickerFallbackNums[i].text = carNumber[i];
 			}
 			
-			tickerName.text = cachedCarNames[int.Parse(carNumber[i])];
+			tickerNames[i].text = cachedCarNames[int.Parse(carNumber[i])];
 			
-			tickerDist.text = "+" + carDist[i].ToString("f3");
+			tickerDists[i].text = "+" + carDist[i].ToString("f3");
 			if(entrantList[i].name == playerCar.name){
-				tickerName.text = playerDisplayName;
-				tickerDist.text = leaderDist.ToString("f3");
+				tickerNames[i].text = playerDisplayName;
+				tickerDists[i].text = leaderDist.ToString("f3");
 			}
 			
 			frameRedraws++;
@@ -588,13 +600,13 @@ public class Ticker : MonoBehaviour
 		
 		//ticker.transform.Translate(-1.5f,0,0);
 		if(CameraRotate.overtime == true){
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "OVERTIME";
+			tickerLapsLbl.text = "OVERTIME";
 		} else {
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
+			tickerLapsLbl.text = "LAP " + CameraRotate.lap + " OF " + CameraRotate.raceEnd;
 		}
 		if(CameraRotate.lap == CameraRotate.raceEnd){
-			tickerFlag.GetComponent<Image>().color = new Color(255,255,255);
-			tickerLaps.GetComponent<TMPro.TMP_Text>().text = "FINAL LAP";
+			tickerFlagImg.color = new Color(255,255,255);
+			tickerLapsLbl.text = "FINAL LAP";
 		}
 		if(carsTagged == false){
 			if(carsArray.Length == 0){
@@ -604,7 +616,7 @@ public class Ticker : MonoBehaviour
 			}
 		}
 		if(CameraRotate.cautionOut == true){
-			tickerFlag.GetComponent<Image>().color = new Color(255,255,0);
+			tickerFlagImg.color = new Color(255,255,0);
 		}
 	}
 }

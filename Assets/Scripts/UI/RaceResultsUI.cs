@@ -152,14 +152,7 @@ public class RaceResultsUI : MonoBehaviour
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
 		raceWinnings = PrizeMoney.cashAmount[Ticker.position] * winningsMultiplier;
 
-		if(ChallengeSelectGUI.challengeMode == false){
-			lapsBonus = PlayerPrefs.GetInt("RaceLapsMultiplier");
-			winningsMultiplier *= lapsBonus;
-		} else {
-			lapsBonus = 1;
-		}
-
-		if ((ChallengeSelectGUI.challengeMode == false)||(challengeComplete == true)){
+		if (challengeComplete == true){
 			PlayerPrefs.SetInt("raceWinnings",raceWinnings);
 		} else {
 			PlayerPrefs.SetInt("raceWinnings",0);
