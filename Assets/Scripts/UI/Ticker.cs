@@ -78,11 +78,11 @@ public class Ticker : MonoBehaviour
 	public static GameObject mainCam;
 	public static GameObject pauseMenu;
 	
-	public static TMPro.TMP_Text[] tickerPositions;
-	public static Image[] tickerNums;
-	public static TMPro.TMP_Text[] tickerFallbackNums;
-	public static TMPro.TMP_Text[] tickerNames;
-	public static TMPro.TMP_Text[] tickerDists;
+	public static TMPro.TMP_Text[] tickerPositions = new TMPro.TMP_Text[50];
+	public static Image[] tickerNums = new Image[50];
+	public static TMPro.TMP_Text[] tickerFallbackNums = new TMPro.TMP_Text[50];
+	public static TMPro.TMP_Text[] tickerNames = new TMPro.TMP_Text[50];
+	public static TMPro.TMP_Text[] tickerDists = new TMPro.TMP_Text[50];
 
     // Start is called before the first frame update
     void Awake(){
