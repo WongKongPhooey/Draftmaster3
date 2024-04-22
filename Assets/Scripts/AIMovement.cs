@@ -1959,6 +1959,11 @@ public class AIMovement : MonoBehaviour
 		wreckDecel = 0;
 		wreckForce.force = new Vector3(0f, 0f,windForce);
 		wreckForce.torque = new Vector3(0f, Random.Range(-0.5f, 0.35f) * 10, 0f);
+
+		if(Movement.momentChecks == true){
+			MomentsCriteria.checkMomentsCriteria("CarWrecks",carNum.ToString());
+			MomentsCriteria.checkMomentsCriteria("CarWrecksAlso",carNum.ToString());
+		}
 	}
 	
 	public void endWreck(){
