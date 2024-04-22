@@ -45,7 +45,8 @@ public class EventData : MonoBehaviour
 		offlineEvent[0] = "Ol' Seven-Time";
 		offlineEvent[1] = "The Intimidator";
 		offlineEvent[3] = "The Closer";
-		offlineEvent[4] = "Moments";
+		offlineEvent[4] = "Modern Era";
+		offlineEvent[5] = "Classics";
 		
 		switch(PlayerPrefs.GetString("SpecialEvent")){
 			case "Cup22Final4":
@@ -61,6 +62,7 @@ public class EventData : MonoBehaviour
 		//offlineEventType[2] = "Replay";
 		offlineEventType[3] = "Progression";
 		offlineEventType[4] = "Replay";
+		offlineEventType[5] = "Replay";
 		offlineEventType[9] = "Replay";
 		
 		offlineEventWeek[0] = "4,8,12";
@@ -68,6 +70,7 @@ public class EventData : MonoBehaviour
 		//offlineEventWeek[2] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[3] = "1,5,9";
 		offlineEventWeek[4] = "1,2,3,4,5,6,7,8,9,10,11,12";
+		offlineEventWeek[5] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		offlineEventWeek[9] = "1,2,3,4,5,6,7,8,9,10,11,12";
 		
 		//Ol' Seven-Time
@@ -331,24 +334,6 @@ public class EventData : MonoBehaviour
 		eventChapterDescriptions[3,3] = "With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
 
 		//Modern Era
-		offlineEventChapter[4,0] = "Daytona '79";
-		offlineChapterImage[4,0] = "cup79livery11";
-		offlineMinClass[4,0] = 1;
-		offlineMinLevel[4,0] = 1;
-		offlineAILevel[4,0] = 10;
-		offlineSeries[4,0] = "cup79";
-		offlineCustomCar[4,0] = "cup79livery11";
-		offlineCustomField[4,0] = "cup79MomentsDaytona";
-		offlineStartingLap[4,0] = 12;
-		offlineModifier[4,0] = "delicate";
-		offlineRaceLaps[4,0] = 201;
-		offlineStartingLap[4,0] = 200;
-		offlineMoment[4,0] = "Daytona79";
-		offlineTracklists[4,0] = "1";
-		offlinePrizes[4,0] = "1Star";
-		offlineCustomFieldOrder[4,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,43";
-		eventChapterDescriptions[4,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
-		
 		offlineEventChapter[4,1] = "Chastain's Wallride";
 		offlineChapterImage[4,1] = "cup22livery1alt2";
 		offlineMinClass[4,1] = 1;
@@ -448,22 +433,22 @@ public class EventData : MonoBehaviour
 		offlineCustomFieldOrder[5,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,43";
 		eventChapterDescriptions[5,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
 		
-		offlineEventChapter[5,0] = "Craven Got Him";
-		offlineChapterImage[5,0] = "cup03livery32";
-		offlineMinClass[5,0] = 1;
-		offlineMinLevel[5,0] = 1;
-		offlineAILevel[5,0] = 10;
-		offlineSeries[5,0] = "cup03";
-		offlineCustomCar[5,0] = "cup03livery32";
-		offlineCustomField[5,0] = "MomentsDarlington03";
-		offlineModifier[5,0] = "delicate";
-		offlineRaceLaps[5,0] = 293;
-		offlineStartingLap[5,0] = 292;
-		offlineMoment[5,0] = "Darlington03";
-		offlineTracklists[5,0] = "1";
-		offlinePrizes[5,0] = "1Star";
-		offlineCustomFieldOrder[5,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,43";
-		eventChapterDescriptions[5,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
+		offlineEventChapter[5,1] = "Craven Got Him";
+		offlineChapterImage[5,1] = "dmc15livery67";
+		offlineMinClass[5,1] = 1;
+		offlineMinLevel[5,1] = 1;
+		offlineAILevel[5,1] = 10;
+		offlineSeries[5,1] = "dmc15";
+		offlineCustomCar[5,1] = "dmc15livery67";
+		offlineCustomField[5,1] = "MomentsDarlington03";
+		offlineModifier[5,1] = "delicate";
+		offlineRaceLaps[5,1] = 293;
+		offlineStartingLap[5,1] = 292;
+		offlineMoment[5,1] = "Darlington03";
+		offlineTracklists[5,1] = "19";
+		offlinePrizes[5,1] = "1Star";
+		offlineCustomFieldOrder[5,1] = "99,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,27";
+		eventChapterDescriptions[5,1] = "March 16th, 2003. Craven beats Busch across the line by just 0.02s whilst glued together.";
 		
 
 		//Special Event - Final 4
@@ -577,14 +562,16 @@ public class EventData : MonoBehaviour
 		offlineEventImage[1] = "cup20livery3alt2";
 		offlineEventImage[2] = "cup22livery45";
 		offlineEventImage[3] = "cup22livery4";
-		offlineEventImage[4] = "cup79livery1";
+		offlineEventImage[4] = "cup22livery1alt2";
+		offlineEventImage[5] = "cup79livery1";
 		offlineEventImage[9] = "cup22livery1alt1";
 		
 		eventDescriptions[0] = "Relive Johnson's best moments leading to an incredible 7 championships.";
 		eventDescriptions[1] = "Do it for Dale! Revisit some of Earnhardt's finest drives.";
 		eventDescriptions[2] = "Touchdown in LA. The new season starts here.";
-		eventDescriptions[3] = "Play out the biggest races in Harvick's career to date.";
-		eventDescriptions[4] = "Reliving wrecks and famous fueds. Wreck 'em and check 'em!";
+		eventDescriptions[3] = "Play out the biggest races in Harvick's career.";
+		eventDescriptions[4] = "Memorable races from recent years.";
+		eventDescriptions[5] = "Reliving famous wrecks and familiar fueds.";
 		
 	}
 

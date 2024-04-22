@@ -1319,7 +1319,9 @@ public class Movement : MonoBehaviour {
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
+			MomentsCriteria.checkMomentsCriteria("WreckStartLocationCorner",CameraRotate.turn.ToString(), onTurn.ToString());
 			MomentsCriteria.checkMomentsCriteria("WreckStartPositionHigherThan",Ticker.position.ToString());
+			MomentsCriteria.checkMomentsCriteria("PlayerWrecks","");
 		}
 		
 		if(fastestLapSaved == false){
