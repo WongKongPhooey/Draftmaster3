@@ -31,8 +31,8 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, float> numXScale = new Dictionary<string, float>();
 	public static Dictionary<string, int> numXRotation = new Dictionary<string, int>();
 
-	public static string[] allCarsets = new string[9];
-	public static string[] allWinnableCarsets = new string[7];
+	public static string[] allCarsets = new string[10];
+	public static string[] allWinnableCarsets = new string[8];
 	public static string[] allManufacturers = new string[7];
 
 	public static string[] cup2020Names = new string[101];
@@ -64,6 +64,12 @@ public class DriverNames : MonoBehaviour {
 	public static string[] irl2023Manufacturer = new string[101];
 	public static int[] irl2023Rarity = new int[101];
 	public static string[] irl2023Types = new string[101];
+	
+	public static string[] irl2024Names = new string[101];
+	public static string[] irl2024Teams = new string[101];
+	public static string[] irl2024Manufacturer = new string[101];
+	public static int[] irl2024Rarity = new int[101];
+	public static string[] irl2024Types = new string[101];
 	
 	public static string[] cup2001Names = new string[101];
 	public static string[] cup2001Teams = new string[101];
@@ -111,6 +117,7 @@ public class DriverNames : MonoBehaviour {
 		cup23();
 		cup24();
 		irl23();
+		irl24();
 		cup01();
 		cup79();
 		dmc15();
@@ -128,6 +135,7 @@ public class DriverNames : MonoBehaviour {
 		series.Add("cup23");
 		series.Add("cup24");
 		series.Add("irl23");
+		series.Add("irl24");
 		series.Add("cup01");
 		series.Add("cup79");
 		series.Add("dmc15");
@@ -139,6 +147,7 @@ public class DriverNames : MonoBehaviour {
 		winnableSeries.Add("cup23");
 		winnableSeries.Add("cup24");
 		winnableSeries.Add("irl23");
+		winnableSeries.Add("irl24");
 		winnableSeries.Add("dmc15");
 		winnableSeries.Add("irc00");
 		
@@ -172,6 +181,12 @@ public class DriverNames : MonoBehaviour {
 			allManufacturer.Add("irl23", irl2023Manufacturer);
 			allRarity.Add("irl23", irl2023Rarity);
 			allTypes.Add("irl23", irl2023Types);
+
+			allNames.Add("irl24", irl2024Names);
+			allTeams.Add("irl24", irl2024Teams);
+			allManufacturer.Add("irl24", irl2024Manufacturer);
+			allRarity.Add("irl24", irl2024Rarity);
+			allTypes.Add("irl24", irl2024Types);
 			
 			allNames.Add("cup01", cup2001Names);
 			allTeams.Add("cup01", cup2001Teams);
@@ -225,6 +240,7 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[6] = "dmc15";
 		allCarsets[7] = "irc00";
 		allCarsets[8] = "irl23";
+		allCarsets[9] = "irl24";
 	}
 	
 	public static void listManufacturers(){
@@ -245,6 +261,7 @@ public class DriverNames : MonoBehaviour {
 		allWinnableCarsets[4] = "dmc15";
 		allWinnableCarsets[5] = "irc00";
 		allWinnableCarsets[6] = "irl23";
+		allWinnableCarsets[7] = "irl24";
 	}
 	
 	public static void populateDriverPool(){
@@ -435,11 +452,10 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Zilisch");
 
 		foreach(KeyValuePair<string, string[]> seriesDrivers in allNames){
+			//No fictional names in the driver pool
 			if(seriesDrivers.Key == "dmc15"){
 				continue;
 			}
-			//Debug.Log("Getting names in " + seriesDrivers.Key);
-			// do something with entry.Value or entry.Key
 			for(int i=0;i<100;i++){
 				//Only unlocked drivers for each series appear in the pool
 				if(PlayerPrefs.GetInt(seriesDrivers.Key + i + "Unlocked") == 1){
@@ -850,6 +866,7 @@ public class DriverNames : MonoBehaviour {
 			allCarsetNames.Add("cup22", "Cup '22");
 			allCarsetNames.Add("cup20", "Cup '20");
 			allCarsetNames.Add("irl23", "IRL '23");
+			allCarsetNames.Add("irl24", "IRL '24");
 			allCarsetNames.Add("cup01", "Cup '01");
 			allCarsetNames.Add("cup79", "Cup '79");
 			allCarsetNames.Add("irc00", "IROC '00");
@@ -1995,6 +2012,189 @@ public class DriverNames : MonoBehaviour {
 		irl2023Rarity[98] = 2;
 	}
 	
+	public static void irl24(){
+
+		irl2024Names[2] = "Newgarden";
+		irl2024Names[3] = "Mclaughlin";
+		irl2024Names[4] = "Simpson";
+		irl2024Names[5] = "O Ward";
+		irl2024Names[6] = "Malukas";
+		irl2024Names[7] = "Rossi";
+		irl2024Names[8] = "Lundqvist";
+		irl2024Names[9] = "Dixon";
+		irl2024Names[10] = "Palou";
+		irl2024Names[11] = "Armstrong";
+		irl2024Names[12] = "Power";
+		irl2024Names[14] = "Ferrucci";
+		irl2024Names[15] = "Rahal";
+		irl2024Names[16] = "Castroneves";
+		irl2024Names[17] = "Larson";
+		irl2024Names[18] = "Harvey";
+		irl2024Names[20] = "Carpenter";
+		irl2024Names[21] = "VeeKay";
+		irl2024Names[23] = "Hunter-Reay";
+		irl2024Names[24] = "Daly";
+		irl2024Names[26] = "Herta";
+		irl2024Names[27] = "Kirkwood";
+		irl2024Names[28] = "Ericsson";
+		irl2024Names[30] = "Fittipaldi";
+		irl2024Names[33] = "Rasmussen";
+		irl2024Names[41] = "Robb";
+		irl2024Names[45] = "Lundgaard";
+		irl2024Names[50] = "NA";
+		irl2024Names[51] = "Siegel";
+		irl2024Names[60] = "Rosenqvist";
+		irl2024Names[66] = "Blomqvist";
+		irl2024Names[75] = "Sato";
+		irl2024Names[77] = "Grosjean";
+		irl2024Names[78] = "Canapino";
+		irl2024Names[98] = "Andretti";
+		
+		irl2024Teams[2] = "PEN";
+		irl2024Teams[3] = "PEN";
+		irl2024Teams[4] = "CGR";
+		irl2024Teams[5] = "ARR";
+		irl2024Teams[6] = "ARR";
+		irl2024Teams[7] = "ARR";
+		irl2024Teams[8] = "CGR";
+		irl2024Teams[9] = "CGR";
+		irl2024Teams[10] = "CGR";
+		irl2024Teams[11] = "CGR";
+		irl2024Teams[12] = "PEN";
+		irl2024Teams[14] = "FOY";
+		irl2024Teams[15] = "RLL";
+		irl2024Teams[16] = "MEY";
+		irl2024Teams[17] = "ARR";
+		irl2024Teams[18] = "DCR";
+		irl2024Teams[20] = "EDC";
+		irl2024Teams[21] = "EDC";
+		irl2024Teams[23] = "DRE";
+		irl2024Teams[24] = "DRE";
+		irl2024Teams[26] = "AND";
+		irl2024Teams[27] = "AND";
+		irl2024Teams[28] = "AND";
+		irl2024Teams[30] = "RLL";
+		irl2024Teams[33] = "EDC";
+		irl2024Teams[41] = "FOY";
+		irl2024Teams[45] = "RLL";
+		irl2024Teams[50] = "IND";
+		irl2024Teams[51] = "DCR";
+		irl2024Teams[60] = "MEY";
+		irl2024Teams[66] = "MEY";
+		irl2024Teams[75] = "RLL";
+		irl2024Teams[77] = "JUN";
+		irl2024Teams[78] = "JUN";
+		irl2024Teams[98] = "AND";
+		
+		irl2024Manufacturer[2] = "CHV";
+		irl2024Manufacturer[3] = "CHV";
+		irl2024Manufacturer[4] = "HON";
+		irl2024Manufacturer[5] = "CHV";
+		irl2024Manufacturer[6] = "CHV";
+		irl2024Manufacturer[7] = "CHV";
+		irl2024Manufacturer[8] = "HON";
+		irl2024Manufacturer[9] = "HON";
+		irl2024Manufacturer[10] = "HON";
+		irl2024Manufacturer[11] = "HON";
+		irl2024Manufacturer[12] = "CHV";
+		irl2024Manufacturer[14] = "CHV";
+		irl2024Manufacturer[15] = "HON";
+		irl2024Manufacturer[16] = "HON";
+		irl2024Manufacturer[17] = "CHV";
+		irl2024Manufacturer[18] = "HON";
+		irl2024Manufacturer[20] = "CHV";
+		irl2024Manufacturer[21] = "CHV";
+		irl2024Manufacturer[23] = "CHV";
+		irl2024Manufacturer[24] = "CHV";
+		irl2024Manufacturer[26] = "HON";
+		irl2024Manufacturer[27] = "HON";
+		irl2024Manufacturer[28] = "HON";
+		irl2024Manufacturer[30] = "HON";
+		irl2024Manufacturer[33] = "CHV";
+		irl2024Manufacturer[41] = "CHV";
+		irl2024Manufacturer[45] = "HON";
+		irl2024Manufacturer[50] = "CHV";
+		irl2024Manufacturer[51] = "HON";
+		irl2024Manufacturer[60] = "HON";
+		irl2024Manufacturer[66] = "HON";
+		irl2024Manufacturer[75] = "HON";
+		irl2024Manufacturer[77] = "CHV";
+		irl2024Manufacturer[78] = "CHV";
+		irl2024Manufacturer[98] = "HON";
+		
+		irl2024Types[2] = "Dominator";
+		irl2024Types[3] = "Intimidator";
+		irl2024Types[4] = "Rookie";
+		irl2024Types[5] = "Closer";
+		irl2024Types[6] = "Strategist";
+		irl2024Types[7] = "Strategist";
+		irl2024Types[8] = "Rookie";
+		irl2024Types[9] = "Legend";
+		irl2024Types[10] = "Dominator";
+		irl2024Types[11] = "Strategist";
+		irl2024Types[12] = "Legend";
+		irl2024Types[14] = "Intimidator";
+		irl2024Types[15] = "Strategist";
+		irl2024Types[16] = "Legend";
+		irl2024Types[17] = "Rookie";
+		irl2024Types[18] = "Blocker";
+		irl2024Types[20] = "Closer";
+		irl2024Types[21] = "Strategist";
+		irl2024Types[23] = "Closer";
+		irl2024Types[24] = "Blocker";
+		irl2024Types[26] = "Strategist";
+		irl2024Types[27] = "Closer";
+		irl2024Types[28] = "Strategist";
+		irl2024Types[30] = "Rookie";
+		irl2024Types[33] = "Rookie";
+		irl2024Types[41] = "Blocker";
+		irl2024Types[45] = "Closer";
+		irl2024Types[50] = "Rookie";
+		irl2024Types[51] = "Rookie";
+		irl2024Types[60] = "Strategist";
+		irl2024Types[66] = "Rookie";
+		irl2024Types[75] = "Sato";
+		irl2024Types[77] = "Strategist";
+		irl2024Types[78] = "Blocker";
+		irl2024Types[98] = "Blocker";
+
+		irl2024Rarity[2] = 3;
+		irl2024Rarity[3] = 3;
+		irl2024Rarity[4] = 1;
+		irl2024Rarity[5] = 3;
+		irl2024Rarity[6] = 2;
+		irl2024Rarity[7] = 2;
+		irl2024Rarity[8] = 1;
+		irl2024Rarity[9] = 4;
+		irl2024Rarity[10] = 4;
+		irl2024Rarity[11] = 2;
+		irl2024Rarity[12] = 3;
+		irl2024Rarity[14] = 2;
+		irl2024Rarity[15] = 2;
+		irl2024Rarity[16] = 2;
+		irl2024Rarity[17] = 1;
+		irl2024Rarity[18] = 1;
+		irl2024Rarity[20] = 1;
+		irl2024Rarity[21] = 2;
+		irl2024Rarity[23] = 1;
+		irl2024Rarity[24] = 1;
+		irl2024Rarity[26] = 2;
+		irl2024Rarity[27] = 3;
+		irl2024Rarity[28] = 3;
+		irl2024Rarity[30] = 1;
+		irl2024Rarity[33] = 1;
+		irl2024Rarity[41] = 1;
+		irl2024Rarity[45] = 3;
+		irl2024Rarity[50] = 1;
+		irl2024Rarity[51] = 1;
+		irl2024Rarity[60] = 3;
+		irl2024Rarity[66] = 1;
+		irl2024Rarity[75] = 2;
+		irl2024Rarity[77] = 1;
+		irl2024Rarity[78] = 1;
+		irl2024Rarity[98] = 1;
+	}
+
 	public static void cup01(){
 
 		cup2001Names[24] = "Gordon";
@@ -2393,6 +2593,9 @@ public class DriverNames : MonoBehaviour {
 				break;
 			case "Blocker":
 				type="Block.";
+				break;
+			case "Pusher":
+				type="Push.";
 				break;
 			case "Legend":
 				type="Legen.";

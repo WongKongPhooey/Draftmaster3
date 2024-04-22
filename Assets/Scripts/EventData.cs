@@ -329,8 +329,8 @@ public class EventData : MonoBehaviour
 		offlinePrizes[3,3] = "AltPaint";
 		offlineSetPrizes[3,3] = "cup23livery4alt1";
 		eventChapterDescriptions[3,3] = "With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
-		
-		//Moments
+
+		//Modern Era
 		offlineEventChapter[4,0] = "Daytona '79";
 		offlineChapterImage[4,0] = "cup79livery11";
 		offlineMinClass[4,0] = 1;
@@ -397,7 +397,6 @@ public class EventData : MonoBehaviour
 		offlineCustomFieldOrder[4,3] = "12,x,8,x,player,x,x,2,23,x,47,1,x,34,x,54,19,17,x,7,41,x,x,31,21,15,x,24,9";
 		eventChapterDescriptions[4,3] = "February 25th 2024, an incredible 3-wide finish at Atlanta sees Suarez win by 0.003s.";
 		
-		
 		/*offlineEventChapter[4,2] = "Austin As Moses";
 		offlineChapterImage[4,2] = "cup22livery3";
 		offlineMinClass[4,2] = 1;
@@ -431,6 +430,42 @@ public class EventData : MonoBehaviour
 			Debug.Log("No Live Moment Currently");
 		}
 		
+		//Classics
+		offlineEventChapter[5,0] = "Daytona '79";
+		offlineChapterImage[5,0] = "cup79livery11";
+		offlineMinClass[5,0] = 1;
+		offlineMinLevel[5,0] = 1;
+		offlineAILevel[5,0] = 5;
+		offlineSeries[5,0] = "cup79";
+		offlineCustomCar[5,0] = "cup79livery11";
+		offlineCustomField[5,0] = "cup79MomentsDaytona";
+		offlineModifier[5,0] = "delicate";
+		offlineRaceLaps[5,0] = 201;
+		offlineStartingLap[5,0] = 200;
+		offlineMoment[5,0] = "Daytona79";
+		offlineTracklists[5,0] = "1";
+		offlinePrizes[5,0] = "1Star";
+		offlineCustomFieldOrder[5,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,43";
+		eventChapterDescriptions[5,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
+		
+		offlineEventChapter[5,0] = "Craven Got Him";
+		offlineChapterImage[5,0] = "cup03livery32";
+		offlineMinClass[5,0] = 1;
+		offlineMinLevel[5,0] = 1;
+		offlineAILevel[5,0] = 10;
+		offlineSeries[5,0] = "cup03";
+		offlineCustomCar[5,0] = "cup03livery32";
+		offlineCustomField[5,0] = "MomentsDarlington03";
+		offlineModifier[5,0] = "delicate";
+		offlineRaceLaps[5,0] = 293;
+		offlineStartingLap[5,0] = 292;
+		offlineMoment[5,0] = "Darlington03";
+		offlineTracklists[5,0] = "1";
+		offlinePrizes[5,0] = "1Star";
+		offlineCustomFieldOrder[5,0] = "1,x,x,x,player,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,43";
+		eventChapterDescriptions[5,0] = "February 18th, 1979. Allison and Yarborough collide, gifting Petty the win.";
+		
+
 		//Special Event - Final 4
 		offlineEventChapter[9,0] = "Unlock Logano";
 		offlineChapterImage[9,0] = "cup22livery22";

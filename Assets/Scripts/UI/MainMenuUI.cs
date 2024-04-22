@@ -331,9 +331,15 @@ public class MainMenuUI : MonoBehaviour {
 		string[] latestSubVersions = PlayerPrefs.GetString("LatestVersion").Split(".");
 		string[] currentSubVersions = Application.version.Split(".");
 		for(int i=0;i<latestSubVersions.Length;i++){
+			//Lower version number
 			if(int.Parse(latestSubVersions[i]) > int.Parse(currentSubVersions[i])){
 				return false;
 			}
+			//Higher version number
+			if(int.Parse(latestSubVersions[i]) < int.Parse(currentSubVersions[i])){
+				return true;
+			}
+			//Else.. number matches, so search further along the string
 		}
 		return true;
 	}
