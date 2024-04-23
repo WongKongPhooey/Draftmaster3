@@ -51,9 +51,9 @@ public class MomentsCriteria : MonoBehaviour
 				break;
 				case "Darlington03":
 					momentsCriteria.Add("FinishPositionLowerThan","1");
-					momentsCriteria.Add("CarWrecks","99");
+					momentsCriteria.Add("CarWrecks","97");
 					momentsCriteria.Add("PlayerWrecks","Yes");
-					momentsCriteria.Add("WinningMargin","0.1");
+					momentsCriteria.Add("WinningMargin","0.02");
 				break;
 				case "ChastainWallride":
 					momentsCriteria.Add("WreckStartLocationStraight","2");
@@ -179,10 +179,8 @@ public class MomentsCriteria : MonoBehaviour
 		foreach(KeyValuePair<string, string> criteria in momentsCriteria){
 			if(criteria.Key == criteriaSearchTerm){
 				complete = checkCriteriaCompletion(criteriaSearchTerm, criteria.Value, criteriaCheckA ,criteriaCheckB, criteriaCheckC);
-				//Debug.Log("Checking Critera: " + criteriaSearchTerm);
 			}
 		}
-		//Debug.Log("All criteria checked");
 		return complete;
 	}
 	

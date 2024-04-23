@@ -361,7 +361,7 @@ public class SpawnField : MonoBehaviour {
 				fieldInd++;
 
 				for(int j=1;j<=gridLanes;j++){
-					if(j != startLane){
+					if((j != startLane)&&(customFieldOrder.Count < fieldInd)){
 						if(int.TryParse((string)customFieldOrder[fieldInd],out int parsable)){
 							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
 							carNum = customFieldOrder[fieldInd].ToString();

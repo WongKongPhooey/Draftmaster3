@@ -234,7 +234,11 @@ public class Ticker : MonoBehaviour
 				tickerUpdateIndex = i;
 				return;
 			}
-			
+			if(carNumber[i] == null){
+				tickerUpdateIndex = 0;
+				return;
+			}
+
 			//Fill the static arrays (heavy, on start frames)
 			if(tickerPositions[i] == null){
 				tickerPositions[i] = ticker.transform.GetChild(i).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
@@ -246,7 +250,7 @@ public class Ticker : MonoBehaviour
 
 			//Redraw the TMPText (heavy performance hit)
 			tickerPositions[i].text = (i+1).ToString();
-			
+
 			int displayNumber = cachedCarNumbers[int.Parse(carNumber[i])];
 			if(entrantList[i].name == playerCar.name){
 				displayNumber = playerDisplayNum;
