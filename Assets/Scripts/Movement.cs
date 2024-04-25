@@ -22,6 +22,7 @@ public class Movement : MonoBehaviour {
 	static float overspeed;
 	float speed;
 	float draftDist;
+	float engineTemp;
 
 	float challengeSpeedBoost;
 	float dominatorDrag;
@@ -139,6 +140,7 @@ public class Movement : MonoBehaviour {
 	public GameObject HUDLapDelta;
 	public TMPro.TMP_Text HUDLapDeltaLbl;
 	public GameObject HUDTemps;
+	public TMPro.TMP_Text HUDTempsLbl;
 	public float calcLapDelta;
 	public float HUDDraftStrength;
 	
@@ -216,6 +218,10 @@ public class Movement : MonoBehaviour {
 		topSpeed = 208f + speedRand;
 		randTopend = Random.Range(0,99);
 		randTopend = randTopend / 1000;
+		
+		//Low = 210, blows up at = 260?
+		engineTemp = 210f;
+		
 		laneticker = 0;
 		onTurn = false;
 		lane = SpawnField.startLane;
@@ -257,6 +263,7 @@ public class Movement : MonoBehaviour {
 		HUDControls = GameObject.Find("Controls");
 		HUDGearLbl = HUDGear.GetComponent<TMPro.TMP_Text>();
 		HUDRevsLbl = HUDRevs.GetComponent<TMPro.TMP_Text>();
+		HUDTempsLbl = HUDTemps.GetComponent<TMPro.TMP_Text>();
 		HUDLastLapLbl = HUDLastLap.GetComponent<TMPro.TMP_Text>();
 		HUDBestLapLbl = HUDBestLap.GetComponent<TMPro.TMP_Text>();
 		HUDLapDeltaLbl = HUDLapDelta.GetComponent<TMPro.TMP_Text>();
@@ -804,6 +811,14 @@ public class Movement : MonoBehaviour {
 				overspeed += 0.0001f;
 				playerSpeed = variTopSpeed + overspeed;
 			}
+			if(engineTemp < (261f - DraftCheck.distance)){
+				engineTemp+= -(0.1f / -(DraftCheck.distance - 0.5f));
+			} else {
+				engineTemp-= 0.005f;
+			}
+			if(engineTemp > 260f){
+				Debug.Log("ENGINE GO BOOM");
+			}
 		} else {
 			//Slow down if not in any draft
 			if(playerSpeed > 200){
@@ -816,6 +831,9 @@ public class Movement : MonoBehaviour {
 				} else {
 					playerSpeed-=(dragDecelMulti + dominatorDrag) * draftFactor;
 				}
+			}
+			if(engineTemp > 210f){
+				engineTemp-= 0.01f;
 			}
 			
 			//Overspeed disappears
@@ -1141,6 +1159,7 @@ public class Movement : MonoBehaviour {
 		//The speed shown on the HUD
 		speedoSpeed = (playerSpeed + seriesSpeedDiff - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel;
 		
+		HUDTemps.GetComponent<TMPro.TMP_Text>().text = "TEMP " + engineTemp.ToString("F0");
 		//When debugging the real speed
 		#if UNITY_EDITOR
 		//speedoSpeed = playerSpeed + playerWreckDecel;
