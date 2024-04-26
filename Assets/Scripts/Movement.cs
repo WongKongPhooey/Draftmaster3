@@ -26,6 +26,7 @@ public class Movement : MonoBehaviour {
 
 	float challengeSpeedBoost;
 	float dominatorDrag;
+	float maxDraftDistance;
 
 	int customAccel;
 	int customSpeed;
@@ -261,6 +262,7 @@ public class Movement : MonoBehaviour {
 		
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
+		HUDTemps = GameObject.Find("Temp");
 		HUDGearLbl = HUDGear.GetComponent<TMPro.TMP_Text>();
 		HUDRevsLbl = HUDRevs.GetComponent<TMPro.TMP_Text>();
 		HUDTempsLbl = HUDTemps.GetComponent<TMPro.TMP_Text>();
@@ -494,6 +496,14 @@ public class Movement : MonoBehaviour {
 			if(DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
 				//e.g. Class 6(S) reduces drag from 0.004f to 0.002f
 				dominatorDrag = carClass / 3000f;
+			}
+		}
+
+		maxDraftDistance = 9 + carRarity;
+		if(officialSeries == true){
+			if (DriverNames.getType(seriesPrefix,carNum) == "Closer"){
+				//e.g. 4* Class 6(S) increases drafting range to 19
+				maxDraftDistance = 9 + carRarity + carClass;		
 			}
 		}
 
@@ -782,12 +792,12 @@ public class Movement : MonoBehaviour {
 		variTopSpeed = topSpeed + (carRarity / 4f) + (laneInv / 4f) + randTopend;
 		
 		//If in draft of car in front
-		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, 10 + customDistF)){
+		if (Physics.Raycast(transform.position,transform.forward, out DraftCheck, maxDraftDistance)){
 			draftDist = DraftCheck.distance;
 			//Speed up
 			if(playerSpeed < variTopSpeed){
 				
-				float draftStrength = ((10 - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f);
+				float draftStrength = ((maxDraftDistance - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f);
 				#if UNITY_EDITOR
 				//Debug.Log("Total Player draft strength: " + draftStrength + " - " + (10 - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
 				#endif
@@ -811,10 +821,10 @@ public class Movement : MonoBehaviour {
 				overspeed += 0.0001f;
 				playerSpeed = variTopSpeed + overspeed;
 			}
-			if(engineTemp < (261f - DraftCheck.distance)){
-				engineTemp+= -(0.1f / -(DraftCheck.distance - 0.5f));
+			if(engineTemp < (265f - (DraftCheck.distance * 5))){
+				engineTemp+= (0.01f / (DraftCheck.distance - 0.6f));
 			} else {
-				engineTemp-= 0.005f;
+				engineTemp-= (engineTemp - 210f) / 1500;
 			}
 			if(engineTemp > 260f){
 				Debug.Log("ENGINE GO BOOM");
@@ -833,7 +843,9 @@ public class Movement : MonoBehaviour {
 				}
 			}
 			if(engineTemp > 210f){
-				engineTemp-= 0.01f;
+				//e.g. 260C engine = 0.033f cooling
+				//e.g. 220C engine = 0.0066f cooling
+				engineTemp-= (engineTemp - 210f) / 1500;
 			}
 			
 			//Overspeed disappears

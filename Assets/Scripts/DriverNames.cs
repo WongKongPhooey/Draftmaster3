@@ -289,12 +289,16 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Allgaier");
 		driverPool.Add("Ambrose");
 		driverPool.Add("Anderson");
+		driverPool.Add("Andretti");
+		driverPool.Add("Annunziata");
 		driverPool.Add("Arias");
 		driverPool.Add("Armstrong");
 		driverPool.Add("Balcaen");
 		driverPool.Add("Berry");
 		driverPool.Add("Blomqvist");
 		driverPool.Add("Bogle");
+		driverPool.Add("Bollman");
+		driverPool.Add("Borneman");
 		driverPool.Add("Boyd");
 		driverPool.Add("Brabham");
 		driverPool.Add("Breidinger");
@@ -311,16 +315,19 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Clubb");
 		driverPool.Add("Corr");
 		driverPool.Add("Cosentino");
+		driverPool.Add("Costner");
 		driverPool.Add("Crafton");
 		driverPool.Add("Cram");
 		driverPool.Add("Creed");
 		driverPool.Add("Currey");
 		driverPool.Add("Daly");
+		driverPool.Add("Dart");
 		driverPool.Add("Davenport");
 		driverPool.Add("Dauzat");
 		driverPool.Add("Dean");
 		driverPool.Add("Decker");
 		driverPool.Add("Deegan");
+		driverPool.Add("Deshautelle");
 		driverPool.Add("Doheny");
 		driverPool.Add("Dye");
 		driverPool.Add("J.Earnhardt");
@@ -330,8 +337,10 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Emerling");
 		driverPool.Add("Enfinger");
 		driverPool.Add("Erickson");
+		driverPool.Add("Farre");
 		driverPool.Add("Fartuch");
 		driverPool.Add("Fenhaus");
+		driverPool.Add("Finch");
 		driverPool.Add("Foster");
 		driverPool.Add("Francis.Jr");
 		driverPool.Add("Franzoni");
@@ -341,6 +350,7 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Garrett");
 		driverPool.Add("Garvie");
 		driverPool.Add("Gaulding");
+		driverPool.Add("Gibson");
 		driverPool.Add("Gold");
 		driverPool.Add("Graf Jr");
 		driverPool.Add("Tan.Gray");
@@ -365,11 +375,16 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Huff");
 		driverPool.Add("Iest");
 		driverPool.Add("Jankowiak");
+		driverPool.Add("Joanides");
+		driverPool.Add("I.Johnson");
+		driverPool.Add("E.Johnson.Jr");
 		driverPool.Add("B.Jones");
 		driverPool.Add("C.Jones");
 		driverPool.Add("J.Jones");
 		driverPool.Add("Kaminski");
 		driverPool.Add("Keller");
+		driverPool.Add("Kennealy");
+		driverPool.Add("Kiemele");
 		driverPool.Add("Kitzmiller");
 		driverPool.Add("Kligerman");
 		driverPool.Add("Koga");
@@ -385,7 +400,9 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Lundqvist");
 		driverPool.Add("Mack");
 		driverPool.Add("Maggio");
+		driverPool.Add("Magras");
 		driverPool.Add("Majeski");
+		driverPool.Add("Maples");
 		driverPool.Add("Mayer");
 		driverPool.Add("Massey");
 		driverPool.Add("McElrea");
@@ -407,6 +424,7 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Nemechek");
 		driverPool.Add("Newman");
 		driverPool.Add("Nicolopoulos");
+		driverPool.Add("OLeary");
 		driverPool.Add("Parsons");
 		driverPool.Add("Patrick");
 		driverPool.Add("PJ.Pedroncelli");
@@ -427,11 +445,14 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Rhodes");
 		driverPool.Add("Richmond");
 		driverPool.Add("Riggs");
+		driverPool.Add("Robusto");
 		driverPool.Add("Rockenfeller");
 		driverPool.Add("Roe");
 		driverPool.Add("Rohrbaugh");
 		driverPool.Add("Roper");
 		driverPool.Add("Rose");
+		driverPool.Add("Roulette");
+		driverPool.Add("Ruggiero");
 		driverPool.Add("Said");
 		driverPool.Add("Salas");
 		driverPool.Add("Sanchez");
@@ -464,6 +485,7 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Williams");
 		driverPool.Add("Wilson");
 		driverPool.Add("Wood");
+		driverPool.Add("Wright");
 		driverPool.Add("Zilisch");
 
 		foreach(KeyValuePair<string, string[]> seriesDrivers in allNames){
