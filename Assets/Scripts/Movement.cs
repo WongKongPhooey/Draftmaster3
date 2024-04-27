@@ -22,7 +22,10 @@ public class Movement : MonoBehaviour {
 	static float overspeed;
 	float speed;
 	float draftDist;
+	
 	float engineTemp;
+	float tempLimit;
+	bool blownEngine;
 
 	float challengeSpeedBoost;
 	float dominatorDrag;
@@ -133,9 +136,13 @@ public class Movement : MonoBehaviour {
 	public GameObject HUDRevs;
 	public TMPro.TMP_Text HUDRevsLbl;
 	public GameObject HUDRevBarMask;
+	public RectTransform HUDRevBarMaskRect;
 	public GameObject HUDDraftBarMask;
+	public RectTransform HUDDraftBarMaskRect;
 	public GameObject HUDSpeed;
+	public TMPro.TMP_Text HUDSpeedLbl;
 	public GameObject HUDAccSpeed;
+	public TMPro.TMP_Text HUDAccSpeedLbl;
 	public GameObject HUDLastLap;
 	public TMPro.TMP_Text HUDLastLapLbl;
 	public GameObject HUDBestLap;
@@ -222,8 +229,11 @@ public class Movement : MonoBehaviour {
 		randTopend = Random.Range(0,99);
 		randTopend = randTopend / 1000;
 		
-		//Low = 210, blows up at = 260?
+		//Low = 210, blows up at = ~260?
 		engineTemp = 210f;
+		tempLimit = 259 + Random.Range(0,4);
+		
+		blownEngine = false;
 		
 		laneticker = 0;
 		onTurn = false;
@@ -267,12 +277,17 @@ public class Movement : MonoBehaviour {
 		HUD = GameObject.Find("HUD");
 		HUDControls = GameObject.Find("Controls");
 		HUDTemps = GameObject.Find("Temp");
+		HUDSpeedLbl = HUDSpeed.GetComponent<TMPro.TMP_Text>();
+		HUDAccSpeedLbl = HUDAccSpeed.GetComponent<TMPro.TMP_Text>();
 		HUDGearLbl = HUDGear.GetComponent<TMPro.TMP_Text>();
 		HUDRevsLbl = HUDRevs.GetComponent<TMPro.TMP_Text>();
 		HUDTempsLbl = HUDTemps.GetComponent<TMPro.TMP_Text>();
 		HUDLastLapLbl = HUDLastLap.GetComponent<TMPro.TMP_Text>();
 		HUDBestLapLbl = HUDBestLap.GetComponent<TMPro.TMP_Text>();
 		HUDLapDeltaLbl = HUDLapDelta.GetComponent<TMPro.TMP_Text>();
+
+		HUDDraftBarMaskRect = HUDDraftBarMask.GetComponent<RectTransform>();
+		HUDRevBarMaskRect = HUDRevBarMask.GetComponent<RectTransform>();
 
 		pauseMenu = GameObject.Find("PauseMenu");
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
@@ -607,7 +622,7 @@ public class Movement : MonoBehaviour {
 				  (carHit.gameObject.name == "OuterWall") ||
 				  (carHit.gameObject.name == "SaferBarrier")){
 					startWreck();
-					GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Scrape");
+					//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("Scrape");
 				}
 			}
 			   
@@ -658,12 +673,18 @@ public class Movement : MonoBehaviour {
 		}
 	}
 	
-	void ReceivePush(GameObject pushedBy){
+	void ReceivePush(object[] receivedData){
 		if(isWrecking == false){
+			GameObject pushedBy = (GameObject)receivedData[0];
+			float bumpSpeed = (float)receivedData[1];
 			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + " while I was going " + playerSpeed);
 			if(initialContact == false){
-				float bumpSpeed = pushedBy.GetComponent<AIMovement>().AISpeed;
 				float midSpeed = bumpSpeed - playerSpeed;
+				if(((midSpeed > 3f)||(midSpeed < -3f))
+					&&(blownEngine == true)){
+					//Debug.Log("Wreck: Strong Push");
+					startWreck();
+				}
 				playerSpeed += midSpeed/4;
 				initialContact = true;
 				//Debug.Log("Impact levels out Player");
@@ -671,28 +692,20 @@ public class Movement : MonoBehaviour {
 				//Speed up
 				playerSpeed += backdraftMulti;
 			}
-			//Send it back
-			RaycastHit DraftCheckBackward;
-			bool HitBackward = Physics.Raycast(transform.position - new Vector3(0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			if(HitBackward == false){
-				HitBackward = Physics.Raycast(transform.position - new Vector3(-0.48f,0,0), transform.forward * -1, out DraftCheckBackward, 1.01f);
-			}
-			
-			if(HitBackward == true){
-				DraftCheckBackward.transform.gameObject.SendMessage("UpdateTandemPosition",tandemPosition);
-				DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
-				//Debug.Log("Send to pusher: " + playerSpeed);
-			}
+			//Send it back			
+			pushedBy.SendMessage("UpdateTandemPosition",tandemPosition);
+			//Debug.Log(AICar.name + " sends push back to " + pushedBy.name);
+			pushedBy.SendMessage("GivePush",playerSpeed);
 		}
 	}
 	
 	void GivePush(float bumpSpeed){
-		//Debug.Log("Return to player speed " + bumpSpeed + " (was " + playerSpeed + ")");
 		if(tandemPosition > 2){
 			playerSpeed-= 0.25f;
-			//Debug.Log("Player speed reduced by " + (bumpSpeed - playerSpeed) + "");
 		}
-		affectedPlayerSpeed = bumpSpeed;
+		if(brakesOn == false){
+			affectedPlayerSpeed = bumpSpeed;
+		}
 	}
 	
 	void UpdateTandemPosition(int tandemPosInFront){
@@ -825,13 +838,19 @@ public class Movement : MonoBehaviour {
 				overspeed += 0.0001f;
 				playerSpeed = variTopSpeed + overspeed;
 			}
-			if(engineTemp < (270f - (DraftCheck.distance * 5))){
+			//e.g. bump draft (1.0) = Max 265f
+			//e.g. close draft (2.0) = Max 255f
+			//e.g. distant draft (5.0) = Max 225f
+			if(engineTemp < (275f - (DraftCheck.distance * 10))){
+				//e.g. bump draft (1.0) = +0.025
+				//e.g. close draft (2.0) = +0.007
+				//e.g. distant draft (5.0) = +0.0022
 				engineTemp+= (0.01f / (DraftCheck.distance - 0.6f));
 			} else {
 				engineTemp-= (engineTemp - 210f) / 1500;
 			}
-			if(engineTemp >= 260f){
-				Debug.Log("ENGINE GO BOOM");
+			if(engineTemp >= tempLimit){
+				blownEngine = true;
 				engineSmokeParticles.Play();
 			}
 		} else {
@@ -894,8 +913,11 @@ public class Movement : MonoBehaviour {
 					playerSpeed+=(backdraftMulti + customAccelF);
 				}
 				if(DraftCheck.transform.gameObject.tag == "AICar"){
+					object[] messageData = new object[2];
+					messageData[0] = vehicle;
+					messageData[1] = playerSpeed;
 					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
-					DraftCheck.transform.gameObject.SendMessage("ReceivePush",vehicle);
+					DraftCheck.transform.gameObject.SendMessage("ReceivePush",messageData);
 				}
 			}
 		} else {
@@ -903,7 +925,7 @@ public class Movement : MonoBehaviour {
 			tandemPosition = 1;
 		}
 		
-		if(brakesOn == true){
+		if((brakesOn == true)||(blownEngine == true)){
 			if(playerSpeed > 195){
 				playerSpeed-=0.05f;
 			}
@@ -1117,8 +1139,6 @@ public class Movement : MonoBehaviour {
 				//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 			}
 			HUDGearLbl.text = "GEAR 4";
-			HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
-			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 		} else {
 			if((CameraRotate.carSpeedOffset - playerWreckDecel) < gearSpeeds[3]){
 				//3rd GEAR
@@ -1133,8 +1153,6 @@ public class Movement : MonoBehaviour {
 					//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 				}
 				HUDGearLbl.text = "GEAR 3";
-				HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
-				HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 			} else {
 				//2nd GEAR 
 				if((CameraRotate.carSpeedOffset - playerWreckDecel) < gearSpeeds[2]){
@@ -1149,8 +1167,6 @@ public class Movement : MonoBehaviour {
 						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 					}
 					HUDGearLbl.text = "GEAR 2";
-					HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
-					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 				} else {
 					//1st GEAR (wrecks only)
 					engineRevs = 0;
@@ -1167,24 +1183,26 @@ public class Movement : MonoBehaviour {
 						//GameObject.Find("Main Camera").GetComponent<AudioManager>().playSfx("GearShift");
 					}
 					HUDGearLbl.text = "GEAR 2";
-					HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
-					HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
 				}
 			}
 		}
+		HUDRevsLbl.text = "" + engineRevs.ToString("F0") + " RPM";
+		HUDRevBarMaskRect.sizeDelta = new Vector2(((10000 - engineRevs) / 25) + revbarOffset, 40);
+		
 		
 		//The speed shown on the HUD
 		speedoSpeed = (playerSpeed + seriesSpeedDiff - speedOffset - CameraRotate.carSpeedOffset) + playerWreckDecel;
 		
-		HUDTemps.GetComponent<TMPro.TMP_Text>().text = "TEMP " + engineTemp.ToString("F0");
-		//When debugging the real speed
-		#if UNITY_EDITOR
-		//speedoSpeed = playerSpeed + playerWreckDecel;
-		#endif
+		if(engineTemp > 255f){
+			HUDTempsLbl.color = new Color32(255,0,0,255);
+		} else {
+			HUDTempsLbl.color = new Color32(255,200,0,255);
+		}
+		HUDTempsLbl.text = "TEMP " + engineTemp.ToString("F0");
 		
 		if(speedoSpeed > 1){
-			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F2");
-			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD " + (speedoSpeed).ToString("F2");
+			HUDSpeedLbl.text = "SPD " + (speedoSpeed).ToString("F2");
+			HUDAccSpeedLbl.text = "SPD " + (speedoSpeed).ToString("F2");
 		} else {
 			//Update the final position GUI slightly before the Time.timeScale freezes to 0
 			if(speedoSpeed > 0){
@@ -1198,9 +1216,9 @@ public class Movement : MonoBehaviour {
 			carEngine.pitch = 0f;
 			HUDGearLbl.text = "NO GEAR";
 			HUDRevsLbl.text = "0 RPM";
-			HUDRevBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(430, 40);
-			HUDSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD 0";
-			HUDAccSpeed.GetComponent<TMPro.TMP_Text>().text = "SPD 0";
+			HUDRevBarMaskRect.sizeDelta = new Vector2(430, 40);
+			HUDSpeedLbl.text = "SPD 0";
+			HUDAccSpeedLbl.text = "SPD 0";
 		}
 
 		if(draftDist > HUDDraftStrength){
@@ -1212,10 +1230,10 @@ public class Movement : MonoBehaviour {
 
 		//Todo - Optimise all of these GetComponent calls and CameraRotate calls		
 		if((isWrecking == false)&&(wreckOver == false)){
-			HUDDraftBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(80, (120f / (10f + customDistF)) * HUDDraftStrength);
+			HUDDraftBarMaskRect.sizeDelta = new Vector2(80, (120f / (10f + customDistF)) * HUDDraftStrength);
 		} else {
 			//Cover it completely
-			HUDDraftBarMask.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 120f);
+			HUDDraftBarMaskRect.sizeDelta = new Vector2(80, 120f);
 		}
 
 		HUDLastLapLbl.text = "LAP " + CameraRotate.lapTime.ToString("F3");
@@ -1318,15 +1336,15 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Make the car light, more affected by physics
-		this.GetComponent<Rigidbody>().mass = 2;
+		wreckRigidbody.mass = 2;
 		
 		//Remove constraints, allowing it to impact/spin using physics
-		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezeRotationY;
-		this.GetComponent<Rigidbody>().constraints &= ~RigidbodyConstraints.FreezePositionX;
+		wreckRigidbody.constraints &= ~RigidbodyConstraints.FreezeRotationY;
+		wreckRigidbody.constraints &= ~RigidbodyConstraints.FreezePositionX;
 		
 		//Remove forces, physics only
-		this.GetComponent<Rigidbody>().isKinematic = false;
-		this.GetComponent<Rigidbody>().useGravity = false;
+		wreckRigidbody.isKinematic = false;
+		wreckRigidbody.useGravity = false;
 		
 		//Apply wind/drag
 		baseDecel = -0.35f;
@@ -1337,7 +1355,7 @@ public class Movement : MonoBehaviour {
 		targetForce = 0;
 		forceSmoothing = 0.5f;
 		windForce = targetForce;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,targetForce);
+		wreckForce.force = new Vector3(0f, 0f,targetForce);
 		float wreckTorque;
 		if(wreckHits > 1){
 			//Subsequent hits based on rotation angle
@@ -1351,7 +1369,7 @@ public class Movement : MonoBehaviour {
 				wreckTorque = 0;
 			}
 		}
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, wreckTorque, 0f);
+		wreckForce.torque = new Vector3(0f, wreckTorque, 0f);
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckStartLocationStraight",CameraRotate.straight.ToString(), onTurn.ToString());
@@ -1378,11 +1396,11 @@ public class Movement : MonoBehaviour {
 		wreckOver = true;
 		hideHUD();
 		//Debug.Log("WRECK OVER");
-		this.GetComponent<Rigidbody>().mass = 5;
-		this.GetComponent<Rigidbody>().isKinematic = true;
-		this.GetComponent<ConstantForce>().force = new Vector3(0f, 0f,windForce);
-		this.GetComponent<ConstantForce>().torque = new Vector3(0f, 0f, 0f);
-		this.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
+		wreckRigidbody.mass = 5;
+		wreckRigidbody.isKinematic = true;
+		wreckForce.force = new Vector3(0f, 0f,windForce);
+		wreckForce.torque = new Vector3(0f, 0f, 0f);
+		wreckRigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
@@ -1445,14 +1463,14 @@ public class Movement : MonoBehaviour {
 			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			if(wallrideMod == true){
 				baseDecel+=0.35f;
-				this.GetComponent<ConstantForce>().force = new Vector3(10f,0f,40f);
+				wreckForce.force = new Vector3(10f,0f,40f);
 			} else {
-				this.GetComponent<ConstantForce>().force = new Vector3(slideX,0f,windForce);
+				wreckForce.force = new Vector3(slideX,0f,windForce);
 				//Debug.Log("Windforce: " + windForce);
 			}
 			//Debug.Log("Apply side force to wreck on turn");
 		} else {
-			this.GetComponent<ConstantForce>().force = new Vector3(-3f, 0f,windForce);
+			wreckForce.force = new Vector3(-3f, 0f,windForce);
 			//Debug.Log("Windforce: " + windForce);
 		}
 		playerWreckDecel = baseDecel - (60f * wreckSine);
@@ -1468,11 +1486,11 @@ public class Movement : MonoBehaviour {
 		}
 		
 		if(wallrideMod == true){
-			this.GetComponent<Rigidbody>().mass = 2;
+			wreckRigidbody.mass = 2;
 		} else {
-			this.GetComponent<Rigidbody>().mass = (-playerWreckDecel / 20) + 2;
+			wreckRigidbody.mass = (-playerWreckDecel / 20) + 2;
 		}
-		this.GetComponent<Rigidbody>().angularDrag += 0.001f;
+		wreckRigidbody.angularDrag += 0.001f;
 		
 		//Prevent landing in the crowd
 		if(this.gameObject.transform.position.x > 1.5f){
@@ -1498,6 +1516,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		//Flatten the smoke
+		engineSmoke.rotation = Quaternion.Euler(0,180,0);
 		tireSmoke.rotation = Quaternion.Euler(0,180,0);
 		float smokeMultiplier = wreckSine;
 		if(smokeMultiplier < 0){
@@ -1505,6 +1524,10 @@ public class Movement : MonoBehaviour {
 		}
 		smokeMultiplier = (smokeMultiplier * 60) + 5;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
+		
+		engineSmokeParticles.startColor = new Color32(135,135,155,(byte)smokeMultiplier);
+		engineSmokeParticles.startSpeed = 40 + (playerWreckDecel / 5);
+		
 		tireSmokeParticles.startColor = new Color32(200,200,200,(byte)smokeMultiplier);
 		tireSmokeParticles.startSpeed = 40 + (playerWreckDecel / 5);
 		tireSmokeParticles.startSize = 12 + (playerWreckDecel / 30); //Max 12, Min 4.5

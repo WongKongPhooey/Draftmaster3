@@ -607,15 +607,12 @@ public class AIMovement : MonoBehaviour
 		particleDisableDelay = 20;
     }
 	
-	void ReceivePush(GameObject pushedBy){
+	//void ReceivePush(GameObject pushedBy, float bumpSpeed){
+	void ReceivePush(object[] receivedData){
+		GameObject pushedBy = (GameObject)receivedData[0];
+		float bumpSpeed = (float)receivedData[1];
 		//Debug.Log(AICar.name + " gets pushed at speed of " + AISpeed);
 		if(initialContact == false){
-			float bumpSpeed;
-			if(pushedBy.tag == "AICar"){
-				bumpSpeed = pushedBy.GetComponent<AIMovement>().AISpeed;
-			} else {
-				bumpSpeed = Movement.playerSpeed;
-			}	
 			float midSpeed = bumpSpeed - AISpeed;
 			if((midSpeed > (6f - wreckFreq))||(midSpeed < (-6f + wreckFreq))){
 				//Debug.Log("Wreck: Strong Push");
@@ -640,9 +637,6 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	void GivePush(float bumpSpeed){
-		//if(carRarity == 4){
-			//Debug.Log("Return to #" + carNum + " speed " + bumpSpeed + " (was " + AISpeed + ")");
-		//}
 		affectedAISpeed = bumpSpeed;
 		//Discourage long draft trains
 		if(tandemPosition > maxTandem){
@@ -887,9 +881,11 @@ public class AIMovement : MonoBehaviour
 		if (HitForward && DraftCheckForward.distance <= bumpDraftDistTrigger){
 			//Frontward draft
 			if(DraftCheckForward.transform.gameObject.name != null){
-
+				object[] messageData = new object[2];
+				messageData[0] = AICar;
+				messageData[1] = AISpeed;
 				//if (DraftCheckForward.distance <= bumpDraftDistTrigger){
-				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",AICar);
+				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",messageData);
 				//}
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;
