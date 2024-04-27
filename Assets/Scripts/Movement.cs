@@ -680,9 +680,8 @@ public class Movement : MonoBehaviour {
 			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + " while I was going " + playerSpeed);
 			if(initialContact == false){
 				float midSpeed = bumpSpeed - playerSpeed;
-				if(((midSpeed > 3f)||(midSpeed < -3f))
+				if(((midSpeed > 2f)||(midSpeed < -2f))
 					&&(blownEngine == true)){
-					//Debug.Log("Wreck: Strong Push");
 					startWreck();
 				}
 				playerSpeed += midSpeed/4;
