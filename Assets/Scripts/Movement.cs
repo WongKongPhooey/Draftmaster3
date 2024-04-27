@@ -99,6 +99,8 @@ public class Movement : MonoBehaviour {
 	ParticleSystem rightSparksParticles;
 	ParticleSystemRenderer leftSparksParticleRenderer;
 	ParticleSystemRenderer rightSparksParticleRenderer;
+	Transform engineSmoke;
+	ParticleSystem engineSmokeParticles;
 	Transform tireSmoke;
 	ParticleSystem tireSmokeParticles;
 	
@@ -253,6 +255,8 @@ public class Movement : MonoBehaviour {
 		rightSparksParticles = rightSparks.GetComponent<ParticleSystem>();
 		leftSparksParticleRenderer = leftSparks.GetComponent<ParticleSystemRenderer>();
 		rightSparksParticleRenderer = rightSparks.GetComponent<ParticleSystemRenderer>();
+		engineSmoke = this.transform.Find("EngineSmoke");
+		engineSmokeParticles = engineSmoke.GetComponent<ParticleSystem>();
 		tireSmoke = this.transform.Find("TireSmoke");
 		tireSmokeParticles = tireSmoke.GetComponent<ParticleSystem>();
 		
@@ -821,13 +825,14 @@ public class Movement : MonoBehaviour {
 				overspeed += 0.0001f;
 				playerSpeed = variTopSpeed + overspeed;
 			}
-			if(engineTemp < (265f - (DraftCheck.distance * 5))){
+			if(engineTemp < (270f - (DraftCheck.distance * 5))){
 				engineTemp+= (0.01f / (DraftCheck.distance - 0.6f));
 			} else {
 				engineTemp-= (engineTemp - 210f) / 1500;
 			}
-			if(engineTemp > 260f){
+			if(engineTemp >= 260f){
 				Debug.Log("ENGINE GO BOOM");
+				engineSmokeParticles.Play();
 			}
 		} else {
 			//Slow down if not in any draft
