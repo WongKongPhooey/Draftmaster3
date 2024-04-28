@@ -27,6 +27,8 @@ public class Movement : MonoBehaviour {
 	float tempLimit;
 	bool blownEngine;
 
+	int sparksCooldown;
+
 	float challengeSpeedBoost;
 	float dominatorDrag;
 	float maxDraftDistance;
@@ -59,13 +61,8 @@ public class Movement : MonoBehaviour {
 	public static int laneBias;
 	public static int laneChangeDuration;
 	public static int laneChangeBackout;
-	public int dooredStrength;
+	public static int dooredStrength;
 	float laneChangeSpeed;
-	float vStrongLane;
-	float strongLane;
-	float weakLane;
-	float vWeakLane;
-	float weakestLane;
 	float laneFactor;
 
 	public static bool onTurn;
@@ -234,6 +231,8 @@ public class Movement : MonoBehaviour {
 		tempLimit = 259 + Random.Range(0,4);
 		
 		blownEngine = false;
+		
+		sparksCooldown = 0;
 		
 		laneticker = 0;
 		onTurn = false;
@@ -664,6 +663,25 @@ public class Movement : MonoBehaviour {
 				}
 			}
 		}
+		
+		if(carHit.gameObject.name == "OuterWall"){
+			rightSparksParticles.Play();
+			sparksCooldown = Random.Range(5,20);
+		}
+		
+		if ((carHit.gameObject.tag == "AICar") ||
+			(carHit.gameObject.tag == "Barrier")){
+				
+			if(checkRaycast("LeftCorners", 0.51f) == true){
+				leftSparksParticles.Play();
+				sparksCooldown = Random.Range(5,20);
+			}
+			if(checkRaycast("RightCorners", 0.51f) == true){
+				rightSparksParticles.Play();
+				sparksCooldown = Random.Range(5,20);
+			}
+		}
+		
 		playerSpeed-=0.2f;
 	}
 	
@@ -772,16 +790,15 @@ public class Movement : MonoBehaviour {
 		}
 			
 		laneInv = 4 - lane;
-		laneFactor = 10000;
-		weakestLane = laneInv/laneFactor;
-		laneFactor = 200;
-		vWeakLane = laneInv/laneFactor;
-		laneFactor = 10;
-		weakLane = laneInv/laneFactor;
-		laneFactor = 5;
-		strongLane = laneInv/laneFactor;
-		laneFactor = 2;
-		vStrongLane = laneInv/laneFactor;
+		
+		if(sparksCooldown > 0){
+			sparksCooldown--;
+			if(sparksCooldown == 1){
+				sparksCooldown--;
+				leftSparksParticles.Stop();
+				rightSparksParticles.Stop();	
+			}
+		}
 		
 		carSpeedOffset = CameraRotate.carSpeedOffset;
 		
@@ -925,6 +942,7 @@ public class Movement : MonoBehaviour {
 		}
 		
 		if((brakesOn == true)||(blownEngine == true)){
+			brakesOn = true;
 			if(playerSpeed > 195){
 				playerSpeed-=0.05f;
 			}

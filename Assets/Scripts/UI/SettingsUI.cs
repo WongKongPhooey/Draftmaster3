@@ -69,6 +69,7 @@ public class SettingsUI : MonoBehaviour
 	public void SaveAudioSlider(){
 		PlayerPrefs.SetInt("AudioOn",(int)audioSlider.value);
 		audioSliderLabel.text = SliderValueDesc("Audio",audioSlider.value);
+		AudioSettings.SetDSPBufferSize(512,4);
 	}
 	
 	public void SaveCommentarySlider(){

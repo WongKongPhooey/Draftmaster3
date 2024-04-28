@@ -522,7 +522,7 @@ public class AIMovement : MonoBehaviour
 				int dooredStrength = 0;
 				if(carHit.gameObject.tag == "Player"){
 					hitByPlayer = true;
-					dooredStrength = carHit.gameObject.GetComponent<Movement>().dooredStrength;
+					dooredStrength = Movement.dooredStrength;
 					//Debug.Log("Doored by the player! Strength of " + dooredStrength);
 				} else {
 					if(carHit.gameObject.tag == "AICar"){
