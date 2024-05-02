@@ -935,6 +935,10 @@ public class Movement : MonoBehaviour {
 					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
 					DraftCheck.transform.gameObject.SendMessage("ReceivePush",messageData);
 				}
+				if(blownEngine == true){
+					tandemDraft = false;
+					tandemPosition = 1;
+				}
 			}
 		} else {
 			tandemDraft = false;
