@@ -78,6 +78,8 @@ public class AIMovement : MonoBehaviour
 	ParticleSystem rightSparksParticles;
 	ParticleSystemRenderer leftSparksParticleRenderer;
 	ParticleSystemRenderer rightSparksParticleRenderer;
+	Transform engineSmoke;
+	ParticleSystem engineSmokeParticles;
 	Transform tireSmoke;
 	ParticleSystem tireSmokeParticles;
 
@@ -116,6 +118,12 @@ public class AIMovement : MonoBehaviour
 	string seriesPrefix;
 	bool officialSeries;
 	int customNum;
+
+	float engineTemp;
+
+	float tempLimit;
+
+	bool blownEngine;
 
 	bool coolEngine;
 	int sparksCooldown;
@@ -172,7 +180,7 @@ public class AIMovement : MonoBehaviour
 		relativeZToPlayer = 0;
 		
 		carSpeedOffset = 80;
-		
+
 		holdLane = 0;
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
@@ -194,6 +202,8 @@ public class AIMovement : MonoBehaviour
 		rightSparksParticles = rightSparks.GetComponent<ParticleSystem>();
 		leftSparksParticleRenderer = leftSparks.GetComponent<ParticleSystemRenderer>();
 		rightSparksParticleRenderer = rightSparks.GetComponent<ParticleSystemRenderer>();
+		engineSmoke = this.transform.Find("EngineSmoke");
+		engineSmokeParticles = engineSmoke.GetComponent<ParticleSystem>();
 		tireSmoke = this.transform.Find("TireSmoke");
 		tireSmokeParticles = tireSmoke.GetComponent<ParticleSystem>();
 		
@@ -275,6 +285,9 @@ public class AIMovement : MonoBehaviour
 			carNumInd = ModData.getJsonIndexFromCarNum(seriesPrefix,carNum);
 		}
 		
+		engineTemp = Random.Range(210,215);
+		tempLimit = 259 + carRarity;
+
 		AICarClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		
 		Renderer liveryRend = this.transform.Find("Plane").GetComponent<Renderer>();
@@ -621,6 +634,10 @@ public class AIMovement : MonoBehaviour
 					startWreck();
 				}
 			}
+			if(((midSpeed > (5f - wreckFreq))||(midSpeed < (-5f + wreckFreq)))
+				&&(blownEngine == true)){
+				startWreck();
+			}
 			//For some reason changing this makes the player bump-draft mega fast!
 			AISpeed += midSpeed/4;
 			//Debug.Log(AICar.name + " is now at speed of " + AISpeed);
@@ -785,6 +802,32 @@ public class AIMovement : MonoBehaviour
 				//AISpeed += draftStrength;
 				AISpeed += (draftStrength * draftFactor);
 			}
+
+			//e.g. bump draft (1.0) = Max 265f
+			//e.g. close draft (2.0) = Max 255f
+			//e.g. distant draft (5.0) = Max 225f
+			if(engineTemp < (275f - (DraftCheckForward.distance * 10))){
+				//e.g. bump draft (1.0) = +0.025
+				//e.g. close draft (2.0) = +0.007
+				//e.g. distant draft (5.0) = +0.0022
+				engineTemp+= (0.01f / (DraftCheckForward.distance - 0.5f));
+				if(engineTemp > (tempLimit - 1)){
+					coolEngine = true;
+				}
+			} else {
+				engineTemp-= (engineTemp - 210f) / 1250;
+			}
+			if(engineTemp >= tempLimit){
+				blownEngine = true;
+				engineSmokeParticles.Play();
+			}
+
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
+			}
+			#endif
+
 		} else {
 			//Slow down
 			if (AISpeed > 200){
@@ -828,6 +871,13 @@ public class AIMovement : MonoBehaviour
 					}
 				}
 			}
+
+			if(engineTemp > 210f){
+				//e.g. 260C engine = 0.033f cooling
+				//e.g. 220C engine = 0.0066f cooling
+				engineTemp-= (engineTemp - 210f) / 1500;
+			}
+
 		}
 		
 		#if UNITY_EDITOR
@@ -918,6 +968,13 @@ public class AIMovement : MonoBehaviour
 			}
 		}
 		
+		//Blown engine
+		if(blownEngine == true){
+			if(AISpeed > 195){
+				AISpeed-=0.05f;
+			}
+		}
+
 		//Speed tops out
         if (AISpeed > AIVariTopSpeed){
 			//Hard limiter

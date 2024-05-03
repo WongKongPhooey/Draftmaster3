@@ -861,9 +861,9 @@ public class Movement : MonoBehaviour {
 				//e.g. bump draft (1.0) = +0.025
 				//e.g. close draft (2.0) = +0.007
 				//e.g. distant draft (5.0) = +0.0022
-				engineTemp+= (0.01f / (DraftCheck.distance - 0.6f));
+				engineTemp+= (0.01f / (DraftCheck.distance - 0.5f));
 			} else {
-				engineTemp-= (engineTemp - 210f) / 1500;
+				engineTemp-= (engineTemp - 210f) / 1250;
 			}
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
@@ -934,6 +934,10 @@ public class Movement : MonoBehaviour {
 					messageData[1] = playerSpeed;
 					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
 					DraftCheck.transform.gameObject.SendMessage("ReceivePush",messageData);
+				}
+				if(blownEngine == true){
+					tandemDraft = false;
+					tandemPosition = 1;
 				}
 			}
 		} else {
