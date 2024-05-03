@@ -813,6 +813,7 @@ public class SeriesData : MonoBehaviour{
 			case "cup23":
 			case "cup24":
 			case "irl23":
+			case "irl24":
 			case "dmc15":
 			case "irc00":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
@@ -912,6 +913,7 @@ public class SeriesData : MonoBehaviour{
 			case "FRD":
 			case "TYT":
 			case "HON":
+			case "DDG":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<=99;j++){
@@ -958,6 +960,18 @@ public class SeriesData : MonoBehaviour{
 			case "PEN":
 			case "JGR":
 			case "HEN":
+			case "KAU":
+			case "23X":
+			case "LMC":
+			case "FOY":
+			case "AND":
+			case "ARR":
+			case "DCR":
+			case "DRE":
+			case "EDC":
+			case "JUN":
+			case "MEY":
+			case "RLL":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<=99;j++){
@@ -975,6 +989,7 @@ public class SeriesData : MonoBehaviour{
 			case "Strategist":
 			case "Closer":
 			case "Intimidator":
+			case "Pusher":
 			case "Blocker":
 			case "Dominator":
 			case "Legend":
@@ -990,7 +1005,6 @@ public class SeriesData : MonoBehaviour{
 					}
 				}
 			break;
-			
 			default:
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
