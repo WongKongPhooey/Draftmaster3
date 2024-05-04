@@ -1402,7 +1402,6 @@ public class AIMovement : MonoBehaviour
 		}
 		#endif
 		
-		//Check Right Corners Clear
 		float rng = Random.Range(0,100);
 		if(chance >= rng) {
 			
@@ -1454,7 +1453,7 @@ public class AIMovement : MonoBehaviour
 						Debug.Log(AICar.name + " try pass opportunity (either). Random choose.." + rngDir + "/2");
 					}
 				#endif
-				if(rngDir > 1f){
+				if(rngDir >= 1f){
 					changeLane("Right");
 				} else {
 					changeLane("Left");
