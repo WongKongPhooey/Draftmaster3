@@ -51,6 +51,12 @@ public class Ticker : MonoBehaviour
 	public static string[] carNumber = new string[50];
 	public static string[] driverNames = new string[50];
 	public static float[] carDist = new float[50];
+	public static GameObject[] wreckedCarsArray = new GameObject[50];
+	public static float[] wreckedCarPositions = new float[50];
+	public static string[] wreckedCarNames = new string[50];
+	public static string[] wreckedCarNumber = new string[50];
+	public static string[] wreckedDriverNames = new string[50];
+	public static float[] wreckedCarDist = new float[50];
 	public static List<GameObject> entrantList = new List<GameObject>();
 
 	public static GameObject[] cautionCarsArray = new GameObject[50];
@@ -410,7 +416,9 @@ public class Ticker : MonoBehaviour
 		//Reverse the sort
 		entrantList.Reverse(); 
 		
-		//Debug.Log(entrantList.Count + " cars to sort.");
+		//Now we have our caution order..
+		//Shuffle all wrecked cars to the back
+		//Then shuffle heavily damaged cars to the back of that new set
 		
 		for(int i=0;i<entrantList.Count;i++){
 			if(entrantList[i].name == playerCar.name){
@@ -446,7 +454,6 @@ public class Ticker : MonoBehaviour
 				carDist[i] = carDist[i] / 25;
 			}
 			PlayerPrefs.SetInt("CautionPosition" + i + "", int.Parse(carNumber[i]));
-			//Debug.Log(i + ": " + driverNames[i]);
 		}
 		PlayerPrefs.SetInt("CautionLap", CameraRotate.lap);
 		PlayerPrefs.SetInt("SpawnFromCaution", 1);
