@@ -160,7 +160,7 @@ public class Movement : MonoBehaviour {
 	public static string spotterCall;
 	
 	public string carName;
-	public int carNum;
+	public static int carNum;
 	public int carClass;
 	public string carTeam;
 	public string carManu;
@@ -762,6 +762,8 @@ public class Movement : MonoBehaviour {
 			}
 		}
 		
+		RaceControl.carSpeed[carNum] = playerSpeed;
+		
 		if(pacing == true){
 			playerSpeed = 202;
 			HUD.SetActive(false);
@@ -933,7 +935,7 @@ public class Movement : MonoBehaviour {
 					messageData[0] = vehicle;
 					messageData[1] = playerSpeed;
 					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
-					DraftCheck.transform.gameObject.SendMessage("ReceivePush",messageData);
+					//DraftCheck.transform.gameObject.SendMessage("ReceivePush",messageData);
 				}
 				if(blownEngine == true){
 					tandemDraft = false;

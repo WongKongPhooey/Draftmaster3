@@ -217,7 +217,7 @@ public class MainMenuUI : MonoBehaviour {
 		updateLabel = GameObject.Find("VersionNotice");
 		string latestVersion = PlayerPrefs.GetString("LatestVersion");
 		if(latestVersion != Application.version){
-			bool latestUpdate = isLatestVersion();
+			bool latestUpdate = PlayFabManager.isLatestVersion();
 			if(latestUpdate == false){
 				updateLabel.GetComponent<TMPro.TMP_Text>().text = "Latest Is v" + latestVersion + "";
 			}
@@ -307,7 +307,7 @@ public class MainMenuUI : MonoBehaviour {
 			if(!PlayerPrefs.HasKey("PlayerUsername")){
 				timeTrialDescUILabel.text = "Register a free account to use the online features of the game. This includes the weekly Time Trial leaderboard, and live Challenges!";
 			} else {
-				if(isLatestVersion() == false){
+				if(PlayFabManager.isLatestVersion() == false){
 					timeTrialDescUILabel.text = "You must be on the latest version of the game (v" + PlayerPrefs.GetString("LatestVersion") + ") to take part in the Live Time Trial";
 				} else {
 					timeTrialDescUILabel.text = "There is No Active Time Trial";
@@ -322,26 +322,6 @@ public class MainMenuUI : MonoBehaviour {
 		} else {
 			liveChallengeDescUILabel.text = "Live Moments Challenge\n" + PlayerPrefs.GetString("MomentName") + "";
 		}
-	}
-
-	bool isLatestVersion(){
-		if(PlayerPrefs.GetString("LatestVersion") == ""){
-			return true;
-		}
-		string[] latestSubVersions = PlayerPrefs.GetString("LatestVersion").Split(".");
-		string[] currentSubVersions = Application.version.Split(".");
-		for(int i=0;i<latestSubVersions.Length;i++){
-			//Lower version number
-			if(int.Parse(latestSubVersions[i]) > int.Parse(currentSubVersions[i])){
-				return false;
-			}
-			//Higher version number
-			if(int.Parse(latestSubVersions[i]) < int.Parse(currentSubVersions[i])){
-				return true;
-			}
-			//Else.. number matches, so search further along the string
-		}
-		return true;
 	}
 
 	void loadCurrentChampionshipInfo(){

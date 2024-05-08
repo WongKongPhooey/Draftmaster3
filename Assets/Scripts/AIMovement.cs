@@ -621,9 +621,9 @@ public class AIMovement : MonoBehaviour
     }
 	
 	//void ReceivePush(GameObject pushedBy, float bumpSpeed){
-	void ReceivePush(object[] receivedData){
-		GameObject pushedBy = (GameObject)receivedData[0];
-		float bumpSpeed = (float)receivedData[1];
+	void ReceivePush(){
+		GameObject pushedBy = RaceControl.carTandem[carNum];
+		float bumpSpeed = RaceControl.receivedSpeed[carNum];
 		//Debug.Log(AICar.name + " gets pushed at speed of " + AISpeed);
 		if(initialContact == false){
 			float midSpeed = bumpSpeed - AISpeed;
@@ -646,11 +646,17 @@ public class AIMovement : MonoBehaviour
 		} else {
 			AISpeed += backdraftMulti;
 		}
-		if(isWrecking == false){			
-			pushedBy.SendMessage("UpdateTandemPosition",tandemPosition);
+		if(isWrecking == false){
+				
+			int oppNum = getOpponentNumFromGameObject(pushedBy);
+			RaceControl.tandemPosition[oppNum] = tandemPosition;
+			//pushedBy.SendMessage("UpdateTandemPosition",tandemPosition);
 			//Debug.Log(AICar.name + " sends push back to " + pushedBy.name);
-			pushedBy.SendMessage("GivePush",AISpeed);
+			RaceControl.givenSpeed[oppNum] = AISpeed;
+			//pushedBy.SendMessage("GivePush",AISpeed);
 		}
+		//Clear the temp values once used
+		RaceControl.carTandem[carNum] = null;
 	}
 	
 	void GivePush(float bumpSpeed){
@@ -677,6 +683,8 @@ public class AIMovement : MonoBehaviour
 		}
 
 		pos = transform.position;
+
+		RaceControl.carSpeed[carNum] = AISpeed;
 
 		if(isWrecking == false){
 			if(sparksCooldown > 0){
@@ -819,6 +827,7 @@ public class AIMovement : MonoBehaviour
 			}
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
+				RaceControl.hasBlownEngine[carNum] = blownEngine;
 				engineSmokeParticles.Play();
 			}
 
@@ -931,12 +940,9 @@ public class AIMovement : MonoBehaviour
 		if (HitForward && DraftCheckForward.distance <= bumpDraftDistTrigger){
 			//Frontward draft
 			if(DraftCheckForward.transform.gameObject.name != null){
-				object[] messageData = new object[2];
-				messageData[0] = AICar;
-				messageData[1] = AISpeed;
-				//if (DraftCheckForward.distance <= bumpDraftDistTrigger){
-				DraftCheckForward.transform.gameObject.SendMessage("ReceivePush",messageData);
-				//}
+				int opponentNum = getOpponentNum(DraftCheckForward);
+				RaceControl.carTandem[opponentNum] = AICar;
+				RaceControl.receivedSpeed[opponentNum] = AISpeed;
 				if (AISpeed > (AIVariTopSpeed - 3f)){
 					coolEngine = true;
 				}
@@ -953,6 +959,7 @@ public class AIMovement : MonoBehaviour
 		} else {
 			tandemDraft = false;
 			tandemPosition = 1;
+			RaceControl.tandemPosition[carNum] = 1;
 		}
 
 		//If engine is too hot, stall out
@@ -1703,10 +1710,8 @@ public class AIMovement : MonoBehaviour
 			} else {
 				//Left lane isn't clear, but is moving faster than yourself
 				//Or, simply aiming to follow non-wrecking cars
-				if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>() != null){
-					if(DraftCheckLaneLeft.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
-						direction = "Left";
-					}
+				if(opponentIsWrecking(DraftCheckLaneLeft) == false){
+					direction = "Left";
 				}
 			}
 		}
@@ -1719,13 +1724,11 @@ public class AIMovement : MonoBehaviour
 					direction = "Right";
 				}
 			} else {
-				if(DraftCheckLaneRight.transform.gameObject.GetComponent<AIMovement>() != null){
-					if(DraftCheckLaneRight.transform.gameObject.GetComponent<AIMovement>().isWrecking == false){
-						if(direction == "Left"){
-							direction = "Both";
-						} else {
-							direction = "Right";
-						}
+				if(opponentIsWrecking(DraftCheckLaneRight) == false){
+					if(direction == "Left"){
+						direction = "Both";
+					} else {
+						direction = "Right";
 					}
 				}
 			}
@@ -1869,13 +1872,36 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 	
+	int getOpponentNum(RaycastHit opponent){
+		if(opponent.transform.gameObject.tag == "Player"){
+			return Movement.carNum;
+		} else {
+			if(opponent.transform.gameObject.tag == "AICar"){
+				return int.Parse(opponent.transform.gameObject.name.Substring(5));
+			}
+		}
+		return 9999;
+	}
+	
+	int getOpponentNumFromGameObject(GameObject opponent){
+		if(opponent.tag == "Player"){
+			return Movement.carNum;
+		} else {
+			if(opponent.tag == "AICar"){
+				return int.Parse(opponent.name.Substring(5));
+			}
+		}
+		return 9999;
+	}
+	
 	float getOpponentSpeed(RaycastHit opponent){
 		if(opponent.transform.gameObject.tag == "Player"){
 			return Movement.playerSpeed;
 		} else {
 			if(opponent.transform.gameObject.tag == "AICar"){
 				//Debug.Log(opponent.transform.gameObject.name);
-				return opponent.transform.gameObject.GetComponent<AIMovement>().AISpeed;
+				int opponentNum = int.Parse(opponent.transform.gameObject.name.Substring(5));
+				return RaceControl.carSpeed[opponentNum];
 			}
 		}
 		return 9999;
@@ -1886,8 +1912,8 @@ public class AIMovement : MonoBehaviour
 			return Movement.isWrecking;
 		} else {
 			if(opponent.transform.gameObject.tag == "AICar"){
-				//Debug.Log(opponent.transform.gameObject.name);
-				return opponent.transform.gameObject.GetComponent<AIMovement>().isWrecking;
+				int opponentNum = int.Parse(opponent.transform.gameObject.name.Substring(5));
+				return RaceControl.isCarDamaged(opponentNum);
 			}
 		}
 		return false;
@@ -1981,6 +2007,7 @@ public class AIMovement : MonoBehaviour
 		Movement.incrTotalWreckers();
 		
 		isWrecking = true;
+		RaceControl.isWrecking[carNum] = isWrecking;
 		if(CameraRotate.cautionOut == false){
 			CameraRotate.throwCaution();
 		}
@@ -2024,6 +2051,8 @@ public class AIMovement : MonoBehaviour
 		slideX = 0;
 		isWrecking = false;
 		wreckOver = true;
+		RaceControl.isWrecking[carNum] = isWrecking;
+		RaceControl.hasWrecked[carNum] = wreckOver;
 		
 		sparksCooldown = 0;
 

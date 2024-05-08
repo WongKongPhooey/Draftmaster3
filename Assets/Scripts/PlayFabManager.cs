@@ -454,7 +454,7 @@ public class PlayFabManager : MonoBehaviour
 		}
 
 		#if UNITY_EDITOR
-		//result.Data["LiveTimeTrial"] = "FortWorth";
+		result.Data["LiveTimeTrial"] = "Kansas";
 		//result.Data["TargetVersion"] = "7.6.4";
 		//Debug.Log("Time Trial Testing");
 		#endif
@@ -1147,16 +1147,22 @@ public class PlayFabManager : MonoBehaviour
 		GetLiveTimeTrialLeaderboard();
 	}
 	
-	static bool isLatestVersion(){
+	public static bool isLatestVersion(){
 		if(PlayerPrefs.GetString("LatestVersion") == ""){
 			return true;
 		}
 		string[] latestSubVersions = PlayerPrefs.GetString("LatestVersion").Split(".");
 		string[] currentSubVersions = Application.version.Split(".");
 		for(int i=0;i<latestSubVersions.Length;i++){
+			//Lower version number
 			if(int.Parse(latestSubVersions[i]) > int.Parse(currentSubVersions[i])){
 				return false;
 			}
+			//Higher version number
+			if(int.Parse(latestSubVersions[i]) < int.Parse(currentSubVersions[i])){
+				return true;
+			}
+			//Else.. number matches, so search further along the string
 		}
 		return true;
 	}
