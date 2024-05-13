@@ -870,6 +870,7 @@ public class Movement : MonoBehaviour {
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
 				engineSmokeParticles.Play();
+				RaceControl.hasBlownEngine[carNum] = true;
 				cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = "Race Over";
 			}
 		} else {
@@ -1404,7 +1405,6 @@ public class Movement : MonoBehaviour {
 		}
 		
 		if(fastestLapSaved == false){
-			Debug.Log("Haven't saved fastest lap yet.. (Movement)");
 			CameraRotate.saveRaceFastestLap();
 			fastestLapSaved = true;
 		}
