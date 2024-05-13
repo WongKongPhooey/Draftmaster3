@@ -1999,7 +1999,7 @@ public class AIMovement : MonoBehaviour
 		
 		tireSmokeParticles.Play();
 		
-		if(Random.Range(1,10) <= 2){
+		if(Random.Range(1,10) <= 3){
 			leftSparksParticles.Play();
 			rightSparksParticles.Play();
 		}
@@ -2007,7 +2007,7 @@ public class AIMovement : MonoBehaviour
 		Movement.incrTotalWreckers();
 		
 		isWrecking = true;
-		RaceControl.isWrecking[carNum] = isWrecking;
+		RaceControl.isWrecking[carNum] = true;
 		if(CameraRotate.cautionOut == false){
 			CameraRotate.throwCaution();
 		}
@@ -2051,8 +2051,8 @@ public class AIMovement : MonoBehaviour
 		slideX = 0;
 		isWrecking = false;
 		wreckOver = true;
-		RaceControl.isWrecking[carNum] = isWrecking;
-		RaceControl.hasWrecked[carNum] = wreckOver;
+		RaceControl.isWrecking[carNum] = false;
+		RaceControl.hasWrecked[carNum] = true;
 		
 		sparksCooldown = 0;
 

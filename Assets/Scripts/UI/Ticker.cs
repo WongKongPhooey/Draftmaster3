@@ -51,12 +51,6 @@ public class Ticker : MonoBehaviour
 	public static string[] carNumber = new string[50];
 	public static string[] driverNames = new string[50];
 	public static float[] carDist = new float[50];
-	public static GameObject[] wreckedCarsArray = new GameObject[50];
-	public static float[] wreckedCarPositions = new float[50];
-	public static string[] wreckedCarNames = new string[50];
-	public static string[] wreckedCarNumber = new string[50];
-	public static string[] wreckedDriverNames = new string[50];
-	public static float[] wreckedCarDist = new float[50];
 	public static List<GameObject> entrantList = new List<GameObject>();
 
 	public static GameObject[] cautionCarsArray = new GameObject[50];
@@ -400,19 +394,13 @@ public class Ticker : MonoBehaviour
 			}
 			carsTagged = true;
 		}
-		if(playerPitted == false){
-			entrantList.Add(playerCar);
-		}
+		entrantList.Add(playerCar);
 		
 		//Sort by z axis position
         entrantList.Sort(delegate(GameObject a, GameObject b) {
 		  return (a.transform.position.z).CompareTo(b.transform.position.z);
 		});
 		
-		//Add after sort, tags onto back
-		if(playerPitted == true){
-			entrantList.Add(playerCar);
-		}
 		//Reverse the sort
 		entrantList.Reverse(); 
 		
@@ -420,6 +408,7 @@ public class Ticker : MonoBehaviour
 		//Shuffle all wrecked cars to the back
 		//Then shuffle heavily damaged cars to the back of that new set
 		
+		int restartPosition = 0;
 		for(int i=0;i<entrantList.Count;i++){
 			if(entrantList[i].name == playerCar.name){
 				position = i;
@@ -453,11 +442,34 @@ public class Ticker : MonoBehaviour
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
 			}
-			PlayerPrefs.SetInt("CautionPosition" + i + "", int.Parse(carNumber[i]));
+			
+			//If car is fine, join the restart queue
+			int carNum = int.Parse(carNumber[i]);
+			if((RaceControl.isWrecking[carNum]==false)&&
+			  (RaceControl.hasWrecked[carNum]==false)&&
+			  (RaceControl.hasBlownEngine[carNum]==false)){
+				Debug.Log("Car #" + carNumber[i] + " restarts P" + restartPosition);
+				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[i]));
+				restartPosition++;
+			}
 		}
+		
+		for(int k=0;k<entrantList.Count;k++){
+			//Wrecked cars restart at the back
+			int carNum = int.Parse(carNumber[k]);
+			if((RaceControl.isWrecking[carNum]==true)||
+			  (RaceControl.hasWrecked[carNum]==true)){
+				Debug.Log("Car #" + carNumber[k] + " pits and restarts P" + restartPosition);
+				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[k]));
+				restartPosition++;
+			}
+			//..any other cars (blown engine) do not restart
+		}
+		
 		PlayerPrefs.SetInt("CautionLap", CameraRotate.lap);
 		PlayerPrefs.SetInt("SpawnFromCaution", 1);
-		cautionSummaryMenu.SetActive(true);
+		//cautionSummaryMenu.SetActive(true);
+		
 		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 	}
 

@@ -13,8 +13,14 @@ public class RaceControl : MonoBehaviour
 	public static int[] tandemPosition = new int[100];
 	public static float[] receivedSpeed = new float[100];
 	public static float[] givenSpeed = new float[100];
-    // Start is called before the first frame update
-    void Start(){    
+    
+	// Start is called before the first frame update
+    void Start(){
+		for(int i=0;i<100;i++){
+			isWrecking[i] = false;
+			hasWrecked[i] = false;
+			hasBlownEngine[i] = false;
+		}
     }
 
     // Update is called once per frame
@@ -25,7 +31,15 @@ public class RaceControl : MonoBehaviour
 		if((isWrecking[carNum] == true)||
 		  (hasWrecked[carNum] == true)||
 		  (hasBlownEngine[carNum] == true)){
-			Debug.Log("Car #" + carNum + " is damaged");
+			//Debug.Log("Car #" + carNum + " is damaged");
+			return true;
+		}
+		return false;
+	}
+	
+	public static bool isCarTerminalDamaged(int carNum){
+		if(hasBlownEngine[carNum] == true){
+			//Debug.Log("Car #" + carNum + " is damaged");
 			return true;
 		}
 		return false;

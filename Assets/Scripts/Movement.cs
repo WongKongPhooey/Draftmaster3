@@ -25,7 +25,7 @@ public class Movement : MonoBehaviour {
 	
 	float engineTemp;
 	float tempLimit;
-	bool blownEngine;
+	public static bool blownEngine;
 
 	int sparksCooldown;
 
@@ -870,6 +870,7 @@ public class Movement : MonoBehaviour {
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
 				engineSmokeParticles.Play();
+				cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = "Race Over";
 			}
 		} else {
 			//Slow down if not in any draft
@@ -1349,6 +1350,7 @@ public class Movement : MonoBehaviour {
 		
 		if(wreckOver == false){
 			isWrecking = true;
+			RaceControl.isWrecking[carNum] = true;
 			totalWreckers++;
 			wreckHits++;
 			wreckDamage+=1;
@@ -1417,6 +1419,9 @@ public class Movement : MonoBehaviour {
 		updateWindForce(0);
 		isWrecking = false;
 		wreckOver = true;
+		RaceControl.isWrecking[carNum] = false;
+		RaceControl.hasWrecked[carNum] = true;
+		
 		hideHUD();
 		//Debug.Log("WRECK OVER");
 		wreckRigidbody.mass = 5;
@@ -1582,8 +1587,11 @@ public class Movement : MonoBehaviour {
 	}
 		
 	public string calculateDamageGrade(float damage){
-		if(damage > 1500){
-			return "DVP Clock (100%)";
+		if(RaceControl.hasBlownEngine[carNum] == true){
+			return "Blown Engine (100%)";
+		}
+		if(damage > 1000){
+			return "Heavy (70%)";
 		}
 		if(damage > 500){
 			return "Heavy (" + Mathf.Round(damage / 15) + "%)";
@@ -1592,7 +1600,7 @@ public class Movement : MonoBehaviour {
 			return "Minor (" + Mathf.Round(damage / 15) + "%)";
 		}
 		if(damage > 20){
-			return "Cosmetic (" + Mathf.Round(damage / 15) + "%)";
+			return "Scrapes (" + Mathf.Round(damage / 15) + "%)";
 		}
 		return "None";
 	}

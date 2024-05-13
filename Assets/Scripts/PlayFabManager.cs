@@ -454,7 +454,7 @@ public class PlayFabManager : MonoBehaviour
 		}
 
 		#if UNITY_EDITOR
-		result.Data["LiveTimeTrial"] = "Kansas";
+		//result.Data["LiveTimeTrial"] = "Kansas";
 		//result.Data["TargetVersion"] = "7.6.4";
 		//Debug.Log("Time Trial Testing");
 		#endif

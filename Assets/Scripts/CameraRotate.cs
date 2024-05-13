@@ -418,12 +418,9 @@ public class CameraRotate : MonoBehaviour {
 					if(raceLapRecord > lapRecord){
 						lapRecord = raceLapRecord;
 					}
-					
 					if((lapTime < fastestRaceLap)&&(lap > 1)&&(lapTime != 0)){
 						fastestRaceLap = lapTime;
 						Debug.Log("New Fastest Lap: " + fastestRaceLap);
-					} else {
-						
 					}
 				}
 			}
@@ -439,11 +436,10 @@ public class CameraRotate : MonoBehaviour {
 			frameTime = 0;
 			
 			//Caution, reset scene
-			if(cautionOut == true){
+			if((cautionOut == true)||(Movement.blownEngine == true)){
 				//Only save at the line if not currently wrecking
 				if(Movement.isWrecking == false){
 					saveRaceFastestLap();
-					//Debug.Log("Saved fastest lap on lap count");
 					cautionSummaryMenu.SetActive(true);
 					finishLine.GetComponent<Renderer>().enabled = true;
 					carEngine.volume = 0.0f;
