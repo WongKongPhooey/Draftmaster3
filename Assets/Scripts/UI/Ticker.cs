@@ -460,8 +460,9 @@ public class Ticker : MonoBehaviour
 		for(int k=0;k<entrantList.Count;k++){
 			//Wrecked cars restart at the back
 			int carNum = int.Parse(carNumber[k]);
-			if((RaceControl.isWrecking[carNum]==true)||
-			  (RaceControl.hasWrecked[carNum]==true)){
+			if(((RaceControl.isWrecking[carNum]==true)||
+			  (RaceControl.hasWrecked[carNum]==true))&&
+			  (RaceControl.wreckDamage[carNum] < 50f)){
 				//Debug.Log("Car #" + carNumber[k] + " pits and restarts P" + restartPosition);
 				if(entrantList[k].name == playerCar.name){
 					//Debug.Log("PLAYER WAS DAMAGED");
@@ -469,6 +470,10 @@ public class Ticker : MonoBehaviour
 				}
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[k]));
 				restartPosition++;
+			} else {
+				if(RaceControl.wreckDamage[carNum] >= 50f){
+					Debug.Log(entrantList[k].name + " has retired.  (" + RaceControl.wreckDamage[carNum] + " damage)");
+				}
 			}
 			//..any other cars do not restart
 		}
