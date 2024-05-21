@@ -619,59 +619,6 @@ public class AIMovement : MonoBehaviour
 		antiGlitch = 0;
 		particleDisableDelay = 20;
     }
-	
-	//void ReceivePush(GameObject pushedBy, float bumpSpeed){
-	void ReceivePush(){
-		GameObject pushedBy = RaceControl.carTandem[carNum];
-		float bumpSpeed = RaceControl.receivedSpeed[carNum];
-		//Debug.Log(AICar.name + " gets pushed at speed of " + AISpeed);
-		if(initialContact == false){
-			float midSpeed = bumpSpeed - AISpeed;
-			if((midSpeed > (6f - wreckFreq))||(midSpeed < (-6f + wreckFreq))){
-				//Debug.Log("Wreck: Strong Push");
-				float rng = Random.Range(0,1000);
-				if(wreckProbability >= rng){
-					startWreck();
-				}
-			}
-			if(((midSpeed > (5f - wreckFreq))||(midSpeed < (-5f + wreckFreq)))
-				&&(blownEngine == true)){
-				startWreck();
-			}
-			//For some reason changing this makes the player bump-draft mega fast!
-			AISpeed += midSpeed/4;
-			//Debug.Log(AICar.name + " is now at speed of " + AISpeed);
-			initialContact = true;
-			tandemDraft = true;
-		} else {
-			AISpeed += backdraftMulti;
-		}
-		if(isWrecking == false){
-				
-			int oppNum = getOpponentNumFromGameObject(pushedBy);
-			RaceControl.tandemPosition[oppNum] = tandemPosition;
-			//pushedBy.SendMessage("UpdateTandemPosition",tandemPosition);
-			//Debug.Log(AICar.name + " sends push back to " + pushedBy.name);
-			RaceControl.givenSpeed[oppNum] = AISpeed;
-			//pushedBy.SendMessage("GivePush",AISpeed);
-		}
-		//Clear the temp values once used
-		RaceControl.carTandem[carNum] = null;
-	}
-	
-	void GivePush(float bumpSpeed){
-		affectedAISpeed = bumpSpeed;
-		//Discourage long draft trains
-		if(tandemPosition > maxTandem){
-			affectedAISpeed-=0.25f;
-			coolEngine=true;
-		}
-	}
-	
-	void UpdateTandemPosition(int tandemPosInFront){
-		tandemPosition = tandemPosInFront + 1;
-		//Debug.Log("" + AICar.name + " is in tandem position" + tandemPosition);
-	}
 
     // Update is called once per frame
     void FixedUpdate(){
@@ -683,8 +630,6 @@ public class AIMovement : MonoBehaviour
 		}
 
 		pos = transform.position;
-
-		RaceControl.carSpeed[carNum] = AISpeed;
 
 		if(isWrecking == false){
 			if(sparksCooldown > 0){
@@ -724,6 +669,51 @@ public class AIMovement : MonoBehaviour
 			return;
 		}
 		
+		//Speed returned from the car you just bumped
+		float givenSpeed = RaceControl.givenSpeed[carNum];
+		if(givenSpeed != 0){
+			if(coolEngine == false){
+				AISpeed = givenSpeed;
+				tandemPosition = RaceControl.tandemPosition[carNum];
+				RaceControl.givenSpeed[carNum] = 0;
+			} else {
+				//Helps to remove the 'stickiness' when cooling the engine and detaching from the tandem
+				if(AISpeed > givenSpeed){
+					AISpeed = givenSpeed-0.25f;
+				}
+				RaceControl.givenSpeed[carNum] = 0;
+			}
+		}
+		RaceControl.carSpeed[carNum] = AISpeed;
+		
+		float bumpSpeed = RaceControl.receivedSpeed[carNum];
+		if(bumpSpeed != 0){
+			//You've been bumped!
+			if(initialContact == false){
+				float midSpeed = bumpSpeed - AISpeed;
+				if((midSpeed > (6f - wreckFreq))||(midSpeed < (-6f + wreckFreq))){
+					//Debug.Log("Wreck: Strong Push");
+					float rng = Random.Range(0,1000);
+					if(wreckProbability >= rng){
+						startWreck();
+					}
+				}
+				if(((midSpeed > (4f - wreckFreq))||(midSpeed < (-4f + wreckFreq)))
+					&&(blownEngine == true)){
+					startWreck();
+				}
+				AISpeed += midSpeed/4;
+				initialContact = true;
+			} else {
+				//Speed up
+				AISpeed += backdraftMulti;
+			}
+			RaceControl.receivedSpeed[carNum] = 0;
+			int pusherNum = RaceControl.carTandemNum[carNum];
+			RaceControl.tandemPosition[pusherNum] = tandemPosition + 1;
+			RaceControl.givenSpeed[pusherNum] = AISpeed;
+		}
+		
 		if(Movement.pacing == false){
 			if((isWrecking == true)||(wreckOver == true)){
 				//Bail, drop all Movement logic
@@ -754,8 +744,8 @@ public class AIMovement : MonoBehaviour
 				updateMovement();
 			}
 
-			wreckRigidbody.velocity = Vector3.zero;
-			wreckRigidbody.angularVelocity = Vector3.zero;
+			//wreckRigidbody.velocity = Vector3.zero;
+			//wreckRigidbody.angularVelocity = Vector3.zero;
 		} else {
 			//Pacing speed
 			AISpeed = 202;
@@ -791,7 +781,7 @@ public class AIMovement : MonoBehaviour
 			//Speed up
 			if (AISpeed < AIVariTopSpeed){
 				//Draft gets stronger as you get closer
-				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 2500f);
+				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 5000f);
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
 					Debug.Log("Total AI draft strength: " + draftStrength + " - " + (maxDraftDistance - DraftCheckForward.distance) + " " + draftStrengthRatio + " " + (AILevel / 2500f));
@@ -815,15 +805,16 @@ public class AIMovement : MonoBehaviour
 			//e.g. close draft (2.0) = Max 255f
 			//e.g. distant draft (5.0) = Max 225f
 			if(engineTemp < (275f - (DraftCheckForward.distance * 10))){
-				//e.g. bump draft (1.0) = +0.025
-				//e.g. close draft (2.0) = +0.007
+				//e.g. bump draft (1.0) = +0.02
+				//e.g. closer draft (1.5) = +0.01
+				//e.g. breathing draft (2.0) = +0.0066
 				//e.g. distant draft (5.0) = +0.0022
-				engineTemp+= (0.01f / (DraftCheckForward.distance - 0.5f));
+				engineTemp+= (0.005f / (DraftCheckForward.distance - 0.75f));
 				if(engineTemp > (tempLimit - 1)){
 					coolEngine = true;
 				}
 			} else {
-				engineTemp-= (engineTemp - 210f) / 1250;
+				engineTemp-= (engineTemp - 210f) / 1250f;
 			}
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
@@ -941,10 +932,15 @@ public class AIMovement : MonoBehaviour
 			//Frontward draft
 			if(DraftCheckForward.transform.gameObject.name != null){
 				int opponentNum = getOpponentNum(DraftCheckForward);
-				RaceControl.carTandem[opponentNum] = AICar;
+				RaceControl.carTandemNum[opponentNum] = carNum;
 				RaceControl.receivedSpeed[opponentNum] = AISpeed;
-				if (AISpeed > (AIVariTopSpeed - 3f)){
+				if (AISpeed > (AIVariTopSpeed - 2f)){
 					coolEngine = true;
+					#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " cooling engine (bump draft too fast)");
+					}
+					#endif
 				}
 			}
 			//If pushing into the bump draft cushion (below the dist trigger for a bump draft)
@@ -1059,11 +1055,22 @@ public class AIMovement : MonoBehaviour
 				coolOffInv = 4f;
 				tandemDrafting = true;
 				break;
-			default:
+			case "v4cup":
 				draftStrengthRatio = 900f;
 				dragDecelMulti = 0.0035f;
 				backdraftMulti = 0.0035f;
 				bumpDraftDistTrigger = 1.1f;
+				passDistMulti = 1f;
+				draftAirCushion = 1.2f;
+				coolOffSpace = 1.4f;
+				coolOffInv = 5f;
+				tandemDrafting = true;
+				break;
+			default:
+				draftStrengthRatio = 900f;
+				dragDecelMulti = 0.0035f;
+				backdraftMulti = 0.0035f;
+				bumpDraftDistTrigger = 1.05f;
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
 				coolOffSpace = 1.4f;

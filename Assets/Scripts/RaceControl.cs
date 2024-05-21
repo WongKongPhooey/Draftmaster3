@@ -9,8 +9,12 @@ public class RaceControl : MonoBehaviour
 	public static bool[] hasWrecked = new bool[100];
 	public static bool[] hasBlownEngine = new bool[100];
 	public static float[] carSpeed = new float[100];
+	
+	//The car behind (doing the pushing)
 	public static GameObject[] carTandem = new GameObject[100];
+	public static int[] carTandemNum = new int[100];
 	public static int[] tandemPosition = new int[100];
+	
 	public static float[] receivedSpeed = new float[100];
 	public static float[] givenSpeed = new float[100];
     

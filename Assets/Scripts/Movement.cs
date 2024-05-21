@@ -691,45 +691,6 @@ public class Movement : MonoBehaviour {
 		}
 	}
 	
-	void ReceivePush(object[] receivedData){
-		if(isWrecking == false){
-			GameObject pushedBy = (GameObject)receivedData[0];
-			float bumpSpeed = (float)receivedData[1];
-			//Debug.Log("Thanks for the push! Hit me at " + bumpSpeed + " while I was going " + playerSpeed);
-			if(initialContact == false){
-				float midSpeed = bumpSpeed - playerSpeed;
-				if(((midSpeed > 2f)||(midSpeed < -2f))
-					&&(blownEngine == true)){
-					startWreck();
-				}
-				playerSpeed += midSpeed/4;
-				initialContact = true;
-				//Debug.Log("Impact levels out Player");
-			} else {
-				//Speed up
-				playerSpeed += backdraftMulti;
-			}
-			//Send it back			
-			pushedBy.SendMessage("UpdateTandemPosition",tandemPosition);
-			//Debug.Log(AICar.name + " sends push back to " + pushedBy.name);
-			pushedBy.SendMessage("GivePush",playerSpeed);
-		}
-	}
-	
-	void GivePush(float bumpSpeed){
-		if(tandemPosition > 2){
-			playerSpeed-= 0.25f;
-		}
-		if(brakesOn == false){
-			affectedPlayerSpeed = bumpSpeed;
-		}
-	}
-	
-	void UpdateTandemPosition(int tandemPosInFront){
-		tandemPosition = tandemPosInFront + 1;
-		//Debug.Log("Player is in tandem position " + tandemPosition + "");
-	}
-	
 	// Update is called once per frame
 	void FixedUpdate () {
 			
@@ -762,7 +723,63 @@ public class Movement : MonoBehaviour {
 			}
 		}
 		
+		//Speed returned from the car you just bumped
+		float givenSpeed = RaceControl.givenSpeed[carNum];
+		if(givenSpeed != 0){
+			if(brakesOn == false){
+				playerSpeed = givenSpeed;
+				tandemPosition = RaceControl.tandemPosition[carNum];
+				RaceControl.givenSpeed[carNum] = 0;
+				#if UNITY_EDITOR
+					//Debug.Log("The player has evened out at " + givenSpeed + " in the tandem.");
+					Debug.Log("Player is in a tandem of " + tandemPosition);
+				#endif
+			} else {
+				//Helps to remove the 'stickiness' when lifting to detach from the tandem
+				if(playerSpeed > givenSpeed){
+					playerSpeed = givenSpeed-0.25f;
+				}
+				RaceControl.givenSpeed[carNum] = 0;
+			}
+		}
 		RaceControl.carSpeed[carNum] = playerSpeed;
+		
+		float bumpSpeed = RaceControl.receivedSpeed[carNum];
+		if(bumpSpeed != 0){
+			#if UNITY_EDITOR
+			//Debug.Log("The player has been bumped at: " + bumpSpeed);
+			#endif
+			//You've been bumped!
+			if(initialContact == false){
+				float midSpeed = bumpSpeed - playerSpeed;
+				if(((midSpeed > 2f)||(midSpeed < -2f))
+					&&(blownEngine == true)){
+					startWreck();
+				}
+				#if UNITY_EDITOR
+				//Debug.Log("Player speed is now: " + playerSpeed);
+				#endif
+				playerSpeed += midSpeed/4;
+				initialContact = true;
+			} else {
+				//Speed up
+				playerSpeed += backdraftMulti;
+			}
+			//I have received some speed from being bumped from behind..
+			//..so now I reset it to 0
+			RaceControl.receivedSpeed[carNum] = 0;
+			//Who bumped me?
+			int pusherNum = RaceControl.carTandemNum[carNum];
+			//Update their tandemPosition to 2+
+			RaceControl.tandemPosition[pusherNum] = tandemPosition;
+			//Send them the speed of my car, so they then match it
+			RaceControl.givenSpeed[pusherNum] = playerSpeed;
+			#if UNITY_EDITOR
+			//Debug.Log("Pusher #" + pusherNum + "returned speed: " + playerSpeed);
+			#endif
+			//Send it back
+			//Debug.Log(AICar.name + " sends push back to " + pushedBy.name);
+		}
 		
 		if(pacing == true){
 			playerSpeed = 202;
@@ -863,9 +880,9 @@ public class Movement : MonoBehaviour {
 				//e.g. bump draft (1.0) = +0.025
 				//e.g. close draft (2.0) = +0.007
 				//e.g. distant draft (5.0) = +0.0022
-				engineTemp+= (0.01f / (DraftCheck.distance - 0.5f));
+				engineTemp+= (0.005f / (DraftCheck.distance - 0.75f));
 			} else {
-				engineTemp-= (engineTemp - 210f) / 1250;
+				engineTemp-= (engineTemp - 210f) / 1250f;
 			}
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
@@ -918,7 +935,8 @@ public class Movement : MonoBehaviour {
 				playerSpeed+=(backdraftMulti / 5f);
 			}
 			//playerSpeed+=0.0045f;
-			DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
+			
+			//DraftCheckBackward.transform.gameObject.SendMessage("GivePush",playerSpeed);
 			tandemDraft = true;
 		} else {
 			tandemDraft = false;
@@ -933,11 +951,12 @@ public class Movement : MonoBehaviour {
 					playerSpeed+=(backdraftMulti + customAccelF);
 				}
 				if(DraftCheck.transform.gameObject.tag == "AICar"){
-					object[] messageData = new object[2];
-					messageData[0] = vehicle;
-					messageData[1] = playerSpeed;
-					//Debug.Log("AI " + DraftCheck.transform.gameObject.name + " is bumped to take speed of " + playerSpeed);
-					//DraftCheck.transform.gameObject.SendMessage("ReceivePush",messageData);
+					//Give the car you are pushing your speed value..
+					//They will then acknowledge it, and return their speed 
+					//back to you on the next frame
+					int opponentNum = int.Parse(DraftCheck.transform.gameObject.name.Substring(5));
+					RaceControl.carTandemNum[opponentNum] = carNum;
+					RaceControl.receivedSpeed[opponentNum] = playerSpeed;
 				}
 				if(blownEngine == true){
 					tandemDraft = false;
@@ -1040,11 +1059,21 @@ public class Movement : MonoBehaviour {
 				draftAirCushion = 1.1f;
 				revLimiterBoost = 0f;
 				break;
-			default:
+			case "v4cup":
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 1050f;
 				dragDecelMulti = 0.003f;
 				backdraftMulti = 0.005f;
+				bumpDraftDistTrigger = 1.05f;
+				draftAirCushion = 1.2f;
+				revLimiterBoost = 0f;
+				break;
+			//v5
+			default:
+				seriesSpeedDiff = 0;
+				draftStrengthRatio = 1000f;
+				dragDecelMulti = 0.0025f;
+				backdraftMulti = 0.0055f;
 				bumpDraftDistTrigger = 1.05f;
 				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;
