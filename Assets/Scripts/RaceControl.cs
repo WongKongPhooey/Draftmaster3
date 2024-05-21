@@ -7,6 +7,7 @@ public class RaceControl : MonoBehaviour
 	
 	public static bool[] isWrecking = new bool[100];
 	public static bool[] hasWrecked = new bool[100];
+	public static float[] wreckDamage = new float[100];
 	public static bool[] hasBlownEngine = new bool[100];
 	public static float[] carSpeed = new float[100];
 	
@@ -24,6 +25,7 @@ public class RaceControl : MonoBehaviour
 			isWrecking[i] = false;
 			hasWrecked[i] = false;
 			hasBlownEngine[i] = false;
+			wreckDamage[i] = 0f;
 		}
     }
 

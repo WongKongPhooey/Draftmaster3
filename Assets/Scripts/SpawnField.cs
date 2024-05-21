@@ -115,7 +115,7 @@ public class SpawnField : MonoBehaviour {
 		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
 			fieldSize = fastCars.Count + midCars.Count + slowCars.Count + 1;
 		} else {
-			//Just remember count from the initial race start
+			//Just remember count set earlier on
 			fieldSize = PlayerPrefs.GetInt("FieldSize");
 		}
 		

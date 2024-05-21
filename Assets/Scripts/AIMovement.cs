@@ -51,6 +51,7 @@ public class AIMovement : MonoBehaviour
 	
 	public bool isWrecking;
 	public bool wreckOver;
+	public float wreckDamage;
 	float baseDecel;
 	float randDecel;
 	float slideX;
@@ -185,6 +186,7 @@ public class AIMovement : MonoBehaviour
 		laneRest = Random.Range(100, 1000);
 		isWrecking = false;
 		wreckOver = false;
+		wreckDamage = 0;
 		wreckSlideRand = Random.Range(5f,15f);
 		wreckFlatRand = Random.Range(0f,-3f);
 		wreckMassRand = Random.Range(-0.5f,0.5f);
@@ -214,7 +216,6 @@ public class AIMovement : MonoBehaviour
 		coolOffSpace = 2.0f;
 		coolOffInv = 75;
 		if(PlayerPrefs.GetString("TrackType") == "Short"){
-			//maxTandem = 1;
 			coolOffSpace = 2.5f;
 			coolOffInv = 50;
 		}
@@ -489,7 +490,9 @@ public class AIMovement : MonoBehaviour
 				if(isWrecking == true){
 					//Share some wreck inertia
 					float opponentWreckDecel = carHit.gameObject.GetComponent<AIMovement>().wreckDecel;
+					wreckDamage += ((opponentWreckDecel - wreckDecel) / 2);
 					wreckDecel += ((opponentWreckDecel - wreckDecel) / 2);
+					RaceControl.wreckDamage[carNum] = wreckDamage;
 				} else {
 					bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
 					if(joinWreck == true){
@@ -672,7 +675,9 @@ public class AIMovement : MonoBehaviour
 		//Speed returned from the car you just bumped
 		float givenSpeed = RaceControl.givenSpeed[carNum];
 		if(givenSpeed != 0){
-			if(coolEngine == false){
+			//If the engine is not overheating, and the tandem line isn't too long..
+			if((coolEngine == false)&&(tandemPosition <= maxTandem)){
+				//Take the car in front's speed and continue the tandem
 				AISpeed = givenSpeed;
 				tandemPosition = RaceControl.tandemPosition[carNum];
 				RaceControl.givenSpeed[carNum] = 0;
@@ -683,7 +688,11 @@ public class AIMovement : MonoBehaviour
 				}
 				RaceControl.givenSpeed[carNum] = 0;
 			}
+		} else {
+			tandemPosition = 1;
+			RaceControl.tandemPosition[carNum] = 1;
 		}
+		
 		RaceControl.carSpeed[carNum] = AISpeed;
 		
 		float bumpSpeed = RaceControl.receivedSpeed[carNum];
@@ -784,7 +793,7 @@ public class AIMovement : MonoBehaviour
 				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 5000f);
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log("Total AI draft strength: " + draftStrength + " - " + (maxDraftDistance - DraftCheckForward.distance) + " " + draftStrengthRatio + " " + (AILevel / 2500f));
+					//Debug.Log("Total AI draft strength: " + draftStrength + " - " + (maxDraftDistance - DraftCheckForward.distance) + " " + draftStrengthRatio + " " + (AILevel / 2500f));
 				}
 				#endif
 				
@@ -815,6 +824,9 @@ public class AIMovement : MonoBehaviour
 				}
 			} else {
 				engineTemp-= (engineTemp - 210f) / 1250f;
+				if(engineTemp < (tempLimit - 6)){
+					coolEngine = false;
+				}
 			}
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
@@ -824,7 +836,7 @@ public class AIMovement : MonoBehaviour
 
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
+				//Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
 			}
 			#endif
 
@@ -834,7 +846,7 @@ public class AIMovement : MonoBehaviour
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " slowing down, no forward draft");
+					//Debug.Log(AICar.name + " slowing down, no forward draft");
 				}
 				#endif
 				
@@ -902,7 +914,7 @@ public class AIMovement : MonoBehaviour
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " backdraft speed up by " + (backdraftMulti + (AILevel / 1500f)) + " ( BD:" + backdraftMulti + " , AI:" + (AILevel / 1500f));
+					//Debug.Log(AICar.name + " backdraft speed up by " + (backdraftMulti + (AILevel / 1500f)) + " ( BD:" + backdraftMulti + " , AI:" + (AILevel / 1500f));
 				}
 				#endif
 			}
@@ -934,23 +946,11 @@ public class AIMovement : MonoBehaviour
 				int opponentNum = getOpponentNum(DraftCheckForward);
 				RaceControl.carTandemNum[opponentNum] = carNum;
 				RaceControl.receivedSpeed[opponentNum] = AISpeed;
-				if (AISpeed > (AIVariTopSpeed - 2f)){
-					coolEngine = true;
-					#if UNITY_EDITOR
-					if(debugPlayer == true){
-						Debug.Log(AICar.name + " cooling engine (bump draft too fast)");
-					}
-					#endif
-				}
 			}
 			//If pushing into the bump draft cushion (below the dist trigger for a bump draft)
 			if (DraftCheckForward.distance < bumpDraftDistTrigger){
 				//The cushion gives resistance to prevent jagged motion and stackups
 				AISpeed -= (bumpDraftDistTrigger - DraftCheckForward.distance)/coolOffInv;
-			}
-
-			if(seriesPrefix == "irl23"){
-				coolEngine = true;
 			}
 		} else {
 			tandemDraft = false;
@@ -1224,7 +1224,7 @@ public class AIMovement : MonoBehaviour
 				backingOut = true;
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " hit the apron! Moving back up ");
+					//Debug.Log(AICar.name + " hit the apron! Moving back up ");
 				}
 				#endif
 			}
@@ -1238,7 +1238,7 @@ public class AIMovement : MonoBehaviour
 				backingOut = true;
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " hit the wall! Moving back up ");
+					//Debug.Log(AICar.name + " hit the wall! Moving back up ");
 				}
 				#endif
 				float rng = Random.Range(0,100);
@@ -2014,6 +2014,7 @@ public class AIMovement : MonoBehaviour
 		Movement.incrTotalWreckers();
 		
 		isWrecking = true;
+		wreckDamage+=1;
 		RaceControl.isWrecking[carNum] = true;
 		if(CameraRotate.cautionOut == false){
 			CameraRotate.throwCaution();

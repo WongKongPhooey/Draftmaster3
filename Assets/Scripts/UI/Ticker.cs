@@ -427,7 +427,6 @@ public class Ticker : MonoBehaviour
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
-				PlayerPrefs.SetInt("PlayerCautionPosition", i);
 				//Debug.Log("Player is in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
@@ -448,8 +447,12 @@ public class Ticker : MonoBehaviour
 			if((RaceControl.isWrecking[carNum]==false)&&
 			  (RaceControl.hasWrecked[carNum]==false)&&
 			  (RaceControl.hasBlownEngine[carNum]==false)){
-				Debug.Log("Car #" + carNumber[i] + " restarts P" + restartPosition);
+				//Debug.Log("Car #" + carNumber[i] + " restarts P" + restartPosition);
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[i]));
+				if(entrantList[i].name == playerCar.name){
+					//Debug.Log("PLAYER WAS NOT DAMAGED");
+					PlayerPrefs.SetInt("PlayerCautionPosition", restartPosition);
+				}
 				restartPosition++;
 			}
 		}
@@ -459,16 +462,22 @@ public class Ticker : MonoBehaviour
 			int carNum = int.Parse(carNumber[k]);
 			if((RaceControl.isWrecking[carNum]==true)||
 			  (RaceControl.hasWrecked[carNum]==true)){
-				Debug.Log("Car #" + carNumber[k] + " pits and restarts P" + restartPosition);
+				//Debug.Log("Car #" + carNumber[k] + " pits and restarts P" + restartPosition);
+				if(entrantList[k].name == playerCar.name){
+					//Debug.Log("PLAYER WAS DAMAGED");
+					PlayerPrefs.SetInt("PlayerCautionPosition", restartPosition);
+				}
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[k]));
 				restartPosition++;
 			}
-			//..any other cars (blown engine) do not restart
+			//..any other cars do not restart
 		}
+		
+		//Update field size to however many cars were counted as restartable
+		PlayerPrefs.SetInt("FieldSize", restartPosition);
 		
 		PlayerPrefs.SetInt("CautionLap", CameraRotate.lap);
 		PlayerPrefs.SetInt("SpawnFromCaution", 1);
-		//cautionSummaryMenu.SetActive(true);
 		
 		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 	}
