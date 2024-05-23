@@ -732,7 +732,7 @@ public class Movement : MonoBehaviour {
 				RaceControl.givenSpeed[carNum] = 0;
 				#if UNITY_EDITOR
 					//Debug.Log("The player has evened out at " + givenSpeed + " in the tandem.");
-					Debug.Log("Player is in a tandem of " + tandemPosition);
+					//Debug.Log("Player is in a tandem of " + tandemPosition);
 				#endif
 			} else {
 				//Helps to remove the 'stickiness' when lifting to detach from the tandem

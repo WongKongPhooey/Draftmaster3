@@ -214,6 +214,36 @@ public class Ticker : MonoBehaviour
 				entrantList.Add(car);
 				i++;
 			}
+			for(int d=0;d<50;d++){
+				//Initiate ticker objects for DNF cars
+				if(!PlayerPrefs.HasKey("DNFPosition" + d + "")){
+					continue;
+				}
+				
+				GameObject tickerInst = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+				tickerInst.transform.SetParent(tickerObj, false);
+				
+				int displayNumber = PlayerPrefs.GetInt("DNFPosition" + d + "");
+				
+				tickerInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = (d+1).ToString();
+				tickerInst.transform.GetChild(1).GetComponent<Image>().overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
+				//tickerFallbackNums[d] = tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				//tickerNames[d] = tickerInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+				tickerInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>().text = "+ 2 LAPS";
+				
+				//Show the correct number icon, or a fallback number
+				/*if(Resources.Load<Sprite>("cup20num" + displayNumber) != null){
+					tickerNums[d].overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
+					tickerNums[d].color = new Color32(255,255,225,255);
+					tickerFallbackNums[d].text = "";
+				} else {
+					tickerNums[d].color = new Color32(255,255,225,0);
+					tickerFallbackNums[d].text = carNumber[i];
+				}
+			
+				tickerNames[d].text = DriverNames.getName(seriesPrefix,displayNumber);*/
+			}
+			
 			carsTagged = true;
 			
 			//Manually add the player
@@ -457,12 +487,16 @@ public class Ticker : MonoBehaviour
 			}
 		}
 		
+		//Count backwards from the max field size
+		//This way the index moves with each restart
+		int DNFPosition = PlayerPrefs.GetInt("FieldSize");
+		
 		for(int k=0;k<entrantList.Count;k++){
 			//Wrecked cars restart at the back
 			int carNum = int.Parse(carNumber[k]);
 			if(((RaceControl.isWrecking[carNum]==true)||
 			  (RaceControl.hasWrecked[carNum]==true))&&
-			  (RaceControl.wreckDamage[carNum] < 50f)){
+			  (RaceControl.wreckDamage[carNum] < 10f)){
 				//Debug.Log("Car #" + carNumber[k] + " pits and restarts P" + restartPosition);
 				if(entrantList[k].name == playerCar.name){
 					//Debug.Log("PLAYER WAS DAMAGED");
@@ -471,8 +505,11 @@ public class Ticker : MonoBehaviour
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[k]));
 				restartPosition++;
 			} else {
-				if(RaceControl.wreckDamage[carNum] >= 50f){
-					Debug.Log(entrantList[k].name + " has retired.  (" + RaceControl.wreckDamage[carNum] + " damage)");
+				if((RaceControl.wreckDamage[carNum] >= 10f)||((RaceControl.hasBlownEngine[carNum]==true))){
+					Debug.Log(entrantList[k].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
+					PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
+					PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", 1);
+					DNFPosition--;
 				}
 			}
 			//..any other cars do not restart

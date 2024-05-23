@@ -753,22 +753,22 @@ public class AIMovement : MonoBehaviour
 				updateMovement();
 			}
 
+			//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
+			raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //0. Forward centered
+			raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, draftAirCushion); //1. Backward centered
+			raycastBatch[2] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right * -1, 1f); //2. Car Left Of FQ
+			raycastBatch[3] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right * -1, 1f); //3. Car Left Of RQ
+			raycastBatch[4] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right, 1f); //2. Car Right Of FQ
+			raycastBatch[5] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right, 1f); //3. Car Right Of RQ
+			
+			raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
+
 			//wreckRigidbody.velocity = Vector3.zero;
 			//wreckRigidbody.angularVelocity = Vector3.zero;
 		} else {
 			//Pacing speed
 			AISpeed = 202;
 		}
-		
-		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
-		raycastBatch[0] = new RaycastCommand(pos, transform.forward, maxDraftDistance); //0. Forward centered
-		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, draftAirCushion); //1. Backward centered
-		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right * -1, 1f); //2. Car Left Of FQ
-		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right * -1, 1f); //3. Car Left Of RQ
-		raycastBatch[4] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right, 1f); //2. Car Right Of FQ
-		raycastBatch[5] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right, 1f); //3. Car Right Of RQ
-		
-		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
 	}
 
 	void speedLogic(){
@@ -1074,7 +1074,7 @@ public class AIMovement : MonoBehaviour
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
 				coolOffSpace = 1.4f;
-				coolOffInv = 5f;
+				coolOffInv = 10f;
 				tandemDrafting = true;
 				break;
 		}
