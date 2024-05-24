@@ -42,6 +42,13 @@ public class TrackUI : MonoBehaviour
 			}
 		}
 		
+		//Reset any left over prefs from previous races
+		for(int i=0;i<99;i++){
+			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
+			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
+			PlayerPrefs.DeleteKey("DNFLap" + i + "");
+		}
+		
 		championshipSelector = GameObject.Find("ChampionshipSelector");
 		championshipSelector.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = "All " + seriesLength + " Rounds";
 		championshipSelector.transform.GetChild(1).GetComponent<TMPro.TMP_Text>().text = "x" + seriesLength + " race rewards received at the end of the season.";

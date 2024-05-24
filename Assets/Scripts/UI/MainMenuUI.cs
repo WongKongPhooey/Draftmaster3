@@ -171,6 +171,9 @@ public class MainMenuUI : MonoBehaviour {
 				PlayerPrefs.DeleteKey("RaceAltPaint" + i);
 				//Debug.Log("Reset Alt Paints");
 			}
+			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
+			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
+			PlayerPrefs.DeleteKey("DNFLap" + i + "");
 		}
 		PlayerPrefs.DeleteKey("RaceAltPaintsChosen");
 		

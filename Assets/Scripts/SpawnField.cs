@@ -464,7 +464,7 @@ public class SpawnField : MonoBehaviour {
 				}
 
 				//Cars Behind
-				for (int i = 1; i < (gridRows - playerRow); i++) {
+				for (int i = 1; i <= (gridRows - playerRow); i++) {
 					for(int j=1;j<=gridLanes;j++){
 						if(fastCars.Count > 0){
 							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
@@ -494,6 +494,7 @@ public class SpawnField : MonoBehaviour {
 						}
 					}
 				}
+				Debug.Log("Unplaced cars: Fast " + fastCars.Count + ", Mid " + midCars.Count + ", Slow " + slowCars.Count);
 			}
 		}
 		Ticker.updateTicker();

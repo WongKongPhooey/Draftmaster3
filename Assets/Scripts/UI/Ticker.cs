@@ -214,6 +214,7 @@ public class Ticker : MonoBehaviour
 				entrantList.Add(car);
 				i++;
 			}
+			
 			for(int d=0;d<50;d++){
 				//Initiate ticker objects for DNF cars
 				if(!PlayerPrefs.HasKey("DNFPosition" + d + "")){
@@ -224,24 +225,20 @@ public class Ticker : MonoBehaviour
 				tickerInst.transform.SetParent(tickerObj, false);
 				
 				int displayNumber = PlayerPrefs.GetInt("DNFPosition" + d + "");
-				
-				tickerInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = (d+1).ToString();
-				tickerInst.transform.GetChild(1).GetComponent<Image>().overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
-				//tickerFallbackNums[d] = tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-				//tickerNames[d] = tickerInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
-				tickerInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>().text = "+ 2 LAPS";
-				
+				tickerInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = d.ToString();
+
 				//Show the correct number icon, or a fallback number
-				/*if(Resources.Load<Sprite>("cup20num" + displayNumber) != null){
-					tickerNums[d].overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
-					tickerNums[d].color = new Color32(255,255,225,255);
-					tickerFallbackNums[d].text = "";
+				if(Resources.Load<Sprite>("cup20num" + displayNumber) != null){
+					tickerInst.transform.GetChild(1).GetComponent<Image>().overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
+					tickerInst.transform.GetChild(1).GetComponent<Image>().color = new Color32(255,255,225,255);
+					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = "";
 				} else {
-					tickerNums[d].color = new Color32(255,255,225,0);
-					tickerFallbackNums[d].text = carNumber[i];
+					tickerInst.transform.GetChild(1).GetComponent<Image>().color = new Color32(255,255,225,0);
+					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = carNumber[i];
 				}
 			
-				tickerNames[d].text = DriverNames.getName(seriesPrefix,displayNumber);*/
+				tickerInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>().text = DriverNames.getName(seriesPrefix,displayNumber);
+				tickerInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>().text = "+ 2 LAPS";
 			}
 			
 			carsTagged = true;
