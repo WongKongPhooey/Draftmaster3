@@ -162,8 +162,6 @@ public class SpawnField : MonoBehaviour {
 			//Debug.Log("Set Field From Caution");
 			int fieldIndex = 0;
 			
-			//Debug.Log("Player starting row: " + playerRow);
-			
 			//Set field after caution
 			//Cars In Front
 			for (int i = playerRow - 1; i >= 1; i--) {
@@ -257,7 +255,7 @@ public class SpawnField : MonoBehaviour {
 			}
 
 			//Cars Behind
-			for (int i = 1; i < (gridRows - playerRow); i++) {
+			for (int i = 1; i <= (gridRows - playerRow); i++) {
 				//Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
 					//Skip whenever the player number appears in the field
@@ -494,7 +492,7 @@ public class SpawnField : MonoBehaviour {
 						}
 					}
 				}
-				Debug.Log("Unplaced cars: Fast " + fastCars.Count + ", Mid " + midCars.Count + ", Slow " + slowCars.Count);
+				//Debug.Log("Unplaced cars: Fast " + fastCars.Count + ", Mid " + midCars.Count + ", Slow " + slowCars.Count);
 			}
 		}
 		Ticker.updateTicker();
