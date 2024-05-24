@@ -221,7 +221,12 @@ public class SpawnField : MonoBehaviour {
 					}
 				}
 				if(j != startLane){
-					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+					if(PlayerPrefs.HasKey("CautionPosition" + fieldIndex + "")){
+						carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+					} else {
+						//We've hit the end, stop spawning
+						break;
+					}
 					carNum = carNumInt.ToString();
 					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
 					//If car already exists in field, loop..
@@ -258,15 +263,12 @@ public class SpawnField : MonoBehaviour {
 			for (int i = 1; i <= (gridRows - playerRow); i++) {
 				//Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
-					//Skip whenever the player number appears in the field
-					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
-						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
-							fieldIndex++;
-						} else {
-							break;
-						}
+					if(PlayerPrefs.HasKey("CautionPosition" + fieldIndex + "")){
+						carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
+					} else {
+						//We've hit the end, stop spawning
+						break;
 					}
-					carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
 					carNum = carNumInt.ToString();
 					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
 					//If car already exists in field, loop..
@@ -289,7 +291,7 @@ public class SpawnField : MonoBehaviour {
 					if((spawnedCars.Contains(carNumInt) == true)
 						&&(carTex != null)){
 						//Exit loop
-						continue;
+						break;
 					}
 					AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 					spawnedCars.Add(carNumInt);
@@ -309,16 +311,18 @@ public class SpawnField : MonoBehaviour {
 				//If the Current Index is the Live Moments Event
 				string customFieldOrderStr = "";
 				if(PlayerPrefs.GetString("CurrentSeriesIndex") == "49EVENT"){
-					Debug.Log("Live Moment Custom Field Set");
+					//Debug.Log("Live Moment Custom Field Set");
 					customFieldOrderStr = PlayerPrefs.GetString("LiveMomentCustomField");
 				} else {
-					Debug.Log("Custom Field Order Set" + PlayerPrefs.GetString("CurrentSeriesIndex"));
+					//Debug.Log("Custom Field Order Set" + PlayerPrefs.GetString("CurrentSeriesIndex"));
 					customFieldOrderStr = PlayerPrefs.GetString("CustomFieldOrder");
+					//Debug.Log("Custom Field Order: " + customFieldOrderStr);
 				}
 				
 				string[] fieldOrderArr = customFieldOrderStr.Split(',');
 				customFieldOrder.Clear();
 				foreach(string pos in fieldOrderArr){
+					Debug.Log("Field Added: " + pos);
 					customFieldOrder.Add(pos);
 				}
 				//Debug.Log("Field Size: " + customFieldOrder.Count);
@@ -379,6 +383,7 @@ public class SpawnField : MonoBehaviour {
 						if(int.TryParse((string)customFieldOrder[fieldInd],out int parsable)){
 							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 							carNum = customFieldOrder[fieldInd].ToString();
+							Debug.Log("Spawn car #" + carNum);
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 							carsTotal++;

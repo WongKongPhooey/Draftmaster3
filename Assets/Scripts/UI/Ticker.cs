@@ -215,17 +215,27 @@ public class Ticker : MonoBehaviour
 				i++;
 			}
 			
-			for(int d=0;d<50;d++){
+			//Manually add the player
+			entrantList.Add(playerCar);
+			GameObject playerTick = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			playerTick.transform.SetParent(tickerObj, false);
+			
+			for(int d=0;d<99;d++){
 				//Initiate ticker objects for DNF cars
 				if(!PlayerPrefs.HasKey("DNFPosition" + d + "")){
 					continue;
 				}
 				
+				Debug.Log("DNF'd Car " + d);
+				
 				GameObject tickerInst = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				tickerInst.transform.SetParent(tickerObj, false);
 				
 				int displayNumber = PlayerPrefs.GetInt("DNFPosition" + d + "");
+				
 				tickerInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = d.ToString();
+
+				Debug.Log("DNF'd Car #" + displayNumber + "");
 
 				//Show the correct number icon, or a fallback number
 				if(Resources.Load<Sprite>("cup20num" + displayNumber) != null){
@@ -234,19 +244,13 @@ public class Ticker : MonoBehaviour
 					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = "";
 				} else {
 					tickerInst.transform.GetChild(1).GetComponent<Image>().color = new Color32(255,255,225,0);
-					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = carNumber[i];
+					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = displayNumber.ToString();
 				}
-			
 				tickerInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>().text = DriverNames.getName(seriesPrefix,displayNumber);
-				tickerInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>().text = "+ 2 LAPS";
+				tickerInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>().text = "DNF - LAP " + PlayerPrefs.GetInt("DNFLap" + d + "") + "";
 			}
 			
 			carsTagged = true;
-			
-			//Manually add the player
-			entrantList.Add(playerCar);
-			GameObject playerTick = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-			playerTick.transform.SetParent(tickerObj, false);
 			updateTicker();
 		}
 	}
@@ -406,6 +410,11 @@ public class Ticker : MonoBehaviour
 		
 		//Lock in any alt paints for the restart
 		PlayerPrefs.SetInt("RaceAltPaintsChosen",1);
+		
+		//Reset any previous saved caution data
+		for(int i=0;i<99;i++){
+			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
+		}
 		
 		entrantList.Clear();
 		

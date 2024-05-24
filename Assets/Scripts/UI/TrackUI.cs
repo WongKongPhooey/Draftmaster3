@@ -45,6 +45,7 @@ public class TrackUI : MonoBehaviour
 		//Reset any left over prefs from previous races
 		for(int i=0;i<99;i++){
 			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
+			PlayerPrefs.DeleteKey("FinishPosition" + i + "");
 			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
 			PlayerPrefs.DeleteKey("DNFLap" + i + "");
 		}
@@ -66,7 +67,7 @@ public class TrackUI : MonoBehaviour
 			Debug.Log("There's an active championship here.. " + currentSeriesIndex);
 			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 			PlayerPrefs.SetString("carSeries", seriesPrefix);
-			Debug.Log("SeriesChampionship" + currentSeriesIndex + "Carset loaded as " + seriesPrefix);
+			//Debug.Log("SeriesChampionship" + currentSeriesIndex + "Carset loaded as " + seriesPrefix);
 			
 			//Found a championship round set
 			championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
@@ -77,7 +78,7 @@ public class TrackUI : MonoBehaviour
 				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
 				PlayerPrefs.SetString("RaceType","Single");
 			} else {
-				Debug.Log("Championship - Round " + championshipRound + "/" + seriesLength);
+				//Debug.Log("Championship - Round " + championshipRound + "/" + seriesLength);
 				loadTrack(trackList, championshipRound);
 				PlayerPrefs.SetString("CurrentTrack","" + championshipRound);
 			}

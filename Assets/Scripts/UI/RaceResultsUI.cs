@@ -179,18 +179,23 @@ public class RaceResultsUI : MonoBehaviour
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
 		
-		int fieldSize = PlayerPrefs.GetInt("FieldSize");
-		//Debug.Log("Field Size: " + fieldSize);
-		for(int i=0;i<fieldSize;i++){
+		for(int i=0;i<99;i++){
 			
 			int carNum = 999;
+			int carLap = 999;
 			float carDist = 999.999f;
-			if(!PlayerPrefs.HasKey("FinishPosition" + i + "")){
-				break;
-			} else {
+			if(PlayerPrefs.HasKey("FinishPosition" + i + "")){
 				carNum = PlayerPrefs.GetInt("FinishPosition" + i + "");
 				carDist = PlayerPrefs.GetInt("FinishTime" + i + "");
-				//Debug.Log("Pos: " + i + " Num: " + carNum);
+				Debug.Log("Pos: " + i + " Num: " + carNum);
+			} else {
+				if(PlayerPrefs.HasKey("DNFPosition" + i + "")){
+					carNum = PlayerPrefs.GetInt("DNFPosition" + i + "");
+					carLap = PlayerPrefs.GetInt("DNFLap" + i + "");
+					//Debug.Log("Pos: " + i + " Num: " + carNum);
+				} else {
+					//break;
+				}
 			}
 			
 			GameObject resultInst = Instantiate(resultRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -230,8 +235,12 @@ public class RaceResultsUI : MonoBehaviour
 			if(i==0){
 				resultTime.text = "";
 			} else {
-				if((carDist > 32000f)||((i == (fieldSize - 1))&&(fieldSize > 16))){
-					resultTime.text = "+1 LAP";
+				if(carDist > 32000f){
+					if(carLap != 999){
+						resultTime.text = "+" + carLap + " LAPS";
+					} else {
+						resultTime.text = "+1 LAP";
+					}
 				} else {
 					resultTime.text = "+" + (carDist / 1000f).ToString("f3");
 				}
