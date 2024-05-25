@@ -189,12 +189,12 @@ public class RaceResultsUI : MonoBehaviour
 				carDist = PlayerPrefs.GetInt("FinishTime" + i + "");
 				Debug.Log("Pos: " + i + " Num: " + carNum);
 			} else {
-				if(PlayerPrefs.HasKey("DNFPosition" + i + "")){
-					carNum = PlayerPrefs.GetInt("DNFPosition" + i + "");
-					carLap = PlayerPrefs.GetInt("DNFLap" + i + "");
-					//Debug.Log("Pos: " + i + " Num: " + carNum);
+				if(PlayerPrefs.HasKey("DNFPosition" + (i+1) + "")){
+					carNum = PlayerPrefs.GetInt("DNFPosition" + (i+1) + "");
+					carLap = PlayerPrefs.GetInt("DNFLap" + (i+1) + "");
+					Debug.Log("DNF Pos: " + i + " Num: " + carNum);
 				} else {
-					//break;
+					continue;
 				}
 			}
 			

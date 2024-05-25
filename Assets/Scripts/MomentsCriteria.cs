@@ -50,6 +50,7 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("WinningMargin","0.02");
 				break;
 				case "Darlington03":
+					momentsCriteria.Add("CrossTheLine","Yes");
 					momentsCriteria.Add("FinishPositionLowerThan","1");
 					momentsCriteria.Add("CarWrecks","97");
 					momentsCriteria.Add("PlayerWrecks","Yes");
@@ -123,6 +124,9 @@ public class MomentsCriteria : MonoBehaviour
 			case "WreckEndLocationLessThanX":
 				return "Stop Below The Apron";
 				break;
+			case "CrossTheLine":
+				return "Cross The Finish Line";
+				break;
 			case "FinishPositionLowerThan":
 				if(criteriaValue == "1"){
 					return "Win The Race";
@@ -181,6 +185,7 @@ public class MomentsCriteria : MonoBehaviour
 				complete = checkCriteriaCompletion(criteriaSearchTerm, criteria.Value, criteriaCheckA ,criteriaCheckB, criteriaCheckC);
 			}
 		}
+		//Debug.Log("Checked criteria " + criteriaSearchTerm + " - " + complete);
 		return complete;
 	}
 	
@@ -193,11 +198,11 @@ public class MomentsCriteria : MonoBehaviour
 				momentComplete = true;
 				challengeWon.SetActive(true);
 				PlayerPrefs.SetInt("MomentComplete",1);
-				//Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
+				Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
 			} else {
 				momentComplete = false;
 				challengeLost.SetActive(true);
-				//Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
+				Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
 				TMPro.TMP_Text challengeLostMessage = GameObject.Find("ChallengeEndMessage").GetComponent<TMPro.TMP_Text>();
 				challengeLostMessage.text = "Almost.. (" + completeCriteria + "/" + totalCriteria + ")";
 			}
@@ -233,6 +238,10 @@ public class MomentsCriteria : MonoBehaviour
 				if(int.Parse(criteriaValue) <= int.Parse(criteriaCheckA)){
 					complete = true;
 				}
+				break;
+			case "CrossTheLine":
+				//If this check ever fires, it must be true
+				complete = true;
 				break;
 			case "FinishPositionLowerThan":
 				//If finish position (A) is lower, true
@@ -339,7 +348,7 @@ public class MomentsCriteria : MonoBehaviour
 		RawImage criteriaTick = criteriaObj.transform.GetChild(1).GetComponent<RawImage>();
 		criteriaTick.texture = Resources.Load<Texture2D>("Icons/tick");
 		completeCriteria++;
-		//Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete + ". Total: " + completeCriteria);
+		Debug.Log("Criteria Complete: " + criteriaSearchTerm + " - " + complete + ". Total: " + completeCriteria);
 	}
 
     // Update is called once per frame

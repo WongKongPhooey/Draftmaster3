@@ -202,11 +202,11 @@ public class DriverNames : MonoBehaviour {
 			allRarity.Add("cup01", cup2001Rarity);
 			allTypes.Add("cup01", cup2001Types);
 			
-			allNames.Add("cup03", cup2001Names);
-			allTeams.Add("cup03", cup2001Teams);
-			allManufacturer.Add("cup03", cup2001Manufacturer);
-			allRarity.Add("cup03", cup2001Rarity);
-			allTypes.Add("cup03", cup2001Types);
+			allNames.Add("cup03", cup2003Names);
+			allTeams.Add("cup03", cup2003Teams);
+			allManufacturer.Add("cup03", cup2003Manufacturer);
+			allRarity.Add("cup03", cup2003Rarity);
+			allTypes.Add("cup03", cup2003Types);
 
 			allNames.Add("cup79", cup1979Names);
 			allTeams.Add("cup79", cup1979Teams);
@@ -238,6 +238,10 @@ public class DriverNames : MonoBehaviour {
 			numXPos.Add("irl23", -34);
 			numXScale.Add("irl23", 0.45f);
 			numXRotation.Add("irl23", 270);
+			
+			numXPos.Add("irl24", -34);
+			numXScale.Add("irl24", 0.45f);
+			numXRotation.Add("irl24", 270);
 		}
 		populateDriverPool();
 		populateManufacturerPool();

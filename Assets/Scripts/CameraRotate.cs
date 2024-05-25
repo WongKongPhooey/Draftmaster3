@@ -420,7 +420,7 @@ public class CameraRotate : MonoBehaviour {
 					}
 					if((lapTime < fastestRaceLap)&&(lap > 1)&&(lapTime != 0)){
 						fastestRaceLap = lapTime;
-						Debug.Log("New Fastest Lap: " + fastestRaceLap);
+						//Debug.Log("New Fastest Lap: " + fastestRaceLap);
 					}
 				}
 			}
@@ -614,6 +614,9 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			lap--;
+			if(momentChecks == true){
+				MomentsCriteria.updateCriteriaCompletion("CrossTheLine",true);
+			}
 			finishLine.transform.position = new Vector3(finishLine.transform.position.x,finishLine.transform.position.y,thePlayer.transform.position.z + 1f);
 			finishLine.GetComponent<Renderer>().enabled = true;
 		}
@@ -637,7 +640,6 @@ public class CameraRotate : MonoBehaviour {
 		PlayerPrefs.SetInt("ExpAdded",0);
 		
 		if(momentChecks == true){
-			MomentsCriteria.checkMomentsCriteria("CarWrecks","");
 			MomentsCriteria.checkMomentsCriteria("CarAvoidsWreck","");
 			MomentsCriteria.checkMomentsCriteria("FinishPositionLowerThan",Ticker.position.ToString());
 			MomentsCriteria.checkEndCriteria();

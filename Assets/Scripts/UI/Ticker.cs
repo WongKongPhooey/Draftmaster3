@@ -496,6 +496,7 @@ public class Ticker : MonoBehaviour
 		//Count backwards from the max field size
 		//This way the index moves with each restart
 		int DNFPosition = PlayerPrefs.GetInt("FieldSize");
+		int cautionLap = CameraRotate.lap;
 		
 		for(int k=0;k<entrantList.Count;k++){
 			//Wrecked cars restart at the back
@@ -514,7 +515,7 @@ public class Ticker : MonoBehaviour
 				if((RaceControl.wreckDamage[carNum] >= 10f)||((RaceControl.hasBlownEngine[carNum]==true))){
 					Debug.Log(entrantList[k].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
 					PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
-					PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", 1);
+					PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
 					DNFPosition--;
 				}
 			}
