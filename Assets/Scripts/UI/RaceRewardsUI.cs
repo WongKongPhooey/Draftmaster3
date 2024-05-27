@@ -137,25 +137,62 @@ public class RaceRewardsUI : MonoBehaviour
 		moneyTitle.GetComponent<UIAnimate>().scaleIn();
 		
 		if(raceType != "Event"){
-			//e.g. AI Level 14 = 14 / 5  = 2.x -> 2 + 3 = 5
-			float maxGearsFloat = Mathf.Floor(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5);
+			//e.g. AI Level 14 = 14 / 3  = 4.x -> 4 + 3 = 7
+			//e.g. AI Level 5 = 5 / 3 = 1.x -> 1 + 3 = 4
+			float maxGearsFloat = Mathf.Floor(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/3);
 			maxRaceGears = (int)maxGearsFloat + 3;
 			//If low strength AI Race (<+3)
 			if(maxRaceGears <= 2){
 				//Top 3 win gears
 				maxRaceGears = 3;
 			}
-			if(maxRaceGears >= 6){
-				//Max for a win is 6
-				maxRaceGears = 6;
+			if(maxRaceGears >= 8){
+				//Max for a win is 10
+				maxRaceGears = 8;
 			}
 			
-			//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
-			rewardGears = (int)Mathf.Round(maxRaceGears - Mathf.Ceil(finishPos/2)) + 1;
-			if(rewardGears > 0){
-				gears += rewardGears * rewardMultiplier;
+			//Longer seasons are more generous with rewards
+			if((raceType == "Championship")&&(rewardMultiplier >= 8)){
+				//20 race series, 150% difficulty
+				//e.g. 1st -> 1 - 1 + 1 = 8
+				//e.g. 10th -> 8 - 3 + 1 = 6
+				//e.g. 24th -> 8 - 6 + 1 = 3
+				//e.g. 32nd -> 8 - 8 + 1 = 1
+				//e.g. 33rd -> 8 - 9 + 1 = 0
+				
+				//20 race series, 50% difficulty
+				//e.g. 1st -> 4 - 1 + 1 = 4
+				//e.g. 10th -> 4 - 3 + 1 = 2
+				//e.g. 16th -> 4 - 4 + 1 = 1
+				//e.g. 17th -> 4 - 5 + 1 = 0
+				rewardGears = (int)Mathf.Round(maxRaceGears - Mathf.Ceil(finishPos/4)) + 1;
+				int minimumGears = (int)Mathf.Ceil(rewardMultiplier/2);
+				
+				if(rewardGears >= 1){
+					//20 race series, 150% difficulty
+					//e.g. 1st -> 8 * 20 = 160
+					//e.g. 10th -> 6 * 20 = 120
+					//e.g. 24th -> 3 * 20 = 60
+					//e.g. 32nd -> 1 * 20 = 20
+					
+					//20 race series, 50% difficulty
+					//e.g. 1st -> 4 * 20 = 80
+					//e.g. 10th -> 2 * 20 = 40
+					//e.g. 16th -> 1 * 20 = 20
+					gears += rewardGears * rewardMultiplier;
+				} else {
+					//e.g. 40th -> 10
+					rewardGears = minimumGears;
+				}
 			} else {
-				rewardGears = 0;
+				//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
+				rewardGears = (int)Mathf.Round(maxRaceGears - Mathf.Ceil(finishPos/4)) + 1;
+				
+				if(rewardGears > 0){
+					gears += rewardGears * rewardMultiplier;
+				} else {
+					rewardGears = 0;
+				}
 			}
 		}
 		PlayerPrefs.SetInt("Gears",gears);
@@ -184,15 +221,11 @@ public class RaceRewardsUI : MonoBehaviour
 				}
 				break;
 			case "Championship":
-				//If top 10 finish..
-				if(finishPos < 15){
-					//e.g. 10 race season / finished 5th = 2x
-					//e.g. 3 race season / finished 10th = 1x
-					//e.g. 20 race season / finished 10th = 2x
-					float rewardRatio = rewardMultiplier / finishPos;
-					if(rewardRatio == 0){
-						rewardRatio = 1;
-					}
+				//e.g. 10 race season / finished 5th = 2x
+				//e.g. 3 race season / finished 10th = 1x
+				//e.g. 20 race season / finished 10th = 2x
+				float rewardRatio = (rewardMultiplier * 1.5f) / finishPos;
+				if(rewardRatio >= 1){
 					rewardMultiplier = Mathf.CeilToInt(rewardRatio);
 					Debug.Log("New reward multiplier: " + rewardMultiplier);
 					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);

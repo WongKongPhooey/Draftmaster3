@@ -503,7 +503,7 @@ public class Ticker : MonoBehaviour
 			int carNum = int.Parse(carNumber[k]);
 			if(((RaceControl.isWrecking[carNum]==true)||
 			  (RaceControl.hasWrecked[carNum]==true))&&
-			  (RaceControl.wreckDamage[carNum] < 10f)){
+			  (RaceControl.wreckDamage[carNum] < 50f)){
 				//Debug.Log("Car #" + carNumber[k] + " pits and restarts P" + restartPosition);
 				if(entrantList[k].name == playerCar.name){
 					//Debug.Log("PLAYER WAS DAMAGED");
@@ -512,7 +512,7 @@ public class Ticker : MonoBehaviour
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[k]));
 				restartPosition++;
 			} else {
-				if((RaceControl.wreckDamage[carNum] >= 10f)||((RaceControl.hasBlownEngine[carNum]==true))){
+				if((RaceControl.wreckDamage[carNum] >= 50f)||((RaceControl.hasBlownEngine[carNum]==true))){
 					Debug.Log(entrantList[k].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
 					PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
 					PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);

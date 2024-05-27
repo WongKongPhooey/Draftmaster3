@@ -105,7 +105,6 @@ public class SpawnField : MonoBehaviour {
 		carNumber = PlayerPrefs.GetString("carTexture");			
 		string splitAfter = "livery";
 		carNumber = carNumber.Substring(carNumber.IndexOf(splitAfter) + splitAfter.Length);
-		//Debug.Log("Player car num: " + carNumber);
 		fastCars.Remove(carNumber);
 		midCars.Remove(carNumber);
 		slowCars.Remove(carNumber);
@@ -180,7 +179,8 @@ public class SpawnField : MonoBehaviour {
 					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
 					//If car already exists in field, loop..
 					//If car has no default paint texture, loop..
-					while((spawnedCars.Contains(carNumInt) == true)
+					while(((spawnedCars.Contains(carNumInt) == true)||
+						(carNumInt == int.Parse(carNumber)))
 						&&(carTex != null)){
 						//As long as this index has a car saved
 						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
@@ -231,7 +231,8 @@ public class SpawnField : MonoBehaviour {
 					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
 					//If car already exists in field, loop..
 					//If car has no default paint texture, loop..
-					while((spawnedCars.Contains(carNumInt) == true)
+					while(((spawnedCars.Contains(carNumInt) == true)||
+						(carNumInt == int.Parse(carNumber)))
 						&&(carTex != null)){
 						//As long as this index has a car saved
 						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
@@ -263,6 +264,14 @@ public class SpawnField : MonoBehaviour {
 			for (int i = 1; i <= (gridRows - playerRow); i++) {
 				//Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
+					//Skip whenever the player number appears in the field
+					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
+						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
+							fieldIndex++;
+						} else {
+							break;
+						}
+					}
 					if(PlayerPrefs.HasKey("CautionPosition" + fieldIndex + "")){
 						carNumInt = PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "");
 					} else {
@@ -273,7 +282,8 @@ public class SpawnField : MonoBehaviour {
 					Texture2D carTex = Resources.Load<Texture2D>(seriesPrefix + "num" + carNumInt);
 					//If car already exists in field, loop..
 					//If car has no default paint texture, loop..
-					while((spawnedCars.Contains(carNumInt) == true)
+					while(((spawnedCars.Contains(carNumInt) == true)||
+						(carNumInt == int.Parse(carNumber)))
 						&&(carTex != null)){	
 						//As long as this index has a car saved
 						if(PlayerPrefs.HasKey("CautionPosition" + (fieldIndex+1) + "")){
@@ -287,6 +297,7 @@ public class SpawnField : MonoBehaviour {
 							break;
 						}
 					}
+					//Debug.Log("Car in pos " + fieldIndex + " set as #" + carNum);
 					//We never found a suitable car to spawn, and ran out of cars to check
 					if((spawnedCars.Contains(carNumInt) == true)
 						&&(carTex != null)){

@@ -422,8 +422,13 @@ public class Movement : MonoBehaviour {
 
 		if(officialSeries == true){
 			if(DriverNames.getType(seriesPrefix,carNum) == "Strategist"){
-				if(seriesPrefix == "irl23"){
-					carClass+=4;
+				switch(seriesPrefix){
+					case "irl23":
+					case "irl24":
+						carClass+=4;
+						break;
+					default:
+						break;
 				}
 				switch(carClass){
 					case 1:
@@ -476,21 +481,39 @@ public class Movement : MonoBehaviour {
 						laneChangeSpeed = 0.06f;
 						laneChangeBackout = 8;
 						break;
+					case 11:
+						laneChangeDuration = 16;
+						laneChangeSpeed = 0.075f;
+						laneChangeBackout = 6;
+						break;
+					case 12:
+					case 13:
+					case 14:
+					case 15:
+					case 16:
+						laneChangeDuration = 12;
+						laneChangeSpeed = 0.1f;
+						laneChangeBackout = 5;
+						break;
 					default:
 						laneChangeDuration = 80;
 						laneChangeSpeed = 0.015f;
 						laneChangeBackout = 32;
 						break;
-				}
+				}	
 			} else {
-				if(seriesPrefix == "irl23"){
-					laneChangeDuration = 48;
-					laneChangeSpeed = 0.025f;
-					laneChangeBackout = 16;
-				} else {
-					laneChangeDuration = 80;
-					laneChangeSpeed = 0.015f;
-					laneChangeBackout = 32;
+				switch(seriesPrefix){
+					case "irl23":
+					case "irl24":
+						laneChangeDuration = 48;
+						laneChangeSpeed = 0.025f;
+						laneChangeBackout = 16;
+						break;
+					default:
+						laneChangeDuration = 80;
+						laneChangeSpeed = 0.015f;
+						laneChangeBackout = 32;
+						break;
 				}
 			}
 		} else {

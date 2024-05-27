@@ -836,7 +836,7 @@ public class AIMovement : MonoBehaviour
 
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				//Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
+				Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
 			}
 			#endif
 
@@ -1020,6 +1020,7 @@ public class AIMovement : MonoBehaviour
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
+			case "irl24":
 			case "indy":
 			case "indycar":
 			case "openwheel":
@@ -1085,8 +1086,13 @@ public class AIMovement : MonoBehaviour
 		//If strategist, or if override has been applied (avoiding wrecks etc.)
 		if((DriverNames.getType(seriesPrefix,carNum) == "Strategist")||(overrideValue != 0)){
 			laneChangeSpeedIndex = AICarClass;
-			if(seriesPrefix == "irl23"){
-				laneChangeSpeedIndex+=4;
+			switch(seriesPrefix){
+				case "irl23":
+				case "irl24":
+					laneChangeSpeedIndex+=4;
+					break;
+				default:
+					break;
 			}
 			if(overrideValue != 0){
 				laneChangeSpeedIndex+=overrideValue;
@@ -1164,14 +1170,18 @@ public class AIMovement : MonoBehaviour
 					break;
 			}
 		} else {
-			if(seriesPrefix == "irl23"){
-				laneChangeDuration = 48;
-				laneChangeSpeed = 0.025f;
-				laneChangeBackout = 16;
-			} else {
-				laneChangeDuration = 80;
-				laneChangeSpeed = 0.015f;
-				laneChangeBackout = 32;
+			switch(seriesPrefix){
+				case "irl23":
+				case "irl24":
+					laneChangeDuration = 48;
+					laneChangeSpeed = 0.025f;
+					laneChangeBackout = 16;
+					break;
+				default:
+					laneChangeDuration = 80;
+					laneChangeSpeed = 0.015f;
+					laneChangeBackout = 32;
+					break;
 			}
 		}
 	}
