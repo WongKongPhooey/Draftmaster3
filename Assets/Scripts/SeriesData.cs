@@ -743,8 +743,8 @@ public class SeriesData : MonoBehaviour{
 		offlineSeriesImage[9,5] = "cup24livery84";
 		offlineSeriesImage[9,6] = "cup24livery8";
 		offlineSeriesImage[9,7] = "cup24livery12";
-		offlineSeriesImage[9,8] = "cup24livery10";
-		offlineSeriesImage[9,9] = "cup24livery9";
+		offlineSeriesImage[9,8] = "irl24livery10";
+		offlineSeriesImage[9,9] = "irl24livery9";
 		
 		offlineAILevel[9,0] = 5;
 		offlineAILevel[9,1] = 5;

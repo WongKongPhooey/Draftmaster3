@@ -240,6 +240,9 @@ public class TrackData : MonoBehaviour
 			case "28":
 				trackImageName = "TriOval";
 				break;
+			case "29":
+				trackImageName = "TriOval";
+				break;
 			case "30":
 				trackImageName = "TinyOval";
 				break;
@@ -899,6 +902,28 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("SpeedOffset",56 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
 		PlayerPrefs.SetString("TrackType","Short");
+	}
+	
+	public static void Fountain(){
+		trackCodeName = "Fountain";
+		PlayerPrefs.SetInt("RaceLaps",7);
+		PlayerPrefs.SetInt("CircuitLanes",4);
+		PlayerPrefs.SetInt("StraightLength1",1);
+		PlayerPrefs.SetInt("StraightLength2",1);
+		PlayerPrefs.SetInt("StraightLength3",200);
+		PlayerPrefs.SetInt("StraightLength4",10);
+		PlayerPrefs.SetInt("TurnLength1",35);
+		PlayerPrefs.SetInt("TurnLength2",145);
+		PlayerPrefs.SetInt("TurnLength3",145);
+		PlayerPrefs.SetInt("TurnLength4",35);
+		PlayerPrefs.SetInt("TurnAngle1",4);
+		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle3",1);
+		PlayerPrefs.SetInt("TurnAngle4",4);
+		PlayerPrefs.SetInt("StartLine",5);
+		PlayerPrefs.SetInt("SpeedOffset",63 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Mid");
 	}
 
 	public static void TestTrack(){

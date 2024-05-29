@@ -183,15 +183,20 @@ public class RaceResultsUI : MonoBehaviour
 			
 			int carNum = 999;
 			int carLap = 999;
-			float carDist = 999.999f;
+			float carDist;
 			if(PlayerPrefs.HasKey("FinishPosition" + i + "")){
 				carNum = PlayerPrefs.GetInt("FinishPosition" + i + "");
 				carDist = PlayerPrefs.GetInt("FinishTime" + i + "");
-				Debug.Log("Pos: " + i + " Num: " + carNum);
+				Debug.Log("Pos: " + i + " Num: " + carNum + " Dist: " + carDist);
 			} else {
 				if(PlayerPrefs.HasKey("DNFPosition" + (i+1) + "")){
 					carNum = PlayerPrefs.GetInt("DNFPosition" + (i+1) + "");
-					carLap = PlayerPrefs.GetInt("DNFLap" + (i+1) + "");
+					carDist = 99999.99f;
+					carLap = PlayerPrefs.GetInt("RaceLaps") - PlayerPrefs.GetInt("DNFLap" + (i+1) + "");
+					//Error catch
+					if(carLap<=0){
+						carLap = PlayerPrefs.GetInt("RaceLaps");
+					}
 					Debug.Log("DNF Pos: " + i + " Num: " + carNum);
 				} else {
 					continue;
@@ -236,7 +241,7 @@ public class RaceResultsUI : MonoBehaviour
 				resultTime.text = "";
 			} else {
 				if(carDist > 32000f){
-					if(carLap != 999){
+					if((carLap != 999)&&(carLap != 1)){
 						resultTime.text = "+" + carLap + " LAPS";
 					} else {
 						resultTime.text = "+1 LAP";

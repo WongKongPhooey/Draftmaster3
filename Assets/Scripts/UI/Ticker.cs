@@ -192,7 +192,6 @@ public class Ticker : MonoBehaviour
 					} else {
 						cachedCarNumbers[int.Parse(carNumber[i])] = int.Parse(carNumber[i]);
 					}
-					
 					//Cache in an array to avoid calls during runtime
 					cachedCarNames[int.Parse(carNumber[i])] = driverNames[i];
 				} else {
@@ -232,19 +231,23 @@ public class Ticker : MonoBehaviour
 				tickerInst.transform.SetParent(tickerObj, false);
 				
 				int displayNumber = PlayerPrefs.GetInt("DNFPosition" + d + "");
+				int customNumber = displayNumber;
+				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + displayNumber)){
+					customNumber = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + displayNumber);
+				}
 				
 				tickerInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = d.ToString();
 
-				Debug.Log("DNF'd Car #" + displayNumber + "");
+				Debug.Log("DNF'd Car #" + customNumber + "");
 
 				//Show the correct number icon, or a fallback number
-				if(Resources.Load<Sprite>("cup20num" + displayNumber) != null){
-					tickerInst.transform.GetChild(1).GetComponent<Image>().overrideSprite = Resources.Load<Sprite>("cup20num" + displayNumber);
+				if(Resources.Load<Sprite>("cup20num" + customNumber) != null){
+					tickerInst.transform.GetChild(1).GetComponent<Image>().overrideSprite = Resources.Load<Sprite>("cup20num" + customNumber);
 					tickerInst.transform.GetChild(1).GetComponent<Image>().color = new Color32(255,255,225,255);
 					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = "";
 				} else {
 					tickerInst.transform.GetChild(1).GetComponent<Image>().color = new Color32(255,255,225,0);
-					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = displayNumber.ToString();
+					tickerInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = customNumber.ToString();
 				}
 				tickerInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>().text = DriverNames.getName(seriesPrefix,displayNumber);
 				tickerInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>().text = "DNF - LAP " + PlayerPrefs.GetInt("DNFLap" + d + "") + "";
