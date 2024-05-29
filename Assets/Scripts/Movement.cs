@@ -201,6 +201,7 @@ public class Movement : MonoBehaviour {
 	
 	public GameObject pauseMenu;
 	public GameObject challengeLost;
+	public GameObject cautionRestartBtn;
 	public GameObject cautionSummaryMenu;
 	public GameObject cautionSummaryTotalWreckers;
 	public GameObject cautionSummaryDamage;
@@ -289,6 +290,7 @@ public class Movement : MonoBehaviour {
 		HUDRevBarMaskRect = HUDRevBarMask.GetComponent<RectTransform>();
 
 		pauseMenu = GameObject.Find("PauseMenu");
+		cautionRestartBtn = GameObject.Find("CautionRestart");
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		cautionSummaryTotalWreckers = GameObject.Find("CarsInvolved");
 		cautionSummaryDamage = GameObject.Find("WreckDamage");
@@ -912,6 +914,7 @@ public class Movement : MonoBehaviour {
 				engineSmokeParticles.Play();
 				RaceControl.hasBlownEngine[carNum] = true;
 				cautionSummaryTotalWreckers.GetComponent<TMPro.TMP_Text>().text = "Race Over";
+				cautionRestartBtn.SetActive(false);
 			}
 		} else {
 			//Slow down if not in any draft
@@ -995,6 +998,11 @@ public class Movement : MonoBehaviour {
 			brakesOn = true;
 			if(playerSpeed > 195){
 				playerSpeed-=0.05f;
+			} else {
+				if(blownEngine == true){
+					startWreck();
+					brakesOn = false;
+				}
 			}
 		}
 
@@ -1496,13 +1504,13 @@ public class Movement : MonoBehaviour {
 		
 		//No cautions on the last lap, race is over
 		if(CameraRotate.lap < CameraRotate.raceEnd){
-			Debug.Log("Wreck Over (Movement)");
+			//Debug.Log("Wreck Over (Movement)");
 			if(momentChecks == false){
 				//Open the caution menu
 				cautionSummaryMenu.SetActive(true);
 			}
 			if(fastestLapSaved == false){
-				Debug.Log("Haven't saved fastest lap yet.. (Movement)");
+				//Debug.Log("Haven't saved fastest lap yet.. (Movement)");
 				CameraRotate.saveRaceFastestLap();
 				fastestLapSaved = true;
 			}

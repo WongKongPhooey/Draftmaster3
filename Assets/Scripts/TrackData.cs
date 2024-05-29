@@ -121,7 +121,9 @@ public class TrackData : MonoBehaviour
 		trackNames[26] = "North Wilkesboro, NC";
 		trackNames[27] = "Nazareth, PN";
 		trackNames[28] = "Newton, IA";
-		trackNames[29] = "Nashville, TN";
+		trackNames[29] = "Fountain, CO";
+		trackNames[31] = "Motegi, JPN";
+		trackNames[33] = "Milwaukee, WI";
 	}
 	
 	public static void loadTrackCodeNames(){
@@ -148,15 +150,16 @@ public class TrackData : MonoBehaviour
 		trackCodeNames[21] = "Miami";
 		trackCodeNames[22] = "Madison";
 		trackCodeNames[23] = "Nashville";
+		trackCodeNames[26] = "NorthWilkesboro";
 		trackCodeNames[30] = "LosAngeles";
 		
 		trackCodeNames[24] = "RockinghamUK";
-		
 		trackCodeNames[25] = "Rockingham";
-		trackCodeNames[26] = "NorthWilkesboro";
 		trackCodeNames[27] = "Nazareth";
 		trackCodeNames[28] = "Iowa";
 		trackCodeNames[29] = "Nashville";
+		trackCodeNames[31] = "Fountain";
+		trackCodeNames[33] = "Milwaukee";
 	}
 	
 	public static string getTrackImage(string trackId){
@@ -274,9 +277,8 @@ public class TrackData : MonoBehaviour
 		trackLaps[30] = 10;
 		
 		trackLaps[24] = 6;
-		
 		trackLaps[25] = 7;
-		trackLaps[27] = 6;
+		trackLaps[27] = 8;
 		trackLaps[28] = 9;
 		trackLaps[29] = 6;
 	}
@@ -873,6 +875,28 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("TurnAngle4",1);
 		PlayerPrefs.SetInt("StartLine",75);
 		PlayerPrefs.SetInt("SpeedOffset",73 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",4);
+		PlayerPrefs.SetString("TrackType","Short");
+	}
+
+	public static void Nazareth(){
+		trackCodeName = "Nazareth";
+		PlayerPrefs.SetInt("RaceLaps",8);
+		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("StraightLength1",120);
+		PlayerPrefs.SetInt("StraightLength2",100);
+		PlayerPrefs.SetInt("StraightLength3",150);
+		PlayerPrefs.SetInt("StraightLength4",30);
+		PlayerPrefs.SetInt("TurnLength1",60);
+		PlayerPrefs.SetInt("TurnLength2",150);
+		PlayerPrefs.SetInt("TurnLength3",130);
+		PlayerPrefs.SetInt("TurnLength4",20);
+		PlayerPrefs.SetInt("TurnAngle1",2);
+		PlayerPrefs.SetInt("TurnAngle2",2);
+		PlayerPrefs.SetInt("TurnAngle3",2);
+		PlayerPrefs.SetInt("TurnAngle4",1);
+		PlayerPrefs.SetInt("StartLine",60);
+		PlayerPrefs.SetInt("SpeedOffset",56 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
 		PlayerPrefs.SetString("TrackType","Short");
 	}

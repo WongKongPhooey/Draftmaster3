@@ -361,6 +361,10 @@ public class CameraRotate : MonoBehaviour {
 			if(lap >= raceEnd){
 				endRace();
 			}
+			//Terminal Engine Damage
+			if(Movement.blownEngine == true){
+				endRace();
+			}
 			return;
 		}
 		
@@ -436,7 +440,7 @@ public class CameraRotate : MonoBehaviour {
 			frameTime = 0;
 			
 			//Caution, reset scene
-			if((cautionOut == true)||(Movement.blownEngine == true)){
+			if(cautionOut == true){
 				//Only save at the line if not currently wrecking
 				if(Movement.isWrecking == false){
 					saveRaceFastestLap();
@@ -622,10 +626,11 @@ public class CameraRotate : MonoBehaviour {
 		}
 		if(lap == raceEnd){
 			if(Movement.wreckOver == true){
-				Debug.Log("We've wrecked on the last lap!");
+				//Debug.Log("We've wrecked on the last lap!");
 				gamePausedLate = true;
 			}
 		}
+		//Giant Inflatable Tropicono Orange
 		if(PlayerPrefs.GetString("CurrentCircuit") == "Joliet"){
 			int rand = Random.Range(1,100);
 			//Lucky day
