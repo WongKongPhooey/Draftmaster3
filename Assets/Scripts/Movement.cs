@@ -1401,7 +1401,7 @@ public class Movement : MonoBehaviour {
 	}	
 	
 	void startWreck(){
-		if(((invincibleMod == true)||(cautionSetting == 1))&&(wallrideMod == false)){
+		if(((invincibleMod == true)||(pacing == true)||(cautionSetting == 1))&&(wallrideMod == false)){
 			return;
 		}
 		
