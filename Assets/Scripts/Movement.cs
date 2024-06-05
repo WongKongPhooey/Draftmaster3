@@ -1490,6 +1490,12 @@ public class Movement : MonoBehaviour {
 		wreckForce.torque = new Vector3(0f, 0f, 0f);
 		wreckRigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ;
 		
+		if(blownEngine == true){
+			Ticker.checkFinishPositions(false);
+		} else {
+			Ticker.saveCautionPositions(true);
+		}
+		
 		if(momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationLessThanX",vehicle.transform.position.x.ToString());
 			MomentsCriteria.checkMomentsCriteria("WreckEndLocationCorner", CameraRotate.turn.ToString(), onTurn.ToString());

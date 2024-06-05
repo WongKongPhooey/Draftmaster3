@@ -443,6 +443,11 @@ public class CameraRotate : MonoBehaviour {
 			if(cautionOut == true){
 				//Only save at the line if not currently wrecking
 				if(Movement.isWrecking == false){
+					if(Movement.blownEngine == true){
+						Ticker.checkFinishPositions();
+					} else {
+						Ticker.saveCautionPositions(true);
+					}
 					saveRaceFastestLap();
 					cautionSummaryMenu.SetActive(true);
 					finishLine.GetComponent<Renderer>().enabled = true;

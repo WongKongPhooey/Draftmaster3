@@ -192,13 +192,15 @@ public class RaceRewardsUI : MonoBehaviour
 				}
 			} else {
 				//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
-				rewardGears = (int)Mathf.Round(maxRaceGears - Mathf.Ceil(finishPos/4)) + 1;
+				rewardGears = maxRaceGears - Mathf.CeilToInt(finishPos/4) + 1;
+				//Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + "");
 				
 				if(rewardGears > 0){
 					gears += rewardGears * rewardMultiplier;
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
 					rewardGears = 0;
+					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +0 Gears (" + gears + ")";
 				}
 			}
 		}

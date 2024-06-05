@@ -62,8 +62,12 @@ public class RaceHUD : MonoBehaviour {
 		if((raceOver == false)&&(caution == false)){
 			//Do nothing
 		} else {
+			//If challenge is active, show that menu instead..
+			//If engine is blown, show the caution menu instead..
+			//Else, show the race ending screen
 			if((challengeActive == false)
-			&&((Movement.blownEngine == false)||(raceOver == true))){
+			&&(Movement.blownEngine == false)
+			&&(raceOver == true)){
 				if(((raceOver == true)||(racePreover == true))){
 					GUI.skin.label.fontSize = 512 / fontScale;
 					GUI.skin.label.alignment = TextAnchor.LowerLeft;
