@@ -237,6 +237,9 @@ public class TrackData : MonoBehaviour
 			case "26":
 				trackImageName = "SmallOval";
 				break;
+			case "27":
+				trackImageName = "Nazareth";
+				break;
 			case "28":
 				trackImageName = "TriOval";
 				break;
