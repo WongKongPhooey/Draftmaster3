@@ -623,24 +623,34 @@ public class Ticker : MonoBehaviour
 			}
 
 			if(crossedFinish == false){
-				//If car is fine, join the finishers queue
+				//..the player has wrecked, so the finish line was never reached..
+				//if this car is okay, lock in it's finish time..
+				//else, shuffle it to the back (because it is either wrecking, wrecked, or has a blown engine)
 				int carNum = int.Parse(carNumber[i]);
 				if((RaceControl.isWrecking[carNum]==false)&&
 				  (RaceControl.hasWrecked[carNum]==false)&&
 				  (RaceControl.hasBlownEngine[carNum]==false)){
-					//Debug.Log("Car #" + carNumber[i] + " restarts P" + unclassifiedPosition);
+					Debug.Log("Car #" + carNumber[i] + " finishes P" + unclassifiedPosition);
 					PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[i]));
 					PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
 					if(entrantList[i].name == playerCar.name){
 						PlayerPrefs.SetInt("PlayerFinishPosition", unclassifiedPosition);
+						Debug.Log("Player finishes P" + unclassifiedPosition);
 					}
 					unclassifiedPosition++;
 				}
 			} else {
-				//If the finish line is reached..
+				//We're either wrecking, or have a blown engine, but..
+				//we've reached the finish line, so..
 				//..don't meddle with the finishing order
+				Debug.Log("Car #" + carNumber[i] + " finishes P" + unclassifiedPosition);
 				PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[i]));
 				PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
+				if(entrantList[i].name == playerCar.name){
+					PlayerPrefs.SetInt("PlayerFinishPosition", unclassifiedPosition);
+					Debug.Log("Player finishes P" + unclassifiedPosition);
+				}
+				unclassifiedPosition++;
 			}
 		}
 		
@@ -650,7 +660,7 @@ public class Ticker : MonoBehaviour
 			int cautionLap = CameraRotate.lap;
 			
 			for(int k=0;k<entrantList.Count;k++){
-				//Wrecked cars restart at the back
+				//Wrecked cars are shuffled to the back of the finishers
 				int carNum = int.Parse(carNumber[k]);
 				if(((RaceControl.isWrecking[carNum]==true)||
 				  (RaceControl.hasWrecked[carNum]==true))&&
@@ -671,7 +681,8 @@ public class Ticker : MonoBehaviour
 						unclassifiedPosition++;
 					}
 				} else {
-					//Too damaged to continue
+					//Too damaged to cross the finish line..
+					//So mark them as DNF'd, 1 lap down
 					if(entrantList[k].name == playerCar.name){
 						//The player cannot retire from being too damaged
 					} else {

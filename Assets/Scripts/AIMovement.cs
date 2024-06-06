@@ -683,7 +683,7 @@ public class AIMovement : MonoBehaviour
 				RaceControl.givenSpeed[carNum] = 0;
 			} else {
 				//Helps to remove the 'stickiness' when cooling the engine and detaching from the tandem
-				if(AISpeed > givenSpeed){
+				if(AISpeed > (givenSpeed-0.25f)){
 					AISpeed = givenSpeed-0.25f;
 				}
 				RaceControl.givenSpeed[carNum] = 0;
