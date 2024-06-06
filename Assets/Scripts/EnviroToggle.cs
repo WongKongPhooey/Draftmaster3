@@ -53,7 +53,7 @@ public class EnviroToggle : MonoBehaviour {
 	void FixedUpdate() {
 
 		//IF ENTERING OR EXITING TURN
-		if((currentState != Movement.onTurn)||(CameraRotate.lap == 0)){
+		if((currentState != Movement.onTurn)||(Movement.pacing == true)){
 			
 			//If V1 enviro setup
 			if(advancedPlacement == false){

@@ -50,18 +50,24 @@ public class ChampionshipHubUI : MonoBehaviour
 	
     // Start is called before the first frame update
     void Start(){
+		
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		currentSeries = int.Parse(currentSeriesIndex.Substring(0,1));
 		currentSubseries = int.Parse(currentSeriesIndex.Substring(1));
 		championshipTracklist = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "Tracklist");
+		
+		//Testing Long Championships Fast
+		#if UNITY_EDITOR
+		//PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round",32);
+		//Debug.Log("Championship Round hacked to R32.");
+		#endif
+		
 		championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
 		championshipLength = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Length");
 		seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 		PlayerPrefs.SetString("carSeries",seriesPrefix);
 		PlayerPrefs.SetString("RaceType","Championship");
-        
-		Debug.Log("Championship Round " + (championshipRound + 1));
 		
 		modSeries = false;
 		if(ModData.isModSeries(seriesPrefix) == true){

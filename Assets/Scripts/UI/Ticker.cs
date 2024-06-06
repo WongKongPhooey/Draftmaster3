@@ -409,7 +409,7 @@ public class Ticker : MonoBehaviour
 		return pos;
 	}
 
-	public static void saveCautionPositions(bool playerPitted = false){
+	public static void saveCautionPositions(bool waitForReload = false){
 		
 		//Lock in any alt paints for the restart
 		PlayerPrefs.SetInt("RaceAltPaintsChosen",1);
@@ -531,10 +531,12 @@ public class Ticker : MonoBehaviour
 		PlayerPrefs.SetInt("CautionLap", CameraRotate.lap);
 		PlayerPrefs.SetInt("SpawnFromCaution", 1);
 		
-		SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+		if(waitForReload == false){
+			SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+		}
 	}
 
-	public static void checkFinishPositions(){
+	public static void checkFinishPositions(bool crossedFinish = true){
 		playerPosition = playerCar.transform.position.z;
 		
 		entrantList.Clear();
@@ -558,8 +560,10 @@ public class Ticker : MonoBehaviour
 		//Reverse the sort
 		entrantList.Reverse(); 
 		
-		//Debug.Log(entrantList.Count + " cars to sort.");
+		//Now we have our initial finish order..
+		//Shuffle all wrecked cars to the back, as they never crossed the line
 		
+		int unclassifiedPosition = 0;
 		for(int i=0;i<entrantList.Count;i++){
 			if(entrantList[i].name == playerCar.name){
 				position = i;
@@ -617,8 +621,69 @@ public class Ticker : MonoBehaviour
 					MomentsCriteria.checkMomentsCriteria("Top5FinishAlso",carNumber[i],i.ToString());
 				}
 			}
-			PlayerPrefs.SetInt("FinishPosition" + i + "", int.Parse(carNumber[i]));
-			PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
+
+			if(crossedFinish == false){
+				//If car is fine, join the finishers queue
+				int carNum = int.Parse(carNumber[i]);
+				if((RaceControl.isWrecking[carNum]==false)&&
+				  (RaceControl.hasWrecked[carNum]==false)&&
+				  (RaceControl.hasBlownEngine[carNum]==false)){
+					//Debug.Log("Car #" + carNumber[i] + " restarts P" + unclassifiedPosition);
+					PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[i]));
+					PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
+					if(entrantList[i].name == playerCar.name){
+						PlayerPrefs.SetInt("PlayerFinishPosition", unclassifiedPosition);
+					}
+					unclassifiedPosition++;
+				}
+			} else {
+				//If the finish line is reached..
+				//..don't meddle with the finishing order
+				PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[i]));
+				PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
+			}
+		}
+		
+		if(crossedFinish == false){
+			//Count backwards from the max field size
+			int DNFPosition = PlayerPrefs.GetInt("FieldSize");
+			int cautionLap = CameraRotate.lap;
+			
+			for(int k=0;k<entrantList.Count;k++){
+				//Wrecked cars restart at the back
+				int carNum = int.Parse(carNumber[k]);
+				if(((RaceControl.isWrecking[carNum]==true)||
+				  (RaceControl.hasWrecked[carNum]==true))&&
+				  (RaceControl.wreckDamage[carNum] < 50f)){
+					if(entrantList[k].name == playerCar.name){
+						if(Movement.blownEngine == true){
+							Debug.Log("Player has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
+							PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
+							PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
+							PlayerPrefs.SetInt("PlayerFinishPosition", DNFPosition);
+							DNFPosition--;
+						} else {
+							PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[k]));
+							unclassifiedPosition++;
+						}
+					} else {
+						PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[k]));
+						unclassifiedPosition++;
+					}
+				} else {
+					//Too damaged to continue
+					if(entrantList[k].name == playerCar.name){
+						//The player cannot retire from being too damaged
+					} else {
+						if((RaceControl.wreckDamage[carNum] >= 50f)||((RaceControl.hasBlownEngine[carNum]==true))){
+							Debug.Log(entrantList[k].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
+							PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
+							PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
+							DNFPosition--;
+						}
+					}
+				}
+			}
 		}
 		
 		if(position == 0){

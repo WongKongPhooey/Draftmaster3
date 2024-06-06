@@ -153,8 +153,8 @@ public class RaceRewardsUI : MonoBehaviour
 			
 			//Longer seasons are more generous with rewards
 			if((raceType == "Championship")&&(rewardMultiplier >= 8)){
-				//20 race series, 150% difficulty
-				//e.g. 1st -> 1 - 1 + 1 = 8
+				//33 race series, 150% difficulty
+				//e.g. 1st -> 8 - 1 + 1 = 8
 				//e.g. 10th -> 8 - 3 + 1 = 6
 				//e.g. 24th -> 8 - 6 + 1 = 3
 				//e.g. 32nd -> 8 - 8 + 1 = 1
@@ -165,39 +165,47 @@ public class RaceRewardsUI : MonoBehaviour
 				//e.g. 10th -> 4 - 3 + 1 = 2
 				//e.g. 16th -> 4 - 4 + 1 = 1
 				//e.g. 17th -> 4 - 5 + 1 = 0
-				rewardGears = (int)Mathf.Round(maxRaceGears - Mathf.Ceil(finishPos/4)) + 1;
-				int minimumGears = (int)Mathf.Ceil(rewardMultiplier/2);
+				Debug.Log("Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Floor): " + Mathf.FloorToInt(finishPos/4) + "");
+				rewardGears = maxRaceGears - Mathf.FloorToInt(finishPos/4);
+				Debug.Log("Rewarded Gears Per Race: " + rewardGears);
+				int minimumGears = Mathf.CeilToInt(rewardMultiplier/2);
+				Debug.Log("Minimum Reward Gears: " + minimumGears);
 				
 				if(rewardGears >= 1){
-					//20 race series, 150% difficulty
-					//e.g. 1st -> 8 * 20 = 160
-					//e.g. 10th -> 6 * 20 = 120
-					//e.g. 24th -> 3 * 20 = 60
-					//e.g. 32nd -> 1 * 20 = 20
+					//33 race series, 150% difficulty
+					//e.g. 1st -> 8 * 33 = 160
+					//e.g. 10th -> 6 * 33 = 120
+					//e.g. 24th -> 3 * 33 = 60
+					//e.g. 32nd -> 1 * 33 = 20
 					
 					//20 race series, 50% difficulty
 					//e.g. 1st -> 4 * 20 = 80
 					//e.g. 10th -> 2 * 20 = 40
 					//e.g. 16th -> 1 * 20 = 20
 					gears += rewardGears * rewardMultiplier;
+					Debug.Log("Total Rewarded Gears: " + (rewardGears * rewardMultiplier));
+					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
 					//e.g. 40th -> 10
-					rewardGears = minimumGears;
+					gears+= minimumGears;
+					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + minimumGears + " Gears (" + gears + ")";
 				}
 			} else {
 				//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
-				rewardGears = (int)Mathf.Round(maxRaceGears - Mathf.Ceil(finishPos/4)) + 1;
+				rewardGears = maxRaceGears - Mathf.CeilToInt(finishPos/4) + 1;
+				//Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + "");
 				
 				if(rewardGears > 0){
 					gears += rewardGears * rewardMultiplier;
+					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
 					rewardGears = 0;
+					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +0 Gears (" + gears + ")";
 				}
 			}
 		}
 		PlayerPrefs.SetInt("Gears",gears);
 		
-		gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 		gearsTitle.GetComponent<UIAnimate>().animOffset = 120;
 		gearsTitle.GetComponent<UIAnimate>().scaleIn();	
 		
@@ -221,12 +229,13 @@ public class RaceRewardsUI : MonoBehaviour
 				}
 				break;
 			case "Championship":
-				//e.g. 10 race season / finished 5th = 2x
-				//e.g. 3 race season / finished 10th = 1x
-				//e.g. 20 race season / finished 10th = 2x
-				float rewardRatio = (rewardMultiplier * 1.5f) / finishPos;
+				//e.g. 33 race season / 50% / finished 10th = 7
+				//e.g. 33 race season / 150% / finished 20th = 10
+				//e.g. 33 race season / 150% / finished 1st = 99
+				int maxRewardInt = Mathf.FloorToInt(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5);
+				int rewardRatio = Mathf.CeilToInt((rewardMultiplier * maxRewardInt) / Mathf.CeilToInt(finishPos/2));
 				if(rewardRatio >= 1){
-					rewardMultiplier = Mathf.CeilToInt(rewardRatio);
+					rewardMultiplier = rewardRatio;
 					Debug.Log("New reward multiplier: " + rewardMultiplier);
 					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 				} else {

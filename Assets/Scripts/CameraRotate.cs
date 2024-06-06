@@ -443,6 +443,11 @@ public class CameraRotate : MonoBehaviour {
 			if(cautionOut == true){
 				//Only save at the line if not currently wrecking
 				if(Movement.isWrecking == false){
+					if(Movement.blownEngine == true){
+						Ticker.checkFinishPositions();
+					} else {
+						Ticker.saveCautionPositions(true);
+					}
 					saveRaceFastestLap();
 					cautionSummaryMenu.SetActive(true);
 					finishLine.GetComponent<Renderer>().enabled = true;
@@ -531,7 +536,7 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 		} else {
-			if(lap > 0){
+			if(pacing == false){
 				//Post turn accel
 				if(carSpeedOffset > 0){
 					carSpeedOffset-= gearedAccel;
@@ -618,6 +623,7 @@ public class CameraRotate : MonoBehaviour {
 				}
 			}
 			lap--;
+			gamePausedLate = true;
 			if(momentChecks == true){
 				MomentsCriteria.updateCriteriaCompletion("CrossTheLine",true);
 			}

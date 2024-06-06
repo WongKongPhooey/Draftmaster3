@@ -1000,7 +1000,7 @@ public class AIMovement : MonoBehaviour
 			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed;
 		}
 		speed = speed / 100;
-		if(prePause != true){
+		if((prePause != true)||(RaceHUD.raceOver != true)){
 			AICar.transform.Translate(0, 0, speed);
 			relativeZToPlayer = speed;
 		}
@@ -2010,7 +2010,7 @@ public class AIMovement : MonoBehaviour
 	void startWreck(){
 		
 		//Bailout
-		if((isWrecking == true)||(wreckOver == true)||(cautionSetting == 1)){
+		if((isWrecking == true)||(wreckOver == true)||(cautionSetting == 1)||(Movement.pacing == true)){
 			return;
 		}
 		
