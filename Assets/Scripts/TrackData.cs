@@ -157,8 +157,8 @@ public class TrackData : MonoBehaviour
 		trackCodeNames[25] = "Rockingham";
 		trackCodeNames[27] = "Nazareth";
 		trackCodeNames[28] = "Iowa";
-		trackCodeNames[29] = "Nashville";
-		trackCodeNames[31] = "Fountain";
+		trackCodeNames[29] = "Fountain";
+		trackCodeNames[31] = "Motegi";
 		trackCodeNames[33] = "Milwaukee";
 	}
 	
