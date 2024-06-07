@@ -157,8 +157,8 @@ public class TrackData : MonoBehaviour
 		trackCodeNames[25] = "Rockingham";
 		trackCodeNames[27] = "Nazareth";
 		trackCodeNames[28] = "Iowa";
-		trackCodeNames[29] = "Nashville";
-		trackCodeNames[31] = "Fountain";
+		trackCodeNames[29] = "Fountain";
+		trackCodeNames[31] = "Motegi";
 		trackCodeNames[33] = "Milwaukee";
 	}
 	
@@ -237,6 +237,9 @@ public class TrackData : MonoBehaviour
 			case "26":
 				trackImageName = "SmallOval";
 				break;
+			case "27":
+				trackImageName = "Nazareth";
+				break;
 			case "28":
 				trackImageName = "TriOval";
 				break;
@@ -245,6 +248,9 @@ public class TrackData : MonoBehaviour
 				break;
 			case "30":
 				trackImageName = "TinyOval";
+				break;
+			case "31":
+				trackImageName = "Madison";
 				break;
 			default:
 				break;
@@ -492,16 +498,16 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("StraightLength2",300);
 		PlayerPrefs.SetInt("StraightLength3",0);
 		PlayerPrefs.SetInt("StraightLength4",0);
-		PlayerPrefs.SetInt("TurnLength1",200);
-		PlayerPrefs.SetInt("TurnLength2",160);
+		PlayerPrefs.SetInt("TurnLength1",190);
+		PlayerPrefs.SetInt("TurnLength2",170);
 		PlayerPrefs.SetInt("TurnLength3",0);
 		PlayerPrefs.SetInt("TurnLength4",0);
 		PlayerPrefs.SetInt("TurnAngle1",2);
-		PlayerPrefs.SetInt("TurnAngle2",1);
+		PlayerPrefs.SetInt("TurnAngle2",2);
 		PlayerPrefs.SetInt("TurnAngle3",0);
 		PlayerPrefs.SetInt("TurnAngle4",0);
-		PlayerPrefs.SetInt("StartLine",200);
-		PlayerPrefs.SetInt("SpeedOffset",25 - speedFactor);
+		PlayerPrefs.SetInt("StartLine",150);
+		PlayerPrefs.SetInt("SpeedOffset",12 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",2);
 		PlayerPrefs.SetString("TrackType","Alt");
 	}

@@ -761,19 +761,19 @@ public class Movement : MonoBehaviour {
 				#endif
 			} else {
 				//Helps to remove the 'stickiness' when lifting to detach from the tandem
-				if(playerSpeed > givenSpeed){
+				if(playerSpeed > (givenSpeed-0.25f)){
 					playerSpeed = givenSpeed-0.25f;
 				}
 				RaceControl.givenSpeed[carNum] = 0;
 			}
+		} else {
+			tandemPosition = 1;
+			RaceControl.tandemPosition[carNum] = 1;
 		}
 		RaceControl.carSpeed[carNum] = playerSpeed;
 		
 		float bumpSpeed = RaceControl.receivedSpeed[carNum];
 		if(bumpSpeed != 0){
-			#if UNITY_EDITOR
-			//Debug.Log("The player has been bumped at: " + bumpSpeed);
-			#endif
 			//You've been bumped!
 			if(initialContact == false){
 				float midSpeed = bumpSpeed - playerSpeed;
@@ -781,9 +781,6 @@ public class Movement : MonoBehaviour {
 					&&(blownEngine == true)){
 					startWreck();
 				}
-				#if UNITY_EDITOR
-				//Debug.Log("Player speed is now: " + playerSpeed);
-				#endif
 				playerSpeed += midSpeed/4;
 				initialContact = true;
 			} else {
@@ -796,14 +793,9 @@ public class Movement : MonoBehaviour {
 			//Who bumped me?
 			int pusherNum = RaceControl.carTandemNum[carNum];
 			//Update their tandemPosition to 2+
-			RaceControl.tandemPosition[pusherNum] = tandemPosition;
+			RaceControl.tandemPosition[pusherNum] = tandemPosition + 1;
 			//Send them the speed of my car, so they then match it
 			RaceControl.givenSpeed[pusherNum] = playerSpeed;
-			#if UNITY_EDITOR
-			//Debug.Log("Pusher #" + pusherNum + "returned speed: " + playerSpeed);
-			#endif
-			//Send it back
-			//Debug.Log(AICar.name + " sends push back to " + pushedBy.name);
 		}
 		
 		if(pacing == true){

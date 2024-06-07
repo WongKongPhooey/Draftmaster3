@@ -545,44 +545,44 @@ public class RaceRewardsUI : MonoBehaviour
 			
 			//Event Specific
 			case "Johnson":
-				validDriver.Add("cup2048");
+				prizeOptions.Add("cup2048");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
 			case "Earnhardt":
-				validDriver.Add("cup203");
+				prizeOptions.Add("cup203");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
 			case "Harvick":
-				validDriver.Add("cup234");
+				prizeOptions.Add("cup234");
 			break;
 			
 			case "Logano":
-				validDriver.Add("cup2222");
+				prizeOptions.Add("cup2222");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
 			case "Elliott":
-				validDriver.Add("cup229");
+				prizeOptions.Add("cup229");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
 			case "Bell":
-				validDriver.Add("cup2220");
+				prizeOptions.Add("cup2220");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
 			case "Chastain":
-				validDriver.Add("cup221");
+				prizeOptions.Add("cup221");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
 			case "Suarez":
-				validDriver.Add("cup2096");
-				validDriver.Add("cup2299");
-				validDriver.Add("cup2399");
-				validDriver.Add("cup2499");
+				prizeOptions.Add("cup2096");
+				prizeOptions.Add("cup2299");
+				prizeOptions.Add("cup2399");
+				prizeOptions.Add("cup2499");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
