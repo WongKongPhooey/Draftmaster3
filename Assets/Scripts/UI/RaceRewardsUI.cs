@@ -147,7 +147,7 @@ public class RaceRewardsUI : MonoBehaviour
 				maxRaceGears = 3;
 			}
 			if(maxRaceGears >= 8){
-				//Max for a win is 10
+				//Max for a win is 8
 				maxRaceGears = 8;
 			}
 			
@@ -193,13 +193,15 @@ public class RaceRewardsUI : MonoBehaviour
 			} else {
 				//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
 				rewardGears = maxRaceGears - Mathf.CeilToInt(finishPos/4) + 1;
-				//Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + "");
+				Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + "");
 				
 				if(rewardGears > 0){
 					gears += rewardGears * rewardMultiplier;
+					Debug.Log("Youve got Gears");
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
 					rewardGears = 0;
+					Debug.Log("No Gears");
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +0 Gears (" + gears + ")";
 				}
 			}
@@ -231,9 +233,9 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Championship":
 				//e.g. 33 race season / 50% / finished 10th = 7
 				//e.g. 33 race season / 150% / finished 20th = 10
-				//e.g. 33 race season / 150% / finished 1st = 99
+				//e.g. 33 race season / 150% / finished 1st = Ceil((33 * 3)/1
 				int maxRewardInt = Mathf.FloorToInt(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5);
-				int rewardRatio = Mathf.CeilToInt((rewardMultiplier * maxRewardInt) / Mathf.CeilToInt(finishPos/2));
+				int rewardRatio = Mathf.CeilToInt(((rewardMultiplier/2) * maxRewardInt) / Mathf.CeilToInt(finishPos/2));
 				if(rewardRatio >= 1){
 					rewardMultiplier = rewardRatio;
 					Debug.Log("New reward multiplier: " + rewardMultiplier);
@@ -243,14 +245,13 @@ public class RaceRewardsUI : MonoBehaviour
 				}
 				break;
 			default:
-				//If top 10 finish..
-				if(finishPos < 11){
-					//Inverted chance of reward (10th = 10%, 1st = 100%)
-					float chance = 11 - finishPos;
-					float rnd = Random.Range(0,10);
+				if(rewardGears > 0){
+					//If rnd is less or equal to your rewardGears, you get car parts.
+					float rnd = Random.Range(0,8);
 					//Top 3 = guaranteed reward
-					if((rnd <= chance)||(finishPos <= 3)){
-						//Debug.Log("Top 10 finish, add rewards. Valid Drivers: " + validDriver.Count);
+					//Rewarded Gears = each Gear acts like a raffle ticket
+					if((rnd <= rewardGears)||
+					   (finishPos <= 3)){
 						if(validDriver.Count > 0){
 							AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 						} else {
