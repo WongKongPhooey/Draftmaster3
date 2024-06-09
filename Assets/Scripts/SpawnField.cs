@@ -153,6 +153,7 @@ public class SpawnField : MonoBehaviour {
 		}
 
 		int carChoice;
+		int carsTotal = 0;
 
 		Object AICarInstance;
 
@@ -340,7 +341,7 @@ public class SpawnField : MonoBehaviour {
 				gridRowsCalc = customFieldOrder.Count * 0.5f;
 				gridRows = Mathf.CeilToInt(gridRowsCalc);
 				int fieldInd = 0;
-				int carsTotal = 0;
+				carsTotal = 0;
 				
 				for(int i = 0; i < customFieldOrder.Count;i++){
 					int playerPos = 0;
@@ -410,6 +411,7 @@ public class SpawnField : MonoBehaviour {
 				PlayerPrefs.SetInt("FieldSize",carsTotal + 1);
 			} else {
 			
+				carsTotal = 0;
 				//Randomised field for start of race
 				//Cars In Front
 				for (int i = playerRow - 1; i >= 1; i--) {
@@ -421,6 +423,7 @@ public class SpawnField : MonoBehaviour {
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 							fastCars.RemoveAt(carChoice);
+							carsTotal++;
 						} else {
 							if(midCars.Count > 0){
 								AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
@@ -429,6 +432,7 @@ public class SpawnField : MonoBehaviour {
 								AICarInstance.name = ("AICar0" + carNum);
 								GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 								midCars.RemoveAt(carChoice);
+								carsTotal++;
 							} else {
 								if(slowCars.Count > 0){
 									AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
@@ -437,6 +441,7 @@ public class SpawnField : MonoBehaviour {
 									AICarInstance.name = ("AICar0" + carNum);
 									GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 									slowCars.RemoveAt(carChoice);
+									carsTotal++;
 								}
 							}
 						}
@@ -455,6 +460,7 @@ public class SpawnField : MonoBehaviour {
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 							fastCars.RemoveAt(carChoice);
+							carsTotal++;
 						} else {
 							if(midCars.Count > 0){
 								AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
@@ -463,6 +469,7 @@ public class SpawnField : MonoBehaviour {
 								AICarInstance.name = ("AICar0" + carNum);
 								GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 								midCars.RemoveAt(carChoice);
+								carsTotal++;
 							} else {
 								if(slowCars.Count > 0){
 									AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, 0f), Quaternion.identity);
@@ -471,6 +478,7 @@ public class SpawnField : MonoBehaviour {
 									AICarInstance.name = ("AICar0" + carNum);
 									GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 									slowCars.RemoveAt(carChoice);
+									carsTotal++;
 								}
 							}
 						}
@@ -487,6 +495,7 @@ public class SpawnField : MonoBehaviour {
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 							fastCars.RemoveAt(carChoice);
+							carsTotal++;
 						} else {
 							if(midCars.Count > 0){
 								AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
@@ -495,6 +504,7 @@ public class SpawnField : MonoBehaviour {
 								AICarInstance.name = ("AICar0" + carNum);
 								GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 								midCars.RemoveAt(carChoice);
+								carsTotal++;
 							} else {
 								if(slowCars.Count > 0){
 									AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
@@ -503,6 +513,7 @@ public class SpawnField : MonoBehaviour {
 									AICarInstance.name = ("AICar0" + carNum);
 									GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 									slowCars.RemoveAt(carChoice);
+									carsTotal++;
 								}
 							}
 						}

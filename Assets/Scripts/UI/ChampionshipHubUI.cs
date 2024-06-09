@@ -51,6 +51,58 @@ public class ChampionshipHubUI : MonoBehaviour
     // Start is called before the first frame update
     void Start(){
 		
+		if(PlayerPrefs.HasKey("MidRaceLoading")){
+			PlayerPrefs.DeleteKey("MidRaceLoading");
+		}
+		
+		//Delete Pre-Race Stored Variables
+		if(PlayerPrefs.HasKey("ActivePath")){
+			PlayerPrefs.DeleteKey("ActivePath");
+		}
+        if(PlayerPrefs.HasKey("RaceType")){
+			PlayerPrefs.DeleteKey("RaceType");
+		}
+		if(PlayerPrefs.HasKey("RaceMoment")){
+			PlayerPrefs.DeleteKey("RaceMoment");
+		}
+		if(PlayerPrefs.HasKey("StartingLap")){
+			PlayerPrefs.DeleteKey("StartingLap");
+		}
+		if(PlayerPrefs.HasKey("CustomRaceLaps")){
+			PlayerPrefs.DeleteKey("CustomRaceLaps");
+		}
+		if(PlayerPrefs.HasKey("RaceModifier")){
+			PlayerPrefs.DeleteKey("RaceModifier");
+		}
+		if(PlayerPrefs.HasKey("CustomFieldOrder")){
+			PlayerPrefs.DeleteKey("CustomFieldOrder");
+		}
+		if(PlayerPrefs.HasKey("MomentComplete")){
+			PlayerPrefs.DeleteKey("MomentComplete");
+		}
+		if(PlayerPrefs.HasKey("RaceAILevel")){
+			PlayerPrefs.DeleteKey("RaceAILevel");
+		}
+		if(PlayerPrefs.HasKey("SpawnFromCaution")){
+			PlayerPrefs.DeleteKey("SpawnFromCaution");
+		}
+		if(PlayerPrefs.HasKey("RaceAltPaintsChosen")){
+			PlayerPrefs.DeleteKey("RaceAltPaintsChosen");
+		}
+		if(PlayerPrefs.HasKey("SeriesPrizeAmt")){
+			PlayerPrefs.DeleteKey("SeriesPrizeAmt");
+		}
+
+		for(int i=0;i<100;i++){
+			if(PlayerPrefs.HasKey("RaceAltPaint" + i)){
+				PlayerPrefs.DeleteKey("RaceAltPaint" + i);
+				//Debug.Log("Reset Alt Paints");
+			}
+			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
+			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
+			PlayerPrefs.DeleteKey("DNFLap" + i + "");
+		}
+		
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		currentSeries = int.Parse(currentSeriesIndex.Substring(0,1));

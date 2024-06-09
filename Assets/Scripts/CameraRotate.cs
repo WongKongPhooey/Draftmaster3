@@ -311,14 +311,14 @@ public class CameraRotate : MonoBehaviour {
 		if(gamePausedLate == true){
 			if((cautionSummaryMenu.activeSelf == true)||
 			   (RaceHUD.raceOver == true)){
-				Debug.Log("Time Paused (Camera Rotate)");
+				Debug.Log("Time Paused For Caution (Camera Rotate)");
 				Time.timeScale = 0.0f;
 				return;
 			}
 			try {
 				pauseMenu = GameObject.Find("PauseMenu");
 				if(pauseMenu.activeSelf == true){
-					Debug.Log("Time Paused (Camera Rotate)");
+					Debug.Log("Time Paused By Player (Camera Rotate)");
 					Time.timeScale = 0.0f;
 				}
 			}
@@ -439,29 +439,31 @@ public class CameraRotate : MonoBehaviour {
 			lapTime = 0;
 			frameTime = 0;
 			
-			//Caution, reset scene
-			if(cautionOut == true){
-				//Only save at the line if not currently wrecking
-				if(Movement.isWrecking == false){
-					if(Movement.blownEngine == true){
-						Ticker.checkFinishPositions();
-					} else {
-						Ticker.saveCautionPositions(true);
-					}
-					saveRaceFastestLap();
-					cautionSummaryMenu.SetActive(true);
-					finishLine.GetComponent<Renderer>().enabled = true;
-					carEngine.volume = 0.0f;
-					crowdNoise.volume = 0.0f;
-					gamePausedLate = true;
-				}
-			}
-			PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
-			
 			//Race End
 			if(lap >= (raceEnd + 1)){
 				gamePausedLate = true;
 				endRace();
+			} else {
+			
+				//Caution, reset scene
+				if(cautionOut == true){
+					//Only save at the line if not currently wrecking
+					if(Movement.isWrecking == false){
+						if(Movement.blownEngine == true){
+							Debug.Log("Engine Blown!");
+							Ticker.checkFinishPositions();
+						} else {
+							Ticker.saveCautionPositions(true);
+						}
+						saveRaceFastestLap();
+						cautionSummaryMenu.SetActive(true);
+						finishLine.GetComponent<Renderer>().enabled = true;
+						carEngine.volume = 0.0f;
+						crowdNoise.volume = 0.0f;
+						gamePausedLate = true;
+					}
+				}
+				PlayerPrefs.SetInt("TotalLaps",PlayerPrefs.GetInt("TotalLaps") + 1);
 			}
 		}
 
@@ -608,6 +610,7 @@ public class CameraRotate : MonoBehaviour {
 		} else {
 			RaceHUD.raceOver = true;
 		}
+		//Debug.Log("Race Ended");
 		if(lap >= (raceEnd + 1)){
 			//Bug catch, again no idea on this one
 			if((straight == 1)||(turn == 1)){
@@ -647,7 +650,11 @@ public class CameraRotate : MonoBehaviour {
 		carEngine.volume = 0;
 		crowdNoise.volume = 0;
 		GameObject.Find("Player").GetComponent<Movement>().hideHUD();
-		Ticker.checkFinishPositions();
+		if(Movement.wreckOver == true){
+			Ticker.checkFinishPositions(false);
+		} else {
+			Ticker.checkFinishPositions();
+		}
 		PlayerPrefs.SetInt("ExpAdded",0);
 		
 		if(momentChecks == true){
@@ -673,7 +680,7 @@ public class CameraRotate : MonoBehaviour {
 			fastestRaceLapInt = 0;
 			return;
 		}
-		Debug.Log("Fastest Lap Save Call (Reusable)");
+		//Debug.Log("Fastest Lap Save Call (Reusable)");
 		lapRecordInt = (int)Mathf.Round((lapRecord - trackSpeedOffset) * 1000);
 		PlayerPrefs.SetInt("FastestLap" + circuit, lapRecordInt);
 		if(PlayerPrefs.HasKey("FastestLap" + circuit)){
@@ -689,10 +696,10 @@ public class CameraRotate : MonoBehaviour {
 				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
 				PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
 				//This seems to be working
-				Debug.Log("Sent Leaderboards (Reusable)");
+				//Debug.Log("Sent Leaderboards (Reusable)");
 			}
 		} else {
-			Debug.Log("Not The Live Circuit");
+			//Debug.Log("Not The Live Circuit");
 		}
 	}
 	
@@ -771,7 +778,7 @@ public class CameraRotate : MonoBehaviour {
 		if(calcdGear > 0.25f){
 			calcdGear = 0.25f;
 		}
-		Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)longestStraight + " + " + (float)(slowestTurnLength / 2) + ")");
+		//Debug.Log("Calculated Gearing - " + calcdGear.ToString("f3") + " (" + (float)slowestTurn + " / " + (float)longestStraight + " + " + (float)(slowestTurnLength / 2) + ")");
 		return calcdGear;
 	}
 	

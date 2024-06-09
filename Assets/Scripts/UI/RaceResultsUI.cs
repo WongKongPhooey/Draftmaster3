@@ -140,12 +140,12 @@ public class RaceResultsUI : MonoBehaviour
 			//If better than previous (or 0 if it glitched a result)
 			if(((Ticker.position + 1) < bestFinishPos)||(bestFinishPos == 0)){
 				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Ticker.position + 1);
-				Debug.Log("New best finish: " + (Ticker.position + 1) + "Track: " + currentSeriesIndex + currentTrack);
+				//Debug.Log("New best finish: " + (Ticker.position + 1) + "Track: " + currentSeriesIndex + currentTrack);
 			}
-			Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
+			//Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
 		} else {
 			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Ticker.position + 1);
-			Debug.Log("New best finish: " + Ticker.position + ". Track: " + currentSeriesIndex + currentTrack);
+			//Debug.Log("New best finish: " + Ticker.position + ". Track: " + currentSeriesIndex + currentTrack);
 		}
 
 		moneyCount = 0;
@@ -189,15 +189,15 @@ public class RaceResultsUI : MonoBehaviour
 				carDist = PlayerPrefs.GetInt("FinishTime" + i + "");
 				//Debug.Log("Pos: " + i + " Num: " + carNum + " Dist: " + carDist);
 			} else {
-				if(PlayerPrefs.HasKey("DNFPosition" + (i+1) + "")){
-					carNum = PlayerPrefs.GetInt("DNFPosition" + (i+1) + "");
+				if(PlayerPrefs.HasKey("DNFPosition" + i + "")){
+					carNum = PlayerPrefs.GetInt("DNFPosition" + i + "");
 					carDist = 99999.99f;
-					carLap = PlayerPrefs.GetInt("RaceLaps") - PlayerPrefs.GetInt("DNFLap" + (i+1) + "");
+					carLap = PlayerPrefs.GetInt("RaceLaps") - PlayerPrefs.GetInt("DNFLap" + i + "");
 					//Error catch
 					if(carLap<=0){
 						carLap = PlayerPrefs.GetInt("RaceLaps");
 					}
-					//Debug.Log("DNF Pos: " + i + " Num: " + carNum);
+					Debug.Log("DNF Pos: " + i + " Num: " + carNum);
 				} else {
 					continue;
 				}

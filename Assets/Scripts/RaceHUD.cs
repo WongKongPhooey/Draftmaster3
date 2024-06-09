@@ -59,16 +59,14 @@ public class RaceHUD : MonoBehaviour {
 		GUI.skin.label.fontSize = 80 / 2;
 		GUI.skin.button.fontSize = 120 / 2;
 
-		if((raceOver == false)&&(caution == false)){
+		if(raceOver == false){
 			//Do nothing
 		} else {
 			//If challenge is active, show that menu instead..
-			//If engine is blown, show the caution menu instead..
 			//Else, show the race ending screen
 			if((challengeActive == false)
-			&&(Movement.blownEngine == false)
 			&&(raceOver == true)){
-				if(((raceOver == true)||(racePreover == true))){
+				if(((raceOver == true)||(racePreover == true)||(Movement.blownEngine == true))&&(CameraRotate.lap >= CameraRotate.raceEnd)){
 					GUI.skin.label.fontSize = 512 / fontScale;
 					GUI.skin.label.alignment = TextAnchor.LowerLeft;
 					GUI.skin.label.normal.textColor = Color.black;
@@ -78,15 +76,16 @@ public class RaceHUD : MonoBehaviour {
 					GUI.Label(new Rect(widthblock - (8 / (fontScale * 2)), Screen.height - (heightblock * 9) - (8 / (fontScale * 2)), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
 					GUI.skin.label.normal.textColor = Color.yellow;
 					GUI.Label(new Rect(widthblock , Screen.height - (heightblock * 9), widthblock * 12, heightblock * 8), "P" + (Ticker.position + 1));
-				}
-				GUI.skin.label.fontSize = 80 / fontScale;
 					
-				GUI.skin = redGUI;
-				GUI.skin.button.fontSize = 120 / fontScale;
-				if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Results")){
-					Time.timeScale = 1.0f;
-					raceOver = false;
-					SceneManager.LoadScene("Menus/RaceResults");
+					GUI.skin.label.fontSize = 80 / fontScale;
+						
+					GUI.skin = redGUI;
+					GUI.skin.button.fontSize = 120 / fontScale;
+					if (GUI.Button(new Rect(widthblock * 13, Screen.height - (heightblock * 7), widthblock * 6, heightblock * 4), "Results")){
+						Time.timeScale = 1.0f;
+						raceOver = false;
+						SceneManager.LoadScene("Menus/RaceResults");
+					}
 				}
 			}
 		}

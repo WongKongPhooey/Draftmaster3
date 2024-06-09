@@ -137,34 +137,33 @@ public class RaceRewardsUI : MonoBehaviour
 		moneyTitle.GetComponent<UIAnimate>().scaleIn();
 		
 		if(raceType != "Event"){
-			//e.g. AI Level 14 = 14 / 3  = 4.x -> 4 + 3 = 7
-			//e.g. AI Level 5 = 5 / 3 = 1.x -> 1 + 3 = 4
+			//e.g. AI Level 14 = 14 / 3  = 4.x -> 4 + 2 = 6
+			//e.g. AI Level 5 = 5 / 3 = 1.x -> 1 + 2 = 3
 			float maxGearsFloat = Mathf.Floor(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/3);
-			maxRaceGears = (int)maxGearsFloat + 3;
+			maxRaceGears = (int)maxGearsFloat + 2;
 			//If low strength AI Race (<+3)
 			if(maxRaceGears <= 2){
 				//Top 3 win gears
 				maxRaceGears = 3;
 			}
-			if(maxRaceGears >= 8){
-				//Max for a win is 8
-				maxRaceGears = 8;
+			if(maxRaceGears >= 7){
+				//Max for a win is 7
+				maxRaceGears = 7;
 			}
 			
 			//Longer seasons are more generous with rewards
 			if((raceType == "Championship")&&(rewardMultiplier >= 8)){
 				//33 race series, 150% difficulty
-				//e.g. 1st -> 8 - 1 + 1 = 8
-				//e.g. 10th -> 8 - 3 + 1 = 6
-				//e.g. 24th -> 8 - 6 + 1 = 3
-				//e.g. 32nd -> 8 - 8 + 1 = 1
-				//e.g. 33rd -> 8 - 9 + 1 = 0
+				//e.g. 1st -> 7 - 0 = 7
+				//e.g. 10th -> 7 - 2 = 5
+				//e.g. 27th -> 7 - 6 = 1
+				//e.g. 28th -> 7 - 7 = 0
 				
-				//20 race series, 50% difficulty
-				//e.g. 1st -> 4 - 1 + 1 = 4
-				//e.g. 10th -> 4 - 3 + 1 = 2
-				//e.g. 16th -> 4 - 4 + 1 = 1
-				//e.g. 17th -> 4 - 5 + 1 = 0
+				//20 race series, 60% difficulty
+				//e.g. 1st -> 4 - 0 = 4
+				//e.g. 10th -> 4 - 2 = 2
+				//e.g. 15th -> 4 - 3 = 1
+				//e.g. 16th -> 4 - 4 = 0
 				Debug.Log("Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Floor): " + Mathf.FloorToInt(finishPos/4) + "");
 				rewardGears = maxRaceGears - Mathf.FloorToInt(finishPos/4);
 				Debug.Log("Rewarded Gears Per Race: " + rewardGears);
@@ -173,26 +172,26 @@ public class RaceRewardsUI : MonoBehaviour
 				
 				if(rewardGears >= 1){
 					//33 race series, 150% difficulty
-					//e.g. 1st -> 8 * 33 = 160
-					//e.g. 10th -> 6 * 33 = 120
-					//e.g. 24th -> 3 * 33 = 60
-					//e.g. 32nd -> 1 * 33 = 20
+					//e.g. 1st -> 7 * 33 = 231
+					//e.g. 10th -> 5 * 33 = 165
+					//e.g. 27th -> 1 * 33 = 33
+					//e.g. 28th -> 0 * 33 = 0
 					
-					//20 race series, 50% difficulty
+					//20 race series, 60% difficulty
 					//e.g. 1st -> 4 * 20 = 80
 					//e.g. 10th -> 2 * 20 = 40
-					//e.g. 16th -> 1 * 20 = 20
+					//e.g. 15th -> 1 * 20 = 20
 					gears += rewardGears * rewardMultiplier;
 					Debug.Log("Total Rewarded Gears: " + (rewardGears * rewardMultiplier));
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
-					//e.g. 40th -> 10
+					//e.g. 40th -> 17
 					gears+= minimumGears;
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + minimumGears + " Gears (" + gears + ")";
 				}
 			} else {
-				//e.g. +8 AI Strength = 5 Gears for a win, 1 gear for 5th
-				rewardGears = maxRaceGears - Mathf.CeilToInt(finishPos/4) + 1;
+				//e.g. 150% AI Strength = 7 Gears for a win, 1 gear for 24th
+				rewardGears = maxRaceGears - Mathf.FloorToInt(finishPos/4);
 				Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + "");
 				
 				if(rewardGears > 0){
@@ -233,9 +232,10 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Championship":
 				//e.g. 33 race season / 50% / finished 10th = 7
 				//e.g. 33 race season / 150% / finished 20th = 10
-				//e.g. 33 race season / 150% / finished 1st = Ceil((33 * 3)/1
-				int maxRewardInt = Mathf.FloorToInt(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5);
-				int rewardRatio = Mathf.CeilToInt(((rewardMultiplier/2) * maxRewardInt) / Mathf.CeilToInt(finishPos/2));
+				//e.g. 33 race season / 150% / finished 1st = 99
+				int maxRewardInt = Mathf.CeilToInt(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5);
+				Debug.Log("Reward Multi: " + Mathf.CeilToInt(rewardMultiplier/2) + ", Max Reward: " + maxRewardInt + ", CeilFinish Pos/2: " + Mathf.CeilToInt(finishPos/2));
+				int rewardRatio = Mathf.CeilToInt((Mathf.CeilToInt(rewardMultiplier/2) * maxRewardInt) / Mathf.CeilToInt((finishPos + 1)/2));
 				if(rewardRatio >= 1){
 					rewardMultiplier = rewardRatio;
 					Debug.Log("New reward multiplier: " + rewardMultiplier);

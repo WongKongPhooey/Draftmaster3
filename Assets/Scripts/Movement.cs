@@ -638,7 +638,9 @@ public class Movement : MonoBehaviour {
 			(carHit.gameObject.name == "TrackLimit") ||
 			(carHit.gameObject.name == "FixedKerb")) {
 			
-			if((isWrecking == false)&&(wreckOver == false)&&(delicateMod == true)){
+			//Delicate mod or blown engine, always wreck
+			if(((isWrecking == false)&&(wreckOver == false))&&
+			  ((delicateMod == true)||(blownEngine == true))){
 				startWreck();
 			}
 			if((isWrecking == false)&&(wreckOver == false)&&(wallrideMod == true)){
@@ -774,18 +776,20 @@ public class Movement : MonoBehaviour {
 		
 		float bumpSpeed = RaceControl.receivedSpeed[carNum];
 		if(bumpSpeed != 0){
-			//You've been bumped!
-			if(initialContact == false){
-				float midSpeed = bumpSpeed - playerSpeed;
-				if(((midSpeed > 2f)||(midSpeed < -2f))
-					&&(blownEngine == true)){
-					startWreck();
+			if(brakesOn == false){
+				//You've been bumped!
+				if(initialContact == false){
+					float midSpeed = bumpSpeed - playerSpeed;
+					if(((midSpeed > 2f)||(midSpeed < -2f))
+						&&(blownEngine == true)){
+						startWreck();
+					}
+					playerSpeed += midSpeed/4;
+					initialContact = true;
+				} else {
+					//Speed up
+					playerSpeed += backdraftMulti;
 				}
-				playerSpeed += midSpeed/4;
-				initialContact = true;
-			} else {
-				//Speed up
-				playerSpeed += backdraftMulti;
 			}
 			//I have received some speed from being bumped from behind..
 			//..so now I reset it to 0

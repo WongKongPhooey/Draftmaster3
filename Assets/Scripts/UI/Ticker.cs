@@ -426,6 +426,7 @@ public class Ticker : MonoBehaviour
 		carsArray = GameObject.FindGameObjectsWithTag("AICar");
 		playerPosition = playerCar.transform.position.z;
 		
+		//Load in all the race entries
 		if(carsArray.Length > 0){
 			foreach (GameObject car in carsArray) {
 				entrantList.Add(car);
@@ -443,7 +444,7 @@ public class Ticker : MonoBehaviour
 		//Reverse the sort
 		entrantList.Reverse(); 
 		
-		//Now we have our caution order..
+		//Now we have our initial caution order..
 		//Shuffle all wrecked cars to the back
 		//Then shuffle heavily damaged cars to the back of that new set
 		
@@ -496,13 +497,12 @@ public class Ticker : MonoBehaviour
 			}
 		}
 		
-		//Count backwards from the max field size
-		//This way the index moves with each restart
-		int DNFPosition = PlayerPrefs.GetInt("FieldSize");
-		int cautionLap = CameraRotate.lap;
+		//We've now counted all of the undamaged cars.
+		//Now run loop #2 to add the damaged but not retired cars.
 		
 		for(int k=0;k<entrantList.Count;k++){
-			//Wrecked cars restart at the back
+			//Damaged cars restart at the back
+			//If damage <50, car is okay to continue and restart.
 			int carNum = int.Parse(carNumber[k]);
 			if(((RaceControl.isWrecking[carNum]==true)||
 			  (RaceControl.hasWrecked[carNum]==true))&&
@@ -514,15 +514,27 @@ public class Ticker : MonoBehaviour
 				}
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[k]));
 				restartPosition++;
-			} else {
+			}
+		}
+		//Debug.Log("Total cars undamaged: " + restartPosition);
+		
+		//Loop #3 counts the DNFs
+		int DNFPosition = restartPosition;
+		int cautionLap = CameraRotate.lap;
+		
+		for(int l=0;l<entrantList.Count;l++){
+			int carNum = int.Parse(carNumber[l]);
+			if(((RaceControl.isWrecking[carNum]==true)||
+			  (RaceControl.hasWrecked[carNum]==true))&&
+			  (RaceControl.wreckDamage[carNum] >= 50f)){
+				//Car is heavily damaged and retires.
 				if((RaceControl.wreckDamage[carNum] >= 50f)||((RaceControl.hasBlownEngine[carNum]==true))){
-					Debug.Log(entrantList[k].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
+					Debug.Log(entrantList[l].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
 					PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
 					PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
-					DNFPosition--;
+					DNFPosition++;
 				}
 			}
-			//..any other cars do not restart
 		}
 		
 		//Update field size to however many cars were counted as restartable
@@ -531,6 +543,7 @@ public class Ticker : MonoBehaviour
 		PlayerPrefs.SetInt("CautionLap", CameraRotate.lap);
 		PlayerPrefs.SetInt("SpawnFromCaution", 1);
 		
+		//Only restart the scene if no manual action is required from the player.
 		if(waitForReload == false){
 			SceneManager.LoadScene(SceneManager.GetActiveScene().name);
 		}
@@ -601,97 +614,85 @@ public class Ticker : MonoBehaviour
 					
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;
-				if(i == 1){
-					MomentsCriteria.checkMomentsCriteria("WinningMargin",carDist[i].ToString());
-					MomentsCriteria.checkMomentsCriteria("AIMustWin",carDist[i].ToString());
-				}
-				if(i == 2){
-					MomentsCriteria.checkMomentsCriteria("WinToThirdLessThan",carDist[i].ToString());
-				}
-				if(i < 2){
-					MomentsCriteria.checkMomentsCriteria("Top2Finish",carNumber[i],i.ToString());
-					MomentsCriteria.checkMomentsCriteria("Top2FinishAlso",carNumber[i],i.ToString());
-				}
-				if(i < 3){
-					MomentsCriteria.checkMomentsCriteria("Top3Finish",carNumber[i],i.ToString());
-					MomentsCriteria.checkMomentsCriteria("Top3FinishAlso",carNumber[i],i.ToString());
-				}
-				if(i < 5){
-					MomentsCriteria.checkMomentsCriteria("Top5Finish",carNumber[i],i.ToString());
-					MomentsCriteria.checkMomentsCriteria("Top5FinishAlso",carNumber[i],i.ToString());
-				}
 			}
 
 			if(crossedFinish == false){
+				//Debug.Log("The player hasn't crossed the line..");
 				//..the player has wrecked, so the finish line was never reached..
-				//if this car is okay, lock in it's finish time..
-				//else, shuffle it to the back (because it is either wrecking, wrecked, or has a blown engine)
+				//if car is okay, lock in it's finish time..
+				//else, shuffle it to the back (because it is either wrecking or wrecked)
 				int carNum = int.Parse(carNumber[i]);
 				if((RaceControl.isWrecking[carNum]==false)&&
-				  (RaceControl.hasWrecked[carNum]==false)&&
-				  (RaceControl.hasBlownEngine[carNum]==false)){
-					Debug.Log("Car #" + carNumber[i] + " finishes P" + unclassifiedPosition);
+				  (RaceControl.hasWrecked[carNum]==false)){
+					//Debug.Log("Car #" + carNumber[i] + " finishes P" + unclassifiedPosition);
 					PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[i]));
 					PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
 					if(entrantList[i].name == playerCar.name){
 						PlayerPrefs.SetInt("PlayerFinishPosition", unclassifiedPosition);
-						Debug.Log("Player finishes P" + unclassifiedPosition);
+						//Debug.Log("Player finishes P" + unclassifiedPosition);
 					}
 					unclassifiedPosition++;
 				}
 			} else {
-				//We're either wrecking, or have a blown engine, but..
+				//Debug.Log("The player has crossed the line..");
+				//We're wrecking but..
 				//we've reached the finish line, so..
-				//..don't meddle with the finishing order
-				Debug.Log("Car #" + carNumber[i] + " finishes P" + unclassifiedPosition);
+				//..the finish order is set
+				//Debug.Log("Car #" + carNumber[i] + " finishes P" + unclassifiedPosition);
 				PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[i]));
 				PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
 				if(entrantList[i].name == playerCar.name){
 					PlayerPrefs.SetInt("PlayerFinishPosition", unclassifiedPosition);
-					Debug.Log("Player finishes P" + unclassifiedPosition);
+					//Debug.Log("Player finishes P" + unclassifiedPosition);
 				}
 				unclassifiedPosition++;
 			}
+			if(i == 1){
+				MomentsCriteria.checkMomentsCriteria("WinningMargin",carDist[i].ToString());
+			}
+			if(i == 2){
+				MomentsCriteria.checkMomentsCriteria("WinToThirdLessThan",carDist[i].ToString());
+			}
+			if(i < 2){
+				MomentsCriteria.checkMomentsCriteria("Top2Finish",carNumber[i],i.ToString());
+				MomentsCriteria.checkMomentsCriteria("Top2FinishAlso",carNumber[i],i.ToString());
+			}
+			if(i < 3){
+				MomentsCriteria.checkMomentsCriteria("Top3Finish",carNumber[i],i.ToString());
+				MomentsCriteria.checkMomentsCriteria("Top3FinishAlso",carNumber[i],i.ToString());
+			}
+			if(i < 5){
+				MomentsCriteria.checkMomentsCriteria("Top5Finish",carNumber[i],i.ToString());
+				MomentsCriteria.checkMomentsCriteria("Top5FinishAlso",carNumber[i],i.ToString());
+			}
 		}
 		
+		//We've now counted all of the undamaged cars.
+		//Now run loop #2 to add the cars that didn't cross the lne.
+		
 		if(crossedFinish == false){
+			//Debug.Log("The player hasn't crossed the line.. check for last lap DNFs");
 			//Count backwards from the max field size
-			int DNFPosition = PlayerPrefs.GetInt("FieldSize");
+			int DNFPosition = unclassifiedPosition;
 			int cautionLap = CameraRotate.lap;
 			
 			for(int k=0;k<entrantList.Count;k++){
 				//Wrecked cars are shuffled to the back of the finishers
 				int carNum = int.Parse(carNumber[k]);
-				if(((RaceControl.isWrecking[carNum]==true)||
-				  (RaceControl.hasWrecked[carNum]==true))&&
-				  (RaceControl.wreckDamage[carNum] < 50f)){
+				
+				//Car is marked as retired
+				if((RaceControl.isWrecking[carNum]==true)||
+				  (RaceControl.hasWrecked[carNum]==true)){
 					if(entrantList[k].name == playerCar.name){
-						if(Movement.blownEngine == true){
-							Debug.Log("Player has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
-							PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
-							PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
-							PlayerPrefs.SetInt("PlayerFinishPosition", DNFPosition);
-							DNFPosition--;
-						} else {
-							PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[k]));
-							unclassifiedPosition++;
-						}
+						//Debug.Log("Player wrecked before the line, finishes P" + DNFPosition);
+						PlayerPrefs.SetInt("PlayerFinishPosition", DNFPosition);
+						PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
+						PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", CameraRotate.raceEnd - 1);
+						DNFPosition++;
 					} else {
-						PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[k]));
-						unclassifiedPosition++;
-					}
-				} else {
-					//Too damaged to cross the finish line..
-					//So mark them as DNF'd, 1 lap down
-					if(entrantList[k].name == playerCar.name){
-						//The player cannot retire from being too damaged
-					} else {
-						if((RaceControl.wreckDamage[carNum] >= 50f)||((RaceControl.hasBlownEngine[carNum]==true))){
-							Debug.Log(entrantList[k].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
-							PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
-							PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
-							DNFPosition--;
-						}
+						PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
+						PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", CameraRotate.raceEnd - 1);
+						DNFPosition++;
 					}
 				}
 			}

@@ -175,7 +175,6 @@ public class MainMenuUI : MonoBehaviour {
 			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
 			PlayerPrefs.DeleteKey("DNFLap" + i + "");
 		}
-		PlayerPrefs.DeleteKey("RaceAltPaintsChosen");
 		
 		//Level Up?
 		if(exp > levelExp){
