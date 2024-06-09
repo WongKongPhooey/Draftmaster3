@@ -485,6 +485,7 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Van Gisbergen");
 		driverPool.Add("Vargas");
 		driverPool.Add("Vips");
+		driverPool.Add("Waters");
 		driverPool.Add("White");
 		driverPool.Add("Williams");
 		driverPool.Add("Wilson");

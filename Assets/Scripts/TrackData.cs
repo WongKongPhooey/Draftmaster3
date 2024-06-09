@@ -252,6 +252,9 @@ public class TrackData : MonoBehaviour
 			case "31":
 				trackImageName = "Madison";
 				break;
+			case "33":
+				trackImageName = "LongOval";
+				break;
 			default:
 				break;
 		}
@@ -290,6 +293,8 @@ public class TrackData : MonoBehaviour
 		trackLaps[27] = 8;
 		trackLaps[28] = 9;
 		trackLaps[29] = 6;
+		trackLaps[31] = 6;
+		trackLaps[33] = 6;
 	}
 	
 	public static void Talladega(){
@@ -930,6 +935,28 @@ public class TrackData : MonoBehaviour
 		PlayerPrefs.SetInt("SpeedOffset",63 - speedFactor);
 		PlayerPrefs.SetInt("TotalTurns",4);
 		PlayerPrefs.SetString("TrackType","Mid");
+	}
+
+	public static void Milwaukee(){
+		trackCodeName = "Milwaukee";
+		PlayerPrefs.SetInt("RaceLaps",6);
+		PlayerPrefs.SetInt("CircuitLanes",4);
+		PlayerPrefs.SetInt("StraightLength1",250);
+		PlayerPrefs.SetInt("StraightLength2",250);
+		PlayerPrefs.SetInt("StraightLength3",0);
+		PlayerPrefs.SetInt("StraightLength4",0);
+		PlayerPrefs.SetInt("TurnLength1",180);
+		PlayerPrefs.SetInt("TurnLength2",180);
+		PlayerPrefs.SetInt("TurnLength3",0);
+		PlayerPrefs.SetInt("TurnLength4",0);
+		PlayerPrefs.SetInt("TurnAngle1",2);
+		PlayerPrefs.SetInt("TurnAngle2",2);
+		PlayerPrefs.SetInt("TurnAngle3",0);
+		PlayerPrefs.SetInt("TurnAngle4",0);
+		PlayerPrefs.SetInt("StartLine",100);
+		PlayerPrefs.SetInt("SpeedOffset",45 - speedFactor);
+		PlayerPrefs.SetInt("TotalTurns",2);
+		PlayerPrefs.SetString("TrackType","Short");
 	}
 
 	public static void TestTrack(){
