@@ -113,6 +113,8 @@ public class SpawnField : MonoBehaviour {
 		// +1 for the Player's car
 		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
 			fieldSize = fastCars.Count + midCars.Count + slowCars.Count + 1;
+			PlayerPrefs.SetInt("FieldSize", fieldSize);
+			PlayerPrefs.SetInt("RaceEntries", fieldSize);
 		} else {
 			//Just remember count set earlier on
 			fieldSize = PlayerPrefs.GetInt("FieldSize");
@@ -123,9 +125,6 @@ public class SpawnField : MonoBehaviour {
 			fieldSize = 43;
 		}
 		
-		if(!PlayerPrefs.HasKey("SpawnFromCaution")){
-			PlayerPrefs.SetInt("FieldSize", fieldSize);
-		}
 		float gridRowsCalc = fieldSize * 0.5f;
 		
 		gridRows = Mathf.CeilToInt(gridRowsCalc);

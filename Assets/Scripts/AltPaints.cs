@@ -9,12 +9,14 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup23AltPaintNames = new string[101,10];
 	public static string[,] cup24AltPaintNames = new string[101,10];
 	public static string[,] irl23AltPaintNames = new string[101,10];
+	public static string[,] irl24AltPaintNames = new string[101,10];
 	
 	public static string[,] cup2020AltPaintDriver = new string[101,10];
 	public static string[,] cup22AltPaintDriver = new string[101,10];
 	public static string[,] cup23AltPaintDriver = new string[101,10];
 	public static string[,] cup24AltPaintDriver = new string[101,10];
 	public static string[,] irl23AltPaintDriver = new string[101,10];
+	public static string[,] irl24AltPaintDriver = new string[101,10];
 	
 	public static int[,] cup2020AltPaintRarity = new int[101,10];
 	
@@ -23,18 +25,21 @@ public class AltPaints : MonoBehaviour {
 	public static string[,] cup23AltPaintTheme = new string[101,10];
 	public static string[,] cup24AltPaintTheme = new string[101,10];
 	public static string[,] irl23AltPaintTheme = new string[101,10];
+	public static string[,] irl24AltPaintTheme = new string[101,10];
 	
 	public static bool[,] cup2020AltCanBuy = new bool[101,10];
 	public static bool[,] cup22AltCanBuy = new bool[101,10];
 	public static bool[,] cup23AltCanBuy = new bool[101,10];
 	public static bool[,] cup24AltCanBuy = new bool[101,10];
 	public static bool[,] irl23AltCanBuy = new bool[101,10];
+	public static bool[,] irl24AltCanBuy = new bool[101,10];
 	
 	public static bool[,] cup2020AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup22AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup23AltPaintAISpawning = new bool[101,10];
 	public static bool[,] cup24AltPaintAISpawning = new bool[101,10];
 	public static bool[,] irl23AltPaintAISpawning = new bool[101,10];
+	public static bool[,] irl24AltPaintAISpawning = new bool[101,10];
 	
     // Start is called before the first frame update
     void Start(){
@@ -133,14 +138,18 @@ public class AltPaints : MonoBehaviour {
 		cup24AltPaintNames[6,1] = "#1 Half Off";
 		cup24AltPaintNames[9,1] = "#1 40 Years";
 		cup24AltPaintNames[11,1] = "#1 Winner";
+		cup24AltPaintNames[15,1] = "#1 Parnelli";
 		cup24AltPaintNames[16,1] = "#1 MLG 1337";
 		cup24AltPaintNames[17,1] = "#1 Submarine";
 		cup24AltPaintNames[23,1] = "#1 Money";
 		cup24AltPaintNames[24,1] = "#1 40 Years";
 		cup24AltPaintNames[31,1] = "#1 Golfer";
+		cup24AltPaintNames[34,1] = "#1 Long John";
 		cup24AltPaintNames[42,1] = "#1 Dolla";
 		cup24AltPaintNames[48,1] = "#1 40 Years";
+		cup24AltPaintNames[51,1] = "#1 Cops";
 		cup24AltPaintNames[54,1] = "#1 Radio XM";
+		cup24AltPaintNames[60,1] = "#1 Waters";
 		cup24AltPaintNames[99,1] = "#1 Time Trial";
 		cup24AltPaintNames[99,2] = "#2 Worldwide";
 		
@@ -149,6 +158,11 @@ public class AltPaints : MonoBehaviour {
 		irl23AltPaintNames[6,1] = "#1 500 Triple";
 		irl23AltPaintNames[7,1] = "#1 Azure Triple";
 		irl23AltPaintNames[28,1] = "#1 LGBTQ";
+		
+		irl24AltPaintNames[3,1] = "#1 Galaga";
+		irl24AltPaintNames[3,2] = "#2 Yellow Sub";
+		irl24AltPaintNames[14,1] = "#1 Patriot";
+		irl24AltPaintNames[41,1] = "#1 Doggo";
 		
 		cup2020AltPaintDriver[3,2] = "Earnhardt";
 		cup2020AltPaintDriver[3,3] = "Earnhardt";
@@ -298,6 +312,9 @@ public class AltPaints : MonoBehaviour {
 			case "irl23":
 				altPaintName = irl23AltPaintNames[carNum,altNum];
 				break;
+			case "irl24":
+				altPaintName = irl24AltPaintNames[carNum,altNum];
+				break;
 			default:
 				break;
 		}
@@ -320,6 +337,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "irl23":
 				return irl23AltPaintDriver[carNum,altNum];
+				break;
+			case "irl24":
+				return irl24AltPaintDriver[carNum,altNum];
 				break;
 			default:
 				return null;
@@ -353,6 +373,11 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "irl23":
 				if(irl23AltCanBuy[carNum,altNum] == true){
+					canBuy = true;
+				}
+				break;
+			case "irl24":
+				if(irl24AltCanBuy[carNum,altNum] == true){
 					canBuy = true;
 				}
 				break;
@@ -390,6 +415,11 @@ public class AltPaints : MonoBehaviour {
 					canSpawn = true;
 				}
 				break;
+			case "irl24":
+				if(irl24AltPaintAISpawning[carNum,altNum] == true){
+					canSpawn = true;
+				}
+				break;
 			default:
 				break;
 		}
@@ -412,6 +442,9 @@ public class AltPaints : MonoBehaviour {
 				break;
 			case "irl23":
 				return irl23AltPaintTheme[carNum,altNum];
+				break;
+			case "irl24":
+				return irl24AltPaintTheme[carNum,altNum];
 				break;
 			default:
 				return "Blank";

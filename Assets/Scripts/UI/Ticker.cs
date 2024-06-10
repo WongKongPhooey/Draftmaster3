@@ -687,11 +687,11 @@ public class Ticker : MonoBehaviour
 						//Debug.Log("Player wrecked before the line, finishes P" + DNFPosition);
 						PlayerPrefs.SetInt("PlayerFinishPosition", DNFPosition);
 						PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
-						PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", CameraRotate.raceEnd - 1);
+						PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
 						DNFPosition++;
 					} else {
 						PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
-						PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", CameraRotate.raceEnd - 1);
+						PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
 						DNFPosition++;
 					}
 				}

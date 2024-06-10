@@ -156,6 +156,9 @@ public class MainMenuUI : MonoBehaviour {
 		if(PlayerPrefs.HasKey("RaceAILevel")){
 			PlayerPrefs.DeleteKey("RaceAILevel");
 		}
+		if(PlayerPrefs.HasKey("RaceEntries")){
+			PlayerPrefs.DeleteKey("RaceEntries");
+		}
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			PlayerPrefs.DeleteKey("SpawnFromCaution");
 		}

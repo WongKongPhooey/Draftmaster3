@@ -136,6 +136,8 @@ public class RaceRewardsUI : MonoBehaviour
 		moneyTitle.GetComponent<UIAnimate>().animOffset = 80;
 		moneyTitle.GetComponent<UIAnimate>().scaleIn();
 		
+		int raceEntries = PlayerPrefs.GetInt("RaceEntries");
+		
 		if(raceType != "Event"){
 			//e.g. AI Level 14 = 14 / 3  = 4.x -> 4 + 2 = 6
 			//e.g. AI Level 5 = 5 / 3 = 1.x -> 1 + 2 = 3
@@ -166,6 +168,10 @@ public class RaceRewardsUI : MonoBehaviour
 				//e.g. 16th -> 4 - 4 = 0
 				Debug.Log("Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Floor): " + Mathf.FloorToInt(finishPos/4) + "");
 				rewardGears = maxRaceGears - Mathf.FloorToInt(finishPos/4);
+				
+				//Adjust based on size of field in the race
+				rewardGears = Mathf.FloorToInt((rewardGears / 40) * raceEntries);
+				
 				Debug.Log("Rewarded Gears Per Race: " + rewardGears);
 				int minimumGears = Mathf.CeilToInt(rewardMultiplier/2);
 				Debug.Log("Minimum Reward Gears: " + minimumGears);
@@ -193,6 +199,9 @@ public class RaceRewardsUI : MonoBehaviour
 				//e.g. 150% AI Strength = 7 Gears for a win, 1 gear for 24th
 				rewardGears = maxRaceGears - Mathf.FloorToInt(finishPos/4);
 				Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + "");
+				
+				//Adjust based on size of field in the race
+				rewardGears = Mathf.FloorToInt((rewardGears / 40) * raceEntries);
 				
 				if(rewardGears > 0){
 					gears += rewardGears * rewardMultiplier;
