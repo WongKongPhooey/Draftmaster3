@@ -371,6 +371,7 @@ public class RaceRewardsUI : MonoBehaviour
 			case "cup23":
 			case "cup24":
 			case "irl23":
+			case "irl24":
 			case "dmc15":
 			case "irc00":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){

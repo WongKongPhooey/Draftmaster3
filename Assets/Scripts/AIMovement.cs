@@ -1019,11 +1019,23 @@ public class AIMovement : MonoBehaviour
 	
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
+			
 			case "irl23":
 			case "irl24":
 			case "indy":
 			case "indycar":
 			case "openwheel":
+				draftStrengthRatio = 800f;
+				dragDecelMulti = 0.002f;
+				backdraftMulti = 0.0025f;
+				bumpDraftDistTrigger = 1.1f;
+				passDistMulti = 1f;
+				draftAirCushion = 2f;
+				coolOffSpace = 2f;
+				coolOffInv = 4f;
+				tandemDrafting = false;
+				break;
+			case "indyold":
 				draftStrengthRatio = 450f;
 				dragDecelMulti = 0.003f;
 				backdraftMulti = 0.015f;

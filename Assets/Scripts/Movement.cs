@@ -1057,16 +1057,17 @@ public class Movement : MonoBehaviour {
 	void setCarPhysics(string seriesPrefix){
 		switch(seriesPrefix){
 			case "irl23":
+			case "irl24":
 			case "indy":
 			case "indycar":
 			case "openwheel":
 				seriesSpeedDiff = 30;
-				draftStrengthRatio = 600f;
-				dragDecelMulti = 0.0025f;
-				backdraftMulti = 0.015f;
-				bumpDraftDistTrigger = 1.2f;
-				draftAirCushion = 1.8f;
-				revLimiterBoost = 1.0f;
+				draftStrengthRatio = 900f;
+				dragDecelMulti = 0.0015f;
+				backdraftMulti = 0.0040f;
+				bumpDraftDistTrigger = 1.1f;
+				draftAirCushion = 2f;
+				revLimiterBoost = 1f;
 				break;
 			case "cushion":
 				seriesSpeedDiff = 0;

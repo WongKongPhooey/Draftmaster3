@@ -98,7 +98,8 @@ public class SpawnField : MonoBehaviour {
 		}
 		//spawnCup2020Scenario();
 		paceDistance = 2.5f;
-		if(seriesPrefix == "irl23"){
+		if((seriesPrefix == "irl23")||
+		  (seriesPrefix == "irl24")){
 			paceDistance = 4f;
 		}
 		string carNumber = PlayerPrefs.GetString("carTexture");
