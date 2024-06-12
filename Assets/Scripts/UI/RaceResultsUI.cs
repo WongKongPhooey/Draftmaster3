@@ -193,10 +193,7 @@ public class RaceResultsUI : MonoBehaviour
 					carNum = PlayerPrefs.GetInt("DNFPosition" + i + "");
 					carDist = 99999.99f;
 					carLap = PlayerPrefs.GetInt("RaceLaps") - PlayerPrefs.GetInt("DNFLap" + i + "");
-					//Error catch
-					if(carLap<=0){
-						carLap = PlayerPrefs.GetInt("RaceLaps");
-					}
+					Debug.Log("DNF #" + carNum + " - Lap: " + carLap);
 					Debug.Log("DNF Pos: " + i + " Num: " + carNum);
 				} else {
 					continue;
@@ -240,14 +237,21 @@ public class RaceResultsUI : MonoBehaviour
 			if(i==0){
 				resultTime.text = "";
 			} else {
-				if(carDist > 32000f){
-					if((carLap != 999)&&(carLap != 1)){
+				//Cars that are DNF'd
+				if(carLap != 999){
+					//DNF'd several laps ago
+					if(carLap > 1){
 						resultTime.text = "+" + carLap + " LAPS";
 					} else {
-						resultTime.text = "+1 LAP";
+						resultTime.text = "+ 1 LAP";
 					}
 				} else {
-					resultTime.text = "+" + (carDist / 1000f).ToString("f3");
+					//Cars that continued after the player retired, mark as 1 lap down
+					if(carDist == 99999){
+						resultTime.text =  "+1 LAP";
+					} else {
+						resultTime.text = "+" + (carDist / 1000f).ToString("f3");
+					}
 				}
 			}
 		}
