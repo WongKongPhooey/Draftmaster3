@@ -1025,9 +1025,9 @@ public class AIMovement : MonoBehaviour
 			case "indy":
 			case "indycar":
 			case "openwheel":
-				draftStrengthRatio = 800f;
-				dragDecelMulti = 0.002f;
-				backdraftMulti = 0.0025f;
+				draftStrengthRatio = 400f;
+				dragDecelMulti = 0.0035f;
+				backdraftMulti = 0.0035f;
 				bumpDraftDistTrigger = 1.1f;
 				passDistMulti = 1f;
 				draftAirCushion = 2f;

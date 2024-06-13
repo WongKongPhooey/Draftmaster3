@@ -1062,9 +1062,9 @@ public class Movement : MonoBehaviour {
 			case "indycar":
 			case "openwheel":
 				seriesSpeedDiff = 30;
-				draftStrengthRatio = 900f;
-				dragDecelMulti = 0.0015f;
-				backdraftMulti = 0.0040f;
+				draftStrengthRatio = 400f;
+				dragDecelMulti = 0.0030f;
+				backdraftMulti = 0.0015f;
 				bumpDraftDistTrigger = 1.1f;
 				draftAirCushion = 2f;
 				revLimiterBoost = 1f;
