@@ -518,6 +518,18 @@ public class RaceRewardsUI : MonoBehaviour
 			case "PEN":
 			case "JGR":
 			case "HEN":
+			case "KAU":
+			case "23X":
+			case "LMC":
+			case "FOY":
+			case "AND":
+			case "ARR":
+			case "DCR":
+			case "DRE":
+			case "EDC":
+			case "JUN":
+			case "MEY":
+			case "RLL":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
 					for(int j=0;j<=99;j++){
@@ -572,7 +584,6 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Harvick":
 				prizeOptions.Add("cup234");
 			break;
-			
 			case "Logano":
 				prizeOptions.Add("cup2222");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
