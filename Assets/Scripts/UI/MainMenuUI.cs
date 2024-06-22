@@ -84,6 +84,7 @@ public class MainMenuUI : MonoBehaviour {
 				Application.targetFrameRate = 60;
 				break;
 		}
+		AudioSettings.SetDSPBufferSize(512,4);
 	}
 	
     // Start is called before the first frame update

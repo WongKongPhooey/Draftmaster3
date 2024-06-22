@@ -111,8 +111,8 @@ public class ChampionshipHubUI : MonoBehaviour
 		
 		//Testing Long Championships Fast
 		#if UNITY_EDITOR
-		//PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round",32);
-		//Debug.Log("Championship Round hacked to R32.");
+		//PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round",4);
+		//Debug.Log("Championship Round hacked to R4.");
 		#endif
 		
 		championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
@@ -177,8 +177,6 @@ public class ChampionshipHubUI : MonoBehaviour
 			endSeasonBtn.SetActive(false);
 		}
 	}
-
-	//PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber, currentPoints + points);
 
 	public void loadPoints(string currentSeriesIndex){
 		championshipPoints.Clear();

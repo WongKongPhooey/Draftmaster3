@@ -202,6 +202,9 @@ public class RaceRewardsUI : MonoBehaviour
 				rewardGears = maxRaceGears - Mathf.FloorToInt(finishPos/4);
 				
 				//Adjust based on size of field in the race
+				if(raceEntries == 0){
+					raceEntries = 40;
+				}
 				float scaledRewards = (rewardGears / 40f) * raceEntries;
 				rewardGears = Mathf.FloorToInt(scaledRewards);
 
@@ -246,7 +249,8 @@ public class RaceRewardsUI : MonoBehaviour
 				//e.g. 33 race season / 50% / finished 10th = 7
 				//e.g. 33 race season / 150% / finished 20th = 10
 				//e.g. 33 race season / 150% / finished 1st = 99
-				int maxRewardInt = Mathf.CeilToInt(SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5);
+				float maxRewardFloat = SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5f;
+				int maxRewardInt = Mathf.CeilToInt(maxRewardFloat);
 				Debug.Log("Reward Multi: " + Mathf.CeilToInt(rewardMultiplier/2) + ", Max Reward: " + maxRewardInt + ", CeilFinish Pos/2: " + Mathf.CeilToInt(((finishPos + 1f)/2f)));
 				int rewardRatio = Mathf.CeilToInt((Mathf.CeilToInt(rewardMultiplier/2f) * maxRewardInt) / Mathf.CeilToInt((finishPos + 1f)/2f));
 				if(rewardRatio >= 1){
