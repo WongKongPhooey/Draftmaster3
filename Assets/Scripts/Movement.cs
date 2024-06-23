@@ -903,8 +903,8 @@ public class Movement : MonoBehaviour {
 				//e.g. distant draft (5.0) = +0.0017
 				engineTemp+= (0.005f / (DraftCheck.distance - 0.85f));
 			} else {
-				//e.g. 260 temp = -0.041
-				engineTemp-= (engineTemp - 210f) / 1200f;
+				//e.g. 260 temp = -0.04
+				engineTemp-= (engineTemp - 210f) / 1250f;
 			}
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
@@ -929,7 +929,7 @@ public class Movement : MonoBehaviour {
 			if(engineTemp > 210f){
 				//e.g. 260C engine = 0.033f cooling
 				//e.g. 220C engine = 0.0066f cooling
-				engineTemp-= (engineTemp - 210f) / 1500;
+				engineTemp-= (engineTemp - 210f) / 1200f;
 			}
 			
 			//Overspeed disappears

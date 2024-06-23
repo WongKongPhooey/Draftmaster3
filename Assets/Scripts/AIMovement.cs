@@ -887,7 +887,7 @@ public class AIMovement : MonoBehaviour
 			if(engineTemp > 210f){
 				//e.g. 260C engine = 0.033f cooling
 				//e.g. 220C engine = 0.0066f cooling
-				engineTemp-= (engineTemp - 210f) / 1500;
+				engineTemp-= (engineTemp - 210f) / 1250f;
 			}
 
 		}
