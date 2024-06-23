@@ -548,7 +548,7 @@ public class AIMovement : MonoBehaviour
 				if(doored("Left",dooredStrength) == true){
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " got doored! Moving right");
+						//Debug.Log(AICar.name + " got doored! Moving right");
 					}
 					#endif
 					changeLane("Right");
@@ -556,7 +556,7 @@ public class AIMovement : MonoBehaviour
 				if(doored("Right",dooredStrength) == true){
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " got doored! Moving left");
+						//Debug.Log(AICar.name + " got doored! Moving left");
 					}
 					#endif
 					changeLane("Left");
@@ -816,8 +816,8 @@ public class AIMovement : MonoBehaviour
 			if(engineTemp < (275f - (DraftCheckForward.distance * 10))){
 				//e.g. bump draft (1.0) = +0.02
 				//e.g. closer draft (1.5) = +0.01
-				//e.g. breathing draft (2.0) = +0.0066
-				//e.g. distant draft (5.0) = +0.0022
+				//e.g. breathing draft (2.0) = +0.004
+				//e.g. distant draft (5.0) = +0.00117
 				engineTemp+= (0.005f / (DraftCheckForward.distance - 0.75f));
 				if(engineTemp > (tempLimit - 1)){
 					coolEngine = true;
@@ -1285,7 +1285,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " draft logic start ");
+			//Debug.Log(AICar.name + " draft logic start ");
 		}
 		#endif
 		
@@ -1295,7 +1295,7 @@ public class AIMovement : MonoBehaviour
 			bool tryTimedPass = timedPass(carDist, opponentSpeed);
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log(AICar.name + " have the setup for a timed pass? " + tryTimedPass);
+				//Debug.Log(AICar.name + " have the setup for a timed pass? " + tryTimedPass);
 			}
 			#endif
 			if(CameraRotate.cautionOut == true){
@@ -1320,7 +1320,7 @@ public class AIMovement : MonoBehaviour
 
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " attempting a pass (lane rest exceeded) ");
+					//Debug.Log(AICar.name + " attempting a pass (lane rest exceeded) ");
 				}
 				#endif
 
@@ -1434,7 +1434,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " tryPass start");
+			//Debug.Log(AICar.name + " tryPass start");
 		}
 		#endif
 		
@@ -1443,7 +1443,7 @@ public class AIMovement : MonoBehaviour
 			
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log(AICar.name + " tryPass attempted ");
+				//Debug.Log(AICar.name + " tryPass attempted ");
 			}
 			#endif
 			
@@ -1455,7 +1455,7 @@ public class AIMovement : MonoBehaviour
 				} else {
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " try pass opportunity (right)");
+						//Debug.Log(AICar.name + " try pass opportunity (right)");
 					}
 					#endif
 					direction = "Right";
@@ -1464,7 +1464,7 @@ public class AIMovement : MonoBehaviour
 			if((leftSideClr == true)&&(pos.x > (apronLineX + 1f))){
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " try pass opportunity (left)");
+					//Debug.Log(AICar.name + " try pass opportunity (left)");
 				}
 				#endif
 				if(direction == "Right"){
@@ -1486,7 +1486,7 @@ public class AIMovement : MonoBehaviour
 				float rngDir = Random.Range(0,2);
 				#if UNITY_EDITOR
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " try pass opportunity (either). Random choose.." + rngDir + "/2");
+						//Debug.Log(AICar.name + " try pass opportunity (either). Random choose.." + rngDir + "/2");
 					}
 				#endif
 				if(rngDir >= 1f){
@@ -1554,7 +1554,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log("Looking for a draft: Left - " + HitLaneLeft + " , Right - " + HitLaneRight);
+			//Debug.Log("Looking for a draft: Left - " + HitLaneLeft + " , Right - " + HitLaneRight);
 		}
 		#endif
 		
@@ -1627,7 +1627,7 @@ public class AIMovement : MonoBehaviour
 			}
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log(AICar.name + " found a better draft; moving " + direction);
+				//Debug.Log(AICar.name + " found a better draft; moving " + direction);
 			}
 			#endif
 			changeLane(direction);
@@ -1708,7 +1708,7 @@ public class AIMovement : MonoBehaviour
 			}
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log(AICar.name + " found a clear lane; moving " + direction);
+				//Debug.Log(AICar.name + " found a clear lane; moving " + direction);
 			}
 			#endif
 			changeLane(direction);
@@ -1722,7 +1722,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " avoiding wreck.");
+			//Debug.Log(AICar.name + " avoiding wreck.");
 		}
 		#endif
 			
@@ -1824,7 +1824,7 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " doored - Strength: " + chance + " - Rnd: " + randChance);
+			//Debug.Log(AICar.name + " doored - Strength: " + chance + " - Rnd: " + randChance);
 		}
 		#endif
 		
@@ -1840,7 +1840,7 @@ public class AIMovement : MonoBehaviour
 					}
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " doored from the left");
+						//Debug.Log(AICar.name + " doored from the left");
 					}
 					#endif
 					break;
@@ -1850,7 +1850,7 @@ public class AIMovement : MonoBehaviour
 					}
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " doored from the right");
+						//Debug.Log(AICar.name + " doored from the right");
 					}
 					#endif
 					break;
@@ -2103,7 +2103,7 @@ public class AIMovement : MonoBehaviour
 		}
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log(AICar.name + " wreck angle: " + wreckAngle + " sine: " + wreckSine);
+			//Debug.Log(AICar.name + " wreck angle: " + wreckAngle + " sine: " + wreckSine);
 		}
 		#endif
 		baseDecel-=(0.45f - randDecel);
