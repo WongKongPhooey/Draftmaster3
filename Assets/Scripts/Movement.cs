@@ -537,8 +537,8 @@ public class Movement : MonoBehaviour {
 		dominatorDrag = 0;
 		if(officialSeries == true){
 			if(DriverNames.getType(seriesPrefix,carNum) == "Dominator"){
-				//e.g. Class 6(S) reduces drag from 0.004f to 0.002f
-				dominatorDrag = carClass / 3000f;
+				//e.g. Class 6(S) reduces drag by 0.0002f - 0.001f
+				dominatorDrag = carClass / 25000f;
 			}
 		}
 
@@ -870,9 +870,18 @@ public class Movement : MonoBehaviour {
 			//Speed up
 			if(playerSpeed < variTopSpeed){
 				
-				float draftStrength = ((maxDraftDistance - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f);
+				float minDraftStrength = (0.04f - (maxDraftDistance / 750f)) + (carRarity / 750f) + (carClass / 2500f);
+				
+				float oldDraftStrength = ((maxDraftDistance - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f) - dragDecelMulti;
+				
+				//e.g. dist 1 = strength 0.028
+				//e.g. dist 2 = strength 0.026
+				//e.g. dist 5 = strength 0.02
+				float draftStrength = (0.04f - (DraftCheck.distance / 750f)) + (carRarity / 750f) + (carClass / 2500f) - minDraftStrength - dragDecelMulti;
 				#if UNITY_EDITOR
-				//Debug.Log("Total Player draft strength: " + draftStrength + " - " + (10 - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
+				Debug.Log("Player draft strength: " + oldDraftStrength + " - " + (maxDraftDistance - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
+				Debug.Log("New player draft strength: " + draftStrength + " - " + (0.02f / DraftCheck.distance) + " " + (carRarity / 750f) + (carClass / 2500f));
+				
 				#endif
 				
 				float diffToMax = variTopSpeed - playerSpeed;
@@ -1102,7 +1111,7 @@ public class Movement : MonoBehaviour {
 				seriesSpeedDiff = 0;
 				draftStrengthRatio = 1000f;
 				dragDecelMulti = 0.0025f;
-				backdraftMulti = 0.0055f;
+				backdraftMulti = 0.0045f;
 				bumpDraftDistTrigger = 1.05f;
 				draftAirCushion = 1.2f;
 				revLimiterBoost = 0f;

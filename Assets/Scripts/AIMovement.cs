@@ -790,7 +790,15 @@ public class AIMovement : MonoBehaviour
 			//Speed up
 			if (AISpeed < AIVariTopSpeed){
 				//Draft gets stronger as you get closer
-				float draftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (AILevel / 5000f);
+				float minDraftStrength = (0.04f - (maxDraftDistance / 750f)) + (carRarity / 750f) + (carClass / 2500f);
+				
+				float oldDraftStrength = ((maxDraftDistance - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f) - dragDecelMulti;
+				
+				//e.g. dist 1 = strength 0.028
+				//e.g. dist 2 = strength 0.026
+				//e.g. dist 5 = strength 0.02
+				float draftStrength = (0.04f - (DraftCheck.distance / 750f)) + (carRarity / 750f) + (carClass / 2500f) - minDraftStrength - dragDecelMulti;
+				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
 					//Debug.Log("Total AI draft strength: " + draftStrength + " - " + (maxDraftDistance - DraftCheckForward.distance) + " " + draftStrengthRatio + " " + (AILevel / 2500f));
@@ -819,12 +827,12 @@ public class AIMovement : MonoBehaviour
 				//e.g. breathing draft (2.0) = +0.004
 				//e.g. distant draft (5.0) = +0.00117
 				engineTemp+= (0.005f / (DraftCheckForward.distance - 0.75f));
-				if(engineTemp > (tempLimit - 1)){
+				if(engineTemp > (tempLimit - 2)){
 					coolEngine = true;
 				}
 			} else {
 				engineTemp-= (engineTemp - 210f) / 1250f;
-				if(engineTemp < (tempLimit - 6)){
+				if(engineTemp < (tempLimit - 7)){
 					coolEngine = false;
 				}
 			}
@@ -836,7 +844,7 @@ public class AIMovement : MonoBehaviour
 
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
+				//Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
 			}
 			#endif
 
@@ -852,11 +860,11 @@ public class AIMovement : MonoBehaviour
 				
 				//No draft, slow with drag
 				if(dominator == true){
-					AISpeed -= ((dragDecelMulti - (AILevel / 6000f)) / 2) * draftFactor;
+					AISpeed -= (dragDecelMulti - (AILevel / 7500f)) * draftFactor;
 					
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " dominator slowing down by " + ((dragDecelMulti - (AILevel / 6000f)) / 2) + " , variTopSpeed " + AIVariTopSpeed);
+						//Debug.Log(AICar.name + " dominator slowing down by " + (dragDecelMulti - (AILevel / 7500f)) + " , variTopSpeed " + AIVariTopSpeed);
 					}
 					#endif
 				} else {
@@ -865,19 +873,19 @@ public class AIMovement : MonoBehaviour
 						if(diffToMax < 0){
 							diffToMax = 0;
 						}
-						AISpeed -= ((dragDecelMulti - (AILevel / 6000f)) * (2 - (diffToMax / 2))) * draftFactor;
+						AISpeed -= ((dragDecelMulti - (AILevel / 15000f)) * (2 - (diffToMax / 2))) * draftFactor;
 						
 						#if UNITY_EDITOR
 						if(debugPlayer == true){
-							//Debug.Log(AICar.name + " close to max speed, slowing down by " + (dragDecelMulti - (AILevel / 6000f)) * (2 - (diffToMax / 2)));
+							//Debug.Log(AICar.name + " close to max speed, slowing down by " + ((dragDecelMulti - (AILevel / 15000f)) * (2f - (diffToMax / 2f))) + ". Drag Decel x AI Level: " + (dragDecelMulti - (AILevel / 15000f)) + ", Diff to max: " + (2f - (diffToMax / 2f)));
 						}
 						#endif
 					} else {
-						AISpeed -= (dragDecelMulti - (AILevel / 6000f)) * draftFactor;
+						AISpeed -= (dragDecelMulti - (AILevel / 15000f)) * draftFactor;
 						
 						#if UNITY_EDITOR
 						if(debugPlayer == true){
-							//Debug.Log(AICar.name + " slowing down by " + (dragDecelMulti - (AILevel / 6000f)));
+							//Debug.Log(AICar.name + " slowing down by " + (dragDecelMulti - (AILevel / 15000f)));
 						}
 						#endif
 					}
@@ -966,6 +974,13 @@ public class AIMovement : MonoBehaviour
 				if(affectedAISpeed != 0){
 					affectedAISpeed -= (coolOffSpace - DraftCheckForward.distance)/coolOffInv;
 				}
+				
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " is overheated and slowing by " + ((coolOffSpace - DraftCheckForward.distance)/coolOffInv));
+				}
+				#endif
+				
 			} else {
 				coolEngine = false;
 			}
@@ -1032,7 +1047,7 @@ public class AIMovement : MonoBehaviour
 				passDistMulti = 1f;
 				draftAirCushion = 2f;
 				coolOffSpace = 2f;
-				coolOffInv = 4f;
+				coolOffInv = 5f;
 				tandemDrafting = false;
 				break;
 			case "indyold":
@@ -1081,13 +1096,13 @@ public class AIMovement : MonoBehaviour
 				break;
 			default:
 				draftStrengthRatio = 900f;
-				dragDecelMulti = 0.0035f;
+				dragDecelMulti = 0.0025f;
 				backdraftMulti = 0.0035f;
 				bumpDraftDistTrigger = 1.05f;
 				passDistMulti = 1f;
 				draftAirCushion = 1.2f;
 				coolOffSpace = 1.4f;
-				coolOffInv = 10f;
+				coolOffInv = 20f;
 				tandemDrafting = true;
 				break;
 		}
