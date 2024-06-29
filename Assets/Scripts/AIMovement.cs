@@ -295,18 +295,6 @@ public class AIMovement : MonoBehaviour
 		GameObject numberObj = this.transform.Find("Number").transform.gameObject;
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
-		switch(seriesPrefix){
-			case "cup22":
-				this.transform.Find("Number").Translate(0.1f,0f,0f);
-				break;
-			case "cup23":
-				//Debug.Log("Cup '23 Number Shift");
-				this.transform.Find("Number").Translate(0.1f,0f,0f);
-				break;
-			default:
-				break;
-		}
-		
 		string chosenAlt;
 		//Debug.Log("#" + carNumber + " checking for alt paints");
 		if(!PlayerPrefs.HasKey("RaceAltPaintsChosen")){
@@ -365,7 +353,6 @@ public class AIMovement : MonoBehaviour
 						liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
 					}
 				}
-				//Debug.Log("AI: " + (0-DriverNames.getNumXPos(seriesPrefix)/55.75f));
 				numXPos = new Vector3(0,0.52f,0-DriverNames.getNumXPos(seriesPrefix)/55.75f);
 				numScale = new Vector3(DriverNames.getNumScale(seriesPrefix) * 0.5f,0,DriverNames.getNumScale(seriesPrefix) * 0.5f);
 				numRotation = new Vector3(0,-90f-DriverNames.getNumRotation(seriesPrefix),0);
@@ -790,14 +777,14 @@ public class AIMovement : MonoBehaviour
 			//Speed up
 			if (AISpeed < AIVariTopSpeed){
 				//Draft gets stronger as you get closer
-				float minDraftStrength = (0.04f - (maxDraftDistance / 750f)) + (carRarity / 750f) + (carClass / 2500f);
+				float minDraftStrength = (0.04f - (maxDraftDistance / 750f)) + (carRarity / 1000f) + (AILevel / 4000f);
 				
-				float oldDraftStrength = ((maxDraftDistance - DraftCheck.distance)/draftStrengthRatio) + (carRarity / 750f) + (carClass / 2500f) - dragDecelMulti;
+				float oldDraftStrength = ((maxDraftDistance - DraftCheckForward.distance)/draftStrengthRatio) + (carRarity / 1000f) + (AILevel / 4000f) - dragDecelMulti;
 				
 				//e.g. dist 1 = strength 0.028
 				//e.g. dist 2 = strength 0.026
 				//e.g. dist 5 = strength 0.02
-				float draftStrength = (0.04f - (DraftCheck.distance / 750f)) + (carRarity / 750f) + (carClass / 2500f) - minDraftStrength - dragDecelMulti;
+				float draftStrength = (0.04f - (DraftCheckForward.distance / 750f)) + (carRarity / 1000f) + (AILevel / 4000f) - minDraftStrength - dragDecelMulti;
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){

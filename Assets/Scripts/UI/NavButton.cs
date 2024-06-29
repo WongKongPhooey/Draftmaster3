@@ -33,7 +33,6 @@ public class NavButton : MonoBehaviour
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
 			PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
 			PlayerPrefs.DeleteKey("SeriesPrize");
-			PlayerPrefs.DeleteKey("RaceType");
 			PlayerPrefs.DeleteKey("MomentComplete");
 			PlayerPrefs.DeleteKey("SeriesPrizeAmt");
 			PlayerPrefs.SetInt("ChampionshipReward",0);

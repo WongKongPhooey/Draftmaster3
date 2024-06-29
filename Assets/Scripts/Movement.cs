@@ -400,18 +400,6 @@ public class Movement : MonoBehaviour {
 		} else {
 			numRend.enabled = false;
 		}
-		
-		switch(seriesPrefix){
-			case "cup22":
-				this.transform.Find("Number").Translate(0.1f,0f,0f);
-				break;
-			case "cup23":
-				//Debug.Log("Cup '23 Number Shift");
-				this.transform.Find("Number").Translate(0.1f,0f,0f);
-				break;
-			default:
-				break;
-		}
 				
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
 		
@@ -879,9 +867,8 @@ public class Movement : MonoBehaviour {
 				//e.g. dist 5 = strength 0.02
 				float draftStrength = (0.04f - (DraftCheck.distance / 750f)) + (carRarity / 750f) + (carClass / 2500f) - minDraftStrength - dragDecelMulti;
 				#if UNITY_EDITOR
-				Debug.Log("Player draft strength: " + oldDraftStrength + " - " + (maxDraftDistance - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
-				Debug.Log("New player draft strength: " + draftStrength + " - " + (0.02f / DraftCheck.distance) + " " + (carRarity / 750f) + (carClass / 2500f));
-				
+				//Debug.Log("Player draft strength: " + oldDraftStrength + " - " + (maxDraftDistance - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
+				//Debug.Log("New player draft strength: " + draftStrength + " - " + (0.02f / DraftCheck.distance) + " " + (carRarity / 750f) + (carClass / 2500f));
 				#endif
 				
 				float diffToMax = variTopSpeed - playerSpeed;

@@ -227,8 +227,8 @@ public class DriverNames : MonoBehaviour {
 			allTypes.Add("dmc15", dmc2015Types);
 			
 			numXPos.Add("cup20", 17);
-			numXPos.Add("cup22", 10);
-			numXPos.Add("cup23", 11.7f);
+			numXPos.Add("cup22", 9.9f);
+			numXPos.Add("cup23", 11.6f);
 			numXPos.Add("cup24", 9.5f);
 			numXPos.Add("dmc15", 19);
 

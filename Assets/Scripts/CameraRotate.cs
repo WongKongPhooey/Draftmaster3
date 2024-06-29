@@ -628,7 +628,8 @@ public class CameraRotate : MonoBehaviour {
 			lap--;
 			gamePausedLate = true;
 			if(momentChecks == true){
-				MomentsCriteria.updateCriteriaCompletion("CrossTheLine",true);
+				//MomentsCriteria.updateCriteriaCompletion("CrossTheLine",true);
+				MomentsCriteria.checkMomentsCriteria("CrossTheLine","");
 			}
 			finishLine.transform.position = new Vector3(finishLine.transform.position.x,finishLine.transform.position.y,thePlayer.transform.position.z + 1f);
 			finishLine.GetComponent<Renderer>().enabled = true;
