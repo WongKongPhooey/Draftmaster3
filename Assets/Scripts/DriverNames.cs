@@ -2061,7 +2061,7 @@ public class DriverNames : MonoBehaviour {
 		irl2024Names[3] = "Mclaughlin";
 		irl2024Names[4] = "Simpson";
 		irl2024Names[5] = "O Ward";
-		irl2024Names[6] = "Malukas";
+		irl2024Names[6] = "Pourchaire";
 		irl2024Names[7] = "Rossi";
 		irl2024Names[8] = "Lundqvist";
 		irl2024Names[9] = "Dixon";
@@ -2084,7 +2084,7 @@ public class DriverNames : MonoBehaviour {
 		irl2024Names[33] = "Carpenter";
 		irl2024Names[41] = "Robb";
 		irl2024Names[45] = "Lundgaard";
-		irl2024Names[51] = "Siegel";
+		irl2024Names[51] = "Ghiotto";
 		irl2024Names[60] = "Rosenqvist";
 		irl2024Names[66] = "Blomqvist";
 		irl2024Names[75] = "Sato";
