@@ -315,7 +315,6 @@ public class ModsUI : MonoBehaviour {
 		if(nameLength > 13){
 			string[] altSplit = fileName.Split("alt");
 			carNum = altSplit[0].Substring(6);
-			//Debug.Log(carNum);
 			altNum = altSplit[altSplit.Length - 1];
 			altNum = altNum.Split(".")[0];
 			//Debug.Log(altNum);

@@ -498,7 +498,7 @@ public class TrackData : MonoBehaviour
 	public static void Motegi(){
 		trackCodeName = "Motegi";
 		PlayerPrefs.SetInt("RaceLaps",6);
-		PlayerPrefs.SetInt("CircuitLanes",3);
+		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",300);
 		PlayerPrefs.SetInt("StraightLength2",300);
 		PlayerPrefs.SetInt("StraightLength3",0);
