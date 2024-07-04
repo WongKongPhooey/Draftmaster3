@@ -146,7 +146,7 @@ public class TrackUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
-		Debug.Log("Championship Round: " + championshipRound);
+		//Debug.Log("Championship Round: " + championshipRound);
 
 		//If there's a track list loaded
 		if(tracks != ""){

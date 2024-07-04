@@ -208,11 +208,15 @@ public class RaceRewardsUI : MonoBehaviour
 				float scaledRewards = (rewardGears / 40f) * raceEntries;
 				rewardGears = Mathf.FloorToInt(scaledRewards);
 
-				Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + ", Factor: " + raceEntries + "/40, Scaled Rewards: " + scaledRewards);
+				//Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + ", Factor: " + raceEntries + "/40, Scaled Rewards: " + scaledRewards);
+				
+				if(raceType == "Event"){
+					rewardGears = 1;
+				}
 				
 				if(rewardGears > 0){
 					gears += rewardGears * rewardMultiplier;
-					Debug.Log("Youve got Gears");
+					Debug.Log("You've got Gears");
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
 					rewardGears = 0;
@@ -239,7 +243,7 @@ public class RaceRewardsUI : MonoBehaviour
 					} else {
 						//Populate event reward pool
 						Debug.Log("Assign Event Prize");
-						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
+						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, 1);
 					}
 				} else {
 					carReward = "";

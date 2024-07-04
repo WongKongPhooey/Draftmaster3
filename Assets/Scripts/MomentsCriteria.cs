@@ -198,11 +198,11 @@ public class MomentsCriteria : MonoBehaviour
 				momentComplete = true;
 				challengeWon.SetActive(true);
 				PlayerPrefs.SetInt("MomentComplete",1);
-				Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
+				//Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
 			} else {
 				momentComplete = false;
 				challengeLost.SetActive(true);
-				Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
+				//Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
 				TMPro.TMP_Text challengeLostMessage = GameObject.Find("ChallengeEndMessage").GetComponent<TMPro.TMP_Text>();
 				challengeLostMessage.text = "Almost.. (" + completeCriteria + "/" + totalCriteria + ")";
 			}

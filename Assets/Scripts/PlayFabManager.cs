@@ -884,7 +884,7 @@ public class PlayFabManager : MonoBehaviour
 					Debug.Log("Cannot reach PlayFab");
 				}
 			}
-			Debug.Log("Garage Value: " + garageValue);
+			//Debug.Log("Garage Value: " + garageValue);
 			PlayerPrefs.SetInt("GarageValue",garageValue);
 		}
 	}
@@ -949,9 +949,9 @@ public class PlayFabManager : MonoBehaviour
 		};
 		try {
 			PlayFabClientAPI.UpdatePlayerStatistics(request, OnLeaderboardUpdate, OnError);
-			Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
+			//Debug.Log("Sent " + score + " To Leaderboard " + circuitName + ".");
 		} catch (Exception e){
-			Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
+			//Debug.Log("Cannot reach Playfab to send " + score + " time to " + circuitName);
 		}
 	}
 	

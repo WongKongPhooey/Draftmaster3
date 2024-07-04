@@ -184,7 +184,7 @@ public class EventsUI : MonoBehaviour
 	}
 
 	public void loadEvent(){
-		Debug.Log("Load Event " + subMenuId + "," + subEventId + "");
+		//Debug.Log("Load Event " + subMenuId + "," + subEventId + "");
 		
 		PlayerPrefs.SetString("SeriesTrackList",EventData.offlineTracklists[subMenuId,subEventId]);
 		PlayerPrefs.SetString("CurrentSeriesIndex", subMenuId + "" + subEventId + "EVENT");
@@ -216,11 +216,11 @@ public class EventsUI : MonoBehaviour
 		}
 		if(EventData.offlineStartingLap[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("StartingLap", EventData.offlineStartingLap[subMenuId,subEventId]);
-			Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
+			//Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
 		}
 		if(EventData.offlineRaceLaps[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("CustomRaceLaps", EventData.offlineRaceLaps[subMenuId,subEventId]);
-			Debug.Log("Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
+			//Debug.Log("Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
 		}
 		if(EventData.offlineModifier[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);

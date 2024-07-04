@@ -334,7 +334,7 @@ public class SpawnField : MonoBehaviour {
 				string[] fieldOrderArr = customFieldOrderStr.Split(',');
 				customFieldOrder.Clear();
 				foreach(string pos in fieldOrderArr){
-					Debug.Log("Field Added: " + pos);
+					//Debug.Log("Field Added: " + pos);
 					customFieldOrder.Add(pos);
 				}
 				//Debug.Log("Field Size: " + customFieldOrder.Count);

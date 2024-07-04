@@ -2061,7 +2061,7 @@ public class DriverNames : MonoBehaviour {
 		irl2024Names[3] = "Mclaughlin";
 		irl2024Names[4] = "Simpson";
 		irl2024Names[5] = "O Ward";
-		irl2024Names[6] = "Pourchaire";
+		irl2024Names[6] = "Siegel";
 		irl2024Names[7] = "Rossi";
 		irl2024Names[8] = "Lundqvist";
 		irl2024Names[9] = "Dixon";
