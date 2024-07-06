@@ -50,9 +50,9 @@ public class MenuButton : MonoBehaviour
 	
 	public void loadTimeTrial(){
 		LeanTween.reset();
-		if(PlayerPrefs.GetString("LiveTimeTrial") != ""){
+		//if(PlayerPrefs.GetString("LiveTimeTrial") != ""){
 			SceneManager.LoadScene("Menus/TimeTrial");
-		}
+		//}
 	}
 	
 	public void loadInProgressChampionship(){

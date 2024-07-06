@@ -207,6 +207,7 @@ public class PlayFabManager : MonoBehaviour
 		if(result.Data == null){
 			//Debug.Log("No Live Time Trial Found");
 			PlayerPrefs.SetString("LatestVersion", Application.version);
+			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 
@@ -221,9 +222,11 @@ public class PlayFabManager : MonoBehaviour
 				PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
 			} else {
+				PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 				PlayerPrefs.SetString("LiveTimeTrial","");
 			}
 		} else {
+			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 	}
@@ -243,12 +246,14 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 			PlayerPrefs.SetInt("EventActive", 0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
+			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 			PlayerPrefs.SetString("SpecialEvent","");
 			PlayerPrefs.SetString("LatestVersion", Application.version);
 		}
 		
 		//Testing
-		//result.Data["LiveTimeTrial"] = "Atlanta";
+		result.Data["LiveTimeTrialActive"] = "Yes";
+		result.Data["LiveTimeTrial"] = "Nashville";
 		
 		if(result.Data.ContainsKey("MomentName") == false){
 			PlayerPrefs.SetString("MomentName", "");
@@ -466,16 +471,21 @@ public class PlayFabManager : MonoBehaviour
 			} else {
 				PlayerPrefs.SetString("LatestVersion", Application.version);
 			}
-			if(result.Data["LiveTimeTrial"] != ""){
+			if((result.Data["LiveTimeTrial"] != "")&&(result.Data["LiveTimeTrialActive"] == "Yes")){
 				if(isLatestVersion() == true){
+					PlayerPrefs.SetInt("LiveTimeTrialActive",1);
 					PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				} else {
 					Debug.Log("Time Trial not set (not on latest version)");
+					PlayerPrefs.SetInt("LiveTimeTrialActive",0);
+					PlayerPrefs.SetString("LiveTimeTrial","");
 				}
 			} else {
+				PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 				PlayerPrefs.SetString("LiveTimeTrial","");
 			}
 		} else {
+			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
 		

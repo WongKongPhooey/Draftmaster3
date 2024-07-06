@@ -82,6 +82,7 @@ public class CameraRotate : MonoBehaviour {
 	public static int trackSpeedOffset;
 	static string circuit;
 	static string liveTimeTrial;
+	static int liveTimeTrialActive;
 	float kerbBlur;
 	
 	public GameObject cautionSummaryMenu;
@@ -205,8 +206,9 @@ public class CameraRotate : MonoBehaviour {
 		
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		liveTimeTrial = PlayerPrefs.GetString("LiveTimeTrial");
+		liveTimeTrialActive = PlayerPrefs.GetInt("LiveTimeTrialActive");
 		isLiveTimeTrial = false;
-		if(circuit == liveTimeTrial){
+		if((circuit == liveTimeTrial)&&(liveTimeTrialActive == 1)){
 			isLiveTimeTrial = true;
 		}
 		
@@ -694,7 +696,6 @@ public class CameraRotate : MonoBehaviour {
 		if(isLiveTimeTrial == true){
 			//Double checked
 			if(officialSeries == true){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
 				PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
 				//This seems to be working
 				//Debug.Log("Sent Leaderboards (Reusable)");

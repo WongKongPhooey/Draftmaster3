@@ -44,6 +44,7 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject loginBtn;
 	public GameObject loginBtnLabel;
 	
+	public GameObject timeTrialTileUI;
 	public GameObject timeTrialDescUI;	
 	TMPro.TMP_Text timeTrialDescUILabel;
 	
@@ -229,6 +230,7 @@ public class MainMenuUI : MonoBehaviour {
 			}
 		}
 		
+		timeTrialTileUI = GameObject.Find("LiveTimeTrial");
 		
 		timeTrialDescUI = GameObject.Find("TimeTrialDesc");
 		timeTrialDescUILabel = timeTrialDescUI.GetComponent<TMPro.TMP_Text>();
@@ -320,7 +322,12 @@ public class MainMenuUI : MonoBehaviour {
 				}
 			}
 		} else {
-			timeTrialDescUILabel.text = "Set your fastest lap in any race series with an official Cup car at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
+			if(PlayerPrefs.GetInt("LiveTimeTrialActive") == 1){
+				timeTrialTileUI.GetComponent<Image>().color = new Color32(0,200,0,255);
+				timeTrialDescUILabel.text = "Set your fastest lap at " + PlayerPrefs.GetString("LiveTimeTrial") + " in any race series with an official Cup car this week to enter. Top 5 win prizes!";
+			} else {
+				timeTrialDescUILabel.text = "The " + PlayerPrefs.GetString("LiveTimeTrial") + " Time Trial has ended. Check the results to see your ranking!";
+			}
 		}
 		
 		if(PlayerPrefs.GetString("MomentName") == ""){
