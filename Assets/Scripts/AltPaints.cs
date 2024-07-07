@@ -131,6 +131,7 @@ public class AltPaints : MonoBehaviour {
 		cup23AltPaintNames[41,1] = "#1 Bobby";
 		cup23AltPaintNames[91,1] = "#1 Winner";
 		
+		cup24AltPaintNames[2,1] = "#1 DM2 Crew";
 		cup24AltPaintNames[3,1] = "#1 Lion";
 		cup24AltPaintNames[4,1] = "#1 Hard Work";
 		cup24AltPaintNames[5,1] = "#1 Indy";
@@ -278,6 +279,7 @@ public class AltPaints : MonoBehaviour {
 		
 		cup22AltCanBuy[1,1] = true;
 		
+		cup24AltCanBuy[2,1] = true;
 		cup24AltCanBuy[99,1] = true;
 		cup24AltCanBuy[99,2] = true;
 		
@@ -290,6 +292,7 @@ public class AltPaints : MonoBehaviour {
 		cup22AltPaintAISpawning[1,1] = true;
 		cup22AltPaintAISpawning[99,1] = true;
 		
+		cup24AltPaintAISpawning[2,1] = true;
 		cup24AltPaintAISpawning[6,1] = true;
 		cup24AltPaintAISpawning[99,1] = true;
 	}

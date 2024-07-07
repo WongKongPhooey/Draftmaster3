@@ -893,11 +893,12 @@ public class Movement : MonoBehaviour {
 			//e.g. bump draft (1.0) = Max 265f
 			//e.g. close draft (2.0) = Max 255f
 			//e.g. distant draft (5.0) = Max 225f
-			if(engineTemp < (275f - (DraftCheck.distance * 10))){
-				//e.g. bump draft (1.0) = +0.033
-				//e.g. close draft (2.0) = +0.00434
-				//e.g. distant draft (5.0) = +0.0017
-				engineTemp+= (0.005f / (DraftCheck.distance - 0.85f));
+			if(engineTemp < (275f - (DraftCheck.distance * 10f))){
+				//e.g. bump draft (1.0) = +0.02
+				//e.g. closer draft (1.5) = +0.0066
+				//e.g. breathing draft (2.0) = +0.004
+				//e.g. distant draft (5.0) = +0.0012
+				engineTemp+= (0.005f / (DraftCheck.distance - 0.75f));
 			} else {
 				//e.g. 260 temp = -0.04
 				engineTemp-= (engineTemp - 210f) / 1250f;
