@@ -819,8 +819,8 @@ public class AIMovement : MonoBehaviour
 					coolEngine = true;
 				}
 			} else {
-				engineTemp-= (engineTemp - 210f) / 1250f;
-				if(engineTemp < (tempLimit - 7)){
+				engineTemp-= (engineTemp - 210f) / 1000f;
+				if(engineTemp < (tempLimit - (7 - wreckFreq))){
 					coolEngine = false;
 				}
 			}
@@ -881,9 +881,10 @@ public class AIMovement : MonoBehaviour
 			}
 
 			if(engineTemp > 210f){
-				//e.g. 260C engine = 0.033f cooling
-				//e.g. 220C engine = 0.0066f cooling
-				engineTemp-= (engineTemp - 210f) / 1250f;
+				//e.g. 260 temp & >1.5m away = -0.5
+				//e.g. 250 temp & >2.5m away = -0.04
+				//e.g. 225 temp & >5m away = -0.015
+				engineTemp-= (engineTemp - 210f) / 1000f;
 			}
 
 		}

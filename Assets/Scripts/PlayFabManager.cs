@@ -252,8 +252,10 @@ public class PlayFabManager : MonoBehaviour
 		}
 		
 		//Testing
+		#if UNITY_EDITOR
 		result.Data["LiveTimeTrialActive"] = "Yes";
 		result.Data["LiveTimeTrial"] = "Nashville";
+		#endif
 		
 		if(result.Data.ContainsKey("MomentName") == false){
 			PlayerPrefs.SetString("MomentName", "");
