@@ -253,8 +253,9 @@ public class PlayFabManager : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
-		result.Data["LiveTimeTrialActive"] = "Yes";
-		result.Data["LiveTimeTrial"] = "Nashville";
+		//result.Data["LiveTimeTrialActive"] = "Yes";
+		//result.Data["LiveTimeTrial"] = "Nashville";
+		//result.Data["TargetVersion"] = "8.1.12";
 		#endif
 		
 		if(result.Data.ContainsKey("MomentName") == false){
@@ -396,44 +397,10 @@ public class PlayFabManager : MonoBehaviour
 		}
 		
 		if(result.Data.ContainsKey("TargetVersion") == true){
-			PlayerPrefs.SetString("TargetVersion", result.Data["TargetVersion"]);
+			//Debug.Log("What's the latest version?");
+			PlayerPrefs.SetString("LatestVersion", result.Data["TargetVersion"]);
 		} else {
-			PlayerPrefs.SetString("TargetVersion", Application.version);
-		}
-		
-		if(result.Data.ContainsKey("GlobalGift") == true){
-			if((result.Data["GlobalGift"] != "")
-			&&(result.Data["GlobalGift"] != PlayerPrefs.GetString("GlobalGift"))){
-				PlayerPrefs.SetString("GlobalGift", result.Data["GlobalGift"]);
-				//Debug.Log("Received Global Gift!");
-			} else {
-				PlayerPrefs.DeleteKey("InForm");
-			}
-		}
-		
-		//In Form Driver
-		if(result.Data.ContainsKey("InForm") == true){
-			//Format example: "Larson"
-			if(result.Data["InForm"] != ""){
-				PlayerPrefs.SetString("InForm", result.Data["InForm"]);
-				//Debug.Log("In Form Driver is " + result.Data["InForm"]);
-			} else {
-				PlayerPrefs.DeleteKey("InForm");
-			}
-		} else {
-			PlayerPrefs.DeleteKey("InForm");
-		}
-		
-		//Free Fuel Promo
-		if(result.Data.ContainsKey("FreeFuel") == true){
-			if(result.Data["FreeFuel"] == "Yes"){
-				PlayerPrefs.SetInt("FreeFuel", 1);
-				//Debug.Log("Free Fuel Activated");
-			} else {
-				PlayerPrefs.SetInt("FreeFuel", 0);
-			}
-		} else {
-			PlayerPrefs.SetInt("FreeFuel", 0);
+			PlayerPrefs.SetString("LatestVersion", Application.version);
 		}
 		
 		//Shop Discount Promo (Everything moves down 1 price tier)
@@ -448,7 +415,7 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("ShopDiscount", 0);
 		}
 		
-		//Shop Discount Promo (Everything moves down 1 price tier)
+		//Free Modding Weekend etc.
 		if(result.Data.ContainsKey("FreeModding") == true){
 			if(result.Data["FreeModding"] == "Yes"){
 				PlayerPrefs.SetInt("FreeModding", 1);
@@ -468,11 +435,6 @@ public class PlayFabManager : MonoBehaviour
 
 		//Live Race Time Trial
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
-			if(result.Data["TargetVersion"] != ""){
-				PlayerPrefs.SetString("LatestVersion", result.Data["TargetVersion"]);
-			} else {
-				PlayerPrefs.SetString("LatestVersion", Application.version);
-			}
 			if((result.Data["LiveTimeTrial"] != "")&&(result.Data["LiveTimeTrialActive"] == "Yes")){
 				if(isLatestVersion() == true){
 					PlayerPrefs.SetInt("LiveTimeTrialActive",1);
@@ -490,10 +452,6 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
-		
-		//Testing
-		//result.Data["MessageAlert"] = "This is a testier message!";
-		//result.Data["MessageAlertId"] = "6969";
 		
 		//Message Alerts
 		if(result.Data.ContainsKey("MessageAlert") == true){
@@ -1160,6 +1118,7 @@ public class PlayFabManager : MonoBehaviour
 	}
 	
 	public static bool isLatestVersion(){
+		//Debug.Log("Latest Version? " + PlayerPrefs.GetString("LatestVersion"));
 		if(PlayerPrefs.GetString("LatestVersion") == ""){
 			return true;
 		}
