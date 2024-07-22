@@ -332,7 +332,7 @@ public class MainMenuUI : MonoBehaviour {
 					timeTrialTileUI.GetComponent<Image>().color = new Color32(0,200,0,255);
 					timeTrialDescUILabel.text = "Set your fastest lap at " + PlayerPrefs.GetString("LiveTimeTrial") + " in any race series with an official Cup car this week to enter. Top 5 win prizes!";
 				} else {
-					timeTrialDescUILabel.text = "The " + PlayerPrefs.GetString("LiveTimeTrial") + " Time Trial has ended. Check the results to see your ranking!";
+					timeTrialDescUILabel.text = "The " + PlayerPrefs.GetString("LiveTimeTrial") + " Time Trial has ended. Check the results here to see your ranking!";
 				}
 			}
 			
@@ -344,7 +344,7 @@ public class MainMenuUI : MonoBehaviour {
 			
 			latestVersion = PlayerPrefs.GetString("LatestVersion");
 			bool latestUpdate = PlayFabManager.isLatestVersion();
-			Debug.Log("Checking for updated versions.. " + latestUpdate);
+			//Debug.Log("Checking for updated versions.. " + latestUpdate);
 			if(latestUpdate == false){
 				updateLabelUILabel.text = "Latest Is v" + latestVersion + "";
 			} else {

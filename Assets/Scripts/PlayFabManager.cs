@@ -253,7 +253,7 @@ public class PlayFabManager : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
-		//result.Data["LiveTimeTrialActive"] = "Yes";
+		//result.Data["LiveTimeTrialActive"] = "No";
 		//result.Data["LiveTimeTrial"] = "Nashville";
 		//result.Data["TargetVersion"] = "8.1.12";
 		#endif
@@ -428,15 +428,17 @@ public class PlayFabManager : MonoBehaviour
 		}
 
 		#if UNITY_EDITOR
-		//result.Data["LiveTimeTrial"] = "Kansas";
-		//result.Data["TargetVersion"] = "7.6.4";
-		//Debug.Log("Time Trial Testing");
+		result.Data["LiveTimeTrial"] = "Kansas";
+		result.Data["LiveTimeTrialActive"] = "No";
+		Debug.Log("Time Trial Testing");
 		#endif
 
 		//Live Race Time Trial
 		if(result.Data.ContainsKey("LiveTimeTrial") == true){
+			Debug.Log("There is a Time Trial field..");
 			if((result.Data["LiveTimeTrial"] != "")&&(result.Data["LiveTimeTrialActive"] == "Yes")){
 				if(isLatestVersion() == true){
+					Debug.Log("You are on the latest version, and the TT is active.");
 					PlayerPrefs.SetInt("LiveTimeTrialActive",1);
 					PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
 				} else {
@@ -445,8 +447,19 @@ public class PlayFabManager : MonoBehaviour
 					PlayerPrefs.SetString("LiveTimeTrial","");
 				}
 			} else {
-				PlayerPrefs.SetInt("LiveTimeTrialActive",0);
-				PlayerPrefs.SetString("LiveTimeTrial","");
+				if(result.Data["LiveTimeTrialActive"] != "Yes"){
+					Debug.Log("The TT is not active");
+					PlayerPrefs.SetInt("LiveTimeTrialActive",0);
+				} else {
+					PlayerPrefs.SetInt("LiveTimeTrialActive",1);
+				}
+				if(result.Data["LiveTimeTrial"] == ""){
+					Debug.Log("There's no TT circuit set");
+					PlayerPrefs.SetString("LiveTimeTrial","");
+				} else {
+					PlayerPrefs.SetString("LiveTimeTrial", result.Data["LiveTimeTrial"]);
+				}
+				Debug.Log("TT: " + PlayerPrefs.GetString("LiveTimeTrial") + " - Active? " + PlayerPrefs.GetString("LiveTimeTrialActive"));
 			}
 		} else {
 			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
@@ -679,15 +692,16 @@ public class PlayFabManager : MonoBehaviour
 	static void OnProgressReceived(GetUserDataResult result){
 		if(result.Data != null){
 			string seriesPrefix = "cup20";
-			string json = "";
+			string playerData = "";
+			string seriesData = "";
 			string saveType = "";
 			int cloudLevel = 0;
 			
-			//Check the latest autosave
-			if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
+			//Check the general player account save
+			if(result.Data.ContainsKey("AutosavePlayerAccount")){
 				//Debug.Log("No manual save.. looking for an autosave");
-				json = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
-				Series playerJson = JsonUtility.FromJson<Series>(json);
+				playerData = result.Data["AutosavePlayerAccount"].Value;
+				Player playerJson = JsonUtility.FromJson<Player>(playerData);
 				if(cloudLevel < int.Parse(playerJson.playerLevel)){
 					cloudLevel = int.Parse(playerJson.playerLevel);
 					//Debug.Log("Autosave is at level " + cloudLevel);
@@ -695,10 +709,19 @@ public class PlayFabManager : MonoBehaviour
 				saveType = "automatic";
 			}
 			
-			if(json != ""){
+			//Check the series save
+			if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
+				//Debug.Log("No manual save.. looking for an autosave");
+				seriesData = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
+				Series seriesJson = JsonUtility.FromJson<Series>(seriesData);
+				saveType = "automatic";
+			}
+			
+			if(playerData != ""){
+				
 				//We found some form of save data, but should we load it?
 				 PlayerPrefs.SetInt("NewUser",1);
-				 Series playerJson = JsonUtility.FromJson<Series>(json);
+				 Player playerJson = JsonUtility.FromJson<Player>(playerData);
 				 int level = int.Parse(playerJson.playerLevel);
 				 int transferTokens = 0;
 				 int savedTokens = 0;
@@ -721,6 +744,9 @@ public class PlayFabManager : MonoBehaviour
 					PlayerPrefs.SetInt("Level", level);
 					//Debug.Log("Your save is not a lower level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + ").");
 				 }
+			}
+			
+			if(seriesData != ""){
 				 
 				 //Car sets have to be in here to be loaded
 				 string[] allSeries = DriverNames.getAllSeries();
@@ -738,31 +764,31 @@ public class PlayFabManager : MonoBehaviour
 						 Debug.Log(e.Message);
 						 continue;
 					 }
-					 json = result.Data["AutosavePlayerProgress" + series].Value;
-					 playerJson = JsonUtility.FromJson<Series>(json);
+					 seriesData = result.Data["AutosavePlayerProgress" + series].Value;
+					 Series seriesJson = JsonUtility.FromJson<Series>(seriesData);
 					 
 					 for(int i=0;i<=99;i++){
 						if(DriverNames.getName(series,i) != null){
-							if(PlayerPrefs.GetInt(series + i + "Unlocked") < int.Parse(playerJson.drivers[i].carUnlocked)){
-								PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(playerJson.drivers[i].carUnlocked));
+							if(PlayerPrefs.GetInt(series + i + "Unlocked") < int.Parse(seriesJson.drivers[i].carUnlocked)){
+								PlayerPrefs.SetInt(series + i + "Unlocked", int.Parse(seriesJson.drivers[i].carUnlocked));
 								//Debug.Log("New unlock on load, " + series + " #" + i);
 							}
-							if(playerJson.drivers[i].carUnlocked == "1"){
+							if(seriesJson.drivers[i].carUnlocked == "1"){
 								unlockedCars++;
 							}
-							if(PlayerPrefs.GetInt(series + i + "Class") < int.Parse(playerJson.drivers[i].carClass)){
-								PlayerPrefs.SetInt(series + i + "Class", int.Parse(playerJson.drivers[i].carClass));
-								PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
+							if(PlayerPrefs.GetInt(series + i + "Class") < int.Parse(seriesJson.drivers[i].carClass)){
+								PlayerPrefs.SetInt(series + i + "Class", int.Parse(seriesJson.drivers[i].carClass));
+								PlayerPrefs.SetInt(series + i + "Gears", int.Parse(seriesJson.drivers[i].carGears));
 								//Debug.Log("Updated class on load, " + series + " #" + i);
 							} else {
-								if(PlayerPrefs.GetInt(series + i + "Class") == int.Parse(playerJson.drivers[i].carClass)){
+								if(PlayerPrefs.GetInt(series + i + "Class") == int.Parse(seriesJson.drivers[i].carClass)){
 									//If the class hasn't changed but the gears have increased
-									if(PlayerPrefs.GetInt(series + i + "Gears") < int.Parse(playerJson.drivers[i].carGears)){
-										PlayerPrefs.SetInt(series + i + "Gears", int.Parse(playerJson.drivers[i].carGears));
+									if(PlayerPrefs.GetInt(series + i + "Gears") < int.Parse(seriesJson.drivers[i].carGears)){
+										PlayerPrefs.SetInt(series + i + "Gears", int.Parse(seriesJson.drivers[i].carGears));
 									}
 								}
 							}
-							string altsList = playerJson.drivers[i].altPaints;
+							string altsList = seriesJson.drivers[i].altPaints;
 							if(altsList != "0"){
 								string[] altsArray = altsList.Split(',');
 								foreach(string alt in altsArray){

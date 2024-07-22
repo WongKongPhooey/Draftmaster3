@@ -1637,19 +1637,25 @@ public class GarageUI : MonoBehaviour
 }
 
 [Serializable]
+public class Player {
+	public string playerLevel;
+	public int playerGears;
+	public int playerMoney;
+	public int totalCars;
+	public string transferTokens;
+}
+
+[Serializable]
+public class Series {
+    public string seriesName;
+    public List<Driver> drivers;
+}
+
+[Serializable]
 public class Driver {
     public string carNo;
     public string carUnlocked;
     public string carClass;
     public string carGears;
     public string altPaints;
-}
-
-[Serializable]
-public class Series {
-	public string playerLevel;
-	public int totalCars;
-	public string transferTokens;
-    public string seriesName;
-    public List<Driver> drivers;
 }
