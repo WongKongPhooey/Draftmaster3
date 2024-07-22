@@ -299,9 +299,11 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log("#" + carNumber + " checking for alt paints");
 		if(!PlayerPrefs.HasKey("RaceAltPaintsChosen")){
 			altPaints = new List<string>();
-			altPaints.Add("0");
-			altPaints.Add("0");
-			altPaints.Add("0");
+			if(PlayerPrefs.GetString("CurrentCircuit") != "Darlington"){
+				altPaints.Add("0");
+				altPaints.Add("0");
+				altPaints.Add("0");
+			}
 			if(officialSeries == true){
 				AltPaints.loadAlts();
 				for(int i=1;i<10;i++){
@@ -320,6 +322,10 @@ public class AIMovement : MonoBehaviour
 						altPaints.Add(i.ToString());
 					}
 				}
+			}
+			//Add the stock paint if the array is still empty
+			if(altPaints.Count == 0){
+				altPaints.Add("0");
 			}
 			int altIndex = Random.Range(0,altPaints.Count);
 			//Debug.Log("#" + carNumber + " - " + altPaints.Count + " possible paints. Chose " + altIndex);

@@ -138,6 +138,15 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		int raceEntries = PlayerPrefs.GetInt("RaceEntries");
 		
+		//Adjust based on size of field in the race
+		if(raceEntries == 0){
+			raceEntries = 40;
+		}
+		//Min of 60%, as not to scale the rewards too low
+		if(raceEntries < 24){
+			raceEntries = 24;
+		}
+		
 		if(raceType != "Event"){
 			//e.g. AI Level 14 = 14 / 3  = 4.x -> 4 + 2 = 6
 			//e.g. AI Level 5 = 5 / 3 = 1.x -> 1 + 2 = 3
@@ -201,10 +210,6 @@ public class RaceRewardsUI : MonoBehaviour
 				//e.g. 150% AI Strength = 7 Gears for a win, 1 gear for 24th
 				rewardGears = maxRaceGears - Mathf.FloorToInt(finishPos/4);
 				
-				//Adjust based on size of field in the race
-				if(raceEntries == 0){
-					raceEntries = 40;
-				}
 				float scaledRewards = (rewardGears / 40f) * raceEntries;
 				rewardGears = Mathf.FloorToInt(scaledRewards);
 
