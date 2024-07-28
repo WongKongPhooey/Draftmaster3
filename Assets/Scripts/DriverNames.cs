@@ -405,7 +405,6 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Herbst");
 		driverPool.Add("Herrin");
 		driverPool.Add("Hezemans");
-		driverPool.Add("A.Hill");
 		driverPool.Add("C.Hill");
 		driverPool.Add("Hillis.Jr");
 		driverPool.Add("Hingorani");
@@ -1755,6 +1754,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Names[23] = "Wallace";
 		cup2024Names[24] = "Byron";
 		cup2024Names[31] = "Hemric";
+		cup2024Names[33] = "A.Hill";
 		cup2024Names[34] = "McDowell";
 		cup2024Names[38] = "Gilliland";
 		cup2024Names[41] = "Preece";
@@ -1799,6 +1799,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Teams[23] = "23X";
 		cup2024Teams[24] = "HEN";
 		cup2024Teams[31] = "KAU";
+		cup2024Teams[33] = "RCR";
 		cup2024Teams[34] = "FRM";
 		cup2024Teams[38] = "FRM";
 		cup2024Teams[41] = "SHR";
@@ -1843,6 +1844,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Manufacturer[23] = "TYT";
 		cup2024Manufacturer[24] = "CHV";
 		cup2024Manufacturer[31] = "CHV";
+		cup2024Manufacturer[33] = "CHV";
 		cup2024Manufacturer[34] = "FRD";
 		cup2024Manufacturer[38] = "FRD";
 		cup2024Manufacturer[41] = "FRD";
@@ -1887,6 +1889,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Types[23] = "Strategist";
 		cup2024Types[24] = "Dominator";
 		cup2024Types[31] = "Strategist";
+		cup2024Types[33] = "Rookie";
 		cup2024Types[34] = "Strategist";
 		cup2024Types[38] = "Blocker";
 		cup2024Types[41] = "Strategist";
@@ -1931,6 +1934,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Rarity[23] = 2;
 		cup2024Rarity[24] = 4;
 		cup2024Rarity[31] = 1;
+		cup2024Rarity[33] = 1;
 		cup2024Rarity[34] = 2;
 		cup2024Rarity[38] = 1;
 		cup2024Rarity[41] = 1;

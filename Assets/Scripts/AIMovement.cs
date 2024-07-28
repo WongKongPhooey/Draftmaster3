@@ -478,6 +478,10 @@ public class AIMovement : MonoBehaviour
 				startWreck();
 			}
 			
+			if(blownEngine == true){
+				startWreck();
+			}
+			
 			//Join wreck
 			if(carHit.gameObject.tag == "AICar"){
 				if(isWrecking == true){
@@ -583,6 +587,10 @@ public class AIMovement : MonoBehaviour
 			antiGlitch++;
 		}
 		
+		if(blownEngine == true){
+			startWreck();
+		}
+		
 		//Join wreck
 		if(carHit.gameObject.tag == "AICar"){
 			bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
@@ -614,6 +622,10 @@ public class AIMovement : MonoBehaviour
 	void OnCollisionExit(Collision carHit) {
 		antiGlitch = 0;
 		particleDisableDelay = 20;
+		
+		if(blownEngine == true){
+			startWreck();
+		}
     }
 
     // Update is called once per frame

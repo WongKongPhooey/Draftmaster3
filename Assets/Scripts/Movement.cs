@@ -700,7 +700,18 @@ public class Movement : MonoBehaviour {
 		playerSpeed-=0.2f;
 	}
 	
+	void OnCollisionStay(Collision carHit) {
+		if(blownEngine == true){
+			startWreck();
+		}
+	}
+	
 	void OnCollisionExit (Collision carHit){
+		
+		if(blownEngine == true){
+			startWreck();
+		}
+		
 		if(isWrecking == true){
 			playerWreckDecel+= Random.Range(2f,5f);
 		}
