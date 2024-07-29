@@ -478,7 +478,8 @@ public class AIMovement : MonoBehaviour
 				startWreck();
 			}
 			
-			if(blownEngine == true){
+			if((blownEngine == true)&&(isWrecking == false)){
+				Debug.Log("Contact - Blown Engine");
 				startWreck();
 			}
 			
@@ -587,7 +588,8 @@ public class AIMovement : MonoBehaviour
 			antiGlitch++;
 		}
 		
-		if(blownEngine == true){
+		if((blownEngine == true)&&(isWrecking == false)){
+			Debug.Log("Continued Contact - Blown Engine");
 			startWreck();
 		}
 		
@@ -623,7 +625,8 @@ public class AIMovement : MonoBehaviour
 		antiGlitch = 0;
 		particleDisableDelay = 20;
 		
-		if(blownEngine == true){
+		if((blownEngine == true)&&(isWrecking == false)){
+			Debug.Log("Contact End - Blown Engine");
 			startWreck();
 		}
     }

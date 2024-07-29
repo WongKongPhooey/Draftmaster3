@@ -701,14 +701,14 @@ public class Movement : MonoBehaviour {
 	}
 	
 	void OnCollisionStay(Collision carHit) {
-		if(blownEngine == true){
+		if((blownEngine == true)&&(isWrecking == false)){
 			startWreck();
 		}
 	}
 	
 	void OnCollisionExit (Collision carHit){
 		
-		if(blownEngine == true){
+		if((blownEngine == true)&&(isWrecking == false)){
 			startWreck();
 		}
 		
