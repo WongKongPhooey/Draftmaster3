@@ -139,9 +139,11 @@ public class AltPaints : MonoBehaviour {
 		cup24AltPaintNames[6,1] = "#1 Half Off";
 		cup24AltPaintNames[9,1] = "#1 40 Years";
 		cup24AltPaintNames[11,1] = "#1 Winner";
+		cup24AltPaintNames[12,1] = "#1 Body IV";
 		cup24AltPaintNames[15,1] = "#1 Parnelli";
 		cup24AltPaintNames[16,1] = "#1 MLG 1337";
 		cup24AltPaintNames[17,1] = "#1 Submarine";
+		cup24AltPaintNames[20,1] = "#1 Yippee";
 		cup24AltPaintNames[23,1] = "#1 Money";
 		cup24AltPaintNames[24,1] = "#1 40 Years";
 		cup24AltPaintNames[31,1] = "#1 Golfer";
