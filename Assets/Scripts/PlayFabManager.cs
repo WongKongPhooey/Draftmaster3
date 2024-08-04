@@ -625,7 +625,7 @@ public class PlayFabManager : MonoBehaviour
 	
 	IEnumerator PostPasswordChange(){
 		
-		using UnityWebRequest www = UnityWebRequest.Post("https://5A7C1.playfabapi.com/Admin/ResetPassword?Password=" + newPasswordInput.text + "&Token=" + recoveryCodeInput.text,"");
+		using UnityWebRequest www = UnityWebRequest.PostWwwForm("https://5A7C1.playfabapi.com/Admin/ResetPassword?Password=" + newPasswordInput.text + "&Token=" + recoveryCodeInput.text,"");
 		www.SetRequestHeader("X-SecretKey", "ZNGMGNF3TA3WKBID11HIHAQGARBWZUBKIG9EZKS4DBFAXOCWAA");
 		www.SetRequestHeader("Content-Type", "application/json");
 		
