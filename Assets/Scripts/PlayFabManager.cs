@@ -698,9 +698,9 @@ public class PlayFabManager : MonoBehaviour
 			int cloudLevel = 0;
 			
 			//Check the general player account save
-			if(result.Data.ContainsKey("AutosavePlayerAccount")){
+			if(result.Data.ContainsKey("AutosavePlayerProgress")){
 				//Debug.Log("No manual save.. looking for an autosave");
-				playerData = result.Data["AutosavePlayerAccount"].Value;
+				playerData = result.Data["AutosavePlayerProgress"].Value;
 				Player playerJson = JsonUtility.FromJson<Player>(playerData);
 				if(cloudLevel < int.Parse(playerJson.playerLevel)){
 					cloudLevel = int.Parse(playerJson.playerLevel);
@@ -710,9 +710,9 @@ public class PlayFabManager : MonoBehaviour
 			}
 			
 			//Check the series save
-			if(result.Data.ContainsKey("AutosavePlayerProgress" + seriesPrefix)){
+			if(result.Data.ContainsKey("AutosaveSeriesProgress" + seriesPrefix)){
 				//Debug.Log("No manual save.. looking for an autosave");
-				seriesData = result.Data["AutosavePlayerProgress" + seriesPrefix].Value;
+				seriesData = result.Data["AutosaveSeriesProgress" + seriesPrefix].Value;
 				Series seriesJson = JsonUtility.FromJson<Series>(seriesData);
 				saveType = "automatic";
 			}
@@ -722,6 +722,8 @@ public class PlayFabManager : MonoBehaviour
 				//We found some form of save data, but should we load it?
 				 PlayerPrefs.SetInt("NewUser",1);
 				 Player playerJson = JsonUtility.FromJson<Player>(playerData);
+				 int gears = int.Parse(playerJson.playerGears);
+				 int money = int.Parse(playerJson.playerMoney);
 				 int level = int.Parse(playerJson.playerLevel);
 				 int transferTokens = 0;
 				 int savedTokens = 0;
@@ -740,6 +742,25 @@ public class PlayFabManager : MonoBehaviour
 					PlayerPrefs.SetInt("TransferTokens", minTokens);
 				 }
 				 
+				 
+				 //Almost certainly a fresh install..
+				 if((PlayerPrefs.GetInt("PrizeMoney") == 10000)&&(PlayerPrefs.GetInt("Gears") == 10)){
+					 
+					Debug.Log("Fresh install login");
+					 
+					//One time grab for fresh installs
+					//upon logging back in for the first time
+					if(gears > PlayerPrefs.GetInt("Gears")){
+						PlayerPrefs.SetInt("Gears", gears);
+						Debug.Log("Updated Gears from cloud save");
+					}
+					if(money > PlayerPrefs.GetInt("PrizeMoney")){
+						PlayerPrefs.SetInt("PrizeMoney", money);
+						Debug.Log("Updated Money from cloud save");
+					} 
+				 }
+				 
+				 
 				 if(level > PlayerPrefs.GetInt("Level")){
 					PlayerPrefs.SetInt("Level", level);
 					//Debug.Log("Your save is not a lower level (" + level + ") than what you already have (" + PlayerPrefs.GetInt("Level") + ").");
@@ -756,7 +777,7 @@ public class PlayFabManager : MonoBehaviour
 					 //Debug.Log("Loading " + series);
 					 //Drop out if no save for this car set
 					 try{
-						if(result.Data["AutosavePlayerProgress" + series].Value == null){
+						if(result.Data["AutosaveSeriesProgress" + series].Value == null){
 							//break;
 							continue;
 						}
@@ -764,7 +785,7 @@ public class PlayFabManager : MonoBehaviour
 						 Debug.Log(e.Message);
 						 continue;
 					 }
-					 seriesData = result.Data["AutosavePlayerProgress" + series].Value;
+					 seriesData = result.Data["AutosaveSeriesProgress" + series].Value;
 					 Series seriesJson = JsonUtility.FromJson<Series>(seriesData);
 					 
 					 for(int i=0;i<=99;i++){
@@ -820,14 +841,25 @@ public class PlayFabManager : MonoBehaviour
 		//Debug.Log("Rewards Collected, Server Reset");
 	}
 	
-	public static void AutosavePlayerProgress(string seriesPrefix, string progressJSON){
+	public static void AutosavePlayerProgress(string progressJSON){
 		if(checkInternet() == false){return;}
 		var request = new UpdateUserDataRequest {
 			Data = new Dictionary<string, string> {
-				{"AutosavePlayerProgress" + seriesPrefix, progressJSON}
+				{"AutosavePlayerProgress", progressJSON}
 			}
 		};
-		//Debug.Log("Saved series " + seriesPrefix + " to cloud");
+		Debug.Log("Saved player progress to cloud");
+		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
+	}
+	
+	public static void AutosaveSeriesProgress(string seriesPrefix, string progressJSON){
+		if(checkInternet() == false){return;}
+		var request = new UpdateUserDataRequest {
+			Data = new Dictionary<string, string> {
+				{"AutosaveSeriesProgress" + seriesPrefix, progressJSON}
+			}
+		};
+		Debug.Log("Saved series " + seriesPrefix + " progress to cloud");
 		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
 	}
 	
@@ -871,10 +903,14 @@ public class PlayFabManager : MonoBehaviour
 			
 			garageValue = 0;
 			//Try an autosave
+			
+			string playerProgressJSON = JSONifyPlayerProgress();
+			PlayFabManager.AutosavePlayerProgress(playerProgressJSON);
+			
 			foreach(string series in allSeries){
-				string progressJSON = JSONifyProgress(series);
+				string progressJSON = JSONifySeriesProgress(series);
 				try {
-					PlayFabManager.AutosavePlayerProgress(series, progressJSON);
+					PlayFabManager.AutosaveSeriesProgress(series, progressJSON);
 				}
 				catch(Exception e){
 					Debug.Log("Cannot reach PlayFab");
@@ -885,10 +921,17 @@ public class PlayFabManager : MonoBehaviour
 		}
 	}
 
-	public static string JSONifyProgress(string seriesPrefix){
+	public static string JSONifyPlayerProgress(){
 		string JSONOutput = "{";
 		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
-		JSONOutput += "\"transferTokens\": \"" + PlayerPrefs.GetInt("TransferTokens").ToString() + "\",";
+		JSONOutput += "\"playerMoney\": \"" + PlayerPrefs.GetInt("PrizeMoney").ToString() + "\",";
+		JSONOutput += "\"playerGears\": \"" + PlayerPrefs.GetInt("Gears").ToString() + "\",";
+		JSONOutput += "\"transferTokens\": \"" + PlayerPrefs.GetInt("TransferTokens").ToString() + "\"}";
+		return JSONOutput;
+	}
+
+	public static string JSONifySeriesProgress(string seriesPrefix){
+		string JSONOutput = "{";
 		JSONOutput += "\"seriesName\": \"" + seriesPrefix + "\",";
 		JSONOutput += "\"drivers\": [";
 		int totalCars = 0;

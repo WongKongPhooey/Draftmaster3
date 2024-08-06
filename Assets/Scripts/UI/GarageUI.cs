@@ -1639,9 +1639,8 @@ public class GarageUI : MonoBehaviour
 [Serializable]
 public class Player {
 	public string playerLevel;
-	public int playerGears;
-	public int playerMoney;
-	public int totalCars;
+	public string playerGears;
+	public string playerMoney;
 	public string transferTokens;
 }
 
@@ -1649,6 +1648,7 @@ public class Player {
 public class Series {
     public string seriesName;
     public List<Driver> drivers;
+	public int totalCars;
 }
 
 [Serializable]

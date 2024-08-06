@@ -259,8 +259,6 @@ public class MainMenuUI : MonoBehaviour {
 		//Reset the game to imitate new users
 		#if UNITY_EDITOR
 		//PlayerPrefs.DeleteAll();
-		//PlayerPrefs.SetInt("Gears",1000);
-		//PlayerPrefs.SetInt("Level", 45);
 		#endif
 		
 		if(!PlayerPrefs.HasKey("NewUser")){
