@@ -725,9 +725,42 @@ public class PlayFabManager : MonoBehaviour
 				 int gears = int.Parse(playerJson.playerGears);
 				 int money = int.Parse(playerJson.playerMoney);
 				 int level = int.Parse(playerJson.playerLevel);
+				 int totalStarts = 0;
+				 int savedStarts = 0;
+				 int totalWins = 0;
+				 int savedWins = 0;
+				 int garageValue = 0;
+				 int savedGarageValue = 0;
 				 int transferTokens = 0;
 				 int savedTokens = 0;
-				 //Old save files don't have this field, now skippable
+				 
+				 if(playerJson.playerStarts != null){
+					totalStarts = int.Parse(playerJson.playerStarts);
+					savedStarts = PlayerPrefs.GetInt("TotalStarts");
+					if(savedStarts < totalStarts){
+						PlayerPrefs.SetInt("TotalStarts", totalStarts);
+						savedStarts = PlayerPrefs.GetInt("TotalStarts");
+					}
+				 }
+				 
+				 if(playerJson.playerWins != null){
+					totalWins = int.Parse(playerJson.playerWins);
+					savedStarts = PlayerPrefs.GetInt("TotalWins");
+					if(savedStarts < totalWins){
+						PlayerPrefs.SetInt("TotalWins", totalWins);
+						savedStarts = PlayerPrefs.GetInt("TotalWins");
+					}
+				 }
+				 
+				 if(playerJson.playerGarageValue != null){
+					garageValue = int.Parse(playerJson.playerGarageValue);
+					savedGarageValue = PlayerPrefs.GetInt("TotalWins");
+					if(savedGarageValue < garageValue){
+						PlayerPrefs.SetInt("TotalWins", garageValue);
+						savedGarageValue = PlayerPrefs.GetInt("TotalWins");
+					}
+				 }
+				 
 				 if(playerJson.transferTokens != null){
 					transferTokens = int.Parse(playerJson.transferTokens);
 					savedTokens = PlayerPrefs.GetInt("TransferTokens");
@@ -735,12 +768,16 @@ public class PlayFabManager : MonoBehaviour
 						PlayerPrefs.SetInt("TransferTokens", transferTokens);
 						savedTokens = PlayerPrefs.GetInt("TransferTokens");
 					}
-					//Debug.Log("Received " + transferTokens + " Transfer Tokens");
 				 }
 				 int minTokens = GameData.minTransferTokensFromLevel(level);
 				 if(minTokens > savedTokens){
 					PlayerPrefs.SetInt("TransferTokens", minTokens);
 				 }
+				 
+				 //PlayerPrefs.GetInt("TotalStarts").ToString() + "\",";
+				 //JSONOutput += "\"playerWins\": \"" + PlayerPrefs.GetInt("TotalWins").ToString() + "\",";
+				 //JSONOutput += "\"playerGarageValue\": \"" + PlayerPrefs.GetInt("GarageValue").ToString() + "\",";
+				 
 				 
 				 
 				 //Almost certainly a fresh install..
@@ -926,6 +963,9 @@ public class PlayFabManager : MonoBehaviour
 		JSONOutput += "\"playerLevel\": \"" + PlayerPrefs.GetInt("Level").ToString() + "\",";
 		JSONOutput += "\"playerMoney\": \"" + PlayerPrefs.GetInt("PrizeMoney").ToString() + "\",";
 		JSONOutput += "\"playerGears\": \"" + PlayerPrefs.GetInt("Gears").ToString() + "\",";
+		JSONOutput += "\"playerStarts\": \"" + PlayerPrefs.GetInt("TotalStarts").ToString() + "\",";
+		JSONOutput += "\"playerWins\": \"" + PlayerPrefs.GetInt("TotalWins").ToString() + "\",";
+		JSONOutput += "\"playerGarageValue\": \"" + PlayerPrefs.GetInt("GarageValue").ToString() + "\",";
 		JSONOutput += "\"transferTokens\": \"" + PlayerPrefs.GetInt("TransferTokens").ToString() + "\"}";
 		return JSONOutput;
 	}

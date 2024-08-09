@@ -1641,6 +1641,9 @@ public class Player {
 	public string playerLevel;
 	public string playerGears;
 	public string playerMoney;
+	public string playerStarts;
+	public string playerWins;
+	public string playerGarageValue;
 	public string transferTokens;
 }
 
