@@ -464,6 +464,7 @@ public class modDriver {
 public class modCarset {
 	public string modName;
 	public string modFolder;
+	public string modType;
 	public string modVersion;
 	public string modAuthor;
 	public string modPhysics;
@@ -471,4 +472,23 @@ public class modCarset {
 	public string modNumberScale;
 	public string modNumberRotation;
     public List<modDriver> drivers;
+}
+
+[Serializable]
+public class modTrackset {
+	public string modName;
+	public string modFolder;
+	public string modType;
+	public string[] straightLengths;
+	public string[] turnAngles;
+	public string[] turnRadius;
+}
+
+[Serializable]
+public class modSeriesset {
+	public string modName;
+	public string modFolder;
+	public string modType;
+	public string[] trackList;
+	public string AIDifficulty;
 }
