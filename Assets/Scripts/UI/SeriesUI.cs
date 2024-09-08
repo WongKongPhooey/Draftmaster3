@@ -49,13 +49,17 @@ public class SeriesUI : MonoBehaviour
 			Destroy(child.gameObject);
 		}
 		
-		for(int i=0;i<10;i++){
+		for(int i=0;i<20;i++){
 			SeriesData.loadSeries();
 			//Skip through the non-driver #s
 			if(SeriesData.offlineMenu[i] == null){
 				//Debug.Log("No Event here: " + i);
 				continue;
 			}
+			//if((i==10)&&(PlayerPrefs.GetInt("FreeModding") == 0)&&(PlayerPrefs.GetInt("TransferTokens") < 999)){
+			//	continue;
+			//}
+			
 			
 			GameObject tileInst = Instantiate(seriesTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			RectTransform tileObj = tileInst.GetComponent<RectTransform>();
@@ -80,6 +84,13 @@ public class SeriesUI : MonoBehaviour
 	}
 
 	public void loadSubSeries(int seriesId){
+		
+		//Reroute
+		if(seriesId == 10){
+			loadAllModSeries();
+			return;
+		}
+		
 		//Debug.Log("Loading sub events of event: " + seriesId);
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
@@ -178,6 +189,65 @@ public class SeriesUI : MonoBehaviour
 			}
 		} else {
 			SceneManager.LoadScene("Menus/Garage");
+		}
+	}
+	
+	public void loadAllModSeries(){
+		
+		//Debug.Log("Loading sub events of event: " + seriesId);
+		foreach (Transform child in tileFrame){
+			Destroy(child.gameObject);
+		}
+		
+		scrollFrame.GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
+		
+		string[] modsArray = PlayerPrefs.GetString("ModsList").Split(',');
+		foreach(string modSet in modsArray){
+			//Debug.Log(modSet);
+			string[] modData = modSet.Split('|');
+			string modSeriesPrefix = modData[0];
+			
+			for(int i=0;i<100;i++){
+			
+				if(ModData.getModSeriesName(modData[0], i) == null){
+					continue;
+				}
+				
+				GameObject tileInst = Instantiate(seriesChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+				RectTransform tileObj = tileInst.GetComponent<RectTransform>();
+				tileInst.transform.SetParent(tileFrame, false);
+				
+				tileInst.GetComponent<UIAnimate>().animOffset = 1;
+				tileInst.GetComponent<UIAnimate>().scaleIn();
+				
+				TMPro.TMP_Text seriesName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+				RawImage seriesImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
+				TMPro.TMP_Text seriesDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				GameObject seriesRewardsBtn = tileInst.transform.GetChild(6).transform.gameObject;
+				GameObject seriesCover = tileInst.transform.GetChild(4).transform.gameObject;
+				GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
+				TMPro.TMP_Text champsProgress = tileInst.transform.GetChild(8).GetComponent<TMPro.TMP_Text>();
+			
+				seriesName.text = ModData.getModSeriesName(modSeriesPrefix, i);
+				seriesDesc.text = ModData.getModSeriesDesc(modSeriesPrefix, i);
+				seriesImage.texture = ModData.getTexture(modSeriesPrefix, 97);
+				
+				if(PlayerPrefs.HasKey("SeriesChampionship" + modSeriesPrefix + i + "Round")){
+					if(PlayerPrefs.GetInt("SeriesChampionship" + modSeriesPrefix + i + "Round") > 0){
+						int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + modSeriesPrefix + i + "Round") + 1;
+						int totalRounds = PlayerPrefs.GetInt("SeriesChampionship" + modSeriesPrefix + i + "Length");
+						if(nextRound > totalRounds){
+							champsProgress.text = "Championship Finished \nCollect Rewards";
+						} else {
+							champsProgress.text = "Championship In Progress \nRound " + nextRound + "/" + totalRounds;
+						}
+					}
+				}
+			}
+			
+			//tileInst.GetComponent<SeriesUIFunctions>().seriesId = seriesId;
+			//tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = k;
+			//seriesImage.texture = ModData.getModSeriesImage[seriesPrefix,k];
 		}
 	}
 	

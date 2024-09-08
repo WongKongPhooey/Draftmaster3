@@ -428,9 +428,9 @@ public class PlayFabManager : MonoBehaviour
 		}
 
 		#if UNITY_EDITOR
-		result.Data["LiveTimeTrial"] = "Kansas";
-		result.Data["LiveTimeTrialActive"] = "No";
-		Debug.Log("Time Trial Testing");
+		//result.Data["LiveTimeTrial"] = "Kansas";
+		//result.Data["LiveTimeTrialActive"] = "No";
+		//Debug.Log("Time Trial Testing");
 		#endif
 
 		//Live Race Time Trial

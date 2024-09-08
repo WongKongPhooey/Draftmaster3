@@ -33,6 +33,7 @@ public class EventData : MonoBehaviour
 	public static string[,] offlineCustomFieldOrder = new string[10,10];
 	public static int[,] offlineRaceLaps = new int[10,10];
 	public static int[,] offlineStartingLap = new int[10,10];
+	public static int[,] offlineEndingLap = new int[10,10];
 	public static string[,] offlineModifier = new string[10,10];
 	public static string[,] offlineMoment = new string[10,10];
 	

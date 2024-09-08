@@ -4,25 +4,25 @@ using UnityEngine;
 
 public class SeriesData : MonoBehaviour{
 	
-	public static string[] offlineMenu = new string[10];
-	public static string[,] offlineSeries = new string[10,25];
-	public static string[] offlineImage = new string[10];
-	public static string[,] offlineSeriesImage = new string[10,25];
-	public static string[] seriesDescriptions = new string[10];
-	public static string[,] offlineDescriptions = new string[10,25];
-	public static int[,] offlineAILevel = new int[10,25];
-	public static string[,] offlineMinType = new string[10,25];
-	public static int[,] offlineMinLevel = new int[10,25];
-	public static int[,] offlineMinClass = new int[10,25];
-	public static int[,] offlineMinRarity = new int[10,25];
-	public static string[,] offlineMinTeam = new string[10,25];
-	public static int[,] offlineExactCar = new int[10,25];
-	public static string[,] offlineMinManu = new string[10,25];
-	public static string[,] offlineMinDriverType = new string[10,25];
-	public static string[,] offlineTracklists = new string[10,25];
-	public static string[] offlineCustomListOrder = new string[10];
-	public static int[,] offlineFuel = new int[10,25];
-	public static string[,] offlinePrizes = new string[10,25];
+	public static string[] offlineMenu = new string[20];
+	public static string[,] offlineSeries = new string[20,25];
+	public static string[] offlineImage = new string[20];
+	public static string[,] offlineSeriesImage = new string[20,25];
+	public static string[] seriesDescriptions = new string[20];
+	public static string[,] offlineDescriptions = new string[20,25];
+	public static int[,] offlineAILevel = new int[20,25];
+	public static string[,] offlineMinType = new string[20,25];
+	public static int[,] offlineMinLevel = new int[20,25];
+	public static int[,] offlineMinClass = new int[20,25];
+	public static int[,] offlineMinRarity = new int[20,25];
+	public static string[,] offlineMinTeam = new string[20,25];
+	public static int[,] offlineExactCar = new int[20,25];
+	public static string[,] offlineMinManu = new string[20,25];
+	public static string[,] offlineMinDriverType = new string[20,25];
+	public static string[,] offlineTracklists = new string[20,25];
+	public static string[] offlineCustomListOrder = new string[20];
+	public static int[,] offlineFuel = new int[20,25];
+	public static string[,] offlinePrizes = new string[20,25];
 	
     // Start is called before the first frame update
     void Start(){
@@ -43,6 +43,7 @@ public class SeriesData : MonoBehaviour{
 		offlineMenu[7] = "Type";
 		offlineMenu[8] = "Rarity";
 		offlineMenu[9] = "Seasons";
+		offlineMenu[10] = "Mods";
 		
 		offlineImage[0] = "cup24livery4";
 		offlineImage[1] = "cup24livery11";
@@ -54,6 +55,7 @@ public class SeriesData : MonoBehaviour{
 		offlineImage[7] = "cup24livery47";
 		offlineImage[8] = "cup24livery48";
 		offlineImage[9] = "cup24livery12";
+		offlineImage[10] = "cup03livery97";
 		
 		seriesDescriptions[0] = "The first step onto the oval racing ladder. Show 'em what you've got!";
 		seriesDescriptions[1] = "Learn the challenges of high speed pack racing.";
@@ -65,6 +67,7 @@ public class SeriesData : MonoBehaviour{
 		seriesDescriptions[7] = "Some drive clean, some not so much. Play to your drivers strengths here.";
 		seriesDescriptions[8] = "Proven winners wear their stars with pride. Rarer drivers win bigger rewards!";
 		seriesDescriptions[9] = "The complete calendars. The ultimate challenge!";
+		seriesDescriptions[10] = "Community made mod series sets!";
 		
 		//Rookies
 		offlineSeries[0,0] = "Take The Wheel";

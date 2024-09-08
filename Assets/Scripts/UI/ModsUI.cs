@@ -88,6 +88,7 @@ public class ModsUI : MonoBehaviour {
 				try {
 					modJsonRaw = loadJson(directory.Name);
 				} catch(Exception e){
+					Debug.Log(e.Message);
 					modJsonRaw = directory.Name;
 				}
 				
@@ -99,7 +100,7 @@ public class ModsUI : MonoBehaviour {
 				
 				//Check the json is valid
 				try {
-					modCarset modJson = JsonUtility.FromJson<modCarset>(modJsonRaw);
+					modSet modJson = JsonUtility.FromJson<modSet>(modJsonRaw);
 					if(modJson.modName != null){
 						modFullName = stringLimit(modJson.modName,8);
 					}
@@ -113,6 +114,7 @@ public class ModsUI : MonoBehaviour {
 					
 					modList += directory.Name + "|" + modFullName;
 				} catch(Exception e){
+					Debug.Log(directory.Name + e.Message);
 					modFullName = "?";
 					modAuthor = "?";
 					modType = "?";
@@ -164,9 +166,10 @@ public class ModsUI : MonoBehaviour {
 		string json = System.IO.File.ReadAllText(directoryPath + "/" + folderName + ".json");
 
 		try{
-			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+			modSet modJson = JsonUtility.FromJson<modSet>(json);
 			string modName = modJson.modName;
 		} catch(Exception e){
+			Debug.Log(e.Message);
 			string jsonValid = "Error";
 		}
 		
@@ -285,7 +288,7 @@ public class ModsUI : MonoBehaviour {
 		string modFolder = null;
 		pickedJSON = null;
 		try{
-			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+			modSet modJson = JsonUtility.FromJson<modSet>(json);
 			modName = modJson.modName;
 			modFolder = modJson.modFolder;
 		} catch(Exception e){
