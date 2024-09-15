@@ -13,7 +13,7 @@ public class ModCarsetFunctions : MonoBehaviour
 	
 	public void setSeries(){
 		GarageUI.seriesPrefix = seriesPrefix;
-		GameObject.Find("Main").GetComponent<GarageUI>().loadAllModCars();
+		GameObject.Find("Main").GetComponent<GarageUI>().reloadModCars();
 		GameObject.Find("Main").GetComponent<GarageUI>().toggleDropdown(true);
 	}
 }

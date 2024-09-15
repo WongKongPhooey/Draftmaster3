@@ -115,7 +115,7 @@ public class GarageUI : MonoBehaviour
 		if(PlayerPrefs.GetString("ExactSeries") != ""){
 			seriesPrefix = PlayerPrefs.GetString("ExactSeries");
 			GameObject seriesSelector = GameObject.Find("SeriesSelect");
-			loadAllCars();
+			StartCoroutine(loadAllCars());
 			seriesSelector.SetActive(false);
 			PlayerPrefs.DeleteKey("ExactSeries");
 		}
@@ -150,7 +150,7 @@ public class GarageUI : MonoBehaviour
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
 		} else {
-			loadAllCars();
+			StartCoroutine(loadAllCars());
 		}
 		
 		//No starter cars? Auto-unlock them
@@ -160,7 +160,15 @@ public class GarageUI : MonoBehaviour
 		loadTransferPanels();
 	}
 	
-	public void loadAllCars(){
+	public void reloadCars(){
+		StartCoroutine(loadAllCars());
+	}
+	
+	public void reloadModCars(){
+		StartCoroutine(loadAllModCars());
+	}
+	
+	IEnumerator loadAllCars(){
 		
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
@@ -373,6 +381,7 @@ public class GarageUI : MonoBehaviour
 				carDisabled.SetActive(true);
 				carUnlocked = 0;
 			}
+			yield return null;
 		}
 		
 		int sortCounter=0;
@@ -405,7 +414,7 @@ public class GarageUI : MonoBehaviour
 		}
 	}
 
-	public void loadAllModCars(){
+	IEnumerator loadAllModCars(){
 		
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
@@ -557,6 +566,7 @@ public class GarageUI : MonoBehaviour
 					validCars++;
 				}
 			}
+			yield return null;
 		}
 		
 		if(PlayerPrefs.HasKey("ActivePath")){
@@ -696,14 +706,14 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void loadTransferPanels(){
-		loadTransferPanel("Driver",driverPanel);
-		loadTransferPanel("Manufacturer",manufacturerPanel);
-		loadTransferPanel("Team",teamPanel);
-		loadTransferPanel("Number",numberPanel);
-		loadTransferPanel("Paint",paintPanel);
+		StartCoroutine(loadTransferPanel("Driver",driverPanel));
+		StartCoroutine(loadTransferPanel("Manufacturer",manufacturerPanel));
+		StartCoroutine(loadTransferPanel("Team",teamPanel));
+		StartCoroutine(loadTransferPanel("Number",numberPanel));
+		StartCoroutine(loadTransferPanel("Paint",paintPanel));
 	}
 	
-	public void loadTransferPanel(string panelType, Transform parentGrid){
+	IEnumerator loadTransferPanel(string panelType, Transform parentGrid){
 		//Empty the panel
 		foreach (Transform child in parentGrid){
 			Destroy(child.gameObject);
@@ -717,6 +727,7 @@ public class GarageUI : MonoBehaviour
 					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<TMPro.TMP_Text>().text = driver;
 					optionInst.transform.SetParent(parentGrid, false);
+					yield return null;
 				}
 				break;
 			case "Manufacturer":
@@ -727,6 +738,7 @@ public class GarageUI : MonoBehaviour
 					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("Icons/manu-" + manu);
 					optionInst.transform.SetParent(parentGrid, false);
+					yield return null;
 				}
 				break;
 			case "Team":
@@ -737,6 +749,7 @@ public class GarageUI : MonoBehaviour
 					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<TMPro.TMP_Text>().text = team;
 					optionInst.transform.SetParent(parentGrid, false);
+					yield return null;
 				}
 				break;
 			case "Number":
@@ -747,6 +760,7 @@ public class GarageUI : MonoBehaviour
 						optionInst.GetComponent<GridSelector>().optionType = panelType;
 						optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("cup20num" + i);
 						optionInst.transform.SetParent(numberPanel, false);
+						yield return null;
 					}
 				}
 				break;
@@ -788,6 +802,7 @@ public class GarageUI : MonoBehaviour
 								paintInst.transform.GetChild(3).gameObject.SetActive(false);
 								paintInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = "Locked";
 							}
+							yield return null;
 						}
 					}
 				} else {
@@ -806,6 +821,7 @@ public class GarageUI : MonoBehaviour
 							if(PlayerPrefs.GetInt(seriesPrefix + openCarNum + "AltPaint") == i){
 								paintInst.transform.GetChild(3).gameObject.SetActive(false);
 							}
+							yield return null;
 						}
 					}
 				}
@@ -932,9 +948,9 @@ public class GarageUI : MonoBehaviour
 		hideGarageTransferPanels();
 		loadTransferPanels();
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
-			loadAllCars();
+			StartCoroutine(loadAllCars());
 		} else {
-			loadAllModCars();
+			StartCoroutine(loadAllModCars());
 		}
 	}
 
