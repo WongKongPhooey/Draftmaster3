@@ -339,18 +339,36 @@ public class ModData : MonoBehaviour
 		if((loadedMod == null)||(modName != seriesPrefix)){
 			loadedMod = loadMod(seriesPrefix);
 		}
-		string seriesName = null;
+		string seriesDesc = null;
 		if(loadedMod != null){
 			string modFolderName = loadJson(loadedMod.Name);
 			try {
 				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
-				seriesName = modJson.series[index].seriesDescription;
+				seriesDesc = modJson.series[index].seriesDescription;
 			} catch(Exception e){
 				Debug.Log(e.Message);
 				return null;
 			}
 		}
-		return seriesName;
+		return seriesDesc;
+	}
+	
+	public static string getModSeriesTracklist(string seriesPrefix, int index){
+		if((loadedMod == null)||(modName != seriesPrefix)){
+			loadedMod = loadMod(seriesPrefix);
+		}
+		string seriesTracklist = null;
+		if(loadedMod != null){
+			string modFolderName = loadJson(loadedMod.Name);
+			try {
+				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
+				seriesTracklist = modJson.series[index].seriesTracklist;
+			} catch(Exception e){
+				Debug.Log(e.Message);
+				return null;
+			}
+		}
+		return seriesTracklist;
 	}
 	
 	public static Texture2D getTexture(string seriesPrefix, int index, bool convertToNum = false, string altPrefix = ""){

@@ -21,6 +21,7 @@ public class SeriesUI : MonoBehaviour
 	public GameObject reqListText;
 	public static int seriesId;
 	public static int subSeriesId;
+	public static string modSeriesPrefix;
 	string seriesPrefix;
 	int level;
 	
@@ -130,19 +131,19 @@ public class SeriesUI : MonoBehaviour
 			TMPro.TMP_Text seriesName = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			RawImage seriesImage = tileInst.transform.GetChild(1).GetComponent<RawImage>();
 			TMPro.TMP_Text seriesDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
-			GameObject seriesRewardsBtn = tileInst.transform.GetChild(6).transform.gameObject;
+			GameObject seriesRewardsBtn = tileInst.transform.GetChild(8).transform.gameObject;
 			GameObject seriesCover = tileInst.transform.GetChild(4).transform.gameObject;
-			GameObject rewardCollected = tileInst.transform.GetChild(7).transform.gameObject;
-			TMPro.TMP_Text champsProgress = tileInst.transform.GetChild(8).GetComponent<TMPro.TMP_Text>();
+			GameObject rewardCollected = tileInst.transform.GetChild(9).transform.gameObject;
+			TMPro.TMP_Text champsProgress = tileInst.transform.GetChild(10).GetComponent<TMPro.TMP_Text>();
 			
 			if(PlayerPrefs.HasKey("SeriesChampionship" + seriesId + k + "Round")){
 				if(PlayerPrefs.GetInt("SeriesChampionship" + seriesId + k + "Round") > 0){
 					int nextRound = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + k + "Round") + 1;
 					int totalRounds = PlayerPrefs.GetInt("SeriesChampionship" + seriesId + k + "Length");
 					if(nextRound > totalRounds){
-						champsProgress.text = "Championship Finished \nCollect Rewards";
+						champsProgress.text = "Collect Championship Rewards";
 					} else {
-						champsProgress.text = "Championship In Progress \nRound " + nextRound + "/" + totalRounds;
+						champsProgress.text = "Continue Championship (R" + nextRound + "/" + totalRounds + ")";
 					}
 				}
 			}
@@ -161,12 +162,12 @@ public class SeriesUI : MonoBehaviour
 	}
 
 	public void loadSeries(){
-		
 		PlayerPrefs.SetString("SeriesTrackList",SeriesData.offlineTracklists[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("CurrentSeriesIndex", seriesId + "" + subSeriesId);
 		PlayerPrefs.SetString("CurrentSeriesName",SeriesData.offlineSeries[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("CurrentSeries", seriesId);
 		PlayerPrefs.SetInt("CurrentSubseries", subSeriesId);
+		PlayerPrefs.DeleteKey("CurrentModSeries");
 		PlayerPrefs.SetInt("SubseriesMinClass", SeriesData.offlineMinClass[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue(seriesId,subSeriesId));
@@ -181,6 +182,31 @@ public class SeriesUI : MonoBehaviour
 				PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("SeriesChampionship" + seriesId + subSeriesId + "CarTexture"));
 				PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("SeriesChampionship" + seriesId + subSeriesId + "CarChoice"));
 				PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("SeriesChampionship" + seriesId + subSeriesId + "CarSeries"));
+				PlayerPrefs.SetString("ActivePath","ChampionshipRace");
+				//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
+				SceneManager.LoadScene("Menus/ChampionshipHub");
+			} else {
+				SceneManager.LoadScene("Menus/Garage");
+			}
+		} else {
+			SceneManager.LoadScene("Menus/Garage");
+		}
+	}
+	
+	public void loadModSeries(){
+		PlayerPrefs.SetString("SeriesTrackList",ModData.getModSeriesTracklist(modSeriesPrefix,subSeriesId));
+		PlayerPrefs.SetString("CurrentSeriesIndex", seriesId + "" + subSeriesId);
+		PlayerPrefs.SetString("CurrentSeriesName",ModData.getModSeriesName(modSeriesPrefix,subSeriesId));
+		PlayerPrefs.SetInt("CurrentSeries", seriesId);
+		PlayerPrefs.SetInt("CurrentSubseries", subSeriesId);
+		PlayerPrefs.SetString("CurrentModSeries", modSeriesPrefix);
+		PlayerPrefs.SetString("ActivePath","SingleRace");
+		
+		if(PlayerPrefs.HasKey("SeriesChampionship" + modSeriesPrefix + subSeriesId + "Round")){
+			if(PlayerPrefs.GetInt("SeriesChampionship" + modSeriesPrefix + subSeriesId + "Round") > 0){
+				PlayerPrefs.SetString("carTexture", PlayerPrefs.GetString("SeriesChampionship" + modSeriesPrefix + seriesId +subSeriesId + "CarTexture"));
+				PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("SeriesChampionship" + modSeriesPrefix + seriesId +subSeriesId + "CarChoice"));
+				PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("SeriesChampionship" + modSeriesPrefix + seriesId + subSeriesId + "CarSeries"));
 				PlayerPrefs.SetString("ActivePath","ChampionshipRace");
 				//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 				SceneManager.LoadScene("Menus/ChampionshipHub");
@@ -207,7 +233,7 @@ public class SeriesUI : MonoBehaviour
 			string[] modData = modSet.Split('|');
 			string modSeriesPrefix = modData[0];
 			
-			for(int i=0;i<100;i++){
+			for(int i=0;i<10;i++){
 			
 				if(ModData.getModSeriesName(modData[0], i) == null){
 					continue;
@@ -243,11 +269,10 @@ public class SeriesUI : MonoBehaviour
 						}
 					}
 				}
+				tileInst.GetComponent<SeriesUIFunctions>().seriesId = seriesId;
+				tileInst.GetComponent<SeriesUIFunctions>().modSeriesPrefix = modSeriesPrefix;
+				tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = i;
 			}
-			
-			//tileInst.GetComponent<SeriesUIFunctions>().seriesId = seriesId;
-			//tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = k;
-			//seriesImage.texture = ModData.getModSeriesImage[seriesPrefix,k];
 		}
 	}
 	

@@ -140,6 +140,9 @@ public class MainMenuUI : MonoBehaviour {
         if(PlayerPrefs.HasKey("RaceType")){
 			PlayerPrefs.DeleteKey("RaceType");
 		}
+		if(PlayerPrefs.HasKey("CurrentModSeries")){
+			PlayerPrefs.DeleteKey("CurrentModSeries");
+		}
 		if(PlayerPrefs.HasKey("RaceMoment")){
 			PlayerPrefs.DeleteKey("RaceMoment");
 		}

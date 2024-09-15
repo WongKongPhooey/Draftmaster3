@@ -6,6 +6,7 @@ public class SeriesUIFunctions : MonoBehaviour {
 	
 	public int seriesId;
 	public int subSeriesId;
+	public string modSeriesPrefix;
 	//public static int subMenuIdInst;
 
 	public void openSubMenu(){
@@ -31,7 +32,14 @@ public class SeriesUIFunctions : MonoBehaviour {
 	public void loadEvent(){
 		SeriesUI.seriesId = seriesId;
 		SeriesUI.subSeriesId = subSeriesId;
-		GameObject.Find("Main").GetComponent<SeriesUI>().loadSeries();
+		SeriesUI.modSeriesPrefix = modSeriesPrefix;
+		//The community mods category..
+		if(seriesId == 10){
+			Debug.Log("Load a mod series");
+			GameObject.Find("Main").GetComponent<SeriesUI>().loadModSeries();
+		} else {
+			GameObject.Find("Main").GetComponent<SeriesUI>().loadSeries();
+		}
 	}
 }
 

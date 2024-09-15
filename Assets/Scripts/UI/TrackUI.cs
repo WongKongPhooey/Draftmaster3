@@ -19,6 +19,7 @@ public class TrackUI : MonoBehaviour
 	public static int carNumber;
 	
 	public static string currentSeriesIndex;
+	public static string currentModSeries;
 	
 	public static string trackList;
 	
@@ -31,7 +32,11 @@ public class TrackUI : MonoBehaviour
     void Start()
     {
 		trackList = PlayerPrefs.GetString("SeriesTrackList");
+		
+		//Official series e.g. 93 -> series 9, subseries 3
+		//Mod series e.g. cup042 -> series cup04 , subseries 2
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
+		
         loadAllTracks(trackList);
 		
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
@@ -58,6 +63,13 @@ public class TrackUI : MonoBehaviour
 		seriesPrefix = "cup20";
 		seriesPrefix = PlayerPrefs.GetString("carSeries");
 		
+		currentModSeries = "";
+			//Sneak custom modded series IDs in here (otherwise blank)
+			if(PlayerPrefs.HasKey("CurrentModSeries")){
+				currentModSeries = PlayerPrefs.GetString("CurrentModSeries");
+			}
+			Debug.Log("Current Mod Series: " + currentModSeries);
+		
 		seriesFuel = PlayerPrefs.GetInt("SeriesFuel");
 		
 		alertPopup = GameObject.Find("AlertPopup");
@@ -65,7 +77,8 @@ public class TrackUI : MonoBehaviour
 		//If race type is Championship (Set in the Championship Hub screen)
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
 			Debug.Log("There's an active championship here.. " + currentSeriesIndex);
-			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
+			
+			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarSeries");
 			PlayerPrefs.SetString("carSeries", seriesPrefix);
 			//Debug.Log("SeriesChampionship" + currentSeriesIndex + "Carset loaded as " + seriesPrefix);
 			
@@ -243,14 +256,15 @@ public class TrackUI : MonoBehaviour
 	}
 
 	public void startChampionship(){
-		DriverPoints.resetPoints(currentSeriesIndex,seriesPrefix);
+		DriverPoints.resetPoints(currentModSeries + currentSeriesIndex,seriesPrefix);
 		PlayerPrefs.SetString("RaceType","Championship");
-		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round", 0);
-		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "Tracklist",PlayerPrefs.GetString("SeriesTrackList"));
-		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Length", seriesLength);
-		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "CarTexture", PlayerPrefs.GetString("carTexture"));
-		PlayerPrefs.SetString("SeriesChampionship" + currentSeriesIndex + "CarSeries", PlayerPrefs.GetString("carSeries"));
-		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "CarChoice", PlayerPrefs.GetInt("CarChoice"));
+		PlayerPrefs.SetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "Round", 0);
+		PlayerPrefs.SetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "Tracklist",PlayerPrefs.GetString("SeriesTrackList"));
+		PlayerPrefs.SetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "Length", seriesLength);
+		PlayerPrefs.SetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarTexture", PlayerPrefs.GetString("carTexture"));
+		PlayerPrefs.SetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarSeries", seriesPrefix);
+		Debug.Log("Start Championship: SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarSeries");
+		PlayerPrefs.SetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarChoice", PlayerPrefs.GetInt("CarChoice"));
 		loadTrack(trackList, 0);
 		championshipRound = 0;
 		resetChampionshipPoints(currentSeriesIndex);
