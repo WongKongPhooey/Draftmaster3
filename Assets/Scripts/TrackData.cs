@@ -162,97 +162,97 @@ public class TrackData : MonoBehaviour
 		trackCodeNames[33] = "Milwaukee";
 	}
 	
-	public static string getTrackImage(string trackId){
+	public static string getTrackImage(int trackId){
 		string trackImageName = "";
 		switch(trackId){
-			case "1":
+			case 1:
 				trackImageName = "SuperTriOval";
 				break;
-			case "2":
+			case 2:
 				trackImageName = "AngledTriOval";
 				break;
-			case "3":
+			case 3:
 				trackImageName = "TriOval";
 				break;
-			case "4":
+			case 4:
 				trackImageName = "Phoenix";
 				break;
-			case "5":
+			case 5:
 				trackImageName = "SuperTriOval";
 				break;
-			case "6":
+			case 6:
 				trackImageName = "LongOval";
 				break;
-			case "7":
+			case 7:
 				trackImageName = "AngledTriOval";
 				break;
-			case "8":
+			case 8:
 				trackImageName = "TinyOval";
 				break;
-			case "9":
+			case 9:
 				trackImageName = "TriOval";
 				break;
-			case "10":
+			case 10:
 				trackImageName = "Talladega";
 				break;
-			case "11":
+			case 11:
 				trackImageName = "SmallOval";
 				break;
-			case "12":
+			case 12:
 				trackImageName = "TriOval";
 				break;
-			case "13":
+			case 13:
 				trackImageName = "AngledTriOval";
 				break;
-			case "14":
+			case 14:
 				trackImageName = "LongPond";
 				break;
-			case "15":
+			case 15:
 				trackImageName = "SuperTriOval";
 				break;
-			case "16":
+			case 16:
 				trackImageName = "TriOval";
 				break;
-			case "17":
+			case 17:
 				trackImageName = "TriOval";
 				break;
-			case "18":
+			case 18:
 				trackImageName = "LongOval";
 				break;
-			case "19":
+			case 19:
 				trackImageName = "Darlington";
 				break;
-			case "20":
+			case 20:
 				trackImageName = "Indianapolis";
 				break;
-			case "21":
+			case 21:
 				trackImageName = "BigOval";
 				break;
-			case "22":
+			case 22:
 				trackImageName = "Madison";
 				break;
-			case "23":
+			case 23:
 				trackImageName = "TriOval";
 				break;
-			case "26":
+			case 26:
 				trackImageName = "SmallOval";
 				break;
-			case "27":
+			case 27:
 				trackImageName = "Nazareth";
 				break;
-			case "28":
+			case 28:
 				trackImageName = "TriOval";
 				break;
-			case "29":
+			case 29:
 				trackImageName = "TriOval";
 				break;
-			case "30":
+			case 30:
 				trackImageName = "TinyOval";
 				break;
-			case "31":
+			case 31:
 				trackImageName = "Madison";
 				break;
-			case "33":
+			case 33:
 				trackImageName = "LongOval";
 				break;
 			default:
@@ -264,26 +264,26 @@ public class TrackData : MonoBehaviour
 	public static void loadTrackLaps(){
 		trackLaps[1] = 4;
 		trackLaps[2] = 5;
-		trackLaps[3] = 6;
-		trackLaps[4] = 7;
+		trackLaps[3] = 5;
+		trackLaps[4] = 6;
 		trackLaps[5] = 4;
-		trackLaps[6] = 9;
-		trackLaps[7] = 6;
+		trackLaps[6] = 10;
+		trackLaps[7] = 5;
 		trackLaps[8] = 10;
-		trackLaps[9] = 9;
+		trackLaps[9] = 8;
 		trackLaps[10] = 4;
 		trackLaps[11] = 8;
 		trackLaps[12] = 5;
-		trackLaps[13] = 6;
-		trackLaps[14] = 4;
+		trackLaps[13] = 8;
+		trackLaps[14] = 3;
 		trackLaps[15] = 4;
 		trackLaps[16] = 6;
 		trackLaps[17] = 6;
 		trackLaps[18] = 6;
-		trackLaps[19] = 6;
-		trackLaps[20] = 4;
-		trackLaps[21] = 6;
-		trackLaps[22] = 7;
+		trackLaps[19] = 7;
+		trackLaps[20] = 3;
+		trackLaps[21] = 5;
+		trackLaps[22] = 5;
 		trackLaps[23] = 6;
 		trackLaps[26] = 8;
 		trackLaps[30] = 10;
@@ -291,7 +291,7 @@ public class TrackData : MonoBehaviour
 		trackLaps[24] = 6;
 		trackLaps[25] = 7;
 		trackLaps[27] = 8;
-		trackLaps[28] = 9;
+		trackLaps[28] = 7;
 		trackLaps[29] = 6;
 		trackLaps[31] = 6;
 		trackLaps[33] = 6;
@@ -299,7 +299,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Talladega(){
 		trackCodeName = "Talladega";
-		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",200);
 		PlayerPrefs.SetInt("StraightLength2",500);
@@ -321,7 +320,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Joliet(){
 		trackCodeName = "Joliet";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -343,7 +341,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void LasVegas(){
 		trackCodeName = "LasVegas";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -365,7 +362,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Bristol(){
 		trackCodeName = "Bristol";
-		PlayerPrefs.SetInt("RaceLaps",10);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",100);
 		PlayerPrefs.SetInt("StraightLength2",100);
@@ -387,7 +383,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Richmond(){
 		trackCodeName = "Richmond";
-		PlayerPrefs.SetInt("RaceLaps",9);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -409,7 +404,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void NewHampshire(){
 		trackCodeName = "NewHampshire";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",250);
 		PlayerPrefs.SetInt("StraightLength2",250);
@@ -431,7 +425,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Indianapolis(){
 		trackCodeName = "Indianapolis";
-		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",400);
 		PlayerPrefs.SetInt("StraightLength2",100);
@@ -453,7 +446,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Atlanta(){
 		trackCodeName = "Atlanta";
-		PlayerPrefs.SetInt("RaceLaps",5);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",150);
 		PlayerPrefs.SetInt("StraightLength2",50);
@@ -475,7 +467,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Phoenix(){
 		trackCodeName = "Phoenix";
-		PlayerPrefs.SetInt("RaceLaps",8);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",50);
 		PlayerPrefs.SetInt("StraightLength2",100);
@@ -497,7 +488,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Motegi(){
 		trackCodeName = "Motegi";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",300);
 		PlayerPrefs.SetInt("StraightLength2",300);
@@ -519,7 +509,6 @@ public class TrackData : MonoBehaviour
 
 	public static void LongPond(){
 		trackCodeName = "LongPond";
-		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",350);
 		PlayerPrefs.SetInt("StraightLength2",250);
@@ -541,7 +530,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Fontana(){
 		trackCodeName = "Fontana";
-		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -563,7 +551,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Michigan(){
 		trackCodeName = "Michigan";
-		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -585,7 +572,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Charlotte(){
 		trackCodeName = "Charlotte";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",100);
 		PlayerPrefs.SetInt("StraightLength2",50);
@@ -607,7 +593,6 @@ public class TrackData : MonoBehaviour
 
 	public static void FortWorth(){
 		trackCodeName = "FortWorth";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",80);
 		PlayerPrefs.SetInt("StraightLength2",75);
@@ -629,7 +614,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Darlington(){
 		trackCodeName = "Darlington";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",250);
 		PlayerPrefs.SetInt("StraightLength2",0);
@@ -651,7 +635,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Miami(){
 		trackCodeName = "Miami";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",300);
 		PlayerPrefs.SetInt("StraightLength2",300);
@@ -673,7 +656,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Dover(){
 		trackCodeName = "Dover";
-		PlayerPrefs.SetInt("RaceLaps",8);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",150);
 		PlayerPrefs.SetInt("StraightLength2",150);
@@ -695,7 +677,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Kansas(){
 		trackCodeName = "Kansas";
-		PlayerPrefs.SetInt("RaceLaps",5);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",50);
@@ -717,7 +698,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Kentucky(){
 		trackCodeName = "Kentucky";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -739,7 +719,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Daytona(){
 		trackCodeName = "Daytona";
-		PlayerPrefs.SetInt("RaceLaps",4);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",2);
 		PlayerPrefs.SetInt("StraightLength2",200);
@@ -761,7 +740,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Martinsville(){
 		trackCodeName = "Martinsville";
-		PlayerPrefs.SetInt("RaceLaps",9);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",150);
 		PlayerPrefs.SetInt("StraightLength2",150);
@@ -783,7 +761,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void LosAngeles(){
 		trackCodeName = "LosAngeles";
-		PlayerPrefs.SetInt("RaceLaps",10);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",20);
 		PlayerPrefs.SetInt("StraightLength2",0);
@@ -807,7 +784,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Madison(){
 		trackCodeName = "Madison";
-		PlayerPrefs.SetInt("RaceLaps",7);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",250);
 		PlayerPrefs.SetInt("StraightLength2",250);
@@ -829,7 +805,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Nashville(){
 		trackCodeName = "Nashville";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -851,7 +826,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Iowa(){
 		trackCodeName = "Iowa";
-		PlayerPrefs.SetInt("RaceLaps",9);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -873,7 +847,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void NorthWilkesboro(){
 		trackCodeName = "NorthWilkesboro";
-		PlayerPrefs.SetInt("RaceLaps",8);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",150);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -895,7 +868,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Nazareth(){
 		trackCodeName = "Nazareth";
-		PlayerPrefs.SetInt("RaceLaps",8);
 		PlayerPrefs.SetInt("CircuitLanes",3);
 		PlayerPrefs.SetInt("StraightLength1",120);
 		PlayerPrefs.SetInt("StraightLength2",100);
@@ -917,7 +889,6 @@ public class TrackData : MonoBehaviour
 	
 	public static void Fountain(){
 		trackCodeName = "Fountain";
-		PlayerPrefs.SetInt("RaceLaps",7);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",1);
 		PlayerPrefs.SetInt("StraightLength2",1);
@@ -939,7 +910,6 @@ public class TrackData : MonoBehaviour
 
 	public static void Milwaukee(){
 		trackCodeName = "Milwaukee";
-		PlayerPrefs.SetInt("RaceLaps",6);
 		PlayerPrefs.SetInt("CircuitLanes",4);
 		PlayerPrefs.SetInt("StraightLength1",250);
 		PlayerPrefs.SetInt("StraightLength2",250);

@@ -29,6 +29,20 @@ public class SeriesUIFunctions : MonoBehaviour {
 		GameObject.Find("Main").GetComponent<SeriesUI>().showRewardsPopup(seriesId, subSeriesId);
 	}
 	
+	public void loadLapsSlider(){
+		//Debug.Log("Loading Event Rewards for Event " + EventData.offlineEventChapter[subMenuId, subEventId]);
+		SeriesUI.seriesId = seriesId;
+		SeriesUI.subSeriesId = subSeriesId;
+		GameObject.Find("Main").GetComponent<SeriesUI>().showLapsPopup(seriesId, subSeriesId);
+	}
+	
+	public void loadDifficultySlider(){
+		//Debug.Log("Loading Event Rewards for Event " + EventData.offlineEventChapter[subMenuId, subEventId]);
+		SeriesUI.seriesId = seriesId;
+		SeriesUI.subSeriesId = subSeriesId;
+		GameObject.Find("Main").GetComponent<SeriesUI>().showDifficultyPopup(seriesId, subSeriesId);
+	}
+	
 	public void loadEvent(){
 		SeriesUI.seriesId = seriesId;
 		SeriesUI.subSeriesId = subSeriesId;

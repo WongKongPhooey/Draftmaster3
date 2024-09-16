@@ -18,7 +18,22 @@ public class SeriesUI : MonoBehaviour
 	public GameObject rewardsGrid;
 	public GameObject rewardCar;
 	public GameObject entryReqsPopup;
+	public GameObject difficultyPopup;
+	public GameObject lapsPopup;
 	public GameObject reqListText;
+	public GameObject lapsSetting;
+	public GameObject difficultySetting;
+	
+	Slider lapsSlider;
+	Slider difficultySlider;
+	
+	TMPro.TMP_Text lapsSliderValue;
+	TMPro.TMP_Text lapsSliderMin;
+	TMPro.TMP_Text lapsSliderMax;
+	TMPro.TMP_Text diffSliderValue;
+	TMPro.TMP_Text diffSliderMin;
+	TMPro.TMP_Text diffSliderMax;
+	
 	public static int seriesId;
 	public static int subSeriesId;
 	public static string modSeriesPrefix;
@@ -32,14 +47,19 @@ public class SeriesUI : MonoBehaviour
 		
 		scrollFrame = GameObject.Find("Main");
 		
-		//Hide rewards popup after storing the var
+		//Hide popups after storing the vars
 		rewardsPopup = GameObject.Find("RewardsPopup");
-		rewardsPopup.SetActive(false);
-		
 		entryReqsPopup = GameObject.Find("EntryReqsPopup");
-		entryReqsPopup.SetActive(false);
-		
+		lapsPopup = GameObject.Find("LapsPopup");
+		difficultyPopup = GameObject.Find("DifficultyPopup");
 		reqListText = GameObject.Find("RequirementsList");
+		rewardsPopup.SetActive(false);
+		entryReqsPopup.SetActive(false);
+		lapsPopup.SetActive(false);
+		difficultyPopup.SetActive(false);
+		
+		lapsSlider = lapsSetting.transform.GetChild(1).GetComponent<Slider>();
+		difficultySlider = difficultySetting.transform.GetChild(1).GetComponent<Slider>();
 		
 		loadAllSeries();
     }
@@ -333,13 +353,26 @@ public class SeriesUI : MonoBehaviour
 		reqListText = GameObject.Find("RequirementsList");
 		reqListText.GetComponent<TMPro.TMP_Text>().text = getEntryReqs(series,subSeries);
 	}
+	
+	public void showLapsPopup(int series, int subSeries){
+		lapsPopup.SetActive(true);
+	}
+	
+	public void showDifficultyPopup(int series, int subSeries){
+		difficultyPopup.SetActive(true);
+	}
 
 	public void closeEntryReqsPopup(){
 		entryReqsPopup.SetActive(false);
 	}
 
 	public void showRewardsPopup(int subMenu, int subEvent){
+		loadPossibleRewards(subMenu, subEvent);
+	}
+
+	public void loadPossibleRewards(int subMenu, int subEvent){
 		rewardsList.Clear();
+		rewardsPopup.SetActive(true);
 		string rewardsCode = SeriesData.offlinePrizes[subMenu,subEvent];
 		
 		//Generate the list of possible rewards
@@ -358,7 +391,6 @@ public class SeriesUI : MonoBehaviour
 			carPaint.texture = (Texture2D)Resources.Load(rewardString);
 			//Debug.Log("Reward loaded: " + rewardString);
 		}
-		rewardsPopup.SetActive(true);
 	}
 
 	public void closeRewardsPopup(){
@@ -366,6 +398,14 @@ public class SeriesUI : MonoBehaviour
 			GameObject.Destroy(reward.gameObject);
 		}
 		rewardsPopup.SetActive(false);
+	}
+	
+	public void closeLapsPopup(){
+		lapsPopup.SetActive(false);
+	}
+	
+	public void closeDifficultyPopup(){
+		difficultyPopup.SetActive(false);
 	}
 
 	public void dynamicBackButton(){

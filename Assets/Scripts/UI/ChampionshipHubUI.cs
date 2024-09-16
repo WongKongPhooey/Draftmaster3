@@ -17,7 +17,7 @@ public class ChampionshipHubUI : MonoBehaviour
 	public GameObject hubTrackImage;
 	
 	public GameObject hubTrackName;
-	public static string[] tracksArray;
+	public static int[] tracksArray;
 	
 	public GameObject hubCarImage;
 	
@@ -141,7 +141,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		nextRound.GetComponent<TMPro.TMP_Text>().text = "Round " + (championshipRound + 1) + "/" + championshipLength;
 		
 		//Debug.Log("Tracklist: " + championshipTracklist);
-		tracksArray = championshipTracklist.Split(',');
+		tracksArray = championshipTracklist.Split(',').Select(int.Parse).ToArray();
 		
 		hubCarImage = GameObject.Find("NextCar");
 		if(ModData.isModSeries(seriesPrefix) == true){
@@ -167,7 +167,7 @@ public class ChampionshipHubUI : MonoBehaviour
 			championshipOver = true;
 			championshipRound = 0;
 		} else {
-			nextTrackLabel.GetComponent<TMPro.TMP_Text>().text = TrackData.getTrackName(int.Parse(tracksArray[championshipRound]));
+			nextTrackLabel.GetComponent<TMPro.TMP_Text>().text = TrackData.getTrackName(tracksArray[championshipRound]);
 		}
 		
 		hubTrackImage = GameObject.Find("NextTrack");

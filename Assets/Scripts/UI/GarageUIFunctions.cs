@@ -16,7 +16,7 @@ public class GarageUIFunctions : MonoBehaviour
 
 	public void setSeries(){
 		GarageUI.seriesPrefix = seriesPrefix;
-		GameObject.Find("Main").GetComponent<GarageUI>().reloadCars();
+		GameObject.Find("Main").GetComponent<GarageUI>().loadAllCars();
 		GameObject.Find("Main").GetComponent<GarageUI>().toggleDropdown(false);
 	}
 
@@ -78,7 +78,7 @@ public class GarageUIFunctions : MonoBehaviour
 	}
 
 	public void reloadGarage(){
-		GameObject.Find("Main").GetComponent<GarageUI>().reloadCars();
+		GameObject.Find("Main").GetComponent<GarageUI>().loadAllCars();
 	}
 
 	public int getClassMax(int carClass){

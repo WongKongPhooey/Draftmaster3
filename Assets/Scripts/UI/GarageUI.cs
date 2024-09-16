@@ -115,7 +115,7 @@ public class GarageUI : MonoBehaviour
 		if(PlayerPrefs.GetString("ExactSeries") != ""){
 			seriesPrefix = PlayerPrefs.GetString("ExactSeries");
 			GameObject seriesSelector = GameObject.Find("SeriesSelect");
-			StartCoroutine(loadAllCars());
+			loadAllCars();
 			seriesSelector.SetActive(false);
 			PlayerPrefs.DeleteKey("ExactSeries");
 		}
@@ -150,25 +150,16 @@ public class GarageUI : MonoBehaviour
 		if(PlayerPrefs.HasKey("CustomCar")){
 			autoSelectCar();
 		} else {
-			StartCoroutine(loadAllCars());
+			loadAllCars();
 		}
 		
 		//No starter cars? Auto-unlock them
 		starterCars();
 		
 		chosenOption = null;
-		loadTransferPanels();
 	}
 	
-	public void reloadCars(){
-		StartCoroutine(loadAllCars());
-	}
-	
-	public void reloadModCars(){
-		StartCoroutine(loadAllModCars());
-	}
-	
-	IEnumerator loadAllCars(){
+	public void loadAllCars(){
 		
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
@@ -209,7 +200,7 @@ public class GarageUI : MonoBehaviour
 			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
 			tileInst.GetComponent<GarageUIFunctions>().modCar = false;
 			tileInst.transform.SetParent(tileFrame, false);
-			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
+			tileInst.GetComponent<UIAnimate>().animOffset = i*5;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
@@ -381,7 +372,6 @@ public class GarageUI : MonoBehaviour
 				carDisabled.SetActive(true);
 				carUnlocked = 0;
 			}
-			yield return null;
 		}
 		
 		int sortCounter=0;
@@ -414,7 +404,7 @@ public class GarageUI : MonoBehaviour
 		}
 	}
 
-	IEnumerator loadAllModCars(){
+	public void loadAllModCars(){
 		
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
@@ -443,7 +433,7 @@ public class GarageUI : MonoBehaviour
 			tileInst.GetComponent<GarageUIFunctions>().carNum = carNum;
 			tileInst.GetComponent<GarageUIFunctions>().modCar = true;
 			tileInst.transform.SetParent(tileFrame, false);
-			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
+			tileInst.GetComponent<UIAnimate>().animOffset = i*5;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
@@ -566,7 +556,6 @@ public class GarageUI : MonoBehaviour
 					validCars++;
 				}
 			}
-			yield return null;
 		}
 		
 		if(PlayerPrefs.HasKey("ActivePath")){
@@ -706,14 +695,14 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void loadTransferPanels(){
-		StartCoroutine(loadTransferPanel("Driver",driverPanel));
-		StartCoroutine(loadTransferPanel("Manufacturer",manufacturerPanel));
-		StartCoroutine(loadTransferPanel("Team",teamPanel));
-		StartCoroutine(loadTransferPanel("Number",numberPanel));
-		StartCoroutine(loadTransferPanel("Paint",paintPanel));
+		loadTransferPanel("Driver",driverPanel);
+		loadTransferPanel("Manufacturer",manufacturerPanel);
+		loadTransferPanel("Team",teamPanel);
+		loadTransferPanel("Number",numberPanel);
+		loadTransferPanel("Paint",paintPanel);
 	}
 	
-	IEnumerator loadTransferPanel(string panelType, Transform parentGrid){
+	public void loadTransferPanel(string panelType, Transform parentGrid){
 		//Empty the panel
 		foreach (Transform child in parentGrid){
 			Destroy(child.gameObject);
@@ -727,7 +716,6 @@ public class GarageUI : MonoBehaviour
 					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<TMPro.TMP_Text>().text = driver;
 					optionInst.transform.SetParent(parentGrid, false);
-					yield return null;
 				}
 				break;
 			case "Manufacturer":
@@ -738,7 +726,6 @@ public class GarageUI : MonoBehaviour
 					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("Icons/manu-" + manu);
 					optionInst.transform.SetParent(parentGrid, false);
-					yield return null;
 				}
 				break;
 			case "Team":
@@ -749,7 +736,6 @@ public class GarageUI : MonoBehaviour
 					optionInst.GetComponent<GridSelector>().optionType = panelType;
 					optionInst.GetComponent<TMPro.TMP_Text>().text = team;
 					optionInst.transform.SetParent(parentGrid, false);
-					yield return null;
 				}
 				break;
 			case "Number":
@@ -760,7 +746,6 @@ public class GarageUI : MonoBehaviour
 						optionInst.GetComponent<GridSelector>().optionType = panelType;
 						optionInst.GetComponent<RawImage>().texture = Resources.Load<Texture2D>("cup20num" + i);
 						optionInst.transform.SetParent(numberPanel, false);
-						yield return null;
 					}
 				}
 				break;
@@ -802,7 +787,6 @@ public class GarageUI : MonoBehaviour
 								paintInst.transform.GetChild(3).gameObject.SetActive(false);
 								paintInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>().text = "Locked";
 							}
-							yield return null;
 						}
 					}
 				} else {
@@ -821,7 +805,6 @@ public class GarageUI : MonoBehaviour
 							if(PlayerPrefs.GetInt(seriesPrefix + openCarNum + "AltPaint") == i){
 								paintInst.transform.GetChild(3).gameObject.SetActive(false);
 							}
-							yield return null;
 						}
 					}
 				}
@@ -948,9 +931,9 @@ public class GarageUI : MonoBehaviour
 		hideGarageTransferPanels();
 		loadTransferPanels();
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
-			StartCoroutine(loadAllCars());
+			loadAllCars();
 		} else {
-			StartCoroutine(loadAllModCars());
+			loadAllModCars();
 		}
 	}
 
@@ -1372,6 +1355,7 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void showGaragePopup(string seriesPrefix, int carNum, int carClass, int carRarity){
+		loadTransferPanels();
 		openCarNum = carNum;
 		//Load this here to get the paints from the params passed in
 		loadTransferPanel("Paint",paintPanel);

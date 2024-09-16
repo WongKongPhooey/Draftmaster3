@@ -10,7 +10,7 @@ public class TrackUI : MonoBehaviour
 	
 	public GameObject trackTile;
 	public Transform tileFrame;
-	public static string[] tracksArray;
+	public static int[] tracksArray;
 	int seriesLength;
 	public static int seriesFuel;
 	public static string trackCodeName;
@@ -103,19 +103,16 @@ public class TrackUI : MonoBehaviour
 
 	public void loadAllTracks(string tracks){
 		
-		TrackData.loadTrackNames();
-		TrackData.loadTrackCodeNames();
-		
 		foreach (Transform child in tileFrame){
 			//Destroy(child.gameObject);
 		}
 		
 		//If there's a track list loaded
 		if(tracks != ""){
-			tracksArray = tracks.Split(',');
+			tracksArray = tracks.Split(',').Select(int.Parse).ToArray();
 		} else {
 			tracks = "1,2,3,4,5";
-			tracksArray = tracks.Split(',');
+			tracksArray = tracks.Split(',').Select(int.Parse).ToArray();
 		}
 		seriesLength = tracksArray.Length;
 		
@@ -124,12 +121,12 @@ public class TrackUI : MonoBehaviour
 			//Jump straight into it
 			championshipRound = 0;
 			loadTrack(tracks,0);
-			startRace(TrackData.getTrackCodeName(int.Parse(tracksArray[0])));
+			startRace(TrackData.getTrackCodeName(tracksArray[0]));
 		}
 		
 		for(int i=0;i<seriesLength;i++){
 			GameObject tileInst = Instantiate(trackTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
-			int trackId = int.Parse(tracksArray[i]);
+			int trackId = tracksArray[i];
 			tileInst.GetComponent<TrackUIFunctions>().trackId = trackId;
 			tileInst.GetComponent<TrackUIFunctions>().trackCodeName = TrackData.getTrackCodeName(trackId);
 			tileInst.transform.SetParent(tileFrame, false);
@@ -145,9 +142,9 @@ public class TrackUI : MonoBehaviour
 			} else {
 				bestFinish.text = "N/A";
 			}
-			trackName.text = getTrackName(tracksArray[i]);
+			trackName.text = TrackData.getTrackName(tracksArray[i]);
 			raceLaps.text = "Laps " + calcRaceLaps(TrackData.getTrackLaps(trackId));
-			trackImage.texture = Resources.Load<Texture2D>(TrackData.getTrackImage(tracksArray[i]));
+			trackImage.texture = Resources.Load<Texture2D>(TrackData.getTrackImage(trackId));
 		}
 	}
 
@@ -163,14 +160,14 @@ public class TrackUI : MonoBehaviour
 
 		//If there's a track list loaded
 		if(tracks != ""){
-			tracksArray = tracks.Split(',');
+			tracksArray = tracks.Split(',').Select(int.Parse).ToArray();
 		} else {
 			tracks = "1,2,3,4,5";
-			tracksArray = tracks.Split(',');
+			tracksArray = tracks.Split(',').Select(int.Parse).ToArray();
 		}
 		seriesLength = tracksArray.Length;
 		//Debug.Log("Track ID:" + tracksArray[championshipRound] );
-		int trackId = int.Parse(tracksArray[championshipRound]);
+		int trackId = tracksArray[championshipRound];
 		string trackCodeName = TrackData.trackCodeNames[trackId];
 		
 		GameObject tileInst = Instantiate(trackTile, new Vector3(transform.position.x,transform.position.y, transform.position.z), Quaternion.identity);
@@ -189,20 +186,12 @@ public class TrackUI : MonoBehaviour
 		} else {
 			bestFinish.text = "N/A";
 		}
-		trackName.text = getTrackName(tracksArray[seriesIndex]);
-		raceLaps.text = "Laps " + PlayerPrefs.GetInt("RaceLaps");
+		trackName.text = TrackData.getTrackName(tracksArray[seriesIndex]);
+		raceLaps.text = "Laps " + TrackData.getTrackLaps(tracksArray[seriesIndex]);
 		trackImage.texture = Resources.Load<Texture2D>(TrackData.getTrackImage(tracksArray[seriesIndex]));
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
 			startRace(trackCodeName);
 		}
-	}
-	
-	static string getTrackName(string trackId){
-		string trackName = "";
-		TrackData.loadTrackNames();
-		TrackData.loadTrackCodeNames();
-		trackName = TrackData.trackNames[int.Parse(trackId)];
-		return trackName;
 	}
 
 	public static int calcRaceLaps(int baseLaps){
@@ -250,7 +239,7 @@ public class TrackUI : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
-		PlayerPrefs.SetInt("RaceLaps",8);
+		//PlayerPrefs.SetInt("RaceLaps",8);
 		#endif
 		SceneManager.LoadScene(track);
 	}
