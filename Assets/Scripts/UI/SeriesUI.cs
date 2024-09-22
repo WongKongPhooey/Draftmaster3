@@ -21,11 +21,22 @@ public class SeriesUI : MonoBehaviour
 	public GameObject difficultyPopup;
 	public GameObject lapsPopup;
 	public GameObject reqListText;
+	public GameObject lapsValue;
 	public GameObject lapsSetting;
+	public GameObject minDiffValue;
+	public GameObject diffValue;
 	public GameObject difficultySetting;
 	
 	Slider lapsSlider;
 	Slider difficultySlider;
+	
+	int lapSeries;
+	int lapSubseries;
+	int lapsMulti;
+	
+	int diffSeries;
+	int diffSubseries;
+	int diffMulti;
 	
 	TMPro.TMP_Text lapsSliderValue;
 	TMPro.TMP_Text lapsSliderMin;
@@ -77,9 +88,6 @@ public class SeriesUI : MonoBehaviour
 				//Debug.Log("No Event here: " + i);
 				continue;
 			}
-			//if((i==10)&&(PlayerPrefs.GetInt("FreeModding") == 0)&&(PlayerPrefs.GetInt("TransferTokens") < 999)){
-			//	continue;
-			//}
 			
 			
 			GameObject tileInst = Instantiate(seriesTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -142,6 +150,7 @@ public class SeriesUI : MonoBehaviour
 			}
 			
 			GameObject tileInst = Instantiate(seriesChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+			tileInst.name = "SeriesChild" + seriesId + k;
 			RectTransform tileObj = tileInst.GetComponent<RectTransform>();
 			tileInst.transform.SetParent(tileFrame, false);
 			
@@ -153,6 +162,8 @@ public class SeriesUI : MonoBehaviour
 			TMPro.TMP_Text seriesDesc = tileInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 			GameObject seriesRewardsBtn = tileInst.transform.GetChild(8).transform.gameObject;
 			GameObject seriesCover = tileInst.transform.GetChild(4).transform.gameObject;
+			TMPro.TMP_Text difficultyBtn = tileInst.transform.GetChild(5).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+			TMPro.TMP_Text lapsBtn = tileInst.transform.GetChild(6).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			GameObject rewardCollected = tileInst.transform.GetChild(9).transform.gameObject;
 			TMPro.TMP_Text champsProgress = tileInst.transform.GetChild(10).GetComponent<TMPro.TMP_Text>();
 			
@@ -172,7 +183,15 @@ public class SeriesUI : MonoBehaviour
 			tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = k;
 			
 			seriesName.text = SeriesData.offlineSeries[seriesId,k];
-			seriesDesc.text = ((SeriesData.offlineAILevel[seriesId,k] * 10) + 50).ToString() + "% Difficulty";
+			seriesDesc.text = "";
+			difficultyBtn.text = ((SeriesData.offlineAILevel[seriesId,k] * 10) + 50).ToString() + "% Difficulty";
+			if(PlayerPrefs.HasKey("CustomDifficulty" + seriesId + k)){
+				difficultyBtn.text = ((PlayerPrefs.GetInt("CustomDifficulty" + seriesId + k) + 5) * 10) + "% Difficulty";
+			}
+			lapsBtn.text = (calcDistPercent(SeriesData.offlineAILevel[seriesId,k]) + "% Laps").ToString();	
+			if(PlayerPrefs.HasKey("CustomLaps" + seriesId + k)){
+				lapsBtn.text = (PlayerPrefs.GetInt("CustomLaps" + seriesId + k) * 2) + "% Laps";
+			}
 			seriesImage.texture = Resources.Load<Texture2D>(SeriesData.offlineSeriesImage[seriesId,k]); 
 		
 			if(SeriesData.offlineMinLevel[seriesId,k] > level){
@@ -355,11 +374,48 @@ public class SeriesUI : MonoBehaviour
 	}
 	
 	public void showLapsPopup(int series, int subSeries){
+		lapSeries = series;
+		lapSubseries = subSeries;
+		lapsMulti = calcDistPercent(SeriesData.offlineAILevel[lapSeries,lapSubseries]);
+		if(PlayerPrefs.HasKey("CustomLaps" + lapSeries + lapSubseries)){
+			lapsMulti = PlayerPrefs.GetInt("CustomLaps" + lapSeries + lapSubseries) * 2;
+		}
+		//Debug.Log("Laps Multi: " + lapsMulti);
+		lapsSlider.value = lapsMulti/2;
 		lapsPopup.SetActive(true);
+		lapsValue.GetComponent<TMPro.TMP_Text>().text = "Between " + (3 * (lapsMulti/2)) + " and " + (10 * (lapsMulti/2)) + " Laps";
+	}
+	
+	public void SaveLapsSlider(){
+		int customLaps = (int)lapsSlider.value;
+		PlayerPrefs.SetInt("CustomLaps" + lapSeries + lapSubseries,customLaps);
+		//Debug.Log("CustomLaps" + lapSeries + lapSubseries + ": " + customLaps);
+		lapsValue.GetComponent<TMPro.TMP_Text>().text = "Between " + (3 * customLaps) + " and " + (10 * customLaps) + " Laps";
 	}
 	
 	public void showDifficultyPopup(int series, int subSeries){
+		diffSeries = series;
+		diffSubseries = subSeries;
+		diffMulti = SeriesData.offlineAILevel[diffSeries,diffSubseries];
+		int minDiffMulti = diffMulti;
+		difficultySlider.minValue = diffMulti;
+		//Debug.Log("Diff Min: " + diffMulti);
+		if(PlayerPrefs.HasKey("CustomDifficulty" + diffSeries + diffSubseries)){
+			diffMulti = PlayerPrefs.GetInt("CustomDifficulty" + diffSeries + diffSubseries);
+		}
+		//Debug.Log("Diff Multi: " + diffMulti);
+		difficultySlider.value = diffMulti;
 		difficultyPopup.SetActive(true);
+		minDiffValue.GetComponent<TMPro.TMP_Text>().text = ((minDiffMulti + 5) * 10) + "%";
+		diffValue.GetComponent<TMPro.TMP_Text>().text = ((diffMulti + 5) * 10) + "% Difficulty";
+	
+	}
+	
+	public void SaveDifficultySlider(){
+		int customDiff = (int)difficultySlider.value;
+		PlayerPrefs.SetInt("CustomDifficulty" + diffSeries + diffSubseries,customDiff);
+		//Debug.Log("CustomDifficulty" + diffSeries + diffSubseries + ": " + customDiff);
+		diffValue.GetComponent<TMPro.TMP_Text>().text = ((customDiff + 5) * 10) + "% Difficulty";
 	}
 
 	public void closeEntryReqsPopup(){
@@ -401,11 +457,36 @@ public class SeriesUI : MonoBehaviour
 	}
 	
 	public void closeLapsPopup(){
+		GameObject subSeriesTile = GameObject.Find("SeriesChild" + lapSeries + lapSubseries);
+		TMPro.TMP_Text lapsBtn = subSeriesTile.transform.GetChild(6).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+		lapsBtn.text = (calcDistPercent(SeriesData.offlineAILevel[lapSeries,lapSubseries]) + "% Laps").ToString();	
+		if(PlayerPrefs.HasKey("CustomLaps" + lapSeries + lapSubseries)){
+			lapsBtn.text = (PlayerPrefs.GetInt("CustomLaps" + lapSeries + lapSubseries) * 2) + "% Laps";
+		}
+		lapSeries = 999;
+		lapSubseries = 999;
+		lapsMulti = 1;
 		lapsPopup.SetActive(false);
 	}
 	
 	public void closeDifficultyPopup(){
+		GameObject subSeriesTile = GameObject.Find("SeriesChild" + diffSeries + diffSubseries);
+		TMPro.TMP_Text diffBtn = subSeriesTile.transform.GetChild(5).transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
+		diffBtn.text = (((SeriesData.offlineAILevel[diffSeries,diffSubseries] + 5) * 10) + "% Difficulty").ToString();	
+		if(PlayerPrefs.HasKey("CustomDifficulty" + diffSeries + diffSubseries)){
+			diffBtn.text = ((PlayerPrefs.GetInt("CustomDifficulty" + diffSeries + diffSubseries) + 5) * 10) + "% Difficulty";
+		}
+		diffSeries = 999;
+		diffSubseries = 999;
+		diffMulti = 1;
 		difficultyPopup.SetActive(false);
+	}
+
+	public static int calcDistPercent(int difficulty){
+		if(difficulty < 3){
+			difficulty = 3;
+		}
+		return (2 * (difficulty / 3));
 	}
 
 	public void dynamicBackButton(){

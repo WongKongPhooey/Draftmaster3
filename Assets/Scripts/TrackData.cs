@@ -85,7 +85,6 @@ public class TrackData : MonoBehaviour
 		MethodInfo trackLoader = this.GetType().GetMethod(trackCodeName);
 
 		//Invoke the method
-		//(null- no parameter for the method call)
 		trackLoader.Invoke(this, null);
 	}
 
