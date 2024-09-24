@@ -49,6 +49,7 @@ public class TrackUI : MonoBehaviour
 		
 		//Reset any left over prefs from previous races
 		for(int i=0;i<99;i++){
+			PlayerPrefs.DeleteKey("RaceLaps");
 			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
 			PlayerPrefs.DeleteKey("FinishPosition" + i + "");
 			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
@@ -121,7 +122,7 @@ public class TrackUI : MonoBehaviour
 			//Jump straight into it
 			championshipRound = 0;
 			loadTrack(tracks,0);
-			startRace(TrackData.getTrackCodeName(tracksArray[0]));
+			startRace(tracksArray[0]);
 		}
 		
 		for(int i=0;i<seriesLength;i++){
@@ -190,23 +191,36 @@ public class TrackUI : MonoBehaviour
 		raceLaps.text = TrackData.getTrackLaps(tracksArray[seriesIndex]) + " Laps";
 		trackImage.texture = Resources.Load<Texture2D>(TrackData.getTrackImage(tracksArray[seriesIndex]));
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
-			startRace(trackCodeName);
+			startRace(trackId);
 		}
 	}
 
 	public static int calcRaceLaps(int baseLaps){
+		
 		int AIDiff = PlayerPrefs.GetInt("AIDifficulty");
 		int raceLapsMultiplier = (AIDiff / 4) + 1;
-		//Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		//Debug.Log("Base Laps: " + baseLaps);
+		if(PlayerPrefs.GetString("RaceType") == ""){
+			if(PlayerPrefs.HasKey("CustomLaps" + currentSeriesIndex)){
+				raceLapsMultiplier = PlayerPrefs.GetInt("CustomLaps" + currentSeriesIndex);
+				//Debug.Log("Custom Laps Multi: " + raceLapsMultiplier);
+			}
+		}
+		if(PlayerPrefs.GetString("RaceType") == "Championship"){
+			if(PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "CustomRaceLength")){
+				raceLapsMultiplier = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "CustomRaceLength");
+				//Debug.Log("Custom Season Laps Multi: " + raceLapsMultiplier);
+			}
+		}
 		return Mathf.FloorToInt(baseLaps * raceLapsMultiplier);
 	}
 
-	public static void setRaceLaps(){
+	public static void setRaceLaps(int trackId){
 		//Adjust laps based on AI difficulty
 		int AIDiff = PlayerPrefs.GetInt("AIDifficulty");
-		int baseLaps = PlayerPrefs.GetInt("RaceLaps");
+		int baseLaps = TrackData.getTrackLaps(trackId);
 		int raceLapsMultiplier = (AIDiff / 4) + 1;
-		Debug.Log("Race Type: " + PlayerPrefs.GetString("RaceType"));
+		Debug.Log("Base Laps: " + baseLaps);
 		if(PlayerPrefs.GetString("RaceType") == ""){
 			if(PlayerPrefs.HasKey("CustomLaps" + currentSeriesIndex)){
 				raceLapsMultiplier = PlayerPrefs.GetInt("CustomLaps" + currentSeriesIndex);
@@ -223,13 +237,13 @@ public class TrackUI : MonoBehaviour
 		Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
 	}
 
-	public static void startRace(string track){
+	public static void startRace(int trackId){
 		
 		//This loads the track data
+		string track = TrackData.getTrackCodeName(trackId);
 		GameObject.Find("Main").GetComponent<TrackData>().loadTrackData(track);
 		GameObject alertPopup = GameObject.Find("AlertPopup");
-		
-		setRaceLaps();
+		setRaceLaps(trackId);
 		
 		PlayerPrefs.SetString("TrackLocation",track);
 		PlayerPrefs.SetString("CurrentCircuit", track);

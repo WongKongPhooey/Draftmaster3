@@ -255,7 +255,7 @@ public class RaceResultsUI : MonoBehaviour
 					if(carLap > 1){
 						resultTime.text = "+" + carLap + " LAPS";
 					} else {
-						resultTime.text = "+ 1 LAP";
+						resultTime.text = "+1 LAP";
 					}
 				} else {
 					//Cars that continued after the player retired, mark as 1 lap down

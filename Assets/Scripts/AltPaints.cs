@@ -333,24 +333,17 @@ public class AltPaints : MonoBehaviour {
 		switch(seriesPrefix){
 			case "cup20":
 				return cup2020AltPaintDriver[carNum,altNum];
-				break;
 			case "cup22":
 				return cup22AltPaintDriver[carNum,altNum];
-				break;
 			case "cup23":
 				return cup23AltPaintDriver[carNum,altNum];
-				break;
 			case "cup24":
 				return cup24AltPaintDriver[carNum,altNum];
-				break;
 			case "irl23":
 				return irl23AltPaintDriver[carNum,altNum];
-				break;
 			case "irl24":
 				return irl24AltPaintDriver[carNum,altNum];
-				break;
 			default:
-				return null;
 				break;
 		}
 		return null;
@@ -438,24 +431,17 @@ public class AltPaints : MonoBehaviour {
 		switch(seriesPrefix){
 			case "cup20":
 				return cup2020AltPaintTheme[carNum,altNum];
-				break;
 			case "cup22":
 				return cup22AltPaintTheme[carNum,altNum];
-				break;
 			case "cup23":
 				return cup23AltPaintTheme[carNum,altNum];
-				break;
 			case "cup24":
 				return cup24AltPaintTheme[carNum,altNum];
-				break;
 			case "irl23":
 				return irl23AltPaintTheme[carNum,altNum];
-				break;
 			case "irl24":
 				return irl24AltPaintTheme[carNum,altNum];
-				break;
 			default:
-				return "Blank";
 				break;
 		}
 		return "Blank";

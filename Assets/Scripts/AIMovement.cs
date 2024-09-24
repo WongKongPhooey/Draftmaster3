@@ -231,7 +231,11 @@ public class AIMovement : MonoBehaviour
 		if(PlayerPrefs.GetString("RaceType") == "Event"){
 			AILevel = (float)EventData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		} else {
-			AILevel = (float)SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			if(PlayerPrefs.HasKey("CustomDifficulty" + currentSeries + currentSubseries)){
+				AILevel = PlayerPrefs.GetInt("CustomDifficulty" + currentSeries + currentSubseries);
+			} else {
+				AILevel = (float)SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			}
 			//Debug.Log("AILevel: " + AILevel);
 		}
 		PlayerPrefs.SetInt("RaceAILevel", (int)AILevel);
