@@ -184,8 +184,6 @@ public class EventsUI : MonoBehaviour
 	}
 
 	public void loadEvent(){
-		//Debug.Log("Load Event " + subMenuId + "," + subEventId + "");
-		
 		PlayerPrefs.SetString("SeriesTrackList",EventData.offlineTracklists[subMenuId,subEventId]);
 		PlayerPrefs.SetString("CurrentSeriesIndex", subMenuId + "" + subEventId + "EVENT");
 		PlayerPrefs.SetString("CurrentSeriesName",EventData.offlineEventChapter[subMenuId,subEventId]);
@@ -220,7 +218,7 @@ public class EventsUI : MonoBehaviour
 		}
 		if(EventData.offlineRaceLaps[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("CustomRaceLaps", EventData.offlineRaceLaps[subMenuId,subEventId]);
-			//Debug.Log("Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
+			Debug.Log("Event Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
 		}
 		if(EventData.offlineModifier[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);

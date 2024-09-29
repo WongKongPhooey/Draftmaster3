@@ -1039,7 +1039,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[53] = "Davison";
 		cup2020Names[54] = "Yeley";
 		cup2020Names[62] = "Gaughan";
-		cup2020Names[66] = "Hill";
+		cup2020Names[66] = "T.Hill";
 		cup2020Names[74] = "Sorenson";
 		cup2020Names[77] = "Chastain";
 		cup2020Names[78] = "Smithley";
@@ -1307,7 +1307,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Names[53] = "Smithley";
 		cup2022Names[55] = "Yeley";
 		cup2022Names[62] = "Gragson";
-		cup2022Names[66] = "Hill";
+		cup2022Names[66] = "T.Hill";
 		cup2022Names[77] = "Cassill";
 		cup2022Names[78] = "McLeod";
 		cup2022Names[91] = "Raikkonen";
@@ -1541,7 +1541,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Names[50] = "Daly";
 		cup2023Names[51] = "Crafton";
 		cup2023Names[54] = "Gibbs";
-		cup2023Names[62] = "Hill";
+		cup2023Names[62] = "T.Hill";
 		cup2023Names[67] = "Pastrana";
 		cup2023Names[77] = "T.Dillon";
 		cup2023Names[78] = "McLeod";
@@ -1769,6 +1769,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Names[54] = "Gibbs";
 		cup2024Names[60] = "Ragan";
 		cup2024Names[62] = "Alfredo";
+		cup2024Names[66] = "T.Hill";
 		cup2024Names[71] = "Z.Smith";
 		cup2024Names[77] = "Hocevar";
 		cup2024Names[78] = "McLeod";
@@ -1814,6 +1815,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Teams[54] = "JGR";
 		cup2024Teams[60] = "RFK";
 		cup2024Teams[62] = "IND";
+		cup2024Teams[66] = "IND";
 		cup2024Teams[71] = "SPI";
 		cup2024Teams[77] = "SPI";
 		cup2024Teams[78] = "IND";
@@ -1859,6 +1861,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Manufacturer[54] = "TYT";
 		cup2024Manufacturer[60] = "FRD";
 		cup2024Manufacturer[62] = "CHV";
+		cup2024Manufacturer[66] = "FRD";
 		cup2024Manufacturer[71] = "CHV";
 		cup2024Manufacturer[77] = "CHV";
 		cup2024Manufacturer[78] = "CHV";
@@ -1904,6 +1907,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Types[54] = "Intimidator";
 		cup2024Types[60] = "Strategist";
 		cup2024Types[62] = "Strategist";
+		cup2024Types[66] = "Blocker";
 		cup2024Types[71] = "Rookie";
 		cup2024Types[77] = "Rookie";
 		cup2024Types[78] = "Blocker";
@@ -1949,6 +1953,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Rarity[54] = 2;
 		cup2024Rarity[60] = 1;
 		cup2024Rarity[62] = 1;
+		cup2024Rarity[66] = 1;
 		cup2024Rarity[71] = 1;
 		cup2024Rarity[77] = 1;
 		cup2024Rarity[78] = 1;

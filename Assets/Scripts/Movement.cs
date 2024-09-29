@@ -67,6 +67,9 @@ public class Movement : MonoBehaviour {
 
 	public static bool onTurn;
 	public static bool brakesOn;
+	
+	public static bool steering;
+	public static int steeringType;
 
 	//These can adjust per race series (e.g. Indy)
 	int seriesSpeedDiff;
@@ -407,6 +410,9 @@ public class Movement : MonoBehaviour {
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 
 		brakesOn = false;
+		steering = false;
+		steeringType = PlayerPrefs.GetInt("SteeringType");
+		
 		draftCounter = 0;
 		raceCounter = 0;
 
@@ -1013,6 +1019,17 @@ public class Movement : MonoBehaviour {
 				}
 			}
 		}
+		
+		if(steeringType == 1){
+			if(steering == true){
+				if(laneticker > 0){
+					laneticker = 2;
+				}
+				if(laneticker < 0){
+					laneticker = -2;
+				}
+			}
+		}
 
 		wobbleCount++;		
 		if(wobbleCount >= wobbleRand){
@@ -1162,6 +1179,7 @@ public class Movement : MonoBehaviour {
         }
 
         if (laneticker == 0){
+			steering = false;
 			//movingLane = false;
             backingOut = false;
         }
@@ -1192,18 +1210,36 @@ public class Movement : MonoBehaviour {
 	}
 	
 	public static void changeLaneLeft(){
-		if(laneticker == 0){
-			lane++;
-			laneticker = laneChangeDuration;
-			//Debug.Log("Goin' Left!");
+		steering = true;
+		if(steeringType == 0){
+			if(laneticker == 0){
+				lane++;
+				laneticker = laneChangeDuration;
+				//Debug.Log("Goin' Left!");
+			}
+		}
+		if(steeringType == 1){
+			laneticker = 2;
 		}
 	}
 	
 	public static void changeLaneRight(){
-		if(laneticker == 0){
-			lane--;
-			laneticker = -laneChangeDuration;
-			//Debug.Log("Goin' Right!");
+		steering = true;
+		if(steeringType == 0){
+			if(laneticker == 0){
+				lane--;
+				laneticker = -laneChangeDuration;
+				//Debug.Log("Goin' Right!");
+			}
+		}
+		if(steeringType == 1){
+			laneticker = -2;
+		}
+	}
+	
+	public static void releaseSteering(){
+		if(steeringType == 1){
+			steering = false;
 		}
 	}
 	

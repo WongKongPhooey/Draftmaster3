@@ -185,6 +185,9 @@ public class ModData : MonoBehaviour
 			loadedMod = loadMod(seriesPrefix);
 		}
 		string driverName = null;
+		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
+			return PlayerPrefs.GetString("CustomDriver" + seriesPrefix + index);
+		}
 		if(loadedMod != null){
 			string modFolderName = loadJson(loadedMod.Name);
 			if(convertedIndex){

@@ -192,17 +192,21 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		raceEnd = PlayerPrefs.GetInt("RaceLaps");
+		Debug.Log("Race Laps: " + raceEnd);
 		if(PlayerPrefs.HasKey("CustomRaceLaps")){
 			if(PlayerPrefs.GetString("RaceType") != "Event"){
 				//This should not be here..
 				PlayerPrefs.DeleteKey("CustomRaceLaps");
+				//Debug.Log("Not An Event.. Delete");
 			} else {
 				//Set custom race length for events
 				if(PlayerPrefs.GetInt("CustomRaceLaps") > 0){
+					//Debug.Log("Race Laps: " + PlayerPrefs.GetInt("CustomRaceLaps"));
 					raceEnd = PlayerPrefs.GetInt("CustomRaceLaps") - 1;
 				}
 			}
 		}
+		Debug.Log("Lap " + lap + " of " + raceEnd);
 		
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		liveTimeTrial = PlayerPrefs.GetString("LiveTimeTrial");

@@ -267,6 +267,9 @@ public class SeriesUI : MonoBehaviour
 		scrollFrame.GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
 		
 		string[] modsArray = PlayerPrefs.GetString("ModsList").Split(',');
+		
+		int j=0;
+		
 		foreach(string modSet in modsArray){
 			//Debug.Log(modSet);
 			string[] modData = modSet.Split('|');
@@ -279,6 +282,8 @@ public class SeriesUI : MonoBehaviour
 				}
 				
 				GameObject tileInst = Instantiate(seriesChildTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
+				tileInst.name = "SeriesChild10" + j;
+				
 				RectTransform tileObj = tileInst.GetComponent<RectTransform>();
 				tileInst.transform.SetParent(tileFrame, false);
 				
@@ -311,6 +316,7 @@ public class SeriesUI : MonoBehaviour
 				tileInst.GetComponent<SeriesUIFunctions>().seriesId = seriesId;
 				tileInst.GetComponent<SeriesUIFunctions>().modSeriesPrefix = modSeriesPrefix;
 				tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = i;
+				j++;
 			}
 		}
 	}

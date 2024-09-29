@@ -17,7 +17,6 @@ public class MyAccountGUI : MonoBehaviour
     {
         playerName.text = PlayerPrefs.GetString("PlayerUsername");
         totalStarts.text = "Total Starts - " + PlayerPrefs.GetInt("TotalStarts");
-        totalWins.text = "Total Wins - " + PlayerPrefs.GetInt("TotalWins");
         garageValue.text = "Garage Value - " + PlayerPrefs.GetInt("GarageValue");
     }
 

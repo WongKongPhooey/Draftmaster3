@@ -156,6 +156,7 @@ public class AltPaints : MonoBehaviour {
 		cup24AltPaintNames[51,1] = "#1 Cops";
 		cup24AltPaintNames[54,1] = "#1 Radio XM";
 		cup24AltPaintNames[60,1] = "#1 Waters";
+		cup24AltPaintNames[66,1] = "#1 Sunset";
 		cup24AltPaintNames[99,1] = "#1 Time Trial";
 		cup24AltPaintNames[99,2] = "#2 Worldwide";
 		

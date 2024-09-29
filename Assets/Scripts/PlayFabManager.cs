@@ -745,19 +745,27 @@ public class PlayFabManager : MonoBehaviour
 				 
 				 if(playerJson.playerWins != null){
 					totalWins = int.Parse(playerJson.playerWins);
-					savedStarts = PlayerPrefs.GetInt("TotalWins");
-					if(savedStarts < totalWins){
+					savedWins = PlayerPrefs.GetInt("TotalWins");
+					if(savedWins > savedStarts){
+						savedWins = savedStarts;
+					}
+					if(savedWins < totalWins){
 						PlayerPrefs.SetInt("TotalWins", totalWins);
-						savedStarts = PlayerPrefs.GetInt("TotalWins");
+						savedWins = PlayerPrefs.GetInt("TotalWins");
+					}
+					//Bugfix fallback
+					if(savedWins > savedStarts){
+						PlayerPrefs.SetInt("TotalWins", totalStarts);
+						savedWins = PlayerPrefs.GetInt("TotalWins");
 					}
 				 }
 				 
 				 if(playerJson.playerGarageValue != null){
 					garageValue = int.Parse(playerJson.playerGarageValue);
-					savedGarageValue = PlayerPrefs.GetInt("TotalWins");
+					savedGarageValue = PlayerPrefs.GetInt("GarageValue");
 					if(savedGarageValue < garageValue){
-						PlayerPrefs.SetInt("TotalWins", garageValue);
-						savedGarageValue = PlayerPrefs.GetInt("TotalWins");
+						PlayerPrefs.SetInt("GarageValue", garageValue);
+						savedGarageValue = PlayerPrefs.GetInt("GarageValue");
 					}
 				 }
 				 

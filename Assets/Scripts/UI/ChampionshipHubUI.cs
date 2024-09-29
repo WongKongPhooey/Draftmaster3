@@ -123,7 +123,7 @@ public class ChampionshipHubUI : MonoBehaviour
 		championshipLength = PlayerPrefs.GetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "Length");
 		seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarSeries");
 		PlayerPrefs.SetString("carSeries",seriesPrefix);
-		Debug.Log("Champ Carset: " + seriesPrefix);
+		//Debug.Log("Champ Carset: " + seriesPrefix);
 		PlayerPrefs.SetString("RaceType","Championship");
 		
 		modSeries = false;

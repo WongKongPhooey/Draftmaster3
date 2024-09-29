@@ -76,7 +76,7 @@ public class TrackData : MonoBehaviour
 
 	public static int getTrackLaps(int trackId){
 		loadTrackLaps();
-		Debug.Log("Track " + trackId + " defaults to " + trackLaps[trackId] + " laps");
+		//Debug.Log("Track " + trackId + " defaults to " + trackLaps[trackId] + " laps");
 		return trackLaps[trackId];
 	}
 

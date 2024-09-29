@@ -49,7 +49,6 @@ public class TrackUI : MonoBehaviour
 		
 		//Reset any left over prefs from previous races
 		for(int i=0;i<99;i++){
-			PlayerPrefs.DeleteKey("RaceLaps");
 			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
 			PlayerPrefs.DeleteKey("FinishPosition" + i + "");
 			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
@@ -69,7 +68,7 @@ public class TrackUI : MonoBehaviour
 			if(PlayerPrefs.HasKey("CurrentModSeries")){
 				currentModSeries = PlayerPrefs.GetString("CurrentModSeries");
 			}
-			Debug.Log("Current Mod Series: " + currentModSeries);
+			//Debug.Log("Current Mod Series: " + currentModSeries);
 		
 		seriesFuel = PlayerPrefs.GetInt("SeriesFuel");
 		
@@ -77,7 +76,7 @@ public class TrackUI : MonoBehaviour
 		
 		//If race type is Championship (Set in the Championship Hub screen)
 		if(PlayerPrefs.GetString("RaceType") == "Championship"){
-			Debug.Log("There's an active championship here.. " + currentSeriesIndex);
+			//Debug.Log("There's an active championship here.. " + currentSeriesIndex);
 			
 			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarSeries");
 			PlayerPrefs.SetString("carSeries", seriesPrefix);
@@ -85,7 +84,7 @@ public class TrackUI : MonoBehaviour
 			
 			//Found a championship round set
 			championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
-			Debug.Log("Current Round: " + championshipRound);
+			//Debug.Log("Current Round: " + championshipRound);
 			if(championshipRound >= seriesLength){
 				//Championship is over, reset
 				PlayerPrefs.DeleteKey("ChampionshipSubseries");
@@ -220,7 +219,7 @@ public class TrackUI : MonoBehaviour
 		int AIDiff = PlayerPrefs.GetInt("AIDifficulty");
 		int baseLaps = TrackData.getTrackLaps(trackId);
 		int raceLapsMultiplier = (AIDiff / 4) + 1;
-		Debug.Log("Base Laps: " + baseLaps);
+		//Debug.Log("Base Laps: " + baseLaps + ", Difficulty: " + AIDiff + ", Multiplier: " + raceLapsMultiplier);
 		if(PlayerPrefs.GetString("RaceType") == ""){
 			if(PlayerPrefs.HasKey("CustomLaps" + currentSeriesIndex)){
 				raceLapsMultiplier = PlayerPrefs.GetInt("CustomLaps" + currentSeriesIndex);
@@ -234,7 +233,8 @@ public class TrackUI : MonoBehaviour
 			}
 		}
 		PlayerPrefs.SetInt("RaceLaps", Mathf.FloorToInt(baseLaps * raceLapsMultiplier));
-		Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
+		//Debug.Log("Race Laps: " + PlayerPrefs.GetInt("RaceLaps"));
+		//Debug.Log("Diff Adjusted Race Laps: " + baseLaps + " * " + raceLapsMultiplier);
 	}
 
 	public static void startRace(int trackId){
@@ -266,7 +266,7 @@ public class TrackUI : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
-		//PlayerPrefs.SetInt("RaceLaps",8);
+		//PlayerPrefs.SetInt("RaceLaps",1);
 		#endif
 		SceneManager.LoadScene(track);
 	}
@@ -279,6 +279,9 @@ public class TrackUI : MonoBehaviour
 		PlayerPrefs.SetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "Length", seriesLength);
 		if(PlayerPrefs.HasKey("CustomLaps" + currentModSeries + currentSeriesIndex)){
 			PlayerPrefs.SetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CustomRaceLength",PlayerPrefs.GetInt("CustomLaps" + currentModSeries + currentSeriesIndex));
+		}
+		if(PlayerPrefs.HasKey("CustomDifficulty" + currentModSeries + currentSeriesIndex)){
+			PlayerPrefs.SetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CustomDifficulty",PlayerPrefs.GetInt("CustomDifficulty" + currentModSeries + currentSeriesIndex));
 		}
 		PlayerPrefs.SetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarTexture", PlayerPrefs.GetString("carTexture"));
 		PlayerPrefs.SetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarSeries", seriesPrefix);
