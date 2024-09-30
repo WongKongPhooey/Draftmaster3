@@ -200,7 +200,7 @@ public class GarageUI : MonoBehaviour
 			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
 			tileInst.GetComponent<GarageUIFunctions>().modCar = false;
 			tileInst.transform.SetParent(tileFrame, false);
-			tileInst.GetComponent<UIAnimate>().animOffset = i*5;
+			tileInst.GetComponent<UIAnimate>().animOffset = i;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
