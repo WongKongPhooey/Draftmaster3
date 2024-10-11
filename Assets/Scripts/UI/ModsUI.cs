@@ -215,6 +215,11 @@ public class ModsUI : MonoBehaviour {
 		GameObject promptInputValue = GameObject.Find(inputName);
 		string folderName = promptInputValue.GetComponent<TMPro.TMP_Text>().text;
 		folderName = folderName.ToLower();
+		if(folderName.Length < 5){
+			for(int i=folderName.Length;i<=5;i++){
+				folderName+="x";
+			}
+		}
 		if(folderName.Length > 5){
 			folderName = folderName.Substring(0, 5);
 		}

@@ -25,7 +25,10 @@ public class SeriesUI : MonoBehaviour
 	public GameObject lapsSetting;
 	public GameObject minDiffValue;
 	public GameObject diffValue;
+	public GameObject diffNote;
 	public GameObject difficultySetting;
+	
+	public GameObject alertPopup;
 	
 	Slider lapsSlider;
 	Slider difficultySlider;
@@ -36,6 +39,7 @@ public class SeriesUI : MonoBehaviour
 	
 	int diffSeries;
 	int diffSubseries;
+	int defaultDiff;
 	int diffMulti;
 	
 	TMPro.TMP_Text lapsSliderValue;
@@ -268,7 +272,13 @@ public class SeriesUI : MonoBehaviour
 		
 		string[] modsArray = PlayerPrefs.GetString("ModsList").Split(',');
 		
+		if(modsArray[0] == ""){
+			alertPopup.GetComponent<AlertManager>().showPopup("No Modded Series Found","Install mods containing a custom race series to get started!","dm2logo");
+			return;
+		}
+		
 		int j=0;
+		int totalModdedSeries=0;
 		
 		foreach(string modSet in modsArray){
 			//Debug.Log(modSet);
@@ -317,7 +327,14 @@ public class SeriesUI : MonoBehaviour
 				tileInst.GetComponent<SeriesUIFunctions>().modSeriesPrefix = modSeriesPrefix;
 				tileInst.GetComponent<SeriesUIFunctions>().subSeriesId = i;
 				j++;
+				
+				totalModdedSeries++;
 			}
+		}
+		
+		if(totalModdedSeries == 0){
+			alertPopup.GetComponent<AlertManager>().showPopup("No Modded Series Found","Install mods containing a custom race series to get started!","dm2logo");
+			return;
 		}
 	}
 	
@@ -402,7 +419,8 @@ public class SeriesUI : MonoBehaviour
 	public void showDifficultyPopup(int series, int subSeries){
 		diffSeries = series;
 		diffSubseries = subSeries;
-		diffMulti = SeriesData.offlineAILevel[diffSeries,diffSubseries];
+		defaultDiff = SeriesData.offlineAILevel[diffSeries,diffSubseries];
+		diffMulti = defaultDiff;
 		int minDiffMulti = diffMulti;
 		difficultySlider.minValue = diffMulti;
 		//Debug.Log("Diff Min: " + diffMulti);
@@ -414,6 +432,7 @@ public class SeriesUI : MonoBehaviour
 		difficultyPopup.SetActive(true);
 		minDiffValue.GetComponent<TMPro.TMP_Text>().text = ((minDiffMulti + 5) * 10) + "%";
 		diffValue.GetComponent<TMPro.TMP_Text>().text = ((diffMulti + 5) * 10) + "% Difficulty";
+		diffNote.GetComponent<TMPro.TMP_Text>().text = "Note: Difficulty cannot be set lower than the default (" + ((diffMulti + 5) * 10) + "%)";
 	
 	}
 	
