@@ -19,6 +19,9 @@ public class EventsUI : MonoBehaviour
 	public GameObject rewardCar;
 	public GameObject entryReqsPopup;
 	public GameObject reqListText;
+	
+	public GameObject alertPopup;
+	
 	public static int subMenuId;
 	public static int subEventId;
 	string seriesPrefix;
@@ -143,9 +146,7 @@ public class EventsUI : MonoBehaviour
 			eventRewardsBtn.SetActive(false);
 			rewardCollected.SetActive(true);
 			tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
-			//Debug.Log("BestFinishPosition" + subMenuId + "" + i + "EVENT1 : " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
-		} else {
-			//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
+			checkRewardCollected(subMenuId,i);
 		}
 			
 		if(EventData.offlineEventType[subMenuId] == "Progression"){
@@ -288,6 +289,35 @@ public class EventsUI : MonoBehaviour
 			tile.SetAsLastSibling();
 			shuffleArray.Remove(tile);
 			sortTiles();
+		}
+	}
+
+	public void checkRewardCollected(int subMenu, int subEvent){
+		string setPrize = "";
+		if(EventData.offlinePrizes[subMenu,subEvent] == "AltPaint"){
+			setPrize = EventData.offlineSetPrizes[subMenu,subEvent];
+		} else {
+			return;
+		}
+		
+		//Win an alt paint rather than car parts
+		//setPrize format example: cup20livery48alt2	
+		string sanitisedAlt = setPrize.Replace("livery","");
+		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
+		
+		//Sanitised example: cup2048Alt2Unlocked	
+		string extractedCarNum = setPrize.Split('y').Last();
+		string extractedAltNum = setPrize.Split('t').Last();
+		
+		extractedCarNum = extractedCarNum.Substring(0, extractedCarNum.IndexOf("alt")).Trim();
+		int parsedNum = int.Parse(extractedCarNum);
+		int parsedAlt = int.Parse(extractedAltNum);
+		
+		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
+		if(AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] != null){
+			alertPopup.GetComponent<AlertManager>().showPopup("Reward Collected","New " + AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] + " Alt Paint Unlocked!","dm2logo");
+		} else {
+			alertPopup.GetComponent<AlertManager>().showPopup("Reward Collected","New " + DriverNames.cup2020Names[parsedNum] + " Alt Paint Unlocked!","dm2logo");
 		}
 	}
 
