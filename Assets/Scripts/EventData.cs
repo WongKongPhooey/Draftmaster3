@@ -286,53 +286,136 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[3,0] = "cup01livery29";
 		offlineMinClass[3,0] = 1;
 		offlineMinLevel[3,0] = 1;
-		offlineAILevel[3,0] = 10;
+		offlineAILevel[3,0] = 12;
 		offlineSeries[3,0] = "cup01";
 		offlineCustomCar[3,0] = "cup01livery29";
 		offlineCustomField[3,0] = "cup01MomentsAtlanta";
-		offlineStartingLap[3,0] = 14;
+		offlineRaceLaps[3,0] = 326;
+		offlineStartingLap[3,0] = 324;
 		offlineMoment[3,0] = "Atlanta01";
 		offlineTracklists[3,0] = "2";
-		offlinePrizes[3,0] = "Harvick";
-		offlineSetPrizes[3,0] = "15";
+		offlinePrizes[3,0] = "Harvick20";
+		offlineSetPrizes[3,0] = "30";
 		offlineCustomFieldOrder[3,0] = "x,player,x,x,x,x,24";
-		eventChapterDescriptions[3,0] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
+		eventChapterDescriptions[3,0] = "Mar 11, 2001. Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
 		
 		offlineEventChapter[3,1] = "The Yard Of Bricks";
-		offlineChapterImage[3,1] = "cup20livery4";
+		offlineChapterImage[3,1] = "Indianapolis";
 		offlineMinClass[3,1] = 2;
 		offlineMinLevel[3,1] = 5;
+		offlineMinType[3,1] = "Team";
 		offlineMinTeam[3,1] = "RCR";
-		offlineAILevel[3,1] = 10;
-		offlineStartingLap[3,1] = 8;
+		offlineAILevel[3,1] = 4;
+		offlineRaceLaps[3,1] = 161;
+		offlineStartingLap[3,1] = 151;
 		offlineTracklists[3,1] = "20";
-		offlinePrizes[3,1] = "Harvick";
-		offlineSetPrizes[3,1] = "15";
-		eventChapterDescriptions[3,1] = "Harvick's first crown jewel victory came in 2003, winning the Brickyard 400 for RCR.";
+		offlinePrizes[3,1] = "Harvick20";
+		offlineSetPrizes[3,1] = "35";
+		eventChapterDescriptions[3,1] = "Aug 3, 2003. Harvick's first crown jewel victory, winning the Brickyard 400 for RCR.";
 		
 		offlineEventChapter[3,2] = "The Great American";
-		offlineChapterImage[3,2] = "cup22livery4";
+		offlineChapterImage[3,2] = "SuperTriOval";
 		offlineMinClass[3,2] = 3;
 		offlineMinLevel[3,2] = 10;
-		offlineMinTeam[3,2] = "RCR";
-		offlineAILevel[3,2] = 12;
-		offlineStartingLap[3,2] = 8;
+		offlineMinType[3,2] = "Driver";
+		offlineMinTeam[3,2] = "Harvick";
+		offlineAILevel[3,2] = 7;
+		offlineRaceLaps[3,2] = 201;
+		offlineStartingLap[3,2] = 191;
 		offlineTracklists[3,2] = "1";
-		offlinePrizes[3,2] = "Harvick";
-		offlineSetPrizes[3,2] = "15";
-		eventChapterDescriptions[3,2] = "As the field wrecked behind them, Harvick edged out Martin to win the 500 by a nose.";
+		offlinePrizes[3,2] = "Harvick23";
+		offlineSetPrizes[3,2] = "35";
+		eventChapterDescriptions[3,2] = "Feb 18, 2007. As the field wrecked behind them, Harvick edged out Martin to win the 500 by a nose.";
 		
-		offlineEventChapter[3,3] = "Heartbreaker";
-		offlineChapterImage[3,3] = "cup23livery4alt1";
-		offlineMinClass[3,3] = 3;
-		offlineMinLevel[3,3] = 20;
-		offlineSeries[3,3] = "cup23";
-		offlineCustomCar[3,3] = "cup23livery4";
-		offlineAILevel[3,3] = 14;
-		offlineTracklists[3,3] = "13";
-		offlinePrizes[3,3] = "AltPaint";
-		offlineSetPrizes[3,3] = "cup23livery4alt1";
-		eventChapterDescriptions[3,3] = "With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
+		offlineEventChapter[3,3] = "The Tandem Tango";
+		offlineChapterImage[3,3] = "Talladega";
+		offlineMinClass[3,3] = 4;
+		offlineMinLevel[3,3] = 15;
+		offlineMinType[3,3] = "Driver";
+		offlineMinTeam[3,3] = "Harvick";
+		offlineAILevel[3,3] = 10;
+		offlineRaceLaps[3,3] = 201;
+		offlineStartingLap[3,3] = 191;
+		offlineTracklists[3,3] = "10";
+		offlinePrizes[3,3] = "Harvick23";
+		offlineSetPrizes[3,3] = "40";
+		eventChapterDescriptions[3,3] = "Apr 25, 2010. The most lead changes in history and the longest Talladega race ever belonged to Harvick.";
+
+		offlineEventChapter[3,4] = "Heartbreaker";
+		offlineChapterImage[3,4] = "cup23livery4alt1";
+		offlineMinLevel[3,4] = 20;
+		offlineSeries[3,4] = "cup23";
+		offlineCustomCar[3,4] = "cup23livery4alt1";
+		offlineAILevel[3,4] = 14;
+		offlineTracklists[3,4] = "13";
+		offlinePrizes[3,4] = "AltPaint";
+		offlineSetPrizes[3,4] = "cup23livery4alt1";
+		eventChapterDescriptions[3,4] = "May 29, 2011. With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
+
+		offlineEventChapter[3,5] = "Clash Of Titans";
+		offlineChapterImage[3,5] = "SuperTriOval";
+		offlineMinClass[3,5] = 4;
+		offlineMinLevel[3,5] = 25;
+		offlineMinType[3,5] = "Driver";
+		offlineMinTeam[3,5] = "Harvick";
+		offlineAILevel[3,5] = 12;
+		offlineStartingLap[3,5] = 8;
+		offlineTracklists[3,5] = "5";
+		offlinePrizes[3,5] = "Harvick23";
+		offlineSetPrizes[3,5] = "40";
+		eventChapterDescriptions[3,5] = "Mar 27, 2011. A brave pass around the outside of Johnson on the final lap sealed the win at Auto Club.";
+
+
+		offlineEventChapter[3,6] = "Win And In";
+		offlineChapterImage[3,6] = "Phoenix";
+		offlineMinClass[3,6] = 3;
+		offlineMinLevel[3,6] = 30;
+		offlineMinType[3,6] = "Driver";
+		offlineMinTeam[3,6] = "Harvick";
+		offlineAILevel[3,6] = 14;
+		offlineTracklists[3,6] = "4";
+		offlinePrizes[3,6] = "Harvick22";
+		offlineSetPrizes[3,6] = "35";
+		eventChapterDescriptions[3,6] = "Nov 9, 2014. In the first elimination chase season, Harvick booked a championship 4 place at Phoenix.";
+
+		offlineEventChapter[3,7] = "Chase For The Cup";
+		offlineChapterImage[3,7] = "BigOval";
+		offlineMinClass[3,7] = 4;
+		offlineMinLevel[3,7] = 35;
+		offlineMinType[3,7] = "Driver";
+		offlineMinTeam[3,7] = "Harvick";
+		offlineAILevel[3,7] = 15;
+		offlineTracklists[3,7] = "21";
+		offlinePrizes[3,7] = "Harvick22";
+		offlineSetPrizes[3,7] = "40";
+		eventChapterDescriptions[3,7] = "Nov 16, 2014. Harvick soaked up the pressure of a late caution to win the championship in Miami.";
+
+
+		offlineEventChapter[3,8] = "Phoenix 2016";
+		offlineChapterImage[3,8] = "Phoenix";
+		offlineMinClass[3,8] = 4;
+		offlineMinLevel[3,8] = 40;
+		offlineMinType[3,8] = "Driver";
+		offlineMinTeam[3,8] = "Harvick";
+		offlineAILevel[3,8] = 15;
+		offlineTracklists[3,8] = "4";
+		offlinePrizes[3,8] = "Harvick22";
+		offlineSetPrizes[3,8] = "40";
+		eventChapterDescriptions[3,8] = "Mar 13, 2016. A tense late restart on old tyres saw Harvick defend from a charging Edwards in Phoenix.";
+
+
+		offlineEventChapter[3,9] = "Vintage Harvick";
+		offlineChapterImage[3,9] = "cup22livery4alt1";
+		offlineMinClass[3,9] = 3;
+		offlineMinLevel[3,9] = 45;
+		offlineSeries[3,9] = "cup22";
+		offlineCustomCar[3,9] = "cup22livery4alt1";
+		offlineAILevel[3,9] = 15;
+		offlineTracklists[3,9] = "9";
+		offlinePrizes[3,9] = "AltPaint";
+		offlineSetPrizes[3,9] = "cup22livery4alt1";
+		eventChapterDescriptions[3,9] = "Harvick grabbed his final ever race victory at Richmond in 2022 in typically dominant style.";
+
 
 		//Modern Era
 		offlineEventChapter[4,1] = "Chastain's Wallride";
@@ -631,20 +714,14 @@ public class EventData : MonoBehaviour
 			case "Earnhardt":
 				validDriver.Add("cup203");
 			break;
-			case "Harvick":
+			case "Harvick20":
+				validDriver.Add("cup204");
+			break;
+			case "Harvick22":
+				validDriver.Add("cup224");
+			break;
+			case "Harvick23":
 				validDriver.Add("cup234");
-			break;
-			case "Logano":
-				validDriver.Add("cup2222");
-			break;
-			case "Elliott":
-				validDriver.Add("cup229");
-			break;
-			case "Bell":
-				validDriver.Add("cup2220");
-			break;
-			case "Chastain":
-				validDriver.Add("cup221");
 			break;
 			
 			default:

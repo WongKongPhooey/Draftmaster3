@@ -649,10 +649,12 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	
-	public static string getName(string seriesPrefix, int index){
+	public static string getName(string seriesPrefix, int index, bool includeCustom = true){
 		loadData();
-		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
-			return PlayerPrefs.GetString("CustomDriver" + seriesPrefix + index);
+		if(includeCustom == true){
+			if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
+				return PlayerPrefs.GetString("CustomDriver" + seriesPrefix + index);
+			}
 		}
 		if(allNames.ContainsKey(seriesPrefix)){
 			string[] names = allNames[seriesPrefix];
@@ -727,7 +729,7 @@ public class DriverNames : MonoBehaviour {
 			}
 		}
 	}
-	
+
 	public static string getType(string seriesPrefix, int index){
 		loadData();
 		if(allRarity.ContainsKey(seriesPrefix)){

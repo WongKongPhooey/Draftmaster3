@@ -266,7 +266,7 @@ public class TrackUI : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
-		PlayerPrefs.SetInt("RaceLaps",1);
+		//PlayerPrefs.SetInt("RaceLaps",1);
 		#endif
 		SceneManager.LoadScene(track);
 	}

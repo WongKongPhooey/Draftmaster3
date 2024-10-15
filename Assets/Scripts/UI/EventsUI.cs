@@ -313,11 +313,15 @@ public class EventsUI : MonoBehaviour
 		int parsedNum = int.Parse(extractedCarNum);
 		int parsedAlt = int.Parse(extractedAltNum);
 		
+		if(PlayerPrefs.GetInt(sanitisedAlt + "Unlocked") == 1){
+			return;
+		}
+
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
 		if(AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] != null){
-			alertPopup.GetComponent<AlertManager>().showPopup("Reward Collected","New " + AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] + " Alt Paint Unlocked!","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Unclaimed Rewards Collected","New " + AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] + " Alt Paint Unlocked!", setPrize);
 		} else {
-			alertPopup.GetComponent<AlertManager>().showPopup("Reward Collected","New " + DriverNames.cup2020Names[parsedNum] + " Alt Paint Unlocked!","dm2logo");
+			alertPopup.GetComponent<AlertManager>().showPopup("Unclaimed Rewards Collected","New " + DriverNames.cup2020Names[parsedNum] + " Alt Paint Unlocked!", setPrize);
 		}
 	}
 
@@ -337,6 +341,7 @@ public class EventsUI : MonoBehaviour
 		string rewardsCode = EventData.offlinePrizes[subMenu,subEvent];
 		if(EventData.offlinePrizes[subMenu,subEvent] != "AltPaint"){
 			//Generate the list of possible rewards
+			Debug.Log("Show Rewards for: " + rewardsCode);
 			rewardsList = EventData.ListRewards(rewardsCode);
 		} else {
 			//Throw the alt paint into the list instead

@@ -30,6 +30,7 @@ public class GarageUI : MonoBehaviour
 	string seriesTeam;
 	string seriesManu;
 	int seriesCar;
+	string seriesDriver;
 	string seriesDriverType;
 	int seriesRarity;
 	
@@ -586,6 +587,7 @@ public class GarageUI : MonoBehaviour
 			
 		seriesTeam = "";
 		seriesManu = "";
+		seriesDriver = "";
 		seriesCar = 999;
 		seriesDriverType = "";
 		seriesRarity = 0;
@@ -600,6 +602,9 @@ public class GarageUI : MonoBehaviour
 				break;
 			case "Car":
 				seriesCar = int.Parse(restrictionValue);
+				break;
+			case "Driver":
+				seriesDriver = restrictionValue;
 				break;
 			case "Rarity":
 				seriesRarity = int.Parse(restrictionValue);
@@ -625,6 +630,9 @@ public class GarageUI : MonoBehaviour
 		if((seriesCar != 999)&&(car != seriesCar)){
 			return false;
 		}
+		if((seriesDriver != "")&&(DriverNames.getName(series, car) != seriesDriver)){
+			return false;
+		}
 		if((seriesDriverType != "")&&(DriverNames.getType(series, car) != seriesDriverType)){
 			return false;
 		}
@@ -644,6 +652,9 @@ public class GarageUI : MonoBehaviour
 			return false;
 		}
 		if((seriesCar != 999)&&(car != seriesCar)){
+			return false;
+		}
+		if((seriesDriver != "")&&(ModData.getName(series, car) != seriesDriver)){
 			return false;
 		}
 		if((seriesDriverType != "")&&(ModData.getType(series, car) != seriesDriverType)){

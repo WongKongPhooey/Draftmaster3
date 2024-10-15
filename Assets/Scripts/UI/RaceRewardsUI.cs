@@ -607,9 +607,19 @@ public class RaceRewardsUI : MonoBehaviour
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
 			
-			case "Harvick":
-				prizeOptions.Add("cup234");
+			case "Harvick20":
+				prizeOptions.Add("cup204");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
 			break;
+			case "Harvick22":
+				prizeOptions.Add("cup224");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+			case "Harvick23":
+				prizeOptions.Add("cup234");
+				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
+			break;
+
 			case "Logano":
 				prizeOptions.Add("cup2222");
 				setPrize = PlayerPrefs.GetString("SeriesPrizeAmt");
