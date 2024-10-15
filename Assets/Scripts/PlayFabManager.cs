@@ -893,7 +893,7 @@ public class PlayFabManager : MonoBehaviour
 				{"AutosavePlayerProgress", progressJSON}
 			}
 		};
-		Debug.Log("Saved player progress to cloud");
+		//Debug.Log("Saved player progress to cloud");
 		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
 	}
 	
@@ -904,7 +904,7 @@ public class PlayFabManager : MonoBehaviour
 				{"AutosaveSeriesProgress" + seriesPrefix, progressJSON}
 			}
 		};
-		Debug.Log("Saved series " + seriesPrefix + " progress to cloud");
+		//Debug.Log("Saved series " + seriesPrefix + " progress to cloud");
 		PlayFabClientAPI.UpdateUserData(request, OnProgressSave, OnError);
 	}
 	

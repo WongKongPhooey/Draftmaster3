@@ -677,6 +677,9 @@ public class GarageUI : MonoBehaviour
 		if(seriesCar != 999){
 			restriction += "Car " + seriesCar + "\n";
 		}
+		if(seriesDriver != ""){
+			restriction += "Driver " + seriesDriver + "\n";
+		}
 		if(seriesDriverType != ""){
 			restriction += "Type " + seriesDriverType + "\n";
 		}

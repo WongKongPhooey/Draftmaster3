@@ -247,7 +247,6 @@ public class CameraRotate : MonoBehaviour {
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
 			//Debug.Log("Restarting on lap " + lap);
-			raceEnd = PlayerPrefs.GetInt("RaceLaps");
 			if(lap >= (raceEnd - 1)){
 				//Overtime
 				raceEnd = lap+2;

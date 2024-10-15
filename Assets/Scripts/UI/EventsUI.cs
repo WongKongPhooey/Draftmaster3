@@ -245,6 +245,9 @@ public class EventsUI : MonoBehaviour
 			case "Car":
 				restrictionValue += "Exact Car: #" + EventData.offlineExactCar[subMenu,subEvent];
 			break;
+			case "Driver":
+				restrictionValue += "Exact Driver: " + EventData.offlineExactDriver[subMenu,subEvent];
+			break;
 			case "Type":
 				restrictionValue += "Driver Type: " + EventData.offlineMinDriverType[subMenu,subEvent];
 			break;

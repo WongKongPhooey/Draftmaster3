@@ -21,6 +21,8 @@ public class EventData : MonoBehaviour
 	public static string[,] offlineMinTeam = new string[10,10];
 	public static string[,] offlineExactSeries = new string[10,10];
 	public static int[,] offlineExactCar = new int[10,10];
+
+	public static string[,] offlineExactDriver = new string[10,10];
 	public static string[,] offlineMinManu = new string[10,10];
 	public static string[,] offlineMinDriverType = new string[10,10];
 	public static string[,] offlineTracklists = new string[10,10];
@@ -318,7 +320,7 @@ public class EventData : MonoBehaviour
 		offlineMinClass[3,2] = 3;
 		offlineMinLevel[3,2] = 10;
 		offlineMinType[3,2] = "Driver";
-		offlineMinTeam[3,2] = "Harvick";
+		offlineExactDriver[3,2] = "Harvick";
 		offlineAILevel[3,2] = 7;
 		offlineRaceLaps[3,2] = 201;
 		offlineStartingLap[3,2] = 191;
@@ -329,10 +331,10 @@ public class EventData : MonoBehaviour
 		
 		offlineEventChapter[3,3] = "The Tandem Tango";
 		offlineChapterImage[3,3] = "Talladega";
-		offlineMinClass[3,3] = 4;
+		offlineMinClass[3,3] = 3;
 		offlineMinLevel[3,3] = 15;
 		offlineMinType[3,3] = "Driver";
-		offlineMinTeam[3,3] = "Harvick";
+		offlineExactDriver[3,3] = "Harvick";
 		offlineAILevel[3,3] = 10;
 		offlineRaceLaps[3,3] = 201;
 		offlineStartingLap[3,3] = 191;
@@ -343,10 +345,13 @@ public class EventData : MonoBehaviour
 
 		offlineEventChapter[3,4] = "Heartbreaker";
 		offlineChapterImage[3,4] = "cup23livery4alt1";
+		offlineMinClass[3,4] = 3;
 		offlineMinLevel[3,4] = 20;
 		offlineSeries[3,4] = "cup23";
-		offlineCustomCar[3,4] = "cup23livery4alt1";
-		offlineAILevel[3,4] = 14;
+		offlineCustomCar[3,4] = "cup23livery4";
+		offlineAILevel[3,4] = 11;
+		offlineRaceLaps[3,4] = 401;
+		offlineStartingLap[3,4] = 386;
 		offlineTracklists[3,4] = "13";
 		offlinePrizes[3,4] = "AltPaint";
 		offlineSetPrizes[3,4] = "cup23livery4alt1";
@@ -354,12 +359,13 @@ public class EventData : MonoBehaviour
 
 		offlineEventChapter[3,5] = "Clash Of Titans";
 		offlineChapterImage[3,5] = "SuperTriOval";
-		offlineMinClass[3,5] = 4;
+		offlineMinClass[3,5] = 3;
 		offlineMinLevel[3,5] = 25;
 		offlineMinType[3,5] = "Driver";
-		offlineMinTeam[3,5] = "Harvick";
+		offlineExactDriver[3,5] = "Harvick";
 		offlineAILevel[3,5] = 12;
-		offlineStartingLap[3,5] = 8;
+		offlineRaceLaps[3,5] = 201;
+		offlineStartingLap[3,5] = 192;
 		offlineTracklists[3,5] = "5";
 		offlinePrizes[3,5] = "Harvick23";
 		offlineSetPrizes[3,5] = "40";
@@ -368,11 +374,13 @@ public class EventData : MonoBehaviour
 
 		offlineEventChapter[3,6] = "Win And In";
 		offlineChapterImage[3,6] = "Phoenix";
-		offlineMinClass[3,6] = 3;
+		offlineMinClass[3,6] = 4;
 		offlineMinLevel[3,6] = 30;
 		offlineMinType[3,6] = "Driver";
-		offlineMinTeam[3,6] = "Harvick";
+		offlineExactDriver[3,6] = "Harvick";
 		offlineAILevel[3,6] = 14;
+		offlineRaceLaps[3,6] = 313;
+		offlineStartingLap[3,6] = 292;
 		offlineTracklists[3,6] = "4";
 		offlinePrizes[3,6] = "Harvick22";
 		offlineSetPrizes[3,6] = "35";
@@ -383,7 +391,7 @@ public class EventData : MonoBehaviour
 		offlineMinClass[3,7] = 4;
 		offlineMinLevel[3,7] = 35;
 		offlineMinType[3,7] = "Driver";
-		offlineMinTeam[3,7] = "Harvick";
+		offlineExactDriver[3,7] = "Harvick";
 		offlineAILevel[3,7] = 15;
 		offlineTracklists[3,7] = "21";
 		offlinePrizes[3,7] = "Harvick22";
@@ -396,7 +404,7 @@ public class EventData : MonoBehaviour
 		offlineMinClass[3,8] = 4;
 		offlineMinLevel[3,8] = 40;
 		offlineMinType[3,8] = "Driver";
-		offlineMinTeam[3,8] = "Harvick";
+		offlineExactDriver[3,8] = "Harvick";
 		offlineAILevel[3,8] = 15;
 		offlineTracklists[3,8] = "4";
 		offlinePrizes[3,8] = "Harvick22";
