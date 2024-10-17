@@ -433,7 +433,6 @@ public class SeriesUI : MonoBehaviour
 		minDiffValue.GetComponent<TMPro.TMP_Text>().text = ((minDiffMulti + 5) * 10) + "%";
 		diffValue.GetComponent<TMPro.TMP_Text>().text = ((diffMulti + 5) * 10) + "% Difficulty";
 		diffNote.GetComponent<TMPro.TMP_Text>().text = "Note: Difficulty cannot be set lower than the default (" + ((diffMulti + 5) * 10) + "%)";
-	
 	}
 	
 	public void SaveDifficultySlider(){

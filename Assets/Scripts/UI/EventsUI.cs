@@ -167,7 +167,7 @@ public class EventsUI : MonoBehaviour
 		}
 		//Moments show newest first
 		if(subMenuId == 4){
-			for(int i=9;i>=0;i--){
+			for(int i=14;i>=0;i--){
 				//Skip through the empty chapters
 				if(EventData.offlineEventChapter[subMenuId,i] == null){
 					continue;
@@ -175,7 +175,7 @@ public class EventsUI : MonoBehaviour
 				loadSubEvent(i,true);
 			}
 		} else {
-			for(int i=0;i<=9;i++){
+			for(int i=0;i<=14;i++){
 				if(EventData.offlineEventChapter[subMenuId,i] == null){
 					continue;
 				}
