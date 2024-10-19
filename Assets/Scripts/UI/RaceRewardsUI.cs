@@ -369,26 +369,26 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		//Sanitised example: cup2048Alt2Unlocked
 		
+		string extractedCarSeries = setPrize.Substring(0,5);
 		string extractedCarNum = setPrize.Split('y').Last();
 		string extractedAltNum = setPrize.Split('t').Last();
 		carPrizeAlt = setPrize;
 		carPrizeNumAlt = extractedCarNum;
 		
-		//Debug.Log("Extracted Alt: " + extractedCarNum);
-		
 		extractedCarNum = extractedCarNum.Substring(0, extractedCarNum.IndexOf("alt")).Trim();
 		int parsedNum = int.Parse(extractedCarNum);
 		int parsedAlt = int.Parse(extractedAltNum);
 		
+		Debug.Log("Extracted Alt: " + extractedCarSeries + " -> " + extractedCarNum + " -> " + extractedAltNum);
 		//Debug.Log("Extracted car number: #" + extractedCarNum);
 		//Debug.Log("Extracted alt number: #" + extractedAltNum);
 		
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
-		if(AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] != null){
-			carReward = "New " + AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] + " Alt Unlocked!";
-		} else {
-			carReward = "New " + DriverNames.cup2020Names[parsedNum] + " Alt Unlocked!";
-		}
+		
+		//Set it as the active alt
+		PlayerPrefs.SetInt(extractedCarSeries + extractedCarNum + "AltPaint",parsedAlt);
+		
+		carReward = "New " + DriverNames.cup2020Names[parsedNum] + " Alt Unlocked!";
 	}
 	
 	List<string> ListPrizeOptions(string category){

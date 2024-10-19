@@ -592,6 +592,7 @@ public class GarageUI : MonoBehaviour
 		seriesDriverType = "";
 		seriesRarity = 0;
 		
+		Debug.Log("Restriction Type: " + restrictionType + " - " + restrictionValue);
 		switch(restrictionType){
 			case "Team":
 				seriesTeam = restrictionValue;
@@ -669,22 +670,22 @@ public class GarageUI : MonoBehaviour
 	public string showRestrictions(){
 		string restriction = "";
 		if(seriesTeam != ""){
-			restriction += "Team " + seriesTeam + "\n";
+			restriction += "Team - " + seriesTeam + "\n";
 		}
 		if(seriesManu != ""){
-			restriction += "Manufacturer " + seriesManu + "\n";
+			restriction += "Manufacturer - " + seriesManu + "\n";
 		}
 		if(seriesCar != 999){
-			restriction += "Car " + seriesCar + "\n";
+			restriction += "Car - #" + seriesCar + "\n";
 		}
 		if(seriesDriver != ""){
-			restriction += "Driver " + seriesDriver + "\n";
+			restriction += "Driver - " + seriesDriver + "\n";
 		}
 		if(seriesDriverType != ""){
-			restriction += "Type " + seriesDriverType + "\n";
+			restriction += "Type - " + seriesDriverType + "\n";
 		}
 		if(seriesRarity != 0){
-			restriction += "Rarity " + seriesRarity + "\n";
+			restriction += "Rarity - " + seriesRarity + "\n";
 		}
 		int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		restriction += "Minimum Class " + classAbbr(minClass);
