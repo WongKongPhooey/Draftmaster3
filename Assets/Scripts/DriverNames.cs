@@ -31,7 +31,7 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, float> numXScale = new Dictionary<string, float>();
 	public static Dictionary<string, int> numXRotation = new Dictionary<string, int>();
 
-	public static string[] allCarsets = new string[11];
+	public static string[] allCarsets = new string[12];
 	public static string[] allWinnableCarsets = new string[8];
 	public static string[] allManufacturers = new string[7];
 
@@ -70,6 +70,12 @@ public class DriverNames : MonoBehaviour {
 	public static string[] irl2024Manufacturer = new string[101];
 	public static int[] irl2024Rarity = new int[101];
 	public static string[] irl2024Types = new string[101];
+	
+	public static string[] dm2seNames = new string[101];
+	public static string[] dm2seTeams = new string[101];
+	public static string[] dm2seManufacturer = new string[101];
+	public static int[] dm2seRarity = new int[101];
+	public static string[] dm2seTypes = new string[101];
 	
 	public static string[] cup2001Names = new string[101];
 	public static string[] cup2001Teams = new string[101];
@@ -124,6 +130,7 @@ public class DriverNames : MonoBehaviour {
 		cup24();
 		irl23();
 		irl24();
+		dm2se();
 		cup01();
 		cup03();
 		cup79();
@@ -143,6 +150,7 @@ public class DriverNames : MonoBehaviour {
 		series.Add("cup24");
 		series.Add("irl23");
 		series.Add("irl24");
+		series.Add("dm2se");
 		series.Add("cup01");
 		series.Add("cup03");
 		series.Add("cup79");
@@ -195,6 +203,12 @@ public class DriverNames : MonoBehaviour {
 			allManufacturer.Add("irl24", irl2024Manufacturer);
 			allRarity.Add("irl24", irl2024Rarity);
 			allTypes.Add("irl24", irl2024Types);
+			
+			allNames.Add("dm2se", dm2seNames);
+			allTeams.Add("dm2se", dm2seTeams);
+			allManufacturer.Add("dm2se", dm2seManufacturer);
+			allRarity.Add("dm2se", dm2seRarity);
+			allTypes.Add("dm2se", dm2seTypes);
 			
 			allNames.Add("cup01", cup2001Names);
 			allTeams.Add("cup01", cup2001Teams);
@@ -260,6 +274,7 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[8] = "irc00";
 		allCarsets[9] = "irl23";
 		allCarsets[10] = "irl24";
+		allCarsets[11] = "dm2se";
 	}
 	
 	public static void listManufacturers(){
@@ -2325,6 +2340,23 @@ public class DriverNames : MonoBehaviour {
 		irl2024Rarity[98] = 1;
 	}
 
+	public static void dm2se(){
+
+		dm2seNames[4] = "Harvick";
+		dm2seNames[19] = "Edwards";
+		
+		dm2seTeams[4] = "SHR";
+		dm2seTeams[19] = "JGR";
+		
+		dm2seManufacturer[4] = "CHV";
+		dm2seManufacturer[19] = "TYT";
+		
+		dm2seTypes[4] = "Closer";
+		dm2seTypes[19] = "Intimidator";
+
+		dm2seRarity[4] = 4;
+		dm2seRarity[19] = 2;
+	}
 	public static void cup01(){
 
 		cup2001Names[24] = "Gordon";

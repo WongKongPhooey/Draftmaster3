@@ -514,7 +514,7 @@ public class modDriver {
 public class modSet {
 	public string modName;
 	public string modFolder;
-	public string modType;
+	public string modContent;
 	public string modVersion;
 	public string modAuthor;
 	public string modPhysics;

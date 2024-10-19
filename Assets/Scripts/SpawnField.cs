@@ -656,14 +656,16 @@ public class SpawnField : MonoBehaviour {
 				slowCars.Add("34");
 				slowCars.Add("41");
 				break;
-			case "cup01HarvickGordon":
-				//fastCars.Add("29");
+			case "cup01MomentsAtlanta":
 				fastCars.Add("24");
 				break;
 			case "cup79MomentsDaytona":
 				fastCars.Add("1");
 				fastCars.Add("11");
 				slowCars.Add("43");
+				break;
+			case "dm2sePhoenix16":
+				fastCars.Add("19");
 				break;
 			default:
 				break;

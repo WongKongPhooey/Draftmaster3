@@ -56,6 +56,11 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("PlayerWrecks","Yes");
 					momentsCriteria.Add("WinningMargin","0.02");
 				break;
+				case "Phoenix16":
+					momentsCriteria.Add("FinishPositionLowerThan","1");
+					momentsCriteria.Add("CarAvoidsWreck","19");
+					momentsCriteria.Add("WinningMargin","0.01");
+				break;
 				case "ChastainWallride":
 					momentsCriteria.Add("WreckStartLocationStraight","2");
 					momentsCriteria.Add("WreckStartPositionHigherThan","9");

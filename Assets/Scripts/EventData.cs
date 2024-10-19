@@ -393,6 +393,8 @@ public class EventData : MonoBehaviour
 		offlineMinType[3,7] = "Driver";
 		offlineExactDriver[3,7] = "Harvick";
 		offlineAILevel[3,7] = 15;
+		offlineRaceLaps[3,7] = 268;
+		offlineStartingLap[3,7] = 264;
 		offlineTracklists[3,7] = "21";
 		offlinePrizes[3,7] = "AltPaint";
 		offlineSetPrizes[3,7] = "cup23livery4alt2";
@@ -403,13 +405,13 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[3,8] = "Phoenix";
 		offlineMinClass[3,8] = 4;
 		offlineMinLevel[3,8] = 35;
-		offlineMinType[3,8] = "Driver";
-		offlineExactDriver[3,8] = "Harvick";
 		offlineAILevel[3,8] = 15;
-		offlineCustomFieldOrder[3,8] = "x,player,x,x,x,x,24";
-		offlineCustomField[3,8] = "cup16MomentsPhoenix";
-		offlineRaceLaps[3,8] = 326;
-		offlineStartingLap[3,8] = 324;
+		offlineSeries[3,8] = "dm2se";
+		offlineCustomCar[3,8] = "dm2selivery4";
+		offlineCustomFieldOrder[3,8] = "x,player,x,x,x,x,x,x,19";
+		offlineCustomField[3,8] = "dm2sePhoenix16";
+		offlineRaceLaps[3,8] = 313;
+		offlineStartingLap[3,8] = 310;
 		offlineMoment[3,8] = "Phoenix16";
 		offlineTracklists[3,8] = "4";
 		offlinePrizes[3,8] = "Harvick22";
@@ -423,6 +425,8 @@ public class EventData : MonoBehaviour
 		offlineMinType[3,9] = "Driver";
 		offlineExactDriver[3,9] = "Harvick";
 		offlineAILevel[3,9] = 15;
+		offlineRaceLaps[3,9] = 501;
+		offlineStartingLap[3,9] = 419;
 		offlineTracklists[3,9] = "8";
 		offlinePrizes[3,9] = "Harvick22";
 		offlineSetPrizes[3,9] = "40";
@@ -436,6 +440,8 @@ public class EventData : MonoBehaviour
 		offlineSeries[3,10] = "cup22";
 		offlineCustomCar[3,10] = "cup22livery4alt1";
 		offlineAILevel[3,10] = 15;
+		offlineRaceLaps[3,10] = 401;
+		offlineStartingLap[3,10] = 256;
 		offlineTracklists[3,10] = "9";
 		offlinePrizes[3,10] = "AltPaint";
 		offlineSetPrizes[3,10] = "cup22livery4alt1";

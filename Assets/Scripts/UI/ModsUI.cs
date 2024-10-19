@@ -94,7 +94,7 @@ public class ModsUI : MonoBehaviour {
 				
 				string modFullName = "?";
 				string modAuthor = "?";
-				string modType = "?";
+				string modContent = "C0,P0";
 				string modJsonValid = "OK";
 				int totalCars = 0;
 				
@@ -107,9 +107,14 @@ public class ModsUI : MonoBehaviour {
 					if(modJson.modAuthor != null){
 						modAuthor = stringLimit(modJson.modAuthor,14);
 					}
-					if(modJson.modType != null){
-						modType = stringLimit(modJson.modType,9);
-					}					
+					if(modJson.drivers.Any() != false){
+						modContent = modJson.drivers.Count + " Cars";
+						Debug.Log(modJson.series);
+					}
+					if(modJson.series.Any() != false){
+						modContent = modJson.drivers.Count + "C+" + modJson.series.Count + "S";
+						Debug.Log(modJson.series);
+					}
 					modJsonValid = "OK";
 					
 					modList += directory.Name + "|" + modFullName;
@@ -117,7 +122,7 @@ public class ModsUI : MonoBehaviour {
 					Debug.Log(directory.Name + e.Message);
 					modFullName = "?";
 					modAuthor = "?";
-					modType = "?";
+					modContent = "C0,P0";
 					modJsonValid = "Error";
 				}
 				
@@ -129,27 +134,15 @@ public class ModsUI : MonoBehaviour {
 				
 				TMPro.TMP_Text modName = modInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text modAuthorTxt = modInst.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
-				TMPro.TMP_Text modContent = modInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				TMPro.TMP_Text modContentTxt = modInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text modJsonTxt = modInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text modFolder = modInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 				
 				modName.text = modFullName;
 				modAuthorTxt.text = modAuthor;
+				modContentTxt.text = modContent;
 				modJsonTxt.text = modJsonValid;
 				modFolder.text = directory.Name;
-				
-				switch(modType){
-					case "Cars":
-						break;
-					case "Tracks":
-						break;
-					case "Challenge":
-						break;
-					default:
-						modType = "N/A";
-						break;
-				}
-				modContent.text = modType;
 				
 				i++;
             }
