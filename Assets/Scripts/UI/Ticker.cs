@@ -225,7 +225,7 @@ public class Ticker : MonoBehaviour
 					continue;
 				}
 				
-				Debug.Log("DNF'd Car " + d);
+				//Debug.Log("DNF'd Car " + d);
 				
 				GameObject tickerInst = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				tickerInst.transform.SetParent(tickerObj, false);
@@ -238,7 +238,7 @@ public class Ticker : MonoBehaviour
 				
 				tickerInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = d.ToString();
 
-				Debug.Log("DNF'd Car #" + customNumber + "");
+				//Debug.Log("DNF'd Car #" + customNumber + "");
 
 				//Show the correct number icon, or a fallback number
 				if(Resources.Load<Sprite>("cup20num" + customNumber) != null){
@@ -595,13 +595,7 @@ public class Ticker : MonoBehaviour
 				if(PlayerPrefs.HasKey(seriesPrefix + carNumber[i] + "AltDriver")){
 					driverNames[i] = PlayerPrefs.GetString(seriesPrefix + carNumber[i] + "AltDriver");
 				} else {
-					int carJsonIndex = 999;
-					if(officialSeries == true){
-						driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
-					} else {
-						carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
-						driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
-					}
+					driverNames[i] = cachedCarNames[int.Parse(carNumber[i])];
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
@@ -612,13 +606,7 @@ public class Ticker : MonoBehaviour
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = carNames[i].Remove(0,6);	
-				int carJsonIndex = 999;
-				if(officialSeries == true){
-					driverNames[i] = DriverNames.getName(seriesPrefix,int.Parse(carNumber[i]));
-				} else {
-					carJsonIndex = ModData.getJsonIndexFromCarNum(seriesPrefix, int.Parse(carNumber[i]));
-					driverNames[i] = ModData.getName(seriesPrefix,carJsonIndex);
-				}
+				driverNames[i] = cachedCarNames[int.Parse(carNumber[i])];
 					
 				carDist[i] = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				carDist[i] = carDist[i] / 25;

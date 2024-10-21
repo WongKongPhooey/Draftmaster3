@@ -7,34 +7,37 @@ public class EventData : MonoBehaviour
     public static string[] offlineEvent = new string[10];
 	public static string[] offlineEventType = new string[10];
 	public static string[] offlineEventWeek = new string[10];
-	public static string[,] offlineEventChapter = new string[10,10];
+	public static string[,] offlineEventChapter = new string[10,15];
 	public static string[] offlineEventImage = new string[10];
-	public static string[,] offlineChapterImage = new string[10,10];
+	public static string[,] offlineChapterImage = new string[10,15];
 	public static string[] eventDescriptions = new string[10];
-	public static string[,] eventChapterDescriptions = new string[10,10];
-	public static int[,] offlineAILevel = new int[10,10];
-	public static string[,] offlineSeries = new string[10,10];
-	public static string[,] offlineMinType = new string[10,10];
-	public static int[,] offlineMinLevel = new int[10,10];
-	public static int[,] offlineMinClass = new int[10,10];
-	public static int[,] offlineMinRarity = new int[10,10];
-	public static string[,] offlineMinTeam = new string[10,10];
-	public static string[,] offlineExactSeries = new string[10,10];
-	public static int[,] offlineExactCar = new int[10,10];
-	public static string[,] offlineMinManu = new string[10,10];
-	public static string[,] offlineMinDriverType = new string[10,10];
-	public static string[,] offlineTracklists = new string[10,10];
+	public static string[,] eventChapterDescriptions = new string[10,15];
+	public static int[,] offlineAILevel = new int[10,15];
+	public static string[,] offlineSeries = new string[10,15];
+	public static string[,] offlineMinType = new string[10,15];
+	public static int[,] offlineMinLevel = new int[10,15];
+	public static int[,] offlineMinClass = new int[10,15];
+	public static int[,] offlineMinRarity = new int[10,15];
+	public static string[,] offlineMinTeam = new string[10,15];
+	public static string[,] offlineExactSeries = new string[10,15];
+	public static int[,] offlineExactCar = new int[10,15];
+
+	public static string[,] offlineExactDriver = new string[10,15];
+	public static string[,] offlineMinManu = new string[10,15];
+	public static string[,] offlineMinDriverType = new string[10,15];
+	public static string[,] offlineTracklists = new string[10,15];
 	public static string[] offlineCircuits = new string[20];
-	public static string[,] offlinePrizes = new string[10,10];
-	public static string[,] offlineSetPrizes = new string[10,10];
+	public static string[,] offlinePrizes = new string[10,15];
+	public static string[,] offlineSetPrizes = new string[10,15];
 	
-	public static string[,] offlineCustomCar = new string[10,10];
-	public static string[,] offlineCustomField = new string[10,10];
-	public static string[,] offlineCustomFieldOrder = new string[10,10];
-	public static int[,] offlineRaceLaps = new int[10,10];
-	public static int[,] offlineStartingLap = new int[10,10];
-	public static string[,] offlineModifier = new string[10,10];
-	public static string[,] offlineMoment = new string[10,10];
+	public static string[,] offlineCustomCar = new string[10,15];
+	public static string[,] offlineCustomField = new string[10,15];
+	public static string[,] offlineCustomFieldOrder = new string[10,15];
+	public static int[,] offlineRaceLaps = new int[10,15];
+	public static int[,] offlineStartingLap = new int[10,15];
+	public static int[,] offlineEndingLap = new int[10,15];
+	public static string[,] offlineModifier = new string[10,15];
+	public static string[,] offlineMoment = new string[10,15];
 	
     // Start is called before the first frame update
     void Start(){   
@@ -285,53 +288,165 @@ public class EventData : MonoBehaviour
 		offlineChapterImage[3,0] = "cup01livery29";
 		offlineMinClass[3,0] = 1;
 		offlineMinLevel[3,0] = 1;
-		offlineAILevel[3,0] = 10;
+		offlineAILevel[3,0] = 12;
 		offlineSeries[3,0] = "cup01";
 		offlineCustomCar[3,0] = "cup01livery29";
 		offlineCustomField[3,0] = "cup01MomentsAtlanta";
-		offlineStartingLap[3,0] = 14;
+		offlineRaceLaps[3,0] = 326;
+		offlineStartingLap[3,0] = 324;
 		offlineMoment[3,0] = "Atlanta01";
 		offlineTracklists[3,0] = "2";
-		offlinePrizes[3,0] = "Harvick";
-		offlineSetPrizes[3,0] = "15";
+		offlinePrizes[3,0] = "Harvick20";
+		offlineSetPrizes[3,0] = "30";
 		offlineCustomFieldOrder[3,0] = "x,player,x,x,x,x,24";
-		eventChapterDescriptions[3,0] = "Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
+		eventChapterDescriptions[3,0] = "Mar 11, 2001. Harvick picks up a dramatic first win in only his 3rd start, going toe to toe with Gordon in Atlanta.";
 		
 		offlineEventChapter[3,1] = "The Yard Of Bricks";
-		offlineChapterImage[3,1] = "cup20livery4";
+		offlineChapterImage[3,1] = "Indianapolis";
 		offlineMinClass[3,1] = 2;
-		offlineMinLevel[3,1] = 5;
+		offlineMinLevel[3,1] = 3;
+		offlineMinType[3,1] = "Team";
 		offlineMinTeam[3,1] = "RCR";
-		offlineAILevel[3,1] = 10;
-		offlineStartingLap[3,1] = 8;
+		offlineAILevel[3,1] = 4;
+		offlineRaceLaps[3,1] = 161;
+		offlineStartingLap[3,1] = 151;
 		offlineTracklists[3,1] = "20";
-		offlinePrizes[3,1] = "Harvick";
-		offlineSetPrizes[3,1] = "15";
-		eventChapterDescriptions[3,1] = "Harvick's first crown jewel victory came in 2003, winning the Brickyard 400 for RCR.";
+		offlinePrizes[3,1] = "Harvick20";
+		offlineSetPrizes[3,1] = "35";
+		eventChapterDescriptions[3,1] = "Aug 3, 2003. Harvick's first crown jewel victory, winning the Brickyard 400 for RCR.";
 		
 		offlineEventChapter[3,2] = "The Great American";
-		offlineChapterImage[3,2] = "cup22livery4";
+		offlineChapterImage[3,2] = "SuperTriOval";
 		offlineMinClass[3,2] = 3;
-		offlineMinLevel[3,2] = 10;
-		offlineMinTeam[3,2] = "RCR";
-		offlineAILevel[3,2] = 12;
-		offlineStartingLap[3,2] = 8;
+		offlineMinLevel[3,2] = 5;
+		offlineMinType[3,2] = "Driver";
+		offlineExactDriver[3,2] = "Harvick";
+		offlineAILevel[3,2] = 7;
+		offlineRaceLaps[3,2] = 201;
+		offlineStartingLap[3,2] = 191;
 		offlineTracklists[3,2] = "1";
-		offlinePrizes[3,2] = "Harvick";
-		offlineSetPrizes[3,2] = "15";
-		eventChapterDescriptions[3,2] = "As the field wrecked behind them, Harvick edged out Martin to win the 500 by a nose.";
+		offlinePrizes[3,2] = "Harvick23";
+		offlineSetPrizes[3,2] = "35";
+		eventChapterDescriptions[3,2] = "Feb 18, 2007. As the field wrecked behind them, Harvick edged out Martin to win the 500 by a nose.";
 		
-		offlineEventChapter[3,3] = "Heartbreaker";
-		offlineChapterImage[3,3] = "cup23livery4alt1";
+		offlineEventChapter[3,3] = "The Tandem Tango";
+		offlineChapterImage[3,3] = "Talladega";
 		offlineMinClass[3,3] = 3;
-		offlineMinLevel[3,3] = 20;
-		offlineSeries[3,3] = "cup23";
-		offlineCustomCar[3,3] = "cup23livery4";
-		offlineAILevel[3,3] = 14;
-		offlineTracklists[3,3] = "13";
-		offlinePrizes[3,3] = "AltPaint";
-		offlineSetPrizes[3,3] = "cup23livery4alt1";
-		eventChapterDescriptions[3,3] = "With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
+		offlineMinLevel[3,3] = 10;
+		offlineMinType[3,3] = "Driver";
+		offlineExactDriver[3,3] = "Harvick";
+		offlineAILevel[3,3] = 10;
+		offlineRaceLaps[3,3] = 201;
+		offlineStartingLap[3,3] = 191;
+		offlineTracklists[3,3] = "10";
+		offlinePrizes[3,3] = "Harvick23";
+		offlineSetPrizes[3,3] = "40";
+		eventChapterDescriptions[3,3] = "Apr 25, 2010. The most lead changes in history and the longest Talladega race ever belonged to Harvick.";
+
+		offlineEventChapter[3,4] = "Heartbreaker";
+		offlineChapterImage[3,4] = "cup23livery4alt1";
+		offlineMinClass[3,4] = 3;
+		offlineMinLevel[3,4] = 15;
+		offlineSeries[3,4] = "cup23";
+		offlineCustomCar[3,4] = "cup23livery4";
+		offlineAILevel[3,4] = 11;
+		offlineRaceLaps[3,4] = 401;
+		offlineStartingLap[3,4] = 386;
+		offlineTracklists[3,4] = "13";
+		offlinePrizes[3,4] = "AltPaint";
+		offlineSetPrizes[3,4] = "cup23livery4alt1";
+		eventChapterDescriptions[3,4] = "May 29, 2011. With 1 turn to go, Harvick swept past an out of gas Earnhardt Jr to win the Coke 600.";
+
+		offlineEventChapter[3,5] = "Clash Of Titans";
+		offlineChapterImage[3,5] = "SuperTriOval";
+		offlineMinClass[3,5] = 3;
+		offlineMinLevel[3,5] = 20;
+		offlineMinType[3,5] = "Driver";
+		offlineExactDriver[3,5] = "Harvick";
+		offlineAILevel[3,5] = 12;
+		offlineRaceLaps[3,5] = 201;
+		offlineStartingLap[3,5] = 192;
+		offlineTracklists[3,5] = "5";
+		offlinePrizes[3,5] = "Harvick23";
+		offlineSetPrizes[3,5] = "40";
+		eventChapterDescriptions[3,5] = "Mar 27, 2011. A brave pass around the outside of Johnson on the final lap sealed the win at Auto Club.";
+
+
+		offlineEventChapter[3,6] = "Win And In";
+		offlineChapterImage[3,6] = "Phoenix";
+		offlineMinClass[3,6] = 4;
+		offlineMinLevel[3,6] = 25;
+		offlineMinType[3,6] = "Driver";
+		offlineExactDriver[3,6] = "Harvick";
+		offlineAILevel[3,6] = 14;
+		offlineRaceLaps[3,6] = 313;
+		offlineStartingLap[3,6] = 292;
+		offlineTracklists[3,6] = "4";
+		offlinePrizes[3,6] = "Harvick22";
+		offlineSetPrizes[3,6] = "35";
+		eventChapterDescriptions[3,6] = "Nov 9, 2014. In the first elimination chase season, Harvick booked a championship 4 place at Phoenix.";
+
+		offlineEventChapter[3,7] = "Chase For The Cup";
+		offlineChapterImage[3,7] = "cup23livery4alt2";
+		offlineMinClass[3,7] = 4;
+		offlineMinLevel[3,7] = 30;
+		offlineMinType[3,7] = "Driver";
+		offlineExactDriver[3,7] = "Harvick";
+		offlineAILevel[3,7] = 15;
+		offlineRaceLaps[3,7] = 268;
+		offlineStartingLap[3,7] = 265;
+		offlineTracklists[3,7] = "21";
+		offlinePrizes[3,7] = "AltPaint";
+		offlineSetPrizes[3,7] = "cup23livery4alt2";
+		eventChapterDescriptions[3,7] = "Nov 16, 2014. Harvick soaked up the pressure of a late caution to win the championship in Miami.";
+
+
+		offlineEventChapter[3,8] = "Superman";
+		offlineChapterImage[3,8] = "dm2selivery4";
+		offlineMinClass[3,8] = 4;
+		offlineMinLevel[3,8] = 35;
+		offlineAILevel[3,8] = 15;
+		offlineSeries[3,8] = "dm2se";
+		offlineCustomCar[3,8] = "dm2selivery4";
+		offlineCustomFieldOrder[3,8] = "x,player,x,x,x,x,x,x,19";
+		offlineCustomField[3,8] = "dm2sePhoenix16";
+		offlineRaceLaps[3,8] = 313;
+		offlineStartingLap[3,8] = 311;
+		offlineMoment[3,8] = "Phoenix16";
+		offlineTracklists[3,8] = "4";
+		offlinePrizes[3,8] = "Harvick22";
+		offlineSetPrizes[3,8] = "40";
+		eventChapterDescriptions[3,8] = "Mar 13, 2016. A tense late restart on old tyres saw Harvick defend from a charging Edwards in Phoenix.";
+
+		offlineEventChapter[3,9] = "Cloud Nine";
+		offlineChapterImage[3,9] = "TinyOval";
+		offlineMinClass[3,9] = 4;
+		offlineMinLevel[3,9] = 40;
+		offlineMinType[3,9] = "Driver";
+		offlineExactDriver[3,9] = "Harvick";
+		offlineAILevel[3,9] = 15;
+		offlineRaceLaps[3,9] = 501;
+		offlineStartingLap[3,9] = 420;
+		offlineTracklists[3,9] = "8";
+		offlinePrizes[3,9] = "Harvick22";
+		offlineSetPrizes[3,9] = "40";
+		eventChapterDescriptions[3,9] = "Sep 19, 2020. Harvick took his 9th win of a season where the playoff format denied him a 2nd title.";
+
+
+		offlineEventChapter[3,10] = "Vintage Harvick";
+		offlineChapterImage[3,10] = "cup22livery4alt1";
+		offlineMinClass[3,10] = 3;
+		offlineMinLevel[3,10] = 45;
+		offlineSeries[3,10] = "cup22";
+		offlineCustomCar[3,10] = "cup22livery4";
+		offlineAILevel[3,10] = 15;
+		offlineRaceLaps[3,10] = 401;
+		offlineStartingLap[3,10] = 256;
+		offlineTracklists[3,10] = "9";
+		offlinePrizes[3,10] = "AltPaint";
+		offlineSetPrizes[3,10] = "cup22livery4alt1";
+		eventChapterDescriptions[3,10] = "Harvick grabbed his final ever race victory at Richmond in 2022 in typically dominant style.";
+
 
 		//Modern Era
 		offlineEventChapter[4,1] = "Chastain's Wallride";
@@ -630,20 +745,14 @@ public class EventData : MonoBehaviour
 			case "Earnhardt":
 				validDriver.Add("cup203");
 			break;
-			case "Harvick":
+			case "Harvick20":
+				validDriver.Add("cup204");
+			break;
+			case "Harvick22":
+				validDriver.Add("cup224");
+			break;
+			case "Harvick23":
 				validDriver.Add("cup234");
-			break;
-			case "Logano":
-				validDriver.Add("cup2222");
-			break;
-			case "Elliott":
-				validDriver.Add("cup229");
-			break;
-			case "Bell":
-				validDriver.Add("cup2220");
-			break;
-			case "Chastain":
-				validDriver.Add("cup221");
 			break;
 			
 			default:

@@ -308,7 +308,7 @@ public class StoreUI : MonoBehaviour
 		
 		starterPicks.Add("irl2420");
 		starterPicks.Add("irl2466");
-		starterPicks.Add("irl2431");
+		starterPicks.Add("cup2433");
 		starterPicks.Add("cup2451");
 		starterPicks.Add("cup2471");
 		starterPicks.Add("irl2344");
@@ -316,13 +316,11 @@ public class StoreUI : MonoBehaviour
 		starterPicks.Add("cup2291");
 		starterPicks.Add(77);
 		starterPicks.Add("dmc1528");
-		starterPicks.Add("dmc1551");
 		
 		for(int i=0;i<starterPicks.Count;i++){
 			GameObject tileInst = Instantiate(storeTile, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 			tileInst.transform.SetParent(starterTileFrame, false);
 			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
-			//tileInst.GetComponent<UIAnimate>().setCardDown();
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			TMPro.TMP_Text tileSeries = tileInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();

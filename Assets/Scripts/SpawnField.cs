@@ -69,9 +69,13 @@ public class SpawnField : MonoBehaviour {
 		startLane = Random.Range(1,3); //1 or 2
 		
 		if(PlayerPrefs.GetString("RaceType") == "Event"){
-			AILevel = EventData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			AILevel = EventData.offlineAILevel[currentSeries,currentSubseries];
 		} else {
-			AILevel = SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			if(PlayerPrefs.HasKey("CustomDifficulty" + currentSeries + "" + currentSubseries) == true){
+				AILevel = PlayerPrefs.GetInt("CustomDifficulty" + currentSeries + "" + currentSubseries);
+			} else {
+				AILevel = SeriesData.offlineAILevel[currentSeries,currentSubseries];
+			}
 		}
 		if(AILevel>15){
 			AILevel = 15;
@@ -334,7 +338,7 @@ public class SpawnField : MonoBehaviour {
 				string[] fieldOrderArr = customFieldOrderStr.Split(',');
 				customFieldOrder.Clear();
 				foreach(string pos in fieldOrderArr){
-					Debug.Log("Field Added: " + pos);
+					//Debug.Log("Field Added: " + pos);
 					customFieldOrder.Add(pos);
 				}
 				//Debug.Log("Field Size: " + customFieldOrder.Count);
@@ -652,14 +656,16 @@ public class SpawnField : MonoBehaviour {
 				slowCars.Add("34");
 				slowCars.Add("41");
 				break;
-			case "cup01HarvickGordon":
-				//fastCars.Add("29");
+			case "cup01MomentsAtlanta":
 				fastCars.Add("24");
 				break;
 			case "cup79MomentsDaytona":
 				fastCars.Add("1");
 				fastCars.Add("11");
 				slowCars.Add("43");
+				break;
+			case "dm2sePhoenix16":
+				fastCars.Add("19");
 				break;
 			default:
 				break;

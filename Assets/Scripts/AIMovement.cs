@@ -231,8 +231,16 @@ public class AIMovement : MonoBehaviour
 		if(PlayerPrefs.GetString("RaceType") == "Event"){
 			AILevel = (float)EventData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 		} else {
-			AILevel = (float)SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
-			//Debug.Log("AILevel: " + AILevel);
+			if(PlayerPrefs.HasKey("CustomDifficulty" + currentSeries + currentSubseries)){
+				if(PlayerPrefs.GetString("RaceType") == "Championship"){
+					AILevel = PlayerPrefs.GetInt("SeriesChampionship" + currentSeries + currentSubseries + "CustomDifficulty");
+				} else {
+					AILevel = PlayerPrefs.GetInt("CustomDifficulty" + currentSeries + currentSubseries);
+				}
+			} else {
+				AILevel = (float)SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
+			}
+			Debug.Log("AILevel: " + AILevel);
 		}
 		PlayerPrefs.SetInt("RaceAILevel", (int)AILevel);
 		
@@ -299,9 +307,11 @@ public class AIMovement : MonoBehaviour
 		//Debug.Log("#" + carNumber + " checking for alt paints");
 		if(!PlayerPrefs.HasKey("RaceAltPaintsChosen")){
 			altPaints = new List<string>();
-			altPaints.Add("0");
-			altPaints.Add("0");
-			altPaints.Add("0");
+			if(PlayerPrefs.GetString("CurrentCircuit") != "Darlington"){
+				altPaints.Add("0");
+				altPaints.Add("0");
+				altPaints.Add("0");
+			}
 			if(officialSeries == true){
 				AltPaints.loadAlts();
 				for(int i=1;i<10;i++){
@@ -320,6 +330,10 @@ public class AIMovement : MonoBehaviour
 						altPaints.Add(i.ToString());
 					}
 				}
+			}
+			//Add the stock paint if the array is still empty
+			if(altPaints.Count == 0){
+				altPaints.Add("0");
 			}
 			int altIndex = Random.Range(0,altPaints.Count);
 			//Debug.Log("#" + carNumber + " - " + altPaints.Count + " possible paints. Chose " + altIndex);
@@ -472,6 +486,11 @@ public class AIMovement : MonoBehaviour
 				startWreck();
 			}
 			
+			if((blownEngine == true)&&(isWrecking == false)){
+				Debug.Log("Contact - Blown Engine");
+				startWreck();
+			}
+			
 			//Join wreck
 			if(carHit.gameObject.tag == "AICar"){
 				if(isWrecking == true){
@@ -577,6 +596,11 @@ public class AIMovement : MonoBehaviour
 			antiGlitch++;
 		}
 		
+		if((blownEngine == true)&&(isWrecking == false)){
+			Debug.Log("Continued Contact - Blown Engine");
+			startWreck();
+		}
+		
 		//Join wreck
 		if(carHit.gameObject.tag == "AICar"){
 			bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
@@ -608,6 +632,11 @@ public class AIMovement : MonoBehaviour
 	void OnCollisionExit(Collision carHit) {
 		antiGlitch = 0;
 		particleDisableDelay = 20;
+		
+		if((blownEngine == true)&&(isWrecking == false)){
+			Debug.Log("Contact End - Blown Engine");
+			startWreck();
+		}
     }
 
     // Update is called once per frame
@@ -808,18 +837,19 @@ public class AIMovement : MonoBehaviour
 			//e.g. bump draft (1.0) = Max 265f
 			//e.g. close draft (2.0) = Max 255f
 			//e.g. distant draft (5.0) = Max 225f
-			if(engineTemp < (275f - (DraftCheckForward.distance * 10))){
-				//e.g. bump draft (1.0) = +0.02
-				//e.g. closer draft (1.5) = +0.01
-				//e.g. breathing draft (2.0) = +0.004
-				//e.g. distant draft (5.0) = +0.00117
-				engineTemp+= (0.005f / (DraftCheckForward.distance - 0.75f));
+			if(engineTemp < (275f - (DraftCheckForward.distance * 10f))){
+				//e.g. bump draft (1.0) = +0.033
+				//e.g. closer draft (1.5) = +0.0077
+				//e.g. close draft (2.0) = +0.0043
+				//e.g. distant draft (5.0) = +0.0012
+				engineTemp+= (0.005f / (DraftCheckForward.distance - 0.85f));
+				
 				if(engineTemp > (tempLimit - 2)){
 					coolEngine = true;
 				}
 			} else {
-				engineTemp-= (engineTemp - 210f) / 1250f;
-				if(engineTemp < (tempLimit - 7)){
+				engineTemp-= (engineTemp - 210f) / 1000f;
+				if(engineTemp < (tempLimit - (7 - wreckFreq))){
 					coolEngine = false;
 				}
 			}
@@ -880,9 +910,10 @@ public class AIMovement : MonoBehaviour
 			}
 
 			if(engineTemp > 210f){
-				//e.g. 260C engine = 0.033f cooling
-				//e.g. 220C engine = 0.0066f cooling
-				engineTemp-= (engineTemp - 210f) / 1250f;
+				//e.g. 260 temp & >1.5m away = -0.5
+				//e.g. 250 temp & >2.5m away = -0.04
+				//e.g. 225 temp & >5m away = -0.015
+				engineTemp-= (engineTemp - 210f) / 1000f;
 			}
 
 		}
@@ -2133,7 +2164,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		wreckRigidbody.mass = (-wreckDecel / 20) + 2 + wreckMassRand;
-		wreckRigidbody.angularDrag += 0.001f;
+		wreckRigidbody.angularDamping += 0.001f;
 		
 		//Prevent landing in the crowd
 		if(pos.x > 1.5f){

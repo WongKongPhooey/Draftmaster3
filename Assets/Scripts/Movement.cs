@@ -67,6 +67,9 @@ public class Movement : MonoBehaviour {
 
 	public static bool onTurn;
 	public static bool brakesOn;
+	
+	public static bool steering;
+	public static int steeringType;
 
 	//These can adjust per race series (e.g. Indy)
 	int seriesSpeedDiff;
@@ -407,6 +410,9 @@ public class Movement : MonoBehaviour {
 		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 
 		brakesOn = false;
+		steering = false;
+		steeringType = PlayerPrefs.GetInt("SteeringType");
+		
 		draftCounter = 0;
 		raceCounter = 0;
 
@@ -700,7 +706,18 @@ public class Movement : MonoBehaviour {
 		playerSpeed-=0.2f;
 	}
 	
+	void OnCollisionStay(Collision carHit) {
+		if((blownEngine == true)&&(isWrecking == false)){
+			startWreck();
+		}
+	}
+	
 	void OnCollisionExit (Collision carHit){
+		
+		if((blownEngine == true)&&(isWrecking == false)){
+			startWreck();
+		}
+		
 		if(isWrecking == true){
 			playerWreckDecel+= Random.Range(2f,5f);
 		}
@@ -893,14 +910,17 @@ public class Movement : MonoBehaviour {
 			//e.g. bump draft (1.0) = Max 265f
 			//e.g. close draft (2.0) = Max 255f
 			//e.g. distant draft (5.0) = Max 225f
-			if(engineTemp < (275f - (DraftCheck.distance * 10))){
-				//e.g. bump draft (1.0) = +0.033
-				//e.g. close draft (2.0) = +0.00434
-				//e.g. distant draft (5.0) = +0.0017
-				engineTemp+= (0.005f / (DraftCheck.distance - 0.85f));
+			if(engineTemp < (275f - (DraftCheck.distance * 10f))){
+				//e.g. bump draft (1.0) = +0.02
+				//e.g. closer draft (1.5) = +0.0066
+				//e.g. breathing draft (2.0) = +0.004
+				//e.g. distant draft (5.0) = +0.0012
+				engineTemp+= (0.005f / (DraftCheck.distance - 0.75f));
 			} else {
-				//e.g. 260 temp = -0.04
-				engineTemp-= (engineTemp - 210f) / 1250f;
+				//e.g. 260 temp & >1.5m away = -0.5
+				//e.g. 250 temp & >2.5m away = -0.04
+				//e.g. 225 temp & >5m away = -0.015
+				engineTemp-= (engineTemp - 210f) / 1000f;
 			}
 			if(engineTemp >= tempLimit){
 				blownEngine = true;
@@ -923,9 +943,10 @@ public class Movement : MonoBehaviour {
 				}
 			}
 			if(engineTemp > 210f){
-				//e.g. 260C engine = 0.033f cooling
-				//e.g. 220C engine = 0.0066f cooling
-				engineTemp-= (engineTemp - 210f) / 1200f;
+				//e.g. 260 temp = -0.5
+				//e.g. 250 temp = -0.04
+				//e.g. 225 temp = -0.015
+				engineTemp-= (engineTemp - 210f) / 1000f;
 			}
 			
 			//Overspeed disappears
@@ -995,6 +1016,17 @@ public class Movement : MonoBehaviour {
 				if(blownEngine == true){
 					startWreck();
 					brakesOn = false;
+				}
+			}
+		}
+		
+		if(steeringType == 1){
+			if(steering == true){
+				if(laneticker > 0){
+					laneticker = 2;
+				}
+				if(laneticker < 0){
+					laneticker = -2;
 				}
 			}
 		}
@@ -1147,6 +1179,7 @@ public class Movement : MonoBehaviour {
         }
 
         if (laneticker == 0){
+			steering = false;
 			//movingLane = false;
             backingOut = false;
         }
@@ -1177,18 +1210,36 @@ public class Movement : MonoBehaviour {
 	}
 	
 	public static void changeLaneLeft(){
-		if(laneticker == 0){
-			lane++;
-			laneticker = laneChangeDuration;
-			//Debug.Log("Goin' Left!");
+		steering = true;
+		if(steeringType == 0){
+			if(laneticker == 0){
+				lane++;
+				laneticker = laneChangeDuration;
+				//Debug.Log("Goin' Left!");
+			}
+		}
+		if(steeringType == 1){
+			laneticker = 2;
 		}
 	}
 	
 	public static void changeLaneRight(){
-		if(laneticker == 0){
-			lane--;
-			laneticker = -laneChangeDuration;
-			//Debug.Log("Goin' Right!");
+		steering = true;
+		if(steeringType == 0){
+			if(laneticker == 0){
+				lane--;
+				laneticker = -laneChangeDuration;
+				//Debug.Log("Goin' Right!");
+			}
+		}
+		if(steeringType == 1){
+			laneticker = -2;
+		}
+	}
+	
+	public static void releaseSteering(){
+		if(steeringType == 1){
+			steering = false;
 		}
 	}
 	
@@ -1576,7 +1627,7 @@ public class Movement : MonoBehaviour {
 		} else {
 			wreckRigidbody.mass = (-playerWreckDecel / 20) + 2;
 		}
-		wreckRigidbody.angularDrag += 0.001f;
+		wreckRigidbody.angularDamping += 0.001f;
 		
 		//Prevent landing in the crowd
 		if(this.gameObject.transform.position.x > 1.5f){

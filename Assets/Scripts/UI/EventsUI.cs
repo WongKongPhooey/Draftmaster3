@@ -19,6 +19,9 @@ public class EventsUI : MonoBehaviour
 	public GameObject rewardCar;
 	public GameObject entryReqsPopup;
 	public GameObject reqListText;
+	
+	public GameObject alertPopup;
+	
 	public static int subMenuId;
 	public static int subEventId;
 	string seriesPrefix;
@@ -143,9 +146,7 @@ public class EventsUI : MonoBehaviour
 			eventRewardsBtn.SetActive(false);
 			rewardCollected.SetActive(true);
 			tileInst.GetComponent<EventUIFunctions>().rewardCollected = true;
-			//Debug.Log("BestFinishPosition" + subMenuId + "" + i + "EVENT1 : " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
-		} else {
-			//Debug.Log("Best Finish on " + subMenuId + "/" + i + ": " + PlayerPrefs.GetInt("BestFinishPosition" + subMenuId + "" + i + "EVENT1"));
+			checkRewardCollected(subMenuId,i);
 		}
 			
 		if(EventData.offlineEventType[subMenuId] == "Progression"){
@@ -166,7 +167,7 @@ public class EventsUI : MonoBehaviour
 		}
 		//Moments show newest first
 		if(subMenuId == 4){
-			for(int i=9;i>=0;i--){
+			for(int i=14;i>=0;i--){
 				//Skip through the empty chapters
 				if(EventData.offlineEventChapter[subMenuId,i] == null){
 					continue;
@@ -174,7 +175,7 @@ public class EventsUI : MonoBehaviour
 				loadSubEvent(i,true);
 			}
 		} else {
-			for(int i=0;i<=9;i++){
+			for(int i=0;i<=14;i++){
 				if(EventData.offlineEventChapter[subMenuId,i] == null){
 					continue;
 				}
@@ -184,8 +185,6 @@ public class EventsUI : MonoBehaviour
 	}
 
 	public void loadEvent(){
-		Debug.Log("Load Event " + subMenuId + "," + subEventId + "");
-		
 		PlayerPrefs.SetString("SeriesTrackList",EventData.offlineTracklists[subMenuId,subEventId]);
 		PlayerPrefs.SetString("CurrentSeriesIndex", subMenuId + "" + subEventId + "EVENT");
 		PlayerPrefs.SetString("CurrentSeriesName",EventData.offlineEventChapter[subMenuId,subEventId]);
@@ -216,11 +215,11 @@ public class EventsUI : MonoBehaviour
 		}
 		if(EventData.offlineStartingLap[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("StartingLap", EventData.offlineStartingLap[subMenuId,subEventId]);
-			Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
+			//Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
 		}
 		if(EventData.offlineRaceLaps[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("CustomRaceLaps", EventData.offlineRaceLaps[subMenuId,subEventId]);
-			Debug.Log("Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
+			Debug.Log("Event Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
 		}
 		if(EventData.offlineModifier[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);
@@ -245,6 +244,9 @@ public class EventsUI : MonoBehaviour
 			break;
 			case "Car":
 				restrictionValue += "Exact Car: #" + EventData.offlineExactCar[subMenu,subEvent];
+			break;
+			case "Driver":
+				restrictionValue += "Exact Driver: " + EventData.offlineExactDriver[subMenu,subEvent];
 			break;
 			case "Type":
 				restrictionValue += "Driver Type: " + EventData.offlineMinDriverType[subMenu,subEvent];
@@ -271,6 +273,9 @@ public class EventsUI : MonoBehaviour
 			case "Car":
 				restrictionValue = EventData.offlineExactCar[subMenu,subEvent].ToString();
 			break;
+			case "Driver":
+				restrictionValue = EventData.offlineExactDriver[subMenu,subEvent];
+			break;
 			case "Type":
 				restrictionValue = EventData.offlineMinDriverType[subMenu,subEvent];
 			break;
@@ -293,6 +298,39 @@ public class EventsUI : MonoBehaviour
 		}
 	}
 
+	public void checkRewardCollected(int subMenu, int subEvent){
+		string setPrize = "";
+		if(EventData.offlinePrizes[subMenu,subEvent] == "AltPaint"){
+			setPrize = EventData.offlineSetPrizes[subMenu,subEvent];
+		} else {
+			return;
+		}
+		
+		//Win an alt paint rather than car parts
+		//setPrize format example: cup20livery48alt2	
+		string sanitisedAlt = setPrize.Replace("livery","");
+		sanitisedAlt = sanitisedAlt.Replace("alt","Alt");
+		
+		//Sanitised example: cup2048Alt2Unlocked	
+		string extractedCarNum = setPrize.Split('y').Last();
+		string extractedAltNum = setPrize.Split('t').Last();
+		
+		extractedCarNum = extractedCarNum.Substring(0, extractedCarNum.IndexOf("alt")).Trim();
+		int parsedNum = int.Parse(extractedCarNum);
+		int parsedAlt = int.Parse(extractedAltNum);
+		
+		if(PlayerPrefs.GetInt(sanitisedAlt + "Unlocked") == 1){
+			return;
+		}
+
+		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
+		if(AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] != null){
+			alertPopup.GetComponent<AlertManager>().showPopup("Unclaimed Rewards Collected","New " + AltPaints.cup2020AltPaintDriver[parsedNum,parsedAlt] + " Alt Paint Unlocked!", setPrize);
+		} else {
+			alertPopup.GetComponent<AlertManager>().showPopup("Unclaimed Rewards Collected","New " + DriverNames.cup2020Names[parsedNum] + " Alt Paint Unlocked!", setPrize);
+		}
+	}
+
 	public void showEntryReqsPopup(int subMenu, int subEvent){
 		entryReqsPopup.SetActive(true);
 		reqListText = GameObject.Find("RequirementsList");
@@ -309,6 +347,7 @@ public class EventsUI : MonoBehaviour
 		string rewardsCode = EventData.offlinePrizes[subMenu,subEvent];
 		if(EventData.offlinePrizes[subMenu,subEvent] != "AltPaint"){
 			//Generate the list of possible rewards
+			Debug.Log("Show Rewards for: " + rewardsCode);
 			rewardsList = EventData.ListRewards(rewardsCode);
 		} else {
 			//Throw the alt paint into the list instead

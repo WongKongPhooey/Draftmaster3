@@ -30,6 +30,7 @@ public class GarageUI : MonoBehaviour
 	string seriesTeam;
 	string seriesManu;
 	int seriesCar;
+	string seriesDriver;
 	string seriesDriverType;
 	int seriesRarity;
 	
@@ -157,7 +158,6 @@ public class GarageUI : MonoBehaviour
 		starterCars();
 		
 		chosenOption = null;
-		loadTransferPanels();
 	}
 	
 	public void loadAllCars(){
@@ -201,7 +201,7 @@ public class GarageUI : MonoBehaviour
 			tileInst.GetComponent<GarageUIFunctions>().carNum = i;
 			tileInst.GetComponent<GarageUIFunctions>().modCar = false;
 			tileInst.transform.SetParent(tileFrame, false);
-			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
+			tileInst.GetComponent<UIAnimate>().animOffset = i;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
@@ -434,7 +434,7 @@ public class GarageUI : MonoBehaviour
 			tileInst.GetComponent<GarageUIFunctions>().carNum = carNum;
 			tileInst.GetComponent<GarageUIFunctions>().modCar = true;
 			tileInst.transform.SetParent(tileFrame, false);
-			tileInst.GetComponent<UIAnimate>().animOffset = i+1;
+			tileInst.GetComponent<UIAnimate>().animOffset = i*5;
 			tileInst.GetComponent<UIAnimate>().scaleIn();
 			
 			Text carTeamUI = tileInst.transform.GetChild(0).GetComponent<Text>();
@@ -587,10 +587,12 @@ public class GarageUI : MonoBehaviour
 			
 		seriesTeam = "";
 		seriesManu = "";
+		seriesDriver = "";
 		seriesCar = 999;
 		seriesDriverType = "";
 		seriesRarity = 0;
 		
+		Debug.Log("Restriction Type: " + restrictionType + " - " + restrictionValue);
 		switch(restrictionType){
 			case "Team":
 				seriesTeam = restrictionValue;
@@ -601,6 +603,9 @@ public class GarageUI : MonoBehaviour
 				break;
 			case "Car":
 				seriesCar = int.Parse(restrictionValue);
+				break;
+			case "Driver":
+				seriesDriver = restrictionValue;
 				break;
 			case "Rarity":
 				seriesRarity = int.Parse(restrictionValue);
@@ -626,6 +631,9 @@ public class GarageUI : MonoBehaviour
 		if((seriesCar != 999)&&(car != seriesCar)){
 			return false;
 		}
+		if((seriesDriver != "")&&(DriverNames.getName(series, car) != seriesDriver)){
+			return false;
+		}
 		if((seriesDriverType != "")&&(DriverNames.getType(series, car) != seriesDriverType)){
 			return false;
 		}
@@ -647,6 +655,9 @@ public class GarageUI : MonoBehaviour
 		if((seriesCar != 999)&&(car != seriesCar)){
 			return false;
 		}
+		if((seriesDriver != "")&&(ModData.getName(series, car) != seriesDriver)){
+			return false;
+		}
 		if((seriesDriverType != "")&&(ModData.getType(series, car) != seriesDriverType)){
 			return false;
 		}
@@ -659,19 +670,22 @@ public class GarageUI : MonoBehaviour
 	public string showRestrictions(){
 		string restriction = "";
 		if(seriesTeam != ""){
-			restriction += "Team " + seriesTeam + "\n";
+			restriction += "Team - " + seriesTeam + "\n";
 		}
 		if(seriesManu != ""){
-			restriction += "Manufacturer " + seriesManu + "\n";
+			restriction += "Manufacturer - " + seriesManu + "\n";
 		}
 		if(seriesCar != 999){
-			restriction += "Car " + seriesCar + "\n";
+			restriction += "Car - #" + seriesCar + "\n";
+		}
+		if(seriesDriver != ""){
+			restriction += "Driver - " + seriesDriver + "\n";
 		}
 		if(seriesDriverType != ""){
-			restriction += "Type " + seriesDriverType + "\n";
+			restriction += "Type - " + seriesDriverType + "\n";
 		}
 		if(seriesRarity != 0){
-			restriction += "Rarity " + seriesRarity + "\n";
+			restriction += "Rarity - " + seriesRarity + "\n";
 		}
 		int minClass = PlayerPrefs.GetInt("SubseriesMinClass");
 		restriction += "Minimum Class " + classAbbr(minClass);
@@ -1356,6 +1370,7 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void showGaragePopup(string seriesPrefix, int carNum, int carClass, int carRarity){
+		loadTransferPanels();
 		openCarNum = carNum;
 		//Load this here to get the paints from the params passed in
 		loadTransferPanel("Paint",paintPanel);
@@ -1637,19 +1652,28 @@ public class GarageUI : MonoBehaviour
 }
 
 [Serializable]
+public class Player {
+	public string playerLevel;
+	public string playerGears;
+	public string playerMoney;
+	public string playerStarts;
+	public string playerWins;
+	public string playerGarageValue;
+	public string transferTokens;
+}
+
+[Serializable]
+public class Series {
+    public string seriesName;
+    public List<Driver> drivers;
+	public int totalCars;
+}
+
+[Serializable]
 public class Driver {
     public string carNo;
     public string carUnlocked;
     public string carClass;
     public string carGears;
     public string altPaints;
-}
-
-[Serializable]
-public class Series {
-	public string playerLevel;
-	public int totalCars;
-	public string transferTokens;
-    public string seriesName;
-    public List<Driver> drivers;
 }

@@ -31,6 +31,8 @@ public class MainMenuUI : MonoBehaviour {
 	public static bool showInfoBox;
 	public static string infoBox;
 	
+	public static string latestVersion;
+	
 	public AudioSource crowdNoise;
 	public static int audioOn;
 	
@@ -40,10 +42,12 @@ public class MainMenuUI : MonoBehaviour {
 	public GameObject moneyLabel;
 	public GameObject versionLabel;
 	public GameObject updateLabel;
+	TMPro.TMP_Text updateLabelUILabel;
 	
 	public GameObject loginBtn;
 	public GameObject loginBtnLabel;
 	
+	public GameObject timeTrialTileUI;
 	public GameObject timeTrialDescUI;	
 	TMPro.TMP_Text timeTrialDescUILabel;
 	
@@ -136,6 +140,9 @@ public class MainMenuUI : MonoBehaviour {
         if(PlayerPrefs.HasKey("RaceType")){
 			PlayerPrefs.DeleteKey("RaceType");
 		}
+		if(PlayerPrefs.HasKey("CurrentModSeries")){
+			PlayerPrefs.DeleteKey("CurrentModSeries");
+		}
 		if(PlayerPrefs.HasKey("RaceMoment")){
 			PlayerPrefs.DeleteKey("RaceMoment");
 		}
@@ -221,14 +228,16 @@ public class MainMenuUI : MonoBehaviour {
 		versionLabel.GetComponent<TMPro.TMP_Text>().text = "v" + Application.version;
 		
 		updateLabel = GameObject.Find("VersionNotice");
-		string latestVersion = PlayerPrefs.GetString("LatestVersion");
+		updateLabelUILabel = updateLabel.GetComponent<TMPro.TMP_Text>();
+		latestVersion = PlayerPrefs.GetString("LatestVersion");
 		if(latestVersion != Application.version){
 			bool latestUpdate = PlayFabManager.isLatestVersion();
 			if(latestUpdate == false){
-				updateLabel.GetComponent<TMPro.TMP_Text>().text = "Latest Is v" + latestVersion + "";
+				updateLabelUILabel.text = "Latest Is v" + latestVersion + "";
 			}
 		}
 		
+		timeTrialTileUI = GameObject.Find("LiveTimeTrial");
 		
 		timeTrialDescUI = GameObject.Find("TimeTrialDesc");
 		timeTrialDescUILabel = timeTrialDescUI.GetComponent<TMPro.TMP_Text>();
@@ -253,8 +262,6 @@ public class MainMenuUI : MonoBehaviour {
 		//Reset the game to imitate new users
 		#if UNITY_EDITOR
 		//PlayerPrefs.DeleteAll();
-		//PlayerPrefs.SetInt("Gears",1000);
-		//PlayerPrefs.SetInt("Level", 45);
 		#endif
 		
 		if(!PlayerPrefs.HasKey("NewUser")){
@@ -305,29 +312,48 @@ public class MainMenuUI : MonoBehaviour {
 		}
 		
         //loadCurrentChampionshipInfo();
-		checkForPlayfabUpdates();
+		StartCoroutine(checkForPlayfabUpdates());
     }
 
-	void checkForPlayfabUpdates(){
-		if(PlayerPrefs.GetString("LiveTimeTrial") == ""){
-			if(!PlayerPrefs.HasKey("PlayerUsername")){
-				timeTrialDescUILabel.text = "Register a free account to use the online features of the game. This includes the weekly Time Trial leaderboard, and live Challenges!";
-			} else {
-				if(PlayFabManager.isLatestVersion() == false){
-					timeTrialDescUILabel.text = "You must be on the latest version of the game (v" + PlayerPrefs.GetString("LatestVersion") + ") to take part in the Live Time Trial";
+	IEnumerator checkForPlayfabUpdates(){
+		
+		while(true){
+			if(PlayerPrefs.GetString("LiveTimeTrial") == ""){
+				if(!PlayerPrefs.HasKey("PlayerUsername")){
+					timeTrialDescUILabel.text = "Register a free account to use the online features of the game. This includes the weekly Time Trial leaderboard, and live Challenges!";
 				} else {
-					timeTrialDescUILabel.text = "There is No Active Time Trial";
+					if(PlayFabManager.isLatestVersion() == false){
+						timeTrialDescUILabel.text = "You must be on the latest version of the game (v" + PlayerPrefs.GetString("LatestVersion") + ") to take part in the Live Time Trial";
+					} else {
+						timeTrialDescUILabel.text = "There is No Active Time Trial";
+					}
+				}
+			} else {
+				if(PlayerPrefs.GetInt("LiveTimeTrialActive") == 1){
+					timeTrialTileUI.GetComponent<Image>().color = new Color32(0,200,0,255);
+					timeTrialDescUILabel.text = "Set your fastest lap at " + PlayerPrefs.GetString("LiveTimeTrial") + " in any race series with an official Cup car this week to enter. Top 5 win prizes!";
+				} else {
+					timeTrialDescUILabel.text = "The " + PlayerPrefs.GetString("LiveTimeTrial") + " Time Trial has ended. Check the results here to see your ranking!";
 				}
 			}
-		} else {
-			timeTrialDescUILabel.text = "Set your fastest lap in any race series with an official Cup car at " + PlayerPrefs.GetString("LiveTimeTrial") + " this week to enter. Top 5 win prizes!";
-		}
-		
-		if(PlayerPrefs.GetString("MomentName") == ""){
-			liveChallengeDescUILabel.text = "";
-		} else {
-			liveChallengeDescUILabel.text = "Live Moments Challenge\n" + PlayerPrefs.GetString("MomentName") + "";
-		}
+			
+			if(PlayerPrefs.GetString("MomentName") == ""){
+				liveChallengeDescUILabel.text = "";
+			} else {
+				liveChallengeDescUILabel.text = "Live Moments Challenge\n" + PlayerPrefs.GetString("MomentName") + "";
+			}
+			
+			latestVersion = PlayerPrefs.GetString("LatestVersion");
+			bool latestUpdate = PlayFabManager.isLatestVersion();
+			//Debug.Log("Checking for updated versions.. " + latestUpdate);
+			if(latestUpdate == false){
+				updateLabelUILabel.text = "Latest Is v" + latestVersion + "";
+			} else {
+				updateLabelUILabel.text = "";
+			}
+			
+			yield return new WaitForSeconds(1f);
+		}	
 	}
 
 	void loadCurrentChampionshipInfo(){
@@ -354,7 +380,7 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("FPSLimit", 2);
 		PlayerPrefs.SetInt("TransferTokens", 1);
 		PlayerPrefs.SetInt("TransfersLeft", 1);
-		PlayerPrefs.SetString("TargetVersion", Application.version);
+		PlayerPrefs.SetString("LatestVersion", Application.version);
 		alertPopup.GetComponent<AlertManager>().showPopup("Hey Rookie! You Need A Ride?", "Some of the drivers have let you use their cars to get you started!", "cup22livery78");
 		Debug.Log("Open popup");
 		PlayerPrefs.SetInt("NewUser",1);

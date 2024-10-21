@@ -214,13 +214,25 @@ public class RaceResultsUI : MonoBehaviour
 			TMPro.TMP_Text resultTime = resultInst.transform.GetChild(5).GetComponent<TMPro.TMP_Text>();
 			
 			resultPos.text = (i+1).ToString();
-			if (Resources.Load<Texture2D>("cup20num" + carNum) != null) {
-				resultNumber.texture = Resources.Load<Texture2D>("cup20num" + carNum);
+
+			int visualCarNum = carNum;
+			if(officialSeries == true){
+				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + carNum)){
+					visualCarNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + carNum);
+				}
+			} else {
+				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,carNum))){
+					visualCarNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,carNum));
+				}
+			}
+			if (Resources.Load<Texture2D>("cup20num" + visualCarNum) != null) {
+				resultNumber.texture = Resources.Load<Texture2D>("cup20num" + visualCarNum);
 				resultFallbackNumber.enabled = false;
 			} else {
 				resultNumber.enabled = false;
-				resultFallbackNumber.text = carNum.ToString();
+				resultFallbackNumber.text = visualCarNum.ToString();
 			}
+				
 			if(officialSeries == true){
 				resultDriver.text = DriverNames.getName(seriesPrefix,carNum);
 				resultManu.texture = Resources.Load<Texture2D>("Icons/manu-" + DriverNames.getManufacturer(seriesPrefix, carNum));
@@ -243,7 +255,7 @@ public class RaceResultsUI : MonoBehaviour
 					if(carLap > 1){
 						resultTime.text = "+" + carLap + " LAPS";
 					} else {
-						resultTime.text = "+ 1 LAP";
+						resultTime.text = "+1 LAP";
 					}
 				} else {
 					//Cars that continued after the player retired, mark as 1 lap down

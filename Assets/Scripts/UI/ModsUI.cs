@@ -88,25 +88,41 @@ public class ModsUI : MonoBehaviour {
 				try {
 					modJsonRaw = loadJson(directory.Name);
 				} catch(Exception e){
+					Debug.Log(e.Message);
 					modJsonRaw = directory.Name;
 				}
 				
-				string modFullName;
-				string modAuthor;
-				string modJsonValid;
+				string modFullName = "?";
+				string modAuthor = "?";
+				string modContent = "C0,P0";
+				string modJsonValid = "OK";
 				int totalCars = 0;
 				
 				//Check the json is valid
 				try {
-					modCarset modJson = JsonUtility.FromJson<modCarset>(modJsonRaw);
-					modFullName = stringLimit(modJson.modName,8);
-					modAuthor = stringLimit(modJson.modAuthor,14);					
+					modSet modJson = JsonUtility.FromJson<modSet>(modJsonRaw);
+					if(modJson.modName != null){
+						modFullName = stringLimit(modJson.modName,8);
+					}
+					if(modJson.modAuthor != null){
+						modAuthor = stringLimit(modJson.modAuthor,14);
+					}
+					if(modJson.drivers.Any() != false){
+						modContent = modJson.drivers.Count + " Cars";
+						Debug.Log(modJson.series);
+					}
+					if(modJson.series.Any() != false){
+						modContent = modJson.drivers.Count + "C+" + modJson.series.Count + "S";
+						Debug.Log(modJson.series);
+					}
 					modJsonValid = "OK";
 					
 					modList += directory.Name + "|" + modFullName;
 				} catch(Exception e){
+					Debug.Log(directory.Name + e.Message);
 					modFullName = "?";
 					modAuthor = "?";
+					modContent = "C0,P0";
 					modJsonValid = "Error";
 				}
 				
@@ -118,21 +134,15 @@ public class ModsUI : MonoBehaviour {
 				
 				TMPro.TMP_Text modName = modInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text modAuthorTxt = modInst.transform.GetChild(1).GetComponent<TMPro.TMP_Text>();
-				TMPro.TMP_Text modSize = modInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
+				TMPro.TMP_Text modContentTxt = modInst.transform.GetChild(2).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text modJsonTxt = modInst.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 				TMPro.TMP_Text modFolder = modInst.transform.GetChild(4).GetComponent<TMPro.TMP_Text>();
 				
 				modName.text = modFullName;
 				modAuthorTxt.text = modAuthor;
+				modContentTxt.text = modContent;
 				modJsonTxt.text = modJsonValid;
 				modFolder.text = directory.Name;
-				
-				int modCars=0;
-				foreach (var file in directory.GetFiles("*.png")){
-					modCars++;
-				}
-				//Debug.Log(modCars);
-				modSize.text = modCars.ToString();
 				
 				i++;
             }
@@ -149,9 +159,10 @@ public class ModsUI : MonoBehaviour {
 		string json = System.IO.File.ReadAllText(directoryPath + "/" + folderName + ".json");
 
 		try{
-			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+			modSet modJson = JsonUtility.FromJson<modSet>(json);
 			string modName = modJson.modName;
 		} catch(Exception e){
+			Debug.Log(e.Message);
 			string jsonValid = "Error";
 		}
 		
@@ -197,6 +208,11 @@ public class ModsUI : MonoBehaviour {
 		GameObject promptInputValue = GameObject.Find(inputName);
 		string folderName = promptInputValue.GetComponent<TMPro.TMP_Text>().text;
 		folderName = folderName.ToLower();
+		if(folderName.Length < 5){
+			for(int i=folderName.Length;i<=5;i++){
+				folderName+="x";
+			}
+		}
 		if(folderName.Length > 5){
 			folderName = folderName.Substring(0, 5);
 		}
@@ -270,7 +286,7 @@ public class ModsUI : MonoBehaviour {
 		string modFolder = null;
 		pickedJSON = null;
 		try{
-			modCarset modJson = JsonUtility.FromJson<modCarset>(json);
+			modSet modJson = JsonUtility.FromJson<modSet>(json);
 			modName = modJson.modName;
 			modFolder = modJson.modFolder;
 		} catch(Exception e){

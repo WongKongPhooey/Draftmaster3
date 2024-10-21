@@ -31,7 +31,7 @@ public class DriverNames : MonoBehaviour {
 	public static Dictionary<string, float> numXScale = new Dictionary<string, float>();
 	public static Dictionary<string, int> numXRotation = new Dictionary<string, int>();
 
-	public static string[] allCarsets = new string[11];
+	public static string[] allCarsets = new string[12];
 	public static string[] allWinnableCarsets = new string[8];
 	public static string[] allManufacturers = new string[7];
 
@@ -70,6 +70,12 @@ public class DriverNames : MonoBehaviour {
 	public static string[] irl2024Manufacturer = new string[101];
 	public static int[] irl2024Rarity = new int[101];
 	public static string[] irl2024Types = new string[101];
+	
+	public static string[] dm2seNames = new string[101];
+	public static string[] dm2seTeams = new string[101];
+	public static string[] dm2seManufacturer = new string[101];
+	public static int[] dm2seRarity = new int[101];
+	public static string[] dm2seTypes = new string[101];
 	
 	public static string[] cup2001Names = new string[101];
 	public static string[] cup2001Teams = new string[101];
@@ -124,6 +130,7 @@ public class DriverNames : MonoBehaviour {
 		cup24();
 		irl23();
 		irl24();
+		dm2se();
 		cup01();
 		cup03();
 		cup79();
@@ -143,6 +150,7 @@ public class DriverNames : MonoBehaviour {
 		series.Add("cup24");
 		series.Add("irl23");
 		series.Add("irl24");
+		series.Add("dm2se");
 		series.Add("cup01");
 		series.Add("cup03");
 		series.Add("cup79");
@@ -195,6 +203,12 @@ public class DriverNames : MonoBehaviour {
 			allManufacturer.Add("irl24", irl2024Manufacturer);
 			allRarity.Add("irl24", irl2024Rarity);
 			allTypes.Add("irl24", irl2024Types);
+			
+			allNames.Add("dm2se", dm2seNames);
+			allTeams.Add("dm2se", dm2seTeams);
+			allManufacturer.Add("dm2se", dm2seManufacturer);
+			allRarity.Add("dm2se", dm2seRarity);
+			allTypes.Add("dm2se", dm2seTypes);
 			
 			allNames.Add("cup01", cup2001Names);
 			allTeams.Add("cup01", cup2001Teams);
@@ -260,6 +274,7 @@ public class DriverNames : MonoBehaviour {
 		allCarsets[8] = "irc00";
 		allCarsets[9] = "irl23";
 		allCarsets[10] = "irl24";
+		allCarsets[11] = "dm2se";
 	}
 	
 	public static void listManufacturers(){
@@ -288,51 +303,77 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Abel");
 		driverPool.Add("Ahmed");
 		driverPool.Add("Alan");
-		driverPool.Add("Ankrum");
 		driverPool.Add("Alfredo");
 		driverPool.Add("Allgaier");
 		driverPool.Add("Ambrose");
 		driverPool.Add("Anderson");
 		driverPool.Add("Andretti");
+		driverPool.Add("Ankrum");
 		driverPool.Add("Annunziata");
+		driverPool.Add("Antonelli");
 		driverPool.Add("Arias");
 		driverPool.Add("Armstrong");
+		driverPool.Add("Aron");
 		driverPool.Add("Balcaen");
-		driverPool.Add("Berry");
+		driverPool.Add("Barnard");
+		driverPool.Add("Bearman");
+		driverPool.Add("Benavides");
+		driverPool.Add("Bird");
 		driverPool.Add("Blomqvist");
 		driverPool.Add("Bogle");
 		driverPool.Add("Bollman");
 		driverPool.Add("Borneman");
+		driverPool.Add("Bortoleto");
+		driverPool.Add("Boschung");
 		driverPool.Add("Boyd");
 		driverPool.Add("Brabham");
 		driverPool.Add("Breidinger");
 		driverPool.Add("Brown");
 		driverPool.Add("Buchanan.Jr");
+		driverPool.Add("Buemi");
 		driverPool.Add("Burton");
 		driverPool.Add("Button");
+		driverPool.Add("Calderon");
 		driverPool.Add("Carroll");
 		driverPool.Add("Caruth");
+		driverPool.Add("Cassidy");
 		driverPool.Add("Caudell");
 		driverPool.Add("Chadwick");
 		driverPool.Add("Chick");
 		driverPool.Add("Clements");
 		driverPool.Add("Clubb");
+		driverPool.Add("Colapinto");
+		driverPool.Add("Collet");
+		driverPool.Add("Cordeel");
 		driverPool.Add("Corr");
+		driverPool.Add("Correa");
 		driverPool.Add("Cosentino");
 		driverPool.Add("Costner");
+		driverPool.Add("Courtney");
 		driverPool.Add("Crafton");
 		driverPool.Add("Cram");
+		driverPool.Add("Crawford");
 		driverPool.Add("Creed");
 		driverPool.Add("Currey");
+		driverPool.Add("Da Costa");
 		driverPool.Add("Daly");
 		driverPool.Add("Dart");
+		driverPool.Add("Daruvala");
 		driverPool.Add("Davenport");
 		driverPool.Add("Dauzat");
+		driverPool.Add("Davison");
+		driverPool.Add("De Pasquale");
+		driverPool.Add("De Vries");
 		driverPool.Add("Dean");
 		driverPool.Add("Decker");
 		driverPool.Add("Deegan");
+		driverPool.Add("Dennis");
 		driverPool.Add("Deshautelle");
+		driverPool.Add("Di Grassi");
 		driverPool.Add("Doheny");
+		driverPool.Add("Doohan");
+		driverPool.Add("Drugovich");
+		driverPool.Add("Durksen");
 		driverPool.Add("Dye");
 		driverPool.Add("J.Earnhardt");
 		driverPool.Add("Earnhardt.Jr");
@@ -341,43 +382,57 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Emerling");
 		driverPool.Add("Enfinger");
 		driverPool.Add("Erickson");
+		driverPool.Add("Eriksson");
+		driverPool.Add("Evans");
 		driverPool.Add("Farre");
 		driverPool.Add("Fartuch");
+		driverPool.Add("Feeney");
+		driverPool.Add("Fenestraz");
 		driverPool.Add("Fenhaus");
 		driverPool.Add("Finch");
 		driverPool.Add("Foster");
 		driverPool.Add("Francis.Jr");
 		driverPool.Add("Franzoni");
 		driverPool.Add("Friesen");
+		driverPool.Add("Frijns");
 		driverPool.Add("Frost");
+		driverPool.Add("Fullwood");
 		driverPool.Add("Garcia");
 		driverPool.Add("Garrett");
 		driverPool.Add("Garvie");
 		driverPool.Add("Gaulding");
 		driverPool.Add("Gibson");
 		driverPool.Add("Gold");
+		driverPool.Add("Golding");
 		driverPool.Add("Graf Jr");
 		driverPool.Add("Tan.Gray");
 		driverPool.Add("Tay.Gray");
 		driverPool.Add("Green");
+		driverPool.Add("Gunther");
+		driverPool.Add("Hadjar");
+		driverPool.Add("Hauger");
 		driverPool.Add("Haugeberg");
 		driverPool.Add("Hawksworth");
+		driverPool.Add("Hazelwood");
 		driverPool.Add("Heim");
+		driverPool.Add("Heimgartner");
 		driverPool.Add("Hemric");
 		driverPool.Add("Herbst");
 		driverPool.Add("Herrin");
 		driverPool.Add("Hezemans");
-		driverPool.Add("A.Hill");
+		driverPool.Add("C.Hill");
 		driverPool.Add("Hillis.Jr");
 		driverPool.Add("Hingorani");
 		driverPool.Add("Hocevar");
 		driverPool.Add("Holmes");
 		driverPool.Add("Honeyman");
 		driverPool.Add("Howard");
+		driverPool.Add("Hughes");
 		driverPool.Add("Hutchens");
 		driverPool.Add("Huddlestone");
 		driverPool.Add("Huff");
 		driverPool.Add("Iest");
+		driverPool.Add("Iwasa");
 		driverPool.Add("Jankowiak");
 		driverPool.Add("Joanides");
 		driverPool.Add("I.Johnson");
@@ -385,10 +440,12 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("B.Jones");
 		driverPool.Add("C.Jones");
 		driverPool.Add("J.Jones");
+		driverPool.Add("M.Jones");
 		driverPool.Add("Kaminski");
 		driverPool.Add("Keller");
 		driverPool.Add("Kennealy");
 		driverPool.Add("Kiemele");
+		driverPool.Add("King");
 		driverPool.Add("Kitzmiller");
 		driverPool.Add("Kligerman");
 		driverPool.Add("Koga");
@@ -397,6 +454,10 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Lally");
 		driverPool.Add("Laster");
 		driverPool.Add("Latifi");
+		driverPool.Add("Lawson");
+		driverPool.Add("Le Brocq");
+		driverPool.Add("A.Leclerc");
+		driverPool.Add("C.Leclerc");
 		driverPool.Add("Leitz");
 		driverPool.Add("Lewis");
 		driverPool.Add("Lindh");
@@ -405,47 +466,66 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Mack");
 		driverPool.Add("Maggio");
 		driverPool.Add("Magras");
+		driverPool.Add("Maini");
 		driverPool.Add("Majeski");
+		driverPool.Add("Maloney");
 		driverPool.Add("Maples");
-		driverPool.Add("Mayer");
+		driverPool.Add("Marti");
+		driverPool.Add("Martins");
+		driverPool.Add("Mason");
 		driverPool.Add("Massey");
+		driverPool.Add("Mayer");
 		driverPool.Add("McElrea");
 		driverPool.Add("McMurray");
 		driverPool.Add("Melton");
 		driverPool.Add("Mills");
 		driverPool.Add("Misuraca");
+		driverPool.Add("Miyata");
 		driverPool.Add("Moffitt");
 		driverPool.Add("Monroe");
 		driverPool.Add("Moore");
+		driverPool.Add("Mortara");
 		driverPool.Add("Mosack");
+		driverPool.Add("Mostert");
 		driverPool.Add("A.Moyer");
 		driverPool.Add("S.Moyer");
+		driverPool.Add("Muller");
 		driverPool.Add("Mullins");
 		driverPool.Add("Muniz");
+		driverPool.Add("Murray");
 		driverPool.Add("Nannini");
 		driverPool.Add("Er.Nascimento");
 		driverPool.Add("Et.Nascimento");
+		driverPool.Add("Nato");
 		driverPool.Add("Nemechek");
 		driverPool.Add("Newman");
 		driverPool.Add("Nicolopoulos");
+		driverPool.Add("Nissany");
+		driverPool.Add("Novalak");
 		driverPool.Add("OLeary");
+		driverPool.Add("OSullivan");
 		driverPool.Add("Parsons");
 		driverPool.Add("Patrick");
+		driverPool.Add("Payne");
 		driverPool.Add("PJ.Pedroncelli");
 		driverPool.Add("Pa.Pedroncelli");
+		driverPool.Add("Percat");
 		driverPool.Add("Perez De Lara");
 		driverPool.Add("Pierson");
 		driverPool.Add("Pizzi");
 		driverPool.Add("Pompa");
 		driverPool.Add("Poole");
 		driverPool.Add("Porto");
+		driverPool.Add("Pourchaire");
 		driverPool.Add("Purdy");
 		driverPool.Add("Quarterley");
 		driverPool.Add("Ragan");
 		driverPool.Add("Rasmussen");
+		driverPool.Add("Randle");
 		driverPool.Add("Ta.Reif");
 		driverPool.Add("Ty.Reif");
 		driverPool.Add("Retzlaff");
+		driverPool.Add("Reynolds");
 		driverPool.Add("Rhodes");
 		driverPool.Add("Richmond");
 		driverPool.Add("Riggs");
@@ -456,6 +536,7 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Roper");
 		driverPool.Add("Rose");
 		driverPool.Add("Roulette");
+		driverPool.Add("Rowland");
 		driverPool.Add("Ruggiero");
 		driverPool.Add("Said");
 		driverPool.Add("Salas");
@@ -464,9 +545,11 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Sauter");
 		driverPool.Add("Sawalich");
 		driverPool.Add("Scott");
+		driverPool.Add("Sette Camara");
 		driverPool.Add("Shearer");
 		driverPool.Add("Sieg");
 		driverPool.Add("Simpson");
+		driverPool.Add("Slade");
 		driverPool.Add("B.Smith");
 		driverPool.Add("C.Smith");
 		driverPool.Add("D.Smith");
@@ -476,21 +559,33 @@ public class DriverNames : MonoBehaviour {
 		driverPool.Add("Smotherman");
 		driverPool.Add("Souza");
 		driverPool.Add("Sowery");
+		driverPool.Add("Stanaway");
+		driverPool.Add("Stanek");
 		driverPool.Add("Sundaramoorthy");
 		driverPool.Add("Taylor");
 		driverPool.Add("Thompson");
+		driverPool.Add("Ticktum");
 		driverPool.Add("Tinkle");
 		driverPool.Add("Tuttle");
 		driverPool.Add("Van Alst");
+		driverPool.Add("Van Der Linde");
 		driverPool.Add("Van Gisbergen");
+		driverPool.Add("Vandoorne");
 		driverPool.Add("Vargas");
+		driverPool.Add("Vergne");
+		driverPool.Add("Verschoor");
+		driverPool.Add("Vesti");
+		driverPool.Add("Villagomez");
 		driverPool.Add("Vips");
 		driverPool.Add("Waters");
+		driverPool.Add("Wehrlein");
 		driverPool.Add("White");
 		driverPool.Add("Williams");
 		driverPool.Add("Wilson");
+		driverPool.Add("Winterbottom");
 		driverPool.Add("Wood");
 		driverPool.Add("Wright");
+		driverPool.Add("Zendeli");
 		driverPool.Add("Zilisch");
 
 		foreach(KeyValuePair<string, string[]> seriesDrivers in allNames){
@@ -569,10 +664,12 @@ public class DriverNames : MonoBehaviour {
 	}
 	
 	
-	public static string getName(string seriesPrefix, int index){
+	public static string getName(string seriesPrefix, int index, bool includeCustom = true){
 		loadData();
-		if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
-			return PlayerPrefs.GetString("CustomDriver" + seriesPrefix + index);
+		if(includeCustom == true){
+			if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + index)){
+				return PlayerPrefs.GetString("CustomDriver" + seriesPrefix + index);
+			}
 		}
 		if(allNames.ContainsKey(seriesPrefix)){
 			string[] names = allNames[seriesPrefix];
@@ -647,7 +744,7 @@ public class DriverNames : MonoBehaviour {
 			}
 		}
 	}
-	
+
 	public static string getType(string seriesPrefix, int index){
 		loadData();
 		if(allRarity.ContainsKey(seriesPrefix)){
@@ -959,7 +1056,7 @@ public class DriverNames : MonoBehaviour {
 		cup2020Names[53] = "Davison";
 		cup2020Names[54] = "Yeley";
 		cup2020Names[62] = "Gaughan";
-		cup2020Names[66] = "Hill";
+		cup2020Names[66] = "T.Hill";
 		cup2020Names[74] = "Sorenson";
 		cup2020Names[77] = "Chastain";
 		cup2020Names[78] = "Smithley";
@@ -1227,7 +1324,7 @@ public class DriverNames : MonoBehaviour {
 		cup2022Names[53] = "Smithley";
 		cup2022Names[55] = "Yeley";
 		cup2022Names[62] = "Gragson";
-		cup2022Names[66] = "Hill";
+		cup2022Names[66] = "T.Hill";
 		cup2022Names[77] = "Cassill";
 		cup2022Names[78] = "McLeod";
 		cup2022Names[91] = "Raikkonen";
@@ -1461,7 +1558,7 @@ public class DriverNames : MonoBehaviour {
 		cup2023Names[50] = "Daly";
 		cup2023Names[51] = "Crafton";
 		cup2023Names[54] = "Gibbs";
-		cup2023Names[62] = "Hill";
+		cup2023Names[62] = "T.Hill";
 		cup2023Names[67] = "Pastrana";
 		cup2023Names[77] = "T.Dillon";
 		cup2023Names[78] = "McLeod";
@@ -1674,6 +1771,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Names[23] = "Wallace";
 		cup2024Names[24] = "Byron";
 		cup2024Names[31] = "Hemric";
+		cup2024Names[33] = "A.Hill";
 		cup2024Names[34] = "McDowell";
 		cup2024Names[38] = "Gilliland";
 		cup2024Names[41] = "Preece";
@@ -1688,6 +1786,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Names[54] = "Gibbs";
 		cup2024Names[60] = "Ragan";
 		cup2024Names[62] = "Alfredo";
+		cup2024Names[66] = "T.Hill";
 		cup2024Names[71] = "Z.Smith";
 		cup2024Names[77] = "Hocevar";
 		cup2024Names[78] = "McLeod";
@@ -1718,6 +1817,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Teams[23] = "23X";
 		cup2024Teams[24] = "HEN";
 		cup2024Teams[31] = "KAU";
+		cup2024Teams[33] = "RCR";
 		cup2024Teams[34] = "FRM";
 		cup2024Teams[38] = "FRM";
 		cup2024Teams[41] = "SHR";
@@ -1732,6 +1832,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Teams[54] = "JGR";
 		cup2024Teams[60] = "RFK";
 		cup2024Teams[62] = "IND";
+		cup2024Teams[66] = "IND";
 		cup2024Teams[71] = "SPI";
 		cup2024Teams[77] = "SPI";
 		cup2024Teams[78] = "IND";
@@ -1762,6 +1863,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Manufacturer[23] = "TYT";
 		cup2024Manufacturer[24] = "CHV";
 		cup2024Manufacturer[31] = "CHV";
+		cup2024Manufacturer[33] = "CHV";
 		cup2024Manufacturer[34] = "FRD";
 		cup2024Manufacturer[38] = "FRD";
 		cup2024Manufacturer[41] = "FRD";
@@ -1776,6 +1878,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Manufacturer[54] = "TYT";
 		cup2024Manufacturer[60] = "FRD";
 		cup2024Manufacturer[62] = "CHV";
+		cup2024Manufacturer[66] = "FRD";
 		cup2024Manufacturer[71] = "CHV";
 		cup2024Manufacturer[77] = "CHV";
 		cup2024Manufacturer[78] = "CHV";
@@ -1806,6 +1909,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Types[23] = "Strategist";
 		cup2024Types[24] = "Dominator";
 		cup2024Types[31] = "Strategist";
+		cup2024Types[33] = "Rookie";
 		cup2024Types[34] = "Strategist";
 		cup2024Types[38] = "Blocker";
 		cup2024Types[41] = "Strategist";
@@ -1820,6 +1924,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Types[54] = "Intimidator";
 		cup2024Types[60] = "Strategist";
 		cup2024Types[62] = "Strategist";
+		cup2024Types[66] = "Blocker";
 		cup2024Types[71] = "Rookie";
 		cup2024Types[77] = "Rookie";
 		cup2024Types[78] = "Blocker";
@@ -1850,6 +1955,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Rarity[23] = 2;
 		cup2024Rarity[24] = 4;
 		cup2024Rarity[31] = 1;
+		cup2024Rarity[33] = 1;
 		cup2024Rarity[34] = 2;
 		cup2024Rarity[38] = 1;
 		cup2024Rarity[41] = 1;
@@ -1864,6 +1970,7 @@ public class DriverNames : MonoBehaviour {
 		cup2024Rarity[54] = 2;
 		cup2024Rarity[60] = 1;
 		cup2024Rarity[62] = 1;
+		cup2024Rarity[66] = 1;
 		cup2024Rarity[71] = 1;
 		cup2024Rarity[77] = 1;
 		cup2024Rarity[78] = 1;
@@ -2061,7 +2168,7 @@ public class DriverNames : MonoBehaviour {
 		irl2024Names[3] = "Mclaughlin";
 		irl2024Names[4] = "Simpson";
 		irl2024Names[5] = "O Ward";
-		irl2024Names[6] = "Pourchaire";
+		irl2024Names[6] = "Siegel";
 		irl2024Names[7] = "Rossi";
 		irl2024Names[8] = "Lundqvist";
 		irl2024Names[9] = "Dixon";
@@ -2233,6 +2340,23 @@ public class DriverNames : MonoBehaviour {
 		irl2024Rarity[98] = 1;
 	}
 
+	public static void dm2se(){
+
+		dm2seNames[4] = "Harvick";
+		dm2seNames[19] = "Edwards";
+		
+		dm2seTeams[4] = "SHR";
+		dm2seTeams[19] = "JGR";
+		
+		dm2seManufacturer[4] = "CHV";
+		dm2seManufacturer[19] = "TYT";
+		
+		dm2seTypes[4] = "Closer";
+		dm2seTypes[19] = "Intimidator";
+
+		dm2seRarity[4] = 4;
+		dm2seRarity[19] = 2;
+	}
 	public static void cup01(){
 
 		cup2001Names[24] = "Gordon";

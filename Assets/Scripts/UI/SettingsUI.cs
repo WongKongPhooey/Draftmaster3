@@ -12,6 +12,7 @@ public class SettingsUI : MonoBehaviour
 	public GameObject cautionsSetting;
 	public GameObject qualitySetting;
 	public GameObject overtimeSetting;
+	public GameObject steeringSetting;
 	
 	Slider audioSlider;
 	Slider commentarySlider;
@@ -20,6 +21,7 @@ public class SettingsUI : MonoBehaviour
 	Slider cautionsSlider;
 	Slider qualitySlider;
 	Slider overtimeSlider;
+	Slider steeringSlider;
 	
 	TMPro.TMP_Text audioSliderLabel;
 	TMPro.TMP_Text commentarySliderLabel;
@@ -28,6 +30,7 @@ public class SettingsUI : MonoBehaviour
 	TMPro.TMP_Text cautionsSliderLabel;
 	TMPro.TMP_Text qualitySliderLabel;
 	TMPro.TMP_Text overtimeSliderLabel;
+	TMPro.TMP_Text steeringSliderLabel;
 	
     // Start is called before the first frame update
     void Start(){
@@ -40,6 +43,7 @@ public class SettingsUI : MonoBehaviour
 		cautionsSlider = cautionsSetting.transform.GetChild(1).GetComponent<Slider>();
 		qualitySlider = qualitySetting.transform.GetChild(1).GetComponent<Slider>();
 		overtimeSlider = overtimeSetting.transform.GetChild(1).GetComponent<Slider>();
+		//steeringSlider = steeringSetting.transform.GetChild(1).GetComponent<Slider>();
 
 		audioSliderLabel = audioSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		commentarySliderLabel = commentarySlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
@@ -48,6 +52,7 @@ public class SettingsUI : MonoBehaviour
 		cautionsSliderLabel = cautionsSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		qualitySliderLabel = qualitySlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 		overtimeSliderLabel = overtimeSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
+		//steeringSliderLabel = steeringSlider.transform.GetChild(3).GetComponent<TMPro.TMP_Text>();
 
 		audioSlider.value = PlayerPrefs.GetInt("AudioOn");
 		commentarySlider.value = PlayerPrefs.GetInt("CommsOn");
@@ -56,6 +61,7 @@ public class SettingsUI : MonoBehaviour
 		cautionsSlider.value = PlayerPrefs.GetInt("WreckFreq");
 		qualitySlider.value = PlayerPrefs.GetInt("FPSLimit");
 		overtimeSlider.value = PlayerPrefs.GetInt("MaxOvertime");
+		//steeringSlider.value = PlayerPrefs.GetInt("SteeringType");
 
 		audioSliderLabel.text = SliderValueDesc("Audio",audioSlider.value);
 		commentarySliderLabel.text = SliderValueDesc("Comms",commentarySlider.value);
@@ -64,6 +70,7 @@ public class SettingsUI : MonoBehaviour
 		cautionsSliderLabel.text = SliderValueDesc("Cautions",cautionsSlider.value);
 		qualitySliderLabel.text = SliderValueDesc("FPSLimit",qualitySlider.value);
 		overtimeSliderLabel.text = SliderValueDesc("MaxOvertime",overtimeSlider.value);
+		//steeringSliderLabel.text = SliderValueDesc("SteeringType",steeringSlider.value);
     }
 
 	public void SaveAudioSlider(){
@@ -98,6 +105,11 @@ public class SettingsUI : MonoBehaviour
 	public void SaveOvertimeSlider(){
 		PlayerPrefs.SetInt("MaxOvertime",(int)overtimeSlider.value);
 		overtimeSliderLabel.text = SliderValueDesc("MaxOvertime",overtimeSlider.value);
+	}
+	
+	public void SaveSteeringSlider(){
+		PlayerPrefs.SetInt("SteeringType",(int)steeringSlider.value);
+		steeringSliderLabel.text = SliderValueDesc("SteeringType",steeringSlider.value);
 	}
 
 	string SliderValueDesc(string sliderName, float sliderValue){
@@ -195,6 +207,19 @@ public class SettingsUI : MonoBehaviour
 						break;
 				}
 				break;
+			case "SteeringType":
+				switch(sliderValue){
+					case 0:
+						desc = "Fixed";
+						break;
+					case 1:
+						desc = "Free";
+						break;
+					default:
+						desc = "Fixed";
+						break;
+				}
+				break;
 			default:
 				break;
 		}
@@ -224,6 +249,9 @@ public class SettingsUI : MonoBehaviour
 		}
 		if(!PlayerPrefs.HasKey("FPSLimit")){
 			PlayerPrefs.SetInt("FPSLimit",2);
+		}
+		if(!PlayerPrefs.HasKey("SteeringType")){
+			PlayerPrefs.SetInt("SteeringType",0);
 		}
 	}
 }

@@ -82,6 +82,7 @@ public class CameraRotate : MonoBehaviour {
 	public static int trackSpeedOffset;
 	static string circuit;
 	static string liveTimeTrial;
+	static int liveTimeTrialActive;
 	float kerbBlur;
 	
 	public GameObject cautionSummaryMenu;
@@ -191,22 +192,27 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		raceEnd = PlayerPrefs.GetInt("RaceLaps");
+		Debug.Log("Race Laps: " + raceEnd);
 		if(PlayerPrefs.HasKey("CustomRaceLaps")){
 			if(PlayerPrefs.GetString("RaceType") != "Event"){
 				//This should not be here..
 				PlayerPrefs.DeleteKey("CustomRaceLaps");
+				//Debug.Log("Not An Event.. Delete");
 			} else {
 				//Set custom race length for events
 				if(PlayerPrefs.GetInt("CustomRaceLaps") > 0){
+					//Debug.Log("Race Laps: " + PlayerPrefs.GetInt("CustomRaceLaps"));
 					raceEnd = PlayerPrefs.GetInt("CustomRaceLaps") - 1;
 				}
 			}
 		}
+		Debug.Log("Lap " + lap + " of " + raceEnd);
 		
 		circuit = PlayerPrefs.GetString("CurrentCircuit");
 		liveTimeTrial = PlayerPrefs.GetString("LiveTimeTrial");
+		liveTimeTrialActive = PlayerPrefs.GetInt("LiveTimeTrialActive");
 		isLiveTimeTrial = false;
-		if(circuit == liveTimeTrial){
+		if((circuit == liveTimeTrial)&&(liveTimeTrialActive == 1)){
 			isLiveTimeTrial = true;
 		}
 		
@@ -241,7 +247,6 @@ public class CameraRotate : MonoBehaviour {
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			lap = PlayerPrefs.GetInt("CautionLap") + 1;
 			//Debug.Log("Restarting on lap " + lap);
-			raceEnd = PlayerPrefs.GetInt("RaceLaps");
 			if(lap >= (raceEnd - 1)){
 				//Overtime
 				raceEnd = lap+2;
@@ -311,7 +316,7 @@ public class CameraRotate : MonoBehaviour {
 		if(gamePausedLate == true){
 			if((cautionSummaryMenu.activeSelf == true)||
 			   (RaceHUD.raceOver == true)){
-				Debug.Log("Time Paused For Caution (Camera Rotate)");
+				//Debug.Log("Time Paused For Caution (Camera Rotate)");
 				Time.timeScale = 0.0f;
 				return;
 			}
@@ -672,12 +677,12 @@ public class CameraRotate : MonoBehaviour {
 		fastestRaceLapInt = 100000 - (int)Mathf.Round(fastestRaceLap * 1000);
 		raceLapRecordInt = (int)Mathf.Round((raceLapRecord - trackSpeedOffset) * 1000);
 		if(raceLapRecordInt < 0){
-			Debug.Log("No complete lap set.. bail");
+			//Debug.Log("No complete lap set.. bail");
 			raceLapRecordInt = 0;
 			return;
 		}
 		if(fastestRaceLapInt < 0){
-			Debug.Log("No fastest lap set.. bail");
+			//Debug.Log("No fastest lap set.. bail");
 			fastestRaceLapInt = 0;
 			return;
 		}
@@ -694,7 +699,6 @@ public class CameraRotate : MonoBehaviour {
 		if(isLiveTimeTrial == true){
 			//Double checked
 			if(officialSeries == true){
-				PlayFabManager.SendLeaderboard(raceLapRecordInt, "LiveTimeTrialR184","");
 				PlayFabManager.SendLeaderboard(fastestRaceLapInt, "FastestLapChallenge","");
 				//This seems to be working
 				//Debug.Log("Sent Leaderboards (Reusable)");

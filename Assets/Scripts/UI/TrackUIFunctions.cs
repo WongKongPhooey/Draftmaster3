@@ -17,10 +17,12 @@ public class TrackUIFunctions : MonoBehaviour
 		PlayerPrefs.SetString("TrackLocation", TrackData.trackNames[trackId]);
 		TrackUI.trackCodeName = trackCodeName;
 		GameObject.Find("Main").GetComponent<TrackData>().loadTrackData(trackCodeName);
+		PlayerPrefs.SetInt("RaceLaps",TrackData.getTrackLaps(trackId));
+		//Debug.Log("Race Laps set to: " + TrackData.getTrackLaps(trackId));
 		if(PlayerPrefs.HasKey("RaceFastestLap" + trackCodeName)){
 			PlayerPrefs.DeleteKey("RaceFastestLap" + trackCodeName);
 		}
-		TrackUI.startRace(trackCodeName);
+		TrackUI.startRace(trackId);
 	}
 
     // Update is called once per frame

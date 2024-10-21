@@ -56,6 +56,11 @@ public class MomentsCriteria : MonoBehaviour
 					momentsCriteria.Add("PlayerWrecks","Yes");
 					momentsCriteria.Add("WinningMargin","0.02");
 				break;
+				case "Phoenix16":
+					momentsCriteria.Add("FinishPositionLowerThan","1");
+					momentsCriteria.Add("CarAvoidsWreck","19");
+					momentsCriteria.Add("WinningMargin","0.01");
+				break;
 				case "ChastainWallride":
 					momentsCriteria.Add("WreckStartLocationStraight","2");
 					momentsCriteria.Add("WreckStartPositionHigherThan","9");
@@ -198,11 +203,11 @@ public class MomentsCriteria : MonoBehaviour
 				momentComplete = true;
 				challengeWon.SetActive(true);
 				PlayerPrefs.SetInt("MomentComplete",1);
-				Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
+				//Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
 			} else {
 				momentComplete = false;
 				challengeLost.SetActive(true);
-				Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
+				//Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
 				TMPro.TMP_Text challengeLostMessage = GameObject.Find("ChallengeEndMessage").GetComponent<TMPro.TMP_Text>();
 				challengeLostMessage.text = "Almost.. (" + completeCriteria + "/" + totalCriteria + ")";
 			}
