@@ -1627,7 +1627,7 @@ public class Movement : MonoBehaviour {
 		} else {
 			wreckRigidbody.mass = (-playerWreckDecel / 20) + 2;
 		}
-		wreckRigidbody.angularDrag += 0.001f;
+		wreckRigidbody.angularDamping += 0.001f;
 		
 		//Prevent landing in the crowd
 		if(this.gameObject.transform.position.x > 1.5f){

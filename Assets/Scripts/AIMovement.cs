@@ -2164,7 +2164,7 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		wreckRigidbody.mass = (-wreckDecel / 20) + 2 + wreckMassRand;
-		wreckRigidbody.angularDrag += 0.001f;
+		wreckRigidbody.angularDamping += 0.001f;
 		
 		//Prevent landing in the crowd
 		if(pos.x > 1.5f){
