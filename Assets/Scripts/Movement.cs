@@ -49,7 +49,6 @@ public class Movement : MonoBehaviour {
 	float customStrengthFactor;
 
 	int circuitLanes;
-	float apronLineX;
 
 	string seriesPrefix;
 	bool officialSeries;
@@ -405,9 +404,6 @@ public class Movement : MonoBehaviour {
 		}
 				
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
-		
-		apronLineX = -2.7f;
-		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 
 		brakesOn = false;
 		steering = false;
@@ -1183,15 +1179,6 @@ public class Movement : MonoBehaviour {
 			//movingLane = false;
             backingOut = false;
         }
-		
-		if(vehicle.transform.position.x <= apronLineX){
-			//Debug.Log("Track Limits!");
-			if (backingOut == false) {
-				backingOut = true;
-			}
-			laneticker = -laneChangeDuration + laneticker;
-			lane--;
-		}
 		
 		if(vehicle.transform.position.x >= 1.35f){
 			if (backingOut == false) {

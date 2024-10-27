@@ -59,7 +59,7 @@ public class SpawnField : MonoBehaviour {
 		}
 		//Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
 
-		gridLanes = 2;
+		gridLanes = 1;
 		
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
 		
@@ -130,8 +130,9 @@ public class SpawnField : MonoBehaviour {
 			fieldSize = 43;
 		}
 		
-		float gridRowsCalc = fieldSize * 0.5f;
-		
+		//float gridRowsCalc = fieldSize * 0.5f;
+		float gridRowsCalc = fieldSize;
+
 		gridRows = Mathf.CeilToInt(gridRowsCalc);
 		
 		//Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);

@@ -53,7 +53,6 @@ public class MPMovement : NetworkBehaviour
 	float customStrengthFactor;
 
 	int circuitLanes;
-	float apronLineX;
 
 	string seriesPrefix;
 	bool officialSeries;
@@ -307,9 +306,6 @@ public class MPMovement : NetworkBehaviour
 		}
 				
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
-		
-		apronLineX = -2.7f;
-		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
 
 		brakesOn = false;
 		steering = false;
@@ -879,15 +875,6 @@ public class MPMovement : NetworkBehaviour
             backingOut = false;
         }
 		
-		/*if(vehicle.transform.position.x <= apronLineX){
-			//Debug.Log("Track Limits!");
-			if (backingOut == false) {
-				backingOut = true;
-			}
-			laneticker = -laneChangeDuration + laneticker;
-			lane--;
-		}*/
-		
 		/*if(vehicle.transform.position.x >= 1.35f){
 			if (backingOut == false) {
 				backingOut = true;
@@ -917,7 +904,7 @@ public class MPMovement : NetworkBehaviour
 			lane--;
 			laneticker = -laneChangeDuration;
 		}
-		Debug.Log("Go Right ");
+		Debug.Log("Go Right");
 	}
 	
 	public void holdBrake(){

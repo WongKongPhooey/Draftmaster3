@@ -90,7 +90,6 @@ public class AIMovement : MonoBehaviour
 	static float coolOffSpace;
 	static float coolOffInv;
 	int circuitLanes;
-	float apronLineX;
 
 	public string carName;
 	public int carNum;
@@ -412,10 +411,6 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
-		
-		apronLineX = -2.7f;
-		apronLineX = 1.2f - ((circuitLanes - 1) * 1.2f) - 0.3f;
-		//Debug.Log("Apron X: " + apronLineX);
 
 		AIVariTopSpeed = AITopSpeed + (carRarity / 4f) + (AILevel / 4f) + (laneInv / 4f);
 
@@ -1273,20 +1268,6 @@ public class AIMovement : MonoBehaviour
             backingOut = false;
         }
 		
-		if(pos.x <= apronLineX){
-			//Debug.Log("Track Limits!");
-			if (backingOut == false) {
-				backingOut = true;
-				#if UNITY_EDITOR
-				if(debugPlayer == true){
-					//Debug.Log(AICar.name + " hit the apron! Moving back up ");
-				}
-				#endif
-			}
-			laneticker = -laneChangeDuration + laneticker;
-			lane--;
-		}
-		
 		if(pos.x >= 1.35f){
 			//Debug.Log("Wall!");
 			if (backingOut == false) {
@@ -1494,7 +1475,7 @@ public class AIMovement : MonoBehaviour
 					direction = "Right";
 				}
 			}
-			if((leftSideClr == true)&&(pos.x > (apronLineX + 1f))){
+			if(leftSideClr == true){
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
 					//Debug.Log(AICar.name + " try pass opportunity (left)");
@@ -1903,11 +1884,17 @@ public class AIMovement : MonoBehaviour
 				//Debug.Log("Go Left!");
 				laneticker = laneChangeDuration;
 				lane++;
+				if(debugPlayer == true){
+					Debug.Log(AICar.name + " moves lane to " + lane);
+				}
 			} else {
 				if(direction == "Right"){
 					//Debug.Log("Go Right!");
 					laneticker = -laneChangeDuration;
 					lane--;
+					if(debugPlayer == true){
+						Debug.Log(AICar.name + " moves lane to " + lane);
+					}
 				}
 			}
 			laneRest = Random.Range(200, 2000);
