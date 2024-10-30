@@ -69,7 +69,7 @@ public class EnviroToggle : MonoBehaviour {
 						} else {
 							pitLengthPadding = pitLanePadding;
 						}
-						if(((CameraRotate.turn == 4)&&(CameraRotate.cornercounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.cornercounter > CameraRotate.turnLength[4] - pitLengthPadding))){
+						if(((CameraRotate.turn == 4)&&(CameraRotate.turnCounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.turnCounter > CameraRotate.turnLength[4] - pitLengthPadding))){
 							toggleElement(true);
 						} else {
 							toggleElement(false);
@@ -88,7 +88,7 @@ public class EnviroToggle : MonoBehaviour {
 							toggleElement(false);
 						}
 					} else {
-						if((onFinishLine == true)&&(CameraRotate.straight == 1)&&(CameraRotate.straightcounter == 0)){
+						if((onFinishLine == true)&&(CameraRotate.straight == 1)&&(CameraRotate.straightCounter == 0)){
 							toggleElement(true);
 						} else {
 							toggleElement(false);
@@ -122,8 +122,8 @@ public class EnviroToggle : MonoBehaviour {
 			} else {
 				pitLengthPadding = pitLanePadding;
 			}
-			if(((CameraRotate.turn == 4)&&(CameraRotate.cornercounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.cornercounter < ((CameraRotate.turnAngle[3] * CameraRotate.turnLength[3]) - pitLengthPadding)))){
-				//Debug.Log("Corner Count:" + CameraRotate.cornercounter + ", Padding:" + pitLengthPadding);
+			if(((CameraRotate.turn == 4)&&(CameraRotate.turnCounter > pitLengthPadding))||((CameraRotate.turn == 1)&&(CameraRotate.turnCounter < ((CameraRotate.turnAngle[3] * CameraRotate.turnLength[3]) - pitLengthPadding)))){
+				//Debug.Log("Corner Count:" + CameraRotate.turnCounter + ", Padding:" + pitLengthPadding);
 				toggleElement(true);
 			} else {
 				toggleElement(false);

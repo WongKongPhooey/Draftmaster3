@@ -142,6 +142,8 @@ public class AIMovement : MonoBehaviour
     float laneFactor;
     public int laneBias;
 
+	public bool idealLine = true;
+
     int wobbleCount;
     int wobblePos;
     int wobbleTarget;
@@ -156,6 +158,8 @@ public class AIMovement : MonoBehaviour
 
 	public static int cautionSetting;
 
+	public static TrackInfo currentTrackInfo;
+
 	//Debug tool
 	public bool debugPlayer;
 
@@ -169,6 +173,8 @@ public class AIMovement : MonoBehaviour
 		tick=0;
 		logicCycle = 20;
 		
+		currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
+
 		pos = transform.position;
 		
 		AISpeed = 203f;
@@ -1237,6 +1243,18 @@ public class AIMovement : MonoBehaviour
 
 	void updateMovement() {
 		
+		//if(idealLine == true){
+		float xPos = AICar.transform.position.x;
+		if(CameraRotate.onTurn == true){
+			if(xPos > -3.2f){
+				AICar.transform.Translate(new Vector3((-0.02f), 0, 0),Space.World);
+			}
+		} else {
+			if(xPos < 1.2f){
+				AICar.transform.Translate(new Vector3((0.02f), 0, 0),Space.World);
+			}
+		}
+
 		//How fast can you switch lanes
         if (laneticker > 0){
 			bool leftCastHit = checkRaycast("LeftCorners", 0.51f);
@@ -1793,7 +1811,7 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public bool leftSideClear(float maxDist = 1f){
-		
+
 		RaycastHit checkFrontLeft = raycastHits[2];
 		RaycastHit checkRearLeft = raycastHits[3];
         bool hitLaneLeft = ((checkFrontLeft.distance > 0)&&(checkFrontLeft.distance < maxDist))||((checkRearLeft.distance > 0)&&(checkRearLeft.distance < maxDist));
@@ -1879,6 +1897,9 @@ public class AIMovement : MonoBehaviour
 	
 	public void changeLane(string direction){
 		
+		//Force no overtakes
+		return;
+
 		if(laneticker == 0){
 			if(direction == "Left"){
 				//Debug.Log("Go Left!");

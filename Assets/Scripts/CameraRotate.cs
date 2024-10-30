@@ -34,27 +34,25 @@ public class CameraRotate : MonoBehaviour {
 	public static bool acknowledgeWreck;
 	public static bool overtime;
 
-	public static int[] straightLength = new int[6];
-	public static int[] turnLength = new int[6];
-	public static int[] turnAngle = new int[6];
-	public static int[] turnDir = new int[6];
+	public static int[] straightLength, turnLength, turnAngle;
+	public static float[] turnArc;
 	public static float turnSpeed;
 	public static int trackLength;
 	public static int totalTurns;
 	public static int currentLapLength;
-	public static int lengthcounter;
-	public static int straightcounter;
-	public static int cornercounter;
+	public static float straightCounter;
+	public static float turnCounter;
+	public static float frameRotation;
 	public static float carSpeedOffset;
 	public static int cornerSpeed;
 	public static int cornerMidpoint;
 	public static float gearedAccel;
 	
 	public static float maxCornerFactor;
-	public static float wreckingCornerCounter;
+	public static float wreckingturnCounter;
 	
 	public static bool onTurn;
-	
+	public static bool crossedLine = false;
 	public static int lap;
 	public static int cautionLap;
 	public static int cautionProb;
@@ -92,6 +90,8 @@ public class CameraRotate : MonoBehaviour {
 	public static bool gamePausedLate;
 	
 	public static bool momentChecks;
+
+	public static TrackInfo currentTrackInfo;
 	
 	void Awake(){
 		
@@ -116,47 +116,34 @@ public class CameraRotate : MonoBehaviour {
 		customFrameRate = -1;
 
 		MainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
-		MainCam.orthographicSize = 7.0f;
+		MainCam.orthographicSize = 8.0f;
 		if(PlayerPrefs.HasKey("CameraZoom")){
 			MainCam.orthographicSize = 10.0f - (PlayerPrefs.GetInt("CameraZoom") * 2);
 		}
 		
-		cornerKerbRenderer = cornerKerb.GetComponent<Renderer>();
+		currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 		
 		kerbBlur = 0.5f;
-		straightcounter = 0;
-		straightLength[0] = PlayerPrefs.GetInt("StraightLength1");
-		straightLength[1] = PlayerPrefs.GetInt("StraightLength2");
-		straightLength[2] = PlayerPrefs.GetInt("StraightLength3");
-		straightLength[3] = PlayerPrefs.GetInt("StraightLength4");
-		straightLength[4] = PlayerPrefs.GetInt("StraightLength5");
-		straightLength[5] = PlayerPrefs.GetInt("StraightLength6");
-		turnLength[0] = PlayerPrefs.GetInt("TurnLength1");
-		turnLength[1] = PlayerPrefs.GetInt("TurnLength2");
-		turnLength[2] = PlayerPrefs.GetInt("TurnLength3");
-		turnLength[3] = PlayerPrefs.GetInt("TurnLength4");
-		turnLength[4] = PlayerPrefs.GetInt("TurnLength5");
-		turnLength[5] = PlayerPrefs.GetInt("TurnLength6");
-		turnAngle[0] = PlayerPrefs.GetInt("TurnAngle1");
-		turnAngle[1] = PlayerPrefs.GetInt("TurnAngle2");
-		turnAngle[2] = PlayerPrefs.GetInt("TurnAngle3");
-		turnAngle[3] = PlayerPrefs.GetInt("TurnAngle4");
-		turnAngle[4] = PlayerPrefs.GetInt("TurnAngle5");
-		turnAngle[5] = PlayerPrefs.GetInt("TurnAngle6");
-		turnDir[0] = 0;
-		turnDir[1] = 0;
-		turnDir[2] = 0;
-		turnDir[3] = 0;
-		turnDir[4] = 0;
-		turnDir[5] = 0;
+		straightCounter = 0;
+
+		totalTurns = currentTrackInfo.totalTurns;
+		straightLength = new int[totalTurns];
+		turnLength = new int[totalTurns];
+		turnAngle = new int[totalTurns];
+		for(int i=0;i<totalTurns;i++){
+			Debug.Log("Straight Length " + i + ": " + currentTrackInfo.straightLengths[i]);
+			straightLength[i] = currentTrackInfo.straightLengths[i];
+			turnLength[i] = currentTrackInfo.turnLengths[i];
+			turnAngle[i] = currentTrackInfo.turnAngles[i];
+			trackLength += straightLength[i] + turnLength[i];
+		}
+
 		onTurn = false;
 		turnSpeed = 0;
 		trackLength = 0;
-		totalTurns = PlayerPrefs.GetInt("TotalTurns");
 		
 		thePlayer = GameObject.Find("Player");
 		trackEnviro = GameObject.Find("Environment");
-		
 		cautionSummaryMenu = GameObject.Find("CautionMenu");
 		pauseMenu = GameObject.Find("PauseMenu");
 		
@@ -170,14 +157,12 @@ public class CameraRotate : MonoBehaviour {
 		acknowledgeWreck = false;
 		overtime = false;
 		
-		for(int i=0;i<totalTurns;i++){
-			trackLength += straightLength[i];
-			trackLength += (turnLength[i] * turnAngle[i]);
-		}
-		straight = totalTurns;
-		turn = totalTurns;
+		//Start from the previous straight before the final turn of the pace lap
+		straight = totalTurns - 1;
+		turn = totalTurns - 1;
+
 		if(cameraRotate == 1){
-			TDCamera.transform.Rotate(0,0,turnLength[turn-1]);
+			TDCamera.transform.Rotate(0,0,turnAngle[turn]);
 		}
 		
 		lap = 0;
@@ -224,7 +209,7 @@ public class CameraRotate : MonoBehaviour {
 		} else {
 			PlayerPrefs.SetInt("FastestLap" + circuit, 0);
 		}
-		cornercounter = 0;
+		turnCounter = 0;
 		carSpeedOffset = 80;
 		cornerSpeed = 0;
 
@@ -345,6 +330,7 @@ public class CameraRotate : MonoBehaviour {
 				Time.timeScale = 0.0f;
 			}
 		} else {
+			straightCounter += Movement.playerSpeedMetres * Time.deltaTime;
 			pauseMenu.SetActive(false);
 		}
 		
@@ -355,26 +341,17 @@ public class CameraRotate : MonoBehaviour {
 			this.gameObject.GetComponent<CommentaryManager>().commentate("Crash");
 		}
 		
-		//Prevent the counters running when game is pausing
-		if(gamePausedLate == false){
-			lengthcounter++;
-			straightcounter++;
-		}
-		
 		if((Movement.wreckOver == true)&&(Movement.isWrecking == false)){
-			//If last lap, no restart, it's over!
-			if(lap >= raceEnd){
-				endRace();
-			}
-			//Terminal Engine Damage
-			if(Movement.blownEngine == true){
+			//If last lap, no restart. It's over!
+			//Terminal Engine Damage? It's over!
+			if((lap >= raceEnd)||(Movement.blownEngine == true)){
 				endRace();
 			}
 			return;
 		}
 		
 		//Keep the camera and environment following the player on the z-axis
-		TDCamera.transform.position = new Vector3(TDCamera.transform.position.x,TDCamera.transform.position.y,thePlayer.transform.position.z);
+		TDCamera.transform.position = new Vector3(thePlayer.transform.position.x,TDCamera.transform.position.y,thePlayer.transform.position.z);
 		trackEnviro.transform.position = new Vector3(trackEnviro.transform.position.x,trackEnviro.transform.position.y,thePlayer.transform.position.z);
 		
 		if(pacing == false){
@@ -394,53 +371,46 @@ public class CameraRotate : MonoBehaviour {
 		}
 		
 		//Increment Lap
-		if ((straightcounter == PlayerPrefs.GetInt("StartLine"))&&(straight == 1)){
+		if ((straight == 0)&&(straightCounter >= PlayerPrefs.GetInt("StartLine"))&&(crossedLine == false)){
 			Ticker.updateTicker();
 			//Freeze lap count at a caution
+			crossedLine = true;
 			if(cautionOut == false){
 				lap++;
 			}
 			
 			//Final Lap
 			if(CameraRotate.lap == CameraRotate.raceEnd){
-				//Debug.Log("LAST LAP! Pos:" + Ticker.position);
 				if(Ticker.position == 0){
 					this.gameObject.GetComponent<CommentaryManager>().commentate("LastLapLeader");
 				} else {
 					this.gameObject.GetComponent<CommentaryManager>().commentate("LastLap");
 				}
 			}
-			//Debug.Log("Add on a lap, now on lap " + lap);
 			//Starts/Restarts
 			if(pacing == true){
 				Movement.pacingEnds();
 				this.gameObject.GetComponent<CommentaryManager>().commentate("Start");
 				pacing = false;
-			} else {			
-				if(lengthcounter >= 100){		
-					if((averageSpeed > raceLapRecord)&&(lap > 1)){
-						raceLapRecord = averageSpeed;
-					}
-					if((averageSpeed > lapRecord)&&(lap > 1)){
-						lapRecord = averageSpeed;
-					}
-					if(raceLapRecord > lapRecord){
-						lapRecord = raceLapRecord;
-					}
-					if((lapTime < fastestRaceLap)&&(lap > 1)&&(lapTime != 0)){
-						fastestRaceLap = lapTime;
-						//Debug.Log("New Fastest Lap: " + fastestRaceLap);
-					}
+			} else {					
+				if((averageSpeed > raceLapRecord)&&(lap > 1)){
+					raceLapRecord = averageSpeed;
+				}
+				if((averageSpeed > lapRecord)&&(lap > 1)){
+					lapRecord = averageSpeed;
+				}
+				if(raceLapRecord > lapRecord){
+					lapRecord = raceLapRecord;
+				}
+				if((lapTime < fastestRaceLap)&&(lap > 1)&&(lapTime != 0)){
+					fastestRaceLap = lapTime;
 				}
 			}
 			
 			currentLapLength = 0;
-			lengthcounter=0;
-
 			averageSpeed = 0;
 			averageSpeedCount = 0;
 			averageSpeedTotal = 0;
-			
 			lapTime = 0;
 			frameTime = 0;
 			
@@ -454,6 +424,7 @@ public class CameraRotate : MonoBehaviour {
 				if(cautionOut == true){
 					//Only save at the line if not currently wrecking
 					if(Movement.isWrecking == false){
+						//Blown engine
 						if(Movement.blownEngine == true){
 							Debug.Log("Engine Blown!");
 							Ticker.checkFinishPositions();
@@ -472,12 +443,13 @@ public class CameraRotate : MonoBehaviour {
 			}
 		}
 
-		if ((straightcounter % 20) == 1){
+		if ((straightCounter % 20) < 1){
 			Ticker.updateTicker();
 		}
 
+		//Final Lap, Crowd Noise increases
 		if(audioOn != 0){
-			if(lap == (PlayerPrefs.GetInt("RaceLaps"))){
+			if(lap == raceEnd){
 				if(crowdNoise.volume < 0.15f){
 					crowdNoise.volume += 0.002f;
 				}
@@ -486,42 +458,26 @@ public class CameraRotate : MonoBehaviour {
 		currentLapLength++;
 
 		//Turning
-		if(straightcounter > straightLength[straight-1]){
+		if(straightCounter > straightLength[straight]){
 			if(onTurn == false){
 				onTurn = true;
 				Movement.onTurn = true;
 				AIMovement.onTurn = true;
-				cornerSpeed = calcCornerSpeed(straight-1);
-				cornerMidpoint = (turnLength[straight-1] * turnAngle[straight-1]) / 2;
-				wreckingCornerCounter = 0;
+				cornerSpeed = calcCornerSpeed(straight);
+				cornerMidpoint = (turnLength[straight] / 2);
 				//Debug.Log("Corner " + straight + " speed: " + cornerSpeed);
 			}
+
+			frameRotation = turnAngle[turn] / (turnLength[turn] / Movement.playerSpeedMetres) * Time.deltaTime;
 			if(cameraRotate == 1){
-				//If wrecking and not on last lap (the finish trigger screws up with this enabled)
-				if((Movement.isWrecking == true)&&(lap < raceEnd)){
-					maxCornerFactor = Movement.playerSpeed - Movement.speedOffset;
-					float cornerAngleFactor = (1 / maxCornerFactor) * (maxCornerFactor + Movement.playerWreckDecel);
-					//Debug.Log("Corner Angle Factor:" + cornerAngleFactor + " - maxFactor:" + maxCornerFactor);
-					TDCamera.transform.Rotate(0,0,(-1.0f/turnAngle[turn-1]) * cornerAngleFactor);
-					wreckingCornerCounter += cornerAngleFactor;
-					//Debug.Log(wreckingCornerCounter + " so far, out of " + (turnLength[turn-1] * turnAngle[turn-1]));
-				} else {
-					wreckingCornerCounter++;
-					if(turnDir[turn-1] == 1){
-						TDCamera.transform.Rotate(0,0,(1.0f/turnAngle[turn-1]));
-					} else {
-						TDCamera.transform.Rotate(0,0,(-1.0f/turnAngle[turn-1]));
-					}
-				}
+				TDCamera.transform.Rotate(0,0,-frameRotation);
 			}
-			cornerKerbRenderer.enabled = true;
-			cornerKerbRenderer.material.mainTextureOffset = new Vector2(kerbBlur,0);
-			cornercounter++;
+			turnCounter+=(Movement.playerSpeedMetres * Time.deltaTime);
 			
 			
 			if(lap > 0){
 				//Corner Decel
-				if(cornercounter < cornerMidpoint){
+				if(turnCounter < cornerMidpoint){
 					if(carSpeedOffset < cornerSpeed){
 						carSpeedOffset+=0.010f * cornerSpeed;
 					}
@@ -554,55 +510,24 @@ public class CameraRotate : MonoBehaviour {
 		}
 
 		//End of turn
-		if(Movement.isWrecking == true){
-			if(onTurn == true){
-				//Debug.Log("WreckCornCount:" + wreckingCornerCounter + " - TurnLength:" + turnLength[turn-1] + " - Turn Angle:" + turnAngle[turn-1] + " - Turn Factor:" + (turnLength[turn-1] * turnAngle[turn-1]));
-				if(wreckingCornerCounter >= (turnLength[turn-1] * turnAngle[turn-1])){
-					//Debug.Log("WreckCornCount:" + wreckingCornerCounter + " > Turn Factor:" + (turnLength[turn-1] * turnAngle[turn-1]));
-					Ticker.updateTicker();
-					onTurn = false;
-					Movement.onTurn = false;
-					AIMovement.onTurn = false;
-					straightcounter = 0;
-					cornercounter = 0;
-					wreckingCornerCounter = 0;
-					straight++;
-					turn++;
-					
-					if(straight > PlayerPrefs.GetInt("TotalTurns")){
-						straight = 1;
-						turn = 1;
-					}
-					//Debug.Log("Straight:" + straight + " - Turn:" + turn);
-					if(cornerKerb.name != "FixedKerb"){
-						cornerKerbRenderer.enabled = false;
-					}
+		if(onTurn == true){
+			if(turnCounter >= turnLength[turn]){
+				Ticker.updateTicker();
+				onTurn = false;
+				Movement.onTurn = false;
+				AIMovement.onTurn = false;
+				straightCounter = 0;
+				turnCounter = 0;
+				straight++;
+				turn++;
+				if(straight == totalTurns){
+					straight = 0;
+					turn = 0;
+					crossedLine = false;
 				}
-			}
-		} else {
-			if(onTurn == true){
-				if(cornercounter >= (turnLength[turn-1] * turnAngle[turn-1])){
-					Ticker.updateTicker();
-					onTurn = false;
-					Movement.onTurn = false;
-					AIMovement.onTurn = false;
-					straightcounter = 0;
-					cornercounter = 0;
-					straight++;
-					turn++;
-					if(straight > PlayerPrefs.GetInt("TotalTurns")){
-						straight = 1;
-						turn = 1;
-					}
-					
-					if(cautionOut == true){
-						this.gameObject.GetComponent<CommentaryManager>().commentate("Caution");
-					}
-					
-					//Debug.Log("Straight:" + straight + " - Turn:" + turn);
-					if(cornerKerb.name != "FixedKerb"){
-						cornerKerbRenderer.enabled = false;
-					}
+				
+				if(cautionOut == true){
+					this.gameObject.GetComponent<CommentaryManager>().commentate("Caution");
 				}
 			}
 		}
@@ -618,7 +543,7 @@ public class CameraRotate : MonoBehaviour {
 		//Debug.Log("Race Ended");
 		if(lap >= (raceEnd + 1)){
 			//Bug catch, again no idea on this one
-			if((straight == 1)||(turn == 1)){
+			if((straight == 0)||(turn == 0)){
 				//Do nothing
 			} else {
 				//Not on the finish straight, must have wrecked somewhere..
@@ -755,24 +680,19 @@ public class CameraRotate : MonoBehaviour {
 		int turnSpeed = 0;
 		int straightDist = 0;
 		float calcdGear;
-		for(int i=0;i<6;i++){
+		for(int i=0;i<totalTurns;i++){
 			turnSpeed = calcCornerSpeed(i);
-			
 			if(turnSpeed > slowestTurn){
 				slowestTurn = turnSpeed;
 				slowestTurnLength = (turnLength[i] * turnAngle[i]);
 			}
-		}
-		//Debug.Log("Slowest Turn - " + slowestTurn + "MpH");
-		
-		for(int i=0;i<6;i++){
+
 			straightDist = straightLength[i];
 			if(straightDist > longestStraight){
 				longestStraight = straightDist;
 			}
 		}
-		//Debug.Log("Longest Straight - " + longestStraight + "m");
-		
+
 		//Default fallback for plate tracks (where slowest turn = 0)
 		if(slowestTurn == 1){
 			slowestTurn = 20;

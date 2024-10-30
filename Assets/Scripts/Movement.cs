@@ -12,6 +12,7 @@ public class Movement : MonoBehaviour {
 	public GameObject vehicle;
 	public static float playerZ;
 	public static float playerSpeed;
+	public static float playerSpeedMetres;
 	public static float affectedPlayerSpeed;
 	public static float speedoSpeed;
 	public float gettableSpeed;
@@ -221,6 +222,7 @@ public class Movement : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		playerSpeed = 203;
+		playerSpeedMetres = playerSpeed / 2.237f;
 		playerZ = 0;
 		gettableSpeed = playerSpeed;
 		speedRand = Random.Range(0,50);
@@ -1061,7 +1063,8 @@ public class Movement : MonoBehaviour {
 		}
 		
 		gettableSpeed = playerSpeed;
-		
+		playerSpeedMetres = playerSpeed / 2.237f;
+
 		//Speed difference between the Player and the Control Car
 		speed = (playerSpeed + playerWreckDecel) - ControlCarMovement.controlSpeed;
 		speed = speed / 100;
