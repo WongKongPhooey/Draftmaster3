@@ -40,6 +40,9 @@ public class AIMovement : MonoBehaviour
     int laneSettling;
 	int laneStagnant;
 	int stagnantMax;
+	int currentTurn;
+	int turnTrigger;
+	int turnEnd;
 	
 	//These can adjust per race series (e.g. Indy)
 	float draftStrengthRatio;
@@ -144,6 +147,7 @@ public class AIMovement : MonoBehaviour
     float laneFactor;
     public int laneBias;
 
+	public int finishLinePos;
 	public bool idealLine = true;
 
     int wobbleCount;
@@ -181,8 +185,15 @@ public class AIMovement : MonoBehaviour
 		racingLines = new AnimationCurve[currentTrackInfo.totalTurns];
 		
 		for(int i=0;i<currentTrackInfo.totalTurns;i++){
-			racingLines[i] = new AnimationCurve(new Keyframe(0, currentTrackInfo.idealEntry[i]), new Keyframe(currentTrackInfo.turnLeadIn[i] + (currentTrackInfo.turnLengths[i]/2f),currentTrackInfo.idealMidpoint[i]), new Keyframe(currentTrackInfo.turnLeadIn[i] + currentTrackInfo.turnLengths[i] + currentTrackInfo.turnLeadOut[i],currentTrackInfo.idealExit[i]));
+			racingLines[i] = new AnimationCurve(new Keyframe(currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i], currentTrackInfo.idealEntry[i]), new Keyframe(currentTrackInfo.turnPositions[i] + (currentTrackInfo.turnLengths[i]/2f),currentTrackInfo.idealMidpoint[i]), new Keyframe(currentTrackInfo.turnPositions[i] + currentTrackInfo.turnLengths[i] + currentTrackInfo.turnLeadOut[i],currentTrackInfo.idealExit[i]));
 		}
+
+		finishLinePos = currentTrackInfo.finishLinePosition;
+
+		currentTurn = 0;
+		turnTrigger = currentTrackInfo.turnPositions[0] - currentTrackInfo.turnLeadIn[0];
+		turnEnd = currentTrackInfo.turnPositions[0] + currentTrackInfo.turnLengths[0] + currentTrackInfo.turnLeadOut[0];
+
 		pos = transform.position;
 		
 		AISpeed = 203f;
@@ -1251,14 +1262,26 @@ public class AIMovement : MonoBehaviour
 		}
 	}
 
+	void calcNextTurnArc(int turn){
+		turnTrigger = currentTrackInfo.turnPositions[turn] - currentTrackInfo.turnLeadIn[turn];
+		turnEnd = currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn] + currentTrackInfo.turnLeadOut[turn];
+	}
+
 	void updateMovement() {
-		
-		float xPos = AICar.transform.position.x;
-		if(CameraRotate.onTurn == true){
-			float xLine = racingLines[CameraRotate.turn].Evaluate(CameraRotate.turnCounter);
+
+		if(lapLengthCounter > (currentTrackInfo.trackLength + finishLinePos)){
+			lapLengthCounter = finishLinePos;
+		}
+
+		if((lapLengthCounter > turnTrigger)
+		&&(lapLengthCounter < turnEnd)){
+			float xLine = racingLines[currentTurn].Evaluate(lapLengthCounter);
+			Debug.Log("Count: " + lapLengthCounter + " - Trigger: " +  turnTrigger + " - End: " + turnEnd + " - XPos: " + (-3.2f + (4 * xLine)));
 			AICar.transform.position = new Vector3(-3.2f + (4 * xLine), AICar.transform.position.y, AICar.transform.position.z);
-		} else {
-			
+		}
+		if(lapLengthCounter > turnEnd){
+			calcNextTurnArc(CameraRotate.turn);
+			currentTurn = CameraRotate.turn;
 		}
 
 		//How fast can you switch lanes
