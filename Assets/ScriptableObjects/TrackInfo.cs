@@ -10,7 +10,7 @@ public class TrackInfo : ScriptableObject {
     [Header("Track Measurements")]
     public int totalTurns;
 	public int trackWidth;
-    public int[] straightLengths, turnLengths, turnAngles, bankingAngles;
+    public int[] straightPositions, turnPositions, straightLengths, turnLengths, turnAngles, turnLeadIn, turnLeadOut, bankingAngles;
 
     [Header("Racing Line")]
     public bool variableIdealLine;

@@ -17,6 +17,7 @@ public class AIMovement : MonoBehaviour
 	public Camera player2Cam;
 	public Vector3 pos;
     public float AISpeed;
+	public float AISpeedMetres;
 	public float relativeZToPlayer;
 	float affectedAISpeed;
     float speed;
@@ -137,6 +138,7 @@ public class AIMovement : MonoBehaviour
 	int particleDisableDelay;
 
 	public int lap;
+	public float lapLengthCounter;
     public int lane;
     public int laneInv;
     float laneFactor;
@@ -159,6 +161,7 @@ public class AIMovement : MonoBehaviour
 	public static int cautionSetting;
 
 	public static TrackInfo currentTrackInfo;
+	public AnimationCurve[] racingLines;
 
 	//Debug tool
 	public bool debugPlayer;
@@ -175,6 +178,11 @@ public class AIMovement : MonoBehaviour
 		
 		currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
+		racingLines = new AnimationCurve[currentTrackInfo.totalTurns];
+		
+		for(int i=0;i<currentTrackInfo.totalTurns;i++){
+			racingLines[i] = new AnimationCurve(new Keyframe(0, currentTrackInfo.idealEntry[i]), new Keyframe(currentTrackInfo.turnLeadIn[i] + (currentTrackInfo.turnLengths[i]/2f),currentTrackInfo.idealMidpoint[i]), new Keyframe(currentTrackInfo.turnLeadIn[i] + currentTrackInfo.turnLengths[i] + currentTrackInfo.turnLeadOut[i],currentTrackInfo.idealExit[i]));
+		}
 		pos = transform.position;
 		
 		AISpeed = 203f;
@@ -651,6 +659,8 @@ public class AIMovement : MonoBehaviour
 
 		pos = transform.position;
 
+		lapLengthCounter += AISpeedMetres * Time.deltaTime;
+
 		if(isWrecking == false){
 			if(sparksCooldown > 0){
 				sparksCooldown--;
@@ -780,8 +790,6 @@ public class AIMovement : MonoBehaviour
 			
 			raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
 
-			//wreckRigidbody.velocity = Vector3.zero;
-			//wreckRigidbody.angularVelocity = Vector3.zero;
 		} else {
 			//Pacing speed
 			AISpeed = 202;
@@ -1028,6 +1036,8 @@ public class AIMovement : MonoBehaviour
 			affectedAISpeed = 0;
 		}
 		
+		AISpeedMetres = AISpeed / 2.237f;
+
 		if(Movement.isWrecking == true){
 			speed = (AISpeed + wreckDecel) - ControlCarMovement.controlSpeed - (Movement.playerWreckDecel * speedDiffPadding);
 		} else {
@@ -1243,16 +1253,12 @@ public class AIMovement : MonoBehaviour
 
 	void updateMovement() {
 		
-		//if(idealLine == true){
 		float xPos = AICar.transform.position.x;
 		if(CameraRotate.onTurn == true){
-			if(xPos > -3.2f){
-				AICar.transform.Translate(new Vector3((-0.02f), 0, 0),Space.World);
-			}
+			float xLine = racingLines[CameraRotate.turn].Evaluate(CameraRotate.turnCounter);
+			AICar.transform.position = new Vector3(-3.2f + (4 * xLine), AICar.transform.position.y, AICar.transform.position.z);
 		} else {
-			if(xPos < 1.2f){
-				AICar.transform.Translate(new Vector3((0.02f), 0, 0),Space.World);
-			}
+			
 		}
 
 		//How fast can you switch lanes
@@ -1417,18 +1423,18 @@ public class AIMovement : MonoBehaviour
 		wobbleCount++;
 		
 		if(wobbleCount >= wobbleRand){
-			wobbleRand = Random.Range(10,60);
-			wobbleTarget = Random.Range(-100,100);
+			wobbleRand = Random.Range(20,120);
+			wobbleTarget = Random.Range(-200,200);
 			wobbleCount = 1;
 		}
 		
 		//General wobble while in lane
 		if(wobbleTarget > wobblePos){
-			AICar.transform.Translate(-0.001f,0,0);
+			AICar.transform.Translate(-0.002f,0,0);
 			wobblePos++;
 		}
 		if(wobbleTarget < wobblePos){
-			AICar.transform.Translate(0.001f,0,0);
+			AICar.transform.Translate(0.002f,0,0);
 			wobblePos--;
 		}
 	}

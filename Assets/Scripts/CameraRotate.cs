@@ -35,7 +35,7 @@ public class CameraRotate : MonoBehaviour {
 	public static bool overtime;
 
 	public static int[] straightLength, turnLength, turnAngle;
-	public static float[] turnArc;
+
 	public static float turnSpeed;
 	public static int trackLength;
 	public static int totalTurns;
@@ -271,6 +271,7 @@ public class CameraRotate : MonoBehaviour {
 	}
 
 	void Start(){
+
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
 			
 			//Race Restart Comms (1st pos = 0)
