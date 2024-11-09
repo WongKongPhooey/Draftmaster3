@@ -182,6 +182,9 @@ public class AIMovement : MonoBehaviour
 		
 		currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
+		//Todo: This should be calculated/offset from where they spawn
+		lapLengthCounter = 0;
+
 		racingLines = new AnimationCurve[currentTrackInfo.totalTurns];
 		
 		for(int i=0;i<currentTrackInfo.totalTurns;i++){
@@ -264,7 +267,6 @@ public class AIMovement : MonoBehaviour
 			} else {
 				AILevel = (float)SeriesData.offlineAILevel[int.Parse(currentSeries.ToString()),int.Parse(currentSubseries.ToString())];
 			}
-			Debug.Log("AILevel: " + AILevel);
 		}
 		PlayerPrefs.SetInt("RaceAILevel", (int)AILevel);
 		
@@ -1265,23 +1267,56 @@ public class AIMovement : MonoBehaviour
 	void calcNextTurnArc(int turn){
 		turnTrigger = currentTrackInfo.turnPositions[turn] - currentTrackInfo.turnLeadIn[turn];
 		turnEnd = currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn] + currentTrackInfo.turnLeadOut[turn];
+		
+		//Final turn exit is beyond the finish line e.g. Phoenix
+		if(turnEnd > currentTrackInfo.trackLength){
+			turnTrigger -= currentTrackInfo.trackLength;
+			turnEnd -= currentTrackInfo.trackLength;
+		}
+		
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log("Current turn: " + turn + " - Next turn trigger: " + turnTrigger + " - Next turn end: " + turnEnd);
+		}
+		#endif
+	}
+
+	int updateTurnCount(int turn){
+		turn += 1;
+		if(turn > currentTrackInfo.totalTurns){
+			turn = 0;
+			lapLengthCounter = 0;
+		}
+
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log("Turn updated to: " + turn);
+		}
+		#endif
+
+		return turn;
 	}
 
 	void updateMovement() {
 
-		if(lapLengthCounter > (currentTrackInfo.trackLength + finishLinePos)){
-			lapLengthCounter = finishLinePos;
+		if(lapLengthCounter >= currentTrackInfo.trackLength){
+			lapLengthCounter = 0;
 		}
 
 		if((lapLengthCounter > turnTrigger)
 		&&(lapLengthCounter < turnEnd)){
 			float xLine = racingLines[currentTurn].Evaluate(lapLengthCounter);
-			Debug.Log("Count: " + lapLengthCounter + " - Trigger: " +  turnTrigger + " - End: " + turnEnd + " - XPos: " + (-3.2f + (4 * xLine)));
 			AICar.transform.position = new Vector3(-3.2f + (4 * xLine), AICar.transform.position.y, AICar.transform.position.z);
 		}
 		if(lapLengthCounter > turnEnd){
-			calcNextTurnArc(CameraRotate.turn);
-			currentTurn = CameraRotate.turn;
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log("Current turn: " + currentTurn + " - Lap counter: " + lapLengthCounter + " - Turn end: " + turnEnd);
+			}
+			#endif
+
+			currentTurn = updateTurnCount(currentTurn);
+			calcNextTurnArc(currentTurn);
 		}
 
 		//How fast can you switch lanes
