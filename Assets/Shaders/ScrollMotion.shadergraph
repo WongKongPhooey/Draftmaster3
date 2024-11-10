@@ -111,7 +111,7 @@
                 "m_Node": {
                     "m_Id": "45498a56e0da41758e1949d65be54201"
                 },
-                "m_SlotId": 3
+                "m_SlotId": 0
             },
             "m_InputSlot": {
                 "m_Node": {
@@ -381,7 +381,7 @@
         "scale"
     ],
     "m_Precision": 0,
-    "m_PreviewExpanded": true,
+    "m_PreviewExpanded": false,
     "m_DismissedVersion": 0,
     "m_PreviewMode": 0,
     "m_CustomColors": {
@@ -519,7 +519,7 @@
         "tex2d"
     ],
     "m_Precision": 0,
-    "m_PreviewExpanded": true,
+    "m_PreviewExpanded": false,
     "m_DismissedVersion": 0,
     "m_PreviewMode": 0,
     "m_CustomColors": {
@@ -949,10 +949,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -88.00007629394531,
-            "y": -14.000008583068848,
-            "width": 115.00006103515625,
-            "height": 33.999996185302737
+            "x": -88.0,
+            "y": -15.0,
+            "width": 115.0,
+            "height": 34.0
         }
     },
     "m_Slots": [
@@ -1050,7 +1050,7 @@
     "m_Type": "UnityEditor.ShaderGraph.Texture2DMaterialSlot",
     "m_ObjectId": "908a1a4d46134915b217dabd95d8fb3b",
     "m_Id": 0,
-    "m_DisplayName": "Sprite",
+    "m_DisplayName": "MainTex",
     "m_SlotType": 1,
     "m_Hidden": false,
     "m_ShaderOutputName": "Out",
@@ -1562,11 +1562,11 @@
     "m_Guid": {
         "m_GuidSerialized": "822470a7-604e-4fb6-b613-30ca7608f968"
     },
-    "m_Name": "Sprite",
+    "m_Name": "MainTex",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Sprite",
-    "m_DefaultReferenceName": "_Sprite",
-    "m_OverrideReferenceName": "_SpriteTex",
+    "m_RefNameGeneratedByDisplayName": "MainTex",
+    "m_DefaultReferenceName": "_MainTex",
+    "m_OverrideReferenceName": "_MainTex",
     "m_GeneratePropertyBlock": true,
     "m_UseCustomSlotLabel": false,
     "m_CustomSlotLabel": "",

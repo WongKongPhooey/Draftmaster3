@@ -1,10 +1,11 @@
-/*using UnityEngine;
+using UnityEngine;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Random=UnityEngine.Random;
 
 public class VehicleLogic : MonoBehaviour
 {
@@ -21,9 +22,9 @@ public class VehicleLogic : MonoBehaviour
 	public AnimationCurve[] racingLines;
 
     //Speed variables
-    float speed;
+    public float speed;
     float speedMetres;
-    float locationOnTrack;
+    public float locationOnTrack;
     float engineTemp;
 
 	float tempLimit;
@@ -54,6 +55,9 @@ public class VehicleLogic : MonoBehaviour
 	float slideX;
 	public float wreckDecel;
 	float wreckAngle;
+	float wreckMassRand;
+	float wreckSlideRand;
+	float wreckFlatRand;
 	float sparksEndSpeed;
 	float maxSparksRand;
 	float targetForce;
@@ -97,13 +101,13 @@ public class VehicleLogic : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
-        
+        locationOnTrack+= (speed / 2.237f) * Time.deltaTime ;
     }
 
 	void startWreck(){
 		
 		//Bailout
-		if((isWrecking == true)||(wreckOver == true)||(cautionSetting == 1)||(Movement.pacing == true)){
+		if((isWrecking == true)||(wreckOver == true)||(Movement.pacing == true)){
 			return;
 		}
 		
@@ -157,8 +161,7 @@ public class VehicleLogic : MonoBehaviour
 	}
 	
 	public void endWreck(){
-		//Debug.Log(this.name + " WRECKED");
-		AISpeed = 0;
+		speed = 0;
 		slideX = 0;
 		isWrecking = false;
 		wreckOver = true;
@@ -182,11 +185,7 @@ public class VehicleLogic : MonoBehaviour
 		if(wreckSine < 0.2f){
 			wreckSine = 0.2f;
 		}
-		#if UNITY_EDITOR
-		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " wreck angle: " + wreckAngle + " sine: " + wreckSine);
-		}
-		#endif
+
 		baseDecel-=(0.45f - randDecel);
 		slideX = ((baseDecel + 1) / 5f) + wreckSlideRand;
 		//Formula: -200f = -10x, -140f = 0x, 0f = 10x
@@ -215,9 +214,9 @@ public class VehicleLogic : MonoBehaviour
 		wreckRigidbody.angularDamping += 0.001f;
 		
 		//Prevent landing in the crowd
-		if(pos.x > 1.5f){
+		/*if(pos.x > 1.5f){
 			this.gameObject.transform.position = new Vector3(1.5f,pos.y,pos.z);
-		}
+		}*/
 		
 		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + wreckDecel);
 		if(sparksEndSpeed < wreckDecel){
@@ -289,7 +288,7 @@ public class VehicleLogic : MonoBehaviour
 				return;
 			}
 
-			if (laneticker != 0){
+			/*if (laneticker != 0){
 				if (laneticker > 0){
 					bool rightSideHit = checkRaycast("RightCorners", 0.51f);
 					if(rightSideHit == true){
@@ -316,17 +315,17 @@ public class VehicleLogic : MonoBehaviour
 					changeLane("Left");
 				}
 			}
-			speed -= Random.Range(0.5f,5f);
+			speed -= Random.Range(0.5f,5f);*/
         }
 				
-        if(leftSideClear(0.51f) == false){
+        /*if(leftSideClear(0.51f) == false){
             leftSparksParticles.Play();
             sparksCooldown = Random.Range(5,20);
         }
         if(rightSideClear(0.51f) == false){
             rightSparksParticles.Play();
             sparksCooldown = Random.Range(5,20);
-        }
+        }*/
     }
 
     void OnDestroy(){
@@ -334,4 +333,3 @@ public class VehicleLogic : MonoBehaviour
 		raycastHits.Dispose();
 	}
 }
-*/
