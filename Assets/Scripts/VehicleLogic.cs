@@ -104,7 +104,7 @@ public class VehicleLogic : MonoBehaviour
         currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
         //Todo: This should be calculated/offset from where they spawn
-		locationOnTrack = 0;
+		locationOnTrack = 0 - vehicle.transform.position.x;
 		turn = 0;
 
 		initRacingLines();
