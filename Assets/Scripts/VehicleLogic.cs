@@ -6,9 +6,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Random=UnityEngine.Random;
+using Unity.Entities.UniversalDelegates;
 
 public class VehicleLogic : MonoBehaviour
 {
+	GameObject vehicle;
+	bool isPlayer = false;
+	static Camera mainCam;
 
     //Car info
     public string carName;
@@ -20,10 +24,14 @@ public class VehicleLogic : MonoBehaviour
     //Track info
     public static TrackInfo currentTrackInfo;
 	public AnimationCurve[] racingLines;
+	public int[] turnEntries;
+	public int[] turnExits;
+
+	public int turn = 0;
 
     //Speed variables
     public float speed;
-    float speedMetres;
+    static float speedMetres;
     public float locationOnTrack;
     float engineTemp;
 
@@ -82,27 +90,76 @@ public class VehicleLogic : MonoBehaviour
 	ParticleSystem engineSmokeParticles;
 	Transform tireSmoke;
 	ParticleSystem tireSmokeParticles;
+
+	//Misc
+	public bool debugPlayer;
+
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
         
+		vehicle = this.gameObject;
+		mainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
+
         currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
         //Todo: This should be calculated/offset from where they spawn
 		locationOnTrack = 0;
+		turn = 0;
 
-		racingLines = new AnimationCurve[currentTrackInfo.totalTurns];
-		
-		for(int i=0;i<currentTrackInfo.totalTurns;i++){
-			racingLines[i] = new AnimationCurve(new Keyframe(currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i], currentTrackInfo.idealEntry[i]), new Keyframe(currentTrackInfo.turnPositions[i] + (currentTrackInfo.turnLengths[i]/2f),currentTrackInfo.idealMidpoint[i]), new Keyframe(currentTrackInfo.turnPositions[i] + currentTrackInfo.turnLengths[i] + currentTrackInfo.turnLeadOut[i],currentTrackInfo.idealExit[i]));
-		}
+		initRacingLines();
 
-        speed = 60;
+        speed = 140;
+		speedMetres = speed / 2.237f;
     }
+
+	void initRacingLines(){
+		racingLines = new AnimationCurve[currentTrackInfo.totalTurns];
+		turnEntries = new int[currentTrackInfo.totalTurns];
+		turnExits = new int[currentTrackInfo.totalTurns];
+
+		for(int i=0;i<currentTrackInfo.totalTurns;i++){
+			//Debug.Log("Turn: " + i + " - Entry:" + (currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i]));
+			turnEntries[i] = currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i];
+			turnExits[i] = currentTrackInfo.turnPositions[i] + currentTrackInfo.turnLengths[i] + currentTrackInfo.turnLeadOut[i];
+			racingLines[i] = new AnimationCurve(new Keyframe(turnEntries[i], currentTrackInfo.idealEntry[i]), new Keyframe(currentTrackInfo.turnPositions[i] + (currentTrackInfo.turnLengths[i]/2f),currentTrackInfo.idealMidpoint[i]), new Keyframe(turnExits[i],currentTrackInfo.idealExit[i]));
+		}
+	}
+
+
 
     // Update is called once per frame
     void Update(){
-        locationOnTrack+= (speed / 2.237f) * Time.deltaTime ;
-    }
+        locationOnTrack+= (speedMetres) * Time.deltaTime;
+		if(locationOnTrack > turnExits[turn]){
+			turn = updateTurnCount(turn);
+		}
+
+		if(isPlayer == true){
+ 			float frameRotation = RaceManager.turnAngle[turn] / (RaceManager.turnLength[turn] / speedMetres) * Time.deltaTime;
+       		mainCam.transform.Rotate(0,0,-frameRotation);
+		}
+
+		Debug.Log("xLine: " + racingLines[turn].Evaluate(locationOnTrack));
+		float xLine = racingLines[turn].Evaluate(locationOnTrack);
+		vehicle.transform.position = new Vector2(vehicle.transform.position.x, -6.5f + (13 * xLine));
+	}
+
+	int updateTurnCount(int turn){
+		turn += 1;
+		if(turn >= currentTrackInfo.totalTurns){
+			turn = 0;
+			locationOnTrack = 0;
+		}
+
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			Debug.Log("Turn updated to: " + turn);
+		}
+		#endif
+
+		return turn;
+	}
 
 	void startWreck(){
 		
