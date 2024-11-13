@@ -11,7 +11,7 @@ using Unity.Entities.UniversalDelegates;
 public class VehicleLogic : MonoBehaviour
 {
 	GameObject vehicle;
-	bool isPlayer = false;
+	public bool isPlayer = false;
 	static Camera mainCam;
 
     //Car info
@@ -21,13 +21,16 @@ public class VehicleLogic : MonoBehaviour
 	public string carManu;
     string seriesPrefix;
 
-    //Track info
+    //Track/Location info
     public static TrackInfo currentTrackInfo;
 	public AnimationCurve[] racingLines;
+	public AnimationCurve[] turnSpeeds;
 	public int[] turnEntries;
 	public int[] turnExits;
 
 	public int turn = 0;
+	public bool inArc = false;
+	public bool onTurn = false;
 
     //Speed variables
     public float speed;
@@ -131,18 +134,92 @@ public class VehicleLogic : MonoBehaviour
     // Update is called once per frame
     void Update(){
         locationOnTrack+= (speedMetres) * Time.deltaTime;
+		
+		//Track width - a car width
+		float trackWidth = 13f;
+		float yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
+
+		if(locationOnTrack > (currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn])){
+			onTurn = false;
+		} else {
+			if(locationOnTrack >= currentTrackInfo.turnPositions[turn]){
+				if(onTurn == false){
+					onTurn = true;
+				}
+			}
+		}
+
+		//Are we in a turn (incl. the arc)?
 		if(locationOnTrack > turnExits[turn]){
+			inArc = false;
 			turn = updateTurnCount(turn);
+		} else {
+			if(locationOnTrack >= turnEntries[turn]){
+				if(inArc == false){
+					calcNextTurnArc(turn, yRatio);
+					inArc = true;
+				}
+			}
 		}
 
-		if(isPlayer == true){
- 			float frameRotation = RaceManager.turnAngle[turn] / (RaceManager.turnLength[turn] / speedMetres) * Time.deltaTime;
-       		mainCam.transform.Rotate(0,0,-frameRotation);
+		if(inArc == true){
+			//Debug.Log("xLine: " + racingLines[turn].Evaluate(locationOnTrack));
+			float yLine = racingLines[turn].Evaluate(locationOnTrack);
+			vehicle.transform.position = new Vector2(vehicle.transform.position.x, (yLine * trackWidth) - (trackWidth / 2));
 		}
 
-		Debug.Log("xLine: " + racingLines[turn].Evaluate(locationOnTrack));
-		float xLine = racingLines[turn].Evaluate(locationOnTrack);
-		vehicle.transform.position = new Vector2(vehicle.transform.position.x, -6.5f + (13 * xLine));
+		if(onTurn == true){
+			if(isPlayer == true){
+ 				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
+				
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log("Frame rotation: " + frameRotation + "");
+				}
+				#endif
+
+       			mainCam.transform.Rotate(0,0,-frameRotation);
+			}
+		}
+	}
+
+	void calcNextTurnArc(int turn, float yRatio){
+
+		if(yRatio > (currentTrackInfo.idealEntry[turn])){
+			//Go high, rip the wall
+			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.highestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.highestExit[turn]));
+		
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log("High turn " + turn + " arc calculated: " + yRatio);
+			}
+			#endif
+
+		} else {
+			if(yRatio < (currentTrackInfo.idealEntry[turn])){
+				//Dive down low
+				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.lowestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.lowestExit[turn]));
+			
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log("Low turn " + turn + " arc calculated: " + yRatio);
+				}
+				#endif
+
+			} else {
+				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.idealMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.idealExit[turn]));
+			
+				#if UNITY_EDITOR
+				if(debugPlayer == true){
+					Debug.Log("Mid turn " + turn + " arc calculated: " + yRatio);
+				}
+				#endif
+			}
+		}
+	}
+
+	void calcNextTurnSpeeds(int turn, float yRatio){
+		turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], 0), new Keyframe(currentTrackInfo.turnPositions[turn] + ((currentTrackInfo.turnLengths[turn]/2f) * (1 - yRatio)),1), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),1), new Keyframe(turnExits[turn],yRatio));
 	}
 
 	int updateTurnCount(int turn){

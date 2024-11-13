@@ -20,4 +20,8 @@ public class TrackInfo : ScriptableObject {
     public float[] idealEntry, idealMidpoint, idealExit;
     public float[] highestEntry, highestMidpoint, highestExit;
     public float[] longRunEntry, longRunMidpoint, longRunExit;
+
+    [Header("Track Feel")]
+    public AnimationCurve[] lowTurnDecel;
+    public AnimationCurve[] highTurnDecel;
 }
