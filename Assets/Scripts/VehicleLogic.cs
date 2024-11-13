@@ -14,7 +14,8 @@ public class VehicleLogic : MonoBehaviour
 	public bool isPlayer = false;
 	static Camera mainCam;
 
-    //Car info
+    //Vehicle info
+	public AnimationCurve speedCurve;
     public string carName;
 	public int carNum;
 	public string carTeam;
@@ -22,6 +23,7 @@ public class VehicleLogic : MonoBehaviour
     string seriesPrefix;
 
     //Track/Location info
+	public static TrackInfo currentVehicleInfo;
     public static TrackInfo currentTrackInfo;
 	public AnimationCurve[] racingLines;
 	public AnimationCurve[] turnSpeeds;
@@ -32,16 +34,17 @@ public class VehicleLogic : MonoBehaviour
 	public bool inArc = false;
 	public bool onTurn = false;
 
+	public float yDiff;
+	public float yLine;
+
     //Speed variables
     public float speed;
     static float speedMetres;
     public float locationOnTrack;
-    float engineTemp;
-
+    
+	float engineTemp;
 	float tempLimit;
-
 	bool blownEngine;
-
 	bool coolEngine;
 	int sparksCooldown;
 
@@ -104,7 +107,10 @@ public class VehicleLogic : MonoBehaviour
 		vehicle = this.gameObject;
 		mainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
+		currentVehicleInfo = Resources.Load<TrackInfo>("Vehicle/Phoenix");
         currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
+
+		speedCurve = new AnimationCurve(new Keyframe(0,0), new Keyframe(3.4f,60), new Keyframe(10,currentTrackInfo.topSpeed));
 
         //Todo: This should be calculated/offset from where they spawn
 		locationOnTrack = 0 - vehicle.transform.position.x;
@@ -164,7 +170,9 @@ public class VehicleLogic : MonoBehaviour
 
 		if(inArc == true){
 			//Debug.Log("xLine: " + racingLines[turn].Evaluate(locationOnTrack));
-			float yLine = racingLines[turn].Evaluate(locationOnTrack);
+			yDiff = yLine - racingLines[turn].Evaluate(locationOnTrack);
+			yLine = racingLines[turn].Evaluate(locationOnTrack);
+			speed -= (yDiff * 30);
 			vehicle.transform.position = new Vector2(vehicle.transform.position.x, (yLine * trackWidth) - (trackWidth / 2));
 		}
 
