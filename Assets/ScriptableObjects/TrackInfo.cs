@@ -15,7 +15,7 @@ public class TrackInfo : ScriptableObject {
     public int[] straightPositions, turnPositions, straightLengths, turnLengths, turnAngles, turnLeadIn, turnLeadOut, bankingAngles;
 
     [Header("Track Speed")]
-    public int[] turnSpeeds;
+    public int[] turnMaxSpeeds;
     public AnimationCurve[] lowTurnDecel;
     public AnimationCurve[] highTurnDecel;
 

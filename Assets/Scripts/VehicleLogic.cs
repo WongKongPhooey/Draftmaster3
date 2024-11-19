@@ -14,8 +14,15 @@ public class VehicleLogic : MonoBehaviour
 	public bool isPlayer = false;
 	static Camera mainCam;
 
+	//Global info
+	public static float playerSpeedMetres;
+	public Material motionShader;
+
     //Vehicle info
-	public AnimationCurve speedCurve;
+	public int topSpeed;
+	public float zeroToSixty;
+	public float gearRatio;
+	public AnimationCurve accelerationCurve;
     public string carName;
 	public int carNum;
 	public string carTeam;
@@ -23,7 +30,7 @@ public class VehicleLogic : MonoBehaviour
     string seriesPrefix;
 
     //Track/Location info
-	public static TrackInfo currentVehicleInfo;
+	public static VehicleInfo currentVehicleInfo;
     public static TrackInfo currentTrackInfo;
 	public AnimationCurve[] racingLines;
 	public AnimationCurve[] turnSpeeds;
@@ -107,10 +114,18 @@ public class VehicleLogic : MonoBehaviour
 		vehicle = this.gameObject;
 		mainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-		currentVehicleInfo = Resources.Load<TrackInfo>("Vehicle/Phoenix");
+		if(isPlayer == true){
+			RaceManager.thePlayer = vehicle;
+		}
+
+		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
         currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
-		speedCurve = new AnimationCurve(new Keyframe(0,0), new Keyframe(3.4f,60), new Keyframe(10,currentTrackInfo.topSpeed));
+		zeroToSixty = currentVehicleInfo.zeroToSixty;
+
+		//Debug.Log("Top Speed: " + currentVehicleInfo.topSpeed);
+		accelerationCurve = currentVehicleInfo.accelerationCurve;
+		//accelerationCurve.keys[2] = new Keyframe(15,currentTrackInfo.topSpeed);
 
         //Todo: This should be calculated/offset from where they spawn
 		locationOnTrack = 0 - vehicle.transform.position.x;
@@ -126,6 +141,7 @@ public class VehicleLogic : MonoBehaviour
 		racingLines = new AnimationCurve[currentTrackInfo.totalTurns];
 		turnEntries = new int[currentTrackInfo.totalTurns];
 		turnExits = new int[currentTrackInfo.totalTurns];
+		turnSpeeds = new AnimationCurve[currentTrackInfo.totalTurns];
 
 		for(int i=0;i<currentTrackInfo.totalTurns;i++){
 			//Debug.Log("Turn: " + i + " - Entry:" + (currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i]));
@@ -163,6 +179,7 @@ public class VehicleLogic : MonoBehaviour
 			if(locationOnTrack >= turnEntries[turn]){
 				if(inArc == false){
 					calcNextTurnArc(turn, yRatio);
+					calcNextTurnSpeed(turn, yRatio);
 					inArc = true;
 				}
 			}
@@ -170,9 +187,9 @@ public class VehicleLogic : MonoBehaviour
 
 		if(inArc == true){
 			//Debug.Log("xLine: " + racingLines[turn].Evaluate(locationOnTrack));
-			yDiff = yLine - racingLines[turn].Evaluate(locationOnTrack);
+			//yDiff = yLine - racingLines[turn].Evaluate(locationOnTrack);
 			yLine = racingLines[turn].Evaluate(locationOnTrack);
-			speed -= (yDiff * 30);
+			//speed -= yDiff;
 			vehicle.transform.position = new Vector2(vehicle.transform.position.x, (yLine * trackWidth) - (trackWidth / 2));
 		}
 
@@ -188,6 +205,21 @@ public class VehicleLogic : MonoBehaviour
 
        			mainCam.transform.Rotate(0,0,-frameRotation);
 			}
+
+			speed = turnSpeeds[turn].Evaluate(locationOnTrack);
+		} else {
+			speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
+			speedMetres = speed / 2.237f;
+		}
+
+		speed+=currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
+		speedMetres = speed / 2.237f;
+
+		if(isPlayer == true){
+			updateMotion();
+			playerSpeedMetres = speedMetres;
+		} else {
+			vehicle.transform.Translate(new Vector2((playerSpeedMetres - speedMetres) * Time.deltaTime, 0));
 		}
 	}
 
@@ -226,8 +258,10 @@ public class VehicleLogic : MonoBehaviour
 		}
 	}
 
-	void calcNextTurnSpeeds(int turn, float yRatio){
-		turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], 0), new Keyframe(currentTrackInfo.turnPositions[turn] + ((currentTrackInfo.turnLengths[turn]/2f) * (1 - yRatio)),1), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),1), new Keyframe(turnExits[turn],yRatio));
+	void calcNextTurnSpeed(int turn, float yRatio){
+		turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + ((currentTrackInfo.turnLengths[turn]/2f) * (1 - yRatio)),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
+		//turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f), currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
+		
 	}
 
 	int updateTurnCount(int turn){
@@ -244,6 +278,10 @@ public class VehicleLogic : MonoBehaviour
 		#endif
 
 		return turn;
+	}
+
+	public void updateMotion(){
+		motionShader.SetFloat("_Speed",playerSpeedMetres);
 	}
 
 	void startWreck(){

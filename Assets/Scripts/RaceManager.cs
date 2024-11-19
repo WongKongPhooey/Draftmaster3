@@ -3,6 +3,8 @@ using UnityEngine;
 public class RaceManager : MonoBehaviour
 {
     Camera mainCam;
+
+	public static GameObject thePlayer;
     public static TrackInfo currentTrackInfo;
     public static int[] straightLength, turnLength, turnAngle;
 

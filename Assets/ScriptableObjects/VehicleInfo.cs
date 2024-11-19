@@ -4,6 +4,8 @@ using UnityEngine;
 public class VehicleInfo : ScriptableObject {
    
    [Header("Vehicle Info")]
-   public float toSixty;
-   public float toHundred;
+   public int topSpeed;
+   public float zeroToSixty;
+   public AnimationCurve speedCurve;
+   public AnimationCurve accelerationCurve;
 }

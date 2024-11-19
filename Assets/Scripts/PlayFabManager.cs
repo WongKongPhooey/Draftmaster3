@@ -205,10 +205,11 @@ public class PlayFabManager : MonoBehaviour
 	public static void OnLiveTimeTrialReceived(GetTitleDataResult result){
 		if(checkInternet() == false){return;}
 		if(result.Data == null){
-			//Debug.Log("No Live Time Trial Found");
 			PlayerPrefs.SetString("LatestVersion", Application.version);
 			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
+			PlayerPrefs.SetInt("EventTimeTrialActive",0);
+			PlayerPrefs.SetString("EventTimeTrial","");
 		}
 
 		//Live Race Time Trial
@@ -229,8 +230,27 @@ public class PlayFabManager : MonoBehaviour
 			PlayerPrefs.SetInt("LiveTimeTrialActive",0);
 			PlayerPrefs.SetString("LiveTimeTrial","");
 		}
+
+		//Live Event Time Trial
+		if(result.Data.ContainsKey("EventTimeTrial") == true){
+			if(result.Data["TargetVersion"] != ""){
+				PlayerPrefs.SetString("LatestVersion", result.Data["TargetVersion"]);
+			} else {
+				PlayerPrefs.SetString("LatestVersion", Application.version);
+			}
+			if(result.Data["EventTimeTrial"] != ""){
+				PlayerPrefs.SetString("EventTimeTrial", result.Data["EventTimeTrial"]);
+				//Debug.Log("Live Time Trial At " + result.Data["LiveTimeTrial"]);
+			} else {
+				PlayerPrefs.SetInt("EventTimeTrialActive",0);
+				PlayerPrefs.SetString("EventTimeTrial","");
+			}
+		} else {
+			PlayerPrefs.SetInt("EventTimeTrialActive",0);
+			PlayerPrefs.SetString("EventTimeTrial","");
+		}
 	}
-	
+
 	public static void GetTitleData(){
 		if(checkInternet() == false){return;}
 		PlayFabClientAPI.GetTitleData(new GetTitleDataRequest(), OnTitleDataReceived, OnTitleError);
@@ -253,6 +273,8 @@ public class PlayFabManager : MonoBehaviour
 		
 		//Testing
 		#if UNITY_EDITOR
+		result.Data["EventTimeTrialActive"] = "Yes";
+		result.Data["EventTimeTrial"] = "Talladega";
 		//result.Data["LiveTimeTrialActive"] = "No";
 		//result.Data["LiveTimeTrial"] = "Nashville";
 		//result.Data["TargetVersion"] = "8.1.12";
