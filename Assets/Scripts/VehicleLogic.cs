@@ -17,6 +17,7 @@ public class VehicleLogic : MonoBehaviour
 	//Global info
 	public static float playerSpeedMetres;
 	public Material motionShader;
+	public float motionOffset;
 
     //Vehicle info
 	public int topSpeed;
@@ -205,14 +206,15 @@ public class VehicleLogic : MonoBehaviour
 
        			mainCam.transform.Rotate(0,0,-frameRotation);
 			}
-
-			speed = turnSpeeds[turn].Evaluate(locationOnTrack);
+			if(currentTrackInfo.turnMaxSpeeds[turn] < speed){
+				speed = turnSpeeds[turn].Evaluate(locationOnTrack);
+			} else {
+				speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
+			}
 		} else {
 			speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
-			speedMetres = speed / 2.237f;
 		}
 
-		speed+=currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
 		speedMetres = speed / 2.237f;
 
 		if(isPlayer == true){
@@ -259,9 +261,7 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	void calcNextTurnSpeed(int turn, float yRatio){
-		turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + ((currentTrackInfo.turnLengths[turn]/2f) * (1 - yRatio)),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
-		//turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f), currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
-		
+		turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
 	}
 
 	int updateTurnCount(int turn){
@@ -281,7 +281,11 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	public void updateMotion(){
-		motionShader.SetFloat("_Speed",playerSpeedMetres);
+		motionOffset -= (playerSpeedMetres / 8f) * Time.deltaTime;
+		if(motionOffset <= 0){
+			motionOffset++;
+		}
+		motionShader.SetFloat("_MotionOffset", motionOffset);
 	}
 
 	void startWreck(){
