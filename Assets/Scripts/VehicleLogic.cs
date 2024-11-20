@@ -227,7 +227,7 @@ public class VehicleLogic : MonoBehaviour
 
 	void calcNextTurnArc(int turn, float yRatio){
 
-		if(yRatio >= (currentTrackInfo.highestEntry[turn])){
+		/*if(yRatio >= (currentTrackInfo.highestEntry[turn])){
 			//Go high, rip the wall
 			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.highestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.highestExit[turn]));
 		
@@ -257,7 +257,10 @@ public class VehicleLogic : MonoBehaviour
 				}
 				#endif
 			}
-		}
+		}*/
+
+		//Random for now
+		racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),Random.Range(0,10) / 10f), new Keyframe(turnExits[turn], Random.Range(80,100) / 100f));
 	}
 
 	void calcNextTurnSpeed(int turn, float yRatio){
