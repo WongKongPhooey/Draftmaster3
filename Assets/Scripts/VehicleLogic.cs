@@ -207,7 +207,7 @@ public class VehicleLogic : MonoBehaviour
        			mainCam.transform.Rotate(0,0,-frameRotation);
 			}
 			if(currentTrackInfo.turnMaxSpeeds[turn] < speed){
-				speed = turnSpeeds[turn].Evaluate(locationOnTrack);
+				speed = currentTrackInfo.turnMaxSpeeds[turn] + turnSpeeds[turn].Evaluate(locationOnTrack);
 			} else {
 				speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
 			}
@@ -264,7 +264,35 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	void calcNextTurnSpeed(int turn, float yRatio){
-		turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
+
+		//Speed based on arc (and banking)
+		float minTurnY = currentTrackInfo.lowestEntry[turn];
+		float maxTurnY = currentTrackInfo.highestEntry[turn];
+		float ySpread = maxTurnY - minTurnY;
+		float arcRatio = (yRatio - minTurnY) / ySpread;
+		//yRatio zero'd (my subtracting the min) divided by the possible spread
+		//This returns what % of the arc is being run 
+		//e.g. if min is 0.2, max is 0.9, spread is 0.7, actual is 0.35
+		//then 0.35 - 0.2 is 0.15, divided by 0.7 = 21% 
+		//So the car is 21% up from the lowest arc, compared to the highest arc.
+
+		//Predetermined speed curves, based on shape of turn and banking
+		AnimationCurve minTurnArc = currentTrackInfo.lowTurnDecel[turn];
+		AnimationCurve maxTurnArc = currentTrackInfo.highTurnDecel[turn];
+
+		turnSpeeds[turn] = new AnimationCurve();
+		for(int i=0;i<currentTrackInfo.turnLengths[turn];i+=50){
+			float speedSpread = maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i) - minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			float speedRatio = (speedSpread * arcRatio) + minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn] + i,speedRatio));
+		}
+
+		for(int j=0;j<turnSpeeds[turn].keys.Length;j++){
+			turnSpeeds[turn].SmoothTangents(j,0);
+		}
+
+		//Fixed Speed (for now)
+		//turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
 	}
 
 	int updateTurnCount(int turn){
