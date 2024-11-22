@@ -180,7 +180,6 @@ public class VehicleLogic : MonoBehaviour
 			if(locationOnTrack >= turnEntries[turn]){
 				if(inArc == false){
 					calcNextTurnArc(turn, yRatio);
-					calcNextTurnSpeed(turn, yRatio);
 					inArc = true;
 				}
 			}
@@ -207,8 +206,9 @@ public class VehicleLogic : MonoBehaviour
        			mainCam.transform.Rotate(0,0,-frameRotation);
 			}
 			if(currentTrackInfo.turnMaxSpeeds[turn] < speed){
-				speed = currentTrackInfo.turnMaxSpeeds[turn] + turnSpeeds[turn].Evaluate(locationOnTrack);
+				speed = turnSpeeds[turn].Evaluate(locationOnTrack);
 			} else {
+				//Flat-out turn
 				speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
 			}
 		} else {
@@ -260,16 +260,21 @@ public class VehicleLogic : MonoBehaviour
 		}*/
 
 		//Random for now
-		racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),Random.Range(0,10) / 10f), new Keyframe(turnExits[turn], Random.Range(80,100) / 100f));
+		float midpointRatio = Random.Range(0,10) / 10f;
+		racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f), midpointRatio), new Keyframe(turnExits[turn], Random.Range(80,100) / 100f));
+	
+		calcNextTurnSpeed(turn, speed, midpointRatio);
 	}
 
-	void calcNextTurnSpeed(int turn, float yRatio){
+	void calcNextTurnSpeed(int turn, float speed, float yRatio){
 
 		//Speed based on arc (and banking)
 		float minTurnY = currentTrackInfo.lowestEntry[turn];
 		float maxTurnY = currentTrackInfo.highestEntry[turn];
 		float ySpread = maxTurnY - minTurnY;
 		float arcRatio = (yRatio - minTurnY) / ySpread;
+
+		Debug.Log("" + this.name + " - Y Ratio:" + arcRatio);
 		//yRatio zero'd (my subtracting the min) divided by the possible spread
 		//This returns what % of the arc is being run 
 		//e.g. if min is 0.2, max is 0.9, spread is 0.7, actual is 0.35
@@ -284,7 +289,7 @@ public class VehicleLogic : MonoBehaviour
 		for(int i=0;i<currentTrackInfo.turnLengths[turn];i+=50){
 			float speedSpread = maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i) - minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			float speedRatio = (speedSpread * arcRatio) + minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
-			turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn] + i,speedRatio));
+			turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn] + i,speed + speedRatio));
 		}
 
 		for(int j=0;j<turnSpeeds[turn].keys.Length;j++){
