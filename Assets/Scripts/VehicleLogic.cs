@@ -13,6 +13,7 @@ public class VehicleLogic : MonoBehaviour
 	GameObject vehicle;
 	public bool isPlayer = false;
 	static Camera mainCam;
+	public Vector3 pos;
 
 	//Global info
 	public static float playerSpeedMetres;
@@ -37,6 +38,7 @@ public class VehicleLogic : MonoBehaviour
 	public AnimationCurve[] turnSpeeds;
 	public int[] turnEntries;
 	public int[] turnExits;
+	public float trackWidth;
 
 	public int turn = 0;
 	public bool inArc = false;
@@ -113,7 +115,10 @@ public class VehicleLogic : MonoBehaviour
     void Start(){
         
 		vehicle = this.gameObject;
+		pos = transform.position;
 		mainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
+
+		trackWidth = 13f;
 
 		if(isPlayer == true){
 			RaceManager.thePlayer = vehicle;
@@ -136,6 +141,9 @@ public class VehicleLogic : MonoBehaviour
 
         speed = 140;
 		speedMetres = speed / 2.237f;
+
+		raycastBatch = new NativeArray<RaycastCommand>(8, Allocator.Persistent);
+		raycastHits = new NativeArray<RaycastHit>(8, Allocator.Persistent);
     }
 
 	void initRacingLines(){
@@ -152,60 +160,41 @@ public class VehicleLogic : MonoBehaviour
 		}
 	}
 
-
-
     // Update is called once per frame
     void Update(){
-        locationOnTrack+= (speedMetres) * Time.deltaTime;
+        
+		pos = vehicle.transform.position;
+
+		locationOnTrack+= (speedMetres) * Time.deltaTime;
 		
-		//Track width - a car width
-		float trackWidth = 13f;
 		float yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
 
-		if(locationOnTrack > (currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn])){
-			onTurn = false;
-		} else {
-			if(locationOnTrack >= currentTrackInfo.turnPositions[turn]){
-				if(onTurn == false){
-					onTurn = true;
-				}
-			}
+		//Update turn and arc triggers
+		onTurn = checkTurnStatus(turn, locationOnTrack, onTurn);
+		
+		#if UNITY_EDITOR
+		if(debugPlayer == true){
+			//Debug.Log("Arc status: " + inArc);
 		}
+		#endif
 
-		//Are we in a turn (incl. the arc)?
-		if(locationOnTrack > turnExits[turn]){
-			inArc = false;
-			turn = updateTurnCount(turn);
-		} else {
-			if(locationOnTrack >= turnEntries[turn]){
-				if(inArc == false){
-					calcNextTurnArc(turn, yRatio);
-					inArc = true;
-				}
-			}
-		}
+		inArc = checkArcStatus(turn, locationOnTrack, inArc, yRatio);
 
+		//Follow the calculated racing line
 		if(inArc == true){
-			//Debug.Log("xLine: " + racingLines[turn].Evaluate(locationOnTrack));
-			//yDiff = yLine - racingLines[turn].Evaluate(locationOnTrack);
 			yLine = racingLines[turn].Evaluate(locationOnTrack);
-			//speed -= yDiff;
 			vehicle.transform.position = new Vector2(vehicle.transform.position.x, (yLine * trackWidth) - (trackWidth / 2));
 		}
 
+		//On turn speed logic
 		if(onTurn == true){
 			if(isPlayer == true){
  				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
-				
-				#if UNITY_EDITOR
-				if(debugPlayer == true){
-					Debug.Log("Frame rotation: " + frameRotation + "");
-				}
-				#endif
-
        			mainCam.transform.Rotate(0,0,-frameRotation);
 			}
-			if(currentTrackInfo.turnMaxSpeeds[turn] < speed){
+
+			if((currentTrackInfo.turnMaxSpeeds[turn] < speed)
+			&&(locationOnTrack < (currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn]))){
 				speed = turnSpeeds[turn].Evaluate(locationOnTrack);
 			} else {
 				//Flat-out turn
@@ -218,11 +207,55 @@ public class VehicleLogic : MonoBehaviour
 		speedMetres = speed / 2.237f;
 
 		if(isPlayer == true){
+			//Send the new motion speed to the environment objects
 			updateMotion();
 			playerSpeedMetres = speedMetres;
 		} else {
+			//Move the other cars relative to the player
 			vehicle.transform.Translate(new Vector2((playerSpeedMetres - speedMetres) * Time.deltaTime, 0));
 		}
+
+		//Complete the raycasting that was scheduled during the previous frame
+		raycastHandler.Complete();
+
+		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
+		raycastBatch[0] = new RaycastCommand(pos, transform.forward, 10f); //0. Forward centered
+		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, draftAirCushion); //1. Backward centered
+		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right * -1, 1f); //2. Car Left Of FQ
+		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right * -1, 1f); //3. Car Left Of RQ
+		raycastBatch[4] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right, 1f); //2. Car Right Of FQ
+		raycastBatch[5] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right, 1f); //3. Car Right Of RQ
+		
+		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
+	}
+
+	bool checkTurnStatus(int turn, float location, bool isOnTurn){
+		if(location > (currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn])){
+			return false;
+		} else {
+			if(location >= currentTrackInfo.turnPositions[turn]){
+				if(isOnTurn == false){
+					return true;
+				}
+			}
+		}
+		return isOnTurn;
+	}
+
+	bool checkArcStatus(int turn, float location, bool isInArc, float yRatio){
+		//Are we in a turn (incl. the arc)?
+		if(location > turnExits[turn]){
+			updateTurnCount(turn);
+			return false;
+		} else {
+			if(location >= turnEntries[turn]){
+				if(isInArc == false){
+					calcNextTurnArc(turn, yRatio);
+					return true;
+				}
+			}
+		}
+		return isInArc;
 	}
 
 	void calcNextTurnArc(int turn, float yRatio){
@@ -274,7 +307,7 @@ public class VehicleLogic : MonoBehaviour
 		float ySpread = maxTurnY - minTurnY;
 		float arcRatio = (yRatio - minTurnY) / ySpread;
 
-		Debug.Log("" + this.name + " - Y Ratio:" + arcRatio);
+		//Debug.Log("" + this.name + " - Y Ratio:" + arcRatio);
 		//yRatio zero'd (my subtracting the min) divided by the possible spread
 		//This returns what % of the arc is being run 
 		//e.g. if min is 0.2, max is 0.9, spread is 0.7, actual is 0.35
@@ -287,8 +320,17 @@ public class VehicleLogic : MonoBehaviour
 
 		turnSpeeds[turn] = new AnimationCurve();
 		for(int i=0;i<currentTrackInfo.turnLengths[turn];i+=50){
-			float speedSpread = maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i) - minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
-			float speedRatio = (speedSpread * arcRatio) + minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			float highLineSpeed = maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			float lowLineSpeed = minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			float speedSpread = 0.5f;
+			float speedRatio = 0.5f;
+			if(highLineSpeed < lowLineSpeed){
+				speedSpread = highLineSpeed - lowLineSpeed;
+				speedRatio = (speedSpread * arcRatio) + minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			} else {
+				speedSpread = lowLineSpeed - highLineSpeed;
+				speedRatio = (speedSpread * arcRatio) + maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			}
 			turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn] + i,speed + speedRatio));
 		}
 
@@ -300,20 +342,19 @@ public class VehicleLogic : MonoBehaviour
 		//turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
 	}
 
-	int updateTurnCount(int turn){
-		turn += 1;
-		if(turn >= currentTrackInfo.totalTurns){
-			turn = 0;
+	void updateTurnCount(int t){
+		t++;
+		if(t >= currentTrackInfo.totalTurns){
+			t = 0;
 			locationOnTrack = 0;
 		}
+		turn = t;
 
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
 			Debug.Log("Turn updated to: " + turn);
 		}
 		#endif
-
-		return turn;
 	}
 
 	public void updateMotion(){
