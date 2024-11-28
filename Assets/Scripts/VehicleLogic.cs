@@ -13,12 +13,13 @@ public class VehicleLogic : MonoBehaviour
 	GameObject vehicle;
 	public bool isPlayer = false;
 	static Camera mainCam;
-	public Vector3 pos;
+	public Vector2 pos;
 
 	//Global info
 	public static float playerSpeedMetres;
 	public Material motionShader;
 	public float motionOffset;
+	public float yRatio;
 
     //Vehicle info
 	public int topSpeed;
@@ -70,6 +71,9 @@ public class VehicleLogic : MonoBehaviour
 	static float coolOffSpace;
 	static float coolOffInv;
 
+	//AI Logic variables
+	bool arcAdjusted = false;
+
     //Wreck variables
     public bool isWrecking;
 	public bool wreckOver;
@@ -91,9 +95,6 @@ public class VehicleLogic : MonoBehaviour
 	bool hitByPlayer;
 
     //Cached components
-    NativeArray<RaycastCommand> raycastBatch;
-	NativeArray<RaycastHit> raycastHits;
-	JobHandle raycastHandler;
     ConstantForce wreckForce;
 	Rigidbody wreckRigidbody;
 	Transform leftSparks;
@@ -141,9 +142,6 @@ public class VehicleLogic : MonoBehaviour
 
         speed = 140;
 		speedMetres = speed / 2.237f;
-
-		raycastBatch = new NativeArray<RaycastCommand>(8, Allocator.Persistent);
-		raycastHits = new NativeArray<RaycastHit>(8, Allocator.Persistent);
     }
 
 	void initRacingLines(){
@@ -167,17 +165,10 @@ public class VehicleLogic : MonoBehaviour
 
 		locationOnTrack+= (speedMetres) * Time.deltaTime;
 		
-		float yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
+		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
 
 		//Update turn and arc triggers
 		onTurn = checkTurnStatus(turn, locationOnTrack, onTurn);
-		
-		#if UNITY_EDITOR
-		if(debugPlayer == true){
-			//Debug.Log("Arc status: " + inArc);
-		}
-		#endif
-
 		inArc = checkArcStatus(turn, locationOnTrack, inArc, yRatio);
 
 		//Follow the calculated racing line
@@ -191,6 +182,9 @@ public class VehicleLogic : MonoBehaviour
 			if(isPlayer == true){
  				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
        			mainCam.transform.Rotate(0,0,-frameRotation);
+			} else {
+				int awarenessVal = 20;
+				checkQuarters(awarenessVal);
 			}
 
 			if((currentTrackInfo.turnMaxSpeeds[turn] < speed)
@@ -204,6 +198,7 @@ public class VehicleLogic : MonoBehaviour
 			speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
 		}
 
+		//Convert from MpH to m/s
 		speedMetres = speed / 2.237f;
 
 		if(isPlayer == true){
@@ -214,19 +209,6 @@ public class VehicleLogic : MonoBehaviour
 			//Move the other cars relative to the player
 			vehicle.transform.Translate(new Vector2((playerSpeedMetres - speedMetres) * Time.deltaTime, 0));
 		}
-
-		//Complete the raycasting that was scheduled during the previous frame
-		raycastHandler.Complete();
-
-		//Schedule the required raycasts (that run every frame) to run during this frame in a batch job
-		raycastBatch[0] = new RaycastCommand(pos, transform.forward, 10f); //0. Forward centered
-		raycastBatch[1] = new RaycastCommand(pos, transform.forward * -1, draftAirCushion); //1. Backward centered
-		raycastBatch[2] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right * -1, 1f); //2. Car Left Of FQ
-		raycastBatch[3] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right * -1, 1f); //3. Car Left Of RQ
-		raycastBatch[4] = new RaycastCommand(pos + new Vector3(0,0,0.99f), transform.right, 1f); //2. Car Right Of FQ
-		raycastBatch[5] = new RaycastCommand(pos + new Vector3(0,0,-0.99f), transform.right, 1f); //3. Car Right Of RQ
-		
-		raycastHandler = RaycastCommand.ScheduleBatch(raycastBatch, raycastHits, 6);
 	}
 
 	bool checkTurnStatus(int turn, float location, bool isOnTurn){
@@ -299,6 +281,17 @@ public class VehicleLogic : MonoBehaviour
 		calcNextTurnSpeed(turn, speed, midpointRatio);
 	}
 
+	void recalcTurnArc(int turn, bool carInside, bool carOutside){
+		float currentYRatio = racingLines[turn].Evaluate(locationOnTrack);
+		if(carInside == true){
+			racingLines[turn] = new AnimationCurve(new Keyframe(locationOnTrack, yRatio), new Keyframe(turnExits[turn], 1f));
+		}
+		if(carOutside == true){
+			racingLines[turn] = new AnimationCurve(new Keyframe(locationOnTrack, yRatio), new Keyframe(turnExits[turn], 0.5f));
+		}
+		arcAdjusted = true;
+	}
+
 	void calcNextTurnSpeed(int turn, float speed, float yRatio){
 
 		//Speed based on arc (and banking)
@@ -349,6 +342,7 @@ public class VehicleLogic : MonoBehaviour
 			locationOnTrack = 0;
 		}
 		turn = t;
+		arcAdjusted = false;
 
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
@@ -363,6 +357,35 @@ public class VehicleLogic : MonoBehaviour
 			motionOffset++;
 		}
 		motionShader.SetFloat("_MotionOffset", motionOffset);
+	}
+
+	void checkQuarters(int awareness){
+		RaycastHit2D checkFrontLeft = Physics2D.Raycast(pos + new Vector2(-2.56f,-1.28f), Vector2.down);
+		RaycastHit2D checkRearLeft = Physics2D.Raycast(pos + new Vector2(2.56f,-1.28f), Vector2.down);
+		RaycastHit2D checkFrontRight = Physics2D.Raycast(pos + new Vector2(-2.56f,-1.28f), Vector2.up);
+		RaycastHit2D checkRearRight = Physics2D.Raycast(pos + new Vector2(2.56f,-1.28f), Vector2.up);
+		Debug.DrawRay(pos + new Vector2(-2.56f,-1.28f), Vector2.down, Color.green);
+		Debug.DrawRay(pos + new Vector2(2.56f,-1.28f), Vector2.down, Color.green);
+
+		float awarenessDist = 0.025f * awareness;
+		bool hitLaneLeft = ((checkFrontLeft.distance > 0)&&(checkFrontLeft.distance < awarenessDist))||((checkRearLeft.distance > 0)&&(checkRearLeft.distance < awarenessDist));
+		bool hitLaneRight = ((checkFrontRight.distance > 0)&&(checkFrontRight.distance < awarenessDist))||((checkRearRight.distance > 0)&&(checkRearRight.distance < awarenessDist));
+
+		#if UNITY_EDITOR
+		if((hitLaneLeft == true)||(hitLaneLeft == true)){
+			Debug.Log("Adjust arc to avoid opponent");
+		}
+		#endif
+
+		if(arcAdjusted == false){
+			if(hitLaneLeft){
+				recalcTurnArc(turn, true, false);
+			} else {
+				if(hitLaneRight){
+					recalcTurnArc(turn, false, true);
+				}
+			}
+		}
 	}
 
 	void startWreck(){
@@ -588,9 +611,4 @@ public class VehicleLogic : MonoBehaviour
             sparksCooldown = Random.Range(5,20);
         }*/
     }
-
-    void OnDestroy(){
-		raycastBatch.Dispose();
-		raycastHits.Dispose();
-	}
 }
