@@ -24,13 +24,8 @@ public class MovementOnFoot : MonoBehaviour {
         body.linearVelocity = direction * playerSpeed;
 
         Vector3 facing = new Vector3(direction.x,direction.y,0);
-        Debug.Log("Input direction: " + direction.x + "," + direction.y);
 
-        //Vector3 relative = transform.InverseTransformPoint(facing);
-        float angle = Mathf.Atan2(facing.x, facing.z) * Mathf.Rad2Deg;
-
-        Debug.Log("Atan angle: " + angle);
-        //transform.rotation = Quaternion.Euler(0, 0, angle);
+        Debug.DrawLine(transform.position, transform.position + facing, Color.red); 
 
         animator.SetFloat(horizontal, direction.x);
         animator.SetFloat(vertical, direction.y);
