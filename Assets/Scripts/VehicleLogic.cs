@@ -282,12 +282,13 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	void recalcTurnArc(int turn, bool carInside, bool carOutside){
+
 		float currentYRatio = racingLines[turn].Evaluate(locationOnTrack);
 		if(carInside == true){
 			racingLines[turn] = new AnimationCurve(new Keyframe(locationOnTrack, yRatio), new Keyframe(turnExits[turn], 1f));
 		}
 		if(carOutside == true){
-			racingLines[turn] = new AnimationCurve(new Keyframe(locationOnTrack, yRatio), new Keyframe(turnExits[turn], 0.5f));
+			racingLines[turn] = new AnimationCurve(new Keyframe(locationOnTrack, yRatio), new Keyframe(turnExits[turn], 0.6f));
 		}
 		arcAdjusted = true;
 	}
@@ -360,28 +361,37 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	void checkQuarters(int awareness){
-		RaycastHit2D checkFrontLeft = Physics2D.Raycast(pos + new Vector2(-2.56f,-1.28f), Vector2.down);
-		RaycastHit2D checkRearLeft = Physics2D.Raycast(pos + new Vector2(2.56f,-1.28f), Vector2.down);
-		RaycastHit2D checkFrontRight = Physics2D.Raycast(pos + new Vector2(-2.56f,-1.28f), Vector2.up);
-		RaycastHit2D checkRearRight = Physics2D.Raycast(pos + new Vector2(2.56f,-1.28f), Vector2.up);
-		Debug.DrawRay(pos + new Vector2(-2.56f,-1.28f), Vector2.down, Color.green);
-		Debug.DrawRay(pos + new Vector2(2.56f,-1.28f), Vector2.down, Color.green);
 
-		float awarenessDist = 0.025f * awareness;
+		float awarenessDist = 0.05f * awareness;
+
+		RaycastHit2D checkFrontLeft = Physics2D.Raycast(pos + new Vector2(-2.56f,-1.28f), Vector2.down,awarenessDist,LayerMask.GetMask("Vehicles"));
+		RaycastHit2D checkRearLeft = Physics2D.Raycast(pos + new Vector2(2.56f,-1.28f), Vector2.down,awarenessDist,LayerMask.GetMask("Vehicles"));
+		RaycastHit2D checkFrontRight = Physics2D.Raycast(pos + new Vector2(-2.56f,1.28f), Vector2.up,awarenessDist,LayerMask.GetMask("Vehicles"));
+		RaycastHit2D checkRearRight = Physics2D.Raycast(pos + new Vector2(2.56f,1.28f), Vector2.up,awarenessDist,LayerMask.GetMask("Vehicles"));
+		Debug.DrawRay(pos + new Vector2(-2.56f,-1.28f), Vector2.down * awarenessDist, Color.green);
+		Debug.DrawRay(pos + new Vector2(2.56f,-1.28f), Vector2.down * awarenessDist, Color.green);
+		Debug.DrawRay(pos + new Vector2(-2.56f,1.28f), Vector2.up * awarenessDist, Color.green);
+		Debug.DrawRay(pos + new Vector2(2.56f,1.28f), Vector2.up * awarenessDist, Color.green);
+
+
 		bool hitLaneLeft = ((checkFrontLeft.distance > 0)&&(checkFrontLeft.distance < awarenessDist))||((checkRearLeft.distance > 0)&&(checkRearLeft.distance < awarenessDist));
 		bool hitLaneRight = ((checkFrontRight.distance > 0)&&(checkFrontRight.distance < awarenessDist))||((checkRearRight.distance > 0)&&(checkRearRight.distance < awarenessDist));
 
-		#if UNITY_EDITOR
-		if((hitLaneLeft == true)||(hitLaneLeft == true)){
-			Debug.Log("Adjust arc to avoid opponent");
-		}
-		#endif
-
 		if(arcAdjusted == false){
-			if(hitLaneLeft){
+			if(hitLaneLeft == true){
+
+				#if UNITY_EDITOR
+				Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car inside");
+				#endif
+
 				recalcTurnArc(turn, true, false);
 			} else {
-				if(hitLaneRight){
+				if(hitLaneRight == true){
+
+					#if UNITY_EDITOR
+					Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car outside");
+					#endif
+
 					recalcTurnArc(turn, false, true);
 				}
 			}
