@@ -117,7 +117,7 @@ public class VehicleLogic : MonoBehaviour
         
 		vehicle = this.gameObject;
 		pos = transform.position;
-		mainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
+		mainCam = GameObject.Find("MainCamera").GetComponent<Camera>();
 
 		trackWidth = 13f;
 

@@ -20,7 +20,7 @@ public class MovementOnFoot : MonoBehaviour {
         animator = GetComponent<Animator>();
     }
 
-    void Update(){
+    void FixedUpdate(){
         direction.Set(InputManager.direction.x,InputManager.direction.y);
         body.linearVelocity = direction * playerSpeed;
 
@@ -34,7 +34,8 @@ public class MovementOnFoot : MonoBehaviour {
         //When the stick is released, leave the player as is, don't reset to 0
         if(angle != 0){
             Quaternion angleAxis = Quaternion.AngleAxis(angle + 90, Vector3.forward);
-            transform.rotation = Quaternion.Slerp(transform.rotation, angleAxis, Time.deltaTime * 10);
+            //transform.rotation = Quaternion.Slerp(transform.rotation, angleAxis, Time.deltaTime * 10);
+            body.MoveRotation(Quaternion.Slerp(transform.rotation, angleAxis, Time.deltaTime * 10));
         }
 
         animator.SetFloat(horizontal, direction.x);
