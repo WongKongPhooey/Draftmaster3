@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using NUnit.Framework.Constraints;
 using UnityEngine;
 
 public class MovementOnFoot : MonoBehaviour {
@@ -23,9 +24,18 @@ public class MovementOnFoot : MonoBehaviour {
         direction.Set(InputManager.direction.x,InputManager.direction.y);
         body.linearVelocity = direction * playerSpeed;
 
-        Vector3 facing = new Vector3(direction.x,direction.y,0);
+        Vector3 lookDir = (transform.position + new Vector3(direction.x,direction.y,0));
 
-        Debug.DrawLine(transform.position, transform.position + facing, Color.red); 
+        //Debug.DrawLine(transform.position, lookDir, Color.red);
+
+        float angle = Mathf.Atan2(lookDir.y - transform.position.y,lookDir.x - transform.position.x) * Mathf.Rad2Deg;
+        //Debug.Log("Atan2 Angle:" + angle);
+
+        //When the stick is released, leave the player as is, don't reset to 0
+        if(angle != 0){
+            Quaternion angleAxis = Quaternion.AngleAxis(angle + 90, Vector3.forward);
+            transform.rotation = Quaternion.Slerp(transform.rotation, angleAxis, Time.deltaTime * 10);
+        }
 
         animator.SetFloat(horizontal, direction.x);
         animator.SetFloat(vertical, direction.y);
