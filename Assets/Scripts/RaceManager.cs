@@ -1,8 +1,12 @@
+using System.Collections;
+using System.Collections.Generic;
+using PlayFab.ClientModels;
+using Unity.Cinemachine;
 using UnityEngine;
 
 public class RaceManager : MonoBehaviour
 {
-    Camera mainCam;
+    private static CinemachineCamera actionedCamera;
 
 	public static GameObject thePlayer;
     public static TrackInfo currentTrackInfo;
@@ -14,6 +18,9 @@ public class RaceManager : MonoBehaviour
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
+
+		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
+
         setFPS();
         setCameraZoom();
         trackInit();
@@ -42,6 +49,11 @@ public class RaceManager : MonoBehaviour
 		}
     }
 
+	public static void setPlayer(GameObject playerVehicle){
+		thePlayer = playerVehicle;
+		actionedCamera.Follow = thePlayer.transform;
+	}
+
     void setFPS(){
         int fpsCap = PlayerPrefs.GetInt("FPSLimit");
 		switch(fpsCap){
@@ -64,7 +76,6 @@ public class RaceManager : MonoBehaviour
     }
 
     void setCameraZoom(){
-        mainCam = GameObject.Find("Main Camera").GetComponent<Camera>();
-		mainCam.orthographicSize = 20.0f;
+		actionedCamera.Lens.OrthographicSize = 18f;
     }
 }

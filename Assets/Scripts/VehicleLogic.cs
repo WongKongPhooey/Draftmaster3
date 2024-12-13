@@ -122,7 +122,7 @@ public class VehicleLogic : MonoBehaviour
 		trackWidth = 13f;
 
 		if(isPlayer == true){
-			RaceManager.thePlayer = vehicle;
+			RaceManager.setPlayer(vehicle);
 		}
 
 		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
@@ -241,9 +241,11 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	void calcNextTurnArc(int turn, float yRatio){
-
-		/*if(yRatio >= (currentTrackInfo.highestEntry[turn])){
+		
+		float midpointRatio;
+		if(yRatio >= (currentTrackInfo.highestEntry[turn])){
 			//Go high, rip the wall
+			midpointRatio = currentTrackInfo.highestMidpoint[turn];
 			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.highestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.highestExit[turn]));
 		
 			#if UNITY_EDITOR
@@ -255,6 +257,7 @@ public class VehicleLogic : MonoBehaviour
 		} else {
 			if(yRatio <= (currentTrackInfo.lowestEntry[turn])){
 				//Dive down low
+				midpointRatio = currentTrackInfo.lowestMidpoint[turn];
 				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.lowestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.lowestExit[turn]));
 			
 				#if UNITY_EDITOR
@@ -264,6 +267,7 @@ public class VehicleLogic : MonoBehaviour
 				#endif
 
 			} else {
+				midpointRatio = currentTrackInfo.idealMidpoint[turn];
 				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.idealMidpoint[turn] + Random.Range(0,0.25f)), new Keyframe(turnExits[turn],currentTrackInfo.idealExit[turn] + Random.Range(-0.25f,0f)));
 			
 				#if UNITY_EDITOR
@@ -272,11 +276,11 @@ public class VehicleLogic : MonoBehaviour
 				}
 				#endif
 			}
-		}*/
+		}
 
 		//Random for now
-		float midpointRatio = Random.Range(0,10) / 10f;
-		racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f), midpointRatio), new Keyframe(turnExits[turn], Random.Range(80,100) / 100f));
+		//float midpointRatio = Random.Range(0,10) / 10f;
+		//racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f), midpointRatio), new Keyframe(turnExits[turn], Random.Range(80,100) / 100f));
 	
 		calcNextTurnSpeed(turn, speed, midpointRatio);
 	}
