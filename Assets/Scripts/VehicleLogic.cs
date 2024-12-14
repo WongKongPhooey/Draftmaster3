@@ -50,7 +50,7 @@ public class VehicleLogic : MonoBehaviour
 
     //Speed variables
     public float speed;
-    static float speedMetres;
+    public float speedMetres;
     public float locationOnTrack;
     
 	float engineTemp;
@@ -159,7 +159,7 @@ public class VehicleLogic : MonoBehaviour
 	}
 
     // Update is called once per frame
-    void Update(){
+    void FixedUpdate(){
         
 		pos = vehicle.transform.position;
 

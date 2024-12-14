@@ -6,31 +6,42 @@ using UnityEngine;
 
 public class RaceManager : MonoBehaviour
 {
-    private static CinemachineCamera actionedCamera;
+	private static CinemachineCamera actionedCamera;
 
 	public static GameObject thePlayer;
     public static TrackInfo currentTrackInfo;
-    public static int[] straightLength, turnLength, turnAngle;
+    public int[] straightLength, turnLength, turnAngle, turnPositions, turnStartAngle;
 
 	public static int trackLength;
 	public static int totalTurns;
-	public static int currentLapLength;
+	public float playerLocation;
+	private float trackRotation;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
-
-		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
-
-        setFPS();
-        setCameraZoom();
         trackInit();
     }
 
-    // Update is called once per frame
-    void Update(){
+	void FixedUpdate(){
 
-        //float frameRotation = turnAngle[turn] / (turnLength[turn] / vehicleLogic.speedMetres) * Time.deltaTime;
-       //mainCam.transform.Rotate(0,0,-frameRotation);
+    	int playerTurn = thePlayer.GetComponent<VehicleLogic>().turn;
+	   	playerLocation = thePlayer.GetComponent<VehicleLogic>().locationOnTrack;
+       	if(turnPositions[playerTurn] > playerLocation){
+			//On a straight
+			trackRotation = turnStartAngle[playerTurn];
+			Debug.Log("Turn: " + playerTurn + ", Location: " + playerLocation + ", Rotation: " + trackRotation);
+		} else {
+			//Somewhere in a turn
+			float percentInTurn = (playerLocation - turnPositions[playerTurn]) / turnLength[playerTurn];
+			if(percentInTurn < 1){
+				trackRotation = turnStartAngle[playerTurn] + (turnAngle[playerTurn] * percentInTurn);
+				Debug.Log("Turn: " + playerTurn + ", Location: " + playerLocation + ", % Turn: " + percentInTurn + ", Rotation: " + trackRotation);
+			} else {
+				trackRotation = turnStartAngle[playerTurn] + turnAngle[playerTurn];
+				Debug.Log("Turn: " + playerTurn + ", Location: " + playerLocation + ", Rotation: " + trackRotation);
+			}
+		}
+	   	CameraManager.setRotation(trackRotation);
     }
 
     void trackInit(){
@@ -40,42 +51,26 @@ public class RaceManager : MonoBehaviour
 		straightLength = new int[totalTurns];
 		turnLength = new int[totalTurns];
 		turnAngle = new int[totalTurns];
+		turnStartAngle = new int[totalTurns];
+		turnPositions = new int[totalTurns];
+		int cumulativeTurnAngle = 0;
 		for(int i=0;i<totalTurns;i++){
 			Debug.Log("Straight Length " + i + ": " + currentTrackInfo.straightLengths[i]);
 			straightLength[i] = currentTrackInfo.straightLengths[i];
 			turnLength[i] = currentTrackInfo.turnLengths[i];
 			turnAngle[i] = currentTrackInfo.turnAngles[i];
-			trackLength += straightLength[i] + turnLength[i];
+			turnPositions[i] = currentTrackInfo.turnPositions[i];
+			turnStartAngle[i] = cumulativeTurnAngle;
+			cumulativeTurnAngle += turnAngle[i];
+			trackLength += straightLength[i];
+			trackLength += turnLength[i];
 		}
     }
 
 	public static void setPlayer(GameObject playerVehicle){
 		thePlayer = playerVehicle;
+		CameraManager.setPlayer(thePlayer);
+		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;
 	}
-
-    void setFPS(){
-        int fpsCap = PlayerPrefs.GetInt("FPSLimit");
-		switch(fpsCap){
-			case 1:
-				Application.targetFrameRate = 30;
-				break;
-			case 2:
-				Application.targetFrameRate = 60;
-				break;
-			case 3:
-				Application.targetFrameRate = 120;
-				#if UNITY_EDITOR
-				Application.targetFrameRate = -1;
-				#endif
-				break;
-			default:
-				Application.targetFrameRate = 60;
-				break;
-		}
-    }
-
-    void setCameraZoom(){
-		actionedCamera.Lens.OrthographicSize = 18f;
-    }
 }
