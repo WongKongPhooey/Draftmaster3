@@ -29,16 +29,13 @@ public class RaceManager : MonoBehaviour
        	if(turnPositions[playerTurn] > playerLocation){
 			//On a straight
 			trackRotation = turnStartAngle[playerTurn];
-			Debug.Log("Turn: " + playerTurn + ", Location: " + playerLocation + ", Rotation: " + trackRotation);
 		} else {
 			//Somewhere in a turn
 			float percentInTurn = (playerLocation - turnPositions[playerTurn]) / turnLength[playerTurn];
 			if(percentInTurn < 1){
 				trackRotation = turnStartAngle[playerTurn] + (turnAngle[playerTurn] * percentInTurn);
-				Debug.Log("Turn: " + playerTurn + ", Location: " + playerLocation + ", % Turn: " + percentInTurn + ", Rotation: " + trackRotation);
 			} else {
 				trackRotation = turnStartAngle[playerTurn] + turnAngle[playerTurn];
-				Debug.Log("Turn: " + playerTurn + ", Location: " + playerLocation + ", Rotation: " + trackRotation);
 			}
 		}
 	   	CameraManager.setRotation(trackRotation);
@@ -55,7 +52,6 @@ public class RaceManager : MonoBehaviour
 		turnPositions = new int[totalTurns];
 		int cumulativeTurnAngle = 0;
 		for(int i=0;i<totalTurns;i++){
-			Debug.Log("Straight Length " + i + ": " + currentTrackInfo.straightLengths[i]);
 			straightLength[i] = currentTrackInfo.straightLengths[i];
 			turnLength[i] = currentTrackInfo.turnLengths[i];
 			turnAngle[i] = currentTrackInfo.turnAngles[i];

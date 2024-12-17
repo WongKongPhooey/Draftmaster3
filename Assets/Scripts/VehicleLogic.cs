@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Random=UnityEngine.Random;
 using Unity.Entities.UniversalDelegates;
+using UnityEditor.Experimental.GraphView;
 
 public class VehicleLogic : MonoBehaviour
 {
@@ -14,6 +15,8 @@ public class VehicleLogic : MonoBehaviour
 	public bool isPlayer = false;
 	static Camera mainCam;
 	public Vector2 pos;
+	private Vector2 direction;
+	private int sensitivity;
 
 	//Global info
 	public static float playerSpeedMetres;
@@ -118,6 +121,7 @@ public class VehicleLogic : MonoBehaviour
 		vehicle = this.gameObject;
 		pos = transform.position;
 		mainCam = GameObject.Find("MainCamera").GetComponent<Camera>();
+		sensitivity = InputManager.inputSensitivity;
 
 		trackWidth = 13f;
 
@@ -205,6 +209,10 @@ public class VehicleLogic : MonoBehaviour
 			//Send the new motion speed to the environment objects
 			updateMotion();
 			playerSpeedMetres = speedMetres;
+
+			//Horizontal analog stick input becomes vertical car direction
+			direction.Set(InputManager.direction.x,0);
+			vehicle.transform.Translate(0,direction.x * sensitivity * Time.deltaTime,0);
 		} else {
 			//Move the other cars relative to the player
 			vehicle.transform.Translate(new Vector2((playerSpeedMetres - speedMetres) * Time.deltaTime, 0));
@@ -243,7 +251,7 @@ public class VehicleLogic : MonoBehaviour
 	void calcNextTurnArc(int turn, float yRatio){
 		
 		float midpointRatio;
-		if(yRatio >= (currentTrackInfo.highestEntry[turn])){
+		if(yRatio >= (currentTrackInfo.highestEntry[turn] - 0.2f)){
 			//Go high, rip the wall
 			midpointRatio = currentTrackInfo.highestMidpoint[turn];
 			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.highestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.highestExit[turn]));
@@ -255,7 +263,7 @@ public class VehicleLogic : MonoBehaviour
 			#endif
 
 		} else {
-			if(yRatio <= (currentTrackInfo.lowestEntry[turn])){
+			if(yRatio <= (currentTrackInfo.lowestEntry[turn] + 0.2f)){
 				//Dive down low
 				midpointRatio = currentTrackInfo.lowestMidpoint[turn];
 				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.lowestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.lowestExit[turn]));

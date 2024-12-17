@@ -17,10 +17,6 @@ public class CameraManager : MonoBehaviour
         setFPS();
     }
 
-    // Update is called once per frame
-    void Update(){
-    }
-
     public static void setRotation(float angle){
         actionedCamera.Lens.Dutch = -angle;
     }

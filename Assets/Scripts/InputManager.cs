@@ -10,6 +10,8 @@ public class InputManager : MonoBehaviour
     private PlayerInput playerInput;
     private InputAction moveAction;
 
+    public static int inputSensitivity = 8;
+
     private void Awake(){
         playerInput = GetComponent<PlayerInput>();
 

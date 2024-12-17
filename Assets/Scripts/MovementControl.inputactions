@@ -1,8 +1,8 @@
 {
-    "name": "OnFootControl",
+    "name": "MovementControl",
     "maps": [
         {
-            "name": "OnFoot",
+            "name": "Movement",
             "id": "3729da16-70cd-4f6e-89ec-1a8791f5131b",
             "actions": [
                 {

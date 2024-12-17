@@ -21,15 +21,17 @@ public class MovementOnFoot : MonoBehaviour {
     }
 
     void FixedUpdate(){
+        if(RaceManager.thePlayer != this.gameObject){
+            //If the player is not the on foot character
+            //We don't need to calc any movement
+            return;
+        }
         direction.Set(InputManager.direction.x,InputManager.direction.y);
         body.linearVelocity = direction * playerSpeed;
 
         Vector3 lookDir = (transform.position + new Vector3(direction.x,direction.y,0));
 
-        //Debug.DrawLine(transform.position, lookDir, Color.red);
-
         float angle = Mathf.Atan2(lookDir.y - transform.position.y,lookDir.x - transform.position.x) * Mathf.Rad2Deg;
-        //Debug.Log("Atan2 Angle:" + angle);
 
         //When the stick is released, leave the player as is, don't reset to 0
         if(angle != 0){
