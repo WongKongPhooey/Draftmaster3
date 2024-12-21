@@ -21,15 +21,16 @@ public class CameraManager : MonoBehaviour
         actionedCamera.Lens.Dutch = -angle;
     }
 
-    public static void setPlayer(GameObject playerVehicle){
+    public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
         thePlayer = playerVehicle;
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
-        actionedCamera.Lens.OrthographicSize = 18f;
+        actionedCamera.Lens.OrthographicSize = zoom;
 		actionedCamera.Follow = thePlayer.transform;
 	}
 
     void setFPS(){
-        int fpsCap = PlayerPrefs.GetInt("FPSLimit");
+        //int fpsCap = PlayerPrefs.GetInt("FPSLimit");
+		int fpsCap=3;
 		switch(fpsCap){
 			case 1:
 				Application.targetFrameRate = 30;

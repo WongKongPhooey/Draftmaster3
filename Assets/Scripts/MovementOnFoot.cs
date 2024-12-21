@@ -24,7 +24,7 @@ public class MovementOnFoot : MonoBehaviour {
         if(RaceManager.thePlayer != this.gameObject){
             //If the player is not the on foot character
             //We don't need to calc any movement
-            return;
+            //return;
         }
         direction.Set(InputManager.direction.x,InputManager.direction.y);
         body.linearVelocity = direction * playerSpeed;

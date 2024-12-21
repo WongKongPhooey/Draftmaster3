@@ -217,6 +217,13 @@ public class VehicleLogic : MonoBehaviour
 			//Move the other cars relative to the player
 			vehicle.transform.Translate(new Vector2((playerSpeedMetres - speedMetres) * Time.deltaTime, 0));
 		}
+
+		if(RaceManager.thePlayer.tag != "Vehicle"){
+			//Not in a car, so make the cars 'loop' to simulate laps
+			if(vehicle.transform.position.x < (-RaceManager.trackLength / 2)){
+				vehicle.transform.Translate(RaceManager.trackLength,0,0);
+			}
+		}
 	}
 
 	bool checkTurnStatus(int turn, float location, bool isOnTurn){

@@ -19,17 +19,15 @@ public class TriggerActions : MonoBehaviour{
     [SerializeField] private string triggerParamString;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
+    void Start(){
     }
 
     public void OnTriggerEnter2D(Collider2D other){
-        Debug.Log("Trigger Entered");
 
         switch(triggerType){
             case "FocusCameraAway":
                 triggerCamera.GetComponent<CameraActions>().triggerAction("FocusAwayForSeconds", target, triggerParamInt);
+                RaceManager.setPlayer(GameObject.Find("cup24livery20"));
                 break;
             case "Dialogue":
                 triggerDialogue.GetComponent<DialogueManager>().TriggerDialogue(triggerParamString);

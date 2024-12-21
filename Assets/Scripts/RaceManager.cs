@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using PlayFab.ClientModels;
 using Unity.Cinemachine;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class RaceManager : MonoBehaviour
@@ -20,9 +21,19 @@ public class RaceManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
         trackInit();
+
+		//If no player is set, fallback to the player on foot
+		if(thePlayer == null){
+			thePlayer = GameObject.Find("PlayerOnFoot");
+			setPlayer(thePlayer, 3f);
+		}
     }
 
 	void FixedUpdate(){
+
+		if(thePlayer.tag != "Vehicle"){
+			return;
+		}
 
     	int playerTurn = thePlayer.GetComponent<VehicleLogic>().turn;
 	   	playerLocation = thePlayer.GetComponent<VehicleLogic>().locationOnTrack;
@@ -63,9 +74,9 @@ public class RaceManager : MonoBehaviour
 		}
     }
 
-	public static void setPlayer(GameObject playerVehicle){
+	public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
 		thePlayer = playerVehicle;
-		CameraManager.setPlayer(thePlayer);
+		CameraManager.setPlayer(thePlayer, zoom);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;
 	}
