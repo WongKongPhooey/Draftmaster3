@@ -9,6 +9,7 @@ public class MovementOnFoot : MonoBehaviour {
     [SerializeField] private float playerSpeed = 2.0f;
     private Rigidbody2D body;
     private Animator animator;
+    public Material motionShader;
 
     private const string horizontal = "Horizontal";
     private const string vertical = "Vertical";
@@ -43,4 +44,10 @@ public class MovementOnFoot : MonoBehaviour {
         animator.SetFloat(horizontal, direction.x);
         animator.SetFloat(vertical, direction.y);
     }
+
+    public void setAsPlayer(){
+		RaceManager.setPlayer(this.gameObject, 3f);
+        motionShader.SetFloat("_MotionOffset", 0f);
+        CameraManager.setRotation(0f);
+	}
 }

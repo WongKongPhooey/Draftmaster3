@@ -22,6 +22,8 @@ public class VehicleLogic : MonoBehaviour
 	public static float playerSpeedMetres;
 	public Material motionShader;
 	public float motionOffset;
+	public float lastXOffset;
+	public float xOffset;
 	public float yRatio;
 
     //Vehicle info
@@ -123,6 +125,8 @@ public class VehicleLogic : MonoBehaviour
 		mainCam = GameObject.Find("MainCamera").GetComponent<Camera>();
 		sensitivity = InputManager.inputSensitivity;
 
+		xOffset = 0;
+
 		trackWidth = 13f;
 
 		if(isPlayer == true){
@@ -162,14 +166,32 @@ public class VehicleLogic : MonoBehaviour
 		}
 	}
 
+	public void setAsPlayer(){
+		RaceManager.setPlayer(this.gameObject);
+	}
+
     // Update is called once per frame
     void FixedUpdate(){
         
+		if(RaceManager.thePlayer == this.gameObject){
+			isPlayer = true;
+		} else {
+			isPlayer = false;
+		}
+
 		pos = vehicle.transform.position;
 
 		locationOnTrack+= (speedMetres) * Time.deltaTime;
 		
 		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
+
+		//The X offset has changed..
+		//Therefore the player has changed
+		if(RaceManager.playerXOffset != lastXOffset){
+			xOffset = RaceManager.playerXOffset;
+			lastXOffset = xOffset;
+			Debug.Log("Shift the field by offset: " + xOffset);
+		}
 
 		//Update turn and arc triggers
 		onTurn = checkTurnStatus(turn, locationOnTrack, onTurn);
@@ -212,13 +234,15 @@ public class VehicleLogic : MonoBehaviour
 
 			//Horizontal analog stick input becomes vertical car direction
 			direction.Set(InputManager.direction.x,0);
-			vehicle.transform.Translate(0,direction.x * sensitivity * Time.deltaTime,0);
+			vehicle.transform.Translate(-xOffset,direction.x * sensitivity * Time.deltaTime,0);
 		} else {
 			//Move the other cars relative to the player
-			vehicle.transform.Translate(new Vector2((playerSpeedMetres - speedMetres) * Time.deltaTime, 0));
+			vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
 		}
+		xOffset = 0;
 
 		if(RaceManager.thePlayer.tag != "Vehicle"){
+			//Debug.Log("The player is not a car: " + RaceManager.thePlayer.tag);
 			//Not in a car, so make the cars 'loop' to simulate laps
 			if(vehicle.transform.position.x < (-RaceManager.trackLength / 2)){
 				vehicle.transform.Translate(RaceManager.trackLength,0,0);

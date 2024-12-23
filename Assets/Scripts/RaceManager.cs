@@ -10,6 +10,7 @@ public class RaceManager : MonoBehaviour
 	private static CinemachineCamera actionedCamera;
 
 	public static GameObject thePlayer;
+	public static float playerXOffset;
     public static TrackInfo currentTrackInfo;
     public int[] straightLength, turnLength, turnAngle, turnPositions, turnStartAngle;
 
@@ -21,6 +22,8 @@ public class RaceManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
         trackInit();
+
+		playerXOffset = 0;
 
 		//If no player is set, fallback to the player on foot
 		if(thePlayer == null){
@@ -76,6 +79,10 @@ public class RaceManager : MonoBehaviour
 
 	public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
 		thePlayer = playerVehicle;
+		if(thePlayer.tag == "Vehicle"){
+			playerXOffset = thePlayer.transform.position.x;
+		}
+		Debug.Log("New X offset: " + playerXOffset);
 		CameraManager.setPlayer(thePlayer, zoom);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;
