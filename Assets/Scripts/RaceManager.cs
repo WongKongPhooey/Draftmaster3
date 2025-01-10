@@ -82,7 +82,7 @@ public class RaceManager : MonoBehaviour
 		if(thePlayer.tag == "Vehicle"){
 			playerXOffset = thePlayer.transform.position.x;
 		}
-		Debug.Log("New X offset: " + playerXOffset);
+		//Debug.Log("New X offset: " + playerXOffset);
 		CameraManager.setPlayer(thePlayer, zoom);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;

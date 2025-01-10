@@ -13,60 +13,51 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Presets:
-  - m_Name: 
+  - m_Name: Phoenix T2 Low
     m_Curve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
-        time: 460
-        value: 0
-        inSlope: -0.05
-        outSlope: -0.05
+        time: 458.36017
+        value: 161.89606
+        inSlope: -0.3444271
+        outSlope: -0.3444271
         tangentMode: 34
         weightedMode: 0
         inWeight: 0
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 560
-        value: -5
-        inSlope: -0.09973816
-        outSlope: -0.09973816
+        time: 580
+        value: 120
+        inSlope: -0.26036537
+        outSlope: -0.26036537
         tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 660
-        value: -19.947632
-        inSlope: -0.01712449
-        outSlope: -0.01712449
-        tangentMode: 0
+        time: 608.36017
+        value: 115
+        inSlope: -0.10898514
+        outSlope: -0.10898514
+        tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
-        outWeight: 0.3566704
-      - serializedVersion: 3
-        time: 711.3424
-        value: -20.05152
-        inSlope: -0.0011726494
-        outSlope: -0.0011726494
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.9225144
-      - serializedVersion: 3
-        time: 760
-        value: -20
-        inSlope: 0.020259427
-        outSlope: 0.020259427
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0.42431945
         outWeight: 0.33333334
       - serializedVersion: 3
+        time: 728.36017
+        value: 110
+        inSlope: 0.107441455
+        outSlope: 0.107441455
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.23427488
+      - serializedVersion: 3
         time: 860
-        value: 0
-        inSlope: 0.2
-        outSlope: 0.2
+        value: 135
+        inSlope: 0.18991213
+        outSlope: 0.18991213
         tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
@@ -74,112 +65,51 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  - m_Name: 
+  - m_Name: Phoenix T2 High
     m_Curve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
-        time: 460
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 136
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      - serializedVersion: 3
-        time: 560
-        value: -18
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 136
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      - serializedVersion: 3
-        time: 660
-        value: -18
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 136
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      - serializedVersion: 3
-        time: 760
-        value: -16
-        inSlope: 0.040000003
-        outSlope: 0.040000003
-        tangentMode: 136
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      - serializedVersion: 3
-        time: 860
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 136
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-  - m_Name: 
-    m_Curve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 460
-        value: 0
-        inSlope: -0.045453638
-        outSlope: -0.045453638
+        time: 458.36017
+        value: 161.89606
+        inSlope: -0.39069235
+        outSlope: -0.39069235
         tangentMode: 34
         weightedMode: 0
         inWeight: 0
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 570.0022
-        value: -5
-        inSlope: -0.10413449
-        outSlope: -0.10413449
+        time: 540
+        value: 130
+        inSlope: -0.26848817
+        outSlope: -0.26848817
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 608.36017
+        value: 120
+        inSlope: -0.09397534
+        outSlope: -0.09397534
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 728.36017
+        value: 115
+        inSlope: 0.107441455
+        outSlope: 0.107441455
         tangentMode: 0
         weightedMode: 0
         inWeight: 0.33333334
-        outWeight: 0.32550204
-      - serializedVersion: 3
-        time: 610
-        value: -16
-        inSlope: -0.1333409
-        outSlope: -0.1333409
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      - serializedVersion: 3
-        time: 730
-        value: -15
-        inSlope: 0.031944446
-        outSlope: 0.031944446
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      - serializedVersion: 3
-        time: 820
-        value: -10
-        inSlope: 0.090277776
-        outSlope: 0.090277776
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
+        outWeight: 0.23427488
       - serializedVersion: 3
         time: 860
-        value: -5
-        inSlope: 0.125
-        outSlope: 0.125
+        value: 140
+        inSlope: 0.18991213
+        outSlope: 0.18991213
         tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
@@ -187,55 +117,107 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  - m_Name: 
+  - m_Name: Phoenix T3 Low
     m_Curve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 460
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 136
+        value: 155
+        inSlope: -0.33333334
+        outSlope: -0.33333334
+        tangentMode: 34
         weightedMode: 0
-        inWeight: 0.33333334
+        inWeight: 0
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 520.1436
-        value: -9.915094
-        inSlope: -0.09045622
-        outSlope: -0.09045622
+        time: 580
+        value: 115
+        inSlope: -0.25481847
+        outSlope: -0.25481847
         tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 650
-        value: -12
-        inSlope: 0.0010631727
-        outSlope: 0.0010631727
+        time: 608.36017
+        value: 110
+        inSlope: -0.10898514
+        outSlope: -0.10898514
         tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 760
-        value: -10
-        inSlope: 0.05909091
-        outSlope: 0.05909091
-        tangentMode: 34
+        time: 728.36017
+        value: 105
+        inSlope: 0.107441455
+        outSlope: 0.107441455
+        tangentMode: 0
         weightedMode: 0
         inWeight: 0.33333334
-        outWeight: 0.33333334
+        outWeight: 0.23427488
       - serializedVersion: 3
         time: 860
-        value: 0
-        inSlope: 0.1
-        outSlope: 0.1
+        value: 125
+        inSlope: 0.1519297
+        outSlope: 0.1519297
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+  - m_Name: Phoenix T3 High
+    m_Curve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 460
+        value: 155
+        inSlope: -0.375
+        outSlope: -0.375
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 540
+        value: 125
+        inSlope: -0.260642
+        outSlope: -0.260642
         tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
         outWeight: 0.33333334
-      m_PreInfinity: 0
-      m_PostInfinity: 0
+      - serializedVersion: 3
+        time: 608.36017
+        value: 115
+        inSlope: -0.09397534
+        outSlope: -0.09397534
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 728.36017
+        value: 110
+        inSlope: 0.107441455
+        outSlope: 0.107441455
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.23427488
+      - serializedVersion: 3
+        time: 860
+        value: 130
+        inSlope: 0.1519297
+        outSlope: 0.1519297
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
       m_RotationOrder: 4

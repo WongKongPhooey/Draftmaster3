@@ -148,7 +148,7 @@ public class VehicleLogic : MonoBehaviour
 
 		initRacingLines();
 
-        speed = 140;
+        speed = 55;
 		speedMetres = speed / 2.237f;
     }
 
@@ -405,7 +405,7 @@ public class VehicleLogic : MonoBehaviour
 
 	void checkQuarters(int awareness){
 
-		float awarenessDist = 0.05f * awareness;
+		float awarenessDist = 0.25f * awareness;
 
 		RaycastHit2D checkFrontLeft = Physics2D.Raycast(pos + new Vector2(-2.56f,-1.28f), Vector2.down,awarenessDist,LayerMask.GetMask("Vehicles"));
 		RaycastHit2D checkRearLeft = Physics2D.Raycast(pos + new Vector2(2.56f,-1.28f), Vector2.down,awarenessDist,LayerMask.GetMask("Vehicles"));
@@ -421,6 +421,7 @@ public class VehicleLogic : MonoBehaviour
 		bool hitLaneRight = ((checkFrontRight.distance > 0)&&(checkFrontRight.distance < awarenessDist))||((checkRearRight.distance > 0)&&(checkRearRight.distance < awarenessDist));
 
 		if(arcAdjusted == false){
+
 			if(hitLaneLeft == true){
 
 				#if UNITY_EDITOR
