@@ -2,41 +2,63 @@ using UnityEngine;
 
 public class EnvironmentManager : MonoBehaviour
 {
-
-	public bool[] straights = new bool[6];
-	public bool[] corners = new bool[6];
-    public static TrackInfo currentTrackInfo;
-    Renderer[] childRenderers;
+    public bool[] straights;
+	public bool[] corners;
+    [SerializeField]
+    private bool scrolling;
+	public int specificLocation;
+	
+	Renderer[] childRenderers;
 	BoxCollider[] childColliders;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start(){
-        currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
+	static Shader scrollingShader;
+	static Shader staticShader;
 
-        straights = new bool[currentTrackInfo.totalTurns];
-	    corners = new bool[currentTrackInfo.totalTurns];
-    }
+    private float playerLocation;
 
-    // Update is called once per frame
-    void Update(){
-        
-        //V2 enviro setup
-        if(Movement.onTurn == true){
-            if(corners[CameraRotate.turn] == true){
-                toggleElement(true);
-            } else {
-                toggleElement(false);
+    private bool isVisible;
+
+	void Awake(){
+
+		childRenderers = GetComponentsInChildren<Renderer>();
+		childColliders = GetComponentsInChildren<BoxCollider>();
+
+        isVisible = false;
+        toggleVisibility(false);
+
+		straights = new bool[RaceManager.totalTurns];
+		corners = new bool[RaceManager.totalTurns];
+
+		scrollingShader = CameraManager.scrollShader;
+		staticShader = CameraManager.staticShader;
+	}
+	
+	// Update is called once per frame
+	void FixedUpdate() {
+		
+        playerLocation = RaceManager.playerLocation;
+
+        if(specificLocation != 0){
+            if((playerLocation > (specificLocation - 100))
+            && isVisible == false){
+                this.transform.position = new Vector3(specificLocation - 100, transform.position.y,0);
+                toggleVisibility(true);
             }
-        } else {
-            if(straights[CameraRotate.straight] == true){
-                toggleElement(true);
-            } else {
-                toggleElement(false);
+
+            if((playerLocation > (specificLocation + 100))
+            && isVisible == false){
+                toggleVisibility(false);
+                this.transform.position = new Vector3(specificLocation - 100, transform.position.y,0);
             }
         }
-    }
 
-    void toggleElement(bool isShowing = false){
+        if(isVisible == true){
+            this.transform.position = new Vector3(playerLocation - specificLocation, transform.position.y,0);
+        }
+	}
+
+	void toggleVisibility(bool isShowing = false){
+        isVisible = isShowing;
 		foreach(Renderer rend in childRenderers){
 			rend.enabled = isShowing;
 		}

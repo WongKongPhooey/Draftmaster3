@@ -12,11 +12,11 @@ public class RaceManager : MonoBehaviour
 	public static GameObject thePlayer;
 	public static float playerXOffset;
     public static TrackInfo currentTrackInfo;
-    public int[] straightLength, turnLength, turnAngle, turnPositions, turnStartAngle;
-
+    public static int[] straightLength, turnLength, turnAngle, turnPositions, turnStartAngle;
 	public static int trackLength;
 	public static int totalTurns;
-	public float playerLocation;
+	public static float playerLocation;
+	public float playerLocationPublic;
 	private float trackRotation;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -40,6 +40,7 @@ public class RaceManager : MonoBehaviour
 
     	int playerTurn = thePlayer.GetComponent<VehicleLogic>().turn;
 	   	playerLocation = thePlayer.GetComponent<VehicleLogic>().locationOnTrack;
+		playerLocationPublic = playerLocation;
        	if(turnPositions[playerTurn] > playerLocation){
 			//On a straight
 			trackRotation = turnStartAngle[playerTurn];

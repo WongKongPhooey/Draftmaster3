@@ -12,9 +12,15 @@ public class CameraManager : MonoBehaviour
 	private static int trackLength;
 	private static int totalTurns;
 
+	public Shader scrollingMotion, staticMotion;
+	public static Shader scrollShader, staticShader;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
         setFPS();
+
+		scrollShader = scrollingMotion;
+		staticShader = staticMotion;
     }
 
     public static void setRotation(float angle){

@@ -342,14 +342,13 @@ public class VehicleLogic : MonoBehaviour
 		float minTurnY = currentTrackInfo.lowestEntry[turn];
 		float maxTurnY = currentTrackInfo.highestEntry[turn];
 		float ySpread = maxTurnY - minTurnY;
-		float arcRatio = (yRatio - minTurnY) / ySpread;
 
-		//Debug.Log("" + this.name + " - Y Ratio:" + arcRatio);
-		//yRatio zero'd (my subtracting the min) divided by the possible spread
+		//arcRatio = yRatio zero'd (by subtracting the min) divided by the possible spread
 		//This returns what % of the arc is being run 
 		//e.g. if min is 0.2, max is 0.9, spread is 0.7, actual is 0.35
 		//then 0.35 - 0.2 is 0.15, divided by 0.7 = 21% 
 		//So the car is 21% up from the lowest arc, compared to the highest arc.
+		float arcRatio = (yRatio - minTurnY) / ySpread;
 
 		//Predetermined speed curves, based on shape of turn and banking
 		AnimationCurve minTurnArc = currentTrackInfo.lowTurnDecel[turn];
@@ -357,18 +356,31 @@ public class VehicleLogic : MonoBehaviour
 
 		turnSpeeds[turn] = new AnimationCurve();
 		for(int i=0;i<currentTrackInfo.turnLengths[turn];i+=50){
+			//First keyframe is just entry speed
+			if(i==0){
+				turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn],speed));
+				continue;
+			}
+			
 			float highLineSpeed = maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			float lowLineSpeed = minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			float speedSpread = 0.5f;
 			float speedRatio = 0.5f;
 			if(highLineSpeed < lowLineSpeed){
+				//Amount of possible variation between low line and high line speeds
 				speedSpread = highLineSpeed - lowLineSpeed;
 				speedRatio = (speedSpread * arcRatio) + minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			} else {
 				speedSpread = lowLineSpeed - highLineSpeed;
 				speedRatio = (speedSpread * arcRatio) + maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			}
-			turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn] + i,speed + speedRatio));
+			turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn] + i,speedRatio));
+
+			#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log("High Line Speed: " + highLineSpeed + " - Low Line Speed: " + lowLineSpeed + " - Speed Ratio: " + speedRatio + " - Speed Spread: " + speedSpread + " - Arc Ratio: " + arcRatio);
+			}
+			#endif
 		}
 
 		for(int j=0;j<turnSpeeds[turn].keys.Length;j++){
