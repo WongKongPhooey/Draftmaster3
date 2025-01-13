@@ -285,7 +285,7 @@ public class VehicleLogic : MonoBehaviour
 		if(yRatio >= (currentTrackInfo.highestEntry[turn] - 0.2f)){
 			//Go high, rip the wall
 			midpointRatio = currentTrackInfo.highestMidpoint[turn];
-			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.highestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.highestExit[turn]));
+			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.highestMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.highestExit[turn])));
 		
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
@@ -297,7 +297,7 @@ public class VehicleLogic : MonoBehaviour
 			if(yRatio <= (currentTrackInfo.lowestEntry[turn] + 0.2f)){
 				//Dive down low
 				midpointRatio = currentTrackInfo.lowestMidpoint[turn];
-				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.lowestMidpoint[turn]), new Keyframe(turnExits[turn],currentTrackInfo.lowestExit[turn]));
+				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.lowestMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.lowestExit[turn])));
 			
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
@@ -307,7 +307,7 @@ public class VehicleLogic : MonoBehaviour
 
 			} else {
 				midpointRatio = currentTrackInfo.idealMidpoint[turn];
-				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.idealMidpoint[turn] + Random.Range(0,0.25f)), new Keyframe(turnExits[turn],currentTrackInfo.idealExit[turn] + Random.Range(-0.25f,0f)));
+				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.idealMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.idealExit[turn])));
 			
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
@@ -389,6 +389,20 @@ public class VehicleLogic : MonoBehaviour
 
 		//Fixed Speed (for now)
 		//turnSpeeds[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], speed), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),currentTrackInfo.turnMaxSpeeds[turn]), new Keyframe(turnExits[turn],speed));
+	}
+
+	float randLine(float yPos){
+		int consistency = 5;
+		float variability=(21-consistency)/50f;
+
+		if(yPos < variability){
+			return Random.Range(0,yPos + variability);
+		}
+		if((yPos + variability) > 1){
+			return Random.Range(yPos - variability,1);
+		}
+
+		return Random.Range(yPos - variability,yPos + variability);
 	}
 
 	void updateTurnCount(int t){
