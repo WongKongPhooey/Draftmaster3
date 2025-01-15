@@ -422,7 +422,7 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	public void updateMotion(){
-		motionOffset -= (playerSpeedMetres / 8f) * Time.deltaTime;
+		motionOffset -= (playerSpeedMetres / 16f) * Time.deltaTime;
 		if(motionOffset <= 0){
 			motionOffset++;
 		}
@@ -451,7 +451,7 @@ public class VehicleLogic : MonoBehaviour
 			if(hitLaneLeft == true){
 
 				#if UNITY_EDITOR
-				Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car inside");
+				//Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car inside");
 				#endif
 
 				recalcTurnArc(turn, true, false);
@@ -459,7 +459,7 @@ public class VehicleLogic : MonoBehaviour
 				if(hitLaneRight == true){
 
 					#if UNITY_EDITOR
-					Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car outside");
+					//Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car outside");
 					#endif
 
 					recalcTurnArc(turn, false, true);

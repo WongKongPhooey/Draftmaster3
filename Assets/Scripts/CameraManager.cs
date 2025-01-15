@@ -12,14 +12,9 @@ public class CameraManager : MonoBehaviour
 	private static int trackLength;
 	private static int totalTurns;
 
-	public Material scrollingMotion, staticMotion;
-	private static Material scrMat, statMat;
-
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
         setFPS();
-		scrMat = scrollingMotion;
-		statMat = staticMotion;
     }
 
     public static void setRotation(float angle){
@@ -54,12 +49,4 @@ public class CameraManager : MonoBehaviour
 				break;
 		}
     }
-
-	public static Material getScrollMaterial(){
-		return scrMat;
-	}
-
-	public static Material getStaticMaterial(){
-		return statMat;
-	}
 }
