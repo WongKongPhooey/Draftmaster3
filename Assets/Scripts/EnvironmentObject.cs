@@ -28,9 +28,6 @@ public class EnvironmentObject : MonoBehaviour
 		childRenderers = GetComponentsInChildren<Renderer>();
 		childColliders = GetComponentsInChildren<BoxCollider>();
 
-		scrollingMaterial = EnvironmentManager.getScrollingShader();
-		staticMaterial = EnvironmentManager.staticMaterial;
-
 		if(startsVisible == true){
 			toggleVisibility(true);
 		} else {
@@ -114,18 +111,13 @@ public class EnvironmentObject : MonoBehaviour
 
 	void toggleScrollMotion(bool scrollMotion){
 		if(scrollMotion == true){
-			/*foreach(Renderer rend in childRenderers){
-				if(rend.material == staticMaterial){
-					rend.material = scrollingMaterial;
-				}
-			}*/
+			if(this.gameObject.GetComponent<SpriteRenderer>().material == staticMaterial){
+				this.gameObject.GetComponent<SpriteRenderer>().material = scrollingMaterial;
+			}
 		}
 		if(scrollMotion == false){
-			/*foreach(Renderer rend in childRenderers){
-				if(rend.material == scrollingMaterial){
-					rend.material = staticMaterial;
-				}
-			}*/
+			scrollingMaterial = this.gameObject.GetComponent<SpriteRenderer>().material;
+			this.gameObject.GetComponent<SpriteRenderer>().material = EnvironmentManager.staticMaterial;
 		}
 	}
 }

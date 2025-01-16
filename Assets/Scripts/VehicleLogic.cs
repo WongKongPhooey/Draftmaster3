@@ -21,7 +21,11 @@ public class VehicleLogic : MonoBehaviour
 	//Global info
 	public static float playerSpeedMetres;
 	public Material motionShader;
+	public Material motionShader2x;
+	public Material motionShader4x;
 	public float motionOffset;
+	public float motionOffset2x;
+	public float motionOffset4x;
 	public float lastXOffset;
 	public float xOffset;
 	public float yRatio;
@@ -133,7 +137,8 @@ public class VehicleLogic : MonoBehaviour
 			RaceManager.setPlayer(vehicle);
 		}
 
-		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
+		//currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
+		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/PushCart");
         currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
 		zeroToSixty = currentVehicleInfo.zeroToSixty;
@@ -148,7 +153,8 @@ public class VehicleLogic : MonoBehaviour
 
 		initRacingLines();
 
-        speed = 55;
+        //speed = 55;
+		speed = 0;
 		speedMetres = speed / 2.237f;
     }
 
@@ -422,11 +428,21 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	public void updateMotion(){
-		motionOffset -= (playerSpeedMetres / 16f) * Time.deltaTime;
+		motionOffset -= (playerSpeedMetres / 10f) * Time.deltaTime;
+		motionOffset2x -= (playerSpeedMetres / 20f) * Time.deltaTime;
+		motionOffset4x -= (playerSpeedMetres / 40f) * Time.deltaTime;
 		if(motionOffset <= 0){
 			motionOffset++;
 		}
+		if(motionOffset2x <= 0){
+			motionOffset2x++;
+		}
+		if(motionOffset4x <= 0){
+			motionOffset4x++;
+		}
 		motionShader.SetFloat("_MotionOffset", motionOffset);
+		motionShader2x.SetFloat("_MotionOffset", motionOffset2x);
+		motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
 	}
 
 	void checkQuarters(int awareness){
