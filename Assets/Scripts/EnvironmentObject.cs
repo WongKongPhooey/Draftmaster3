@@ -1,3 +1,4 @@
+using UnityEditor.Rendering;
 using UnityEngine;
 
 public class EnvironmentObject : MonoBehaviour
@@ -18,15 +19,21 @@ public class EnvironmentObject : MonoBehaviour
 	private static Material scrollingMaterial;
 	private static Material staticMaterial;
 
+	private MaterialPropertyBlock materialOverride;
+
     private float playerLocation;
 	private bool scrollActive;
 	private bool scrollEnded;
     private bool isVisible;
 
+	public bool debugObject;
+
 	void Awake(){
 
 		childRenderers = GetComponentsInChildren<Renderer>();
 		childColliders = GetComponentsInChildren<BoxCollider>();
+
+		materialOverride = new MaterialPropertyBlock();
 
 		if(startsVisible == true){
 			toggleVisibility(true);
@@ -48,6 +55,12 @@ public class EnvironmentObject : MonoBehaviour
 	void FixedUpdate() {
 		
         playerLocation = RaceManager.playerLocation;
+
+		#if UNITY_EDITOR
+		if(debugObject == true){
+			Debug.Log("Object: " + this.gameObject.name + " - Visible?: " + isVisible + " - Scrolling?: " + scrollActive);
+		}
+		#endif
 
         if(specificStartLocation != 0){
             if((playerLocation > (specificStartLocation - 100))
@@ -111,13 +124,14 @@ public class EnvironmentObject : MonoBehaviour
 
 	void toggleScrollMotion(bool scrollMotion){
 		if(scrollMotion == true){
-			if(this.gameObject.GetComponent<SpriteRenderer>().material == staticMaterial){
-				this.gameObject.GetComponent<SpriteRenderer>().material = scrollingMaterial;
-			}
+			materialOverride.Clear();
+			// Apply the MaterialPropertyBlock to the GameObject
+            this.gameObject.GetComponent<SpriteRenderer>().SetPropertyBlock(materialOverride);
 		}
 		if(scrollMotion == false){
-			scrollingMaterial = this.gameObject.GetComponent<SpriteRenderer>().material;
-			this.gameObject.GetComponent<SpriteRenderer>().material = EnvironmentManager.staticMaterial;
+			materialOverride.SetFloat("_MotionOffset", 0);
+			// Apply the MaterialPropertyBlock to the GameObject
+            this.gameObject.GetComponent<SpriteRenderer>().SetPropertyBlock(materialOverride);
 		}
 	}
 }

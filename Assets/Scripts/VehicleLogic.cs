@@ -137,8 +137,8 @@ public class VehicleLogic : MonoBehaviour
 			RaceManager.setPlayer(vehicle);
 		}
 
-		//currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
-		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/PushCart");
+		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
+		//currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/PushCart");
         currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
 		zeroToSixty = currentVehicleInfo.zeroToSixty;
