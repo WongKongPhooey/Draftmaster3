@@ -3,15 +3,20 @@ using UnityEngine;
 
 public class EnvironmentObject : MonoBehaviour
 {
+
    	[SerializeField]
     private bool[] straights,corners;
     [SerializeField]
     private bool scrolling;
 	[SerializeField]
 	private bool startsVisible;
-	public int specificStartLocation;
-	public int specificEndLocation;
+	public int specificStartLocation, specificEndLocation;
 	
+	private float centeredStartLocation, centeredEndLocation; 
+
+	private float objectLength;
+	private SpriteRenderer objectRenderer;
+
 	Renderer[] childRenderers;
 	BoxCollider[] childColliders;
 	Material[] childMaterials;
@@ -33,6 +38,18 @@ public class EnvironmentObject : MonoBehaviour
 		childRenderers = GetComponentsInChildren<Renderer>();
 		childColliders = GetComponentsInChildren<BoxCollider>();
 
+		objectRenderer = this.gameObject.GetComponent<SpriteRenderer>();
+		objectLength = this.gameObject.transform.localScale.x;
+		
+		if(objectRenderer.drawMode == SpriteDrawMode.Tiled){
+			centeredStartLocation = specificStartLocation + ((objectLength * objectRenderer.size.x) / 2);
+			centeredEndLocation = specificEndLocation - ((objectLength * objectRenderer.size.x) / 2);
+		} else {
+			//Start position defines when the middle of object.x is centered at 0;
+			centeredStartLocation = specificStartLocation + (objectLength / 2);
+			centeredEndLocation = specificEndLocation - (objectLength / 2);
+		}
+
 		materialOverride = new MaterialPropertyBlock();
 
 		if(startsVisible == true){
@@ -43,8 +60,11 @@ public class EnvironmentObject : MonoBehaviour
 		scrollActive = false;
 		scrollEnded = false;
 
+		//Object must be visible at the start/finish line
 		if(specificStartLocation > specificEndLocation){
+			scrollActive = true;
 			toggleVisibility(true);
+			toggleScrollMotion(true);
 		}
 
 		straights = new bool[RaceManager.totalTurns];
@@ -56,63 +76,79 @@ public class EnvironmentObject : MonoBehaviour
 		
         playerLocation = RaceManager.playerLocation;
 
-		#if UNITY_EDITOR
-		if(debugObject == true){
-			Debug.Log("Object: " + this.gameObject.name + " - Visible?: " + isVisible + " - Scrolling?: " + scrollActive);
+		//If the object is approaching (<100m)..
+		//And is invisible, and not past the centrepoint..
+		//Spawn it in
+		if((playerLocation > (centeredStartLocation - 100))
+		&&(isVisible == false)
+		&&(scrollEnded == false)){
+			this.transform.position = new Vector3(centeredStartLocation - 100, transform.position.y,0);
+			scrollEnded = false;
+			toggleVisibility(true);
+			toggleScrollMotion(false);
 		}
-		#endif
 
-        if(specificStartLocation != 0){
-            if((playerLocation > (specificStartLocation - 100))
-            && isVisible == false){
-                this.transform.position = new Vector3(specificStartLocation - 100, transform.position.y,0);
-				scrollEnded = false;
-                toggleVisibility(true);
-				toggleScrollMotion(false);
-            }
-
+        if(specificStartLocation < specificEndLocation){
             if((playerLocation > (specificEndLocation + 100))
             && isVisible == false){
                 toggleVisibility(false);
 				toggleScrollMotion(false);
-                this.transform.position = new Vector3(specificEndLocation - 100, transform.position.y,0);
+                this.transform.position = new Vector3(centeredEndLocation - 100, transform.position.y,0);
             }
+		} else {
+			//For cases where the object appears before the start/finish, and disappears after it
+			if((playerLocation > (specificEndLocation + 100))
+			&&(playerLocation < specificStartLocation)
+			&&(scrolling == true)
+			&&(scrollEnded == true)
+			&&(isVisible == true)){
+				toggleVisibility(false);
+				toggleScrollMotion(false);
+                this.transform.position = new Vector3(centeredEndLocation - 100, transform.position.y,0);
+			}
         }
 
         if(isVisible == true){
 			if(scrolling == true){
 				//The player has just passed the zero point of the scrolling object..
 				//So now it should scroll using the shader.
-				if(playerLocation > specificStartLocation){
-					if(scrollActive != true){
+				if((playerLocation > centeredStartLocation)
+				&&(scrollEnded == false)){
+					if(scrollActive == false){
 						scrollActive = true;
-						scrollEnded = false;
 						toggleScrollMotion(true);
 					}
 				}
 				//100 metres before the object leaves, the scrolling stops
 				//The final 100 metres is the object sliding out of view.
-				if(playerLocation > (specificEndLocation - 100)){
-					if(scrollActive != false){
+				if(playerLocation > centeredEndLocation){
+					if(scrollActive == true){
 						scrollActive = false;
-						toggleScrollMotion(false);
 						scrollEnded = true;
+						toggleScrollMotion(false);
 					}
 				}
 				if(scrollActive == false){
 					if(scrollEnded == true){
-						this.transform.position = new Vector3((playerLocation + 100) - specificEndLocation, transform.position.y,0);
+						this.transform.position = new Vector3(playerLocation - centeredEndLocation, transform.position.y,0);
 					} else {
-						this.transform.position = new Vector3(playerLocation - specificStartLocation, transform.position.y,0);
+						this.transform.position = new Vector3(playerLocation - centeredStartLocation, transform.position.y,0);
 					}
 				}
 			} else {
-				this.transform.position = new Vector3(playerLocation - specificStartLocation, transform.position.y,0);
+				this.transform.position = new Vector3(playerLocation - centeredStartLocation, transform.position.y,0);
 			}
         }
 	}
 
 	void toggleVisibility(bool isShowing = false){
+
+		#if UNITY_EDITOR
+		if(debugObject == true){
+			Debug.Log("Object: " + this.gameObject.name + " - Toggle Visibility: " + isShowing + " - Location: " + playerLocation);
+		}
+		#endif
+
         isVisible = isShowing;
 		foreach(Renderer rend in childRenderers){
 			rend.enabled = isShowing;
@@ -120,16 +156,24 @@ public class EnvironmentObject : MonoBehaviour
 		foreach(BoxCollider col in childColliders){
 			col.enabled = isShowing;
 		}
+		scrollEnded = false;
 	}
 
 	void toggleScrollMotion(bool scrollMotion){
+
+		#if UNITY_EDITOR
+		if(debugObject == true){
+			//Debug.Log("Object: " + this.gameObject.name + " - Toggle Scroll: " + scrollMotion + " - Location: " + playerLocation);
+		}
+		#endif
+
 		if(scrollMotion == true){
 			materialOverride.Clear();
 			// Apply the MaterialPropertyBlock to the GameObject
             this.gameObject.GetComponent<SpriteRenderer>().SetPropertyBlock(materialOverride);
 		}
 		if(scrollMotion == false){
-			materialOverride.SetFloat("_MotionOffset", 0);
+			materialOverride.SetFloat("_MotionOffset", RaceManager.motionOffset);
 			// Apply the MaterialPropertyBlock to the GameObject
             this.gameObject.GetComponent<SpriteRenderer>().SetPropertyBlock(materialOverride);
 		}

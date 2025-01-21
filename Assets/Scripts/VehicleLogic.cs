@@ -288,7 +288,7 @@ public class VehicleLogic : MonoBehaviour
 	void calcNextTurnArc(int turn, float yRatio){
 		
 		float midpointRatio;
-		if(yRatio >= (currentTrackInfo.highestEntry[turn] - 0.2f)){
+		/*if(yRatio >= (currentTrackInfo.highestEntry[turn] - 0.2f)){
 			//Go high, rip the wall
 			midpointRatio = currentTrackInfo.highestMidpoint[turn];
 			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.highestMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.highestExit[turn])));
@@ -311,7 +311,7 @@ public class VehicleLogic : MonoBehaviour
 				}
 				#endif
 
-			} else {
+			} else {*/
 				midpointRatio = currentTrackInfo.idealMidpoint[turn];
 				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.idealMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.idealExit[turn])));
 			
@@ -320,8 +320,8 @@ public class VehicleLogic : MonoBehaviour
 					Debug.Log("Mid turn " + turn + " arc calculated: " + yRatio);
 				}
 				#endif
-			}
-		}
+			//}
+		//}
 
 		//Random for now
 		//float midpointRatio = Random.Range(0,10) / 10f;
@@ -398,7 +398,7 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	float randLine(float yPos){
-		int consistency = 5;
+		int consistency = 14;
 		float variability=(21-consistency)/50f;
 
 		if(yPos < variability){
@@ -440,6 +440,7 @@ public class VehicleLogic : MonoBehaviour
 		if(motionOffset4x <= 0){
 			motionOffset4x++;
 		}
+		RaceManager.motionOffset = motionOffset;
 		motionShader.SetFloat("_MotionOffset", motionOffset);
 		motionShader2x.SetFloat("_MotionOffset", motionOffset2x);
 		motionShader4x.SetFloat("_MotionOffset", motionOffset4x);

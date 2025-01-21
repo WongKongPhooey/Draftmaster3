@@ -24,6 +24,11 @@ public class TriggerActions : MonoBehaviour{
 
     public void OnTriggerEnter2D(Collider2D other){
 
+        //Vehicles can't trigger things, only people/props
+        if(RaceManager.thePlayer.tag == "Vehicle"){
+            return;
+        }
+
         switch(triggerType){
             case "FocusCameraAway":
                 triggerCamera.GetComponent<CameraActions>().triggerAction("FocusAwayForSeconds", target, triggerParamInt);

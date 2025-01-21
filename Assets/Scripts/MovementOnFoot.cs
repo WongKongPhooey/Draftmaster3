@@ -6,6 +6,7 @@ using UnityEngine;
 public class MovementOnFoot : MonoBehaviour {
 
     private Vector2 direction;
+    private Vector2 lastKnownPos;
     [SerializeField] private float playerSpeed = 2.0f;
     private Rigidbody2D body;
     private Animator animator;
@@ -19,14 +20,15 @@ public class MovementOnFoot : MonoBehaviour {
     {
         body = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        lastKnownPos = this.gameObject.transform.position;
     }
 
     void FixedUpdate(){
         if(RaceManager.thePlayer != this.gameObject){
-            //If the player is not the on foot character
-            //We don't need to calc any movement
-            //return;
+            this.transform.position = new Vector2(RaceManager.playerLocation - lastKnownPos.x, lastKnownPos.y);
+            return;
         }
+        lastKnownPos = this.gameObject.transform.position;
         direction.Set(InputManager.direction.x,InputManager.direction.y);
         body.linearVelocity = direction * playerSpeed;
 
@@ -47,6 +49,7 @@ public class MovementOnFoot : MonoBehaviour {
 
     public void setAsPlayer(){
 		RaceManager.setPlayer(this.gameObject, 3f);
+        RaceManager.playerLocation = this.gameObject.transform.position.x;
         motionShader.SetFloat("_MotionOffset", 0f);
         CameraManager.setRotation(0f);
 	}
