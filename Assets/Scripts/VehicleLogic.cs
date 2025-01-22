@@ -398,7 +398,7 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	float randLine(float yPos){
-		int consistency = 14;
+		int consistency = 15;
 		float variability=(21-consistency)/50f;
 
 		if(yPos < variability){
