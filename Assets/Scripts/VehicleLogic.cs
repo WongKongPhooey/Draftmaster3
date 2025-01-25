@@ -186,8 +186,6 @@ public class VehicleLogic : MonoBehaviour
 		}
 
 		pos = vehicle.transform.position;
-
-		locationOnTrack+= (speedMetres) * Time.deltaTime;
 		
 		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
 
@@ -198,6 +196,8 @@ public class VehicleLogic : MonoBehaviour
 			lastXOffset = xOffset;
 			Debug.Log("Shift the field by offset: " + xOffset);
 		}
+
+		calculateDraft();
 
 		//Update turn and arc triggers
 		onTurn = checkTurnStatus(turn, locationOnTrack, onTurn);
@@ -233,9 +233,12 @@ public class VehicleLogic : MonoBehaviour
 		//Convert from MpH to m/s
 		speedMetres = speed / 2.237f;
 
+		locationOnTrack+= (speedMetres) * Time.deltaTime;
+
 		if(isPlayer == true){
 			//Send the new motion speed to the environment objects
 			updateMotion();
+			updateHUD();
 			playerSpeedMetres = speedMetres;
 
 			//Horizontal analog stick input becomes vertical car direction
@@ -446,6 +449,20 @@ public class VehicleLogic : MonoBehaviour
 		motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
 	}
 
+	void calculateDraft(){
+		RaycastHit2D checkFront = Physics2D.Raycast(pos + new Vector2(-2.56f,0), Vector2.left,10,LayerMask.GetMask("Vehicles"));
+		Debug.DrawRay(pos + new Vector2(-2.56f,0), Vector2.left * 10, Color.green);
+
+		bool hitDraft = (checkFront.distance < 10);
+		if(hitDraft == true){
+			speed+=0.1f;
+		}
+	}
+
+	void updateHUD(){
+		return;
+	}
+
 	void checkQuarters(int awareness){
 
 		float awarenessDist = 0.25f * awareness;
@@ -454,10 +471,10 @@ public class VehicleLogic : MonoBehaviour
 		RaycastHit2D checkRearLeft = Physics2D.Raycast(pos + new Vector2(2.56f,-1.28f), Vector2.down,awarenessDist,LayerMask.GetMask("Vehicles"));
 		RaycastHit2D checkFrontRight = Physics2D.Raycast(pos + new Vector2(-2.56f,1.28f), Vector2.up,awarenessDist,LayerMask.GetMask("Vehicles"));
 		RaycastHit2D checkRearRight = Physics2D.Raycast(pos + new Vector2(2.56f,1.28f), Vector2.up,awarenessDist,LayerMask.GetMask("Vehicles"));
-		Debug.DrawRay(pos + new Vector2(-2.56f,-1.28f), Vector2.down * awarenessDist, Color.green);
-		Debug.DrawRay(pos + new Vector2(2.56f,-1.28f), Vector2.down * awarenessDist, Color.green);
-		Debug.DrawRay(pos + new Vector2(-2.56f,1.28f), Vector2.up * awarenessDist, Color.green);
-		Debug.DrawRay(pos + new Vector2(2.56f,1.28f), Vector2.up * awarenessDist, Color.green);
+		//Debug.DrawRay(pos + new Vector2(-2.56f,-1.28f), Vector2.down * awarenessDist, Color.green);
+		//Debug.DrawRay(pos + new Vector2(2.56f,-1.28f), Vector2.down * awarenessDist, Color.green);
+		//Debug.DrawRay(pos + new Vector2(-2.56f,1.28f), Vector2.up * awarenessDist, Color.green);
+		//Debug.DrawRay(pos + new Vector2(2.56f,1.28f), Vector2.up * awarenessDist, Color.green);
 
 
 		bool hitLaneLeft = ((checkFrontLeft.distance > 0)&&(checkFrontLeft.distance < awarenessDist))||((checkRearLeft.distance > 0)&&(checkRearLeft.distance < awarenessDist));
