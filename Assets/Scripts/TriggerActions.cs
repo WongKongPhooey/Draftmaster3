@@ -32,7 +32,7 @@ public class TriggerActions : MonoBehaviour{
         switch(triggerType){
             case "FocusCameraAway":
                 triggerCamera.GetComponent<CameraActions>().triggerAction("FocusAwayForSeconds", target, triggerParamInt);
-                RaceManager.setPlayer(GameObject.Find("cup24livery20"));
+                //RaceManager.setPlayer(GameObject.Find("cup24livery20"));
                 break;
             case "Dialogue":
                 triggerDialogue.GetComponent<DialogueManager>().TriggerDialogue(triggerParamString);
@@ -42,6 +42,27 @@ public class TriggerActions : MonoBehaviour{
                 break;
         }
     }
+
+    /*public void OnTriggerExit2D(Collider2D other){
+
+        //Vehicles can't trigger things, only people/props
+        if(RaceManager.thePlayer.tag == "Vehicle"){
+            return;
+        }
+
+        switch(triggerType){
+            case "FocusCameraAway":
+                triggerCamera.GetComponent<CameraActions>().triggerAction("FocusAwayForSeconds", target, triggerParamInt);
+                //RaceManager.setPlayer(GameObject.Find("cup24livery20"));
+                break;
+            case "Dialogue":
+                triggerDialogue.GetComponent<DialogueManager>().TriggerDialogue(triggerParamString);
+                break;
+            default:
+                //Invalid type, do nothing
+                break;
+        }
+    }*/
 
     // Update is called once per frame
     void Update()

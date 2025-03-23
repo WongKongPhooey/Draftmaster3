@@ -221,7 +221,22 @@ public class VehicleLogic : MonoBehaviour
 
 			if((currentTrackInfo.turnMaxSpeeds[turn] < speed)
 			&&(locationOnTrack < (currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn]))){
-				speed = turnSpeeds[turn].Evaluate(locationOnTrack);
+				float turnPointSpeed = turnSpeeds[turn].Evaluate(locationOnTrack);
+				if(speed > turnPointSpeed){
+					speed = turnSpeeds[turn].Evaluate(locationOnTrack);
+					/*#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log("Slow to " + speed + " in turn.");
+					}
+					#endif*/
+				} else {
+					speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
+					/*#if UNITY_EDITOR
+					if(debugPlayer == true){
+						Debug.Log("Accelerate to " + speed + " in turn.");
+					}
+					#endif*/
+				}
 			} else {
 				//Flat-out turn
 				speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
@@ -330,7 +345,12 @@ public class VehicleLogic : MonoBehaviour
 		//float midpointRatio = Random.Range(0,10) / 10f;
 		//racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f), midpointRatio), new Keyframe(turnExits[turn], Random.Range(80,100) / 100f));
 	
-		calcNextTurnSpeed(turn, speed, midpointRatio);
+		bool flatOut = false;
+		if(currentTrackInfo.turnMaxSpeeds[turn] >= currentTrackInfo.topSpeed){
+			flatOut = true;
+		}
+
+		calcNextTurnSpeed(turn, speed, midpointRatio, flatOut);
 	}
 
 	void recalcTurnArc(int turn, bool carInside, bool carOutside){
@@ -345,7 +365,7 @@ public class VehicleLogic : MonoBehaviour
 		arcAdjusted = true;
 	}
 
-	void calcNextTurnSpeed(int turn, float speed, float yRatio){
+	void calcNextTurnSpeed(int turn, float speed, float yRatio, bool flatOut){
 
 		//Speed based on arc (and banking)
 		float minTurnY = currentTrackInfo.lowestEntry[turn];
@@ -365,6 +385,12 @@ public class VehicleLogic : MonoBehaviour
 
 		turnSpeeds[turn] = new AnimationCurve();
 		for(int i=0;i<currentTrackInfo.turnLengths[turn];i+=50){
+
+			if(flatOut == true){
+				turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn],currentTrackInfo.topSpeed));
+				continue;
+			}
+
 			//First keyframe is just entry speed
 			if(i==0){
 				turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn],speed));

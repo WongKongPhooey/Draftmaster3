@@ -145,7 +145,7 @@ public class EnvironmentObject : MonoBehaviour
 
 		#if UNITY_EDITOR
 		if(debugObject == true){
-			Debug.Log("Object: " + this.gameObject.name + " - Toggle Visibility: " + isShowing + " - Location: " + playerLocation);
+			//Debug.Log("Object: " + this.gameObject.name + " - Toggle Visibility: " + isShowing + " - Location: " + playerLocation);
 		}
 		#endif
 

@@ -48,8 +48,10 @@ public class MovementOnFoot : MonoBehaviour {
     }
 
     public void setAsPlayer(){
+        Debug.Log("Last Known Pos: " + lastKnownPos.x);
 		RaceManager.setPlayer(this.gameObject, 3f);
-        RaceManager.playerLocation = this.gameObject.transform.position.x;
+        this.transform.position = new Vector2(lastKnownPos.x, lastKnownPos.y);
+        RaceManager.playerLocation = lastKnownPos.x;
         motionShader.SetFloat("_MotionOffset", 0f);
         CameraManager.setRotation(0f);
 	}
