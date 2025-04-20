@@ -30,6 +30,8 @@ public class DialogueManager : MonoBehaviour
     // Update is called once per frame
     void Update(){
         this.transform.position = actor.transform.position + new Vector3(0,0.4f,0);
+        this.transform.rotation = new Vector3(0,0,0);
+    
     }
 
     IEnumerator DialogueLine(){

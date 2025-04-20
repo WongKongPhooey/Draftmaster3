@@ -306,7 +306,8 @@ public class VehicleLogic : MonoBehaviour
 	void calcNextTurnArc(int turn, float yRatio){
 		
 		float midpointRatio;
-		/*if(yRatio >= (currentTrackInfo.highestEntry[turn] - 0.2f)){
+		float rnd = Random.Range(0,10)/10f;
+		if(rnd >= (currentTrackInfo.highestEntry[turn] - 0.2f)){
 			//Go high, rip the wall
 			midpointRatio = currentTrackInfo.highestMidpoint[turn];
 			racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.highestMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.highestExit[turn])));
@@ -318,7 +319,7 @@ public class VehicleLogic : MonoBehaviour
 			#endif
 
 		} else {
-			if(yRatio <= (currentTrackInfo.lowestEntry[turn] + 0.2f)){
+			if(rnd <= (currentTrackInfo.lowestEntry[turn] + 0.2f)){
 				//Dive down low
 				midpointRatio = currentTrackInfo.lowestMidpoint[turn];
 				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.lowestMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.lowestExit[turn])));
@@ -329,7 +330,7 @@ public class VehicleLogic : MonoBehaviour
 				}
 				#endif
 
-			} else {*/
+			} else {
 				midpointRatio = currentTrackInfo.idealMidpoint[turn];
 				racingLines[turn] = new AnimationCurve(new Keyframe(turnEntries[turn], yRatio), new Keyframe(currentTrackInfo.turnPositions[turn] + (currentTrackInfo.turnLengths[turn]/2f),randLine(currentTrackInfo.idealMidpoint[turn])), new Keyframe(turnExits[turn],randLine(currentTrackInfo.idealExit[turn])));
 			
@@ -338,8 +339,8 @@ public class VehicleLogic : MonoBehaviour
 					Debug.Log("Mid turn " + turn + " arc calculated: " + yRatio);
 				}
 				#endif
-			//}
-		//}
+			}
+		}
 
 		//Random for now
 		//float midpointRatio = Random.Range(0,10) / 10f;
@@ -372,13 +373,6 @@ public class VehicleLogic : MonoBehaviour
 		float maxTurnY = currentTrackInfo.highestEntry[turn];
 		float ySpread = maxTurnY - minTurnY;
 
-		//arcRatio = yRatio zero'd (by subtracting the min) divided by the possible spread
-		//This returns what % of the arc is being run 
-		//e.g. if min is 0.2, max is 0.9, spread is 0.7, actual is 0.35
-		//then 0.35 - 0.2 is 0.15, divided by 0.7 = 21% 
-		//So the car is 21% up from the lowest arc, compared to the highest arc.
-		float arcRatio = (yRatio - minTurnY) / ySpread;
-
 		//Predetermined speed curves, based on shape of turn and banking
 		AnimationCurve minTurnArc = currentTrackInfo.lowTurnDecel[turn];
 		AnimationCurve maxTurnArc = currentTrackInfo.highTurnDecel[turn];
@@ -396,24 +390,35 @@ public class VehicleLogic : MonoBehaviour
 				turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn],speed));
 				continue;
 			}
-			
+
+			//arcRatio = yRatio zero'd (by subtracting the min) divided by the possible spread
+			//This returns what % of the arc is being run 
+			//e.g. if min is 0.2, max is 0.9, spread is 0.7, actual is 0.35
+			//then 0.35 - 0.2 is 0.15, divided by 0.7 = 21% 
+			//So the car is 21% up from the lowest arc, compared to the highest arc.
+			//float arcRatio = (yRatio - minTurnY) / ySpread;
+
+			float arcRatio = (racingLines[turn].Evaluate(currentTrackInfo.turnPositions[turn] + i) - minTurnY) / ySpread;
 			float highLineSpeed = maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			float lowLineSpeed = minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			float speedSpread = 0.5f;
 			float speedRatio = 0.5f;
+			bool highLineFast = false;
 			if(highLineSpeed < lowLineSpeed){
+				highLineFast = true;
+
 				//Amount of possible variation between low line and high line speeds
-				speedSpread = highLineSpeed - lowLineSpeed;
-				speedRatio = (speedSpread * arcRatio) + minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
-			} else {
 				speedSpread = lowLineSpeed - highLineSpeed;
 				speedRatio = (speedSpread * arcRatio) + maxTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
+			} else {
+				speedSpread = highLineSpeed - lowLineSpeed;
+				speedRatio = (speedSpread * arcRatio) + minTurnArc.Evaluate(currentTrackInfo.turnPositions[turn] + i);
 			}
 			turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn] + i,speedRatio));
 
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log("High Line Speed: " + highLineSpeed + " - Low Line Speed: " + lowLineSpeed + " - Speed Ratio: " + speedRatio + " - Speed Spread: " + speedSpread + " - Arc Ratio: " + arcRatio);
+				Debug.Log("High Line Speed: " + highLineSpeed + " - Low Line Speed: " + lowLineSpeed + " - Speed Ratio: " + speedRatio + " - Speed Spread: " + speedSpread + " - Arc Ratio: " + arcRatio + " - High Line Fast?: " + highLineFast);
 			}
 			#endif
 		}
