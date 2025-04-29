@@ -88,12 +88,15 @@ public class EnvironmentObject : MonoBehaviour
 			toggleScrollMotion(false);
 		}
 
+		//Once the object has been and gone..
+		//Hide it again, and reset it's position
         if(specificStartLocation < specificEndLocation){
+
             if((playerLocation > (specificEndLocation + 100))
-            && isVisible == false){
+            && isVisible == true){
                 toggleVisibility(false);
 				toggleScrollMotion(false);
-                this.transform.position = new Vector3(centeredEndLocation - 100, transform.position.y,0);
+                this.transform.position = new Vector3(0, transform.position.y,0);
             }
 		} else {
 			//For cases where the object appears before the start/finish, and disappears after it
@@ -104,9 +107,9 @@ public class EnvironmentObject : MonoBehaviour
 			&&(isVisible == true)){
 				toggleVisibility(false);
 				toggleScrollMotion(false);
-                this.transform.position = new Vector3(centeredEndLocation - 100, transform.position.y,0);
+				this.transform.position = new Vector3(centeredEndLocation - 100, transform.position.y,0);
 			}
-        }
+		}
 
         if(isVisible == true){
 			if(scrolling == true){
@@ -131,6 +134,13 @@ public class EnvironmentObject : MonoBehaviour
 				if(scrollActive == false){
 					if(scrollEnded == true){
 						this.transform.position = new Vector3(playerLocation - centeredEndLocation, transform.position.y,0);
+
+						//Once out of view, hide and reset
+						/*if((this.transform.position.x > 200)
+						||(this.transform.position.x < -200)){
+							isVisible = false;
+							this.transform.position = new Vector3(0, transform.position.y,0);
+						}*/
 					} else {
 						this.transform.position = new Vector3(playerLocation - centeredStartLocation, transform.position.y,0);
 					}

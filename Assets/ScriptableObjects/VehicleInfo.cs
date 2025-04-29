@@ -8,4 +8,5 @@ public class VehicleInfo : ScriptableObject {
    public float zeroToSixty;
    public AnimationCurve speedCurve;
    public AnimationCurve accelerationCurve;
+   public AnimationCurve decelerationCurve;
 }

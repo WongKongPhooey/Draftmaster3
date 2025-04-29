@@ -53,6 +53,7 @@ public class VehicleLogic : MonoBehaviour
 	public int turn = 0;
 	public bool inArc = false;
 	public bool onTurn = false;
+	public bool pitting = false;
 
 	public float yDiff;
 	public float yLine;
@@ -62,6 +63,7 @@ public class VehicleLogic : MonoBehaviour
     public float speedMetres;
     public float locationOnTrack;
     
+	float targetSpeed, pointAccel, pointDecel;
 	float engineTemp;
 	float tempLimit;
 	bool blownEngine;
@@ -187,14 +189,18 @@ public class VehicleLogic : MonoBehaviour
 
 		pos = vehicle.transform.position;
 		
+		//Update Y location relative to the track
 		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
+
+		pointAccel = currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
+		pointDecel = currentVehicleInfo.decelerationCurve.Evaluate(speed) * Time.deltaTime;
 
 		//The X offset has changed..
 		//Therefore the player has changed
 		if(RaceManager.playerXOffset != lastXOffset){
 			xOffset = RaceManager.playerXOffset;
 			lastXOffset = xOffset;
-			Debug.Log("Shift the field by offset: " + xOffset);
+			//Debug.Log("Shift the field by offset: " + xOffset);
 		}
 
 		calculateDraft();
@@ -202,47 +208,29 @@ public class VehicleLogic : MonoBehaviour
 		//Update turn and arc triggers
 		onTurn = checkTurnStatus(turn, locationOnTrack, onTurn);
 		inArc = checkArcStatus(turn, locationOnTrack, inArc, yRatio);
-
-		//Follow the calculated racing line
-		if(inArc == true){
-			yLine = racingLines[turn].Evaluate(locationOnTrack);
-			vehicle.transform.position = new Vector2(vehicle.transform.position.x, (yLine * trackWidth) - (trackWidth / 2));
+		if(pitting == true){
+			automatedPitControl();
+			targetSpeed = currentTrackInfo.pitSpeed.Evaluate(locationOnTrack);
+		} else {
+			if(inArc == true){
+				assistedLineControl(inArc);
+				targetSpeed = turnSpeeds[turn].Evaluate(locationOnTrack);
+			} else {
+				targetSpeed = 999;
+			}
 		}
+
+		speed = updateSpeed(targetSpeed, onTurn, pitting);
 
 		//On turn speed logic
 		if(onTurn == true){
 			if(isPlayer == true){
- 				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
-       			mainCam.transform.Rotate(0,0,-frameRotation);
+				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
+				mainCam.transform.Rotate(0,0,-frameRotation);
 			} else {
 				int awarenessVal = 20;
 				checkQuarters(awarenessVal);
 			}
-
-			if((currentTrackInfo.turnMaxSpeeds[turn] < speed)
-			&&(locationOnTrack < (currentTrackInfo.turnPositions[turn] + currentTrackInfo.turnLengths[turn]))){
-				float turnPointSpeed = turnSpeeds[turn].Evaluate(locationOnTrack);
-				if(speed > turnPointSpeed){
-					speed = turnSpeeds[turn].Evaluate(locationOnTrack);
-					/*#if UNITY_EDITOR
-					if(debugPlayer == true){
-						Debug.Log("Slow to " + speed + " in turn.");
-					}
-					#endif*/
-				} else {
-					speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
-					/*#if UNITY_EDITOR
-					if(debugPlayer == true){
-						Debug.Log("Accelerate to " + speed + " in turn.");
-					}
-					#endif*/
-				}
-			} else {
-				//Flat-out turn
-				speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
-			}
-		} else {
-			speed += currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
 		}
 
 		//Convert from MpH to m/s
@@ -253,7 +241,7 @@ public class VehicleLogic : MonoBehaviour
 		if(isPlayer == true){
 			//Send the new motion speed to the environment objects
 			updateMotion();
-			updateHUD();
+			HUDManager.updateHUD(speed);
 			playerSpeedMetres = speedMetres;
 
 			//Horizontal analog stick input becomes vertical car direction
@@ -272,6 +260,54 @@ public class VehicleLogic : MonoBehaviour
 				vehicle.transform.Translate(RaceManager.trackLength,0,0);
 			}
 		}
+
+		//Check for a pit entry
+		if(((currentTrackInfo.pitEntryTriggerX - 1) < locationOnTrack)
+		&&((currentTrackInfo.pitEntryTriggerX + 1) > locationOnTrack)
+		&&((currentTrackInfo.pitEntryTriggerY) > yRatio)
+		&&((currentTrackInfo.pitEntryTriggerY - 1f) < yRatio)){
+			pitting = true;
+		}
+	}
+
+	void automatedPitControl(){
+		yLine = currentTrackInfo.pitLane.Evaluate(locationOnTrack);
+		vehicle.transform.position = new Vector2(vehicle.transform.position.x, (yLine * trackWidth) - (trackWidth / 2));
+			
+		//Check for a pit exit
+		if(((currentTrackInfo.pitExitTriggerX - 1) < locationOnTrack)
+		&&((currentTrackInfo.pitExitTriggerX + 1) > locationOnTrack)
+		&&((currentTrackInfo.pitExitTriggerY) > yRatio)
+		&&((currentTrackInfo.pitExitTriggerY - 1f) < yRatio)){
+			pitting = false;
+		}
+	}
+
+	void assistedLineControl(bool inArc){
+		if(inArc == true){
+			yLine = racingLines[turn].Evaluate(locationOnTrack);
+			vehicle.transform.position = new Vector2(vehicle.transform.position.x, (yLine * trackWidth) - (trackWidth / 2));
+		}
+	}
+
+	float updateSpeed(float targetSpeed, bool onTurn, bool pitting = false){
+
+		/*
+		*  If speed difference is beyond the max acceleration of the car
+		*/
+		if((targetSpeed - speed) > pointAccel){
+			//Just accelerate instead
+			speed += pointAccel;
+		} else {
+			if((targetSpeed - speed) < pointDecel){
+				//Decelerate (Brake) as hard as possible
+				speed += pointDecel;
+			} else {
+				//Follow the calculated speed curve
+				return targetSpeed;
+			}
+		}
+		return speed;
 	}
 
 	bool checkTurnStatus(int turn, float location, bool isOnTurn){
@@ -306,7 +342,7 @@ public class VehicleLogic : MonoBehaviour
 	void calcNextTurnArc(int turn, float yRatio){
 		
 		float midpointRatio;
-		float rnd = Random.Range(0,10)/10f;
+		float rnd = Random.Range(4,6)/10f;
 		if(rnd >= (currentTrackInfo.highestEntry[turn] - 0.2f)){
 			//Go high, rip the wall
 			midpointRatio = currentTrackInfo.highestMidpoint[turn];
@@ -378,7 +414,7 @@ public class VehicleLogic : MonoBehaviour
 		AnimationCurve maxTurnArc = currentTrackInfo.highTurnDecel[turn];
 
 		turnSpeeds[turn] = new AnimationCurve();
-		for(int i=0;i<currentTrackInfo.turnLengths[turn];i+=50){
+		for(int i=0;i<currentTrackInfo.turnLengths[turn];i+=20){
 
 			if(flatOut == true){
 				turnSpeeds[turn].AddKey(new Keyframe(currentTrackInfo.turnPositions[turn],currentTrackInfo.topSpeed));
@@ -462,9 +498,9 @@ public class VehicleLogic : MonoBehaviour
 	}
 
 	public void updateMotion(){
-		motionOffset -= (playerSpeedMetres / 10f) * Time.deltaTime;
-		motionOffset2x -= (playerSpeedMetres / 20f) * Time.deltaTime;
-		motionOffset4x -= (playerSpeedMetres / 40f) * Time.deltaTime;
+		motionOffset -= (playerSpeedMetres / 10.24f) * Time.deltaTime;
+		motionOffset2x -= (playerSpeedMetres / 20.48f) * Time.deltaTime;
+		motionOffset4x -= (playerSpeedMetres / 40.96f) * Time.deltaTime;
 		if(motionOffset <= 0){
 			motionOffset++;
 		}
@@ -486,12 +522,8 @@ public class VehicleLogic : MonoBehaviour
 
 		bool hitDraft = (checkFront.distance < 10);
 		if(hitDraft == true){
-			speed+=0.1f;
+			//speed+=0.1f;
 		}
-	}
-
-	void updateHUD(){
-		return;
 	}
 
 	void checkQuarters(int awareness){

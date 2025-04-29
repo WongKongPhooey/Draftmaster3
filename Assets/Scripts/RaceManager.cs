@@ -10,6 +10,7 @@ public class RaceManager : MonoBehaviour
 	private static CinemachineCamera actionedCamera;
 
 	public static GameObject thePlayer;
+	public static float playerSpeed;
 	public static float motionOffset;
 	public static float playerXOffset;
     public static TrackInfo currentTrackInfo;
