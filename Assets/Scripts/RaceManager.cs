@@ -11,7 +11,8 @@ public class RaceManager : MonoBehaviour
 
 	public static GameObject thePlayer;
 	public static float playerSpeed;
-	public static float motionOffset;
+	public static float playerSpeedMetres;
+	public static float motionSpeed;
 	public static float playerXOffset;
     public static TrackInfo currentTrackInfo;
     public static int[] straightLength, turnLength, turnAngle, turnPositions, turnStartAngle;
@@ -39,6 +40,8 @@ public class RaceManager : MonoBehaviour
 		if(thePlayer.tag != "Vehicle"){
 			return;
 		}
+
+		motionSpeed = playerSpeedMetres * Time.deltaTime;
 
     	int playerTurn = thePlayer.GetComponent<VehicleLogic>().turn;
 	   	playerLocation = thePlayer.GetComponent<VehicleLogic>().locationOnTrack;

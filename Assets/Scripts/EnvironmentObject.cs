@@ -1,9 +1,11 @@
+using System.Linq;
 using UnityEditor.Rendering;
 using UnityEngine;
 
 public class EnvironmentObject : MonoBehaviour
 {
-
+	public Material materialInstance;
+	public float pixelWidth;
    	[SerializeField]
     private bool[] straights,corners;
     [SerializeField]
@@ -20,10 +22,8 @@ public class EnvironmentObject : MonoBehaviour
 	Renderer[] childRenderers;
 	BoxCollider[] childColliders;
 	Material[] childMaterials;
-
-	private static Material scrollingMaterial;
-	private static Material staticMaterial;
-
+	private string pixelsFromShaderName;
+    private float motionOffset;
 	private MaterialPropertyBlock materialOverride;
 
     private float playerLocation;
@@ -50,6 +50,10 @@ public class EnvironmentObject : MonoBehaviour
 			centeredEndLocation = specificEndLocation - (objectLength / 2);
 		}
 
+		if(objectRenderer.material != null){
+			pixelsFromShaderName = GetNumbersFromString(objectRenderer.material.name);
+		}
+
 		materialOverride = new MaterialPropertyBlock();
 
 		if(startsVisible == true){
@@ -62,7 +66,6 @@ public class EnvironmentObject : MonoBehaviour
 
 		//Object must be visible at the start/finish line
 		if(specificStartLocation > specificEndLocation){
-			scrollActive = true;
 			toggleVisibility(true);
 			toggleScrollMotion(true);
 		}
@@ -75,6 +78,14 @@ public class EnvironmentObject : MonoBehaviour
 	void FixedUpdate() {
 		
         playerLocation = RaceManager.playerLocation;
+
+		if(materialInstance != null){
+			motionOffset-= (RaceManager.motionSpeed / (float.Parse(pixelsFromShaderName) / 2f));
+			if(motionOffset <= 0){
+				motionOffset++;
+			}
+			materialInstance.SetFloat("_MotionOffset", motionOffset);
+		}
 
 		//If the object is approaching (<100m)..
 		//And is invisible, and not past the centrepoint..
@@ -171,21 +182,22 @@ public class EnvironmentObject : MonoBehaviour
 
 	void toggleScrollMotion(bool scrollMotion){
 
-		#if UNITY_EDITOR
-		if(debugObject == true){
-			//Debug.Log("Object: " + this.gameObject.name + " - Toggle Scroll: " + scrollMotion + " - Location: " + playerLocation);
-		}
-		#endif
-
 		if(scrollMotion == true){
+			scrollActive = true;
 			materialOverride.Clear();
-			// Apply the MaterialPropertyBlock to the GameObject
+			if(materialInstance != null){
+				materialInstance.SetFloat("_MotionOffset", 0);
+			}
             this.gameObject.GetComponent<SpriteRenderer>().SetPropertyBlock(materialOverride);
 		}
 		if(scrollMotion == false){
-			materialOverride.SetFloat("_MotionOffset", RaceManager.motionOffset);
-			// Apply the MaterialPropertyBlock to the GameObject
+			scrollActive = false;
             this.gameObject.GetComponent<SpriteRenderer>().SetPropertyBlock(materialOverride);
 		}
+	}
+
+	private static string GetNumbersFromString(string input)
+	{
+		return new string(input.Where(c => char.IsDigit(c)).ToArray());
 	}
 }
