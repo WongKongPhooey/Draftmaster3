@@ -4,16 +4,18 @@ using UnityEngine;
 public class ScrollingTexture : MonoBehaviour
 {
     public Material material;
+    public float scrollSpeedOverride;
+    private float objectLength;
     private float motionOffset;
     private SpriteRenderer objectRenderer;
     string pixelsFromShaderName;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        material = GetComponent<SpriteRenderer>().material;
-        motionOffset = 0;
-
         objectRenderer = GetComponent<SpriteRenderer>();
+        material = objectRenderer.material;
+        objectLength = objectRenderer.size.x;
+        motionOffset = 0;
 
         if(objectRenderer.material != null){
 			pixelsFromShaderName = GetNumbersFromString(objectRenderer.material.name);
@@ -23,7 +25,13 @@ public class ScrollingTexture : MonoBehaviour
 
     void Update()
     {
-        motionOffset-= (RaceManager.motionSpeed / (float.Parse(pixelsFromShaderName) / 2f));
+        if(scrollSpeedOverride != 0){
+			motionOffset-= (RaceManager.motionSpeed / scrollSpeedOverride);
+        } else {
+            //motionOffset-= (RaceManager.motionSpeed / (float.Parse(pixelsFromShaderName) / 2f)); //128/2 = 64
+            //motionOffset-= RaceManager.motionSpeed / ((float.Parse(pixelsFromShaderName) / 512f) * 40f);
+            motionOffset-= (RaceManager.motionSpeed / ((objectLength * 100f) / 32f));
+        }
         if(motionOffset <= 0){
 			motionOffset++;
 		}
