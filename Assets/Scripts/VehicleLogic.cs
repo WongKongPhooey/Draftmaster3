@@ -499,7 +499,7 @@ public class VehicleLogic : MonoBehaviour
 
 	public void updateMotion(){
 		RaceManager.playerSpeedMetres = speedMetres;
-		/*motionOffset -= (playerSpeedMetres / 10.24f) * Time.deltaTime;
+		motionOffset -= (playerSpeedMetres / 10.24f) * Time.deltaTime;
 		motionOffset2x -= (playerSpeedMetres / 20.48f) * Time.deltaTime;
 		motionOffset4x -= (playerSpeedMetres / 40.96f) * Time.deltaTime;
 		if(motionOffset <= 0){
@@ -514,7 +514,7 @@ public class VehicleLogic : MonoBehaviour
 		RaceManager.motionOffset = motionOffset;
 		motionShader.SetFloat("_MotionOffset", motionOffset);
 		motionShader2x.SetFloat("_MotionOffset", motionOffset2x);
-		motionShader4x.SetFloat("_MotionOffset", motionOffset4x);*/
+		motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
 	}
 
 	void calculateDraft(){
