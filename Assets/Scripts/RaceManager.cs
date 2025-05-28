@@ -14,6 +14,7 @@ public class RaceManager : MonoBehaviour
 	public static float playerSpeedMetres;
 	public static float motionSpeed;
 	public static float motionOffset;
+	public static float frameMotion;
 	public static float playerXOffset;
     public static TrackInfo currentTrackInfo;
     public static int[] straightLength, turnLength, turnAngle, turnPositions, turnStartAngle;

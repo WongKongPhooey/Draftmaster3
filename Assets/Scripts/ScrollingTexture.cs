@@ -25,17 +25,7 @@ public class ScrollingTexture : MonoBehaviour
 
     void Update()
     {
-        if(scrollSpeedOverride != 0){
-			motionOffset-= (RaceManager.motionSpeed / scrollSpeedOverride);
-        } else {
-            //motionOffset-= (RaceManager.motionSpeed / (float.Parse(pixelsFromShaderName) / 2f)); //128/2 = 64
-            //motionOffset-= RaceManager.motionSpeed / ((float.Parse(pixelsFromShaderName) / 512f) * 40f);
-            motionOffset-= (RaceManager.motionSpeed / ((objectLength * 100f) / 32f));
-        }
-        if(motionOffset <= 0){
-			motionOffset++;
-		}
-        material.SetFloat("_MotionOffset", motionOffset);
+        material.SetFloat("_MotionOffset", RaceManager.motionOffset);
     }
 
     private static string GetNumbersFromString(string input)
