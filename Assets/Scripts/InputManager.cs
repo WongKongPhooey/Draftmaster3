@@ -10,15 +10,26 @@ public class InputManager : MonoBehaviour
     private PlayerInput playerInput;
     private InputAction moveAction;
 
+    bool isPushing, isPunching, isThrowing;
+
     public static int inputSensitivity = 16;
 
-    private void Awake(){
-        playerInput = GetComponent<PlayerInput>();
+    Animator animator;
 
+    private void Awake()
+    {
+        playerInput = GetComponent<PlayerInput>();
+        animator = GetComponent<Animator>();
+        
         moveAction = playerInput.actions["Movement"];
     }
 
-    private void Update(){
+    private void Update()
+    {
         direction = moveAction.ReadValue<Vector2>();
+
+        if(Input.GetButtonDown("Push")){
+            animator.SetTrigger("PushTrigger");
+        }
     }
 }
