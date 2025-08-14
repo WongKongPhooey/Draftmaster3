@@ -17,6 +17,7 @@ public class VehicleLogic : MonoBehaviour
 	public Vector2 pos;
 	private Vector2 direction;
 	private int sensitivity;
+	private bool autoTurn;
 
 	//Global info
 	public static float playerSpeedMetres;
@@ -133,7 +134,7 @@ public class VehicleLogic : MonoBehaviour
 		pos = transform.position;
 		mainCam = GameObject.Find("MainCamera").GetComponent<Camera>();
 		sensitivity = InputManager.inputSensitivity;
-
+		autoTurn = InputManager.autoTurn;
 		xOffset = 0;
 
 		trackWidth = 13f;
@@ -253,12 +254,17 @@ public class VehicleLogic : MonoBehaviour
 			playerSpeedMetres = speedMetres;
 
 			//Horizontal analog stick input becomes vertical car direction
-			direction.Set(InputManager.direction.x,0);
-			vehicle.transform.Translate(-xOffset,direction.x * sensitivity * Time.deltaTime,0);
-		} else {
-			//Move the other cars relative to the player
-			vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
+			if ((onTurn == false)||(autoTurn == false))
+			{
+				direction.Set(InputManager.direction.x, 0);
+				vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
+			}
 		}
+			else
+			{
+				//Move the other cars relative to the player
+				vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
+			}
 		xOffset = 0;
 
 		if(RaceManager.thePlayer.tag != "Vehicle"){
