@@ -31,6 +31,7 @@ public class VehicleLogic : MonoBehaviour
 	public float lastXOffset;
 	public float xOffset;
 	public float yRatio;
+	float prevYRatio;
 
     //Vehicle info
 	public int topSpeed;
@@ -136,8 +137,10 @@ public class VehicleLogic : MonoBehaviour
 		xOffset = 0;
 
 		trackWidth = 13f;
+		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
 
-		if(isPlayer == true){
+		if (isPlayer == true)
+		{
 			RaceManager.setPlayer(vehicle);
 		}
 
@@ -190,9 +193,12 @@ public class VehicleLogic : MonoBehaviour
 		}
 
 		pos = vehicle.transform.position;
-		
+
 		//Update Y location relative to the track
+		prevYRatio = yRatio;
 		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
+
+		vehicle.transform.rotation = Quaternion.Euler(0, 0, (prevYRatio - yRatio) * 500);
 
 		pointAccel = currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
 		pointDecel = currentVehicleInfo.decelerationCurve.Evaluate(speed) * Time.deltaTime;

@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 
 public class InputManager : MonoBehaviour
 {
+    public GameObject activePlayer;
     public static Vector2 direction;
 
     private PlayerInput playerInput;
@@ -18,18 +19,18 @@ public class InputManager : MonoBehaviour
 
     private void Awake()
     {
-        playerInput = GetComponent<PlayerInput>();
-        animator = GetComponent<Animator>();
-        
+        playerInput = activePlayer.GetComponent<PlayerInput>();
+        animator = activePlayer.GetComponent<Animator>();
+
         moveAction = playerInput.actions["Movement"];
     }
 
     private void Update()
     {
-        direction = moveAction.ReadValue<Vector2>();
+    }
 
-        if(Input.GetButtonDown("Push")){
-            animator.SetTrigger("PushTrigger");
-        }
+    public void pushTrigger()
+    { 
+        animator.SetTrigger("PushTrigger");
     }
 }
