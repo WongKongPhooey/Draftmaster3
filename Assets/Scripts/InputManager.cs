@@ -21,7 +21,7 @@ public class InputManager : MonoBehaviour
 
     private void Awake()
     {
-        autoTurn = true;
+        autoTurn = false;
 
         playerInput = this.gameObject.GetComponent<PlayerInput>();
         animator = activePlayer.GetComponent<Animator>();

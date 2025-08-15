@@ -52,6 +52,7 @@ public class VehicleLogic : MonoBehaviour
 	public AnimationCurve[] turnSpeeds;
 	public int[] turnEntries;
 	public int[] turnExits;
+	public float[] steeringAngles;
 	public float trackWidth;
 
 	public int turn = 0;
@@ -170,12 +171,14 @@ public class VehicleLogic : MonoBehaviour
 		racingLines = new AnimationCurve[currentTrackInfo.totalTurns];
 		turnEntries = new int[currentTrackInfo.totalTurns];
 		turnExits = new int[currentTrackInfo.totalTurns];
+		steeringAngles = new float[currentTrackInfo.totalTurns];
 		turnSpeeds = new AnimationCurve[currentTrackInfo.totalTurns];
 
 		for(int i=0;i<currentTrackInfo.totalTurns;i++){
 			//Debug.Log("Turn: " + i + " - Entry:" + (currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i]));
 			turnEntries[i] = currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i];
 			turnExits[i] = currentTrackInfo.turnPositions[i] + currentTrackInfo.turnLengths[i] + currentTrackInfo.turnLeadOut[i];
+			steeringAngles[i] = currentTrackInfo.steeringAngles[i];
 			racingLines[i] = new AnimationCurve(new Keyframe(turnEntries[i], currentTrackInfo.idealEntry[i]), new Keyframe(currentTrackInfo.turnPositions[i] + (currentTrackInfo.turnLengths[i]/2f),currentTrackInfo.idealMidpoint[i]), new Keyframe(turnExits[i],currentTrackInfo.idealExit[i]));
 		}
 	}
@@ -222,7 +225,10 @@ public class VehicleLogic : MonoBehaviour
 			targetSpeed = currentTrackInfo.pitSpeed.Evaluate(locationOnTrack);
 		} else {
 			if(inArc == true){
-				assistedLineControl(inArc);
+				if (autoTurn == true)
+				{
+					assistedLineControl(inArc);
+				}
 				targetSpeed = turnSpeeds[turn].Evaluate(locationOnTrack);
 			} else {
 				targetSpeed = 999;
@@ -247,24 +253,32 @@ public class VehicleLogic : MonoBehaviour
 
 		locationOnTrack+= (speedMetres) * Time.deltaTime;
 
-		if(isPlayer == true){
+		if (isPlayer == true)
+		{
 			//Send the new motion speed to the environment objects
 			updateMotion();
 			HUDManager.updateHUD(speed);
 			playerSpeedMetres = speedMetres;
 
 			//Horizontal analog stick input becomes vertical car direction
-			if ((onTurn == false)||(autoTurn == false))
+			if ((onTurn == false) && (autoTurn == true))
 			{
 				direction.Set(InputManager.direction.x, 0);
 				vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
 			}
-		}
-			else
+			
+
+			if ((onTurn == true) && (autoTurn == false))
 			{
-				//Move the other cars relative to the player
-				vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
+				direction.Set(InputManager.direction.x + (steeringAngles[turn] / 10), 0);
+				vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
 			}
+		}
+		else
+		{
+			//Move the other cars relative to the player
+			vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
+		}
 		xOffset = 0;
 
 		if(RaceManager.thePlayer.tag != "Vehicle"){
