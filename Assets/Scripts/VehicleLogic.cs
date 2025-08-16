@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Random=UnityEngine.Random;
 using Unity.Entities.UniversalDelegates;
 using UnityEditor.Experimental.GraphView;
+using UnityEditor.Callbacks;
 
 public class VehicleLogic : MonoBehaviour
 {
@@ -110,9 +111,8 @@ public class VehicleLogic : MonoBehaviour
 	int wreckProbability;
 	bool hitByPlayer;
 
-    //Cached components
-    ConstantForce wreckForce;
-	Rigidbody wreckRigidbody;
+	//Cached components
+	Rigidbody2D rb;
 	Transform leftSparks;
 	Transform rightSparks;
 	ParticleSystem leftSparksParticles;
@@ -128,9 +128,10 @@ public class VehicleLogic : MonoBehaviour
 	public bool debugPlayer;
 
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start(){
-        
+	// Start is called once before the first execution of Update after the MonoBehaviour is created
+	void Start()
+	{
+
 		vehicle = this.gameObject;
 		pos = transform.position;
 		mainCam = GameObject.Find("MainCamera").GetComponent<Camera>();
@@ -139,7 +140,7 @@ public class VehicleLogic : MonoBehaviour
 		xOffset = 0;
 
 		trackWidth = 13f;
-		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
+		yRatio = (vehicle.transform.position.y + (trackWidth / 2)) / trackWidth;
 
 		if (isPlayer == true)
 		{
@@ -148,7 +149,7 @@ public class VehicleLogic : MonoBehaviour
 
 		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
 		//currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/PushCart");
-        currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
+		currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
 
 		zeroToSixty = currentVehicleInfo.zeroToSixty;
 
@@ -156,15 +157,17 @@ public class VehicleLogic : MonoBehaviour
 		accelerationCurve = currentVehicleInfo.accelerationCurve;
 		//accelerationCurve.keys[2] = new Keyframe(15,currentTrackInfo.topSpeed);
 
-        //Todo: This should be calculated/offset from where they spawn
+		//Todo: This should be calculated/offset from where they spawn
 		locationOnTrack = 0 - vehicle.transform.position.x;
 		turn = 0;
 
 		initRacingLines();
 
-        //speed = 55;
+		//speed = 55;
 		speed = 0;
 		speedMetres = speed / 2.237f;
+		
+		rb = this.gameObject.GetComponent<Rigidbody2D>();
     }
 
 	void initRacingLines(){
@@ -189,10 +192,19 @@ public class VehicleLogic : MonoBehaviour
 
     // Update is called once per frame
     void FixedUpdate(){
-        
-		if(RaceManager.thePlayer == this.gameObject){
+
+		if (isWrecking == true) {
+			Debug.Log(rb.linearVelocity);
+			wreckMotion();
+			return;
+		}
+
+		if (RaceManager.thePlayer == this.gameObject)
+		{
 			isPlayer = true;
-		} else {
+		}
+		else
+		{
 			isPlayer = false;
 		}
 
@@ -547,6 +559,31 @@ public class VehicleLogic : MonoBehaviour
 		//motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
 	}
 
+	public void wreckMotion(){
+		//Convert from MpH to m/s
+		playerSpeedMetres = rb.linearVelocity.x;
+		RaceManager.playerSpeedMetres = playerSpeedMetres;
+
+		frameMotion = (playerSpeedMetres / 10.24f) * Time.deltaTime;
+		motionOffset -= frameMotion;
+		motionOffset2x -= (playerSpeedMetres / 20.48f) * Time.deltaTime;
+		motionOffset4x -= (playerSpeedMetres / 40.96f) * Time.deltaTime;
+		if(motionOffset <= 0){
+			motionOffset++;
+		}
+		if(motionOffset2x <= 0){
+			motionOffset2x++;
+		}
+		if(motionOffset4x <= 0){
+			motionOffset4x++;
+		}
+		RaceManager.motionOffset = motionOffset;
+		RaceManager.frameMotion = frameMotion;
+		//motionShader.SetFloat("_MotionOffset", motionOffset);
+		//motionShader2x.SetFloat("_MotionOffset", motionOffset2x);
+		//motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
+	}
+
 	void calculateDraft(){
 		RaycastHit2D checkFront = Physics2D.Raycast(pos + new Vector2(-2.56f,0), Vector2.left,10,LayerMask.GetMask("Vehicles"));
 		Debug.DrawRay(pos + new Vector2(-2.56f,0), Vector2.left * 10, Color.green);
@@ -596,14 +633,23 @@ public class VehicleLogic : MonoBehaviour
 		}
 	}
 
-	void startWreck(){
-		
+	private void OnCollisionEnter2D(Collision2D collision)
+	{
+		Debug.Log("2D Collision with " + collision.gameObject.name + "");
+		startWreck();
+	}
+
+	void startWreck()
+	{
+
 		//Bailout
-		if((isWrecking == true)||(wreckOver == true)||(Movement.pacing == true)){
+		if (isWrecking == true)
+		{
 			return;
 		}
-		
-		tireSmokeParticles.Play();
+		isWrecking = true;
+
+		/*tireSmokeParticles.Play();
 		
 		if(Random.Range(1,10) <= 3){
 			leftSparksParticles.Play();
@@ -619,20 +665,16 @@ public class VehicleLogic : MonoBehaviour
 			CameraRotate.throwCaution();
 		}
 		sparksCooldown = 99999;
-
+		*/
 		//Debug.Log(this.name + " is wrecking");
-		
 		//Make the car light, more affected by physics
-		wreckRigidbody.mass = 2 + wreckMassRand;
-		
-		//Remove constraints, allowing it to impact/spin using physics
-		wreckRigidbody.constraints &= ~RigidbodyConstraints.FreezeRotationY;
-		wreckRigidbody.constraints &= ~RigidbodyConstraints.FreezePositionX;
-		
+
+		rb.AddForce(new Vector3(playerSpeedMetres * 60,0,0));
+		rb.AddTorque(500f);
 		//Remove forces, physics only
-		wreckRigidbody.isKinematic = false;
-		wreckRigidbody.useGravity = false;
-		
+		//rb.bodyType = false;
+		//rb.gravityScale = 0;
+		/*
 		//Apply wind/drag
 		sparksEndSpeed = Random.Range(-130,-180);
 		maxSparksRand = Random.Range(5,30);
@@ -649,7 +691,7 @@ public class VehicleLogic : MonoBehaviour
 		if(Movement.momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("CarWrecks",carNum.ToString());
 			MomentsCriteria.checkMomentsCriteria("CarWrecksAlso",carNum.ToString());
-		}
+		}*/
 	}
 	
 	public void endWreck(){
@@ -666,10 +708,11 @@ public class VehicleLogic : MonoBehaviour
 		leftSparksParticles.Stop();
 		rightSparksParticles.Stop();
 	}
-	
-	void wreckPhysics(){
-		
-		wreckAngle = this.gameObject.transform.rotation.y;
+
+	void wreckPhysics()
+	{
+
+		/*wreckAngle = this.gameObject.transform.rotation.y;
 		float wreckSine = Mathf.Sin(wreckAngle);
 		if(wreckSine < 0){
 			wreckSine = -wreckSine;
@@ -708,35 +751,39 @@ public class VehicleLogic : MonoBehaviour
 		//Prevent landing in the crowd
 		/*if(pos.x > 1.5f){
 			this.gameObject.transform.position = new Vector3(1.5f,pos.y,pos.z);
-		}*/
-		
+		}
+
 		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + wreckDecel);
-		if(sparksEndSpeed < wreckDecel){
+		if (sparksEndSpeed < wreckDecel)
+		{
 			//Align particle system to global track direction
-			leftSparks.rotation = Quaternion.Euler(0,180,0);
-			rightSparks.rotation = Quaternion.Euler(0,180,0);
+			leftSparks.rotation = Quaternion.Euler(0, 180, 0);
+			rightSparks.rotation = Quaternion.Euler(0, 180, 0);
 			leftSparksParticles.startSpeed = 100 + (wreckDecel / 2);
 			rightSparksParticles.startSpeed = 100 + (wreckDecel / 2);
 			leftSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 12));
 			rightSparksParticles.maxParticles = (int)Mathf.Floor(maxSparksRand + (wreckDecel / 12));
-			leftSparksParticles.startLifetime = 0.2f + ((0-wreckDecel) / 50);
-			rightSparksParticles.startLifetime = 0.2f + ((0-wreckDecel) / 50);
+			leftSparksParticles.startLifetime = 0.2f + ((0 - wreckDecel) / 50);
+			rightSparksParticles.startLifetime = 0.2f + ((0 - wreckDecel) / 50);
 			leftSparksParticleRenderer.lengthScale = 0.5f + (wreckDecel / 200);
 			rightSparksParticleRenderer.lengthScale = 0.5f + (wreckDecel / 200);
-		} else {
+		}
+		else
+		{
 			leftSparksParticles.Stop();
 			rightSparksParticles.Stop();
 		}
-		
+
 		//Flatten the smoke
-		tireSmoke.rotation = Quaternion.Euler(0,180,0);
+		tireSmoke.rotation = Quaternion.Euler(0, 180, 0);
 		float smokeMultiplier = wreckSine;
 		smokeMultiplier = (smokeMultiplier * 60) + 5;
 		smokeMultiplier = Mathf.Round(smokeMultiplier);
-		tireSmokeParticles.startColor = new Color32(200,200,200,(byte)smokeMultiplier);
+		tireSmokeParticles.startColor = new Color32(200, 200, 200, (byte)smokeMultiplier);
 		tireSmokeParticles.startSpeed = 40 + (wreckDecel / 5);
 		tireSmokeParticles.startSize = 12 + (wreckDecel / 30); //Max 12, Min 4.5
 		tireSmokeParticles.maxParticles = (int)(70 + Mathf.Round(wreckDecel / 2)); //Max 70, Hits 0 at -140 decel
+		*/
 	}
 	
 	void updateWindForce(float angleSin){
