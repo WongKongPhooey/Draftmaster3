@@ -27,6 +27,8 @@ public class EnvironmentObject : MonoBehaviour
 	private MaterialPropertyBlock materialOverride;
 
     private float playerLocation;
+
+	public static float locationOffset;
 	private bool scrollActive;
 	private bool scrollEnded;
     private bool isVisible;
@@ -74,15 +76,16 @@ public class EnvironmentObject : MonoBehaviour
 	// Update is called once per frame
 	void FixedUpdate() {
 		
-        playerLocation = RaceManager.playerLocation;
+        playerLocation = RaceManager.playerLocation + EnvironmentManager.cameraOffset;
 
 		//If the object is approaching (<100m)..
 		//And is invisible, and not past the centrepoint..
 		//Spawn it in
-		if((playerLocation > (centeredStartLocation - 100))
-		&&(isVisible == false)
-		&&(scrollEnded == false)){
-			this.transform.position = new Vector3(centeredStartLocation - 100, transform.position.y,0);
+		if ((playerLocation > (centeredStartLocation - 100))
+		&& (isVisible == false)
+		&& (scrollEnded == false))
+		{
+			this.transform.position = new Vector3(centeredStartLocation - 100, transform.position.y, 0);
 			scrollEnded = false;
 			toggleVisibility(true);
 			toggleScrollMotion(false);

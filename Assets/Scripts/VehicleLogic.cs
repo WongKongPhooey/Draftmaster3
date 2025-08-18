@@ -678,15 +678,6 @@ public class VehicleLogic : MonoBehaviour
 		//Apply wind/drag
 		sparksEndSpeed = Random.Range(-130,-180);
 		maxSparksRand = Random.Range(5,30);
-		targetForce = Random.Range(10f,-10f);
-		windForce = targetForce;
-		forceSmoothing = 0.5f;
-		baseDecel = -0.35f;
-		randDecel = Random.Range(0.01f,0.1f);
-		slideX = 0;
-		wreckDecel = 0;
-		wreckForce.force = new Vector3(0f, 0f,windForce);
-		wreckForce.torque = new Vector3(0f, Random.Range(-0.5f, 0.35f) * 10, 0f);
 
 		if(Movement.momentChecks == true){
 			MomentsCriteria.checkMomentsCriteria("CarWrecks",carNum.ToString());

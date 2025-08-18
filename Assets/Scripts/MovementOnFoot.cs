@@ -25,7 +25,7 @@ public class MovementOnFoot : MonoBehaviour {
 
     void FixedUpdate(){
         if(RaceManager.thePlayer != this.gameObject){
-            this.transform.position = new Vector2(RaceManager.playerLocation - lastKnownPos.x, lastKnownPos.y);
+            this.transform.position = new Vector2(RaceManager.playerLocation + EnvironmentManager.cameraOffset - lastKnownPos.x, lastKnownPos.y);
             return;
         }
         lastKnownPos = this.gameObject.transform.position;
