@@ -193,12 +193,6 @@ public class VehicleLogic : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate(){
 
-		if (isWrecking == true) {
-			Debug.Log(rb.linearVelocity);
-			wreckMotion();
-			return;
-		}
-
 		if (RaceManager.thePlayer == this.gameObject)
 		{
 			isPlayer = true;
@@ -208,12 +202,23 @@ public class VehicleLogic : MonoBehaviour
 			isPlayer = false;
 		}
 
+		if (isWrecking == true)
+		{
+			if (isPlayer == true)
+			{
+				//Update the scrolling shader movement fo the wreck
+				wreckMotion();
+			}
+			return;
+		}
+
 		pos = vehicle.transform.position;
 
 		//Update Y location relative to the track
 		prevYRatio = yRatio;
 		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
 
+		//Leans the car inwards/outwards in the turns
 		vehicle.transform.rotation = Quaternion.Euler(0, 0, (prevYRatio - yRatio) * 500);
 
 		pointAccel = currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
@@ -237,7 +242,7 @@ public class VehicleLogic : MonoBehaviour
 			targetSpeed = currentTrackInfo.pitSpeed.Evaluate(locationOnTrack);
 		} else {
 			if(inArc == true){
-				if (autoTurn == true)
+				if((autoTurn == true)||(isPlayer == false))
 				{
 					assistedLineControl(inArc);
 				}
@@ -272,17 +277,24 @@ public class VehicleLogic : MonoBehaviour
 			HUDManager.updateHUD(speed);
 			playerSpeedMetres = speedMetres;
 
-			//Horizontal analog stick input becomes vertical car direction
-			if ((onTurn == false) && (autoTurn == true))
+			//If autoturn is enabled
+			if ((onTurn == true) && (autoTurn == true))
 			{
-				direction.Set(InputManager.direction.x, 0);
-				vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
+				//Do the hecking autoturn
+				//Ignore inputs
 			}
-			
-
-			if ((onTurn == true) && (autoTurn == false))
+			else
 			{
-				direction.Set(InputManager.direction.x + (steeringAngles[turn] / 10), 0);
+				//Manual steering control
+				if (onTurn == true)
+				{
+					//Car pulls naturaly wide in the turns (so we add -steeringAngle)
+					direction.Set(InputManager.direction.x + (steeringAngles[turn] / 25), 0);
+				}
+				else
+				{
+					direction.Set(InputManager.direction.x, 0);
+				}
 				vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
 			}
 		}
@@ -635,7 +647,7 @@ public class VehicleLogic : MonoBehaviour
 
 	private void OnCollisionEnter2D(Collision2D collision)
 	{
-		Debug.Log("2D Collision with " + collision.gameObject.name + "");
+		Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
 		startWreck();
 	}
 
@@ -669,7 +681,8 @@ public class VehicleLogic : MonoBehaviour
 		//Debug.Log(this.name + " is wrecking");
 		//Make the car light, more affected by physics
 
-		rb.AddForce(new Vector3(playerSpeedMetres * 60,0,0));
+		rb.AddForce(new Vector3(playerSpeedMetres,0,0),ForceMode2D.Impulse);
+		Debug.Log("Initial wrecking force: " + playerSpeedMetres);
 		rb.AddTorque(500f);
 		//Remove forces, physics only
 		//rb.bodyType = false;

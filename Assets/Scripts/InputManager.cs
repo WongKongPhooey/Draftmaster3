@@ -49,5 +49,6 @@ public class InputManager : MonoBehaviour
     public void OnSteering(InputValue value)
     {
         direction = value.Get<Vector2>();
+        //Debug.Log("Analog direction" + direction.x + ", " + direction.y);
     }
 }
