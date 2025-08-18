@@ -655,9 +655,9 @@ public class VehicleLogic : MonoBehaviour
 	{
 
 		//Bailout
-		if (isWrecking == true)
+		if (isWrecking == false)
 		{
-			return;
+			Debug.Log("Initial wrecking force: " + playerSpeedMetres);
 		}
 		isWrecking = true;
 
@@ -682,7 +682,6 @@ public class VehicleLogic : MonoBehaviour
 		//Make the car light, more affected by physics
 
 		rb.AddForce(new Vector3(playerSpeedMetres,0,0),ForceMode2D.Impulse);
-		Debug.Log("Initial wrecking force: " + playerSpeedMetres);
 		rb.AddTorque(500f);
 		//Remove forces, physics only
 		//rb.bodyType = false;
