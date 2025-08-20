@@ -7,12 +7,15 @@ public class EnvironmentManager : MonoBehaviour
 	public static Material scrollingMaterial;
 	public static Material staticMaterial;
 
+	public static float circuitRotation;
+
 	public static float cameraOffset;
 	public static float motionOffset;
 
 	void Awake()
 	{
-
+		circuitRotation = 0;
+		
 		scrollingMaterial = Resources.Load("Materials/ScrollingMaterial", typeof(Material)) as Material;
 		staticMaterial = Resources.Load("Materials/StaticMaterial", typeof(Material)) as Material;
 

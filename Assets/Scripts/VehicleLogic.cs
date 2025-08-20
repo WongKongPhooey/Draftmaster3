@@ -17,6 +17,8 @@ public class VehicleLogic : MonoBehaviour
 	static Camera mainCam;
 	public Vector2 pos;
 	private Vector2 direction;
+	private float worldDirection;
+	private float diffToWorldRads;
 	private int sensitivity;
 	private bool autoTurn;
 
@@ -138,6 +140,7 @@ public class VehicleLogic : MonoBehaviour
 		sensitivity = InputManager.inputSensitivity;
 		autoTurn = InputManager.autoTurn;
 		xOffset = 0;
+		worldDirection = 0;
 
 		trackWidth = 13f;
 		yRatio = (vehicle.transform.position.y + (trackWidth / 2)) / trackWidth;
@@ -234,6 +237,14 @@ public class VehicleLogic : MonoBehaviour
 
 		//If autoturn is not enabled
 		if (autoTurn == false){
+			
+			//Update the car's rotation based on steering input
+			worldDirection += direction.x * sensitivity * Time.deltaTime;
+			//Debug.Log("Player rotation: " + worldDirection);
+
+			//Compare the rotation of the car to the circuit, and convert to radians
+			diffToWorldRads = ((worldDirection - EnvironmentManager.circuitRotation) * 3.14159f) / 180f;
+        	//Debug.Log("Player rotation rads: " + diffToWorldRads);
 
 			//Manual steering control
 			if (onTurn == true){
@@ -242,7 +253,9 @@ public class VehicleLogic : MonoBehaviour
 			} else {
 				direction.Set(InputManager.direction.x, 0);
 			}
-			vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
+
+			//Trigonometry fun time
+			vehicle.transform.Translate(-xOffset, playerSpeedMetres * Mathf.Sin(diffToWorldRads) * Time.deltaTime, 0);
 		}
 		xOffset = 0;
 	}
@@ -300,8 +313,9 @@ public class VehicleLogic : MonoBehaviour
 		yRatio = (vehicle.transform.position.y + (trackWidth / 2)) / trackWidth;
 
 		//Leans the car inwards/outwards in the turns
-		vehicle.transform.rotation = Quaternion.Euler(0, 0, (prevYRatio - yRatio) * 500);
-		
+		//vehicle.transform.rotation = Quaternion.Euler(0, 0, (prevYRatio - yRatio) * 500);
+		vehicle.transform.rotation = Quaternion.Euler(0, 0, (EnvironmentManager.circuitRotation - worldDirection));
+
 		locationOnTrack+= (speedMetres) * Time.deltaTime;
 	}
 
@@ -369,6 +383,7 @@ public class VehicleLogic : MonoBehaviour
 			if(isPlayer == true){
 				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
 				mainCam.transform.Rotate(0,0,-frameRotation);
+				EnvironmentManager.circuitRotation = mainCam.transform.rotation.x;
 			} else {
 				int awarenessVal = 20;
 				checkQuarters(awarenessVal);

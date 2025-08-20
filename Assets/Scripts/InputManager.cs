@@ -7,6 +7,7 @@ public class InputManager : MonoBehaviour
 {
     public GameObject activePlayer;
     public static Vector2 direction;
+    public static float playerDirection;
 
     public static bool autoTurn;
 
@@ -15,7 +16,7 @@ public class InputManager : MonoBehaviour
 
     bool isPushing, isPunching, isThrowing;
 
-    public static int inputSensitivity = 16;
+    public static int inputSensitivity = 20;
 
     Animator animator;
 
@@ -26,19 +27,13 @@ public class InputManager : MonoBehaviour
         playerInput = this.gameObject.GetComponent<PlayerInput>();
         animator = activePlayer.GetComponent<Animator>();
 
-        if (activePlayer.tag == "Vehicle")
-        {
+        if (activePlayer.tag == "Vehicle"){
             moveAction = playerInput.actions["InCar"];
-        }
-        else
-        {
-            //moveAction = playerInput.actions["OnFoot"];
         }
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        Debug.Log(direction);
     }
 
     public void pushTrigger()
