@@ -193,124 +193,21 @@ public class VehicleLogic : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate(){
 
-		if (RaceManager.thePlayer == this.gameObject)
-		{
-			isPlayer = true;
-		}
-		else
-		{
-			isPlayer = false;
-		}
-
-		if (isWrecking == true)
-		{
-			if (isPlayer == true)
-			{
-				//Update the scrolling shader movement fo the wreck
-				wreckMotion();
-			}
-			return;
-		}
-
-		pos = vehicle.transform.position;
-
-		//Update Y location relative to the track
-		prevYRatio = yRatio;
-		yRatio = (vehicle.transform.position.y + (trackWidth/2)) / trackWidth;
-
-		//Leans the car inwards/outwards in the turns
-		vehicle.transform.rotation = Quaternion.Euler(0, 0, (prevYRatio - yRatio) * 500);
-
-		pointAccel = currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
-		pointDecel = currentVehicleInfo.decelerationCurve.Evaluate(speed) * Time.deltaTime;
-
-		//The X offset has changed..
-		//Therefore the player has changed
-		if(RaceManager.playerXOffset != lastXOffset){
-			xOffset = RaceManager.playerXOffset;
-			lastXOffset = xOffset;
-			//Debug.Log("Shift the field by offset: " + xOffset);
-		}
+		speed = updateSpeed(targetSpeed, onTurn, pitting);
 
 		calculateDraft();
 
-		//Update turn and arc triggers
-		onTurn = checkTurnStatus(turn, locationOnTrack, onTurn);
-		inArc = checkArcStatus(turn, locationOnTrack, inArc, yRatio);
-		if(pitting == true){
-			automatedPitControl();
-			targetSpeed = currentTrackInfo.pitSpeed.Evaluate(locationOnTrack);
+		updateTurnLogic();
+		
+		updateLocation();
+
+		//Check who the active player is
+		if (RaceManager.thePlayer == this.gameObject) {
+			isPlayer = true;
+			playerLogic();
 		} else {
-			if(inArc == true){
-				if((autoTurn == true)||(isPlayer == false))
-				{
-					assistedLineControl(inArc);
-				}
-				targetSpeed = turnSpeeds[turn].Evaluate(locationOnTrack);
-			} else {
-				targetSpeed = 999;
-			}
-		}
-
-		speed = updateSpeed(targetSpeed, onTurn, pitting);
-
-		//On turn speed logic
-		if(onTurn == true){
-			if(isPlayer == true){
-				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
-				mainCam.transform.Rotate(0,0,-frameRotation);
-			} else {
-				int awarenessVal = 20;
-				checkQuarters(awarenessVal);
-			}
-		}
-
-		//Convert from MpH to m/s
-		speedMetres = speed / 2.237f;
-
-		locationOnTrack+= (speedMetres) * Time.deltaTime;
-
-		if (isPlayer == true)
-		{
-			//Send the new motion speed to the environment objects
-			updateMotion();
-			HUDManager.updateHUD(speed);
-			playerSpeedMetres = speedMetres;
-
-			//If autoturn is enabled
-			if ((onTurn == true) && (autoTurn == true))
-			{
-				//Do the hecking autoturn
-				//Ignore inputs
-			}
-			else
-			{
-				//Manual steering control
-				if (onTurn == true)
-				{
-					//Car pulls naturaly wide in the turns (so we add -steeringAngle)
-					direction.Set(InputManager.direction.x + (steeringAngles[turn] / 25), 0);
-				}
-				else
-				{
-					direction.Set(InputManager.direction.x, 0);
-				}
-				vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
-			}
-		}
-		else
-		{
-			//Move the other cars relative to the player
-			vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
-		}
-		xOffset = 0;
-
-		if(RaceManager.thePlayer.tag != "Vehicle"){
-			//Debug.Log("The player is not a car: " + RaceManager.thePlayer.tag);
-			//Not in a car, so make the cars 'loop' to simulate laps
-			if(vehicle.transform.position.x < (-RaceManager.trackLength / 2)){
-				vehicle.transform.Translate(RaceManager.trackLength,0,0);
-			}
+			isPlayer = false;
+			opponentLogic();
 		}
 
 		//Check for a pit entry
@@ -320,6 +217,53 @@ public class VehicleLogic : MonoBehaviour
 		&&((currentTrackInfo.pitEntryTriggerY - 1f) < yRatio)){
 			pitting = true;
 		}
+	}
+
+	void playerLogic(){
+		
+		//Send the new motion speed to the environment objects
+		if (isWrecking == true) {
+			wreckMotion();
+		} else {
+			updateMotion();
+		}
+		HUDManager.updateHUD(speed);
+
+		//playerSpeedMetres is used to sync up all scrolling motion in the scene
+		playerSpeedMetres = speedMetres;
+
+		//If autoturn is not enabled
+		if (autoTurn == false)
+		{
+
+			//Manual steering control
+			if (onTurn == true)
+			{
+				//Car pulls naturally wide in the turns (so we add -steeringAngle)
+				direction.Set(InputManager.direction.x + (steeringAngles[turn] / 25), 0);
+			}
+			else
+			{
+				direction.Set(InputManager.direction.x, 0);
+			}
+			vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
+		}
+		xOffset = 0;
+	}
+
+	void opponentLogic(){
+		
+		//Move the other cars relative to the player
+		vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
+
+		if (RaceManager.thePlayer.tag != "Vehicle"){
+			
+			//Not in a car, so make the cars 'loop' to simulate laps
+			if (vehicle.transform.position.x < (-RaceManager.trackLength / 2)){
+				vehicle.transform.Translate(RaceManager.trackLength, 0, 0);
+			}
+		}
+		xOffset = 0;
 	}
 
 	void automatedPitControl(){
@@ -342,24 +286,98 @@ public class VehicleLogic : MonoBehaviour
 		}
 	}
 
+	void updateLocation() {
+
+		pos = vehicle.transform.position;
+
+		//The X offset has changed..
+		//Therefore the player has changed
+		if (RaceManager.playerXOffset != lastXOffset)
+		{
+			xOffset = RaceManager.playerXOffset;
+			lastXOffset = xOffset;
+			//Debug.Log("Shift the field by offset: " + xOffset);
+		}
+
+		//Update Y location relative to the track
+		prevYRatio = yRatio;
+		yRatio = (vehicle.transform.position.y + (trackWidth / 2)) / trackWidth;
+
+		//Leans the car inwards/outwards in the turns
+		vehicle.transform.rotation = Quaternion.Euler(0, 0, (prevYRatio - yRatio) * 500);
+		
+		locationOnTrack+= (speedMetres) * Time.deltaTime;
+	}
+
 	float updateSpeed(float targetSpeed, bool onTurn, bool pitting = false){
+
+		pointAccel = currentVehicleInfo.accelerationCurve.Evaluate(speed) * Time.deltaTime;
+		pointDecel = currentVehicleInfo.decelerationCurve.Evaluate(speed) * Time.deltaTime;
 
 		/*
 		*  If speed difference is beyond the max acceleration of the car
 		*/
-		if((targetSpeed - speed) > pointAccel){
+		if ((targetSpeed - speed) > pointAccel)
+		{
 			//Just accelerate instead
 			speed += pointAccel;
-		} else {
-			if((targetSpeed - speed) < pointDecel){
+		}
+		else
+		{
+			if ((targetSpeed - speed) < pointDecel)
+			{
 				//Decelerate (Brake) as hard as possible
 				speed += pointDecel;
-			} else {
+			}
+			else
+			{
 				//Follow the calculated speed curve
 				return targetSpeed;
 			}
 		}
+
+		//Convert from MpH to m/s
+		speedMetres = speed / 2.237f;
+
 		return speed;
+	}
+
+	void updateTurnLogic() {
+
+		//Update turn and arc triggers
+		onTurn = checkTurnStatus(turn, locationOnTrack, onTurn);
+		inArc = checkArcStatus(turn, locationOnTrack, inArc, yRatio);
+		if (pitting == true)
+		{
+			automatedPitControl();
+			targetSpeed = currentTrackInfo.pitSpeed.Evaluate(locationOnTrack);
+		}
+		else
+		{
+			if (inArc == true)
+			{
+				if ((autoTurn == true) || (isPlayer == false))
+				{
+					assistedLineControl(inArc);
+				}
+				targetSpeed = turnSpeeds[turn].Evaluate(locationOnTrack);
+			}
+			else
+			{
+				targetSpeed = 999;
+			}
+		}
+		
+		//On turn logic
+		if(onTurn == true){
+			if(isPlayer == true){
+				float frameRotation = currentTrackInfo.turnAngles[turn] / (currentTrackInfo.turnLengths[turn] / speedMetres) * Time.deltaTime;
+				mainCam.transform.Rotate(0,0,-frameRotation);
+			} else {
+				int awarenessVal = 20;
+				checkQuarters(awarenessVal);
+			}
+		}
 	}
 
 	bool checkTurnStatus(int turn, float location, bool isOnTurn){
@@ -571,7 +589,8 @@ public class VehicleLogic : MonoBehaviour
 		//motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
 	}
 
-	public void wreckMotion(){
+	public void wreckMotion()
+	{
 		//Convert from MpH to m/s
 		playerSpeedMetres = rb.linearVelocity.x;
 		RaceManager.playerSpeedMetres = playerSpeedMetres;
@@ -580,20 +599,22 @@ public class VehicleLogic : MonoBehaviour
 		motionOffset -= frameMotion;
 		motionOffset2x -= (playerSpeedMetres / 20.48f) * Time.deltaTime;
 		motionOffset4x -= (playerSpeedMetres / 40.96f) * Time.deltaTime;
-		if(motionOffset <= 0){
+		if (motionOffset <= 0)
+		{
 			motionOffset++;
 		}
-		if(motionOffset2x <= 0){
+		if (motionOffset2x <= 0)
+		{
 			motionOffset2x++;
 		}
-		if(motionOffset4x <= 0){
+		if (motionOffset4x <= 0)
+		{
 			motionOffset4x++;
 		}
 		RaceManager.motionOffset = motionOffset;
 		RaceManager.frameMotion = frameMotion;
-		//motionShader.SetFloat("_MotionOffset", motionOffset);
-		//motionShader2x.SetFloat("_MotionOffset", motionOffset2x);
-		//motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
+		
+		speed = rb.linearVelocity.x;
 	}
 
 	void calculateDraft(){
@@ -657,7 +678,7 @@ public class VehicleLogic : MonoBehaviour
 		//Bailout
 		if (isWrecking == false)
 		{
-			Debug.Log("Initial wrecking force: " + playerSpeedMetres);
+			Debug.Log("Initial wrecking force: " + speedMetres);
 		}
 		isWrecking = true;
 
@@ -673,19 +694,15 @@ public class VehicleLogic : MonoBehaviour
 		isWrecking = true;
 		wreckDamage+=1;
 		RaceControl.isWrecking[carNum] = true;
-		if(CameraRotate.cautionOut == false){
+		if(CameraRotate.cautionOut == false){No 
 			CameraRotate.throwCaution();
 		}
 		sparksCooldown = 99999;
 		*/
-		//Debug.Log(this.name + " is wrecking");
-		//Make the car light, more affected by physics
 
-		rb.AddForce(new Vector3(playerSpeedMetres,0,0),ForceMode2D.Impulse);
+		rb.AddForce(new Vector3(speedMetres,0,0),ForceMode2D.Impulse);
 		rb.AddTorque(500f);
-		//Remove forces, physics only
-		//rb.bodyType = false;
-		//rb.gravityScale = 0;
+
 		/*
 		//Apply wind/drag
 		sparksEndSpeed = Random.Range(-130,-180);
