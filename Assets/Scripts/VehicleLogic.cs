@@ -233,17 +233,13 @@ public class VehicleLogic : MonoBehaviour
 		playerSpeedMetres = speedMetres;
 
 		//If autoturn is not enabled
-		if (autoTurn == false)
-		{
+		if (autoTurn == false){
 
 			//Manual steering control
-			if (onTurn == true)
-			{
+			if (onTurn == true){
 				//Car pulls naturally wide in the turns (so we add -steeringAngle)
 				direction.Set(InputManager.direction.x + (steeringAngles[turn] / 25), 0);
-			}
-			else
-			{
+			} else {
 				direction.Set(InputManager.direction.x, 0);
 			}
 			vehicle.transform.Translate(-xOffset, direction.x * sensitivity * Time.deltaTime, 0);
