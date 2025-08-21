@@ -626,6 +626,12 @@ public class VehicleLogic : MonoBehaviour
 		RaceManager.frameMotion = frameMotion;
 		
 		speed = rb.linearVelocity.x;
+
+		if(speed < 5){
+			rb.linearVelocity = new Vector2(0,0);
+			rb.angularDamping = 500f;
+			speed = 0;
+		}
 	}
 
 	void calculateDraft(){
@@ -711,8 +717,11 @@ public class VehicleLogic : MonoBehaviour
 		sparksCooldown = 99999;
 		*/
 
+		Debug.Log("Max wall force: " + speedMetres + ", Actual: " + (speedMetres * (1 - Mathf.Sin(diffToWorldRads))));
+		//rb.AddForce(new Vector3(speedMetres * (1 - Mathf.Sin(diffToWorldRads)),0,0),ForceMode2D.Impulse);
 		rb.AddForce(new Vector3(speedMetres,0,0),ForceMode2D.Impulse);
-		rb.AddTorque(500f);
+		
+		//rb.AddTorque(Random.Range(-50f,50f));
 
 		/*
 		//Apply wind/drag
