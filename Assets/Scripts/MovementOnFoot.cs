@@ -25,6 +25,7 @@ public class MovementOnFoot : MonoBehaviour {
 
     void FixedUpdate(){
         if(RaceManager.thePlayer != this.gameObject){
+            //If the NPC isn't the active player, have it become an faux environment object
             this.transform.position = new Vector2(RaceManager.playerLocation + EnvironmentManager.cameraOffset - lastKnownPos.x, lastKnownPos.y);
             return;
         }
@@ -48,10 +49,11 @@ public class MovementOnFoot : MonoBehaviour {
     }
 
     public void setAsPlayer(){
-        Debug.Log("Last Known Pos: " + lastKnownPos.x);
+        //Debug.Log("Last Known Pos: " + lastKnownPos.x);
 		RaceManager.setPlayer(this.gameObject, 3f);
         this.transform.position = new Vector2(lastKnownPos.x, lastKnownPos.y);
         RaceManager.playerLocation = lastKnownPos.x;
+        InputManager.playerInput.SwitchCurrentActionMap("OnFoot");
         motionShader.SetFloat("_MotionOffset", 0f);
         CameraManager.setRotation(0f);
 	}

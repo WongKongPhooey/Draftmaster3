@@ -191,6 +191,7 @@ public class VehicleLogic : MonoBehaviour
 
 	public void setAsPlayer(){
 		RaceManager.setPlayer(this.gameObject);
+		InputManager.playerInput.SwitchCurrentActionMap("InCar");
 	}
 
     // Update is called once per frame
@@ -264,6 +265,12 @@ public class VehicleLogic : MonoBehaviour
 		
 		//Move the other cars relative to the player
 		vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
+
+		#if UNITY_EDITOR
+			if(debugPlayer == true){
+				Debug.Log("Distance opponent moved X: " + playerSpeedMetres + " - " + speedMetres);
+			}
+		#endif
 
 		if (RaceManager.thePlayer.tag != "Vehicle"){
 			
@@ -696,6 +703,8 @@ public class VehicleLogic : MonoBehaviour
 		if (isWrecking == false)
 		{
 			Debug.Log("Initial wrecking force: " + speedMetres);
+		} else {
+			return;
 		}
 		isWrecking = true;
 
@@ -718,8 +727,8 @@ public class VehicleLogic : MonoBehaviour
 		*/
 
 		Debug.Log("Max wall force: " + speedMetres + ", Actual: " + (speedMetres * (1 - Mathf.Sin(diffToWorldRads))));
-		//rb.AddForce(new Vector3(speedMetres * (1 - Mathf.Sin(diffToWorldRads)),0,0),ForceMode2D.Impulse);
-		rb.AddForce(new Vector3(speedMetres,0,0),ForceMode2D.Impulse);
+		rb.AddForce(new Vector3(speedMetres * (1 - Mathf.Sin(diffToWorldRads)),0,0),ForceMode2D.Impulse);
+		//rb.AddForce(new Vector3(speedMetres,0,0) ,ForceMode2D.Impulse);
 		
 		//rb.AddTorque(Random.Range(-50f,50f));
 

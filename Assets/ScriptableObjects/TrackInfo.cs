@@ -14,7 +14,8 @@ public class TrackInfo : ScriptableObject {
     public int trackWidth;
     public int[] straightPositions, turnPositions, straightLengths, turnLengths, turnAngles, turnLeadIn, turnLeadOut, bankingAngles;
 
-    //Steering Angle = arctan(Wheelbase≈39 / ((Turn Length / (Turn Angle * π / 180)) - (AxleLength≈28 / 2)))
+    //Steering Angle = arctan(Wheelbase≈39 / (Turn Length / Turn Angle in Radians) - (AxleLength≈28 / 2)))
+    //Example: arctan(39 / (360 / 2.44346) - (28/2))
     public float[] steeringAngles;
 
     [Header("Track Markers")]

@@ -11,8 +11,7 @@ public class InputManager : MonoBehaviour
 
     public static bool autoTurn;
 
-    private PlayerInput playerInput;
-    private InputAction moveAction;
+    public static PlayerInput playerInput;
 
     bool isPushing, isPunching, isThrowing;
 
@@ -28,7 +27,9 @@ public class InputManager : MonoBehaviour
         animator = activePlayer.GetComponent<Animator>();
 
         if (activePlayer.tag == "Vehicle"){
-            moveAction = playerInput.actions["InCar"];
+            playerInput.SwitchCurrentActionMap("InCar");
+        } else {
+            playerInput.SwitchCurrentActionMap("OnFoot");
         }
     }
 
@@ -39,6 +40,12 @@ public class InputManager : MonoBehaviour
     public void pushTrigger()
     {
         animator.SetTrigger("PushTrigger");
+    }
+
+    public void OnWalking(InputValue value)
+    {
+        direction = value.Get<Vector2>();
+        //Debug.Log("Analog direction" + direction.x + ", " + direction.y);
     }
 
     public void OnSteering(InputValue value)
