@@ -33,7 +33,7 @@ public class CameraActions : MonoBehaviour
         yield return new WaitForSeconds(timeToPan);
 
         Debug.Log("Camera Focus To Player");
-        actionedCamera.Lens.OrthographicSize = 3;
+        actionedCamera.Lens.OrthographicSize = 6;
         actionedCamera.Follow = player.transform;
     }
 }

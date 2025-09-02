@@ -191,7 +191,7 @@ public class VehicleLogic : MonoBehaviour
 
 	public void setAsPlayer(){
 		RaceManager.setPlayer(this.gameObject);
-		InputManager.playerInput.SwitchCurrentActionMap("InCar");
+		InputManager.ChangeInputMap("InCar");
 	}
 
     // Update is called once per frame

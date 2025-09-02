@@ -28,13 +28,14 @@ public class InputManager : MonoBehaviour
 
         if (activePlayer.tag == "Vehicle"){
             playerInput.SwitchCurrentActionMap("InCar");
+            CameraManager.cameraCentering = true;
         } else {
             playerInput.SwitchCurrentActionMap("OnFoot");
+            CameraManager.cameraCentering = false;
         }
     }
 
-    private void FixedUpdate()
-    {
+    private void FixedUpdate(){
     }
 
     public void pushTrigger()
@@ -42,15 +43,35 @@ public class InputManager : MonoBehaviour
         animator.SetTrigger("PushTrigger");
     }
 
-    public void OnWalking(InputValue value)
+    //This took me ages to remember how this works..
+    //The InputManager Player Input component creates these method names..
+    //based on the name of the input in the Input Action Asset.
+    public void OnMovement(InputValue value)
     {
         direction = value.Get<Vector2>();
-        //Debug.Log("Analog direction" + direction.x + ", " + direction.y);
+        Debug.Log("Analog walking direction" + direction.x + ", " + direction.y);
     }
 
     public void OnSteering(InputValue value)
     {
         direction = value.Get<Vector2>();
-        //Debug.Log("Analog direction" + direction.x + ", " + direction.y);
+        Debug.Log("Analog steering direction" + direction.x + ", " + direction.y);
+    }
+
+    public static void ChangeInputMap(string mapName){
+        switch(mapName){
+            case "InCar":
+                playerInput.SwitchCurrentActionMap("InCar");
+                CameraManager.cameraCentering = true;
+                break;
+            case "OnFoot":
+                playerInput.SwitchCurrentActionMap("OnFoot");
+                CameraManager.cameraCentering = false;
+                break;
+            default:
+                playerInput.SwitchCurrentActionMap("InCar");
+                CameraManager.cameraCentering = true;
+                break;
+        }
     }
 }

@@ -4,6 +4,7 @@ using Unity.Cinemachine;
 public class CameraManager : MonoBehaviour
 {
     private static CinemachineCamera actionedCamera;
+	public GameObject centeredCamera;
 
 	private static GameObject thePlayer;
     private static TrackInfo currentTrackInfo;
@@ -12,10 +13,21 @@ public class CameraManager : MonoBehaviour
 	private static int trackLength;
 	private static int totalTurns;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+	public static bool cameraCentering;
+	public static float cameraOffset;
+
     void Start(){
         setFPS();
+		cameraCentering = true;
+		cameraOffset = 0;
     }
+
+	// Update is called once per frame
+	void FixedUpdate() {
+		if((centeredCamera != null)&&(cameraCentering == true)){
+			cameraOffset = centeredCamera.transform.position.x;
+        }
+	}
 
     public static void setRotation(float angle){
         actionedCamera.Lens.Dutch = -angle;

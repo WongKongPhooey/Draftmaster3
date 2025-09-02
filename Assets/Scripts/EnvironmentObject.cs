@@ -76,7 +76,7 @@ public class EnvironmentObject : MonoBehaviour
 	// Update is called once per frame
 	void FixedUpdate() {
 		
-        playerLocation = RaceManager.playerLocation + EnvironmentManager.cameraOffset;
+        playerLocation = RaceManager.playerLocation + CameraManager.cameraOffset;
 
 		//If the object is approaching (<100m)..
 		//And is invisible, and not past the centrepoint..

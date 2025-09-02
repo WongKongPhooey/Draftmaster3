@@ -26,12 +26,13 @@ public class MovementOnFoot : MonoBehaviour {
     void FixedUpdate(){
         if(RaceManager.thePlayer != this.gameObject){
             //If the NPC isn't the active player, have it become an faux environment object
-            this.transform.position = new Vector2(RaceManager.playerLocation + EnvironmentManager.cameraOffset - lastKnownPos.x, lastKnownPos.y);
+            this.transform.position = new Vector2(RaceManager.playerLocation + CameraManager.cameraOffset - lastKnownPos.x, lastKnownPos.y);
             return;
         }
         lastKnownPos = this.gameObject.transform.position;
         direction.Set(InputManager.direction.x,InputManager.direction.y);
         body.linearVelocity = direction * playerSpeed;
+        Debug.Log("Applying direction: x" + direction.x + ", y" + direction.y);
 
         Vector3 lookDir = (transform.position + new Vector3(direction.x,direction.y,0));
 
@@ -50,10 +51,10 @@ public class MovementOnFoot : MonoBehaviour {
 
     public void setAsPlayer(){
         //Debug.Log("Last Known Pos: " + lastKnownPos.x);
-		RaceManager.setPlayer(this.gameObject, 3f);
+		RaceManager.setPlayer(this.gameObject, 6f);
         this.transform.position = new Vector2(lastKnownPos.x, lastKnownPos.y);
         RaceManager.playerLocation = lastKnownPos.x;
-        InputManager.playerInput.SwitchCurrentActionMap("OnFoot");
+        InputManager.ChangeInputMap("OnFoot");
         motionShader.SetFloat("_MotionOffset", 0f);
         CameraManager.setRotation(0f);
 	}
