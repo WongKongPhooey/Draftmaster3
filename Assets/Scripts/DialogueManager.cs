@@ -21,6 +21,10 @@ public class DialogueManager : MonoBehaviour
     }
 
     public void TriggerDialogue(string dialogue){
+        //A dialogue is already active
+        if(dialogueCanvas.activeSelf == true){
+            return;
+        }
         dialogueOutput.text = "";
         dialogueText = dialogue;
         dialogueCanvas.SetActive(true);
@@ -29,8 +33,8 @@ public class DialogueManager : MonoBehaviour
 
     // Update is called once per frame
     void Update(){
-        this.transform.position = actor.transform.position + new Vector3(0,0.4f,0);
-        //this.transform.rotation = new Quaternion();
+        this.transform.position = actor.transform.position + new Vector3(-0.4f,0.4f,0);
+        this.transform.eulerAngles = new Vector3(0,0,0);
     
     }
 
@@ -39,7 +43,7 @@ public class DialogueManager : MonoBehaviour
             dialogueOutput.text += c;
             yield return new WaitForSeconds(0.075f);
         }
-        yield return new WaitForSeconds(2);
+        yield return new WaitForSeconds(3);
         dialogueCanvas.SetActive(false);
     }
 }

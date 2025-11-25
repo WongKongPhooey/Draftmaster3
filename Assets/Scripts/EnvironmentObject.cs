@@ -76,6 +76,17 @@ public class EnvironmentObject : MonoBehaviour
 	// Update is called once per frame
 	void FixedUpdate() {
 		
+		#if UNITY_EDITOR
+		if(debugObject == true){
+			Debug.Log("Object: " + this.gameObject.name + " - Player Location: " + playerLocation + " - Centered Start Location: " + centeredStartLocation + " - Camera Offset:" + CameraManager.cameraOffset);
+		}
+		#endif
+
+		if (RaceManager.thePlayer.tag == "PlayerOnFoot"){
+			playerLocation = 0;
+			centeredStartLocation = 0;
+		}
+
         playerLocation = RaceManager.playerLocation + CameraManager.cameraOffset;
 
 		//If the object is approaching (<100m)..

@@ -24,9 +24,9 @@ public class CameraManager : MonoBehaviour
 
 	// Update is called once per frame
 	void FixedUpdate() {
-		if((centeredCamera != null)&&(cameraCentering == true)){
+		/*if((centeredCamera != null)&&(cameraCentering == true)){
 			cameraOffset = centeredCamera.transform.position.x;
-        }
+        }*/
 	}
 
     public static void setRotation(float angle){
