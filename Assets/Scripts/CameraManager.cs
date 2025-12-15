@@ -1,9 +1,11 @@
 using UnityEngine;
 using Unity.Cinemachine;
+using UnityEngine.UI;
 
 public class CameraManager : MonoBehaviour
 {
     private static CinemachineCamera actionedCamera;
+	private static Transform followCamera;
 	public GameObject centeredCamera;
 
 	private static GameObject thePlayer;
@@ -16,10 +18,14 @@ public class CameraManager : MonoBehaviour
 	public static bool cameraCentering;
 	public static float cameraOffset;
 
+	private RectTransform topBar, bottomBar;
+
     void Start(){
         setFPS();
 		cameraCentering = true;
 		cameraOffset = 0;
+
+		createLetterbox();
     }
 
 	// Update is called once per frame
@@ -61,4 +67,15 @@ public class CameraManager : MonoBehaviour
 				break;
 		}
     }
+
+	void createLetterbox(){
+		followCamera = GameObject.Find("FollowCamera").GetComponent<Transform>();
+		GameObject tBar = new GameObject("topBar", typeof(Image));
+		tBar.transform.SetParent(followCamera, false);
+		tBar.GetComponent<Image>().color = Color.black;
+		topBar = tBar.GetComponent<RectTransform>();
+		topBar.anchorMin = new Vector2(0,1);
+		topBar.anchorMax = new Vector2(1,1);
+		topBar.sizeDelta = new Vector2(0,300);
+	}
 }

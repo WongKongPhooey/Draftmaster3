@@ -85,6 +85,16 @@ public class RaceManager : MonoBehaviour
 		}
     }
 
+	public static GameObject getPlayer(){
+		
+		//If no player is set, fallback to the player on foot
+		if(thePlayer == null){
+			thePlayer = GameObject.Find("PlayerOnFoot");
+			setPlayer(thePlayer, 3f);
+		}
+		return thePlayer;
+	}
+
 	public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
 		thePlayer = playerVehicle;
 		if(thePlayer.tag == "Vehicle"){

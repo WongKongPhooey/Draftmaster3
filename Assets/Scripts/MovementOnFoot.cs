@@ -30,10 +30,10 @@ public class MovementOnFoot : MonoBehaviour {
             return;
         }
         lastKnownPos = this.gameObject.transform.position;
-        Debug.Log("Playable NPC Location: " + lastKnownPos);
+        //Debug.Log("Playable NPC Location: " + lastKnownPos);
         direction.Set(InputManager.direction.x,InputManager.direction.y);
         body.linearVelocity = direction * playerSpeed;
-        Debug.Log("Applying direction: x" + direction.x + ", y" + direction.y);
+        //Debug.Log("Applying direction: x" + direction.x + ", y" + direction.y);
 
         Vector3 lookDir = (transform.position + new Vector3(direction.x,direction.y,0));
 
