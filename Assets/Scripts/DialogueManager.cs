@@ -8,6 +8,7 @@ public class DialogueManager : MonoBehaviour
 {
 
     public GameObject actor;
+    private bool isPlayer;
     private GameObject dialogueCanvas;
 
     private Story currentDialogue;
@@ -22,6 +23,12 @@ public class DialogueManager : MonoBehaviour
         dialogueOutput = dialogueCanvas.transform.GetChild(1).transform.GetChild(0).gameObject.GetComponent<TMPro.TMP_Text>();
         dialogueCanvas.SetActive(false);
         dialogueOutput.text = "";
+
+        if(actor.tag == "PlayerOnFoot"){
+            isPlayer = true;
+        } else {
+            isPlayer = false;
+        }
     }
 
     public void TriggerDialogue(TextAsset inkJSON){
@@ -51,10 +58,8 @@ public class DialogueManager : MonoBehaviour
     IEnumerator DialogueLine(){
         foreach(char c in dialogueText.ToCharArray()){
             dialogueOutput.text += c;
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.06f);
         }
-        //yield return new WaitForSeconds(5);
-        //dialogueCanvas.SetActive(false);
     }
 
     void endDialogue(){
