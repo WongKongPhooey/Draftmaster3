@@ -16,6 +16,8 @@ public class DialogueManager : MonoBehaviour
     private TMPro.TMP_Text dialogueOutput;
     public string dialogueText;
 
+    private bool isOutputting;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -31,12 +33,10 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    public void TriggerDialogue(TextAsset inkJSON){
-        
-        //A dialogue is already active
-        if(dialogueCanvas.activeSelf == false){
-            Debug.Log(dialogueCanvas + " - is now active");
-            currentDialogue = new Story(inkJSON.text);
+    public void AdvanceDialogue(TextAsset inkJSON){
+        //Can't advance while it's already typing out
+        if(isOutputting == true){
+            return;
         }
 
         dialogueOutput.text = "";
@@ -44,8 +44,20 @@ public class DialogueManager : MonoBehaviour
             dialogueText = currentDialogue.Continue();
             dialogueCanvas.SetActive(true);
             StartCoroutine(DialogueLine());
+            isOutputting = true;
         } else {
             endDialogue();
+        }
+    }
+
+    public void TriggerDialogue(TextAsset inkJSON){
+
+        //Initialise a new dialogue
+        if(dialogueCanvas.activeSelf == false){
+            Debug.Log(dialogueCanvas + " - is now active");
+            currentDialogue = new Story(inkJSON.text);
+
+            AdvanceDialogue(inkJSON);
         }
     }
 
@@ -60,6 +72,7 @@ public class DialogueManager : MonoBehaviour
             dialogueOutput.text += c;
             yield return new WaitForSeconds(0.06f);
         }
+        isOutputting = false;
     }
 
     void endDialogue(){

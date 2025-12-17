@@ -19,7 +19,7 @@ public class ScrollingTexture : MonoBehaviour
 
         if(objectRenderer.material != null){
 			pixelsFromShaderName = GetNumbersFromString(objectRenderer.material.name);
-			Debug.Log(pixelsFromShaderName + " pixels.");
+			//Debug.Log(pixelsFromShaderName + " pixels.");
 		}
     }
 

@@ -692,7 +692,7 @@ public class VehicleLogic : MonoBehaviour
 
 	private void OnCollisionEnter2D(Collision2D collision)
 	{
-		Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
+		//Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
 		startWreck();
 	}
 
@@ -702,7 +702,7 @@ public class VehicleLogic : MonoBehaviour
 		//Bailout
 		if (isWrecking == false)
 		{
-			Debug.Log("Initial wrecking force: " + speedMetres);
+			//Debug.Log("Initial wrecking force: " + speedMetres);
 		} else {
 			return;
 		}

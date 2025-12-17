@@ -37,6 +37,8 @@ public class EnvironmentObject : MonoBehaviour
 
 	void Awake(){
 
+		playerLocation = RaceManager.playerLocation + CameraManager.cameraOffset;
+
 		childRenderers = GetComponentsInChildren<Renderer>();
 		childColliders = GetComponentsInChildren<BoxCollider>();
 
@@ -63,7 +65,14 @@ public class EnvironmentObject : MonoBehaviour
 		scrollEnded = false;
 
 		//Object must be visible at the start/finish line
-		if(specificStartLocation > specificEndLocation){
+		if((specificStartLocation > specificEndLocation)&&(specificEndLocation != 0)){
+
+			#if UNITY_EDITOR
+			if(debugObject == true){
+				Debug.Log("Object: " + this.gameObject.name + " - Starts Visible: " + playerLocation + " - Centered Start Location: " + centeredStartLocation + " - Centered End Location: " + specificEndLocation);
+			}
+			#endif
+
 			scrollActive = true;
 			toggleVisibility(true);
 			toggleScrollMotion(true);
@@ -82,9 +91,9 @@ public class EnvironmentObject : MonoBehaviour
 		}
 		#endif
 
+		//Nothing uses motion when the environment is fixed at 0
 		if (RaceManager.thePlayer.tag == "PlayerOnFoot"){
-			playerLocation = 0;
-			centeredStartLocation = 0;
+			return;
 		}
 
         playerLocation = RaceManager.playerLocation + CameraManager.cameraOffset;

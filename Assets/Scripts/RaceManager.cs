@@ -40,6 +40,11 @@ public class RaceManager : MonoBehaviour
 	void FixedUpdate(){
 
 		if(thePlayer.tag != "Vehicle"){
+
+			//Players on foot only walk around the pit/infield/crowd fixed at 0x
+			if (thePlayer.tag == "PlayerOnFoot"){
+				playerLocation = 0;
+			}
 			return;
 		}
 
