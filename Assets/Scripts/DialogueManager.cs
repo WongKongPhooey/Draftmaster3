@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using PlayFab.MultiplayerModels;
 using UnityEngine;
 using TMPro;
@@ -6,76 +7,27 @@ using Ink.Runtime;
 
 public class DialogueManager : MonoBehaviour
 {
+    public static GameObject playerDialogueCanvas;
+    public static TMPro.TMP_Text playerDialogueOutput;
 
-    public GameObject actor;
-    private bool isPlayer;
-    private GameObject dialogueCanvas;
-
-    private Story currentDialogue;
-
-    private TMPro.TMP_Text dialogueOutput;
-    public string dialogueText;
-
-    private bool isOutputting;
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        dialogueCanvas = this.transform.gameObject;
-        dialogueOutput = dialogueCanvas.transform.GetChild(1).transform.GetChild(0).gameObject.GetComponent<TMPro.TMP_Text>();
-        dialogueCanvas.SetActive(false);
-        dialogueOutput.text = "";
-
-        if(actor.tag == "PlayerOnFoot"){
-            isPlayer = true;
-        } else {
-            isPlayer = false;
-        }
+    void Awake(){
+        playerDialogueCanvas = GameObject.Find("PlayerOnFoot/DialogueCanvas");
+        playerDialogueOutput = GameObject.Find("PlayerOnFoot/DialogueCanvas/DialogueBox/DialogueText").GetComponent<TMPro.TMP_Text>();
     }
 
-    public void AdvanceDialogue(TextAsset inkJSON){
-        //Can't advance while it's already typing out
-        if(isOutputting == true){
-            return;
-        }
+    public static GameObject getPlayerDialogueCanvas(){
 
-        dialogueOutput.text = "";
-        if(currentDialogue.canContinue){
-            dialogueText = currentDialogue.Continue();
-            dialogueCanvas.SetActive(true);
-            StartCoroutine(DialogueLine());
-            isOutputting = true;
-        } else {
-            endDialogue();
+        if(playerDialogueCanvas == null){
+            playerDialogueCanvas = GameObject.Find("PlayerOnFoot/DialogueCanvas");
         }
+        return playerDialogueCanvas;
     }
 
-    public void TriggerDialogue(TextAsset inkJSON){
-
-        //Initialise a new dialogue
-        if(dialogueCanvas.activeSelf == false){
-            Debug.Log(dialogueCanvas + " - is now active");
-            currentDialogue = new Story(inkJSON.text);
-
-            AdvanceDialogue(inkJSON);
+    public static TMPro.TMP_Text getPlayerDialogueOutput(){
+        
+        if(playerDialogueOutput == null){
+            playerDialogueOutput = GameObject.Find("PlayerOnFoot/DialogueCanvas/DialogueBox/DialogueText").GetComponent<TMPro.TMP_Text>();
         }
-    }
-
-    // Update is called once per frame
-    void Update(){
-        this.transform.position = actor.transform.position + new Vector3(-0.4f,-0.3f,0);
-        this.transform.eulerAngles = new Vector3(0,0,0);
-    }
-
-    IEnumerator DialogueLine(){
-        foreach(char c in dialogueText.ToCharArray()){
-            dialogueOutput.text += c;
-            yield return new WaitForSeconds(0.06f);
-        }
-        isOutputting = false;
-    }
-
-    void endDialogue(){
-        dialogueCanvas.SetActive(false);
+        return playerDialogueOutput;
     }
 }

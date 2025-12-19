@@ -49,7 +49,7 @@ public class TriggerActions : MonoBehaviour{
                 break;
             case "Dialogue":
                 //target.transform.LookAt(player.transform.position);
-                triggerDialogue.GetComponent<DialogueManager>().TriggerDialogue(inkJSON);
+                triggerDialogue.GetComponent<DialogueHandler>().TriggerDialogue(inkJSON);
                 break;
             default:
                 //Invalid type, do nothing
