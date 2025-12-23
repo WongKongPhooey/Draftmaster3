@@ -7,6 +7,8 @@ public class CameraManager : MonoBehaviour
     private static CinemachineCamera actionedCamera;
 	//public GameObject centeredCamera;
 
+	public static float playerZoom;
+
 	private static GameObject thePlayer;
     private static TrackInfo currentTrackInfo;
     private static int[] straightLength, turnLength, turnAngle;
@@ -22,6 +24,7 @@ public class CameraManager : MonoBehaviour
 
     void Start(){
         setFPS();
+		playerZoom = 3f;
 		cameraCentering = true;
 		cameraOffset = 0;
 

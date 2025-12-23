@@ -10,6 +10,7 @@ public class DialogueHandler : MonoBehaviour
     public GameObject actor;
     private bool isPlayer;
     private GameObject dialogueCanvas;
+    private Canvas dialogueCanvasRenderer;
 
     private Story currentDialogue;
     private List<string> currentTags;
@@ -17,21 +18,25 @@ public class DialogueHandler : MonoBehaviour
     private TMPro.TMP_Text dialogueOutput;
     public string dialogueText;
 
-    private bool isOutputting;
+    public bool isOutputting;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         dialogueCanvas = this.transform.gameObject;
+        dialogueCanvasRenderer = dialogueCanvas.GetComponent<Canvas>();
         dialogueOutput = dialogueCanvas.transform.GetChild(1).transform.GetChild(0).gameObject.GetComponent<TMPro.TMP_Text>();
         dialogueOutput.text = "";
         isOutputting = false;
 
-        dialogueCanvas.SetActive(false);
+        dialogueCanvasRenderer.enabled = false;
     }
 
     public void AdvanceDialogue(TextAsset inkJSON){
-        //Can't advance while it's already typing out
+        
+        //Debug.Log("Advancing Dialogue: " + isOutputting);
+
+        //Can't advance while it's typing out
         if(isOutputting == true){
             return;
         }
@@ -39,16 +44,19 @@ public class DialogueHandler : MonoBehaviour
         dialogueOutput.text = "";
         if(currentDialogue.canContinue){
             dialogueText = currentDialogue.Continue();
+            //Debug.Log("Next line: " + dialogueText);
             currentTags = currentDialogue.currentTags;
             if((currentTags.Count > 0)&&(currentTags[0] == "player")){
+                isOutputting = false;
                 GameObject playerDialogue = DialogueManager.getPlayerDialogueCanvas();
-                playerDialogue.GetComponent<PlayerDialogue>().receiveDialogue(dialogueText);
-                dialogueCanvas.SetActive(false);
+                playerDialogue.GetComponent<PlayerDialogue>().receiveDialogue(dialogueText, dialogueCanvas, inkJSON);
+                dialogueCanvasRenderer.enabled = false;
             } else {
-                dialogueCanvas.SetActive(true);
+                //Debug.Log("Read out the dialogue");
+                dialogueCanvasRenderer.enabled = true;
+                isOutputting = true;
                 StartCoroutine(DialogueLine());
             }
-            isOutputting = true;
         } else {
             endDialogue();
         }
@@ -57,7 +65,8 @@ public class DialogueHandler : MonoBehaviour
     public void TriggerDialogue(TextAsset inkJSON){
 
         //Initialise a new dialogue
-        if(dialogueCanvas.activeSelf == false){
+        if(dialogueCanvasRenderer.enabled == false){
+            dialogueCanvasRenderer.enabled = true;
             Debug.Log(dialogueCanvas + " - is now active");
             currentDialogue = new Story(inkJSON.text);
 

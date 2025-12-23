@@ -26,14 +26,31 @@ public class CameraActions : MonoBehaviour
         }
     }
 
-    IEnumerator FocusAwayForSeconds(GameObject target, int timeToPan){
+    public void triggerExitAction(string actionName, GameObject target, int actionParamInt){
+        Debug.Log("Exit Trigger Action");
+
+        switch(actionName){
+            case "ReturnFocusToPlayer":
+                StartCoroutine(ReturnFocusToPlayer(target, actionParamInt));
+                break;
+            default:
+                //Invalid type, do nothing
+                Debug.Log("Camera Action Not Found - " + actionName);
+                break;
+        }
+    }
+
+    IEnumerator FocusAwayForSeconds(GameObject target, int newZoom){
         Debug.Log("Camera Focus To Target");
         actionedCamera.Follow = target.transform;
-        actionedCamera.Lens.OrthographicSize = 18;
-        yield return new WaitForSeconds(timeToPan);
+        actionedCamera.Lens.OrthographicSize = newZoom;
+        yield return new WaitForSeconds(0);
+    }
 
+    IEnumerator ReturnFocusToPlayer(GameObject target, int newZoom){
         Debug.Log("Camera Focus To Player");
-        actionedCamera.Lens.OrthographicSize = 6;
+        yield return new WaitForSeconds(1f); 
+        actionedCamera.Lens.OrthographicSize = CameraManager.playerZoom;
         actionedCamera.Follow = player.transform;
     }
 }

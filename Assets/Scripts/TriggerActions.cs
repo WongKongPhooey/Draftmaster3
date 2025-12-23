@@ -40,8 +40,6 @@ public class TriggerActions : MonoBehaviour{
             return;
         }
 
-        Debug.Log(other.name);
-
         switch(triggerType){
             case "FocusCameraAway":
                 triggerCamera.GetComponent<CameraActions>().triggerAction("FocusAwayForSeconds", target, triggerParamInt);
@@ -57,9 +55,28 @@ public class TriggerActions : MonoBehaviour{
         }
     }
 
+    public void OnTriggerExit2D(Collider2D other){
+        if(other != playerCollider){
+            return;
+        }
+
+        //Only the player can trigger actions
+        if(player.tag == "Vehicle"){
+            return;
+        }
+
+        switch(triggerType){
+            case "FocusCameraAway":
+                triggerCamera.GetComponent<CameraActions>().triggerExitAction("ReturnFocusToPlayer", target, triggerParamInt);
+                break;
+            default:
+                //Invalid type, do nothing
+                break;
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
-        
     }
 }
