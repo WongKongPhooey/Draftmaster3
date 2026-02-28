@@ -413,6 +413,7 @@ public class VehicleLogic : MonoBehaviour
 
 	bool checkArcStatus(int turn, float location, bool isInArc, float yRatio){
 		//Are we in a turn (incl. the arc)?
+		Debug.Log(turn);
 		if(location > turnExits[turn]){
 			updateTurnCount(turn);
 			return false;
@@ -692,7 +693,9 @@ public class VehicleLogic : MonoBehaviour
 
 	private void OnCollisionEnter2D(Collision2D collision)
 	{
-		//Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
+		if(collision.gameObject.layer == 3){return;}
+
+		Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
 		startWreck();
 	}
 

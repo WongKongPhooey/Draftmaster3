@@ -107,6 +107,7 @@ public class RaceManager : MonoBehaviour
 		}
 		//Debug.Log("New X offset: " + playerXOffset);
 		CameraManager.setPlayer(thePlayer, zoom);
+		DialogueManager.setPlayerCanvas(thePlayer);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;
 	}

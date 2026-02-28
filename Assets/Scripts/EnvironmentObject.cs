@@ -87,7 +87,7 @@ public class EnvironmentObject : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugObject == true){
-			Debug.Log("Object: " + this.gameObject.name + " - Player Location: " + playerLocation + " - Centered Start Location: " + centeredStartLocation + " - Camera Offset:" + CameraManager.cameraOffset);
+			//Debug.Log("Object: " + this.gameObject.name + " - Player Location: " + playerLocation + " - Centered Start Location: " + centeredStartLocation + " - Camera Offset:" + CameraManager.cameraOffset);
 		}
 		#endif
 

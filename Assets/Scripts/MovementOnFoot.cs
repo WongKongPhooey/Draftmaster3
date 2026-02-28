@@ -8,6 +8,7 @@ public class MovementOnFoot : MonoBehaviour {
     private Vector2 direction;
     private Vector2 lastKnownPos;
     [SerializeField] private float playerSpeed = 2.0f;
+    [SerializeField] private float startLocation = 0f;
     private Rigidbody2D body;
     private Animator animator;
     public Material motionShader;
@@ -21,6 +22,7 @@ public class MovementOnFoot : MonoBehaviour {
         body = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         lastKnownPos = this.gameObject.transform.position;
+        this.gameObject.transform.position = new Vector2(startLocation,lastKnownPos.y);
     }
 
     void FixedUpdate(){

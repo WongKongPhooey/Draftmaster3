@@ -9,16 +9,23 @@ public class DialogueManager : MonoBehaviour
 {
     public static GameObject playerDialogueCanvas;
     public static TMPro.TMP_Text playerDialogueOutput;
+    public static GameObject activePlayer;
+    private static string playerName;
 
     void Awake(){
-        playerDialogueCanvas = GameObject.Find("PlayerOnFoot/DialogueCanvas");
-        playerDialogueOutput = GameObject.Find("PlayerOnFoot/DialogueCanvas/DialogueBox/DialogueText").GetComponent<TMPro.TMP_Text>();
+    }
+
+    public static void setPlayerCanvas(GameObject thePlayer){
+        activePlayer = thePlayer;
+        playerName = activePlayer.name;
+        playerDialogueCanvas = GameObject.Find(playerName + "/DialogueCanvas");
+        //playerDialogueOutput = GameObject.Find(playerName + "/DialogueCanvas/DialogueBox/DialogueText").GetComponent<TMPro.TMP_Text>();
     }
 
     public static GameObject getPlayerDialogueCanvas(){
 
         if(playerDialogueCanvas == null){
-            playerDialogueCanvas = GameObject.Find("PlayerOnFoot/DialogueCanvas");
+            playerDialogueCanvas = GameObject.Find(playerName + "/DialogueCanvas");
         }
         return playerDialogueCanvas;
     }
@@ -26,7 +33,7 @@ public class DialogueManager : MonoBehaviour
     public static TMPro.TMP_Text getPlayerDialogueOutput(){
         
         if(playerDialogueOutput == null){
-            playerDialogueOutput = GameObject.Find("PlayerOnFoot/DialogueCanvas/DialogueBox/DialogueText").GetComponent<TMPro.TMP_Text>();
+            playerDialogueOutput = GameObject.Find(playerName + "/DialogueCanvas/DialogueBox/DialogueText").GetComponent<TMPro.TMP_Text>();
         }
         return playerDialogueOutput;
     }
