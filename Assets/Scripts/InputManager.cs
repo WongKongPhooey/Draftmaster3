@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 public class InputManager : MonoBehaviour
@@ -12,19 +13,23 @@ public class InputManager : MonoBehaviour
     public static bool autoTurn;
 
     public static PlayerInput playerInput;
+    public static float playerYRatio;
 
     bool isPushing, isPunching, isThrowing;
 
     public static int inputSensitivity = 20;
 
     Animator animator;
+    Slider entrySlider;
 
     private void Awake()
     {
-        autoTurn = false;
+        //False = analog stick
+        autoTurn = true;
 
         playerInput = this.gameObject.GetComponent<PlayerInput>();
         animator = activePlayer.GetComponent<Animator>();
+        entrySlider = GameObject.Find("EntrySlider").GetComponent<Slider>();
 
         if (activePlayer.tag == "Vehicle"){
             playerInput.SwitchCurrentActionMap("InCar");
@@ -35,7 +40,12 @@ public class InputManager : MonoBehaviour
         }
     }
 
-    private void FixedUpdate(){
+    private void FixedUpdate()
+    {
+        if (activePlayer.tag == "Vehicle")
+        {
+            entrySlider.value = playerYRatio;
+        }
     }
 
     public void pushTrigger()

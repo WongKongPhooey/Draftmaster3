@@ -34,9 +34,9 @@ public class CameraManager : MonoBehaviour
 
 	// Update is called once per frame
 	void FixedUpdate() {
-		/*if((centeredCamera != null)&&(cameraCentering == true)){
-			cameraOffset = centeredCamera.transform.position.x;
-        }*/
+		//if((centeredCamera != null)&&(cameraCentering == true)){
+			//cameraOffset = centeredCamera.transform.position.x;
+        //}
 	}
 
     public static void setRotation(float angle){
@@ -45,6 +45,9 @@ public class CameraManager : MonoBehaviour
 
     public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
         thePlayer = playerVehicle;
+		cameraOffset = thePlayer.transform.position.x;
+		Debug.Log("New X offset: " + cameraOffset);
+		Debug.Log("" + thePlayer);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
         actionedCamera.Lens.OrthographicSize = zoom;
 		actionedCamera.Follow = thePlayer.transform;

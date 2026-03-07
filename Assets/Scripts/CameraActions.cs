@@ -17,6 +17,10 @@ public class CameraActions : MonoBehaviour
 
         switch(actionName){
             case "FocusAwayForSeconds":
+                //if(RaceManager.thePlayer.tag == "Vehicle"){
+                    return;
+                //}
+
                 StartCoroutine(FocusAwayForSeconds(target, actionParamInt));
                 break;
             default:

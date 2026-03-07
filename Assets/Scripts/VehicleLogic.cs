@@ -257,6 +257,9 @@ public class VehicleLogic : MonoBehaviour
 
 			//Trigonometry fun time
 			vehicle.transform.Translate(-xOffset, playerSpeedMetres * Mathf.Sin(diffToWorldRads) * Time.deltaTime, 0);
+		} else
+		{
+			InputManager.playerYRatio = yRatio;
 		}
 		xOffset = 0;
 	}
@@ -852,70 +855,12 @@ public class VehicleLogic : MonoBehaviour
         if ((carHit.gameObject.tag == "Opponent") || 
 		    (carHit.gameObject.tag == "Wall")) {
 			
-			if((blownEngine == true)&&(isWrecking == false)){
-				Debug.Log("Blown Engine Wreck");
-				startWreck();
-			}
-			
-			//Join wreck
-			if(carHit.gameObject.tag == "Opponent"){
-				if(isWrecking == true){
-					//Share some wreck inertia
-					float opponentWreckDecel = carHit.gameObject.GetComponent<AIMovement>().wreckDecel;
-					wreckDamage += ((opponentWreckDecel - wreckDecel) / 2);
-					wreckDecel += ((opponentWreckDecel - wreckDecel) / 2);
-					RaceControl.wreckDamage[carNum] = wreckDamage;
-				} else {
-					bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
-					if(joinWreck == true){
-						//Debug.Log("Wreck: Joining In");
-						startWreck();
-					}
-				}
-			}
+			startWreck();
 
 			//No need to check the other stuff if wrecking
 			if(isWrecking == true){
 				return;
 			}
-
-			/*if (laneticker != 0){
-				if (laneticker > 0){
-					bool rightSideHit = checkRaycast("RightCorners", 0.51f);
-					if(rightSideHit == true){
-						backingOut = true;
-						laneticker = -laneChangeDuration + laneticker;
-					}
-				}
-				if (laneticker < 0){
-					bool leftSideHit = checkRaycast("LeftCorners", 0.51f);
-					if(leftSideHit == true){
-						backingOut = true;
-						laneticker = laneChangeDuration + laneticker;
-					}
-				}
-			} else {
-				int dooredStrength = 0;
-				if(carHit.gameObject.tag == "AICar"){
-					dooredStrength = carHit.gameObject.GetComponent<VehicleLogic>().GetStat("AGG");
-				}
-				if(doored("Left",dooredStrength) == true){
-					changeLane("Right");
-				}
-				if(doored("Right",dooredStrength) == true){
-					changeLane("Left");
-				}
-			}
-			speed -= Random.Range(0.5f,5f);*/
         }
-				
-        /*if(leftSideClear(0.51f) == false){
-            leftSparksParticles.Play();
-            sparksCooldown = Random.Range(5,20);
-        }
-        if(rightSideClear(0.51f) == false){
-            rightSparksParticles.Play();
-            sparksCooldown = Random.Range(5,20);
-        }*/
     }
 }
