@@ -31,6 +31,9 @@ public class TriggerActions : MonoBehaviour{
 
     public void OnTriggerEnter2D(Collider2D other){
 
+        player = RaceManager.getPlayer(); 
+        playerCollider = player.GetComponent<BoxCollider2D>();
+
         if(other != playerCollider){
             return;
         }

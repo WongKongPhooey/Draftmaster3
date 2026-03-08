@@ -20,7 +20,7 @@ public class EnvironmentManager : MonoBehaviour
 	
 	// Update is called once per frame
 	void FixedUpdate() {
-         environmentRoot.transform.position = new Vector3(CameraManager.cameraOffset, environmentRoot.transform.position.y, environmentRoot.transform.position.z);
+         environmentRoot.transform.position = new Vector3(RaceManager.playerXShift, environmentRoot.transform.position.y, environmentRoot.transform.position.z);
 	}
 
 	public static Material getScrollingShader(){

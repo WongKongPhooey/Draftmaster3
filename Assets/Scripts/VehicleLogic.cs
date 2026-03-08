@@ -33,7 +33,7 @@ public class VehicleLogic : MonoBehaviour
 	public float motionOffset2x;
 	public float motionOffset4x;
 	public float lastXOffset;
-	public float xOffset;
+	public static float xShift;
 	public float yRatio;
 	float prevYRatio;
 
@@ -139,7 +139,7 @@ public class VehicleLogic : MonoBehaviour
 		mainCam = GameObject.Find("MainCamera").GetComponent<Camera>();
 		sensitivity = InputManager.inputSensitivity;
 		autoTurn = InputManager.autoTurn;
-		xOffset = 0;
+		xShift = 0;
 		worldDirection = 0;
 
 		trackWidth = 13f;
@@ -196,6 +196,8 @@ public class VehicleLogic : MonoBehaviour
 
     // Update is called once per frame
     void FixedUpdate(){
+
+		xShift = RaceManager.playerXShift;
 
 		speed = updateSpeed(targetSpeed, onTurn, pitting);
 
@@ -256,18 +258,18 @@ public class VehicleLogic : MonoBehaviour
 			}
 
 			//Trigonometry fun time
-			vehicle.transform.Translate(-xOffset, playerSpeedMetres * Mathf.Sin(diffToWorldRads) * Time.deltaTime, 0);
+			vehicle.transform.Translate(0, playerSpeedMetres * Mathf.Sin(diffToWorldRads) * Time.deltaTime, 0);
 		} else
 		{
 			InputManager.playerYRatio = yRatio;
 		}
-		xOffset = 0;
+		vehicle.transform.Translate(xShift,0,0);
 	}
 
 	void opponentLogic(){
 		
 		//Move the other cars relative to the player
-		vehicle.transform.Translate(new Vector2(-xOffset + ((playerSpeedMetres - speedMetres) * Time.deltaTime), 0));
+		vehicle.transform.Translate(new Vector2((playerSpeedMetres - speedMetres) * Time.deltaTime, 0));
 
 		#if UNITY_EDITOR
 			if(debugPlayer == true){
@@ -282,7 +284,7 @@ public class VehicleLogic : MonoBehaviour
 				vehicle.transform.Translate(RaceManager.trackLength, 0, 0);
 			}
 		}
-		xOffset = 0;
+		vehicle.transform.Translate(xShift,0,0);
 	}
 
 	void automatedPitControl(){
@@ -308,15 +310,6 @@ public class VehicleLogic : MonoBehaviour
 	void updateLocation() {
 
 		pos = vehicle.transform.position;
-
-		//The X offset has changed..
-		//Therefore the player has changed
-		if (RaceManager.playerXOffset != lastXOffset)
-		{
-			xOffset = RaceManager.playerXOffset;
-			lastXOffset = xOffset;
-			//Debug.Log("Shift the field by offset: " + xOffset);
-		}
 
 		//Update Y location relative to the track
 		prevYRatio = yRatio;

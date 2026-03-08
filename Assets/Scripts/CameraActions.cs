@@ -18,10 +18,10 @@ public class CameraActions : MonoBehaviour
         switch(actionName){
             case "FocusAwayForSeconds":
                 //if(RaceManager.thePlayer.tag == "Vehicle"){
-                    return;
+                    //return;
                 //}
 
-                StartCoroutine(FocusAwayForSeconds(target, actionParamInt));
+                //StartCoroutine(FocusAwayForSeconds(target, actionParamInt));
                 break;
             default:
                 //Invalid type, do nothing
@@ -35,7 +35,11 @@ public class CameraActions : MonoBehaviour
 
         switch(actionName){
             case "ReturnFocusToPlayer":
-                StartCoroutine(ReturnFocusToPlayer(target, actionParamInt));
+                //If the active player has changed..
+                //..the exit action can be skipped
+                if (target == RaceManager.getPlayer()){
+                    StartCoroutine(ReturnFocusToPlayer(target, actionParamInt));
+                }
                 break;
             default:
                 //Invalid type, do nothing

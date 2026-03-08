@@ -15,7 +15,7 @@ public class RaceManager : MonoBehaviour
 	public static float motionSpeed;
 	public static float motionOffset;
 	public static float frameMotion;
-	public static float playerXOffset;
+	public static float playerXShift;
     public static TrackInfo currentTrackInfo;
     public static int[] straightLength, turnLength, turnAngle, turnPositions, turnStartAngle;
 	public static int trackLength;
@@ -28,7 +28,7 @@ public class RaceManager : MonoBehaviour
     void Start(){
         trackInit();
 
-		playerXOffset = 0;
+		playerXShift = 0;
 
 		//If no player is set, fallback to the player on foot
 		if(thePlayer == null){
@@ -44,6 +44,8 @@ public class RaceManager : MonoBehaviour
 			//Players on foot only walk around the pit/infield/crowd fixed at 0x
 			if (thePlayer.tag == "PlayerOnFoot"){
 				playerLocation = 0;
+				trackRotation = 0;
+				CameraManager.setRotation(trackRotation);
 			}
 			return;
 		}
@@ -67,6 +69,15 @@ public class RaceManager : MonoBehaviour
 		}
 	   	CameraManager.setRotation(trackRotation);
     }
+
+	void LateUpdate()
+	{
+		//Player has now been zeroed
+		//Hopefully by this point everything else has acknowledged the shift
+		if(thePlayer.transform.position.x == 0){
+			playerXShift = 0;
+		}
+	}
 
     void trackInit(){
         currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
@@ -102,10 +113,8 @@ public class RaceManager : MonoBehaviour
 
 	public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
 		thePlayer = playerVehicle;
-		if(thePlayer.tag == "Vehicle"){
-			playerXOffset = thePlayer.transform.position.x;
-			Debug.Log("New X offset: " + playerXOffset);
-		}
+		playerXShift = -thePlayer.transform.position.x;
+		Debug.Log("New X shift: " + playerXShift);
 		CameraManager.setPlayer(thePlayer, zoom);
 		DialogueManager.setPlayerCanvas(thePlayer);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
