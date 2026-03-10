@@ -41,7 +41,7 @@ public class RaceManager : MonoBehaviour
 
 		if(thePlayer.tag != "Vehicle"){
 
-			//Players on foot only walk around the pit/infield/crowd fixed at 0x
+			//Players on foot only walk around the pit/infield/crowd fixed at x=0
 			if (thePlayer.tag == "PlayerOnFoot"){
 				playerLocation = 0;
 				trackRotation = 0;
