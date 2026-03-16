@@ -10,6 +10,7 @@ public class RaceManager : MonoBehaviour
 	private static CinemachineCamera actionedCamera;
 
 	public static GameObject thePlayer;
+	Transform carPrefab;
 	public static float playerSpeed;
 	public static float playerSpeedMetres;
 	public static float motionSpeed;
@@ -35,6 +36,8 @@ public class RaceManager : MonoBehaviour
 			thePlayer = GameObject.Find("PlayerOnFoot");
 			setPlayer(thePlayer, 3f);
 		}
+
+		spawnField();
     }
 
 	void FixedUpdate(){
@@ -119,5 +122,15 @@ public class RaceManager : MonoBehaviour
 		DialogueManager.setPlayerCanvas(thePlayer);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;
+	}
+
+	public static void spawnField(){
+		Object carInst;
+		for (int i = 1; i < 43; i++) {
+			//carInst = Instantiate(carPrefab, new Vector2(garageEnd - (i * 1.2), 0.4f), Quaternion.identity);
+			//AICarInstance.name = ("AICar0" + carNum);
+			//GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
+					
+		}
 	}
 }
