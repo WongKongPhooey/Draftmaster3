@@ -23,6 +23,12 @@ EditorUserSettings:
     Journaling:
       value: 184c
       flags: 0
+    QuickInstaller_com.unity.purchasing_installRecorded:
+      value: 37434103
+      flags: 0
+    QuickInstaller_com.unity.services.levelplay_installRecorded:
+      value: 2550581500
+      flags: 0
     RecentlyUsedSceneGuid-0:
       value: 575450575d53080e5d575424117a064440164072292a27632e2b4467e3e5673e
       flags: 0
