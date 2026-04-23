@@ -17,7 +17,8 @@ public class VehicleLogic : MonoBehaviour
 	static Camera mainCam;
 	public Vector2 pos;
 	private Vector2 direction;
-	private float worldDirection;
+	public float worldDirection;
+	[HideInInspector] public bool isNetworkRemote = false;
 	private float diffToWorldRads;
 	private int sensitivity;
 	private bool autoTurn;
@@ -33,7 +34,6 @@ public class VehicleLogic : MonoBehaviour
 	public float motionOffset2x;
 	public float motionOffset4x;
 	public float lastXOffset;
-	public static float xShift;
 	public float yRatio;
 	float prevYRatio;
 
@@ -139,7 +139,6 @@ public class VehicleLogic : MonoBehaviour
 		mainCam = GameObject.Find("MainCamera").GetComponent<Camera>();
 		sensitivity = InputManager.inputSensitivity;
 		autoTurn = InputManager.autoTurn;
-		xShift = 0;
 		worldDirection = 0;
 
 		trackWidth = 13f;
@@ -197,7 +196,10 @@ public class VehicleLogic : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate(){
 
-		xShift = RaceManager.playerXShift;
+		// Networked remote cars have their transform/state driven by NetworkedVehicle. Skip all local logic.
+		if (isNetworkRemote) {
+			return;
+		}
 
 		speed = updateSpeed(targetSpeed, onTurn, pitting);
 
@@ -263,7 +265,6 @@ public class VehicleLogic : MonoBehaviour
 		{
 			InputManager.playerYRatio = yRatio;
 		}
-		vehicle.transform.Translate(xShift,0,0);
 	}
 
 	void opponentLogic(){
@@ -284,7 +285,6 @@ public class VehicleLogic : MonoBehaviour
 				vehicle.transform.Translate(RaceManager.trackLength, 0, 0);
 			}
 		}
-		vehicle.transform.Translate(xShift,0,0);
 	}
 
 	void automatedPitControl(){
@@ -599,9 +599,6 @@ public class VehicleLogic : MonoBehaviour
 		}
 		RaceManager.motionOffset = motionOffset;
 		RaceManager.frameMotion = frameMotion;
-		//motionShader.SetFloat("_MotionOffset", motionOffset);
-		//motionShader2x.SetFloat("_MotionOffset", motionOffset2x);
-		//motionShader4x.SetFloat("_MotionOffset", motionOffset4x);
 	}
 
 	public void wreckMotion()
@@ -628,7 +625,6 @@ public class VehicleLogic : MonoBehaviour
 		}
 		RaceManager.motionOffset = motionOffset;
 		RaceManager.frameMotion = frameMotion;
-		
 		speed = rb.linearVelocity.x;
 
 		if(speed < 5){

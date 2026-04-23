@@ -23,7 +23,7 @@ public class EnvironmentObjectV2 : MonoBehaviour
 	BoxCollider[] childColliders;
 	Material[] childMaterials;
 	private string pixelsFromShaderName;
-    private float motionOffset;
+	private float scrollDivisor;
 	
 	private MaterialPropertyBlock materialOverride;
 
@@ -57,6 +57,8 @@ public class EnvironmentObjectV2 : MonoBehaviour
 		if(objectRenderer.material != null){
 			pixelsFromShaderName = GetNumbersFromString(objectRenderer.material.name);
 		}
+		float pixelSize = (pixelsFromShaderName != "") ? float.Parse(pixelsFromShaderName) : 128f;
+		scrollDivisor = (scrollSpeedOverride != 0) ? scrollSpeedOverride : ((pixelSize / 512f) * 40f);
 
 		materialOverride = new MaterialPropertyBlock();
 
@@ -94,7 +96,7 @@ public class EnvironmentObjectV2 : MonoBehaviour
 		if((playerLocation > (centeredStartLocation - 100))
 		&&(isVisible == false)
 		&&(postScroll == false)){
-			this.transform.position = new Vector3(centeredStartLocation - 100, transform.position.y,0);
+			this.transform.position = new Vector3(playerLocation - centeredStartLocation, transform.position.y, 0);
 			toggleVisibility(true);
 			isScrolling = false;
 		}
@@ -129,28 +131,11 @@ public class EnvironmentObjectV2 : MonoBehaviour
 			}
 
 			if(isScrolling == true){
+				this.transform.position = new Vector3(0, transform.position.y, 0);
 				if(materialInstance != null){
-					if(scrollSpeedOverride != 0){
-						motionOffset-= (RaceManager.motionSpeed / scrollSpeedOverride);
-						
-						#if UNITY_EDITOR
-						if(debugObject == true){
-							//Debug.Log("Name:" + this.gameObject.name + ", Scroll Speed Override:" + scrollSpeedOverride);
-						}
-						#endif
-					} else {
-						motionOffset-= RaceManager.motionSpeed / ((float.Parse(pixelsFromShaderName) / 512f) * 40f);
-						
-						#if UNITY_EDITOR
-						if(debugObject == true){
-							//Debug.Log("Name:" + this.gameObject.name + ", Pixels From Shader Name:" + float.Parse(pixelsFromShaderName) + ", Math Adjusted:" + ((float.Parse(pixelsFromShaderName) / 512f) * 40f));
-						}
-						#endif
-					}
-					if(motionOffset <= 0){
-						motionOffset++;
-					}
-					materialInstance.SetFloat("_MotionOffset", motionOffset);
+					float rawOffset = (playerLocation - centeredStartLocation) / scrollDivisor;
+					float shaderOffset = 1f - (rawOffset - Mathf.Floor(rawOffset));
+					materialInstance.SetFloat("_MotionOffset", shaderOffset);
 				}
 			}
 
@@ -188,6 +173,22 @@ public class EnvironmentObjectV2 : MonoBehaviour
 			col.enabled = isShowing;
 		}
 		postScroll = false;
+	}
+
+	public void resetState(){
+		isScrolling = false;
+		postScroll = false;
+		if(scrollable == false){
+			toggleVisibility(true);
+		} else {
+			toggleVisibility(false);
+		}
+		this.transform.position = new Vector3(0, transform.position.y, 0);
+
+		if(specificStartLocation > specificEndLocation){
+			toggleVisibility(true);
+			isScrolling = true;
+		}
 	}
 
 	void toggleScrolling(bool scrolling){

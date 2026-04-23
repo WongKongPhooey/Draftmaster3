@@ -56,5 +56,6 @@ public class MovementOnFoot : MonoBehaviour {
         this.transform.position = new Vector2(lastKnownPos.x, lastKnownPos.y);
         //Debug.Log("Last Known Pos: " + lastKnownPos.x);
 		RaceManager.setPlayer(this.gameObject, 6f);
+		InputManager.ChangeInputMap("OnFoot");
 	}
 }

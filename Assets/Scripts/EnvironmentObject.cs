@@ -47,11 +47,11 @@ public class EnvironmentObject : MonoBehaviour
 		
 		if(objectRenderer.drawMode == SpriteDrawMode.Tiled){
 			centeredStartLocation = specificStartLocation + ((objectLength * objectRenderer.size.x) / 2);
-			centeredEndLocation = specificEndLocation - ((objectLength * objectRenderer.size.x) / 2);
+			centeredEndLocation = specificEndLocation;
 		} else {
 			//Start position defines when the middle of object.x is centered at 0;
 			centeredStartLocation = specificStartLocation + (objectLength / 2);
-			centeredEndLocation = specificEndLocation - (objectLength / 2);
+			centeredEndLocation = specificEndLocation;
 		}
 
 		materialOverride = new MaterialPropertyBlock();
@@ -147,7 +147,13 @@ public class EnvironmentObject : MonoBehaviour
 				}
 				//100 metres before the object leaves, the scrolling stops
 				//The final 100 metres is the object sliding out of view.
-				if(playerLocation > centeredEndLocation){
+				bool pastEnd;
+				if(specificStartLocation < specificEndLocation){
+					pastEnd = playerLocation > centeredEndLocation;
+				} else {
+					pastEnd = playerLocation < specificStartLocation && playerLocation > centeredEndLocation;
+				}
+				if(pastEnd){
 					if(scrollActive == true){
 						scrollActive = false;
 						scrollEnded = true;

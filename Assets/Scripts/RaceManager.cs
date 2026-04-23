@@ -75,11 +75,7 @@ public class RaceManager : MonoBehaviour
 
 	void LateUpdate()
 	{
-		//Player has now been zeroed
-		//Hopefully by this point everything else has acknowledged the shift
-		if(thePlayer.transform.position.x == 0){
-			playerXShift = 0;
-		}
+		playerXShift = 0;
 	}
 
     void trackInit(){
@@ -116,12 +112,35 @@ public class RaceManager : MonoBehaviour
 
 	public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
 		thePlayer = playerVehicle;
-		playerXShift = -thePlayer.transform.position.x;
-		Debug.Log("New X shift: " + playerXShift);
+
+		float shift = -thePlayer.transform.position.x;
+
+		VehicleLogic[] vehicles = Object.FindObjectsByType<VehicleLogic>(FindObjectsSortMode.None);
+		foreach(VehicleLogic v in vehicles){
+			v.transform.Translate(shift, 0, 0);
+		}
+		MovementOnFoot[] footChars = Object.FindObjectsByType<MovementOnFoot>(FindObjectsSortMode.None);
+		foreach(MovementOnFoot f in footChars){
+			f.transform.Translate(shift, 0, 0);
+		}
+
+		playerXShift = 0;
+
+		if(thePlayer.TryGetComponent<VehicleLogic>(out VehicleLogic vl)){
+			playerLocation = vl.locationOnTrack;
+		} else {
+			playerLocation = 0;
+		}
+
 		CameraManager.setPlayer(thePlayer, zoom);
 		DialogueManager.setPlayerCanvas(thePlayer);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;
+
+		EnvironmentObjectV2[] envObjects = Object.FindObjectsByType<EnvironmentObjectV2>(FindObjectsSortMode.None);
+		foreach(EnvironmentObjectV2 obj in envObjects){
+			obj.resetState();
+		}
 	}
 
 	public static void spawnField(){

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find C:UsersJoshDocumentsDraftmaster3Assets -name Phoenix.unity -o -name *Phoenix* -type f)",
+      "Bash(grep -E \"\\\\.cs$|MonoBehaviour|m_Name\")",
+      "Bash(grep -r \"public class\\\\|internal class\\\\|private class\" C:UsersJoshDocumentsDraftmaster3AssetsScripts --include=*.cs)",
+      "Bash(ls -1 C:UsersJoshDocumentsDraftmaster3AssetsScripts/*.cs)",
+      "Bash(ls:*)",
+      "Bash(find C:UsersJoshDocumentsDraftmaster3AssetsScripts -name *.cs -type f)",
+      "Bash(grep -E \", Assembly-CSharp$\")",
+      "Bash(grep:*)"
+    ]
+  }
+}
