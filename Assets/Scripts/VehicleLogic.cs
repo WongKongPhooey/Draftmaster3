@@ -278,8 +278,8 @@ public class VehicleLogic : MonoBehaviour
 			}
 		#endif
 
-		if (RaceManager.thePlayer.tag != "Vehicle"){
-			
+		if (RaceManager.thePlayer == null || RaceManager.thePlayer.tag != "Vehicle"){
+
 			//Not in a car, so make the cars 'loop' to simulate laps
 			if (vehicle.transform.position.x < (-RaceManager.trackLength / 2)){
 				vehicle.transform.Translate(RaceManager.trackLength, 0, 0);

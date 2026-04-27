@@ -22,7 +22,17 @@ public class MovementOnFoot : MonoBehaviour {
         body = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         lastKnownPos = this.gameObject.transform.position;
-        this.gameObject.transform.position = new Vector2(startLocation,lastKnownPos.y);
+    }
+
+    private void Start()
+    {
+        var track = RaceManager.currentTrackInfo;
+        if (track != null) {
+            transform.position = new Vector2(transform.position.x, track.infieldScenePositionY);
+        } else {
+            transform.position = new Vector2(startLocation, lastKnownPos.y);
+        }
+        lastKnownPos = transform.position;
     }
 
     void FixedUpdate(){

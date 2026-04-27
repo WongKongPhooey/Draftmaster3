@@ -91,11 +91,6 @@ public class EnvironmentObject : MonoBehaviour
 		}
 		#endif
 
-		//Nothing uses motion when the environment is fixed at 0
-		if (RaceManager.thePlayer.tag == "PlayerOnFoot"){
-			return;
-		}
-
         playerLocation = RaceManager.playerLocation + CameraManager.cameraOffset;
 
 		//If the object is approaching (<100m)..

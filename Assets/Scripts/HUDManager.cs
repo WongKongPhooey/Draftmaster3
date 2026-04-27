@@ -17,6 +17,9 @@ public class HUDManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (HUDplayerLocationLbl != null) {
+            HUDplayerLocationLbl.text = RaceManager.playerLocation.ToString("F3") + "m";
+        }
     }
 
     public static void updateHUD(float speed)

@@ -20,6 +20,7 @@ public class TrackInfo : ScriptableObject {
 
     [Header("Track Markers")]
     public int finishLinePosition;
+    public float infieldScenePositionX, infieldScenePositionY;
     public float pitEntryTriggerX, pitEntryTriggerY, pitExitTriggerX, pitExitTriggerY;
 
 

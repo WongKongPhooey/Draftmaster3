@@ -25,10 +25,13 @@ public class RaceManager : MonoBehaviour
 	public float playerLocationPublic;
 	private float trackRotation;
 
+	void Awake(){
+		// Track must be loaded before any Start() runs so on-foot spawn / env objects can read it.
+		trackInit();
+	}
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start(){
-        trackInit();
-
 		playerXShift = 0;
 
 		//If no player is set, fallback to the player on foot
@@ -42,11 +45,14 @@ public class RaceManager : MonoBehaviour
 
 	void FixedUpdate(){
 
+		if(thePlayer == null) return;
+
 		if(thePlayer.tag != "Vehicle"){
 
-			//Players on foot only walk around the pit/infield/crowd fixed at x=0
-			if (thePlayer.tag == "PlayerOnFoot"){
-				playerLocation = 0;
+			//Players on foot stand at the track's infield scene position so the env shows the right area
+			if (thePlayer.GetComponent<MovementOnFoot>() != null){
+				playerLocation = currentTrackInfo != null ? currentTrackInfo.infieldScenePositionX : 0;
+				playerLocationPublic = playerLocation;
 				trackRotation = 0;
 				CameraManager.setRotation(trackRotation);
 			}
@@ -128,6 +134,8 @@ public class RaceManager : MonoBehaviour
 
 		if(thePlayer.TryGetComponent<VehicleLogic>(out VehicleLogic vl)){
 			playerLocation = vl.locationOnTrack;
+		} else if (thePlayer.GetComponent<MovementOnFoot>() != null && currentTrackInfo != null) {
+			playerLocation = currentTrackInfo.infieldScenePositionX;
 		} else {
 			playerLocation = 0;
 		}
