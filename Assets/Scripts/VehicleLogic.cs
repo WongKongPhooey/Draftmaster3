@@ -144,11 +144,6 @@ public class VehicleLogic : MonoBehaviour
 		trackWidth = 13f;
 		yRatio = (vehicle.transform.position.y + (trackWidth / 2)) / trackWidth;
 
-		if (isPlayer == true)
-		{
-			RaceManager.setPlayer(vehicle);
-		}
-
 		currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
 		//currentVehicleInfo = Resources.Load<VehicleInfo>("Vehicles/PushCart");
 		currentTrackInfo = Resources.Load<TrackInfo>("Tracks/Phoenix");
@@ -162,6 +157,11 @@ public class VehicleLogic : MonoBehaviour
 		//Todo: This should be calculated/offset from where they spawn
 		locationOnTrack = 0 - vehicle.transform.position.x;
 		turn = 0;
+
+		if (isPlayer == true)
+		{
+			RaceManager.setPlayer(vehicle);
+		}
 
 		initRacingLines();
 

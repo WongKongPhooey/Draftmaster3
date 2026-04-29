@@ -8,7 +8,9 @@
       "Bash(ls:*)",
       "Bash(find C:UsersJoshDocumentsDraftmaster3AssetsScripts -name *.cs -type f)",
       "Bash(grep -E \", Assembly-CSharp$\")",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 7777 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetUDPEndpoint -LocalPort 7777 -ErrorAction SilentlyContinue)"
     ]
   }
 }

@@ -10,7 +10,8 @@ public class RaceManager : MonoBehaviour
 	private static CinemachineCamera actionedCamera;
 
 	public static GameObject thePlayer;
-	Transform carPrefab;
+	public Transform carPrefab;
+	public static Transform carPrefabStatic;
 	public static float playerSpeed;
 	public static float playerSpeedMetres;
 	public static float motionSpeed;
@@ -28,6 +29,9 @@ public class RaceManager : MonoBehaviour
 	void Awake(){
 		// Track must be loaded before any Start() runs so on-foot spawn / env objects can read it.
 		trackInit();
+		carPrefabStatic = carPrefab;
+		spawnField();
+
 	}
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -53,30 +57,20 @@ public class RaceManager : MonoBehaviour
 			if (thePlayer.GetComponent<MovementOnFoot>() != null){
 				playerLocation = currentTrackInfo != null ? currentTrackInfo.infieldScenePositionX : 0;
 				playerLocationPublic = playerLocation;
-				trackRotation = 0;
+				trackRotation = getCumulativeTurnAngle(playerLocation);
 				CameraManager.setRotation(trackRotation);
+				EnvironmentManager.circuitRotation = trackRotation;
 			}
 			return;
 		}
 
 		motionSpeed = playerSpeedMetres * Time.deltaTime;
 
-    	int playerTurn = thePlayer.GetComponent<VehicleLogic>().turn;
 	   	playerLocation = thePlayer.GetComponent<VehicleLogic>().locationOnTrack;
 		playerLocationPublic = playerLocation;
-       	if(turnPositions[playerTurn] > playerLocation){
-			//On a straight
-			trackRotation = turnStartAngle[playerTurn];
-		} else {
-			//Somewhere in a turn
-			float percentInTurn = (playerLocation - turnPositions[playerTurn]) / turnLength[playerTurn];
-			if(percentInTurn < 1){
-				trackRotation = turnStartAngle[playerTurn] + (turnAngle[playerTurn] * percentInTurn);
-			} else {
-				trackRotation = turnStartAngle[playerTurn] + turnAngle[playerTurn];
-			}
-		}
+		trackRotation = getCumulativeTurnAngle(playerLocation);
 	   	CameraManager.setRotation(trackRotation);
+		EnvironmentManager.circuitRotation = trackRotation;
     }
 
 	void LateUpdate()
@@ -105,6 +99,23 @@ public class RaceManager : MonoBehaviour
 			trackLength += turnLength[i];
 		}
     }
+
+	public static float getCumulativeTurnAngle(float location){
+		float angle = 0f;
+		if(turnPositions == null) return 0f;
+		for(int i=0;i<totalTurns;i++){
+			if(location >= turnPositions[i] + turnLength[i]){
+				angle += turnAngle[i];
+			} else if(location >= turnPositions[i]){
+				float pct = (location - turnPositions[i]) / (float)turnLength[i];
+				angle += turnAngle[i] * pct;
+				break;
+			} else {
+				break;
+			}
+		}
+		return angle;
+	}
 
 	public static GameObject getPlayer(){
 		
@@ -141,6 +152,10 @@ public class RaceManager : MonoBehaviour
 		}
 
 		CameraManager.setPlayer(thePlayer, zoom);
+		float spawnRotation = getCumulativeTurnAngle(playerLocation);
+		Debug.Log("Spawn Rotation: " + spawnRotation);
+		CameraManager.setRotation(spawnRotation);
+		EnvironmentManager.circuitRotation = spawnRotation;
 		DialogueManager.setPlayerCanvas(thePlayer);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
 		actionedCamera.Follow = thePlayer.transform;
@@ -154,10 +169,8 @@ public class RaceManager : MonoBehaviour
 	public static void spawnField(){
 		Object carInst;
 		for (int i = 1; i < 43; i++) {
-			//carInst = Instantiate(carPrefab, new Vector2(garageEnd - (i * 1.2), 0.4f), Quaternion.identity);
-			//AICarInstance.name = ("AICar0" + carNum);
-			//GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
-					
+			carInst = Instantiate(carPrefabStatic, new Vector2(0f - (i * 1.2f), 0.4f), Quaternion.identity);
+			carInst.name = ("AICar0" + i);				
 		}
 	}
 }
