@@ -169,8 +169,9 @@ public class RaceManager : MonoBehaviour
 	public static void spawnField(){
 		Object carInst;
 		for (int i = 1; i < 43; i++) {
-			carInst = Instantiate(carPrefabStatic, new Vector2(0f - (i * 1.2f), 0.4f), Quaternion.identity);
-			carInst.name = ("AICar0" + i);				
+			carInst = Instantiate(carPrefabStatic, new Vector2(53f - (i * 10.24f), -21.5f), Quaternion.identity);
+			carInst.name = ("AICar0" + i);
+			//carInst.GetComponent<SpriteRenderer>().Sprite = Resources.Load("cup26livery" + i);			
 		}
 	}
 }
