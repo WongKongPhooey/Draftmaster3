@@ -40,7 +40,7 @@ public class RaceManager : MonoBehaviour
 
 		//If no player is set, fallback to the player on foot
 		if(thePlayer == null){
-			thePlayer = GameObject.Find("PlayerOnFoot");
+			thePlayer = GameObject.FindGameObjectWithTag("PlayerOnFoot");
 			setPlayer(thePlayer, 3f);
 		}
 
@@ -121,7 +121,7 @@ public class RaceManager : MonoBehaviour
 		
 		//If no player is set, fallback to the player on foot
 		if(thePlayer == null){
-			thePlayer = GameObject.Find("PlayerOnFoot");
+			thePlayer = GameObject.FindGameObjectWithTag("PlayerOnFoot");
 			setPlayer(thePlayer, 3f);
 		}
 		return thePlayer;

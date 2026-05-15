@@ -10,7 +10,22 @@
       "Bash(grep -E \", Assembly-CSharp$\")",
       "Bash(grep:*)",
       "PowerShell(Get-NetTCPConnection -LocalPort 7777 -ErrorAction SilentlyContinue)",
-      "PowerShell(Get-NetUDPEndpoint -LocalPort 7777 -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-NetUDPEndpoint -LocalPort 7777 -ErrorAction SilentlyContinue)",
+      "Bash(claude mcp *)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://127.0.0.1:8080\" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop; \"Status: $\\($r.StatusCode\\)\" } catch { \"Error: $\\($_.Exception.Message\\)\" })",
+      "PowerShell($out = & \"C:\\\\Users\\\\Josh\\\\.local\\\\bin\\\\uvx.exe\" --offline --from \"mcpforunityserver==9.6.8\" mcp-for-unity --help 2>&1 | Out-String; $out.Substring\\(0, [Math]::Min\\(2000, $out.Length\\)\\))",
+      "PowerShell($p = Start-Process -FilePath \"C:\\\\Users\\\\Josh\\\\.local\\\\bin\\\\uvx.exe\" -ArgumentList \"--offline\",\"--from\",\"mcpforunityserver==9.6.8\",\"mcp-for-unity\",\"--transport\",\"http\",\"--http-url\",\"http://127.0.0.1:8080\",\"--project-scoped-tools\" -RedirectStandardOutput \"$env:TEMP\\\\mcp_out.txt\" -RedirectStandardError \"$env:TEMP\\\\mcp_err.txt\" -NoNewWindow -PassThru; Start-Sleep -Seconds 4; if \\(-not $p.HasExited\\) { Stop-Process -Id $p.Id -Force; \"Process still running \\(HTTP server mode probably\\)\" } else { \"Process exited code $\\($p.ExitCode\\)\" }; \"--- stdout ---\"; Get-Content \"$env:TEMP\\\\mcp_out.txt\" -ErrorAction SilentlyContinue | Select-Object -First 30; \"--- stderr ---\"; Get-Content \"$env:TEMP\\\\mcp_err.txt\" -ErrorAction SilentlyContinue | Select-Object -First 30)",
+      "PowerShell($matches = [regex]::Matches\\(\\(Get-Content \"C:\\\\Users\\\\Josh\\\\.claude.json\" -Raw\\), '\"UnityMCP\"'\\); \"Entries: $\\($matches.Count\\)\")",
+      "Bash(python \"C:\\\\Users\\\\Josh\\\\AppData\\\\Local\\\\Temp\\\\fix_claude_json.py\")",
+      "PowerShell($raw = Get-Content \"C:\\\\Users\\\\Josh\\\\.claude.json\" -Raw; $idx = $raw.IndexOf\\(\"UnityMCP\"\\); if \\($idx -ge 0\\) { $raw.Substring\\([Math]::Max\\(0,$idx-300\\), [Math]::Min\\(700, $raw.Length-[Math]::Max\\(0,$idx-300\\)\\)\\) } else { \"UnityMCP not in file\" })",
+      "mcp__UnityMCP__manage_scene",
+      "mcp__UnityMCP__read_console",
+      "mcp__UnityMCP__find_gameobjects",
+      "mcp__UnityMCP__manage_components",
+      "mcp__UnityMCP__refresh_unity",
+      "mcp__UnityMCP__manage_scriptable_object",
+      "mcp__UnityMCP__manage_asset",
+      "mcp__UnityMCP__manage_gameobject"
     ]
   }
 }
