@@ -7,10 +7,22 @@ public class TrackBuilder : MonoBehaviour
 {
     public TrackInfoV2 track;
     public Material surfaceMaterial;
+    public Material pitSurfaceMaterial;
     public bool drawGizmos = true;
     public bool rebuildOnValidate = true;
 
-    Mesh _mesh;
+    Mesh _mainMesh;
+    Mesh _pitMesh;
+    GameObject _pitChild;
+
+    public struct Sample
+    {
+        public Vector2 position;
+        public Vector2 tangent;
+        public Vector2 normal;
+        public float width;
+        public float distance;
+    }
 
     void OnEnable() { Build(); }
 
@@ -33,30 +45,67 @@ public class TrackBuilder : MonoBehaviour
         var mr = GetComponent<MeshRenderer>();
         if (surfaceMaterial != null) mr.sharedMaterial = surfaceMaterial;
 
-        var samples = SampleCenterline();
-        if (samples.Count < 2)
+        var mainSamples = SampleCenterline();
+        _mainMesh = BuildRibbonMesh(mainSamples, track.closedLoop, $"Track_{track.name}");
+        mf.sharedMesh = _mainMesh;
+
+        BuildPitLane();
+    }
+
+    void BuildPitLane()
+    {
+        // Tear down any previous pit child first.
+        var existing = transform.Find("PitLane");
+        if (existing != null)
         {
-            mf.sharedMesh = null;
-            return;
+            if (Application.isPlaying) Destroy(existing.gameObject);
+            else DestroyImmediate(existing.gameObject);
+        }
+        _pitChild = null;
+        _pitMesh = null;
+
+        if (!track.hasPitLane || track.pitSegments == null || track.pitSegments.Length == 0) return;
+
+        var pitSamples = SamplePitCenterline();
+        if (pitSamples.Count < 2) return;
+
+        _pitChild = new GameObject("PitLane");
+        _pitChild.transform.SetParent(transform, false);
+        var mf = _pitChild.AddComponent<MeshFilter>();
+        var mr = _pitChild.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = pitSurfaceMaterial != null ? pitSurfaceMaterial : surfaceMaterial;
+        _pitMesh = BuildRibbonMesh(pitSamples, false, $"Pit_{track.name}");
+        mf.sharedMesh = _pitMesh;
+    }
+
+    Mesh BuildRibbonMesh(List<Sample> samples, bool closedLoop, string name)
+    {
+        if (samples == null || samples.Count < 2) return null;
+
+        var meshSamples = samples;
+        if (closedLoop)
+        {
+            meshSamples = new List<Sample>(samples.Count + 1);
+            meshSamples.AddRange(samples);
+            meshSamples.Add(samples[0]);
         }
 
-        _mesh = new Mesh { name = $"Track_{track.name}" };
-        _mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        var mesh = new Mesh { name = name };
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 
-        var verts = new List<Vector3>(samples.Count * 2);
-        var uvs = new List<Vector2>(samples.Count * 2);
-        var tris = new List<int>(samples.Count * 6);
+        var verts = new List<Vector3>(meshSamples.Count * 2);
+        var uvs = new List<Vector2>(meshSamples.Count * 2);
+        var tris = new List<int>(meshSamples.Count * 6);
 
         float distance = 0f;
-        for (int i = 0; i < samples.Count; i++)
+        for (int i = 0; i < meshSamples.Count; i++)
         {
-            var s = samples[i];
+            var s = meshSamples[i];
             Vector3 right = new Vector3(s.normal.x, s.normal.y, 0);
             verts.Add(new Vector3(s.position.x, s.position.y, 0) - right * (s.width * 0.5f));
             verts.Add(new Vector3(s.position.x, s.position.y, 0) + right * (s.width * 0.5f));
-
-            uvs.Add(new Vector2(0f, distance * 0.1f));
-            uvs.Add(new Vector2(1f, distance * 0.1f));
+            uvs.Add(new Vector2(0f, distance));
+            uvs.Add(new Vector2(1f, distance));
 
             if (i > 0)
             {
@@ -64,60 +113,127 @@ public class TrackBuilder : MonoBehaviour
                 int b = i * 2;
                 tris.Add(a + 0); tris.Add(b + 0); tris.Add(b + 1);
                 tris.Add(a + 0); tris.Add(b + 1); tris.Add(a + 1);
-
-                distance += Vector2.Distance(samples[i - 1].position, s.position);
+                distance += Vector2.Distance(meshSamples[i - 1].position, s.position);
             }
         }
 
-        _mesh.SetVertices(verts);
-        _mesh.SetTriangles(tris, 0);
-        _mesh.SetUVs(0, uvs);
-        _mesh.RecalculateNormals();
-        _mesh.RecalculateBounds();
-
-        mf.sharedMesh = _mesh;
-    }
-
-    public struct Sample
-    {
-        public Vector2 position;
-        public Vector2 tangent;
-        public Vector2 normal;
-        public float width;
-        public float distance;
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetUVs(0, uvs);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
     }
 
     public List<Sample> SampleCenterline()
     {
-        var samples = new List<Sample>();
-        if (track == null || track.segments == null || track.segments.Length == 0) return samples;
+        return SampleSegments(
+            track.startPosition,
+            track.startHeading,
+            track.segments,
+            track.defaultWidth,
+            Mathf.Max(1, track.samplesPerSegment),
+            Mathf.Max(0.1f, track.maxArcStepMetres),
+            seg => seg.width <= 0f ? track.defaultWidth : seg.width);
+    }
 
-        Vector2 pos = track.startPosition;
-        float headingDeg = track.startHeading;
-        int spp = Mathf.Max(1, track.samplesPerSegment);
+    public List<Sample> SamplePitCenterline()
+    {
+        if (track == null || !track.hasPitLane || track.pitSegments == null) return new List<Sample>();
+        float pitWidth = track.pitDefaultWidth > 0f ? track.pitDefaultWidth : track.defaultWidth;
+        return SampleSegments(
+            track.pitStartPosition,
+            track.pitStartHeading,
+            track.pitSegments,
+            pitWidth,
+            Mathf.Max(1, track.samplesPerSegment),
+            Mathf.Max(0.1f, track.maxArcStepMetres),
+            seg => seg.width <= 0f ? pitWidth : seg.width);
+    }
+
+    public Sample SampleAt(float distance, List<Sample> samples = null)
+    {
+        if (samples == null) samples = SampleCenterline();
+        return SampleListAt(samples, distance, track != null && track.closedLoop);
+    }
+
+    public Sample SamplePitAt(float distance, List<Sample> samples = null)
+    {
+        if (samples == null) samples = SamplePitCenterline();
+        return SampleListAt(samples, distance, false);
+    }
+
+    static Sample SampleListAt(List<Sample> samples, float distance, bool loop)
+    {
+        if (samples.Count == 0) return default;
+        if (samples.Count == 1) return samples[0];
+
+        float total = samples[samples.Count - 1].distance;
+        if (loop && total > 0f) distance = ((distance % total) + total) % total;
+
+        int lo = 0, hi = samples.Count - 1;
+        while (lo < hi - 1)
+        {
+            int mid = (lo + hi) >> 1;
+            if (samples[mid].distance <= distance) lo = mid;
+            else hi = mid;
+        }
+        var a = samples[lo];
+        var b = samples[hi];
+        float denom = b.distance - a.distance;
+        float t = denom > 0f ? Mathf.Clamp01((distance - a.distance) / denom) : 0f;
+        Vector2 tan = Vector2.Lerp(a.tangent, b.tangent, t);
+        if (tan.sqrMagnitude > 0) tan.Normalize();
+        else tan = a.tangent;
+        Vector2 nrm = new Vector2(tan.y, -tan.x);
+        return new Sample
+        {
+            position = Vector2.Lerp(a.position, b.position, t),
+            tangent = tan,
+            normal = nrm,
+            width = Mathf.Lerp(a.width, b.width, t),
+            distance = distance
+        };
+    }
+
+    static List<Sample> SampleSegments(
+        Vector2 startPos,
+        float startHeading,
+        TrackInfoV2.TrackSegment[] segments,
+        float defaultWidth,
+        int minSpp,
+        float step,
+        System.Func<TrackInfoV2.TrackSegment, float> widthFn)
+    {
+        var samples = new List<Sample>();
+        if (segments == null || segments.Length == 0) return samples;
+
+        Vector2 pos = startPos;
+        float headingDeg = startHeading;
         float cumulativeDistance = 0f;
 
-        EmitSample(samples, pos, headingDeg, GetSegmentWidth(track.segments[0]), cumulativeDistance);
+        EmitSample(samples, pos, headingDeg, widthFn(segments[0]), cumulativeDistance);
 
-        for (int segIndex = 0; segIndex < track.segments.Length; segIndex++)
+        for (int segIndex = 0; segIndex < segments.Length; segIndex++)
         {
-            var seg = track.segments[segIndex];
+            var seg = segments[segIndex];
             if (seg.length <= 0f) continue;
 
-            float width = GetSegmentWidth(seg);
+            float width = widthFn(seg);
+            int spp = Mathf.Max(minSpp, Mathf.CeilToInt(seg.length / step));
 
             if (seg.type == TrackInfoV2.SegmentType.Straight)
             {
                 Vector2 dir = HeadingToDir(headingDeg);
-                Vector2 startPos = pos;
+                Vector2 sPos = pos;
                 for (int s = 1; s <= spp; s++)
                 {
                     float t = s / (float)spp;
-                    Vector2 p = startPos + dir * seg.length * t;
+                    Vector2 p = sPos + dir * seg.length * t;
                     float d = cumulativeDistance + seg.length * t;
                     EmitSample(samples, p, headingDeg, width, d);
                 }
-                pos = startPos + dir * seg.length;
+                pos = sPos + dir * seg.length;
                 cumulativeDistance += seg.length;
             }
             else // Turn
@@ -125,7 +241,6 @@ public class TrackBuilder : MonoBehaviour
                 float angleRad = seg.angle * Mathf.Deg2Rad;
                 if (Mathf.Abs(angleRad) < 0.0001f)
                 {
-                    // Degenerate turn — treat as straight.
                     Vector2 dir = HeadingToDir(headingDeg);
                     pos += dir * seg.length;
                     cumulativeDistance += seg.length;
@@ -135,13 +250,11 @@ public class TrackBuilder : MonoBehaviour
 
                 float radius = seg.length / Mathf.Abs(angleRad);
                 Vector2 forward = HeadingToDir(headingDeg);
-                // Centre of arc: 90° to the left if turning left (positive angle), to the right if turning right.
                 Vector2 toCentre = (seg.angle >= 0f)
                     ? new Vector2(-forward.y, forward.x)
                     : new Vector2(forward.y, -forward.x);
                 Vector2 centre = pos + toCentre * radius;
 
-                // Vector from centre to current position
                 Vector2 startRadial = pos - centre;
                 float startAngle = Mathf.Atan2(startRadial.y, startRadial.x);
 
@@ -161,19 +274,7 @@ public class TrackBuilder : MonoBehaviour
             }
         }
 
-        if (track.closedLoop && samples.Count > 1)
-        {
-            // Add a closing sample at the start position so the mesh visually closes the loop.
-            var first = samples[0];
-            samples.Add(first);
-        }
-
         return samples;
-    }
-
-    float GetSegmentWidth(TrackInfoV2.TrackSegment seg)
-    {
-        return seg.width <= 0f ? track.defaultWidth : seg.width;
     }
 
     static Vector2 HeadingToDir(float headingDeg)
@@ -202,7 +303,6 @@ public class TrackBuilder : MonoBehaviour
         var samples = SampleCenterline();
         if (samples.Count < 2) return;
 
-        // Centerline
         Gizmos.color = Color.cyan;
         for (int i = 1; i < samples.Count; i++)
         {
@@ -211,20 +311,29 @@ public class TrackBuilder : MonoBehaviour
             Gizmos.DrawLine(a, b);
         }
 
-        // Segment-boundary markers
-        Gizmos.color = Color.yellow;
-        int spp = Mathf.Max(1, track.samplesPerSegment);
-        for (int segIndex = 0; segIndex < track.segments.Length; segIndex++)
-        {
-            int idx = (segIndex + 1) * spp;
-            if (idx >= samples.Count) idx = samples.Count - 1;
-            Vector3 p = transform.TransformPoint(new Vector3(samples[idx].position.x, samples[idx].position.y, 0));
-            Gizmos.DrawSphere(p, 2f);
-        }
-
-        // Start line
         Gizmos.color = Color.green;
         Vector3 sp = transform.TransformPoint(new Vector3(track.startPosition.x, track.startPosition.y, 0));
         Gizmos.DrawCube(sp, Vector3.one * 4f);
+
+        if (track.hasPitLane)
+        {
+            var pitSamples = SamplePitCenterline();
+            Gizmos.color = new Color(1f, 0.6f, 0f);
+            for (int i = 1; i < pitSamples.Count; i++)
+            {
+                Vector3 a = transform.TransformPoint(new Vector3(pitSamples[i - 1].position.x, pitSamples[i - 1].position.y, 0));
+                Vector3 b = transform.TransformPoint(new Vector3(pitSamples[i].position.x, pitSamples[i].position.y, 0));
+                Gizmos.DrawLine(a, b);
+            }
+
+            // Entry/exit markers on the main spline
+            Gizmos.color = Color.magenta;
+            var entrySample = SampleAt(track.pitEntryDistance, samples);
+            var exitSample = SampleAt(track.pitExitDistance, samples);
+            Vector3 entry = transform.TransformPoint(new Vector3(entrySample.position.x, entrySample.position.y, 0));
+            Vector3 exit = transform.TransformPoint(new Vector3(exitSample.position.x, exitSample.position.y, 0));
+            Gizmos.DrawWireSphere(entry, 3f);
+            Gizmos.DrawWireSphere(exit, 3f);
+        }
     }
 }
