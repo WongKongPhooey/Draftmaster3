@@ -134,6 +134,7 @@ public class TrackBuilder : MonoBehaviour
             track.defaultWidth,
             Mathf.Max(1, track.samplesPerSegment),
             Mathf.Max(0.1f, track.maxArcStepMetres),
+            track.closedLoop,
             seg => seg.width <= 0f ? track.defaultWidth : seg.width);
     }
 
@@ -148,6 +149,7 @@ public class TrackBuilder : MonoBehaviour
             pitWidth,
             Mathf.Max(1, track.samplesPerSegment),
             Mathf.Max(0.1f, track.maxArcStepMetres),
+            false,
             seg => seg.width <= 0f ? pitWidth : seg.width);
     }
 
@@ -203,6 +205,7 @@ public class TrackBuilder : MonoBehaviour
         float defaultWidth,
         int minSpp,
         float step,
+        bool closedLoop,
         System.Func<TrackInfoV2.TrackSegment, float> widthFn)
     {
         var samples = new List<Sample>();
@@ -219,7 +222,12 @@ public class TrackBuilder : MonoBehaviour
             var seg = segments[segIndex];
             if (seg.length <= 0f) continue;
 
-            float width = widthFn(seg);
+            TrackInfoV2.TrackSegment nextSeg;
+            if (segIndex < segments.Length - 1) nextSeg = segments[segIndex + 1];
+            else if (closedLoop) nextSeg = segments[0];
+            else nextSeg = seg;
+            float wA = widthFn(seg);
+            float wB = widthFn(nextSeg);
             int spp = Mathf.Max(minSpp, Mathf.CeilToInt(seg.length / step));
 
             if (seg.type == TrackInfoV2.SegmentType.Straight)
@@ -230,8 +238,9 @@ public class TrackBuilder : MonoBehaviour
                 {
                     float t = s / (float)spp;
                     Vector2 p = sPos + dir * seg.length * t;
+                    float w = Mathf.Lerp(wA, wB, t);
                     float d = cumulativeDistance + seg.length * t;
-                    EmitSample(samples, p, headingDeg, width, d);
+                    EmitSample(samples, p, headingDeg, w, d);
                 }
                 pos = sPos + dir * seg.length;
                 cumulativeDistance += seg.length;
@@ -244,7 +253,7 @@ public class TrackBuilder : MonoBehaviour
                     Vector2 dir = HeadingToDir(headingDeg);
                     pos += dir * seg.length;
                     cumulativeDistance += seg.length;
-                    EmitSample(samples, pos, headingDeg, width, cumulativeDistance);
+                    EmitSample(samples, pos, headingDeg, wB, cumulativeDistance);
                     continue;
                 }
 
@@ -264,8 +273,9 @@ public class TrackBuilder : MonoBehaviour
                     float a = startAngle + angleRad * t;
                     Vector2 p = centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius;
                     float headingHere = headingDeg + seg.angle * t;
+                    float w = Mathf.Lerp(wA, wB, t);
                     float d = cumulativeDistance + seg.length * t;
-                    EmitSample(samples, p, headingHere, width, d);
+                    EmitSample(samples, p, headingHere, w, d);
                 }
 
                 pos = centre + new Vector2(Mathf.Cos(startAngle + angleRad), Mathf.Sin(startAngle + angleRad)) * radius;
