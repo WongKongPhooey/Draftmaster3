@@ -34,6 +34,16 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         BuildDecorations(samples, pitSamples);
     }
 
+    static float AnchorEdgeBias(TrackEnvironment.LateralAnchor anchor, float trackWidth)
+    {
+        switch (anchor)
+        {
+            case TrackEnvironment.LateralAnchor.LeftEdge: return -trackWidth * 0.5f;
+            case TrackEnvironment.LateralAnchor.RightEdge: return trackWidth * 0.5f;
+            default: return 0f;
+        }
+    }
+
     void ClearChildren()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
@@ -87,7 +97,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             float t = i / (float)(steps - 1);
             float d = strip.startDistance + length * t;
             var sample = usePit ? track.SamplePitAt(d, samples) : track.SampleAt(d, samples);
-            Vector2 center = sample.position + sample.normal * strip.lateralOffset;
+            float edgeBias = AnchorEdgeBias(strip.anchor, sample.width);
+            Vector2 center = sample.position + sample.normal * (edgeBias + strip.lateralOffset);
             Vector2 left = center - sample.normal * (strip.width * 0.5f);
             Vector2 right = center + sample.normal * (strip.width * 0.5f);
             verts.Add(new Vector3(left.x, left.y, 0));
@@ -127,7 +138,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             var lookup = usePit ? pitSamples : mainSamples;
             if (lookup == null || lookup.Count < 2) continue;
             var sample = usePit ? track.SamplePitAt(deco.distance, lookup) : track.SampleAt(deco.distance, lookup);
-            Vector2 pos = sample.position + sample.normal * deco.lateralOffset;
+            float edgeBias = AnchorEdgeBias(deco.anchor, sample.width);
+            Vector2 pos = sample.position + sample.normal * (edgeBias + deco.lateralOffset);
             float angleDeg = Mathf.Atan2(sample.tangent.y, sample.tangent.x) * Mathf.Rad2Deg + deco.rotationOffset;
 
             GameObject instance;

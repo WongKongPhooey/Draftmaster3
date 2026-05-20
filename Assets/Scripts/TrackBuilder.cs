@@ -11,6 +11,12 @@ public class TrackBuilder : MonoBehaviour
     public bool drawGizmos = true;
     public bool rebuildOnValidate = true;
 
+    [Header("Racing Line Gizmo")]
+    public TrackRacingLine racingLine;
+    public bool drawRacingLineGizmo = true;
+    public Color racingLineColor = Color.yellow;
+    public float racingLineWaypointRadius = 1.5f;
+
     Mesh _mainMesh;
     Mesh _pitMesh;
     GameObject _pitChild;
@@ -49,7 +55,81 @@ public class TrackBuilder : MonoBehaviour
         _mainMesh = BuildRibbonMesh(mainSamples, track.closedLoop, $"Track_{track.name}");
         mf.sharedMesh = _mainMesh;
 
+        BuildEdgeLines(mainSamples);
         BuildPitLane();
+    }
+
+    void BuildEdgeLines(List<Sample> samples)
+    {
+        TearDownChild("LeftEdgeLine");
+        TearDownChild("RightEdgeLine");
+
+        if (!track.drawEdgeLines || track.edgeLineMaterial == null) return;
+        if (samples == null || samples.Count < 2) return;
+        if (track.drawLeftEdgeLine) BuildSingleEdgeLine("LeftEdgeLine", samples, -1f);
+        if (track.drawRightEdgeLine) BuildSingleEdgeLine("RightEdgeLine", samples, 1f);
+    }
+
+    void BuildSingleEdgeLine(string childName, List<Sample> samples, float edgeSign)
+    {
+        var go = new GameObject(childName);
+        go.transform.SetParent(transform, false);
+        var mf = go.AddComponent<MeshFilter>();
+        var mr = go.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = track.edgeLineMaterial;
+        mr.sortingOrder = track.edgeLineSortingOrder;
+
+        var meshSamples = samples;
+        if (track.closedLoop)
+        {
+            meshSamples = new List<Sample>(samples.Count + 1);
+            meshSamples.AddRange(samples);
+            meshSamples.Add(samples[0]);
+        }
+
+        var mesh = new Mesh { name = $"EdgeLine_{childName}" };
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        var verts = new List<Vector3>(meshSamples.Count * 2);
+        var uvs = new List<Vector2>(meshSamples.Count * 2);
+        var tris = new List<int>(meshSamples.Count * 6);
+        float distance = 0f;
+        float halfLine = track.edgeLineWidth * 0.5f;
+
+        for (int i = 0; i < meshSamples.Count; i++)
+        {
+            var s = meshSamples[i];
+            float centerLateral = edgeSign * (s.width * 0.5f - track.edgeLineInset);
+            Vector3 right = new Vector3(s.normal.x, s.normal.y, 0);
+            Vector3 baseP = new Vector3(s.position.x, s.position.y, 0);
+            Vector3 lineCenter = baseP + right * centerLateral;
+            verts.Add(lineCenter - right * halfLine);
+            verts.Add(lineCenter + right * halfLine);
+            uvs.Add(new Vector2(0f, distance));
+            uvs.Add(new Vector2(1f, distance));
+            if (i > 0)
+            {
+                int a = (i - 1) * 2;
+                int b = i * 2;
+                tris.Add(a + 0); tris.Add(b + 0); tris.Add(b + 1);
+                tris.Add(a + 0); tris.Add(b + 1); tris.Add(a + 1);
+                distance += Vector2.Distance(meshSamples[i - 1].position, s.position);
+            }
+        }
+
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetUVs(0, uvs);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        mf.sharedMesh = mesh;
+    }
+
+    void TearDownChild(string childName)
+    {
+        var existing = transform.Find(childName);
+        if (existing == null) return;
+        if (Application.isPlaying) Destroy(existing.gameObject);
+        else DestroyImmediate(existing.gameObject);
     }
 
     void BuildPitLane()
@@ -344,6 +424,35 @@ public class TrackBuilder : MonoBehaviour
             Vector3 exit = transform.TransformPoint(new Vector3(exitSample.position.x, exitSample.position.y, 0));
             Gizmos.DrawWireSphere(entry, 3f);
             Gizmos.DrawWireSphere(exit, 3f);
+        }
+
+        if (drawRacingLineGizmo && racingLine != null && samples.Count >= 2)
+        {
+            float length = samples[samples.Count - 1].distance;
+            Gizmos.color = racingLineColor;
+            Vector3 prev = Vector3.zero;
+            for (int i = 0; i < samples.Count; i++)
+            {
+                var s = samples[i];
+                Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
+                Vector2 p = s.position + right * racingLine.GetLateralAt(s.distance, length);
+                Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
+                if (i > 0) Gizmos.DrawLine(prev, w);
+                prev = w;
+            }
+
+            if (racingLine.waypoints != null)
+            {
+                for (int i = 0; i < racingLine.waypoints.Length; i++)
+                {
+                    var wp = racingLine.waypoints[i];
+                    var s = SampleAt(wp.distance, samples);
+                    Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
+                    Vector2 p = s.position + right * wp.lateralOffset;
+                    Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
+                    Gizmos.DrawWireSphere(w, racingLineWaypointRadius);
+                }
+            }
         }
     }
 }

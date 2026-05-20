@@ -27,6 +27,19 @@ public class TrackInfoV2 : ScriptableObject
     [Header("Segments (in order around the lap)")]
     public TrackSegment[] segments;
 
+    [Header("Edge Lines (painted boundary, e.g. white line)")]
+    public bool drawEdgeLines;
+    [Tooltip("Material for the painted edge line. Use a Material with the appropriate texture (e.g. solid white or dashed) and tiling.")]
+    public Material edgeLineMaterial;
+    [Tooltip("Width of the painted edge line in metres.")]
+    public float edgeLineWidth = 0.15f;
+    [Tooltip("How far the line's centre sits inboard of the track edge, in metres. Set to edgeLineWidth/2 so the line's outer edge meets the track edge exactly.")]
+    public float edgeLineInset = 0.075f;
+    [Tooltip("Sorting order for the line meshes. Higher draws above the track surface.")]
+    public int edgeLineSortingOrder = 1;
+    public bool drawLeftEdgeLine = true;
+    public bool drawRightEdgeLine = true;
+
     [Header("Pit Lane")]
     public bool hasPitLane;
     [Tooltip("World position where the pit lane starts.")]

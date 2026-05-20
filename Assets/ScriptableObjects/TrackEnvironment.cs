@@ -13,17 +13,20 @@ public class TrackEnvironment : ScriptableObject
     public float stripSampleSpacing = 2f;
 
     public enum SplineRef { Main, Pit }
+    public enum LateralAnchor { Centerline, LeftEdge, RightEdge }
 
     [System.Serializable]
     public struct Strip
     {
         public string label;
         public SplineRef useSpline;
+        [Tooltip("Anchor for the lateralOffset value: Centerline = distance from track centre; LeftEdge / RightEdge = distance from that edge of the track, so the strip tracks the track edge when width varies.")]
+        public LateralAnchor anchor;
         [Tooltip("Where the strip starts, in metres along the spline.")]
         public float startDistance;
         [Tooltip("Where the strip ends, in metres along the spline.")]
         public float endDistance;
-        [Tooltip("Lateral offset from the centerline, metres. Positive = right of travel direction.")]
+        [Tooltip("Lateral offset from the chosen anchor, metres. Positive = right of travel direction.")]
         public float lateralOffset;
         [Tooltip("Strip width in metres.")]
         public float width;
@@ -39,9 +42,11 @@ public class TrackEnvironment : ScriptableObject
     {
         public string label;
         public SplineRef useSpline;
+        [Tooltip("Anchor for the lateralOffset value: Centerline, LeftEdge or RightEdge.")]
+        public LateralAnchor anchor;
         [Tooltip("Distance along the spline, in metres.")]
         public float distance;
-        [Tooltip("Lateral offset from the centerline. Positive = right of travel direction.")]
+        [Tooltip("Lateral offset from the chosen anchor. Positive = right of travel direction.")]
         public float lateralOffset;
         [Tooltip("Extra rotation in degrees applied on top of the spline tangent.")]
         public float rotationOffset;
