@@ -1,0 +1,6 @@
+<linker>
+  <assembly fullname="Assembly-CSharp">
+    <type fullname="Draftmaster.Data.Driver" preserve="all"/>
+  </assembly>
+  <assembly fullname="SQLite-net" preserve="all"/>
+</linker>

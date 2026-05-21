@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using Draftmaster.Data;
 using SQLite;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -48,8 +49,7 @@ public class DatabaseManager : MonoBehaviour
     // Register table schemas here as model classes are added. CreateTable is idempotent — safe to call every launch.
     static void CreateTables(SQLiteConnection db)
     {
-        // db.CreateTable<Driver>();
-        // db.CreateTable<Team>();
+        db.CreateTable<Driver>();
     }
 
     IEnumerator CopySeedFromStreamingAssets()
