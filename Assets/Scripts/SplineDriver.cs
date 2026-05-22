@@ -4,7 +4,9 @@ using UnityEngine;
 public class SplineDriver : MonoBehaviour
 {
     public TrackBuilder track;
-    public TrackRacingLine racingLine;
+    [Tooltip("Racing-line variant: -1 = innermost, 0 = ideal, +1 = outermost. Anything in between blends.")]
+    [Range(-1f, 1f)]
+    public float lineFactor = 0f;
     [Tooltip("Speed in metres per second.")]
     public float speed = 40f;
     [Tooltip("Distance along the spline to spawn at, in metres.")]
@@ -22,6 +24,7 @@ public class SplineDriver : MonoBehaviour
 
     List<TrackBuilder.Sample> _mainSamples;
     List<TrackBuilder.Sample> _pitSamples;
+    List<TrackInfoV2.RacingLineAnchor> _anchors;
     float _mainLength;
     float _pitLength;
     float _distance;
@@ -51,6 +54,7 @@ public class SplineDriver : MonoBehaviour
         _mainLength = _mainSamples.Count > 0 ? _mainSamples[_mainSamples.Count - 1].distance : 0f;
         _pitSamples = track.SamplePitCenterline();
         _pitLength = _pitSamples.Count > 0 ? _pitSamples[_pitSamples.Count - 1].distance : 0f;
+        _anchors = track.track != null ? track.track.BuildRacingLineAnchors() : null;
     }
 
     void FixedUpdate()
@@ -95,7 +99,7 @@ public class SplineDriver : MonoBehaviour
             length = _mainLength;
         }
 
-        float lineLateral = (!_onPit && racingLine != null) ? racingLine.GetLateralAt(_distance, length) : 0f;
+        float lineLateral = (!_onPit && _anchors != null && track.track != null) ? track.track.GetLateralAt(_distance, lineFactor, _anchors) : 0f;
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);
         Vector2 finalPos = sample.position + right * (lateralOffset + lineLateral);
         Vector3 worldPos = track != null ? track.transform.TransformPoint(new Vector3(finalPos.x, finalPos.y, 0)) : new Vector3(finalPos.x, finalPos.y, 0);

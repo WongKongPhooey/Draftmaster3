@@ -12,10 +12,12 @@ public class TrackBuilder : MonoBehaviour
     public bool rebuildOnValidate = true;
 
     [Header("Racing Line Gizmo")]
-    public TrackRacingLine racingLine;
     public bool drawRacingLineGizmo = true;
-    public Color racingLineColor = Color.yellow;
-    public float racingLineWaypointRadius = 1.5f;
+    public Color idealLineColor = Color.yellow;
+    public Color minLineColor = new Color(1f, 0.3f, 0.3f, 0.6f);
+    public Color maxLineColor = new Color(0.3f, 1f, 0.3f, 0.6f);
+    public bool drawMinMaxBounds = true;
+    public float anchorMarkerRadius = 1.2f;
 
     Mesh _mainMesh;
     Mesh _pitMesh;
@@ -387,6 +389,22 @@ public class TrackBuilder : MonoBehaviour
         });
     }
 
+    void DrawRacingLineCurve(List<Sample> samples, List<TrackInfoV2.RacingLineAnchor> anchors, float lineFactor, Color color)
+    {
+        Gizmos.color = color;
+        Vector3 prev = Vector3.zero;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            var s = samples[i];
+            Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
+            float lateral = track.GetLateralAt(s.distance, lineFactor, anchors);
+            Vector2 p = s.position + right * lateral;
+            Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
+            if (i > 0) Gizmos.DrawLine(prev, w);
+            prev = w;
+        }
+    }
+
     void OnDrawGizmos()
     {
         if (!drawGizmos || track == null) return;
@@ -426,31 +444,27 @@ public class TrackBuilder : MonoBehaviour
             Gizmos.DrawWireSphere(exit, 3f);
         }
 
-        if (drawRacingLineGizmo && racingLine != null && samples.Count >= 2)
+        if (drawRacingLineGizmo && samples.Count >= 2)
         {
-            float length = samples[samples.Count - 1].distance;
-            Gizmos.color = racingLineColor;
-            Vector3 prev = Vector3.zero;
-            for (int i = 0; i < samples.Count; i++)
+            var anchors = track.BuildRacingLineAnchors();
+            if (anchors.Count > 0)
             {
-                var s = samples[i];
-                Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
-                Vector2 p = s.position + right * racingLine.GetLateralAt(s.distance, length);
-                Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
-                if (i > 0) Gizmos.DrawLine(prev, w);
-                prev = w;
-            }
-
-            if (racingLine.waypoints != null)
-            {
-                for (int i = 0; i < racingLine.waypoints.Length; i++)
+                if (drawMinMaxBounds)
                 {
-                    var wp = racingLine.waypoints[i];
-                    var s = SampleAt(wp.distance, samples);
+                    DrawRacingLineCurve(samples, anchors, -1f, minLineColor);
+                    DrawRacingLineCurve(samples, anchors, +1f, maxLineColor);
+                }
+                DrawRacingLineCurve(samples, anchors, 0f, idealLineColor);
+
+                Gizmos.color = idealLineColor;
+                for (int i = 0; i < anchors.Count; i++)
+                {
+                    var anchor = anchors[i];
+                    var s = SampleAt(anchor.distance, samples);
                     Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
-                    Vector2 p = s.position + right * wp.lateralOffset;
+                    Vector2 p = s.position + right * anchor.ideal;
                     Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
-                    Gizmos.DrawWireSphere(w, racingLineWaypointRadius);
+                    Gizmos.DrawWireSphere(w, anchorMarkerRadius);
                 }
             }
         }

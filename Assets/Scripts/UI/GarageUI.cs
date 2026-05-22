@@ -1665,12 +1665,12 @@ public class Player {
 [Serializable]
 public class Series {
     public string seriesName;
-    public List<Driver> drivers;
-	public int totalCars;
+    public List<SeriesCar> drivers;
+    public int totalCars;
 }
 
 [Serializable]
-public class Driver {
+public class SeriesCar {
     public string carNo;
     public string carUnlocked;
     public string carClass;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "TrackInfoV2", menuName = "Racetrack/Track Info V2", order = 2)]
@@ -26,6 +27,10 @@ public class TrackInfoV2 : ScriptableObject
 
     [Header("Segments (in order around the lap)")]
     public TrackSegment[] segments;
+
+    [Header("Racing Line")]
+    [Tooltip("Safety margin (metres) kept between the AI's outermost/innermost line and the track edge. Stops cars from drifting off the track surface on the straights.")]
+    public float racingLineEdgeMargin = 1.5f;
 
     [Header("Edge Lines (painted boundary, e.g. white line)")]
     public bool drawEdgeLines;
@@ -69,13 +74,173 @@ public class TrackInfoV2 : ScriptableObject
         public float angle;
         [Tooltip("Banking angle in degrees. Informational for physics/AI.")]
         public float banking;
-        [Tooltip("Lead-in distance for racing-line calc (metres). Geometry ignores this.")]
+        [Tooltip("Lead-in distance for racing-line calc (metres). The entry anchor sits this far before the segment starts.")]
         public float leadIn;
-        [Tooltip("Lead-out distance for racing-line calc (metres). Geometry ignores this.")]
+        [Tooltip("Lead-out distance for racing-line calc (metres). The exit anchor sits this far after the segment ends.")]
         public float leadOut;
         [Tooltip("Max segment speed in mph. Informational.")]
         public int maxSpeed;
         [Tooltip("Width override at this segment (metres). 0 = use defaultWidth.")]
         public float width;
+        [Tooltip("Racing-line lateral offsets. Used by Turn segments to define entry/apex/exit. Ignored for Straights.")]
+        public SegmentRacingLine racingLine;
+    }
+
+    [System.Serializable]
+    public struct SegmentRacingLine
+    {
+        [Header("Ideal Line")]
+        [Tooltip("Lateral offset at the entry point (segment start minus leadIn). Positive = right of travel direction.")]
+        public float idealEntry;
+        [Tooltip("Lateral offset at the apex (midpoint of the segment).")]
+        public float idealApex;
+        [Tooltip("Lateral offset at the exit point (segment end plus leadOut).")]
+        public float idealExit;
+
+        [Header("Innermost AI Line (e.g. defensive)")]
+        public float minEntry;
+        public float minApex;
+        public float minExit;
+
+        [Header("Outermost AI Line (e.g. aggressive overtake)")]
+        public float maxEntry;
+        public float maxApex;
+        public float maxExit;
+    }
+
+    public struct RacingLineAnchor
+    {
+        public float distance;
+        public float ideal;
+        public float min;
+        public float max;
+    }
+
+    public float TotalLength()
+    {
+        if (segments == null) return 0f;
+        float total = 0f;
+        for (int i = 0; i < segments.Length; i++) total += segments[i].length;
+        return total;
+    }
+
+    public List<RacingLineAnchor> BuildRacingLineAnchors()
+    {
+        var list = new List<RacingLineAnchor>();
+        if (segments == null) return list;
+        float cum = 0f;
+        for (int i = 0; i < segments.Length; i++)
+        {
+            var seg = segments[i];
+            if (seg.type == SegmentType.Turn)
+            {
+                var rl = seg.racingLine;
+                list.Add(new RacingLineAnchor { distance = cum - seg.leadIn, ideal = rl.idealEntry, min = rl.minEntry, max = rl.maxEntry });
+                list.Add(new RacingLineAnchor { distance = cum + seg.length * 0.5f, ideal = rl.idealApex, min = rl.minApex, max = rl.maxApex });
+                list.Add(new RacingLineAnchor { distance = cum + seg.length + seg.leadOut, ideal = rl.idealExit, min = rl.minExit, max = rl.maxExit });
+            }
+            else
+            {
+                float w = seg.width > 0f ? seg.width : defaultWidth;
+                float halfUsable = Mathf.Max(0f, w * 0.5f - racingLineEdgeMargin);
+                list.Add(new RacingLineAnchor { distance = cum + seg.length * 0.5f, ideal = 0f, min = -halfUsable, max = halfUsable });
+            }
+            cum += seg.length;
+        }
+        list.Sort((a, b) => a.distance.CompareTo(b.distance));
+        return list;
+    }
+
+    // lineFactor: -1 = innermost AI line, 0 = ideal, +1 = outermost. Smoothly blended.
+    public float GetLateralAt(float distance, float lineFactor, List<RacingLineAnchor> anchors = null)
+    {
+        if (anchors == null) anchors = BuildRacingLineAnchors();
+        if (anchors.Count == 0) return 0f;
+        if (anchors.Count == 1) return BlendAnchor(anchors[0], lineFactor);
+
+        float trackLength = TotalLength();
+        if (closedLoop && trackLength > 0f)
+            distance = ((distance % trackLength) + trackLength) % trackLength;
+
+        ResolveAnchorNeighbours(anchors, distance, trackLength,
+            out var a0, out var a1, out var a2, out var a3,
+            out float d0, out float d1, out float d2, out float d3);
+
+        float v0 = BlendAnchor(a0, lineFactor);
+        float v1 = BlendAnchor(a1, lineFactor);
+        float v2 = BlendAnchor(a2, lineFactor);
+        float v3 = BlendAnchor(a3, lineFactor);
+
+        float t = (d2 - d1) > 0f ? Mathf.Clamp01((distance - d1) / (d2 - d1)) : 0f;
+        return CatmullRomNonUniform(v0, v1, v2, v3, d0, d1, d2, d3, t);
+    }
+
+    static float BlendAnchor(RacingLineAnchor a, float lineFactor)
+    {
+        lineFactor = Mathf.Clamp(lineFactor, -1f, 1f);
+        if (lineFactor >= 0f) return Mathf.Lerp(a.ideal, a.max, lineFactor);
+        return Mathf.Lerp(a.ideal, a.min, -lineFactor);
+    }
+
+    void ResolveAnchorNeighbours(List<RacingLineAnchor> anchors, float distance, float trackLength,
+        out RacingLineAnchor a0, out RacingLineAnchor a1, out RacingLineAnchor a2, out RacingLineAnchor a3,
+        out float d0, out float d1, out float d2, out float d3)
+    {
+        int n = anchors.Count;
+        int i1 = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (anchors[i].distance <= distance) i1 = i;
+            else break;
+        }
+
+        if (closedLoop)
+        {
+            int i0w = (i1 - 1 + n) % n;
+            int i2w = (i1 + 1) % n;
+            int i3w = (i1 + 2) % n;
+
+            a0 = anchors[i0w]; a1 = anchors[i1]; a2 = anchors[i2w]; a3 = anchors[i3w];
+
+            d1 = a1.distance;
+            d2 = a2.distance;
+            if (i2w <= i1) d2 += Mathf.Max(trackLength, d2 + 1f);
+            d0 = a0.distance;
+            if (i0w >= i1) d0 -= Mathf.Max(trackLength, a0.distance + 1f);
+            d3 = a3.distance;
+            while (d3 < d2) d3 += Mathf.Max(trackLength, 1f);
+        }
+        else
+        {
+            int i2 = Mathf.Min(i1 + 1, n - 1);
+            int i0 = Mathf.Max(i1 - 1, 0);
+            int i3 = Mathf.Min(i2 + 1, n - 1);
+            a0 = anchors[i0]; a1 = anchors[i1]; a2 = anchors[i2]; a3 = anchors[i3];
+            d0 = a0.distance; d1 = a1.distance; d2 = a2.distance; d3 = a3.distance;
+            if (i0 == i1) { d0 = 2f * d1 - d2; }
+            if (i3 == i2) { d3 = 2f * d2 - d1; }
+        }
+    }
+
+    static float CatmullRomNonUniform(
+        float v0, float v1, float v2, float v3,
+        float d0, float d1, float d2, float d3,
+        float t)
+    {
+        float dt0 = Mathf.Max(d1 - d0, 1e-4f);
+        float dt1 = Mathf.Max(d2 - d1, 1e-4f);
+        float dt2 = Mathf.Max(d3 - d2, 1e-4f);
+
+        float m1 = (v1 - v0) / dt0 - (v2 - v0) / (dt0 + dt1) + (v2 - v1) / dt1;
+        float m2 = (v2 - v1) / dt1 - (v3 - v1) / (dt1 + dt2) + (v3 - v2) / dt2;
+        m1 *= dt1;
+        m2 *= dt1;
+
+        float t2 = t * t;
+        float t3 = t2 * t;
+        return (2f * t3 - 3f * t2 + 1f) * v1
+             + (t3 - 2f * t2 + t) * m1
+             + (-2f * t3 + 3f * t2) * v2
+             + (t3 - t2) * m2;
     }
 }

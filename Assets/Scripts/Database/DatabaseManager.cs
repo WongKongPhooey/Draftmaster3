@@ -50,6 +50,13 @@ public class DatabaseManager : MonoBehaviour
     static void CreateTables(SQLiteConnection db)
     {
         db.CreateTable<Driver>();
+        SeedDriversIfEmpty(db);
+    }
+
+    static void SeedDriversIfEmpty(SQLiteConnection db)
+    {
+        if (db.Table<Driver>().Count() > 0) return;
+        db.InsertAll(DummyDrivers.Build());
     }
 
     IEnumerator CopySeedFromStreamingAssets()
