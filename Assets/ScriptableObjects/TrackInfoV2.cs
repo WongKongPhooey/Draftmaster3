@@ -28,10 +28,6 @@ public class TrackInfoV2 : ScriptableObject
     [Header("Segments (in order around the lap)")]
     public TrackSegment[] segments;
 
-    [Header("Racing Line")]
-    [Tooltip("Safety margin (metres) kept between the AI's outermost/innermost line and the track edge. Stops cars from drifting off the track surface on the straights.")]
-    public float racingLineEdgeMargin = 1.5f;
-
     [Header("Edge Lines (painted boundary, e.g. white line)")]
     public bool drawEdgeLines;
     [Tooltip("Material for the painted edge line. Use a Material with the appropriate texture (e.g. solid white or dashed) and tiling.")]
@@ -67,6 +63,7 @@ public class TrackInfoV2 : ScriptableObject
     [System.Serializable]
     public struct TrackSegment
     {
+        public string label;
         public SegmentType type;
         [Tooltip("Length in metres along the centerline.")]
         public float length;
@@ -82,7 +79,10 @@ public class TrackInfoV2 : ScriptableObject
         public int maxSpeed;
         [Tooltip("Width override at this segment (metres). 0 = use defaultWidth.")]
         public float width;
-        [Tooltip("Racing-line lateral offsets. Used by Turn segments to define entry/apex/exit. Ignored for Straights.")]
+        [Range(-0.5f, 0.5f)]
+        [Tooltip("Straights only: shifts the single racing-line anchor along the segment. 0 = exact middle, -0.5 = at segment start, +0.5 = at segment end. Use this to bias the straight's anchor away from a previous turn that forces an unusual exit.")]
+        public float straightMidpointOffset;
+        [Tooltip("Racing-line lateral offsets. For Turns: entry/apex/exit. For Straights: only the apex values are used (positioned by straightMidpoint).")]
         public SegmentRacingLine racingLine;
     }
 
@@ -132,18 +132,17 @@ public class TrackInfoV2 : ScriptableObject
         for (int i = 0; i < segments.Length; i++)
         {
             var seg = segments[i];
+            var rl = seg.racingLine;
             if (seg.type == SegmentType.Turn)
             {
-                var rl = seg.racingLine;
                 list.Add(new RacingLineAnchor { distance = cum - seg.leadIn, ideal = rl.idealEntry, min = rl.minEntry, max = rl.maxEntry });
                 list.Add(new RacingLineAnchor { distance = cum + seg.length * 0.5f, ideal = rl.idealApex, min = rl.minApex, max = rl.maxApex });
                 list.Add(new RacingLineAnchor { distance = cum + seg.length + seg.leadOut, ideal = rl.idealExit, min = rl.minExit, max = rl.maxExit });
             }
             else
             {
-                float w = seg.width > 0f ? seg.width : defaultWidth;
-                float halfUsable = Mathf.Max(0f, w * 0.5f - racingLineEdgeMargin);
-                list.Add(new RacingLineAnchor { distance = cum + seg.length * 0.5f, ideal = 0f, min = -halfUsable, max = halfUsable });
+                float midFrac = Mathf.Clamp(0.5f + seg.straightMidpointOffset, 0f, 1f);
+                list.Add(new RacingLineAnchor { distance = cum + seg.length * midFrac, ideal = rl.idealApex, min = rl.minApex, max = rl.maxApex });
             }
             cum += seg.length;
         }

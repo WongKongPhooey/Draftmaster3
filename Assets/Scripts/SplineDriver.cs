@@ -22,6 +22,13 @@ public class SplineDriver : MonoBehaviour
     [Tooltip("Drive on the pit lane spline instead of the main spline.")]
     public bool usePitLane = false;
 
+    [Header("Cornering Feel")]
+    [Tooltip("How strongly the car leans into turns. 0 = rigid, ~8 = subtle, 20+ = drifty arcade.")]
+    public float leanIntoTurns = 10f;
+    [Tooltip("Smoothing for the lean angle. Lower = snappier, higher = floatier. 0 disables smoothing.")]
+    [Range(0f, 0.95f)]
+    public float leanSmoothing = 0.8f;
+
     List<TrackBuilder.Sample> _mainSamples;
     List<TrackBuilder.Sample> _pitSamples;
     List<TrackInfoV2.RacingLineAnchor> _anchors;
@@ -29,6 +36,9 @@ public class SplineDriver : MonoBehaviour
     float _pitLength;
     float _distance;
     bool _onPit;
+    float _prevHeading;
+    bool _hasPrevHeading;
+    float _currentLean;
 
     void Awake()
     {
@@ -105,6 +115,10 @@ public class SplineDriver : MonoBehaviour
         Vector3 worldPos = track != null ? track.transform.TransformPoint(new Vector3(finalPos.x, finalPos.y, 0)) : new Vector3(finalPos.x, finalPos.y, 0);
         transform.position = new Vector3(worldPos.x, worldPos.y, transform.position.z);
         float angleDeg = Mathf.Atan2(sample.tangent.y, sample.tangent.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? angleDeg - 90f : angleDeg) + angleOffsetDeg);
+        float leanTarget = _hasPrevHeading ? Mathf.DeltaAngle(_prevHeading, angleDeg) * leanIntoTurns : 0f;
+        _currentLean = Mathf.Lerp(leanTarget, _currentLean, leanSmoothing);
+        _prevHeading = angleDeg;
+        _hasPrevHeading = true;
+        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? angleDeg - 90f : angleDeg) + angleOffsetDeg + _currentLean);
     }
 }
