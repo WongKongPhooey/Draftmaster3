@@ -20,7 +20,7 @@ public class AIDriverBinding : MonoBehaviour
     {
         if (driver == null || _spline == null) return;
 
-        // Aggression skews preferred line outward (more aggressive drivers ride the max line; cautious drivers tuck to the min).
+        // Aggression skews preferred line toward the right; cautious drivers tuck to the left. Replace later with proper turn-relative logic (inside vs outside) once the AI plans corner-by-corner.
         float aggression01 = Mathf.Clamp01(driver.Aggression / 100f);
         _spline.lineFactor = Mathf.Lerp(-0.6f, 1f, aggression01);
 

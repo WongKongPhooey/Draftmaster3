@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "TrackInfoV2", menuName = "Racetrack/Track Info V2", order = 2)]
 public class TrackInfoV2 : ScriptableObject
@@ -97,23 +98,23 @@ public class TrackInfoV2 : ScriptableObject
         [Tooltip("Lateral offset at the exit point (segment end plus leadOut).")]
         public float idealExit;
 
-        [Header("Innermost AI Line (e.g. defensive)")]
-        public float minEntry;
-        public float minApex;
-        public float minExit;
+        [Header("Leftmost AI Line (visual left of the track)")]
+        [FormerlySerializedAs("maxEntry")] public float leftEntry;
+        [FormerlySerializedAs("maxApex")]  public float leftApex;
+        [FormerlySerializedAs("maxExit")]  public float leftExit;
 
-        [Header("Outermost AI Line (e.g. aggressive overtake)")]
-        public float maxEntry;
-        public float maxApex;
-        public float maxExit;
+        [Header("Rightmost AI Line (visual right of the track)")]
+        [FormerlySerializedAs("minEntry")] public float rightEntry;
+        [FormerlySerializedAs("minApex")]  public float rightApex;
+        [FormerlySerializedAs("minExit")]  public float rightExit;
     }
 
     public struct RacingLineAnchor
     {
         public float distance;
         public float ideal;
-        public float min;
-        public float max;
+        public float left;
+        public float right;
     }
 
     public float TotalLength()
@@ -135,14 +136,14 @@ public class TrackInfoV2 : ScriptableObject
             var rl = seg.racingLine;
             if (seg.type == SegmentType.Turn)
             {
-                list.Add(new RacingLineAnchor { distance = cum - seg.leadIn, ideal = rl.idealEntry, min = rl.minEntry, max = rl.maxEntry });
-                list.Add(new RacingLineAnchor { distance = cum + seg.length * 0.5f, ideal = rl.idealApex, min = rl.minApex, max = rl.maxApex });
-                list.Add(new RacingLineAnchor { distance = cum + seg.length + seg.leadOut, ideal = rl.idealExit, min = rl.minExit, max = rl.maxExit });
+                list.Add(new RacingLineAnchor { distance = cum - seg.leadIn, ideal = rl.idealEntry, left = rl.leftEntry, right = rl.rightEntry });
+                list.Add(new RacingLineAnchor { distance = cum + seg.length * 0.5f, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex });
+                list.Add(new RacingLineAnchor { distance = cum + seg.length + seg.leadOut, ideal = rl.idealExit, left = rl.leftExit, right = rl.rightExit });
             }
             else
             {
                 float midFrac = Mathf.Clamp(0.5f + seg.straightMidpointOffset, 0f, 1f);
-                list.Add(new RacingLineAnchor { distance = cum + seg.length * midFrac, ideal = rl.idealApex, min = rl.minApex, max = rl.maxApex });
+                list.Add(new RacingLineAnchor { distance = cum + seg.length * midFrac, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex });
             }
             cum += seg.length;
         }
@@ -150,7 +151,7 @@ public class TrackInfoV2 : ScriptableObject
         return list;
     }
 
-    // lineFactor: -1 = innermost AI line, 0 = ideal, +1 = outermost. Smoothly blended.
+    // lineFactor: -1 = leftmost AI line, 0 = ideal, +1 = rightmost. Smoothly blended.
     public float GetLateralAt(float distance, float lineFactor, List<RacingLineAnchor> anchors = null)
     {
         if (anchors == null) anchors = BuildRacingLineAnchors();
@@ -177,8 +178,8 @@ public class TrackInfoV2 : ScriptableObject
     static float BlendAnchor(RacingLineAnchor a, float lineFactor)
     {
         lineFactor = Mathf.Clamp(lineFactor, -1f, 1f);
-        if (lineFactor >= 0f) return Mathf.Lerp(a.ideal, a.max, lineFactor);
-        return Mathf.Lerp(a.ideal, a.min, -lineFactor);
+        if (lineFactor >= 0f) return Mathf.Lerp(a.ideal, a.right, lineFactor);
+        return Mathf.Lerp(a.ideal, a.left, -lineFactor);
     }
 
     void ResolveAnchorNeighbours(List<RacingLineAnchor> anchors, float distance, float trackLength,

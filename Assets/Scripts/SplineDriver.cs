@@ -4,7 +4,7 @@ using UnityEngine;
 public class SplineDriver : MonoBehaviour
 {
     public TrackBuilder track;
-    [Tooltip("Racing-line variant: -1 = innermost, 0 = ideal, +1 = outermost. Anything in between blends.")]
+    [Tooltip("Racing-line variant: -1 = leftmost line, 0 = ideal, +1 = rightmost line. Anything in between blends.")]
     [Range(-1f, 1f)]
     public float lineFactor = 0f;
     [Tooltip("Speed in metres per second.")]

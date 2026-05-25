@@ -13,10 +13,10 @@ public class TrackBuilder : MonoBehaviour
 
     [Header("Racing Line Gizmo")]
     public bool drawRacingLineGizmo = true;
-    public Color idealLineColor = Color.yellow;
-    public Color minLineColor = new Color(1f, 0.3f, 0.3f, 0.6f);
-    public Color maxLineColor = new Color(0.3f, 1f, 0.3f, 0.6f);
-    public bool drawMinMaxBounds = true;
+    public Color idealLineColor = new Color(0.2f, 1f, 0.3f, 1f);
+    public Color leftLineColor = new Color(0.3f, 0.5f, 1f, 0.7f);
+    public Color rightLineColor = new Color(1f, 0.3f, 0.3f, 0.7f);
+    public bool drawLeftRightBounds = true;
     public float anchorMarkerRadius = 1.2f;
 
     Mesh _mainMesh;
@@ -449,10 +449,10 @@ public class TrackBuilder : MonoBehaviour
             var anchors = track.BuildRacingLineAnchors();
             if (anchors.Count > 0)
             {
-                if (drawMinMaxBounds)
+                if (drawLeftRightBounds)
                 {
-                    DrawRacingLineCurve(samples, anchors, -1f, minLineColor);
-                    DrawRacingLineCurve(samples, anchors, +1f, maxLineColor);
+                    DrawRacingLineCurve(samples, anchors, -1f, leftLineColor);
+                    DrawRacingLineCurve(samples, anchors, +1f, rightLineColor);
                 }
                 DrawRacingLineCurve(samples, anchors, 0f, idealLineColor);
 
