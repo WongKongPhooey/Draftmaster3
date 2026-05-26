@@ -5,9 +5,7 @@ using UnityEngine;
 public class AIDriverBinding : MonoBehaviour
 {
     public Driver driver;
-
-    [Tooltip("Base speed in m/s before driver-stat modifiers are applied.")]
-    public float baseSpeed = 35f;
+    public VehicleInfo vehicleInfo;
 
     SplineDriver _spline;
 
@@ -18,19 +16,26 @@ public class AIDriverBinding : MonoBehaviour
 
     public void Apply()
     {
-        if (driver == null || _spline == null) return;
+        if (_spline == null) return;
 
-        // Aggression skews preferred line toward the right; cautious drivers tuck to the left. Replace later with proper turn-relative logic (inside vs outside) once the AI plans corner-by-corner.
-        float aggression01 = Mathf.Clamp01(driver.Aggression / 100f);
-        _spline.lineFactor = Mathf.Lerp(-0.6f, 1f, aggression01);
+        if (vehicleInfo != null) _spline.vehicleInfo = vehicleInfo;
 
-        // Qualifying boosts straight-line pace; consistency tightens the random jitter band.
-        float qualifying01 = Mathf.Clamp01(driver.Qualifying / 100f);
-        float consistency01 = Mathf.Clamp01(driver.Consistency / 100f);
-        float paceMultiplier = Mathf.Lerp(0.92f, 1.05f, qualifying01);
-        float jitter = Random.Range(1f - (1f - consistency01) * 0.08f, 1f);
-        _spline.speed = baseSpeed * paceMultiplier * jitter;
+        if (driver != null)
+        {
+            // Aggression skews preferred line toward the right; cautious drivers tuck to the left. Replace later with proper turn-relative logic (inside vs outside) once the AI plans corner-by-corner.
+            float aggression01 = Mathf.Clamp01(driver.Aggression / 100f);
+            _spline.lineFactor = Mathf.Lerp(-0.6f, 1f, aggression01);
 
-        gameObject.name = $"AI_{driver.LastName}_{driver.Id}";
+            // Qualifying lifts overall pace; consistency tightens random variation.
+            float qualifying01 = Mathf.Clamp01(driver.Qualifying / 100f);
+            float consistency01 = Mathf.Clamp01(driver.Consistency / 100f);
+            float pace = Mathf.Lerp(0.93f, 1.04f, qualifying01);
+            float jitter = Random.Range(1f - (1f - consistency01) * 0.04f, 1f);
+            _spline.paceMultiplier = pace * jitter;
+
+            gameObject.name = $"AI_{driver.LastName}_{driver.Id}";
+        }
+
+        _spline.Rebuild();
     }
 }

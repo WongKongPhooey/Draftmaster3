@@ -21,8 +21,12 @@ public class GridSpawner : MonoBehaviour
     public float rowStagger = 3.5f;
     [Tooltip("Distance behind the start line where the front of the grid sits.")]
     public float gridStartDistance = -6f;
-    [Tooltip("Base car speed in metres per second; driver stats scale this.")]
+    [Tooltip("Fallback car speed (m/s) when no VehicleInfo is assigned. Otherwise speed is driven by the vehicle's accel/decel curves.")]
     public float speed = 35f;
+    [Tooltip("VehicleInfo asset applied to every spawned AI car. Defines accel/decel/cornering curves.")]
+    public VehicleInfo vehicleInfo;
+    [Tooltip("If true, the first spawned AI logs its precomputed segment speeds on Rebuild. Use for diagnosing corner speed issues.")]
+    public bool logFirstCarSegmentSpeeds;
     [Tooltip("Scale to apply to spawned cars.")]
     public Vector2 carScale = new Vector2(6, 6);
 
@@ -65,20 +69,19 @@ public class GridSpawner : MonoBehaviour
             var splineDriver = go.GetComponent<SplineDriver>();
             if (splineDriver == null) splineDriver = go.AddComponent<SplineDriver>();
             splineDriver.track = track;
+            splineDriver.vehicleInfo = vehicleInfo;
+            splineDriver.logSegmentSpeeds = logFirstCarSegmentSpeeds && i == 0;
             splineDriver.startDistance = gridStartDistance - i * spacing;
             splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
             splineDriver.speed = speed;
             splineDriver.spriteFacesUp = false;
             splineDriver.angleOffsetDeg = 180f;
 
-            if (pool.Count > 0)
-            {
-                var binding = go.GetComponent<AIDriverBinding>();
-                if (binding == null) binding = go.AddComponent<AIDriverBinding>();
-                binding.driver = pool[i % pool.Count];
-                binding.baseSpeed = speed;
-                binding.Apply();
-            }
+            var binding = go.GetComponent<AIDriverBinding>();
+            if (binding == null) binding = go.AddComponent<AIDriverBinding>();
+            binding.vehicleInfo = vehicleInfo;
+            if (pool.Count > 0) binding.driver = pool[i % pool.Count];
+            binding.Apply();
         }
     }
 

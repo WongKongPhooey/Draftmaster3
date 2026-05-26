@@ -411,7 +411,7 @@ public class TrackBuilder : MonoBehaviour
         var samples = SampleCenterline();
         if (samples.Count < 2) return;
 
-        Gizmos.color = Color.cyan;
+        Gizmos.color = Color.yellow;
         for (int i = 1; i < samples.Count; i++)
         {
             Vector3 a = transform.TransformPoint(new Vector3(samples[i - 1].position.x, samples[i - 1].position.y, 0));

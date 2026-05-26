@@ -33,7 +33,7 @@ Track and vehicle properties are defined as **ScriptableObjects** in `Assets/Scr
 
 VehicleLogic calculates dynamic racing lines per turn based on random high/mid/low selection, with speed curves derived from the chosen line and track banking data.
 
-### Key Scripts (attached to Phoenix scene)
+### Key Scripts (legacy scrolling system, attached to Phoenix scene)
 
 - **VehicleLogic.cs** — Car physics, speed, turns, drafting, wrecking, motion offset publishing
 - **EnvironmentObjectV2.cs** — Scrollable/static environment element lifecycle and shader control
@@ -59,12 +59,23 @@ Many scripts in `Assets/Scripts/` are from a previous iteration (e.g., `Movement
 ### Scene Organization
 
 - **`Assets/Menus/`** — UI scenes (MainMenu, Garage, TrackSelect, SeriesSelect, Store, Settings, etc.)
-- **`Assets/Levels/Racetracks/`** — Active racetrack scenes (Phoenix, Daytona, Atlanta, etc.). `Custom/` subdirectory has template tracks for custom track creation.
+- **`Assets/Levels/Racetracks/`** — Active racetrack scenes (WatkinsGlen, Phoenix, Daytona, Atlanta, etc.). `Custom/` subdirectory has template tracks for custom track creation. **WatkinsGlen** is the current test scene for the spline-based system.
 - **`Assets/Levels/Legacy/`** — Older tracks from a previous iteration, still in the build but may use legacy scripts
 - **`Assets/Levels/Scenarios/`** — Special event scenes (DaytonaDay, Halloween, Throwback, Pitlane)
 - **`Assets/Levels/`** — Utility scenes (LoginRegister, MyAccount, DeleteAccount)
 
-Phoenix is the primary development/test racetrack scene where the core scripts are wired up.
+**WatkinsGlen is the current development/test scene.** It uses the new spline-based system (see below). Phoenix is wired up to the legacy scrolling system.
+
+### Active System: Spline-Based Tracks
+
+A second, newer system runs alongside the legacy scrolling code:
+
+- **TrackInfoV2** (`Assets/ScriptableObjects/`) — ScriptableObject defining a track as an ordered list of `TrackSegment`s (Straight or Turn) with length, angle, banking, width, plus an embedded `SegmentRacingLine` (ideal / leftmost / rightmost lateral offsets at entry/apex/exit). Stored under `Assets/Resources/Tracks/`.
+- **TrackBuilder** — generates the road mesh, edge lines, and pit lane from a TrackInfoV2 at edit time. Provides centerline sampling (`SampleCenterline()`, `SampleAt(distance)`) and a gizmo for the racing line (yellow centerline, green ideal, blue leftmost, red rightmost).
+- **SplineDriver** — AI/test driver that walks the spline using a VehicleInfo's accel/decel/cornering curves. Looks ahead `brakingLookahead` metres to brake for upcoming slower segments, applies racing-line lateral offset via `lineFactor` (-1=leftmost, 0=ideal, +1=rightmost), and leans into turns by heading-change rate.
+- **AIDriverBinding** — ties a `Draftmaster.Data.Driver` (SQLite row) to a SplineDriver: Aggression skews `lineFactor`, Qualifying/Consistency set `paceMultiplier`.
+- **GridSpawner** — instantiates N AI cars, waits on `DatabaseManager.IsReady`, pulls a shuffled driver pool, and applies bindings.
+- **DatabaseManager** (`Assets/Scripts/Database/`) — singleton wrapping a sqlite-net-pcl connection at `Application.persistentDataPath/draftmaster.db`. Seeds dummy drivers on first launch via `DummyDrivers.Build()`. Tables live in `Assets/Scripts/Database/Models/` under namespace `Draftmaster.Data`.
 
 ## Development
 
