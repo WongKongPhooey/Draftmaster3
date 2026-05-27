@@ -4,8 +4,10 @@ using UnityEngine.UI;
 public class SpeedometerUI : MonoBehaviour
 {
     [Header("Target")]
-    [Tooltip("Car to track. If left blank, the first SplineDriver found in the scene is used.")]
+    [Tooltip("Player car SplineDriver. If left blank, auto-finds GameObject named playerObjectName.")]
     public SplineDriver target;
+    [Tooltip("Scene GameObject name used to auto-find the player car when target is blank.")]
+    public string playerObjectName = "PlayerCar";
 
     [Header("Display")]
     [Tooltip("Top of the displayed speed range, in mph. Needle reaches max angle at this speed.")]
@@ -20,11 +22,7 @@ public class SpeedometerUI : MonoBehaviour
     [Header("References (auto-built if left blank)")]
     public RectTransform needle;
     public Text speedText;
-    public Text targetText;
     public Image dial;
-
-    [Tooltip("If true, shows the target mph the AI is aiming for under the current speed. Useful for debugging.")]
-    public bool showTarget = true;
 
     [Header("Auto-Build")]
     [Tooltip("If true and no needle is assigned, a default speedometer UI is generated at runtime.")]
@@ -43,7 +41,7 @@ public class SpeedometerUI : MonoBehaviour
 
     void Update()
     {
-        if (target == null || target.vehicleInfo == null) target = PickTarget();
+        if (target == null) target = FindPlayer();
         if (target == null || needle == null) return;
 
         float mph = target.speed * 2.237f;
@@ -52,19 +50,13 @@ public class SpeedometerUI : MonoBehaviour
         float t = Mathf.Clamp01(_displayedMph / Mathf.Max(maxMph, 1f));
         needle.localEulerAngles = new Vector3(0, 0, Mathf.Lerp(minNeedleAngle, maxNeedleAngle, t));
         if (speedText != null) speedText.text = Mathf.RoundToInt(_displayedMph).ToString();
-        if (targetText != null) targetText.text = showTarget ? $"{target.name}  tgt {Mathf.RoundToInt(target.CurrentTargetMph)}" : string.Empty;
     }
 
-    static SplineDriver PickTarget()
+    SplineDriver FindPlayer()
     {
-        var all = FindObjectsByType<SplineDriver>(FindObjectsSortMode.None);
-        SplineDriver fallback = null;
-        for (int i = 0; i < all.Length; i++)
-        {
-            if (all[i].vehicleInfo != null) return all[i];
-            if (fallback == null) fallback = all[i];
-        }
-        return fallback;
+        if (string.IsNullOrEmpty(playerObjectName)) return null;
+        var go = GameObject.Find(playerObjectName);
+        return go != null ? go.GetComponent<SplineDriver>() : null;
     }
 
     void BuildDefaultUI()
@@ -106,45 +98,31 @@ public class SpeedometerUI : MonoBehaviour
         var textGO = new GameObject("SpeedText", typeof(RectTransform));
         textGO.transform.SetParent(container, false);
         var textRT = textGO.GetComponent<RectTransform>();
-        textRT.anchorMin = new Vector2(0.5f, 0.18f);
-        textRT.anchorMax = new Vector2(0.5f, 0.18f);
+        textRT.anchorMin = new Vector2(0.5f, 0.22f);
+        textRT.anchorMax = new Vector2(0.5f, 0.22f);
         textRT.pivot = new Vector2(0.5f, 0.5f);
-        textRT.sizeDelta = new Vector2(dialSize * 0.7f, 36f);
+        textRT.sizeDelta = new Vector2(dialSize * 0.7f, 44f);
         textRT.anchoredPosition = Vector2.zero;
         speedText = textGO.AddComponent<Text>();
         speedText.alignment = TextAnchor.MiddleCenter;
         speedText.color = textColor;
-        speedText.fontSize = Mathf.RoundToInt(dialSize * 0.18f);
+        speedText.fontSize = 24;
+        speedText.fontStyle = FontStyle.Bold;
         speedText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         speedText.text = "0";
-
-        var targetGO = new GameObject("TargetText", typeof(RectTransform));
-        targetGO.transform.SetParent(container, false);
-        var targetRT = targetGO.GetComponent<RectTransform>();
-        targetRT.anchorMin = new Vector2(0.5f, 0.32f);
-        targetRT.anchorMax = new Vector2(0.5f, 0.32f);
-        targetRT.pivot = new Vector2(0.5f, 0.5f);
-        targetRT.sizeDelta = new Vector2(dialSize * 0.7f, 22f);
-        targetRT.anchoredPosition = Vector2.zero;
-        targetText = targetGO.AddComponent<Text>();
-        targetText.alignment = TextAnchor.MiddleCenter;
-        targetText.color = new Color(0.6f, 0.95f, 1f, 0.85f);
-        targetText.fontSize = Mathf.RoundToInt(dialSize * 0.08f);
-        targetText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        targetText.text = string.Empty;
 
         var unitGO = new GameObject("UnitLabel", typeof(RectTransform));
         unitGO.transform.SetParent(container, false);
         var unitRT = unitGO.GetComponent<RectTransform>();
-        unitRT.anchorMin = new Vector2(0.5f, 0.05f);
-        unitRT.anchorMax = new Vector2(0.5f, 0.05f);
+        unitRT.anchorMin = new Vector2(0.5f, 0.08f);
+        unitRT.anchorMax = new Vector2(0.5f, 0.08f);
         unitRT.pivot = new Vector2(0.5f, 0.5f);
-        unitRT.sizeDelta = new Vector2(dialSize * 0.5f, 20f);
+        unitRT.sizeDelta = new Vector2(dialSize * 0.5f, 22f);
         unitRT.anchoredPosition = Vector2.zero;
         var unitText = unitGO.AddComponent<Text>();
         unitText.alignment = TextAnchor.MiddleCenter;
         unitText.color = new Color(textColor.r, textColor.g, textColor.b, 0.7f);
-        unitText.fontSize = Mathf.RoundToInt(dialSize * 0.07f);
+        unitText.fontSize = Mathf.RoundToInt(dialSize * 0.09f);
         unitText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         unitText.text = "MPH";
     }

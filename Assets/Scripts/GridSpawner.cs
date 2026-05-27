@@ -25,8 +25,6 @@ public class GridSpawner : MonoBehaviour
     public float speed = 35f;
     [Tooltip("VehicleInfo asset applied to every spawned AI car. Defines accel/decel/cornering curves.")]
     public VehicleInfo vehicleInfo;
-    [Tooltip("If true, the first spawned AI logs its precomputed segment speeds on Rebuild. Use for diagnosing corner speed issues.")]
-    public bool logFirstCarSegmentSpeeds;
     [Tooltip("Scale to apply to spawned cars.")]
     public Vector2 carScale = new Vector2(6, 6);
 
@@ -70,7 +68,6 @@ public class GridSpawner : MonoBehaviour
             if (splineDriver == null) splineDriver = go.AddComponent<SplineDriver>();
             splineDriver.track = track;
             splineDriver.vehicleInfo = vehicleInfo;
-            splineDriver.logSegmentSpeeds = logFirstCarSegmentSpeeds && i == 0;
             splineDriver.startDistance = gridStartDistance - i * spacing;
             splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
             splineDriver.speed = speed;

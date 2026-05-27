@@ -107,6 +107,14 @@ public class TrackInfoV2 : ScriptableObject
         [FormerlySerializedAs("minEntry")] public float rightEntry;
         [FormerlySerializedAs("minApex")]  public float rightApex;
         [FormerlySerializedAs("minExit")]  public float rightExit;
+
+        [Header("Anchor Skipping (smoother chicanes)")]
+        [Tooltip("Skip the entry anchor for this turn. Useful in chicanes where the previous corner's exit already shapes the line.")]
+        public bool skipEntry;
+        [Tooltip("Skip the exit anchor for this turn. Useful in chicanes where the next corner's entry takes over.")]
+        public bool skipExit;
+        [Tooltip("Skip the apex anchor (straights only). Useful for very short straights linking two turns where the neighbours already shape the line.")]
+        public bool skipApex;
     }
 
     public struct RacingLineAnchor
@@ -136,11 +144,13 @@ public class TrackInfoV2 : ScriptableObject
             var rl = seg.racingLine;
             if (seg.type == SegmentType.Turn)
             {
-                list.Add(new RacingLineAnchor { distance = cum - seg.leadIn, ideal = rl.idealEntry, left = rl.leftEntry, right = rl.rightEntry });
+                if (!rl.skipEntry)
+                    list.Add(new RacingLineAnchor { distance = cum - seg.leadIn, ideal = rl.idealEntry, left = rl.leftEntry, right = rl.rightEntry });
                 list.Add(new RacingLineAnchor { distance = cum + seg.length * 0.5f, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex });
-                list.Add(new RacingLineAnchor { distance = cum + seg.length + seg.leadOut, ideal = rl.idealExit, left = rl.leftExit, right = rl.rightExit });
+                if (!rl.skipExit)
+                    list.Add(new RacingLineAnchor { distance = cum + seg.length + seg.leadOut, ideal = rl.idealExit, left = rl.leftExit, right = rl.rightExit });
             }
-            else
+            else if (!rl.skipApex)
             {
                 float midFrac = Mathf.Clamp(0.5f + seg.straightMidpointOffset, 0f, 1f);
                 list.Add(new RacingLineAnchor { distance = cum + seg.length * midFrac, ideal = rl.idealApex, left = rl.leftApex, right = rl.rightApex });

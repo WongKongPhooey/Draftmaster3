@@ -366,6 +366,32 @@ public class TrackBuilder : MonoBehaviour
             }
         }
 
+        // Stitch the loop seam: if closed, add samples interpolating final pos back to startPos so the car travels
+        // continuously across the join instead of teleporting. Authoring imprecision in segment sums lands here.
+        if (closedLoop)
+        {
+            float closeDist = Vector2.Distance(pos, startPos);
+            if (closeDist > 0.01f)
+            {
+                int spp = Mathf.Max(minSpp, Mathf.CeilToInt(closeDist / step));
+                Vector2 dir = (startPos - pos) / closeDist;
+                float closeHeading = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                float wA = widthFn(segments[segments.Length - 1]);
+                float wB = widthFn(segments[0]);
+                Vector2 sPos = pos;
+                for (int s = 1; s <= spp; s++)
+                {
+                    float t = s / (float)spp;
+                    Vector2 p = sPos + dir * (closeDist * t);
+                    float headingHere = Mathf.LerpAngle(headingDeg, closeHeading, t);
+                    float w = Mathf.Lerp(wA, wB, t);
+                    float d = cumulativeDistance + closeDist * t;
+                    EmitSample(samples, p, headingHere, w, d);
+                }
+                cumulativeDistance += closeDist;
+            }
+        }
+
         return samples;
     }
 

@@ -1,0 +1,205 @@
+using UnityEngine;
+
+[RequireComponent(typeof(SplineDriver))]
+public class AIRacingBehaviour : MonoBehaviour
+{
+    [Header("Driver Personality (0 = cautious, 1 = aggressive)")]
+    [Range(0f, 1f)] public float aggression01 = 0.5f;
+    [Tooltip("0 = wildly inconsistent, 1 = metronome. Drives mistake frequency.")]
+    [Range(0f, 1f)] public float consistency01 = 0.8f;
+    [Tooltip("Per-second probability of a small mistake at consistency=0. Decays toward zero as consistency rises.")]
+    public float mistakeProbabilityPerSecond = 0.06f;
+    [Tooltip("Length of a single mistake event (sec).")]
+    public float mistakeDurationSeconds = 0.7f;
+    [Tooltip("Pace multiplier applied during a mistake (e.g. 0.85 = 15% slower).")]
+    public float mistakePaceFactor = 0.85f;
+    [Tooltip("Extra lateral wobble (m) during a mistake.")]
+    public float mistakeWobble = 1.2f;
+
+    [Header("Detection Ranges (m)")]
+    public float lookAheadRange = 70f;
+    public float overtakeClosingRange = 25f;
+    public float minFollowDistance = 5f;
+    public float sidewaysRange = 12f;
+    public float sidewaysWidth = 3.5f;
+    [Tooltip("Distance ahead (m) scanned to pick outside-of-turn passing side.")]
+    public float cornerScanDistance = 90f;
+    [Tooltip("Lateral half-width (m) within which a follower benefits from slipstream.")]
+    public float draftingLateralWidth = 2.5f;
+
+    [Header("Manoeuvre Strength")]
+    [Tooltip("Lateral offset (m) committed during an overtake.")]
+    public float overtakeLineOffset = 3f;
+    [Tooltip("Max lateral target offset (m) from side-by-side repulsion.")]
+    public float sidewaysMaxPush = 2.5f;
+
+    [Header("Smoothness")]
+    [Tooltip("Max lateral speed (m/s) the AI uses when changing line. Lower = smoother, like a real steering rate limit.")]
+    public float maxLateralSpeed = 1.6f;
+    [Tooltip("Dead zone (m). Tactical changes smaller than this aren't acted on.")]
+    public float tacticalDeadzone = 0.25f;
+    [Tooltip("Once an overtake direction is committed, hold it for at least this many seconds before reconsidering. Prevents flip-flop.")]
+    public float commitHoldSeconds = 1.5f;
+    [Tooltip("Once the AI returns to neutral line, wait this long before initiating another manoeuvre.")]
+    public float manoeuvreCooldown = 0.6f;
+
+    SplineDriver _spline;
+    float _smoothedTactical;
+    float _commitTimer;
+    float _commitDir;
+    float _cooldownTimer;
+    float _mistakeTimer;
+    float _mistakeWobbleDir;
+    float _basePaceMultiplier = 1f;
+
+    void Awake()
+    {
+        _spline = GetComponent<SplineDriver>();
+        if (_spline != null) _basePaceMultiplier = _spline.paceMultiplier;
+    }
+
+    public void SetBasePace(float baseMul) { _basePaceMultiplier = baseMul; }
+
+    void FixedUpdate()
+    {
+        if (_spline == null || _spline.TrackLength <= 0f) return;
+
+        float dt = Time.fixedDeltaTime;
+        float desiredTactical = 0f;
+        float speedCap = float.MaxValue;
+        float speedBoost = 0f;
+        bool wantOvertake = false;
+        float overtakeDir = 0f;
+
+        if (RaceField.TryGetAhead(_spline, lookAheadRange, out var ahead, out float aheadGap))
+        {
+            float aheadSpeed = ahead.CurrentMph;
+            float mySpeed = _spline.CurrentMph;
+            float aheadLat = ahead.LateralOnTrack;
+
+            float closingRange = Mathf.Lerp(overtakeClosingRange * 0.7f, overtakeClosingRange * 1.4f, aggression01);
+            if (aheadGap < closingRange && aheadSpeed < mySpeed - 2f && _cooldownTimer <= 0f)
+            {
+                wantOvertake = true;
+                // Prefer outside of upcoming turn (more room, safer arc). Aggressive drivers can dive inside.
+                int turnSign = _spline.NextTurnSign(cornerScanDistance);
+                if (turnSign != 0)
+                {
+                    float outsideDir = turnSign; // positive turn (left) → outside is positive lateral (right of travel)
+                    float insideDir = -outsideDir;
+                    overtakeDir = aggression01 > 0.75f ? insideDir : outsideDir;
+                }
+                else
+                {
+                    overtakeDir = aheadLat >= 0f ? -1f : 1f;
+                }
+            }
+
+            float safeGap = Mathf.Lerp(14f, 6f, aggression01);
+            if (aheadGap < safeGap)
+            {
+                float blend = Mathf.Clamp01((safeGap - aheadGap) / Mathf.Max(safeGap - minFollowDistance, 0.1f));
+                speedCap = Mathf.Lerp(mySpeed, aheadSpeed, blend);
+            }
+            if (aheadGap < minFollowDistance) speedCap = Mathf.Min(speedCap, aheadSpeed * 0.85f);
+
+            // Drafting: close, aligned, above min speed. Linear falloff with gap. Tighter alignment = more bonus.
+            var vi = _spline.vehicleInfo;
+            if (vi != null && mySpeed >= vi.draftingMinSpeed && aheadGap <= vi.draftingMaxGap)
+            {
+                float lateralDelta = Mathf.Abs(_spline.LateralOnTrack - aheadLat);
+                if (lateralDelta <= draftingLateralWidth)
+                {
+                    float gapFrac = 1f - (aheadGap / Mathf.Max(vi.draftingMaxGap, 0.1f));
+                    float latFrac = 1f - (lateralDelta / Mathf.Max(draftingLateralWidth, 0.1f));
+                    speedBoost = vi.draftingMaxBonus * Mathf.Clamp01(gapFrac) * Mathf.Clamp01(latFrac);
+                }
+            }
+        }
+
+        // Commitment: once we pick a passing side, hold it. Prevents weave.
+        if (wantOvertake)
+        {
+            _commitTimer = commitHoldSeconds;
+            _commitDir = overtakeDir;
+        }
+        else if (_commitTimer > 0f)
+        {
+            _commitTimer -= dt;
+            if (_commitTimer > 0f)
+            {
+                wantOvertake = true;
+                overtakeDir = _commitDir;
+            }
+        }
+
+        if (wantOvertake) desiredTactical = overtakeDir * overtakeLineOffset;
+
+        // Side-by-side repulsion: only kicks in when really close laterally. Bounded target offset, no per-tick accumulation.
+        float repulse = 0f;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float longGap = LongitudinalGap(_spline, other);
+            if (Mathf.Abs(longGap) > sidewaysRange) continue;
+            float latGap = _spline.LateralOnTrack - other.LateralOnTrack;
+            float threshold = sidewaysWidth * 0.6f;
+            if (Mathf.Abs(latGap) >= threshold) continue;
+            float dir = latGap >= 0f ? 1f : -1f;
+            float push = (threshold - Mathf.Abs(latGap)) / threshold;
+            repulse += dir * push * sidewaysMaxPush;
+        }
+        desiredTactical += Mathf.Clamp(repulse, -sidewaysMaxPush, sidewaysMaxPush);
+
+        // Slew-rate-limited convergence toward desired offset. Dead-zone prevents twitching near target.
+        float diff = desiredTactical - _smoothedTactical;
+        if (Mathf.Abs(diff) < tacticalDeadzone) diff = 0f;
+        float step = maxLateralSpeed * dt;
+        _smoothedTactical += Mathf.Clamp(diff, -step, step);
+
+        // Manoeuvre cooldown once we settle near zero.
+        if (Mathf.Abs(_smoothedTactical) < tacticalDeadzone && Mathf.Abs(desiredTactical) < tacticalDeadzone)
+        {
+            if (_cooldownTimer < manoeuvreCooldown) _cooldownTimer = manoeuvreCooldown;
+        }
+        if (_cooldownTimer > 0f) _cooldownTimer -= dt;
+
+        // Mistake roll: probability scales with (1 - consistency). Active mistake adds wobble + pace dip.
+        if (_mistakeTimer > 0f)
+        {
+            _mistakeTimer -= dt;
+            _smoothedTactical += _mistakeWobbleDir * mistakeWobble * dt;
+        }
+        else if (mistakeProbabilityPerSecond > 0f)
+        {
+            float perTickP = mistakeProbabilityPerSecond * (1f - consistency01) * dt;
+            if (Random.value < perTickP)
+            {
+                _mistakeTimer = mistakeDurationSeconds;
+                _mistakeWobbleDir = Random.value < 0.5f ? -1f : 1f;
+            }
+        }
+
+        float effectivePace = _basePaceMultiplier;
+        if (_mistakeTimer > 0f) effectivePace *= mistakePaceFactor;
+        var tire = GetComponent<TireState>();
+        if (tire != null) effectivePace *= tire.GripMultiplier;
+        _spline.paceMultiplier = effectivePace;
+
+        _spline.tacticalLateralOffset = _smoothedTactical;
+        _spline.aiMaxSpeedMph = speedCap;
+        _spline.aiSpeedBoostMph = speedBoost;
+    }
+
+    static float LongitudinalGap(SplineDriver self, SplineDriver other)
+    {
+        float trackLen = self.TrackLength;
+        float g = other.DistanceOnTrack - self.DistanceOnTrack;
+        if (g > trackLen * 0.5f) g -= trackLen;
+        else if (g < -trackLen * 0.5f) g += trackLen;
+        return g;
+    }
+}

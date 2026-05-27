@@ -20,18 +20,26 @@ public class AIDriverBinding : MonoBehaviour
 
         if (vehicleInfo != null) _spline.vehicleInfo = vehicleInfo;
 
+        var racing = GetComponent<AIRacingBehaviour>();
+        if (racing == null) racing = gameObject.AddComponent<AIRacingBehaviour>();
+
+        if (GetComponent<TireState>() == null) gameObject.AddComponent<TireState>();
+
         if (driver != null)
         {
-            // Aggression skews preferred line toward the right; cautious drivers tuck to the left. Replace later with proper turn-relative logic (inside vs outside) once the AI plans corner-by-corner.
             float aggression01 = Mathf.Clamp01(driver.Aggression / 100f);
             _spline.lineFactor = Mathf.Lerp(-0.6f, 1f, aggression01);
+            racing.aggression01 = aggression01;
 
-            // Qualifying lifts overall pace; consistency tightens random variation.
             float qualifying01 = Mathf.Clamp01(driver.Qualifying / 100f);
             float consistency01 = Mathf.Clamp01(driver.Consistency / 100f);
+            racing.consistency01 = consistency01;
+
             float pace = Mathf.Lerp(0.93f, 1.04f, qualifying01);
             float jitter = Random.Range(1f - (1f - consistency01) * 0.04f, 1f);
-            _spline.paceMultiplier = pace * jitter;
+            float basePace = pace * jitter;
+            _spline.paceMultiplier = basePace;
+            racing.SetBasePace(basePace);
 
             gameObject.name = $"AI_{driver.LastName}_{driver.Id}";
         }

@@ -8,9 +8,17 @@ public class SplineDriver : MonoBehaviour
     [Tooltip("Scales the target speed at every point on track. <1 slows the car down, >1 speeds it up. Driver stats (qualifying/consistency) feed this.")]
     [Range(0.5f, 1.2f)]
     public float paceMultiplier = 1f;
-    [Tooltip("Racing-line variant: -1 = leftmost line, 0 = ideal, +1 = rightmost line. Anything in between blends.")]
+    [Tooltip("Racing-line variant: -1 = leftmost line, 0 = ideal, +1 = rightmost line. Anything in between blends. Used as seed for the smoothed line.")]
     [Range(-1f, 1f)]
     public float lineFactor = 0f;
+
+    [Header("Racing Line Smoothing")]
+    [Tooltip("How many Gauss-Seidel passes to relax the line toward minimum curvature. 0 = follow authored ideal exactly (rigid). 30-80 = realistic smoothed line.")]
+    [Range(0, 200)]
+    public int smoothingIterations = 60;
+    [Tooltip("Per-pass relaxation factor. 0 = no movement, 1 = full averaging. ~0.3 is stable.")]
+    [Range(0f, 1f)]
+    public float smoothingRelaxation = 0.3f;
     [Tooltip("Current speed in metres per second. Driven by the simulation when vehicleInfo is assigned; otherwise treated as a constant.")]
     public float speed = 40f;
     [Tooltip("Distance along the spline to spawn at, in metres.")]
@@ -27,27 +35,33 @@ public class SplineDriver : MonoBehaviour
     public bool usePitLane = false;
 
     [Header("Cornering Feel")]
-    [Tooltip("How strongly the car leans into turns. 0 = rigid, ~8 = subtle, 20+ = drifty arcade.")]
-    public float leanIntoTurns = 10f;
+    [Tooltip("Lean angle (deg) per metre/sec of lateral motion. Positive offset rate = moving right = leans right. Negate to flip.")]
+    public float leanIntoTurns = 4f;
     [Tooltip("Smoothing for the lean angle. Lower = snappier, higher = floatier. 0 disables smoothing.")]
     [Range(0f, 0.95f)]
     public float leanSmoothing = 0.8f;
+    [Tooltip("Distance (metres) from rear-axle pivot to sprite centre. Spline sample sits at rear axle; sprite body extends this far forward. 0 = pivot at sprite centre (legacy).")]
+    public float rearAxleToCenter = 2.4f;
 
-    [Header("Anticipation")]
-    [Tooltip("How far ahead (metres) to look for slower corners that require pre-braking.")]
-    public float brakingLookahead = 400f;
-    [Tooltip("If true, this driver prints its precomputed per-segment target speeds to the console on Rebuild. Useful for diagnosing why a car isn't braking for corners.")]
-    public bool logSegmentSpeeds = false;
+    public float CurrentMph => _currentMph;
+    public float DistanceOnTrack => _mainLength > 0f ? ((_distance % _mainLength) + _mainLength) % _mainLength : _distance;
+    public float LateralOnTrack => _prevLateral;
+    public float TrackLength => _mainLength;
 
-    public float CurrentTargetMph { get; private set; }
+    // Commanded path state (consumed by BicycleDynamics).
+    public Vector2 CommandedLocalPos { get; private set; }
+    public float CommandedHeadingDeg { get; private set; }
+    public float CommandedSpeedMps { get; private set; }
+    public bool externalMotionController = false; // true when BicycleDynamics owns the transform
+    public int CurrentSegmentIndex() => _segmentStartDistance != null ? SegmentIndexAt(_distance) : -1;
 
-    [Header("Debug Live (read-only)")]
-    [SerializeField] float _dbgCurrentMph;
-    [SerializeField] float _dbgTargetMph;
-    [SerializeField] int _dbgSegIdx;
-    [SerializeField] float _dbgDistance;
-    [SerializeField] float _dbgAccelMps2;
-    [SerializeField] float _dbgDecelMps2;
+    [Header("AI Inputs (driven by AIRacingBehaviour)")]
+    [Tooltip("Additive lateral offset applied each frame. Used by AI for overtaking / side-repulsion.")]
+    public float tacticalLateralOffset = 0f;
+    [Tooltip("Hard speed cap (mph) layered on top of the speed profile. float.MaxValue = no cap.")]
+    public float aiMaxSpeedMph = float.MaxValue;
+    [Tooltip("Additive speed bonus (mph). Used for drafting/slipstream.")]
+    public float aiSpeedBoostMph = 0f;
     [Tooltip("Default deceleration used when the vehicle's decel curve is unauthored, in m/s².")]
     public float fallbackDecel = 10f;
     [Tooltip("Default acceleration used when the vehicle's accel curve is unauthored, in m/s².")]
@@ -63,12 +77,16 @@ public class SplineDriver : MonoBehaviour
     List<TrackInfoV2.RacingLineAnchor> _anchors;
     float[] _segmentTargetMph;
     float[] _segmentStartDistance;
+    float[] _speedProfile;
+    float[] _lateralProfile;
+    float[] _leftBoundProfile;
+    float[] _rightBoundProfile;
     float _mainLength;
     float _pitLength;
     float _distance;
     bool _onPit;
-    float _prevHeading;
-    bool _hasPrevHeading;
+    float _prevLateral;
+    bool _hasPrevLateral;
     float _currentLean;
     float _currentMph;
 
@@ -80,6 +98,9 @@ public class SplineDriver : MonoBehaviour
         var rb = GetComponent<Rigidbody2D>();
         if (rb != null) rb.bodyType = RigidbodyType2D.Kinematic;
     }
+
+    void OnEnable() { RaceField.Register(this); }
+    void OnDisable() { RaceField.Unregister(this); }
 
     void Start()
     {
@@ -99,6 +120,93 @@ public class SplineDriver : MonoBehaviour
         _pitLength = _pitSamples.Count > 0 ? _pitSamples[_pitSamples.Count - 1].distance : 0f;
         _anchors = track.track != null ? track.track.BuildRacingLineAnchors() : null;
         PrecomputeSegmentSpeeds();
+        BuildSpeedProfile();
+        BuildLateralProfile();
+    }
+
+    void BuildLateralProfile()
+    {
+        if (_mainSamples == null || _mainSamples.Count == 0 || track == null || track.track == null || _anchors == null)
+        {
+            _lateralProfile = null;
+            _leftBoundProfile = null;
+            _rightBoundProfile = null;
+            return;
+        }
+
+        int n = _mainSamples.Count;
+        _lateralProfile = new float[n];
+        _leftBoundProfile = new float[n];
+        _rightBoundProfile = new float[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            float d = _mainSamples[i].distance;
+            _lateralProfile[i] = track.track.GetLateralAt(d, lineFactor, _anchors);
+            _leftBoundProfile[i] = track.track.GetLateralAt(d, -1f, _anchors);
+            _rightBoundProfile[i] = track.track.GetLateralAt(d, +1f, _anchors);
+        }
+
+        // Min-curvature relaxation: each pass nudges every point toward the average of its neighbours, clamped to bounds.
+        var tmp = new float[n];
+        for (int p = 0; p < smoothingIterations; p++)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                int prev = i == 0 ? (loop ? n - 1 : 0) : i - 1;
+                int next = i == n - 1 ? (loop ? 0 : n - 1) : i + 1;
+                float avg = 0.5f * (_lateralProfile[prev] + _lateralProfile[next]);
+                float relaxed = Mathf.Lerp(_lateralProfile[i], avg, smoothingRelaxation);
+                float lo = Mathf.Min(_leftBoundProfile[i], _rightBoundProfile[i]);
+                float hi = Mathf.Max(_leftBoundProfile[i], _rightBoundProfile[i]);
+                tmp[i] = Mathf.Clamp(relaxed, lo, hi);
+            }
+            (tmp, _lateralProfile) = (_lateralProfile, tmp);
+        }
+    }
+
+    void BoundsAt(float distance, out float lo, out float hi)
+    {
+        lo = -100f; hi = 100f;
+        if (_leftBoundProfile == null || _rightBoundProfile == null || _mainSamples == null) return;
+        if (_mainLength > 0f) distance = ((distance % _mainLength) + _mainLength) % _mainLength;
+        int n = _leftBoundProfile.Length;
+        int idxLo = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (_mainSamples[i].distance <= distance) idxLo = i;
+            else break;
+        }
+        int idxHi = (idxLo + 1) % n;
+        float dLo = _mainSamples[idxLo].distance;
+        float dHi = _mainSamples[idxHi].distance;
+        if (idxHi <= idxLo) dHi += _mainLength;
+        float denom = dHi - dLo;
+        float t = denom > 0f ? Mathf.Clamp01((distance - dLo) / denom) : 0f;
+        float left = Mathf.Lerp(_leftBoundProfile[idxLo], _leftBoundProfile[idxHi], t);
+        float right = Mathf.Lerp(_rightBoundProfile[idxLo], _rightBoundProfile[idxHi], t);
+        lo = Mathf.Min(left, right);
+        hi = Mathf.Max(left, right);
+    }
+
+    float LateralAt(float distance)
+    {
+        if (_lateralProfile == null || _lateralProfile.Length == 0 || _mainSamples == null) return 0f;
+        if (_mainLength > 0f) distance = ((distance % _mainLength) + _mainLength) % _mainLength;
+        int n = _lateralProfile.Length;
+        int lo = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (_mainSamples[i].distance <= distance) lo = i;
+            else break;
+        }
+        int hi = (lo + 1) % n;
+        float dLo = _mainSamples[lo].distance;
+        float dHi = _mainSamples[hi].distance;
+        if (hi <= lo) dHi += _mainLength;
+        float denom = dHi - dLo;
+        float t = denom > 0f ? Mathf.Clamp01((distance - dLo) / denom) : 0f;
+        return Mathf.Lerp(_lateralProfile[lo], _lateralProfile[hi], t);
     }
 
     void PrecomputeSegmentSpeeds()
@@ -121,19 +229,80 @@ public class SplineDriver : MonoBehaviour
             cum += segs[i].length;
         }
 
-        if (logSegmentSpeeds)
+    }
+
+    void BuildSpeedProfile()
+    {
+        if (_mainSamples == null || _mainSamples.Count == 0 || _segmentTargetMph == null)
         {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"[SplineDriver] {name} segments (mainLength={_mainLength:F1}m, vehicle={(vehicleInfo != null ? vehicleInfo.name : "<null>")}, topSpeed={(vehicleInfo != null ? vehicleInfo.topSpeed : 0)}):");
-            for (int i = 0; i < segs.Length; i++)
-            {
-                var s = segs[i];
-                float radius = (s.type == TrackInfoV2.SegmentType.Turn && Mathf.Abs(s.angle) > 1e-3f)
-                    ? s.length / (Mathf.Abs(s.angle) * Mathf.Deg2Rad) : 0f;
-                sb.AppendLine($"  [{i}] {s.type} len={s.length:F1}m ang={s.angle:F1}° bank={s.banking:F1}° r={radius:F0}m maxOverride={s.maxSpeed} → target={_segmentTargetMph[i]:F0}mph");
-            }
-            Debug.Log(sb.ToString());
+            _speedProfile = null;
+            return;
         }
+
+        int n = _mainSamples.Count;
+        _speedProfile = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            int segIdx = SegmentIndexAt(_mainSamples[i].distance);
+            _speedProfile[i] = _segmentTargetMph[segIdx];
+        }
+
+        // Two wrap-aware passes per direction so values settle across the loop seam.
+        int passes = loop ? 2 : 1;
+        for (int p = 0; p < passes; p++)
+        {
+            for (int i = 1; i < n; i++) ApplyAccelLimit(i, i - 1);
+            if (loop) ApplyAccelLimit(0, n - 1);
+        }
+        for (int p = 0; p < passes; p++)
+        {
+            for (int i = n - 2; i >= 0; i--) ApplyBrakeLimit(i, i + 1);
+            if (loop) ApplyBrakeLimit(n - 1, 0);
+        }
+    }
+
+    void ApplyAccelLimit(int i, int prev)
+    {
+        float d = _mainSamples[i].distance - _mainSamples[prev].distance;
+        if (d < 0f) d += _mainLength;
+        if (d <= 0f) return;
+        float vPrev = _speedProfile[prev] * MphToMps;
+        float a = SampleAccel(_speedProfile[prev]);
+        float vMaxMps = Mathf.Sqrt(vPrev * vPrev + 2f * a * d);
+        float vMaxMph = vMaxMps * MpsToMph;
+        if (vMaxMph < _speedProfile[i]) _speedProfile[i] = vMaxMph;
+    }
+
+    void ApplyBrakeLimit(int i, int next)
+    {
+        float d = _mainSamples[next].distance - _mainSamples[i].distance;
+        if (d < 0f) d += _mainLength;
+        if (d <= 0f) return;
+        float vNext = _speedProfile[next] * MphToMps;
+        float decel = SampleDecel(_speedProfile[i]);
+        float vMaxMps = Mathf.Sqrt(vNext * vNext + 2f * decel * d);
+        float vMaxMph = vMaxMps * MpsToMph;
+        if (vMaxMph < _speedProfile[i]) _speedProfile[i] = vMaxMph;
+    }
+
+    float ProfileAt(float distance)
+    {
+        if (_speedProfile == null || _speedProfile.Length == 0 || _mainSamples == null) return 0f;
+        if (_mainLength > 0f) distance = ((distance % _mainLength) + _mainLength) % _mainLength;
+        int n = _speedProfile.Length;
+        int lo = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (_mainSamples[i].distance <= distance) lo = i;
+            else break;
+        }
+        int hi = (lo + 1) % n;
+        float dLo = _mainSamples[lo].distance;
+        float dHi = _mainSamples[hi].distance;
+        if (hi <= lo) dHi += _mainLength;
+        float denom = dHi - dLo;
+        float t = denom > 0f ? Mathf.Clamp01((distance - dLo) / denom) : 0f;
+        return Mathf.Lerp(_speedProfile[lo], _speedProfile[hi], t);
     }
 
     float ComputeTargetSpeedForSegment(TrackInfoV2.TrackSegment seg)
@@ -143,11 +312,47 @@ public class SplineDriver : MonoBehaviour
         if (seg.type == TrackInfoV2.SegmentType.Straight || Mathf.Approximately(seg.angle, 0f)) return topMph;
 
         float radius = seg.length / Mathf.Max(Mathf.Abs(seg.angle) * Mathf.Deg2Rad, 1e-4f);
-        float baseMph = (vehicleInfo != null && vehicleInfo.corneringSpeedCurve != null && vehicleInfo.corneringSpeedCurve.length > 0)
-            ? vehicleInfo.corneringSpeedCurve.Evaluate(radius)
-            : fallbackCornerMph;
+        float baseMph;
+        if (vehicleInfo != null && vehicleInfo.corneringSpeedCurve != null && vehicleInfo.corneringSpeedCurve.length > 0)
+        {
+            baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius);
+        }
+        else if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
+        {
+            // v = sqrt(r * g * mu_effective). mu_effective = base mu × track conditions × tire wear grip.
+            float gripMul = TrackConditions.GripMultiplier;
+            var tire = GetComponent<TireState>();
+            if (tire != null) gripMul *= tire.GripMultiplier;
+            float aLatMps2 = vehicleInfo.maxLateralG * Mathf.Max(0.05f, gripMul) * 9.81f;
+            float vMps = Mathf.Sqrt(radius * aLatMps2);
+            baseMph = vMps * MpsToMph;
+        }
+        else
+        {
+            baseMph = fallbackCornerMph;
+        }
         float bankingMph = (vehicleInfo != null) ? seg.banking * vehicleInfo.bankingMphPerDegree : 0f;
         return Mathf.Clamp(baseMph + bankingMph, 5f, topMph);
+    }
+
+    public int NextTurnSign(float scanDistance)
+    {
+        if (track == null || track.track == null || track.track.segments == null) return 0;
+        if (_segmentStartDistance == null || _mainLength <= 0f) return 0;
+        var segs = track.track.segments;
+        float d = DistanceOnTrack;
+        int curIdx = SegmentIndexAt(d);
+        for (int k = 0; k < segs.Length; k++)
+        {
+            int idx = (curIdx + k) % segs.Length;
+            float segStart = _segmentStartDistance[idx];
+            float gap = segStart - d;
+            if (gap < 0f) gap += _mainLength;
+            if (gap > scanDistance) break;
+            if (segs[idx].type == TrackInfoV2.SegmentType.Turn && Mathf.Abs(segs[idx].angle) > 0.5f)
+                return segs[idx].angle > 0f ? 1 : -1;
+        }
+        return 0;
     }
 
     void FixedUpdate()
@@ -163,23 +368,12 @@ public class SplineDriver : MonoBehaviour
         float length = _onPit ? _pitLength : _mainLength;
         if (length <= 0f) return;
 
-        if (vehicleInfo != null && _segmentTargetMph != null && !_onPit)
+        if (vehicleInfo != null && _speedProfile != null && !_onPit)
         {
-            float targetMph = ComputeEffectiveTargetMph(_distance) * paceMultiplier;
-            CurrentTargetMph = targetMph;
+            float targetMph = ProfileAt(_distance) * paceMultiplier + aiSpeedBoostMph;
+            if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
             UpdateSpeedToward(targetMph);
             speed = _currentMph * MphToMps;
-            _dbgCurrentMph = _currentMph;
-            _dbgTargetMph = targetMph;
-            _dbgSegIdx = SegmentIndexAt(_distance);
-            _dbgDistance = _distance;
-            _dbgAccelMps2 = SampleAccel(_currentMph);
-            _dbgDecelMps2 = SampleDecel(_currentMph);
-        }
-        else
-        {
-            Debug.LogWarning($"[SplineDriver] {name} sim gated off — vehicleInfo={(vehicleInfo != null)}, segmentTargets={(_segmentTargetMph != null)}, onPit={_onPit}, trackInfo={(track != null && track.track != null)}", this);
-            enabled = false;
         }
 
         _distance += speed * Time.fixedDeltaTime;
@@ -193,34 +387,6 @@ public class SplineDriver : MonoBehaviour
             _distance = Mathf.Clamp(_distance, 0f, length);
         }
         Place();
-    }
-
-    float ComputeEffectiveTargetMph(float distance)
-    {
-        int curIdx = SegmentIndexAt(distance);
-        float target = _segmentTargetMph[curIdx];
-
-        float decel = SampleDecel(_currentMph);
-        if (decel < 0.1f) decel = 0.1f;
-        float currentMps = _currentMph * MphToMps;
-
-        int n = _segmentTargetMph.Length;
-        for (int k = 1; k <= n; k++)
-        {
-            int idx = (curIdx + k) % n;
-            float distToStart = _segmentStartDistance[idx] - distance;
-            if (distToStart < 0f) distToStart += _mainLength;
-            if (distToStart > brakingLookahead) break;
-
-            float segMph = _segmentTargetMph[idx];
-            if (segMph >= _currentMph) continue;
-
-            float segMps = segMph * MphToMps;
-            float brakeDist = (currentMps * currentMps - segMps * segMps) / (2f * decel);
-            if (brakeDist >= distToStart) target = Mathf.Min(target, segMph);
-        }
-
-        return target;
     }
 
     void UpdateSpeedToward(float targetMph)
@@ -283,16 +449,34 @@ public class SplineDriver : MonoBehaviour
             length = _mainLength;
         }
 
-        float lineLateral = (!_onPit && _anchors != null && track.track != null) ? track.track.GetLateralAt(_distance, lineFactor, _anchors) : 0f;
+        float lineLateral = !_onPit ? LateralAt(_distance) : 0f;
+        float totalLateral = lateralOffset + tacticalLateralOffset + lineLateral;
+        if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
+        {
+            BoundsAt(_distance, out float boundLo, out float boundHi);
+            totalLateral = Mathf.Clamp(totalLateral, boundLo, boundHi);
+        }
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);
-        Vector2 finalPos = sample.position + right * (lateralOffset + lineLateral);
+        Vector2 rearAxle = sample.position + right * totalLateral;
+        float angleDeg = Mathf.Atan2(sample.tangent.y, sample.tangent.x) * Mathf.Rad2Deg;
+        float lateralRate = (_hasPrevLateral && Time.fixedDeltaTime > 0f) ? (totalLateral - _prevLateral) / Time.fixedDeltaTime : 0f;
+        float leanTarget = -lateralRate * leanIntoTurns;
+        _currentLean = Mathf.Lerp(leanTarget, _currentLean, leanSmoothing);
+        _prevLateral = totalLateral;
+        _hasPrevLateral = true;
+        float carHeadingDeg = angleDeg + _currentLean;
+        float carHeadingRad = carHeadingDeg * Mathf.Deg2Rad;
+        Vector2 carForward = new Vector2(Mathf.Cos(carHeadingRad), Mathf.Sin(carHeadingRad));
+        Vector2 finalPos = rearAxle + carForward * rearAxleToCenter;
+
+        CommandedLocalPos = finalPos;
+        CommandedHeadingDeg = carHeadingDeg;
+        CommandedSpeedMps = speed;
+
+        if (externalMotionController) return;
+
         Vector3 worldPos = track != null ? track.transform.TransformPoint(new Vector3(finalPos.x, finalPos.y, 0)) : new Vector3(finalPos.x, finalPos.y, 0);
         transform.position = new Vector3(worldPos.x, worldPos.y, transform.position.z);
-        float angleDeg = Mathf.Atan2(sample.tangent.y, sample.tangent.x) * Mathf.Rad2Deg;
-        float leanTarget = _hasPrevHeading ? Mathf.DeltaAngle(_prevHeading, angleDeg) * leanIntoTurns : 0f;
-        _currentLean = Mathf.Lerp(leanTarget, _currentLean, leanSmoothing);
-        _prevHeading = angleDeg;
-        _hasPrevHeading = true;
-        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? angleDeg - 90f : angleDeg) + angleOffsetDeg + _currentLean);
+        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? carHeadingDeg - 90f : carHeadingDeg) + angleOffsetDeg);
     }
 }
