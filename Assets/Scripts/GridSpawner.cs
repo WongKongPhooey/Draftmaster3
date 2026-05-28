@@ -68,7 +68,8 @@ public class GridSpawner : MonoBehaviour
             if (splineDriver == null) splineDriver = go.AddComponent<SplineDriver>();
             splineDriver.track = track;
             splineDriver.vehicleInfo = vehicleInfo;
-            splineDriver.startDistance = gridStartDistance - i * spacing;
+            float sfAnchor = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
+            splineDriver.startDistance = sfAnchor + gridStartDistance - i * spacing;
             splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
             splineDriver.speed = speed;
             splineDriver.spriteFacesUp = false;

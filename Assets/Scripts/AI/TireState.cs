@@ -46,4 +46,5 @@ public class TireState : MonoBehaviour
     }
 
     public void Reset(float w = 0f) { wear = Mathf.Clamp01(w); }
+    public void PitReset() { wear = 0f; }
 }

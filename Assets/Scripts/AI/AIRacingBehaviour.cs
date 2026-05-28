@@ -32,6 +32,16 @@ public class AIRacingBehaviour : MonoBehaviour
     public float overtakeLineOffset = 3f;
     [Tooltip("Max lateral target offset (m) from side-by-side repulsion.")]
     public float sidewaysMaxPush = 2.5f;
+    [Tooltip("Lateral offset (m) when defending an inside line from a faster pursuer.")]
+    public float defendLineOffset = 2.5f;
+    [Tooltip("Range behind (m) to consider a pursuer threatening enough to defend.")]
+    public float defendDetectRange = 35f;
+    [Tooltip("Contact threshold: cars within this lateral distance (m) and sidewaysRange long are treated as touching. Triggers harder push + speed scrub.")]
+    public float contactLateralWidth = 1.1f;
+    [Tooltip("Extra lateral push (m) applied during contact.")]
+    public float contactPush = 1.5f;
+    [Tooltip("Speed scrub (mph) per second during contact.")]
+    public float contactSpeedScrub = 8f;
 
     [Header("Smoothness")]
     [Tooltip("Max lateral speed (m/s) the AI uses when changing line. Lower = smoother, like a real steering rate limit.")]
@@ -135,8 +145,28 @@ public class AIRacingBehaviour : MonoBehaviour
 
         if (wantOvertake) desiredTactical = overtakeDir * overtakeLineOffset;
 
-        // Side-by-side repulsion: only kicks in when really close laterally. Bounded target offset, no per-tick accumulation.
+        // Defending: if a faster pursuer is close behind during the approach to a turn, shift to the inside.
+        if (_spline.CurrentPhase == SplineDriver.CornerPhase.Approach || _spline.CurrentPhase == SplineDriver.CornerPhase.Entry)
+        {
+            if (RaceField.TryGetBehind(_spline, defendDetectRange, out var pursuer, out float behindGap))
+            {
+                float behindSpeed = pursuer.CurrentMph;
+                if (behindSpeed > _spline.CurrentMph + 1f && _cooldownTimer <= 0f)
+                {
+                    int turnSign = _spline.NextTurnSign(cornerScanDistance);
+                    if (turnSign != 0)
+                    {
+                        float insideDir = -turnSign; // inside of turn = opposite of outside
+                        float strength = Mathf.Clamp01((defendDetectRange - behindGap) / defendDetectRange);
+                        desiredTactical += insideDir * defendLineOffset * strength;
+                    }
+                }
+            }
+        }
+
+        // Side-by-side repulsion + contact response.
         float repulse = 0f;
+        float contactScrub = 0f;
         var drivers = RaceField.Drivers;
         for (int i = 0; i < drivers.Count; i++)
         {
@@ -146,13 +176,30 @@ public class AIRacingBehaviour : MonoBehaviour
             float longGap = LongitudinalGap(_spline, other);
             if (Mathf.Abs(longGap) > sidewaysRange) continue;
             float latGap = _spline.LateralOnTrack - other.LateralOnTrack;
-            float threshold = sidewaysWidth * 0.6f;
-            if (Mathf.Abs(latGap) >= threshold) continue;
+            float absLat = Mathf.Abs(latGap);
             float dir = latGap >= 0f ? 1f : -1f;
-            float push = (threshold - Mathf.Abs(latGap)) / threshold;
-            repulse += dir * push * sidewaysMaxPush;
+            if (absLat < contactLateralWidth)
+            {
+                // Contact: stronger push + speed scrub.
+                float overlap = (contactLateralWidth - absLat) / contactLateralWidth;
+                repulse += dir * (sidewaysMaxPush + contactPush) * overlap;
+                contactScrub += contactSpeedScrub * overlap;
+            }
+            else
+            {
+                float threshold = sidewaysWidth * 0.6f;
+                if (absLat >= threshold) continue;
+                float push = (threshold - absLat) / threshold;
+                repulse += dir * push * sidewaysMaxPush;
+            }
         }
-        desiredTactical += Mathf.Clamp(repulse, -sidewaysMaxPush, sidewaysMaxPush);
+        desiredTactical += Mathf.Clamp(repulse, -(sidewaysMaxPush + contactPush), sidewaysMaxPush + contactPush);
+
+        if (contactScrub > 0f)
+        {
+            float scrubMph = contactScrub * dt;
+            speedCap = Mathf.Min(speedCap, _spline.CurrentMph - scrubMph);
+        }
 
         // Slew-rate-limited convergence toward desired offset. Dead-zone prevents twitching near target.
         float diff = desiredTactical - _smoothedTactical;

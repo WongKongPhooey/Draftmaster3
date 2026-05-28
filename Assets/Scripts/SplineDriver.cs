@@ -40,8 +40,7 @@ public class SplineDriver : MonoBehaviour
     [Tooltip("Smoothing for the lean angle. Lower = snappier, higher = floatier. 0 disables smoothing.")]
     [Range(0f, 0.95f)]
     public float leanSmoothing = 0.8f;
-    [Tooltip("Distance (metres) from rear-axle pivot to sprite centre. Spline sample sits at rear axle; sprite body extends this far forward. 0 = pivot at sprite centre (legacy).")]
-    public float rearAxleToCenter = 2.4f;
+    const float rearAxleToCenter = -2.4f;
 
     public float CurrentMph => _currentMph;
     public float DistanceOnTrack => _mainLength > 0f ? ((_distance % _mainLength) + _mainLength) % _mainLength : _distance;
@@ -54,6 +53,9 @@ public class SplineDriver : MonoBehaviour
     public float CommandedSpeedMps { get; private set; }
     public bool externalMotionController = false; // true when BicycleDynamics owns the transform
     public int CurrentSegmentIndex() => _segmentStartDistance != null ? SegmentIndexAt(_distance) : -1;
+
+    public enum CornerPhase { Straight, Approach, Entry, Apex, Exit, PostExit }
+    public CornerPhase CurrentPhase { get; private set; }
 
     [Header("AI Inputs (driven by AIRacingBehaviour)")]
     [Tooltip("Additive lateral offset applied each frame. Used by AI for overtaking / side-repulsion.")]
@@ -335,6 +337,60 @@ public class SplineDriver : MonoBehaviour
         return Mathf.Clamp(baseMph + bankingMph, 5f, topMph);
     }
 
+    void UpdateCornerPhase()
+    {
+        if (track == null || track.track == null || track.track.segments == null || _segmentStartDistance == null)
+        {
+            CurrentPhase = CornerPhase.Straight;
+            return;
+        }
+        var segs = track.track.segments;
+        float d = DistanceOnTrack;
+        int idx = SegmentIndexAt(d);
+        if (idx < 0 || idx >= segs.Length) { CurrentPhase = CornerPhase.Straight; return; }
+        var seg = segs[idx];
+        if (seg.type == TrackInfoV2.SegmentType.Turn && Mathf.Abs(seg.angle) > 0.5f)
+        {
+            float into = d - _segmentStartDistance[idx];
+            if (into < 0f) into += _mainLength;
+            float t = seg.length > 0.01f ? into / seg.length : 0f;
+            if (t < 0.3f) CurrentPhase = CornerPhase.Entry;
+            else if (t < 0.6f) CurrentPhase = CornerPhase.Apex;
+            else CurrentPhase = CornerPhase.Exit;
+            return;
+        }
+
+        // Straight: classify by proximity of next turn / recent exit.
+        float distToNextTurn = float.MaxValue;
+        for (int k = 1; k <= segs.Length; k++)
+        {
+            int n = (idx + k) % segs.Length;
+            if (segs[n].type == TrackInfoV2.SegmentType.Turn && Mathf.Abs(segs[n].angle) > 0.5f)
+            {
+                float gap = _segmentStartDistance[n] - d;
+                if (gap < 0f) gap += _mainLength;
+                distToNextTurn = gap;
+                break;
+            }
+        }
+        float prevExitDist = float.MaxValue;
+        for (int k = 1; k <= segs.Length; k++)
+        {
+            int p = (idx - k + segs.Length) % segs.Length;
+            if (segs[p].type == TrackInfoV2.SegmentType.Turn && Mathf.Abs(segs[p].angle) > 0.5f)
+            {
+                float endP = _segmentStartDistance[p] + segs[p].length;
+                float gap = d - endP;
+                if (gap < 0f) gap += _mainLength;
+                prevExitDist = gap;
+                break;
+            }
+        }
+        if (distToNextTurn < 60f) CurrentPhase = CornerPhase.Approach;
+        else if (prevExitDist < 30f) CurrentPhase = CornerPhase.PostExit;
+        else CurrentPhase = CornerPhase.Straight;
+    }
+
     public int NextTurnSign(float scanDistance)
     {
         if (track == null || track.track == null || track.track.segments == null) return 0;
@@ -361,6 +417,12 @@ public class SplineDriver : MonoBehaviour
 
         if (usePitLane != _onPit)
         {
+            // Lane switch — if entering pit, reset tires (service stop). Out-of-pit doesn't touch wear.
+            if (usePitLane)
+            {
+                var tire = GetComponent<TireState>();
+                if (tire != null) tire.PitReset();
+            }
             _onPit = usePitLane;
             _distance = 0f;
         }
@@ -375,6 +437,8 @@ public class SplineDriver : MonoBehaviour
             UpdateSpeedToward(targetMph);
             speed = _currentMph * MphToMps;
         }
+
+        UpdateCornerPhase();
 
         _distance += speed * Time.fixedDeltaTime;
         if (loop && !_onPit)

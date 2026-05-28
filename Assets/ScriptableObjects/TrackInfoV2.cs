@@ -10,6 +10,8 @@ public class TrackInfoV2 : ScriptableObject
     public int trackId;
     public int trackLaps = 1;
     public int topSpeed;
+    [Tooltip("Distance (m) from the start of segment[0] to the start/finish line. Cars spawn from this anchor. Lap timing rolls here.")]
+    public float startFinishDistance = 0f;
 
     [Header("Geometry")]
     [Tooltip("World position of the start/finish line.")]
