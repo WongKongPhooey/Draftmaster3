@@ -28,6 +28,14 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Scale to apply to spawned cars.")]
     public Vector2 carScale = new Vector2(6, 6);
 
+    [Header("Collision")]
+    [Tooltip("Add VehicleCollision to each spawned car for barrier + car-car contact.")]
+    public bool addCollision = true;
+    [Tooltip("Box collider half-extents (m). x = half-width, y = half-length.")]
+    public Vector2 collisionHalfExtents = new Vector2(1.0f, 2.4f);
+    [Tooltip("Layers cars collide against (barriers + other vehicles).")]
+    public LayerMask collisionMask = ~0;
+
     IEnumerator Start()
     {
         if (track == null || carPrefab == null) yield break;
@@ -70,6 +78,8 @@ public class GridSpawner : MonoBehaviour
             splineDriver.vehicleInfo = vehicleInfo;
             float sfAnchor = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
             splineDriver.startDistance = sfAnchor + gridStartDistance - i * spacing;
+            splineDriver.spawnInPit = true;
+            splineDriver.qualifyingPosition = i;
             splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
             splineDriver.speed = speed;
             splineDriver.spriteFacesUp = false;
@@ -80,6 +90,15 @@ public class GridSpawner : MonoBehaviour
             binding.vehicleInfo = vehicleInfo;
             if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             binding.Apply();
+
+            if (addCollision)
+            {
+                var col = go.GetComponent<VehicleCollision>();
+                if (col == null) col = go.AddComponent<VehicleCollision>();
+                col.halfExtents = collisionHalfExtents;
+                col.collisionMask = collisionMask;
+                col.ApplyExtents();
+            }
         }
     }
 

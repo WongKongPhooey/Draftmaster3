@@ -8,6 +8,10 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     public TrackEnvironment environment;
     public bool rebuildOnValidate = true;
 
+    [Header("Scene Editor")]
+    [Tooltip("Index into environment.manualSections currently edited in the Scene view. -1 = none.")]
+    public int editManualSectionIndex = -1;
+
     void OnEnable() { Build(); }
 
 #if UNITY_EDITOR
@@ -31,7 +35,183 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         if (samples.Count < 2) return;
 
         BuildStrips(samples, pitSamples);
+        BuildBarriers(samples, pitSamples);
         BuildDecorations(samples, pitSamples);
+    }
+
+    void BuildBarriers(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)
+    {
+        if (!environment.generateBarriers) return;
+        if (track.track == null || track.track.segments == null || track.track.segments.Length == 0) return;
+
+        var root = new GameObject("Barriers");
+        root.transform.SetParent(transform, false);
+
+        var segs = track.track.segments;
+        float spacing = Mathf.Max(0.25f, environment.stripSampleSpacing);
+
+        // Per-segment distance ranges.
+        float[] segStart = new float[segs.Length];
+        float cum = 0f;
+        for (int i = 0; i < segs.Length; i++) { segStart[i] = cum; cum += segs[i].length; }
+
+        for (int i = 0; i < segs.Length; i++)
+        {
+            float dStart = segStart[i];
+            float dEnd = dStart + segs[i].length;
+            BuildOneBarrier(root.transform, i, TrackEnvironment.BarrierSide.Inner, dStart, dEnd, mainSamples, spacing);
+            BuildOneBarrier(root.transform, i, TrackEnvironment.BarrierSide.Outer, dStart, dEnd, mainSamples, spacing);
+        }
+    }
+
+    void BuildOneBarrier(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
+        float dStart, float dEnd, List<TrackBuilder.Sample> mainSamples, float spacing)
+    {
+        var go = new GameObject($"Barrier_{side}_{segIndex}");
+        go.transform.SetParent(root, false);
+        var mf = go.AddComponent<MeshFilter>();
+        var mr = go.AddComponent<MeshRenderer>();
+        mr.sortingOrder = environment.barrierSortingOrder;
+        if (environment.barrierMaterial != null) mr.sharedMaterial = environment.barrierMaterial;
+
+        List<Vector2> centerline;
+        int manualIdx = FindManualSection(segIndex, side);
+        if (manualIdx >= 0)
+        {
+            centerline = BuildManualCenterline(manualIdx, side, dStart, dEnd, mainSamples);
+        }
+        else
+        {
+            centerline = BuildAutoEdgeCenterline(side, dStart, dEnd, mainSamples, spacing);
+        }
+
+        if (centerline.Count < 2) { DestroyImmediateSafe(go); return; }
+        mf.sharedMesh = BuildPolylineRibbon(centerline, Mathf.Max(0.05f, environment.barrierWidth),
+            environment.barrierUvLengthScale > 0f ? environment.barrierUvLengthScale : 1f);
+
+        if (environment.barrierColliders)
+        {
+            var col = go.AddComponent<PolygonCollider2D>();
+            col.points = BuildBarrierColliderPath(centerline, side, Mathf.Max(0.5f, environment.barrierColliderThickness));
+        }
+    }
+
+    // Solid wall: front face = barrier centerline, back face = centerline pushed OUTWARD (away from track) by thickness.
+    // Closed CW/CCW loop. Thick volume prevents fast cars tunnelling through a thin line.
+    Vector2[] BuildBarrierColliderPath(List<Vector2> centerline, TrackEnvironment.BarrierSide side, float thickness)
+    {
+        int n = centerline.Count;
+        var path = new Vector2[n * 2];
+        // Outward sign: Inner barrier sits right of track → outward = +normal; Outer sits left → outward = -normal.
+        float outward = side == TrackEnvironment.BarrierSide.Inner ? 1f : -1f;
+        for (int i = 0; i < n; i++)
+        {
+            Vector2 tangent;
+            if (i == 0) tangent = centerline[1] - centerline[0];
+            else if (i == n - 1) tangent = centerline[i] - centerline[i - 1];
+            else tangent = centerline[i + 1] - centerline[i - 1];
+            if (tangent.sqrMagnitude < 1e-6f) tangent = Vector2.right;
+            tangent.Normalize();
+            Vector2 normal = new Vector2(tangent.y, -tangent.x);
+            path[i] = centerline[i]; // front face
+            path[n * 2 - 1 - i] = centerline[i] + normal * (outward * thickness); // back face, reversed
+        }
+        return path;
+    }
+
+    int FindManualSection(int segIndex, TrackEnvironment.BarrierSide side)
+    {
+        if (environment.manualSections == null) return -1;
+        for (int i = 0; i < environment.manualSections.Length; i++)
+            if (environment.manualSections[i].segmentIndex == segIndex && environment.manualSections[i].side == side)
+                return i;
+        return -1;
+    }
+
+    // Auto: sample the track edge across the segment span, offset outboard by inner/outer offset.
+    List<Vector2> BuildAutoEdgeCenterline(TrackEnvironment.BarrierSide side, float dStart, float dEnd,
+        List<TrackBuilder.Sample> mainSamples, float spacing)
+    {
+        var list = new List<Vector2>();
+        if (mainSamples == null || mainSamples.Count < 2) return list;
+        float length = dEnd - dStart;
+        int steps = Mathf.Max(2, Mathf.CeilToInt(length / spacing) + 1);
+        for (int i = 0; i < steps; i++)
+        {
+            float t = i / (float)(steps - 1);
+            float d = dStart + length * t;
+            list.Add(EdgePoint(side, d, mainSamples));
+        }
+        return list;
+    }
+
+    // Manual: seed endpoints at the segment boundaries (so it connects to neighbour barriers), then user points between.
+    List<Vector2> BuildManualCenterline(int manualIdx, TrackEnvironment.BarrierSide side, float dStart, float dEnd,
+        List<TrackBuilder.Sample> mainSamples)
+    {
+        var section = environment.manualSections[manualIdx];
+        var list = new List<Vector2>();
+        Vector2 startAnchor = EdgePoint(side, dStart, mainSamples);
+        Vector2 endAnchor = EdgePoint(side, dEnd, mainSamples);
+        list.Add(startAnchor);
+        if (section.manualPoints != null) list.AddRange(section.manualPoints);
+        list.Add(endAnchor);
+        return list;
+    }
+
+    Vector2 EdgePoint(TrackEnvironment.BarrierSide side, float distance, List<TrackBuilder.Sample> mainSamples)
+    {
+        var sample = track.SampleAt(distance, mainSamples);
+        // normal = right of travel. Inner = right edge + innerOffset (outboard right). Outer = left edge - outerOffset (outboard left).
+        if (side == TrackEnvironment.BarrierSide.Inner)
+            return sample.position + sample.normal * (sample.width * 0.5f + environment.innerEdgeOffset);
+        return sample.position - sample.normal * (sample.width * 0.5f + environment.outerEdgeOffset);
+    }
+
+    void DestroyImmediateSafe(GameObject go)
+    {
+        if (Application.isPlaying) Destroy(go); else DestroyImmediate(go);
+    }
+
+    Mesh BuildPolylineRibbon(List<Vector2> centerline, float width, float uvScale)
+    {
+        var mesh = new Mesh { name = "BarrierRibbon" };
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        var verts = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        var tris = new List<int>();
+        float half = width * 0.5f;
+        float cumulative = 0f;
+        for (int i = 0; i < centerline.Count; i++)
+        {
+            Vector2 tangent;
+            if (i == 0) tangent = (centerline[1] - centerline[0]);
+            else if (i == centerline.Count - 1) tangent = (centerline[i] - centerline[i - 1]);
+            else tangent = (centerline[i + 1] - centerline[i - 1]);
+            if (tangent.sqrMagnitude < 1e-6f) tangent = Vector2.right;
+            tangent.Normalize();
+            Vector2 normal = new Vector2(tangent.y, -tangent.x);
+            Vector2 left = centerline[i] - normal * half;
+            Vector2 right = centerline[i] + normal * half;
+            verts.Add(new Vector3(left.x, left.y, 0f));
+            verts.Add(new Vector3(right.x, right.y, 0f));
+            if (i > 0) cumulative += Vector2.Distance(centerline[i], centerline[i - 1]);
+            uvs.Add(new Vector2(0f, cumulative * uvScale));
+            uvs.Add(new Vector2(1f, cumulative * uvScale));
+            if (i > 0)
+            {
+                int a = (i - 1) * 2;
+                int bIdx = i * 2;
+                tris.Add(a); tris.Add(bIdx); tris.Add(bIdx + 1);
+                tris.Add(a); tris.Add(bIdx + 1); tris.Add(a + 1);
+            }
+        }
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetUVs(0, uvs);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
     }
 
     static float AnchorEdgeBias(TrackEnvironment.LateralAnchor anchor, float trackWidth)

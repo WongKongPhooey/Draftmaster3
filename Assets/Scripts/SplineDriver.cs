@@ -1,8 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SplineDriver : MonoBehaviour
+public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionResponder
 {
+    public float SpeedMps => speed;
+
+    Vector2 _lastWorldRight = Vector2.right;
+    float _collisionLateral;
+
+    public void ApplyContact(Vector2 worldMtv, float severity)
+    {
+        // Project the push onto the car's lateral axis; transform is rebuilt from spline each frame,
+        // so persist the correction as a decaying lateral offset rather than moving transform directly.
+        float lateralDelta = Vector2.Dot(worldMtv, _lastWorldRight);
+        _collisionLateral += lateralDelta;
+        _collisionLateral = Mathf.Clamp(_collisionLateral, -8f, 8f);
+        _currentMph *= Mathf.Clamp01(1f - severity * 0.4f);
+    }
+
     public TrackBuilder track;
     public VehicleInfo vehicleInfo;
     [Tooltip("Scales the target speed at every point on track. <1 slows the car down, >1 speeds it up. Driver stats (qualifying/consistency) feed this.")]
@@ -33,6 +48,18 @@ public class SplineDriver : MonoBehaviour
     public float angleOffsetDeg = 0f;
     [Tooltip("Drive on the pit lane spline instead of the main spline.")]
     public bool usePitLane = false;
+
+    [Header("Pit Grid Spawn")]
+    [Tooltip("If true, spawn car in pit lane at qualifyingPosition's pit box.")]
+    public bool spawnInPit = false;
+    [Tooltip("Grid index. 0 = pole (closest to pit exit). Used to place car in pit box.")]
+    public int qualifyingPosition = 0;
+    [Tooltip("Distance (m) between pit boxes along pit lane.")]
+    public float pitBoxSpacing = 12f;
+    [Tooltip("Distance (m) from end of pit lane to the pole-sitter's pit box.")]
+    public float pitBoxExitGap = 20f;
+    [Tooltip("How much of the pit-lane length the cars actually need to traverse before merging back onto track (sets the auto-exit threshold).")]
+    [Range(0.5f, 1f)] public float pitExitThreshold = 0.98f;
 
     [Header("Cornering Feel")]
     [Tooltip("Lean angle (deg) per metre/sec of lateral motion. Positive offset rate = moving right = leans right. Negate to flip.")]
@@ -107,10 +134,25 @@ public class SplineDriver : MonoBehaviour
     void Start()
     {
         Rebuild();
-        _distance = startDistance;
+        if (spawnInPit && _pitLength > 0f)
+        {
+            usePitLane = true;
+            _onPit = true;
+            _distance = ComputePitBoxDistance(qualifyingPosition);
+        }
+        else
+        {
+            _distance = startDistance;
+            _onPit = usePitLane;
+        }
         _currentMph = speed * MpsToMph;
-        _onPit = usePitLane;
         Place();
+    }
+
+    float ComputePitBoxDistance(int idx)
+    {
+        float d = _pitLength - pitBoxExitGap - idx * pitBoxSpacing;
+        return Mathf.Max(0f, d);
     }
 
     public void Rebuild()
@@ -430,10 +472,22 @@ public class SplineDriver : MonoBehaviour
         float length = _onPit ? _pitLength : _mainLength;
         if (length <= 0f) return;
 
-        if (vehicleInfo != null && _speedProfile != null && !_onPit)
+        if (vehicleInfo != null)
         {
-            float targetMph = ProfileAt(_distance) * paceMultiplier + aiSpeedBoostMph;
-            if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
+            float targetMph;
+            if (_onPit)
+            {
+                targetMph = track != null && track.track != null ? track.track.pitSpeedLimit : 50f;
+            }
+            else if (_speedProfile != null)
+            {
+                targetMph = ProfileAt(_distance) * paceMultiplier + aiSpeedBoostMph;
+                if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
+            }
+            else
+            {
+                targetMph = 0f;
+            }
             UpdateSpeedToward(targetMph);
             speed = _currentMph * MphToMps;
         }
@@ -441,6 +495,17 @@ public class SplineDriver : MonoBehaviour
         UpdateCornerPhase();
 
         _distance += speed * Time.fixedDeltaTime;
+
+        if (_onPit && _pitLength > 0f && _distance >= _pitLength * pitExitThreshold)
+        {
+            // Hop from pit spline back to main spline at pit exit node.
+            float overshoot = _distance - _pitLength;
+            _onPit = false;
+            usePitLane = false;
+            _distance = (track != null && track.track != null ? track.track.pitExitDistance : 0f) + Mathf.Max(0f, overshoot);
+            length = _mainLength;
+        }
+
         if (loop && !_onPit)
         {
             while (_distance >= length) _distance -= length;
@@ -513,14 +578,17 @@ public class SplineDriver : MonoBehaviour
             length = _mainLength;
         }
 
+        _collisionLateral = Mathf.MoveTowards(_collisionLateral, 0f, 6f * Time.fixedDeltaTime);
         float lineLateral = !_onPit ? LateralAt(_distance) : 0f;
-        float totalLateral = lateralOffset + tacticalLateralOffset + lineLateral;
+        float totalLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral;
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(_distance, out float boundLo, out float boundHi);
             totalLateral = Mathf.Clamp(totalLateral, boundLo, boundHi);
         }
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);
+        if (track != null) _lastWorldRight = ((Vector2)track.transform.TransformVector(new Vector3(right.x, right.y, 0f))).normalized;
+        else _lastWorldRight = right;
         Vector2 rearAxle = sample.position + right * totalLateral;
         float angleDeg = Mathf.Atan2(sample.tangent.y, sample.tangent.x) * Mathf.Rad2Deg;
         float lateralRate = (_hasPrevLateral && Time.fixedDeltaTime > 0f) ? (totalLateral - _prevLateral) / Time.fixedDeltaTime : 0f;

@@ -224,9 +224,16 @@ public class TrackBuilder : MonoBehaviour
     {
         if (track == null || !track.hasPitLane || track.pitSegments == null) return new List<Sample>();
         float pitWidth = track.pitDefaultWidth > 0f ? track.pitDefaultWidth : track.defaultWidth;
+
+        // Pit start locked to the pit entry node on the main spline. Use authored-segment walker (skips seam closure samples).
+        track.SampleAuthoredSpline(track.pitEntryDistance, out Vector2 pitStartPos, out float pitStartHeading);
+        pitStartHeading += track.pitStartHeadingOffset;
+        track.pitStartPosition = pitStartPos;
+        track.pitStartHeading = pitStartHeading;
+
         return SampleSegments(
-            track.pitStartPosition,
-            track.pitStartHeading,
+            pitStartPos,
+            pitStartHeading,
             track.pitSegments,
             pitWidth,
             Mathf.Max(1, track.samplesPerSegment),
@@ -460,14 +467,24 @@ public class TrackBuilder : MonoBehaviour
                 Gizmos.DrawLine(a, b);
             }
 
-            // Entry/exit markers on the main spline
-            Gizmos.color = Color.magenta;
+            // Entry/exit markers on the main spline + connector lines to pit ends
             var entrySample = SampleAt(track.pitEntryDistance, samples);
             var exitSample = SampleAt(track.pitExitDistance, samples);
             Vector3 entry = transform.TransformPoint(new Vector3(entrySample.position.x, entrySample.position.y, 0));
             Vector3 exit = transform.TransformPoint(new Vector3(exitSample.position.x, exitSample.position.y, 0));
-            Gizmos.DrawWireSphere(entry, 3f);
-            Gizmos.DrawWireSphere(exit, 3f);
+            Gizmos.color = new Color(0.2f, 1f, 0.4f);
+            Gizmos.DrawWireSphere(entry, 4f);
+            Gizmos.color = new Color(1f, 0.4f, 0.4f);
+            Gizmos.DrawWireSphere(exit, 4f);
+            if (pitSamples.Count > 0)
+            {
+                Vector3 pitStart = transform.TransformPoint(new Vector3(pitSamples[0].position.x, pitSamples[0].position.y, 0));
+                Vector3 pitEnd = transform.TransformPoint(new Vector3(pitSamples[pitSamples.Count - 1].position.x, pitSamples[pitSamples.Count - 1].position.y, 0));
+                Gizmos.color = new Color(0.2f, 1f, 0.4f, 0.5f);
+                Gizmos.DrawLine(entry, pitStart);
+                Gizmos.color = new Color(1f, 0.4f, 0.4f, 0.5f);
+                Gizmos.DrawLine(exit, pitEnd);
+            }
         }
 
         if (drawRacingLineGizmo && samples.Count >= 2)

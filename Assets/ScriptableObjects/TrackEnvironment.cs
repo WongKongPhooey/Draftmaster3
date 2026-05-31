@@ -9,6 +9,23 @@ public class TrackEnvironment : ScriptableObject
     [Header("Point Decorations (prefabs placed along the spline)")]
     public Decoration[] decorations;
 
+    [Header("Barriers — auto-generated per segment, both sides")]
+    public bool generateBarriers = true;
+    [Tooltip("Offset (m) from the RIGHT track edge for the inner barrier. Positive = further right (outboard).")]
+    public float innerEdgeOffset = 0f;
+    [Tooltip("Offset (m) from the LEFT track edge for the outer barrier. Positive = further left (outboard).")]
+    public float outerEdgeOffset = 10f;
+    public float barrierWidth = 1f;
+    public Material barrierMaterial;
+    public int barrierSortingOrder = 2;
+    public float barrierUvLengthScale = 1f;
+    [Tooltip("Add a solid collider to every barrier section.")]
+    public bool barrierColliders = true;
+    [Tooltip("Collider thickness (m) extending outward, away from the track. Make this larger than a car's per-frame travel to prevent tunnelling. ~6m is safe.")]
+    public float barrierColliderThickness = 6f;
+    [Tooltip("Sections switched from auto-follow to hand-drawn. Each targets one segment + side.")]
+    public ManualBarrierSection[] manualSections;
+
     [Tooltip("Spacing between strip vertex rows in metres. Lower = smoother strips on tight curves, more triangles.")]
     public float stripSampleSpacing = 2f;
 
@@ -35,6 +52,18 @@ public class TrackEnvironment : ScriptableObject
         public Material material;
         [Tooltip("Texture tiling along the strip length. 1 = one repeat per metre.")]
         public float uvLengthScale;
+    }
+
+    public enum BarrierSide { Inner, Outer }
+
+    [System.Serializable]
+    public struct ManualBarrierSection
+    {
+        [Tooltip("Main-spline segment index this manual section replaces.")]
+        public int segmentIndex;
+        public BarrierSide side;
+        [Tooltip("Hand-drawn track-local points. Endpoints auto-seed to neighbour barrier ends if empty.")]
+        public Vector2[] manualPoints;
     }
 
     [System.Serializable]

@@ -4,8 +4,8 @@ using UnityEngine.UI;
 public class SpeedometerUI : MonoBehaviour
 {
     [Header("Target")]
-    [Tooltip("Player car SplineDriver. If left blank, auto-finds GameObject named playerObjectName.")]
-    public SplineDriver target;
+    [Tooltip("Player car GameObject (any component implementing IVehicleSpeedReadout). If blank, auto-finds GameObject named playerObjectName.")]
+    public MonoBehaviour target;
     [Tooltip("Scene GameObject name used to auto-find the player car when target is blank.")]
     public string playerObjectName = "PlayerCar";
 
@@ -43,8 +43,10 @@ public class SpeedometerUI : MonoBehaviour
     {
         if (target == null) target = FindPlayer();
         if (target == null || needle == null) return;
+        var readout = target as IVehicleSpeedReadout;
+        if (readout == null) return;
 
-        float mph = target.speed * 2.237f;
+        float mph = readout.SpeedMps * 2.237f;
         _displayedMph = Mathf.Lerp(_displayedMph, mph, 1f - Mathf.Exp(-needleResponse * Time.deltaTime));
 
         float t = Mathf.Clamp01(_displayedMph / Mathf.Max(maxMph, 1f));
@@ -52,11 +54,20 @@ public class SpeedometerUI : MonoBehaviour
         if (speedText != null) speedText.text = Mathf.RoundToInt(_displayedMph).ToString();
     }
 
-    SplineDriver FindPlayer()
+    MonoBehaviour FindPlayer()
     {
         if (string.IsNullOrEmpty(playerObjectName)) return null;
         var go = GameObject.Find(playerObjectName);
-        return go != null ? go.GetComponent<SplineDriver>() : null;
+        if (go == null) return null;
+        // Prefer PlayerVehicleController if present; else any enabled IVehicleSpeedReadout.
+        var pvc = go.GetComponent<PlayerVehicleController>();
+        if (pvc != null && pvc.enabled) return pvc;
+        var components = go.GetComponents<MonoBehaviour>();
+        for (int i = 0; i < components.Length; i++)
+        {
+            if (components[i] is IVehicleSpeedReadout && components[i].enabled) return components[i];
+        }
+        return null;
     }
 
     void BuildDefaultUI()

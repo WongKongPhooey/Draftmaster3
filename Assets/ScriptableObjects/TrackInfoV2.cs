@@ -46,20 +46,83 @@ public class TrackInfoV2 : ScriptableObject
 
     [Header("Pit Lane")]
     public bool hasPitLane;
-    [Tooltip("World position where the pit lane starts.")]
-    public Vector2 pitStartPosition;
-    [Tooltip("Initial heading of the pit lane, in degrees.")]
-    public float pitStartHeading;
+    [HideInInspector] public Vector2 pitStartPosition;
+    [HideInInspector] public float pitStartHeading;
+    [Tooltip("Additive angle (deg) added to the auto-derived pit start heading. Use to angle the pit entry away from the main spline tangent.")]
+    public float pitStartHeadingOffset = 0f;
     [Tooltip("Default width for the pit lane, in metres. 0 = inherit defaultWidth.")]
     public float pitDefaultWidth;
     [Tooltip("Pit-lane segments. Same format as the main spline.")]
     public TrackSegment[] pitSegments;
-    [Tooltip("Distance along the main spline (metres) where the pit-lane entry diverges.")]
-    public float pitEntryDistance;
-    [Tooltip("Distance along the main spline (metres) where the pit lane rejoins.")]
-    public float pitExitDistance;
+    [Tooltip("Main-spline segment whose EXIT node is the pit entry point (pit diverges at the end of this segment).")]
+    public int pitEntrySegmentIndex = 0;
+    [Tooltip("Fine-tune shift (m) along main spline applied to the pit entry node. Positive = further round the lap.")]
+    public float pitEntryOffset = 0f;
+    [Tooltip("Main-spline segment whose EXIT node is the pit rejoin point (pit merges back at the end of this segment).")]
+    public int pitExitSegmentIndex = 1;
+    [Tooltip("Fine-tune shift (m) along main spline applied to the pit exit node. Positive = further round the lap.")]
+    public float pitExitOffset = 0f;
+    [HideInInspector] public float pitEntryDistance;
+    [HideInInspector] public float pitExitDistance;
     [Tooltip("Pit-lane speed limit in mph. Informational for now.")]
     public int pitSpeedLimit = 50;
+
+    void OnValidate()
+    {
+        if (segments == null || segments.Length == 0) return;
+        if (pitEntrySegmentIndex >= 0 && pitEntrySegmentIndex < segments.Length)
+            pitEntryDistance = SegmentStartDistance(pitEntrySegmentIndex) + segments[pitEntrySegmentIndex].length + pitEntryOffset;
+        if (pitExitSegmentIndex >= 0 && pitExitSegmentIndex < segments.Length)
+            pitExitDistance = SegmentStartDistance(pitExitSegmentIndex) + segments[pitExitSegmentIndex].length + pitExitOffset;
+    }
+
+    float SegmentStartDistance(int idx)
+    {
+        float d = 0f;
+        for (int i = 0; i < idx; i++) d += segments[i].length;
+        return d;
+    }
+
+    // Walk authored segments only (no seam closure) to find world position + heading at a given distance along main spline.
+    public void SampleAuthoredSpline(float distance, out Vector2 pos, out float headingDeg)
+    {
+        pos = startPosition;
+        headingDeg = startHeading;
+        if (segments == null || segments.Length == 0) return;
+        float remaining = distance;
+        for (int i = 0; i < segments.Length; i++)
+        {
+            var seg = segments[i];
+            if (remaining <= seg.length || i == segments.Length - 1)
+            {
+                AdvanceAlongSegment(seg, ref pos, ref headingDeg, Mathf.Min(remaining, seg.length));
+                return;
+            }
+            AdvanceAlongSegment(seg, ref pos, ref headingDeg, seg.length);
+            remaining -= seg.length;
+        }
+    }
+
+    static void AdvanceAlongSegment(TrackSegment seg, ref Vector2 pos, ref float headingDeg, float dist)
+    {
+        if (seg.type == SegmentType.Straight || Mathf.Approximately(seg.angle, 0f))
+        {
+            float hRad = headingDeg * Mathf.Deg2Rad;
+            pos += new Vector2(Mathf.Cos(hRad), Mathf.Sin(hRad)) * dist;
+            return;
+        }
+        float angleRad = seg.angle * Mathf.Deg2Rad;
+        float fraction = dist / Mathf.Max(seg.length, 1e-4f);
+        float radius = seg.length / Mathf.Abs(angleRad);
+        Vector2 forward = new Vector2(Mathf.Cos(headingDeg * Mathf.Deg2Rad), Mathf.Sin(headingDeg * Mathf.Deg2Rad));
+        Vector2 toCentre = seg.angle >= 0f ? new Vector2(-forward.y, forward.x) : new Vector2(forward.y, -forward.x);
+        Vector2 centre = pos + toCentre * radius;
+        Vector2 startRadial = pos - centre;
+        float startAngleRad = Mathf.Atan2(startRadial.y, startRadial.x);
+        float endAngleRad = startAngleRad + angleRad * fraction;
+        pos = centre + new Vector2(Mathf.Cos(endAngleRad), Mathf.Sin(endAngleRad)) * radius;
+        headingDeg += seg.angle * fraction;
+    }
 
     public enum SegmentType { Straight, Turn }
 
@@ -159,6 +222,16 @@ public class TrackInfoV2 : ScriptableObject
             }
             cum += seg.length;
         }
+        float trackLen = cum;
+        if (closedLoop && trackLen > 0f)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var a = list[i];
+                a.distance = ((a.distance % trackLen) + trackLen) % trackLen;
+                list[i] = a;
+            }
+        }
         list.Sort((a, b) => a.distance.CompareTo(b.distance));
         return list;
     }
@@ -199,7 +272,7 @@ public class TrackInfoV2 : ScriptableObject
         out float d0, out float d1, out float d2, out float d3)
     {
         int n = anchors.Count;
-        int i1 = 0;
+        int i1 = -1;
         for (int i = 0; i < n; i++)
         {
             if (anchors[i].distance <= distance) i1 = i;
@@ -208,6 +281,8 @@ public class TrackInfoV2 : ScriptableObject
 
         if (closedLoop)
         {
+            bool beforeFirst = i1 < 0;
+            if (beforeFirst) i1 = n - 1;
             int i0w = (i1 - 1 + n) % n;
             int i2w = (i1 + 1) % n;
             int i3w = (i1 + 2) % n;
@@ -216,14 +291,16 @@ public class TrackInfoV2 : ScriptableObject
 
             d1 = a1.distance;
             d2 = a2.distance;
-            if (i2w <= i1) d2 += Mathf.Max(trackLength, d2 + 1f);
+            if (beforeFirst) d1 -= trackLength; // we wrapped past zero; treat i1 as one lap behind
+            if (i2w <= i1 || beforeFirst) { while (d2 <= d1) d2 += trackLength; }
             d0 = a0.distance;
-            if (i0w >= i1) d0 -= Mathf.Max(trackLength, a0.distance + 1f);
+            while (d0 > d1) d0 -= trackLength;
             d3 = a3.distance;
-            while (d3 < d2) d3 += Mathf.Max(trackLength, 1f);
+            while (d3 < d2) d3 += trackLength;
         }
         else
         {
+            if (i1 < 0) i1 = 0;
             int i2 = Mathf.Min(i1 + 1, n - 1);
             int i0 = Mathf.Max(i1 - 1, 0);
             int i3 = Mathf.Min(i2 + 1, n - 1);
