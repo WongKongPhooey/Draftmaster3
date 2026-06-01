@@ -21,8 +21,6 @@ public class TrackEnvironment : ScriptableObject
     public float barrierUvLengthScale = 1f;
     [Tooltip("Add a solid collider to every barrier section.")]
     public bool barrierColliders = true;
-    [Tooltip("Collider thickness (m) extending outward, away from the track. Make this larger than a car's per-frame travel to prevent tunnelling. ~6m is safe.")]
-    public float barrierColliderThickness = 6f;
     [Tooltip("Sections switched from auto-follow to hand-drawn. Each targets one segment + side.")]
     public ManualBarrierSection[] manualSections;
 

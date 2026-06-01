@@ -29,7 +29,8 @@ public class VehicleCollision : MonoBehaviour
 
         _box = GetComponent<BoxCollider2D>();
         if (_box == null) _box = gameObject.AddComponent<BoxCollider2D>();
-        _box.size = halfExtents * 2f;
+        // Car forward = local +X. halfExtents.x = half-width, halfExtents.y = half-length → length maps to X.
+        _box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
 
         _responder = PickResponder();
     }
@@ -54,7 +55,7 @@ public class VehicleCollision : MonoBehaviour
     {
         if (_box == null) _box = GetComponent<BoxCollider2D>();
         if (_box == null) _box = gameObject.AddComponent<BoxCollider2D>();
-        _box.size = halfExtents * 2f;
+        _box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
     }
 
     void FixedUpdate()
@@ -113,6 +114,6 @@ public class VehicleCollision : MonoBehaviour
     void OnValidate()
     {
         var box = GetComponent<BoxCollider2D>();
-        if (box != null) box.size = halfExtents * 2f;
+        if (box != null) box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
     }
 }

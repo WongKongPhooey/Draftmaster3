@@ -92,18 +92,18 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         if (environment.barrierColliders)
         {
             var col = go.AddComponent<PolygonCollider2D>();
-            col.points = BuildBarrierColliderPath(centerline, side, Mathf.Max(0.5f, environment.barrierColliderThickness));
+            col.points = BuildBarrierColliderPath(centerline, 1f);
+            col.offset = Vector2.zero;
         }
     }
 
-    // Solid wall: front face = barrier centerline, back face = centerline pushed OUTWARD (away from track) by thickness.
-    // Closed CW/CCW loop. Thick volume prevents fast cars tunnelling through a thin line.
-    Vector2[] BuildBarrierColliderPath(List<Vector2> centerline, TrackEnvironment.BarrierSide side, float thickness)
+    // Thin wall centred on the barrier centerline. Both faces offset ±thickness/2 along the PER-POINT normal,
+    // so the collider stays glued to the curving barrier instead of drifting (fixed-axis offset broke on turns).
+    Vector2[] BuildBarrierColliderPath(List<Vector2> centerline, float thickness)
     {
         int n = centerline.Count;
         var path = new Vector2[n * 2];
-        // Outward sign: Inner barrier sits right of track → outward = +normal; Outer sits left → outward = -normal.
-        float outward = side == TrackEnvironment.BarrierSide.Inner ? 1f : -1f;
+        float half = thickness * 0.5f;
         for (int i = 0; i < n; i++)
         {
             Vector2 tangent;
@@ -113,8 +113,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             if (tangent.sqrMagnitude < 1e-6f) tangent = Vector2.right;
             tangent.Normalize();
             Vector2 normal = new Vector2(tangent.y, -tangent.x);
-            path[i] = centerline[i]; // front face
-            path[n * 2 - 1 - i] = centerline[i] + normal * (outward * thickness); // back face, reversed
+            path[i] = centerline[i] + normal * half;                 // near face
+            path[n * 2 - 1 - i] = centerline[i] - normal * half;     // far face, reversed
         }
         return path;
     }
