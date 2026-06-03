@@ -6,16 +6,20 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float SpeedMps => speed;
 
     Vector2 _lastWorldRight = Vector2.right;
+    Vector2 _lastWorldForward = Vector2.right;
     float _collisionLateral;
 
     public void ApplyContact(Vector2 worldMtv, float severity)
     {
-        // Project the push onto the car's lateral axis; transform is rebuilt from spline each frame,
-        // so persist the correction as a decaying lateral offset rather than moving transform directly.
+        // Persist push as decaying lateral offset (transform rebuilt from spline each frame).
         float lateralDelta = Vector2.Dot(worldMtv, _lastWorldRight);
         _collisionLateral += lateralDelta;
         _collisionLateral = Mathf.Clamp(_collisionLateral, -8f, 8f);
-        _currentMph *= Mathf.Clamp01(1f - severity * 0.4f);
+
+        // Scrub speed only by how head-on the hit is. Glancing scrapes barely slow; square-on loses more.
+        Vector2 n = worldMtv.sqrMagnitude > 1e-6f ? worldMtv.normalized : Vector2.zero;
+        float headOn = Mathf.Abs(Vector2.Dot(_lastWorldForward, n)); // 0 = parallel glance, 1 = square
+        _currentMph *= Mathf.Clamp01(1f - severity * headOn * 0.5f);
     }
 
     public TrackBuilder track;
@@ -587,8 +591,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             totalLateral = Mathf.Clamp(totalLateral, boundLo, boundHi);
         }
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);
-        if (track != null) _lastWorldRight = ((Vector2)track.transform.TransformVector(new Vector3(right.x, right.y, 0f))).normalized;
-        else _lastWorldRight = right;
+        if (track != null)
+        {
+            _lastWorldRight = ((Vector2)track.transform.TransformVector(new Vector3(right.x, right.y, 0f))).normalized;
+            _lastWorldForward = ((Vector2)track.transform.TransformVector(new Vector3(sample.tangent.x, sample.tangent.y, 0f))).normalized;
+        }
+        else { _lastWorldRight = right; _lastWorldForward = sample.tangent; }
         Vector2 rearAxle = sample.position + right * totalLateral;
         float angleDeg = Mathf.Atan2(sample.tangent.y, sample.tangent.x) * Mathf.Rad2Deg;
         float lateralRate = (_hasPrevLateral && Time.fixedDeltaTime > 0f) ? (totalLateral - _prevLateral) / Time.fixedDeltaTime : 0f;

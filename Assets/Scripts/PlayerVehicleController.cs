@@ -5,10 +5,41 @@ using UnityEngine.InputSystem;
 // No spline/path coupling. Implements IVehicleSpeedReadout so SpeedometerUI can read its speed.
 public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICollisionResponder
 {
+    [Header("Collision Response")]
+    [Tooltip("Bounce-back along the wall normal. 0 = no bounce (slide), 0.3 = lively armco kick.")]
+    [Range(0f, 0.8f)] public float restitution = 0.25f;
+    [Tooltip("Speed retained tangent to the wall on a scrape. 1 = no loss, 0.9 = slight scrub.")]
+    [Range(0.5f, 1f)] public float tangentialRetention = 0.94f;
+    [Tooltip("How fast the car's heading bends toward the deflected direction on contact (deg/sec). Lower = spongier, more inertia.")]
+    public float contactTurnRate = 220f;
+
+    float _contactHeadingTarget;
+    float _contactTimer;
+
     public void ApplyContact(Vector2 worldMtv, float severity)
     {
         transform.position += new Vector3(worldMtv.x, worldMtv.y, 0f);
-        _speedMps *= Mathf.Clamp01(1f - severity * 0.5f);
+
+        Vector2 n = worldMtv.sqrMagnitude > 1e-6f ? worldMtv.normalized : Vector2.zero;
+        if (n == Vector2.zero) return;
+
+        float hRad = _headingDeg * Mathf.Deg2Rad;
+        Vector2 vel = new Vector2(Mathf.Cos(hRad), Mathf.Sin(hRad)) * _speedMps;
+
+        float vn = Vector2.Dot(vel, n);
+        if (vn < 0f)
+        {
+            Vector2 normalComp = vn * n;
+            Vector2 tangentComp = vel - normalComp;
+            Vector2 deflected = tangentComp * tangentialRetention - normalComp * restitution;
+            _speedMps = deflected.magnitude; // speed change immediate (energy lost in impact)
+            if (deflected.sqrMagnitude > 0.01f)
+            {
+                // Heading bends toward deflected dir over time, not instantly — gives flex/inertia.
+                _contactHeadingTarget = Mathf.Atan2(deflected.y, deflected.x) * Mathf.Rad2Deg;
+                _contactTimer = 0.25f;
+            }
+        }
     }
 
     public VehicleInfo vehicleInfo;
@@ -107,6 +138,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         }
 
         _headingDeg += yawRateRad * Mathf.Rad2Deg * dt;
+
+        // Contact heading bend: rate-limited rotation toward the deflected direction (spongy, not instant).
+        if (_contactTimer > 0f)
+        {
+            _headingDeg = Mathf.MoveTowardsAngle(_headingDeg, _contactHeadingTarget, contactTurnRate * dt);
+            _contactTimer -= dt;
+        }
 
         float headRad = _headingDeg * Mathf.Deg2Rad;
         Vector2 forward = new Vector2(Mathf.Cos(headRad), Mathf.Sin(headRad));

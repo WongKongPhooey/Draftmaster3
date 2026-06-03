@@ -13,12 +13,15 @@ public class VehicleCollision : MonoBehaviour
     public LayerMask collisionMask = ~0;
     [Tooltip("Max colliders considered per step.")]
     public int maxContacts = 8;
+    [Tooltip("Fraction of penetration corrected per step. <1 lets the car sink slightly then ease out (armco flex). ~0.4 feels spongy, 1 is rigid.")]
+    [Range(0.1f, 1f)] public float positionalSoftness = 0.4f;
     [Tooltip("Log overlap diagnostics each second.")]
     public bool debugLog = false;
 
     BoxCollider2D _box;
     Rigidbody2D _rb;
     ICollisionResponder _responder;
+    IDamageable _damage;
     readonly Collider2D[] _hits = new Collider2D[16];
 
     void Awake()
@@ -33,6 +36,7 @@ public class VehicleCollision : MonoBehaviour
         _box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
 
         _responder = PickResponder();
+        _damage = GetComponentInChildren<IDamageable>();
     }
 
     ICollisionResponder PickResponder()
@@ -89,11 +93,13 @@ public class VehicleCollision : MonoBehaviour
             ColliderDistance2D d = _box.Distance(other);
             if (!d.isOverlapped) continue;
 
-            Vector2 mtv = d.normal * d.distance; // distance negative when overlapped; normal points from other to us
-            // d.normal points from collider B (other) toward A (this) when overlapped; push us out fully.
-            Vector2 pushWorld = -d.normal * Mathf.Abs(d.distance);
+            // Soft push: only correct a fraction per step so the car flexes into the barrier then eases out.
+            Vector2 pushWorld = -d.normal * Mathf.Abs(d.distance) * positionalSoftness;
 
             float severity = Mathf.Clamp01(Mathf.Abs(d.distance) / Mathf.Max(halfExtents.x, 0.1f));
+
+            // Dent bodywork at the contact point. pointB sits on the barrier/other car; inward = -d.normal into us.
+            _damage?.OnImpact(d.pointB, -d.normal, severity);
 
             var otherResponder = other.GetComponent<ICollisionResponder>();
             if (otherResponder != null)
