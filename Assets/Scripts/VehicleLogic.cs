@@ -722,7 +722,11 @@ public class VehicleLogic : MonoBehaviour
 		*/
 
 		Debug.Log("Max wall force: " + speedMetres + ", Actual: " + (speedMetres * (1 - Mathf.Sin(diffToWorldRads))));
-		rb.AddForce(new Vector3(speedMetres * (1 - Mathf.Sin(diffToWorldRads)),0,0),ForceMode2D.Impulse);
+		if (rb == null) { rb = GetComponent<Rigidbody2D>(); }
+		if (rb != null)
+		{
+			rb.AddForce(new Vector3(speedMetres * (1 - Mathf.Sin(diffToWorldRads)),0,0),ForceMode2D.Impulse);
+		}
 		//rb.AddForce(new Vector3(speedMetres,0,0) ,ForceMode2D.Impulse);
 		
 		//rb.AddTorque(Random.Range(-50f,50f));
