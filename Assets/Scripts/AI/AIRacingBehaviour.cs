@@ -42,6 +42,16 @@ public class AIRacingBehaviour : MonoBehaviour
     public float contactPush = 1.5f;
     [Tooltip("Speed scrub (mph) per second during contact.")]
     public float contactSpeedScrub = 8f;
+    [Tooltip("Contact scrub never drags the car below this speed (mph). Stops side-by-side pairs grinding to a halt.")]
+    public float contactScrubFloorMph = 30f;
+
+    [Header("Stuck Recovery")]
+    [Tooltip("Below this speed (mph) while the profile wants much more, the car counts as stalled.")]
+    public float stallSpeedMph = 15f;
+    [Tooltip("Seconds of continuous stall before recovery kicks in.")]
+    public float stallTriggerSeconds = 1.5f;
+    [Tooltip("Recovery duration: follow-caps are ignored and the car commits to a side to drive around the blockage.")]
+    public float stallRecoverySeconds = 2.5f;
 
     [Header("Smoothness")]
     [Tooltip("Max lateral speed (m/s) the AI uses when changing line. Lower = smoother, like a real steering rate limit.")]
@@ -61,6 +71,9 @@ public class AIRacingBehaviour : MonoBehaviour
     float _mistakeTimer;
     float _mistakeWobbleDir;
     float _basePaceMultiplier = 1f;
+    float _stallTimer;
+    float _recoveryTimer;
+    float _recoveryDir;
 
     void Awake()
     {
@@ -88,7 +101,10 @@ public class AIRacingBehaviour : MonoBehaviour
             float aheadLat = ahead.LateralOnTrack;
 
             float closingRange = Mathf.Lerp(overtakeClosingRange * 0.7f, overtakeClosingRange * 1.4f, aggression01);
-            if (aheadGap < closingRange && aheadSpeed < mySpeed - 2f && _cooldownTimer <= 0f)
+            // Compare against what we COULD do (profile pace), not current speed — once we've matched the
+            // leader's speed the current-speed delta is zero and a train forms that never breaks.
+            float myPotential = Mathf.Max(mySpeed, _spline.DesiredMph);
+            if (aheadGap < closingRange && aheadSpeed < myPotential - 2f && _cooldownTimer <= 0f)
             {
                 wantOvertake = true;
                 // Prefer outside of upcoming turn (more room, safer arc). Aggressive drivers can dive inside.
@@ -198,7 +214,30 @@ public class AIRacingBehaviour : MonoBehaviour
         if (contactScrub > 0f)
         {
             float scrubMph = contactScrub * dt;
-            speedCap = Mathf.Min(speedCap, _spline.CurrentMph - scrubMph);
+            // Floor stops the ratchet: without it two cars in sustained contact cap each other to zero.
+            speedCap = Mathf.Min(speedCap, Mathf.Max(_spline.CurrentMph - scrubMph, contactScrubFloorMph));
+        }
+
+        // Stuck recovery: stalled well below profile pace → ignore follow-caps and commit around the blockage.
+        bool stalled = !_spline.usePitLane && _spline.CurrentMph < stallSpeedMph && _spline.DesiredMph > stallSpeedMph + 10f;
+        _stallTimer = stalled ? _stallTimer + dt : 0f;
+        if (_stallTimer >= stallTriggerSeconds && _recoveryTimer <= 0f)
+        {
+            _recoveryTimer = stallRecoverySeconds;
+            // Pick the side away from whoever is blocking; fall back to drifting toward centerline.
+            if (RaceField.TryGetAhead(_spline, minFollowDistance * 2f, out var blocker, out _))
+                _recoveryDir = blocker.LateralOnTrack >= _spline.LateralOnTrack ? -1f : 1f;
+            else
+                _recoveryDir = _spline.LateralOnTrack >= 0f ? -1f : 1f;
+            _stallTimer = 0f;
+        }
+        if (_recoveryTimer > 0f)
+        {
+            _recoveryTimer -= dt;
+            speedCap = float.MaxValue;
+            desiredTactical = _recoveryDir * overtakeLineOffset;
+            _commitTimer = Mathf.Max(_commitTimer, commitHoldSeconds);
+            _commitDir = _recoveryDir;
         }
 
         // Slew-rate-limited convergence toward desired offset. Dead-zone prevents twitching near target.

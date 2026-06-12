@@ -74,6 +74,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     const float rearAxleToCenter = -2.4f;
 
     public float CurrentMph => _currentMph;
+    /// What the speed profile wants here, before AI follow-caps. Lets behaviours ask "could I be going faster?"
+    public float DesiredMph { get; private set; }
     public float DistanceOnTrack => _mainLength > 0f ? ((_distance % _mainLength) + _mainLength) % _mainLength : _distance;
     public float LateralOnTrack => _prevLateral;
     public float TrackLength => _mainLength;
@@ -149,7 +151,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _distance = startDistance;
             _onPit = usePitLane;
         }
-        _currentMph = speed * MpsToMph;
+        // Pit-box race start is a standing start. The speed field only seeds constant-speed test rigs.
+        _currentMph = spawnInPit ? 0f : speed * MpsToMph;
+        float capMph = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
+        _currentMph = Mathf.Clamp(_currentMph, 0f, capMph);
         Place();
     }
 
@@ -486,11 +491,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             else if (_speedProfile != null)
             {
                 targetMph = ProfileAt(_distance) * paceMultiplier + aiSpeedBoostMph;
+                DesiredMph = targetMph;
                 if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
             }
             else
             {
                 targetMph = 0f;
+                DesiredMph = 0f;
             }
             UpdateSpeedToward(targetMph);
             speed = _currentMph * MphToMps;

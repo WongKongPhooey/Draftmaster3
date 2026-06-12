@@ -29,9 +29,20 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     [Tooltip("Minimum severity to register a dent. Filters tiny scrapes.")]
     public float minSeverity = 0.08f;
 
+    [Header("Rigid Core")]
+    [Tooltip("Optional greyscale mask painted over the sprite: white = deforms fully, black = rigid (core shell). Must be Read/Write enabled. Overrides the core rect below.")]
+    public Texture2D deformMask;
+    [Tooltip("Width of the rigid core as a fraction of the sprite (0 = disabled). Vertices inside never deform.")]
+    [Range(0f, 1f)] public float coreWidthFrac = 0f;
+    [Tooltip("Height of the rigid core as a fraction of the sprite (0 = disabled).")]
+    [Range(0f, 1f)] public float coreHeightFrac = 0f;
+    [Tooltip("Falloff band (fraction of sprite) outside the core rect where deformation fades in from 0 to full.")]
+    [Range(0.01f, 0.5f)] public float coreFalloffFrac = 0.15f;
+
     Mesh _mesh;
     Vector3[] _base;
     Vector3[] _current;
+    float[] _deformWeight;
     float _worldToLocal = 1f;
 
     void Awake() { Build(); }
@@ -56,6 +67,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
 
         int vx = gridX + 1, vy = gridY + 1;
         _base = new Vector3[vx * vy];
+        _deformWeight = new float[vx * vy];
         var uvs = new Vector2[vx * vy];
         Rect uvRect = new Rect(
             sourceSprite.textureRect.x / sourceSprite.texture.width,
@@ -71,6 +83,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
                 int idx = y * vx + x;
                 _base[idx] = new Vector3(min.x + size.x * fx, min.y + size.y * fy, 0f);
                 uvs[idx] = new Vector2(uvRect.x + uvRect.width * fx, uvRect.y + uvRect.height * fy);
+                _deformWeight[idx] = ComputeDeformWeight(fx, fy);
             }
         }
 
@@ -97,6 +110,25 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         _mesh.triangles = tris;
         _mesh.RecalculateBounds();
         mf.sharedMesh = _mesh;
+    }
+
+    // Per-vertex deform weight, 0 = rigid, 1 = fully deformable. fx/fy are sprite-normalized [0,1].
+    float ComputeDeformWeight(float fx, float fy)
+    {
+        if (deformMask != null)
+        {
+            if (deformMask.isReadable)
+                return Mathf.Clamp01(deformMask.GetPixelBilinear(fx, fy).grayscale);
+            Debug.LogWarning($"VehicleDamage ({name}): deformMask '{deformMask.name}' is not Read/Write enabled — falling back to core rect.", this);
+        }
+
+        if (coreWidthFrac <= 0f || coreHeightFrac <= 0f) return 1f;
+
+        // Distance outside the centered core rect, per axis, in sprite fractions.
+        float dx = Mathf.Abs(fx - 0.5f) - coreWidthFrac * 0.5f;
+        float dy = Mathf.Abs(fy - 0.5f) - coreHeightFrac * 0.5f;
+        float outside = Mathf.Max(dx, dy); // <= 0 inside the core
+        return Mathf.Clamp01(outside / coreFalloffFrac);
     }
 
     static Material BuildSpriteMaterial(Sprite sprite)
@@ -127,15 +159,19 @@ public class VehicleDamage : MonoBehaviour, IDamageable
 
         for (int i = 0; i < _current.Length; i++)
         {
+            float weight = _deformWeight != null ? _deformWeight[i] : 1f;
+            if (weight <= 0f) continue; // rigid core shell — never bends
+
             float dist = Vector2.Distance(_current[i], localPoint);
             if (dist > dentRadius) continue;
             float falloff = 1f - (dist / dentRadius);
-            Vector3 push = localDir * (displace * falloff);
+            Vector3 push = localDir * (displace * falloff * weight);
             Vector3 target = _current[i] + push;
 
-            // Clamp accumulated displacement from base.
+            // Clamp accumulated displacement from base; rigid-ish vertices also cap shallower.
             Vector3 fromBase = target - _base[i];
-            if (fromBase.magnitude > maxDent) fromBase = fromBase.normalized * maxDent;
+            float vertexMaxDent = maxDent * weight;
+            if (fromBase.magnitude > vertexMaxDent) fromBase = fromBase.normalized * vertexMaxDent;
             _current[i] = _base[i] + fromBase;
             changed = true;
         }

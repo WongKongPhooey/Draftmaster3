@@ -25,7 +25,7 @@ public class NPCInteractable : MonoBehaviour
     public bool InRange(Vector2 playerPos) => Vector2.Distance(playerPos, transform.position) <= interactRange;
 
     // Returns true while a conversation is ongoing (caller should keep focus).
-    public bool Interact()
+    public virtual bool Interact()
     {
         if (lines == null || lines.Length == 0) return false;
 
@@ -54,7 +54,7 @@ public class NPCInteractable : MonoBehaviour
         DialogueUI.Instance?.Hide();
     }
 
-    public bool IsTalking => _talking;
+    public virtual bool IsTalking => _talking;
 
     GameObject _prompt;
     public void BuildFloatingPrompt(bool show)
