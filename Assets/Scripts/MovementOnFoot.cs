@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework.Constraints;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class MovementOnFoot : MonoBehaviour {
 
@@ -43,7 +44,9 @@ public class MovementOnFoot : MonoBehaviour {
         }
         lastKnownPos = this.gameObject.transform.position;
         //Debug.Log("Playable NPC Location: " + lastKnownPos);
-        direction.Set(InputManager.direction.x,InputManager.direction.y);
+        //Read the device directly. The legacy InputManager.direction bus freezes at its last value on release
+        //(PlayerInput is set to Invoke Unity Events, which doesn't deliver a clean (0,0)) — that caused the ice-slide.
+        direction = ReadMoveInput();
         body.linearVelocity = direction * playerSpeed;
         //Debug.Log("Applying direction: x" + direction.x + ", y" + direction.y);
 
@@ -60,6 +63,24 @@ public class MovementOnFoot : MonoBehaviour {
 
         animator.SetFloat(horizontal, direction.x);
         animator.SetFloat(vertical, direction.y);
+    }
+
+    //Direct device read with a deadzone so releasing the stick stops the player instantly (no coasting).
+    Vector2 ReadMoveInput(){
+        Vector2 m = Vector2.zero;
+        var gp = Gamepad.current;
+        if(gp != null){
+            m = gp.leftStick.ReadValue(); // .ReadValue() applies the stick deadzone
+            if(m.magnitude < 0.15f) m = Vector2.zero;
+        }
+        var kb = Keyboard.current;
+        if(kb != null){
+            if(kb.aKey.isPressed || kb.leftArrowKey.isPressed) m.x = -1f;
+            if(kb.dKey.isPressed || kb.rightArrowKey.isPressed) m.x = 1f;
+            if(kb.wKey.isPressed || kb.upArrowKey.isPressed) m.y = 1f;
+            if(kb.sKey.isPressed || kb.downArrowKey.isPressed) m.y = -1f;
+        }
+        return Vector2.ClampMagnitude(m, 1f);
     }
 
     public void setAsPlayer(){

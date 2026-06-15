@@ -13,8 +13,8 @@ public class VehicleCollision : MonoBehaviour
     public LayerMask collisionMask = ~0;
     [Tooltip("Max colliders considered per step.")]
     public int maxContacts = 8;
-    [Tooltip("Fraction of penetration corrected per step. <1 lets the car sink slightly then ease out (armco flex). ~0.4 feels spongy, 1 is rigid.")]
-    [Range(0.1f, 1f)] public float positionalSoftness = 0.4f;
+    [Tooltip("Fraction of penetration corrected per step. 1 = fully ejected each step (no pass-through). Below ~0.9 a fast car can sink through a thin barrier before the push balances. Bounce/flex feel lives in the responder's restitution instead.")]
+    [Range(0.1f, 1f)] public float positionalSoftness = 1f;
     [Tooltip("Log overlap diagnostics each second.")]
     public bool debugLog = false;
 
@@ -42,16 +42,24 @@ public class VehicleCollision : MonoBehaviour
     ICollisionResponder PickResponder()
     {
         var all = GetComponents<MonoBehaviour>();
-        ICollisionResponder fallback = null;
+        ICollisionResponder enabledNonSpline = null; // a free controller that actually owns the transform (e.g. PlayerVehicleController)
+        ICollisionResponder enabledAny = null;       // any enabled responder (SplineDriver on AI cars)
+        ICollisionResponder fallback = null;          // disabled responder, last resort
         for (int i = 0; i < all.Length; i++)
         {
             if (all[i] is ICollisionResponder r)
             {
-                if (all[i].enabled) return r; // prefer the active controller
-                fallback ??= r;
+                if (all[i].enabled)
+                {
+                    enabledAny ??= r;
+                    // SplineDriver's ApplyContact only nudges a spline-relative offset — useless for a free-driven
+                    // car. When a non-spline controller is present and enabled, it owns depenetration.
+                    if (!(all[i] is SplineDriver)) enabledNonSpline ??= r;
+                }
+                else fallback ??= r;
             }
         }
-        return fallback;
+        return enabledNonSpline ?? enabledAny ?? fallback;
     }
 
     // Call after setting halfExtents at runtime (e.g. from GridSpawner) so the collider resizes.
@@ -83,6 +91,10 @@ public class VehicleCollision : MonoBehaviour
         }
 
         if (count <= 0) return;
+
+        // Re-resolve each contact frame: the active controller (PlayerVehicleController) may be enabled AFTER our Awake,
+        // so a responder cached at Awake goes stale (was picking the dormant SplineDriver, which can't move a free car).
+        _responder = PickResponder();
 
         int processed = 0;
         for (int i = 0; i < count && processed < maxContacts; i++)

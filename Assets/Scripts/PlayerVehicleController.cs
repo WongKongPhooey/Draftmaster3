@@ -64,6 +64,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Range(0.2f, 1f)] public float highSpeedSteerScale = 0.55f;
     [Tooltip("Speed (mph) at which steering authority has decayed to highSpeedSteerScale.")]
     public float steerDecaySpeedMph = 180f;
+    [Tooltip("Stick input below this magnitude is ignored — kills drift-induced steer.")]
+    [Range(0f, 0.4f)] public float steerDeadzone = 0.12f;
+    [Tooltip("Steering response curve. 1 = linear, higher = softer near centre (small tilt -> small steer).")]
+    [Range(1f, 3f)] public float steerExpo = 1.8f;
 
     public float SpeedMps => _speedMps;
     public float SpeedMph => _speedMps * 2.237f;
@@ -92,7 +96,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         var gp = Gamepad.current;
         if (gp != null)
         {
-            steerIn = gp.leftStick.x.ReadValue();
+            steerIn = gp.leftStick.ReadValue().x; // .ReadValue() applies the stick deadzone; .x does not
             throttleIn = gp.rightTrigger.ReadValue();
             brakeIn = gp.leftTrigger.ReadValue();
         }
@@ -105,6 +109,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             if (kb.sKey.isPressed || kb.downArrowKey.isPressed) brakeIn = 1f;
         }
         steerIn = Mathf.Clamp(steerIn, -1f, 1f);
+        // Drift guard + expo: small tilt -> small steer, full lock only near the edge.
+        if (Mathf.Abs(steerIn) < steerDeadzone) steerIn = 0f;
+        steerIn = Mathf.Sign(steerIn) * Mathf.Pow(Mathf.Abs(steerIn), steerExpo);
 
         // Steering input maps to front wheel angle, then rate-limited and speed-scaled.
         float speedFraction = Mathf.Clamp01(SpeedMph / Mathf.Max(steerDecaySpeedMph, 1f));

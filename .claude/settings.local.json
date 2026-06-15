@@ -31,7 +31,9 @@
       "mcp__UnityMCP__manage_prefabs",
       "mcp__UnityMCP__execute_code",
       "mcp__UnityMCP__set_active_instance",
-      "mcp__UnityMCP__manage_animation"
+      "mcp__UnityMCP__manage_animation",
+      "Bash(python3 -c ' *)",
+      "Bash(xxd)"
     ]
   }
 }
