@@ -15,12 +15,24 @@ public class OnFootController : MonoBehaviour
     public float spriteFacingOffsetDeg = 90f;
     [Tooltip("Stick input below this magnitude is ignored — kills drift-induced sliding.")]
     [Range(0f, 0.4f)] public float stickDeadzone = 0.15f;
+    [Tooltip("Crisp stop: once the stick falls to this fraction of its peak tilt, movement snaps to 0. Masks a stick whose axis returns to centre slowly (it can plateau then crawl). Lower = snaps sooner / crisper, but less room to ease off mid-walk.")]
+    [Range(0.3f, 0.95f)] public float releaseFraction = 0.7f;
+    [Tooltip("After a snap, the stick must be pushed back above this magnitude to move again. A slow-returning axis only decreases, so it can't re-trigger.")]
+    [Range(0.1f, 0.95f)] public float reEngageThreshold = 0.3f;
+    [Tooltip("Input actions asset (PlayerControl). Movement is read from the OnFoot/Movement action each frame. A private runtime copy is used so it can't clash with the car's InputManager.")]
+    public InputActionAsset controlsAsset;
 
     Rigidbody2D _rb;
     Animator _animator;
     NPCInteractable _activeNpc;
     bool _interactHeldPrev;
     bool _hasHorizontal, _hasVertical, _hasSpeed;
+    InputActionAsset _controls;   // private clone of controlsAsset
+    InputAction _moveAction;       // OnFoot/Movement on the clone
+    bool _warnedNoAsset;
+    float _prevMoveMag;            // last frame's input magnitude, for re-engage detection
+    float _peakMag;                // highest magnitude since the current push began
+    bool _stickReleased;           // latched true while the stick springs back
 
     void Awake()
     {
@@ -38,10 +50,41 @@ public class OnFootController : MonoBehaviour
             }
         }
 
+        // NOTE: the action is built lazily (see EnsureMoveAction), not here.
+        // This component is usually added via AddComponent at runtime, so controlsAsset
+        // is assigned by the spawner *after* Awake has already run.
+    }
+
+    void OnEnable() => _moveAction?.Enable();
+    void OnDisable() => _moveAction?.Disable();
+
+    // Builds a private clone of controlsAsset and grabs OnFoot/Movement. Cloning keeps our
+    // enable/disable from clashing with the car's InputManager, which shares PlayerControl.
+    void EnsureMoveAction()
+    {
+        if (_moveAction != null) return;
+        if (controlsAsset == null)
+        {
+            if (!_warnedNoAsset)
+            {
+                Debug.LogError("OnFootController: controlsAsset not assigned — no movement input.", this);
+                _warnedNoAsset = true;
+            }
+            return;
+        }
+        _controls = Instantiate(controlsAsset);
+        _moveAction = _controls.FindActionMap("OnFoot")?.FindAction("Movement");
+        if (_moveAction == null)
+        {
+            Debug.LogError("OnFootController: OnFoot/Movement action not found in controlsAsset.", this);
+            return;
+        }
+        if (isActiveAndEnabled) _moveAction.Enable();
     }
 
     void FixedUpdate()
     {
+        EnsureMoveAction();
         Vector2 move = ReadMove();
 
         // Lock movement while mid-conversation.
@@ -112,22 +155,29 @@ public class OnFootController : MonoBehaviour
 
     Vector2 ReadMove()
     {
-        Vector2 m = Vector2.zero;
-        var gp = Gamepad.current;
-        if (gp != null)
+        if (_moveAction == null) return Vector2.zero;
+        Vector2 m = _moveAction.ReadValue<Vector2>();
+        if (m.magnitude < stickDeadzone) m = Vector2.zero; // drift guard (stick already deadzoned; keyboard is digital)
+        m = Vector2.ClampMagnitude(m, 1f);
+
+        // Crisp stop. A stick whose axis returns to centre slowly produces a coast: on release the
+        // value drops then plateaus and crawls toward 0 (sometimes too slowly to read as "falling"
+        // frame-to-frame). Compare against the peak tilt instead: once the stick has fallen to a
+        // fraction of its peak, treat it as released and zero movement. Re-engage only when the
+        // stick is actively pushed back up — a slow return only decreases, so it can't re-trigger.
+        float mag = m.magnitude;
+        const float eps = 0.03f;
+        if (_stickReleased)
         {
-            m = gp.leftStick.ReadValue();
-            if (m.magnitude < stickDeadzone) m = Vector2.zero; // drift guard
+            if (mag > _prevMoveMag + eps && mag >= reEngageThreshold) { _stickReleased = false; _peakMag = mag; }
         }
-        var kb = Keyboard.current;
-        if (kb != null)
+        else
         {
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) m.x = -1f;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) m.x = 1f;
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed) m.y = 1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) m.y = -1f;
+            if (mag > _peakMag) _peakMag = mag;
+            if (_peakMag > stickDeadzone && mag < _peakMag * releaseFraction) _stickReleased = true;
         }
-        return Vector2.ClampMagnitude(m, 1f);
+        _prevMoveMag = mag;
+        return _stickReleased ? Vector2.zero : m;
     }
 
     bool ReadInteractPressed()

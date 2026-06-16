@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 // Sets up the on-foot pit scene: spawns the walking player in the pit area, builds the dialogue UI,
 // and places conversational NPCs. Drop on an empty GameObject in WatkinsGlen.
@@ -10,6 +11,8 @@ public class PitWalkSpawner : MonoBehaviour
     [Tooltip("Where the player starts walking. If null, uses this GameObject's position.")]
     public Transform playerSpawn;
     public float playerScale = 1f;
+    [Tooltip("Input actions asset (PlayerControl). Passed to the spawned OnFootController so it reads the OnFoot/Movement action.")]
+    public InputActionAsset controls;
 
     [Header("NPCs")]
     public NpcSpec[] npcs;
@@ -53,7 +56,9 @@ public class PitWalkSpawner : MonoBehaviour
         }
         go.transform.localScale = Vector3.one * playerScale;
 
-        if (go.GetComponent<OnFootController>() == null) go.AddComponent<OnFootController>();
+        var ofc = go.GetComponent<OnFootController>();
+        if (ofc == null) ofc = go.AddComponent<OnFootController>();
+        ofc.controlsAsset = controls; // OnFootController builds the action lazily, after this assignment
         if (go.GetComponent<Rigidbody2D>() == null) go.AddComponent<Rigidbody2D>();
         if (go.GetComponent<Collider2D>() == null)
         {

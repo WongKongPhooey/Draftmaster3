@@ -116,14 +116,17 @@ public class VehicleCollision : MonoBehaviour
             var otherResponder = other.GetComponent<ICollisionResponder>();
             if (otherResponder != null)
             {
-                // Vehicle-vehicle: split correction.
-                _responder?.ApplyContact(pushWorld * 0.5f, severity);
-                otherResponder.ApplyContact(-pushWorld * 0.5f, severity);
+                // Vehicle-vehicle: split correction by inverse mass. Heavier car barely moves; lighter car gets shoved.
+                float mA = _responder != null ? _responder.Mass : 1500f;
+                float mB = otherResponder.Mass;
+                float total = Mathf.Max(mA + mB, 1f);
+                _responder?.ApplyContact(pushWorld * (mB / total), d.pointA, severity);
+                otherResponder.ApplyContact(-pushWorld * (mA / total), d.pointB, severity);
             }
             else
             {
-                // Barrier (static): full correction on us.
-                _responder?.ApplyContact(pushWorld, severity);
+                // Barrier (static): full correction on us. d.pointA is the contact on our body → lever arm for spin.
+                _responder?.ApplyContact(pushWorld, d.pointA, severity);
             }
             processed++;
         }

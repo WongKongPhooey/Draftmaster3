@@ -9,8 +9,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     Vector2 _lastWorldForward = Vector2.right;
     float _collisionLateral;
 
-    public void ApplyContact(Vector2 worldMtv, float severity)
+    public float Mass => vehicleInfo != null ? vehicleInfo.mass : 1500f;
+
+    public void ApplyContact(Vector2 worldMtv, Vector2 contactPoint, float severity)
     {
+        // Spline cars stay glued to the path; the lever arm can't spin them freely. contactPoint is ignored here.
         // Persist push as decaying lateral offset (transform rebuilt from spline each frame).
         float lateralDelta = Vector2.Dot(worldMtv, _lastWorldRight);
         _collisionLateral += lateralDelta;

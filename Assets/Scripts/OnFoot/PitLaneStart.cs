@@ -13,6 +13,8 @@ public class PitLaneStart : MonoBehaviour
     public GameObject onFootPrefab;
     [Tooltip("The drivable car parked in the pit lane. Its PlayerVehicleController stays disabled until entered.")]
     public PlayerVehicleController car;
+    [Tooltip("Input actions asset (PlayerControl). Passed to the spawned OnFootController so it reads the OnFoot/Movement action.")]
+    public InputActionAsset controls;
 
     [Header("Placement")]
     [Tooltip("Where along the pit lane to spawn, as a fraction of its length (0.5 = middle).")]
@@ -109,7 +111,9 @@ public class PitLaneStart : MonoBehaviour
         var pi = _player.GetComponent<PlayerInput>();
         if (pi != null) pi.enabled = false;
 
-        if (_player.GetComponent<OnFootController>() == null) _player.AddComponent<OnFootController>();
+        var ofc = _player.GetComponent<OnFootController>();
+        if (ofc == null) ofc = _player.AddComponent<OnFootController>();
+        ofc.controlsAsset = controls; // OnFootController builds the action lazily, after this assignment
 
         // Scene uses the 3D URP renderer — Sprite-Lit-Default gets no Light2D and renders black. Swap to unlit.
         var sr = _player.GetComponent<SpriteRenderer>();

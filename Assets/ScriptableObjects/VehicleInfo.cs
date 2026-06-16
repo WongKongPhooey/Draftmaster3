@@ -50,4 +50,7 @@ public class VehicleInfo : ScriptableObject
     public float maxSteeringAngle = 28f;
     [Tooltip("How quickly steering can change (deg/sec). Limits steering rate.")]
     public float steeringRate = 240f;
+
+    [Tooltip("Vehicle mass in kg. Used for collision momentum transfer between cars (heavier cars shove lighter ones more). Cup car ~1500kg.")]
+    public float mass = 1500f;
 }
