@@ -65,6 +65,45 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Steering response curve. 1 = linear, higher = softer near centre (small tilt -> small steer).")]
     [Range(1f, 3f)] public float steerExpo = 1.8f;
 
+    [Header("Surface / Grass")]
+    [Tooltip("TrackBuilder used to tell on-track from grass. Auto-found at Start if left empty.")]
+    public TrackBuilder track;
+    [Tooltip("Lateral grip multiplier when off the track surface. Low = slippery grass that lets the car break away.")]
+    [Range(0.1f, 1f)] public float grassGrip = 0.4f;
+    [Tooltip("Engine traction multiplier on grass (wheels struggle to put power down).")]
+    [Range(0.1f, 1f)] public float grassPower = 0.55f;
+    [Tooltip("Extra deceleration (m/s²) from rolling resistance on grass.")]
+    public float grassDrag = 6f;
+
+    [Header("Wheelspin / Donuts")]
+    [Tooltip("Below this forward speed (m/s), heavy throttle lights up the rear tyres (1st-gear wheelspin).")]
+    public float wheelspinSpeed = 9f;
+    [Tooltip("Throttle needed before the rear breaks traction.")]
+    [Range(0f, 1f)] public float wheelspinThrottle = 0.6f;
+    [Tooltip("Donut rotation rate at full spin + full steering lock (deg/sec).")]
+    public float wheelspinYawRate = 150f;
+    [Tooltip("How quickly donut yaw spins up/down (deg/sec²).")]
+    public float wheelspinYawAccel = 360f;
+    [Tooltip("Forward accel lost while the wheels are spinning (keeps the car slow so a donut can be held).")]
+    [Range(0f, 0.95f)] public float wheelspinAccelLoss = 0.6f;
+    [Tooltip("Rear lateral grip multiplier while spinning (lower = looser, easier to rotate).")]
+    [Range(0.1f, 1f)] public float wheelspinRearGrip = 0.45f;
+
+    [Header("Tyre Trails")]
+    [Tooltip("Leave faint tyre trails while on grass.")]
+    public bool grassTrails = true;
+    [Tooltip("Trail tint (alpha = faintness).")]
+    public Color trailColor = new Color(0.18f, 0.14f, 0.10f, 0.5f);
+    public float trailWidth = 0.35f;
+    [Tooltip("Seconds a trail segment lingers before fading out.")]
+    public float trailTime = 4f;
+    [Tooltip("Lateral distance between the two rear tyre trails (m).")]
+    public float trailTrackWidth = 1.6f;
+    [Tooltip("Sorting order for trails. Above the track surface, below the car.")]
+    public int trailSortingOrder = 1;
+    [Tooltip("Optional trail material. A faint unlit sprite material is created if left empty.")]
+    public Material trailMaterial;
+
     public VehicleInfo vehicleInfo;
 
     public float Mass => vehicleInfo != null ? vehicleInfo.mass : 1500f;
@@ -88,6 +127,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
     float _a, _b, _iz;  // CoM→front axle, CoM→rear axle (m), yaw inertia (kg·m²)
     float _alphaF, _alphaR; // last front/rear slip angles (rad) for telemetry
+    bool _onGrass;          // car is off the track surface this step
+    bool _wasEmitting;      // trail emit state last step (for streak-free re-enable)
+    TrailRenderer _trailL, _trailR; // rear tyre trails (grass)
 
     void Start()
     {
@@ -98,6 +140,34 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         }
         _headingDeg = transform.eulerAngles.z + (spriteFacesUp ? 90f : 0f) - angleOffsetDeg;
         RecomputeGeometry();
+
+        if (track == null) track = FindFirstObjectByType<TrackBuilder>();
+        if (grassTrails) CreateTrails();
+    }
+
+    void CreateTrails()
+    {
+        _trailL = MakeTrail("TyreTrailL");
+        _trailR = MakeTrail("TyreTrailR");
+    }
+
+    TrailRenderer MakeTrail(string name)
+    {
+        var go = new GameObject(name);
+        // Parented to the scene root, not the (scaled) car, so width/position stay in world metres.
+        var tr = go.AddComponent<TrailRenderer>();
+        tr.time = trailTime;
+        tr.startWidth = trailWidth;
+        tr.endWidth = trailWidth;
+        tr.numCapVertices = 2;
+        tr.minVertexDistance = 0.1f;
+        tr.autodestruct = false;
+        tr.emitting = false;
+        tr.sortingOrder = trailSortingOrder;
+        tr.material = trailMaterial != null ? trailMaterial : new Material(Shader.Find("Sprites/Default"));
+        tr.startColor = trailColor;
+        tr.endColor = new Color(trailColor.r, trailColor.g, trailColor.b, 0f);
+        return tr;
     }
 
     void RecomputeGeometry()
@@ -143,11 +213,22 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _steerDeg = Mathf.MoveTowards(_steerDeg, desiredSteer, vehicleInfo.steeringRate * dt);
         float delta = _steerDeg * Mathf.Deg2Rad;
 
+        // --- Surface + wheelspin state for this update.
+        _onGrass = track != null && !track.IsOnSurface(transform.position, out _);
+        float speedNow = SpeedMps;
+        float wheelspin = 0f;
+        if (throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
+            wheelspin = Mathf.Clamp01(
+                ((throttleIn - wheelspinThrottle) / Mathf.Max(1f - wheelspinThrottle, 0.01f))
+                * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));
+
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         float topMps = vehicleInfo.topSpeed / 2.237f;
         float accel = SampleAccel(_vx) * TrackConditions.PowerMultiplier * throttleIn;
         float decel = SampleDecel(_vx) * brakeIn;
         if (throttleIn < 0.05f && brakeIn < 0.05f) decel += coastDecel;
+        if (_onGrass) { accel *= grassPower; decel += grassDrag; }   // grass: less drive, more rolling resistance
+        accel *= (1f - wheelspinAccelLoss * wheelspin);              // spinning wheels put down less power
         float axCmd = accel - decel; // commanded longitudinal accel (m/s²)
 
         // Available grip per axle: μ (proxied by maxLateralG) × track × wear, biased front/rear for balance.
@@ -157,6 +238,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float wearGripR = enableWear ? Mathf.Lerp(1f, minGrip, wearRear) : 1f;
         float muF = vehicleInfo.maxLateralG * trackGrip * wearGripF * (1f - understeerBias);
         float muR = vehicleInfo.maxLateralG * trackGrip * wearGripR * (1f + understeerBias);
+
+        // Off-track surface cuts both axles; lit-up rears lose extra grip so the car rotates.
+        float surfaceGrip = _onGrass ? grassGrip : 1f;
+        muF *= surfaceGrip;
+        muR *= surfaceGrip * Mathf.Lerp(1f, wheelspinRearGrip, wheelspin);
 
         float m = Mass;
         float h = dt / Mathf.Max(subSteps, 1);
@@ -199,14 +285,33 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             {
                 // Low-speed: kinematic yaw from geometry, bleed lateral velocity (no meaningful slip at crawl).
                 float rKin = (_vx / (_a + _b)) * Mathf.Tan(delta);
-                _r = Mathf.MoveTowards(_r, rKin, 8f * h);
-                _vy = Mathf.MoveTowards(_vy, 0f, 12f * h);
+                if (wheelspin > 0f)
+                {
+                    // Rear tyres lit up: pivot toward steering lock so a donut can be held from near standstill.
+                    float lockFrac = Mathf.Clamp(_steerDeg / Mathf.Max(vehicleInfo.maxSteeringAngle, 1f), -1f, 1f);
+                    float targetR = rKin + lockFrac * wheelspinYawRate * Mathf.Deg2Rad * wheelspin;
+                    _r = Mathf.MoveTowards(_r, targetR, wheelspinYawAccel * Mathf.Deg2Rad * h);
+                    _vy = Mathf.MoveTowards(_vy, 0f, 4f * h); // looser so the tail steps out
+                }
+                else
+                {
+                    _r = Mathf.MoveTowards(_r, rKin, 8f * h);
+                    _vy = Mathf.MoveTowards(_vy, 0f, 12f * h);
+                }
                 _alphaF = 0f; _alphaR = 0f;
             }
 
-            // Forward: engine/brake + the centripetal coupling. Clamp to [0, top].
-            _vx += (axCmd + _vy * _r) * h;
-            _vx = Mathf.Clamp(_vx, 0f, topMps);
+            // Longitudinal update. The centripetal coupling (_vy*_r) rotates the velocity vector as the body yaws and
+            // MUST keep its sign: a 180° spin should carry momentum into reverse (car slides backward at speed), not
+            // have it deleted. The old Max(_vx,0) floor wiped that backward momentum, so a spun car shed its speed and
+            // then "shot forward" under throttle. Engine drives forward only; brake + coast oppose the current travel
+            // direction without pushing the car through zero into reverse.
+            _vx += _vy * _r * h;
+            _vx += accel * h;
+            float resist = decel * h;
+            if (_vx > 0f) _vx = Mathf.Max(0f, _vx - resist);
+            else if (_vx < 0f) _vx = Mathf.Min(0f, _vx + resist);
+            _vx = Mathf.Clamp(_vx, -topMps, topMps);
 
             // Integrate heading by yaw rate.
             _headingDeg += _r * Mathf.Rad2Deg * h;
@@ -227,6 +332,44 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         Vector2 newPos = (Vector2)transform.position + worldVel * dt;
         transform.position = new Vector3(newPos.x, newPos.y, transform.position.z);
         transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? _headingDeg - 90f : _headingDeg) + angleOffsetDeg);
+
+        UpdateTrails();
+    }
+
+    // Park the two trail emitters over the rear tyres (world metres) and emit only while sliding on grass.
+    void UpdateTrails()
+    {
+        if (!grassTrails || _trailL == null) return;
+        float hr = _headingDeg * Mathf.Deg2Rad;
+        Vector2 fwd = new Vector2(Mathf.Cos(hr), Mathf.Sin(hr));
+        Vector2 nrm = new Vector2(fwd.y, -fwd.x); // right of travel
+        Vector2 rear = (Vector2)transform.position - fwd * _b;
+        float z = transform.position.z;
+
+        Vector2 lp = rear + nrm * (trailTrackWidth * 0.5f);
+        Vector2 rp = rear - nrm * (trailTrackWidth * 0.5f);
+        bool emit = _onGrass && SpeedMps > 0.5f;
+
+        if (emit && !_wasEmitting)
+        {
+            // Snap to the tyre positions and wipe history so re-enabling doesn't draw a streak from the last spot.
+            _trailL.transform.position = new Vector3(lp.x, lp.y, z);
+            _trailR.transform.position = new Vector3(rp.x, rp.y, z);
+            _trailL.Clear();
+            _trailR.Clear();
+        }
+
+        _trailL.transform.position = new Vector3(lp.x, lp.y, z);
+        _trailR.transform.position = new Vector3(rp.x, rp.y, z);
+        _trailL.emitting = emit;
+        _trailR.emitting = emit;
+        _wasEmitting = emit;
+    }
+
+    void OnDestroy()
+    {
+        if (_trailL != null) Destroy(_trailL.gameObject);
+        if (_trailR != null) Destroy(_trailR.gameObject);
     }
 
     public void ApplyContact(Vector2 worldMtv, Vector2 contactPoint, float severity)

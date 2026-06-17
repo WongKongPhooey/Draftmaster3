@@ -21,6 +21,8 @@ public class GridSpawner : MonoBehaviour
     public float rowStagger = 3.5f;
     [Tooltip("Distance behind the start line where the front of the grid sits.")]
     public float gridStartDistance = -6f;
+    [Tooltip("If true, AI start in their pit boxes. If false, they line up on the grid behind the start line. Currently false for testing.")]
+    public bool spawnInPit = false;
     [Tooltip("Fallback car speed (m/s) when no VehicleInfo is assigned. Otherwise speed is driven by the vehicle's accel/decel curves.")]
     public float speed = 35f;
     [Tooltip("VehicleInfo asset applied to every spawned AI car. Defines accel/decel/cornering curves.")]
@@ -78,7 +80,7 @@ public class GridSpawner : MonoBehaviour
             splineDriver.vehicleInfo = vehicleInfo;
             float sfAnchor = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
             splineDriver.startDistance = sfAnchor + gridStartDistance - i * spacing;
-            splineDriver.spawnInPit = true;
+            splineDriver.spawnInPit = spawnInPit;
             splineDriver.qualifyingPosition = i;
             splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
             splineDriver.speed = speed;

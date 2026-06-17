@@ -14,6 +14,11 @@ public class TrackEnvironmentBuilder : MonoBehaviour
 
     void OnEnable() { Build(); }
 
+    // Right-click the component header → Rebuild. Use after editing the TrackEnvironment asset,
+    // since changes to the referenced SO don't trigger this component's OnValidate.
+    [ContextMenu("Rebuild")]
+    public void Rebuild() => Build();
+
 #if UNITY_EDITOR
     void OnValidate()
     {
@@ -59,33 +64,80 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         {
             float dStart = segStart[i];
             float dEnd = dStart + segs[i].length;
-            BuildOneBarrier(root.transform, i, TrackEnvironment.BarrierSide.Inner, dStart, dEnd, mainSamples, spacing);
-            BuildOneBarrier(root.transform, i, TrackEnvironment.BarrierSide.Outer, dStart, dEnd, mainSamples, spacing);
+            BuildBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Inner, dStart, dEnd, mainSamples, spacing);
+            BuildBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Outer, dStart, dEnd, mainSamples, spacing);
         }
     }
 
-    void BuildOneBarrier(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
+    // Build one segment's barrier for a side, split into pieces with any overlapping gap ranges cut out.
+    // Auto sections sample the track edge per piece; manual (hand-drawn) sections slice their polyline by arc-length
+    // so gaps work on pit walls / service-road sections too.
+    void BuildBarrierSide(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
         float dStart, float dEnd, List<TrackBuilder.Sample> mainSamples, float spacing)
     {
-        var go = new GameObject($"Barrier_{side}_{segIndex}");
+        int manualIdx = FindManualSection(segIndex, side);
+        List<Vector2> manualFull = manualIdx >= 0
+            ? BuildManualCenterline(manualIdx, side, dStart, dEnd, mainSamples)
+            : null;
+        float len = Mathf.Max(dEnd - dStart, 1e-4f);
+
+        var spans = SubtractGaps(segIndex, dStart, dEnd, side);
+        for (int k = 0; k < spans.Count; k++)
+        {
+            float a = spans[k].x, b = spans[k].y;
+            if (b - a < 0.05f) continue; // skip slivers left by a gap touching a segment boundary
+
+            List<Vector2> centerline = manualFull != null
+                ? SlicePolylineByFraction(manualFull, (a - dStart) / len, (b - dStart) / len)
+                : BuildAutoEdgeCenterline(side, a, b, mainSamples, spacing);
+
+            BuildBarrierPieceMesh(root, segIndex, side, k, centerline);
+        }
+    }
+
+    // Remaining barrier intervals within [dStart, dEnd] after removing gaps targeting this segment + side.
+    // Gap start/end are LOCAL: metres from the start of this barrier segment.
+    List<Vector2> SubtractGaps(int segIndex, float dStart, float dEnd, TrackEnvironment.BarrierSide side)
+    {
+        var spans = new List<Vector2>();
+        if (dEnd <= dStart) return spans;
+        spans.Add(new Vector2(dStart, dEnd));
+        if (environment.barrierGaps == null) return spans;
+
+        float segLen = dEnd - dStart;
+        for (int g = 0; g < environment.barrierGaps.Length; g++)
+        {
+            var gap = environment.barrierGaps[g];
+            if (gap.segmentIndex != segIndex || gap.side != side) continue;
+            float gs = dStart + Mathf.Clamp(Mathf.Min(gap.startDistance, gap.endDistance), 0f, segLen);
+            float ge = dStart + Mathf.Clamp(Mathf.Max(gap.startDistance, gap.endDistance), 0f, segLen);
+            if (ge - gs < 1e-4f) continue;
+
+            var next = new List<Vector2>();
+            for (int k = 0; k < spans.Count; k++)
+            {
+                float a = spans[k].x, b = spans[k].y;
+                if (ge <= a || gs >= b) { next.Add(spans[k]); continue; } // no overlap
+                if (gs > a) next.Add(new Vector2(a, gs));                  // left remainder
+                if (ge < b) next.Add(new Vector2(ge, b));                  // right remainder
+            }
+            spans = next;
+        }
+        return spans;
+    }
+
+    void BuildBarrierPieceMesh(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
+        int pieceIndex, List<Vector2> centerline)
+    {
+        if (centerline == null || centerline.Count < 2) return;
+
+        var go = new GameObject($"Barrier_{side}_{segIndex}_{pieceIndex}");
         go.transform.SetParent(root, false);
         var mf = go.AddComponent<MeshFilter>();
         var mr = go.AddComponent<MeshRenderer>();
         mr.sortingOrder = environment.barrierSortingOrder;
         if (environment.barrierMaterial != null) mr.sharedMaterial = environment.barrierMaterial;
 
-        List<Vector2> centerline;
-        int manualIdx = FindManualSection(segIndex, side);
-        if (manualIdx >= 0)
-        {
-            centerline = BuildManualCenterline(manualIdx, side, dStart, dEnd, mainSamples);
-        }
-        else
-        {
-            centerline = BuildAutoEdgeCenterline(side, dStart, dEnd, mainSamples, spacing);
-        }
-
-        if (centerline.Count < 2) { DestroyImmediateSafe(go); return; }
         mf.sharedMesh = BuildPolylineRibbon(centerline, Mathf.Max(0.05f, environment.barrierWidth),
             environment.barrierUvLengthScale > 0f ? environment.barrierUvLengthScale : 1f);
 
@@ -95,6 +147,50 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             col.points = BuildBarrierColliderPath(centerline, 1f);
             col.offset = Vector2.zero;
         }
+    }
+
+    // Extract the sub-polyline between two arc-length fractions [f0, f1] of the input, interpolating new endpoints.
+    // Maps a main-spline distance gap onto a hand-drawn barrier proportionally by its own length.
+    static List<Vector2> SlicePolylineByFraction(List<Vector2> pts, float f0, float f1)
+    {
+        var result = new List<Vector2>();
+        if (pts == null || pts.Count < 2) return result;
+        f0 = Mathf.Clamp01(f0); f1 = Mathf.Clamp01(f1);
+        if (f1 - f0 < 1e-4f) return result;
+
+        float total = 0f;
+        for (int i = 1; i < pts.Count; i++) total += Vector2.Distance(pts[i - 1], pts[i]);
+        if (total < 1e-4f) return result;
+
+        float dStart = f0 * total;
+        float dEnd = f1 * total;
+
+        float cum = 0f;
+        for (int i = 1; i < pts.Count; i++)
+        {
+            float segLen = Vector2.Distance(pts[i - 1], pts[i]);
+            if (segLen < 1e-6f) continue;
+            float segStart = cum;
+            float segEnd = cum + segLen;
+
+            if (segEnd >= dStart && segStart <= dEnd) // segment overlaps the kept range
+            {
+                if (result.Count == 0)
+                    result.Add(Vector2.Lerp(pts[i - 1], pts[i], Mathf.Clamp01((dStart - segStart) / segLen)));
+
+                if (segEnd <= dEnd)
+                {
+                    result.Add(pts[i]);
+                }
+                else
+                {
+                    result.Add(Vector2.Lerp(pts[i - 1], pts[i], Mathf.Clamp01((dEnd - segStart) / segLen)));
+                    break;
+                }
+            }
+            cum = segEnd;
+        }
+        return result;
     }
 
     // Thin wall centred on the barrier centerline. Both faces offset ±thickness/2 along the PER-POINT normal,
@@ -166,11 +262,6 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         if (side == TrackEnvironment.BarrierSide.Inner)
             return sample.position + sample.normal * (sample.width * 0.5f + environment.innerEdgeOffset);
         return sample.position - sample.normal * (sample.width * 0.5f + environment.outerEdgeOffset);
-    }
-
-    void DestroyImmediateSafe(GameObject go)
-    {
-        if (Application.isPlaying) Destroy(go); else DestroyImmediate(go);
     }
 
     Mesh BuildPolylineRibbon(List<Vector2> centerline, float width, float uvScale)
@@ -339,4 +430,45 @@ public class TrackEnvironmentBuilder : MonoBehaviour
                 instance.transform.localScale = new Vector3(deco.scale.x, deco.scale.y, 1f);
         }
     }
+
+#if UNITY_EDITOR
+    // Mark each barrier gap along the affected edge(s) so openings can be placed without entering play mode.
+    void OnDrawGizmosSelected()
+    {
+        if (track == null || track.track == null || environment == null || environment.barrierGaps == null) return;
+        var samples = track.SampleCenterline();
+        if (samples == null || samples.Count < 2) return;
+        var segs = track.track.segments;
+        if (segs == null || segs.Length == 0) return;
+
+        for (int i = 0; i < environment.barrierGaps.Length; i++)
+        {
+            var gap = environment.barrierGaps[i];
+            if (gap.segmentIndex < 0 || gap.segmentIndex >= segs.Length) continue;
+            float segStart = 0f;
+            for (int s = 0; s < gap.segmentIndex; s++) segStart += segs[s].length;
+            float segLen = segs[gap.segmentIndex].length;
+            float local0 = Mathf.Clamp(Mathf.Min(gap.startDistance, gap.endDistance), 0f, segLen);
+            float local1 = Mathf.Clamp(Mathf.Max(gap.startDistance, gap.endDistance), 0f, segLen);
+            if (local1 - local0 < 1e-4f) continue;
+            DrawGapMarker(gap.side, segStart + local0, segStart + local1, samples);
+        }
+    }
+
+    void DrawGapMarker(TrackEnvironment.BarrierSide side, float gs, float ge, List<TrackBuilder.Sample> samples)
+    {
+        Gizmos.color = new Color(1f, 0.2f, 0.1f, 1f);
+        int steps = Mathf.Max(2, Mathf.CeilToInt((ge - gs) / 2f) + 1);
+        Vector3 prev = Vector3.zero;
+        for (int i = 0; i < steps; i++)
+        {
+            float d = Mathf.Lerp(gs, ge, i / (float)(steps - 1));
+            Vector2 p = EdgePoint(side, d, samples);
+            Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0f));
+            if (i == 0 || i == steps - 1) Gizmos.DrawWireSphere(w, 1.5f);
+            if (i > 0) Gizmos.DrawLine(prev, w);
+            prev = w;
+        }
+    }
+#endif
 }

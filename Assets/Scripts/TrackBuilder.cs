@@ -22,6 +22,7 @@ public class TrackBuilder : MonoBehaviour
     Mesh _mainMesh;
     Mesh _pitMesh;
     GameObject _pitChild;
+    List<Sample> _surfaceCache;
 
     public struct Sample
     {
@@ -48,6 +49,7 @@ public class TrackBuilder : MonoBehaviour
     public void Build()
     {
         if (track == null || track.segments == null || track.segments.Length == 0) return;
+        _surfaceCache = null; // invalidate on-surface lookup; rebuilt lazily on next query
 
         var mf = GetComponent<MeshFilter>();
         var mr = GetComponent<MeshRenderer>();
@@ -252,6 +254,28 @@ public class TrackBuilder : MonoBehaviour
     {
         if (samples == null) samples = SamplePitCenterline();
         return SampleListAt(samples, distance, false);
+    }
+
+    // True if worldPos sits over the drivable track surface. Outputs |lateral| offset from the centreline (m).
+    // Uses a cached centerline (invalidated on Build); cheap enough to call per-FixedUpdate for one car.
+    public bool IsOnSurface(Vector3 worldPos, out float lateralAbs)
+    {
+        lateralAbs = 0f;
+        if (track == null) return true;
+        if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
+        if (_surfaceCache.Count < 2) return true;
+
+        Vector2 local = transform.InverseTransformPoint(worldPos);
+        float best = float.MaxValue;
+        int bi = 0;
+        for (int i = 0; i < _surfaceCache.Count; i++)
+        {
+            float d = ((Vector2)_surfaceCache[i].position - local).sqrMagnitude;
+            if (d < best) { best = d; bi = i; }
+        }
+        var s = _surfaceCache[bi];
+        lateralAbs = Mathf.Abs(Vector2.Dot(local - s.position, s.normal));
+        return lateralAbs <= s.width * 0.5f;
     }
 
     static Sample SampleListAt(List<Sample> samples, float distance, bool loop)

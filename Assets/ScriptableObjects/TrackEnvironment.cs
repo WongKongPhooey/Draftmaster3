@@ -24,6 +24,10 @@ public class TrackEnvironment : ScriptableObject
     [Tooltip("Sections switched from auto-follow to hand-drawn. Each targets one segment + side.")]
     public ManualBarrierSection[] manualSections;
 
+    [Header("Barrier Gaps — openings for pit lane, service roads, etc.")]
+    [Tooltip("Cut openings out of a specific barrier. Pick the barrier (side + segment index, e.g. Inner 2 = Barrier_Inner_2) and the start/end position in metres from the START of that barrier segment. Removes mesh + collider. Works on auto and manual (hand-drawn) sections.")]
+    public BarrierGap[] barrierGaps;
+
     [Tooltip("Spacing between strip vertex rows in metres. Lower = smoother strips on tight curves, more triangles.")]
     public float stripSampleSpacing = 2f;
 
@@ -53,6 +57,21 @@ public class TrackEnvironment : ScriptableObject
     }
 
     public enum BarrierSide { Inner, Outer }
+
+    [System.Serializable]
+    public struct BarrierGap
+    {
+        [Tooltip("Optional name, e.g. \"Pit entry\" or \"Garage access\".")]
+        public string label;
+        [Tooltip("Which side's barrier to open: Inner or Outer.")]
+        public BarrierSide side;
+        [Tooltip("Barrier segment to open — the N in Barrier_Inner_N / Barrier_Outer_N (the track segment index).")]
+        public int segmentIndex;
+        [Tooltip("Gap start, metres from the START of that barrier segment.")]
+        public float startDistance;
+        [Tooltip("Gap end, metres from the start of that barrier segment.")]
+        public float endDistance;
+    }
 
     [System.Serializable]
     public struct ManualBarrierSection
