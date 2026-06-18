@@ -30,7 +30,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Cornering stiffness per unit vertical load (1/rad). How sharply slip angle builds lateral force. ~10-14 typical. Higher = sharper turn-in, twitchier.")]
     public float corneringStiffness = 11f;
     [Tooltip("Static handling balance. + = more understeer (rear grippier than front, safe/stable). - = oversteer (loose). 0 = neutral.")]
-    [Range(-0.3f, 0.3f)] public float understeerBias = 0.04f;
+    [Range(-0.3f, 0.3f)] public float understeerBias = 0.10f;
+    [Tooltip("Yaw-rate damping (1/s). Resists spinning — settles snap spins and tames brake-induced rotation. Higher = more stable/heavier feel. 0 = none.")]
+    public float yawDamping = 2.5f;
+    [Tooltip("Extra yaw damping under braking (1/s), scaled by brake input. Specifically counters spin-on-the-brakes from rear unloading.")]
+    public float brakeYawDamping = 2f;
     [Tooltip("Below this forward speed (m/s) steering is kinematic (geometry only) to avoid divide-by-near-zero jitter at crawl.")]
     public float lowSpeedKinematic = 2.0f;
     [Tooltip("Physics sub-steps per FixedUpdate. More = stiffer/stabler tyres without oscillation. 4 is plenty.")]
@@ -72,10 +76,22 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Range(0.1f, 1f)] public float grassGrip = 0.4f;
     [Tooltip("Engine traction multiplier on grass (wheels struggle to put power down).")]
     [Range(0.1f, 1f)] public float grassPower = 0.55f;
-    [Tooltip("Extra deceleration (m/s²) from rolling resistance on grass.")]
+    [Tooltip("Extra deceleration (m/s²) from rolling resistance on grass, at and above grassDragRampSpeed.")]
     public float grassDrag = 6f;
+    [Tooltip("Speed (m/s) over which grass rolling resistance reaches full strength. Below it, drag fades to 0 so the car can crawl off a standstill.")]
+    public float grassDragRampSpeed = 3f;
+
+    [Header("Reverse")]
+    [Tooltip("Hold brake with no throttle once nearly stopped to reverse. Max reverse speed (m/s).")]
+    public float reverseMaxSpeed = 5f;
+    [Tooltip("Reverse acceleration (m/s²).")]
+    public float reverseAccel = 4f;
+    [Tooltip("Forward speed (m/s) below which holding the brake engages reverse.")]
+    public float reverseEngageSpeed = 0.4f;
 
     [Header("Wheelspin / Donuts")]
+    [Tooltip("Enable low-speed wheelspin/donuts. Disabled for AI so they launch cleanly instead of spinning off the line.")]
+    public bool enableWheelspin = true;
     [Tooltip("Below this forward speed (m/s), heavy throttle lights up the rear tyres (1st-gear wheelspin).")]
     public float wheelspinSpeed = 9f;
     [Tooltip("Throttle needed before the rear breaks traction.")]
@@ -112,6 +128,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // Body-slip angle (overall slide), degrees.
     public float SlipAngleDeg => Mathf.Atan2(_vy, Mathf.Max(Mathf.Abs(_vx), 0.01f)) * Mathf.Rad2Deg;
     public float YawRateDeg => _r * Mathf.Rad2Deg;
+    public float HeadingDeg => _headingDeg; // world heading of the nose (0 = +X), for AI input providers
     // Per-axle slip angles (deg) and handling balance: + = understeer (front sliding more), - = oversteer (rear more).
     public float SlipFrontDeg => _alphaF * Mathf.Rad2Deg;
     public float SlipRearDeg => _alphaR * Mathf.Rad2Deg;
@@ -128,6 +145,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     float _a, _b, _iz;  // CoM→front axle, CoM→rear axle (m), yaw inertia (kg·m²)
     float _alphaF, _alphaR; // last front/rear slip angles (rad) for telemetry
     bool _onGrass;          // car is off the track surface this step
+
+    [HideInInspector] public bool externalInput; // true when an AI controller feeds inputs via SetInput
+    float _inSteer, _inThrottle, _inBrake;        // last externally-supplied inputs
     bool _wasEmitting;      // trail emit state last step (for streak-free re-enable)
     TrailRenderer _trailL, _trailR; // rear tyre trails (grass)
 
@@ -149,6 +169,23 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     {
         _trailL = MakeTrail("TyreTrailL");
         _trailR = MakeTrail("TyreTrailR");
+    }
+
+    // Feed driving inputs from an external controller (AI). Each is -1..1 / 0..1; only used when externalInput is true.
+    public void SetInput(float steer, float throttle, float brake)
+    {
+        _inSteer = Mathf.Clamp(steer, -1f, 1f);
+        _inThrottle = Mathf.Clamp01(throttle);
+        _inBrake = Mathf.Clamp01(brake);
+    }
+
+    // Place the car and align the dynamic state to a heading (used once at AI spawn so it starts on the grid/pit).
+    public void SeedPose(Vector2 worldPos, float headingDeg)
+    {
+        transform.position = new Vector3(worldPos.x, worldPos.y, transform.position.z);
+        _headingDeg = headingDeg;
+        _vx = _vy = _r = 0f;
+        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? _headingDeg - 90f : _headingDeg) + angleOffsetDeg);
     }
 
     TrailRenderer MakeTrail(string name)
@@ -185,22 +222,30 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         RecomputeGeometry();
         float dt = Time.fixedDeltaTime;
 
-        // --- Inputs: gamepad first, keyboard overrides if pressed.
-        float steerIn = 0f, throttleIn = 0f, brakeIn = 0f;
-        var gp = Gamepad.current;
-        if (gp != null)
+        // --- Inputs: external (AI) when driven, otherwise gamepad first, keyboard overrides if pressed.
+        float steerIn, throttleIn, brakeIn;
+        if (externalInput)
         {
-            steerIn = gp.leftStick.ReadValue().x;
-            throttleIn = gp.rightTrigger.ReadValue();
-            brakeIn = gp.leftTrigger.ReadValue();
+            steerIn = _inSteer; throttleIn = _inThrottle; brakeIn = _inBrake;
         }
-        var kb = Keyboard.current;
-        if (kb != null)
+        else
         {
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) steerIn = -1f;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steerIn = +1f;
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed) throttleIn = 1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) brakeIn = 1f;
+            steerIn = 0f; throttleIn = 0f; brakeIn = 0f;
+            var gp = Gamepad.current;
+            if (gp != null)
+            {
+                steerIn = gp.leftStick.ReadValue().x;
+                throttleIn = gp.rightTrigger.ReadValue();
+                brakeIn = gp.leftTrigger.ReadValue();
+            }
+            var kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) steerIn = -1f;
+                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steerIn = +1f;
+                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) throttleIn = 1f;
+                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) brakeIn = 1f;
+            }
         }
         steerIn = Mathf.Clamp(steerIn, -1f, 1f);
         if (Mathf.Abs(steerIn) < steerDeadzone) steerIn = 0f;
@@ -217,7 +262,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _onGrass = track != null && !track.IsOnSurface(transform.position, out _);
         float speedNow = SpeedMps;
         float wheelspin = 0f;
-        if (throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
+        if (enableWheelspin && throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
             wheelspin = Mathf.Clamp01(
                 ((throttleIn - wheelspinThrottle) / Mathf.Max(1f - wheelspinThrottle, 0.01f))
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));
@@ -225,11 +270,25 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         float topMps = vehicleInfo.topSpeed / 2.237f;
         float accel = SampleAccel(_vx) * TrackConditions.PowerMultiplier * throttleIn;
-        float decel = SampleDecel(_vx) * brakeIn;
+
+        // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
+        // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still
+        // BRAKES (and keeps its momentum) instead of being snapped to the reverse cap.
+        bool reversing = brakeIn > 0.05f && throttleIn < 0.05f && _vx < reverseEngageSpeed && _vx > -reverseMaxSpeed;
+
+        float decel = reversing ? 0f : SampleDecel(_vx) * brakeIn; // brake suppressed while reversing (would fight it)
         if (throttleIn < 0.05f && brakeIn < 0.05f) decel += coastDecel;
-        if (_onGrass) { accel *= grassPower; decel += grassDrag; }   // grass: less drive, more rolling resistance
+        float reverseDrive = reversing ? -reverseAccel * brakeIn : 0f;
+
+        if (_onGrass)
+        {
+            accel *= grassPower;
+            reverseDrive *= grassPower;
+            // Rolling resistance ramps in with speed — zero at a standstill so the car can always crawl back off.
+            decel += grassDrag * Mathf.Clamp01(speedNow / grassDragRampSpeed);
+        }
         accel *= (1f - wheelspinAccelLoss * wheelspin);              // spinning wheels put down less power
-        float axCmd = accel - decel; // commanded longitudinal accel (m/s²)
+        float axCmd = accel + reverseDrive - decel; // commanded longitudinal accel (m/s²)
 
         // Available grip per axle: μ (proxied by maxLateralG) × track × wear, biased front/rear for balance.
         float trackGrip = TrackConditions.GripMultiplier;
@@ -277,9 +336,16 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
                 // Equations of motion (body frame).
                 float ay = (fyF + fyR) / m - _vx * _r;          // lateral accel (tyres + centripetal term)
-                float dr = (_a * fyF - _b * fyR) / _iz;          // yaw accel from front/rear moment
+                // Yaw damper opposes rotation (stabilises oversteer); extra damping under braking kills spin-on-the-brakes.
+                float yawDamp = yawDamping + brakeYawDamping * brakeIn;
+                float dr = (_a * fyF - _b * fyR) / _iz - yawDamp * _r; // yaw accel from front/rear moment + damping
                 _vy += ay * h;
                 _r += dr * h;
+                // Velocity-vector rotation (Coriolis), paired with the -_vx*_r term in ay so it conserves speed:
+                // this is what carries momentum through a spin (incl. into reverse). Only valid here where the
+                // counter-term exists — doing it in the low-speed branch (where _vy is killed kinematically) pumped
+                // _vx and launched the car after a spin.
+                _vx += _vy * _r * h;
             }
             else
             {
@@ -301,17 +367,17 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 _alphaF = 0f; _alphaR = 0f;
             }
 
-            // Longitudinal update. The centripetal coupling (_vy*_r) rotates the velocity vector as the body yaws and
-            // MUST keep its sign: a 180° spin should carry momentum into reverse (car slides backward at speed), not
-            // have it deleted. The old Max(_vx,0) floor wiped that backward momentum, so a spun car shed its speed and
-            // then "shot forward" under throttle. Engine drives forward only; brake + coast oppose the current travel
-            // direction without pushing the car through zero into reverse.
-            _vx += _vy * _r * h;
+            // Engine/brake along the nose. Engine drives forward only; brake + coast oppose the current travel
+            // direction without pushing the car through zero into reverse (so backward momentum from a spin is kept,
+            // not deleted and then "shot forward" under throttle). The velocity-vector rotation lives in the tyre
+            // branch above.
             _vx += accel * h;
+            _vx += reverseDrive * h;
             float resist = decel * h;
             if (_vx > 0f) _vx = Mathf.Max(0f, _vx - resist);
             else if (_vx < 0f) _vx = Mathf.Min(0f, _vx + resist);
             _vx = Mathf.Clamp(_vx, -topMps, topMps);
+            if (reversing) _vx = Mathf.Max(_vx, -reverseMaxSpeed); // cap input-driven reverse, not spin momentum
 
             // Integrate heading by yaw rate.
             _headingDeg += _r * Mathf.Rad2Deg * h;

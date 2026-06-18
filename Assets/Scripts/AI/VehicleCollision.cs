@@ -13,6 +13,12 @@ public class VehicleCollision : MonoBehaviour
     public LayerMask collisionMask = ~0;
     [Tooltip("Max colliders considered per step.")]
     public int maxContacts = 8;
+
+    [Header("Damage")]
+    [Tooltip("Closing speed (m/s) below which a contact does NO bodywork damage. Stops slow nudges from squashing a car.")]
+    public float damageMinSpeed = 3f;
+    [Tooltip("Closing speed (m/s) that produces a full-severity dent. Lower = harder-hitting damage at speed.")]
+    public float damageSpeedFull = 18f;
     [Tooltip("Fraction of penetration corrected per step. 1 = fully ejected each step (no pass-through). Below ~0.9 a fast car can sink through a thin barrier before the push balances. Bounce/flex feel lives in the responder's restitution instead.")]
     [Range(0.1f, 1f)] public float positionalSoftness = 1f;
     [Tooltip("Log overlap diagnostics each second.")]
@@ -23,6 +29,10 @@ public class VehicleCollision : MonoBehaviour
     ICollisionResponder _responder;
     IDamageable _damage;
     readonly Collider2D[] _hits = new Collider2D[16];
+
+    Vector2 _prevPos;
+    Vector2 _vel;                 // world velocity from position delta (kinematic body)
+    public Vector2 Velocity => _vel;
 
     void Awake()
     {
@@ -37,6 +47,7 @@ public class VehicleCollision : MonoBehaviour
 
         _responder = PickResponder();
         _damage = GetComponentInChildren<IDamageable>();
+        _prevPos = transform.position;
     }
 
     ICollisionResponder PickResponder()
@@ -74,6 +85,12 @@ public class VehicleCollision : MonoBehaviour
     {
         if (_box == null) return;
 
+        // Track world velocity from the kinematic body's position delta (used for impact-speed damage).
+        float dt = Time.fixedDeltaTime;
+        Vector2 nowPos = transform.position;
+        _vel = dt > 0f ? (nowPos - _prevPos) / dt : Vector2.zero;
+        _prevPos = nowPos;
+
         var filter = new ContactFilter2D { useLayerMask = true, layerMask = collisionMask, useTriggers = false };
         int count = _box.Overlap(filter, _hits);
 
@@ -106,14 +123,21 @@ public class VehicleCollision : MonoBehaviour
             if (!d.isOverlapped) continue;
 
             // Soft push: only correct a fraction per step so the car flexes into the barrier then eases out.
+            // (Depenetration stays penetration-based — that's positional correctness, not damage.)
             Vector2 pushWorld = -d.normal * Mathf.Abs(d.distance) * positionalSoftness;
 
-            float severity = Mathf.Clamp01(Mathf.Abs(d.distance) / Mathf.Max(halfExtents.x, 0.1f));
-
-            // Dent bodywork at the contact point. pointB sits on the barrier/other car; inward = -d.normal into us.
-            _damage?.OnImpact(d.pointB, -d.normal, severity);
-
+            // Damage scales with CLOSING SPEED, not penetration depth, so a slow sustained nudge does nothing
+            // while a real impact dents hard. d.normal points along the contact; relVel·normal = approach rate.
             var otherResponder = other.GetComponent<ICollisionResponder>();
+            var otherVC = other.GetComponent<VehicleCollision>();
+            Vector2 otherVel = otherVC != null ? otherVC.Velocity : Vector2.zero;
+            float closingSpeed = Mathf.Max(0f, Vector2.Dot(_vel - otherVel, d.normal));
+            float severity = Mathf.Clamp01(closingSpeed / Mathf.Max(damageSpeedFull, 0.1f));
+
+            // Dent bodywork at the contact point — only for genuine impacts above the threshold.
+            if (closingSpeed >= damageMinSpeed)
+                _damage?.OnImpact(d.pointB, -d.normal, severity);
+
             if (otherResponder != null)
             {
                 // Vehicle-vehicle: split correction by inverse mass. Heavier car barely moves; lighter car gets shoved.

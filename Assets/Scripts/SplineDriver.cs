@@ -8,16 +8,19 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     Vector2 _lastWorldRight = Vector2.right;
     Vector2 _lastWorldForward = Vector2.right;
     float _collisionLateral;
+    float _collisionLongitudinal;
+    bool _contactHold;
 
     public float Mass => vehicleInfo != null ? vehicleInfo.mass : 1500f;
 
     public void ApplyContact(Vector2 worldMtv, Vector2 contactPoint, float severity)
     {
         // Spline cars stay glued to the path; the lever arm can't spin them freely. contactPoint is ignored here.
-        // Persist push as decaying lateral offset (transform rebuilt from spline each frame).
-        float lateralDelta = Vector2.Dot(worldMtv, _lastWorldRight);
-        _collisionLateral += lateralDelta;
-        _collisionLateral = Mathf.Clamp(_collisionLateral, -8f, 8f);
+        // Persist the push as offsets along BOTH spline axes (transform is rebuilt from the spline each frame).
+        // The longitudinal offset is what unsticks cars overlapping nose-to-tail — the old code dropped it entirely.
+        _collisionLateral = Mathf.Clamp(_collisionLateral + Vector2.Dot(worldMtv, _lastWorldRight), -8f, 8f);
+        _collisionLongitudinal = Mathf.Clamp(_collisionLongitudinal + Vector2.Dot(worldMtv, _lastWorldForward), -8f, 8f);
+        _contactHold = true; // hold the offsets through the next Place (skip one decay step) so contact separates
 
         // Scrub speed only by how head-on the hit is. Glancing scrapes barely slow; square-on loses more.
         Vector2 n = worldMtv.sqrMagnitude > 1e-6f ? worldMtv.normalized : Vector2.zero;
@@ -88,6 +91,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float CommandedHeadingDeg { get; private set; }
     public float CommandedSpeedMps { get; private set; }
     public bool externalMotionController = false; // true when BicycleDynamics owns the transform
+    [HideInInspector] public float externalActualSpeedMps; // actual car speed fed back by the input provider
     public int CurrentSegmentIndex() => _segmentStartDistance != null ? SegmentIndexAt(_distance) : -1;
 
     public enum CornerPhase { Straight, Approach, Entry, Apex, Exit, PostExit }
@@ -508,7 +512,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         UpdateCornerPhase();
 
-        _distance += speed * Time.fixedDeltaTime;
+        // Advance along the spline by the ACTUAL car speed when an external dynamic model drives it, so the
+        // commanded path point stays with the car (a stalled/contacted car doesn't get left behind by its brain).
+        // CommandedSpeedMps still carries the brain's DESIRED speed (set from `speed` in Place) for the provider.
+        float advanceSpeed = externalMotionController ? externalActualSpeedMps : speed;
+        _distance += advanceSpeed * Time.fixedDeltaTime;
 
         if (_onPit && _pitLength > 0f && _distance >= _pitLength * pitExitThreshold)
         {
@@ -579,25 +587,33 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     void Place()
     {
+        // Decay collision offsets toward 0, but hold them one step after a fresh contact so cars actually separate.
+        if (_contactHold) _contactHold = false;
+        else
+        {
+            _collisionLateral = Mathf.MoveTowards(_collisionLateral, 0f, 6f * Time.fixedDeltaTime);
+            _collisionLongitudinal = Mathf.MoveTowards(_collisionLongitudinal, 0f, 6f * Time.fixedDeltaTime);
+        }
+        float placeDistance = _distance + _collisionLongitudinal;
+
         TrackBuilder.Sample sample;
         float length;
         if (_onPit && _pitSamples != null && _pitSamples.Count >= 2)
         {
-            sample = track.SamplePitAt(_distance, _pitSamples);
+            sample = track.SamplePitAt(placeDistance, _pitSamples);
             length = _pitLength;
         }
         else
         {
-            sample = track.SampleAt(_distance, _mainSamples);
+            sample = track.SampleAt(placeDistance, _mainSamples);
             length = _mainLength;
         }
 
-        _collisionLateral = Mathf.MoveTowards(_collisionLateral, 0f, 6f * Time.fixedDeltaTime);
-        float lineLateral = !_onPit ? LateralAt(_distance) : 0f;
+        float lineLateral = !_onPit ? LateralAt(placeDistance) : 0f;
         float totalLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral;
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
         {
-            BoundsAt(_distance, out float boundLo, out float boundHi);
+            BoundsAt(placeDistance, out float boundLo, out float boundHi);
             totalLateral = Mathf.Clamp(totalLateral, boundLo, boundHi);
         }
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);

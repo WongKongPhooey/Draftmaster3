@@ -38,6 +38,14 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Layers cars collide against (barriers + other vehicles).")]
     public LayerMask collisionMask = ~0;
 
+    [Header("Dynamic AI Physics")]
+    [Tooltip("Drive AI with the player's full dynamic model (tyre model, damage denting, feel) via PlayerVehicleController + SplineInputDriver. Off = legacy kinematic SplineDriver motion (safe fallback).")]
+    public bool dynamicAI = true;
+    [Tooltip("AI pure-pursuit steering gain (SplineInputDriver.steerGain).")]
+    public float aiSteerGain = 1.5f;
+    [Tooltip("AI speed-tracking gain — throttle/brake per m/s of speed error (SplineInputDriver.speedGain).")]
+    public float aiSpeedGain = 0.5f;
+
     IEnumerator Start()
     {
         if (track == null || carPrefab == null) yield break;
@@ -92,6 +100,44 @@ public class GridSpawner : MonoBehaviour
             binding.vehicleInfo = vehicleInfo;
             if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             binding.Apply();
+
+            if (dynamicAI)
+            {
+                // Hand motion to the player's dynamic model; SplineDriver stays the path/speed brain.
+                splineDriver.externalMotionController = true;
+
+                var pvc = go.GetComponent<PlayerVehicleController>();
+                if (pvc == null) pvc = go.AddComponent<PlayerVehicleController>();
+                pvc.vehicleInfo = vehicleInfo;
+                pvc.track = track;
+                pvc.spriteFacesUp = false;   // match the AI sprite convention used by SplineDriver
+                pvc.angleOffsetDeg = 180f;
+                pvc.grassTrails = false;     // perf: no trail renderers across a full AI field
+                pvc.enableWheelspin = false; // AI launch cleanly; no donuts off the line
+                pvc.externalInput = true;
+
+                var input = go.GetComponent<SplineInputDriver>();
+                if (input == null) input = go.AddComponent<SplineInputDriver>();
+                input.steerGain = aiSteerGain;
+                input.speedGain = aiSpeedGain;
+
+                // Deformable bodywork so AI dent like the player. A SpriteRenderer and the MeshRenderer that
+                // VehicleDamage requires can't share a GameObject, so replace the sprite with the deformable mesh —
+                // mirroring the player car (VehicleDamage + MeshRenderer, no SpriteRenderer). Added before
+                // VehicleCollision, which caches the IDamageable in Awake.
+                if (sr != null && sr.sprite != null && sr.GetComponent<VehicleDamage>() == null)
+                {
+                    var srGo = sr.gameObject;
+                    var spr = sr.sprite;
+                    DestroyImmediate(sr);
+                    var dmg = srGo.AddComponent<VehicleDamage>();
+                    dmg.sourceSprite = spr;
+                    dmg.material = null;          // auto-build an unlit per-car material from the sprite
+                    dmg.sortingLayer = "Default";
+                    dmg.sortingOrder = carSortingOrder;
+                    dmg.Build();
+                }
+            }
 
             if (addCollision)
             {
