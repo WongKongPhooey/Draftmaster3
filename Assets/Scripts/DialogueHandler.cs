@@ -46,7 +46,9 @@ public class DialogueHandler : MonoBehaviour
             dialogueText = currentDialogue.Continue();
             //Debug.Log("Next line: " + dialogueText);
             currentTags = currentDialogue.currentTags;
-            if((currentTags.Count > 0)&&(currentTags[0] == "player")){
+            //Apply any quest/stat side effects carried by this line's tags
+            ProcessTags(currentTags);
+            if(IsPlayerLine(currentTags)){
                 isOutputting = false;
                 GameObject playerDialogue = DialogueManager.getPlayerDialogueCanvas();
                 playerDialogue.GetComponent<PlayerDialogue>().receiveDialogue(dialogueText, dialogueCanvas, inkJSON);
@@ -90,5 +92,68 @@ public class DialogueHandler : MonoBehaviour
 
     void endDialogue(){
         dialogueCanvas.SetActive(false);
+    }
+
+    // Returns true when the current line should be voiced by the player rather
+    // than this NPC (the Ink line carries a #player tag).
+    bool IsPlayerLine(List<string> tags){
+        if(tags == null){
+            return false;
+        }
+        foreach(string tag in tags){
+            if(tag == "player"){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Inspects the tags attached to an Ink line and triggers any side-quest or
+    // stat actions they request. This is what lets an NPC's dialogue hand out a
+    // side-quest or grant stats. Supported tag forms (everything after the # in
+    // an Ink line):
+    //   quest_start:QuestId            - offer/begin a side-quest
+    //   quest_complete:QuestId         - mark a side-quest finished
+    //   quest_progress:QuestId:amount  - push a side-quest's progress along
+    //   stat:StatName:amount           - grant stat points there and then
+    void ProcessTags(List<string> tags){
+        if(tags == null){
+            return;
+        }
+
+        foreach(string tag in tags){
+            string[] parts = tag.Split(':');
+            switch(parts[0]){
+                case "quest_start":
+                    if(parts.Length >= 2){
+                        QuestManager.StartQuest(parts[1]);
+                    }
+                    break;
+                case "quest_complete":
+                    if(parts.Length >= 2){
+                        QuestManager.CompleteQuest(parts[1]);
+                    }
+                    break;
+                case "quest_progress":
+                    if(parts.Length >= 3){
+                        int amount;
+                        if(int.TryParse(parts[2], out amount)){
+                            QuestManager.AdvanceQuest(parts[1], amount);
+                        }
+                    }
+                    break;
+                case "stat":
+                    if(parts.Length >= 3){
+                        int amount;
+                        if(int.TryParse(parts[2], out amount)){
+                            StatsManager.GainStat(parts[1], amount);
+                        }
+                    }
+                    break;
+                default:
+                    //Not a quest/stat tag (e.g. the #player routing tag)
+                    break;
+            }
+        }
     }
 }
