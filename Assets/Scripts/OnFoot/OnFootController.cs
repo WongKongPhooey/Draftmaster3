@@ -27,6 +27,7 @@ public class OnFootController : MonoBehaviour
     NPCInteractable _activeNpc;
     bool _interactHeldPrev;
     bool _hasHorizontal, _hasVertical, _hasSpeed;
+    Vector2 _talkFacing;          // direction the player faces while mid-conversation
     InputActionAsset _controls;   // private clone of controlsAsset
     InputAction _moveAction;       // OnFoot/Movement on the clone
     bool _warnedNoAsset;
@@ -101,8 +102,10 @@ public class OnFootController : MonoBehaviour
 
         if (_animator != null)
         {
-            if (_hasHorizontal) _animator.SetFloat("Horizontal", move.x);
-            if (_hasVertical) _animator.SetFloat("Vertical", move.y);
+            // While talking, hold the facing direction so directional idle rigs keep looking at the NPC.
+            Vector2 face = (_activeNpc != null && _activeNpc.IsTalking) ? _talkFacing : move;
+            if (_hasHorizontal) _animator.SetFloat("Horizontal", face.x);
+            if (_hasVertical) _animator.SetFloat("Vertical", face.y);
             if (_hasSpeed) _animator.SetFloat("Speed", move.sqrMagnitude);
             // Belt and braces: pause the rig while standing so the walk cycle can't treadmill in place.
             _animator.speed = move.sqrMagnitude > 0.0001f ? 1f : 0f;
@@ -123,7 +126,42 @@ public class OnFootController : MonoBehaviour
             else
             {
                 var npc = NearestInRange();
-                if (npc != null) { _activeNpc = npc; npc.Interact(); }
+                if (npc != null)
+                {
+                    npc.SetInteractor(transform);
+                    FaceEachOther(npc.transform);
+                    _activeNpc = npc;
+                    npc.Interact();
+                }
+            }
+        }
+    }
+
+    // Turn the player and the NPC to look at each other as the conversation opens.
+    void FaceEachOther(Transform other)
+    {
+        Vector2 toNpc = (Vector2)(other.position - transform.position);
+        _talkFacing = toNpc.sqrMagnitude > 0.0001f ? toNpc.normalized : Vector2.down;
+        ApplyFacing(transform, _rb, toNpc);
+        ApplyFacing(other, other.GetComponent<Rigidbody2D>(), -toNpc);
+    }
+
+    void ApplyFacing(Transform who, Rigidbody2D body, Vector2 dir)
+    {
+        if (dir.sqrMagnitude < 0.0001f) return;
+        float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
+        if (body != null) body.MoveRotation(ang);          // respects rb constraints (freezeRotation/kinematic)
+        else who.rotation = Quaternion.Euler(0f, 0f, ang);
+
+        // Orient directional idle rigs too, if the animator exposes Horizontal/Vertical.
+        var anim = who.GetComponent<Animator>();
+        if (anim != null)
+        {
+            Vector2 n = dir.normalized;
+            foreach (var p in anim.parameters)
+            {
+                if (p.name == "Horizontal") anim.SetFloat("Horizontal", n.x);
+                else if (p.name == "Vertical") anim.SetFloat("Vertical", n.y);
             }
         }
     }

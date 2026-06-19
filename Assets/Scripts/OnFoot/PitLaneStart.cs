@@ -28,6 +28,26 @@ public class PitLaneStart : MonoBehaviour
     [Tooltip("Max distance from car centre to allow climbing in.")]
     public float enterRange = 2.5f;
 
+    [Header("Pit Greeter NPC")]
+    [Tooltip("Spawn a walk-up-and-talk crew member near the player's pit spawn.")]
+    public bool spawnGreeter = true;
+    [Tooltip("Name shown in the dialogue panel.")]
+    public string greeterName = "Pit Crew";
+    [TextArea]
+    [Tooltip("Conversation lines, one per interact. A line ending with \"#player\" is spoken by the driver (their own bubble); the marker is stripped.")]
+    public string[] greeterLines =
+    {
+        "Morning! Car's prepped and fuelled, ready when you are.",
+        "Thanks. Anything I should know? #player",
+        "Track's still cold, so take the first lap easy.",
+        "Will do. #player",
+        "Right then — hop in whenever you're set. Good luck out there!"
+    };
+    [Tooltip("Lateral offset (m) off the pit centerline for the NPC. More negative = further from the wall.")]
+    public float greeterLateral = -5.5f;
+    [Tooltip("Metres behind the player's spawn (along the pit) to place the NPC.")]
+    public float greeterBehind = 1.5f;
+
     [Header("Camera")]
     [Tooltip("Orthographic size while walking.")]
     public float onFootOrthoSize = 3.5f;
@@ -88,6 +108,15 @@ public class PitLaneStart : MonoBehaviour
 
         SpawnPlayer(playerPos);
 
+        if (spawnGreeter)
+        {
+            float npcDist = Mathf.Clamp(total * pitFraction - greeterBehind, 0f, total);
+            var npcSample = usedPit ? track.SamplePitAt(npcDist, samples) : track.SampleAt(npcDist, samples);
+            Vector2 npcOff = npcSample.position + npcSample.normal * greeterLateral;
+            Vector3 npcPos = track.transform.TransformPoint(new Vector3(npcOff.x, npcOff.y, 0f));
+            SpawnGreeter(npcPos);
+        }
+
         // Camera: follow the walker, zoomed in.
         _cam = Camera.main;
         if (_cam != null)
@@ -130,6 +159,49 @@ public class PitLaneStart : MonoBehaviour
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
         }
+    }
+
+    // Spawn a stationary crew member from the on-foot prefab and make it talkable. Dialogue shows as
+    // world-space speech bubbles with a typewriter reveal above the crew member and the driver (SpeechBubble),
+    // driven by the player's OnFootController interaction. Lines come from greeterLines (no scene wiring needed).
+    void SpawnGreeter(Vector3 pos)
+    {
+        var npc = Instantiate(onFootPrefab, pos, Quaternion.identity);
+        npc.name = "PitCrewNPC";
+
+        // Strip anything that would drive/control it — it just stands and talks.
+        var mv = npc.GetComponent<MovementOnFoot>(); if (mv != null) mv.enabled = false;
+        var pi = npc.GetComponent<PlayerInput>(); if (pi != null) pi.enabled = false;
+        var ofc = npc.GetComponent<OnFootController>(); if (ofc != null) Destroy(ofc);
+        var rb = npc.GetComponent<Rigidbody2D>();
+        if (rb != null) { rb.gravityScale = 0f; rb.bodyType = RigidbodyType2D.Kinematic; }
+
+        // Nothing drives this Animator, so freeze it — otherwise the walk cycle plays in place forever.
+        var anim = npc.GetComponent<Animator>();
+        if (anim != null)
+        {
+            foreach (var p in anim.parameters)
+            {
+                if (p.type == AnimatorControllerParameterType.Float &&
+                    (p.name == "Horizontal" || p.name == "Vertical" || p.name == "Speed"))
+                    anim.SetFloat(p.name, 0f);
+            }
+            anim.Update(0f);   // sample the idle pose at zeroed params...
+            anim.speed = 0f;   // ...then stop so it can't treadmill
+        }
+
+        // Same unlit-shader swap the player gets, so it renders under the 3D URP renderer.
+        var sr = npc.GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (sh == null) sh = Shader.Find("Sprites/Default");
+            if (sh != null) sr.sharedMaterial = new Material(sh);
+        }
+
+        var inter = npc.AddComponent<NPCInteractable>();
+        inter.speakerName = greeterName;
+        if (greeterLines != null && greeterLines.Length > 0) inter.lines = greeterLines;
     }
 
     void Update()

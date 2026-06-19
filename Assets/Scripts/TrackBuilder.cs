@@ -23,6 +23,7 @@ public class TrackBuilder : MonoBehaviour
     Mesh _pitMesh;
     GameObject _pitChild;
     List<Sample> _surfaceCache;
+    List<Sample> _pitSurfaceCache;
 
     public struct Sample
     {
@@ -50,6 +51,7 @@ public class TrackBuilder : MonoBehaviour
     {
         if (track == null || track.segments == null || track.segments.Length == 0) return;
         _surfaceCache = null; // invalidate on-surface lookup; rebuilt lazily on next query
+        _pitSurfaceCache = null;
 
         var mf = GetComponent<MeshFilter>();
         var mr = GetComponent<MeshRenderer>();
@@ -256,24 +258,45 @@ public class TrackBuilder : MonoBehaviour
         return SampleListAt(samples, distance, false);
     }
 
-    // True if worldPos sits over the drivable track surface. Outputs |lateral| offset from the centreline (m).
-    // Uses a cached centerline (invalidated on Build); cheap enough to call per-FixedUpdate for one car.
+    // True if worldPos sits over a drivable surface (main track OR pit lane). Outputs |lateral| offset from the
+    // nearest centreline (m). Uses cached centerlines (invalidated on Build); cheap enough for one car per FixedUpdate.
     public bool IsOnSurface(Vector3 worldPos, out float lateralAbs)
     {
         lateralAbs = 0f;
         if (track == null) return true;
         if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
-        if (_surfaceCache.Count < 2) return true;
 
         Vector2 local = transform.InverseTransformPoint(worldPos);
+
+        if (OnSampleSurface(_surfaceCache, local, out lateralAbs)) return true;
+        if (_surfaceCache.Count < 2) return true; // no usable main centerline — don't penalise
+
+        // The pit lane is drivable too: don't treat it like grass.
+        if (track.hasPitLane)
+        {
+            if (_pitSurfaceCache == null || _pitSurfaceCache.Count < 2) _pitSurfaceCache = SamplePitCenterline();
+            if (OnSampleSurface(_pitSurfaceCache, local, out float pitLat))
+            {
+                lateralAbs = pitLat;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Nearest-sample test: is local within half-width of this centerline? Outputs |lateral| from it.
+    static bool OnSampleSurface(List<Sample> samples, Vector2 local, out float lateralAbs)
+    {
+        lateralAbs = 0f;
+        if (samples == null || samples.Count < 2) return false;
         float best = float.MaxValue;
         int bi = 0;
-        for (int i = 0; i < _surfaceCache.Count; i++)
+        for (int i = 0; i < samples.Count; i++)
         {
-            float d = ((Vector2)_surfaceCache[i].position - local).sqrMagnitude;
+            float d = ((Vector2)samples[i].position - local).sqrMagnitude;
             if (d < best) { best = d; bi = i; }
         }
-        var s = _surfaceCache[bi];
+        var s = samples[bi];
         lateralAbs = Mathf.Abs(Vector2.Dot(local - s.position, s.normal));
         return lateralAbs <= s.width * 0.5f;
     }

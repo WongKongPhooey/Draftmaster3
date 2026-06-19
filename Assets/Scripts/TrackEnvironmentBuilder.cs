@@ -67,6 +67,23 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             BuildBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Inner, dStart, dEnd, mainSamples, spacing);
             BuildBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Outer, dStart, dEnd, mainSamples, spacing);
         }
+
+        // Close the loop. TrackBuilder stitches a seam from the last authored point back to the start, so the
+        // centerline runs past the authored segment total. Build barriers across that seam too — otherwise the
+        // last segment's barrier stops short of the first and leaves an open gap at the start/finish.
+        if (track.track.closedLoop)
+        {
+            float authoredTotal = cum;
+            float fullTotal = mainSamples[mainSamples.Count - 1].distance;
+            if (fullTotal - authoredTotal > 0.05f)
+            {
+                int seamIndex = segs.Length; // names the pieces Barrier_*_<segCount>
+                BuildBarrierPieceMesh(root.transform, seamIndex, TrackEnvironment.BarrierSide.Inner, 0,
+                    BuildAutoEdgeCenterline(TrackEnvironment.BarrierSide.Inner, authoredTotal, fullTotal, mainSamples, spacing));
+                BuildBarrierPieceMesh(root.transform, seamIndex, TrackEnvironment.BarrierSide.Outer, 0,
+                    BuildAutoEdgeCenterline(TrackEnvironment.BarrierSide.Outer, authoredTotal, fullTotal, mainSamples, spacing));
+            }
+        }
     }
 
     // Build one segment's barrier for a side, split into pieces with any overlapping gap ranges cut out.
@@ -325,6 +342,9 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         }
     }
 
+    static bool IsFinishLine(string label) =>
+        !string.IsNullOrEmpty(label) && label.ToLowerInvariant().Contains("finish");
+
     void BuildStrips(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)
     {
         if (environment.strips == null || environment.strips.Length == 0) return;
@@ -335,6 +355,16 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         for (int s = 0; s < environment.strips.Length; s++)
         {
             var strip = environment.strips[s];
+
+            // The finish-line strip is anchored to the track's start/finish line, so it honours
+            // TrackInfoV2.startFinishDistance instead of a hand-typed distance (its band length is kept).
+            if (track.track != null && IsFinishLine(strip.label))
+            {
+                float band = strip.endDistance - strip.startDistance;
+                strip.startDistance = track.track.startFinishDistance;
+                strip.endDistance = strip.startDistance + (band > 0.01f ? band : 1f);
+            }
+
             if (strip.endDistance <= strip.startDistance) continue;
             var lookup = strip.useSpline == TrackEnvironment.SplineRef.Pit ? pitSamples : mainSamples;
             if (lookup == null || lookup.Count < 2) continue;
