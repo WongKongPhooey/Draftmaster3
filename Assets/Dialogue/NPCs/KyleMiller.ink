@@ -14,4 +14,5 @@ Throw my beer over the fence!
       
 === chosen(choice) ===
 DO IT! I would but I can't throw too good.
+{ choice == "Accept": You're on! Get out there and cover some laps first. #quest_start:KyleCaution }
 -> END
