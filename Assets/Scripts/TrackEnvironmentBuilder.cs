@@ -60,12 +60,13 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         float cum = 0f;
         for (int i = 0; i < segs.Length; i++) { segStart[i] = cum; cum += segs[i].length; }
 
+        // Auto barriers per segment, with any gaps AND hand-drawn manual spans cut out.
         for (int i = 0; i < segs.Length; i++)
         {
             float dStart = segStart[i];
             float dEnd = dStart + segs[i].length;
-            BuildBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Inner, dStart, dEnd, mainSamples, spacing);
-            BuildBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Outer, dStart, dEnd, mainSamples, spacing);
+            BuildAutoBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Inner, dStart, dEnd, mainSamples, spacing);
+            BuildAutoBarrierSide(root.transform, i, TrackEnvironment.BarrierSide.Outer, dStart, dEnd, mainSamples, spacing);
         }
 
         // Close the loop. TrackBuilder stitches a seam from the last authored point back to the start, so the
@@ -78,37 +79,28 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             if (fullTotal - authoredTotal > 0.05f)
             {
                 int seamIndex = segs.Length; // names the pieces Barrier_*_<segCount>
-                BuildBarrierPieceMesh(root.transform, seamIndex, TrackEnvironment.BarrierSide.Inner, 0,
-                    BuildAutoEdgeCenterline(TrackEnvironment.BarrierSide.Inner, authoredTotal, fullTotal, mainSamples, spacing));
-                BuildBarrierPieceMesh(root.transform, seamIndex, TrackEnvironment.BarrierSide.Outer, 0,
-                    BuildAutoEdgeCenterline(TrackEnvironment.BarrierSide.Outer, authoredTotal, fullTotal, mainSamples, spacing));
+                BuildAutoBarrierSide(root.transform, seamIndex, TrackEnvironment.BarrierSide.Inner, authoredTotal, fullTotal, mainSamples, spacing);
+                BuildAutoBarrierSide(root.transform, seamIndex, TrackEnvironment.BarrierSide.Outer, authoredTotal, fullTotal, mainSamples, spacing);
             }
         }
+
+        // Hand-drawn manual spans replace the auto stretches removed above.
+        BuildManualSpans(root.transform, mainSamples);
     }
 
-    // Build one segment's barrier for a side, split into pieces with any overlapping gap ranges cut out.
-    // Auto sections sample the track edge per piece; manual (hand-drawn) sections slice their polyline by arc-length
-    // so gaps work on pit walls / service-road sections too.
-    void BuildBarrierSide(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
+    // Build one segment's AUTO barrier for a side, split into pieces with any overlapping gap ranges and
+    // hand-drawn manual spans cut out (so a manual barrier fully replaces the auto one across its span).
+    void BuildAutoBarrierSide(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
         float dStart, float dEnd, List<TrackBuilder.Sample> mainSamples, float spacing)
     {
-        int manualIdx = FindManualSection(segIndex, side);
-        List<Vector2> manualFull = manualIdx >= 0
-            ? BuildManualCenterline(manualIdx, side, dStart, dEnd, mainSamples)
-            : null;
-        float len = Mathf.Max(dEnd - dStart, 1e-4f);
-
         var spans = SubtractGaps(segIndex, dStart, dEnd, side);
+        spans = SubtractManualSpans(spans, side);
         for (int k = 0; k < spans.Count; k++)
         {
             float a = spans[k].x, b = spans[k].y;
-            if (b - a < 0.05f) continue; // skip slivers left by a gap touching a segment boundary
-
-            List<Vector2> centerline = manualFull != null
-                ? SlicePolylineByFraction(manualFull, (a - dStart) / len, (b - dStart) / len)
-                : BuildAutoEdgeCenterline(side, a, b, mainSamples, spacing);
-
-            BuildBarrierPieceMesh(root, segIndex, side, k, centerline);
+            if (b - a < 0.05f) continue; // skip slivers left by a cut touching a boundary
+            BuildBarrierPieceMesh(root, $"Barrier_{side}_{segIndex}_{k}", side,
+                BuildAutoEdgeCenterline(side, a, b, mainSamples, spacing));
         }
     }
 
@@ -128,27 +120,63 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             if (gap.segmentIndex != segIndex || gap.side != side) continue;
             float gs = dStart + Mathf.Clamp(Mathf.Min(gap.startDistance, gap.endDistance), 0f, segLen);
             float ge = dStart + Mathf.Clamp(Mathf.Max(gap.startDistance, gap.endDistance), 0f, segLen);
-            if (ge - gs < 1e-4f) continue;
-
-            var next = new List<Vector2>();
-            for (int k = 0; k < spans.Count; k++)
-            {
-                float a = spans[k].x, b = spans[k].y;
-                if (ge <= a || gs >= b) { next.Add(spans[k]); continue; } // no overlap
-                if (gs > a) next.Add(new Vector2(a, gs));                  // left remainder
-                if (ge < b) next.Add(new Vector2(ge, b));                  // right remainder
-            }
-            spans = next;
+            spans = RemoveInterval(spans, gs, ge);
         }
         return spans;
     }
 
-    void BuildBarrierPieceMesh(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
-        int pieceIndex, List<Vector2> centerline)
+    // Remove the global distance ranges covered by hand-drawn manual barriers on this side.
+    List<Vector2> SubtractManualSpans(List<Vector2> spans, TrackEnvironment.BarrierSide side)
+    {
+        if (environment.manualSections == null) return spans;
+        for (int m = 0; m < environment.manualSections.Length; m++)
+        {
+            var sec = environment.manualSections[m];
+            if (sec.side != side) continue;
+            if (!TryManualSpanRange(sec, out float lo, out float hi)) continue;
+            spans = RemoveInterval(spans, lo, hi);
+        }
+        return spans;
+    }
+
+    // Cut [gs, ge] out of a list of [start, end] intervals.
+    static List<Vector2> RemoveInterval(List<Vector2> spans, float gs, float ge)
+    {
+        if (ge - gs < 1e-4f) return spans;
+        var next = new List<Vector2>();
+        for (int k = 0; k < spans.Count; k++)
+        {
+            float a = spans[k].x, b = spans[k].y;
+            if (ge <= a || gs >= b) { next.Add(spans[k]); continue; } // no overlap
+            if (gs > a) next.Add(new Vector2(a, gs));                  // left remainder
+            if (ge < b) next.Add(new Vector2(ge, b));                  // right remainder
+        }
+        return next;
+    }
+
+    // Build every hand-drawn manual barrier as a single straight-line polyline: startAnchor → points → endAnchor.
+    void BuildManualSpans(Transform root, List<TrackBuilder.Sample> mainSamples)
+    {
+        if (environment.manualSections == null) return;
+        for (int m = 0; m < environment.manualSections.Length; m++)
+        {
+            var sec = environment.manualSections[m];
+            if (!TryGetManualAnchorPoints(sec, mainSamples, out Vector2 startA, out Vector2 endA)) continue;
+
+            var line = new List<Vector2> { startA };
+            if (sec.manualPoints != null) line.AddRange(sec.manualPoints);
+            line.Add(endA);
+            if (line.Count < 2) continue;
+
+            BuildBarrierPieceMesh(root, $"Barrier_{sec.side}_Manual_{m}", sec.side, line);
+        }
+    }
+
+    void BuildBarrierPieceMesh(Transform root, string name, TrackEnvironment.BarrierSide side, List<Vector2> centerline)
     {
         if (centerline == null || centerline.Count < 2) return;
 
-        var go = new GameObject($"Barrier_{side}_{segIndex}_{pieceIndex}");
+        var go = new GameObject(name);
         go.transform.SetParent(root, false);
         var mf = go.AddComponent<MeshFilter>();
         var mr = go.AddComponent<MeshRenderer>();
@@ -166,48 +194,50 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         }
     }
 
-    // Extract the sub-polyline between two arc-length fractions [f0, f1] of the input, interpolating new endpoints.
-    // Maps a main-spline distance gap onto a hand-drawn barrier proportionally by its own length.
-    static List<Vector2> SlicePolylineByFraction(List<Vector2> pts, float f0, float f1)
+    // Distance (m) along the main spline of a segment boundary.
+    bool TryAnchorDistance(int segIndex, TrackEnvironment.SegmentEnd end, out float distance)
     {
-        var result = new List<Vector2>();
-        if (pts == null || pts.Count < 2) return result;
-        f0 = Mathf.Clamp01(f0); f1 = Mathf.Clamp01(f1);
-        if (f1 - f0 < 1e-4f) return result;
+        distance = 0f;
+        var segs = track != null && track.track != null ? track.track.segments : null;
+        if (segs == null || segIndex < 0 || segIndex >= segs.Length) return false;
+        float d = 0f;
+        for (int i = 0; i < segIndex; i++) d += segs[i].length;
+        if (end == TrackEnvironment.SegmentEnd.End) d += segs[segIndex].length;
+        distance = d;
+        return true;
+    }
 
-        float total = 0f;
-        for (int i = 1; i < pts.Count; i++) total += Vector2.Distance(pts[i - 1], pts[i]);
-        if (total < 1e-4f) return result;
+    // Ordered [lo, hi] main-spline distance range a manual section covers (used to cut the auto barrier).
+    bool TryManualSpanRange(TrackEnvironment.ManualBarrierSection sec, out float lo, out float hi)
+    {
+        lo = hi = 0f;
+        if (!TryAnchorDistance(sec.startSegmentIndex, sec.startEnd, out float ds)) return false;
+        if (!TryAnchorDistance(sec.endSegmentIndex, sec.endEnd, out float de)) return false;
+        lo = Mathf.Min(ds, de);
+        hi = Mathf.Max(ds, de);
+        return hi - lo > 1e-3f;
+    }
 
-        float dStart = f0 * total;
-        float dEnd = f1 * total;
+    bool TryGetManualAnchorPoints(TrackEnvironment.ManualBarrierSection sec, List<TrackBuilder.Sample> mainSamples,
+        out Vector2 startAnchor, out Vector2 endAnchor)
+    {
+        startAnchor = endAnchor = Vector2.zero;
+        if (!TryAnchorDistance(sec.startSegmentIndex, sec.startEnd, out float ds)) return false;
+        if (!TryAnchorDistance(sec.endSegmentIndex, sec.endEnd, out float de)) return false;
+        startAnchor = EdgePoint(sec.side, ds, mainSamples);
+        endAnchor = EdgePoint(sec.side, de, mainSamples);
+        return true;
+    }
 
-        float cum = 0f;
-        for (int i = 1; i < pts.Count; i++)
-        {
-            float segLen = Vector2.Distance(pts[i - 1], pts[i]);
-            if (segLen < 1e-6f) continue;
-            float segStart = cum;
-            float segEnd = cum + segLen;
-
-            if (segEnd >= dStart && segStart <= dEnd) // segment overlaps the kept range
-            {
-                if (result.Count == 0)
-                    result.Add(Vector2.Lerp(pts[i - 1], pts[i], Mathf.Clamp01((dStart - segStart) / segLen)));
-
-                if (segEnd <= dEnd)
-                {
-                    result.Add(pts[i]);
-                }
-                else
-                {
-                    result.Add(Vector2.Lerp(pts[i - 1], pts[i], Mathf.Clamp01((dEnd - segStart) / segLen)));
-                    break;
-                }
-            }
-            cum = segEnd;
-        }
-        return result;
+    // Editor helper: the two fixed anchor points of a manual section, in track-local space.
+    public bool TryGetManualAnchors(int sectionIndex, out Vector2 startLocal, out Vector2 endLocal)
+    {
+        startLocal = endLocal = Vector2.zero;
+        if (track == null || environment == null || environment.manualSections == null) return false;
+        if (sectionIndex < 0 || sectionIndex >= environment.manualSections.Length) return false;
+        var samples = track.SampleCenterline();
+        if (samples == null || samples.Count < 2) return false;
+        return TryGetManualAnchorPoints(environment.manualSections[sectionIndex], samples, out startLocal, out endLocal);
     }
 
     // Thin wall centred on the barrier centerline. Both faces offset ±thickness/2 along the PER-POINT normal,
@@ -232,15 +262,6 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         return path;
     }
 
-    int FindManualSection(int segIndex, TrackEnvironment.BarrierSide side)
-    {
-        if (environment.manualSections == null) return -1;
-        for (int i = 0; i < environment.manualSections.Length; i++)
-            if (environment.manualSections[i].segmentIndex == segIndex && environment.manualSections[i].side == side)
-                return i;
-        return -1;
-    }
-
     // Auto: sample the track edge across the segment span, offset outboard by inner/outer offset.
     List<Vector2> BuildAutoEdgeCenterline(TrackEnvironment.BarrierSide side, float dStart, float dEnd,
         List<TrackBuilder.Sample> mainSamples, float spacing)
@@ -255,20 +276,6 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             float d = dStart + length * t;
             list.Add(EdgePoint(side, d, mainSamples));
         }
-        return list;
-    }
-
-    // Manual: seed endpoints at the segment boundaries (so it connects to neighbour barriers), then user points between.
-    List<Vector2> BuildManualCenterline(int manualIdx, TrackEnvironment.BarrierSide side, float dStart, float dEnd,
-        List<TrackBuilder.Sample> mainSamples)
-    {
-        var section = environment.manualSections[manualIdx];
-        var list = new List<Vector2>();
-        Vector2 startAnchor = EdgePoint(side, dStart, mainSamples);
-        Vector2 endAnchor = EdgePoint(side, dEnd, mainSamples);
-        list.Add(startAnchor);
-        if (section.manualPoints != null) list.AddRange(section.manualPoints);
-        list.Add(endAnchor);
         return list;
     }
 

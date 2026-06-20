@@ -23,6 +23,8 @@ public class GridSpawner : MonoBehaviour
     public float gridStartDistance = -6f;
     [Tooltip("If true, AI start in their pit boxes. If false, they line up on the grid behind the start line. Currently false for testing.")]
     public bool spawnInPit = false;
+    [Tooltip("Formation-lap race: AI start frozen in pit boxes and form a train behind the safety car until green. Forces pit spawn, auto-fits pit-box spacing, and adds a FormationController to each car. Needs a FormationDirector in the scene.")]
+    public bool formationRace = true;
     [Tooltip("Fallback car speed (m/s) when no VehicleInfo is assigned. Otherwise speed is driven by the vehicle's accel/decel curves.")]
     public float speed = 35f;
     [Tooltip("VehicleInfo asset applied to every spawned AI car. Defines accel/decel/cornering curves.")]
@@ -69,6 +71,21 @@ public class GridSpawner : MonoBehaviour
         var parent = new GameObject("AIField").transform;
         parent.SetParent(transform, false);
 
+        // Formation race: park the field in the pit lane and fit the boxes to the available pit length.
+        float pitBoxExitGap = 12f;
+        float pitBoxSpacing = 12f;
+        if (formationRace)
+        {
+            spawnInPit = true;
+            var pit = track.SamplePitCenterline();
+            float pitLen = pit.Count > 0 ? pit[pit.Count - 1].distance : 0f;
+            if (pitLen > 0f && count > 1)
+            {
+                float usable = Mathf.Max(0f, pitLen - pitBoxExitGap - 6f);
+                pitBoxSpacing = Mathf.Clamp(usable / (count - 1), 5f, 12f);
+            }
+        }
+
         for (int i = 0; i < count; i++)
         {
             var go = Instantiate(carPrefab, parent);
@@ -94,6 +111,14 @@ public class GridSpawner : MonoBehaviour
             splineDriver.speed = speed;
             splineDriver.spriteFacesUp = false;
             splineDriver.angleOffsetDeg = 180f;
+
+            if (formationRace)
+            {
+                splineDriver.pitBoxExitGap = pitBoxExitGap;
+                splineDriver.pitBoxSpacing = pitBoxSpacing;
+                splineDriver.freezeUntilFormation = true;
+                if (go.GetComponent<FormationController>() == null) go.AddComponent<FormationController>();
+            }
 
             var binding = go.GetComponent<AIDriverBinding>();
             if (binding == null) binding = go.AddComponent<AIDriverBinding>();

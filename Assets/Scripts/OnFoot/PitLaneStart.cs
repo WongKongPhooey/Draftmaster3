@@ -28,6 +28,10 @@ public class PitLaneStart : MonoBehaviour
     [Tooltip("Max distance from car centre to allow climbing in.")]
     public float enterRange = 2.5f;
 
+    // Fired the moment the player climbs into the car. FormationDirector subscribes to this to start
+    // the safety-car formation lap.
+    public event System.Action PlayerEnteredCar;
+
     [Header("Pit Greeter NPC")]
     [Tooltip("Spawn a walk-up-and-talk crew member near the player's pit spawn.")]
     public bool spawnGreeter = true;
@@ -226,6 +230,8 @@ public class PitLaneStart : MonoBehaviour
         car.enabled = true; // PlayerVehicleController.Start captures parked heading on first enable
         if (_camFollow != null) _camFollow.target = car.transform;
         _orthoTarget = drivingOrthoSize;
+
+        PlayerEnteredCar?.Invoke();
     }
 
     bool InteractPressed()

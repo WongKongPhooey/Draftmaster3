@@ -21,7 +21,7 @@ public class TrackEnvironment : ScriptableObject
     public float barrierUvLengthScale = 1f;
     [Tooltip("Add a solid collider to every barrier section.")]
     public bool barrierColliders = true;
-    [Tooltip("Sections switched from auto-follow to hand-drawn. Each targets one segment + side.")]
+    [Tooltip("Hand-drawn barrier spans. Each replaces the auto barrier on one side from a start segment boundary to an end segment boundary, drawing straight lines through the anchors and any hand-placed points between.")]
     public ManualBarrierSection[] manualSections;
 
     [Header("Barrier Gaps — openings for pit lane, service roads, etc.")]
@@ -73,13 +73,30 @@ public class TrackEnvironment : ScriptableObject
         public float endDistance;
     }
 
+    // Which boundary of a segment an anchor sits on.
+    public enum SegmentEnd { Start, End }
+
     [System.Serializable]
     public struct ManualBarrierSection
     {
-        [Tooltip("Main-spline segment index this manual section replaces.")]
-        public int segmentIndex;
+        [Tooltip("Optional name, e.g. \"Pit wall\" or \"Turn 5 tyre stack\".")]
+        public string label;
+        [Tooltip("Which side's barrier this span replaces: Inner or Outer.")]
         public BarrierSide side;
-        [Tooltip("Hand-drawn track-local points. Endpoints auto-seed to neighbour barrier ends if empty.")]
+
+        [Header("Start anchor")]
+        [Tooltip("Segment whose boundary the manual barrier starts at.")]
+        public int startSegmentIndex;
+        [Tooltip("Which end of the start segment to anchor to.")]
+        public SegmentEnd startEnd;
+
+        [Header("End anchor")]
+        [Tooltip("Segment whose boundary the manual barrier ends at.")]
+        public int endSegmentIndex;
+        [Tooltip("Which end of the end segment to anchor to.")]
+        public SegmentEnd endEnd;
+
+        [Tooltip("Hand-placed track-local points between the two anchors, in order. The barrier is straight lines: startAnchor → points[0] → … → endAnchor.")]
         public Vector2[] manualPoints;
     }
 

@@ -284,6 +284,38 @@ public class TrackBuilder : MonoBehaviour
         return false;
     }
 
+    // Project a WORLD position onto the main centerline and return its distance (m) along the spline.
+    // Lets a free-driven car (the player) be located on the track for gap maths against the AI field.
+    // Uses the cached centerline (invalidated on Build); cheap enough for one query per FixedUpdate.
+    public float NearestCenterlineDistance(Vector3 worldPos)
+    {
+        if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
+        var samples = _surfaceCache;
+        if (samples == null || samples.Count < 2) return 0f;
+
+        Vector2 local = transform.InverseTransformPoint(worldPos);
+        float best = float.MaxValue;
+        int bi = 0;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            float d = ((Vector2)samples[i].position - local).sqrMagnitude;
+            if (d < best) { best = d; bi = i; }
+        }
+
+        // Refine to sub-sample accuracy by projecting onto the segment toward the closer neighbour.
+        int ni = bi;
+        float bestN = float.MaxValue;
+        if (bi > 0) { float d = ((Vector2)samples[bi - 1].position - local).sqrMagnitude; if (d < bestN) { bestN = d; ni = bi - 1; } }
+        if (bi < samples.Count - 1) { float d = ((Vector2)samples[bi + 1].position - local).sqrMagnitude; if (d < bestN) { bestN = d; ni = bi + 1; } }
+
+        var a = samples[bi];
+        var b = samples[ni];
+        Vector2 ab = (Vector2)b.position - (Vector2)a.position;
+        float denom = ab.sqrMagnitude;
+        float t = denom > 1e-6f ? Mathf.Clamp01(Vector2.Dot(local - (Vector2)a.position, ab) / denom) : 0f;
+        return Mathf.Lerp(a.distance, b.distance, t);
+    }
+
     // Nearest-sample test: is local within half-width of this centerline? Outputs |lateral| from it.
     static bool OnSampleSurface(List<Sample> samples, Vector2 local, out float lateralAbs)
     {

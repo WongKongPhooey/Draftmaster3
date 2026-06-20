@@ -147,6 +147,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     bool _onGrass;          // car is off the track surface this step
 
     [HideInInspector] public bool externalInput; // true when an AI controller feeds inputs via SetInput
+    // Soft forward-speed cap (m/s). Infinity = no cap. Set by FormationDirector to hold the player to
+    // pace-car speed during a caution/formation lap. Caps forward speed only — reverse and slides are untouched.
+    [HideInInspector] public float speedGovernorMps = Mathf.Infinity;
     float _inSteer, _inThrottle, _inBrake;        // last externally-supplied inputs
     bool _wasEmitting;      // trail emit state last step (for streak-free re-enable)
     TrailRenderer _trailL, _trailR; // rear tyre trails (grass)
@@ -179,12 +182,15 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _inBrake = Mathf.Clamp01(brake);
     }
 
-    // Place the car and align the dynamic state to a heading (used once at AI spawn so it starts on the grid/pit).
-    public void SeedPose(Vector2 worldPos, float headingDeg)
+    // Place the car and align the dynamic state to a heading (used at AI spawn so it starts on the grid/pit,
+    // and when handing back from a kinematic formation lap — pass the current forward speed so the rolling
+    // start doesn't lurch from a standstill).
+    public void SeedPose(Vector2 worldPos, float headingDeg, float forwardSpeedMps = 0f)
     {
         transform.position = new Vector3(worldPos.x, worldPos.y, transform.position.z);
         _headingDeg = headingDeg;
-        _vx = _vy = _r = 0f;
+        _vx = forwardSpeedMps;
+        _vy = _r = 0f;
         transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? _headingDeg - 90f : _headingDeg) + angleOffsetDeg);
     }
 
@@ -378,6 +384,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             else if (_vx < 0f) _vx = Mathf.Min(0f, _vx + resist);
             _vx = Mathf.Clamp(_vx, -topMps, topMps);
             if (reversing) _vx = Mathf.Max(_vx, -reverseMaxSpeed); // cap input-driven reverse, not spin momentum
+            if (_vx > speedGovernorMps) _vx = speedGovernorMps;    // formation/caution pace cap (forward only)
 
             // Integrate heading by yaw rate.
             _headingDeg += _r * Mathf.Rad2Deg * h;

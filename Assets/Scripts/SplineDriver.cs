@@ -70,6 +70,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float pitBoxExitGap = 20f;
     [Tooltip("How much of the pit-lane length the cars actually need to traverse before merging back onto track (sets the auto-exit threshold).")]
     [Range(0.5f, 1f)] public float pitExitThreshold = 0.98f;
+    [Tooltip("When on the pit lane and past pitExitThreshold, hop back onto the main spline. Disable for a safety car that drives INTO the pit to park.")]
+    public bool autoPitExit = true;
+    [Tooltip("After rejoining the main spline at pit exit, how fast (m/s) the car eases from its pit-exit line onto the racing line. Stops the merge being an instant sideways pop.")]
+    public float pitMergeEaseSpeed = 2.5f;
+
+    [Header("Formation Start")]
+    [Tooltip("Hold this car perfectly still (parked in its box / at pit exit) while RaceStart.Current is PreGrid. Released automatically once the phase advances to Formation.")]
+    public bool freezeUntilFormation = false;
 
     [Header("Cornering Feel")]
     [Tooltip("Lean angle (deg) per metre/sec of lateral motion. Positive offset rate = moving right = leans right. Negate to flip.")]
@@ -131,6 +139,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     bool _hasPrevLateral;
     float _currentLean;
     float _currentMph;
+    float _mergeLatBias; // lateral carried across the pit→main merge, eased out so the rejoin isn't a sideways pop
 
     void Awake()
     {
@@ -473,6 +482,27 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         if (_mainSamples == null || _mainSamples.Count < 2) return;
 
+        // Pre-grid hold: sit parked in the pit box / at the pit exit until the formation lap begins.
+        // Still Place() so the pose (and the commanded point feeding any dynamic model) tracks the box,
+        // but advance nothing and command zero speed so dynamic-AI cars hold station too.
+        if (freezeUntilFormation && RaceStart.Current == RaceStart.Phase.PreGrid)
+        {
+            speed = 0f;
+            _currentMph = 0f;
+            Place();
+            // Pin the body to the box even under a dynamic motion controller. The controller's one-shot
+            // seed can latch the wrong pose (its FixedUpdate may run before this Start places the car), and
+            // a frozen car has no speed to recover. Writing the transform here guarantees it sits on its box;
+            // a zero-velocity PlayerVehicleController preserves it, so they agree regardless of update order.
+            if (externalMotionController && track != null)
+            {
+                Vector3 wp = track.transform.TransformPoint(new Vector3(CommandedLocalPos.x, CommandedLocalPos.y, 0f));
+                transform.position = new Vector3(wp.x, wp.y, transform.position.z);
+                transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? CommandedHeadingDeg - 90f : CommandedHeadingDeg) + angleOffsetDeg);
+            }
+            return;
+        }
+
         if (usePitLane != _onPit)
         {
             // Lane switch — if entering pit, reset tires (service stop). Out-of-pit doesn't touch wear.
@@ -518,14 +548,35 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float advanceSpeed = externalMotionController ? externalActualSpeedMps : speed;
         _distance += advanceSpeed * Time.fixedDeltaTime;
 
-        if (_onPit && _pitLength > 0f && _distance >= _pitLength * pitExitThreshold)
+        if (autoPitExit && _onPit && _pitLength > 0f && _distance >= _pitLength * pitExitThreshold)
         {
-            // Hop from pit spline back to main spline at pit exit node.
-            float overshoot = _distance - _pitLength;
+            // Rejoin the main spline WITHOUT a positional jump. The authored pitExitDistance node need not line
+            // up with the physical end of the pit lane, so teleporting there warps the car forward (and the
+            // lateral discontinuity spikes the lean into a phantom 360). Instead continue from the main-spline
+            // point nearest the car's current position, and carry its current lateral as a bias that eases out.
             _onPit = false;
             usePitLane = false;
-            _distance = (track != null && track.track != null ? track.track.pitExitDistance : 0f) + Mathf.Max(0f, overshoot);
             length = _mainLength;
+
+            if (track != null && _mainSamples != null && _mainSamples.Count >= 2)
+            {
+                Vector3 worldNow = transform.position;
+                Vector2 localNow = track.transform.InverseTransformPoint(worldNow);
+                _distance = track.NearestCenterlineDistance(worldNow);
+
+                var s = track.SampleAt(_distance, _mainSamples);
+                float actualLat = Vector2.Dot(localNow - s.position, s.normal);
+                float baseLat = lateralOffset + tacticalLateralOffset + LateralAt(_distance);
+                _mergeLatBias = Mathf.Clamp(actualLat - baseLat, -12f, 12f);
+            }
+            else
+            {
+                _distance = track != null && track.track != null ? track.track.pitExitDistance : 0f;
+                _mergeLatBias = 0f;
+            }
+
+            _hasPrevLateral = false; // don't let the pit→main lateral change spike the lean
+            _currentLean = 0f;
         }
 
         if (loop && !_onPit)
@@ -594,6 +645,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _collisionLateral = Mathf.MoveTowards(_collisionLateral, 0f, 6f * Time.fixedDeltaTime);
             _collisionLongitudinal = Mathf.MoveTowards(_collisionLongitudinal, 0f, 6f * Time.fixedDeltaTime);
         }
+        // Ease the pit-merge lateral bias out so the car drifts from its pit-exit line onto the racing line.
+        _mergeLatBias = Mathf.MoveTowards(_mergeLatBias, 0f, pitMergeEaseSpeed * Time.fixedDeltaTime);
+
         float placeDistance = _distance + _collisionLongitudinal;
 
         TrackBuilder.Sample sample;
@@ -610,7 +664,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         float lineLateral = !_onPit ? LateralAt(placeDistance) : 0f;
-        float totalLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral;
+        float totalLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral + _mergeLatBias;
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(placeDistance, out float boundLo, out float boundHi);

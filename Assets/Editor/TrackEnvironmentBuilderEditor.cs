@@ -6,8 +6,13 @@ using UnityEngine;
 public class TrackEnvironmentBuilderEditor : Editor
 {
     TrackEnvironmentBuilder _builder;
-    int _pickSegment;
-    TrackEnvironment.BarrierSide _pickSide = TrackEnvironment.BarrierSide.Outer;
+
+    // New-section pickers.
+    TrackEnvironment.BarrierSide _side = TrackEnvironment.BarrierSide.Outer;
+    int _startSeg;
+    TrackEnvironment.SegmentEnd _startEnd = TrackEnvironment.SegmentEnd.Start;
+    int _endSeg;
+    TrackEnvironment.SegmentEnd _endEnd = TrackEnvironment.SegmentEnd.Start;
 
     void OnEnable() { _builder = (TrackEnvironmentBuilder)target; }
 
@@ -18,60 +23,95 @@ public class TrackEnvironmentBuilderEditor : Editor
         var env = _builder.environment;
         if (env == null) return;
 
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Barrier Manual Sections", EditorStyles.boldLabel);
-
         int segCount = (_builder.track != null && _builder.track.track != null && _builder.track.track.segments != null)
             ? _builder.track.track.segments.Length : 0;
+        int maxSeg = Mathf.Max(0, segCount - 1);
 
-        _pickSegment = EditorGUILayout.IntSlider("Segment", _pickSegment, 0, Mathf.Max(0, segCount - 1));
-        _pickSide = (TrackEnvironment.BarrierSide)EditorGUILayout.EnumPopup("Side", _pickSide);
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("New Manual Barrier", EditorStyles.boldLabel);
+        _side = (TrackEnvironment.BarrierSide)EditorGUILayout.EnumPopup("Side", _side);
 
-        int existing = FindSection(env, _pickSegment, _pickSide);
-        if (existing < 0)
+        EditorGUILayout.LabelField("Start anchor");
+        EditorGUI.indentLevel++;
+        _startSeg = EditorGUILayout.IntSlider("Segment", _startSeg, 0, maxSeg);
+        _startEnd = (TrackEnvironment.SegmentEnd)EditorGUILayout.EnumPopup("End", _startEnd);
+        EditorGUI.indentLevel--;
+
+        EditorGUILayout.LabelField("End anchor");
+        EditorGUI.indentLevel++;
+        _endSeg = EditorGUILayout.IntSlider("Segment", _endSeg, 0, maxSeg);
+        _endEnd = (TrackEnvironment.SegmentEnd)EditorGUILayout.EnumPopup("End", _endEnd);
+        EditorGUI.indentLevel--;
+
+        if (GUILayout.Button("Create Manual Barrier"))
         {
-            if (GUILayout.Button("Switch This Section To Manual"))
+            var list = new List<TrackEnvironment.ManualBarrierSection>(env.manualSections ?? new TrackEnvironment.ManualBarrierSection[0]);
+            list.Add(new TrackEnvironment.ManualBarrierSection
             {
-                var list = new List<TrackEnvironment.ManualBarrierSection>(env.manualSections ?? new TrackEnvironment.ManualBarrierSection[0]);
-                list.Add(new TrackEnvironment.ManualBarrierSection { segmentIndex = _pickSegment, side = _pickSide, manualPoints = new Vector2[0] });
-                env.manualSections = list.ToArray();
-                _builder.editManualSectionIndex = list.Count - 1;
-                EditorUtility.SetDirty(env);
-                _builder.Build();
-            }
+                label = $"{_side} {_startSeg}{Short(_startEnd)}→{_endSeg}{Short(_endEnd)}",
+                side = _side,
+                startSegmentIndex = _startSeg,
+                startEnd = _startEnd,
+                endSegmentIndex = _endSeg,
+                endEnd = _endEnd,
+                manualPoints = new Vector2[0],
+            });
+            Undo.RecordObject(env, "Create Manual Barrier");
+            env.manualSections = list.ToArray();
+            _builder.editManualSectionIndex = list.Count - 1;
+            EditorUtility.SetDirty(env);
+            _builder.Build();
+            SceneView.RepaintAll();
+        }
+
+        // Existing sections.
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Manual Barriers", EditorStyles.boldLabel);
+        var sections = env.manualSections;
+        if (sections == null || sections.Length == 0)
+        {
+            EditorGUILayout.HelpBox("None yet. Pick anchors above and Create Manual Barrier.", MessageType.None);
         }
         else
         {
-            EditorGUILayout.HelpBox($"Segment {_pickSegment} / {_pickSide} is Manual (section {existing}).", MessageType.Info);
-            if (GUILayout.Button("Edit This Section In Scene"))
-                _builder.editManualSectionIndex = existing;
-            if (GUILayout.Button("Revert This Section To Auto"))
+            for (int i = 0; i < sections.Length; i++)
             {
-                var list = new List<TrackEnvironment.ManualBarrierSection>(env.manualSections);
-                list.RemoveAt(existing);
-                env.manualSections = list.ToArray();
-                _builder.editManualSectionIndex = -1;
-                EditorUtility.SetDirty(env);
-                _builder.Build();
+                var s = sections[i];
+                EditorGUILayout.BeginHorizontal();
+                bool active = _builder.editManualSectionIndex == i;
+                string title = string.IsNullOrEmpty(s.label) ? $"{s.side} {s.startSegmentIndex}→{s.endSegmentIndex}" : s.label;
+                EditorGUILayout.LabelField($"{(active ? "▶ " : "")}{i}: {title} ({(s.manualPoints != null ? s.manualPoints.Length : 0)} pts)");
+                if (GUILayout.Button(active ? "Editing" : "Edit", GUILayout.Width(64)))
+                {
+                    _builder.editManualSectionIndex = active ? -1 : i;
+                    SceneView.RepaintAll();
+                }
+                if (GUILayout.Button("Delete", GUILayout.Width(60)))
+                {
+                    var list = new List<TrackEnvironment.ManualBarrierSection>(env.manualSections);
+                    Undo.RecordObject(env, "Delete Manual Barrier");
+                    list.RemoveAt(i);
+                    env.manualSections = list.ToArray();
+                    if (_builder.editManualSectionIndex >= env.manualSections.Length) _builder.editManualSectionIndex = -1;
+                    EditorUtility.SetDirty(env);
+                    _builder.Build();
+                    EditorGUILayout.EndHorizontal();
+                    break;
+                }
+                EditorGUILayout.EndHorizontal();
             }
         }
 
         EditorGUILayout.HelpBox(
-            "Scene editing the active manual section:\n" +
-            "• Ctrl+Click = add point\n" +
-            "• Drag handles = move\n" +
-            "• Shift+Click a point = delete\n" +
-            "Endpoints auto-connect to neighbour barriers.",
+            "Editing the active manual barrier (▶) in the Scene view:\n" +
+            "• Click empty space = add a point (appended in order between the anchors)\n" +
+            "• Drag a point = move it\n" +
+            "• Shift+Click a point = delete it\n" +
+            "Green spheres are the fixed start/end anchors.",
             MessageType.None);
     }
 
-    static int FindSection(TrackEnvironment env, int seg, TrackEnvironment.BarrierSide side)
-    {
-        if (env.manualSections == null) return -1;
-        for (int i = 0; i < env.manualSections.Length; i++)
-            if (env.manualSections[i].segmentIndex == seg && env.manualSections[i].side == side) return i;
-        return -1;
-    }
+    static string Short(TrackEnvironment.SegmentEnd e) => e == TrackEnvironment.SegmentEnd.Start ? "s" : "e";
 
     void OnSceneGUI()
     {
@@ -87,13 +127,31 @@ public class TrackEnvironmentBuilderEditor : Editor
         Event e = Event.current;
         bool changed = false;
 
+        bool haveAnchors = _builder.TryGetManualAnchors(idx, out Vector2 startLocal, out Vector2 endLocal);
+        Vector3 startWorld = tf.TransformPoint(new Vector3(startLocal.x, startLocal.y, 0f));
+        Vector3 endWorld = tf.TransformPoint(new Vector3(endLocal.x, endLocal.y, 0f));
+
+        // Fixed anchors.
+        if (haveAnchors)
+        {
+            Handles.color = Color.green;
+            Handles.SphereHandleCap(0, startWorld, Quaternion.identity, HandleUtility.GetHandleSize(startWorld) * 0.16f, EventType.Repaint);
+            Handles.SphereHandleCap(0, endWorld, Quaternion.identity, HandleUtility.GetHandleSize(endWorld) * 0.16f, EventType.Repaint);
+            Handles.Label(startWorld, " start");
+            Handles.Label(endWorld, " end");
+        }
+
+        // Movable / deletable user points. Track if the mouse-down landed on one so a plain click there
+        // doesn't also add a new point.
+        bool onExistingPoint = false;
         for (int i = 0; i < pts.Count; i++)
         {
             Vector3 world = tf.TransformPoint(new Vector3(pts[i].x, pts[i].y, 0f));
             float size = HandleUtility.GetHandleSize(world) * 0.12f;
+            if (HandleUtility.DistanceToCircle(world, size) < 10f) onExistingPoint = true;
 
             if (e.shift && e.type == EventType.MouseDown && e.button == 0 &&
-                HandleUtility.DistanceToCircle(world, size) < 8f)
+                HandleUtility.DistanceToCircle(world, size) < 10f)
             {
                 Undo.RecordObject(env, "Delete Barrier Point");
                 pts.RemoveAt(i);
@@ -115,13 +173,19 @@ public class TrackEnvironmentBuilderEditor : Editor
             Handles.Label(world, $" {i}");
         }
 
+        // Polyline preview: startAnchor → points → endAnchor.
         Handles.color = Color.yellow;
-        for (int i = 1; i < pts.Count; i++)
-            Handles.DrawLine(
-                tf.TransformPoint(new Vector3(pts[i - 1].x, pts[i - 1].y, 0f)),
-                tf.TransformPoint(new Vector3(pts[i].x, pts[i].y, 0f)));
+        Vector3 prev = startWorld;
+        for (int i = 0; i < pts.Count; i++)
+        {
+            Vector3 w = tf.TransformPoint(new Vector3(pts[i].x, pts[i].y, 0f));
+            if (haveAnchors || i > 0) Handles.DrawLine(prev, w);
+            prev = w;
+        }
+        if (haveAnchors) Handles.DrawLine(prev, endWorld);
 
-        if (e.control && e.type == EventType.MouseDown && e.button == 0)
+        // Plain left-click in empty space adds a point.
+        if (!e.shift && !e.alt && e.type == EventType.MouseDown && e.button == 0 && !onExistingPoint)
         {
             Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
             Plane plane = new Plane(Vector3.forward, Vector3.zero);
@@ -144,6 +208,7 @@ public class TrackEnvironmentBuilderEditor : Editor
             _builder.Build();
         }
 
+        // Take control so plain clicks don't deselect the builder while editing.
         if (e.type == EventType.Layout)
             HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
     }

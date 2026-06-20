@@ -32,19 +32,28 @@ public class SplineInputDriver : MonoBehaviour
         // SplineDriver stops writing the transform (the dynamic model owns it); PlayerVehicleController takes AI inputs.
         if (_spline != null) _spline.externalMotionController = true;
         if (_car != null) _car.externalInput = true;
+        // Re-seed whenever re-enabled (e.g. handing back from a kinematic formation lap) so the car picks up
+        // its current spline pose + speed instead of driving on from a stale internal state.
+        _seeded = false;
     }
 
     void FixedUpdate()
     {
         if (_spline == null || _car == null || _spline.track == null || _spline.vehicleInfo == null) return;
 
+        // Don't seed until SplineDriver has actually placed the car (TrackLength>0 means Rebuild has run).
+        if (_spline.TrackLength <= 0f) return;
+
         Vector3 targetWorld = _spline.track.transform.TransformPoint(
             new Vector3(_spline.CommandedLocalPos.x, _spline.CommandedLocalPos.y, 0f));
 
         // Place the car on the grid/pit and align heading before handing over to the dynamic model.
-        if (!_seeded)
+        // While the field is held PreGrid, keep re-seeding: SplineDriver.Rebuild can populate the spline
+        // before its Start computes the real pit-box pose, so a one-shot seed can latch the wrong (origin)
+        // pose on a frozen car. Re-seeding every PreGrid frame pins the car to its box once Start runs.
+        if (!_seeded || RaceStart.Current == RaceStart.Phase.PreGrid)
         {
-            _car.SeedPose(new Vector2(targetWorld.x, targetWorld.y), _spline.CommandedHeadingDeg);
+            _car.SeedPose(new Vector2(targetWorld.x, targetWorld.y), _spline.CommandedHeadingDeg, _spline.CommandedSpeedMps);
             _seeded = true;
             return;
         }

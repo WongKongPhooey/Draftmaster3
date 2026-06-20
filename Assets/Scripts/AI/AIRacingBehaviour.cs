@@ -86,6 +86,9 @@ public class AIRacingBehaviour : MonoBehaviour
     void FixedUpdate()
     {
         if (_spline == null || _spline.TrackLength <= 0f) return;
+        // Racing tactics stay off until the green flag. During PreGrid/Formation, FormationController
+        // owns the AI's speed cap and line so the field forms up behind the safety car.
+        if (!RaceStart.IsGreen) return;
 
         float dt = Time.fixedDeltaTime;
         float desiredTactical = 0f;
