@@ -17,6 +17,18 @@ public class SplineInputDriver : MonoBehaviour
     [Tooltip("Below this speed (m/s) steering authority ramps down to avoid low-speed wobble / spin.")]
     public float lowSpeedCutoff = 6f;
 
+    [Header("Lookahead")]
+    [Tooltip("Seconds of travel ahead to aim the steering at. The pure-pursuit target sits speed*this metres up the racing line; bigger = smoother but lazier turn-in.")]
+    public float lookaheadTime = 0.45f;
+    [Tooltip("Minimum lookahead distance (m), used at low speed and on the tightest turns.")]
+    public float lookaheadMin = 4f;
+    [Tooltip("Maximum lookahead distance (m), capping it on the straights.")]
+    public float lookaheadMax = 22f;
+    [Tooltip("On a turn, the lookahead is capped to this fraction of the turn radius — so tight corners get a short, sharp aim point (turn in hard) while gradual ones keep a long smooth one. Lower = sharper turn-in.")]
+    public float radiusLookaheadFactor = 0.55f;
+    [Tooltip("Distance ahead (m) scanned for the tightest turn radius that caps the lookahead.")]
+    public float curvatureScan = 35f;
+
     SplineDriver _spline;
     PlayerVehicleController _car;
     bool _seeded;
@@ -44,7 +56,7 @@ public class SplineInputDriver : MonoBehaviour
         // Don't seed until SplineDriver has actually placed the car (TrackLength>0 means Rebuild has run).
         if (_spline.TrackLength <= 0f) return;
 
-        Vector3 targetWorld = _spline.track.transform.TransformPoint(
+        Vector3 seedWorld = _spline.track.transform.TransformPoint(
             new Vector3(_spline.CommandedLocalPos.x, _spline.CommandedLocalPos.y, 0f));
 
         // Place the car on the grid/pit and align heading before handing over to the dynamic model.
@@ -53,14 +65,22 @@ public class SplineInputDriver : MonoBehaviour
         // pose on a frozen car. Re-seeding every PreGrid frame pins the car to its box once Start runs.
         if (!_seeded || RaceStart.Current == RaceStart.Phase.PreGrid)
         {
-            _car.SeedPose(new Vector2(targetWorld.x, targetWorld.y), _spline.CommandedHeadingDeg, _spline.CommandedSpeedMps);
+            _car.SeedPose(new Vector2(seedWorld.x, seedWorld.y), _spline.CommandedHeadingDeg, _spline.CommandedSpeedMps);
             _seeded = true;
             return;
         }
 
         float speed = _car.SpeedMps;
 
-        // --- Steering: pure-pursuit toward the commanded path point.
+        // --- Steering: pure-pursuit toward a point AHEAD on the racing line. Lookahead scales with speed, then
+        // is capped by the tightest upcoming turn radius so the car aims short into tight corners (sharp turn-in,
+        // no running wide) while keeping a long smooth aim on straights and gradual sweepers.
+        float lookahead = Mathf.Clamp(speed * lookaheadTime, lookaheadMin, lookaheadMax);
+        float radius = _spline.CurvatureRadiusAhead(curvatureScan);
+        if (radius < float.MaxValue)
+            lookahead = Mathf.Min(lookahead, Mathf.Max(lookaheadMin, radius * radiusLookaheadFactor));
+        Vector2 aheadLocal = _spline.PathPointAhead(lookahead);
+        Vector3 targetWorld = _spline.track.transform.TransformPoint(new Vector3(aheadLocal.x, aheadLocal.y, 0f));
         Vector2 toTarget = (Vector2)targetWorld - (Vector2)transform.position;
         float steerInput = 0f;
         if (toTarget.sqrMagnitude > 1e-4f)

@@ -7,12 +7,15 @@ public class TrackEnvironmentBuilderEditor : Editor
 {
     TrackEnvironmentBuilder _builder;
 
-    // New-section pickers.
+    // Manual-barrier pickers.
     TrackEnvironment.BarrierSide _side = TrackEnvironment.BarrierSide.Outer;
     int _startSeg;
     TrackEnvironment.SegmentEnd _startEnd = TrackEnvironment.SegmentEnd.Start;
     int _endSeg;
     TrackEnvironment.SegmentEnd _endEnd = TrackEnvironment.SegmentEnd.Start;
+
+    // Runoff picker.
+    TrackEnvironment.SurfaceType _runoffSurface = TrackEnvironment.SurfaceType.Grass;
 
     void OnEnable() { _builder = (TrackEnvironmentBuilder)target; }
 
@@ -27,7 +30,15 @@ public class TrackEnvironmentBuilderEditor : Editor
             ? _builder.track.track.segments.Length : 0;
         int maxSeg = Mathf.Max(0, segCount - 1);
 
+        DrawManualBarrierSection(env, maxSeg);
         EditorGUILayout.Space();
+        DrawRunoffSection(env);
+    }
+
+    // ---------------------------------------------------------------- Manual barriers
+
+    void DrawManualBarrierSection(TrackEnvironment env, int maxSeg)
+    {
         EditorGUILayout.LabelField("New Manual Barrier", EditorStyles.boldLabel);
         _side = (TrackEnvironment.BarrierSide)EditorGUILayout.EnumPopup("Side", _side);
 
@@ -58,14 +69,12 @@ public class TrackEnvironmentBuilderEditor : Editor
             });
             Undo.RecordObject(env, "Create Manual Barrier");
             env.manualSections = list.ToArray();
-            _builder.editManualSectionIndex = list.Count - 1;
+            SetBarrierEdit(list.Count - 1);
             EditorUtility.SetDirty(env);
             _builder.Build();
             SceneView.RepaintAll();
         }
 
-        // Existing sections.
-        EditorGUILayout.Space();
         EditorGUILayout.LabelField("Manual Barriers", EditorStyles.boldLabel);
         var sections = env.manualSections;
         if (sections == null || sections.Length == 0)
@@ -83,7 +92,7 @@ public class TrackEnvironmentBuilderEditor : Editor
                 EditorGUILayout.LabelField($"{(active ? "▶ " : "")}{i}: {title} ({(s.manualPoints != null ? s.manualPoints.Length : 0)} pts)");
                 if (GUILayout.Button(active ? "Editing" : "Edit", GUILayout.Width(64)))
                 {
-                    _builder.editManualSectionIndex = active ? -1 : i;
+                    SetBarrierEdit(active ? -1 : i);
                     SceneView.RepaintAll();
                 }
                 if (GUILayout.Button("Delete", GUILayout.Width(60)))
@@ -103,35 +112,116 @@ public class TrackEnvironmentBuilderEditor : Editor
         }
 
         EditorGUILayout.HelpBox(
-            "Editing the active manual barrier (▶) in the Scene view:\n" +
-            "• Click empty space = add a point (appended in order between the anchors)\n" +
-            "• Drag a point = move it\n" +
-            "• Shift+Click a point = delete it\n" +
+            "Editing the active barrier (▶) in the Scene view:\n" +
+            "• Click empty space = add a point (between the anchors)\n" +
+            "• Drag a point = move • Shift+Click a point = delete\n" +
             "Green spheres are the fixed start/end anchors.",
             MessageType.None);
     }
 
+    // ---------------------------------------------------------------- Runoff areas
+
+    void DrawRunoffSection(TrackEnvironment env)
+    {
+        EditorGUILayout.LabelField("New Runoff Area", EditorStyles.boldLabel);
+        _runoffSurface = (TrackEnvironment.SurfaceType)EditorGUILayout.EnumPopup("Surface", _runoffSurface);
+
+        if (GUILayout.Button("Create Runoff Area"))
+        {
+            var list = new List<TrackEnvironment.RunoffArea>(env.runoffAreas ?? new TrackEnvironment.RunoffArea[0]);
+            list.Add(new TrackEnvironment.RunoffArea
+            {
+                label = $"{_runoffSurface} {list.Count}",
+                surface = _runoffSurface,
+                points = new Vector2[0],
+            });
+            Undo.RecordObject(env, "Create Runoff Area");
+            env.runoffAreas = list.ToArray();
+            SetRunoffEdit(list.Count - 1);
+            EditorUtility.SetDirty(env);
+            _builder.Build();
+            SceneView.RepaintAll();
+        }
+
+        EditorGUILayout.LabelField("Runoff Areas", EditorStyles.boldLabel);
+        var areas = env.runoffAreas;
+        if (areas == null || areas.Length == 0)
+        {
+            EditorGUILayout.HelpBox("None yet. Pick a surface and Create Runoff Area, then click in the Scene to draw the polygon.", MessageType.None);
+        }
+        else
+        {
+            for (int i = 0; i < areas.Length; i++)
+            {
+                var a = areas[i];
+                EditorGUILayout.BeginHorizontal();
+                bool active = _builder.editRunoffIndex == i;
+                string title = string.IsNullOrEmpty(a.label) ? a.surface.ToString() : a.label;
+                EditorGUILayout.LabelField($"{(active ? "▶ " : "")}{i}: {title} ({(a.points != null ? a.points.Length : 0)} pts)");
+                if (GUILayout.Button(active ? "Editing" : "Edit", GUILayout.Width(64)))
+                {
+                    SetRunoffEdit(active ? -1 : i);
+                    SceneView.RepaintAll();
+                }
+                if (GUILayout.Button("Delete", GUILayout.Width(60)))
+                {
+                    var list = new List<TrackEnvironment.RunoffArea>(env.runoffAreas);
+                    Undo.RecordObject(env, "Delete Runoff Area");
+                    list.RemoveAt(i);
+                    env.runoffAreas = list.ToArray();
+                    if (_builder.editRunoffIndex >= env.runoffAreas.Length) _builder.editRunoffIndex = -1;
+                    EditorUtility.SetDirty(env);
+                    _builder.Build();
+                    EditorGUILayout.EndHorizontal();
+                    break;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+
+        EditorGUILayout.HelpBox(
+            "Editing the active runoff (▶) in the Scene view:\n" +
+            "• Click empty space = add a polygon point (in order)\n" +
+            "• Drag a point = move • Shift+Click a point = delete\n" +
+            "The polygon auto-closes from the last point back to the first.",
+            MessageType.None);
+    }
+
+    // Only one edit mode active at a time.
+    void SetBarrierEdit(int i) { _builder.editManualSectionIndex = i; if (i >= 0) _builder.editRunoffIndex = -1; }
+    void SetRunoffEdit(int i) { _builder.editRunoffIndex = i; if (i >= 0) _builder.editManualSectionIndex = -1; }
+
     static string Short(TrackEnvironment.SegmentEnd e) => e == TrackEnvironment.SegmentEnd.Start ? "s" : "e";
+
+    // ---------------------------------------------------------------- Scene editing
 
     void OnSceneGUI()
     {
         var env = _builder.environment;
-        if (env == null || env.manualSections == null) return;
+        if (env == null || _builder.track == null) return;
+
+        if (_builder.editManualSectionIndex >= 0) EditBarrier(env);
+        else if (_builder.editRunoffIndex >= 0) EditRunoff(env);
+        else return;
+
+        // Take control so plain clicks don't deselect the builder while editing.
+        if (Event.current.type == EventType.Layout)
+            HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+    }
+
+    void EditBarrier(TrackEnvironment env)
+    {
         int idx = _builder.editManualSectionIndex;
-        if (idx < 0 || idx >= env.manualSections.Length) return;
-        if (_builder.track == null) return;
+        if (env.manualSections == null || idx >= env.manualSections.Length) return;
 
         var section = env.manualSections[idx];
         var pts = section.manualPoints != null ? new List<Vector2>(section.manualPoints) : new List<Vector2>();
         Transform tf = _builder.track.transform;
-        Event e = Event.current;
-        bool changed = false;
 
         bool haveAnchors = _builder.TryGetManualAnchors(idx, out Vector2 startLocal, out Vector2 endLocal);
         Vector3 startWorld = tf.TransformPoint(new Vector3(startLocal.x, startLocal.y, 0f));
         Vector3 endWorld = tf.TransformPoint(new Vector3(endLocal.x, endLocal.y, 0f));
 
-        // Fixed anchors.
         if (haveAnchors)
         {
             Handles.color = Color.green;
@@ -141,39 +231,9 @@ public class TrackEnvironmentBuilderEditor : Editor
             Handles.Label(endWorld, " end");
         }
 
-        // Movable / deletable user points. Track if the mouse-down landed on one so a plain click there
-        // doesn't also add a new point.
-        bool onExistingPoint = false;
-        for (int i = 0; i < pts.Count; i++)
-        {
-            Vector3 world = tf.TransformPoint(new Vector3(pts[i].x, pts[i].y, 0f));
-            float size = HandleUtility.GetHandleSize(world) * 0.12f;
-            if (HandleUtility.DistanceToCircle(world, size) < 10f) onExistingPoint = true;
+        bool changed = EditPoints(pts, tf, env);
 
-            if (e.shift && e.type == EventType.MouseDown && e.button == 0 &&
-                HandleUtility.DistanceToCircle(world, size) < 10f)
-            {
-                Undo.RecordObject(env, "Delete Barrier Point");
-                pts.RemoveAt(i);
-                changed = true;
-                e.Use();
-                break;
-            }
-
-            EditorGUI.BeginChangeCheck();
-            Handles.color = Color.cyan;
-            Vector3 moved = Handles.FreeMoveHandle(world, size, Vector3.zero, Handles.SphereHandleCap);
-            if (EditorGUI.EndChangeCheck())
-            {
-                Undo.RecordObject(env, "Move Barrier Point");
-                Vector3 local = tf.InverseTransformPoint(moved);
-                pts[i] = new Vector2(local.x, local.y);
-                changed = true;
-            }
-            Handles.Label(world, $" {i}");
-        }
-
-        // Polyline preview: startAnchor → points → endAnchor.
+        // Open polyline: startAnchor → points → endAnchor.
         Handles.color = Color.yellow;
         Vector3 prev = startWorld;
         for (int i = 0; i < pts.Count; i++)
@@ -184,22 +244,6 @@ public class TrackEnvironmentBuilderEditor : Editor
         }
         if (haveAnchors) Handles.DrawLine(prev, endWorld);
 
-        // Plain left-click in empty space adds a point.
-        if (!e.shift && !e.alt && e.type == EventType.MouseDown && e.button == 0 && !onExistingPoint)
-        {
-            Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-            Plane plane = new Plane(Vector3.forward, Vector3.zero);
-            if (plane.Raycast(ray, out float dist))
-            {
-                Vector3 hit = ray.GetPoint(dist);
-                Vector3 local = tf.InverseTransformPoint(hit);
-                Undo.RecordObject(env, "Add Barrier Point");
-                pts.Add(new Vector2(local.x, local.y));
-                changed = true;
-                e.Use();
-            }
-        }
-
         if (changed)
         {
             section.manualPoints = pts.ToArray();
@@ -207,9 +251,87 @@ public class TrackEnvironmentBuilderEditor : Editor
             EditorUtility.SetDirty(env);
             _builder.Build();
         }
+    }
 
-        // Take control so plain clicks don't deselect the builder while editing.
-        if (e.type == EventType.Layout)
-            HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+    void EditRunoff(TrackEnvironment env)
+    {
+        int idx = _builder.editRunoffIndex;
+        if (env.runoffAreas == null || idx >= env.runoffAreas.Length) return;
+
+        var area = env.runoffAreas[idx];
+        var pts = area.points != null ? new List<Vector2>(area.points) : new List<Vector2>();
+        Transform tf = _builder.track.transform;
+
+        bool changed = EditPoints(pts, tf, env);
+
+        // Closed polygon outline.
+        Handles.color = new Color(1f, 0.6f, 0.1f, 1f);
+        for (int i = 0; i < pts.Count; i++)
+        {
+            Vector3 a = tf.TransformPoint(new Vector3(pts[i].x, pts[i].y, 0f));
+            Vector3 b = tf.TransformPoint(new Vector3(pts[(i + 1) % pts.Count].x, pts[(i + 1) % pts.Count].y, 0f));
+            if (pts.Count >= 2) Handles.DrawLine(a, b);
+        }
+
+        if (changed)
+        {
+            area.points = pts.ToArray();
+            env.runoffAreas[idx] = area;
+            EditorUtility.SetDirty(env);
+            _builder.Build();
+        }
+    }
+
+    // Move (drag) / delete (shift-click) existing points and add a new one on a plain click in empty space.
+    static bool EditPoints(List<Vector2> pts, Transform tf, Object undoTarget)
+    {
+        Event e = Event.current;
+        bool changed = false;
+        bool onExisting = false;
+
+        for (int i = 0; i < pts.Count; i++)
+        {
+            Vector3 world = tf.TransformPoint(new Vector3(pts[i].x, pts[i].y, 0f));
+            float size = HandleUtility.GetHandleSize(world) * 0.12f;
+            if (HandleUtility.DistanceToCircle(world, size) < 10f) onExisting = true;
+
+            if (e.shift && e.type == EventType.MouseDown && e.button == 0 &&
+                HandleUtility.DistanceToCircle(world, size) < 10f)
+            {
+                Undo.RecordObject(undoTarget, "Delete Point");
+                pts.RemoveAt(i);
+                e.Use();
+                return true;
+            }
+
+            EditorGUI.BeginChangeCheck();
+            Handles.color = Color.cyan;
+            Vector3 moved = Handles.FreeMoveHandle(world, size, Vector3.zero, Handles.SphereHandleCap);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(undoTarget, "Move Point");
+                Vector3 local = tf.InverseTransformPoint(moved);
+                pts[i] = new Vector2(local.x, local.y);
+                changed = true;
+            }
+            Handles.Label(world, $" {i}");
+        }
+
+        if (!e.shift && !e.alt && e.type == EventType.MouseDown && e.button == 0 && !onExisting)
+        {
+            Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+            Plane plane = new Plane(Vector3.forward, Vector3.zero);
+            if (plane.Raycast(ray, out float dist))
+            {
+                Vector3 hit = ray.GetPoint(dist);
+                Vector3 local = tf.InverseTransformPoint(hit);
+                Undo.RecordObject(undoTarget, "Add Point");
+                pts.Add(new Vector2(local.x, local.y));
+                changed = true;
+                e.Use();
+            }
+        }
+
+        return changed;
     }
 }

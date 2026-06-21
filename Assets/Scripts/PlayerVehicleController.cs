@@ -81,6 +81,16 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Speed (m/s) over which grass rolling resistance reaches full strength. Below it, drag fades to 0 so the car can crawl off a standstill.")]
     public float grassDragRampSpeed = 3f;
 
+    [Header("Runoff Surfaces")]
+    [Tooltip("Lateral grip on a Gravel runoff. Low = slides; gravel mainly bogs the car down via drag.")]
+    [Range(0.1f, 1f)] public float gravelGrip = 0.45f;
+    [Tooltip("Engine traction on Gravel (wheels dig in / spin).")]
+    [Range(0.1f, 1f)] public float gravelPower = 0.4f;
+    [Tooltip("Extra deceleration (m/s²) from a Gravel trap. High = sinks in and stops fast.")]
+    public float gravelDrag = 14f;
+    [Tooltip("Lateral grip on a Tarmac runoff — near track grip, so paved run-offs are safe.")]
+    [Range(0.1f, 1f)] public float tarmacRunoffGrip = 0.95f;
+
     [Header("Reverse")]
     [Tooltip("Hold brake with no throttle once nearly stopped to reverse. Max reverse speed (m/s).")]
     public float reverseMaxSpeed = 5f;
@@ -145,6 +155,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     float _a, _b, _iz;  // CoM→front axle, CoM→rear axle (m), yaw inertia (kg·m²)
     float _alphaF, _alphaR; // last front/rear slip angles (rad) for telemetry
     bool _onGrass;          // car is off the track surface this step
+    float _lastAy;          // last lateral accel (m/s²), for tyre load-transfer split
+    TireModel _tires;       // 4-tyre wear+temperature model (when enableWear)
 
     [HideInInspector] public bool externalInput; // true when an AI controller feeds inputs via SetInput
     // Soft forward-speed cap (m/s). Infinity = no cap. Set by FormationDirector to hold the player to
@@ -166,6 +178,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
         if (track == null) track = FindFirstObjectByType<TrackBuilder>();
         if (grassTrails) CreateTrails();
+
+        if (enableWear)
+        {
+            _tires = GetComponent<TireModel>();
+            if (_tires == null) _tires = gameObject.AddComponent<TireModel>();
+            _tires.Configure(vehicleInfo);
+        }
     }
 
     void CreateTrails()
@@ -265,7 +284,30 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float delta = _steerDeg * Mathf.Deg2Rad;
 
         // --- Surface + wheelspin state for this update.
-        _onGrass = track != null && !track.IsOnSurface(transform.position, out _);
+        // On the track (or a tarmac runoff) the car has full grip. Off it, sample the runoff field: grass is
+        // slippery, gravel bogs the car down. Unclassified off-track terrain defaults to grass.
+        bool onTrackSurface = track == null || track.IsOnSurface(transform.position, out _);
+        float surfGrip = 1f, surfPower = 1f, surfDrag = 0f;
+        bool looseSurface = false;
+        if (!onTrackSurface)
+        {
+            var surf = TrackEnvironment.SurfaceType.Grass;
+            if (SurfaceField.TryGetSurface(transform.position, out var queried)) surf = queried;
+            switch (surf)
+            {
+                case TrackEnvironment.SurfaceType.TarmacRunoff:
+                    surfGrip = tarmacRunoffGrip; surfPower = 1f; surfDrag = 0f; looseSurface = false;
+                    break;
+                case TrackEnvironment.SurfaceType.Gravel:
+                    surfGrip = gravelGrip; surfPower = gravelPower; surfDrag = gravelDrag; looseSurface = true;
+                    break;
+                default: // Grass (and unclassified off-track)
+                    surfGrip = grassGrip; surfPower = grassPower; surfDrag = grassDrag; looseSurface = true;
+                    break;
+            }
+        }
+        _onGrass = looseSurface; // drives tyre-trail emission below
+
         float speedNow = SpeedMps;
         float wheelspin = 0f;
         if (enableWheelspin && throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
@@ -286,28 +328,24 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (throttleIn < 0.05f && brakeIn < 0.05f) decel += coastDecel;
         float reverseDrive = reversing ? -reverseAccel * brakeIn : 0f;
 
-        if (_onGrass)
-        {
-            accel *= grassPower;
-            reverseDrive *= grassPower;
-            // Rolling resistance ramps in with speed — zero at a standstill so the car can always crawl back off.
-            decel += grassDrag * Mathf.Clamp01(speedNow / grassDragRampSpeed);
-        }
+        // Surface power/drag (no-ops on the track: surfPower=1, surfDrag=0).
+        accel *= surfPower;
+        reverseDrive *= surfPower;
+        // Rolling resistance ramps in with speed — zero at a standstill so the car can always crawl back off.
+        if (surfDrag > 0f) decel += surfDrag * Mathf.Clamp01(speedNow / grassDragRampSpeed);
         accel *= (1f - wheelspinAccelLoss * wheelspin);              // spinning wheels put down less power
         float axCmd = accel + reverseDrive - decel; // commanded longitudinal accel (m/s²)
 
-        // Available grip per axle: μ (proxied by maxLateralG) × track × wear, biased front/rear for balance.
+        // Available grip per axle: μ (proxied by maxLateralG) × track × tyre (wear+temperature), biased for balance.
         float trackGrip = TrackConditions.GripMultiplier;
-        float minGrip = vehicleInfo.tireMinGrip;
-        float wearGripF = enableWear ? Mathf.Lerp(1f, minGrip, wearFront) : 1f;
-        float wearGripR = enableWear ? Mathf.Lerp(1f, minGrip, wearRear) : 1f;
-        float muF = vehicleInfo.maxLateralG * trackGrip * wearGripF * (1f - understeerBias);
-        float muR = vehicleInfo.maxLateralG * trackGrip * wearGripR * (1f + understeerBias);
+        float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
+        float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
+        float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * (1f - understeerBias);
+        float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * (1f + understeerBias);
 
         // Off-track surface cuts both axles; lit-up rears lose extra grip so the car rotates.
-        float surfaceGrip = _onGrass ? grassGrip : 1f;
-        muF *= surfaceGrip;
-        muR *= surfaceGrip * Mathf.Lerp(1f, wheelspinRearGrip, wheelspin);
+        muF *= surfGrip;
+        muR *= surfGrip * Mathf.Lerp(1f, wheelspinRearGrip, wheelspin);
 
         float m = Mass;
         float h = dt / Mathf.Max(subSteps, 1);
@@ -342,6 +380,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
                 // Equations of motion (body frame).
                 float ay = (fyF + fyR) / m - _vx * _r;          // lateral accel (tyres + centripetal term)
+                _lastAy = ay;
                 // Yaw damper opposes rotation (stabilises oversteer); extra damping under braking kills spin-on-the-brakes.
                 float yawDamp = yawDamping + brakeYawDamping * brakeIn;
                 float dr = (_a * fyF - _b * fyR) / _iz - yawDamp * _r; // yaw accel from front/rear moment + damping
@@ -390,12 +429,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             _headingDeg += _r * Mathf.Rad2Deg * h;
         }
 
-        // --- Per-axle wear accumulation (worked tyres fade and shift the balance).
-        if (enableWear && SpeedMph > 1f)
+        // --- Tyre wear + temperature update (worked/hot tyres fade and shift the balance).
+        if (enableWear && _tires != null && SpeedMph > 1f)
         {
-            float rate = vehicleInfo.tireWearRate * wearRateScale;
-            wearFront = Mathf.Clamp01(wearFront + (wearAccumF / subSteps) * rate * dt);
-            wearRear = Mathf.Clamp01(wearRear + (wearAccumR / subSteps) * rate * dt);
+            float latNorm = Mathf.Clamp(_lastAy / Mathf.Max(vehicleInfo.maxLateralG * G, 0.1f), -1f, 1f);
+            _tires.Tick(dt, (wearAccumF / subSteps) * wearRateScale, (wearAccumR / subSteps) * wearRateScale, SpeedMps, latNorm);
+            wearFront = _tires.FrontWear; // mirror for telemetry / existing readouts
+            wearRear = _tires.RearWear;
         }
 
         // --- Integrate world position from body velocity rotated into world space.
@@ -479,7 +519,34 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         }
     }
 
-    public void PitResetTyres() { wearFront = 0f; wearRear = 0f; }
+    // Car-vs-car impact. The velocity change is supplied by VehicleCollision (a proper 2-body impulse), so we
+    // just add it — no wall-style reflection. This is what makes a fast car shunt a stationary one forward and
+    // shed its own speed, instead of bouncing straight back off a car that never moves.
+    public void ApplyCarImpact(Vector2 worldMtv, Vector2 contactPoint, Vector2 worldDeltaV, float severity)
+    {
+        transform.position += new Vector3(worldMtv.x, worldMtv.y, 0f); // depenetrate
+
+        // Add the world-space velocity change in the body frame (body = Rᵀ·world).
+        float hr = _headingDeg * Mathf.Deg2Rad;
+        float cos = Mathf.Cos(hr), sin = Mathf.Sin(hr);
+        _vx += worldDeltaV.x * cos + worldDeltaV.y * sin;
+        _vy += -worldDeltaV.x * sin + worldDeltaV.y * cos;
+
+        // Off-centre hit imparts yaw spin: lever arm × impulse (impulse = mass × Δv) / yaw inertia.
+        Vector2 rArm = contactPoint - (Vector2)transform.position;
+        float dvMag = worldDeltaV.magnitude;
+        if (dvMag > 1e-5f)
+        {
+            Vector2 n = worldDeltaV / dvMag;
+            float impulse = dvMag * Mass;
+            float crossZ = rArm.x * n.y - rArm.y * n.x;
+            float deltaOmega = (crossZ * impulse / Mathf.Max(_iz, 1f)) * spinSensitivity;
+            float cap = maxImpactSpinDeg * Mathf.Deg2Rad;
+            _r += Mathf.Clamp(deltaOmega, -cap, cap);
+        }
+    }
+
+    public void PitResetTyres() { wearFront = 0f; wearRear = 0f; if (_tires != null) _tires.PitReset(); }
 
     float SampleAccel(float speedMps)
     {

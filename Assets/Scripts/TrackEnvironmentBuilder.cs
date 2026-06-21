@@ -11,6 +11,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     [Header("Scene Editor")]
     [Tooltip("Index into environment.manualSections currently edited in the Scene view. -1 = none.")]
     public int editManualSectionIndex = -1;
+    [Tooltip("Index into environment.runoffAreas currently edited in the Scene view. -1 = none.")]
+    public int editRunoffIndex = -1;
 
     void OnEnable() { Build(); }
 
@@ -39,9 +41,159 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         var pitSamples = track.SamplePitCenterline();
         if (samples.Count < 2) return;
 
+        BuildRunoff();
         BuildStrips(samples, pitSamples);
         BuildBarriers(samples, pitSamples);
         BuildDecorations(samples, pitSamples);
+    }
+
+    void BuildRunoff()
+    {
+        // Always reset the physics surface lookup so deleting/clearing areas takes effect.
+        SurfaceField.Clear();
+        if (environment.runoffAreas == null || environment.runoffAreas.Length == 0) return;
+        var root = new GameObject("Runoff");
+        root.transform.SetParent(transform, false);
+
+        for (int i = 0; i < environment.runoffAreas.Length; i++)
+        {
+            var area = environment.runoffAreas[i];
+            if (area.points == null || area.points.Length < 3) continue;
+
+            var mesh = BuildPolygonMesh(area.points);
+            if (mesh == null) continue;
+
+            var go = new GameObject(string.IsNullOrEmpty(area.label) ? $"Runoff_{area.surface}_{i}" : area.label);
+            go.transform.SetParent(root.transform, false);
+            var mf = go.AddComponent<MeshFilter>();
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sortingOrder = environment.runoffSortingOrder;
+            mr.sharedMaterial = area.materialOverride != null ? area.materialOverride : DefaultSurfaceMaterial(area.surface);
+            mf.sharedMesh = mesh;
+
+            // Register the polygon (in world space) so the car physics can sample its surface type.
+            var worldPts = new Vector2[area.points.Length];
+            for (int k = 0; k < area.points.Length; k++)
+            {
+                Vector3 w = track.transform.TransformPoint(new Vector3(area.points[k].x, area.points[k].y, 0f));
+                worldPts[k] = new Vector2(w.x, w.y);
+            }
+            SurfaceField.Add(worldPts, area.surface);
+        }
+    }
+
+    Material DefaultSurfaceMaterial(TrackEnvironment.SurfaceType surface)
+    {
+        switch (surface)
+        {
+            case TrackEnvironment.SurfaceType.Grass: return environment.grassMaterial;
+            case TrackEnvironment.SurfaceType.Gravel: return environment.gravelMaterial;
+            default: return environment.tarmacRunoffMaterial;
+        }
+    }
+
+    // Triangulate a simple (non-self-intersecting) polygon by ear clipping. UVs map world metres 1:1.
+    static Mesh BuildPolygonMesh(Vector2[] points)
+    {
+        var poly = new List<Vector2>(points);
+        // Drop duplicate consecutive points.
+        for (int i = poly.Count - 1; i > 0; i--)
+            if ((poly[i] - poly[i - 1]).sqrMagnitude < 1e-8f) poly.RemoveAt(i);
+        if (poly.Count < 3) return null;
+
+        // Ensure counter-clockwise winding so the ear test signs are consistent.
+        if (SignedArea(poly) < 0f) poly.Reverse();
+
+        var indices = new List<int>();
+        var remaining = new List<int>();
+        for (int i = 0; i < poly.Count; i++) remaining.Add(i);
+
+        int guard = 0;
+        int maxGuard = poly.Count * poly.Count + 16;
+        while (remaining.Count > 3 && guard++ < maxGuard)
+        {
+            bool clipped = false;
+            for (int r = 0; r < remaining.Count; r++)
+            {
+                int i0 = remaining[(r - 1 + remaining.Count) % remaining.Count];
+                int i1 = remaining[r];
+                int i2 = remaining[(r + 1) % remaining.Count];
+                Vector2 a = poly[i0], b = poly[i1], c = poly[i2];
+
+                if (Cross(b - a, c - a) <= 0f) continue; // reflex vertex, not an ear
+
+                bool hasInside = false;
+                for (int k = 0; k < remaining.Count; k++)
+                {
+                    int idx = remaining[k];
+                    if (idx == i0 || idx == i1 || idx == i2) continue;
+                    if (PointInTriangle(poly[idx], a, b, c)) { hasInside = true; break; }
+                }
+                if (hasInside) continue;
+
+                indices.Add(i0); indices.Add(i1); indices.Add(i2);
+                remaining.RemoveAt(r);
+                clipped = true;
+                break;
+            }
+            if (!clipped) break; // degenerate / self-intersecting — bail with what we have
+        }
+        if (remaining.Count == 3)
+        {
+            indices.Add(remaining[0]); indices.Add(remaining[1]); indices.Add(remaining[2]);
+        }
+        if (indices.Count < 3) return null;
+
+        var verts = new List<Vector3>(poly.Count);
+        var uvs = new List<Vector2>(poly.Count);
+        var normals = new List<Vector3>(poly.Count);
+        for (int i = 0; i < poly.Count; i++)
+        {
+            verts.Add(new Vector3(poly[i].x, poly[i].y, 0f));
+            uvs.Add(poly[i]); // world metres → UV, so tiling matches the track scale
+            normals.Add(new Vector3(0f, 0f, -1f)); // face the camera (orthographic, looking +z)
+        }
+
+        // Double-sided: emit the triangles both windings so the surface shows regardless of the material's
+        // cull mode or which way the polygon happens to be wound relative to the camera.
+        var tris = new List<int>(indices.Count * 2);
+        tris.AddRange(indices);
+        for (int i = 0; i < indices.Count; i += 3)
+        {
+            tris.Add(indices[i]); tris.Add(indices[i + 2]); tris.Add(indices[i + 1]);
+        }
+
+        var mesh = new Mesh { name = "RunoffPolygon" };
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetUVs(0, uvs);
+        mesh.SetNormals(normals);
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    static float SignedArea(List<Vector2> p)
+    {
+        float a = 0f;
+        for (int i = 0; i < p.Count; i++)
+        {
+            Vector2 cur = p[i], next = p[(i + 1) % p.Count];
+            a += cur.x * next.y - next.x * cur.y;
+        }
+        return a * 0.5f;
+    }
+
+    static float Cross(Vector2 u, Vector2 v) => u.x * v.y - u.y * v.x;
+
+    static bool PointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+    {
+        float d1 = Cross(b - a, p - a);
+        float d2 = Cross(c - b, p - b);
+        float d3 = Cross(a - c, p - c);
+        bool neg = d1 < 0f || d2 < 0f || d3 < 0f;
+        bool pos = d1 > 0f || d2 > 0f || d3 > 0f;
+        return !(neg && pos);
     }
 
     void BuildBarriers(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)
@@ -282,10 +434,40 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     Vector2 EdgePoint(TrackEnvironment.BarrierSide side, float distance, List<TrackBuilder.Sample> mainSamples)
     {
         var sample = track.SampleAt(distance, mainSamples);
+        float offset = SegmentOffset(side, distance);
         // normal = right of travel. Inner = right edge + innerOffset (outboard right). Outer = left edge - outerOffset (outboard left).
         if (side == TrackEnvironment.BarrierSide.Inner)
-            return sample.position + sample.normal * (sample.width * 0.5f + environment.innerEdgeOffset);
-        return sample.position - sample.normal * (sample.width * 0.5f + environment.outerEdgeOffset);
+            return sample.position + sample.normal * (sample.width * 0.5f + offset);
+        return sample.position - sample.normal * (sample.width * 0.5f + offset);
+    }
+
+    // Per-segment barrier offset, falling back to the global inner/outer value when a segment has no override.
+    float SegmentOffset(TrackEnvironment.BarrierSide side, float distance)
+    {
+        float global = side == TrackEnvironment.BarrierSide.Inner ? environment.innerEdgeOffset : environment.outerEdgeOffset;
+        if (environment.barrierOffsets == null || environment.barrierOffsets.Length == 0) return global;
+        int seg = SegmentIndexAtDistance(distance);
+        for (int i = 0; i < environment.barrierOffsets.Length; i++)
+        {
+            if (environment.barrierOffsets[i].segmentIndex != seg) continue;
+            return side == TrackEnvironment.BarrierSide.Inner
+                ? environment.barrierOffsets[i].innerOffset
+                : environment.barrierOffsets[i].outerOffset;
+        }
+        return global;
+    }
+
+    int SegmentIndexAtDistance(float distance)
+    {
+        var segs = track != null && track.track != null ? track.track.segments : null;
+        if (segs == null || segs.Length == 0) return 0;
+        float cum = 0f;
+        for (int i = 0; i < segs.Length; i++)
+        {
+            cum += segs[i].length;
+            if (distance < cum) return i;
+        }
+        return segs.Length - 1;
     }
 
     Mesh BuildPolylineRibbon(List<Vector2> centerline, float width, float uvScale)

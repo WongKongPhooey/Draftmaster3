@@ -28,6 +28,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _currentMph *= Mathf.Clamp01(1f - severity * headOn * 0.5f);
     }
 
+    // Spline cars are glued to the path, so momentum transfer doesn't apply — just separate and scrub speed
+    // the same way a barrier contact does. (During racing the AI run the dynamic model, which gets the full
+    // 2-body impulse via PlayerVehicleController.ApplyCarImpact instead.)
+    public void ApplyCarImpact(Vector2 worldMtv, Vector2 contactPoint, Vector2 worldDeltaV, float severity)
+        => ApplyContact(worldMtv, contactPoint, severity);
+
     public TrackBuilder track;
     public VehicleInfo vehicleInfo;
     [Tooltip("Scales the target speed at every point on track. <1 slows the car down, >1 speeds it up. Driver stats (qualifying/consistency) feed this.")]
@@ -118,6 +124,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float fallbackAccel = 5f;
     [Tooltip("Default flat-corner speed used when the vehicle's cornering curve is unauthored, in mph.")]
     public float fallbackCornerMph = 110f;
+    [Tooltip("Scales corner (turn-segment) target speeds. <1 gives the dynamic model grip + braking margin so it stops overshooting turns and brakes earlier. Straights are unaffected.")]
+    [Range(0.6f, 1.1f)] public float cornerSpeedScale = 0.85f;
 
     const float MphToMps = 1f / 2.237f;
     const float MpsToMph = 2.237f;
@@ -211,9 +219,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         for (int i = 0; i < n; i++)
         {
             float d = _mainSamples[i].distance;
-            _lateralProfile[i] = track.track.GetLateralAt(d, lineFactor, _anchors);
-            _leftBoundProfile[i] = track.track.GetLateralAt(d, -1f, _anchors);
-            _rightBoundProfile[i] = track.track.GetLateralAt(d, +1f, _anchors);
+            _lateralProfile[i] = track.track.GetLateralAt(d, lineFactor, _anchors, _mainLength);
+            _leftBoundProfile[i] = track.track.GetLateralAt(d, -1f, _anchors, _mainLength);
+            _rightBoundProfile[i] = track.track.GetLateralAt(d, +1f, _anchors, _mainLength);
         }
 
         // Min-curvature relaxation: each pass nudges every point toward the average of its neighbours, clamped to bounds.
@@ -390,8 +398,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         {
             // v = sqrt(r * g * mu_effective). mu_effective = base mu × track conditions × tire wear grip.
             float gripMul = TrackConditions.GripMultiplier;
-            var tire = GetComponent<TireState>();
-            if (tire != null) gripMul *= tire.GripMultiplier;
+            var tireModel = GetComponent<TireModel>();
+            if (tireModel != null) gripMul *= tireModel.OverallGrip;
+            else { var tire = GetComponent<TireState>(); if (tire != null) gripMul *= tire.GripMultiplier; }
             float aLatMps2 = vehicleInfo.maxLateralG * Mathf.Max(0.05f, gripMul) * 9.81f;
             float vMps = Mathf.Sqrt(radius * aLatMps2);
             baseMph = vMps * MpsToMph;
@@ -401,7 +410,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             baseMph = fallbackCornerMph;
         }
         float bankingMph = (vehicleInfo != null) ? seg.banking * vehicleInfo.bankingMphPerDegree : 0f;
-        return Mathf.Clamp(baseMph + bankingMph, 5f, topMph);
+        return Mathf.Clamp((baseMph + bankingMph) * cornerSpeedScale, 5f, topMph);
     }
 
     void UpdateCornerPhase()
@@ -512,7 +521,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 if (tire != null) tire.PitReset();
             }
             _onPit = usePitLane;
-            _distance = 0f;
+            // Land on the new lane at the point nearest the car's current position (no teleport to lane start),
+            // carrying its current lateral as a bias that eases out — same continuous merge as the pit exit.
+            RejoinSplineContinuous(transform.position);
         }
 
         float length = _onPit ? _pitLength : _mainLength;
@@ -557,26 +568,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _onPit = false;
             usePitLane = false;
             length = _mainLength;
-
-            if (track != null && _mainSamples != null && _mainSamples.Count >= 2)
-            {
-                Vector3 worldNow = transform.position;
-                Vector2 localNow = track.transform.InverseTransformPoint(worldNow);
-                _distance = track.NearestCenterlineDistance(worldNow);
-
-                var s = track.SampleAt(_distance, _mainSamples);
-                float actualLat = Vector2.Dot(localNow - s.position, s.normal);
-                float baseLat = lateralOffset + tacticalLateralOffset + LateralAt(_distance);
-                _mergeLatBias = Mathf.Clamp(actualLat - baseLat, -12f, 12f);
-            }
-            else
-            {
-                _distance = track != null && track.track != null ? track.track.pitExitDistance : 0f;
-                _mergeLatBias = 0f;
-            }
-
-            _hasPrevLateral = false; // don't let the pit→main lateral change spike the lean
-            _currentLean = 0f;
+            RejoinSplineContinuous(transform.position);
         }
 
         if (loop && !_onPit)
@@ -634,6 +626,92 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             else break;
         }
         return idx;
+    }
+
+    // Smallest turn radius (m) on the path within scanDistance ahead, including the current segment.
+    // float.MaxValue when the road ahead is straight. The AI input driver uses this to shorten its steering
+    // lookahead on tight corners (aim short = turn in hard) and keep it long on gradual ones (smooth).
+    public float CurvatureRadiusAhead(float scanDistance)
+    {
+        if (track == null || track.track == null || track.track.segments == null) return float.MaxValue;
+        if (_segmentStartDistance == null || _mainLength <= 0f) return float.MaxValue;
+
+        var segs = track.track.segments;
+        float d = DistanceOnTrack;
+        int curIdx = SegmentIndexAt(d);
+        float minR = float.MaxValue;
+        for (int k = 0; k < segs.Length; k++)
+        {
+            int idx = (curIdx + k) % segs.Length;
+            if (k > 0)
+            {
+                float gap = _segmentStartDistance[idx] - d;
+                if (gap < 0f) gap += _mainLength;
+                if (gap > scanDistance) break;
+            }
+            var s = segs[idx];
+            if (s.type == TrackInfoV2.SegmentType.Turn && Mathf.Abs(s.angle) > 0.5f)
+            {
+                float r = s.length / Mathf.Max(Mathf.Abs(s.angle) * Mathf.Deg2Rad, 1e-4f);
+                if (r < minR) minR = r;
+            }
+        }
+        return minR;
+    }
+
+    // Land on the current lane (_onPit must already be set) at the point nearest worldNow — no teleport to the
+    // lane start. Carries the car's current lateral as a bias that eases onto the lane line, and clears the lean
+    // so the switch can't spike a phantom 360. Used by both the pit-entry and pit-exit transitions.
+    void RejoinSplineContinuous(Vector3 worldNow)
+    {
+        if (track == null || _mainSamples == null || _mainSamples.Count < 2) { _distance = 0f; return; }
+        Vector2 localNow = track.transform.InverseTransformPoint(worldNow);
+
+        TrackBuilder.Sample s;
+        if (_onPit && _pitSamples != null && _pitSamples.Count >= 2)
+        {
+            _distance = track.NearestPitDistance(worldNow);
+            s = track.SamplePitAt(_distance, _pitSamples);
+        }
+        else
+        {
+            _distance = track.NearestCenterlineDistance(worldNow);
+            s = track.SampleAt(_distance, _mainSamples);
+        }
+
+        float actualLat = Vector2.Dot(localNow - s.position, s.normal);
+        float baseLat = lateralOffset + tacticalLateralOffset + (_onPit ? 0f : LateralAt(_distance));
+        _mergeLatBias = Mathf.Clamp(actualLat - baseLat, -20f, 20f);
+        _hasPrevLateral = false;
+        _currentLean = 0f;
+    }
+
+    // Path point on the current spline a given distance AHEAD of the car, in track-local space. The AI input
+    // driver steers toward this (pure-pursuit lookahead): aiming at the car's own position (CommandedLocalPos)
+    // gives it nothing to track and makes it wander, so a lookahead point is what lets it hold the racing line.
+    public Vector2 PathPointAhead(float aheadMeters)
+    {
+        if (_mainSamples == null || _mainSamples.Count < 2) return CommandedLocalPos;
+
+        if (_onPit && _pitSamples != null && _pitSamples.Count >= 2)
+        {
+            float dp = Mathf.Clamp(_distance + aheadMeters, 0f, _pitLength);
+            var sp = track.SamplePitAt(dp, _pitSamples);
+            Vector2 rp = new Vector2(sp.tangent.y, -sp.tangent.x);
+            return sp.position + rp * (lateralOffset + tacticalLateralOffset);
+        }
+
+        float d = _distance + aheadMeters;
+        if (_mainLength > 0f) d = ((d % _mainLength) + _mainLength) % _mainLength;
+        var s = track.SampleAt(d, _mainSamples);
+        Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
+        float lat = LateralAt(d) + lateralOffset + tacticalLateralOffset;
+        if (_leftBoundProfile != null && _rightBoundProfile != null)
+        {
+            BoundsAt(d, out float lo, out float hi);
+            lat = Mathf.Clamp(lat, lo, hi);
+        }
+        return s.position + right * lat;
     }
 
     void Place()

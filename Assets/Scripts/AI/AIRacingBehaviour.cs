@@ -274,8 +274,9 @@ public class AIRacingBehaviour : MonoBehaviour
 
         float effectivePace = _basePaceMultiplier;
         if (_mistakeTimer > 0f) effectivePace *= mistakePaceFactor;
-        var tire = GetComponent<TireState>();
-        if (tire != null) effectivePace *= tire.GripMultiplier;
+        var tireModel = GetComponent<TireModel>();
+        if (tireModel != null) effectivePace *= tireModel.OverallGrip;
+        else { var tire = GetComponent<TireState>(); if (tire != null) effectivePace *= tire.GripMultiplier; }
         _spline.paceMultiplier = effectivePace;
 
         _spline.tacticalLateralOffset = _smoothedTactical;

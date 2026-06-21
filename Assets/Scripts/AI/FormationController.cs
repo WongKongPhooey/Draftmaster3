@@ -105,6 +105,11 @@ public class FormationController : MonoBehaviour
             if (_pvc != null) _pvc.enabled = true;
             if (_input != null) _input.enabled = true;
             else if (_spline != null) _spline.externalMotionController = true;
+
+            // Drop any leftover formation weave; AIRacingBehaviour owns the lateral line once racing.
+            _lateral = 0f;
+            _weaveEnv = 0f;
+            if (_spline != null) _spline.tacticalLateralOffset = 0f;
         }
     }
 

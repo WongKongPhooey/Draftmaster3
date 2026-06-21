@@ -15,6 +15,8 @@ public class TrackEnvironment : ScriptableObject
     public float innerEdgeOffset = 0f;
     [Tooltip("Offset (m) from the LEFT track edge for the outer barrier. Positive = further left (outboard).")]
     public float outerEdgeOffset = 10f;
+    [Tooltip("Per-segment overrides for the inner/outer barrier offset. Any segment not listed uses the global values above.")]
+    public BarrierOffsetOverride[] barrierOffsets;
     public float barrierWidth = 1f;
     public Material barrierMaterial;
     public int barrierSortingOrder = 2;
@@ -28,10 +30,24 @@ public class TrackEnvironment : ScriptableObject
     [Tooltip("Cut openings out of a specific barrier. Pick the barrier (side + segment index, e.g. Inner 2 = Barrier_Inner_2) and the start/end position in metres from the START of that barrier segment. Removes mesh + collider. Works on auto and manual (hand-drawn) sections.")]
     public BarrierGap[] barrierGaps;
 
+    [Header("Runoff Areas — hand-drawn surface polygons (tarmac runoff, grass, gravel)")]
+    [Tooltip("Filled polygons placed beside the track. Each is classified by surface type and rendered with that type's material (or a per-area override).")]
+    public RunoffArea[] runoffAreas;
+    [Tooltip("Default material for Tarmac-runoff areas (used when an area has no override).")]
+    public Material tarmacRunoffMaterial;
+    [Tooltip("Default material for Grass areas.")]
+    public Material grassMaterial;
+    [Tooltip("Default material for Gravel areas.")]
+    public Material gravelMaterial;
+    [Tooltip("Sorting order for runoff meshes. Below barriers, above the track surface.")]
+    public int runoffSortingOrder = 1;
+
     [Tooltip("Spacing between strip vertex rows in metres. Lower = smoother strips on tight curves, more triangles.")]
     public float stripSampleSpacing = 2f;
 
     public enum SplineRef { Main, Pit }
+
+    public enum SurfaceType { TarmacRunoff, Grass, Gravel }
     public enum LateralAnchor { Centerline, LeftEdge, RightEdge }
 
     [System.Serializable]
@@ -57,6 +73,30 @@ public class TrackEnvironment : ScriptableObject
     }
 
     public enum BarrierSide { Inner, Outer }
+
+    [System.Serializable]
+    public struct BarrierOffsetOverride
+    {
+        [Tooltip("Track segment index (the N in Barrier_*_N) to override.")]
+        public int segmentIndex;
+        [Tooltip("Inner-barrier offset (m) from the right track edge for this segment.")]
+        public float innerOffset;
+        [Tooltip("Outer-barrier offset (m) from the left track edge for this segment.")]
+        public float outerOffset;
+    }
+
+    [System.Serializable]
+    public struct RunoffArea
+    {
+        [Tooltip("Optional name, e.g. \"Turn 1 gravel trap\".")]
+        public string label;
+        [Tooltip("Surface type — picks the default material and (later) the grip model.")]
+        public SurfaceType surface;
+        [Tooltip("Polygon outline in track-local space, in order. 3+ points.")]
+        public Vector2[] points;
+        [Tooltip("Optional material override. Empty = use the surface type's default material.")]
+        public Material materialOverride;
+    }
 
     [System.Serializable]
     public struct BarrierGap

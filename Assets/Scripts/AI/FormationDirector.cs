@@ -39,21 +39,10 @@ public class FormationDirector : MonoBehaviour
     float _debugTimer;
 
     [Header("Player")]
-    [Tooltip("ON: cap the player to pace and stop them overtaking under caution (default). OFF: free-follow, player drives unrestricted.")]
+    [Tooltip("ON: cap the player's top speed to the pace (cruiseMph) during the formation lap — otherwise they drive freely (no slowing for nearby cars). OFF: no cap at all.")]
     public bool enforceHoldStation = true;
-    [Tooltip("How far ahead (m) to look for the car the player should hold station behind.")]
-    public float holdRange = 60f;
-    [Tooltip("Gap (m) the player is nudged toward holding behind the car ahead.")]
-    public float targetFollowGap = 10f;
-    [Tooltip("Inside this gap (m) the player is forced to back off so they can't overtake.")]
-    public float hardGap = 14f;
-    [Tooltip("Speed factor applied to the car-ahead's speed when inside hardGap (forces a gap to open).")]
-    [Range(0.3f, 1f)] public float holdSpeedFactor = 0.85f;
-    [Tooltip("Extra speed (m/s) the player may use over the car ahead to close a gap before settling.")]
-    public float closeUpAllowanceMps = 3f;
 
     SafetyCar _safetyCar;
-    float _mainLength;
     float _greenMsgTimer;
 
     void Awake()
@@ -71,11 +60,6 @@ public class FormationDirector : MonoBehaviour
     void Start()
     {
         if (track == null) track = FindFirstObjectByType<TrackBuilder>();
-        if (track != null)
-        {
-            var main = track.SampleCenterline();
-            _mainLength = main.Count > 0 ? main[main.Count - 1].distance : 0f;
-        }
 
         if (pitLaneStart != null) pitLaneStart.PlayerEnteredCar += BeginFormation;
         else Debug.LogWarning("FormationDirector: no PitLaneStart wired — the formation lap will never start.");
@@ -147,49 +131,8 @@ public class FormationDirector : MonoBehaviour
     void FixedUpdate()
     {
         if (RaceStart.Current != RaceStart.Phase.Formation || playerCar == null) return;
-
-        if (!enforceHoldStation)
-        {
-            playerCar.speedGovernorMps = Mathf.Infinity; // free-follow: never capped
-            return;
-        }
-
-        playerCar.speedGovernorMps = ComputePlayerCap();
-    }
-
-    float ComputePlayerCap()
-    {
-        float cruiseMps = cruiseMph / 2.237f;
-        if (track == null) return cruiseMps;
-
-        float pd = track.NearestCenterlineDistance(playerCar.transform.position);
-
-        SplineDriver lead = null;
-        float bestGap = float.MaxValue;
-        var drivers = RaceField.Drivers;
-        for (int i = 0; i < drivers.Count; i++)
-        {
-            var d = drivers[i];
-            if (d == null) continue;
-            float tl = d.TrackLength;
-            if (tl <= 0f) continue;
-            float g = d.DistanceOnTrack - pd;
-            g = ((g % tl) + tl) % tl;            // forward distance from the player to this car
-            if (g > 0.5f && g < holdRange && g < bestGap) { bestGap = g; lead = d; }
-        }
-
-        float cap = cruiseMps;
-        if (lead != null)
-        {
-            float leadMps = lead.CurrentMph / 2.237f;
-            if (bestGap > targetFollowGap) cap = leadMps + closeUpAllowanceMps; // close the gap, may nudge over cruise
-            else cap = Mathf.Min(cruiseMps, leadMps);                            // hold station at pace
-            if (bestGap < hardGap) cap = leadMps * holdSpeedFactor;              // too close — back off, no overtaking
-        }
-
-        // Never exceed cruise by more than the close-up allowance; never fully stop.
-        cap = Mathf.Clamp(cap, 1.5f, cruiseMps + closeUpAllowanceMps);
-        return cap;
+        // Only cap top speed to the pace — the player otherwise drives freely (no slowing for nearby cars).
+        playerCar.speedGovernorMps = enforceHoldStation ? cruiseMph / 2.237f : Mathf.Infinity;
     }
 
     void Update()

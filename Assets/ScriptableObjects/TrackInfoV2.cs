@@ -237,13 +237,16 @@ public class TrackInfoV2 : ScriptableObject
     }
 
     // lineFactor: -1 = leftmost AI line, 0 = ideal, +1 = rightmost. Smoothly blended.
-    public float GetLateralAt(float distance, float lineFactor, List<RacingLineAnchor> anchors = null)
+    // loopLengthOverride: the TRUE sampled loop length (incl. the seam TrackBuilder stitches back to the start).
+    // Pass it so the wrap happens at the real loop end — otherwise the line jumps at the authored-segment total
+    // (which sits near the start/finish) and the smoothing spreads that jump into a big sweep.
+    public float GetLateralAt(float distance, float lineFactor, List<RacingLineAnchor> anchors = null, float loopLengthOverride = 0f)
     {
         if (anchors == null) anchors = BuildRacingLineAnchors();
         if (anchors.Count == 0) return 0f;
         if (anchors.Count == 1) return BlendAnchor(anchors[0], lineFactor);
 
-        float trackLength = TotalLength();
+        float trackLength = loopLengthOverride > 0f ? loopLengthOverride : TotalLength();
         if (closedLoop && trackLength > 0f)
             distance = ((distance % trackLength) + trackLength) % trackLength;
 

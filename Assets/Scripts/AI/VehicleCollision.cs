@@ -19,6 +19,8 @@ public class VehicleCollision : MonoBehaviour
     public float damageMinSpeed = 3f;
     [Tooltip("Closing speed (m/s) that produces a full-severity dent. Lower = harder-hitting damage at speed.")]
     public float damageSpeedFull = 18f;
+    [Tooltip("Bounciness of car-vs-car impacts. 0 = cars shove/stick (max inertia transfer), 0.3 = lively rebound.")]
+    [Range(0f, 0.6f)] public float vehicleRestitution = 0.1f;
     [Tooltip("Fraction of penetration corrected per step. 1 = fully ejected each step (no pass-through). Below ~0.9 a fast car can sink through a thin barrier before the push balances. Bounce/flex feel lives in the responder's restitution instead.")]
     [Range(0.1f, 1f)] public float positionalSoftness = 1f;
     [Tooltip("Log overlap diagnostics each second.")]
@@ -140,12 +142,26 @@ public class VehicleCollision : MonoBehaviour
 
             if (otherResponder != null)
             {
-                // Vehicle-vehicle: split correction by inverse mass. Heavier car barely moves; lighter car gets shoved.
+                // Vehicle-vehicle. Positional depenetration is split by inverse mass (heavier car barely moves),
+                // and a proper 2-body impulse along the contact normal transfers momentum: a fast car shunts a
+                // stationary one forward and sheds its own speed, instead of both bouncing off like walls.
                 float mA = _responder != null ? _responder.Mass : 1500f;
                 float mB = otherResponder.Mass;
                 float total = Mathf.Max(mA + mB, 1f);
-                _responder?.ApplyContact(pushWorld * (mB / total), d.pointA, severity);
-                otherResponder.ApplyContact(-pushWorld * (mA / total), d.pointB, severity);
+
+                Vector2 n = d.normal; // points from this car (A) toward the other (B)
+                float vn = Vector2.Dot(_vel - otherVel, n); // >0 = closing along the normal
+                Vector2 dvA = Vector2.zero, dvB = Vector2.zero;
+                if (vn > 0f)
+                {
+                    float invSum = (1f / mA) + (1f / mB);
+                    float j = (1f + vehicleRestitution) * vn / Mathf.Max(invSum, 1e-4f);
+                    dvA = -(j / mA) * n; // A slows / rebounds
+                    dvB = (j / mB) * n;  // B is shunted forward
+                }
+
+                _responder?.ApplyCarImpact(pushWorld * (mB / total), d.pointA, dvA, severity);
+                otherResponder.ApplyCarImpact(-pushWorld * (mA / total), d.pointB, dvB, severity);
             }
             else
             {

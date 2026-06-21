@@ -290,10 +290,20 @@ public class TrackBuilder : MonoBehaviour
     public float NearestCenterlineDistance(Vector3 worldPos)
     {
         if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
-        var samples = _surfaceCache;
+        return NearestDistanceOnSamples(transform.InverseTransformPoint(worldPos), _surfaceCache);
+    }
+
+    // Same projection against the PIT centerline — used to rejoin the pit lane without a positional jump.
+    public float NearestPitDistance(Vector3 worldPos)
+    {
+        if (_pitSurfaceCache == null || _pitSurfaceCache.Count < 2) _pitSurfaceCache = SamplePitCenterline();
+        return NearestDistanceOnSamples(transform.InverseTransformPoint(worldPos), _pitSurfaceCache);
+    }
+
+    static float NearestDistanceOnSamples(Vector2 local, List<Sample> samples)
+    {
         if (samples == null || samples.Count < 2) return 0f;
 
-        Vector2 local = transform.InverseTransformPoint(worldPos);
         float best = float.MaxValue;
         int bi = 0;
         for (int i = 0; i < samples.Count; i++)
@@ -505,11 +515,12 @@ public class TrackBuilder : MonoBehaviour
     {
         Gizmos.color = color;
         Vector3 prev = Vector3.zero;
+        float loopLen = samples.Count > 0 ? samples[samples.Count - 1].distance : 0f;
         for (int i = 0; i < samples.Count; i++)
         {
             var s = samples[i];
             Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
-            float lateral = track.GetLateralAt(s.distance, lineFactor, anchors);
+            float lateral = track.GetLateralAt(s.distance, lineFactor, anchors, loopLen);
             Vector2 p = s.position + right * lateral;
             Vector3 w = transform.TransformPoint(new Vector3(p.x, p.y, 0));
             if (i > 0) Gizmos.DrawLine(prev, w);

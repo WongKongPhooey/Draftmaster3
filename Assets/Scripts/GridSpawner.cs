@@ -13,6 +13,16 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Sorting order applied to each spawned car's SpriteRenderer. Higher draws on top.")]
     public int carSortingOrder = 5;
 
+    [Header("Livery / Names")]
+    [Tooltip("Carset prefix for liveries + numbers, e.g. cup26 → loads Resources/cup26liveryN sprites.")]
+    public string carsetPrefix = "cup26";
+    [Tooltip("Give each car a distinct livery sprite from the carset (Resources/<prefix>liveryN).")]
+    public bool useCarsetLiveries = true;
+    [Tooltip("Name drivers from the DriverNames pool instead of the SQLite database.")]
+    public bool useDriverNamePool = true;
+    [Tooltip("Highest car number probed when collecting liveries from Resources.")]
+    public int maxLiveryNumber = 99;
+
     [Header("Field")]
     public int count = 6;
     [Tooltip("Distance between cars on the grid, in metres.")]
@@ -47,6 +57,8 @@ public class GridSpawner : MonoBehaviour
     public float aiSteerGain = 1.5f;
     [Tooltip("AI speed-tracking gain — throttle/brake per m/s of speed error (SplineInputDriver.speedGain).")]
     public float aiSpeedGain = 0.5f;
+    [Tooltip("Scales the AI's corner target speeds (SplineDriver.cornerSpeedScale). <1 gives a little grip/braking margin. Tight-turn line-following is handled by the steering lookahead, so this can stay near 1.")]
+    public float aiCornerSpeedScale = 0.9f;
 
     IEnumerator Start()
     {
@@ -71,6 +83,29 @@ public class GridSpawner : MonoBehaviour
         var parent = new GameObject("AIField").transform;
         parent.SetParent(transform, false);
 
+        // Livery pool: a distinct paint per car, loaded from the carset's Resources sprites.
+        var liveries = new List<(int number, Sprite sprite)>();
+        if (useCarsetLiveries && !string.IsNullOrEmpty(carsetPrefix))
+        {
+            for (int n = 0; n <= maxLiveryNumber; n++)
+            {
+                var spr = Resources.Load<Sprite>($"{carsetPrefix}livery{n}");
+                if (spr != null) liveries.Add((n, spr));
+            }
+            Shuffle(liveries);
+            if (liveries.Count == 0)
+                Debug.LogWarning($"GridSpawner: no liveries found for '{carsetPrefix}' in Resources.");
+        }
+
+        // Driver names from DriverNames (surname pool), instead of the database.
+        List<string> namePool = null;
+        if (useDriverNamePool)
+        {
+            DriverNames.loadData();
+            namePool = new List<string>(DriverNames.driverPool);
+            Shuffle(namePool);
+        }
+
         // Formation race: park the field in the pit lane and fit the boxes to the available pit length.
         float pitBoxExitGap = 12f;
         float pitBoxSpacing = 12f;
@@ -93,16 +128,25 @@ public class GridSpawner : MonoBehaviour
             go.transform.localScale = new Vector3(carScale.x, carScale.y, 1f);
 
             var sr = go.GetComponentInChildren<SpriteRenderer>();
+            int carNumber = i;
             if (sr != null)
             {
                 if (carMaterial != null) sr.sharedMaterial = carMaterial;
                 sr.sortingOrder = carSortingOrder;
+                // Distinct livery before the VehicleDamage mesh is built from this sprite below.
+                if (liveries.Count > 0)
+                {
+                    var liv = liveries[i % liveries.Count];
+                    carNumber = liv.number;
+                    sr.sprite = liv.sprite;
+                }
             }
 
             var splineDriver = go.GetComponent<SplineDriver>();
             if (splineDriver == null) splineDriver = go.AddComponent<SplineDriver>();
             splineDriver.track = track;
             splineDriver.vehicleInfo = vehicleInfo;
+            splineDriver.cornerSpeedScale = aiCornerSpeedScale;
             float sfAnchor = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
             splineDriver.startDistance = sfAnchor + gridStartDistance - i * spacing;
             splineDriver.spawnInPit = spawnInPit;
@@ -125,6 +169,14 @@ public class GridSpawner : MonoBehaviour
             binding.vehicleInfo = vehicleInfo;
             if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             binding.Apply();
+
+            // Identity for the position counter / HUD: name from DriverNames, number from the livery.
+            var label = go.GetComponent<DriverLabel>();
+            if (label == null) label = go.AddComponent<DriverLabel>();
+            label.carset = carsetPrefix;
+            label.carNumber = carNumber;
+            label.driverName = (namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "";
+            if (!string.IsNullOrEmpty(label.driverName)) go.name = $"AI_{label.driverName}_{carNumber}";
 
             if (dynamicAI)
             {
