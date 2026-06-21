@@ -166,8 +166,27 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     void OnEnable() { RaceField.Register(this); }
     void OnDisable() { RaceField.Unregister(this); }
 
+    bool _startSeeded; // set by EngageFromCurrentPose so Start() doesn't clobber the seeded distance
+
+    // Take over a free-driven car (e.g. the player's) without a teleport: rebuild the spline data, latch onto the
+    // nearest point to the car's current world position, and continue at its current speed. Enable the component
+    // first, then call this. Used by DriveModeController when handing the player's car to the AI.
+    public void EngageFromCurrentPose(float startMph)
+    {
+        if (_mainSamples == null || _mainSamples.Count < 2) Rebuild();
+        externalMotionController = false; // kinematic: this component owns the transform
+        usePitLane = false;
+        _onPit = false;
+        RejoinSplineContinuous(transform.position);
+        float cap = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
+        _currentMph = Mathf.Clamp(startMph, 0f, cap);
+        speed = _currentMph * MphToMps;
+        _startSeeded = true;
+    }
+
     void Start()
     {
+        if (_startSeeded) return; // already engaged via EngageFromCurrentPose; keep its seeded distance
         Rebuild();
         if (spawnInPit && _pitLength > 0f)
         {

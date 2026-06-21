@@ -34,7 +34,17 @@
       "mcp__UnityMCP__manage_animation",
       "Bash(python3 -c ' *)",
       "Bash(xxd)",
-      "Bash(echo \"== type strings in prefab ==\")"
+      "Bash(echo \"== type strings in prefab ==\")",
+      "Bash(rm -f Assets/Screenshots/screenshot-20260621-1331*.png Assets/Screenshots/screenshot-20260621-1332*.png Assets/Screenshots/screenshot-20260621-1333*.png Assets/Screenshots/screenshot-20260621-1336*.png Assets/Screenshots/screenshot-20260621-1337*.png Assets/Screenshots/screenshot-20260621-1331*.png.meta Assets/Screenshots/screenshot-20260621-1332*.png.meta Assets/Screenshots/screenshot-20260621-1333*.png.meta Assets/Screenshots/screenshot-20260621-1336*.png.meta Assets/Screenshots/screenshot-20260621-1337*.png.meta 2>/dev/null; ls Assets/Screenshots/ 2>/dev/null | head)",
+      "Bash(rm -f Assets/Screenshots/screenshot-20260621-145*.png Assets/Screenshots/screenshot-20260621-145*.png.meta 2>/dev/null; echo done)",
+      "Read(//c/Users/Josh/AppData/LocalLow/**)",
+      "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' 'PRAGMA table_info\\(Drivers\\);')",
+      "mcp__UnityMCP__execute_menu_item",
+      "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' .tables)",
+      "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' 'PRAGMA table_info\\(Series\\);')"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots"
     ]
   }
 }

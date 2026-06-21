@@ -46,17 +46,65 @@ public class DatabaseManager : MonoBehaviour
         Ready?.Invoke();
     }
 
+    // Bump when a model's columns change in a way that needs a clean rebuild of its table.
+    const int SchemaVersion = 2;
+
     // Register table schemas here as model classes are added. CreateTable is idempotent — safe to call every launch.
     static void CreateTables(SQLiteConnection db)
     {
+        // On a schema bump, drop tables whose columns changed so they're recreated + reseeded fresh
+        // (sqlite-net only ADDs missing columns; it won't drop/rename old ones, which would leave stale data).
+        const string key = "DbSchemaVersion";
+        if (PlayerPrefs.GetInt(key, 1) < SchemaVersion)
+        {
+            db.DropTable<Driver>();
+            PlayerPrefs.SetInt(key, SchemaVersion);
+            PlayerPrefs.Save();
+        }
+
         db.CreateTable<Driver>();
         SeedDriversIfEmpty(db);
+
+        // Additive tables: CreateTable is idempotent, seed only when empty — no schema-version bump needed.
+        // Fully-qualified: legacy global-namespace types (e.g. GarageUI's `Series`/`Entry`) otherwise shadow the models.
+        db.CreateTable<Draftmaster.Data.Series>();
+        SeedSeriesIfEmpty(db);
+
+        db.CreateTable<Draftmaster.Data.Team>();
+        SeedTeamsIfEmpty(db);
+
+        db.CreateTable<Draftmaster.Data.Sponsor>();
+        SeedSponsorsIfEmpty(db);
+
+        // Transactional tables — schema only; populated by season generation / the race sim, not statically seeded.
+        db.CreateTable<Draftmaster.Data.Entry>();
+        db.CreateTable<Draftmaster.Data.Race>();
+        db.CreateTable<Draftmaster.Data.Result>();
+        db.CreateTable<Draftmaster.Data.Contract>();
     }
 
     static void SeedDriversIfEmpty(SQLiteConnection db)
     {
         if (db.Table<Driver>().Count() > 0) return;
         db.InsertAll(DummyDrivers.Build());
+    }
+
+    static void SeedSeriesIfEmpty(SQLiteConnection db)
+    {
+        if (db.Table<Draftmaster.Data.Series>().Count() > 0) return;
+        db.InsertAll(DummySeries.Build());
+    }
+
+    static void SeedTeamsIfEmpty(SQLiteConnection db)
+    {
+        if (db.Table<Draftmaster.Data.Team>().Count() > 0) return;
+        db.InsertAll(DummyTeams.Build());
+    }
+
+    static void SeedSponsorsIfEmpty(SQLiteConnection db)
+    {
+        if (db.Table<Draftmaster.Data.Sponsor>().Count() > 0) return;
+        db.InsertAll(DummySponsors.Build());
     }
 
     IEnumerator CopySeedFromStreamingAssets()

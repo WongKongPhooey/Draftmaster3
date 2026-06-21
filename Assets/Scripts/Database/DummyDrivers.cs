@@ -4,30 +4,50 @@ namespace Draftmaster.Data
 {
     public static class DummyDrivers
     {
+        // Compact constructor. Stats are 0-20; current/potential ability are 0-100.
+        static Driver D(string fn, string ln, string nick, int age,
+            int shortTracks, int speedways, int superspeedways, int roadCourses, int dirtCourses, int openWheel,
+            int fuel, int tyre, int qualifying, int consistency, int aggression, int awareness, int adaptability,
+            int sponsorAppeal, int fanSupport, int prestige,
+            int current, int potential)
+        {
+            return new Driver
+            {
+                FirstName = fn, LastName = ln, Nickname = nick, Age = age,
+                ShortTracks = shortTracks, Speedways = speedways, Superspeedways = superspeedways,
+                RoadCourses = roadCourses, DirtCourses = dirtCourses, OpenWheel = openWheel,
+                FuelManagement = fuel, TyreManagement = tyre, Qualifying = qualifying, Consistency = consistency,
+                Aggression = aggression, Awareness = awareness, Adaptability = adaptability,
+                SponsorAppeal = sponsorAppeal, FanSupport = fanSupport, Prestige = prestige,
+                CurrentAbility = current, PotentialAbility = potential
+            };
+        }
+
         public static List<Driver> Build()
         {
+            //                                              age  ST SP SS RC DC OW FM TM  Q CO AG AW AD SA FS PR  CUR POT
             return new List<Driver>
             {
-                new Driver { FirstName = "Buck",   LastName = "Roberts",  Nickname = "The Hammer",   Age = 38, Reputation = 82, Aggression = 88, Consistency = 70, Qualifying = 75, ShortTracks = 90, Superspeedways = 65, RoadCourses = 55, TireWear = 60, FuelEfficiency = 55, Potential = 60, SponsorAppeal = 75, Negotiation = 70, Motivation = 80, FanAppeal = 88 },
-                new Driver { FirstName = "Hank",   LastName = "Jensen",   Nickname = "Smooth",       Age = 34, Reputation = 78, Aggression = 45, Consistency = 92, Qualifying = 80, ShortTracks = 72, Superspeedways = 85, RoadCourses = 70, TireWear = 88, FuelEfficiency = 90, Potential = 65, SponsorAppeal = 80, Negotiation = 78, Motivation = 75, FanAppeal = 72 },
-                new Driver { FirstName = "Dale",   LastName = "Whitlow",  Nickname = "Pops",         Age = 47, Reputation = 95, Aggression = 55, Consistency = 88, Qualifying = 68, ShortTracks = 82, Superspeedways = 92, RoadCourses = 75, TireWear = 85, FuelEfficiency = 80, Potential = 30, SponsorAppeal = 95, Negotiation = 90, Motivation = 70, FanAppeal = 96 },
-                new Driver { FirstName = "Cody",   LastName = "Marsh",    Nickname = "Rook",         Age = 21, Reputation = 35, Aggression = 72, Consistency = 50, Qualifying = 65, ShortTracks = 60, Superspeedways = 55, RoadCourses = 45, TireWear = 50, FuelEfficiency = 50, Potential = 95, SponsorAppeal = 60, Negotiation = 30, Motivation = 92, FanAppeal = 55 },
-                new Driver { FirstName = "Tyler",  LastName = "Briggs",   Nickname = "Tank",         Age = 29, Reputation = 60, Aggression = 95, Consistency = 55, Qualifying = 70, ShortTracks = 85, Superspeedways = 60, RoadCourses = 50, TireWear = 45, FuelEfficiency = 40, Potential = 70, SponsorAppeal = 50, Negotiation = 55, Motivation = 88, FanAppeal = 78 },
-                new Driver { FirstName = "Owen",   LastName = "Calloway", Nickname = "The Surgeon",  Age = 32, Reputation = 85, Aggression = 50, Consistency = 95, Qualifying = 88, ShortTracks = 75, Superspeedways = 80, RoadCourses = 92, TireWear = 90, FuelEfficiency = 82, Potential = 75, SponsorAppeal = 85, Negotiation = 80, Motivation = 78, FanAppeal = 80 },
-                new Driver { FirstName = "Rusty",  LastName = "Pike",     Nickname = "Wildcard",     Age = 36, Reputation = 55, Aggression = 80, Consistency = 45, Qualifying = 72, ShortTracks = 78, Superspeedways = 75, RoadCourses = 65, TireWear = 55, FuelEfficiency = 50, Potential = 50, SponsorAppeal = 60, Negotiation = 50, Motivation = 70, FanAppeal = 72 },
-                new Driver { FirstName = "Sam",    LastName = "Holloway", Nickname = "Slick",        Age = 27, Reputation = 68, Aggression = 65, Consistency = 78, Qualifying = 82, ShortTracks = 70, Superspeedways = 78, RoadCourses = 85, TireWear = 72, FuelEfficiency = 75, Potential = 82, SponsorAppeal = 70, Negotiation = 68, Motivation = 80, FanAppeal = 70 },
-                new Driver { FirstName = "Joaquin",LastName = "Reyes",    Nickname = "Road Runner",  Age = 30, Reputation = 72, Aggression = 60, Consistency = 80, Qualifying = 78, ShortTracks = 65, Superspeedways = 72, RoadCourses = 96, TireWear = 80, FuelEfficiency = 78, Potential = 78, SponsorAppeal = 72, Negotiation = 70, Motivation = 82, FanAppeal = 75 },
-                new Driver { FirstName = "Jesse",  LastName = "McGraw",   Nickname = "Gentleman",    Age = 41, Reputation = 90, Aggression = 35, Consistency = 90, Qualifying = 70, ShortTracks = 70, Superspeedways = 88, RoadCourses = 78, TireWear = 92, FuelEfficiency = 88, Potential = 45, SponsorAppeal = 92, Negotiation = 85, Motivation = 65, FanAppeal = 88 },
-                new Driver { FirstName = "Mason",  LastName = "Vance",    Nickname = "Vandal",       Age = 25, Reputation = 50, Aggression = 92, Consistency = 60, Qualifying = 75, ShortTracks = 80, Superspeedways = 70, RoadCourses = 55, TireWear = 55, FuelEfficiency = 50, Potential = 85, SponsorAppeal = 55, Negotiation = 40, Motivation = 90, FanAppeal = 65 },
-                new Driver { FirstName = "Will",   LastName = "Atherton", Nickname = "Will-Power",   Age = 33, Reputation = 80, Aggression = 70, Consistency = 82, Qualifying = 85, ShortTracks = 78, Superspeedways = 82, RoadCourses = 80, TireWear = 78, FuelEfficiency = 75, Potential = 72, SponsorAppeal = 82, Negotiation = 75, Motivation = 80, FanAppeal = 80 },
-                new Driver { FirstName = "Earl",   LastName = "Schaeffer",Nickname = "The Veteran",  Age = 50, Reputation = 92, Aggression = 40, Consistency = 92, Qualifying = 65, ShortTracks = 78, Superspeedways = 90, RoadCourses = 72, TireWear = 90, FuelEfficiency = 92, Potential = 20, SponsorAppeal = 88, Negotiation = 92, Motivation = 60, FanAppeal = 90 },
-                new Driver { FirstName = "Drew",   LastName = "Castillo", Nickname = "Speed Demon",  Age = 28, Reputation = 70, Aggression = 78, Consistency = 70, Qualifying = 92, ShortTracks = 75, Superspeedways = 82, RoadCourses = 75, TireWear = 65, FuelEfficiency = 60, Potential = 80, SponsorAppeal = 70, Negotiation = 65, Motivation = 85, FanAppeal = 78 },
-                new Driver { FirstName = "Ben",    LastName = "Carlisle", Nickname = "Beanpole",     Age = 24, Reputation = 45, Aggression = 55, Consistency = 65, Qualifying = 70, ShortTracks = 60, Superspeedways = 65, RoadCourses = 70, TireWear = 70, FuelEfficiency = 72, Potential = 88, SponsorAppeal = 50, Negotiation = 45, Motivation = 78, FanAppeal = 55 },
-                new Driver { FirstName = "Lance",  LastName = "Ortega",   Nickname = "Lightning",    Age = 31, Reputation = 76, Aggression = 75, Consistency = 75, Qualifying = 88, ShortTracks = 82, Superspeedways = 70, RoadCourses = 85, TireWear = 68, FuelEfficiency = 65, Potential = 75, SponsorAppeal = 75, Negotiation = 70, Motivation = 82, FanAppeal = 78 },
-                new Driver { FirstName = "Cooper", LastName = "Lange",    Nickname = "The Closer",   Age = 37, Reputation = 85, Aggression = 68, Consistency = 88, Qualifying = 80, ShortTracks = 78, Superspeedways = 86, RoadCourses = 82, TireWear = 85, FuelEfficiency = 82, Potential = 55, SponsorAppeal = 85, Negotiation = 82, Motivation = 75, FanAppeal = 82 },
-                new Driver { FirstName = "Hector", LastName = "Aldana",   Nickname = "El Toro",      Age = 35, Reputation = 78, Aggression = 85, Consistency = 72, Qualifying = 78, ShortTracks = 88, Superspeedways = 75, RoadCourses = 78, TireWear = 65, FuelEfficiency = 60, Potential = 65, SponsorAppeal = 75, Negotiation = 70, Motivation = 82, FanAppeal = 80 },
-                new Driver { FirstName = "Reggie", LastName = "Boone",    Nickname = "Boone Dog",    Age = 43, Reputation = 82, Aggression = 60, Consistency = 85, Qualifying = 72, ShortTracks = 80, Superspeedways = 88, RoadCourses = 70, TireWear = 88, FuelEfficiency = 85, Potential = 35, SponsorAppeal = 80, Negotiation = 80, Motivation = 68, FanAppeal = 82 },
-                new Driver { FirstName = "Nico",   LastName = "Petrov",   Nickname = "Iceman",       Age = 26, Reputation = 65, Aggression = 50, Consistency = 88, Qualifying = 85, ShortTracks = 70, Superspeedways = 78, RoadCourses = 90, TireWear = 82, FuelEfficiency = 80, Potential = 90, SponsorAppeal = 68, Negotiation = 60, Motivation = 85, FanAppeal = 70 },
+                D("Buck",    "Roberts",  "The Hammer",   38, 18, 13, 13, 11, 12,  5, 11, 12, 15, 14, 18, 13, 12, 15, 18, 16,  78, 80),
+                D("Hank",    "Jensen",   "Smooth",       34, 14, 17, 17, 14,  9,  8, 18, 18, 16, 18,  9, 16, 15, 16, 14, 14,  82, 84),
+                D("Dale",    "Whitlow",  "Pops",         47, 16, 18, 18, 15, 13,  7, 16, 17, 13, 18, 11, 18, 16, 19, 19, 19,  85, 85),
+                D("Cody",    "Marsh",    "Rook",         21,  7, 11, 11,  9,  8,  6, 10, 10, 13, 10, 14,  8,  9, 12, 11,  6,  52, 92),
+                D("Tyler",   "Briggs",   "Tank",         29, 17, 12, 12, 10, 14,  5,  9,  9, 14, 11, 19, 10, 11, 10, 16, 12,  66, 74),
+                D("Owen",    "Calloway", "The Surgeon",  32, 15, 16, 16, 18, 10,  9, 16, 18, 17, 19, 10, 18, 18, 17, 16, 16,  88, 90),
+                D("Rusty",   "Pike",     "Wildcard",     36, 15, 15, 15, 13, 16,  7, 11, 11, 14,  9, 16, 11, 13, 12, 14, 11,  60, 62),
+                D("Sam",     "Holloway", "Slick",        27, 14, 15, 16, 17, 10,  8, 14, 14, 16, 15, 13, 14, 16, 14, 14, 13,  74, 86),
+                D("Joaquin", "Reyes",    "Road Runner",  30, 13, 14, 14, 19,  9, 12, 15, 16, 15, 16, 12, 15, 18, 14, 15, 14,  79, 86),
+                D("Jesse",   "McGraw",   "Gentleman",    41, 14, 17, 18, 15, 12,  6, 18, 18, 14, 18,  7, 17, 16, 18, 18, 18,  80, 80),
+                D("Mason",   "Vance",    "Vandal",       25, 16, 14, 14, 11, 13,  7,  9, 10, 15, 12, 19,  9, 11, 11, 13,  8,  60, 90),
+                D("Will",    "Atherton", "Will-Power",   33, 15, 16, 16, 16, 11, 10, 15, 15, 17, 16, 14, 15, 16, 16, 16, 15,  80, 82),
+                D("Earl",    "Schaeffer","The Veteran",  50, 15, 18, 18, 14, 13,  6, 18, 18, 13, 18,  8, 19, 17, 18, 18, 20,  82, 82),
+                D("Drew",    "Castillo", "Speed Demon",  28, 15, 16, 16, 15,  9,  9, 13, 13, 19, 14, 16, 13, 14, 14, 16, 13,  76, 88),
+                D("Ben",     "Carlisle", "Beanpole",     24, 12, 13, 13, 14,  8,  7, 14, 14, 14, 13, 11, 13, 15, 10, 11,  7,  56, 90),
+                D("Lance",   "Ortega",   "Lightning",    31, 16, 14, 14, 17, 11,  9, 13, 14, 18, 15, 15, 14, 16, 15, 16, 14,  78, 84),
+                D("Cooper",  "Lange",    "The Closer",   37, 15, 17, 17, 16, 12,  8, 17, 17, 16, 18, 14, 17, 16, 17, 16, 16,  84, 84),
+                D("Hector",  "Aldana",   "El Toro",      35, 18, 15, 15, 16, 17,  8, 12, 13, 16, 14, 17, 14, 15, 15, 16, 15,  76, 78),
+                D("Reggie",  "Boone",    "Boone Dog",    43, 16, 18, 18, 14, 15,  6, 18, 18, 14, 17, 12, 18, 16, 16, 17, 17,  80, 80),
+                D("Nico",    "Petrov",   "Iceman",       26, 14, 16, 16, 18, 10, 13, 16, 16, 17, 18, 10, 17, 18, 14, 14, 12,  82, 94),
             };
         }
     }
