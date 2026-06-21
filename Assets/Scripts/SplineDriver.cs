@@ -628,6 +628,19 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return idx;
     }
 
+    // Lateral room (m) from the car's current line to each track edge. +lateral is right of travel, so
+    // rightRoom is space to move right, leftRoom space to move left. Lets the AI pick the roomier passing side.
+    public bool GetLateralRoom(out float leftRoom, out float rightRoom)
+    {
+        leftRoom = rightRoom = 0f;
+        if (_leftBoundProfile == null || _rightBoundProfile == null || !_hasPrevLateral) return false;
+        BoundsAt(_distance, out float lo, out float hi);
+        float cur = _prevLateral;
+        rightRoom = Mathf.Max(0f, hi - cur);
+        leftRoom = Mathf.Max(0f, cur - lo);
+        return true;
+    }
+
     // Smallest turn radius (m) on the path within scanDistance ahead, including the current segment.
     // float.MaxValue when the road ahead is straight. The AI input driver uses this to shorten its steering
     // lookahead on tight corners (aim short = turn in hard) and keep it long on gradual ones (smooth).

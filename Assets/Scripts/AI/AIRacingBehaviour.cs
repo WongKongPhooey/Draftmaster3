@@ -19,6 +19,8 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Detection Ranges (m)")]
     public float lookAheadRange = 70f;
     public float overtakeClosingRange = 25f;
+    [Tooltip("Extra overtake-initiation range (m) per mph of closing speed — start easing offline earlier when reeling a slower car in fast, so the AI arrives alongside instead of catching its gearbox then darting.")]
+    public float ttcRangePerMph = 0.6f;
     public float minFollowDistance = 5f;
     public float sidewaysRange = 12f;
     public float sidewaysWidth = 3.5f;
@@ -107,21 +109,13 @@ public class AIRacingBehaviour : MonoBehaviour
             // Compare against what we COULD do (profile pace), not current speed — once we've matched the
             // leader's speed the current-speed delta is zero and a train forms that never breaks.
             float myPotential = Mathf.Max(mySpeed, _spline.DesiredMph);
-            if (aheadGap < closingRange && aheadSpeed < myPotential - 2f && _cooldownTimer <= 0f)
+            // Closing-rate widening: catching a much-slower car fast → begin the move from further back.
+            float closingMph = Mathf.Max(0f, myPotential - aheadSpeed);
+            float initiateRange = closingRange + closingMph * ttcRangePerMph;
+            if (aheadGap < initiateRange && aheadSpeed < myPotential - 2f && _cooldownTimer <= 0f)
             {
-                wantOvertake = true;
-                // Prefer outside of upcoming turn (more room, safer arc). Aggressive drivers can dive inside.
-                int turnSign = _spline.NextTurnSign(cornerScanDistance);
-                if (turnSign != 0)
-                {
-                    float outsideDir = turnSign; // positive turn (left) → outside is positive lateral (right of travel)
-                    float insideDir = -outsideDir;
-                    overtakeDir = aggression01 > 0.75f ? insideDir : outsideDir;
-                }
-                else
-                {
-                    overtakeDir = aheadLat >= 0f ? -1f : 1f;
-                }
+                overtakeDir = ChooseOvertakeSide(aheadLat);
+                wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
             }
 
             float safeGap = Mathf.Lerp(14f, 6f, aggression01);
@@ -282,6 +276,49 @@ public class AIRacingBehaviour : MonoBehaviour
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
         _spline.aiSpeedBoostMph = speedBoost;
+    }
+
+    // Pick which side to pass on: outside of an upcoming turn (safer arc), else the roomier side away from the
+    // car ahead. Never commit to a side another car already occupies — try the other, and bail if both are blocked.
+    float ChooseOvertakeSide(float aheadLat)
+    {
+        int turnSign = _spline.NextTurnSign(cornerScanDistance);
+        float pick;
+        if (turnSign != 0)
+        {
+            float outsideDir = turnSign;   // outside of the turn — more room, better exit
+            float insideDir = -outsideDir; // the dive
+            pick = aggression01 > 0.75f ? insideDir : outsideDir;
+        }
+        else
+        {
+            float roomBias = 0f;
+            if (_spline.GetLateralRoom(out float leftRoom, out float rightRoom))
+                roomBias = rightRoom - leftRoom; // >0 → more room on the right (+lateral)
+            float awayFromAhead = aheadLat >= 0f ? -1f : 1f; // car ahead sits right → go left
+            pick = (roomBias * 0.4f + awayFromAhead) >= 0f ? 1f : -1f;
+        }
+
+        if (SideOccupied(pick)) pick = -pick;     // someone's there — try the other side
+        if (SideOccupied(pick)) return 0f;        // boxed in both sides — abort the pass
+        return pick;
+    }
+
+    // Is another car alongside or just ahead on the given side, so passing there would clip it?
+    bool SideOccupied(float dir)
+    {
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float lg = LongitudinalGap(_spline, other); // + = ahead of me
+            if (lg < -3f || lg > overtakeClosingRange) continue; // only cars alongside / just ahead
+            float latGap = other.LateralOnTrack - _spline.LateralOnTrack;
+            if (Mathf.Sign(latGap) == Mathf.Sign(dir) && Mathf.Abs(latGap) < sidewaysWidth) return true;
+        }
+        return false;
     }
 
     static float LongitudinalGap(SplineDriver self, SplineDriver other)
