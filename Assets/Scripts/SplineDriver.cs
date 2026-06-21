@@ -84,6 +84,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Header("Formation Start")]
     [Tooltip("Hold this car perfectly still (parked in its box / at pit exit) while RaceStart.Current is PreGrid. Released automatically once the phase advances to Formation.")]
     public bool freezeUntilFormation = false;
+    [Tooltip("While on the pit lane, hold the car stopped (a service stop). Set by PitStopController at the pit box.")]
+    public bool pitStopHold = false;
+
+    public bool IsOnPit => _onPit;
+    public float PitProgress01 => (_onPit && _pitLength > 0f) ? Mathf.Clamp01(_distance / _pitLength) : 0f;
 
     [Header("Cornering Feel")]
     [Tooltip("Lean angle (deg) per metre/sec of lateral motion. Positive offset rate = moving right = leans right. Negate to flip.")]
@@ -534,7 +539,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             float targetMph;
             if (_onPit)
             {
-                targetMph = track != null && track.track != null ? track.track.pitSpeedLimit : 50f;
+                float pitLimit = track != null && track.track != null ? track.track.pitSpeedLimit : 50f;
+                targetMph = pitStopHold ? 0f : pitLimit; // hold = a service stop at the box
             }
             else if (_speedProfile != null)
             {

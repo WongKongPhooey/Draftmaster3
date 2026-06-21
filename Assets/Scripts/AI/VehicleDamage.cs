@@ -39,11 +39,21 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     [Tooltip("Falloff band (fraction of sprite) outside the core rect where deformation fades in from 0 to full.")]
     [Range(0.01f, 0.5f)] public float coreFalloffFrac = 0.15f;
 
+    [Header("Damage Severity → Handling")]
+    [Tooltip("Accumulated damage per unit impact severity. Higher = a few hits cripple the car.")]
+    public float damageAccrual = 0.18f;
+
+    // 0..1 accumulated bodywork damage, read by PlayerVehicleController to spoil grip / top speed.
+    public float DamageLevel { get; private set; }
+    // Signed left/right damage bias (−1 = left side battered, +1 = right). Drives a steering pull.
+    public float DamageBiasX { get; private set; }
+
     Mesh _mesh;
     Vector3[] _base;
     Vector3[] _current;
     float[] _deformWeight;
     float _worldToLocal = 1f;
+    float _biasAccum;
 
     void Awake() { Build(); }
 
@@ -180,6 +190,11 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         {
             _mesh.vertices = _current;
             _mesh.RecalculateBounds();
+
+            // Accumulate a 0..1 damage level + a left/right bias (from where the hit landed) for handling effects.
+            DamageLevel = Mathf.Clamp01(DamageLevel + Mathf.Clamp01(severity) * damageAccrual);
+            _biasAccum += localPoint.x * Mathf.Clamp01(severity);
+            DamageBiasX = Mathf.Clamp(_biasAccum, -1f, 1f);
         }
     }
 
@@ -189,5 +204,8 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         _current = (Vector3[])_base.Clone();
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
+        DamageLevel = 0f;
+        DamageBiasX = 0f;
+        _biasAccum = 0f;
     }
 }

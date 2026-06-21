@@ -170,6 +170,9 @@ public class GridSpawner : MonoBehaviour
             if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             binding.Apply();
 
+            // Wear-based pit strategy (self-gates on green flag).
+            if (go.GetComponent<PitStopController>() == null) go.AddComponent<PitStopController>();
+
             // Identity for the position counter / HUD: name from DriverNames, number from the livery.
             var label = go.GetComponent<DriverLabel>();
             if (label == null) label = go.AddComponent<DriverLabel>();

@@ -91,6 +91,16 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Lateral grip on a Tarmac runoff — near track grip, so paved run-offs are safe.")]
     [Range(0.1f, 1f)] public float tarmacRunoffGrip = 0.95f;
 
+    [Header("Damage → Handling")]
+    [Tooltip("Grip lost at full bodywork damage (both axles).")]
+    [Range(0f, 0.6f)] public float damageGripLoss = 0.22f;
+    [Tooltip("Extra deceleration (m/s²) at full damage — bent panels drag.")]
+    public float damageDragAdd = 3f;
+    [Tooltip("Fraction of top speed lost at full damage.")]
+    [Range(0f, 0.5f)] public float damageTopSpeedLoss = 0.12f;
+    [Tooltip("Steering pull (radians) at full damage with full side bias — a battered car wanders toward the hit side.")]
+    public float damageSteerPull = 0.05f;
+
     [Header("Reverse")]
     [Tooltip("Hold brake with no throttle once nearly stopped to reverse. Max reverse speed (m/s).")]
     public float reverseMaxSpeed = 5f;
@@ -157,6 +167,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     bool _onGrass;          // car is off the track surface this step
     float _lastAy;          // last lateral accel (m/s²), for tyre load-transfer split
     TireModel _tires;       // 4-tyre wear+temperature model (when enableWear)
+    VehicleDamage _bodywork; // accumulated bodywork damage → handling penalties
 
     [HideInInspector] public bool externalInput; // true when an AI controller feeds inputs via SetInput
     // Soft forward-speed cap (m/s). Infinity = no cap. Set by FormationDirector to hold the player to
@@ -185,6 +196,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             if (_tires == null) _tires = gameObject.AddComponent<TireModel>();
             _tires.Configure(vehicleInfo);
         }
+
+        _bodywork = GetComponentInChildren<VehicleDamage>();
     }
 
     void CreateTrails()
@@ -281,7 +294,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float speedAuthority = Mathf.Lerp(1f, highSpeedSteerScale, speedFraction);
         float desiredSteer = -steerIn * vehicleInfo.maxSteeringAngle * speedAuthority;
         _steerDeg = Mathf.MoveTowards(_steerDeg, desiredSteer, vehicleInfo.steeringRate * dt);
+        // Bodywork damage spoils handling: a steering pull toward the battered side, plus grip/drag/top-speed below.
+        float dmg = _bodywork != null ? _bodywork.DamageLevel : 0f;
         float delta = _steerDeg * Mathf.Deg2Rad;
+        if (dmg > 0f && _bodywork != null) delta += _bodywork.DamageBiasX * dmg * damageSteerPull;
 
         // --- Surface + wheelspin state for this update.
         // On the track (or a tarmac runoff) the car has full grip. Off it, sample the runoff field: grass is
@@ -316,7 +332,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));
 
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
-        float topMps = vehicleInfo.topSpeed / 2.237f;
+        float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss);
         float accel = SampleAccel(_vx) * TrackConditions.PowerMultiplier * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
@@ -333,6 +349,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         reverseDrive *= surfPower;
         // Rolling resistance ramps in with speed — zero at a standstill so the car can always crawl back off.
         if (surfDrag > 0f) decel += surfDrag * Mathf.Clamp01(speedNow / grassDragRampSpeed);
+        if (dmg > 0f) decel += dmg * damageDragAdd;                  // bent bodywork drags
         accel *= (1f - wheelspinAccelLoss * wheelspin);              // spinning wheels put down less power
         float axCmd = accel + reverseDrive - decel; // commanded longitudinal accel (m/s²)
 
@@ -340,8 +357,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float trackGrip = TrackConditions.GripMultiplier;
         float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
         float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
-        float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * (1f - understeerBias);
-        float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * (1f + understeerBias);
+        float dmgGrip = 1f - dmg * damageGripLoss;
+        float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * dmgGrip * (1f - understeerBias);
+        float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * dmgGrip * (1f + understeerBias);
 
         // Off-track surface cuts both axles; lit-up rears lose extra grip so the car rotates.
         muF *= surfGrip;

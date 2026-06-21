@@ -27,6 +27,8 @@ public class RacePositionTracker : MonoBehaviour
         public float prevDist;
         public bool hasPrev;
         public float progress;
+        public float speedMps;
+        public float gapToLeaderSec;
         public int position;          // 1 = leader
     }
 
@@ -63,6 +65,15 @@ public class RacePositionTracker : MonoBehaviour
 
         _entries.Sort((a, b) => b.progress.CompareTo(a.progress));
         for (int i = 0; i < _entries.Count; i++) _entries[i].position = i + 1;
+
+        // Time gap to the leader = distance behind / leader's speed.
+        if (_entries.Count > 0)
+        {
+            var leader = _entries[0];
+            float leadSpeed = Mathf.Max(leader.speedMps, 8f);
+            for (int i = 0; i < _entries.Count; i++)
+                _entries[i].gapToLeaderSec = (leader.progress - _entries[i].progress) / leadSpeed;
+        }
     }
 
     void SyncEntries()
@@ -115,12 +126,14 @@ public class RacePositionTracker : MonoBehaviour
             if (e.tf == null) return;
             len = _len;
             dist = track.NearestCenterlineDistance(e.tf.position);
+            e.speedMps = playerCar != null ? playerCar.SpeedMps : 0f;
         }
         else
         {
             if (e.spline == null || e.spline.TrackLength <= 0f) return;
             len = e.spline.TrackLength;
             dist = e.spline.DistanceOnTrack;
+            e.speedMps = e.spline.SpeedMps;
         }
 
         if (e.hasPrev)
