@@ -29,6 +29,38 @@ public class VehicleInfo : ScriptableObject
     [Tooltip("Extra corner speed (mph) added per degree of banking. ~2.5 mph/deg.")]
     public float bankingMphPerDegree = 2.5f;
 
+    [Header("Gearbox")]
+    [Tooltip("Gear ratios, index 0 = 1st gear. Modern NASCAR Next Gen runs a 5-speed sequential. Higher ratio = more torque, lower top speed in that gear. Defaults roughly map topSpeed to redline in top gear with the default wheelRadius/finalDrive.")]
+    public float[] gearRatios = { 2.9f, 2.0f, 1.5f, 1.18f, 1.0f };
+
+    [Tooltip("Final drive (differential) ratio multiplied into every gear.")]
+    public float finalDriveRatio = 3.5f;
+
+    [Tooltip("Idle RPM (engine floor when stopped / clutch slip).")]
+    public float idleRpm = 1100f;
+
+    [Tooltip("Redline / max usable RPM. NASCAR Next Gen ~9000.")]
+    public float maxRpm = 9000f;
+
+    [Tooltip("Upshift when engine RPM rises above this (must be below maxRpm).")]
+    public float shiftUpRpm = 8600f;
+
+    [Tooltip("Downshift when engine RPM falls below this.")]
+    public float shiftDownRpm = 5200f;
+
+    [Tooltip("Drive-wheel rolling radius in metres. ~0.34 for a Cup tire. Used to convert road speed to engine RPM.")]
+    public float wheelRadius = 0.34f;
+
+    [Tooltip("Seconds the drive is interrupted during a sequential shift. Produces the brief accel cut / RPM drop on each gear change.")]
+    public float shiftTime = 0.12f;
+
+    [Tooltip("Normalized torque multiplier vs normalized RPM (x: 0=idle .. 1=redline, y: accel multiplier). Should average ~1 so it shapes feel without changing overall pace. Default peaks mid-high and falls off at redline, giving the accel surge after each upshift.")]
+    public AnimationCurve torqueCurve = new AnimationCurve(
+        new Keyframe(0f, 0.70f),
+        new Keyframe(0.5f, 1.05f),
+        new Keyframe(0.78f, 1.10f),
+        new Keyframe(1f, 0.82f));
+
     [Header("Drafting")]
     [Tooltip("Max speed bonus (mph) when fully in another car's slipstream.")]
     public float draftingMaxBonus = 7f;

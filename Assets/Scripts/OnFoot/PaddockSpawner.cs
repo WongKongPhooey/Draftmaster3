@@ -150,13 +150,12 @@ public class PaddockSpawner : MonoBehaviour
         go.transform.SetParent(root, false);
         var mf = go.AddComponent<MeshFilter>();
         var mr = go.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = tarmacMaterial != null ? tarmacMaterial : BuildFallbackTarmac();
+        mr.sharedMaterial = ResolveSurfaceMaterial();
         mr.sortingOrder = surfaceSortingOrder;
 
-        // Quad in world space (transform stays at identity). Sit slightly toward the camera (-z) so the opaque tarmac
-        // always wins the depth test against the coplanar ground plane; NPC sprites are nudged further forward (-0.1)
-        // so they render on top of it.
-        float z = -0.05f;
+        // Sit coplanar with the ground (z=0) and rely on sorting order to layer it: ground(0) < paddock(1) < cars(5).
+        // A negative z would pull the opaque quad in FRONT of the player/car (same z=0 plane) and hide them under it.
+        float z = 0f;
         Vector3 a = along * halfLen, d = outward * halfDepth;
         Vector3 v0 = center - a - d + Vector3.forward * z;
         Vector3 v1 = center + a - d + Vector3.forward * z;
@@ -283,6 +282,26 @@ public class PaddockSpawner : MonoBehaviour
         if (sh == null) sh = Shader.Find("Sprites/Default");
         _unlitSprite = new Material(sh);
         return _unlitSprite;
+    }
+
+    // Pick a URP-compatible tarmac material. The inspector-assigned one may be a legacy built-in (Standard) material
+    // (e.g. TarmacMid) that renders wrong/white under URP, so prefer the track's own proven tarmac, then a flat fallback.
+    Material ResolveSurfaceMaterial()
+    {
+        if (IsUrp(tarmacMaterial)) return tarmacMaterial;
+        if (track != null)
+        {
+            if (IsUrp(track.pitSurfaceMaterial)) return track.pitSurfaceMaterial;
+            if (IsUrp(track.surfaceMaterial)) return track.surfaceMaterial;
+        }
+        return BuildFallbackTarmac();
+    }
+
+    static bool IsUrp(Material m)
+    {
+        if (m == null || m.shader == null) return false;
+        string n = m.shader.name;
+        return n.Contains("Universal") || n.Contains("Unlit") || n.Contains("Sprites");
     }
 
     Material BuildFallbackTarmac()

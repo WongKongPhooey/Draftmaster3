@@ -154,6 +154,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float _currentMph;
     float _mergeLatBias; // lateral carried across the pit→main merge, eased out so the rejoin isn't a sideways pop
 
+    EngineGearbox _gearbox; // optional: shapes acceleration (gear torque + shift drive-cut) and feeds engine audio
+
     void Awake()
     {
         var vl = GetComponent<VehicleLogic>();
@@ -161,6 +163,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         var rb = GetComponent<Rigidbody2D>();
         if (rb != null) rb.bodyType = RigidbodyType2D.Kinematic;
+
+        _gearbox = GetComponent<EngineGearbox>();
     }
 
     void OnEnable() { RaceField.Register(this); }
@@ -186,6 +190,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     void Start()
     {
+        // Re-resolve the gearbox: GridSpawner adds it AFTER this SplineDriver, so the Awake fetch missed it.
+        // Start runs after the whole spawn loop, so it exists now. (Prefab-built cars already had it in Awake.)
+        if (_gearbox == null) _gearbox = GetComponent<EngineGearbox>();
+
         if (_startSeeded) return; // already engaged via EngageFromCurrentPose; keep its seeded distance
         Rebuild();
         if (spawnInPit && _pitLength > 0f)
@@ -614,6 +622,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (_currentMph < targetMph)
         {
             float accel = SampleAccel(_currentMph);
+            // Gearbox shapes the live accel (gear torque curve + brief drive-cut on a shift). It averages ~1
+            // so overall pace is preserved; the static speed profile is left untouched (built without it).
+            if (_gearbox != null) accel *= _gearbox.AccelMultiplier;
             _currentMph += accel * MpsToMph * Time.fixedDeltaTime;
             if (_currentMph > targetMph) _currentMph = targetMph;
         }

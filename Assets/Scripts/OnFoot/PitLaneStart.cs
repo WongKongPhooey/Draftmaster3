@@ -67,6 +67,11 @@ public class PitLaneStart : MonoBehaviour
     bool _interactHeldPrev;
     GameObject _prompt;
 
+    // Where the player's parked car sits along the pit lane (metres) and whether the pit lane was used.
+    // GridSpawner reads these to reserve the player's pit box so it doesn't spawn an AI on top of the car.
+    public float PlayerPitDistance { get; private set; }
+    public bool PlayerOnPit { get; private set; }
+
     void Start()
     {
         if (track == null || onFootPrefab == null || car == null)
@@ -89,8 +94,13 @@ public class PitLaneStart : MonoBehaviour
         if (!usedPit) Debug.LogWarning("PitLaneStart: no pit lane on track, using main spline.");
 
         float total = samples[samples.Count - 1].distance;
+        float carDistance = Mathf.Min(total, total * pitFraction + carAheadMetres);
         var mid = track.SamplePitAt(total * pitFraction, samples);
-        var carSample = track.SamplePitAt(Mathf.Min(total, total * pitFraction + carAheadMetres), samples);
+        var carSample = track.SamplePitAt(carDistance, samples);
+
+        // Expose the parked car's pit position so GridSpawner can keep its box clear.
+        PlayerPitDistance = carDistance;
+        PlayerOnPit = usedPit;
 
         Vector2 midOff = mid.position + mid.normal * lateralOffsetMetres;
         Vector2 carOff = carSample.position + carSample.normal * lateralOffsetMetres;

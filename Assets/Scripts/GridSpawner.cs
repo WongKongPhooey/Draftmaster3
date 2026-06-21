@@ -42,6 +42,14 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Scale to apply to spawned cars.")]
     public Vector2 carScale = new Vector2(6, 6);
 
+    [Header("Engine Audio")]
+    [Tooltip("Shared engine sound set applied to every spawned AI car (3D/positional). Leave null for silent AI.")]
+    public EngineSoundSet aiEngineSound;
+    [Tooltip("Max audible distance (m) for an AI car's engine. Beyond this it attenuates to silence.")]
+    public float aiEngineMaxDistance = 120f;
+    [Tooltip("Overall AI engine volume. Keep below the player's so the field doesn't drown the player's own car.")]
+    [Range(0f, 1f)] public float aiEngineVolume = 0.7f;
+
     [Header("Collision")]
     [Tooltip("Add VehicleCollision to each spawned car for barrier + car-car contact.")]
     public bool addCollision = true;
@@ -106,19 +114,36 @@ public class GridSpawner : MonoBehaviour
             Shuffle(namePool);
         }
 
+        // Wait a frame so PitLaneStart.Start has positioned the player car (its DB-less Start may run after ours).
+        yield return null;
+
+        // Reserve the player's pit box so an AI isn't spawned on top of the player car (they'd collide forever).
+        // The player is +1 on top of `count` AI, so the boxes are fit for that total and one box index is left empty.
+        var pls = formationRace ? FindObjectOfType<PitLaneStart>() : null;
+        bool reservePlayer = pls != null && pls.PlayerOnPit;
+        int totalBoxes = count + (reservePlayer ? 1 : 0);
+
         // Formation race: park the field in the pit lane and fit the boxes to the available pit length.
         float pitBoxExitGap = 12f;
         float pitBoxSpacing = 12f;
+        float pitLen = 0f;
         if (formationRace)
         {
             spawnInPit = true;
             var pit = track.SamplePitCenterline();
-            float pitLen = pit.Count > 0 ? pit[pit.Count - 1].distance : 0f;
-            if (pitLen > 0f && count > 1)
+            pitLen = pit.Count > 0 ? pit[pit.Count - 1].distance : 0f;
+            if (pitLen > 0f && totalBoxes > 1)
             {
                 float usable = Mathf.Max(0f, pitLen - pitBoxExitGap - 6f);
-                pitBoxSpacing = Mathf.Clamp(usable / (count - 1), 5f, 12f);
+                pitBoxSpacing = Mathf.Clamp(usable / (totalBoxes - 1), 5f, 12f);
             }
+        }
+
+        int reservedBox = -1;
+        if (reservePlayer && pitLen > 0f)
+        {
+            reservedBox = Mathf.RoundToInt((pitLen - pitBoxExitGap - pls.PlayerPitDistance) / Mathf.Max(pitBoxSpacing, 0.01f));
+            reservedBox = Mathf.Clamp(reservedBox, 0, totalBoxes - 1);
         }
 
         for (int i = 0; i < count; i++)
@@ -150,7 +175,8 @@ public class GridSpawner : MonoBehaviour
             float sfAnchor = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
             splineDriver.startDistance = sfAnchor + gridStartDistance - i * spacing;
             splineDriver.spawnInPit = spawnInPit;
-            splineDriver.qualifyingPosition = i;
+            // Skip the player's reserved box when numbering AI grid slots.
+            splineDriver.qualifyingPosition = (reservedBox >= 0 && i >= reservedBox) ? i + 1 : i;
             splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
             splineDriver.speed = speed;
             splineDriver.spriteFacesUp = false;
@@ -217,6 +243,18 @@ public class GridSpawner : MonoBehaviour
                     dmg.sortingOrder = carSortingOrder;
                     dmg.Build();
                 }
+            }
+
+            if (aiEngineSound != null)
+            {
+                // Gearbox derives RPM/gear from the car's speed; EngineAudio voices it positionally (3D).
+                if (go.GetComponent<EngineGearbox>() == null) go.AddComponent<EngineGearbox>();
+                var ea = go.GetComponent<EngineAudio>();
+                if (ea == null) ea = go.AddComponent<EngineAudio>();
+                ea.soundSet = aiEngineSound;
+                ea.spatialBlend = 1f;
+                ea.masterVolume = aiEngineVolume;
+                ea.maxDistance = aiEngineMaxDistance;
             }
 
             if (addCollision)
