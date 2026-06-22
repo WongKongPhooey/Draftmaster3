@@ -2,12 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Draftmaster.Data;
+using Unity.Netcode;
 using UnityEngine;
 
 public class GridSpawner : MonoBehaviour
 {
     public TrackBuilder track;
     public GameObject carPrefab;
+    [Tooltip("Networked AI car prefab (NetworkObject + NetworkedAICar). In multiplayer the host spawns the field from this instead of carPrefab; clients receive the replicas.")]
+    public GameObject networkedAiPrefab;
     [Tooltip("Material applied to each spawned car's SpriteRenderer. Use an unlit sprite material so cars render correctly without Light2D coverage.")]
     public Material carMaterial;
     [Tooltip("Sorting order applied to each spawned car's SpriteRenderer. Higher draws on top.")]
@@ -70,6 +73,16 @@ public class GridSpawner : MonoBehaviour
 
     IEnumerator Start()
     {
+        // Multiplayer: only the host spawns AI, as networked objects replicated to clients (SpawnNetworkedField).
+        // Clients receive the field from the host and spawn nothing locally.
+        if (GameSession.IsMultiplayer)
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm != null && nm.IsServer && networkedAiPrefab != null && track != null)
+                yield return SpawnNetworkedField();
+            yield break;
+        }
+
         if (track == null || carPrefab == null) yield break;
 
         if (DatabaseManager.Instance == null)
@@ -265,6 +278,109 @@ public class GridSpawner : MonoBehaviour
                 col.collisionMask = collisionMask;
                 col.ApplyExtents();
             }
+        }
+    }
+
+    // Host-only multiplayer field spawn. Mirrors the single-player grid setup but instantiates the networked
+    // AI prefab, seeds each car's identity, and NetworkObject.Spawn()s it so clients get a replica. The host
+    // runs the brains; NetworkedAICar disables them on clients. No formation lap / pit flow in multiplayer.
+    IEnumerator SpawnNetworkedField()
+    {
+        RaceStart.Current = RaceStart.Phase.Green;          // race immediately; no on-foot entry in MP
+        var formation = FindFirstObjectByType<FormationDirector>();
+        if (formation != null) formation.enabled = false;
+
+        if (DatabaseManager.Instance != null)
+            while (!DatabaseManager.Instance.IsReady) yield return null;
+
+        var drivers = DatabaseManager.Instance != null
+            ? DatabaseManager.Instance.Connection.Table<Driver>().ToList()
+            : new List<Driver>();
+        var pool = new List<Driver>(drivers);
+        Shuffle(pool);
+
+        var liveries = new List<(int number, Sprite sprite)>();
+        if (useCarsetLiveries && !string.IsNullOrEmpty(carsetPrefix))
+        {
+            for (int n = 0; n <= maxLiveryNumber; n++)
+            {
+                var spr = Resources.Load<Sprite>($"{carsetPrefix}livery{n}");
+                if (spr != null) liveries.Add((n, spr));
+            }
+            Shuffle(liveries);
+        }
+
+        List<string> namePool = null;
+        if (useDriverNamePool)
+        {
+            DriverNames.loadData();
+            namePool = new List<string>(DriverNames.driverPool);
+            Shuffle(namePool);
+        }
+
+        var parent = new GameObject("NetworkedAIField").transform;
+        float sfAnchor = (track.track != null) ? track.track.startFinishDistance : 0f;
+
+        for (int i = 0; i < count; i++)
+        {
+            var go = Instantiate(networkedAiPrefab);
+            go.transform.localScale = new Vector3(carScale.x, carScale.y, 1f);
+
+            int carNumber = (liveries.Count > 0) ? liveries[i % liveries.Count].number : i;
+            string driverName = (namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "";
+
+            var splineDriver = go.GetComponent<SplineDriver>();
+            if (splineDriver != null)
+            {
+                splineDriver.track = track;
+                splineDriver.vehicleInfo = vehicleInfo;
+                splineDriver.cornerSpeedScale = aiCornerSpeedScale;
+                splineDriver.startDistance = sfAnchor + gridStartDistance - i * spacing;
+                splineDriver.spawnInPit = false;
+                splineDriver.qualifyingPosition = i;
+                splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
+                splineDriver.speed = speed;
+                splineDriver.spriteFacesUp = false;
+                splineDriver.angleOffsetDeg = 180f;
+            }
+
+            var input = go.GetComponent<SplineInputDriver>();
+            if (input != null) { input.steerGain = aiSteerGain; input.speedGain = aiSpeedGain; }
+
+            var pvc = go.GetComponent<PlayerVehicleController>();
+            if (pvc != null)
+            {
+                pvc.vehicleInfo = vehicleInfo;
+                pvc.track = track;
+                pvc.spriteFacesUp = false;
+                pvc.angleOffsetDeg = 180f;
+                pvc.grassTrails = false;
+                pvc.enableWheelspin = false;
+                pvc.externalInput = true;
+            }
+
+            var binding = go.GetComponent<AIDriverBinding>();
+            if (binding != null)
+            {
+                binding.vehicleInfo = vehicleInfo;
+                if (pool.Count > 0) binding.driver = pool[i % pool.Count];
+            }
+
+            // Seed identity before Spawn; the server copies it into the synced NetworkVariables on spawn.
+            var net = go.GetComponent<NetworkedAICar>();
+            if (net != null)
+            {
+                net.carsetSeed = carsetPrefix;
+                net.carNumberSeed = carNumber;
+                net.driverNameSeed = driverName;
+            }
+
+            go.GetComponent<NetworkObject>().Spawn();
+
+            // Host configures the brain after spawn (adds AIRacingBehaviour/TireState, rebuilds the spline).
+            if (binding != null) binding.Apply();
+
+            go.transform.SetParent(parent, true);
         }
     }
 

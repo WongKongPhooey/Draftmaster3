@@ -168,7 +168,10 @@ public class EngineAudio : MonoBehaviour
 
     void Update()
     {
-        if (_gearbox == null || (!_onBank.Valid && !_offBank.Valid)) return;
+        // Banks are built in Awake; guard against null in case Awake hasn't completed for a freshly
+        // added component this frame (e.g. runtime-assembled cars), which otherwise NREs every frame.
+        if (_gearbox == null || _onBank == null || _offBank == null) return;
+        if (!_onBank.Valid && !_offBank.Valid) return;
 
         float rpm = _gearbox.Rpm;
         float load = _gearbox.Load01;                       // 1 = on power, 0 = coasting

@@ -200,6 +200,17 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _bodywork = GetComponentInChildren<VehicleDamage>();
     }
 
+    // Re-seed heading + track from the CURRENT transform and zero motion. Used when the car is positioned
+    // after Start has already run — e.g. a networked host car that spawned in the menu scene and only gets
+    // dropped onto the grid once the race scene loads. Without this it keeps the stale menu-origin heading.
+    public void ReinitializeAtCurrentPose()
+    {
+        _headingDeg = transform.eulerAngles.z + (spriteFacesUp ? 90f : 0f) - angleOffsetDeg;
+        _vx = 0f; _vy = 0f; _r = 0f;
+        RecomputeGeometry();
+        if (track == null) track = FindFirstObjectByType<TrackBuilder>();
+    }
+
     void CreateTrails()
     {
         _trailL = MakeTrail("TyreTrailL");

@@ -1,5 +1,4 @@
 using System.Linq;
-using UnityEditor.Rendering;
 using UnityEngine;
 
 public class EnvironmentObjectV2 : MonoBehaviour

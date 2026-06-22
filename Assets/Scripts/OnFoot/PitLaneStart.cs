@@ -74,6 +74,15 @@ public class PitLaneStart : MonoBehaviour
 
     void Start()
     {
+        // Multiplayer skips the on-foot pit-entry flow: networked cars spawn straight onto the grid
+        // (see NetworkedCarBindings). Hide the single-player scene car so it doesn't double up with them.
+        if (GameSession.IsMultiplayer)
+        {
+            if (car != null) car.gameObject.SetActive(false);
+            enabled = false;
+            return;
+        }
+
         if (track == null || onFootPrefab == null || car == null)
         {
             Debug.LogError("PitLaneStart: missing refs (track / onFootPrefab / car).");

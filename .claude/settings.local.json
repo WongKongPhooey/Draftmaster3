@@ -41,7 +41,9 @@
       "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' 'PRAGMA table_info\\(Drivers\\);')",
       "mcp__UnityMCP__execute_menu_item",
       "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' .tables)",
-      "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' 'PRAGMA table_info\\(Series\\);')"
+      "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' 'PRAGMA table_info\\(Series\\);')",
+      "mcp__UnityMCP__unity_reflect",
+      "mcp__UnityMCP__manage_build"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots"

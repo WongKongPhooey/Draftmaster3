@@ -6,9 +6,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Random=UnityEngine.Random;
-using Unity.Entities.UniversalDelegates;
-using UnityEditor.Experimental.GraphView;
-using UnityEditor.Callbacks;
 
 public class VehicleLogic : MonoBehaviour
 {
