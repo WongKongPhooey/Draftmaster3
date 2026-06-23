@@ -38,6 +38,16 @@ public class NetworkedAICar : NetworkBehaviour
             CarNumber.Value = carNumberSeed;
             DriverName.Value = driverNameSeed ?? "";
             Carset.Value = carsetSeed ?? "";
+
+            // The host runs the whole AI field. The prefab ships its brains DISABLED so they don't tick on a
+            // client before the else-branch below switches them off — but that means the server has to switch
+            // them back ON, or every car sits dead on the grid (placed by GridSpawner.PlaceAtStartDistance but
+            // never advanced). Single-player AI use a different prefab whose brains are already enabled, which
+            // is why this only bit multiplayer. Idempotent if a component is already enabled.
+            EnableIfPresent<SplineDriver>();
+            EnableIfPresent<SplineInputDriver>();
+            EnableIfPresent<PlayerVehicleController>();
+            EnableIfPresent<VehicleCollision>();
         }
         else
         {
@@ -71,7 +81,9 @@ public class NetworkedAICar : NetworkBehaviour
         if (sprite != null)
         {
             var dmg = GetComponentInChildren<VehicleDamage>();
-            if (dmg != null) { dmg.sourceSprite = sprite; dmg.Build(); }
+            // Force a fresh per-car material from THIS livery — Build() reuses an existing material if one is
+            // already assigned (the prefab ships a shared one), which would paint every car the same.
+            if (dmg != null) { dmg.sourceSprite = sprite; dmg.material = null; dmg.Build(); }
         }
 
         var label = GetComponent<DriverLabel>();
@@ -87,5 +99,11 @@ public class NetworkedAICar : NetworkBehaviour
     {
         var c = GetComponent<T>();
         if (c != null) c.enabled = false;
+    }
+
+    void EnableIfPresent<T>() where T : MonoBehaviour
+    {
+        var c = GetComponent<T>();
+        if (c != null) c.enabled = true;
     }
 }

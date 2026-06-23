@@ -43,7 +43,10 @@
       "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' .tables)",
       "Bash(sqlite3 '/c/Users/Josh/AppData/LocalLow/DuffetyWong/Draftmaster 2/draftmaster.db' 'PRAGMA table_info\\(Series\\);')",
       "mcp__UnityMCP__unity_reflect",
-      "mcp__UnityMCP__manage_build"
+      "mcp__UnityMCP__manage_build",
+      "Bash(git --version)",
+      "PowerShell(Write-Output \"--- zombie UPM/Unity processes ---\"; Get-Process | Where-Object { $_.ProcessName -match 'Unity' } | Select-Object Id, ProcessName, StartTime | Format-Table -AutoSize; Write-Output \"--- binary present? ---\"; $bin = \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.4.3f1\\\\Editor\\\\Data\\\\Resources\\\\PackageManager\\\\Server\\\\UnityPackageManager.exe\"; if \\(Test-Path $bin\\) { Get-Item $bin | Select-Object FullName, Length, LastWriteTime } else { Write-Output \"MISSING \\(AV may have quarantined\\): $bin\" })",
+      "PowerShell(foreach \\($id in 25200,25044\\) { $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$id\" -ErrorAction SilentlyContinue; if \\($p\\) { Write-Output \"=== PID $id ===\"; Write-Output $p.CommandLine; Write-Output \"\" } })"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots"

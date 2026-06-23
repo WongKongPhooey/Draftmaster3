@@ -1,31 +1,36 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Keeps the live running order of the whole field (AI + the player) and exposes each entrant's position.
-// Progress = lapsCompleted * trackLength + distanceAlongTrack, so it stays correct across the start/finish line.
-// The safety car is excluded (it's not a competitor). Renders a small "P x / N" readout for the player.
+// Keeps the live running order of the whole field and exposes each entrant's position. Progress =
+// lapsCompleted * trackLength + distanceAlongTrack, so it stays correct across the start/finish line.
+//
+// Enumerates every car tagged "Vehicle" by transform (not via RaceField/SplineDriver), so it works the SAME on
+// the host and on clients: a client's AI are NetworkTransform puppets with their brains disabled (so they're not
+// in RaceField), but their transforms still move — distance is sampled from the car's world position. Other human
+// players are counted too. The safety car is excluded. Renders a small "P x / N" readout for the local player.
 public class RacePositionTracker : MonoBehaviour
 {
     public static RacePositionTracker Instance { get; private set; }
 
     [Tooltip("Track the field runs on. Auto-found if empty.")]
     public TrackBuilder track;
-    [Tooltip("The human player's car. Auto-found (a PlayerVehicleController with no AI SplineInputDriver) if empty.")]
-    public PlayerVehicleController playerCar;
     public string playerName = "You";
     [Tooltip("Draw the player's position on-screen.")]
     public bool showHud = true;
+    [Tooltip("How often (s) to rescan the scene for cars joining/leaving. Progress updates every frame regardless.")]
+    public float membershipRefresh = 0.5f;
 
     public class Entry
     {
-        public SplineDriver spline;   // null for the player
         public Transform tf;
-        public bool isPlayer;
+        public SplineDriver spline;   // present on host AI (precise distance); null/disabled on client puppets
+        public bool isPlayer;         // the LOCAL player's car
         public string name;
         public int carNumber;
         public int lap;
         public float prevDist;
         public bool hasPrev;
+        public float prevProgress;
         public float progress;
         public float speedMps;
         public float gapToLeaderSec;
@@ -33,14 +38,20 @@ public class RacePositionTracker : MonoBehaviour
     }
 
     readonly List<Entry> _entries = new();
-    readonly Dictionary<SplineDriver, Entry> _bySpline = new();
+    readonly Dictionary<Transform, Entry> _byTf = new();
     Entry _playerEntry;
     float _len;
+    float _refreshTimer;
 
     public IReadOnlyList<Entry> Order => _entries;
     public int FieldSize => _entries.Count;
     public int PlayerPosition => _playerEntry != null ? _playerEntry.position : 0;
-    public int PositionOf(SplineDriver d) => (d != null && _bySpline.TryGetValue(d, out var e)) ? e.position : 0;
+    public int PositionOf(SplineDriver d)
+    {
+        if (d == null) return 0;
+        for (int i = 0; i < _entries.Count; i++) if (_entries[i].spline == d) return _entries[i].position;
+        return 0;
+    }
 
     void Awake() => Instance = this;
     void OnDestroy() { if (Instance == this) Instance = null; }
@@ -53,20 +64,21 @@ public class RacePositionTracker : MonoBehaviour
             var s = track.SampleCenterline();
             _len = s.Count > 0 ? s[s.Count - 1].distance : 0f;
         }
+        RefreshMembership();
     }
 
     void Update()
     {
         if (track == null || _len <= 0f) return;
-        SyncEntries();
 
-        for (int i = 0; i < _entries.Count; i++)
-            UpdateProgress(_entries[i]);
+        _refreshTimer -= Time.deltaTime;
+        if (_refreshTimer <= 0f) { RefreshMembership(); _refreshTimer = membershipRefresh; }
+
+        for (int i = 0; i < _entries.Count; i++) UpdateProgress(_entries[i]);
 
         _entries.Sort((a, b) => b.progress.CompareTo(a.progress));
         for (int i = 0; i < _entries.Count; i++) _entries[i].position = i + 1;
 
-        // Time gap to the leader = distance behind / leader's speed.
         if (_entries.Count > 0)
         {
             var leader = _entries[0];
@@ -76,86 +88,110 @@ public class RacePositionTracker : MonoBehaviour
         }
     }
 
-    void SyncEntries()
+    void RefreshMembership()
     {
-        // Player.
-        if (_playerEntry == null)
+        var cars = GameObject.FindGameObjectsWithTag("Vehicle");
+        for (int i = 0; i < cars.Length; i++)
         {
-            if (playerCar == null) playerCar = FindPlayerCar();
-            if (playerCar != null)
-            {
-                _playerEntry = new Entry { isPlayer = true, tf = playerCar.transform, name = playerName };
-                _entries.Add(_playerEntry);
-            }
+            var go = cars[i];
+            if (go == null) continue;
+            if (go.GetComponent<SafetyCar>() != null) continue;          // not a competitor
+            var tf = go.transform;
+            if (_byTf.ContainsKey(tf)) { RefreshIdentity(_byTf[tf], go); continue; }
+
+            var e = new Entry { tf = tf, spline = go.GetComponent<SplineDriver>() };
+            RefreshIdentity(e, go);
+            _byTf[tf] = e;
+            _entries.Add(e);
         }
 
-        // AI / field drivers from RaceField. Skip the safety car (not a competitor).
+        // Also pull registered drivers (single-player AI may not be tagged "Vehicle" but are in RaceField).
         var drivers = RaceField.Drivers;
         for (int i = 0; i < drivers.Count; i++)
         {
             var d = drivers[i];
-            if (d == null || _bySpline.ContainsKey(d)) continue;
-            if (d.GetComponent<SafetyCar>() != null) continue;
-
-            var label = d.GetComponent<DriverLabel>();
-            var e = new Entry
-            {
-                spline = d,
-                tf = d.transform,
-                name = label != null && !string.IsNullOrEmpty(label.driverName) ? label.driverName : d.name,
-                carNumber = label != null ? label.carNumber : 0,
-            };
-            _bySpline[d] = e;
+            if (d == null) continue;
+            var go = d.gameObject;
+            if (go.GetComponent<SafetyCar>() != null) continue;
+            var tf = go.transform;
+            if (_byTf.ContainsKey(tf)) continue;
+            var e = new Entry { tf = tf, spline = d };
+            RefreshIdentity(e, go);
+            _byTf[tf] = e;
             _entries.Add(e);
         }
 
-        // Drop despawned drivers.
+        // Drop despawned cars (destroyed transforms compare == null).
         for (int i = _entries.Count - 1; i >= 0; i--)
         {
-            var e = _entries[i];
-            if (e.isPlayer) continue;
-            if (e.spline == null) { _bySpline.Remove(e.spline); _entries.RemoveAt(i); }
+            if (_entries[i].tf == null)
+            {
+                if (_entries[i] == _playerEntry) _playerEntry = null;
+                _entries.RemoveAt(i);
+            }
         }
+        // Prune dictionary keys whose transform died.
+        var dead = new List<Transform>();
+        foreach (var kv in _byTf) if (kv.Key == null) dead.Add(kv.Key);
+        for (int i = 0; i < dead.Count; i++) _byTf.Remove(dead[i]);
+    }
+
+    // Name/number + local-player flag. The local player's car is the only enabled PlayerVehicleController with no
+    // AI SplineInputDriver (remote players are disabled; AI carry a SplineInputDriver).
+    void RefreshIdentity(Entry e, GameObject go)
+    {
+        var pvc = go.GetComponent<PlayerVehicleController>();
+        bool isLocal = pvc != null && pvc.enabled && go.GetComponent<SplineInputDriver>() == null;
+        e.isPlayer = isLocal;
+        if (isLocal) _playerEntry = e;
+
+        var player = go.GetComponent<NetworkedCarBindings>();
+        if (player != null)
+        {
+            e.name = isLocal ? playerName : (string.IsNullOrEmpty(player.DisplayLabel) ? "Player" : player.DisplayLabel);
+            e.carNumber = player.Number;
+            return;
+        }
+
+        var label = go.GetComponent<DriverLabel>();
+        if (label != null)
+        {
+            e.name = !string.IsNullOrEmpty(label.driverName) ? label.driverName : go.name;
+            e.carNumber = label.carNumber;
+            return;
+        }
+
+        e.name = isLocal ? playerName : go.name;
     }
 
     void UpdateProgress(Entry e)
     {
+        if (e.tf == null) return;
+
         float len, dist;
-        if (e.isPlayer)
+        if (e.spline != null && e.spline.enabled && e.spline.TrackLength > 0f)
         {
-            if (e.tf == null) return;
-            len = _len;
-            dist = track.NearestCenterlineDistance(e.tf.position);
-            e.speedMps = playerCar != null ? playerCar.SpeedMps : 0f;
+            len = e.spline.TrackLength;
+            dist = e.spline.DistanceOnTrack;
         }
         else
         {
-            if (e.spline == null || e.spline.TrackLength <= 0f) return;
-            len = e.spline.TrackLength;
-            dist = e.spline.DistanceOnTrack;
-            e.speedMps = e.spline.SpeedMps;
+            len = _len;
+            dist = track.NearestCenterlineDistance(e.tf.position);
         }
 
         if (e.hasPrev)
         {
-            // Detect a forward wrap across the start/finish line (distance drops by ~a lap).
-            if (e.prevDist - dist > len * 0.5f) e.lap++;
-            else if (dist - e.prevDist > len * 0.5f) e.lap--; // small backwards nudge across the line
+            if (e.prevDist - dist > len * 0.5f) e.lap++;          // forward wrap across the line
+            else if (dist - e.prevDist > len * 0.5f) e.lap--;     // small backward nudge across the line
         }
         e.prevDist = dist;
         e.hasPrev = true;
         e.progress = e.lap * len + dist;
-    }
 
-    PlayerVehicleController FindPlayerCar()
-    {
-        var all = FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
-        for (int i = 0; i < all.Length; i++)
-        {
-            // AI cars carry a SplineInputDriver; the human's car does not.
-            if (all[i].GetComponent<SplineInputDriver>() == null && all[i].enabled) return all[i];
-        }
-        return null;
+        float dt = Time.deltaTime;
+        if (dt > 0f) e.speedMps = Mathf.Clamp((e.progress - e.prevProgress) / dt, 0f, 200f);
+        e.prevProgress = e.progress;
     }
 
     void OnGUI()

@@ -234,6 +234,7 @@ public class GridSpawner : MonoBehaviour
                 pvc.grassTrails = false;     // perf: no trail renderers across a full AI field
                 pvc.enableWheelspin = false; // AI launch cleanly; no donuts off the line
                 pvc.externalInput = true;
+                pvc.damageImpairsHandling = false; // damage only slows AI; never pulls them off the racing line
 
                 var input = go.GetComponent<SplineInputDriver>();
                 if (input == null) input = go.AddComponent<SplineInputDriver>();
@@ -286,7 +287,9 @@ public class GridSpawner : MonoBehaviour
     // runs the brains; NetworkedAICar disables them on clients. No formation lap / pit flow in multiplayer.
     IEnumerator SpawnNetworkedField()
     {
-        RaceStart.Current = RaceStart.Phase.Green;          // race immediately; no on-foot entry in MP
+        // Hold the field on the grid until the multiplayer lobby gate passes (2+ players, all ready).
+        // NetworkedCarBindings (server) flips the phase to Green once that's satisfied. (Was: race immediately.)
+        RaceStart.Current = RaceStart.Phase.PreGrid;
         var formation = FindFirstObjectByType<FormationDirector>();
         if (formation != null) formation.enabled = false;
 
@@ -318,7 +321,6 @@ public class GridSpawner : MonoBehaviour
             Shuffle(namePool);
         }
 
-        var parent = new GameObject("NetworkedAIField").transform;
         float sfAnchor = (track.track != null) ? track.track.startFinishDistance : 0f;
 
         for (int i = 0; i < count; i++)
@@ -342,6 +344,7 @@ public class GridSpawner : MonoBehaviour
                 splineDriver.speed = speed;
                 splineDriver.spriteFacesUp = false;
                 splineDriver.angleOffsetDeg = 180f;
+                splineDriver.freezeUntilFormation = true; // hold on the grid through the lobby; released when RaceStart hits Green
             }
 
             var input = go.GetComponent<SplineInputDriver>();
@@ -357,6 +360,7 @@ public class GridSpawner : MonoBehaviour
                 pvc.grassTrails = false;
                 pvc.enableWheelspin = false;
                 pvc.externalInput = true;
+                pvc.damageImpairsHandling = false; // damage only slows AI; never pulls them off the racing line
             }
 
             var binding = go.GetComponent<AIDriverBinding>();
@@ -365,6 +369,12 @@ public class GridSpawner : MonoBehaviour
                 binding.vehicleInfo = vehicleInfo;
                 if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             }
+
+            // Configure the brain and place the car on its start spot BEFORE Spawn, so NetworkTransform
+            // captures a valid on-track pose. (The AI input driver's first physics step runs before Start
+            // and would otherwise latch the car at the origin, piling the whole field up at (0,0).)
+            if (binding != null) binding.Apply();              // adds AIRacingBehaviour/TireState, rebuilds spline
+            if (splineDriver != null) splineDriver.PlaceAtStartDistance();
 
             // Seed identity before Spawn; the server copies it into the synced NetworkVariables on spawn.
             var net = go.GetComponent<NetworkedAICar>();
@@ -375,12 +385,8 @@ public class GridSpawner : MonoBehaviour
                 net.driverNameSeed = driverName;
             }
 
+            // NetworkObjects stay at the scene root — NGO forbids parenting them under a plain GameObject.
             go.GetComponent<NetworkObject>().Spawn();
-
-            // Host configures the brain after spawn (adds AIRacingBehaviour/TireState, rebuilds the spline).
-            if (binding != null) binding.Apply();
-
-            go.transform.SetParent(parent, true);
         }
     }
 

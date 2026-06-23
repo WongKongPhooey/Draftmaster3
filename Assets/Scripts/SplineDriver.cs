@@ -220,6 +220,35 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return Mathf.Max(0f, d);
     }
 
+    // Place the car at startDistance immediately and write the transform, independent of Start() ordering.
+    // The networked spawner calls this before NetworkObject.Spawn() so the car captures a valid on-track pose:
+    // otherwise the AI input driver's first physics step (which runs before Start) seeds it at the origin.
+    public void PlaceAtStartDistance()
+    {
+        if (track == null) return;
+        if (_mainSamples == null || _mainSamples.Count < 2) Rebuild();
+
+        if (spawnInPit && _pitLength > 0f)
+        {
+            usePitLane = true;
+            _onPit = true;
+            _distance = ComputePitBoxDistance(qualifyingPosition);
+        }
+        else
+        {
+            _distance = startDistance;
+            _onPit = usePitLane;
+        }
+        _currentMph = spawnInPit ? 0f : speed * MpsToMph;
+        Place(); // sets CommandedLocalPos/Heading/Speed; skips the transform under externalMotionController
+
+        // Write the transform too (Place skips it when an external model owns motion), so the car physically
+        // sits on its start spot and NetworkTransform replicates that pose to clients.
+        Vector3 wp = track.transform.TransformPoint(new Vector3(CommandedLocalPos.x, CommandedLocalPos.y, 0f));
+        transform.position = new Vector3(wp.x, wp.y, transform.position.z);
+        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? CommandedHeadingDeg - 90f : CommandedHeadingDeg) + angleOffsetDeg);
+    }
+
     public void Rebuild()
     {
         if (track == null) return;

@@ -56,17 +56,27 @@ public class SpeedometerUI : MonoBehaviour
 
     MonoBehaviour FindPlayer()
     {
-        if (string.IsNullOrEmpty(playerObjectName)) return null;
-        var go = GameObject.Find(playerObjectName);
-        if (go == null) return null;
-        // Prefer PlayerVehicleController if present; else any enabled IVehicleSpeedReadout.
-        var pvc = go.GetComponent<PlayerVehicleController>();
-        if (pvc != null && pvc.enabled) return pvc;
-        var components = go.GetComponents<MonoBehaviour>();
-        for (int i = 0; i < components.Length; i++)
+        // Single-player: the named scene car (GameObject.Find skips inactive objects).
+        if (!string.IsNullOrEmpty(playerObjectName))
         {
-            if (components[i] is IVehicleSpeedReadout && components[i].enabled) return components[i];
+            var go = GameObject.Find(playerObjectName);
+            if (go != null)
+            {
+                var pvc = go.GetComponent<PlayerVehicleController>();
+                if (pvc != null && pvc.enabled) return pvc;
+                var components = go.GetComponents<MonoBehaviour>();
+                for (int i = 0; i < components.Length; i++)
+                    if (components[i] is IVehicleSpeedReadout && components[i].enabled) return components[i];
+            }
         }
+
+        // Multiplayer: the local player drives a networked car, not the disabled scene "PlayerCar". The owned
+        // car is the only enabled PlayerVehicleController with no AI SplineInputDriver (remote cars are disabled;
+        // AI carry a SplineInputDriver).
+        var all = FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+            if (all[i].enabled && all[i].GetComponent<SplineInputDriver>() == null) return all[i];
+
         return null;
     }
 

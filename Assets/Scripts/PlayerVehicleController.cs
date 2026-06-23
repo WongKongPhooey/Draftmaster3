@@ -100,6 +100,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Range(0f, 0.5f)] public float damageTopSpeedLoss = 0.12f;
     [Tooltip("Steering pull (radians) at full damage with full side bias — a battered car wanders toward the hit side.")]
     public float damageSteerPull = 0.05f;
+    [Tooltip("If false, damage no longer affects handling (no steering pull, no grip loss) — only the speed penalties (top-speed loss + drag) still apply. Set false for AI so a knock doesn't push them off the racing line and get them stuck.")]
+    public bool damageImpairsHandling = true;
 
     [Header("Reverse")]
     [Tooltip("Hold brake with no throttle once nearly stopped to reverse. Max reverse speed (m/s).")]
@@ -308,7 +310,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Bodywork damage spoils handling: a steering pull toward the battered side, plus grip/drag/top-speed below.
         float dmg = _bodywork != null ? _bodywork.DamageLevel : 0f;
         float delta = _steerDeg * Mathf.Deg2Rad;
-        if (dmg > 0f && _bodywork != null) delta += _bodywork.DamageBiasX * dmg * damageSteerPull;
+        if (damageImpairsHandling && dmg > 0f && _bodywork != null) delta += _bodywork.DamageBiasX * dmg * damageSteerPull;
 
         // --- Surface + wheelspin state for this update.
         // On the track (or a tarmac runoff) the car has full grip. Off it, sample the runoff field: grass is
@@ -368,7 +370,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float trackGrip = TrackConditions.GripMultiplier;
         float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
         float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
-        float dmgGrip = 1f - dmg * damageGripLoss;
+        float dmgGrip = damageImpairsHandling ? 1f - dmg * damageGripLoss : 1f;
         float muF = vehicleInfo.maxLateralG * trackGrip * tyreGripF * dmgGrip * (1f - understeerBias);
         float muR = vehicleInfo.maxLateralG * trackGrip * tyreGripR * dmgGrip * (1f + understeerBias);
 

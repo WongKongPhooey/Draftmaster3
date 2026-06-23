@@ -80,7 +80,14 @@ public class NetworkLauncher : MonoBehaviour
         if (UnityServices.State != ServicesInitializationState.Initialized)
         {
             SetStatus("Initialising services…");
-            await UnityServices.InitializeAsync();
+            var options = new InitializationOptions();
+#if UNITY_EDITOR
+            // Multiplayer Play Mode runs the host and every virtual player in ONE process. Without a distinct UGS
+            // auth profile per player they share a single anonymous identity, which breaks session join
+            // ("Unexpected exception processing network metadata"). Give each player its own profile.
+            options.SetProfile(MppmProfile());
+#endif
+            await UnityServices.InitializeAsync(options);
         }
         if (!AuthenticationService.Instance.IsSignedIn)
         {
@@ -88,6 +95,18 @@ public class NetworkLauncher : MonoBehaviour
             await AuthenticationService.Instance.SignInAnonymouslyAsync();
         }
     }
+
+#if UNITY_EDITOR
+    // A stable, distinct UGS auth profile per Multiplayer Play Mode player (main editor + each virtual player),
+    // so they sign in as separate UGS users instead of colliding on one shared anonymous identity.
+    static string MppmProfile()
+    {
+        if (Unity.Multiplayer.PlayMode.CurrentPlayer.IsMainEditor) return "main";
+        // Each virtual player has its own persistentDataPath; hash it for a distinct, stable profile name.
+        int h = Application.persistentDataPath.GetHashCode() & 0x7fffffff;
+        return "vp" + h;
+    }
+#endif
 
     public async void HostGame()
     {
