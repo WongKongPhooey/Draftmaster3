@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 // Keeps the live running order of the whole field and exposes each entrant's position. Progress =
 // lapsCompleted * trackLength + distanceAlongTrack, so it stays correct across the start/finish line.
@@ -17,6 +18,8 @@ public class RacePositionTracker : MonoBehaviour
     public string playerName = "You";
     [Tooltip("Draw the player's position on-screen.")]
     public bool showHud = true;
+    [Tooltip("Authored position readout (auto-wired in editor). 'P x / N' is written here each frame; its panel is hidden until the local player is known.")]
+    public Text positionText;
     [Tooltip("How often (s) to rescan the scene for cars joining/leaving. Progress updates every frame regardless.")]
     public float membershipRefresh = 0.5f;
 
@@ -53,7 +56,7 @@ public class RacePositionTracker : MonoBehaviour
         return 0;
     }
 
-    void Awake() => Instance = this;
+    void Awake() { Instance = this; ResolveRefs(); }
     void OnDestroy() { if (Instance == this) Instance = null; }
 
     void Start()
@@ -86,6 +89,8 @@ public class RacePositionTracker : MonoBehaviour
             for (int i = 0; i < _entries.Count; i++)
                 _entries[i].gapToLeaderSec = (leader.progress - _entries[i].progress) / leadSpeed;
         }
+
+        UpdateHud();
     }
 
     void RefreshMembership()
@@ -194,17 +199,34 @@ public class RacePositionTracker : MonoBehaviour
         e.prevProgress = e.progress;
     }
 
-    void OnGUI()
+    // Writes the player's running position into the authored readout and hides the panel until it's known.
+    void UpdateHud()
     {
-        if (!showHud || _playerEntry == null || _entries.Count == 0) return;
-        var style = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 34,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.UpperRight,
-        };
-        style.normal.textColor = Color.white;
-        var rect = new Rect(Screen.width - 280f, 16f, 260f, 50f);
-        GUI.Label(rect, $"P{_playerEntry.position} / {_entries.Count}", style);
+        if (positionText == null) return;
+        bool show = showHud && _playerEntry != null && _entries.Count > 0;
+
+        // Toggle the backing Panel (the text's parent) so the backdrop hides with the label.
+        var panel = positionText.transform.parent;
+        var panelGo = (panel != null && panel != transform) ? panel.gameObject : positionText.gameObject;
+        if (panelGo.activeSelf != show) panelGo.SetActive(show);
+
+        if (show) positionText.text = $"P{_playerEntry.position} / {_entries.Count}";
     }
+
+    // Locate the authored readout. Runtime fallback + editor baking.
+    void ResolveRefs()
+    {
+        if (positionText == null)
+        {
+            var t = transform.Find("Panel/PositionText");
+            if (t != null) positionText = t.GetComponent<Text>();
+        }
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (!Application.isPlaying) ResolveRefs();
+    }
+#endif
 }

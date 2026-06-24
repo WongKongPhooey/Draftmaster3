@@ -14,6 +14,15 @@ public class NetworkCarOwnerGate : NetworkBehaviour
         var pvc = GetComponent<PlayerVehicleController>();
         if (pvc != null) pvc.enabled = owner;
 
+#if UNITY_EDITOR
+        // Multiplayer Play Mode local testing: keyboard for the main editor, gamepad for each virtual player, so
+        // both players can drive at once without swapping window focus. Real builds keep Auto (both devices).
+        if (owner && pvc != null && GameSession.IsMultiplayer)
+            pvc.controlScheme = Unity.Multiplayer.PlayMode.CurrentPlayer.IsMainEditor
+                ? PlayerVehicleController.ControlScheme.Keyboard
+                : PlayerVehicleController.ControlScheme.Gamepad;
+#endif
+
         // Spline/AI brains have no place on a player-driven car.
         var spline = GetComponent<SplineDriver>();
         if (spline != null) spline.enabled = false;

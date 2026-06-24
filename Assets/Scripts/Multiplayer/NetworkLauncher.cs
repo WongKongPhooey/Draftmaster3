@@ -30,6 +30,8 @@ public class NetworkLauncher : MonoBehaviour
     [SerializeField] GameObject playerPrefab;
     [Tooltip("Extra prefabs spawned at runtime (e.g. networked AI cars). Registered as network prefabs on every peer so host-spawned objects resolve on clients.")]
     [SerializeField] GameObject[] networkPrefabs;
+    [Tooltip("Authored join-code overlay spawned (DontDestroyOnLoad) so the host can read/copy the code from the menu through into the race. Auto-filled in the editor.")]
+    [SerializeField] GameObject statusOverlayPrefab;
 
     public bool Busy { get; private set; }
     public ISession Session { get; private set; }
@@ -43,12 +45,18 @@ public class NetworkLauncher : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        // Keep unfocused windows ticking — required so an MPPM virtual player (or a backgrounded client) keeps
+        // simulating and reading its input device while another window has focus.
+        Application.runInBackground = true;
         EnsureNetworkManager();
+
+        // Authored join-code overlay; persists across the menu->race scene load alongside this launcher.
+        if (statusOverlayPrefab != null) DontDestroyOnLoad(Instantiate(statusOverlayPrefab));
     }
 
     void EnsureNetworkManager()
     {
-        if (NetworkManager.Singleton != null) return;
+        if (NetworkManager.Singleton != null) { HookTransportFailure(NetworkManager.Singleton); return; }
 
         var go = new GameObject("NetworkManager");
         var nm = go.AddComponent<NetworkManager>();
@@ -67,6 +75,40 @@ public class NetworkLauncher : MonoBehaviour
                 if (p != null) nm.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = p });
 
         DontDestroyOnLoad(go);
+        HookTransportFailure(nm);
+    }
+
+    bool _failureHooked;
+
+    // Relay can drop the allocation under us (timeout, network loss). NGO surfaces that via OnTransportFailure
+    // and then shuts the host/client down — so we recover here instead of leaving a dead NetworkManager.
+    void HookTransportFailure(NetworkManager nm)
+    {
+        if (_failureHooked || nm == null) return;
+        nm.OnTransportFailure += HandleTransportFailure;
+        _failureHooked = true;
+    }
+
+    async void HandleTransportFailure()
+    {
+        bool wasHost = Session != null && Session.IsHost;
+        SetStatus(wasHost
+            ? "Network transport failed — recreating session…"
+            : "Network transport failed — connection lost.");
+
+        // The old Relay allocation is gone; tear the dead session/host down before recreating.
+        try { if (Session != null) await Session.LeaveAsync(); }
+        catch (Exception e) { Debug.LogException(e); }
+        Session = null;
+
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            NetworkManager.Singleton.Shutdown();
+
+        GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
+
+        // Host: spin up a fresh allocation and restart NGO as host. This yields a NEW join code, so any
+        // previously connected players must re-join with it. Clients just report the lost connection.
+        if (wasHost) HostGame();
     }
 
     void SetStatus(string s)
@@ -168,23 +210,13 @@ public class NetworkLauncher : MonoBehaviour
         GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
     }
 
-    // Persistent on-screen join code. This object survives the menu->race scene load (DontDestroyOnLoad),
-    // so the host can still read / copy the code after the race has loaded and share it with friends.
-    void OnGUI()
+#if UNITY_EDITOR
+    // Auto-wire the authored overlay prefab so the scene/build carries the reference with no manual dragging.
+    void OnValidate()
     {
-        if (Session == null) return;
-
-        var box = new GUIStyle(GUI.skin.box)
-        {
-            fontSize = 20,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
-
-        string label = Session.IsHost ? $"HOST  —  Join code: {Session.Code}" : $"Connected  ({Session.Code})";
-        GUI.Box(new Rect(10, 10, 380, 46), label, box);
-
-        if (Session.IsHost && GUI.Button(new Rect(10, 60, 140, 32), "Copy code"))
-            GUIUtility.systemCopyBuffer = Session.Code;
+        if (statusOverlayPrefab == null)
+            statusOverlayPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Prefabs/UI/NetworkStatusOverlay.prefab");
     }
+#endif
 }

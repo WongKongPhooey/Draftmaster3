@@ -171,6 +171,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     TireModel _tires;       // 4-tyre wear+temperature model (when enableWear)
     VehicleDamage _bodywork; // accumulated bodywork damage → handling penalties
 
+    public enum ControlScheme { Auto, Keyboard, Gamepad }
+    [Tooltip("Which device this car reads when driven locally. Auto = keyboard + gamepad. Set to split devices between players for local / Multiplayer Play Mode testing (e.g. keyboard for P1, gamepad for P2).")]
+    public ControlScheme controlScheme = ControlScheme.Auto;
+
     [HideInInspector] public bool externalInput; // true when an AI controller feeds inputs via SetInput
     // Soft forward-speed cap (m/s). Infinity = no cap. Set by FormationDirector to hold the player to
     // pace-car speed during a caution/formation lap. Caps forward speed only — reverse and slides are untouched.
@@ -282,20 +286,26 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         else
         {
             steerIn = 0f; throttleIn = 0f; brakeIn = 0f;
-            var gp = Gamepad.current;
-            if (gp != null)
+            if (controlScheme != ControlScheme.Keyboard)
             {
-                steerIn = gp.leftStick.ReadValue().x;
-                throttleIn = gp.rightTrigger.ReadValue();
-                brakeIn = gp.leftTrigger.ReadValue();
+                var gp = Gamepad.current;
+                if (gp != null)
+                {
+                    steerIn = gp.leftStick.ReadValue().x;
+                    throttleIn = gp.rightTrigger.ReadValue();
+                    brakeIn = gp.leftTrigger.ReadValue();
+                }
             }
-            var kb = Keyboard.current;
-            if (kb != null)
+            if (controlScheme != ControlScheme.Gamepad)
             {
-                if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) steerIn = -1f;
-                if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steerIn = +1f;
-                if (kb.wKey.isPressed || kb.upArrowKey.isPressed) throttleIn = 1f;
-                if (kb.sKey.isPressed || kb.downArrowKey.isPressed) brakeIn = 1f;
+                var kb = Keyboard.current;
+                if (kb != null)
+                {
+                    if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) steerIn = -1f;
+                    if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steerIn = +1f;
+                    if (kb.wKey.isPressed || kb.upArrowKey.isPressed) throttleIn = 1f;
+                    if (kb.sKey.isPressed || kb.downArrowKey.isPressed) brakeIn = 1f;
+                }
             }
         }
         steerIn = Mathf.Clamp(steerIn, -1f, 1f);

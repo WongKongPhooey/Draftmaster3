@@ -1,30 +1,90 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-// Self-contained demo menu. Builds its own uGUI (Single Player / Host / Join-by-code / status)
-// at runtime so no prefab references or UnityEvent wiring are needed — drop this on one GameObject
-// in the demo menu scene and it works. Legacy uGUI (Text/Button/InputField) keeps dependencies light.
+// Thin binder for the authored multiplayer-menu Canvas (Assets/Prefabs/UI/MultiplayerMenu.prefab).
+//
+// The menu is authored in the editor — Canvas, yellow background, Mania title, blue/red GUI buttons, code field —
+// so it is visible and editable without entering Play mode. This script only:
+//   * caches the child references (auto-found in the editor via OnValidate, re-found at runtime as a fallback),
+//   * wires the button clicks,
+//   * captures the keyboard for the hand-rolled join-code field (the legacy uGUI InputField can't read the new
+//     Input System), and
+//   * mirrors NetworkLauncher's connection status / join code into the labels.
 public class MultiplayerMenuUI : MonoBehaviour
 {
     [SerializeField] string raceSceneName = "WatkinsGlen";
 
-    Text statusText;
-    Text codeDisplay;
-    InputField codeInput;
+    [Header("Authored children (auto-wired in editor)")]
+    [SerializeField] Button singlePlayerButton;
+    [SerializeField] Button hostButton;
+    [SerializeField] Button joinButton;
+    [SerializeField] Text statusText;
+    [SerializeField] Text codeDisplay;
+    [SerializeField] Text codeText;         // typed join code
+    [SerializeField] Text codePlaceholder;  // shown only while the field is empty
+
+    string _code = "";
+
+    void Awake()
+    {
+        ResolveRefs();
+        if (singlePlayerButton != null) singlePlayerButton.onClick.AddListener(OnSinglePlayer);
+        if (hostButton != null) hostButton.onClick.AddListener(OnHost);
+        if (joinButton != null) joinButton.onClick.AddListener(OnJoin);
+    }
 
     void Start()
     {
-        BuildUI();
         if (NetworkLauncher.Instance != null)
             NetworkLauncher.Instance.StatusChanged += OnStatus;
+        RefreshCodeField();
+    }
+
+    void OnEnable()
+    {
+        if (Keyboard.current != null) Keyboard.current.onTextInput += OnTextInput;
+    }
+
+    void OnDisable()
+    {
+        if (Keyboard.current != null) Keyboard.current.onTextInput -= OnTextInput;
     }
 
     void OnDestroy()
     {
         if (NetworkLauncher.Instance != null)
             NetworkLauncher.Instance.StatusChanged -= OnStatus;
+    }
+
+    // New Input System keyboard capture for the join-code field (the legacy InputField can't read it).
+    void OnTextInput(char c)
+    {
+        if (char.IsControl(c)) return;                 // backspace/enter handled in Update
+        if (!char.IsLetterOrDigit(c)) return;          // join codes are alphanumeric
+        if (_code.Length >= 12) return;
+        _code += char.ToUpperInvariant(c);
+        RefreshCodeField();
+    }
+
+    void Update()
+    {
+        var kb = Keyboard.current;
+        if (kb == null) return;
+        if (kb.backspaceKey.wasPressedThisFrame && _code.Length > 0)
+        {
+            _code = _code.Substring(0, _code.Length - 1);
+            RefreshCodeField();
+        }
+        if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)
+            OnJoin();
+    }
+
+    void RefreshCodeField()
+    {
+        if (codeText != null) codeText.text = _code;
+        if (codePlaceholder != null) codePlaceholder.enabled = string.IsNullOrEmpty(_code);
     }
 
     void OnStatus(string s)
@@ -52,125 +112,31 @@ public class MultiplayerMenuUI : MonoBehaviour
     void OnJoin()
     {
         if (NetworkLauncher.Instance == null) { SetStatus("No NetworkLauncher in scene."); return; }
-        NetworkLauncher.Instance.JoinGame(codeInput != null ? codeInput.text : "");
+        NetworkLauncher.Instance.JoinGame(_code);
     }
 
     void SetStatus(string s) { if (statusText != null) statusText.text = s; }
 
-    // ---- UI construction ----
-
-    void BuildUI()
+    // Locate the authored children by name. Used as a runtime fallback and to bake references in the editor.
+    void ResolveRefs()
     {
-        var canvasGo = new GameObject("MenuCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        canvasGo.transform.SetParent(transform, false);
-        var canvas = canvasGo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        var scaler = canvasGo.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-
-        if (FindObjectOfType<EventSystem>() == null)
-        {
-            var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-            es.transform.SetParent(transform, false);
-        }
-
-        // Title
-        MakeText(canvas.transform, "Title", "DRAFTMASTER — MULTIPLAYER", 54,
-            new Vector2(0.5f, 1f), new Vector2(0, -120), new Vector2(1200, 90), TextAnchor.MiddleCenter);
-
-        // Single Player
-        MakeButton(canvas.transform, "Single Player", new Vector2(0, 120), OnSinglePlayer);
-
-        // Host
-        MakeButton(canvas.transform, "Host Game", new Vector2(0, 20), OnHost);
-
-        // Join code input + button
-        codeInput = MakeInput(canvas.transform, "CodeInput", "Enter join code…", new Vector2(-110, -80));
-        MakeButton(canvas.transform, "Join", new Vector2(170, -80), OnJoin, 180);
-
-        // Host's code display
-        codeDisplay = MakeText(canvas.transform, "CodeDisplay", "", 30,
-            new Vector2(0.5f, 0.5f), new Vector2(0, -170), new Vector2(900, 50), TextAnchor.MiddleCenter);
-
-        // Status line
-        statusText = MakeText(canvas.transform, "Status", "Single player, or host / join a multiplayer race.", 26,
-            new Vector2(0.5f, 0f), new Vector2(0, 80), new Vector2(1400, 50), TextAnchor.MiddleCenter);
+        if (singlePlayerButton == null) singlePlayerButton = FindButton("SinglePlayerButton");
+        if (hostButton == null) hostButton = FindButton("HostButton");
+        if (joinButton == null) joinButton = FindButton("JoinButton");
+        if (statusText == null) statusText = FindText("Status");
+        if (codeDisplay == null) codeDisplay = FindText("CodeDisplay");
+        if (codeText == null) codeText = FindText("CodeInput/Text");
+        if (codePlaceholder == null) codePlaceholder = FindText("CodeInput/Placeholder");
     }
 
-    static Font UiFont => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+    Button FindButton(string path) { var t = transform.Find(path); return t != null ? t.GetComponent<Button>() : null; }
+    Text FindText(string path) { var t = transform.Find(path); return t != null ? t.GetComponent<Text>() : null; }
 
-    Text MakeText(Transform parent, string name, string content, int size, Vector2 anchor,
-        Vector2 anchoredPos, Vector2 sizeDelta, TextAnchor align)
+#if UNITY_EDITOR
+    // Bake the authored child references into the prefab/scene so they're visible in the inspector.
+    void OnValidate()
     {
-        var go = new GameObject(name, typeof(Text));
-        go.transform.SetParent(parent, false);
-        var t = go.GetComponent<Text>();
-        t.font = UiFont;
-        t.text = content;
-        t.fontSize = size;
-        t.color = Color.white;
-        t.alignment = align;
-        t.horizontalOverflow = HorizontalWrapMode.Overflow;
-        var rt = t.rectTransform;
-        rt.anchorMin = rt.anchorMax = anchor;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = sizeDelta;
-        return t;
+        if (!Application.isPlaying) ResolveRefs();
     }
-
-    Button MakeButton(Transform parent, string label, Vector2 anchoredPos,
-        UnityEngine.Events.UnityAction onClick, float width = 360)
-    {
-        var go = new GameObject(label + "Button", typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        var img = go.GetComponent<Image>();
-        img.color = new Color(0.12f, 0.14f, 0.20f, 0.95f);
-        var rt = img.rectTransform;
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = new Vector2(width, 72);
-
-        var btn = go.GetComponent<Button>();
-        btn.onClick.AddListener(onClick);
-
-        var txt = MakeText(go.transform, "Label", label, 30,
-            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, 72), TextAnchor.MiddleCenter);
-        txt.color = Color.white;
-        return btn;
-    }
-
-    InputField MakeInput(Transform parent, string name, string placeholder, Vector2 anchoredPos)
-    {
-        var go = new GameObject(name, typeof(Image), typeof(InputField));
-        go.transform.SetParent(parent, false);
-        var img = go.GetComponent<Image>();
-        img.color = new Color(0.08f, 0.09f, 0.12f, 0.95f); // dark field so the typed code reads clearly
-        var rt = img.rectTransform;
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = new Vector2(420, 72);
-
-        var input = go.GetComponent<InputField>();
-        input.characterLimit = 12;
-
-        var ph = MakeText(go.transform, "Placeholder", placeholder, 28,
-            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(400, 60), TextAnchor.MiddleLeft);
-        ph.color = new Color(0.7f, 0.7f, 0.72f, 1f);
-        ph.fontStyle = FontStyle.Italic;
-        ph.rectTransform.offsetMin = new Vector2(15, 0);
-
-        var text = MakeText(go.transform, "Text", "", 28,
-            new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(400, 60), TextAnchor.MiddleLeft);
-        text.color = Color.white; // white text on the dark field
-        text.supportRichText = false;
-        text.rectTransform.offsetMin = new Vector2(15, 0);
-
-        input.textComponent = text;
-        input.placeholder = ph;
-        return input;
-    }
+#endif
 }

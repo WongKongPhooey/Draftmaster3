@@ -46,7 +46,11 @@
       "mcp__UnityMCP__manage_build",
       "Bash(git --version)",
       "PowerShell(Write-Output \"--- zombie UPM/Unity processes ---\"; Get-Process | Where-Object { $_.ProcessName -match 'Unity' } | Select-Object Id, ProcessName, StartTime | Format-Table -AutoSize; Write-Output \"--- binary present? ---\"; $bin = \"C:\\\\Program Files\\\\Unity\\\\Hub\\\\Editor\\\\6000.4.3f1\\\\Editor\\\\Data\\\\Resources\\\\PackageManager\\\\Server\\\\UnityPackageManager.exe\"; if \\(Test-Path $bin\\) { Get-Item $bin | Select-Object FullName, Length, LastWriteTime } else { Write-Output \"MISSING \\(AV may have quarantined\\): $bin\" })",
-      "PowerShell(foreach \\($id in 25200,25044\\) { $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$id\" -ErrorAction SilentlyContinue; if \\($p\\) { Write-Output \"=== PID $id ===\"; Write-Output $p.CommandLine; Write-Output \"\" } })"
+      "PowerShell(foreach \\($id in 25200,25044\\) { $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$id\" -ErrorAction SilentlyContinue; if \\($p\\) { Write-Output \"=== PID $id ===\"; Write-Output $p.CommandLine; Write-Output \"\" } })",
+      "Bash(npm view *)",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(claude-mem *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots"
