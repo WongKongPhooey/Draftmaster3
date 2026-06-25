@@ -116,6 +116,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public bool enableWheelspin = true;
     [Tooltip("Below this forward speed (m/s), heavy throttle lights up the rear tyres (1st-gear wheelspin).")]
     public float wheelspinSpeed = 9f;
+    [Tooltip("Minimum forward speed (m/s) before the rear breaks loose. Below this the car can't spin on the spot — it must be rolling to wheelspin/oversteer around. Keep above lowSpeedKinematic so a near-stationary car never pivots.")]
+    public float donutMinSpeedMps = 3f;
     [Tooltip("Throttle needed before the rear breaks traction.")]
     [Range(0f, 1f)] public float wheelspinThrottle = 0.6f;
     [Tooltip("Donut rotation rate at full spin + full steering lock (deg/sec).")]
@@ -348,8 +350,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _onGrass = looseSurface; // drives tyre-trail emission below
 
         float speedNow = SpeedMps;
+        // Donut/wheelspin only once the car is actually rolling (>= donutMinSpeedMps) — a near-stationary car
+        // must NOT be able to pivot on the spot. With donutMinSpeedMps above lowSpeedKinematic, the low-speed
+        // kinematic branch never injects spin, so the rear breaks loose via the dynamic model while moving.
         float wheelspin = 0f;
-        if (enableWheelspin && throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
+        if (enableWheelspin && throttleIn > wheelspinThrottle && speedNow >= donutMinSpeedMps && speedNow < wheelspinSpeed)
             wheelspin = Mathf.Clamp01(
                 ((throttleIn - wheelspinThrottle) / Mathf.Max(1f - wheelspinThrottle, 0.01f))
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));

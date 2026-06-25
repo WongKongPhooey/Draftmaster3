@@ -11,8 +11,10 @@ using UnityEngine.SceneManagement;
 //   • Ready     — owner-writable flag toggled from the lobby panel (MultiplayerLobbyUI).
 //   • CarNumber — server-assigned, distinct per player, picks a Resources/cup26liveryN paint so players
 //                 don't all look identical (mirrors NetworkedAICar).
-//   • Start gate — the server flips RaceStart PreGrid→Green only once 2+ players are connected and all ready.
-//   • Pre-race hold — the owner's car is speed-governed to 0 until the race goes green.
+//   • Start gate — once 2+ players are connected and all ready, the host runs PreGrid→Formation (pace lap
+//                  behind the safety car), then Formation→Green when the safety car pits. Each transition is
+//                  replicated to every client (SetPhaseClientRpc) since RaceStart is a per-process static.
+//   • Pre-race hold — the owner's car is speed-governed: parked (PreGrid), cruise (Formation), free (Green).
 //
 // The host's player car spawns the instant StartHost runs, which is while the MENU scene is still active
 // (before the race scene loads). At that point there's no track and no race camera, so setup is deferred:
@@ -56,6 +58,7 @@ public class NetworkedCarBindings : NetworkBehaviour
 
     bool _setupDone;
     PlayerVehicleController _pvc;
+    static bool _greenBroadcast; // host: ensures the Formation→Green RPC fires exactly once per race
 
     public override void OnNetworkSpawn()
     {
@@ -88,23 +91,42 @@ public class NetworkedCarBindings : NetworkBehaviour
 
     void Update()
     {
-        // Owner: keep the car parked until the race goes green (speed-governed to 0, released on green).
-        if (IsOwner && _pvc != null)
+        // Owner: parked on the grid (PreGrid) or free once Green. The Formation lap is governed by PaceLapAssist
+        // instead (free to drive, but speed-capped so the player can't overtake the car directly ahead).
+        if (IsOwner && _pvc != null && RaceStart.Current != RaceStart.Phase.Formation)
             _pvc.speedGovernorMps = RaceStart.IsGreen ? Mathf.Infinity : 0f;
 
-        // Server: start the race once the lobby is satisfied — strict 2+ players, all ready.
-        // RaceStart is a per-process static, so flip it on the host AND tell every client to do the same
-        // (their own cars are speed-held off this same flag). The first binding to pass the check this frame
-        // flips it; the rest see Green and skip, so the RPC fires once.
-        if (IsServer && RaceStart.Current == RaceStart.Phase.PreGrid && AllReadyToStart())
+        if (!IsServer) return;
+
+        // RaceStart is a per-process static, so the host flips it locally AND replicates each transition to
+        // every client (SetPhaseClientRpc). The first binding to pass a gate this frame flips it; the rest
+        // see the new phase and skip, so each RPC fires once.
+        if (RaceStart.Current == RaceStart.Phase.PreGrid && AllReadyToStart())
         {
-            RaceStart.Current = RaceStart.Phase.Green;
-            StartRaceClientRpc();
+            // Lobby satisfied (2+ players, all ready) → roll out for the formation lap behind the safety car.
+            RaceStart.Current = RaceStart.Phase.Formation;
+            _greenBroadcast = false;        // re-arm for THIS race: the static persists across races in one process
+            BeginFormationClientRpc();
+        }
+        else if (RaceStart.Current == RaceStart.Phase.Green && !_greenBroadcast)
+        {
+            // The host's safety car has pitted and FormationDirector flipped the race green → tell the field.
+            _greenBroadcast = true;
+            GoGreenClientRpc();
         }
     }
 
+    // Parameterless RPCs — a plain enum param can fail to round-trip; the original working start gate used these.
+    // Each client mirrors the host's phase so its OWN car's governor lifts from the 60 mph pace cap to free
+    // running the instant the race goes green.
     [ClientRpc]
-    void StartRaceClientRpc()
+    void BeginFormationClientRpc()
+    {
+        RaceStart.Current = RaceStart.Phase.Formation;
+    }
+
+    [ClientRpc]
+    void GoGreenClientRpc()
     {
         RaceStart.Current = RaceStart.Phase.Green;
     }
@@ -183,6 +205,12 @@ public class NetworkedCarBindings : NetworkBehaviour
             // Start may have already run (host car, menu scene); re-seed heading/track from the placed pose.
             if (_pvc != null) _pvc.ReinitializeAtCurrentPose();
             WireCamera();
+
+            // Local pace-lap helper: free driving, but speed-capped to not overtake the car ahead, plus the
+            // "line up behind car #N" prompt + out-of-position warning. Owner-only (others are remote puppets).
+            var assist = GetComponent<PaceLapAssist>();
+            if (assist == null) assist = gameObject.AddComponent<PaceLapAssist>();
+            assist.pvc = _pvc;
         }
 
         _setupDone = true;

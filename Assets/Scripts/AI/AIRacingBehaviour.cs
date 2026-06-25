@@ -29,6 +29,16 @@ public class AIRacingBehaviour : MonoBehaviour
     [Tooltip("Lateral half-width (m) within which a follower benefits from slipstream.")]
     public float draftingLateralWidth = 2.5f;
 
+    [Header("Rear-end Avoidance")]
+    [Tooltip("Range (m) scanned for a slower/stopped car ahead to brake for. Must exceed the braking distance from racing speed, so keep it well above lookAheadRange.")]
+    public float brakeScanRange = 130f;
+    [Tooltip("Time headway (s) to the car ahead — the gap held even at matched speed scales with our speed.")]
+    public float followHeadwaySeconds = 0.7f;
+    [Tooltip("Braking rate (m/s²) assumed when sizing the safe following gap. Lower = brake earlier / more margin.")]
+    public float followDecelMps2 = 11f;
+    [Tooltip("Gap (m) at which we back off BELOW the car ahead's speed so we don't tap it.")]
+    public float hardFollowGap = 6f;
+
     [Header("Manoeuvre Strength")]
     [Tooltip("Lateral offset (m) committed during an overtake.")]
     public float overtakeLineOffset = 3f;
@@ -65,6 +75,8 @@ public class AIRacingBehaviour : MonoBehaviour
     [Tooltip("Once the AI returns to neutral line, wait this long before initiating another manoeuvre.")]
     public float manoeuvreCooldown = 0.6f;
 
+    const float MphToMps = 1f / 2.237f;
+
     SplineDriver _spline;
     float _smoothedTactical;
     float _commitTimer;
@@ -99,7 +111,7 @@ public class AIRacingBehaviour : MonoBehaviour
         bool wantOvertake = false;
         float overtakeDir = 0f;
 
-        if (RaceField.TryGetAhead(_spline, lookAheadRange, out var ahead, out float aheadGap))
+        if (RaceField.TryGetAhead(_spline, Mathf.Max(lookAheadRange, brakeScanRange), out var ahead, out float aheadGap))
         {
             float aheadSpeed = ahead.CurrentMph;
             float mySpeed = _spline.CurrentMph;
@@ -118,13 +130,22 @@ public class AIRacingBehaviour : MonoBehaviour
                 wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
             }
 
-            float safeGap = Mathf.Lerp(14f, 6f, aggression01);
-            if (aheadGap < safeGap)
+            // Rear-end avoidance: keep a speed-scaled gap and shed our closing speed EARLY so we never plough
+            // into a slower / stopped car. reqGap = fixed buffer + time-headway + the distance to bleed our
+            // closing speed at followDecelMps2. (The old fixed 6–14 m gap was far too short at racing speeds —
+            // that's what caused the start-line pileups.) Aggressive drivers tuck in a touch tighter.
+            float mySpeedMps = mySpeed * MphToMps;
+            float closingMps = Mathf.Max(0f, mySpeedMps - aheadSpeed * MphToMps);
+            float brakeDist = (closingMps * closingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
+            float reqGap = (minFollowDistance + mySpeedMps * followHeadwaySeconds + brakeDist)
+                           * Mathf.Lerp(1.15f, 0.85f, aggression01);
+            if (aheadGap < reqGap)
             {
-                float blend = Mathf.Clamp01((safeGap - aheadGap) / Mathf.Max(safeGap - minFollowDistance, 0.1f));
-                speedCap = Mathf.Lerp(mySpeed, aheadSpeed, blend);
+                // Ease from the leader's speed (at reqGap) down to a touch under it (at hardFollowGap).
+                float close01 = Mathf.InverseLerp(reqGap, hardFollowGap, aheadGap);
+                speedCap = Mathf.Min(speedCap, Mathf.Lerp(aheadSpeed, Mathf.Max(0f, aheadSpeed - 6f), close01));
             }
-            if (aheadGap < minFollowDistance) speedCap = Mathf.Min(speedCap, aheadSpeed * 0.85f);
+            if (aheadGap < hardFollowGap) speedCap = Mathf.Min(speedCap, aheadSpeed * 0.6f);
 
             // Drafting: close, aligned, above min speed. Linear falloff with gap. Tighter alignment = more bonus.
             var vi = _spline.vehicleInfo;

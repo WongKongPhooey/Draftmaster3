@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -16,6 +17,13 @@ public class NetworkedAICar : NetworkBehaviour
     [HideInInspector] public int carNumberSeed;
     [HideInInspector] public string driverNameSeed = "";
     [HideInInspector] public string carsetSeed = "";
+    // Kinematic field: drive via SplineDriver only (no dynamic bicycle model). Set by GridSpawner before Spawn().
+    [HideInInspector] public bool kinematicSeed;
+
+    // Peer-wide registry of every networked AI (present on host AND clients, where they're puppets). Lets the
+    // local player's PaceLapAssist find cars by transform without needing the host-only spline/RaceField.
+    static readonly List<NetworkedAICar> _all = new();
+    public static IReadOnlyList<NetworkedAICar> All => _all;
 
     // Replicated identity (server writes, everyone reads) so clients reproduce the exact paint/label.
     public NetworkVariable<int> CarNumber = new(writePerm: NetworkVariableWritePermission.Server);
@@ -24,6 +32,8 @@ public class NetworkedAICar : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        if (!_all.Contains(this)) _all.Add(this);
+
         var track = FindFirstObjectByType<TrackBuilder>();
         var spline = GetComponent<SplineDriver>();
         var pvc = GetComponent<PlayerVehicleController>();
@@ -45,9 +55,20 @@ public class NetworkedAICar : NetworkBehaviour
             // never advanced). Single-player AI use a different prefab whose brains are already enabled, which
             // is why this only bit multiplayer. Idempotent if a component is already enabled.
             EnableIfPresent<SplineDriver>();
-            EnableIfPresent<SplineInputDriver>();
-            EnableIfPresent<PlayerVehicleController>();
             EnableIfPresent<VehicleCollision>();
+            if (kinematicSeed)
+            {
+                // Cheap kinematic AI: SplineDriver writes the transform directly. Skip the dynamic bicycle model
+                // (PlayerVehicleController + SplineInputDriver) — the big host-CPU saving for a full networked field.
+                DisableIfPresent<SplineInputDriver>();
+                DisableIfPresent<PlayerVehicleController>();
+                if (spline != null) spline.externalMotionController = false;
+            }
+            else
+            {
+                EnableIfPresent<SplineInputDriver>();
+                EnableIfPresent<PlayerVehicleController>();
+            }
         }
         else
         {
@@ -94,6 +115,8 @@ public class NetworkedAICar : NetworkBehaviour
             label.driverName = DriverName.Value.ToString();
         }
     }
+
+    public override void OnNetworkDespawn() => _all.Remove(this);
 
     void DisableIfPresent<T>() where T : MonoBehaviour
     {

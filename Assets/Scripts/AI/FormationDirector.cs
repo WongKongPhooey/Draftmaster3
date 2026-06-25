@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 // Orchestrates the pre-race formation lap:
@@ -55,6 +56,24 @@ public class FormationDirector : MonoBehaviour
     {
         if (Instance == this) Instance = null;
         if (pitLaneStart != null) pitLaneStart.PlayerEnteredCar -= BeginFormation;
+    }
+
+    void OnEnable()  => RaceStart.PhaseChanged += OnPhaseChanged;
+    void OnDisable() => RaceStart.PhaseChanged -= OnPhaseChanged;
+
+    // SP, or the MP host, owns the phase write. MP clients take each phase from the host's replicated
+    // gate (NetworkedCarBindings) — their local cosmetic safety car must never flip the race itself.
+    static bool PhaseAuthority =>
+        !GameSession.IsMultiplayer ||
+        (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
+
+    // Fires on every peer the instant the race goes green (locally in SP / on the host, or via the host's
+    // RPC on a client): release the SP human and flash the banner so all players see GREEN together.
+    void OnPhaseChanged(RaceStart.Phase phase)
+    {
+        if (phase != RaceStart.Phase.Green) return;
+        if (playerCar != null) playerCar.speedGovernorMps = Mathf.Infinity;
+        _greenMsgTimer = 3.5f;
     }
 
     void Start()
@@ -117,15 +136,19 @@ public class FormationDirector : MonoBehaviour
 
     void BeginFormation()
     {
+        // Multiplayer enters the formation lap through the host's lobby gate (NetworkedCarBindings), which
+        // flips the phase AND replicates it. Flipping it here as well would leave clients behind, so skip.
+        if (GameSession.IsMultiplayer) return;
         if (RaceStart.Current != RaceStart.Phase.PreGrid) return;
         RaceStart.Current = RaceStart.Phase.Formation;
     }
 
     void GoGreen()
     {
+        // The MP host flips green here when its safety car pits; NetworkedCarBindings sees the change and
+        // replicates it. Clients don't write the phase off their local safety car — they wait for that RPC.
+        if (!PhaseAuthority) return;
         RaceStart.Current = RaceStart.Phase.Green;
-        if (playerCar != null) playerCar.speedGovernorMps = Mathf.Infinity;
-        _greenMsgTimer = 3.5f;
     }
 
     void FixedUpdate()

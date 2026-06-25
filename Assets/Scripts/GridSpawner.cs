@@ -64,6 +64,8 @@ public class GridSpawner : MonoBehaviour
     [Header("Dynamic AI Physics")]
     [Tooltip("Drive AI with the player's full dynamic model (tyre model, damage denting, feel) via PlayerVehicleController + SplineInputDriver. Off = legacy kinematic SplineDriver motion (safe fallback).")]
     public bool dynamicAI = true;
+    [Tooltip("Multiplayer only: drive the networked AI field with the cheap kinematic SplineDriver instead of the full dynamic model. Big host-CPU saving so a large field (e.g. 43) stays smooth over the network. Single-player AI follow 'dynamicAI' above.")]
+    public bool multiplayerKinematicAI = true;
     [Tooltip("AI pure-pursuit steering gain (SplineInputDriver.steerGain).")]
     public float aiSteerGain = 1.5f;
     [Tooltip("AI speed-tracking gain — throttle/brake per m/s of speed error (SplineInputDriver.speedGain).")]
@@ -200,7 +202,9 @@ public class GridSpawner : MonoBehaviour
                 splineDriver.pitBoxExitGap = pitBoxExitGap;
                 splineDriver.pitBoxSpacing = pitBoxSpacing;
                 splineDriver.freezeUntilFormation = true;
-                if (go.GetComponent<FormationController>() == null) go.AddComponent<FormationController>();
+                var fc = go.GetComponent<FormationController>();
+                if (fc == null) fc = go.AddComponent<FormationController>();
+                fc.kinematic = !dynamicAI; // a kinematic SP field stays kinematic through green
             }
 
             var binding = go.GetComponent<AIDriverBinding>();
@@ -284,14 +288,14 @@ public class GridSpawner : MonoBehaviour
 
     // Host-only multiplayer field spawn. Mirrors the single-player grid setup but instantiates the networked
     // AI prefab, seeds each car's identity, and NetworkObject.Spawn()s it so clients get a replica. The host
-    // runs the brains; NetworkedAICar disables them on clients. No formation lap / pit flow in multiplayer.
+    // runs the brains; NetworkedAICar disables them on clients. The field runs a formation lap behind the
+    // safety car (same as SP): the FormationDirector stays enabled and each host AI gets a FormationController.
     IEnumerator SpawnNetworkedField()
     {
         // Hold the field on the grid until the multiplayer lobby gate passes (2+ players, all ready).
-        // NetworkedCarBindings (server) flips the phase to Green once that's satisfied. (Was: race immediately.)
+        // NetworkedCarBindings (host) then runs PreGrid → Formation (pace lap) → Green. Leave the
+        // FormationDirector enabled so it spawns the safety car and leads the lap, exactly as in single player.
         RaceStart.Current = RaceStart.Phase.PreGrid;
-        var formation = FindFirstObjectByType<FormationDirector>();
-        if (formation != null) formation.enabled = false;
 
         if (DatabaseManager.Instance != null)
             while (!DatabaseManager.Instance.IsReady) yield return null;
@@ -344,8 +348,15 @@ public class GridSpawner : MonoBehaviour
                 splineDriver.speed = speed;
                 splineDriver.spriteFacesUp = false;
                 splineDriver.angleOffsetDeg = 180f;
-                splineDriver.freezeUntilFormation = true; // hold on the grid through the lobby; released when RaceStart hits Green
+                splineDriver.freezeUntilFormation = true; // hold on the grid through the lobby; released when the formation lap starts
+                splineDriver.externalMotionController = !multiplayerKinematicAI; // kinematic: SplineDriver writes the transform itself
             }
+
+            // Pace lap: file in behind the safety car during Formation (dormant in every other phase). Host-only
+            // brain — on clients the car is a NetworkTransform puppet and NetworkedAICar disables this there.
+            var fc = go.GetComponent<FormationController>();
+            if (fc == null) fc = go.AddComponent<FormationController>();
+            fc.kinematic = multiplayerKinematicAI; // a kinematic field stays kinematic through green
 
             var input = go.GetComponent<SplineInputDriver>();
             if (input != null) { input.steerGain = aiSteerGain; input.speedGain = aiSpeedGain; }
@@ -383,6 +394,7 @@ public class GridSpawner : MonoBehaviour
                 net.carsetSeed = carsetPrefix;
                 net.carNumberSeed = carNumber;
                 net.driverNameSeed = driverName;
+                net.kinematicSeed = multiplayerKinematicAI;
             }
 
             // NetworkObjects stay at the scene root — NGO forbids parenting them under a plain GameObject.

@@ -13,17 +13,20 @@ public class FormationController : MonoBehaviour
     [Tooltip("Cruise pace of the train (mph). Falls back to this when no FormationDirector is present.")]
     public float cruiseMph = 60f;
     [Tooltip("How far behind the car ahead this car tries to sit (m).")]
-    public float targetGap = 9f;
+    public float targetGap = 7f;
     [Tooltip("Speed correction (mph) applied per metre of gap error. Higher = closes/opens gaps faster.")]
-    public float gapGainMphPerMetre = 3f;
-    [Tooltip("Most this car may exceed cruise pace by while catching the train up (mph). Only used on straights.")]
-    public float catchUpBonusMph = 18f;
+    public float gapGainMphPerMetre = 4f;
+    [Tooltip("Most this car may exceed cruise pace by while catching the train up (mph). Only used on straights. Kept low so the field doesn't string out far ahead of the pace.")]
+    public float catchUpBonusMph = 9f;
     [Tooltip("Lowest speed cap (mph) — a floor so a car never crawls to a halt mid-formation (lifted when blocked).")]
     public float minCapMph = 12f;
     [Tooltip("How far ahead (m) to look for the car to follow.")]
     public float lookAheadRange = 90f;
     [Tooltip("Pace multiplier on the SplineDriver corner-speed profile during formation. <1 gives the dynamic model grip margin so it holds the line through turns. Barely affects straights (capped to cruise).")]
     [Range(0.6f, 1f)] public float formationPace = 0.9f;
+
+    [Tooltip("This car has no dynamic model (cheap kinematic AI): stay on the kinematic SplineDriver through the green flag instead of handing back to PlayerVehicleController. Set by the spawner for a kinematic field.")]
+    public bool kinematic;
 
     [Header("Corner caution")]
     [Tooltip("Distance ahead (m) scanned for a turn. Inside this, the car drops the catch-up boost and the weave so it can hold the racing line through the corner.")]
@@ -91,8 +94,9 @@ public class FormationController : MonoBehaviour
         if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
         if (_input == null) _input = GetComponent<SplineInputDriver>();
 
-        bool kinematic = phase == RaceStart.Phase.Formation;
-        if (kinematic)
+        // Kinematic while forming up; a kinematic car (no dynamic model) also stays kinematic for racing.
+        bool driveKinematic = phase == RaceStart.Phase.Formation || kinematic;
+        if (driveKinematic)
         {
             if (_input != null) _input.enabled = false;
             if (_pvc != null) _pvc.enabled = false;
@@ -105,8 +109,12 @@ public class FormationController : MonoBehaviour
             if (_pvc != null) _pvc.enabled = true;
             if (_input != null) _input.enabled = true;
             else if (_spline != null) _spline.externalMotionController = true;
+        }
 
-            // Drop any leftover formation weave; AIRacingBehaviour owns the lateral line once racing.
+        // Leaving the formation lap (green or pregrid): drop any weave/lateral the formation applied —
+        // AIRacingBehaviour owns the lateral line once racing.
+        if (phase != RaceStart.Phase.Formation)
+        {
             _lateral = 0f;
             _weaveEnv = 0f;
             if (_spline != null) _spline.tacticalLateralOffset = 0f;
