@@ -30,6 +30,8 @@ public class PaceLapAssist : MonoBehaviour
     [Tooltip("If our locked leader is more than this far ahead (m), prompt the player to close up.")]
     public float catchUpGap = 30f;
 
+    const float MphToMps = 1f / 2.237f;
+
     Transform _leader;          // the car we locked onto to line up behind (sticky once acquired)
     int _leaderNumber = -1;
     bool _leaderIsSafety;
@@ -58,6 +60,18 @@ public class PaceLapAssist : MonoBehaviour
             // Not the formation lap — drop our hold + prompt. NetworkedCarBindings owns PreGrid/Green governing.
             _leader = null; _showPrompt = false;
             _prevPos.Clear(); _speedMps.Clear();
+            // Defensive: once green, make sure our last no-overtake cap is lifted so the player is never stranded
+            // capped if nothing else releases the governor.
+            if (RaceStart.IsGreen) pvc.speedGovernorMps = Mathf.Infinity;
+            return;
+        }
+
+        // Single-player / host: every car (incl. the safety car) is a spline car in RaceField with a real
+        // along-track distance. Pick the leader by TRACK ORDER — the car immediately ahead — instead of a
+        // world-space cone that can lock onto a car that's spatially ahead round a bend but behind in the order.
+        if (RaceField.Drivers.Count > 0 && pvc.ObstacleTrack != null)
+        {
+            UpdateSpline();
             return;
         }
 
@@ -90,10 +104,15 @@ public class PaceLapAssist : MonoBehaviour
             if (fwdDist < nearestFwd) { nearestFwd = fwdDist; nearestAhead = t; }
         }
 
+        // Multiplayer: the other cars are NetworkTransform puppets (no spline/RaceField entry on a client).
         var ai = NetworkedAICar.All;
         for (int i = 0; i < ai.Count; i++) if (ai[i] != null) Consider(ai[i].transform);
         var players = NetworkedCarBindings.Players;
         for (int i = 0; i < players.Count; i++) if (players[i] != null) Consider(players[i].transform);
+        // Single-player (and the host): the AI field are spline cars in RaceField. These lists are empty in the
+        // other mode, so scanning both is safe and lets this one helper drive the pace lap in either mode.
+        var field = RaceField.Drivers;
+        for (int i = 0; i < field.Count; i++) if (field[i] != null) Consider(field[i].transform);
         if (_safetyCar == null) _safetyCar = FindFirstObjectByType<SafetyCar>();
         if (_safetyCar != null) Consider(_safetyCar.transform);
 
@@ -116,6 +135,78 @@ public class PaceLapAssist : MonoBehaviour
         }
 
         UpdatePrompt(myPos, fwd);
+    }
+
+    // Spline-based pace hold. The leader is the car directly ahead of the player in GRID ORDER (so the prompt
+    // matches the reserved-slot formation); if the player has no grid slot it falls back to the nearest car ahead.
+    // Speed-capped to that car (no overtaking) with a prompt to line up behind it.
+    void UpdateSpline()
+    {
+        var field = RaceField.Drivers;
+        float trackLen = 0f;
+        for (int i = 0; i < field.Count; i++)
+            if (field[i] != null && field[i].TrackLength > trackLen) trackLen = field[i].TrackLength;
+        if (trackLen <= 0f) { _showPrompt = false; pvc.speedGovernorMps = Mathf.Infinity; return; }
+
+        float playerDist = pvc.TrackDistance;
+        Transform leaderT = null;
+        bool leaderSafety = false;
+        float leaderMph = 0f;
+        float gap = float.MaxValue; // signed in grid-order mode (+ ahead, - behind); positive-only in fallback
+
+        // Preferred: the member directly ahead of the player in grid order.
+        var member = pvc.GridPosition >= 0 ? FormationOrder.MemberAhead(pvc.GridPosition) : null;
+        var sdMember = member as SplineDriver;
+        if (sdMember != null)
+        {
+            float g = sdMember.DistanceOnTrack - playerDist;
+            if (g > trackLen * 0.5f) g -= trackLen;
+            else if (g < -trackLen * 0.5f) g += trackLen;
+            gap = g;
+            leaderT = sdMember.transform;
+            leaderSafety = sdMember.GetComponent<SafetyCar>() != null;
+            leaderMph = sdMember.CurrentMph;
+        }
+        else
+        {
+            // Fallback: nearest car ahead in track order.
+            SplineDriver leader = null;
+            float best = float.MaxValue;
+            for (int i = 0; i < field.Count; i++)
+            {
+                var d = field[i];
+                if (d == null) continue;
+                float g = d.DistanceOnTrack - playerDist;
+                if (g <= 0f) g += trackLen;
+                if (g > 0f && g < best) { best = g; leader = d; }
+            }
+            if (leader != null)
+            {
+                gap = best;
+                leaderT = leader.transform;
+                leaderSafety = leader.GetComponent<SafetyCar>() != null;
+                leaderMph = leader.CurrentMph;
+            }
+        }
+
+        float gov = Mathf.Infinity;
+        if (leaderT != null)
+        {
+            float aheadMps = leaderMph * MphToMps;
+            if (gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
+            else if (gap < holdGap) gov = aheadMps;      // close — match it, no overtaking
+            _leader = leaderT;
+            _leaderIsSafety = leaderSafety;
+            _leaderNumber = leaderSafety ? -1 : CarNumberOf(leaderT);
+        }
+        pvc.speedGovernorMps = gov;
+
+        if (leaderT == null) { _showPrompt = false; return; }
+        string who = _leaderIsSafety ? "the safety car" : $"car #{_leaderNumber}";
+        _showPrompt = true;
+        if (gap < -2f) { _promptText = $"OUT OF POSITION — drop in behind {who}"; _promptColor = new Color(1f, 0.3f, 0.2f); }
+        else if (gap > catchUpGap) { _promptText = $"Close up behind {who}"; _promptColor = new Color(1f, 0.85f, 0.2f); }
+        else { _promptText = $"Hold station behind {who}"; _promptColor = new Color(0.55f, 1f, 0.55f); }
     }
 
     void UpdatePrompt(Vector2 myPos, Vector2 fwd)

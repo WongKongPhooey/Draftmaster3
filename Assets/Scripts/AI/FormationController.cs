@@ -149,10 +149,21 @@ public class FormationController : MonoBehaviour
             cap = pitOutMph; // ease onto the racing line after the pit merge before resuming pace
         else
         {
-            if (RaceField.TryGetAhead(_spline, lookAheadRange, out _, out float gap))
+            // Station behind the car directly ahead in GRID ORDER (an AI, the player, or the safety car) rather
+            // than the nearest car ahead — that's what forms the field up in qualifying order and holds the
+            // player's slot open. The gap is SIGNED: if our man slips behind us (e.g. the player drops back) the
+            // negative gap drops our cap so we wait for them instead of charging off to "catch" a phantom ahead.
+            var memberAhead = FormationOrder.MemberAhead(_spline.qualifyingPosition);
+            if (memberAhead != null)
+            {
+                float len = _spline.TrackLength;
+                float gap = memberAhead.TrackDistance - _spline.DistanceOnTrack;
+                if (gap > len * 0.5f) gap -= len;
+                else if (gap < -len * 0.5f) gap += len;
                 cap = cruise + gapGainMphPerMetre * (gap - targetGap);
+            }
             else
-                cap = cruise + catchUpBonusMph; // nobody in range yet — close the train up (straights only)
+                cap = cruise + catchUpBonusMph; // nobody ahead in the order yet — close the train up (straights only)
             if (corner) cap = Mathf.Min(cap, cruise); // never carry the catch-up boost into a turn
         }
 
@@ -177,6 +188,32 @@ public class FormationController : MonoBehaviour
                 float strength = Mathf.Clamp01((blockScanRange - bgap) / Mathf.Max(blockScanRange, 0.1f));
                 avoidTarget = side * avoidPush * strength;
             }
+        }
+
+        // The free-driven player isn't in RaceField, so the block above can't see it. Treat the player as a
+        // blockage too: slow (allow a full stop) and steer to the open side so the forming field doesn't pile
+        // into a player who has dropped back or stopped.
+        var obstacles = RaceObstacles.All;
+        for (int oi = 0; oi < obstacles.Count; oi++)
+        {
+            var p = obstacles[oi];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            float len = _spline.TrackLength;
+            if (len <= 0f) continue;
+            float pg = p.TrackDistance - _spline.DistanceOnTrack;
+            if (pg <= 0f) pg += len;
+            if (pg <= 0f || pg > blockScanRange) continue;
+
+            float pMph = p.SpeedMph;
+            bool pBlocked = pMph < _spline.CurrentMph - blockSpeedDeltaMph || pMph < blockStoppedMph;
+            if (!pBlocked) continue;
+
+            float pCloseT = Mathf.InverseLerp(blockScanRange, blockStopGap, pg);
+            cap = Mathf.Min(cap, Mathf.Lerp(pMph, 0f, Mathf.Clamp01(pCloseT)));
+            floorMph = 0f;
+            float pSide = p.TrackLateral >= _spline.LateralOnTrack ? -1f : 1f;
+            float pStrength = Mathf.Clamp01((blockScanRange - pg) / Mathf.Max(blockScanRange, 0.1f));
+            avoidTarget = pSide * avoidPush * pStrength;
         }
 
         cap = Mathf.Clamp(cap, floorMph, cruise + catchUpBonusMph);

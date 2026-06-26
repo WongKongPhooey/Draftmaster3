@@ -71,6 +71,10 @@ public class SafetyCar : MonoBehaviour
 
         if (_pitting)
         {
+            // Park in the LAST box (closest to the pit-lane start). The box sits right at the entrance, so brake
+            // the instant we're on pit road — the car can't stop on a dime, so this halts it as close to the box
+            // as the braking distance allows rather than rolling on toward the pit exit.
+            if (_spline.IsOnPit && !_spline.pitStopHold) _spline.pitStopHold = true;
             _despawnTimer -= Time.fixedDeltaTime;
             if (_despawnTimer <= 0f) gameObject.SetActive(false);
             return;

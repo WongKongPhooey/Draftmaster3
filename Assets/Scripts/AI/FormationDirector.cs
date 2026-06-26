@@ -40,7 +40,7 @@ public class FormationDirector : MonoBehaviour
     float _debugTimer;
 
     [Header("Player")]
-    [Tooltip("ON: cap the player's top speed to the pace (cruiseMph) during the formation lap — otherwise they drive freely (no slowing for nearby cars). OFF: no cap at all.")]
+    [Tooltip("ON: hold the player in station during the formation lap — free to drive any speed, but speed-capped so they can't overtake the car directly ahead, with an on-screen prompt to line up (same as multiplayer). OFF: no restriction at all.")]
     public bool enforceHoldStation = true;
 
     SafetyCar _safetyCar;
@@ -82,6 +82,16 @@ public class FormationDirector : MonoBehaviour
 
         if (pitLaneStart != null) pitLaneStart.PlayerEnteredCar += BeginFormation;
         else Debug.LogWarning("FormationDirector: no PitLaneStart wired — the formation lap will never start.");
+
+        // Single-player pace lap: the player drives any speed but is held in station (can't pass the car ahead)
+        // with the same prompt as multiplayer. PaceLapAssist governs it; we no longer hard-cap to pace below.
+        // (Multiplayer attaches its own PaceLapAssist via NetworkedCarBindings for the owning client.)
+        if (!GameSession.IsMultiplayer && playerCar != null && enforceHoldStation)
+        {
+            var assist = playerCar.GetComponent<PaceLapAssist>();
+            if (assist == null) assist = playerCar.gameObject.AddComponent<PaceLapAssist>();
+            assist.pvc = playerCar;
+        }
 
         SpawnSafetyCar();
     }
@@ -126,6 +136,7 @@ public class FormationDirector : MonoBehaviour
         spline.externalMotionController = false; // kinematic: SplineDriver writes the transform itself
         spline.aiMaxSpeedMph = cruiseMph;
         spline.startDistance = track.track.pitExitDistance + safetyCarStartOffset;
+        spline.qualifyingPosition = FormationOrder.SafetyCarGrid; // leads the formation order (below every car)
 
         _safetyCar = go.GetComponent<SafetyCar>();
         if (_safetyCar == null) _safetyCar = go.AddComponent<SafetyCar>();
@@ -149,13 +160,6 @@ public class FormationDirector : MonoBehaviour
         // replicates it. Clients don't write the phase off their local safety car — they wait for that RPC.
         if (!PhaseAuthority) return;
         RaceStart.Current = RaceStart.Phase.Green;
-    }
-
-    void FixedUpdate()
-    {
-        if (RaceStart.Current != RaceStart.Phase.Formation || playerCar == null) return;
-        // Only cap top speed to the pace — the player otherwise drives freely (no slowing for nearby cars).
-        playerCar.speedGovernorMps = enforceHoldStation ? cruiseMph / 2.237f : Mathf.Infinity;
     }
 
     void Update()

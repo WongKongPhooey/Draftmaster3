@@ -63,7 +63,12 @@ public class PitStopController : MonoBehaviour
                 {
                     if (_ai != null) _ai.enabled = false;     // park the racing brain on pit road
                     _spline.tacticalLateralOffset = 0f;
-                    if (_spline.PitProgress01 >= serviceFrac)
+                    // Stop in this car's ASSIGNED box (= its grid position), not a generic fraction of the lane,
+                    // so every car services in its own marked box. Falls back to serviceFrac if unconfigured.
+                    float targetFrac = serviceFrac;
+                    if (PitLane.Configured && _spline.PitLength > 0f)
+                        targetFrac = PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength) / _spline.PitLength;
+                    if (_spline.PitProgress01 >= targetFrac)
                     {
                         _spline.pitStopHold = true;
                         _serviceTimer = serviceSeconds;

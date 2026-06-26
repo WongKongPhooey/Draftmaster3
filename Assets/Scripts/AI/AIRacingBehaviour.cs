@@ -111,7 +111,15 @@ public class AIRacingBehaviour : MonoBehaviour
         bool wantOvertake = false;
         float overtakeDir = 0f;
 
-        if (RaceField.TryGetAhead(_spline, Mathf.Max(lookAheadRange, brakeScanRange), out var ahead, out float aheadGap))
+        // Detection range must cover the distance we need to brake from our CURRENT speed, otherwise a stopped
+        // car is spotted too late to avoid — a fixed brakeScanRange is far too short at racing speed (that's
+        // what let the field plough into stationary cars).
+        float myMpsNow = _spline.CurrentMph * MphToMps;
+        float dynStopDist = minFollowDistance + myMpsNow * followHeadwaySeconds
+                            + (myMpsNow * myMpsNow) / (2f * Mathf.Max(followDecelMps2, 1f)) + 20f;
+        float scanDist = Mathf.Max(lookAheadRange, brakeScanRange, dynStopDist);
+
+        if (RaceField.TryGetAhead(_spline, scanDist, out var ahead, out float aheadGap))
         {
             float aheadSpeed = ahead.CurrentMph;
             float mySpeed = _spline.CurrentMph;
@@ -158,6 +166,42 @@ public class AIRacingBehaviour : MonoBehaviour
                     float latFrac = 1f - (lateralDelta / Mathf.Max(draftingLateralWidth, 0.1f));
                     speedBoost = vi.draftingMaxBonus * Mathf.Clamp01(gapFrac) * Mathf.Clamp01(latFrac);
                 }
+            }
+        }
+
+        // Human player car(s) — driven free with SplineDriver off, so absent from RaceField and invisible to the
+        // checks above. Treat the nearest one ahead exactly like a slow/stopped car: shed closing speed early and,
+        // if it's much slower, commit to a side to go around instead of rear-ending it.
+        var obstacles = RaceObstacles.All;
+        for (int oi = 0; oi < obstacles.Count; oi++)
+        {
+            var p = obstacles[oi];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            float len = _spline.TrackLength;
+            if (len <= 0f) continue;
+            float pg = p.TrackDistance - _spline.DistanceOnTrack;
+            if (pg <= 0f) pg += len;
+            if (pg <= 0f || pg > scanDist) continue;
+
+            float pSpeedMph = p.SpeedMph;
+            float pClosingMps = Mathf.Max(0f, myMpsNow - pSpeedMph * MphToMps);
+            float pBrakeDist = (pClosingMps * pClosingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
+            float pReqGap = (minFollowDistance + myMpsNow * followHeadwaySeconds + pBrakeDist)
+                            * Mathf.Lerp(1.15f, 0.85f, aggression01);
+            if (pg < pReqGap)
+            {
+                float close01 = Mathf.InverseLerp(pReqGap, hardFollowGap, pg);
+                speedCap = Mathf.Min(speedCap, Mathf.Lerp(pSpeedMph, Mathf.Max(0f, pSpeedMph - 6f), close01));
+            }
+            if (pg < hardFollowGap) speedCap = Mathf.Min(speedCap, pSpeedMph * 0.6f);
+
+            // Go around a much-slower / stopped player when a side is clear of other cars.
+            float myPotential = Mathf.Max(_spline.CurrentMph, _spline.DesiredMph);
+            if (!wantOvertake && pSpeedMph < myPotential - 2f && _cooldownTimer <= 0f)
+            {
+                float side = p.TrackLateral >= _spline.LateralOnTrack ? -1f : 1f;
+                if (!SideOccupied(side)) { overtakeDir = side; wantOvertake = true; }
+                else if (!SideOccupied(-side)) { overtakeDir = -side; wantOvertake = true; }
             }
         }
 

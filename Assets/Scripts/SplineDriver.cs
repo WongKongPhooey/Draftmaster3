@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionResponder
+public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionResponder, IFormationMember
 {
     public float SpeedMps => speed;
 
@@ -89,6 +89,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     public bool IsOnPit => _onPit;
     public float PitProgress01 => (_onPit && _pitLength > 0f) ? Mathf.Clamp01(_distance / _pitLength) : 0f;
+    public float PitLength => _pitLength;
 
     [Header("Cornering Feel")]
     [Tooltip("Lean angle (deg) per metre/sec of lateral motion. Positive offset rate = moving right = leans right. Negate to flip.")]
@@ -96,6 +97,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Smoothing for the lean angle. Lower = snappier, higher = floatier. 0 disables smoothing.")]
     [Range(0f, 0.95f)]
     public float leanSmoothing = 0.8f;
+    [Tooltip("Hard cap on the lean angle (deg). Without it, a fast lateral move (chicane, weave, line change) blows the lean up to 20°+ and the car renders crabbed — pointing diagonally instead of along its direction of travel. Keep small (a few degrees) so cornering still reads as a subtle lean.")]
+    [Range(0f, 20f)]
+    public float maxLeanDeg = 5f;
     const float rearAxleToCenter = -2.4f;
 
     public float CurrentMph => _currentMph;
@@ -104,6 +108,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float DistanceOnTrack => _mainLength > 0f ? ((_distance % _mainLength) + _mainLength) % _mainLength : _distance;
     public float LateralOnTrack => _prevLateral;
     public float TrackLength => _mainLength;
+
+    // IFormationMember — lets the formation lap line cars up in grid order (the safety car overrides its grid via
+    // qualifyingPosition = FormationOrder.SafetyCarGrid so it leads).
+    public int GridPosition => qualifyingPosition;
+    float IFormationMember.TrackDistance => DistanceOnTrack;
+    float IFormationMember.TrackLateral => LateralOnTrack;
+    public float SpeedMph => _currentMph;
+    public bool FormationActive => isActiveAndEnabled && _mainLength > 0f;
 
     // Commanded path state (consumed by BicycleDynamics).
     public Vector2 CommandedLocalPos { get; private set; }
@@ -167,8 +179,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _gearbox = GetComponent<EngineGearbox>();
     }
 
-    void OnEnable() { RaceField.Register(this); }
-    void OnDisable() { RaceField.Unregister(this); }
+    void OnEnable() { RaceField.Register(this); FormationOrder.Register(this); }
+    void OnDisable() { RaceField.Unregister(this); FormationOrder.Unregister(this); }
 
     bool _startSeeded; // set by EngageFromCurrentPose so Start() doesn't clobber the seeded distance
 
@@ -820,12 +832,17 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         float lineLateral = !_onPit ? LateralAt(placeDistance) : 0f;
-        float totalLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral + _mergeLatBias;
+        float baseLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral;
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(placeDistance, out float boundLo, out float boundHi);
-            totalLateral = Mathf.Clamp(totalLateral, boundLo, boundHi);
+            baseLateral = Mathf.Clamp(baseLateral, boundLo, boundHi);
         }
+        // The pit-merge bias carries the car from its REAL pit-exit position onto the racing line. It must NOT be
+        // bounds-clamped, or the car snaps (warps) onto the track edge the instant it leaves the pit lane — the
+        // pit lane sits laterally outside the track, so clamping deletes the offset. Added after the clamp and
+        // eased to zero (pitMergeEaseSpeed) so the car slides smoothly onto the line instead of teleporting.
+        float totalLateral = baseLateral + _mergeLatBias;
         Vector2 right = new Vector2(sample.tangent.y, -sample.tangent.x);
         if (track != null)
         {
@@ -838,6 +855,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float lateralRate = (_hasPrevLateral && Time.fixedDeltaTime > 0f) ? (totalLateral - _prevLateral) / Time.fixedDeltaTime : 0f;
         float leanTarget = -lateralRate * leanIntoTurns;
         _currentLean = Mathf.Lerp(leanTarget, _currentLean, leanSmoothing);
+        _currentLean = Mathf.Clamp(_currentLean, -maxLeanDeg, maxLeanDeg); // never let lean crab the car off its travel direction
         _prevLateral = totalLateral;
         _hasPrevLateral = true;
         float carHeadingDeg = angleDeg + _currentLean;

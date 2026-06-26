@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 // first → car runs wide) and oversteer (rear lets go first → car rotates / slides). Impacts inject yaw rate and
 // the tyres damp it out, so a knock means a natural, recoverable slide rather than a scripted snap.
 // Implements IVehicleSpeedReadout so SpeedometerUI can read speed, ICollisionResponder for VehicleCollision.
-public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICollisionResponder
+public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICollisionResponder, IFormationMember
 {
     [Header("Collision Response")]
     [Tooltip("Bounce-back along the wall normal. 0 = no bounce (slide), 0.3 = lively armco kick.")]
@@ -31,8 +31,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float corneringStiffness = 11f;
     [Tooltip("Static handling balance. + = more understeer (rear grippier than front, safe/stable). - = oversteer (loose). 0 = neutral.")]
     [Range(-0.3f, 0.3f)] public float understeerBias = 0.10f;
-    [Tooltip("Yaw-rate damping (1/s). Resists spinning — settles snap spins and tames brake-induced rotation. Higher = more stable/heavier feel. 0 = none.")]
-    public float yawDamping = 2.5f;
+    [Tooltip("Yaw-rate damping (1/s). Resists spinning — settles snap spins and tames brake-induced rotation. Higher = more stable/heavier feel. Too high and the car won't rotate (feels like understeer). 0 = none.")]
+    public float yawDamping = 1.8f;
     [Tooltip("Extra yaw damping under braking (1/s), scaled by brake input. Specifically counters spin-on-the-brakes from rear unloading.")]
     public float brakeYawDamping = 2f;
     [Tooltip("Below this forward speed (m/s) steering is kinematic (geometry only) to avoid divide-by-near-zero jitter at crawl.")]
@@ -60,14 +60,14 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Header("Physics Tuning")]
     [Tooltip("Coasting deceleration (m/s²) when no throttle and no brake (engine + aero drag).")]
     public float coastDecel = 1.5f;
-    [Tooltip("Steering authority reduction at high speed. 1 = full at all speeds, lower tightens high-speed steering.")]
-    [Range(0.2f, 1f)] public float highSpeedSteerScale = 0.55f;
+    [Tooltip("Steering authority reduction at high speed. 1 = full at all speeds, lower tightens high-speed steering. Too low and the car won't turn in at racing speed (understeer).")]
+    [Range(0.2f, 1f)] public float highSpeedSteerScale = 0.8f;
     [Tooltip("Speed (mph) at which steering authority has decayed to highSpeedSteerScale.")]
     public float steerDecaySpeedMph = 180f;
     [Tooltip("Stick input below this magnitude is ignored — kills drift-induced steer.")]
     [Range(0f, 0.4f)] public float steerDeadzone = 0.12f;
-    [Tooltip("Steering response curve. 1 = linear, higher = softer near centre (small tilt -> small steer).")]
-    [Range(1f, 3f)] public float steerExpo = 1.8f;
+    [Tooltip("Steering response curve. 1 = linear, higher = softer near centre (small tilt -> small steer). High values make turn-in feel lazy/understeery.")]
+    [Range(1f, 3f)] public float steerExpo = 1.4f;
 
     [Header("Surface / Grass")]
     [Tooltip("TrackBuilder used to tell on-track from grass. Auto-found at Start if left empty.")]
@@ -116,8 +116,6 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public bool enableWheelspin = true;
     [Tooltip("Below this forward speed (m/s), heavy throttle lights up the rear tyres (1st-gear wheelspin).")]
     public float wheelspinSpeed = 9f;
-    [Tooltip("Minimum forward speed (m/s) before the rear breaks loose. Below this the car can't spin on the spot — it must be rolling to wheelspin/oversteer around. Keep above lowSpeedKinematic so a near-stationary car never pivots.")]
-    public float donutMinSpeedMps = 3f;
     [Tooltip("Throttle needed before the rear breaks traction.")]
     [Range(0f, 1f)] public float wheelspinThrottle = 0.6f;
     [Tooltip("Donut rotation rate at full spin + full steering lock (deg/sec).")]
@@ -158,6 +156,24 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float SlipRearDeg => _alphaR * Mathf.Rad2Deg;
     public float HandlingBalanceDeg => (Mathf.Abs(_alphaF) - Mathf.Abs(_alphaR)) * Mathf.Rad2Deg;
 
+    // --- Obstacle projection (so the racing AI can see this car as a slow/stopped obstacle ahead).
+    // Only the active HUMAN car registers (an AI car keeps an enabled SplineDriver and is already in RaceField).
+    public TrackBuilder ObstacleTrack => track;
+    public float TrackDistance { get; private set; }   // distance along the track centerline (m), AI-comparable
+    public float TrackLateral { get; private set; }     // signed lateral offset from the centerline (m)
+    bool _isObstacle;
+
+    // IFormationMember — the player occupies a reserved grid slot so the AI behind it hold that place open during
+    // the formation lap. SetFormationGrid is called by GridSpawner with the player's reserved pit-box index.
+    int _formationGrid = -1;
+    public int GridPosition => _formationGrid;
+    public bool FormationActive => _isObstacle && track != null && _formationGrid >= 0;
+    public void SetFormationGrid(int grid)
+    {
+        _formationGrid = grid;
+        if (isActiveAndEnabled && _isObstacle && _formationGrid >= 0) FormationOrder.Register(this);
+    }
+
     const float G = 9.81f;
 
     float _vx;          // forward velocity, body frame (m/s)
@@ -184,6 +200,37 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     float _inSteer, _inThrottle, _inBrake;        // last externally-supplied inputs
     bool _wasEmitting;      // trail emit state last step (for streak-free re-enable)
     TrailRenderer _trailL, _trailR; // rear tyre trails (grass)
+
+    void OnEnable()
+    {
+        // Register as an AI-visible obstacle only when we're the active human car. AI cars run this same
+        // controller but keep an enabled SplineDriver (they're already in RaceField), so they're excluded.
+        var sd = GetComponent<SplineDriver>();
+        _isObstacle = sd == null || !sd.enabled;
+        if (_isObstacle)
+        {
+            RaceObstacles.Register(this);
+            if (_formationGrid >= 0) FormationOrder.Register(this);
+        }
+    }
+
+    void OnDisable()
+    {
+        if (_isObstacle) RaceObstacles.Unregister(this);
+        FormationOrder.Unregister(this);
+    }
+
+    // Project our world position onto the track centerline so the AI can compare our progress to its own.
+    void UpdateTrackProjection()
+    {
+        if (track == null) return;
+        float d = track.NearestCenterlineDistance(transform.position);
+        var s = track.SampleAt(d);
+        Vector2 localNow = track.transform.InverseTransformPoint(transform.position);
+        Vector2 right = new Vector2(s.tangent.y, -s.tangent.x); // matches SplineDriver's lateral convention
+        TrackDistance = d;
+        TrackLateral = Vector2.Dot(localNow - s.position, right);
+    }
 
     void Start()
     {
@@ -277,6 +324,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     {
         if (vehicleInfo == null) return;
         RecomputeGeometry();
+        if (_isObstacle) UpdateTrackProjection();
         float dt = Time.fixedDeltaTime;
 
         // --- Inputs: external (AI) when driven, otherwise gamepad first, keyboard overrides if pressed.
@@ -350,11 +398,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         _onGrass = looseSurface; // drives tyre-trail emission below
 
         float speedNow = SpeedMps;
-        // Donut/wheelspin only once the car is actually rolling (>= donutMinSpeedMps) — a near-stationary car
-        // must NOT be able to pivot on the spot. With donutMinSpeedMps above lowSpeedKinematic, the low-speed
-        // kinematic branch never injects spin, so the rear breaks loose via the dynamic model while moving.
+        // Wheelspin/donuts: heavy throttle below wheelspinSpeed lights up the rears. Works from a standstill on
+        // purpose — that's how you spin the car around to recover from a spin. The low-speed kinematic branch
+        // below reads `wheelspin` to pivot the car toward steering lock.
         float wheelspin = 0f;
-        if (enableWheelspin && throttleIn > wheelspinThrottle && speedNow >= donutMinSpeedMps && speedNow < wheelspinSpeed)
+        if (enableWheelspin && throttleIn > wheelspinThrottle && speedNow < wheelspinSpeed)
             wheelspin = Mathf.Clamp01(
                 ((throttleIn - wheelspinThrottle) / Mathf.Max(1f - wheelspinThrottle, 0.01f))
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));

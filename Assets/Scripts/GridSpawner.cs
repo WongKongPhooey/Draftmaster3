@@ -152,6 +152,8 @@ public class GridSpawner : MonoBehaviour
                 float usable = Mathf.Max(0f, pitLen - pitBoxExitGap - 6f);
                 pitBoxSpacing = Mathf.Clamp(usable / (totalBoxes - 1), 5f, 12f);
             }
+            // Publish the box layout so every car (safety car, pit stops) agrees where the boxes are.
+            if (pitLen > 0f) PitLane.Configure(pitBoxExitGap, pitBoxSpacing, totalBoxes);
         }
 
         int reservedBox = -1;
@@ -159,6 +161,8 @@ public class GridSpawner : MonoBehaviour
         {
             reservedBox = Mathf.RoundToInt((pitLen - pitBoxExitGap - pls.PlayerPitDistance) / Mathf.Max(pitBoxSpacing, 0.01f));
             reservedBox = Mathf.Clamp(reservedBox, 0, totalBoxes - 1);
+            // Tell the player car its reserved grid slot so the formation order holds the place open for it.
+            if (pls.car != null) pls.car.SetFormationGrid(reservedBox);
         }
 
         for (int i = 0; i < count; i++)
