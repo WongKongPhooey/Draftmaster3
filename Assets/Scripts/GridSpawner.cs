@@ -219,6 +219,8 @@ public class GridSpawner : MonoBehaviour
 
             // Wear-based pit strategy (self-gates on green flag).
             if (go.GetComponent<PitStopController>() == null) go.AddComponent<PitStopController>();
+            // Fuel so the crew has something to refill (TireModel is auto-added by the dynamic model).
+            if (go.GetComponent<FuelTank>() == null) go.AddComponent<FuelTank>();
 
             // Identity for the position counter / HUD: name from DriverNames, number from the livery.
             var label = go.GetComponent<DriverLabel>();

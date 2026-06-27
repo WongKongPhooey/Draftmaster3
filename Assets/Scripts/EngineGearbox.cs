@@ -44,7 +44,7 @@ public class EngineGearbox : MonoBehaviour
 
     void Awake()
     {
-        _speedSource = GetComponent<IVehicleSpeedReadout>();
+        _speedSource = ResolveSpeedSource();
         if (vehicleInfo == null)
         {
             // Pull the car's data from whichever motion brain it has (AI spline car or dynamic player car).
@@ -60,9 +60,32 @@ public class EngineGearbox : MonoBehaviour
         Load01 = 0f;
     }
 
+    // Pick the speed source that's actually driving the car: the ENABLED IVehicleSpeedReadout. A player car carries
+    // both a PlayerVehicleController and a SplineDriver (its broadcast/AI brain) — only one is enabled at a time.
+    // A disabled SplineDriver still reports its constant cruise speed, which would pin the engine note at full RPM.
+    IVehicleSpeedReadout ResolveSpeedSource()
+    {
+        var comps = GetComponents<MonoBehaviour>();
+        IVehicleSpeedReadout fallback = null;
+        for (int i = 0; i < comps.Length; i++)
+        {
+            if (comps[i] is IVehicleSpeedReadout r)
+            {
+                fallback ??= r;
+                if (comps[i].isActiveAndEnabled) return r;
+            }
+        }
+        return fallback;
+    }
+
     void FixedUpdate()
     {
         ShiftEvent = 0;
+
+        // Re-resolve when the live driver changes (driving ↔ broadcast/crew-chief swaps which readout is enabled).
+        if (_speedSource is MonoBehaviour mb && !mb.isActiveAndEnabled) _speedSource = ResolveSpeedSource();
+        else if (_speedSource == null) _speedSource = ResolveSpeedSource();
+
         if (!HasGears || _speedSource == null)
         {
             AccelMultiplier = 1f;

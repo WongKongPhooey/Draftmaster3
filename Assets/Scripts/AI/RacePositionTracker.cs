@@ -56,6 +56,13 @@ public class RacePositionTracker : MonoBehaviour
         return 0;
     }
 
+    // Current lap (0-based, as counted across the line) for a car by its transform. 0 if unknown.
+    public int LapOf(Transform tf)
+    {
+        if (tf == null) return 0;
+        return _byTf.TryGetValue(tf, out var e) ? e.lap : 0;
+    }
+
     void Awake() { Instance = this; ResolveRefs(); }
     void OnDestroy() { if (Instance == this) Instance = null; }
 

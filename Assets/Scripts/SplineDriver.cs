@@ -86,6 +86,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public bool freezeUntilFormation = false;
     [Tooltip("While on the pit lane, hold the car stopped (a service stop). Set by PitStopController at the pit box.")]
     public bool pitStopHold = false;
+    [Tooltip("Distance (m) along the pit lane to hard-park at (e.g. the safety car parking near the entrance). -1 = no park; the car drives the pit normally. Once reached the car is pinned here and stopped, regardless of decel/vehicleInfo.")]
+    public float pitParkDistance = -1f;
 
     public bool IsOnPit => _onPit;
     public float PitProgress01 => (_onPit && _pitLength > 0f) ? Mathf.Clamp01(_distance / _pitLength) : 0f;
@@ -632,6 +634,19 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // CommandedSpeedMps still carries the brain's DESIRED speed (set from `speed` in Place) for the provider.
         float advanceSpeed = externalMotionController ? externalActualSpeedMps : speed;
         _distance += advanceSpeed * Time.fixedDeltaTime;
+
+        // Hard-park target on the pit lane (safety car parking near the entrance). Deterministic: pin the car the
+        // instant it reaches the target distance, independent of braking distance or whether vehicleInfo exists —
+        // otherwise a kinematic pace car with no decel curve rolls to the pit-spline end and parks out by the exit.
+        if (_onPit && pitParkDistance >= 0f && _distance >= pitParkDistance)
+        {
+            _distance = pitParkDistance;
+            _currentMph = 0f;
+            speed = 0f;
+            pitStopHold = true;
+            Place();
+            return;
+        }
 
         if (autoPitExit && _onPit && _pitLength > 0f && _distance >= _pitLength * pitExitThreshold)
         {

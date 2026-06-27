@@ -26,6 +26,12 @@ public class DriveModeController : MonoBehaviour
     [Tooltip("Optional keyboard shortcut to toggle Driving.")]
     public Key toggleKey = Key.V;
 
+    [Tooltip("When true, another system (e.g. CrewChiefController) owns the camera, so broadcast mode won't retarget it.")]
+    public bool suppressBroadcastCamera = false;
+
+    public bool IsDriving => _driving;
+    public GameObject PlayerCar => playerCar;
+
     PlayerVehicleController _pvc;
     SplineDriver _spline;
     bool _driving = true;
@@ -111,6 +117,7 @@ public class DriveModeController : MonoBehaviour
 
     void UpdateBroadcastCamera()
     {
+        if (suppressBroadcastCamera) return;     // crew chief (or similar) owns the camera
         _cycleTimer -= Time.deltaTime;
         if (_cycleTimer <= 0f || _featured == null) PickNextCar();
         if (_featured != null && cameraFollow != null) cameraFollow.target = _featured.transform;
@@ -131,7 +138,7 @@ public class DriveModeController : MonoBehaviour
         _featuredIndex = (_featuredIndex + 1) % _candidates.Count;
         _featured = _candidates[_featuredIndex];
         _cycleTimer = broadcastCycleSeconds;
-        if (cameraFollow != null) cameraFollow.target = _featured.transform;
+        if (cameraFollow != null && !suppressBroadcastCamera) cameraFollow.target = _featured.transform;
     }
 
     void UpdateLabel()

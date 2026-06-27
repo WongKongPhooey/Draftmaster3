@@ -13,6 +13,8 @@ public class SafetyCar : MonoBehaviour
     [Range(0.5f, 1f)] public float minLapFractionBeforePit = 0.8f;
     [Tooltip("Seconds after pit-in before the safety car is hidden (lets it roll out of sight down the pit).")]
     public float despawnAfterPitSeconds = 6f;
+    [Tooltip("Park this far (m) BEFORE the first pit box (the one nearest the pit entrance), so the pace car stops at the start of the lane rather than rolling down it.")]
+    public float parkGapBeforeFirstBox = 4f;
 
     [Header("Roof light")]
     public Color rooflightColor = new Color(1f, 0.55f, 0f, 1f);
@@ -71,10 +73,8 @@ public class SafetyCar : MonoBehaviour
 
         if (_pitting)
         {
-            // Park in the LAST box (closest to the pit-lane start). The box sits right at the entrance, so brake
-            // the instant we're on pit road — the car can't stop on a dime, so this halts it as close to the box
-            // as the braking distance allows rather than rolling on toward the pit exit.
-            if (_spline.IsOnPit && !_spline.pitStopHold) _spline.pitStopHold = true;
+            // The car hard-parks at _spline.pitParkDistance (set in PitIn) — just before the first box at the
+            // pit-lane entrance — so it stops at the start of the lane, not out by the exit.
             _despawnTimer -= Time.fixedDeltaTime;
             if (_despawnTimer <= 0f) gameObject.SetActive(false);
             return;
@@ -100,6 +100,17 @@ public class SafetyCar : MonoBehaviour
     {
         _pitting = true;
         _despawnTimer = despawnAfterPitSeconds;
+
+        // Park just before the first box at the pit ENTRANCE (PitLane.LastBox = highest index = nearest the start
+        // of the lane = smallest box distance). Fall back to a short distance in if the boxes aren't configured.
+        float pitLen = _spline.PitLength;
+        float target;
+        if (PitLane.Configured && pitLen > 0f)
+            target = PitLane.BoxDistance(PitLane.LastBox, pitLen) - parkGapBeforeFirstBox;
+        else
+            target = Mathf.Min(8f, pitLen > 0f ? pitLen * 0.15f : 8f);
+        _spline.pitParkDistance = Mathf.Max(2f, target);
+
         _spline.usePitLane = true; // SplineDriver hops onto the pit spline at the entry node next step
         OnPitEntry?.Invoke();
     }

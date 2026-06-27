@@ -76,11 +76,22 @@ public class DatabaseManager : MonoBehaviour
         db.CreateTable<Draftmaster.Data.Sponsor>();
         SeedSponsorsIfEmpty(db);
 
+        db.CreateTable<Draftmaster.Data.Track>();
+        SeedTracksIfEmpty(db);
+
+        // Per-team staff: seeded after Teams exist (reads them to build a roster each).
+        db.CreateTable<Draftmaster.Data.Staff>();
+        SeedStaffIfEmpty(db);
+
         // Transactional tables — schema only; populated by season generation / the race sim, not statically seeded.
         db.CreateTable<Draftmaster.Data.Entry>();
         db.CreateTable<Draftmaster.Data.Race>();
         db.CreateTable<Draftmaster.Data.Result>();
         db.CreateTable<Draftmaster.Data.Contract>();
+        db.CreateTable<Draftmaster.Data.DriverContract>();
+        db.CreateTable<Draftmaster.Data.Standing>();
+        db.CreateTable<Draftmaster.Data.Career>();
+        db.CreateTable<Draftmaster.Data.Transaction>();
     }
 
     static void SeedDriversIfEmpty(SQLiteConnection db)
@@ -105,6 +116,19 @@ public class DatabaseManager : MonoBehaviour
     {
         if (db.Table<Draftmaster.Data.Sponsor>().Count() > 0) return;
         db.InsertAll(DummySponsors.Build());
+    }
+
+    static void SeedTracksIfEmpty(SQLiteConnection db)
+    {
+        if (db.Table<Draftmaster.Data.Track>().Count() > 0) return;
+        db.InsertAll(DummyTracks.Build());
+    }
+
+    static void SeedStaffIfEmpty(SQLiteConnection db)
+    {
+        if (db.Table<Draftmaster.Data.Staff>().Count() > 0) return;
+        foreach (var team in db.Table<Draftmaster.Data.Team>())
+            db.InsertAll(DummyStaff.ForTeam(team));
     }
 
     IEnumerator CopySeedFromStreamingAssets()

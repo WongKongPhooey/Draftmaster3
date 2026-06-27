@@ -11,6 +11,22 @@ public class TrackBuilder : MonoBehaviour
     public bool drawGizmos = true;
     public bool rebuildOnValidate = true;
 
+    [Header("Brake Marker Boards")]
+    [Tooltip("Place 150/100/50m marker boards on the barrier of straights that lead into a turn.")]
+    public bool drawMarkerBoards = true;
+    [Tooltip("Only add boards when the straight immediately before a turn is at least this long (m).")]
+    public float minStraightForMarkers = 200f;
+    [Tooltip("Distances (m) before the turn entry to place a board. One board per value.")]
+    public float[] markerDistances = { 150f, 100f, 50f };
+    [Tooltip("Gap (m) from the track edge out to the board, on top of the track half-width.")]
+    public float markerEdgeOffset = 1.5f;
+    [Tooltip("Board panel size (m): x across, y along the track.")]
+    public Vector2 markerBoardSize = new Vector2(2.4f, 1.4f);
+    [Tooltip("Sorting order for the boards (above the road surface).")]
+    public int markerSortingOrder = 3;
+    public Color markerPanelColor = new Color(0.05f, 0.05f, 0.05f, 1f);
+    public Color markerTextColor = new Color(1f, 0.95f, 0.2f, 1f);
+
     [Header("Racing Line Gizmo")]
     public bool drawRacingLineGizmo = true;
     public Color idealLineColor = new Color(0.2f, 1f, 0.3f, 1f);
@@ -62,7 +78,127 @@ public class TrackBuilder : MonoBehaviour
         mf.sharedMesh = _mainMesh;
 
         BuildEdgeLines(mainSamples);
+        BuildMarkerBoards(mainSamples);
         BuildPitLane();
+    }
+
+    // 150/100/50m brake boards on the barrier of any straight (>= minStraightForMarkers) that leads into a turn.
+    void BuildMarkerBoards(List<Sample> samples)
+    {
+        TearDownChild("BrakeMarkers");
+        if (!drawMarkerBoards || track.segments == null || samples == null || samples.Count < 2) return;
+        if (markerDistances == null || markerDistances.Length == 0) return;
+
+        // Cumulative start distance of each segment along the lap.
+        var segs = track.segments;
+        var startDist = new float[segs.Length];
+        float cum = 0f;
+        for (int i = 0; i < segs.Length; i++) { startDist[i] = cum; cum += segs[i].length; }
+        float lapLen = samples[samples.Count - 1].distance;
+
+        GameObject root = null;
+
+        for (int i = 0; i < segs.Length; i++)
+        {
+            if (segs[i].type != TrackInfoV2.SegmentType.Turn) continue;
+
+            // The straight feeding this turn. For the first segment, the preceding one wraps to the last (closed loop).
+            int prev = i - 1;
+            if (prev < 0) prev = track.closedLoop ? segs.Length - 1 : -1;
+            if (prev < 0 || segs[prev].type != TrackInfoV2.SegmentType.Straight) continue;
+            if (segs[prev].length < minStraightForMarkers) continue;
+
+            float turnStart = startDist[i];
+            float straightStart = startDist[prev];
+            // Outside of the turn = where the wall/runoff is. +normal is the right of travel (matches RightEdgeLine).
+            float outsideSign = segs[i].angle >= 0f ? 1f : -1f;
+
+            for (int m = 0; m < markerDistances.Length; m++)
+            {
+                float d = turnStart - markerDistances[m];
+                if (d < straightStart) continue;            // board would fall before the straight begins
+                if (d < 0f) d += lapLen;                     // wrap (first-segment turn)
+
+                var s = SampleNearestDistance(samples, d);
+                if (root == null)
+                {
+                    root = new GameObject("BrakeMarkers");
+                    root.transform.SetParent(transform, false);
+                }
+                BuildBoard(root.transform, s, outsideSign, Mathf.RoundToInt(markerDistances[m]));
+            }
+        }
+    }
+
+    Sample SampleNearestDistance(List<Sample> samples, float distance)
+    {
+        Sample best = samples[0];
+        float bestDiff = Mathf.Abs(samples[0].distance - distance);
+        for (int i = 1; i < samples.Count; i++)
+        {
+            float diff = Mathf.Abs(samples[i].distance - distance);
+            if (diff < bestDiff) { bestDiff = diff; best = samples[i]; }
+        }
+        return best;
+    }
+
+    void BuildBoard(Transform root, Sample s, float outsideSign, int metres)
+    {
+        Vector3 normal = new Vector3(s.normal.x, s.normal.y, 0f);
+        Vector3 basePos = new Vector3(s.position.x, s.position.y, 0f);
+        Vector3 pos = basePos + normal * outsideSign * (s.width * 0.5f + markerEdgeOffset);
+        pos.z = -0.05f; // sit just above the road surface
+
+        // Orient so the board's local +Y runs along the track (up-track), reading upright to an approaching driver.
+        float tangAng = Mathf.Atan2(s.tangent.y, s.tangent.x) * Mathf.Rad2Deg;
+
+        var board = new GameObject($"Marker_{metres}m");
+        board.transform.SetParent(root, false);
+        board.transform.localPosition = pos;
+        board.transform.localRotation = Quaternion.Euler(0f, 0f, tangAng - 90f);
+
+        var panel = board.AddComponent<SpriteRenderer>();
+        panel.sprite = UnitSquareSprite();
+        panel.color = markerPanelColor;
+        panel.sharedMaterial = MarkerMaterial();
+        panel.sortingOrder = markerSortingOrder;
+        board.transform.localScale = new Vector3(markerBoardSize.x, markerBoardSize.y, 1f);
+
+        // Number, as a TextMesh (renders reliably under the 3D URP renderer, same as the NPC prompt glyph).
+        var labelGo = new GameObject("Label");
+        labelGo.transform.SetParent(board.transform, false);
+        labelGo.transform.localPosition = new Vector3(0f, 0f, -0.05f);
+        labelGo.transform.localScale = new Vector3(1f / Mathf.Max(0.01f, markerBoardSize.x), 1f / Mathf.Max(0.01f, markerBoardSize.y), 1f);
+        var tm = labelGo.AddComponent<TextMesh>();
+        tm.text = metres.ToString();
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.characterSize = 0.18f;
+        tm.fontSize = 64;
+        tm.color = markerTextColor;
+        var tmr = labelGo.GetComponent<MeshRenderer>();
+        tmr.sortingOrder = markerSortingOrder + 1;
+    }
+
+    static Sprite _square;
+    static Sprite UnitSquareSprite()
+    {
+        if (_square != null) return _square;
+        var tex = new Texture2D(2, 2);
+        tex.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
+        tex.Apply();
+        _square = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 2f); // 2px ÷ 2ppu = 1 unit
+        return _square;
+    }
+
+    static Material _markerMat;
+    static Material MarkerMaterial()
+    {
+        if (_markerMat != null) return _markerMat;
+        Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+        if (sh == null) sh = Shader.Find("Sprites/Default");
+        _markerMat = new Material(sh);
+        return _markerMat;
     }
 
     void BuildEdgeLines(List<Sample> samples)

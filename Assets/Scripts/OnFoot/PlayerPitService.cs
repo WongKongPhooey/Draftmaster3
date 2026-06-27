@@ -13,11 +13,14 @@ public class PlayerPitService : MonoBehaviour
     [Tooltip("Speed (m/s) below which the car counts as stopped for service.")]
     public float stopSpeedMps = 3f;
     public bool repairDamage = true;
+    public bool refuel = true;
 
     TireModel _tires;
     VehicleDamage _bodywork;
+    FuelTank _fuel;
     float _timer;
     bool _serviced;
+    bool _crewWorking;
     float _msgTimer;
 
     void Start() { if (track == null) track = FindFirstObjectByType<TrackBuilder>(); }
@@ -28,30 +31,50 @@ public class PlayerPitService : MonoBehaviour
         if (playerCar == null || track == null) return;
         if (_tires == null) _tires = playerCar.GetComponent<TireModel>();
         if (_bodywork == null) _bodywork = playerCar.GetComponentInChildren<VehicleDamage>();
+        if (_fuel == null) _fuel = playerCar.GetComponent<FuelTank>();
 
         bool onPit = OnPitLane(playerCar.transform.position);
         bool slow = playerCar.SpeedMps < stopSpeedMps;
         float wear = _tires != null ? 0.5f * (_tires.FrontWear + _tires.RearWear) : 0f;
-        bool needs = wear > 0.05f || (repairDamage && _bodywork != null && _bodywork.DamageLevel > 0.05f);
+        bool needs = wear > 0.05f
+                     || (repairDamage && _bodywork != null && _bodywork.DamageLevel > 0.05f)
+                     || (refuel && _fuel != null && _fuel.Fraction < 0.999f);
 
         if (onPit && slow && needs && !_serviced && RaceStart.IsGreen)
         {
+            if (!_crewWorking)
+            {
+                PitCrewRegistry.Nearest(playerCar.transform.position)?.BeginService(playerCar.transform);
+                var hist = playerCar.GetComponent<PitHistory>();
+                if (hist == null) hist = playerCar.gameObject.AddComponent<PitHistory>();
+                hist.Record(RacePositionTracker.Instance != null ? RacePositionTracker.Instance.LapOf(playerCar.transform) : 0);
+                _crewWorking = true;
+            }
             _timer += Time.deltaTime;
             if (_timer >= serviceSeconds)
             {
                 playerCar.PitResetTyres();
                 if (repairDamage && _bodywork != null) _bodywork.RepairFull();
+                if (refuel && _fuel != null) _fuel.FillFull();
                 _serviced = true;
                 _msgTimer = 3f;
+                EndCrew(playerCar.transform.position);
             }
         }
         else
         {
             _timer = 0f;
+            if (_crewWorking) EndCrew(playerCar.transform.position);
             if (!onPit) _serviced = false; // re-arm after leaving the pit
         }
 
         if (_msgTimer > 0f) _msgTimer -= Time.deltaTime;
+    }
+
+    void EndCrew(Vector3 worldPos)
+    {
+        PitCrewRegistry.Nearest(worldPos)?.EndService();
+        _crewWorking = false;
     }
 
     bool OnPitLane(Vector3 worldPos)
