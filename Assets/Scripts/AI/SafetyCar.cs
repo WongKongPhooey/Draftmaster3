@@ -16,6 +16,16 @@ public class SafetyCar : MonoBehaviour
     [Tooltip("Park this far (m) BEFORE the first pit box (the one nearest the pit entrance), so the pace car stops at the start of the lane rather than rolling down it.")]
     public float parkGapBeforeFirstBox = 4f;
 
+    [Header("Close-up")]
+    [Tooltip("When this far (m) or less before the start/finish line, drop to closeUpMph so the field bunches up into tight rows before the green.")]
+    public float closeUpDistanceM = 500f;
+    [Tooltip("Reduced pace (mph) held through the close-up zone before the start/finish line.")]
+    public float closeUpMph = 45f;
+
+    // True while the leader is in the close-up zone (slowed near the line). FormationControllers read this
+    // (via FormationDirector) to pack the field into tight two-wide rows instead of the single-file train.
+    public bool ClosingUp { get; private set; }
+
     [Header("Roof light")]
     public Color rooflightColor = new Color(1f, 0.55f, 0f, 1f);
     public float blinkInterval = 0.35f;
@@ -92,6 +102,20 @@ public class SafetyCar : MonoBehaviour
         }
         _prevDist = cur;
         _hasPrev = true;
+
+        // Close-up: within closeUpDistanceM of the start/finish line (distance 0), ease back to closeUpMph so the
+        // field concertinas up tight behind the leader. Guarded by _travelled so we don't crawl off the line if the
+        // car happens to spawn inside the zone.
+        ClosingUp = false;
+        if (lap > 0f && _travelled > closeUpDistanceM)
+        {
+            float toLine = lap - cur; // cur in [0, lap); distance forward to the next start/finish crossing
+            if (toLine <= closeUpDistanceM)
+            {
+                ClosingUp = true;
+                _spline.aiMaxSpeedMph = closeUpMph;
+            }
+        }
 
         if (_travelled >= _triggerTravel) PitIn();
     }

@@ -28,6 +28,12 @@ public class FormationController : MonoBehaviour
     [Tooltip("This car has no dynamic model (cheap kinematic AI): stay on the kinematic SplineDriver through the green flag instead of handing back to PlayerVehicleController. Set by the spawner for a kinematic field.")]
     public bool kinematic;
 
+    [Header("Close-up (rows of two)")]
+    [Tooltip("When the leader slows in the close-up zone, pack into two columns this far (m) either side of centre — half the lateral gap between the two cars in a row.")]
+    public float columnHalfOffset = 1.5f;
+    [Tooltip("Longitudinal gap (m) each row holds behind the row ahead while packed up. Small = tight rows.")]
+    public float rowGap = 6f;
+
     [Header("Corner caution")]
     [Tooltip("Distance ahead (m) scanned for a turn. Inside this, the car drops the catch-up boost and the weave so it can hold the racing line through the corner.")]
     public float cornerLookahead = 55f;
@@ -136,6 +142,7 @@ public class FormationController : MonoBehaviour
         if (settling) _pitOutTimer -= dt;
 
         float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : cruiseMph;
+        bool closingUp = FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
 
         // Corner awareness: in or approaching a turn, hold the racing line — no catch-up overspeed, no weave.
         var phase = _spline.CurrentPhase;
@@ -153,14 +160,24 @@ public class FormationController : MonoBehaviour
             // than the nearest car ahead — that's what forms the field up in qualifying order and holds the
             // player's slot open. The gap is SIGNED: if our man slips behind us (e.g. the player drops back) the
             // negative gap drops our cap so we wait for them instead of charging off to "catch" a phantom ahead.
-            var memberAhead = FormationOrder.MemberAhead(_spline.qualifyingPosition);
+            // Closing up: station behind the car one ROW ahead in the same column (two-wide) and hold a tight
+            // rowGap. Otherwise station single-file behind the car directly ahead in grid order.
+            var memberAhead = closingUp
+                ? FormationOrder.RowAhead(_spline.qualifyingPosition)
+                : FormationOrder.MemberAhead(_spline.qualifyingPosition);
+            float wantGap = closingUp ? rowGap : targetGap;
             if (memberAhead != null)
             {
                 float len = _spline.TrackLength;
                 float gap = memberAhead.TrackDistance - _spline.DistanceOnTrack;
                 if (gap > len * 0.5f) gap -= len;
                 else if (gap < -len * 0.5f) gap += len;
-                cap = cruise + gapGainMphPerMetre * (gap - targetGap);
+                // Match the car ahead's ACTUAL speed, trimmed by gap error — a proper car-following model. Basing
+                // this on the fixed `cruise` instead let the leader keep charging at 60 when the safety car had
+                // slowed to closeUpMph for the bunch-up, so it settled barely a car length back (rear-ending it)
+                // and the rows piled up too tight to form cleanly. Following the leader's pace holds the real gap.
+                float aheadMph = memberAhead.SpeedMph;
+                cap = aheadMph + gapGainMphPerMetre * (gap - wantGap);
             }
             else
                 cap = cruise + catchUpBonusMph; // nobody ahead in the order yet — close the train up (straights only)
@@ -222,8 +239,8 @@ public class FormationController : MonoBehaviour
         _spline.paceMultiplier = formationPace;
         _spline.aiSpeedBoostMph = 0f;
 
-        // --- Lateral: avoidance wins; otherwise a slow weave on straights that ramps in gently.
-        if (settling || corner) _weaveEnv = 0f;
+        // --- Lateral: avoidance wins; then two-wide columns while closing up; otherwise a slow weave on straights.
+        if (settling || corner || closingUp) _weaveEnv = 0f;
         else _weaveEnv = Mathf.MoveTowards(_weaveEnv, 1f, dt / Mathf.Max(weaveRampSeconds, 0.01f));
 
         float lateralTarget;
@@ -232,6 +249,13 @@ public class FormationController : MonoBehaviour
         {
             lateralTarget = avoidTarget;
             slew = avoidSlewPerSec;
+        }
+        else if (closingUp)
+        {
+            // Pack into two columns by grid parity: even slots left, odd slots right. Hold the line through turns.
+            int parity = ((_spline.qualifyingPosition % 2) + 2) % 2;
+            lateralTarget = corner ? 0f : (parity == 0 ? -columnHalfOffset : columnHalfOffset);
+            slew = weaveSlewPerSec;
         }
         else
         {

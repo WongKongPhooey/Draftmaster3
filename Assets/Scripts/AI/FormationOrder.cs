@@ -48,4 +48,27 @@ public static class FormationOrder
         }
         return best;
     }
+
+    static int Parity(int g) => ((g % 2) + 2) % 2;
+
+    // The member one ROW ahead of `grid` in a two-wide formation: the nearest member ahead in the SAME column
+    // (same grid parity). Even-parity cars chain down to the safety car (its sentinel grid is even); odd-parity
+    // front-row car has no same-column car ahead, so it also falls back to the safety car. Used to pack the
+    // field into tight rows of two for the close-up before the green.
+    public static IFormationMember RowAhead(int grid)
+    {
+        int parity = Parity(grid);
+        IFormationMember best = null;
+        int bestGrid = int.MinValue;
+        IFormationMember safety = null;
+        for (int i = 0; i < _members.Count; i++)
+        {
+            var m = _members[i];
+            if (m == null || !m.FormationActive) continue;
+            int g = m.GridPosition;
+            if (g == SafetyCarGrid) safety = m;
+            if (g < grid && Parity(g) == parity && g > bestGrid) { bestGrid = g; best = m; }
+        }
+        return best ?? safety;
+    }
 }

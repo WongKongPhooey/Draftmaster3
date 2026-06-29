@@ -46,6 +46,10 @@ public class FormationDirector : MonoBehaviour
     SafetyCar _safetyCar;
     float _greenMsgTimer;
 
+    // True while the leader has slowed in the close-up zone before the line. FormationControllers read this to
+    // pack the field into tight two-wide rows for the final run to the green.
+    public bool FieldClosingUp => _safetyCar != null && _safetyCar.ClosingUp;
+
     void Awake()
     {
         Instance = this;

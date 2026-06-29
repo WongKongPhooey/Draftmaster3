@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 // Global race-procedure phase gate. One source of truth that the formation-lap systems read so
 // they don't need cross-references to each other.
@@ -22,11 +23,17 @@ public static class RaceStart
         {
             if (_current == value) return;
             _current = value;
+            if (value == Phase.Green) GreenTime = Time.time;
             PhaseChanged?.Invoke(value);
         }
     }
 
     public static event Action<Phase> PhaseChanged;
+
+    // Time.time at which the race last went green (-1 before then). Lets the AI run a brief rolling-start launch
+    // window where follow-distance caps relax so the whole field accelerates together instead of accordioning out.
+    public static float GreenTime { get; private set; } = -1f;
+    public static float SecondsSinceGreen => (_current == Phase.Green && GreenTime >= 0f) ? Time.time - GreenTime : -1f;
 
     public static bool IsGreen => _current == Phase.Green;
     public static bool IsFormation => _current == Phase.Formation;
@@ -34,5 +41,5 @@ public static class RaceStart
 
     // A fresh scene load shares this static with the previous one. Reset so a second race doesn't
     // inherit Green from the last. FormationDirector.Awake sets the real starting phase.
-    public static void ResetToDefault() => Current = Phase.Green;
+    public static void ResetToDefault() { GreenTime = -1f; Current = Phase.Green; }
 }

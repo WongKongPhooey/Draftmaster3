@@ -39,6 +39,10 @@ public class AIRacingBehaviour : MonoBehaviour
     [Tooltip("Gap (m) at which we back off BELOW the car ahead's speed so we don't tap it.")]
     public float hardFollowGap = 6f;
 
+    [Header("Rolling Start")]
+    [Tooltip("Seconds after the green flag during which the follow-distance speed cap is eased in, so the whole field launches together (a rolling start) instead of accordioning out from the leader. The hard nose-to-tail cap still applies, so cars can't pile in. 0 = off (cars hold full racing gaps from the instant of green).")]
+    public float launchWindowSeconds = 3f;
+
     [Header("Manoeuvre Strength")]
     [Tooltip("Lateral offset (m) committed during an overtake.")]
     public float overtakeLineOffset = 3f;
@@ -105,6 +109,14 @@ public class AIRacingBehaviour : MonoBehaviour
         if (!RaceStart.IsGreen) return;
 
         float dt = Time.fixedDeltaTime;
+
+        // Rolling start: for launchWindowSeconds after green, ease the follow-distance cap in from 0→1 so the
+        // field accelerates together off the line (like the released player) instead of the cap pinning each
+        // follower to the car ahead and the green crawling back through the pack from the leader. 1 = full cap.
+        float sinceGreen = RaceStart.SecondsSinceGreen;
+        float launchCapBlend = (launchWindowSeconds > 0f && sinceGreen >= 0f && sinceGreen < launchWindowSeconds)
+            ? Mathf.Clamp01(sinceGreen / launchWindowSeconds) : 1f;
+
         float desiredTactical = 0f;
         float speedCap = float.MaxValue;
         float speedBoost = 0f;
@@ -151,7 +163,10 @@ public class AIRacingBehaviour : MonoBehaviour
             {
                 // Ease from the leader's speed (at reqGap) down to a touch under it (at hardFollowGap).
                 float close01 = Mathf.InverseLerp(reqGap, hardFollowGap, aheadGap);
-                speedCap = Mathf.Min(speedCap, Mathf.Lerp(aheadSpeed, Mathf.Max(0f, aheadSpeed - 6f), close01));
+                float followCap = Mathf.Lerp(aheadSpeed, Mathf.Max(0f, aheadSpeed - 6f), close01);
+                // Rolling start: blend from our own race pace toward the follow cap over the launch window.
+                followCap = Mathf.Lerp(_spline.DesiredMph, followCap, launchCapBlend);
+                speedCap = Mathf.Min(speedCap, followCap);
             }
             if (aheadGap < hardFollowGap) speedCap = Mathf.Min(speedCap, aheadSpeed * 0.6f);
 
@@ -191,7 +206,9 @@ public class AIRacingBehaviour : MonoBehaviour
             if (pg < pReqGap)
             {
                 float close01 = Mathf.InverseLerp(pReqGap, hardFollowGap, pg);
-                speedCap = Mathf.Min(speedCap, Mathf.Lerp(pSpeedMph, Mathf.Max(0f, pSpeedMph - 6f), close01));
+                float pCap = Mathf.Lerp(pSpeedMph, Mathf.Max(0f, pSpeedMph - 6f), close01);
+                pCap = Mathf.Lerp(_spline.DesiredMph, pCap, launchCapBlend); // rolling-start ease-in
+                speedCap = Mathf.Min(speedCap, pCap);
             }
             if (pg < hardFollowGap) speedCap = Mathf.Min(speedCap, pSpeedMph * 0.6f);
 

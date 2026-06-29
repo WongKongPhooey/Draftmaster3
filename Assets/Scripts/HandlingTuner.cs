@@ -36,9 +36,25 @@ public class HandlingTuner : MonoBehaviour
         new Knob("coastDecel",           0f,    6f),
     };
 
+    // Knobs on the shared VehicleInfo asset. maxLateralG is the ABSOLUTE-grip lever (the one the PVC sliders
+    // can't reach — they only shift balance). Editing these changes the asset, so EVERY car using it (player +
+    // AI) gets the change — exactly what you want when balancing "the car". NOTE: asset edits made in play mode
+    // PERSIST after you exit play mode (Unity ScriptableObject behaviour). Hit Reset before stopping to revert.
+    static readonly Knob[] VehicleKnobs =
+    {
+        new Knob("maxLateralG",          0.8f,  2.5f),
+        new Knob("bankingMphPerDegree",  0f,    5f),
+        new Knob("maxSteeringAngle",     10f,   40f),
+        new Knob("steeringRate",         60f,   600f),
+        new Knob("tireMinGrip",          0.5f,  1f),
+    };
+
     PlayerVehicleController _pvc;
     readonly Dictionary<string, FieldInfo> _fields = new();
     readonly Dictionary<string, float> _defaults = new();
+    readonly Dictionary<string, FieldInfo> _viFields = new();
+    readonly Dictionary<string, float> _viDefaults = new();
+    readonly Dictionary<string, float> _globalDefaults = new();
     bool _show;
     float _findTimer;
     Rect _win = new Rect(16, 80, 380, 0);
@@ -63,6 +79,12 @@ public class HandlingTuner : MonoBehaviour
         {
             var fi = t.GetField(k.field, BindingFlags.Public | BindingFlags.Instance);
             if (fi != null) _fields[k.field] = fi;
+        }
+        var vt = typeof(VehicleInfo);
+        foreach (var k in VehicleKnobs)
+        {
+            var fi = vt.GetField(k.field, BindingFlags.Public | BindingFlags.Instance);
+            if (fi != null) _viFields[k.field] = fi;
         }
     }
 
@@ -92,6 +114,10 @@ public class HandlingTuner : MonoBehaviour
     {
         if (_pvc == null || _defaults.Count > 0) return;
         foreach (var kv in _fields) _defaults[kv.Key] = (float)kv.Value.GetValue(_pvc);
+        if (_pvc.vehicleInfo != null)
+            foreach (var kv in _viFields) _viDefaults[kv.Key] = (float)kv.Value.GetValue(_pvc.vehicleInfo);
+        _globalDefaults["GripMultiplier"] = TrackConditions.GripMultiplier;
+        _globalDefaults["PowerMultiplier"] = TrackConditions.PowerMultiplier;
     }
 
     void OnGUI()
@@ -131,6 +157,26 @@ public class HandlingTuner : MonoBehaviour
             if (!Mathf.Approximately(nv, val)) fi.SetValue(_pvc, nv);
         }
 
+        // --- Vehicle asset: absolute grip + steering geometry (shared by every car on this asset). ---
+        if (_pvc.vehicleInfo != null && _viFields.Count > 0)
+        {
+            GUILayout.Space(8);
+            GUILayout.Label("Vehicle  (shared asset — ALL cars)", _head);
+            foreach (var k in VehicleKnobs)
+            {
+                if (!_viFields.TryGetValue(k.field, out var fi)) continue;
+                float val = (float)fi.GetValue(_pvc.vehicleInfo);
+                float nv = LabeledSlider(k.field, val, k.min, k.max);
+                if (!Mathf.Approximately(nv, val)) fi.SetValue(_pvc.vehicleInfo, nv);
+            }
+        }
+
+        // --- Global track conditions: live grip/power multipliers layered on every car. ---
+        GUILayout.Space(8);
+        GUILayout.Label("Global  (track conditions — ALL cars)", _head);
+        TrackConditions.GripMultiplier  = LabeledSlider("GripMultiplier",  TrackConditions.GripMultiplier,  0.5f, 1.5f);
+        TrackConditions.PowerMultiplier = LabeledSlider("PowerMultiplier", TrackConditions.PowerMultiplier, 0.5f, 1.5f);
+
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Reset")) ResetDefaults();
@@ -140,10 +186,25 @@ public class HandlingTuner : MonoBehaviour
         GUI.DragWindow(new Rect(0, 0, 10000, 22));
     }
 
+    // A label + value readout + slider row. Returns the (possibly changed) value. Used for the VehicleInfo
+    // and global rows where the value lives off the PlayerVehicleController.
+    float LabeledSlider(string name, float val, float min, float max)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(name, _label, GUILayout.Width(165));
+        GUILayout.Label(val.ToString("0.###"), _label, GUILayout.Width(50));
+        GUILayout.EndHorizontal();
+        return GUILayout.HorizontalSlider(val, min, max);
+    }
+
     void ResetDefaults()
     {
         if (_pvc == null) return;
         foreach (var kv in _defaults) if (_fields.TryGetValue(kv.Key, out var fi)) fi.SetValue(_pvc, kv.Value);
+        if (_pvc.vehicleInfo != null)
+            foreach (var kv in _viDefaults) if (_viFields.TryGetValue(kv.Key, out var fi)) fi.SetValue(_pvc.vehicleInfo, kv.Value);
+        if (_globalDefaults.TryGetValue("GripMultiplier", out var g)) TrackConditions.GripMultiplier = g;
+        if (_globalDefaults.TryGetValue("PowerMultiplier", out var p)) TrackConditions.PowerMultiplier = p;
     }
 
     void LogValues()
@@ -153,6 +214,12 @@ public class HandlingTuner : MonoBehaviour
         foreach (var k in Knobs)
             if (_fields.TryGetValue(k.field, out var fi))
                 sb.AppendLine($"  {k.field} = {(float)fi.GetValue(_pvc):0.####}");
+        if (_pvc.vehicleInfo != null)
+            foreach (var k in VehicleKnobs)
+                if (_viFields.TryGetValue(k.field, out var fi))
+                    sb.AppendLine($"  [VehicleInfo] {k.field} = {(float)fi.GetValue(_pvc.vehicleInfo):0.####}");
+        sb.AppendLine($"  [Global] GripMultiplier = {TrackConditions.GripMultiplier:0.####}");
+        sb.AppendLine($"  [Global] PowerMultiplier = {TrackConditions.PowerMultiplier:0.####}");
         Debug.Log(sb.ToString());
     }
 

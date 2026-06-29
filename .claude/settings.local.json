@@ -53,10 +53,28 @@
       "Bash(claude-mem *)",
       "Bash([ -f \"$LOG\" ])",
       "Read(//c/Users/Josh/AppData/Local/Unity/Editor/**)",
-      "Read(//c/Users/Josh/AppData/Local/Unity/Editor//**)"
+      "Read(//c/Users/Josh/AppData/Local/Unity/Editor//**)",
+      "Bash(find Assets -iname \"*.asset\" -path \"*ehicle*\")",
+      "Bash(grep -rl \"maxLateralG\" Assets --include=*.asset)",
+      "WebFetch(domain:pypi.org)",
+      "Bash(py --version)",
+      "Bash(py -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(ollama --version)",
+      "Bash(py -m pip install mcp-ollama-python)",
+      "Bash(ls -la \"/c/Python310/Scripts/\" 2>&1 | grep -i pygm; rm -f \"/c/Python310/Scripts/pygmentize.exe\" \"/c/Python310/Scripts/pygmentize.exe.deleteme\" 2>&1; echo done)",
+      "Read(//c/Python310/Scripts//**)",
+      "Bash(mkdir -p ~/.mcp-ollama-python)",
+      "Bash(py -m venv ~/.mcp-ollama-python/venv)",
+      "Bash('C:\\\\Users\\\\Josh/.mcp-ollama-python/venv/Scripts/python.exe' -m pip install --upgrade pip -q)",
+      "Bash('C:\\\\Users\\\\Josh/.mcp-ollama-python/venv/Scripts/python.exe' -m pip install mcp-ollama-python)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(node -e ' *)",
+      "mcp__unity__read_console",
+      "mcp__unity__refresh_unity"
     ],
     "additionalDirectories": [
-      "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots"
+      "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots",
+      "C:\\Python310\\Scripts"
     ]
   }
 }

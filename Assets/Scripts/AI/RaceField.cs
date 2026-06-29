@@ -28,6 +28,7 @@ public static class RaceField
         {
             var d = _drivers[i];
             if (d == self || d == null) continue;
+            if (d.IsOnPit) continue; // on the pit lane: DistanceOnTrack is a pit-spline value, not a racing-line position
             if (System.Math.Abs(d.TrackLength - trackLen) > 0.5f) continue;
             float g = d.DistanceOnTrack - selfDist;
             if (g <= 0f) g += trackLen;
@@ -47,6 +48,7 @@ public static class RaceField
         {
             var d = _drivers[i];
             if (d == self || d == null) continue;
+            if (d.IsOnPit) continue; // on the pit lane: DistanceOnTrack is a pit-spline value, not a racing-line position
             if (System.Math.Abs(d.TrackLength - trackLen) > 0.5f) continue;
             float g = selfDist - d.DistanceOnTrack;
             if (g <= 0f) g += trackLen;

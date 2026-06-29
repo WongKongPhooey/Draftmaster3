@@ -472,7 +472,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         else if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
         {
             // v = sqrt(r * g * mu_effective). mu_effective = base mu × track conditions × tire wear grip.
-            float gripMul = TrackConditions.GripMultiplier;
+            float gripMul = TrackConditions.Effective;
             var tireModel = GetComponent<TireModel>();
             if (tireModel != null) gripMul *= tireModel.OverallGrip;
             else { var tire = GetComponent<TireState>(); if (tire != null) gripMul *= tire.GripMultiplier; }

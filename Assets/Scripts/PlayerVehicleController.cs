@@ -430,7 +430,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float axCmd = accel + reverseDrive - decel; // commanded longitudinal accel (m/s²)
 
         // Available grip per axle: μ (proxied by maxLateralG) × track × tyre (wear+temperature), biased for balance.
-        float trackGrip = TrackConditions.GripMultiplier;
+        float trackGrip = TrackConditions.Effective;
         float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
         float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
         float dmgGrip = damageImpairsHandling ? 1f - dmg * damageGripLoss : 1f;
