@@ -22,10 +22,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _collisionLongitudinal = Mathf.Clamp(_collisionLongitudinal + Vector2.Dot(worldMtv, _lastWorldForward), -8f, 8f);
         _contactHold = true; // hold the offsets through the next Place (skip one decay step) so contact separates
 
-        // Scrub speed only by how head-on the hit is. Glancing scrapes barely slow; square-on loses more.
+        // Scrub speed only by how head-on the hit is. Glancing scrapes barely slow; square-on loses more. Kept GENTLE
+        // (contactSpeedScrub) — a hard scrub on a nose-to-tail tap in a tight pack made the tapped car lurch slow,
+        // the car behind brake to match, and the wave amplified into a pile-up. A soft touch barely bleeds speed.
         Vector2 n = worldMtv.sqrMagnitude > 1e-6f ? worldMtv.normalized : Vector2.zero;
         float headOn = Mathf.Abs(Vector2.Dot(_lastWorldForward, n)); // 0 = parallel glance, 1 = square
-        _currentMph *= Mathf.Clamp01(1f - severity * headOn * 0.5f);
+        _currentMph *= Mathf.Clamp01(1f - severity * headOn * contactSpeedScrub);
     }
 
     // Spline cars are glued to the path, so momentum transfer doesn't apply — just separate and scrub speed
@@ -78,8 +80,12 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Range(0.5f, 1f)] public float pitExitThreshold = 0.98f;
     [Tooltip("When on the pit lane and past pitExitThreshold, hop back onto the main spline. Disable for a safety car that drives INTO the pit to park.")]
     public bool autoPitExit = true;
+    [Tooltip("On an AI takeover (EngageFromCurrentPose), the car engages on the PIT lane instead of the racing line if it's within this many metres of the pit centerline. Stops a handover in the pit driving through the pit wall onto the track.")]
+    public float pitEngageLateralMax = 6f;
     [Tooltip("After rejoining the main spline at pit exit, how fast (m/s) the car eases from its pit-exit line onto the racing line. Stops the merge being an instant sideways pop.")]
     public float pitMergeEaseSpeed = 2.5f;
+    [Tooltip("How fast (deg/sec) the car's heading eases from its pit-exit facing onto the main-spline tangent. The pit exit isn't geometrically locked to the main spline, so without this the heading SNAPS on rejoin (a visible rotation pop). Lower = longer, smoother turn-in.")]
+    public float pitMergeHeadingEaseDegPerSec = 25f;
 
     [Header("Formation Start")]
     [Tooltip("Hold this car perfectly still (parked in its box / at pit exit) while RaceStart.Current is PreGrid. Released automatically once the phase advances to Formation.")]
@@ -94,6 +100,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float PitLength => _pitLength;
 
     [Header("Cornering Feel")]
+    [Tooltip("Generous temporal smoothing (0..0.97) applied to the racing-line lateral AND the turn-in yaw, so the car flows through corner entry/exit instead of the rear axle snapping at segment boundaries. Higher = smoother but slightly rounds/lags the authored line. Per-FixedUpdate Lerp weight on the OLD value.")]
+    [Range(0f, 0.97f)] public float cornerSmoothing = 0.88f;
     [Tooltip("Lean angle (deg) per metre/sec of lateral motion. Positive offset rate = moving right = leans right. Negate to flip.")]
     public float leanIntoTurns = 4f;
     [Tooltip("Smoothing for the lean angle. Lower = snappier, higher = floatier. 0 disables smoothing.")]
@@ -102,6 +110,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Hard cap on the lean angle (deg). Without it, a fast lateral move (chicane, weave, line change) blows the lean up to 20°+ and the car renders crabbed — pointing diagonally instead of along its direction of travel. Keep small (a few degrees) so cornering still reads as a subtle lean.")]
     [Range(0f, 20f)]
     public float maxLeanDeg = 5f;
+    [Tooltip("Fraction of speed bled off on a perfectly square contact (scaled by severity and how head-on the hit is). Keep small for the parade — a hard scrub on a nose-to-tail tap makes the field concertina into a pile-up.")]
+    [Range(0f, 1f)] public float contactSpeedScrub = 0.12f;
     const float rearAxleToCenter = -2.4f;
 
     public float CurrentMph => _currentMph;
@@ -137,6 +147,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float aiMaxSpeedMph = float.MaxValue;
     [Tooltip("Additive speed bonus (mph). Used for drafting/slipstream.")]
     public float aiSpeedBoostMph = 0f;
+    [Tooltip("When > 0, GUARANTEES at least this braking rate (mph/sec) regardless of the (possibly weak) decel curve. Set per-frame by the formation/avoidance AI so an emergency slow can actually land. 0 = use the curve.")]
+    [HideInInspector] public float aiMinDecelMphPerSec = 0f;
     [Tooltip("Default deceleration used when the vehicle's decel curve is unauthored, in m/s².")]
     public float fallbackDecel = 10f;
     [Tooltip("Default acceleration used when the vehicle's accel curve is unauthored, in m/s².")]
@@ -166,7 +178,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     bool _hasPrevLateral;
     float _currentLean;
     float _currentMph;
+    float _lineLatSmoothed;   // low-passed racing-line lateral, so the rear axle doesn't snap at segment boundaries
+    bool _hasLineSmoothed;    // false until the first smoothed sample / after a lane change, so it seeds from raw
+    float _pathYawSmoothed;   // low-passed turn-in yaw (deg), so the body doesn't snap pointing onto its path
     float _mergeLatBias; // lateral carried across the pit→main merge, eased out so the rejoin isn't a sideways pop
+    float _mergeHeadingBias; // heading (deg) carried across the merge, eased out so the rejoin isn't a rotation snap
 
     EngineGearbox _gearbox; // optional: shapes acceleration (gear torque + shift drive-cut) and feeds engine audio
 
@@ -193,8 +209,23 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         if (_mainSamples == null || _mainSamples.Count < 2) Rebuild();
         externalMotionController = false; // kinematic: this component owns the transform
-        usePitLane = false;
-        _onPit = false;
+
+        // Latch onto whichever lane the car is physically ON. Taking over a car that's in the pit lane and forcing
+        // it onto the main racing line would drive it straight through the pit wall (the crash). Use an ABSOLUTE
+        // test — within pitEngageLateralMax of the pit centerline — rather than "nearer spline wins": the pit lane
+        // runs alongside the main straight, so the main line just across the wall is often geometrically closer than
+        // the pit centerline, which made the comparison pick the track and crash. Same test as PlayerPitService.
+        // RejoinSplineContinuous then continues along the chosen lane; the normal auto-exit carries a pit-lane car
+        // back onto the track at the pit-exit node.
+        bool onPit = false;
+        if (track != null && _pitSamples != null && _pitSamples.Count >= 2 && _pitLength > 0f)
+        {
+            Vector2 local = track.transform.InverseTransformPoint(transform.position);
+            Vector2 pitPos = track.SamplePitAt(track.NearestPitDistance(transform.position), _pitSamples).position;
+            onPit = Vector2.Distance(local, pitPos) < pitEngageLateralMax;
+        }
+        usePitLane = onPit;
+        _onPit = onPit;
         RejoinSplineContinuous(transform.position);
         float cap = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
         _currentMph = Mathf.Clamp(startMph, 0f, cap);
@@ -686,8 +717,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
         else if (_currentMph > targetMph)
         {
-            float decel = SampleDecel(_currentMph);
-            _currentMph -= decel * MpsToMph * Time.fixedDeltaTime;
+            float decelMphPerSec = SampleDecel(_currentMph) * MpsToMph;
+            // Avoidance can demand a firmer brake than the authored decel curve (which may be too weak to stop a
+            // closing car before contact). aiMinDecelMphPerSec is the floor on braking authority for that frame.
+            if (aiMinDecelMphPerSec > 0f) decelMphPerSec = Mathf.Max(decelMphPerSec, aiMinDecelMphPerSec);
+            _currentMph -= decelMphPerSec * Time.fixedDeltaTime;
             if (_currentMph < targetMph) _currentMph = targetMph;
         }
         _currentMph = Mathf.Clamp(_currentMph, 0f, topMph);
@@ -772,22 +806,47 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (track == null || _mainSamples == null || _mainSamples.Count < 2) { _distance = 0f; return; }
         Vector2 localNow = track.transform.InverseTransformPoint(worldNow);
 
+        // worldNow is the car CENTRE, but _distance indexes the REAR-AXLE sample point — Place() builds the centre as
+        // rearAxle + forward*rearAxleToCenter. Snapping _distance to the centre's nearest point makes the very next
+        // Place() shove the centre back by |rearAxleToCenter| (~2.4m): the small backward jump seen on the pit-exit
+        // merge. Resolve the rear-axle point from the arriving heading and snap _distance to THAT instead.
+        Vector2 rearAxleLocal = localNow;
+        if (_hasPrevLateral)
+        {
+            float hr = CommandedHeadingDeg * Mathf.Deg2Rad;
+            rearAxleLocal = localNow - new Vector2(Mathf.Cos(hr), Mathf.Sin(hr)) * rearAxleToCenter;
+        }
+        Vector3 rearAxleWorld = track.transform.TransformPoint(new Vector3(rearAxleLocal.x, rearAxleLocal.y, 0f));
+
         TrackBuilder.Sample s;
         if (_onPit && _pitSamples != null && _pitSamples.Count >= 2)
         {
-            _distance = track.NearestPitDistance(worldNow);
+            _distance = track.NearestPitDistance(rearAxleWorld);
             s = track.SamplePitAt(_distance, _pitSamples);
         }
         else
         {
-            _distance = track.NearestCenterlineDistance(worldNow);
+            _distance = track.NearestCenterlineDistance(rearAxleWorld);
             s = track.SampleAt(_distance, _mainSamples);
         }
 
-        float actualLat = Vector2.Dot(localNow - s.position, s.normal);
+        float actualLat = Vector2.Dot(rearAxleLocal - s.position, s.normal);
         float baseLat = lateralOffset + tacticalLateralOffset + (_onPit ? 0f : LateralAt(_distance));
         _mergeLatBias = Mathf.Clamp(actualLat - baseLat, -20f, 20f);
+
+        // Heading bias: the new lane's tangent vs the facing the car arrives with. CommandedHeadingDeg is in the
+        // same track-local frame as the sample tangent (both atan2 of a local-space direction), so the delta is
+        // the kink at the join. Eased to 0 in Place() so the car turns smoothly onto the new tangent instead of
+        // snapping. Only when we have a valid arriving pose (_hasPrevLateral); a cold engage has no facing to keep.
+        if (_hasPrevLateral)
+        {
+            float newHeadingDeg = Mathf.Atan2(s.tangent.y, s.tangent.x) * Mathf.Rad2Deg;
+            _mergeHeadingBias = Mathf.Clamp(Mathf.DeltaAngle(newHeadingDeg, CommandedHeadingDeg), -90f, 90f);
+        }
+        else _mergeHeadingBias = 0f;
+
         _hasPrevLateral = false;
+        _hasLineSmoothed = false; // reseed the line low-pass from the new lane's raw offset (no stale drag)
         _currentLean = 0f;
     }
 
@@ -828,8 +887,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _collisionLateral = Mathf.MoveTowards(_collisionLateral, 0f, 6f * Time.fixedDeltaTime);
             _collisionLongitudinal = Mathf.MoveTowards(_collisionLongitudinal, 0f, 6f * Time.fixedDeltaTime);
         }
-        // Ease the pit-merge lateral bias out so the car drifts from its pit-exit line onto the racing line.
+        // Ease the pit-merge lateral + heading biases out so the car drifts from its pit-exit line/facing onto the
+        // racing line and tangent — a continuous turn-in instead of a sideways pop or a rotation snap.
         _mergeLatBias = Mathf.MoveTowards(_mergeLatBias, 0f, pitMergeEaseSpeed * Time.fixedDeltaTime);
+        _mergeHeadingBias = Mathf.MoveTowards(_mergeHeadingBias, 0f, pitMergeHeadingEaseDegPerSec * Time.fixedDeltaTime);
 
         float placeDistance = _distance + _collisionLongitudinal;
 
@@ -846,7 +907,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             length = _mainLength;
         }
 
-        float lineLateral = !_onPit ? LateralAt(placeDistance) : 0f;
+        // Racing-line lateral, temporally smoothed. The authored line steps between entry/apex/exit anchors, so the
+        // raw value kinks at segment boundaries — the rear axle (built straight off this offset) snaps into and out
+        // of turns. A generous low-pass rounds those kinks so the car flows through the corner. Reset on a lane
+        // change (RejoinSplineContinuous clears _hasLineSmoothed) so it doesn't drag a stale value across the merge.
+        float rawLineLateral = !_onPit ? LateralAt(placeDistance) : 0f;
+        _lineLatSmoothed = _hasLineSmoothed ? Mathf.Lerp(rawLineLateral, _lineLatSmoothed, cornerSmoothing) : rawLineLateral;
+        _hasLineSmoothed = true;
+        float lineLateral = _lineLatSmoothed;
         float baseLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral;
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
         {
@@ -868,12 +936,25 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         Vector2 rearAxle = sample.position + right * totalLateral;
         float angleDeg = Mathf.Atan2(sample.tangent.y, sample.tangent.x) * Mathf.Rad2Deg;
         float lateralRate = (_hasPrevLateral && Time.fixedDeltaTime > 0f) ? (totalLateral - _prevLateral) / Time.fixedDeltaTime : 0f;
+        // Geometric turn-in: on an offset racing line the car's true direction of travel is the centreline tangent
+        // rotated by atan2(lateral velocity, forward velocity). Through a chicane the offset swings hard, so this
+        // yaw is large and MUST come from the real kinematics. The old code faked turn-in with `lean` alone, which
+        // is clamped to a few degrees (maxLeanDeg) — so the car under-rotated and rendered crabbed (pointing down
+        // the centreline, not down its actual path). Speed-normalised so the angle is right at any pace; the floor
+        // on forward speed guards against an atan2 blow-up at a standstill (where lateralRate is ~0 anyway).
+        float forwardMps = Mathf.Max(Mathf.Abs(speed), 0.5f);
+        float pathYawRaw = Mathf.Atan2(-lateralRate, forwardMps) * Mathf.Rad2Deg;
+        // Smooth the turn-in yaw too (same generous filter), so the body doesn't snap as the car points onto its
+        // path at corner entry/exit. Cold first frame takes the raw angle so there's no start-up swing.
+        _pathYawSmoothed = _hasPrevLateral ? Mathf.Lerp(pathYawRaw, _pathYawSmoothed, cornerSmoothing) : pathYawRaw;
+        // `lean` is now only a SMALL cosmetic bank layered on top of the correct heading (subtle lean into the
+        // turn), clamped tight — the big turn-in comes from the smoothed path yaw above, not from this.
         float leanTarget = -lateralRate * leanIntoTurns;
         _currentLean = Mathf.Lerp(leanTarget, _currentLean, leanSmoothing);
-        _currentLean = Mathf.Clamp(_currentLean, -maxLeanDeg, maxLeanDeg); // never let lean crab the car off its travel direction
+        _currentLean = Mathf.Clamp(_currentLean, -maxLeanDeg, maxLeanDeg);
         _prevLateral = totalLateral;
         _hasPrevLateral = true;
-        float carHeadingDeg = angleDeg + _currentLean;
+        float carHeadingDeg = angleDeg + _pathYawSmoothed + _currentLean + _mergeHeadingBias;
         float carHeadingRad = carHeadingDeg * Mathf.Deg2Rad;
         Vector2 carForward = new Vector2(Mathf.Cos(carHeadingRad), Mathf.Sin(carHeadingRad));
         Vector2 finalPos = rearAxle + carForward * rearAxleToCenter;

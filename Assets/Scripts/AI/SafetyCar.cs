@@ -16,14 +16,14 @@ public class SafetyCar : MonoBehaviour
     [Tooltip("Park this far (m) BEFORE the first pit box (the one nearest the pit entrance), so the pace car stops at the start of the lane rather than rolling down it.")]
     public float parkGapBeforeFirstBox = 4f;
 
-    [Header("Close-up")]
-    [Tooltip("When this far (m) or less before the start/finish line, drop to closeUpMph so the field bunches up into tight rows before the green.")]
+    [Header("Close-up / peel-away")]
+    [Tooltip("When this far (m) or less before the start/finish line, the field bunches up into tight rows AND the pace car begins peeling away (true to life).")]
     public float closeUpDistanceM = 500f;
-    [Tooltip("Reduced pace (mph) held through the close-up zone before the start/finish line.")]
-    public float closeUpMph = 45f;
+    [Tooltip("Pace (mph) the pace car accelerates to through the close-up zone, pulling AWAY from the leader so it opens a clear gap and reaches the pit lane before the green. Must exceed cruiseMph or the field rear-ends it.")]
+    public float peelAwayMph = 95f;
 
-    // True while the leader is in the close-up zone (slowed near the line). FormationControllers read this
-    // (via FormationDirector) to pack the field into tight two-wide rows instead of the single-file train.
+    // True while the pace car is in the close-up zone near the line: the field packs into tight two-wide rows
+    // (read by FormationControllers via FormationDirector) while the pace car simultaneously peels away to the pit.
     public bool ClosingUp { get; private set; }
 
     [Header("Roof light")]
@@ -103,9 +103,11 @@ public class SafetyCar : MonoBehaviour
         _prevDist = cur;
         _hasPrev = true;
 
-        // Close-up: within closeUpDistanceM of the start/finish line (distance 0), ease back to closeUpMph so the
-        // field concertinas up tight behind the leader. Guarded by _travelled so we don't crawl off the line if the
-        // car happens to spawn inside the zone.
+        // Close-up: within closeUpDistanceM of the start/finish line (distance 0), the field concertinas up tight
+        // (ClosingUp tells the FormationControllers to pack into rows and hold pace) while the pace car ACCELERATES
+        // to peelAwayMph and dives for the pit — opening a clear gap so it's off the racing surface before the green.
+        // Slowing here (the old behaviour) just let the bunched field pile onto it. Guarded by _travelled so the car
+        // doesn't bolt off the line if it happens to spawn inside the zone.
         ClosingUp = false;
         if (lap > 0f && _travelled > closeUpDistanceM)
         {
@@ -113,7 +115,7 @@ public class SafetyCar : MonoBehaviour
             if (toLine <= closeUpDistanceM)
             {
                 ClosingUp = true;
-                _spline.aiMaxSpeedMph = closeUpMph;
+                _spline.aiMaxSpeedMph = Mathf.Max(peelAwayMph, cruiseMph);
             }
         }
 
@@ -123,6 +125,7 @@ public class SafetyCar : MonoBehaviour
     void PitIn()
     {
         _pitting = true;
+        ClosingUp = false; // pace car is leaving the surface; the field launches at green, not row-packs any more
         _despawnTimer = despawnAfterPitSeconds;
 
         // Park just before the first box at the pit ENTRANCE (PitLane.LastBox = highest index = nearest the start
