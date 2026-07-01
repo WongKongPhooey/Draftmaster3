@@ -75,7 +75,11 @@ public class PaddockSpawner : MonoBehaviour
         var root = new GameObject("Paddock").transform;
         root.SetParent(transform, false);
 
-        BuildSurface(root, center, along, outward, halfLen, halfDepth);
+        // The tarmac surface is baked into the scene in the editor (Tools/Draftmaster/Bake Paddock
+        // Surface) — nothing is generated at play time. Only the NPCs are runtime-spawned.
+        if (transform.Find("PaddockSurface") == null)
+            Debug.LogWarning("PaddockSpawner: no baked PaddockSurface in the scene — run Tools/Draftmaster/Bake Paddock Surface.", this);
+
         SpawnNpcs(root, center, along, outward, halfLen, halfDepth);
     }
 
@@ -144,7 +148,7 @@ public class PaddockSpawner : MonoBehaviour
         return Mathf.Sqrt(best);
     }
 
-    void BuildSurface(Transform root, Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
+    GameObject BuildSurface(Transform root, Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
     {
         var go = new GameObject("PaddockSurface");
         go.transform.SetParent(root, false);
@@ -173,7 +177,43 @@ public class PaddockSpawner : MonoBehaviour
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         mf.sharedMesh = mesh;
+        return go;
     }
+
+#if UNITY_EDITOR
+    // Bakes the paddock tarmac into the scene as a persistent object (child "PaddockSurface" of the
+    // spawner), replacing the old play-time generation. Re-run after changing the paddock layout fields.
+    [UnityEditor.MenuItem("Tools/Draftmaster/Bake Paddock Surface")]
+    static void BakePaddockSurface()
+    {
+        var sp = FindObjectOfType<PaddockSpawner>();
+        if (sp == null) { Debug.LogError("Bake Paddock Surface: no PaddockSpawner in the open scene."); return; }
+        if (sp.track == null) sp.track = FindObjectOfType<TrackBuilder>();
+        if (sp.track == null) { Debug.LogError("Bake Paddock Surface: no TrackBuilder in the open scene."); return; }
+
+        if (!sp.ComputePaddockRect(out Vector3 center, out Vector3 along, out Vector3 outward, out float halfLen, out float halfDepth))
+        {
+            Debug.LogError("Bake Paddock Surface: could not derive a pit-lane straight to place the paddock.");
+            return;
+        }
+
+        var old = sp.transform.Find("PaddockSurface");
+        if (old != null) DestroyImmediate(old.gameObject);
+
+        var go = sp.BuildSurface(sp.transform, center, along, outward, halfLen, halfDepth);
+
+        // A baked object must reference an ASSET material — a runtime-built fallback is not saved with
+        // the scene and would come back missing (magenta) after an editor restart.
+        var mat = go.GetComponent<MeshRenderer>().sharedMaterial;
+        if (mat == null || !UnityEditor.AssetDatabase.Contains(mat))
+            Debug.LogWarning("Bake Paddock Surface: surface material is not an asset — assign 'tarmacMaterial' (or the track's pit/surface material) and re-bake, or it will go missing on reload.", go);
+
+        UnityEditor.Undo.RegisterCreatedObjectUndo(go, "Bake Paddock Surface");
+        UnityEditor.EditorUtility.SetDirty(sp);
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(go.scene);
+        Debug.Log($"Bake Paddock Surface: baked '{go.name}' under '{sp.name}'.", go);
+    }
+#endif
 
     void SpawnNpcs(Transform root, Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
     {

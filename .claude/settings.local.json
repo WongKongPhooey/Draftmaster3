@@ -73,11 +73,29 @@
       "mcp__unity__refresh_unity",
       "mcp__unity__run_tests",
       "mcp__unity__get_test_job",
-      "mcp__unity__manage_editor"
+      "mcp__unity__manage_editor",
+      "Skill(update-config)",
+      "PowerShell($j = Get-Content \".claude\\\\settings.local.json\" -Raw | ConvertFrom-Json; $j.hooks.SessionStart[0].hooks[0].command)",
+      "mcp__unity__find_gameobjects",
+      "mcp__unity__manage_components",
+      "mcp__unity__manage_scene",
+      "mcp__unity__execute_menu_item"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots",
       "C:\\Python310\\Scripts"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"⚠️ Reminder: start UnityMCP server (open Unity Editor with MCP bridge) before running prompts.\"}'"
+          }
+        ]
+      }
     ]
   }
 }

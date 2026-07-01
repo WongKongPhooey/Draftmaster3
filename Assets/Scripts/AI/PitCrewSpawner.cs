@@ -30,17 +30,29 @@ public class PitCrewSpawner : MonoBehaviour
     public float wallSide = 1f;
     [Tooltip("Uniform scale per crew member. Placeholders are already built ~1.4m tall, so leave at 1. If you assign a tiny paper-doll library (e.g. 8px art), bump this up to reach roughly person height.")]
     public float memberScale = 1f;
-    [Tooltip("Lateral distance (m) from the box centre to the standby line on the wall.")]
-    public float standbyLateral = 3.2f;
+    [Tooltip("Lateral distance (m) from the box centre to the standby line on the wall. Must clear the parked box lane (PitLane.ParkLateral + car half-width) or the crew stand inside the parked cars.")]
+    public float standbyLateral = 4.6f;
     [Tooltip("Half the car length the wheel stations straddle (m).")]
     public float wheelLongitudinal = 1.8f;
     [Tooltip("Lateral offset (m) of a wheel station from the box centre.")]
     public float wheelLateral = 1.2f;
 
+    [Header("Box props")]
+    [Tooltip("Dress every box with a static set of 4 tyres and a fuel can. Cars park directly in front of them.")]
+    public bool buildBoxProps = true;
+    [Tooltip("How far behind the box centre (m, along the lane) the prop cluster sits. Car half-length is ~2.4, so the default puts the props just behind the parked car's rear bumper.")]
+    public float propsBehind = 3.4f;
+    [Tooltip("Fallback lateral offset (m) of the props toward the pit wall. When GridSpawner has published PitLane.ParkLateral (the wall-side lane cars park on), that is used instead so the props sit directly behind each parked car.")]
+    public float propsLateral = 2.6f;
+    [Tooltip("Uniform scale applied to each prop sprite.")]
+    public float propScale = 1f;
+
     [Header("Sorting")]
     public string sortingLayerName = "Vehicles";
     [Tooltip("Crew draw above the cars (car sorting order is ~5).")]
     public int baseSortingOrder = 8;
+    [Tooltip("Box props draw below the cars so a car sliding past reads as driving over them.")]
+    public int propSortingOrder = 4;
 
     Material _unlit;
 
@@ -91,6 +103,8 @@ public class PitCrewSpawner : MonoBehaviour
         boxGo.transform.rotation = Quaternion.Euler(0f, 0f, tangAng - 90f); // up = tangent
 
         var box = boxGo.AddComponent<PitCrewBox>();
+        box.wheelLongitudinal = wheelLongitudinal;
+        box.wheelLateral = wheelLateral;
         box.Configure(idx);
 
         // Five stations: 4 wheels (corners) + 1 fueller (rear). x is lateral (wall = +wallSide), y is along lane.
@@ -103,8 +117,11 @@ public class PitCrewSpawner : MonoBehaviour
             new Vector3(-wheelLateral * wl, -wheelLongitudinal, 0f), // rear wheel, far side
             new Vector3( wheelLateral * wl, -wheelLongitudinal - 1.0f, 0f), // fueller, rear wall side
         };
-        // Standby: lined up along the wall.
-        float sx = standbyLateral * wl;
+        // Standby: lined up along the wall, always beyond the parked box lane so the crew never stand
+        // inside a parked car (ParkLateral is the parked file's centre; +2.2 clears a half-width + margin).
+        float standbyLat = standbyLateral;
+        if (PitLane.Configured) standbyLat = Mathf.Max(standbyLat, Mathf.Abs(PitLane.ParkLateral) + 2.2f);
+        float sx = standbyLat * wl;
         var standby = new[]
         {
             new Vector3(sx,  2.4f, 0f),
@@ -119,6 +136,46 @@ public class PitCrewSpawner : MonoBehaviour
             bool fueller = m == 4;
             BuildMember(box, boxGo.transform, standby[m], work[m], fueller, idx * 5 + m);
         }
+
+        if (buildBoxProps) BuildProps(boxGo.transform);
+    }
+
+    // Static box dressing: a 2×2 set of tyres with the fuel can behind them, sitting at the back of the
+    // box on the wall side. The car's park point is the box centre, so it stops directly in front.
+    void BuildProps(Transform boxParent)
+    {
+        var props = new GameObject("BoxProps");
+        props.transform.SetParent(boxParent, false);
+        // Box-frame +X matches the spline lateral sign, so PitLane.ParkLateral (signed) drops in directly.
+        float lat = (PitLane.Configured && Mathf.Abs(PitLane.ParkLateral) > 0.01f) ? PitLane.ParkLateral : propsLateral * wallSide;
+        props.transform.localPosition = new Vector3(lat, -propsBehind, 0f);
+
+        var tirePositions = new[]
+        {
+            new Vector3(-0.35f,  0.35f, 0f),
+            new Vector3( 0.35f,  0.35f, 0f),
+            new Vector3(-0.35f, -0.35f, 0f),
+            new Vector3( 0.35f, -0.35f, 0f),
+        };
+        for (int t = 0; t < tirePositions.Length; t++)
+            BuildProp(props.transform, "Tyre", tirePositions[t],
+                wheelSprite != null ? wheelSprite : Placeholder(new Color(0.08f, 0.08f, 0.08f), 0.6f));
+
+        BuildProp(props.transform, "FuelCan", new Vector3(0f, -1.1f, 0f),
+            fuelCanSprite != null ? fuelCanSprite : Placeholder(new Color(0.85f, 0.2f, 0.15f), 0.7f));
+    }
+
+    void BuildProp(Transform parent, string name, Vector3 localPos, Sprite sprite)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPos;
+        go.transform.localScale = Vector3.one * propScale;
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.sharedMaterial = UnlitSprite();
+        sr.sortingLayerName = sortingLayerName;
+        sr.sortingOrder = propSortingOrder;
     }
 
     void BuildMember(PitCrewBox box, Transform parent, Vector3 standby, Vector3 work, bool fueller, int seed)
@@ -162,9 +219,9 @@ public class PitCrewSpawner : MonoBehaviour
         item.sharedMaterial = UnlitSprite();
         item.sortingLayerName = sortingLayerName;
         item.sortingOrder = baseSortingOrder + 6; // gear in front of the member
-        item.enabled = false;
+        item.enabled = false;                     // Init turns it on — crew always hold their gear
 
-        member.Init(standby, work, appearance, item);
+        member.Init(standby, work, appearance, item, fueller);
         box.AddMember(member);
     }
 

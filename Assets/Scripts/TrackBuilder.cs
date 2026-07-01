@@ -11,6 +11,22 @@ public class TrackBuilder : MonoBehaviour
     public bool drawGizmos = true;
     public bool rebuildOnValidate = true;
 
+    [Header("Pit Box Lane")]
+    [Tooltip("Build a second lane alongside the pit lane (wall side, +normal) where the pit boxes sit. Cars park on it; the pit lane proper stays clear for driving.")]
+    public bool buildPitBoxLane = true;
+    [Tooltip("Width (m) of the box lane strip.")]
+    public float pitBoxLaneWidth = 4f;
+    [Tooltip("Material for the box lane. Null = a flat grey tarmac is built automatically (pitBoxLaneColor).")]
+    public Material pitBoxLaneMaterial;
+    public Color pitBoxLaneColor = new Color(0.42f, 0.42f, 0.44f);
+
+    // Box-lane geometry, published so the pit systems all agree with the mesh: GridSpawner parks the
+    // field at the lane's centre lateral; the pit service/engage checks extend to its outer edge.
+    public bool HasPitBoxLane => buildPitBoxLane && track != null && track.hasPitLane;
+    float PitHalfWidth => track == null ? 0f : (track.pitDefaultWidth > 0f ? track.pitDefaultWidth : track.defaultWidth) * 0.5f;
+    public float PitBoxLaneCenterLateral => PitHalfWidth + pitBoxLaneWidth * 0.5f;
+    public float PitBoxLaneOuterLateral => PitHalfWidth + pitBoxLaneWidth;
+
     [Header("Brake Marker Boards")]
     [Tooltip("Place 150/100/50m marker boards on the barrier of straights that lead into a turn.")]
     public bool drawMarkerBoards = true;
@@ -298,6 +314,70 @@ public class TrackBuilder : MonoBehaviour
         mr.sharedMaterial = pitSurfaceMaterial != null ? pitSurfaceMaterial : surfaceMaterial;
         _pitMesh = BuildRibbonMesh(pitSamples, false, $"Pit_{track.name}");
         mf.sharedMesh = _pitMesh;
+
+        // Second lane on the wall side (+normal): the grey strip the pit boxes sit on. Shares its inner
+        // edge with the pit ribbon so the two read as one paved surface.
+        if (buildPitBoxLane && pitBoxLaneWidth > 0f)
+        {
+            var laneGo = new GameObject("PitBoxLane");
+            laneGo.transform.SetParent(_pitChild.transform, false);
+            var lmf = laneGo.AddComponent<MeshFilter>();
+            var lmr = laneGo.AddComponent<MeshRenderer>();
+            lmr.sharedMaterial = pitBoxLaneMaterial != null ? pitBoxLaneMaterial : BuildBoxLaneMaterial();
+            lmf.sharedMesh = BuildBandMesh(pitSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth, $"PitBoxLane_{track.name}");
+        }
+    }
+
+    Material BuildBoxLaneMaterial()
+    {
+        Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+        if (sh == null) sh = Shader.Find("Unlit/Color");
+        var m = new Material(sh) { name = "PitBoxLaneGrey" };
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", pitBoxLaneColor);
+        else if (m.HasProperty("_Color")) m.SetColor("_Color", pitBoxLaneColor);
+        return m;
+    }
+
+    // Ribbon between two lateral offsets from the centerline (both along +normal; pass negatives for the
+    // other side). Same vertex layout as BuildRibbonMesh, open-ended.
+    Mesh BuildBandMesh(List<Sample> samples, System.Func<Sample, float> latFrom, System.Func<Sample, float> latTo, string name)
+    {
+        if (samples == null || samples.Count < 2) return null;
+
+        var mesh = new Mesh { name = name };
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+
+        var verts = new List<Vector3>(samples.Count * 2);
+        var uvs = new List<Vector2>(samples.Count * 2);
+        var tris = new List<int>(samples.Count * 6);
+
+        float distance = 0f;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            var s = samples[i];
+            Vector3 right = new Vector3(s.normal.x, s.normal.y, 0);
+            Vector3 c = new Vector3(s.position.x, s.position.y, 0);
+            verts.Add(c + right * latFrom(s));
+            verts.Add(c + right * latTo(s));
+            uvs.Add(new Vector2(0f, distance));
+            uvs.Add(new Vector2(1f, distance));
+
+            if (i > 0)
+            {
+                int a = (i - 1) * 2;
+                int b = i * 2;
+                tris.Add(a + 0); tris.Add(b + 0); tris.Add(b + 1);
+                tris.Add(a + 0); tris.Add(b + 1); tris.Add(a + 1);
+                distance += Vector2.Distance(samples[i - 1].position, s.position);
+            }
+        }
+
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetUVs(0, uvs);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
     }
 
     Mesh BuildRibbonMesh(List<Sample> samples, bool closedLoop, string name)
@@ -407,17 +487,37 @@ public class TrackBuilder : MonoBehaviour
         if (OnSampleSurface(_surfaceCache, local, out lateralAbs)) return true;
         if (_surfaceCache.Count < 2) return true; // no usable main centerline — don't penalise
 
-        // The pit lane is drivable too: don't treat it like grass.
+        // The pit lane is drivable too: don't treat it like grass. The band extends past the ribbon on
+        // the +normal side to cover the box lane, so parked/box-lane cars keep tarmac physics.
         if (track.hasPitLane)
         {
             if (_pitSurfaceCache == null || _pitSurfaceCache.Count < 2) _pitSurfaceCache = SamplePitCenterline();
-            if (OnSampleSurface(_pitSurfaceCache, local, out float pitLat))
+            float extraPlus = HasPitBoxLane ? pitBoxLaneWidth : 0f;
+            if (OnPitBand(_pitSurfaceCache, local, extraPlus, out float pitLat))
             {
                 lateralAbs = pitLat;
                 return true;
             }
         }
         return false;
+    }
+
+    // Signed band test against the pit centerline: [-width/2, width/2 + extraPlus] along +normal.
+    static bool OnPitBand(List<Sample> samples, Vector2 local, float extraPlus, out float lateralAbs)
+    {
+        lateralAbs = 0f;
+        if (samples == null || samples.Count < 2) return false;
+        float best = float.MaxValue;
+        int bi = 0;
+        for (int i = 0; i < samples.Count; i++)
+        {
+            float d = ((Vector2)samples[i].position - local).sqrMagnitude;
+            if (d < best) { best = d; bi = i; }
+        }
+        var s = samples[bi];
+        float lat = Vector2.Dot(local - s.position, s.normal);
+        lateralAbs = Mathf.Abs(lat);
+        return lat >= -s.width * 0.5f && lat <= s.width * 0.5f + extraPlus;
     }
 
     // Project a WORLD position onto the main centerline and return its distance (m) along the spline.

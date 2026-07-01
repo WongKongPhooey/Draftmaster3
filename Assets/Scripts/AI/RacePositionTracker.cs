@@ -154,6 +154,10 @@ public class RacePositionTracker : MonoBehaviour
     {
         var pvc = go.GetComponent<PlayerVehicleController>();
         bool isLocal = pvc != null && pvc.enabled && go.GetComponent<SplineInputDriver>() == null;
+        // Sticky: once a car has been identified as the local player it stays the player. Drive-off /
+        // Crew Chief mode hands the car to an AI brain (SplineInputDriver added, PVC driven externally),
+        // which would otherwise demote it and lose the player's position/results identity.
+        if (e.isPlayer) isLocal = true;
         e.isPlayer = isLocal;
         if (isLocal) _playerEntry = e;
 

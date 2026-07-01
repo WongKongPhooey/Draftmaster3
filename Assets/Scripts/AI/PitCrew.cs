@@ -45,29 +45,40 @@ public class PitCrewMember : MonoBehaviour
     [Tooltip("Walk art faces -Y, so +90 lines the drawn facing up with the movement angle (same as PaddockWalker).")]
     public float spriteFacingOffsetDeg = 90f;
     public float turnRate = 720f;
+    [Tooltip("Seconds at the car's corner before the held wheel disappears — the moment it 'goes on' the car. Fuellers keep their can for the whole stop.")]
+    public float wheelFitSeconds = 1.2f;
 
     NPCLayeredAppearance _appearance;
     SpriteRenderer _itemRenderer;
     Vector3 _standbyLocal, _workLocal, _targetLocal;
     bool _working;
+    bool _isFueller;
+    bool _gearSpent;    // the held wheel is on the car; empty-handed until restocked at standby
+    float _workTimer;
     float _frameTimer;
     int _frame;
 
-    public void Init(Vector3 standbyLocal, Vector3 workLocal, NPCLayeredAppearance appearance, SpriteRenderer itemRenderer)
+    public void Init(Vector3 standbyLocal, Vector3 workLocal, NPCLayeredAppearance appearance, SpriteRenderer itemRenderer, bool isFueller)
     {
         _appearance = appearance;
         _itemRenderer = itemRenderer;
+        _isFueller = isFueller;
         _standbyLocal = standbyLocal;
         _workLocal = workLocal;
         _targetLocal = standbyLocal;
         transform.localPosition = standbyLocal;
-        ShowItem(false);
+        ShowItem(true);   // crew always stand ready with their wheel / fuel can in hand
     }
+
+    // Where (box-local) this member works the current stop. The box calls this on BeginService with the
+    // serviced car's ACTUAL corner positions, so the crew run to the car wherever it stopped in the box.
+    public void SetWorkTarget(Vector3 workLocal) => _workLocal = workLocal;
 
     public void SetWorking(bool working)
     {
         _working = working;
         _targetLocal = working ? _workLocal : _standbyLocal;
+        if (working) _workTimer = 0f;
     }
 
     void Update()
@@ -83,14 +94,25 @@ public class PitCrewMember : MonoBehaviour
             transform.localPosition = cur + dir * moveSpeed * Time.deltaTime;
             FaceLocal(dir);
             Animate();
-            ShowItem(false);            // gear is stowed while walking
+            ShowItem(!_gearSpent);       // carry the wheel to the car; run back empty-handed after fitting it
         }
         else
         {
             transform.localPosition = new Vector3(_targetLocal.x, _targetLocal.y, cur.z);
             _frame = 0;
             _appearance?.SetFrame(0);
-            ShowItem(_working);          // arrived at the car: present the wheel / fuel can
+
+            if (_working)
+            {
+                // At the corner: the wheel goes on after a beat and the held one disappears.
+                _workTimer += Time.deltaTime;
+                if (!_isFueller && !_gearSpent && _workTimer >= wheelFitSeconds) _gearSpent = true;
+            }
+            else
+            {
+                _gearSpent = false;      // back at standby: restocked with a fresh wheel
+            }
+            ShowItem(!_gearSpent);
         }
     }
 
@@ -123,13 +145,23 @@ public class PitCrewMember : MonoBehaviour
 }
 
 // A pit box's crew. Owns its members and toggles them between standby and work on BeginService/EndService.
+// Members are added in station order: 4 wheel changers (front-near, rear-near, front-far, rear-far), then the
+// fueller — BeginService relies on that order to send each one to the right corner of the serviced car.
 public class PitCrewBox : MonoBehaviour
 {
+    [Tooltip("Half the car length the wheel stations straddle (m). Set by PitCrewSpawner.")]
+    public float wheelLongitudinal = 1.8f;
+    [Tooltip("Lateral offset (m) of a wheel station from the car centre. Set by PitCrewSpawner.")]
+    public float wheelLateral = 1.2f;
+    [Tooltip("How far behind the rear wheel station the fueller stands (m).")]
+    public float fuellerBehind = 1.0f;
+
     int _boxIndex = -1;
     readonly List<PitCrewMember> _members = new();
     Transform _servicingCar;
 
     public bool IsServicing => _servicingCar != null;
+    public int BoxIndex => _boxIndex;
 
     public void Configure(int boxIndex)
     {
@@ -142,6 +174,31 @@ public class PitCrewBox : MonoBehaviour
     public void BeginService(Transform car)
     {
         _servicingCar = car;
+
+        // Aim each member at the serviced car's ACTUAL wheel corners (car forward = local +X, so
+        // transform.right is its long axis and transform.up its side axis), converted to box-local
+        // space — the crew run to the car wherever it stopped in the box, not to a fixed spot.
+        if (car != null)
+        {
+            Vector3 p = car.position;
+            Vector3 f = car.right * wheelLongitudinal;
+            Vector3 s = car.up * wheelLateral;
+            var stations = new[]
+            {
+                p + f + s,                                   // front wheel, near side
+                p - f + s,                                   // rear wheel, near side
+                p + f - s,                                   // front wheel, far side
+                p - f - s,                                   // rear wheel, far side
+                p - f - car.right * fuellerBehind + s,       // fueller, behind the rear
+            };
+            for (int i = 0; i < _members.Count && i < stations.Length; i++)
+            {
+                Vector3 local = transform.InverseTransformPoint(stations[i]);
+                local.z = 0f;
+                _members[i].SetWorkTarget(local);
+            }
+        }
+
         for (int i = 0; i < _members.Count; i++) _members[i].SetWorking(true);
     }
 

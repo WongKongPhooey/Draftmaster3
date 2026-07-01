@@ -12,14 +12,25 @@ public static class PitLane
     public static float ExitGap { get; private set; }   // m from the pit-lane end (exit) to box 0 (pole)
     public static float Spacing { get; private set; }    // m between adjacent boxes
     public static int BoxCount { get; private set; } = 1; // total assigned boxes (one per race car)
+    // Signed lateral offset (m) of the parked "box lane" from the pit centerline (positive = wall side).
+    // Parked cars sit here, in front of their box props; cars DRIVING the lane keep the centerline, so a
+    // moving car never shares a line with a parked one.
+    public static float ParkLateral { get; private set; }
 
-    public static void Configure(float exitGap, float spacing, int boxCount)
+    // The human player's reserved box index. -1 = the player has no pit box this session.
+    public static int PlayerBox { get; private set; } = -1;
+
+    public static void Configure(float exitGap, float spacing, int boxCount, float parkLateral = 0f)
     {
         ExitGap = exitGap;
         Spacing = spacing;
         BoxCount = Mathf.Max(1, boxCount);
+        ParkLateral = parkLateral;
+        PlayerBox = -1;   // GridSpawner re-publishes it after reserving the box
         Configured = true;
     }
+
+    public static void SetPlayerBox(int idx) => PlayerBox = idx;
 
     // Distance along the pit lane (m) for a box. Box 0 = nearest the exit; higher index = nearer the entrance.
     public static float BoxDistance(int idx, float pitLength) => Mathf.Max(0f, pitLength - ExitGap - idx * Spacing);

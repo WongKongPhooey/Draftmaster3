@@ -94,6 +94,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public bool pitStopHold = false;
     [Tooltip("Distance (m) along the pit lane to hard-park at (e.g. the safety car parking near the entrance). -1 = no park; the car drives the pit normally. Once reached the car is pinned here and stopped, regardless of decel/vehicleInfo.")]
     public float pitParkDistance = -1f;
+    [Tooltip("Hard-park pin, independent of the race phase (practice cars waiting in their box). Zero speed, transform pinned to the commanded point until cleared.")]
+    public bool parkedHold = false;
 
     public bool IsOnPit => _onPit;
     public float PitProgress01 => (_onPit && _pitLength > 0f) ? Mathf.Clamp01(_distance / _pitLength) : 0f;
@@ -222,7 +224,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         {
             Vector2 local = track.transform.InverseTransformPoint(transform.position);
             Vector2 pitPos = track.SamplePitAt(track.NearestPitDistance(transform.position), _pitSamples).position;
-            onPit = Vector2.Distance(local, pitPos) < pitEngageLateralMax;
+            // A car parked on the box lane (outside the pit ribbon) still counts as on the pit.
+            float engageMax = track.HasPitBoxLane ? Mathf.Max(pitEngageLateralMax, track.PitBoxLaneOuterLateral + 0.5f) : pitEngageLateralMax;
+            onPit = Vector2.Distance(local, pitPos) < engageMax;
         }
         usePitLane = onPit;
         _onPit = onPit;
@@ -600,7 +604,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // Pre-grid hold: sit parked in the pit box / at the pit exit until the formation lap begins.
         // Still Place() so the pose (and the commanded point feeding any dynamic model) tracks the box,
         // but advance nothing and command zero speed so dynamic-AI cars hold station too.
-        if (freezeUntilFormation && RaceStart.Current == RaceStart.Phase.PreGrid)
+        if ((freezeUntilFormation && RaceStart.Current == RaceStart.Phase.PreGrid) || parkedHold)
         {
             speed = 0f;
             _currentMph = 0f;
@@ -687,6 +691,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // point nearest the car's current position, and carry its current lateral as a bias that eases out.
             _onPit = false;
             usePitLane = false;
+            // Any pit-only lateral (the wall-side box lane a pit start parks on) must not leak onto the
+            // track. Zeroed BEFORE the rejoin so the merge bias absorbs it and eases it out continuously.
+            lateralOffset = 0f;
             length = _mainLength;
             RejoinSplineContinuous(transform.position);
         }

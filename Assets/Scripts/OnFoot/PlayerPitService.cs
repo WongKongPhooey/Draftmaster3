@@ -1,7 +1,11 @@
 using UnityEngine;
 
-// Services the human player's car when they stop in the pit lane: hold roughly still on pit road for a few
-// seconds and the crew fits fresh tyres (and straightens the bodywork). Re-arms once the car leaves the pit.
+// Services the human player's car when they stop in their pit box: a glowing rectangle marks the
+// player's reserved box while they're in the pit lane, and the stop only begins once the car has
+// stopped FULLY inside it. Hold still for a few seconds and the crew fits fresh tyres (and
+// straightens the bodywork). Re-arms once the car leaves the pit. If the session gave the player no
+// reserved box (PitLane.PlayerBox = -1, e.g. multiplayer), falls back to the old anywhere-in-the-lane
+// behaviour.
 public class PlayerPitService : MonoBehaviour
 {
     public TrackBuilder track;
@@ -11,19 +15,27 @@ public class PlayerPitService : MonoBehaviour
     [Tooltip("Distance (m) from the pit centerline still counted as 'in the pit lane'.")]
     public float pitLateralMax = 6f;
     [Tooltip("Speed (m/s) below which the car counts as stopped for service.")]
-    public float stopSpeedMps = 3f;
+    public float stopSpeedMps = 1.5f;
+
     public bool repairDamage = true;
     public bool refuel = true;
 
     TireModel _tires;
     VehicleDamage _bodywork;
     FuelTank _fuel;
+    PlayerPitBoxMarker _marker;
+    PitCrewBox _activeCrew;
     float _timer;
     bool _serviced;
     bool _crewWorking;
     float _msgTimer;
+    bool _showBoxHint;
 
-    void Start() { if (track == null) track = FindFirstObjectByType<TrackBuilder>(); }
+    void Start()
+    {
+        if (track == null) track = FindFirstObjectByType<TrackBuilder>();
+        _marker = PlayerPitBoxMarker.Ensure();
+    }
 
     void Update()
     {
@@ -40,11 +52,29 @@ public class PlayerPitService : MonoBehaviour
                      || (repairDamage && _bodywork != null && _bodywork.DamageLevel > 0.05f)
                      || (refuel && _fuel != null && _fuel.Fraction < 0.999f);
 
-        if (onPit && slow && needs && !_serviced && RaceStart.IsGreen)
+        // Glowing box marker: shown while the player drives the pit lane. The stop only arms once the
+        // car is stopped fully inside it. No reserved box this session → the whole lane counts.
+        if (_marker != null)
+        {
+            _marker.UpdateFor(track);
+            _marker.SetVisible(onPit);
+        }
+        bool hasBox = _marker != null && _marker.IsBuilt;
+        // Strict: when the pit-box system is live, ONLY the player's own box services them — stopping in
+        // another car's box does nothing. The lane-wide fallback exists solely for sessions that have no
+        // pit boxes at all (PitLane never configured, e.g. legacy/multiplayer scenes).
+        bool inBox = hasBox ? _marker.CarFullyInside(playerCar.transform, CarHalfExtents())
+                            : !PitLane.Configured;
+        _showBoxHint = hasBox && onPit && slow && needs && !inBox && !_serviced;
+
+        if (onPit && inBox && slow && needs && !_serviced && RaceStart.IsGreen)
         {
             if (!_crewWorking)
             {
-                PitCrewRegistry.Nearest(playerCar.transform.position)?.BeginService(playerCar.transform);
+                // The car is in its own box, so use its own crew; Nearest is the no-reserved-box fallback.
+                _activeCrew = hasBox ? PitCrewRegistry.ForBox(PitLane.PlayerBox) : null;
+                if (_activeCrew == null) _activeCrew = PitCrewRegistry.Nearest(playerCar.transform.position);
+                _activeCrew?.BeginService(playerCar.transform);
                 var hist = playerCar.GetComponent<PitHistory>();
                 if (hist == null) hist = playerCar.gameObject.AddComponent<PitHistory>();
                 hist.Record(RacePositionTracker.Instance != null ? RacePositionTracker.Instance.LapOf(playerCar.transform) : 0);
@@ -73,8 +103,18 @@ public class PlayerPitService : MonoBehaviour
 
     void EndCrew(Vector3 worldPos)
     {
-        PitCrewRegistry.Nearest(worldPos)?.EndService();
+        if (_activeCrew == null) _activeCrew = PitCrewRegistry.Nearest(worldPos);
+        _activeCrew?.EndService();
+        _activeCrew = null;
         _crewWorking = false;
+    }
+
+    // Car footprint for the fully-inside-the-box test (VehicleCollision convention: x = half-width,
+    // y = half-length).
+    Vector2 CarHalfExtents()
+    {
+        var vc = playerCar != null ? playerCar.GetComponent<VehicleCollision>() : null;
+        return vc != null ? vc.halfExtents : new Vector2(1.0f, 2.4f);
     }
 
     bool OnPitLane(Vector3 worldPos)
@@ -84,7 +124,9 @@ public class PlayerPitService : MonoBehaviour
         float d = track.NearestPitDistance(worldPos);
         var s = track.SamplePitAt(d, pit);
         Vector2 local = track.transform.InverseTransformPoint(worldPos);
-        return Vector2.Distance(local, s.position) < pitLateralMax;
+        // Cover the box lane too — the player's box sits on it, outside the pit ribbon proper.
+        float max = track.HasPitBoxLane ? Mathf.Max(pitLateralMax, track.PitBoxLaneOuterLateral + 0.5f) : pitLateralMax;
+        return Vector2.Distance(local, s.position) < max;
     }
 
     PlayerVehicleController FindPlayer()
@@ -107,6 +149,12 @@ public class PlayerPitService : MonoBehaviour
         {
             style.normal.textColor = new Color(0.3f, 1f, 0.4f, Mathf.Clamp01(_msgTimer));
             GUI.Label(new Rect(0, Screen.height * 0.28f, Screen.width, 50f), "FRESH TYRES", style);
+        }
+        else if (_showBoxHint)
+        {
+            style.fontSize = 22;
+            style.normal.textColor = new Color(1f, 0.85f, 0.3f);
+            GUI.Label(new Rect(0, Screen.height * 0.28f, Screen.width, 40f), "STOP FULLY INSIDE YOUR PIT BOX", style);
         }
     }
 }

@@ -37,6 +37,7 @@ public class CrewChiefController : MonoBehaviour
     GameObject _avatar;
     GameObject _playerCar;
     Text _label;
+    GameObject _timingBtn;
     bool _keyPrev;
     Material _unlit;
     GUIStyle _rowStyle, _headStyle;
@@ -86,6 +87,7 @@ public class CrewChiefController : MonoBehaviour
         if (cameraFollow != null) cameraFollow.target = _avatar.transform;
 
         _active = true;
+        if (_timingBtn != null) _timingBtn.SetActive(true);
         UpdateLabel();
     }
 
@@ -105,6 +107,8 @@ public class CrewChiefController : MonoBehaviour
         }
 
         _active = false;
+        if (_timingBtn != null) _timingBtn.SetActive(false);
+        if (TimingScreenUI.Instance != null) TimingScreenUI.Instance.Hide();
         UpdateLabel();
     }
 
@@ -184,6 +188,33 @@ public class CrewChiefController : MonoBehaviour
         _label.fontSize = 18;
         _label.fontStyle = FontStyle.Bold;
         _label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        // "Timing" button under the toggle — only visible while acting as crew chief. Opens the
+        // full-field timing screen (lap times from LapTimingManager).
+        _timingBtn = new GameObject("TimingButton", typeof(RectTransform), typeof(Image), typeof(Button));
+        _timingBtn.transform.SetParent(canvasGO.transform, false);
+        var trt2 = _timingBtn.GetComponent<RectTransform>();
+        trt2.anchorMin = new Vector2(0f, 1f);
+        trt2.anchorMax = new Vector2(0f, 1f);
+        trt2.pivot = new Vector2(0f, 1f);
+        trt2.anchoredPosition = new Vector2(250f, -76f);   // directly below the crew chief toggle
+        trt2.sizeDelta = new Vector2(200f, 48f);
+        _timingBtn.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+        _timingBtn.GetComponent<Button>().onClick.AddListener(() => TimingScreenUI.Ensure().Toggle());
+
+        var ttxtGO = new GameObject("Label", typeof(RectTransform));
+        ttxtGO.transform.SetParent(_timingBtn.transform, false);
+        var ttrt = ttxtGO.GetComponent<RectTransform>();
+        ttrt.anchorMin = Vector2.zero; ttrt.anchorMax = Vector2.one;
+        ttrt.offsetMin = Vector2.zero; ttrt.offsetMax = Vector2.zero;
+        var tlabel = ttxtGO.AddComponent<Text>();
+        tlabel.alignment = TextAnchor.MiddleCenter;
+        tlabel.color = Color.white;
+        tlabel.fontSize = 18;
+        tlabel.fontStyle = FontStyle.Bold;
+        tlabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tlabel.text = "Timing";
+        _timingBtn.SetActive(false);
     }
 
     void UpdateLabel()

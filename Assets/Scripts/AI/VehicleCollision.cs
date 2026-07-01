@@ -36,6 +36,10 @@ public class VehicleCollision : MonoBehaviour
     Vector2 _vel;                 // world velocity from position delta (kinematic body)
     public Vector2 Velocity => _vel;
 
+    // Fired when this car contacts a static barrier, with the closing speed (m/s). Lap timing
+    // listens to invalidate the current lap on a wall hit.
+    public event System.Action<float> BarrierHit;
+
     void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
@@ -167,6 +171,7 @@ public class VehicleCollision : MonoBehaviour
             {
                 // Barrier (static): full correction on us. d.pointA is the contact on our body → lever arm for spin.
                 _responder?.ApplyContact(pushWorld, d.pointA, severity);
+                BarrierHit?.Invoke(closingSpeed);
             }
             processed++;
         }

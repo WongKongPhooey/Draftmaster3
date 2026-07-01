@@ -52,6 +52,13 @@ public class FormationDirector : MonoBehaviour
 
     void Awake()
     {
+        // Practice and qualifying have no formation lap or safety car — PracticeDirector owns those
+        // sessions. Disabling here (before OnEnable/Start) skips the safety-car spawn and subscriptions.
+        if (RaceWeekend.IsPracticeLike)
+        {
+            enabled = false;
+            return;
+        }
         Instance = this;
         RaceStart.Current = RaceStart.Phase.PreGrid;
     }

@@ -36,6 +36,8 @@ public class GridSpawner : MonoBehaviour
     public float gridStartDistance = -6f;
     [Tooltip("If true, AI start in their pit boxes. If false, they line up on the grid behind the start line. Currently false for testing.")]
     public bool spawnInPit = false;
+    [Tooltip("Signed lateral offset (m) of the parked box lane from the pit centerline (positive = wall side, matching PitCrewSpawner.wallSide=1). Parked cars sit here in front of their box props; cars driving the lane keep the centerline so they clear the parked file.")]
+    public float pitBoxParkLateral = 2.6f;
     [Tooltip("Formation-lap race: AI start frozen in pit boxes and form a train behind the safety car until green. Forces pit spawn, auto-fits pit-box spacing, and adds a FormationController to each car. Needs a FormationDirector in the scene.")]
     public bool formationRace = true;
     [Tooltip("Fallback car speed (m/s) when no VehicleInfo is assigned. Otherwise speed is driven by the vehicle's accel/decel curves.")]
@@ -132,19 +134,47 @@ public class GridSpawner : MonoBehaviour
         // Wait a frame so PitLaneStart.Start has positioned the player car (its DB-less Start may run after ours).
         yield return null;
 
+        // Practice/qualifying: same pit-box parking as a formation race, but no formation lap — cars
+        // are held by PracticeAIStint and cycled out for lap stints by the PracticeDirector.
+        bool practice = RaceWeekend.IsPracticeLike;
+        if (practice) formationRace = false;
+        bool pitStart = formationRace || practice;
+        var director = practice ? PracticeDirector.Ensure() : null;
+        if (!practice) RaceDirector.Ensure();   // race sessions get a finish + results screen
+
+        // Race after qualifying: the captured grid fixes each car's identity and slot. GridOrder[g] is
+        // grid slot g (pole = 0); the player's rank becomes their reserved pit box, and the AI keep the
+        // name/livery they qualified with instead of re-shuffling on the reload.
+        List<RaceWeekend.GridEntry> aiGrid = null;
+        int playerRank = -1;
+        if (!practice && RaceWeekend.GridOrder != null && RaceWeekend.GridOrder.Count > 0)
+        {
+            aiGrid = new List<RaceWeekend.GridEntry>();
+            for (int g = 0; g < RaceWeekend.GridOrder.Count; g++)
+            {
+                var entry = RaceWeekend.GridOrder[g];
+                if (entry.isPlayer) playerRank = g;
+                else aiGrid.Add(entry);
+            }
+        }
+
         // Reserve the player's pit box so an AI isn't spawned on top of the player car (they'd collide forever).
         // The player is +1 on top of `count` AI, so the boxes are fit for that total and one box index is left empty.
-        var pls = formationRace ? FindObjectOfType<PitLaneStart>() : null;
+        var pls = pitStart ? FindObjectOfType<PitLaneStart>() : null;
         bool reservePlayer = pls != null && pls.PlayerOnPit;
         int totalBoxes = count + (reservePlayer ? 1 : 0);
 
-        // Formation race: park the field in the pit lane and fit the boxes to the available pit length.
+        // Pit start (formation race or practice): park the field in the pit lane and fit the boxes to
+        // the available pit length.
         float pitBoxExitGap = 12f;
         float pitBoxSpacing = 12f;
         float pitLen = 0f;
-        if (formationRace)
+        if (pitStart)
         {
             spawnInPit = true;
+            // Park the field in the middle of the track's box lane when it has one, so the parked file,
+            // the box props, and the player's marker all sit on the grey strip TrackBuilder generated.
+            if (track.HasPitBoxLane) pitBoxParkLateral = track.PitBoxLaneCenterLateral;
             var pit = track.SamplePitCenterline();
             pitLen = pit.Count > 0 ? pit[pit.Count - 1].distance : 0f;
             if (pitLen > 0f && totalBoxes > 1)
@@ -153,7 +183,7 @@ public class GridSpawner : MonoBehaviour
                 pitBoxSpacing = Mathf.Clamp(usable / (totalBoxes - 1), 5f, 12f);
             }
             // Publish the box layout so every car (safety car, pit stops) agrees where the boxes are.
-            if (pitLen > 0f) PitLane.Configure(pitBoxExitGap, pitBoxSpacing, totalBoxes);
+            if (pitLen > 0f) PitLane.Configure(pitBoxExitGap, pitBoxSpacing, totalBoxes, pitBoxParkLateral);
         }
 
         int reservedBox = -1;
@@ -161,8 +191,32 @@ public class GridSpawner : MonoBehaviour
         {
             reservedBox = Mathf.RoundToInt((pitLen - pitBoxExitGap - pls.PlayerPitDistance) / Mathf.Max(pitBoxSpacing, 0.01f));
             reservedBox = Mathf.Clamp(reservedBox, 0, totalBoxes - 1);
+            // Qualified: the player's grid rank IS their box (box order = grid order); the snap below
+            // physically parks the car there.
+            if (playerRank >= 0) reservedBox = Mathf.Clamp(playerRank, 0, totalBoxes - 1);
             // Tell the player car its reserved grid slot so the formation order holds the place open for it.
             if (pls.car != null) pls.car.SetFormationGrid(reservedBox);
+            // Publish it so the player-facing pit systems (box marker, pit service) know which box is theirs.
+            PitLane.SetPlayerBox(reservedBox);
+
+            // Snap the parked player car into its box: single file on the pit centerline, in front of
+            // its tyre/fuel props, exactly like the AI. PitLaneStart parked it off-lane at a fraction of
+            // the pit length; the box grid only exists now that the boxes are fitted. The car is still
+            // parked (PlayerVehicleController disabled — it captures heading from the transform when the
+            // player climbs in), so a transform write is all it takes.
+            if (pls.car != null)
+            {
+                var pitSamples = track.SamplePitCenterline();
+                float boxD = PitLane.BoxDistance(reservedBox, pitLen);
+                var bs = track.SamplePitAt(boxD, pitSamples);
+                var carT = pls.car.transform;
+                Vector2 boxPos = bs.position + bs.normal * pitBoxParkLateral;
+                Vector3 wp = track.transform.TransformPoint(new Vector3(boxPos.x, boxPos.y, 0f));
+                carT.position = new Vector3(wp.x, wp.y, carT.position.z);
+                Vector3 wt = track.transform.TransformDirection(new Vector3(bs.tangent.x, bs.tangent.y, 0f));
+                float headingDeg = Mathf.Atan2(wt.y, wt.x) * Mathf.Rad2Deg;
+                carT.rotation = Quaternion.Euler(0f, 0f, headingDeg - ((pls.car.spriteFacesUp ? 90f : 0f) - pls.car.angleOffsetDeg));
+            }
         }
 
         for (int i = 0; i < count; i++)
@@ -171,19 +225,29 @@ public class GridSpawner : MonoBehaviour
             go.name = $"AI_{i + 1:D2}";
             go.transform.localScale = new Vector3(carScale.x, carScale.y, 1f);
 
+            // Identity: the qualifying grid pins name + livery to the slot; otherwise the shuffled pools.
+            var gridEntry = (aiGrid != null && i < aiGrid.Count) ? aiGrid[i] : null;
+
             var sr = go.GetComponentInChildren<SpriteRenderer>();
             int carNumber = i;
+            Sprite liverySprite = null;
+            if (gridEntry != null)
+            {
+                carNumber = gridEntry.carNumber;
+                liverySprite = Resources.Load<Sprite>($"{carsetPrefix}livery{carNumber}");
+            }
+            if (liverySprite == null && liveries.Count > 0)
+            {
+                var liv = liveries[i % liveries.Count];
+                carNumber = liv.number;
+                liverySprite = liv.sprite;
+            }
             if (sr != null)
             {
                 if (carMaterial != null) sr.sharedMaterial = carMaterial;
                 sr.sortingOrder = carSortingOrder;
                 // Distinct livery before the VehicleDamage mesh is built from this sprite below.
-                if (liveries.Count > 0)
-                {
-                    var liv = liveries[i % liveries.Count];
-                    carNumber = liv.number;
-                    sr.sprite = liv.sprite;
-                }
+                if (liverySprite != null) sr.sprite = liverySprite;
             }
 
             var splineDriver = go.GetComponent<SplineDriver>();
@@ -196,19 +260,35 @@ public class GridSpawner : MonoBehaviour
             splineDriver.spawnInPit = spawnInPit;
             // Skip the player's reserved box when numbering AI grid slots.
             splineDriver.qualifyingPosition = (reservedBox >= 0 && i >= reservedBox) ? i + 1 : i;
-            splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
+            // Pit starts park single file on the wall-side box lane, in front of the box props. The
+            // offset is cleared at the pit exit (SplineDriver) so it never leaks onto the track; the
+            // grid stagger is only for fields lined up on the track. Formation columns come from
+            // tacticalLateralOffset.
+            splineDriver.lateralOffset = pitStart ? pitBoxParkLateral : ((i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f);
             splineDriver.speed = speed;
             splineDriver.spriteFacesUp = false;
             splineDriver.angleOffsetDeg = 180f;
 
-            if (formationRace)
+            if (pitStart)
             {
                 splineDriver.pitBoxExitGap = pitBoxExitGap;
                 splineDriver.pitBoxSpacing = pitBoxSpacing;
+            }
+            if (formationRace)
+            {
                 splineDriver.freezeUntilFormation = true;
                 var fc = go.GetComponent<FormationController>();
                 if (fc == null) fc = go.AddComponent<FormationController>();
                 fc.kinematic = !dynamicAI; // a kinematic SP field stays kinematic through green
+            }
+            if (practice)
+            {
+                // Pin in the box (the phase is Green, so freezeUntilFormation wouldn't hold);
+                // the director releases cars for stints via PracticeAIStint.
+                splineDriver.parkedHold = true;
+                var stint = go.GetComponent<PracticeAIStint>();
+                if (stint == null) stint = go.AddComponent<PracticeAIStint>();
+                director.Register(stint);
             }
 
             var binding = go.GetComponent<AIDriverBinding>();
@@ -217,8 +297,9 @@ public class GridSpawner : MonoBehaviour
             if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             binding.Apply();
 
-            // Wear-based pit strategy (self-gates on green flag).
-            if (go.GetComponent<PitStopController>() == null) go.AddComponent<PitStopController>();
+            // Wear-based pit strategy (self-gates on green flag). Not in practice — the stint
+            // controller owns all pit-lane decisions there.
+            if (!practice && go.GetComponent<PitStopController>() == null) go.AddComponent<PitStopController>();
             // Fuel so the crew has something to refill (TireModel is auto-added by the dynamic model).
             if (go.GetComponent<FuelTank>() == null) go.AddComponent<FuelTank>();
 
@@ -227,7 +308,9 @@ public class GridSpawner : MonoBehaviour
             if (label == null) label = go.AddComponent<DriverLabel>();
             label.carset = carsetPrefix;
             label.carNumber = carNumber;
-            label.driverName = (namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "";
+            label.driverName = gridEntry != null && !string.IsNullOrEmpty(gridEntry.driverName)
+                ? gridEntry.driverName
+                : ((namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "");
             if (!string.IsNullOrEmpty(label.driverName)) go.name = $"AI_{label.driverName}_{carNumber}";
 
             if (dynamicAI)
@@ -289,6 +372,11 @@ public class GridSpawner : MonoBehaviour
                 col.collisionMask = collisionMask;
                 col.ApplyExtents();
             }
+
+            // Practice: physically place the car in its box now. The PreGrid freeze that pins a
+            // formation field never runs here (the phase is already Green), so without this a
+            // dynamic-AI car's motion model can latch a stale origin pose on its first physics step.
+            if (practice) splineDriver.PlaceAtStartDistance();
         }
     }
 
