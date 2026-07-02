@@ -24,7 +24,7 @@ public class FuelTank : MonoBehaviour
     {
         if (dt <= 0f) return;
         float load = idleBurn + litresPerSecAtFull * Mathf.Clamp01(throttle01) * (0.4f + 0.6f * Mathf.Clamp01(speedMps / 60f));
-        fuelLitres = Mathf.Max(0f, fuelLitres - load * dt);
+        fuelLitres = Mathf.Max(0f, fuelLitres - load * TrackConditions.FuelUseMultiplier * dt);
     }
 
     public void Refuel(float litres) => fuelLitres = Mathf.Clamp(fuelLitres + Mathf.Max(0f, litres), 0f, capacityLitres);

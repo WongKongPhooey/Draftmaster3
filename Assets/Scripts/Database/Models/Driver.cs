@@ -44,5 +44,15 @@ namespace Draftmaster.Data
         // --- Overall ability (0-100) ---
         public int CurrentAbility { get; set; }
         public int PotentialAbility { get; set; }
+
+        // --- Career lifecycle (driven by DriverProgression / SeasonRollover each offseason) ---
+        // Season the driver debuted (their rookie year). 0 for the hand-authored seed drivers.
+        public int DebutSeason { get; set; }
+        // Age at which CurrentAbility tops out; growth before it, decline after. 0 = not yet assigned
+        // (DriverProgression assigns one lazily on the first Advance for seed drivers).
+        public int PeakAge { get; set; }
+        // True once the driver hangs it up; retired drivers stay in the table for history but leave the active pool.
+        public bool Retired { get; set; }
+        public int RetiredSeason { get; set; }
     }
 }

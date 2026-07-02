@@ -544,19 +544,28 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         for (int s = 0; s < environment.strips.Length; s++)
         {
             var strip = environment.strips[s];
-
-            // The finish-line strip is anchored to the track's start/finish line, so it honours
-            // TrackInfoV2.startFinishDistance instead of a hand-typed distance (its band length is kept).
-            if (track.track != null && IsFinishLine(strip.label))
-            {
-                float band = strip.endDistance - strip.startDistance;
-                strip.startDistance = track.track.startFinishDistance;
-                strip.endDistance = strip.startDistance + (band > 0.01f ? band : 1f);
-            }
-
-            if (strip.endDistance <= strip.startDistance) continue;
             var lookup = strip.useSpline == TrackEnvironment.SplineRef.Pit ? pitSamples : mainSamples;
             if (lookup == null || lookup.Count < 2) continue;
+
+            // Resolve the segment-anchored span (segment index + metres within it, like barrier gaps)
+            // to absolute spline distances.
+            var segs = strip.useSpline == TrackEnvironment.SplineRef.Pit
+                ? (track.track != null ? track.track.pitSegments : null)
+                : (track.track != null ? track.track.segments : null);
+            if (segs == null || segs.Length == 0) continue;
+            float startAbs = ResolveSegmentDistance(segs, strip.startSegmentIndex, strip.startDistance);
+            float endAbs = ResolveSegmentDistance(segs, strip.endSegmentIndex, strip.endDistance);
+
+            // The finish-line strip is anchored to the track's start/finish line, so it honours
+            // TrackInfoV2.startFinishDistance instead of a hand-typed span (its band length is kept).
+            if (track.track != null && IsFinishLine(strip.label))
+            {
+                float band = endAbs - startAbs;
+                startAbs = track.track.startFinishDistance;
+                endAbs = startAbs + (band > 0.01f ? band : 1f);
+            }
+
+            if (endAbs <= startAbs) continue;
 
             var go = new GameObject(string.IsNullOrEmpty(strip.label) ? $"Strip_{s}" : strip.label);
             go.transform.SetParent(stripsRoot.transform, false);
@@ -564,20 +573,31 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             var mr = go.AddComponent<MeshRenderer>();
             mr.sortingOrder = strip.sortingOrder;
             if (strip.material != null) mr.sharedMaterial = strip.material;
-            mf.sharedMesh = BuildStripMesh(lookup, strip, spacing);
+            mf.sharedMesh = BuildStripMesh(lookup, strip, spacing, startAbs, endAbs);
         }
     }
 
-    Mesh BuildStripMesh(List<TrackBuilder.Sample> samples, TrackEnvironment.Strip strip, float spacing)
+    // Absolute spline distance of (segment index, metres past that segment's start). The within-segment
+    // distance is clamped to the segment's length, mirroring barrier-gap behaviour.
+    static float ResolveSegmentDistance(TrackInfoV2.TrackSegment[] segs, int segmentIndex, float distanceInSegment)
     {
-        var mesh = new Mesh { name = $"Strip_{strip.startDistance}_{strip.endDistance}" };
+        int idx = Mathf.Clamp(segmentIndex, 0, segs.Length - 1);
+        float start = 0f;
+        for (int i = 0; i < idx; i++) start += segs[i].length;
+        return start + Mathf.Clamp(distanceInSegment, 0f, segs[idx].length);
+    }
+
+    Mesh BuildStripMesh(List<TrackBuilder.Sample> samples, TrackEnvironment.Strip strip, float spacing,
+                        float startAbs, float endAbs)
+    {
+        var mesh = new Mesh { name = $"Strip_{startAbs}_{endAbs}" };
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 
         var verts = new List<Vector3>();
         var uvs = new List<Vector2>();
         var tris = new List<int>();
 
-        float length = strip.endDistance - strip.startDistance;
+        float length = endAbs - startAbs;
         int steps = Mathf.Max(2, Mathf.CeilToInt(length / spacing) + 1);
         float uvScale = strip.uvLengthScale > 0f ? strip.uvLengthScale : 1f;
 
@@ -585,7 +605,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         for (int i = 0; i < steps; i++)
         {
             float t = i / (float)(steps - 1);
-            float d = strip.startDistance + length * t;
+            float d = startAbs + length * t;
             var sample = usePit ? track.SamplePitAt(d, samples) : track.SampleAt(d, samples);
             float edgeBias = AnchorEdgeBias(strip.anchor, sample.width);
             Vector2 center = sample.position + sample.normal * (edgeBias + strip.lateralOffset);
@@ -688,6 +708,57 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             if (i > 0) Gizmos.DrawLine(prev, w);
             prev = w;
         }
+    }
+
+    // One-shot migration: strips used to store ABSOLUTE spline distances; they are now segment-anchored
+    // (segment index + metres within it, like barrier gaps). Converts every legacy strip on the open
+    // scene's TrackEnvironment in place. Only touches strips whose segment indices are both still 0
+    // (the legacy default), so re-running is harmless.
+    [UnityEditor.MenuItem("Tools/Draftmaster/Migrate Strip Distances")]
+    static void MigrateStripDistances()
+    {
+        var builder = FindObjectOfType<TrackEnvironmentBuilder>();
+        if (builder == null || builder.environment == null || builder.track == null || builder.track.track == null)
+        {
+            Debug.LogError("Migrate Strips: need a TrackEnvironmentBuilder with environment + track assigned in the open scene.");
+            return;
+        }
+
+        var env = builder.environment;
+        if (env.strips == null || env.strips.Length == 0) { Debug.Log("Migrate Strips: no strips."); return; }
+
+        int migrated = 0;
+        for (int i = 0; i < env.strips.Length; i++)
+        {
+            var strip = env.strips[i];
+            if (strip.startSegmentIndex != 0 || strip.endSegmentIndex != 0) continue; // already segment-anchored
+
+            var segs = strip.useSpline == TrackEnvironment.SplineRef.Pit
+                ? builder.track.track.pitSegments : builder.track.track.segments;
+            if (segs == null || segs.Length == 0) continue;
+
+            (strip.startSegmentIndex, strip.startDistance) = AbsoluteToSegment(segs, strip.startDistance);
+            (strip.endSegmentIndex, strip.endDistance) = AbsoluteToSegment(segs, strip.endDistance);
+            env.strips[i] = strip;
+            migrated++;
+        }
+
+        UnityEditor.EditorUtility.SetDirty(env);
+        UnityEditor.AssetDatabase.SaveAssets();
+        Debug.Log($"Migrate Strips: converted {migrated}/{env.strips.Length} strips on '{env.name}' to segment-anchored spans.", env);
+    }
+
+    // Walk the cumulative segment lengths to express an absolute spline distance as (segment, within-segment).
+    static (int, float) AbsoluteToSegment(TrackInfoV2.TrackSegment[] segs, float absolute)
+    {
+        float cum = 0f;
+        for (int i = 0; i < segs.Length; i++)
+        {
+            if (absolute < cum + segs[i].length || i == segs.Length - 1)
+                return (i, Mathf.Clamp(absolute - cum, 0f, segs[i].length));
+            cum += segs[i].length;
+        }
+        return (0, absolute);
     }
 #endif
 }

@@ -92,11 +92,13 @@ public class AIRacingBehaviour : MonoBehaviour
     float _stallTimer;
     float _recoveryTimer;
     float _recoveryDir;
+    PracticeAIStint _stint;   // practice stints manage lateralOffset themselves — don't fight them
 
     void Awake()
     {
         _spline = GetComponent<SplineDriver>();
         if (_spline != null) _basePaceMultiplier = _spline.paceMultiplier;
+        _stint = GetComponent<PracticeAIStint>();
     }
 
     public void SetBasePace(float baseMul) { _basePaceMultiplier = baseMul; }
@@ -109,6 +111,12 @@ public class AIRacingBehaviour : MonoBehaviour
         if (!RaceStart.IsGreen) return;
 
         float dt = Time.fixedDeltaTime;
+
+        // The grid-row stagger (lateralOffset) is only a parked-field look. Once racing, ease it off so cars
+        // settle onto their real racing line instead of holding a permanent ±2 m offset for the whole race.
+        // Not while on the pit lane (box-lane parking uses it) and not in practice (the stint controller owns it).
+        if (_stint == null && !_spline.IsOnPit && Mathf.Abs(_spline.lateralOffset) > 0.001f)
+            _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, maxLateralSpeed * dt);
 
         // Rolling start: for launchWindowSeconds after green, ease the follow-distance cap in from 0→1 so the
         // field accelerates together off the line (like the released player) instead of the cap pinning each
@@ -348,7 +356,7 @@ public class AIRacingBehaviour : MonoBehaviour
             }
         }
 
-        float effectivePace = _basePaceMultiplier;
+        float effectivePace = _basePaceMultiplier * TrackConditions.AiPaceMultiplier;
         if (_mistakeTimer > 0f) effectivePace *= mistakePaceFactor;
         var tireModel = GetComponent<TireModel>();
         if (tireModel != null) effectivePace *= tireModel.OverallGrip;

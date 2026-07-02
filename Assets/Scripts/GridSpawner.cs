@@ -70,10 +70,10 @@ public class GridSpawner : MonoBehaviour
     public bool multiplayerKinematicAI = true;
     [Tooltip("AI pure-pursuit steering gain (SplineInputDriver.steerGain).")]
     public float aiSteerGain = 1.5f;
-    [Tooltip("AI speed-tracking gain — throttle/brake per m/s of speed error (SplineInputDriver.speedGain).")]
-    public float aiSpeedGain = 0.5f;
-    [Tooltip("Scales the AI's corner target speeds (SplineDriver.cornerSpeedScale). <1 gives a little grip/braking margin. Tight-turn line-following is handled by the steering lookahead, so this can stay near 1.")]
-    public float aiCornerSpeedScale = 0.9f;
+    [Tooltip("AI speed-tracking gain — throttle/brake per m/s of speed error (SplineInputDriver.speedGain). Low values make the AI cruise under their target speed (throttle sags near zero error).")]
+    public float aiSpeedGain = 2f;
+    [Tooltip("Scales the AI's corner target speeds (SplineDriver.cornerSpeedScale). <1 gives a little grip/braking margin, >1 pushes targets past the computed grip speed (physics saturation still caps what they achieve).")]
+    public float aiCornerSpeedScale = 1.5f;
 
     IEnumerator Start()
     {

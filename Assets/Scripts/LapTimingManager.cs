@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Times every car's laps off the RacePositionTracker's lap counter. A lap only counts if the car
-// stayed on the track surface and never hit a wall: going fully off (centre of the car past the
-// track edge, runoff included) or a barrier contact invalidates the lap in progress. Driving the
+// stayed on legal surface and never hit a wall: going fully off onto grass/gravel or a barrier
+// contact invalidates the lap in progress (paved tarmac runoff is legal). Driving the
 // pit lane voids the lap outright — timing re-arms at the next start/finish crossing.
 // The crew-chief timing screen (TimingScreenUI) reads Rows; a small HUD shows the player's
 // last/best lap and flashes when their current lap is invalidated.
@@ -94,9 +94,14 @@ public class LapTimingManager : MonoBehaviour
                 continue;
             }
 
-            // Fully off the track surface (grass/gravel/runoff) invalidates the running lap.
+            // Fully off the track surface (grass/gravel) invalidates the running lap. Paved (tarmac)
+            // runoff is legal — running wide onto it costs time but keeps the lap.
             if (c.lapStarted && c.valid && !track.IsOnSurface(e.tf.position, out _))
-                Invalidate(c);
+            {
+                bool onPavedRunoff = SurfaceField.TryGetSurface(e.tf.position, out var surf)
+                                     && surf == TrackEnvironment.SurfaceType.TarmacRunoff;
+                if (!onPavedRunoff) Invalidate(c);
+            }
 
             if (e.lap > c.prevLap)
             {

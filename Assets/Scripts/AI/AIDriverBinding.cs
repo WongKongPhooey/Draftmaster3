@@ -28,8 +28,9 @@ public class AIDriverBinding : MonoBehaviour
         if (driver != null)
         {
             float aggression01 = Mathf.Clamp01(driver.Aggression / (float)Driver.StatMax);
-            // Everyone runs the ideal line; aggression only nudges them a little off it (-0.15 = slightly inside, +0.2 = slightly outside).
-            _spline.lineFactor = Mathf.Lerp(-0.15f, 0.2f, aggression01);
+            // Everyone runs the ideal line; aggression only nudges them fractionally off it (-0.05 = a touch
+            // inside, +0.08 = a touch outside). Kept tight so the field visibly follows the ideal line.
+            _spline.lineFactor = Mathf.Lerp(-0.05f, 0.08f, aggression01);
             racing.aggression01 = aggression01;
 
             float qualifying01 = Mathf.Clamp01(driver.Qualifying / (float)Driver.StatMax);

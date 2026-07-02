@@ -47,7 +47,7 @@ public class DatabaseManager : MonoBehaviour
     }
 
     // Bump when a model's columns change in a way that needs a clean rebuild of its table.
-    const int SchemaVersion = 2;
+    const int SchemaVersion = 3;
 
     // Register table schemas here as model classes are added. CreateTable is idempotent — safe to call every launch.
     static void CreateTables(SQLiteConnection db)

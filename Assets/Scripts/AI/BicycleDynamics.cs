@@ -71,7 +71,7 @@ public class BicycleDynamics : MonoBehaviour
         // Throttle/brake from commanded speed error.
         float speedError = _spline.CommandedSpeedMps - _speedMps;
         float accelInput = Mathf.Clamp(speedError * speedGain, -50f, 50f);
-        float accelCap = SampleAccel(vi, _speedMps) * TrackConditions.PowerMultiplier;
+        float accelCap = SampleAccel(vi, _speedMps) * TrackConditions.EffectivePower;
         float decelCap = SampleDecel(vi, _speedMps);
         float longitudinalA = accelInput >= 0f ? Mathf.Min(accelInput, accelCap) : Mathf.Max(accelInput, -decelCap);
 

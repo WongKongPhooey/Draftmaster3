@@ -192,7 +192,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
             _mesh.RecalculateBounds();
 
             // Accumulate a 0..1 damage level + a left/right bias (from where the hit landed) for handling effects.
-            DamageLevel = Mathf.Clamp01(DamageLevel + Mathf.Clamp01(severity) * damageAccrual);
+            DamageLevel = Mathf.Clamp01(DamageLevel + Mathf.Clamp01(severity) * damageAccrual * TrackConditions.DamageMultiplier);
             _biasAccum += localPoint.x * Mathf.Clamp01(severity);
             DamageBiasX = Mathf.Clamp(_biasAccum, -1f, 1f);
         }

@@ -57,9 +57,15 @@ public class TrackEnvironment : ScriptableObject
         public SplineRef useSpline;
         [Tooltip("Anchor for the lateralOffset value: Centerline = distance from track centre; LeftEdge / RightEdge = distance from that edge of the track, so the strip tracks the track edge when width varies.")]
         public LateralAnchor anchor;
-        [Tooltip("Where the strip starts, in metres along the spline.")]
+
+        [Header("Span (segment-anchored, like barrier gaps)")]
+        [Tooltip("Segment the strip starts on (index into the chosen spline's segments).")]
+        public int startSegmentIndex;
+        [Tooltip("Strip start, metres from the START of that segment.")]
         public float startDistance;
-        [Tooltip("Where the strip ends, in metres along the spline.")]
+        [Tooltip("Segment the strip ends on (index into the chosen spline's segments). Same segment as start is fine.")]
+        public int endSegmentIndex;
+        [Tooltip("Strip end, metres from the START of the end segment.")]
         public float endDistance;
         [Tooltip("Lateral offset from the chosen anchor, metres. Positive = right of travel direction.")]
         public float lateralOffset;

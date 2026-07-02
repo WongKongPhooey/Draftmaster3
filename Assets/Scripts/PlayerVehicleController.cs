@@ -22,7 +22,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Fraction of static weight on the FRONT axle. >0.5 = nose-heavy (more front grip, tends to understeer).")]
     [Range(0.4f, 0.65f)] public float frontWeightBias = 0.54f;
     [Tooltip("Centre-of-gravity height (m). Higher = more weight transfer under accel/brake, more pitch-sensitive balance.")]
-    public float cgHeight = 0.5f;
+    public float cgHeight = 0.25f;
     [Tooltip("Yaw inertia scaler. Iz = mass * a * b * this. <1 = darty/nervous rotation, >1 = lazy/stable.")]
     [Range(0.4f, 2f)] public float yawInertiaFactor = 1.0f;
 
@@ -30,11 +30,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Cornering stiffness per unit vertical load (1/rad). How sharply slip angle builds lateral force. ~10-14 typical. Higher = sharper turn-in, twitchier.")]
     public float corneringStiffness = 11f;
     [Tooltip("Static handling balance. + = more understeer (rear grippier than front, safe/stable). - = oversteer (loose). 0 = neutral.")]
-    [Range(-0.3f, 0.3f)] public float understeerBias = 0.10f;
+    [Range(-0.3f, 0.3f)] public float understeerBias = 0.05f;
     [Tooltip("Yaw-rate damping (1/s). Resists spinning — settles snap spins and tames brake-induced rotation. Higher = more stable/heavier feel. Too high and the car won't rotate (feels like understeer). 0 = none.")]
     public float yawDamping = 1.8f;
     [Tooltip("Extra yaw damping under braking (1/s), scaled by brake input. Specifically counters spin-on-the-brakes from rear unloading.")]
-    public float brakeYawDamping = 2f;
+    public float brakeYawDamping = 4f;
     [Tooltip("Below this forward speed (m/s) steering is kinematic (geometry only) to avoid divide-by-near-zero jitter at crawl.")]
     public float lowSpeedKinematic = 2.0f;
     [Tooltip("Physics sub-steps per FixedUpdate. More = stiffer/stabler tyres without oscillation. 4 is plenty.")]
@@ -409,7 +409,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss);
-        float accel = SampleAccel(_vx) * TrackConditions.PowerMultiplier * throttleIn;
+        float accel = SampleAccel(_vx) * TrackConditions.EffectivePower * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
         // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still

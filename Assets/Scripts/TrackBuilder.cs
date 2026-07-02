@@ -15,7 +15,11 @@ public class TrackBuilder : MonoBehaviour
     [Tooltip("Build a second lane alongside the pit lane (wall side, +normal) where the pit boxes sit. Cars park on it; the pit lane proper stays clear for driving.")]
     public bool buildPitBoxLane = true;
     [Tooltip("Width (m) of the box lane strip.")]
-    public float pitBoxLaneWidth = 4f;
+    public float pitBoxLaneWidth = 6f;
+    [Tooltip("Where the grey box-lane strip starts, metres from the pit lane's start. 0 = from the very start.")]
+    public float pitBoxLaneStartOffset = 0f;
+    [Tooltip("Where the grey box-lane strip ends, metres BEFORE the pit lane's end. 0 = all the way to the end.")]
+    public float pitBoxLaneEndOffset = 0f;
     [Tooltip("Material for the box lane. Null = a flat grey tarmac is built automatically (pitBoxLaneColor).")]
     public Material pitBoxLaneMaterial;
     public Color pitBoxLaneColor = new Color(0.42f, 0.42f, 0.44f);
@@ -316,16 +320,36 @@ public class TrackBuilder : MonoBehaviour
         mf.sharedMesh = _pitMesh;
 
         // Second lane on the wall side (+normal): the grey strip the pit boxes sit on. Shares its inner
-        // edge with the pit ribbon so the two read as one paved surface.
+        // edge with the pit ribbon so the two read as one paved surface. Its span is trimmed by the
+        // start/end offsets so the strip can begin after the pit entry and stop before the exit.
         if (buildPitBoxLane && pitBoxLaneWidth > 0f)
         {
-            var laneGo = new GameObject("PitBoxLane");
-            laneGo.transform.SetParent(_pitChild.transform, false);
-            var lmf = laneGo.AddComponent<MeshFilter>();
-            var lmr = laneGo.AddComponent<MeshRenderer>();
-            lmr.sharedMaterial = pitBoxLaneMaterial != null ? pitBoxLaneMaterial : BuildBoxLaneMaterial();
-            lmf.sharedMesh = BuildBandMesh(pitSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth, $"PitBoxLane_{track.name}");
+            float pitLen = pitSamples[pitSamples.Count - 1].distance;
+            float from = Mathf.Clamp(pitBoxLaneStartOffset, 0f, pitLen);
+            float to = Mathf.Clamp(pitLen - Mathf.Max(0f, pitBoxLaneEndOffset), 0f, pitLen);
+            var bandSamples = SampleRange(pitSamples, from, to);
+            if (bandSamples.Count >= 2)
+            {
+                var laneGo = new GameObject("PitBoxLane");
+                laneGo.transform.SetParent(_pitChild.transform, false);
+                var lmf = laneGo.AddComponent<MeshFilter>();
+                var lmr = laneGo.AddComponent<MeshRenderer>();
+                lmr.sharedMaterial = pitBoxLaneMaterial != null ? pitBoxLaneMaterial : BuildBoxLaneMaterial();
+                lmf.sharedMesh = BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth, $"PitBoxLane_{track.name}");
+            }
         }
+    }
+
+    // Sub-range of a sample list between two distances, with exact interpolated samples at both ends.
+    List<Sample> SampleRange(List<Sample> samples, float from, float to)
+    {
+        var list = new List<Sample>();
+        if (to - from < 0.01f) return list;
+        list.Add(SamplePitAt(from, samples));
+        for (int i = 0; i < samples.Count; i++)
+            if (samples[i].distance > from && samples[i].distance < to) list.Add(samples[i]);
+        list.Add(SamplePitAt(to, samples));
+        return list;
     }
 
     Material BuildBoxLaneMaterial()

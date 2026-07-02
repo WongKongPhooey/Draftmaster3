@@ -12,8 +12,8 @@ public class SplineInputDriver : MonoBehaviour
 {
     [Tooltip("Steering response: heading error (deg) is scaled by this, then clamped to the steering limit and a low-speed ramp. Higher = sharper correction (twitchier).")]
     public float steerGain = 1.5f;
-    [Tooltip("Throttle/brake per m/s of speed error (produces a 0..1 input). Higher = snappier speed tracking.")]
-    public float speedGain = 0.5f;
+    [Tooltip("Throttle/brake per m/s of speed error (produces a 0..1 input). Higher = snappier speed tracking. Too low makes the AI feel gutless: throttle sags as they close on the target speed, so they cruise 1-2 m/s under it and never use full power.")]
+    public float speedGain = 2f;
     [Tooltip("Below this speed (m/s) steering authority ramps down to avoid low-speed wobble / spin.")]
     public float lowSpeedCutoff = 6f;
 

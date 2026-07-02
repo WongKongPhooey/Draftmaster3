@@ -10,9 +10,9 @@ using UnityEngine;
 public class PlayerPitBoxMarker : MonoBehaviour
 {
     [Tooltip("Box length (m), along the pit lane. Must comfortably exceed the car length (~4.8).")]
-    public float boxLength = 6.4f;
+    public float boxLength = 8.5f;
     [Tooltip("Box width (m), across the lane. Must comfortably exceed the car width (~2.0).")]
-    public float boxWidth = 3.4f;
+    public float boxWidth = 4.6f;
     public Color color = new Color(0.35f, 1f, 0.55f);
     [Tooltip("Glow pulses per second.")]
     public float pulseHz = 1.1f;

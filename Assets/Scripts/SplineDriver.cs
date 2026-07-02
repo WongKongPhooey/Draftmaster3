@@ -158,7 +158,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Default flat-corner speed used when the vehicle's cornering curve is unauthored, in mph.")]
     public float fallbackCornerMph = 110f;
     [Tooltip("Scales corner (turn-segment) target speeds. <1 gives the dynamic model grip + braking margin so it stops overshooting turns and brakes earlier. Straights are unaffected.")]
-    [Range(0.6f, 1.1f)] public float cornerSpeedScale = 0.85f;
+    [Range(0.6f, 2f)] public float cornerSpeedScale = 0.85f;
 
     const float MphToMps = 1f / 2.237f;
     const float MpsToMph = 2.237f;
@@ -502,7 +502,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float baseMph;
         if (vehicleInfo != null && vehicleInfo.corneringSpeedCurve != null && vehicleInfo.corneringSpeedCurve.length > 0)
         {
-            baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius);
+            // The curve encodes corner speed at nominal (1.0) grip. Corner speed scales with √μ, so fold the
+            // global grip boost in — otherwise the AI corner at raw curve speeds while the player's physics
+            // enjoy TrackConditions.Effective and walk away from the field mid-corner.
+            baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
+                      * Mathf.Sqrt(Mathf.Max(TrackConditions.Effective, 0.05f));
         }
         else if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
         {

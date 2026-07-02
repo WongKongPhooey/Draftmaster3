@@ -28,7 +28,7 @@ public class TireState : MonoBehaviour
         float latG = EstimateLateralG();
         float maxG = Mathf.Max(_spline.vehicleInfo.maxLateralG, 0.1f);
         float intensity = Mathf.Clamp01(latG / maxG);
-        wear = Mathf.Min(1f, wear + intensity * _spline.vehicleInfo.tireWearRate * Time.fixedDeltaTime);
+        wear = Mathf.Min(1f, wear + intensity * _spline.vehicleInfo.tireWearRate * TrackConditions.TireWearMultiplier * Time.fixedDeltaTime);
     }
 
     float EstimateLateralG()
