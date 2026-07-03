@@ -503,15 +503,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (vehicleInfo != null && vehicleInfo.corneringSpeedCurve != null && vehicleInfo.corneringSpeedCurve.length > 0)
         {
             // The curve encodes corner speed at nominal (1.0) grip. Corner speed scales with √μ, so fold the
-            // global grip boost in — otherwise the AI corner at raw curve speeds while the player's physics
-            // enjoy TrackConditions.Effective and walk away from the field mid-corner.
+            // AI's effective grip in (global boost × AI-only bonus) — otherwise the AI corner at raw curve
+            // speeds while the physics enjoy the multiplied grip and the targets undersell what the car can do.
             baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
-                      * Mathf.Sqrt(Mathf.Max(TrackConditions.Effective, 0.05f));
+                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective, 0.05f));
         }
         else if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
         {
-            // v = sqrt(r * g * mu_effective). mu_effective = base mu × track conditions × tire wear grip.
-            float gripMul = TrackConditions.Effective;
+            // v = sqrt(r * g * mu_effective). mu_effective = base mu × track conditions (incl. AI bonus) × tire wear grip.
+            float gripMul = TrackConditions.AiEffective;
             var tireModel = GetComponent<TireModel>();
             if (tireModel != null) gripMul *= tireModel.OverallGrip;
             else { var tire = GetComponent<TireState>(); if (tire != null) gripMul *= tire.GripMultiplier; }

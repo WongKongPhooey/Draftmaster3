@@ -85,7 +85,8 @@
       "mcp__unity__execute_code",
       "mcp__unity__manage_asset",
       "mcp__unity__manage_prefabs",
-      "mcp__unity__manage_scriptable_object"
+      "mcp__unity__manage_scriptable_object",
+      "Bash(python *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots",

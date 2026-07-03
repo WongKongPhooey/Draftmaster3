@@ -17,6 +17,13 @@ public class TrackEnvironmentBuilderEditor : Editor
     // Runoff picker.
     TrackEnvironment.SurfaceType _runoffSurface = TrackEnvironment.SurfaceType.Grass;
 
+    // Kerb pickers.
+    TrackEnvironment.BarrierSide _kerbSide = TrackEnvironment.BarrierSide.Outer;
+    int _kerbStartSeg;
+    float _kerbStartDist;
+    float _kerbLength = 20f; // metres along the spline; may run past the start segment's end
+    float _kerbWidth = 2f;
+
     void OnEnable() { _builder = (TrackEnvironmentBuilder)target; }
 
     public override void OnInspectorGUI()
@@ -33,6 +40,8 @@ public class TrackEnvironmentBuilderEditor : Editor
         DrawManualBarrierSection(env, maxSeg);
         EditorGUILayout.Space();
         DrawRunoffSection(env);
+        EditorGUILayout.Space();
+        DrawKerbSection(env, maxSeg);
     }
 
     // ---------------------------------------------------------------- Manual barriers
@@ -185,6 +194,94 @@ public class TrackEnvironmentBuilderEditor : Editor
             "• Drag a point = move • Shift+Click a point = delete\n" +
             "The polygon auto-closes from the last point back to the first.",
             MessageType.None);
+    }
+
+    // ---------------------------------------------------------------- Kerbs (strips preset)
+
+    void DrawKerbSection(TrackEnvironment env, int maxSeg)
+    {
+        EditorGUILayout.LabelField("New Kerb", EditorStyles.boldLabel);
+        _kerbSide = (TrackEnvironment.BarrierSide)EditorGUILayout.EnumPopup("Side (of travel)", _kerbSide);
+
+        EditorGUILayout.LabelField("Span");
+        EditorGUI.indentLevel++;
+        _kerbStartSeg = EditorGUILayout.IntSlider("Start segment", _kerbStartSeg, 0, maxSeg);
+        _kerbStartDist = EditorGUILayout.FloatField("Start dist (m into segment)", _kerbStartDist);
+        _kerbLength = EditorGUILayout.FloatField("Length (m)", _kerbLength);
+        EditorGUI.indentLevel--;
+        _kerbWidth = EditorGUILayout.FloatField("Width (m)", _kerbWidth);
+
+        if (GUILayout.Button("Create Kerb"))
+        {
+            // Kerbs are just Strips with a preset: edge-anchored, shifted fully OUTBOARD of the track
+            // surface (center = edge ± width/2), kerb material, drawn above the track and edge lines.
+            // Inner = right of travel (+lateral), Outer = left of travel (−lateral) — matches barriers.
+            bool inner = _kerbSide == TrackEnvironment.BarrierSide.Inner;
+            var segs = _builder.track.track.segments;
+
+            // The Strip struct stores a segment-anchored END; the UI takes a LENGTH. Convert: walk forward
+            // from (startSeg, startDist) by _kerbLength metres, spilling into following segments as needed.
+            // Clamps at the end of the last segment (no wrap past the lap seam).
+            int endSeg = Mathf.Clamp(_kerbStartSeg, 0, segs.Length - 1);
+            float endDist = Mathf.Clamp(_kerbStartDist, 0f, segs[endSeg].length) + Mathf.Max(0.1f, _kerbLength);
+            while (endDist > segs[endSeg].length && endSeg < segs.Length - 1)
+            {
+                endDist -= segs[endSeg].length;
+                endSeg++;
+            }
+            endDist = Mathf.Min(endDist, segs[endSeg].length);
+
+            var list = new List<TrackEnvironment.Strip>(env.strips ?? new TrackEnvironment.Strip[0]);
+            list.Add(new TrackEnvironment.Strip
+            {
+                label = $"Kerb {_kerbSide} {_kerbStartSeg}+{_kerbLength:0}m",
+                useSpline = TrackEnvironment.SplineRef.Main,
+                anchor = inner ? TrackEnvironment.LateralAnchor.RightEdge : TrackEnvironment.LateralAnchor.LeftEdge,
+                startSegmentIndex = _kerbStartSeg,
+                startDistance = _kerbStartDist,
+                endSegmentIndex = endSeg,
+                endDistance = endDist,
+                lateralOffset = (inner ? 1f : -1f) * _kerbWidth * 0.5f,
+                width = _kerbWidth,
+                sortingOrder = 2,
+                material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Kerb.mat"),
+                uvLengthScale = 1f,
+            });
+            Undo.RecordObject(env, "Create Kerb");
+            env.strips = list.ToArray();
+            EditorUtility.SetDirty(env);
+            _builder.Build();
+            SceneView.RepaintAll();
+        }
+
+        EditorGUILayout.LabelField("Strips (kerbs, lines, ribbons)", EditorStyles.boldLabel);
+        var strips = env.strips;
+        if (strips == null || strips.Length == 0)
+        {
+            EditorGUILayout.HelpBox("None yet. Pick a side + span above and Create Kerb. Fine-tune in the Strips array.", MessageType.None);
+        }
+        else
+        {
+            for (int i = 0; i < strips.Length; i++)
+            {
+                var s = strips[i];
+                EditorGUILayout.BeginHorizontal();
+                string title = string.IsNullOrEmpty(s.label) ? $"Strip {i}" : s.label;
+                EditorGUILayout.LabelField($"{i}: {title} (seg {s.startSegmentIndex}→{s.endSegmentIndex}, w {s.width:0.##}m)");
+                if (GUILayout.Button("Delete", GUILayout.Width(60)))
+                {
+                    var list = new List<TrackEnvironment.Strip>(env.strips);
+                    Undo.RecordObject(env, "Delete Strip");
+                    list.RemoveAt(i);
+                    env.strips = list.ToArray();
+                    EditorUtility.SetDirty(env);
+                    _builder.Build();
+                    EditorGUILayout.EndHorizontal();
+                    break;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+        }
     }
 
     // Only one edit mode active at a time.

@@ -39,8 +39,8 @@ public class TrackEnvironment : ScriptableObject
     public Material grassMaterial;
     [Tooltip("Default material for Gravel areas.")]
     public Material gravelMaterial;
-    [Tooltip("Sorting order for runoff meshes. Below barriers, above the track surface.")]
-    public int runoffSortingOrder = 1;
+    [Tooltip("Sorting order for runoff meshes. Ground is -100, ExtraTrackSpline ribbons -2, main track 0 — keep runoff between ground and the extra ribbons so escape roads draw over their runoff aprons.")]
+    public int runoffSortingOrder = -10;
 
     [Tooltip("Spacing between strip vertex rows in metres. Lower = smoother strips on tight curves, more triangles.")]
     public float stripSampleSpacing = 2f;

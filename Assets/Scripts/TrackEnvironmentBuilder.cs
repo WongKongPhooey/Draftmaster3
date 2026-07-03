@@ -602,6 +602,10 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         float uvScale = strip.uvLengthScale > 0f ? strip.uvLengthScale : 1f;
 
         bool usePit = strip.useSpline == TrackEnvironment.SplineRef.Pit;
+        // U runs left→right vert (−normal → +normal). On the RIGHT edge that reads track→outside; on the
+        // LEFT edge it reads outside→track, so an asymmetric texture (kerb profile) points INTO the track.
+        // Mirror U for left-anchored strips so the texture always reads track-side → outside on both edges.
+        bool mirrorU = strip.anchor == TrackEnvironment.LateralAnchor.LeftEdge;
         for (int i = 0; i < steps; i++)
         {
             float t = i / (float)(steps - 1);
@@ -613,8 +617,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             Vector2 right = center + sample.normal * (strip.width * 0.5f);
             verts.Add(new Vector3(left.x, left.y, 0));
             verts.Add(new Vector3(right.x, right.y, 0));
-            uvs.Add(new Vector2(0f, length * t * uvScale));
-            uvs.Add(new Vector2(1f, length * t * uvScale));
+            uvs.Add(new Vector2(mirrorU ? 1f : 0f, length * t * uvScale));
+            uvs.Add(new Vector2(mirrorU ? 0f : 1f, length * t * uvScale));
 
             if (i > 0)
             {

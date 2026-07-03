@@ -81,7 +81,7 @@ public class BicycleDynamics : MonoBehaviour
 
         // Grip saturation: cap lateral acceleration. If required lateral > available, scale yawRate down and bleed speed.
         var tire = GetComponent<TireState>();
-        float gripMul = TrackConditions.Effective * (tire != null ? tire.GripMultiplier : 1f);
+        float gripMul = TrackConditions.AiEffective * (tire != null ? tire.GripMultiplier : 1f);
         float maxLatMps2 = vi.maxLateralG * gripMul * 9.81f * saturationHeadroom;
         float requiredLatMps2 = Mathf.Abs(yawRateRad * _speedMps);
         if (requiredLatMps2 > maxLatMps2 && _speedMps > 0.5f)

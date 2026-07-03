@@ -404,7 +404,7 @@ public class TrackBuilder : MonoBehaviour
         return mesh;
     }
 
-    Mesh BuildRibbonMesh(List<Sample> samples, bool closedLoop, string name)
+    public static Mesh BuildRibbonMesh(List<Sample> samples, bool closedLoop, string name)
     {
         if (samples == null || samples.Count < 2) return null;
 
@@ -523,6 +523,17 @@ public class TrackBuilder : MonoBehaviour
                 return true;
             }
         }
+
+        // Free-placed extra ribbons (escape roads, alternate-layout splits) are tarmac too, not grass.
+        var extras = ExtraTrackSpline.Active;
+        for (int i = 0; i < extras.Count; i++)
+        {
+            if (extras[i] != null && extras[i].IsOnSurface(worldPos, out float exLat))
+            {
+                lateralAbs = exLat;
+                return true;
+            }
+        }
         return false;
     }
 
@@ -587,7 +598,8 @@ public class TrackBuilder : MonoBehaviour
     }
 
     // Nearest-sample test: is local within half-width of this centerline? Outputs |lateral| from it.
-    static bool OnSampleSurface(List<Sample> samples, Vector2 local, out float lateralAbs)
+    // Public+static: ExtraTrackSpline runs the same test against its own centerline.
+    public static bool OnSampleSurface(List<Sample> samples, Vector2 local, out float lateralAbs)
     {
         lateralAbs = 0f;
         if (samples == null || samples.Count < 2) return false;
@@ -636,7 +648,7 @@ public class TrackBuilder : MonoBehaviour
         };
     }
 
-    static List<Sample> SampleSegments(
+    public static List<Sample> SampleSegments(
         Vector2 startPos,
         float startHeading,
         TrackInfoV2.TrackSegment[] segments,

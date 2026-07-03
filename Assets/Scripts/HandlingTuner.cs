@@ -98,6 +98,7 @@ public class HandlingTuner : MonoBehaviour
         _globalDefaults["FuelUseMultiplier"] = TrackConditions.FuelUseMultiplier;
         _globalDefaults["DamageMultiplier"] = TrackConditions.DamageMultiplier;
         _globalDefaults["AiPaceMultiplier"] = TrackConditions.AiPaceMultiplier;
+        _globalDefaults["AiGripMultiplier"] = TrackConditions.AiGripMultiplier;
     }
 
     void OnGUI()
@@ -146,6 +147,7 @@ public class HandlingTuner : MonoBehaviour
         TrackConditions.FuelUseMultiplier  = LabeledSlider("FuelUseMultiplier",  TrackConditions.FuelUseMultiplier,  0f,   4f);
         TrackConditions.DamageMultiplier   = LabeledSlider("DamageMultiplier",   TrackConditions.DamageMultiplier,   0f,   4f);
         TrackConditions.AiPaceMultiplier   = LabeledSlider("AiPaceMultiplier",   TrackConditions.AiPaceMultiplier,   0.5f, 1.5f);
+        TrackConditions.AiGripMultiplier   = LabeledSlider("AiGripMultiplier",   TrackConditions.AiGripMultiplier,   0.5f, 1.5f);
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
@@ -177,6 +179,7 @@ public class HandlingTuner : MonoBehaviour
         if (_globalDefaults.TryGetValue("FuelUseMultiplier", out var f)) TrackConditions.FuelUseMultiplier = f;
         if (_globalDefaults.TryGetValue("DamageMultiplier", out var d)) TrackConditions.DamageMultiplier = d;
         if (_globalDefaults.TryGetValue("AiPaceMultiplier", out var a)) TrackConditions.AiPaceMultiplier = a;
+        if (_globalDefaults.TryGetValue("AiGripMultiplier", out var ag)) TrackConditions.AiGripMultiplier = ag;
     }
 
     void LogValues()
@@ -192,6 +195,7 @@ public class HandlingTuner : MonoBehaviour
         sb.AppendLine($"  [Global] FuelUseMultiplier = {TrackConditions.FuelUseMultiplier:0.####}");
         sb.AppendLine($"  [Global] DamageMultiplier = {TrackConditions.DamageMultiplier:0.####}");
         sb.AppendLine($"  [Global] AiPaceMultiplier = {TrackConditions.AiPaceMultiplier:0.####}");
+        sb.AppendLine($"  [Global] AiGripMultiplier = {TrackConditions.AiGripMultiplier:0.####}");
         Debug.Log(sb.ToString());
     }
 

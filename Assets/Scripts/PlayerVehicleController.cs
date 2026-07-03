@@ -409,7 +409,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss);
-        float accel = SampleAccel(_vx) * TrackConditions.EffectivePower * throttleIn;
+        // AI cars fold AiPaceMultiplier into engine power too: their commanded targets already scale with it,
+        // but targets above what the engine can physically reach do nothing — so the engine must scale with them.
+        float aiPower = externalInput ? TrackConditions.AiPaceMultiplier : 1f;
+        float accel = SampleAccel(_vx) * TrackConditions.EffectivePower * aiPower * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
         // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still
@@ -430,7 +433,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float axCmd = accel + reverseDrive - decel; // commanded longitudinal accel (m/s²)
 
         // Available grip per axle: μ (proxied by maxLateralG) × track × tyre (wear+temperature), biased for balance.
-        float trackGrip = TrackConditions.Effective;
+        // AI-driven cars get the AI-only grip bonus on top of the global conditions; the player reads the raw global.
+        float trackGrip = externalInput ? TrackConditions.AiEffective : TrackConditions.Effective;
         float tyreGripF = (enableWear && _tires != null) ? _tires.AxleGripFront : 1f;
         float tyreGripR = (enableWear && _tires != null) ? _tires.AxleGripRear : 1f;
         float dmgGrip = damageImpairsHandling ? 1f - dmg * damageGripLoss : 1f;
