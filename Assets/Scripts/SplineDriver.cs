@@ -396,6 +396,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return Mathf.Lerp(_lateralProfile[lo], _lateralProfile[hi], t);
     }
 
+    // paceMultiplier folded into the current speed profile. Targets are baked at this pace so the
+    // relaxation passes bake matching (longer) braking distances; the live command applies only the
+    // residual ratio between rebuilds. Above 1 the whole longitudinal envelope stretches with it —
+    // without that, the pace knob never reached the straights (accel tapers to zero at the authored
+    // top speed and both brain and car hard-clamp there, so only corner speeds ever scaled).
+    float _profilePace = 1f;
+    float _nextProfileRebuildTime;
+    float ProfileStretch => Mathf.Max(1f, _profilePace);
+
     void PrecomputeSegmentSpeeds()
     {
         if (track == null || track.track == null || track.track.segments == null)
@@ -405,6 +414,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             return;
         }
 
+        _profilePace = Mathf.Max(0.1f, paceMultiplier);
         var segs = track.track.segments;
         _segmentTargetMph = new float[segs.Length];
         _segmentStartDistance = new float[segs.Length];
@@ -412,7 +422,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         for (int i = 0; i < segs.Length; i++)
         {
             _segmentStartDistance[i] = cum;
-            _segmentTargetMph[i] = ComputeTargetSpeedForSegment(segs[i]);
+            _segmentTargetMph[i] = ComputeTargetSpeedForSegment(segs[i]) * _profilePace;
             cum += segs[i].length;
         }
 
@@ -454,7 +464,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (d < 0f) d += _mainLength;
         if (d <= 0f) return;
         float vPrev = _speedProfile[prev] * MphToMps;
-        float a = SampleAccel(_speedProfile[prev]);
+        float a = SampleAccel(_speedProfile[prev] / ProfileStretch) * ProfileStretch;
         float vMaxMps = Mathf.Sqrt(vPrev * vPrev + 2f * a * d);
         float vMaxMph = vMaxMps * MpsToMph;
         if (vMaxMph < _speedProfile[i]) _speedProfile[i] = vMaxMph;
@@ -466,7 +476,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (d < 0f) d += _mainLength;
         if (d <= 0f) return;
         float vNext = _speedProfile[next] * MphToMps;
-        float decel = SampleDecel(_speedProfile[i]);
+        float decel = SampleDecel(_speedProfile[i] / ProfileStretch) * ProfileStretch;
         float vMaxMps = Mathf.Sqrt(vNext * vNext + 2f * decel * d);
         float vMaxMph = vMaxMps * MpsToMph;
         if (vMaxMph < _speedProfile[i]) _speedProfile[i] = vMaxMph;
@@ -653,7 +663,18 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             else if (_speedProfile != null)
             {
-                targetMph = ProfileAt(_distance) * paceMultiplier + aiSpeedBoostMph;
+                // The profile is baked at _profilePace; between (rate-limited) rebuilds the residual
+                // ratio keeps the response live, so formation ramps and slider drags act immediately.
+                float paceNow = Mathf.Max(0.1f, paceMultiplier);
+                float ratio = paceNow / _profilePace;
+                if ((ratio > 1.05f || ratio < 0.95f) && Time.time >= _nextProfileRebuildTime)
+                {
+                    _nextProfileRebuildTime = Time.time + 2f;
+                    PrecomputeSegmentSpeeds();
+                    BuildSpeedProfile();
+                    ratio = 1f;
+                }
+                targetMph = ProfileAt(_distance) * ratio + aiSpeedBoostMph;
                 DesiredMph = targetMph;
                 if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
             }
@@ -716,10 +737,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     void UpdateSpeedToward(float targetMph)
     {
-        float topMph = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
+        // Pace above 1 stretches the longitudinal envelope — accel/decel curves sampled at the
+        // pace-normalised speed and scaled up, top-speed ceiling raised to match. Sub-1 pace keeps
+        // the stock envelope (formation laps just chase lower targets with normal urgency).
+        float stretch = Mathf.Max(1f, paceMultiplier);
+        float topMph = (vehicleInfo != null ? vehicleInfo.topSpeed : 200f) * stretch;
         if (_currentMph < targetMph)
         {
-            float accel = SampleAccel(_currentMph);
+            float accel = SampleAccel(_currentMph / stretch) * stretch;
             // Gearbox shapes the live accel (gear torque curve + brief drive-cut on a shift). It averages ~1
             // so overall pace is preserved; the static speed profile is left untouched (built without it).
             if (_gearbox != null) accel *= _gearbox.AccelMultiplier;
@@ -728,7 +753,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
         else if (_currentMph > targetMph)
         {
-            float decelMphPerSec = SampleDecel(_currentMph) * MpsToMph;
+            float decelMphPerSec = SampleDecel(_currentMph / stretch) * stretch * MpsToMph;
             // Avoidance can demand a firmer brake than the authored decel curve (which may be too weak to stop a
             // closing car before contact). aiMinDecelMphPerSec is the floor on braking authority for that frame.
             if (aiMinDecelMphPerSec > 0f) decelMphPerSec = Mathf.Max(decelMphPerSec, aiMinDecelMphPerSec);

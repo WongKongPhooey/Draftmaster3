@@ -93,6 +93,18 @@ public class OnFootController : MonoBehaviour
 
         _rb.linearVelocity = move * moveSpeed;
 
+        // Keep the walker inside any authored PaddockBoundary: clamp the predicted next position
+        // and re-derive velocity from it, which naturally slides along the polygon edge.
+        if (PaddockBoundary.AnyActive)
+        {
+            if (!PaddockBoundary.IsInside(_rb.position))
+                _rb.position = PaddockBoundary.Constrain(_rb.position); // spawned/pushed outside — pull back in
+            Vector2 next = _rb.position + _rb.linearVelocity * Time.fixedDeltaTime;
+            Vector2 clamped = PaddockBoundary.Constrain(next);
+            if (clamped != next)
+                _rb.linearVelocity = (clamped - _rb.position) / Time.fixedDeltaTime;
+        }
+
         if (faceMoveDirection && move.sqrMagnitude > 0.01f)
         {
             float ang = Mathf.Atan2(move.y, move.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;

@@ -408,18 +408,24 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));
 
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
-        float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss);
         // AI cars fold AiPaceMultiplier into engine power too: their commanded targets already scale with it,
         // but targets above what the engine can physically reach do nothing — so the engine must scale with them.
+        // Above 1 it also STRETCHES the envelope (top-speed clamp raised, accel/brake curves sampled at the
+        // pace-normalised speed) — otherwise the hard _vx clamp pins AI to the authored top speed and the pace
+        // knob never reaches the straights.
         float aiPower = externalInput ? TrackConditions.AiPaceMultiplier : 1f;
-        float accel = SampleAccel(_vx) * TrackConditions.EffectivePower * aiPower * throttleIn;
+        float aiStretch = Mathf.Max(1f, aiPower);
+        float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss) * aiStretch;
+        float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
         // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still
         // BRAKES (and keeps its momentum) instead of being snapped to the reverse cap.
         bool reversing = brakeIn > 0.05f && throttleIn < 0.05f && _vx < reverseEngageSpeed && _vx > -reverseMaxSpeed;
 
-        float decel = reversing ? 0f : SampleDecel(_vx) * brakeIn; // brake suppressed while reversing (would fight it)
+        // Brakes stretch with the same envelope so a pace-boosted car can still shed its extra straight
+        // speed inside the profile's baked braking distances (they assume symmetric scaling).
+        float decel = reversing ? 0f : SampleDecel(_vx / aiStretch) * aiStretch * brakeIn; // brake suppressed while reversing (would fight it)
         if (throttleIn < 0.05f && brakeIn < 0.05f) decel += coastDecel;
         float reverseDrive = reversing ? -reverseAccel * brakeIn : 0f;
 

@@ -60,6 +60,7 @@ public class PitLaneStart : MonoBehaviour
     public float orthoLerpSpeed = 3f;
 
     GameObject _player;
+    SpawnIntroUI _intro;
     CameraFollow _camFollow;
     Camera _cam;
     float _orthoTarget;
@@ -115,6 +116,19 @@ public class PitLaneStart : MonoBehaviour
         Vector2 carOff = carSample.position + carSample.normal * lateralOffsetMetres;
         Vector3 playerPos = track.transform.TransformPoint(new Vector3(midOff.x, midOff.y, 0f));
         Vector3 carPos = track.transform.TransformPoint(new Vector3(carOff.x, carOff.y, 0f));
+
+        // Editor-placed spawn markers override the procedural pit-lane spawn for the PLAYER only —
+        // the car stays parked at its pit box, so the walk to it becomes part of the scene open.
+        var marker = PlayerSpawnPoint.Pick();
+        if (marker != null)
+            playerPos = new Vector3(marker.transform.position.x, marker.transform.position.y, playerPos.z);
+
+        // If a walkable boundary is authored, never spawn the player outside it.
+        if (PaddockBoundary.AnyActive)
+        {
+            Vector2 c = PaddockBoundary.Constrain(playerPos);
+            playerPos = new Vector3(c.x, c.y, playerPos.z);
+        }
         float carHeadingDeg = Mathf.Atan2(carSample.tangent.y, carSample.tangent.x) * Mathf.Rad2Deg;
 
         // Park the car. PlayerVehicleController reads heading from transform on its Start (first enable),
@@ -150,6 +164,16 @@ public class PitLaneStart : MonoBehaviour
             _cam.orthographicSize = onFootOrthoSize;
         }
         _orthoTarget = onFootOrthoSize;
+
+        // Spawn-in presentation: "<Track> - <spawn label>" title card, plus an objective marker
+        // pointing at the parked car (edge-clamped arrow + distance + paint-scheme icon when far).
+        string trackTitle = (track.track != null && !string.IsNullOrEmpty(track.track.trackName))
+            ? track.track.trackName
+            : SpawnIntroUI.Nicify(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        string spawnLabel = (marker != null && !string.IsNullOrEmpty(marker.label)) ? marker.label : "Pit Lane";
+        _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform);
+        var carSprite = car.GetComponentInChildren<SpriteRenderer>();
+        _intro.AddMarker(car.transform, carSprite != null ? carSprite.sprite : null, enterRange * 2f);
     }
 
     void SpawnPlayer(Vector3 pos)
@@ -245,6 +269,7 @@ public class PitLaneStart : MonoBehaviour
         _entered = true;
         ShowPrompt(false);
         _player.SetActive(false);
+        if (_intro != null) _intro.RemoveMarker(car.transform); // objective complete
 
         car.enabled = true; // PlayerVehicleController.Start captures parked heading on first enable
         if (_camFollow != null) _camFollow.target = car.transform;

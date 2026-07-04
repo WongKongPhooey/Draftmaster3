@@ -86,7 +86,10 @@
       "mcp__unity__manage_asset",
       "mcp__unity__manage_prefabs",
       "mcp__unity__manage_scriptable_object",
-      "Bash(python *)"
+      "Bash(python *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Select-String *)",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $a=[System.Drawing.Image]::FromFile\\(\"$PWD\\\\Assets\\\\Textures\\\\Props\\\\crowd-phoenix.png\"\\); \"$\\($a.Width\\)x$\\($a.Height\\) props\"; $a.Dispose\\(\\); $b=[System.Drawing.Image]::FromFile\\(\"$PWD\\\\Assets\\\\Textures\\\\crowd-phoenix.png\"\\); \"$\\($b.Width\\)x$\\($b.Height\\) root\"; $b.Dispose\\(\\); Select-String -Path \"Assets\\\\Textures\\\\crowd-phoenix.png.meta\" -Pattern \"textureType|wrapU|wrapV|filterMode\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots",

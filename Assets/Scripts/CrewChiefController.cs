@@ -18,7 +18,9 @@ public class CrewChiefController : MonoBehaviour
     public InputActionAsset controls;
 
     [Header("Crew chief avatar")]
-    [Tooltip("Paper-doll outfit library. If null, a placeholder sprite is used.")]
+    [Tooltip("On-foot player prefab (TaylorEmerson) — the animated pixel character with the walk cycle. If null, it's borrowed from the scene's PitLaneStart; the sprite fallbacks below only apply when neither exists.")]
+    public GameObject onFootPrefab;
+    [Tooltip("Paper-doll outfit library. Fallback when no on-foot prefab is available.")]
     public NPCPartLibrary crewLibrary;
     [Tooltip("Fallback single sprite when no library is set.")]
     public Sprite crewChiefSprite;
@@ -119,6 +121,43 @@ public class CrewChiefController : MonoBehaviour
         Vector3 pos = spawnPoint != null ? spawnPoint.position
                     : (_playerCar != null ? _playerCar.transform.position : transform.position);
         pos.z = -0.1f;
+
+        // Preferred look: the player's on-foot rig (TaylorEmerson) — animated pixel character whose
+        // walk cycle OnFootController already drives via the Animator's Horizontal/Vertical/Speed
+        // params. Same sanitisation as PitLaneStart.SpawnPlayer. Prefab and controls are borrowed
+        // from the scene's PitLaneStart when not wired here, so no scene setup is needed.
+        var pit = FindAnyObjectByType<PitLaneStart>();
+        GameObject prefab = onFootPrefab != null ? onFootPrefab : (pit != null ? pit.onFootPrefab : null);
+        if (controls == null && pit != null) controls = pit.controls;
+
+        if (prefab != null)
+        {
+            _avatar = Instantiate(prefab, pos, Quaternion.identity);
+            _avatar.name = "CrewChief";
+            // The prefab carries its own world scale (8x) — avatarScale multiplies it, never replaces it.
+            if (avatarScale > 0f && !Mathf.Approximately(avatarScale, 1f))
+                _avatar.transform.localScale *= avatarScale;
+
+            // Legacy components depend on RaceManager/InputManager which aren't active here.
+            var legacy = _avatar.GetComponent<MovementOnFoot>();
+            if (legacy != null) legacy.enabled = false;
+            var pi = _avatar.GetComponent<PlayerInput>();
+            if (pi != null) pi.enabled = false;
+
+            // 3D URP renderer: Sprite-Lit-Default gets no Light2D and renders black — swap to unlit.
+            var sprite = _avatar.GetComponent<SpriteRenderer>();
+            if (sprite != null) sprite.sharedMaterial = UnlitSprite();
+
+            var body = _avatar.GetComponent<Rigidbody2D>();
+            if (body == null) body = _avatar.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.freezeRotation = true;
+
+            var walk = _avatar.GetComponent<OnFootController>();
+            if (walk == null) walk = _avatar.AddComponent<OnFootController>();
+            walk.controlsAsset = controls;
+            return;
+        }
 
         _avatar = new GameObject("CrewChief");
         _avatar.transform.position = pos;

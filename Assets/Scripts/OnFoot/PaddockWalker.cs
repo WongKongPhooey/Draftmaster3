@@ -59,10 +59,18 @@ public class PaddockWalker : MonoBehaviour
 
     Vector3 RandomPointInRect()
     {
-        // Inset a touch so walkers don't clip the paddock edge.
-        float l = Random.Range(-_halfLen * 0.92f, _halfLen * 0.92f);
-        float d = Random.Range(-_halfDepth * 0.92f, _halfDepth * 0.92f);
-        return _center + _along * l + _outward * d;
+        // Inset a touch so walkers don't clip the paddock edge. When a PaddockBoundary is authored,
+        // reject-sample so waypoints land inside it (clamping instead would pile them on the edge).
+        Vector3 p = _center;
+        for (int attempt = 0; attempt < 8; attempt++)
+        {
+            float l = Random.Range(-_halfLen * 0.92f, _halfLen * 0.92f);
+            float d = Random.Range(-_halfDepth * 0.92f, _halfDepth * 0.92f);
+            p = _center + _along * l + _outward * d;
+            if (PaddockBoundary.IsInside(p)) return p;
+        }
+        Vector2 c = PaddockBoundary.Constrain(p);
+        return new Vector3(c.x, c.y, p.z);
     }
 
     void Update()
@@ -93,8 +101,24 @@ public class PaddockWalker : MonoBehaviour
 
         Vector2 dir = toTarget.normalized;
         Vector3 step = (Vector3)(dir * speed * Time.deltaTime);
-        if (_rb != null && _rb.bodyType != RigidbodyType2D.Dynamic) _rb.MovePosition((Vector2)pos + (Vector2)step);
-        else transform.position = pos + step;
+        Vector3 newPos = pos + step;
+
+        // Never step outside an authored PaddockBoundary. A clamped step means the waypoint is
+        // unreachable through the polygon — skip to the next one rather than grinding on the edge.
+        if (PaddockBoundary.AnyActive)
+        {
+            Vector2 c = PaddockBoundary.Constrain(newPos);
+            if ((Vector2)newPos != c)
+            {
+                newPos = new Vector3(c.x, c.y, newPos.z);
+                _idx++;
+                if (_idx >= _path.Count) { _idx = 0; if (Random.value < 0.5f) GeneratePath(); }
+                _pauseTimer = Random.Range(0f, maxPauseSeconds);
+            }
+        }
+
+        if (_rb != null && _rb.bodyType != RigidbodyType2D.Dynamic) _rb.MovePosition(newPos);
+        else transform.position = newPos;
 
         Face(dir);
         Animate();
