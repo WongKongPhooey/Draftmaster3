@@ -9,6 +9,7 @@ public class MovementOnFoot : MonoBehaviour {
     private Vector2 direction;
     private Vector2 lastKnownPos;
     [SerializeField] private float playerSpeed = 2.0f;
+    [SerializeField] private float runMultiplier = 2.0f;
     [SerializeField] private float startLocation = 0f;
     private Rigidbody2D body;
     private Animator animator;
@@ -40,6 +41,7 @@ public class MovementOnFoot : MonoBehaviour {
         if(RaceManager.thePlayer != this.gameObject){
             //If the NPC isn't the active player, have it become an faux environment object
             this.transform.position = new Vector2(RaceManager.playerLocation + CameraManager.cameraOffset - lastKnownPos.x, lastKnownPos.y);
+            animator.speed = 1f; //don't leave sprint playback rate behind when control switches away
             return;
         }
         lastKnownPos = this.gameObject.transform.position;
@@ -47,7 +49,10 @@ public class MovementOnFoot : MonoBehaviour {
         //Read the device directly. The legacy InputManager.direction bus freezes at its last value on release
         //(PlayerInput is set to Invoke Unity Events, which doesn't deliver a clean (0,0)) — that caused the ice-slide.
         direction = ReadMoveInput();
-        body.linearVelocity = direction * playerSpeed;
+        bool running = IsRunHeld() && direction != Vector2.zero;
+        body.linearVelocity = direction * playerSpeed * (running ? runMultiplier : 1f);
+        //Same walk animation, played faster while running
+        animator.speed = running ? runMultiplier : 1f;
         //Debug.Log("Applying direction: x" + direction.x + ", y" + direction.y);
 
         Vector3 lookDir = (transform.position + new Vector3(direction.x,direction.y,0));
@@ -63,6 +68,15 @@ public class MovementOnFoot : MonoBehaviour {
 
         animator.SetFloat(horizontal, direction.x);
         animator.SetFloat(vertical, direction.y);
+    }
+
+    //Sprint modifier: Left Shift on keyboard, L1/left shoulder on gamepad.
+    bool IsRunHeld(){
+        var gp = Gamepad.current;
+        if(gp != null && gp.leftShoulder.isPressed) return true;
+        var kb = Keyboard.current;
+        if(kb != null && kb.leftShiftKey.isPressed) return true;
+        return false;
     }
 
     //Direct device read with a deadzone so releasing the stick stops the player instantly (no coasting).

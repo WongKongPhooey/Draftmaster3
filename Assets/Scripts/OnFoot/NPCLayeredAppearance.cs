@@ -16,6 +16,27 @@ public class NPCLayeredAppearance : MonoBehaviour
     [Tooltip("Material applied to each layer (e.g. an unlit sprite material for the 3D URP renderer). Optional.")]
     public Material layerMaterial;
 
+    [Header("Authored outfit")]
+    [Tooltip("On: build the outfit from the authored choices below (Stardew-style — pick a style and a colour per layer) instead of randomising. Spawner-built crowd NPCs leave this off.")]
+    public bool useAuthoredOutfit = false;
+    [Tooltip("One entry per library category (the custom inspector keeps this in sync). A category without an entry falls back to a random pick.")]
+    public LayerChoice[] authoredOutfit;
+
+    // A designer's pick for one layer: which sheet and what colour. styleIndex -1 keeps the style
+    // random while the tint stays authored.
+    [System.Serializable]
+    public class LayerChoice
+    {
+        [Tooltip("Library category this choice applies to (matched by name).")]
+        public string category;
+        [Tooltip("Untick to leave this layer off the character entirely.")]
+        public bool include = true;
+        [Tooltip("Index into the category's options. -1 = random style.")]
+        public int styleIndex = 0;
+        [Tooltip("Colour multiplied onto the layer. White = art as drawn. Tintable parts should be painted in a white/grey ramp.")]
+        public Color tint = Color.white;
+    }
+
     readonly List<SpriteRenderer> _renderers = new();
     readonly List<Sprite[]> _frames = new();
     int _frameCount;
@@ -23,7 +44,15 @@ public class NPCLayeredAppearance : MonoBehaviour
     public int FrameCount => _frameCount;
     public bool Built => _renderers.Count > 0;
 
-    // Picks a random outfit and instantiates the layer renderers. Returns false if nothing could be built
+    // Scene-authored NPCs build themselves. Spawner-built NPCs call Build() right after AddComponent,
+    // so Built is already true (or the component is being destroyed) by the time Start runs.
+    void Start()
+    {
+        if (!Built) Build();
+    }
+
+    // Builds the outfit and instantiates the layer renderers. Authored choices are used where present
+    // (useAuthoredOutfit), anything else is randomised. Returns false if nothing could be built
     // (no library / no options yet) so the caller can fall back to the prefab's own sprite.
     public bool Build(int? seed = null)
     {
@@ -36,9 +65,14 @@ public class NPCLayeredAppearance : MonoBehaviour
         foreach (var cat in library.categories)
         {
             if (cat.options == null || cat.options.Length == 0) continue;
-            if (cat.optional && rng.NextDouble() > cat.presentChance) continue;
 
-            var sheet = cat.options[rng.Next(cat.options.Length)];
+            LayerChoice choice = useAuthoredOutfit ? FindChoice(cat.name) : null;
+            if (choice != null && !choice.include) continue;
+            if (choice == null && cat.optional && rng.NextDouble() > cat.presentChance) continue;
+
+            Texture2D sheet = (choice != null && choice.styleIndex >= 0)
+                ? cat.options[Mathf.Clamp(choice.styleIndex, 0, cat.options.Length - 1)]
+                : cat.options[rng.Next(cat.options.Length)];
             if (sheet == null) continue;
 
             var frames = Slice(sheet);
@@ -51,11 +85,13 @@ public class NPCLayeredAppearance : MonoBehaviour
             t.localRotation = Quaternion.identity;
             t.localScale = Vector3.one;
 
+            go.AddComponent<NPCLayerTag>(); // marks it as ours so Clear can sweep stale editor previews
+
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingLayerName = sortingLayerName;
             sr.sortingOrder = order++;
             if (layerMaterial != null) sr.sharedMaterial = layerMaterial;
-            sr.color = PickTint(cat, rng);
+            sr.color = choice != null ? choice.tint : PickTint(cat, rng);
             sr.sprite = frames[0];
 
             _renderers.Add(sr);
@@ -74,6 +110,14 @@ public class NPCLayeredAppearance : MonoBehaviour
             if (f.Length == 0) continue;
             _renderers[l].sprite = f[((i % f.Length) + f.Length) % f.Length];
         }
+    }
+
+    LayerChoice FindChoice(string category)
+    {
+        if (authoredOutfit == null) return null;
+        foreach (var c in authoredOutfit)
+            if (c != null && c.category == category) return c;
+        return null;
     }
 
     static Color PickTint(NPCPartLibrary.PartCategory cat, System.Random rng)
@@ -99,11 +143,29 @@ public class NPCLayeredAppearance : MonoBehaviour
         return arr;
     }
 
-    void Clear()
+    // Also runs in edit mode (inspector preview), so it can't just Destroy. The NPCLayerTag sweep
+    // catches layers this instance doesn't know about — editor previews saved into the scene, or
+    // leftovers from before a domain reload wiped the _renderers list.
+    public void Clear()
     {
-        foreach (var r in _renderers) if (r != null) Destroy(r.gameObject);
+        foreach (var r in _renderers) if (r != null) DestroyNode(r.gameObject);
         _renderers.Clear();
         _frames.Clear();
         _frameCount = 0;
+
+        var stale = GetComponentsInChildren<NPCLayerTag>(true);
+        foreach (var tag in stale) if (tag != null) DestroyNode(tag.gameObject);
+    }
+
+    static void DestroyNode(GameObject go)
+    {
+        if (Application.isPlaying) Destroy(go);
+        else DestroyImmediate(go);
     }
 }
+
+// Marker for generated layer objects — lets NPCLayeredAppearance.Clear find and remove layers that
+// survived a domain reload or were saved into the scene by the editor preview. Hidden from the Add
+// Component menu.
+[AddComponentMenu("")]
+public class NPCLayerTag : MonoBehaviour { }

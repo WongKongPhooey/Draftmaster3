@@ -78,6 +78,9 @@ public class RaceDirector : MonoBehaviour
                 {
                     _greenTime = Time.time;
                     BaselineLaps(rt);       // line crossings before green (formation) don't count
+                    // Career ledger: taking the green counts as a start. When the player's career gains a
+                    // manufacturer, also increment "starts.<manufacturer>" here for sponsor-style quests.
+                    PlayerStatsLedger.Increment("starts");
                     _phase = Phase.Racing;
                 }
                 break;
@@ -109,6 +112,7 @@ public class RaceDirector : MonoBehaviour
                 if ((playerDone && Time.time - _checkeredTime > 2f) || running == 0 || Time.time - _checkeredTime > stragglerTimeout)
                 {
                     ClassifyRemaining(rt);
+                    RecordCareerResult();
                     _phase = Phase.Results;
                 }
                 break;
@@ -170,6 +174,24 @@ public class RaceDirector : MonoBehaviour
             _finishedBy[e.tf] = r;
             _results.Add(r);
         }
+    }
+
+    // Career ledger + quest evaluation, once, on the final classification.
+    void RecordCareerResult()
+    {
+        int playerPos = 0;
+        for (int i = 0; i < _results.Count; i++) if (_results[i].isPlayer) { playerPos = i + 1; break; }
+        if (playerPos > 0)
+        {
+            PlayerStatsLedger.Increment("races");
+            if (playerPos == 1) PlayerStatsLedger.Increment("wins");
+            if (playerPos <= 5) PlayerStatsLedger.Increment("top5s");
+            if (playerPos <= 10) PlayerStatsLedger.Increment("top10s");
+        }
+
+        var classification = new List<(string name, bool isPlayer)>(_results.Count);
+        foreach (var r in _results) classification.Add((r.name, r.isPlayer));
+        QuestManager.OnRaceFinished(classification);
     }
 
     public void NextWeekend()

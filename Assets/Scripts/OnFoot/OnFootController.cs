@@ -7,6 +7,8 @@ public class OnFootController : MonoBehaviour
 {
     [Tooltip("Walk speed in units/sec.")]
     public float moveSpeed = 3.5f;
+    [Tooltip("Speed multiplier while the run modifier is held (Left Shift / L1). Walk animation plays faster by the same factor.")]
+    public float runMultiplier = 2f;
     [Tooltip("How fast the body rotates to face movement direction (deg/sec).")]
     public float turnRate = 720f;
     [Tooltip("Rotate sprite to face walking direction. Off for fixed-facing sprites. Auto-disabled when the Animator has Horizontal/Vertical params (directional anims own the facing).")]
@@ -91,7 +93,8 @@ public class OnFootController : MonoBehaviour
         // Lock movement while mid-conversation.
         if (_activeNpc != null && _activeNpc.IsTalking) move = Vector2.zero;
 
-        _rb.linearVelocity = move * moveSpeed;
+        bool running = move != Vector2.zero && ReadRunHeld();
+        _rb.linearVelocity = move * moveSpeed * (running ? runMultiplier : 1f);
 
         // Keep the walker inside any authored PaddockBoundary: clamp the predicted next position
         // and re-derive velocity from it, which naturally slides along the polygon edge.
@@ -120,7 +123,8 @@ public class OnFootController : MonoBehaviour
             if (_hasVertical) _animator.SetFloat("Vertical", face.y);
             if (_hasSpeed) _animator.SetFloat("Speed", move.sqrMagnitude);
             // Belt and braces: pause the rig while standing so the walk cycle can't treadmill in place.
-            _animator.speed = move.sqrMagnitude > 0.0001f ? 1f : 0f;
+            // Same walk clip while running, just played faster.
+            _animator.speed = move.sqrMagnitude > 0.0001f ? (running ? runMultiplier : 1f) : 0f;
         }
     }
 
@@ -228,6 +232,17 @@ public class OnFootController : MonoBehaviour
         }
         _prevMoveMag = mag;
         return _stickReleased ? Vector2.zero : m;
+    }
+
+    // Run modifier: Left Shift on keyboard, L1/left shoulder on gamepad. Direct device read,
+    // matching ReadInteractPressed — no action-map entry needed.
+    bool ReadRunHeld()
+    {
+        var gp = Gamepad.current;
+        if (gp != null && gp.leftShoulder.isPressed) return true;
+        var kb = Keyboard.current;
+        if (kb != null && kb.leftShiftKey.isPressed) return true;
+        return false;
     }
 
     bool ReadInteractPressed()
