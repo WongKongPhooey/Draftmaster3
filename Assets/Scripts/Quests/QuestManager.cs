@@ -44,7 +44,8 @@ public static class QuestManager
         if (q.objective == QuestInfo.ObjectiveType.StatThreshold && q.countFromAccept)
             PlayerPrefs.SetInt(BaselineKey(q), PlayerStatsLedger.Get(q.statKey));
         SetState(q, State.Active);
-        ReevaluateStatObjectives(); // an already-met threshold turns in immediately
+        ReevaluateStatObjectives();          // an already-met threshold turns in immediately
+        ReevaluateRelationshipObjective(q);  // ditto for an already-poisoned (or -friendly) relationship
         QuestHUD.Ensure();
     }
 
@@ -110,10 +111,78 @@ public static class QuestManager
         }
     }
 
+    // Relationship score changed (either party may be the player). Called by DriverRelationships.Modify.
+    public static void OnRelationshipChanged(string a, string b, float value)
+    {
+        bool aIsPlayer = DriverRelationships.IsPlayerName(a);
+        bool bIsPlayer = DriverRelationships.IsPlayerName(b);
+        if (!aIsPlayer && !bIsPlayer) return;
+        string other = aIsPlayer ? b : a;
+
+        foreach (var q in All)
+        {
+            if (q == null || GetState(q) != State.Active) continue;
+            // Empty driverName = any driver (field names reshuffle each race, so wildcards are the
+            // reliable authoring choice for relationship quests).
+            if (!string.IsNullOrEmpty(q.driverName) && !NameMatches(other, q.driverName)) continue;
+            if (q.objective == QuestInfo.ObjectiveType.RelationshipBelow && value <= q.relationshipTarget)
+                SetState(q, State.ReadyToTurnIn);
+            else if (q.objective == QuestInfo.ObjectiveType.RelationshipAbove && value >= q.relationshipTarget)
+                SetState(q, State.ReadyToTurnIn);
+        }
+    }
+
+    // On accept, a relationship quest whose condition the player already satisfies turns in immediately
+    // (mirrors how stat thresholds behave) — otherwise it would only complete on the NEXT score change.
+    static void ReevaluateRelationshipObjective(QuestInfo q)
+    {
+        if (GetState(q) != State.Active) return;
+        if (q.objective != QuestInfo.ObjectiveType.RelationshipBelow
+            && q.objective != QuestInfo.ObjectiveType.RelationshipAbove) return;
+
+        var rt = RacePositionTracker.Instance;
+        string player = (rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You").Trim().ToLowerInvariant();
+        foreach (var (a, b, value) in DriverRelationships.AllPairs())
+        {
+            string other = a == player ? b : (b == player ? a : null);
+            if (other == null) continue;
+            if (!string.IsNullOrEmpty(q.driverName) && !NameMatches(other, q.driverName)) continue;
+            if ((q.objective == QuestInfo.ObjectiveType.RelationshipBelow && value <= q.relationshipTarget)
+                || (q.objective == QuestInfo.ObjectiveType.RelationshipAbove && value >= q.relationshipTarget))
+            {
+                SetState(q, State.ReadyToTurnIn);
+                return;
+            }
+        }
+    }
+
+    // A contact involving the player was logged. otherName = the non-player party; playerCaused = the
+    // player was the striker. Called by DriverRelationships.ReportContact.
+    public static void OnPlayerContact(string otherName, float severity, bool playerCaused)
+    {
+        foreach (var q in All)
+        {
+            if (q == null || q.objective != QuestInfo.ObjectiveType.ContactDriver) continue;
+            if (GetState(q) != State.Active) continue;
+            if (!string.IsNullOrEmpty(q.driverName) && !NameMatches(otherName, q.driverName)) continue;
+            if (severity < q.minContactSeverity) continue;
+            if (q.playerMustCause && !playerCaused) continue;
+            SetState(q, State.ReadyToTurnIn);
+        }
+    }
+
     static bool NameMatches(string resultName, string questName)
     {
         if (string.IsNullOrEmpty(resultName) || string.IsNullOrEmpty(questName)) return false;
         return resultName.ToLowerInvariant().Contains(questName.ToLowerInvariant());
+    }
+
+    // Player's current relationship score with the quest's named driver, for HUD progress text.
+    static int RelProgress(QuestInfo q)
+    {
+        var rt = RacePositionTracker.Instance;
+        string player = rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
+        return Mathf.RoundToInt(DriverRelationships.Get(player, q.driverName));
     }
 
     // Quests worth showing in the HUD.
@@ -143,6 +212,17 @@ public static class QuestManager
             case QuestInfo.ObjectiveType.DeliverItem:
                 string what = string.IsNullOrEmpty(q.itemDisplayName) ? q.itemId : q.itemDisplayName;
                 return PlayerInventory.Has(q.itemId) ? $"Deliver the {what}" : $"Find a {what}";
+            case QuestInfo.ObjectiveType.RelationshipBelow:
+                return string.IsNullOrEmpty(q.driverName)
+                    ? $"Make an enemy (reach {q.relationshipTarget} with anyone)"
+                    : $"Feud with {q.driverName} ({RelProgress(q)}/{q.relationshipTarget})";
+            case QuestInfo.ObjectiveType.RelationshipAbove:
+                return string.IsNullOrEmpty(q.driverName)
+                    ? $"Win a friend (reach +{q.relationshipTarget} with anyone)"
+                    : $"Make peace with {q.driverName} ({RelProgress(q)}/{q.relationshipTarget})";
+            case QuestInfo.ObjectiveType.ContactDriver:
+                string who = string.IsNullOrEmpty(q.driverName) ? "someone" : q.driverName;
+                return q.minContactSeverity > 0.5f ? $"Wreck {who}" : $"Rattle {who}'s cage";
         }
         return "";
     }

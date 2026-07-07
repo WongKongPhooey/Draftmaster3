@@ -760,7 +760,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             _currentMph -= decelMphPerSec * Time.fixedDeltaTime;
             if (_currentMph < targetMph) _currentMph = targetMph;
         }
-        _currentMph = Mathf.Clamp(_currentMph, 0f, topMph);
+        // aiSpeedBoostMph is aero (slipstream) — it legitimately carries a car past its stock flat-out
+        // speed, so the ceiling rises with it. Without this the boost is a dead letter on the straights.
+        _currentMph = Mathf.Clamp(_currentMph, 0f, topMph + Mathf.Max(0f, aiSpeedBoostMph));
     }
 
     float SampleAccel(float mph)

@@ -47,6 +47,14 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Scale to apply to spawned cars.")]
     public Vector2 carScale = new Vector2(6, 6);
 
+    [Header("Teams")]
+    [Tooltip("Group the AI field into teams of this size (assigned in spawn order). 0 = no teams.")]
+    public int teamSize = 2;
+    [Tooltip("How many spawned AI join the PLAYER'S team (team 0). TeamSwitchController offers mid-race control of these cars.")]
+    public int playerTeammates = 2;
+    [Tooltip("Display name of the player's team.")]
+    public string playerTeamName = "Your Team";
+
     [Header("Engine Audio")]
     [Tooltip("Shared engine sound set applied to every spawned AI car (3D/positional). Leave null for silent AI.")]
     public EngineSoundSet aiEngineSound;
@@ -312,6 +320,19 @@ public class GridSpawner : MonoBehaviour
                 ? gridEntry.driverName
                 : ((namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "");
             if (!string.IsNullOrEmpty(label.driverName)) go.name = $"AI_{label.driverName}_{carNumber}";
+
+            // Teams, in spawn order: the first playerTeammates cars join the player's team (0) — the
+            // ones TeamSwitchController offers control of — then the rest pair up into rival teams.
+            if (playerTeammates > 0 && i < playerTeammates)
+            {
+                label.teamId = 0;
+                label.teamName = playerTeamName;
+            }
+            else if (teamSize > 0)
+            {
+                label.teamId = 1 + (i - Mathf.Max(playerTeammates, 0)) / teamSize;
+                label.teamName = $"Team {label.teamId}";
+            }
 
             if (dynamicAI)
             {

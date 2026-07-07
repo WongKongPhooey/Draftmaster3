@@ -176,6 +176,8 @@ public class RaceDirector : MonoBehaviour
         }
     }
 
+    int _payout; // prize money earned this race, shown on the results panel
+
     // Career ledger + quest evaluation, once, on the final classification.
     void RecordCareerResult()
     {
@@ -187,11 +189,18 @@ public class RaceDirector : MonoBehaviour
             if (playerPos == 1) PlayerStatsLedger.Increment("wins");
             if (playerPos <= 5) PlayerStatsLedger.Increment("top5s");
             if (playerPos <= 10) PlayerStatsLedger.Increment("top10s");
+            // Prize money funds the travel-map economy (parts, tows).
+            _payout = PlayerWallet.PayoutForPosition(playerPos);
+            PlayerWallet.Add(_payout);
         }
 
         var classification = new List<(string name, bool isPlayer)>(_results.Count);
         foreach (var r in _results) classification.Add((r.name, r.isPlayer));
         QuestManager.OnRaceFinished(classification);
+
+        // Time heals: every stored driver relationship drifts a little back toward neutral each race, so
+        // feuds fade unless refreshed with new contact.
+        DriverRelationships.RegenTowardNeutral(4f);
     }
 
     public void NextWeekend()
@@ -275,6 +284,7 @@ public class RaceDirector : MonoBehaviour
         int playerPos = 0;
         for (int i = 0; i < _results.Count; i++) if (_results[i].isPlayer) { playerPos = i + 1; break; }
         string headline = playerPos == 1 ? "YOU WIN!" : (playerPos > 0 ? $"YOU FINISHED P{playerPos}" : "");
+        if (_payout > 0) headline += $"    +{PlayerWallet.Format(_payout)}  (bank: {PlayerWallet.CashText})";
         GUI.Label(new Rect(x, y, w, 24f), headline, _headlineStyle);
         y += 30f;
 
@@ -300,8 +310,11 @@ public class RaceDirector : MonoBehaviour
         }
 
         y += 8f;
-        if (GUI.Button(new Rect(x, y, 200f, 34f), "NEXT WEEKEND")) NextWeekend();
-        if (GUI.Button(new Rect(x + 216f, y, 140f, 34f), "CLOSE")) _panelHidden = true;
+        // The road trip is the main loop: pick the next venue on the map, spend stops on detours, race there.
+        // SKIP TRAVEL keeps the old instant weekend loop for quick testing.
+        if (GUI.Button(new Rect(x, y, 200f, 34f), "HIT THE ROAD")) { _panelHidden = true; TravelMapScreen.Open(); }
+        if (GUI.Button(new Rect(x + 216f, y, 140f, 34f), "SKIP TRAVEL")) NextWeekend();
+        if (GUI.Button(new Rect(x + 372f, y, 140f, 34f), "CLOSE")) _panelHidden = true;
     }
 
     void EnsureStyles()

@@ -68,6 +68,16 @@ public class VehicleInfo : ScriptableObject
     public float draftingMaxGap = 18f;
     [Tooltip("Drafting only kicks in above this speed (mph). Slow corners shouldn't benefit.")]
     public float draftingMinSpeed = 130f;
+    [Tooltip("Extra straight-line acceleration (m/s²) at full tow — the drag a slipstream frees up (dynamic-model cars).")]
+    public float draftingTowAccel = 1.6f;
+    [Tooltip("Fraction of top speed unlocked at full tow, so the run can carry past the leader's flat-out speed.")]
+    public float draftingTopSpeedGain = 0.06f;
+
+    [Header("Side Draft")]
+    [Tooltip("Extra drag (m/s²) at full side draft — a rival's nose beside the rear quarter stealing air off the spoiler.")]
+    public float sideDraftDrag = 1.5f;
+    [Tooltip("Fraction of top speed lost at full side draft.")]
+    public float sideDraftTopSpeedLoss = 0.05f;
 
     [Header("Tire Wear")]
     [Tooltip("Wear added per second at maximum lateral G. Cup stint: full wear over ~30 mins of hard cornering.")]

@@ -63,6 +63,21 @@ public class RacePositionTracker : MonoBehaviour
         return _byTf.TryGetValue(tf, out var e) ? e.lap : 0;
     }
 
+    // Move the local-player flag to another car (mid-race team switching). The flag is otherwise sticky —
+    // RefreshIdentity never demotes a car once it's been the player — so an explicit hand-over is the only
+    // way to transfer it. Position/lap history stays with each car; only "which car is the player" moves.
+    public void SetLocalPlayer(Transform tf)
+    {
+        RefreshMembership();   // make sure the target car has an entry before flagging it
+        _playerEntry = null;
+        for (int i = 0; i < _entries.Count; i++)
+        {
+            var e = _entries[i];
+            e.isPlayer = e.tf == tf;
+            if (e.isPlayer) _playerEntry = e;
+        }
+    }
+
     void Awake() { Instance = this; ResolveRefs(); }
     void OnDestroy() { if (Instance == this) Instance = null; }
 

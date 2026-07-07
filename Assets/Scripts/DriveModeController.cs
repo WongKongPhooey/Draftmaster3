@@ -72,6 +72,16 @@ public class DriveModeController : MonoBehaviour
 
     public void Toggle() => SetDriving(!_driving);
 
+    // Team switching moved the human into a different chassis: broadcast/resume must now operate on THAT
+    // car, or toggling V would disable the AI-driven old car and leave the new one uncontrolled.
+    public void RetargetPlayerCar(GameObject car)
+    {
+        if (car == null) return;
+        playerCar = car;
+        _pvc = car.GetComponent<PlayerVehicleController>();
+        _spline = car.GetComponent<SplineDriver>();
+    }
+
     public void SetDriving(bool driving)
     {
         if (driving == _driving) return;

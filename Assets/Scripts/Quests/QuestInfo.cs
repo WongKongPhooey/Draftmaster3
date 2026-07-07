@@ -12,6 +12,9 @@ public class QuestInfo : ScriptableObject
         FinishRacePosition,  // finish at or better than targetPosition
         StatThreshold,       // a PlayerStatsLedger counter reaches statTarget
         DeliverItem,         // hand itemId to the quest's delivery-target NPC
+        RelationshipBelow,   // drive the player's relationship with driverName DOWN to relationshipTarget (make an enemy)
+        RelationshipAbove,   // bring the player's relationship with driverName UP to relationshipTarget (make peace)
+        ContactDriver,       // cause a contact of at least minContactSeverity with driverName (a hit job)
     }
 
     [Header("Identity")]
@@ -43,6 +46,13 @@ public class QuestInfo : ScriptableObject
     public string itemId = "";
     [Tooltip("Display name for the item in HUD text, e.g. 'lucky charm'.")]
     public string itemDisplayName = "";
+
+    [Tooltip("RelationshipBelow/Above: the score the player's relationship with driverName must reach (Below: at or under, e.g. -60; Above: at or over, e.g. 40). Range -100..100.")]
+    public int relationshipTarget = -60;
+    [Tooltip("ContactDriver: minimum contact severity (0..1) that counts. ~0.2 is a bump, ~0.6 a proper slam.")]
+    [Range(0f, 1f)] public float minContactSeverity = 0.3f;
+    [Tooltip("ContactDriver: when true the PLAYER must be the striker (drove into them); false counts any mutual contact.")]
+    public bool playerMustCause = true;
 
     [Header("Reward")]
     [Tooltip("Optional item granted on completion — e.g. completing one quest hands over the charm a later quest needs.")]

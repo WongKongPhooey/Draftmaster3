@@ -103,6 +103,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("If false, damage no longer affects handling (no steering pull, no grip loss) — only the speed penalties (top-speed loss + drag) still apply. Set false for AI so a knock doesn't push them off the racing line and get them stuck.")]
     public bool damageImpairsHandling = true;
 
+    [Header("Draft / Slipstream")]
+    [Tooltip("Aero draft effects: slipstream tow (extra accel + top speed behind a car) and side draft (drag when a rival's nose sits beside the rear quarter). Strengths and gates come from VehicleInfo.")]
+    public bool enableDraft = true;
+
     [Header("Reverse")]
     [Tooltip("Hold brake with no throttle once nearly stopped to reverse. Max reverse speed (m/s).")]
     public float reverseMaxSpeed = 5f;
@@ -155,6 +159,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float SlipFrontDeg => _alphaF * Mathf.Rad2Deg;
     public float SlipRearDeg => _alphaR * Mathf.Rad2Deg;
     public float HandlingBalanceDeg => (Mathf.Abs(_alphaF) - Mathf.Abs(_alphaR)) * Mathf.Rad2Deg;
+    // Aero draft state this step (0..1), for HUD / telemetry / audio.
+    public float TowFactor { get; private set; }        // slipstream caught from a car ahead
+    public float SideDraftFactor { get; private set; }  // side draft suffered from a rival's nose on our quarter
 
     // --- Obstacle projection (so the racing AI can see this car as a slow/stopped obstacle ahead).
     // Only the active HUMAN car registers (an AI car keeps an enabled SplineDriver and is already in RaceField).
@@ -188,6 +195,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     float _lastAy;          // last lateral accel (m/s²), for tyre load-transfer split
     TireModel _tires;       // 4-tyre wear+temperature model (when enableWear)
     VehicleDamage _bodywork; // accumulated bodywork damage → handling penalties
+    SplineDriver _brainSpline; // AI brain when present (enabled) — supplies the track pose for draft maths
 
     public enum ControlScheme { Auto, Keyboard, Gamepad }
     [Tooltip("Which device this car reads when driven locally. Auto = keyboard + gamepad. Set to split devices between players for local / Multiplayer Play Mode testing (e.g. keyboard for P1, gamepad for P2).")]
@@ -206,6 +214,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Register as an AI-visible obstacle only when we're the active human car. AI cars run this same
         // controller but keep an enabled SplineDriver (they're already in RaceField), so they're excluded.
         var sd = GetComponent<SplineDriver>();
+        _brainSpline = sd;
         _isObstacle = sd == null || !sd.enabled;
         if (_isObstacle)
         {
@@ -232,8 +241,34 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         TrackLateral = Vector2.Dot(localNow - s.position, right);
     }
 
+    // Track-space pose for the draft field: an AI-driven car reads its (enabled) SplineDriver brain; the
+    // free-driven player reads the obstacle projection it already maintains. The player's lap length comes
+    // from the AI field — no AI on the track also means nobody to draft, so zero either way.
+    void ComputeDraft(out float tow, out float sideDraft)
+    {
+        tow = 0f; sideDraft = 0f;
+        if (vehicleInfo == null) return;
+        if (_brainSpline != null && _brainSpline.enabled && _brainSpline.TrackLength > 0f)
+        {
+            if (_brainSpline.IsOnPit) return; // no aero games on the pit lane
+            DraftAero.Compute(_brainSpline.track, _brainSpline.TrackLength, _brainSpline.DistanceOnTrack,
+                _brainSpline.LateralOnTrack, SpeedMph, gameObject, vehicleInfo, out tow, out _, out sideDraft);
+        }
+        else if (_isObstacle && track != null)
+        {
+            float len = DraftAero.TrackLengthFor(track);
+            if (len <= 0f) return;
+            DraftAero.Compute(track, len, TrackDistance, TrackLateral, SpeedMph, gameObject, vehicleInfo,
+                out tow, out _, out sideDraft);
+        }
+    }
+
     void Start()
     {
+        // Human-driven car only (AI spawns get externalInput before Start): layer the player's bought
+        // parts onto a runtime clone of the shared VehicleInfo asset. The asset itself is never touched.
+        if (!externalInput && vehicleInfo != null) vehicleInfo = PlayerCarBuild.Outfit(vehicleInfo);
+
         if (startReference != null)
         {
             transform.position = startReference.position;
@@ -407,6 +442,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 ((throttleIn - wheelspinThrottle) / Mathf.Max(1f - wheelspinThrottle, 0.01f))
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));
 
+        // --- Aero draft. Tow: tucked behind a car, the hole in the air frees up drag → extra accel + a raised
+        // top-speed ceiling (the slingshot run). Side draft: a rival's nose beside OUR rear quarter steals air
+        // off the spoiler → extra drag + a top-speed cut. Both 0..1 from the shared DraftAero field geometry.
+        float tow = 0f, sideDraft = 0f;
+        if (enableDraft) ComputeDraft(out tow, out sideDraft);
+        TowFactor = tow; SideDraftFactor = sideDraft;
+
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         // AI cars fold AiPaceMultiplier into engine power too: their commanded targets already scale with it,
         // but targets above what the engine can physically reach do nothing — so the engine must scale with them.
@@ -416,7 +458,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float aiPower = externalInput ? TrackConditions.AiPaceMultiplier : 1f;
         float aiStretch = Mathf.Max(1f, aiPower);
         float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss) * aiStretch;
+        // Draft moves the aero ceiling: a full tow carries the car past its stock flat-out speed, being
+        // side-drafted pulls it down (the top-speed cut is what actually slows a car already at the clamp).
+        topMps *= (1f + vehicleInfo.draftingTopSpeedGain * tow) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
         float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * throttleIn;
+        // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
+        // so without this additive term the raised ceiling would never be reached).
+        if (tow > 0f) accel += vehicleInfo.draftingTowAccel * tow * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
         // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still
@@ -426,7 +474,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Brakes stretch with the same envelope so a pace-boosted car can still shed its extra straight
         // speed inside the profile's baked braking distances (they assume symmetric scaling).
         float decel = reversing ? 0f : SampleDecel(_vx / aiStretch) * aiStretch * brakeIn; // brake suppressed while reversing (would fight it)
-        if (throttleIn < 0.05f && brakeIn < 0.05f) decel += coastDecel;
+        if (throttleIn < 0.05f && brakeIn < 0.05f) decel += coastDecel * (1f - 0.5f * tow); // a tow also coasts further
         float reverseDrive = reversing ? -reverseAccel * brakeIn : 0f;
 
         // Surface power/drag (no-ops on the track: surfPower=1, surfDrag=0).
@@ -435,6 +483,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Rolling resistance ramps in with speed — zero at a standstill so the car can always crawl back off.
         if (surfDrag > 0f) decel += surfDrag * Mathf.Clamp01(speedNow / grassDragRampSpeed);
         if (dmg > 0f) decel += dmg * damageDragAdd;                  // bent bodywork drags
+        if (sideDraft > 0f) decel += vehicleInfo.sideDraftDrag * sideDraft; // air stolen off the spoiler drags
         accel *= (1f - wheelspinAccelLoss * wheelspin);              // spinning wheels put down less power
         float axCmd = accel + reverseDrive - decel; // commanded longitudinal accel (m/s²)
 

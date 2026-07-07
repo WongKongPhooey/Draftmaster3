@@ -81,7 +81,7 @@ A second, newer system runs alongside the legacy scrolling code:
 
 This is a Unity 6 (6000.4.3f1) project — open in the Unity Editor, not built from CLI. There is no automated test suite or CI pipeline. Testing is done by entering Play Mode in the editor.
 
-Authoring guides live in `Docs/` — `Docs/NPCs-and-Quests.md` covers the paper-doll character system (sprite specs, greyscale/tint rules, editor NPC designer), dialogue (NPCInteractable), and the side-quest system (QuestInfo assets, QuestGiverNPC, stats ledger, inventory).
+Authoring guides live in `Docs/` — `Docs/NPCs-and-Quests.md` covers the paper-doll character system (sprite specs, greyscale/tint rules, editor NPC designer), dialogue (NPCInteractable), and the side-quest system (QuestInfo assets, QuestGiverNPC, stats ledger, inventory, pause-menu mission board). `Docs/Rivalry-and-TeamSwitch.md` covers the driver-relationship/payback system (DriverRelationships, contact blame, AIRacingBehaviour payback, RivalryFeed) and mid-race team car switching (TeamSwitchController, GridSpawner teams).
 
 **Build hazard**: Several runtime scripts have `using UnityEditor` imports (RaceManager, VehicleLogic, EnvironmentObjectV2). These will cause build failures for standalone builds. Wrap any editor-only code in `#if UNITY_EDITOR` directives.
 

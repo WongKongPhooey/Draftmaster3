@@ -166,6 +166,17 @@ public class VehicleCollision : MonoBehaviour
 
                 _responder?.ApplyCarImpact(pushWorld * (mB / total), d.pointA, dvA, severity);
                 otherResponder.ApplyCarImpact(-pushWorld * (mA / total), d.pointB, dvB, severity);
+
+                // Feed the rivalry system: genuine impacts (above the damage threshold) sour the two
+                // drivers' relationship. frontHit = the contact point lies ahead of us along our direction
+                // of travel, i.e. we drove into them — used to attribute blame. Both cars report the same
+                // impact; DriverRelationships dedupes per pair.
+                if (closingSpeed >= damageMinSpeed && otherVC != null)
+                {
+                    bool frontHit = _vel.sqrMagnitude > 1f
+                        && Vector2.Dot(d.pointA - (Vector2)transform.position, _vel.normalized) > 0f;
+                    DriverRelationships.ReportContact(gameObject, otherVC.gameObject, severity, frontHit);
+                }
             }
             else
             {

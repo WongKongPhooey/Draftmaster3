@@ -103,6 +103,13 @@ ScriptableObjects in **`Assets/Resources/Quests/`** (create via **Assets > Creat
 | `FinishRacePosition` | Player finishes at or better than a position | `targetPosition` (1 = win) |
 | `StatThreshold` | A career counter reaches a target | `statKey`, `statTarget`, `countFromAccept` (count from accept instead of career total) |
 | `DeliverItem` | Player hands an item to the delivery-target NPC | `itemId`, `itemDisplayName` |
+| `RelationshipBelow` | Player's relationship with a driver falls to a target (make an enemy) | `driverName` (**empty = any driver**), `relationshipTarget` (e.g. -60) |
+| `RelationshipAbove` | Player's relationship with a driver rises to a target (make a friend) | `driverName` (**empty = any driver**), `relationshipTarget` (e.g. 20) |
+| `ContactDriver` | Player trades paint with a driver hard enough | `driverName` (**empty = anyone**), `minContactSeverity` (0..1; ~0.2 bump, ~0.6 slam), `playerMustCause` (player must be the striker) |
+
+Relationship objectives ride on the driver-relationship system (see `Docs/Rivalry-and-TeamSwitch.md`).
+Because the AI field's names reshuffle every race, **leave `driverName` empty (wildcard)** unless the
+quest targets a driver you know will be present.
 
 Other fields:
 
@@ -148,6 +155,9 @@ commits when it ends.
 | `starts` | Every green flag in a race session |
 | `races` | Every final classification with the player in it |
 | `wins` / `top5s` / `top10s` | Position-based, at classification |
+| `contacts.caused` / `contacts.received` | Player was the striker / victim of a logged car contact |
+| `paybacks.against` | An AI declared a payback move on the player |
+| `teamswitches` | Player swapped cars via the TEAM panel mid-race |
 
 Any new counter is immediately quest-able — call `PlayerStatsLedger.Increment("your.key")` from
 anywhere. Manufacturer starts (`starts.chevrolet` …) are planned but wait on the player career
@@ -164,11 +174,24 @@ having a manufacturer; the hook point is commented in RaceDirector.
 when ready to turn in. It appears on first accept, survives scene loads, only draws in gameplay
 scenes (race or on-foot), and revives itself on launch when a save has tracked quests.
 
+### The mission board (no NPC required)
+
+The race pause menu (Esc) has a **MISSIONS** panel listing every QuestInfo asset: available quests
+can be accepted there, and non-delivery quests can be turned in there too. It mirrors what a
+QuestGiverNPC would do, so quests are fully playable in race scenes with no walking NPCs. Quests
+whose prerequisite is unmet are hidden from the board. DeliverItem still hands over at its target
+NPC.
+
 ### Example quest assets (`Resources/Quests/`)
 
 - **Quest_BeatRival** — BeatDriverInRace. `driverName` is `CHANGE_ME`; set a real driver name.
 - **Quest_SponsorStarts** — StatThreshold, 30 career `starts` (sponsor gate).
 - **Quest_LuckyCharm** — DeliverItem, `lucky_charm`.
+- **Quest_SendMessage** — ContactDriver, wildcard, severity ≥ 0.5, player must cause. Entry point of
+  the rivalry chain.
+- **Quest_PublicEnemy** — RelationshipBelow -60 with anyone (prereq `send_message`).
+- **Quest_DraftingPartners** — RelationshipAbove +20 with anyone (draft-bond your way there).
+- **Quest_FreshSeat** — StatThreshold `teamswitches` ≥ 1 from accept (use the TEAM panel).
 
 ---
 

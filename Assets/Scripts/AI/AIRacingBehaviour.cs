@@ -26,8 +26,6 @@ public class AIRacingBehaviour : MonoBehaviour
     public float sidewaysWidth = 3.5f;
     [Tooltip("Distance ahead (m) scanned to pick outside-of-turn passing side.")]
     public float cornerScanDistance = 90f;
-    [Tooltip("Lateral half-width (m) within which a follower benefits from slipstream.")]
-    public float draftingLateralWidth = 2.5f;
 
     [Header("Rear-end Avoidance")]
     [Tooltip("Range (m) scanned for a slower/stopped car ahead to brake for. Must exceed the braking distance from racing speed, so keep it well above lookAheadRange.")]
@@ -60,6 +58,24 @@ public class AIRacingBehaviour : MonoBehaviour
     public float contactSpeedScrub = 8f;
     [Tooltip("Contact scrub never drags the car below this speed (mph). Stops side-by-side pairs grinding to a halt.")]
     public float contactScrubFloorMph = 30f;
+
+    [Header("Rivalry / Payback")]
+    [Tooltip("Allow this driver to deliberately wreck a rival when their relationship has fallen below DriverRelationships.PaybackThreshold (NASCAR Thunder style).")]
+    public bool enablePayback = true;
+    [Tooltip("Seconds between grudge scans for a nearby hated rival.")]
+    public float paybackScanInterval = 1.5f;
+    [Tooltip("Longitudinal range (m) within which a rival can be targeted.")]
+    public float paybackRange = 22f;
+    [Tooltip("Seconds a payback move is held: steering into the rival, follow caps ignored.")]
+    public float paybackDurationSeconds = 2.2f;
+    [Tooltip("Per-rival cooldown (s) after an attempt, so a feud produces occasional lunges rather than constant grinding.")]
+    public float paybackCooldownSeconds = 45f;
+    [Tooltip("Chance per scan of launching payback right at the threshold. Grows as the relationship rots further below it, and with aggression.")]
+    [Range(0f, 1f)] public float paybackBaseChance = 0.2f;
+    [Tooltip("Extra speed (mph) requested while ramming, so the hit actually lands.")]
+    public float paybackSpeedBoost = 6f;
+    [Tooltip("Seconds of continuous drafting behind the same car per +1 relationship — working together builds trust (0 = off).")]
+    public float draftBondSeconds = 8f;
 
     [Header("Stuck Recovery")]
     [Tooltip("Below this speed (mph) while the profile wants much more, the car counts as stalled.")]
@@ -94,6 +110,17 @@ public class AIRacingBehaviour : MonoBehaviour
     float _recoveryDir;
     PracticeAIStint _stint;   // practice stints manage lateralOffset themselves — don't fight them
 
+    // Payback state: the rival currently being lunged at (an AI spline OR the free-driven player),
+    // the active-move timer, and per-rival cooldown gates keyed by driver name.
+    float _paybackScanTimer;
+    float _paybackTimer;
+    SplineDriver _paybackRivalSpline;
+    PlayerVehicleController _paybackRivalObstacle;
+    readonly System.Collections.Generic.Dictionary<string, float> _paybackNextAllowed = new();
+    DriverLabel _label;
+    float _draftBondTimer;
+    string _draftPartnerName;
+
     void Awake()
     {
         _spline = GetComponent<SplineDriver>();
@@ -124,6 +151,25 @@ public class AIRacingBehaviour : MonoBehaviour
         float sinceGreen = RaceStart.SecondsSinceGreen;
         float launchCapBlend = (launchWindowSeconds > 0f && sinceGreen >= 0f && sinceGreen < launchWindowSeconds)
             ? Mathf.Clamp01(sinceGreen / launchWindowSeconds) : 1f;
+
+        // Rivalry: run down an active payback move; otherwise scan for a nearby hated rival on an interval.
+        if (enablePayback && !_spline.IsOnPit)
+        {
+            if (_paybackTimer > 0f)
+            {
+                _paybackTimer -= dt;
+                if (_paybackTimer <= 0f) { _paybackRivalSpline = null; _paybackRivalObstacle = null; }
+            }
+            else
+            {
+                _paybackScanTimer -= dt;
+                if (_paybackScanTimer <= 0f)
+                {
+                    _paybackScanTimer = paybackScanInterval;
+                    ScanForPayback();
+                }
+            }
+        }
 
         float desiredTactical = 0f;
         float speedCap = float.MaxValue;
@@ -177,19 +223,6 @@ public class AIRacingBehaviour : MonoBehaviour
                 speedCap = Mathf.Min(speedCap, followCap);
             }
             if (aheadGap < hardFollowGap) speedCap = Mathf.Min(speedCap, aheadSpeed * 0.6f);
-
-            // Drafting: close, aligned, above min speed. Linear falloff with gap. Tighter alignment = more bonus.
-            var vi = _spline.vehicleInfo;
-            if (vi != null && mySpeed >= vi.draftingMinSpeed && aheadGap <= vi.draftingMaxGap)
-            {
-                float lateralDelta = Mathf.Abs(_spline.LateralOnTrack - aheadLat);
-                if (lateralDelta <= draftingLateralWidth)
-                {
-                    float gapFrac = 1f - (aheadGap / Mathf.Max(vi.draftingMaxGap, 0.1f));
-                    float latFrac = 1f - (lateralDelta / Mathf.Max(draftingLateralWidth, 0.1f));
-                    speedBoost = vi.draftingMaxBonus * Mathf.Clamp01(gapFrac) * Mathf.Clamp01(latFrac);
-                }
-            }
         }
 
         // Human player car(s) — driven free with SplineDriver off, so absent from RaceField and invisible to the
@@ -227,6 +260,22 @@ public class AIRacingBehaviour : MonoBehaviour
                 float side = p.TrackLateral >= _spline.LateralOnTrack ? -1f : 1f;
                 if (!SideOccupied(side)) { overtakeDir = side; wantOvertake = true; }
                 else if (!SideOccupied(-side)) { overtakeDir = -side; wantOvertake = true; }
+            }
+        }
+
+        // Slipstream: shared DraftAero geometry — the exact field the physics reads. The boost raises the brain's
+        // TARGET speed; the dynamic model separately gains real drag reduction (raised ceiling + accel), so the
+        // ask and the capability stay matched. Covers AI and human tow sources alike, and ticks the draft bond
+        // with whoever is punching the hole in the air.
+        var vinfo = _spline.vehicleInfo;
+        if (vinfo != null && !_spline.IsOnPit)
+        {
+            DraftAero.Compute(_spline.track, _spline.TrackLength, _spline.DistanceOnTrack, _spline.LateralOnTrack,
+                _spline.CurrentMph, gameObject, vinfo, out float towFactor, out var towSource, out _);
+            if (towFactor > 0f)
+            {
+                speedBoost = Mathf.Max(speedBoost, vinfo.draftingMaxBonus * towFactor);
+                if (towSource != null) AccumulateDraftBond(DriverRelationships.NameOf(towSource), dt);
             }
         }
 
@@ -275,6 +324,7 @@ public class AIRacingBehaviour : MonoBehaviour
         {
             var other = drivers[i];
             if (other == null || other == _spline) continue;
+            if (PaybackActive && other == _paybackRivalSpline) continue; // no self-preservation vs the target
             if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
             float longGap = LongitudinalGap(_spline, other);
             if (Mathf.Abs(longGap) > sidewaysRange) continue;
@@ -325,6 +375,27 @@ public class AIRacingBehaviour : MonoBehaviour
             desiredTactical = _recoveryDir * overtakeLineOffset;
             _commitTimer = Mathf.Max(_commitTimer, commitHoldSeconds);
             _commitDir = _recoveryDir;
+        }
+
+        // Payback: steer INTO the rival and drop self-preservation for the duration. Repulsion against
+        // the target is skipped above, follow caps are discarded, and a small boost is requested when the
+        // rival is ahead so the hit lands. VehicleCollision does the actual damage; the resulting contact
+        // sours the relationship further via DriverRelationships.ReportContact.
+        if (PaybackActive && _recoveryTimer <= 0f)
+        {
+            if (TryGetRivalTrackPose(out float rivalLat, out float rivalGap) && Mathf.Abs(rivalGap) <= paybackRange)
+            {
+                desiredTactical = _smoothedTactical + (rivalLat - _spline.LateralOnTrack);
+                speedCap = float.MaxValue;
+                if (rivalGap > 0.5f) speedBoost = Mathf.Max(speedBoost, paybackSpeedBoost);
+                _commitTimer = 0f; // a lunge overrides any overtake commitment
+            }
+            else
+            {
+                _paybackTimer = 0f; // rival gone (pitted, wrecked clear, out of range) — stand down
+                _paybackRivalSpline = null;
+                _paybackRivalObstacle = null;
+            }
         }
 
         // Slew-rate-limited convergence toward desired offset. Dead-zone prevents twitching near target.
@@ -417,6 +488,120 @@ public class AIRacingBehaviour : MonoBehaviour
         float g = other.DistanceOnTrack - self.DistanceOnTrack;
         if (g > trackLen * 0.5f) g -= trackLen;
         else if (g < -trackLen * 0.5f) g += trackLen;
+        return g;
+    }
+
+    // ---- Rivalry / payback ----
+
+    bool PaybackActive => _paybackTimer > 0f && (_paybackRivalSpline != null || _paybackRivalObstacle != null);
+
+    // Continuous clean drafting behind the same partner trickles the relationship upward: +1 per
+    // draftBondSeconds. Switching partners resets the clock.
+    void AccumulateDraftBond(string partner, float dt)
+    {
+        if (draftBondSeconds <= 0f || string.IsNullOrEmpty(partner)) return;
+        if (partner != _draftPartnerName)
+        {
+            _draftPartnerName = partner;
+            _draftBondTimer = 0f;
+        }
+        _draftBondTimer += dt;
+        if (_draftBondTimer >= draftBondSeconds)
+        {
+            _draftBondTimer = 0f;
+            DriverRelationships.Modify(MyName(), partner, 1f);
+        }
+    }
+
+    string MyName()
+    {
+        if (_label == null) _label = GetComponent<DriverLabel>();
+        return _label != null && !string.IsNullOrEmpty(_label.driverName) ? _label.driverName : gameObject.name;
+    }
+
+    // Look for anyone nearby this driver hates enough to wreck: AI splines first, then the free-driven
+    // player (an obstacle, not a RaceField entry). One target max; first qualifying roll wins.
+    void ScanForPayback()
+    {
+        string myName = MyName();
+
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            if (Mathf.Abs(LongitudinalGap(_spline, other)) > paybackRange) continue;
+            if (TryLaunchPayback(myName, DriverRelationships.NameOf(other.gameObject)))
+            {
+                _paybackRivalSpline = other;
+                _paybackRivalObstacle = null;
+                return;
+            }
+        }
+
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack != _spline.track) continue;
+            if (Mathf.Abs(SignedGapTo(p.TrackDistance)) > paybackRange) continue;
+            if (TryLaunchPayback(myName, DriverRelationships.NameOf(p.gameObject)))
+            {
+                _paybackRivalObstacle = p;
+                _paybackRivalSpline = null;
+                return;
+            }
+        }
+    }
+
+    bool TryLaunchPayback(string myName, string otherName)
+    {
+        if (string.IsNullOrEmpty(otherName) || otherName == myName) return false;
+        float rel = DriverRelationships.Get(myName, otherName);
+        if (rel > DriverRelationships.PaybackThreshold) return false;
+        if (_paybackNextAllowed.TryGetValue(otherName, out float next) && Time.time < next) return false;
+
+        // Right at the threshold a cautious driver almost never snaps; deep in the red an aggressive one
+        // lunges most scans.
+        float depth01 = Mathf.Clamp01((DriverRelationships.PaybackThreshold - rel) / 40f);
+        float chance = paybackBaseChance * (0.5f + aggression01) * (0.6f + 0.8f * depth01);
+        if (Random.value > chance) return false;
+
+        _paybackNextAllowed[otherName] = Time.time + paybackCooldownSeconds;
+        _paybackTimer = paybackDurationSeconds;
+        DriverRelationships.DeclarePayback(myName, otherName);
+        return true;
+    }
+
+    // Rival's lateral position + signed longitudinal gap (+ = rival ahead). False once they're untrackable.
+    bool TryGetRivalTrackPose(out float lat, out float gap)
+    {
+        lat = 0f;
+        gap = 0f;
+        if (_paybackRivalSpline != null)
+        {
+            if (_paybackRivalSpline.IsOnPit || !_paybackRivalSpline.isActiveAndEnabled) return false;
+            lat = _paybackRivalSpline.LateralOnTrack;
+            gap = LongitudinalGap(_spline, _paybackRivalSpline);
+            return true;
+        }
+        if (_paybackRivalObstacle != null)
+        {
+            if (_paybackRivalObstacle.ObstacleTrack != _spline.track || !_paybackRivalObstacle.isActiveAndEnabled) return false;
+            lat = _paybackRivalObstacle.TrackLateral;
+            gap = SignedGapTo(_paybackRivalObstacle.TrackDistance);
+            return true;
+        }
+        return false;
+    }
+
+    float SignedGapTo(float otherDist)
+    {
+        float len = _spline.TrackLength;
+        float g = otherDist - _spline.DistanceOnTrack;
+        if (g > len * 0.5f) g -= len;
+        else if (g < -len * 0.5f) g += len;
         return g;
     }
 }
