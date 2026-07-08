@@ -129,6 +129,12 @@ public class RaceManager : MonoBehaviour
 	public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
 		thePlayer = playerVehicle;
 
+		// Recentre the incoming player on world x=0 (screen centre). The game keeps the
+		// player fixed at centre and scrolls the world past it, so on every player switch
+		// we cancel out the player's current X by shifting by its negative. Every vehicle
+		// and on-foot character is translated by the same amount so relative spacing is
+		// preserved. Recentring is done by moving the cars, NOT by offsetting the
+		// environment root, so playerXShift stays 0 (see below).
 		float shift = -thePlayer.transform.position.x;
 
 		VehicleLogic[] vehicles = Object.FindObjectsByType<VehicleLogic>(FindObjectsSortMode.None);
@@ -140,6 +146,9 @@ public class RaceManager : MonoBehaviour
 			f.transform.Translate(shift, 0, 0);
 		}
 
+		// EnvironmentManager reads playerXShift to slide the environment root on X. Since
+		// recentring above already moved the cars to x=0, the env root needs no offset, so
+		// zero it here. LateUpdate also forces playerXShift back to 0 every frame.
 		playerXShift = 0;
 
 		if(thePlayer.TryGetComponent<VehicleLogic>(out VehicleLogic vl)){
