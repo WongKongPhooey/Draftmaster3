@@ -1,0 +1,12 @@
+You are running unattended overnight in the Draftmaster3 Unity project. Nobody is watching and nobody can answer questions — never ask, never wait for input. Complete the task below end to end, or if it is genuinely impossible or too ambiguous to attempt safely, make NO changes and explain why in your final message.
+
+TASK: {task}
+
+Ground rules:
+- Work only inside this repository. Stay on the develop branch. Do not push to any remote.
+- Verify your work where possible. The Unity editor may be open but unfocused: EditMode tests via Unity MCP work fine, but PLAY MODE PAUSES when the editor is unfocused — do not rely on play-mode or runtime verification. Prefer EditMode tests, compilation checks (read_console for errors after script changes), and careful code review.
+- When the task is done and verified, commit your work to develop yourself with a clear, descriptive commit message.
+- Do not expand scope. Do the task, nothing adjacent.
+- If you hit a blocker partway through, leave the work in a compiling, non-broken state, commit what is safe, and describe the blocker.
+
+End your final message with a 2-3 sentence plain-language summary: what changed, how you verified it, and anything Josh should review in the morning. This summary goes directly into the morning report.
