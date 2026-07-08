@@ -73,6 +73,13 @@ public class PitLaneStart : MonoBehaviour
     public float PlayerPitDistance { get; private set; }
     public bool PlayerOnPit { get; private set; }
 
+    // Camera-zoom arbiter. This component owns the ortho lerp for the whole scene, but other systems
+    // retarget the camera (broadcast TV cuts, crew chief's pit-wall avatar) and need the zoom to follow:
+    // without this the camera stays at whatever level the last on-foot/enter-car flow left it.
+    public float DrivingZoom => drivingOrthoSize;
+    public float OnFootZoom => onFootOrthoSize;
+    public void SetZoomTarget(float orthoSize) => _orthoTarget = orthoSize;
+
     void Start()
     {
         // Multiplayer skips the on-foot pit-entry flow: networked cars spawn straight onto the grid

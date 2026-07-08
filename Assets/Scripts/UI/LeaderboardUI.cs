@@ -14,6 +14,8 @@ public class LeaderboardUI : MonoBehaviour
 
     GUIStyle _row, _head;
     static Texture2D _tex;
+    DriveModeController _drive;
+    bool _driveSearched;
 
     void EnsureStyles()
     {
@@ -30,6 +32,11 @@ public class LeaderboardUI : MonoBehaviour
         if (t == null || t.Order.Count == 0) return;
         EnsureStyles();
 
+        // In broadcast mode the rows become camera buttons: click a driver to cut to their car.
+        if (_drive == null && !_driveSearched) { _drive = FindFirstObjectByType<DriveModeController>(); _driveSearched = true; }
+        bool broadcast = _drive != null && !_drive.IsDriving;
+        Transform featured = broadcast ? _drive.FeaturedTransform : null;
+
         bool expanded = Input.GetKey(expandKey);
         var order = t.Order;
         int n = order.Count;
@@ -39,14 +46,15 @@ public class LeaderboardUI : MonoBehaviour
         float h = (show + 1) * rowHeight + 8f;
         Fill(new Rect(x - 4f, y - 4f, width + 8f, h + 8f), new Color(0f, 0f, 0f, 0.55f));
 
-        GUI.Label(new Rect(x, y, width, rowHeight), expanded ? $"ORDER — {n} cars" : "ORDER (Tab = full)", _head);
+        string header = broadcast ? "ORDER — click = camera" : (expanded ? $"ORDER — {n} cars" : "ORDER (Tab = full)");
+        GUI.Label(new Rect(x, y, width, rowHeight), header, _head);
         y += rowHeight;
 
         bool playerShown = false;
         for (int i = 0; i < show; i++)
         {
             var e = order[i];
-            DrawRow(x, y, e);
+            DrawRow(x, y, e, broadcast, featured);
             if (e.isPlayer) playerShown = true;
             y += rowHeight;
         }
@@ -58,15 +66,20 @@ public class LeaderboardUI : MonoBehaviour
             {
                 if (!order[i].isPlayer) continue;
                 y += 4f;
-                DrawRow(x, y, order[i]);
+                DrawRow(x, y, order[i], broadcast, featured);
                 break;
             }
         }
     }
 
-    void DrawRow(float x, float y, RacePositionTracker.Entry e)
+    void DrawRow(float x, float y, RacePositionTracker.Entry e, bool broadcast, Transform featured)
     {
-        if (e.isPlayer) Fill(new Rect(x - 4f, y, width + 8f, rowHeight), new Color(0.2f, 0.45f, 1f, 0.35f));
+        var rowRect = new Rect(x - 4f, y, width + 8f, rowHeight);
+        if (e.isPlayer) Fill(rowRect, new Color(0.2f, 0.45f, 1f, 0.35f));
+        else if (broadcast && featured != null && e.tf == featured) Fill(rowRect, new Color(1f, 0.3f, 0.2f, 0.35f));
+        // Invisible button under the label so the whole row is clickable without changing its look.
+        if (broadcast && e.tf != null && GUI.Button(rowRect, GUIContent.none, GUIStyle.none))
+            _drive.FeatureCar(e.tf);
         string num = e.carNumber > 0 ? $"#{e.carNumber}" : "";
         string gap = e.position == 1 ? "Leader" : $"+{e.gapToLeaderSec:0.0}s";
         GUI.Label(new Rect(x, y, width, rowHeight), $"{e.position,2}  {num,-4} {Trim(e.name, 12),-12} {gap}", e.isPlayer ? _head : _row);

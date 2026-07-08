@@ -19,6 +19,8 @@ public class DriveModeController : MonoBehaviour
     [Header("Broadcast")]
     [Tooltip("Seconds each AI car is featured before cutting to the next.")]
     public float broadcastCycleSeconds = 5f;
+    [Tooltip("Seconds a car picked from the leaderboard stays featured before the TV cycle resumes.")]
+    public float clickHoldSeconds = 15f;
     [Tooltip("Start the scene in broadcast (spectator) mode rather than driving.")]
     public bool startInBroadcast = false;
 
@@ -31,13 +33,28 @@ public class DriveModeController : MonoBehaviour
 
     public bool IsDriving => _driving;
     public GameObject PlayerCar => playerCar;
+    // The car the broadcast camera is on right now (null while driving). Leaderboard highlights this row.
+    public Transform FeaturedTransform => _driving ? null : (_pinned != null ? _pinned : (_featured != null ? _featured.transform : null));
+
+    // Leaderboard click: cut to this car and hold it for clickHoldSeconds, then resume the TV cycle.
+    // Works for any car with a transform (incl. the player's own AI-driven car and client puppets).
+    public void FeatureCar(Transform car)
+    {
+        if (_driving || car == null || suppressBroadcastCamera) return;
+        _pinned = car;
+        _pinnedTimer = clickHoldSeconds;
+        if (cameraFollow != null && !suppressBroadcastCamera) cameraFollow.target = car;
+    }
 
     PlayerVehicleController _pvc;
     SplineDriver _spline;
+    PitLaneStart _zoom;      // owns the camera ortho lerp; null on scenes without the pit-start flow
     bool _driving = true;
     float _cycleTimer;
     int _featuredIndex = -1;
     SplineDriver _featured;
+    Transform _pinned;       // leaderboard-clicked car; overrides the cycle while its hold timer runs
+    float _pinnedTimer;
     readonly List<SplineDriver> _candidates = new();
 
     Text _label;
@@ -52,6 +69,7 @@ public class DriveModeController : MonoBehaviour
             _spline = playerCar.GetComponent<SplineDriver>();
         }
         if (cameraFollow == null && Camera.main != null) cameraFollow = Camera.main.GetComponent<CameraFollow>();
+        _zoom = FindFirstObjectByType<PitLaneStart>();
         BuildUI();
         UpdateLabel();
 
@@ -108,6 +126,10 @@ public class DriveModeController : MonoBehaviour
         }
         _cycleTimer = 0f;
         _featured = null;
+        _pinned = null;
+        // Broadcast watches cars, so zoom out to driving level — the on-foot flow may have left the
+        // camera at walking zoom if the player never climbed into the car this session.
+        if (_zoom != null && !suppressBroadcastCamera) _zoom.SetZoomTarget(_zoom.DrivingZoom);
         PickNextCar();
     }
 
@@ -123,11 +145,23 @@ public class DriveModeController : MonoBehaviour
             _pvc.SeedPose(pos, heading, mph / 2.237f);
         }
         if (cameraFollow != null && playerCar != null) cameraFollow.target = playerCar.transform;
+        _pinned = null;
     }
 
     void UpdateBroadcastCamera()
     {
         if (suppressBroadcastCamera) return;     // crew chief (or similar) owns the camera
+        if (_pinned != null)
+        {
+            _pinnedTimer -= Time.deltaTime;
+            if (_pinnedTimer > 0f)
+            {
+                if (cameraFollow != null) cameraFollow.target = _pinned;
+                return;
+            }
+            _pinned = null;
+            _cycleTimer = 0f;   // hold expired (or car despawned): cut to the next cycle car now
+        }
         _cycleTimer -= Time.deltaTime;
         if (_cycleTimer <= 0f || _featured == null) PickNextCar();
         if (_featured != null && cameraFollow != null) cameraFollow.target = _featured.transform;

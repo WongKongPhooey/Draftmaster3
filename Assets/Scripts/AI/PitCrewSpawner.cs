@@ -80,10 +80,14 @@ public class PitCrewSpawner : MonoBehaviour
         var root = new GameObject("PitCrews").transform;
         root.SetParent(transform, false);
 
+        // Unconfigured fallback spreads the boxes inside the grey box-lane strip (not the full lane —
+        // that would drop boxes on the entry/exit ramps outside the grey surface).
+        float fallbackTo = track.HasPitBoxLane ? track.PitBoxLaneTo(pitLength) : pitLength;
+        float fallbackFrom = track.HasPitBoxLane ? track.PitBoxLaneFrom(pitLength) : 0f;
         for (int idx = 0; idx < count; idx++)
         {
             float boxDist = PitLane.Configured ? PitLane.BoxDistance(idx, pitLength)
-                                               : Mathf.Lerp(pitLength, 0f, (idx + 0.5f) / count);
+                                               : Mathf.Lerp(fallbackTo, fallbackFrom, (idx + 0.5f) / count);
             BuildBox(root, idx, boxDist, pit);
         }
     }

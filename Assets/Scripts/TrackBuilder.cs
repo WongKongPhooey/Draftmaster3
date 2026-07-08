@@ -30,6 +30,10 @@ public class TrackBuilder : MonoBehaviour
     float PitHalfWidth => track == null ? 0f : (track.pitDefaultWidth > 0f ? track.pitDefaultWidth : track.defaultWidth) * 0.5f;
     public float PitBoxLaneCenterLateral => PitHalfWidth + pitBoxLaneWidth * 0.5f;
     public float PitBoxLaneOuterLateral => PitHalfWidth + pitBoxLaneWidth;
+    // Span of the grey strip along the pit lane (distances from the pit-lane start), matching the mesh
+    // built in BuildPitLane. GridSpawner fits the pit boxes inside this span.
+    public float PitBoxLaneFrom(float pitLen) => Mathf.Clamp(pitBoxLaneStartOffset, 0f, pitLen);
+    public float PitBoxLaneTo(float pitLen) => Mathf.Clamp(pitLen - Mathf.Max(0f, pitBoxLaneEndOffset), 0f, pitLen);
 
     [Header("Brake Marker Boards")]
     [Tooltip("Place 150/100/50m marker boards on the barrier of straights that lead into a turn.")]

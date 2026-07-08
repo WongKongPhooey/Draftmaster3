@@ -94,7 +94,8 @@
       "PowerShell(Add-Type -AssemblyName System.Drawing; $bmp=New-Object System.Drawing.Bitmap\\(\\(Resolve-Path 'Assets\\\\Sprites\\\\Walking\\\\walk.png'\\).Path\\); $cols=@{}; for\\($x=0;$x -lt 56;$x++\\){ for\\($y=0;$y -lt 8;$y++\\){ $p=$bmp.GetPixel\\($x,$y\\); if\\($p.A -gt 0\\){ $k=\"R$\\($p.R\\),G$\\($p.G\\),B$\\($p.B\\)\"; $cols[$k]++ } } }; $bmp.Dispose\\(\\); $cols.GetEnumerator\\(\\) | Sort-Object Value -Descending | ForEach-Object { Write-Output \"$\\($_.Key\\) x$\\($_.Value\\)\" })",
       "PowerShell(Select-String -Path 'Assets\\\\Sprites\\\\Walking\\\\walk.png.meta' -Pattern 'filterMode|textureCompression|spritePixelsToUnits|textureType|sRGBTexture' | ForEach-Object { $_.Line.Trim\\(\\) })",
       "mcp__unity__manage_texture",
-      "PowerShell(Select-String -Path 'Assets\\\\Sprites\\\\Walking\\\\walk_base.png.meta' -Pattern 'filterMode|textureCompression|spritePixelsToUnits|textureType' | ForEach-Object { $_.Line.Trim\\(\\) } | Select-Object -First 6)"
+      "PowerShell(Select-String -Path 'Assets\\\\Sprites\\\\Walking\\\\walk_base.png.meta' -Pattern 'filterMode|textureCompression|spritePixelsToUnits|textureType' | ForEach-Object { $_.Line.Trim\\(\\) } | Select-Object -First 6)",
+      "Skill(claude-api)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots",

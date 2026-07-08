@@ -185,9 +185,21 @@ public class GridSpawner : MonoBehaviour
             if (track.HasPitBoxLane) pitBoxParkLateral = track.PitBoxLaneCenterLateral;
             var pit = track.SamplePitCenterline();
             pitLen = pit.Count > 0 ? pit[pit.Count - 1].distance : 0f;
+            // Fit every box inside the grey box-lane strip. The strip can start well after the pit entry
+            // and end well before the exit ramp, so box 0's exit gap comes from the strip's end offset —
+            // a fixed gap would park the pole car on the exit ramp, off the grey surface.
+            float boxSpanFrom = 6f;                    // fallback margins for tracks without a strip
+            float boxSpanTo = pitLen - pitBoxExitGap;
+            if (track.HasPitBoxLane && pitLen > 0f)
+            {
+                const float bandMargin = 3f;           // keep the end boxes off the strip's very edges
+                boxSpanFrom = track.PitBoxLaneFrom(pitLen) + bandMargin;
+                boxSpanTo = Mathf.Max(boxSpanFrom, track.PitBoxLaneTo(pitLen) - bandMargin);
+                pitBoxExitGap = pitLen - boxSpanTo;
+            }
             if (pitLen > 0f && totalBoxes > 1)
             {
-                float usable = Mathf.Max(0f, pitLen - pitBoxExitGap - 6f);
+                float usable = Mathf.Max(0f, boxSpanTo - boxSpanFrom);
                 pitBoxSpacing = Mathf.Clamp(usable / (totalBoxes - 1), 5f, 12f);
             }
             // Publish the box layout so every car (safety car, pit stops) agrees where the boxes are.
