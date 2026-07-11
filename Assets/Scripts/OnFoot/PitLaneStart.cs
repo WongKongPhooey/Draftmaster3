@@ -23,6 +23,8 @@ public class PitLaneStart : MonoBehaviour
     public float carAheadMetres = 5f;
     [Tooltip("Lateral offset (m) off the pit centerline for both player and parked car. Negative = away from the pit wall — keeps them clear of AI cars driving the pit spline at race start.")]
     public float lateralOffsetMetres = -3f;
+    [Tooltip("If set, spawn the on-foot player at the PlayerSpawnPoint GameObject with this exact name (deterministic) instead of a weighted-random pick among all markers. Empty = random. Defaults to the motorhome/RV start so the scene opens with the player stood inside the RV.")]
+    public string forcedSpawnName = "SpawnPoint_RV";
 
     [Header("Entering")]
     [Tooltip("Max distance from car centre to allow climbing in.")]
@@ -126,7 +128,8 @@ public class PitLaneStart : MonoBehaviour
 
         // Editor-placed spawn markers override the procedural pit-lane spawn for the PLAYER only —
         // the car stays parked at its pit box, so the walk to it becomes part of the scene open.
-        var marker = PlayerSpawnPoint.Pick();
+        // forcedSpawnName pins the start to a named marker (the RV) when present; else weighted-random.
+        var marker = PlayerSpawnPoint.Pick(forcedSpawnName);
         if (marker != null)
             playerPos = new Vector3(marker.transform.position.x, marker.transform.position.y, playerPos.z);
 

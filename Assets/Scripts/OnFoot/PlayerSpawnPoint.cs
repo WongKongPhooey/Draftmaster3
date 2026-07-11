@@ -12,6 +12,22 @@ public class PlayerSpawnPoint : MonoBehaviour
     [Tooltip("Optional editor-only label drawn next to the gizmo, e.g. \"paddock gate\".")]
     public string label;
 
+    // Deterministic variant: if preferredName is set and an enabled marker with that exact
+    // GameObject name exists, always return it (weight is ignored — the pin is explicit).
+    // Otherwise falls back to the weighted-random Pick(). Lets a scene fix the on-foot start at a
+    // named spot (e.g. the player's motorhome) without affecting scenes that lack that marker.
+    public static PlayerSpawnPoint Pick(string preferredName)
+    {
+        if (!string.IsNullOrEmpty(preferredName))
+        {
+            var all = FindObjectsByType<PlayerSpawnPoint>();
+            for (int i = 0; i < all.Length; i++)
+                if (all[i].isActiveAndEnabled && all[i].gameObject.name == preferredName)
+                    return all[i];
+        }
+        return Pick();
+    }
+
     // Weighted-random pick over the enabled markers in the scene. Null if none are usable.
     public static PlayerSpawnPoint Pick()
     {
