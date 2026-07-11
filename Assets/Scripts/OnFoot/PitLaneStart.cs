@@ -25,6 +25,8 @@ public class PitLaneStart : MonoBehaviour
     public float lateralOffsetMetres = -3f;
     [Tooltip("If set, spawn the on-foot player at the PlayerSpawnPoint GameObject with this exact name (deterministic) instead of a weighted-random pick among all markers. Empty = random. Defaults to the motorhome/RV start so the scene opens with the player stood inside the RV.")]
     public string forcedSpawnName = "SpawnPoint_RV";
+    [Tooltip("When the player spawns at the RV marker (forcedSpawnName), give the RV a masked interior: the rest of the scene goes black and an interior room shows until the player walks back out the doorway. See RVInterior.")]
+    public bool rvInterior = true;
 
     [Header("Entering")]
     [Tooltip("Max distance from car centre to allow climbing in.")]
@@ -174,6 +176,15 @@ public class PitLaneStart : MonoBehaviour
             _cam.orthographicSize = onFootOrthoSize;
         }
         _orthoTarget = onFootOrthoSize;
+
+        // "Scene within a scene": if the on-foot start actually landed on the RV marker, wrap the spawn in a
+        // masked interior. Standing inside blacks out the rest of the world and shows an interior room; walking
+        // out through the doorway (the edge facing the parked car) reveals the scene again. See RVInterior.
+        if (rvInterior && marker != null && marker.gameObject.name == forcedSpawnName)
+        {
+            var rv = new GameObject("RVInterior").AddComponent<RVInterior>();
+            rv.Initialize(_player.transform.position, _player.transform, car.transform);
+        }
 
         // Spawn-in presentation: "<Track> - <spawn label>" title card, plus an objective marker
         // pointing at the parked car (edge-clamped arrow + distance + paint-scheme icon when far).
