@@ -7,5 +7,7 @@
   "idle_minutes": 20,
   "default_user_daily_burn_pct": 8.0,
   "task_timeout_minutes": 90,
-  "repo_path": "C:/Users/Josh/Documents/Draftmaster3"
+  "repo_path": "C:/Users/Josh/Documents/Draftmaster3",
+  "require_unity_mcp": true,
+  "unity_mcp_url": "http://127.0.0.1:8080"
 }

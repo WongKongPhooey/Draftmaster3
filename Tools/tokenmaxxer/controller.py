@@ -3,7 +3,8 @@
 Fired by Windows Task Scheduler every 30 minutes. Each tick runs AT MOST one
 task. The gates and pacing math decide whether this tick works or exits:
 
-  gates:  no overlapping run, user idle, 5-hour headroom, usage data present
+  gates:  no overlapping run, Unity MCP connected, user idle, 5-hour
+          headroom, usage data present
   pacing: keep weekly utilization under a target curve that lands the week
           near weekly_ceiling_pct at reset, reserving headroom for the
           user's own daytime usage (learned from history)
@@ -22,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import tasks as tasks_mod
+import unity_mcp as unity_mcp_mod
 import usage as usage_mod
 
 # Windows consoles default to cp1252; keep prints from crashing on non-ASCII.
@@ -293,6 +295,23 @@ def main():
         log("stale lock removed")
         LOCK_FILE.unlink()
 
+    # --- Unity MCP gate (required even for --force) ---
+    # Every task operates on the Unity project and verifies itself through Unity
+    # MCP (EditMode tests, read_console compile checks). If the editor's MCP
+    # bridge is not confirmed connected, a task can't verify anything and would
+    # edit blind — so no Unity work happens without a live connection.
+    require_unity = cfg.get("require_unity_mcp", True)
+    unity_ok, unity_info = True, {}
+    if require_unity:
+        unity_ok, unity_info = unity_mcp_mod.check_connection(cfg, log)
+        if not unity_ok and not args.dry_run:
+            log(f"gate: Unity MCP not connected — {unity_info.get('reason')}; "
+                "failing safe (no Unity work without a confirmed connection)")
+            return
+        if unity_ok and not args.dry_run:
+            log(f"Unity MCP connected: {unity_info.get('project')}@"
+                f"{unity_info.get('hash')} ({unity_info.get('unity_version')})")
+
     # --- usage (required even for --force: measures the run's cost) ---
     limits = usage_mod.get_limits(log)
     if limits is None:
@@ -311,6 +330,7 @@ def main():
 
     if args.dry_run:
         log(f"dry-run: idle={idle:.1f} min, session={session['percent'] if session else '?'}%")
+        log(f"dry-run: unity_mcp → connected={unity_ok} {json.dumps(unity_info)}")
         log(f"dry-run: pacing → allowed={allowed} {json.dumps(info)}")
         task_list = tasks_mod.fetch_tasks(cfg, log)
         if task_list is not None:

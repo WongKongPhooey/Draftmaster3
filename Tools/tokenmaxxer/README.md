@@ -16,7 +16,7 @@ Overnight autonomous Claude task runner. Windows Task Scheduler fires `controlle
 
 ## How it decides to work (per 30-min tick)
 
-1. **Gates**: no run already in progress; you've been idle ≥ `idle_minutes` (keyboard/mouse); 5-hour window ≤ `five_hour_max_pct`; usage endpoint reachable (fails safe otherwise).
+1. **Gates**: no run already in progress; **Unity MCP is connected** (the MCP server is healthy and a Unity Editor for this project is registered with it — see below); you've been idle ≥ `idle_minutes` (keyboard/mouse); 5-hour window ≤ `five_hour_max_pct`; usage endpoint reachable (fails safe otherwise).
 2. **Pacing**: weekly utilization must be below a target curve (`elapsed week fraction × ceiling`), minus a reserve for your own daytime usage — learned each week from how much usage happened outside tool runs.
 3. If all pass: run the next pending task headless (`claude -p --model opus --dangerously-skip-permissions`), measure the weekly-% delta it cost, write the morning report, commit.
 
@@ -34,6 +34,17 @@ python controller.py --force     # run one task now, ignoring idle + pacing gate
 
 To pause the whole system: disable the "Tokenmaxxer" task in Task Scheduler.
 
+## Unity MCP connection gate
+
+Every task edits the Unity project and verifies itself through Unity MCP (EditMode tests, `read_console` compile checks). Running a task with no live editor connection means Claude can't verify anything and would edit blind, so the controller refuses to run any task unless the connection is confirmed — **enforced even under `--force`**.
+
+The check (`unity_mcp.py`) probes the MCP for Unity HTTP server (`unity_mcp_url`, default `http://127.0.0.1:8080`):
+
+- `GET /health` → the MCP server process is up and healthy;
+- `GET /api/instances` → a Unity Editor whose `project` matches this repo's folder name is registered.
+
+Both must pass. Any failure (server down, no editor, wrong project, timeout) fails safe: the tick is skipped, nothing runs. `python controller.py --dry-run` reports the current connection status. Set `require_unity_mcp` to `false` in `config.json` if you ever want to run tasks that don't need Unity.
+
 ## Config knobs (`config.json`)
 
 | Key | Meaning |
@@ -46,3 +57,6 @@ To pause the whole system: disable the "Tokenmaxxer" task in Task Scheduler.
 | `idle_minutes` | Minimum keyboard/mouse idle before working (20) |
 | `default_user_daily_burn_pct` | Assumed daytime burn/day until a half-day of history exists (8) |
 | `task_timeout_minutes` | Hard kill for a single task run (90) |
+| `require_unity_mcp` | Gate every run on a confirmed Unity MCP connection (true) |
+| `unity_mcp_url` | Base URL of the MCP for Unity HTTP server (`http://127.0.0.1:8080`) |
+| `unity_project_name` | Override the expected Unity project name; defaults to `repo_path`'s folder name |
