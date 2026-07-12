@@ -382,12 +382,10 @@ def main():
         if weekly_after and before["weekly"] is not None:
             deltas["weekly"] = round(weekly_after["percent"] - before["weekly"], 1)
 
-        write_report(task, outcome, deltas, cfg)
-        commit_result = commit_leftovers(task, cfg, baseline)
-        log(f"task {'ok' if outcome['ok'] else 'ERROR'} in "
-            f"{outcome['duration_s'] / 60:.1f} min; git: {commit_result}; "
-            f"weekly Δ {deltas.get('weekly', '?')}%")
-
+        # Record and PERSIST the outcome BEFORE any step that can throw. A
+        # completed task is marked done and flushed to disk here, so a later
+        # failure (report IO, a git error) can never lose the record and let an
+        # already-finished task be picked up and run again on a following tick.
         if outcome["ok"]:
             state["done"][task["id"]] = {
                 "task": task["text"],
@@ -407,6 +405,18 @@ def main():
             "weekly_delta": deltas.get("weekly", 0.0) or 0.0,
         })
         save_state(state)
+
+        # Best-effort follow-ups, now that the outcome is durable. Guarded so a
+        # failure here cannot escape and skip the save above on a re-run.
+        try:
+            write_report(task, outcome, deltas, cfg)
+            commit_result = commit_leftovers(task, cfg, baseline)
+        except Exception as e:
+            log(f"post-run report/commit failed (task already recorded): {e!r}")
+            commit_result = f"post-run error: {e!r}"
+        log(f"task {'ok' if outcome['ok'] else 'ERROR'} in "
+            f"{outcome['duration_s'] / 60:.1f} min; git: {commit_result}; "
+            f"weekly Δ {deltas.get('weekly', '?')}%")
     finally:
         LOCK_FILE.unlink(missing_ok=True)
 
