@@ -36,6 +36,10 @@ public class RVInterior : MonoBehaviour
     [Tooltip("If set, the interior floor is this sprite instead of the procedural placeholder room. Sized to roomWidth x (roomBack+roomFront).")]
     public Sprite interiorSprite;
 
+    [Header("Satnav")]
+    [Tooltip("Interaction range (m) for the driver-seat satnav that opens the travel map. Walk within this to see the prompt.")]
+    public float satnavRange = 2f;
+
     // World z-planes. More negative = closer to the camera (which sits at player.z - 100 looking +z), so
     // each layer draws in front of the one below it. The player is pulled to insidePlayerZ while inside.
     const float kMaskZ = -2.0f;
@@ -109,6 +113,32 @@ public class RVInterior : MonoBehaviour
 
         if (interiorSprite != null) BuildSpriteFloor(interior);
         else BuildProceduralRoom(interior);
+
+        BuildSatnav(interior);
+    }
+
+    // A satnav at the RV's driver seat (front-left of the cab, beside the doorway). Its floating prompt +
+    // action-button handling are inherited from NPCInteractable via OnFootController; interacting opens the
+    // travel map. Built under the interior root so it only exists — and only prompts — while inside the RV.
+    void BuildSatnav(Transform interior)
+    {
+        float frontY = roomFront - 0.5f;                        // near the front wall, level with the door
+        float x = -Mathf.Min(1.9f, roomWidth * 0.5f - 0.6f);   // driver side (left), kept clear of the wall
+        Vector2 unit = new(x, frontY);
+
+        // Driver's seat block just behind the unit, so the spot reads as the front cab.
+        BuildQuad(interior, "DriverSeat", new Vector2(x, frontY - 0.85f), new Vector2(1.0f, 1.1f), kPropZ, MakeUnlit(new Color(0.16f, 0.16f, 0.18f)));
+        // Satnav housing + lit screen.
+        BuildQuad(interior, "SatnavBody", unit, new Vector2(0.62f, 0.44f), kPropZ - 0.02f, MakeUnlit(new Color(0.08f, 0.08f, 0.09f)));
+        BuildQuad(interior, "SatnavScreen", unit, new Vector2(0.44f, 0.30f), kPropZ - 0.04f, MakeUnlit(new Color(0.20f, 0.72f, 0.55f)));
+
+        // Co-located empty child carries the interactable. Kept separate from the visuals so the
+        // face-each-other rotation OnFootController applies on interact never spins the device.
+        var go = new GameObject("Satnav");
+        go.transform.SetParent(interior, false);
+        go.transform.localPosition = new Vector3(unit.x, unit.y, kPropZ);
+        var sat = go.AddComponent<SatnavInteractable>();
+        sat.interactRange = satnavRange;
     }
 
     void BuildMask(Transform parent)
