@@ -51,6 +51,10 @@ public class PitCrewMember : MonoBehaviour
     NPCLayeredAppearance _appearance;
     SpriteRenderer _itemRenderer;
     Vector3 _standbyLocal, _workLocal, _targetLocal;
+    readonly List<Vector3> _path = new();   // waypoints to the current target (walks around the car)
+    Vector3 _carCenterLocal;                // serviced car's footprint, box-local (axis-aligned approx)
+    Vector2 _carHalf;
+    bool _hasCar;
     bool _working;
     bool _isFueller;
     bool _gearSpent;    // the held wheel is on the car; empty-handed until restocked at standby
@@ -74,17 +78,79 @@ public class PitCrewMember : MonoBehaviour
     // serviced car's ACTUAL corner positions, so the crew run to the car wherever it stopped in the box.
     public void SetWorkTarget(Vector3 workLocal) => _workLocal = workLocal;
 
+    // The serviced car's footprint (box-local, axis-aligned — parked cars sit along the lane). Routes to
+    // the far side detour around the nearer bumper instead of walking across the top of the car.
+    public void SetCarRect(Vector3 centerLocal, Vector2 half)
+    {
+        _carCenterLocal = centerLocal;
+        _carHalf = half;
+        _hasCar = true;
+    }
+
     public void SetWorking(bool working)
     {
         _working = working;
         _targetLocal = working ? _workLocal : _standbyLocal;
+        BuildPath(transform.localPosition, _targetLocal);
         if (working) _workTimer = 0f;
+    }
+
+    // Straight line unless it would cross the car: then walk to the nearer bumper line on THIS side,
+    // across past the bumper, and down the far side — an L/U route around the footprint's edge.
+    void BuildPath(Vector3 from, Vector3 to)
+    {
+        _path.Clear();
+        if (_hasCar && SegmentCrossesCar(from, to))
+        {
+            const float endMargin = 0.7f;
+            float top = _carCenterLocal.y + _carHalf.y + endMargin;
+            float bot = _carCenterLocal.y - _carHalf.y - endMargin;
+            // Round whichever bumper makes the shorter total detour.
+            float costTop = Mathf.Abs(from.y - top) + Mathf.Abs(to.y - top);
+            float costBot = Mathf.Abs(from.y - bot) + Mathf.Abs(to.y - bot);
+            float endY = costTop <= costBot ? top : bot;
+            _path.Add(new Vector3(from.x, endY, 0f));
+            _path.Add(new Vector3(to.x, endY, 0f));
+        }
+        _path.Add(to);
+    }
+
+    // 2D segment vs the car's AABB (slab test). Endpoints sit at the stations beside the car — outside
+    // the rect because its half-width is kept under the station lateral.
+    bool SegmentCrossesCar(Vector3 a, Vector3 b)
+    {
+        Vector2 min = new(_carCenterLocal.x - _carHalf.x, _carCenterLocal.y - _carHalf.y);
+        Vector2 max = new(_carCenterLocal.x + _carHalf.x, _carCenterLocal.y + _carHalf.y);
+        Vector2 d = new(b.x - a.x, b.y - a.y);
+        Vector2 p = new(a.x, a.y);
+        float t0 = 0f, t1 = 1f;
+        for (int axis = 0; axis < 2; axis++)
+        {
+            float da = axis == 0 ? d.x : d.y;
+            float pa = axis == 0 ? p.x : p.y;
+            float mn = axis == 0 ? min.x : min.y;
+            float mx = axis == 0 ? max.x : max.y;
+            if (Mathf.Abs(da) < 1e-6f)
+            {
+                if (pa < mn || pa > mx) return false;
+            }
+            else
+            {
+                float ta = (mn - pa) / da, tb = (mx - pa) / da;
+                if (ta > tb) (ta, tb) = (tb, ta);
+                t0 = Mathf.Max(t0, ta);
+                t1 = Mathf.Min(t1, tb);
+                if (t0 > t1) return false;
+            }
+        }
+        return true;
     }
 
     void Update()
     {
         Vector3 cur = transform.localPosition;
-        Vector3 to = _targetLocal - cur;
+        Vector3 target = _path.Count > 0 ? _path[0] : _targetLocal;
+        Vector3 to = target - cur;
         to.z = 0f;
         float dist = to.magnitude;
 
@@ -95,6 +161,10 @@ public class PitCrewMember : MonoBehaviour
             FaceLocal(dir);
             Animate();
             ShowItem(!_gearSpent);       // carry the wheel to the car; run back empty-handed after fitting it
+        }
+        else if (_path.Count > 0)
+        {
+            _path.RemoveAt(0);           // waypoint reached — head for the next leg
         }
         else
         {
@@ -191,10 +261,18 @@ public class PitCrewBox : MonoBehaviour
                 p - f - s,                                   // rear wheel, far side
                 p - f - car.right * fuellerBehind + s,       // fueller, behind the rear
             };
+            // Publish the car's footprint so members route around the bumpers instead of over the roof.
+            // Half-width sits just inside the wheel stations (they must stay reachable endpoints); half-length
+            // a touch beyond them, roughly the bodywork.
+            Vector3 carLocal = transform.InverseTransformPoint(p);
+            carLocal.z = 0f;
+            var carHalf = new Vector2(Mathf.Max(0.4f, wheelLateral - 0.15f), wheelLongitudinal + 0.4f);
+
             for (int i = 0; i < _members.Count && i < stations.Length; i++)
             {
                 Vector3 local = transform.InverseTransformPoint(stations[i]);
                 local.z = 0f;
+                _members[i].SetCarRect(carLocal, carHalf);
                 _members[i].SetWorkTarget(local);
             }
         }

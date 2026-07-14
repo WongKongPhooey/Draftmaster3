@@ -100,7 +100,7 @@ public class PracticeAIStint : MonoBehaviour
                     var tb = _spline.track;
                     if (tb != null && tb.track != null)
                     {
-                        float gap = tb.track.pitEntryDistance - _spline.DistanceOnTrack;
+                        float gap = tb.track.PitEntryDistanceOnLap - _spline.DistanceOnTrack;
                         if (gap < 0f) gap += _spline.TrackLength;
                         if (gap < pitEntryWindow) _spline.usePitLane = true;
                     }

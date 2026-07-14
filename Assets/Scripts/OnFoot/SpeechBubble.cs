@@ -6,12 +6,20 @@ using UnityEngine;
 // reproducing the original Phoenix dialogue feel. Built from a TextMesh + a 9-sliced sprite so it renders
 // reliably under this scene's 3D URP renderer (a world-space UI Canvas is finicky here). It is an independent
 // object (not parented to the actor) so the actor's scale or facing rotation never distorts it.
+//
+// The box is sized to the FULL line up front (not auto-grown while typing) and the text is left-aligned
+// inside it, dialogue-box style. The background sprite is loaded from Resources/OnFoot/SpeechBox.png when
+// present — texture that PNG to restyle every bubble (keep its 9-slice border import settings; regenerate
+// a fresh placeholder via Draftmaster > UI > Build Speech Box Texture). Without it, a procedural rounded
+// rect is used.
 public class SpeechBubble : MonoBehaviour
 {
     public float charInterval = 0.04f;             // seconds per character
     public float headHeight = 0.75f;               // world metres above the actor's position
-    public int wrapChars = 18;                     // soft word-wrap width
-    public Vector2 padding = new Vector2(0.16f, 0.1f);
+    public int wrapChars = 34;                     // soft word-wrap width (characters per line)
+    public Vector2 padding = new Vector2(0.18f, 0.12f); // box border around the text block, per side
+    [Tooltip("How far in front of the actor (negative z, toward the camera) the bubble sits. Must clear whatever the actor is standing on — the opaque z=0 ground depth-tests the box away without this.")]
+    public float zLift = 0.6f;
 
     Transform _actor;
     TextMesh _label;
@@ -19,6 +27,8 @@ public class SpeechBubble : MonoBehaviour
     SpriteRenderer _bg;
     Coroutine _reveal;
     string _full = "";
+    Vector2 _boxSize = new Vector2(0.55f, 0.4f);
+    Vector2 _textOrigin;                            // label's top-left anchor position inside the box
 
     public bool IsRevealing { get; private set; }
 
@@ -37,9 +47,11 @@ public class SpeechBubble : MonoBehaviour
         _bg = new GameObject("BG").AddComponent<SpriteRenderer>();
         _bg.transform.SetParent(transform, false);
         _bg.transform.localPosition = new Vector3(0f, 0f, 0.01f); // just behind the text
-        _bg.sprite = BubbleSprite();
+        var custom = Resources.Load<Sprite>("OnFoot/SpeechBox");
+        _bg.sprite = custom != null ? custom : BubbleSprite();
         _bg.drawMode = SpriteDrawMode.Sliced;
-        _bg.color = new Color(0.06f, 0.06f, 0.09f, 0.92f);
+        // A hand-textured box is shown as authored; the procedural fallback gets the dark tint.
+        _bg.color = custom != null ? Color.white : new Color(0.06f, 0.06f, 0.09f, 0.92f);
         _bg.sortingLayerName = "Vehicles";
         _bg.sortingOrder = 60;
         SetUnlit(_bg);
@@ -48,8 +60,9 @@ public class SpeechBubble : MonoBehaviour
         labelGo.transform.SetParent(transform, false);
         labelGo.transform.localPosition = new Vector3(0f, 0f, -0.01f);
         _label = labelGo.AddComponent<TextMesh>();
-        _label.anchor = TextAnchor.MiddleCenter;
-        _label.alignment = TextAlignment.Center;
+        // Anchored at its top-left so lines type out left-aligned and hang from a fixed origin.
+        _label.anchor = TextAnchor.UpperLeft;
+        _label.alignment = TextAlignment.Left;
         // TextMesh world height per line ≈ fontSize * characterSize * 0.1, so ~0.16 units/line here.
         _label.fontSize = 72;
         _label.characterSize = 0.022f;
@@ -63,6 +76,15 @@ public class SpeechBubble : MonoBehaviour
     {
         gameObject.SetActive(true);
         _full = WordWrap(text, wrapChars);
+
+        // Size the box to the finished line once, so it doesn't pulse while the text types in:
+        // show the full text, measure it, then wind back to empty and reveal.
+        _label.text = _full;
+        Vector3 b = _labelRenderer.bounds.size;
+        _boxSize = new Vector2(Mathf.Max(0.55f, b.x + padding.x * 2f), Mathf.Max(0.4f, b.y + padding.y * 2f));
+        _textOrigin = new Vector2(-b.x * 0.5f, b.y * 0.5f); // text block centred in the box, left-aligned
+        _label.transform.localPosition = new Vector3(_textOrigin.x, _textOrigin.y, -0.01f);
+
         if (_reveal != null) StopCoroutine(_reveal);
         _reveal = StartCoroutine(Reveal());
     }
@@ -100,16 +122,13 @@ public class SpeechBubble : MonoBehaviour
     void LateUpdate()
     {
         if (_actor == null) { Destroy(gameObject); return; } // actor despawned — clean up
-        transform.position = _actor.position + Vector3.up * headHeight;
+        transform.position = _actor.position
+            + Vector3.up * (headHeight + _boxSize.y * 0.5f)
+            + Vector3.back * zLift; // in front of the ground/actor so the box isn't depth-culled
         transform.rotation = Quaternion.identity;            // stay upright even if the actor turns to face
         transform.localScale = Vector3.one;
 
-        // Auto-fit the bubble to the text currently shown (grows as the line types in).
-        if (_bg != null && _labelRenderer != null)
-        {
-            Vector3 b = _labelRenderer.bounds.size;
-            _bg.size = new Vector2(Mathf.Max(0.55f, b.x + padding.x), Mathf.Max(0.4f, b.y + padding.y));
-        }
+        if (_bg != null) _bg.size = _boxSize;
     }
 
     // Greedy word wrap so multi-word lines don't run off the side (TextMesh has no auto-wrap).

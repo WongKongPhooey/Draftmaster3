@@ -36,6 +36,10 @@ public class AIRacingBehaviour : MonoBehaviour
     public float followDecelMps2 = 11f;
     [Tooltip("Gap (m) at which we back off BELOW the car ahead's speed so we don't tap it.")]
     public float hardFollowGap = 6f;
+    [Tooltip("Lateral separation (m) below which a car ahead fully blocks our corridor (≈ a car width) — the follow cap applies at full strength.")]
+    public float corridorOverlapWidth = 2f;
+    [Tooltip("Lateral separation (m) beyond which a car ahead no longer caps our speed at all — we're clear to drive past. The cap fades between the two widths. This is what lets a committed overtake actually PASS a slow or wrecked car instead of matching its speed until it fully stops.")]
+    public float corridorClearWidth = 3.4f;
 
     [Header("Rolling Start")]
     [Tooltip("Seconds after the green flag during which the follow-distance speed cap is eased in, so the whole field launches together (a rolling start) instead of accordioning out from the leader. The hard nose-to-tail cap still applies, so cars can't pile in. 0 = off (cars hold full racing gaps from the instant of green).")]
@@ -203,26 +207,36 @@ public class AIRacingBehaviour : MonoBehaviour
                 overtakeDir = ChooseOvertakeSide(aheadLat);
                 wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
             }
+        }
 
-            // Rear-end avoidance: keep a speed-scaled gap and shed our closing speed EARLY so we never plough
-            // into a slower / stopped car. reqGap = fixed buffer + time-headway + the distance to bleed our
-            // closing speed at followDecelMps2. (The old fixed 6–14 m gap was far too short at racing speeds —
-            // that's what caused the start-line pileups.) Aggressive drivers tuck in a touch tighter.
-            float mySpeedMps = mySpeed * MphToMps;
-            float closingMps = Mathf.Max(0f, mySpeedMps - aheadSpeed * MphToMps);
+        // Rear-end avoidance: keep a speed-scaled gap and shed our closing speed EARLY so we never plough
+        // into a slower / stopped car. reqGap = fixed buffer + time-headway + the distance to bleed our
+        // closing speed at followDecelMps2. (The old fixed 6–14 m gap was far too short at racing speeds —
+        // that's what caused the start-line pileups.) Aggressive drivers tuck in a touch tighter.
+        // The cap keys off the nearest car IN OUR LATERAL CORRIDOR and fades with lateral separation —
+        // capping off the nearest-ahead regardless of lateral froze the whole field behind any slow or
+        // wrecked car (a committed overtake could never build the speed to actually drive past it).
+        if (TryGetAheadInCorridor(scanDist, out var blocker, out float blockGap, out float overlap01))
+        {
+            float blockerMph = blocker.CurrentMph;
+            float mySpeedMps = _spline.CurrentMph * MphToMps;
+            float closingMps = Mathf.Max(0f, mySpeedMps - blockerMph * MphToMps);
             float brakeDist = (closingMps * closingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
             float reqGap = (minFollowDistance + mySpeedMps * followHeadwaySeconds + brakeDist)
                            * Mathf.Lerp(1.15f, 0.85f, aggression01);
-            if (aheadGap < reqGap)
+            if (blockGap < reqGap)
             {
-                // Ease from the leader's speed (at reqGap) down to a touch under it (at hardFollowGap).
-                float close01 = Mathf.InverseLerp(reqGap, hardFollowGap, aheadGap);
-                float followCap = Mathf.Lerp(aheadSpeed, Mathf.Max(0f, aheadSpeed - 6f), close01);
+                // Ease from the blocker's speed (at reqGap) down to a touch under it (at hardFollowGap).
+                float close01 = Mathf.InverseLerp(reqGap, hardFollowGap, blockGap);
+                float followCap = Mathf.Lerp(blockerMph, Mathf.Max(0f, blockerMph - 6f), close01);
                 // Rolling start: blend from our own race pace toward the follow cap over the launch window.
                 followCap = Mathf.Lerp(_spline.DesiredMph, followCap, launchCapBlend);
+                // Laterally clearing the blocker fades the cap back to race pace — drive past, don't shadow it.
+                followCap = Mathf.Lerp(_spline.DesiredMph, followCap, overlap01);
                 speedCap = Mathf.Min(speedCap, followCap);
             }
-            if (aheadGap < hardFollowGap) speedCap = Mathf.Min(speedCap, aheadSpeed * 0.6f);
+            if (blockGap < hardFollowGap)
+                speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, blockerMph * 0.6f, overlap01));
         }
 
         // Human player car(s) — driven free with SplineDriver off, so absent from RaceField and invisible to the
@@ -240,18 +254,23 @@ public class AIRacingBehaviour : MonoBehaviour
             if (pg <= 0f || pg > scanDist) continue;
 
             float pSpeedMph = p.SpeedMph;
+            // Same lateral-corridor fade as the AI-vs-AI cap: a player car we're already clear of
+            // shouldn't pin our speed while we drive past it.
+            float pOverlap = CorridorOverlap01(Mathf.Abs(p.TrackLateral - _spline.LateralOnTrack));
             float pClosingMps = Mathf.Max(0f, myMpsNow - pSpeedMph * MphToMps);
             float pBrakeDist = (pClosingMps * pClosingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
             float pReqGap = (minFollowDistance + myMpsNow * followHeadwaySeconds + pBrakeDist)
                             * Mathf.Lerp(1.15f, 0.85f, aggression01);
-            if (pg < pReqGap)
+            if (pg < pReqGap && pOverlap > 0f)
             {
                 float close01 = Mathf.InverseLerp(pReqGap, hardFollowGap, pg);
                 float pCap = Mathf.Lerp(pSpeedMph, Mathf.Max(0f, pSpeedMph - 6f), close01);
                 pCap = Mathf.Lerp(_spline.DesiredMph, pCap, launchCapBlend); // rolling-start ease-in
+                pCap = Mathf.Lerp(_spline.DesiredMph, pCap, pOverlap);
                 speedCap = Mathf.Min(speedCap, pCap);
             }
-            if (pg < hardFollowGap) speedCap = Mathf.Min(speedCap, pSpeedMph * 0.6f);
+            if (pg < hardFollowGap && pOverlap > 0f)
+                speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, pSpeedMph * 0.6f, pOverlap));
 
             // Go around a much-slower / stopped player when a side is clear of other cars.
             float myPotential = Mathf.Max(_spline.CurrentMph, _spline.DesiredMph);
@@ -362,8 +381,8 @@ public class AIRacingBehaviour : MonoBehaviour
         {
             _recoveryTimer = stallRecoverySeconds;
             // Pick the side away from whoever is blocking; fall back to drifting toward centerline.
-            if (RaceField.TryGetAhead(_spline, minFollowDistance * 2f, out var blocker, out _))
-                _recoveryDir = blocker.LateralOnTrack >= _spline.LateralOnTrack ? -1f : 1f;
+            if (RaceField.TryGetAhead(_spline, minFollowDistance * 2f, out var stallBlocker, out _))
+                _recoveryDir = stallBlocker.LateralOnTrack >= _spline.LateralOnTrack ? -1f : 1f;
             else
                 _recoveryDir = _spline.LateralOnTrack >= 0f ? -1f : 1f;
             _stallTimer = 0f;
@@ -489,6 +508,37 @@ public class AIRacingBehaviour : MonoBehaviour
         if (g > trackLen * 0.5f) g -= trackLen;
         else if (g < -trackLen * 0.5f) g += trackLen;
         return g;
+    }
+
+    // 1 = the other car sits square in our lateral path, 0 = fully clear, fading in between.
+    float CorridorOverlap01(float lateralSeparation)
+        => 1f - Mathf.Clamp01((lateralSeparation - corridorOverlapWidth)
+                              / Mathf.Max(corridorClearWidth - corridorOverlapWidth, 0.1f));
+
+    // Nearest car ahead that overlaps MY lateral corridor — the one we'd actually hit. RaceField.TryGetAhead
+    // returns the nearest-ahead regardless of lateral, which is right for "who do I try to pass" but wrong
+    // for "who do I brake for": a wreck sitting offline would cap the whole field's speed until it stopped.
+    bool TryGetAheadInCorridor(float scanDist, out SplineDriver blocker, out float gap, out float overlap01)
+    {
+        blocker = null; gap = 0f; overlap01 = 0f;
+        float best = float.MaxValue;
+        float myLat = _spline.LateralOnTrack;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float lg = LongitudinalGap(_spline, other);
+            if (lg <= 0f || lg > scanDist || lg >= best) continue;
+            float ov = CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - myLat));
+            if (ov <= 0f) continue;
+            best = lg;
+            blocker = other;
+            gap = lg;
+            overlap01 = ov;
+        }
+        return blocker != null;
     }
 
     // ---- Rivalry / payback ----

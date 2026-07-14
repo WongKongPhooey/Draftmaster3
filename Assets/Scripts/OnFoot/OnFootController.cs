@@ -24,6 +24,11 @@ public class OnFootController : MonoBehaviour
     [Tooltip("Input actions asset (PlayerControl). Movement is read from the OnFoot/Movement action each frame. A private runtime copy is used so it can't clash with the car's InputManager.")]
     public InputActionAsset controlsAsset;
 
+    // Scripted sequences (cutscenes) set this to freeze the player in place: movement zeroes, the
+    // walk animation idles, prompts hide, and interact presses are swallowed. Facing is left alone
+    // so the sequence can orient the player itself. Not serialized — runtime control only.
+    [System.NonSerialized] public bool MovementLocked;
+
     Rigidbody2D _rb;
     Animator _animator;
     NPCInteractable _activeNpc;
@@ -90,8 +95,8 @@ public class OnFootController : MonoBehaviour
         EnsureMoveAction();
         Vector2 move = ReadMove();
 
-        // Lock movement while mid-conversation.
-        if (_activeNpc != null && _activeNpc.IsTalking) move = Vector2.zero;
+        // Lock movement while mid-conversation or while a cutscene holds the player.
+        if (MovementLocked || (_activeNpc != null && _activeNpc.IsTalking)) move = Vector2.zero;
 
         bool running = move != Vector2.zero && ReadRunHeld();
         _rb.linearVelocity = move * moveSpeed * (running ? runMultiplier : 1f);
@@ -117,8 +122,9 @@ public class OnFootController : MonoBehaviour
 
         if (_animator != null)
         {
-            // While talking, hold the facing direction so directional idle rigs keep looking at the NPC.
-            Vector2 face = (_activeNpc != null && _activeNpc.IsTalking) ? _talkFacing : move;
+            // While talking (or held by a cutscene), hold the facing direction so directional idle
+            // rigs keep looking at the NPC instead of snapping to the zeroed move vector.
+            Vector2 face = (MovementLocked || (_activeNpc != null && _activeNpc.IsTalking)) ? _talkFacing : move;
             if (_hasHorizontal) _animator.SetFloat("Horizontal", face.x);
             if (_hasVertical) _animator.SetFloat("Vertical", face.y);
             if (_hasSpeed) _animator.SetFloat("Speed", move.sqrMagnitude);
@@ -130,6 +136,16 @@ public class OnFootController : MonoBehaviour
 
     void Update()
     {
+        // Frozen by a cutscene: no prompts, no interactions. Interact state still ticks so a held
+        // key doesn't fire the moment the lock lifts.
+        if (MovementLocked)
+        {
+            for (int i = 0; i < NPCInteractable.All.Count; i++)
+                NPCInteractable.All[i].BuildFloatingPrompt(false);
+            ReadInteractPressed();
+            return;
+        }
+
         UpdateNearestPrompt();
 
         bool interact = ReadInteractPressed();
@@ -153,19 +169,43 @@ public class OnFootController : MonoBehaviour
         }
     }
 
+    // Cutscene entry point: start a conversation with the given NPC exactly as if the player had
+    // pressed interact next to them — face each other, open the first line, and keep the player
+    // planted until the conversation ends. Interact then advances the lines as normal.
+    public void BeginConversation(NPCInteractable npc)
+    {
+        if (npc == null) return;
+        npc.SetInteractor(transform);
+        FaceEachOther(npc.transform);
+        _activeNpc = npc;
+        npc.Interact();
+    }
+
+    // Turn the player to look at a world point and hold that facing while locked/talking.
+    // Cutscenes use this to orient the player before anything else happens.
+    public void FaceToward(Vector3 worldPoint)
+    {
+        Vector2 dir = (Vector2)(worldPoint - transform.position);
+        if (dir.sqrMagnitude < 0.0001f) return;
+        _talkFacing = dir.normalized;
+        ApplyFacing(transform, _rb, dir, spriteFacingOffsetDeg);
+    }
+
     // Turn the player and the NPC to look at each other as the conversation opens.
     void FaceEachOther(Transform other)
     {
         Vector2 toNpc = (Vector2)(other.position - transform.position);
         _talkFacing = toNpc.sqrMagnitude > 0.0001f ? toNpc.normalized : Vector2.down;
-        ApplyFacing(transform, _rb, toNpc);
-        ApplyFacing(other, other.GetComponent<Rigidbody2D>(), -toNpc);
+        ApplyFacing(transform, _rb, toNpc, spriteFacingOffsetDeg);
+        ApplyFacing(other, other.GetComponent<Rigidbody2D>(), -toNpc, spriteFacingOffsetDeg);
     }
 
-    void ApplyFacing(Transform who, Rigidbody2D body, Vector2 dir)
+    // Shared facing snap: rotates the body (respecting rb constraints) and orients directional idle
+    // rigs through their Horizontal/Vertical params. Static so cutscenes can face NPCs with it too.
+    public static void ApplyFacing(Transform who, Rigidbody2D body, Vector2 dir, float facingOffsetDeg)
     {
         if (dir.sqrMagnitude < 0.0001f) return;
-        float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
+        float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + facingOffsetDeg;
         if (body != null) body.MoveRotation(ang);          // respects rb constraints (freezeRotation/kinematic)
         else who.rotation = Quaternion.Euler(0f, 0f, ang);
 

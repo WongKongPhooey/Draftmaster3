@@ -80,8 +80,8 @@ public class GridSpawner : MonoBehaviour
     public float aiSteerGain = 1.5f;
     [Tooltip("AI speed-tracking gain — throttle/brake per m/s of speed error (SplineInputDriver.speedGain). Low values make the AI cruise under their target speed (throttle sags near zero error).")]
     public float aiSpeedGain = 2f;
-    [Tooltip("Scales the AI's corner target speeds (SplineDriver.cornerSpeedScale). <1 gives a little grip/braking margin, >1 pushes targets past the computed grip speed (physics saturation still caps what they achieve).")]
-    public float aiCornerSpeedScale = 1.5f;
+    [Tooltip("Scales the AI's corner target speeds (SplineDriver.cornerSpeedScale). Targets are computed from the driven line's real curvature and the physics' own grip, so 1.0 = theoretical limit; keep slightly below 1 for margin. >1 commands past the grip ceiling and strews understeering cars across the track.")]
+    public float aiCornerSpeedScale = 0.95f;
 
     IEnumerator Start()
     {
@@ -200,7 +200,7 @@ public class GridSpawner : MonoBehaviour
             if (pitLen > 0f && totalBoxes > 1)
             {
                 float usable = Mathf.Max(0f, boxSpanTo - boxSpanFrom);
-                pitBoxSpacing = Mathf.Clamp(usable / (totalBoxes - 1), 5f, 12f);
+                pitBoxSpacing = Mathf.Clamp(usable / (totalBoxes - 1), 4.5f, 10f);
             }
             // Publish the box layout so every car (safety car, pit stops) agrees where the boxes are.
             if (pitLen > 0f) PitLane.Configure(pitBoxExitGap, pitBoxSpacing, totalBoxes, pitBoxParkLateral);
@@ -214,6 +214,10 @@ public class GridSpawner : MonoBehaviour
             // Qualified: the player's grid rank IS their box (box order = grid order); the snap below
             // physically parks the car there.
             if (playerRank >= 0) reservedBox = Mathf.Clamp(playerRank, 0, totalBoxes - 1);
+            // Race with no qualifying rank for the player (weekend skipped straight to race, or the
+            // player never made the timing rows): no time = no earned slot — start from the very back.
+            // Without this the physical fallback above maps the default pit parking spot to the front.
+            else if (!practice) reservedBox = totalBoxes - 1;
             // Tell the player car its reserved grid slot so the formation order holds the place open for it.
             if (pls.car != null) pls.car.SetFormationGrid(reservedBox);
             // Publish it so the player-facing pit systems (box marker, pit service) know which box is theirs.

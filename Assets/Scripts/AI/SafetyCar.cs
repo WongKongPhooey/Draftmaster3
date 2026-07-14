@@ -11,6 +11,8 @@ public class SafetyCar : MonoBehaviour
     public float cruiseMph = 60f;
     [Tooltip("Fraction of a full lap that must be covered before the car is allowed to pit. Guards against an early trigger.")]
     [Range(0.5f, 1f)] public float minLapFractionBeforePit = 0.8f;
+    [Tooltip("Commit to the pit lane when within this distance (m) of the authored pit-entry node — the same continuous merge an AI pit stop uses. Lane-flipping anywhere else snaps onto the nearest pit-spline point, which past the entry means driving across the pit wall.")]
+    public float pitEntryWindow = 20f;
     [Tooltip("Seconds after pit-in before the safety car is hidden (lets it roll out of sight down the pit).")]
     public float despawnAfterPitSeconds = 6f;
     [Tooltip("Park this far (m) BEFORE the first pit box (the one nearest the pit entrance), so the pace car stops at the start of the lane rather than rolling down it.")]
@@ -40,7 +42,7 @@ public class SafetyCar : MonoBehaviour
     float _prevDist;
     bool _hasPrev;
     bool _pitting;
-    float _triggerTravel;
+    float _pitEntryDistance;
     float _despawnTimer;
 
     SpriteRenderer _light;
@@ -62,16 +64,13 @@ public class SafetyCar : MonoBehaviour
     {
         BuildRoofLight();
 
-        float lap = _spline.TrackLength;
-        if (_spline.track != null && _spline.track.track != null && lap > 0f)
-        {
-            float entry = _spline.track.track.pitEntryDistance;
-            float exit = _spline.track.track.pitExitDistance;
-            // Forward arc from where we start (pit exit) round to the pit entry node.
-            _triggerTravel = (((entry - exit) % lap) + lap) % lap;
-            // If entry sits just after exit, that arc is ~a full lap already; otherwise enforce the floor.
-            _triggerTravel = Mathf.Max(_triggerTravel, lap * minLapFractionBeforePit);
-        }
+        // Pit-in triggers on PROXIMITY to the authored entry node, not on accumulated travel. The old
+        // travel-arc trigger measured from pitExitDistance, but the car actually spawns at pitExitDistance
+        // + safetyCarStartOffset (FormationDirector) and the min-lap floor could push the trigger further
+        // still — firing PAST the entry, where the lane flip snaps across the pit wall.
+        _pitEntryDistance = (_spline.track != null && _spline.track.track != null)
+            ? _spline.track.track.PitEntryDistanceOnLap
+            : -1f;
     }
 
     void FixedUpdate()
@@ -119,7 +118,14 @@ public class SafetyCar : MonoBehaviour
             }
         }
 
-        if (_travelled >= _triggerTravel) PitIn();
+        // Dive in as the car reaches the entry node, once it's covered enough of the lap. If the floor isn't
+        // met at the first pass the car simply paces another lap and pits next time round — never a wall shot.
+        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= lap * minLapFractionBeforePit)
+        {
+            float gap = _pitEntryDistance - cur;
+            if (gap < 0f) gap += lap;
+            if (gap <= pitEntryWindow) PitIn();
+        }
     }
 
     void PitIn()
@@ -128,12 +134,19 @@ public class SafetyCar : MonoBehaviour
         ClosingUp = false; // pace car is leaving the surface; the field launches at green, not row-packs any more
         _despawnTimer = despawnAfterPitSeconds;
 
-        // Park just before the first box at the pit ENTRANCE (PitLane.LastBox = highest index = nearest the start
-        // of the lane = smallest box distance). Fall back to a short distance in if the boxes aren't configured.
+        // Park in an "invisible box" one box pitch before the first real box at the pit ENTRANCE
+        // (PitLane.LastBox = highest index = nearest the start of the lane = smallest box distance), and on
+        // the grey box-lane lateral — NOT the pit centerline, which is the driving line the field files down.
+        // Fall back to a short distance in if the boxes aren't configured.
         float pitLen = _spline.PitLength;
         float target;
         if (PitLane.Configured && pitLen > 0f)
-            target = PitLane.BoxDistance(PitLane.LastBox, pitLen) - parkGapBeforeFirstBox;
+        {
+            target = PitLane.BoxDistance(PitLane.LastBox, pitLen) - Mathf.Max(parkGapBeforeFirstBox, PitLane.Spacing);
+            // Set before the lane flip: the rejoin carries the car's current lateral as an easing bias, so it
+            // drifts from the entry onto the box strip over the drive down instead of snapping sideways.
+            _spline.lateralOffset = PitLane.ParkLateral;
+        }
         else
             target = Mathf.Min(8f, pitLen > 0f ? pitLen * 0.15f : 8f);
         _spline.pitParkDistance = Mathf.Max(2f, target);

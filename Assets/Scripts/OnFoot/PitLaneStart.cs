@@ -56,6 +56,31 @@ public class PitLaneStart : MonoBehaviour
     [Tooltip("Metres behind the player's spawn (along the pit) to place the NPC.")]
     public float greeterBehind = 1.5f;
 
+    [Header("RV Door Cutscene")]
+    [Tooltip("When spawning at the RV, stand a crew member outside and play a walk-up cutscene the first time the player steps out the door: player freezes, bars slide in, the NPC walks over, both face each other, dialogue opens.")]
+    public bool rvDoorCutscene = true;
+    [Tooltip("Name shown for the RV-door NPC's dialogue.")]
+    public string rvNpcName = "Team Manager";
+    [TextArea]
+    [Tooltip("Cutscene conversation lines. A line ending with \"#player\" is spoken by the driver.")]
+    public string[] rvNpcLines =
+    {
+        "There you are! Was starting to think you'd sleep through the whole weekend.",
+        "The bunk in that thing is better than my bed at home. #player",
+        "Well, shake it off — the car's fuelled and sitting in the box.",
+        "Any changes from yesterday? #player",
+        "Touch more front wing, nothing you'll fight. Go get settled in.",
+        "On my way. #player"
+    };
+    [Tooltip("How far straight out from the RV door the NPC stands (m).")]
+    public float rvNpcDoorDistance = 5f;
+    [Tooltip("Sideways offset (m) along the RV for the NPC's stand point (+ = toward the cab).")]
+    public float rvNpcLateral = 2.5f;
+    [Tooltip("How far outside the door the walk-over trigger sits (m). Keep past the interior's exit threshold (roomFront + hysteresis) so the mask has already lifted when it fires.")]
+    public float rvTriggerDistance = 2.6f;
+    [Tooltip("Radius of the walk-over trigger (m).")]
+    public float rvTriggerRadius = 1.5f;
+
     [Header("Camera")]
     [Tooltip("Orthographic size while walking.")]
     public float onFootOrthoSize = 3.5f;
@@ -182,8 +207,31 @@ public class PitLaneStart : MonoBehaviour
         // out through the doorway (the edge facing the parked car) reveals the scene again. See RVInterior.
         if (rvInterior && marker != null && marker.gameObject.name == forcedSpawnName)
         {
-            var rv = new GameObject("RVInterior").AddComponent<RVInterior>();
-            rv.Initialize(_player.transform.position, _player.transform, car.transform);
+            // Prefer the hand-editable prefab (built via Draftmaster > RV Interior > Build Prefab, then
+            // edited in Prefab Mode); fall back to the fully procedural room when it doesn't exist.
+            var prefab = Resources.Load<GameObject>("OnFoot/RVInterior");
+            RVInterior rv;
+            if (prefab != null)
+            {
+                var go = Instantiate(prefab);
+                go.name = "RVInterior";
+                rv = go.GetComponent<RVInterior>();
+                if (rv == null) rv = go.AddComponent<RVInterior>();
+            }
+            else
+            {
+                rv = new GameObject("RVInterior").AddComponent<RVInterior>();
+            }
+            // A marker parented under a placed RV exterior orients the interior's doorway to the RV's
+            // authored door direction and lets RVInterior swap the shell's colliders off while inside;
+            // a bare marker falls back to pointing the door at the parked car.
+            var exterior = marker.GetComponentInParent<RVExterior>();
+            rv.Initialize(_player.transform.position, _player.transform, car.transform, exterior);
+
+            // The exit beat: a crew member waiting outside who walks over the first time the player
+            // steps out the door. Needs the exterior for the door's position/facing.
+            if (rvDoorCutscene && exterior != null)
+                BuildRvDoorCutscene(exterior, rv);
         }
 
         // Spawn-in presentation: "<Track> - <spawn label>" title card, plus an objective marker
@@ -234,8 +282,49 @@ public class PitLaneStart : MonoBehaviour
     // driven by the player's OnFootController interaction. Lines come from greeterLines (no scene wiring needed).
     void SpawnGreeter(Vector3 pos)
     {
+        SpawnTalkableNpc(pos, "PitCrewNPC", greeterName, greeterLines);
+    }
+
+    // Stand a crew member outside the RV door and arm a walk-over trigger just past the doorway.
+    // Stepping out of the RV onto the trigger plays NPCWalkUpCutscene: the player freezes, the
+    // cinematic bars come in, the NPC walks over, and the conversation opens face-to-face.
+    void BuildRvDoorCutscene(RVExterior exterior, RVInterior interior)
+    {
+        Vector2 doorDir = exterior.DoorWorldDirection;
+        Vector2 side = new Vector2(-doorDir.y, doorDir.x); // door's left = toward the cab on the default prefab
+        Vector3 doorPos = exterior.DoorWorldPosition;
+        // Ground-plane z, NOT the player's current z — the player has already been pulled to the
+        // interior's -2.5 by this point, which would put the NPC in front of the black mask.
+        float z = exterior.transform.position.z;
+
+        Vector3 npcPos = doorPos + (Vector3)(doorDir * rvNpcDoorDistance + side * rvNpcLateral);
+        npcPos.z = z;
+        var npc = SpawnTalkableNpc(npcPos, "RVDoorNPC", rvNpcName, rvNpcLines);
+
+        // One GameObject hosts both the trigger and the sequence, parked on the trigger spot; the
+        // cutscene destroys it when the conversation ends, so the beat can only play once.
+        var seq = new GameObject("RVDoorCutscene");
+        Vector3 triggerPos = doorPos + (Vector3)(doorDir * rvTriggerDistance);
+        triggerPos.z = z;
+        seq.transform.position = triggerPos;
+
+        var walkUp = seq.AddComponent<NPCWalkUpCutscene>();
+        walkUp.player = _player.GetComponent<OnFootController>();
+        walkUp.npc = npc;
+
+        var trigger = seq.AddComponent<CutsceneTrigger>();
+        trigger.radius = rvTriggerRadius;
+        trigger.target = _player.transform;
+        trigger.Gate = () => !interior.IsInside; // never fire while the world is masked
+        trigger.Triggered = walkUp.Play;
+    }
+
+    // Shared NPC factory: clone the on-foot prefab, strip anything that would control it, freeze the
+    // walk cycle at an idle pose, and attach an NPCInteractable carrying the given dialogue.
+    NPCInteractable SpawnTalkableNpc(Vector3 pos, string goName, string speaker, string[] npcLines)
+    {
         var npc = Instantiate(onFootPrefab, pos, Quaternion.identity);
-        npc.name = "PitCrewNPC";
+        npc.name = goName;
 
         // Strip anything that would drive/control it — it just stands and talks.
         var mv = npc.GetComponent<MovementOnFoot>(); if (mv != null) mv.enabled = false;
@@ -268,8 +357,9 @@ public class PitLaneStart : MonoBehaviour
         }
 
         var inter = npc.AddComponent<NPCInteractable>();
-        inter.speakerName = greeterName;
-        if (greeterLines != null && greeterLines.Length > 0) inter.lines = greeterLines;
+        inter.speakerName = speaker;
+        if (npcLines != null && npcLines.Length > 0) inter.lines = npcLines;
+        return inter;
     }
 
     void Update()

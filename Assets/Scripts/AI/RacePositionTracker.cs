@@ -208,7 +208,13 @@ public class RacePositionTracker : MonoBehaviour
         else
         {
             len = _len;
-            dist = track.NearestCenterlineDistance(e.tf.position);
+            // A spline-less car in the pit lane (the player's parked car pre-race) is located by pit
+            // distance, matching what AI splines report while on pit. Projecting a pit box onto the MAIN
+            // centerline can land just short of the start/finish line — a near-full-lap progress that
+            // ranked the parked player car P1.
+            dist = track.IsOnPitSurface(e.tf.position)
+                ? track.NearestPitDistance(e.tf.position)
+                : track.NearestCenterlineDistance(e.tf.position);
         }
 
         if (e.hasPrev)

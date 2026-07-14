@@ -13,7 +13,7 @@ public class FormationController : MonoBehaviour
     [Tooltip("Cruise pace of the train (mph). Falls back to this when no FormationDirector is present.")]
     public float cruiseMph = 60f;
     [Tooltip("How far behind the car ahead this car tries to sit (m).")]
-    public float targetGap = 7f;
+    public float targetGap = 9f;
     [Tooltip("Speed correction (mph) applied per metre of gap error. Higher = closes/opens gaps faster, but too high makes the train string-UNSTABLE (a wobble amplifies down the field into a pile-up).")]
     public float gapGainMphPerMetre = 2.5f;
     [Tooltip("Gap error (m) ignored before the car reacts — a deadband so a hair-trigger correction doesn't ripple back through the field as a phantom stop-and-go jam.")]
@@ -35,12 +35,12 @@ public class FormationController : MonoBehaviour
     public bool kinematic;
 
     [Header("Two-wide formation")]
-    [Tooltip("Pack into two columns this far (m) either side of centre — half the lateral gap between the two cars in a row. The field runs double-file the WHOLE formation lap, so it's paired up ready for the start.")]
-    public float columnHalfOffset = 1.5f;
+    [Tooltip("Pack into two columns this far (m) either side of centre — half the lateral gap between the two cars in a row. The field runs double-file the WHOLE formation lap, so it's paired up ready for the start. Must comfortably exceed weaveAmplitude + half a car width: the columns and the weave are ACTIVE AT THE SAME TIME, and anti-phase weave eats 2*weaveAmplitude of the pair gap.")]
+    public float columnHalfOffset = 2.2f;
     [Tooltip("Longitudinal gap (m) each row holds behind the row ahead while closed up. Small = tight rows, but too small and a wobble closes it to a touch.")]
     public float rowGap = 8f;
     [Tooltip("Through a turn, scale the column offset by this (0..1) so the pair eases toward centre but STAYS paired — never collapses to single file (which is what made the field look single-file on a road course whose close-up zone contains corners).")]
-    [Range(0f, 1f)] public float cornerColumnScale = 0.5f;
+    [Range(0f, 1f)] public float cornerColumnScale = 0.6f;
 
     [Header("Collision avoidance")]
     [Tooltip("Range ahead (m) scanned for the nearest car DIRECTLY IN MY PATH (lateral overlap) — the car I'd actually rear-end. Watched regardless of the formation reference; the real anti-collision net.")]
@@ -69,6 +69,8 @@ public class FormationController : MonoBehaviour
     public float pitOutMph = 45f;
     [Tooltip("How long (s) the pit-out settle lasts after leaving the pit lane.")]
     public float pitOutSettleSeconds = 3f;
+    [Tooltip("How fast (m/s of lateral) a car filing out for the formation lap pulls off the grey parked-box strip onto the pit lane's driving line. The grid spawn parks cars at the box-lane lateral; without this they ride that offset single-file down the wall for the whole lane.")]
+    public float pitPullOutLateralRate = 1.5f;
 
     [Header("Blockage avoidance (stopped/crashed car ahead)")]
     [Tooltip("Range ahead (m) scanned for a slow/stopped car to avoid.")]
@@ -85,8 +87,8 @@ public class FormationController : MonoBehaviour
     public float avoidSlewPerSec = 4.5f;
 
     [Header("Tyre-warming weave")]
-    [Tooltip("Lateral weave amplitude (m) on straights. Suppressed in/near turns and at pit-out.")]
-    public float weaveAmplitude = 0.85f;
+    [Tooltip("Lateral weave amplitude (m) on straights. Suppressed in/near turns and at pit-out. Layered on TOP of the two-wide column offset with a per-slot phase, so anti-phase neighbours close their pair gap by up to twice this — keep it well under columnHalfOffset minus a car width.")]
+    public float weaveAmplitude = 0.45f;
     [Tooltip("Weave frequency (Hz). Low = slow gentle sway the dynamic model can follow.")]
     public float weaveHz = 0.18f;
     [Tooltip("Phase offset (radians) added per grid slot, so the train snakes instead of weaving in lockstep.")]
@@ -107,6 +109,8 @@ public class FormationController : MonoBehaviour
     float _pitOutTimer;
     float _prevCap;     // last frame's speed cap, for rate-limiting how fast braking can ramp the cap down
     bool _hasPrevCap;
+    float _savedLineFactor; // the car's own racing line, parked during formation and restored at green
+    bool _lineFactorSaved;
 
     void Awake() => _spline = GetComponent<SplineDriver>();
 
@@ -145,6 +149,17 @@ public class FormationController : MonoBehaviour
             else if (_spline != null) _spline.externalMotionController = true;
         }
 
+        // The pair columns are offsets from each car's OWN racing line, and per-driver lines (lineFactor,
+        // skewed by AIDriverBinding aggression) all converge at an apex — offset or not, two different base
+        // paths can cross there and put a pair in contact. Run the whole field on the SAME line (ideal) for
+        // the formation lap so the pair separation is exactly the column difference everywhere.
+        if (phase == RaceStart.Phase.Formation && _spline != null && !_lineFactorSaved)
+        {
+            _savedLineFactor = _spline.lineFactor;
+            _spline.lineFactor = 0f;
+            _lineFactorSaved = true;
+        }
+
         // Leaving the formation lap (green or pregrid): drop any weave/lateral the formation applied —
         // AIRacingBehaviour owns the lateral line once racing.
         if (phase != RaceStart.Phase.Formation)
@@ -152,7 +167,16 @@ public class FormationController : MonoBehaviour
             _lateral = 0f;
             _weaveEnv = 0f;
             _hasPrevCap = false; // drop the brake-rate-limit history so the green launch isn't held back by it
-            if (_spline != null) _spline.tacticalLateralOffset = 0f;
+            if (_spline != null)
+            {
+                _spline.tacticalLateralOffset = 0f;
+                if (_lineFactorSaved)
+                {
+                    // The dynamic model steers over to the restored line via pure pursuit — no lateral snap.
+                    _spline.lineFactor = _savedLineFactor;
+                    _lineFactorSaved = false;
+                }
+            }
         }
     }
 
@@ -163,8 +187,16 @@ public class FormationController : MonoBehaviour
 
         float dt = Time.fixedDeltaTime;
 
-        // While still filing out of the pit lane, let SplineDriver's pit crawl handle pace/line.
-        if (_spline.usePitLane) { _wasPit = true; return; }
+        // While still filing out of the pit lane, let SplineDriver's pit crawl handle pace — but pull the car
+        // off the parked box lane onto the pit CENTERLINE once it's rolling. Only the formation pull-out does
+        // this here: practice stints manage their own box-lane lateral in both directions (PracticeAIStint).
+        if (_spline.usePitLane)
+        {
+            _wasPit = true;
+            if (_spline.CurrentMph > 3f)
+                _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, pitPullOutLateralRate * dt);
+            return;
+        }
         // Just rejoined the main track — start the pit-out settle so the merge doesn't snap the car off line.
         if (_wasPit) { _wasPit = false; _pitOutTimer = pitOutSettleSeconds; _weaveEnv = 0f; }
         bool settling = _pitOutTimer > 0f;

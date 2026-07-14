@@ -14,6 +14,12 @@ public class PitStopController : MonoBehaviour
     [Range(0.1f, 0.9f)] public float serviceFrac = 0.5f;
     [Tooltip("Commit to the pit lane when within this distance (m) of the pit-entry node.")]
     public float pitEntryWindow = 25f;
+    [Tooltip("Lateral speed (m/s) for moving between the pit-lane centerline (the driving line) and the wall-side box lane. Cars drive the centerline and only cut across at their own box, so a car being serviced never blocks the lane.")]
+    public float laneChangeRate = 3f;
+    [Tooltip("After service, hold in the box while another moving pit-lane car is within this many metres behind the box — pull out into a gap, not into traffic.")]
+    public float exitYieldBehindM = 14f;
+    [Tooltip("Pit-lane ACC: stop this far (m) behind a stationary car in the lane ahead.")]
+    public float pitFollowStopGap = 6f;
     [Tooltip("Reset bodywork damage during the stop too.")]
     public bool repairDamage = true;
     [Tooltip("Refuel to full during the stop.")]
@@ -80,7 +86,7 @@ public class PitStopController : MonoBehaviour
                 {
                     // Commit to the lane as we reach the entry node so the merge stays continuous.
                     float d = _spline.DistanceOnTrack;
-                    float gap = tb.track.pitEntryDistance - d;
+                    float gap = tb.track.PitEntryDistanceOnLap - d;
                     if (gap < 0f) gap += _spline.TrackLength;
                     if (gap < pitEntryWindow) _spline.usePitLane = true;
                 }
@@ -91,8 +97,20 @@ public class PitStopController : MonoBehaviour
                     // Stop in this car's ASSIGNED box (= its grid position), not a generic fraction of the lane,
                     // so every car services in its own marked box. Falls back to serviceFrac if unconfigured.
                     float targetFrac = serviceFrac;
+                    float boxDist = _spline.PitLength * serviceFrac;
                     if (PitLane.Configured && _spline.PitLength > 0f)
-                        targetFrac = PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength) / _spline.PitLength;
+                    {
+                        boxDist = PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength);
+                        targetFrac = boxDist / _spline.PitLength;
+                    }
+                    // Drive the centerline down the lane (clear of cars being serviced on the strip) and cut
+                    // across to the wall-side box lane only inside the last stretch before this car's own box —
+                    // same flow as PracticeAIStint. Servicing ON the centerline blocked the whole lane and the
+                    // cars behind (which have no racing brain down here) drove straight into the stop.
+                    float cutWindow = PitLane.Configured ? Mathf.Min(PitLane.Spacing * 0.8f, 10f) : 10f;
+                    if (boxDist - _spline.PitProgress01 * _spline.PitLength < cutWindow)
+                        _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, PitLane.ParkLateral, laneChangeRate * Time.fixedDeltaTime);
+                    PitLaneFollowCap();
                     if (_spline.PitProgress01 >= targetFrac)
                     {
                         _spline.pitStopHold = true;
@@ -112,19 +130,78 @@ public class PitStopController : MonoBehaviour
                     if (repairDamage && _bodywork != null) _bodywork.RepairFull();
                     if (refuel && _fuel != null) _fuel.FillFull();
                     PitCrewRegistry.ForBox(_spline.qualifyingPosition)?.EndService();
-                    _spline.pitStopHold = false;
-                    _state = State.Leaving;
+                    _state = State.Leaving; // pitStopHold stays on until the lane behind is clear
                 }
                 break;
 
             case State.Leaving:
-                if (!_spline.IsOnPit) // SplineDriver auto-exits the pit; we're back on track
+                if (_spline.pitStopHold)
+                {
+                    // Yield: stay in the box until no moving pit-lane car is bearing down from behind,
+                    // so the pull-out merges into a gap instead of across someone's nose.
+                    if (PitExitClear()) _spline.pitStopHold = false;
+                }
+                else if (_spline.IsOnPit)
+                {
+                    // Ease off the box strip back onto the centerline for the run to the exit.
+                    _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, laneChangeRate * Time.fixedDeltaTime);
+                    PitLaneFollowCap();
+                }
+                else // SplineDriver auto-exits the pit; we're back on track
                 {
                     if (_ai != null) _ai.enabled = true;
                     _state = State.Racing;
                 }
                 break;
         }
+    }
+
+    // Pit-lane ACC: nothing else paces a car down here (the racing brain is parked), so without this a car
+    // drives the lane's speed profile straight into whoever is stopped or queuing ahead. Owns aiMaxSpeedMph
+    // while on the pit lane — AIRacingBehaviour is disabled here and re-takes it every frame once racing.
+    void PitLaneFollowCap()
+    {
+        if (!_spline.IsOnPit || _spline.PitLength <= 0f) return;
+        float myD = _spline.PitProgress01 * _spline.PitLength;
+        float myLat = _spline.LateralOnTrack;
+
+        float bestGap = float.MaxValue;
+        float bestMph = 0f;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || !d.IsOnPit || d.PitLength <= 0f) continue;
+            float g = d.PitProgress01 * d.PitLength - myD;
+            if (g <= 0.5f || g > 30f) continue;                            // level with me, or far ahead
+            if (Mathf.Abs(d.LateralOnTrack - myLat) > 2.2f) continue;      // parked on the strip, not in my lane
+            if (g < bestGap) { bestGap = g; bestMph = d.CurrentMph; }
+        }
+
+        // No foe → release the cap (200 lets SplineDriver's own pit pace govern). A Min() ratchet here would
+        // latch a one-off slow-down for the rest of the lane.
+        float cap = 200f;
+        if (bestGap < float.MaxValue)
+            cap = Mathf.Max(0f, bestMph + Mathf.Max(0f, bestGap - pitFollowStopGap) * 2f);
+        _spline.aiMaxSpeedMph = cap;
+    }
+
+    // A moving pit-lane car within exitYieldBehindM behind the box (or level with it) blocks the pull-out.
+    // Stationary neighbours servicing in adjacent boxes don't count.
+    bool PitExitClear()
+    {
+        if (!_spline.IsOnPit || _spline.PitLength <= 0f) return true;
+        float myD = _spline.PitProgress01 * _spline.PitLength;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || !d.IsOnPit || d.PitLength <= 0f) continue;
+            if (d.CurrentMph < 2f) continue; // parked/servicing — not traffic
+            float rel = myD - d.PitProgress01 * d.PitLength; // + = they're behind me
+            if (rel > -3f && rel < exitYieldBehindM) return false;
+        }
+        return true;
     }
 
     void RecordPit()

@@ -83,6 +83,19 @@ public class TrackInfoV2 : ScriptableObject
         return d;
     }
 
+    // pitEntryDistance folded into [0, lap). The bake anchors to the END of the entry segment plus the
+    // offset, so an entry authored on the final segment lands past the lap total — raw gap maths against
+    // DistanceOnTrack (which wraps) then never come inside the entry window and the car circles forever.
+    public float PitEntryDistanceOnLap
+    {
+        get
+        {
+            float lap = 0f;
+            if (segments != null) for (int i = 0; i < segments.Length; i++) lap += segments[i].length;
+            return lap > 0f ? ((pitEntryDistance % lap) + lap) % lap : pitEntryDistance;
+        }
+    }
+
     // Walk authored segments only (no seam closure) to find world position + heading at a given distance along main spline.
     public void SampleAuthoredSpline(float distance, out Vector2 pos, out float headingDeg)
     {

@@ -21,6 +21,12 @@ public class CinematicBars : MonoBehaviour
     float _t;        // 0 = hidden, 1 = fully in
     float _target;
 
+    // Scripted cutscenes can hold the bars in before any dialogue is up (e.g. while an NPC walks over
+    // to the player). Counted, so overlapping holders can't release each other's bars early.
+    static int _forceHolds;
+    public static void PushForced() => _forceHolds++;
+    public static void PopForced() => _forceHolds = Mathf.Max(0, _forceHolds - 1);
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
@@ -41,7 +47,7 @@ public class CinematicBars : MonoBehaviour
 
     void Update()
     {
-        _target = AnyoneTalking() ? 1f : 0f;
+        _target = (_forceHolds > 0 || AnyoneTalking()) ? 1f : 0f;
         _t = Mathf.MoveTowards(_t, _target, Time.unscaledDeltaTime * Mathf.Max(0.01f, slideSpeed));
         if (_topBar != null) _topBar.anchoredPosition = new Vector2(0f, Mathf.Lerp(_barPx, 0f, _t));
         if (_bottomBar != null) _bottomBar.anchoredPosition = new Vector2(0f, Mathf.Lerp(-_barPx, 0f, _t));

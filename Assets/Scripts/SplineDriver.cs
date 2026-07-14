@@ -157,8 +157,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float fallbackAccel = 5f;
     [Tooltip("Default flat-corner speed used when the vehicle's cornering curve is unauthored, in mph.")]
     public float fallbackCornerMph = 110f;
-    [Tooltip("Scales corner (turn-segment) target speeds. <1 gives the dynamic model grip + braking margin so it stops overshooting turns and brakes earlier. Straights are unaffected.")]
-    [Range(0.6f, 2f)] public float cornerSpeedScale = 0.85f;
+    [Tooltip("Scales corner target speeds. Targets are computed from the driven line's real curvature and the same grip the physics uses, so 1.0 = the theoretical limit; keep slightly below 1 for margin, >1 commands past the grip ceiling (physics saturation caps what actually happens).")]
+    [Range(0.6f, 2f)] public float cornerSpeedScale = 0.95f;
 
     const float MphToMps = 1f / 2.237f;
     const float MpsToMph = 2.237f;
@@ -169,6 +169,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float[] _segmentTargetMph;
     float[] _segmentStartDistance;
     float[] _speedProfile;
+    float[] _curvatureProfile;  // |curvature| (1/m) of the DRIVEN line (centerline + smoothed lateral), per main sample
+    float _bakedALatMaxMps2;    // lateral-accel ceiling (m/s²) the profile was baked against
     float[] _lateralProfile;
     float[] _leftBoundProfile;
     float[] _rightBoundProfile;
@@ -307,8 +309,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _pitLength = _pitSamples.Count > 0 ? _pitSamples[_pitSamples.Count - 1].distance : 0f;
         _anchors = track.track != null ? track.track.BuildRacingLineAnchors() : null;
         PrecomputeSegmentSpeeds();
-        BuildSpeedProfile();
+        // Lateral (the smoothed racing line) must exist before the speed profile: corner targets are computed
+        // from the curvature of the line the car actually drives, not the raw centerline segments.
         BuildLateralProfile();
+        BuildCurvatureProfile();
+        BuildSpeedProfile();
     }
 
     void BuildLateralProfile()
@@ -428,6 +433,85 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     }
 
+    // Curvature (1/m) of the ACTUAL driven line — centerline + smoothed racing-line lateral — per main sample.
+    // Segment radius alone lies about corner speed: the smoothed line opens the radius at the apex (that's the
+    // point of a racing line) and the lateral swing through transitions adds curvature the segments never see.
+    // Speed targets and braking distances are only physics-true against the line the car really drives.
+    void BuildCurvatureProfile()
+    {
+        if (_mainSamples == null || _mainSamples.Count < 3) { _curvatureProfile = null; return; }
+        int n = _mainSamples.Count;
+        var pts = new Vector2[n];
+        for (int i = 0; i < n; i++)
+        {
+            var s = _mainSamples[i];
+            Vector2 right = new Vector2(s.tangent.y, -s.tangent.x);
+            float lat = (_lateralProfile != null && _lateralProfile.Length == n) ? _lateralProfile[i] : 0f;
+            pts[i] = s.position + right * lat;
+        }
+
+        _curvatureProfile = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            // Segment joins can emit near-coincident samples; step outward until the neighbours are far enough
+            // apart for the three-point (Menger) estimate to be stable.
+            int prev = StepDistinct(pts, i, -1, 0.5f);
+            int next = StepDistinct(pts, i, +1, 0.5f);
+            _curvatureProfile[i] = (prev == i || next == i || prev == next)
+                ? 0f
+                : MengerCurvature(pts[prev], pts[i], pts[next]);
+        }
+
+        // Light box smoothing: keeps apex curvature honest while killing sample-to-sample jitter.
+        var tmp = new float[n];
+        for (int p = 0; p < 2; p++)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                int prev = i == 0 ? (loop ? n - 1 : 0) : i - 1;
+                int next = i == n - 1 ? (loop ? 0 : n - 1) : i + 1;
+                tmp[i] = (_curvatureProfile[prev] + _curvatureProfile[i] + _curvatureProfile[next]) / 3f;
+            }
+            (tmp, _curvatureProfile) = (_curvatureProfile, tmp);
+        }
+    }
+
+    int StepDistinct(Vector2[] pts, int from, int dir, float minDist)
+    {
+        int n = pts.Length;
+        int idx = from;
+        for (int k = 0; k < 8; k++)
+        {
+            int cand = idx + dir;
+            if (loop) cand = (cand + n) % n;
+            else if (cand < 0 || cand >= n) return idx;
+            idx = cand;
+            if (Vector2.Distance(pts[from], pts[idx]) >= minDist) return idx;
+        }
+        return idx;
+    }
+
+    static float MengerCurvature(Vector2 a, Vector2 b, Vector2 c)
+    {
+        float ab = Vector2.Distance(a, b), bc = Vector2.Distance(b, c), ca = Vector2.Distance(c, a);
+        float denom = ab * bc * ca;
+        if (denom < 1e-6f) return 0f;
+        float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        return 2f * Mathf.Abs(cross) / denom;
+    }
+
+    // Lateral-accel ceiling (m/s²) matching what the dynamic model can actually generate: maxLateralG × the same
+    // grip multipliers PlayerVehicleController folds into its friction circle (global+AI conditions, tyre state).
+    float GripLateralAccelMps2()
+    {
+        float gripMul = TrackConditions.AiEffective;
+        var tireModel = GetComponent<TireModel>();
+        if (tireModel != null) gripMul *= tireModel.OverallGrip;
+        else { var tire = GetComponent<TireState>(); if (tire != null) gripMul *= tire.GripMultiplier; }
+        float g = (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f) ? vehicleInfo.maxLateralG : 1.8f;
+        return g * Mathf.Max(0.05f, gripMul) * 9.81f;
+    }
+
     void BuildSpeedProfile()
     {
         if (_mainSamples == null || _mainSamples.Count == 0 || _segmentTargetMph == null)
@@ -438,10 +522,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         int n = _mainSamples.Count;
         _speedProfile = new float[n];
+        _bakedALatMaxMps2 = GripLateralAccelMps2();
         for (int i = 0; i < n; i++)
         {
             int segIdx = SegmentIndexAt(_mainSamples[i].distance);
-            _speedProfile[i] = _segmentTargetMph[segIdx];
+            float kappa = _curvatureProfile != null ? _curvatureProfile[i] : 0f;
+            // Curvature-true target where the line actually bends; the old segment target (top speed or the
+            // authored cap) elsewhere and as the fallback when no curvature data exists.
+            _speedProfile[i] = kappa > 1e-4f
+                ? ComputeTargetSpeedForCurvature(kappa, segIdx) * _profilePace
+                : _segmentTargetMph[segIdx];
         }
 
         // Two wrap-aware passes per direction so values settle across the loop seam.
@@ -458,6 +548,49 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
     }
 
+    // Corner target from the driven line's real radius: v = √(r · a_lat). Same μ the physics friction circle
+    // uses, so with cornerSpeedScale ≤ 1 the car is guaranteed lateral headroom instead of being commanded into
+    // saturation (which is what strews understeering cars across the track when grip/speed tuning changes).
+    float ComputeTargetSpeedForCurvature(float kappa, int segIdx)
+    {
+        float topMph = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
+        float radius = 1f / kappa;
+
+        float baseMph;
+        if (vehicleInfo != null && vehicleInfo.corneringSpeedCurve != null && vehicleInfo.corneringSpeedCurve.length > 0)
+        {
+            // The curve encodes corner speed by radius at nominal (1.0) grip; corner speed scales with √μ.
+            baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
+                      * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective, 0.05f));
+        }
+        else
+        {
+            baseMph = Mathf.Sqrt(radius * _bakedALatMaxMps2) * MpsToMph;
+        }
+
+        float bankingMph = 0f;
+        float capMph = topMph;
+        var segs = (track != null && track.track != null) ? track.track.segments : null;
+        if (segs != null && segIdx >= 0 && segIdx < segs.Length)
+        {
+            var seg = segs[segIdx];
+            if (vehicleInfo != null) bankingMph = seg.banking * vehicleInfo.bankingMphPerDegree;
+            if (seg.maxSpeed > 0) capMph = Mathf.Min(capMph, seg.maxSpeed);
+        }
+        return Mathf.Clamp((baseMph + bankingMph) * cornerSpeedScale, 5f, capMph);
+    }
+
+    // Friction circle: longitudinal authority shrinks with the lateral load already spent at this point of the
+    // line — a_long = a_max · √(1 − (a_lat/a_latMax)²). This is what pushes braking zones back up the straight
+    // (brake BEFORE turn-in) instead of assuming full brake force mid-corner, where the real car's rear lets go.
+    float FrictionCircleHeadroom(int idx, float vMps)
+    {
+        if (_curvatureProfile == null || idx >= _curvatureProfile.Length || _bakedALatMaxMps2 <= 0.01f) return 1f;
+        float frac = vMps * vMps * _curvatureProfile[idx] / _bakedALatMaxMps2;
+        // Floor keeps the relaxation passes progressing even where targets sit at the lateral limit.
+        return Mathf.Max(0.15f, Mathf.Sqrt(Mathf.Clamp01(1f - frac * frac)));
+    }
+
     void ApplyAccelLimit(int i, int prev)
     {
         float d = _mainSamples[i].distance - _mainSamples[prev].distance;
@@ -465,6 +598,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (d <= 0f) return;
         float vPrev = _speedProfile[prev] * MphToMps;
         float a = SampleAccel(_speedProfile[prev] / ProfileStretch) * ProfileStretch;
+        a *= FrictionCircleHeadroom(prev, vPrev);
         float vMaxMps = Mathf.Sqrt(vPrev * vPrev + 2f * a * d);
         float vMaxMph = vMaxMps * MpsToMph;
         if (vMaxMph < _speedProfile[i]) _speedProfile[i] = vMaxMph;
@@ -477,6 +611,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (d <= 0f) return;
         float vNext = _speedProfile[next] * MphToMps;
         float decel = SampleDecel(_speedProfile[i] / ProfileStretch) * ProfileStretch;
+        decel *= FrictionCircleHeadroom(i, _speedProfile[i] * MphToMps);
         float vMaxMps = Mathf.Sqrt(vNext * vNext + 2f * decel * d);
         float vMaxMph = vMaxMps * MpsToMph;
         if (vMaxMph < _speedProfile[i]) _speedProfile[i] = vMaxMph;
@@ -659,7 +794,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             if (_onPit)
             {
                 float pitLimit = track != null && track.track != null ? track.track.pitSpeedLimit : 50f;
-                targetMph = pitStopHold ? 0f : pitLimit; // hold = a service stop at the box
+                // aiMaxSpeedMph applies on the lane too: PitStopController's pit ACC queues a car behind
+                // slower/stopped lane traffic through it (every other writer leaves it at/above the limit).
+                targetMph = pitStopHold ? 0f : Mathf.Min(pitLimit, aiMaxSpeedMph); // hold = a service stop at the box
             }
             else if (_speedProfile != null)
             {
@@ -805,11 +942,36 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return true;
     }
 
-    // Smallest turn radius (m) on the path within scanDistance ahead, including the current segment.
+    // Smallest turn radius (m) on the path within scanDistance ahead, including the current position.
     // float.MaxValue when the road ahead is straight. The AI input driver uses this to shorten its steering
-    // lookahead on tight corners (aim short = turn in hard) and keep it long on gradual ones (smooth).
+    // lookahead on tight corners (aim short = turn in hard), keep it long on gradual ones (smooth), and to
+    // cap its commanded speed to the live grip limit. Prefers the DRIVEN-line curvature profile (the radius
+    // the car actually has to negotiate); falls back to raw segment radii when no profile exists.
     public float CurvatureRadiusAhead(float scanDistance)
     {
+        if (!_onPit && _curvatureProfile != null && _mainSamples != null && _mainLength > 0f)
+        {
+            int n = _curvatureProfile.Length;
+            float start = DistanceOnTrack;
+            // Samples are distance-ordered: find the first at/after the car, then walk only the scan window.
+            int i0 = 0;
+            for (int i = 0; i < n; i++)
+            {
+                if (_mainSamples[i].distance <= start) i0 = i;
+                else break;
+            }
+            float maxK = 0f;
+            for (int k = 0; k < n; k++)
+            {
+                int i = (i0 + k) % n;
+                float ahead = _mainSamples[i].distance - start;
+                if (ahead < 0f) ahead += _mainLength;
+                if (k > 0 && ahead > scanDistance) break;
+                if (_curvatureProfile[i] > maxK) maxK = _curvatureProfile[i];
+            }
+            return maxK > 1e-4f ? 1f / maxK : float.MaxValue;
+        }
+
         if (track == null || track.track == null || track.track.segments == null) return float.MaxValue;
         if (_segmentStartDistance == null || _mainLength <= 0f) return float.MaxValue;
 

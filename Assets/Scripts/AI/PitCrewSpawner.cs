@@ -37,22 +37,13 @@ public class PitCrewSpawner : MonoBehaviour
     [Tooltip("Lateral offset (m) of a wheel station from the box centre.")]
     public float wheelLateral = 1.2f;
 
-    [Header("Box props")]
-    [Tooltip("Dress every box with a static set of 4 tyres and a fuel can. Cars park directly in front of them.")]
-    public bool buildBoxProps = true;
-    [Tooltip("How far behind the box centre (m, along the lane) the prop cluster sits. Car half-length is ~2.4, so the default puts the props just behind the parked car's rear bumper.")]
-    public float propsBehind = 3.4f;
-    [Tooltip("Fallback lateral offset (m) of the props toward the pit wall. When GridSpawner has published PitLane.ParkLateral (the wall-side lane cars park on), that is used instead so the props sit directly behind each parked car.")]
-    public float propsLateral = 2.6f;
-    [Tooltip("Uniform scale applied to each prop sprite.")]
-    public float propScale = 1f;
+    [Tooltip("World height (m) a paper-doll member is normalised to, whatever the library's pixel size. memberScale multiplies on top.")]
+    public float memberHeightM = 1.5f;
 
     [Header("Sorting")]
     public string sortingLayerName = "Vehicles";
     [Tooltip("Crew draw above the cars (car sorting order is ~5).")]
     public int baseSortingOrder = 8;
-    [Tooltip("Box props draw below the cars so a car sliding past reads as driving over them.")]
-    public int propSortingOrder = 4;
 
     Material _unlit;
 
@@ -61,6 +52,9 @@ public class PitCrewSpawner : MonoBehaviour
     IEnumerator SpawnWhenReady()
     {
         if (track == null) track = FindFirstObjectByType<TrackBuilder>();
+        // Same paper-doll library as the paddock crowd unless one is wired in the scene. Keeps the crew
+        // as real walking NPCs without a serialized scene reference.
+        if (crewLibrary == null) crewLibrary = Resources.Load<NPCPartLibrary>("NPC/NPCPartLibrary");
         // Wait for GridSpawner to fit the boxes to the lane and for the pit mesh to exist.
         float timeout = 10f;
         while (timeout > 0f && (track == null || !PitLane.Configured))
@@ -140,46 +134,6 @@ public class PitCrewSpawner : MonoBehaviour
             bool fueller = m == 4;
             BuildMember(box, boxGo.transform, standby[m], work[m], fueller, idx * 5 + m);
         }
-
-        if (buildBoxProps) BuildProps(boxGo.transform);
-    }
-
-    // Static box dressing: a 2×2 set of tyres with the fuel can behind them, sitting at the back of the
-    // box on the wall side. The car's park point is the box centre, so it stops directly in front.
-    void BuildProps(Transform boxParent)
-    {
-        var props = new GameObject("BoxProps");
-        props.transform.SetParent(boxParent, false);
-        // Box-frame +X matches the spline lateral sign, so PitLane.ParkLateral (signed) drops in directly.
-        float lat = (PitLane.Configured && Mathf.Abs(PitLane.ParkLateral) > 0.01f) ? PitLane.ParkLateral : propsLateral * wallSide;
-        props.transform.localPosition = new Vector3(lat, -propsBehind, 0f);
-
-        var tirePositions = new[]
-        {
-            new Vector3(-0.35f,  0.35f, 0f),
-            new Vector3( 0.35f,  0.35f, 0f),
-            new Vector3(-0.35f, -0.35f, 0f),
-            new Vector3( 0.35f, -0.35f, 0f),
-        };
-        for (int t = 0; t < tirePositions.Length; t++)
-            BuildProp(props.transform, "Tyre", tirePositions[t],
-                wheelSprite != null ? wheelSprite : Placeholder(new Color(0.08f, 0.08f, 0.08f), 0.6f));
-
-        BuildProp(props.transform, "FuelCan", new Vector3(0f, -1.1f, 0f),
-            fuelCanSprite != null ? fuelCanSprite : Placeholder(new Color(0.85f, 0.2f, 0.15f), 0.7f));
-    }
-
-    void BuildProp(Transform parent, string name, Vector3 localPos, Sprite sprite)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        go.transform.localPosition = localPos;
-        go.transform.localScale = Vector3.one * propScale;
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = sprite;
-        sr.sharedMaterial = UnlitSprite();
-        sr.sortingLayerName = sortingLayerName;
-        sr.sortingOrder = propSortingOrder;
     }
 
     void BuildMember(PitCrewBox box, Transform parent, Vector3 standby, Vector3 work, bool fueller, int seed)
@@ -197,9 +151,15 @@ public class PitCrewSpawner : MonoBehaviour
         layered.layerMaterial = UnlitSprite();
         layered.sortingLayerName = sortingLayerName;
         layered.baseSortingOrder = baseSortingOrder;
+        // A paper-doll frame is frameHeight/pixelsPerUnit metres tall at scale 1 — normalise the member to
+        // memberHeightM whatever the library's pixel size, so tiny sheets don't spawn ant-sized crew.
+        float bodyScale = 1f;
         if (crewLibrary != null && layered.Build(seed))
         {
             appearance = layered;
+            float frameWorldH = Mathf.Max(0.01f, crewLibrary.frameHeight / Mathf.Max(1f, crewLibrary.pixelsPerUnit));
+            bodyScale = memberHeightM / frameWorldH;
+            go.transform.localScale = Vector3.one * memberScale * bodyScale;
         }
         else
         {
@@ -211,11 +171,12 @@ public class PitCrewSpawner : MonoBehaviour
             sr.sortingOrder = baseSortingOrder;
         }
 
-        // Held gear, shown only while servicing.
+        // Held gear, shown only while servicing. The gear sprites are metric (sized in world metres at
+        // scale 1), so divide the body normalisation back out of this child's scale and offset.
         var itemGo = new GameObject("Gear");
         itemGo.transform.SetParent(go.transform, false);
-        itemGo.transform.localPosition = new Vector3(0f, 0.18f, 0f);
-        itemGo.transform.localScale = Vector3.one * gearScale;
+        itemGo.transform.localPosition = new Vector3(0f, 0.18f, 0f) / bodyScale;
+        itemGo.transform.localScale = Vector3.one * gearScale / bodyScale;
         var item = itemGo.AddComponent<SpriteRenderer>();
         item.sprite = fueller
             ? (fuelCanSprite != null ? fuelCanSprite : Placeholder(new Color(0.85f, 0.2f, 0.15f), 0.7f))

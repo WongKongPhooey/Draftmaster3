@@ -559,6 +559,20 @@ public class TrackBuilder : MonoBehaviour
         return lat >= -s.width * 0.5f && lat <= s.width * 0.5f + extraPlus;
     }
 
+    // True if worldPos sits over the pit lane (ribbon or box lane) and NOT over the main track surface —
+    // the main band wins at the entry/exit blends where the two overlap, so a car passing the pit mouth
+    // on track is never located by pit distance.
+    public bool IsOnPitSurface(Vector3 worldPos)
+    {
+        if (track == null || !track.hasPitLane) return false;
+        if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
+        if (_pitSurfaceCache == null || _pitSurfaceCache.Count < 2) _pitSurfaceCache = SamplePitCenterline();
+        Vector2 local = transform.InverseTransformPoint(worldPos);
+        if (OnSampleSurface(_surfaceCache, local, out _)) return false;
+        float extraPlus = HasPitBoxLane ? pitBoxLaneWidth : 0f;
+        return OnPitBand(_pitSurfaceCache, local, extraPlus, out _);
+    }
+
     // Project a WORLD position onto the main centerline and return its distance (m) along the spline.
     // Lets a free-driven car (the player) be located on the track for gap maths against the AI field.
     // Uses the cached centerline (invalidated on Build); cheap enough for one query per FixedUpdate.

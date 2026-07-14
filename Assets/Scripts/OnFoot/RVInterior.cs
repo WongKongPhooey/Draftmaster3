@@ -16,19 +16,29 @@ using UnityEngine;
 //
 // Self-configuring: PitLaneStart builds one and calls Initialize() with the RV spawn marker, the walking
 // player, and the parked car (used only to orient the doorway toward where the player must walk). No scene
-// wiring or art is required. Assign interiorSprite to drop a hand-drawn floor plan in place of the
-// procedural placeholder room.
+// wiring or art is required.
+//
+// Editing the interior: the room is hand-authorable as a prefab. Run Draftmaster > RV Interior > Build
+// Prefab to generate Assets/Resources/OnFoot/RVInterior.prefab (this component at the root, the room as
+// sprite children under an "Interior" child), then open it in Prefab Mode and rearrange/restyle/add art
+// freely. PitLaneStart instantiates that prefab when it exists; Initialize() detects the authored
+// "Interior" child and uses it instead of building the procedural placeholder room. Author in the
+// Interior child's local frame: (0,0) is where the player spawns, +Y points at the doorway (Initialize
+// rotates the whole room so +Y faces the parked car). Keep art z between the -2.0 mask and the -2.5
+// player (the builder's defaults follow the k*Z constants below). If no prefab exists, or its Interior
+// child is missing, the procedural room below is used; assigning interiorSprite swaps the procedural
+// room for a single hand-drawn floor-plan sprite.
 public class RVInterior : MonoBehaviour
 {
     [Header("Room size (metres, local to the doorway)")]
-    [Tooltip("Interior width across the doorway.")]
-    public float roomWidth = 8f;
+    [Tooltip("Interior width across the doorway. With the RV's side door this is the RV's LENGTH (the long axis runs across the door).")]
+    public float roomWidth = 9.6f;
     [Tooltip("Depth of the room behind the spawn point (away from the door).")]
-    public float roomBack = 3f;
-    [Tooltip("Distance from the spawn point forward to the doorway. Crossing this line (toward the car) steps outside.")]
-    public float roomFront = 2.5f;
+    public float roomBack = 1.85f;
+    [Tooltip("Distance from the spawn point forward to the doorway. Crossing this line (out the side door) steps outside. Slightly past the body edge so the shallow collider notch still lets the player's collider cross the enter threshold (roomFront - hysteresis).")]
+    public float roomFront = 2.3f;
     [Tooltip("Width of the door opening in the front wall.")]
-    public float doorWidth = 1.8f;
+    public float doorWidth = 1.4f;
     [Tooltip("Dead-band around the doorway so the view doesn't flicker while standing in the threshold.")]
     public float hysteresis = 0.4f;
 
@@ -53,32 +63,49 @@ public class RVInterior : MonoBehaviour
 
     Transform _player;
     Vector2 _anchorXY;
-    Vector2 _doorDir = Vector2.down;   // world direction from the spawn toward the doorway (and the car)
+    Vector2 _doorDir = Vector2.down;   // world direction from the spawn toward the doorway (RV facing, or toward the car)
+    RVExterior _exterior;              // placed RV shell; its solid colliders are switched off while inside
     GameObject _insideView;            // mask + interior root; toggled as one
     bool _inside;
     float _outsidePlayerZ;             // the player's z before we ever pulled them into the interior
     bool _initialised;
 
+    // Whether the player is currently in the masked interior. Cutscene/trigger logic outside the
+    // RV gates on this so nothing fires while the world is masked.
+    public bool IsInside => _inside;
+
     readonly List<Material> _mats = new(); // owned runtime materials, released on destroy
 
-    // Pure doorway test, split out so the state logic can be reasoned about on its own.
-    // localForward = how far the player is past the spawn toward the door. Hysteresis keeps the two
-    // switch points apart so standing in the doorway can't rapidly toggle the view.
-    public static bool EvaluateInside(bool wasInside, float localForward, float doorDistance, float hysteresis)
+    // Pure room-bounds test, split out so the state logic can be reasoned about on its own.
+    // localForward = how far the player is past the spawn toward the door; localRight = lateral offset.
+    // Inside = within the room's box: short of the door line ahead, within halfWidth to the sides, and
+    // not past backDistance behind — so approaching the RV from a side or the back never re-masks; only
+    // the doorway does. Hysteresis grows the box while inside and shrinks it while outside, keeping each
+    // pair of switch points apart so hovering on an edge can't rapidly toggle the view.
+    public static bool EvaluateInside(bool wasInside, float localForward, float localRight, float doorDistance, float backDistance, float halfWidth, float hysteresis)
     {
-        return wasInside
-            ? localForward < doorDistance + hysteresis   // stay inside until clearly past the door
-            : localForward < doorDistance - hysteresis;  // step well back inside before re-entering
+        float h = wasInside ? hysteresis : -hysteresis;
+        return localForward < doorDistance + h
+            && localForward > -backDistance - h
+            && Mathf.Abs(localRight) < halfWidth + h;
     }
 
     // anchorWorld: the RV spawn point (player starts here, inside). player: the walking player transform.
-    // car: the parked car — only its position is used, to point the doorway the way the player must walk.
-    public void Initialize(Vector3 anchorWorld, Transform player, Transform car)
+    // exterior: the placed RV shell — its up orients the doorway, and its solid colliders are switched
+    // off while inside (the interior's own wall colliders take over) and back on when stepping out.
+    // car: fallback doorway orientation when there is no exterior — only its position is used, to point
+    // the door the way the player must walk.
+    public void Initialize(Vector3 anchorWorld, Transform player, Transform car, RVExterior exterior = null)
     {
         _player = player;
+        _exterior = exterior;
         _anchorXY = new Vector2(anchorWorld.x, anchorWorld.y);
 
-        if (car != null)
+        if (exterior != null)
+        {
+            _doorDir = exterior.DoorWorldDirection;
+        }
+        else if (car != null)
         {
             Vector2 toCar = (Vector2)car.position - _anchorXY;
             if (toCar.sqrMagnitude > 0.0001f) _doorDir = toCar.normalized;
@@ -99,6 +126,10 @@ public class RVInterior : MonoBehaviour
 
     void BuildView()
     {
+        // A pre-existing "Interior" child means we were instantiated from the hand-authored prefab
+        // (see the class comment) — adopt it instead of generating the placeholder room.
+        Transform authored = transform.Find("Interior");
+
         _insideView = new GameObject("InsideView");
         _insideView.transform.SetParent(transform, false);
 
@@ -106,15 +137,29 @@ public class RVInterior : MonoBehaviour
 
         // Interior root is rotated so its local +Y points at the doorway (the direction the player walks
         // out). Everything below is authored in that local frame: +Y = toward the door, +X = to the right.
-        var interior = new GameObject("Interior").transform;
-        interior.SetParent(_insideView.transform, false);
+        Transform interior;
+        if (authored != null)
+        {
+            authored.SetParent(_insideView.transform, false);
+            interior = authored;
+        }
+        else
+        {
+            interior = new GameObject("Interior").transform;
+            interior.SetParent(_insideView.transform, false);
+        }
         float doorAngle = Mathf.Atan2(_doorDir.y, _doorDir.x) * Mathf.Rad2Deg - 90f; // map local +Y onto doorDir
         interior.localRotation = Quaternion.Euler(0f, 0f, doorAngle);
 
-        if (interiorSprite != null) BuildSpriteFloor(interior);
-        else BuildProceduralRoom(interior);
+        if (authored == null)
+        {
+            if (interiorSprite != null) BuildSpriteFloor(interior);
+            else BuildProceduralRoom(interior);
+        }
 
-        BuildSatnav(interior);
+        // The authored prefab carries its own satnav; only generate one when it doesn't.
+        if (interior.GetComponentInChildren<SatnavInteractable>(true) == null)
+            BuildSatnav(interior);
     }
 
     // A satnav at the RV's driver seat (front-left of the cab, beside the doorway). Its floating prompt +
@@ -167,19 +212,21 @@ public class RVInterior : MonoBehaviour
         // Floor.
         BuildQuad(interior, "Floor", new Vector2(0f, centreY), new Vector2(roomWidth, depth), kFloorZ, MakeUnlit(new Color(0.60f, 0.48f, 0.33f)));
 
-        // Walls: a dark frame around the floor with a gap at the door (front, +Y).
+        // Walls: a dark frame around the floor with a gap at the door (front, +Y). Solid, so the player
+        // can only leave through the doorway (colliders toggle with InsideView, so they never block
+        // anything while the interior is hidden).
         var wallMat = MakeUnlit(new Color(0.28f, 0.22f, 0.17f));
         float wallSpan = depth + kWallThickness;
-        BuildQuad(interior, "WallBack", new Vector2(0f, -roomBack), new Vector2(roomWidth + kWallThickness, kWallThickness), kWallZ, wallMat);
-        BuildQuad(interior, "WallLeft", new Vector2(-halfW, centreY), new Vector2(kWallThickness, wallSpan), kWallZ, wallMat);
-        BuildQuad(interior, "WallRight", new Vector2(halfW, centreY), new Vector2(kWallThickness, wallSpan), kWallZ, wallMat);
+        BuildQuad(interior, "WallBack", new Vector2(0f, -roomBack), new Vector2(roomWidth + kWallThickness, kWallThickness), kWallZ, wallMat, withCollider: true);
+        BuildQuad(interior, "WallLeft", new Vector2(-halfW, centreY), new Vector2(kWallThickness, wallSpan), kWallZ, wallMat, withCollider: true);
+        BuildQuad(interior, "WallRight", new Vector2(halfW, centreY), new Vector2(kWallThickness, wallSpan), kWallZ, wallMat, withCollider: true);
         // Front wall in two segments, leaving the doorway open in the middle.
         float segW = halfW - halfDoor;
         if (segW > 0.01f)
         {
             float segCentre = (halfW + halfDoor) * 0.5f;
-            BuildQuad(interior, "WallFrontL", new Vector2(-segCentre, roomFront), new Vector2(segW, kWallThickness), kWallZ, wallMat);
-            BuildQuad(interior, "WallFrontR", new Vector2(segCentre, roomFront), new Vector2(segW, kWallThickness), kWallZ, wallMat);
+            BuildQuad(interior, "WallFrontL", new Vector2(-segCentre, roomFront), new Vector2(segW, kWallThickness), kWallZ, wallMat, withCollider: true);
+            BuildQuad(interior, "WallFrontR", new Vector2(segCentre, roomFront), new Vector2(segW, kWallThickness), kWallZ, wallMat, withCollider: true);
         }
 
         // A few furnishings so the room reads as a motorhome interior. All placeholder blocks — replace by
@@ -199,7 +246,8 @@ public class RVInterior : MonoBehaviour
 
         Vector2 rel = (Vector2)_player.position - _anchorXY;
         float localForward = Vector2.Dot(rel, _doorDir);
-        bool nowInside = EvaluateInside(_inside, localForward, roomFront, hysteresis);
+        float localRight = Vector2.Dot(rel, new Vector2(_doorDir.y, -_doorDir.x));
+        bool nowInside = EvaluateInside(_inside, localForward, localRight, roomFront, roomBack, roomWidth * 0.5f, hysteresis);
         if (nowInside != _inside) SetInside(nowInside);
 
         // Keep the player pulled in front of the mask every frame while inside, in case anything else
@@ -218,6 +266,10 @@ public class RVInterior : MonoBehaviour
         _inside = inside;
         if (_insideView != null) _insideView.SetActive(inside);
 
+        // Swap which shell is solid: the interior's wall colliders toggle with InsideView above, while
+        // the exterior's body colliders must only block from outside (they overlap the room's floor).
+        if (_exterior != null) _exterior.SetCollidersEnabled(!inside);
+
         if (_player != null)
         {
             var p = _player.position;
@@ -230,11 +282,13 @@ public class RVInterior : MonoBehaviour
 
     // Axis-aligned quad in the parent's local space, centred at centreLocal with the given size, at localZ.
     // Double-sided (both windings) so it's never backface-culled regardless of which side the camera is on.
-    static GameObject BuildQuad(Transform parent, string name, Vector2 centreLocal, Vector2 size, float localZ, Material mat)
+    // withCollider adds a solid BoxCollider2D matching the quad (used for the walls).
+    static GameObject BuildQuad(Transform parent, string name, Vector2 centreLocal, Vector2 size, float localZ, Material mat, bool withCollider = false)
     {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         go.transform.localPosition = new Vector3(centreLocal.x, centreLocal.y, localZ);
+        if (withCollider) go.AddComponent<BoxCollider2D>().size = size;
 
         var mf = go.AddComponent<MeshFilter>();
         var mr = go.AddComponent<MeshRenderer>();
