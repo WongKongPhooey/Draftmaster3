@@ -4,7 +4,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 // Parts shop panel for landmark locations — the on-foot counterpart of the travel map's side-panel
-// shop. Runtime-built uGUI (GaragePanelUI pattern, LegacyRuntime font, no prefab wiring) since the
+// shop. Runtime-built uGUI (GaragePanelUI pattern, brand body font via BrandFonts, no prefab wiring) since the
 // authored-layout requirement is the map, not this. Same stock rules as the map: junkyards sell the
 // weekly salvage roll (bought items gone until the week ticks), engine shops a fixed catalog; buying
 // installs immediately and scraps the old part. ShopCounterNPC opens/closes it.
@@ -171,7 +171,7 @@ public class LandmarkShopPanel : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         gameObject.AddComponent<GraphicRaycaster>();
 
-        _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _font = BrandFonts.Body;
 
         _root = new GameObject("Panel", typeof(RectTransform));
         _root.transform.SetParent(transform, false);

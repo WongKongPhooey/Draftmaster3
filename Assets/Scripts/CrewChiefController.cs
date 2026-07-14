@@ -226,7 +226,7 @@ public class CrewChiefController : MonoBehaviour
         _label.color = Color.white;
         _label.fontSize = 18;
         _label.fontStyle = FontStyle.Bold;
-        _label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _label.font = BrandFonts.Body;
 
         // "Timing" button under the toggle — only visible while acting as crew chief. Opens the
         // full-field timing screen (lap times from LapTimingManager).
@@ -251,7 +251,7 @@ public class CrewChiefController : MonoBehaviour
         tlabel.color = Color.white;
         tlabel.fontSize = 18;
         tlabel.fontStyle = FontStyle.Bold;
-        tlabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tlabel.font = BrandFonts.Body;
         tlabel.text = "Timing";
         _timingBtn.SetActive(false);
     }

@@ -228,7 +228,7 @@ public class DriveModeController : MonoBehaviour
         _label.color = Color.white;
         _label.fontSize = 18;
         _label.fontStyle = FontStyle.Bold;
-        _label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        _label.font = BrandFonts.Body;
     }
 
     static void EnsureEventSystem()

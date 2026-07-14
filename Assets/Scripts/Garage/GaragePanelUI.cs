@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Full-screen info panel shown when the player interacts with a garage role station. Built entirely at
-// runtime with legacy uGUI Text (LegacyRuntime.ttf) so no prefab/font/TMP wiring is needed. Display-only:
+// runtime with legacy uGUI Text (brand body font via BrandFonts) so no prefab/font/TMP wiring is needed. Display-only:
 // RoleStation opens it on interact and hides it on the next interact press.
 public class GaragePanelUI : MonoBehaviour
 {
@@ -52,7 +52,7 @@ public class GaragePanelUI : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         gameObject.AddComponent<GraphicRaycaster>();
 
-        var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var font = BrandFonts.Body;
 
         // Dimmer behind the panel.
         _root = new GameObject("Panel", typeof(RectTransform));

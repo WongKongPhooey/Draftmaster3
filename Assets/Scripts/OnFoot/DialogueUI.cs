@@ -78,7 +78,7 @@ public class DialogueUI : MonoBehaviour
         rt.anchorMin = anchorMin; rt.anchorMax = anchorMax;
         rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
         var txt = go.AddComponent<Text>();
-        txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        txt.font = BrandFonts.Body;
         txt.color = color; txt.fontSize = size; txt.fontStyle = style; txt.alignment = align;
         txt.horizontalOverflow = HorizontalWrapMode.Wrap;
         txt.verticalOverflow = VerticalWrapMode.Overflow;

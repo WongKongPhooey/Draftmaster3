@@ -141,7 +141,7 @@ public class PracticeDirector : MonoBehaviour
         label.color = Color.white;
         label.fontSize = 20;
         label.fontStyle = FontStyle.Bold;
-        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        label.font = BrandFonts.Body;
         label.text = _isQualifying ? "START RACE" : "QUALIFYING";
     }
 

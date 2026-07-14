@@ -336,7 +336,7 @@ public class TeamSwitchController : MonoBehaviour
         t.fontSize = size;
         t.fontStyle = style;
         t.color = color;
-        t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.font = BrandFonts.Body;
         return t;
     }
 
