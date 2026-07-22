@@ -164,7 +164,9 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         Vector3 localDir = transform.InverseTransformVector(new Vector3(worldInward.x, worldInward.y, 0f));
         if (localDir.sqrMagnitude > 1e-6f) localDir.Normalize();
 
-        float displace = dentStrength * Mathf.Clamp01(severity);
+        // Global damage slider scales visual dent depth as well as the mechanical accrual below.
+        float displace = dentStrength * Mathf.Clamp01(severity) * Mathf.Max(0f, TrackConditions.DamageMultiplier);
+        if (displace <= 0f) return; // invulnerable bodywork — no dents, no damage, no bias
         bool changed = false;
 
         for (int i = 0; i < _current.Length; i++)

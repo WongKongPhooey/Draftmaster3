@@ -14,7 +14,7 @@ public class RaceDirector : MonoBehaviour
     public static RaceDirector Instance { get; private set; }
 
     [Tooltip("Race length in laps (counted from the green flag).")]
-    public int raceLaps = 5;
+    public int raceLaps = 3;
     [Tooltip("Seconds after the checkered flag before still-running cars are classified where they are.")]
     public float stragglerTimeout = 45f;
     [Tooltip("Seconds the CHECKERED FLAG banner stays up.")]
@@ -246,10 +246,12 @@ public class RaceDirector : MonoBehaviour
                 if (e != null && e.tf != null && e.isPlayer) { lap = Mathf.Clamp(RacingLaps(e) + 1, 1, raceLaps); break; }
             }
         }
+        // Sits above LeaderboardUI (origin y=70), which would otherwise draw straight over it.
+        var box = new Rect(12f, 34f, 140f, 26f);
         GUI.color = new Color(0f, 0f, 0f, 0.6f);
-        GUI.DrawTexture(new Rect(12f, 64f, 140f, 26f), Texture2D.whiteTexture);
+        GUI.DrawTexture(box, Texture2D.whiteTexture);
         GUI.color = Color.white;
-        GUI.Label(new Rect(12f, 64f, 140f, 26f), $"LAP {lap} / {raceLaps}", _lapStyle);
+        GUI.Label(box, $"LAP {lap} / {raceLaps}", _lapStyle);
     }
 
     void DrawBanner(string text)

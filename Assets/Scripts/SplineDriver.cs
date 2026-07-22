@@ -97,6 +97,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Hard-park pin, independent of the race phase (practice cars waiting in their box). Zero speed, transform pinned to the commanded point until cleared.")]
     public bool parkedHold = false;
 
+    // True whenever the car is being held stationary — either the pre-grid freeze or an explicit park
+    // (practice cars in their box). SplineInputDriver keeps re-seeding the dynamic model while this holds,
+    // otherwise the model integrates freely against a zero speed command and the car creeps out of its box.
+    public bool IsHeldStill => parkedHold || (freezeUntilFormation && RaceStart.Current == RaceStart.Phase.PreGrid);
+
     public bool IsOnPit => _onPit;
     public float PitProgress01 => (_onPit && _pitLength > 0f) ? Mathf.Clamp01(_distance / _pitLength) : 0f;
     public float PitLength => _pitLength;
@@ -753,7 +758,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // Pre-grid hold: sit parked in the pit box / at the pit exit until the formation lap begins.
         // Still Place() so the pose (and the commanded point feeding any dynamic model) tracks the box,
         // but advance nothing and command zero speed so dynamic-AI cars hold station too.
-        if ((freezeUntilFormation && RaceStart.Current == RaceStart.Phase.PreGrid) || parkedHold)
+        if (IsHeldStill)
         {
             speed = 0f;
             _currentMph = 0f;

@@ -12,6 +12,21 @@ public class TireModel : MonoBehaviour
     // Index: 0 = FL, 1 = FR, 2 = RL, 3 = RR.
     public const int FL = 0, FR = 1, RL = 2, RR = 3;
 
+    // Rubber choice. Soft is the REFERENCE compound — its multipliers are 1.0, so every existing tuning value
+    // in this file and in VehicleInfo still means what it used to. Hard trades a slice of peak grip and slower
+    // warm-up for tyres that last.
+    public enum Compound { Soft, Hard }
+
+    [Header("Compound")]
+    [Tooltip("Fitted compound. Soft = maximum grip, wears fast, warms quickly. Hard = a little less grip, warms slowly, lasts.")]
+    public Compound compound = Compound.Soft;
+    [Tooltip("Peak grip multiplier for the hard compound (soft = 1.0).")]
+    [Range(0.85f, 1f)] public float hardGripScale = 0.955f;
+    [Tooltip("Wear-rate multiplier for the hard compound (soft = 1.0). Below 1 = lasts longer.")]
+    [Range(0.2f, 1f)] public float hardWearScale = 0.7f;
+    [Tooltip("Heating multiplier for the hard compound (soft = 1.0). Below 1 = takes longer to switch on.")]
+    [Range(0.4f, 1f)] public float hardHeatScale = 0.8f;
+
     [Header("State (read-only telemetry)")]
     [Range(0f, 1f)] public float[] wear = new float[4];
     public float[] tempC = new float[4];
@@ -27,9 +42,9 @@ public class TireModel : MonoBehaviour
     [Range(0.5f, 1f)] public float coldGrip = 0.82f;
     [Range(0.5f, 1f)] public float hotGrip = 0.72f;
     [Tooltip("Heating per unit of tyre work per second.")]
-    public float heatRate = 120f;
-    [Tooltip("Cooling toward ambient per second (scaled up by airflow at speed).")]
-    public float coolRate = 0.45f;
+    public float heatRate = 60f;
+    [Tooltip("Cooling toward ambient per second (scaled up by airflow at speed). Keep in ratio with heatRate: halving both keeps the same equilibrium temps but doubles how long tyres take to get there.")]
+    public float coolRate = 0.225f;
     [Tooltip("Extra cooling per (m/s) of airflow.")]
     public float airCool = 0.015f;
 
@@ -91,20 +106,33 @@ public class TireModel : MonoBehaviour
         work = Mathf.Max(0f, work);
 
         // Heat: friction power ≈ work × speed. Cool toward ambient, faster with airflow.
-        float heat = heatRate * work * (0.25f + speedMps / 45f);
+        float heat = heatRate * CompoundHeat * work * (0.25f + speedMps / 45f);
         float cool = coolRate * (tempC[i] - ambientC) * (1f + speedMps * airCool);
         tempC[i] += (heat - cool) * dt;
         if (tempC[i] < ambientC) tempC[i] = ambientC;
 
         // Wear: scales with work and accelerates when the tyre runs hot.
         float overheat = 1f + Mathf.Max(0f, tempC[i] - overheatWearStartC) * overheatWearPerDeg;
-        wear[i] = Mathf.Clamp01(wear[i] + _wearRate * TrackConditions.TireWearMultiplier * work * overheat * dt * 60f);
+        wear[i] = Mathf.Clamp01(wear[i] + _wearRate * CompoundWear * TrackConditions.TireWearMultiplier * work * overheat * dt * 60f);
+    }
+
+    // Compound multipliers. Soft is the reference (1.0) so the tuned defaults keep their meaning.
+    public float CompoundGrip => compound == Compound.Hard ? hardGripScale : 1f;
+    public float CompoundWear => compound == Compound.Hard ? hardWearScale : 1f;
+    public float CompoundHeat => compound == Compound.Hard ? hardHeatScale : 1f;
+
+    // Fit a compound. Called by the pre-race setup panel and by a pit stop that changes rubber; resets the
+    // tyres because you can't swap compound without swapping the tyre.
+    public void SetCompound(Compound c)
+    {
+        compound = c;
+        PitReset();
     }
 
     public float TyreGrip(int i)
     {
         float wg = Mathf.Lerp(1f, minWearGrip, Mathf.Clamp01(wear[i]));
-        return wg * TempGrip(tempC[i]);
+        return wg * TempGrip(tempC[i]) * CompoundGrip;
     }
 
     float TempGrip(float t)

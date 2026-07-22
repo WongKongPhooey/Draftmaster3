@@ -37,8 +37,8 @@ public class PitLaneStart : MonoBehaviour
     public event System.Action PlayerEnteredCar;
 
     [Header("Pit Greeter NPC")]
-    [Tooltip("Spawn a walk-up-and-talk crew member near the player's pit spawn.")]
-    public bool spawnGreeter = true;
+    [Tooltip("When the pit crew greeter appears: session, series, scene, career progress, repeat policy. Defaults to every time.")]
+    public AppearanceConditions greeterAppearance = new AppearanceConditions();
     [Tooltip("Name shown in the dialogue panel.")]
     public string greeterName = "Pit Crew";
     [TextArea]
@@ -57,8 +57,12 @@ public class PitLaneStart : MonoBehaviour
     public float greeterBehind = 1.5f;
 
     [Header("RV Door Cutscene")]
-    [Tooltip("When spawning at the RV, stand a crew member outside and play a walk-up cutscene the first time the player steps out the door: player freezes, bars slide in, the NPC walks over, both face each other, dialogue opens.")]
-    public bool rvDoorCutscene = true;
+    [Tooltip("When spawning at the RV, stand a crew member outside and play a walk-up cutscene as the player steps out the door: player freezes, bars slide in, the NPC walks over, both face each other, dialogue opens. These conditions decide WHEN he's there — by default once per race weekend, not every time you press Play.")]
+    public AppearanceConditions rvNpcAppearance = new AppearanceConditions
+    {
+        repeat = AppearanceConditions.Repeat.OncePerWeekend,
+        saveKey = "rv.door.intro",
+    };
     [Tooltip("Name shown for the RV-door NPC's dialogue.")]
     public string rvNpcName = "Team Manager";
     [TextArea]
@@ -182,13 +186,14 @@ public class PitLaneStart : MonoBehaviour
 
         SpawnPlayer(playerPos);
 
-        if (spawnGreeter)
+        if (greeterAppearance.IsMet())
         {
             float npcDist = Mathf.Clamp(total * pitFraction - greeterBehind, 0f, total);
             var npcSample = usedPit ? track.SamplePitAt(npcDist, samples) : track.SampleAt(npcDist, samples);
             Vector2 npcOff = npcSample.position + npcSample.normal * greeterLateral;
             Vector3 npcPos = track.transform.TransformPoint(new Vector3(npcOff.x, npcOff.y, 0f));
             SpawnGreeter(npcPos);
+            greeterAppearance.MarkSeen(); // a stationary NPC has appeared the moment he's stood there
         }
 
         // Camera: follow the walker, zoomed in.
@@ -230,7 +235,7 @@ public class PitLaneStart : MonoBehaviour
 
             // The exit beat: a crew member waiting outside who walks over the first time the player
             // steps out the door. Needs the exterior for the door's position/facing.
-            if (rvDoorCutscene && exterior != null)
+            if (exterior != null && rvNpcAppearance.IsMet())
                 BuildRvDoorCutscene(exterior, rv);
         }
 
@@ -316,7 +321,9 @@ public class PitLaneStart : MonoBehaviour
         trigger.radius = rvTriggerRadius;
         trigger.target = _player.transform;
         trigger.Gate = () => !interior.IsInside; // never fire while the world is masked
-        trigger.Triggered = walkUp.Play;
+        // Mark the beat seen only when it actually plays — walking out and straight back in without
+        // stepping on the trigger leaves it armed for next time.
+        trigger.Triggered = () => { rvNpcAppearance.MarkSeen(); walkUp.Play(); };
     }
 
     // Shared NPC factory: clone the on-foot prefab, strip anything that would control it, freeze the

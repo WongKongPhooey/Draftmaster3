@@ -13,7 +13,9 @@ public class NPCWalkUpCutscene : MonoBehaviour
     public OnFootController player;
     [Tooltip("The NPC who walks up and speaks. Its NPCInteractable lines are the cutscene dialogue.")]
     public NPCInteractable npc;
-    [Tooltip("NPC approach speed (units/sec).")]
+    [Tooltip("Walk over at the player's own walk speed, so the pair move alike. Falls back to walkSpeed if there's no player.")]
+    public bool matchPlayerSpeed = true;
+    [Tooltip("NPC approach speed (units/sec). Used when matchPlayerSpeed is off.")]
     public float walkSpeed = 2.2f;
     [Tooltip("The NPC stops this far (m) from the player and starts talking.")]
     public float stopDistance = 1.2f;
@@ -80,8 +82,9 @@ public class NPCWalkUpCutscene : MonoBehaviour
             return;
         }
 
+        float speed = matchPlayerSpeed ? player.moveSpeed : walkSpeed;
         Vector2 dir = toPlayer.normalized;
-        Vector3 next = pos + (Vector3)(dir * walkSpeed * Time.deltaTime);
+        Vector3 next = pos + (Vector3)(dir * speed * Time.deltaTime);
         if (_npcRb != null && _npcRb.bodyType != RigidbodyType2D.Dynamic) _npcRb.MovePosition(next);
         else npc.transform.position = next;
 

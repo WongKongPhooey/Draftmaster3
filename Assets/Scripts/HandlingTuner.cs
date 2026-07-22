@@ -14,8 +14,8 @@ public class HandlingTuner : MonoBehaviour
 {
     public static HandlingTuner Instance { get; private set; }
 
-    public bool startVisible = true;
-    public Key toggleKey = Key.F1;
+    public bool startVisible = false;
+    public Key toggleKey = Key.F9;
 
     // Field name on PlayerVehicleController + slider range. Curated to the knobs that drive understeer/oversteer.
     struct Knob { public string field; public float min, max; public Knob(string f, float a, float b) { field = f; min = a; max = b; } }

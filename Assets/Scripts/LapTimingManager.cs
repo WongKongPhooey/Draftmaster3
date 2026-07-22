@@ -17,6 +17,8 @@ public class LapTimingManager : MonoBehaviour
     public float wallHitMinClosingSpeed = 1.5f;
     [Tooltip("Draw the player's last/best lap readout.")]
     public bool showPlayerHud = true;
+    [Tooltip("Key toggling the lap readout (iRacing-style F1).")]
+    public KeyCode toggleKey = KeyCode.F1;
 
     public class CarTimes
     {
@@ -63,6 +65,7 @@ public class LapTimingManager : MonoBehaviour
 
     void Update()
     {
+        if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) showPlayerHud = !showPlayerHud;
         if (track == null) track = FindFirstObjectByType<TrackBuilder>();
         var rt = RacePositionTracker.Instance;
         if (rt == null || track == null) return;

@@ -8,6 +8,8 @@ public class LeaderboardUI : MonoBehaviour
     public int compactRows = 12;
     [Tooltip("Hold this key to expand to the full field.")]
     public KeyCode expandKey = KeyCode.Tab;
+    [Tooltip("Press to show/hide the board. Persists across sessions.")]
+    public KeyCode toggleKey = KeyCode.F2;
     public float rowHeight = 22f;
     public float width = 250f;
     public Vector2 origin = new Vector2(16f, 70f);
@@ -16,6 +18,18 @@ public class LeaderboardUI : MonoBehaviour
     static Texture2D _tex;
     DriveModeController _drive;
     bool _driveSearched;
+    bool _visible = true;
+
+    const string PrefKey = "hud.leaderboard";
+
+    void Awake() => _visible = PlayerPrefs.GetInt(PrefKey, 1) == 1;
+
+    void Update()
+    {
+        if (!Input.GetKeyDown(toggleKey)) return;
+        _visible = !_visible;
+        PlayerPrefs.SetInt(PrefKey, _visible ? 1 : 0);
+    }
 
     void EnsureStyles()
     {
@@ -28,6 +42,7 @@ public class LeaderboardUI : MonoBehaviour
 
     void OnGUI()
     {
+        if (!_visible) return;
         var t = RacePositionTracker.Instance;
         if (t == null || t.Order.Count == 0) return;
         EnsureStyles();

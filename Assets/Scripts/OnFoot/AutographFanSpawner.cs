@@ -31,20 +31,25 @@ public class AutographFanSpawner : MonoBehaviour
     public float wallSide = 1f;
     [Tooltip("Lateral distance (m) from the pit centerline to the fans. Clamped clear of any parked box lane.")]
     public float lateralFromCenter = 4.0f;
-    [Tooltip("World height (m) a paper-doll fan is normalised to, whatever the library's pixel size.")]
-    public float fanHeightM = 1.5f;
+    [Tooltip("World height a paper-doll fan is normalised to, whatever the library's pixel size. Defaults to the same figure the on-foot player renders at, so fans don't tower over whoever they're asking for a signature.")]
+    public float fanHeightM = PitCrewSpawner.OnFootPersonHeight;
 
     [Header("Sorting")]
     public string sortingLayerName = "Vehicles";
     [Tooltip("Fans draw above the cars (car sorting order is ~5).")]
     public int baseSortingOrder = 8;
 
-    // True while the player is on foot in the scene. AutographFan reads this so patience only bleeds when
-    // the player could actually stop and sign (on foot), not while racing past.
-    public static bool PlayerOnFoot { get; private set; }
+    // The on-foot player currently in the scene (null while driving). AutographFan reads this to notice,
+    // walk up to, and face the player — and so patience only bleeds when they could actually stop and sign.
+    public static OnFootController OnFootPlayer { get; private set; }
+    // True while the player is on foot in the scene.
+    public static bool PlayerOnFoot => OnFootPlayer != null;
 
     Material _unlit;
     float _onFootPoll;
+    bool _waveRunning;      // a spawn coroutine is in flight
+    bool _stintTopUpDone;   // one top-up wave per on-foot stint
+    Transform _root;
 
     // ----- self-install -----
     static bool _hooked;
@@ -76,53 +81,71 @@ public class AutographFanSpawner : MonoBehaviour
         if (_onFootPoll <= 0f)
         {
             _onFootPoll = 0.5f;
-            PlayerOnFoot = FindObjectOfType<OnFootController>() != null;
+            OnFootPlayer = FindObjectOfType<OnFootController>();
+
+            // Top-up: if the player goes on foot and every fan from the load-time wave has already come and
+            // gone (or none spawned), give this stint a fresh wave — once per stint, so a late pit walk
+            // still meets fans instead of an empty wall.
+            if (!PlayerOnFoot) _stintTopUpDone = false;
+            else if (!_stintTopUpDone && !_waveRunning && GetComponentsInChildren<AutographFan>().Length == 0)
+            {
+                _stintTopUpDone = true;
+                StartCoroutine(SpawnWhenReady());
+            }
         }
     }
 
     IEnumerator SpawnWhenReady()
     {
-        if (track == null) track = FindObjectOfType<TrackBuilder>();
-        if (fanLibrary == null) fanLibrary = Resources.Load<NPCPartLibrary>("NPC/NPCPartLibrary");
-
-        // Give GridSpawner a chance to configure the pit boxes so we can span the grey box-lane strip.
-        // Proceed regardless once it exists — a pit-walk scene may have no GridSpawner (unconfigured fallback).
-        float timeout = 10f;
-        while (timeout > 0f && (track == null || !PitLane.Configured))
+        _waveRunning = true;
+        try
         {
             if (track == null) track = FindObjectOfType<TrackBuilder>();
-            timeout -= Time.deltaTime;
-            yield return null;
+            if (fanLibrary == null) fanLibrary = Resources.Load<NPCPartLibrary>("NPC/NPCPartLibrary");
+
+            // Give GridSpawner a chance to configure the pit boxes so we can span the grey box-lane strip.
+            // Proceed regardless once it exists — a pit-walk scene may have no GridSpawner (unconfigured fallback).
+            float timeout = 10f;
+            while (timeout > 0f && (track == null || !PitLane.Configured))
+            {
+                if (track == null) track = FindObjectOfType<TrackBuilder>();
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+            if (track == null || track.track == null || !track.track.hasPitLane) yield break;
+
+            var pit = track.SamplePitCenterline();
+            if (pit.Count < 2) yield break;
+            float pitLength = pit[pit.Count - 1].distance;
+            if (pitLength <= 0f) yield break;
+
+            int count = FanAppeal.FanCountForAppeal(FanAppeal.Value, minFans, maxFans);
+            if (count <= 0) yield break;
+
+            // Spread fans across the box-lane span (or a central slice of the whole lane when there's no strip),
+            // so they cluster near the boxes rather than out on the entry/exit ramps.
+            float from = track.HasPitBoxLane ? track.PitBoxLaneFrom(pitLength) : pitLength * 0.15f;
+            float to = track.HasPitBoxLane ? track.PitBoxLaneTo(pitLength) : pitLength * 0.85f;
+
+            // Keep fans clear of any parked box lane so they don't stand inside the cars.
+            float lateral = lateralFromCenter;
+            if (PitLane.Configured) lateral = Mathf.Max(lateral, Mathf.Abs(PitLane.ParkLateral) + 1.5f);
+
+            if (_root == null)
+            {
+                _root = new GameObject("AutographFans").transform;
+                _root.SetParent(transform, false);
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                float d = count == 1 ? Mathf.Lerp(from, to, 0.5f)
+                                     : Mathf.Lerp(from, to, (i + 0.5f) / count) + Random.Range(-1.5f, 1.5f);
+                d = Mathf.Clamp(d, from, to);
+                BuildFan(_root, d, lateral, pit, i);
+            }
         }
-        if (track == null || track.track == null || !track.track.hasPitLane) yield break;
-
-        var pit = track.SamplePitCenterline();
-        if (pit.Count < 2) yield break;
-        float pitLength = pit[pit.Count - 1].distance;
-        if (pitLength <= 0f) yield break;
-
-        int count = FanAppeal.FanCountForAppeal(FanAppeal.Value, minFans, maxFans);
-        if (count <= 0) yield break;
-
-        // Spread fans across the box-lane span (or a central slice of the whole lane when there's no strip),
-        // so they cluster near the boxes rather than out on the entry/exit ramps.
-        float from = track.HasPitBoxLane ? track.PitBoxLaneFrom(pitLength) : pitLength * 0.15f;
-        float to = track.HasPitBoxLane ? track.PitBoxLaneTo(pitLength) : pitLength * 0.85f;
-
-        // Keep fans clear of any parked box lane so they don't stand inside the cars.
-        float lateral = lateralFromCenter;
-        if (PitLane.Configured) lateral = Mathf.Max(lateral, Mathf.Abs(PitLane.ParkLateral) + 1.5f);
-
-        var root = new GameObject("AutographFans").transform;
-        root.SetParent(transform, false);
-
-        for (int i = 0; i < count; i++)
-        {
-            float d = count == 1 ? Mathf.Lerp(from, to, 0.5f)
-                                 : Mathf.Lerp(from, to, (i + 0.5f) / count) + Random.Range(-1.5f, 1.5f);
-            d = Mathf.Clamp(d, from, to);
-            BuildFan(root, d, lateral, pit, i);
-        }
+        finally { _waveRunning = false; }
     }
 
     void BuildFan(Transform root, float dist, float lateral, List<TrackBuilder.Sample> pit, int seed)
@@ -172,7 +195,7 @@ public class AutographFanSpawner : MonoBehaviour
         {
             Destroy(layered);
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = Placeholder(new Color(0.85f, 0.75f, 0.25f), 1.4f); // gold blob = fan
+            sr.sprite = Placeholder(new Color(0.85f, 0.75f, 0.25f), fanHeightM); // gold blob = fan
             sr.sharedMaterial = UnlitSprite();
             sr.sortingLayerName = sortingLayerName;
             sr.sortingOrder = baseSortingOrder;

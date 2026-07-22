@@ -21,7 +21,7 @@ public class GridSpawner : MonoBehaviour
     public string carsetPrefix = "cup26";
     [Tooltip("Give each car a distinct livery sprite from the carset (Resources/<prefix>liveryN).")]
     public bool useCarsetLiveries = true;
-    [Tooltip("Name drivers from the DriverNames pool instead of the SQLite database.")]
+    [Tooltip("Fallback only: name drivers from the DriverNames surname pool when no database driver claims the car's number.")]
     public bool useDriverNamePool = true;
     [Tooltip("Highest car number probed when collecting liveries from Resources.")]
     public int maxLiveryNumber = 99;
@@ -113,6 +113,12 @@ public class GridSpawner : MonoBehaviour
         var pool = new List<Driver>(drivers);
         Shuffle(pool);
 
+        // Car number -> the driver who actually races it. The roster keys every driver to their real
+        // number, which is also the livery sprite's number, so the timing tower matches the paintwork.
+        var driversByNumber = new Dictionary<int, Driver>();
+        foreach (var d in drivers)
+            if (d.CarNumber > 0) driversByNumber[d.CarNumber] = d;
+
         var parent = new GameObject("AIField").transform;
         parent.SetParent(transform, false);
 
@@ -129,6 +135,11 @@ public class GridSpawner : MonoBehaviour
             if (liveries.Count == 0)
                 Debug.LogWarning($"GridSpawner: no liveries found for '{carsetPrefix}' in Resources.");
         }
+
+        // The player's own paint is out of the AI pool — the field can't contain a second #8 while the
+        // player is racing it, and the player already IS that number's driver.
+        int playerCarNumber = CarIdentity.NumberOf(CarIdentity.FindPlayerCar());
+        if (playerCarNumber >= 0) liveries.RemoveAll(l => l.number == playerCarNumber);
 
         // Driver names from DriverNames (surname pool), instead of the database.
         List<string> namePool = null;
@@ -243,6 +254,27 @@ public class GridSpawner : MonoBehaviour
             }
         }
 
+        // Real-team grouping: cars share a teamId when they share a NASCAR team. The player's team is
+        // playerTeamName when that names a real team, otherwise the team of the first car spawned —
+        // either way TeamSwitchController still has a team 0 to offer control of.
+        var realTeamIds = new Dictionary<string, int>();
+        int nextRealTeamId = 1;
+        string playerRealTeam = null;
+        if (playerTeammates > 0)
+        {
+            // An explicit playerTeamName wins when it names a real team; otherwise the player's own livery
+            // decides — driving the #8 puts them in that car's team, so their teammates are the real ones.
+            if (!string.IsNullOrEmpty(playerTeamName))
+                foreach (var d in drivers)
+                    if (d.TeamName == playerTeamName) { playerRealTeam = d.TeamName; break; }
+
+            if (playerRealTeam == null)
+            {
+                var playerDriver = RosterLookup.ByCarNumber(playerCarNumber);
+                if (playerDriver != null) playerRealTeam = playerDriver.TeamName;
+            }
+        }
+
         for (int i = 0; i < count; i++)
         {
             var go = Instantiate(carPrefab, parent);
@@ -315,10 +347,16 @@ public class GridSpawner : MonoBehaviour
                 director.Register(stint);
             }
 
+            // The car's number decides the driver: whoever races that number in the roster. Only cars
+            // whose number nobody claims fall back to the shuffled pool.
+            Driver rosterDriver = null;
+            driversByNumber.TryGetValue(carNumber, out rosterDriver);
+
             var binding = go.GetComponent<AIDriverBinding>();
             if (binding == null) binding = go.AddComponent<AIDriverBinding>();
             binding.vehicleInfo = vehicleInfo;
-            if (pool.Count > 0) binding.driver = pool[i % pool.Count];
+            if (rosterDriver != null) binding.driver = rosterDriver;
+            else if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             binding.Apply();
 
             // Wear-based pit strategy (self-gates on green flag). Not in practice — the stint
@@ -327,19 +365,35 @@ public class GridSpawner : MonoBehaviour
             // Fuel so the crew has something to refill (TireModel is auto-added by the dynamic model).
             if (go.GetComponent<FuelTank>() == null) go.AddComponent<FuelTank>();
 
-            // Identity for the position counter / HUD: name from DriverNames, number from the livery.
+            // Identity for the position counter / HUD: the roster driver who runs this number, falling
+            // back to the qualifying grid's captured name and then the surname pool.
             var label = go.GetComponent<DriverLabel>();
             if (label == null) label = go.AddComponent<DriverLabel>();
             label.carset = carsetPrefix;
             label.carNumber = carNumber;
-            label.driverName = gridEntry != null && !string.IsNullOrEmpty(gridEntry.driverName)
-                ? gridEntry.driverName
-                : ((namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "");
+            if (rosterDriver != null)
+                label.driverName = !string.IsNullOrEmpty(rosterDriver.ShortName) ? rosterDriver.ShortName : rosterDriver.LastName;
+            else if (gridEntry != null && !string.IsNullOrEmpty(gridEntry.driverName))
+                label.driverName = gridEntry.driverName;
+            else
+                label.driverName = (namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "";
             if (!string.IsNullOrEmpty(label.driverName)) go.name = $"AI_{label.driverName}_{carNumber}";
 
-            // Teams, in spawn order: the first playerTeammates cars join the player's team (0) — the
-            // ones TeamSwitchController offers control of — then the rest pair up into rival teams.
-            if (playerTeammates > 0 && i < playerTeammates)
+            // Teams: real NASCAR teams when the roster knows one, so teammates on track are actual
+            // teammates. Without roster data, fall back to spawn-order pairing.
+            string realTeam = rosterDriver != null ? rosterDriver.TeamName : null;
+            if (!string.IsNullOrEmpty(realTeam))
+            {
+                if (playerRealTeam == null && playerTeammates > 0) playerRealTeam = realTeam;
+                if (!realTeamIds.TryGetValue(realTeam, out int tid))
+                {
+                    tid = realTeam == playerRealTeam ? 0 : nextRealTeamId++;
+                    realTeamIds[realTeam] = tid;
+                }
+                label.teamId = tid;
+                label.teamName = realTeam;
+            }
+            else if (playerTeammates > 0 && i < playerTeammates)
             {
                 label.teamId = 0;
                 label.teamName = playerTeamName;
@@ -437,6 +491,10 @@ public class GridSpawner : MonoBehaviour
         var pool = new List<Driver>(drivers);
         Shuffle(pool);
 
+        var driversByNumber = new Dictionary<int, Driver>();
+        foreach (var d in drivers)
+            if (d.CarNumber > 0) driversByNumber[d.CarNumber] = d;
+
         var liveries = new List<(int number, Sprite sprite)>();
         if (useCarsetLiveries && !string.IsNullOrEmpty(carsetPrefix))
         {
@@ -464,7 +522,11 @@ public class GridSpawner : MonoBehaviour
             go.transform.localScale = new Vector3(carScale.x, carScale.y, 1f);
 
             int carNumber = (liveries.Count > 0) ? liveries[i % liveries.Count].number : i;
-            string driverName = (namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "";
+            // Same pairing as single player: the number on the car picks the driver who runs it.
+            driversByNumber.TryGetValue(carNumber, out Driver rosterDriver);
+            string driverName = rosterDriver != null
+                ? (!string.IsNullOrEmpty(rosterDriver.ShortName) ? rosterDriver.ShortName : rosterDriver.LastName)
+                : ((namePool != null && namePool.Count > 0) ? namePool[i % namePool.Count] : "");
 
             var splineDriver = go.GetComponent<SplineDriver>();
             if (splineDriver != null)
@@ -509,7 +571,8 @@ public class GridSpawner : MonoBehaviour
             if (binding != null)
             {
                 binding.vehicleInfo = vehicleInfo;
-                if (pool.Count > 0) binding.driver = pool[i % pool.Count];
+                if (rosterDriver != null) binding.driver = rosterDriver;
+                else if (pool.Count > 0) binding.driver = pool[i % pool.Count];
             }
 
             // Configure the brain and place the car on its start spot BEFORE Spawn, so NetworkTransform

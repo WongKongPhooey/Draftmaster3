@@ -534,6 +534,11 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     static bool IsFinishLine(string label) =>
         !string.IsNullOrEmpty(label) && label.ToLowerInvariant().Contains("finish");
 
+    // Same trick as the finish line, on the pit spline: a strip labelled "PitExitLine" is anchored to
+    // TrackInfoV2.PitExitLineDistance so the painted line and PitLimiter's release point can never drift apart.
+    static bool IsPitExitLine(string label) =>
+        !string.IsNullOrEmpty(label) && label.ToLowerInvariant().Replace(" ", "").Contains("pitexit");
+
     void BuildStrips(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)
     {
         if (environment.strips == null || environment.strips.Length == 0) return;
@@ -563,6 +568,16 @@ public class TrackEnvironmentBuilder : MonoBehaviour
                 float band = endAbs - startAbs;
                 startAbs = track.track.startFinishDistance;
                 endAbs = startAbs + (band > 0.01f ? band : 1f);
+            }
+            // The pit exit line lands on the pit spline at the limiter's release distance. Anchored at its END
+            // so the whole painted band sits BEFORE the release point — cross the paint, you're free.
+            else if (track.track != null && IsPitExitLine(strip.label) &&
+                     strip.useSpline == TrackEnvironment.SplineRef.Pit)
+            {
+                float band = endAbs - startAbs;
+                if (band < 0.01f) band = 1f;
+                endAbs = track.track.PitExitLineDistance;
+                startAbs = Mathf.Max(0f, endAbs - band);
             }
 
             if (endAbs <= startAbs) continue;

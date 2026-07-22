@@ -1,12 +1,16 @@
 using UnityEngine;
 
 // On-screen 2×2 tyre readout for the player's car: each corner shows its temperature (background colour:
-// blue = cold, green = optimal, red = overheating) and its wear (dark fill rising from the bottom + %).
+// blue = cold, green = optimal, red = overheating) and its wear (dark fill rising from the bottom;
+// the % is tyre life remaining — 100 fresh, counting down to 0).
 public class TireTempWearUI : MonoBehaviour
 {
     [Tooltip("Tyre model to display. Auto-found from the player's car if left empty.")]
     public TireModel tires;
     public bool autoFindPlayer = true;
+    [Tooltip("Key toggling the tyre readout (iRacing-style F6).")]
+    public KeyCode toggleKey = KeyCode.F6;
+    public bool visible = true;
 
     [Header("Layout")]
     public float cellW = 78f;
@@ -19,6 +23,7 @@ public class TireTempWearUI : MonoBehaviour
 
     void Update()
     {
+        if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) visible = !visible;
         if (tires == null && autoFindPlayer) tires = FindPlayerTires();
     }
 
@@ -36,7 +41,7 @@ public class TireTempWearUI : MonoBehaviour
 
     void OnGUI()
     {
-        if (tires == null) return;
+        if (!visible || tires == null) return;
         if (_tex == null) { _tex = new Texture2D(1, 1); _tex.SetPixel(0, 0, Color.white); _tex.Apply(); }
         if (_style == null)
             _style = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
@@ -59,7 +64,7 @@ public class TireTempWearUI : MonoBehaviour
         Fill(new Rect(x, y + cellH * (1f - w), cellW, cellH * w), new Color(0f, 0f, 0f, 0.45f)); // wear fill
         Outline(new Rect(x, y, cellW, cellH), new Color(0f, 0f, 0f, 0.8f));
 
-        GUI.Label(new Rect(x, y, cellW, cellH), $"{label}\n{t:F0}°C\n{w * 100f:F0}%", _style);
+        GUI.Label(new Rect(x, y, cellW, cellH), $"{label}\n{t:F0}°C\n{(1f - w) * 100f:F0}%", _style);
     }
 
     Color TempColor(float t)

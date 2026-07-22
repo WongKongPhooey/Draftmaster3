@@ -200,6 +200,7 @@ public class RacePositionTracker : MonoBehaviour
         if (e.tf == null) return;
 
         float len, dist;
+        bool rebaseToLine = true;   // false for pit-space distances, which aren't on the main centerline
         if (e.spline != null && e.spline.enabled && e.spline.TrackLength > 0f)
         {
             len = e.spline.TrackLength;
@@ -212,9 +213,20 @@ public class RacePositionTracker : MonoBehaviour
             // distance, matching what AI splines report while on pit. Projecting a pit box onto the MAIN
             // centerline can land just short of the start/finish line — a near-full-lap progress that
             // ranked the parked player car P1.
-            dist = track.IsOnPitSurface(e.tf.position)
+            bool onPit = track.IsOnPitSurface(e.tf.position);
+            rebaseToLine = !onPit;
+            dist = onPit
                 ? track.NearestPitDistance(e.tf.position)
                 : track.NearestCenterlineDistance(e.tf.position);
+        }
+
+        // Distances are measured from the start of segment[0], but the lap rolls at the painted
+        // start/finish line — which sits partway down the main straight on most tracks. Rebase so the
+        // wrap (and therefore the lap count, lap timing and the race finish) happens at the line.
+        if (rebaseToLine && len > 0f)
+        {
+            float sf = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
+            if (sf != 0f) dist = Mathf.Repeat(dist - sf, len);
         }
 
         if (e.hasPrev)

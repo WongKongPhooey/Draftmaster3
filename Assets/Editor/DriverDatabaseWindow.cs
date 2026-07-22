@@ -107,7 +107,8 @@ public class DriverDatabaseWindow : EditorWindow
 
             bool on = i == _selected;
             var style = on ? EditorStyles.boldLabel : EditorStyles.label;
-            if (GUILayout.Button($"{label}  ({d.CurrentAbility})", style)) _selected = i;
+            string num = d.CarNumber > 0 ? $"#{d.CarNumber} " : "";
+            if (GUILayout.Button($"{num}{label}  ({d.CurrentAbility})", style)) _selected = i;
         }
         EditorGUILayout.EndScrollView();
         EditorGUILayout.EndVertical();
@@ -129,8 +130,15 @@ public class DriverDatabaseWindow : EditorWindow
         EditorGUILayout.LabelField("Identity", EditorStyles.boldLabel);
         d.FirstName = EditorGUILayout.TextField("First Name", d.FirstName);
         d.LastName = EditorGUILayout.TextField("Last Name", d.LastName);
+        d.ShortName = EditorGUILayout.TextField("Short Name", d.ShortName);
         d.Nickname = EditorGUILayout.TextField("Nickname", d.Nickname);
         d.Age = EditorGUILayout.IntField("Age", d.Age);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Ride", EditorStyles.boldLabel);
+        d.CarNumber = EditorGUILayout.IntField("Car Number", d.CarNumber);
+        d.TeamName = EditorGUILayout.TextField("Team", d.TeamName);
+        d.Manufacturer = EditorGUILayout.TextField("Manufacturer", d.Manufacturer);
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Track Aptitudes (0-20)", EditorStyles.boldLabel);

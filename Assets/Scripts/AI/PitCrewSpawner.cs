@@ -37,8 +37,12 @@ public class PitCrewSpawner : MonoBehaviour
     [Tooltip("Lateral offset (m) of a wheel station from the box centre.")]
     public float wheelLateral = 1.2f;
 
-    [Tooltip("World height (m) a paper-doll member is normalised to, whatever the library's pixel size. memberScale multiplies on top.")]
-    public float memberHeightM = 1.5f;
+    [Tooltip("World height a paper-doll member is normalised to, whatever the library's pixel size. memberScale multiplies on top. Default matches the on-foot player (an 8px frame at 100 PPU drawn at scale 8), so crew read as the same size as everyone else on foot — the world is metric for cars but the people are drawn smaller than 1:1.")]
+    public float memberHeightM = OnFootPersonHeight;
+
+    // On-foot characters (player, paddock NPCs, autograph fans) all render 0.64 world units tall.
+    // Size generated crew to the same figure or they tower over the player.
+    public const float OnFootPersonHeight = 0.64f;
 
     [Header("Sorting")]
     public string sortingLayerName = "Vehicles";
@@ -165,22 +169,23 @@ public class PitCrewSpawner : MonoBehaviour
         {
             Destroy(layered);
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = Placeholder(fueller ? new Color(0.95f, 0.55f, 0.15f) : new Color(0.2f, 0.5f, 0.95f), 1.4f);
+            sr.sprite = Placeholder(fueller ? new Color(0.95f, 0.55f, 0.15f) : new Color(0.2f, 0.5f, 0.95f), memberHeightM);
             sr.sharedMaterial = UnlitSprite();
             sr.sortingLayerName = sortingLayerName;
             sr.sortingOrder = baseSortingOrder;
         }
 
-        // Held gear, shown only while servicing. The gear sprites are metric (sized in world metres at
+        // Held gear, shown only while servicing. The gear sprites are metric (sized in world units at
         // scale 1), so divide the body normalisation back out of this child's scale and offset.
+        // Placeholder gear is sized off the member so it stays in proportion if memberHeightM is retuned.
         var itemGo = new GameObject("Gear");
         itemGo.transform.SetParent(go.transform, false);
-        itemGo.transform.localPosition = new Vector3(0f, 0.18f, 0f) / bodyScale;
+        itemGo.transform.localPosition = new Vector3(0f, memberHeightM * 0.15f, 0f) / bodyScale;
         itemGo.transform.localScale = Vector3.one * gearScale / bodyScale;
         var item = itemGo.AddComponent<SpriteRenderer>();
         item.sprite = fueller
-            ? (fuelCanSprite != null ? fuelCanSprite : Placeholder(new Color(0.85f, 0.2f, 0.15f), 0.7f))
-            : (wheelSprite != null ? wheelSprite : Placeholder(new Color(0.1f, 0.1f, 0.1f), 0.6f));
+            ? (fuelCanSprite != null ? fuelCanSprite : Placeholder(new Color(0.85f, 0.2f, 0.15f), memberHeightM * 0.45f))
+            : (wheelSprite != null ? wheelSprite : Placeholder(new Color(0.1f, 0.1f, 0.1f), memberHeightM * 0.38f));
         item.sharedMaterial = UnlitSprite();
         item.sortingLayerName = sortingLayerName;
         item.sortingOrder = baseSortingOrder + 6; // gear in front of the member

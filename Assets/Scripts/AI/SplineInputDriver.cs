@@ -89,10 +89,13 @@ public class SplineInputDriver : MonoBehaviour
             new Vector3(_spline.CommandedLocalPos.x, _spline.CommandedLocalPos.y, 0f));
 
         // Place the car on the grid/pit and align heading before handing over to the dynamic model.
-        // While the field is held PreGrid, keep re-seeding: SplineDriver.Rebuild can populate the spline
+        // While the car is held still, keep re-seeding: SplineDriver.Rebuild can populate the spline
         // before its Start computes the real pit-box pose, so a one-shot seed can latch the wrong (origin)
-        // pose on a frozen car. Re-seeding every PreGrid frame pins the car to its box once Start runs.
-        if (!_seeded || RaceStart.Current == RaceStart.Phase.PreGrid)
+        // pose on a frozen car. Re-seeding every held frame pins the car to its box once Start runs, and
+        // SeedPose zeroes the model's velocity so a parked car can't creep or be shoved out of its box by
+        // a neighbour. This tracks IsHeldStill, not the race phase: practice parks cars with parkedHold
+        // while the phase is already Green, so a PreGrid-only test let the whole pit lane roll.
+        if (!_seeded || _spline.IsHeldStill)
         {
             // Tyre components are added by other Start()s after our Awake — keep re-resolving while held.
             if (_tireModel == null) _tireModel = GetComponent<TireModel>();

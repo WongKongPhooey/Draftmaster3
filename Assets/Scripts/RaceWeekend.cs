@@ -30,9 +30,16 @@ public static class RaceWeekend
     // null = no qualifying ran this weekend; the race grid falls back to random order.
     public static List<GridEntry> GridOrder;
 
+    // Monotonic id for "which race weekend is this", bumped by ResetWeekend and persisted so it
+    // survives scene loads and quits. AppearanceConditions scopes its once-per-weekend memory to it.
+    const string WeekendIdKey = "raceweekend.id";
+    public static int WeekendId => UnityEngine.PlayerPrefs.GetInt(WeekendIdKey, 0);
+
     // Fresh weekend (call from menu flow before loading a track scene).
     public static void ResetWeekend()
     {
+        UnityEngine.PlayerPrefs.SetInt(WeekendIdKey, WeekendId + 1);
+        UnityEngine.PlayerPrefs.Save();
         Current = Session.Practice;
         GridOrder = null;
     }

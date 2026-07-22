@@ -21,8 +21,8 @@ public class TeamSwitchController : MonoBehaviour
     public CameraFollow cameraFollow;
 
     [Header("Identity")]
-    [Tooltip("Car number stamped on the original player car's DriverLabel (livery/number stays with the chassis).")]
-    public int playerCarNumber = 3;
+    [Tooltip("Car number stamped on the original player car's DriverLabel (livery/number stays with the chassis). 0 = read it off the car's livery sprite, which is what you want unless the paint and the number deliberately disagree.")]
+    public int playerCarNumber = 0;
 
     [Header("AI Handover")]
     [Tooltip("Steering gain for the AI that inherits a car (SplineInputDriver.steerGain).")]
@@ -35,6 +35,11 @@ public class TeamSwitchController : MonoBehaviour
     public float rosterRefreshSeconds = 1f;
     [Tooltip("Seconds between button label updates (position readouts).")]
     public float labelRefreshSeconds = 0.5f;
+    [Tooltip("Key toggling the TEAM box.")]
+    public KeyCode toggleKey = KeyCode.F3;
+
+    // What RacePositionTracker.playerName reads as when nobody has set a career name.
+    public const string kPlaceholderName = "You";
 
     GameObject _current;                       // the car the human is driving right now
     readonly List<GameObject> _teamCars = new();
@@ -43,6 +48,7 @@ public class TeamSwitchController : MonoBehaviour
     Canvas _canvas;
     RectTransform _panel;
     float _rosterTimer, _labelTimer;
+    bool _hidden;                              // toggleKey; the panel also hides itself in practice/qualifying
 
     public GameObject CurrentCar => _current;
 
@@ -60,8 +66,10 @@ public class TeamSwitchController : MonoBehaviour
 
     void Update()
     {
+        if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) _hidden = !_hidden;
+
         // No roster in practice/qualifying — team cars are parked stint props there.
-        bool available = !RaceWeekend.IsPracticeLike;
+        bool available = !RaceWeekend.IsPracticeLike && !_hidden;
         if (_panel != null && _panel.gameObject.activeSelf != available)
             _panel.gameObject.SetActive(available);
         if (!available) return;
@@ -80,16 +88,42 @@ public class TeamSwitchController : MonoBehaviour
         if (playerCar == null) return;
         var label = playerCar.GetComponent<DriverLabel>();
         if (label == null) label = playerCar.AddComponent<DriverLabel>();
+
+        // The number comes off the paintwork, so the player is whoever really races that car.
+        if (label.carNumber == 0)
+        {
+            int fromLivery = playerCarNumber > 0 ? playerCarNumber : CarIdentity.NumberOf(playerCar);
+            if (fromLivery >= 0) label.carNumber = fromLivery;
+        }
+
+        var spawner = FindObjectOfType<GridSpawner>();
+        if (string.IsNullOrEmpty(label.carset) && spawner != null) label.carset = spawner.carsetPrefix;
+
+        var rosterDriver = RosterLookup.ByCarNumber(label.carNumber);
+
         if (string.IsNullOrEmpty(label.driverName))
         {
+            // A real career name wins; otherwise the player takes the identity of the driver who races
+            // this car. "You" is the unconfigured placeholder, not a name, so it doesn't count as set.
             var rt = RacePositionTracker.Instance;
-            label.driverName = rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
+            string careerName = rt != null ? rt.playerName : null;
+            bool haveCareerName = !string.IsNullOrEmpty(careerName) && careerName != kPlaceholderName;
+
+            if (haveCareerName) label.driverName = careerName;
+            else if (rosterDriver != null)
+                label.driverName = !string.IsNullOrEmpty(rosterDriver.ShortName) ? rosterDriver.ShortName : rosterDriver.LastName;
+            else label.driverName = kPlaceholderName;
+
+            // Keep the position HUD and timing tower calling the player the same thing.
+            if (rt != null && !haveCareerName) rt.playerName = label.driverName;
         }
-        if (label.carNumber == 0) label.carNumber = playerCarNumber;
+
         label.teamId = 0;
-        var spawner = FindObjectOfType<GridSpawner>();
         if (string.IsNullOrEmpty(label.teamName))
-            label.teamName = spawner != null ? spawner.playerTeamName : "Your Team";
+        {
+            if (rosterDriver != null && !string.IsNullOrEmpty(rosterDriver.TeamName)) label.teamName = rosterDriver.TeamName;
+            else label.teamName = spawner != null ? spawner.playerTeamName : "Your Team";
+        }
     }
 
     // Team roster = the original player car + every team-0 car that can actually be driven by the human

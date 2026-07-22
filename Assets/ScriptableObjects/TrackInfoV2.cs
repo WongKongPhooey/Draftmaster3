@@ -64,8 +64,10 @@ public class TrackInfoV2 : ScriptableObject
     public float pitExitOffset = 0f;
     [HideInInspector] public float pitEntryDistance;
     [HideInInspector] public float pitExitDistance;
-    [Tooltip("Pit-lane speed limit in mph. Informational for now.")]
+    [Tooltip("Pit-lane speed limit in mph. Enforced on the AI (SplineDriver) and on the player (PitLimiter) between the pit entry and the pit exit line.")]
     public int pitSpeedLimit = 50;
+    [Tooltip("Distance along the PIT LANE (m) of the pit exit line — where the speed limit ends and the driver may accelerate. 0 = the end of the pit lane. The painted line (a strip labelled 'PitExitLine') anchors here too.")]
+    public float pitExitLineDistance = 0f;
 
     void OnValidate()
     {
@@ -82,6 +84,22 @@ public class TrackInfoV2 : ScriptableObject
         for (int i = 0; i < idx; i++) d += segments[i].length;
         return d;
     }
+
+    // Total authored length of the pit lane (m), 0 when the track has no pit lane.
+    public float PitLaneLength
+    {
+        get
+        {
+            float d = 0f;
+            if (pitSegments != null) for (int i = 0; i < pitSegments.Length; i++) d += pitSegments[i].length;
+            return d;
+        }
+    }
+
+    // Where the speed limit ends, as a distance along the pit lane. An unauthored (0) value means the very
+    // end of the lane, which is the safe default — the limiter then holds until the car is back on track.
+    public float PitExitLineDistance =>
+        pitExitLineDistance > 0.01f ? Mathf.Min(pitExitLineDistance, PitLaneLength) : PitLaneLength;
 
     // pitEntryDistance folded into [0, lap). The bake anchors to the END of the entry segment plus the
     // offset, so an entry authored on the final segment lands past the lap total — raw gap maths against

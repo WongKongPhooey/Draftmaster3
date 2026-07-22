@@ -205,6 +205,12 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // Soft forward-speed cap (m/s). Infinity = no cap. Set by FormationDirector to hold the player to
     // pace-car speed during a caution/formation lap. Caps forward speed only — reverse and slides are untouched.
     [HideInInspector] public float speedGovernorMps = Mathf.Infinity;
+    // Pit-lane speed cap (m/s), owned by PitLimiter. Deliberately a SEPARATE field from speedGovernorMps:
+    // FormationDirector / PaceLapAssist / NetworkedCarBindings all assign that one outright, so sharing it
+    // would let a pace-lap release lift the pit limiter (or vice versa). The tighter of the two always wins.
+    [HideInInspector] public float pitLimiterMps = Mathf.Infinity;
+    // Forward-speed ceiling actually applied this step. Infinity = free.
+    public float SpeedCapMps => Mathf.Min(speedGovernorMps, pitLimiterMps);
     float _inSteer, _inThrottle, _inBrake;        // last externally-supplied inputs
     bool _wasEmitting;      // trail emit state last step (for streak-free re-enable)
     TrailRenderer _trailL, _trailR; // rear tyre trails (grass)
@@ -576,7 +582,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             else if (_vx < 0f) _vx = Mathf.Min(0f, _vx + resist);
             _vx = Mathf.Clamp(_vx, -topMps, topMps);
             if (reversing) _vx = Mathf.Max(_vx, -reverseMaxSpeed); // cap input-driven reverse, not spin momentum
-            if (_vx > speedGovernorMps) _vx = speedGovernorMps;    // formation/caution pace cap (forward only)
+            float cap = SpeedCapMps;                               // formation/caution pace cap + pit limiter
+            if (_vx > cap) _vx = cap;                              // forward only — reverse and slides untouched
 
             // Integrate heading by yaw rate.
             _headingDeg += _r * Mathf.Rad2Deg * h;

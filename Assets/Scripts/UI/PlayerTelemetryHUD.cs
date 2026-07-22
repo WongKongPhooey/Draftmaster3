@@ -11,7 +11,7 @@ public class PlayerTelemetryHUD : MonoBehaviour
     [Tooltip("Start visible.")]
     public bool visible = true;
     [Tooltip("Key to toggle the overlay on/off.")]
-    public KeyCode toggleKey = KeyCode.F3;
+    public KeyCode toggleKey = KeyCode.F7;   // F3 is the TEAM box (iRacing layout)
     [Tooltip("Slip angle (deg) treated as the limit for the colour ramp.")]
     public float slipLimitDeg = 8f;
 

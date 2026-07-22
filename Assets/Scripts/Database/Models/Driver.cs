@@ -18,7 +18,19 @@ namespace Draftmaster.Data
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Nickname { get; set; }
+        // Timing-tower label — surname, disambiguated where a season has two of them (e.g. "A.Dillon"/"T.Dillon").
+        // Falls back to LastName when empty.
+        public string ShortName { get; set; }
         public int Age { get; set; }
+
+        // --- Ride ---
+        // Car number this driver races. Matches the carset livery sprite (Resources/<carset>livery<CarNumber>),
+        // so the grid can pair a livery with the driver who actually runs it. 0 = no assigned ride.
+        public int CarNumber { get; set; }
+        // Team the driver races for, e.g. "Hendrick Motorsports". Empty for unsigned/new-gen drivers.
+        public string TeamName { get; set; }
+        // Three-letter manufacturer code matching DriverNames.allManufacturers (CHV/FRD/TYT).
+        public string Manufacturer { get; set; }
 
         // --- Skill stats (0-20) ---
         // Track-type aptitudes
