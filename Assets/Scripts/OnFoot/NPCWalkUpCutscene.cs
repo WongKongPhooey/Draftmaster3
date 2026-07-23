@@ -24,6 +24,10 @@ public class NPCWalkUpCutscene : MonoBehaviour
     [Tooltip("Rotation added to the movement angle so the sprite's drawn facing lines up (walk art faces -Y, so +90).")]
     public float spriteFacingOffsetDeg = 90f;
 
+    // Fired once the conversation has ended (or the cutscene aborted), just before this object destroys
+    // itself. PitLaneStart uses it to put the next objective on screen.
+    public System.Action Finished;
+
     enum Phase { Idle, WalkUp, Talking, Done }
     Phase _phase = Phase.Idle;
     Rigidbody2D _npcRb;
@@ -64,6 +68,8 @@ public class NPCWalkUpCutscene : MonoBehaviour
                 if (npc == null || !npc.IsTalking)
                 {
                     _phase = Phase.Done;
+                    var done = Finished; Finished = null;
+                    done?.Invoke();
                     Destroy(gameObject); // one-time scene beat; takes any sibling trigger with it
                 }
                 break;
@@ -141,6 +147,8 @@ public class NPCWalkUpCutscene : MonoBehaviour
         if (player != null) player.MovementLocked = false;
         CinematicBars.PopForced();
         _phase = Phase.Done;
+        var done = Finished; Finished = null;
+        done?.Invoke();
         Destroy(gameObject);
     }
 }

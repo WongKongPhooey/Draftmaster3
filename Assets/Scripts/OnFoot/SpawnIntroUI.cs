@@ -26,11 +26,18 @@ public class SpawnIntroUI : MonoBehaviour
     [Tooltip("Don't show a marker's distance label when the target is closer than this (m).")]
     public float distanceLabelMinMetres = 15f;
 
+    [Header("Marker Fly-In")]
+    [Tooltip("A marker starts oversized in the middle of the screen and flies out to its resting spot, to pull the eye toward the objective. Seconds that move takes.")]
+    public float markerIntroTime = 0.7f;
+    [Tooltip("Size multiplier at the start of the fly-out.")]
+    public float markerIntroScale = 3f;
+
     class Marker
     {
         public Transform target;
         public Sprite icon;
         public float hideWithinMetres;
+        public float introTimer;
     }
 
     string _title;
@@ -61,6 +68,22 @@ public class SpawnIntroUI : MonoBehaviour
         _markers.RemoveAll(m => m.target == target);
     }
 
+    // Replay a marker's fly-in. Called when a beat ends and its objective becomes the live one, so the
+    // eye gets pulled from the middle of the screen out to the direction the player has to walk.
+    public void PulseMarker(Transform target)
+    {
+        for (int i = 0; i < _markers.Count; i++)
+            if (_markers[i].target == target) _markers[i].introTimer = 0f;
+    }
+
+    // Re-use the title card as an objective banner ("HEAD TO YOUR CAR") — same fade-in/hold/fade-out,
+    // restarted from the top. Called when a beat finishes and the player needs pointing at the next thing.
+    public void ShowTitle(string text)
+    {
+        _title = text;
+        _titleTimer = 0f;
+    }
+
     // "WatkinsGlen" -> "Watkins Glen". For scene/asset names used as a title fallback.
     public static string Nicify(string s)
     {
@@ -77,6 +100,7 @@ public class SpawnIntroUI : MonoBehaviour
     void Update()
     {
         _titleTimer += Time.unscaledDeltaTime; // title keeps its rhythm even if the game gets paused
+        for (int i = 0; i < _markers.Count; i++) _markers[i].introTimer += Time.unscaledDeltaTime;
     }
 
     void OnGUI()
@@ -128,48 +152,65 @@ public class SpawnIntroUI : MonoBehaviour
                             gui.x >= edgeMargin && gui.x <= Screen.width - edgeMargin &&
                             gui.y >= edgeMargin && gui.y <= Screen.height - edgeMargin;
 
+            // Where the marker lives once it has settled, plus the direction it points when edge-clamped.
+            Vector2 rest;
+            Vector2 dir = Vector2.zero;
             if (onScreen)
             {
-                DrawIcon(new Vector2(gui.x, gui.y - iconSize), m.icon);
-                if (dist >= distanceLabelMinMetres)
-                    DrawDistance(new Vector2(gui.x, gui.y - iconSize + iconSize * 0.75f), dist);
+                rest = new Vector2(gui.x, gui.y - iconSize);
             }
             else
             {
                 // Clamp to the screen edge; the arrow points from the marker toward the real position.
-                Vector2 clamped = new Vector2(
+                rest = new Vector2(
                     Mathf.Clamp(gui.x, edgeMargin, Screen.width - edgeMargin),
                     Mathf.Clamp(gui.y, edgeMargin, Screen.height - edgeMargin));
-                Vector2 dir = gui - clamped;
+                dir = gui - rest;
                 if (dir.sqrMagnitude < 1f) dir = Vector2.right;
-                float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg; // GUI degrees, y-down
+            }
 
-                // Arrow on the far side of the icon, pointing out toward the target.
-                Vector2 arrowPos = clamped + dir.normalized * (iconSize * 0.5f + 12f);
+            // Fly-in: oversized in the middle of the screen, then shrinking and sliding out to `rest`.
+            // Eased so it leaves the centre fast and settles softly at the edge.
+            float t = markerIntroTime > 0f ? Mathf.Clamp01(m.introTimer / markerIntroTime) : 1f;
+            float ease = 1f - (1f - t) * (1f - t);
+            bool settled = t >= 1f;
+            float scale = Mathf.Lerp(markerIntroScale, 1f, ease);
+            Vector2 pos = settled
+                ? rest
+                : Vector2.Lerp(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f), rest, ease);
+
+            // Arrow and distance are read-at-a-glance detail — they'd only be clutter mid-flight.
+            if (settled && dir != Vector2.zero)
+            {
+                float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg; // GUI degrees, y-down
+                Vector2 arrowPos = pos + dir.normalized * (iconSize * 0.5f + 12f);
                 var mtx = GUI.matrix;
                 GUIUtility.RotateAroundPivot(ang, arrowPos);
                 GUI.color = Color.white;
                 GUI.DrawTexture(new Rect(arrowPos.x - 11f, arrowPos.y - 11f, 22f, 22f), _arrow);
                 GUI.matrix = mtx;
-
-                DrawIcon(clamped, m.icon);
-                DrawDistance(new Vector2(clamped.x, clamped.y + iconSize * 0.75f), dist);
             }
+
+            DrawIcon(pos, m.icon, scale);
+
+            if (settled && (!onScreen || dist >= distanceLabelMinMetres))
+                DrawDistance(new Vector2(pos.x, pos.y + iconSize * 0.75f), dist);
         }
         GUI.color = Color.white;
     }
 
-    // Icon centred on pos, aspect kept, over a soft dark backing plate.
-    void DrawIcon(Vector2 pos, Sprite icon)
+    // Icon centred on pos, aspect kept, over a soft dark backing plate. `sizeMul` drives the fly-in.
+    void DrawIcon(Vector2 pos, Sprite icon, float sizeMul = 1f)
     {
-        float plate = iconSize + 10f;
+        float size = iconSize * sizeMul;
+        float plate = size + 10f * sizeMul;
         GUI.color = new Color(0f, 0f, 0f, 0.55f);
         GUI.DrawTexture(new Rect(pos.x - plate * 0.5f, pos.y - plate * 0.5f, plate, plate), _px);
         GUI.color = Color.white;
 
         if (icon == null) return;
         Rect tr = icon.textureRect;
-        float scale = iconSize / Mathf.Max(tr.width, tr.height);
+        float scale = size / Mathf.Max(tr.width, tr.height);
         float w = tr.width * scale, h = tr.height * scale;
         Rect uv = new Rect(tr.x / icon.texture.width, tr.y / icon.texture.height,
                            tr.width / icon.texture.width, tr.height / icon.texture.height);

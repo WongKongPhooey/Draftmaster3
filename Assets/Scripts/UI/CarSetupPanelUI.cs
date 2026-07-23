@@ -36,6 +36,9 @@ public class CarSetupPanelUI : MonoBehaviour
     CarSetup _setup;
     Action<CarSetup> _onConfirm;
     bool _confirmed;
+    CursorLockMode _prevCursorLock;
+    bool _prevCursorVisible;
+    int _openFrame = -1;
 
     // Is a setup panel currently up? Callers use this to hold the car still while the driver decides.
     public static bool IsOpen { get; private set; }
@@ -53,6 +56,8 @@ public class CarSetupPanelUI : MonoBehaviour
             return null;
         }
 
+        EnsureEventSystem();
+
         var go = Instantiate(prefab);
         go.name = "CarSetupPanel";
         var ui = go.GetComponent<CarSetupPanelUI>();
@@ -61,11 +66,23 @@ public class CarSetupPanelUI : MonoBehaviour
         return ui;
     }
 
+    // The racing scenes have no EventSystem (nothing in them is clickable), so the panel's buttons and
+    // sliders would be dead without one.
+    static void EnsureEventSystem()
+    {
+        if (UnityEngine.EventSystems.EventSystem.current != null) return;
+        var es = new GameObject("EventSystem");
+        es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+    }
+
     void Awake() => ResolveRefs();
 
     void OnDestroy()
     {
         if (IsOpen) IsOpen = false;
+        Cursor.lockState = _prevCursorLock;
+        Cursor.visible = _prevCursorVisible;
     }
 
     void Bind(CarSetup setup, Action<CarSetup> onConfirm)
@@ -73,6 +90,13 @@ public class CarSetupPanelUI : MonoBehaviour
         _setup = setup.Clone();
         _onConfirm = onConfirm;
         IsOpen = true;
+        _openFrame = Time.frameCount;
+
+        // The driving scenes hide the pointer; the panel needs it back to click tyres and drag sliders.
+        _prevCursorLock = Cursor.lockState;
+        _prevCursorVisible = Cursor.visible;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
 
         ResolveRefs();
 
@@ -106,6 +130,9 @@ public class CarSetupPanelUI : MonoBehaviour
     void Update()
     {
         if (_confirmed) return;
+        // The button press that closed the crew chief's last line is still "pressed this frame" when the
+        // panel opens — without this guard a gamepad player confirms the default setup instantly.
+        if (Time.frameCount <= _openFrame) return;
         // Confirm from the keyboard/pad too — the driver is sat in the car, not on a mouse.
         var kb = Keyboard.current;
         if (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) Confirm();

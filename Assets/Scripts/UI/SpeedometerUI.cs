@@ -26,8 +26,16 @@ public class SpeedometerUI : MonoBehaviour
     [Header("Authored children (auto-wired in editor)")]
     public RectTransform needle;
     public Text speedText;
+    [Tooltip("Optional pit-limiter chip under the dial. Shows the limit while the limiter is armed and warns when the driver speeds in the lane with it off.")]
+    public Text limiterText;
+
+    [Header("Pit limiter chip")]
+    public Color limiterArmedColor = new Color(0.35f, 0.85f, 1f);
+    public Color limiterSpeedingColor = new Color(1f, 0.35f, 0.25f);
+    public Color limiterOffColor = new Color(1f, 0.8f, 0.25f);
 
     float _displayedMph;
+    PitLimiter _limiter;
 
     void Awake() => ResolveRefs();
 
@@ -44,6 +52,35 @@ public class SpeedometerUI : MonoBehaviour
         float t = Mathf.Clamp01(_displayedMph / Mathf.Max(maxMph, 1f));
         needle.localEulerAngles = new Vector3(0, 0, Mathf.Lerp(minNeedleAngle, maxNeedleAngle, t));
         if (speedText != null) speedText.text = Mathf.RoundToInt(_displayedMph).ToString();
+
+        UpdateLimiterChip();
+    }
+
+    // Pit-limiter state, on the dial where the driver is already looking. Blank outside the pit lane.
+    void UpdateLimiterChip()
+    {
+        if (limiterText == null) return;
+
+        if (_limiter == null || _limiter.gameObject != target.gameObject)
+            _limiter = target.GetComponent<PitLimiter>();
+
+        if (_limiter == null || !_limiter.InPitZone) { limiterText.text = ""; return; }
+
+        if (_limiter.Speeding)
+        {
+            limiterText.text = $"SPEEDING — LIMIT {Mathf.RoundToInt(_limiter.LimitMph)}";
+            limiterText.color = limiterSpeedingColor;
+        }
+        else if (_limiter.Armed)
+        {
+            limiterText.text = $"PIT LIMITER  {Mathf.RoundToInt(_limiter.LimitMph)}";
+            limiterText.color = limiterArmedColor;
+        }
+        else
+        {
+            limiterText.text = $"LIMITER OFF — LIMIT {Mathf.RoundToInt(_limiter.LimitMph)}";
+            limiterText.color = limiterOffColor;
+        }
     }
 
     MonoBehaviour FindPlayer()
@@ -84,6 +121,11 @@ public class SpeedometerUI : MonoBehaviour
         {
             var t = transform.Find("Dial/SpeedText");
             if (t != null) speedText = t.GetComponent<Text>();
+        }
+        if (limiterText == null)
+        {
+            var t = transform.Find("Dial/LimiterText");
+            if (t != null) limiterText = t.GetComponent<Text>();
         }
     }
 
