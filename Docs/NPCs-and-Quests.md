@@ -88,6 +88,73 @@ each other; typewriter speech bubbles handle display.
 For branching dialogue there is `InkNPCInteractable` (compiled Ink .json + DialogueHandler
 canvases from the Phoenix era), but the SpeechBubble path above is the proven one in spline scenes.
 
+### Player choices mid-conversation
+
+**`DialogueChoiceUI`** is a modal "pick one line" panel for a conversation that needs an answer:
+
+```csharp
+DialogueChoiceUI.Open(this, "So what do you want to be?", options, i => Picked(i));
+```
+
+W/S (stick, d-pad, or mouse) moves the selection, E/Space/Enter/gamepad-A answers. It's IMGUI, like
+`SpawnIntroUI` and the debug panels — no prefab, no canvas wiring. The pick is dispatched from `Update`,
+never from `OnGUI`, so the callback can safely open the next speech bubble.
+
+Rules for the calling NPC (see `CareerPathNPC` for the working example):
+
+- Override `IsTalking` to include "a choice of mine is open", or `OnFootController` unlocks the player and
+  they walk off mid-question.
+- Swallow interact presses for a frame or two after the answer lands — the key that answered the choice is
+  the same key that advances dialogue, and the controller reads it independently.
+- Build a branching conversation by swapping `lines` and calling `base.Interact()` again per beat; the base
+  class restarts at index 0 whenever it isn't already talking.
+- The panel cancels itself if its owner is destroyed or disabled, so poll it (`DialogueChoiceUI.IsOpen &&
+  DialogueChoiceUI.Owner == this`) and end the conversation if it vanished.
+
+---
+
+## 2a. The career-path opening choice
+
+**`CareerPathNPC`** is the paddock old-hand who opens a career. He asks "do you like racing?" (flavour),
+then "what do you want to be when you grow up?" — and that second answer is the career's premise. Four
+answers, one per `CareerPath.Path`:
+
+| Answer | Path | Leads with |
+|---|---|---|
+| "I want to be on a championship winning pit crew" | `PitCrew` | +8 `career.pitcraft` |
+| "I want to be a championship winning driver" | `Driver` | +9 `career.driving` |
+| "I want to own my own race team" | `TeamOwner` | +8 `career.business` |
+| "I want to scout the world's best young drivers" | `Scout` | +9 `career.scouting` |
+
+**`CareerPath`** (`Assets/Scripts/Progression/`, own assembly `Draftmaster.Progression` so the maths is
+EditMode-testable) persists the answer in PlayerPrefs (`career.path`) and pays out the starting stats
+**once** (`career.path.applied`):
+
+- Every path spends the same `StartingStatBudget` (17) across the five career attributes —
+  `career.driving`, `career.pitcraft`, `career.engineering`, `career.business`, `career.scouting` — so the
+  choice is a shape, not a power level. They're written as ordinary `PlayerStatsLedger` counters, so a
+  `StatThreshold` quest or an `AppearanceConditions.statKey` can read them with no extra plumbing.
+- It also nudges `FanAppeal` (`StartingFanAppealBonus`): the kid who wanted to drive starts with a name.
+
+**Gating future opportunities on the answer** is what `AppearanceConditions.careerPaths` is for — leave it
+empty for "any path", or list the paths a beat is meant for:
+
+```csharp
+public AppearanceConditions appearance = new AppearanceConditions
+{
+    careerPaths = new[] { CareerPath.Path.TeamOwner, CareerPath.Path.Scout },
+};
+```
+
+**`CareerPathNPCSpawner`** self-installs him into the on-foot paddock flow (single player + `PitLaneStart`
++ a spline `TrackBuilder`, same gate as `DriverMotorhomeLot`), stood out from the player's RV door on the
+opposite side to the race engineer's walk-up beat and clamped inside the `PaddockBoundary`. In the demo
+he's simply there, out of context, until career mode owns this moment; once the choice is made he stays and
+switches to small talk (`stayAfterChoosing`).
+
+The answer is once per save, so testing it needs **Draftmaster > NPCs > Clear Career Path Choice**, which
+un-answers the question and refunds the stats it paid out.
+
 ---
 
 ## 3. Side Quests

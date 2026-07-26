@@ -4,7 +4,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Draftmaster.Fans"
+        "Draftmaster.Fans",
+        "Draftmaster.Progression"
     ],
     "includePlatforms": [
         "Editor"

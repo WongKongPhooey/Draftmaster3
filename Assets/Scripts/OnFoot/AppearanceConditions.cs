@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Draftmaster.Progression;
 
 // Authorable "should this NPC (or cutscene, or scene beat) show up right now?" rule block.
 //
@@ -60,6 +61,10 @@ public class AppearanceConditions
     [Tooltip("Maximum value of statKey (inclusive). Leave at int.MaxValue for no upper bound.")]
     public int statMax = int.MaxValue;
 
+    [Header("Career path")]
+    [Tooltip("Career paths this beat is for — the answer the player gave the paddock veteran at the start of their career (CareerPathNPC). Empty = any path, including a save that was never asked. This is how an NPC only offers an opportunity to, say, a would-be team owner.")]
+    public CareerPath.Path[] careerPaths;
+
     [Header("Quest / inventory")]
     [Tooltip("Quest id this depends on. Empty = no quest check.")]
     public string questId = "";
@@ -90,6 +95,7 @@ public class AppearanceConditions
         if (!Matches(scenes, SceneManager.GetActiveScene().name)) return false;
         if (!SeriesAllowed()) return false;
         if (!StatAllowed()) return false;
+        if (!CareerPath.Allows(careerPaths)) return false;
         if (!QuestAllowed()) return false;
         if (!string.IsNullOrEmpty(requiredItemId) && !PlayerInventory.Has(requiredItemId)) return false;
         if (AlreadySeen()) return false;
