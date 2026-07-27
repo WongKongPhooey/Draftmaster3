@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 using Draftmaster.Data;
 using Draftmaster.Fans;
 
-// Play-time driver dossier. A draggable on-screen panel (HandlingTuner's sibling — press F2) showing
+// Play-time driver dossier. A draggable on-screen panel (HandlingTuner's sibling — press F5) showing
 // everything the game knows about the player's driver: identity (name / number / team from the car's
 // DriverLabel), the matching Drivers-table row with all skill stats and ability ratings, fan appeal with
 // autograph-fan diagnostics, the career ledger counters, and current rivalry standings.
@@ -15,7 +15,7 @@ public class DriverInfoPanel : MonoBehaviour
 {
     public static DriverInfoPanel Instance { get; private set; }
 
-    public bool startVisible = true;
+    public bool startVisible = false;
     public Key toggleKey = Key.F5;   // F2 is the leaderboard (iRacing layout)
     [Tooltip("Seconds between data refreshes (DB lookup, ledger read, scene scans).")]
     public float refreshSeconds = 2f;
@@ -150,7 +150,7 @@ public class DriverInfoPanel : MonoBehaviour
     {
         if (!_show) return;
         EnsureStyles();
-        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow, "Driver Info  (F2)");
+        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow, "Driver Info  (F5)");
     }
 
     void DrawWindow(int id)

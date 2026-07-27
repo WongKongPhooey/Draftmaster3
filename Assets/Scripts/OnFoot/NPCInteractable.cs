@@ -16,6 +16,10 @@ public class NPCInteractable : MonoBehaviour
     public float interactRange = 2.2f;
     [Tooltip("Loop back to first line when the conversation ends, or stay finished.")]
     public bool repeatable = true;
+    [Tooltip("World height (m) this speaker's bubble floats above them. Raise it for a talker the size of a car, or the box sits inside the bodywork. 0 = SpeechBubble's own default.")]
+    public float bubbleHeadHeight = 0f;
+    [Tooltip("Turn to face the player when the conversation opens. Off for a speaker whose transform means something — a driver sat in a parked car can't swivel the car round, and its heading is read back when someone drives it.")]
+    public bool turnsToFace = true;
 
     int _index;
     bool _talking;
@@ -29,6 +33,21 @@ public class NPCInteractable : MonoBehaviour
 
     // Called by the interacting controller right before Interact() so #player lines can target the player's bubble.
     public void SetInteractor(Transform interactor) => _interactor = interactor;
+
+    // Who this NPC is currently talking to (null when nobody has engaged). PaddockWalker reads it to
+    // stand still and turn toward whoever stopped it.
+    public Transform Interactor => _interactor;
+
+    // Name shown over the driver's own bubble on "#player" lines. The position tracker holds the
+    // career name; before it exists (on foot, pre-race) fall back to a neutral label.
+    public static string PlayerSpeakerName
+    {
+        get
+        {
+            var rt = RacePositionTracker.Instance;
+            return rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
+        }
+    }
 
     // Returns true while a conversation is ongoing (caller should keep focus).
     public virtual bool Interact()
@@ -80,11 +99,15 @@ public class NPCInteractable : MonoBehaviour
         }
         else
         {
-            if (_npcBubble == null) _npcBubble = SpeechBubble.Attach(transform);
+            if (_npcBubble == null)
+            {
+                _npcBubble = SpeechBubble.Attach(transform);
+                if (bubbleHeadHeight > 0f) _npcBubble.headHeight = bubbleHeadHeight;
+            }
             _playerBubble?.Hide();
             _activeBubble = _npcBubble;
         }
-        _activeBubble.Speak(raw);
+        _activeBubble.Speak(raw, playerLine ? PlayerSpeakerName : speakerName);
     }
 
     public void EndConversation()

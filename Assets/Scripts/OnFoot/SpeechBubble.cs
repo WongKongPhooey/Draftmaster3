@@ -18,11 +18,15 @@ public class SpeechBubble : MonoBehaviour
     public float headHeight = 0.75f;               // world metres above the actor's position
     public int wrapChars = 34;                     // soft word-wrap width (characters per line)
     public Vector2 padding = new Vector2(0.18f, 0.12f); // box border around the text block, per side
+    [Tooltip("Gap (world m) between the top of the box and the speaker's name sat above it.")]
+    public float nameGap = 0.045f;
+    [Tooltip("Colour of the speaker-name line above the box.")]
+    public Color nameColor = new Color(1f, 0.83f, 0.42f, 1f);
     [Tooltip("How far in front of the actor (negative z, toward the camera) the bubble sits. Must clear whatever the actor is standing on — the opaque z=0 ground depth-tests the box away without this.")]
     public float zLift = 0.6f;
 
     Transform _actor;
-    TextMesh _label;
+    TextMesh _label, _nameLabel;
     MeshRenderer _labelRenderer;
     SpriteRenderer _bg;
     Coroutine _reveal;
@@ -70,12 +74,28 @@ public class SpeechBubble : MonoBehaviour
         _labelRenderer = labelGo.GetComponent<MeshRenderer>();
         _labelRenderer.sortingLayerName = "Vehicles";
         _labelRenderer.sortingOrder = 61;
+
+        // Who's talking, in a smaller face sat above the box — so a paddock full of named drivers
+        // reads at a glance without a UI panel. Positioned in Speak, once the box is sized.
+        var nameGo = new GameObject("Name");
+        nameGo.transform.SetParent(transform, false);
+        _nameLabel = nameGo.AddComponent<TextMesh>();
+        _nameLabel.anchor = TextAnchor.LowerLeft;
+        _nameLabel.alignment = TextAlignment.Left;
+        _nameLabel.fontSize = 72;
+        _nameLabel.characterSize = 0.0135f;   // ~60% of the dialogue face
+        _nameLabel.color = nameColor;
+        var nameRenderer = nameGo.GetComponent<MeshRenderer>();
+        nameRenderer.sortingLayerName = "Vehicles";
+        nameRenderer.sortingOrder = 61;
     }
 
-    public void Speak(string text)
+    // speaker names the actor talking; empty hides the name line entirely.
+    public void Speak(string text, string speaker = null)
     {
         gameObject.SetActive(true);
         _full = WordWrap(text, wrapChars);
+        SetSpeaker(speaker);
 
         // Size the box to the finished line once, so it doesn't pulse while the text types in:
         // show the full text, measure it, then wind back to empty and reveal.
@@ -85,8 +105,23 @@ public class SpeechBubble : MonoBehaviour
         _textOrigin = new Vector2(-b.x * 0.5f, b.y * 0.5f); // text block centred in the box, left-aligned
         _label.transform.localPosition = new Vector3(_textOrigin.x, _textOrigin.y, -0.01f);
 
+        // Name hangs off the box's top-left corner, so it stays glued to the box however wide the line is.
+        if (_nameLabel != null && _nameLabel.gameObject.activeSelf)
+            _nameLabel.transform.localPosition =
+                new Vector3(-_boxSize.x * 0.5f + padding.x * 0.5f, _boxSize.y * 0.5f + nameGap, -0.01f);
+
         if (_reveal != null) StopCoroutine(_reveal);
         _reveal = StartCoroutine(Reveal());
+    }
+
+    void SetSpeaker(string speaker)
+    {
+        if (_nameLabel == null) return;
+        bool show = !string.IsNullOrEmpty(speaker);
+        _nameLabel.gameObject.SetActive(show);
+        if (!show) return;
+        _nameLabel.text = speaker;
+        _nameLabel.color = nameColor;
     }
 
     // First press while typing fills the line instantly (instead of advancing the conversation).

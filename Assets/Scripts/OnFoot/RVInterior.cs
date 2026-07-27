@@ -184,6 +184,8 @@ public class RVInterior : MonoBehaviour
         go.transform.localPosition = new Vector3(unit.x, unit.y, kPropZ);
         var sat = go.AddComponent<SatnavInteractable>();
         sat.interactRange = satnavRange;
+        sat.speakerName = "Satnav";   // shown above its dialogue; the base default ("Crew Member") is nobody here
+        sat.turnsToFace = false;      // a fitted device doesn't turn to look at you
     }
 
     void BuildMask(Transform parent)

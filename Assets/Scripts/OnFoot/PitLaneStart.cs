@@ -57,11 +57,16 @@ public class PitLaneStart : MonoBehaviour
     public float greeterBehind = 1.5f;
 
     [Header("RV Door Cutscene")]
-    [Tooltip("When spawning at the RV, stand a crew member outside and play a walk-up cutscene as the player steps out the door: player freezes, bars slide in, the NPC walks over, both face each other, dialogue opens. These conditions decide WHEN he's there — by default once per race weekend, not every time you press Play.")]
+    [Tooltip("When spawning at the RV, stand a crew member outside and play a walk-up cutscene as the player steps out the door: player freezes, bars slide in, the NPC walks over, both face each other, dialogue opens. These conditions decide WHEN he's there — practice only (he's briefing you at the start of the weekend), once per race weekend, not every time you press Play.")]
     public AppearanceConditions rvNpcAppearance = new AppearanceConditions
     {
         repeat = AppearanceConditions.Repeat.OncePerWeekend,
         saveKey = "rv.door.intro",
+        // Friday-morning beat: he's there to hand the weekend over, so he has no business
+        // turning up before qualifying or the race.
+        inPractice = true,
+        inQualifying = false,
+        inRace = false,
     };
     [Tooltip("Name shown for the RV-door NPC's dialogue.")]
     public string rvNpcName = "Race Engineer";

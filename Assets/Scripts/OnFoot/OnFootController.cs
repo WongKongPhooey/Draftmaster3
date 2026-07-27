@@ -161,7 +161,7 @@ public class OnFootController : MonoBehaviour
                 if (npc != null)
                 {
                     npc.SetInteractor(transform);
-                    FaceEachOther(npc.transform);
+                    FaceEachOther(npc);
                     _activeNpc = npc;
                     npc.Interact();
                 }
@@ -176,7 +176,7 @@ public class OnFootController : MonoBehaviour
     {
         if (npc == null) return;
         npc.SetInteractor(transform);
-        FaceEachOther(npc.transform);
+        FaceEachOther(npc);
         _activeNpc = npc;
         npc.Interact();
     }
@@ -191,13 +191,16 @@ public class OnFootController : MonoBehaviour
         ApplyFacing(transform, _rb, dir, spriteFacingOffsetDeg);
     }
 
-    // Turn the player and the NPC to look at each other as the conversation opens.
-    void FaceEachOther(Transform other)
+    // Turn the player and the NPC to look at each other as the conversation opens. Speakers whose
+    // transform carries meaning (a driver sat in a parked car) opt out of being turned.
+    void FaceEachOther(NPCInteractable npc)
     {
+        Transform other = npc.transform;
         Vector2 toNpc = (Vector2)(other.position - transform.position);
         _talkFacing = toNpc.sqrMagnitude > 0.0001f ? toNpc.normalized : Vector2.down;
         ApplyFacing(transform, _rb, toNpc, spriteFacingOffsetDeg);
-        ApplyFacing(other, other.GetComponent<Rigidbody2D>(), -toNpc, spriteFacingOffsetDeg);
+        if (npc.turnsToFace)
+            ApplyFacing(other, other.GetComponent<Rigidbody2D>(), -toNpc, spriteFacingOffsetDeg);
     }
 
     // Shared facing snap: rotates the body (respecting rb constraints) and orients directional idle

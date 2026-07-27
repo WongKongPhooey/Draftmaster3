@@ -21,6 +21,8 @@ public class PaddockWalker : MonoBehaviour
     public float spriteFacingOffsetDeg = 90f;
     [Tooltip("Walk-cycle playback rate (frames/sec) while moving.")]
     public float frameRate = 8f;
+    [Tooltip("Conversation this walker owns. While it's running the walker stands still and turns to face whoever stopped it — otherwise it would wander off mid-sentence, dragging its speech bubble along. Auto-found on the same object if left null.")]
+    public NPCInteractable conversation;
 
     // Paddock rectangle, world space. Set via Configure.
     Vector3 _center, _along, _outward;
@@ -47,6 +49,7 @@ public class PaddockWalker : MonoBehaviour
     {
         _rb = GetComponent<Rigidbody2D>();
         _appearance = GetComponent<NPCLayeredAppearance>();
+        if (conversation == null) conversation = GetComponent<NPCInteractable>();
     }
 
     void GeneratePath()
@@ -75,6 +78,15 @@ public class PaddockWalker : MonoBehaviour
 
     void Update()
     {
+        // Stop and listen for as long as someone is talking to us.
+        if (conversation != null && conversation.IsTalking)
+        {
+            Idle();
+            if (conversation.Interactor != null)
+                Face((Vector2)(conversation.Interactor.position - transform.position));
+            return;
+        }
+
         if (_path.Count == 0) return;
 
         Vector3 pos = transform.position;
