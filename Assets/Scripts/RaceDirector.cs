@@ -23,6 +23,17 @@ public class RaceDirector : MonoBehaviour
     enum Phase { Waiting, Racing, Checkered, Results }
     Phase _phase = Phase.Waiting;
 
+    // How far through the race the leader is, 0 at the green and 1 at the checkered, counted in whole
+    // laps plus the leader's fraction of the current one. The AI reads this to settle in early and charge
+    // over the closing laps (Draftmaster.Sim.RaceCraft).
+    public float RaceProgress01 { get; private set; }
+
+    // -1 when the race distance isn't known — practice, qualifying, multiplayer, or before the green.
+    // Callers treat that as "mid-race", rather than pretending it's forever lap one.
+    public static float Progress01 =>
+        (Instance != null && Instance.isActiveAndEnabled && Instance._phase != Phase.Waiting)
+            ? Instance.RaceProgress01 : -1f;
+
     class Result
     {
         public string name;
@@ -87,6 +98,7 @@ public class RaceDirector : MonoBehaviour
 
             case Phase.Racing:
                 BaselineLaps(rt);           // cars appearing mid-race start from their current lap
+                UpdateRaceProgress(rt);
                 CheckFinishes(rt);
                 if (_results.Count > 0)     // leader took the flag
                 {
@@ -127,6 +139,19 @@ public class RaceDirector : MonoBehaviour
             if (e == null || e.tf == null || _lapBaseline.ContainsKey(e.tf)) continue;
             _lapBaseline[e.tf] = e.lap;
         }
+    }
+
+    // Leader's share of the race distance. Order is already sorted by progress, so entry 0 is the leader.
+    void UpdateRaceProgress(RacePositionTracker rt)
+    {
+        if (raceLaps <= 0 || rt.Order.Count == 0) return;
+        var leader = rt.Order[0];
+        if (leader == null || leader.tf == null) return;
+
+        // Fraction of the current lap, so a 3-lap race doesn't step through the phases in thirds.
+        float len = rt.TrackLength;
+        float frac = len > 0f ? Mathf.Clamp01((leader.progress - leader.lap * len) / len) : 0f;
+        RaceProgress01 = Mathf.Clamp01((RacingLaps(leader) + frac) / raceLaps);
     }
 
     int RacingLaps(RacePositionTracker.Entry e) =>

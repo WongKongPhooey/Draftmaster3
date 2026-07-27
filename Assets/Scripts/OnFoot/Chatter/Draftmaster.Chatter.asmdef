@@ -1,0 +1,14 @@
+{
+    "name": "Draftmaster.Chatter",
+    "rootNamespace": "Draftmaster.Chatter",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

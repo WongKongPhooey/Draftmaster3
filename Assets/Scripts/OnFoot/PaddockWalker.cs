@@ -23,6 +23,8 @@ public class PaddockWalker : MonoBehaviour
     public float frameRate = 8f;
     [Tooltip("Conversation this walker owns. While it's running the walker stands still and turns to face whoever stopped it — otherwise it would wander off mid-sentence, dragging its speech bubble along. Auto-found on the same object if left null.")]
     public NPCInteractable conversation;
+    [Tooltip("Ambient one-liners this walker mutters at a passing player. Handled the same as a conversation: stand still and look at them while speaking. Auto-found on the same object if left null.")]
+    public NPCAmbientChatter chatter;
 
     // Paddock rectangle, world space. Set via Configure.
     Vector3 _center, _along, _outward;
@@ -50,6 +52,7 @@ public class PaddockWalker : MonoBehaviour
         _rb = GetComponent<Rigidbody2D>();
         _appearance = GetComponent<NPCLayeredAppearance>();
         if (conversation == null) conversation = GetComponent<NPCInteractable>();
+        if (chatter == null) chatter = GetComponent<NPCAmbientChatter>();
     }
 
     void GeneratePath()
@@ -84,6 +87,15 @@ public class PaddockWalker : MonoBehaviour
             Idle();
             if (conversation.Interactor != null)
                 Face((Vector2)(conversation.Interactor.position - transform.position));
+            return;
+        }
+
+        // Same treatment for an unprompted mutter: stop, look at whoever we're talking to, then walk on.
+        if (chatter != null && chatter.IsSpeaking)
+        {
+            Idle();
+            if (chatter.Listener != null)
+                Face((Vector2)(chatter.Listener.position - transform.position));
             return;
         }
 

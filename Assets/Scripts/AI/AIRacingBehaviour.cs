@@ -1,4 +1,5 @@
 using UnityEngine;
+using Draftmaster.Sim;
 
 [RequireComponent(typeof(SplineDriver))]
 public class AIRacingBehaviour : MonoBehaviour
@@ -15,6 +16,20 @@ public class AIRacingBehaviour : MonoBehaviour
     public float mistakePaceFactor = 0.85f;
     [Tooltip("Extra lateral wobble (m) during a mistake.")]
     public float mistakeWobble = 1.2f;
+
+    [Header("Race Craft")]
+    [Tooltip("Let the race phase shape this driver: settle in over the opening laps (wider gaps, fewer lunges) and throw everything at it over the closing ones. Needs a RaceDirector for the race distance; practice/qualifying/multiplayer run the neutral mid-race envelope.")]
+    public bool phaseAwareRacecraft = true;
+    [Tooltip("Blue flags: a car a lap or more down eases offline and lifts slightly to let the leaders through instead of racing them.")]
+    public bool respectBlueFlags = true;
+    [Tooltip("Range behind (m) at which a car on a lap we haven't reached starts being let past.")]
+    public float blueFlagRange = 45f;
+    [Tooltip("Lateral offset (m) held while getting out of a lapper's way.")]
+    public float blueFlagOffset = 2.6f;
+    [Tooltip("Pace multiplier at full yield — a small lift so the pass actually completes. 1 = don't lift at all.")]
+    [Range(0.6f, 1f)] public float blueFlagLift = 0.94f;
+    [Tooltip("Range behind (m) over which a pursuer piles pressure on and makes a mistake likelier. Worn tyres raise the odds too.")]
+    public float pressureRange = 18f;
 
     [Header("Detection Ranges (m)")]
     public float lookAheadRange = 70f;

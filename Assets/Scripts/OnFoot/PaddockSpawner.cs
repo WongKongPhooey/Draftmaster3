@@ -35,9 +35,11 @@ public class PaddockSpawner : MonoBehaviour
 
     [Header("NPCs")]
     [Tooltip("Total NPCs spawned in the paddock.")]
-    public int totalNpcs = 20;
-    [Tooltip("How many of them are conversational. The rest wander.")]
-    public int talkingNpcs = 5;
+    public int totalNpcs = 34;
+    [Tooltip("How many of them are conversational. The rest wander. Keep at or below the dialogue table size (10) so no two talkers repeat the same script.")]
+    public int talkingNpcs = 9;
+    [Tooltip("Give the wandering NPCs ambient one-liners they mutter as the player walks past (NPCAmbientChatter).")]
+    public bool ambientChatter = true;
     [Tooltip("Uniform scale for spawned NPCs. 0 = keep the prefab's own scale.")]
     public float npcScale = 0f;
     [Tooltip("Walk speed for wandering NPCs, units/sec.")]
@@ -51,9 +53,18 @@ public class PaddockSpawner : MonoBehaviour
         new[] { "Heard the weather might turn this afternoon.", "Think it'll rain before the flag? #player", "Maybe. I'd keep the wets close, just in case." },
         new[] { "You're driving the 22 today, right?", "That's me. #player", "Bold livery! Hard to miss you out there. Good luck." },
         new[] { "Press wants a word after the session — don't disappear on me.", "I'll find you in the paddock. #player", "Appreciate it. Now go warm those tyres up." },
+        new[] { "Scales say we're eight kilos heavy on the left rear.", "Can we get it out before the session? #player", "Working on it. Don't lean on that corner early, yeah?" },
+        new[] { "Timing screens have you fourth on the long runs.", "Only fourth? #player", "On old tyres, mate. That's the good news." },
+        new[] { "Kid over by the fence has had your poster since Friday.", "I'll go and sign it. #player", "Good lad. That's how you get a fanbase." },
+        new[] { "Fuel's on the limit if we run the whole stint flat.", "So I lift and coast down the back? #player", "Two corners' worth. I'll call it on the radio." },
+        new[] { "Our neighbours in the next bay are protesting something.", "Us? #player", "Everyone. They protest the weather, that lot." },
     };
 
-    static readonly string[] kNames = { "Crew Chief", "Tyre Tech", "Spotter", "Fan", "Press Officer" };
+    static readonly string[] kNames =
+    {
+        "Crew Chief", "Tyre Tech", "Spotter", "Fan", "Press Officer",
+        "Engineer", "Data Analyst", "Autograph Hunter", "Fuel Man", "Team Manager",
+    };
 
     void Start()
     {
@@ -238,8 +249,18 @@ public class PaddockSpawner : MonoBehaviour
             }
             else
             {
+                // Walkers are the crowd. They carry no interact prompt, but they do mutter at a passing
+                // player — that's what stops a bigger paddock reading as a bigger set of props. Stagger
+                // the first bark per NPC so the crowd doesn't all fire the moment the player walks in.
+                if (ambientChatter)
+                {
+                    var chat = npc.AddComponent<NPCAmbientChatter>();
+                    chat.area = Draftmaster.Chatter.ChatterArea.Paddock;
+                    chat.minRepeatSeconds = Random.Range(18f, 40f);
+                }
+
                 var walker = npc.AddComponent<PaddockWalker>();
-                walker.speed = walkSpeed;
+                walker.speed = walkSpeed * Random.Range(0.8f, 1.25f); // a crowd doesn't march in step
                 walker.Configure(center, along, outward, halfLen, halfDepth);
             }
         }

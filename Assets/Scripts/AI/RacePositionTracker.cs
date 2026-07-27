@@ -48,6 +48,8 @@ public class RacePositionTracker : MonoBehaviour
 
     public IReadOnlyList<Entry> Order => _entries;
     public int FieldSize => _entries.Count;
+    // Main centerline length (m). Lets callers turn an entry's progress back into a fraction of a lap.
+    public float TrackLength => _len;
     public int PlayerPosition => _playerEntry != null ? _playerEntry.position : 0;
     public int PositionOf(SplineDriver d)
     {

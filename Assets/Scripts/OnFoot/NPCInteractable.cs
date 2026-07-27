@@ -31,6 +31,18 @@ public class NPCInteractable : MonoBehaviour
 
     public bool InRange(Vector2 playerPos) => Vector2.Distance(playerPos, transform.position) <= interactRange;
 
+    // True while ANY speaker in the scene has a conversation open. Ambient chatter checks this so a
+    // background NPC never mutters over a line the player is actually reading.
+    public static bool AnyConversationActive
+    {
+        get
+        {
+            for (int i = 0; i < All.Count; i++)
+                if (All[i] != null && All[i].IsTalking) return true;
+            return false;
+        }
+    }
+
     // Called by the interacting controller right before Interact() so #player lines can target the player's bubble.
     public void SetInteractor(Transform interactor) => _interactor = interactor;
 
