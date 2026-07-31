@@ -146,6 +146,12 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Tooltip("Optional trail material. A faint unlit sprite material is created if left empty.")]
     public Material trailMaterial;
 
+    [Header("Particle FX")]
+    [Tooltip("Kick up surface-coloured particles from the rear tyres while running on grass or gravel (TyreSurfaceParticles).")]
+    public bool surfaceSpray = true;
+    [Tooltip("Throw sparks and shed bodywork debris on contact with barriers and other cars (ImpactParticles).")]
+    public bool impactDebris = true;
+
     public VehicleInfo vehicleInfo;
 
     public float Mass => vehicleInfo != null ? vehicleInfo.mass : 1500f;
@@ -159,6 +165,20 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float SlipFrontDeg => _alphaF * Mathf.Rad2Deg;
     public float SlipRearDeg => _alphaR * Mathf.Rad2Deg;
     public float HandlingBalanceDeg => (Mathf.Abs(_alphaF) - Mathf.Abs(_alphaR)) * Mathf.Rad2Deg;
+    // Surface state this step, for tyre FX. CurrentSurface is only meaningful while OnLooseSurface — on
+    // the track it keeps whatever was last driven over.
+    public bool OnLooseSurface => _onGrass;
+    public TrackEnvironment.SurfaceType CurrentSurface { get; private set; } = TrackEnvironment.SurfaceType.Grass;
+    // World centre of the rear axle — where tyre trails and surface spray come from.
+    public Vector2 RearAxleWorld
+    {
+        get
+        {
+            float hr = _headingDeg * Mathf.Deg2Rad;
+            return (Vector2)transform.position - new Vector2(Mathf.Cos(hr), Mathf.Sin(hr)) * _b;
+        }
+    }
+
     // Aero draft state this step (0..1), for HUD / telemetry / audio.
     public float TowFactor { get; private set; }        // slipstream caught from a car ahead
     public float SideDraftFactor { get; private set; }  // side draft suffered from a rival's nose on our quarter
@@ -285,6 +305,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
         if (track == null) track = FindFirstObjectByType<TrackBuilder>();
         if (grassTrails) CreateTrails();
+
+        // FX components install themselves onto every car (player and AI) so no prefab wiring is needed.
+        if (surfaceSpray && GetComponent<TyreSurfaceParticles>() == null) gameObject.AddComponent<TyreSurfaceParticles>();
+        if (impactDebris && GetComponent<ImpactParticles>() == null) gameObject.AddComponent<ImpactParticles>();
 
         if (enableWear)
         {
@@ -435,6 +459,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                     surfGrip = grassGrip; surfPower = grassPower; surfDrag = grassDrag; looseSurface = true;
                     break;
             }
+            CurrentSurface = surf; // tyre spray tints itself from this
         }
         _onGrass = looseSurface; // drives tyre-trail emission below
 

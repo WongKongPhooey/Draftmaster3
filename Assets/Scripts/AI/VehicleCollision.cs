@@ -40,6 +40,19 @@ public class VehicleCollision : MonoBehaviour
     // listens to invalidate the current lap on a wall hit.
     public event System.Action<float> BarrierHit;
 
+    // One resolved contact, in world space. Fired for barriers AND cars every step the overlap persists,
+    // so listeners that shouldn't repeat (bursts, sounds) must rate-limit themselves. ImpactParticles reads this.
+    public struct ContactEvent
+    {
+        public Vector2 point;       // contact point on OUR body
+        public Vector2 normal;      // points from us toward the obstacle
+        public float closingSpeed;  // m/s along the normal — how hard we drove into it
+        public float scrapeSpeed;   // m/s tangent to the contact — how fast we're sliding along it
+        public float severity;      // 0..1, closingSpeed normalised by damageSpeedFull
+        public bool otherIsCar;     // false = static barrier
+    }
+    public event System.Action<ContactEvent> Contacted;
+
     void Awake()
     {
         _rb = GetComponent<Rigidbody2D>();
@@ -183,6 +196,24 @@ public class VehicleCollision : MonoBehaviour
                 // Barrier (static): full correction on us. d.pointA is the contact on our body → lever arm for spin.
                 _responder?.ApplyContact(pushWorld, d.pointA, severity);
                 BarrierHit?.Invoke(closingSpeed);
+            }
+
+            // Broadcast the resolved contact for FX (sparks, bodywork debris). Scrape speed is the
+            // relative motion ALONG the contact — a car grinding down the wall has almost no closing
+            // speed but plenty of scrape, and that's what should be throwing sparks.
+            if (Contacted != null)
+            {
+                Vector2 rel = _vel - otherVel;
+                Vector2 scrape = rel - Vector2.Dot(rel, d.normal) * d.normal;
+                Contacted.Invoke(new ContactEvent
+                {
+                    point = d.pointA,
+                    normal = d.normal,
+                    closingSpeed = closingSpeed,
+                    scrapeSpeed = scrape.magnitude,
+                    severity = severity,
+                    otherIsCar = otherResponder != null,
+                });
             }
             processed++;
         }

@@ -106,7 +106,8 @@
       "PowerShell(if \\(Test-Path \".mcp.json\"\\) { Get-Content \".mcp.json\" -Raw }; $cfg = \"$env:USERPROFILE\\\\.claude.json\"; if \\(Test-Path $cfg\\) { $j = Get-Content $cfg -Raw | ConvertFrom-Json; if \\($j.mcpServers\\) { $j.mcpServers | ConvertTo-Json -Depth 5 }; $proj = $j.projects.\"C:\\\\Users\\\\Josh\\\\Documents\\\\Draftmaster3\"; if \\($proj -and $proj.mcpServers\\) { $proj.mcpServers | ConvertTo-Json -Depth 5 } })",
       "PowerShell(Get-Process *)",
       "mcp__unity__validate_script",
-      "mcp__unity__unity_reflect"
+      "mcp__unity__unity_reflect",
+      "Bash(cd *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots",
