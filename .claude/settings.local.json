@@ -107,7 +107,8 @@
       "PowerShell(Get-Process *)",
       "mcp__unity__validate_script",
       "mcp__unity__unity_reflect",
-      "Bash(cd *)"
+      "Bash(cd *)",
+      "mcp__unity__manage_material"
     ],
     "additionalDirectories": [
       "c:\\Users\\Josh\\Documents\\Draftmaster3\\Assets\\Screenshots",

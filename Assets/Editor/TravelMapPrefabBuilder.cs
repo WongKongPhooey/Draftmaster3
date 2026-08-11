@@ -80,6 +80,46 @@ public static class TravelMapPrefabBuilder
         finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
+    // Pushes TravelGraph's code-defined layout back onto the existing markers and re-bakes the highway
+    // lines. Use after moving nodes in code (the lattice); it DOES overwrite hand-dragged positions.
+    [MenuItem("Draftmaster/Travel Map/Snap Markers To Graph Layout")]
+    public static void SnapMarkersToGraph()
+    {
+        var root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            var screen = root.GetComponent<TravelMapScreen>();
+            int moved = 0, unknown = 0;
+            foreach (var m in screen.nodesRoot.GetComponentsInChildren<TravelNodeMarker>(true))
+            {
+                var n = TravelGraph.Get(m.nodeId);
+                if (n == null) { Debug.LogWarning($"Marker '{m.name}' references unknown TravelGraph node '{m.nodeId}'"); unknown++; continue; }
+                var rt = (RectTransform)m.transform;
+                rt.anchoredPosition = new Vector2(n.pos.x * MapW, -n.pos.y * MapH);
+                moved++;
+            }
+
+            // Markers added since the prefab was built would otherwise be missing entirely.
+            var have = new System.Collections.Generic.HashSet<string>();
+            foreach (var m in screen.nodesRoot.GetComponentsInChildren<TravelNodeMarker>(true)) have.Add(m.nodeId);
+            foreach (var n in TravelGraph.Nodes)
+                if (!have.Contains(n.id)) { CreateMarker(screen.nodesRoot, n); moved++; }
+
+            // Clear the baked highways HERE, not in BuildEdges: objects inside prefab contents count as
+            // assets, so its plain DestroyImmediate(child) is refused and every bake would stack another
+            // full set of lines on top of the old ones.
+            for (int i = screen.edgesRoot.childCount - 1; i >= 0; i--)
+                Object.DestroyImmediate(screen.edgesRoot.GetChild(i).gameObject, true);
+
+            Canvas.ForceUpdateCanvases();
+            screen.BuildEdges();
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            Debug.Log($"TravelMap: snapped {moved} marker(s) to the graph layout, {TravelGraph.Edges.Count} highways baked" +
+                      (unknown > 0 ? $" ({unknown} stale marker(s) left alone)" : "."));
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
     static void BuildInternal()
     {
         if (Mania == null || NowMedium == null || NowBold == null || BlueButton == null)

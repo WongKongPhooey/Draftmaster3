@@ -185,8 +185,9 @@ public class NPCInteractable : MonoBehaviour
                 mr.sortingLayerName = "Vehicles";
                 mr.sortingOrder = 61;
             }
-            // Reflect the active input device each frame the prompt is shown.
-            if (_promptLabel != null) _promptLabel.text = Gamepad.current != null ? "A" : "E";
+            // E is THE interact key, whatever is plugged in — a wheel or an idle pad used to flip every
+            // prompt to the gamepad face button while the player was still on the keyboard.
+            if (_promptLabel != null) _promptLabel.text = "E";
             // Pin above the head in world space — never inherit the NPC's facing rotation.
             _prompt.transform.position = transform.position + Vector3.up * 0.7f;
             _prompt.transform.rotation = Quaternion.identity;

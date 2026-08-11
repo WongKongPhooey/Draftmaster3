@@ -11,6 +11,12 @@ public class PracticeAIStint : MonoBehaviour
     public float pitEntryWindow = 25f;
     [Tooltip("Lateral speed (m/s) for moving between the parked box lane (PitLane.ParkLateral, wall side) and the pit-lane centerline. Cars DRIVE the centerline so they clear the parked file; they only cut to the box lane at their own box.")]
     public float laneChangeRate = 3f;
+    [Tooltip("Braking rate (m/s^2) used to size the approach to the box, so the car arrives AT its box instead of sailing through it.")]
+    public float boxApproachDecel = 5f;
+    [Tooltip("Speed (mph) the car keeps creeping at over the last few metres into the box.")]
+    public float boxCrawlMph = 5f;
+    [Tooltip("Shortest run-in (m) over which the car may cut from the centerline to the box lane.")]
+    public float minCutWindow = 12f;
 
     public enum State { Parked, Leaving, OnTrack, HeadingToPit, PittingIn }
     State _state = State.Parked;
@@ -54,6 +60,8 @@ public class PracticeAIStint : MonoBehaviour
         _lapsDone = 0;
         _hasPrev = false;
         _spline.parkedHold = false;
+        _spline.pitParkDistance = -1f;   // release the box stop line, else SplineDriver re-pins the car
+        _spline.aiMaxSpeedMph = 200f;    // drop the approach cap so the car can run the lane out
         _spline.pitStopHold = false;
         _state = State.Leaving;
     }
@@ -125,10 +133,21 @@ public class PracticeAIStint : MonoBehaviour
                     boxDist = PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength);
                     targetFrac = boxDist / _spline.PitLength;
                 }
-                float cutWindow = PitLane.Configured ? Mathf.Min(PitLane.Spacing * 0.8f, 10f) : 10f;
-                if (boxDist - _spline.PitProgress01 * _spline.PitLength < cutWindow)
+                float remaining = boxDist - _spline.PitProgress01 * _spline.PitLength;
+                // Window sized from the lateral left to cover — the box lane sits several metres off the
+                // centerline, so a fixed short run-in leaves the car stopping in the lane. Under the braking
+                // ramp below the time left to the box is sqrt(2d/a), so d = (latRemain/rate)^2 * a/2 covers it.
+                float latRemain = Mathf.Abs(PitLane.ParkLateral - _spline.lateralOffset);
+                float latTime = latRemain / Mathf.Max(0.1f, laneChangeRate);
+                float cutWindow = Mathf.Max(minCutWindow, 0.75f * Mathf.Max(0.5f, boxApproachDecel) * latTime * latTime);
+                if (remaining < cutWindow)
                     _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, PitLane.ParkLateral, laneChangeRate * Time.fixedDeltaTime);
-                if (!_spline.pitStopHold && _spline.PitProgress01 >= targetFrac)
+                // Brake FOR the box rather than at it, and pin a stop line there, so the car doesn't roll on
+                // into the next car's box.
+                float approachMph = Mathf.Sqrt(2f * Mathf.Max(0.5f, boxApproachDecel) * Mathf.Max(0f, remaining - 1f)) * 2.237f;
+                _spline.aiMaxSpeedMph = Mathf.Max(boxCrawlMph, approachMph);
+                _spline.pitParkDistance = boxDist;
+                if (!_spline.pitStopHold && (remaining <= 0.5f || _spline.PitProgress01 >= targetFrac))
                     _spline.pitStopHold = true;
                 if (_spline.pitStopHold && ActualSpeedMps < 0.3f)
                 {

@@ -1,0 +1,9 @@
+atlas: C:\Users\Josh\AppData\Local\Temp\draftmaster-font\pixel-font-atlas.png
+size: 1024x1024
+format: 54
+renderMode: RASTER_HINTED
+shader: TextMeshPro/Bitmap
+pointSize: 16
+lineHeight: 17.76
+scale: 1
+glyphs: 95

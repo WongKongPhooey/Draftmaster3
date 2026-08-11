@@ -60,7 +60,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             var area = environment.runoffAreas[i];
             if (area.points == null || area.points.Length < 3) continue;
 
-            var mesh = BuildPolygonMesh(area.points);
+            var material = area.materialOverride != null ? area.materialOverride : DefaultSurfaceMaterial(area.surface);
+            var mesh = BuildPolygonMesh(area.points, PixelArt.UvScale(material));
             if (mesh == null) continue;
 
             var go = new GameObject(string.IsNullOrEmpty(area.label) ? $"Runoff_{area.surface}_{i}" : area.label);
@@ -68,7 +69,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             var mf = go.AddComponent<MeshFilter>();
             var mr = go.AddComponent<MeshRenderer>();
             mr.sortingOrder = environment.runoffSortingOrder;
-            mr.sharedMaterial = area.materialOverride != null ? area.materialOverride : DefaultSurfaceMaterial(area.surface);
+            mr.sharedMaterial = material;
             mf.sharedMesh = mesh;
 
             // Register the polygon (in world space) so the car physics can sample its surface type.
@@ -93,7 +94,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     }
 
     // Triangulate a simple (non-self-intersecting) polygon by ear clipping. UVs map world metres 1:1.
-    static Mesh BuildPolygonMesh(Vector2[] points)
+    static Mesh BuildPolygonMesh(Vector2[] points, Vector2 uvScale)
     {
         var poly = new List<Vector2>(points);
         // Drop duplicate consecutive points.
@@ -150,7 +151,9 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         for (int i = 0; i < poly.Count; i++)
         {
             verts.Add(new Vector3(poly[i].x, poly[i].y, 0f));
-            uvs.Add(poly[i]); // world metres → UV, so tiling matches the track scale
+            // World metres → UV, scaled to the project pixel density (PixelArt.UvScale), so a runoff
+            // area lands on the same texel grid as the road and the grass regardless of its size.
+            uvs.Add(new Vector2(poly[i].x * uvScale.x, poly[i].y * uvScale.y));
             normals.Add(new Vector3(0f, 0f, -1f)); // face the camera (orthographic, looking +z)
         }
 
@@ -335,8 +338,13 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         mr.sortingOrder = environment.barrierSortingOrder;
         if (environment.barrierMaterial != null) mr.sharedMaterial = environment.barrierMaterial;
 
+        // Barriers are directional strips like kerbs: U across the barrier's width, V along it in
+        // metres at the standard pixel density (a barrier's stripe pattern must repeat at a fixed
+        // physical spacing, not once per generated piece).
+        Vector2 barrierDensity = PixelArt.UvScale(environment.barrierMaterial);
         mf.sharedMesh = BuildPolylineRibbon(centerline, Mathf.Max(0.05f, environment.barrierWidth),
-            environment.barrierUvLengthScale > 0f ? environment.barrierUvLengthScale : 1f);
+            (environment.barrierUvLengthScale > 0f ? environment.barrierUvLengthScale : 1f) * barrierDensity.y,
+            Mathf.Max(0.05f, environment.barrierWidth) * barrierDensity.x);
 
         if (environment.barrierColliders)
         {
@@ -470,7 +478,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         return segs.Length - 1;
     }
 
-    Mesh BuildPolylineRibbon(List<Vector2> centerline, float width, float uvScale)
+    Mesh BuildPolylineRibbon(List<Vector2> centerline, float width, float uvScale, float uSpan)
     {
         var mesh = new Mesh { name = "BarrierRibbon" };
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
@@ -494,7 +502,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             verts.Add(new Vector3(right.x, right.y, 0f));
             if (i > 0) cumulative += Vector2.Distance(centerline[i], centerline[i - 1]);
             uvs.Add(new Vector2(0f, cumulative * uvScale));
-            uvs.Add(new Vector2(1f, cumulative * uvScale));
+            uvs.Add(new Vector2(uSpan, cumulative * uvScale));
             if (i > 0)
             {
                 int a = (i - 1) * 2;
@@ -614,13 +622,26 @@ public class TrackEnvironmentBuilder : MonoBehaviour
 
         float length = endAbs - startAbs;
         int steps = Mathf.Max(2, Mathf.CeilToInt(length / spacing) + 1);
-        float uvScale = strip.uvLengthScale > 0f ? strip.uvLengthScale : 1f;
+        // Strips are directional (a kerb's stripes and a finish line's chequer must follow the track), so
+        // they use ribbon UVs rather than the world-grid UVs the asphalt uses. Both axes are still in
+        // metres at the standard pixel density, so the kerb stripe and the chequer square come out the
+        // same physical size on every strip regardless of how wide or long it was authored.
+        // uvLengthScale stays available as a deliberate per-strip stretch, defaulting to 1 = on standard.
+        Vector2 density = PixelArt.UvScale(strip.material);
+        float lengthScale = (strip.uvLengthScale > 0f ? strip.uvLengthScale : 1f) * density.y;
+        float widthScale = density.x;
 
         bool usePit = strip.useSpline == TrackEnvironment.SplineRef.Pit;
         // U runs left→right vert (−normal → +normal). On the RIGHT edge that reads track→outside; on the
         // LEFT edge it reads outside→track, so an asymmetric texture (kerb profile) points INTO the track.
         // Mirror U for left-anchored strips so the texture always reads track-side → outside on both edges.
         bool mirrorU = strip.anchor == TrackEnvironment.LateralAnchor.LeftEdge;
+
+        // Both rails share the centreline's distance, so a stripe boundary stays perpendicular to the
+        // kerb. Through a corner that makes the outer stripe physically longer than the inner one --
+        // which is what a real painted kerb does, and why the audit's density spread on tight corners
+        // is geometry rather than a defect. (Giving each rail its own arc length removes the spread but
+        // shears the stripes into a fan, which looks wrong.)
         for (int i = 0; i < steps; i++)
         {
             float t = i / (float)(steps - 1);
@@ -630,10 +651,13 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             Vector2 center = sample.position + sample.normal * (edgeBias + strip.lateralOffset);
             Vector2 left = center - sample.normal * (strip.width * 0.5f);
             Vector2 right = center + sample.normal * (strip.width * 0.5f);
+
             verts.Add(new Vector3(left.x, left.y, 0));
             verts.Add(new Vector3(right.x, right.y, 0));
-            uvs.Add(new Vector2(mirrorU ? 1f : 0f, length * t * uvScale));
-            uvs.Add(new Vector2(mirrorU ? 0f : 1f, length * t * uvScale));
+            float uLo = mirrorU ? strip.width * widthScale : 0f;
+            float uHi = mirrorU ? 0f : strip.width * widthScale;
+            uvs.Add(new Vector2(uLo, length * t * lengthScale));
+            uvs.Add(new Vector2(uHi, length * t * lengthScale));
 
             if (i > 0)
             {

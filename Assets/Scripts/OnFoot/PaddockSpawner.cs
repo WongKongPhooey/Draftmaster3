@@ -40,8 +40,11 @@ public class PaddockSpawner : MonoBehaviour
     public int talkingNpcs = 9;
     [Tooltip("Give the wandering NPCs ambient one-liners they mutter as the player walks past (NPCAmbientChatter).")]
     public bool ambientChatter = true;
-    [Tooltip("Uniform scale for spawned NPCs. 0 = keep the prefab's own scale.")]
+    [Tooltip("Extra multiplier on top of the height normalisation. 0 or 1 = leave at the standard figure.")]
     public float npcScale = 0f;
+    [Tooltip("World height (m) a paddock walker is normalised to, matching the player and every other NPC. " +
+             "0 = PitCrewSpawner.OnFootPersonHeight.")]
+    public float npcHeightM = 0f;
     [Tooltip("Walk speed for wandering NPCs, units/sec.")]
     public float walkSpeed = 1.2f;
 
@@ -312,7 +315,23 @@ public class PaddockSpawner : MonoBehaviour
             npc.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
         }
 
-        if (npcScale > 0f) npc.transform.localScale = Vector3.one * npcScale;
+        // Size the walker to a real height rather than inheriting whatever scale the source prefab carries.
+        //
+        // These used to come out right by accident: the prefab was scaled 8 to compensate for an 8px sprite
+        // imported at 100 px/unit, and this spawner left that scale alone. Once the prefab was corrected to
+        // scale 1 (its sprite now being imported at the project standard), the paddock walkers shrank to an
+        // eighth. The paper-doll layers are built through NPCPartLibrary.pixelsPerUnit, not the PNG's import
+        // setting, so the only reliable size is the one derived from the library -- which is exactly what
+        // every other NPC spawner already does, and why the conversational NPCs were unaffected.
+        float target = npcHeightM > 0f ? npcHeightM : PitCrewSpawner.OnFootPersonHeight;
+        float frameWorldH = partLibrary != null
+            ? partLibrary.frameHeight / Mathf.Max(1f, partLibrary.pixelsPerUnit)
+            : 0f;
+        if (frameWorldH > 0.0001f)
+            npc.transform.localScale = Vector3.one * (target / frameWorldH) * (npcScale > 0f ? npcScale : 1f);
+        else if (npcScale > 0f)
+            npc.transform.localScale = Vector3.one * npcScale;
+
         npc.name = talking ? "PaddockNPC_Talk" : "PaddockNPC_Walk";
         return npc;
     }

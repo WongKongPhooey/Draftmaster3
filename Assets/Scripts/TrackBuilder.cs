@@ -98,7 +98,8 @@ public class TrackBuilder : MonoBehaviour
         if (surfaceMaterial != null) mr.sharedMaterial = surfaceMaterial;
 
         var mainSamples = SampleCenterline();
-        _mainMesh = BuildRibbonMesh(mainSamples, track.closedLoop, $"Track_{track.name}");
+        _mainMesh = BuildRibbonMesh(mainSamples, track.closedLoop, $"Track_{track.name}",
+                                    PixelArt.UvScale(surfaceMaterial));
         mf.sharedMesh = _mainMesh;
 
         BuildEdgeLines(mainSamples);
@@ -258,8 +259,11 @@ public class TrackBuilder : MonoBehaviour
         var verts = new List<Vector3>(meshSamples.Count * 2);
         var uvs = new List<Vector2>(meshSamples.Count * 2);
         var tris = new List<int>(meshSamples.Count * 6);
-        float distance = 0f;
         float halfLine = track.edgeLineWidth * 0.5f;
+        // A painted line is directional, so unlike the asphalt it keeps ribbon UVs: across the line
+        // (0..1, the texture spans the paint's width) and along it in metres at the standard density.
+        Vector2 uvScale = PixelArt.UvScale(mr.sharedMaterial);
+        float distance = 0f;
 
         for (int i = 0; i < meshSamples.Count; i++)
         {
@@ -270,8 +274,8 @@ public class TrackBuilder : MonoBehaviour
             Vector3 lineCenter = baseP + right * centerLateral;
             verts.Add(lineCenter - right * halfLine);
             verts.Add(lineCenter + right * halfLine);
-            uvs.Add(new Vector2(0f, distance));
-            uvs.Add(new Vector2(1f, distance));
+            uvs.Add(new Vector2(0f, distance * uvScale.y));
+            uvs.Add(new Vector2(1f, distance * uvScale.y));
             if (i > 0)
             {
                 int a = (i - 1) * 2;
@@ -320,7 +324,8 @@ public class TrackBuilder : MonoBehaviour
         var mf = _pitChild.AddComponent<MeshFilter>();
         var mr = _pitChild.AddComponent<MeshRenderer>();
         mr.sharedMaterial = pitSurfaceMaterial != null ? pitSurfaceMaterial : surfaceMaterial;
-        _pitMesh = BuildRibbonMesh(pitSamples, false, $"Pit_{track.name}");
+        _pitMesh = BuildRibbonMesh(pitSamples, false, $"Pit_{track.name}",
+                                   PixelArt.UvScale(mr.sharedMaterial));
         mf.sharedMesh = _pitMesh;
 
         // Second lane on the wall side (+normal): the grey strip the pit boxes sit on. Shares its inner
@@ -339,7 +344,8 @@ public class TrackBuilder : MonoBehaviour
                 var lmf = laneGo.AddComponent<MeshFilter>();
                 var lmr = laneGo.AddComponent<MeshRenderer>();
                 lmr.sharedMaterial = pitBoxLaneMaterial != null ? pitBoxLaneMaterial : BuildBoxLaneMaterial();
-                lmf.sharedMesh = BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth, $"PitBoxLane_{track.name}");
+                lmf.sharedMesh = BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth,
+                                               $"PitBoxLane_{track.name}", PixelArt.UvScale(lmr.sharedMaterial));
             }
         }
     }
@@ -368,7 +374,8 @@ public class TrackBuilder : MonoBehaviour
 
     // Ribbon between two lateral offsets from the centerline (both along +normal; pass negatives for the
     // other side). Same vertex layout as BuildRibbonMesh, open-ended.
-    Mesh BuildBandMesh(List<Sample> samples, System.Func<Sample, float> latFrom, System.Func<Sample, float> latTo, string name)
+    Mesh BuildBandMesh(List<Sample> samples, System.Func<Sample, float> latFrom, System.Func<Sample, float> latTo,
+                       string name, Vector2 uvScale)
     {
         if (samples == null || samples.Count < 2) return null;
 
@@ -379,16 +386,17 @@ public class TrackBuilder : MonoBehaviour
         var uvs = new List<Vector2>(samples.Count * 2);
         var tris = new List<int>(samples.Count * 6);
 
-        float distance = 0f;
         for (int i = 0; i < samples.Count; i++)
         {
             var s = samples[i];
             Vector3 right = new Vector3(s.normal.x, s.normal.y, 0);
             Vector3 c = new Vector3(s.position.x, s.position.y, 0);
-            verts.Add(c + right * latFrom(s));
-            verts.Add(c + right * latTo(s));
-            uvs.Add(new Vector2(0f, distance));
-            uvs.Add(new Vector2(1f, distance));
+            Vector3 a0 = c + right * latFrom(s);
+            Vector3 b0 = c + right * latTo(s);
+            verts.Add(a0);
+            verts.Add(b0);
+            uvs.Add(new Vector2(a0.x * uvScale.x, a0.y * uvScale.y));
+            uvs.Add(new Vector2(b0.x * uvScale.x, b0.y * uvScale.y));
 
             if (i > 0)
             {
@@ -396,7 +404,6 @@ public class TrackBuilder : MonoBehaviour
                 int b = i * 2;
                 tris.Add(a + 0); tris.Add(b + 0); tris.Add(b + 1);
                 tris.Add(a + 0); tris.Add(b + 1); tris.Add(a + 1);
-                distance += Vector2.Distance(samples[i - 1].position, s.position);
             }
         }
 
@@ -408,7 +415,15 @@ public class TrackBuilder : MonoBehaviour
         return mesh;
     }
 
+    // uvScale bakes the project pixel density into the mesh (see PixelArt.UvScale). UVs are the vertex's
+    // WORLD position in metres, scaled -- not 0..1 across the ribbon. Asphalt is isotropic, so anchoring it
+    // to the world grid rather than the ribbon means the road, the pit lane, the runoff and the grass all
+    // share one continuous texel grid, and a 12m-wide road and a 100m-wide runoff cannot end up at
+    // different pixel sizes the way a 0..1 cross-ribbon UV guarantees they will.
     public static Mesh BuildRibbonMesh(List<Sample> samples, bool closedLoop, string name)
+        => BuildRibbonMesh(samples, closedLoop, name, Vector2.one);
+
+    public static Mesh BuildRibbonMesh(List<Sample> samples, bool closedLoop, string name, Vector2 uvScale)
     {
         if (samples == null || samples.Count < 2) return null;
 
@@ -427,15 +442,16 @@ public class TrackBuilder : MonoBehaviour
         var uvs = new List<Vector2>(meshSamples.Count * 2);
         var tris = new List<int>(meshSamples.Count * 6);
 
-        float distance = 0f;
         for (int i = 0; i < meshSamples.Count; i++)
         {
             var s = meshSamples[i];
             Vector3 right = new Vector3(s.normal.x, s.normal.y, 0);
-            verts.Add(new Vector3(s.position.x, s.position.y, 0) - right * (s.width * 0.5f));
-            verts.Add(new Vector3(s.position.x, s.position.y, 0) + right * (s.width * 0.5f));
-            uvs.Add(new Vector2(0f, distance));
-            uvs.Add(new Vector2(1f, distance));
+            Vector3 l = new Vector3(s.position.x, s.position.y, 0) - right * (s.width * 0.5f);
+            Vector3 r = new Vector3(s.position.x, s.position.y, 0) + right * (s.width * 0.5f);
+            verts.Add(l);
+            verts.Add(r);
+            uvs.Add(new Vector2(l.x * uvScale.x, l.y * uvScale.y));
+            uvs.Add(new Vector2(r.x * uvScale.x, r.y * uvScale.y));
 
             if (i > 0)
             {
@@ -443,7 +459,6 @@ public class TrackBuilder : MonoBehaviour
                 int b = i * 2;
                 tris.Add(a + 0); tris.Add(b + 0); tris.Add(b + 1);
                 tris.Add(a + 0); tris.Add(b + 1); tris.Add(a + 1);
-                distance += Vector2.Distance(meshSamples[i - 1].position, s.position);
             }
         }
 

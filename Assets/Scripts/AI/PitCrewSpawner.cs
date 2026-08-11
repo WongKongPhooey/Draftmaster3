@@ -40,9 +40,11 @@ public class PitCrewSpawner : MonoBehaviour
     [Tooltip("World height a paper-doll member is normalised to, whatever the library's pixel size. memberScale multiplies on top. Default matches the on-foot player (an 8px frame at 100 PPU drawn at scale 8), so crew read as the same size as everyone else on foot — the world is metric for cars but the people are drawn smaller than 1:1.")]
     public float memberHeightM = OnFootPersonHeight;
 
-    // On-foot characters (player, paddock NPCs, autograph fans) all render 0.64 world units tall.
-    // Size generated crew to the same figure or they tower over the player.
-    public const float OnFootPersonHeight = 0.64f;
+    // On-foot characters (player, paddock NPCs, autograph fans) all render to one figure, so generated
+    // crew match the player instead of towering over them. The 8px-tall walk frame drawn at the project
+    // standard is 8 / 12.8 = 0.625m -- which is right for a person seen from above beside a 5m car, and
+    // replaces the old hand-set 0.64 that was 2.3% off the grid the rest of the art sits on.
+    public const float OnFootPersonHeight = 8f / PixelArt.PixelsPerMetre;
 
     [Header("Sorting")]
     public string sortingLayerName = "Vehicles";

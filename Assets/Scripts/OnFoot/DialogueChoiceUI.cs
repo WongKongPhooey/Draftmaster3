@@ -6,7 +6,8 @@ using UnityEngine.InputSystem;
 //
 // Drawn with IMGUI for the same reason SpawnIntroUI and the debug panels are — the spline scenes use the 3D
 // URP renderer, where a world/screen-space Canvas needs wiring and a font asset, while OnGUI just works with
-// no prefab and no scene setup.
+// no prefab and no scene setup. Its look comes from PixelGUI (the shared window plate, pixel font and
+// palette), so it matches the rest of the kit instead of the Unity default skin.
 //
 // Only one panel is open at a time. The caller owns the conversation:
 //
@@ -43,9 +44,6 @@ public class DialogueChoiceUI : MonoBehaviour
     bool _confirmHeldPrev, _upHeldPrev, _downHeldPrev;
     Vector2 _lastMousePos;
     float _mouseMovedAt = -99f;    // in-game OnGUI gets no MouseMove events, so track the pointer ourselves
-
-    GUIStyle _header, _option, _optionSelected, _footer;
-    Texture2D _px;
 
     // Open a choice. Replaces any panel already up (the last caller wins), which can only happen if two
     // conversations race — the player can talk to one NPC at a time.
@@ -188,32 +186,40 @@ public class DialogueChoiceUI : MonoBehaviour
     void OnGUI()
     {
         if (!_open || _options == null || RacePauseMenu.IsPaused) return;
-        EnsureStyles();
 
-        float w = Mathf.Min(panelWidth, Screen.width - 40f);
+        var theme = PixelGUI.Theme;
+        // panelWidth/rowHeight/bottomMargin are authored at 1x; PixelGUI steps the whole panel up in whole
+        // numbers with the screen height, so the box grows with the text instead of the rows crowding.
+        float scaledWidth = PixelGUI.Px(panelWidth);
+        float scaledRow = PixelGUI.Px(rowHeight);
+
+        float w = Mathf.Min(scaledWidth, Screen.width - PixelGUI.Px(40f));
         float x = (Screen.width - w) * 0.5f;
-        float headerH = string.IsNullOrEmpty(_question) ? 0f : _header.CalcHeight(new GUIContent(_question), w - 32f) + 10f;
-        float footerH = 24f;
-        float h = headerH + _options.Length * rowHeight + footerH + 24f;
-        float y = Screen.height - bottomMargin - h;
+        float pad = PixelGUI.Px(20f);
+        float headerH = string.IsNullOrEmpty(_question)
+            ? 0f
+            : PixelGUI.Heading.CalcHeight(new GUIContent(_question), w - pad * 2f) + PixelGUI.Px(10f);
+        float footerH = PixelGUI.Px(24f);
+        float h = headerH + _options.Length * scaledRow + footerH + PixelGUI.Px(28f);
+        float y = Screen.height - PixelGUI.Px(bottomMargin) - h;
 
-        // Backing plate, drawn dark so it reads over the paddock whatever the player is stood on.
-        GUI.color = new Color(0.05f, 0.05f, 0.08f, 0.92f);
-        GUI.DrawTexture(new Rect(x, y, w, h), _px);
-        GUI.color = new Color(1f, 0.83f, 0.42f, 0.85f);
-        GUI.DrawTexture(new Rect(x, y, w, 2f), _px);       // amber top rule, matching the speech-bubble name colour
-        GUI.color = Color.white;
+        // The shared 9-sliced window plate, so a dialogue choice is framed exactly like a menu.
+        GUI.Box(new Rect(x, y, w, h), GUIContent.none, PixelGUI.Window);
 
-        float cy = y + 12f;
+        float cy = y + PixelGUI.Px(14f);
         if (headerH > 0f)
         {
-            GUI.Label(new Rect(x + 16f, cy, w - 32f, headerH), _question, _header);
+            GUI.Label(new Rect(x + pad, cy, w - pad * 2f, headerH), _question, PixelGUI.Heading);
             cy += headerH;
         }
 
+        // Rows are indented to leave a gutter for the selection cursor, the JRPG convention: the cursor
+        // marks the choice rather than a highlight bar doing all the work.
+        float gutter = PixelGUI.Px(20f);
+        float rowInset = PixelGUI.Px(14f);
         for (int i = 0; i < _options.Length; i++)
         {
-            var row = new Rect(x + 12f, cy, w - 24f, rowHeight);
+            var row = new Rect(x + rowInset, cy, w - rowInset * 2f, scaledRow);
             bool selected = i == _index;
 
             // Mouse hover moves the selection, so pointer and keyboard never disagree.
@@ -225,56 +231,21 @@ public class DialogueChoiceUI : MonoBehaviour
 
             if (selected)
             {
-                GUI.color = new Color(1f, 0.83f, 0.42f, 0.18f);
-                GUI.DrawTexture(row, _px);
-                GUI.color = Color.white;
+                var band = theme != null ? theme.gold : new Color(1f, 0.83f, 0.42f);
+                band.a = 0.16f;
+                PixelGUI.Fill(row, band);
+                PixelGUI.DrawCursor(row, PixelGUI.Px(12f));
             }
 
-            string label = (selected ? "> " : "   ") + _options[i];
-            if (GUI.Button(row, label, selected ? _optionSelected : _option)) _clicked = i;
-            cy += rowHeight;
+            var textRect = new Rect(row.x + gutter, row.y, row.width - gutter, row.height);
+            if (GUI.Button(textRect, _options[i], selected ? PixelGUI.RowSelected : PixelGUI.Row))
+                _clicked = i;
+            cy += scaledRow;
         }
 
-        bool pad = Gamepad.current != null;
-        string keys = pad ? "Left stick / D-pad to choose    A to answer" : "W / S to choose    E to answer";
-        GUI.Label(new Rect(x + 16f, cy + 2f, w - 32f, footerH), keys, _footer);
-    }
-
-    void EnsureStyles()
-    {
-        if (_px == null)
-        {
-            _px = new Texture2D(1, 1);
-            _px.SetPixel(0, 0, Color.white);
-            _px.Apply();
-        }
-        if (_header != null) return;
-
-        _header = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 17,
-            fontStyle = FontStyle.Bold,
-            wordWrap = true,
-            alignment = TextAnchor.UpperLeft,
-        };
-        _header.normal.textColor = new Color(1f, 0.88f, 0.62f);
-
-        // Transparent buttons: the row highlight above is the affordance, so the list reads as dialogue
-        // rather than a settings menu.
-        _option = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 15,
-            alignment = TextAnchor.MiddleLeft,
-            wordWrap = false,
-        };
-        _option.normal.textColor = new Color(0.82f, 0.82f, 0.86f);
-        _option.hover.textColor = Color.white;
-
-        _optionSelected = new GUIStyle(_option) { fontStyle = FontStyle.Bold };
-        _optionSelected.normal.textColor = Color.white;
-        _optionSelected.hover.textColor = Color.white;
-
-        _footer = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
-        _footer.normal.textColor = new Color(0.62f, 0.62f, 0.68f);
+        // E answers on every device — it is the one interact key the game prompts for.
+        bool hasPad = Gamepad.current != null;
+        string keys = hasPad ? "Left stick / D-pad to choose    E to answer" : "W / S to choose    E to answer";
+        GUI.Label(new Rect(x + pad, cy + PixelGUI.Px(2f), w - pad * 2f, footerH), keys, PixelGUI.Footer);
     }
 }

@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Draftmaster.Fans",
-        "Draftmaster.Progression"
+        "Draftmaster.Progression",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"

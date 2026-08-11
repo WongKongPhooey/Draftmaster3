@@ -506,7 +506,7 @@ public class PitLaneStart : MonoBehaviour
 
         if (!_hintedEnter && Vector2.Distance(_player.transform.position, car.transform.position) < enterHintRange)
         {
-            ControlHints.Show("entercar", "E", "A", "Get in the car");
+            ControlHints.Show("entercar", "E", "E", "Get in the car");
             _hintedEnter = true;
         }
     }
@@ -555,7 +555,7 @@ public class PitLaneStart : MonoBehaviour
             _chief.SetInteractor(car.transform); // "#player" lines bubble over the car, where the driver now is
             _chief.Interact();                   // opens the first line
             _interactHeldPrev = true;            // swallow the same press that got us in the car
-            if (showControlHints) ControlHints.Show("advance", "E", "A", "Continue");
+            if (showControlHints) ControlHints.Show("advance", "E", "E", "Continue");
             return;
         }
 

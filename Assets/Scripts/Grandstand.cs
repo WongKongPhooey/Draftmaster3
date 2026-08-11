@@ -16,7 +16,11 @@ public class Grandstand : MonoBehaviour
     public float length = 120f;
     [Tooltip("Depth of the stand (m), along local +Y.")]
     public float depth = 12f;
-    [Tooltip("World metres covered by ONE horizontal repeat of the texture.")]
+    [Tooltip("Leave on to size the crowd at the project pixel standard (PixelArt.PixelsPerMetre), so a crowd " +
+             "pixel is the same size as a car pixel. Turn off only for a deliberate forced-perspective stand.")]
+    public bool usePixelStandard = true;
+    [Tooltip("World metres covered by ONE horizontal repeat of the texture. Ignored when usePixelStandard is on, " +
+             "where it is derived as textureWidth / PixelArt.PixelsPerMetre.")]
     public float metresPerRepeat = 12f;
     [Tooltip("Flip the texture vertically — for stands on the far side of the track, so the rows face it.")]
     public bool flipFacing;
@@ -44,11 +48,18 @@ public class Grandstand : MonoBehaviour
         var mr = GetComponent<MeshRenderer>();
 
         float hx = length * 0.5f, hy = depth * 0.5f;
-        float uRep = length / Mathf.Max(0.1f, metresPerRepeat);
+
+        // One repeat spans however many metres the texture's width covers at the project standard, so the
+        // crowd's pixels match the car's. At 12.8 px/m a 128px crowd strip repeats every 10m.
+        float repeat = metresPerRepeat;
+        if (usePixelStandard && crowdTexture != null)
+            repeat = crowdTexture.width / PixelArt.PixelsPerMetre;
+
+        float uRep = length / Mathf.Max(0.1f, repeat);
         float vRep = 1f;
         if (crowdTexture != null)
         {
-            float pixelsPerMetre = crowdTexture.width / Mathf.Max(0.1f, metresPerRepeat);
+            float pixelsPerMetre = crowdTexture.width / Mathf.Max(0.1f, repeat);
             vRep = depth * pixelsPerMetre / Mathf.Max(1, crowdTexture.height);
         }
         float v0 = flipFacing ? vRep : 0f;

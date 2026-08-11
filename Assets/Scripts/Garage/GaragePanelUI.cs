@@ -87,7 +87,7 @@ public class GaragePanelUI : MonoBehaviour
 
         var hint = MakeText("Hint", card.transform, font, 24, FontStyle.Italic, TextAnchor.LowerRight,
                             new Color(1f, 1f, 1f, 0.5f));
-        hint.text = "Press E / A to close";
+        hint.text = "Press E to close";
         var hrt = hint.rectTransform;
         hrt.anchorMin = new Vector2(0, 0); hrt.anchorMax = new Vector2(1, 0);
         hrt.offsetMin = new Vector2(48, 24); hrt.offsetMax = new Vector2(-48, 60);

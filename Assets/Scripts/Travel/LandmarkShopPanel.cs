@@ -216,7 +216,7 @@ public class LandmarkShopPanel : MonoBehaviour
         srt.offsetMin = new Vector2(48, 24); srt.offsetMax = new Vector2(-360, 64);
 
         _hint = MakeText("Hint", card.transform, 22, FontStyle.Italic, TextAnchor.LowerRight, new Color(1f, 1f, 1f, 0.5f));
-        _hint.text = "Press E / A to close";
+        _hint.text = "Press E to close";
         var hrt = _hint.rectTransform;
         hrt.anchorMin = new Vector2(1, 0); hrt.anchorMax = new Vector2(1, 0); hrt.pivot = new Vector2(1, 0);
         hrt.anchoredPosition = new Vector2(-48, 24);

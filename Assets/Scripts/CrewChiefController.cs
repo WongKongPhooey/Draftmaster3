@@ -134,7 +134,8 @@ public class CrewChiefController : MonoBehaviour
         {
             _avatar = Instantiate(prefab, pos, Quaternion.identity);
             _avatar.name = "CrewChief";
-            // The prefab carries its own world scale (8x) — avatarScale multiplies it, never replaces it.
+            // The prefab is authored at true world scale (its sprite is imported at the project pixel
+            // standard, so scale 1 is a 0.625m figure) — avatarScale multiplies it, never replaces it.
             if (avatarScale > 0f && !Mathf.Approximately(avatarScale, 1f))
                 _avatar.transform.localScale *= avatarScale;
 

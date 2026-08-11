@@ -136,27 +136,32 @@ public class ExtraTrackSpline : MonoBehaviour
         var subTris = new List<List<int>>();
         var mats = new List<Material>();
 
-        // Submesh 0: the road surface, centerline ± half width.
-        subTris.Add(AppendStrip(meshSamples, verts, uvs, s => -s.width * 0.5f, s => s.width * 0.5f));
-        mats.Add(surfaceMaterial != null ? surfaceMaterial : mr.sharedMaterial);
+        // Submesh 0: the road surface, centerline ± half width. Its UVs are world-anchored at the project
+        // pixel density so this spur's asphalt shares one texel grid with the main track it joins.
+        var surface = surfaceMaterial != null ? surfaceMaterial : mr.sharedMaterial;
+        subTris.Add(AppendStrip(meshSamples, verts, uvs, s => -s.width * 0.5f, s => s.width * 0.5f,
+            PixelArt.UvScale(surface), transform.localToWorldMatrix));
+        mats.Add(surface);
 
         // Optional edge lines as extra submeshes. Later submeshes draw on top of earlier ones within
         // the same renderer, so the lines sit on the road without needing their own sortingOrder.
         if (drawEdgeLines && edgeLineMaterial != null)
         {
             float halfLine = edgeLineWidth * 0.5f;
+            // Painted lines are directional, so they keep ribbon UVs (across the paint, along the road).
+            Vector2 lineUv = PixelArt.UvScale(edgeLineMaterial);
             if (drawLeftEdgeLine)
             {
                 subTris.Add(AppendStrip(meshSamples, verts, uvs,
                     s => -(s.width * 0.5f - edgeLineInset) - halfLine,
-                    s => -(s.width * 0.5f - edgeLineInset) + halfLine));
+                    s => -(s.width * 0.5f - edgeLineInset) + halfLine, lineUv, null));
                 mats.Add(edgeLineMaterial);
             }
             if (drawRightEdgeLine)
             {
                 subTris.Add(AppendStrip(meshSamples, verts, uvs,
                     s => (s.width * 0.5f - edgeLineInset) - halfLine,
-                    s => (s.width * 0.5f - edgeLineInset) + halfLine));
+                    s => (s.width * 0.5f - edgeLineInset) + halfLine, lineUv, null));
                 mats.Add(edgeLineMaterial);
             }
         }
@@ -176,8 +181,13 @@ public class ExtraTrackSpline : MonoBehaviour
 
     // Quad strip between two lateral offsets from the centerline (along +normal; negative = left side).
     // Appends into the shared vertex/uv lists and returns the strip's triangle indices.
+    //
+    // uvScale carries the project pixel density (PixelArt.UvScale). Pass toWorld to anchor the UVs to the
+    // world texel grid (isotropic surfaces like asphalt); pass null for ribbon UVs that follow the strip
+    // (directional textures like painted lines).
     static List<int> AppendStrip(List<TrackBuilder.Sample> samples, List<Vector3> verts, List<Vector2> uvs,
-        System.Func<TrackBuilder.Sample, float> latFrom, System.Func<TrackBuilder.Sample, float> latTo)
+        System.Func<TrackBuilder.Sample, float> latFrom, System.Func<TrackBuilder.Sample, float> latTo,
+        Vector2 uvScale, Matrix4x4? toWorld)
     {
         var tris = new List<int>(samples.Count * 6);
         int baseIndex = verts.Count;
@@ -187,10 +197,22 @@ public class ExtraTrackSpline : MonoBehaviour
             var s = samples[i];
             Vector3 right = new Vector3(s.normal.x, s.normal.y, 0);
             Vector3 c = new Vector3(s.position.x, s.position.y, 0);
-            verts.Add(c + right * latFrom(s));
-            verts.Add(c + right * latTo(s));
-            uvs.Add(new Vector2(0f, distance));
-            uvs.Add(new Vector2(1f, distance));
+            Vector3 vFrom = c + right * latFrom(s);
+            Vector3 vTo = c + right * latTo(s);
+            verts.Add(vFrom);
+            verts.Add(vTo);
+            if (toWorld.HasValue)
+            {
+                Vector3 wFrom = toWorld.Value.MultiplyPoint3x4(vFrom);
+                Vector3 wTo = toWorld.Value.MultiplyPoint3x4(vTo);
+                uvs.Add(new Vector2(wFrom.x * uvScale.x, wFrom.y * uvScale.y));
+                uvs.Add(new Vector2(wTo.x * uvScale.x, wTo.y * uvScale.y));
+            }
+            else
+            {
+                uvs.Add(new Vector2(0f, distance * uvScale.y));
+                uvs.Add(new Vector2(1f, distance * uvScale.y));
+            }
             if (i > 0)
             {
                 int a = baseIndex + (i - 1) * 2;
