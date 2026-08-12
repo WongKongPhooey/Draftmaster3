@@ -31,6 +31,8 @@ public class PitLaneStart : MonoBehaviour
     [Header("Entering")]
     [Tooltip("Max distance from car centre to allow climbing in.")]
     public float enterRange = 2.5f;
+    [Tooltip("World height (m) of the keycap prompt floating over the car. Bigger than the NPC one — it sits above a 5m car, not a person.")]
+    public float enterPromptIconHeight = 0.9f;
 
     // Fired the moment the player climbs into the car. FormationDirector subscribes to this to start
     // the safety-car formation lap.
@@ -626,15 +628,22 @@ public class PitLaneStart : MonoBehaviour
                 _prompt = new GameObject("EnterPrompt");
                 _prompt.transform.SetParent(car.transform, false);
                 _prompt.transform.localPosition = new Vector3(0f, 2.2f, 0f);
-                var tm = _prompt.AddComponent<TextMesh>();
-                tm.text = "E";
-                tm.characterSize = 0.5f;
-                tm.fontSize = 32;
-                tm.anchor = TextAnchor.MiddleCenter;
-                tm.color = new Color(1f, 1f, 0.4f, 0.95f);
-                var mr = _prompt.GetComponent<MeshRenderer>();
-                mr.sortingLayerName = "Vehicles"; // above the car bodywork
-                mr.sortingOrder = 50;
+
+                // Same Kenney keycap the NPC prompts use, so "press E" looks identical whether you're
+                // walking up to a person or to your own car. Sized larger than the NPC one because it
+                // floats over a 5m car rather than a 0.6m figure.
+                if (InputPromptIcon.Create(_prompt.transform, "Icon", enterPromptIconHeight, "Vehicles", 50) == null)
+                {
+                    var tm = _prompt.AddComponent<TextMesh>();
+                    tm.text = "E";
+                    tm.characterSize = 0.5f;
+                    tm.fontSize = 32;
+                    tm.anchor = TextAnchor.MiddleCenter;
+                    tm.color = new Color(1f, 1f, 0.4f, 0.95f);
+                    var mr = _prompt.GetComponent<MeshRenderer>();
+                    mr.sortingLayerName = "Vehicles"; // above the car bodywork
+                    mr.sortingOrder = 50;
+                }
             }
             _prompt.transform.rotation = Quaternion.identity; // stay upright regardless of car rotation
             _prompt.SetActive(true);

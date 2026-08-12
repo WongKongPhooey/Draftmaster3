@@ -27,8 +27,12 @@ public class FormationDirector : MonoBehaviour
     public Color rooflightColor = new Color(1f, 0.55f, 0f, 1f);
     public Vector2 safetyCarScale = new Vector2(1f, 1f);
     public int safetyCarSortingOrder = 6;
-    [Tooltip("Distance (m) along the main spline, past the pit-exit node, to start the safety car.")]
-    public float safetyCarStartOffset = 4f;
+    [Tooltip("Distance (m) along the main spline, past the pit-exit node, to start the safety car. Wants to be " +
+             "at least FormationController.paceCarGap: at the old 4m the leader emerged from the pit lane already " +
+             "inside its following cushion and had to brake immediately, which is the disturbance the train " +
+             "behind then amplified. Pit-in is triggered by proximity to the authored entry node, so a larger " +
+             "offset here does NOT push the safety car past its pit entry.")]
+    public float safetyCarStartOffset = 28f;
 
     [Header("Pace")]
     [Tooltip("Formation cruise pace (mph). Shared with the AI FormationControllers via Instance.")]

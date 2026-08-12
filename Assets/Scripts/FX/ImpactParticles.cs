@@ -52,6 +52,19 @@ public class ImpactParticles : MonoBehaviour
     [Tooltip("Fraction of the car's own velocity the shower inherits, so debris trails behind the car.")]
     [Range(0f, 1f)] public float inheritVelocity = 0.35f;
 
+    // The tuned Spark/Debris numbers above describe the HARDEST contact (intensity/severity 1). Everything
+    // below that is scaled down by these three, so a slow nudge coughs out a few short-lived flecks instead
+    // of the same metre-wide shower a 60 m/s shunt produces. Leave all three at 1 for the old flat response.
+    [Header("Speed Response")]
+    [Tooltip("Ejection-speed multiplier at the weakest contact that still shows anything. Scales how FAR particles are thrown.")]
+    [Range(0.05f, 1f)] public float weakSpeedScale = 0.25f;
+    [Tooltip("Lifetime multiplier at the weakest contact. Combines with the speed scale, so reach falls off faster than speed alone.")]
+    [Range(0.1f, 1f)] public float weakLifetimeScale = 0.45f;
+    [Tooltip("Particle-size multiplier at the weakest contact, so a light scuff throws smaller flecks.")]
+    [Range(0.1f, 1f)] public float weakSizeScale = 0.6f;
+    [Tooltip("Shapes the ramp from weakest to hardest contact. >1 keeps low-speed contacts subdued for longer.")]
+    [Range(0.25f, 4f)] public float responseExponent = 1.35f;
+
     [Header("Render")]
     [Tooltip("Sorting order. Sparks and debris sit above the car body (5) — they're in front of it.")]
     public int sortingOrder = 7;
@@ -175,9 +188,10 @@ public class ImpactParticles : MonoBehaviour
             // Sparks fly out of the contact but are dragged along by the scrape — a car grinding the wall
             // leaves its sparks behind it, not in a neat fan.
             Vector2 bias = carVel * (inheritVelocity * 0.5f);
+            Response(intensity, out float spd, out float life, out float sz);
             Burst(_sparks, c.point, z, outward, bias, count, sparkSpreadDeg,
-                sparkSpeedMin, Mathf.Lerp(sparkSpeedMin, sparkSpeedMax, intensity),
-                sparkColorA, sparkColorB, sparkSize, sparkSize);
+                sparkSpeedMin * spd, sparkSpeedMax * spd, sparkLifetime * life,
+                sparkColorA, sparkColorB, sparkSize * sz, sparkSize * sz);
         }
 
         if (c.severity >= debrisMinSeverity && now >= _nextDebris)
@@ -185,15 +199,31 @@ public class ImpactParticles : MonoBehaviour
             _nextDebris = now + debrisInterval;
             float sev = Mathf.Clamp01(c.severity);
             int count = Mathf.Max(1, Mathf.RoundToInt(debrisCountMax * sev));
+            Response(sev, out float spd, out float life, out float sz);
             Burst(_debris, c.point, z, outward, carVel * inheritVelocity, count, debrisSpreadDeg,
-                debrisSpeedMin, Mathf.Lerp(debrisSpeedMin, debrisSpeedMax, sev),
-                debrisColorA, debrisColorB, debrisSizeMin, debrisSizeMax);
+                debrisSpeedMin * spd, debrisSpeedMax * spd, debrisLifetime * life,
+                debrisColorA, debrisColorB, debrisSizeMin * sz, debrisSizeMax * sz);
         }
     }
 
+    // Map a 0..1 contact strength onto the three multipliers that make the burst read as harder or softer.
+    // Both ends of each speed range move together — scaling only the top end (what this used to do) left the
+    // slowest particles as fast as they were in a full shunt, so every contact threw its shower the same
+    // distance no matter how gently the car touched. Speed sets throw velocity and lifetime sets how long
+    // they keep it, so reach scales roughly with the product of the two.
+    void Response(float t, out float speedScale, out float lifetimeScale, out float sizeScale)
+    {
+        float k = Mathf.Pow(Mathf.Clamp01(t), Mathf.Max(0.01f, responseExponent));
+        speedScale = Mathf.Lerp(weakSpeedScale, 1f, k);
+        lifetimeScale = Mathf.Lerp(weakLifetimeScale, 1f, k);
+        sizeScale = Mathf.Lerp(weakSizeScale, 1f, k);
+    }
+
     // Emit `count` particles from `point`, fanned within `spreadDeg` of `dir`, plus an inherited velocity bias.
+    // startLifetime is supplied per burst (not read from the system's main module) so a soft contact's
+    // particles die back early instead of coasting out to the full-impact distance.
     static void Burst(ParticleSystem ps, Vector2 point, float z, Vector2 dir, Vector2 bias, int count,
-                      float spreadDeg, float speedMin, float speedMax, Color colA, Color colB,
+                      float spreadDeg, float speedMin, float speedMax, float lifetime, Color colA, Color colB,
                       float sizeMin, float sizeMax)
     {
         var p = new ParticleSystem.EmitParams { applyShapeToPosition = false };
@@ -208,6 +238,7 @@ public class ImpactParticles : MonoBehaviour
             p.velocity = new Vector3(v.x, v.y, 0f);
             p.startColor = Color.Lerp(colA, colB, Random.value);
             p.startSize = Random.Range(sizeMin, sizeMax);
+            p.startLifetime = Mathf.Max(0.02f, lifetime * Random.Range(0.8f, 1.15f));
             ps.Emit(p, 1);
         }
     }

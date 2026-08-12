@@ -20,6 +20,8 @@ public class NPCInteractable : MonoBehaviour
     public float bubbleHeadHeight = 0f;
     [Tooltip("Turn to face the player when the conversation opens. Off for a speaker whose transform means something — a driver sat in a parked car can't swivel the car round, and its heading is read back when someone drives it.")]
     public bool turnsToFace = true;
+    [Tooltip("World height (m) of the floating keycap prompt. Roughly half a head — the old text glyph read as a giant letter because nothing tied it to a real size.")]
+    public float promptIconHeight = 0.3f;
 
     int _index;
     bool _talking;
@@ -157,33 +159,26 @@ public class NPCInteractable : MonoBehaviour
                 _prompt.transform.localPosition = new Vector3(0f, 0.7f * inv, -0.1f * inv); // -z nudges it in front of the road mesh
                 _prompt.transform.localScale = Vector3.one * inv; // children below render at world scale
 
-                // Dark disc background so the glyph reads as a button.
-                var iconGo = new GameObject("Icon");
-                iconGo.transform.SetParent(_prompt.transform, false);
-                iconGo.transform.localScale = Vector3.one * 0.55f;
-                var sr = iconGo.AddComponent<SpriteRenderer>();
-                sr.sprite = SpeechBubbleSprite();
-                sr.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
-                sr.sortingLayerName = "Vehicles";
-                sr.sortingOrder = 60;
-                // Scene uses the 3D URP renderer — default Sprite-Lit gets no Light2D and renders black. Force unlit.
-                Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-                if (sh == null) sh = Shader.Find("Sprites/Default");
-                if (sh != null) sr.sharedMaterial = new Material(sh);
+                // Kenney pixel keycap. It already draws its own dark bezel and lit keytop, so it needs
+                // neither the disc that used to sit behind the letter nor a tint — the art IS the button.
+                var icon = InputPromptIcon.Create(_prompt.transform, "Icon", promptIconHeight, "Vehicles", 60);
 
-                // Button glyph (TextMesh renders reliably under the 3D renderer; same approach as the car-enter prompt).
-                var labelGo = new GameObject("Label");
-                labelGo.transform.SetParent(_prompt.transform, false);
-                labelGo.transform.localPosition = new Vector3(0f, 0f, -0.05f);
-                _promptLabel = labelGo.AddComponent<TextMesh>();
-                _promptLabel.anchor = TextAnchor.MiddleCenter;
-                _promptLabel.alignment = TextAlignment.Center;
-                _promptLabel.characterSize = 0.18f;
-                _promptLabel.fontSize = 64;
-                _promptLabel.color = new Color(1f, 1f, 0.5f, 1f);
-                var mr = labelGo.GetComponent<MeshRenderer>();
-                mr.sortingLayerName = "Vehicles";
-                mr.sortingOrder = 61;
+                if (icon == null)
+                {
+                    // Art missing: fall back to the old text glyph so a prompt still appears.
+                    var labelGo = new GameObject("Label");
+                    labelGo.transform.SetParent(_prompt.transform, false);
+                    labelGo.transform.localPosition = new Vector3(0f, 0f, -0.05f);
+                    _promptLabel = labelGo.AddComponent<TextMesh>();
+                    _promptLabel.anchor = TextAnchor.MiddleCenter;
+                    _promptLabel.alignment = TextAlignment.Center;
+                    _promptLabel.characterSize = 0.18f;
+                    _promptLabel.fontSize = 64;
+                    _promptLabel.color = new Color(1f, 1f, 0.5f, 1f);
+                    var mr = labelGo.GetComponent<MeshRenderer>();
+                    mr.sortingLayerName = "Vehicles";
+                    mr.sortingOrder = 61;
+                }
             }
             // E is THE interact key, whatever is plugged in — a wheel or an idle pad used to flip every
             // prompt to the gamepad face button while the player was still on the keyboard.
@@ -196,22 +191,4 @@ public class NPCInteractable : MonoBehaviour
         else if (_prompt != null) _prompt.SetActive(false);
     }
 
-    static Sprite _bubble;
-    static Sprite SpeechBubbleSprite()
-    {
-        if (_bubble != null) return _bubble;
-        int s = 32;
-        var tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
-        var px = new Color32[s * s];
-        Vector2 c = new Vector2(s * 0.5f, s * 0.5f);
-        for (int y = 0; y < s; y++)
-            for (int x = 0; x < s; x++)
-            {
-                float d = Vector2.Distance(new Vector2(x, y), c);
-                px[y * s + x] = d < s * 0.45f ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
-            }
-        tex.SetPixels32(px); tex.Apply();
-        _bubble = Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), s);
-        return _bubble;
-    }
 }

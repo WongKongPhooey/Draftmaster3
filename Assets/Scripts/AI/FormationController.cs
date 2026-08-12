@@ -14,14 +14,24 @@ public class FormationController : MonoBehaviour
     public float cruiseMph = 60f;
     [Tooltip("How far behind the car ahead this car tries to sit (m).")]
     public float targetGap = 9f;
+    [Tooltip("How far behind the SAFETY CAR the leader tries to sit (m). Deliberately much larger than targetGap: " +
+             "the pace car runs its own speed profile, so it sheds speed for corners on its own schedule and the " +
+             "leader stationed a race-gap behind it has to stab the brakes to keep station. That stab is the " +
+             "disturbance the whole train then amplifies. A long gap turns the same speed change into a slow " +
+             "gap-closure the ACC law can absorb without braking at all.")]
+    public float paceCarGap = 26f;
     [Tooltip("Speed correction (mph) applied per metre of gap error. Higher = closes/opens gaps faster, but too high makes the train string-UNSTABLE (a wobble amplifies down the field into a pile-up).")]
     public float gapGainMphPerMetre = 2.5f;
     [Tooltip("Gap error (m) ignored before the car reacts — a deadband so a hair-trigger correction doesn't ripple back through the field as a phantom stop-and-go jam.")]
     public float gapDeadbandM = 1.5f;
-    [Tooltip("Brake (mph) per mph of CLOSING speed on the car ahead. This relative-velocity damping is what makes the train string-STABLE: a car eases off the moment it's catching the car ahead (before the gap collapses), so a disturbance up front dies out down the line instead of amplifying into a pile-up.")]
-    public float relVelDampMph = 0.85f;
-    [Tooltip("Max rate (mph/sec) the formation speed cap may FALL. Braking is rate-limited so a touch or a slow car ahead produces a gentle, bounded slow-down instead of a hard stab that ripples back through the pack as a pile-up. Accelerating up is not limited.")]
-    public float maxBrakeMphPerSec = 14f;
+    [Tooltip("Brake (mph) per mph of CLOSING speed on the car ahead. This relative-velocity damping is what makes the train string-STABLE: a car eases off the moment it's catching the car ahead (before the gap collapses), so a disturbance up front dies out down the line instead of amplifying into a pile-up. Must dominate gapGainMphPerMetre's contribution or each car overreacts to gap error and the wobble grows with field position — which reads as the MIDPACK crashing while the front looks fine.")]
+    public float relVelDampMph = 1.5f;
+    [Tooltip("Max rate (mph/sec) the formation speed cap may FALL. Braking is rate-limited so a touch or a slow car ahead produces a gentle, bounded slow-down instead of a hard stab that ripples back through the pack as a pile-up. Accelerating up is not limited. Too LOW is its own trap: the gentle correction can't land, the car sails on into the emergency branch, and the stab it was meant to prevent happens anyway.")]
+    public float maxBrakeMphPerSec = 20f;
+    [Tooltip("Escalate from gentle station-keeping to hard avoidance at this fraction of the station gap. Must stay below 1: at 1 the follow law is commanded to sit exactly on the panic trigger and every car brake-stabs on noise.")]
+    [Range(0.2f, 0.95f)] public float emergencyGapFraction = 0.6f;
+    [Tooltip("Hysteresis on the release: once avoiding, keep avoiding until the gap recovers past emergency threshold x this. >1 stops a car chattering in and out of panic braking frame to frame.")]
+    [Range(1f, 2f)] public float emergencyReleaseFactor = 1.3f;
     [Tooltip("Most this car may exceed cruise pace by while catching the train up (mph). Only used on straights. Kept low so the field doesn't string out far ahead of the pace.")]
     public float catchUpBonusMph = 9f;
     [Tooltip("Lowest speed cap (mph) — a floor so a car never crawls to a halt mid-formation (lifted when blocked).")]
@@ -109,6 +119,21 @@ public class FormationController : MonoBehaviour
     float _pitOutTimer;
     float _prevCap;     // last frame's speed cap, for rate-limiting how fast braking can ramp the cap down
     bool _hasPrevCap;
+    bool _avoiding;     // latched hard-avoidance state, with hysteresis on release (see the speed law)
+
+    // --- Diagnostics (read by FormationDiagnostics, the F8 overlay). Last frame's view of the speed law, so a
+    //     pace lap can be watched car-by-car instead of inferred from the wreckage.
+    public static readonly System.Collections.Generic.List<FormationController> Active = new();
+    public SplineDriver Spline => _spline;
+    public float DbgGap { get; private set; }          // gap to the car being followed; -1 = nothing ahead
+    public float DbgStationGap { get; private set; }   // where the follow law is trying to sit
+    public float DbgPanicGap { get; private set; }     // below this it escalates to hard braking
+    public float DbgClosingMph { get; private set; }   // + = catching the car ahead
+    public float DbgCap { get; private set; }          // commanded speed cap after all limits
+    public bool DbgAvoiding { get; private set; }
+    public bool DbgSettling { get; private set; }
+    public bool DbgOnPit { get; private set; }
+    public bool DbgPaceCarAhead { get; private set; }
     float _savedLineFactor; // the car's own racing line, parked during formation and restored at green
     bool _lineFactorSaved;
 
@@ -116,11 +141,16 @@ public class FormationController : MonoBehaviour
 
     void OnEnable()
     {
+        Active.Add(this);
         RaceStart.PhaseChanged += OnPhaseChanged;
         OnPhaseChanged(RaceStart.Current);
     }
 
-    void OnDisable() => RaceStart.PhaseChanged -= OnPhaseChanged;
+    void OnDisable()
+    {
+        Active.Remove(this);
+        RaceStart.PhaseChanged -= OnPhaseChanged;
+    }
 
     // The dynamic bicycle model + pure-pursuit steering is twitchy at parade speeds and spins cars off the
     // line. For the formation lap we drive KINEMATICALLY instead — SplineDriver glues the car to the racing
@@ -167,6 +197,7 @@ public class FormationController : MonoBehaviour
             _lateral = 0f;
             _weaveEnv = 0f;
             _hasPrevCap = false; // drop the brake-rate-limit history so the green launch isn't held back by it
+            _avoiding = false;   // and the avoidance latch, so a car can't carry panic braking into the green
             if (_spline != null)
             {
                 _spline.tacticalLateralOffset = 0f;
@@ -193,10 +224,13 @@ public class FormationController : MonoBehaviour
         if (_spline.usePitLane)
         {
             _wasPit = true;
+            DbgOnPit = true;
+            DbgGap = -1f;
             if (_spline.CurrentMph > 3f)
                 _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, pitPullOutLateralRate * dt);
             return;
         }
+        DbgOnPit = false;
         // Just rejoined the main track — start the pit-out settle so the merge doesn't snap the car off line.
         if (_wasPit) { _wasPit = false; _pitOutTimer = pitOutSettleSeconds; _weaveEnv = 0f; }
         bool settling = _pitOutTimer > 0f;
@@ -221,32 +255,69 @@ public class FormationController : MonoBehaviour
         float avoidTarget = float.NaN; // NaN = no lateral avoidance this frame
         bool emergencyBrake = false;
 
-        if (settling)
-            cap = pitOutMph; // ease onto the racing line after the pit merge before resuming pace
-        else
-        {
-            // Free to close the train up on an open straight; held to cruise in a corner or the close-up bunch.
-            cap = (corner || closingUp) ? cruise : cruise + catchUpBonusMph;
-            float wantGap = closingUp ? rowGap : targetGap;
+        // Base pace: gentle while settling after the pit merge, otherwise free to close the train up on an open
+        // straight and held to cruise in a corner or the close-up bunch.
+        //
+        // The pit-out settle used to REPLACE the whole speed law with a flat pitOutMph for pitOutSettleSeconds.
+        // That left every car blind for ~3 seconds at 45mph immediately after joining the main track — no gap
+        // keeping, no avoidance, no matter what was in front of it. The leaders merge into empty track so they
+        // got away with it; the midpack merges into a train that has already formed, eats the gap at whatever
+        // the speed differential is, and rear-ends it. That's a hole in the logic, not a gain that needed
+        // trimming, which is why softening the ACC gains changed nothing. The settle is now a CEILING on pace
+        // (it still eases the car onto the racing line) with the follower running underneath it as normal.
+        cap = settling ? pitOutMph
+                       : ((corner || closingUp) ? cruise : cruise + catchUpBonusMph);
 
-            if (TryNearestAheadInPath(avoidScanRange, avoidLateralGate,
+        {
+            // Scan far enough to still SEE the safety car at the long pace-car gap. Without this the leader
+            // loses sight of it just as it settles at station, reverts to catch-up pace, and sails back into
+            // range — a slow surge/back-off cycle that the field behind reads as the leader braking.
+            float scanRange = Mathf.Max(avoidScanRange, paceCarGap + 12f);
+
+            if (TryNearestAheadInPath(scanRange, avoidLateralGate,
                     out float foeMph, out float foeLat, out float foeGap, out bool foeIsPaceCar))
             {
                 float myMps = _spline.CurrentMph * MphToMps;
                 float safeGap = Mathf.Max(avoidMinGap, myMps * avoidHeadwaySec);
 
+                // Hang well back off the pace car; hold a normal race gap off another car. The leader is the
+                // only car that ever sees the pace car, so this lengthens the front of the train only.
+                float wantGap = foeIsPaceCar ? paceCarGap : (closingUp ? rowGap : targetGap);
+
                 // Station off the nearest car ahead EVERY frame (ACC: match its pace, trimmed by gap error + closing
                 // rate), so closing speed never builds in the first place. Held to at least the speed-dependent cushion.
-                float follow = FollowCapRaw(foeMph, foeGap, Mathf.Max(wantGap, safeGap));
+                float stationGap = Mathf.Max(wantGap, safeGap);
+                float follow = FollowCapRaw(foeMph, foeGap, stationGap);
                 if (foeIsPaceCar) follow = Mathf.Min(follow, cruise); // pace the safety car, but NEVER chase its peel-away
                 cap = Mathf.Min(cap, follow);
 
-                // Inside the cushion and still closing: act. Slip ALONGSIDE on an open side if there's room (a real
-                // pace-lap move that opens the gap with nobody braking); otherwise hold station with FULL braking
-                // authority (bypass the gentle rate-limit + guarantee the decel) so the slow actually lands in time.
-                if (foeGap < safeGap && _spline.CurrentMph - foeMph > -1f)
+                // Escalate to hard avoidance only WELL INSIDE the station gap, not AT it.
+                //
+                // These were the same number. The follow law above is commanded to sit at exactly stationGap, and
+                // the panic branch below fired at anything under stationGap — so every car in the field cruised
+                // parked on the trigger, and the slightest wobble (a corner, a weave, a metre of noise) dropped it
+                // inside and fired a hard stab that bypasses the brake rate-limit. The car behind then saw a sharp
+                // decel, stabbed harder, and so on down the line: the disturbance grows with field position, which
+                // is why it shows up in the midpack rather than at the front.
+                //
+                // Latched with hysteresis so a car sitting near the boundary can't chatter in and out of panic
+                // braking frame to frame — once triggered it stays in avoidance until the gap genuinely recovers.
+                float panicGap = stationGap * emergencyGapFraction;
+                bool closing = _spline.CurrentMph - foeMph > -1f;
+                if (_avoiding) _avoiding = foeGap < panicGap * emergencyReleaseFactor;
+                else _avoiding = foeGap < panicGap && closing;
+
+                DbgGap = foeGap;
+                DbgStationGap = stationGap;
+                DbgPanicGap = panicGap;
+                DbgClosingMph = _spline.CurrentMph - foeMph;
+                DbgPaceCarAhead = foeIsPaceCar;
+
+                if (_avoiding)
                 {
-                    int side = foeIsPaceCar ? 0 : ChooseAvoidSide();
+                    // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to
+                    // prevent, so while settling the car brakes to hold station instead of slipping alongside.
+                    int side = (foeIsPaceCar || settling) ? 0 : ChooseAvoidSide();
                     if (side != 0)
                     {
                         avoidTarget = foeLat + side * alongsideClear;
@@ -259,6 +330,12 @@ public class FormationController : MonoBehaviour
                     }
                 }
             }
+            else
+            {
+                _avoiding = false; // nothing ahead in my corridor — drop the latch
+                DbgGap = -1f;
+                DbgPaceCarAhead = false;
+            }
         }
 
         cap = Mathf.Clamp(cap, floorMph, cruise + catchUpBonusMph);
@@ -269,6 +346,10 @@ public class FormationController : MonoBehaviour
         if (_hasPrevCap && !emergencyBrake) cap = Mathf.Max(cap, _prevCap - maxBrakeMphPerSec * dt);
         _prevCap = cap;
         _hasPrevCap = true;
+
+        DbgCap = cap;
+        DbgAvoiding = _avoiding;
+        DbgSettling = settling;
 
         _spline.aiMaxSpeedMph = cap;
         _spline.aiMinDecelMphPerSec = emergencyBrake ? avoidHardDecelMphPerSec : 0f; // brake authority for the avoidance

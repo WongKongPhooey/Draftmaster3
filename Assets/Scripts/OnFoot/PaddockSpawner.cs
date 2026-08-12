@@ -45,6 +45,9 @@ public class PaddockSpawner : MonoBehaviour
     [Tooltip("World height (m) a paddock walker is normalised to, matching the player and every other NPC. " +
              "0 = PitCrewSpawner.OnFootPersonHeight.")]
     public float npcHeightM = 0f;
+    [Tooltip("Footprint (m, world space) the NPC blocks the player with: x = width across, y = depth. " +
+             "Sized to the drawn body, not the sprite frame. Set either axis to 0 to leave the prefab's collider alone.")]
+    public Vector2 npcColliderSize = new(0.30f, 0.17f);
     [Tooltip("Walk speed for wandering NPCs, units/sec.")]
     public float walkSpeed = 1.2f;
 
@@ -332,8 +335,42 @@ public class PaddockSpawner : MonoBehaviour
         else if (npcScale > 0f)
             npc.transform.localScale = Vector3.one * npcScale;
 
+        FitCollider(npc);
+
         npc.name = talking ? "PaddockNPC_Talk" : "PaddockNPC_Walk";
         return npc;
+    }
+
+    // The prefab's collider is authored against the prefab's own 1:1 scale (0.64 x 0.32 for a 0.625m
+    // figure). The height normalisation above rescales the whole NPC -- with the part library at
+    // 100 px/unit and the figure at 12.8 px/m that's ~7.8x -- and a Collider2D scales with its
+    // transform, so every paddock NPC was blocking a 5m x 2.5m box floating 0.6m off its own feet.
+    // The sprites never showed it because the paper-doll layers are built at the library's PPU, so the
+    // scale cancels out for them and only the collider was left oversized.
+    //
+    // Re-derive the footprint in world metres and divide the transform scale back out, so the box stays
+    // the same size on the ground whatever the library's pixel settings are.
+    void FitCollider(GameObject npc)
+    {
+        if (npcColliderSize.x <= 0f || npcColliderSize.y <= 0f) return;
+
+        float s = Mathf.Abs(npc.transform.localScale.x);
+        if (s < 0.0001f) return;
+
+        var box = npc.GetComponent<BoxCollider2D>();
+        if (box != null)
+        {
+            box.size = npcColliderSize / s;
+            box.offset = Vector2.zero; // prefab offsets the box up the body; centred is right for a top-down footprint
+            return;
+        }
+
+        var circle = npc.GetComponent<CircleCollider2D>();
+        if (circle != null)
+        {
+            circle.radius = Mathf.Max(npcColliderSize.x, npcColliderSize.y) * 0.5f / s;
+            circle.offset = Vector2.zero;
+        }
     }
 
     GameObject BuildPlaceholder(string name, Vector3 pos, Color color)
