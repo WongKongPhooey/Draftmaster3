@@ -7,7 +7,9 @@ using Draftmaster.Progression;
 //
 // Drop one on any spawner as a serialized field and check IsMet() before building the thing:
 //
-//     if (rvNpcAppearance.IsMet()) BuildRvDoorCutscene(...);
+//     if (appear.IsMet()) BuildTheThing(...);
+//
+// PlacedNPC carries one of these per editor-placed NPC — that's the main way they're authored now.
 //
 // Every clause is opt-in: an empty/default block means "always". Clauses are ANDed. Repeat policy is
 // the one that needs a save key — everything else reads live state (weekend session, scene, series,
@@ -85,6 +87,26 @@ public class AppearanceConditions
     // the pit box", "only if it's raining"). Set by the spawner after deserialization. Null = ignored.
     [System.NonSerialized] public System.Func<bool> ExtraGate;
 
+    // ------------------------------------------------------------------ editor preview
+    //
+    // The NPC Director asks "who would be here in qualifying, at Martinsville, in the Cup series?" without
+    // entering Play Mode. Set Preview and every clause answers against that hypothetical instead of live
+    // state; null (the shipping case) reads the real session/track/series as always. Repeat memory and the
+    // chance roll are skipped by default too — a preview is about the AUTHORED rule, not about what this
+    // particular save has already seen.
+    public class PreviewContext
+    {
+        public RaceWeekend.Session session = RaceWeekend.Session.Practice;
+        public string trackId = "";
+        public string series = "";
+        public bool ignoreSeen = true;
+        public bool ignoreChance = true;
+    }
+
+    // Editor-only in practice: nothing at runtime ever assigns it. Static so a gizmo, an inspector and the
+    // Director window all answer identically without threading a context through every call.
+    [System.NonSerialized] public static PreviewContext Preview;
+
     const string SeenPrefix = "npc.seen.";
     const string RegistryKey = "npc.seen.keys"; // CSV of every key ever written, so a debug menu can clear them
 
@@ -92,21 +114,71 @@ public class AppearanceConditions
     static readonly HashSet<string> _playSessionSeen = new HashSet<string>();
 
     // Everything ANDed. Rolls `chance`, so call once and cache.
-    public bool IsMet()
+    public bool IsMet() => FirstUnmet() == null;
+
+    // Same test as IsMet(), but says WHICH clause said no — null means "appears". The Director window and
+    // the PlacedNPC inspector print this, so an NPC that fails to turn up explains itself instead of
+    // needing a clause-by-clause read of the inspector.
+    public string FirstUnmet()
     {
-        if (!enabled) return false;
-        if (!SessionAllowed()) return false;
-        if (!Matches(tracks, CurrentTrackId)) return false;
-        if (!PlaceAllowed()) return false;
-        if (!SeriesAllowed()) return false;
-        if (!StatAllowed()) return false;
-        if (!CareerPath.Allows(careerPaths)) return false;
-        if (!QuestAllowed()) return false;
-        if (!string.IsNullOrEmpty(requiredItemId) && !PlayerInventory.Has(requiredItemId)) return false;
-        if (AlreadySeen()) return false;
-        if (ExtraGate != null && !ExtraGate()) return false;
-        if (chance < 1f && Random.value > chance) return false;
-        return true;
+        if (!enabled) return "disabled";
+        if (!SessionAllowed()) return $"not in {CurrentSession}";
+        if (!Matches(tracks, CurrentTrackId)) return $"track is {Blank(CurrentTrackId)}, needs {Join(tracks)}";
+        if (!PlaceAllowed()) return $"scene is {SceneManager.GetActiveScene().name}, needs {Join(scenes)}";
+        if (!SeriesAllowed()) return $"series not one of {Join(series)}";
+        if (!StatAllowed()) return $"stat '{statKey}' is {PlayerStatsLedger.Get(statKey)}, needs {statMin}..{(statMax == int.MaxValue ? "∞" : statMax.ToString())}";
+        if (!CareerPath.Allows(careerPaths)) return "career path doesn't match";
+        if (!QuestAllowed()) return $"quest '{questId}' not {questRequirement}";
+        if (!string.IsNullOrEmpty(requiredItemId) && !PlayerInventory.Has(requiredItemId)) return $"missing item '{requiredItemId}'";
+        if (AlreadySeen()) return $"already seen ({repeat})";
+        if (ExtraGate != null && !ExtraGate()) return "code gate says no";
+        if (chance < 1f && !ChanceAllowed()) return $"lost the {chance:P0} roll";
+        return null;
+    }
+
+    // One-line human summary of what this block is gated on, for list rows and gizmo labels.
+    // "always" when nothing is set.
+    public string Summarise()
+    {
+        var bits = new List<string>();
+        if (!enabled) bits.Add("DISABLED");
+        if (!(inPractice && inQualifying && inRace))
+        {
+            var s = new List<string>();
+            if (inPractice) s.Add("P");
+            if (inQualifying) s.Add("Q");
+            if (inRace) s.Add("R");
+            bits.Add(s.Count == 0 ? "no session" : string.Join("/", s));
+        }
+        if (tracks != null && tracks.Length > 0) bits.Add(Join(tracks));
+        if (scenes != null && scenes.Length > 0) bits.Add("scene " + Join(scenes));
+        if (series != null && series.Length > 0) bits.Add("series " + Join(series));
+        if (!string.IsNullOrEmpty(statKey))
+            bits.Add($"{statKey} {statMin}..{(statMax == int.MaxValue ? "∞" : statMax.ToString())}");
+        if (careerPaths != null && careerPaths.Length > 0) bits.Add("path " + string.Join("/", careerPaths));
+        if (!string.IsNullOrEmpty(questId) && questRequirement != QuestRequirement.Ignore)
+            bits.Add($"quest {questId} {questRequirement}");
+        if (!string.IsNullOrEmpty(requiredItemId)) bits.Add("holds " + requiredItemId);
+        if (repeat != Repeat.EveryTime) bits.Add(repeat.ToString());
+        if (chance < 1f) bits.Add($"{chance:P0} chance");
+        return bits.Count == 0 ? "always" : string.Join(" · ", bits);
+    }
+
+    static string Blank(string s) => string.IsNullOrEmpty(s) ? "(none)" : s;
+    static string Join(string[] a) => a == null || a.Length == 0 ? "(any)" : string.Join("/", a);
+
+    bool ChanceAllowed() => (Preview != null && Preview.ignoreChance) || Random.value <= chance;
+
+    // Which session the rules are being read against — the previewed one in the editor, the live one in game.
+    public static RaceWeekend.Session CurrentSession
+    {
+        get
+        {
+            if (Preview != null) return Preview.session;
+            if (RaceWeekend.IsPractice) return RaceWeekend.Session.Practice;
+            if (RaceWeekend.IsQualifying) return RaceWeekend.Session.Qualifying;
+            return RaceWeekend.Session.Race;
+        }
     }
 
     // The beat actually played. Writes the repeat memory for the current scope.
@@ -136,6 +208,7 @@ public class AppearanceConditions
 
     public bool AlreadySeen()
     {
+        if (Preview != null && Preview.ignoreSeen) return false;
         if (repeat == Repeat.EveryTime) return false;
         string key = ScopedKey();
         if (key == null) return false;
@@ -145,14 +218,18 @@ public class AppearanceConditions
 
     bool SessionAllowed()
     {
-        if (RaceWeekend.IsPractice) return inPractice;
-        if (RaceWeekend.IsQualifying) return inQualifying;
-        return inRace; // multiplayer and plain race sessions both land here
+        switch (CurrentSession)
+        {
+            case RaceWeekend.Session.Practice:    return inPractice;
+            case RaceWeekend.Session.Qualifying:  return inQualifying;
+            default:                              return inRace; // multiplayer and plain race both land here
+        }
     }
 
     bool SeriesAllowed()
     {
         if (series == null || series.Length == 0) return true;
+        if (Preview != null) return Matches(series, Preview.series);
         return Matches(series, PlayerPrefs.GetString("CurrentSeriesIndex", ""))
             || Matches(series, PlayerPrefs.GetString("CurrentSeriesName", ""))
             || Matches(series, PlayerPrefs.GetInt("CurrentSeries", -1).ToString());
@@ -220,6 +297,7 @@ public class AppearanceConditions
     {
         get
         {
+            if (Preview != null) return Preview.trackId;
             var active = TrackPackage.Active;
             if (active != null && !string.IsNullOrEmpty(active.trackId)) return active.trackId;
             return TrackSelection.CurrentId;

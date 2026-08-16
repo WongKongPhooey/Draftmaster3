@@ -38,86 +38,13 @@ public class PitLaneStart : MonoBehaviour
     // the safety-car formation lap.
     public event System.Action PlayerEnteredCar;
 
-    [Header("Pit Greeter NPC")]
-    [Tooltip("When the pit crew greeter appears: session, series, scene, career progress, repeat policy. Defaults to every time.")]
-    public AppearanceConditions greeterAppearance = new AppearanceConditions();
-    [Tooltip("Name shown in the dialogue panel.")]
-    public string greeterName = "Pit Crew";
-    [TextArea]
-    [Tooltip("Conversation lines, one per interact. A line ending with \"#player\" is spoken by the driver (their own bubble); the marker is stripped.")]
-    public string[] greeterLines =
-    {
-        "Morning! Car's prepped and fuelled, ready when you are.",
-        "Thanks. Anything I should know? #player",
-        "Track's still cold, so take the first lap easy.",
-        "Will do. #player",
-        "Right then — hop in whenever you're set. Good luck out there!"
-    };
-    [Tooltip("Lateral offset (m) off the pit centerline for the NPC. More negative = further from the wall.")]
-    public float greeterLateral = -5.5f;
-    [Tooltip("Metres behind the player's spawn (along the pit) to place the NPC.")]
-    public float greeterBehind = 1.5f;
-
-    [Header("RV Door Cutscene")]
-    [Tooltip("When spawning at the RV, stand a crew member outside and play a walk-up cutscene as the player steps out the door: player freezes, bars slide in, the NPC walks over, both face each other, dialogue opens. These conditions decide WHEN he's there — practice only (he's briefing you at the start of the weekend), once per race weekend, not every time you press Play.")]
-    public AppearanceConditions rvNpcAppearance = new AppearanceConditions
-    {
-        repeat = AppearanceConditions.Repeat.OncePerWeekend,
-        saveKey = "rv.door.intro",
-        // Friday-morning beat: he's there to hand the weekend over, so he has no business
-        // turning up before qualifying or the race.
-        inPractice = true,
-        inQualifying = false,
-        inRace = false,
-    };
-    [Tooltip("Name shown for the RV-door NPC's dialogue.")]
-    public string rvNpcName = "Race Engineer";
-    [TextArea]
-    [Tooltip("Cutscene conversation lines. A line ending with \"#player\" is spoken by the driver.")]
-    public string[] rvNpcLines =
-    {
-        "There you are. Was starting to think you'd sleep through the whole weekend.",
-        "The bunk in that thing is better than my bed at home. #player",
-        "Well, shake it off. Car's out of the truck and sitting in the box.",
-        "How did it look overnight? #player",
-        "Solid. We freshened the rubber and dropped a touch of front wing back in.",
-        "Anything you want from me? #player",
-        "Get in it. Chief's waiting by the car — he'll want your setup call before you roll out.",
-        "On my way. #player"
-    };
-    [Tooltip("Objective banner shown once the RV-door conversation ends. Empty = no banner.")]
-    public string rvObjectiveText = "HEAD TO YOUR CAR";
-    [Tooltip("How far straight out from the RV door the NPC stands (m).")]
-    public float rvNpcDoorDistance = 5f;
-    [Tooltip("Sideways offset (m) along the RV for the NPC's stand point (+ = toward the cab).")]
-    public float rvNpcLateral = 2.5f;
-    [Tooltip("How far outside the door the walk-over trigger sits (m). Keep past the interior's exit threshold (roomFront + hysteresis) so the mask has already lifted when it fires.")]
-    public float rvTriggerDistance = 2.6f;
-    [Tooltip("Radius of the walk-over trigger (m).")]
-    public float rvTriggerRadius = 1.5f;
-
-    [Header("Crew Chief / Car Setup")]
-    [Tooltip("When the crew chief is stood by the car to take your setup call. Default: once per race weekend.")]
-    public AppearanceConditions crewChiefAppearance = new AppearanceConditions
-    {
-        repeat = AppearanceConditions.Repeat.OncePerWeekend,
-        saveKey = "car.setup.briefing",
-    };
-    [Tooltip("Name shown for the crew chief's dialogue.")]
-    public string crewChiefName = "Crew Chief";
-    [TextArea]
-    [Tooltip("Spoken the first time you get in the car. The setup panel opens when these lines run out.")]
-    public string[] crewChiefLines =
-    {
-        "Belts tight? Good. Weather's holding, so it's your call on rubber.",
-        "How long are we running? #player",
-        "Short one. Take what you need and no more — every litre is weight.",
-        "Okay — how do you want the car set up?"
-    };
-    [Tooltip("How far to the side of the CAR the chief stands (m). Negative = away from the pit wall, i.e. the lane side the driver walks in from. Measured from the car's own lateral position, not the lane centre, because GridSpawner re-parks the car in its fitted box after this scene starts.")]
-    public float crewChiefSideOffset = -3f;
-    [Tooltip("Metres behind the parked car (along the pit) to stand the chief.")]
-    public float crewChiefBehind = 1.5f;
+    [Header("Cast")]
+    [Tooltip("The pit greeter, race engineer and crew chief are PlacedNPC markers now — place, edit and gate " +
+             "them in the NPC Director (Draftmaster > NPCs > Director). With this on, a scene that has no " +
+             "markers for those three roles gets the stock set built at runtime, so a track that was never " +
+             "dressed still opens with its cast. Run 'Install Default Pit Cast' to turn them into real, " +
+             "editable scene objects; the runtime install then leaves them alone.")]
+    public bool installDefaultCast = true;
     [Tooltip("Open the tyre / fuel / balance panel after the chief's briefing. Off = climb in and drive.")]
     public bool showSetupPanel = true;
 
@@ -159,6 +86,7 @@ public class PitLaneStart : MonoBehaviour
     enum EntryPhase { Walking, Briefing, Setup, Driving }
     EntryPhase _phase = EntryPhase.Walking;
     NPCInteractable _chief;
+    PlacedNPC _chiefNpc;
     Vector3 _hintOrigin;
     bool _hintOriginSet, _hintedRun, _hintedEnter;
     // Set while an opening cutscene is armed/playing: control hints stay off until it's done, so the
@@ -253,31 +181,8 @@ public class PitLaneStart : MonoBehaviour
         SpawnPlayer(playerPos);
         AmbienceLoop.Play(ambienceClip, ambienceVolume);
 
-        if (greeterAppearance.IsMet())
-        {
-            float npcDist = Mathf.Clamp(total * pitFraction - greeterBehind, 0f, total);
-            var npcSample = usedPit ? track.SamplePitAt(npcDist, samples) : track.SampleAt(npcDist, samples);
-            Vector2 npcOff = npcSample.position + npcSample.normal * greeterLateral;
-            Vector3 npcPos = track.transform.TransformPoint(new Vector3(npcOff.x, npcOff.y, 0f));
-            SpawnGreeter(npcPos);
-            greeterAppearance.MarkSeen(); // a stationary NPC has appeared the moment he's stood there
-        }
-
-        // The crew chief waits at the car itself. His briefing plays when the driver climbs in and hands
-        // straight over to the setup panel, so the last thing before the first lap is a strategy choice.
-        //
-        // He's spawned here but POSITIONED every frame while the player walks (PlaceChiefBesideCar): the car
-        // doesn't stay where this script parks it — GridSpawner snaps it into its fitted pit box once the
-        // driver database is ready, which is several frames later. Placing him once would leave him standing
-        // in the middle of the lane, metres from the car.
         _pitSamples = samples;
         _usedPit = usedPit;
-        if (crewChiefAppearance.IsMet())
-        {
-            _chief = SpawnTalkableNpc(car.transform.position, "CrewChiefNPC", crewChiefName, crewChiefLines);
-            _chief.repeatable = false; // the briefing is a one-off, not a chat loop
-            PlaceChiefBesideCar();
-        }
 
         // Camera: follow the walker, zoomed in.
         _cam = Camera.main;
@@ -293,6 +198,8 @@ public class PitLaneStart : MonoBehaviour
         // "Scene within a scene": if the on-foot start actually landed on the RV marker, wrap the spawn in a
         // masked interior. Standing inside blacks out the rest of the world and shows an interior room; walking
         // out through the doorway (the edge facing the parked car) reveals the scene again. See RVInterior.
+        RVExterior rvExterior = null;
+        RVInterior rvRoom = null;
         if (rvInterior && marker != null && marker.gameObject.name == forcedSpawnName)
         {
             // Prefer the hand-editable prefab (built via Draftmaster > RV Interior > Build Prefab, then
@@ -316,11 +223,14 @@ public class PitLaneStart : MonoBehaviour
             var exterior = marker.GetComponentInParent<RVExterior>();
             rv.Initialize(_player.transform.position, _player.transform, car.transform, exterior);
 
-            // The exit beat: a crew member waiting outside who walks over the first time the player
-            // steps out the door. Needs the exterior for the door's position/facing.
-            if (exterior != null && rvNpcAppearance.IsMet())
-                BuildRvDoorCutscene(exterior, rv);
+            rvExterior = exterior;
+            rvRoom = rv;
         }
+
+        // Everyone on foot in this scene — the greeter, the engineer's opening beat, the crew chief, and any
+        // NPC hand-placed in this track's package — is a PlacedNPC marker. They're built here, in one pass,
+        // once the geometry their anchors read from (pit lane, parked car, RV door) is all in place.
+        BuildCast(playerPos, total * pitFraction, rvExterior, rvRoom);
 
         // Spawn-in presentation: "<Track> - <spawn label>" title card, plus an objective marker
         // pointing at the parked car (edge-clamped arrow + distance + paint-scheme icon when far).
@@ -367,114 +277,68 @@ public class PitLaneStart : MonoBehaviour
         }
     }
 
-    // Spawn a stationary crew member from the on-foot prefab and make it talkable. Dialogue shows as
-    // world-space speech bubbles with a typewriter reveal above the crew member and the driver (SpeechBubble),
-    // driven by the player's OnFootController interaction. Lines come from greeterLines (no scene wiring needed).
-    void SpawnGreeter(Vector3 pos)
+    // Stand up everyone on foot. Every one of them is a PlacedNPC marker — placed in this track's package
+    // for somebody who belongs to this track, or in the shared scene for the every-track cast — so who
+    // appears, where they stand and what they say is all authored rather than coded.
+    //
+    // The context handed over is what the geometry anchors resolve against: the pit lane and where along it
+    // the player spawned, the parked car, and the RV they may have woken up in.
+    void BuildCast(Vector3 playerPos, float playerPitDistance, RVExterior exterior, RVInterior interior)
     {
-        SpawnTalkableNpc(pos, "PitCrewNPC", greeterName, greeterLines);
-    }
+        // A scene nobody has dressed yet still opens with its greeter, engineer and chief.
+        if (installDefaultCast) PlacedNPCDefaults.EnsureCast(transform);
 
-    // Stand a crew member outside the RV door and arm a walk-over trigger just past the doorway.
-    // Stepping out of the RV onto the trigger plays NPCWalkUpCutscene: the player freezes, the
-    // cinematic bars come in, the NPC walks over, and the conversation opens face-to-face.
-    void BuildRvDoorCutscene(RVExterior exterior, RVInterior interior)
-    {
-        Vector2 doorDir = exterior.DoorWorldDirection;
-        Vector2 side = new Vector2(-doorDir.y, doorDir.x); // door's left = toward the cab on the default prefab
-        Vector3 doorPos = exterior.DoorWorldPosition;
-        // Ground-plane z, NOT the player's current z — the player has already been pulled to the
-        // interior's -2.5 by this point, which would put the NPC in front of the black mask.
-        float z = exterior.transform.position.z;
-
-        Vector3 npcPos = doorPos + (Vector3)(doorDir * rvNpcDoorDistance + side * rvNpcLateral);
-        npcPos.z = z;
-        var npc = SpawnTalkableNpc(npcPos, "RVDoorNPC", rvNpcName, rvNpcLines);
-
-        // One GameObject hosts both the trigger and the sequence, parked on the trigger spot; the
-        // cutscene destroys it when the conversation ends, so the beat can only play once.
-        var seq = new GameObject("RVDoorCutscene");
-        Vector3 triggerPos = doorPos + (Vector3)(doorDir * rvTriggerDistance);
-        triggerPos.z = z;
-        seq.transform.position = triggerPos;
-
-        var walkUp = seq.AddComponent<NPCWalkUpCutscene>();
-        walkUp.player = _player.GetComponent<OnFootController>();
-        walkUp.npc = npc;
-
-        var trigger = seq.AddComponent<CutsceneTrigger>();
-        trigger.radius = rvTriggerRadius;
-        trigger.target = _player.transform;
-        trigger.Gate = () => !interior.IsInside; // never fire while the world is masked
-        // Mark the beat seen only when it actually plays — walking out and straight back in without
-        // stepping on the trigger leaves it armed for next time.
-        trigger.Triggered = () => { rvNpcAppearance.MarkSeen(); walkUp.Play(); };
-
-        // Nothing gets taught while the cutscene owns the screen.
-        _hintsHeldForCutscene = true;
-
-        // The engineer's last line sends the driver to the car — put that on screen as the objective,
-        // fly the car marker out from the centre of the screen so the eye follows it to the edge, and
-        // only now teach the run control (the player has just got movement back).
-        walkUp.Finished = () =>
+        var ctx = new PlacedNPC.BuildContext
         {
-            _hintsHeldForCutscene = false;
-            _hintOriginSet = false; // re-base the "walked far enough" test from where the talk left them
-            if (_intro != null)
-            {
-                if (!string.IsNullOrEmpty(rvObjectiveText)) _intro.ShowTitle(rvObjectiveText);
-                _intro.PulseMarker(car.transform);
-            }
-            if (showControlHints && !_hintedRun)
-            {
-                ControlHints.Show("run", "LEFT SHIFT", "LB", "Hold to run");
-                _hintedRun = true;
-            }
+            prefab = onFootPrefab,
+            player = _player.transform,
+            car = car.transform,
+            track = track,
+            pitSamples = _pitSamples,
+            usedPit = _usedPit,
+            playerPitDistance = playerPitDistance,
+            playerSpawnPos = playerPos,
+            rv = exterior,
+            rvInterior = interior,
+            groundZ = exterior != null ? exterior.transform.position.z : playerPos.z,
         };
+
+        // Nothing gets taught while a cutscene owns the screen; the beat's own Finished callback releases it.
+        PlacedNPC.CutsceneFinished += OnPlacedCutsceneFinished;
+        PlacedNPC.BuildAll(ctx);
+        _hintsHeldForCutscene = PlacedNPC.AnyCutsceneArmed;
+
+        // The chief's briefing is driven from EnterCar rather than by walking up to him.
+        var chief = PlacedNPC.Find(PlacedNPC.Role.CrewChief);
+        _chiefNpc = chief;
+        _chief = chief != null ? chief.Interactable : null;
     }
 
-    // Shared NPC factory: clone the on-foot prefab, strip anything that would control it, freeze the
-    // walk cycle at an idle pose, and attach an NPCInteractable carrying the given dialogue.
-    NPCInteractable SpawnTalkableNpc(Vector3 pos, string goName, string speaker, string[] npcLines)
+    void OnDestroy()
     {
-        var npc = Instantiate(onFootPrefab, pos, Quaternion.identity);
-        npc.name = goName;
-
-        // Strip anything that would drive/control it — it just stands and talks.
-        var mv = npc.GetComponent<MovementOnFoot>(); if (mv != null) mv.enabled = false;
-        var pi = npc.GetComponent<PlayerInput>(); if (pi != null) pi.enabled = false;
-        var ofc = npc.GetComponent<OnFootController>(); if (ofc != null) Destroy(ofc);
-        var rb = npc.GetComponent<Rigidbody2D>();
-        if (rb != null) { rb.gravityScale = 0f; rb.bodyType = RigidbodyType2D.Kinematic; }
-
-        // Nothing drives this Animator, so freeze it — otherwise the walk cycle plays in place forever.
-        var anim = npc.GetComponent<Animator>();
-        if (anim != null)
-        {
-            foreach (var p in anim.parameters)
-            {
-                if (p.type == AnimatorControllerParameterType.Float &&
-                    (p.name == "Horizontal" || p.name == "Vertical" || p.name == "Speed"))
-                    anim.SetFloat(p.name, 0f);
-            }
-            anim.Update(0f);   // sample the idle pose at zeroed params...
-            anim.speed = 0f;   // ...then stop so it can't treadmill
-        }
-
-        // Same unlit-shader swap the player gets, so it renders under the 3D URP renderer.
-        var sr = npc.GetComponent<SpriteRenderer>();
-        if (sr != null)
-        {
-            Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-            if (sh == null) sh = Shader.Find("Sprites/Default");
-            if (sh != null) sr.sharedMaterial = new Material(sh);
-        }
-
-        var inter = npc.AddComponent<NPCInteractable>();
-        inter.speakerName = speaker;
-        if (npcLines != null && npcLines.Length > 0) inter.lines = npcLines;
-        return inter;
+        PlacedNPC.CutsceneFinished -= OnPlacedCutsceneFinished;
     }
+
+    // An opening beat has finished: put its objective on screen, fly the car marker out from the centre so
+    // the eye follows it to the edge, and only now teach the run control (the player has just got movement
+    // back, and the hint would otherwise have landed under the dialogue).
+    void OnPlacedCutsceneFinished(PlacedNPC npc)
+    {
+        _hintsHeldForCutscene = false;
+        _hintOriginSet = false; // re-base the "walked far enough" test from where the talk left them
+
+        if (_intro != null)
+        {
+            if (npc != null && !string.IsNullOrEmpty(npc.objectiveOnFinish)) _intro.ShowTitle(npc.objectiveOnFinish);
+            _intro.PulseMarker(car.transform);
+        }
+        if (showControlHints && !_hintedRun)
+        {
+            ControlHints.Show("run", "LEFT SHIFT", "LB", "Hold to run");
+            _hintedRun = true;
+        }
+    }
+
 
     void Update()
     {
@@ -487,7 +351,6 @@ public class PitLaneStart : MonoBehaviour
         if (_entered) return;
 
         if (showControlHints) StepWalkHints();
-        PlaceChiefBesideCar(); // the car can still be re-parked under him until the moment we climb in
 
         bool inRange = Vector2.Distance(_player.transform.position, car.transform.position) <= enterRange;
         ShowPrompt(inRange);
@@ -515,29 +378,6 @@ public class PitLaneStart : MonoBehaviour
         }
     }
 
-    // Stand the chief beside the car wherever the car currently is: project the car onto the pit lane, take
-    // its own lateral offset, and put him a short way behind it and further out into the lane. Re-run while
-    // the player walks so a later re-park (GridSpawner's pit-box snap) takes him with it.
-    void PlaceChiefBesideCar()
-    {
-        if (_chief == null || track == null || _pitSamples == null || _pitSamples.Count < 2) return;
-
-        Vector3 carPos = car.transform.position;
-        float carDist = _usedPit ? track.NearestPitDistance(carPos) : track.NearestCenterlineDistance(carPos);
-        var carSample = _usedPit ? track.SamplePitAt(carDist, _pitSamples) : track.SampleAt(carDist, _pitSamples);
-
-        Vector2 carLocal = track.transform.InverseTransformPoint(carPos);
-        float carLateral = Vector2.Dot(carLocal - carSample.position, carSample.normal);
-
-        float end = _pitSamples[_pitSamples.Count - 1].distance;
-        float chiefDist = Mathf.Clamp(carDist - crewChiefBehind, 0f, end);
-        var chiefSample = _usedPit ? track.SamplePitAt(chiefDist, _pitSamples) : track.SampleAt(chiefDist, _pitSamples);
-
-        Vector2 off = chiefSample.position + chiefSample.normal * (carLateral + crewChiefSideOffset);
-        Vector3 wp = track.transform.TransformPoint(new Vector3(off.x, off.y, 0f));
-        _chief.transform.position = new Vector3(wp.x, wp.y, carPos.z);
-    }
-
     void EnterCar()
     {
         _entered = true;
@@ -550,12 +390,12 @@ public class PitLaneStart : MonoBehaviour
         // heard out and the setup made before the car is live.
         if (_camFollow != null) _camFollow.target = car.transform;
 
-        if (_chief != null && crewChiefLines != null && crewChiefLines.Length > 0)
+        if (_chief != null && _chief.lines != null && _chief.lines.Length > 0)
         {
             // Hold the walking zoom through the briefing — the chief is stood beside the car and both
             // bubbles are on-foot scale. The pull-back to driving distance waits for his last line.
             _phase = EntryPhase.Briefing;
-            crewChiefAppearance.MarkSeen(); // the briefing has actually started, not just been staged
+            if (_chiefNpc != null) _chiefNpc.MarkPlayed(); // the briefing has actually started, not just been staged
             _chief.SetInteractor(car.transform); // "#player" lines bubble over the car, where the driver now is
             _chief.Interact();                   // opens the first line
             _interactHeldPrev = true;            // swallow the same press that got us in the car

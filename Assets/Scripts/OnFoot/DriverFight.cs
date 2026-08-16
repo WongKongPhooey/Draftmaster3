@@ -30,6 +30,8 @@ public class DriverFight : MonoBehaviour
     public int playerAggression = 12;
     [Tooltip("Enable the left/right hook moves. Off until their animations exist — the shove clip is all the art there is today.")]
     public bool enableHooks = false;
+    [Tooltip("Show the how-to-fight popup the first time the player ever ends up in a fight. Once per save.")]
+    public bool showTutorial = true;
 
     [Header("Breaking it up")]
     [Tooltip("How many bystanders come over. The first two walk a driver away each; extras just get in the way.")]
@@ -69,6 +71,10 @@ public class DriverFight : MonoBehaviour
 
     PitLaneStart _pitScene;
     bool _shoveHeldPrev, _leftHeldPrev, _rightHeldPrev;
+
+    // The first-fight tutorial popup. While it's up the fight is frozen — see BeginTutorial.
+    const string TutorialId = "fight.basics";
+    bool _tutorialOpen;
 
     // Start a fight. playerGo is the on-foot player, rivalGo the driver they squared up to. Returns null if
     // a fight is already running (only one at a time).
@@ -114,20 +120,75 @@ public class DriverFight : MonoBehaviour
         _pitScene = FindObjectOfType<PitLaneStart>();
         if (_pitScene != null) _pitScene.SetZoomTarget(fightZoom);
 
-        ControlHints.Show("fight", "SPACE", "X", "Shove", 6f);
+        ControlHints.Show("fight", InputGlyphs.ShoveKeyboard, InputGlyphs.ShovePad, "Shove", 6f);
         if (enableHooks)
         {
             ControlHints.Show("fightleft", "J", "LB", "Left hook", 6f);
             ControlHints.Show("fightright", "K", "RB", "Right hook", 6f);
         }
 
+        if (showTutorial) BeginTutorial();
+
         PlayerStatsLedger.Increment("fights.started");
         Debug.Log($"DriverFight: {_playerName} squares up to {_rivalName}.", this);
+    }
+
+    // ---------------------------------------------------------------- first-fight tutorial
+
+    // A fight is the one on-foot beat the player is dropped into rather than choosing to walk up to, and the
+    // shove button isn't used anywhere else, so the first one gets a popup naming the button for whatever
+    // device is in their hands (InputGlyphs). Once per save; clear it with
+    // Draftmaster > NPCs > Clear Appearance Flags.
+    void BeginTutorial()
+    {
+        bool shown = TutorialPopup.ShowOnce(
+            TutorialId,
+            "YOU'RE IN A FIGHT",
+            "Press {KEY} to push your opponent.\n\n" +
+            "Stay close enough to reach them and keep your feet — nobody gets knocked out, and the crews " +
+            "will be over to pull you apart soon enough.",
+            () => InputGlyphs.Shove);
+        if (!shown) return;
+
+        _tutorialOpen = true;
+        FreezeForTutorial(true);
+    }
+
+    void EndTutorial()
+    {
+        _tutorialOpen = false;
+        FreezeForTutorial(false);
+        // The rival's opening delay burned off behind the popup — give the player the beat back rather than
+        // opening with a shove the moment they close it.
+        var ai = _rival != null ? _rival.GetComponent<RivalFightAI>() : null;
+        if (ai != null) ai.DelayNextAttack(0.7f);
+    }
+
+    // Holds both fighters still without touching Time.timeScale (the paddock keeps moving behind the popup).
+    void FreezeForTutorial(bool frozen)
+    {
+        if (_attacksLocked) return;   // the crews own the lock once they arrive — never hand control back early
+        if (_player != null)
+        {
+            _player.AttacksLocked = frozen;
+            if (_player.Controller != null) _player.Controller.MovementLocked = frozen;
+        }
+        if (_rival != null) _rival.AttacksLocked = frozen;
     }
 
     void Update()
     {
         if (_player == null || _rival == null) { End(); return; }
+
+        // Nothing else runs while the first-fight popup is up: the pair square up and wait, so the player
+        // isn't being shoved around while they're reading how to shove back.
+        if (_tutorialOpen)
+        {
+            _player.FaceOpponent();
+            _rival.FaceOpponent();
+            if (TutorialPopup.IsOpen) return;
+            EndTutorial();
+        }
 
         switch (_state)
         {
@@ -454,6 +515,8 @@ public class DriverFight : MonoBehaviour
             if (extra != null) Destroy(extra, 8f);   // let them walk back out of shot first
 
         if (_pitScene != null) _pitScene.SetZoomTarget(_pitScene.OnFootZoom);
+        _tutorialOpen = false;
+        TutorialPopup.Close(TutorialId);
         ControlHints.Hide("fight");
         ControlHints.Hide("fightleft");
         ControlHints.Hide("fightright");
@@ -494,6 +557,7 @@ public class DriverFight : MonoBehaviour
     // Scene change or a forced teardown mid-fight: never leave a driver frozen out of their own routine.
     void OnDestroy()
     {
+        if (_tutorialOpen) { _tutorialOpen = false; TutorialPopup.Close(TutorialId); }
         RestoreRivalIdleBehaviour();
         if (_player != null && _player.Controller != null) _player.Controller.MovementLocked = false;
         if (Active == this) Active = null;

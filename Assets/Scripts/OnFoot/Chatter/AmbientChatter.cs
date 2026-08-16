@@ -99,9 +99,27 @@ namespace Draftmaster.Chatter
             "Tools stay in the shop. Every time.",
         };
 
+        // Authored lines, layered over the built-in tables. DialogueLibrary installs this at runtime so a
+        // track's own DialoguePool asset can add to (or replace) what the crowd says here; left null this
+        // class stays exactly what it was — pure, seeded, testable, no Resources, no track lookup.
+        // Returning null or an empty array falls through to the built-ins.
+        public static System.Func<ChatterArea, ChatterMood, string[]> Provider;
+
         // The pool for an area/mood pairing. Never empty — an area with nothing mood-specific falls back
         // to its neutral lines, so a caller can always speak something.
         public static string[] Lines(ChatterArea area, ChatterMood mood)
+        {
+            if (Provider != null)
+            {
+                var authored = Provider(area, mood);
+                if (authored != null && authored.Length > 0) return authored;
+            }
+            return BuiltIn(area, mood);
+        }
+
+        // The tables compiled into the game. Public so the authored pools can be layered on top of them
+        // rather than having to restate them.
+        public static string[] BuiltIn(ChatterArea area, ChatterMood mood)
         {
             switch (area)
             {

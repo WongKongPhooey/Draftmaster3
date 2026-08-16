@@ -36,6 +36,11 @@ public class RivalFightAI : MonoBehaviour
         _circleFlipAt = Time.time + Random.Range(1.5f, 3f);
     }
 
+    // Push the next swing back. Used when the fight is held behind something — the first-fight tutorial popup
+    // — so the rival doesn't come out of the hold already throwing.
+    public void DelayNextAttack(float seconds)
+        => _nextAttack = Mathf.Max(_nextAttack, Time.time + Mathf.Max(0f, seconds));
+
     void Update()
     {
         if (_self == null || _self.Opponent == null) return;

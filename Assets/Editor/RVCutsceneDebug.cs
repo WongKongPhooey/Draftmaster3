@@ -39,8 +39,7 @@ public static class RVCutsceneDebug
         if (!Application.isPlaying) { Debug.LogWarning("RVCutsceneDebug: enter play mode first."); return; }
         var player = GameObject.Find("OnFootPlayer");
         var ofc = player != null ? player.GetComponent<OnFootController>() : null;
-        var npcGo = GameObject.Find("RVDoorNPC");
-        var npc = npcGo != null ? npcGo.GetComponent<NPCInteractable>() : null;
+        var npc = EngineerInteractable();
         if (ofc == null || npc == null)
         {
             Debug.LogError($"RVCutsceneDebug: missing refs (player={(ofc != null)}, npc={(npc != null)}).");
@@ -63,13 +62,21 @@ public static class RVCutsceneDebug
         var rv = Object.FindFirstObjectByType<RVInterior>();
         sb.AppendLine($"  interior: {(rv != null ? $"IsInside={rv.IsInside}" : "<missing>")}");
 
-        var npcGo = GameObject.Find("RVDoorNPC");
-        var npc = npcGo != null ? npcGo.GetComponent<NPCInteractable>() : null;
-        sb.AppendLine($"  npc: pos={(npcGo != null ? npcGo.transform.position.ToString("F2") : "<missing>")} talking={(npc != null ? npc.IsTalking.ToString() : "?")}");
+        var npc = EngineerInteractable();
+        sb.AppendLine($"  npc: pos={(npc != null ? npc.transform.position.ToString("F2") : "<missing>")} talking={(npc != null ? npc.IsTalking.ToString() : "?")}");
 
-        var seq = GameObject.Find("RVDoorCutscene");
+        var marker = PlacedNPC.Find(PlacedNPC.Role.RaceEngineer);
+        var seq = marker != null ? GameObject.Find(marker.name + "_Cutscene") : null;
         sb.AppendLine($"  cutscene object: {(seq != null ? "alive at " + seq.transform.position.ToString("F2") : "destroyed/absent")}");
 
         Debug.Log(sb.ToString());
+    }
+
+    // The engineer is a PlacedNPC marker now, and the body it spawns is named after it — ask the marker
+    // rather than guessing at a hard-coded object name.
+    static NPCInteractable EngineerInteractable()
+    {
+        var marker = PlacedNPC.Find(PlacedNPC.Role.RaceEngineer);
+        return marker != null ? marker.Interactable : null;
     }
 }

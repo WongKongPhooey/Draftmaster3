@@ -5,6 +5,103 @@ spline-based scenes (WatkinsGlen etc.) where the on-foot player uses `OnFootCont
 
 ---
 
+## 0. Placing NPCs (`PlacedNPC` + the NPC Director)
+
+**This is how you add, move, remove and gate an NPC.** Drop an empty GameObject, add **`PlacedNPC`**,
+fill it in. Nothing else needs wiring: the body is cloned from the on-foot prefab at runtime
+(`NPCFactory`) and the dialogue / cutscene components are attached to it.
+
+**Where to put the marker:**
+
+| The NPC is… | Put the marker in | Anchor |
+|---|---|---|
+| specific to one track (a local promoter, a track quest giver) | the track package, under `Paddock/NPCs` — `Draftmaster > Tracks > Edit Selected Package` | `Here` |
+| part of the every-track cast (greeter, engineer, chief) | `Assets/Scenes/RaceScene.unity` | a geometry anchor |
+
+**Anchors** are what let one marker work at all thirty-five tracks — the position is derived from
+geometry rather than typed in:
+
+- `Here` — exactly where you put it. For anything inside a track package.
+- `PitLane` — `along` metres up the pit lane from the player's spawn, `lateral` metres off it
+  (negative = away from the wall).
+- `ParkedCar` — relative to the player's car, measured from the *car's own* lateral offset. Turn on
+  `followAnchor`: `GridSpawner` re-parks the car into its fitted pit box several frames after the
+  scene opens, and a marker placed once ends up metres away.
+- `RVDoor` — `along` metres straight out of the RV door, `lateral` along its flank (+ = toward the
+  cab). Falls back to `PlayerSpawn` at a track whose package has no RV.
+- `PlayerSpawn` — on the line the player walks from their spawn toward their car.
+
+**Interaction** is how the player meets them:
+
+- `TalkOnInteract` — stand there, press E. The ordinary case.
+- `WalkUpCutscene` — the player freezes, the letterbox bars come in, the NPC walks over and opens the
+  conversation face-to-face (`NPCWalkUpCutscene`). `waitForTrigger` puts a walk-over ring
+  (`CutsceneTrigger`) at `triggerOffset`; off = it plays as the scene opens. `objectiveOnFinish` puts
+  a banner up when the conversation ends.
+- `OnCarEntry` — silent until the scene flow runs them. This is the crew chief's briefing, fired by
+  `PitLaneStart.EnterCar`.
+- `Silent` — a body, no dialogue.
+
+**When they appear** is the full `AppearanceConditions` block (section 4 below): session, series,
+track, career-stat range, quest state, inventory, career path, repeat scope, chance.
+
+Setting `quest` turns the marker into a `QuestGiverNPC` and the four quest line sets take over the
+conversation — see section 3.
+
+### The NPC Director — `Draftmaster > NPCs > Director` (Ctrl+Shift+N)
+
+- **Session switcher** (Practice / Qualifying / Race) plus track and series fields. These drive
+  `AppearanceConditions.Preview`, so the whole editor — window, inspector and scene gizmos — answers
+  "would this person be here?" for that hypothetical **without entering play mode**.
+- **Table** with a ✔/· column per session, so a cast that changes across a weekend reads at a glance.
+  A row that isn't appearing says which clause stopped it ("not in Race", "wins is 0, needs 5..∞").
+- Click a row to select and frame the NPC; `×` deletes; **Add NPC** drops one at the scene-view pivot
+  (into `Paddock/NPCs` when a package is open in Prefab Mode).
+- **Install Default Pit Cast** creates the greeter / race engineer / crew chief as real, editable
+  markers. They're defined once, in `PlacedNPCDefaults` — a scene that has never had this run gets the
+  identical three built at runtime (`PitLaneStart.installDefaultCast`), and the runtime install stays
+  out of the way once markers exist.
+
+In the scene view every placed NPC draws as a person-shaped gizmo **at their resolved position**,
+green if they appear in the previewed session and grey-red if they don't, with the stand point,
+trigger ring, trigger radius, interact range, stop distance and facing all on drag handles.
+
+**Geometry anchors only resolve when a track is loaded in the open scene.** The race scene is
+deliberately roadless, so run `Draftmaster > Tracks > Preview Selected Package In Scene` (and
+`Clear Package Previews From Scene` when done) or author inside the package's own Prefab Mode stage.
+
+### The random crowd — per-track dialogue pools
+
+The Director lists *placed* NPCs. The rest of the cast is spawned procedurally (`PaddockSpawner` talkers,
+`AutographFanSpawner` fans, ambient barks from `NPCAmbientChatter`), and those have no marker to select —
+but **what they say is authorable per track**.
+
+- **`DialoguePool`** (ScriptableObject, `Assets/Resources/Dialogue/`) holds ambient barks (by
+  `ChatterArea` × `ChatterMood`), multi-line conversations (by `ConversationKind`: PaddockCrew,
+  AutographFan, DriverFlavour) and a pool of speaker names.
+- A pool with an **empty `trackId` is global**; one naming a track applies only there, **on top of** the
+  global pool and the compiled-in tables. `replaceBuiltIn` drops the compiled tables instead of adding
+  to them.
+- **`DialogueLibrary`** resolves them at runtime — global pool, then this track's — caching per track and
+  falling back to the code tables so a spawner is never left mute. It also installs
+  `AmbientChatter.Provider`, which keeps `AmbientChatter` itself pure and unit-testable (no Resources, no
+  track lookup) while still letting authored lines win.
+
+Menus, all under **`Draftmaster > NPCs`**:
+
+| Menu | Does |
+|---|---|
+| Dialogue Pool (Global) | create/select `Resources/Dialogue/Default.asset` |
+| Dialogue Pool (Selected Track) | create/select the pool for `TrackSelection.CurrentId` |
+| Seed Global Dialogue Pool From Built-Ins | copy every compiled-in table into the global pool and switch it to Replace — the house style becomes editable rows instead of something buried in a .cs file |
+
+The NPC Director's footer shows both pools with their line counts and Create/Edit buttons.
+
+**Not yet pooled:** `DriverPresenceDirector`'s rival-driver flavour lines (they're keyed on driver
+personality rather than on the track). `ConversationKind.DriverFlavour` is reserved for wiring them up.
+
+---
+
 ## 1. Paper-Doll Character System
 
 NPC (and eventually player) appearance is built from **layered sprite sheets** — Stardew Valley
@@ -267,15 +364,15 @@ NPC.
 Every round runs in one scene (`Assets/Scenes/RaceScene.unity`) with the track loaded as a package — see
 `Docs/Tracks.md`. That splits NPCs into two kinds, and most of them are already the first kind:
 
-**Spawned from geometry — nothing to do per track.** `PitLaneStart` (greeter, race engineer, crew chief, the
-RV beat), `PaddockSpawner`, `PitCrewSpawner`, `AutographFanSpawner`, `CareerPathNPCSpawner`,
-`DriverMotorhomeLot` and `DriverPresenceDirector` all live in the shared scene and place people off the pit
-lane spline. `AutographFanSpawner` and `CareerPathNPCSpawner` even self-install
+**Spawned from geometry — nothing to do per track.** `PaddockSpawner`, `PitCrewSpawner`,
+`AutographFanSpawner`, `CareerPathNPCSpawner`, `DriverMotorhomeLot` and `DriverPresenceDirector` all live in
+the shared scene and place people off the pit lane spline. The pit greeter, race engineer and crew chief are
+`PlacedNPC` markers on geometry anchors (section 0) — same effect, but you can see and edit them. `AutographFanSpawner` and `CareerPathNPCSpawner` even self-install
 (`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]`), and the package is instantiated before that runs, so
 they find the road. A new track gets the whole paddock cast for free.
 
 **Placed by hand — put them in the package.** Anything belonging to *this* track (a local promoter, a
-track-specific quest giver, an NPC stood by a particular gate) goes in the package prefab under
+track-specific quest giver, an NPC stood by a particular gate) is a `PlacedNPC` in the package prefab under
 `Paddock/NPCs`, a root the dressing factory creates for the purpose. Open the package in Prefab Mode
 (`Draftmaster > Tracks > Edit Selected Package`), drop the NPC in, and it travels with the track — loaded
 when that round loads, absent otherwise, with no scene to keep in sync.

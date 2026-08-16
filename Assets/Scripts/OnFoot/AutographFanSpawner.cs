@@ -172,9 +172,15 @@ public class AutographFanSpawner : MonoBehaviour
 
         BuildAppearance(go, seed);
 
+        // The track's own DialoguePool asset can add fan lines on top of these (or replace them) — a home
+        // crowd shouldn't greet the player the same way an away one does. See DialogueLibrary.
+        var conversations = DialogueLibrary.Conversations(Draftmaster.Chatter.ConversationKind.AutographFan, kDialogue);
+        var lines = conversations[seed % conversations.Length];
+
         var fan = go.AddComponent<AutographFan>();
-        fan.speakerName = "Fan";
-        fan.lines = kDialogue[seed % kDialogue.Length];
+        fan.lines = lines;
+        fan.speakerName = DialogueLibrary.SpeakerNameFor(
+            Draftmaster.Chatter.ConversationKind.AutographFan, lines, new[] { "Fan" }, seed, usePoolNames: false);
     }
 
     void BuildAppearance(GameObject go, int seed)
@@ -224,6 +230,9 @@ public class AutographFanSpawner : MonoBehaviour
         float ppu = s / Mathf.Max(0.05f, metres);
         return Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), ppu);
     }
+
+    // The compiled-in house style, for DialogueLibrary and the pool seeder (see DialoguePoolMenu).
+    public static string[][] BuiltInConversations => kDialogue;
 
     // A line ending with "#player" is spoken by the player. Signing happens when the last line is passed.
     static readonly string[][] kDialogue =

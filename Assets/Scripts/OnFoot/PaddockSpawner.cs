@@ -51,6 +51,11 @@ public class PaddockSpawner : MonoBehaviour
     [Tooltip("Walk speed for wandering NPCs, units/sec.")]
     public float walkSpeed = 1.2f;
 
+    // The compiled-in house style. Exposed so DialogueLibrary can layer authored pools on top of it, and so
+    // the pool seeder can copy it into an asset for editing.
+    public static string[][] BuiltInConversations => kDialogue;
+    public static string[] BuiltInNames => kNames;
+
     // Sample dialogue for the talking NPCs. A line ending with "#player" is spoken by the player.
     static readonly string[][] kDialogue =
     {
@@ -249,9 +254,15 @@ public class PaddockSpawner : MonoBehaviour
 
             if (talking)
             {
+                // Dialogue comes from the library, not straight from kDialogue: a track's own DialoguePool
+                // asset adds to (or replaces) the house style, so the paddock can sound like this circuit.
+                var conversations = DialogueLibrary.Conversations(Draftmaster.Chatter.ConversationKind.PaddockCrew, kDialogue);
+                var lines = conversations[i % conversations.Length];
+
                 var inter = npc.AddComponent<NPCInteractable>();
-                inter.speakerName = kNames[i % kNames.Length];
-                inter.lines = kDialogue[i % kDialogue.Length];
+                inter.lines = lines;
+                inter.speakerName = DialogueLibrary.SpeakerNameFor(
+                    Draftmaster.Chatter.ConversationKind.PaddockCrew, lines, kNames, i);
             }
             else
             {

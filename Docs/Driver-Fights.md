@@ -15,10 +15,12 @@ runs out of it simply stops swinging.
 3. When the argument runs out, a `DialogueChoiceUI` panel offers **Square up to them** / **Let it go**.
 4. Squaring up starts a `DriverFight`: a composure bar appears over each character's head, both square up for
    a beat, then it's live.
-5. **SPACE** (gamepad **X**) shoves. The rival circles and shoves back on their own timer.
-6. After ~14 seconds — or as soon as either fighter is spent — nearby NPCs run over, wedge themselves between
+5. **The very first fight of a save** stops there for a moment: a `TutorialPopup` names the shove button for
+   the device in the player's hands and the fight is held still behind it (see below).
+6. **SPACE** (gamepad **X**) shoves. The rival circles and shoves back on their own timer.
+7. After ~14 seconds — or as soon as either fighter is spent — nearby NPCs run over, wedge themselves between
    the two of them, and walk each driver away. The fight is over; nobody wins by knockout.
-7. Fallout: the pair's relationship drops a further 12 points, and `fights.started` plus
+8. Fallout: the pair's relationship drops a further 12 points, and `fights.started` plus
    `fights.won` / `fights.lost` / `fights.drawn` land on the stats ledger (quest-able like any other counter).
 
 A 20-second cooldown stops the same argument restarting the moment the crews let go.
@@ -51,6 +53,37 @@ they'd have nowhere to fight from.
 Turn the whole option off with `DriverPresenceDirector.allowFights`, or per driver with
 `RivalDriverNPC.allowFights`.
 
+## Teaching it — the first-fight popup
+
+A fight is the one on-foot beat the player is dropped into rather than choosing to walk up to, and the shove
+button is used nowhere else, so the first one ever gets a full popup instead of the usual bottom-of-screen
+control hint:
+
+> **YOU'RE IN A FIGHT**
+> Press **SPACE** to push your opponent.
+
+- Put up by `DriverFight.BeginTutorial` through `TutorialPopup.ShowOnce("fight.basics", …)`
+  (`Assets/Scripts/UI/TutorialPopupUI.cs`) — an IMGUI window on the shared `PixelGUI` plate over a dimmed
+  screen, dismissed with **E / SPACE / gamepad south**, auto-closing after 15 s if it's ignored.
+- **The fight is frozen behind it**: both fighters get `AttacksLocked`, the player's controller is locked, and
+  `DriverFight.Update` returns early, so no timer runs and nobody gets shoved while the player reads.
+  `Time.timeScale` is untouched — the rest of the paddock carries on. On dismissal the rival's next swing is
+  pushed back 0.7 s (`RivalFightAI.DelayNextAttack`) so it doesn't open with a hit.
+- **The button name follows the device.** `InputGlyphs` (`Assets/Scripts/UI/InputGlyphs.cs`) is the single
+  place that knows what a button is called: keyboard `SPACE`, Xbox-style pads `X`, PlayStation pads `SQUARE`
+  (detected from the device layout/product name). `{KEY}` in the popup body is substituted every frame, so
+  picking a pad up while the popup is open re-labels it. The `ControlHints` shove badge reads the same
+  properties, so badge and popup can never disagree.
+- Once per save, remembered by `AppearanceConditions` (OnceEver, key `seen.tutorial.fight.basics`). To see it
+  again: **Draftmaster > NPCs > Clear Appearance Flags**. Turn it off entirely with
+  `DriverFight.showTutorial`.
+- Re-use it for any other first-time mechanic: `TutorialPopup.ShowOnce(id, title, body, () => label)` returns
+  whether it actually went up, which is what a caller holds its own beat on.
+
+**If the shove is ever rebound**, change the binding in `DriverFight.ReadPlayerMoves` and the labels in
+`InputGlyphs.ShoveKeyboard` / `ShovePad` together — they are deliberately next to each other in comments for
+that reason.
+
 ## Testing it
 
 `FightTestRivals` installs itself in any single-player scene with the on-foot pit flow. It waits for the
@@ -75,6 +108,8 @@ overwrites a feud earned on track, and it logs the driver's name and distance fr
 | `Assets/Scripts/OnFoot/RivalDriverNPC.cs` | The dialogue: argument lines, the square-up choice, and the hand-off into `DriverFight`. |
 | `Assets/Scripts/OnFoot/FightMotion.cs` | Shared move/turn/animate helpers, so Animator rigs and paper-doll rigs are driven the same way. |
 | `Assets/Scripts/OnFoot/FightTestRivals.cs` | Seeds the test rivalries described above. |
+| `Assets/Scripts/UI/TutorialPopupUI.cs` | The first-time-mechanic popup and its `TutorialPopup` facade (once-per-save memory, `{KEY}` substitution). |
+| `Assets/Scripts/UI/InputGlyphs.cs` | What each button is called on the device in use — keyboard / Xbox / PlayStation labels for prompts. |
 | `Assets/Tests/Editor/FightRulesTests.cs` | EditMode coverage of the maths (12 tests). |
 
 ## Animation
