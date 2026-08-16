@@ -98,12 +98,14 @@ public class LapTimingManager : MonoBehaviour
             }
 
             // Fully off the track surface (grass/gravel) invalidates the running lap. Paved (tarmac)
-            // runoff is legal — running wide onto it costs time but keeps the lap.
+            // runoff is legal — running wide onto it costs time but keeps the lap — and so is a kerb,
+            // which sits outboard of the road ribbon but is track as far as the rules are concerned.
             if (c.lapStarted && c.valid && !track.IsOnSurface(e.tf.position, out _))
             {
-                bool onPavedRunoff = SurfaceField.TryGetSurface(e.tf.position, out var surf)
-                                     && surf == TrackEnvironment.SurfaceType.TarmacRunoff;
-                if (!onPavedRunoff) Invalidate(c);
+                bool onPaved = SurfaceField.TryGetSurface(e.tf.position, out var surf)
+                               && (surf == TrackEnvironment.SurfaceType.TarmacRunoff
+                                   || surf == TrackEnvironment.SurfaceType.Kerb);
+                if (!onPaved) Invalidate(c);
             }
 
             if (e.lap > c.prevLap)

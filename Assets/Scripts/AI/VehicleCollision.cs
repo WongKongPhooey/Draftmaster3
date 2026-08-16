@@ -141,13 +141,23 @@ public class VehicleCollision : MonoBehaviour
             ColliderDistance2D d = _box.Distance(other);
             if (!d.isOverlapped) continue;
 
+            var otherResponder = other.GetComponent<ICollisionResponder>();
+
+            // People are not walls. Anything carrying its own rigidbody but no vehicle responder — the
+            // on-foot player, paddock NPCs, pit crew — would otherwise fall through to the barrier branch
+            // below and shove 1.5 tonnes of parked car aside at walking pace. Skipping it leaves the pair
+            // to Unity's own solver, which pushes the person out of this kinematic body and never the
+            // other way round: a parked car is immovable on foot, and a moving one runs you over.
+            // Barriers and scenery (static colliders, no rigidbody) still push the car as before.
+            if (otherResponder == null && other.attachedRigidbody != null &&
+                other.attachedRigidbody.bodyType != RigidbodyType2D.Static) continue;
+
             // Soft push: only correct a fraction per step so the car flexes into the barrier then eases out.
             // (Depenetration stays penetration-based — that's positional correctness, not damage.)
             Vector2 pushWorld = -d.normal * Mathf.Abs(d.distance) * positionalSoftness;
 
             // Damage scales with CLOSING SPEED, not penetration depth, so a slow sustained nudge does nothing
             // while a real impact dents hard. d.normal points along the contact; relVel·normal = approach rate.
-            var otherResponder = other.GetComponent<ICollisionResponder>();
             var otherVC = other.GetComponent<VehicleCollision>();
             Vector2 otherVel = otherVC != null ? otherVC.Velocity : Vector2.zero;
             float closingSpeed = Mathf.Max(0f, Vector2.Dot(_vel - otherVel, d.normal));

@@ -136,6 +136,16 @@ public class OnFootController : MonoBehaviour
 
     void Update()
     {
+        // Mid-fight: the fight owns the action keys (DriverFight reads them directly) and nobody is
+        // talkable while it's going on — but walking still works, so the player can circle and back off.
+        if (DriverFight.IsActive)
+        {
+            for (int i = 0; i < NPCInteractable.All.Count; i++)
+                NPCInteractable.All[i].BuildFloatingPrompt(false);
+            ReadInteractPressed();
+            return;
+        }
+
         // Frozen by a cutscene: no prompts, no interactions. Interact state still ticks so a held
         // key doesn't fire the moment the lock lifts.
         if (MovementLocked)

@@ -19,6 +19,18 @@ public class RoleStation : NPCInteractable
 
     public override bool Interact()
     {
+        // Sponsorship is the one station the player DOES something at: deals signed out at the track are
+        // placed on the car's panels here, and a sponsor pays nothing until it is. So it gets the
+        // interactive board rather than the read-only card.
+        if (role == Role.SponsorshipManager)
+        {
+            var board = SponsorBoardPanel.Ensure();
+            if (!_open) { _open = true; board.Show(); return true; }
+            _open = false;
+            board.Hide();
+            return false;
+        }
+
         var panel = GaragePanelUI.Ensure();
         if (!_open)
         {

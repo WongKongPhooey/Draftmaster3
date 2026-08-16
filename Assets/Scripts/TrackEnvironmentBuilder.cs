@@ -547,6 +547,15 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     static bool IsPitExitLine(string label) =>
         !string.IsNullOrEmpty(label) && label.ToLowerInvariant().Replace(" ", "").Contains("pitexit");
 
+    // A kerb is just a Strip by construction (see TrackEnvironmentBuilderEditor's Create Kerb), so it is
+    // recognised by its label or its material rather than by a flag no existing authored track carries.
+    // Recognised kerbs register their footprint with SurfaceField so the physics stops calling them grass.
+    static bool IsKerb(TrackEnvironment.Strip strip)
+    {
+        if (!string.IsNullOrEmpty(strip.label) && strip.label.ToLowerInvariant().Contains("kerb")) return true;
+        return strip.material != null && strip.material.name.ToLowerInvariant().Contains("kerb");
+    }
+
     void BuildStrips(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)
     {
         if (environment.strips == null || environment.strips.Length == 0) return;
@@ -596,7 +605,13 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             var mr = go.AddComponent<MeshRenderer>();
             mr.sortingOrder = strip.sortingOrder;
             if (strip.material != null) mr.sharedMaterial = strip.material;
-            mf.sharedMesh = BuildStripMesh(lookup, strip, spacing, startAbs, endAbs);
+            mf.sharedMesh = BuildStripMesh(lookup, strip, spacing, startAbs, endAbs, out var outline);
+
+            // Kerbs sit outboard of the road ribbon, so IsOnSurface reports them as off-track. Registering
+            // the footprint here gives the car physics a Kerb surface to find instead of falling through to
+            // "unclassified off-track = grass" — which is what threw grass clods on the red-and-whites.
+            // Registered after the runoff areas so the kerb wins wherever it overlaps one (last poly wins).
+            if (outline != null && IsKerb(strip)) SurfaceField.Add(outline, TrackEnvironment.SurfaceType.Kerb);
         }
     }
 
@@ -610,15 +625,20 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         return start + Mathf.Clamp(distanceInSegment, 0f, segs[idx].length);
     }
 
+    // worldOutline comes back as the ribbon's closed footprint in WORLD space (down the left rail, back up
+    // the right), ready to hand to SurfaceField for kerbs.
     Mesh BuildStripMesh(List<TrackBuilder.Sample> samples, TrackEnvironment.Strip strip, float spacing,
-                        float startAbs, float endAbs)
+                        float startAbs, float endAbs, out Vector2[] worldOutline)
     {
+        worldOutline = null;
         var mesh = new Mesh { name = $"Strip_{startAbs}_{endAbs}" };
         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 
         var verts = new List<Vector3>();
         var uvs = new List<Vector2>();
         var tris = new List<int>();
+        var leftRail = new List<Vector2>();
+        var rightRail = new List<Vector2>();
 
         float length = endAbs - startAbs;
         int steps = Mathf.Max(2, Mathf.CeilToInt(length / spacing) + 1);
@@ -654,6 +674,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
 
             verts.Add(new Vector3(left.x, left.y, 0));
             verts.Add(new Vector3(right.x, right.y, 0));
+            leftRail.Add(ToWorld2D(left));
+            rightRail.Add(ToWorld2D(right));
             float uLo = mirrorU ? strip.width * widthScale : 0f;
             float uHi = mirrorU ? 0f : strip.width * widthScale;
             uvs.Add(new Vector2(uLo, length * t * lengthScale));
@@ -673,7 +695,22 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         mesh.SetUVs(0, uvs);
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
+
+        if (leftRail.Count >= 2)
+        {
+            worldOutline = new Vector2[leftRail.Count * 2];
+            for (int i = 0; i < leftRail.Count; i++) worldOutline[i] = leftRail[i];
+            for (int i = 0; i < rightRail.Count; i++) worldOutline[leftRail.Count + i] = rightRail[rightRail.Count - 1 - i];
+        }
         return mesh;
+    }
+
+    // Strip geometry is authored in the TRACK's local space (that's what SampleAt returns), so the physics
+    // footprint has to go through the track transform, exactly as BuildRunoff does for runoff polygons.
+    Vector2 ToWorld2D(Vector2 trackLocal)
+    {
+        Vector3 w = track.transform.TransformPoint(new Vector3(trackLocal.x, trackLocal.y, 0f));
+        return new Vector2(w.x, w.y);
     }
 
     void BuildDecorations(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)

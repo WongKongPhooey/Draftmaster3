@@ -69,7 +69,12 @@ public class TrackInfoV2 : ScriptableObject
     [Tooltip("Distance along the PIT LANE (m) of the pit exit line — where the speed limit ends and the driver may accelerate. 0 = the end of the pit lane. The painted line (a strip labelled 'PitExitLine') anchors here too.")]
     public float pitExitLineDistance = 0f;
 
-    void OnValidate()
+    void OnValidate() => RebakePitDistances();
+
+    // Recompute where the pit lane leaves and rejoins the main spline, from the segment indices and the
+    // fine-tune offsets. Runs on every inspector edit; public so a generator (OvalTrackFactory) can bake
+    // the same values when it builds an asset in code, where OnValidate doesn't fire.
+    public void RebakePitDistances()
     {
         if (segments == null || segments.Length == 0) return;
         if (pitEntrySegmentIndex >= 0 && pitEntrySegmentIndex < segments.Length)

@@ -48,6 +48,13 @@ public static class PixelSpriteImport
         "Assets/RefImages",
     };
 
+    // Sprites the CPU has to read pixels from at runtime, rather than just hand to the GPU.
+    static bool NeedsCpuRead(string path)
+    {
+        string p = path.Replace('\\', '/');
+        return Path.GetFileName(p).Contains("livery") || p.Contains("/Resources/Sponsors/");
+    }
+
     [MenuItem("Draftmaster/Art/Retarget World Sprites to Pixel Standard", priority = 110)]
     public static void Run()
     {
@@ -93,6 +100,16 @@ public static class PixelSpriteImport
                 if (importer.textureCompression != TextureImporterCompression.Uncompressed)
                 {
                     importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    dirty = true;
+                }
+
+                // Liveries are composited at runtime — SponsorLiveryBaker reads a car's paint and blits the
+                // sponsor decals its driver has sold into a copy of it — so they have to be Read/Write.
+                // Only the liveries: making the whole 1500-sprite world library readable would double its
+                // memory for no reason. A 64x32 paint costs 8KB.
+                if (NeedsCpuRead(paths[i]) && !importer.isReadable)
+                {
+                    importer.isReadable = true;
                     dirty = true;
                 }
 

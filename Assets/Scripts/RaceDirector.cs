@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Sponsors;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -201,7 +202,9 @@ public class RaceDirector : MonoBehaviour
         }
     }
 
-    int _payout; // prize money earned this race, shown on the results panel
+    int _payout;          // prize money earned this race, shown on the results panel
+    int _sponsorPayout;   // sponsorship money earned this race (placed decals + met clauses)
+    List<SponsorDeal> _expiredSponsors;   // deals that ran out on this race
 
     // Career ledger + quest evaluation, once, on the final classification.
     void RecordCareerResult()
@@ -217,6 +220,15 @@ public class RaceDirector : MonoBehaviour
             // Prize money funds the travel-map economy (parts, tows).
             _payout = PlayerWallet.PayoutForPosition(playerPos);
             PlayerWallet.Add(_payout);
+
+            // Sponsorship pays on top — but only for decals actually on the car, and only while the deal
+            // still has races left on it. Clause bonuses land here too (finish inside the agreed position).
+            _sponsorPayout = SponsorBook.PayoutForFinish(playerPos);
+            if (_sponsorPayout > 0) PlayerWallet.Add(_sponsorPayout);
+
+            // Every live deal burns a race, placed or not: sitting on a contract you never painted on the
+            // car wastes it, which is what makes the four panels worth arguing over.
+            _expiredSponsors = SponsorBook.TickRace();
         }
 
         var classification = new List<(string name, bool isPlayer)>(_results.Count);
@@ -314,6 +326,20 @@ public class RaceDirector : MonoBehaviour
         if (_payout > 0) headline += $"    +{PlayerWallet.Format(_payout)}  (bank: {PlayerWallet.CashText})";
         GUI.Label(new Rect(x, y, w, 24f), headline, _headlineStyle);
         y += 30f;
+
+        // Sponsorship line: what the decals on the car earned, and anything whose contract just ran out.
+        if (_sponsorPayout > 0 || (_expiredSponsors != null && _expiredSponsors.Count > 0))
+        {
+            string sponsors = _sponsorPayout > 0 ? $"SPONSORS  +{PlayerWallet.Format(_sponsorPayout)}" : "SPONSORS  —";
+            if (_expiredSponsors != null && _expiredSponsors.Count > 0)
+            {
+                var names = new List<string>(_expiredSponsors.Count);
+                foreach (var d in _expiredSponsors) names.Add(d.sponsorName);
+                sponsors += $"    (deal ended: {string.Join(", ", names)})";
+            }
+            GUI.Label(new Rect(x, y, w, 20f), sponsors, _headStyle);
+            y += 24f;
+        }
 
         GUI.Label(new Rect(x, y, w, 18f), $"{"Pos",-5}{"#",-5}{"Driver",-17}{"Result",-13}{"Best Lap",-11}", _headStyle);
         y += 20f;

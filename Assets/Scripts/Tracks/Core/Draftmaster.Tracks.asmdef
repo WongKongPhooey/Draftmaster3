@@ -1,0 +1,14 @@
+{
+    "name": "Draftmaster.Tracks",
+    "rootNamespace": "Draftmaster.Tracks",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

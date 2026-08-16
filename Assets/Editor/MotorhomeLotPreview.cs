@@ -31,11 +31,17 @@ public static class MotorhomeLotPreview
         // what will actually be built at play time.
         float rvWidth = lot != null ? lot.rvWidth : 3.95f;
         float rvLength = lot != null ? lot.rvLength : 9.93f;
-        float sideGap = lot != null ? lot.sideGap : 4f;
-        float aisleDepth = lot != null ? lot.aisleDepth : 10f;
-        float setback = lot != null ? lot.lotSetback : 25f;
-        int perRow = lot != null ? lot.perRow : 8;
+        float lineGap = lot != null ? lot.lineGap : 2f;
+        float rowGap = lot != null ? lot.rowGap : 4f;
+        int rowCount = lot != null ? lot.rowCount : 2;
+        bool stackForward = lot == null || lot.stackRowsForward;
+        Vector2 lineDir = lot != null ? lot.lineDirection : Vector2.right;
+        int playerPlace = lot != null ? lot.playerLineIndex : 0;
         float rvZ = lot != null ? lot.rvZ : -0.5f;
+        string numberPrefix = lot != null && !string.IsNullOrEmpty(lot.numberSpritePrefix) ? lot.numberSpritePrefix : "cup20num";
+        float numberSize = lot != null ? lot.numberSize : 2.5f;
+        float numberOffset = lot != null ? lot.numberOffset : 0f;
+        bool showNumbers = lot == null || lot.showCarNumbers;
 
         var grid = Object.FindObjectOfType<GridSpawner>();
         int fieldSize = grid != null ? grid.count : 43;
@@ -44,13 +50,12 @@ public static class MotorhomeLotPreview
         if (entries.Count > fieldSize) entries.RemoveRange(fieldSize, entries.Count - fieldSize);
 
         Quaternion rot = playerRv.transform.rotation;
-        Vector3 sideAxis = -(rot * Vector3.right);
-        Vector3 rowAxis = rot * Vector3.up;
-        Vector3 origin = playerRv.transform.position + rowAxis * setback;
-        origin.z = rvZ;
-
-        float sidePitch = rvWidth + sideGap;
-        float rowPitch = rvLength + aisleDepth;
+        playerPlace = Mathf.Clamp(playerPlace, 0, Mathf.Max(0, entries.Count - 1));
+        // entries excludes nobody: the roster count here already stands in for the whole field, so the
+        // preview's places-per-line matches what the live lot will compute.
+        var line = DriverMotorhomeLot.ComputeLine(playerRv.transform.position, rot, lineDir,
+                                                  rvWidth, rvLength, lineGap, rowGap, rowCount,
+                                                  entries.Count, playerPlace, rvZ, stackForward);
 
         var root = new GameObject(RootName) { hideFlags = HideFlags.DontSave };
         var sprite = Resources.Load<Sprite>("Environment/motorhome");
@@ -62,12 +67,14 @@ public static class MotorhomeLotPreview
         if (sh == null) sh = Shader.Find("Sprites/Default");
         var unlit = new Material(sh) { hideFlags = HideFlags.DontSave };
 
+        // The player's own rig is already in the scene, so the preview skips its place in the line —
+        // what you see is where everyone ELSE will park around it.
+        int place = 0;
         for (int i = 0; i < entries.Count; i++)
         {
-            int col = i % Mathf.Max(1, perRow);
-            int row = i / Mathf.Max(1, perRow);
-            Vector3 pos = origin + sideAxis * (col * sidePitch) + rowAxis * (row * rowPitch);
-            pos.z = rvZ;
+            if (place == playerPlace) place++;
+            Vector3 pos = line.PlaceAt(place);
+            place++;
 
             var go = new GameObject($"RV_{entries[i].Number}_{entries[i].Last}") { hideFlags = HideFlags.DontSave };
             go.transform.SetParent(root.transform, false);
@@ -88,10 +95,32 @@ public static class MotorhomeLotPreview
                 Vector2 s = sprite.bounds.size;
                 art.transform.localScale = new Vector3(rvLength / s.x, rvWidth / s.y, 1f);
             }
+
+            // The car number painted on the roof, same art and sizing the live lot uses.
+            if (!showNumbers) continue;
+            var numberSprite = Resources.Load<Sprite>($"{numberPrefix}{entries[i].Number}");
+            if (numberSprite == null) continue;
+            Vector3 numPos = pos + (rot * Vector3.up) * numberOffset;
+            var num = new GameObject("Number") { hideFlags = HideFlags.DontSave };
+            num.transform.SetParent(go.transform, false);
+            num.transform.position = new Vector3(numPos.x, numPos.y, rvZ - 0.1f);
+            num.transform.localRotation = Quaternion.identity;
+            var nsr = num.AddComponent<SpriteRenderer>();
+            nsr.sprite = numberSprite;
+            nsr.sharedMaterial = unlit;
+            nsr.sortingOrder = (lot != null ? lot.sortingOrder : 2) + 1;
+            float nh = numberSprite.bounds.size.y;
+            if (nh > 0.0001f)
+            {
+                float ns = numberSize / nh;
+                num.transform.localScale = new Vector3(ns, ns, 1f);
+            }
         }
 
-        Debug.Log($"Preview Motorhome Lot: {entries.Count} motorhomes in {Mathf.CeilToInt(entries.Count / (float)perRow)} rows, " +
-                  $"anchored on '{playerRv.name}' at {playerRv.transform.position}. Clear when done.", root);
+        Debug.Log($"Preview Motorhome Lot: {entries.Count} motorhomes in {Mathf.Max(1, rowCount)} line(s) of " +
+                  $"{line.perRow}, {line.pitch:0.0}m apart ({line.perRow * line.pitch:0}m long × " +
+                  $"{Mathf.Max(1, rowCount) * line.rowPitch:0}m deep), anchored on '{playerRv.name}' at " +
+                  $"{playerRv.transform.position} with the player at place {playerPlace}. Clear when done.", root);
         Selection.activeGameObject = root;
     }
 

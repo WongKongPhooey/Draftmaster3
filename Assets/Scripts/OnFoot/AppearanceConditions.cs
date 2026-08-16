@@ -48,7 +48,11 @@ public class AppearanceConditions
     public bool inRace = true;
 
     [Header("Where")]
-    [Tooltip("Scene names this may appear in (e.g. 'WatkinsGlen'). Empty = any scene. Case-insensitive.")]
+    [Tooltip("Track ids this may appear at (e.g. 'Daytona'). Empty = any track. Case-insensitive. This is the " +
+             "one to use — every track now runs in the same scene, so the scene name no longer says where you are.")]
+    public string[] tracks;
+    [Tooltip("Scene names this may appear in (e.g. 'RaceScene', 'TeamGarage'). Empty = any scene. Case-insensitive. " +
+             "A track id still matches here, for beats authored before tracks and scenes were separated.")]
     public string[] scenes;
     [Tooltip("Series this may appear in, matched against PlayerPrefs CurrentSeriesIndex / CurrentSeries / CurrentSeriesName. Empty = any series. Case-insensitive.")]
     public string[] series;
@@ -92,7 +96,8 @@ public class AppearanceConditions
     {
         if (!enabled) return false;
         if (!SessionAllowed()) return false;
-        if (!Matches(scenes, SceneManager.GetActiveScene().name)) return false;
+        if (!Matches(tracks, CurrentTrackId)) return false;
+        if (!PlaceAllowed()) return false;
         if (!SeriesAllowed()) return false;
         if (!StatAllowed()) return false;
         if (!CareerPath.Allows(careerPaths)) return false;
@@ -202,9 +207,31 @@ public class AppearanceConditions
             case Repeat.OncePerPlaySession:    return saveKey;
             case Repeat.OncePerWeekendSession: return $"{SeenPrefix}{saveKey}.w{RaceWeekend.WeekendId}.{RaceWeekend.Current}";
             case Repeat.OncePerWeekend:        return $"{SeenPrefix}{saveKey}.w{RaceWeekend.WeekendId}";
-            case Repeat.OncePerTrack:          return $"{SeenPrefix}{saveKey}.{SceneManager.GetActiveScene().name}";
+            // Keyed on the track, not the scene: since the multi-track split every round runs in the same
+            // RaceScene, so a scene-name key would make "once per track" mean "once, ever".
+            case Repeat.OncePerTrack:          return $"{SeenPrefix}{saveKey}.{CurrentTrackId}";
             default:                           return SeenPrefix + saveKey;
         }
+    }
+
+    // Which track the player is at. The loaded package is the truth (it's what's actually built around
+    // them); TrackSelection is the fallback for a scene that loads no package at all.
+    public static string CurrentTrackId
+    {
+        get
+        {
+            var active = TrackPackage.Active;
+            if (active != null && !string.IsNullOrEmpty(active.trackId)) return active.trackId;
+            return TrackSelection.CurrentId;
+        }
+    }
+
+    // A beat authored before the split may name its track in `scenes` — "WatkinsGlen" meant both the track
+    // and the scene back then. Accept either so those keep working.
+    bool PlaceAllowed()
+    {
+        if (scenes == null || scenes.Length == 0) return true;
+        return Matches(scenes, SceneManager.GetActiveScene().name) || Matches(scenes, CurrentTrackId);
     }
 
     static bool Matches(string[] allowed, string value)

@@ -24,8 +24,10 @@ public static class TrackConditions
     // Effective power the dynamics actually consume: baked baseline × driver slider.
     public static float EffectivePower => BasePower * PowerMultiplier;
 
-    [Tooltip("Scales tyre wear accrual on every car. Default 0.05 (gentle). 0 = no wear, 1 = raw model rate, >1 abrasive track.")]
-    public static float TireWearMultiplier = 0.05f;
+    // 0.02 is calibrated against a hot lap: one flat-out lap costs the loaded (outside) tyres ~7% and the
+    // unloaded side ~3%, so a stint fades over many laps rather than falling off in a handful.
+    [Tooltip("Scales tyre wear accrual on every car. Default 0.02 (gentle). 0 = no wear, 1 = raw model rate, >1 abrasive track.")]
+    public static float TireWearMultiplier = 0.02f;
 
     [Tooltip("Scales fuel burn on every car. 1 nominal, 0 = no burn, 2 = double consumption.")]
     public static float FuelUseMultiplier = 1f;
@@ -46,7 +48,7 @@ public static class TrackConditions
     {
         GripMultiplier = 1.2f;
         PowerMultiplier = 0.8f;
-        TireWearMultiplier = 0.05f;
+        TireWearMultiplier = 0.02f;
         FuelUseMultiplier = 1f;
         DamageMultiplier = 1f;
         AiPaceMultiplier = 1.2f;

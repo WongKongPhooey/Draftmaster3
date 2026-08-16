@@ -19,7 +19,10 @@ public class TrackMiniMap : MonoBehaviour
     public float mapSize = 220f;
     [Tooltip("Distance (px) from the screen's bottom-right corner.")]
     public Vector2 cornerMargin = new Vector2(16f, 16f);
-    [Range(0f, 1f)] public float backgroundAlpha = 0.45f;
+    [Tooltip("Height (in the HUD's 1920x1080 reference units) to keep clear at the bottom right for the " +
+             "speedometer dial, which is anchored there: 30 margin + 220 dial + 16 gap. Scaled to the real " +
+             "screen the same way the HUD canvas scales, so the map clears the dial at any resolution.")]
+    public float speedoClearance = 266f;
 
     [Header("Dots")]
     public float aiDotSize = 6f;
@@ -30,7 +33,7 @@ public class TrackMiniMap : MonoBehaviour
     public Color trackLineColor = new Color(1f, 1f, 1f, 0.9f);
 
     TrackBuilder _builder;
-    Texture2D _mapTex, _px, _dot;
+    Texture2D _mapTex, _dot;
     Rect _worldRect;      // world-space bounds baked into the map texture
     float _pollTimer;
     SplineDriver[] _aiCars = System.Array.Empty<SplineDriver>();
@@ -148,13 +151,16 @@ public class TrackMiniMap : MonoBehaviour
         if (!Visible || _mapTex == null || RacePauseMenu.IsPaused) return;
         EnsureAssets();
 
+        // Sat above the speedometer rather than on top of it. This is IMGUI in raw screen pixels while the
+        // dial is on a scaled canvas, so the clearance is converted with the same factor CanvasScaler uses
+        // (Scale With Screen Size, 1920x1080, match 0.5 — the geometric mean of the two ratios).
         var rect = new Rect(
             Screen.width - mapSize - cornerMargin.x,
-            Screen.height - mapSize - cornerMargin.y,
+            Screen.height - mapSize - cornerMargin.y - speedoClearance * HudScale(),
             mapSize, mapSize);
 
-        GUI.color = new Color(0f, 0f, 0f, backgroundAlpha);
-        GUI.DrawTexture(new Rect(rect.x - 6f, rect.y - 6f, rect.width + 12f, rect.height + 12f), _px);
+        // No backdrop: the baked map is transparent apart from the lines, so it reads as an overlay on the
+        // track instead of a panel bolted to the corner.
         GUI.color = Color.white;
         GUI.DrawTexture(rect, _mapTex);
 
@@ -171,6 +177,11 @@ public class TrackMiniMap : MonoBehaviour
         GUI.color = Color.white;
     }
 
+    // What CanvasScaler does to the HUD at this resolution, so a measurement taken off the speedometer's
+    // RectTransform means the same thing here.
+    static float HudScale() =>
+        Mathf.Sqrt(Mathf.Max(0.0001f, (Screen.width / 1920f) * (Screen.height / 1080f)));
+
     void DrawDot(Rect mapRect, Vector2 world, Color color, float size)
     {
         Vector2 uv = WorldToMap01(world);
@@ -183,12 +194,6 @@ public class TrackMiniMap : MonoBehaviour
 
     void EnsureAssets()
     {
-        if (_px == null)
-        {
-            _px = new Texture2D(1, 1);
-            _px.SetPixel(0, 0, Color.white);
-            _px.Apply();
-        }
         if (_dot == null)
         {
             const int n = 16;

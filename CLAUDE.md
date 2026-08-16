@@ -77,11 +77,15 @@ A second, newer system runs alongside the legacy scrolling code:
 - **GridSpawner** — instantiates N AI cars, waits on `DatabaseManager.IsReady`, pulls a shuffled driver pool, and applies bindings.
 - **DatabaseManager** (`Assets/Scripts/Database/`) — singleton wrapping a sqlite-net-pcl connection at `Application.persistentDataPath/draftmaster.db`. Seeds dummy drivers on first launch via `DummyDrivers.Build()`. Tables live in `Assets/Scripts/Database/Models/` under namespace `Draftmaster.Data`.
 
+### Multi-track structure
+
+A track is one string id (`Daytona`), shared by the `Tracks` table, the calendar, the travel map and the assets. It resolves to three things via `TrackCatalog`: a catalogue row, geometry at `Resources/Tracks/<id>.asset`, and a content package at `Resources/TrackPackages/<id>.prefab`. `TrackSceneLoader` drops the selected package (`TrackSelection`) into the shared race scene (`Assets/Scenes/RaceScene.unity` — managers, no road, all `TrackBuilder` fields null) and binds it to everything holding a `TrackBuilder` — so the race scene is authored once and the track is content, rather than one scene per round. `TrackDressingFactory` generates each package's ground, walls, grandstands and paddock from the spline, and never overwrites hand-authored pieces. Ovals are generated from their lap length by `Draftmaster.Tracks.OvalGeometry`; road courses are hand-authored. Tooling: **Draftmaster > Tracks**. Full pipeline in `Docs/Tracks.md`.
+
 ## Development
 
 This is a Unity 6 (6000.4.3f1) project — open in the Unity Editor, not built from CLI. There is no automated test suite or CI pipeline. Testing is done by entering Play Mode in the editor.
 
-Authoring guides live in `Docs/` — `Docs/NPCs-and-Quests.md` covers the paper-doll character system (sprite specs, greyscale/tint rules, editor NPC designer), dialogue (NPCInteractable), and the side-quest system (QuestInfo assets, QuestGiverNPC, stats ledger, inventory, pause-menu mission board). `Docs/Rivalry-and-TeamSwitch.md` covers the driver-relationship/payback system (DriverRelationships, contact blame, AIRacingBehaviour payback, RivalryFeed) and mid-race team car switching (TeamSwitchController, GridSpawner teams).
+Authoring guides live in `Docs/` — `Docs/NPCs-and-Quests.md` covers the paper-doll character system (sprite specs, greyscale/tint rules, editor NPC designer), dialogue (NPCInteractable), and the side-quest system (QuestInfo assets, QuestGiverNPC, stats ledger, inventory, pause-menu mission board). `Docs/Rivalry-and-TeamSwitch.md` covers the driver-relationship/payback system (DriverRelationships, contact blame, AIRacingBehaviour payback, RivalryFeed) and mid-race team car switching (TeamSwitchController, GridSpawner teams). `Docs/Sponsorship.md` covers sponsor contracts (pit-lane reps, haggling, the PlayerPrefs deal book) and the car decal pipeline (panel layout assets, livery baking, placeholder art tools).
 
 **Build hazard**: Several runtime scripts have `using UnityEditor` imports (RaceManager, VehicleLogic, EnvironmentObjectV2). These will cause build failures for standalone builds. Wrap any editor-only code in `#if UNITY_EDITOR` directives.
 

@@ -5,7 +5,10 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Draftmaster.Fans",
+        "Draftmaster.Fights",
         "Draftmaster.Progression",
+        "Draftmaster.Sponsors",
+        "Draftmaster.Tracks",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [

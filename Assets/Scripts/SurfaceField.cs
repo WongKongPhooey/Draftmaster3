@@ -9,6 +9,7 @@ public static class SurfaceField
     struct Poly
     {
         public Vector2[] pts;
+        public Vector2 min, max; // AABB, so a query skips the crossing test for polys it can't be inside
         public TrackEnvironment.SurfaceType surface;
     }
 
@@ -19,7 +20,14 @@ public static class SurfaceField
     public static void Add(Vector2[] worldPoints, TrackEnvironment.SurfaceType surface)
     {
         if (worldPoints == null || worldPoints.Length < 3) return;
-        _polys.Add(new Poly { pts = worldPoints, surface = surface });
+        var min = worldPoints[0];
+        var max = worldPoints[0];
+        for (int i = 1; i < worldPoints.Length; i++)
+        {
+            min = Vector2.Min(min, worldPoints[i]);
+            max = Vector2.Max(max, worldPoints[i]);
+        }
+        _polys.Add(new Poly { pts = worldPoints, min = min, max = max, surface = surface });
     }
 
     public static bool TryGetSurface(Vector2 worldPos, out TrackEnvironment.SurfaceType surface)
@@ -28,7 +36,9 @@ public static class SurfaceField
         bool found = false;
         for (int i = 0; i < _polys.Count; i++)
         {
-            if (PointInPolygon(_polys[i].pts, worldPos)) { surface = _polys[i].surface; found = true; }
+            var p = _polys[i];
+            if (worldPos.x < p.min.x || worldPos.x > p.max.x || worldPos.y < p.min.y || worldPos.y > p.max.y) continue;
+            if (PointInPolygon(p.pts, worldPos)) { surface = p.surface; found = true; }
         }
         return found;
     }

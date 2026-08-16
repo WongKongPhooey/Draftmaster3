@@ -21,4 +21,15 @@ public static class RosterLookup
             if (e.Number == carNumber) return CupRoster2026.BuildDriver(e);
         return null;
     }
+
+    // The name a driver competes under: what GridSpawner writes into their DriverLabel, what the position
+    // tracker shows, and — crucially — the identity DriverRelationships files rivalries under. Anything that
+    // needs to look a driver up in that system (the paddock's RivalDriverNPC, quests, the dossier) must use
+    // this and not their full name, or it keys a second, empty relationship for the same person.
+    public static string LabelName(Driver d)
+    {
+        if (d == null) return "";
+        if (!string.IsNullOrEmpty(d.ShortName)) return d.ShortName;
+        return d.LastName ?? "";
+    }
 }

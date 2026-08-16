@@ -90,6 +90,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float gravelDrag = 14f;
     [Tooltip("Lateral grip on a Tarmac runoff — near track grip, so paved run-offs are safe.")]
     [Range(0.1f, 1f)] public float tarmacRunoffGrip = 0.95f;
+    [Tooltip("Lateral grip on a painted kerb. Slightly below track grip — you can ride the red-and-whites, but leaning on them costs a little bite.")]
+    [Range(0.1f, 1f)] public float kerbGrip = 0.92f;
 
     [Header("Damage → Handling")]
     [Tooltip("Grip lost at full bodywork damage (both axles).")]
@@ -451,6 +453,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             {
                 case TrackEnvironment.SurfaceType.TarmacRunoff:
                     surfGrip = tarmacRunoffGrip; surfPower = 1f; surfDrag = 0f; looseSurface = false;
+                    break;
+                case TrackEnvironment.SurfaceType.Kerb:
+                    // Sealed paint, not runoff: full power, no drag, and nothing for the tyres to throw.
+                    surfGrip = kerbGrip; surfPower = 1f; surfDrag = 0f; looseSurface = false;
                     break;
                 case TrackEnvironment.SurfaceType.Gravel:
                     surfGrip = gravelGrip; surfPower = gravelPower; surfDrag = gravelDrag; looseSurface = true;

@@ -372,7 +372,7 @@ public class GridSpawner : MonoBehaviour
             label.carset = carsetPrefix;
             label.carNumber = carNumber;
             if (rosterDriver != null)
-                label.driverName = !string.IsNullOrEmpty(rosterDriver.ShortName) ? rosterDriver.ShortName : rosterDriver.LastName;
+                label.driverName = RosterLookup.LabelName(rosterDriver);
             else if (gridEntry != null && !string.IsNullOrEmpty(gridEntry.driverName))
                 label.driverName = gridEntry.driverName;
             else

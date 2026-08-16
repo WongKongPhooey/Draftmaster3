@@ -166,12 +166,33 @@ public static class DriverRelationships
         return car.name;
     }
 
+    // The single answer to "what is the player filed under?". Everything that reads or writes a player
+    // relationship must go through this, or the same feud ends up split across two identities.
+    //
+    // The player's CAR label wins, because that is what NameOf reports when contact is logged on track —
+    // TeamSwitchController stamps it with the roster driver whose car they're in (or their career name).
+    // The position tracker is only the fallback, and it is not reliable on its own: it starts life holding
+    // the "You" placeholder and is only renamed once the car has been labelled, so a paddock conversation
+    // that read it early keyed a different person than the racing did.
+    public static string PlayerName
+    {
+        get
+        {
+            var car = UnityEngine.Object.FindObjectOfType<PlayerVehicleController>();
+            if (car != null)
+            {
+                var label = car.GetComponent<DriverLabel>();
+                if (label != null && !string.IsNullOrEmpty(label.driverName)) return label.driverName;
+            }
+            var rt = RacePositionTracker.Instance;
+            return rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
+        }
+    }
+
     public static bool IsPlayerName(string name)
     {
         if (string.IsNullOrEmpty(name)) return false;
-        var rt = RacePositionTracker.Instance;
-        string player = rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
-        return string.Equals(name.Trim(), player.Trim(), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(name.Trim(), PlayerName.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     // ---- internals ----

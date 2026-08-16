@@ -48,6 +48,10 @@ public class DriverPresenceDirector : MonoBehaviour
     [Tooltip("Drivers draw above the cars (car sorting order is ~5) and the motorhomes.")]
     public int baseSortingOrder = 10;
 
+    [Header("Fights")]
+    [Tooltip("Let a driver you've fallen out with on track square up to you in the paddock (DriverFight). Off = rivals still argue, but it never goes further.")]
+    public bool allowFights = true;
+
     [Header("Budget")]
     [Tooltip("Cap on spawned driver NPCs. Drivers past the cap are left sat in their cars, which costs nothing. 0 = no cap.")]
     public int maxSpawnedDrivers = 0;
@@ -144,9 +148,7 @@ public class DriverPresenceDirector : MonoBehaviour
         // Face out of the door, into the aisle, so they're looking at whoever walks up.
         OnFootController.ApplyFacing(go.transform, go.GetComponent<Rigidbody2D>(), slot.doorDirection, 90f);
 
-        var talk = go.AddComponent<NPCInteractable>();
-        talk.speakerName = slot.fullName;
-        talk.lines = LinesFor(slot, Presence.AtRV);
+        var talk = MakeTalkable(go, slot, Presence.AtRV);
         talk.interactRange = footTalkRange;
     }
 
@@ -157,9 +159,7 @@ public class DriverPresenceDirector : MonoBehaviour
 
         var go = BuildDriver(slot, pos, "Driver_Walking");
 
-        var talk = go.AddComponent<NPCInteractable>();
-        talk.speakerName = slot.fullName;
-        talk.lines = LinesFor(slot, Presence.Walking);
+        var talk = MakeTalkable(go, slot, Presence.Walking);
         talk.interactRange = footTalkRange;
 
         // Confined to the open band in front of their own row, so they never walk through a parked
@@ -168,6 +168,31 @@ public class DriverPresenceDirector : MonoBehaviour
         walker.speed = walkSpeed;
         walker.conversation = talk;   // stand still and turn to face whoever stops them
         walker.Configure(slot.aisleCenter, slot.aisleAlong, slot.aisleOut, slot.aisleHalfLen, slot.aisleHalfDepth);
+    }
+
+    // A driver you can walk up to is a RivalDriverNPC, not a plain NPCInteractable: it behaves exactly like
+    // one until the pair's relationship falls past DriverRelationships.RivalThreshold, at which point the
+    // conversation turns into an argument and offers the option to square up (see DriverFight).
+    //
+    // Only drivers who are actually stood on their feet get this — a driver sat in their car is talked to
+    // through the window and has nowhere to fight from.
+    RivalDriverNPC MakeTalkable(GameObject go, DriverMotorhomeLot.Slot slot, Presence presence)
+    {
+        var talk = go.AddComponent<RivalDriverNPC>();
+        talk.speakerName = slot.fullName;
+        talk.lines = LinesFor(slot, presence);
+        talk.allowFights = allowFights;
+
+        // The relationship identity MUST be the name this driver races under (their DriverLabel), not their
+        // full name: DriverRelationships keys on the label, so "Ross Chastain" and "Chastain" are two
+        // different people to it and a feud earned on track would never reach the paddock.
+        var d = RosterLookup.ByCarNumber(slot.carNumber);
+        string label = RosterLookup.LabelName(d);
+        if (string.IsNullOrEmpty(label)) label = !string.IsNullOrEmpty(slot.shortName) ? slot.shortName : slot.fullName;
+        talk.driverName = label;
+
+        if (d != null) talk.aggression = Mathf.Clamp(d.Aggression, 1, 20);
+        return talk;
     }
 
     // ---------------------------------------------------------------- construction

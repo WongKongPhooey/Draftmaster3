@@ -262,6 +262,42 @@ NPC.
 
 ---
 
+## 4. NPCs across thirty-five tracks
+
+Every round runs in one scene (`Assets/Scenes/RaceScene.unity`) with the track loaded as a package — see
+`Docs/Tracks.md`. That splits NPCs into two kinds, and most of them are already the first kind:
+
+**Spawned from geometry — nothing to do per track.** `PitLaneStart` (greeter, race engineer, crew chief, the
+RV beat), `PaddockSpawner`, `PitCrewSpawner`, `AutographFanSpawner`, `CareerPathNPCSpawner`,
+`DriverMotorhomeLot` and `DriverPresenceDirector` all live in the shared scene and place people off the pit
+lane spline. `AutographFanSpawner` and `CareerPathNPCSpawner` even self-install
+(`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]`), and the package is instantiated before that runs, so
+they find the road. A new track gets the whole paddock cast for free.
+
+**Placed by hand — put them in the package.** Anything belonging to *this* track (a local promoter, a
+track-specific quest giver, an NPC stood by a particular gate) goes in the package prefab under
+`Paddock/NPCs`, a root the dressing factory creates for the purpose. Open the package in Prefab Mode
+(`Draftmaster > Tracks > Edit Selected Package`), drop the NPC in, and it travels with the track — loaded
+when that round loads, absent otherwise, with no scene to keep in sync.
+
+Same for spawn markers: `PlayerSpawnPoint` markers are per-track furniture, so they live in the package too.
+The generated paddock ships two — `SpawnPoint_RV` (inside the RV prefab, the one `PitLaneStart.forcedSpawnName`
+looks for) and a weight-0.5 `SpawnPoint_Paddock` fallback.
+
+### Gating a beat to particular tracks
+
+`AppearanceConditions` has a **`tracks`** list (`Daytona`, `Martinsville`, …) — empty means any track. Use it
+rather than `scenes`, which now says only which *scene* you're in and is the same string for every round.
+Old conditions that named a track in `scenes` still work: the check accepts a scene name **or** a track id.
+
+`Repeat.OncePerTrack` is keyed on the track id for the same reason. Before the split it keyed on the scene
+name, which in a shared scene would have quietly meant "once, ever".
+
+Both read `AppearanceConditions.CurrentTrackId` — the loaded `TrackPackage`'s id, falling back to
+`TrackSelection.CurrentId`.
+
+---
+
 ## Gotchas
 
 - Sprite sheets are sliced at runtime (`Sprite.Create`) — no Unity sprite-editor slicing or

@@ -47,7 +47,10 @@ public class TrackEnvironment : ScriptableObject
 
     public enum SplineRef { Main, Pit }
 
-    public enum SurfaceType { TarmacRunoff, Grass, Gravel }
+    // Kerb is appended last on purpose: these are serialized by index in authored runoff areas.
+    // It is registered by the strip builder (not by a runoff area) so a painted kerb drives like
+    // sealed track — a little less grip, but no grass physics and no surface spray.
+    public enum SurfaceType { TarmacRunoff, Grass, Gravel, Kerb }
     public enum LateralAnchor { Centerline, LeftEdge, RightEdge }
 
     [System.Serializable]

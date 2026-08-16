@@ -324,9 +324,11 @@ public class PitLaneStart : MonoBehaviour
 
         // Spawn-in presentation: "<Track> - <spawn label>" title card, plus an objective marker
         // pointing at the parked car (edge-clamped arrow + distance + paint-scheme icon when far).
+        // Geometry first, then the catalogue. The scene name is last and no longer useful on its own — every
+        // track runs in RaceScene, so falling back to it would title every round "Race Scene".
         string trackTitle = (track.track != null && !string.IsNullOrEmpty(track.track.trackName))
             ? track.track.trackName
-            : SpawnIntroUI.Nicify(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            : TrackCatalog.DisplayName(AppearanceConditions.CurrentTrackId);
         string spawnLabel = (marker != null && !string.IsNullOrEmpty(marker.label)) ? marker.label : "Pit Lane";
         _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform);
         var carSprite = car.GetComponentInChildren<SpriteRenderer>();

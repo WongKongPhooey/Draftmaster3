@@ -4,10 +4,12 @@ using Draftmaster.Data;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// The drivers' motorhome lot: one RV per driver in the field, lined up next to each other in rows,
-// each with a name board over the cab. Slot 0 is the player's own RV — the scene-placed RVExterior
-// prefab instance that PitLaneStart spawns them inside — so the row grows out of a motorhome the
-// player already knows, and inherits its rotation and door convention for free.
+// The drivers' motorhome lot: one RV per driver in the field, parked side by side in a small number of
+// long lines (rowCount, default 2) stacked one in front of the other in the pit area, each with a name
+// board over the cab. The lot is anchored on the player's own RV — the scene-placed RVExterior prefab
+// instance that PitLaneStart spawns them inside — so it grows out of a motorhome the player already
+// knows and inherits its rotation and door convention for free. The player's rig never moves:
+// playerLineIndex decides which place it occupies, and the lot's start slides the other way to suit.
 //
 // This component also owns the FIELD ROSTER (who is racing, under what number, for which team).
 // DriverPresenceDirector reads the slots back to put each of those drivers somewhere in the world.
@@ -52,14 +54,18 @@ public class DriverMotorhomeLot : MonoBehaviour
     public float rvZ = -0.5f;
 
     [Header("Layout")]
-    [Tooltip("Motorhomes parked side by side before the row wraps.")]
-    public int perRow = 8;
-    [Tooltip("Gap (m) between neighbouring motorhomes in a row. Their doors face across it.")]
-    public float sideGap = 4f;
-    [Tooltip("Open aisle (m) between one row's back edge and the next row's front edge.")]
-    public float aisleDepth = 10f;
-    [Tooltip("How far past the player's RV (the way its cab points) the drivers' rows start, metres. The player's rig sits at the head of the lot on its own; the rows need to clear the paddock tarmac, the pit garages and the RV's walk-out cutscene, all of which sit behind it.")]
-    public float lotSetback = 25f;
+    [Tooltip("World direction the lines run, seen from the player's motorhome. (1,0) = to the right of screen.")]
+    public Vector2 lineDirection = Vector2.right;
+    [Tooltip("Gap (m) of open ground between neighbouring motorhomes in a line.")]
+    public float lineGap = 2f;
+    [Tooltip("How many lines the field is split across, stacked one in front of the other. 2 halves the width of the lot for twice the depth.")]
+    public int rowCount = 2;
+    [Tooltip("Open ground (m) between one line's bodies and the next line's — the walkway drivers mill about in. Keep it wide enough for the on-foot player to walk down.")]
+    public float rowGap = 4f;
+    [Tooltip("Which side of the first line the extra lines stack on. On = the way the cabs point (up-screen for an unrotated RV); off = the other way.")]
+    public bool stackRowsForward = true;
+    [Tooltip("Which place in the lot the player's own motorhome takes, counting along the first line and then on to the next. 0 = the head of the front line. The player's authored RV never moves — the lot's start slides to suit, so the field parks around them.")]
+    public int playerLineIndex = 0;
 
     [Header("Sorting")]
     [Tooltip("Sorting layer for the motorhome bodies.")]
@@ -67,12 +73,15 @@ public class DriverMotorhomeLot : MonoBehaviour
     [Tooltip("Order for the bodies: above the paddock tarmac (1), below the cars (5) and the on-foot crowd. Raise the walkers' order instead if anyone disappears behind a motorhome.")]
     public int sortingOrder = 2;
 
-    [Header("Name boards")]
-    [Tooltip("Show '#number / SURNAME' over each motorhome's cab.")]
-    public bool showNameBoards = true;
-    [Tooltip("Height (m) of the name board above the cab end of the body.")]
-    public float nameBoardLift = 1.4f;
-    public Color nameBoardColor = new Color(1f, 0.93f, 0.7f, 1f);
+    [Header("Car numbers")]
+    [Tooltip("Paint each driver's car number on the roof of their motorhome, using the same number art the cars carry.")]
+    public bool showCarNumbers = true;
+    [Tooltip("Resources name prefix for the number art: this + the car number, e.g. 'cup20num' + 8 loads Resources/cup20num8.")]
+    public string numberSpritePrefix = "cup20num";
+    [Tooltip("Height (m) of the painted number. The art is 16x16 px and the world runs at 12.8 px/m, so whole multiples of 1.25m (1.25 / 2.5 / 3.75) keep its pixels square against everything else.")]
+    public float numberSize = 2.5f;
+    [Tooltip("Offset (m) from the middle of the roof toward the cab. 0 = dead centre.")]
+    public float numberOffset = 0f;
 
     [Header("Field")]
     [Tooltip("Seconds to wait for GridSpawner to finish spawning the AI field before building the lot with whoever has turned up.")]
@@ -155,7 +164,8 @@ public class DriverMotorhomeLot : MonoBehaviour
 
         Built = true;
         Ready?.Invoke(this);
-        Debug.Log($"DriverMotorhomeLot: {_slots.Count} motorhomes parked ({(_slots.Count > 0 && _slots[0].isPlayer ? "player at slot 0" : "no player RV found")}).", this);
+        Debug.Log($"DriverMotorhomeLot: {_slots.Count} motorhomes in {Mathf.Max(1, rowCount)} line(s) " +
+                  $"({(_slots.Count > 0 && _slots[0].isPlayer ? $"player at place {Mathf.Clamp(playerLineIndex, 0, _slots.Count - 1)}" : "no player RV found")}).", this);
 
         // Now that every driver has an address, put each of them somewhere: in their car, at their
         // motorhome, or walking the lot.
@@ -228,6 +238,76 @@ public class DriverMotorhomeLot : MonoBehaviour
 
     // ---------------------------------------------------------------- layout
 
+    // The parked lot: one or more lines of motorhomes stacked one in front of the other. Shared by the
+    // runtime lot and the editor preview so what a track author sees while placing the player's RV is
+    // exactly what gets built at play time.
+    public struct LineLayout
+    {
+        public Vector3 origin;      // body centre of place 0 — the head of the front line
+        public Vector3 axis;        // unit vector each line runs along
+        public Vector3 front;       // unit vector out of a line's face; later lines stack this way
+        public Quaternion rotation; // body frame every rig shares (from the player's RV)
+        public float pitch;         // centre-to-centre spacing along a line
+        public float rowPitch;      // centre-to-centre spacing between lines
+        public float depth;         // body extent along `front`
+        public int perRow;          // places in a line before the next one starts
+
+        // Places run along the front line, then wrap to the head of the next line back.
+        public Vector3 PlaceAt(int index)
+        {
+            int n = Mathf.Max(1, perRow);
+            Vector3 p = origin + axis * (pitch * (index % n)) + front * (rowPitch * (index / n));
+            p.z = origin.z;
+            return p;
+        }
+
+        public int RowOf(int index) => index / Mathf.Max(1, perRow);
+    }
+
+    // anchor/rot come from the player's RV. playerIndex is the place that rig occupies: the lot's start
+    // is pushed back so the anchor keeps its authored position whatever place it is given. Pitch
+    // measures the body ACROSS the line direction and rowPitch measures it along the stack direction,
+    // so a rotated RV still parks with the right spacing either way.
+    public static LineLayout ComputeLine(Vector3 anchor, Quaternion rot, Vector2 direction,
+                                         float rvWidth, float rvLength, float gap, float rowGap,
+                                         int rowCount, int total, int playerIndex, float z,
+                                         bool stackForward = true)
+    {
+        Vector3 axis = new Vector3(direction.x, direction.y, 0f);
+        if (axis.sqrMagnitude < 1e-6f) axis = rot * Vector3.right;
+        axis.Normalize();
+
+        // Lines stack the way the cabs point, resolved onto the axis' perpendicular so the walkway
+        // never ends up skewed when the lines run at an angle to the bodies.
+        Vector3 front = new Vector3(-axis.y, axis.x, 0f);
+        if (Vector3.Dot(front, rot * Vector3.up) < 0f) front = -front;
+        if (!stackForward) front = -front;   // stack back past the cabs instead, walkways with them
+
+        Vector3 bodyLen = rot * Vector3.up;    // local +Y = length (cab)
+        Vector3 bodyWide = rot * Vector3.right; // local +X = width (door side)
+        float across = Mathf.Abs(Vector3.Dot(bodyLen, axis)) * rvLength + Mathf.Abs(Vector3.Dot(bodyWide, axis)) * rvWidth;
+        float depth = Mathf.Abs(Vector3.Dot(bodyLen, front)) * rvLength + Mathf.Abs(Vector3.Dot(bodyWide, front)) * rvWidth;
+
+        int rows = Mathf.Max(1, rowCount);
+        var layout = new LineLayout
+        {
+            axis = axis,
+            front = front,
+            rotation = rot,
+            pitch = across + Mathf.Max(0f, gap),
+            rowPitch = depth + Mathf.Max(0f, rowGap),
+            depth = depth,
+            perRow = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, total) / (float)rows)),
+        };
+
+        playerIndex = Mathf.Max(0, playerIndex);
+        layout.origin = anchor
+                      - axis * (layout.pitch * (playerIndex % layout.perRow))
+                      - front * (layout.rowPitch * (playerIndex / layout.perRow));
+        layout.origin.z = z;
+        return layout;
+    }
+
     void BuildRow()
     {
         if (_slots.Count == 0) return;
@@ -238,23 +318,16 @@ public class DriverMotorhomeLot : MonoBehaviour
             return;
         }
 
-        // Body frame: local +Y is the length (cab forward), local +X is the door side.
-        // Rows march the way the cabs point — on a placed RV that's away from the pit lane, into the
-        // open grass behind the paddock, which is the only direction with room for a full field.
-        Vector3 sideAxis = -(rot * Vector3.right);   // march away from the player's door
-        Vector3 rowAxis = rot * Vector3.up;          // extra rows stack ahead, aisle between
-        float sidePitch = rvWidth + sideGap;
-        float rowPitch = rvLength + aisleDepth;
+        int playerPlace = Mathf.Clamp(playerLineIndex, 0, _slots.Count - 1);
+        var line = ComputeLine(origin, rot, lineDirection, rvWidth, rvLength, lineGap, rowGap,
+                               rowCount, _slots.Count, playerPlace, rvZ, stackRowsForward);
 
         var root = new GameObject("Motorhomes").transform;
         root.SetParent(transform, false);
 
-        // The player's rig keeps its authored spot at the head of the lot and is NOT part of the grid:
-        // it is parked on the paddock tarmac, and the rows have to start clear of the tarmac, the pit
-        // garage props behind it and the RV-door cutscene. Everything else lines up from the setback.
-        Vector3 gridOrigin = playerRv != null ? origin + rowAxis * lotSetback : origin;
-        int gridIndex = 0;
-
+        // The player's rig holds its place; everyone else fills the remaining places in roster order,
+        // so the lot closes up around whichever spot the player was given.
+        int nextPlace = 0;
         for (int i = 0; i < _slots.Count; i++)
         {
             var slot = _slots[i];
@@ -270,24 +343,21 @@ public class DriverMotorhomeLot : MonoBehaviour
             }
             else
             {
-                int col = gridIndex % Mathf.Max(1, perRow);
-                int row = gridIndex / Mathf.Max(1, perRow);
-                gridIndex++;
+                if (nextPlace == playerPlace && playerRv != null) nextPlace++;   // leave the player's gap open
+                slot.position = line.PlaceAt(nextPlace);
+                nextPlace++;
 
-                slot.position = gridOrigin + sideAxis * (col * sidePitch) + rowAxis * (row * rowPitch);
-                slot.position.z = rvZ;
-                slot.doorDirection = rot * Vector3.right;
-                slot.doorPosition = slot.position
-                                  + (Vector3)(slot.doorDirection * (rvWidth * 0.5f))
-                                  + (rot * Vector3.up) * (rvLength * 0.12f);
+                // Drivers stand in the walkway ahead of their own line, not in the gap between two rigs.
+                slot.doorDirection = line.front;
+                slot.doorPosition = slot.position + line.front * (line.depth * 0.5f + 0.8f);
                 slot.rv = BuildMotorhome(root, slot);
             }
 
-            AssignAisle(slot, sideAxis, rowAxis, sidePitch);
-            if (showNameBoards) BuildNameBoard(root, slot);
+            AssignAisle(slot, line);
+            if (showCarNumbers) BuildNumberDecal(slot);
         }
 
-        ExtendWalkableArea(sideAxis, rowAxis);
+        ExtendWalkableArea(line.axis, line.front);
     }
 
     // WatkinsGlen clamps the on-foot player to an authored PaddockBoundary polygon that stops at the
@@ -311,8 +381,13 @@ public class DriverMotorhomeLot : MonoBehaviour
             rMin = Mathf.Min(rMin, r); rMax = Mathf.Max(rMax, r);
         }
 
-        float sPad = rvWidth * 0.5f + sideGap;
-        float rPad = rvLength * 0.5f + aisleDepth;   // back edge reaches into the authored paddock
+        // Pad past the outermost bodies: along the lines by half a rig, and across them by half a rig
+        // plus a walkway, so the band takes in the aisle ahead of the last line and, behind the first,
+        // enough ground to overlap the authored paddock.
+        float sPad = rvWidth * 0.5f + rvLength * 0.5f + lineGap;
+        // Floored at a rig's length so tightening rowGap can't shrink the band back off the authored
+        // paddock polygon — the overlap is what lets the player walk in from the tarmac.
+        float rPad = rvLength * 0.5f + Mathf.Max(rowGap, rvLength);
         sMin -= sPad; sMax += sPad;
         rMin -= rPad; rMax += rPad;
 
@@ -331,9 +406,9 @@ public class DriverMotorhomeLot : MonoBehaviour
         go.AddComponent<PaddockBoundary>();
     }
 
-    // Where the row starts and which way it points. The player's placed RV wins — the lot then reads
-    // as "the paddock the player woke up in". Without one, fall back to the pit lane's longest
-    // straight, set back behind the paddock, so the feature still works on an unauthored track.
+    // Where the line is anchored and which way the bodies face. The player's placed RV wins — the lot
+    // then reads as "the paddock the player woke up in". Without one, fall back to the middle of the pit
+    // lane, set back behind the paddock, so the feature still works on an unauthored track.
     bool ResolveAnchor(out Vector3 origin, out Quaternion rot, out RVExterior playerRv)
     {
         playerRv = FindObjectOfType<RVExterior>();
@@ -360,21 +435,22 @@ public class DriverMotorhomeLot : MonoBehaviour
         // Set back well behind the pit wall, clear of PaddockSpawner's tarmac.
         origin = midWorld + normal * 60f;
         origin.z = rvZ;
-        // Cabs (local +Y) point away from the lane, so rows stack further out into open ground and the
-        // doors (local +X) open along the lane rather than onto a neighbour's back end.
+        // Cabs (local +Y) point away from the lane, so the line faces out into open ground and the
+        // walkway in front of it is clear of the pit wall.
         rot = Quaternion.LookRotation(Vector3.forward, normal);
         return true;
     }
 
-    // The open band in front of this slot's row — a few motorhomes wide, so a driver wanders near
-    // their own rig instead of the whole lot, and never through parked bodywork.
-    void AssignAisle(Slot slot, Vector3 sideAxis, Vector3 rowAxis, float sidePitch)
+    // The open band in front of this slot's stretch of its line — a few motorhomes wide, so a driver
+    // wanders near their own rig instead of the whole lot, and never through parked bodywork. With
+    // several lines that band is the walkway between this line and the one stacked ahead of it.
+    void AssignAisle(Slot slot, LineLayout line)
     {
-        slot.aisleAlong = sideAxis;
-        slot.aisleOut = rowAxis;
-        slot.aisleHalfLen = sidePitch * 1.5f;
-        slot.aisleHalfDepth = Mathf.Max(1f, aisleDepth * 0.35f);
-        slot.aisleCenter = slot.position + rowAxis * (rvLength * 0.5f + aisleDepth * 0.5f);
+        slot.aisleAlong = line.axis;
+        slot.aisleOut = line.front;
+        slot.aisleHalfLen = line.pitch * 1.5f;
+        slot.aisleHalfDepth = Mathf.Max(1f, rowGap * 0.35f);
+        slot.aisleCenter = slot.position + line.front * (line.depth * 0.5f + rowGap * 0.5f);
         slot.aisleCenter.z = 0f;
     }
 
@@ -422,29 +498,69 @@ public class DriverMotorhomeLot : MonoBehaviour
         return go.transform;
     }
 
-    // "#8 / EMERSON" over the cab. Parented to the lot root, not the RV, so it stays upright
-    // however the row is rotated.
-    void BuildNameBoard(Transform root, Slot slot)
+    // The driver's number painted on the roof, from the same Resources art the cars wear. Parented to
+    // the motorhome itself (including the player's scene-placed one) so it travels with the body, and
+    // centred on the body's own sprite rather than on the transform origin — the player's RV pivots at
+    // its doorstep, not at the middle of the rig.
+    void BuildNumberDecal(Slot slot)
     {
-        var go = new GameObject($"NameBoard_{slot.carNumber}");
-        go.transform.SetParent(root, false);
-        Vector3 cab = slot.position + (slot.rotation * Vector3.up) * (rvLength * 0.5f + nameBoardLift);
-        go.transform.position = new Vector3(cab.x, cab.y, rvZ - 0.1f);
-        go.transform.rotation = Quaternion.identity;
+        if (slot.rv == null || slot.carNumber <= 0) return;
+        Sprite sprite = NumberSprite(slot.carNumber);
+        if (sprite == null) return;
 
-        var tm = go.AddComponent<TextMesh>();
-        tm.text = slot.carNumber > 0
-            ? $"#{slot.carNumber}\n{slot.shortName.ToUpperInvariant()}"
-            : slot.shortName.ToUpperInvariant();
-        tm.anchor = TextAnchor.MiddleCenter;
-        tm.alignment = TextAlignment.Center;
-        tm.fontSize = 72;
-        tm.characterSize = 0.016f;
-        tm.color = slot.isPlayer ? new Color(0.6f, 1f, 0.7f, 1f) : nameBoardColor;
+        BodySprite(slot, out Vector3 center, out int order);
+        center += (slot.rotation * Vector3.up) * numberOffset;
 
-        var mr = go.GetComponent<MeshRenderer>();
-        mr.sortingLayerName = "Vehicles";
-        mr.sortingOrder = 40;
+        var go = new GameObject($"Number_{slot.carNumber}");
+        go.transform.SetParent(slot.rv, false);
+        go.transform.position = new Vector3(center.x, center.y, rvZ - 0.1f);
+        go.transform.localRotation = Quaternion.identity;   // reads along the body, whatever way it parks
+
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.sharedMaterial = UnlitSprite();
+        sr.sortingLayerName = sortingLayerName;
+        sr.sortingOrder = order;
+
+        float h = sprite.bounds.size.y;
+        if (h > 0.0001f)
+        {
+            float s = numberSize / h;
+            go.transform.localScale = new Vector3(s, s, 1f);
+        }
+    }
+
+    // Where the rig's paintwork actually sits, and what to sort above. Uses the biggest sprite on the
+    // motorhome as "the body", so extra bits (door, steps, awning) can't drag the number off centre.
+    void BodySprite(Slot slot, out Vector3 center, out int order)
+    {
+        center = slot.position;
+        order = sortingOrder + 1;
+
+        var rends = slot.rv.GetComponentsInChildren<SpriteRenderer>();
+        SpriteRenderer biggest = null;
+        float bestArea = 0f;
+        int top = int.MinValue;
+        foreach (var r in rends)
+        {
+            if (r == null || r.sprite == null) continue;
+            Vector3 size = r.bounds.size;
+            float area = size.x * size.y;
+            if (area > bestArea) { bestArea = area; biggest = r; }
+            top = Mathf.Max(top, r.sortingOrder);
+        }
+        if (biggest != null) center = biggest.bounds.center;
+        if (top != int.MinValue) order = top + 1;
+    }
+
+    static readonly Dictionary<string, Sprite> _numberSprites = new();
+    Sprite NumberSprite(int carNumber)
+    {
+        string path = $"{numberSpritePrefix}{carNumber}";
+        if (_numberSprites.TryGetValue(path, out var cached)) return cached;
+        var sprite = Resources.Load<Sprite>(path);
+        _numberSprites[path] = sprite;   // cache misses too: a missing number shouldn't re-hit disk
+        return sprite;
     }
 
     // ---------------------------------------------------------------- assets
