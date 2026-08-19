@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
@@ -57,7 +58,8 @@ public class DriveModeController : MonoBehaviour
     float _pinnedTimer;
     readonly List<SplineDriver> _candidates = new();
 
-    Text _label;
+    TMP_Text _label;
+    Image _face;
     bool _keyPrev;
 
     void Start()
@@ -187,48 +189,36 @@ public class DriveModeController : MonoBehaviour
 
     void UpdateLabel()
     {
-        if (_label != null) _label.text = _driving ? "Driving: ON" : "Broadcast (AI)";
+        if (_label != null)
+        {
+            _label.text = _driving ? "DRIVING: ON" : "BROADCAST";
+            _label.color = _driving ? PixelGUI.Text : PixelGUI.TextDim;
+        }
+        // Selected = the player is driving, which the kit shows by filling the tab with alarm red rather
+        // than by moving anything.
+        if (_face != null) _face.color = _driving ? PixelGUI.Danger : PixelGUI.PlateDeep;
     }
 
     void BuildUI()
     {
         EnsureEventSystem();
 
-        var canvasGO = new GameObject("DriveModeCanvas");
-        var canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 110;
-        canvasGO.AddComponent<CanvasScaler>();
-        canvasGO.AddComponent<GraphicRaycaster>();
+        // Iron Oval nav tab rather than a grey rectangle: this is a mode switch, which is exactly what the
+        // kit's tab is for, and it now matches the TEAM/CHIEF controls sitting beside it.
+        var canvas = PixelUI.CreateCanvas("DriveModeCanvas", 110);
 
-        var btnGO = new GameObject("DriveToggle", typeof(RectTransform), typeof(Image), typeof(Button));
-        btnGO.transform.SetParent(canvasGO.transform, false);
-        var rt = btnGO.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(20f, -20f);
-        rt.sizeDelta = new Vector2(220f, 48f);
+        var tab = IronOvalUI.TabButton(canvas.transform, "DriveToggle", "DRIVING: ON",
+                                       new Vector2(96f, 18f), selected: true);
+        var shadow = (RectTransform)tab.transform.parent;   // TabButton returns the face; the root is its shadow
+        shadow.anchorMin = new Vector2(0f, 1f);
+        shadow.anchorMax = new Vector2(0f, 1f);
+        shadow.pivot = new Vector2(0f, 1f);
+        shadow.anchoredPosition = new Vector2(12f, -12f);
 
-        var img = btnGO.GetComponent<Image>();
-        img.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-
-        var btn = btnGO.GetComponent<Button>();
-        btn.onClick.AddListener(Toggle);
-
-        var txtGO = new GameObject("Label", typeof(RectTransform));
-        txtGO.transform.SetParent(btnGO.transform, false);
-        var trt = txtGO.GetComponent<RectTransform>();
-        trt.anchorMin = Vector2.zero;
-        trt.anchorMax = Vector2.one;
-        trt.offsetMin = Vector2.zero;
-        trt.offsetMax = Vector2.zero;
-        _label = txtGO.AddComponent<Text>();
-        _label.alignment = TextAnchor.MiddleCenter;
-        _label.color = Color.white;
-        _label.fontSize = 18;
-        _label.fontStyle = FontStyle.Bold;
-        _label.font = BrandFonts.Body;
+        tab.onClick.AddListener(Toggle);
+        _face = tab.GetComponent<Image>();
+        _label = tab.GetComponentInChildren<TMP_Text>();
+        UpdateLabel();
     }
 
     static void EnsureEventSystem()

@@ -32,6 +32,18 @@ public static class BrandFonts
         }
     }
 
+    // Display font for runtime-built uGUI headings — Silkscreen, the kit's label voice. Falls back to the
+    // body face so a half-configured theme still draws text rather than nothing.
+    public static Font Display
+    {
+        get
+        {
+            var theme = PixelUITheme.Instance;
+            if (theme != null && theme.imguiDisplayFont != null) return theme.imguiDisplayFont;
+            return Body;
+        }
+    }
+
     // Font size for a runtime uGUI panel, stepped with the screen the same way the IMGUI panels are so the
     // two families stay the same size as each other.
     public static int Size(int baseline) => Mathf.Max(1, baseline * PixelGUI.Scale);

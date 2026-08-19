@@ -15,8 +15,23 @@ fill it in. Nothing else needs wiring: the body is cloned from the on-foot prefa
 
 | The NPC is… | Put the marker in | Anchor |
 |---|---|---|
-| specific to one track (a local promoter, a track quest giver) | the track package, under `Paddock/NPCs` — `Draftmaster > Tracks > Edit Selected Package` | `Here` |
-| part of the every-track cast (greeter, engineer, chief) | `Assets/Scenes/RaceScene.unity` | a geometry anchor |
+| specific to one track (a local promoter, a track quest giver, the RV engineer) | the track package, under `Paddock/NPCs` — `Draftmaster > Tracks > Edit Selected Package` | `Here`, or a geometry anchor if they should follow a piece of track furniture |
+| part of the every-track cast (pit greeter, crew chief) | `Assets/Scenes/RaceScene.unity` | a geometry anchor |
+
+**Where the marker lives is what decides which tracks they appear at.** A marker in a package exists at
+that track and nowhere else — no appearance condition needed. `AppearanceConditions.tracks` is for the
+other case: a marker in the shared scene that should only turn up at some tracks.
+
+Already placed one in the wrong half? `Draftmaster > NPCs > Move Selected NPC Into Track Package` copies
+the marker — tuned anchor, trigger ring, dialogue, conditions and all — into the selected track's package
+and deletes it from the scene.
+
+Only the pit greeter and the crew chief are installed automatically in an undressed scene
+(`PlacedNPCDefaults`), because they work off geometry every track has: the pit lane and the player's car.
+The **race engineer is not** — his beat is the player coming out of their motorhome, and an RV is track
+content, so his marker belongs in the package that owns the RV
+(`Draftmaster > NPCs > Add RV Engineer To Open Package` drops a stock one in). If he were auto-installed,
+deleting him from a track would put him straight back.
 
 **Anchors** are what let one marker work at all thirty-five tracks — the position is derived from
 geometry rather than typed in:

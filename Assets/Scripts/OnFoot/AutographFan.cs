@@ -117,6 +117,7 @@ public class AutographFan : NPCInteractable
         if (_resolved) return;
         _resolved = true;
         FanAppeal.Add(appealForSigning);
+        PlayerStatsLedger.Increment("autographs");   // quest thresholds and the phone's SoBuzz feed read this
         Leave();
     }
 

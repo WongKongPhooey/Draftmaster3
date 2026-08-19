@@ -165,25 +165,31 @@ public static class PixelUIKitSetup
     //                            a bitmap atlas as if its alpha were a distance field, which is what
     //                            produces heavy fringing and near-unreadable text.
     static TMP_FontAsset BuildPixelFont()
+        => BuildBitmapFont("Assets/Fonts/fixedsys.ttf", kFontDir + "/Fixedsys Pixel.asset",
+                           "Fixedsys Pixel", kPixelFontPointSize);
+
+    // Builds one bitmap TMP font asset by the recipe above. Public because the Iron Oval kit needs the
+    // same five things to line up for its three faces, and a second copy of this would drift.
+    public static TMP_FontAsset BuildBitmapFont(string ttfPath, string outPath, string niceName, int pointSize)
     {
-        const string src = "Assets/Fonts/fixedsys.ttf";
-        var ttf = AssetDatabase.LoadAssetAtPath<Font>(src);
+        var ttf = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
         if (ttf == null)
         {
-            Debug.LogWarning($"[PixelUIKitSetup] {src} not found — body font left unset.");
+            Debug.LogWarning($"[PixelUIKitSetup] {ttfPath} not found — '{niceName}' not built.");
             return null;
         }
 
-        Directory.CreateDirectory(kFontDir);
-        string outPath = kFontDir + "/Fixedsys Pixel.asset";
+        Directory.CreateDirectory(Path.GetDirectoryName(outPath));
 
         var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(outPath);
         if (existing != null)
         {
-            // Render mode and padding are baked into the atlas, so an asset built with the wrong values
-            // has to be regenerated -- fixing the material alone would leave the glyphs as they were.
+            // Render mode, padding and the rasterised point size are all baked into the atlas, so an
+            // asset built with any of them wrong has to be regenerated -- fixing the material alone
+            // would leave the glyphs exactly as they were.
             if (existing.atlasRenderMode == GlyphRenderMode.RASTER_HINTED &&
-                existing.atlasPadding == kPixelFontPadding)
+                existing.atlasPadding == kPixelFontPadding &&
+                Mathf.RoundToInt(existing.faceInfo.pointSize) == pointSize)
             {
                 EnforceBitmapRendering(existing);
                 return existing;
@@ -192,26 +198,26 @@ public static class PixelUIKitSetup
         }
 
         var fontAsset = TMP_FontAsset.CreateFontAsset(
-            ttf, kPixelFontPointSize, kPixelFontPadding, GlyphRenderMode.RASTER_HINTED, 1024, 1024,
+            ttf, pointSize, kPixelFontPadding, GlyphRenderMode.RASTER_HINTED, 1024, 1024,
             AtlasPopulationMode.Dynamic);
         if (fontAsset == null)
         {
-            Debug.LogWarning("[PixelUIKitSetup] TMP could not build a font asset from fixedsys.ttf.");
+            Debug.LogWarning($"[PixelUIKitSetup] TMP could not build a font asset from {ttfPath}.");
             return null;
         }
 
-        fontAsset.name = "Fixedsys Pixel";
+        fontAsset.name = niceName;
         AssetDatabase.CreateAsset(fontAsset, outPath);
 
         // The atlas and material are sub-assets and must be stored alongside the font asset.
         if (fontAsset.atlasTexture != null)
         {
-            fontAsset.atlasTexture.name = "Fixedsys Pixel Atlas";
+            fontAsset.atlasTexture.name = niceName + " Atlas";
             AssetDatabase.AddObjectToAsset(fontAsset.atlasTexture, fontAsset);
         }
         if (fontAsset.material != null)
         {
-            fontAsset.material.name = "Fixedsys Pixel Material";
+            fontAsset.material.name = niceName + " Material";
             AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
         }
 
@@ -220,11 +226,8 @@ public static class PixelUIKitSetup
         return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(outPath);
     }
 
-    // The IMGUI panels (PixelGUI) take a plain Font, not a TMP asset, and Unity rasterises those
-    // dynamically at runtime. Left on the default smooth rendering, the same typeface that looks crisp in
-    // TextMeshPro comes out anti-aliased and blurry there. Hinted Raster gives hard edges with stems
-    // snapped to the pixel grid, and the font size must be its native cell for that to line up.
-    static void ConfigurePixelTtfImport(string path)
+    // Same hinted-raster treatment for a plain UnityEngine.Font (the IMGUI path). Public for the same reason.
+    public static void ConfigurePixelTtf(string path, int pointSize)
     {
         var importer = AssetImporter.GetAtPath(path) as TrueTypeFontImporter;
         if (importer == null) return;
@@ -235,13 +238,19 @@ public static class PixelUIKitSetup
             importer.fontRenderingMode = FontRenderingMode.HintedRaster;
             dirty = true;
         }
-        if (importer.fontSize != kPixelFontPointSize)
+        if (importer.fontSize != pointSize)
         {
-            importer.fontSize = kPixelFontPointSize;
+            importer.fontSize = pointSize;
             dirty = true;
         }
         if (dirty) importer.SaveAndReimport();
     }
+
+    // The IMGUI panels (PixelGUI) take a plain Font, not a TMP asset, and Unity rasterises those
+    // dynamically at runtime. Left on the default smooth rendering, the same typeface that looks crisp in
+    // TextMeshPro comes out anti-aliased and blurry there. Hinted Raster gives hard edges with stems
+    // snapped to the pixel grid, and the font size must be its native cell for that to line up.
+    static void ConfigurePixelTtfImport(string path) => ConfigurePixelTtf(path, kPixelFontPointSize);
 
     // Puts the font's material on the bitmap shader and its atlas on point filtering. Split out so a
     // font asset built by an earlier version of this tool gets repaired in place.

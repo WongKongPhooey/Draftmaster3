@@ -53,6 +53,7 @@ public static class QuestManager
     {
         SetState(q, State.Completed);
         if (!string.IsNullOrEmpty(q.rewardItemId)) PlayerInventory.Add(q.rewardItemId);
+        PhoneNotes.ResolveQuest(q);   // the phone's Notes app keeps it, struck through, rather than dropping it
     }
 
     // DeliverItem turn-in: consumes the item. False if the player doesn't actually have it.

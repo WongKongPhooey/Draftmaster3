@@ -42,7 +42,6 @@ public class CrewChiefController : MonoBehaviour
     GameObject _timingBtn;
     bool _keyPrev;
     Material _unlit;
-    GUIStyle _rowStyle, _headStyle;
 
     void Start()
     {
@@ -268,48 +267,52 @@ public class CrewChiefController : MonoBehaviour
         var rt = RacePositionTracker.Instance;
         if (rt == null) return;
 
-        if (_headStyle == null)
-        {
-            _headStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold };
-            _headStyle.normal.textColor = new Color(1f, 0.85f, 0.3f);
-            _rowStyle = new GUIStyle(GUI.skin.label) { fontSize = 14 };
-            _rowStyle.normal.textColor = Color.white;
-        }
-
+        // The pit-wall timing screen, in the kit's furniture: framed plate, Silkscreen column heads, VT323
+        // rows so the six columns line up without measuring anything.
         var order = rt.Order;
-        float w = 430f;
-        float h = 40f + Mathf.Min(order.Count, 45) * 18f;
-        float x = Screen.width - w - 16f;
-        float y = 80f;
+        float row = PixelGUI.Px(11f);
+        float w = PixelGUI.Px(212f);
+        float h = PixelGUI.Px(34f) + Mathf.Min(order.Count, 45) * row;
+        float x = Screen.width - w - PixelGUI.Px(8f);
+        float y = PixelGUI.Px(40f);
 
-        GUI.color = new Color(0f, 0f, 0f, 0.7f);
-        GUI.DrawTexture(new Rect(x - 8f, y - 8f, w + 16f, h + 16f), Texture2D.whiteTexture);
-        GUI.color = Color.white;
+        PixelGUI.Panel(new Rect(x, y, w, h));
+        var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
+        float cx = c.x, cy = c.y;
 
-        GUI.Label(new Rect(x, y, w, 20f), "CREW CHIEF  —  PIT WALL", _headStyle);
-        y += 22f;
-        GUI.Label(new Rect(x, y, w, 18f), $"{"Pos",-4}{"#",-5}{"Driver",-16}{"Lap",-6}{"LastPit",-9}{"Fuel",-6}", _rowStyle);
-        y += 18f;
+        GUI.Label(new Rect(cx, cy, c.width, PixelGUI.Px(10f)), "CREW CHIEF · PIT WALL", PixelGUI.HeadingSmall);
+        cy += PixelGUI.Px(12f);
+        GUI.Label(new Rect(cx, cy, c.width, PixelGUI.Px(10f)),
+                  $"{"POS",-4}{"#",-5}{"DRIVER",-16}{"LAP",-6}{"PIT",-7}{"FUEL",-6}", PixelGUI.LabelDim);
+        cy += PixelGUI.Px(11f);
+        PixelGUI.Rule(cx, cy, c.width);
+        cy += PixelGUI.Px(3f);
 
+        var style = PixelGUI.Data;
+        var prev = style.normal.textColor;
         for (int i = 0; i < order.Count; i++)
         {
             var e = order[i];
             if (e == null || e.tf == null) continue;
 
             bool isPlayer = _playerCar != null && e.tf == _playerCar.transform;
-            _rowStyle.normal.textColor = isPlayer ? new Color(0.4f, 1f, 0.5f) : Color.white;
+            style.normal.textColor = isPlayer ? PixelGUI.Gold : PixelGUI.Text;
 
             var fuel = e.tf.GetComponent<FuelTank>();
             string fuelStr = fuel != null ? $"{Mathf.RoundToInt(fuel.Fraction * 100f)}%" : "--";
+            // A car about to run dry is the whole reason this screen exists, so it gets the alarm colour
+            // even on a row that is not the player's.
+            if (fuel != null && fuel.Fraction < 0.12f) style.normal.textColor = PixelGUI.Danger;
 
             var hist = e.tf.GetComponent<PitHistory>();
             string pitStr = (hist != null && hist.HasPitted) ? $"L{hist.lastPitLap + 1}" : "—";
 
             string name = string.IsNullOrEmpty(e.name) ? "?" : (e.name.Length > 14 ? e.name.Substring(0, 14) : e.name);
-            GUI.Label(new Rect(x, y, w, 18f),
-                $"{("P" + e.position),-4}{("#" + e.carNumber),-5}{name,-16}{(e.lap + 1),-6}{pitStr,-9}{fuelStr,-6}", _rowStyle);
-            y += 18f;
+            GUI.Label(new Rect(cx, cy, c.width, row),
+                $"{("P" + e.position),-4}{("#" + e.carNumber),-5}{name,-16}{(e.lap + 1),-6}{pitStr,-7}{fuelStr,-6}", style);
+            cy += row;
         }
+        style.normal.textColor = prev;
     }
 
     Material UnlitSprite()

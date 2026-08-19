@@ -2,9 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Corner-of-screen track mini-map for the spline scenes. The main (and pit) centerline is baked
-// once into a small texture — white main loop, grey pit lane, notch at the start/finish — and the
-// live cars are plotted over it every frame: white dots for AI, a bigger green dot for the player's
-// car. World-aligned (no rotation), so it matches what the top-down camera shows.
+// once into a small texture — cream main loop, dim pit lane, notch at the start/finish — and the
+// live cars are plotted over it every frame: dim square pips for AI, a bigger gold one for the
+// player's car. World-aligned (no rotation), so it matches what the top-down camera shows.
+//
+// Iron Oval furniture: the map sits on the kit's framed plate, and the pips are hard-edged squares
+// rather than soft circles — an anti-aliased dot next to pixel art reads as a rendering error.
 //
 // Self-bootstraps like HandlingTuner/RacingLineDisplay: builds only in scenes with a TrackBuilder,
 // no wiring needed. Toggled from the pause menu; state persists in PlayerPrefs.
@@ -14,26 +17,29 @@ public class TrackMiniMap : MonoBehaviour
 
     const string PrefKey = "ShowMiniMap";
 
-    [Header("Layout")]
-    [Tooltip("Mini-map square size (px).")]
-    public float mapSize = 220f;
-    [Tooltip("Distance (px) from the screen's bottom-right corner.")]
-    public Vector2 cornerMargin = new Vector2(16f, 16f);
+    [Header("Layout (UI pixels, before PixelGUI.Scale)")]
+    [Tooltip("Mini-map square size.")]
+    public float mapSize = 104f;
+    [Tooltip("Distance from the screen's bottom-right corner.")]
+    public Vector2 cornerMargin = new Vector2(8f, 8f);
     [Tooltip("Height (in the HUD's 1920x1080 reference units) to keep clear at the bottom right for the " +
              "speedometer dial, which is anchored there: 30 margin + 220 dial + 16 gap. Scaled to the real " +
              "screen the same way the HUD canvas scales, so the map clears the dial at any resolution.")]
     public float speedoClearance = 266f;
 
-    [Header("Dots")]
-    public float aiDotSize = 6f;
-    public float playerDotSize = 10f;
-    public Color aiDotColor = Color.white;
-    public Color playerDotColor = new Color(0.3f, 1f, 0.4f);
-    public Color pitLaneColor = new Color(1f, 1f, 1f, 0.35f);
-    public Color trackLineColor = new Color(1f, 1f, 1f, 0.9f);
+    [Header("Dots (UI pixels, before PixelGUI.Scale)")]
+    public float aiDotSize = 3f;
+    public float playerDotSize = 5f;
+    [Tooltip("Left at clear, these take the theme's colours: dim for the field, accent gold for the player.")]
+    public Color aiDotColor = new Color(0f, 0f, 0f, 0f);
+    public Color playerDotColor = new Color(0f, 0f, 0f, 0f);
+    [Tooltip("Also theme-defaulted when left at clear: the pit lane draws dim, the racing surface in the " +
+             "primary text colour.")]
+    public Color pitLaneColor = new Color(0f, 0f, 0f, 0f);
+    public Color trackLineColor = new Color(0f, 0f, 0f, 0f);
 
     TrackBuilder _builder;
-    Texture2D _mapTex, _dot;
+    Texture2D _mapTex;
     Rect _worldRect;      // world-space bounds baked into the map texture
     float _pollTimer;
     SplineDriver[] _aiCars = System.Array.Empty<SplineDriver>();
@@ -105,7 +111,9 @@ public class TrackMiniMap : MonoBehaviour
         _worldRect = new Rect(min, max - min);
 
         const int N = 256;
-        _mapTex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+        // Point filtering: the map is drawn at a whole-number scale like everything else in the kit, and
+        // a bilinear track line smears into a grey haze at that size.
+        _mapTex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
         var clear = new Color32(0, 0, 0, 0);
         var pxs = new Color32[N * N];
         for (int i = 0; i < pxs.Length; i++) pxs[i] = clear;
@@ -127,10 +135,13 @@ public class TrackMiniMap : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < pit.Count; i++) Stamp(_builder.transform.TransformPoint(pit[i].position), pitLaneColor, 1);
-        for (int i = 0; i < main.Count; i++) Stamp(_builder.transform.TransformPoint(main[i].position), trackLineColor, 2);
-        // Start/finish notch, slightly fatter than the line.
-        Stamp(_builder.transform.TransformPoint(main[0].position), new Color(1f, 0.35f, 0.3f, 1f), 4);
+        for (int i = 0; i < pit.Count; i++)
+            Stamp(_builder.transform.TransformPoint(pit[i].position), Resolve(pitLaneColor, PixelGUI.TextDisabled), 1);
+        for (int i = 0; i < main.Count; i++)
+            Stamp(_builder.transform.TransformPoint(main[i].position), Resolve(trackLineColor, PixelGUI.Text), 2);
+        // Start/finish notch, slightly fatter than the line. Alarm red is the one place it is used here,
+        // and it is a landmark rather than decoration.
+        Stamp(_builder.transform.TransformPoint(main[0].position), PixelGUI.Danger, 4);
 
         _mapTex.SetPixels32(pxs);
         _mapTex.Apply();
@@ -149,18 +160,21 @@ public class TrackMiniMap : MonoBehaviour
     void OnGUI()
     {
         if (!Visible || _mapTex == null || RacePauseMenu.IsPaused) return;
-        EnsureAssets();
 
         // Sat above the speedometer rather than on top of it. This is IMGUI in raw screen pixels while the
         // dial is on a scaled canvas, so the clearance is converted with the same factor CanvasScaler uses
         // (Scale With Screen Size, 1920x1080, match 0.5 — the geometric mean of the two ratios).
+        float size = PixelGUI.Px(mapSize);
         var rect = new Rect(
-            Screen.width - mapSize - cornerMargin.x,
-            Screen.height - mapSize - cornerMargin.y - speedoClearance * HudScale(),
-            mapSize, mapSize);
+            Screen.width - size - PixelGUI.Px(cornerMargin.x),
+            Screen.height - size - PixelGUI.Px(cornerMargin.y) - speedoClearance * HudScale(),
+            size, size);
 
-        // No backdrop: the baked map is transparent apart from the lines, so it reads as an overlay on the
-        // track instead of a panel bolted to the corner.
+        // The baked map is transparent apart from its lines, and over a light piece of track it vanished.
+        // The kit's plate gives it a constant backing; the frame is what makes it read as an instrument
+        // rather than a decal.
+        float pad = PixelGUI.Px(4f);
+        PixelGUI.Panel(new Rect(rect.x - pad, rect.y - pad, rect.width + pad * 2f, rect.height + pad * 2f));
         GUI.color = Color.white;
         GUI.DrawTexture(rect, _mapTex);
 
@@ -170,10 +184,10 @@ public class TrackMiniMap : MonoBehaviour
             if (car == null || !car.isActiveAndEnabled) continue;
             // The player's car also carries a SplineDriver (AI hand-off) — skip it here, it gets the green dot.
             if (_playerCar != null && car.transform == _playerCar.transform) continue;
-            DrawDot(rect, car.transform.position, aiDotColor, aiDotSize);
+            DrawDot(rect, car.transform.position, Resolve(aiDotColor, PixelGUI.TextDim), aiDotSize);
         }
         if (_playerCar != null)
-            DrawDot(rect, _playerCar.transform.position, playerDotColor, playerDotSize);
+            DrawDot(rect, _playerCar.transform.position, Resolve(playerDotColor, PixelGUI.Gold), playerDotSize);
         GUI.color = Color.white;
     }
 
@@ -182,31 +196,22 @@ public class TrackMiniMap : MonoBehaviour
     static float HudScale() =>
         Mathf.Sqrt(Mathf.Max(0.0001f, (Screen.width / 1920f) * (Screen.height / 1080f)));
 
+    // An unset (fully transparent) inspector colour means "use the theme", so the palette stays in one
+    // place while a scene can still override a pip by hand.
+    static Color Resolve(Color authored, Color themed) => authored.a > 0f ? authored : themed;
+
     void DrawDot(Rect mapRect, Vector2 world, Color color, float size)
     {
         Vector2 uv = WorldToMap01(world);
         if (uv.x < -0.05f || uv.x > 1.05f || uv.y < -0.05f || uv.y > 1.05f) return;
-        float x = mapRect.x + uv.x * mapRect.width;
-        float y = mapRect.y + (1f - uv.y) * mapRect.height; // GUI space runs y-down
-        GUI.color = color;
-        GUI.DrawTexture(new Rect(x - size * 0.5f, y - size * 0.5f, size, size), _dot);
+        float s = PixelGUI.Px(size);
+        // Whole pixels, or a pip lands on a half-pixel and blurs against everything else on the screen.
+        float x = Mathf.Round(mapRect.x + uv.x * mapRect.width - s * 0.5f);
+        float y = Mathf.Round(mapRect.y + (1f - uv.y) * mapRect.height - s * 0.5f); // GUI space runs y-down
+        // 1px ink surround, so a pip stays visible where it crosses a track line of its own colour.
+        float b = PixelGUI.Px(1f);
+        PixelGUI.Fill(new Rect(x - b, y - b, s + b * 2f, s + b * 2f), PixelGUI.Ink);
+        PixelGUI.Fill(new Rect(x, y, s, s), color);
     }
 
-    void EnsureAssets()
-    {
-        if (_dot == null)
-        {
-            const int n = 16;
-            _dot = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
-            var clear = new Color(0f, 0f, 0f, 0f);
-            Vector2 c = new Vector2((n - 1) * 0.5f, (n - 1) * 0.5f);
-            for (int y = 0; y < n; y++)
-                for (int x = 0; x < n; x++)
-                {
-                    float d = Vector2.Distance(new Vector2(x, y), c) / (n * 0.5f);
-                    _dot.SetPixel(x, y, d <= 0.9f ? Color.white : clear);
-                }
-            _dot.Apply();
-        }
-    }
 }

@@ -3,13 +3,12 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // Minimal tracked-quest readout: top-right list of Active/ReadyToTurnIn quests, title + progress line.
-// OnGUI, same style family as RaceDirector's HUD. Lives across scene loads; draws only in gameplay
-// scenes (an on-foot player or a race in progress), never in menus.
+// Drawn with the Iron Oval kit (PixelGUI), same as the rest of the in-race furniture. Lives across scene
+// loads; draws only in gameplay scenes (an on-foot player or a race in progress), never in menus.
 public class QuestHUD : MonoBehaviour
 {
     public static QuestHUD Instance { get; private set; }
 
-    GUIStyle _title, _line;
     bool _gameplayScene;
     float _nextSceneCheck;
 
@@ -63,34 +62,32 @@ public class QuestHUD : MonoBehaviour
         List<QuestInfo> tracked = QuestManager.Tracked();
         if (tracked.Count == 0) return;
 
-        EnsureStyles();
-        float w = 250f;
-        float x = Screen.width - w - 12f;
-        float y = 120f; // below the RESULTS/position widgets
+        // Iron Oval card per tracked quest: gold Silkscreen title over the VT323 progress line, and a
+        // gain-green line once the quest is ready to hand in — the only state the player has to act on.
+        float w = PixelGUI.Px(150f);
+        float x = Screen.width - w - PixelGUI.Px(8f);
+        float y = PixelGUI.Px(60f);   // below the RESULTS/position widgets
+        float h = PixelGUI.Px(34f);
 
         foreach (var q in tracked)
         {
             bool ready = QuestManager.GetState(q) == QuestManager.State.ReadyToTurnIn;
             string progress = QuestManager.DescribeProgress(q);
-            float h = 42f;
 
-            GUI.color = new Color(0f, 0f, 0f, 0.6f);
-            GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
-            GUI.color = Color.white;
+            PixelGUI.Panel(new Rect(x, y, w, h), focused: ready);
+            var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 4f);
 
-            _title.normal.textColor = new Color(1f, 0.85f, 0.3f);
-            GUI.Label(new Rect(x + 8f, y + 3f, w - 16f, 18f), q.title, _title);
-            _line.normal.textColor = ready ? new Color(0.4f, 1f, 0.5f) : Color.white;
-            GUI.Label(new Rect(x + 8f, y + 21f, w - 16f, 18f), progress, _line);
+            GUI.Label(new Rect(c.x, c.y, c.width, PixelGUI.Px(9f)), q.title.ToUpperInvariant(),
+                      PixelGUI.HeadingSmall);
 
-            y += h + 6f;
+            var style = PixelGUI.Row;
+            var prev = style.normal.textColor;
+            style.normal.textColor = ready ? PixelGUI.Confirm : PixelGUI.Text;
+            GUI.Label(new Rect(c.x, c.y + PixelGUI.Px(10f), c.width, PixelGUI.Px(12f)), progress, style);
+            style.normal.textColor = prev;
+
+            y += h + PixelGUI.Px(4f);
         }
     }
 
-    void EnsureStyles()
-    {
-        if (_title != null) return;
-        _title = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
-        _line = new GUIStyle(GUI.skin.label) { fontSize = 12 };
-    }
 }

@@ -42,7 +42,8 @@ public class HandlingTuner : MonoBehaviour
     bool _show;
     float _findTimer;
     Rect _win = new Rect(16, 80, 380, 0);
-    GUIStyle _head, _telem, _label;
+    GUIStyle _head, _telem, _label, _window;
+    int _builtAtScale = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
@@ -105,7 +106,7 @@ public class HandlingTuner : MonoBehaviour
     {
         if (!_show || _pvc == null) return;
         EnsureStyles();
-        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow, "Handling Tuner  (F1)");
+        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow, "HANDLING TUNER · F1", _window);
     }
 
     void DrawWindow(int id)
@@ -115,7 +116,8 @@ public class HandlingTuner : MonoBehaviour
         string verdict = bal > 2f ? "UNDERSTEER (front wide)"
                        : bal < -2f ? "OVERSTEER (rear loose)"
                        : "neutral";
-        Color vc = bal > 2f ? new Color(1f, 0.6f, 0.2f) : bal < -2f ? new Color(1f, 0.4f, 0.4f) : new Color(0.5f, 1f, 0.6f);
+        // Understeer costs a lap time, oversteer costs the car: accent for one, alarm for the other.
+        Color vc = bal > 2f ? PixelGUI.Gold : bal < -2f ? PixelGUI.Danger : PixelGUI.Confirm;
 
         GUILayout.Label($"Speed {_pvc.SpeedMph:0} mph    Yaw {_pvc.YawRateDeg:0.0}/s", _telem);
         GUILayout.Label($"Slip  F {_pvc.SlipFrontDeg:0.0}    R {_pvc.SlipRearDeg:0.0}    bal {bal:+0.0;-0.0}", _telem);
@@ -201,11 +203,25 @@ public class HandlingTuner : MonoBehaviour
 
     void EnsureStyles()
     {
-        if (_head != null) return;
-        _head = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 14 };
-        _telem = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold };
-        _telem.normal.textColor = Color.white;
-        _label = new GUIStyle(GUI.skin.label) { fontSize = 12 };
-        _label.normal.textColor = Color.white;
+        if (_head != null && _builtAtScale == PixelGUI.Scale) return;
+        _builtAtScale = PixelGUI.Scale;
+
+        _head = new GUIStyle(PixelGUI.HeadingSmall);
+        _telem = new GUIStyle(PixelGUI.Data);
+        _label = new GUIStyle(PixelGUI.Row) { alignment = TextAnchor.MiddleLeft };
+
+        // The draggable window itself: the kit's frame, with room under the title bar for the content and
+        // the title drawn in the same Silkscreen the rest of the panel headings use.
+        _window = new GUIStyle(PixelGUI.Window)
+        {
+            font = PixelGUI.Theme != null ? PixelGUI.Theme.imguiDisplayFont : null,
+            fontSize = 8 * PixelGUI.Scale,
+            alignment = TextAnchor.UpperCenter,
+            padding = new RectOffset(8 * PixelGUI.Scale, 8 * PixelGUI.Scale,
+                                     16 * PixelGUI.Scale, 8 * PixelGUI.Scale),
+        };
+        _window.normal.textColor = PixelGUI.Gold;
+        _window.onNormal.textColor = PixelGUI.Gold;
+        _window.onNormal.background = _window.normal.background;
     }
 }

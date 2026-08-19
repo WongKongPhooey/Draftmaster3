@@ -259,6 +259,10 @@ public class NPCDirectorWindow : EditorWindow
             var root = stage.prefabContentsRoot.transform.Find("Paddock/NPCs");
             go.transform.SetParent(root != null ? root : stage.prefabContentsRoot.transform, true);
         }
+        else
+        {
+            go.transform.SetParent(PlacedNPCDefaults.Root(), true);
+        }
 
         Undo.RegisterCreatedObjectUndo(go, "Add Placed NPC");
         Selection.activeGameObject = go;
@@ -271,23 +275,23 @@ public class NPCDirectorWindow : EditorWindow
         var existing = PlacedNPCSceneContext.AllInScene();
         var made = new List<GameObject>();
 
+        // The every-track cast only. The RV race engineer belongs to the track that owns the motorhome —
+        // Draftmaster > NPCs > Add RV Engineer To Open Package.
         if (!HasRole(existing, PlacedNPC.Role.PitGreeter)) made.Add(PlacedNPCDefaults.CreateGreeter().gameObject);
-        if (!HasRole(existing, PlacedNPC.Role.RaceEngineer)) made.Add(PlacedNPCDefaults.CreateEngineer().gameObject);
         if (!HasRole(existing, PlacedNPC.Role.CrewChief)) made.Add(PlacedNPCDefaults.CreateChief().gameObject);
 
         if (made.Count == 0)
         {
             EditorUtility.DisplayDialog("Default Pit Cast",
-                "The greeter, race engineer and crew chief are already placed in this scene.", "OK");
+                "The greeter and crew chief are already placed in this scene.", "OK");
             return;
         }
 
-        // One parent so they don't litter the scene root, matching where the runtime install puts them.
-        var flow = PlacedNPCSceneContext.Find<PitLaneStart>();
-        Transform parent = flow != null ? flow.transform : null;
+        // Under the scene's "NPCs" root, matching where the runtime install puts them.
+        var parent = PlacedNPCDefaults.Root();
         foreach (var go in made)
         {
-            if (parent != null) go.transform.SetParent(parent, false);
+            go.transform.SetParent(parent, false);
             Undo.RegisterCreatedObjectUndo(go, "Install Default Pit Cast");
         }
 

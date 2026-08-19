@@ -20,6 +20,92 @@ using UnityEngine.UI;
 // colour is left alone.
 public static class PixelUIRestyle
 {
+    // The authored UI prefabs a spline race scene actually instantiates. Restyling the prefab rather than
+    // only the scene instance is what keeps the two in step — a scene-only edit becomes a prefab override
+    // that the next instance does not get.
+    static readonly string[] kPrefabs =
+    {
+        "Assets/Prefabs/UI/SpeedometerHUD.prefab",
+        "Assets/Prefabs/UI/PositionTrackerHUD.prefab",
+        "Assets/Resources/UI/ControlHint.prefab",
+        "Assets/Resources/UI/CarSetupPanel.prefab",
+        "Assets/Resources/UI/TravelMap.prefab",
+    };
+
+    [MenuItem("Draftmaster/Art/Restyle UI Prefabs", priority = 126)]
+    public static void RunOnPrefabs()
+    {
+        var theme = PixelUITheme.Instance;
+        if (theme == null)
+        {
+            Debug.LogWarning("[PixelUIRestyle] theme not loaded — run Set Up Iron Oval Kit first.");
+            return;
+        }
+
+        var report = new List<string>();
+        int fonts = 0, colours = 0, scalers = 0;
+
+        foreach (var path in kPrefabs)
+        {
+            var root = PrefabUtility.LoadPrefabContents(path);
+            if (root == null) { Debug.LogWarning($"[PixelUIRestyle] missing prefab {path}"); continue; }
+
+            foreach (var scaler in root.GetComponentsInChildren<CanvasScaler>(true))
+                if (RestyleScaler(scaler, report)) scalers++;
+            foreach (var label in root.GetComponentsInChildren<TMP_Text>(true))
+                RestyleTmp(label, theme, report, ref fonts, ref colours);
+            foreach (var text in root.GetComponentsInChildren<Text>(true))
+                RestyleText(text, theme, report, ref fonts, ref colours);
+
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[PixelUIRestyle] prefabs: {fonts} fonts, {colours} colours, {scalers} scalers.");
+    }
+
+    static bool RestyleScaler(CanvasScaler scaler, List<string> report)
+    {
+        // Only take over canvases already scaling with the screen; a constant-pixel canvas is usually
+        // deliberate (a debug overlay), and forcing it would move things the author placed by hand.
+        if (scaler.uiScaleMode != CanvasScaler.ScaleMode.ScaleWithScreenSize) return false;
+        if (Mathf.Approximately(scaler.referenceResolution.x, PixelUITheme.ReferenceWidth)) return false;
+        scaler.referencePixelsPerUnit = PixelUITheme.ReferencePixelsPerUnit;
+        EditorUtility.SetDirty(scaler);
+        report.Note(scaler.name, "canvas scaler referencePixelsPerUnit -> 100");
+        return true;
+    }
+
+    static void RestyleTmp(TMP_Text label, PixelUITheme theme, List<string> report, ref int fonts, ref int colours)
+    {
+        if (theme.body == null) return;
+        bool heading = label.fontSize >= 40f;
+        var font = heading && theme.display != null ? theme.display : theme.body;
+        if (label.font != font)
+        {
+            label.font = font;
+            if (font.material != null) label.fontSharedMaterial = font.material;
+            fonts++;
+        }
+        var mapped = MapColour(label.color, theme);
+        if (mapped != label.color) { label.color = mapped; colours++; }
+        EditorUtility.SetDirty(label);
+        report.Note(label.name, $"{(heading ? "display" : "body")} font, colour {ColorUtility.ToHtmlStringRGB(mapped)}");
+    }
+
+    static void RestyleText(Text text, PixelUITheme theme, List<string> report, ref int fonts, ref int colours)
+    {
+        // Legacy Text cannot take a TMP asset, so it gets the plain-Font side of the kit: VT323 for the
+        // readouts these mostly are, Silkscreen where the label is a heading-sized caption.
+        var font = text.fontSize >= 28 && theme.imguiDisplayFont != null ? theme.imguiDisplayFont : theme.imguiFont;
+        if (font != null && text.font != font) { text.font = font; fonts++; }
+        var mapped = MapColour(text.color, theme);
+        if (mapped != text.color) { text.color = mapped; colours++; }
+        EditorUtility.SetDirty(text);
+        report.Note(text.name, "legacy Text -> pixel font");
+    }
+
     [MenuItem("Draftmaster/Art/Restyle Scene Canvas UI", priority = 125)]
     public static void Run()
     {
@@ -74,11 +160,7 @@ public static class PixelUIRestyle
         foreach (var text in Object.FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             Undo.RecordObject(text, "Restyle label");
-            if (theme.imguiFont != null && text.font != theme.imguiFont) { text.font = theme.imguiFont; fonts++; }
-            var mapped = MapColour(text.color, theme);
-            if (mapped != text.color) { text.color = mapped; colours++; }
-            EditorUtility.SetDirty(text);
-            report.Note(text.name, "legacy Text -> pixel font");
+            RestyleText(text, theme, report, ref fonts, ref colours);
         }
 
         Directory.CreateDirectory("Docs");

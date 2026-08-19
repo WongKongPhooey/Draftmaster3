@@ -23,6 +23,20 @@ public class TrackBuilder : MonoBehaviour
     [Tooltip("Material for the box lane. Null = a flat grey tarmac is built automatically (pitBoxLaneColor).")]
     public Material pitBoxLaneMaterial;
     public Color pitBoxLaneColor = new Color(0.42f, 0.42f, 0.44f);
+    [Tooltip("How many pit boxes the strip is divided into — used by the painted box lines and the scene-view gizmo. 0 = take it from the scene's GridSpawner (field size + the player's box), falling back to a full field when there is none (e.g. editing a track package in prefab mode).")]
+    public int pitBoxCount = 0;
+    [Tooltip("Paint the white dividing lines between the pit boxes across the box-lane strip.")]
+    public bool buildPitBoxLines = true;
+    [Tooltip("Width (m) of a painted box line, across the lane.")]
+    public float pitBoxLineWidth = 0.15f;
+    public Color pitBoxLineColor = Color.white;
+    [Tooltip("Material for the box lines. Null = a flat unlit fill in pitBoxLineColor is built automatically.")]
+    public Material pitBoxLineMaterial;
+    [Tooltip("Sorting order for the painted box lines (above the box-lane tarmac).")]
+    public int pitBoxLineSortingOrder = 2;
+
+    // A full Cup field plus the player, for when there is no GridSpawner to ask (prefab-mode authoring).
+    public const int DefaultPitBoxCount = 44;
 
     // Box-lane geometry, published so the pit systems all agree with the mesh: GridSpawner parks the
     // field at the lane's centre lateral; the pit service/engage checks extend to its outer edge.
@@ -30,10 +44,22 @@ public class TrackBuilder : MonoBehaviour
     float PitHalfWidth => track == null ? 0f : (track.pitDefaultWidth > 0f ? track.pitDefaultWidth : track.defaultWidth) * 0.5f;
     public float PitBoxLaneCenterLateral => PitHalfWidth + pitBoxLaneWidth * 0.5f;
     public float PitBoxLaneOuterLateral => PitHalfWidth + pitBoxLaneWidth;
+    // Inner edge of the strip = the pit lane's own edge, where a box's dividing line starts.
+    public float PitBoxLaneInnerLateral => PitHalfWidth;
     // Span of the grey strip along the pit lane (distances from the pit-lane start), matching the mesh
     // built in BuildPitLane. GridSpawner fits the pit boxes inside this span.
     public float PitBoxLaneFrom(float pitLen) => Mathf.Clamp(pitBoxLaneStartOffset, 0f, pitLen);
     public float PitBoxLaneTo(float pitLen) => Mathf.Clamp(pitLen - Mathf.Max(0f, pitBoxLaneEndOffset), 0f, pitLen);
+
+    // How many boxes the strip is cut into. One answer for the painted lines, the gizmo and anything else
+    // that needs it before GridSpawner has run and published the real layout through PitLane.Configure.
+    public int ResolvePitBoxCount()
+    {
+        if (pitBoxCount > 0) return pitBoxCount;
+        var spawner = FindFirstObjectByType<GridSpawner>();
+        if (spawner != null) return Mathf.Max(1, spawner.count + 1); // + the player's reserved box
+        return DefaultPitBoxCount;
+    }
 
     [Header("Brake Marker Boards")]
     [Tooltip("Place 150/100/50m marker boards on the barrier of straights that lead into a turn.")]
@@ -347,7 +373,79 @@ public class TrackBuilder : MonoBehaviour
                 lmf.sharedMesh = BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth,
                                                $"PitBoxLane_{track.name}", PixelArt.UvScale(lmr.sharedMaterial));
             }
+            BuildPitBoxLines(pitSamples, pitLen);
         }
+    }
+
+    // The white lines dividing the strip into boxes, one per boundary plus the two end lines. The boundaries
+    // come from PitLane.FitBoxes — the same fit GridSpawner parks the field on — so the paint lines up with
+    // where the cars and crews actually stop. All the quads live in one mesh under the PitLane child, so
+    // BuildPitLane's teardown takes them with it.
+    void BuildPitBoxLines(List<Sample> pitSamples, float pitLen)
+    {
+        if (!buildPitBoxLines || pitBoxLineWidth <= 0f || pitLen <= 0f) return;
+
+        var fit = PitLane.FitBoxes(this, pitLen, ResolvePitBoxCount());
+        if (fit.spacing <= 0f) return;
+
+        float inner = PitBoxLaneInnerLateral;
+        float outer = PitBoxLaneOuterLateral;
+        float half = pitBoxLineWidth * 0.5f;
+        float stripFrom = PitBoxLaneFrom(pitLen) + half;    // keep the paint on the grey, ends included
+        float stripTo = Mathf.Max(stripFrom, PitBoxLaneTo(pitLen) - half);
+
+        var verts = new List<Vector3>((fit.boxes + 1) * 4);
+        var uvs = new List<Vector2>((fit.boxes + 1) * 4);
+        var tris = new List<int>((fit.boxes + 1) * 6);
+
+        for (int i = 0; i <= fit.boxes; i++)
+        {
+            float d = PitLane.BoxLineDistance(i, pitLen, fit, stripFrom, stripTo);
+            var s = SamplePitAt(d, pitSamples);
+            Vector3 right = new Vector3(s.normal.x, s.normal.y, 0f);
+            Vector3 along = new Vector3(s.tangent.x, s.tangent.y, 0f) * half;
+            Vector3 c = new Vector3(s.position.x, s.position.y, 0f);
+
+            // Wound like the ribbon meshes (along the lane, then across it) so the face points at the camera.
+            int v = verts.Count;
+            verts.Add(c + right * inner - along);
+            verts.Add(c + right * outer - along);
+            verts.Add(c + right * inner + along);
+            verts.Add(c + right * outer + along);
+            uvs.Add(new Vector2(0f, 0f));
+            uvs.Add(new Vector2(1f, 0f));
+            uvs.Add(new Vector2(0f, 1f));
+            uvs.Add(new Vector2(1f, 1f));
+            tris.Add(v + 0); tris.Add(v + 2); tris.Add(v + 3);
+            tris.Add(v + 0); tris.Add(v + 3); tris.Add(v + 1);
+        }
+        if (verts.Count == 0) return;
+
+        var mesh = new Mesh { name = $"PitBoxLines_{track.name}" };
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.SetUVs(0, uvs);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        var go = new GameObject("PitBoxLines");
+        go.transform.SetParent(_pitChild.transform, false);
+        go.transform.localPosition = new Vector3(0f, 0f, -0.02f); // just in front of the strip's tarmac
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        var mr = go.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = pitBoxLineMaterial != null ? pitBoxLineMaterial : BuildBoxLineMaterial();
+        mr.sortingOrder = pitBoxLineSortingOrder;
+    }
+
+    Material BuildBoxLineMaterial()
+    {
+        Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+        if (sh == null) sh = Shader.Find("Unlit/Color");
+        var m = new Material(sh) { name = "PitBoxLineWhite" };
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", pitBoxLineColor);
+        else if (m.HasProperty("_Color")) m.SetColor("_Color", pitBoxLineColor);
+        return m;
     }
 
     // Sub-range of a sample list between two distances, with exact interpolated samples at both ends.

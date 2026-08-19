@@ -9,7 +9,6 @@ public class TimingScreenUI : MonoBehaviour
 
     public bool visible;
 
-    GUIStyle _headStyle, _rowStyle, _titleStyle;
     readonly List<LapTimingManager.CarTimes> _sorted = new();
 
     public static TimingScreenUI Ensure()
@@ -34,48 +33,40 @@ public class TimingScreenUI : MonoBehaviour
         var lt = LapTimingManager.Instance;
         if (lt == null) return;
 
-        if (_titleStyle == null)
-        {
-            _titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold };
-            _titleStyle.normal.textColor = new Color(1f, 0.85f, 0.3f);
-            _headStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold };
-            _headStyle.normal.textColor = new Color(0.8f, 0.8f, 0.8f);
-            _rowStyle = new GUIStyle(GUI.skin.label) { fontSize = 14 };
-            _rowStyle.normal.textColor = Color.white;
-        }
-
-        _sorted.Clear();
-        var rows = lt.Rows;
-        for (int i = 0; i < rows.Count; i++) if (rows[i] != null && rows[i].tf != null) _sorted.Add(rows[i]);
-        _sorted.Sort((a, b) =>
-        {
-            bool aHas = a.bestLap > 0f, bHas = b.bestLap > 0f;
-            if (aHas != bHas) return aHas ? -1 : 1;
-            if (aHas) return a.bestLap.CompareTo(b.bestLap);
-            return b.lapsCompleted.CompareTo(a.lapsCompleted);
-        });
+        lt.RankByBest(_sorted);
 
         float bestOverall = _sorted.Count > 0 ? _sorted[0].bestLap : -1f;
 
-        float w = 560f;
-        float h = 64f + _sorted.Count * 19f;
-        float x = 24f;
-        float y = Mathf.Max(60f, (Screen.height - h) * 0.35f);
+        float row = PixelGUI.Px(11f);
+        float w = PixelGUI.Px(292f);
+        float h = PixelGUI.Px(42f) + _sorted.Count * row;
+        float x = PixelGUI.Px(12f);
+        float y = Mathf.Max(PixelGUI.Px(30f), Mathf.Round((Screen.height - h) * 0.35f));
 
-        GUI.color = new Color(0f, 0f, 0f, 0.82f);
-        GUI.DrawTexture(new Rect(x - 10f, y - 10f, w + 20f, h + 20f), Texture2D.whiteTexture);
-        GUI.color = Color.white;
+        PixelGUI.Panel(new Rect(x, y, w, h), focused: true);
+        var c0 = PixelGUI.PanelContent(new Rect(x, y, w, h), 8f);
+        float cx = c0.x, cy = c0.y;
 
         string session = RaceWeekend.IsQualifying ? "QUALIFYING" : (RaceWeekend.IsPractice ? "PRACTICE" : "RACE");
-        GUI.Label(new Rect(x, y, w, 22f), $"TIMING  —  {session}", _titleStyle);
-        y += 26f;
-        GUI.Label(new Rect(x, y, w, 18f), $"{"Pos",-5}{"#",-5}{"Driver",-17}{"Laps",-6}{"Last",-11}{"Best",-11}{"Gap",-8}", _headStyle);
-        y += 20f;
+        GUI.Label(new Rect(cx, cy, c0.width, PixelGUI.Px(18f)), $"TIMING · {session}", PixelGUI.Heading);
+        cy += PixelGUI.Px(20f);
+        GUI.Label(new Rect(cx, cy, c0.width, PixelGUI.Px(10f)),
+                  $"{"POS",-5}{"#",-5}{"DRIVER",-17}{"LAPS",-6}{"LAST",-11}{"BEST",-11}{"GAP",-8}",
+                  PixelGUI.LabelDim);
+        cy += PixelGUI.Px(11f);
+        PixelGUI.Rule(cx, cy, c0.width);
+        cy += PixelGUI.Px(3f);
 
+        var style = PixelGUI.Data;
+        var prev = style.normal.textColor;
         for (int i = 0; i < _sorted.Count; i++)
         {
             var c = _sorted[i];
-            _rowStyle.normal.textColor = c.isPlayer ? new Color(0.4f, 1f, 0.5f) : Color.white;
+            // Purple-for-fastest is a broadcast idiom this palette has no room for, so the session's best
+            // lap takes the one accent and the player's own row is the only other marked line.
+            style.normal.textColor = i == 0 && c.bestLap > 0f ? PixelGUI.Gold
+                                   : c.isPlayer ? PixelGUI.Confirm
+                                   : PixelGUI.Text;
 
             string name = string.IsNullOrEmpty(c.name) ? "?" : (c.name.Length > 15 ? c.name.Substring(0, 15) : c.name);
             string last = LapTimingManager.Format(c.lastLap) + (c.lastLap > 0f && !c.lastValid ? "✕" : "");
@@ -84,9 +75,11 @@ public class TimingScreenUI : MonoBehaviour
                 ? (i == 0 ? "—" : $"+{c.bestLap - bestOverall:0.000}")
                 : "—";
 
-            GUI.Label(new Rect(x, y, w, 18f),
-                $"{("P" + (i + 1)),-5}{("#" + c.carNumber),-5}{name,-17}{c.lapsCompleted,-6}{last,-11}{best,-11}{gap,-8}", _rowStyle);
-            y += 19f;
+            GUI.Label(new Rect(cx, cy, c0.width, row),
+                $"{("P" + (i + 1)),-5}{("#" + c.carNumber),-5}{name,-17}{c.lapsCompleted,-6}{last,-11}{best,-11}{gap,-8}",
+                style);
+            cy += row;
         }
+        style.normal.textColor = prev;
     }
 }

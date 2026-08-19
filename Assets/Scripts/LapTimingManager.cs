@@ -48,7 +48,25 @@ public class LapTimingManager : MonoBehaviour
     public IReadOnlyList<CarTimes> Rows => _rows;
 
     CarTimes _player;
-    GUIStyle _hudStyle, _invalidStyle;
+
+    // Session order: fastest lap first, cars with no time yet at the back, ordered by laps run. This is
+    // what decides a practice or qualifying session, so the timing screen, the Tab board and the grid
+    // PracticeDirector captures all rank on it.
+    public void RankByBest(List<CarTimes> into)
+    {
+        into.Clear();
+        for (int i = 0; i < _rows.Count; i++)
+            if (_rows[i] != null && _rows[i].tf != null) into.Add(_rows[i]);
+        into.Sort(CompareByBest);
+    }
+
+    public static int CompareByBest(CarTimes a, CarTimes b)
+    {
+        bool aHas = a.bestLap > 0f, bHas = b.bestLap > 0f;
+        if (aHas != bHas) return aHas ? -1 : 1;
+        if (aHas) return a.bestLap.CompareTo(b.bestLap);
+        return b.lapsCompleted.CompareTo(a.lapsCompleted);
+    }
 
     public static LapTimingManager Ensure()
     {
@@ -185,27 +203,33 @@ public class LapTimingManager : MonoBehaviour
     {
         if (!showPlayerHud || _player == null) return;
 
-        if (_hudStyle == null)
-        {
-            _hudStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            _hudStyle.normal.textColor = Color.white;
-            _invalidStyle = new GUIStyle(_hudStyle) { fontSize = 17 };
-            _invalidStyle.normal.textColor = new Color(1f, 0.35f, 0.3f);
-        }
+        // The timing strip, Iron Oval: framed plate, VT323 so the digits hold their columns as they run,
+        // and the invalidation notice in alarm red under it — the one thing here worth shouting.
+        float w = PixelGUI.Px(212f), h = PixelGUI.Px(16f);
+        float x = Mathf.Round((Screen.width - w) * 0.5f), y = PixelGUI.Px(6f);
+        bool invalid = Time.time < _player.invalidFlashUntil;
+        float panelH = h + PixelGUI.Px(10f) + (invalid ? h : 0f);
 
-        float w = 340f, h = 24f;
-        float x = (Screen.width - w) * 0.5f, y = 12f;
-
-        GUI.color = new Color(0f, 0f, 0f, 0.6f);
-        GUI.DrawTexture(new Rect(x, y, w, h * 2f), Texture2D.whiteTexture);
-        GUI.color = Color.white;
+        PixelGUI.Panel(new Rect(x, y, w, panelH));
+        var c = PixelGUI.PanelContent(new Rect(x, y, w, panelH), 1f);
 
         string cur = _player.lapStarted
-            ? Format(_player.CurrentLapTime(Time.time)) + (_player.valid ? "" : "  ✕")
+            ? Format(_player.CurrentLapTime(Time.time)) + (_player.valid ? "" : " ✕")
             : "--:--.---";
-        GUI.Label(new Rect(x, y, w, h), $"LAP {cur}    LAST {Format(_player.lastLap)}    BEST {Format(_player.bestLap)}", _hudStyle);
 
-        if (Time.time < _player.invalidFlashUntil)
-            GUI.Label(new Rect(x, y + h, w, h), "LAP INVALIDATED", _invalidStyle);
+        var style = PixelGUI.Data;
+        var prevAlign = style.alignment;
+        style.alignment = TextAnchor.MiddleCenter;
+        GUI.Label(new Rect(c.x, c.y, c.width, h),
+                  $"LAP {cur}   LAST {Format(_player.lastLap)}   BEST {Format(_player.bestLap)}", style);
+
+        if (invalid)
+        {
+            var prev = style.normal.textColor;
+            style.normal.textColor = PixelGUI.Danger;
+            GUI.Label(new Rect(c.x, c.y + h, c.width, h), "LAP INVALIDATED", style);
+            style.normal.textColor = prev;
+        }
+        style.alignment = prevAlign;
     }
 }

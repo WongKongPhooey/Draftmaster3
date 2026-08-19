@@ -70,6 +70,9 @@ public class QuestGiverNPC : NPCInteractable
         {
             case Outcome.Accept:
                 QuestManager.Accept(quest);
+                // Log it on the player's phone: a quest here is a conversation, and the Notes app is
+                // the only record of who asked for what.
+                PhoneNotes.RecordQuest(quest, speakerName);
                 if (!string.IsNullOrEmpty(grantItemOnAccept)) PlayerInventory.Add(grantItemOnAccept);
                 break;
             case Outcome.TurnIn:

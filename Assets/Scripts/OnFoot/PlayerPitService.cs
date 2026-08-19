@@ -139,22 +139,34 @@ public class PlayerPitService : MonoBehaviour
 
     void OnGUI()
     {
-        var style = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+        // Pit-stop callouts, centred over the car: a framed strip rather than floating text, so a message
+        // that lands over a light piece of pit lane is still readable.
         if (_timer > 0f && !_serviced)
-        {
-            style.normal.textColor = new Color(1f, 0.85f, 0.3f);
-            GUI.Label(new Rect(0, Screen.height * 0.28f, Screen.width, 50f), $"PITTING…  {Mathf.Max(0f, serviceSeconds - _timer):0.0}s", style);
-        }
+            Callout($"PITTING…  {Mathf.Max(0f, serviceSeconds - _timer):0.0}s", PixelGUI.Gold, 1f);
         else if (_msgTimer > 0f)
-        {
-            style.normal.textColor = new Color(0.3f, 1f, 0.4f, Mathf.Clamp01(_msgTimer));
-            GUI.Label(new Rect(0, Screen.height * 0.28f, Screen.width, 50f), "FRESH TYRES", style);
-        }
+            Callout("FRESH TYRES", PixelGUI.Confirm, Mathf.Clamp01(_msgTimer));
         else if (_showBoxHint)
-        {
-            style.fontSize = 22;
-            style.normal.textColor = new Color(1f, 0.85f, 0.3f);
-            GUI.Label(new Rect(0, Screen.height * 0.28f, Screen.width, 40f), "STOP FULLY INSIDE YOUR PIT BOX", style);
-        }
+            Callout("STOP FULLY INSIDE YOUR PIT BOX", PixelGUI.Gold, 1f);
+    }
+
+    static void Callout(string text, Color colour, float alpha)
+    {
+        float w = PixelGUI.Px(240f), h = PixelGUI.Px(26f);
+        float x = Mathf.Round((Screen.width - w) * 0.5f);
+        float y = Mathf.Round(Screen.height * 0.28f);
+
+        var prevGui = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, alpha);
+        PixelGUI.Panel(new Rect(x, y, w, h));
+
+        var style = PixelGUI.Heading;
+        var prevAlign = style.alignment;
+        var prevColour = style.normal.textColor;
+        style.alignment = TextAnchor.MiddleCenter;
+        style.normal.textColor = new Color(colour.r, colour.g, colour.b, alpha);
+        GUI.Label(new Rect(x, y, w, h), text, style);
+        style.alignment = prevAlign;
+        style.normal.textColor = prevColour;
+        GUI.color = prevGui;
     }
 }

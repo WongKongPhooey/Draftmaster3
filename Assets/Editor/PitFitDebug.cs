@@ -16,20 +16,10 @@ public static class PitFitDebug
         float pitLen = pit.Count > 0 ? pit[pit.Count - 1].distance : 0f;
         int totalBoxes = spawner.count + 1; // + player
 
-        float boxSpanFrom = 6f, boxSpanTo = pitLen - 12f;
-        if (track.HasPitBoxLane && pitLen > 0f)
-        {
-            const float bandMargin = 3f;
-            boxSpanFrom = track.PitBoxLaneFrom(pitLen) + bandMargin;
-            boxSpanTo = Mathf.Max(boxSpanFrom, track.PitBoxLaneTo(pitLen) - bandMargin);
-        }
-        float usable = Mathf.Max(0f, boxSpanTo - boxSpanFrom);
-        float rawSpacing = totalBoxes > 1 ? usable / (totalBoxes - 1) : 0f;
-        float spacing = Mathf.Clamp(rawSpacing, 4.5f, 12f);
-        float span = (totalBoxes - 1) * spacing;
+        var fit = PitLane.FitBoxes(track, pitLen, totalBoxes);
 
-        Debug.Log($"PitFit: pitLen={pitLen:0.0} strip=[{boxSpanFrom:0.0}..{boxSpanTo:0.0}] usable={usable:0.0} " +
-                  $"boxes={totalBoxes} rawSpacing={rawSpacing:0.00} clampedSpacing={spacing:0.00} " +
-                  $"span={span:0.0} overflow={Mathf.Max(0f, span - usable):0.0}");
+        Debug.Log($"PitFit: pitLen={pitLen:0.0} strip=[{fit.spanFrom:0.0}..{fit.spanTo:0.0}] usable={fit.usable:0.0} " +
+                  $"boxes={fit.boxes} rawSpacing={fit.rawSpacing:0.00} clampedSpacing={fit.spacing:0.00} " +
+                  $"span={fit.Span:0.0} overflow={fit.Overflow:0.0}");
     }
 }

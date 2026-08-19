@@ -285,8 +285,9 @@ public class PitLaneStart : MonoBehaviour
     // the player spawned, the parked car, and the RV they may have woken up in.
     void BuildCast(Vector3 playerPos, float playerPitDistance, RVExterior exterior, RVInterior interior)
     {
-        // A scene nobody has dressed yet still opens with its greeter, engineer and chief.
-        if (installDefaultCast) PlacedNPCDefaults.EnsureCast(transform);
+        // A scene nobody has dressed yet still opens with its greeter and chief. They go under the scene's
+        // "NPCs" root, not under this object — this one only marks where the pit lane starts.
+        if (installDefaultCast) PlacedNPCDefaults.EnsureCast();
 
         var ctx = new PlacedNPC.BuildContext
         {

@@ -23,7 +23,8 @@ public class DriverInfoPanel : MonoBehaviour
     bool _show;
     Rect _win = new Rect(410, 80, 400, 0);
     Vector2 _scroll;
-    GUIStyle _head, _label, _mono;
+    GUIStyle _head, _label, _mono, _window;
+    int _builtAtScale = -1;
 
     // Cached snapshot, rebuilt every refreshSeconds so OnGUI never hits the DB per frame.
     float _nextRefresh;
@@ -150,7 +151,7 @@ public class DriverInfoPanel : MonoBehaviour
     {
         if (!_show) return;
         EnsureStyles();
-        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow, "Driver Info  (F5)");
+        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow, "DRIVER INFO · F5", _window);
     }
 
     void DrawWindow(int id)
@@ -260,11 +261,26 @@ public class DriverInfoPanel : MonoBehaviour
 
     void EnsureStyles()
     {
-        if (_head != null) return;
-        _head = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 14 };
-        _label = new GUIStyle(GUI.skin.label) { fontSize = 12 };
-        _label.normal.textColor = Color.white;
-        _mono = new GUIStyle(GUI.skin.label) { fontSize = 12 };
-        _mono.normal.textColor = new Color(0.55f, 0.9f, 1f);
+        if (_head != null && _builtAtScale == PixelGUI.Scale) return;
+        _builtAtScale = PixelGUI.Scale;
+
+        _head = new GUIStyle(PixelGUI.HeadingSmall);
+        _label = new GUIStyle(PixelGUI.Row);
+        // Values read in the telemetry blue, which is what this palette uses for a number the player is
+        // reading rather than acting on.
+        _mono = new GUIStyle(PixelGUI.Data);
+        _mono.normal.textColor = PixelGUI.Info;
+
+        _window = new GUIStyle(PixelGUI.Window)
+        {
+            font = PixelGUI.Theme != null ? PixelGUI.Theme.imguiDisplayFont : null,
+            fontSize = 8 * PixelGUI.Scale,
+            alignment = TextAnchor.UpperCenter,
+            padding = new RectOffset(8 * PixelGUI.Scale, 8 * PixelGUI.Scale,
+                                     16 * PixelGUI.Scale, 8 * PixelGUI.Scale),
+        };
+        _window.normal.textColor = PixelGUI.Gold;
+        _window.onNormal.textColor = PixelGUI.Gold;
+        _window.onNormal.background = _window.normal.background;
     }
 }

@@ -125,9 +125,9 @@ public class SpawnIntroUI : MonoBehaviour
         var rect = new Rect(0f, Screen.height * 0.30f - 30f, Screen.width, 60f);
         var shadow = rect; shadow.x += 2f; shadow.y += 2f;
         var prev = _titleStyle.normal.textColor;
-        _titleStyle.normal.textColor = new Color(0f, 0f, 0f, 0.8f * a);
+        _titleStyle.normal.textColor = new Color(PixelGUI.Ink.r, PixelGUI.Ink.g, PixelGUI.Ink.b, 0.9f * a);
         GUI.Label(shadow, _title, _titleStyle);
-        _titleStyle.normal.textColor = new Color(1f, 1f, 1f, a);
+        _titleStyle.normal.textColor = new Color(PixelGUI.Text.r, PixelGUI.Text.g, PixelGUI.Text.b, a);
         GUI.Label(rect, _title, _titleStyle);
         _titleStyle.normal.textColor = prev;
     }
@@ -204,8 +204,13 @@ public class SpawnIntroUI : MonoBehaviour
     {
         float size = iconSize * sizeMul;
         float plate = size + 10f * sizeMul;
-        GUI.color = new Color(0f, 0f, 0f, 0.55f);
-        GUI.DrawTexture(new Rect(pos.x - plate * 0.5f, pos.y - plate * 0.5f, plate, plate), _px);
+        // Opaque plate with a cream keyline, the kit's slot treatment: a translucent black square behind a
+        // pixel icon picks up whatever is under it and the icon loses its edge.
+        float b = PixelGUI.Px(1f);
+        var plateRect = new Rect(pos.x - plate * 0.5f, pos.y - plate * 0.5f, plate, plate);
+        PixelGUI.Fill(new Rect(plateRect.x - b, plateRect.y - b, plateRect.width + b * 2f, plateRect.height + b * 2f),
+                      PixelGUI.Text);
+        PixelGUI.Fill(plateRect, PixelGUI.PlateDeep);
         GUI.color = Color.white;
 
         if (icon == null) return;
@@ -221,9 +226,9 @@ public class SpawnIntroUI : MonoBehaviour
     {
         string text = $"{Mathf.RoundToInt(metres)}m";
         var r = new Rect(pos.x - 40f, pos.y, 80f, 20f);
-        var shadow = r; shadow.x += 1f; shadow.y += 1f;
+        var shadow = r; shadow.x += PixelGUI.Px(1f); shadow.y += PixelGUI.Px(1f);
         var prev = _distStyle.normal.textColor;
-        _distStyle.normal.textColor = new Color(0f, 0f, 0f, 0.9f);
+        _distStyle.normal.textColor = PixelGUI.Ink;
         GUI.Label(shadow, text, _distStyle);
         _distStyle.normal.textColor = prev;
         GUI.Label(r, text, _distStyle);
@@ -233,19 +238,15 @@ public class SpawnIntroUI : MonoBehaviour
     {
         if (_titleStyle == null)
         {
-            _titleStyle = new GUIStyle(GUI.skin.label)
+            // Silkscreen for the location title, VT323 for the distance readouts. Both sized off the kit's
+            // cells rather than titleFontSize's raw pixels, so they stay crisp at any display scale.
+            _titleStyle = new GUIStyle(PixelGUI.Heading)
             {
-                fontSize = titleFontSize,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter
+                fontSize = 16 * PixelGUI.Scale,
+                alignment = TextAnchor.MiddleCenter,
             };
-            _distStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter
-            };
-            _distStyle.normal.textColor = Color.white;
+            _titleStyle.normal.textColor = PixelGUI.Text;
+            _distStyle = new GUIStyle(PixelGUI.Data) { alignment = TextAnchor.MiddleCenter };
         }
         if (_px == null)
         {
@@ -274,7 +275,7 @@ public class SpawnIntroUI : MonoBehaviour
             }
         }
         tex.Apply();
-        tex.filterMode = FilterMode.Bilinear;
+        tex.filterMode = FilterMode.Point;   // hard edges, like everything else drawn here
         return tex;
     }
 }

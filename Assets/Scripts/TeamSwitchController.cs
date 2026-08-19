@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -44,8 +45,9 @@ public class TeamSwitchController : MonoBehaviour
     GameObject _current;                       // the car the human is driving right now
     readonly List<GameObject> _teamCars = new();
     readonly List<Button> _buttons = new();
-    readonly List<Text> _buttonLabels = new();
+    readonly List<TMP_Text> _buttonLabels = new();
     Canvas _canvas;
+    RectTransform _window;
     RectTransform _panel;
     float _rosterTimer, _labelTimer;
     bool _hidden;                              // toggleKey; the panel also hides itself in practice/qualifying
@@ -70,8 +72,9 @@ public class TeamSwitchController : MonoBehaviour
 
         // No roster in practice/qualifying — team cars are parked stint props there.
         bool available = !RaceWeekend.IsPracticeLike && !_hidden;
-        if (_panel != null && _panel.gameObject.activeSelf != available)
-            _panel.gameObject.SetActive(available);
+        // Hide the whole window, frame included — hiding only the content would leave an empty plate.
+        if (_window != null && _window.gameObject.activeSelf != available)
+            _window.gameObject.SetActive(available);
         if (!available) return;
 
         _rosterTimer -= Time.deltaTime;
@@ -177,6 +180,11 @@ public class TeamSwitchController : MonoBehaviour
         if (hud != null) hud.target = target.GetComponent<PlayerVehicleController>();
 
         PlayerStatsLedger.Increment("teamswitches");
+        // The window is a fixed frame around a growing list, so it is resized to whatever the content
+        // ended up being: title row, one row per team car, and the kit's 6px margins.
+        if (_window != null)
+            _window.sizeDelta = new Vector2(120f, 22f + _teamCars.Count * 20f);
+
         RefreshButtonLabels();
     }
 
@@ -270,36 +278,40 @@ public class TeamSwitchController : MonoBehaviour
     {
         EnsureEventSystem();
 
-        var canvasGO = new GameObject("TeamSwitchCanvas");
-        _canvas = canvasGO.AddComponent<Canvas>();
-        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 110;
-        canvasGO.AddComponent<CanvasScaler>();
-        canvasGO.AddComponent<GraphicRaycaster>();
+        // Iron Oval window on the kit's 640x360 canvas. IronOvalUI.Window puts the frame and the dithered
+        // interior in as children, so the layout group goes on a content child of its own rather than on
+        // the window root — a VerticalLayoutGroup there would try to lay out the frame too.
+        _canvas = PixelUI.CreateCanvas("TeamSwitchCanvas", 110);
 
-        var panelGO = new GameObject("TeamPanel", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
-        panelGO.transform.SetParent(canvasGO.transform, false);
-        _panel = panelGO.GetComponent<RectTransform>();
-        _panel.anchorMin = new Vector2(0f, 0f);
-        _panel.anchorMax = new Vector2(0f, 0f);
-        _panel.pivot = new Vector2(0f, 0f);
-        _panel.anchoredPosition = new Vector2(16f, 16f);
+        var window = IronOvalUI.Window(_canvas.transform, "TeamPanel", new Vector2(120f, 80f));
+        window.anchorMin = new Vector2(0f, 0f);
+        window.anchorMax = new Vector2(0f, 0f);
+        window.pivot = new Vector2(0f, 0f);
+        window.anchoredPosition = new Vector2(8f, 8f);
 
-        panelGO.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 0.7f);
-        var layout = panelGO.GetComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(8, 8, 8, 8);
+        var contentGO = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup),
+                                       typeof(ContentSizeFitter));
+        contentGO.transform.SetParent(window, false);
+        _panel = contentGO.GetComponent<RectTransform>();
+        _panel.anchorMin = new Vector2(0f, 1f);
+        _panel.anchorMax = new Vector2(1f, 1f);
+        _panel.pivot = new Vector2(0f, 1f);
+        _panel.offsetMin = new Vector2(6f, 0f);
+        _panel.offsetMax = new Vector2(-6f, -6f);
+
+        var layout = contentGO.GetComponent<VerticalLayoutGroup>();
         layout.spacing = 4f;
         layout.childForceExpandHeight = false;
         layout.childForceExpandWidth = true;
-        var fitter = panelGO.AddComponent<ContentSizeFitter>();
+        var fitter = contentGO.GetComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        var title = MakeLabel(panelGO.transform, "TEAM", 14, FontStyle.Bold, new Color(1f, 0.85f, 0.3f));
-        title.alignment = TextAnchor.MiddleLeft;
+        var title = IronOvalUI.Label(_panel, "Title", "TEAM", IronOvalUI.Role.HeaderSmall);
+        title.alignment = TextAlignmentOptions.Left;
         var tle = title.gameObject.AddComponent<LayoutElement>();
-        tle.preferredWidth = 210f;
-        tle.preferredHeight = 20f;
+        tle.preferredWidth = 108f;
+        tle.preferredHeight = 10f;
+        _window = window;
     }
 
     void RebuildButtons()
@@ -312,24 +324,35 @@ public class TeamSwitchController : MonoBehaviour
         foreach (var car in _teamCars)
         {
             var carRef = car; // captured
-            var btnGO = new GameObject("TeamCarButton", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            var btnGO = new GameObject("TeamCarButton", typeof(RectTransform), typeof(Image), typeof(Button),
+                                       typeof(LayoutElement));
             btnGO.transform.SetParent(_panel, false);
-            btnGO.GetComponent<Image>().color = new Color(0.12f, 0.12f, 0.16f, 0.9f);
+            var plate = btnGO.GetComponent<Image>();
+            plate.color = PixelGUI.PlateDeep;
             var le = btnGO.GetComponent<LayoutElement>();
-            le.preferredWidth = 210f;
-            le.preferredHeight = 34f;
+            le.preferredWidth = 108f;
+            le.preferredHeight = 16f;
 
             var btn = btnGO.GetComponent<Button>();
+            btn.transition = Selectable.Transition.ColorTint;
+            var colours = btn.colors;
+            colours.normalColor = Color.white;
+            colours.highlightedColor = Color.white;
+            colours.pressedColor = Color.white;
+            colours.selectedColor = Color.white;
+            colours.disabledColor = Color.white;   // "mine" is shown by the label colour, not a grey plate
+            colours.fadeDuration = 0f;             // no fades on pixel art
+            btn.colors = colours;
             btn.onClick.AddListener(() => SwitchTo(carRef));
             _buttons.Add(btn);
 
-            var label = MakeLabel(btnGO.transform, "", 14, FontStyle.Bold, Color.white);
-            var lrt = label.GetComponent<RectTransform>();
+            var label = IronOvalUI.Label(btnGO.transform, "Label", "", IronOvalUI.Role.Data);
+            var lrt = label.rectTransform;
             lrt.anchorMin = Vector2.zero;
             lrt.anchorMax = Vector2.one;
-            lrt.offsetMin = new Vector2(8f, 0f);
+            lrt.offsetMin = new Vector2(4f, 0f);
             lrt.offsetMax = Vector2.zero;
-            label.alignment = TextAnchor.MiddleLeft;
+            label.alignment = TextAlignmentOptions.Left;
             _buttonLabels.Add(label);
         }
         RefreshButtonLabels();
@@ -356,22 +379,10 @@ public class TeamSwitchController : MonoBehaviour
 
             bool mine = car == _current;
             text.text = $"#{number} {name.ToUpperInvariant()}{(pos > 0 ? $"  P{pos}" : "")}";
-            text.color = mine ? new Color(0.45f, 1f, 0.55f) : Color.white;
+            // The car you are in takes the accent; the rest are ordinary rows you can click.
+            text.color = mine ? PixelGUI.Gold : PixelGUI.Text;
             if (btn != null) btn.interactable = !mine;
         }
-    }
-
-    static Text MakeLabel(Transform parent, string content, int size, FontStyle style, Color color)
-    {
-        var go = new GameObject("Label", typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        var t = go.AddComponent<Text>();
-        t.text = content;
-        t.fontSize = size;
-        t.fontStyle = style;
-        t.color = color;
-        t.font = BrandFonts.Body;
-        return t;
     }
 
     static void EnsureEventSystem()

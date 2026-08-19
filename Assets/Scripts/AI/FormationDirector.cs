@@ -190,14 +190,29 @@ public class FormationDirector : MonoBehaviour
     void OnGUI()
     {
         if (_greenMsgTimer <= 0f) return;
-        var style = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 64,
-            fontStyle = FontStyle.Bold,
-            alignment = TextAnchor.MiddleCenter
-        };
-        style.normal.textColor = new Color(0.2f, 1f, 0.2f, Mathf.Clamp01(_greenMsgTimer));
-        GUI.Label(new Rect(0, Screen.height * 0.18f, Screen.width, 90f), "GREEN — GO!", style);
+
+        // The green flag, in the kit's banner shape: kerb-edged plate across the screen with the call in
+        // Silkscreen. Gain green, which is the palette's "you may go" colour.
+        float alpha = Mathf.Clamp01(_greenMsgTimer);
+        float h = PixelGUI.Px(34f);
+        float y = Mathf.Round(Screen.height * 0.18f);
+        float kerb = PixelGUI.Px(4f);
+
+        var prevGui = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, alpha);
+        PixelGUI.Fill(new Rect(0f, y, Screen.width, h), PixelGUI.PlateDeep);
+        PixelGUI.Kerb(new Rect(0f, y - kerb, Screen.width, kerb));
+        PixelGUI.Kerb(new Rect(0f, y + h, Screen.width, kerb));
+
+        var style = PixelGUI.Heading;
+        var prevAlign = style.alignment;
+        var prevColour = style.normal.textColor;
+        style.alignment = TextAnchor.MiddleCenter;
+        style.normal.textColor = new Color(PixelGUI.Confirm.r, PixelGUI.Confirm.g, PixelGUI.Confirm.b, alpha);
+        GUI.Label(new Rect(0f, y, Screen.width, h), "GREEN · GO!", style);
+        style.alignment = prevAlign;
+        style.normal.textColor = prevColour;
+        GUI.color = prevGui;
     }
 
     static void DisableIfPresent<T>(GameObject go, string typeName) where T : Behaviour

@@ -1,21 +1,28 @@
 using UnityEngine;
 
-// The pit-lane opening cast, as PlacedNPC markers: the greeter, the race engineer and the crew chief.
+// The pit-lane opening cast, as PlacedNPC markers: the greeter and the crew chief.
 //
-// These three used to be spawned from fields on PitLaneStart. They're built here instead so there is ONE
+// These used to be spawned from fields on PitLaneStart. They're built here instead so there is ONE
 // definition of them — the editor menu (Draftmaster > NPCs > Install Default Pit Cast) creates them as real,
 // editable scene objects from this file, and a scene that hasn't had that run yet gets the identical set
 // created at runtime. Once they exist in the scene the runtime install stays out of the way, so editing them
 // in the inspector is the only thing that decides who turns up.
+//
+// Only beats that work off geometry EVERY track has are installed automatically: the greeter stands in the
+// pit lane, the chief stands by the player's car. The race engineer is deliberately NOT one of them — his
+// beat is the player coming out of their RV, and an RV is track content, so his marker belongs in the track
+// package that owns the motorhome (Draftmaster > NPCs > Add RV Engineer To Open Package). Auto-installing
+// him meant deleting him from a track put him straight back, which is the opposite of what placing an NPC
+// in a package should mean.
 public static class PlacedNPCDefaults
 {
-    // Create any of the three that the scene doesn't already have. Returns how many were added.
+    // Create any of the every-track cast the scene doesn't already have. Returns how many were added.
+    // The race engineer is not included — see the note above; use CreateEngineer inside a track package.
     public static int EnsureCast(Transform parent = null)
     {
         int added = 0;
-        if (Find(PlacedNPC.Role.PitGreeter) == null)   { CreateGreeter(parent);  added++; }
-        if (Find(PlacedNPC.Role.RaceEngineer) == null) { CreateEngineer(parent); added++; }
-        if (Find(PlacedNPC.Role.CrewChief) == null)    { CreateChief(parent);    added++; }
+        if (Find(PlacedNPC.Role.PitGreeter) == null) { CreateGreeter(parent); added++; }
+        if (Find(PlacedNPC.Role.CrewChief) == null)  { CreateChief(parent);   added++; }
         return added;
     }
 
@@ -109,10 +116,24 @@ public static class PlacedNPCDefaults
         return npc;
     }
 
+    // Where scene-level markers live: one empty at the origin called "NPCs". They used to be parented to
+    // PitLaneStart, which only describes where the pit lane begins — nothing about the cast belongs to it.
+    public const string RootName = "NPCs";
+
+    public static Transform Root()
+    {
+        var existing = GameObject.Find(RootName);
+        if (existing != null) return existing.transform;
+
+        var go = new GameObject(RootName);
+        go.transform.position = Vector3.zero;
+        return go.transform;
+    }
+
     static PlacedNPC New(string name, Transform parent)
     {
         var go = new GameObject(name);
-        if (parent != null) go.transform.SetParent(parent, false);
+        go.transform.SetParent(parent != null ? parent : Root(), false);
         return go.AddComponent<PlacedNPC>();
     }
 }

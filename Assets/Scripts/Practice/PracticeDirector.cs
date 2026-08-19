@@ -33,7 +33,6 @@ public class PracticeDirector : MonoBehaviour
     GameObject _raceBtn;
     bool _isQualifying;
     float _qualiEndTime;
-    GUIStyle _qualiStyle;
 
     public static PracticeDirector Ensure()
     {
@@ -169,15 +168,7 @@ public class PracticeDirector : MonoBehaviour
         if (lt == null || lt.Rows.Count == 0) { RaceWeekend.GridOrder = null; return; }
 
         var ranked = new List<LapTimingManager.CarTimes>();
-        for (int i = 0; i < lt.Rows.Count; i++)
-            if (lt.Rows[i] != null && lt.Rows[i].tf != null) ranked.Add(lt.Rows[i]);
-        ranked.Sort((a, b) =>
-        {
-            bool aHas = a.bestLap > 0f, bHas = b.bestLap > 0f;
-            if (aHas != bHas) return aHas ? -1 : 1;
-            if (aHas) return a.bestLap.CompareTo(b.bestLap);
-            return b.lapsCompleted.CompareTo(a.lapsCompleted);
-        });
+        lt.RankByBest(ranked);
 
         var grid = new List<RaceWeekend.GridEntry>(ranked.Count);
         for (int i = 0; i < ranked.Count; i++)
@@ -196,21 +187,24 @@ public class PracticeDirector : MonoBehaviour
     void OnGUI()
     {
         if (!_isQualifying) return;
-        if (_qualiStyle == null)
-        {
-            _qualiStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleRight };
-            _qualiStyle.normal.textColor = new Color(1f, 0.85f, 0.3f);
-        }
 
         float remaining = _qualiEndTime - Time.time;
         string text = remaining > 0f
             ? $"QUALIFYING  {Mathf.FloorToInt(remaining / 60f)}:{Mathf.FloorToInt(remaining % 60f):00}"
-            : "QUALIFYING COMPLETE — press START RACE";
-        _qualiStyle.normal.textColor = remaining > 0f ? new Color(1f, 0.85f, 0.3f) : new Color(0.4f, 1f, 0.5f);
+            : "QUALIFYING COMPLETE · PRESS START RACE";
 
-        GUI.color = new Color(0f, 0f, 0f, 0.6f);
-        GUI.DrawTexture(new Rect(Screen.width - 356f, 76f, 340f, 26f), Texture2D.whiteTexture);
-        GUI.color = Color.white;
-        GUI.Label(new Rect(Screen.width - 352f, 76f, 332f, 26f), text, _qualiStyle);
+        float w = PixelGUI.Px(200f), h = PixelGUI.Px(20f);
+        var box = new Rect(Screen.width - w - PixelGUI.Px(8f), PixelGUI.Px(38f), w, h);
+        PixelGUI.Panel(box);
+
+        // Counting down is the accent; done and waiting on the player is the gain colour.
+        var style = PixelGUI.Data;
+        var prevAlign = style.alignment;
+        var prevColour = style.normal.textColor;
+        style.alignment = TextAnchor.MiddleCenter;
+        style.normal.textColor = remaining > 0f ? PixelGUI.Gold : PixelGUI.Confirm;
+        GUI.Label(box, text, style);
+        style.alignment = prevAlign;
+        style.normal.textColor = prevColour;
     }
 }

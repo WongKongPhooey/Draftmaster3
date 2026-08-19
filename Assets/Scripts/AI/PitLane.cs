@@ -35,6 +35,69 @@ public static class PitLane
     // Distance along the pit lane (m) for a box. Box 0 = nearest the exit; higher index = nearer the entrance.
     public static float BoxDistance(int idx, float pitLength) => Mathf.Max(0f, pitLength - ExitGap - idx * Spacing);
 
+    // Same maths against an explicit fit, for callers (the editor preview, the painted lines) working
+    // before Configure ran.
+    public static float BoxDistance(int idx, float pitLength, in BoxFit fit) =>
+        Mathf.Max(0f, pitLength - fit.exitGap - idx * fit.spacing);
+
+    // Distance of the dividing line at boundary `i` — 0 is the line at box 0's exit side, `boxes` the one
+    // behind the last box, so a fit of N boxes has N+1 lines. Clamped into [stripFrom, stripTo]: the fit
+    // keeps the box CENTRES a margin inside the grey strip, but box 0's front line still lands past its
+    // end, and paint hanging off the tarmac reads as a bug.
+    public static float BoxLineDistance(int i, float pitLength, in BoxFit fit, float stripFrom, float stripTo) =>
+        Mathf.Clamp(BoxDistance(0, pitLength, fit) + fit.spacing * 0.5f - i * fit.spacing, stripFrom, stripTo);
+
     // The box closest to the START of the pit lane (entrance). The pace car parks here.
     public static int LastBox => Mathf.Max(0, BoxCount - 1);
+
+    // ---- Box fitting ---------------------------------------------------------------------------
+    // The single copy of "where do the boxes land". GridSpawner runs it at spawn and publishes the
+    // result through Configure; the editor gizmo and the fit debug log run it at edit time, so the
+    // preview in the scene view is the same ladder the cars park on.
+
+    public const float BandMargin = 3f;         // keep the end boxes off the grey strip's very edges
+    public const float MinSpacing = 4.5f;
+    public const float MaxSpacing = 10f;
+    const float FallbackExitGap = 12f;          // tracks with no box-lane strip
+    const float FallbackSpanFrom = 6f;
+    const float FallbackSpacing = 12f;
+
+    public struct BoxFit
+    {
+        public int boxes;
+        public float exitGap;      // m from the pit-lane end to box 0
+        public float spacing;      // m between adjacent boxes (clamped)
+        public float rawSpacing;   // pre-clamp, for diagnosing a field that doesn't fit
+        public float spanFrom;     // first usable distance along the lane (entrance end)
+        public float spanTo;       // last usable distance along the lane (exit end)
+        public float usable;
+        public float Span => Mathf.Max(0, boxes - 1) * spacing;
+        public float Overflow => Mathf.Max(0f, Span - usable);
+    }
+
+    public static BoxFit FitBoxes(TrackBuilder track, float pitLength, int totalBoxes)
+    {
+        var fit = new BoxFit
+        {
+            boxes = Mathf.Max(1, totalBoxes),
+            exitGap = FallbackExitGap,
+            spacing = FallbackSpacing,
+            spanFrom = FallbackSpanFrom,
+            spanTo = pitLength - FallbackExitGap,
+        };
+
+        // The grey strip can start well after the pit entry and end well before the exit ramp, so box 0's
+        // exit gap comes from the strip's end offset — a fixed gap would park the pole car on the ramp.
+        if (track != null && track.HasPitBoxLane && pitLength > 0f)
+        {
+            fit.spanFrom = track.PitBoxLaneFrom(pitLength) + BandMargin;
+            fit.spanTo = Mathf.Max(fit.spanFrom, track.PitBoxLaneTo(pitLength) - BandMargin);
+            fit.exitGap = pitLength - fit.spanTo;
+        }
+
+        fit.usable = Mathf.Max(0f, fit.spanTo - fit.spanFrom);
+        fit.rawSpacing = fit.boxes > 1 ? fit.usable / (fit.boxes - 1) : 0f;
+        if (pitLength > 0f && fit.boxes > 1) fit.spacing = Mathf.Clamp(fit.rawSpacing, MinSpacing, MaxSpacing);
+        return fit;
+    }
 }

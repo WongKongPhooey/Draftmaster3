@@ -21,6 +21,10 @@ public class PixelUITheme : ScriptableObject
     // makes one source pixel equal one UI pixel with no arithmetic anywhere else.
     public const float ReferencePixelsPerUnit = 100f;
 
+    [Header("Palette — screen")]
+    [Tooltip("The void behind everything — letterbox bars, the space around a menu. Iron Oval #0A0B10.")]
+    public Color screenBase = new Color32(0x0a, 0x0b, 0x10, 0xff);
+
     [Header("Palette — plate")]
     public Color ink = new Color32(0x0b, 0x0d, 0x17, 0xff);
     public Color plateDeep = new Color32(0x10, 0x18, 0x2c, 0xff);
@@ -57,6 +61,39 @@ public class PixelUITheme : ScriptableObject
     public Sprite cursor;
     public Sprite dialogueTail;
 
+    // ---- Iron Oval texture set ---------------------------------------------------------------------
+    // The handoff sheet's /textures, authored at 1x. Tiles are Repeat-wrapped and meant to be drawn with
+    // Image.Type = Tiled; the frames are 9-sliced. See Docs/IronOvalKit.md.
+    [Header("Iron Oval — frames")]
+    [Tooltip("Default window frame: dark outline, cream edge, inner shade. 12x12, border 4.")]
+    public Sprite frameCream;
+    [Tooltip("Focus state only — the window the cursor is in. Swap the frame rather than tinting text.")]
+    public Sprite frameGold;
+    [Tooltip("Confirm button, highlight and shade baked in. 12x12, border 3. Pressed = offset content 2px down.")]
+    public Sprite buttonRed;
+
+    [Header("Iron Oval — tiles")]
+    [Tooltip("Window interior dither. Draw Tiled, not Stretched.")]
+    public Sprite panelFill;
+    [Tooltip("Screen base and modal scrim (drop to 85% alpha over gameplay).")]
+    public Sprite panelFillDeep;
+    [Tooltip("Placeholder hatch for portraits and art that isn't drawn yet — reads as pending, not broken.")]
+    public Sprite hatchSlot;
+    [Tooltip("TV line overlay. Full-screen Tiled Image on top of everything, Raycast Target off.")]
+    public Sprite scanline;
+    [Tooltip("UI-only kerb band for menu backdrops and results headers — not the track.")]
+    public Sprite kerbStripe;
+    [Tooltip("UI-only asphalt noise for menu backdrops. Quiet enough to sit under text.")]
+    public Sprite asphaltNoise;
+
+    [Header("Iron Oval — cells")]
+    [Tooltip("Filled 8x10 cell, left half of the stat-cell sheet. Repeat it for a segmented bar.")]
+    public Sprite statCellFilled;
+    [Tooltip("Empty 8x10 cell, right half of the stat-cell sheet.")]
+    public Sprite statCellEmpty;
+    [Tooltip("Gold selection cursor, 6x8. Blink 0.45s on / 0.45s off and step it by whole rows.")]
+    public Sprite cursorArrow;
+
     [Header("Icons (16x16)")]
     public Sprite iconMoney, iconPart, iconFuel, iconTrophy, iconStar, iconQuest,
                   iconMap, iconSpeech, iconClock, iconFlag, iconTyre, iconHeart,
@@ -68,10 +105,19 @@ public class PixelUITheme : ScriptableObject
     public TMP_FontAsset body;
     [Tooltip("Display face for headings and big numbers — the racing brand voice against the pixel body.")]
     public TMP_FontAsset display;
+    [Tooltip("Fixed-advance face for dense columns: running order, timing, tyre readouts. Its constant " +
+             "advance width keeps columns aligned with no tab work. Iron Oval: VT323.")]
+    public TMP_FontAsset data;
     [Tooltip("The same pixel typeface as a plain Font, for the IMGUI panels (dialogue choices, debug " +
-             "overlays) that cannot take a TMP asset. fixedsys renders crisply at its native sizes, so " +
-             "use whole multiples of 8pt.")]
+             "overlays) that cannot take a TMP asset. Iron Oval: VT323, the data face — most IMGUI in " +
+             "this project is a readout. Use whole multiples of its 16pt cell.")]
     public Font imguiFont;
+    [Tooltip("IMGUI counterpart of `display` — Silkscreen, for headings, labels and buttons. Whole " +
+             "multiples of 8pt only; a bitmap face resampled to 12 or 20pt loses its stems.")]
+    public Font imguiDisplayFont;
+    [Tooltip("IMGUI counterpart of `body` — Pixelify Sans, for prose (dialogue, quest copy). Whole " +
+             "multiples of its 20pt design grid.")]
+    public Font imguiBodyFont;
 
     [Header("Metrics (UI pixels)")]
     [Tooltip("Body copy size. A multiple of the font's native pixel height keeps glyphs sharp.")]

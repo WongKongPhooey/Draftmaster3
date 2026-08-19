@@ -1,8 +1,12 @@
 using UnityEngine;
 
-// On-screen 2×2 tyre readout for the player's car: each corner shows its temperature (background colour:
-// blue = cold, green = optimal, red = overheating) and its wear (dark fill rising from the bottom;
-// the % is tyre life remaining — 100 fresh, counting down to 0).
+// On-screen 2×2 tyre readout for the player's car: each corner shows its temperature and the life left in
+// the tyre (100 fresh, counting down to 0).
+//
+// Drawn with the Iron Oval kit. Temperature is a continuous bar because it is a continuous reading, and
+// life is a ten-cell segmented bar because that is a quantity the driver counts rather than reads — the
+// same split the kit's own HUD block makes. Colour carries meaning, not decoration: telemetry blue while
+// the tyre is cold, gain green in the window, alarm red once it is over temperature or nearly worn out.
 public class TireTempWearUI : MonoBehaviour
 {
     [Tooltip("Tyre model to display. Auto-found from the player's car if left empty.")]
@@ -12,14 +16,11 @@ public class TireTempWearUI : MonoBehaviour
     public KeyCode toggleKey = KeyCode.F6;
     public bool visible = true;
 
-    [Header("Layout")]
-    public float cellW = 78f;
-    public float cellH = 56f;
-    public float gap = 6f;
-    public Vector2 margin = new Vector2(20f, 30f);
-
-    static Texture2D _tex;
-    GUIStyle _style;
+    [Header("Layout (UI pixels, before PixelGUI.Scale)")]
+    public float cellW = 62f;
+    public float cellH = 34f;
+    public float gap = 4f;
+    public Vector2 margin = new Vector2(10f, 14f);
 
     void Update()
     {
@@ -42,53 +43,55 @@ public class TireTempWearUI : MonoBehaviour
     void OnGUI()
     {
         if (!visible || tires == null) return;
-        if (_tex == null) { _tex = new Texture2D(1, 1); _tex.SetPixel(0, 0, Color.white); _tex.Apply(); }
-        if (_style == null)
-            _style = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
 
-        float x0 = margin.x;
-        float y0 = Screen.height - 2f * cellH - gap - margin.y;
+        float cw = PixelGUI.Px(cellW), ch = PixelGUI.Px(cellH), g = PixelGUI.Px(gap);
+        float pad = PixelGUI.Px(6f);
+        float boardW = cw * 2f + g, boardH = ch * 2f + g;
+        float x0 = PixelGUI.Px(margin.x) + pad;
+        float y0 = Screen.height - boardH - PixelGUI.Px(margin.y) - pad;
 
-        DrawTyre("FL", TireModel.FL, x0, y0);
-        DrawTyre("FR", TireModel.FR, x0 + cellW + gap, y0);
-        DrawTyre("RL", TireModel.RL, x0, y0 + cellH + gap);
-        DrawTyre("RR", TireModel.RR, x0 + cellW + gap, y0 + cellH + gap);
+        PixelGUI.Panel(new Rect(x0 - pad, y0 - pad, boardW + pad * 2f, boardH + pad * 2f));
+
+        DrawTyre("FL", TireModel.FL, x0, y0, cw, ch);
+        DrawTyre("FR", TireModel.FR, x0 + cw + g, y0, cw, ch);
+        DrawTyre("RL", TireModel.RL, x0, y0 + ch + g, cw, ch);
+        DrawTyre("RR", TireModel.RR, x0 + cw + g, y0 + ch + g, cw, ch);
     }
 
-    void DrawTyre(string label, int i, float x, float y)
+    void DrawTyre(string label, int i, float x, float y, float w, float h)
     {
         float t = tires.tempC[i];
-        float w = Mathf.Clamp01(tires.wear[i]);
+        float life = 1f - Mathf.Clamp01(tires.wear[i]);
 
-        Fill(new Rect(x, y, cellW, cellH), TempColor(t));                          // temperature background
-        Fill(new Rect(x, y + cellH * (1f - w), cellW, cellH * w), new Color(0f, 0f, 0f, 0.45f)); // wear fill
-        Outline(new Rect(x, y, cellW, cellH), new Color(0f, 0f, 0f, 0.8f));
+        float line = PixelGUI.Px(8f);
+        // Corner and temperature on one Silkscreen line, then the temperature bar, then the life cells.
+        GUI.Label(new Rect(x, y, w, line), label, PixelGUI.Label);
+        var tempLabel = PixelGUI.Data;
+        var prevAlign = tempLabel.alignment;
+        tempLabel.alignment = TextAnchor.UpperRight;
+        GUI.Label(new Rect(x, y - PixelGUI.Px(3f), w, PixelGUI.Px(12f)), $"{t:F0}°", tempLabel);
+        tempLabel.alignment = prevAlign;
 
-        GUI.Label(new Rect(x, y, cellW, cellH), $"{label}\n{t:F0}°C\n{(1f - w) * 100f:F0}%", _style);
+        PixelGUI.Bar(new Rect(x, y + line + PixelGUI.Px(2f), w, PixelGUI.Px(5f)), TempFill(t), TempColour(t));
+
+        // Ten cells of life, red once a third of the tyre is gone — the point at which the lap time is
+        // already going away, rather than the point at which the tyre is finished.
+        int cells = Mathf.CeilToInt(life * 10f);
+        var wearColour = life > 0.66f ? PixelGUI.Confirm : life > 0.33f ? PixelGUI.Gold : PixelGUI.Danger;
+        PixelGUI.Cells(new Rect(x, y + line + PixelGUI.Px(9f), w, PixelGUI.Px(10f)), cells, 10, wearColour);
     }
 
-    Color TempColor(float t)
+    // How full the temperature bar reads: empty at cold, full at the overheat threshold.
+    float TempFill(float t) => Mathf.Clamp01(Mathf.InverseLerp(tires.coldC, tires.overheatC, t));
+
+    Color TempColour(float t)
     {
         if (t < tires.optimalC)
-            return Color.Lerp(new Color(0.30f, 0.55f, 1f), new Color(0.25f, 0.9f, 0.35f),
-                Mathf.Clamp01(Mathf.InverseLerp(tires.coldC, tires.optimalC, t)));
-        return Color.Lerp(new Color(0.25f, 0.9f, 0.35f), new Color(1f, 0.25f, 0.18f),
-            Mathf.Clamp01(Mathf.InverseLerp(tires.optimalC, tires.overheatC, t)));
-    }
-
-    static void Fill(Rect r, Color c)
-    {
-        var prev = GUI.color;
-        GUI.color = c;
-        GUI.DrawTexture(r, _tex);
-        GUI.color = prev;
-    }
-
-    static void Outline(Rect r, Color c)
-    {
-        Fill(new Rect(r.x, r.y, r.width, 1f), c);
-        Fill(new Rect(r.x, r.yMax - 1f, r.width, 1f), c);
-        Fill(new Rect(r.x, r.y, 1f, r.height), c);
-        Fill(new Rect(r.xMax - 1f, r.y, 1f, r.height), c);
+        {
+            // Cold to in-window. Stepped rather than a gradient: the kit's palette has three states here
+            // and a continuous blend would land on colours that are in neither.
+            return Mathf.InverseLerp(tires.coldC, tires.optimalC, t) > 0.75f ? PixelGUI.Confirm : PixelGUI.Info;
+        }
+        return Mathf.InverseLerp(tires.optimalC, tires.overheatC, t) > 0.75f ? PixelGUI.Danger : PixelGUI.Confirm;
     }
 }

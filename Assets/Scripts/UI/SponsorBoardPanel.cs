@@ -145,7 +145,7 @@ public class SponsorBoardPanel : MonoBehaviour
 
     float AddHeading(string text, float y)
     {
-        var t = MakeText("Heading", _rows, _font, 26, FontStyle.Bold, TextAnchor.UpperLeft, new Color(1f, 0.82f, 0.25f));
+        var t = MakeText("Heading", _rows, BrandFonts.Display, 24, FontStyle.Normal, TextAnchor.UpperLeft, PixelGUI.Gold);
         t.text = text;
         Place(t.rectTransform, y, 32f);
         return y + 36f;
@@ -153,7 +153,7 @@ public class SponsorBoardPanel : MonoBehaviour
 
     float AddRow(string text, float y)
     {
-        var t = MakeText("Row", _rows, _font, 24, FontStyle.Normal, TextAnchor.UpperLeft, new Color(1f, 1f, 1f, 0.85f));
+        var t = MakeText("Row", _rows, _font, 24, FontStyle.Normal, TextAnchor.UpperLeft, PixelGUI.TextDim);
         t.text = text;
         float h = text.Contains("\n") ? 56f : 32f;
         Place(t.rectTransform, y, h);
@@ -168,7 +168,7 @@ public class SponsorBoardPanel : MonoBehaviour
         go.transform.SetParent(_rows, false);
         Place(go.GetComponent<RectTransform>(), y, h);
 
-        var text = MakeText("Label", go.GetComponent<RectTransform>(), _font, 24, FontStyle.Normal, TextAnchor.UpperLeft, Color.white);
+        var text = MakeText("Label", go.GetComponent<RectTransform>(), _font, 24, FontStyle.Normal, TextAnchor.UpperLeft, PixelGUI.Text);
         text.text = label;
         var lrt = text.rectTransform;
         lrt.anchorMin = new Vector2(0, 0); lrt.anchorMax = new Vector2(1, 1);
@@ -177,7 +177,7 @@ public class SponsorBoardPanel : MonoBehaviour
         var btnGo = new GameObject("Action", typeof(RectTransform));
         btnGo.transform.SetParent(go.transform, false);
         var img = btnGo.AddComponent<Image>();
-        img.color = new Color(0.16f, 0.20f, 0.28f, 1f);
+        img.color = PixelGUI.PlateLight;
         var brt = btnGo.GetComponent<RectTransform>();
         brt.anchorMin = new Vector2(1, 0); brt.anchorMax = new Vector2(1, 1);
         brt.pivot = new Vector2(1, 0.5f);
@@ -188,7 +188,7 @@ public class SponsorBoardPanel : MonoBehaviour
         btn.targetGraphic = img;
         btn.onClick.AddListener(onClick);
 
-        var btnText = MakeText("Text", brt, _font, 22, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.6f));
+        var btnText = MakeText("Text", brt, BrandFonts.Display, 16, FontStyle.Normal, TextAnchor.MiddleCenter, PixelGUI.Gold);
         btnText.text = action;
         var trt = btnText.rectTransform;
         trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
@@ -221,7 +221,8 @@ public class SponsorBoardPanel : MonoBehaviour
         _root = new GameObject("Panel", typeof(RectTransform));
         _root.transform.SetParent(transform, false);
         var dim = _root.AddComponent<Image>();
-        dim.color = new Color(0f, 0f, 0f, 0.6f);
+        // Scrim in the kit's screen void rather than plain black, so the pit lane behind it stays readable.
+        dim.color = new Color(PixelGUI.ScreenBase.r, PixelGUI.ScreenBase.g, PixelGUI.ScreenBase.b, 0.85f);
         var drt = _root.GetComponent<RectTransform>();
         drt.anchorMin = Vector2.zero; drt.anchorMax = Vector2.one;
         drt.offsetMin = Vector2.zero; drt.offsetMax = Vector2.zero;
@@ -229,21 +230,21 @@ public class SponsorBoardPanel : MonoBehaviour
         var card = new GameObject("Card", typeof(RectTransform));
         card.transform.SetParent(_root.transform, false);
         var cbg = card.AddComponent<Image>();
-        cbg.color = new Color(0.06f, 0.07f, 0.10f, 0.97f);
+        cbg.color = PixelGUI.Plate;
         var crt = card.GetComponent<RectTransform>();
         crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f);
         crt.pivot = new Vector2(0.5f, 0.5f);
         crt.sizeDelta = new Vector2(1120, 760);
 
-        _title = MakeText("Title", card.GetComponent<RectTransform>(), _font, 40, FontStyle.Bold, TextAnchor.UpperLeft,
-                          new Color(1f, 0.82f, 0.25f));
+        _title = MakeText("Title", card.GetComponent<RectTransform>(), BrandFonts.Display, 32, FontStyle.Normal,
+                          TextAnchor.UpperLeft, PixelGUI.Gold);
         var trt = _title.rectTransform;
         trt.anchorMin = new Vector2(0, 1); trt.anchorMax = new Vector2(1, 1);
         trt.pivot = new Vector2(0.5f, 1f);
         trt.offsetMin = new Vector2(44, -96); trt.offsetMax = new Vector2(-44, -32);
 
         _income = MakeText("Income", card.GetComponent<RectTransform>(), _font, 26, FontStyle.Bold, TextAnchor.UpperRight,
-                           new Color(0.6f, 1f, 0.7f));
+                           PixelGUI.Confirm);
         var irt = _income.rectTransform;
         irt.anchorMin = new Vector2(0, 1); irt.anchorMax = new Vector2(1, 1);
         irt.pivot = new Vector2(0.5f, 1f);
@@ -273,14 +274,14 @@ public class SponsorBoardPanel : MonoBehaviour
         scroll.movementType = ScrollRect.MovementType.Clamped;
         scroll.scrollSensitivity = 30f;
 
-        _status = MakeText("Status", card.GetComponent<RectTransform>(), _font, 24, FontStyle.Italic, TextAnchor.LowerLeft,
-                           new Color(1f, 1f, 1f, 0.75f));
+        _status = MakeText("Status", card.GetComponent<RectTransform>(), _font, 24, FontStyle.Normal, TextAnchor.LowerLeft,
+                           PixelGUI.TextDim);
         var srt = _status.rectTransform;
         srt.anchorMin = new Vector2(0, 0); srt.anchorMax = new Vector2(1, 0);
         srt.offsetMin = new Vector2(44, 56); srt.offsetMax = new Vector2(-44, 92);
 
-        var hint = MakeText("Hint", card.GetComponent<RectTransform>(), _font, 22, FontStyle.Italic, TextAnchor.LowerRight,
-                            new Color(1f, 1f, 1f, 0.5f));
+        var hint = MakeText("Hint", card.GetComponent<RectTransform>(), _font, 22, FontStyle.Normal, TextAnchor.LowerRight,
+                            PixelGUI.TextDisabled);
         hint.text = "A sponsor pays nothing until its decal is on a panel  •  Press E to close";
         var hrt = hint.rectTransform;
         hrt.anchorMin = new Vector2(0, 0); hrt.anchorMax = new Vector2(1, 0);
