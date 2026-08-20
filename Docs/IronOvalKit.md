@@ -116,8 +116,13 @@ label, command (`NewSeason` / `Continue` / `Exhibition` / `LoadScene` / `NotWire
 whose destination isn't in the build settings draws disabled and says so when picked, rather than
 silently doing nothing.
 
-Nothing boots into it yet: add `TitleScreen` to the build settings (first) when you want it as the front
-door. `GARAGE` lights up once `TeamGarage` is in that list too.
+Where the rows go: `NEW SEASON` starts a fresh weekend at `newSeasonTrackId` (Watkins Glen, the reference
+track) and loads the shared race scene; `CONTINUE` loads it at whatever track is selected, falling back to
+the same one when that selection has no layout; `GARAGE` opens `GarageScreen`, whose BACK returns here.
+`TitleScreen`, `RaceScene` and `GarageScreen` are all in the build settings, so all four live rows work.
+
+It is not the boot scene — `DemoMenu` is still build index 0. Drag `TitleScreen` to the top of
+File > Build Profiles > Scene List to make it the front door.
 
 The scene is generated — re-running the menu item rebuilds it from scratch. Keep anything hand-made in a
 prefab the scene references, and take changes to the look back to the design project first.

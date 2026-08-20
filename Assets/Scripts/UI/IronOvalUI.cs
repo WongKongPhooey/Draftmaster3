@@ -19,7 +19,7 @@ public static class IronOvalUI
 
     // Type roles. Header is the uppercase Silkscreen voice, Body is Pixelify Sans prose, Data is the
     // fixed-advance VT323 used for anything that has to line up in columns.
-    public enum Role { Header, HeaderSmall, Body, BodyLarge, Data }
+    public enum Role { Header, HeaderSmall, Body, BodyLarge, Display, Data }
 
     public static TextMeshProUGUI Label(Transform parent, string name, string content,
                                         Role role = Role.Body, Color? colour = null)
@@ -48,6 +48,9 @@ public static class IronOvalUI
             case Role.Header:      font = t.display; size = 16; defaultColour = t.gold; break;
             case Role.HeaderSmall: font = t.display; size = 8;  defaultColour = t.gold; break;
             case Role.BodyLarge:   font = t.body;    size = 40; defaultColour = t.text; break;
+            // The title-screen voice. 60 is the top of Pixelify's 20-grid ladder — the sheet's 62px
+            // wordmark rounded onto it, so the logo stays hard-edged.
+            case Role.Display:     font = t.body;    size = 60; defaultColour = t.text; break;
             case Role.Data:        font = t.data;    size = 16; defaultColour = t.textDim; break;
             default:               font = t.body;    size = 20; defaultColour = t.text; break;
         }
