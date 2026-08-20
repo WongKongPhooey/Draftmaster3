@@ -1,0 +1,380 @@
+#if UNITY_EDITOR
+using System.IO;
+using TMPro;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.UI;
+
+// Builds Assets/Scenes/GarageScreen.unity from the Iron Oval design file's GARAGE screen (the updated
+// pass: car slot + career + accolades left, driver stats over an XP meter in the middle, car stats and
+// fitted parts right).
+//
+//   Draftmaster > Art > Build Garage Screen Scene
+//
+// The sheet is 844x390; this is the project's 640x360 canvas at the same proportions — left column 208
+// becomes 158, right 212 becomes 161, and the middle takes the rest. Driver-stat cells are gold, car-stat
+// cells telemetry blue, exactly as the sheet separates the two.
+//
+// The middle block is every attribute the Drivers table keeps, in DriverAttributeSheet order: the two
+// 0-100 ability ratings full width, then the sixteen 0-20 skills in two grouped columns. GarageScreenUI
+// fills those rows by index, so the order rows are added in here is the order that sheet declares.
+//
+// What each field is bound to (and why nothing is faked) is in GarageScreenUI's class comment. The one
+// deliberate substitution: the sheet's bottom strip switches between four team drivers, and this game has
+// one car, so that strip carries the weekend and the way out to the track.
+//
+// Generated, not hand-authored: re-running rebuilds it.
+public static class IronOvalGarageBuilder
+{
+    const string kScenePath = "Assets/Scenes/GarageScreen.unity";
+
+    [MenuItem("Draftmaster/Art/Build Garage Screen Scene", priority = 126)]
+    public static void Build()
+    {
+        var theme = PixelUITheme.Instance;
+        if (theme == null || theme.body == null)
+        {
+            EditorUtility.DisplayDialog("Iron Oval",
+                "The theme has no Iron Oval fonts yet. Run Draftmaster > Art > Set Up Iron Oval Kit first.", "OK");
+            return;
+        }
+
+        int W = PixelUITheme.ReferenceWidth;
+        int H = PixelUITheme.ReferenceHeight;
+
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+        var camGo = new GameObject("GarageCamera", typeof(Camera));
+        var cam = camGo.GetComponent<Camera>();
+        cam.orthographic = true;
+        cam.orthographicSize = H / 2f / PixelUITheme.ReferencePixelsPerUnit;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = theme.screenBase;
+        camGo.transform.position = new Vector3(0f, 0f, -10f);
+
+        var canvasGo = new GameObject("GarageCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        var canvas = canvasGo.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = cam;
+        canvas.planeDistance = 1f;
+        PixelUI.ApplyScaler(canvasGo.GetComponent<CanvasScaler>());
+        var root = (RectTransform)canvasGo.transform;
+
+        var ui = canvasGo.AddComponent<GarageScreenUI>();
+
+        // --- header band ------------------------------------------------------------------------------
+        var band = Plate(root, "HeaderBand", theme.plateLight);
+        band.anchorMin = new Vector2(0f, 1f);
+        band.anchorMax = new Vector2(1f, 1f);
+        band.pivot = new Vector2(0.5f, 1f);
+        band.sizeDelta = new Vector2(0f, 16f);
+        band.anchoredPosition = Vector2.zero;
+
+        var title = IronOvalUI.Label(band, "Title", "GARAGE", IronOvalUI.Role.Header, theme.text);
+        Place(title.rectTransform, 8f, -3f, 200f, 14f);
+
+        var cash = IronOvalUI.Label(band, "Cash", "$0", IronOvalUI.Role.Header, theme.gold);
+        Anchor(cash.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, -3f), new Vector2(200f, 14f));
+        cash.alignment = TextAlignmentOptions.Right;
+        ui.cashLabel = cash;
+
+        float top = -22f;
+        float colH = H - 22f - 30f;      // band above, weekend strip below
+
+        // --- left: the car, then who is driving it -----------------------------------------------------
+        float leftW = 158f;
+        var carSlot = IronOvalUI.ArtSlot(root, "CarSlot", new Vector2(leftW, 62f),
+                                         "[ car sprite ]", keyline: true);
+        Place(carSlot, 8f, top, leftW, 62f);
+        var caption = carSlot.Find("Caption");
+        if (caption != null) ui.carSlotCaption = caption.GetComponent<TextMeshProUGUI>();
+
+        var identity = Plate(root, "Identity", theme.plate);
+        Place(identity, 8f, top - 66f, leftW, colH - 66f);
+
+        var name = IronOvalUI.Label(identity, "Name", "YOU", IronOvalUI.Role.Body, theme.text);
+        Place(name.rectTransform, 8f, -6f, leftW - 16f, 22f);
+        ui.driverName = name;
+
+        var number = IronOvalUI.Label(identity, "Number", "#8", IronOvalUI.Role.HeaderSmall, theme.danger);
+        Place(number.rectTransform, 8f, -28f, 40f, 10f);
+        ui.driverNumber = number;
+
+        var level = IronOvalUI.Label(identity, "Level", "LV 1", IronOvalUI.Role.HeaderSmall, theme.textDim);
+        Place(level.rectTransform, 50f, -28f, 60f, 10f);
+        ui.driverLevel = level;
+
+        // The rest of the driver's database row: team, then age / manufacturer / nickname on one line.
+        var team = IronOvalUI.Label(identity, "Team", "NO TEAM", IronOvalUI.Role.HeaderSmall, theme.text);
+        Place(team.rectTransform, 8f, -40f, leftW - 16f, 10f);
+        team.textWrappingMode = TextWrappingModes.NoWrap;
+        ui.driverTeam = team;
+
+        var bio = IronOvalUI.Label(identity, "Bio", "", IronOvalUI.Role.HeaderSmall, theme.textDim);
+        Place(bio.rectTransform, 8f, -52f, leftW - 16f, 10f);
+        bio.textWrappingMode = TextWrappingModes.NoWrap;
+        ui.driverBio = bio;
+
+        Place(Plate(identity, "Rule0", theme.plateLight), 8f, -66f, leftW - 16f, 1f);
+
+        var careerHead = IronOvalUI.Label(identity, "CareerHead", "CAREER", IronOvalUI.Role.HeaderSmall, theme.gold);
+        Place(careerHead.rectTransform, 8f, -72f, 100f, 10f);
+
+        float cy = -84f;
+        for (int i = 0; i < 3; i++)
+        {
+            var label = IronOvalUI.Label(identity, "CareerLabel_" + i, "-", IronOvalUI.Role.HeaderSmall, theme.textDim);
+            Place(label.rectTransform, 8f, cy, 90f, 10f);
+
+            var value = IronOvalUI.Label(identity, "CareerValue_" + i, "0", IronOvalUI.Role.HeaderSmall, theme.text);
+            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, cy), new Vector2(60f, 10f));
+            value.alignment = TextAlignmentOptions.Right;
+
+            ui.careerRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
+            cy -= 12f;
+        }
+
+        Place(Plate(identity, "Rule1", theme.plateLight), 8f, cy - 2f, leftW - 16f, 1f);
+        cy -= 8f;
+
+        var accHead = IronOvalUI.Label(identity, "AccoladesHead", "ACCOLADES", IronOvalUI.Role.HeaderSmall, theme.gold);
+        Place(accHead.rectTransform, 8f, cy, 120f, 10f);
+        cy -= 13f;
+
+        for (int i = 0; i < 3; i++)
+        {
+            var line = IronOvalUI.Label(identity, "Accolade_" + i, "", IronOvalUI.Role.HeaderSmall, theme.textDim);
+            Place(line.rectTransform, 8f, cy, leftW - 16f, 10f);
+            ui.accoladeLines.Add(line);
+            cy -= 13f;
+        }
+
+        // --- middle: the driver ------------------------------------------------------------------------
+        float midX = 8f + leftW + 8f;
+        float midW = W - midX - 161f - 16f;
+        var middle = Plate(root, "DriverStats", theme.plate);
+        Place(middle, midX, top, midW, colH);
+
+        var statsHead = IronOvalUI.Label(middle, "Head", "DRIVER STATS", IronOvalUI.Role.HeaderSmall, theme.gold);
+        Place(statsHead.rectTransform, 10f, -8f, 200f, 10f);
+
+        // Rows are added in DriverAttributeSheet.All order — ability across the top, then the left column
+        // (track types, standing) and the right column (craft) — because GarageScreenUI fills them by
+        // index. Change the order here and the sheet has to change with it, not the other way round.
+        float sy = -22f;
+        foreach (var attribute in DriverAttributeSheet.Ability)
+        {
+            var rowRt = Row(middle, "Ability_" + ui.driverStats.Count, 10f, sy, midW - 20f, 14f);
+
+            var label = IronOvalUI.Label(rowRt, "Label", attribute.Label, IronOvalUI.Role.HeaderSmall, theme.textDim);
+            Place(label.rectTransform, 0f, -2f, 90f, 10f);
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+
+            var cells = IronOvalUI.StatCells(rowRt, "Cells", 0, 10);   // gold: the driver's own numbers
+            Place(cells, 94f, -1f, 110f, 10f);
+
+            var value = IronOvalUI.Label(rowRt, "Value", "-", IronOvalUI.Role.HeaderSmall, theme.text);
+            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, -2f), new Vector2(40f, 10f));
+            value.alignment = TextAlignmentOptions.Right;
+
+            ui.driverStats.Add(new GarageScreenUI.StatRow { label = label, cells = cells, value = value });
+            sy -= 18f;
+        }
+
+        Place(Plate(middle, "StatsRule", theme.plateLight), 10f, sy - 2f, midW - 20f, 1f);
+
+        // The sixteen 0-20 skills, two columns of grouped rows. Each row is the car-stats shape — name and
+        // number on one line, the cell bar under it — because a 130px column has no room for all three
+        // side by side.
+        const float colW = 130f;
+        const float colGap = 9f;
+        float colTop = sy - 10f;
+        float colAx = 10f;
+        float colBx = colAx + colW + colGap;
+
+        float ay = SkillGroup(ui, middle, theme, "TRACK TYPES", DriverAttributeSheet.TrackTypes, colAx, colTop, colW);
+        SkillGroup(ui, middle, theme, "STANDING", DriverAttributeSheet.Standing, colAx, ay, colW);
+        SkillGroup(ui, middle, theme, "CRAFT", DriverAttributeSheet.Craft, colBx, colTop, colW);
+
+        // XP row, pinned to the foot of the block as the sheet has it (the columns above are near enough
+        // full now, so it can't float below the last one any more).
+        float xpY = -(colH - 20f);
+
+        var xpHead = IronOvalUI.Label(middle, "XPHead", "FAN APPEAL", IronOvalUI.Role.HeaderSmall, theme.gold);
+        Place(xpHead.rectTransform, 10f, xpY, 90f, 10f);
+
+        var xpTrack = Plate(middle, "XPTrack", theme.plateLight);
+        Place(xpTrack, 94f, xpY, midW - 150f, 9f);
+        var xpFill = Plate(xpTrack, "XPFill", theme.confirm);
+        Place(xpFill, 0f, 0f, 0f, 9f);
+        ui.xpBar = xpFill;
+
+        var xpValue = IronOvalUI.Label(middle, "XPValue", "0/100", IronOvalUI.Role.HeaderSmall, theme.textDim);
+        Anchor(xpValue.rectTransform, new Vector2(1f, 1f), new Vector2(-10f, xpY), new Vector2(46f, 10f));
+        xpValue.alignment = TextAlignmentOptions.Right;
+        ui.xpLabel = xpValue;
+
+        // --- right: the car's numbers and what's bolted on ---------------------------------------------
+        float rightW = 161f;
+        var right = Plate(root, "CarStats", theme.plate);
+        Place(right, W - rightW - 8f, top, rightW, colH);
+
+        var carHead = IronOvalUI.Label(right, "Head", "CAR STATS", IronOvalUI.Role.HeaderSmall, theme.gold);
+        Place(carHead.rectTransform, 8f, -8f, 140f, 10f);
+
+        float ry = -22f;
+        for (int i = 0; i < 4; i++)
+        {
+            var rowRt = Row(right, "CarStat_" + i, 8f, ry, rightW - 16f, 20f);
+
+            var label = IronOvalUI.Label(rowRt, "Label", "-", IronOvalUI.Role.HeaderSmall, theme.textDim);
+            Place(label.rectTransform, 0f, 0f, 80f, 10f);
+
+            var value = IronOvalUI.Label(rowRt, "Value", "-", IronOvalUI.Role.HeaderSmall, theme.text);
+            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(64f, 10f));
+            value.alignment = TextAlignmentOptions.Right;
+
+            // Telemetry blue: the sheet keeps the car's cells a different colour from the driver's.
+            var cells = IronOvalUI.StatCells(rowRt, "Cells", 0, 10, theme.info);
+            Place(cells, 0f, -11f, rightW - 16f, 8f);
+
+            ui.carStats.Add(new GarageScreenUI.StatRow { label = label, cells = cells, value = value, tint = theme.info });
+            ry -= 24f;
+        }
+
+        Place(Plate(right, "Rule", theme.plateLight), 8f, ry, rightW - 16f, 1f);
+        ry -= 8f;
+
+        var partsHead = IronOvalUI.Label(right, "PartsHead", "FITTED PARTS", IronOvalUI.Role.HeaderSmall, theme.gold);
+        Place(partsHead.rectTransform, 8f, ry, 140f, 10f);
+        ry -= 14f;
+
+        for (int i = 0; i < 4; i++)
+        {
+            var slot = IronOvalUI.Label(right, "Slot_" + i, "SLOT", IronOvalUI.Role.HeaderSmall, theme.textDisabled);
+            Place(slot.rectTransform, 8f, ry, 60f, 10f);
+
+            var item = IronOvalUI.Label(right, "Item_" + i, "stock", IronOvalUI.Role.HeaderSmall, theme.text);
+            Anchor(item.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, ry), new Vector2(96f, 10f));
+            item.alignment = TextAlignmentOptions.Right;
+
+            ui.partRows.Add(new GarageScreenUI.TextPair { label = slot, value = item });
+            ry -= 15f;
+        }
+
+        // --- weekend strip (the sheet's roster row) ----------------------------------------------------
+        var strip = Plate(root, "WeekendStrip", theme.plateDeep);
+        strip.anchorMin = new Vector2(0f, 0f);
+        strip.anchorMax = new Vector2(1f, 0f);
+        strip.pivot = new Vector2(0.5f, 0f);
+        strip.sizeDelta = new Vector2(-16f, 24f);
+        strip.anchoredPosition = new Vector2(0f, 4f);
+
+        var weekend = IronOvalUI.Label(strip, "Weekend", "NO TRACK SELECTED", IronOvalUI.Role.HeaderSmall, theme.text);
+        Place(weekend.rectTransform, 8f, -6f, 320f, 10f);
+        ui.weekendLabel = weekend;
+
+        var status = IronOvalUI.Label(strip, "Status", "", IronOvalUI.Role.HeaderSmall, theme.caution);
+        Place(status.rectTransform, 8f, -15f, 320f, 10f);
+        ui.statusLabel = status;
+
+        var race = IronOvalUI.Button(strip, "Race", "RACE", new Vector2(72f, 18f));
+        Anchor((RectTransform)race.transform, new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(72f, 18f),
+               pivot: new Vector2(1f, 0.5f));
+        race.onClick.AddListener(ui.Race);
+
+        // TabButton returns the FACE, stretched inside its shadow parent — position the parent, or the
+        // face detaches from its plate and the label wraps a letter per line.
+        var back = IronOvalUI.TabButton(strip, "Back", "BACK", new Vector2(56f, 18f));
+        Anchor((RectTransform)back.transform.parent, new Vector2(1f, 0.5f), new Vector2(-88f, 0f),
+               new Vector2(56f, 18f), pivot: new Vector2(1f, 0.5f));
+        back.onClick.AddListener(ui.Back);
+
+        var lines = new GameObject("IronOvalScanlines", typeof(IronOvalScanlines));
+        lines.GetComponent<IronOvalScanlines>().opacity = 0.6f;
+
+        // Fill it in once so the saved scene shows real values rather than placeholders.
+        ui.Refresh();
+
+        Directory.CreateDirectory(Path.GetDirectoryName(kScenePath));
+        EditorSceneManager.SaveScene(scene, kScenePath);
+        AssetDatabase.SaveAssets();
+
+        Debug.Log($"Iron Oval: built the garage screen at {kScenePath}.");
+    }
+
+    // One headed group of 0-20 skills down a column. Returns the y the next group starts at.
+    static float SkillGroup(GarageScreenUI ui, RectTransform parent, PixelUITheme theme, string heading,
+                            DriverAttributeSheet.Attribute[] attributes, float x, float y, float w)
+    {
+        const float rowPitch = 20f;
+
+        var head = IronOvalUI.Label(parent, heading.Replace(' ', '_') + "Head", heading,
+                                    IronOvalUI.Role.HeaderSmall, theme.gold);
+        Place(head.rectTransform, x, y, w, 10f);
+        y -= 14f;
+
+        foreach (var attribute in attributes)
+        {
+            var rowRt = Row(parent, "Stat_" + ui.driverStats.Count, x, y, w, rowPitch);
+
+            var label = IronOvalUI.Label(rowRt, "Label", attribute.Label, IronOvalUI.Role.HeaderSmall, theme.textDim);
+            Place(label.rectTransform, 0f, 0f, 90f, 10f);
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+
+            var value = IronOvalUI.Label(rowRt, "Value", "-", IronOvalUI.Role.HeaderSmall, theme.text);
+            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(38f, 10f));
+            value.alignment = TextAlignmentOptions.Right;
+
+            var cells = IronOvalUI.StatCells(rowRt, "Cells", 0, 10);
+            Place(cells, 0f, -10f, w, 10f);
+
+            ui.driverStats.Add(new GarageScreenUI.StatRow { label = label, cells = cells, value = value });
+            y -= rowPitch;
+        }
+
+        return y - 6f;   // a group's worth of air before the next heading
+    }
+
+    // ------------------------------------------------------------------ layout helpers
+
+    static RectTransform Row(Transform parent, string name, float x, float y, float w, float h)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var rt = (RectTransform)go.transform;
+        Place(rt, x, y, w, h);
+        return rt;
+    }
+
+    static RectTransform Plate(Transform parent, string name, Color colour)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var img = go.GetComponent<Image>();
+        img.color = colour;
+        img.raycastTarget = false;
+        return (RectTransform)go.transform;
+    }
+
+    // Top-left placement in UI pixels: (x, y) is the corner, y running negative down the column.
+    static void Place(RectTransform rt, float x, float y, float w, float h)
+    {
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.sizeDelta = new Vector2(w, h);
+        rt.anchoredPosition = new Vector2(x, y);
+    }
+
+    static void Anchor(RectTransform rt, Vector2 anchor, Vector2 position, Vector2 size, Vector2? pivot = null)
+    {
+        rt.anchorMin = anchor;
+        rt.anchorMax = anchor;
+        rt.pivot = pivot ?? anchor;
+        rt.sizeDelta = size;
+        rt.anchoredPosition = position;
+    }
+}
+#endif

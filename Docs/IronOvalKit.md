@@ -95,3 +95,97 @@ Most in-race UI in the spline scenes draws with OnGUI rather than a Canvas, so t
 | `imguiBodyFont` | PixelifySans-Variable | prose (20pt) |
 
 Kit textures import Read/Write enabled because that upscale runs through `GetPixels`. `PixelGUISkin` additionally restyles Unity's built-in skin from the theme, so a panel not yet moved onto `PixelGUI` still picks up the font, palette, plate and sliders.
+
+## Title screen
+
+`Draftmaster > Art > Build Title Screen Scene` generates `Assets/Scenes/TitleScreen.unity` from the
+design file's TITLE screen (`Iron Oval UI.dc.html` in the Claude Design project — see the memory note
+`iron-oval-design-source`). Preview: `Assets/Screenshots/ironoval_title.png`.
+
+| Sheet | Here |
+| --- | --- |
+| 844x390 landscape mock | the 640x360 reference canvas, same proportions — copy column ~51% of the width |
+| Wordmark 62px Pixelify Sans, 4px hard shadow | 60px (top of Pixelify's 20px ladder; 62 is off-grid and renders soft), shadow = a second label offset 4,-4 in `ink` — TMP's underlay is a blur |
+| Eyebrow / season / footer, Silkscreen 9-10px | Silkscreen 8, the size the face is drawn for, with tracking |
+| Menu rows, blinking ▶ | the kit's 6x8 `cursorArrow` sprite + `IronOvalBlink`; the bitmap faces have no ▶ glyph and a typed one is a tofu box (same reason the footer says `(C)`) |
+| `linear-gradient(90deg,#0d0f16 62%,transparent)` | baked once to `Assets/UI/IronOval/title-scrim.png`, 64x1, point-filtered |
+| Scanline overlay | `IronOvalScanlines`, installed by the scene |
+
+`TitleScreenUI` is the binder: selection, pointer hover/click, and where each row goes. Rows are data —
+label, command (`NewSeason` / `Continue` / `Exhibition` / `LoadScene` / `NotWired`), scene name. A row
+whose destination isn't in the build settings draws disabled and says so when picked, rather than
+silently doing nothing.
+
+Nothing boots into it yet: add `TitleScreen` to the build settings (first) when you want it as the front
+door. `GARAGE` lights up once `TeamGarage` is in that list too.
+
+The scene is generated — re-running the menu item rebuilds it from scratch. Keep anything hand-made in a
+prefab the scene references, and take changes to the look back to the design project first.
+
+## Garage screen
+
+`Draftmaster > Art > Build Garage Screen Scene` generates `Assets/Scenes/GarageScreen.unity`
+(`GarageScreenUI` binder), built from the design file's **updated** GARAGE pass — car slot with the
+driver's identity, career and accolades down the left, their full database stat block over an XP meter in
+the middle, the car's numbers and fitted parts on the right. Preview:
+`Assets/Screenshots/ironoval_garage.png`.
+
+The sheet is a JRPG character sheet. Nothing here is faked to match it; every field is bound to something
+the game keeps.
+
+**Which driver it shows.** The same one the race does: `PlayerDriver` reads the persisted car number
+(`career.carnumber`, defaulting to the demo car's #8) and hands it to `RosterLookup.ByCarNumber` — the
+`Drivers` table when the database is open, the code roster (`CupRoster2026`) when it isn't, which is every
+menu scene in the editor. That is why the sheet is full of real numbers at edit time and why the builder
+can bake them into the saved scene. A career name (`career.drivername`) overrides the *name* only, exactly
+as `TeamSwitchController` does on track: the player takes the seat and keeps their own name over it.
+
+Row order is `DriverAttributeSheet.All` and the builder adds rows in that order, because `GarageScreenUI`
+fills them by index. Add a stat column to `Driver`, add it to the right group in that sheet, re-run the
+menu item, and both ends pick it up. The four lifecycle columns (`DebutSeason`, `PeakAge`, `Retired`,
+`RetiredSeason`) are deliberately not on the sheet — they're bookkeeping for the offseason, not ratings.
+
+| Sheet | Bound to |
+| --- | --- |
+| Name, #, team, age / make / nickname | the player's row in the `Drivers` table (`PlayerDriver.Row`). Team names lose their suffix to fit the column — "Hendrick Motorsports" is `HENDRICK` |
+| DRIVER STATS (gold cells) | every attribute that row carries, laid out by `DriverAttributeSheet`: `ABILITY` / `POTENTIAL` (0-100) full width, then the sixteen 0-20 skills in three groups — TRACK TYPES and STANDING down the left column, CRAFT down the right. No row at all reads as dashes rather than eighteen empty bars |
+| XP bar | fan appeal 0-100 (`FanAppeal`), labelled as such |
+| LV | races run — `1 + starts/5`, the only ladder that exists |
+| CAREER | `PlayerStatsLedger` starts / wins / top 10s |
+| ACCOLADES | derived from those counters, so a line only appears once earned |
+| CAR STATS (telemetry-blue cells) | base `VehicleInfo` (`Resources/Vehicles/Cup24`) with the installed parts applied: top speed, 0-60, grip, durability — the numbers the car will actually race with |
+| FITTED PARTS | the four real part slots (`PlayerCarBuild`). Empty reads `stock`, dimmed |
+| ◈ 12,400 | `PlayerWallet.CashText` |
+| Roster strip (4 team drivers) | **substituted**: this game has one car, so the bottom strip carries the weekend (track + session) and the way out to the track |
+
+Two glyph traps, both hit while building it: the bitmap faces have no `★` and no `©`, so both render as
+tofu boxes — accolades use plain text and the title footer says `(C)`. And Pixelify's smallest crisp size
+is 20, which is too big for the 158px columns, so the narrow blocks are Silkscreen 8.
+
+## Race HUD
+
+`IronOvalRaceHUD` (self-installing, `Assets/Scripts/UI/IronOvalRaceHUD.cs`) draws the sheet's in-race
+readouts with PixelGUI: position and speed as 40px Pixelify numerals with the 2px hard shadow, the lap
+count in gold Silkscreen beneath, and a tyre/draft cell plate on the right — alarm red for the rubber,
+telemetry blue for the tow, exactly the colour rules in section 01 of the handoff.
+
+It **replaces** three older readouts rather than stacking on them: the authored speedometer dial canvas,
+the `P x / N` position panel, and `RaceDirector`'s own lap counter all stand down while it runs
+(`RaceDirector.drawLapCounter`). Disable the component and they come back.
+
+Draft is read off the gap to the car ahead in the running order (full bar inside 6 m, nothing past 30) —
+a driver aid, not a physics probe.
+
+## Results screen
+
+`RaceDirector.DrawResults` follows the sheet's two-column results: a header band with the track and
+round, the classification on a plate down the left with the player's row as the one gold band, and a
+right-hand column carrying PURSE / SPONSORS / BANK over a fan-appeal meter and the way out. A win gets
+the blinking plate the sheet uses for LEVEL UP — only when it's earned.
+
+## What is not built from the design project
+
+`Iron Oval Styles.dc.html` is the **exploration round**: three alternative directions (1a Booth Green,
+1b Sunday Telecast, 1c Night Feed) with their own palettes and typefaces. Iron Oval is the direction that
+came out of it, so those three are deliberately not implemented — building them would put three
+contradicting looks in the same game. Keep the file as the record of what was considered.
