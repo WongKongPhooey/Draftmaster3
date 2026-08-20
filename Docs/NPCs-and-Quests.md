@@ -16,7 +16,11 @@ fill it in. Nothing else needs wiring: the body is cloned from the on-foot prefa
 | The NPC is… | Put the marker in | Anchor |
 |---|---|---|
 | specific to one track (a local promoter, a track quest giver, the RV engineer) | the track package, under `Paddock/NPCs` — `Draftmaster > Tracks > Edit Selected Package` | `Here`, or a geometry anchor if they should follow a piece of track furniture |
-| part of the every-track cast (pit greeter, crew chief) | `Assets/Scenes/RaceScene.unity` | a geometry anchor |
+| part of the every-track cast (pit greeter, crew chief) | `Assets/Scenes/RaceScene.unity`, under the `NPCs` root | a geometry anchor |
+
+Scene markers live under one empty at the origin called **`NPCs`** — created on demand by
+`PlacedNPCDefaults.Root()`. (They used to be parented to `PitLaneStart`, which only marks where the pit
+lane begins.)
 
 **Where the marker lives is what decides which tracks they appear at.** A marker in a package exists at
 that track and nowhere else — no appearance condition needed. `AppearanceConditions.tracks` is for the

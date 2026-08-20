@@ -23,6 +23,7 @@ public static class PixelGUI
 {
     static PixelUITheme _builtFor;
     static int _builtAtScale;
+    static GUIStyle _display;
     static GUIStyle _window, _focusedWindow, _heading, _headingSmall, _row, _rowSelected, _footer,
                     _cursor, _body, _data, _dataDim, _button, _tab, _tabSelected, _label, _labelDim;
     static Texture2D _flat;
@@ -90,6 +91,8 @@ public static class PixelGUI
     public static GUIStyle Body { get { Ensure(); return _body; } }
     // VT323 columns: timing, running order, telemetry.
     public static GUIStyle Data { get { Ensure(); return _data; } }
+    // Big numerals: the HUD's position and speed. Pixelify at 40 — on its 20px grid, so it stays hard.
+    public static GUIStyle Display { get { Ensure(); return _display; } }
     public static GUIStyle DataDim { get { Ensure(); return _dataDim; } }
     // Silkscreen caption that is not a row in a list.
     public static GUIStyle Label { get { Ensure(); return _label; } }
@@ -158,6 +161,7 @@ public static class PixelGUI
         _data = Style(data, vt, Text, TextAnchor.MiddleLeft, rich: true);
         _dataDim = Style(data, vt, TextDim, TextAnchor.MiddleLeft, rich: true);
         _body = Style(prose, pixelify, Text, TextAnchor.UpperLeft, wordWrap: true, rich: true);
+        _display = Style(prose, pixelify * 2, Text, TextAnchor.UpperLeft);
         _footer = Style(display, silk, TextDisabled, TextAnchor.MiddleLeft);
         _cursor = Style(display, silk, Gold, TextAnchor.MiddleCenter);
 

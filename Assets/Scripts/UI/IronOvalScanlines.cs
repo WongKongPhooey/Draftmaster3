@@ -7,6 +7,9 @@ using UnityEngine.UI;
 //
 // Sheet spec: Image Type Tiled, top of sort order, Raycast Target off, no tint. The source tile is 1x3px
 // with one row of black at 42% alpha, so the gap reads as 3 UI px — 9 screen px at 3x.
+// Runs in edit mode as well, so a screen being authored is drawn through the same line the player sees.
+// The overlay it builds is DontSave — it never lands in the scene file, however many times you look at it.
+[ExecuteAlways]
 [DisallowMultipleComponent]
 public class IronOvalScanlines : MonoBehaviour
 {
@@ -29,12 +32,27 @@ public class IronOvalScanlines : MonoBehaviour
 
     void Awake()
     {
-        if (_instance != null && _instance != this) { Destroy(gameObject); return; }
+        if (Application.isPlaying && _instance != null && _instance != this) { Destroy(gameObject); return; }
         _instance = this;
         Build();
     }
 
-    void OnDestroy() { if (_instance == this) _instance = null; }
+    void OnEnable()
+    {
+        _instance = this;
+        if (_image == null) Build();   // edit mode: rebuild after a domain reload or scene open
+    }
+
+    void OnDestroy()
+    {
+        if (_instance == this) _instance = null;
+        if (_image != null && !Application.isPlaying)
+        {
+            var canvas = _image.canvas;
+            if (canvas != null) DestroyImmediate(canvas.gameObject);
+            _image = null;
+        }
+    }
 
     void Build()
     {
@@ -49,10 +67,12 @@ public class IronOvalScanlines : MonoBehaviour
 
         var canvas = PixelUI.CreateCanvas("ScanlineOverlay", sortingOrder);
         canvas.transform.SetParent(transform, false);
+        // Generated furniture, not scene content: hidden from the hierarchy and never serialised.
+        canvas.gameObject.hideFlags = HideFlags.HideAndDontSave;
         // Nothing on this canvas is interactive, and a raycaster over the whole screen would swallow
         // every click underneath it.
         var raycaster = canvas.GetComponent<GraphicRaycaster>();
-        if (raycaster != null) Destroy(raycaster);
+        if (raycaster != null) DestroyImmediate(raycaster);
 
         var go = new GameObject("Scanlines", typeof(Image));
         go.transform.SetParent(canvas.transform, false);

@@ -191,6 +191,9 @@ The standard is **12.8 px/m**. Import at that PPU — never fix size with transf
 - Everything reads one asset: `Assets/Resources/UI/PixelUITheme.asset`.
 - Move authored Canvases onto the kit: `Restyle Scene Canvas UI` / `Restyle UI Prefabs`.
 - The IMGUI race panels are code (`PixelGUI`), not prefabs — `Docs/IronOvalKit.md`.
+- Screens from the design file: `Draftmaster > Art > Build Title Screen Scene` and
+  `Build Garage Screen Scene` regenerate `Assets/Scenes/TitleScreen.unity` / `GarageScreen.unity`. The
+  race HUD (`IronOvalRaceHUD`) and results screen are code, not scenes. See `Docs/IronOvalKit.md`.
 - Demo-flow prefabs: `Draftmaster > UI > Build Demo UI Prefabs` (car setup panel + control hint).
 - Font trouble: `Dump Pixel Font Atlas`, `Preview Dialogue Bubble`.
 
