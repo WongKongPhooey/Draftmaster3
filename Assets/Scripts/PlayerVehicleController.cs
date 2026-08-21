@@ -163,6 +163,15 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     public float SlipAngleDeg => Mathf.Atan2(_vy, Mathf.Max(Mathf.Abs(_vx), 0.01f)) * Mathf.Rad2Deg;
     public float YawRateDeg => _r * Mathf.Rad2Deg;
     public float HeadingDeg => _headingDeg; // world heading of the nose (0 = +X), for AI input providers
+    // Commanded longitudinal accel (m/s², + = driving, - = braking/coasting) and lateral accel (m/s², + = left
+    // in the body frame). Read by the camera for lean; below the kinematic threshold the stored lateral figure
+    // is stale (the slip-angle branch doesn't run at a crawl), so report zero rather than a leftover corner.
+    public float LongitudinalAccel => _lastAx;
+    public float LateralAccel => _vx > lowSpeedKinematic ? _lastAy : 0f;
+    // Driver inputs actually applied this step, whoever supplied them (human device or AI).
+    public float SteerInput => _lastSteerIn;
+    public float ThrottleInput => _lastThrottleIn;
+    public float BrakeInput => _lastBrakeIn;
     // Per-axle slip angles (deg) and handling balance: + = understeer (front sliding more), - = oversteer (rear more).
     public float SlipFrontDeg => _alphaF * Mathf.Rad2Deg;
     public float SlipRearDeg => _alphaR * Mathf.Rad2Deg;
@@ -215,6 +224,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     float _alphaF, _alphaR; // last front/rear slip angles (rad) for telemetry
     bool _onGrass;          // car is off the track surface this step
     float _lastAy;          // last lateral accel (m/s²), for tyre load-transfer split
+    float _lastAx;          // last commanded longitudinal accel (m/s²), telemetry only
+    float _lastSteerIn, _lastThrottleIn, _lastBrakeIn; // resolved inputs this step, telemetry only
     TireModel _tires;       // 4-tyre wear+temperature model (when enableWear)
     VehicleDamage _bodywork; // accumulated bodywork damage → handling penalties
     SplineDriver _brainSpline; // AI brain when present (enabled) — supplies the track pose for draft maths
@@ -428,6 +439,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         steerIn = Mathf.Clamp(steerIn, -1f, 1f);
         if (Mathf.Abs(steerIn) < steerDeadzone) steerIn = 0f;
         steerIn = Mathf.Sign(steerIn) * Mathf.Pow(Mathf.Abs(steerIn), steerExpo);
+        _lastSteerIn = steerIn; _lastThrottleIn = throttleIn; _lastBrakeIn = brakeIn;
 
         // Steering → front-wheel angle, rate-limited and speed-scaled.
         float speedFraction = Mathf.Clamp01(SpeedMph / Mathf.Max(steerDecaySpeedMph, 1f));
@@ -523,6 +535,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (sideDraft > 0f) decel += vehicleInfo.sideDraftDrag * sideDraft; // air stolen off the spoiler drags
         accel *= (1f - wheelspinAccelLoss * wheelspin);              // spinning wheels put down less power
         float axCmd = accel + reverseDrive - decel; // commanded longitudinal accel (m/s²)
+        _lastAx = axCmd;
 
         // Available grip per axle: μ (proxied by maxLateralG) × track × tyre (wear+temperature), biased for balance.
         // AI-driven cars get the AI-only grip bonus on top of the global conditions; the player reads the raw global.
