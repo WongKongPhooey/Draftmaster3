@@ -1,0 +1,830 @@
+<meta charset="utf-8">
+<title>Draftmaster Build Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ── Iron Oval palette (Assets/Resources/UI/PixelUITheme.asset) ───────────── */
+:root {
+  /* light: parchment ground, kit roles swapped consistently */
+  --ground:      #EDE3CE;
+  --plate:       #E2D6BB;
+  --plate-deep:  #D8CAAB;
+  --edge:        #C0AF8C;
+  --text:        #171921;
+  --text-dim:    #5C5644;
+  --text-off:    #857E68;
+  --gold:        #9A6B0C;
+  --gold-lit:    #7C550A;
+  --danger:      #9E3524;
+  --info:        #2F6DA8;
+  --confirm:     #4A7A38;
+  --rail-w: 15.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:     #0A0B10;
+    --plate:      #182136;
+    --plate-deep: #12141C;
+    --edge:       #2C3145;
+    --text:       #F4EAD7;
+    --text-dim:   #B9AE9A;
+    --text-off:   #6D7590;
+    --gold:       #E8B13C;
+    --gold-lit:   #F6CB6E;
+    --danger:     #E06A52;
+    --info:       #5A9AD6;
+    --confirm:    #6FA85A;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:     #0A0B10;
+  --plate:      #182136;
+  --plate-deep: #12141C;
+  --edge:       #2C3145;
+  --text:       #F4EAD7;
+  --text-dim:   #B9AE9A;
+  --text-off:   #6D7590;
+  --gold:       #E8B13C;
+  --gold-lit:   #F6CB6E;
+  --danger:     #E06A52;
+  --info:       #5A9AD6;
+  --confirm:    #6FA85A;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 15.5px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── shell ───────────────────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  gap: 0;
+  max-width: 74rem;
+  margin: 0 auto;
+}
+
+/* ── rail ────────────────────────────────────────────────────────────────── */
+.rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 1.75rem 1.25rem 3rem;
+  border-right: 1px solid var(--edge);
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+.rail-mark {
+  font-family: Silkscreen, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+.rail-mark span { display: block; color: var(--text-off); font-size: 0.62rem; letter-spacing: 0.12em; }
+.rail nav { display: flex; flex-direction: column; gap: 1.1rem; }
+.rail-group { display: flex; flex-direction: column; gap: 0.28rem; }
+.rail-label {
+  font-family: Silkscreen, monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-off);
+  margin-bottom: 0.15rem;
+}
+.rail a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.83rem;
+  line-height: 1.35;
+  padding: 0.18rem 0.5rem;
+  border-left: 2px solid transparent;
+}
+.rail a:hover { color: var(--text); background: var(--plate); }
+.rail a.on { color: var(--gold); border-left-color: var(--gold); }
+.rail a:focus-visible, main a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ── content ─────────────────────────────────────────────────────────────── */
+main {
+  padding: 0 3rem 6rem;
+  min-width: 0;
+}
+.masthead {
+  padding: 3.5rem 0 2.25rem;
+  border-bottom: 1px solid var(--edge);
+  position: relative;
+  overflow: hidden;
+}
+/* the kit's scanline overlay, static and barely there */
+.masthead::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--text) 5%, transparent) 0 1px,
+    transparent 1px 3px
+  );
+}
+.eyebrow {
+  font-family: Silkscreen, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+h1 {
+  font-family: Silkscreen, monospace;
+  font-size: clamp(1.5rem, 3.4vw, 2.3rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin: 0.9rem 0 0.7rem;
+  text-wrap: balance;
+}
+.standfirst {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-dim);
+  font-size: 1.02rem;
+}
+.standfirst strong { color: var(--text); font-weight: 600; }
+
+section { padding-top: 2.9rem; }
+h2 {
+  font-family: Silkscreen, monospace;
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.2rem;
+  text-wrap: balance;
+}
+h2 + .sect-note { margin: 0 0 1.4rem; color: var(--text-off); font-size: 0.88rem; max-width: 60ch; }
+h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.45rem;
+  letter-spacing: -0.005em;
+}
+p { max-width: 66ch; }
+main a { color: var(--info); text-underline-offset: 2px; }
+
+code, .path, kbd {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.86em;
+}
+code {
+  color: var(--gold-lit);
+  background: color-mix(in srgb, var(--plate) 70%, transparent);
+  padding: 0.06em 0.32em;
+  border: 1px solid var(--edge);
+  white-space: nowrap;
+}
+
+/* ── plates ──────────────────────────────────────────────────────────────── */
+.plate {
+  background: var(--plate-deep);
+  border: 1px solid var(--edge);
+  padding: 1.1rem 1.25rem;
+}
+.rule-note {
+  border-left: 3px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  padding: 0.85rem 1.1rem;
+  margin: 1.3rem 0;
+  max-width: 66ch;
+}
+.rule-note p { margin: 0; }
+
+/* ── tables ──────────────────────────────────────────────────────────────── */
+.scroller { overflow-x: auto; margin: 1rem 0 1.5rem; border: 1px solid var(--edge); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td {
+  text-align: left;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--edge);
+  vertical-align: top;
+}
+thead th {
+  font-family: Silkscreen, monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-off);
+  background: var(--plate-deep);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:nth-child(even) { background: color-mix(in srgb, var(--plate) 45%, transparent); }
+td .path { color: var(--text-dim); white-space: nowrap; }
+
+/* ── recipes ─────────────────────────────────────────────────────────────── */
+.recipes { display: grid; gap: 1rem; }
+.recipe {
+  background: var(--plate-deep);
+  border: 1px solid var(--edge);
+  padding: 1.15rem 1.35rem 1.3rem;
+}
+.recipe > p:first-of-type { margin-top: 0.2rem; }
+.recipe p:last-child { margin-bottom: 0; }
+.recipe ol, .recipe ul { margin: 0.55rem 0 0; padding-left: 1.15rem; }
+.recipe li { margin-bottom: 0.35rem; max-width: 64ch; }
+.recipe li:last-child { margin-bottom: 0; }
+.seealso {
+  font-size: 0.82rem;
+  color: var(--text-off);
+  margin-top: 0.9rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--edge);
+}
+
+/* menu path chip: Draftmaster › Tracks › Track Builder Window */
+.menu {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: var(--plate);
+  border: 1px solid var(--edge);
+  border-bottom-color: color-mix(in srgb, var(--gold) 45%, var(--edge));
+  padding: 0.08em 0.42em;
+  white-space: nowrap;
+}
+.menu i { font-style: normal; color: var(--gold); padding: 0 0.15em; }
+
+/* ── key map ─────────────────────────────────────────────────────────────── */
+.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr)); gap: 0.5rem; margin: 1rem 0 1.2rem; }
+.key {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  background: var(--plate-deep);
+  border: 1px solid var(--edge);
+  padding: 0.5rem 0.7rem;
+}
+kbd {
+  flex: none;
+  min-width: 2.6rem;
+  text-align: center;
+  color: var(--gold);
+  background: var(--plate);
+  border: 1px solid var(--edge);
+  border-bottom-width: 2px;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.key span { font-size: 0.87rem; color: var(--text-dim); }
+.key.clash { border-color: color-mix(in srgb, var(--danger) 55%, var(--edge)); }
+.key.clash kbd { color: var(--danger); }
+.free {
+  font-size: 0.86rem;
+  color: var(--text-off);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* ── gotchas ─────────────────────────────────────────────────────────────── */
+.gotchas { display: grid; gap: 0.6rem; margin-top: 1rem; }
+.gotcha {
+  display: grid;
+  grid-template-columns: 3px 1fr;
+  gap: 0 0.95rem;
+  background: var(--plate-deep);
+  border: 1px solid var(--edge);
+}
+.gotcha::before { content: ""; background: var(--danger); }
+.gotcha div { padding: 0.7rem 1rem 0.75rem 0; max-width: 70ch; }
+.gotcha b { font-weight: 600; }
+
+/* ── menu reference groups ───────────────────────────────────────────────── */
+.menu-group { margin-bottom: 1.5rem; }
+.menu-group h3 {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+.menu-list { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.menu-list li {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  background: var(--plate);
+  border: 1px solid var(--edge);
+  padding: 0.16rem 0.45rem;
+}
+
+footer {
+  margin-top: 3.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--edge);
+  color: var(--text-off);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--edge); }
+  .rail nav { flex-direction: row; flex-wrap: wrap; gap: 1.5rem; }
+  main { padding: 0 1.25rem 4rem; }
+}
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">DRAFTMASTER 3<span>BUILD BOOK</span></div>
+    <nav>
+      <div class="rail-group">
+        <div class="rail-label">Orientation</div>
+        <a href="#scenes">Which scene do I open?</a>
+        <a href="#paths">Where things live</a>
+        <a href="#frontend">Front end &amp; boot order</a>
+      </div>
+      <div class="rail-group">
+        <div class="rail-label">Tracks</div>
+        <a href="#new-oval">Add a new oval</a>
+        <a href="#road-course">Add a road course</a>
+        <a href="#scenery">Change a track's scenery</a>
+        <a href="#lines">Paint finish &amp; pit-exit lines</a>
+        <a href="#pitboxes">See the pit boxes</a>
+      </div>
+      <div class="rail-group">
+        <div class="rail-label">People</div>
+        <a href="#place-npc">Place an NPC</a>
+        <a href="#npc-look">Design an NPC's look</a>
+        <a href="#chatter">Add crowd chatter</a>
+        <a href="#quest">Add a side quest</a>
+        <a href="#phone">Add a phone app</a>
+        <a href="#drivers">Edit drivers</a>
+      </div>
+      <div class="rail-group">
+        <div class="rail-label">Dressing</div>
+        <a href="#sponsors">Sponsors &amp; decals</a>
+        <a href="#rv">Edit the RV</a>
+        <a href="#travel">Edit the travel map</a>
+        <a href="#art">New world art</a>
+        <a href="#ui">UI work</a>
+        <a href="#hud">Race HUD &amp; results</a>
+        <a href="#paddock">Paddock &amp; garage</a>
+      </div>
+      <div class="rail-group">
+        <div class="rail-label">Reference</div>
+        <a href="#keys">Play-mode keys</a>
+        <a href="#menus">Menu reference</a>
+        <a href="#gotchas">Gotchas</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Unity 6 · URP · spline tracks</div>
+      <h1>Build Book</h1>
+      <p class="standfirst">The other docs explain how each system <em>works</em>. This one is the operator's manual: <strong>what to click, in what order</strong>, for the jobs that come up while making content. Every entry points back at the deep doc when there is one.</p>
+    </header>
+
+    <section id="scenes">
+      <h2>Which scene do I open?</h2>
+      <p class="sect-note">Get this wrong and the work lands in a file nothing loads.</p>
+      <div class="scroller">
+        <table>
+          <thead><tr><th>Job</th><th>Open</th></tr></thead>
+          <tbody>
+            <tr><td>Race managers, HUDs, the every-track NPC cast, the player car</td><td><span class="path">Assets/Scenes/RaceScene.unity</span> — the shared race scene. <b>No road in it</b>; the track loads as a package at play time.</td></tr>
+            <tr><td>One track's road, scenery, paddock, its own NPCs</td><td>That track's package prefab, <span class="path">Resources/TrackPackages/&lt;id&gt;.prefab</span> — via <span class="menu">Draftmaster<i>›</i>Tracks<i>›</i>Edit Selected Package (Prefab Mode)</span></td></tr>
+            <tr><td>The hand-authored reference road course</td><td><span class="path">Assets/Scenes/WatkinsGlen.unity</span></td></tr>
+            <tr><td>The front-end menu (wordmark, NEW SEASON / CONTINUE / GARAGE)</td><td><span class="path">Assets/Scenes/TitleScreen.unity</span> — regenerated by <span class="menu">Draftmaster<i>›</i>Art<i>›</i>Build Title Screen Scene</span></td></tr>
+            <tr><td>The garage character sheet (driver stats, car, fitted parts)</td><td><span class="path">Assets/Scenes/GarageScreen.unity</span> — regenerated by <span class="menu">Draftmaster<i>›</i>Art<i>›</i>Build Garage Screen Scene</span></td></tr>
+            <tr><td>Team garage on-foot hub</td><td><span class="path">Assets/Scenes/TeamGarage.unity</span> — built by <span class="menu">Tools<i>›</i>Draftmaster<i>›</i>Build Team Garage Scene</span>. Not the same thing as <code>GarageScreen</code>: this one you walk around.</td></tr>
+            <tr><td>Judging UI widgets</td><td><span class="path">Assets/Scenes/IronOvalShowcase.unity</span> — built by <span class="menu">Draftmaster<i>›</i>Art<i>›</i>Build Iron Oval Showcase Scene</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="rule-note"><p><b>The rule:</b> a thing that exists at every track belongs in the race scene; a thing that <em>is</em> that track belongs in the package prefab.</p></div>
+    </section>
+
+    <section id="paths">
+      <h2>Where things live</h2>
+      <div class="scroller">
+        <table>
+          <thead><tr><th>What</th><th>Path</th></tr></thead>
+          <tbody>
+            <tr><td>Track geometry (<code>TrackInfoV2</code>)</td><td><span class="path">Assets/Resources/Tracks/&lt;id&gt;.asset</span></td></tr>
+            <tr><td>Track walls &amp; strips (<code>TrackEnvironment</code>)</td><td><span class="path">Assets/Resources/Tracks/&lt;id&gt;Environment.asset</span></td></tr>
+            <tr><td>Track content package</td><td><span class="path">Assets/Resources/TrackPackages/&lt;id&gt;.prefab</span></td></tr>
+            <tr><td>Track catalogue rows (the calendar)</td><td><span class="path">Assets/Scripts/Database/DummyTracks.cs</span></td></tr>
+            <tr><td>Quests</td><td><span class="path">Assets/Resources/Quests/*.asset</span></td></tr>
+            <tr><td>Dialogue pools (random crowd)</td><td><span class="path">Assets/Resources/Dialogue/*.asset</span> — claimed by <code>trackId</code></td></tr>
+            <tr><td>UI prefabs + theme</td><td><span class="path">Assets/Resources/UI/</span> — <code>PixelUITheme.asset</code> drives the whole look</td></tr>
+            <tr><td>RV interior / speech box</td><td><span class="path">Assets/Resources/OnFoot/</span></td></tr>
+            <tr><td>Paper-doll part library</td><td><span class="path">Assets/Resources/NPC/NPCPartLibrary.asset</span> — sheets in <span class="path">Assets/Sprites/Walking/Parts/</span></td></tr>
+            <tr><td>Vehicles</td><td><span class="path">Assets/Resources/Vehicles/</span></td></tr>
+            <tr><td>Driver database</td><td><span class="path">draftmaster.db</span> in <code>Application.persistentDataPath</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="frontend">
+      <h2>Front end &amp; boot order</h2>
+      <p class="sect-note">New since the last edition: the title screen and the garage sheet are real scenes and the menu now leads somewhere.</p>
+      <div class="scroller">
+        <table>
+          <thead><tr><th>#</th><th>Scene</th><th>Why it's in the list</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td><span class="path">Assets/Scenes/DemoMenu.unity</span></td><td>Still the boot scene — the new screens were appended, not slotted in front</td></tr>
+            <tr><td>1</td><td><span class="path">Assets/Scenes/WatkinsGlen.unity</span></td><td>The hand-authored reference road course</td></tr>
+            <tr><td>2</td><td><span class="path">Assets/Scenes/RaceScene.unity</span></td><td>The shared race scene every track package loads into</td></tr>
+            <tr><td>3</td><td><span class="path">Assets/Scenes/TitleScreen.unity</span></td><td>Front-end menu</td></tr>
+            <tr><td>4</td><td><span class="path">Assets/Scenes/GarageScreen.unity</span></td><td>Garage character sheet</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="recipes">
+        <article class="recipe">
+          <h3>What each title row does</h3>
+          <ul>
+            <li><b>NEW SEASON</b> — fresh weekend at <code>newSeasonTrackId</code>, which defaults to <code>TrackCatalog.DefaultTrackId</code> = <code>WatkinsGlen</code>. It is pinned rather than "wherever the calendar starts" because Watkins Glen is the one track with <em>both</em> a layout and a content package.</li>
+            <li><b>CONTINUE</b> — back into the selected track as it stands, falling through the same has-geometry check (the travel map can leave <code>TrackSelection</code> on a catalogue-only track).</li>
+            <li><b>EXHIBITION</b> — one race, no practice or qualifying.</li>
+            <li><b>GARAGE</b> — loads <code>GarageScreen</code>; its BACK returns here and its RACE button goes to <code>RaceScene</code>.</li>
+            <li><b>OPTIONS</b> — <code>NotWired</code>, drawn disabled on purpose.</li>
+          </ul>
+          <p>Keys: arrows / <kbd>W</kbd><kbd>S</kbd> to move, <kbd>Enter</kbd> / <kbd>Space</kbd> / <kbd>E</kbd> to confirm, d-pad and south button on a gamepad.</p>
+          <div class="rule-note"><p><b>A row whose destination isn't in the build settings draws disabled</b>, so a half-wired menu reads as half-wired instead of dead. If a row you just wired is greyed out, the scene isn't in the list.</p></div>
+        </article>
+
+        <article class="recipe">
+          <h3>Rebuilding either screen</h3>
+          <p>Both are the authored-canvas pattern: a builder writes the layout into the scene once, and a thin binder (<code>TitleScreenUI</code> / <code>GarageScreenUI</code>) fills it. Re-running <span class="menu">Build Title Screen Scene</span> or <span class="menu">Build Garage Screen Scene</span> rewrites the layout <em>and</em> the wiring, so a rebuild never leaves the menu pointing at nothing — but it does drop hand edits to the canvas.</p>
+          <p>The garage sheet binds to what the game really keeps: the player's row in the <code>Drivers</code> table via <code>PlayerDriver</code>, fan appeal as the XP meter, <code>PlayerStatsLedger</code> for career and accolades, the <code>VehicleInfo</code> with fitted parts applied for the car numbers.</p>
+          <p class="seealso">Screen-by-screen spec: <span class="path">Docs/IronOvalKit.md</span> §Title screen, §Garage screen</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="new-oval">
+      <h2>Tracks</h2>
+      <p class="sect-note">One string id — <code>Daytona</code> — resolves to a catalogue row, geometry, and a content package. The shared race scene loads the package.</p>
+
+      <div class="recipes">
+        <article class="recipe">
+          <h3>Add a new oval</h3>
+          <ol>
+            <li>Check it is in the calendar: <span class="path">Assets/Scripts/Database/DummyTracks.cs</span>. Most of the 35 are already there with type, length, banking and laps. If you edit that seed, bump <code>DatabaseManager.SchemaVersion</code> so the table rebuilds.</li>
+            <li><span class="menu">Draftmaster<i>›</i>Tracks<i>›</i>Track Builder Window</span>. Find the row, press <b>Generate Layout</b> — writes <span class="path">Resources/Tracks/&lt;id&gt;.asset</span>. Regenerating refills the asset in place, so its GUID (and every reference to it) survives.</li>
+            <li><b>Build Package</b> — writes <span class="path">Resources/TrackPackages/&lt;id&gt;.prefab</span> and dresses it. What comes out is drivable and walkable without opening it.</li>
+            <li><b>Race</b> — sets <code>TrackSelection</code>; open <code>RaceScene</code> and press Play.</li>
+          </ol>
+          <p class="seealso"><span class="menu">Tracks<i>›</i>Report Calendar Coverage</span> prints what's built vs catalogue-only. <span class="menu">Dress All Undressed Packages</span> fills in every package missing scenery. Detail: <span class="path">Docs/Tracks.md</span></p>
+        </article>
+
+        <article class="recipe" id="road-course">
+          <h3>Add a road course</h3>
+          <p>The generator refuses road courses — there is no formula for one. Duplicate <span class="path">Assets/Resources/Tracks/WatkinsGlen.asset</span>, rename it <span class="path">&lt;id&gt;.asset</span>, edit its segment list (Straight/Turn with length, angle, banking, width, plus the racing-line offsets), then <b>Build Package</b> from the Track Builder Window as above.</p>
+        </article>
+
+        <article class="recipe" id="scenery">
+          <h3>Change a track's scenery</h3>
+          <p>Open the package: <span class="menu">Draftmaster<i>›</i>Tracks<i>›</i>Edit Selected Package (Prefab Mode)</span>, or <b>In Context (Race Scene)</b> to see it against the managers. Move, delete or replace anything.</p>
+          <p>Re-dressing (<span class="menu">Dress Selected Package</span>) only ever replaces pieces <b>it</b> generated — those inside the <code>Environment</code> / <code>Paddock</code> roots, or carrying its names. Hand-made pieces are kept and reported. Kerbs, garages, signage and camera towers are hand work by design.</p>
+        </article>
+
+        <article class="recipe" id="lines">
+          <h3>Paint the start/finish or pit-exit line</h3>
+          <p>Strip arrays can't be grown through the MCP property API, so these are menu items:</p>
+          <ul>
+            <li><span class="menu">Tools<i>›</i>Track<i>›</i>Add Missing Finish Line Strips</span> — anchors a strip to <code>TrackInfoV2.startFinishDistance</code>.</li>
+            <li><span class="menu">Tools<i>›</i>Track<i>›</i>Add Missing Pit Exit Lines</span> — anchors to <code>PitExitLineDistance</code>, where the pit limiter releases.</li>
+            <li><span class="menu">Tools<i>›</i>Track<i>›</i>Rebuild Track Environment</span> after either.</li>
+          </ul>
+        </article>
+
+        <article class="recipe" id="pitboxes">
+          <h3>See the pit boxes while authoring</h3>
+          <p><span class="menu">Draftmaster<i>›</i>Debug<i>›</i>Show Pit Boxes</span> (a checked toggle) draws the box ladder at edit time from the same <code>PitLane.FitBoxes</code> call the spawner makes — so it is where cars and crews actually end up. <span class="menu">Log Pit Box Lines</span> dumps distances and local positions for placing the painted dividers; <span class="menu">Log Pit Fit</span> explains a "field doesn't fit" layout.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="place-npc">
+      <h2>People</h2>
+      <p class="sect-note">Markers, not prefabs: the body is cloned from the on-foot prefab at runtime and the dialogue components are attached to it.</p>
+
+      <div class="recipes">
+        <article class="recipe">
+          <h3>Place an NPC</h3>
+          <ol>
+            <li>Decide where the marker lives: <b>track-specific</b> → the package, under <code>Paddock/NPCs</code>; <b>every track</b> → <span class="path">RaceScene.unity</span>.</li>
+            <li>Empty GameObject + <code>PlacedNPC</code>, or <span class="menu">Draftmaster<i>›</i>NPCs<i>›</i>Add Placed NPC</span> — drops one at the scene-view pivot, parented correctly when a package is open in Prefab Mode.</li>
+            <li>Set the <b>anchor</b>: <code>Here</code> inside a package, otherwise a geometry anchor (<code>PitLane</code>, <code>ParkedCar</code>, <code>RVDoor</code>, <code>PlayerSpawn</code>) so one marker works at all 35 tracks. <code>ParkedCar</code> needs <code>followAnchor</code> on — the car is re-parked into its fitted box a few frames after the scene opens.</li>
+            <li>Set the <b>interaction</b>: <code>TalkOnInteract</code> / <code>WalkUpCutscene</code> / <code>OnCarEntry</code> / <code>Silent</code>, plus lines.</li>
+            <li>Gate it with <code>AppearanceConditions</code> — session, series, track, career stats, quest state, inventory, career path, repeat scope, chance.</li>
+          </ol>
+          <div class="rule-note"><p><b>Geometry anchors only resolve with a track loaded.</b> In the race scene run <span class="menu">Tracks<i>›</i>Preview Selected Package In Scene</span> first, then <span class="menu">Clear Package Previews From Scene</span> when done — otherwise the gizmo is lying to you.</p></div>
+          <p>Marker in the wrong file? <span class="menu">Draftmaster<i>›</i>NPCs<i>›</i>Move Selected NPC Into Track Package</span> moves the selected marker into <code>Paddock/NPCs</code> of the selected track's package, copying the component wholesale (<code>CopySerialized</code>) so the tuned anchor, trigger ring, dialogue and appearance conditions all survive the trip. <span class="menu">Add RV Engineer To Open Package</span> drops a fresh stock race engineer into a package. Both write into the package prefab asset, so the change travels with the track.</p>
+          <p>Check the cast with <span class="menu">Draftmaster<i>›</i>NPCs<i>›</i>Director</span> (<b>Ctrl+Shift+N</b>): flip between Practice / Qualifying / Race and everyone greys out or lights up, with a reason per row ("not in Race", "wins is 0, needs 5..∞"). <span class="menu">Install Default Pit Cast</span> turns the runtime greeter / engineer / crew chief into editable markers.</p>
+          <p class="seealso">Detail: <span class="path">Docs/NPCs-and-Quests.md</span> §0</p>
+        </article>
+
+        <article class="recipe" id="npc-look">
+          <h3>Design what an NPC looks like</h3>
+          <p><span class="menu">GameObject<i>›</i>2D Object<i>›</i>Layered NPC (Paper Doll)</span>, then work in the inspector: per layer pick a style sheet and a colour, with live Scene-view preview. The preview layers are real children, so what you see is what builds at runtime.</p>
+          <p><b>There is clothing now.</b> Until recently only the Base body sheet existed, so every clothing category was skipped at <code>Build()</code> and NPCs walked around as bare silhouettes. <span class="path">Assets/Sprites/Walking/Parts/</span> now holds 13 <b>placeholder</b> sheets — 2 bottoms, 2 shoes, 3 tops, 3 hairs, 3 hats — all 56×8 (7 frames of 8×8, matching <code>walk_base.png</code>), painted in the white/grey ramp so the runtime tint multiply colours them. They are crude on purpose; redraw them in place and nothing else changes.</p>
+          <p>Each layer owns a band of the body so nothing above it hides it completely: bottoms take the hips + feet rows, shoes the toe pixel at each end, tops the shoulders + arms rows, hair and hats the head block (same place on all seven frames, so they repeat one pose across the strip). Every part was cut from <code>walk_base</code>'s own silhouette, so no part pixel lands off the body.</p>
+          <p>Adding a part: drop the PNG under <span class="path">Assets/Sprites/Walking/Parts/</span> with the import settings from the doc, add it to that category's <b>Options</b> in <span class="path">Assets/Resources/NPC/NPCPartLibrary.asset</span>, then add swatches to its <b>Tint Options</b> — those are what the random crowd draws from. Colour variety is all tint: 5 skin, 8 shirt, 6 trouser, 5 shoe, 6 hair, 6 hat.</p>
+          <p class="seealso">Sprite spec, the greyscale/tint rule and the band table: <span class="path">Docs/NPCs-and-Quests.md</span> §1</p>
+        </article>
+
+        <article class="recipe" id="chatter">
+          <h3>Add crowd chatter</h3>
+          <p><span class="menu">Draftmaster<i>›</i>NPCs<i>›</i>Dialogue Pool (Selected Track)</span> creates or opens the per-track pool; <span class="menu">Dialogue Pool (Global)</span> the shared one; <span class="menu">Seed Global Dialogue Pool From Built-Ins</span> fills it from the hardcoded lines. A pool is claimed by its <code>trackId</code> field.</p>
+        </article>
+
+        <article class="recipe" id="quest">
+          <h3>Add a side quest</h3>
+          <ol>
+            <li><span class="menu">Assets<i>›</i>Create<i>›</i>Quests<i>›</i>Quest</span>, saved into <span class="path">Assets/Resources/Quests/</span>.</li>
+            <li>Fill in objective type, target, reward (<code>rewardItemId</code> makes it a chain link), prerequisites.</li>
+            <li>Put it on an NPC: <code>QuestGiverNPC</code> — setting <code>quest</code> on a <code>PlacedNPC</code> turns it into one — and fill the five line sets: <code>offerLines</code>, <code>activeLines</code>, <code>turnInLines</code>, <code>completedLines</code>, <code>lockedLines</code>.</li>
+            <li>A delivery target is the same component with <code>isDeliveryTarget</code> on and <code>offersQuest</code> off.</li>
+          </ol>
+          <p class="seealso">Objective types, stat keys and the pause-menu mission board: <span class="path">Docs/NPCs-and-Quests.md</span> §3</p>
+        </article>
+
+        <article class="recipe" id="phone">
+          <h3>Add an app to the phone</h3>
+          <p>The player's phone slides up from the bottom on foot (<b>P</b>) with six tile slots — Tasks, Notes, SoBuzz and DrivR fill four, and the spare bays are drawn empty so nothing reflows when a fifth arrives.</p>
+          <p>Adding one is a <code>PhoneApp</code> subclass plus a line in <code>PhoneUI.BuildApps()</code>. The base class carries the drawing vocabulary (<code>Section</code>, <code>Row</code>, <code>Body</code>, <code>Meter</code>, <code>Plate</code>); each helper returns the height it used, so <code>Draw</code> is a running <code>y +=</code> and the total is what the device scrolls.</p>
+          <p>Writing to the existing apps from elsewhere: <code>PhoneTasksApp.Push(id, text)</code> and <code>Resolve(id)</code> for a reminder line, <code>PhoneNotes.Record(...)</code> for a log entry, <code>PhoneUI.Open("drivr")</code> to open straight into an app.</p>
+          <p class="seealso"><span class="path">Docs/Phone.md</span></p>
+        </article>
+
+        <article class="recipe" id="drivers">
+          <h3>Edit drivers</h3>
+          <p><span class="menu">Window<i>›</i>Draftmaster<i>›</i>Driver Database</span> — edits the same SQLite file the game reads, so changes show up in Play Mode. To change the <em>schema</em> or the seeded roster, edit <span class="path">Assets/Scripts/Database/</span> and bump <code>DatabaseManager.SchemaVersion</code> to force a rebuild.</p>
+          <p><b>Which row is the player?</b> <code>PlayerDriver</code> reads the persisted car number (<code>career.carnumber</code>, defaulting to <b>#8</b> — the number <code>RaceScene</code>'s PlayerCar is painted in) and hands it to <code>RosterLookup.ByCarNumber</code>: the <code>Drivers</code> table when the database is open, the code roster when it isn't, which is every menu scene in the editor. A career name overrides the name only. Look the player up by name and you get nothing, because no save sets one.</p>
+          <p>Adding a column to <code>Driver</code>? Declare the row once in <code>DriverAttributeSheet</code> — the garage builder lays rows out in that order and <code>GarageScreenUI</code> fills them by index, so a row can't end up labelled one thing and filled with another.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="sponsors">
+      <h2>Dressing &amp; art</h2>
+      <p class="sect-note">Every generator here writes real, editable objects — then refuses to overwrite them.</p>
+
+      <div class="recipes">
+        <article class="recipe">
+          <h3>Sponsors and car decals</h3>
+          <ul>
+            <li><span class="menu">Draftmaster<i>›</i>Sponsors<i>›</i>Create Car Sponsor Layout</span> — the asset saying where the hood / tail / quarter panels sit on the livery.</li>
+            <li><span class="menu">Generate Placeholder Decals</span> — one car-scale logo per brand in the database, so the feature is playable before any real art. Overwrite the PNGs later; nothing else changes.</li>
+            <li><span class="menu">Preview Slots On Livery</span> writes <span class="path">Temp/SponsorSlotPreview.png</span>; <span class="menu">Preview Sponsored Car</span> shows the baked result.</li>
+          </ul>
+          <p class="seealso"><span class="path">Docs/Sponsorship.md</span></p>
+        </article>
+
+        <article class="recipe" id="rv">
+          <h3>Edit the RV, inside and out</h3>
+          <p><span class="menu">Draftmaster<i>›</i>RV Interior<i>›</i>Build Prefab</span> generates <span class="path">Resources/OnFoot/RVInterior.prefab</span> once — after that it is <b>yours</b>: open it in Prefab Mode and lay it out, swap the placeholder squares for art. Build refuses to overwrite; <b>Force Rebuild</b> loses hand edits. Same pair for the exterior (<span class="menu">Build RV Prefab</span>).</p>
+          <p>Authoring frame: <code>(0,0)</code> is where the player spawns, <code>+Y</code> points at the doorway.</p>
+        </article>
+
+        <article class="recipe" id="travel">
+          <h3>Edit the travel map</h3>
+          <p><span class="menu">Draftmaster<i>›</i>Travel Map<i>›</i>Build Prefab</span> once, then edit <span class="path">Resources/UI/TravelMap.prefab</span> by hand. <span class="menu">Sync Node Markers</span> adds markers for nodes added to <code>TravelGraph</code> later without moving existing ones; <span class="menu">Snap Markers To Graph Layout</span> re-snaps everything to the code positions; <span class="menu">Open (Play Mode)</span> opens the map without the F9 key. Geography is code-defined in <code>TravelGraph</code>.</p>
+          <p class="seealso"><span class="path">Docs/Travel-Map.md</span></p>
+        </article>
+
+        <article class="recipe" id="art">
+          <h3>New world art (sprites, props)</h3>
+          <p>The standard is <b>12.8 px/m</b>. Import at that PPU — never fix size with transform scale.</p>
+          <ul>
+            <li><span class="menu">Art<i>›</i>Retarget World Sprites to Pixel Standard</span> — bulk-fix import PPU.</li>
+            <li><span class="menu">Audit Pixel Scale</span> — writes <span class="path">Docs/PixelScaleAudit.md</span>.</li>
+            <li><span class="menu">Report Sprite Scale Compensation</span> — finds prefabs faking size with scale.</li>
+            <li><span class="menu">Apply Pixel Standard to Open Scene</span> + <span class="menu">Rebuild Track Generators</span> after changing materials or tiling.</li>
+            <li><span class="menu">Report Surface Material Usage</span> — who else uses a material before you retile it.</li>
+          </ul>
+          <p class="seealso"><span class="path">Docs/PixelArtStandard.md</span></p>
+        </article>
+
+        <article class="recipe" id="ui">
+          <h3>UI work</h3>
+          <ul>
+            <li>Kit setup: <span class="menu">Art<i>›</i>Set Up Iron Oval Kit</span>, then <span class="menu">Verify Iron Oval Kit</span> (writes <span class="path">Docs/IronOvalKit.md</span>). Older kit: <span class="menu">Set Up / Verify Pixel UI Kit</span>.</li>
+            <li>Everything reads one asset: <span class="path">Assets/Resources/UI/PixelUITheme.asset</span>.</li>
+            <li>Move authored Canvases onto the kit: <span class="menu">Restyle Scene Canvas UI</span> / <span class="menu">Restyle UI Prefabs</span>.</li>
+            <li>The IMGUI race panels are code (<code>PixelGUI</code>), not prefabs.</li>
+            <li>Screens from the design file: <span class="menu">Build Title Screen Scene</span> and <span class="menu">Build Garage Screen Scene</span> regenerate <span class="path">Assets/Scenes/TitleScreen.unity</span> / <span class="path">GarageScreen.unity</span>. The race HUD and results screen are code, not scenes — see below.</li>
+            <li>Scanlines run <code>[ExecuteAlways]</code>: <code>IronOvalScanlines</code> builds its own <code>DontSave</code> overlay canvas, so a screen is <em>authored</em> through the same TV line the player sees and the overlay never lands in the scene file.</li>
+            <li>Demo-flow prefabs: <span class="menu">UI<i>›</i>Build Demo UI Prefabs</span> — car setup panel + control hint.</li>
+            <li>Font trouble: <span class="menu">Dump Pixel Font Atlas</span>, <span class="menu">Preview Dialogue Bubble</span>.</li>
+          </ul>
+        </article>
+
+        <article class="recipe" id="hud">
+          <h3>Race HUD &amp; results</h3>
+          <p><code>IronOvalRaceHUD</code> is the in-race readout from the design file: position and speed as big numerals with a hard shadow, lap count in gold under them, tyre/draft plate on the right. It self-installs at load — there is nothing to place in a scene.</p>
+          <p>It <b>replaces</b> three older readouts rather than sitting on top of them: the authored speedometer dial, the "P x / N" position panel and <code>RaceDirector</code>'s own lap counter all stand down while it runs, so nothing draws twice. Turn its <code>enabled</code> off and they come back — that is the switch if you need the old dial for a comparison.</p>
+          <p>The results screen is the restyled <code>RaceDirector.DrawResults</code>, also code.</p>
+          <p class="seealso"><span class="path">Docs/IronOvalKit.md</span> §Race HUD, §Results screen</p>
+        </article>
+
+        <article class="recipe" id="paddock">
+          <h3>Paddock, spawns and the garage</h3>
+          <ul>
+            <li><span class="menu">GameObject<i>›</i>Draftmaster<i>›</i>Player Spawn Point</span> — where the on-foot player starts (labelled, weighted).</li>
+            <li><span class="menu">GameObject<i>›</i>Draftmaster<i>›</i>Paddock Boundary</span> — the walkable pocket.</li>
+            <li><span class="menu">Tools<i>›</i>Draftmaster<i>›</i>Bake Paddock Surface</span> — bakes the paddock tarmac into the scene as a real object; re-run after changing the layout fields.</li>
+            <li><span class="menu">Draftmaster<i>›</i>Paddock<i>›</i>Preview Motorhome Lot</span> / <span class="menu">Clear Motorhome Lot Preview</span> — see where the drivers' RV row lands while authoring. Preview objects are <code>DontSave</code>, so they never hit the scene file.</li>
+            <li><span class="menu">Tools<i>›</i>Draftmaster<i>›</i>Build Team Garage Scene</span>.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="keys">
+      <h2>Play-mode keys</h2>
+      <p class="sect-note">Read out of the source, not memory (re-read 2026-08-21). <b>F6 now drives three panels and F8 is no longer free</b> — the last edition of this page said it was.</p>
+      <div class="keys">
+        <div class="key"><kbd>Esc</kbd><span>Pause menu — closes the phone first if it's up</span></div>
+        <div class="key"><kbd>P</kbd><span>Phone (on foot) — Tasks, Notes, SoBuzz, DrivR</span></div>
+        <div class="key"><kbd>Tab</kbd><span>Hold — expand the order board to the full field</span></div>
+        <div class="key"><kbd>F1</kbd><span>Lap timing readout</span></div>
+        <div class="key"><kbd>F2</kbd><span>Order board — best-lap ranked in practice</span></div>
+        <div class="key"><kbd>F3</kbd><span>TEAM box — mid-race car switch</span></div>
+        <div class="key"><kbd>F4</kbd><span>Rivalry standings</span></div>
+        <div class="key"><kbd>F5</kbd><span>Driver dossier</span></div>
+        <div class="key clash"><kbd>F6</kbd><span>Tyre temp/wear <b>and</b> sponsor board <b>and</b> the UI-kit showcase</span></div>
+        <div class="key"><kbd>F7</kbd><span>Player telemetry</span></div>
+        <div class="key"><kbd>F8</kbd><span>Formation-lap diagnostics — gap / closing speed / state per car</span></div>
+        <div class="key clash"><kbd>F9</kbd><span>Handling tuner <b>and</b> travel map</span></div>
+        <div class="key"><kbd>C</kbd><span>Crew chief mode</span></div>
+        <div class="key"><kbd>V</kbd><span>Drive / Broadcast toggle</span></div>
+        <div class="key"><kbd>L</kbd><span>Pit limiter</span></div>
+      </div>
+      <p class="free">Free: F10–F12</p>
+    </section>
+
+    <section id="menus">
+      <h2>Menu reference</h2>
+      <p class="sect-note">Everything under the project's own menus, grouped.</p>
+
+      <div class="menu-group">
+        <h3>Draftmaster › Tracks</h3>
+        <div class="scroller">
+          <table>
+            <thead><tr><th>Item</th><th>Does</th></tr></thead>
+            <tbody>
+              <tr><td>Track Builder Window</td><td>The main authoring window: Generate Layout / Build Package / Dress / Race, per calendar row</td></tr>
+              <tr><td>Create Starter Layouts</td><td>Seeds the two examples (Daytona + Martinsville)</td></tr>
+              <tr><td>Dress Selected Package · Dress All Undressed Packages</td><td>Generate ground, walls, grandstands, paddock from the spline</td></tr>
+              <tr><td>Edit Selected Package (Prefab Mode) · In Context (Race Scene)</td><td>Open a package for editing</td></tr>
+              <tr><td>Preview Selected Package In Scene · Clear Package Previews</td><td>Drop a track into the race scene so geometry anchors resolve</td></tr>
+              <tr><td>Select Track For Next Race › …</td><td>Sets <code>TrackSelection</code></td></tr>
+              <tr><td>Report Calendar Coverage</td><td>What's built vs catalogue-only</td></tr>
+              <tr><td>Split Shared Race Scene</td><td>One-shot: turn the hand-authored WatkinsGlen scene into shared scene + package</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="menu-group">
+        <h3>Draftmaster › NPCs</h3>
+        <ul class="menu-list">
+          <li>Director (Ctrl+Shift+N)</li><li>Add Placed NPC</li><li>Install Default Pit Cast</li>
+          <li>Move Selected NPC Into Track Package</li><li>Add RV Engineer To Open Package</li>
+          <li>Dialogue Pool (Global)</li><li>Dialogue Pool (Selected Track)</li>
+          <li>Seed Global Dialogue Pool From Built-Ins</li><li>Clear Appearance Flags</li><li>Clear Career Path Choice</li>
+        </ul>
+        <div class="rule-note"><p><b>Clear Appearance Flags</b> is the one to remember: a once-per-weekend / once-ever beat writes a PlayerPrefs flag when it plays, and you can't see it again until that's wiped.</p></div>
+      </div>
+
+      <div class="menu-group">
+        <h3>Draftmaster › Art</h3>
+        <ul class="menu-list">
+          <li>Set Up Iron Oval Kit</li><li>Verify Iron Oval Kit</li><li>Set Up Pixel UI Kit</li><li>Verify Pixel UI Kit</li>
+          <li>Build Title Screen Scene</li><li>Build Garage Screen Scene</li><li>Build Iron Oval Showcase Scene</li>
+          <li>Restyle Scene Canvas UI</li><li>Restyle UI Prefabs</li>
+          <li>Apply Pixel Standard to Open Scene</li><li>Rebuild Track Generators</li>
+          <li>Retarget World Sprites to Pixel Standard</li><li>Audit Pixel Scale</li>
+          <li>Report Sprite Scale Compensation</li><li>Report Surface Material Usage</li>
+          <li>Dump Pixel Font Atlas</li><li>Preview Dialogue Bubble</li><li>Clear Dialogue Bubble Preview</li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <h3>Draftmaster › UI · Sponsors</h3>
+        <ul class="menu-list">
+          <li>Build Demo UI Prefabs</li><li>Build Car Setup Panel Prefab</li><li>Build Control Hint Prefab</li>
+          <li>Add Pit Limiter Chip To Speedometer</li><li>Build Speech Box Texture (+ Force Rebuild)</li>
+          <li>Generate Placeholder Decals</li><li>Create Car Sponsor Layout</li>
+          <li>Preview Slots On Livery</li><li>Preview Sponsored Car</li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <h3>Draftmaster › RV Interior · Travel Map · Paddock · Fights · Debug</h3>
+        <ul class="menu-list">
+          <li>Build / Force Rebuild pairs</li><li>Preview Motorhome Lot</li><li>Clear Motorhome Lot Preview</li>
+          <li>Clear Seeded Test Rivalries</li><li>Reset ALL Driver Relationships</li>
+          <li>Show Pit Boxes</li><li>Log Pit Box Lines</li><li>Log Pit Fit</li>
+          <li>RV Cutscene › Teleport Player Outside Door</li><li>… Onto Trigger</li><li>… Start NPC Conversation</li><li>… Report State</li>
+        </ul>
+        <p class="seealso">The RV Cutscene items are play-mode stand-ins for walking the player, since MCP can't move objects during play.</p>
+      </div>
+
+      <div class="menu-group">
+        <h3>Tools · GameObject · Window</h3>
+        <ul class="menu-list">
+          <li>Tools › Track › Add Missing Finish Line Strips</li><li>… Add Missing Pit Exit Lines</li>
+          <li>… Rebuild Track Environment</li><li>… Normalise Racing Line Sides</li>
+          <li>Tools › Draftmaster › Build Team Garage Scene</li><li>… Bake Paddock Surface</li><li>… Migrate Strip Distances</li>
+          <li>GameObject › Draftmaster › Player Spawn Point</li><li>… Paddock Boundary</li>
+          <li>GameObject › 2D Object › Layered NPC (Paper Doll)</li>
+          <li>Window › Draftmaster › Driver Database</li>
+        </ul>
+      </div>
+
+      <div class="menu-group">
+        <h3>Assets › Create</h3>
+        <div class="scroller">
+          <table>
+            <thead><tr><th>Menu</th><th>Asset</th></tr></thead>
+            <tbody>
+              <tr><td>Racetrack › Track Info V2</td><td>Track geometry (spline system)</td></tr>
+              <tr><td>Racetrack › Track Environment</td><td>Walls, strips, barrier gaps</td></tr>
+              <tr><td>Racetrack › New Track</td><td>Legacy <code>TrackInfo</code> (scrolling system)</td></tr>
+              <tr><td>Vehicle › New Vehicle</td><td><code>VehicleInfo</code></td></tr>
+              <tr><td>Quests › Quest</td><td><code>QuestInfo</code></td></tr>
+              <tr><td>Draftmaster › Dialogue Pool</td><td>Crowd lines</td></tr>
+              <tr><td>Draftmaster › Car Sponsor Layout</td><td>Decal panel rects</td></tr>
+              <tr><td>Draftmaster › Pixel UI Theme</td><td>UI theme</td></tr>
+              <tr><td>NPC › Part Library</td><td>Paper-doll parts</td></tr>
+              <tr><td>Sounds › Engine Sound Set · Clips · Commentary › Lines</td><td>Audio</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="gotchas">
+      <h2>Gotchas</h2>
+      <p class="sect-note">The ones that cost an hour before you remember them.</p>
+      <div class="gotchas">
+        <div class="gotcha"><div><b>"Force Rebuild" items destroy hand edits.</b> The plain <em>Build …</em> items refuse to overwrite on purpose.</div></div>
+        <div class="gotcha"><div><b>Geometry-anchored NPCs need a track in the scene</b> — preview a package, or author inside the package's own Prefab Mode stage.</div></div>
+        <div class="gotcha"><div><b>The race scene has no road.</b> Manager fields pointing at a <code>TrackBuilder</code> are filled at load (<code>BindSceneReferences</code> only fills nulls); serialise a road into the scene and no package can ever load.</div></div>
+        <div class="gotcha"><div><b>Road courses are hand-authored.</b> The oval generator refuses them.</div></div>
+        <div class="gotcha"><div><b>Scenes and prefabs are binary-serialised.</b> Text search won't find a GUID inside one — use the Unity MCP tools or the editor.</div></div>
+        <div class="gotcha"><div><b>Editing the seeded roster or calendar needs <code>DatabaseManager.SchemaVersion</code> bumped</b>, or the old table survives.</div></div>
+        <div class="gotcha"><div><b>F6 drives three panels and F9 two</b> — tyre wear, sponsor board and the UI-kit showcase all answer F6. Only F10–F12 are still free; a new panel should take one of those.</div></div>
+        <div class="gotcha"><div><b>A title-screen row pointing at a scene that isn't in the build settings draws disabled</b>, not broken. That's the design — but it means "my new menu row does nothing" is almost always a missing build-settings entry.</div></div>
+        <div class="gotcha"><div><b>The race HUD stands the old readouts down.</b> <code>IronOvalRaceHUD</code> self-installs and switches off the speedometer dial, the position panel and RaceDirector's lap counter so nothing draws twice. Missing dial = it's doing its job; disable the component to get them back.</div></div>
+        <div class="gotcha"><div><b>The player is found by car number, not name.</b> <code>PlayerDriver</code> → <code>RosterLookup.ByCarNumber</code>, defaulting to #8. A lookup by career name returns nothing, because no save sets one.</div></div>
+        <div class="gotcha"><div><b>Play mode pauses while the editor is unfocused</b>, so nothing driven by game time ticks while you work in another window.</div></div>
+      </div>
+
+      <footer>
+        Updated 2026-08-21 — front end &amp; boot order, race HUD, paper-doll clothing, garage driver sheet, corrected key map · mirrors <span class="path">Docs/Editor-Handbook.md</span> in the repo · palette and display face from the project's own Iron Oval kit (<code>PixelUITheme.asset</code>)
+      </footer>
+    </section>
+  </main>
+</div>
+
+<script>
+// Rail highlight follows the section in view.
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  var targets = Object.keys(byId).map(function (id) { return document.getElementById(id); }).filter(Boolean);
+  if (!('IntersectionObserver' in window) || !targets.length) return;
+
+  var seen = {};
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { seen[e.target.id] = e.isIntersecting; });
+    var current = null;
+    targets.forEach(function (t) { if (seen[t.id] && !current) current = t.id; });
+    if (!current) return;
+    links.forEach(function (a) { a.classList.remove('on'); });
+    byId[current].classList.add('on');
+  }, { rootMargin: '-12% 0px -70% 0px' });
+
+  targets.forEach(function (t) { io.observe(t); });
+})();
+</script>

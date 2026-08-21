@@ -4,6 +4,9 @@ The other docs in `Docs/` explain how each system *works*. This one is the opera
 click, in what order**, for the jobs that come up while making content. Every entry links out to the deep
 doc when there is one.
 
+`Docs/BuildBook.html` is the same material as a browsable page (the Build Book), styled with the
+project's own Iron Oval kit. Open it in a browser; keep the two in step when either changes.
+
 ---
 
 ## Which scene do I open?
@@ -221,14 +224,15 @@ The standard is **12.8 px/m**. Import at that PPU — never fix size with transf
 | `F3` | TEAM box — mid-race car switch |
 | `F4` | Rivalry standings |
 | `F5` | Driver dossier |
-| `F6` | Tyre temp/wear **and** sponsor board (clash) |
+| `F6` | Tyre temp/wear **and** sponsor board **and** the UI-kit showcase (clash) |
 | `F7` | Player telemetry |
+| `F8` | Formation-lap diagnostics — gap / closing speed / state per car |
 | `F9` | Handling tuner **and** travel-map dev hotkey (clash) |
 | `C` | Crew chief mode |
 | `V` | Drive / Broadcast toggle |
 | `L` | Pit limiter |
 
-Free: `F8`, `F10`–`F12`.
+Free: `F10`–`F12`.
 
 ---
 
@@ -314,6 +318,7 @@ Driver Database.
   MCP tools or the editor.
 - **Editing the seeded roster or calendar needs `DatabaseManager.SchemaVersion` bumped**, or the old table
   survives.
-- **`F6` and `F9` each drive two panels** (see the key table) — worth retuning next time either is touched.
+- **`F6` drives three panels and `F9` two** (see the key table). Only `F10`–`F12` are still free — a new
+  panel should take one of those.
 - **Play mode pauses while the editor is unfocused**, so nothing driven by game time ticks while you work
   in another window.
