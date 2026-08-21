@@ -173,6 +173,26 @@ Tint is a **multiply**: white pixel × red tint = exactly red; grey pixel × red
 3. Add palette colours to that category's **Tint Options** — these become one-click swatches in
    the NPC inspector and the pool random crowd NPCs draw from.
 
+### Current parts — all placeholder
+
+`Assets/Sprites/Walking/Parts/` holds 13 **placeholder** sheets, all 56×8 (7 frames), painted in the
+white/grey ramp and meant to be redrawn. They were cut out of `walk_base.png`'s own silhouette, so
+every pixel of every part lands on a pixel the body actually covers.
+
+The body reads top-down, and each layer owns a band of it so nothing above it hides it completely:
+
+| Layer | Band of the body | Sheets |
+|---|---|---|
+| Base | the whole silhouette | `walk_base` (unchanged) |
+| Bottoms | hips row + feet row | `bottoms_trousers`, `bottoms_shorts` (bare ankles) |
+| Shoes | the toe pixel at each end of the feet row | `shoes_low`, `shoes_boots` |
+| Top | shoulders row + arms row | `top_tee` (arm tips stay skin), `top_vest` (bare arms), `top_jacket` (sleeves to the hands) |
+| Hair | the head block | `hair_short`, `hair_long`, `hair_buzz` |
+| Hat | the head block | `hat_cap`, `hat_beanie`, `hat_helmet` |
+
+The head block sits in the same place on all seven frames, so hair and hats repeat one pose across the
+strip. Colour variation is all tint: 5 skin tones, 8 shirt, 6 trouser, 5 shoe, 6 hair, 6 hat.
+
 ### Designing an NPC in the editor
 
 **GameObject > 2D Object > Layered NPC (Paper Doll)** creates a ready-to-design NPC with the
