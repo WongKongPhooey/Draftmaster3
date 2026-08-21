@@ -75,7 +75,8 @@ public class LeaderboardUI : MonoBehaviour
         int show = expanded ? n : Mathf.Min(compactRows, n);
 
         float pad = PixelGUI.Px(6f);
-        float row = PixelGUI.Px(rowHeight);
+        // Never tighter than a line of the face actually needs, whatever the inspector says.
+        float row = Mathf.Max(PixelGUI.Px(rowHeight), PixelGUI.DataLineH);
         float w = PixelGUI.Px(width + (byLap ? lapTimeExtraWidth : 0f));
         float x = PixelGUI.Px(origin.x), y = PixelGUI.Px(origin.y);
 

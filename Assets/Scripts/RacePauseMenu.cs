@@ -91,18 +91,23 @@ public class RacePauseMenu : MonoBehaviour
         // The frozen race sits under the kit's scrim, not a flat black wash: still legible, clearly halted.
         PixelGUI.Scrim();
 
-        float w = PixelGUI.Px(200f), h = PixelGUI.Px(150f);
+        // Rows are a line of the label face tall, so the panel is sized from them rather than a
+        // literal 150 that was true while the face sat on an 8px cell.
+        float rowH = PixelGUI.LineH, gapH = PixelGUI.Px(4f);
+        float w = PixelGUI.Px(200f);
+        float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 4f + rowH * 2f
+                  + rowH + gapH + (rowH + PixelGUI.Px(6f)) + PixelGUI.LineH + PixelGUI.Px(8f);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Round((Screen.height - h) * 0.5f);
 
         PixelGUI.Panel(new Rect(x, y, w, h), focused: true);
 
         var content = PixelGUI.PanelContent(new Rect(x, y, w, h), 10f);
-        float row = PixelGUI.Px(16f), gap = PixelGUI.Px(4f);
+        float row = rowH, gap = gapH;
         float cy = content.y;
 
-        GUI.Label(new Rect(content.x, cy, content.width, row), "PAUSED", _title);
-        cy += row + gap;
+        GUI.Label(new Rect(content.x, cy, content.width, PixelGUI.Heading.fontSize), "PAUSED", _title);
+        cy += PixelGUI.Heading.fontSize + gap;
         PixelGUI.Rule(content.x, cy, content.width);
         cy += gap * 2f;
 
@@ -116,13 +121,13 @@ public class RacePauseMenu : MonoBehaviour
         if (newMap != map) TrackMiniMap.Visible = newMap;
         cy += row + gap;
 
-        if (PixelGUI.Tab(new Rect(content.x, cy, content.width, PixelGUI.Px(14f)),
+        if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row),
                          _showMissions ? "MISSIONS ◂" : "MISSIONS ▸", _showMissions))
             _showMissions = !_showMissions;
-        cy += PixelGUI.Px(14f) + gap;
+        cy += row + gap;
 
-        float footer = PixelGUI.Px(10f);
-        float buttonH = PixelGUI.Px(20f);
+        float footer = PixelGUI.LineH;
+        float buttonH = PixelGUI.LineH + PixelGUI.Px(6f);
         float buttonY = content.yMax - buttonH - footer;
         if (PixelGUI.Button(new Rect(content.x, buttonY, content.width, buttonH), "RESUME")) Resume();
         GUI.Label(new Rect(content.x, content.yMax - footer, content.width, footer), "ESC TO RESUME", PixelGUI.Footer);
@@ -141,7 +146,7 @@ public class RacePauseMenu : MonoBehaviour
         PixelGUI.Panel(new Rect(x, y, w, h));
         var content = PixelGUI.PanelContent(new Rect(x, y, w, h), 8f);
 
-        float row = PixelGUI.Px(16f);
+        float row = Mathf.Max(PixelGUI.Px(16f), PixelGUI.LineH);
         GUI.Label(new Rect(content.x, content.y, content.width, row), "MISSIONS", _title);
 
         var listRect = new Rect(content.x, content.y + row, content.width, content.height - row);
@@ -163,7 +168,7 @@ public class RacePauseMenu : MonoBehaviour
             {
                 case QuestManager.State.NotStarted:
                     GUILayout.Label(q.description, PixelGUI.Body);
-                    if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.Px(16f)), "ACCEPT"))
+                    if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.LineH + PixelGUI.Px(6f)), "ACCEPT"))
                         QuestManager.Accept(q);
                     break;
                 case QuestManager.State.Active:
@@ -172,7 +177,7 @@ public class RacePauseMenu : MonoBehaviour
                 case QuestManager.State.ReadyToTurnIn:
                     if (q.objective == QuestInfo.ObjectiveType.DeliverItem)
                         GUILayout.Label("Deliver it in person.", PixelGUI.Row);
-                    else if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.Px(16f)), "TURN IN"))
+                    else if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.LineH + PixelGUI.Px(6f)), "TURN IN"))
                         QuestManager.Complete(q);
                     break;
                 case QuestManager.State.Completed:

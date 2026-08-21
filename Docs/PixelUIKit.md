@@ -32,4 +32,4 @@ Canvas: 640x360 UI px (x3 = 1920x1080, x6 = 3840x2160), reference PPU 100.
 | icon warning | warning | 16x16px, unsliced |
 | body font | Fixedsys Pixel | RASTER_HINTED, shader `TextMeshPro/Bitmap`, atlas filter Point — OK |
 | display font | mania SDF 1 |  |
-| IMGUI font | fixedsys | used by PixelGUI panels, which cannot take a TMP asset |
+| IMGUI font | VT323-Regular | used by PixelGUI panels, which cannot take a TMP asset (all three IMGUI slots hold it — see Docs/IronOvalKit.md) |

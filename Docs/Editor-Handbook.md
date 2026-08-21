@@ -270,6 +270,11 @@ Preview / Clear Dialogue Bubble.
 Build Demo UI Prefabs · Build Car Setup Panel Prefab · Build Control Hint Prefab ·
 Add Pit Limiter Chip To Speedometer · Build Speech Box Texture (+ Force Rebuild).
 
+### `Draftmaster > UI`
+Retarget Fonts In Prefabs (points every authored TMP/legacy label at the theme's faces and snaps its size
+onto that face's pixel cell) · Retarget Fonts In Open Scenes (same, for whatever scenes are open — leaves
+them dirty for you to check and save).
+
 ### `Draftmaster > Sponsors`
 Generate Placeholder Decals · Create Car Sponsor Layout · Preview Slots On Livery · Preview Sponsored Car.
 
@@ -324,6 +329,12 @@ Driver Database.
   survives.
 - **`F6` drives three panels and `F9` two** (see the key table). Only `F10`–`F12` are still free — a new
   panel should take one of those.
+- **The UI is one typeface (VT323) and sizes follow the face, not the role.** A bitmap face is drawn for
+  one pixel cell — VT323 16, Silkscreen 8, Pixelify Sans 20 — and rendering off whole multiples of it goes
+  soft. `IronOvalUI.Snap` and `PixelGUI`'s `LineH` / `DataLineH` exist so layouts re-flow when the theme's
+  faces change; lay text rows out with those rather than literals. Changing a theme font slot is therefore
+  safe, but a screen authored at the old cell may need its row pitch re-checked. Authored labels hold a
+  direct font reference — `Draftmaster > UI > Retarget Fonts …` is what moves them.
 - **The runtime hierarchy is grouped, so root paths change in play mode.** `RuntimeHierarchyOrganizer`
   files every root object under `UI`, `Particles`, `Environment`, `Vehicles`, `Characters`, `Directors`,
   `Cameras`, `Lighting`, `Audio`, `Markers` or `Misc` — empty parents at the origin, identity scale, world

@@ -58,11 +58,17 @@ Accent budget: under 3% of lit pixels on any screen. Alarm red is never decorati
 
 ## Type
 
+**The whole UI is VT323.** The kit was authored with three faces — Silkscreen for labels, Pixelify Sans
+for prose, VT323 for data columns — but VT323 at 16 is the one that stays readable under the scanline
+overlay, so every slot now points at it. The three-face layout below still works: point `display` back at
+Silkscreen Pixel and `body` at Pixelify Sans Pixel and everything re-flows, because sizes are derived from
+whichever face a slot holds rather than hard-coded (see the ladder note under the table).
+
 | role | slot | asset | atlas |
 |---|---|---|---|
-| Headers, labels, buttons (Silkscreen) | `display` | Silkscreen Pixel | RASTER_HINTED, padding 1, `TextMeshPro/Bitmap`, Point — OK |
-| Dialogue, names, prose (Pixelify Sans) | `body` | Pixelify Sans Pixel | RASTER_HINTED, padding 1, `TextMeshPro/Bitmap`, Point — OK |
-| Dense data columns (VT323) | `data` | VT323 Pixel | RASTER_HINTED, padding 1, `TextMeshPro/Bitmap`, Point — OK |
+| Headers, labels, buttons | `display` | VT323 Pixel (was Silkscreen Pixel) | RASTER_HINTED, padding 1, `TextMeshPro/Bitmap`, Point — OK |
+| Dialogue, names, prose | `body` | VT323 Pixel (was Pixelify Sans Pixel) | RASTER_HINTED, padding 1, `TextMeshPro/Bitmap`, Point — OK |
+| Dense data columns | `data` | VT323 Pixel | RASTER_HINTED, padding 1, `TextMeshPro/Bitmap`, Point — OK |
 | IMGUI panels | `imguiFont` | VT323-Regular | plain Font, hinted raster |
 
 Each atlas is rasterised at the smallest size its face ships at — Silkscreen 8, Pixelify Sans 20, VT323 16 — because a bitmap atlas scales up cleanly and not down. Usable ladders:
@@ -73,7 +79,16 @@ Each atlas is rasterised at the smallest size its face ships at — Silkscreen 8
 | Pixelify Sans | 20, 40, 60 | 12, 16, 32, 48 |
 | VT323 | 16, 32 | 19, 22 |
 
-Disable auto-size on every label and keep text positions on whole pixels. `IronOvalUI` only ever asks for on-ladder sizes.
+Disable auto-size on every label and keep text positions on whole pixels. `IronOvalUI` only ever asks for
+on-ladder sizes: `IronOvalUI.Snap(font, designSize)` rounds a size authored for one face onto the cell of
+the face actually in the slot, so a Silkscreen 8 label becomes VT323 16 rather than a resampled VT323 8.
+`PixelGUI` does the same for IMGUI, and exposes `PixelGUI.LineH` / `DataLineH` — the height one row of
+text needs at the current face and scale. **Lay rows out with those, never with a literal**, or a face on
+a bigger cell draws over the row below it.
+
+The consequence of VT323 everywhere: a text row costs 18px where Silkscreen cost 10, so dense screens
+carry fewer rows. The garage's sixteen skills lost their per-row cell bars to pay for it (name + number
+only); the bars stay on the two ability rows and the car's four stats.
 
 ## Canvas
 
@@ -91,8 +106,11 @@ Most in-race UI in the spline scenes draws with OnGUI rather than a Canvas, so t
 | slot | asset | used for |
 |---|---|---|
 | `imguiFont` | VT323-Regular | readouts and columns (16pt cell) |
-| `imguiDisplayFont` | Silkscreen-Regular | headings, labels, buttons (8pt) |
-| `imguiBodyFont` | PixelifySans-Variable | prose (20pt) |
+| `imguiDisplayFont` | VT323-Regular (was Silkscreen-Regular) | headings, labels, buttons |
+| `imguiBodyFont` | VT323-Regular (was PixelifySans-Variable) | prose |
+
+Sizes come from the face's cell, not the role: `PixelGUI` reads the cell off the font in the slot
+(VT323 16, Silkscreen 8, Pixelify Sans 20) and sets labels/buttons at one cell, headings at two.
 
 Kit textures import Read/Write enabled because that upscale runs through `GetPixels`. `PixelGUISkin` additionally restyles Unity's built-in skin from the theme, so a panel not yet moved onto `PixelGUI` still picks up the font, palette, plate and sliders.
 

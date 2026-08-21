@@ -28,16 +28,20 @@ public class PlayerTelemetryHUD : MonoBehaviour
     {
         if (!visible || target == null) return;
 
-        float w = PixelGUI.Px(150f), h = PixelGUI.Px(126f);
+        // Height is the sum of what goes in it — heading, rule, six data lines, two labelled wear
+        // rows — so a face on a bigger cell grows the panel instead of spilling out of it.
+        float w = PixelGUI.Px(150f);
+        float h = PixelGUI.Px(16f) + PixelGUI.LineH + PixelGUI.Px(5f) + 6f * PixelGUI.DataLineH
+                  + PixelGUI.Px(2f) + 2f * (PixelGUI.LineH + PixelGUI.CellsHeight + PixelGUI.Px(3f));
         float x = PixelGUI.Px(8f), y = Screen.height - h - PixelGUI.Px(14f);
         PixelGUI.Panel(new Rect(x, y, w, h));
 
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 8f);
         float cy = c.y;
-        float line = PixelGUI.Px(12f);
+        float line = PixelGUI.DataLineH;
 
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Px(10f)), "TELEMETRY", PixelGUI.HeadingSmall);
-        cy += PixelGUI.Px(12f);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "TELEMETRY", PixelGUI.HeadingSmall);
+        cy += PixelGUI.LineH;
         PixelGUI.Rule(c.x, cy, c.width);
         cy += PixelGUI.Px(3f);
 
@@ -73,13 +77,13 @@ public class PlayerTelemetryHUD : MonoBehaviour
     // as the reading is actually trusted to be.
     void Wear(float x, ref float y, string label, float wear01)
     {
-        GUI.Label(new Rect(x, y, PixelGUI.CellsWidth(10), PixelGUI.Px(9f)), label, PixelGUI.Label);
-        y += PixelGUI.Px(10f);
+        GUI.Label(new Rect(x, y, PixelGUI.CellsWidth(10), PixelGUI.LineH), label, PixelGUI.Label);
+        y += PixelGUI.LineH;
         float life = 1f - Mathf.Clamp01(wear01);
         var colour = life > 0.66f ? PixelGUI.Confirm : life > 0.33f ? PixelGUI.Gold : PixelGUI.Danger;
         PixelGUI.Cells(new Rect(x, y, PixelGUI.CellsWidth(10), PixelGUI.CellsHeight),
                        Mathf.CeilToInt(life * 10f), 10, colour);
-        y += PixelGUI.Px(13f);
+        y += PixelGUI.CellsHeight + PixelGUI.Px(3f);
     }
 
     // White until the tyre is genuinely working, then alarm red. No ramp through pink in between: the kit

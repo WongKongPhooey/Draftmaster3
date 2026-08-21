@@ -59,6 +59,15 @@ public static class PixelGUI
     // Scales a pixel measurement authored at 1x.
     public static float Px(float baseline) => baseline * Scale;
 
+    // One line of label/heading text at the current face and scale, plus its leading — the height a row
+    // of text actually needs. Panels lay their rows out with this rather than a literal, so swapping the
+    // theme onto a face drawn on a bigger cell (Silkscreen 8 -> VT323 16) pushes rows apart instead of
+    // drawing them over each other.
+    public static float LineH { get { Ensure(); return _label.fontSize + Px(2f); } }
+
+    // The same for the fixed-advance data face, which is what rows, columns and readouts are set in.
+    public static float DataLineH { get { Ensure(); return _data.fontSize + Px(2f); } }
+
     // ---- palette ------------------------------------------------------------------------------------
     // Shortcuts, so a panel does not have to null-check the theme on every colour it draws.
     public static Color Text => Theme != null ? Theme.text : Color.white;

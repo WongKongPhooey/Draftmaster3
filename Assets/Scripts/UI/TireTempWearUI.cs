@@ -63,22 +63,23 @@ public class TireTempWearUI : MonoBehaviour
         float t = tires.tempC[i];
         float life = 1f - Mathf.Clamp01(tires.wear[i]);
 
-        float line = PixelGUI.Px(8f);
-        // Corner and temperature on one Silkscreen line, then the temperature bar, then the life cells.
+        float line = PixelGUI.LineH;
+        // Corner and temperature on one line of the label face, then the temperature bar, then the life
+        // cells. The line height comes from the face so a bigger cell moves the bar down with it.
         GUI.Label(new Rect(x, y, w, line), label, PixelGUI.Label);
         var tempLabel = PixelGUI.Data;
         var prevAlign = tempLabel.alignment;
         tempLabel.alignment = TextAnchor.UpperRight;
-        GUI.Label(new Rect(x, y - PixelGUI.Px(3f), w, PixelGUI.Px(12f)), $"{t:F0}°", tempLabel);
+        GUI.Label(new Rect(x, y, w, line), $"{t:F0}°", tempLabel);
         tempLabel.alignment = prevAlign;
 
-        PixelGUI.Bar(new Rect(x, y + line + PixelGUI.Px(2f), w, PixelGUI.Px(5f)), TempFill(t), TempColour(t));
+        PixelGUI.Bar(new Rect(x, y + line, w, PixelGUI.Px(5f)), TempFill(t), TempColour(t));
 
         // Ten cells of life, red once a third of the tyre is gone — the point at which the lap time is
         // already going away, rather than the point at which the tyre is finished.
         int cells = Mathf.CeilToInt(life * 10f);
         var wearColour = life > 0.66f ? PixelGUI.Confirm : life > 0.33f ? PixelGUI.Gold : PixelGUI.Danger;
-        PixelGUI.Cells(new Rect(x, y + line + PixelGUI.Px(9f), w, PixelGUI.Px(10f)), cells, 10, wearColour);
+        PixelGUI.Cells(new Rect(x, y + line + PixelGUI.Px(7f), w, PixelGUI.CellsHeight), cells, 10, wearColour);
     }
 
     // How full the temperature bar reads: empty at cold, full at the overheat threshold.

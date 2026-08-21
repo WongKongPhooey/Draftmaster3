@@ -124,13 +124,13 @@ public class IronOvalRaceHUD : MonoBehaviour
         var prev = style.normal.textColor;
         style.normal.textColor = PixelGUI.TextDim;
         GUI.Label(new Rect(x + PixelGUI.Px(2f) + Measure(PixelGUI.Display, "P" + pos), y + PixelGUI.Px(14f),
-                           PixelGUI.Px(60f), PixelGUI.Px(12f)), "/" + Mathf.Max(field, pos), style);
+                           PixelGUI.Px(60f), PixelGUI.DataLineH), "/" + Mathf.Max(field, pos), style);
         style.normal.textColor = prev;
 
         string lap = LapText();
         if (string.IsNullOrEmpty(lap)) return;
         var heading = PixelGUI.HeadingSmall;
-        GUI.Label(new Rect(x + PixelGUI.Px(2f), y + PixelGUI.Px(32f), PixelGUI.Px(120f), PixelGUI.Px(10f)),
+        GUI.Label(new Rect(x + PixelGUI.Px(2f), y + PixelGUI.Px(32f), PixelGUI.Px(120f), PixelGUI.LineH),
                   lap, heading);
     }
 
@@ -149,7 +149,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         var prev = style.normal.textColor;
         style.normal.textColor = PixelGUI.TextDim;
         GUI.Label(new Rect(x + PixelGUI.Px(2f) + Measure(PixelGUI.Display, text), y + PixelGUI.Px(14f),
-                           PixelGUI.Px(40f), PixelGUI.Px(12f)), "MPH", style);
+                           PixelGUI.Px(40f), PixelGUI.DataLineH), "MPH", style);
         style.normal.textColor = prev;
     }
 
@@ -158,7 +158,7 @@ public class IronOvalRaceHUD : MonoBehaviour
     void DrawMeters()
     {
         float w = PixelGUI.Px(92f);
-        float h = PixelGUI.Px(52f);
+        float h = PixelGUI.Px(12f) + 2f * (PixelGUI.LineH + PixelGUI.CellsHeight + PixelGUI.Px(4f));
         float x = Screen.width - w - PixelGUI.Px(8f);
         float y = PixelGUI.Px(96f);
 
@@ -170,16 +170,16 @@ public class IronOvalRaceHUD : MonoBehaviour
         var prev = label.normal.textColor;
 
         label.normal.textColor = PixelGUI.Danger;
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Px(9f)), "TIRE", label);
-        cy += PixelGUI.Px(10f);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "TIRE", label);
+        cy += PixelGUI.LineH;
         float life = _tires != null ? 1f - Mathf.Clamp01(Mathf.Max(_tires.FrontWear, _tires.RearWear)) : 1f;
         PixelGUI.Cells(new Rect(c.x, cy, c.width, PixelGUI.CellsHeight), Mathf.RoundToInt(life * 10f), 10,
                        life > 0.66f ? PixelGUI.Confirm : life > 0.33f ? PixelGUI.Gold : PixelGUI.Danger);
-        cy += PixelGUI.Px(14f);
+        cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
 
         label.normal.textColor = PixelGUI.Info;
-        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Px(9f)), "DRAFT", label);
-        cy += PixelGUI.Px(10f);
+        GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "DRAFT", label);
+        cy += PixelGUI.LineH;
         PixelGUI.Cells(new Rect(c.x, cy, c.width, PixelGUI.CellsHeight),
                        Mathf.RoundToInt(Draft01() * 10f), 10, PixelGUI.Info);
 
