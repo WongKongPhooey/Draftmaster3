@@ -10,10 +10,10 @@
   <Project Path="Draftmaster.Tracks.csproj" />
   <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Tests.Editor.csproj" />
+  <Project Path="Draftmaster.Sim.csproj" />
   <Project Path="Draftmaster.Crowd.csproj" />
   <Project Path="Draftmaster.Fights.csproj" />
   <Project Path="PlayFabSDKEditor.csproj" />
   <Project Path="Draftmaster.Fans.csproj" />
   <Project Path="Draftmaster.Tests.PlayMode.csproj" />
-  <Project Path="Draftmaster.Sim.csproj" />
 </Solution>

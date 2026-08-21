@@ -29,6 +29,16 @@ public static class IronOvalGarageBuilder
 {
     const string kScenePath = "Assets/Scenes/GarageScreen.unity";
 
+    // Row metrics follow the label FACE. This screen was authored against Silkscreen, which is drawn on
+    // an 8px cell: a label box was 10px and rows sat 12-24px apart. VT323 is drawn on a 16px cell and
+    // cannot be rendered below it without going soft, so its label box is 18px and every pitch grows to
+    // match. Expressed as metrics rather than literals so the screen re-flows if the face changes again.
+    static float LabelH => IronOvalUI.Snap(PixelUITheme.Instance != null ? PixelUITheme.Instance.display : null, 8) + 2f;
+    // One text row to the next, in a list of plain text rows.
+    static float TextPitch => LabelH + 2f;
+    // A heading to the first row under it.
+    static float HeadPitch => LabelH + 4f;
+
     [MenuItem("Draftmaster/Art/Build Garage Screen Scene", priority = 126)]
     public static void Build()
     {
@@ -93,61 +103,71 @@ public static class IronOvalGarageBuilder
         var identity = Plate(root, "Identity", theme.plate);
         Place(identity, 8f, top - 66f, leftW, colH - 66f);
 
+        // The block runs off one cursor so a taller label face pushes everything below it down
+        // instead of landing on top of the next line.
+        float iy = -6f;
+
         var name = IronOvalUI.Label(identity, "Name", "YOU", IronOvalUI.Role.Body, theme.text);
-        Place(name.rectTransform, 8f, -6f, leftW - 16f, 22f);
+        Place(name.rectTransform, 8f, iy, leftW - 16f, 20f);
         ui.driverName = name;
+        iy -= 22f;
 
         var number = IronOvalUI.Label(identity, "Number", "#8", IronOvalUI.Role.HeaderSmall, theme.danger);
-        Place(number.rectTransform, 8f, -28f, 40f, 10f);
+        Place(number.rectTransform, 8f, iy, 40f, LabelH);
         ui.driverNumber = number;
 
         var level = IronOvalUI.Label(identity, "Level", "LV 1", IronOvalUI.Role.HeaderSmall, theme.textDim);
-        Place(level.rectTransform, 50f, -28f, 60f, 10f);
+        Place(level.rectTransform, 50f, iy, 60f, LabelH);
         ui.driverLevel = level;
+        iy -= TextPitch;
 
         // The rest of the driver's database row: team, then age / manufacturer / nickname on one line.
         var team = IronOvalUI.Label(identity, "Team", "NO TEAM", IronOvalUI.Role.HeaderSmall, theme.text);
-        Place(team.rectTransform, 8f, -40f, leftW - 16f, 10f);
+        Place(team.rectTransform, 8f, iy, leftW - 16f, LabelH);
         team.textWrappingMode = TextWrappingModes.NoWrap;
         ui.driverTeam = team;
+        iy -= TextPitch;
 
         var bio = IronOvalUI.Label(identity, "Bio", "", IronOvalUI.Role.HeaderSmall, theme.textDim);
-        Place(bio.rectTransform, 8f, -52f, leftW - 16f, 10f);
+        Place(bio.rectTransform, 8f, iy, leftW - 16f, LabelH);
         bio.textWrappingMode = TextWrappingModes.NoWrap;
         ui.driverBio = bio;
+        iy -= LabelH + 4f;
 
-        Place(Plate(identity, "Rule0", theme.plateLight), 8f, -66f, leftW - 16f, 1f);
+        Place(Plate(identity, "Rule0", theme.plateLight), 8f, iy, leftW - 16f, 1f);
+        iy -= 6f;
 
         var careerHead = IronOvalUI.Label(identity, "CareerHead", "CAREER", IronOvalUI.Role.HeaderSmall, theme.gold);
-        Place(careerHead.rectTransform, 8f, -72f, 100f, 10f);
+        Place(careerHead.rectTransform, 8f, iy, 100f, LabelH);
+        iy -= HeadPitch;
 
-        float cy = -84f;
         for (int i = 0; i < 3; i++)
         {
             var label = IronOvalUI.Label(identity, "CareerLabel_" + i, "-", IronOvalUI.Role.HeaderSmall, theme.textDim);
-            Place(label.rectTransform, 8f, cy, 90f, 10f);
+            Place(label.rectTransform, 8f, iy, 90f, LabelH);
 
             var value = IronOvalUI.Label(identity, "CareerValue_" + i, "0", IronOvalUI.Role.HeaderSmall, theme.text);
-            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, cy), new Vector2(60f, 10f));
+            Anchor(value.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, iy), new Vector2(60f, LabelH));
             value.alignment = TextAlignmentOptions.Right;
 
             ui.careerRows.Add(new GarageScreenUI.TextPair { label = label, value = value });
-            cy -= 12f;
+            iy -= TextPitch;
         }
 
-        Place(Plate(identity, "Rule1", theme.plateLight), 8f, cy - 2f, leftW - 16f, 1f);
-        cy -= 8f;
+        iy -= 2f;
+        Place(Plate(identity, "Rule1", theme.plateLight), 8f, iy, leftW - 16f, 1f);
+        iy -= 6f;
 
         var accHead = IronOvalUI.Label(identity, "AccoladesHead", "ACCOLADES", IronOvalUI.Role.HeaderSmall, theme.gold);
-        Place(accHead.rectTransform, 8f, cy, 120f, 10f);
-        cy -= 13f;
+        Place(accHead.rectTransform, 8f, iy, 120f, LabelH);
+        iy -= HeadPitch;
 
         for (int i = 0; i < 3; i++)
         {
             var line = IronOvalUI.Label(identity, "Accolade_" + i, "", IronOvalUI.Role.HeaderSmall, theme.textDim);
-            Place(line.rectTransform, 8f, cy, leftW - 16f, 10f);
+            Place(line.rectTransform, 8f, iy, leftW - 16f, LabelH);
             ui.accoladeLines.Add(line);
-            cy -= 13f;
+            iy -= TextPitch;
         }
 
         // --- middle: the driver ------------------------------------------------------------------------

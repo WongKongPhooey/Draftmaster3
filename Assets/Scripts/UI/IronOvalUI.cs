@@ -61,13 +61,36 @@ public static class IronOvalUI
             if (font.material != null) label.fontSharedMaterial = font.material;
         }
 
-        label.fontSize = size;
+        label.fontSize = Snap(font, size);
         label.color = colour ?? defaultColour;
         // Silkscreen is drawn to be tracked out; the sheet asks for +1 to +3px on labels. TMP's
         // characterSpacing is in font units (1/100 em), so 12.5 at 16px is 2px.
         label.characterSpacing = role == Role.Header || role == Role.HeaderSmall ? 12.5f : 0f;
         label.enableAutoSizing = false;
         label.raycastTarget = false;
+    }
+
+    // The pixel cell a bitmap face is drawn for, and the nearest whole multiple of it to a size that
+    // was authored for some other face. Retargeting the theme onto one typeface (VT323 everywhere)
+    // would otherwise ask for Silkscreen's 8 and Pixelify's 20 and 60 off VT323's 16-grid, which is
+    // exactly the half-pixel mush the ladder exists to prevent. Faces keep their own sizes: with the
+    // original three-face theme every role snaps back to the number it was authored with.
+    static int Cell(TMP_FontAsset font, int fallback)
+    {
+        if (font == null) return fallback;
+        string n = font.name;
+        if (n.IndexOf("VT323", System.StringComparison.OrdinalIgnoreCase) >= 0) return 16;
+        if (n.IndexOf("Silkscreen", System.StringComparison.OrdinalIgnoreCase) >= 0) return 8;
+        if (n.IndexOf("Pixelify", System.StringComparison.OrdinalIgnoreCase) >= 0) return 20;
+        if (n.IndexOf("Fixedsys", System.StringComparison.OrdinalIgnoreCase) >= 0) return 16;
+        return fallback;
+    }
+
+    public static int Snap(TMP_FontAsset font, int designSize)
+    {
+        int cell = Cell(font, designSize);
+        if (cell <= 0) return designSize;
+        return Mathf.Max(cell, Mathf.RoundToInt(designSize / (float)cell) * cell);
     }
 
     // ---- surfaces ----------------------------------------------------------------------------------

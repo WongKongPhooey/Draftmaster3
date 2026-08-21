@@ -131,11 +131,14 @@ public static class PixelGUI
         Font data = t != null ? t.imguiFont : null;
         Font prose = t != null && t.imguiBodyFont != null ? t.imguiBodyFont : data;
 
-        // Whole multiples of each face's cell: Silkscreen 8, VT323 16, Pixelify Sans 20.
-        int silk = 8 * scale;
-        int silkBig = 16 * scale;
+        // Sizes follow the FACE, not the role — a bitmap face resampled off its own cell loses its
+        // stems. Silkscreen is drawn on an 8pt cell, VT323 on 16, Pixelify Sans on 20, so each style
+        // asks its face which cell it wants. With the theme on one typeface throughout (VT323) this
+        // collapses to 16 for text and 32 for headings.
+        int labelPt = CellOf(display, 8) * scale;
+        int headingPt = CellOf(display, 8) * 2 * scale;
         int vt = 16 * scale;
-        int pixelify = 20 * scale;
+        int prosePt = CellOf(prose, 20) * scale;
 
         _window = new GUIStyle();
         var frame = t != null ? t.frameCream : null;
@@ -147,10 +150,10 @@ public static class PixelGUI
         }
         _window.padding = new RectOffset(12 * scale, 12 * scale, 10 * scale, 10 * scale);
 
-        _heading = Style(display, silkBig, Gold, TextAnchor.UpperLeft, wordWrap: true, rich: true);
-        _headingSmall = Style(display, silk, Gold, TextAnchor.UpperLeft, rich: true);
-        _label = Style(display, silk, Text, TextAnchor.MiddleLeft, rich: true);
-        _labelDim = Style(display, silk, TextDim, TextAnchor.MiddleLeft, rich: true);
+        _heading = Style(display, headingPt, Gold, TextAnchor.UpperLeft, wordWrap: true, rich: true);
+        _headingSmall = Style(display, labelPt, Gold, TextAnchor.UpperLeft, rich: true);
+        _label = Style(display, labelPt, Text, TextAnchor.MiddleLeft, rich: true);
+        _labelDim = Style(display, labelPt, TextDim, TextAnchor.MiddleLeft, rich: true);
 
         _row = Style(data, vt, TextDim, TextAnchor.MiddleLeft, rich: true);
         _row.hover.textColor = Text;
@@ -160,15 +163,15 @@ public static class PixelGUI
 
         _data = Style(data, vt, Text, TextAnchor.MiddleLeft, rich: true);
         _dataDim = Style(data, vt, TextDim, TextAnchor.MiddleLeft, rich: true);
-        _body = Style(prose, pixelify, Text, TextAnchor.UpperLeft, wordWrap: true, rich: true);
-        _display = Style(prose, pixelify * 2, Text, TextAnchor.UpperLeft);
-        _footer = Style(display, silk, TextDisabled, TextAnchor.MiddleLeft);
-        _cursor = Style(display, silk, Gold, TextAnchor.MiddleCenter);
+        _body = Style(prose, prosePt, Text, TextAnchor.UpperLeft, wordWrap: true, rich: true);
+        _display = Style(prose, prosePt * 2, Text, TextAnchor.UpperLeft);
+        _footer = Style(display, labelPt, TextDisabled, TextAnchor.MiddleLeft);
+        _cursor = Style(display, labelPt, Gold, TextAnchor.MiddleCenter);
 
         // The confirm plate. Its highlight and shade are baked into the sprite, so there is no second
         // drawing for hover or press — the kit asks for the pressed state to come from a 2px offset,
         // which Button() below applies to the label.
-        _button = Style(display, silk, Text, TextAnchor.MiddleCenter);
+        _button = Style(display, labelPt, Text, TextAnchor.MiddleCenter);
         var plate = t != null ? t.buttonRed : null;
         if (plate != null)
         {
@@ -183,8 +186,21 @@ public static class PixelGUI
         _button.padding = new RectOffset(6 * scale, 6 * scale, 4 * scale, 4 * scale);
 
         // Flat nav tab: solid plate, no 9-slice — Tab() draws the plate and its hard shadow itself.
-        _tab = Style(display, silk, TextDim, TextAnchor.MiddleCenter);
-        _tabSelected = Style(display, silk, Text, TextAnchor.MiddleCenter);
+        _tab = Style(display, labelPt, TextDim, TextAnchor.MiddleCenter);
+        _tabSelected = Style(display, labelPt, Text, TextAnchor.MiddleCenter);
+    }
+
+    // The pixel cell a bitmap face is drawn for. Sizes must be whole multiples of it or the glyphs
+    // are resampled and go soft — the one thing this whole UI exists to avoid.
+    static int CellOf(Font font, int fallback)
+    {
+        if (font == null) return fallback;
+        string n = font.name;
+        if (n.IndexOf("VT323", System.StringComparison.OrdinalIgnoreCase) >= 0) return 16;
+        if (n.IndexOf("Silkscreen", System.StringComparison.OrdinalIgnoreCase) >= 0) return 8;
+        if (n.IndexOf("Pixelify", System.StringComparison.OrdinalIgnoreCase) >= 0) return 20;
+        if (n.IndexOf("fixedsys", System.StringComparison.OrdinalIgnoreCase) >= 0) return 16;
+        return fallback;
     }
 
     static GUIStyle Style(Font font, int size, Color colour, TextAnchor anchor,
