@@ -9,6 +9,25 @@ using UnityEngine.InputSystem;
 // hand and a body built from geometry are the same body.
 public static class NPCFactory
 {
+    // One unlit sprite material for every NPC in the scene. It used to be a fresh Material per NPC,
+    // which is both a leak and a batch-breaker: two sprites can only be drawn together if they share a
+    // material, so a crowd of a hundred was a hundred materials and a hundred draw calls that had no
+    // reason to be separate. Nothing per-NPC is stored on it — the outfit colours live on the
+    // SpriteRenderers — so one instance serves the lot.
+    static Material _unlitSprite;
+    public static Material UnlitSpriteMaterial
+    {
+        get
+        {
+            if (_unlitSprite != null) return _unlitSprite;
+            Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (sh == null) sh = Shader.Find("Sprites/Default");
+            if (sh == null) return null;
+            _unlitSprite = new Material(sh) { name = "NPC Unlit Sprite (shared)", hideFlags = HideFlags.DontSave };
+            return _unlitSprite;
+        }
+    }
+
     // Clone the prefab and make it inert. No dialogue attached yet.
     public static GameObject SpawnBody(GameObject prefab, Vector3 pos, string goName)
     {
@@ -51,9 +70,8 @@ public static class NPCFactory
         var sr = npc.GetComponent<SpriteRenderer>();
         if (sr != null)
         {
-            Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-            if (sh == null) sh = Shader.Find("Sprites/Default");
-            if (sh != null) sr.sharedMaterial = new Material(sh);
+            var mat = UnlitSpriteMaterial;
+            if (mat != null) sr.sharedMaterial = mat;
         }
 
         return npc;

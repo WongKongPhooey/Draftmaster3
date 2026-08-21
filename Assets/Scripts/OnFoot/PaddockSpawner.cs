@@ -34,10 +34,12 @@ public class PaddockSpawner : MonoBehaviour
     public int surfaceSortingOrder = 1;
 
     [Header("NPCs")]
-    [Tooltip("Total NPCs spawned in the paddock.")]
-    public int totalNpcs = 34;
+    [Tooltip("Total NPCs spawned in the paddock. Most of these are frozen at any moment (see governCrowd), " +
+             "so the number that costs per frame is only the handful within 25m of the player — measure " +
+             "with the CrowdBenchmarkTests EditMode suite before pushing it much past a few hundred.")]
+    public int totalNpcs = 120;
     [Tooltip("How many of them are conversational. The rest wander. Keep at or below the dialogue table size (10) so no two talkers repeat the same script.")]
-    public int talkingNpcs = 9;
+    public int talkingNpcs = 10;
     [Tooltip("Give the wandering NPCs ambient one-liners they mutter as the player walks past (NPCAmbientChatter).")]
     public bool ambientChatter = true;
     [Tooltip("Extra multiplier on top of the height normalisation. 0 or 1 = leave at the standard figure.")]
@@ -50,6 +52,10 @@ public class PaddockSpawner : MonoBehaviour
     public Vector2 npcColliderSize = new(0.30f, 0.17f);
     [Tooltip("Walk speed for wandering NPCs, units/sec.")]
     public float walkSpeed = 1.2f;
+    [Tooltip("Put every paddock NPC under the CrowdDirector (CrowdActor): behaviour and physics scale " +
+             "back with distance and switch off entirely while the player is driving, leaving the crowd " +
+             "visible but inert. Untick to run the whole paddock at full cost all the time.")]
+    public bool governCrowd = true;
 
     // The compiled-in house style. Exposed so DialogueLibrary can layer authored pools on top of it, and so
     // the pool seeder can copy it into an asset for editing.
@@ -280,6 +286,11 @@ public class PaddockSpawner : MonoBehaviour
                 walker.speed = walkSpeed * Random.Range(0.8f, 1.25f); // a crowd doesn't march in step
                 walker.Configure(center, along, outward, halfLen, halfDepth);
             }
+
+            // Added last so it collects every behaviour above. From here the CrowdDirector owns whether
+            // this NPC is thinking: fully awake near the player on foot, silent further out, and
+            // completely switched off (visuals only) the moment the player is in the car.
+            if (governCrowd) npc.AddComponent<CrowdActor>();
         }
     }
 
@@ -402,15 +413,9 @@ public class PaddockSpawner : MonoBehaviour
         return go;
     }
 
-    Material _unlitSprite;
-    Material UnlitSpriteMaterial()
-    {
-        if (_unlitSprite != null) return _unlitSprite;
-        Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
-        if (sh == null) sh = Shader.Find("Sprites/Default");
-        _unlitSprite = new Material(sh);
-        return _unlitSprite;
-    }
+    // Shared with every other NPC in the scene, so the whole crowd can batch into one draw per texture
+    // rather than one per person.
+    Material UnlitSpriteMaterial() => NPCFactory.UnlitSpriteMaterial;
 
     // Pick a URP-compatible tarmac material. The inspector-assigned one may be a legacy built-in (Standard) material
     // (e.g. TarmacMid) that renders wrong/white under URP, so prefer the track's own proven tarmac, then a flat fallback.

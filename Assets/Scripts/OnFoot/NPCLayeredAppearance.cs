@@ -131,16 +131,13 @@ public class NPCLayeredAppearance : MonoBehaviour
         return Color.white; // no tint
     }
 
+    // Frames come from the shared cache, not a fresh slice per NPC. What makes one NPC look different
+    // from another is the tint on its SpriteRenderer and which sheets it drew, never the Sprite objects
+    // themselves — so a paddock of a hundred people shares the same hundred-odd frames between them.
     Sprite[] Slice(Texture2D sheet)
     {
-        int fw = Mathf.Max(1, library.frameWidth);
-        int fh = Mathf.Max(1, library.frameHeight);
-        int count = Mathf.Max(1, sheet.width / fw);
-        var arr = new Sprite[count];
-        for (int i = 0; i < count; i++)
-            arr[i] = Sprite.Create(sheet, new Rect(i * fw, 0, fw, fh), library.pivot,
-                                   library.pixelsPerUnit, 0, SpriteMeshType.FullRect);
-        return arr;
+        return Draftmaster.Crowd.NPCSpriteCache.Slice(
+            sheet, library.frameWidth, library.frameHeight, library.pivot, library.pixelsPerUnit);
     }
 
     // Also runs in edit mode (inspector preview), so it can't just Destroy. The NPCLayerTag sweep
