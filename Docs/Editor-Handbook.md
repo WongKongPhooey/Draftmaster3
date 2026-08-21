@@ -279,6 +279,10 @@ Reset ALL Driver Relationships · Show Pit Boxes · Log Pit Box Lines · Log Pit
 RV Cutscene > Teleport Player Outside Door / Onto Trigger, Start NPC Conversation, Report State
 (play-mode stand-ins for walking the player, since MCP can't move objects during play).
 
+### `Draftmaster > Scene`
+Tidy Hierarchy Into Groups (files the open scene's root objects into the same buckets play mode uses —
+undoable, save the scene to keep it) · Flatten Hierarchy Groups (undoes it, returning everything to the root).
+
 ### `Tools`
 `Tools > Track >` Add Missing Finish Line Strips · Add Missing Pit Exit Lines · Rebuild Track Environment ·
 Normalise Racing Line Sides.
@@ -320,5 +324,13 @@ Driver Database.
   survives.
 - **`F6` drives three panels and `F9` two** (see the key table). Only `F10`–`F12` are still free — a new
   panel should take one of those.
+- **The runtime hierarchy is grouped, so root paths change in play mode.** `RuntimeHierarchyOrganizer`
+  files every root object under `UI`, `Particles`, `Environment`, `Vehicles`, `Characters`, `Directors`,
+  `Cameras`, `Lighting`, `Audio`, `Markers` or `Misc` — empty parents at the origin, identity scale, world
+  pose preserved. `GameObject.Find("Name")` is unaffected; a hard-coded `"/Name/Child"` path is not.
+  Spawning something that should be filed instantly? Call `RuntimeHierarchy.Adopt(go, HierarchyGroup.X)`.
+  Something that must stay at the root? Add a `HierarchyIgnore` component. Whole thing off?
+  `RuntimeHierarchy.Enabled = false` before the scene loads. DontDestroyOnLoad objects and Netcode
+  `NetworkObject`s are left alone by design.
 - **Play mode pauses while the editor is unfocused**, so nothing driven by game time ticks while you work
   in another window.

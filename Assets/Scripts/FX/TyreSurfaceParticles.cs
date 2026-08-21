@@ -69,6 +69,7 @@ public class TyreSurfaceParticles : MonoBehaviour
     ParticleSystem MakeSystem()
     {
         var go = new GameObject($"TyreSpray ({name})");
+        RuntimeHierarchy.Adopt(go, HierarchyGroup.Particles); // world-space spray, filed under the Particles bucket
         var ps = go.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 

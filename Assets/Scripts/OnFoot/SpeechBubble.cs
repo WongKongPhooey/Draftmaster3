@@ -45,6 +45,7 @@ public class SpeechBubble : MonoBehaviour
     public static SpeechBubble Attach(Transform actor)
     {
         var go = new GameObject("SpeechBubble (" + actor.name + ")");
+        RuntimeHierarchy.Adopt(go, HierarchyGroup.UI); // world-space, but it is UI - keep it out of the scene root
         var sb = go.AddComponent<SpeechBubble>();
         sb._actor = actor;
         sb.Build();

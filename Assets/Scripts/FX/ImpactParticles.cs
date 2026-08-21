@@ -103,6 +103,7 @@ public class ImpactParticles : MonoBehaviour
     ParticleSystem MakeSystem(string name, float lifetime, float sizeMin, float sizeMax, bool tumble)
     {
         var go = new GameObject(name);
+        RuntimeHierarchy.Adopt(go, HierarchyGroup.Particles); // stays off the car, but out of the scene root
         var ps = go.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
