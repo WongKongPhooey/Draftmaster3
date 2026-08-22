@@ -13,9 +13,14 @@ using UnityEngine.UI;
 // game onto one typeface is a theme edit for that half. Authored prefabs and scenes are the other half —
 // their TMP_Text and legacy Text components hold a direct font reference, so they need rewriting once.
 //
-// Sizes are snapped to the target face's pixel cell (VT323 16, Silkscreen 8, Pixelify Sans 20). A bitmap
-// face drawn at a size that is not a whole multiple of its cell is resampled and goes soft, which is the
-// one thing this UI is built to avoid — so a Silkscreen 8 label becomes VT323 16, not VT323 8.
+// Sizes are snapped to the target face's pixel cell (Fixedsys 16, Silkscreen 8). A bitmap face drawn at a
+// size that is not a whole multiple of its cell is resampled and goes soft, which is the one thing this UI
+// is built to avoid — so a Silkscreen 8 label becomes Fixedsys 16, not Fixedsys 8.
+//
+// Labels keep their role rather than all collapsing onto one face: an earlier pass pointed every TMP_Text
+// at theme.data, which is how the title screen ended up entirely in the data face. Silkscreen cannot hold
+// prose (it has no lowercase) or columns (it is proportional), so anything containing lowercase or named
+// like a readout goes to theme.data, and the all-caps display labels keep theme.display.
 //
 // Both items are undoable per asset (prefabs are saved immediately; scenes are left dirty for you to
 // check and save) and neither opens a dialog, so they are safe to drive from MCP.
@@ -89,11 +94,12 @@ public static class FontRetargetMenu
     {
         int changed = 0;
 
-        var tmpFont = theme.data != null ? theme.data : theme.body;
-        if (tmpFont != null)
+        var dataFont = theme.data != null ? theme.data : theme.body;
+        if (dataFont != null)
         {
             foreach (var label in root.GetComponentsInChildren<TMP_Text>(true))
             {
+                var tmpFont = FaceFor(label, theme, dataFont);
                 int size = IronOvalUI.Snap(tmpFont, Mathf.RoundToInt(label.fontSize));
                 if (label.font == tmpFont && Mathf.Approximately(label.fontSize, size)) continue;
 
@@ -125,7 +131,36 @@ public static class FontRetargetMenu
         return changed;
     }
 
-    // Legacy Text carries no font asset to read a cell off, and the theme's IMGUI face is the same VT323
+    // Legacy Text carries no font asset to read a cell off, and the theme's IMGUI face is the same Fixedsys
     // the rest of the UI uses, so snap to its 16px cell.
     static int SnapLegacy(int size) => Mathf.Max(16, Mathf.RoundToInt(size / 16f) * 16);
+
+    // Which role a label belongs to. The test is the text itself: Silkscreen has no lowercase glyphs, so
+    // any label that shows lowercase has to be the data face or it comes out shouting. Names are the
+    // second signal, for labels authored empty and filled at runtime.
+    static TMP_FontAsset FaceFor(TMP_Text label, PixelUITheme theme, TMP_FontAsset dataFont)
+    {
+        var display = theme.display != null ? theme.display : dataFont;
+        if (display == null) return dataFont;
+
+        string text = label.text;
+        if (!string.IsNullOrEmpty(text))
+            foreach (char c in text)
+                if (char.IsLower(c)) return dataFont;
+
+        return IsReadoutName(label.name) ? dataFont : display;
+    }
+
+    // Substrings, so they have to be distinctive: "row" would also claim "Eyebrow", and "body" would
+    // claim anything named Bodywork. Names that only appear as whole words are matched by segment below.
+    static readonly string[] kReadoutNames =
+        { "data", "gap", "delta", "timing", "readout", "telemetry", "status" };
+
+    static bool IsReadoutName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        foreach (var hint in kReadoutNames)
+            if (name.IndexOf(hint, System.StringComparison.OrdinalIgnoreCase) >= 0) return true;
+        return false;
+    }
 }

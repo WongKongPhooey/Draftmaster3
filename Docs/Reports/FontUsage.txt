@@ -1,0 +1,47 @@
+Font usage: Assets/Scenes/IronOvalShowcase.unity
+
+TMP  IronOvalShowcase/Kicker
+     face=Silkscreen Pixel  size=8  text="IRON OVAL · UI KIT"
+TMP  IronOvalShowcase/Title
+     face=Silkscreen Pixel  size=16  text="RACE FURNITURE"
+TMP  IronOvalShowcase/SwatchNote
+     face=Silkscreen Pixel  size=8  text="ONE ACCENT · RED IS ALARM ONLY"
+TMP  IronOvalShowcase/TypeHeader
+     face=Silkscreen Pixel  size=16  text="LAP 118/200"
+TMP  IronOvalShowcase/TelemetryWindow/Head
+     face=Silkscreen Pixel  size=8  text="TYRE"
+TMP  IronOvalShowcase/TypeBody
+     face=Fixedsys Pixel  size=16  text="Twelve laps of clean air."
+TMP  IronOvalShowcase/TelemetryWindow/Head2
+     face=Silkscreen Pixel  size=8  text="DRAFT"
+TMP  IronOvalShowcase/TypeData
+     face=Fixedsys Pixel  size=16  text="4  #11  HAMLIN   +8.1s
+5  #03  A.DILLON +9.0s"
+TMP  IronOvalShowcase/FocusedWindow/MapSlot/Caption
+     face=Fixedsys Pixel  size=16  text="[ track map ]"
+TMP  IronOvalShowcase/TelemetryWindow/Gap
+     face=Fixedsys Pixel  size=16  text="P4 /20   +8.1s"
+TMP  IronOvalShowcase/FocusedWindow/FocusNote
+     face=Silkscreen Pixel  size=8  text="FOCUSED"
+TMP  IronOvalShowcase/Confirm/Content/Label
+     face=Silkscreen Pixel  size=16  text="CONTINUE"
+TMP  IronOvalShowcase/Disabled/Content/Label
+     face=Silkscreen Pixel  size=16  text="PIT NOW"
+TMP  IronOvalShowcase/IronOvalDialogue/Body/NameRow/Status
+     face=Fixedsys Pixel  size=16  text="TRUST 3/5"
+TMP  IronOvalShowcase/IronOvalDialogue/Body/NameRow/Speaker
+     face=Silkscreen Pixel  size=8  text="RAY — CREW CHIEF"
+TMP  IronOvalShowcase/Tab_CHIEF/Face/Label
+     face=Silkscreen Pixel  size=8  text="CHIEF"
+TMP  IronOvalShowcase/Tab_TEAM/Face/Label
+     face=Silkscreen Pixel  size=8  text="TEAM"
+TMP  IronOvalShowcase/Tab_DRIVE/Face/Label
+     face=Silkscreen Pixel  size=8  text="DRIVE"
+TMP  IronOvalShowcase/MenuRow0
+     face=Fixedsys Pixel  size=16  text="Take the wheel"
+TMP  IronOvalShowcase/IronOvalDialogue/Body/Line
+     face=Fixedsys Pixel  size=16  text="Forty-first is not where I put you. Twelve laps of clean air"
+TMP  IronOvalShowcase/MenuRow1
+     face=Fixedsys Pixel  size=16  text="Stay on the wall"
+TMP  IronOvalShowcase/IronOvalDialogue/Body/Caret
+     face=Silkscreen Pixel  size=16  text="▼"

@@ -72,11 +72,14 @@ public static class IronOvalKitSetup
     //                   every glyph off-grid — that is what made body copy render as overlapping mush.
     //                   Ladder: 20 / 40 / 60. The sheet's 12, 16 and 32 are off-grid for this face.
     //   Silkscreen      clean at 8 under hinted raster; 8 is also the sheet's smallest size. Ladder 8/16/24.
-    //   VT323           never fully binary at any size — it is a CRT face with curves, not strict pixel
-    //                   art — and reads correctly at 16. Ladder 16 / 32.
+    //   VT323           dropped. A CRT face with curves rather than strict pixel art, its advances collide
+    //                   at every size on this pipeline — rebuilding it from the TTF reproduced the same
+    //                   overlapping glyphs, so it was removed rather than kept as a trap.
+    //   Fixedsys        16px cell, fixed advance, true lowercase. Takes prose and every column readout.
+    //                   Ladder 16 / 32 / 48.
     const int kSilkscreenSize = 8;
     const int kPixelifySize = 20;
-    const int kVt323Size = 16;
+    const int kFixedsysSize = 16;
 
     struct FaceSpec
     {
@@ -92,9 +95,9 @@ public static class IronOvalKitSetup
         new FaceSpec { ttf = "Assets/Fonts/PixelifySans-Variable.ttf",
                        outPath = kFontDir + "/Pixelify Sans Pixel.asset",
                        niceName = "Pixelify Sans Pixel", pointSize = kPixelifySize },
-        new FaceSpec { ttf = "Assets/Fonts/VT323-Regular.ttf",
-                       outPath = kFontDir + "/VT323 Pixel.asset",
-                       niceName = "VT323 Pixel", pointSize = kVt323Size },
+        new FaceSpec { ttf = "Assets/Fonts/fixedsys.ttf",
+                       outPath = kFontDir + "/Fixedsys Pixel.asset",
+                       niceName = "Fixedsys Pixel", pointSize = kFixedsysSize },
     };
 
     [MenuItem("Draftmaster/Art/Set Up Iron Oval Kit", priority = 122)]
@@ -237,20 +240,18 @@ public static class IronOvalKitSetup
         if (theme.buttonRed != null) { theme.button = theme.buttonRed; theme.buttonDanger = theme.buttonRed; }
         if (theme.cursorArrow != null) theme.cursor = theme.cursorArrow;
 
-        // Type roles: Silkscreen headers/labels, Pixelify Sans prose, VT323 dense data (and the IMGUI
+        // Type roles: Silkscreen headers/labels, Fixedsys for prose and dense data alike (and the IMGUI
         // panels, which are almost all data readouts and take a plain Font rather than a TMP asset).
+        // Fixedsys covers both because Silkscreen has no lowercase and no fixed advance.
         if (faces.TryGetValue("Silkscreen Pixel", out var silkscreen)) theme.display = silkscreen;
-        if (faces.TryGetValue("Pixelify Sans Pixel", out var pixelify)) theme.body = pixelify;
-        if (faces.TryGetValue("VT323 Pixel", out var vt323)) theme.data = vt323;
-        // The IMGUI panels take plain Fonts rather than TMP assets, and they carry the same three roles:
-        // VT323 for the readouts that most of them are, Silkscreen for their headings and buttons, and
-        // Pixelify Sans for the few that print prose. PixelGUI sizes each at whole multiples of its cell.
-        var vtTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/VT323-Regular.ttf");
-        if (vtTtf != null) theme.imguiFont = vtTtf;
+        if (faces.TryGetValue("Fixedsys Pixel", out var fixedsys)) { theme.body = fixedsys; theme.data = fixedsys; }
+        // The IMGUI panels take plain Fonts rather than TMP assets, and they carry the same roles:
+        // Fixedsys for the readouts and prose that most of them are, Silkscreen for headings and buttons.
+        // PixelGUI sizes each at whole multiples of its cell.
+        var fixedTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/fixedsys.ttf");
+        if (fixedTtf != null) { theme.imguiFont = fixedTtf; theme.imguiBodyFont = fixedTtf; }
         var silkTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Silkscreen-Regular.ttf");
         if (silkTtf != null) theme.imguiDisplayFont = silkTtf;
-        var pixelifyTtf = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/PixelifySans-Variable.ttf");
-        if (pixelifyTtf != null) theme.imguiBodyFont = pixelifyTtf;
 
         // Metrics from the sheet: Silkscreen 8/11/16/24, body 16, and the 12px margin / 8px gutter.
         theme.bodySize = 16;
@@ -377,19 +378,19 @@ public static class IronOvalKitSetup
             sb.AppendLine($"| {role} | `{slot}` | {(f == null ? "**MISSING**" : f.name)} | {note} |");
         }
         FontRow("Headers, labels, buttons (Silkscreen)", "display", theme.display);
-        FontRow("Dialogue, names, prose (Pixelify Sans)", "body", theme.body);
-        FontRow("Dense data columns (VT323)", "data", theme.data);
+        FontRow("Dialogue, names, prose (Fixedsys)", "body", theme.body);
+        FontRow("Dense data columns (Fixedsys)", "data", theme.data);
         sb.AppendLine($"| IMGUI panels | `imguiFont` | {(theme.imguiFont == null ? "**MISSING**" : theme.imguiFont.name)} | plain Font, hinted raster |");
         sb.AppendLine();
         sb.AppendLine($"Each atlas is rasterised at the smallest size its face ships at — Silkscreen {kSilkscreenSize}, " +
-                      $"Pixelify Sans {kPixelifySize}, VT323 {kVt323Size} — because a bitmap atlas scales up cleanly " +
+                      $"Pixelify Sans {kPixelifySize}, Fixedsys {kFixedsysSize} — because a bitmap atlas scales up cleanly " +
                       "and not down. Usable ladders:");
         sb.AppendLine();
         sb.AppendLine("| face | crisp sizes | off-ladder sizes from the sheet |");
         sb.AppendLine("|---|---|---|");
         sb.AppendLine($"| Silkscreen | {kSilkscreenSize}, {kSilkscreenSize * 2}, {kSilkscreenSize * 3} | 11 |");
         sb.AppendLine($"| Pixelify Sans | {kPixelifySize}, {kPixelifySize * 2}, {kPixelifySize * 3} | 12, 16, 32, 48 |");
-        sb.AppendLine($"| VT323 | {kVt323Size}, {kVt323Size * 2} | 19, 22 |");
+        sb.AppendLine($"| Fixedsys | {kFixedsysSize}, {kFixedsysSize * 2}, {kFixedsysSize * 3} | 19, 22 |");
         sb.AppendLine();
         sb.AppendLine("Disable auto-size on every label and keep text positions on whole pixels. " +
                       "`IronOvalUI` only ever asks for on-ladder sizes.");

@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 //   * mirrors NetworkLauncher's connection status / join code into the labels.
 public class MultiplayerMenuUI : MonoBehaviour
 {
-    [SerializeField] string raceSceneName = "WatkinsGlen";
+    [SerializeField] string raceSceneName = "RaceScene";
 
     [Header("Authored children (auto-wired in editor)")]
     [SerializeField] Button singlePlayerButton;

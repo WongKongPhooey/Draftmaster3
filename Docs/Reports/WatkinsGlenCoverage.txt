@@ -1,0 +1,8 @@
+WatkinsGlen coverage audit
+  scene      Assets/Scenes/WatkinsGlen.unity: 160 objects, 32 roots
+  race scene Assets/Scenes/RaceScene.unity: 41 objects, 22 roots
+  package    Assets/Resources/TrackPackages/WatkinsGlen.prefab: 126 objects
+
+NOT COVERED: 2 object signatures short (name | components):
+  Grandstands | Transform   scene x1, union x0
+  Main Camera | AudioListener,Camera,CameraFollow,Transform,UniversalAdditionalCameraData   scene x1, union x0

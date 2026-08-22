@@ -23,7 +23,7 @@ public class NetworkLauncher : MonoBehaviour
     public static NetworkLauncher Instance { get; private set; }
 
     [Tooltip("Scene name (must be in Build Settings) the host loads after creating the session.")]
-    [SerializeField] string raceSceneName = "WatkinsGlen";
+    [SerializeField] string raceSceneName = "RaceScene";
     [Tooltip("Maximum players per session, including the host.")]
     [SerializeField] int maxPlayers = 8;
     [Tooltip("Networked player car spawned per client once that prefab exists (Phase 2). Null = no auto spawn.")]
