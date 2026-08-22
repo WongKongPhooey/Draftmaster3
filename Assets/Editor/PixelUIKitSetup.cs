@@ -28,6 +28,28 @@ public static class PixelUIKitSetup
         { "bar-track", 3 }, { "bar-gold", 3 }, { "bar-red", 3 }, { "bar-teal", 3 },
     };
 
+    // Set only by the explicit force item below. Every other path through the kit setup refuses to
+    // destroy a font asset that still has its baked atlas — see the guard in BuildBitmapFont.
+    public static bool AllowFontOverwrite;
+
+    [MenuItem("Draftmaster/Art/Force Rebuild Pixel Fonts (destroys baked atlases)", priority = 123)]
+    public static void ForceRebuildFonts()
+    {
+        AllowFontOverwrite = true;
+        try
+        {
+            BuildPixelFont();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.LogWarning("[PixelUIKitSetup] Font atlases rebuilt from source TTFs. Check a label before " +
+                             "trusting them: a dynamic rebuild starts with an empty atlas.");
+        }
+        finally
+        {
+            AllowFontOverwrite = false;
+        }
+    }
+
     [MenuItem("Draftmaster/Art/Set Up Pixel UI Kit", priority = 120)]
     public static void Run()
     {
@@ -191,6 +213,21 @@ public static class PixelUIKitSetup
                 existing.atlasPadding == kPixelFontPadding &&
                 Mathf.RoundToInt(existing.faceInfo.pointSize) == pointSize)
             {
+                EnforceBitmapRendering(existing);
+                return existing;
+            }
+            // Guard: an asset that already carries baked glyphs is not something to throw away on a
+            // metrics mismatch. Rebuilding writes an AtlasPopulationMode.Dynamic asset with an EMPTY
+            // atlas (~23KB), and TMP then rasterises glyphs on demand — which is exactly how the kit's
+            // faces lost their atlases and started rendering with colliding advances. Losing the ladder
+            // is a cosmetic problem; losing the atlas is a broken build. Keep the glyphs.
+            if (!AllowFontOverwrite && existing.glyphTable != null && existing.glyphTable.Count > 0)
+            {
+                Debug.LogWarning(
+                    $"[PixelUIKitSetup] '{niceName}' already has {existing.glyphTable.Count} baked glyph(s) " +
+                    $"but its raster settings do not match (want {pointSize}px RASTER_HINTED, padding " +
+                    $"{kPixelFontPadding}). Keeping the baked atlas rather than rebuilding it empty. " +
+                    "Use Draftmaster > Art > Force Rebuild Pixel Fonts if a genuine rebuild is wanted.");
                 EnforceBitmapRendering(existing);
                 return existing;
             }
