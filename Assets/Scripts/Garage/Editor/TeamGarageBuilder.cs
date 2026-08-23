@@ -68,6 +68,12 @@ public static class TeamGarageBuilder
         MakeStation(root.transform, RoleStation.Role.EngineMechanic,     new Vector3( 8f, 2.5f, 0f), new Color(0.45f, 0.75f, 0.95f), disc, mat);
         MakeStation(root.transform, RoleStation.Role.SponsorshipManager, new Vector3( 0f, 6.5f, 0f), new Color(0.55f, 0.85f, 0.50f), disc, mat);
 
+        // --- the desk laptop: the factory's way into the car sheet ---
+        MakeLaptop(root.transform, new Vector3(-8f, -5f, 0f), square, mat);
+
+        // --- the way out: the factory is otherwise a room with no exit ---
+        MakeExitDoor(root.transform, new Vector3(8f, -8f, 0f), square, mat);
+
         // --- camera ---
         var cam = Camera.main;
         if (cam != null)
@@ -139,6 +145,52 @@ public static class TeamGarageBuilder
         station.interactRange = 2.4f;
         AddLabel(go.transform, RoleStation.SpeakerFor(role), new Vector3(0f, 0.85f, 0f),
                  new Color(1f, 1f, 1f, 0.9f), 0.1f);
+    }
+
+    // The engineers' desk with the team laptop on it. Interacting opens the garage screen; BACK there
+    // returns to this scene (GarageScreenLoader remembers). The desk is solid so the player walks round it.
+    static void MakeLaptop(Transform parent, Vector3 pos, Sprite square, Material mat)
+    {
+        var desk = MakeQuad(parent, "Desk", pos, new Vector3(2.6f, 1.2f, 1f),
+                            square, mat, new Color(0.30f, 0.26f, 0.22f), 8);
+        desk.AddComponent<BoxCollider2D>().size = Vector2.one;
+
+        MakeQuad(parent, "LaptopLid", pos + new Vector3(-0.35f, 0.15f, -0.05f), new Vector3(0.7f, 0.5f, 1f),
+                 square, mat, new Color(0.13f, 0.14f, 0.16f), 9);
+        MakeQuad(parent, "LaptopScreen", pos + new Vector3(-0.35f, 0.15f, -0.1f), new Vector3(0.55f, 0.36f, 1f),
+                 square, mat, new Color(0.36f, 0.66f, 0.85f), 10);
+        MakeQuad(parent, "LaptopBase", pos + new Vector3(0.35f, 0.05f, -0.05f), new Vector3(0.7f, 0.44f, 1f),
+                 square, mat, new Color(0.22f, 0.23f, 0.26f), 9);
+
+        // Co-located empty carries the interactable, kept off the visuals so nothing rotates them.
+        var go = new GameObject("Laptop");
+        go.transform.SetParent(parent, false);
+        go.transform.position = pos;
+        var laptop = go.AddComponent<LaptopInteractable>();
+        laptop.interactRange = 2.4f;
+        laptop.speakerName = "Laptop";
+        laptop.turnsToFace = false;
+        AddLabel(go.transform, "LAPTOP", new Vector3(0f, 1.1f, 0f), new Color(1f, 1f, 1f, 0.9f), 0.1f);
+    }
+
+    // A door back to the title screen. Nothing else in this scene changes scene, and the pause menu only
+    // arms itself where there's a TrackBuilder, so without this the factory is a dead end.
+    static void MakeExitDoor(Transform parent, Vector3 pos, Sprite square, Material mat)
+    {
+        MakeQuad(parent, "ExitFrame", pos, new Vector3(2.2f, 3.0f, 1f),
+                 square, mat, new Color(0.10f, 0.10f, 0.12f), 6);
+        MakeQuad(parent, "ExitDoor", pos, new Vector3(1.8f, 2.6f, 1f),
+                 square, mat, new Color(0.42f, 0.34f, 0.20f), 7);
+
+        var go = new GameObject("ExitDoor");
+        go.transform.SetParent(parent, false);
+        go.transform.position = pos;
+        var door = go.AddComponent<SceneDoorInteractable>();
+        door.sceneName = GarageScreenLoader.TitleSceneName;
+        door.interactRange = 2.4f;
+        door.speakerName = "Exit";
+        door.turnsToFace = false;
+        AddLabel(go.transform, "EXIT", new Vector3(0f, 1.7f, 0f), new Color(1f, 0.85f, 0.4f, 0.95f), 0.11f);
     }
 
     // Always-on world-space caption above an object (TextMesh renders reliably under URP).

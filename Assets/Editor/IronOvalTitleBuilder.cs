@@ -151,11 +151,14 @@ public static class IronOvalTitleBuilder
 
         var entries = new[]
         {
-            ("NEW SEASON", TitleScreenUI.Command.NewSeason,  ""),
-            ("CONTINUE",   TitleScreenUI.Command.Continue,   ""),
-            ("EXHIBITION", TitleScreenUI.Command.Exhibition, ""),
-            ("GARAGE",     TitleScreenUI.Command.LoadScene,  "GarageScreen"),
-            ("OPTIONS",    TitleScreenUI.Command.NotWired,   ""),
+            // No GARAGE row: the car sheet is reached from the laptop in the RV or in the factory
+            // (LaptopInteractable / GarageScreenLoader), not from a menu the player never stands in.
+            // TEAM FACTORY is the walk-in half of that — the shop, with the other laptop in it.
+            ("NEW SEASON",   TitleScreenUI.Command.NewSeason,  ""),
+            ("CONTINUE",     TitleScreenUI.Command.Continue,   ""),
+            ("EXHIBITION",   TitleScreenUI.Command.Exhibition, ""),
+            ("TEAM FACTORY", TitleScreenUI.Command.LoadScene,  "TeamGarage"),
+            ("OPTIONS",      TitleScreenUI.Command.NotWired,   ""),
         };
 
         float rowY = 0f;
@@ -230,7 +233,7 @@ public static class IronOvalTitleBuilder
         EditorUtility.DisplayDialog("Iron Oval",
             "Title screen built at Assets/Scenes/TitleScreen.unity.\n\n" +
             "Add it to File > Build Profiles > Scene List — first — to boot into it. " +
-            "The menu's destinations (RaceScene, GarageScreen) have to be in that list too, or their " +
+            "The menu's destinations (RaceScene, TeamGarage) have to be in that list too, or their " +
             "rows draw disabled.", "OK");
     }
 

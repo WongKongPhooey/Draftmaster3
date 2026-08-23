@@ -189,6 +189,22 @@ public static class RVInteriorPrefabBuilder
             sat.transform.localPosition = new Vector3(unit.x, unit.y, PropZ);
             sat.AddComponent<SatnavInteractable>().interactRange = 2f;
 
+            // Laptop on the dinette table: the way into the garage screen from a race weekend. Same
+            // visuals-plus-empty split as the satnav. RVInterior generates one at runtime for any room
+            // that lacks it, so an older prefab still gets a laptop — this just bakes it into new ones.
+            Vector2 desk = new(-1.2f, 1.15f);   // the Table above
+            Quad(white, mat, interior, "LaptopLid", desk + new Vector2(-0.16f, 0f), new Vector2(0.30f, 0.52f), PropZ - 0.02f, new Color(0.13f, 0.14f, 0.16f));
+            Quad(white, mat, interior, "LaptopScreen", desk + new Vector2(-0.16f, 0f), new Vector2(0.22f, 0.44f), PropZ - 0.04f, new Color(0.36f, 0.66f, 0.85f));
+            Quad(white, mat, interior, "LaptopBase", desk + new Vector2(0.06f, 0f), new Vector2(0.26f, 0.52f), PropZ - 0.02f, new Color(0.22f, 0.23f, 0.26f));
+
+            var laptop = new GameObject("Laptop");
+            laptop.transform.SetParent(interior, false);
+            laptop.transform.localPosition = new Vector3(desk.x, desk.y, PropZ);
+            var laptopIx = laptop.AddComponent<LaptopInteractable>();
+            laptopIx.interactRange = 1.6f;
+            laptopIx.speakerName = "Laptop";
+            laptopIx.turnsToFace = false;
+
             Directory.CreateDirectory(Path.GetDirectoryName(PrefabPath));
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             Debug.Log($"RVInterior prefab built at {PrefabPath}. Open it in Prefab Mode to edit the room " +

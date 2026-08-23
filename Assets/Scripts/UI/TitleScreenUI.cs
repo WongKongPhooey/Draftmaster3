@@ -147,20 +147,13 @@ public class TitleScreenUI : MonoBehaviour
                 break;
 
             case Command.Continue:
-                // The saved selection is only as good as whoever set it last — the travel map moves it to
-                // any circuit on the map, and most of the calendar is still catalogue-only. The race scene
-                // builds its road from that id, so fall back here rather than load a scene with no track.
-                if (!TrackCatalog.HasGeometry(TrackSelection.CurrentId))
-                {
-                    string resume = OpeningTrack();
-                    if (string.IsNullOrEmpty(resume)) { SetStatus("No track has a layout yet."); return; }
-                    TrackSelection.Select(resume);
-                }
+                if (!EnsureRaceableTrack()) return;
                 Load(raceSceneName);
                 break;
 
             case Command.Exhibition:
                 // One race: skip the practice/qualifying half of the weekend.
+                if (!EnsureRaceableTrack()) return;
                 RaceWeekend.Current = RaceWeekend.Session.Race;
                 Load(raceSceneName);
                 break;
@@ -195,6 +188,20 @@ public class TitleScreenUI : MonoBehaviour
                                         && Application.CanStreamedLevelBeLoaded(row.sceneName);
             default: return Application.CanStreamedLevelBeLoaded(raceSceneName);
         }
+    }
+
+    // The saved selection is only as good as whoever set it last — the travel map moves it to any circuit
+    // on the map, and most of the calendar is still catalogue-only. The race scene builds its road from
+    // that id, so both rows that resume an existing selection come through here rather than load a scene
+    // with no track in it. False = nothing anywhere has a layout, and the status line says so.
+    bool EnsureRaceableTrack()
+    {
+        if (TrackCatalog.HasGeometry(TrackSelection.CurrentId)) return true;
+
+        string resume = OpeningTrack();
+        if (string.IsNullOrEmpty(resume)) { SetStatus("No track has a layout yet."); return false; }
+        TrackSelection.Select(resume);
+        return true;
     }
 
     // Where a season starts: the configured track when it has a layout to race on, otherwise the first

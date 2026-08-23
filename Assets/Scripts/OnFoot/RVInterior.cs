@@ -50,6 +50,10 @@ public class RVInterior : MonoBehaviour
     [Tooltip("Interaction range (m) for the driver-seat satnav that opens the travel map. Walk within this to see the prompt.")]
     public float satnavRange = 2f;
 
+    [Header("Laptop")]
+    [Tooltip("Interaction range (m) for the laptop on the table that opens the garage screen. Walk within this to see the prompt.")]
+    public float laptopRange = 1.6f;
+
     // World z-planes. More negative = closer to the camera (which sits at player.z - 100 looking +z), so
     // each layer draws in front of the one below it. The player is pulled to insidePlayerZ while inside.
     const float kMaskZ = -2.0f;
@@ -60,6 +64,10 @@ public class RVInterior : MonoBehaviour
 
     const float kMaskHalfSize = 200f; // giant, so it covers the frame at any on-foot camera position/zoom
     const float kWallThickness = 0.25f;
+
+    // The dinette table, in the interior's local frame. Shared: the procedural room draws the table here
+    // and the laptop is placed on top of it, so the two can't drift apart.
+    static readonly Vector2 kTablePos = new(1.8f, 0.6f);
 
     Transform _player;
     Vector2 _anchorXY;
@@ -160,6 +168,33 @@ public class RVInterior : MonoBehaviour
         // The authored prefab carries its own satnav; only generate one when it doesn't.
         if (interior.GetComponentInChildren<SatnavInteractable>(true) == null)
             BuildSatnav(interior);
+        if (interior.GetComponentInChildren<LaptopInteractable>(true) == null)
+            BuildLaptop(interior);
+    }
+
+    // The laptop on the dinette table: the only way into the garage screen from a race weekend. Same
+    // arrangement as the satnav — visuals plus a co-located empty carrying the interactable — so the
+    // walk-up prompt and action button come free from OnFootController.
+    //
+    // The hand-authored prefab puts its table somewhere else than the procedural room does, so the spot
+    // is taken from whatever "Table" the room actually has and only falls back to the procedural one.
+    void BuildLaptop(Transform interior)
+    {
+        Transform table = interior.Find("Table");
+        Vector2 at = table != null ? (Vector2)table.localPosition : kTablePos;
+
+        // Lid (with a lit screen on it) behind the keyboard slab, so the thing reads as open from above.
+        BuildQuad(interior, "LaptopLid", at + new Vector2(0f, 0.16f), new Vector2(0.52f, 0.30f), kPropZ - 0.02f, MakeUnlit(new Color(0.13f, 0.14f, 0.16f)));
+        BuildQuad(interior, "LaptopScreen", at + new Vector2(0f, 0.16f), new Vector2(0.44f, 0.22f), kPropZ - 0.04f, MakeUnlit(new Color(0.36f, 0.66f, 0.85f)));
+        BuildQuad(interior, "LaptopBase", at + new Vector2(0f, -0.06f), new Vector2(0.52f, 0.26f), kPropZ - 0.02f, MakeUnlit(new Color(0.22f, 0.23f, 0.26f)));
+
+        var go = new GameObject("Laptop");
+        go.transform.SetParent(interior, false);
+        go.transform.localPosition = new Vector3(at.x, at.y, kPropZ);
+        var laptop = go.AddComponent<LaptopInteractable>();
+        laptop.interactRange = laptopRange;
+        laptop.speakerName = "Laptop";  // the base default ("Crew Member") is nobody here
+        laptop.turnsToFace = false;     // a laptop on a table doesn't swivel to look at you
     }
 
     // A satnav at the RV's driver seat (front-left of the cab, beside the doorway). Its floating prompt +
@@ -233,7 +268,7 @@ public class RVInterior : MonoBehaviour
 
         // A few furnishings so the room reads as a motorhome interior. All placeholder blocks — replace by
         // assigning interiorSprite. Kept clear of the origin (0,0), where the player spawns.
-        Vector2 tablePos = new(1.8f, 0.6f);
+        Vector2 tablePos = kTablePos;
         BuildQuad(interior, "Rug", tablePos, new Vector2(2.4f, 1.7f), kWallZ, MakeUnlit(new Color(0.55f, 0.20f, 0.18f)));
         BuildQuad(interior, "Bed", new Vector2(-halfW + 1.6f, -roomBack + 1.3f), new Vector2(2.7f, 1.9f), kPropZ, MakeUnlit(new Color(0.78f, 0.80f, 0.86f)));
         BuildQuad(interior, "BedPillow", new Vector2(-halfW + 1.6f, -roomBack + 2.0f), new Vector2(2.4f, 0.6f), kPropZ - 0.02f, MakeUnlit(new Color(0.92f, 0.93f, 0.96f)));

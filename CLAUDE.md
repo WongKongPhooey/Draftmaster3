@@ -66,6 +66,13 @@ Many scripts in `Assets/Scripts/` are from a previous iteration (e.g., `Movement
 
 **WatkinsGlen is the current development/test scene.** It uses the new spline-based system (see below). Phoenix is wired up to the legacy scrolling system.
 
+**The demo flow** starts at `Assets/Scenes/TitleScreen.unity` (build index 0) and runs
+TitleScreen → RaceScene (which builds WatkinsGlen from `TrackSelection`), or TitleScreen → TeamGarage
+("Team Factory"). The garage sheet (`Assets/Scenes/GarageScreen.unity`) is **not** on the title menu — it
+is opened by a `LaptopInteractable` in the RV interior or in the factory, and `GarageScreenLoader`
+remembers which scene to send BACK to. `Esc > QUIT TO TITLE` in a race scene closes the loop. The whole
+chain is asserted by `Assets/Tests/Editor/TitleScreenWiringTests.cs`; the diagram is in `Docs/Editor-Handbook.md`.
+
 ### Active System: Spline-Based Tracks
 
 A second, newer system runs alongside the legacy scrolling code:

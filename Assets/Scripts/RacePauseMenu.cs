@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 // Pause menu for the spline-based race scenes. Esc freezes time and opens a small centred panel
-// with the driving-aid toggles (racing line) and a resume button. Self-bootstraps like
-// HandlingTuner so no scene wiring is needed; it only arms itself in scenes that have a
-// TrackBuilder (i.e. actual race/practice scenes, not the menus).
+// with the driving-aid toggles (racing line), a resume button and the way back to the title.
+// Self-bootstraps like HandlingTuner so no scene wiring is needed; it only arms itself in scenes that
+// have a TrackBuilder (i.e. actual race/practice scenes, not the menus).
 //
 // Drawn with the Iron Oval kit (PixelGUI): the frozen race goes behind the deep dither scrim rather than
 // a black wash, so it still reads as the thing being paused, and the panel is the same framed plate the
@@ -15,6 +16,8 @@ public class RacePauseMenu : MonoBehaviour
     public static bool IsPaused { get; private set; }
 
     public Key toggleKey = Key.Escape;
+    [Tooltip("Scene the QUIT TO TITLE button loads. Falls back to build index 0 when it isn't in the build settings.")]
+    public string titleSceneName = "TitleScreen";
 
     bool _inRaceScene;
     float _pollTimer;
@@ -83,6 +86,15 @@ public class RacePauseMenu : MonoBehaviour
         AudioListener.pause = false;
     }
 
+    // Out of the weekend and back to the front of the game. Unpause first: loading a scene with time
+    // frozen leaves the next one frozen too, since nothing there knows a pause was ever on.
+    void QuitToTitle()
+    {
+        Resume();
+        if (Application.CanStreamedLevelBeLoaded(titleSceneName)) SceneManager.LoadScene(titleSceneName);
+        else SceneManager.LoadScene(0);   // the title is the first scene in the build list
+    }
+
     void OnGUI()
     {
         if (!IsPaused) return;
@@ -96,7 +108,7 @@ public class RacePauseMenu : MonoBehaviour
         float rowH = PixelGUI.LineH, gapH = PixelGUI.Px(4f);
         float w = PixelGUI.Px(200f);
         float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 4f + rowH * 2f
-                  + rowH + gapH + (rowH + PixelGUI.Px(6f)) + PixelGUI.LineH + PixelGUI.Px(8f);
+                  + rowH + gapH + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Round((Screen.height - h) * 0.5f);
 
@@ -128,8 +140,12 @@ public class RacePauseMenu : MonoBehaviour
 
         float footer = PixelGUI.LineH;
         float buttonH = PixelGUI.LineH + PixelGUI.Px(6f);
-        float buttonY = content.yMax - buttonH - footer;
-        if (PixelGUI.Button(new Rect(content.x, buttonY, content.width, buttonH), "RESUME")) Resume();
+        float resumeY = content.yMax - buttonH - footer;
+        // The way back to the front of the game. Without it a race is a one-way trip and the only exit
+        // from the demo is stopping play mode.
+        if (PixelGUI.Button(new Rect(content.x, resumeY - buttonH - gap, content.width, buttonH), "QUIT TO TITLE"))
+            QuitToTitle();
+        if (PixelGUI.Button(new Rect(content.x, resumeY, content.width, buttonH), "RESUME")) Resume();
         GUI.Label(new Rect(content.x, content.yMax - footer, content.width, footer), "ESC TO RESUME", PixelGUI.Footer);
 
         if (_showMissions) DrawMissions(x + w + PixelGUI.Px(6f), y);
