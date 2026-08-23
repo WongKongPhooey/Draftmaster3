@@ -64,6 +64,12 @@ public class TitleScreenUI : MonoBehaviour
     float _statusUntil;
     bool _loading;
 
+    // Row indices sorted top-to-bottom by where the row actually sits on screen. The list is the wiring
+    // and the column is the layout, and the two drift apart the moment a row is dragged up the menu in
+    // the scene without the list following it — so DOWN means the next row down the screen, not the next
+    // element of the list.
+    int[] _order;
+
     void Start()
     {
         // Nothing else in a menu scene installs these, and the design puts the TV line over everything.
@@ -79,6 +85,7 @@ public class TitleScreenUI : MonoBehaviour
             HookPointer(row, i);
         }
 
+        RebuildOrder();
         _index = Mathf.Clamp(startIndex, 0, Mathf.Max(0, rows.Count - 1));
         SetStatus("");
         Redraw();
@@ -113,8 +120,37 @@ public class TitleScreenUI : MonoBehaviour
     void Step(int by)
     {
         if (rows.Count == 0) return;
-        _index = (_index + by + rows.Count) % rows.Count;
+        if (_order == null || _order.Length != rows.Count) RebuildOrder();
+
+        int at = System.Array.IndexOf(_order, _index);
+        if (at < 0) at = 0;
+        _index = _order[(at + by + _order.Length) % _order.Length];
         Redraw();
+    }
+
+    // Sort the rows the way the eye reads them: highest on screen first. Rows with no rect keep their
+    // list order at the bottom, which is the only sensible place for a row that isn't drawn anywhere.
+    // Insertion sort — the menu is five rows long and equal heights stay in list order.
+    void RebuildOrder()
+    {
+        int n = rows.Count;
+        _order = new int[n];
+
+        var key = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            _order[i] = i;
+            var rect = rows[i] != null ? rows[i].rect : null;
+            key[i] = rect != null ? -rect.position.y : float.PositiveInfinity;
+        }
+
+        for (int i = 1; i < n; i++)
+        {
+            int row = _order[i];
+            int j = i - 1;
+            while (j >= 0 && key[_order[j]] > key[row]) { _order[j + 1] = _order[j]; j--; }
+            _order[j + 1] = row;
+        }
     }
 
     void Select(int index)

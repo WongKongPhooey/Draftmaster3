@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -199,7 +201,115 @@ public class TitleScreenWiringTests
         }
     }
 
+    // The menu is drawn by the layout in the scene and driven by the list on the component, and the two
+    // are edited separately — a row dragged up the column doesn't move in the list. When they disagree
+    // the cursor jumps around the menu instead of walking down it, which is only visible by pressing the
+    // arrow keys. So the walk order the binder computes is checked against the column itself.
+    [Test]
+    public void ArrowKeysWalkTheMenuInTheOrderItIsDrawn()
+    {
+        var menu = Menu();
+        var drawn = DrawnRowLabels();
+
+        CollectionAssert.AreEqual(drawn, WalkOrder(menu),
+                                  "Pressing DOWN does not move down the menu: the walk order and the column disagree.");
+
+        // With the list and the column currently in the same order, that alone would also pass if the
+        // binder just read the list. So turn the list upside down: the menu should still walk top to
+        // bottom, because that is what the player sees.
+        Reverse(menu);
+        try
+        {
+            CollectionAssert.AreEqual(drawn, WalkOrder(menu),
+                                      "The arrow keys follow the rows list rather than the column the player reads.");
+        }
+        finally
+        {
+            Reverse(menu);
+        }
+    }
+
+    // A row that is drawn but missing from the list can never be selected — the cursor steps over a
+    // visible line and Enter on it does nothing.
+    [Test]
+    public void EveryDrawnMenuRowIsWiredIntoTheList()
+    {
+        var rows = Menu().FindProperty("rows");
+        var wired = new List<string>();
+        for (int i = 0; i < rows.arraySize; i++)
+        {
+            var rect = rows.GetArrayElementAtIndex(i).FindPropertyRelative("rect").objectReferenceValue;
+            Assert.IsNotNull(rect, $"Row '{rows.GetArrayElementAtIndex(i).FindPropertyRelative("label").stringValue}' has no rect.");
+            wired.Add(RowLabel(rect.name));
+        }
+
+        foreach (string drawn in DrawnRowLabels())
+            Assert.Contains(drawn, wired, $"The menu draws a '{drawn}' row that is not in TitleScreenUI.rows.");
+        Assert.AreEqual(DrawnRowLabels().Count, wired.Count, "TitleScreenUI.rows holds rows the menu does not draw.");
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
+
+    // The row labels in the order the arrow keys would step through them.
+    static List<string> WalkOrder(SerializedObject menu)
+    {
+        var binder = menu.targetObject;
+
+        var rebuild = binder.GetType().GetMethod("RebuildOrder", Flags);
+        Assert.IsNotNull(rebuild, "TitleScreenUI.RebuildOrder is gone; the menu no longer sorts its rows by where they are drawn.");
+        rebuild.Invoke(binder, null);
+
+        var order = (int[])binder.GetType().GetField("_order", Flags).GetValue(binder);
+        Assert.IsNotNull(order, "TitleScreenUI built no walk order.");
+
+        menu.Update();
+        var rows = menu.FindProperty("rows");
+        var walked = new List<string>();
+        foreach (int i in order)
+            walked.Add(rows.GetArrayElementAtIndex(i).FindPropertyRelative("label").stringValue);
+        return walked;
+    }
+
+    // Flips the rows list in place. Applied to the live component so the binder sees it; run twice it
+    // puts the list back exactly as it was, which is why the caller does.
+    static void Reverse(SerializedObject menu)
+    {
+        var rows = menu.FindProperty("rows");
+        for (int i = 0; i < rows.arraySize - 1; i++) rows.MoveArrayElement(rows.arraySize - 1, i);
+        menu.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // The labels the player reads down the column, top first — the layout, straight out of the scene.
+    List<string> DrawnRowLabels()
+    {
+        var menu = MenuColumn();
+        var found = new List<RectTransform>();
+        foreach (RectTransform child in menu)
+            if (child.name.StartsWith("Row_")) found.Add(child);
+        Assert.IsNotEmpty(found, "The title menu draws no rows.");
+
+        found.Sort((a, b) => b.anchoredPosition.y.CompareTo(a.anchoredPosition.y));
+
+        var labels = new List<string>();
+        foreach (var rect in found) labels.Add(RowLabel(rect.name));
+        return labels;
+    }
+
+    RectTransform MenuColumn()
+    {
+        foreach (var root in _title.GetRootGameObjects())
+        {
+            var menu = root.transform.Find("Column/Menu") as RectTransform;
+            if (menu != null) return menu;
+        }
+        Assert.Fail("The title screen has no Column/Menu to draw rows in.");
+        return null;
+    }
+
+    static string RowLabel(string objectName) =>
+        objectName.StartsWith("Row_") ? objectName.Substring("Row_".Length).Replace('_', ' ') : objectName;
 
     SerializedObject Menu() => Find(_title, "TitleScreenUI");
 
