@@ -278,6 +278,223 @@ public static class IronOvalUI
         return face.GetComponent<Button>();
     }
 
+    // The dropdown from the garage sheet's top bar: a plate carrying the current value and a gold caret,
+    // with the list dropping out of the bottom of it and the kit's selection arrow marking the chosen row.
+    //
+    // Built from TMP's own default control and then repainted, rather than assembled part by part:
+    // TMP_Dropdown validates its template when the list opens — item toggle, viewport, content and scroll
+    // rect all in the parentage it expects — and a hand-built one that is a level out fails at the click,
+    // which is the single thing an EditMode test cannot press. So the structure is TMP's and the kit only
+    // owns the paint: colours, faces, and a row height that follows the label face like every other metric.
+    //
+    // `visibleItems` is how many rows the list shows before it scrolls; a 38-car field gets a scrollbar.
+    public static TMP_Dropdown Dropdown(Transform parent, string name, Vector2 size, int visibleItems = 8)
+    {
+        var t = Theme;
+        float rowH = Snap(t == null ? null : t.display, 8) + 4f;
+
+        var go = TMP_DefaultControls.CreateDropdown(new TMP_DefaultControls.Resources());
+        go.name = name;
+        go.transform.SetParent(parent, false);
+
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.sizeDelta = size;
+
+        var dropdown = go.GetComponent<TMP_Dropdown>();
+        dropdown.options.Clear();
+        dropdown.alphaFadeSpeed = 0f;          // the kit's rule: things appear, they don't fade in
+
+        // ---- the closed control -------------------------------------------------------------------
+        // ColorTint multiplies the image, so the plate stays white and its colour lives in the block.
+        var plate = go.GetComponent<Image>();
+        plate.sprite = null;
+        plate.type = Image.Type.Simple;
+        plate.color = Color.white;
+
+        var colours = dropdown.colors;
+        colours.normalColor = t == null ? Color.grey : t.plateDeep;
+        colours.highlightedColor = t == null ? Color.grey : t.plate;
+        colours.pressedColor = t == null ? Color.grey : t.plateLight;
+        colours.selectedColor = t == null ? Color.grey : t.plate;
+        colours.disabledColor = t == null ? Color.grey : t.plateDeep;
+        colours.fadeDuration = 0f;
+        dropdown.colors = colours;
+
+        var caption = dropdown.captionText;
+        caption.text = "";
+        Apply(caption, Role.HeaderSmall, t == null ? Color.white : t.text);
+        Line(caption);
+        // The text box is deliberately taller than the plate: a truncating label whose box is shorter
+        // than one line of its face renders NOTHING, and every face here draws taller than its cell.
+        Stretch(caption.rectTransform, new Vector2(6f, -4f), new Vector2(-12f, 4f));
+
+        // The caret is type, not art: the kit ships no triangle, and nothing here is allowed to rotate
+        // the selection arrow into one.
+        var arrow = go.transform.Find("Arrow") as RectTransform;
+        if (arrow != null)
+        {
+            var arrowImage = arrow.GetComponent<Image>();
+            if (arrowImage != null) Discard(arrowImage);
+
+            var caret = arrow.gameObject.AddComponent<TextMeshProUGUI>();
+            caret.text = "v";
+            Apply(caret, Role.HeaderSmall, t == null ? Color.white : t.gold);
+            caret.alignment = TextAlignmentOptions.Center;
+            arrow.anchorMin = arrow.anchorMax = new Vector2(1f, 0.5f);
+            arrow.pivot = new Vector2(1f, 0.5f);
+            arrow.sizeDelta = new Vector2(10f, size.y);
+            arrow.anchoredPosition = new Vector2(-2f, 0f);
+        }
+
+        // ---- the list -----------------------------------------------------------------------------
+        // The template plate is the ink surround; the viewport inset by a pixel is what the rows sit on.
+        var template = dropdown.template;
+        var templateImage = template.GetComponent<Image>();
+        templateImage.sprite = null;
+        templateImage.type = Image.Type.Simple;
+        templateImage.color = t == null ? Color.black : t.ink;
+        template.sizeDelta = new Vector2(0f, Mathf.Max(1, visibleItems) * rowH + 2f);
+
+        var viewport = template.Find("Viewport") as RectTransform;
+        if (viewport != null)
+        {
+            var viewportImage = viewport.GetComponent<Image>();
+            if (viewportImage != null)
+            {
+                viewportImage.sprite = null;
+                viewportImage.type = Image.Type.Simple;
+                viewportImage.color = t == null ? Color.grey : t.plateDeep;
+            }
+            // A pixel of ink on three sides, and the scrollbar's strip reserved on the fourth. The
+            // scrollbar hides itself when the list fits, so this is the only place its width is spent.
+            viewport.offsetMin = new Vector2(1f, 1f);
+            viewport.offsetMax = new Vector2(-7f, -1f);
+        }
+
+        var item = template.Find("Viewport/Content/Item") as RectTransform;
+        if (item != null)
+        {
+            item.sizeDelta = new Vector2(0f, rowH);
+
+            var background = item.Find("Item Background");
+            if (background != null)
+            {
+                var image = background.GetComponent<Image>();
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.color = Color.white;
+            }
+
+            var toggle = item.GetComponent<Toggle>();
+            if (toggle != null)
+            {
+                toggle.transition = Selectable.Transition.ColorTint;
+                var rows = toggle.colors;
+                rows.normalColor = t == null ? Color.grey : t.plate;
+                rows.highlightedColor = t == null ? Color.grey : t.plateLight;
+                rows.pressedColor = t == null ? Color.grey : t.plateLight;
+                rows.selectedColor = t == null ? Color.grey : t.plateLight;
+                rows.disabledColor = t == null ? Color.grey : t.plate;
+                rows.fadeDuration = 0f;
+                toggle.colors = rows;
+            }
+
+            // The tick is the kit's gold selection arrow, the same one that marks a menu row.
+            var checkmark = item.Find("Item Checkmark") as RectTransform;
+            if (checkmark != null)
+            {
+                var image = checkmark.GetComponent<Image>();
+                image.sprite = t == null ? null : t.cursorArrow;
+                image.type = Image.Type.Simple;
+                if (image.sprite == null) image.color = t == null ? Color.yellow : t.gold;
+                checkmark.sizeDelta = new Vector2(6f, 8f);
+                checkmark.anchoredPosition = new Vector2(6f, 0f);
+            }
+        }
+
+        var itemText = dropdown.itemText;
+        if (itemText != null)
+        {
+            itemText.text = "";
+            Apply(itemText, Role.HeaderSmall, t == null ? Color.white : t.text);
+            Line(itemText);
+            Stretch(itemText.rectTransform, new Vector2(12f, -2f), new Vector2(-6f, 2f));
+        }
+
+        var scrollbar = template.Find("Scrollbar") as RectTransform;
+        if (scrollbar != null)
+        {
+            scrollbar.anchorMin = new Vector2(1f, 0f);
+            scrollbar.anchorMax = new Vector2(1f, 1f);
+            scrollbar.pivot = new Vector2(1f, 1f);
+            scrollbar.sizeDelta = new Vector2(6f, -2f);
+            scrollbar.anchoredPosition = new Vector2(-1f, -1f);
+
+            var track = scrollbar.GetComponent<Image>();
+            track.sprite = null;
+            track.type = Image.Type.Simple;
+            track.color = t == null ? Color.grey : t.plate;
+
+            var area = scrollbar.Find("Sliding Area") as RectTransform;
+            if (area != null) area.sizeDelta = Vector2.zero;
+
+            var handle = scrollbar.Find("Sliding Area/Handle") as RectTransform;
+            if (handle != null)
+            {
+                handle.sizeDelta = Vector2.zero;
+                var image = handle.GetComponent<Image>();
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.color = t == null ? Color.yellow : t.gold;
+            }
+
+            var bar = scrollbar.GetComponent<Scrollbar>();
+            var handleColours = bar.colors;
+            handleColours.normalColor = Color.white;
+            handleColours.highlightedColor = Color.white;
+            handleColours.pressedColor = Color.white;
+            handleColours.selectedColor = Color.white;
+            handleColours.fadeDuration = 0f;
+            bar.colors = handleColours;
+        }
+
+        var scroll = template.GetComponent<ScrollRect>();
+        scroll.inertia = false;                // no glide on a list of eight rows
+        scroll.scrollSensitivity = rowH;
+        // AutoHide, not AutoHideAndExpandViewport: expanding rewrites the viewport's width every frame
+        // and takes the ink border off with it.
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        scroll.verticalScrollbarSpacing = 0f;
+
+        return dropdown;
+    }
+
+    // One line of type in a box the caller has sized: centred on the box, never wrapped, cut off at the
+    // edge rather than spilling. What every field in a strip of furniture wants.
+    static void Line(TMP_Text label)
+    {
+        label.alignment = TextAlignmentOptions.Left;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        // Truncate, not Ellipsis: the ellipsis glyph is not in every face the theme can be pointed at.
+        label.overflowMode = TextOverflowModes.Truncate;
+    }
+
+    static void Stretch(RectTransform rt, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = offsetMin;
+        rt.offsetMax = offsetMax;
+    }
+
+    static void Discard(Object victim)
+    {
+        if (Application.isPlaying) Object.Destroy(victim);
+        else Object.DestroyImmediate(victim);
+    }
+
     // ---- data ---------------------------------------------------------------------------------------
 
     // Segmented bar built from the stat-cell sheet: `max` cells, the first `value` of them filled.

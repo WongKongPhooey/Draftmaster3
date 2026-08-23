@@ -24,6 +24,10 @@ using UnityEngine.UI;
 // deliberate substitution: the sheet's bottom strip switches between four team drivers, and this game has
 // one car, so that strip carries the weekend and the way out to the track.
 //
+// The top bar carries the sheet's two pickers — series, then the field entered in that series — which is
+// where the design's roster switching ended up: one bar that reaches every driver in the world rather
+// than a strip that reaches four.
+//
 // Generated, not hand-authored: re-running rebuilds it.
 public static class IronOvalGarageBuilder
 {
@@ -74,18 +78,37 @@ public static class IronOvalGarageBuilder
         var ui = canvasGo.AddComponent<GarageScreenUI>();
 
         // --- header band ------------------------------------------------------------------------------
+        // A picker is a label box plus a couple of pixels, and the band is a picker plus air either side
+        // — so the bar grows with the label face instead of being a number that only suited one of them.
+        // On the face this was authored against that lands on the 16px band it has always been, which is
+        // why nothing below the bar moves.
+        float pickerH = LabelH + 2f;
         var band = Plate(root, "HeaderBand", theme.plateLight);
         band.anchorMin = new Vector2(0f, 1f);
         band.anchorMax = new Vector2(1f, 1f);
         band.pivot = new Vector2(0.5f, 1f);
-        band.sizeDelta = new Vector2(0f, 16f);
+        band.sizeDelta = new Vector2(0f, pickerH + 4f);
         band.anchoredPosition = Vector2.zero;
 
         var title = IronOvalUI.Label(band, "Title", "GARAGE", IronOvalUI.Role.Header, theme.text);
-        Place(title.rectTransform, 8f, -3f, 200f, 14f);
+        Place(title.rectTransform, 8f, -3f, 88f, 14f);
+        // The word is one word: let it run past its box rather than break "GARAGE" into "GARAG" + "E".
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+
+        // The two pickers: which championship, and which of its entries the sheet is drawn for. The
+        // driver list is the longer one — a stock-car field is 38 cars — so it gets the wider plate and
+        // the deeper list. GarageScreenUI fills both and redraws the sheet when either changes.
+        float pickerY = -(band.sizeDelta.y - pickerH) / 2f;
+        var seriesPicker = IronOvalUI.Dropdown(band, "SeriesPicker", new Vector2(168f, pickerH), visibleItems: 7);
+        Place((RectTransform)seriesPicker.transform, 100f, pickerY, 168f, pickerH);
+        ui.seriesDropdown = seriesPicker;
+
+        var driverPicker = IronOvalUI.Dropdown(band, "DriverPicker", new Vector2(200f, pickerH), visibleItems: 8);
+        Place((RectTransform)driverPicker.transform, 276f, pickerY, 200f, pickerH);
+        ui.driverDropdown = driverPicker;
 
         var cash = IronOvalUI.Label(band, "Cash", "$0", IronOvalUI.Role.Header, theme.gold);
-        Anchor(cash.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, -3f), new Vector2(200f, 14f));
+        Anchor(cash.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, -3f), new Vector2(160f, 14f));
         cash.alignment = TextAlignmentOptions.Right;
         ui.cashLabel = cash;
 
@@ -325,7 +348,9 @@ public static class IronOvalGarageBuilder
         var lines = new GameObject("IronOvalScanlines", typeof(IronOvalScanlines));
         lines.GetComponent<IronOvalScanlines>().opacity = 0.6f;
 
-        // Fill it in once so the saved scene shows real values rather than placeholders.
+        // Fill it in once so the saved scene shows real values rather than placeholders — the pickers
+        // included, so the header reads as a real series and a real field in the editor too.
+        ui.BuildPickers();
         ui.Refresh();
 
         Directory.CreateDirectory(Path.GetDirectoryName(kScenePath));

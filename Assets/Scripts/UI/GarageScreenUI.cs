@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -9,6 +10,8 @@ using UnityEngine.UI;
 using Draftmaster.Data;
 using Draftmaster.Fans;
 using Draftmaster.Sponsors;
+// GarageUI declares a `Series` of its own in the global namespace, which would shadow the database model.
+using SeriesInfo = Draftmaster.Data.Series;
 
 // The garage screen, built to the Iron Oval design file's GARAGE pass: car slot and driver identity down
 // the left with career and accolades under it, the driver's own stats in the middle over an XP meter, and
@@ -30,6 +33,12 @@ using Draftmaster.Sponsors;
 //                 durability are the numbers the car will actually race with.
 //   FITTED PARTS  the four real part slots. Empty reads "stock", dimmed.
 //
+// The top bar carries two dropdowns — the series, and the field entered in it — so the sheet can be read
+// for anyone on the grid, not just the player. Where a block is only true of the player (their career
+// counters, their accolades, their fan appeal, the parts bolted to their car) it says so plainly rather
+// than showing the player's numbers under a rival's name: SeriesRoster answers who races where, and
+// nothing on this screen writes anything back.
+//
 // The sheet's bottom strip is a team-roster switcher; this game has one car, so that strip carries the
 // weekend and the way out to the track instead.
 //
@@ -40,6 +49,10 @@ using Draftmaster.Sponsors;
 public class GarageScreenUI : MonoBehaviour
 {
     [Header("Wired by the builder")]
+    [Tooltip("Top-bar series picker. Changing it refills the driver picker with that series' entry list.")]
+    public TMP_Dropdown seriesDropdown;
+    [Tooltip("Top-bar driver picker: the selected series' field, by car number. Changing it redraws the sheet.")]
+    public TMP_Dropdown driverDropdown;
     public TextMeshProUGUI cashLabel;
     public TextMeshProUGUI carSlotCaption;
     public TextMeshProUGUI driverName;
@@ -90,12 +103,105 @@ public class GarageScreenUI : MonoBehaviour
 
     float _statusUntil;
 
+    // What the top bar is currently pointed at.
+    List<SeriesInfo> _series = new();
+    List<Driver> _field = new();
+    Driver _viewed;
+    // False until the pickers have been filled — a sheet built before they existed still shows the
+    // player rather than an empty column.
+    bool _browsing;
+    // Set while options are being rebuilt, so SetValue's own callback can't re-enter and rebuild again.
+    bool _populating;
+
     void Start()
     {
         IronOvalScanlines.Ensure();
         if (EventSystem.current == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        BuildPickers();
         Refresh();
+    }
+
+    // ------------------------------------------------------------------ top bar
+
+    // Fill both dropdowns and open the sheet on the player: their series, their car. Listeners are added
+    // here rather than baked into the scene — a UnityEvent wired at build time isn't serialised, so the
+    // only wiring that survives a scene save is the wiring done in code.
+    public void BuildPickers()
+    {
+        _series = SeriesRoster.AllSeries();
+        int seriesIndex = SeriesRoster.SeriesIndexFor(_series, PlayerDriver.CarNumber);
+
+        if (seriesDropdown != null)
+        {
+            _populating = true;
+            seriesDropdown.ClearOptions();
+            seriesDropdown.AddOptions(_series.Select(s => SeriesRoster.Label(s)).ToList());
+            seriesDropdown.SetValueWithoutNotify(Mathf.Max(0, seriesIndex));
+            seriesDropdown.RefreshShownValue();
+            seriesDropdown.onValueChanged.RemoveListener(OnSeriesPicked);
+            seriesDropdown.onValueChanged.AddListener(OnSeriesPicked);
+            _populating = false;
+            _browsing = true;
+        }
+
+        if (driverDropdown != null)
+        {
+            driverDropdown.onValueChanged.RemoveListener(OnDriverPicked);
+            driverDropdown.onValueChanged.AddListener(OnDriverPicked);
+            _browsing = true;
+        }
+
+        ShowField(seriesIndex, PlayerDriver.CarNumber);
+    }
+
+    // The entry list for one series, with the sheet landing on `preferredCarNumber` when that car is in
+    // it. A series nobody has been entered into yet says so instead of borrowing another series' field.
+    void ShowField(int seriesIndex, int preferredCarNumber)
+    {
+        var series = seriesIndex >= 0 && seriesIndex < _series.Count ? _series[seriesIndex] : null;
+        _field = SeriesRoster.Drivers(series);
+        int driverIndex = SeriesRoster.DriverIndexFor(_field, preferredCarNumber);
+        _viewed = driverIndex >= 0 && driverIndex < _field.Count ? _field[driverIndex] : null;
+
+        if (driverDropdown == null) return;
+
+        _populating = true;
+        driverDropdown.ClearOptions();
+        driverDropdown.AddOptions(_field.Count > 0
+            ? _field.Select(d => SeriesRoster.Label(d)).ToList()
+            : new List<string> { "NO ENTRY LIST YET" });
+        driverDropdown.SetValueWithoutNotify(Mathf.Max(0, driverIndex));
+        driverDropdown.RefreshShownValue();
+        driverDropdown.interactable = _field.Count > 1;
+        _populating = false;
+    }
+
+    public void OnSeriesPicked(int index)
+    {
+        if (_populating) return;
+        ShowField(index, PlayerDriver.CarNumber);
+        Refresh();
+    }
+
+    public void OnDriverPicked(int index)
+    {
+        if (_populating) return;
+        _viewed = index >= 0 && index < _field.Count ? _field[index] : null;
+        Refresh();
+    }
+
+    // The driver the sheet is drawing. Before the pickers are filled — and on a copy of the screen built
+    // before they existed — that is the player, exactly as it was.
+    Driver ViewedRow() => _browsing ? _viewed : PlayerDriver.Row();
+
+    // Whether the sheet is showing the player's own ride, which is what decides if the player-only blocks
+    // (career, accolades, fan appeal, the car and its parts) are theirs to fill.
+    bool ViewingPlayer(Driver row)
+    {
+        if (!_browsing) return true;
+        int mine = PlayerDriver.CarNumber;
+        return row != null && mine > 0 && row.CarNumber == mine;
     }
 
     void Update()
@@ -111,14 +217,19 @@ public class GarageScreenUI : MonoBehaviour
     {
         var theme = PixelUITheme.Instance;
 
-        // One lookup for the whole sheet: the Drivers row behind the number the player races.
-        var row = PlayerDriver.Row();
+        // One lookup for the whole sheet: the driver the top bar is pointed at, which starts out as the
+        // Drivers row behind the number the player races.
+        var row = ViewedRow();
+        bool mine = ViewingPlayer(row);
 
-        int number = row != null && row.CarNumber > 0 ? row.CarNumber : PlayerDriver.CarNumber;
+        int number = row != null ? row.CarNumber : (mine ? PlayerDriver.CarNumber : 0);
         if (cashLabel != null) cashLabel.text = PlayerWallet.CashText;
-        if (carSlotCaption != null) carSlotCaption.text = $"[ car sprite — #{number} ]";
-        if (driverName != null) driverName.text = PlayerDriver.DisplayName(row).ToUpperInvariant();
-        if (driverNumber != null) driverNumber.text = "#" + number;
+        if (carSlotCaption != null)
+            carSlotCaption.text = number > 0 ? $"[ car sprite — #{number} ]" : "[ no car ]";
+        // Only the player's own name is overridden by their career name; a rival keeps theirs.
+        if (driverName != null)
+            driverName.text = (mine ? PlayerDriver.DisplayName(row) : FullName(row)).ToUpperInvariant();
+        if (driverNumber != null) driverNumber.text = number > 0 ? "#" + number : "#—";
         FillIdentity(theme, row);
 
         int starts = PlayerStatsLedger.Get("starts");
@@ -126,16 +237,24 @@ public class GarageScreenUI : MonoBehaviour
         int top10s = PlayerStatsLedger.Get("top10s");
         int top5s = PlayerStatsLedger.Get("top5s");
 
-        // The sheet's LV. Seasons aren't levelled, so this reads the one ladder that exists: races run.
-        if (driverLevel != null) driverLevel.text = "LV " + (1 + starts / 5);
+        // The sheet's LV. Seasons aren't levelled, so this reads the one ladder that exists: races run —
+        // and only the player has run any, so a rival's level is blank rather than borrowed.
+        if (driverLevel != null)
+        {
+            driverLevel.text = mine ? "LV " + (1 + starts / 5) : "LV —";
+            if (theme != null) driverLevel.color = mine ? theme.textDim : theme.textDisabled;
+        }
 
-        FillCareer(starts, wins, top10s);
-        FillAccolades(theme, starts, wins, top5s, top10s);
+        FillCareer(mine, starts, wins, top10s);
+        FillAccolades(theme, mine, starts, wins, top5s, top10s);
         FillDriverStats(theme, row);
-        FillCarStats();
-        FillParts(theme);
+        FillCarStats(mine);
+        FillParts(theme, mine);
 
-        float appeal = FanAppeal.Value;
+        // The player's fan appeal is the meter this game keeps; a rival's standing with the crowd is the
+        // Fan Support their row is rated on, put on the same 0-100 scale.
+        float appeal = mine ? FanAppeal.Value
+                            : (row != null ? row.FanSupport * 100f / Driver.StatMax : 0f);
         SetBar(xpBar, appeal / 100f);
         if (xpLabel != null) xpLabel.text = Mathf.RoundToInt(appeal) + "/100";
 
@@ -149,25 +268,35 @@ public class GarageScreenUI : MonoBehaviour
         }
     }
 
-    void FillCareer(int starts, int wins, int top10s)
+    // The ledger counts the player's races and nobody else's, so a rival's career reads as unrecorded
+    // rather than being handed the player's numbers.
+    void FillCareer(bool mine, int starts, int wins, int top10s)
     {
-        SetPair(careerRows, 0, "STARTS", starts.ToString());
-        SetPair(careerRows, 1, "WINS", wins.ToString());
-        SetPair(careerRows, 2, "TOP 10s", top10s.ToString());
+        SetPair(careerRows, 0, "STARTS", mine ? starts.ToString() : "—");
+        SetPair(careerRows, 1, "WINS", mine ? wins.ToString() : "—");
+        SetPair(careerRows, 2, "TOP 10s", mine ? top10s.ToString() : "—");
     }
 
     // Every line here is something the ledger can prove. Nothing earned yet says so plainly.
-    void FillAccolades(PixelUITheme theme, int starts, int wins, int top5s, int top10s)
+    void FillAccolades(PixelUITheme theme, bool mine, int starts, int wins, int top5s, int top10s)
     {
         var lines = new List<(string text, bool gold)>();
-        if (wins > 0) lines.Add(($"{wins} RACE WIN{(wins == 1 ? "" : "S")}", true));
-        if (top5s > 0) lines.Add(($"{top5s} TOP FIVE{(top5s == 1 ? "" : "S")}", true));
-        if (PlayerStatsLedger.Get("fights.won") > 0)
-            lines.Add(($"{PlayerStatsLedger.Get("fights.won")}× WON A PADDOCK SCRAP", false));
-        if (PlayerStatsLedger.Get("locations") > 0)
-            lines.Add(($"{PlayerStatsLedger.Get("locations")} PLACES VISITED", false));
-        if (lines.Count == 0)
-            lines.Add((starts > 0 ? "NOTHING TO PUT ON THE WALL YET" : "NO STARTS YET", false));
+        if (!mine)
+        {
+            // Nothing in the ledger is about this driver, and the database keeps no honours roll yet.
+            lines.Add(("NO CAREER RECORD ON FILE", false));
+        }
+        else
+        {
+            if (wins > 0) lines.Add(($"{wins} RACE WIN{(wins == 1 ? "" : "S")}", true));
+            if (top5s > 0) lines.Add(($"{top5s} TOP FIVE{(top5s == 1 ? "" : "S")}", true));
+            if (PlayerStatsLedger.Get("fights.won") > 0)
+                lines.Add(($"{PlayerStatsLedger.Get("fights.won")}× WON A PADDOCK SCRAP", false));
+            if (PlayerStatsLedger.Get("locations") > 0)
+                lines.Add(($"{PlayerStatsLedger.Get("locations")} PLACES VISITED", false));
+            if (lines.Count == 0)
+                lines.Add((starts > 0 ? "NOTHING TO PUT ON THE WALL YET" : "NO STARTS YET", false));
+        }
 
         for (int i = 0; i < accoladeLines.Count; i++)
         {
@@ -229,14 +358,15 @@ public class GarageScreenUI : MonoBehaviour
         }
     }
 
-    // What the car will actually race with: the base VehicleInfo plus every installed part.
-    void FillCarStats()
+    // What the car will actually race with: the base VehicleInfo plus every installed part. Parts are the
+    // player's own upgrades, so a rival's entry is the spec car — the same chassis with nothing on it.
+    void FillCarStats(bool mine)
     {
         var baseInfo = Resources.Load<VehicleInfo>("Vehicles/Cup24");
         float topAdd = 0f, accelScale = 1f, gripAdd = 0f, wearScale = 1f;
         foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))
         {
-            var part = PlayerCarBuild.Installed(slot);
+            var part = mine ? PlayerCarBuild.Installed(slot) : null;
             if (part == null) continue;
             topAdd += part.topSpeedAdd;
             accelScale *= part.accelScale;
@@ -259,12 +389,12 @@ public class GarageScreenUI : MonoBehaviour
         durability >= 1.25f ? "IRON" : durability >= 1.05f ? "GOOD" :
         durability >= 0.95f ? "STOCK" : durability >= 0.8f ? "FAIR" : "FRAGILE";
 
-    void FillParts(PixelUITheme theme)
+    void FillParts(PixelUITheme theme, bool mine)
     {
         var slots = new[] { PartSlot.Engine, PartSlot.Gearbox, PartSlot.Tires, PartSlot.Chassis };
         for (int i = 0; i < partRows.Count && i < slots.Length; i++)
         {
-            var part = PlayerCarBuild.Installed(slots[i]);
+            var part = mine ? PlayerCarBuild.Installed(slots[i]) : null;
             SetPair(partRows, i, slots[i].ToString().ToUpperInvariant(), part != null ? part.name : "stock");
             if (theme != null && partRows[i].value != null)
                 partRows[i].value.color = part != null ? theme.text : theme.textDisabled;
@@ -272,6 +402,17 @@ public class GarageScreenUI : MonoBehaviour
     }
 
     // ------------------------------------------------------------------ helpers
+
+    // A driver's name as their own row has it, with the timing-tower short name as the fallback. Used for
+    // everyone except the player, whose career name is allowed to sit over the seat they took.
+    static string FullName(Driver row)
+    {
+        if (row == null) return "no driver";
+        string full = ((row.FirstName ?? "") + " " + (row.LastName ?? "")).Trim();
+        if (full.Length > 0) return full;
+        string label = RosterLookup.LabelName(row);
+        return label.Length > 0 ? label : "no driver";
+    }
 
     void SetStat(List<StatRow> rows, int index, string label, float fill01, string value)
     {

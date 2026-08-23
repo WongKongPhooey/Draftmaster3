@@ -11,7 +11,8 @@
         "Draftmaster.Tracks",
         "Unity.TextMeshPro",
         "UnityEditor.TestRunner",
-        "UnityEngine.TestRunner"
+        "UnityEngine.TestRunner",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

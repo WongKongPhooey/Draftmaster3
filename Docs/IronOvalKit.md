@@ -163,6 +163,18 @@ menu scene in the editor. That is why the sheet is full of real numbers at edit 
 can bake them into the saved scene. A career name (`career.drivername`) overrides the *name* only, exactly
 as `TeamSwitchController` does on track: the player takes the seat and keeps their own name over it.
 
+**Browsing the field.** The top bar carries two dropdowns (`IronOvalUI.Dropdown`): the series, and the
+field entered in it. Picking either redraws the whole sheet for that driver, so the garage reads anyone on
+the grid — it is a viewer, nothing on the screen writes back. `SeriesRoster` answers who races where: the
+`Entries` table once a season has been generated, and otherwise the seeded field, which is `CupRoster2026`
+and therefore the top stock-car championship's entry list. Series with no entries yet say `NO ENTRY LIST
+YET` rather than borrowing somebody else's drivers.
+
+The blocks that are only true of the player — CAREER, ACCOLADES, the fan-appeal meter, LV, and the car
+with its fitted parts — say so when the sheet is pointed at a rival instead of showing the player's
+numbers under their name. A rival's meter reads their `FanSupport` rating on the same 0-100 scale, and
+their car is the spec car with nothing bolted to it.
+
 Row order is `DriverAttributeSheet.All` and the builder adds rows in that order, because `GarageScreenUI`
 fills them by index. Add a stat column to `Driver`, add it to the right group in that sheet, re-run the
 menu item, and both ends pick it up. The four lifecycle columns (`DebutSeason`, `PeakAge`, `Retired`,
@@ -179,7 +191,8 @@ menu item, and both ends pick it up. The four lifecycle columns (`DebutSeason`, 
 | CAR STATS (telemetry-blue cells) | base `VehicleInfo` (`Resources/Vehicles/Cup24`) with the installed parts applied: top speed, 0-60, grip, durability — the numbers the car will actually race with |
 | FITTED PARTS | the four real part slots (`PlayerCarBuild`). Empty reads `stock`, dimmed |
 | ◈ 12,400 | `PlayerWallet.CashText` |
-| Roster strip (4 team drivers) | **substituted**: this game has one car, so the bottom strip carries the weekend (track + session) and the way out to the track |
+| SERIES / DRIVER pickers | `SeriesRoster` — the `Series` table (or the `DummySeries` seed list when no database is open) and the field entered in the picked one |
+| Roster strip (4 team drivers) | **substituted**: the sheet's roster switching moved to the top bar's two pickers, which reach every driver in the world rather than four; the bottom strip carries the weekend (track + session) and the way out to the track |
 
 Two glyph traps, both hit while building it: the bitmap faces have no `★` and no `©`, so both render as
 tofu boxes — accolades use plain text and the title footer says `(C)`. And Pixelify's smallest crisp size
