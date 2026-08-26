@@ -66,6 +66,23 @@ Many scripts in `Assets/Scripts/` are from a previous iteration (e.g., `Movement
 
 **WatkinsGlen is the current development/test scene.** It uses the new spline-based system (see below). Phoenix is wired up to the legacy scrolling system.
 
+### The race weekend
+
+A weekend is six half-days (Fri/Sat/Sun, AM and PM) at one track shared by three championships — Trucks,
+National and Cup. The player is entered in one: their practice/qualifying/race are drivable and hand off to
+the race scene, the other two championships' sessions are watched from a grandstand, and the rest of the
+three days is media, signing sessions, sponsor duties and the race-day ceremony, all booked against a clock
+where things clash. **Obligations are places, not panels**: committing on the `F10` sheet books an
+appointment and points an objective marker at it, and the thing itself happens in the paddock as a
+conversation with whoever is waiting — the crew chief at the pit box, the engineer in your motorhome, the
+official in the drivers' room, the fans through the fence, the rep under the hospitality awning.
+`Assets/Scripts/Weekend/Core/` (asmdef `Draftmaster.Weekend`) holds the pure rules — timetable, ledger,
+support-race sim, season championships, press bank, venue map, conversation content;
+`Assets/Scripts/Weekend/` holds the runtime (director, schedule screen, `Venues/` builder + hosts). The two
+championships the player is not in run every round whether anybody watches or not: `SeasonChampionships`
+folds those results into three points tables, gated so Sunday's result is not readable on Friday. Full
+guide: `Docs/Race-Weekend.md`.
+
 **The demo flow** starts at `Assets/Scenes/TitleScreen.unity` (build index 0) and runs
 TitleScreen → RaceScene (which builds WatkinsGlen from `TrackSelection`), or TitleScreen → TeamGarage
 ("Team Factory"). The garage sheet (`Assets/Scenes/GarageScreen.unity`) is **not** on the title menu — it

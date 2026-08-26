@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Draftmaster.Weekend;
 using UnityEngine;
 
 // An NPC you place in the editor instead of spawning from code.
@@ -31,6 +32,9 @@ public class PlacedNPC : MonoBehaviour
         PitGreeter,     // stands in the pit lane, chats, nothing depends on him
         RaceEngineer,   // opening beat: walks up as the session starts / as the player leaves the RV
         CrewChief,      // briefs the driver when they climb into the car, then opens the setup panel
+        TeamLiaison,    // catches the driver on their way out of the motorhome with where they are due next
+        ChiefStrategist,// the one with the run plan: fuel windows, tyre calls, what the race is going to be
+        PRManager,      // the media and sponsor side of the driver's day
     }
 
     // Where the body actually ends up. Only `Here` uses this GameObject's own position.
@@ -79,6 +83,75 @@ public class PlacedNPC : MonoBehaviour
     [TextArea]
     [Tooltip("One line per interact. A line ending with \"#player\" is spoken by the driver in their own bubble.")]
     public string[] lines = { "Hey, good to see you in the pits." };
+
+    // What they say when, across the three days.
+    //
+    // The core cast is stood in the same places all weekend, but a crew chief on Friday morning is talking
+    // about a practice session that has not happened, and the same man on Sunday lunchtime is talking about
+    // the race you are about to start. One flat list of lines cannot say both, so a marker can carry a set
+    // per half-day; the first entry whose half-days include the one being played wins, and anything with no
+    // matching entry falls back to `lines` above.
+    [System.Serializable]
+    public class ScheduledLines
+    {
+        [Tooltip("What this set is for, in the editor's list. Not shown to the player.")]
+        public string label = "Friday";
+
+        [Tooltip("Half-days this set is used in. None ticked = never used.")]
+        public bool fridayAM, fridayPM, saturdayAM, saturdayPM, sundayAM, sundayPM;
+
+        [TextArea]
+        public string[] lines = { "" };
+
+        [Tooltip("Objective banner shown when this set's walk-up beat ends. Empty = use the marker's own.")]
+        public string objectiveOnFinish = "";
+
+        public bool Covers(WeekendSlot slot) => slot switch
+        {
+            WeekendSlot.FridayAM => fridayAM,
+            WeekendSlot.FridayPM => fridayPM,
+            WeekendSlot.SaturdayAM => saturdayAM,
+            WeekendSlot.SaturdayPM => saturdayPM,
+            WeekendSlot.SundayAM => sundayAM,
+            _ => sundayPM,
+        };
+
+        public void Set(WeekendSlot slot, bool on)
+        {
+            switch (slot)
+            {
+                case WeekendSlot.FridayAM: fridayAM = on; break;
+                case WeekendSlot.FridayPM: fridayPM = on; break;
+                case WeekendSlot.SaturdayAM: saturdayAM = on; break;
+                case WeekendSlot.SaturdayPM: saturdayPM = on; break;
+                case WeekendSlot.SundayAM: sundayAM = on; break;
+                default: sundayPM = on; break;
+            }
+        }
+    }
+
+    [Tooltip("Per-half-day dialogue. The first set covering the half-day being played is used; with none, " +
+             "the lines above are.")]
+    public List<ScheduledLines> schedule = new();
+
+    // The set for a given half-day, or null when nothing covers it.
+    public ScheduledLines ScheduledFor(WeekendSlot slot)
+    {
+        for (int i = 0; i < schedule.Count; i++)
+        {
+            var set = schedule[i];
+            if (set == null || set.lines == null || set.lines.Length == 0) continue;
+            if (set.Covers(slot)) return set;
+        }
+        return null;
+    }
+
+    // What this NPC says in a given half-day, falling back to the flat list.
+    public string[] LinesFor(WeekendSlot slot)
+    {
+        var set = ScheduledFor(slot);
+        return set != null ? set.lines : lines;
+    }
     [Tooltip("Loop back to the first line after the conversation ends.")]
     public bool repeatable = true;
     [Tooltip("Player must be this close (m) to talk.")]
@@ -208,6 +281,16 @@ public class PlacedNPC : MonoBehaviour
         Vector3 pos = ResolveStandPoint();
         var body = NPCFactory.SpawnBody(prefab, pos, GameObjectName);
         _npc = quest != null ? BuildQuestGiver(body) : NPCFactory.AddTalker<NPCInteractable>(body, speakerName, lines);
+
+        // A marker with a per-half-day script keeps its lines in step with the weekend's clock, which moves
+        // while the scene is up — the schedule advances as bookings are completed, so what the crew chief
+        // has to say changes without a reload.
+        if (schedule != null && schedule.Count > 0)
+        {
+            var scheduled = body.AddComponent<ScheduledDialogue>();
+            scheduled.marker = this;
+            scheduled.speaker = _npc;
+        }
         _npc.interactRange = interactRange;
         _npc.repeatable = repeatable;
         _npcRb = _npc.GetComponent<Rigidbody2D>();

@@ -111,8 +111,25 @@ public class PaddockSpawner : MonoBehaviour
         SpawnNpcs(root, center, along, outward, halfLen, halfDepth);
     }
 
+    // The paddock as a rectangle: where it is, which way it runs, and how big it is. Public because the
+    // weekend's venues (the drivers' room, the fan fence, the hospitality tent, the intro stage) are placed
+    // inside this same frame — see WeekendVenueSites — and two systems guessing at the paddock's shape
+    // separately would put the fence somewhere the player cannot walk to.
+    public static bool TryGetArea(out Vector3 center, out Vector3 along, out Vector3 outward,
+                                  out float halfLen, out float halfDepth)
+    {
+        center = along = outward = Vector3.zero; halfLen = halfDepth = 0f;
+
+        var spawner = FindFirstObjectByType<PaddockSpawner>();
+        if (spawner == null) return false;
+        if (spawner.track == null) spawner.track = FindFirstObjectByType<TrackBuilder>();
+        if (spawner.track == null) return false;
+
+        return spawner.ComputePaddockRect(out center, out along, out outward, out halfLen, out halfDepth);
+    }
+
     // Walks the pit segments to find the longest Straight, then frames a rectangle alongside it on `side`.
-    bool ComputePaddockRect(out Vector3 center, out Vector3 along, out Vector3 outward, out float halfLen, out float halfDepth)
+    public bool ComputePaddockRect(out Vector3 center, out Vector3 along, out Vector3 outward, out float halfLen, out float halfDepth)
     {
         center = along = outward = Vector3.zero; halfLen = halfDepth = 0f;
 

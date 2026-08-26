@@ -224,8 +224,25 @@ public class RaceDirector : MonoBehaviour
 
             // Sponsorship pays on top — but only for decals actually on the car, and only while the deal
             // still has races left on it. Clause bonuses land here too (finish inside the agreed position).
+            //
+            // What the weekend did off the track is worth real money here: a weekend of kept appearances
+            // pays a premium and a weekend of no-shows is docked (WeekendLedger.SponsorPayoutMultiplier).
             _sponsorPayout = SponsorBook.PayoutForFinish(playerPos);
+            _sponsorPayout = Mathf.RoundToInt(_sponsorPayout * Draftmaster.Weekend.WeekendLedger.SponsorPayoutMultiplier);
             if (_sponsorPayout > 0) PlayerWallet.Add(_sponsorPayout);
+
+            // The press ask about your last result, so the ledger keeps it.
+            PlayerPrefs.SetInt("stat.lastfinish", playerPos);
+            PlayerPrefs.Save();
+
+            // The championship the player is entered in scores this result, alongside the two that were
+            // simulated over the same three days. Only for a race the weekend actually routed here - a
+            // one-off race started from track select is not a round of anybody's season.
+            if (!string.IsNullOrEmpty(WeekendDirector.PendingRouteId)) RecordChampionshipResult(playerPos);
+
+            // Credit the race booking on the weekend timetable. No result card - the classification screen
+            // behind this is the result card.
+            WeekendDirector.FinishRoutedSession(BuildRaceOutcome(playerPos), showCard: false);
 
             // Every live deal burns a race, placed or not: sitting on a contract you never painted on the
             // car wastes it, which is what makes the four panels worth arguing over.
@@ -241,9 +258,53 @@ public class RaceDirector : MonoBehaviour
         DriverRelationships.RegenTowardNeutral(4f);
     }
 
+    // Put the player's own drive into their championship table.
+    //
+    // The rest of that table's field is simulated (SeasonChampionships) rather than taken from the cars
+    // that were actually on track: the AI here is a shuffled handful of database drivers who change from
+    // round to round, and a season standing needs the same names every week to be worth reading. So the
+    // player is cut into the simulated field at the position they finished, and everybody they beat drops
+    // a place. The two championships they were not in scored their own rounds over the same three days.
+    void RecordChampionshipResult(int playerPos)
+    {
+        string name = DriverRelationships.PlayerName;
+        int carNumber = 0;
+        foreach (var r in _results)
+            if (r.isPlayer) { if (!string.IsNullOrEmpty(r.name)) name = r.name; carNumber = r.carNumber; break; }
+
+        // Where they started, when qualifying was run. Pole is worth a point.
+        int grid = 0;
+        var order = RaceWeekend.GridOrder;
+        if (order != null)
+            for (int i = 0; i < order.Count; i++) if (order[i].isPlayer) { grid = i + 1; break; }
+
+        Draftmaster.Weekend.SeasonChampionships.RecordPlayerRace(
+            RaceWeekend.WeekendId, Draftmaster.Weekend.SeriesCatalog.PlayerSeries,
+            name, playerPos, grid, carNumber);
+    }
+
+    // What the race itself was worth to the weekend's meters, on top of the purse the results screen shows.
+    Draftmaster.Weekend.WeekendOutcome BuildRaceOutcome(int playerPos)
+    {
+        var o = Draftmaster.Weekend.WeekendOutcome.Nothing;
+        int field = Mathf.Max(1, _results.Count);
+        float rank01 = 1f - Mathf.Clamp01((playerPos - 1) / (float)Mathf.Max(1, field - 1));
+
+        o.score = rank01;
+        o.fanAppeal = playerPos == 1 ? 8f : playerPos <= 5 ? 4f : playerPos <= 10 ? 1.5f : 0f;
+        o.sponsorMood = playerPos <= 10 ? 12f : playerPos <= 20 ? 2f : -4f;
+        o.teamMorale = Mathf.Lerp(-8f, 14f, rank01);
+        o.mediaStanding = playerPos == 1 ? 15f : playerPos <= 5 ? 6f : 0f;
+        o.headline = playerPos == 1
+            ? "Won the race. Everything else about the weekend is a footnote now."
+            : $"Finished P{playerPos} of {field}.";
+        return o;
+    }
+
     public void NextWeekend()
     {
-        RaceWeekend.ResetWeekend();
+        WeekendDirector.NextWeekend();
+        WeekendDirector.OpenAfterLoad();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
@@ -329,7 +390,7 @@ public class RaceDirector : MonoBehaviour
         float railW = PixelGUI.Px(150f);          // the design's right-hand column
         float w = PixelGUI.Px(420f);
         float bandH = PixelGUI.Px(18f);
-        float h = bandH + PixelGUI.Px(30f) + Mathf.Max(_results.Count * row, PixelGUI.Px(150f));
+        float h = bandH + PixelGUI.Px(30f) + Mathf.Max(_results.Count * row, PixelGUI.Px(174f));
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Max(PixelGUI.Px(12f), Mathf.Round((Screen.height - h) * 0.35f));
 
@@ -461,6 +522,13 @@ public class RaceDirector : MonoBehaviour
         // there. SKIP TRAVEL keeps the instant weekend loop for quick testing.
         float bh = PixelGUI.Px(18f);
         if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "HIT THE ROAD")) { _panelHidden = true; TravelMapScreen.Open(); }
+        ry += bh + PixelGUI.Px(4f);
+        // The weekend is not necessarily over when your race is: a truck driver still has two days of it.
+        if (PixelGUI.Tab(new Rect(rx, ry, railW, bh), "WEEKEND SCHEDULE", false))
+        {
+            _panelHidden = true;
+            WeekendScheduleUI.Open();
+        }
         ry += bh + PixelGUI.Px(4f);
         float halfW = (railW - PixelGUI.Px(4f)) * 0.5f;
         if (PixelGUI.Tab(new Rect(rx, ry, halfW, bh), "SKIP TRAVEL", false)) NextWeekend();

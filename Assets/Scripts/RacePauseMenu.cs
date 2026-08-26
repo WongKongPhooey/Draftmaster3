@@ -107,8 +107,8 @@ public class RacePauseMenu : MonoBehaviour
         // literal 150 that was true while the face sat on an 8px cell.
         float rowH = PixelGUI.LineH, gapH = PixelGUI.Px(4f);
         float w = PixelGUI.Px(200f);
-        float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 4f + rowH * 2f
-                  + rowH + gapH + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f);
+        float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 5f + rowH * 2f
+                  + rowH * 2f + gapH + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Round((Screen.height - h) * 0.5f);
 
@@ -136,6 +136,14 @@ public class RacePauseMenu : MonoBehaviour
         if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row),
                          _showMissions ? "MISSIONS ◂" : "MISSIONS ▸", _showMissions))
             _showMissions = !_showMissions;
+        cy += row + gap;
+
+        // The weekend timetable: what else is on today besides the session you are sat in.
+        if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row), "WEEKEND SCHEDULE", false))
+        {
+            Resume();
+            WeekendScheduleUI.Open();
+        }
         cy += row + gap;
 
         float footer = PixelGUI.LineH;

@@ -121,7 +121,10 @@ public class NPCInteractable : MonoBehaviour
             _playerBubble?.Hide();
             _activeBubble = _npcBubble;
         }
-        _activeBubble.Speak(raw, playerLine ? PlayerSpeakerName : speakerName);
+        // Both halves of the conversation are owned by this NPC, so the player's reply is never queued
+        // behind the line it is answering.
+        _activeBubble.Speak(raw, playerLine ? PlayerSpeakerName : speakerName,
+                            Draftmaster.Sim.SpeechPriority.Conversation, owner: this);
     }
 
     public void EndConversation()

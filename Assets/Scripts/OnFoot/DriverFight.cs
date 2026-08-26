@@ -550,7 +550,8 @@ public class DriverFight : MonoBehaviour
             ? "Yeah — walk away. See you Sunday."
             : outcome < 0 ? "Now we're square. Try that on the track." : "This isn't finished.";
         var bubble = SpeechBubble.Attach(_rival.transform);
-        bubble.Speak(line, _rivalName);
+        // A fight is a scripted beat: it takes the screen off whatever was being said.
+        bubble.Speak(line, _rivalName, Draftmaster.Sim.SpeechPriority.Cutscene);
         Destroy(bubble.gameObject, 3.5f);
     }
 

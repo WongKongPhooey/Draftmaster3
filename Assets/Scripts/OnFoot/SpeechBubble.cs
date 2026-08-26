@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Text;
+using Draftmaster.Sim;
 using TMPro;
 using UnityEngine;
 
@@ -41,6 +42,15 @@ public class SpeechBubble : MonoBehaviour
     float _labelScale = 1f, _nameScale = 1f;        // TMP local units -> world metres, measured in Build
 
     public bool IsRevealing { get; private set; }
+
+    // How much of the screen edge the box keeps clear of, as a fraction of the view. The name line sits
+    // above the box, so the top margin is the larger of the two.
+    const float EdgeMarginX = 0.02f;
+    const float EdgeMarginTop = 0.06f;
+    const float EdgeMarginBottom = 0.03f;
+
+    // Set while this bubble holds the screen, so Hide can hand it back.
+    bool _holdsScreen;
 
     public static SpeechBubble Attach(Transform actor)
     {
@@ -169,8 +179,23 @@ public class SpeechBubble : MonoBehaviour
     }
 
     // speaker names the actor talking; empty hides the name line entirely.
-    public void Speak(string text, string speaker = null)
+    //
+    // Everything asks SpeechDirector first: one bubble is up at a time, and a line that cannot have the
+    // screen right now is either queued behind the current one or dropped, depending on what it is. False
+    // = this bubble is not speaking (yet), and the caller should behave as though it never started.
+    public bool Speak(string text, string speaker = null,
+                      SpeechPriority priority = SpeechPriority.Conversation, object owner = null)
     {
+        if (!SpeechDirector.Request(this, text, speaker, priority, owner)) return false;
+        SpeakNow(text, speaker);
+        return true;
+    }
+
+    // Say it, having already been granted the screen. Only SpeechDirector calls this directly, when a
+    // queued line's turn comes round.
+    public void SpeakNow(string text, string speaker = null)
+    {
+        _holdsScreen = true;
         gameObject.SetActive(true);
         _full = WordWrap(text, wrapChars);
         SetSpeaker(speaker);
@@ -244,10 +269,62 @@ public class SpeechBubble : MonoBehaviour
 
     public void Hide()
     {
+        HideNow();
+        SpeechDirector.Release(this);   // whatever was waiting behind this line can have the screen
+    }
+
+    // Off the screen without handing the floor on — what the director calls when something outranks this
+    // bubble and is about to speak over it.
+    public void HideNow()
+    {
         if (_reveal != null) { StopCoroutine(_reveal); _reveal = null; }
         IsRevealing = false;
+        _holdsScreen = false;
         if (_caret != null) _caret.enabled = false;
         gameObject.SetActive(false);
+    }
+
+    void OnDestroy()
+    {
+        if (_holdsScreen) SpeechDirector.Release(this);
+    }
+
+    // A bubble half off the screen is a line you cannot read, and the camera is following the player, not
+    // whoever is speaking — so a speaker at the edge of the view, or one talking from off to the side, puts
+    // their box past the border every time.
+    //
+    // Preference order: above the speaker's head (where it belongs), below them (when there is no room
+    // above — the camera is looking down at somebody near the top of the frame), and failing that slid
+    // along the edge until it fits. Measured in viewport space so it works whichever projection the scene's
+    // camera happens to use.
+    Vector3 KeepOnScreen(Vector3 wanted)
+    {
+        var cam = Camera.main;
+        if (cam == null) return wanted;
+        Vector3 view = cam.WorldToViewportPoint(wanted);
+        if (view.z <= 0f) return wanted;    // behind the camera; nothing sensible to clamp to
+
+        // The box's half-size in viewport units, measured rather than assumed.
+        Vector3 edge = cam.WorldToViewportPoint(wanted + new Vector3(_boxSize.x * 0.5f, _boxSize.y * 0.5f, 0f));
+        float halfX = Mathf.Abs(edge.x - view.x);
+        float halfY = Mathf.Abs(edge.y - view.y);
+
+        float top = 1f - EdgeMarginTop - halfY;
+        float bottom = EdgeMarginBottom + halfY;
+
+        // No room above the speaker? Put it under them instead, which reads as the same speaker rather
+        // than as a box that has drifted off on its own.
+        if (view.y > top)
+        {
+            Vector3 below = wanted - Vector3.up * (_boxSize.y + headHeight * 2f);
+            Vector3 belowView = cam.WorldToViewportPoint(below);
+            if (belowView.z > 0f && belowView.y >= bottom) view = belowView;
+        }
+
+        view.x = Mathf.Clamp(view.x, EdgeMarginX + halfX, 1f - EdgeMarginX - halfX);
+        view.y = bottom > top ? 0.5f : Mathf.Clamp(view.y, bottom, top);   // a box taller than the view: centre it
+
+        return cam.ViewportToWorldPoint(view);
     }
 
     IEnumerator Reveal()
@@ -274,9 +351,11 @@ public class SpeechBubble : MonoBehaviour
     void LateUpdate()
     {
         if (_actor == null) { Destroy(gameObject); return; } // actor despawned — clean up
-        transform.position = _actor.position
+
+        Vector3 above = _actor.position
             + Vector3.up * (headHeight + _boxSize.y * 0.5f)
             + Vector3.back * zLift; // in front of the ground/actor so the box isn't depth-culled
+        transform.position = KeepOnScreen(above);
         transform.rotation = Quaternion.identity;            // stay upright even if the actor turns to face
         transform.localScale = Vector3.one;
 

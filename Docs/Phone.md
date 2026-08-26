@@ -7,14 +7,16 @@ It is not a pause. The paddock keeps moving behind it — the player just stops 
 
 ## What's on it
 
-Six tiles, two by three. Four are filled today; the spare bays are drawn as empty so the grid doesn't
-reflow when the fifth and sixth arrive.
+Six tiles, two by three, and all six are filled. A seventh app is kept but not reachable from the grid,
+which is loud enough to notice.
 
 | App | Shows | Reads from |
 | --- | --- | --- |
 | **Tasks** | What stands between the player and progress: the weekend's next step, sponsors unsigned or unpainted, fan appeal, quests waiting to be reported | `RaceWeekend`, `LapTimingManager`, `RaceDirector`, `SponsorBook`, `FanAppeal`, `QuestManager` |
 | **Notes** | Who asked for what. Every accepted side quest is logged with the person's name and their own words; finished ones drop to the bottom rather than disappearing | `PhoneNotes` (PlayerPrefs), `QuestManager` for progress |
 | **SoBuzz** | Fan appeal as a gauge and a follower count, plus a feed: which brands are watching, which are still out of reach and by how much, and what the crowd is saying | `FanAppeal`, `SponsorCatalog`, `SponsorTerms`, `SponsorBook`, `PlayerStatsLedger` |
+| **Schedule** | The weekend timetable: where the clock is, what is still to come today, your own three sessions wherever they fall, and the five meters | `WeekendDirector`, `WeekendLedger`, `FanAppeal` |
+| **Points** | The three championships. This weekend's races (who won, or when they are due), a results feed, and the tables with the player's own series first | `SeasonChampionships` |
 | **DrivR** | The form guide: every driver ranked by ability, tap for their season results, craft stats, track-type stats and off-track ratings | `Drivers` and `Results` tables via `DatabaseManager` |
 
 **SoBuzz is not flavour text.** A brand posting "we're watching" means `SponsorTerms.CanApproach` is true
@@ -25,7 +27,7 @@ the feed is stable within a weekend and different at the next one.
 **DrivR's stats are the ones the AI drives on** — `Qualifying` and `Consistency` set pace,
 `Aggression` skews the racing line (`AIDriverBinding`) — so a driver who reads aggressive races that way.
 
-## Adding a fifth app
+## Adding an app
 
 One subclass and one line:
 
@@ -86,4 +88,5 @@ Both stores are PlayerPrefs-backed, so they survive the scene reloads between se
 ## Files
 
 `Assets/Scripts/UI/Phone/` — `PhoneUI` (device, slide, home grid, input), `PhoneApp` (base + drawing
-vocabulary), `PhoneTasksApp`, `PhoneNotesApp`, `PhoneNotes` (store), `PhoneSoBuzzApp`, `PhoneDrivRApp`.
+vocabulary), `PhoneTasksApp`, `PhoneNotesApp`, `PhoneNotes` (store), `PhoneSoBuzzApp`, `PhoneDrivRApp`,
+`PhoneScheduleApp`, `PhoneChampionshipApp`.

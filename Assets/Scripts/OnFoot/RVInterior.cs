@@ -78,6 +78,18 @@ public class RVInterior : MonoBehaviour
     float _outsidePlayerZ;             // the player's z before we ever pulled them into the interior
     bool _initialised;
 
+    // The interior's own frame: +Y points at the doorway, (0,0) is where the player stands on entry.
+    // Public so things that belong INSIDE the RV can be parented into it — the weekend's debrief happens
+    // at this dinette, with the engineer sat across the table, and it has to be inside the mask or it draws
+    // over the blackout with the rest of the world.
+    public Transform InteriorRoot { get; private set; }
+
+    // Where the dinette table is in that frame, so anything put "at the table" agrees with the table.
+    public static Vector2 TableLocal => kTablePos;
+
+    // Local z the interior's props sit at.
+    public static float InteriorPropZ => kPropZ;
+
     // Whether the player is currently in the masked interior. Cutscene/trigger logic outside the
     // RV gates on this so nothing fires while the world is masked.
     public bool IsInside => _inside;
@@ -156,6 +168,7 @@ public class RVInterior : MonoBehaviour
             interior = new GameObject("Interior").transform;
             interior.SetParent(_insideView.transform, false);
         }
+        InteriorRoot = interior;
         float doorAngle = Mathf.Atan2(_doorDir.y, _doorDir.x) * Mathf.Rad2Deg - 90f; // map local +Y onto doorDir
         interior.localRotation = Quaternion.Euler(0f, 0f, doorAngle);
 

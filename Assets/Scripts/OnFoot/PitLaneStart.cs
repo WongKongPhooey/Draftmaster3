@@ -240,7 +240,12 @@ public class PitLaneStart : MonoBehaviour
             ? track.track.trackName
             : TrackCatalog.DisplayName(AppearanceConditions.CurrentTrackId);
         string spawnLabel = (marker != null && !string.IsNullOrEmpty(marker.label)) ? marker.label : "Pit Lane";
-        _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform);
+        // Under the name: where the player is in the weekend. A race weekend is a schedule, and the first
+        // thing a driver wants to know on waking up in the motorhome is what day it is and how long they
+        // have got.
+        string when = Draftmaster.Weekend.WeekendSlots.Day(Draftmaster.Weekend.WeekendLedger.CurrentSlot) + " - " +
+                      Draftmaster.Weekend.WeekendSlots.ClockAmPm(Draftmaster.Weekend.WeekendLedger.ClockMinute);
+        _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform, when);
         var carSprite = car.GetComponentInChildren<SpriteRenderer>();
         _intro.AddMarker(car.transform, carSprite != null ? carSprite.sprite : null, enterRange * 2f);
     }

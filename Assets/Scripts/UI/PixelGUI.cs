@@ -358,7 +358,12 @@ public static class PixelGUI
         // The frame's own centre is the plate colour, so it is drawn first and the dither goes over the
         // area inside the border. Both are opaque, so there is no double-darkening.
         var style = focused ? FocusedWindow() : Window;
-        style.Draw(r, GUIContent.none, false, false, false, false);
+        // GUIStyle.Draw throws on anything but a repaint, and an exception here aborts the rest of OnGUI -
+        // which means the panel paints but no control below it is ever created on the mouse events, so every
+        // button on the screen is dead. Repaint-only, and the frame is the only thing that needs the guard:
+        // GUI.DrawTexture (Fill/Tile) already no-ops off-repaint.
+        if (Event.current == null || Event.current.type == EventType.Repaint)
+            style.Draw(r, GUIContent.none, false, false, false, false);
 
         float inset = 4f * scale;
         var inner = new Rect(r.x + inset, r.y + inset, r.width - inset * 2f, r.height - inset * 2f);

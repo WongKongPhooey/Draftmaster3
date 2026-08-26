@@ -82,7 +82,12 @@ public class NPCAmbientChatter : MonoBehaviour
         if (string.IsNullOrEmpty(line)) return;
 
         if (_bubble == null) _bubble = SpeechBubble.Attach(transform);
-        _bubble.Speak(line, string.IsNullOrEmpty(speakerName) ? null : speakerName);
+
+        // Background flavour never talks over anything, and is never queued to be said late — if the
+        // screen is busy this bark simply did not happen, and the next one is along in a second.
+        if (!_bubble.Speak(line, string.IsNullOrEmpty(speakerName) ? null : speakerName,
+                           Draftmaster.Sim.SpeechPriority.Ambient))
+            return;
 
         _lastLine = line;
         _speaking = true;

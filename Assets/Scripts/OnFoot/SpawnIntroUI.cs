@@ -40,22 +40,39 @@ public class SpawnIntroUI : MonoBehaviour
         public float introTimer;
     }
 
+    // The one on screen. The weekend's objectives hang their markers on it rather than drawing a second
+    // set of arrows over the top of these.
+    public static SpawnIntroUI Instance { get; private set; }
+
+    // What the card said when the scene opened — the track, and the day and time the weekend is at. Kept
+    // apart from the live title because that gets reused as an objective banner, and "where am I and when
+    // is it" is worth being able to ask for later.
+    public string SpawnTitle { get; private set; }
+    public string SpawnSubtitle { get; private set; }
+
     string _title;
+    string _subtitle;
     float _titleTimer;
     Transform _player;
     readonly List<Marker> _markers = new();
     GUIStyle _titleStyle, _distStyle;
     Texture2D _px, _arrow;
 
-    public static SpawnIntroUI Create(string title, Transform player)
+    public static SpawnIntroUI Create(string title, Transform player, string subtitle = "")
     {
         var go = new GameObject("SpawnIntroUI");
         var ui = go.AddComponent<SpawnIntroUI>();
         ui._title = title;
+        ui._subtitle = subtitle;
+        ui.SpawnTitle = title;
+        ui.SpawnSubtitle = subtitle;
         ui._player = player;
-        Debug.Log($"[SpawnIntro] \"{title}\"");
+        Instance = ui;
+        Debug.Log($"[SpawnIntro] \"{title}\"" + (string.IsNullOrEmpty(subtitle) ? "" : $" / \"{subtitle}\""));
         return ui;
     }
+
+    void OnDestroy() { if (Instance == this) Instance = null; }
 
     public void AddMarker(Transform target, Sprite icon, float hideWithinMetres = 0f)
     {
@@ -76,11 +93,18 @@ public class SpawnIntroUI : MonoBehaviour
             if (_markers[i].target == target) _markers[i].introTimer = 0f;
     }
 
+    // True while the card on screen is still playing. Anything that wants the banner for its own message
+    // waits for this rather than cutting the card off mid-sentence — the first thing the player reads on
+    // arriving should be where they are and what day it is.
+    public bool TitleBusy => !string.IsNullOrEmpty(_title) &&
+                             _titleTimer < titleFadeIn + titleHold + titleFadeOut;
+
     // Re-use the title card as an objective banner ("HEAD TO YOUR CAR") — same fade-in/hold/fade-out,
     // restarted from the top. Called when a beat finishes and the player needs pointing at the next thing.
-    public void ShowTitle(string text)
+    public void ShowTitle(string text, string subtitle = "")
     {
         _title = text;
+        _subtitle = subtitle;
         _titleTimer = 0f;
     }
 
@@ -130,6 +154,22 @@ public class SpawnIntroUI : MonoBehaviour
         _titleStyle.normal.textColor = new Color(PixelGUI.Text.r, PixelGUI.Text.g, PixelGUI.Text.b, a);
         GUI.Label(rect, _title, _titleStyle);
         _titleStyle.normal.textColor = prev;
+
+        // The line under the name: the day and the time you have arrived at. A weekend is a schedule, and
+        // the card is the first place the player is told where they are in it.
+        if (string.IsNullOrEmpty(_subtitle)) return;
+
+        var under = new Rect(rect.x, rect.yMax - 6f, rect.width, 24f);
+        var underShadow = under; underShadow.x += 2f; underShadow.y += 2f;
+        var wasSub = _distStyle.normal.textColor;
+        var wasAlign = _distStyle.alignment;
+        _distStyle.alignment = TextAnchor.UpperCenter;
+        _distStyle.normal.textColor = new Color(PixelGUI.Ink.r, PixelGUI.Ink.g, PixelGUI.Ink.b, 0.9f * a);
+        GUI.Label(underShadow, _subtitle, _distStyle);
+        _distStyle.normal.textColor = new Color(PixelGUI.Gold.r, PixelGUI.Gold.g, PixelGUI.Gold.b, a);
+        GUI.Label(under, _subtitle, _distStyle);
+        _distStyle.normal.textColor = wasSub;
+        _distStyle.alignment = wasAlign;
     }
 
     void DrawMarkers()

@@ -141,23 +141,94 @@ public class PracticeDirector : MonoBehaviour
         label.fontSize = 20;
         label.fontStyle = FontStyle.Bold;
         label.font = BrandFonts.Body;
-        label.text = _isQualifying ? "START RACE" : "QUALIFYING";
+        // Under the weekend schedule the button just ends the session - what happens next is the player's
+        // choice off the timetable, not this director's.
+        label.text = WeekendRouted ? "END SESSION"
+                                   : (_isQualifying ? "START RACE" : "QUALIFYING");
     }
 
     // Advance the weekend: practice → qualifying; qualifying → capture the grid → race. Each step
     // reloads the scene; the race then runs the normal pre-grid → formation → green flow.
     public void StartRace()
     {
-        if (_isQualifying)
+        // Qualifying always publishes its grid, however the session was reached.
+        if (_isQualifying) CaptureGrid();
+
+        // The weekend schedule sent us out here, so the session reports back to it and the player picks what
+        // to do with the rest of the day off the timetable. Without the schedule this is still the old
+        // straight line: practice to qualifying to race.
+        if (WeekendRouted)
         {
-            CaptureGrid();
-            RaceWeekend.Current = RaceWeekend.Session.Race;
+            WeekendDirector.FinishRoutedSession(BuildSessionOutcome());
+            return;
         }
-        else
-        {
-            RaceWeekend.Current = RaceWeekend.Session.Qualifying;
-        }
+
+        RaceWeekend.Current = _isQualifying ? RaceWeekend.Session.Race : RaceWeekend.Session.Qualifying;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    // True when this session is a booking off the weekend timetable rather than the standalone flow.
+    static bool WeekendRouted => !string.IsNullOrEmpty(WeekendDirector.PendingRouteId);
+
+    // What the session was worth to the weekend. Practice pays in setup knowledge - laps are data, and a
+    // driver who ran the whole session gives the engineers something to work with. Qualifying pays in where
+    // you start, which is the only thing qualifying has ever paid in.
+    Draftmaster.Weekend.WeekendOutcome BuildSessionOutcome()
+    {
+        var o = Draftmaster.Weekend.WeekendOutcome.Nothing;
+        var lt = LapTimingManager.Instance;
+
+        LapTimingManager.CarTimes player = null;
+        if (lt != null)
+            for (int i = 0; i < lt.Rows.Count; i++)
+                if (lt.Rows[i] != null && lt.Rows[i].isPlayer) { player = lt.Rows[i]; break; }
+
+        int laps = player != null ? player.lapsCompleted : 0;
+
+        if (!_isQualifying)
+        {
+            // Twelve clean laps is a full run sheet; past that the engineers have what they need.
+            float run01 = Mathf.Clamp01(laps / 12f);
+            o.setupGain = run01 * 0.28f;
+            o.teamMorale = Mathf.Lerp(-4f, 8f, run01);
+            o.score = run01;
+            o.statKey = "practicesessions";
+            o.statCount = 1;
+            o.headline = laps == 0
+                ? "Sat in the car and never turned a lap. The engineers have nothing."
+                : $"{laps} laps in the book and a run sheet worth reading.";
+            return o;
+        }
+
+        // Qualifying: find where the captured grid put the player.
+        int pos = 0;
+        var grid = RaceWeekend.GridOrder;
+        if (grid != null)
+            for (int i = 0; i < grid.Count; i++)
+                if (grid[i] != null && grid[i].isPlayer) { pos = i + 1; break; }
+
+        o.statKey = "qualifyingsessions";
+        o.statCount = 1;
+
+        if (pos <= 0 || laps == 0)
+        {
+            o.score = 0f;
+            o.teamMorale = -8f;
+            o.headline = "No time set. You will start this race from the back of it.";
+            return o;
+        }
+
+        int field = grid != null ? Mathf.Max(1, grid.Count) : 1;
+        float rank01 = 1f - Mathf.Clamp01((pos - 1) / (float)Mathf.Max(1, field - 1));
+        o.score = rank01;
+        o.teamMorale = Mathf.Lerp(-4f, 10f, rank01);
+        o.mediaStanding = pos == 1 ? 10f : pos <= 5 ? 5f : 0f;
+        o.fanAppeal = pos == 1 ? 3f : pos <= 5 ? 1.2f : 0f;
+        o.sponsorMood = pos <= 10 ? 5f : 0f;
+        o.headline = pos == 1
+            ? "POLE. The car was under you and you used all of it."
+            : $"Qualified P{pos} of {field}.";
+        return o;
     }
 
     // Rank the field by best qualifying lap (no-time cars go to the back, ordered by laps run) and

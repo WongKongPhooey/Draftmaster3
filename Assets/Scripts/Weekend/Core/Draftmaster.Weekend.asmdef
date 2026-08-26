@@ -1,0 +1,16 @@
+{
+    "name": "Draftmaster.Weekend",
+    "rootNamespace": "Draftmaster.Weekend",
+    "references": [
+        "Draftmaster.Fans"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -68,10 +68,12 @@ public class PhoneUI : MonoBehaviour
     void BuildApps()
     {
         _apps.Clear();
+        Register(new PhoneScheduleApp());
         Register(new PhoneTasksApp());
         Register(new PhoneNotesApp());
         Register(new PhoneSoBuzzApp());
         Register(new PhoneDrivRApp());
+        Register(new PhoneChampionshipApp());
     }
 
     // Later apps hook in here rather than editing the home screen. Extra apps past the six slots are

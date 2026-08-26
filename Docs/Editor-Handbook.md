@@ -34,9 +34,34 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   opened it so BACK returns there; opened cold it falls back to the title.
 * Returning from the garage **reloads** the scene it came from, so a practice session in progress
   restarts. The laptops are for between sessions.
+* **The weekend is a schedule, not a straight line.** Arriving at a track puts the three-day timetable up
+  (`F10` after that): six half-days, your own practice/qualifying/race, the other two championships'
+  sessions to watch, and the media, fan and sponsor obligations booked around them. Your sessions still
+  hand off to the race scene exactly as before. `Docs/Race-Weekend.md`.
 * Build list order is load-bearing: `TitleScreen`, `RaceScene`, `GarageScreen`, `TeamGarage`, `DemoMenu`
   (multiplayer lobby). A destination missing from that list makes its title row draw disabled.
   `Assets/Tests/Editor/TitleScreenWiringTests.cs` checks the whole chain.
+* **`DemoMenu` is currently unreachable** — nothing routes to the multiplayer lobby since the title screen
+  became the boot scene. Either give it a title row or uncheck it in the build settings; until then it is
+  listed in `SceneNavigationTests.KnownOrphans`.
+
+### Is it still navigable? (run this after any scene or menu change)
+
+Two suites, both runnable from the Test Runner (`Window > General > Test Runner`) or over MCP:
+
+| Suite | Mode | What it proves |
+| --- | --- | --- |
+| `Assets/Tests/Editor/SceneNavigationTests.cs` | EditMode, ~2s | Every enabled build scene opens, carries no missing scripts, and names only scenes that are in the build list. The exits form one connected graph: everything is reachable from `TitleScreen`, nothing is a dead end, and the title is reachable again from everywhere. |
+| `Assets/Tests/PlayMode/NavigationFlowTests.cs` | PlayMode, ~20s | The same routes actually walked with the game running: every title row pressed, the factory laptop and door used, RACE/BACK on the garage sheet, `QUIT TO TITLE` out of a race. Also: every scene comes up without a `Debug.LogError`, with a camera, with no button whose `onClick` calls nothing, and with the clock running (a weekend panel left open used to freeze everything loaded after it). |
+
+The static suite reads the map; the play suite drives it. A route that only exists in code (the pause
+menu's `titleSceneName`, the laptop's `GarageScreenLoader.SceneName`) is read off the real type in
+`SceneNavigationTests.CodeExits`, so renaming either fails the test rather than silently dropping an edge.
+
+**Writing more play-mode tests: never call `SceneManager.LoadScene` directly.** The play-mode test runner
+is a scene object marked `DontSave`, not `DontDestroyOnLoad`, so a single-mode load deletes the object
+running your coroutine — the run does not fail, it hangs in play mode forever. Load through
+`NavigationFlowTests.Go(sceneName)`, which moves the runner out of the way first.
 
 ## Which scene do I open?
 
@@ -118,6 +143,34 @@ Strip arrays can't be grown through the MCP property API, so these are menu item
 `PitLane.FitBoxes` call the spawner makes — so it is where cars and crews actually end up.
 `Log Pit Box Lines` dumps distances and local positions for placing the painted dividers;
 `Log Pit Fit` explains a "field doesn't fit" layout.
+
+## 6a. Lay out a track's cast for the weekend
+
+`Draftmaster > NPCs > Weekend Cast` (`Ctrl+Shift+W`) is the window for building a race weekend's people.
+
+1. Pick the **half-day** across the top (FRI AM … SUN PM) and the series. The window rebuilds the timetable
+   for that weekend and previews the scene as whatever session falls in that half-day, so the scene-view
+   gizmos grey out anybody who would not be there.
+2. **Booked this half-day** lists what is on the sheet: time, title, venue and who is waiting there. Click a
+   booking to read the whole conversation the player will have — every beat, every answer, and what each
+   answer is worth — then **Open the words** to jump to the content file.
+3. **In the paddock this half-day** lists every placed NPC, greyed if they would not appear, with the line
+   set that is live for that half-day. Click one to select and frame it in the scene view.
+4. The panel underneath edits the selected NPC: **what they say in that half-day**, their quest and its four
+   line sets, and the marker/beat fields (interaction, objective banner, trigger). Everything else is behind
+   the fold.
+
+**Install Core Cast** stamps the people every track has, whatever series is running — pit greeter, crew
+chief, race engineer, chief strategist, PR manager, team liaison — as ordinary editable markers under
+`NPCs`. Run it in any track scene or package; it never duplicates what is already there. Everybody else in
+the paddock is crowd, scattered around them by `PaddockSpawner`.
+
+**Dialogue that changes across the weekend:** a marker carries a *set of lines per half-day*
+(`PlacedNPC.schedule`). The first set covering the half-day being played wins; anything uncovered falls back
+to the marker's default lines. The crew chief ships with three — Friday's practice brief, Saturday's
+qualifying trim, Sunday's race brief — and `ScheduledDialogue` swaps them as the weekend's clock advances,
+without a scene reload. Write a new one with **Write a FRI AM set** in the window; it starts as a copy of
+what they say now.
 
 ## 6. Place an NPC
 
@@ -249,6 +302,38 @@ The standard is **12.8 px/m**. Import at that PPU — never fix size with transf
   floor, team car, the three crew stations, the desk **laptop** (opens the garage sheet) and the **EXIT**
   door back to the title. A re-run wipes hand edits under that root, so run it first, then tweak.
 
+## 18. Change what a race weekend looks like
+
+`F10` in play mode is the timetable, but the weekend leads itself: arriving books the next thing, the team
+liaison meets the player outside the motorhome to say where they are due, the objective marker points at it,
+and finishing one books the next. **Committing to something books it rather than running it** — the sheet
+closes, a marker and a strip name the place and the distance, and the obligation happens when the player
+walks up to whoever is waiting there (`T` travels you if you would rather not walk). To change it:
+
+- **Move a session** — `WeekendTimetable.PracticeTime / QualifyingTime / RaceTime`. Everything else keys off
+  these: the drivers meeting is two hours before your race and intros thirty minutes before it, wherever
+  that lands.
+- **Add or move an obligation** — `WeekendTimetable.BuildObligations`. Deliberate clashes are the point.
+- **Move where something happens** — `WeekendVenues.For` maps each `ActivityKind` to a place; the sheet's
+  location column is generated from it, so the two can't disagree.
+- **Rewrite what somebody says** — `Core/Conversations/` (`TeamMeetingContent`, `CeremonyContent`,
+  `SponsorContent`, `SigningContent`). A beat is a speaker, a line and its answers; each answer carries
+  what it is worth. `PressConferenceContent.Pool` still owns the press questions.
+- **Rotate a weekend feature** — `WeekendTimetable.AddFeature`, one seeded roll per weekend.
+- **Retune the meters** — `WeekendLedger.Apply` and the per-answer values in the conversation content.
+  Nothing else touches them.
+- **Change who meets the player at the RV** — `PlacedNPCDefaults.CreateLiaison` (the team liaison, who
+  names the next booking) and `CreateEngineer` (who meets them instead when the next thing is their own
+  session). Both are `PlacedNPC` walk-up beats triggered by stepping out of the motorhome.
+- **Move a venue in the world** — `WeekendVenueSites` builds them all off the paddock rectangle; a track
+  package can override any one by authoring its own `WeekendVenueAnchor`, which the builder leaves alone.
+
+Rules live in the `Draftmaster.Weekend` assembly and are covered by `WeekendTimetableTests`,
+`WeekendActivityContentTests` and `WeekendVenueTests` (EditMode); the paddock the weekend is played in is
+covered by `WeekendVenuePresenceTests` (PlayMode — venues exist, hosts are stood at them, the room has a
+chair per driver, and booking → objective → walk → talk actually connects). Full guide:
+`Docs/Race-Weekend.md`.
+
 ---
 
 # Play-mode keys
@@ -256,7 +341,8 @@ The standard is **12.8 px/m**. Import at that PPU — never fix size with transf
 | Key | Panel |
 | --- | --- |
 | `Esc` | Pause menu (closes the phone first if it's up) |
-| `P` | Phone — on foot only: Tasks, Notes, SoBuzz, DrivR |
+| `P` | Phone — on foot only: Schedule, Tasks, Notes, SoBuzz, DrivR, Points |
+| `T` | Travel to whatever the weekend has you booked in for (only while an appointment is up) |
 | `Tab` (hold) | Expand the running-order board to the full field |
 | `F1` | Lap timing readout |
 | `F2` | Running-order board (in practice/qualifying it ranks on best lap) |
@@ -267,11 +353,12 @@ The standard is **12.8 px/m**. Import at that PPU — never fix size with transf
 | `F7` | Player telemetry |
 | `F8` | Formation-lap diagnostics — gap / closing speed / state per car |
 | `F9` | Handling tuner **and** travel-map dev hotkey (clash) |
+| `F10` | Race weekend schedule — the three-day timetable |
 | `C` | Crew chief mode |
 | `V` | Drive / Broadcast toggle |
 | `L` | Pit limiter |
 
-Free: `F10`–`F12`.
+Free: `F11`–`F12`.
 
 ---
 
@@ -357,6 +444,22 @@ Driver Database.
 # Gotchas
 
 - **"Force Rebuild" items destroy hand edits.** The plain `Build …` items refuse to overwrite on purpose.
+- **A modal that survives a scene load takes the clock with it.** `WeekendModal` zeroes `Time.timeScale`
+  while a weekend panel is up, and those panels are `DontDestroyOnLoad` — so anything that leaves the scene
+  while one is open hands the next scene a frozen game (`Update` still runs, so menus respond; nothing
+  physical moves). `WeekendDirector.OnSceneLoaded` closes the schedule and calls `WeekendModal.Reset()` on
+  every non-additive load. Any NEW panel that freezes the world must be closed on scene change the same way.
+- **Nobody speaks without asking.** Every `SpeechBubble.Speak` goes through `SpeechDirector`: one bubble is
+  on screen at a time, ambient chatter is dropped rather than queued when anything else is talking, a
+  cutscene outranks a conversation, and two conversations take turns. Pass the priority
+  (`Draftmaster.Sim.SpeechPriority`) when adding a new speaker, and pass `owner` for a two-hander so the
+  player's reply is not queued behind the line it answers. Rules: `Assets/Scripts/Sim/SpeechQueue.cs`.
+- **Bubbles clamp themselves into the view.** A speaker at the edge of the frame would otherwise put half
+  its box off screen. `SpeechBubble.KeepOnScreen` prefers above the head, then below, then slides along the
+  edge — so never assume the box is directly over the speaker.
+- **A generated screen's buttons are dead unless the binder wires them in `Start`.** `onClick.AddListener`
+  at build time is a runtime listener and is not serialised into the saved scene — see
+  `GarageScreenUI.WireButtons`. `NavigationFlowTests` fails on any button whose `onClick` calls nothing.
 - **Geometry-anchored NPCs need a track in the scene** — preview a package, or author inside the package's
   own Prefab Mode stage.
 - **The race scene has no road.** Manager fields pointing at a `TrackBuilder` are filled at load

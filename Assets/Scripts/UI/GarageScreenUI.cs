@@ -3,6 +3,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
@@ -118,8 +119,55 @@ public class GarageScreenUI : MonoBehaviour
         IronOvalScanlines.Ensure();
         if (EventSystem.current == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        WireButtons();
         BuildPickers();
         Refresh();
+    }
+
+    // RACE and BACK, hooked up here for the same reason the pickers are: the builder that generates this
+    // scene calls onClick.AddListener at edit time, which adds a RUNTIME listener and is thrown away when
+    // the scene is saved. The buttons in the saved scene therefore have an empty onClick, and the only
+    // wiring that survives is the wiring done in code, on the way up.
+    //
+    // Found by the names the builder gives them rather than by serialized references, so a rebuilt scene
+    // needs no re-dragging. RACE sits on its own object; BACK is a tab, whose Button is on the face inside
+    // the plate — GetComponentInChildren covers both shapes.
+    void WireButtons()
+    {
+        Wire("Race", Race);
+        Wire("Back", Back);
+    }
+
+    void Wire(string objectName, UnityAction action)
+    {
+        var owner = FindDescendant(transform, objectName);
+        if (owner == null)
+        {
+            Debug.LogWarning($"GarageScreenUI: no '{objectName}' button in the scene — rebuild it with " +
+                             "Draftmaster > Art > Build Garage Screen Scene.");
+            return;
+        }
+
+        var button = owner.GetComponentInChildren<Button>(true);
+        if (button == null)
+        {
+            Debug.LogWarning($"GarageScreenUI: '{objectName}' has no Button, so it can't be pressed.");
+            return;
+        }
+
+        button.onClick.RemoveListener(action);   // a rebuild in the same session must not double it up
+        button.onClick.AddListener(action);
+    }
+
+    static Transform FindDescendant(Transform root, string objectName)
+    {
+        if (root.name == objectName) return root;
+        foreach (Transform child in root)
+        {
+            var found = FindDescendant(child, objectName);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     // ------------------------------------------------------------------ top bar

@@ -9,6 +9,7 @@
         "Draftmaster.Sim",
         "Draftmaster.Sponsors",
         "Draftmaster.Tracks",
+        "Draftmaster.Weekend",
         "Unity.TextMeshPro",
         "UnityEditor.TestRunner",
         "UnityEngine.TestRunner",
