@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -5,6 +6,28 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody2D))]
 public class OnFootController : MonoBehaviour
 {
+    // Every walking body currently in the scene, kept the same way NPCInteractable.All and
+    // CrowdActor.All are.
+    //
+    // "Is the player on foot, and where are they" is asked several times a frame — the objective
+    // marker alone asked it around a dozen times, once per IMGUI event, on top of the phone, the
+    // crowd director and the fan spawner polling for it. Each of those was a full-scene
+    // FindFirstObjectByType, which walks every object in a paddock of hundreds of NPCs. Registering
+    // here turns all of it into a list read.
+    public static readonly List<OnFootController> All = new();
+
+    // The walking body, or null while the player is in the car / in a menu. First one still alive,
+    // matching the scene order FindFirstObjectByType used to hand back.
+    public static OnFootController Current
+    {
+        get
+        {
+            for (int i = 0; i < All.Count; i++)
+                if (All[i] != null) return All[i];   // Unity null: destroyed this frame, OnDisable pending
+            return null;
+        }
+    }
+
     [Tooltip("Walk speed in units/sec.")]
     public float moveSpeed = 3.5f;
     [Tooltip("Speed multiplier while the run modifier is held (Left Shift / L1). Walk animation plays faster by the same factor.")]
@@ -63,8 +86,17 @@ public class OnFootController : MonoBehaviour
         // is assigned by the spawner *after* Awake has already run.
     }
 
-    void OnEnable() => _moveAction?.Enable();
-    void OnDisable() => _moveAction?.Disable();
+    void OnEnable()
+    {
+        if (!All.Contains(this)) All.Add(this);
+        _moveAction?.Enable();
+    }
+
+    void OnDisable()
+    {
+        All.Remove(this);
+        _moveAction?.Disable();
+    }
 
     // Builds a private clone of controlsAsset and grabs OnFoot/Movement. Cloning keeps our
     // enable/disable from clashing with the car's InputManager, which shares PlayerControl.

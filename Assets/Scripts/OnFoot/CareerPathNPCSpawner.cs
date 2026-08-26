@@ -90,7 +90,7 @@ public class CareerPathNPCSpawner : MonoBehaviour
         OnFootController player = null;
         while (timeout > 0f && player == null)
         {
-            player = FindObjectOfType<OnFootController>();
+            player = OnFootController.Current;
             if (player != null) break;
             timeout -= Time.deltaTime;
             yield return null;

@@ -76,12 +76,13 @@ public class AutographFanSpawner : MonoBehaviour
 
     void Update()
     {
-        // Cheap throttled poll for the on-foot player (no static registry on OnFootController).
+        // Throttled poll for the on-foot player. The lookup itself is a list read now
+        // (OnFootController.Current); the throttle stays because the top-up check below is not free.
         _onFootPoll -= Time.deltaTime;
         if (_onFootPoll <= 0f)
         {
             _onFootPoll = 0.5f;
-            OnFootPlayer = FindObjectOfType<OnFootController>();
+            OnFootPlayer = OnFootController.Current;
 
             // Top-up: if the player goes on foot and every fan from the load-time wave has already come and
             // gone (or none spawned), give this stint a fresh wave — once per stint, so a late pit walk

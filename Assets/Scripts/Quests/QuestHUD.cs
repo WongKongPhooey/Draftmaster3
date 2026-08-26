@@ -12,6 +12,24 @@ public class QuestHUD : MonoBehaviour
     bool _gameplayScene;
     float _nextSceneCheck;
 
+    // One line of the readout, worked out on a timer rather than inside OnGUI.
+    //
+    // OnGUI runs once per IMGUI event: a Layout and a Repaint every frame at rest, and one more for
+    // every key and mouse event on top, so it fires several times a frame while the player is walking.
+    // Rebuilding the tracked list, re-reading each quest's state out of PlayerPrefs and re-formatting
+    // its progress line on every one of those was pure garbage. A quest readout does not need to be
+    // frame-fresh, so it is refreshed four times a second and OnGUI only draws what is here.
+    struct Row
+    {
+        public string title;
+        public string progress;
+        public bool ready;
+    }
+
+    const float RowRefreshSeconds = 0.25f;
+    readonly List<Row> _rows = new();
+    float _nextRowRefresh;
+
     public static QuestHUD Ensure()
     {
         if (Instance == null)
@@ -20,6 +38,7 @@ public class QuestHUD : MonoBehaviour
             DontDestroyOnLoad(go);
             Instance = go.AddComponent<QuestHUD>();
         }
+        Instance._nextRowRefresh = 0f;   // a quest just changed hands — redraw on the next tick
         return Instance;
     }
 
@@ -52,15 +71,37 @@ public class QuestHUD : MonoBehaviour
         {
             _nextSceneCheck = Time.unscaledTime + 2f;
             _gameplayScene = RacePositionTracker.Instance != null
-                             || FindAnyObjectByType<OnFootController>() != null;
+                             || OnFootController.Current != null;
+        }
+
+        if (!_gameplayScene) return;
+        if (Time.unscaledTime < _nextRowRefresh) return;
+        _nextRowRefresh = Time.unscaledTime + RowRefreshSeconds;
+        RebuildRows();
+    }
+
+    // Walks the quest definitions directly rather than through QuestManager.Tracked(), which builds a
+    // fresh list every call — there is nothing to hand out here, only rows to fill.
+    void RebuildRows()
+    {
+        _rows.Clear();
+        foreach (var q in QuestManager.All)
+        {
+            if (q == null) continue;
+            var state = QuestManager.GetState(q);
+            if (state != QuestManager.State.Active && state != QuestManager.State.ReadyToTurnIn) continue;
+            _rows.Add(new Row
+            {
+                title = string.IsNullOrEmpty(q.title) ? "" : q.title.ToUpperInvariant(),
+                progress = QuestManager.DescribeProgress(q),
+                ready = state == QuestManager.State.ReadyToTurnIn,
+            });
         }
     }
 
     void OnGUI()
     {
-        if (!_gameplayScene) return;
-        List<QuestInfo> tracked = QuestManager.Tracked();
-        if (tracked.Count == 0) return;
+        if (!_gameplayScene || _rows.Count == 0) return;
 
         // Iron Oval card per tracked quest: gold Silkscreen title over the VT323 progress line, and a
         // gain-green line once the quest is ready to hand in — the only state the player has to act on.
@@ -69,21 +110,19 @@ public class QuestHUD : MonoBehaviour
         float y = PixelGUI.Px(60f);   // below the RESULTS/position widgets
         float h = PixelGUI.Px(34f);
 
-        foreach (var q in tracked)
+        for (int i = 0; i < _rows.Count; i++)
         {
-            bool ready = QuestManager.GetState(q) == QuestManager.State.ReadyToTurnIn;
-            string progress = QuestManager.DescribeProgress(q);
+            var row = _rows[i];
 
-            PixelGUI.Panel(new Rect(x, y, w, h), focused: ready);
+            PixelGUI.Panel(new Rect(x, y, w, h), focused: row.ready);
             var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 4f);
 
-            GUI.Label(new Rect(c.x, c.y, c.width, PixelGUI.Px(9f)), q.title.ToUpperInvariant(),
-                      PixelGUI.HeadingSmall);
+            GUI.Label(new Rect(c.x, c.y, c.width, PixelGUI.Px(9f)), row.title, PixelGUI.HeadingSmall);
 
             var style = PixelGUI.Row;
             var prev = style.normal.textColor;
-            style.normal.textColor = ready ? PixelGUI.Confirm : PixelGUI.Text;
-            GUI.Label(new Rect(c.x, c.y + PixelGUI.Px(10f), c.width, PixelGUI.Px(12f)), progress, style);
+            style.normal.textColor = row.ready ? PixelGUI.Confirm : PixelGUI.Text;
+            GUI.Label(new Rect(c.x, c.y + PixelGUI.Px(10f), c.width, PixelGUI.Px(12f)), row.progress, style);
             style.normal.textColor = prev;
 
             y += h + PixelGUI.Px(4f);

@@ -63,9 +63,13 @@ public class WeekendVenueAnchor : MonoBehaviour
 
     // The walking player, if there is one. Everything here is about somebody on foot, so a scene with the
     // player in the car simply has no distance to measure.
+    //
+    // Read off OnFootController's own registry rather than searched for: the objective HUD asks this
+    // several times a frame (once per IMGUI event, plus its Update), and a full-scene search that often
+    // is the single most expensive thing in the paddock.
     public static Transform OnFootPlayer()
     {
-        var controller = Object.FindFirstObjectByType<OnFootController>();
+        var controller = OnFootController.Current;
         return controller != null ? controller.transform : null;
     }
 

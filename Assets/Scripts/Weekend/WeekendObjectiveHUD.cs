@@ -34,6 +34,19 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // 9:30 AM" and only then "TEAM PLAN MEETING".
     string _bannerTitle, _bannerSubtitle;
 
+    // What the strip is drawing, worked out once a frame in Update.
+    //
+    // OnGUI runs once per IMGUI event — a Layout and a Repaint every frame, plus one more for every key
+    // and mouse event, so holding a walk key multiplies it. Resolving the booking in there meant the
+    // timetable lookup, the venue search, the distance measure and four interpolated strings all ran
+    // several times a frame, and the whole lot showed up as a hitch exactly when the player was walking
+    // to a marker. It is one evaluation a frame now, and OnGUI only draws.
+    WeekendActivity _shown;
+    bool _onFoot;
+    bool _here;
+    int _metresLeft = -1;
+    string _detailText = "", _footerText = "";
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
     {
@@ -68,10 +81,49 @@ public class WeekendObjectiveHUD : MonoBehaviour
     {
         SyncMarker();
         PumpBanner();
+        Refresh();
 
         if (!Showing) return;
         var kb = Keyboard.current;
         if (kb != null && kb[TravelKey].wasPressedThisFrame) TravelThere();
+    }
+
+    // The once-a-frame resolve. Everything that costs something — the booking, where it is, how far off
+    // it is and the lines that say so — lands in fields here so OnGUI is pure drawing.
+    void Refresh()
+    {
+        var activity = WeekendAppointment.Pending;
+        if (activity == null)
+        {
+            _shown = null;
+            _onFoot = false;
+            _metresLeft = -1;
+            return;
+        }
+
+        _onFoot = WeekendVenueAnchor.OnFootPlayer() != null;
+        if (WeekendAppointment.Target() == null) { _shown = null; return; }
+        var previous = _shown;
+        _shown = activity;
+
+        float distance = WeekendAppointment.DistanceRemaining();
+        bool here = distance >= 0f && distance <= HereMetres;
+        int metres = Mathf.RoundToInt(Mathf.Max(0f, distance));
+
+        // The two lines only change on a whole metre, on arriving, or on the booking itself changing,
+        // so they are rebuilt then rather than every frame — a walk across the paddock is otherwise a
+        // few hundred dead strings.
+        if (activity != previous || here != _here || metres != _metresLeft || _detailText.Length == 0)
+        {
+            _here = here;
+            _metresLeft = metres;
+            _detailText = here
+                ? "You're here — press E to " + Verb(activity)
+                : $"{Capitalise(WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
+            _footerText = here
+                ? activity.Clock + "  ·  " + WeekendAppointment.TargetLabel()
+                : $"{activity.Clock}  ·  [T] TRAVEL THERE";
+        }
     }
 
     // Hang the objective on the game's own marker system rather than drawing a second set of arrows: the
@@ -129,15 +181,17 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
     // Nothing to say when there is no appointment, when the schedule or a conversation is up, or when the
     // player is not on foot to walk anywhere.
+    //
+    // The panel/conversation gates stay live rather than cached: they are static reads, and a conversation
+    // that opens after this component's Update has already run would otherwise get one frame of strip
+    // drawn over it. The costly half comes from Refresh.
     bool Showing
     {
         get
         {
             if (WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return false;
             if (NPCInteractable.AnyConversationActive || DialogueChoiceUI.IsOpen) return false;
-            var a = WeekendAppointment.Pending;
-            if (a == null) return false;
-            return WeekendAppointment.Target() != null && WeekendVenueAnchor.OnFootPlayer() != null;
+            return _shown != null && _onFoot;
         }
     }
 
@@ -164,11 +218,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         if (!Showing) return;
         EnsureStyles();
 
-        var activity = WeekendAppointment.Pending;
-        if (activity == null || WeekendAppointment.Target() == null) return;
-
-        float distance = WeekendAppointment.DistanceRemaining();
-        bool here = distance >= 0f && distance <= HereMetres;
+        var activity = _shown;
 
         float w = PixelGUI.Px(230f);
         float h = PixelGUI.Px(34f);
@@ -178,18 +228,9 @@ public class WeekendObjectiveHUD : MonoBehaviour
         var c = PixelGUI.PanelContent(box, 4f);
 
         GUI.Label(new Rect(c.x, c.y, c.width, PixelGUI.LineH), activity.title, _title);
-
-        string detail = here
-            ? "You're here — press E to " + Verb(activity)
-            : $"{Capitalise(WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {Mathf.RoundToInt(Mathf.Max(0f, distance))} m";
-        GUI.Label(new Rect(c.x, c.y + PixelGUI.LineH, c.width, PixelGUI.LineH), detail, _detail);
-
-        if (!here)
-            GUI.Label(new Rect(c.x, c.y + PixelGUI.LineH * 2f, c.width, PixelGUI.LineH),
-                      $"{activity.Clock}  ·  [T] TRAVEL THERE", PixelGUI.Footer);
-        else
-            GUI.Label(new Rect(c.x, c.y + PixelGUI.LineH * 2f, c.width, PixelGUI.LineH),
-                      activity.Clock + "  ·  " + WeekendAppointment.TargetLabel(), PixelGUI.Footer);
+        GUI.Label(new Rect(c.x, c.y + PixelGUI.LineH, c.width, PixelGUI.LineH), _detailText, _detail);
+        GUI.Label(new Rect(c.x, c.y + PixelGUI.LineH * 2f, c.width, PixelGUI.LineH), _footerText,
+                  PixelGUI.Footer);
     }
 
     static string Verb(WeekendActivity a)

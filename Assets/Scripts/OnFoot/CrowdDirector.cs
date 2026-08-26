@@ -102,6 +102,6 @@ public class CrowdDirector : MonoBehaviour
     void ResolvePlayer()
     {
         _player = AutographFanSpawner.OnFootPlayer;
-        if (_player == null) _player = FindObjectOfType<OnFootController>();
+        if (_player == null) _player = OnFootController.Current;
     }
 }

@@ -82,8 +82,25 @@ public static class WeekendAppointment
             return anchor != null ? anchor.transform : null;
         }
 
-        var pitLane = Object.FindFirstObjectByType<PitLaneStart>();
-        return pitLane != null && pitLane.car != null ? pitLane.car.transform : null;
+        return PlayerCar();
+    }
+
+    // The scene's parked player car. Held onto rather than searched for every call: Target() is asked
+    // several times a frame while the objective marker is up, and a full-scene search per ask is real
+    // money in a paddock. A scene change destroys the PitLaneStart, which reads as a Unity null here and
+    // triggers one fresh search — capped at one per frame so a scene that simply has no pit-lane flow
+    // does not pay for a scan on every ask.
+    static PitLaneStart _pitLane;
+    static int _pitLaneSearchedFrame = -1;
+
+    static Transform PlayerCar()
+    {
+        if (_pitLane == null && _pitLaneSearchedFrame != Time.frameCount)
+        {
+            _pitLaneSearchedFrame = Time.frameCount;
+            _pitLane = Object.FindFirstObjectByType<PitLaneStart>();
+        }
+        return _pitLane != null && _pitLane.car != null ? _pitLane.car.transform : null;
     }
 
     // What the marker calls the place.

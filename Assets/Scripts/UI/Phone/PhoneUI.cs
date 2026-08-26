@@ -102,7 +102,7 @@ public class PhoneUI : MonoBehaviour
         if (_pollTimer <= 0f)
         {
             _pollTimer = 0.5f;
-            var found = FindAnyObjectByType<OnFootController>();
+            var found = OnFootController.Current;
             if (found != _player)
             {
                 // The old body is gone (scene change, got in the car) — never leave it locked.
@@ -154,7 +154,7 @@ public class PhoneUI : MonoBehaviour
 
     void OpenInternal(string appId)
     {
-        if (_player == null) _player = FindAnyObjectByType<OnFootController>();
+        if (_player == null) _player = OnFootController.Current;
         if (_player == null) return;                       // in the car, or a scene with no on-foot body
         if (!_open && _player.MovementLocked) return;      // a conversation or cutscene has the player
 

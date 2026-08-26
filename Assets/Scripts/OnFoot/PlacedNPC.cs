@@ -256,7 +256,7 @@ public class PlacedNPC : MonoBehaviour
         var ctx = new BuildContext { groundZ = transform.position.z };
         var flow = FindFirstObjectByType<PitLaneStart>();
         if (flow != null) ctx.prefab = flow.onFootPrefab;
-        var player = FindFirstObjectByType<OnFootController>();
+        var player = OnFootController.Current;
         if (player != null) ctx.player = player.transform;
         TryBuild(ctx);
     }

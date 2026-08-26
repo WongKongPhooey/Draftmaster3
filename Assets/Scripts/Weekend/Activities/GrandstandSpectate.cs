@@ -82,7 +82,7 @@ public class GrandstandSpectate : MonoBehaviour
     // the camera is still theirs, so the cars, the crowd and the paddock all carry on around them.
     void SitDown()
     {
-        _player = FindFirstObjectByType<OnFootController>();
+        _player = OnFootController.Current;
         if (_player == null) return;
         _player.MovementLocked = true;
         _lockedPlayer = true;
