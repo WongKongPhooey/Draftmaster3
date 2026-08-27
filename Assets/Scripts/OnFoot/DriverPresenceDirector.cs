@@ -53,8 +53,8 @@ public class DriverPresenceDirector : MonoBehaviour
     public bool allowFights = true;
 
     [Header("Budget")]
-    [Tooltip("Cap on spawned driver NPCs. Drivers past the cap are left sat in their cars, which costs nothing. 0 = no cap.")]
-    public int maxSpawnedDrivers = 0;
+    [Tooltip("Cap on spawned driver NPCs. Drivers past the cap are left sat in their cars, which costs nothing — or, between sessions when there are no cars, left out of the paddock entirely. Their motorhome is parked either way. 0 = no cap.")]
+    public int maxSpawnedDrivers = 16;
 
     Material _unlit;
     Transform _root;

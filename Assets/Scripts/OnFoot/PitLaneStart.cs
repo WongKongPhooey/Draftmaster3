@@ -80,6 +80,7 @@ public class PitLaneStart : MonoBehaviour
     bool _entered;
     bool _interactHeldPrev;
     GameObject _prompt;
+    Sprite _carIcon;
 
     // Walk to the car → chief's briefing → setup panel → green light on the controls. Each step hands to the
     // next; the car's controller stays disabled until the very end so the driver can't roll away mid-briefing.
@@ -247,7 +248,8 @@ public class PitLaneStart : MonoBehaviour
                       Draftmaster.Weekend.WeekendSlots.ClockAmPm(Draftmaster.Weekend.WeekendLedger.ClockMinute);
         _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform, when);
         var carSprite = car.GetComponentInChildren<SpriteRenderer>();
-        _intro.AddMarker(car.transform, carSprite != null ? carSprite.sprite : null, enterRange * 2f);
+        _carIcon = carSprite != null ? carSprite.sprite : null;
+        SyncCarMarker();
     }
 
     void SpawnPlayer(Vector3 pos)
@@ -356,9 +358,27 @@ public class PitLaneStart : MonoBehaviour
         if (_phase == EntryPhase.Briefing) { StepBriefing(); return; }
         if (_entered) return;
 
+        SyncCarMarker();
+
         if (showControlHints) StepWalkHints();
 
         bool inRange = Vector2.Distance(_player.transform.position, car.transform.position) <= enterRange;
+
+        // Outside a session the car is parked scenery: the paddock is walkable for all three days, but the
+        // hour in the car is something the sheet gives you.
+        //
+        // The exception is the sheet's own sessions. An obligation is a place you go to, and a practice
+        // session is no different — stood at the car with one booked, E takes it. The director reloads the
+        // scene with the session live (the field only comes out at load) and the spawn is a few steps away.
+        if (!RaceWeekend.SessionLive)
+        {
+            var due = BookedSession;
+            ShowPrompt(inRange && due != null);
+            if (due == null) ControlHints.Hide("entercar");
+            if (inRange && due != null && InteractPressed()) WeekendDirector.Begin(due);
+            return;
+        }
+
         ShowPrompt(inRange);
 
         if (inRange && InteractPressed()) EnterCar();
@@ -377,11 +397,38 @@ public class PitLaneStart : MonoBehaviour
             _hintedRun = true;
         }
 
-        if (!_hintedEnter && Vector2.Distance(_player.transform.position, car.transform.position) < enterHintRange)
+        if (!_hintedEnter && (RaceWeekend.SessionLive || BookedSession != null)
+            && Vector2.Distance(_player.transform.position, car.transform.position) < enterHintRange)
         {
             ControlHints.Show("entercar", "E", "E", "Get in the car");
             _hintedEnter = true;
         }
+    }
+
+    // The player's own on-track session, if that is what they are currently due at. Null the rest of the
+    // time, which is most of the weekend.
+    static Draftmaster.Weekend.WeekendActivity BookedSession
+    {
+        get
+        {
+            var due = WeekendAppointment.Pending;
+            return due != null && due.IsOnTrack ? due : null;
+        }
+    }
+
+    // The car is an objective only while a session is live; the rest of the weekend, pointing the player at
+    // it would be pointing them at something they cannot do.
+    void SyncCarMarker()
+    {
+        if (_intro == null || car == null) return;
+
+        // When a session is what the player is due at, the weekend's own marker is already on the car — at a
+        // higher priority and with the booking's name on it. Leave that one alone rather than the two of us
+        // rewriting the same entry every frame.
+        if (BookedSession != null) return;
+
+        if (RaceWeekend.SessionLive) _intro.AddMarker(car.transform, _carIcon, enterRange * 2f, "Your car");
+        else _intro.RemoveMarker(car.transform);
     }
 
     void EnterCar()

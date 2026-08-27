@@ -179,6 +179,9 @@ public class TitleScreenUI : MonoBehaviour
                 string opener = OpeningTrack();
                 if (string.IsNullOrEmpty(opener)) { SetStatus("No track has a layout yet."); return; }
                 TrackSelection.StartWeekendAt(opener);
+                // A new weekend opens in the paddock, not in the car — the sheet decides when the track
+                // goes live.
+                RaceWeekend.SessionLive = false;
                 Load(raceSceneName);
                 break;
 
@@ -191,6 +194,8 @@ public class TitleScreenUI : MonoBehaviour
                 // One race: skip the practice/qualifying half of the weekend.
                 if (!EnsureRaceableTrack()) return;
                 RaceWeekend.Current = RaceWeekend.Session.Race;
+                // No weekend around an exhibition: the session is live the moment the scene loads.
+                RaceWeekend.SessionLive = true;
                 Load(raceSceneName);
                 break;
 

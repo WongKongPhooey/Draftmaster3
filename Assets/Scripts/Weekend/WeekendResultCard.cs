@@ -27,6 +27,12 @@ public class WeekendResultCard : MonoBehaviour
     // the weekend carries on around them.
     bool _inWorld;
 
+    // This card's own entry on the modal stack, and whether it has already handed over. Both are tracked
+    // per card rather than inferred from Instance: Destroy() is deferred to the end of the frame, so a card
+    // is still alive — and still drawing — after the next one has taken Instance off it.
+    bool _pushed;
+    bool _dismissed;
+
     public static void Show(WeekendActivity a, WeekendOutcome o, bool inWorld = false)
     {
         if (Instance != null) Destroy(Instance.gameObject);
@@ -43,25 +49,39 @@ public class WeekendResultCard : MonoBehaviour
     {
         Instance = this;
         _openedAt = Time.unscaledTime;
-        if (!_inWorld) WeekendModal.Push();
+        if (!_inWorld) { WeekendModal.Push(); _pushed = true; }
     }
 
+    // Pops what this card pushed whatever else has happened to Instance in between. Guarding the pop on
+    // "am I still the Instance" leaked a modal depth every time one card replaced another — the outgoing
+    // card never popped, so the counter never came back to zero and the world stayed frozen behind the
+    // panel that did pop. The depth counter in WeekendModal is what keeps the overlap honest; this only
+    // has to be sure its own push is matched exactly once.
     void OnDestroy()
     {
-        if (Instance != this) return;
-        Instance = null;
-        if (!_inWorld) WeekendModal.Pop();
+        if (Instance == this) Instance = null;
+        if (_pushed) { WeekendModal.Pop(); _pushed = false; }
     }
 
     void Dismiss()
     {
+        if (_dismissed) return;
+        _dismissed = true;
+
         bool wasInWorld = _inWorld;
+
+        // Stand down as the Instance here rather than waiting for OnDestroy at the end of the frame: the
+        // schedule refuses to open over a result card, so handing over while still holding Instance meant
+        // the sheet silently never came back.
+        if (Instance == this) Instance = null;
         Destroy(gameObject);
         if (!wasInWorld) WeekendScheduleUI.Open();
     }
 
     void OnGUI()
     {
+        // Destroyed but not yet collected: draw nothing, and above all do not dismiss a second time.
+        if (_dismissed) return;
         if (_activity == null) { Dismiss(); return; }
 
         if (_inWorld && Time.unscaledTime - _openedAt > InWorldSeconds) { Dismiss(); return; }
@@ -69,7 +89,26 @@ public class WeekendResultCard : MonoBehaviour
 
         var lines = Deltas();
         float w = Mathf.Min(PixelGUI.Px(340f), Screen.width - PixelGUI.Px(16f));
-        float h = PixelGUI.Px(74f) + Mathf.Max(lines.Count, 1) * PixelGUI.Px(12f) + PixelGUI.Px(26f);
+
+        // Measured, not budgeted. The meter rows are set in the data face — 32px at the current 2x skin —
+        // while the old height allowed Px(12), 24px, for each of them and a flat Px(74) for everything
+        // above; a card with three or more meters on it ran its last rows out through the GOT IT button.
+        // What follows is the same arithmetic the draw below does, in the same order.
+        float pad = PixelGUI.Px(4f) + PixelGUI.Px(8f);   // what PanelContent(outer, 8f) takes off each side
+        float contentW = w - pad * 2f;
+        float bandH = PixelGUI.Px(18f);
+        float rowH = PixelGUI.Data.fontSize + PixelGUI.Px(3f);
+        float buttonH = PixelGUI.Px(18f);
+        float headlineH = string.IsNullOrEmpty(_outcome.headline)
+            ? 0f
+            : PixelGUI.Body.CalcHeight(new GUIContent(_outcome.headline), contentW) + PixelGUI.Px(5f);
+
+        float h = pad * 2f
+                  + bandH + PixelGUI.Px(6f)                    // title band
+                  + headlineH                                  // what the weekend will remember it by
+                  + PixelGUI.Px(4f)                            // the rule under it
+                  + Mathf.Max(lines.Count, 1) * rowH           // one line per meter that moved
+                  + PixelGUI.Px(6f) + buttonH;                 // and the way out
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         // In the world it sits low, out of the way of whoever is stood in front of you; as a modal it sits
         // where a modal sits.
@@ -81,7 +120,6 @@ public class WeekendResultCard : MonoBehaviour
         PixelGUI.Panel(outer, focused: true);
         var c = PixelGUI.PanelContent(outer, 8f);
 
-        float bandH = PixelGUI.Px(18f);
         PixelGUI.Fill(new Rect(c.x, c.y, c.width, bandH), PixelGUI.PlateLight);
         GUI.Label(new Rect(c.x + PixelGUI.Px(4f), c.y + PixelGUI.Px(4f), c.width, PixelGUI.Px(12f)),
                   _activity.title, PixelGUI.Heading);
@@ -107,28 +145,27 @@ public class WeekendResultCard : MonoBehaviour
 
         if (lines.Count == 0)
         {
-            GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Px(11f)), "Nothing moved.", PixelGUI.DataDim);
-            cy += PixelGUI.Px(12f);
+            GUI.Label(new Rect(c.x, cy, c.width, rowH), "Nothing moved.", PixelGUI.DataDim);
+            cy += rowH;
         }
         else
         {
             foreach (var (label, value, colour) in lines)
             {
-                GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Px(11f)), label, PixelGUI.DataDim);
+                GUI.Label(new Rect(c.x, cy, c.width, rowH), label, PixelGUI.DataDim);
                 var s = PixelGUI.Data;
                 var pc = s.normal.textColor;
                 var pa = s.alignment;
                 s.normal.textColor = colour;
                 s.alignment = TextAnchor.MiddleRight;
-                GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.Px(11f)), value, s);
+                GUI.Label(new Rect(c.x, cy, c.width, rowH), value, s);
                 s.normal.textColor = pc;
                 s.alignment = pa;
-                cy += PixelGUI.Px(12f);
+                cy += rowH;
             }
         }
 
-        float bh2 = PixelGUI.Px(18f);
-        if (PixelGUI.Button(new Rect(c.x, c.yMax - bh2, c.width, bh2),
+        if (PixelGUI.Button(new Rect(c.x, c.yMax - buttonH, c.width, buttonH),
                             _inWorld ? "GOT IT" : "BACK TO THE SCHEDULE") ||
             (Time.unscaledTime - _openedAt > 0.4f && ConfirmPressed()))
             Dismiss();

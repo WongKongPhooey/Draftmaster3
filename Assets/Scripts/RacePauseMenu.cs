@@ -26,6 +26,16 @@ public class RacePauseMenu : MonoBehaviour
     Vector2 _missionScroll;
     GUIStyle _title, _toggle;
 
+    // What the board was told to do this frame, settled once every layout scope has closed.
+    //
+    // Accepting or turning in from the board changes what the board draws — a ReadyToTurnIn row carries a
+    // button, a Completed row does not — and IMGUI caches the control list during the Layout event that
+    // precedes each real one. Doing it inline meant the pass after the click walked a different list than
+    // Layout had recorded: "Mismatched LayoutGroup", thrown from inside the scroll view, so EndScrollView
+    // and EndArea never ran and the clip stack was left unbalanced. Recording the press and settling it
+    // below keeps each event self-consistent; the next one lays the new state out from scratch.
+    QuestInfo _pendingAccept, _pendingTurnIn;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
@@ -195,7 +205,7 @@ public class RacePauseMenu : MonoBehaviour
                 case QuestManager.State.NotStarted:
                     GUILayout.Label(q.description, PixelGUI.Body);
                     if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.LineH + PixelGUI.Px(6f)), "ACCEPT"))
-                        QuestManager.Accept(q);
+                        _pendingAccept = q;
                     break;
                 case QuestManager.State.Active:
                     GUILayout.Label(QuestManager.DescribeProgress(q), PixelGUI.Row);
@@ -204,7 +214,7 @@ public class RacePauseMenu : MonoBehaviour
                     if (q.objective == QuestInfo.ObjectiveType.DeliverItem)
                         GUILayout.Label("Deliver it in person.", PixelGUI.Row);
                     else if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.LineH + PixelGUI.Px(6f)), "TURN IN"))
-                        QuestManager.Complete(q);
+                        _pendingTurnIn = q;
                     break;
                 case QuestManager.State.Completed:
                     GUILayout.Label(string.IsNullOrEmpty(q.rewardText) ? "Done." : $"Done — {q.rewardText}",
@@ -217,6 +227,10 @@ public class RacePauseMenu : MonoBehaviour
 
         GUILayout.EndScrollView();
         GUILayout.EndArea();
+
+        // Outside every layout group: safe to change what the board says about itself.
+        if (_pendingAccept != null) { QuestManager.Accept(_pendingAccept); _pendingAccept = null; }
+        if (_pendingTurnIn != null) { QuestManager.Complete(_pendingTurnIn); _pendingTurnIn = null; }
     }
 
     // Only the toggle needs building by hand: it is the one control here that draws Unity's own check box,

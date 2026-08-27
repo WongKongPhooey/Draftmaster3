@@ -97,6 +97,11 @@ public class GridSpawner : MonoBehaviour
 
         if (track == null || carPrefab == null) yield break;
 
+        // No session, no field. The three championships share the circuit for three days, but their cars are
+        // only on it during their own sessions; the rest of the weekend the track is empty and everything
+        // that happens, happens in the paddock.
+        if (!RaceWeekend.SessionLive) yield break;
+
         if (DatabaseManager.Instance == null)
         {
             Debug.LogWarning("GridSpawner: no DatabaseManager in scene — spawning without driver bindings.");

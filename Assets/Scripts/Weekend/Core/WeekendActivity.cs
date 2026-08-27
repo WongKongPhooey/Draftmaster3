@@ -100,6 +100,11 @@ namespace Draftmaster.Weekend
         public int startMinute;   // minutes from midnight
         public int minutes;       // how long it blocks the calendar for
 
+        // A booking that has to have happened before this one means anything. A practice debrief with no
+        // practice behind it is a meeting about a session nobody ran, so the sheet holds it back until the
+        // run it discusses has been made. Empty for everything that stands on its own.
+        public string requiresId = "";
+
         // The sport, the team or the contract says you are there. Skipping applies the penalty below.
         public bool mandatory;
 

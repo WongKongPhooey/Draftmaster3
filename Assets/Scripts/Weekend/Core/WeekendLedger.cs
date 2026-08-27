@@ -141,7 +141,13 @@ namespace Draftmaster.Weekend
             if (IsMissed(a.id)) return State.Missed;
             if ((int)a.slot > Data.slotIndex) return State.Later;
             if ((int)a.slot < Data.slotIndex) return State.Past;
-            return a.startMinute >= Data.clockMinute ? State.Available : State.Missed;
+            if (a.startMinute >= Data.clockMinute) return State.Available;
+
+            // Same half-day, clock past its slot time. Everything else is missed at that point — but your
+            // own session is the point of the weekend and the crew do not pack up because a sponsor
+            // overran, so practice, qualifying and the race stay takeable until the half-day itself ends.
+            // SweepMissed makes the same exception; this is the read side of it.
+            return ActivityKinds.IsOnTrack(a.kind) ? State.Available : State.Missed;
         }
 
         // Can the player still walk into this? Reason is a short line for the schedule screen when not.
@@ -156,6 +162,12 @@ namespace Draftmaster.Weekend
                 case State.Missed: reason = "You missed it."; return false;
                 case State.Later: reason = "Not until " + WeekendSlots.Label(a.slot) + "."; return false;
                 case State.Past: reason = "That day is behind you."; return false;
+            }
+
+            if (!string.IsNullOrEmpty(a.requiresId) && !IsDone(a.requiresId))
+            {
+                reason = "Nothing to go over until the session has run.";
+                return false;
             }
 
             if (a.EndMinute > WeekendSlots.ClosesAt(a.slot))
@@ -227,6 +239,12 @@ namespace Draftmaster.Weekend
                 bool gone = (int)a.slot < d.slotIndex ||
                             ((int)a.slot == d.slotIndex && a.startMinute < d.clockMinute);
                 if (!gone) continue;
+
+                // Your own session is the point of the weekend, and a driver does not lose practice because
+                // a sponsor overran: the car is in the box and the crew wait. Within its own half-day the
+                // session stays takeable however far past its slot time the clock has gone. Once the half-day
+                // itself is behind you it is missed like anything else.
+                if (ActivityKinds.IsOnTrack(a.kind) && (int)a.slot == d.slotIndex) continue;
 
                 d.missed.Add(a.id);
                 if (!a.mandatory) continue;

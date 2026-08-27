@@ -27,7 +27,10 @@ public class GrandstandSeat : NPCInteractable
             return base.Interact();
         }
 
-        GrandstandSpectate.Begin(pending);
+        // Behind a wipe. From the gate this is the walk out to the stand and back through the crowd; from a
+        // seat it is settling into it. Either way the session opens with the grandstand already around you.
+        if (ScreenFade.Busy) return false;
+        ScreenFade.Cut(() => GrandstandSpectate.Begin(pending));
         return false;
     }
 }

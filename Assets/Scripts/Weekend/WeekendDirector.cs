@@ -213,7 +213,34 @@ public class WeekendDirector : MonoBehaviour
         if (!replaceExisting && pending != null && WeekendLedger.CanDo(pending, out _)) return pending;
 
         var next = WeekendSchedulePlan.NextWorthDoing();
-        if (next == null) { WeekendAppointment.Clear(); return null; }
+
+        // Nothing left in this half-day: roll on to the next one that has something in it.
+        //
+        // A half-day empties faster than it looks like it should — finishing an obligation moves the clock
+        // to the end of its hour and sweeps up everything the clock walked past — so the player would finish
+        // a sponsor session at 11:00 and be stood in the paddock with no marker, nothing on the sheet they
+        // could still do, and no way to tell that the answer was "the morning is over". Only reachable when
+        // the slot is genuinely exhausted (everything in it done, missed, or behind the clock), so the sweep
+        // AdvanceSlot runs on the way out has nothing left to take.
+        bool rolled = false;
+        for (int guard = WeekendSlots.Count; next == null && guard > 0 && !WeekendLedger.WeekendOver; guard--)
+        {
+            WeekendLedger.AdvanceSlot();
+            rolled = true;
+            next = WeekendSchedulePlan.NextWorthDoing();
+        }
+
+        if (next == null)
+        {
+            WeekendAppointment.Clear();
+            if (WeekendLedger.WeekendOver)
+                WeekendScheduleUI.Toast("That is the weekend done.");
+            return null;
+        }
+
+        if (rolled)
+            WeekendScheduleUI.Toast(WeekendSlots.Label(WeekendLedger.CurrentSlot) + " — " +
+                                    WeekendSchedulePlan.Describe(next) + ".");
 
         // Nowhere to walk to from here (the title screen, the garage): leave it unbooked rather than
         // pointing at a place that is not in this scene.
@@ -289,6 +316,8 @@ public class WeekendDirector : MonoBehaviour
     static void BeginOnTrack(WeekendActivity a)
     {
         PendingRouteId = a.id;
+        // The sheet has put the player in the car for this hour: the track goes live with them.
+        RaceWeekend.SessionLive = true;
         RaceWeekend.Current = a.kind switch
         {
             ActivityKind.Qualifying => RaceWeekend.Session.Qualifying,
@@ -339,6 +368,10 @@ public class WeekendDirector : MonoBehaviour
         string id = PendingRouteId;
         if (string.IsNullOrEmpty(id)) return;
         ClearRoute();
+
+        // Session over: the track empties and the car goes back to being parked scenery until the sheet
+        // sends the player out again.
+        RaceWeekend.SessionLive = false;
 
         var a = Timetable.ById(id);
         if (a == null) return;

@@ -86,6 +86,10 @@ public class DriverMotorhomeLot : MonoBehaviour
     [Header("Field")]
     [Tooltip("Seconds to wait for GridSpawner to finish spawning the AI field before building the lot with whoever has turned up.")]
     public float fieldTimeout = 12f;
+    [Tooltip("Park a motorhome for every driver on the series entry list, not only for the cars that happen to be on track. The paddock is the same place all weekend; the field only exists during a session.")]
+    public bool parkWholeRoster = true;
+    [Tooltip("Most motorhomes in one line before another line is stacked behind it. Stops a full entry list parking in one 250m row.")]
+    public int maxPerRow = 10;
     [Tooltip("Put each driver somewhere once the row is built (DriverPresenceDirector): in their car, at their motorhome, or walking the lot. Off = an empty lot of parked rigs.")]
     public bool populateDrivers = true;
 
@@ -147,8 +151,11 @@ public class DriverMotorhomeLot : MonoBehaviour
             while (!DatabaseManager.Instance.IsReady && dbWait > 0f) { dbWait -= Time.deltaTime; yield return null; }
         }
 
+        // Outside a session there is no field to wait for — GridSpawner leaves the track empty — so the lot
+        // is built from the entry list straight away instead of standing in an empty paddock for the whole
+        // timeout first.
         int seen = -1, stable = 0;
-        float timeout = fieldTimeout;
+        float timeout = RaceWeekend.SessionLive ? fieldTimeout : 0f;
         while (timeout > 0f)
         {
             int now = FindObjectsByType<DriverLabel>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
@@ -210,6 +217,21 @@ public class DriverMotorhomeLot : MonoBehaviour
             };
             FillNames(slot, label.driverName);
             _slots.Add(slot);
+        }
+
+        // And everyone else on the entry list. Cars are only out during a session, so between sessions the
+        // labels above find nothing — but the paddock a driver walks around on a Friday morning is the same
+        // paddock whether or not anybody is on track, and every driver entered has an address in it.
+        if (!parkWholeRoster) return;
+
+        foreach (var e in Draftmaster.Data.CupRoster2026.Entries)
+        {
+            if (e == null || e.Number == playerNumber) continue;
+            if (TryGetSlot(e.Number, out _)) continue;
+
+            var entrySlot = new Slot { carNumber = e.Number, teamName = e.Team };
+            FillNames(entrySlot, string.IsNullOrEmpty(e.Short) ? e.Last : e.Short);
+            _slots.Add(entrySlot);
         }
     }
 
@@ -319,8 +341,15 @@ public class DriverMotorhomeLot : MonoBehaviour
         }
 
         int playerPlace = Mathf.Clamp(playerLineIndex, 0, _slots.Count - 1);
+
+        // A whole entry list in two lines is a quarter-mile row. Add lines instead, so the lot stays a lot
+        // rather than a street.
+        int rows = maxPerRow > 0
+            ? Mathf.Max(rowCount, Mathf.CeilToInt(_slots.Count / (float)maxPerRow))
+            : rowCount;
+
         var line = ComputeLine(origin, rot, lineDirection, rvWidth, rvLength, lineGap, rowGap,
-                               rowCount, _slots.Count, playerPlace, rvZ, stackRowsForward);
+                               rows, _slots.Count, playerPlace, rvZ, stackRowsForward);
 
         var root = new GameObject("Motorhomes").transform;
         root.SetParent(transform, false);

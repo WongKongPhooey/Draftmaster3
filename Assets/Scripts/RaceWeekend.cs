@@ -35,6 +35,29 @@ public static class RaceWeekend
     const string WeekendIdKey = "raceweekend.id";
     public static int WeekendId => UnityEngine.PlayerPrefs.GetInt(WeekendIdKey, 0);
 
+    // True while one of the player's own on-track sessions is actually running.
+    //
+    // The paddock is walkable for all three days of a weekend, but the car is only the player's to take out
+    // for the hour the sheet gives them: practice, qualifying, the race. Outside those the pit box is
+    // something you walk past on the way to a sponsor, and no series has cars circulating. Whatever puts the
+    // player on track sets this — WeekendDirector routing a booked session, the title screen starting an
+    // exhibition race — and settling the session clears it again.
+    //
+    // PlayerPrefs for the same reason as WeekendDirector.PendingRouteId: practice, qualifying and the race
+    // each reload the scene, which would eat a static.
+    const string SessionLiveKey = "raceweekend.sessionlive";
+
+    public static bool SessionLive
+    {
+        // Multiplayer has no weekend around it — a lobby that has loaded the track is a race.
+        get => !GameSession.IsSinglePlayer || UnityEngine.PlayerPrefs.GetInt(SessionLiveKey, 0) == 1;
+        set
+        {
+            UnityEngine.PlayerPrefs.SetInt(SessionLiveKey, value ? 1 : 0);
+            UnityEngine.PlayerPrefs.Save();
+        }
+    }
+
     // Fresh weekend (call from menu flow before loading a track scene).
     public static void ResetWeekend()
     {
@@ -42,5 +65,6 @@ public static class RaceWeekend
         UnityEngine.PlayerPrefs.Save();
         Current = Session.Practice;
         GridOrder = null;
+        SessionLive = false;
     }
 }

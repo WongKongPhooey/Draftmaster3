@@ -38,6 +38,10 @@ public class SpawnIntroUI : MonoBehaviour
         public Sprite icon;
         public float hideWithinMetres;
         public float introTimer;
+        // What this one is for ("Your car", "Sponsor photo shoot"), drawn under the icon, and which
+        // objective outranks which when more than one is registered.
+        public string label;
+        public int priority;
     }
 
     // The one on screen. The weekend's objectives hang their markers on it rather than drawing a second
@@ -55,7 +59,7 @@ public class SpawnIntroUI : MonoBehaviour
     float _titleTimer;
     Transform _player;
     readonly List<Marker> _markers = new();
-    GUIStyle _titleStyle, _distStyle;
+    GUIStyle _titleStyle, _distStyle, _captionStyle;
     Texture2D _px, _arrow;
 
     public static SpawnIntroUI Create(string title, Transform player, string subtitle = "")
@@ -74,10 +78,32 @@ public class SpawnIntroUI : MonoBehaviour
 
     void OnDestroy() { if (Instance == this) Instance = null; }
 
-    public void AddMarker(Transform target, Sprite icon, float hideWithinMetres = 0f)
+    // Register - or re-describe - the marker for a target. One entry per transform: a booking whose venue
+    // is the player's own car used to stack a second marker on top of the spawn's, so the same object
+    // carried two icons and two distances.
+    public void AddMarker(Transform target, Sprite icon, float hideWithinMetres = 0f,
+                          string label = "", int priority = 0)
     {
         if (target == null) return;
-        _markers.Add(new Marker { target = target, icon = icon, hideWithinMetres = hideWithinMetres });
+
+        for (int i = 0; i < _markers.Count; i++)
+        {
+            if (_markers[i].target != target) continue;
+            _markers[i].icon = icon;
+            _markers[i].hideWithinMetres = hideWithinMetres;
+            _markers[i].label = label;
+            _markers[i].priority = priority;
+            return;   // introTimer is kept: re-describing is not a reason to fly in again, PulseMarker is
+        }
+
+        _markers.Add(new Marker
+        {
+            target = target,
+            icon = icon,
+            hideWithinMetres = hideWithinMetres,
+            label = label,
+            priority = priority,
+        });
     }
 
     public void RemoveMarker(Transform target)
@@ -177,66 +203,110 @@ public class SpawnIntroUI : MonoBehaviour
         var cam = Camera.main;
         if (cam == null || _player == null) return;
 
+        var m = Live();
+        if (m == null) return;
+
+        float dist = Vector2.Distance(_player.position, m.target.position);
+
+        Vector3 sp = cam.WorldToScreenPoint(m.target.position);
+        Vector2 gui = new Vector2(sp.x, Screen.height - sp.y); // GUI space runs y-down
+
+        bool onScreen = sp.z > 0f &&
+                        gui.x >= edgeMargin && gui.x <= Screen.width - edgeMargin &&
+                        gui.y >= edgeMargin && gui.y <= Screen.height - edgeMargin;
+
+        // Where the marker lives once it has settled, plus the direction it points when edge-clamped.
+        Vector2 rest;
+        Vector2 dir = Vector2.zero;
+        if (onScreen)
+        {
+            rest = new Vector2(gui.x, gui.y - iconSize);
+        }
+        else
+        {
+            // Clamp to the screen edge; the arrow points from the marker toward the real position.
+            rest = new Vector2(
+                Mathf.Clamp(gui.x, edgeMargin, Screen.width - edgeMargin),
+                Mathf.Clamp(gui.y, edgeMargin, Screen.height - edgeMargin));
+            dir = gui - rest;
+            if (dir.sqrMagnitude < 1f) dir = Vector2.right;
+        }
+
+        // Fly-in: oversized in the middle of the screen, then shrinking and sliding out to `rest`.
+        // Eased so it leaves the centre fast and settles softly at the edge.
+        float t = markerIntroTime > 0f ? Mathf.Clamp01(m.introTimer / markerIntroTime) : 1f;
+        float ease = 1f - (1f - t) * (1f - t);
+        bool settled = t >= 1f;
+        float scale = Mathf.Lerp(markerIntroScale, 1f, ease);
+        Vector2 pos = settled
+            ? rest
+            : Vector2.Lerp(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f), rest, ease);
+
+        // Arrow, caption and distance are read-at-a-glance detail - they'd only be clutter mid-flight.
+        if (settled && dir != Vector2.zero)
+        {
+            float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg; // GUI degrees, y-down
+            Vector2 arrowPos = pos + dir.normalized * (iconSize * 0.5f + 12f);
+            var mtx = GUI.matrix;
+            GUIUtility.RotateAroundPivot(ang, arrowPos);
+            GUI.color = Color.white;
+            GUI.DrawTexture(new Rect(arrowPos.x - 11f, arrowPos.y - 11f, 22f, 22f), _arrow);
+            GUI.matrix = mtx;
+        }
+
+        DrawIcon(pos, m.icon, scale);
+
+        if (settled)
+        {
+            // Under the icon: what it is, then how far away. An unlabelled pip is a guess.
+            float below = pos.y + iconSize * 0.72f;
+            if (!string.IsNullOrEmpty(m.label))
+            {
+                DrawCaption(new Vector2(pos.x, below), m.label);
+                below += PixelGUI.LineH;
+            }
+            if (!onScreen || dist >= distanceLabelMinMetres) DrawDistance(new Vector2(pos.x, below), dist);
+        }
+
+        GUI.color = Color.white;
+    }
+
+    // The one objective on screen.
+    //
+    // Two markers up at once - the car from the pit-lane spawn and whatever the weekend has booked - read
+    // as two identical pips with no way to tell them apart, and the player is only ever due at one of them.
+    // Highest priority wins, most recently added on a tie, so a booking displaces the standing "get in your
+    // car" and hands it straight back when the booking is done.
+    Marker Live()
+    {
+        Marker best = null;
         for (int i = 0; i < _markers.Count; i++)
         {
             var m = _markers[i];
             if (m.target == null) continue;
-
-            float dist = Vector2.Distance(_player.position, m.target.position);
-            if (m.hideWithinMetres > 0f && dist < m.hideWithinMetres) continue;
-
-            Vector3 sp = cam.WorldToScreenPoint(m.target.position);
-            Vector2 gui = new Vector2(sp.x, Screen.height - sp.y); // GUI space runs y-down
-
-            bool onScreen = sp.z > 0f &&
-                            gui.x >= edgeMargin && gui.x <= Screen.width - edgeMargin &&
-                            gui.y >= edgeMargin && gui.y <= Screen.height - edgeMargin;
-
-            // Where the marker lives once it has settled, plus the direction it points when edge-clamped.
-            Vector2 rest;
-            Vector2 dir = Vector2.zero;
-            if (onScreen)
-            {
-                rest = new Vector2(gui.x, gui.y - iconSize);
-            }
-            else
-            {
-                // Clamp to the screen edge; the arrow points from the marker toward the real position.
-                rest = new Vector2(
-                    Mathf.Clamp(gui.x, edgeMargin, Screen.width - edgeMargin),
-                    Mathf.Clamp(gui.y, edgeMargin, Screen.height - edgeMargin));
-                dir = gui - rest;
-                if (dir.sqrMagnitude < 1f) dir = Vector2.right;
-            }
-
-            // Fly-in: oversized in the middle of the screen, then shrinking and sliding out to `rest`.
-            // Eased so it leaves the centre fast and settles softly at the edge.
-            float t = markerIntroTime > 0f ? Mathf.Clamp01(m.introTimer / markerIntroTime) : 1f;
-            float ease = 1f - (1f - t) * (1f - t);
-            bool settled = t >= 1f;
-            float scale = Mathf.Lerp(markerIntroScale, 1f, ease);
-            Vector2 pos = settled
-                ? rest
-                : Vector2.Lerp(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f), rest, ease);
-
-            // Arrow and distance are read-at-a-glance detail — they'd only be clutter mid-flight.
-            if (settled && dir != Vector2.zero)
-            {
-                float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg; // GUI degrees, y-down
-                Vector2 arrowPos = pos + dir.normalized * (iconSize * 0.5f + 12f);
-                var mtx = GUI.matrix;
-                GUIUtility.RotateAroundPivot(ang, arrowPos);
-                GUI.color = Color.white;
-                GUI.DrawTexture(new Rect(arrowPos.x - 11f, arrowPos.y - 11f, 22f, 22f), _arrow);
-                GUI.matrix = mtx;
-            }
-
-            DrawIcon(pos, m.icon, scale);
-
-            if (settled && (!onScreen || dist >= distanceLabelMinMetres))
-                DrawDistance(new Vector2(pos.x, pos.y + iconSize * 0.75f), dist);
+            if (best == null || m.priority >= best.priority) best = m;
         }
-        GUI.color = Color.white;
+
+        // Close enough that the marker would be sat on top of the thing it points at: draw nothing, rather
+        // than falling through to the objective underneath and sending the player back across the paddock
+        // the moment they arrive.
+        if (best != null && best.hideWithinMetres > 0f &&
+            Vector2.Distance(_player.position, best.target.position) < best.hideWithinMetres) return null;
+
+        return best;
+    }
+
+    // The marker's name, sat under its icon. Overflows its box rather than wrapping: a caption is one short
+    // line by construction, and a wrapped one would collide with the distance readout under it.
+    void DrawCaption(Vector2 pos, string text)
+    {
+        var r = new Rect(pos.x - 160f, pos.y, 320f, PixelGUI.LineH);
+        var shadow = r; shadow.x += PixelGUI.Px(1f); shadow.y += PixelGUI.Px(1f);
+        var prev = _captionStyle.normal.textColor;
+        _captionStyle.normal.textColor = PixelGUI.Ink;
+        GUI.Label(shadow, text, _captionStyle);
+        _captionStyle.normal.textColor = prev;
+        GUI.Label(r, text, _captionStyle);
     }
 
     // Icon centred on pos, aspect kept, over a soft dark backing plate. `sizeMul` drives the fly-in.
@@ -287,6 +357,12 @@ public class SpawnIntroUI : MonoBehaviour
             };
             _titleStyle.normal.textColor = PixelGUI.Text;
             _distStyle = new GUIStyle(PixelGUI.Data) { alignment = TextAnchor.MiddleCenter };
+            _captionStyle = new GUIStyle(PixelGUI.HeadingSmall)
+            {
+                alignment = TextAnchor.UpperCenter,
+                wordWrap = false,
+                clipping = TextClipping.Overflow,
+            };
         }
         if (_px == null)
         {

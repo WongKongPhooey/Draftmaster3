@@ -24,7 +24,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // actually gates the conversation.
     const float HereMetres = 4f;
 
-    GUIStyle _title, _detail;
+    GUIStyle _title, _detail, _footer;
 
     // What the marker is currently hung on, so it can be moved when the booking changes.
     string _markedId = "";
@@ -148,7 +148,10 @@ public class WeekendObjectiveHUD : MonoBehaviour
         if (target == null) return;
 
         _marked = target;
-        intro.AddMarker(target, MarkerIcon(target), hideWithinMetres: 3f);
+        // Named, and outranking the pit-lane spawn's "your car" pip. The booking is the one place the player
+        // is due; a second, unlabelled marker beside it is a puzzle rather than a direction.
+        intro.AddMarker(target, MarkerIcon(target), hideWithinMetres: 3f,
+                        label: activity.title, priority: 10);
         intro.PulseMarker(target);
 
         // The banner says what it is; the line under it says where and when, in the same shape the spawn
@@ -203,13 +206,22 @@ public class WeekendObjectiveHUD : MonoBehaviour
         var target = WeekendAppointment.Target();
         var player = WeekendVenueAnchor.OnFootPlayer();
         if (target == null || player == null) return false;
+        if (ScreenFade.Busy) return false;
 
         // Stand on the venue's own mark where there is one; a session has no mark, so pull up beside the car.
         Vector3 to = anchor != null ? anchor.StandPosition : target.position + new Vector3(0f, -3f, 0f);
         to.z = player.position.z;
-        var body = player.GetComponent<Rigidbody2D>();
-        if (body != null) body.position = to;           // the body owns the pose; moving only the transform snaps back
-        player.position = new Vector3(to.x, to.y, player.position.z);
+
+        // Behind a wipe rather than a jump cut. The paddock is one continuous place, and a player who blinks
+        // and finds themselves two hundred metres away has to work out where they are looking from scratch;
+        // a fade is the shorthand every game uses for "time and distance happened here".
+        ScreenFade.Cut(() =>
+        {
+            if (player == null) return;
+            var body = player.GetComponent<Rigidbody2D>();
+            if (body != null) body.position = to;       // the body owns the pose; moving only the transform snaps back
+            player.position = new Vector3(to.x, to.y, player.position.z);
+        });
         return true;
     }
 
@@ -220,18 +232,40 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
         var activity = _shown;
 
-        float w = PixelGUI.Px(230f);
-        float h = PixelGUI.Px(34f);
+        // Rows are measured off the styles they are drawn in rather than assumed. The three lines are set
+        // on three different faces — a 32px display heading over a 32px data line over a 16px footer — and
+        // striding them all by LineH (20px at 2x) drew every one of them through the next. That is what the
+        // top of the screen looked like: the booking, the directions and the travel prompt in one heap.
+        float titleH = RowH(_title);
+        float detailH = RowH(_detail);
+        float footerH = RowH(_footer);
+
+        float inset = PixelGUI.Px(8f);   // what PanelContent(box, 4f) takes off each side: Px(4) + Px(4)
+        float textW = Mathf.Max(Width(_title, activity.title),
+                                Mathf.Max(Width(_detail, _detailText), Width(_footer, _footerText)));
+
+        // Sized to its longest line, so a wordy booking widens the strip instead of spilling out of it.
+        float w = Mathf.Clamp(textW + inset * 2f + PixelGUI.Px(8f),
+                              PixelGUI.Px(180f), Screen.width - PixelGUI.Px(16f));
+        float h = titleH + detailH + footerH + inset * 2f;
         var box = new Rect(Mathf.Round((Screen.width - w) * 0.5f), PixelGUI.Px(6f), w, h);
 
         PixelGUI.Panel(box, focused: false);
         var c = PixelGUI.PanelContent(box, 4f);
 
-        GUI.Label(new Rect(c.x, c.y, c.width, PixelGUI.LineH), activity.title, _title);
-        GUI.Label(new Rect(c.x, c.y + PixelGUI.LineH, c.width, PixelGUI.LineH), _detailText, _detail);
-        GUI.Label(new Rect(c.x, c.y + PixelGUI.LineH * 2f, c.width, PixelGUI.LineH), _footerText,
-                  PixelGUI.Footer);
+        float y = c.y;
+        GUI.Label(new Rect(c.x, y, c.width, titleH), activity.title, _title);
+        y += titleH;
+        GUI.Label(new Rect(c.x, y, c.width, detailH), _detailText, _detail);
+        y += detailH;
+        GUI.Label(new Rect(c.x, y, c.width, footerH), _footerText, _footer);
     }
+
+    // The height one line of a style actually occupies, leading included.
+    static float RowH(GUIStyle s) => s.fontSize + PixelGUI.Px(3f);
+
+    static float Width(GUIStyle s, string text) =>
+        string.IsNullOrEmpty(text) ? 0f : s.CalcSize(new GUIContent(text)).x;
 
     static string Verb(WeekendActivity a)
     {
@@ -248,7 +282,16 @@ public class WeekendObjectiveHUD : MonoBehaviour
     void EnsureStyles()
     {
         if (_title != null) return;
-        _title = new GUIStyle(PixelGUI.Heading);
-        _detail = new GUIStyle(PixelGUI.Data);
+
+        // Centred on the strip, and none of them wrapping: the panel sizes itself to the longest line, so a
+        // long booking title makes a wider strip rather than a second line drawn over the one beneath it.
+        _title = new GUIStyle(PixelGUI.Heading)
+        {
+            alignment = TextAnchor.UpperCenter,
+            wordWrap = false,
+            clipping = TextClipping.Overflow,
+        };
+        _detail = new GUIStyle(PixelGUI.Data) { alignment = TextAnchor.UpperCenter, wordWrap = false };
+        _footer = new GUIStyle(PixelGUI.Footer) { alignment = TextAnchor.UpperCenter, wordWrap = false };
     }
 }

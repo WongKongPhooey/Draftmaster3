@@ -57,7 +57,9 @@ public class PlayerPitService : MonoBehaviour
         if (_marker != null)
         {
             _marker.UpdateFor(track);
-            _marker.SetVisible(onPit);
+            // Only while there is a session to pit out of. Between sessions the player's car is parked in
+            // its box, which lit the glow permanently and read as an invitation to get in it.
+            _marker.SetVisible(onPit && RaceWeekend.SessionLive);
         }
         bool hasBox = _marker != null && _marker.IsBuilt;
         // Strict: when the pit-box system is live, ONLY the player's own box services them — stopping in

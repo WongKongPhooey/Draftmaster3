@@ -267,6 +267,9 @@ public class WeekendVenueSites : MonoBehaviour
         if (stands == null || stands.Length == 0) return;
 
         int placed = 0;
+        Vector3 gatePoint = Vector3.zero;
+        float gateReach = float.MaxValue;
+
         foreach (var stand in stands)
         {
             if (stand == null) continue;
@@ -276,6 +279,17 @@ public class WeekendVenueSites : MonoBehaviour
             Vector3 front = stand.transform.TransformPoint(new Vector3(0f, -stand.depth * 0.5f + 1.2f, 0f));
             front.z = 0f;
 
+            // A stand out beyond the paddock fence is a seat the player cannot walk to, and an objective
+            // marker on the far side of a wall is worse than no marker at all. Remember the walkable point
+            // nearest it — that is the way out towards it — and let the gate below stand in for the lot.
+            Vector3 reachable = Walkable(front);
+            if (Vector2.Distance(reachable, front) > 1f)
+            {
+                float reach = Vector2.Distance(reachable, front);
+                if (reach < gateReach) { gateReach = reach; gatePoint = reachable; }
+                continue;
+            }
+
             var anchor = PaddockProps.Anchor(_root, WeekendVenue.Grandstand, front, front, arriveRange: 4f,
                                              label: "the " + stand.name.Replace('_', ' ').ToLowerInvariant());
 
@@ -284,6 +298,20 @@ public class WeekendVenueSites : MonoBehaviour
             seat.speakerName = "GRANDSTAND";
             seat.interactRange = 3.2f;
             placed++;
+        }
+
+        // Every stand at this circuit is outside the paddock. The sheet still says be in one, so the
+        // objective becomes the way out towards them: walk to the gate, press the action button, and the
+        // walk to the stand happens behind the wipe GrandstandSeat plays.
+        if (placed == 0 && gateReach < float.MaxValue)
+        {
+            var gate = PaddockProps.Anchor(_root, WeekendVenue.Grandstand, gatePoint, gatePoint,
+                                           arriveRange: 4f, label: "the gate to the grandstands");
+            var gateSeat = gate.gameObject.AddComponent<GrandstandSeat>();
+            gateSeat.speakerName = "GRANDSTAND";
+            gateSeat.interactRange = 3.2f;
+            placed++;
+            Debug.Log("WeekendVenues: the stands are outside the paddock — watching a session starts at the gate.");
         }
 
         if (placed > 0) Debug.Log($"WeekendVenues: {placed} grandstand seat(s) to watch a session from.");

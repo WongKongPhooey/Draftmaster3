@@ -128,10 +128,16 @@ namespace Draftmaster.Weekend
             var p = PracticeTime(playerSeries);
             const int debriefMinutes = 45;
             var debrief = FitAfter(p.slot, p.startMinute + p.minutes + 15, debriefMinutes);
-            Add(debrief, ActivityKind.Debrief, playerSeries,
+            var debriefActivity = Add(debrief, ActivityKind.Debrief, playerSeries,
                 "PRACTICE DEBRIEF",
                 "Engineers, tyre data, and your own read on the car. Pick what to change before qualifying.",
                 "Engineering truck");
+
+            // There is nothing to debrief until the run has been made. Without this the sheet would offer the
+            // debrief the moment the clock walked past practice, and a player who had not turned a lap would
+            // be sat in the engineering truck going over a session that never happened.
+            var practice = PlayerSession(ActivityKind.Practice);
+            if (practice != null) debriefActivity.requiresId = practice.id;
 
             // Race morning: the last plan of the weekend, agreed over coffee.
             var race = RaceTime(playerSeries);
