@@ -28,16 +28,12 @@ public class TireTempWearUI : MonoBehaviour
         if (tires == null && autoFindPlayer) tires = FindPlayerTires();
     }
 
+    // Registry read rather than a scene search — this is asked every frame until it finds something, and
+    // on foot there is nothing to find.
     static TireModel FindPlayerTires()
     {
-        var all = Object.FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
-        for (int i = 0; i < all.Length; i++)
-            if (all[i].GetComponent<SplineInputDriver>() == null) // the human car has no AI input driver
-            {
-                var tm = all[i].GetComponent<TireModel>();
-                if (tm != null) return tm;
-            }
-        return null;
+        var car = PlayerVehicleController.Human;   // the human car has no AI input driver
+        return car != null ? car.GetComponent<TireModel>() : null;
     }
 
     void OnGUI()

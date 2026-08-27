@@ -57,19 +57,10 @@ public class IronOvalRaceHUD : MonoBehaviour
 
     void Rebind()
     {
-        if (_pvc == null || !_pvc.isActiveAndEnabled)
-        {
-            _pvc = null;
-            var cars = FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
-            for (int i = 0; i < cars.Length; i++)
-            {
-                // The local player's car: a live PVC with no AI brain bolted on.
-                if (cars[i] == null || !cars[i].enabled) continue;
-                if (cars[i].GetComponent<SplineInputDriver>() != null) continue;
-                _pvc = cars[i];
-                break;
-            }
-        }
+        // The local player's car: a live PVC with no AI brain bolted on. Off the registry rather than a
+        // scene search — on foot this rebind never latches, so it would otherwise scan the whole paddock
+        // four times a second for the entire walk.
+        if (_pvc == null || !_pvc.isActiveAndEnabled) _pvc = PlayerVehicleController.Human;
 
         _player = _pvc != null ? _pvc.transform : null;
         _speed = _pvc as IVehicleSpeedReadout;

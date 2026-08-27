@@ -172,8 +172,7 @@ public class OnFootController : MonoBehaviour
         // talkable while it's going on — but walking still works, so the player can circle and back off.
         if (DriverFight.IsActive)
         {
-            for (int i = 0; i < NPCInteractable.All.Count; i++)
-                NPCInteractable.All[i].BuildFloatingPrompt(false);
+            HidePrompt();
             ReadInteractPressed();
             return;
         }
@@ -182,8 +181,7 @@ public class OnFootController : MonoBehaviour
         // key doesn't fire the moment the lock lifts.
         if (MovementLocked)
         {
-            for (int i = 0; i < NPCInteractable.All.Count; i++)
-                NPCInteractable.All[i].BuildFloatingPrompt(false);
+            HidePrompt();
             ReadInteractPressed();
             return;
         }
@@ -267,14 +265,34 @@ public class OnFootController : MonoBehaviour
         }
     }
 
+    // The NPC currently wearing the E prompt, so only a body whose state actually changes is touched.
+    // The paddock carries a couple of hundred talkable NPCs and every one of them used to be told to hide
+    // its prompt on every frame of every walk — a managed-to-native call each, all of them for nothing.
+    // The only prompt that ever needs hiding is the one that was up last frame.
+    NPCInteractable _prompted;
+
     void UpdateNearestPrompt()
     {
         var nearest = NearestInRange();
-        for (int i = 0; i < NPCInteractable.All.Count; i++)
+        var wanted = nearest != null && !nearest.IsTalking ? nearest : null;
+
+        if (_prompted != wanted)
         {
-            var npc = NPCInteractable.All[i];
-            npc.BuildFloatingPrompt(npc == nearest && !npc.IsTalking);
+            if (_prompted != null) _prompted.BuildFloatingPrompt(false);
+            _prompted = wanted;
         }
+        // Re-shown every frame even when it has not changed: the prompt is pinned above the head in world
+        // space, so it has to follow an NPC that is walking away from us.
+        if (wanted != null) wanted.BuildFloatingPrompt(true);
+    }
+
+    // Put away whatever prompt is up. Used by the paths that suppress prompts wholesale — a fight, a
+    // cutscene lock — which return before the walk's own prompt pass runs.
+    void HidePrompt()
+    {
+        if (_prompted == null) return;
+        _prompted.BuildFloatingPrompt(false);
+        _prompted = null;
     }
 
     NPCInteractable NearestInRange()

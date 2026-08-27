@@ -45,7 +45,9 @@ public class AmbienceLoop : MonoBehaviour
     void Update()
     {
         if (_src == null) return;
-        if (_interior == null) _interior = FindFirstObjectByType<RVInterior>();
+        // Register read: outdoors there is no interior to find, so this question is asked and answered
+        // with nothing on every frame of the walk.
+        if (_interior == null) _interior = RVInterior.Current;
 
         bool indoors = _interior != null && _interior.IsInside;
         float target = volume * (indoors ? indoorScale : 1f);

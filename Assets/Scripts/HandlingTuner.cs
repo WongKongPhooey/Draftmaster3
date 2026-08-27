@@ -83,10 +83,11 @@ public class HandlingTuner : MonoBehaviour
 
     static PlayerVehicleController FindPlayer()
     {
-        var all = Object.FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
-        for (int i = 0; i < all.Length; i++)
-            if (all[i].enabled && all[i].GetComponent<SplineInputDriver>() == null) return all[i];
-        return all.Length > 0 ? all[0] : null;
+        var human = PlayerVehicleController.Human;
+        if (human != null) return human;
+        // No human car (broadcast mode, or every car on an AI brain): tune whatever is there.
+        var all = PlayerVehicleController.All;
+        return all.Count > 0 ? all[0] : null;
     }
 
     void CaptureDefaults()

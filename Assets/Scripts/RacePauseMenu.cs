@@ -54,7 +54,9 @@ public class RacePauseMenu : MonoBehaviour
         if (_pollTimer <= 0f)
         {
             _pollTimer = 0.5f;
-            bool inRace = FindAnyObjectByType<TrackBuilder>() != null;
+            // The loaded package answers this without looking through the scene; only an authored track
+            // (a legacy scene with its builder in it) needs the search.
+            bool inRace = TrackPackage.ActiveTrack != null || FindAnyObjectByType<TrackBuilder>() != null;
             if (!inRace && IsPaused) Resume(); // scene changed out from under a pause
             _inRaceScene = inRace;
         }

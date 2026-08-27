@@ -35,13 +35,22 @@ public class SpeedometerUI : MonoBehaviour
     public Color limiterOffColor = new Color(1f, 0.8f, 0.25f);
 
     float _displayedMph;
+    float _findTimer;      // seconds until the next look for the player's car
     PitLimiter _limiter;
 
     void Awake() => ResolveRefs();
 
     void Update()
     {
-        if (target == null) target = FindPlayer();
+        // Retry on a timer, not every frame: the named-object half of the search is a GameObject.Find,
+        // which walks the scene, and it finds nothing at all while the player is on foot.
+        if (target == null)
+        {
+            _findTimer -= Time.unscaledDeltaTime;
+            if (_findTimer > 0f) return;
+            _findTimer = 0.5f;
+            target = FindPlayer();
+        }
         if (target == null || needle == null) return;
         var readout = target as IVehicleSpeedReadout;
         if (readout == null) return;
@@ -102,11 +111,7 @@ public class SpeedometerUI : MonoBehaviour
         // Multiplayer: the local player drives a networked car, not the disabled scene "PlayerCar". The owned
         // car is the only enabled PlayerVehicleController with no AI SplineInputDriver (remote cars are disabled;
         // AI carry a SplineInputDriver).
-        var all = FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
-        for (int i = 0; i < all.Length; i++)
-            if (all[i].enabled && all[i].GetComponent<SplineInputDriver>() == null) return all[i];
-
-        return null;
+        return PlayerVehicleController.Human;
     }
 
     // Locate the authored gauge parts. Runtime fallback + editor baking.

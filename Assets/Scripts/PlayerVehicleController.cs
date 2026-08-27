@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,6 +9,52 @@ using UnityEngine.InputSystem;
 // Implements IVehicleSpeedReadout so SpeedometerUI can read speed, ICollisionResponder for VehicleCollision.
 public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICollisionResponder, IFormationMember
 {
+    // Every live controller in the scene, kept the way OnFootController.All, NPCInteractable.All and
+    // CrowdActor.All are.
+    //
+    // "Where is the player's car" is asked by half a dozen readouts — the telemetry panel, the tyre
+    // board, the speedometer, the race HUD, the handling tuner, the minimap, the pit service. Each of
+    // them used to answer it with a FindObjectsByType, which walks every object in the scene. That is
+    // affordable once; it is not affordable every frame, and it never latches while the player is on
+    // foot — there is no human car to find in the paddock, so the search runs again the next frame, and
+    // the next, for as long as the player is out of the car. A weekend paddock is tens of thousands of
+    // objects (44 motorhomes, a full field, a crowd, the venues), so that was milliseconds a frame of
+    // pure scanning plus an array of garbage per call per site, which is what the walking-around
+    // choppiness was made of. Registering here turns all of it into a list read.
+    public static readonly List<PlayerVehicleController> All = new();
+
+    // The human's car: an enabled controller with no AI input driver bolted on. Null while the player is
+    // on foot, in a menu, or watching in broadcast mode (which hands the car to an AI brain).
+    //
+    // The last answer is held and re-checked rather than re-derived, so the common case is one Unity
+    // null check and one GetComponent. The AI can take the wheel mid-race (crew chief / broadcast mode)
+    // and the car can be swapped for a team-mate's, so this cannot be cached once and trusted forever.
+    static PlayerVehicleController _human;
+    static int _searchedFrame = -1;
+
+    public static PlayerVehicleController Human
+    {
+        get
+        {
+            if (IsHuman(_human)) return _human;
+
+            // Nothing found already this frame: on foot there is no human car at all, and several
+            // readouts ask on every frame, so the walk over the field is worth doing once.
+            if (_searchedFrame == Time.frameCount) return null;
+            _searchedFrame = Time.frameCount;
+
+            _human = null;
+            for (int i = 0; i < All.Count; i++)
+                if (IsHuman(All[i])) { _human = All[i]; break; }
+            return _human;
+        }
+    }
+
+    // A live, human-driven car: alive (Unity null, not C# null — a car destroyed this frame is still in
+    // the list until its OnDisable runs), enabled, and with no AI input driver on it.
+    public static bool IsHuman(PlayerVehicleController pvc) =>
+        pvc != null && pvc.isActiveAndEnabled && pvc.GetComponent<SplineInputDriver>() == null;
+
     [Header("Collision Response")]
     [Tooltip("Bounce-back along the wall normal. 0 = no bounce (slide), 0.3 = lively armco kick.")]
     [Range(0f, 0.8f)] public float restitution = 0.25f;
@@ -250,6 +297,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
     void OnEnable()
     {
+        if (!All.Contains(this)) All.Add(this);
+        _searchedFrame = -1;   // a car just arrived: let the next ask look again rather than wait a frame
+
         // Register as an AI-visible obstacle only when we're the active human car. AI cars run this same
         // controller but keep an enabled SplineDriver (they're already in RaceField), so they're excluded.
         var sd = GetComponent<SplineDriver>();
@@ -264,6 +314,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
     void OnDisable()
     {
+        All.Remove(this);
+        if (_human == this) _human = null;
         if (_isObstacle) RaceObstacles.Unregister(this);
         FormationOrder.Unregister(this);
     }

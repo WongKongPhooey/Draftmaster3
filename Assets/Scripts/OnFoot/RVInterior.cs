@@ -30,6 +30,25 @@ using UnityEngine;
 // room for a single hand-drawn floor-plan sprite.
 public class RVInterior : MonoBehaviour
 {
+    // Every RV interior alive in the scene, and the first of them — the same register the on-foot player,
+    // the crowd and the talkable NPCs keep. The ambience loop asks "is the player indoors" every frame
+    // and there is no interior in the scene at all while the player is out in the paddock, so answering
+    // it with a scene search meant a full-scene walk on every frame of every walk.
+    public static readonly List<RVInterior> All = new();
+
+    public static RVInterior Current
+    {
+        get
+        {
+            for (int i = 0; i < All.Count; i++)
+                if (All[i] != null) return All[i];   // Unity null: destroyed this frame, OnDisable pending
+            return null;
+        }
+    }
+
+    void OnEnable() { if (!All.Contains(this)) All.Add(this); }
+    void OnDisable() => All.Remove(this);
+
     [Header("Room size (metres, local to the doorway)")]
     [Tooltip("Interior width across the doorway. With the RV's side door this is the RV's LENGTH (the long axis runs across the door).")]
     public float roomWidth = 9.6f;

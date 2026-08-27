@@ -684,7 +684,10 @@ public class VehicleLogic : MonoBehaviour
 	{
 		if(collision.gameObject.layer == 3){return;}
 
-		Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
+		// One log per contact, and a race is thousands of them: the editor builds a stack trace, adds a
+		// console entry and writes the log file for each, which lands as a hitch exactly when cars are
+		// piling into each other. Left here commented, the way the rest of this file's tracing is.
+		//Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
 		startWreck();
 	}
 

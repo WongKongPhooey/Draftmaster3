@@ -42,7 +42,9 @@ public class TrackMiniMap : MonoBehaviour
     Texture2D _mapTex;
     Rect _worldRect;      // world-space bounds baked into the map texture
     float _pollTimer;
-    SplineDriver[] _aiCars = System.Array.Empty<SplineDriver>();
+    // The AI field, off the register every SplineDriver already puts itself on — a minimap redraw is not
+    // worth a whole-scene search, even once a second.
+    System.Collections.Generic.IReadOnlyList<SplineDriver> _aiCars = System.Array.Empty<SplineDriver>();
     PlayerVehicleController _playerCar;
 
     public static bool Visible
@@ -83,15 +85,10 @@ public class TrackMiniMap : MonoBehaviour
         }
         if (_mapTex == null) BakeMap();
 
-        // Cache the car lists (cheap to re-find once a second; positions are read live each frame).
-        _aiCars = FindObjectsByType<SplineDriver>();
-        if (_playerCar == null || !_playerCar.isActiveAndEnabled)
-        {
-            _playerCar = null;
-            var pvcs = FindObjectsByType<PlayerVehicleController>();
-            for (int i = 0; i < pvcs.Length; i++)
-                if (pvcs[i].enabled && pvcs[i].GetComponent<SplineInputDriver>() == null) { _playerCar = pvcs[i]; break; }
-        }
+        // Point at the field register and the car register; both stay current on their own, and positions
+        // are read live each frame.
+        _aiCars = RaceField.Drivers;
+        if (_playerCar == null || !_playerCar.isActiveAndEnabled) _playerCar = PlayerVehicleController.Human;
     }
 
     void BakeMap()
@@ -178,7 +175,7 @@ public class TrackMiniMap : MonoBehaviour
         GUI.color = Color.white;
         GUI.DrawTexture(rect, _mapTex);
 
-        for (int i = 0; i < _aiCars.Length; i++)
+        for (int i = 0; i < _aiCars.Count; i++)
         {
             var car = _aiCars[i];
             if (car == null || !car.isActiveAndEnabled) continue;

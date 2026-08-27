@@ -13,6 +13,7 @@ public class LapTimingManager : MonoBehaviour
 
     [Tooltip("Track used for the off-surface check. Auto-found if empty.")]
     public TrackBuilder track;
+    float _trackSearchTimer;   // seconds until the next look for an authored TrackBuilder
     [Tooltip("Barrier closing speed (m/s) below which a wall brush does NOT invalidate the lap.")]
     public float wallHitMinClosingSpeed = 1.5f;
     [Tooltip("Draw the player's last/best lap readout.")]
@@ -84,7 +85,22 @@ public class LapTimingManager : MonoBehaviour
     void Update()
     {
         if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) showPlayerHud = !showPlayerHud;
-        if (track == null) track = FindFirstObjectByType<TrackBuilder>();
+        // The loaded package knows its own builder; only an authored scene needs looking through, and
+        // then on a timer — this used to be a whole-scene search on every frame of every session that
+        // has no track in it at all (the paddock, the garage, a menu sat behind the HUD).
+        if (track == null)
+        {
+            track = TrackPackage.ActiveTrack;
+            if (track == null)
+            {
+                _trackSearchTimer -= Time.unscaledDeltaTime;
+                if (_trackSearchTimer <= 0f)
+                {
+                    _trackSearchTimer = 0.5f;
+                    track = FindFirstObjectByType<TrackBuilder>();
+                }
+            }
+        }
         var rt = RacePositionTracker.Instance;
         if (rt == null || track == null) return;
 

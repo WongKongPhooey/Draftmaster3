@@ -129,13 +129,9 @@ public class PlayerPitService : MonoBehaviour
         return Vector2.Distance(local, s.position) < max;
     }
 
-    PlayerVehicleController FindPlayer()
-    {
-        var all = Object.FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
-        for (int i = 0; i < all.Length; i++)
-            if (all[i].GetComponent<SplineInputDriver>() == null) return all[i];
-        return null;
-    }
+    // Registry read, not a scene search. This is asked every frame until it answers, and it answers with
+    // nothing for the whole time the player is walking around the paddock.
+    PlayerVehicleController FindPlayer() => PlayerVehicleController.Human;
 
     void OnGUI()
     {
