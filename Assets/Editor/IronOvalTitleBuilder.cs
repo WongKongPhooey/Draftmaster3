@@ -64,12 +64,14 @@ public static class IronOvalTitleBuilder
         var root = (RectTransform)canvasGo.transform;
 
         // --- title art -------------------------------------------------------------------------------
-        // The sheet leaves the art as a slot; the hatch fill is what stands in for it until there's a
-        // hero image. Drop a Sprite on this object's Image to replace it.
+        // The sheet leaves the art as a slot, and the hatch fill is what stood in for it. The crash tableau
+        // (TitleCrashScene, below) is the art now, so the slot stays in the scene but draws nothing —
+        // re-enable this Image and drop a Sprite on it to go back to a still hero image instead.
         var art = IronOvalUI.ArtSlot(root, "TitleArt", new Vector2(W, H));
         Stretch(art);
+        art.GetComponent<Image>().enabled = false;
 
-        // The sheet parks its "art goes here" note in the bottom-right, clear of the copy column.
+        // The sheet's "art goes here" note, kept but switched off for the same reason: the art is there.
         var artNote = IronOvalUI.Label(art, "ArtNote", "[ title art — hero car + oval ]",
                                        IronOvalUI.Role.HeaderSmall, theme.textDisabled);
         var anrt = artNote.rectTransform;
@@ -79,6 +81,7 @@ public static class IronOvalTitleBuilder
         anrt.sizeDelta = new Vector2(260f, 10f);
         anrt.anchoredPosition = new Vector2(-16f, 16f);
         artNote.alignment = TextAlignmentOptions.BottomRight;
+        artNote.gameObject.SetActive(false);
 
         // --- scrim -----------------------------------------------------------------------------------
         var scrimGo = new GameObject("Scrim", typeof(RectTransform), typeof(Image));
@@ -219,6 +222,13 @@ public static class IronOvalTitleBuilder
         frt.pivot = new Vector2(0f, 0f);
         frt.sizeDelta = new Vector2(300f, 10f);
         frt.anchoredPosition = new Vector2(x, 18f);
+
+        // --- crash tableau ---------------------------------------------------------------------------
+        // What fills the art half of the sheet: four cars thrown in from off the right edge, time easing to
+        // a stop as they land. Built at runtime from carset liveries and real VehicleDamage bodywork, so
+        // nothing but the component lands in the scene file — the tableau itself is never serialised.
+        var crash = new GameObject("TitleCrash", typeof(TitleCrashScene));
+        crash.GetComponent<TitleCrashScene>().layoutCanvas = canvas;
 
         // --- scanlines -------------------------------------------------------------------------------
         var lines = new GameObject("IronOvalScanlines", typeof(IronOvalScanlines));
