@@ -6,10 +6,12 @@ using Draftmaster.Sim;
 // whatever else is pointing the camera that frame.
 //
 // Two effects:
-//   Lean  — the camera drops back under braking, pushes ahead under power and slides toward the inside of a
-//           corner, with a touch of roll. All of it is smoothed, so it reads as the view settling rather than
-//           snapping about. Driven by the car's real accelerations (PlayerVehicleController telemetry), or by
-//           differentiating the followed transform when the car is kinematic (a broadcast AI, a net puppet).
+//   Lean  — the camera drops back under heavy braking and, far more faintly, pushes ahead under power and
+//           slides toward the inside of a corner. Everything is smoothed and everything sits behind a dead
+//           band, so a car merely driving round moves the view not at all: constant answering of every load
+//           is what makes a chase camera sickening. Driven by the car's real accelerations
+//           (PlayerVehicleController telemetry), or by differentiating the followed transform when the car is
+//           kinematic (a broadcast AI, a net puppet).
 //   Shake — contacts add to a 0..1 trauma budget that decays on its own; the camera rattles by trauma² and
 //           takes a directional kick away from whatever it hit. A wall scrape trickles trauma in, so grinding
 //           down the barrier rumbles without ever reaching full-shunt violence.
@@ -22,44 +24,52 @@ public class DrivingCameraFeel : MonoBehaviour
     [Header("Lean")]
     [Tooltip("Master switch for the braking / steering / throttle lean.")]
     public bool enableLean = true;
-    [Tooltip("Metres the camera pushes ahead of the nose at full acceleration (and drops back at full braking).")]
-    public float longitudinalLean = 2.5f;
+    [Tooltip("Metres the camera pushes ahead of the nose at full acceleration. Keep this small — power is a "
+           + "long, steady load and the view chasing it all lap is what turns stomachs.")]
+    public float throttleLean = 0.5f;
+    [Tooltip("Metres the camera drops back behind the nose under full braking. The one lean allowed to be felt.")]
+    public float brakingLean = 2.5f;
     [Tooltip("Metres the camera slides toward the inside of a corner at full lateral load.")]
-    public float lateralLean = 2f;
+    public float lateralLean = 0.6f;
     [Tooltip("Degrees of camera roll at full lateral load. Negative rolls the other way.")]
-    public float maxRollDeg = 2f;
+    public float maxRollDeg = 0.5f;
     [Tooltip("Acceleration (in g) that counts as 'full'. Higher = the lean saves itself for the big moments.")]
     public float referenceG = 1.1f;
+    [Tooltip("Longitudinal load (in g) the camera ignores entirely. Above coasting drag and full throttle, so "
+           + "only real braking moves the view.")]
+    public float longitudinalThresholdG = 0.35f;
+    [Tooltip("Lateral load (in g) the camera ignores entirely, so an ordinary corner is taken dead square.")]
+    public float lateralThresholdG = 0.5f;
     [Tooltip("How fast the lean chases the car, in e-folds per second. Low = languid, high = twitchy.")]
-    public float leanResponse = 5f;
+    public float leanResponse = 4f;
     [Tooltip("Speed (mph) below which the lean fades out, so a parked or pitting car sits square.")]
     public float leanFadeInMph = 12f;
     [Tooltip("Metres the lean is allowed to reach in total. Stops a big slide walking the car off screen.")]
-    public float maxLeanMetres = 4f;
+    public float maxLeanMetres = 3f;
 
     [Header("Impact shake")]
     [Tooltip("Master switch for impact shake.")]
     public bool enableShake = true;
-    [Tooltip("Contact severity (0..1) below which nothing shakes. Keeps grid jostling quiet.")]
-    [Range(0f, 1f)] public float impactMinSeverity = 0.06f;
+    [Tooltip("Contact severity (0..1) below which nothing shakes. Keeps grid jostling and door rubbing quiet.")]
+    [Range(0f, 1f)] public float impactMinSeverity = 0.1f;
     [Tooltip("Trauma added by a full-severity impact. Over 1 means the biggest hits saturate instantly.")]
     public float impactTrauma = 1.3f;
     [Tooltip("Shake from car-vs-car contact, relative to hitting a barrier.")]
     [Range(0f, 1f)] public float carContactScale = 0.7f;
     [Tooltip("Trauma per second while scraping a barrier at full scrape speed.")]
-    public float scrapeTraumaPerSecond = 0.9f;
+    public float scrapeTraumaPerSecond = 1.3f;
     [Tooltip("Scrape speed (m/s) at which the rumble is at full strength.")]
     public float scrapeFullSpeed = 20f;
     [Tooltip("Trauma bled off per second. Higher = shorter, snappier shakes.")]
-    public float traumaDecay = 1.7f;
+    public float traumaDecay = 2.1f;
     [Tooltip("Metres of rattle at full trauma.")]
-    public float shakeMetres = 1.2f;
+    public float shakeMetres = 1.4f;
     [Tooltip("Degrees of roll rattle at full trauma.")]
     public float shakeRollDeg = 1.6f;
     [Tooltip("Rattle frequency, Hz-ish. Higher = buzzier.")]
     public float shakeFrequency = 26f;
     [Tooltip("Metres the camera is punched away from a full-severity impact before springing back.")]
-    public float kickMetres = 1.6f;
+    public float kickMetres = 1.9f;
     [Tooltip("How fast the directional punch springs back, in e-folds per second.")]
     public float kickDecay = 7f;
 
@@ -128,8 +138,9 @@ public class DrivingCameraFeel : MonoBehaviour
         if (enableLean)
         {
             float fade = CameraFeel.LeanFade(speedMph, leanFadeInMph);
-            leanTarget = CameraFeel.LeanOffset(ax, ay, referenceG, longitudinalLean, lateralLean) * fade;
-            rollTarget = CameraFeel.RollDegrees(ay, referenceG, maxRollDeg) * fade;
+            leanTarget = CameraFeel.LeanOffset(ax, ay, referenceG, throttleLean, brakingLean, lateralLean,
+                                               longitudinalThresholdG, lateralThresholdG) * fade;
+            rollTarget = CameraFeel.RollDegrees(ay, referenceG, maxRollDeg, lateralThresholdG) * fade;
         }
         _lean.x = CameraFeel.Approach(_lean.x, leanTarget.x, leanResponse, dt);
         _lean.y = CameraFeel.Approach(_lean.y, leanTarget.y, leanResponse, dt);

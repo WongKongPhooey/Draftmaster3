@@ -7,16 +7,25 @@ using Draftmaster.Sim;
 // trauma actually decays instead of leaving the view shaking for the rest of the race.
 public class CameraFeelTests
 {
+    // These mirror DrivingCameraFeel's shipped defaults, so the calibration tests below say something about the
+    // camera you actually drive rather than about numbers invented for the test.
     const float RefG = 1.1f;
-    const float LongLean = 1.6f;
-    const float LatLean = 1.2f;
+    const float ThrottleLean = 0.5f;
+    const float BrakingLean = 2.5f;
+    const float LatLean = 0.6f;
+    const float LongBand = 0.35f;
+    const float LatBand = 0.5f;
+
+    // Lean with the dead bands switched off, for the tests that only care which way the camera goes.
+    static Vector2 Lean(float longAccel, float latAccel, float longBand = 0f, float latBand = 0f)
+        => CameraFeel.LeanOffset(longAccel, latAccel, RefG, ThrottleLean, BrakingLean, LatLean, longBand, latBand);
 
     [Test]
     public void LeanPushesAheadUnderPowerAndDropsBackUnderBraking()
     {
-        float power = CameraFeel.LeanOffset(8f, 0f, RefG, LongLean, LatLean).x;
-        float braking = CameraFeel.LeanOffset(-8f, 0f, RefG, LongLean, LatLean).x;
-        float coasting = CameraFeel.LeanOffset(0f, 0f, RefG, LongLean, LatLean).x;
+        float power = Lean(8f, 0f).x;
+        float braking = Lean(-8f, 0f).x;
+        float coasting = Lean(0f, 0f).x;
 
         Assert.Greater(power, 0f, "accelerating should push the camera ahead of the nose");
         Assert.Less(braking, 0f, "braking should drop the camera back behind the nose");
@@ -27,8 +36,8 @@ public class CameraFeelTests
     public void LeanSlidesTowardTheInsideOfTheCorner()
     {
         // Lateral accel follows the vehicle body convention: + is to the left.
-        float leftHander = CameraFeel.LeanOffset(0f, 9f, RefG, LongLean, LatLean).y;
-        float rightHander = CameraFeel.LeanOffset(0f, -9f, RefG, LongLean, LatLean).y;
+        float leftHander = Lean(0f, 9f).y;
+        float rightHander = Lean(0f, -9f).y;
 
         Assert.Greater(leftHander, 0f, "a left-hander should slide the camera to the car's left");
         Assert.Less(rightHander, 0f, "a right-hander should slide the camera to the car's right");
@@ -40,10 +49,60 @@ public class CameraFeelTests
     {
         foreach (float accel in new[] { -200f, -30f, -1f, 0f, 1f, 30f, 200f })
         {
-            var lean = CameraFeel.LeanOffset(accel, accel, RefG, LongLean, LatLean);
-            Assert.LessOrEqual(Mathf.Abs(lean.x), LongLean + 1e-4f, $"longitudinal lean ran away at {accel} m/s²");
+            var lean = Lean(accel, accel, LongBand, LatBand);
+            float longestX = accel < 0f ? BrakingLean : ThrottleLean;
+            Assert.LessOrEqual(Mathf.Abs(lean.x), longestX + 1e-4f, $"longitudinal lean ran away at {accel} m/s²");
             Assert.LessOrEqual(Mathf.Abs(lean.y), LatLean + 1e-4f, $"lateral lean ran away at {accel} m/s²");
         }
+    }
+
+    // ---- The anti-nausea rules ----
+
+    [Test]
+    public void OrdinaryDrivingSitsInsideTheDeadBandAndMovesTheCameraNotAtAll()
+    {
+        // Coasting drag, part throttle and a corner taken at a sensible lick: the whole of a clean lap, really.
+        // None of it should shift the view by so much as a millimetre.
+        foreach (float longAccel in new[] { -1.5f, -3f, 0f, 2f, 3.4f })
+            Assert.AreEqual(0f, Lean(longAccel, 0f, LongBand, LatBand).x, 1e-5f,
+                            $"{longAccel} m/s² of longitudinal load should be inside the dead band");
+
+        foreach (float latAccel in new[] { -4.8f, -2f, 0f, 2f, 4.8f })
+        {
+            Assert.AreEqual(0f, Lean(0f, latAccel, LongBand, LatBand).y, 1e-5f,
+                            $"{latAccel} m/s² of cornering load should be inside the dead band");
+            Assert.AreEqual(0f, CameraFeel.RollDegrees(latAccel, RefG, 0.5f, LatBand), 1e-5f,
+                            $"{latAccel} m/s² of cornering load should not roll the view");
+        }
+    }
+
+    [Test]
+    public void HeavyBrakingIsTheOneLeanYouAreMeantToNotice()
+    {
+        float heavyBraking = Mathf.Abs(Lean(-10f, 0f, LongBand, LatBand).x);
+        float fullPower = Mathf.Abs(Lean(5f, 0f, LongBand, LatBand).x);
+        float hardCornering = Mathf.Abs(Lean(0f, 14f, LongBand, LatBand).y);
+
+        Assert.Greater(heavyBraking, 2f, "a 1 g stop should visibly drop the camera back");
+        Assert.Less(fullPower, 0.25f, "full throttle should barely register next to the stop");
+        Assert.Less(hardCornering, heavyBraking / 3f, "cornering should stay far quieter than braking");
+    }
+
+    [Test]
+    public void LeavingTheDeadBandRampsUpInsteadOfSnapping()
+    {
+        // A hard-edged dead band would jump the camera the instant the driver leaned on the brakes, which is
+        // exactly the twitch the band was added to remove. Walk the load up and check every step is small.
+        float previous = 0f, biggestStep = 0f;
+        for (float accel = 0f; accel <= 16f; accel += 0.05f)
+        {
+            float lean = Mathf.Abs(Lean(-accel, 0f, LongBand, LatBand).x);
+            biggestStep = Mathf.Max(biggestStep, Mathf.Abs(lean - previous));
+            previous = lean;
+        }
+
+        Assert.Greater(previous, 2f, "the ramp should still reach a proper lean by full braking");
+        Assert.Less(biggestStep, 0.05f, "the lean jumped as it left the dead band");
     }
 
     [Test]
