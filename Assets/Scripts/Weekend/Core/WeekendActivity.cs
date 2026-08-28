@@ -98,6 +98,14 @@ namespace Draftmaster.Weekend
         public string subtitle;   // one line of what it actually is
         public string location;   // "Fan zone stage", "Media centre", "Pit road"
 
+        // Name of the marker GameObject this booking sends the player to, instead of the one the venue for
+        // its kind normally uses. Set from a plan file's "markerLocation" field, empty for everything else.
+        //
+        // This is what lets one circuit put its photo shoot against the transporter and another put it on a
+        // podium, without either being a special case in code: the booking names an object, the track has an
+        // object by that name, and the objective marker is wherever somebody dragged it to.
+        public string markerLocation = "";
+
         public int startMinute;   // minutes from midnight
         public int minutes;       // how long it blocks the calendar for
 

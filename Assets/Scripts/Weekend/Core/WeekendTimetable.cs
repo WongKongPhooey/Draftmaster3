@@ -18,6 +18,12 @@ namespace Draftmaster.Weekend
     //
     // Pure and deterministic: same (playerSeries, weekendId) in, same timetable out, every rebuild - which
     // matters because the weekend reloads the race scene between sessions and rebuilds this every time.
+    //
+    // TWO WAYS A WEEKEND GETS BUILT. If there is an authored plan file for this track and series
+    // (Resources/Weekends/<Track>.<Series>.json) then that file IS the weekend and none of the procedural
+    // building below runs: what somebody laid out by hand is what plays, including the empty half-days.
+    // Without one, the generated schedule here still stands the round up, which is what keeps the rest of
+    // the calendar playable while one circuit is being authored. See WeekendPlanLibrary.
     public class WeekendTimetable
     {
         public RacingSeries playerSeries;
@@ -64,6 +70,16 @@ namespace Draftmaster.Weekend
         public static WeekendTimetable Build(RacingSeries playerSeries, int weekendId, string trackName = "")
         {
             var t = new WeekendTimetable { playerSeries = playerSeries, weekendId = weekendId, trackName = trackName ?? "" };
+
+            var plan = WeekendPlanLibrary.For(t.trackName, playerSeries);
+            if (plan != null)
+            {
+                t.authored = true;
+                WeekendPlanLibrary.Apply(plan, t, playerSeries);
+                t._activities.Sort(Chronological);
+                return t;
+            }
+
             var rng = WeekendRandom.For(weekendId, (int)playerSeries, 7717);
             t.BuildSessions();
             t.BuildTeamMeetings();
@@ -72,6 +88,51 @@ namespace Draftmaster.Weekend
             t.BuildRaceDayCeremony();
             t._activities.Sort(Chronological);
             return t;
+        }
+
+        // Built from a plan file rather than generated. The schedule screen says so, and the editor tooling
+        // uses it to decide whether it is looking at something it is allowed to overwrite.
+        public bool authored;
+
+        // Place a booking exactly where an authored plan says, with none of the generated schedule's opinions
+        // about where things belong. WeekendPlanLibrary fills in the rest of the fields.
+        //
+        // Separate from Add() on purpose: Add() is the procedural builder's helper and carries its defaults
+        // (the location column is derived from the kind, the series is always the player's). An authored
+        // booking states its own series, because half the point of a hand-written weekend is putting the
+        // player in a grandstand for somebody else's qualifying.
+        public WeekendActivity AddAuthored(WeekendSlot slot, int startMinute, int minutes,
+                                           ActivityKind kind, RacingSeries series)
+        {
+            var a = new WeekendActivity
+            {
+                slot = slot,
+                startMinute = startMinute,
+                minutes = minutes,
+                kind = kind,
+                series = series,
+                location = WeekendVenues.For(kind) == WeekendVenue.None
+                    ? "Track"
+                    : WeekendVenues.ShortLabel(WeekendVenues.For(kind)),
+            };
+            a.id = MakeId(a);
+            _activities.Add(a);
+            return a;
+        }
+
+        // The booking at an exact half-day, time and kind — how a plan file's `requires` is turned into the
+        // activity id the ledger gates on.
+        public WeekendActivity Find(WeekendSlot slot, int startMinute, ActivityKind kind)
+        {
+            foreach (var a in _activities)
+                if (a.slot == slot && a.startMinute == startMinute && a.kind == kind) return a;
+            return null;
+        }
+
+        public WeekendActivity FirstOfKind(ActivityKind kind)
+        {
+            foreach (var a in _activities) if (a.kind == kind) return a;
+            return null;
         }
 
         static int Chronological(WeekendActivity a, WeekendActivity b)

@@ -119,6 +119,11 @@ public class WeekendVenueSites : MonoBehaviour
         _root = new GameObject("WeekendVenues").transform;
         RuntimeHierarchy.Adopt(_root.gameObject, HierarchyGroup.Environment);
 
+        // Authored places first. Anything the track says for itself becomes a real anchor before a single
+        // venue is generated, and every builder below is already guarded by WeekendVenueAnchor.Exists — so
+        // an authored marker simply means that venue is never computed from geometry at all.
+        AdoptAuthoredMarkers();
+
         PlaceGrandstandSeats();
         PlacePitBox();
         PlaceMotorhome();
@@ -212,6 +217,53 @@ public class WeekendVenueSites : MonoBehaviour
         host.idleLines = idle;
     }
 
+    // ------------------------------------------------------------------ venues the track authored
+
+    // Turn every WeekendMarker in the loaded track into a venue anchor.
+    //
+    // This runs before everything else in Build() and is the reason a hand-placed object beats the runtime's
+    // guesswork: the generated venues all bail out early when an anchor for their kind already exists, so
+    // adopting the authored ones first is the whole override mechanism. Nothing downstream is a special case
+    // — the objective marker, the travel shortcut and the arrival test all read WeekendVenueAnchor and
+    // cannot tell an authored venue from a computed one.
+    void AdoptAuthoredMarkers()
+    {
+        // The naming convention, resolved first: an object called PitBox_Marker in the track package gets its
+        // component here, so drawing a sprite and naming it is genuinely the whole workflow.
+        var package = TrackPackage.Active;
+        WeekendMarker.AdoptNamedObjects(package != null ? package.transform : null);
+
+        int adopted = 0;
+        foreach (var marker in WeekendMarker.All)
+        {
+            if (marker == null) continue;
+
+            // The anchor sits ON the marker, so the objective arrow points at the shape somebody drew and the
+            // arrival test is that shape. Where the player ENDS UP is the marker's stand position, which is
+            // the teleport target when it has one — the seat across the track from a gate you can walk to.
+            var anchor = PaddockProps.Anchor(_root, marker.venue, marker.MarkerPosition, marker.StandPosition,
+                                             marker.Range, marker.label);
+            anchor.markerLocation = marker.name;
+            anchor.marker = marker;
+            anchor.name = "Venue_" + marker.name;
+
+            // A marker that stands in for somewhere unreachable gets the door that leads there.
+            if (marker.HasTeleport)
+            {
+                var gate = anchor.gameObject.AddComponent<WeekendMarkerGate>();
+                gate.destination = marker.teleportTo;
+                gate.venue = marker.venue;
+                gate.speakerName = marker.Label.ToUpperInvariant();
+                gate.interactRange = Mathf.Max(3f, marker.Range);
+            }
+
+            adopted++;
+        }
+
+        if (adopted > 0)
+            Debug.Log($"WeekendVenues: {adopted} authored marker(s) in this track — those venues are not generated.");
+    }
+
     // ------------------------------------------------------------------ venues found on what exists
 
     // The plan meeting happens at the car. The box marker is already drawn on pit road for the player's
@@ -290,7 +342,12 @@ public class WeekendVenueSites : MonoBehaviour
                 continue;
             }
 
-            var anchor = PaddockProps.Anchor(_root, WeekendVenue.Grandstand, front, front, arriveRange: 4f,
+            // Anchored on the walkable point rather than the front row itself: inside the paddock the two
+            // are the same spot, and where the stand is a metre the wrong side of the fence this keeps the
+            // marker on the player's side of it. (WeekendVenueAnchor enforces that anyway — this just means
+            // the seat is authored where it will end up.)
+            var anchor = PaddockProps.Anchor(_root, WeekendVenue.Grandstand, reachable, reachable,
+                                             arriveRange: 4f,
                                              label: "the " + stand.name.Replace('_', ' ').ToLowerInvariant());
 
             // The seat itself is the interaction: walk up, press the action button, sit down and watch.

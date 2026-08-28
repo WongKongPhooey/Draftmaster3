@@ -84,8 +84,13 @@ public class WeekendVenuePresenceTests
     // the venues are laid out on is derived from the pit lane; the walkable area is an authored polygon and
     // is often smaller, so a mark placed on the rectangle's edge can sit outside the boundary, where the
     // player is clamped back the moment they walk at it — an obligation you can see and never attend.
+    //
+    // This is the whole rule, not a sample of it: EVERY marker in the scene, of every venue, grandstands
+    // included. Watching somebody else's session is the one that used to break it — the stands at a road
+    // course are across the track from the paddock, so the marker for "watch TRK qualifying" was pointing
+    // through a fence the player is clamped behind.
     [UnityTest]
-    public IEnumerator EveryVenueIsSomewhereThePlayerCanStand()
+    public IEnumerator NoMarkerAnywhereIsOutsideThePaddockBoundary()
     {
         yield return null;
 
@@ -94,22 +99,56 @@ public class WeekendVenuePresenceTests
         if (!anyActive) Assert.Ignore("This track has no walkable boundary to be outside of.");
 
         var constrain = boundary.GetMethod("Constrain", Any);
+        var anchorType = PlayModeScenes.GameType("WeekendVenueAnchor");
+        var all = (System.Collections.IEnumerable)anchorType.GetField("All", Any).GetValue(null);
 
-        foreach (int venue in new[] { PitBox, Motorhome, MeetingRoom, SigningFence, SponsorSuite, IntroStage })
+        int checkedMarkers = 0;
+        foreach (var anchor in all)
         {
-            var anchor = AnchorFor(venue);
             if (anchor == null) continue;
+            var component = (Component)anchor;
+            int venue = (int)anchorType.GetField("venue").GetValue(anchor);
 
-            Vector3 stand = (Vector3)anchor.GetType().GetProperty("StandPosition", Any).GetValue(anchor);
-            var inside = (Vector2)constrain.Invoke(null, new object[] { (Vector2)stand });
+            foreach (var (what, point) in new[]
+            {
+                ("marker", (Vector3)component.transform.position),
+                ("standing mark", (Vector3)anchorType.GetProperty("StandPosition", Any).GetValue(anchor)),
+            })
+            {
+                var inside = (Vector2)constrain.Invoke(null, new object[] { (Vector2)point });
+                float outsideBy = Vector2.Distance(inside, point);
 
-            float pushedBack = Vector2.Distance(inside, stand);
-            float arriveRange = (float)anchor.GetType().GetField("arriveRange").GetValue(anchor);
+                Assert.Less(outsideBy, 0.5f,
+                            $"Venue {venue}'s {what} is {outsideBy:0.0} m outside the walkable paddock. A marker " +
+                            "may never spawn outside the boundary — the player is clamped back from it.");
+            }
 
-            Assert.Less(pushedBack, arriveRange,
-                        $"Venue {venue}'s standing mark is {pushedBack:0.0} m outside the walkable paddock, and " +
-                        $"it only counts as attended within {arriveRange:0.0} m — the player can never reach it.");
+            checkedMarkers++;
         }
+
+        Assert.Greater(checkedMarkers, 0, "There are no venue markers in the scene at all.");
+    }
+
+    // Watching a session is a place like any other: there has to be a grandstand marker, and it has to be
+    // one the player can walk to.
+    [UnityTest]
+    public IEnumerator TheGrandstandYouWatchFromIsWalkableFromThePaddock()
+    {
+        yield return null;
+
+        var stand = AnchorFor(Grandstand);
+        Assert.IsNotNull(stand, "There is nowhere to watch somebody else's session from.");
+
+        var boundary = PlayModeScenes.GameType("PaddockBoundary");
+        if (!(bool)boundary.GetProperty("AnyActive", Any).GetValue(null))
+            Assert.Ignore("This track has no walkable boundary to be outside of.");
+
+        Vector3 mark = (Vector3)stand.GetType().GetProperty("StandPosition", Any).GetValue(stand);
+        var inside = (Vector2)boundary.GetMethod("Constrain", Any).Invoke(null, new object[] { (Vector2)mark });
+
+        Assert.Less(Vector2.Distance(inside, mark), 0.5f,
+                    "The grandstand marker is outside the paddock — this is the TRK/NAT session the player " +
+                    "is told to go and watch and then cannot reach.");
     }
 
     // Nothing the weekend builds may be solid where the player is, or anywhere in the motorhome row.
@@ -245,10 +284,16 @@ public class WeekendVenuePresenceTests
         float distance = (float)appointment.GetMethod("DistanceRemaining", Any).Invoke(null, null);
         Assert.Greater(distance, 0f, "The venue is not somewhere to walk to — it is already on top of the player.");
 
-        // Take the marker's own shortcut rather than simulating a walk across the paddock.
+        // Take the marker's own shortcut rather than simulating a walk across the paddock. The move happens
+        // at the black of a wipe, a fraction of a second after the button, so wait the wipe out — checking on
+        // the next frame only ever measures the walk the player hasn't taken yet.
         var hud = PlayModeScenes.GameType("WeekendObjectiveHUD");
         Assert.IsTrue((bool)hud.GetMethod("TravelThere", Any).Invoke(null, null), "TRAVEL THERE went nowhere.");
-        yield return null;
+
+        var fade = PlayModeScenes.GameType("ScreenFade");
+        var busy = fade.GetProperty("Busy", Any);
+        yield return PlayModeScenes.WaitFor(() => !(bool)busy.GetValue(null),
+                                            "the travel wipe never finished", 10f);
 
         float after = (float)appointment.GetMethod("DistanceRemaining", Any).Invoke(null, null);
         Assert.IsTrue((bool)appointment.GetMethod("PlayerHasArrived", Any).Invoke(null, null),

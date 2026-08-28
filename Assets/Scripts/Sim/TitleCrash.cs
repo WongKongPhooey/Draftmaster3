@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Draftmaster.Sim
 {
-    // The choreography behind the title screen's crash: four cars thrown in from off the right edge, and
+    // The choreography behind the title screen's crash: four cars thrown in from above the top edge, and
     // time easing to a dead stop as they land, leaving the pile frozen where the art slot used to be.
     //
     // Pure maths, no MonoBehaviour state, for the same reason CameraFeel is: the tableau itself can only be
@@ -10,9 +11,10 @@ namespace Draftmaster.Sim
     // reach zero" and "is the hero car the front-most one" are all answerable in EditMode.
     //
     // Two clocks. `s` is wall clock, 0..1 across the whole run. `u` is choreography time, also 0..1, and it
-    // is what every pose is a function of. Freeze() maps one to the other: u runs at a constant rate for the
-    // first stretch, then decelerates to a halt exactly as it reaches 1. Nothing eases its own motion — the
-    // cars fly at a constant rate in u — so the slowdown is time slowing, not four objects slowing down.
+    // is what every pose is a function of. Freeze() maps one to the other: u opens several times faster than
+    // real time and sheds speed from the very first frame, reaching 1 at exactly the moment it reaches zero
+    // speed. Nothing eases its own motion — the cars fly at a constant rate in u — so the slowdown is time
+    // slowing, not four objects slowing down.
     //
     // Positions are in the 640x360 reference canvas the Iron Oval screens are laid out on, measured from the
     // bottom-left, so they line up with the menu column (which occupies x < 326) without knowing anything
@@ -28,9 +30,14 @@ namespace Draftmaster.Sim
         // wash over the wordmark or the menu.
         public const float ColumnRightPx = 326f;
 
-        // Which car is the star of the shot: front-most in the pile, biggest on screen, and the one that
-        // wears the player's number once they have a team.
+        // Which car is the star of the shot: front-most in the pile, and the one that wears the player's
+        // number once they have a team. Every car is the same size, so draw order is what makes it the hero.
         public const int HeroIndex = 3;
+
+        // One body, four times over: the cars are all the same machine, so nothing in the shot reads as a toy
+        // parked next to a truck. Carset liveries are 64x32, so the body is half as wide as it is long.
+        public const float CarLengthPx = 150f;
+        public const float CarWidthPx = CarLengthPx * 0.5f;
 
         public struct CarPlan
         {
@@ -38,8 +45,7 @@ namespace Draftmaster.Sim
             public Vector2 endPos;          // where it comes to rest
             public float startRotation;     // degrees, including the extra turns it unwinds through
             public float endRotation;
-            public float lengthPx;          // drawn length of the car, nose to tail
-            public float arcPx;             // height of the hop it takes on the way in
+            public float arcPx;             // how far it bows off the straight line on the way in
             public float delay;             // choreography time before it enters
             public float travel;            // choreography time it spends in the air
             public int depth;               // 0 = rear-most; sets the draw order within the pile
@@ -52,43 +58,46 @@ namespace Draftmaster.Sim
             public float progress;          // 0 = still off-screen, 1 = landed
         }
 
-        public struct Impact
+        // Two cars touching. These are found rather than authored: Settle() reports wherever the bodies
+        // actually meet, so a flash never goes off in mid-air and never fails to where metal met metal.
+        public struct Contact
         {
-            public float at;                // choreography time the hit lands
-            public int car;                 // which car takes the dent
-            public Vector2 pointPx;         // where the flash goes
-            public float severity;          // 0..1, straight into VehicleDamage.OnImpact
-            public Vector2 spray;           // direction the sparks favour
+            public int a, b;                // the two cars, by plan index
+            public Vector2 pointPx;         // where they meet
+            public Vector2 normal;          // the push, a -> b
+            public float depthPx;           // how far through each other they were before it
+            public float severity;          // 0..1 from the closing speed, straight into VehicleDamage.OnImpact
         }
 
-        // Wall clock -> choreography time. Constant rate over the first `linearFraction` of the run, then a
-        // quadratic glide that arrives at exactly 1 with exactly zero speed. The rate is solved rather than
-        // guessed so the two halves join smoothly and the whole thing still covers the full sequence:
-        // integrating k over [0,a] and k tapering to nothing over [a,1] gives k(1+a)/2 = 1.
-        public static float Freeze(float s, float linearFraction)
+        // Wall clock -> choreography time: u = 1 - (1-s)^n, which opens at n times real time and decelerates
+        // continuously, hitting exactly 1 with exactly zero speed. `entrySpeed` IS that n, so it reads as
+        // "the cars enter n times faster than the run averages": n = 2 is a flat, constant deceleration all
+        // the way in, and above that the entry is a burst and the last few pixels are a long settle. There is
+        // no cruising phase on purpose — the old constant-then-brake shape spent most of the run at one slow
+        // speed, which read as four cars sliding in rather than four cars arriving too fast to stop.
+        public static float Freeze(float s, float entrySpeed)
         {
-            s = Mathf.Clamp01(s);
-            float a = Mathf.Clamp(linearFraction, 0f, 0.9f);
-            float k = 2f / (1f + a);
-            if (s <= a) return k * s;
-
-            float d = s - a;
-            float span = 1f - a;
-            return Mathf.Clamp01(k * (a + d - (d * d) / (2f * span)));
+            float n = Mathf.Max(1f, entrySpeed);
+            return Mathf.Clamp01(1f - Mathf.Pow(1f - Mathf.Clamp01(s), n));
         }
 
-        // How fast choreography time is running, relative to its opening rate. 1 while the crash is at full
-        // speed, 0 once it has stopped — which is what the particle systems' simulation speed rides on.
-        public static float FreezeRate(float s, float linearFraction)
+        // How fast choreography time is running, relative to its opening rate: (1-s)^(n-1), the derivative of
+        // Freeze normalised to 1 at the entry. 0 once time has stopped — which is what the particle systems'
+        // simulation speed rides on, so the sparks slow with the cars instead of burning out over a still pile.
+        public static float FreezeRate(float s, float entrySpeed)
         {
-            s = Mathf.Clamp01(s);
-            float a = Mathf.Clamp(linearFraction, 0f, 0.9f);
-            if (s <= a) return 1f;
-            return Mathf.Clamp01(1f - (s - a) / (1f - a));
+            float n = Mathf.Max(1f, entrySpeed);
+            return Mathf.Clamp01(Mathf.Pow(1f - Mathf.Clamp01(s), n - 1f));
         }
 
-        // The four cars, rear of the pile first. Every one enters from off the right edge (x > CanvasWidth)
-        // so nothing ever crosses the copy column, and every one has landed by u = 1.
+        // Opening rate the tableau is authored around: a shade over the flat-deceleration 2, so the entry has
+        // some snap without the tail turning into a crawl.
+        public const float DefaultEntrySpeed = 2.4f;
+
+        // The four cars, rear of the pile first. Every one drops in from above the top edge (y > CanvasHeight,
+        // clear of its own rotated height) and travels downwards into the pile, so nothing is ever on screen
+        // when the sequence opens, nothing crosses the copy column on the way, and every one has landed by
+        // u = 1. Start x is kept in the right-hand half so the diagonal never washes over the wordmark.
         public static CarPlan[] Field()
         {
             return new[]
@@ -96,41 +105,49 @@ namespace Draftmaster.Sim
                 // Broadside behind the pile, first in and first to stop.
                 new CarPlan
                 {
-                    startPos = new Vector2(930f, 210f), endPos = new Vector2(566f, 118f),
+                    startPos = new Vector2(615f, 468f), endPos = new Vector2(566f, 118f),
                     startRotation = -108f + 350f,       endRotation = -108f,
-                    lengthPx = 135f, arcPx = 35f, delay = 0f,     travel = 0.80f, depth = 0,
+                    arcPx = 35f, delay = 0f,     travel = 0.80f, depth = 0,
                 },
                 // Spun backwards into the top-right corner, half off the edge of the screen.
                 new CarPlan
                 {
-                    startPos = new Vector2(880f, 430f), endPos = new Vector2(568f, 262f),
+                    startPos = new Vector2(508f, 496f), endPos = new Vector2(568f, 262f),
                     startRotation = 158f + 300f,        endRotation = 158f,
-                    lengthPx = 150f, arcPx = 55f, delay = 0.08f, travel = 0.86f, depth = 1,
+                    arcPx = 55f, delay = 0.08f, travel = 0.86f, depth = 1,
                 },
                 // Sliding in low, tucked under the hero's nose.
                 new CarPlan
                 {
-                    startPos = new Vector2(940f, 60f),  endPos = new Vector2(420f, 105f),
+                    startPos = new Vector2(486f, 452f), endPos = new Vector2(420f, 105f),
                     startRotation = 34f - 380f,         endRotation = 34f,
-                    lengthPx = 145f, arcPx = 25f, delay = 0.05f, travel = 0.84f, depth = 2,
+                    arcPx = -25f, delay = 0.05f, travel = 0.84f, depth = 2,
                 },
-                // The hero: biggest, front-most, and still settling as the clock runs out.
+                // The hero: front-most, last in, and still shunting the pile as the clock runs out.
                 new CarPlan
                 {
-                    startPos = new Vector2(905f, 305f), endPos = new Vector2(470f, 190f),
+                    startPos = new Vector2(556f, 482f), endPos = new Vector2(470f, 190f),
                     startRotation = -28f + 400f,        endRotation = -28f,
-                    lengthPx = 190f, arcPx = 40f, delay = 0.10f, travel = 0.88f, depth = 3,
+                    arcPx = 40f, delay = 0.10f, travel = 0.88f, depth = 3,
                 },
             };
         }
 
-        // Where a car is at choreography time u. Linear in u on purpose (see Freeze), with a sine hop so it
-        // arrives off the ground rather than sliding in flat.
+        // Where a car is at choreography time u. Linear in u on purpose (see Freeze), with a sine bow across
+        // the line of travel — sideways to a car coming down the screen — so it swings into the pile rather
+        // than running in on a ruler. The bow is zero at both ends, so start and end poses are exactly as
+        // authored; a negative arcPx bows the other way.
         public static CarPose Evaluate(CarPlan plan, float u)
         {
             float p = plan.travel <= 0f ? 1f : Mathf.Clamp01((u - plan.delay) / plan.travel);
             Vector2 pos = Vector2.Lerp(plan.startPos, plan.endPos, p);
-            pos.y += plan.arcPx * Mathf.Sin(Mathf.PI * p);
+
+            Vector2 run = plan.endPos - plan.startPos;
+            if (run.sqrMagnitude > 1e-6f)
+            {
+                Vector2 across = new Vector2(-run.y, run.x).normalized;
+                pos += across * (plan.arcPx * Mathf.Sin(Mathf.PI * p));
+            }
 
             return new CarPose
             {
@@ -142,26 +159,189 @@ namespace Draftmaster.Sim
             };
         }
 
-        // The four moments the pile actually connects, in order. Each one flashes sparks, coughs smoke and
-        // puts a fresh dent in the named car on top of whatever it arrived carrying.
-        public static Impact[] Impacts()
+        // ------------------------------------------------------------------ bodies
+
+        // Half the extent of a car along one screen axis at this rotation, in reference px. There is only one
+        // car body in the shot, so this is a function of the angle alone.
+        public static float HalfSpan(float rotationDeg, bool horizontal)
         {
-            return new[]
-            {
-                new Impact { at = 0.55f, car = 0, pointPx = new Vector2(600f, 150f), severity = 0.70f,
-                             spray = new Vector2(-0.6f, 0.8f) },
-                new Impact { at = 0.66f, car = 3, pointPx = new Vector2(540f, 150f), severity = 0.95f,
-                             spray = new Vector2(-0.9f, 0.45f) },
-                new Impact { at = 0.74f, car = 2, pointPx = new Vector2(455f, 130f), severity = 0.80f,
-                             spray = new Vector2(-0.5f, -0.85f) },
-                new Impact { at = 0.86f, car = 1, pointPx = new Vector2(505f, 235f), severity = 0.85f,
-                             spray = new Vector2(0.3f, 0.95f) },
-            };
+            float rad = rotationDeg * Mathf.Deg2Rad;
+            float along = CarLengthPx * 0.5f;
+            float across = CarWidthPx * 0.5f;
+            return horizontal
+                ? along * Mathf.Abs(Mathf.Cos(rad)) + across * Mathf.Abs(Mathf.Sin(rad))
+                : along * Mathf.Abs(Mathf.Sin(rad)) + across * Mathf.Abs(Mathf.Cos(rad));
         }
 
-        // When the pile starts smoking: the first proper contact, so the plume builds through the rest of
-        // the sequence and is still hanging over the cars when everything stops.
-        public const float PlumeStartsAt = 0.55f;
-        public static readonly Vector2 PlumeCentrePx = new Vector2(505f, 150f);
+        // How fast a car is travelling at choreography time u, in reference px per unit of u — the derivative
+        // of Evaluate. Zero before it enters and zero once it has landed, which is what makes a late arrival
+        // hit a parked pile hard while the pile itself only ever nudges.
+        public static Vector2 Velocity(CarPlan plan, float u)
+        {
+            if (plan.travel <= 0f) return Vector2.zero;
+
+            float p = (u - plan.delay) / plan.travel;
+            if (p <= 0f || p >= 1f) return Vector2.zero;
+
+            Vector2 run = plan.endPos - plan.startPos;
+            Vector2 v = run / plan.travel;
+            if (run.sqrMagnitude > 1e-6f)
+            {
+                Vector2 across = new Vector2(-run.y, run.x).normalized;
+                v += across * (plan.arcPx * Mathf.PI * Mathf.Cos(Mathf.PI * p) / plan.travel);
+            }
+            return v;
+        }
+
+        // Closing speed a full-tilt head-on hit runs to, in px per unit u. Contact severity is measured
+        // against it, so anything arriving at entry speed dents as hard as the damage model allows.
+        public const float ReferenceClosingSpeed = 250f;
+
+        // How much a car gives way when something runs into it: a landed one is dead weight and slides, one
+        // still coming in is under power and holds its line.
+        static float Yield(CarPose pose)
+        {
+            return pose.progress >= 1f ? 1f : 0.35f;
+        }
+
+        // Is this car part of the crash yet? Cars are stacked above the top edge before they set off, so
+        // without this they would shove each other around — and throw sparks — off screen before the sequence
+        // has even started.
+        static bool InPlay(CarPose pose)
+        {
+            return pose.progress > 0f && pose.position.y - HalfSpan(pose.rotation, horizontal: false) <= CanvasHeight;
+        }
+
+        // Projection radius of a car body onto an axis: half its length along the body plus half its width
+        // across it, both measured on that axis.
+        static float Radius(float rotationDeg, Vector2 axis)
+        {
+            float rad = rotationDeg * Mathf.Deg2Rad;
+            var along = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+            var across = new Vector2(-along.y, along.x);
+            return CarLengthPx * 0.5f * Mathf.Abs(Vector2.Dot(along, axis))
+                 + CarWidthPx * 0.5f * Mathf.Abs(Vector2.Dot(across, axis));
+        }
+
+        // Separating-axis test between two car bodies at any rotation. Two boxes are clear if and only if one
+        // of their four body axes separates them, so a gap on any axis is a complete miss; when there is no
+        // gap anywhere, the shallowest axis is the shortest way to push them off each other.
+        public static bool Overlap(Vector2 centreA, float rotationA, Vector2 centreB, float rotationB,
+                                   out Vector2 normal, out float depth)
+        {
+            normal = Vector2.right;
+            depth = float.MaxValue;
+            Vector2 between = centreB - centreA;
+
+            for (int i = 0; i < 4; i++)
+            {
+                float rad = (i < 2 ? rotationA : rotationB) * Mathf.Deg2Rad;
+                var axis = (i % 2 == 0)
+                    ? new Vector2(Mathf.Cos(rad), Mathf.Sin(rad))
+                    : new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
+
+                float reach = Vector2.Dot(between, axis);
+                float gap = Radius(rotationA, axis) + Radius(rotationB, axis) - Mathf.Abs(reach);
+                if (gap <= 0f) return false;
+
+                if (gap < depth)
+                {
+                    depth = gap;
+                    normal = reach < 0f ? -axis : axis;
+                }
+            }
+
+            return true;
+        }
+
+        // Turn four cars flying through each other into four cars leaning on each other: every overlapping
+        // pair is pushed apart along the axis that separates them soonest, several passes over the field so a
+        // shove that creates a fresh overlap gets resolved too (a car pinned against the edge of the slot can
+        // only be separated by moving the other one, which takes a few), and anything that has entered the
+        // frame is kept inside the art slot. Contacts are reported from the first pass, before any pushing, so what
+        // comes back is the real interpenetration — which is what the dent severity is measured from.
+        //
+        // Stateless on purpose: poses come out of Evaluate and are settled from scratch every frame, so the
+        // pile stays a pure function of u and an EditMode test can ask what it looks like at any moment.
+        public static void Settle(CarPlan[] plans, CarPose[] poses, float u, List<Contact> contacts,
+                                  int passes = 10)
+        {
+            if (contacts != null) contacts.Clear();
+            if (plans == null || poses == null) return;
+
+            int n = Mathf.Min(plans.Length, poses.Length);
+            passes = Mathf.Max(1, passes);
+
+            for (int pass = 0; pass < passes; pass++)
+            {
+                for (int a = 0; a < n; a++)
+                {
+                    if (!InPlay(poses[a])) continue;
+
+                    for (int b = a + 1; b < n; b++)
+                    {
+                        if (!InPlay(poses[b])) continue;
+
+                        if (!Overlap(poses[a].position, poses[a].rotation,
+                                     poses[b].position, poses[b].rotation,
+                                     out Vector2 normal, out float depth))
+                            continue;
+
+                        if (pass == 0 && contacts != null)
+                        {
+                            float closing = Mathf.Abs(Vector2.Dot(Velocity(plans[b], u) - Velocity(plans[a], u),
+                                                                  normal));
+                            contacts.Add(new Contact
+                            {
+                                a = a, b = b,
+                                // The two bodies are identical, so the midpoint of their centres is always
+                                // inside the region they share — near enough for a flash and a dent.
+                                pointPx = (poses[a].position + poses[b].position) * 0.5f,
+                                normal = normal,
+                                depthPx = depth,
+                                severity = Mathf.Clamp(closing / ReferenceClosingSpeed, 0.25f, 1f),
+                            });
+                        }
+
+                        float yieldA = Yield(poses[a]);
+                        float yieldB = Yield(poses[b]);
+                        float total = Mathf.Max(0.001f, yieldA + yieldB);
+
+                        poses[a].position -= normal * (depth * yieldA / total);
+                        poses[b].position += normal * (depth * yieldB / total);
+                    }
+                }
+
+                for (int i = 0; i < n; i++)
+                {
+                    float halfW = HalfSpan(poses[i].rotation, horizontal: true);
+                    float halfH = HalfSpan(poses[i].rotation, horizontal: false);
+                    Vector2 at = poses[i].position;
+
+                    // A car still entirely above the top edge is meant to be off screen; leave it there.
+                    if (at.y - halfH > CanvasHeight) continue;
+
+                    at.x = Mathf.Clamp(at.x, ColumnRightPx + halfW, CanvasWidth + 60f - halfW);
+                    at.y = Mathf.Max(at.y, halfH);
+                    if (poses[i].progress >= 1f) at.y = Mathf.Min(at.y, CanvasHeight - halfH);
+
+                    poses[i].position = at;
+                }
+            }
+        }
+
+        // The whole field at choreography time u, already settled against itself. The one call the runtime
+        // and the tests both go through, so what a test measures is what the screen is showing.
+        public static CarPose[] Tableau(CarPlan[] plans, float u, List<Contact> contacts = null)
+        {
+            var poses = new CarPose[plans.Length];
+            for (int i = 0; i < plans.Length; i++) poses[i] = Evaluate(plans[i], u);
+            Settle(plans, poses, u, contacts);
+            return poses;
+        }
+
+        // Where the smoke hangs before anything has actually been hit: the middle of the art slot, at about
+        // the height the pile settles at.
+        public static readonly Vector2 PileCentrePx = new Vector2(505f, 160f);
     }
 }

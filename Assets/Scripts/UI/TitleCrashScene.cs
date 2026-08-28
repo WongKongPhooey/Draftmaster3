@@ -2,8 +2,13 @@ using System.Collections.Generic;
 using Draftmaster.Sim;
 using UnityEngine;
 
-// The title screen's hero art: four cars thrown in from off the right edge, colliding across the empty
+// The title screen's hero art: four cars dropped in from above the top edge, colliding across the empty
 // half of the screen, and time easing to a dead stop as they land so the pile stays there mid-crash.
+//
+// The hits are real contacts, not a schedule: TitleCrash.Settle pushes overlapping bodies off each other and
+// reports where they met, and this fires the dents, sparks and smoke off those reports. So the pile is four
+// cars resting against each other rather than four sprites drawn through each other, and a flash only ever
+// goes off where metal actually found metal.
 //
 // This is the runtime half of TitleCrash — that holds the choreography (who goes where, when, and how the
 // clock decelerates), this builds the cars out of it and paints them. Nothing here is authored in the
@@ -33,8 +38,10 @@ public class TitleCrashScene : MonoBehaviour
     public float startDelay = 0.35f;
     [Tooltip("Seconds from the first car entering frame to the tableau standing still.")]
     public float duration = 3f;
-    [Tooltip("Fraction of the run that plays at full speed before time starts easing to a stop.")]
-    [Range(0f, 0.9f)] public float fullSpeedFraction = 0.45f;
+    [Tooltip("How much faster than the run's average pace the cars enter, before time decelerates to a " +
+             "stop. 2 is a flat slow-down the whole way; higher makes the entry a burst and the last few " +
+             "pixels a longer settle.")]
+    [Range(1f, 4f)] public float entrySpeed = TitleCrash.DefaultEntrySpeed;
 
     [Header("Damage")]
     [Tooltip("Dents each car arrives already carrying, so the pile is battered rather than showroom-fresh.")]
@@ -95,9 +102,22 @@ public class TitleCrashScene : MonoBehaviour
 
     float _elapsed;              // wall clock since the first car was due, seconds
     float _u;                    // choreography time, 0..1
-    int _nextImpact;
     float _plumeCarry;           // fractional puff owed to the plume, carried between frames
     float _plumeSpent;           // puffs the plume has issued so far
+
+    // The pile's working state. Poses are rebuilt from the choreography every frame and settled against each
+    // other, so these are buffers rather than memory — the only thing actually remembered between frames is
+    // which pairs were already touching, so a contact bangs once when it happens instead of every frame it
+    // lasts.
+    TitleCrash.CarPlan[] _plans = System.Array.Empty<TitleCrash.CarPlan>();
+    TitleCrash.CarPose[] _poses = System.Array.Empty<TitleCrash.CarPose>();
+    readonly List<TitleCrash.Contact> _contacts = new List<TitleCrash.Contact>();
+    bool[] _touching = System.Array.Empty<bool>();
+    bool[] _wasTouching = System.Array.Empty<bool>();
+
+    float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
+    Vector2 _plumeAt;            // where the plume rises from: the middle of what has been hit so far
+    int _plumeHits;
 
     void Update()
     {
@@ -109,15 +129,15 @@ public class TitleCrashScene : MonoBehaviour
 
         _elapsed += Time.unscaledDeltaTime;
         float s = duration <= 0f ? 1f : Mathf.Clamp01(_elapsed / duration);
-        _u = TitleCrash.Freeze(s, fullSpeedFraction);
+        _u = TitleCrash.Freeze(s, entrySpeed);
 
         PoseCars();
-        FireImpacts();
+        Collide();
         Smoulder();
 
         // The particle systems run on the same decelerating clock, so the sparks hang in the air mid-streak
         // instead of burning out while the cars stand still.
-        float rate = TitleCrash.FreezeRate(s, fullSpeedFraction);
+        float rate = TitleCrash.FreezeRate(s, entrySpeed);
         SetSimulationSpeed(_sparks, rate);
         SetSimulationSpeed(_smoke, rate);
     }
@@ -137,6 +157,12 @@ public class TitleCrashScene : MonoBehaviour
         }
 
         var plans = TitleCrash.Field();
+        _plans = plans;
+        _poses = new TitleCrash.CarPose[plans.Length];
+        _touching = new bool[plans.Length * plans.Length];
+        _wasTouching = new bool[_touching.Length];
+        _plumeAt = TitleCrash.PileCentrePx;
+
         var liveries = PickLiveries(plans.Length);
         var rng = new System.Random(seed);
 
@@ -285,7 +311,7 @@ public class TitleCrashScene : MonoBehaviour
         // The plans are drawn in reference pixels; the sprite is 5 world units of car. Scale bridges the two
         // so the tableau keeps its proportions whatever the screen is.
         float spriteLength = Mathf.Max(0.001f, livery.bounds.size.x);
-        float scale = (plan.lengthPx * _unit) / spriteLength;
+        float scale = (TitleCrash.CarLengthPx * _unit) / spriteLength;
         go.transform.localScale = new Vector3(scale, scale, 1f);
 
         return new Car { t = go.transform, damage = damage, plan = plan };
@@ -327,34 +353,65 @@ public class TitleCrashScene : MonoBehaviour
 
     // ------------------------------------------------------------------ playback
 
+    // Every car posed from the choreography, then the whole field settled against itself so no two bodies
+    // are inside each other, then painted. The settle is what turns the pile from an overlap into a crash.
     void PoseCars()
     {
-        foreach (var car in _cars)
+        if (_poses.Length != _plans.Length) _poses = new TitleCrash.CarPose[_plans.Length];
+
+        for (int i = 0; i < _plans.Length; i++) _poses[i] = TitleCrash.Evaluate(_plans[i], _u);
+        TitleCrash.Settle(_plans, _poses, _u, _contacts);
+
+        for (int i = 0; i < _cars.Length && i < _poses.Length; i++)
         {
-            if (car == null) continue;
-            var pose = TitleCrash.Evaluate(car.plan, _u);
-            car.t.position = PxToWorld(pose.position);
-            car.t.rotation = Quaternion.Euler(0f, 0f, pose.rotation);
+            if (_cars[i] == null) continue;
+            _cars[i].t.position = PxToWorld(_poses[i].position);
+            _cars[i].t.rotation = Quaternion.Euler(0f, 0f, _poses[i].rotation);
         }
     }
 
-    void FireImpacts()
+    // Bang on the frame two bodies first touch, and not again while they stay touching — a pile that is
+    // leaning on itself would otherwise dent and spark every frame until the clock stopped.
+    void Collide()
     {
-        var impacts = TitleCrash.Impacts();
-        while (_nextImpact < impacts.Length && _u >= impacts[_nextImpact].at)
+        int n = _plans.Length;
+        if (_touching.Length < n * n) _touching = new bool[n * n];
+        if (_wasTouching.Length < _touching.Length) _wasTouching = new bool[_touching.Length];
+
+        for (int i = 0; i < _touching.Length; i++) _wasTouching[i] = _touching[i];
+        System.Array.Clear(_touching, 0, _touching.Length);
+
+        foreach (var hit in _contacts)
         {
-            var hit = impacts[_nextImpact++];
+            int key = hit.a * n + hit.b;
+            _touching[key] = true;
+            if (_wasTouching[key]) continue;
+
             Vector3 at = PxToWorld(hit.pointPx);
+            DentCar(hit.a, at, hit.severity);
+            DentCar(hit.b, at, hit.severity);
 
-            if (hit.car >= 0 && hit.car < _cars.Length && _cars[hit.car] != null)
-                Dent(_cars[hit.car], at, hit.severity);
-
-            Vector2 spray = hit.spray.sqrMagnitude > 1e-6f ? hit.spray.normalized : Vector2.up;
+            // Sparks fly off the line the two cars are pushing along, which is the way a real scrape throws
+            // them; the smoke just puffs up out of the same point.
+            Vector2 spray = hit.normal.sqrMagnitude > 1e-6f ? hit.normal.normalized : Vector2.up;
             Burst(_sparks, at, spray, 150f, Mathf.RoundToInt(sparksPerImpact * hit.severity),
                   120f, 430f, sparkColorA, sparkColorB, 2.5f, 4.5f, 0.55f);
             Burst(_smoke, at, spray, 180f, Mathf.RoundToInt(smokePerImpact * hit.severity),
                   14f, 60f, smokeColorA, smokeColorB, 26f, 62f, 4f);
+
+            // The pile smokes from the first thing it hits, and the plume drifts toward the middle of
+            // everything it has hit since.
+            if (_plumeFrom < 0f) { _plumeFrom = _u; _plumeAt = hit.pointPx; _plumeHits = 1; }
+            else { _plumeHits++; _plumeAt += (hit.pointPx - _plumeAt) / _plumeHits; }
         }
+    }
+
+    // The choreography still names four cars when a livery failed to load and left a hole in the field, so
+    // a contact against a car that isn't there sparks and smokes without denting anything.
+    void DentCar(int index, Vector3 worldPoint, float severity)
+    {
+        if (index < 0 || index >= _cars.Length || _cars[index] == null) return;
+        Dent(_cars[index], worldPoint, severity);
     }
 
     // The pile keeps smoking after the first proper contact, so there's a plume hanging over the cars by the
@@ -362,12 +419,12 @@ public class TitleCrashScene : MonoBehaviour
     // out and stops as the clock does.
     void Smoulder()
     {
-        if (_u < TitleCrash.PlumeStartsAt || _smoke == null) return;
+        if (_plumeFrom < 0f || _smoke == null) return;
 
         // Puffs are spent against choreography time, so the whole `plumePuffs` budget is issued across the
         // plume's window however many frames that takes — and issues none once the clock has stopped.
-        float span = Mathf.Max(0.01f, 1f - TitleCrash.PlumeStartsAt);
-        float want = plumePuffs * Mathf.Clamp01((_u - TitleCrash.PlumeStartsAt) / span);
+        float span = Mathf.Max(0.01f, 1f - _plumeFrom);
+        float want = plumePuffs * Mathf.Clamp01((_u - _plumeFrom) / span);
         _plumeCarry += Mathf.Max(0f, want - _plumeSpent);
         _plumeSpent = want;
 
@@ -375,7 +432,7 @@ public class TitleCrashScene : MonoBehaviour
         {
             _plumeCarry -= 1f;
             Vector2 jitter = Random.insideUnitCircle * 34f;
-            Vector3 at = PxToWorld(TitleCrash.PlumeCentrePx + jitter);
+            Vector3 at = PxToWorld(_plumeAt + jitter);
             Burst(_smoke, at, Vector2.up, 60f, 1, 8f, 34f, smokeColorA, smokeColorB, 30f, 74f, 5f);
         }
     }

@@ -293,3 +293,103 @@ Nothing else touches the meters.
   each one; `WeekendVenuePresenceTests` (PlayMode) fails if any venue is missing a host or an anchor.
 - The **signing queue and the drivers meeting's live note are seeded off the booking id**, so walking away
   and coming back cannot re-roll a better hour out of them.
+
+---
+
+## 8. Authoring a weekend (the plan files)
+
+A weekend does not have to be the generated one. Drop a JSON file at
+
+```
+Assets/Resources/Weekends/<Track>.<Series>.json      e.g. WatkinsGlen.Cup.json
+Assets/Resources/Weekends/<Track>.json               all three series at that circuit
+```
+
+and **that file is the weekend** — six half-days, whatever you put in them, empty ones included. The
+procedural builder in `WeekendTimetable` does not run for a track+series that has a plan. A track without
+one still generates its schedule as before, so the calendar stays playable while one round is authored.
+
+Open **Draftmaster > Weekend > Plan Editor** (`Ctrl+Shift+E`): pick the track and series, add bookings to
+half-days, and save. Problems are listed in red as you type — a booking before the half-day opens, one that
+runs past its close, an event id that does not exist.
+
+### The file
+
+```json
+{
+  "track": "WatkinsGlen",
+  "series": "Cup",
+  "slots": [
+    { "slot": "FridayAM", "events": [
+        { "event": "sponsor_event-photoshoot", "start": "09:45", "area": "photoshoot" },
+        { "event": "watch-qualifying", "start": "10:00", "series": "Trucks" }
+    ]},
+    { "slot": "FridayPM", "events": [] }
+  ]
+}
+```
+
+`event` and `start` are the only required fields. Everything else — title, subtitle, length, appearance fee,
+penalties — falls back to `WeekendEventCatalog`, so a booking is one line unless it is doing something
+unusual. **Draftmaster > Weekend > List Event Ids** prints the vocabulary; the groups are
+`session-*` (you drive), `watch-*` (needs `"series"`), `team-*`, `official-*`, `media-*`, `fan_event-*`,
+`sponsor_event-*`, `rest`.
+
+Optional per-booking overrides: `minutes`, `title`, `subtitle`, `fee`, `skipMoney`, `skipAppeal`,
+`skipReason`, `mandatory` (0 default / 1 force / 2 force off), `requires` (an event id that must have
+happened first), and `area`.
+
+### Markers: where a booking actually happens
+
+Venues used to be worked out from the pit lane at runtime, which is how a grandstand marker ended up on the
+fence line at the edge of pit road. A track now says where its places are, by having objects there.
+
+**Make a GameObject in the track package and name it `PitBox_Marker`.** That is now the pit box: the
+objective arrow points at it, and the booking starts when the player is inside it. Recognised names —
+
+`PitBox_Marker` · `Motorhome_Marker` · `DriversRoom_Marker` · `SigningFence_Marker` ·
+`SponsorSuite_Marker` · `IntroStage_Marker` · `Grandstand_Marker`
+
+Matching ignores case, spaces and underscores, so `Pitbox_Marker` and `pit_box_marker` are the same request.
+Several aliases work too (`Hospitality_Marker`, `Signing_Marker`, `Stage_Marker`, `PhotoShoot_Marker`).
+
+**The size is the perimeter.** Give the object a Collider2D and its shape *is* the arrival test — a box the
+shape of the pit stall means standing anywhere in the stall counts. Any collider works, including a rotated
+box or a polygon. With no collider it falls back to a Renderer's bounds, and with neither to
+`fallbackRange` as a plain radius.
+
+**Overriding per booking.** The `Marker Location` field on a booking is the name of the object to use:
+
+```json
+{ "event": "sponsor_event-photoshoot", "start": "09:45", "markerLocation": "Podium_Marker" }
+```
+
+Left blank it falls back to the venue's default name, which the Plan Editor shows under the field along with
+whether an object of that name is actually in the open scene. A marker whose name matches no venue —
+`Podium_Marker` — is still a marker; it just has to be asked for like this.
+
+### Places you cannot walk to
+
+The grandstands at a road course are across the track, behind a boundary the player is clamped inside. So a
+marker can split *where you go* from *where you end up*: give it a **`teleportTo`**, or simply a child object
+called **`Seat`** (also `Destination`, `Inside`, `Teleport`), and the marker becomes a gate.
+
+Put the marker at the paddock exit where the player can reach it, put the child in the grandstand seat. Walk
+into the marker, press the action button, and a wipe puts you there. `WeekendMarkerGate` is added
+automatically — nothing to wire.
+
+A marker with a teleport is **exempt** from the reachability rule, because being at the edge is the point.
+One *without* a teleport that sits outside the boundary is still reported as a fault.
+
+Authored markers are never moved by the boundary rule either: where you put it is where it stays, and a bad
+one is reported rather than quietly dragged inside.
+
+### Checks
+
+- `Draftmaster > Weekend > Validate All Plans` — every shipped file, with line-level problems.
+- `Draftmaster > Weekend > Check Markers In Open Scene` — markers outside the boundary with no teleport to
+  excuse them, duplicate names, markers with no size, and every venue still being guessed at runtime.
+- `WeekendPlanTests` (EditMode) fails the build on a bad plan file, an event id that does not resolve, any
+  `ActivityKind` the catalogue cannot express, and any venue whose default marker name does not resolve back
+  to it.
+- `WeekendVenuePresenceTests` (PlayMode) fails if any marker lands outside the walkable paddock.

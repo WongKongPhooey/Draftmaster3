@@ -1,0 +1,177 @@
+{
+    "track": "WatkinsGlen",
+    "series": "Cup",
+    "notes": "Watkins Glen, Cup entry. Hand-authored: this file IS the weekend, empty half-days included. Friday is a spectator day with the sponsor work stacked into it; Saturday is practice, qualifying and the National race; Sunday is race day. Edit in Draftmaster > Weekend > Plan Editor (Ctrl+Shift+E).",
+    "slots": [
+        {
+            "slot": "FridayAM",
+            "events": [
+                {
+                    "event": "team-briefing",
+                    "start": "08:00"
+                },
+                {
+                    "event": "fan_event-hauler_parade",
+                    "start": "09:00"
+                },
+                {
+                    "event": "sponsor_event-photoshoot",
+                    "start": "09:45",
+                    "markerLocation": "PhotoShoot_Marker"
+                },
+                {
+                    "event": "watch-practice",
+                    "start": "10:00",
+                    "series": "Trucks"
+                }
+            ]
+        },
+        {
+            "slot": "FridayPM",
+            "events": [
+                {
+                    "event": "watch-qualifying",
+                    "start": "13:00",
+                    "series": "Trucks"
+                },
+                {
+                    "event": "sponsor_event-duty",
+                    "start": "13:15",
+                    "minutes": 45,
+                    "title": "PIT-STOP CHALLENGE",
+                    "subtitle": "Sponsor guests against the clock on a wheel gun, and you are the one keeping score.",
+                    "fee": 900,
+                    "skipMoney": 450,
+                    "skipReason": "The guest list turned up to a pit stall with nobody in it."
+                },
+                {
+                    "event": "media-press_conference",
+                    "start": "14:15",
+                    "title": "MEDIA AVAILABILITY",
+                    "subtitle": "The written press get their twenty minutes. Whatever you say here is the quote of the weekend."
+                },
+                {
+                    "event": "watch-practice",
+                    "start": "15:00",
+                    "series": "National"
+                },
+                {
+                    "event": "fan_event-autographs",
+                    "start": "16:30"
+                },
+                {
+                    "event": "watch-race",
+                    "start": "19:00",
+                    "minutes": 105,
+                    "series": "Trucks"
+                }
+            ]
+        },
+        {
+            "slot": "SaturdayAM",
+            "events": [
+                {
+                    "event": "watch-qualifying",
+                    "start": "09:00",
+                    "series": "National"
+                },
+                {
+                    "event": "sponsor_event-photoshoot",
+                    "start": "09:15",
+                    "title": "DEALER GROUP PHOTOS",
+                    "subtitle": "Two hundred handshake photos with the regional dealer network. Smile on every one.",
+                    "minutes": 45,
+                    "fee": 1100,
+                    "markerLocation": "PhotoShoot_Marker",
+                    "skipReason": "The dealer network got a cardboard cut-out."
+                },
+                {
+                    "event": "session-practice",
+                    "start": "10:30",
+                    "minutes": 60
+                },
+                {
+                    "event": "team-debrief",
+                    "start": "11:15",
+                    "requires": "session-practice"
+                }
+            ]
+        },
+        {
+            "slot": "SaturdayPM",
+            "events": [
+                {
+                    "event": "media-press_conference",
+                    "start": "13:00"
+                },
+                {
+                    "event": "session-qualifying",
+                    "start": "14:00"
+                },
+                {
+                    "event": "fan_event-autographs",
+                    "start": "15:30",
+                    "minutes": 45,
+                    "title": "GARAGE WALK",
+                    "subtitle": "Fans with garage passes, walking the stalls. Less structured, more of them.",
+                    "fee": 600
+                },
+                {
+                    "event": "watch-race",
+                    "start": "16:30",
+                    "minutes": 130,
+                    "series": "National"
+                }
+            ]
+        },
+        {
+            "slot": "SundayAM",
+            "events": [
+                {
+                    "event": "sponsor_event-duty",
+                    "start": "09:00",
+                    "minutes": 45,
+                    "title": "RACE MORNING APPEARANCE",
+                    "subtitle": "Coffee, a stage, and the brand's guests before the crowd fills the place up.",
+                    "fee": 1400,
+                    "skipReason": "The brand's guests got an empty stage on race morning."
+                },
+                {
+                    "event": "fan_event-autographs",
+                    "start": "10:00",
+                    "title": "PIT ROAD WALK",
+                    "subtitle": "Pit passes are the hottest ticket of the weekend and they all want a signature.",
+                    "fee": 1000
+                },
+                {
+                    "event": "media-hit",
+                    "start": "11:30"
+                }
+            ]
+        },
+        {
+            "slot": "SundayPM",
+            "events": [
+                {
+                    "event": "official-drivers_meeting",
+                    "start": "12:00"
+                },
+                {
+                    "event": "media-hit",
+                    "start": "13:00",
+                    "title": "GRID WALK INTERVIEW",
+                    "subtitle": "Handed a microphone on the grid with the cars firing up behind you."
+                },
+                {
+                    "event": "official-driver_intros",
+                    "start": "13:30"
+                },
+                {
+                    "event": "session-race",
+                    "start": "14:00",
+                    "minutes": 190
+                }
+            ]
+        }
+    ]
+}

@@ -38,6 +38,20 @@ public class TitleCrashBuildTests
         _hadSavedNumber = PlayerPrefs.HasKey(PlayerDriverNumberKey);
         _savedNumber = PlayerPrefs.GetInt(PlayerDriverNumberKey, 0);
 
+        // Start every test with no career, whatever ran before this one. The hero's number decides which
+        // livery is loaded, the livery decides the sprite, and the sprite decides the size of the mesh every
+        // measurement below is taken against — so a sibling suite leaving a career number behind quietly
+        // changes the cast of this one. Each test that cares sets the number it wants.
+        PlayerPrefs.DeleteKey(PlayerDriverNumberKey);
+
+        // Dent depth is scaled by a global damage slider (TrackConditions.DamageMultiplier), so a suite that
+        // turns damage down and does not put it back would quietly shrink every measurement below. Reached
+        // by reflection for the same reason as everything else here: TrackConditions is in Assembly-CSharp,
+        // which this assembly cannot reference.
+        FindRuntimeType("TrackConditions")
+            ?.GetField("DamageMultiplier", BindingFlags.Static | BindingFlags.Public)
+            ?.SetValue(null, 1f);
+
         _scene = EditorSceneManager.NewPreviewScene();
 
         var canvasGo = new GameObject("TestCanvas", typeof(Canvas));
@@ -113,16 +127,28 @@ public class TitleCrashBuildTests
         // impact isn't until u = 0.55, so this is the bodywork the cars turned up with.
         var crash = Play(out var component, steps: 0);
         var cars = Cars(crash);
-        float onArrival = cars.Sum(Deformation);
 
-        Assert.Greater(onArrival, 0.05f,
+        Assert.Greater(cars.Sum(Deformation), 0.05f,
                        "The cars are showroom-fresh — the pre-damage never reached the mesh.");
 
-        Drive(component, from: 0f, to: 1f, steps: 240);
-        float afterTheCrash = cars.Sum(Deformation);
+        // The bodywork as the cars turned up, kept vertex by vertex so the crash can be compared against it
+        // directly. Two easier measurements both lie here:
+        //
+        //   "the deepest dent got deeper" — a dent is a vector ADDED to whatever a vertex already carried,
+        //   so a second hit from another angle can leave it nearer the flat grid than it was.
+        //   "more vertices are bent"      — the pile connects where the cars overlap, which is inside the
+        //   area the pre-damage already covered, so the count can be saturated before the crash starts.
+        //
+        // What is unambiguous is whether the crash MOVED any metal, so that is what is asserted.
+        var onArrival = cars.Select(Vertices).ToArray();
 
-        Assert.Greater(afterTheCrash, onArrival * 1.05f,
-                       "The scripted impacts put no extra dents in anything — the crash doesn't damage the cars.");
+        Drive(component, from: 0f, to: 1f, steps: 240);
+
+        int moved = 0;
+        for (int i = 0; i < cars.Length; i++) moved += VerticesMovedSince(onArrival[i], cars[i]);
+
+        Assert.Greater(moved, 0,
+                       "Not one vertex on any car moved across the whole crash — the contacts are denting nothing.");
     }
 
     [Test]
@@ -169,17 +195,40 @@ public class TitleCrashBuildTests
     }
 
     [Test]
-    public void TheHeroIsTheBiggestCarOnScreen()
+    public void EveryCarIsBuiltTheSameSize()
+    {
+        // Liveries come out of the carset at whatever pixel size they were drawn at, so "same size" has to be
+        // measured on the drawn body — sprite width times the scale the tableau gave it — rather than trusted.
+        var cars = Cars(Play(out _));
+        float first = DrawnLength(cars[0]);
+
+        Assert.Greater(first, 0f);
+        for (int i = 1; i < cars.Length; i++)
+            Assert.AreEqual(first, DrawnLength(cars[i]), first * 0.01f,
+                            $"{cars[i].name} is drawn a different size to the rest of the field.");
+    }
+
+    [Test]
+    public void TheFrozenPileIsCarsLeaningOnEachOtherRatherThanDrawnThroughEachOther()
     {
         var cars = Cars(Play(out _));
-        float hero = cars[TitleCrash.HeroIndex].GetComponent<MeshRenderer>().bounds.size.magnitude;
 
-        for (int i = 0; i < cars.Length; i++)
+        var field = TitleCrash.Field();
+        var poses = TitleCrash.Tableau(field, 1f);
+
+        // What the maths settled has to be what the transforms got, or the overlap was resolved on paper only.
+        for (int i = 0; i < cars.Length && i < poses.Length; i++)
         {
-            if (i == TitleCrash.HeroIndex) continue;
-            Assert.Greater(hero, cars[i].GetComponent<MeshRenderer>().bounds.size.magnitude,
-                           "The player's car isn't the one your eye goes to.");
+            Vector2 drawn = ToCanvasPx(cars[i].transform.position);
+            Assert.Less(Vector2.Distance(drawn, poses[i].position), 2f,
+                        $"{cars[i].name} isn't standing where the settled pile put it.");
         }
+
+        for (int a = 0; a < poses.Length; a++)
+            for (int b = a + 1; b < poses.Length; b++)
+                if (TitleCrash.Overlap(poses[a].position, poses[a].rotation,
+                                       poses[b].position, poses[b].rotation, out _, out float depth))
+                    Assert.Less(depth, 1f, $"Cars {a} and {b} are still inside each other in the frozen shot.");
     }
 
     // ------------------------------------------------------------------ the player's car
@@ -299,6 +348,29 @@ public class TitleCrashBuildTests
                     .OrderBy(t => int.Parse(t.name.Split('_')[1]))
                     .Select(t => t.gameObject)
                     .ToArray();
+    }
+
+    // The length of the car as drawn: the livery's own width, scaled by whatever the tableau set on it.
+    static float DrawnLength(GameObject car)
+    {
+        var damage = car.GetComponent("VehicleDamage");
+        var sprite = (Sprite)damage.GetType().GetField("sourceSprite").GetValue(damage);
+        return sprite.bounds.size.x * car.transform.lossyScale.x;
+    }
+
+    // A copy of a car's bodywork as it stands right now. Copied rather than referenced: the damage model
+    // writes back into the same mesh, so holding the array would be holding the live one and every
+    // comparison against it would be a comparison with itself.
+    static Vector3[] Vertices(GameObject car) => (Vector3[])car.GetComponent<MeshFilter>().sharedMesh.vertices.Clone();
+
+    // How many of a car's vertices have moved since that snapshot was taken.
+    static int VerticesMovedSince(Vector3[] before, GameObject car)
+    {
+        var now = car.GetComponent<MeshFilter>().sharedMesh.vertices;
+        int moved = 0;
+        for (int i = 0; i < now.Length && i < before.Length; i++)
+            if (Vector3.Distance(now[i], before[i]) > 1e-5f) moved++;
+        return moved;
     }
 
     // How far the worst-dented vertex has been pushed off the flat grid the mesh was built as, in local

@@ -15,6 +15,11 @@ public class PaddockBoundary : MonoBehaviour
     public static readonly List<PaddockBoundary> Active = new();
     public static bool AnyActive => Active.Count > 0;
 
+    // Raised whenever the walkable area changes shape — a boundary turning up or going away. Anything that
+    // parked something inside the paddock needs to hear about it, because the boundaries are generated
+    // (the motorhome lot brings its own) and can appear after whatever measured the paddock first.
+    public static event System.Action Changed;
+
     [Tooltip("Editor-only gizmo colour for this boundary's outline.")]
     public Color gizmoColor = new Color(1f, 0.6f, 0.1f, 0.9f);
 
@@ -26,8 +31,17 @@ public class PaddockBoundary : MonoBehaviour
         _poly.isTrigger = true; // never a physical wall — containment is done by clamping
     }
 
-    void OnEnable() { if (!Active.Contains(this)) Active.Add(this); }
-    void OnDisable() { Active.Remove(this); }
+    void OnEnable()
+    {
+        if (!Active.Contains(this)) Active.Add(this);
+        Changed?.Invoke();
+    }
+
+    void OnDisable()
+    {
+        Active.Remove(this);
+        Changed?.Invoke();
+    }
 
     public bool Contains(Vector2 worldPos)
     {

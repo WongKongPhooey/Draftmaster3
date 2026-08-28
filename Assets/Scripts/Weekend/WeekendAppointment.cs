@@ -67,7 +67,12 @@ public static class WeekendAppointment
     public static WeekendVenueAnchor Where()
     {
         var venue = PendingVenue;
-        return venue == WeekendVenue.None ? null : WeekendVenueAnchor.Find(venue);
+        if (venue == WeekendVenue.None) return null;
+
+        // A booking may name the exact object it happens at ("markerLocation": "Podium_Marker" in the plan
+        // file); without one it goes to whichever anchor of its venue is nearest, as every generated venue does.
+        var pending = Pending;
+        return WeekendVenueAnchor.Find(venue, pending != null ? pending.markerLocation : "");
     }
 
     // The thing to walk to: the venue's mark, or — for the player's own sessions, which are not kept

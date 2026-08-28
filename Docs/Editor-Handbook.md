@@ -310,10 +310,27 @@ and finishing one books the next. **Committing to something books it rather than
 closes, a marker and a strip name the place and the distance, and the obligation happens when the player
 walks up to whoever is waiting there (`T` travels you if you would rather not walk). To change it:
 
-- **Move a session** — `WeekendTimetable.PracticeTime / QualifyingTime / RaceTime`. Everything else keys off
-  these: the drivers meeting is two hours before your race and intros thirty minutes before it, wherever
-  that lands.
-- **Add or move an obligation** — `WeekendTimetable.BuildObligations`. Deliberate clashes are the point.
+- **Lay a whole weekend out by hand** — `Draftmaster > Weekend > Plan Editor` (`Ctrl+Shift+E`). Writes
+  `Assets/Resources/Weekends/<Track>.<Series>.json`: six half-days, whatever you put in them. A track+series
+  with a plan file uses ONLY that file and the generated schedule below does not run for it. This is the
+  way to author a round; the C# builders are the fallback for tracks nobody has got to yet.
+- **Say where something happens at a track** — make a GameObject in the track package and name it
+  `PitBox_Marker` (also `Motorhome_`, `DriversRoom_`, `SigningFence_`, `SponsorSuite_`, `IntroStage_`,
+  `Grandstand_`). Give it a collider and **its shape is the perimeter the booking starts inside**. Authored
+  markers become venue anchors before anything is generated, so that venue is never worked out from the pit
+  lane — which is what used to drop a marker on the fence line.
+- **Send one booking somewhere specific** — the `Marker Location` field on a booking names the object, so
+  `"markerLocation": "Podium_Marker"` sends that one photo shoot to the podium while the rest go to
+  hospitality.
+- **A venue the player cannot walk to** — give its marker a child called `Seat` (or set `teleportTo`). The
+  marker goes where they CAN reach, the child goes where the thing happens, and the marker becomes a gate
+  that wipes them across. This is how the grandstands work at a road course.
+  `Draftmaster > Weekend > Check Markers In Open Scene` reports the rest.
+- **Move a session** (generated tracks) — `WeekendTimetable.PracticeTime / QualifyingTime / RaceTime`.
+  Everything else keys off these: the drivers meeting is two hours before your race and intros thirty
+  minutes before it, wherever that lands.
+- **Add or move an obligation** (generated tracks) — `WeekendTimetable.BuildObligations`. Deliberate clashes
+  are the point.
 - **Move where something happens** — `WeekendVenues.For` maps each `ActivityKind` to a place; the sheet's
   location column is generated from it, so the two can't disagree.
 - **Rewrite what somebody says** — `Core/Conversations/` (`TeamMeetingContent`, `CeremonyContent`,
@@ -329,7 +346,7 @@ walks up to whoever is waiting there (`T` travels you if you would rather not wa
   package can override any one by authoring its own `WeekendVenueAnchor`, which the builder leaves alone.
 
 Rules live in the `Draftmaster.Weekend` assembly and are covered by `WeekendTimetableTests`,
-`WeekendActivityContentTests` and `WeekendVenueTests` (EditMode); the paddock the weekend is played in is
+`WeekendActivityContentTests`, `WeekendVenueTests` and `WeekendPlanTests` (EditMode); the paddock the weekend is played in is
 covered by `WeekendVenuePresenceTests` (PlayMode — venues exist, hosts are stood at them, the room has a
 chair per driver, and booking → objective → walk → talk actually connects). Full guide:
 `Docs/Race-Weekend.md`.
