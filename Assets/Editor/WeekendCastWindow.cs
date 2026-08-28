@@ -251,6 +251,7 @@ public class WeekendCastWindow : EditorWindow
         string file = a.kind switch
         {
             ActivityKind.TeamBriefing or ActivityKind.Debrief => "TeamMeetingContent",
+            ActivityKind.Orientation => "OrientationContent",
             ActivityKind.DriversMeeting or ActivityKind.DriverIntros => "CeremonyContent",
             ActivityKind.SponsorDuty or ActivityKind.PhotoShoot => "SponsorContent",
             ActivityKind.Autographs or ActivityKind.HaulerParade => "SigningContent",

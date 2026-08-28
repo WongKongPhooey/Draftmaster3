@@ -353,9 +353,29 @@ public class WeekendDirector : MonoBehaviour
         WeekendLedger.Complete(a, outcome);
         WeekendResultCard.Show(a, outcome, inWorld);
 
+        // The one booking that explains the phone leaves its own crib sheet inside it, so the answer is
+        // still there in three weekends' time when the card has long gone.
+        if (a.kind == ActivityKind.Orientation) LeavePhoneCribSheet();
+
         // One thing leads to the next: the moment this is settled, the following booking is the live
         // objective and its marker is already on screen.
         BookNextUp(replaceExisting: true);
+    }
+
+    // The orientation's own summary, left inside the app it spent fifteen minutes pointing at. It lands in
+    // NOTES unread, so the tile carries a badge until the player has actually opened it once.
+    static void LeavePhoneCribSheet()
+    {
+        string k = WeekendScripts.PhoneKeyName();
+
+        PhoneNotes.Record(
+            "phone.orientation",
+            "How the phone works",
+            "Crew chief",
+            $"{k} opens it while you're on foot - arrows to move, E to open a tile, Esc to back out. " +
+            "SCHEDULE is what's on today. TASKS is everything outstanding, and the number on it counts the " +
+            "jobs that are finished and want handing back to whoever asked. NOTES is this - every favour " +
+            "you agree to in the paddock, with the name of who wanted it.");
     }
 
     // The on-track session that was routed here has ended. Called by PracticeDirector when a

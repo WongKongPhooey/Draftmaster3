@@ -92,6 +92,7 @@ it is only replaced when the clock has moved past it.
 
 | Activity | What it is | Scored on |
 |---|---|---|
+| **Rookie orientation** | First weekend of a career only, 09:30 on the Friday morning. The crew chief shows you the phone: the key that opens it, TASKS for what is outstanding, NOTES for who asked you for what. Optional, and missing it costs nothing but the explanation. | Team morale, and a crib sheet left in the phone's NOTES |
 | **Team strategy briefing** / **race plan meeting** | The crew chief lays out the weekend and asks what you want the car to be. | Setup knowledge, team morale |
 | **Practice debrief** | The same question with data behind it. Worth far more if you actually ran the practice session. | Setup knowledge |
 | **Press conference** / **media availability** / **broadcast hit** | A reporter asks, three answers on the desk. | Press standing, fans, sponsor mood, rivalry |
@@ -276,6 +277,10 @@ Nothing else touches the meters.
 - **Everything must fit its half-day.** `EveryBooking_FitsInsideItsHalfDay` asserts this; use
   `FitAfter(...)` for anything placed relative to a session, which rolls it into the next half-day rather
   than letting it overrun.
+- **09:30–09:45 on the first Friday belongs to the rookie orientation.** It is the only quarter of an hour
+  on that morning nothing else wants — the hauler parade ends at 09:30 and the sponsor photo shoot starts at
+  09:45 — so the tutorial costs a new player nothing to take. Book anything into that window and finishing
+  one marks the other missed; `WeekendOrientationTests.ItTakesTheGapNothingElseWants` fails if you do.
 - **Car numbers are partitioned mod 3** across the three championships (Cup `1+3i`, National `2+3i`, Trucks
   `3+3i`) so no number is entered twice at the same venue. Change the numbering and the collision test
   catches it.

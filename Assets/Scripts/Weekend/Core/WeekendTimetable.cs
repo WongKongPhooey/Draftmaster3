@@ -68,6 +68,7 @@ namespace Draftmaster.Weekend
             t.BuildSessions();
             t.BuildTeamMeetings();
             t.BuildObligations(ref rng);
+            t.BuildFirstWeekendOrientation();
             t.BuildRaceDayCeremony();
             t._activities.Sort(Chronological);
             return t;
@@ -216,6 +217,27 @@ namespace Draftmaster.Weekend
                 "Handed a microphone on the grid with the cars firing up behind you.", "Starting grid");
 
             AddFeature(ref rng);
+        }
+
+        // The first weekend of a career, and only that one: fifteen minutes at the box being shown the phone
+        // everything in this game is actually run off - the schedule, the jobs you have taken on around the
+        // paddock, and who asked you for what. A driver only gets handed that once, so it is booked against
+        // weekend zero and never appears again.
+        //
+        // 09:30 is chosen, not convenient: the hauler parade finishes at 09:30 and the sponsor photo shoot
+        // starts at 09:45, so the quarter of an hour between them is the only window on the first morning
+        // that costs the player nothing to take. Finishing it walks the clock to 09:45, which is exactly
+        // where the next booking already was.
+        void BuildFirstWeekendOrientation()
+        {
+            if (weekendId != 0) return;
+
+            // Left optional deliberately: missing the one thing that explains how to find everything else
+            // is its own punishment, and fining a new driver for it would be a strange way to open a career.
+            Team(WeekendSlot.FridayAM, 9 * 60 + 30, 15, ActivityKind.Orientation,
+                "ROOKIE ORIENTATION",
+                "Two minutes on the phone in your pocket: what is on today, what you have agreed to do for people, and where to read it back.",
+                "Pit box");
         }
 
         // One rotating headline obligation per weekend, so the sheet is not the same six columns every round.

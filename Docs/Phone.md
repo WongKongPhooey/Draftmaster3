@@ -27,6 +27,14 @@ the feed is stable within a weekend and different at the next one.
 **DrivR's stats are the ones the AI drives on** — `Qualifying` and `Consistency` set pace,
 `Aggression` skews the racing line (`AIDriverBinding`) — so a driver who reads aggressive races that way.
 
+**Where the player is told any of this.** Nothing else in the paddock mentions the phone, so the first
+weekend of a career books fifteen minutes at the pit box for it: `ActivityKind.Orientation`, 09:30 Friday
+morning, weekend zero only. The crew chief names the key, TASKS (what is outstanding, and what the tile's
+badge counts) and NOTES (who asked for what), and finishing it leaves the same summary in NOTES as an
+unread note — `WeekendDirector.LeavePhoneCribSheet`. The key in those lines is read off `PhoneUI.toggleKey`
+at build time (`WeekendScripts.PhoneKeyName`), so rebinding the toggle cannot leave the one conversation
+that explains the phone naming a dead key. Content: `Weekend/Core/Conversations/OrientationContent.cs`.
+
 ## Adding an app
 
 One subclass and one line:

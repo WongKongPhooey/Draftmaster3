@@ -19,6 +19,9 @@ public static class WeekendScripts
             case ActivityKind.Debrief:
                 return TeamMeetingContent.Build(a);
 
+            case ActivityKind.Orientation:
+                return OrientationContent.Build(a, PhoneKeyName());
+
             case ActivityKind.PressConference:
             case ActivityKind.MediaHit:
                 return Press(a);
@@ -38,6 +41,19 @@ public static class WeekendScripts
             default:
                 return null;   // on-track sessions and spectating are not conversations
         }
+    }
+
+    // ------------------------------------------------------------------ the phone
+
+    // The key the orientation tells the player to press. Read off the live phone rather than written into
+    // the content, so a rebound toggle cannot leave the one conversation that explains the phone naming a
+    // key that does nothing. The core assembly cannot see PhoneUI, which is why this is the seam.
+    public static string PhoneKeyName()
+    {
+        var phone = PhoneUI.Instance;
+        var key = phone != null ? phone.toggleKey : UnityEngine.InputSystem.Key.P;
+        if (key == UnityEngine.InputSystem.Key.None) key = UnityEngine.InputSystem.Key.P;
+        return key.ToString().ToUpperInvariant();
     }
 
     // ------------------------------------------------------------------ the press
