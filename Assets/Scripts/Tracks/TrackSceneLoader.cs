@@ -41,8 +41,34 @@ public static class TrackSceneLoader
         if (!IsRaceScene()) return null;
 
         // Authored in place (the reference scene): register it and bind anything it left null.
+        //
+        // A track already in the scene ALWAYS wins over the selection, which is right for WatkinsGlen.unity
+        // (authored in place, and the scene is the track) and silently wrong for anything else. It is very
+        // easy to leave a package preview in the shared race scene and save it — Preview Selected Package
+        // In Scene puts one there deliberately — and the result is a scene pinned to one track that ignores
+        // every selection with no error anywhere. That cost a debugging session: RaceScene.unity had a
+        // whole baked WatkinsGlen committed into it, 1.4 MB of it, and every race loaded Watkins Glen no
+        // matter what the Track Builder window said.
+        //
+        // So say so. The scene still wins — it may be deliberate — but a mismatch is now one console line
+        // instead of a mystery.
         var existing = Object.FindFirstObjectByType<TrackPackage>();
-        if (existing != null) { existing.BindSceneReferences(); return existing; }
+        if (existing != null)
+        {
+            string wanted = TrackSelection.CurrentId;
+            if (!string.IsNullOrEmpty(wanted) && !string.IsNullOrEmpty(existing.trackId) &&
+                !string.Equals(existing.trackId, wanted, System.StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogWarning(
+                    $"TrackSceneLoader: '{SceneManager.GetActiveScene().name}' already contains the " +
+                    $"{TrackCatalog.DisplayName(existing.trackId)} track, so it is racing that and IGNORING " +
+                    $"the selected {TrackCatalog.DisplayName(wanted)}. If that track was left there by " +
+                    "Preview Selected Package In Scene, clear it with Draftmaster > Tracks > Clear Package " +
+                    "Previews From Scene and save the scene.");
+            }
+            existing.BindSceneReferences();
+            return existing;
+        }
 
         var sceneBuilder = Object.FindFirstObjectByType<TrackBuilder>();
         if (sceneBuilder != null)

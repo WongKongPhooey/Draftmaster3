@@ -28,16 +28,44 @@ public static class IronOvalTitleBuilder
     const string kScenePath = "Assets/Scenes/TitleScreen.unity";
     const string kScrimPath = "Assets/UI/IronOval/title-scrim.png";
 
+    // THIS BUILDER REGENERATES THE WHOLE SCENE. Everything hand-authored in TitleScreen.unity since it
+    // last ran is destroyed — that is not a theoretical risk, it has happened: a rebuild to add one menu
+    // row reverted the wordmark from DRAFTMASTER 3 to the IRON OVAL placeholder below, dropped a prefab
+    // instance and a material, and moved the layout. The scene is the source of truth for anything
+    // authored by hand; this file only knows what its own code says.
+    //
+    // So the plain entry point now REFUSES to overwrite an existing scene, matching how the RV and travel
+    // map builders are named in this project. To change one thing, change it in the scene — or, for a
+    // menu row, use Draftmaster > UI > Add SINGLE RACE Row To Title Screen, which edits in place.
     [MenuItem("Draftmaster/Art/Build Title Screen Scene", priority = 125)]
-    public static void Build()
+    public static void Build() => EditorUtility.DisplayDialog("Iron Oval", BuildScene(force: false), "OK");
+
+    [MenuItem("Draftmaster/Art/Force Rebuild Title Screen Scene (loses hand edits)", priority = 126)]
+    public static void ForceRebuild()
     {
+        if (!EditorUtility.DisplayDialog(
+                "Rebuild the title screen?",
+                "This regenerates TitleScreen.unity from code and DESTROYS every hand edit in it — the " +
+                "wordmark, the layout, any art placed in the scene.\n\nThe last time this ran by mistake it " +
+                "reverted the game's name.",
+                "Rebuild anyway", "Cancel"))
+            return;
+
+        Debug.Log(BuildScene(force: true));
+    }
+
+    // Returns what happened rather than announcing it, so it is safe to call from automation, MCP and
+    // tests — a DisplayDialog blocks the editor until somebody clicks it.
+    public static string BuildScene(bool force)
+    {
+        if (!force && File.Exists(kScenePath))
+            return $"{kScenePath} already exists and was NOT rebuilt — a rebuild would destroy every hand " +
+                   "edit in it. Edit the scene directly, or use Force Rebuild Title Screen Scene if you " +
+                   "really do want it regenerated from code.";
+
         var theme = PixelUITheme.Instance;
         if (theme == null || theme.body == null)
-        {
-            EditorUtility.DisplayDialog("Iron Oval",
-                "The theme has no Iron Oval fonts yet. Run Draftmaster > Art > Set Up Iron Oval Kit first.", "OK");
-            return;
-        }
+            return "The theme has no Iron Oval fonts yet. Run Draftmaster > Art > Set Up Iron Oval Kit first.";
 
         int W = PixelUITheme.ReferenceWidth;    // 640
         int H = PixelUITheme.ReferenceHeight;   // 360
@@ -159,6 +187,11 @@ public static class IronOvalTitleBuilder
             // TEAM FACTORY is the walk-in half of that — the shop, with the other laptop in it.
             ("NEW SEASON",   TitleScreenUI.Command.NewSeason,  ""),
             ("CONTINUE",     TitleScreenUI.Command.Continue,   ""),
+            // SINGLE RACE is the "race anything now" row: pick a track, a series and a driver, then go.
+            // It is a plain LoadScene row because the choosing happens in SingleRace.unity, not here.
+            // EXHIBITION above it races whatever is ALREADY selected, which is the quick repeat; this is
+            // the one that lets the player change their mind, and the only route to the other 37 tracks.
+            ("SINGLE RACE",  TitleScreenUI.Command.LoadScene,  "SingleRace"),
             ("EXHIBITION",   TitleScreenUI.Command.Exhibition, ""),
             ("TEAM FACTORY", TitleScreenUI.Command.LoadScene,  "TeamGarage"),
             ("OPTIONS",      TitleScreenUI.Command.NotWired,   ""),
@@ -238,13 +271,8 @@ public static class IronOvalTitleBuilder
         EditorSceneManager.SaveScene(scene, kScenePath);
         AssetDatabase.SaveAssets();
 
-        Debug.Log($"Iron Oval: built the title screen at {kScenePath}. " +
-                  "Add it to the build settings (and put it first) to boot into it.");
-        EditorUtility.DisplayDialog("Iron Oval",
-            "Title screen built at Assets/Scenes/TitleScreen.unity.\n\n" +
-            "Add it to File > Build Profiles > Scene List — first — to boot into it. " +
-            "The menu's destinations (RaceScene, TeamGarage) have to be in that list too, or their " +
-            "rows draw disabled.", "OK");
+        return $"Iron Oval: built the title screen at {kScenePath}. " +
+               "Add it to the build settings (and put it first) to boot into it.";
     }
 
     // The sheet's column gradient: solid #0d0f16 for the first 62%, then out to nothing. Baked once to a

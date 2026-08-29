@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Draftmaster.Data;
+using Draftmaster.Tracks;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,7 +14,8 @@ using UnityEngine;
 //      already there with its type, length, banking and lap count).
 //   2. Draftmaster > Tracks > Track Builder Window, pick it, press Generate Layout. That writes
 //      Resources/Tracks/<id>.asset from OvalTrackFactory — a closed, drivable oval with a racing line and
-//      a pit road. (Road courses are hand-authored; the generator refuses them.)
+//      a pit road. Road courses - and Pocono's triangle - come from an authored corner
+//      sequence in RoadCourseLayouts instead; WatkinsGlen is hand-measured and is skipped.
 //   3. Press Build Package, which writes Resources/TrackPackages/<id>.prefab: a TrackPackage with the road
 //      and a ground plane, ready to have scenery dropped into it in Prefab Mode.
 //   4. Open the package prefab, dress it — grandstands, environment, paddock, spawn markers.
@@ -28,21 +30,49 @@ public static class TrackAuthoringMenu
 
     // ---------------------------------------------------------------- geometry
 
+    // Tracks whose geometry was authored by hand and must never be generated over. Watkins Glen was
+    // measured off satellite imagery — a generated approximation would be a straight downgrade.
+    public static bool IsHandAuthored(string trackId) => trackId == RoadCourseLayouts.HandAuthored;
+
+    // An authored corner sequence always wins over the oval solver, whatever the catalogue TYPE says.
+    // That is not just for road courses: Pocono is catalogued as a speedway and is a triangle, which no
+    // oval formula closes, so it is authored too.
+    public static bool UsesAuthoredLayout(string trackId) => RoadCourseFactory.CanBuild(trackId);
+
+    public static bool CanGenerate(Track row)
+    {
+        if (row == null || IsHandAuthored(row.Name)) return false;
+        if (UsesAuthoredLayout(row.Name)) return true;
+        return row.Type != TrackType.RoadCourse;
+    }
+
     // Writes (or refills) Resources/Tracks/<id>.asset for a catalogue row. Refilling keeps the asset's GUID
     // so scenes and packages already pointing at it stay wired.
+    //
+    // Ovals are solved from their published length and banking (OvalTrackFactory); road courses are built
+    // from an authored corner sequence (RoadCourseFactory). Both land on the same TrackInfoV2, so nothing
+    // downstream needs to know which path a track came down.
     public static TrackInfoV2 GenerateGeometry(Track row, bool overwrite)
     {
         if (row == null) return null;
-        if (row.Type == TrackType.RoadCourse)
+
+        if (IsHandAuthored(row.Name))
         {
-            Debug.LogWarning($"Tracks: {row.Name} is a road course — there's no formula for one. " +
-                             "Author it by hand (duplicate WatkinsGlen.asset as a starting point).");
+            Debug.Log($"Tracks: {row.Name} is hand-measured — skipped, deliberately. Its asset is the " +
+                      "reference the generated circuits are aiming at.");
+            return AssetDatabase.LoadAssetAtPath<TrackInfoV2>($"{GeometryDir}/{row.Name}.asset");
+        }
+
+        bool isRoad = UsesAuthoredLayout(row.Name);
+        if (!isRoad && row.Type == TrackType.RoadCourse)
+        {
+            Debug.LogWarning($"Tracks: {row.Name} is a road course with no authored layout. Add its corner " +
+                             "sequence to RoadCourseLayouts, or author the asset by hand.");
             return null;
         }
 
         Directory.CreateDirectory(GeometryDir);
         string path = $"{GeometryDir}/{row.Name}.asset";
-        var spec = OvalTrackFactory.FromCatalogue(row);
 
         var existing = AssetDatabase.LoadAssetAtPath<TrackInfoV2>(path);
         if (existing != null && !overwrite)
@@ -51,22 +81,29 @@ public static class TrackAuthoringMenu
             return existing;
         }
 
+        var roadSpec = isRoad ? RoadCourseLayouts.Spec(row.Name) : null;
+        var ovalSpec = isRoad ? null : OvalTrackFactory.FromCatalogue(row);
+
         TrackInfoV2 asset;
         if (existing != null)
         {
-            OvalTrackFactory.Populate(existing, spec);
+            if (isRoad) RoadCourseFactory.Populate(existing, roadSpec);
+            else OvalTrackFactory.Populate(existing, ovalSpec);
             EditorUtility.SetDirty(existing);
             asset = existing;
         }
         else
         {
-            asset = OvalTrackFactory.Build(spec);
+            asset = isRoad ? RoadCourseFactory.Build(roadSpec) : OvalTrackFactory.Build(ovalSpec);
             AssetDatabase.CreateAsset(asset, path);
         }
 
         AssetDatabase.SaveAssets();
-        var check = OvalTrackFactory.Validate(asset);
-        Debug.Log($"Tracks: {row.DisplayName} layout written to {path} — {check.Summary}", asset);
+        string summary = isRoad
+            ? RoadCourseGeometry.Validate(RoadCourseGeometry.Solve(roadSpec)).Summary
+            : OvalTrackFactory.Validate(asset).Summary;
+        Debug.Log($"Tracks: {row.DisplayName} layout written to {path} — {summary}, " +
+                  $"{asset.defaultWidth:0.0} m wide", asset);
         return asset;
     }
 
@@ -161,6 +198,113 @@ public static class TrackAuthoringMenu
         AssetDatabase.Refresh();
     }
 
+    // The whole calendar in one press: layout, package and dressing for every venue the three
+    // championships visit. No dialogs — this is run from a menu and from tests, and a modal here would
+    // wedge the editor.
+    //
+    // Existing packages are left alone (the geometry inside them is refilled in place, so their GUIDs and
+    // any hand-dressing survive), and WatkinsGlen is skipped outright.
+    [MenuItem("Draftmaster/Tracks/Build All Calendar Tracks")]
+    public static void BuildAllCalendarTracks() => BuildAll(rebuildPackages: false);
+
+    // Same, but throws away and rebuilds each package prefab. Use after changing the dressing factory;
+    // it discards hand edits made inside the generated Environment/Paddock roots.
+    [MenuItem("Draftmaster/Tracks/Rebuild All Calendar Tracks (replace packages)")]
+    public static void RebuildAllCalendarTracks() => BuildAll(rebuildPackages: true);
+
+    public static string BuildAll(bool rebuildPackages)
+    {
+        var built = new List<string>();
+        var skipped = new List<string>();
+        var failed = new List<string>();
+
+        // No AssetDatabase.StartAssetEditing() around this loop, deliberately. It pauses importing, so
+        // the .asset GenerateGeometry has just written cannot be loaded back by BuildPackage on the very
+        // next line — every package silently failed with "no layout, generate one first" until this went.
+        foreach (var dim in TrackDimensions.All)
+        {
+            var row = TrackCatalog.Row(dim.id);
+            if (row == null) { failed.Add($"{dim.id} (not in the catalogue)"); continue; }
+            if (IsHandAuthored(dim.id)) { skipped.Add($"{dim.id} (hand-measured)"); continue; }
+            if (!CanGenerate(row)) { skipped.Add($"{dim.id} (no authored layout)"); continue; }
+
+            var geometry = GenerateGeometry(row, overwrite: true);
+            if (geometry == null) { failed.Add($"{dim.id} (no geometry)"); continue; }
+
+            bool hadPackage = File.Exists($"{PackageDir}/{dim.id}.prefab");
+            var package = BuildPackage(dim.id, overwrite: rebuildPackages || !hadPackage);
+            if (package == null) { failed.Add($"{dim.id} (no package)"); continue; }
+
+            built.Add(dim.id);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        string report = $"Tracks: built {built.Count} — {string.Join(", ", built)}"
+                      + (skipped.Count > 0 ? $"\nSkipped {skipped.Count}: {string.Join(", ", skipped)}" : "")
+                      + (failed.Count > 0 ? $"\nFAILED {failed.Count}: {string.Join(", ", failed)}" : "");
+        Debug.Log(report);
+        return report;
+    }
+
+    // What each venue is, how big it is and who races there — the table the layouts are generated from,
+    // printed so it can be checked against the real thing without opening the source.
+    [MenuItem("Draftmaster/Tracks/Report Track Dimensions")]
+    public static void ReportDimensions()
+    {
+        var lines = new List<string>
+        {
+            $"{"track",-18}{"type",-15}{"length",9}{"width",9}{"bank",7}  series  source"
+        };
+        foreach (var dim in TrackDimensions.All)
+        {
+            string series = ((dim.series & SeriesVisits.Cup) != 0 ? "C" : "-")
+                          + ((dim.series & SeriesVisits.National) != 0 ? "N" : "-")
+                          + ((dim.series & SeriesVisits.Trucks) != 0 ? "T" : "-");
+            lines.Add($"{dim.id,-18}{dim.kind,-15}{dim.lapMiles,8:0.###}mi{dim.widthMetres,8:0.0}m" +
+                      $"{dim.turnBankingDeg,6:0.#}°  {series}     {dim.confidence}");
+        }
+        Debug.Log($"Track dimensions — {TrackDimensions.All.Count} venues:\n" + string.Join("\n", lines));
+    }
+
+    // Why the next race will build what it builds.
+    //
+    // "I picked a track and still ended up at Watkins Glen" has several possible causes and they are
+    // invisible from the window: the selection may never have been stored, something else may have
+    // overwritten it, or the title screen row you pressed may deliberately reset it. This prints the whole
+    // chain so the answer is one click away.
+    [MenuItem("Draftmaster/Tracks/Report Current Selection")]
+    public static void ReportCurrentSelection()
+    {
+        const string key = "track.current";
+        string saved = PlayerPrefs.GetString(key, "");
+        string travel = TravelState.CurrentNodeId;
+        string resolved = TrackSelection.CurrentId;
+
+        string why;
+        if (!string.IsNullOrEmpty(saved)) why = $"the saved selection ('{saved}')";
+        else if (!string.IsNullOrEmpty(travel) && TrackCatalog.Row(travel) != null)
+            why = $"the travel map's current location ('{travel}') - nothing has been selected";
+        else why = $"the fallback default ('{TrackCatalog.DefaultTrackId}') - nothing selected, no travel location";
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Track selection:");
+        sb.AppendLine($"  PlayerPrefs['{key}'] = {(string.IsNullOrEmpty(saved) ? "<not set>" : saved)}");
+        sb.AppendLine($"  TravelState.CurrentNodeId = {(string.IsNullOrEmpty(travel) ? "<not set>" : travel)}");
+        sb.AppendLine($"  -> next race builds {TrackCatalog.DisplayName(resolved)} ({resolved}), from {why}.");
+        sb.AppendLine($"  geometry present: {TrackCatalog.HasGeometry(resolved)}, " +
+                      $"package present: {TrackCatalog.HasPackage(resolved)}");
+        sb.AppendLine();
+        sb.AppendLine("  Prefs live under company/product: " +
+                      $"{Application.companyName} / {Application.productName}");
+        sb.AppendLine();
+        sb.AppendLine("  On the title screen: CONTINUE and EXHIBITION race the selection above.");
+        sb.AppendLine("  NEW SEASON deliberately restarts the calendar at its opening round, which");
+        sb.AppendLine("  OVERWRITES the selection - that is the usual reason a picked track is ignored.");
+        Debug.Log(sb.ToString());
+    }
+
     [MenuItem("Draftmaster/Tracks/Report Calendar Coverage")]
     public static void ReportCoverage()
     {
@@ -186,30 +330,62 @@ public class TrackBuilderWindow : EditorWindow
 {
     Vector2 _scroll;
     bool _overwrite;
+    bool _builtOnly;
+    string _search = "";
 
     public static void Open()
     {
         var window = GetWindow<TrackBuilderWindow>(false, "Tracks", true);
-        window.minSize = new Vector2(520f, 320f);
+        window.minSize = new Vector2(620f, 360f);
         window.Show();
     }
 
     void OnGUI()
     {
         EditorGUILayout.HelpBox(
-            "Generate a starting layout for any oval on the calendar, then a package prefab the shared race " +
-            "scene can load. Road courses are hand-authored — the generator skips them.",
+            "Every venue on the Cup / National / Truck calendars. Ovals are solved from their published " +
+            "length and banking; road courses (and Pocono) come from an authored corner sequence in " +
+            "RoadCourseLayouts. Watkins Glen is hand-measured and is never regenerated.",
             MessageType.Info);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            _search = EditorGUILayout.TextField("Search", _search);
+            _builtOnly = EditorGUILayout.ToggleLeft("Built only", _builtOnly, GUILayout.Width(90f));
+            if (GUILayout.Button("Refresh", GUILayout.Width(70f))) TrackCatalog.Invalidate();
+        }
 
         _overwrite = EditorGUILayout.ToggleLeft(
             "Overwrite existing layouts (keeps the asset GUID, so scene references survive)", _overwrite);
 
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Build All Calendar Tracks")) TrackAuthoringMenu.BuildAllCalendarTracks();
+            if (GUILayout.Button("Report Dimensions")) TrackAuthoringMenu.ReportDimensions();
+            if (GUILayout.Button("Report Coverage")) TrackAuthoringMenu.ReportCoverage();
+        }
+
         EditorGUILayout.Space();
         _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
+        string current = TrackSelection.CurrentId;
         TrackType? lastType = null;
+        int shown = 0, built = 0, total = 0;
+
         foreach (var row in TrackCatalog.All)
         {
+            bool hasGeometry = File.Exists($"Assets/Resources/Tracks/{row.Name}.asset");
+            bool hasPackage = File.Exists($"Assets/Resources/TrackPackages/{row.Name}.prefab");
+
+            total++;
+            if (hasGeometry && hasPackage) built++;
+
+            if (_builtOnly && !hasGeometry) continue;
+            if (!string.IsNullOrEmpty(_search) &&
+                row.DisplayName.IndexOf(_search, System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                row.Name.IndexOf(_search, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+            shown++;
             if (lastType != row.Type)
             {
                 EditorGUILayout.Space(6f);
@@ -217,43 +393,62 @@ public class TrackBuilderWindow : EditorWindow
                 lastType = row.Type;
             }
 
-            bool hasGeometry = File.Exists($"Assets/Resources/Tracks/{row.Name}.asset");
-            bool hasPackage = File.Exists($"Assets/Resources/TrackPackages/{row.Name}.prefab");
-
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField($"{row.DisplayName}", GUILayout.Width(240f));
-            EditorGUILayout.LabelField($"{row.LengthMiles:0.###} mi · {row.BankingDegrees}°", GUILayout.Width(90f));
-            EditorGUILayout.LabelField(hasGeometry ? (hasPackage ? "built" : "layout") : "—", GUILayout.Width(50f));
 
-            using (new EditorGUI.DisabledScope(row.Type == TrackType.RoadCourse))
+            // The track selected for the next race is the one the race scene will actually build, so it is
+            // worth being able to spot it without reading the footer.
+            bool isCurrent = row.Name == current;
+            EditorGUILayout.LabelField(isCurrent ? $"▶ {row.DisplayName}" : $"   {row.DisplayName}",
+                                       isCurrent ? EditorStyles.boldLabel : EditorStyles.label,
+                                       GUILayout.Width(250f));
+
+            // Width is the number this pipeline exists to get right, so it earns a column.
+            string width = TrackDimensions.TryGet(row.Name, out var dim) ? $"{dim.widthMetres:0.0} m" : "—";
+            EditorGUILayout.LabelField($"{row.LengthMiles:0.###} mi · {row.BankingDegrees}°", GUILayout.Width(90f));
+            EditorGUILayout.LabelField(width, GUILayout.Width(50f));
+            EditorGUILayout.LabelField(hasGeometry ? (hasPackage ? "built" : "layout") : "—", GUILayout.Width(46f));
+
+            using (new EditorGUI.DisabledScope(!TrackAuthoringMenu.CanGenerate(row)))
             {
-                if (GUILayout.Button("Generate Layout", GUILayout.Width(120f)))
+                if (GUILayout.Button("Generate Layout", GUILayout.Width(114f)))
                     TrackAuthoringMenu.GenerateGeometry(row, _overwrite || !hasGeometry);
             }
             using (new EditorGUI.DisabledScope(!hasGeometry))
             {
-                if (GUILayout.Button("Build Package", GUILayout.Width(110f)))
+                if (GUILayout.Button("Build Package", GUILayout.Width(104f)))
                     TrackAuthoringMenu.BuildPackage(row.Name, _overwrite || !hasPackage);
             }
             using (new EditorGUI.DisabledScope(!hasPackage))
             {
-                if (GUILayout.Button("Dress", GUILayout.Width(60f)))
+                if (GUILayout.Button("Dress", GUILayout.Width(52f)))
                     Debug.Log("Tracks: " + TrackDressingFactory.Dress(row.Name, _overwrite));
             }
             using (new EditorGUI.DisabledScope(!hasGeometry))
             {
-                if (GUILayout.Button("Race", GUILayout.Width(50f)))
+                if (GUILayout.Button("Race", GUILayout.Width(46f)))
                 {
-                    TrackSelection.Select(row.Name);
-                    Debug.Log($"Tracks: next race scene will build {row.DisplayName}.");
+                    // Report what actually happened. This used to log success unconditionally, ignoring
+                    // Select()'s return value, so a rejected selection still said "next race scene will
+                    // build X" and the race then loaded somewhere else with no clue why.
+                    if (TrackSelection.Select(row.Name))
+                        Debug.Log($"Tracks: next race scene will build {row.DisplayName}. " +
+                                  "Load RaceScene, or press Play and pick CONTINUE / EXHIBITION on the " +
+                                  "title screen — NEW SEASON deliberately restarts at the season opener.");
+                    else
+                        Debug.LogError($"Tracks: could not select {row.DisplayName} — see the warning above.");
                 }
             }
             EditorGUILayout.EndHorizontal();
         }
 
+        if (shown == 0)
+            EditorGUILayout.LabelField("Nothing matches that search.", EditorStyles.miniLabel);
+
         EditorGUILayout.EndScrollView();
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField($"Selected for the next race: {TrackSelection.CurrentDisplayName}", EditorStyles.miniLabel);
+        EditorGUILayout.LabelField(
+            $"{built} of {total} catalogue rows built · showing {shown} · " +
+            $"next race: {TrackSelection.CurrentDisplayName}", EditorStyles.miniLabel);
     }
 }

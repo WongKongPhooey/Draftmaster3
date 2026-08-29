@@ -10,8 +10,8 @@
   <Project Path="Draftmaster.Weekend.csproj" />
   <Project Path="Draftmaster.Chatter.csproj" />
   <Project Path="Draftmaster.Tracks.csproj" />
-  <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Tests.Editor.csproj" />
+  <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Tests.PlayMode.csproj" />
   <Project Path="Draftmaster.Crowd.csproj" />
   <Project Path="Draftmaster.Fights.csproj" />

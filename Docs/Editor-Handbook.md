@@ -389,7 +389,12 @@ Free: `F11`–`F12`.
 | Dress Selected Package · Dress All Undressed Packages | Generate ground, walls, grandstands, paddock from the spline |
 | Edit Selected Package (Prefab Mode) · In Context (Race Scene) | Open a package for editing |
 | Preview Selected Package In Scene · Clear Package Previews From Scene | Drop a track into the race scene so geometry anchors resolve |
-| Select Track For Next Race > … | Sets `TrackSelection` |
+| Select Track For Next Race... | Dropdown of every built track, grouped by type, ticked on the current one. Sets `TrackSelection` |
+| Build All Calendar Tracks | Layout + package + dressing for all 37 generated venues (Watkins Glen is skipped) |
+| Rebuild All Calendar Tracks (replace packages) | As above, but throws the package prefabs away first |
+| Report Track Dimensions | Published length, width, banking and confidence for all 38 venues |
+| Report Current Selection | Which track the next race builds, and why — prefs, travel-map fallback, resolved id |
+| Clear Package Previews From Scene | **Run this before saving any scene you previewed a track in.** A package left in `RaceScene` overrides every selection |
 | Report Calendar Coverage | What's built vs catalogue-only |
 | Split Shared Race Scene (WatkinsGlen → package) | One-shot: turn the hand-authored scene into shared scene + package |
 

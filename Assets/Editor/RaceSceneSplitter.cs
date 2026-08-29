@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Draftmaster.Data;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -128,14 +129,53 @@ public static class RaceSceneSplitter
 
     // ---------------------------------------------------------------- selection + preview
 
-    [MenuItem("Draftmaster/Tracks/Select Track For Next Race/Daytona")]
-    public static void SelectDaytona() => SelectTrack("Daytona");
+    // Pick the track the next race scene builds, from everything that is actually built.
+    //
+    // This used to be three hard-coded menu items - Daytona, Martinsville, WatkinsGlen - from when those
+    // were the only three tracks that existed. There are now 38, and a [MenuItem] is a compile-time
+    // attribute, so the list cannot be one item per track without writing all 38 out by hand and
+    // re-writing them every time the calendar changes. A GenericMenu is built at the moment it opens, so
+    // it always shows exactly what is on disk.
+    //
+    // Grouped by track type, with a tick against the current selection. A track with no geometry is shown
+    // greyed out rather than hidden, so "why is X not in the list" has a visible answer.
+    [MenuItem("Draftmaster/Tracks/Select Track For Next Race...")]
+    public static void SelectTrackForNextRace()
+    {
+        var menu = new GenericMenu();
+        string current = TrackSelection.CurrentId;
+        int playable = 0;
 
-    [MenuItem("Draftmaster/Tracks/Select Track For Next Race/Martinsville")]
-    public static void SelectMartinsville() => SelectTrack("Martinsville");
+        foreach (TrackType type in new[] { TrackType.Superspeedway, TrackType.Speedway,
+                                           TrackType.ShortTrack, TrackType.RoadCourse, TrackType.DirtCourse })
+        {
+            var rows = TrackCatalog.All.Where(r => r.Type == type)
+                                       .OrderBy(r => r.DisplayName)
+                                       .ToList();
+            if (rows.Count == 0) continue;
 
-    [MenuItem("Draftmaster/Tracks/Select Track For Next Race/WatkinsGlen")]
-    public static void SelectWatkinsGlen() => SelectTrack("WatkinsGlen");
+            string group = ObjectNames.NicifyVariableName(type.ToString());
+            foreach (var row in rows)
+            {
+                string label = $"{group}/{row.DisplayName}  ({row.LengthMiles:0.###} mi)";
+                if (TrackCatalog.HasGeometry(row.Name))
+                {
+                    playable++;
+                    string id = row.Name;   // captured per iteration, not by reference to the loop
+                    menu.AddItem(new GUIContent(label), current == id, () => SelectTrack(id));
+                }
+                else
+                {
+                    menu.AddDisabledItem(new GUIContent(label + " - no layout"));
+                }
+            }
+        }
+
+        menu.AddSeparator("");
+        menu.AddItem(new GUIContent($"Open the Track Builder Window ({playable} built)"), false,
+                     TrackAuthoringMenu.OpenWindow);
+        menu.ShowAsContext();
+    }
 
     static void SelectTrack(string id)
     {

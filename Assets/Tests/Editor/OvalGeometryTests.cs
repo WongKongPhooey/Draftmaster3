@@ -97,8 +97,17 @@ public class OvalGeometryTests
     [Test]
     public void AnOvalWithNoDogLegHasEqualStraights()
     {
+        // Built from a plain spec rather than a named track: every intermediate on the real calendar
+        // turned out to have some dog-leg on its front stretch once TrackDimensions supplied the real
+        // shapes (Kansas included), and a tri-oval front stretch is three segments, not one.
+        var spec = new OvalSpec
+        {
+            trackId = "PlainOval", lengthMiles = 1.5f, corners = 4,
+            turnBanking = 18f, turnShareOfLap = 0.42f, frontKinkDegrees = 0f, roadWidth = 16f,
+        };
+
         float front = 0f, back = 0f;
-        foreach (var seg in OvalGeometry.Build(Intermediate()))
+        foreach (var seg in OvalGeometry.Build(spec))
         {
             if (seg.label == "Front Stretch") front = seg.length;
             else if (seg.label == "Back Stretch") back = seg.length;
@@ -188,7 +197,16 @@ public class OvalGeometryTests
         var martinsville = ShortTrack();
         Assert.AreEqual(2, martinsville.corners, "Martinsville is a paperclip");
         Assert.AreEqual(0f, martinsville.frontKinkDegrees, 1e-3f);
-        Assert.Less(martinsville.roadWidth, daytona.roadWidth, "a bullring is a narrower road");
+
+        // Width comes from TrackDimensions now, not from the track type — and the real figures do not
+        // line up with the intuition the old type defaults encoded. Martinsville and Daytona are BOTH
+        // 40 ft wide; the bullring is not the narrower road. The genuine contrast is Michigan, at 73 ft.
+        Assert.AreEqual(TrackDimensions.Feet(40f), martinsville.roadWidth, 0.01f, "Martinsville is 40 ft");
+        Assert.AreEqual(TrackDimensions.Feet(40f), daytona.roadWidth, 0.01f, "Daytona is 40 ft too");
+
+        var michigan = OvalGeometry.Preset(TrackKind.Speedway, "Michigan",
+                                           "Michigan International Speedway", 2f, 18f, 200);
+        Assert.Greater(michigan.roadWidth, martinsville.roadWidth, "Michigan is the widest of them all");
     }
 
     [Test]

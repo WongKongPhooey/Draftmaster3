@@ -1,6 +1,7 @@
 # Tracks
 
-How the game holds 35 racetracks without 35 copies of the race scene.
+How the game holds every track on the Cup, National and Truck calendars without one copy of the
+race scene per track.
 
 ## The shape of it
 
@@ -14,7 +15,7 @@ Each track is three things, and any of them may be missing while it's being buil
 | Piece | Lives at | Made by |
 | --- | --- | --- |
 | **Catalogue row** — type, length, banking, default laps | `Tracks` table, seeded from `DummyTracks.cs` | Hand-written; 30 rounds already there |
-| **Geometry** — the spline `TrackBuilder` builds | `Resources/Tracks/<id>.asset` (`TrackInfoV2`) | `OvalTrackFactory` for ovals, by hand for road courses |
+| **Geometry** — the spline `TrackBuilder` builds | `Resources/Tracks/<id>.asset` (`TrackInfoV2`) | `OvalTrackFactory` for ovals, `RoadCourseFactory` for authored layouts |
 | **Content package** — everything else specific to this track | `Resources/TrackPackages/<id>.prefab` | `Draftmaster > Tracks` window, then dressed in Prefab Mode |
 
 `TrackCatalog` resolves all three. Ask `HasGeometry` / `HasPackage` before offering a track anywhere —
@@ -50,12 +51,14 @@ current location, so "drive to Martinsville, then race" works without the menu s
 
 ## Adding a track
 
-1. **Catalogue it.** Most of the calendar is already in `DummyTracks.cs` with type, length, banking and
-   laps. Bump `DatabaseManager.SchemaVersion` if you edit that seed and want the table rebuilt.
+1. **Catalogue it.** Add a row to `TrackDimensions` with the venue's published length, width and
+   banking; `DummyTracks` derives its calendar rows from that table, so nothing needs typing twice.
+   Bump `DatabaseManager.SchemaVersion` if you want the `Tracks` table rebuilt from the new seed.
 2. **Generate the layout.** `Draftmaster > Tracks > Track Builder Window`, find the row, press
-   **Generate Layout**. That writes `Resources/Tracks/<id>.asset` — a closed oval with a racing line, pit
-   road and corner-speed hints. Regenerating an existing asset refills it in place, so its GUID (and every
-   reference to it) survives.
+   **Generate Layout**. That writes `Resources/Tracks/<id>.asset` — a closed lap with a racing line, pit
+   road and corner-speed hints. Ovals are solved from the length; a road course needs its corner
+   sequence in `RoadCourseLayouts` first. Regenerating an existing asset refills it in place, so its
+   GUID (and every reference to it) survives.
 3. **Build the package.** Press **Build Package**, which writes `Resources/TrackPackages/<id>.prefab`
    containing the road, an `Environment` root and a `Paddock` root — then dresses it (below), so what comes
    out is drivable and walkable without opening it.
@@ -95,32 +98,119 @@ window's **Dress** button re-does one (with the Overwrite toggle to replace what
 What is still hand work, deliberately: kerbs, the pit boxes' furniture, garages, signage, camera towers, and
 anything about a track that makes it *that* track.
 
+## Where the numbers come from
+
+`Draftmaster.Tracks.TrackDimensions` is the one table of real-world measurements: every venue on the
+Cup / National / Truck calendars with its published lap length, racing-surface width, turn banking and
+straight banking, plus which of the three championships visit it. Widths are authored in **feet**, because
+that is how American ovals publish them, and converted once.
+
+It exists because width used to come from the track TYPE - every superspeedway 18 m, every short track
+13 m. That is wrong in a way you feel from the driver's seat: **Michigan is 73 feet wide and Dover is 40,
+and both are "speedways"**. Bristol and Martinsville are both half-mile bullrings and are not the same
+width either (they are, as it happens, both 40 ft - which is also exactly Daytona's width, so the
+intuition that a bullring is the narrower road turns out to be false).
+
+Three things derive from that one table, so they cannot drift apart:
+
+- the **catalogue seed** (`DummyTracks` builds its calendar rows from it),
+- the **layout generator** (`OvalGeometry.ApplyTrackShape` layers it over the type defaults),
+- and the **road-course specs** (`RoadCourseLayouts.Spec`).
+
+Each row carries a `confidence`: `Published` (the venue's own spec), `Measured` (taken off satellite
+imagery for this project - Watkins Glen only) or `Estimated` (no published figure; Bowman Gray's width and
+the San Diego street circuit's whole layout). `Draftmaster > Tracks > Report Track Dimensions` prints the
+table with that column, so what is a real number and what is a guess is visible without opening the source.
+
+**What is exact**: lap length, width, banking. **What is not**: the corner-by-corner shape. A generated
+layout drives the right distance at the right speed in the right width of road; it is not a survey.
+
 ## The oval generator
 
 `Draftmaster.Tracks.OvalGeometry` (own assembly, unit tested in `OvalGeometryTests`) solves an oval from
 its lap length:
 
-- Corner angles are equal arcs summing to exactly 360°, so the heading closes by construction; the back
-  stretch is then solved by bisection so the position closes too, and every length is scaled uniformly to
-  land the lap on its catalogue distance.
+- Corner angles are equal arcs summing to exactly 360 degrees, so the heading closes by construction; the
+  back stretch is then solved by bisection so the position closes too, and every length is scaled uniformly
+  to land the lap on its catalogue distance.
 - **Two straights joined by two semicircular ends can only close if they are the same length.** This is
   worth knowing before you try to author a "longer front stretch": a 2.5-mile oval split 56/44 leaves a
   254 m gap, and no corner skew or radius change closes it (measured, not assumed). What makes a real front
-  stretch longer is the tri-oval bow, so the **dog-leg is the input and the straight split is the output** —
+  stretch longer is the tri-oval bow, so the **dog-leg is the input and the straight split is the output** -
   give it the kink you want to see and the front stretch comes out longer by however much the bow is worth.
   Martinsville, with no kink, solves to 245.5 m straights; the real ones are 244 m.
 - The racing line comes out wide-in / tight-apex / wide-out, with the leftmost and rightmost AI lines
-  pinned near the edges so the field can run two and three abreast.
-- A **tri-oval** (Daytona, Talladega) is a shallow dog-leg on the front stretch — out, across, back — whose
+  pinned near the edges so the field can run two and three abreast. That margin scales with the road now -
+  a fixed 1.5 m left almost nothing between the lines on a 40 ft track.
+- A **tri-oval** (Daytona, Talladega) is a shallow dog-leg on the front stretch - out, across, back - whose
   angles net to zero, so it bulges toward the grandstand without stealing heading from the corners.
 - A **paperclip** (Martinsville, Bristol) is `corners = 2`: one continuous 180 at each end.
-- Corner speed hints come from `v = √(g·r·(grip + tan bank))`, so a banked 2.5-miler and a flat bullring
-  don't claim the same corner speed.
+- Corner speed hints come from `v = sqrt(g*r*(grip + tan bank))`, so a banked 2.5-miler and a flat bullring
+  do not claim the same corner speed.
 
-It is a **starting point, not a finished track.** Real ovals have unequal radii, progressive banking and
-asymmetric straights. Generate, then tune the numbers in the inspector with `TrackBuilder`'s racing-line
-gizmo on. Road courses aren't generated at all — there's no formula for the Bus Stop; duplicate
-`WatkinsGlen.asset` and author by hand.
+It is a **starting point, not a finished track.** Real ovals have unequal radii and progressive banking.
+Generate, then tune the numbers in the inspector with `TrackBuilder`'s racing-line gizmo on.
+
+## Road courses, and the one oval no formula fits
+
+An oval is a formula. A road course is not - so the ten road and street circuits are **authored corner by
+corner** in `RoadCourseLayouts` and solved by `RoadCourseGeometry`. A layout reads in lap order:
+
+```csharp
+S("Front Straight", 430),        // a real straight
+C("Turn 2 Keyhole", 110, -170),  // 110 m of arc turning 170 degrees RIGHT (negative = right)
+L(160),                          // a connector - takes gentle curvature when the lap is solved
+```
+
+**Why the connectors matter.** Guess twenty corner angles off a track map and they sum to something like
+700 degrees, not the 360 that any simple closed loop must turn through, and the two ends of the circuit
+miss each other by hundreds of metres. Both errors have the same honest home: the connecting sections. The
+"straights" of a real road course are not straight - Road America's Moraine Sweep and the run down to
+Canada Corner both bend, and that gentle curvature is exactly what lets a circuit with eight
+ninety-degree right-handers still come back to where it started. So:
+
+1. **Heading.** Named corners keep their authored angles. The leftover is shared across the links by
+   length, so a long sweep takes more of the bend than a short link and nothing becomes an accidental
+   hairpin.
+2. **Position.** The loop is then shut by changing lengths - and this part is *exact, not a search*. A
+   piece's displacement is linear in its own length (an arc of fixed angle just changes radius), and a
+   length change never moves any heading downstream, so one weighted least-norm solve puts the gap at zero.
+   Straights are weighted to give up length four times as readily as curved links.
+3. **Length.** Everything is scaled by one factor to hit the published distance. Uniform scaling cannot
+   reopen the loop, because a closed shape stays closed when you scale it.
+
+Steps 1 and 2 interact, so they alternate for a handful of passes. Every circuit comes out closing to
+under a centimetre, at its exact published lap length, with no self-intersections.
+
+**Pocono is on this path too**, despite being an oval. It is a triangle with three straights of different
+lengths and three corners of different radius *and* different banking (14, 8 and 6 degrees) - precisely
+what the two-ends oval solver cannot express; it left the lap 1.5 km short of closing. Authored here, each
+corner carries its own numbers. The rule is simply: **an authored layout always wins over the oval solver,
+whatever the catalogue type says.**
+
+**Watkins Glen is never generated.** It was measured off satellite imagery by hand and is the reference the
+others are aiming at; `RoadCourseLayouts.Has` returns false for it and Build All skips it. What the
+generated circuits get right is lap distance, width, corner count, and the order and relative severity of
+the corners. What they do not get right is the exact position of each apex. To improve one, open the map,
+correct the angles and arc lengths in place, and rebuild - the solver re-closes the lap for you, so a
+partial correction is always safe to commit.
+
+## Building the whole calendar
+
+`Draftmaster > Tracks > Build All Calendar Tracks` does layout, package and dressing for all 37 generated
+venues in one press (Watkins Glen is skipped). Existing packages are left alone - the geometry inside them
+is refilled in place, so GUIDs and hand-dressing survive. **Rebuild All Calendar Tracks (replace packages)**
+throws the package prefabs away and regenerates them.
+
+> **Do not wrap that loop in `AssetDatabase.StartAssetEditing()`.** It pauses importing, so the `.asset`
+> written by `GenerateGeometry` cannot be loaded back by `BuildPackage` on the very next line. The first
+> run of this did exactly that: 37 layouts were written, every package silently failed with "no layout,
+> generate one first", and the summary still said "built 37".
+
+`BuiltTrackAssetTests` guards that outcome by reading the assets **on disk** - length, width, closure, pit
+lane, package wiring - rather than re-running the solver. It reaches them through `SerializedObject`,
+because `TrackInfoV2` lives in Assembly-CSharp and an assembly definition cannot reference the predefined
+assemblies.
 
 ## Making a superspeedway feel like one
 
@@ -149,6 +239,10 @@ that way round means the numbers can be argued about in one file rather than hun
 | --- | --- |
 | `Assets/Scripts/Tracks/Core/OvalGeometry.cs` | The solver: spec → segments, pit lane, corner speeds, closure check. Own asmdef, unit tested. |
 | `Assets/Scripts/Tracks/Core/TrackTuning.cs` | Per-type feel numbers plus per-track exceptions. |
+| `Assets/Scripts/Tracks/Core/TrackDimensions.cs` | Published length, width and banking for every venue on the three calendars. |
+| `Assets/Scripts/Tracks/Core/RoadCourseGeometry.cs` | The road-course solver: residual curvature onto the links, exact closure by least-norm. |
+| `Assets/Scripts/Tracks/Core/RoadCourseLayouts.cs` | The authored corner sequences, circuit by circuit (plus Pocono). |
+| `Assets/Scripts/Tracks/RoadCourseFactory.cs` | Adapter: solved road course -> `TrackInfoV2` asset. |
 | `Assets/Scripts/Tracks/TrackCatalog.cs` | id → catalogue row, geometry asset, package prefab. DB first, seed list fallback. |
 | `Assets/Scripts/Tracks/TrackSelection.cs` | Which track the next race scene builds. |
 | `Assets/Scripts/Tracks/TrackProfile.cs` | Game-side view of `TrackTuning`. |
@@ -160,6 +254,8 @@ that way round means the numbers can be argued about in one file rather than hun
 | `Assets/Editor/TrackDressingFactory.cs` | Ground, walls, grandstands and paddock, derived from the geometry. |
 | `Assets/Editor/RaceSceneSplitter.cs` | One-shot: WatkinsGlen → `RaceScene.unity` + a WatkinsGlen package. |
 | `Assets/Tests/Editor/OvalGeometryTests.cs` | Lap length, closure, tri-oval, paperclip, racing line, pit lane, tuning. |
+| `Assets/Tests/Editor/TrackDimensionsTests.cs` | Every venue solves: closure, length, width, corner count, no self-intersection. |
+| `Assets/Tests/Editor/BuiltTrackAssetTests.cs` | The built assets on disk measure what they claim, and every package is wired. |
 
 ## The shared race scene
 

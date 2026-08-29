@@ -84,8 +84,9 @@ folds those results into three points tables, gated so Sunday's result is not re
 guide: `Docs/Race-Weekend.md`.
 
 **The demo flow** starts at `Assets/Scenes/TitleScreen.unity` (build index 0) and runs
-TitleScreen → RaceScene (which builds WatkinsGlen from `TrackSelection`), or TitleScreen → TeamGarage
-("Team Factory"). The garage sheet (`Assets/Scenes/GarageScreen.unity`) is **not** on the title menu — it
+TitleScreen → RaceScene (which builds whatever `TrackSelection` names), TitleScreen → **SingleRace**
+→ RaceScene (pick a track, a series and a driver — `SingleRaceUI`, the only in-game way to reach the
+other 37 venues), or TitleScreen → TeamGarage ("Team Factory"). The garage sheet (`Assets/Scenes/GarageScreen.unity`) is **not** on the title menu — it
 is opened by a `LaptopInteractable` in the RV interior or in the factory, and `GarageScreenLoader`
 remembers which scene to send BACK to. `Esc > QUIT TO TITLE` in a race scene closes the loop. The whole
 chain is asserted by `Assets/Tests/Editor/TitleScreenWiringTests.cs`; the diagram is in `Docs/Editor-Handbook.md`.
@@ -103,7 +104,7 @@ A second, newer system runs alongside the legacy scrolling code:
 
 ### Multi-track structure
 
-A track is one string id (`Daytona`), shared by the `Tracks` table, the calendar, the travel map and the assets. It resolves to three things via `TrackCatalog`: a catalogue row, geometry at `Resources/Tracks/<id>.asset`, and a content package at `Resources/TrackPackages/<id>.prefab`. `TrackSceneLoader` drops the selected package (`TrackSelection`) into the shared race scene (`Assets/Scenes/RaceScene.unity` — managers, no road, all `TrackBuilder` fields null) and binds it to everything holding a `TrackBuilder` — so the race scene is authored once and the track is content, rather than one scene per round. `TrackDressingFactory` generates each package's ground, walls, grandstands and paddock from the spline, and never overwrites hand-authored pieces. Ovals are generated from their lap length by `Draftmaster.Tracks.OvalGeometry`; road courses are hand-authored. Tooling: **Draftmaster > Tracks**. Full pipeline in `Docs/Tracks.md`.
+A track is one string id (`Daytona`), shared by the `Tracks` table, the calendar, the travel map and the assets. It resolves to three things via `TrackCatalog`: a catalogue row, geometry at `Resources/Tracks/<id>.asset`, and a content package at `Resources/TrackPackages/<id>.prefab`. `TrackSceneLoader` drops the selected package (`TrackSelection`) into the shared race scene (`Assets/Scenes/RaceScene.unity` — managers, no road, all `TrackBuilder` fields null; **a track package left in that scene silently overrides every selection**, so clear previews before saving) and binds it to everything holding a `TrackBuilder` — so the race scene is authored once and the track is content, rather than one scene per round. `TrackDressingFactory` generates each package's ground, walls, grandstands and paddock from the spline, and never overwrites hand-authored pieces. **All 38 venues on the Cup / National / Truck calendars are built.** Real published length, width and banking for each live in `Draftmaster.Tracks.TrackDimensions`, which the catalogue seed and both generators derive from. Ovals are solved from their lap length by `OvalGeometry`; the ten road/street circuits — plus Pocono, a triangle no oval formula closes — are authored corner by corner in `RoadCourseLayouts` and solved by `RoadCourseGeometry`. **WatkinsGlen is hand-measured off satellite imagery and is never regenerated.** `Draftmaster > Tracks > Build All Calendar Tracks` rebuilds the lot. Full pipeline in `Docs/Tracks.md`.
 
 ## Development
 

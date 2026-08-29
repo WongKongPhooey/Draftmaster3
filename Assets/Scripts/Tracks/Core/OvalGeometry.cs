@@ -149,20 +149,33 @@ namespace Draftmaster.Tracks
             return ApplyTrackShape(trackId, spec);
         }
 
-        // Per-track shape notes the catalogue can't express. Anything more elaborate belongs in a
-        // hand-authored asset rather than in here.
+        // Layer the venue's real published dimensions over the type defaults.
+        //
+        // This used to be a hand-written switch of shape notes, and the width came from the track TYPE —
+        // every superspeedway 18 m, every short track 13 m. That is wrong in a way you feel from the
+        // driver's seat: Michigan is 73 feet wide and Dover is 40, and both are "speedways". TrackDimensions
+        // holds the published figure for each venue, so a track that is in that table gets its own numbers
+        // and one that is not still falls back to a sensible layout for its type.
         public static OvalSpec ApplyTrackShape(string trackId, OvalSpec spec)
         {
             if (spec == null || string.IsNullOrEmpty(trackId)) return spec;
-            switch (trackId)
-            {
-                case "Daytona":      spec.frontKinkDegrees = 6f; spec.turnShareOfLap = 0.47f; break;
-                case "Talladega":    spec.frontKinkDegrees = 5f; spec.turnShareOfLap = 0.5f; break;
-                case "Indianapolis": spec.frontKinkDegrees = 0f; spec.turnShareOfLap = 0.28f; break;
-                case "LongPond":     spec.corners = 3; spec.turnShareOfLap = 0.3f; break;   // Pocono's triangle
-                case "Martinsville": spec.corners = 2; spec.turnShareOfLap = 0.42f; break;  // paperclip
-                case "Bristol":      spec.turnShareOfLap = 0.55f; break;                    // almost all corner
-            }
+            if (!TrackDimensions.TryGet(trackId, out var dim)) return spec;
+
+            spec.displayName = dim.displayName;
+            spec.lengthMiles = dim.lapMiles;
+            spec.roadWidth = dim.widthMetres;
+            spec.turnBanking = dim.turnBankingDeg;
+            spec.straightBanking = dim.straightBankingDeg;
+            spec.pitSpeedLimitMph = dim.pitSpeedLimitMph;
+            if (dim.cupLaps > 0) spec.defaultLaps = dim.cupLaps;
+            if (dim.corners >= 2) spec.corners = dim.corners;
+            if (dim.turnShareOfLap > 0.01f) spec.turnShareOfLap = dim.turnShareOfLap;
+            spec.frontKinkDegrees = dim.frontKinkDeg;
+
+            // The AI lines are pinned a fixed distance in from the wall, so on a 40 ft track the default
+            // 1.5 m margin leaves almost nothing between them. Scale it with the road instead.
+            spec.lineMargin = Mathf.Clamp(dim.widthMetres * 0.1f, 0.8f, 2.2f);
+
             return spec;
         }
 
@@ -325,7 +338,14 @@ namespace Draftmaster.Tracks
             return lane;
         }
 
-        public static float PitWidth(OvalSpec spec) => Mathf.Max(9f, spec.roadWidth * 0.6f);
+        // Pit road is its own width where the venue publishes one (Indianapolis' pit road is narrow
+        // relative to its 50 ft straights), otherwise a fraction of the racing surface.
+        public static float PitWidth(OvalSpec spec)
+        {
+            if (spec != null && TrackDimensions.TryGet(spec.trackId, out var dim) && dim.pitWidthMetres > 0.5f)
+                return dim.pitWidthMetres;
+            return Mathf.Max(9f, spec.roadWidth * 0.6f);
+        }
 
         // Where the limiter releases: just before the merge back onto the track.
         public static float PitExitLineDistance(OvalSpec spec, float frontStretchMetres)
