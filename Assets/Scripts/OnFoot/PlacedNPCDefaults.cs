@@ -9,28 +9,27 @@ using UnityEngine;
 // in the inspector is the only thing that decides who turns up.
 //
 // Only beats that work off geometry EVERY track has are installed automatically: the greeter stands in the
-// pit lane, the chief stands by the player's car. The race engineer is deliberately NOT one of them — his
-// beat is the player coming out of their RV, and an RV is track content, so his marker belongs in the track
-// package that owns the motorhome (Draftmaster > NPCs > Add RV Engineer To Open Package). Auto-installing
-// him meant deleting him from a track put him straight back, which is the opposite of what placing an NPC
-// in a package should mean.
+// pit lane, the chief stands by the player's car, the liaison catches the driver at the motorhome door.
+//
+// The RV door used to belong to a race engineer who talked about how the car looked overnight and sent the
+// player to their crew chief for a setup call. That beat is retired: the weekend books the driver's day now,
+// and the person waiting outside the motorhome is the team liaison telling them what the team needs them at
+// next — the strategy meeting, the media session, whatever the sheet says. Two people ambushing somebody on
+// their way out of their own motorhome was one too many, and the engineer was the half that no longer knew
+// what the day held.
 public static class PlacedNPCDefaults
 {
     // Create any of the every-track cast the scene doesn't already have. Returns how many were added.
-    // The race engineer is not included — see the note above; use CreateEngineer inside a track package.
     public static int EnsureCast(Transform parent = null)
     {
         int added = 0;
         if (Find(PlacedNPC.Role.PitGreeter) == null)  { CreateGreeter(parent); added++; }
         if (Find(PlacedNPC.Role.CrewChief) == null)   { CreateChief(parent);   added++; }
-        // The liaison only turns out when the next thing on the sheet is NOT the player's own session —
-        // when it is, the race engineer's beat already meets them at the door and points them at the car,
-        // and two people ambushing somebody on their way out of their own motorhome is one too many.
-        if (Find(PlacedNPC.Role.TeamLiaison) == null && LiaisonHasSomethingToSay())
-        {
-            CreateLiaison(parent);
-            added++;
-        }
+        // The liaison turns out whatever is next, including the player's own session: she reads the sheet,
+        // and "you're down for cup practice at the car, 10:00" is as much her job as a sponsor appearance.
+        // She used to stand down when the next thing was on track, because the race engineer met the player
+        // at the door in that case. He is gone, so the door is hers.
+        if (Find(PlacedNPC.Role.TeamLiaison) == null) { CreateLiaison(parent); added++; }
         return added;
     }
 
@@ -79,7 +78,6 @@ public static class PlacedNPCDefaults
     public static int EnsureCoreCast(Transform parent = null)
     {
         int added = EnsureCast(parent);
-        if (Find(PlacedNPC.Role.RaceEngineer) == null)    { CreateEngineer(parent);   added++; }
         if (Find(PlacedNPC.Role.ChiefStrategist) == null) { CreateStrategist(parent); added++; }
         if (Find(PlacedNPC.Role.PRManager) == null)       { CreatePR(parent);         added++; }
         return added;
@@ -192,12 +190,6 @@ public static class PlacedNPCDefaults
         return npc;
     }
 
-    static bool LiaisonHasSomethingToSay()
-    {
-        var next = Draftmaster.Weekend.WeekendSchedulePlan.NextWorthDoing();
-        return next != null && !next.IsOnTrack;
-    }
-
     // The team's liaison: the person who catches you on the way out of the motorhome and tells you where
     // the team needs you to be. She is the front door of the race weekend — the schedule exists whether or
     // not the player ever opens it, and this is how they are told about it in the world.
@@ -212,7 +204,7 @@ public static class PlacedNPCDefaults
         npc.role = PlacedNPC.Role.TeamLiaison;
         npc.anchor = PlacedNPC.Anchor.RVDoor;
         npc.anchorAlong = 4f;                      // straight out from the door, in the way on purpose
-        npc.anchorLateral = -2.2f;                 // the other side of the door from the engineer
+        npc.anchorLateral = -2.2f;                 // off to one side of the door, in the way on purpose
         npc.interaction = PlacedNPC.Interaction.WalkUpCutscene;
         npc.waitForTrigger = true;
         npc.triggerOffset = new Vector2(2.6f, 0f); // past the interior's exit threshold, so the mask has lifted
@@ -255,43 +247,6 @@ public static class PlacedNPCDefaults
             "You have time to walk. I've put it on your map — follow the marker and don't be late, they " +
             "start without you.",
         };
-    }
-
-    public static PlacedNPC CreateEngineer(Transform parent = null)
-    {
-        var npc = New("NPC_RaceEngineer", parent);
-        npc.npcId = "race.engineer";
-        npc.speakerName = "Race Engineer";
-        npc.role = PlacedNPC.Role.RaceEngineer;
-        npc.anchor = PlacedNPC.Anchor.RVDoor;   // falls back to the player's spawn line at a track with no RV
-        npc.anchorAlong = 5f;                   // straight out from the door
-        npc.anchorLateral = 2.5f;               // along the RV, toward the cab
-        npc.interaction = PlacedNPC.Interaction.WalkUpCutscene;
-        npc.waitForTrigger = true;
-        npc.triggerOffset = new Vector2(2.6f, 0f); // past the interior's exit threshold, so the mask has lifted
-        npc.triggerRadius = 1.5f;
-        npc.stopDistance = 1.2f;
-        npc.objectiveOnFinish = "HEAD TO YOUR CAR";
-        // Every practice session, not once per weekend: he's the session's opening beat, and a player who
-        // reloads practice should still be met by their engineer. No business turning up at qualifying or
-        // the race — he's there to hand the weekend over.
-        npc.appear.repeat = AppearanceConditions.Repeat.EveryTime;
-        npc.appear.saveKey = "rv.door.intro";
-        npc.appear.inPractice = true;
-        npc.appear.inQualifying = false;
-        npc.appear.inRace = false;
-        npc.lines = new[]
-        {
-            "There you are. Was starting to think you'd sleep through the whole weekend.",
-            "The bunk in that thing is better than my bed at home. #player",
-            "Well, shake it off. Car's out of the truck and sitting in the box.",
-            "How did it look overnight? #player",
-            "Solid. We freshened the rubber and dropped a touch of front wing back in.",
-            "Anything you want from me? #player",
-            "Get in it. Chief's waiting by the car — he'll want your setup call before you roll out.",
-            "On my way. #player"
-        };
-        return npc;
     }
 
     public static PlacedNPC CreateChief(Transform parent = null)

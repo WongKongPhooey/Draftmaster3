@@ -30,7 +30,8 @@ public class PlacedNPC : MonoBehaviour
     {
         Generic,
         PitGreeter,     // stands in the pit lane, chats, nothing depends on him
-        RaceEngineer,   // opening beat: walks up as the session starts / as the player leaves the RV
+        RaceEngineer,   // RETIRED: the RV-door beat is the TeamLiaison's. Kept so the value's serialized
+                        // number does not shift under every marker already placed in a scene or package.
         CrewChief,      // briefs the driver when they climb into the car, then opens the setup panel
         TeamLiaison,    // catches the driver on their way out of the motorhome with where they are due next
         ChiefStrategist,// the one with the run plan: fuel windows, tyre calls, what the race is going to be
@@ -490,7 +491,7 @@ public class PlacedNPC : MonoBehaviour
                          : name;
 
     // The spawned body is named after its marker, so the hierarchy at runtime reads back to the thing you
-    // placed ("NPC_RaceEngineer" → "NPC_RaceEngineer_Body" / "…_Cutscene").
+    // placed ("NPC_TeamLiaison" → "NPC_TeamLiaison_Body" / "…_Cutscene").
     string GameObjectName => name + "_Body";
 
     // The save key an appearance block falls back to when none was typed, so a repeat policy set in the

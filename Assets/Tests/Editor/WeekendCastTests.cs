@@ -26,7 +26,7 @@ public class WeekendCastTests
     // Everybody a driver's day is built around, at every track, in every series.
     static readonly string[] CoreRoles =
     {
-        "PitGreeter", "CrewChief", "RaceEngineer", "ChiefStrategist", "PRManager",
+        "PitGreeter", "CrewChief", "TeamLiaison", "ChiefStrategist", "PRManager",
     };
 
     [Test]

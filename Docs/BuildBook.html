@@ -535,7 +535,7 @@ footer {
             <li>Gate it with <code>AppearanceConditions</code> — session, series, track, career stats, quest state, inventory, career path, repeat scope, chance.</li>
           </ol>
           <div class="rule-note"><p><b>Geometry anchors only resolve with a track loaded.</b> In the race scene run <span class="menu">Tracks<i>›</i>Preview Selected Package In Scene</span> first, then <span class="menu">Clear Package Previews From Scene</span> when done — otherwise the gizmo is lying to you.</p></div>
-          <p>Marker in the wrong file? <span class="menu">Draftmaster<i>›</i>NPCs<i>›</i>Move Selected NPC Into Track Package</span> moves the selected marker into <code>Paddock/NPCs</code> of the selected track's package, copying the component wholesale (<code>CopySerialized</code>) so the tuned anchor, trigger ring, dialogue and appearance conditions all survive the trip. <span class="menu">Add RV Engineer To Open Package</span> drops a fresh stock race engineer into a package. Both write into the package prefab asset, so the change travels with the track.</p>
+          <p>Marker in the wrong file? <span class="menu">Draftmaster<i>›</i>NPCs<i>›</i>Move Selected NPC Into Track Package</span> moves the selected marker into <code>Paddock/NPCs</code> of the selected track's package, copying the component wholesale (<code>CopySerialized</code>) so the tuned anchor, trigger ring, dialogue and appearance conditions all survive the trip. It writes into the package prefab asset, so the change travels with the track.</p>
           <p>Check the cast with <span class="menu">Draftmaster<i>›</i>NPCs<i>›</i>Director</span> (<b>Ctrl+Shift+N</b>): flip between Practice / Qualifying / Race and everyone greys out or lights up, with a reason per row ("not in Race", "wins is 0, needs 5..∞"). <span class="menu">Install Default Pit Cast</span> turns the runtime greeter / engineer / crew chief into editable markers.</p>
           <p class="seealso">Detail: <span class="path">Docs/NPCs-and-Quests.md</span> §0</p>
         </article>
@@ -709,7 +709,7 @@ footer {
         <h3>Draftmaster › NPCs</h3>
         <ul class="menu-list">
           <li>Director (Ctrl+Shift+N)</li><li>Add Placed NPC</li><li>Install Default Pit Cast</li>
-          <li>Move Selected NPC Into Track Package</li><li>Add RV Engineer To Open Package</li>
+          <li>Move Selected NPC Into Track Package</li>
           <li>Dialogue Pool (Global)</li><li>Dialogue Pool (Selected Track)</li>
           <li>Seed Global Dialogue Pool From Built-Ins</li><li>Clear Appearance Flags</li><li>Clear Career Path Choice</li>
         </ul>

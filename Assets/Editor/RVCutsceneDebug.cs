@@ -65,7 +65,7 @@ public static class RVCutsceneDebug
         var npc = EngineerInteractable();
         sb.AppendLine($"  npc: pos={(npc != null ? npc.transform.position.ToString("F2") : "<missing>")} talking={(npc != null ? npc.IsTalking.ToString() : "?")}");
 
-        var marker = PlacedNPC.Find(PlacedNPC.Role.RaceEngineer);
+        var marker = PlacedNPC.Find(PlacedNPC.Role.TeamLiaison);
         var seq = marker != null ? GameObject.Find(marker.name + "_Cutscene") : null;
         sb.AppendLine($"  cutscene object: {(seq != null ? "alive at " + seq.transform.position.ToString("F2") : "destroyed/absent")}");
 
@@ -76,7 +76,7 @@ public static class RVCutsceneDebug
     // rather than guessing at a hard-coded object name.
     static NPCInteractable EngineerInteractable()
     {
-        var marker = PlacedNPC.Find(PlacedNPC.Role.RaceEngineer);
+        var marker = PlacedNPC.Find(PlacedNPC.Role.TeamLiaison);
         return marker != null ? marker.Interactable : null;
     }
 }

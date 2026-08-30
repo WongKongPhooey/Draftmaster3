@@ -6,11 +6,11 @@
   <Project Path="InkEditor.csproj" />
   <Project Path="Ink-Libraries.csproj" />
   <Project Path="Draftmaster.Sim.csproj" />
+  <Project Path="Draftmaster.Tests.Editor.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Draftmaster.Weekend.csproj" />
   <Project Path="Draftmaster.Chatter.csproj" />
   <Project Path="Draftmaster.Tracks.csproj" />
-  <Project Path="Draftmaster.Tests.Editor.csproj" />
   <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Tests.PlayMode.csproj" />
   <Project Path="Draftmaster.Crowd.csproj" />

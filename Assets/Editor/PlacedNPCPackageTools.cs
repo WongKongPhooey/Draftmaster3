@@ -12,9 +12,8 @@ using UnityEngine;
 // dialogue and appearance conditions all survive.
 //
 //   Move Selected NPC Into Track Package    the marker you have selected → Paddock/NPCs of the selected track
-//   Add RV Engineer To Open Package         a fresh, stock race engineer straight into a package
 //
-// Both write into the package prefab asset, so the change travels with the track.
+// It writes into the package prefab asset, so the change travels with the track.
 public static class PlacedNPCPackageTools
 {
     const string NpcRoot = "Paddock/NPCs";
@@ -96,52 +95,6 @@ public static class PlacedNPCPackageTools
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         AssetDatabase.SaveAssets();
         Debug.Log($"NPCs: moved {names} into {path}. Save the scene to commit their removal from it.");
-    }
-
-    [MenuItem("Draftmaster/NPCs/Add RV Engineer To Open Package")]
-    public static void AddEngineerToOpenPackage()
-    {
-        var stage = PrefabStageUtility.GetCurrentPrefabStage();
-        Transform parent;
-
-        if (stage != null)
-        {
-            parent = FindOrCreate(stage.prefabContentsRoot.transform, NpcRoot);
-        }
-        else
-        {
-            // No stage open: put him in the selected track's package directly.
-            string id = TrackSelection.CurrentId;
-            string path = PackagePath(id);
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
-            {
-                EditorUtility.DisplayDialog("Add RV engineer",
-                    $"No package at {path}.\n\nOpen a package in Prefab Mode " +
-                    "(Draftmaster > Tracks > Edit Selected Package), or select the track first.", "OK");
-                return;
-            }
-
-            var root = PrefabUtility.LoadPrefabContents(path);
-            try
-            {
-                var into = FindOrCreate(root.transform, NpcRoot);
-                PlacedNPCDefaults.CreateEngineer(into);
-                PrefabUtility.SaveAsPrefabAsset(root, path);
-            }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-
-            AssetDatabase.SaveAssets();
-            Debug.Log($"NPCs: added the RV race engineer to {path}. He only appears at {id}.");
-            return;
-        }
-
-        var npc = PlacedNPCDefaults.CreateEngineer(parent);
-        Selection.activeGameObject = npc.gameObject;
-        EditorSceneManager.MarkSceneDirty(stage.scene);
-        Debug.Log("NPCs: added the RV race engineer to the open package. Save the prefab stage to keep him.");
     }
 
     static string PackagePath(string id) => $"Assets/Resources/{TrackCatalog.PackageFolder}/{id}.prefab";

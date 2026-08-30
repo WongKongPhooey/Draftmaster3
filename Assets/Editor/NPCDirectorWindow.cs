@@ -275,8 +275,8 @@ public class NPCDirectorWindow : EditorWindow
         var existing = PlacedNPCSceneContext.AllInScene();
         var made = new List<GameObject>();
 
-        // The every-track cast only. The RV race engineer belongs to the track that owns the motorhome —
-        // Draftmaster > NPCs > Add RV Engineer To Open Package.
+        // The every-track cast only: the greeter in the lane, the chief at the car. The motorhome door is
+        // the team liaison's beat and she is stood up from the weekend's sheet at runtime, not placed here.
         if (!HasRole(existing, PlacedNPC.Role.PitGreeter)) made.Add(PlacedNPCDefaults.CreateGreeter().gameObject);
         if (!HasRole(existing, PlacedNPC.Role.CrewChief)) made.Add(PlacedNPCDefaults.CreateChief().gameObject);
 

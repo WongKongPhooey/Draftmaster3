@@ -30,12 +30,15 @@ Already placed one in the wrong half? `Draftmaster > NPCs > Move Selected NPC In
 the marker — tuned anchor, trigger ring, dialogue, conditions and all — into the selected track's package
 and deletes it from the scene.
 
-Only the pit greeter and the crew chief are installed automatically in an undressed scene
-(`PlacedNPCDefaults`), because they work off geometry every track has: the pit lane and the player's car.
-The **race engineer is not** — his beat is the player coming out of their motorhome, and an RV is track
-content, so his marker belongs in the package that owns the RV
-(`Draftmaster > NPCs > Add RV Engineer To Open Package` drops a stock one in). If he were auto-installed,
-deleting him from a track would put him straight back.
+The pit greeter, the crew chief and the team liaison are installed automatically in an undressed scene
+(`PlacedNPCDefaults`), because they work off geometry every track has: the pit lane, the player's car and
+the motorhome door.
+
+The motorhome door used to hold a **race engineer** who talked about how the car looked overnight and sent
+the player off to the crew chief for a setup call. That beat is retired — the weekend books the driver's day
+now, and the person waiting outside the RV is the liaison telling them what they are wanted at next. The
+`PlacedNPC.Role.RaceEngineer` value is kept (deleting it would renumber every role serialized in a scene or
+package) but nothing creates one; a hand-placed marker still using it is legacy content and can be deleted.
 
 **Anchors** are what let one marker work at all thirty-five tracks — the position is derived from
 geometry rather than typed in:
