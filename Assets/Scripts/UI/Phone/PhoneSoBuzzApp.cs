@@ -170,8 +170,8 @@ public class PhoneSoBuzzApp : PhoneApp
     {
         float pad = PixelGUI.Px(4f);
         float inner = w - pad * 2f;
-        float bodyH = PixelGUI.Body.CalcHeight(new GUIContent(post.text), inner);
-        float h = PixelGUI.Px(11f) + bodyH + PixelGUI.Px(11f) + pad * 2f;
+        float bodyH = PhoneStyles.Body.CalcHeight(new GUIContent(post.text), inner);
+        float h = RowH + bodyH + RowH + pad * 2f;
 
         var plate = new Rect(x, y, w, h);
         Plate(plate, post.muted ? PixelGUI.PlateLight : post.tagColour);

@@ -12,6 +12,11 @@ using UnityEngine.InputSystem;
 // Six tiles, two by three. Four are filled; the spare bays are drawn as empty so the grid doesn't reflow
 // when the fifth and sixth arrive. Self-bootstraps like RacePauseMenu / DriverInfoPanel, arms itself only
 // in scenes that have an on-foot player, and draws with the Iron Oval kit (PixelGUI).
+//
+// It sits over on the left of the screen and is held at a slight angle, drawn through one GUI.matrix
+// about the bottom of the device — so every rect inside is authored square and the tilt costs nothing.
+// Type is PhoneStyles, a step down from the kit's own: a panel-sized glyph in a phone-sized row is what
+// made this thing read as squashed.
 public class PhoneUI : MonoBehaviour
 {
     public static PhoneUI Instance { get; private set; }
@@ -22,9 +27,13 @@ public class PhoneUI : MonoBehaviour
     [Tooltip("Seconds the phone takes to slide in or out.")]
     public float slideSeconds = 0.22f;
     [Tooltip("Phone body size in UI pixels, before PixelGUI.Scale.")]
-    public Vector2 bodySize = new Vector2(196f, 304f);
+    public Vector2 bodySize = new Vector2(216f, 340f);
     [Tooltip("Gap under the phone when it's all the way up, in UI pixels.")]
     public float restGap = 6f;
+    [Tooltip("Where the phone's left edge sits, as a fraction of screen width.")]
+    public float screenAnchorX = 0.20f;
+    [Tooltip("Handheld tilt in degrees. Positive leans the top of the phone to the right.")]
+    public float tiltDegrees = 3f;
 
     // Tiles the home screen has room for. Layout is 2 columns; three rows of two.
     public const int TileSlots = 6;
@@ -204,14 +213,21 @@ public class PhoneUI : MonoBehaviour
         // Over every other IMGUI panel: the phone is held up in front of everything else.
         int prevDepth = GUI.depth;
         GUI.depth = -50;
+        var prevMatrix = GUI.matrix;
 
         float w = PixelGUI.Px(bodySize.x), h = PixelGUI.Px(bodySize.y);
-        float rest = Screen.height - h - PixelGUI.Px(restGap);
-        float y = Mathf.Round(Mathf.Lerp(Screen.height, rest, Ease(_slide)));
-        float x = Mathf.Round((Screen.width - w) * 0.5f);
-        var body = new Rect(x, y, w, h);
 
-        DrawBody(body);
+        // The pivot is the bottom centre of the device — the hand. Sliding moves it, the tilt turns about
+        // it, and the body is then just a rect hanging above the origin.
+        float rest = Screen.height - PixelGUI.Px(restGap);
+        float pivotY = Mathf.Round(Mathf.Lerp(Screen.height + h, rest, Ease(_slide)));
+        float pivotX = Mathf.Round(Screen.width * Mathf.Clamp01(screenAnchorX) + w * 0.5f);
+
+        GUI.matrix = Matrix4x4.TRS(new Vector3(pivotX, pivotY, 0f),
+                                   Quaternion.Euler(0f, 0f, tiltDegrees), Vector3.one);
+        DrawBody(new Rect(-w * 0.5f, -h, w, h));
+
+        GUI.matrix = prevMatrix;
         GUI.depth = prevDepth;
     }
 
@@ -232,21 +248,36 @@ public class PhoneUI : MonoBehaviour
                               body.width - bezel * 2f, body.height - PixelGUI.Px(10f) - PixelGUI.Px(14f));
         PixelGUI.Fill(screen, PixelGUI.ScreenBase);
 
-        // Earpiece slot above the screen, home bar below: two marks that say "phone" without any art.
+        var content = new Rect(screen.x + PixelGUI.Px(3f), screen.y + PixelGUI.Px(11f),
+                               screen.width - PixelGUI.Px(6f), screen.height - PixelGUI.Px(14f));
+
+        if (_current == null) DrawHome(content);
+        else DrawApp(content);
+
+        // Chrome goes on last. A tilted GUI.matrix makes IMGUI's clipping approximate — a rotated clip
+        // rect is enforced as its axis-aligned bounds — so whatever scrolled past the edge of the screen
+        // is covered by the case rather than trusted to have been clipped.
+        DrawCase(body, screen);
+        DrawStatusBar(new Rect(screen.x, screen.y, screen.width, PixelGUI.Px(10f)));
+    }
+
+    // The bezel, redrawn over the content, plus the two marks that say "phone" without any art.
+    void DrawCase(Rect body, Rect screen)
+    {
+        float e = PixelGUI.Px(1f);
+        var inner = new Rect(body.x + e, body.y + e, body.width - e * 2f, body.height - e * 2f);
+        var c = PixelGUI.PlateLight;
+        PixelGUI.Fill(new Rect(inner.x, inner.y, inner.width, screen.y - inner.y), c);
+        PixelGUI.Fill(new Rect(inner.x, screen.yMax, inner.width, inner.yMax - screen.yMax), c);
+        PixelGUI.Fill(new Rect(inner.x, screen.y, screen.x - inner.x, screen.height), c);
+        PixelGUI.Fill(new Rect(screen.xMax, screen.y, inner.xMax - screen.xMax, screen.height), c);
+
         float earW = body.width * 0.22f;
         PixelGUI.Fill(new Rect(body.center.x - earW * 0.5f, body.y + PixelGUI.Px(4f), earW, PixelGUI.Px(2f)),
                       PixelGUI.PlateDeep);
         float barW = body.width * 0.34f;
         PixelGUI.Fill(new Rect(body.center.x - barW * 0.5f, body.yMax - PixelGUI.Px(8f), barW, PixelGUI.Px(2f)),
                       PixelGUI.TextDisabled);
-
-        DrawStatusBar(new Rect(screen.x, screen.y, screen.width, PixelGUI.Px(10f)));
-
-        var content = new Rect(screen.x + PixelGUI.Px(4f), screen.y + PixelGUI.Px(12f),
-                               screen.width - PixelGUI.Px(8f), screen.height - PixelGUI.Px(16f));
-
-        if (_current == null) DrawHome(content);
-        else DrawApp(content);
     }
 
     // Signal, carrier, clock, battery — the strip that makes the plate read as a screen.
@@ -257,19 +288,15 @@ public class PhoneUI : MonoBehaviour
         float x = r.x + PixelGUI.Px(3f);
         for (int i = 0; i < 4; i++)
         {
-            float bh = PixelGUI.Px(2f + i);
+            float bh = PixelGUI.Px(1.5f + i);
             PixelGUI.Fill(new Rect(x + i * PixelGUI.Px(2f), r.yMax - PixelGUI.Px(2f) - bh, PixelGUI.Px(1f), bh),
                           i < 3 ? PixelGUI.Text : PixelGUI.TextDisabled);
         }
 
-        var style = PixelGUI.Footer;
-        var prevAlign = style.alignment;
-        style.alignment = TextAnchor.MiddleCenter;
-        GUI.Label(r, SessionLabel(), style);
-        style.alignment = prevAlign;
+        PhoneStyles.Label(r, SessionLabel(), PhoneStyles.Footer, PixelGUI.TextDim, TextAnchor.MiddleCenter);
 
         // Battery: charge tracks nothing, it's set dressing, so it stays put rather than ticking down.
-        float bw = PixelGUI.Px(10f), bh2 = PixelGUI.Px(5f);
+        float bw = PixelGUI.Px(9f), bh2 = PixelGUI.Px(4f);
         var batt = new Rect(r.xMax - bw - PixelGUI.Px(4f), r.center.y - bh2 * 0.5f, bw, bh2);
         PixelGUI.Fill(batt, PixelGUI.TextDisabled);
         PixelGUI.Fill(new Rect(batt.x + PixelGUI.Px(1f), batt.y + PixelGUI.Px(1f),
@@ -287,9 +314,10 @@ public class PhoneUI : MonoBehaviour
 
     void DrawHome(Rect r)
     {
-        float gap = PixelGUI.Px(5f);
+        float gap = PixelGUI.Px(4f);
+        float hint = PhoneApp.RowH;
         float tileW = (r.width - gap) * 0.5f;
-        float tileH = (r.height - gap * 2f - PixelGUI.Px(12f)) / 3f;
+        float tileH = (r.height - gap * 2f - hint) / 3f;
 
         for (int i = 0; i < TileSlots; i++)
         {
@@ -299,12 +327,9 @@ public class PhoneUI : MonoBehaviour
             else DrawEmptyBay(tile);
         }
 
-        var hint = new Rect(r.x, r.yMax - PixelGUI.Px(10f), r.width, PixelGUI.Px(10f));
-        var style = PixelGUI.Footer;
-        var prevAlign = style.alignment;
-        style.alignment = TextAnchor.MiddleCenter;
-        GUI.Label(hint, $"{toggleKey.ToString().ToUpperInvariant()} CLOSE   ENTER OPEN", style);
-        style.alignment = prevAlign;
+        PhoneStyles.Label(new Rect(r.x, r.yMax - hint, r.width, hint),
+                          toggleKey.ToString().ToUpperInvariant() + " CLOSE   ENTER OPEN",
+                          PhoneStyles.Footer, null, TextAnchor.MiddleCenter);
     }
 
     void DrawTile(Rect r, PhoneApp app, int index)
@@ -316,29 +341,21 @@ public class PhoneUI : MonoBehaviour
         if (GUI.Button(r, GUIContent.none, GUIStyle.none)) { _homeIndex = index; OpenApp(index); }
         if (r.Contains(Event.current.mousePosition)) _homeIndex = index;
 
-        var name = new Rect(r.x + PixelGUI.Px(4f), r.y + PixelGUI.Px(5f), r.width - PixelGUI.Px(8f), PixelGUI.Px(10f));
-        var style = PixelGUI.HeadingSmall;
-        var prev = style.normal.textColor;
-        style.normal.textColor = selected ? PixelGUI.Gold : PixelGUI.Text;
-        GUI.Label(name, app.TileName, style);
-        style.normal.textColor = prev;
+        float row = PhoneApp.RowH;
+        var name = new Rect(r.x + PixelGUI.Px(4f), r.y + PixelGUI.Px(4f), r.width - PixelGUI.Px(8f), row);
+        PhoneStyles.Label(name, app.TileName, PhoneStyles.Heading, selected ? PixelGUI.Gold : PixelGUI.Text);
 
         if (!string.IsNullOrEmpty(app.TileSubtitle))
-            GUI.Label(new Rect(name.x, name.yMax + PixelGUI.Px(1f), name.width, PixelGUI.Px(11f)),
-                      app.TileSubtitle, PixelGUI.DataDim);
+            GUI.Label(new Rect(name.x, name.yMax, name.width, row), app.TileSubtitle, PhoneStyles.DataDim);
 
         int badge = app.Badge;
         if (badge > 0)
         {
-            float d = PixelGUI.Px(9f);
+            float d = PixelGUI.Px(8f);
             var dot = new Rect(r.xMax - d - PixelGUI.Px(3f), r.y + PixelGUI.Px(4f), d, d);
             PixelGUI.Fill(dot, PixelGUI.Danger);
-            var bs = PixelGUI.Footer;
-            var pa = bs.alignment; var pc = bs.normal.textColor;
-            bs.alignment = TextAnchor.MiddleCenter;
-            bs.normal.textColor = PixelGUI.Text;
-            GUI.Label(dot, badge > 9 ? "9+" : badge.ToString(), bs);
-            bs.alignment = pa; bs.normal.textColor = pc;
+            PhoneStyles.Label(dot, badge > 9 ? "9+" : badge.ToString(), PhoneStyles.Footer,
+                              PixelGUI.Text, TextAnchor.MiddleCenter);
         }
     }
 
@@ -346,42 +363,50 @@ public class PhoneUI : MonoBehaviour
     void DrawEmptyBay(Rect r)
     {
         PixelGUI.Fill(r, new Color(PixelGUI.Plate.r, PixelGUI.Plate.g, PixelGUI.Plate.b, 0.35f));
-        var style = PixelGUI.Footer;
-        var prevAlign = style.alignment;
-        style.alignment = TextAnchor.MiddleCenter;
-        GUI.Label(r, "· · ·", style);
-        style.alignment = prevAlign;
+        PhoneStyles.Label(r, "· · ·", PhoneStyles.Footer, null, TextAnchor.MiddleCenter);
     }
 
     void DrawApp(Rect r)
     {
-        var bar = new Rect(r.x, r.y, r.width, PixelGUI.Px(12f));
+        float barH = PhoneApp.RowH + PixelGUI.Px(2f);
+        var bar = new Rect(r.x, r.y, r.width, barH);
+        var view = new Rect(r.x, bar.yMax + PixelGUI.Px(2f), r.width, r.height - barH - PixelGUI.Px(2f));
+        float contentW = view.width - PixelGUI.Px(4f);      // room for the scroll rail
+
+        // Scrolled by hand rather than with GUI.BeginScrollView: the device is drawn through a rotated
+        // matrix, and a scroll view's own bars and clipping do not survive one intact.
+        float max = Mathf.Max(0f, _contentHeight - view.height);
+        _scroll.y = Mathf.Clamp(_scroll.y, 0f, max);
+
+        if (Event.current.type == EventType.ScrollWheel && view.Contains(Event.current.mousePosition))
+        {
+            _scroll.y = Mathf.Clamp(_scroll.y + Event.current.delta.y * PixelGUI.Px(6f), 0f, max);
+            Event.current.Use();
+        }
+
+        GUI.BeginGroup(view);
+        _contentHeight = _current.Draw(0f, -_scroll.y, contentW);
+        GUI.EndGroup();
+
+        if (max > 0f)
+        {
+            float railW = PixelGUI.Px(2f);
+            var rail = new Rect(view.xMax - railW, view.y, railW, view.height);
+            PixelGUI.Fill(rail, new Color(0f, 0f, 0f, 0.35f));
+            float thumbH = Mathf.Max(PixelGUI.Px(10f), view.height * (view.height / Mathf.Max(1f, _contentHeight)));
+            PixelGUI.Fill(new Rect(rail.x, rail.y + (rail.height - thumbH) * (_scroll.y / max), railW, thumbH),
+                          _current.Accent);
+        }
+
+        // Title bar last, so a row scrolled up under it is covered rather than trusted to be clipped.
         PixelGUI.Fill(bar, _current.Accent);
-        var titleStyle = PixelGUI.HeadingSmall;
-        var prev = titleStyle.normal.textColor;
-        titleStyle.normal.textColor = PixelGUI.Ink;
-        GUI.Label(new Rect(bar.x + PixelGUI.Px(14f), bar.y + PixelGUI.Px(2f), bar.width, PixelGUI.Px(9f)),
-                  _current.TileName, titleStyle);
-        titleStyle.normal.textColor = prev;
+        PhoneStyles.Label(new Rect(bar.x + PixelGUI.Px(11f), bar.y, bar.width, bar.height),
+                          _current.TileName, PhoneStyles.Heading, PixelGUI.Ink);
 
         // Back chevron, left of the title, the whole strip clickable.
-        var back = new Rect(bar.x, bar.y, PixelGUI.Px(13f), bar.height);
-        var backStyle = PixelGUI.Label;
-        var bp = backStyle.normal.textColor; var ba = backStyle.alignment;
-        backStyle.normal.textColor = PixelGUI.Ink;
-        backStyle.alignment = TextAnchor.MiddleCenter;
-        GUI.Label(back, "<", backStyle);
-        backStyle.normal.textColor = bp; backStyle.alignment = ba;
-        if (GUI.Button(back, GUIContent.none, GUIStyle.none)) { _current = null; _scroll = Vector2.zero; return; }
-
-        var view = new Rect(r.x, bar.yMax + PixelGUI.Px(3f), r.width, r.height - bar.height - PixelGUI.Px(3f));
-        float contentW = view.width - PixelGUI.Px(10f);   // room for the scrollbar
-
-        // Measure-then-draw in one pass: the app returns its height, which becomes next frame's view size.
-        var inner = new Rect(0f, 0f, contentW, Mathf.Max(view.height, _contentHeight));
-        _scroll = GUI.BeginScrollView(view, _scroll, inner, false, false);
-        _contentHeight = _current.Draw(0f, 0f, contentW);
-        GUI.EndScrollView();
+        var back = new Rect(bar.x, bar.y, PixelGUI.Px(11f), bar.height);
+        PhoneStyles.Label(back, "<", PhoneStyles.Data, PixelGUI.Ink, TextAnchor.MiddleCenter);
+        if (GUI.Button(back, GUIContent.none, GUIStyle.none)) { _current = null; _scroll = Vector2.zero; }
     }
 
     float _contentHeight;

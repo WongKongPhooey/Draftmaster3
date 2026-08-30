@@ -109,7 +109,16 @@ public class PhoneDrivRApp : PhoneApp
         float y0 = y;
         y += Section(x, y, w, $"FIELD · {_rows.Count}");
 
-        float rowH = PixelGUI.Px(12f);
+        // The number on the right is the driver's ability rating out of 100 — the same one the profile
+        // opens with. Unlabelled it reads like points, which it is not.
+        float head = RowH;
+        PhoneStyles.Label(new Rect(x + PixelGUI.Px(2f), y, w - PixelGUI.Px(4f), head), "DRIVER",
+                          PhoneStyles.Footer);
+        PhoneStyles.Label(new Rect(x + PixelGUI.Px(2f), y, w - PixelGUI.Px(4f), head), "ABILITY",
+                          PhoneStyles.Footer, null, TextAnchor.MiddleRight);
+        y += head;
+
+        float rowH = RowH;
         for (int i = 0; i < _rows.Count; i++)
         {
             var row = _rows[i];
@@ -137,7 +146,7 @@ public class PhoneDrivRApp : PhoneApp
         float y0 = y;
         var d = row.driver;
 
-        if (GUI.Button(new Rect(x, y, w, PixelGUI.Px(11f)), GUIContent.none, GUIStyle.none)) _selected = null;
+        if (GUI.Button(new Rect(x, y, w, RowH), GUIContent.none, GUIStyle.none)) _selected = null;
         y += Row(x, y, w, "< all drivers", "", PixelGUI.Info);
         y += PixelGUI.Px(3f);
 
@@ -147,9 +156,9 @@ public class PhoneDrivRApp : PhoneApp
         if (!string.IsNullOrEmpty(d.Nickname)) y += Body(x, y, w, "\"" + d.Nickname + "\"", PixelGUI.TextDisabled);
 
         y += PixelGUI.Px(4f);
-        y += Section(x, y, w, "RATING");
-        y += Meter(x, y, w, "Current", d.CurrentAbility / (float)Driver.AbilityMax, d.CurrentAbility.ToString(), PixelGUI.Gold);
-        y += Meter(x, y, w, "Potential", d.PotentialAbility / (float)Driver.AbilityMax, d.PotentialAbility.ToString(), PixelGUI.Info);
+        y += Section(x, y, w, "ABILITY / 100");
+        y += Meter(x, y, w, "Now", d.CurrentAbility / (float)Driver.AbilityMax, d.CurrentAbility.ToString(), PixelGUI.Gold);
+        y += Meter(x, y, w, "Ceiling", d.PotentialAbility / (float)Driver.AbilityMax, d.PotentialAbility.ToString(), PixelGUI.Info);
 
         y += PixelGUI.Px(4f);
         y += Section(x, y, w, "SEASON");
@@ -197,8 +206,8 @@ public class PhoneDrivRApp : PhoneApp
     // A 0..20 skill as pips — the same read as the driver database window, and quicker than a number.
     float Stat(float x, float y, float w, string label, int value)
     {
-        float h = PixelGUI.Px(11f);
-        GUI.Label(new Rect(x, y, w * 0.55f, h), label, PixelGUI.DataDim);
+        float h = RowH;
+        GUI.Label(new Rect(x, y, w * 0.55f, h), label, PhoneStyles.DataDim);
         float cellsW = PixelGUI.CellsWidth(Driver.StatMax / 2);
         var cells = new Rect(x + w - cellsW, y + (h - PixelGUI.CellsHeight) * 0.5f, cellsW, PixelGUI.CellsHeight);
         PixelGUI.Cells(cells, Mathf.RoundToInt(value / 2f), Driver.StatMax / 2,
@@ -209,8 +218,8 @@ public class PhoneDrivRApp : PhoneApp
     // Left/right pair with the right side coloured too — the list rows want both halves tinted.
     static float Row2(float x, float y, float w, string left, string right, Color colour)
     {
-        float h = PixelGUI.Px(12f);
-        var style = PixelGUI.Data;
+        float h = RowH;
+        var style = PhoneStyles.Data;
         var prev = style.normal.textColor;
         style.normal.textColor = colour;
         GUI.Label(new Rect(x, y, w, h), left, style);

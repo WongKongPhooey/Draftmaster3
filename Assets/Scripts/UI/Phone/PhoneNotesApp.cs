@@ -46,12 +46,12 @@ public class PhoneNotesApp : PhoneApp
         // Measure first so the plate can be drawn behind the text in one pass.
         float pad = PixelGUI.Px(4f);
         float inner = w - pad * 2f;
-        float h = PixelGUI.Px(11f) * 2f;                       // title + from/stamp line
-        float bodyH = PixelGUI.Body.CalcHeight(new GUIContent(note.body ?? ""), inner);
+        float h = RowH * 2f;                       // title + from/stamp line
+        float bodyH = PhoneStyles.Body.CalcHeight(new GUIContent(note.body ?? ""), inner);
         if (!string.IsNullOrEmpty(note.body)) h += bodyH + PixelGUI.Px(2f);
 
         string progress = ProgressLine(note);
-        if (!string.IsNullOrEmpty(progress)) h += PixelGUI.Px(11f);
+        if (!string.IsNullOrEmpty(progress)) h += RowH;
         h += pad * 2f;
 
         var plate = new Rect(x, y, w, h);

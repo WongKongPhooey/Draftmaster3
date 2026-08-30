@@ -54,8 +54,10 @@ public static class PaddockProps
         return go;
     }
 
-    // A floating name over a prop, so a blocked-out box says what it is meant to be. Uses the same world
-    // text the name boards on the motorhomes use.
+    // Writing on a prop — a board, a hoarding, a number on a bay: signage a real circuit would have.
+    //
+    // NOT for naming a place. A venue introduces itself on the title card when the player walks up to it
+    // (LocationTitle), because a name lettered across the ground reads as a label stuck to the scene.
     public static GameObject Sign(Transform parent, string text, Vector2 centreLocal, float widthM,
                                   Color colour, float localZ = PropZ - 0.05f)
     {

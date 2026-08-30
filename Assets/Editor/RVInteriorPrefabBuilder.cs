@@ -20,6 +20,9 @@ public static class RVInteriorPrefabBuilder
     const string RVPrefabPath = "Assets/Prefabs/Environment/RV.prefab";
     const string MaterialPath = "Assets/Resources/OnFoot/RVInteriorSprite.mat";
     const string SpritePath = "Assets/Textures/Environment/WhiteSquare.png";
+    // 4x4 texture at 4 px/unit = one world unit across, which is what Quad()'s metres-into-localScale
+    // sizing depends on. See GetOrCreateWhiteSprite.
+    const float UnitSpritePPU = 4f;
 
     // Exterior body footprint (RV-local): 3.95 wide x 9.93 long, centred on (0,-2), cab at +Y.
     // The spawn marker sits at the body centre (0,-2), so in the interior frame the floor is
@@ -218,6 +221,7 @@ public static class RVInteriorPrefabBuilder
 
     // 1x1-unit white sprite tinted per renderer; localScale sets the block's size in metres.
     // withCollider adds a solid BoxCollider2D auto-fit to the sprite (so it scales with the block).
+    // `size` is metres. The sprite is a unit quad (UnitSpritePPU), so metres go straight into localScale.
     static SpriteRenderer Quad(Sprite sprite, Material mat, Transform parent, string name, Vector2 centre, Vector2 size, float z, Color tint, bool withCollider = false)
     {
         var go = new GameObject(name);
@@ -241,10 +245,33 @@ public static class RVInteriorPrefabBuilder
         go.AddComponent<BoxCollider2D>().size = size;
     }
 
+    // The unit quad every piece of this prefab is drawn with. Quad() sizes a piece by putting metres
+    // straight into localScale, which only holds while this sprite covers exactly 1x1 world unit — so a
+    // 4x4 texture MUST import at 4 px/unit.
+    //
+    // It is not world art and must not be retargeted to the project's 12.8 px/m standard: doing that once
+    // already shrank the RV's body and its interior floor to 4/12.8 = 0.3125 of their size, with the
+    // collider shell (authored in plain metres) left at full size around a motorhome a third the size of
+    // its own doorway. So an existing asset is checked and repaired rather than trusted.
     static Sprite GetOrCreateWhiteSprite()
     {
         var existing = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
-        if (existing != null) return existing;
+        if (existing != null)
+        {
+            var imp = AssetImporter.GetAtPath(SpritePath) as TextureImporter;
+            if (imp != null && (imp.spritePixelsPerUnit != UnitSpritePPU
+                                || imp.spriteImportMode != SpriteImportMode.Single))
+            {
+                Debug.LogWarning($"RVInteriorPrefabBuilder: {SpritePath} was imported at " +
+                                 $"{imp.spritePixelsPerUnit} px/unit ({imp.spriteImportMode}); it is a unit quad, " +
+                                 $"putting it back to {UnitSpritePPU} px/unit (Single).");
+                imp.spriteImportMode = SpriteImportMode.Single;
+                imp.spritePixelsPerUnit = UnitSpritePPU;
+                imp.SaveAndReimport();
+                existing = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+            }
+            return existing;
+        }
 
         var tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
         var px = new Color32[16];
@@ -257,7 +284,7 @@ public static class RVInteriorPrefabBuilder
         var importer = (TextureImporter)AssetImporter.GetAtPath(SpritePath);
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single; // project default is Multiple, which yields no Sprite sub-asset
-        importer.spritePixelsPerUnit = 4f; // 4x4 texture -> exactly 1x1 world unit
+        importer.spritePixelsPerUnit = UnitSpritePPU; // 4x4 texture -> exactly 1x1 world unit
         importer.filterMode = FilterMode.Point;
         importer.mipmapEnabled = false;
         importer.SaveAndReimport();

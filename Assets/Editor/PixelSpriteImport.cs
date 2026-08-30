@@ -48,6 +48,16 @@ public static class PixelSpriteImport
         "Assets/RefImages",
     };
 
+    // Single files that live in a world folder but are NOT drawn art: a flat unit quad, stretched to its
+    // metres by transform scale, which is the one place that is the right thing to do. Retargeting one of
+    // these to 12.8 px/m does not resize a drawing — it silently rescales everything built out of it. The
+    // white square is what the RV exterior and its interior floor are made of, and a pass over this folder
+    // once shrank the whole motorhome to 4/12.8 of its size inside a full-size collider shell.
+    static readonly string[] kExcludedFiles =
+    {
+        "Assets/Textures/Environment/WhiteSquare.png",
+    };
+
     // Sprites the CPU has to read pixels from at runtime, rather than just hand to the GPU.
     static bool NeedsCpuRead(string path)
     {
@@ -72,6 +82,7 @@ public static class PixelSpriteImport
 
         paths = paths.Distinct()
                      .Where(p => !kExcludedFolders.Any(x => p.Replace('\\', '/').StartsWith(x + "/")))
+                     .Where(p => !kExcludedFiles.Contains(p.Replace('\\', '/')))
                      .ToList();
 
         int changed = 0, skipped = 0;

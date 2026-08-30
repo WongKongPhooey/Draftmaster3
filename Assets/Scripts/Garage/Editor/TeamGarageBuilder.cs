@@ -47,7 +47,7 @@ public static class TeamGarageBuilder
                            square, mat, new Color(0.85f, 0.20f, 0.22f), 5);
         var carCol = car.AddComponent<BoxCollider2D>();
         carCol.size = Vector2.one; // scaled by the transform to the sprite size
-        AddLabel(car.transform, "TEAM CAR", new Vector3(0f, 0.75f, 0f), new Color(1f, 0.9f, 0.4f), 0.12f);
+        LocationTitle.Attach(car, "TEAM CAR", 5f, "This year's chassis");
 
         // --- player ---
         var player = MakeDiscObject(root.transform, "OnFootPlayer", new Vector3(0f, -6f, 0f), disc, mat,
@@ -143,8 +143,7 @@ public static class TeamGarageBuilder
         station.role = role;
         station.speakerName = RoleStation.SpeakerFor(role);
         station.interactRange = 2.4f;
-        AddLabel(go.transform, RoleStation.SpeakerFor(role), new Vector3(0f, 0.85f, 0f),
-                 new Color(1f, 1f, 1f, 0.9f), 0.1f);
+        LocationTitle.Attach(go, RoleStation.SpeakerFor(role).ToUpperInvariant(), 4.5f);
     }
 
     // The engineers' desk with the team laptop on it. Interacting opens the garage screen; BACK there
@@ -170,7 +169,7 @@ public static class TeamGarageBuilder
         laptop.interactRange = 2.4f;
         laptop.speakerName = "Laptop";
         laptop.turnsToFace = false;
-        AddLabel(go.transform, "LAPTOP", new Vector3(0f, 1.1f, 0f), new Color(1f, 1f, 1f, 0.9f), 0.1f);
+        LocationTitle.Attach(go, "TEAM LAPTOP", 4f, "Setup, parts and the garage sheet");
     }
 
     // A door back to the title screen. Nothing else in this scene changes scene, and the pause menu only
@@ -190,26 +189,7 @@ public static class TeamGarageBuilder
         door.interactRange = 2.4f;
         door.speakerName = "Exit";
         door.turnsToFace = false;
-        AddLabel(go.transform, "EXIT", new Vector3(0f, 1.7f, 0f), new Color(1f, 0.85f, 0.4f, 0.95f), 0.11f);
-    }
-
-    // Always-on world-space caption above an object (TextMesh renders reliably under URP).
-    static void AddLabel(Transform parent, string text, Vector3 localOffset, Color color, float size)
-    {
-        var go = new GameObject("Label");
-        go.transform.SetParent(parent, false);
-        Vector3 ls = parent.lossyScale;
-        go.transform.localScale = new Vector3(ls.x != 0 ? 1f / ls.x : 1f, ls.y != 0 ? 1f / ls.y : 1f, 1f);
-        go.transform.localPosition = new Vector3(localOffset.x / (ls.x != 0 ? ls.x : 1f),
-                                                 localOffset.y / (ls.y != 0 ? ls.y : 1f), -0.1f);
-        var tm = go.AddComponent<TextMesh>();
-        tm.text = text;
-        tm.anchor = TextAnchor.LowerCenter;
-        tm.alignment = TextAlignment.Center;
-        tm.fontSize = 64;
-        tm.characterSize = size;
-        tm.color = color;
-        go.GetComponent<MeshRenderer>().sortingOrder = 40;
+        LocationTitle.Attach(go, "EXIT", 4.5f, "Back to the title screen");
     }
 
     // ---- asset creation ----

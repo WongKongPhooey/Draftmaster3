@@ -125,6 +125,23 @@ public class SpawnIntroUI : MonoBehaviour
     public bool TitleBusy => !string.IsNullOrEmpty(_title) &&
                              _titleTimer < titleFadeIn + titleHold + titleFadeOut;
 
+    // Put a message on the card from anywhere, standing the UI up first if the scene never spawned one —
+    // a garage or a factory has no PitLaneStart to make it. Deliberately does not touch SpawnTitle: that
+    // is the record of where the player came in, not of the last thing announced.
+    public static SpawnIntroUI Banner(string text, string subtitle = "")
+    {
+        var ui = Instance;
+        if (ui == null)
+        {
+            var go = new GameObject("SpawnIntroUI");
+            ui = go.AddComponent<SpawnIntroUI>();
+            Instance = ui;
+        }
+        if (ui._player == null && OnFootController.Current != null) ui._player = OnFootController.Current.transform;
+        ui.ShowTitle(text, subtitle);
+        return ui;
+    }
+
     // Re-use the title card as an objective banner ("HEAD TO YOUR CAR") — same fade-in/hold/fade-out,
     // restarted from the top. Called when a beat finishes and the player needs pointing at the next thing.
     public void ShowTitle(string text, string subtitle = "")

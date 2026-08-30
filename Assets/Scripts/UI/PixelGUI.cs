@@ -199,6 +199,11 @@ public static class PixelGUI
         _tabSelected = Style(display, labelPt, Text, TextAnchor.MiddleCenter);
     }
 
+    // The pixel cell a bitmap face is drawn for, exposed so a panel that wants a *smaller* face than the
+    // kit's default — the phone, which is a screen drawn inside the screen — can still land on a whole
+    // multiple of the cell rather than resampling the face down to a fractional size.
+    public static int FontCell(Font font, int fallback = 16) => CellOf(font, fallback);
+
     // The pixel cell a bitmap face is drawn for. Sizes must be whole multiples of it or the glyphs
     // are resampled and go soft — the one thing this whole UI exists to avoid.
     static int CellOf(Font font, int fallback)

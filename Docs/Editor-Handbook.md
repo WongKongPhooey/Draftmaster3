@@ -188,7 +188,8 @@ what they say now.
 **Which file the marker lives in decides which tracks they appear at.** In the package = that track only;
 in `RaceScene` = every track, unless you fill in `AppearanceConditions > Tracks`. Put one in the wrong half
 and `Draftmaster > NPCs > Move Selected NPC Into Track Package` moves it, keeping every tuned field.
-The RV race engineer is package content — `Draftmaster > NPCs > Add RV Engineer To Open Package`.
+The motorhome door belongs to the **team liaison**, who is stood up from the weekend's sheet at runtime
+(`PlacedNPCDefaults.CreateLiaison`) rather than placed by hand.
 
 **Geometry anchors only resolve with a track loaded.** In the race scene run
 `Draftmaster > Tracks > Preview Selected Package In Scene` first, then `Clear Package Previews From Scene`
@@ -275,6 +276,13 @@ The standard is **12.8 px/m**. Import at that PPU — never fix size with transf
 - `Apply Pixel Standard to Open Scene` + `Rebuild Track Generators` after changing materials or tiling.
 - `Report Surface Material Usage` — who else uses a material before you retile it.
 
+**The one exception to the standard**: a flat *unit quad* sprite (`Assets/Textures/Environment/WhiteSquare.png`,
+4x4 px at **4** px/unit = 1x1 world unit) is stretched to its metres by transform scale on purpose — it is a
+building block, not a drawing. Retargeting it to 12.8 px/m does not resize art, it rescales everything built
+out of it: it shrank the RV exterior and its interior floor to 4/12.8 of size inside a full-size collider
+shell. The retargeter skips it (`PixelSpriteImport.kExcludedFiles`) and the RV builder repairs the import if
+it drifts again.
+
 `Docs/PixelArtStandard.md`.
 
 ## 16. UI work
@@ -301,6 +309,20 @@ The standard is **12.8 px/m**. Import at that PPU — never fix size with transf
 - `Tools > Draftmaster > Build Team Garage Scene` — rebuilds `GarageContent` in the open TeamGarage scene:
   floor, team car, the three crew stations, the desk **laptop** (opens the garage sheet) and the **EXIT**
   door back to the title. A re-run wipes hand edits under that root, so run it first, then tweak.
+
+### Naming a place
+
+**Places are announced, never lettered.** A location the player walks up to introduces itself on the title
+card in the upper middle of the screen — the same card the track name arrives on and the same one an
+objective banner uses — and fades after a few seconds. Put a `LocationTitle` on whatever the place is built
+under (`title`, optional `subtitle`, `radius`, `forgetRadius`, `minRepeatSeconds`, `onceOnly`), or call
+`LocationTitle.Attach(go, "FAN ZONE", 13f, "Signing sessions")` from the builder that makes it. It waits for
+whatever is already on the card to finish before it speaks, and re-arms only once the player has walked back
+out past `forgetRadius`.
+
+Do **not** float a `TextMesh` with the place's name over it — that reads as a label stuck to the scene.
+World text is for signage a real circuit would have (a board, a hoarding, a braking marker):
+`PaddockProps.Sign` is for that and says so.
 
 ## 18. Change what a race weekend looks like
 
@@ -400,7 +422,7 @@ Free: `F11`–`F12`.
 
 ### `Draftmaster > NPCs`
 Director (**Ctrl+Shift+N**) · Add Placed NPC · Install Default Pit Cast (greeter + chief) ·
-Move Selected NPC Into Track Package · Add RV Engineer To Open Package · Dialogue Pool (Global) ·
+Move Selected NPC Into Track Package · Dialogue Pool (Global) ·
 Dialogue Pool (Selected Track) · Seed Global Dialogue Pool From Built-Ins · Clear Appearance Flags ·
 Clear Career Path Choice.
 

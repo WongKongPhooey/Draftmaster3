@@ -419,8 +419,7 @@ public class WeekendVenueSites : MonoBehaviour
         // The top table the officials and the press sit behind, across the back of the room.
         PaddockProps.Quad(room.transform, "TopTable", new Vector2(0f, hy - 1.6f), new Vector2(RoomWidth - 4f, 1.0f),
                           PaddockProps.PropZ, tableMat);
-        PaddockProps.Sign(room.transform, "DRIVERS' ROOM", new Vector2(0f, -hy - 1.2f), 6f,
-                          new Color(0.95f, 0.86f, 0.55f));
+        LocationTitle.Attach(room, "DRIVERS' ROOM", RoomWidth * 0.7f, "Drivers' meeting and the press");
 
         int seats = BuildSeats(room.transform, seatMat, hy);
         SeatTheDrivers(room.transform, hy, seats);
@@ -531,7 +530,7 @@ public class WeekendVenueSites : MonoBehaviour
                               PaddockProps.PropZ - 0.02f, postMat);
         }
 
-        PaddockProps.Sign(fence.transform, "FAN ZONE", new Vector2(0f, 1.4f), 5f, new Color(0.95f, 0.86f, 0.55f));
+        LocationTitle.Attach(fence, "FAN ZONE", FenceLength * 0.5f, "Signing sessions");
 
         // The crowd, on the public side of the rail. They are the reason the fence is there and the reason
         // signing is done stood at it — you are on the inside, they are on the outside, and the barrier is
@@ -573,8 +572,7 @@ public class WeekendVenueSites : MonoBehaviour
                           new Vector2(TentWidth, 0.8f), PaddockProps.PropZ, Mat(new Color(0.80f, 0.24f, 0.22f)));
         PaddockProps.Quad(tent.transform, "Counter", new Vector2(0f, -TentDepth * 0.5f + 1.2f),
                           new Vector2(TentWidth - 3f, 0.9f), PaddockProps.PropZ, Mat(new Color(0.36f, 0.30f, 0.26f)));
-        PaddockProps.Sign(tent.transform, "HOSPITALITY", new Vector2(0f, TentDepth * 0.5f + 1.1f), 5f,
-                          new Color(0.95f, 0.86f, 0.55f));
+        LocationTitle.Attach(tent, "HOSPITALITY", TentWidth, "Sponsor duty");
 
         Vector3 stand = Walkable(tent.transform.TransformPoint(new Vector3(0f, -TentDepth * 0.5f + 2.6f, 0f)));
         PaddockProps.Anchor(_root, WeekendVenue.SponsorSuite, stand, stand, arriveRange: 4.5f);
@@ -598,8 +596,7 @@ public class WeekendVenueSites : MonoBehaviour
                           PaddockProps.FloorZ, Mat(new Color(0.24f, 0.25f, 0.29f)));
         PaddockProps.Quad(stage.transform, "Backdrop", new Vector2(0f, StageDepth * 0.5f - 0.5f),
                           new Vector2(StageWidth, 1.0f), PaddockProps.PropZ, Mat(new Color(0.13f, 0.35f, 0.58f)));
-        PaddockProps.Sign(stage.transform, "DRIVER INTRODUCTIONS", new Vector2(0f, StageDepth * 0.5f - 0.5f), 8f,
-                          new Color(0.97f, 0.97f, 0.98f), PaddockProps.PropZ - 0.05f);
+        LocationTitle.Attach(stage, "DRIVER INTRODUCTIONS", StageWidth, "The stage at the end of pit road");
 
         Vector3 mark = Walkable(stage.transform.TransformPoint(new Vector3(0f, -StageDepth * 0.25f, 0f)));
         PaddockProps.Anchor(_root, WeekendVenue.IntroStage, mark, mark, arriveRange: 4.5f);

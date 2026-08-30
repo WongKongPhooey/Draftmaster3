@@ -1,7 +1,7 @@
 # The phone
 
-The player's phone slides up from the bottom of the screen while they're on foot. **P** opens and closes
-it; **Esc** backs out one level (app → home → away).
+The player's phone slides up from the bottom of the screen while they're on foot, over on the left and
+held at a slight angle. **P** opens and closes it; **Esc** backs out one level (app → home → away).
 
 It is not a pause. The paddock keeps moving behind it — the player just stops walking while it's up.
 
@@ -15,9 +15,9 @@ which is loud enough to notice.
 | **Tasks** | What stands between the player and progress: the weekend's next step, sponsors unsigned or unpainted, fan appeal, quests waiting to be reported | `RaceWeekend`, `LapTimingManager`, `RaceDirector`, `SponsorBook`, `FanAppeal`, `QuestManager` |
 | **Notes** | Who asked for what. Every accepted side quest is logged with the person's name and their own words; finished ones drop to the bottom rather than disappearing | `PhoneNotes` (PlayerPrefs), `QuestManager` for progress |
 | **SoBuzz** | Fan appeal as a gauge and a follower count, plus a feed: which brands are watching, which are still out of reach and by how much, and what the crowd is saying | `FanAppeal`, `SponsorCatalog`, `SponsorTerms`, `SponsorBook`, `PlayerStatsLedger` |
-| **Schedule** | The weekend timetable: where the clock is, what is still to come today, your own three sessions wherever they fall, and the five meters | `WeekendDirector`, `WeekendLedger`, `FanAppeal` |
+| **Schedule** | The weekend as a calendar page: a day a tab, an hour a cell, every booking a block at its own time and length, with the clock drawn across it as a red line. Under the page, the five meters | `WeekendDirector`, `WeekendLedger`, `FanAppeal` |
 | **Points** | The three championships. This weekend's races (who won, or when they are due), a results feed, and the tables with the player's own series first | `SeasonChampionships` |
-| **DrivR** | The form guide: every driver ranked by ability, tap for their season results, craft stats, track-type stats and off-track ratings | `Drivers` and `Results` tables via `DatabaseManager` |
+| **DrivR** | The form guide: every driver ranked by ability — the number down the right of the list is that rating out of 100, not points — tap for their season results, craft stats, track-type stats and off-track ratings | `Drivers` and `Results` tables via `DatabaseManager` |
 
 **SoBuzz is not flavour text.** A brand posting "we're watching" means `SponsorTerms.CanApproach` is true
 for the player's current standing, so that rep will deal when the player finds them in the pit lane. A
@@ -34,6 +34,25 @@ badge counts) and NOTES (who asked for what), and finishing it leaves the same s
 unread note — `WeekendDirector.LeavePhoneCribSheet`. The key in those lines is read off `PhoneUI.toggleKey`
 at build time (`WeekendScripts.PhoneKeyName`), so rebinding the toggle cannot leave the one conversation
 that explains the phone naming a dead key. Content: `Weekend/Core/Conversations/OrientationContent.cs`.
+
+## How it is drawn
+
+The device is one `GUI.matrix` about the bottom of the phone — the hand — so the tilt is free and every
+rect inside is authored square. `PhoneUI.screenAnchorX` (0.20) puts its left edge a fifth of the way across
+the screen and `tiltDegrees` (3) leans the top to the right; set the tilt to 0 and nothing else changes.
+
+Type is **`PhoneStyles`**, not the kit's own. PixelGUI sizes every face at its cell times the display scale
+— 32px VT323 on a 1080p screen — which is right for a panel that owns the screen and far too big for a
+screen drawn inside one: a 32px glyph in a 22px row is what made the phone read as squashed. PhoneStyles
+builds the same faces at *half* the display scale, rounded to a whole multiple of the cell so the glyphs
+still land on the pixel grid, and adds ink-on-paper variants for the calendar page. Layout still measures in
+`PixelGUI.Px`, so the device is the same size and simply fits about twice as much on it. A row is
+`PhoneApp.RowH` — never a literal.
+
+Because the matrix is rotated, IMGUI's clipping is approximate (a rotated clip rect is enforced as its
+axis-aligned bounds), so the app view is scrolled by hand rather than with `GUI.BeginScrollView`, and the
+case and title bar are drawn **after** the content: anything that scrolled past the edge is covered rather
+than trusted to have been clipped.
 
 ## Adding an app
 
