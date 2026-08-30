@@ -193,7 +193,7 @@ public class WeekendVenueSites : MonoBehaviour
             {
                 var seated = PaddockPerson.SpawnTalker<WeekendVenueHost>(
                     rv.InteriorRoot, Vector3.zero, "Host_" + venue, speaker.GetHashCode(), speaker, idle,
-                    interactRange: 1.8f, heightM: 1.5f);
+                    interactRange: 1.8f, heightM: PaddockPerson.SeatedHeightM);
                 seated.transform.localPosition = new Vector3(RVInterior.TableLocal.x + 0.75f,
                                                             RVInterior.TableLocal.y,
                                                             RVInterior.InteriorPropZ - 0.05f);
@@ -485,7 +485,8 @@ public class WeekendVenueSites : MonoBehaviour
             float x = -rowWidth * 0.5f + col * SeatPitch;
             float y = halfDepth - 3.6f - row * RowPitch;
 
-            var body = PaddockPerson.Spawn(seated.transform, Vector3.zero, $"SeatedDriver_{i}", 7700 + i, heightM: 1.45f);
+            var body = PaddockPerson.Spawn(seated.transform, Vector3.zero, $"SeatedDriver_{i}", 7700 + i,
+                                           heightM: PaddockPerson.SeatedHeightM);
             body.transform.localPosition = new Vector3(x, y + 0.25f, PaddockProps.PropZ - 0.1f);
         }
     }
@@ -542,7 +543,8 @@ public class WeekendVenueSites : MonoBehaviour
             float t = FanCount == 1 ? 0.5f : i / (float)(FanCount - 1);
             float x = Mathf.Lerp(-FenceLength * 0.45f, FenceLength * 0.45f, t);
             float y = 0.9f + (i % 3) * 0.75f;     // three deep, like a real fence on a Friday
-            var body = PaddockPerson.Spawn(crowd.transform, Vector3.zero, $"Fan_{i}", 9100 + i, heightM: 1.7f);
+            var body = PaddockPerson.Spawn(crowd.transform, Vector3.zero, $"Fan_{i}", 9100 + i,
+                                           heightM: PaddockPerson.HeightM);
             body.transform.localPosition = new Vector3(x, y, PaddockProps.PropZ - 0.1f);
         }
 

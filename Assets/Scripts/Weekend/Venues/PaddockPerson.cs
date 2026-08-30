@@ -11,7 +11,15 @@ using UnityEngine;
 // each carrying their own copy of it.
 public static class PaddockPerson
 {
-    public const float HeightM = 1.75f;
+    // The one figure everybody on foot is drawn to — the player, the pit crew, the autograph fans, the
+    // paddock crowd: an 8px walk frame at the project's 12.8 px/m, so 0.625m. The world is metric for cars
+    // and drawn smaller than 1:1 for people; standing a venue's bodies at a real 1.75m made them nearly
+    // three times the size of everyone else, which is what the drivers' room and the hospitality awning
+    // were showing. Never hand-set a metric height here — take it from the standard.
+    public const float HeightM = PitCrewSpawner.OnFootPersonHeight;
+
+    // Somebody sitting down. Same person, folded up — the seated head sits lower than the standing one.
+    public const float SeatedHeightM = HeightM * 0.85f;
     public const float GroundZ = -0.4f;      // in front of the tarmac, behind the on-foot player
     public const string SortingLayer = "Default";
     public const int SortingOrder = 20;
@@ -71,7 +79,10 @@ public static class PaddockPerson
         }
 
         // No part library in this project yet: a coloured blob is still a person you can walk up to.
-        Object.Destroy(layered);
+        // DestroyImmediate outside play mode so an edit-mode test can measure one of these without Unity
+        // refusing the deferred Destroy — the size of a person is exactly the thing worth testing.
+        if (Application.isPlaying) Object.Destroy(layered);
+        else Object.DestroyImmediate(layered);
         var sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = Blob(fallback, heightM);
         sr.sharedMaterial = Unlit;
