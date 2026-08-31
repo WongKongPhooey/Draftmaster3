@@ -206,6 +206,9 @@ public static class PlacedNPCDefaults
         npc.anchorAlong = 4f;                      // straight out from the door, in the way on purpose
         npc.anchorLateral = -2.2f;                 // off to one side of the door, in the way on purpose
         npc.interaction = PlacedNPC.Interaction.WalkUpCutscene;
+        // She is the day: the driver wakes up with nothing booked and an empty objective strip, and it is
+        // this conversation that puts the first obligation on the map. See WeekendBriefing.
+        npc.givesTheDaysObjective = true;
         npc.waitForTrigger = true;
         npc.triggerOffset = new Vector2(2.6f, 0f); // past the interior's exit threshold, so the mask has lifted
         npc.triggerRadius = 1.5f;
@@ -217,13 +220,14 @@ public static class PlacedNPCDefaults
         npc.appear.inPractice = true;
         npc.appear.inQualifying = false;
         npc.appear.inRace = false;
+        npc.linesFromTheWeekendSheet = true;   // re-read when she appears, so a placed marker never goes stale
         npc.lines = LiaisonLines();
         return npc;
     }
 
     // What she says, filled in from the sheet. No booking left today and she says so rather than sending
     // the player somewhere that is not on.
-    static string[] LiaisonLines()
+    public static string[] LiaisonLines()
     {
         var next = Draftmaster.Weekend.WeekendSchedulePlan.NextWorthDoing();
         string clock = Draftmaster.Weekend.WeekendSlots.Day(Draftmaster.Weekend.WeekendLedger.CurrentSlot) + ", " +

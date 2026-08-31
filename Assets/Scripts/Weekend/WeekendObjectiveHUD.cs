@@ -71,7 +71,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // throw the marker's fly-in again so the eye goes from her to the direction she just sent them in.
     void OnCutsceneFinished(PlacedNPC who)
     {
-        if (who == null || who.role != PlacedNPC.Role.TeamLiaison) return;
+        // Whoever hands the day over, whatever their job title — the flag is the thing, not the role.
+        if (who == null || !(who.givesTheDaysObjective || who.role == PlacedNPC.Role.TeamLiaison)) return;
 
         WeekendDirector.BookNextUp(replaceExisting: true);
         _markedId = "";   // force the marker to be rebuilt and pulsed on the next tick

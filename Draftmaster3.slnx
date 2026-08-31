@@ -2,12 +2,12 @@
   <Project Path="Draftmaster.Progression.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="PlayFabEditorExtensions.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="PlayFab.csproj" />
   <Project Path="InkEditor.csproj" />
   <Project Path="Ink-Libraries.csproj" />
   <Project Path="Draftmaster.Sim.csproj" />
   <Project Path="Draftmaster.Tests.Editor.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Draftmaster.Weekend.csproj" />
   <Project Path="Draftmaster.Chatter.csproj" />
   <Project Path="Draftmaster.Tracks.csproj" />

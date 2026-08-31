@@ -32,6 +32,14 @@ public class PitCrewSpawner : MonoBehaviour
     public float memberScale = 1f;
     [Tooltip("Lateral distance (m) from the box centre to the standby line on the wall. Must clear the parked box lane (PitLane.ParkLateral + car half-width) or the crew stand inside the parked cars.")]
     public float standbyLateral = 4.6f;
+
+    [Header("Pit box stands")]
+    [Tooltip("Build the team's pit box — the cart on the wall the crew chief sits on — over every box, " +
+             "painted in that car's colours (CarColours). See PitBoxStand.")]
+    public bool spawnStands = true;
+    [Tooltip("Lateral distance (m) from the box centre out to the stand. Sits beyond the crew's standby " +
+             "line, on the wall itself, so it never overlaps the people working the stop.")]
+    public float standLateral = 6.2f;
     [Tooltip("Half the car length the wheel stations straddle (m).")]
     public float wheelLongitudinal = 1.8f;
     [Tooltip("Lateral offset (m) of a wheel station from the box centre.")]
@@ -106,13 +114,19 @@ public class PitCrewSpawner : MonoBehaviour
         boxGo.transform.position = worldPos;
         boxGo.transform.rotation = Quaternion.Euler(0f, 0f, tangAng - 90f); // up = tangent
 
+        float wallSideSign = Mathf.Sign(wallSide == 0f ? 1f : wallSide);
+
         var box = boxGo.AddComponent<PitCrewBox>();
         box.wheelLongitudinal = wheelLongitudinal;
         box.wheelLateral = wheelLateral;
         box.Configure(idx);
 
+        // The team's own pit box, out on the wall behind the crew: the one thing on pit road painted in the
+        // car's colours, so a glance down the lane says whose box is whose.
+        if (spawnStands) PitBoxStand.Build(boxGo.transform, idx, standLateral * wallSideSign, -0.02f);
+
         // Five stations: 4 wheels (corners) + 1 fueller (rear). x is lateral (wall = +wallSide), y is along lane.
-        float wl = wallSide;
+        float wl = wallSideSign;
         var work = new[]
         {
             new Vector3( wheelLateral * wl,  wheelLongitudinal, 0f), // front wheel, wall side

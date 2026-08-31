@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -55,6 +56,26 @@ public class PitLaneStart : MonoBehaviour
     public float enterHintRange = 14f;
     [Tooltip("How far the player must walk (m) before the run hint appears.")]
     public float runHintAfterMetres = 3f;
+
+    [Header("Wake Up")]
+    [Tooltip("Open on a black screen with an alarm clock going off, then fade in with the driver getting up. " +
+             "Only when the scene opens inside the motorhome, and only on the first morning of a weekend — " +
+             "a session reload does not wake you up again. See WakeUpSequence.")]
+    public bool wakeUpInRV = true;
+    [Tooltip("Alarm clock sound. Empty = a synthesised placeholder (four square-wave beeps on a loop).")]
+    public AudioClip alarmClip;
+    [Range(0f, 1f)] public float alarmVolume = 0.55f;
+    [Tooltip("Seconds the alarm rings in the dark before the picture comes up. Any key hits the clock early.")]
+    public float wakeDarkSeconds = 2.2f;
+    [Tooltip("Seconds the fade from black takes.")]
+    public float wakeFadeInSeconds = 1.8f;
+    [Tooltip("Seconds the getting-up beat takes.")]
+    public float wakeGetUpSeconds = 0.8f;
+    [Tooltip("Lying-down sprite. Empty = the standing sprite laid on its side, which is the placeholder.")]
+    public Sprite lyingDownSprite;
+    [Tooltip("Animator trigger for the getting-up animation, if the player rig has one. Empty (or missing " +
+             "from the rig) = the body rotates upright instead, which is the placeholder.")]
+    public string getUpTrigger = "GetUp";
 
     [Header("Atmosphere")]
     [Tooltip("Looping crowd/paddock bed started when the scene opens. Ducks while the player is inside the RV. Empty = silence.")]
@@ -159,6 +180,12 @@ public class PitLaneStart : MonoBehaviour
         if (marker != null)
             playerPos = new Vector3(marker.transform.position.x, marker.transform.position.y, playerPos.z);
 
+        // Lights out before anything is drawn. The demo opens on a black screen with an alarm clock going
+        // off, so the first frame of the paddock must not be visible underneath it — the decision is made
+        // here, at the top of the scene open, and the beat itself plays once there is a player to wake up.
+        bool waking = ShouldWakeUp(marker);
+        if (waking) ScreenFade.HoldBlack();
+
         // If a walkable boundary is authored, never spawn the player outside it.
         if (PaddockBoundary.AnyActive)
         {
@@ -246,9 +273,84 @@ public class PitLaneStart : MonoBehaviour
         // have got.
         string when = Draftmaster.Weekend.WeekendSlots.Day(Draftmaster.Weekend.WeekendLedger.CurrentSlot) + " - " +
                       Draftmaster.Weekend.WeekendSlots.ClockAmPm(Draftmaster.Weekend.WeekendLedger.ClockMinute);
-        _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform, when);
         var carSprite = car.GetComponentInChildren<SpriteRenderer>();
         _carIcon = carSprite != null ? carSprite.sprite : null;
+
+        // Woken up rather than dropped in: the alarm and the fade come first, and the card that says where
+        // and when you are waits until the driver's eyes are open. Both paths end in the same title card.
+        if (waking) StartCoroutine(WakeUpThenIntroduce($"{trackTitle} - {spawnLabel}", when));
+        else
+        {
+            _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform, when);
+            SyncCarMarker();
+        }
+    }
+
+    // ------------------------------------------------------------------ waking up
+
+    // The weekend whose first morning has already been slept through. A weekend is several scene loads —
+    // practice, qualifying, the race, a trip to the garage and back — and only the first of them is a
+    // morning; the rest are the same day continuing.
+    const string WokeUpKey = "weekend.wokeup";
+
+    // Why the scene did or didn't open with the alarm. Read by Draftmaster > Debug when the opening does
+    // not play and it is not obvious which of the five gates said no.
+    public static string LastWakeDecision = "not evaluated";
+
+    bool ShouldWakeUp(PlayerSpawnPoint marker)
+    {
+        if (!wakeUpInRV) { LastWakeDecision = "wakeUpInRV is off"; return false; }
+        if (!rvInterior) { LastWakeDecision = "rvInterior is off"; return false; }
+        if (marker == null || marker.gameObject.name != forcedSpawnName)
+        {
+            LastWakeDecision = $"spawn is '{(marker == null ? "none" : marker.gameObject.name)}', not {forcedSpawnName}";
+            return false;
+        }
+
+        // Here to drive, or already part-way through the three days: no alarm, you have been up for hours.
+        if (!string.IsNullOrEmpty(WeekendDirector.PendingRouteId))
+        {
+            LastWakeDecision = "here to drive a booked session";
+            return false;
+        }
+        if (Draftmaster.Weekend.WeekendLedger.DoneCount > 0 ||
+            Draftmaster.Weekend.WeekendLedger.MissedCount > 0)
+        {
+            LastWakeDecision = "the weekend is already underway";
+            return false;
+        }
+
+        if (PlayerPrefs.GetInt(WokeUpKey, -1) == RaceWeekend.WeekendId)
+        {
+            LastWakeDecision = "already woken up this weekend";
+            return false;
+        }
+
+        LastWakeDecision = "waking up";
+        return true;
+    }
+
+    IEnumerator WakeUpThenIntroduce(string title, string when)
+    {
+        PlayerPrefs.SetInt(WokeUpKey, RaceWeekend.WeekendId);
+        PlayerPrefs.Save();
+
+        var walker = _player.GetComponent<OnFootController>();
+        var settings = WakeUpSequence.Settings.Default;
+        settings.alarmClip = alarmClip;
+        settings.alarmVolume = alarmVolume;
+        settings.darkSeconds = wakeDarkSeconds;
+        settings.fadeInSeconds = wakeFadeInSeconds;
+        settings.getUpSeconds = wakeGetUpSeconds;
+        settings.lyingDownSprite = lyingDownSprite;
+        settings.getUpTrigger = getUpTrigger;
+
+        // No walker to wake up (a prefab with no controller): bring the lights up rather than leaving the
+        // player staring at the black screen this method just committed to.
+        if (WakeUpSequence.Play(walker, settings) == null) ScreenFade.FromBlack(0f, 0.25f);
+        while (WakeUpSequence.Running) yield return null;
+
+        _intro = SpawnIntroUI.Create(title, _player.transform, when);
         SyncCarMarker();
     }
 
@@ -320,6 +422,12 @@ public class PitLaneStart : MonoBehaviour
         var chief = PlacedNPC.Find(PlacedNPC.Role.CrewChief);
         _chiefNpc = chief;
         _chief = chief != null ? chief.Interactable : null;
+
+        // Is anybody standing outside the motorhome with today's plan? If so the weekend books nothing
+        // until they have said it, and the driver wakes up with an empty objective strip. If not — this
+        // track's cast has no liaison, or hers didn't pass her conditions — the weekend books for itself
+        // as it always did, straight away rather than after a pause the player would read as a bug.
+        WeekendDirector.OpeningCastBuilt(PlacedNPC.ObjectiveGiver() != null);
     }
 
     void OnDestroy()

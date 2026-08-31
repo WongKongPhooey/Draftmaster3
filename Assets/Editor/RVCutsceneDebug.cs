@@ -69,6 +69,13 @@ public static class RVCutsceneDebug
         var seq = marker != null ? GameObject.Find(marker.name + "_Cutscene") : null;
         sb.AppendLine($"  cutscene object: {(seq != null ? "alive at " + seq.transform.position.ToString("F2") : "destroyed/absent")}");
 
+        // The two things the opening turns on: whether the alarm played, and whether the day is still
+        // hers to hand over. An opening that "did nothing" is nearly always one of these two saying no.
+        sb.AppendLine($"  wake up: {PitLaneStart.LastWakeDecision}");
+        sb.AppendLine($"  objective: waitingToBeTold={WeekendDirector.WaitingToBeTold()} " +
+                      $"booked='{WeekendAppointment.PendingId}' " +
+                      $"giver={(PlacedNPC.ObjectiveGiver() == null ? "nobody" : PlacedNPC.ObjectiveGiver().name)}");
+
         Debug.Log(sb.ToString());
     }
 

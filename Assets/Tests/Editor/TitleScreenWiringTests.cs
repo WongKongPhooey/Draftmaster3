@@ -29,18 +29,43 @@ public class TitleScreenWiringTests
     const int Continue = 1;
     const int Exhibition = 2;
     const int LoadScene = 3;
+    const int NotWired = 4;
+    const int RestartDemo = 5;
+
+    // TitleScreenUI.Build, in declaration order.
+    const int Both = 0;
+    const int DemoOnly = 1;
+    const int FullOnly = 2;
+
+    // DemoMode.OverrideKey. Spelled out rather than referenced: this assembly can't see Assembly-CSharp.
+    const string DemoOverrideKey = "game.demo";
 
     Scene _title;
+    int _demoOverrideWas;
 
     // Additive: the editor keeps whatever scene it had open while these run.
     [SetUp]
-    public void OpenTitle() => _title = EditorSceneManager.OpenScene(TitleScenePath, OpenSceneMode.Additive);
+    public void OpenTitle()
+    {
+        _title = EditorSceneManager.OpenScene(TitleScenePath, OpenSceneMode.Additive);
+
+        // The menu is two menus now, and which one it builds depends on a flag that a developer may have
+        // left flipped (Draftmaster > Demo > Preview Demo Menu). Pin it, so these tests read the full
+        // release unless one of them says otherwise, and put it back afterwards.
+        _demoOverrideWas = PlayerPrefs.GetInt(DemoOverrideKey, -1);
+        ForceBuild(demo: false);
+    }
 
     [TearDown]
     public void CloseTitle()
     {
+        if (_demoOverrideWas < 0) PlayerPrefs.DeleteKey(DemoOverrideKey);
+        else PlayerPrefs.SetInt(DemoOverrideKey, _demoOverrideWas);
+
         if (_title.IsValid() && _title.isLoaded) EditorSceneManager.CloseScene(_title, true);
     }
+
+    static void ForceBuild(bool demo) => PlayerPrefs.SetInt(DemoOverrideKey, demo ? 1 : 0);
 
     [Test]
     public void EveryMenuDestinationIsInTheBuildSettings()
@@ -209,7 +234,7 @@ public class TitleScreenWiringTests
     public void ArrowKeysWalkTheMenuInTheOrderItIsDrawn()
     {
         var menu = Menu();
-        var drawn = DrawnRowLabels();
+        var drawn = DrawnRowLabels(menu, demo: false);
 
         CollectionAssert.AreEqual(drawn, WalkOrder(menu),
                                   "Pressing DOWN does not move down the menu: the walk order and the column disagree.");
@@ -227,6 +252,31 @@ public class TitleScreenWiringTests
         {
             Reverse(menu);
         }
+    }
+
+    // The demo ships a shorter menu than the full game: the same column with the full-release rows
+    // switched off and RESTART DEMO switched on. Which rows those are is a per-row flag in the scene, so
+    // it is checked the same way the walk order is — by building the menu both ways and reading it back.
+    [Test]
+    public void TheDemoBuildDrawsTheDemoMenu()
+    {
+        var menu = Menu();
+
+        ForceBuild(demo: true);
+        var demo = WalkOrder(menu);
+        ForceBuild(demo: false);
+        var full = WalkOrder(menu);
+
+        CollectionAssert.AreEqual(DrawnRowLabels(menu, demo: true), demo,
+                                  "The demo build's menu is not the demo rows in column order.");
+        CollectionAssert.Contains(demo, "RESTART DEMO", "The demo menu has no RESTART DEMO row.");
+        CollectionAssert.DoesNotContain(full, "RESTART DEMO",
+                                        "RESTART DEMO is drawn in the full release, which has no demo to restart.");
+        CollectionAssert.IsNotSubsetOf(full, demo,
+                                       "The demo menu offers everything the full game does; nothing is held back.");
+
+        Assert.AreEqual(RestartDemo, CommandOf(menu, "RESTART DEMO"),
+                        "The RESTART DEMO row does not run the restart command.");
     }
 
     // A row that is drawn but missing from the list can never be selected — the cursor steps over a
@@ -281,7 +331,30 @@ public class TitleScreenWiringTests
         menu.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    // The labels the player reads down the column, top first — the layout, straight out of the scene.
+    // The labels the player reads down the column in a given build: the layout, minus the rows that build
+    // switches off. TitleScreenUI closes the column up over the gaps at runtime, so the order is the same
+    // either way — it is the membership that changes.
+    List<string> DrawnRowLabels(SerializedObject menu, bool demo)
+    {
+        var appearsIn = new Dictionary<string, int>();
+        var rows = menu.FindProperty("rows");
+        for (int i = 0; i < rows.arraySize; i++)
+        {
+            var row = rows.GetArrayElementAtIndex(i);
+            var rect = row.FindPropertyRelative("rect").objectReferenceValue;
+            if (rect != null) appearsIn[RowLabel(rect.name)] = row.FindPropertyRelative("appearsIn").enumValueIndex;
+        }
+
+        var shown = new List<string>();
+        foreach (string label in DrawnRowLabels())
+        {
+            int where = appearsIn.TryGetValue(label, out int v) ? v : Both;
+            if (where == Both || (where == DemoOnly) == demo) shown.Add(label);
+        }
+        return shown;
+    }
+
+    // Every row the column draws, top first, whatever build it belongs to.
     List<string> DrawnRowLabels()
     {
         var menu = MenuColumn();

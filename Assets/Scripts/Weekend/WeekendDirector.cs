@@ -120,8 +120,26 @@ public class WeekendDirector : MonoBehaviour
 
     void OnDestroy() { if (Instance == this) Instance = null; }
 
-    void OnEnable() { SceneManager.sceneLoaded += OnSceneLoaded; }
-    void OnDisable() { SceneManager.sceneLoaded -= OnSceneLoaded; }
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        PlacedNPC.CutsceneFinished += OnCutsceneFinished;
+        _holdDeadline = Time.unscaledTime + BriefingGraceSeconds;
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        PlacedNPC.CutsceneFinished -= OnCutsceneFinished;
+    }
+
+    // Somebody has finished a walk-up beat. If it was the person who hands the driver their day, the day is
+    // handed over: the wait ends and the first obligation books itself onto the map.
+    void OnCutsceneFinished(PlacedNPC who)
+    {
+        if (who == null || !who.givesTheDaysObjective) return;
+        BookNextUp(replaceExisting: true);
+    }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
@@ -151,8 +169,54 @@ public class WeekendDirector : MonoBehaviour
         EnterRoundIfAtTheVenue();
         GreetOnArrival();
 
+        // A fresh scene is a fresh chance for somebody to be waiting at the motorhome door with the day's
+        // plan; whether one is there is answered by OpeningCastBuilt a moment later.
+        _giverStoodDown = false;
+        _holdDeadline = Time.unscaledTime + BriefingGraceSeconds;
+
         // Whatever is next on the sheet is booked without being asked for, so the player always has
         // somewhere to be. F10 is for changing your mind, not for finding out you had somewhere to be.
+        // The exception is the first morning of a weekend, which is somebody's job to hand over in person.
+        BookNextUp();
+    }
+
+    // ------------------------------------------------------------------ waiting to be told
+
+    // The day's first obligation is handed over by a person (the team liaison at the motorhome door — any
+    // PlacedNPC with `givesTheDaysObjective`), not by the sheet booking itself while the player is still
+    // asleep. Until she has said it, nothing books. WeekendBriefing holds the rule and the memory of it.
+
+    // How long to wait for that person to turn up before giving up on them. Only reachable in a paddock
+    // with no such NPC in it and no PitLaneStart to say so — a scene the player drove straight into, say.
+    // Without it, a missing liaison would mean a weekend with no objective at all.
+    const float BriefingGraceSeconds = 8f;
+
+    static bool _giverStoodDown;   // the cast is up and nobody is coming to hand the day over
+    static float _holdDeadline;
+    static float _rebookPoll;      // next second at which an unbooked-but-briefed weekend tries again
+
+    public static bool Briefed => WeekendBriefing.Briefed(RaceWeekend.WeekendId);
+
+    // The day has been handed over: by the liaison finishing her piece, by the player booking something
+    // off the sheet themselves, or by the weekend moving on without either.
+    public static void MarkBriefed() => WeekendBriefing.MarkBriefed(RaceWeekend.WeekendId);
+
+    // True while the objective strip should stay empty because somebody is on their way over to fill it.
+    public static bool WaitingToBeTold()
+        => WeekendBriefing.WaitingToBeTold(
+               briefed: Briefed,
+               routed: !string.IsNullOrEmpty(PendingRouteId),
+               weekendUnderway: WeekendLedger.DoneCount > 0 || WeekendLedger.MissedCount > 0,
+               atTheVenue: AtTheVenue(),
+               giverComing: !_giverStoodDown);
+
+    // The scene flow has stood the opening cast up (PitLaneStart.BuildCast). If nobody in it hands the day
+    // over, the weekend goes back to booking for itself, immediately — no grace period, no empty strip.
+    public static void OpeningCastBuilt(bool someoneWillBrief)
+    {
+        if (someoneWillBrief) { _holdDeadline = Time.unscaledTime + BriefingGraceSeconds; return; }
+
+        _giverStoodDown = true;
         BookNextUp();
     }
 
@@ -206,6 +270,21 @@ public class WeekendDirector : MonoBehaviour
     // route rather than a list: finish a thing and the next one is already waiting with a marker on it.
     public static WeekendActivity BookNextUp(bool replaceExisting = false)
     {
+        // Asking outright is being told: the liaison finishing her piece, an obligation settling, the player
+        // committing to something off the sheet. Anything that passes replaceExisting has a person or a
+        // decision behind it, so it ends the wait rather than being held by it.
+        if (replaceExisting) MarkBriefed();
+
+        // The first morning of a weekend is handed over in person. Book nothing until it has been.
+        if (WaitingToBeTold()) return null;
+
+        // Make sure there is a sheet to read before reading it. Pressing Play straight into the race scene
+        // raises no sceneLoaded for this object, so nothing had built the timetable — and with none built,
+        // "what is next" answers *nothing*, which sent the loop below rolling half-day after half-day until
+        // the weekend was over before the player had left their motorhome.
+        _ = Timetable;
+        if (WeekendLedger.Timetable == null) return null;
+
         // A booking the player made themselves stands — unless the weekend has moved past it, which is how
         // a stale appointment from an earlier day survives into the next one and leaves the marker pointing
         // at something that already happened.
@@ -263,6 +342,28 @@ public class WeekendDirector : MonoBehaviour
             EnterRoundIfAtTheVenue();
         }
 
+        // The day has been handed over but no marker went up with it. That happens when the booking was
+        // made before the paddock was finished being staged — the venue it would point at was not standing
+        // yet, so BookNextUp declined rather than aim at nothing. Try again while there is something on the
+        // sheet worth booking: with NextWorthDoing non-null, BookNextUp cannot roll the half-day on, so this
+        // retry can never march the weekend forward by itself.
+        if (!WaitingToBeTold() && WeekendAppointment.Pending == null && Time.unscaledTime >= _rebookPoll
+            && AtTheVenue() && WeekendSchedulePlan.NextWorthDoing() != null)
+        {
+            _rebookPoll = Time.unscaledTime + 1f;
+            BookNextUp();
+        }
+
+        // Nobody turned up to hand the day over and nothing said they weren't going to — a paddock with no
+        // liaison in it and no PitLaneStart to report the cast. Give up waiting rather than leave the player
+        // in a weekend with no objective in it at all.
+        if (WaitingToBeTold() && Time.unscaledTime >= _holdDeadline
+            && !PlacedNPC.AnyCutsceneArmed && PlacedNPC.ObjectiveGiver() == null)
+        {
+            _giverStoodDown = true;
+            BookNextUp();
+        }
+
         var kb = Keyboard.current;
         if (kb == null) return;
         // Not while an obligation is actually happening: mid-conversation with the crew chief, or sat in
@@ -278,6 +379,10 @@ public class WeekendDirector : MonoBehaviour
     public static void Begin(WeekendActivity a)
     {
         if (a == null) return;
+
+        // A player who opened the sheet and picked something has told themselves where they are due. The
+        // liaison is welcome to have her say, but nothing is waiting on her any more.
+        MarkBriefed();
         if (!WeekendLedger.CanDo(a, out string why))
         {
             WeekendScheduleUI.Toast(why);

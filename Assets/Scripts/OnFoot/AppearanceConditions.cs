@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Draftmaster.Progression;
+using Draftmaster.Weekend;
 
 // Authorable "should this NPC (or cutscene, or scene beat) show up right now?" rule block.
 //
@@ -48,6 +49,21 @@ public class AppearanceConditions
     public bool inPractice = true;
     public bool inQualifying = true;
     public bool inRace = true;
+
+    [Header("Which half-day")]
+    // A race weekend is six half-days, and most of the paddock is only there for some of them: the fan
+    // fence is Saturday morning, the sponsor's people fly in Sunday, the truck team is gone by Saturday
+    // night. All six on (the default) means "any time this weekend" and nothing changes.
+    //
+    // This is the axis the NPC Director previews on — pick the day and the half, and the scene shows who
+    // is there. Keep it in step with ScheduledLines below, which is the same six half-days deciding what
+    // somebody SAYS rather than whether they are there at all.
+    public bool fridayAM = true;
+    public bool fridayPM = true;
+    public bool saturdayAM = true;
+    public bool saturdayPM = true;
+    public bool sundayAM = true;
+    public bool sundayPM = true;
 
     [Header("Where")]
     [Tooltip("Track ids this may appear at (e.g. 'Daytona'). Empty = any track. Case-insensitive. This is the " +
@@ -97,6 +113,7 @@ public class AppearanceConditions
     public class PreviewContext
     {
         public RaceWeekend.Session session = RaceWeekend.Session.Practice;
+        public WeekendSlot slot = WeekendSlot.FridayAM;
         public string trackId = "";
         public string series = "";
         public bool ignoreSeen = true;
@@ -123,6 +140,7 @@ public class AppearanceConditions
     {
         if (!enabled) return "disabled";
         if (!SessionAllowed()) return $"not in {CurrentSession}";
+        if (!SlotAllowed()) return $"not on {WeekendSlots.Label(CurrentSlot).ToLowerInvariant()}";
         if (!Matches(tracks, CurrentTrackId)) return $"track is {Blank(CurrentTrackId)}, needs {Join(tracks)}";
         if (!PlaceAllowed()) return $"scene is {SceneManager.GetActiveScene().name}, needs {Join(scenes)}";
         if (!SeriesAllowed()) return $"series not one of {Join(series)}";
@@ -149,6 +167,17 @@ public class AppearanceConditions
             if (inQualifying) s.Add("Q");
             if (inRace) s.Add("R");
             bits.Add(s.Count == 0 ? "no session" : string.Join("/", s));
+        }
+        if (!(fridayAM && fridayPM && saturdayAM && saturdayPM && sundayAM && sundayPM))
+        {
+            var half = new List<string>();
+            if (fridayAM) half.Add("FRI AM");
+            if (fridayPM) half.Add("FRI PM");
+            if (saturdayAM) half.Add("SAT AM");
+            if (saturdayPM) half.Add("SAT PM");
+            if (sundayAM) half.Add("SUN AM");
+            if (sundayPM) half.Add("SUN PM");
+            bits.Add(half.Count == 0 ? "no half-day" : string.Join("/", half));
         }
         if (tracks != null && tracks.Length > 0) bits.Add(Join(tracks));
         if (scenes != null && scenes.Length > 0) bits.Add("scene " + Join(scenes));
@@ -215,6 +244,20 @@ public class AppearanceConditions
         if (repeat == Repeat.OncePerPlaySession) return _playSessionSeen.Contains(key);
         return PlayerPrefs.GetInt(key, 0) != 0;
     }
+
+    // Which half-day the weekend is on. The Director previews one; at runtime it is wherever the ledger's
+    // clock has got to.
+    public static WeekendSlot CurrentSlot => Preview != null ? Preview.slot : WeekendLedger.CurrentSlot;
+
+    bool SlotAllowed() => CurrentSlot switch
+    {
+        WeekendSlot.FridayAM   => fridayAM,
+        WeekendSlot.FridayPM   => fridayPM,
+        WeekendSlot.SaturdayAM => saturdayAM,
+        WeekendSlot.SaturdayPM => saturdayPM,
+        WeekendSlot.SundayAM   => sundayAM,
+        _                      => sundayPM,
+    };
 
     bool SessionAllowed()
     {

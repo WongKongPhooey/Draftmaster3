@@ -184,6 +184,16 @@ public class PlacedNPC : MonoBehaviour
     public bool requireOutsideRV = true;
     [Tooltip("Objective banner shown when this NPC's cutscene ends. Empty = none.")]
     public string objectiveOnFinish = "";
+    [Tooltip("Read this NPC's lines off the weekend's sheet when they appear, instead of using the lines " +
+             "above. That is what lets the team liaison name the actual next booking — and what lets her be " +
+             "a placed marker you can move, rather than one built from scratch every session so her script " +
+             "is current. The lines above are the fallback for a weekend with nothing on it.")]
+    public bool linesFromTheWeekendSheet = false;
+    [Tooltip("This is the person who hands the driver the day's first obligation. Until they have said it " +
+             "the weekend books nothing and the objective strip is empty — waking up is not the same as " +
+             "being told where to be. Tick it on one NPC per scene (the team liaison at the motorhome door " +
+             "by default); with it on nobody, the weekend books the next thing itself, as it used to.")]
+    public bool givesTheDaysObjective = false;
 
     [Header("Look")]
     [Tooltip("Body to clone. Empty = the scene's on-foot prefab (PitLaneStart.onFootPrefab).")]
@@ -200,6 +210,12 @@ public class PlacedNPC : MonoBehaviour
         public TrackBuilder track;
         public List<TrackBuilder.Sample> pitSamples;
         public bool usedPit;
+
+        // Where the player's car will be PARKED, when that is known ahead of time. The editor sets it so a
+        // ParkedCar anchor previews against the pit box the car ends up in rather than wherever the car is
+        // sitting in the scene file — those are metres apart, and the crew chief is anchored to it.
+        public Vector3 parkedCarPos;
+        public bool hasParkedCarPos;
         public float playerPitDistance;   // metres along the pit lane the player spawned at
         public Vector3 playerSpawnPos;
         public RVExterior rv;
@@ -238,6 +254,15 @@ public class PlacedNPC : MonoBehaviour
         return null;
     }
 
+    // Whoever is going to hand the driver their day, if anybody turned up to do it. Built markers only:
+    // one whose conditions failed this session is not coming, and the weekend must not wait on it.
+    public static PlacedNPC ObjectiveGiver()
+    {
+        for (int i = 0; i < All.Count; i++)
+            if (All[i] != null && All[i].givesTheDaysObjective && All[i]._built) return All[i];
+        return null;
+    }
+
     // Build every placed NPC that passes its conditions. Called once by the scene flow (PitLaneStart) with
     // a context the geometry anchors can resolve against.
     public static void BuildAll(BuildContext ctx)
@@ -270,6 +295,15 @@ public class PlacedNPC : MonoBehaviour
         _ctx = ctx;
 
         if (!appear.IsMet()) { _skipped = true; return false; }
+
+        // Somebody whose job is to tell you the schedule has to be reading today's, not the one that was on
+        // the sheet when their marker was placed. Refreshed here, at the moment they stand up, so the liaison
+        // can be an authored marker (moved, re-anchored, edited) and still name the real next booking.
+        if (linesFromTheWeekendSheet)
+        {
+            var fromSheet = PlacedNPCDefaults.LiaisonLines();
+            if (fromSheet != null && fromSheet.Length > 0) lines = fromSheet;
+        }
 
         GameObject prefab = prefabOverride != null ? prefabOverride : ctx.prefab;
         if (prefab == null)
@@ -440,11 +474,11 @@ public class PlacedNPC : MonoBehaviour
     Vector3 FromCar(float along, float lateral)
     {
         var track = _ctx.track;
-        if (_ctx.car == null) return transform.position;
-        if (track == null || _ctx.pitSamples == null || _ctx.pitSamples.Count < 2)
-            return _ctx.car.position + new Vector3(along, lateral, 0f);
+        if (!_ctx.hasParkedCarPos && _ctx.car == null) return transform.position;
 
-        Vector3 carPos = _ctx.car.position;
+        Vector3 carPos = _ctx.hasParkedCarPos ? _ctx.parkedCarPos : _ctx.car.position;
+        if (track == null || _ctx.pitSamples == null || _ctx.pitSamples.Count < 2)
+            return carPos + new Vector3(along, lateral, 0f);
         float carDist = _ctx.usedPit ? track.NearestPitDistance(carPos) : track.NearestCenterlineDistance(carPos);
         var carSample = _ctx.usedPit ? track.SamplePitAt(carDist, _ctx.pitSamples) : track.SampleAt(carDist, _ctx.pitSamples);
 

@@ -38,6 +38,19 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   (`F10` after that): six half-days, your own practice/qualifying/race, the other two championships'
   sessions to watch, and the media, fan and sponsor obligations booked around them. Your sessions still
   hand off to the race scene exactly as before. `Docs/Race-Weekend.md`.
+* **The menu is two menus.** `DemoMode.IsDemo` decides which: each row carries an `appearsIn` flag
+  (Both / DemoOnly / FullOnly), and `TitleScreenUI` switches the others off and closes the column up over
+  the gaps at runtime — in the editor you always see every row. The demo drops the exhibition and factory
+  rows and gains **RESTART DEMO**, which wipes the save (`CareerReset.ClearAll`) and opens a fresh career
+  at the season's opening track; it asks twice before it does. The flag is the `DRAFTMASTER_DEMO` compile
+  define (`Draftmaster > Demo > Build Is Demo`), with a PlayerPrefs override for the editor and
+  development builds (`Draftmaster > Demo > Preview Demo Menu`) so the demo menu can be looked at without
+  a rebuild. Rows are added or re-flagged by `Draftmaster > UI > Set Up Demo Rows On Title Screen`, which
+  edits the scene in place — never rebuild the title screen for a menu change.
+* **`CareerReset` clears by deleting everything and putting the settings back**, rather than by naming the
+  progress keys: PlayerPrefs cannot be enumerated and a list of career keys goes stale the moment a
+  subsystem adds one. Settings, HUD toggles and the signed-in account survive; a new subsystem's keys are
+  cleared without anyone remembering to add them.
 * Build list order is load-bearing: `TitleScreen`, `RaceScene`, `GarageScreen`, `TeamGarage`, `DemoMenu`
   (multiplayer lobby). A destination missing from that list makes its title row draw disabled.
   `Assets/Tests/Editor/TitleScreenWiringTests.cs` checks the whole chain.
@@ -137,6 +150,22 @@ Strip arrays can't be grown through the MCP property API, so these are menu item
   releases.
 - `Tools > Track > Rebuild Track Environment` after either.
 
+## 4b. Car colours and the pit box stands
+
+Every pit box gets the team's **pit box** — the cart on the wall the crew chief sits on — painted in that
+car's colours: canopy in the primary, stripe in the secondary, car number on the roof. `PitBoxStand`, built
+one per box by `PitCrewSpawner` (`spawnStands`, `standLateral`). They appear when the field does, which is
+when a session is live; `Draftmaster > Debug > Session Live (spawn the field)` puts cars, boxes, crews and
+stands in the scene without walking the weekend to a session.
+
+The colours come from **`Resources/Cars/CarColours`**, matched most specific first: carset + car number →
+team name → carset default → the asset's fallback. You do not type it in:
+**`Draftmaster > Cars > Build Car Colours From Liveries`** reads every `<carset>livery<n>` texture and picks
+its two colours off the paint (`LiveryPalette` — ignores the outline, the tyres and the glass, and refuses a
+"second colour" that is really a shade of the first or a ten-pixel sponsor patch). Correct any it gets
+wrong in the asset and tick **Hand Authored** on that row; the seeder never overwrites those, so re-running
+it after a repaint is safe.
+
 ## 5. See the pit boxes while authoring
 
 `Draftmaster > Debug > Show Pit Boxes` (a checked toggle) draws the box ladder at edit time from the same
@@ -148,9 +177,14 @@ Strip arrays can't be grown through the MCP property API, so these are menu item
 
 `Draftmaster > NPCs > Weekend Cast` (`Ctrl+Shift+W`) is the window for building a race weekend's people.
 
-1. Pick the **half-day** across the top (FRI AM … SUN PM) and the series. The window rebuilds the timetable
-   for that weekend and previews the scene as whatever session falls in that half-day, so the scene-view
-   gizmos grey out anybody who would not be there.
+1. Pick the **half-day** across the top (FRI AM … SUN PM) and the series. That one control is the whole
+   preview: the window rebuilds the timetable for that weekend, and the scene view, the NPC Director's
+   table and the inspector card all switch to that half-day with it. Everybody who would not be there
+   greys out where they stand.
+
+   Who is there on a given half-day is authorable, not guessed: `AppearanceConditions` has a **Which
+   half-day** block (six toggles, all on = any time this weekend) next to the session toggles, so "the fan
+   fence crowd is Saturday morning" is a rule rather than a comment.
 2. **Booked this half-day** lists what is on the sheet: time, title, venue and who is waiting there. Click a
    booking to read the whole conversation the player will have — every beat, every answer, and what each
    answer is worth — then **Open the words** to jump to the content file.
@@ -160,7 +194,22 @@ Strip arrays can't be grown through the MCP property API, so these are menu item
    line sets, and the marker/beat fields (interaction, objective banner, trigger). Everything else is behind
    the fold.
 
-**Install Core Cast** stamps the people every track has, whatever series is running — pit greeter, crew
+**Anchored NPCs are not moved by their transform.** Everyone in the core cast stands off a piece of
+geometry — the pit lane, the parked car, the motorhome door — so the marker object itself sits at the
+origin and a dotted line runs from it to where they actually stand. Drag the **handle at the stand point**
+(not the object): it writes back to `anchorAlong` / `anchorLateral`, the two offsets in the inspector. Set
+`anchor = Here` if you want a marker you can move by hand instead. When an anchor cannot resolve — the
+track is not in the scene, or `along` has run off the end of the pit lane and is being clamped — the
+inspector says so in orange rather than leaving you dragging a dead handle.
+
+Clicking any NPC — in the window, the hierarchy or the scene view — puts the same read-out at the top of the
+Inspector: which half-days they are here for (the previewed one in bold) and the clause that stops them when
+they are not, where they stand, how you meet them (walk up, or they walk over and from how far), the quest
+they hand out and what finishing it takes, whether they are the one who hands the player their day, and the
+lines they will actually speak in that half-day. The raw fields are underneath, unchanged.
+
+**Install Core Cast** (also `Draftmaster > NPCs > Install Core Cast`, and the same button in the Director)
+stamps the people every track has, whatever series is running — pit greeter, crew
 chief, race engineer, chief strategist, PR manager, team liaison — as ordinary editable markers under
 `NPCs`. Run it in any track scene or package; it never duplicates what is already there. Everybody else in
 the paddock is crowd, scattered around them by `PaddockSpawner`.
@@ -324,11 +373,46 @@ Do **not** float a `TextMesh` with the place's name over it — that reads as a 
 World text is for signage a real circuit would have (a board, a hoarding, a braking marker):
 `PaddockProps.Sign` is for that and says so.
 
+## 17b. The demo's opening: waking up, and being told the day
+
+The demo opens on a **black screen with an alarm clock going off**, then fades in on the driver getting up
+in their motorhome. It is `WakeUpSequence`, played by `PitLaneStart` and tuned on its inspector under
+**Wake Up**: `wakeUpInRV`, the alarm clip (empty = a synthesised placeholder), how long it rings in the
+dark, the fade, the getting-up beat, plus `lyingDownSprite` and `getUpTrigger` for when the real art lands —
+with neither, the body is laid on its side and stood back up, which is the placeholder. Any key hits the
+clock and brings the picture up early. It plays on the first morning of a weekend only (`weekend.wokeup`),
+not on the reloads that practice, qualifying and the race are made of.
+
+**You wake up with nothing booked.** The weekend normally books the next thing on the sheet by itself, but
+the first obligation of a weekend is handed over by a person: the team liaison waiting outside the
+motorhome door. Until she has said it, `WeekendAppointment` is empty and the objective strip is blank —
+`WeekendBriefing` is the rule, `WeekendDirector.BookNextUp` asks it, and the flag that says who does the
+handing over is **`givesTheDaysObjective` on a `PlacedNPC`** (on the liaison by default; NPC Director,
+Interaction section). Tick it on somebody else and the day is theirs to give; tick it on nobody and the
+weekend books for itself as it used to. If nothing in the cast claims it, `PitLaneStart` says so the moment
+the cast is up and the booking happens immediately — the empty strip is never a dead end.
+
+**Moving the liaison** (or anyone else in the every-track cast): **Install Core Cast** first — until then
+she is built from code at play time and there is nothing in the scene to click (§6a). Once she is a marker,
+she stands off the motorhome door rather than at a world position: `anchor = RVDoor`, `anchorAlong` metres
+out from it, `anchorLateral` metres to one side, `triggerOffset`/`triggerRadius` where stepping out sets her
+off, `stopDistance` how close she walks before she speaks. Her lines still come off the live sheet —
+`linesFromTheWeekendSheet` re-reads them when she appears — so a placed marker never goes stale. Keep her
+anchored to the door in the shared `RaceScene` and she works at all 38 tracks; to put her on an exact spot
+instead, set `anchor = Here` and author the marker **in that track's package**
+(`Draftmaster > Tracks > Edit Selected Package`, or `Draftmaster > NPCs > Move Selected NPC Into Track
+Package`) — a hand-placed position only means anything at one circuit.
+
+Re-arm both beats for another run with **`Draftmaster > Demo > Re-arm The Opening (alarm + liaison)`**
+(it also puts the three days back to Friday morning, since testing the opening walks the clock on). If the
+liaison herself does not turn up, her appearance flag has been used: `Draftmaster > NPCs > Clear Appearance
+Flags`. `Draftmaster > Debug > RV Cutscene > Report State` prints which of the gates said no.
+
 ## 18. Change what a race weekend looks like
 
-`F10` in play mode is the timetable, but the weekend leads itself: arriving books the next thing, the team
-liaison meets the player outside the motorhome to say where they are due, the objective marker points at it,
-and finishing one books the next. **Committing to something books it rather than running it** — the sheet
+`F10` in play mode is the timetable, but the weekend leads itself: the team liaison meets the player
+outside the motorhome and hands them the day, the objective marker points at it, and finishing one books
+the next. **Committing to something books it rather than running it** — the sheet
 closes, a marker and a strip name the place and the distance, and the obligation happens when the player
 walks up to whoever is waiting there (`T` travels you if you would rather not walk). To change it:
 
@@ -444,6 +528,12 @@ Add Pit Limiter Chip To Speedometer · Build Speech Box Texture (+ Force Rebuild
 Retarget Fonts In Prefabs (points every authored TMP/legacy label at the theme's faces and snaps its size
 onto that face's pixel cell) · Retarget Fonts In Open Scenes (same, for whatever scenes are open — leaves
 them dirty for you to check and save).
+
+### `Draftmaster > Demo`
+Preview Demo Menu (checked toggle — forces the demo title menu in the editor and development builds) ·
+Build Is Demo (checked toggle — the `DRAFTMASTER_DEMO` define on the active build target, which is what
+actually ships) · Wipe Career Save (what RESTART DEMO does, from the editor).
+Add or re-flag the rows themselves with `Draftmaster > UI > Set Up Demo Rows On Title Screen`.
 
 ### `Draftmaster > Sponsors`
 Generate Placeholder Decals · Create Car Sponsor Layout · Preview Slots On Livery · Preview Sponsored Car.

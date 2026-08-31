@@ -44,6 +44,42 @@ public class ScreenFade : MonoBehaviour
         fade.StartCoroutine(fade.Run(atBlack, outSeconds, holdSeconds, inSeconds));
     }
 
+    // Black, now, and stay that way until somebody fades it back in. For a scene that opens with the lights
+    // off: called from a Start(), it is up before the first frame is drawn rather than a frame after it.
+    public static void HoldBlack()
+    {
+        var fade = Ensure();
+        fade.StopAllCoroutines();
+        fade._alpha = 1f;
+        fade._busy = true;
+    }
+
+    // The other half of HoldBlack: sit in the dark, then come up. `atLight` runs when the screen is clear.
+    public static void FromBlack(float holdSeconds, float inSeconds, Action atLight = null)
+    {
+        var fade = Ensure();
+        fade.StopAllCoroutines();
+        fade.StartCoroutine(fade.Rise(holdSeconds, inSeconds, atLight));
+    }
+
+    IEnumerator Rise(float holdSeconds, float inSeconds, Action atLight)
+    {
+        _busy = true;
+        _alpha = 1f;
+
+        for (float held = 0f; held < holdSeconds; held += Time.unscaledDeltaTime) yield return null;
+
+        for (float t = 0f; t < inSeconds; t += Time.unscaledDeltaTime)
+        {
+            _alpha = 1f - Mathf.Clamp01(t / Mathf.Max(0.01f, inSeconds));
+            yield return null;
+        }
+
+        _alpha = 0f;
+        _busy = false;
+        atLight?.Invoke();
+    }
+
     IEnumerator Run(Action atBlack, float outSeconds, float holdSeconds, float inSeconds)
     {
         _busy = true;

@@ -9,10 +9,18 @@ media, signing sessions, sponsor obligations, and on race day the mandatory driv
 down the intro stage.
 
 **You do not have to open anything.** Arriving at a track puts the day and time under the spawn card
-("Watkins Glen - RV" / "FRIDAY - 9:30 AM"), books whatever is next on the sheet, and puts an objective
-marker on it. Step out of the motorhome and the team liaison walks over to tell you where you are due;
-follow the marker, do the thing, and the next booking is already live with its own marker before the
-result card has faded. `T` travels you there if you would rather not walk.
+("Watkins Glen - RV" / "FRIDAY - 9:30 AM").
+
+**The first morning starts with nothing booked.** You wake up to an alarm in your own motorhome and the
+objective strip is empty — the day is handed over by a person, not by the sheet. Step out of the door and
+the team liaison walks over to tell you where you are due, and *that* is what books it and puts the marker
+up. From then on the weekend leads itself: follow the marker, do the thing, and the next booking is already
+live with its own marker before the result card has faded. `T` travels you there if you would rather not
+walk.
+
+Who hands the day over is a flag on the NPC (`givesTheDaysObjective`), not a hard-coded role — see
+`Docs/Editor-Handbook.md` §17b. With nobody claiming it, the weekend goes back to booking the next thing
+itself the moment the paddock's cast is up.
 
 Press **F10** to open the timetable when you want to change what you are doing — it is also on the pause
 menu, on the phone (`SCHEDULE` tile) and on the race results screen. It no longer opens itself over your

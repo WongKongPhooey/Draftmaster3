@@ -26,6 +26,18 @@ public class TitleScreenUI : MonoBehaviour
         Exhibition,   // one race, no practice or qualifying
         LoadScene,    // whatever is in sceneName
         NotWired,     // drawn disabled: a row the design has and the game hasn't yet
+        // APPEND new commands, never insert: the scene file stores a row's command as the number above it,
+        // so inserting one moves every row in TitleScreen.unity onto the wrong command.
+        RestartDemo,  // wipe the save, then open a fresh career — the demo build's "start again"
+    }
+
+    // Which build a row belongs to. The demo menu is a different menu, not the same one with things
+    // greyed out: no fresh-season row, no factory, and a RESTART DEMO row the full game has no use for.
+    public enum Build
+    {
+        Both,       // every build
+        DemoOnly,   // only when DemoMode.IsDemo
+        FullOnly,   // only in the full release
     }
 
     [Serializable]
@@ -35,6 +47,8 @@ public class TitleScreenUI : MonoBehaviour
         public Command command = Command.NotWired;
         [Tooltip("Scene loaded by the LoadScene command. Must be in the build settings.")]
         public string sceneName = "";
+        [Tooltip("Which build draws this row. A hidden row is switched off and the column closes up over it.")]
+        public Build appearsIn = Build.Both;
 
         [Header("Wired by the builder")]
         public TextMeshProUGUI labelText;
@@ -43,6 +57,7 @@ public class TitleScreenUI : MonoBehaviour
         public RectTransform rect;
 
         [NonSerialized] public bool available;
+        [NonSerialized] public bool shown;      // in THIS build — see appearsIn
     }
 
     [Header("Menu")]
@@ -64,6 +79,11 @@ public class TitleScreenUI : MonoBehaviour
     float _statusUntil;
     bool _loading;
 
+    // RESTART DEMO throws the save away, so it asks twice: the first press arms it and says what it does,
+    // and the arming expires with the status line that announced it.
+    float _restartArmedUntil;
+    const float StatusSeconds = 2.5f;
+
     // Row indices sorted top-to-bottom by where the row actually sits on screen. The list is the wiring
     // and the column is the layout, and the two drift apart the moment a row is dragged up the menu in
     // the scene without the list following it — so DOWN means the next row down the screen, not the next
@@ -78,17 +98,84 @@ public class TitleScreenUI : MonoBehaviour
         if (EventSystem.current == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
 
+        RebuildOrder();     // decides which rows this build draws, and in which order
+
         for (int i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
-            row.available = IsAvailable(row);
-            HookPointer(row, i);
+            if (row.rect != null) row.rect.gameObject.SetActive(row.shown);
+            row.available = row.shown && IsAvailable(row);
+            if (row.shown) HookPointer(row, i);
         }
 
-        RebuildOrder();
-        _index = Mathf.Clamp(startIndex, 0, Mathf.Max(0, rows.Count - 1));
+        CompactRows();
+        _index = FirstShownFrom(startIndex);
         SetStatus("");
         Redraw();
+    }
+
+    bool ShownInThisBuild(Row row)
+    {
+        if (row == null) return false;
+        switch (row.appearsIn)
+        {
+            case Build.DemoOnly: return DemoMode.IsDemo;
+            case Build.FullOnly: return !DemoMode.IsDemo;
+            default: return true;
+        }
+    }
+
+    // Every row keeps the position it was given in the scene, so switching one off leaves a hole in the
+    // column. Close it: re-stack the visible rows from wherever the top of the block sits, at the spacing
+    // the menu already uses. Both are measured rather than assumed — the block has been moved by hand.
+    void CompactRows()
+    {
+        var all = new List<RectTransform>();
+        foreach (var row in rows)
+            if (row != null && row.rect != null) all.Add(row.rect);
+        if (all.Count == 0) return;
+
+        all.Sort((a, b) => b.anchoredPosition.y.CompareTo(a.anchoredPosition.y));
+        float top = all[0].anchoredPosition.y;
+        float wasBottom = all[all.Count - 1].anchoredPosition.y;
+
+        float spacing = 0f;
+        for (int i = 1; i < all.Count; i++)
+        {
+            float gap = all[i - 1].anchoredPosition.y - all[i].anchoredPosition.y;
+            if (gap > 0.01f && (spacing <= 0f || gap < spacing)) spacing = gap;
+        }
+        if (spacing <= 0f) spacing = 26f;      // the builder's row pitch
+
+        var shown = new List<RectTransform>();
+        foreach (var row in rows)
+            if (row != null && row.shown && row.rect != null) shown.Add(row.rect);
+        if (shown.Count == 0) return;
+
+        shown.Sort((a, b) => b.anchoredPosition.y.CompareTo(a.anchoredPosition.y));
+        for (int i = 0; i < shown.Count; i++)
+        {
+            var at = shown[i].anchoredPosition;
+            shown[i].anchoredPosition = new Vector2(at.x, top - i * spacing);
+        }
+
+        // The status line is authored under the menu block, in a different parent — but the move is a pure
+        // vertical shift, so the same delta lands it under the shortened column instead of floating in the
+        // gap the hidden rows left behind.
+        if (statusLabel != null)
+        {
+            float nowBottom = top - (shown.Count - 1) * spacing;
+            statusLabel.rectTransform.anchoredPosition += Vector2.up * (nowBottom - wasBottom);
+        }
+    }
+
+    // The opening selection, skipped past any row this build doesn't draw.
+    int FirstShownFrom(int index)
+    {
+        if (rows.Count == 0) return 0;
+        index = Mathf.Clamp(index, 0, rows.Count - 1);
+        if (rows[index] != null && rows[index].shown) return index;
+        return _order != null && _order.Length > 0 ? _order[0] : index;
     }
 
     void Update()
@@ -120,43 +207,49 @@ public class TitleScreenUI : MonoBehaviour
     void Step(int by)
     {
         if (rows.Count == 0) return;
-        if (_order == null || _order.Length != rows.Count) RebuildOrder();
+        if (_order == null || _order.Length == 0) RebuildOrder();
+        if (_order.Length == 0) return;
 
         int at = System.Array.IndexOf(_order, _index);
         if (at < 0) at = 0;
         _index = _order[(at + by + _order.Length) % _order.Length];
+        _restartArmedUntil = 0f;    // moving off a primed RESTART DEMO disarms it
         Redraw();
     }
 
-    // Sort the rows the way the eye reads them: highest on screen first. Rows with no rect keep their
-    // list order at the bottom, which is the only sensible place for a row that isn't drawn anywhere.
-    // Insertion sort — the menu is five rows long and equal heights stay in list order.
+    // Sort the rows the way the eye reads them: highest on screen first, and only the ones this build
+    // draws — a hidden row is not somewhere the cursor can land. Rows with no rect sort to the bottom,
+    // which is the only sensible place for a row that isn't drawn anywhere; ties keep list order.
+    //
+    // This is also where `shown` is decided, rather than in Start(), so that the walk order is a function
+    // of the rows alone — the wiring test calls it on a component that has never run.
     void RebuildOrder()
     {
-        int n = rows.Count;
-        _order = new int[n];
-
-        var key = new float[n];
-        for (int i = 0; i < n; i++)
+        var order = new List<int>();
+        for (int i = 0; i < rows.Count; i++)
         {
-            _order[i] = i;
-            var rect = rows[i] != null ? rows[i].rect : null;
-            key[i] = rect != null ? -rect.position.y : float.PositiveInfinity;
+            if (rows[i] == null) continue;
+            rows[i].shown = ShownInThisBuild(rows[i]);
+            if (rows[i].shown) order.Add(i);
         }
 
-        for (int i = 1; i < n; i++)
+        order.Sort((a, b) =>
         {
-            int row = _order[i];
-            int j = i - 1;
-            while (j >= 0 && key[_order[j]] > key[row]) { _order[j + 1] = _order[j]; j--; }
-            _order[j + 1] = row;
-        }
+            int cmp = ScreenKey(rows[a]).CompareTo(ScreenKey(rows[b]));
+            return cmp != 0 ? cmp : a.CompareTo(b);
+        });
+        _order = order.ToArray();
     }
+
+    static float ScreenKey(Row row)
+        => row.rect != null ? -row.rect.position.y : float.PositiveInfinity;
 
     void Select(int index)
     {
         if (index == _index || index < 0 || index >= rows.Count) return;
+        if (!rows[index].shown) return;
         _index = index;
+        _restartArmedUntil = 0f;
         Redraw();
     }
 
@@ -164,6 +257,7 @@ public class TitleScreenUI : MonoBehaviour
     {
         if (_index < 0 || _index >= rows.Count) return;
         var row = rows[_index];
+        if (!row.shown) return;
 
         if (!row.available)
         {
@@ -201,6 +295,27 @@ public class TitleScreenUI : MonoBehaviour
 
             case Command.LoadScene:
                 Load(row.sceneName);
+                break;
+
+            // The demo's start-again row: the same fresh career NEW SEASON opens, on a save wiped back to
+            // the first day — no money, no stats, no championship, no quests, nobody met.
+            case Command.RestartDemo:
+                if (Time.unscaledTime > _restartArmedUntil)
+                {
+                    _restartArmedUntil = Time.unscaledTime + StatusSeconds;
+                    SetStatus("Erases all progress. Press again to restart.");
+                    return;
+                }
+                _restartArmedUntil = 0f;
+
+                string restartAt = OpeningTrack();
+                if (string.IsNullOrEmpty(restartAt)) { SetStatus("No track has a layout yet."); return; }
+
+                CareerReset.ClearAll();
+                // After the wipe, not before: StartWeekendAt writes the selection the wipe would have eaten.
+                TrackSelection.StartWeekendAt(restartAt);
+                RaceWeekend.SessionLive = false;
+                Load(raceSceneName);
                 break;
 
             default:
@@ -275,6 +390,7 @@ public class TitleScreenUI : MonoBehaviour
         for (int i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
+            if (!row.shown) continue;
             if (row.labelText != null)
                 row.labelText.color = !row.available ? dead : (i == _index ? on : off);
             if (row.cursor != null) row.cursor.SetActive(i == _index);
@@ -285,7 +401,7 @@ public class TitleScreenUI : MonoBehaviour
     {
         if (statusLabel == null) return;
         statusLabel.text = text ?? "";
-        _statusUntil = string.IsNullOrEmpty(text) ? 0f : Time.unscaledTime + 2.5f;
+        _statusUntil = string.IsNullOrEmpty(text) ? 0f : Time.unscaledTime + StatusSeconds;
     }
 
     // Mouse: hovering a row selects it, clicking confirms — the same two states the keyboard drives,

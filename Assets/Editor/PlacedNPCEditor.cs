@@ -38,31 +38,167 @@ public class PlacedNPCEditor : Editor
         if (GUILayout.Button("Open NPC Director")) NPCDirectorWindow.Open();
     }
 
-    // The three-session verdict, plus the reason when they don't show up. This is the thing you actually
-    // want to read off an NPC — "will this person be here?" — and it's spread over a dozen fields otherwise.
+    // Everything you need to know about this person, before the raw fields underneath: which half-days
+    // they are here for, where they stand, how you meet them, what they hand out and what they say.
+    //
+    // The fields below are the authoring surface; this is the read-out — written for the moment you click
+    // somebody in a scene and want to know what they are FOR.
     void DrawConditionSummary(PlacedNPC npc)
     {
         var box = new GUIStyle(EditorStyles.helpBox) { richText = true, wordWrap = true };
+        var slot = PlacedNPCSceneContext.PreviewSlot;
         var sb = new System.Text.StringBuilder();
-        sb.Append("<b>Appears in:</b>  ");
 
-        string blockedReason = null;
-        foreach (RaceWeekend.Session s in System.Enum.GetValues(typeof(RaceWeekend.Session)))
+        // --- who -------------------------------------------------------------------------------------
+        sb.Append("<b><size=13>").Append(string.IsNullOrEmpty(npc.speakerName) ? npc.name : npc.speakerName)
+          .Append("</size></b>   <color=#888888>").Append(npc.role.ToString()).Append("</color>");
+
+        // --- when ------------------------------------------------------------------------------------
+        sb.AppendLine().AppendLine().Append("<b>Here on:</b>  ");
+        foreach (var s in Draftmaster.Weekend.WeekendSlots.All)
         {
-            string unmet = PlacedNPCSceneContext.Evaluate(npc, s);
-            bool ok = unmet == null;
-            sb.Append(ok ? "<color=#5CE07A>" : "<color=#888888>");
-            sb.Append(ok ? "✔ " : "✘ ");
-            sb.Append(s.ToString());
+            bool ok = PlacedNPCSceneContext.Evaluate(npc, s) == null;
+            bool now = s == slot;
+            sb.Append(ok ? "<color=#5CE07A>" : "<color=#777777>");
+            if (now) sb.Append("<b>");
+            sb.Append(ok ? Tick : Cross).Append(' ').Append(Draftmaster.Weekend.WeekendSlots.ShortLabel(s));
+            if (now) sb.Append("</b>");
             sb.Append("</color>   ");
-            if (!ok && blockedReason == null) blockedReason = unmet;
         }
 
-        sb.Append("\n<b>Rules:</b>  ").Append(npc.appear.Summarise());
-        if (blockedReason != null) sb.Append("\n<b>Blocked by:</b>  ").Append(blockedReason);
-        sb.Append($"\n<b>Preview:</b>  {PlacedNPCSceneContext.PreviewTrack} · series \"{PlacedNPCSceneContext.PreviewSeries}\"");
+        string unmet = PlacedNPCSceneContext.Evaluate(npc, slot);
+        sb.AppendLine().Append("<b>").Append(Draftmaster.Weekend.WeekendSlots.Label(slot)).Append(":</b>  ")
+          .Append(unmet == null ? "<color=#5CE07A>here</color>"
+                                : "<color=#E08A5C>not here — " + unmet + "</color>");
+        sb.AppendLine().Append("<b>Rules:</b>  ").Append(npc.appear.Summarise());
+
+        // --- where -----------------------------------------------------------------------------------
+        sb.AppendLine().AppendLine().Append("<b>Stands:</b>  ").Append(
+            npc.anchor == PlacedNPC.Anchor.Here
+                ? "where this object is"
+                : $"{npc.anchorAlong:0.#} m along, {npc.anchorLateral:0.#} m across, from the {Where(npc.anchor)}");
+
+        string trouble = AnchorTrouble(npc);
+        if (trouble != null) sb.AppendLine().Append("<color=#E08A5C>").Append(trouble).Append("</color>");
+
+        // --- how you meet them -----------------------------------------------------------------------
+        sb.AppendLine().Append("<b>Meeting:</b>  ").Append(npc.interaction switch
+        {
+            PlacedNPC.Interaction.TalkOnInteract =>
+                $"walk up and press the action button (within {npc.interactRange:0.#} m)",
+            PlacedNPC.Interaction.WalkUpCutscene => npc.waitForTrigger
+                ? $"they walk over when the player crosses their trigger ({npc.triggerRadius:0.#} m ring), " +
+                  $"stopping {npc.stopDistance:0.#} m away"
+                : "they walk over as the scene opens",
+            PlacedNPC.Interaction.OnCarEntry =>
+                "the scene flow starts them — the crew chief's briefing, when the player gets in the car",
+            _ => "set dressing — no dialogue",
+        });
+
+        // --- what they hand out ----------------------------------------------------------------------
+        sb.AppendLine().AppendLine().Append("<b>Quest:</b>  ");
+        if (npc.quest == null) sb.Append("<color=#888888>none</color>");
+        else
+        {
+            sb.Append("<b>").Append(npc.quest.title).Append("</b> (").Append(npc.quest.id).Append(") — ")
+              .Append(npc.isDeliveryTarget ? "they are the DELIVERY TARGET" : "they give it out");
+            sb.AppendLine().Append("<b>Objective:</b>  ").Append(DescribeObjective(npc.quest));
+            if (!string.IsNullOrEmpty(npc.grantItemOnAccept))
+                sb.AppendLine().Append("<b>Hands over on accept:</b>  ").Append(npc.grantItemOnAccept);
+            if (!string.IsNullOrEmpty(npc.quest.rewardItemId))
+                sb.AppendLine().Append("<b>Reward:</b>  ").Append(npc.quest.rewardItemId);
+        }
+
+        if (npc.givesTheDaysObjective)
+            sb.AppendLine().Append("<color=#E0C15C><b>Hands the player their day.</b></color>  Until this " +
+                                   "conversation happens the weekend books nothing and the objective strip " +
+                                   "stays empty.");
+
+        // --- what they say ---------------------------------------------------------------------------
+        var set = npc.ScheduledFor(slot);
+        sb.AppendLine().AppendLine().Append("<b>Says</b> (")
+          .Append(npc.linesFromTheWeekendSheet ? "read off the weekend's sheet"
+                : set != null ? "script: " + set.label
+                : "default lines").Append("):");
+
+        if (npc.linesFromTheWeekendSheet)
+            sb.AppendLine().Append("   <color=#888888><i>written when they appear, so they can name the " +
+                                   "booking that is actually next</i></color>");
+        else
+        {
+            var lines = npc.LinesFor(slot);
+            if (lines == null || lines.Length == 0) sb.Append("  <color=#888888>nothing</color>");
+            else
+            {
+                // The player's own replies are marked #player in the line, and read as the other half of a
+                // conversation rather than as this NPC talking.
+                for (int i = 0; i < lines.Length && i < 4; i++)
+                {
+                    bool player = lines[i].Contains("#player");
+                    sb.AppendLine().Append(player ? "   <color=#7FB2E0>you: " : "   <color=#CFCFCF>")
+                      .Append(lines[i].Replace("#player", "").Trim()).Append("</color>");
+                }
+                if (lines.Length > 4)
+                    sb.AppendLine().Append("   <color=#888888>… and ").Append(lines.Length - 4)
+                      .Append(" more</color>");
+            }
+        }
 
         EditorGUILayout.LabelField(sb.ToString(), box);
+    }
+
+    const string Tick = "✔";
+    const string Cross = "✘";
+
+    // Why an anchored NPC is not where you expect — the two failures that look identical in the scene view
+    // and feel like a bug: nothing to anchor to, and an offset that has run off the end of the pit lane.
+    static string AnchorTrouble(PlacedNPC npc)
+    {
+        if (npc.anchor == PlacedNPC.Anchor.Here) return null;
+
+        Vector3 stand = npc.ResolveStandPoint();
+        if ((stand - npc.transform.position).sqrMagnitude < 1e-6f)
+            return "The geometry this anchor reads from is not in the open scene, so they are drawn at the " +
+                   "marker. Open a scene with the track in it (or preview the package) to place them.";
+
+        Vector3 f = npc.ResolveOffset(npc.anchorAlong + 1f, npc.anchorLateral) - stand;
+        Vector3 b = npc.ResolveOffset(npc.anchorAlong - 1f, npc.anchorLateral) - stand;
+        if (f.sqrMagnitude < 1e-5f && b.sqrMagnitude < 1e-5f)
+            return "Pinned: 'along' has run past the end of the pit lane and is being clamped, so moving it " +
+                   "further changes nothing. Bring it back toward the middle of the lane.";
+
+        return null;
+    }
+
+    static string Where(PlacedNPC.Anchor anchor) => anchor switch
+    {
+        PlacedNPC.Anchor.PitLane => "player's pit-lane spawn",
+        PlacedNPC.Anchor.ParkedCar => "player's parked car",
+        PlacedNPC.Anchor.RVDoor => "motorhome door",
+        PlacedNPC.Anchor.PlayerSpawn => "player's spawn point",
+        _ => "marker",
+    };
+
+    // One line saying what finishing this quest actually takes.
+    static string DescribeObjective(QuestInfo q)
+    {
+        if (q == null) return "";
+        return q.objective switch
+        {
+            QuestInfo.ObjectiveType.BeatDriverInRace =>
+                $"finish ahead of {q.driverName}" + (q.singleRaceAttempt ? ", in one race" : ""),
+            QuestInfo.ObjectiveType.FinishRacePosition => $"finish {q.targetPosition} or better",
+            QuestInfo.ObjectiveType.StatThreshold =>
+                $"get '{q.statKey}' to {q.statTarget}" + (q.countFromAccept ? ", counted from accepting" : ""),
+            QuestInfo.ObjectiveType.DeliverItem => $"deliver '{q.itemId}' to the NPC marked as the target",
+            QuestInfo.ObjectiveType.RelationshipBelow =>
+                $"drive {q.driverName}'s opinion down to {q.relationshipTarget}",
+            QuestInfo.ObjectiveType.RelationshipAbove =>
+                $"bring {q.driverName}'s opinion up to {q.relationshipTarget}",
+            QuestInfo.ObjectiveType.ContactDriver =>
+                $"hit {q.driverName} at severity {q.minContactSeverity:0.##} or more",
+            _ => q.objective.ToString(),
+        };
     }
 
     // ---------------------------------------------------------------- scene view
@@ -156,7 +292,18 @@ public class PlacedNPCEditor : Editor
         Vector3 origin = npc.ResolveOffset(along, lateral);
         Vector3 fwd = npc.ResolveOffset(along + 1f, lateral) - origin;
         Vector3 side = npc.ResolveOffset(along, lateral + 1f) - origin;
-        if (fwd.sqrMagnitude < 1e-5f || side.sqrMagnitude < 1e-5f) return;
+
+        // Probe backwards when forwards has nowhere to go. A pit-lane anchor CLAMPS to the ends of the
+        // spline, so an NPC whose `along` has run past either end sits in a dead zone where stepping one
+        // metre further changes nothing — and the drag used to give up there, which reads in the scene view
+        // as an NPC welded to the pit entry that no amount of dragging will move.
+        if (fwd.sqrMagnitude < 1e-5f) fwd = origin - npc.ResolveOffset(along - 1f, lateral);
+        if (side.sqrMagnitude < 1e-5f) side = origin - npc.ResolveOffset(along, lateral - 1f);
+
+        // Still nothing: the anchor's geometry is missing from the scene entirely. Fall back to world axes
+        // so the handle always writes something rather than silently doing nothing.
+        if (fwd.sqrMagnitude < 1e-5f) fwd = Vector3.right;
+        if (side.sqrMagnitude < 1e-5f) side = Vector3.up;
 
         along += Vector3.Dot(delta, fwd.normalized);
         lateral += Vector3.Dot(delta, side.normalized);
@@ -195,10 +342,34 @@ public class PlacedNPCEditor : Editor
 // previewed, and a build context so geometry anchors resolve against the track in the open scene.
 public static class PlacedNPCSceneContext
 {
+    const string SlotKey = "draftmaster.npcpreview.slot";
     const string SessionKey = "draftmaster.npcpreview.session";
     const string TrackKey = "draftmaster.npcpreview.track";
     const string SeriesKey = "draftmaster.npcpreview.series";
 
+    // The half-day being previewed: the day of the week and which half of it. This is the main axis now —
+    // "who is in the paddock on Saturday morning" is the question an author actually has.
+    public static Draftmaster.Weekend.WeekendSlot PreviewSlot
+    {
+        get => (Draftmaster.Weekend.WeekendSlot)EditorPrefs.GetInt(SlotKey, 0);
+        set { EditorPrefs.SetInt(SlotKey, (int)value); SceneView.RepaintAll(); }
+    }
+
+    // Which session that half-day is: the weekend runs practice on Friday, qualifying on Saturday and the
+    // race on Sunday, so the day picks the session and there is no second control to keep in step. An NPC
+    // gated to qualifying therefore shows up under Saturday, which is where the player would meet them.
+    public static RaceWeekend.Session SessionFor(Draftmaster.Weekend.WeekendSlot slot) => slot switch
+    {
+        Draftmaster.Weekend.WeekendSlot.FridayAM or Draftmaster.Weekend.WeekendSlot.FridayPM
+            => RaceWeekend.Session.Practice,
+        Draftmaster.Weekend.WeekendSlot.SaturdayAM or Draftmaster.Weekend.WeekendSlot.SaturdayPM
+            => RaceWeekend.Session.Qualifying,
+        _ => RaceWeekend.Session.Race,
+    };
+
+    // The session that half-day is played in. Stored rather than derived: the Weekend Cast window knows
+    // the real answer (it has the timetable in front of it and can see that Saturday afternoon is the
+    // National race), and the Director sets the rule-of-thumb above when it has no sheet to read.
     public static RaceWeekend.Session PreviewSession
     {
         get => (RaceWeekend.Session)EditorPrefs.GetInt(SessionKey, 0);
@@ -226,12 +397,20 @@ public static class PlacedNPCSceneContext
     // Would this NPC appear in that session, under the current preview track/series? Returns null when they
     // would, otherwise the clause that stops them.
     public static string Evaluate(PlacedNPC npc, RaceWeekend.Session session)
+        => Evaluate(npc, PreviewSlot, session);
+
+    // Would this NPC be there on that half-day? Null when they would, otherwise the clause that stops them.
+    public static string Evaluate(PlacedNPC npc, Draftmaster.Weekend.WeekendSlot slot)
+        => Evaluate(npc, slot, PreviewSession);
+
+    static string Evaluate(PlacedNPC npc, Draftmaster.Weekend.WeekendSlot slot, RaceWeekend.Session session)
     {
         if (npc == null) return "no npc";
         var previous = AppearanceConditions.Preview;
         AppearanceConditions.Preview = new AppearanceConditions.PreviewContext
         {
             session = session,
+            slot = slot,
             trackId = PreviewTrack,
             series = PreviewSeries,
             ignoreSeen = true,   // a preview is about the authored rule, not about this save's history
@@ -290,6 +469,19 @@ public static class PlacedNPCSceneContext
         float total = samples[samples.Count - 1].distance;
         float fraction = flow != null ? flow.pitFraction : 0.5f;
         ctx.playerPitDistance = total * fraction;
+
+        // Where the car will be PARKED once the scene runs, which is not where it is sitting in the scene
+        // file: PitLaneStart puts it carAheadMetres up the pit lane from the player's spawn. The crew chief
+        // is anchored to the car, so without this he previews next to a car that is about to drive away —
+        // typically pinned against the pit entry, metres from where he actually ends up.
+        if (flow != null)
+        {
+            float carDistance = Mathf.Min(total, total * fraction + flow.carAheadMetres);
+            var carSample = ctx.usedPit ? track.SamplePitAt(carDistance, samples) : track.SampleAt(carDistance, samples);
+            Vector2 carOff = carSample.position + carSample.normal * flow.lateralOffsetMetres;
+            ctx.parkedCarPos = track.transform.TransformPoint(new Vector3(carOff.x, carOff.y, 0f));
+            ctx.hasParkedCarPos = true;
+        }
 
         // Where the player spawns, so PlayerSpawn/RVDoor anchors have an origin before play mode.
         var spawn = Find<PlayerSpawnPoint>();

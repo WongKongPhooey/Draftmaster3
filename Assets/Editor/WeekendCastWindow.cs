@@ -62,8 +62,10 @@ public class WeekendCastWindow : EditorWindow
     void Rebuild()
     {
         _timetable = WeekendTimetable.Build(_series, _weekendId, PlacedNPCSceneContext.PreviewTrack);
-        // The scene-view gizmos and the Director read this, so picking a half-day here greys out anybody
-        // who would not be in the paddock during it.
+        // The scene-view gizmos, the Director's table and the inspector card all read these, so picking a
+        // half-day here shows that half-day's paddock everywhere at once. The session comes off the real
+        // sheet — this window has the timetable, so it knows Saturday afternoon is the National race.
+        PlacedNPCSceneContext.PreviewSlot = _slot;
         PlacedNPCSceneContext.PreviewSession = SessionOf(_slot);
     }
 
@@ -98,7 +100,7 @@ public class WeekendCastWindow : EditorWindow
 
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("Install Core Cast", EditorStyles.toolbarButton, GUILayout.Width(110f)))
-                InstallCoreCast();
+                NPCDirectorWindow.InstallCoreCast();   // one implementation, two doors into it
             if (GUILayout.Button("Add NPC", EditorStyles.toolbarButton, GUILayout.Width(65f)))
                 EditorApplication.ExecuteMenuItem("Draftmaster/NPCs/Add Placed NPC");
             if (GUILayout.Button("NPC Director", EditorStyles.toolbarButton, GUILayout.Width(90f)))
@@ -106,20 +108,6 @@ public class WeekendCastWindow : EditorWindow
         }
     }
 
-    // The people every track has, whatever series is running: greeter, crew chief, engineer, strategist,
-    // PR and the team liaison. Everything else in the paddock is crowd scattered around them.
-    void InstallCoreCast()
-    {
-        int added = PlacedNPCDefaults.EnsureCoreCast();
-        if (added > 0)
-        {
-            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-            Debug.Log($"Weekend Cast: installed {added} core cast marker(s). They are editable objects under " +
-                      $"'{PlacedNPCDefaults.RootName}' — move them, redress them, rewrite them.");
-        }
-        else Debug.Log("Weekend Cast: the core cast is already in this scene.");
-        Repaint();
-    }
 
     void DrawSlotTabs()
     {
@@ -282,7 +270,7 @@ public class WeekendCastWindow : EditorWindow
         foreach (var npc in all)
         {
             if (npc == null) continue;
-            string unmet = PlacedNPCSceneContext.Evaluate(npc, session);
+            string unmet = PlacedNPCSceneContext.Evaluate(npc, _slot);
 
             using (new EditorGUILayout.HorizontalScope(npc == _selected ? "SelectionRect" : GUIStyle.none))
             {

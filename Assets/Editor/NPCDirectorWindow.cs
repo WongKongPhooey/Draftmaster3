@@ -52,7 +52,7 @@ public class NPCDirectorWindow : EditorWindow
         using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
         {
             if (GUILayout.Button("Add NPC", EditorStyles.toolbarButton, GUILayout.Width(70f))) AddNPC();
-            if (GUILayout.Button("Install Default Pit Cast", EditorStyles.toolbarButton, GUILayout.Width(150f))) InstallCast();
+            if (GUILayout.Button("Install Core Cast", EditorStyles.toolbarButton, GUILayout.Width(110f))) InstallCoreCast();
             if (GUILayout.Button("Edit Track Package", EditorStyles.toolbarButton, GUILayout.Width(130f)))
                 EditorApplication.ExecuteMenuItem("Draftmaster/Tracks/Edit Selected Package (Prefab Mode)");
             GUILayout.FlexibleSpace();
@@ -61,19 +61,41 @@ public class NPCDirectorWindow : EditorWindow
         }
     }
 
-    // What the whole window is answering "would they be here?" against.
+    // What the whole window is answering "would they be here?" against: a day of the weekend and which half
+    // of it. Everything reads this — the table, the scene-view gizmos and the inspector card — so picking
+    // SATURDAY / AFTERNOON here shows Saturday afternoon's paddock in the scene view.
     void DrawPreviewRow()
     {
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
         {
+            var slot = PlacedNPCSceneContext.PreviewSlot;
+            int day = (int)slot / 2;
+            int half = (int)slot % 2;
+
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Previewing", GUILayout.Width(70f));
-                var session = (RaceWeekend.Session)GUILayout.Toolbar(
-                    (int)PlacedNPCSceneContext.PreviewSession,
-                    new[] { "Practice", "Qualifying", "Race" }, GUILayout.Width(240f));
-                if (session != PlacedNPCSceneContext.PreviewSession) PlacedNPCSceneContext.PreviewSession = session;
+                EditorGUILayout.LabelField("Day", GUILayout.Width(30f));
+                int newDay = GUILayout.Toolbar(day, new[] { "FRIDAY", "SATURDAY", "SUNDAY" }, GUILayout.Width(240f));
 
+                EditorGUILayout.LabelField("Time", GUILayout.Width(36f));
+                int newHalf = GUILayout.Toolbar(half, new[] { "MORNING", "AFTERNOON" }, GUILayout.Width(180f));
+
+                if (newDay != day || newHalf != half)
+                {
+                    var picked = (Draftmaster.Weekend.WeekendSlot)(newDay * 2 + newHalf);
+                    PlacedNPCSceneContext.PreviewSlot = picked;
+                    // No timetable in this window, so the day picks the session: practice Friday,
+                    // qualifying Saturday, the race Sunday. Weekend Cast overrides it from the real sheet.
+                    PlacedNPCSceneContext.PreviewSession = PlacedNPCSceneContext.SessionFor(picked);
+                }
+
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.LabelField(
+                    $"session: {PlacedNPCSceneContext.PreviewSession}", EditorStyles.miniLabel, GUILayout.Width(130f));
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
                 EditorGUILayout.LabelField("Track", GUILayout.Width(40f));
                 string track = EditorGUILayout.TextField(PlacedNPCSceneContext.PreviewTrack, GUILayout.Width(110f));
                 if (track != PlacedNPCSceneContext.PreviewTrack) PlacedNPCSceneContext.PreviewTrack = track;
@@ -81,6 +103,11 @@ public class NPCDirectorWindow : EditorWindow
                 EditorGUILayout.LabelField("Series", GUILayout.Width(45f));
                 string series = EditorGUILayout.TextField(PlacedNPCSceneContext.PreviewSeries, GUILayout.Width(90f));
                 if (series != PlacedNPCSceneContext.PreviewSeries) PlacedNPCSceneContext.PreviewSeries = series;
+
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.LabelField(
+                    "Practice runs Friday, qualifying Saturday, the race Sunday — so the day picks the session.",
+                    EditorStyles.miniLabel);
             }
 
             if (!PlacedNPCSceneContext.HasTrack)
@@ -99,9 +126,16 @@ public class NPCDirectorWindow : EditorWindow
         {
             EditorGUILayout.LabelField("NPC", EditorStyles.miniBoldLabel, GUILayout.Width(150f));
             EditorGUILayout.LabelField("Anchor", EditorStyles.miniBoldLabel, GUILayout.Width(85f));
-            EditorGUILayout.LabelField("P", EditorStyles.miniBoldLabel, GUILayout.Width(18f));
-            EditorGUILayout.LabelField("Q", EditorStyles.miniBoldLabel, GUILayout.Width(18f));
-            EditorGUILayout.LabelField("R", EditorStyles.miniBoldLabel, GUILayout.Width(18f));
+
+            // The whole weekend across the row: six half-days, the previewed one in bold. Reading down a
+            // column is "who is in the paddock on Saturday morning".
+            foreach (var s in Draftmaster.Weekend.WeekendSlots.All)
+            {
+                var head = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleCenter };
+                if (s == PlacedNPCSceneContext.PreviewSlot) head.normal.textColor = new Color(0.95f, 0.85f, 0.4f);
+                EditorGUILayout.LabelField(Draftmaster.Weekend.WeekendSlots.ShortLabel(s), head, GUILayout.Width(46f));
+            }
+
             EditorGUILayout.LabelField("Rules / why not", EditorStyles.miniBoldLabel);
         }
 
@@ -115,7 +149,7 @@ public class NPCDirectorWindow : EditorWindow
                 npc.Label.IndexOf(_filter, System.StringComparison.OrdinalIgnoreCase) < 0 &&
                 npc.name.IndexOf(_filter, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
 
-            string here = PlacedNPCSceneContext.Evaluate(npc, PlacedNPCSceneContext.PreviewSession);
+            string here = PlacedNPCSceneContext.Evaluate(npc, PlacedNPCSceneContext.PreviewSlot);
             if (_onlyVisible && here != null) continue;
             shown++;
             DrawRow(npc, here);
@@ -125,8 +159,10 @@ public class NPCDirectorWindow : EditorWindow
 
         if (shown == 0)
             EditorGUILayout.HelpBox(all.Count == 0
-                ? "No placed NPCs in this scene. 'Add NPC' drops one in front of the scene camera, or " +
-                  "'Install Default Pit Cast' creates the greeter, engineer and crew chief as editable markers."
+                ? "No placed NPCs in this scene. 'Add NPC' drops one in front of the scene camera; " +
+                  "'Install Cast' puts the people every track has — the pit greeter, the crew chief, the " +
+                  "team liaison at the motorhome door, the strategist and the PR manager — into the scene " +
+                  "as markers you can move and edit."
                 : "Nothing matches the filter.", MessageType.None);
     }
 
@@ -146,8 +182,8 @@ public class NPCDirectorWindow : EditorWindow
 
             EditorGUILayout.LabelField(npc.anchor.ToString(), EditorStyles.miniLabel, GUILayout.Width(85f));
 
-            foreach (RaceWeekend.Session s in System.Enum.GetValues(typeof(RaceWeekend.Session)))
-                Tick(PlacedNPCSceneContext.Evaluate(npc, s) == null);
+            foreach (var s in Draftmaster.Weekend.WeekendSlots.All)
+                Tick(PlacedNPCSceneContext.Evaluate(npc, s) == null, s == PlacedNPCSceneContext.PreviewSlot);
 
             EditorGUILayout.LabelField(unmetHere == null ? npc.appear.Summarise() : "— " + unmetHere,
                                        EditorStyles.miniLabel);
@@ -161,11 +197,13 @@ public class NPCDirectorWindow : EditorWindow
         }
     }
 
-    static void Tick(bool on)
+    static void Tick(bool on, bool previewed = false)
     {
         var style = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
-        style.normal.textColor = on ? new Color(0.35f, 0.9f, 0.45f) : new Color(0.55f, 0.55f, 0.55f);
-        EditorGUILayout.LabelField(on ? "✔" : "·", style, GUILayout.Width(18f));
+        style.normal.textColor = on
+            ? (previewed ? new Color(0.5f, 1f, 0.55f) : new Color(0.35f, 0.9f, 0.45f))
+            : new Color(0.45f, 0.45f, 0.45f);
+        EditorGUILayout.LabelField(on ? "✔" : "·", style, GUILayout.Width(46f));
     }
 
     // The crowd this window can't list: NPCs spawned at random by PaddockSpawner / AutographFanSpawner and
@@ -269,42 +307,30 @@ public class NPCDirectorWindow : EditorWindow
         Open();
     }
 
-    [MenuItem("Draftmaster/NPCs/Install Default Pit Cast")]
-    public static void InstallCast()
+    // Everybody every track has, as real markers you can select, move and edit. Without this they are
+    // built from code when the scene runs, which means opening a scene shows an empty paddock and there is
+    // nothing to click on — the thing this window exists to fix.
+    [MenuItem("Draftmaster/NPCs/Install Core Cast")]
+    public static void InstallCoreCast()
     {
-        var existing = PlacedNPCSceneContext.AllInScene();
-        var made = new List<GameObject>();
+        var before = PlacedNPCSceneContext.AllInScene().Count;
+        int added = PlacedNPCDefaults.EnsureCoreCast(PlacedNPCDefaults.Root());
 
-        // The every-track cast only: the greeter in the lane, the chief at the car. The motorhome door is
-        // the team liaison's beat and she is stood up from the weekend's sheet at runtime, not placed here.
-        if (!HasRole(existing, PlacedNPC.Role.PitGreeter)) made.Add(PlacedNPCDefaults.CreateGreeter().gameObject);
-        if (!HasRole(existing, PlacedNPC.Role.CrewChief)) made.Add(PlacedNPCDefaults.CreateChief().gameObject);
-
-        if (made.Count == 0)
+        if (added == 0)
         {
-            EditorUtility.DisplayDialog("Default Pit Cast",
-                "The greeter and crew chief are already placed in this scene.", "OK");
+            Debug.Log("NPC Director: this scene already has the whole every-track cast.");
+            Open();
             return;
         }
 
-        // Under the scene's "NPCs" root, matching where the runtime install puts them.
-        var parent = PlacedNPCDefaults.Root();
-        foreach (var go in made)
-        {
-            go.transform.SetParent(parent, false);
-            Undo.RegisterCreatedObjectUndo(go, "Install Default Pit Cast");
-        }
+        foreach (var npc in PlacedNPCSceneContext.AllInScene())
+            if (npc != null) Undo.RegisterCreatedObjectUndo(npc.gameObject, "Install cast");
 
         EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
-        Selection.objects = made.ToArray();
-        Debug.Log($"NPC Director: installed {made.Count} default cast marker(s). Save the scene to keep them.");
+        Debug.Log($"NPC Director: added {added} marker(s) — {before + added} in the scene now. " +
+                  "They stand where their anchors put them (the pit lane, the parked car, the motorhome " +
+                  "door); move them with the scene-view handle or their anchor offsets. Save the scene to keep them.");
         Open();
     }
 
-    static bool HasRole(List<PlacedNPC> list, PlacedNPC.Role role)
-    {
-        foreach (var npc in list)
-            if (npc != null && npc.role == role) return true;
-        return false;
-    }
 }
