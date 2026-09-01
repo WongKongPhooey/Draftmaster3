@@ -16,6 +16,8 @@ public class PlayerPitService : MonoBehaviour
     public float pitLateralMax = 6f;
     [Tooltip("Speed (m/s) below which the car counts as stopped for service.")]
     public float stopSpeedMps = 1.5f;
+    [Tooltip("Tell the crew the player is coming once the car is this close (m) to their box, so the sign man is out with the board down before it arrives — the board is what marks the stop.")]
+    public float signCallM = 35f;
 
     public bool repairDamage = true;
     public bool refuel = true;
@@ -68,6 +70,17 @@ public class PlayerPitService : MonoBehaviour
         bool inBox = hasBox ? _marker.CarFullyInside(playerCar.transform, CarHalfExtents())
                             : !PitLane.Configured;
         _showBoxHint = hasBox && onPit && slow && needs && !inBox && !_serviced;
+
+        // Coming down the lane with a stop to make: call the crew so their sign man is out and the board is
+        // down over the box before the car gets there. Only ever the player's OWN box — a sign man waving at
+        // every box driven past would be worse than none. SignalApproach ignores the repeats.
+        if (hasBox && onPit && needs && !_serviced && RaceStart.IsGreen)
+        {
+            var crew = PitCrewRegistry.ForBox(PitLane.PlayerBox);
+            if (crew != null &&
+                (crew.transform.position - playerCar.transform.position).sqrMagnitude < signCallM * signCallM)
+                crew.SignalApproach(playerCar.transform);
+        }
 
         if (onPit && inBox && slow && needs && !_serviced && RaceStart.IsGreen)
         {

@@ -22,6 +22,8 @@ public class PitStopController : MonoBehaviour
     public float boxCrawlMph = 5f;
     [Tooltip("Shortest run-in (m) over which the car may cut from the centerline to the box lane. The real window grows with speed so the car is ON the box lane before it stops.")]
     public float minCutWindow = 12f;
+    [Tooltip("Tell the crew the car is coming this far (m) up the lane from the box, so their sign man is out with the board down before it arrives — the board is what marks the stop.")]
+    public float signCallM = 35f;
     [Tooltip("After service, hold in the box while another moving pit-lane car is within this many metres behind the box — pull out into a gap, not into traffic.")]
     public float exitYieldBehindM = 14f;
     [Tooltip("Pit-lane ACC: stop this far (m) behind a stationary car in the lane ahead.")]
@@ -112,6 +114,11 @@ public class PitStopController : MonoBehaviour
                         targetFrac = boxDist / _spline.PitLength;
                     }
                     float remaining = boxDist - _spline.PitProgress01 * _spline.PitLength;
+
+                    // Call the box before arriving: the sign man walks out and puts the board down over
+                    // where the nose will stop, which he cannot do if he only hears about it on arrival.
+                    if (remaining < signCallM)
+                        PitCrewRegistry.ForBox(_spline.qualifyingPosition)?.SignalApproach(transform);
 
                     // Drive the centerline down the lane (clear of cars being serviced on the strip) and cut
                     // across to the wall-side box lane only inside the last stretch before this car's own box —

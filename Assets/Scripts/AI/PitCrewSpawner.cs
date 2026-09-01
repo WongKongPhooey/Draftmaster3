@@ -2,12 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Builds one PitCrewBox (5 members) at every pit box, fitting them to the shared PitLane geometry that
-// GridSpawner publishes. Drop this on an empty GameObject in the race scene and point it at the TrackBuilder.
+// Builds one PitCrewBox (5 members + the sign man) at every pit box, fitting them to the shared PitLane
+// geometry that GridSpawner publishes. Drop this on an empty GameObject in the race scene and point it at the
+// TrackBuilder.
 //
 // Members are paper-doll NPCs (NPCLayeredAppearance, same look as the paddock crowd). Four wheel changers stand
-// at the car's corners and one fueller at the rear; supply the wheel / fuel-can sprites they hold. Anything left
-// unassigned falls back to a coloured placeholder so the scene is visible before the art exists.
+// at the car's corners and one fueller at the rear; a sixth man stands off the nose working the stop/go board
+// (see PitCrewSignMan). Supply the wheel / fuel-can / sign sprites they hold. Anything left unassigned falls
+// back to a coloured placeholder so the scene is visible before the art exists.
 public class PitCrewSpawner : MonoBehaviour
 {
     [Header("Refs")]
@@ -22,6 +24,21 @@ public class PitCrewSpawner : MonoBehaviour
     [Tooltip("Sprite the fueller holds. Placeholder built if null.")]
     public Sprite fuelCanSprite;
     public float gearScale = 1f;
+
+    [Header("Stop/go sign")]
+    [Tooltip("Put a sign man on every box: the one holding the board over the car's nose, down as it arrives and up when the crew are done.")]
+    public bool spawnSignMan = true;
+    [Tooltip("The board as the driver sees it on the way in. Draw it pole-DOWN (the hand end at the bottom of the sprite, the board at the top) — it is pivoted at the hand and scaled along its length to swing. Placeholder built if null.")]
+    public Sprite stopSignSprite;
+    [Tooltip("The same board flipped to GO, drawn the same way round. Placeholder built if null.")]
+    public Sprite goSignSprite;
+    [Tooltip("Full reach (m) of the sign at scale 1: hand to the far edge of the board. Wants to span the gap from where he stands to over the car's nose.")]
+    public float signReachM = 2.4f;
+    public float signScale = 1f;
+    [Tooltip("How far ahead of the front wheel station the sign man stands (m).")]
+    public float signStandoff = 1.9f;
+    [Tooltip("How far off the car's centreline he stands, as a fraction of the wheel station lateral. Signed with Wall Side, so he keeps the crew's side of the box.")]
+    public float signLateralFrac = 0.6f;
 
     [Header("Layout")]
     [Tooltip("0 = one crew per race car (PitLane.BoxCount). Otherwise spawn this many boxes.")]
@@ -69,6 +86,7 @@ public class PitCrewSpawner : MonoBehaviour
     public int baseSortingOrder = 8;
 
     Material _unlit;
+    Sprite _stopFallback, _goFallback;
 
     void Start() => StartCoroutine(SpawnWhenReady());
 
@@ -161,6 +179,8 @@ public class PitCrewSpawner : MonoBehaviour
         var box = boxGo.AddComponent<PitCrewBox>();
         box.wheelLongitudinal = wheelLongitudinal;
         box.wheelLateral = wheelLateral;
+        box.signStandoff = signStandoff;
+        box.signLateralFrac = signLateralFrac * wallSideSign;
         box.Configure(idx);
 
         // The team's own pit box, behind the boxes on the paddock side: the one thing on pit road painted
@@ -199,14 +219,32 @@ public class PitCrewSpawner : MonoBehaviour
 
         for (int m = 0; m < 5; m++)
         {
-            bool fueller = m == 4;
-            BuildMember(box, boxGo.transform, standby[m], work[m], fueller, idx * 5 + m);
+            var role = m == 4 ? CrewRole.Fueller : CrewRole.WheelChanger;
+            box.AddMember(BuildMember(boxGo.transform, standby[m], work[m], role, idx * 6 + m, out _));
+        }
+
+        // The sign man: off the nose of the box, and first in the line on the wall so he can get out there
+        // ahead of the others without walking through them.
+        if (spawnSignMan)
+        {
+            var signWork = new Vector3(wheelLateral * signLateralFrac * wl, wheelLongitudinal + signStandoff, 0f);
+            var signStandby = new Vector3(sx, 3.8f, 0f);
+            var member = BuildMember(boxGo.transform, signStandby, signWork, CrewRole.SignMan, idx * 6 + 5, out var board);
+            var man = member.gameObject.AddComponent<PitCrewSignMan>();
+            man.Init(board, StopSign(), GoSign());
+            box.SetSignMan(man);
         }
     }
 
-    void BuildMember(PitCrewBox box, Transform parent, Vector3 standby, Vector3 work, bool fueller, int seed)
+    enum CrewRole { WheelChanger, Fueller, SignMan }
+
+    // One crew member and the thing in their hands. `gear` comes back out because the sign man animates his
+    // (it is the board), where a wheel or a can is only ever shown or hidden.
+    PitCrewMember BuildMember(Transform parent, Vector3 standby, Vector3 work, CrewRole role, int seed, out SpriteRenderer gear)
     {
-        var go = new GameObject(fueller ? "Fueller" : "WheelChanger");
+        bool fueller = role == CrewRole.Fueller;
+        bool signMan = role == CrewRole.SignMan;
+        var go = new GameObject(signMan ? "SignMan" : fueller ? "Fueller" : "WheelChanger");
         go.transform.SetParent(parent, false);
         go.transform.localScale = Vector3.one * memberScale;
 
@@ -233,7 +271,9 @@ public class PitCrewSpawner : MonoBehaviour
         {
             Destroy(layered);
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = Placeholder(fueller ? new Color(0.95f, 0.55f, 0.15f) : new Color(0.2f, 0.5f, 0.95f), memberHeightM);
+            sr.sprite = Placeholder(signMan ? new Color(0.95f, 0.9f, 0.35f)
+                                            : fueller ? new Color(0.95f, 0.55f, 0.15f)
+                                                      : new Color(0.2f, 0.5f, 0.95f), memberHeightM);
             sr.sharedMaterial = UnlitSprite();
             sr.sortingLayerName = sortingLayerName;
             sr.sortingOrder = baseSortingOrder;
@@ -242,21 +282,69 @@ public class PitCrewSpawner : MonoBehaviour
         // Held gear, shown only while servicing. The gear sprites are metric (sized in world units at
         // scale 1), so divide the body normalisation back out of this child's scale and offset.
         // Placeholder gear is sized off the member so it stays in proportion if memberHeightM is retuned.
-        var itemGo = new GameObject("Gear");
+        //
+        // The sign is the exception: it is pivoted at his hands and points where he faces, so it takes no
+        // offset and is turned to run along the walk art's forward (-Y). Its sprite and length are then
+        // PitCrewSignMan's business — it swings the board out and back along that axis.
+        var itemGo = new GameObject(signMan ? "Sign" : "Gear");
         itemGo.transform.SetParent(go.transform, false);
-        itemGo.transform.localPosition = new Vector3(0f, memberHeightM * 0.15f, 0f) / bodyScale;
-        itemGo.transform.localScale = Vector3.one * gearScale / bodyScale;
+        itemGo.transform.localPosition = signMan ? Vector3.zero : new Vector3(0f, memberHeightM * 0.15f, 0f) / bodyScale;
+        itemGo.transform.localRotation = signMan ? Quaternion.Euler(0f, 0f, 180f) : Quaternion.identity;
+        itemGo.transform.localScale = Vector3.one * (signMan ? signScale : gearScale) / bodyScale;
         var item = itemGo.AddComponent<SpriteRenderer>();
-        item.sprite = fueller
-            ? (fuelCanSprite != null ? fuelCanSprite : Placeholder(new Color(0.85f, 0.2f, 0.15f), memberHeightM * 0.45f))
-            : (wheelSprite != null ? wheelSprite : Placeholder(new Color(0.1f, 0.1f, 0.1f), memberHeightM * 0.38f));
+        if (!signMan)
+            item.sprite = fueller
+                ? (fuelCanSprite != null ? fuelCanSprite : Placeholder(new Color(0.85f, 0.2f, 0.15f), memberHeightM * 0.45f))
+                : (wheelSprite != null ? wheelSprite : Placeholder(new Color(0.1f, 0.1f, 0.1f), memberHeightM * 0.38f));
         item.sharedMaterial = UnlitSprite();
         item.sortingLayerName = sortingLayerName;
-        item.sortingOrder = baseSortingOrder + 6; // gear in front of the member
+        item.sortingOrder = baseSortingOrder + (signMan ? 8 : 6); // gear in front of the member; the board over the car
         item.enabled = false;                     // Init turns it on — crew always hold their gear
 
-        member.Init(standby, work, appearance, item, fueller);
-        box.AddMember(member);
+        // A wheel changer lets go of their wheel once it is fitted; a fueller and the sign man hold what
+        // they came out with for the whole stop. The sign man also works square to the car, because the
+        // thing he is holding points wherever he is looking.
+        member.faceCarWhenWorking = signMan;
+        member.Init(standby, work, appearance, item, keepsGear: fueller || signMan);
+        gear = item;
+        return member;
+    }
+
+    // Both faces of the board, built once and shared by every box — unlike the wheels and cans, these two
+    // are identical on all forty of them.
+    Sprite StopSign()
+    {
+        if (stopSignSprite != null) return stopSignSprite;
+        if (_stopFallback == null) _stopFallback = SignPlaceholder(new Color(0.85f, 0.13f, 0.13f), signReachM);
+        return _stopFallback;
+    }
+
+    Sprite GoSign()
+    {
+        if (goSignSprite != null) return goSignSprite;
+        if (_goFallback == null) _goFallback = SignPlaceholder(new Color(0.20f, 0.80f, 0.30f), signReachM);
+        return _goFallback;
+    }
+
+    // Placeholder lollipop: a pale pole with a coloured board on the end, pivoted at the HAND (bottom
+    // centre) so scaling its length swings the board out from the man instead of stretching it in place.
+    // `metres` is the full reach, hand to the far edge of the board, at scale 1.
+    static Sprite SignPlaceholder(Color board, float metres)
+    {
+        const int w = 16, h = 64;
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        var px = new Color32[w * h];
+        var pole = (Color32)new Color(0.88f, 0.88f, 0.90f);
+        var clear = new Color32(0, 0, 0, 0);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                bool onBoard = y >= h * 0.58f && y < h - 2 && x >= 1 && x < w - 1;
+                bool onPole = !onBoard && y < h * 0.62f && x >= w / 2 - 1 && x <= w / 2;
+                px[y * w + x] = onBoard ? (Color32)board : onPole ? pole : clear;
+            }
+        tex.SetPixels32(px); tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), h / Mathf.Max(0.05f, metres));
     }
 
     Material UnlitSprite()

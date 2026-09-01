@@ -4,9 +4,10 @@ using UnityEngine;
 
 // A pit crew servicing one pit box. Five members wait on the wall side of the box; when the assigned car stops
 // in the box the crew walk out to their work stations (four wheel changers at the corners, one fueller at the
-// rear), hold their gear for the duration of the stop, then walk back to standby. The car's own pit logic
-// (PitStopController for the AI, PlayerPitService for the human) calls BeginService/EndService — the crew are
-// purely cosmetic and never gate the stop.
+// rear), hold their gear for the duration of the stop, then walk back to standby. A sixth man — the sign man
+// (PitCrewSignMan) — goes out earlier, on the car's APPROACH, and holds the stop/go board over the nose until
+// the crew are done. The car's own pit logic (PitStopController for the AI, PlayerPitService for the human)
+// calls SignalApproach/BeginService/EndService — the crew are purely cosmetic and never gate the stop.
 //
 // Boxes register themselves by box index (= a car's grid / qualifying position) so a pitting car can find its
 // crew with no scene wiring. PitCrewSpawner builds the boxes from the shared PitLane geometry.
@@ -46,8 +47,10 @@ public class PitCrewMember : MonoBehaviour
     [Tooltip("Walk art faces -Y, so +90 lines the drawn facing up with the movement angle (same as PaddockWalker).")]
     public float spriteFacingOffsetDeg = 90f;
     public float turnRate = 720f;
-    [Tooltip("Seconds at the car's corner before the held wheel disappears — the moment it 'goes on' the car. Fuellers keep their can for the whole stop.")]
+    [Tooltip("Seconds at the car's corner before the held wheel disappears — the moment it 'goes on' the car. A fueller (and the sign man) keep what they are holding for the whole stop.")]
     public float wheelFitSeconds = 1.2f;
+    [Tooltip("Turn to face the car on arrival instead of keeping the walk-in heading. The sign man does — he works facing the nose he is holding the board over.")]
+    public bool faceCarWhenWorking;
 
     NPCLayeredAppearance _appearance;
     SpriteRenderer _itemRenderer;
@@ -57,17 +60,19 @@ public class PitCrewMember : MonoBehaviour
     Vector2 _carHalf;
     bool _hasCar;
     bool _working;
-    bool _isFueller;
+    bool _keepsGear;    // holds the same thing all stop (fuel can, sign) rather than fitting it and letting go
     bool _gearSpent;    // the held wheel is on the car; empty-handed until restocked at standby
     float _workTimer;
     float _frameTimer;
     int _frame;
 
-    public void Init(Vector3 standbyLocal, Vector3 workLocal, NPCLayeredAppearance appearance, SpriteRenderer itemRenderer, bool isFueller)
+    public bool IsWorking => _working;
+
+    public void Init(Vector3 standbyLocal, Vector3 workLocal, NPCLayeredAppearance appearance, SpriteRenderer itemRenderer, bool keepsGear)
     {
         _appearance = appearance;
         _itemRenderer = itemRenderer;
-        _isFueller = isFueller;
+        _keepsGear = keepsGear;
         _standbyLocal = standbyLocal;
         _workLocal = workLocal;
         _targetLocal = standbyLocal;
@@ -187,9 +192,13 @@ public class PitCrewMember : MonoBehaviour
 
             if (_working)
             {
+                // Standing at the station, the walk-in heading is meaningless — the sign man in particular
+                // has to be square to the car, because what he is holding points where he is looking.
+                if (faceCarWhenWorking && _hasCar) FaceLocal(_carCenterLocal - transform.localPosition);
+
                 // At the corner: the wheel goes on after a beat and the held one disappears.
                 _workTimer += Time.deltaTime;
-                if (!_isFueller && !_gearSpent && _workTimer >= wheelFitSeconds) _gearSpent = true;
+                if (!_keepsGear && !_gearSpent && _workTimer >= wheelFitSeconds) _gearSpent = true;
             }
             else
             {
@@ -229,7 +238,9 @@ public class PitCrewMember : MonoBehaviour
 
 // A pit box's crew. Owns its members and toggles them between standby and work on BeginService/EndService.
 // Members are added in station order: 4 wheel changers (front-near, rear-near, front-far, rear-far), then the
-// fueller — BeginService relies on that order to send each one to the right corner of the serviced car.
+// fueller — BeginService relies on that order to send each one to the right corner of the serviced car. The
+// sign man is held separately because he does not keep their timing: he leaves the wall on SignalApproach,
+// before the car is even stopped, and stays out a beat past EndService with the board up.
 public class PitCrewBox : MonoBehaviour
 {
     [Tooltip("Half the car length the wheel stations straddle (m). Set by PitCrewSpawner.")]
@@ -238,17 +249,27 @@ public class PitCrewBox : MonoBehaviour
     public float wheelLateral = 1.2f;
     [Tooltip("How far behind the rear wheel station the fueller stands (m).")]
     public float fuellerBehind = 1.0f;
+    [Tooltip("How far ahead of the front wheel station the sign man stands (m) — clear of the nose, holding the board back over it.")]
+    public float signStandoff = 1.9f;
+    [Tooltip("How far off the car's centreline the sign man stands, as a signed fraction of the wheel station lateral (the spawner signs it with the crew's wall side). He is in front of the car, not in front of the driver.")]
+    public float signLateralFrac = 0.6f;
 
     [Tooltip("How long (s) to keep looking for the car assigned to this box before leaving the crew in their own clothes. The grid spawns over several frames and is re-parked afterwards, so a box is usually built before its car exists.")]
     public float resolveWindow = 8f;
+    [Tooltip("Give up on an announced arrival after this long (s) and put the board back up. A car that called the box and then wrecked, pitted through, or ran out of race must not leave a man standing in the lane holding a sign forever.")]
+    public float approachTimeout = 30f;
 
     int _boxIndex = -1;
     readonly List<PitCrewMember> _members = new();
+    PitCrewSignMan _signMan;
     Transform _servicingCar;
+    bool _approaching;
+    float _approachExpires;
     bool _dressed;
     Color _primary = Color.white, _secondary = Color.white;
 
     public bool IsServicing => _servicingCar != null;
+    public bool IsSignDown => _signMan != null && _signMan.IsDown;
     public int BoxIndex => _boxIndex;
 
     public void Configure(int boxIndex)
@@ -262,6 +283,12 @@ public class PitCrewBox : MonoBehaviour
         if (m == null) return;
         _members.Add(m);
         if (_dressed) m.WearTeamColours(_primary, _secondary);   // a late arrival still wears the kit
+    }
+
+    public void SetSignMan(PitCrewSignMan man)
+    {
+        _signMan = man;
+        if (_dressed && _signMan != null) _signMan.WearTeamColours(_primary, _secondary);
     }
 
     void Start() => StartCoroutine(DressCrew());
@@ -284,15 +311,45 @@ public class PitCrewBox : MonoBehaviour
                 _dressed = true;
                 for (int i = 0; i < _members.Count; i++)
                     if (_members[i] != null) _members[i].WearTeamColours(_primary, _secondary);
+                if (_signMan != null) _signMan.WearTeamColours(_primary, _secondary);
                 yield break;
             }
             yield return null;
         }
     }
 
+    // The car has committed to this box and is coming down the lane. Only the sign man moves: he walks out
+    // ahead of the box and puts the board down over the spot the nose is going to stop on, which is the whole
+    // point of him. The rest of the crew stay on the wall until there is a car to work on.
+    //
+    // Idempotent — the pit logic shouts this every frame of the run-in, and re-sending the man would restart
+    // his walk each time.
+    public void SignalApproach(Transform car)
+    {
+        if (_approaching || _servicingCar != null || _signMan == null) return;
+        _approaching = true;
+        _approachExpires = Time.time + Mathf.Max(0f, approachTimeout);
+
+        // No car to measure yet, so he sets up on the box's own nominal car: centred on the box, facing back
+        // down it. BeginService moves him the last half-metre onto wherever the car actually stopped.
+        _signMan.SetCarRect(Vector3.zero, NominalCarHalf);
+        _signMan.SetWorkTarget(NominalSignStation);
+        _signMan.Lower();
+    }
+
+    // Half-extents (box-local) of a car parked square in the box: the footprint the crew route around.
+    // Half-width stays just inside the wheel stations so those remain reachable endpoints; half-length runs
+    // a touch past them, roughly the bodywork.
+    Vector2 NominalCarHalf => new(Mathf.Max(0.4f, wheelLateral - 0.15f), wheelLongitudinal + 0.4f);
+
+    // Where the sign man stands for a car parked square in the box (box-local: +Y is up the lane = car
+    // forward, +X the wall side the crew work from).
+    Vector3 NominalSignStation => new(wheelLateral * signLateralFrac, wheelLongitudinal + signStandoff, 0f);
+
     public void BeginService(Transform car)
     {
         _servicingCar = car;
+        _approaching = false;
 
         // Aim each member at the serviced car's ACTUAL wheel corners (car forward = local +X, so
         // transform.right is its long axis and transform.up its side axis), converted to box-local
@@ -315,7 +372,7 @@ public class PitCrewBox : MonoBehaviour
             // a touch beyond them, roughly the bodywork.
             Vector3 carLocal = transform.InverseTransformPoint(p);
             carLocal.z = 0f;
-            var carHalf = new Vector2(Mathf.Max(0.4f, wheelLateral - 0.15f), wheelLongitudinal + 0.4f);
+            var carHalf = NominalCarHalf;
 
             for (int i = 0; i < _members.Count && i < stations.Length; i++)
             {
@@ -324,15 +381,38 @@ public class PitCrewBox : MonoBehaviour
                 _members[i].SetCarRect(carLocal, carHalf);
                 _members[i].SetWorkTarget(local);
             }
+
+            // The sign man was already out on the nominal box; nudge him onto the real nose so the board
+            // sits over the car that actually turned up rather than the one the box was drawn for.
+            if (_signMan != null)
+            {
+                Vector3 signLocal = transform.InverseTransformPoint(
+                    p + car.right * (wheelLongitudinal + signStandoff) + car.up * (wheelLateral * signLateralFrac));
+                signLocal.z = 0f;
+                _signMan.SetCarRect(carLocal, carHalf);
+                _signMan.SetWorkTarget(signLocal);
+            }
         }
 
         for (int i = 0; i < _members.Count; i++) _members[i].SetWorking(true);
+        // A stop nobody announced (a car that crawled in without calling ahead) still gets its board down.
+        _signMan?.Lower();
     }
 
     public void EndService()
     {
         _servicingCar = null;
+        _approaching = false;
         for (int i = 0; i < _members.Count; i++) _members[i].SetWorking(false);
+        _signMan?.Raise();   // board up = GO; he holds it there a beat before following them back
+    }
+
+    void Update()
+    {
+        // The car that announced itself never arrived. Put the board up rather than leave a man in the lane.
+        if (!_approaching || _servicingCar != null || Time.time < _approachExpires) return;
+        _approaching = false;
+        _signMan?.Raise();
     }
 
     void OnDestroy()
