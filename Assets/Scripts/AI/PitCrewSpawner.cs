@@ -6,10 +6,12 @@ using UnityEngine;
 // geometry that GridSpawner publishes. Drop this on an empty GameObject in the race scene and point it at the
 // TrackBuilder.
 //
-// Members are paper-doll NPCs (NPCLayeredAppearance, same look as the paddock crowd). Four wheel changers stand
-// at the car's corners and one fueller at the rear; a sixth man stands off the nose working the stop/go board
-// (see PitCrewSignMan). Supply the wheel / fuel-can / sign sprites they hold. Anything left unassigned falls
-// back to a coloured placeholder so the scene is visible before the art exists.
+// Members are paper-doll NPCs (NPCLayeredAppearance, same look as the paddock crowd). Four wheel men work the
+// car two to a corner — the right-hand pair of wheels first and then, once those are on, round the car for the
+// left-hand pair, the way a NASCAR stop runs (PitCrewBox drives that sequence) — with one fueller at the left
+// rear; a sixth man stands off the nose working the stop/go board (see PitCrewSignMan). Supply the wheel /
+// fuel-can / sign sprites they hold. Anything left unassigned falls back to a coloured placeholder so the
+// scene is visible before the art exists.
 public class PitCrewSpawner : MonoBehaviour
 {
     [Header("Refs")]
@@ -19,7 +21,7 @@ public class PitCrewSpawner : MonoBehaviour
     public NPCPartLibrary crewLibrary;
 
     [Header("Held gear (you model these)")]
-    [Tooltip("Sprite the four wheel changers hold. Placeholder built if null.")]
+    [Tooltip("Sprite each of the four wheel men holds. Placeholder built if null.")]
     public Sprite wheelSprite;
     [Tooltip("Sprite the fueller holds. Placeholder built if null.")]
     public Sprite fuelCanSprite;
@@ -70,6 +72,8 @@ public class PitCrewSpawner : MonoBehaviour
     public float wheelLongitudinal = 1.8f;
     [Tooltip("Lateral offset (m) of a wheel station from the box centre.")]
     public float wheelLateral = 1.2f;
+    [Tooltip("Gap (m) along the car between the two men sharing a corner: the changer on the wheel and the carrier a step further out towards the bumper.")]
+    public float carrierOffset = 0.7f;
 
     [Tooltip("World height a paper-doll member is normalised to, whatever the library's pixel size. memberScale multiplies on top. Default matches the on-foot player (an 8px frame at 100 PPU drawn at scale 8), so crew read as the same size as everyone else on foot — the world is metric for cars but the people are drawn smaller than 1:1.")]
     public float memberHeightM = OnFootPersonHeight;
@@ -179,6 +183,7 @@ public class PitCrewSpawner : MonoBehaviour
         var box = boxGo.AddComponent<PitCrewBox>();
         box.wheelLongitudinal = wheelLongitudinal;
         box.wheelLateral = wheelLateral;
+        box.carrierOffset = carrierOffset;
         box.signStandoff = signStandoff;
         box.signLateralFrac = signLateralFrac * wallSideSign;
         box.Configure(idx);
@@ -193,15 +198,19 @@ public class PitCrewSpawner : MonoBehaviour
         // else in the paddock is placed in that frame.
         if (spawnStands) PitBoxStand.Build(boxGo.transform, idx, StandLateral(boxGo.transform, wallSideSign), -0.02f);
 
-        // Five stations: 4 wheels (corners) + 1 fueller (rear). x is lateral (wall = +wallSide), y is along lane.
+        // Five stations: the four wheel men on the car's RIGHT-hand side, two to a corner, plus the fueller
+        // at the left rear where the filler is. x is lateral, y is along the lane; a car parked nose-up the
+        // lane has its right-hand side towards box +X whichever side of it the crew's wall happens to be.
+        // Only the opening layout — the box re-measures every station off the car that actually turns up,
+        // and moves the wheel men round to the left-hand side part way through the stop.
         float wl = wallSideSign;
         var work = new[]
         {
-            new Vector3( wheelLateral * wl,  wheelLongitudinal, 0f), // front wheel, wall side
-            new Vector3( wheelLateral * wl, -wheelLongitudinal, 0f), // rear wheel, wall side
-            new Vector3(-wheelLateral * wl,  wheelLongitudinal, 0f), // front wheel, far side
-            new Vector3(-wheelLateral * wl, -wheelLongitudinal, 0f), // rear wheel, far side
-            new Vector3( wheelLateral * wl, -wheelLongitudinal - 1.0f, 0f), // fueller, rear wall side
+            new Vector3( wheelLateral,  wheelLongitudinal, 0f),                 // right front, changer
+            new Vector3( wheelLateral, -wheelLongitudinal, 0f),                 // right rear, changer
+            new Vector3( wheelLateral,  wheelLongitudinal + carrierOffset, 0f), // right front, carrier
+            new Vector3( wheelLateral, -wheelLongitudinal - carrierOffset, 0f), // right rear, carrier
+            new Vector3(-wheelLateral, -wheelLongitudinal - 1.0f, 0f),          // fueller, left rear
         };
         // Standby: lined up along the wall, always beyond the parked box lane so the crew never stand
         // inside a parked car (ParkLateral is the parked file's centre; +2.2 clears a half-width + margin).
@@ -219,7 +228,7 @@ public class PitCrewSpawner : MonoBehaviour
 
         for (int m = 0; m < 5; m++)
         {
-            var role = m == 4 ? CrewRole.Fueller : CrewRole.WheelChanger;
+            var role = m == 4 ? CrewRole.Fueller : CrewRole.WheelMan;
             box.AddMember(BuildMember(boxGo.transform, standby[m], work[m], role, idx * 6 + m, out _));
         }
 
@@ -236,7 +245,7 @@ public class PitCrewSpawner : MonoBehaviour
         }
     }
 
-    enum CrewRole { WheelChanger, Fueller, SignMan }
+    enum CrewRole { WheelMan, Fueller, SignMan }
 
     // One crew member and the thing in their hands. `gear` comes back out because the sign man animates his
     // (it is the board), where a wheel or a can is only ever shown or hidden.
@@ -244,7 +253,7 @@ public class PitCrewSpawner : MonoBehaviour
     {
         bool fueller = role == CrewRole.Fueller;
         bool signMan = role == CrewRole.SignMan;
-        var go = new GameObject(signMan ? "SignMan" : fueller ? "Fueller" : "WheelChanger");
+        var go = new GameObject(signMan ? "SignMan" : fueller ? "Fueller" : "WheelMan");
         go.transform.SetParent(parent, false);
         go.transform.localScale = Vector3.one * memberScale;
 
@@ -301,9 +310,10 @@ public class PitCrewSpawner : MonoBehaviour
         item.sortingOrder = baseSortingOrder + (signMan ? 8 : 6); // gear in front of the member; the board over the car
         item.enabled = false;                     // Init turns it on — crew always hold their gear
 
-        // A wheel changer lets go of their wheel once it is fitted; a fueller and the sign man hold what
-        // they came out with for the whole stop. The sign man also works square to the car, because the
-        // thing he is holding points wherever he is looking.
+        // A wheel man lets go of his wheel once it is fitted, and is handed a fresh one when the crew go
+        // round the car for the other side; a fueller and the sign man hold what they came out with for the
+        // whole stop. The sign man also works square to the car, because the thing he is holding points
+        // wherever he is looking.
         member.faceCarWhenWorking = signMan;
         member.Init(standby, work, appearance, item, keepsGear: fueller || signMan);
         gear = item;

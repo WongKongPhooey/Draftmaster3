@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // A pit crew servicing one pit box. Five members wait on the wall side of the box; when the assigned car stops
-// in the box the crew walk out to their work stations (four wheel changers at the corners, one fueller at the
-// rear), hold their gear for the duration of the stop, then walk back to standby. A sixth man — the sign man
-// (PitCrewSignMan) — goes out earlier, on the car's APPROACH, and holds the stop/go board over the nose until
-// the crew are done. The car's own pit logic (PitStopController for the AI, PlayerPitService for the human)
+// in the box the crew run out to their work stations, hold their gear for the duration of the stop, then walk
+// back to standby. The four wheel men work ONE SIDE AT A TIME, the way a NASCAR stop runs: two to a corner on
+// the car's RIGHT-hand side (a changer on the wheel, a carrier a step further out), and once those wheels are
+// on they run round the car and do the left-hand pair. The fueller stays at the left rear — that is where the
+// filler is — and never changes sides. A sixth man — the sign man (PitCrewSignMan) — goes out earlier, on the
+// car's APPROACH, and holds the stop/go board over the nose until the crew are done. The car's own pit logic (PitStopController for the AI, PlayerPitService for the human)
 // calls SignalApproach/BeginService/EndService — the crew are purely cosmetic and never gate the stop.
 //
 // Boxes register themselves by box index (= a car's grid / qualifying position) so a pitting car can find its
@@ -41,14 +43,15 @@ public static class PitCrewRegistry
 // the car, animating a paper-doll walk cycle and showing its held gear (wheel / fuel can) while on the job.
 public class PitCrewMember : MonoBehaviour
 {
-    public float moveSpeed = 3.2f;
+    [Tooltip("They run rather than stroll — a wheel man has both corners of one side to reach inside a single stop.")]
+    public float moveSpeed = 4.2f;
     public float arriveRadius = 0.1f;
     public float frameRate = 10f;
     [Tooltip("Walk art faces -Y, so +90 lines the drawn facing up with the movement angle (same as PaddockWalker).")]
     public float spriteFacingOffsetDeg = 90f;
     public float turnRate = 720f;
-    [Tooltip("Seconds at the car's corner before the held wheel disappears — the moment it 'goes on' the car. A fueller (and the sign man) keep what they are holding for the whole stop.")]
-    public float wheelFitSeconds = 1.2f;
+    [Tooltip("Seconds at the car's corner before the held wheel disappears — the moment it 'goes on' the car. Half the beat it used to be, because a wheel man now fits two of them in a stop, one per side. A fueller (and the sign man) keep what they are holding for the whole stop.")]
+    public float wheelFitSeconds = 0.6f;
     [Tooltip("Turn to face the car on arrival instead of keeping the walk-in heading. The sign man does — he works facing the nose he is holding the board over.")]
     public bool faceCarWhenWorking;
 
@@ -67,6 +70,11 @@ public class PitCrewMember : MonoBehaviour
     int _frame;
 
     public bool IsWorking => _working;
+    // The wheel he carried out is on the car. His box waits on all four of these before sending the crew
+    // round for the other side.
+    public bool WheelFitted => _gearSpent;
+    // Where (box-local) he is currently working — which side of the car that is, is the whole point here.
+    public Vector3 WorkStation => _workLocal;
 
     public void Init(Vector3 standbyLocal, Vector3 workLocal, NPCLayeredAppearance appearance, SpriteRenderer itemRenderer, bool keepsGear)
     {
@@ -111,6 +119,20 @@ public class PitCrewMember : MonoBehaviour
         _targetLocal = working ? _workLocal : _standbyLocal;
         BuildPath(transform.localPosition, _targetLocal);
         if (working) _workTimer = 0f;
+    }
+
+    // Move a man who is already on the job to a NEW station without sending him back to the wall first: the
+    // run round the car to the other side. `withFreshWheel` puts a wheel back in his hands on the way, or he
+    // would arrive at the second corner empty-handed, having left the first one on the car.
+    public void SendToStation(Vector3 workLocal, bool withFreshWheel)
+    {
+        _workLocal = workLocal;
+        _targetLocal = workLocal;
+        _working = true;
+        _workTimer = 0f;
+        if (withFreshWheel && !_keepsGear) _gearSpent = false;
+        BuildPath(transform.localPosition, _targetLocal);
+        ShowItem(!_gearSpent);
     }
 
     // Straight line unless it would cross the car: then walk to the nearer bumper line on THIS side,
@@ -164,7 +186,10 @@ public class PitCrewMember : MonoBehaviour
         return true;
     }
 
-    void Update()
+    void Update() => Step(Time.deltaTime);
+
+    // The whole tick, taking its own delta so it can be driven a frame at a time from a test.
+    public void Step(float dt)
     {
         Vector3 cur = transform.localPosition;
         Vector3 target = _path.Count > 0 ? _path[0] : _targetLocal;
@@ -175,9 +200,11 @@ public class PitCrewMember : MonoBehaviour
         if (dist > arriveRadius)
         {
             Vector3 dir = to / dist;
-            transform.localPosition = cur + dir * moveSpeed * Time.deltaTime;
-            FaceLocal(dir);
-            Animate();
+            // Never step past the station: at a long frame (or a coarse test delta) a crew running at
+            // moveSpeed can overshoot by more than arriveRadius and hop back and forth over it forever.
+            transform.localPosition = cur + dir * Mathf.Min(moveSpeed * dt, dist);
+            FaceLocal(dir, dt);
+            Animate(dt);
             ShowItem(!_gearSpent);       // carry the wheel to the car; run back empty-handed after fitting it
         }
         else if (_path.Count > 0)
@@ -194,10 +221,10 @@ public class PitCrewMember : MonoBehaviour
             {
                 // Standing at the station, the walk-in heading is meaningless — the sign man in particular
                 // has to be square to the car, because what he is holding points where he is looking.
-                if (faceCarWhenWorking && _hasCar) FaceLocal(_carCenterLocal - transform.localPosition);
+                if (faceCarWhenWorking && _hasCar) FaceLocal(_carCenterLocal - transform.localPosition, dt);
 
                 // At the corner: the wheel goes on after a beat and the held one disappears.
-                _workTimer += Time.deltaTime;
+                _workTimer += dt;
                 if (!_keepsGear && !_gearSpent && _workTimer >= wheelFitSeconds) _gearSpent = true;
             }
             else
@@ -208,19 +235,19 @@ public class PitCrewMember : MonoBehaviour
         }
     }
 
-    void FaceLocal(Vector3 dir)
+    void FaceLocal(Vector3 dir, float dt)
     {
         if (dir.sqrMagnitude < 0.0001f) return;
         // Members live under a rotated box; rotate them in local space so facing reads in the box frame.
         float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
-        float z = Mathf.MoveTowardsAngle(transform.localEulerAngles.z, ang, turnRate * Time.deltaTime);
+        float z = Mathf.MoveTowardsAngle(transform.localEulerAngles.z, ang, turnRate * dt);
         transform.localRotation = Quaternion.Euler(0f, 0f, z);
     }
 
-    void Animate()
+    void Animate(float dt)
     {
         if (_appearance == null || _appearance.FrameCount == 0) return;
-        _frameTimer += Time.deltaTime;
+        _frameTimer += dt;
         float step = 1f / Mathf.Max(0.01f, frameRate);
         while (_frameTimer >= step)
         {
@@ -237,10 +264,12 @@ public class PitCrewMember : MonoBehaviour
 }
 
 // A pit box's crew. Owns its members and toggles them between standby and work on BeginService/EndService.
-// Members are added in station order: 4 wheel changers (front-near, rear-near, front-far, rear-far), then the
-// fueller — BeginService relies on that order to send each one to the right corner of the serviced car. The
-// sign man is held separately because he does not keep their timing: he leaves the wall on SignalApproach,
-// before the car is even stopped, and stays out a beat past EndService with the board up.
+// Members are added in station order: 4 wheel men (front changer, rear changer, front carrier, rear carrier),
+// then the fueller — BeginService relies on that order to put a pair on each corner of whichever side is being
+// worked. A stop runs the NASCAR way rather than four corners at once: the car's right-hand wheels first, and
+// the moment those are on, the four wheel men run round the car for the left-hand pair. The sign man is held
+// separately because he does not keep their timing: he leaves the wall on SignalApproach, before the car is
+// even stopped, and stays out a beat past EndService with the board up.
 public class PitCrewBox : MonoBehaviour
 {
     [Tooltip("Half the car length the wheel stations straddle (m). Set by PitCrewSpawner.")]
@@ -254,10 +283,20 @@ public class PitCrewBox : MonoBehaviour
     [Tooltip("How far off the car's centreline the sign man stands, as a signed fraction of the wheel station lateral (the spawner signs it with the crew's wall side). He is in front of the car, not in front of the driver.")]
     public float signLateralFrac = 0.6f;
 
+    [Tooltip("Work the car's RIGHT-hand wheels first and then send the crew round for the left-hand pair, the way a NASCAR stop runs. Off = one man on each of the four corners, all at once.")]
+    public bool rightSideFirst = true;
+    [Tooltip("Gap (m) along the car between the two men on one corner: the changer on the wheel and the carrier a step further out towards the bumper.")]
+    public float carrierOffset = 0.7f;
+    [Tooltip("Send the crew round for the left side after this long (s) even if a wheel man never got his wheel on, so one member who cannot reach his corner can't strand the stop on one side.")]
+    public float sideChangeTimeout = 4f;
+
     [Tooltip("How long (s) to keep looking for the car assigned to this box before leaving the crew in their own clothes. The grid spawns over several frames and is re-parked afterwards, so a box is usually built before its car exists.")]
     public float resolveWindow = 8f;
     [Tooltip("Give up on an announced arrival after this long (s) and put the board back up. A car that called the box and then wrecked, pitted through, or ran out of race must not leave a man standing in the lane holding a sign forever.")]
     public float approachTimeout = 30f;
+
+    // Members 0..3 are the wheel men (two to a corner); member 4 is the fueller, who works one place all stop.
+    const int WheelMen = 4;
 
     int _boxIndex = -1;
     readonly List<PitCrewMember> _members = new();
@@ -267,10 +306,17 @@ public class PitCrewBox : MonoBehaviour
     float _approachExpires;
     bool _dressed;
     Color _primary = Color.white, _secondary = Color.white;
+    bool _servicing;         // a stop is running (true even for a stop with no car handed over)
+    bool _onLeftSide;        // the right-hand wheels are on and the crew have gone round
+    float _sideTimer;
+    readonly Vector3[] _rightStations = new Vector3[WheelMen];
+    readonly Vector3[] _leftStations = new Vector3[WheelMen];
 
     public bool IsServicing => _servicingCar != null;
     public bool IsSignDown => _signMan != null && _signMan.IsDown;
     public int BoxIndex => _boxIndex;
+    // The crew have finished the right-hand side and are working the left.
+    public bool WorkingLeftSide => _onLeftSide;
 
     public void Configure(int boxIndex)
     {
@@ -350,69 +396,129 @@ public class PitCrewBox : MonoBehaviour
     {
         _servicingCar = car;
         _approaching = false;
+        _servicing = true;
+        _onLeftSide = false;
+        _sideTimer = 0f;
 
-        // Aim each member at the serviced car's ACTUAL wheel corners (car forward = local +X, so
-        // transform.right is its long axis and transform.up its side axis), converted to box-local
-        // space — the crew run to the car wherever it stopped in the box, not to a fixed spot.
-        if (car != null)
+        // Measure both sides off the serviced car's ACTUAL pose, so the crew run to the car wherever it
+        // stopped in the box rather than to a fixed spot. Car forward is its local +X, so transform.right is
+        // the long axis and transform.up the side axis — and because up is a quarter turn anticlockwise of
+        // forward, +up is the car's LEFT-hand side and -up its RIGHT. With no car handed over, fall back to
+        // one parked square in the box: nose up the lane, right-hand side towards the box's own +X.
+        bool haveCar = car != null;
+        Vector3 origin = haveCar ? car.position : transform.position;
+        Vector3 fwd = haveCar ? car.right : transform.up;
+        Vector3 side = haveCar ? -car.up : transform.right;   // out to the car's right-hand side
+
+        Vector3 f = fwd * wheelLongitudinal;
+        Vector3 r = side * wheelLateral;
+        Vector3 step = fwd * carrierOffset;
+        FillStations(_rightStations, origin, f, r, step);
+        FillStations(_leftStations, origin, f, -r, step);
+
+        // Publish the car's footprint so members route around the bumpers instead of over the roof — which
+        // is what makes the change of sides a run around the nose or the tail. Half-width sits just inside
+        // the wheel stations (they must stay reachable endpoints); half-length a touch beyond them, roughly
+        // the bodywork.
+        Vector3 carLocal = ToBoxLocal(origin);
+        var carHalf = NominalCarHalf;
+
+        // The filler is on the left rear, so that is where the fueller works for the whole stop.
+        Vector3 fuellerStation = ToBoxLocal(origin - f - fwd * fuellerBehind - r);
+
+        for (int i = 0; i < _members.Count; i++)
         {
-            Vector3 p = car.position;
-            Vector3 f = car.right * wheelLongitudinal;
-            Vector3 s = car.up * wheelLateral;
-            var stations = new[]
-            {
-                p + f + s,                                   // front wheel, near side
-                p - f + s,                                   // rear wheel, near side
-                p + f - s,                                   // front wheel, far side
-                p - f - s,                                   // rear wheel, far side
-                p - f - car.right * fuellerBehind + s,       // fueller, behind the rear
-            };
-            // Publish the car's footprint so members route around the bumpers instead of over the roof.
-            // Half-width sits just inside the wheel stations (they must stay reachable endpoints); half-length
-            // a touch beyond them, roughly the bodywork.
-            Vector3 carLocal = transform.InverseTransformPoint(p);
-            carLocal.z = 0f;
-            var carHalf = NominalCarHalf;
-
-            for (int i = 0; i < _members.Count && i < stations.Length; i++)
-            {
-                Vector3 local = transform.InverseTransformPoint(stations[i]);
-                local.z = 0f;
-                _members[i].SetCarRect(carLocal, carHalf);
-                _members[i].SetWorkTarget(local);
-            }
-
-            // The sign man was already out on the nominal box; nudge him onto the real nose so the board
-            // sits over the car that actually turned up rather than the one the box was drawn for.
-            if (_signMan != null)
-            {
-                Vector3 signLocal = transform.InverseTransformPoint(
-                    p + car.right * (wheelLongitudinal + signStandoff) + car.up * (wheelLateral * signLateralFrac));
-                signLocal.z = 0f;
-                _signMan.SetCarRect(carLocal, carHalf);
-                _signMan.SetWorkTarget(signLocal);
-            }
+            if (_members[i] == null) continue;
+            _members[i].SetCarRect(carLocal, carHalf);
+            if (i < WheelMen)
+                // Right side first, two men to a corner. With the sequence turned off, the old layout:
+                // one man on each of the four corners, all of them at once.
+                _members[i].SetWorkTarget(rightSideFirst ? _rightStations[i]
+                                                         : i < 2 ? _rightStations[i] : _leftStations[i - 2]);
+            else if (i == WheelMen)
+                _members[i].SetWorkTarget(fuellerStation);
         }
 
-        for (int i = 0; i < _members.Count; i++) _members[i].SetWorking(true);
+        // The sign man was already out on the nominal box; nudge him onto the real nose so the board
+        // sits over the car that actually turned up rather than the one the box was drawn for.
+        if (haveCar && _signMan != null)
+        {
+            Vector3 signLocal = ToBoxLocal(
+                car.position + car.right * (wheelLongitudinal + signStandoff) + car.up * (wheelLateral * signLateralFrac));
+            _signMan.SetCarRect(carLocal, carHalf);
+            _signMan.SetWorkTarget(signLocal);
+        }
+
+        for (int i = 0; i < _members.Count; i++) _members[i]?.SetWorking(true);
         // A stop nobody announced (a car that crawled in without calling ahead) still gets its board down.
         _signMan?.Lower();
+    }
+
+    // The four wheel men on ONE side of the car, in member order: the front and rear changers on the wheels
+    // themselves, then their two carriers a step further out towards the bumpers, so a pair sharing a corner
+    // don't stand in the same place. `side` is the lateral out to the side being worked.
+    void FillStations(Vector3[] into, Vector3 origin, Vector3 halfLength, Vector3 side, Vector3 step)
+    {
+        into[0] = ToBoxLocal(origin + halfLength + side);
+        into[1] = ToBoxLocal(origin - halfLength + side);
+        into[2] = ToBoxLocal(origin + halfLength + side + step);
+        into[3] = ToBoxLocal(origin - halfLength + side - step);
+    }
+
+    // Members walk in the box's local frame, and they are flat, so drop the depth on the way in.
+    Vector3 ToBoxLocal(Vector3 world)
+    {
+        Vector3 local = transform.InverseTransformPoint(world);
+        local.z = 0f;
+        return local;
     }
 
     public void EndService()
     {
         _servicingCar = null;
         _approaching = false;
-        for (int i = 0; i < _members.Count; i++) _members[i].SetWorking(false);
+        _servicing = false;
+        _onLeftSide = false;
+        _sideTimer = 0f;
+        for (int i = 0; i < _members.Count; i++) _members[i]?.SetWorking(false);
         _signMan?.Raise();   // board up = GO; he holds it there a beat before following them back
     }
 
     void Update()
     {
+        if (_servicing) StepService(Time.deltaTime);
+
         // The car that announced itself never arrived. Put the board up rather than leave a man in the lane.
         if (!_approaching || _servicingCar != null || Time.time < _approachExpires) return;
         _approaching = false;
         _signMan?.Raise();
+    }
+
+    // Half way through a stop the right-hand wheels are on, and the four wheel men run round the car for the
+    // left-hand pair, each picking a fresh wheel out of the pit box on the way. The hand-off is driven by the
+    // men themselves rather than a clock, so it happens when the first side is genuinely finished at whatever
+    // pace they are moving; sideChangeTimeout is only the backstop for one who never reaches his corner.
+    // Takes its own delta so a test can drive it a frame at a time.
+    public void StepService(float dt)
+    {
+        if (!rightSideFirst || _onLeftSide) return;
+        _sideTimer += dt;
+        if (!RightSideDone && _sideTimer < sideChangeTimeout) return;
+
+        _onLeftSide = true;
+        for (int i = 0; i < _members.Count && i < WheelMen; i++)
+            _members[i]?.SendToStation(_leftStations[i], withFreshWheel: true);
+    }
+
+    // Every wheel man has left the wheel he carried out on the car.
+    bool RightSideDone
+    {
+        get
+        {
+            for (int i = 0; i < _members.Count && i < WheelMen; i++)
+                if (_members[i] != null && !_members[i].WheelFitted) return false;
+            return true;
+        }
     }
 
     void OnDestroy()
