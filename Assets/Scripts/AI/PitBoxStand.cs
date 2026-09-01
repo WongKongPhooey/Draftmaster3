@@ -86,29 +86,9 @@ public class PitBoxStand : MonoBehaviour
         enabled = false;
     }
 
-    // Whoever is racing out of this box. The player's box is published by GridSpawner; every AI carries its
-    // grid slot on its SplineDriver, and a car's grid slot IS its box.
-    DriverLabel FindCarLabel()
-    {
-        if (boxIndex == PitLane.PlayerBox)
-        {
-            var player = FindFirstObjectByType<PlayerVehicleController>();
-            if (player != null)
-            {
-                var own = player.GetComponent<DriverLabel>();
-                if (own != null) return own;
-            }
-        }
-
-        foreach (var driver in FindObjectsByType<SplineDriver>(FindObjectsSortMode.None))
-        {
-            if (driver == null || driver.qualifyingPosition != boxIndex) continue;
-            var label = driver.GetComponent<DriverLabel>();
-            if (label != null) return label;
-        }
-
-        return null;
-    }
+    // Whoever is racing out of this box. The search is shared with the crew working the same box, who are
+    // asking the identical question at the identical moment (PitBoxCars).
+    DriverLabel FindCarLabel() => PitBoxCars.Label(boxIndex);
 
     public void Repaint(Color primary, Color secondary, int carNumber)
     {

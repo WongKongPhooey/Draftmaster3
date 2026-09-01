@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -72,6 +73,18 @@ public class PitCrewMember : MonoBehaviour
         _targetLocal = standbyLocal;
         transform.localPosition = standbyLocal;
         ShowItem(true);   // crew always stand ready with their wheel / fuel can in hand
+    }
+
+    // Dress this member in the car's colours (CarColours' primary and secondary), as everyone over the wall
+    // is on a real pit road. Paper-doll members take the uniform on the layers TeamUniform names; a member
+    // still standing in for missing art is a plain blob, so the blob itself takes the primary.
+    public void WearTeamColours(Color primary, Color secondary)
+    {
+        if (_appearance != null && _appearance.WearTeamColours(primary, secondary) > 0) return;
+
+        // Not the gear — that is a wheel or a fuel can, and it lives on a child renderer.
+        var body = GetComponent<SpriteRenderer>();
+        if (body != null) body.color = primary;
     }
 
     // Where (box-local) this member works the current stop. The box calls this on BeginService with the
@@ -226,9 +239,14 @@ public class PitCrewBox : MonoBehaviour
     [Tooltip("How far behind the rear wheel station the fueller stands (m).")]
     public float fuellerBehind = 1.0f;
 
+    [Tooltip("How long (s) to keep looking for the car assigned to this box before leaving the crew in their own clothes. The grid spawns over several frames and is re-parked afterwards, so a box is usually built before its car exists.")]
+    public float resolveWindow = 8f;
+
     int _boxIndex = -1;
     readonly List<PitCrewMember> _members = new();
     Transform _servicingCar;
+    bool _dressed;
+    Color _primary = Color.white, _secondary = Color.white;
 
     public bool IsServicing => _servicingCar != null;
     public int BoxIndex => _boxIndex;
@@ -239,7 +257,38 @@ public class PitCrewBox : MonoBehaviour
         PitCrewRegistry.Register(boxIndex, this);
     }
 
-    public void AddMember(PitCrewMember m) { if (m != null) _members.Add(m); }
+    public void AddMember(PitCrewMember m)
+    {
+        if (m == null) return;
+        _members.Add(m);
+        if (_dressed) m.WearTeamColours(_primary, _secondary);   // a late arrival still wears the kit
+    }
+
+    void Start() => StartCoroutine(DressCrew());
+
+    // The crew wear their car's colours, like the pit box stand behind them: five people in the same kit is
+    // what says whose stop this is when the field is all in the lane at once. The car is not there yet when
+    // the box is built, so keep asking until it is (PitBoxCars answers everyone from one shared scan).
+    //
+    // If nothing ever claims the box, the crew keep the outfit they rolled — a paddock face in their own
+    // clothes reads better than five people washed the fallback grey.
+    IEnumerator DressCrew()
+    {
+        float giveUpAt = Time.time + Mathf.Max(0f, resolveWindow);
+        while (Time.time <= giveUpAt)
+        {
+            var label = PitBoxCars.Label(_boxIndex);
+            if (label != null)
+            {
+                CarColours.For(label, out _primary, out _secondary);
+                _dressed = true;
+                for (int i = 0; i < _members.Count; i++)
+                    if (_members[i] != null) _members[i].WearTeamColours(_primary, _secondary);
+                yield break;
+            }
+            yield return null;
+        }
+    }
 
     public void BeginService(Transform car)
     {

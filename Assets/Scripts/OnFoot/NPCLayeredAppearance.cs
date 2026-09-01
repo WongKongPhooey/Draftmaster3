@@ -39,6 +39,7 @@ public class NPCLayeredAppearance : MonoBehaviour
 
     readonly List<SpriteRenderer> _renderers = new();
     readonly List<Sprite[]> _frames = new();
+    readonly List<string> _categories = new();   // library category each layer came from, same order
     int _frameCount;
 
     public int FrameCount => _frameCount;
@@ -96,6 +97,7 @@ public class NPCLayeredAppearance : MonoBehaviour
 
             _renderers.Add(sr);
             _frames.Add(frames);
+            _categories.Add(cat.name);
             _frameCount = Mathf.Max(_frameCount, frames.Length);
         }
         return _renderers.Count > 0;
@@ -110,6 +112,22 @@ public class NPCLayeredAppearance : MonoBehaviour
             if (f.Length == 0) continue;
             _renderers[l].sprite = f[((i % f.Length) + f.Length) % f.Length];
         }
+    }
+
+    // Put this character in a team's kit: the car's two colours on the layers TeamUniform says they belong
+    // on, everything else left as it was rolled. Returns how many layers took a colour, so a caller can tell
+    // an outfit that could not be dressed (a library with none of the uniform's categories) from one that was.
+    public int WearTeamColours(Color primary, Color secondary)
+    {
+        int changed = 0;
+        for (int i = 0; i < _renderers.Count && i < _categories.Count; i++)
+        {
+            if (_renderers[i] == null) continue;
+            if (!Draftmaster.Crowd.TeamUniform.TryColour(_categories[i], primary, secondary, out Color tint)) continue;
+            _renderers[i].color = tint;
+            changed++;
+        }
+        return changed;
     }
 
     LayerChoice FindChoice(string category)
@@ -148,6 +166,7 @@ public class NPCLayeredAppearance : MonoBehaviour
         foreach (var r in _renderers) if (r != null) DestroyNode(r.gameObject);
         _renderers.Clear();
         _frames.Clear();
+        _categories.Clear();
         _frameCount = 0;
 
         var stale = GetComponentsInChildren<NPCLayerTag>(true);
