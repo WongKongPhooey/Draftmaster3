@@ -37,9 +37,18 @@ public class PitCrewSpawner : MonoBehaviour
     [Tooltip("Build the team's pit box — the cart on the wall the crew chief sits on — over every box, " +
              "painted in that car's colours (CarColours). See PitBoxStand.")]
     public bool spawnStands = true;
-    [Tooltip("Lateral distance (m) from the box centre out to the stand. Sits beyond the crew's standby " +
-             "line, on the wall itself, so it never overlaps the people working the stop.")]
+    [Tooltip("How far past the PARKED CAR (m) the stand sits. Measured from the car rather than from the " +
+             "lane centre, because the car is what it has to be behind: a stand a fixed distance off the " +
+             "centreline lands between the car and the racing surface whenever the box lane is wide.")]
+    public float standBeyondCar = 3.4f;
+    [Tooltip("Fallback distance (m) from the box centre, used only when the box lane has not been " +
+             "configured and there is no parked-car lateral to measure from.")]
     public float standLateral = 6.2f;
+    [Tooltip("Put the stands on the PADDOCK side of the boxes — behind the wall, away from the racing " +
+             "surface, which is where a real one sits. The side is taken from the paddock itself " +
+             "(PaddockSpawner.TryGetArea), so it is right at every track whichever way its pit lane runs. " +
+             "Off = follow Wall Side instead, like the crew.")]
+    public bool standsOnPaddockSide = true;
     [Tooltip("Half the car length the wheel stations straddle (m).")]
     public float wheelLongitudinal = 1.8f;
     [Tooltip("Lateral offset (m) of a wheel station from the box centre.")]
@@ -100,6 +109,39 @@ public class PitCrewSpawner : MonoBehaviour
         }
     }
 
+    // Where the stand goes across the box, in the box's own local X.
+    //
+    // Behind the CAR, not a fixed distance off the lane centre. Cars park out on the box lane
+    // (PitLane.ParkLateral, ~8 m at Watkins Glen), so a stand 6.2 m off the centreline sat between the car
+    // and the racing surface — the wrong side of its own car, and in the way of the stop. Measuring from
+    // the car and stepping further out puts it where a real one is: past the car, against the wall, with
+    // the paddock behind it.
+    float StandLateral(Transform box, float fallbackSign)
+    {
+        float carLateral = PitLane.Configured ? PitLane.ParkLateral : 0f;
+
+        // No box lane configured: nothing to measure from, so fall back to the old fixed offset on
+        // whichever side the paddock is.
+        if (Mathf.Approximately(carLateral, 0f))
+            return standLateral * StandSideSign(box, fallbackSign);
+
+        return carLateral + Mathf.Sign(carLateral) * standBeyondCar;
+    }
+
+    // Which way is the paddock, in a pit box's own local X? +1 = the box's wall side, -1 = the other one.
+    // Falls back to the crew's side when a track has no paddock to read (nothing else to go on, and being
+    // beside the crew is a better wrong answer than being out on the racing line).
+    float StandSideSign(Transform box, float fallbackSign)
+    {
+        if (!standsOnPaddockSide) return fallbackSign;
+        if (!PaddockSpawner.TryGetArea(out _, out _, out Vector3 outward, out _, out _)) return fallbackSign;
+        if (outward.sqrMagnitude < 1e-4f) return fallbackSign;
+
+        float dot = Vector3.Dot(outward.normalized, box.right);
+        if (Mathf.Abs(dot) < 1e-3f) return fallbackSign;   // paddock is straight up the lane: no side to pick
+        return Mathf.Sign(dot);
+    }
+
     void BuildBox(Transform root, int idx, float boxDist, List<TrackBuilder.Sample> pit)
     {
         var s = track.SamplePitAt(boxDist, pit);
@@ -121,9 +163,15 @@ public class PitCrewSpawner : MonoBehaviour
         box.wheelLateral = wheelLateral;
         box.Configure(idx);
 
-        // The team's own pit box, out on the wall behind the crew: the one thing on pit road painted in the
-        // car's colours, so a glance down the lane says whose box is whose.
-        if (spawnStands) PitBoxStand.Build(boxGo.transform, idx, standLateral * wallSideSign, -0.02f);
+        // The team's own pit box, behind the boxes on the paddock side: the one thing on pit road painted
+        // in the car's colours, so a glance down the lane says whose box is whose.
+        //
+        // Which side that is cannot be assumed from `wallSide` — that is where the CREW stand, over the
+        // wall next to the car. The stand belongs on the far side of them, away from the racing surface,
+        // and which way that points depends on which hand the pit lane runs. The paddock already knows:
+        // PaddockSpawner picks its own side by probing which way leads away from the track, and everything
+        // else in the paddock is placed in that frame.
+        if (spawnStands) PitBoxStand.Build(boxGo.transform, idx, StandLateral(boxGo.transform, wallSideSign), -0.02f);
 
         // Five stations: 4 wheels (corners) + 1 fueller (rear). x is lateral (wall = +wallSide), y is along lane.
         float wl = wallSideSign;
