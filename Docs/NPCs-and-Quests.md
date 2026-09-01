@@ -1,7 +1,8 @@
 # NPCs, Paper-Doll Characters & Side Quests
 
 How to author characters, dialogue, and quests in Draftmaster3. Everything here works in the
-spline-based scenes (WatkinsGlen etc.) where the on-foot player uses `OnFootController`.
+spline-based race scene (`Assets/Scenes/RaceScene.unity` plus whichever track package it loads),
+where the on-foot player uses `OnFootController`.
 
 ---
 

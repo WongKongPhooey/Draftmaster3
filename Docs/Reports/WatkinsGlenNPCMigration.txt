@@ -1,0 +1,6 @@
+WatkinsGlenNPCMigration:
+RaceScene already has: CrewChief, PitGreeter
+  copied NPC_TeamLiaison (role TeamLiaison, anchor RVDoor along 2.110504 lateral -3.436347)
+  copied NPC_ChiefStrategist (role ChiefStrategist, anchor PitLane along 3.5 lateral -3.2)
+  copied NPC_PRManager (role PRManager, anchor RVDoor along 6.5 lateral 3.4)
+saved Assets/Scenes/RaceScene.unity with 3 added marker(s)

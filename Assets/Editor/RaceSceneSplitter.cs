@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Draftmaster.Data;
@@ -6,126 +5,22 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// Turns the authored-in-place reference scene into the shared race scene the package pipeline expects.
+// Picking, previewing and editing the track a race is run at.
 //
-// WatkinsGlen holds two things at once: the ~20 manager objects every race needs (player car, GridSpawner,
-// PitLaneStart, directors, HUDs, camera, database) and the Watkins Glen track itself (road, environment,
-// ground, grandstands, paddock boundary, spawn markers, RV, the extra splines). While the road lives in the
-// scene, TrackSceneLoader adopts it and no package can ever load — and every manager's `TrackBuilder` field
-// is serialised to that road, so binding does nothing either (BindSceneReferences only fills nulls).
+// Named for the split it used to perform: WatkinsGlen was authored in place, one scene holding both the ~20
+// manager objects every race needs (player car, GridSpawner, PitLaneStart, directors, HUDs, camera,
+// database) AND the Watkins Glen track itself. While a road lives in the scene, TrackSceneLoader adopts it
+// and no package can ever load, so the track half was lifted into Resources/TrackPackages/WatkinsGlen.prefab
+// and the manager half became Assets/Scenes/RaceScene.unity. That is done; the reference scene has been
+// deleted and the one-shot that did it with it.
 //
-// So: copy the scene to RaceScene.unity, lift the track half of it into Resources/TrackPackages/
-// WatkinsGlen.prefab, and delete it from the copy. What's left is a scene with no road and null TrackBuilder
-// fields — which is exactly what TrackSceneLoader wants. Watkins then loads the same way Daytona does.
-//
-// WatkinsGlen.unity itself is never written to; it stays as the authored reference.
+// What is left here is the day-to-day: choose the track, drop it into the race scene to look at, and open
+// it for editing. `Edit Selected Package In Context` is the one to reach for — it opens the package on a
+// Prefab Mode stage THROUGH an instance in the race scene, so the road is drawn with the managers and HUDs
+// around it while every edit still lands in the package and travels with the track.
 public static class RaceSceneSplitter
 {
-    const string SourceScene = "Assets/Scenes/WatkinsGlen.unity";
     const string RaceScenePath = "Assets/Scenes/RaceScene.unity";
-    const string PackageDir = "Assets/Resources/TrackPackages";
-    const string PackageTrackId = "WatkinsGlen";
-
-    // Roots that belong to Watkins Glen alone, identified by a component only a track carries.
-    static readonly System.Type[] TrackComponents =
-    {
-        typeof(TrackBuilder),
-        typeof(TrackEnvironmentBuilder),
-        typeof(ExtraTrackSpline),
-        typeof(Grandstand),
-        typeof(PaddockBoundary),
-        typeof(RVExterior),
-    };
-
-    // ...plus the ones that carry nothing but a transform or a renderer, so they have to go by name.
-    static readonly string[] TrackNames = { "Ground", "PlayerSpawnPoints", "TrackReferenceImage" };
-
-    [MenuItem("Draftmaster/Tracks/Split Shared Race Scene (WatkinsGlen → package)")]
-    public static void Split()
-    {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-
-        var log = new List<string>();
-        var scene = EditorSceneManager.OpenScene(SourceScene, OpenSceneMode.Single);
-
-        // Save As first: from here on every edit lands in RaceScene.unity, never in the reference scene.
-        if (!EditorSceneManager.SaveScene(scene, RaceScenePath))
-        {
-            Debug.LogError($"RaceSceneSplitter: could not save {RaceScenePath}.");
-            return;
-        }
-        log.Add($"scene copied: {SourceScene} -> {RaceScenePath}");
-
-        var roots = scene.GetRootGameObjects();
-        var trackRoots = roots.Where(IsTrackRoot).ToList();
-        var kept = roots.Where(r => !IsTrackRoot(r)).Select(r => r.name).ToList();
-        if (trackRoots.Count == 0)
-        {
-            Debug.LogError("RaceSceneSplitter: no track objects found in the scene — nothing to lift.");
-            return;
-        }
-
-        Directory.CreateDirectory(PackageDir);
-        string packagePath = $"{PackageDir}/{PackageTrackId}.prefab";
-
-        var packageRoot = new GameObject($"Track_{PackageTrackId}");
-        var package = packageRoot.AddComponent<TrackPackage>();
-        package.trackId = PackageTrackId;
-
-        // worldPositionStays: the package is authored at the origin, so the track keeps the coordinates the
-        // whole scene (spawn points, paddock polygon, grandstands) was laid out against.
-        foreach (var root in trackRoots)
-        {
-            root.transform.SetParent(packageRoot.transform, true);
-            log.Add($"  moved into package: {root.name}");
-        }
-
-        package.trackBuilder = packageRoot.GetComponentInChildren<TrackBuilder>(true);
-        var environment = packageRoot.GetComponentInChildren<TrackEnvironmentBuilder>(true);
-        if (environment != null) package.environmentRoot = environment.transform;
-        var paddock = packageRoot.GetComponentInChildren<PaddockBoundary>(true);
-        if (paddock != null) package.paddockRoot = paddock.transform;
-
-        var prefab = PrefabUtility.SaveAsPrefabAsset(packageRoot, packagePath, out bool saved);
-        if (!saved || prefab == null)
-        {
-            Debug.LogError($"RaceSceneSplitter: failed to write {packagePath}. Scene left untouched on disk.");
-            return;
-        }
-        log.Add($"package written: {packagePath} ({trackRoots.Count} roots)");
-
-        // Out of the scene it goes. The managers' TrackBuilder fields go null with it, which is the point:
-        // TrackSceneLoader fills them from whichever package loads.
-        Object.DestroyImmediate(packageRoot);
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
-        log.Add($"race scene kept {kept.Count} roots: {string.Join(", ", kept)}");
-
-        AddToBuildSettings(RaceScenePath, log);
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-
-        string summary = "RaceSceneSplitter:\n" + string.Join("\n", log);
-        Debug.Log(summary);
-        WriteReport(summary);
-    }
-
-    static bool IsTrackRoot(GameObject root)
-    {
-        if (TrackNames.Contains(root.name)) return true;
-        foreach (var type in TrackComponents)
-            if (root.GetComponentInChildren(type, true) != null) return true;
-        return false;
-    }
-
-    static void AddToBuildSettings(string path, List<string> log)
-    {
-        var scenes = EditorBuildSettings.scenes.ToList();
-        if (scenes.Any(s => s.path == path)) { log.Add("build settings: already listed"); return; }
-        scenes.Add(new EditorBuildSettingsScene(path, true));
-        EditorBuildSettings.scenes = scenes.ToArray();
-        log.Add($"build settings: added at index {scenes.Count - 1}");
-    }
 
     // ---------------------------------------------------------------- selection + preview
 

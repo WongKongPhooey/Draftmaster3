@@ -24,10 +24,10 @@ track-select screen should list.
 
 ## Why packages instead of 35 scenes
 
-The reference scene (`Assets/Scenes/WatkinsGlen.unity`) has ~37 root objects. Roughly two thirds of them
-are the same in every race: the player car, `GridSpawner`, `PitLaneStart`, the directors, the HUDs, the
-camera, the database. The rest — the road, its environment, the ground, grandstands, the paddock boundary,
-spawn markers, the RV — belong to Watkins Glen alone.
+The reference scene this all came out of (`Assets/Scenes/WatkinsGlen.unity`, since deleted) had ~33 root
+objects. Roughly two thirds of them are the same in every race: the player car, `GridSpawner`,
+`PitLaneStart`, the directors, the HUDs, the camera, the database. The rest — the road, its environment,
+the ground, grandstands, the paddock boundary, spawn markers, the RV — belonged to Watkins Glen alone.
 
 With one scene per track, 35 rounds means 35 copies of those shared managers, and every change to the race
 flow has to be repeated 35 times. `Assets/Levels/Racetracks/` is that problem already frozen in place: a
@@ -41,9 +41,9 @@ So: **the race scene is authored once and the track is content.**
   (`GridSpawner`, `PitLaneStart`, `LapTimingManager`, `RacePositionTracker`, `SplineDriver`, `PitLimiter`,
   the pit and paddock spawners…), and only fields that are still null get filled, so anything deliberately
   wired to another spline is left alone.
-- A scene that already contains a track — WatkinsGlen, authored in place — is **left exactly as it is**.
-  The loader adopts its `TrackBuilder` so the rest of the game can ask `TrackPackage.ActiveTrack` either
-  way. Nothing had to be torn up to add this.
+- A scene that already contains a track is **left exactly as it is**: the loader adopts its `TrackBuilder`
+  so the rest of the game can ask `TrackPackage.ActiveTrack` either way. That is why a package preview left
+  saved in `RaceScene` silently pins every race to that one track — clear previews before saving.
 
 `TrackSelection` decides which track loads. It's PlayerPrefs-backed because the weekend deliberately
 reloads the scene (practice → qualifying → race, then NEXT WEEKEND), and it falls back to the travel map's
@@ -252,7 +252,7 @@ that way round means the numbers can be argued about in one file rather than hun
 | `Assets/Scripts/Tracks/TrackGround.cs` | The ground plane, sized from the spline's bounding box. |
 | `Assets/Editor/TrackAuthoringMenu.cs` | The `Draftmaster > Tracks` window and menu items. |
 | `Assets/Editor/TrackDressingFactory.cs` | Ground, walls, grandstands and paddock, derived from the geometry. |
-| `Assets/Editor/RaceSceneSplitter.cs` | One-shot: WatkinsGlen → `RaceScene.unity` + a WatkinsGlen package. |
+| `Assets/Editor/RaceSceneSplitter.cs` | Select / preview / edit the track a race is run at. Named for the one-shot split it used to perform. |
 | `Assets/Tests/Editor/OvalGeometryTests.cs` | Lap length, closure, tri-oval, paperclip, racing line, pit lane, tuning. |
 | `Assets/Tests/Editor/TrackDimensionsTests.cs` | Every venue solves: closure, length, width, corner count, no self-intersection. |
 | `Assets/Tests/Editor/BuiltTrackAssetTests.cs` | The built assets on disk measure what they claim, and every package is wired. |
@@ -264,14 +264,19 @@ car, `GridSpawner`, `PitLaneStart`, the directors, HUDs, camera, database) and *
 `TrackBuilder` field in it is deliberately null — `TrackSceneLoader` fills them from whichever package
 loads.
 
-`Assets/Scenes/WatkinsGlen.unity` is untouched and still works as the authored reference; the split was done
-by copying it, so nothing was migrated by hand. Watkins now also exists as a package
-(`Resources/TrackPackages/WatkinsGlen.prefab`), so it loads into RaceScene like any other round.
+Watkins Glen is now just another package (`Resources/TrackPackages/WatkinsGlen.prefab`) and loads into
+RaceScene like any other round. `Assets/Scenes/WatkinsGlen.unity` — the scene the split was copied from —
+**was deleted**; keeping a second scene with a road in it around only invited editing the wrong copy. The
+three every-track NPC markers that had been left behind in it (team liaison, chief strategist, PR manager)
+were moved into `RaceScene`'s `NPCs` root first, so nothing was lost. The one-shot editor tools that
+existed for the split — `RaceSceneSplitter.Split`, `RaceSceneNameFixup`, `WatkinsGlenCoverageAudit` — went
+with it.
+
+**To edit a track now:** open `RaceScene`, pick the track with `Select Track For Next Race...`, then
+`Edit Selected Package In Context (Race Scene)`. That is the only place track content should be edited.
 
 ## Still to do
 
 - **Wire `TrackProfile` into the sim** (draft, tyres, AI spread, camera), as above.
-- **Point the multiplayer entry points at RaceScene** — `NetworkLauncher.raceSceneName` and
-  `MultiplayerMenuUI` still name `WatkinsGlen`, which works but pins multiplayer to one track.
 - **Per-track records and laps**: `TrackInfoV2.trackLaps` and the catalogue's `DefaultLaps` both exist and
   currently disagree in places. Pick the catalogue as the authority when the calendar starts driving races.

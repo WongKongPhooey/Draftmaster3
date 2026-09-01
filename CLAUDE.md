@@ -59,12 +59,15 @@ Many scripts in `Assets/Scripts/` are from a previous iteration (e.g., `Movement
 ### Scene Organization
 
 - **`Assets/Menus/`** — UI scenes (MainMenu, Garage, TrackSelect, SeriesSelect, Store, Settings, etc.)
-- **`Assets/Levels/Racetracks/`** — Active racetrack scenes (WatkinsGlen, Phoenix, Daytona, Atlanta, etc.). `Custom/` subdirectory has template tracks for custom track creation. **WatkinsGlen** is the current test scene for the spline-based system.
+- **`Assets/Scenes/`** — The live scenes: `TitleScreen` (boot), `RaceScene` (the shared race scene), `GarageScreen`, `SingleRace`, `DemoMenu`, `IronOvalShowcase`. These are what is in the build.
+- **`Assets/Levels/Racetracks/`** — Legacy racetrack scenes from the previous iteration (Phoenix, Daytona, Atlanta, etc.). `Custom/` subdirectory has template tracks. Not part of the spline-based system.
 - **`Assets/Levels/Legacy/`** — Older tracks from a previous iteration, still in the build but may use legacy scripts
 - **`Assets/Levels/Scenarios/`** — Special event scenes (DaytonaDay, Halloween, Throwback, Pitlane)
 - **`Assets/Levels/`** — Utility scenes (LoginRegister, MyAccount, DeleteAccount)
 
-**WatkinsGlen is the current development/test scene.** It uses the new spline-based system (see below). Phoenix is wired up to the legacy scrolling system.
+**`Assets/Scenes/RaceScene.unity` is the current development/test scene.** It uses the new spline-based system (see below) and holds no road — the track arrives as a package. To edit track content (scenery, paddock, per-track NPCs), open `RaceScene` and use `Draftmaster > Tracks > Edit Selected Package In Context (Race Scene)`; edits land in the package, not the scene. The every-track NPC cast lives in `RaceScene`'s own `NPCs` root. Phoenix is wired up to the legacy scrolling system.
+
+There was a hand-authored `Assets/Scenes/WatkinsGlen.unity` that predated the split into scene + package. It was **deleted 2026-09-01** — it was a second scene with a road in it, so it both confused "which scene do I open" and could never load a package. Watkins Glen lives on as `Resources/TrackPackages/WatkinsGlen.prefab` like every other venue.
 
 ### The race weekend
 

@@ -1,6 +1,6 @@
 # Driver Relationships, Payback & Team Switching
 
-Two race-scene systems added 2026-07-07, both single-player, both live in WatkinsGlen.
+Two race-scene systems added 2026-07-07, both single-player, both live in `Assets/Scenes/RaceScene.unity`.
 
 ## Driver relationships (NASCAR Thunder 2004 style)
 
@@ -46,7 +46,7 @@ keys `contacts.caused`, `contacts.received`, `paybacks.against` (see NPCs-and-Qu
 
 ## Team switching
 
-`Assets/Scripts/TeamSwitchController.cs` — scene object in WatkinsGlen. Bottom-left **TEAM** panel:
+`Assets/Scripts/TeamSwitchController.cs` — scene object in `RaceScene`. Bottom-left **TEAM** panel:
 one button per team car (`#number NAME  Pposition`), click to jump into that car mid-race
 (green-flag onwards; disabled in practice/qualifying; blocked while the target is on the pit lane).
 

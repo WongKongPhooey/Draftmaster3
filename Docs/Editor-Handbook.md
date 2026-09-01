@@ -81,8 +81,7 @@ running your coroutine — the run does not fail, it hangs in play mode forever.
 | Job | Open |
 | --- | --- |
 | Race managers, HUDs, the every-track NPC cast, the player car | `Assets/Scenes/RaceScene.unity` — the shared race scene. **No road in it**; the track loads as a package at play time. |
-| One track's road, scenery, paddock, its own NPCs | that track's package prefab, `Resources/TrackPackages/<id>.prefab` — `Draftmaster > Tracks > Edit Selected Package (Prefab Mode)` |
-| The hand-authored reference road course | `Assets/Scenes/WatkinsGlen.unity` |
+| One track's road, scenery, paddock, its own NPCs | that track's package prefab, `Resources/TrackPackages/<id>.prefab` — open `RaceScene`, then `Draftmaster > Tracks > Edit Selected Package In Context (Race Scene)` |
 | Team garage on-foot hub ("Team Factory") | `Assets/Menus/TeamGarage.unity` (built by `Tools > Draftmaster > Build Team Garage Scene`) |
 | The title menu | `Assets/Scenes/TitleScreen.unity` (built by `Draftmaster > Art > Build Title Screen Scene`) |
 | The car / driver sheet | `Assets/Scenes/GarageScreen.unity` (built by `Draftmaster > Art > Build Garage Screen Scene`) |
@@ -90,6 +89,16 @@ running your coroutine — the run does not fail, it hangs in play mode forever.
 
 **The rule:** a thing that exists at every track belongs in the race scene; a thing that is *that track*
 belongs in the package prefab. See `Docs/Tracks.md`.
+
+**Placing NPCs, specifically.** Open `RaceScene`, pick the track with
+`Draftmaster > Tracks > Select Track For Next Race...`, then
+`Draftmaster > Tracks > Edit Selected Package In Context (Race Scene)`. That opens the track package on a
+Prefab Mode stage *through* an instance in the race scene, so you place people against the real road with
+the managers and HUDs around them, and every edit is saved into the package rather than into the scene.
+Track-specific people go under `Paddock/NPCs` in the package. The every-track cast — pit greeter, crew
+chief, team liaison, chief strategist, PR manager — lives in `RaceScene`'s own `NPCs` root instead; edit
+those with `RaceScene` open and no prefab stage. `Draftmaster > NPCs > Move Selected NPC Into Track
+Package` moves one from the scene to the package when you get it the wrong way round.
 
 ## Where things live
 
@@ -502,7 +511,6 @@ Free: `F11`–`F12`.
 | Report Current Selection | Which track the next race builds, and why — prefs, travel-map fallback, resolved id |
 | Clear Package Previews From Scene | **Run this before saving any scene you previewed a track in.** A package left in `RaceScene` overrides every selection |
 | Report Calendar Coverage | What's built vs catalogue-only |
-| Split Shared Race Scene (WatkinsGlen → package) | One-shot: turn the hand-authored scene into shared scene + package |
 
 ### `Draftmaster > NPCs`
 Director (**Ctrl+Shift+N**) · Add Placed NPC · Install Default Pit Cast (greeter + chief) ·
