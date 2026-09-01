@@ -218,4 +218,73 @@ public class CrowdPolicyTests
                 $"crowd of {n}: {latency:0.000}s to re-evaluate vs {crossSeconds:0.00}s to cross the band");
         }
     }
+
+    // ---------------------------------------------------------------- how many to spawn
+
+    [Test]
+    public void RaceDayIsTheFullestHalfDay_AndNobodyGetsAnEmptyPaddock()
+    {
+        // Sunday afternoon (index 5, WeekendSlot.SundayPM) is the Cup race and must be the peak; every
+        // other half-day is busy but below it, and none of them empties the place out.
+        float raceDay = CrowdPolicy.BusynessForHalfDay(5);
+        Assert.AreEqual(1f, raceDay, 0.0001f, "race day should be a full house");
+
+        for (int i = 0; i < 5; i++)
+        {
+            float f = CrowdPolicy.BusynessForHalfDay(i);
+            Assert.Less(f, raceDay, $"half-day {i} should be quieter than race day");
+            Assert.Greater(f, 0.5f, $"half-day {i} should still read as a busy paddock");
+        }
+    }
+
+    [Test]
+    public void TheWeekendFillsUpAsItGoesOn()
+    {
+        // Friday setup -> Friday truck race -> Saturday qualifying -> Saturday National race -> Sunday.
+        // Never thins out from one half-day to the next.
+        for (int i = 1; i < 6; i++)
+            Assert.GreaterOrEqual(CrowdPolicy.BusynessForHalfDay(i), CrowdPolicy.BusynessForHalfDay(i - 1),
+                $"half-day {i} should be at least as busy as {i - 1}");
+    }
+
+    [Test]
+    public void OutsideAWeekend_ThePaddockIsFull()
+    {
+        // A single race carries no weekend ledger, and a single race is a race day.
+        Assert.AreEqual(1f, CrowdPolicy.BusynessForHalfDay(-1), 0.0001f);
+        Assert.AreEqual(1f, CrowdPolicy.BusynessForHalfDay(99), 0.0001f);
+    }
+
+    [Test]
+    public void PopulationScalesTheFullHouseFigure()
+    {
+        int full = CrowdPolicy.ComfortableMaxPopulation;
+        Assert.AreEqual(400, full, "the benchmarked ceiling");
+
+        Assert.AreEqual(full, CrowdPolicy.PopulationForHalfDay(5, full), "race day spawns the lot");
+        Assert.AreEqual(220, CrowdPolicy.PopulationForHalfDay(0, full), "Friday morning, 55% of 400");
+
+        // An empty paddock stays empty; a paddock with anybody in it never scales down to nobody.
+        Assert.AreEqual(0, CrowdPolicy.PopulationForHalfDay(0, 0));
+        Assert.AreEqual(0, CrowdPolicy.PopulationForHalfDay(0, -50));
+        Assert.AreEqual(1, CrowdPolicy.PopulationForHalfDay(0, 1));
+    }
+
+    [Test]
+    public void TheComfortableMaximumStaysInsideTheFrameBudgetItWasMeasuredAt()
+    {
+        // CrowdBenchmarkTests measured ~4.5us/frame for an awake NPC. The densest paddock the spawner
+        // frames is a short pit straight, so check the worst case rather than the roomy one: even there
+        // the whole background crowd must stay well under a sixth of a 60fps frame, and while the player
+        // is driving it costs nothing at all because everyone is frozen.
+        const float perAwakeMs = 0.0045f;
+        const float frameMs = 1000f / 60f;
+
+        float awake = CrowdPolicy.ExpectedAwakeCount(CrowdPolicy.ComfortableMaxPopulation, 100f, 30f, Tuning);
+        float cost = awake * perAwakeMs;
+
+        Assert.Less(cost, frameMs / 6f,
+            $"{awake:0} of {CrowdPolicy.ComfortableMaxPopulation} awake = {cost:0.00} ms/frame");
+    }
+
 }

@@ -149,6 +149,59 @@ public class BuiltTrackAssetTests
         }
     }
 
+    // PaddockSpawner frames its crowd alongside the longest STRAIGHT in the pit lane, 30 m deep. That
+    // rectangle is what decides how many of a 400-strong paddock are inside the CrowdDirector's 25 m
+    // reduced radius at once, and therefore what the crowd costs per frame — so the venue with the
+    // shortest pit road is the one that has to stay inside the budget, not the roomy ovals.
+    //
+    // Both pit-lane builders emit exactly one "Pit Road" straight between two tapers
+    // (OvalGeometry.BuildPitLane / RoadCourseGeometry.BuildPitLane) with a floor of 60 m, and Watkins
+    // Glen's is hand-authored, so this reads the assets rather than trusting either.
+    [Test]
+    public void ThePaddockCrowdFitsItsFrameBudgetAtEveryVenue()
+    {
+        const float paddockDepth = 30f;          // PaddockSpawner.paddockDepth
+        const float perAwakeMs = 0.0045f;        // CrowdBenchmarkTests: cost of one awake NPC
+        const float frameMs = 1000f / 60f;
+        var tuning = Draftmaster.Crowd.CrowdTuning.Default;
+        int crowd = Draftmaster.Crowd.CrowdPolicy.ComfortableMaxPopulation;
+
+        string tightest = null;
+        float tightestLen = float.MaxValue, worstCost = 0f;
+
+        foreach (var dim in TrackDimensions.All)
+        {
+            var track = Load(dim.id);
+            Assert.IsNotNull(track, $"{dim.id}: no built asset.");
+
+            var pit = track.FindProperty("pitSegments");
+            float longestStraight = 0f;
+            for (int i = 0; i < pit.arraySize; i++)
+            {
+                var seg = pit.GetArrayElementAtIndex(i);
+                if (seg.FindPropertyRelative("type").enumValueIndex != 0) continue;   // 0 = Straight
+                longestStraight = Mathf.Max(longestStraight, seg.FindPropertyRelative("length").floatValue);
+            }
+
+            Assert.Greater(longestStraight, 40f,
+                           $"{dim.id}: pit lane has no straight worth putting a paddock beside.");
+
+            float awake = Draftmaster.Crowd.CrowdPolicy.ExpectedAwakeCount(
+                crowd, longestStraight, paddockDepth, tuning);
+            float cost = awake * perAwakeMs;
+
+            Assert.Less(cost, frameMs / 4f,
+                        $"{dim.id}: a {crowd}-strong paddock over {longestStraight:0} x {paddockDepth:0} m " +
+                        $"leaves {awake:0} awake = {cost:0.00} ms/frame.");
+
+            if (longestStraight < tightestLen) { tightestLen = longestStraight; tightest = dim.id; }
+            worstCost = Mathf.Max(worstCost, cost);
+        }
+
+        TestContext.WriteLine($"Tightest paddock: {tightest} at {tightestLen:0} x {paddockDepth:0} m; " +
+                              $"worst case {worstCost:0.00} ms/frame for {crowd} NPCs.");
+    }
+
     [Test]
     public void EveryBuiltTrackHasAPitLaneAndARaceDistance()
     {

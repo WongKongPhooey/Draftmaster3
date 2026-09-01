@@ -144,5 +144,43 @@ namespace Draftmaster.Crowd
 
             return population * Mathf.Clamp01(awakeArea / area);
         }
+
+        // ---------------------------------------------------------------- how many to spawn
+
+        // The measured ceiling for the background crowd, from CrowdBenchmarkTests (report in
+        // Library/CrowdBenchmark.txt). At 400 NPCs: ~0.17 ms each to build, so ~70 ms one-off at scene
+        // load, and at the densest paddock measured -- 100m x 30m, half the crowd inside reducedRadius --
+        // 1.85 ms/frame while the player is on foot and 0 ms/frame once they are driving. That is 11% of
+        // a 60fps frame for the whole population, which is the comfortable limit. Re-run the benchmark
+        // before moving this number.
+        public const int ComfortableMaxPopulation = 400;
+
+        // How full the paddock is on each half-day of a race weekend, as a fraction of a full house.
+        //
+        // Taken as a plain 0-5 index rather than a Draftmaster.Weekend.WeekendSlot so this module keeps
+        // no dependency on the weekend rules; the order is WeekendSlot's own (FridayAM .. SundayPM).
+        // A paddock is never deserted, so the floor is high -- Friday morning is still over half a full
+        // house -- and it fills as the weekend goes on: the truck race on Friday night, the National race
+        // on Saturday, and then Sunday, when all three garages are open and the crowd peaks for the Cup
+        // race. Anything outside the six half-days (a one-off race with no weekend running) gets a full
+        // house, because that is a race day too.
+        public static float BusynessForHalfDay(int halfDayIndex) => halfDayIndex switch
+        {
+            0 => 0.55f,  // Friday morning     - setup and first practice
+            1 => 0.70f,  // Friday afternoon   - truck race under lights
+            2 => 0.75f,  // Saturday morning   - qualifying
+            3 => 0.85f,  // Saturday afternoon - National race
+            4 => 0.90f,  // Sunday morning     - race-day build-up
+            5 => 1.00f,  // Sunday afternoon   - the Cup race
+            _ => 1.00f,
+        };
+
+        // The headcount to spawn for a half-day, given the full-house figure. Never returns 0 for a
+        // non-empty paddock: a thinner crowd is still a crowd.
+        public static int PopulationForHalfDay(int halfDayIndex, int fullHousePopulation)
+        {
+            if (fullHousePopulation <= 0) return 0;
+            return Mathf.Max(1, Mathf.RoundToInt(fullHousePopulation * BusynessForHalfDay(halfDayIndex)));
+        }
     }
 }

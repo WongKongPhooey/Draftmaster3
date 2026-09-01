@@ -34,10 +34,15 @@ public class PaddockSpawner : MonoBehaviour
     public int surfaceSortingOrder = 1;
 
     [Header("NPCs")]
-    [Tooltip("Total NPCs spawned in the paddock. Most of these are frozen at any moment (see governCrowd), " +
-             "so the number that costs per frame is only the handful within 25m of the player — measure " +
-             "with the CrowdBenchmarkTests EditMode suite before pushing it much past a few hundred.")]
-    public int totalNpcs = 120;
+    [Tooltip("Paddock headcount at a full house (race day). Most of these are frozen at any moment (see " +
+             "governCrowd), so the number that costs per frame is only the handful within 25m of an on-foot " +
+             "player. 400 is the measured ceiling — CrowdPolicy.ComfortableMaxPopulation — so re-run the " +
+             "CrowdBenchmarkTests EditMode suite before pushing it past that.")]
+    public int totalNpcs = Draftmaster.Crowd.CrowdPolicy.ComfortableMaxPopulation;
+    [Tooltip("Thin the crowd out on the quieter half-days and fill it to totalNpcs on race day. Friday " +
+             "morning setup runs a little over half a full house; a race is always the lot. Untick to " +
+             "spawn the same headcount whatever the session.")]
+    public bool scaleWithWeekend = true;
     [Tooltip("How many of them are conversational. The rest wander. Keep at or below the dialogue table size (10) so no two talkers repeat the same script.")]
     public int talkingNpcs = 10;
     [Tooltip("Give the wandering NPCs ambient one-liners they mutter as the player walks past (NPCAmbientChatter).")]
@@ -262,7 +267,18 @@ public class PaddockSpawner : MonoBehaviour
 
     void SpawnNpcs(Transform root, Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
     {
+        // totalNpcs is the full-house figure. A weekend fills up as it goes on — a quiet Friday morning
+        // of setup, then the truck race, qualifying, the National race, and a packed Sunday — so the
+        // headcount is scaled by whichever half-day the ledger's clock is on.
+        //
+        // A race outranks the sheet: an exhibition race off the title screen, a single race and a
+        // multiplayer lobby carry no weekend ledger at all, and would otherwise read as Friday morning
+        // and spawn a practice-day crowd for a race.
         int total = Mathf.Max(0, totalNpcs);
+        if (scaleWithWeekend && AppearanceConditions.CurrentSession != RaceWeekend.Session.Race)
+            total = Draftmaster.Crowd.CrowdPolicy.PopulationForHalfDay(
+                (int)Draftmaster.Weekend.WeekendLedger.CurrentSlot, total);
+
         int talkers = Mathf.Clamp(talkingNpcs, 0, total);
 
         for (int i = 0; i < total; i++)

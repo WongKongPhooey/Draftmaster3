@@ -223,6 +223,19 @@ chief, race engineer, chief strategist, PR manager, team liaison — as ordinary
 `NPCs`. Run it in any track scene or package; it never duplicates what is already there. Everybody else in
 the paddock is crowd, scattered around them by `PaddockSpawner`.
 
+**How busy the paddock is:** `PaddockSpawner.totalNpcs` on the `PaddockSpawner` object in `RaceScene` is
+the *full-house* headcount, and it is set to 400 — `CrowdPolicy.ComfortableMaxPopulation`, the ceiling
+`CrowdBenchmarkTests` measured (report in `Library/CrowdBenchmark.txt`; re-run that suite before raising
+it). Ten of them are talkable, the rest walk. Almost all of them are frozen at any moment — `CrowdActor` /
+`CrowdDirector` only run the handful within 25 m of an on-foot player, and freeze the lot the instant the
+player gets in the car — so what the number actually costs is under 1.2 ms/frame at the tightest paddock on
+the calendar (Bowman Gray, 75 x 30 m) and nothing at all while driving.
+
+`scaleWithWeekend` thins that down on the quieter half-days and fills it back up for the busy ones — Friday
+morning setup runs 55% of a full house, Sunday afternoon the lot — and any race session (a booked race, a
+single race, multiplayer) is always a full house whatever the sheet says. Untick it to spawn the same
+headcount in every session.
+
 **Dialogue that changes across the weekend:** a marker carries a *set of lines per half-day*
 (`PlacedNPC.schedule`). The first set covering the half-day being played wins; anything uncovered falls back
 to the marker's default lines. The crew chief ships with three — Friday's practice brief, Saturday's
