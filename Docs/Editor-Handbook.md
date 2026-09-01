@@ -363,7 +363,24 @@ it drifts again.
 - `Tools > Draftmaster > Bake Paddock Surface` — bakes the paddock tarmac into the scene as a real object;
   re-run after changing the layout fields.
 - `Draftmaster > Paddock > Preview Motorhome Lot` / `Clear Motorhome Lot Preview` — see where the drivers'
-  RV row lands while authoring (preview objects are `DontSave`, so they never hit the scene file).
+  RV row lands while authoring (preview objects are `DontSave`, so they never hit the scene file). The
+  preview draws the motorhomes only; the popup garages behind them are play-time only.
+- **Popup garages** (`PopupGarageLot`, `PopupGarageRig`, `PopupGarageInterior`) — one team garage per entry,
+  parked in lines *behind* the motorhome lot, each a rig with a canopy pitched off its door side and the
+  car sat under it. `DriverMotorhomeLot` builds the block once its own row exists (switch it off with
+  `buildPopupGarages`), so it inherits the player's RV rotation and the same line direction — the paddock
+  reads as tarmac → motorhomes → garages walked through in order. Knobs live on the `PopupGarageLot`
+  object at play time: `gapFromMotorhomes`, `lineGap`, `rowGap`, `maxPerRow`, the canopy size, and
+  `parkCarsUnderCanopy`. It brings its own `PaddockBoundary` pocket, overlapping the motorhome lot's, so
+  the player can walk straight in.
+  - **The car is at the garage whenever it isn't somewhere else.** A driver with a live car in the scene
+    (out on track, sat in its pit box) gets an empty canopy; between sessions nothing is spawned on track,
+    so every canopy has its bodywork under it.
+  - **Walking in blacks the world out**, exactly like the player's motorhome — one opaque quad in front of
+    everything, the room drawn in front of that, the player pulled in front of the room (see `RVInterior`
+    for the long version). Inside is a meeting table with seats round it, a setup board in the team's
+    colours and a bench. Rooms are generated the first time the player comes within
+    `interiorBuildRange` (25 m), so forty of them cost nothing until they're walked up to.
 - `Tools > Draftmaster > Build Team Garage Scene` — rebuilds `GarageContent` in the open TeamGarage scene:
   floor, team car, the three crew stations, the desk **laptop** (opens the garage sheet) and the **EXIT**
   door back to the title. A re-run wipes hand edits under that root, so run it first, then tweak.

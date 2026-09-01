@@ -93,10 +93,21 @@ public class DriverMotorhomeLot : MonoBehaviour
     [Tooltip("Put each driver somewhere once the row is built (DriverPresenceDirector): in their car, at their motorhome, or walking the lot. Off = an empty lot of parked rigs.")]
     public bool populateDrivers = true;
 
+    [Header("Garages")]
+    [Tooltip("Park a team garage for every entry behind the motorhomes (PopupGarageLot): a rig with a canopy off its side, the car sat under it whenever it isn't out on track, and a masked meeting room behind its door. Off = motorhomes only.")]
+    public bool buildPopupGarages = true;
+
     public static DriverMotorhomeLot Instance { get; private set; }
 
     readonly List<Slot> _slots = new();
     public IReadOnlyList<Slot> Slots => _slots;
+
+    // The line this lot actually laid out, and how many lines it ended up needing. PopupGarageLot parks
+    // its own block of rigs behind this one, and needs the same anchor, rotation and stacking direction
+    // to continue the paddock rather than start a second, unrelated grid somewhere else.
+    public LineLayout Line { get; private set; }
+    public int LineRows { get; private set; }
+    public bool HasLine { get; private set; }
 
     // Raised once the row exists and every slot is filled in. DriverPresenceDirector waits on this.
     public bool Built { get; private set; }
@@ -178,6 +189,11 @@ public class DriverMotorhomeLot : MonoBehaviour
         // motorhome, or walking the lot.
         if (populateDrivers && FindObjectOfType<DriverPresenceDirector>() == null)
             DriverPresenceDirector.Create(this);
+
+        // And the other half of the paddock: the team rigs, with each car parked under its canopy for as
+        // long as it isn't out on track or sat in its pit box.
+        if (buildPopupGarages && FindObjectOfType<PopupGarageLot>() == null)
+            PopupGarageLot.Create(this);
     }
 
     // ---------------------------------------------------------------- roster
@@ -350,6 +366,10 @@ public class DriverMotorhomeLot : MonoBehaviour
 
         var line = ComputeLine(origin, rot, lineDirection, rvWidth, rvLength, lineGap, rowGap,
                                rows, _slots.Count, playerPlace, rvZ, stackRowsForward);
+
+        Line = line;
+        LineRows = rows;
+        HasLine = true;
 
         var root = new GameObject("Motorhomes").transform;
         root.SetParent(transform, false);

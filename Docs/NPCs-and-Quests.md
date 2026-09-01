@@ -408,7 +408,8 @@ Every round runs in one scene (`Assets/Scenes/RaceScene.unity`) with the track l
 `Docs/Tracks.md`. That splits NPCs into two kinds, and most of them are already the first kind:
 
 **Spawned from geometry — nothing to do per track.** `PaddockSpawner`, `PitCrewSpawner`,
-`AutographFanSpawner`, `CareerPathNPCSpawner`, `DriverMotorhomeLot` and `DriverPresenceDirector` all live in
+`AutographFanSpawner`, `CareerPathNPCSpawner`, `DriverMotorhomeLot`, `DriverPresenceDirector` and
+`PopupGarageLot` (the team garages behind the motorhomes — see `Docs/Editor-Handbook.md` §17) all live in
 the shared scene and place people off the pit lane spline. The pit greeter, race engineer and crew chief are
 `PlacedNPC` markers on geometry anchors (section 0) — same effect, but you can see and edit them. `AutographFanSpawner` and `CareerPathNPCSpawner` even self-install
 (`[RuntimeInitializeOnLoadMethod(AfterSceneLoad)]`), and the package is instantiated before that runs, so
