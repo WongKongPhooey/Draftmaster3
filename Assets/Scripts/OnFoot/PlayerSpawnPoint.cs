@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 // Editor-placed marker for where the on-foot player may appear at scene load. Drop any number of
 // these into a race scene (GameObject > Draftmaster > Player Spawn Point); PitLaneStart picks one
@@ -69,19 +69,16 @@ public class PlayerSpawnPoint : MonoBehaviour
     static void CreateMarker(UnityEditor.MenuCommand cmd)
     {
         var go = new GameObject("PlayerSpawnPoint");
-        go.AddComponent<PlayerSpawnPoint>();
-        UnityEditor.GameObjectUtility.SetParentAndAlign(go, cmd.context as GameObject);
 
-        // Drop it where the scene view is looking so it lands on-screen, not at the origin.
-        var view = UnityEditor.SceneView.lastActiveSceneView;
-        if (go.transform.parent == null && view != null)
-        {
-            Vector3 pivot = view.pivot;
-            go.transform.position = new Vector3(pivot.x, pivot.y, 0f);
-        }
+        // Into whatever is open — the scene, or the track package on a prefab stage — and parented so the
+        // stage will actually save it. See PaddockAuthoringStage.
+        PaddockAuthoringStage.Place(go, cmd);
+
+        go.AddComponent<PlayerSpawnPoint>();
 
         UnityEditor.Undo.RegisterCreatedObjectUndo(go, "Create Player Spawn Point");
-        UnityEditor.Selection.activeObject = go;
+        UnityEditor.Selection.activeGameObject = go;
+        UnityEditor.EditorGUIUtility.PingObject(go);
     }
 #endif
 }

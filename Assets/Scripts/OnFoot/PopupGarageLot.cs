@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 // The garage lot: one popup garage per car, parked in lines behind the drivers' motorhomes.
@@ -21,6 +21,8 @@ public class PopupGarageLot : MonoBehaviour
     public static PopupGarageLot Instance { get; private set; }
 
     [Header("Layout")]
+    // Everything in this block is IGNORED when the track package holds a Garages PaddockLotArea:
+    // the drawn rectangle decides where the block goes, its spacing and how many lines there are.
     [Tooltip("Open ground (m) between the last line of motorhomes and the first line of garages.")]
     public float gapFromMotorhomes = 10f;
     [Tooltip("Gap (m) of open ground between one rig's canopy and the next rig's body, along a line.")]
@@ -96,10 +98,16 @@ public class PopupGarageLot : MonoBehaviour
     public void Build(DriverMotorhomeLot lot)
     {
         if (lot == null || lot.Slots.Count == 0) return;
-        if (!lot.HasLine)
+
+        // An authored footprint stands on its own: the block is packed into the rectangle drawn for it in
+        // the track package and needs nothing from the motorhomes — not their line, not gapFromMotorhomes.
+        var area = PaddockLotArea.Find(PaddockLotKind.Garages);
+
+        if (area == null && !lot.HasLine)
         {
             Debug.LogWarning("PopupGarageLot: the motorhome lot never laid out a line (no player RV and no usable " +
-                             "pit lane), so there is nothing to park the garages behind.", this);
+                             "pit lane), so there is nothing to park the garages behind. Draw a Garages " +
+                             "PaddockLotArea in the track package to place them outright.", this);
             return;
         }
 
@@ -109,20 +117,34 @@ public class PopupGarageLot : MonoBehaviour
 
         var slots = lot.Slots;
         int count = slots.Count;
-        int rows = maxPerRow > 0 ? Mathf.Max(1, Mathf.CeilToInt(count / (float)maxPerRow)) : 1;
 
-        var motorhomes = lot.Line;
+        DriverMotorhomeLot.LineLayout line;
+        int rows;
 
-        // A rig is body-plus-canopy wide, so the line is spaced for both: each canopy fills the gap
-        // between its own body and the next one along, and the row's own maths stays in one place.
-        var line = DriverMotorhomeLot.ComputeLine(motorhomes.origin, motorhomes.rotation, lot.lineDirection,
+        if (area != null && area.Solve(count, bodyWidth + canopyWidth, bodyLength, garageZ, out line, out rows, out bool tight))
+        {
+            if (tight)
+                Debug.LogWarning($"PopupGarageLot: {count} garages do not fit '{area.name}' at its authored " +
+                                 $"spacing — packed to {line.pitch:0.0}m against a {bodyWidth + canopyWidth:0.0}m " +
+                                 "rig. Grow the box or cut the field.", area);
+        }
+        else
+        {
+            rows = maxPerRow > 0 ? Mathf.Max(1, Mathf.CeilToInt(count / (float)maxPerRow)) : 1;
+
+            var motorhomes = lot.Line;
+
+            // A rig is body-plus-canopy wide, so the line is spaced for both: each canopy fills the gap
+            // between its own body and the next one along, and the row's own maths stays in one place.
+            line = DriverMotorhomeLot.ComputeLine(motorhomes.origin, motorhomes.rotation, lot.lineDirection,
                                                   bodyWidth + canopyWidth, bodyLength, lineGap, rowGap,
                                                   rows, count, 0, garageZ, lot.stackRowsForward);
 
-        // Slide the whole block past the motorhomes, continuing the way their lines stack.
-        float motorhomeReach = motorhomes.rowPitch * Mathf.Max(0, lot.LineRows - 1) + motorhomes.depth * 0.5f;
-        line.origin += line.front * (motorhomeReach + Mathf.Max(0f, gapFromMotorhomes) + line.depth * 0.5f);
-        line.origin.z = garageZ;
+            // Slide the whole block past the motorhomes, continuing the way their lines stack.
+            float motorhomeReach = motorhomes.rowPitch * Mathf.Max(0, lot.LineRows - 1) + motorhomes.depth * 0.5f;
+            line.origin += line.front * (motorhomeReach + Mathf.Max(0f, gapFromMotorhomes) + line.depth * 0.5f);
+            line.origin.z = garageZ;
+        }
 
         var root = new GameObject("Garages").transform;
         root.SetParent(transform, false);
@@ -148,10 +170,13 @@ public class PopupGarageLot : MonoBehaviour
             }
         }
 
-        ExtendWalkableArea(line.axis, line.front);
+        if (area != null) area.InstallWalkablePocket(transform);
+        else ExtendWalkableArea(line.axis, line.front);
 
         Debug.Log($"PopupGarageLot: {count} team garages in {rows} line(s) of {line.perRow}, {line.pitch:0.0}m apart, " +
-                  $"{parked} with the car at home. Rooms build as the player walks up to them.", this);
+                  $"{parked} with the car at home" +
+                  (area != null ? $", packed into '{area.name}'" : "") +
+                  ". Rooms build as the player walks up to them.", this);
     }
 
     PopupGarageRig BuildRig(Transform root, Vector3 position, Quaternion rotation, DriverMotorhomeLot.Slot slot)

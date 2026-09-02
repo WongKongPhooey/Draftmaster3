@@ -373,19 +373,48 @@ it drifts again.
 
 - `GameObject > Draftmaster > Player Spawn Point` — where the on-foot player starts (labelled, weighted).
 - `GameObject > Draftmaster > Paddock Boundary` — the walkable pocket.
+- All four `GameObject > Draftmaster` items go through `PaddockAuthoringStage.Place`, which puts the new
+  object in **whatever is open** and parents it under the package's paddock root. Without that, an object
+  made while a package is open in context is created in the main scene behind the stage — selected, shown
+  in the Inspector, and invisible in the Hierarchy — and a root-level sibling of the prefab root is dropped
+  when the stage is saved. If you have one of those strays from before, it is sitting in `RaceScene`:
+  delete it there and make a new one inside the package.
 - `Tools > Draftmaster > Bake Paddock Surface` — bakes the paddock tarmac into the scene as a real object;
   re-run after changing the layout fields.
-- `Draftmaster > Paddock > Preview Motorhome Lot` / `Clear Motorhome Lot Preview` — see where the drivers'
-  RV row lands while authoring (preview objects are `DontSave`, so they never hit the scene file). The
-  preview draws the motorhomes only; the popup garages behind them are play-time only.
+- `GameObject > Draftmaster > Paddock Lot Area (Motorhomes)` / `(Garages)` — **the footprint of each
+  paddock block, drawn in the editor.** Both lots are built at play time out of the live field, so
+  without one you set `lineDirection` / `rowGap` / `gapFromMotorhomes` by number and found out in play
+  mode. Drop an area into the track package instead (`Draftmaster > Tracks > Edit Selected Package In
+  Context`), size its `BoxCollider2D` with Edit Collider, and that rectangle **is** the lot.
+  - The box's local **+X is the direction a line of rigs runs**, local **+Y is the way lines stack** and
+    the way the bodies point. Rotate the object and the whole block turns with it.
+  - The gizmo draws the rectangle, every place a rig will stand and a caption —
+    `Motorhomes lot — 43 rigs, 5 line(s) of 9, 5.9m apart (2 place(s) spare)`. Too small a box turns the
+    caption red and says `TIGHT`, and the lot logs the same warning at play time rather than quietly
+    growing out the back.
+  - With an area present the lot **ignores** its own `lineDirection`, `rowCount`, `maxPerRow`, `lineGap`,
+    `rowGap` and (garages) `gapFromMotorhomes`; spacing comes from the area's `gap` / `rowGap`. No area =
+    the old behaviour exactly, anchored on the player's RV.
+  - The walkable pocket is cut to the rectangle plus `walkPad` (4 m) instead of being grown off the
+    rigs — so **overlap the box with the paddock next door** or the player is fenced out of a block they
+    can see. Still only ever added when the scene already has a `PaddockBoundary`.
+  - **The player's RV never moves.** Stood inside the motorhome box it holds the place nearest it and the
+    field parks around it; stood outside, the lot fills every place and their rig is simply elsewhere.
+  - A garages area stands on its own: it no longer needs the motorhome lot to have laid out a line first.
+  - Covered by `Assets/Tests/Editor/PaddockLotAreaTests.cs` (8 EditMode tests).
+- `Draftmaster > Paddock > Preview Motorhome Lot` / `Clear Motorhome Lot Preview` — spawns actual RV
+  bodies for the un-authored path, anchored on the player's RV (preview objects are `DontSave`, so they
+  never hit the scene file). The preview draws the motorhomes only and does **not** know about
+  `PaddockLotArea` — with an area authored, the area's own gizmo is what to trust.
 - **Popup garages** (`PopupGarageLot`, `PopupGarageRig`, `PopupGarageInterior`) — one team garage per entry,
   parked in lines *behind* the motorhome lot, each a rig with a canopy pitched off its door side and the
   car sat under it. `DriverMotorhomeLot` builds the block once its own row exists (switch it off with
   `buildPopupGarages`), so it inherits the player's RV rotation and the same line direction — the paddock
   reads as tarmac → motorhomes → garages walked through in order. Knobs live on the `PopupGarageLot`
   object at play time: `gapFromMotorhomes`, `lineGap`, `rowGap`, `maxPerRow`, the canopy size, and
-  `parkCarsUnderCanopy`. It brings its own `PaddockBoundary` pocket, overlapping the motorhome lot's, so
-  the player can walk straight in.
+  `parkCarsUnderCanopy` — but a `Garages` **Paddock Lot Area** in the track package overrides the
+  placement ones and is the way to author it. It brings its own `PaddockBoundary` pocket, overlapping the
+  motorhome lot's, so the player can walk straight in.
   - **The car is at the garage whenever it isn't somewhere else.** A driver with a live car in the scene
     (out on track, sat in its pit box) gets an empty canopy; between sessions nothing is spawned on track,
     so every canopy has its bodywork under it.

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Draftmaster.Data;
 using UnityEngine;
@@ -54,6 +54,8 @@ public class DriverMotorhomeLot : MonoBehaviour
     public float rvZ = -0.5f;
 
     [Header("Layout")]
+    // Everything in this block is IGNORED when the track package holds a Motorhomes PaddockLotArea:
+    // the drawn rectangle decides the direction, the spacing and how many lines there are.
     [Tooltip("World direction the lines run, seen from the player's motorhome. (1,0) = to the right of screen.")]
     public Vector2 lineDirection = Vector2.right;
     [Tooltip("Gap (m) of open ground between neighbouring motorhomes in a line.")]
@@ -350,6 +352,11 @@ public class DriverMotorhomeLot : MonoBehaviour
     {
         if (_slots.Count == 0) return;
 
+        // An authored footprint wins over the numbers: the block is packed into the rectangle somebody drew
+        // in the track package (PaddockLotArea), so lineDirection, rowCount, maxPerRow and the gaps are all
+        // read off that instead. Nothing authored = the original behaviour, anchored on the player's RV.
+        if (BuildRowInArea()) return;
+
         if (!ResolveAnchor(out Vector3 origin, out Quaternion rot, out RVExterior playerRv))
         {
             Debug.LogWarning("DriverMotorhomeLot: no player RV and no usable pit lane — lot not built.", this);
@@ -366,6 +373,50 @@ public class DriverMotorhomeLot : MonoBehaviour
 
         var line = ComputeLine(origin, rot, lineDirection, rvWidth, rvLength, lineGap, rowGap,
                                rows, _slots.Count, playerPlace, rvZ, stackRowsForward);
+
+        PlaceSlots(line, rows, playerPlace, playerRv, rowGap);
+        ExtendWalkableArea(line.axis, line.front);
+    }
+
+    // The authored path. Returns false when no motorhome area was drawn for this track, so the caller falls
+    // back to growing the lot off the player's RV.
+    //
+    // Places are solved for the whole slot list even when the player's RV stands outside the rectangle — at
+    // worst that leaves one place spare, which is cheaper than solving the layout twice to save a gap.
+    bool BuildRowInArea()
+    {
+        var area = PaddockLotArea.Find(PaddockLotKind.Motorhomes);
+        if (area == null) return false;
+
+        if (!area.Solve(_slots.Count, rvWidth, rvLength, rvZ, out var line, out int rows, out bool tight))
+            return false;
+
+        // The player's rig never moves. It only holds a PLACE in the lot when it is stood inside the
+        // rectangle; parked elsewhere, the field simply fills every place around it.
+        var playerRv = FindObjectOfType<RVExterior>();
+        int playerPlace = playerRv != null && area.Contains(playerRv.transform.position)
+            ? PaddockLotArea.NearestPlace(line, rows * line.perRow, playerRv.transform.position)
+            : -1;
+
+        if (tight)
+            Debug.LogWarning($"DriverMotorhomeLot: {_slots.Count} motorhomes do not fit '{area.name}' at its " +
+                             $"authored spacing — packed to {line.pitch:0.0}m against a {rvWidth:0.0}m body. " +
+                             "Grow the box or cut the field.", area);
+
+        PlaceSlots(line, rows, playerPlace, playerRv, area.rowGap);
+        area.InstallWalkablePocket(transform);
+
+        Debug.Log($"DriverMotorhomeLot: packed into '{area.name}' — {rows} line(s) of {line.perRow}, " +
+                  $"{line.pitch:0.0}m apart" +
+                  (playerPlace >= 0 ? $", player's RV holding place {playerPlace}." : ", player's RV outside the lot."), area);
+        return true;
+    }
+
+    // Park every slot: the player's own RV where it already stands, everyone else in the places the line
+    // hands out. playerPlace < 0 means no place is held open.
+    void PlaceSlots(LineLayout line, int rows, int playerPlace, RVExterior playerRv, float aisleRowGap)
+    {
+        Quaternion rot = line.rotation;
 
         Line = line;
         LineRows = rows;
@@ -402,11 +453,9 @@ public class DriverMotorhomeLot : MonoBehaviour
                 slot.rv = BuildMotorhome(root, slot);
             }
 
-            AssignAisle(slot, line);
+            AssignAisle(slot, line, aisleRowGap);
             if (showCarNumbers) BuildNumberDecal(slot);
         }
-
-        ExtendWalkableArea(line.axis, line.front);
     }
 
     // WatkinsGlen clamps the on-foot player to an authored PaddockBoundary polygon that stops at the
@@ -493,13 +542,13 @@ public class DriverMotorhomeLot : MonoBehaviour
     // The open band in front of this slot's stretch of its line — a few motorhomes wide, so a driver
     // wanders near their own rig instead of the whole lot, and never through parked bodywork. With
     // several lines that band is the walkway between this line and the one stacked ahead of it.
-    void AssignAisle(Slot slot, LineLayout line)
+    void AssignAisle(Slot slot, LineLayout line, float aisleRowGap)
     {
         slot.aisleAlong = line.axis;
         slot.aisleOut = line.front;
         slot.aisleHalfLen = line.pitch * 1.5f;
-        slot.aisleHalfDepth = Mathf.Max(1f, rowGap * 0.35f);
-        slot.aisleCenter = slot.position + line.front * (line.depth * 0.5f + rowGap * 0.5f);
+        slot.aisleHalfDepth = Mathf.Max(1f, aisleRowGap * 0.35f);
+        slot.aisleCenter = slot.position + line.front * (line.depth * 0.5f + aisleRowGap * 0.5f);
         slot.aisleCenter.z = 0f;
     }
 

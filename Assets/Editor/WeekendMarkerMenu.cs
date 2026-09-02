@@ -1,4 +1,4 @@
-using Draftmaster.Weekend;
+﻿using Draftmaster.Weekend;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,6 +11,11 @@ public static class WeekendMarkerMenu
     public static void CreateMarker(MenuCommand cmd)
     {
         var go = new GameObject(WeekendVenue.PitBox + WeekendMarker.NameSuffix);
+
+        // Into whatever is open — the scene, or the track package on a prefab stage — and parented so the
+        // stage will actually save it. See PaddockAuthoringStage.
+        PaddockAuthoringStage.Place(go, cmd);
+
         var marker = go.AddComponent<WeekendMarker>();
         marker.venue = WeekendVenue.PitBox;
 
@@ -20,15 +25,17 @@ public static class WeekendMarkerMenu
         box.isTrigger = true;
         box.size = new Vector2(6f, 6f);
 
-        var parent = (cmd?.context as GameObject) ?? OpenTrackPackage();
-        if (parent != null) GameObjectUtility.SetParentAndAlign(go, parent);
-
-        var view = SceneView.lastActiveSceneView;
-        Vector3 at = view != null ? view.pivot : Vector3.zero;
-        go.transform.position = new Vector3(at.x, at.y, 0f);
+        // In the race scene itself there is no stage to parent into, so the package instance's own paddock
+        // root stands in — a marker loose in the scene belongs to no track.
+        if (go.transform.parent == null)
+        {
+            var parent = OpenTrackPackage();
+            if (parent != null) GameObjectUtility.SetParentAndAlign(go, parent);
+        }
 
         Undo.RegisterCreatedObjectUndo(go, "Create Weekend Marker");
-        Selection.activeObject = go;
+        Selection.activeGameObject = go;
+        EditorGUIUtility.PingObject(go);
 
         Debug.Log("WeekendMarker: created. Rename it for the venue you want (PitBox_Marker, " +
                   "Hospitality_Marker, Signing_Marker, Stage_Marker, DriversRoom_Marker, Grandstand_Marker), " +
@@ -39,7 +46,13 @@ public static class WeekendMarkerMenu
 
     static GameObject OpenTrackPackage()
     {
-        var package = Object.FindFirstObjectByType<TrackPackage>();
+        // The package open on a Prefab Mode stage wins over the copy instantiated in the race scene behind
+        // it: parenting a stage object to a scene object is not allowed, and the edit has to land in the
+        // package anyway.
+        var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+        var package = stage != null
+            ? stage.prefabContentsRoot.GetComponentInChildren<TrackPackage>(true)
+            : Object.FindFirstObjectByType<TrackPackage>();
         if (package == null) return null;
 
         var paddock = package.paddockRoot != null ? package.paddockRoot : package.transform;

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 // Walkable-area boundary for the on-foot layer. Draw the polygon with the PolygonCollider2D's
@@ -112,15 +112,16 @@ public class PaddockBoundary : MonoBehaviour
     static void CreateBoundary(UnityEditor.MenuCommand cmd)
     {
         var go = new GameObject("PaddockBoundary");
+
+        // Into whatever is open — the scene, or the track package on a prefab stage — and parented so the
+        // stage will actually save it. See PaddockAuthoringStage.
+        PaddockAuthoringStage.Place(go, cmd);
+
         var poly = go.AddComponent<PolygonCollider2D>();
         poly.isTrigger = true;
         go.AddComponent<PaddockBoundary>();
-        UnityEditor.GameObjectUtility.SetParentAndAlign(go, cmd.context as GameObject);
 
-        // Start as a generous rectangle at the scene-view pivot; reshape with Edit Collider.
-        var view = UnityEditor.SceneView.lastActiveSceneView;
-        Vector3 pivot = view != null ? view.pivot : Vector3.zero;
-        if (go.transform.parent == null) go.transform.position = new Vector3(pivot.x, pivot.y, 0f);
+        // Start as a generous rectangle; reshape with Edit Collider.
         poly.SetPath(0, new[]
         {
             new Vector2(-15f, -10f), new Vector2(15f, -10f),
