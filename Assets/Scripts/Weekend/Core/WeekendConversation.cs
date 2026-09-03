@@ -32,6 +32,12 @@ namespace Draftmaster.Weekend
         // How well this counted as an answer, 0..1. Averaged across the beats into the outcome's grade.
         public float score = 0.5f;
 
+        // How long this answer takes out of the obligation's window. Only means anything to a conversation
+        // that is on a clock (see minuteBudget): a queue at a fence is as long as the hour lets it be, so
+        // stopping to talk to one person is time the next one does not get. Left at zero by everything that
+        // is a fixed set of questions rather than a queue.
+        public float minutes;
+
         // What this answer adds to the obligation's career counter — one signature, one photo. Left at zero
         // by anything that is counted once for the whole obligation rather than per answer.
         public int statCount;
@@ -73,6 +79,35 @@ namespace Draftmaster.Weekend
         public string[] greeting;
         // Spoken as the player leaves, after the last answer has landed.
         public string[] farewell;
+        // Spoken instead of the farewell when the window ran out with beats still queued up. Falls back to
+        // the farewell when the content has not written one.
+        public string[] timeUpFarewell;
+
+        // ------------------------------------------------------------------ the clock
+        //
+        // Some obligations are a fixed set of questions and end when the last one is answered. Others are a
+        // window with a queue in it, and the decision is what to spend the window on: the signing fence is
+        // as long as the hour allows, so a driver who takes a minute each meets fewer people than one who
+        // signs and moves. Set minuteBudget to the length of the window and give each answer its `minutes`,
+        // and the conversation closes itself when there is no time left to bring the next person forward.
+
+        public float minuteBudget;   // 0 = untimed: the conversation runs to its last beat
+        public float minuteStep;     // the cheapest answer, i.e. the least time the next person could take
+
+        // Applied to the settled outcome before the headline is written, given how many beats were actually
+        // answered. This is where a timed obligation prices the whole hour rather than each answer — the
+        // queue that never reached the front, the queue that did.
+        public Func<WeekendOutcome, int, WeekendOutcome> epilogue;
+
+        // Is there room in the window for one more person at the front?
+        public bool OutOfTime(float minutesSpent) =>
+            minuteBudget > 0f && minutesSpent + minuteStep > minuteBudget;
+
+        // Was answering `choice` at beat `index` the last thing this conversation had in it — because the
+        // answer ended it, because the beats ran out, or because the window did. Kept here so the venue host
+        // and the tests agree on when the queue closes.
+        public bool Ends(int index, WeekendChoice choice, float minutesSpent) =>
+            (choice != null && choice.ends) || index >= beats.Count - 1 || OutOfTime(minutesSpent);
 
         public WeekendBeat Add(WeekendBeat beat)
         {
@@ -94,6 +129,7 @@ namespace Draftmaster.Weekend
             outcome.money += choice.money;
             outcome.score += choice.score;
             outcome.statCount += choice.statCount;
+            outcome.minutesSpent += choice.minutes;
 
             // Last answer to name a driver wins: an obligation that keeps mentioning one person is about
             // that person, and two half-strength deltas at different drivers would read as neither.
@@ -105,11 +141,15 @@ namespace Draftmaster.Weekend
         }
 
         // Turn the running total into the finished thing: average the grade over however many answers were
-        // actually given, stamp the career counter, and let the content write the headline.
+        // actually given, price the obligation as a whole, stamp the career counter, and let the content
+        // write the headline.
         public WeekendOutcome Settle(WeekendOutcome running, int answered)
         {
             var o = running;
             o.score = Clamp01(o.score / Math.Max(1, answered));
+            // After the grade, so the epilogue can read how the hour was worked as well as how much of it
+            // got done, and before the headline, so the headline describes what was actually banked.
+            if (epilogue != null) o = epilogue(o, answered);
             if (!string.IsNullOrEmpty(statKey))
             {
                 o.statKey = statKey;
@@ -129,13 +169,14 @@ namespace Draftmaster.Weekend
         public static WeekendChoice Say(string text, string response, float setup = 0f, float morale = 0f,
                                         float media = 0f, float sponsor = 0f, float appeal = 0f,
                                         int money = 0, float score = 0.5f, int statCount = 0,
-                                        string rivalName = null, float rivalDelta = 0f, bool ends = false)
+                                        string rivalName = null, float rivalDelta = 0f, bool ends = false,
+                                        float minutes = 0f)
             => new WeekendChoice
             {
                 text = text, response = response,
                 setup = setup, morale = morale, media = media, sponsor = sponsor, appeal = appeal,
                 money = money, score = score, statCount = statCount,
-                rivalName = rivalName, rivalDelta = rivalDelta, ends = ends,
+                rivalName = rivalName, rivalDelta = rivalDelta, ends = ends, minutes = minutes,
             };
     }
 }

@@ -42,6 +42,10 @@ namespace Draftmaster.Weekend
         // Grade shown on the activity's result card. 0..1.
         public float score;
 
+        // How much of the obligation's window the player spent, for the ones that are a window with a queue
+        // in it rather than a fixed set of questions. Not a meter — it is what closes the signing fence.
+        public float minutesSpent;
+
         public static WeekendOutcome Nothing => new WeekendOutcome { score = 0f };
 
         public WeekendOutcome WithHeadline(string line) { headline = line; return this; }

@@ -104,7 +104,7 @@ it is only replaced when the clock has moved past it.
 | **Team strategy briefing** / **race plan meeting** | The crew chief lays out the weekend and asks what you want the car to be. | Setup knowledge, team morale |
 | **Practice debrief** | The same question with data behind it. Worth far more if you actually ran the practice session. | Setup knowledge |
 | **Press conference** / **media availability** / **broadcast hit** | A reporter asks, three answers on the desk. | Press standing, fans, sponsor mood, rivalry |
-| **Signing session** / **hauler parade** | A queue at the fence, one person at a time, each holding something. Sign it, sign it and ask their name, pose for the photo, or wave and move on. | Fan appeal, `autographs` counter |
+| **Signing session** / **hauler parade** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. Sign it and move (5 min), sign it and ask their name (10 min), pose for the photo (12 min), or wave and keep walking (2 min). The fence holds exactly as many people as signing-and-moving would clear, so speed is the whole decision: work it flat out and you reach every one of them and the sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support; stop to talk and the people you did reach are worth far more while the back of the queue never gets to the front. | Fan appeal, sponsor mood, `autographs` counter |
 | **Sponsor photo shoot** | The photographer wants hero or human, and the brand's rep wants the cap in every frame. | Sponsor mood, fans, crew morale |
 | **Hospitality Q&A / suite meet & greet** | A guest asks something and one of the answers is the line the brand paid for. The funny one is not it. | Sponsor mood — the off-message answers buy fans and press instead |
 | **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. Somebody else's session, simulated and played forward on a compressed clock, with the timing tower and the broadcast calls down the right-hand side of a screen that still shows the track. `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc) shorten it. | Setup knowledge (homework), team morale |
@@ -266,6 +266,14 @@ a tag and a colour on the sheet), give it a venue in `WeekendVenues.For`, book i
 where each answer carries what it is worth. Nothing else needs writing: the venue's host plays it, and the
 ledger takes the outcome. `WeekendVenueTests` will fail the build if a kind has no venue or a beat has
 fewer than two answers.
+
+**An obligation that is a window rather than a list of questions:** set `minuteBudget` on the
+conversation to the length of the booking, `minuteStep` to the cheapest answer, and give each answer its
+`minutes`. The venue host then closes the conversation the moment there is no room left to bring the next
+beat forward, and speaks `timeUpFarewell` instead of `farewell` when it does. Price the window as a whole
+in `epilogue`, which is handed the settled outcome and how many beats were actually answered — that is
+where the signing fence charges for the people who never reached the front. `SigningContent` is the worked
+example.
 
 **A new press question:** one entry in `PressConferenceContent.Pool`. Situational questions go in the
 `if` blocks at the top so the shuffle is choosing between relevant questions. Answers are tagged with a

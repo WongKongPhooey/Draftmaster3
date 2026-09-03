@@ -195,4 +195,128 @@ public class WeekendVenueTests
             Assert.AreEqual(first.beats[i].speaker, second.beats[i].speaker,
                             "The queue re-rolled — the same booking must bring the same faces.");
     }
+
+    // ------------------------------------------------------------------ the signing queue and the clock
+
+    // A signing session is a window with a queue in it, and how the window is spent is the decision. These
+    // play the fence the way the venue host does — same Ends(), same arithmetic — with one policy held all
+    // the way through, so what each way of working the queue is actually worth can be read off.
+    static WeekendActivity SigningBooking(int minutes) => new WeekendActivity
+    {
+        id = "fan_event-autographs@test", kind = ActivityKind.Autographs, minutes = minutes,
+        title = "SIGNING SESSION", slot = WeekendSlot.FridayPM, startMinute = 16 * 60 + 30,
+    };
+
+    static int Answer(WeekendBeat beat, string startsWith)
+    {
+        for (int i = 0; i < beat.choices.Count; i++)
+            if (beat.choices[i].text.StartsWith(startsWith)) return i;
+        Assert.Fail($"No answer starting '{startsWith}' offered to '{beat.Question}'.");
+        return 0;
+    }
+
+    static WeekendOutcome Work(WeekendConversation c, string policy, out int served)
+    {
+        var running = WeekendOutcome.Nothing;
+        running.score = 0f;
+        served = 0;
+
+        for (int i = 0; i < c.beats.Count; i++)
+        {
+            var beat = c.beats[i];
+            var choice = beat.choices[Answer(beat, policy)];
+            WeekendConversation.Accumulate(ref running, choice);
+            served++;
+            if (c.Ends(i, choice, running.minutesSpent)) break;
+        }
+        return c.Settle(running, System.Math.Max(1, served));
+    }
+
+    // The point of the decision: speed is people. Stopping for a photo with every one of them means the
+    // back of the queue never gets to the front.
+    [Test]
+    public void WorkingTheQueueFastReachesMorePeopleThanStoppingToTalk()
+    {
+        var booking = SigningBooking(60);
+
+        Work(SigningContent.Build(booking), "Sign it. Next.", out int fast);
+        Work(SigningContent.Build(booking), "Sign it and get a photo", out int photos);
+        Work(SigningContent.Build(booking), "Sign it, and ask them their name", out int names);
+
+        Assert.Greater(fast, photos, "Signing and moving should get through more of the queue than posing with all of them.");
+        Assert.GreaterOrEqual(names, photos, "A name takes less of the hour than a photo does.");
+        Assert.AreEqual(SigningContent.Build(booking).beats.Count, fast,
+                        "Flat out, the hour should be exactly long enough to clear the fence.");
+    }
+
+    // ...and what the two ways of spending it are worth. Fast is the sponsor's hour; slow is the fans'.
+    [Test]
+    public void SpeedBuysSponsorMoodAndCostsFanSupport()
+    {
+        var booking = SigningBooking(60);
+
+        var fast = Work(SigningContent.Build(booking), "Sign it. Next.", out _);
+        var photos = Work(SigningContent.Build(booking), "Sign it and get a photo", out _);
+        var names = Work(SigningContent.Build(booking), "Sign it, and ask them their name", out _);
+
+        Assert.Greater(fast.sponsorMood, photos.sponsorMood,
+                       "Clearing the queue is what the rep who booked the appearance is counting.");
+        Assert.Greater(fast.sponsorMood, names.sponsorMood);
+        Assert.Greater(fast.statCount, photos.statCount, "More of the queue means more signatures.");
+
+        Assert.Less(fast.fanAppeal, photos.fanAppeal,
+                    "An hour of signatures and no words should be worth less to the fans than an hour of minutes each.");
+        Assert.Less(fast.fanAppeal, names.fanAppeal);
+        Assert.LessOrEqual(fast.fanAppeal, 1f, "Working the fence flat out should not build fan support.");
+        Assert.Less(photos.sponsorMood, 0f, "An hour spent on five people leaves the sponsor short.");
+        Assert.Greater(photos.fanAppeal, 4f, "The people who did get to the front should be worth having stopped for.");
+    }
+
+    // The parade is the same decision in half the window, so the queue is half as long and the same
+    // trade-off has to still read.
+    [Test]
+    public void AShorterWindowHoldsAShorterQueue()
+    {
+        var parade = new WeekendActivity
+        {
+            id = "fan_event-hauler_parade@test", kind = ActivityKind.HaulerParade, minutes = 30,
+            title = "HAULER PARADE", slot = WeekendSlot.FridayAM, startMinute = 9 * 60,
+        };
+
+        var hour = SigningContent.Build(SigningBooking(60));
+        var walk = SigningContent.Build(parade);
+
+        Assert.Less(walk.beats.Count, hour.beats.Count, "Half the window should hold half the fence.");
+        Assert.GreaterOrEqual(walk.beats.Count, 3, "A parade with fewer than three people at the fence is not a queue.");
+
+        var fast = Work(SigningContent.Build(parade), "Sign it. Next.", out _);
+        var photos = Work(SigningContent.Build(parade), "Sign it and get a photo", out _);
+
+        Assert.Greater(fast.sponsorMood, photos.sponsorMood);
+        Assert.Less(fast.fanAppeal, photos.fanAppeal);
+    }
+
+    // Everything else is a fixed set of questions, not a window: the clock must not close a press
+    // conference or a team meeting early.
+    [Test]
+    public void AnUntimedObligationStillRunsToItsLastBeat()
+    {
+        foreach (var script in EveryScript())
+        {
+            if (script.minuteBudget > 0f) continue;
+
+            var running = WeekendOutcome.Nothing;
+            int answered = 0;
+            for (int i = 0; i < script.beats.Count; i++)
+            {
+                var choice = script.beats[i].choices[0];
+                WeekendConversation.Accumulate(ref running, choice);
+                answered++;
+                if (script.Ends(i, choice, running.minutesSpent)) break;
+            }
+
+            Assert.AreEqual(script.beats.Count, answered,
+                            "An obligation with no window on it ended before its last beat.");
+        }
+    }
 }

@@ -124,7 +124,10 @@ public class WeekendVenueHost : NPCInteractable
         WeekendConversation.Accumulate(ref _running, choice);
         _answered++;
 
-        bool last = choice.ends || _beat >= _script.beats.Count - 1;
+        bool last = _script.Ends(_beat, choice, _running.minutesSpent);
+        // An obligation on a clock can run out of window with people still queued up — that is a different
+        // goodbye from having got to the end of them, and the content says so in its own words.
+        bool timeUp = last && !choice.ends && _beat < _script.beats.Count - 1;
         _beat++;
 
         // What the player said, then what they said back to it, then either the next question or the
@@ -135,7 +138,10 @@ public class WeekendVenueHost : NPCInteractable
         if (last)
         {
             _finished = true;
-            said.AddRange(Lines(_script.farewell));
+            var goodbye = timeUp && _script.timeUpFarewell != null && _script.timeUpFarewell.Length > 0
+                ? _script.timeUpFarewell
+                : _script.farewell;
+            said.AddRange(Lines(goodbye));
         }
         else
         {
