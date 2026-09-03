@@ -3,8 +3,9 @@ using UnityEngine;
 
 namespace Draftmaster.Sim
 {
-    // The choreography behind the title screen's crash: four cars thrown in from above the top edge, and
-    // time easing to a dead stop as they land, leaving the pile frozen where the art slot used to be.
+    // The choreography behind the title screen's crash: four cars coming down from above the top edge, and
+    // time easing to a dead stop, leaving the moment frozen where the art slot used to be. Two of them are
+    // only racing; the other two are the accident. See Field() for what the shot is and why.
     //
     // Pure maths, no MonoBehaviour state, for the same reason CameraFeel is: the tableau itself can only be
     // judged in Play Mode, but "does every car finish inside the right-hand third", "does the clock actually
@@ -94,42 +95,121 @@ namespace Draftmaster.Sim
         // some snap without the tail turning into a crawl.
         public const float DefaultEntrySpeed = 2.4f;
 
-        // The four cars, rear of the pile first. Every one drops in from above the top edge (y > CanvasHeight,
-        // clear of its own rotated height) and travels downwards into the pile, so nothing is ever on screen
-        // when the sequence opens, nothing crosses the copy column on the way, and every one has landed by
-        // u = 1. Start x is kept in the right-hand half so the diagonal never washes over the wordmark.
+        // The two cars that are only racing, and the two that are having the accident. Index order is draw
+        // order, rear-most first; the crash pair is 2 (turned) and 3 (turner, the hero).
+        public const int TurnedIndex = 2;
+        public const int TurnerIndex = 3;
+
+        public static bool IsInTheCrash(int index) => index == TurnedIndex || index == TurnerIndex;
+
+        // The four cars, rear of the shot first. Every one drops in from above the top edge (y > CanvasHeight,
+        // clear of its own rotated height) and travels downwards, so nothing is ever on screen when the
+        // sequence opens, nothing crosses the copy column on the way, and every one has landed by u = 1.
+        //
+        // THIS IS A TABLEAU, NOT A PILE-UP. It used to be four cars thrown at the same spot and separated by
+        // Settle every frame, which is a solver running at speed on four bodies — and it looked like one:
+        // cars jittering through each other, sparks going off on frames where nothing had really happened.
+        // The shot is now authored so that the ONLY two bodies that ever come near each other are the crash
+        // pair, and even they close to within a fraction of a pixel rather than interpenetrating. Settle is
+        // still run underneath as a backstop, but on this field it has nothing to push, so there is nothing
+        // left to jitter.
+        //
+        // What the shot shows: two cars racing straight down the left of the slot in close company and never
+        // touching, and to the right of them a corner being settled the way they actually get settled — the
+        // hero has put its nose in the back of the car ahead and turned it, so one is spearing off at an
+        // angle with its rear end caved in and the other is still pointing down the road with a folded nose.
+        // Which is the damage model doing two different things at once, side by side, on purpose.
         public static CarPlan[] Field()
         {
             return new[]
             {
-                // Broadside behind the pile, first in and first to stop.
+                // Racing, trailing car. Same travel as its team-mate below so the gap between them never
+                // changes: they are a pair running in company, and two cars that keep station cannot touch.
                 new CarPlan
                 {
-                    startPos = new Vector2(615f, 468f), endPos = new Vector2(566f, 118f),
-                    startRotation = -108f + 350f,       endRotation = -108f,
-                    arcPx = 35f, delay = 0f,     travel = 0.80f, depth = 0,
+                    startPos = new Vector2(372f, 882f), endPos = new Vector2(372f, 252f),
+                    startRotation = -90f,               endRotation = -90f,
+                    arcPx = 0f, delay = 0f, travel = 0.86f, depth = 0,
                 },
-                // Spun backwards into the top-right corner, half off the edge of the screen.
+                // Racing, leading car. Nose-down and dead straight — no spin, nothing to settle.
                 new CarPlan
                 {
-                    startPos = new Vector2(508f, 496f), endPos = new Vector2(568f, 262f),
-                    startRotation = 158f + 300f,        endRotation = 158f,
-                    arcPx = 55f, delay = 0.08f, travel = 0.86f, depth = 1,
+                    startPos = new Vector2(372f, 720f), endPos = new Vector2(372f, 90f),
+                    startRotation = -90f,               endRotation = -90f,
+                    arcPx = 0f, delay = 0f, travel = 0.86f, depth = 1,
                 },
-                // Sliding in low, tucked under the hero's nose.
+                // The car that gets turned: comes down the road square, leaves at 60 degrees to it. The
+                // rotation is the whole story, so it is a straight sweep with no extra turns — a car snapped
+                // sideways by a hit, not a car spinning like a coin.
                 new CarPlan
                 {
-                    startPos = new Vector2(486f, 452f), endPos = new Vector2(420f, 105f),
-                    startRotation = 34f - 380f,         endRotation = 34f,
-                    arcPx = -25f, delay = 0.05f, travel = 0.84f, depth = 2,
+                    startPos = new Vector2(520f, 640f), endPos = new Vector2(589f, 149f),
+                    startRotation = -90f,               endRotation = -30f,
+                    arcPx = 0f, delay = 0f, travel = 0.84f, depth = TurnedIndex,
                 },
-                // The hero: front-most, last in, and still shunting the pile as the clock runs out.
+                // The hero, and the one that did it: still pointing where it was going, carrying on into the
+                // space the other car has just left. Enters late so it is visibly arriving on the back of a
+                // car that is already there.
                 new CarPlan
                 {
-                    startPos = new Vector2(556f, 482f), endPos = new Vector2(470f, 190f),
-                    startRotation = -28f + 400f,        endRotation = -28f,
-                    arcPx = 40f, delay = 0.10f, travel = 0.88f, depth = 3,
+                    startPos = new Vector2(470f, 690f), endPos = new Vector2(487f, 276f),
+                    startRotation = -80f,               endRotation = -80f,
+                    arcPx = -30f, delay = 0.06f, travel = 0.88f, depth = TurnerIndex,
                 },
+            };
+        }
+
+        // ------------------------------------------------------------------ the one hit in the shot
+
+        // The contact is authored rather than discovered. Settle can tell you THAT two boxes met, but not
+        // which panel of which car — so it dented both cars at the midpoint between their centres, and the
+        // damage landed wherever that happened to fall. This says it outright: the turner is damaged across
+        // its nose, the car it turned is damaged across its tail, and both are struck at the moment the shot
+        // is built around.
+        public struct ImpactPlan
+        {
+            public int striker;        // the car doing the hitting — damaged across its FRONT
+            public int struck;         // the car being turned — damaged across its REAR
+            public float atU;          // choreography time the hit lands
+            public Vector2 pointPx;    // where the flash and the smoke go
+            public Vector2 normal;     // the push, striker -> struck; sparks spray along it
+            public float severity;     // 0..1, straight into VehicleDamage.OnImpact
+        }
+
+        // Late enough that the cars are visibly together, early enough that the sparks are still travelling
+        // when the clock runs out — a shower frozen mid-flight rather than one that has already landed.
+        public const float ImpactU = 0.90f;
+
+        public static ImpactPlan[] Impacts()
+        {
+            return new[]
+            {
+                new ImpactPlan
+                {
+                    striker = TurnerIndex, struck = TurnedIndex, atU = ImpactU,
+                    // Between the hero's nose and the other car's left rear quarter, which is where a car
+                    // gets turned from and where both dents therefore belong.
+                    pointPx = new Vector2(512f, 194f),
+                    normal = new Vector2(0.42f, -0.91f),
+                    severity = 0.95f,
+                },
+            };
+        }
+
+        // Where on a car's bodywork the hit is written, in normalised body-local coordinates: x is along the
+        // car (+1 nose, -1 tail), y is across it. A panel is a spread of points rather than one, because a
+        // single dent on a 5m car is a dimple — a caved-in nose is the whole end of the car moving.
+        //
+        // `front` picks which end. The spread is deliberately uneven so the damage does not read as a
+        // symmetrical stamp: a real hit folds one corner harder than the other.
+        public static Vector2[] Panel(bool front)
+        {
+            float x = front ? 0.94f : -0.94f;
+            return new[]
+            {
+                new Vector2(x, front ? 0.55f : -0.62f),
+                new Vector2(x, front ? 0.10f : -0.18f),
+                new Vector2(x * 0.86f, front ? -0.42f : 0.34f),
             };
         }
 

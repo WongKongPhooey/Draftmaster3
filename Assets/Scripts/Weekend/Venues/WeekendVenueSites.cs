@@ -315,6 +315,12 @@ public class WeekendVenueSites : MonoBehaviour
     // go past, so the seat is on the stand's front row, facing the road.
     void PlaceGrandstandSeats()
     {
+        // The same guard every other builder has. Without it an authored Grandstand_Marker was adopted and
+        // then a generated seat was added beside it, so the track's own answer and the runtime's guess both
+        // existed and whichever registered first won the lookup — which made authoring a grandstand the one
+        // venue a track could not actually override.
+        if (WeekendVenueAnchor.Exists(WeekendVenue.Grandstand)) return;
+
         var stands = FindObjectsByType<Grandstand>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         if (stands == null || stands.Length == 0) return;
 

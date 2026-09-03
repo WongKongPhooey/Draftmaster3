@@ -18,9 +18,74 @@ using UnityEngine;
 // it for editing. `Edit Selected Package In Context` is the one to reach for — it opens the package on a
 // Prefab Mode stage THROUGH an instance in the race scene, so the road is drawn with the managers and HUDs
 // around it while every edit still lands in the package and travels with the track.
+[InitializeOnLoad]
 public static class RaceSceneSplitter
 {
     const string RaceScenePath = "Assets/Scenes/RaceScene.unity";
+
+    // ---------------------------------------------------------------- the scene stays track-free
+
+    // A package instance saved into the race scene pins it to that one track for good (TrackSceneLoader
+    // adopts a road it finds in the scene, and the selection is then ignored). This used to be guarded by
+    // asking the author to run Clear Package Previews afterwards — a manual step that silently costs you a
+    // debugging session the one time it is forgotten, which is exactly the kind of guard that should not
+    // exist. Two automatic ones instead:
+    //
+    //   1. Editing in context takes its own instance away again when the prefab stage closes.
+    //   2. Saving the race scene strips any package still in it, whoever put it there.
+    //
+    // Clear Package Previews From Scene is still on the menu as a broom for a scene already in that state.
+    static RaceSceneSplitter()
+    {
+        EditorSceneManager.sceneSaving -= StripPackagesBeforeSave;
+        EditorSceneManager.sceneSaving += StripPackagesBeforeSave;
+    }
+
+    static void StripPackagesBeforeSave(UnityEngine.SceneManagement.Scene scene, string path)
+    {
+        // Only the shared race scene. A hand-built track scene is entitled to a road of its own.
+        if (scene.path != RaceScenePath && path != RaceScenePath) return;
+
+        // A stage open in context is USING its instance as the backdrop right now — pulling it out from
+        // under the stage would break the thing being edited. It is removed when the stage closes instead.
+        if (PrefabStageUtility.GetCurrentPrefabStage() != null) return;
+
+        int removed = 0;
+        foreach (var package in Object.FindObjectsByType<TrackPackage>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (package == null) continue;
+            string id = package.trackId;
+            Object.DestroyImmediate(package.gameObject);
+            removed++;
+            Debug.Log($"RaceScene: removed the '{id}' package before saving — the race scene holds no road, " +
+                      "so it stays free to build whichever track is selected. Edits you made inside the " +
+                      "package itself are unaffected.");
+        }
+
+        if (removed > 0) WriteReport($"Save: stripped {removed} package instance(s) from the race scene.");
+    }
+
+    // The instance Edit In Context put in the race scene, so the stage can take it away again on close.
+    // Null after a domain reload, which is why the close handler falls back to finding it by id.
+    static GameObject _contextInstance;
+    static string _contextTrackId;
+
+    static void OnStageClosing(PrefabStage stage)
+    {
+        PrefabStage.prefabStageClosing -= OnStageClosing;
+
+        var instance = _contextInstance;
+        if (instance == null && !string.IsNullOrEmpty(_contextTrackId)) instance = FindPreviewInstance(_contextTrackId);
+
+        _contextInstance = null;
+        _contextTrackId = null;
+        if (instance == null) return;
+
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        Undo.DestroyObjectImmediate(instance);
+        EditorSceneManager.MarkSceneDirty(scene);
+        WriteReport("Edit: closed the stage and removed the context instance — the race scene is track-free again.");
+    }
 
     // ---------------------------------------------------------------- selection + preview
 
@@ -133,9 +198,16 @@ public static class RaceSceneSplitter
             Undo.RegisterCreatedObjectUndo(instance, "Preview Track Package");
         }
 
+        // The instance exists only to be the backdrop for this stage, so it leaves when the stage does.
+        // Nothing to remember to do afterwards, and nothing left to be saved into the scene by accident.
+        _contextInstance = instance;
+        _contextTrackId = id;
+        PrefabStage.prefabStageClosing -= OnStageClosing;
+        PrefabStage.prefabStageClosing += OnStageClosing;
+
         UnityEditor.SceneManagement.PrefabStageUtility.OpenPrefab(path, instance);
-        WriteReport($"Edit: opened {id} in context in RaceScene. The instance is unsaved — " +
-               "'Clear Package Previews' when done, or the scene pins itself to this track.");
+        WriteReport($"Edit: opened {id} in context in RaceScene. Edits land in the package; the context " +
+               "instance is removed from the scene when you close the stage.");
     }
 
     // A package instance left saved in the race scene would be adopted by TrackSceneLoader and quietly pin

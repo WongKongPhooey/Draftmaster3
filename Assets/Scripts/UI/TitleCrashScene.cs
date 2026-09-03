@@ -2,13 +2,17 @@ using System.Collections.Generic;
 using Draftmaster.Sim;
 using UnityEngine;
 
-// The title screen's hero art: four cars dropped in from above the top edge, colliding across the empty
-// half of the screen, and time easing to a dead stop as they land so the pile stays there mid-crash.
+// The title screen's hero art: four cars coming down from above the top edge across the empty half of the
+// screen, and time easing to a dead stop so the moment stays there. Two of them are racing in company and
+// never touch; the other two are a corner being settled, one having put its nose in the back of the other
+// and turned it.
 //
-// The hits are real contacts, not a schedule: TitleCrash.Settle pushes overlapping bodies off each other and
-// reports where they met, and this fires the dents, sparks and smoke off those reports. So the pile is four
-// cars resting against each other rather than four sprites drawn through each other, and a flash only ever
-// goes off where metal actually found metal.
+// The hit is scripted rather than solved. It used to be four cars thrown at the same spot with
+// TitleCrash.Settle pushing the overlaps apart every frame, which is a physics solver running at speed on
+// four bodies and looked like one — jitter, and sparks on frames where nothing had really happened. Now the
+// choreography guarantees the only two cars that ever come near each other are the crash pair, and the one
+// impact fires on a time rather than on an overlap. Settle still runs underneath as a backstop and has
+// nothing left to push.
 //
 // This is the runtime half of TitleCrash — that holds the choreography (who goes where, when, and how the
 // clock decelerates), this builds the cars out of it and paints them. Nothing here is authored in the
@@ -44,7 +48,7 @@ public class TitleCrashScene : MonoBehaviour
     [Range(1f, 4f)] public float entrySpeed = TitleCrash.DefaultEntrySpeed;
 
     [Header("Damage")]
-    [Tooltip("Dents each car arrives already carrying, so the pile is battered rather than showroom-fresh.")]
+    [Tooltip("Dents the two cars in the accident arrive already carrying. The racing pair stay clean.")]
     [Range(0, 12)] public int dentsPerCar = 3;
     [Tooltip("Severity of that pre-existing damage, 0..1.")]
     [Range(0f, 1f)] public float preDamageSeverity = 0.75f;
@@ -105,15 +109,16 @@ public class TitleCrashScene : MonoBehaviour
     float _plumeCarry;           // fractional puff owed to the plume, carried between frames
     float _plumeSpent;           // puffs the plume has issued so far
 
-    // The pile's working state. Poses are rebuilt from the choreography every frame and settled against each
-    // other, so these are buffers rather than memory — the only thing actually remembered between frames is
-    // which pairs were already touching, so a contact bangs once when it happens instead of every frame it
-    // lasts.
+    // Working state. Poses are rebuilt from the choreography every frame and settled against each other, so
+    // these are buffers rather than memory: the tableau stays a pure function of the clock.
     TitleCrash.CarPlan[] _plans = System.Array.Empty<TitleCrash.CarPlan>();
     TitleCrash.CarPose[] _poses = System.Array.Empty<TitleCrash.CarPose>();
     readonly List<TitleCrash.Contact> _contacts = new List<TitleCrash.Contact>();
-    bool[] _touching = System.Array.Empty<bool>();
-    bool[] _wasTouching = System.Array.Empty<bool>();
+
+    // The scripted hit, and whether it has gone off yet. One flag per impact is all the memory the shot
+    // needs now that a bang is keyed to a moment rather than to two boxes still being inside each other.
+    TitleCrash.ImpactPlan[] _impacts = System.Array.Empty<TitleCrash.ImpactPlan>();
+    bool[] _impactsFired = System.Array.Empty<bool>();
 
     float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
     Vector2 _plumeAt;            // where the plume rises from: the middle of what has been hit so far
@@ -159,8 +164,8 @@ public class TitleCrashScene : MonoBehaviour
         var plans = TitleCrash.Field();
         _plans = plans;
         _poses = new TitleCrash.CarPose[plans.Length];
-        _touching = new bool[plans.Length * plans.Length];
-        _wasTouching = new bool[_touching.Length];
+        _impacts = TitleCrash.Impacts();
+        _impactsFired = new bool[_impacts.Length];
         _plumeAt = TitleCrash.PileCentrePx;
 
         var liveries = PickLiveries(plans.Length);
@@ -174,7 +179,9 @@ public class TitleCrashScene : MonoBehaviour
             if (sprite == null) continue;
 
             _cars[i] = BuildCar(i, plans[i], sprite);
-            ApplyPreDamage(_cars[i], rng);
+            // Only the two cars in the accident wear any. The racing pair are meant to read as clean cars
+            // going by at speed — which is what makes the wrecked pair beside them read as wrecked.
+            if (TitleCrash.IsInTheCrash(i)) ApplyPreDamage(_cars[i], rng);
             built++;
         }
 
@@ -370,26 +377,28 @@ public class TitleCrashScene : MonoBehaviour
         }
     }
 
-    // Bang on the frame two bodies first touch, and not again while they stay touching — a pile that is
-    // leaning on itself would otherwise dent and spark every frame until the clock stopped.
+    // The hit, once, when the choreography says so.
+    //
+    // This used to fire off whatever TitleCrash.Settle reported, which meant the shot's damage was decided
+    // by a solver: it dented both cars at the midpoint between their centres, so which panel got hit was
+    // whatever the geometry happened to hand over, and any frame where the resolver failed to fully separate
+    // four bodies banged again. One authored impact instead — the striker takes it across the nose, the car
+    // it turned takes it across the tail, and it happens on exactly one frame because it is keyed to a time
+    // rather than to an overlap.
     void Collide()
     {
-        int n = _plans.Length;
-        if (_touching.Length < n * n) _touching = new bool[n * n];
-        if (_wasTouching.Length < _touching.Length) _wasTouching = new bool[_touching.Length];
-
-        for (int i = 0; i < _touching.Length; i++) _wasTouching[i] = _touching[i];
-        System.Array.Clear(_touching, 0, _touching.Length);
-
-        foreach (var hit in _contacts)
+        for (int i = 0; i < _impacts.Length; i++)
         {
-            int key = hit.a * n + hit.b;
-            _touching[key] = true;
-            if (_wasTouching[key]) continue;
+            if (_impactsFired[i] || _u < _impacts[i].atU) continue;
+            _impactsFired[i] = true;
 
+            var hit = _impacts[i];
             Vector3 at = PxToWorld(hit.pointPx);
-            DentCar(hit.a, at, hit.severity);
-            DentCar(hit.b, at, hit.severity);
+
+            // Front of the one that did it, back of the one it did it to. Both ends are worked across a
+            // spread of points so the panel folds rather than picking up a single dimple.
+            DentPanel(hit.striker, front: true, severity: hit.severity);
+            DentPanel(hit.struck, front: false, severity: hit.severity);
 
             // Sparks fly off the line the two cars are pushing along, which is the way a real scrape throws
             // them; the smoke just puffs up out of the same point.
@@ -399,19 +408,26 @@ public class TitleCrashScene : MonoBehaviour
             Burst(_smoke, at, spray, 180f, Mathf.RoundToInt(smokePerImpact * hit.severity),
                   14f, 60f, smokeColorA, smokeColorB, 26f, 62f, 4f);
 
-            // The pile smokes from the first thing it hits, and the plume drifts toward the middle of
-            // everything it has hit since.
             if (_plumeFrom < 0f) { _plumeFrom = _u; _plumeAt = hit.pointPx; _plumeHits = 1; }
             else { _plumeHits++; _plumeAt += (hit.pointPx - _plumeAt) / _plumeHits; }
         }
     }
 
-    // The choreography still names four cars when a livery failed to load and left a hole in the field, so
-    // a contact against a car that isn't there sparks and smokes without denting anything.
-    void DentCar(int index, Vector3 worldPoint, float severity)
+    // Cave in one end of a car: several dents spread across the panel, each struck on the outline and pushed
+    // inward, which is the same call a barrier makes during a race.
+    void DentPanel(int index, bool front, float severity)
     {
         if (index < 0 || index >= _cars.Length || _cars[index] == null) return;
-        Dent(_cars[index], worldPoint, severity);
+
+        var car = _cars[index];
+        if (car.damage.sourceSprite == null) return;
+        Vector3 extents = car.damage.sourceSprite.bounds.extents;
+
+        foreach (var local in TitleCrash.Panel(front))
+        {
+            Vector3 on = new Vector3(local.x * extents.x, local.y * extents.y, 0f);
+            Dent(car, car.t.TransformPoint(on), severity);
+        }
     }
 
     // The pile keeps smoking after the first proper contact, so there's a plume hanging over the cars by the

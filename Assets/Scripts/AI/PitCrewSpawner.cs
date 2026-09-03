@@ -49,7 +49,7 @@ public class PitCrewSpawner : MonoBehaviour
     public float wallSide = 1f;
     [Tooltip("Uniform scale per crew member. Placeholders are already built ~1.4m tall, so leave at 1. If you assign a tiny paper-doll library (e.g. 8px art), bump this up to reach roughly person height.")]
     public float memberScale = 1f;
-    [Tooltip("Lateral distance (m) from the box centre to the standby line on the wall. Must clear the parked box lane (PitLane.ParkLateral + car half-width) or the crew stand inside the parked cars.")]
+    [Tooltip("Lateral distance (m) from the PARKED CAR to the standby line on the wall. Must clear a car half-width or the crew stand inside their own car.")]
     public float standbyLateral = 4.6f;
 
     [Header("Pit box stands")]
@@ -60,9 +60,6 @@ public class PitCrewSpawner : MonoBehaviour
              "lane centre, because the car is what it has to be behind: a stand a fixed distance off the " +
              "centreline lands between the car and the racing surface whenever the box lane is wide.")]
     public float standBeyondCar = 3.4f;
-    [Tooltip("Fallback distance (m) from the box centre, used only when the box lane has not been " +
-             "configured and there is no parked-car lateral to measure from.")]
-    public float standLateral = 6.2f;
     [Tooltip("Put the stands on the PADDOCK side of the boxes — behind the wall, away from the racing " +
              "surface, which is where a real one sits. The side is taken from the paddock itself " +
              "(PaddockSpawner.TryGetArea), so it is right at every track whichever way its pit lane runs. " +
@@ -131,24 +128,28 @@ public class PitCrewSpawner : MonoBehaviour
         }
     }
 
+    // Signed lateral offset (m) of the parked box lane from the pit centreline — where the car actually
+    // stops, and so where the whole crew box is built.
+    //
+    // PitLane is published by GridSpawner, which only runs when a field is spawned. A practice session has
+    // no grid, so PitLane was left unconfigured and this read 0: the box was built on the pit centreline,
+    // ~8 m off the car at Watkins Glen, and every station in it — crew, standby line, the stand — was
+    // measured from the wrong place. The track itself knows the answer whether or not a race is being run,
+    // so fall through to it rather than to zero.
+    float ParkLateral()
+    {
+        if (PitLane.Configured && !Mathf.Approximately(PitLane.ParkLateral, 0f)) return PitLane.ParkLateral;
+        return track != null && track.HasPitBoxLane ? track.PitBoxLaneCenterLateral : 0f;
+    }
+
     // Where the stand goes across the box, in the box's own local X.
     //
-    // Behind the CAR, not a fixed distance off the lane centre. Cars park out on the box lane
-    // (PitLane.ParkLateral, ~8 m at Watkins Glen), so a stand 6.2 m off the centreline sat between the car
-    // and the racing surface — the wrong side of its own car, and in the way of the stop. Measuring from
-    // the car and stepping further out puts it where a real one is: past the car, against the wall, with
-    // the paddock behind it.
-    float StandLateral(Transform box, float fallbackSign)
-    {
-        float carLateral = PitLane.Configured ? PitLane.ParkLateral : 0f;
-
-        // No box lane configured: nothing to measure from, so fall back to the old fixed offset on
-        // whichever side the paddock is.
-        if (Mathf.Approximately(carLateral, 0f))
-            return standLateral * StandSideSign(box, fallbackSign);
-
-        return carLateral + Mathf.Sign(carLateral) * standBeyondCar;
-    }
+    // The box origin is the parked car, so this is simply how far past the car the stand sits: out beyond
+    // it on the paddock side, away from the racing surface, which is where a real one is. It used to be
+    // measured from the lane centre and add the car's own offset back on, which put it between the car and
+    // the racing line at any track whose box lane was not configured.
+    float StandLateral(Transform box, float fallbackSign) =>
+        standBeyondCar * StandSideSign(box, fallbackSign);
 
     // Which way is the paddock, in a pit box's own local X? +1 = the box's wall side, -1 = the other one.
     // Falls back to the crew's side when a track has no paddock to read (nothing else to go on, and being
@@ -167,7 +168,13 @@ public class PitCrewSpawner : MonoBehaviour
     void BuildBox(Transform root, int idx, float boxDist, List<TrackBuilder.Sample> pit)
     {
         var s = track.SamplePitAt(boxDist, pit);
-        Vector3 worldPos = track.transform.TransformPoint(new Vector3(s.position.x, s.position.y, 0f));
+        // On the parked car, not on the lane centre. Every station in the box (the four wheel men, the
+        // fueller, the sign man, the standby line, the stand) is expressed as an offset from the box origin
+        // in car-sized numbers — wheelLateral is 1.2 m, half a car — so the origin has to BE the car. Built
+        // on the centreline instead, the whole box sat a lane's width off the thing it works on. Same
+        // centre GridSpawner parks cars on and PlayerPitBoxMarker draws the box over.
+        Vector2 centre = s.position + s.normal * ParkLateral();
+        Vector3 worldPos = track.transform.TransformPoint(new Vector3(centre.x, centre.y, 0f));
         worldPos.z = -0.1f; // toward the camera so crew draw in front of the pit tarmac
         Vector3 tangent = track.transform.TransformDirection(new Vector3(s.tangent.x, s.tangent.y, 0f)).normalized;
 
@@ -212,11 +219,10 @@ public class PitCrewSpawner : MonoBehaviour
             new Vector3( wheelLateral, -wheelLongitudinal - carrierOffset, 0f), // right rear, carrier
             new Vector3(-wheelLateral, -wheelLongitudinal - 1.0f, 0f),          // fueller, left rear
         };
-        // Standby: lined up along the wall, always beyond the parked box lane so the crew never stand
-        // inside a parked car (ParkLateral is the parked file's centre; +2.2 clears a half-width + margin).
-        float standbyLat = standbyLateral;
-        if (PitLane.Configured) standbyLat = Mathf.Max(standbyLat, Mathf.Abs(PitLane.ParkLateral) + 2.2f);
-        float sx = standbyLat * wl;
+        // Standby: lined up along the wall, a step past the car on the crew's side. Measured from the car
+        // now that the box origin is the car — the old clamp pushed this out by the car's own lane offset
+        // as well, which was right when the origin was the lane centre and double-counts now.
+        float sx = standbyLateral * wl;
         var standby = new[]
         {
             new Vector3(sx,  2.4f, 0f),
