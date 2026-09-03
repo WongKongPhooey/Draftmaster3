@@ -236,6 +236,22 @@ morning setup runs 55% of a full house, Sunday afternoon the lot — and any rac
 single race, multiplayer) is always a full house whatever the sheet says. Untick it to spawn the same
 headcount in every session.
 
+**Where the crowd stands:** the walkers are a pool, not a cast. A paddock is a few hundred metres long and
+thirty deep, so an evenly spread crowd is mostly behind you — walk to one end and three quarters of it is
+doing nothing for the scene. Any walker that drifts more than 100 m from an on-foot player is taken out of
+the paddock and put back down between 14 m and 45 m away with a freshly rolled outfit, so it reads as
+somebody new arriving rather than the same person teleported. The player never sees it: the inner radius is
+raised at runtime to the on-foot camera's corner distance, so a respawn is off screen by construction, and
+nothing recycles at all while the player is in a car. Talkers, quest givers, drivers, reps and anything
+placed by hand are never touched — only the anonymous wanderers.
+
+`CrowdDirector.recycling` holds the knobs (`CrowdRecycleTuning`). `targetNearPlayer` is the one that
+matters: it caps how many walkers may be inside the 100 m radius at once (280 of 400), and anyone who
+wanders off while the cluster is full is simply left where they are, frozen, until there is room again.
+That is what stops the whole paddock piling onto the player. Untick `PaddockSpawner.recycleWalkers` (or
+`CrowdRecycleTuning.enabled`) to go back to a crowd that stays where it was spawned. Rules and defaults are
+covered by `CrowdRecyclePolicyTests`.
+
 **Dialogue that changes across the weekend:** a marker carries a *set of lines per half-day*
 (`PlacedNPC.schedule`). The first set covering the half-day being played wins; anything uncovered falls back
 to the marker's default lines. The crew chief ships with three — Friday's practice brief, Saturday's

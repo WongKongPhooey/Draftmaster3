@@ -61,6 +61,12 @@ public class PaddockSpawner : MonoBehaviour
              "back with distance and switch off entirely while the player is driving, leaving the crowd " +
              "visible but inert. Untick to run the whole paddock at full cost all the time.")]
     public bool governCrowd = true;
+    [Tooltip("Keep the wandering crowd clustered around the player: a walker that drifts past the " +
+             "CrowdDirector's recycle radius (100m) is taken out of the paddock and put back just out of " +
+             "shot with a new outfit, so the paddock reads as busy wherever the player walks instead of " +
+             "thinning out at the ends. Only the wanderers — the conversational NPCs stay where they were " +
+             "put. Needs governCrowd. Untick to leave the crowd spread over the whole paddock.")]
+    public bool recycleWalkers = true;
 
     // The compiled-in house style. Exposed so DialogueLibrary can layer authored pools on top of it, and so
     // the pool seeder can copy it into an asset for editing.
@@ -281,6 +287,10 @@ public class PaddockSpawner : MonoBehaviour
 
         int talkers = Mathf.Clamp(talkingNpcs, 0, total);
 
+        // The rectangle a recycled walker may be put back inside — the same paddock it was spawned in,
+        // handed to the crowd module so it never has to know what a pit lane is.
+        var recycleArea = new Draftmaster.Crowd.CrowdRect(center, along, outward, halfLen, halfDepth);
+
         for (int i = 0; i < total; i++)
         {
             float l = Random.Range(-halfLen * 0.9f, halfLen * 0.9f);
@@ -323,7 +333,19 @@ public class PaddockSpawner : MonoBehaviour
             // Added last so it collects every behaviour above. From here the CrowdDirector owns whether
             // this NPC is thinking: fully awake near the player on foot, silent further out, and
             // completely switched off (visuals only) the moment the player is in the car.
-            if (governCrowd) npc.AddComponent<CrowdActor>();
+            if (governCrowd)
+            {
+                var actor = npc.AddComponent<CrowdActor>();
+
+                // Only the wanderers are filler. A talker is somebody the player was sent to find, and a
+                // quest that says "the tyre tech is by the haulers" stops working the moment he can be
+                // teleported across the paddock with a new face on.
+                if (!talking && recycleWalkers)
+                {
+                    actor.recyclable = true;
+                    actor.SetRecycleArea(recycleArea);
+                }
+            }
         }
     }
 

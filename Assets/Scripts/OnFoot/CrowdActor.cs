@@ -9,6 +9,10 @@ using UnityEngine;
 // This is what lets the paddock be crowded. The expensive part of an NPC is not its sprite layers, it is
 // the per-frame Update, the kinematic Rigidbody2D and the collider — and none of that buys anything for
 // an NPC the player cannot currently see, hear or reach.
+//
+// A crowd member marked `recyclable` is also filler in the stronger sense: it is nobody in particular, so
+// once it has wandered a long way off the director may pick it up and put it back down just out of shot
+// with a new face on. See CrowdRecyclePolicy.
 [AddComponentMenu("")]
 [DisallowMultipleComponent]
 public class CrowdActor : MonoBehaviour
@@ -19,6 +23,16 @@ public class CrowdActor : MonoBehaviour
     [Tooltip("Behaviours switched off when this NPC is frozen. Collected automatically at Awake — every " +
              "MonoBehaviour on the object except this one, the appearance and any speech bubble.")]
     public List<Behaviour> managed = new();
+
+    [Tooltip("This NPC is anonymous filler: the director may move it back to just out of shot once it " +
+             "drifts past the recycle radius, keeping the crowd packed around wherever the player is. " +
+             "Leave off for anyone the player might go looking for — conversational NPCs, quest givers, " +
+             "drivers, reps, anyone placed by hand.")]
+    public bool recyclable;
+
+    [Tooltip("Roll a new outfit when this NPC is recycled, so the one that walks back into shot reads as " +
+             "a different person rather than the same one teleported.")]
+    public bool rerollOnRecycle = true;
 
     // The subset of `managed` that only matters with the player within a couple of metres (ambient
     // chatter, conversations). Off at Reduced as well as Frozen.
@@ -34,8 +48,15 @@ public class CrowdActor : MonoBehaviour
 
     CrowdLod _lod = CrowdLod.Full;
     bool _applied;
+    CrowdRect _recycleArea;
 
     public CrowdLod Lod => _lod;
+
+    // Where a recycled NPC is allowed to be put back down. Set by whatever spawned it — the crowd
+    // module has no idea what shape a paddock is, and an NPC dropped outside one would be standing on
+    // the racetrack.
+    public CrowdRect RecycleArea => _recycleArea;
+    public void SetRecycleArea(in CrowdRect area) => _recycleArea = area;
 
     void Awake()
     {
@@ -98,6 +119,41 @@ public class CrowdActor : MonoBehaviour
     // interact range so it would be Full anyway, but a cutscene can walk one away mid-sentence.
     public bool IsBusy => _talk != null && _talk.IsTalking;
 
+    // Whether this one is fair game for the recycler. Anything the player is mid-conversation with is
+    // not, however far away the conversation has wandered.
+    public bool CanRecycle => recyclable && _recycleArea.IsValid && !IsBusy;
+
+    // Take this NPC out of where it was and put it back down at `point`, as somebody else.
+    //
+    // Nothing here is visible: the caller only picks points that are off screen, and the NPC it is
+    // moving was a hundred metres away. What the player sees is a paddock that stays busy wherever they
+    // walk instead of thinning out at the ends.
+    public void RecycleTo(Vector2 point)
+    {
+        var t = transform;
+        Vector3 pos = t.position;
+        t.position = new Vector3(point.x, point.y, pos.z);   // z is the sorting plane — leave it alone
+
+        // A kinematic Rigidbody2D holds its own pose. Moving the transform without it leaves the body
+        // behind, and the walker's next MovePosition would drag the NPC straight back across the paddock.
+        if (_rb != null) _rb.position = point;
+
+        // A fresh outfit is what makes this read as a new face rather than the same person teleported.
+        // Frames come out of NPCSpriteCache, so a rebuild is a handful of GameObjects, not a re-slice.
+        if (rerollOnRecycle && _appearance != null && _appearance.Built && !_appearance.Build())
+        {
+            // Only reachable if the part library has gone away since the first build. Stop trying rather
+            // than keep producing NPCs with no renderers on them.
+            rerollOnRecycle = false;
+            Debug.LogWarning($"CrowdActor: could not rebuild an outfit for '{name}' on recycle — " +
+                             "rerolling disabled for this NPC.", this);
+        }
+
+        // Whoever owns the wandering picks a fresh route from where it now stands.
+        for (int i = 0; i < managed.Count; i++)
+            if (managed[i] is ICrowdRecyclable r) r.OnRecycled();
+    }
+
     public void Apply(CrowdLod lod)
     {
         if (IsBusy) lod = CrowdLod.Full;
@@ -133,4 +189,12 @@ public class CrowdActor : MonoBehaviour
         // build from, and a destroyed component is still a live C# reference.
         if (CrowdPolicy.StandsStillAt(lod) && _appearance != null) _appearance.SetFrame(0);
     }
+}
+
+// Implemented by a behaviour on a recyclable crowd NPC that holds state tied to where it was standing —
+// a wander route, a home spot. Called by CrowdActor.RecycleTo once the NPC has been moved, so the
+// behaviour can start again from the new position instead of walking back to the old one.
+public interface ICrowdRecyclable
+{
+    void OnRecycled();
 }

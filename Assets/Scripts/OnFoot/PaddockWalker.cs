@@ -5,7 +5,7 @@ using UnityEngine;
 // Rotates to face its walking direction and cycles the recoloured walk frames from NPCAppearance
 // (the art isn't directional, so facing is done by rotating the transform — same convention the
 // player's OnFootController uses). Configured by PaddockSpawner with the paddock bounds.
-public class PaddockWalker : MonoBehaviour
+public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
 {
     [Tooltip("Walk speed in units/sec.")]
     public float speed = 1.2f;
@@ -45,6 +45,17 @@ public class PaddockWalker : MonoBehaviour
         _halfLen = halfLen; _halfDepth = halfDepth;
         GeneratePath();
         _idx = 0;
+    }
+
+    // The CrowdActor has just picked this walker up and put it down somewhere else in the paddock. The
+    // old route led back to wherever it came from, which is now a long walk away and off the far side of
+    // the recycle radius, so throw it away and pick a new one from here.
+    public void OnRecycled()
+    {
+        GeneratePath();
+        _idx = 0;
+        _pauseTimer = 0f;
+        Idle();
     }
 
     void Awake()
