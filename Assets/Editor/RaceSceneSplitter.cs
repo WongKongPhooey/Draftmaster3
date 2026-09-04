@@ -50,11 +50,30 @@ public static class RaceSceneSplitter
         // under the stage would break the thing being edited. It is removed when the stage closes instead.
         if (PrefabStageUtility.GetCurrentPrefabStage() != null) return;
 
-        int removed = 0;
+        int removed = 0, kept = 0;
         foreach (var package in Object.FindObjectsByType<TrackPackage>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (package == null) continue;
             string id = package.trackId;
+
+            // Never destroy work. An instance carrying edits that are not in the package yet is somebody's
+            // authoring session, and stripping it throws that away with no warning and nothing to undo —
+            // which is exactly how a marker placed against the scene instance disappears overnight.
+            string unapplied = UnappliedEdits(package.gameObject);
+            if (unapplied != null)
+            {
+                kept++;
+                Debug.LogError($"RaceScene: KEPT the '{id}' package rather than stripping it — it is carrying " +
+                               $"{CountLines(unapplied)} edit(s) that are not in the package yet:\n{unapplied}\n" +
+                               "Removing it would have thrown those away. Apply them (right-click the instance " +
+                               "> Prefab > Apply All), or make the edit inside Draftmaster > Tracks > Edit " +
+                               "Selected Package In Context so it lands in the package to begin with — then " +
+                               "save again and it will strip as usual. Until then this scene holds a road, so " +
+                               "TrackSceneLoader will adopt it and ignore the track selection.",
+                               package.gameObject);
+                continue;
+            }
+
             Object.DestroyImmediate(package.gameObject);
             removed++;
             Debug.Log($"RaceScene: removed the '{id}' package before saving — the race scene holds no road, " +
@@ -62,7 +81,9 @@ public static class RaceSceneSplitter
                       "package itself are unaffected.");
         }
 
-        if (removed > 0) WriteReport($"Save: stripped {removed} package instance(s) from the race scene.");
+        if (removed > 0 || kept > 0)
+            WriteReport($"Save: stripped {removed} package instance(s) from the race scene" +
+                        (kept > 0 ? $", kept {kept} carrying unapplied edits." : "."));
     }
 
     // The instance Edit In Context put in the race scene, so the stage can take it away again on close.
@@ -80,6 +101,21 @@ public static class RaceSceneSplitter
         _contextInstance = null;
         _contextTrackId = null;
         if (instance == null) return;
+
+        // Same rule as the save-time strip: edits made against the INSTANCE while the stage was open never
+        // reached the package, and taking the instance away would be the last anybody saw of them.
+        string unapplied = UnappliedEdits(instance);
+        if (unapplied != null)
+        {
+            Debug.LogError("RaceScene: kept the context instance rather than removing it on stage close — it " +
+                           $"is carrying {CountLines(unapplied)} edit(s) that are not in the package yet:\n{unapplied}\n" +
+                           "Those were made against the instance in the scene rather than inside the stage, " +
+                           "so the package never saw them. Apply them (right-click > Prefab > Apply All) or " +
+                           "discard them, then run Draftmaster > Tracks > Clear Package Previews From Scene.",
+                           instance);
+            WriteReport("Edit: closed the stage but KEPT the context instance — it had unapplied edits on it.");
+            return;
+        }
 
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
         Undo.DestroyObjectImmediate(instance);
@@ -266,6 +302,99 @@ public static class RaceSceneSplitter
     }
 
     // The console isn't readable over MCP in this project, so every run also drops its result here.
+    // What this instance is carrying that the package on disk does not have, in words — or null when it is
+    // carrying nothing and is therefore safe to throw away.
+    //
+    // Two whole classes of "override" are deliberately ignored, because on a track package neither of them
+    // is authoring:
+    //
+    //   THE ROOT'S OWN TRANSFORM. The splitter positions the instance itself when it drops one into the
+    //   scene, so the root reads as overridden on every preview. Guarding on that would mean never stripping
+    //   anything, which is the failure this whole file exists to prevent.
+    //
+    //   ADDED GAMEOBJECTS. TrackBuilder is [ExecuteAlways] and rebuilds the road from the spline in
+    //   OnEnable — edge lines, brake markers, pit lane, runoff, barriers, decorations — so a package that
+    //   has only just been instantiated and touched by nobody already reports eight added objects. They are
+    //   generated, they are regenerated on every enable, and treating them as work would jam the guard
+    //   permanently shut. (It is also why applying a track package wholesale bloats the asset: those
+    //   generated children get baked in, and the next enable generates another set beside them.)
+    //
+    //   THE MESH COMPONENTS. Same reason, one level down. The builders write the meshes they generate
+    //   straight into the instance's MeshFilters and MeshRenderers, so every road, kerb, runoff and
+    //   grandstand in a previewed package reads as an override the moment it is drawn. Nobody assigns those
+    //   by hand — they are output, not authoring — and they are the single biggest thing bloating the race
+    //   scene, because a scene that saves with a package in it saves every generated mesh with it.
+    //
+    // What is left is the signal: a property changed on something that IS in the package — a marker dragged
+    // to a new position, a renamed object, a component pulled off. Which is exactly the case that was lost.
+    public static string UnappliedEdits(GameObject instance, int limit = 10)
+    {
+        if (instance == null) return null;
+
+        // Not a prefab instance at all. Nothing can be applied anywhere, so there is no safe way to remove
+        // it — whatever it is, it only exists here.
+        if (!PrefabUtility.IsPartOfPrefabInstance(instance))
+            return "  the whole object — it is not a prefab instance, so nothing in it exists anywhere else";
+
+        var lines = new System.Collections.Generic.List<string>();
+        var rootTransform = instance.transform;
+
+        foreach (var over in PrefabUtility.GetObjectOverrides(instance, includeDefaultOverrides: false))
+        {
+            if (over?.instanceObject == null) continue;
+            if (over.instanceObject == rootTransform || over.instanceObject == instance) continue;
+            if (IsGenerated(over.instanceObject)) continue;
+
+            string where = PathInside(instance, over.instanceObject);
+            if (over.instanceObject is Transform t)
+                lines.Add($"  moved: {where} is at {t.localPosition}");
+            else
+                lines.Add($"  changed: {over.instanceObject.GetType().Name} on {where}");
+        }
+
+        // A component added by hand to an object that IS in the package still counts — that is somebody
+        // wiring something up, not the road rebuilding itself.
+        foreach (var added in PrefabUtility.GetAddedComponents(instance))
+        {
+            if (added?.instanceComponent == null) continue;
+            if (!PrefabUtility.IsPartOfPrefabInstance(added.instanceComponent.gameObject)) continue;
+            lines.Add($"  added: {added.instanceComponent.GetType().Name} on " +
+                      $"{PathInside(instance, added.instanceComponent.transform)}");
+        }
+
+        foreach (var gone in PrefabUtility.GetRemovedComponents(instance))
+            if (gone?.assetComponent != null)
+                lines.Add($"  removed: {gone.assetComponent.GetType().Name}");
+
+        if (lines.Count == 0) return null;
+
+        int shown = Mathf.Min(lines.Count, limit);
+        string text = string.Join("\n", lines.GetRange(0, shown));
+        if (lines.Count > shown) text += $"\n  ...and {lines.Count - shown} more";
+        return text;
+    }
+
+    // Output of an [ExecuteAlways] builder rather than something a person put there. Meshes and the
+    // renderers that draw them are regenerated from the spline on every enable, so they are never authoring
+    // and counting them would mean nothing could ever be stripped.
+    static bool IsGenerated(Object o) => o is MeshFilter || o is MeshRenderer;
+
+    // Where inside the instance something is, for a message somebody has to act on.
+    static string PathInside(GameObject instance, Object member)
+    {
+        var t = member as Transform ?? (member as Component)?.transform;
+        if (t == null) return member != null ? member.name : "?";
+
+        string path = t.name;
+        for (var p = t.parent; p != null && p != instance.transform.parent; p = p.parent)
+            path = p.name + "/" + path;
+        return path;
+    }
+
+    // Consoles and log readers routinely show only the first line of a multi-line message, and here the list
+    // IS the message — so the first line has to carry the count.
+    static int CountLines(string text) => string.IsNullOrEmpty(text) ? 0 : text.Split('\n').Length;
+
     static void WriteReport(string text)
     {
         try
