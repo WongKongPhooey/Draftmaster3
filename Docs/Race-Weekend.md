@@ -132,7 +132,7 @@ it is only replaced when the clock has moved past it.
 | **Signing session** / **hauler parade** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. Sign it and move (5 min), sign it and ask their name (10 min), pose for the photo (12 min), or wave and keep walking (2 min). The fence holds exactly as many people as signing-and-moving would clear, so speed is the whole decision: work it flat out and you reach every one of them and the sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support; stop to talk and the people you did reach are worth far more while the back of the queue never gets to the front. | Fan appeal, sponsor mood, `autographs` counter |
 | **Sponsor photo shoot** | The photographer wants hero or human, and the brand's rep wants the cap in every frame. | Sponsor mood, fans, crew morale |
 | **Hospitality Q&A / suite meet & greet** | A guest asks something and one of the answers is the line the brand paid for. The funny one is not it. | Sponsor mood — the off-message answers buy fans and press instead |
-| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. Somebody else's session, simulated and played forward on a compressed clock, with the timing tower and the broadcast calls down the right-hand side of a screen that still shows the track. `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc) shorten it. | Setup knowledge (homework), team morale |
+| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x — `F11` for live timing, `T` to walk back. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
 | **Drivers meeting** | Mandatory, in the drivers' room with the field sat around you. Officials read four notes; one of them will catch somebody out at this track today. Say which. | Setup knowledge, morale |
 | **Driver introductions** | Mandatory, on the stage. Your name over the PA — decide what to give the crowd. | Fan appeal, sponsor mood |
 
@@ -214,6 +214,7 @@ Assets/Scripts/Weekend/
     WeekendOutcome.cs              what one completed activity did
     SeriesSimulator.cs             the other two championships' sessions: results + broadcast timeline
     WeekendTrackSessions.cs        which championship has cars on the circuit at a given slot + minute
+    GrandstandWatch.cs             how long a watched session takes at 10x, and where the camera frames it
     SeriesWeekendResult.cs         one championship's round, classified and priced - the player cut in
     ChampionshipPoints.cs          what a finishing position is worth
     SeasonChampionships.cs         the season: rounds run, three points tables, what has been read
@@ -223,7 +224,8 @@ Assets/Scripts/Weekend/
     WeekendConversation.cs         beats, answers and what an answer is worth — the shape of an obligation
     Conversations/                 TeamMeetingContent, CeremonyContent, SponsorContent, SigningContent
   WeekendDirector.cs               owns the timetable, books activities, settles outcomes  (Assembly-CSharp)
-  WeekendTrackState.cs             the same question answered live: who is out, and is the player one of them
+  WeekendTrackState.cs             the same question answered live: who is out, and is the player one of
+                                   them — plus the hold a grandstand takes on the circuit while it watches
   WeekendScheduleUI.cs             the sheet (F10)
   WeekendAppointment.cs            the booking you have said yes to and not turned up for yet
   WeekendObjectiveHUD.cs           where you are due, how far, and T to travel there
@@ -235,8 +237,12 @@ Assets/Scripts/Weekend/
     WeekendVenueHost.cs            the person you talk to — plays a conversation in speech bubbles
     WeekendScripts.cs              which conversation a booking is, plus the runtime facts it needs
     GrandstandSeat.cs              sit down and watch
+    WeekendMarker.cs               where a booking happens: the perimeter, the teleport, the vantage
+    WeekendMarkerGate.cs           the door at the end of a teleport
     PaddockProps.cs / PaddockPerson.cs   flat blocked-out props, and people to stand in them
   Activities/GrandstandSpectate.cs the simulated session, played beside the live world
+  Activities/GrandstandVisit.cs    the in-world seat: holds the session open at 10x, F11 timing, T back
+  Activities/GrandstandCamera.cs   the pan out onto the marker's vantage, and giving the camera back
 Assets/Scripts/UI/Phone/PhoneScheduleApp.cs      read-only glance at today
 Assets/Scripts/UI/Phone/PhoneChampionshipApp.cs  the three championships and what has come in
 ```
@@ -423,6 +429,31 @@ automatically — nothing to wire.
 
 A marker with a teleport is **exempt** from the reachability rule, because being at the edge is the point.
 One *without* a teleport that sits outside the boundary is still reported as a fault.
+
+### Sitting down to watch
+
+Arriving in the stand is the booking done — the sheet moves on and the clock jumps to the end of the hour —
+and what happens next is `GrandstandVisit`:
+
+- **The camera pans out.** It comes back tight on the player where the wipe left them, then pulls back over
+  `cameraPanSeconds` onto the marker's **vantage**: a child called **`View`** (also `Vantage`, `Camera`) at
+  the point the shot settles on, with **`Camera Zoom`** as the half-height in metres it ends at. Select the
+  marker and both the seat handle and a green box showing exactly what will be on screen are in the scene
+  view — *Add camera vantage* makes one, *Frame the shot* puts the scene view where the player's camera will
+  be. With no vantage authored the camera goes 55% of the way from the seat to the nearest point on the
+  centreline and picks a zoom off the distance, which is a workable view of the road at every venue.
+  Get out of the seat and walk more than 3.5 m and the camera hands itself back to the ordinary on-foot
+  follow — a fixed wide frame with the player walking out of the bottom of it is worse than no shot.
+- **`F11` is the timing screen** for whatever is on track: the same `TimingScreenUI` the crew chief opens,
+  timing the real ambient field off `LapTimingManager`, headed with the championship and session and with
+  the session clock in the corner.
+- **The session runs at 10x.** The sheet's hour is played out against a compressed clock — ten weekend
+  minutes a minute, floored at 20 s and capped at six minutes, so no session ever asks the player to sit
+  through more than that (`GrandstandWatch`, tested by `GrandstandWatchTests`). The cars are never sped up;
+  it is the session's *length* that is compressed. While it runs, the seat **holds the circuit**
+  (`WeekendTrackState.Hold`) — without that the field the player came to watch would be cleared the instant
+  the booking completed and moved the clock past it. When the compressed clock runs out the hold is given
+  back, the field comes in, and `T` walks back to the gate.
 
 Authored markers are never moved by the boundary rule either: where you put it is where it stays, and a bad
 one is reported rather than quietly dragged inside.

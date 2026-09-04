@@ -9,6 +9,14 @@ public class TimingScreenUI : MonoBehaviour
 
     public bool visible;
 
+    [Tooltip("Overrides the heading. Empty = read off the player's own session (RaceWeekend). Set by " +
+             "anything watching a session that is not the player's — a grandstand puts the championship " +
+             "and the session it is timing here.")]
+    public string sessionLabel = "";
+
+    [Tooltip("Short status in the top-right of the panel — the session clock, or what it finished as.")]
+    public string statusLine = "";
+
     readonly List<LapTimingManager.CarTimes> _sorted = new();
 
     public static TimingScreenUI Ensure()
@@ -47,8 +55,21 @@ public class TimingScreenUI : MonoBehaviour
         var c0 = PixelGUI.PanelContent(new Rect(x, y, w, h), 8f);
         float cx = c0.x, cy = c0.y;
 
-        string session = RaceWeekend.IsQualifying ? "QUALIFYING" : (RaceWeekend.IsPractice ? "PRACTICE" : "RACE");
+        string session = !string.IsNullOrEmpty(sessionLabel)
+            ? sessionLabel
+            : RaceWeekend.IsQualifying ? "QUALIFYING" : (RaceWeekend.IsPractice ? "PRACTICE" : "RACE");
         GUI.Label(new Rect(cx, cy, c0.width, PixelGUI.Px(18f)), $"TIMING · {session}", PixelGUI.Heading);
+
+        // The session clock, opposite the heading — a compressed hour in a grandstand needs somewhere to
+        // say how much of it is left.
+        if (!string.IsNullOrEmpty(statusLine))
+        {
+            var right = PixelGUI.LabelDim;
+            var was = right.alignment;
+            right.alignment = TextAnchor.MiddleRight;
+            GUI.Label(new Rect(cx, cy, c0.width, PixelGUI.Px(18f)), statusLine, right);
+            right.alignment = was;
+        }
         cy += PixelGUI.Px(20f);
         GUI.Label(new Rect(cx, cy, c0.width, PixelGUI.Px(10f)),
                   $"{"POS",-5}{"#",-5}{"DRIVER",-17}{"LAPS",-6}{"LAST",-11}{"BEST",-11}{"GAP",-8}",

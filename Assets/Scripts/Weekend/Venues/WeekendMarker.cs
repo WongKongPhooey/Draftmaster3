@@ -46,6 +46,20 @@ public class WeekendMarker : MonoBehaviour
              "grandstands' rather than 'the grandstand'.")]
     public string label = "";
 
+    [Header("The view from there")]
+    [Tooltip("Where the camera settles once the player has arrived, for somewhere they sit and watch. " +
+             "Empty = the shot is worked out from the seat and the nearest piece of circuit. Author one as " +
+             "a child called View / Vantage / Camera and it is picked up with the rest of the naming " +
+             "convention.")]
+    public Transform cameraView;
+
+    [Tooltip("Orthographic size at the end of the pan — half the height of what is on screen, in metres. " +
+             "0 = work it out from how far the seat is from the road.")]
+    public float cameraZoom = 0f;
+
+    [Tooltip("Seconds the camera takes to pull back from the player to the vantage.")]
+    public float cameraPanSeconds = 2.2f;
+
     [Header("Editor")]
     public Color gizmoColor = new Color(1f, 0.78f, 0.25f, 0.85f);
 
@@ -81,6 +95,12 @@ public class WeekendMarker : MonoBehaviour
     public Vector3 TeleportPosition => teleportTo != null ? teleportTo.position : MarkerPosition;
 
     public bool HasTeleport => teleportTo != null;
+
+    // Where the camera pulls back to, and how wide, once the player is sat there. Null/0 means nobody has
+    // authored one and the runtime works it out from the circuit (GrandstandWatch.Vantage).
+    public bool HasCameraView => cameraView != null;
+
+    public Vector3 CameraViewPosition => cameraView != null ? cameraView.position : TeleportPosition;
 
     public string Label => string.IsNullOrEmpty(label) ? WeekendVenues.Label(venue) : label;
 
@@ -146,13 +166,19 @@ public class WeekendMarker : MonoBehaviour
             marker.venue = VenueFromName(t.name);
 
             // A child called Seat / Destination / Inside is the teleport target, so the split between "walk
-            // here" and "end up there" can be authored without touching the inspector either.
+            // here" and "end up there" can be authored without touching the inspector either. A child called
+            // View / Vantage / Camera is where the camera settles once they are there.
             foreach (Transform child in t)
             {
                 string name = Simplify(child.name);
-                if (name != "seat" && name != "destination" && name != "inside" && name != "teleport") continue;
-                marker.teleportTo = child;
-                break;
+                if (marker.teleportTo == null &&
+                    (name == "seat" || name == "destination" || name == "inside" || name == "teleport"))
+                {
+                    marker.teleportTo = child;
+                    continue;
+                }
+                if (marker.cameraView == null && (name == "view" || name == "vantage" || name == "camera"))
+                    marker.cameraView = child;
             }
 
             adopted++;
@@ -200,6 +226,16 @@ public class WeekendMarker : MonoBehaviour
             Gizmos.color = new Color(gizmoColor.r, gizmoColor.g, gizmoColor.b, 0.5f);
             Gizmos.DrawLine(MarkerPosition, teleportTo.position);
             Gizmos.DrawWireSphere(teleportTo.position, 1f);
+        }
+
+        // The shot, drawn as what will actually be on screen: the camera settles in the middle of this box
+        // and the box is what the player sees, so a vantage that misses the circuit is visible as one.
+        if (cameraView != null)
+        {
+            Gizmos.color = new Color(0.35f, 0.85f, 1f, 0.8f);
+            Gizmos.DrawLine(TeleportPosition, cameraView.position);
+            float half = cameraZoom > 0f ? cameraZoom : 20f;
+            Gizmos.DrawWireCube(cameraView.position, new Vector3(half * 2f * 16f / 9f, half * 2f, 0.1f));
         }
 
         string caption = venue == WeekendVenue.None ? name : venue + " — " + name;

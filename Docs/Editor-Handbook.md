@@ -561,11 +561,12 @@ chair per driver, and booking → objective → walk → talk actually connects)
 | `F8` | Formation-lap diagnostics — gap / closing speed / state per car |
 | `F9` | Handling tuner **and** travel-map dev hotkey (clash) |
 | `F10` | Race weekend schedule — the three-day timetable |
+| `F11` | Live timing for the session you are watching from a grandstand |
 | `C` | Crew chief mode |
 | `V` | Drive / Broadcast toggle |
 | `L` | Pit limiter |
 
-Free: `F11`–`F12`.
+Free: `F12`.
 
 ---
 
@@ -686,8 +687,8 @@ Driver Database.
   MCP tools or the editor.
 - **Editing the seeded roster or calendar needs `DatabaseManager.SchemaVersion` bumped**, or the old table
   survives.
-- **`F6` drives three panels and `F9` two** (see the key table). Only `F10`–`F12` are still free — a new
-  panel should take one of those.
+- **`F6` drives three panels and `F9` two** (see the key table). Only `F12` is still free — a new panel
+  should take it.
 - **The UI is one typeface (VT323) and sizes follow the face, not the role.** A bitmap face is drawn for
   one pixel cell — VT323 16, Silkscreen 8, Pixelify Sans 20 — and rendering off whole multiples of it goes
   soft. `IronOvalUI.Snap` and `PixelGUI`'s `LineH` / `DataLineH` exist so layouts re-flow when the theme's

@@ -195,6 +195,12 @@ public class WeekendObjectiveHUD : MonoBehaviour
         {
             if (WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return false;
             if (NPCInteractable.AnyConversationActive || DialogueChoiceUI.IsOpen) return false;
+
+            // Sat in a grandstand watching a session. The strip would be drawn over the shot, and worse,
+            // T is the key that gets you out of the stand — leaving this live means one press both travels
+            // to the next booking and walks back to the gate.
+            if (GrandstandVisit.Watching || GrandstandSpectate.Watching) return false;
+
             return _shown != null && _onFoot;
         }
     }

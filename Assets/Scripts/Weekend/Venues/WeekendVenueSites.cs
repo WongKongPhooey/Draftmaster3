@@ -270,6 +270,7 @@ public class WeekendVenueSites : MonoBehaviour
 
                 var gate = anchor.gameObject.AddComponent<WeekendMarkerGate>();
                 gate.destination = marker.teleportTo;
+                gate.marker = marker;
                 gate.venue = marker.venue;
                 gate.speakerName = marker.Label.ToUpperInvariant();
                 gate.interactRange = Mathf.Max(3f, marker.Range);

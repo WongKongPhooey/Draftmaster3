@@ -20,8 +20,13 @@ public class WeekendMarkerEditor : Editor
     // is the one we create, so an authored marker and an adopted one look the same in the hierarchy.
     const string SeatChildName = "Seat";
 
+    // Same idea for the camera: the name WeekendMarker.AdoptNamedObjects picks up, so a vantage added here
+    // and one added by hand in the hierarchy are the same object.
+    const string ViewChildName = "View";
+
     static readonly Color GateColor = new Color(1f, 0.78f, 0.25f, 1f);
     static readonly Color SeatColor = new Color(0.35f, 0.85f, 1f, 1f);
+    static readonly Color ViewColor = new Color(0.55f, 1f, 0.6f, 1f);
 
     public override void OnInspectorGUI()
     {
@@ -57,6 +62,42 @@ public class WeekendMarkerEditor : Editor
             {
                 if (GUILayout.Button("Select target")) Selection.activeGameObject = marker.teleportTo.gameObject;
                 if (GUILayout.Button("Frame both")) FrameBoth(marker);
+            }
+        }
+
+        // What the camera does once they are there ------------------------------------------------------
+        if (marker.teleportTo != null)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("The view from there", EditorStyles.boldLabel);
+
+            if (marker.cameraView == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "No vantage authored. The camera pulls back from the seat toward the nearest piece of " +
+                    "circuit and picks a zoom from how far away it is, which works everywhere but is nobody's " +
+                    "idea of a shot.\n\n" +
+                    "Add one to choose exactly what the player watches the session over.",
+                    MessageType.None);
+
+                if (GUILayout.Button("Add camera vantage"))
+                    foreach (var t in targets) CreateView((WeekendMarker)t);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    $"The camera pans out to '{marker.cameraView.name}' over {marker.cameraPanSeconds:0.0}s and " +
+                    (marker.cameraZoom > 0f
+                        ? $"settles at {marker.cameraZoom:0} m half-height."
+                        : "picks its own zoom (set Camera Zoom to choose one).") +
+                    "\n\nThe green box in the scene view is what ends up on screen. Drag its handle to move it.",
+                    MessageType.Info);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Select vantage")) Selection.activeGameObject = marker.cameraView.gameObject;
+                    if (GUILayout.Button("Frame the shot")) FrameShot(marker);
+                }
             }
         }
 
@@ -117,6 +158,32 @@ public class WeekendMarkerEditor : Editor
             marker.teleportTo.position = new Vector3(moved.x, moved.y, marker.teleportTo.position.z);
             EditorUtility.SetDirty(marker.teleportTo);
         }
+
+        if (marker.cameraView == null) return;
+
+        // The shot itself: where the camera ends up, and the rectangle it will be showing. Drawn while the
+        // MARKER is selected for the same reason the seat is — the three points are one decision, and
+        // hunting for the child object to see the frame is what stopped anybody authoring one.
+        Vector3 view = marker.cameraView.position;
+        float half = marker.cameraZoom > 0f ? marker.cameraZoom : 20f;
+        var frame = new Vector3(half * 2f * 16f / 9f, half * 2f, 0f);
+
+        Handles.color = ViewColor;
+        Handles.DrawDottedLine(seat, view, 3f);
+        Handles.DrawWireCube(view, frame);
+        Handles.Label(view + new Vector3(0.8f, frame.y * 0.5f + 0.8f, 0f),
+                      marker.cameraZoom > 0f ? $"what they watch — {marker.cameraZoom:0} m"
+                                             : "what they watch — automatic zoom",
+                      Caption(ViewColor));
+
+        EditorGUI.BeginChangeCheck();
+        Vector3 movedView = Handles.PositionHandle(view, Quaternion.identity);
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(marker.cameraView, "Move Camera Vantage");
+            marker.cameraView.position = new Vector3(movedView.x, movedView.y, marker.cameraView.position.z);
+            EditorUtility.SetDirty(marker.cameraView);
+        }
     }
 
     // ------------------------------------------------------------------ actions
@@ -135,6 +202,29 @@ public class WeekendMarkerEditor : Editor
 
         Undo.RecordObject(marker, "Add Teleport Target");
         marker.teleportTo = go.transform;
+        EditorUtility.SetDirty(marker);
+    }
+
+    // The vantage starts halfway from the seat back toward the gate, because that is where the circuit is:
+    // the whole reason a stand needs a teleport is that the track runs between the two.
+    static void CreateView(WeekendMarker marker)
+    {
+        if (marker == null || marker.teleportTo == null || marker.cameraView != null) return;
+
+        var go = new GameObject(ViewChildName);
+        Undo.RegisterCreatedObjectUndo(go, "Add Camera Vantage");
+        Undo.SetTransformParent(go.transform, marker.transform, "Add Camera Vantage");
+
+        Vector3 seat = marker.TeleportPosition;
+        Vector3 gate = marker.MarkerPosition;
+        go.transform.position = new Vector3(Mathf.Lerp(seat.x, gate.x, 0.4f),
+                                            Mathf.Lerp(seat.y, gate.y, 0.4f),
+                                            seat.z);
+
+        Undo.RecordObject(marker, "Add Camera Vantage");
+        marker.cameraView = go.transform;
+        if (marker.cameraZoom <= 0f)
+            marker.cameraZoom = Draftmaster.Weekend.GrandstandWatch.ZoomFor(Vector2.Distance(seat, gate) * 0.5f);
         EditorUtility.SetDirty(marker);
     }
 
@@ -167,6 +257,17 @@ public class WeekendMarkerEditor : Editor
         bounds.Encapsulate(seat);
         bounds.Expand(20f);
         view.Frame(bounds, false);
+    }
+
+    // Put the scene view where the player's camera will be, at the size it will be, so "is the circuit in
+    // shot" is answered by looking at it rather than by pressing Play.
+    static void FrameShot(WeekendMarker marker)
+    {
+        var view = SceneView.lastActiveSceneView;
+        if (view == null || marker.cameraView == null) return;
+
+        float half = marker.cameraZoom > 0f ? marker.cameraZoom : 20f;
+        view.Frame(new Bounds(marker.cameraView.position, new Vector3(half * 2f * 16f / 9f, half * 2f, 1f)), false);
     }
 
     static GUIStyle Caption(Color color)

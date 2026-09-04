@@ -19,6 +19,10 @@ public class WeekendMarkerGate : NPCInteractable
     [Tooltip("Where this gate leads. Set from the marker's teleportTo when the venue builder makes one.")]
     public Transform destination;
 
+    [Tooltip("The marker this gate belongs to. Carries what the far end looks like — the vantage the camera " +
+             "settles on once the player is sat there.")]
+    public WeekendMarker marker;
+
     [Tooltip("Said when the player presses the action button here with nothing booked that comes this way.")]
     [TextArea]
     public string[] closedLines =
@@ -63,9 +67,10 @@ public class WeekendMarkerGate : NPCInteractable
 
             // Somewhere to watch a session from is not a panel to sit through: the obligation was to be
             // there, so arriving completes it, and what is left is a seat and a way back. GrandstandVisit
-            // owns both. Done inside the wipe so the booking is settled before the screen comes back and
-            // the result card is not read over the paddock the player has just left.
-            if (pending.IsSpectate) GrandstandVisit.Begin(pending, back);
+            // owns both — including the pull back onto the marker's vantage, which is why it is handed the
+            // marker rather than just the spot. Done inside the wipe so the booking is settled before the
+            // screen comes back and the result card is not read over the paddock the player has just left.
+            if (pending.IsSpectate) GrandstandVisit.Begin(pending, back, marker);
         });
 
         return false;

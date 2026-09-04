@@ -39,6 +39,42 @@ public static class WeekendTrackState
         }
     }
 
+    // ------------------------------------------------------------------ a session somebody is watching
+
+    // The stand holds the circuit open.
+    //
+    // Arriving in the grandstand IS the booking done — the sheet moves on and the clock jumps to the end of
+    // the hour the moment the player sits down — so read off the ledger alone, the session they came to
+    // watch would end the instant they got there and the field would be cleared out from under them.
+    //
+    // So the seat takes the session off the clock and holds it: for as long as the player is sat there the
+    // circuit belongs to that championship, and GrandstandVisit plays the hour out at speed against its own
+    // timer. Released when the compressed session ends or the player gets up, and the track goes cold on
+    // whatever the sheet says next.
+    static Live _held;
+    static bool _holding;
+
+    // Raised when a hold is taken or given back, so the field can be put out or taken in. The weekend
+    // clock's own Changed event covers every other case; this is the one that does not move the clock.
+    public static event System.Action HoldChanged;
+
+    public static bool Holding => _holding;
+
+    public static void Hold(RacingSeries series, ActivityKind kind, string activityId)
+    {
+        _held = new Live(series, kind, false, activityId);
+        _holding = true;
+        HoldChanged?.Invoke();
+    }
+
+    public static void Release()
+    {
+        if (!_holding) return;
+        _holding = false;
+        _held = default;
+        HoldChanged?.Invoke();
+    }
+
     public static Live Now()
     {
         // The player's own session. Multiplayer lands here too: a lobby that has loaded the track is a
@@ -53,6 +89,10 @@ public static class WeekendTrackState
             };
             return new Live(SeriesCatalog.PlayerSeries, kind, true, WeekendDirector.PendingRouteId);
         }
+
+        // Somebody is sat in the stand watching. Their session outranks the clock, which has already been
+        // moved past it.
+        if (_holding) return _held;
 
         // Nobody has put the player in a car, so the only thing that can be on track is somebody else's
         // session — read off the weekend clock.

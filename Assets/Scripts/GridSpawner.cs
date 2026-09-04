@@ -111,12 +111,18 @@ public class GridSpawner : MonoBehaviour
     // arriving before Start has decided what to put out would race it into spawning the field twice.
     void OnDestroy()
     {
-        if (_followingTheClock) WeekendLedger.Changed -= OnWeekendClockMoved;
+        if (!_followingTheClock) return;
+        WeekendLedger.Changed -= OnWeekendClockMoved;
+        WeekendTrackState.HoldChanged -= OnWeekendClockMoved;
     }
 
     // The weekend clock only moves when the player finishes (or gives up) an hour, and moving it hands the
     // circuit to a different championship — or empties it. The field follows the sheet rather than the
     // scene load, so an obligation that runs to 10:00 ends with the trucks already going past.
+    //
+    // Also raised when a grandstand takes the circuit off the clock and holds it for as long as somebody is
+    // sat watching (WeekendTrackState.Hold), which is the one case where who is out changes with the clock
+    // standing still.
     void OnWeekendClockMoved()
     {
         if (_playerField || GameSession.IsMultiplayer) return;
@@ -151,6 +157,7 @@ public class GridSpawner : MonoBehaviour
         {
             _followingTheClock = true;
             WeekendLedger.Changed += OnWeekendClockMoved;
+            WeekendTrackState.HoldChanged += OnWeekendClockMoved;
             if (live.any) yield return SpawnAmbientField(live);
             yield break;
         }
