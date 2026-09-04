@@ -25,6 +25,12 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
              "them before carrying on. Also what stops the pair grinding against each other: a kinematic " +
              "walker that keeps stepping into a dynamic player can never be pushed out of the way.")]
     public float bumpPauseSeconds = 1.4f;
+    [Tooltip("Walk round solid paddock scenery — motorhomes, popup garages, haulers — instead of straight " +
+             "through it. Off restores the old behaviour of ignoring everything but the paddock boundary.")]
+    public bool avoidObstacles = true;
+    [Tooltip("How wide a berth this walker gives solid scenery (m) — roughly their own footprint. Their " +
+             "centre stops this far from a motorhome's side or a garage wall.")]
+    public float obstacleRadius = 0.45f;
     [Tooltip("Conversation this walker owns. While it's running the walker stands still and turns to face whoever stopped it — otherwise it would wander off mid-sentence, dragging its speech bubble along. Auto-found on the same object if left null.")]
     public NPCInteractable conversation;
     [Tooltip("Ambient one-liners this walker mutters at a passing player. Handled the same as a conversation: stand still and look at them while speaking. Auto-found on the same object if left null.")]
@@ -43,6 +49,7 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
     float _bumpTimer;
     float _frameTimer;
     int _frame;
+    float _escapeTimer;            // throttles the "am I standing inside a motorhome?" check
 
     // along/outward are the rectangle's unit axes; halfLen spans along, halfDepth spans outward.
     public void Configure(Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
@@ -63,6 +70,7 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         _pauseTimer = 0f;
         _bumpTimer = 0f;
         _bumpedBy = null;
+        _escapeTimer = 0f;   // they may have been put back down on top of a motorhome; check straight away
         Idle();
     }
 
@@ -99,16 +107,31 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
     {
         // Inset a touch so walkers don't clip the paddock edge. When a PaddockBoundary is authored,
         // reject-sample so waypoints land inside it (clamping instead would pile them on the edge).
+        //
+        // Solid scenery is rejected the same way, and with a metre of margin: a waypoint sitting inside a
+        // motorhome can never be reached now that the walls are honoured, so the walker would spend its
+        // whole life pressed against the same panel. Better to aim somewhere it can actually stand.
         Vector3 p = _center;
-        for (int attempt = 0; attempt < 8; attempt++)
+        for (int attempt = 0; attempt < 12; attempt++)
         {
             float l = Random.Range(-_halfLen * 0.92f, _halfLen * 0.92f);
             float d = Random.Range(-_halfDepth * 0.92f, _halfDepth * 0.92f);
             p = _center + _along * l + _outward * d;
-            if (PaddockBoundary.IsInside(p)) return p;
+            if (!PaddockBoundary.IsInside(p)) continue;
+            if (avoidObstacles && PaddockObstacles.IsBlocked(p, obstacleRadius + 1f)) continue;
+            return p;
         }
         Vector2 c = PaddockBoundary.Constrain(p);
         return new Vector3(c.x, c.y, p.z);
+    }
+
+    // Give up on the current waypoint and head for the next, pausing a beat. Used both on arriving and on
+    // finding the way there closed — a boundary edge or a wall of bodywork.
+    void NextWaypoint()
+    {
+        _idx++;
+        if (_idx >= _path.Count) { _idx = 0; if (Random.value < 0.5f) GeneratePath(); }
+        _pauseTimer = Random.Range(0f, maxPauseSeconds);
     }
 
     void Update()
@@ -143,6 +166,33 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         if (_path.Count == 0) return;
 
         Vector3 pos = transform.position;
+
+        // Standing inside something solid: put down on top of a motorhome by the crowd director, or a rig
+        // assembled around them after they arrived. Walk out before doing anything else — otherwise the
+        // step below finds every direction blocked and they are sealed in for good. Checked a couple of
+        // times a second rather than every frame, because for everybody who is not stuck it costs nothing
+        // and there can be hundreds of them.
+        if (avoidObstacles)
+        {
+            _escapeTimer -= Time.deltaTime;
+            if (_escapeTimer <= 0f)
+            {
+                _escapeTimer = 0.5f;
+                if (PaddockObstacles.IsBlocked(pos, obstacleRadius))
+                {
+                    Vector2 freed = PaddockObstacles.PushOut(pos, obstacleRadius);
+                    if (freed != (Vector2)pos)
+                    {
+                        pos = new Vector3(freed.x, freed.y, pos.z);
+                        if (_rb != null && _rb.bodyType != RigidbodyType2D.Dynamic) _rb.position = freed;
+                        transform.position = pos;
+                        GeneratePath();     // the old route started from inside the bodywork
+                        _idx = 0;
+                    }
+                }
+            }
+        }
+
         Vector3 target = _path[_idx];
         target.z = pos.z; // stay in the NPC's own sorting plane
 
@@ -157,9 +207,7 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         if (toTarget.magnitude <= arriveRadius)
         {
             // Reached: advance, occasionally regenerate the loop so the route varies over time.
-            _idx++;
-            if (_idx >= _path.Count) { _idx = 0; if (Random.value < 0.5f) GeneratePath(); }
-            _pauseTimer = Random.Range(0f, maxPauseSeconds);
+            NextWaypoint();
             Idle();
             return;
         }
@@ -176,9 +224,29 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
             if ((Vector2)newPos != c)
             {
                 newPos = new Vector3(c.x, c.y, newPos.z);
-                _idx++;
-                if (_idx >= _path.Count) { _idx = 0; if (Random.value < 0.5f) GeneratePath(); }
-                _pauseTimer = Random.Range(0f, maxPauseSeconds);
+                NextWaypoint();
+            }
+        }
+
+        // Round the bodywork rather than through it. The paddock's motorhomes, popup garages and haulers
+        // are plain static colliders, which stop the dynamic player on their own but do nothing at all to
+        // a kinematic body moved with MovePosition — so this walker has to steer itself. A blocked step
+        // becomes a slide along the panel; a step with nowhere to go at all means the waypoint is on the
+        // wrong side of a wall, so give up on it and pick the next.
+        if (avoidObstacles)
+        {
+            if (!PaddockObstacles.TryStep(pos, newPos, obstacleRadius, out Vector2 stepped))
+            {
+                NextWaypoint();
+                Idle();
+                return;
+            }
+
+            if (stepped != (Vector2)newPos)
+            {
+                newPos = new Vector3(stepped.x, stepped.y, newPos.z);
+                Vector2 slid = (Vector2)(newPos - pos);
+                if (slid.sqrMagnitude > 1e-8f) dir = slid.normalized;   // face the way they're actually going
             }
         }
 
