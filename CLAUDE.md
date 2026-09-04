@@ -83,8 +83,12 @@ official in the drivers' room, the fans through the fence, the rep under the hos
 support-race sim, season championships, press bank, venue map, conversation content;
 `Assets/Scripts/Weekend/` holds the runtime (director, schedule screen, `Venues/` builder + hosts). The two
 championships the player is not in run every round whether anybody watches or not: `SeasonChampionships`
-folds those results into three points tables, gated so Sunday's result is not readable on Friday. Full
-guide: `Docs/Race-Weekend.md`.
+folds those results into three points tables, gated so Sunday's result is not readable on Friday.
+**The circuit belongs to whoever is running**: `WeekendTrackSessions` / `WeekendTrackState` read off
+the sheet's clock, so `GridSpawner` puts a field out only for a designated practice, qualifying or
+race — the player's own (the full race scene) or another championship's (a cheap kinematic field they
+cannot join) — and nothing at all during meetings, media, signings and sponsor duties. Full guide:
+`Docs/Race-Weekend.md`.
 
 **The demo flow** starts at `Assets/Scenes/TitleScreen.unity` (build index 0) and runs
 TitleScreen → RaceScene (which builds whatever `TrackSelection` names), TitleScreen → **SingleRace**

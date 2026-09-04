@@ -58,7 +58,11 @@ public class FormationDirector : MonoBehaviour
     {
         // Practice and qualifying have no formation lap or safety car — PracticeDirector owns those
         // sessions. Disabling here (before OnEnable/Start) skips the safety-car spawn and subscriptions.
-        if (RaceWeekend.IsPracticeLike)
+        //
+        // Nor is there a lap to form up for when the player is not in the car at all: the paddock between
+        // sessions, or another championship's session running past while the player is on foot. Without
+        // this the safety car is spawned onto an empty circuit and sits at pit exit for three days.
+        if (RaceWeekend.IsPracticeLike || !RaceWeekend.SessionLive)
         {
             enabled = false;
             return;

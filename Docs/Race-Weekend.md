@@ -71,6 +71,31 @@ Change which championship you are in with the `SERIES:` control in the schedule 
 available on a weekend nothing has happened in yet — once Friday morning has been spent you are in the
 series you are in.
 
+### The circuit belongs to whoever is running
+
+**Cars are on track for a session and at no other time.** The table above is not just the player's
+calendar — it is who has the circuit. During the truck practice the trucks are out; during Cup qualifying
+the Cup cars are out; and at 09:30 on the Friday, when the player is walking to a sponsor's awning, the
+track is empty, because every other driver in the paddock is doing the same kind of thing.
+
+Which of the two it is does not depend on the player's seat. `WeekendTrackSessions.RunningAt(sheet, slot,
+minute)` reads the booking with cars on it straight off the timetable, so a `watch-*` row counts exactly as
+much as a `session-*` one: a Cup driver stood at the fence on Friday morning sees the truck field go past,
+and **cannot take part in it** — the pit-lane prompt only offers the car for the player's own booked
+session, and the TEAM panel offers nothing outside it.
+
+| What the clock is on | What is on track |
+|---|---|
+| The player's own practice / qualifying / race | The full field, the formation lap, the session's director — the normal race scene |
+| Another championship's session | That series' cars, circulating; the player is on foot and can only watch |
+| Anything else — meetings, media, signings, sponsors, rest | Nothing. The player's own car is parked scenery in the pit box |
+
+`GridSpawner` follows the sheet rather than the scene load: it subscribes to `WeekendLedger.Changed`, so an
+obligation that runs to 10:00 ends with the trucks already going past, and the field is cleared again the
+moment the session it belongs to is over. Somebody else's field is deliberately much cheaper than the
+player's — `ambientCount` cars (16 by default, against a 43-car race) on the kinematic `SplineDriver`
+brain rather than the full dynamic model, in that series' own carset (`cts25` / `xfi25` / `cup26`).
+
 ## 3. What you can do with the rest of the time
 
 **Every obligation is a place you walk to.** Committing to something on the sheet does not run it — it
@@ -188,6 +213,7 @@ Assets/Scripts/Weekend/
     WeekendLedger.cs               what has been done/missed, the clock cursor, the five meters (PlayerPrefs)
     WeekendOutcome.cs              what one completed activity did
     SeriesSimulator.cs             the other two championships' sessions: results + broadcast timeline
+    WeekendTrackSessions.cs        which championship has cars on the circuit at a given slot + minute
     SeriesWeekendResult.cs         one championship's round, classified and priced - the player cut in
     ChampionshipPoints.cs          what a finishing position is worth
     SeasonChampionships.cs         the season: rounds run, three points tables, what has been read
@@ -197,6 +223,7 @@ Assets/Scripts/Weekend/
     WeekendConversation.cs         beats, answers and what an answer is worth — the shape of an obligation
     Conversations/                 TeamMeetingContent, CeremonyContent, SponsorContent, SigningContent
   WeekendDirector.cs               owns the timetable, books activities, settles outcomes  (Assembly-CSharp)
+  WeekendTrackState.cs             the same question answered live: who is out, and is the player one of them
   WeekendScheduleUI.cs             the sheet (F10)
   WeekendAppointment.cs            the booking you have said yes to and not turned up for yet
   WeekendObjectiveHUD.cs           where you are due, how far, and T to travel there

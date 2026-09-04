@@ -62,6 +62,11 @@ public class LeaderboardUI : MonoBehaviour
     {
         if (!_visible) return;
 
+        // The timing tower belongs to the player's own session. Another championship's cars are on track
+        // for a good part of the weekend, and their running order is not something to draw over somebody
+        // walking across the paddock.
+        if (!RaceWeekend.SessionLive) return;
+
         bool byLap = RaceWeekend.IsPracticeLike && BuildFromLapTimes();
         if (!byLap && !BuildFromRunningOrder()) return;
 

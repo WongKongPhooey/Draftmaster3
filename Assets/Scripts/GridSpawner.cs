@@ -4,6 +4,11 @@ using System.Linq;
 using Draftmaster.Data;
 using Unity.Netcode;
 using UnityEngine;
+// Aliased rather than a plain using: Draftmaster.Data has its own Series/Driver types and this file is
+// built on those, so only the weekend names actually needed here are pulled in.
+using RacingSeries = Draftmaster.Weekend.RacingSeries;
+using SeriesCatalog = Draftmaster.Weekend.SeriesCatalog;
+using WeekendLedger = Draftmaster.Weekend.WeekendLedger;
 
 public class GridSpawner : MonoBehaviour
 {
@@ -83,6 +88,42 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Scales the AI's corner target speeds (SplineDriver.cornerSpeedScale). Targets are computed from the driven line's real curvature and the physics' own grip, so 1.0 = theoretical limit; keep slightly below 1 for margin. >1 commands past the grip ceiling and strews understeering cars across the track.")]
     public float aiCornerSpeedScale = 0.95f;
 
+    [Header("Another championship's session")]
+    [Tooltip("Field size for a session the player is not entered in — the trucks practising while the player is doing sponsor duties. Well below the race field on purpose: these are traffic seen from the paddock, not opponents, and they run the cheap kinematic brain. 0 = use the full field size above.")]
+    public int ambientCount = 16;
+    [Tooltip("Carset prefix used when the Truck Series has the circuit. Falls back to carsetPrefix if it loads no liveries.")]
+    public string trucksCarsetPrefix = "cts25";
+    [Tooltip("Carset prefix used when the National Stock Series has the circuit.")]
+    public string nationalCarsetPrefix = "xfi25";
+    [Tooltip("Carset prefix used when the Premier Cup Series has the circuit.")]
+    public string cupCarsetPrefix = "cup26";
+
+    // The other championship's cars, while they are out. Null the rest of the weekend.
+    Transform _ambientField;
+    string _ambientFor = "";
+    // The player's own session spawned its field: this spawner is done, and the weekend clock must never
+    // reach in and clear a grid the player is sat on.
+    bool _playerField;
+    bool _followingTheClock;
+
+    // Subscribed from Start rather than OnEnable, and only on the walk-around side: reading the weekend's
+    // sheet can itself settle the ledger on the first read of a fresh weekend, and a Changed callback
+    // arriving before Start has decided what to put out would race it into spawning the field twice.
+    void OnDestroy()
+    {
+        if (_followingTheClock) WeekendLedger.Changed -= OnWeekendClockMoved;
+    }
+
+    // The weekend clock only moves when the player finishes (or gives up) an hour, and moving it hands the
+    // circuit to a different championship — or empties it. The field follows the sheet rather than the
+    // scene load, so an obligation that runs to 10:00 ends with the trucks already going past.
+    void OnWeekendClockMoved()
+    {
+        if (_playerField || GameSession.IsMultiplayer) return;
+        if (track == null || carPrefab == null || !isActiveAndEnabled) return;
+        StartCoroutine(SyncAmbientField());
+    }
+
     IEnumerator Start()
     {
         // Multiplayer: only the host spawns AI, as networked objects replicated to clients (SpawnNetworkedField).
@@ -100,7 +141,21 @@ public class GridSpawner : MonoBehaviour
         // No session, no field. The three championships share the circuit for three days, but their cars are
         // only on it during their own sessions; the rest of the weekend the track is empty and everything
         // that happens, happens in the paddock.
-        if (!RaceWeekend.SessionLive) yield break;
+        var live = WeekendTrackState.Now();
+
+        // Anything other than the player's own hour in the car is watched from outside it. Their cars run
+        // whether the player is in the grandstand or under the hospitality awning, but there is no way into
+        // one of them — so no grid, no formation lap, no session director, just a field circulating past the
+        // paddock. From here on the sheet's clock, not the scene load, decides who is out.
+        if (!live.any || !live.playerDriving)
+        {
+            _followingTheClock = true;
+            WeekendLedger.Changed += OnWeekendClockMoved;
+            if (live.any) yield return SpawnAmbientField(live);
+            yield break;
+        }
+
+        _playerField = true;
 
         if (DatabaseManager.Instance == null)
         {
@@ -587,6 +642,239 @@ public class GridSpawner : MonoBehaviour
             // NetworkObjects stay at the scene root — NGO forbids parenting them under a plain GameObject.
             go.GetComponent<NetworkObject>().Spawn();
         }
+    }
+
+    // ------------------------------------------------------------------ somebody else's session
+
+    // The clock has moved. Put the right championship on track, or take the circuit back.
+    IEnumerator SyncAmbientField()
+    {
+        var live = WeekendTrackState.Now();
+
+        // The player's own session is a scene load away and brings its own field; nothing to do from here.
+        if (live.any && live.playerDriving) yield break;
+
+        string want = live.any ? live.activityId : "";
+        if (want == _ambientFor) yield break;
+
+        // Claimed here rather than inside the spawn, and before the first yield: StartCoroutine runs this
+        // far synchronously, so a second Changed in the same frame sees the booking already taken.
+        ClearAmbientField();
+        _ambientFor = want;
+        if (live.any) yield return SpawnAmbientField(live);
+    }
+
+    void ClearAmbientField()
+    {
+        if (_ambientField != null) Destroy(_ambientField.gameObject);
+        _ambientField = null;
+        _ambientFor = "";
+    }
+
+    // Another championship's practice, qualifying or race, watched from outside it.
+    //
+    // Deliberately far less machinery than the player's own session: no pit boxes, no reserved slot, no
+    // formation lap, no directors and no results, because none of that is the player's to take part in.
+    // A field spread around the lap, circulating, on the cheap kinematic brain — the player is a couple of
+    // hundred metres away on foot and these are traffic.
+    IEnumerator SpawnAmbientField(WeekendTrackState.Live live)
+    {
+        _ambientFor = live.activityId;
+
+        // No geometry, no field. The race scene holds no road — TrackSceneLoader binds the selected
+        // package's TrackBuilder — so this is null until the track is in. Unclaim the booking on the way
+        // out so the next tick of the clock tries again rather than believing this field is already up.
+        if (track == null || track.track == null || carPrefab == null) { _ambientFor = ""; yield break; }
+
+        if (DatabaseManager.Instance != null)
+            while (!DatabaseManager.Instance.IsReady) yield return null;
+
+        // The clock can have moved on while the database opened.
+        if (_ambientFor != live.activityId) yield break;
+
+        // The session is under way — there is no starter and no grid, so the field is racing from the
+        // moment it appears. (FormationDirector stands itself down outside the player's own session, so
+        // nothing else is going to write this.)
+        RaceStart.Current = RaceStart.Phase.Green;
+
+        string carset = CarsetFor(live.series);
+        var liveries = LoadLiveries(carset);
+        if (liveries.Count == 0 && carset != carsetPrefix)
+        {
+            carset = carsetPrefix;
+            liveries = LoadLiveries(carset);
+        }
+
+        // The player's own paint stays out of it. When the championship running is theirs — a practice they
+        // never booked, going ahead without them — the point is that they are the one car missing from it,
+        // not that a second #8 goes past the fence while theirs is parked in the box.
+        if (live.series == SeriesCatalog.PlayerSeries)
+        {
+            int playerCarNumber = CarIdentity.NumberOf(CarIdentity.FindPlayerCar());
+            if (playerCarNumber >= 0) liveries.RemoveAll(l => l.number == playerCarNumber);
+        }
+
+        var drivers = DatabaseManager.Instance != null
+            ? DatabaseManager.Instance.Connection.Table<Driver>().ToList()
+            : new List<Driver>();
+        var pool = new List<Driver>(drivers);
+        Shuffle(pool);
+
+        var driversByNumber = new Dictionary<int, Driver>();
+        foreach (var d in drivers)
+            if (d.CarNumber > 0) driversByNumber[d.CarNumber] = d;
+
+        List<string> namePool = null;
+        if (useDriverNamePool)
+        {
+            DriverNames.loadData();
+            namePool = new List<string>(DriverNames.driverPool);
+            Shuffle(namePool);
+        }
+
+        string code = SeriesCatalog.ShortCode(live.series);
+        var parent = new GameObject($"AmbientField_{code}").transform;
+        parent.SetParent(transform, false);
+        _ambientField = parent;
+
+        int n = Mathf.Max(1, ambientCount > 0 ? ambientCount : count);
+        // Off the sampled centerline, not the sum of the segment lengths: this is the length SplineDriver
+        // itself measures, so a start distance wrapped against it lands where the car expects to be.
+        var centerline = track.SampleCenterline();
+        float lapLength = centerline.Count > 0 ? centerline[centerline.Count - 1].distance : 0f;
+        float sfAnchor = track.track != null ? track.track.startFinishDistance : 0f;
+        // Spread around the whole lap. A session already running has nobody on a grid, and an even spread
+        // is also what stops a field with no starter arriving at turn one as a single heap.
+        float gap = lapLength > 0f ? lapLength / n : Mathf.Max(spacing, 1f);
+
+        for (int i = 0; i < n; i++)
+        {
+            var go = Instantiate(carPrefab, parent);
+
+            int carNumber = i;
+            Sprite livery = null;
+            if (liveries.Count > 0)
+            {
+                var liv = liveries[i % liveries.Count];
+                carNumber = liv.number;
+                livery = liv.sprite;
+            }
+
+            go.transform.localScale = new Vector3(carScale.x, carScale.y, 1f);
+
+            var sr = go.GetComponentInChildren<SpriteRenderer>();
+            if (sr != null)
+            {
+                if (carMaterial != null) sr.sharedMaterial = carMaterial;
+                sr.sortingOrder = carSortingOrder;
+                if (livery != null) sr.sprite = livery;
+            }
+
+            // Kinematic: SplineDriver writes the transform itself. The full dynamic model is what the
+            // player's own field costs, and a session they are only listening to must not cost that.
+            DisableIfPresent<PlayerVehicleController>(go);
+            DisableIfPresent<SplineInputDriver>(go);
+
+            var splineDriver = go.GetComponent<SplineDriver>();
+            if (splineDriver == null) splineDriver = go.AddComponent<SplineDriver>();
+            splineDriver.track = track;
+            splineDriver.vehicleInfo = vehicleInfo;
+            splineDriver.cornerSpeedScale = aiCornerSpeedScale;
+            splineDriver.externalMotionController = false;
+            splineDriver.loop = true;
+            splineDriver.spawnInPit = false;
+            splineDriver.startDistance = Wrap(sfAnchor + i * gap, lapLength);
+            splineDriver.qualifyingPosition = i;
+            splineDriver.lateralOffset = 0f;
+            splineDriver.speed = speed;
+            splineDriver.spriteFacesUp = false;
+            splineDriver.angleOffsetDeg = 180f;
+
+            driversByNumber.TryGetValue(carNumber, out Driver rosterDriver);
+
+            // Identity for the timing tower. teamId is left unaffiliated (-1) on purpose: these are not
+            // the player's teammates and TeamSwitchController must never offer one of them.
+            var label = go.GetComponent<DriverLabel>();
+            if (label == null) label = go.AddComponent<DriverLabel>();
+            label.carset = carset;
+            label.carNumber = carNumber;
+            label.driverName = rosterDriver != null
+                ? RosterLookup.LabelName(rosterDriver)
+                : (namePool != null && namePool.Count > 0 ? namePool[i % namePool.Count] : "");
+            go.name = string.IsNullOrEmpty(label.driverName)
+                ? $"{code}_{i + 1:D2}"
+                : $"{code}_{label.driverName}_{carNumber}";
+
+            var binding = go.GetComponent<AIDriverBinding>();
+            if (binding == null) binding = go.AddComponent<AIDriverBinding>();
+            binding.vehicleInfo = vehicleInfo;
+            if (rosterDriver != null) binding.driver = rosterDriver;
+            else if (pool.Count > 0) binding.driver = pool[i % pool.Count];
+            binding.Apply();   // adds AIRacingBehaviour/TireState, rebuilds the spline
+
+            if (aiEngineSound != null)
+            {
+                if (go.GetComponent<EngineGearbox>() == null) go.AddComponent<EngineGearbox>();
+                var ea = go.GetComponent<EngineAudio>();
+                if (ea == null) ea = go.AddComponent<EngineAudio>();
+                ea.soundSet = aiEngineSound;
+                ea.spatialBlend = 1f;
+                ea.masterVolume = aiEngineVolume;
+                ea.maxDistance = aiEngineMaxDistance;
+            }
+
+            if (addCollision)
+            {
+                var col = go.GetComponent<VehicleCollision>();
+                if (col == null) col = go.AddComponent<VehicleCollision>();
+                col.halfExtents = collisionHalfExtents;
+                col.collisionMask = collisionMask;
+                col.ApplyExtents();
+            }
+
+            // Place the car on its spot now: a dynamic model is not driving this one, but the same
+            // first-physics-step latch that piles a spawned field up at the origin applies to the
+            // kinematic brain too.
+            splineDriver.PlaceAtStartDistance();
+        }
+    }
+
+    // The paint a championship turns up in. An empty prefix (or a carset with no liveries in Resources)
+    // falls back to the spawner's own, so a missing carset costs the right liveries, not the session.
+    string CarsetFor(RacingSeries s)
+    {
+        string prefix = s switch
+        {
+            RacingSeries.Trucks => trucksCarsetPrefix,
+            RacingSeries.National => nationalCarsetPrefix,
+            _ => cupCarsetPrefix,
+        };
+        return string.IsNullOrEmpty(prefix) ? carsetPrefix : prefix;
+    }
+
+    List<(int number, Sprite sprite)> LoadLiveries(string prefix)
+    {
+        var liveries = new List<(int number, Sprite sprite)>();
+        if (!useCarsetLiveries || string.IsNullOrEmpty(prefix)) return liveries;
+
+        for (int n = 0; n <= maxLiveryNumber; n++)
+        {
+            var spr = Resources.Load<Sprite>($"{prefix}livery{n}");
+            if (spr != null) liveries.Add((n, spr));
+        }
+        Shuffle(liveries);
+        return liveries;
+    }
+
+    // Keep a start distance inside one lap. SplineDriver takes startDistance as written, so a field spread
+    // from the start-finish anchor has to come back round rather than run off the end of the spline.
+    static float Wrap(float distance, float lapLength) =>
+        lapLength > 0f ? ((distance % lapLength) + lapLength) % lapLength : Mathf.Max(0f, distance);
+
+    static void DisableIfPresent<T>(GameObject go) where T : MonoBehaviour
+    {
+        var c = go.GetComponent<T>();
+        if (c != null) c.enabled = false;
     }
 
     static void Shuffle<T>(List<T> list)

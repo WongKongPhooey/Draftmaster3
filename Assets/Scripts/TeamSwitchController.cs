@@ -70,8 +70,10 @@ public class TeamSwitchController : MonoBehaviour
     {
         if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) _hidden = !_hidden;
 
-        // No roster in practice/qualifying — team cars are parked stint props there.
-        bool available = !RaceWeekend.IsPracticeLike && !_hidden;
+        // No roster in practice/qualifying — team cars are parked stint props there. And none at all
+        // outside the player's own session: another championship's cars going past while the player is on
+        // foot in the paddock are not theirs to climb into.
+        bool available = RaceWeekend.SessionLive && !RaceWeekend.IsPracticeLike && !_hidden;
         // Hide the whole window, frame included — hiding only the content would leave an empty plate.
         if (_window != null && _window.gameObject.activeSelf != available)
             _window.gameObject.SetActive(available);
