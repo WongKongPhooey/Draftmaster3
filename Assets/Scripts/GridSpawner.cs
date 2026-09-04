@@ -669,14 +669,21 @@ public class GridSpawner : MonoBehaviour
         if (_ambientField != null) Destroy(_ambientField.gameObject);
         _ambientField = null;
         _ambientFor = "";
+        PitLane.Clear();   // their boxes go with them
     }
 
     // Another championship's practice, qualifying or race, watched from outside it.
     //
-    // Deliberately far less machinery than the player's own session: no pit boxes, no reserved slot, no
-    // formation lap, no directors and no results, because none of that is the player's to take part in.
-    // A field spread around the lap, circulating, on the cheap kinematic brain — the player is a couple of
-    // hundred metres away on foot and these are traffic.
+    // Deliberately far less machinery than the player's own session: no reserved slot, no formation lap, no
+    // directors and no results, because none of that is the player's to take part in. A field spread around
+    // the lap, circulating, on the cheap kinematic brain — the player is a couple of hundred metres away on
+    // foot and these are traffic.
+    //
+    // The pit boxes ARE laid out, though, and to this field. A session running is a pit road with that
+    // championship's crews stood in it, one box per car; a Truck practice with the Cup boxes still painted
+    // for a field that is not out, or with no boxes at all, is the tell that nothing here is really
+    // happening. Box index is the car's slot in this field, which is what PitBoxCars matches on, so every
+    // crew ends up in the colours of the car that pits in front of them.
     IEnumerator SpawnAmbientField(WeekendTrackState.Live live)
     {
         _ambientFor = live.activityId;
@@ -738,6 +745,7 @@ public class GridSpawner : MonoBehaviour
         _ambientField = parent;
 
         int n = Mathf.Max(1, ambientCount > 0 ? ambientCount : count);
+        LayOutBoxesFor(n);
         // Off the sampled centerline, not the sum of the segment lengths: this is the length SplineDriver
         // itself measures, so a start distance wrapped against it lands where the car expects to be.
         var centerline = track.SampleCenterline();
@@ -837,6 +845,22 @@ public class GridSpawner : MonoBehaviour
             // kinematic brain too.
             splineDriver.PlaceAtStartDistance();
         }
+    }
+
+    // Pit road, set up for whichever championship is out. Same fit the player's own field gets — the boxes
+    // land on the grey strip TrackBuilder drew — but no box is reserved, because the player is not in this
+    // session and a box painted as theirs would be a lie they can walk up to.
+    void LayOutBoxesFor(int cars)
+    {
+        if (track == null || track.track == null || !track.track.hasPitLane) return;
+
+        var pit = track.SamplePitCenterline();
+        float pitLength = pit.Count > 0 ? pit[pit.Count - 1].distance : 0f;
+        if (pitLength <= 0f) return;
+
+        float parkLateral = track.HasPitBoxLane ? track.PitBoxLaneCenterLateral : 0f;
+        var fit = PitLane.FitBoxes(track, pitLength, cars);
+        PitLane.Configure(fit.exitGap, fit.spacing, cars, parkLateral);
     }
 
     // The paint a championship turns up in. An empty prefix (or a carset with no liveries in Resources)

@@ -20,6 +20,11 @@ public static class PitLane
     // The human player's reserved box index. -1 = the player has no pit box this session.
     public static int PlayerBox { get; private set; } = -1;
 
+    // Raised whenever the ladder changes shape — a field arriving, a field leaving. The pit crews are built
+    // from it, and a weekend changes hands several times in one scene: the Trucks practise, then everybody
+    // goes away, then the National cars come out. Anything built per box has to be able to follow that.
+    public static event System.Action Changed;
+
     public static void Configure(float exitGap, float spacing, int boxCount, float parkLateral = 0f)
     {
         ExitGap = exitGap;
@@ -28,6 +33,18 @@ public static class PitLane
         ParkLateral = parkLateral;
         PlayerBox = -1;   // GridSpawner re-publishes it after reserving the box
         Configured = true;
+        Changed?.Invoke();
+    }
+
+    // The field has gone: there are no boxes, because there is nobody to have one. Pit road between
+    // sessions is empty tarmac, not forty crews stood over nothing.
+    public static void Clear()
+    {
+        if (!Configured) return;
+        Configured = false;
+        BoxCount = 1;
+        PlayerBox = -1;
+        Changed?.Invoke();
     }
 
     public static void SetPlayerBox(int idx) => PlayerBox = idx;

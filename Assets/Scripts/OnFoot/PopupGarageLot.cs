@@ -74,6 +74,35 @@ public class PopupGarageLot : MonoBehaviour
     readonly List<PopupGarageRig> _rigs = new();
     public IReadOnlyList<PopupGarageRig> Rigs => _rigs;
 
+    // The player's car, when the player is not the one racing.
+    //
+    // PitLaneStart parks it in its pit box on every scene load, because that is where it has to be for the
+    // hour they are in it. The rest of the weekend it should not be there at all: a Cup car sat in a box on
+    // pit road through a Truck practice is a car nobody is running, in the way of the people who are, and it
+    // is the one thing in the paddock saying the player's session is now when it is not.
+    //
+    // So it goes home to its own garage — the real car, moved under its own canopy, rather than a second
+    // copy parked on top of it. It is already inert (PlayerVehicleController is disabled until somebody
+    // climbs in) and the next scene load with a session live puts it back on pit road.
+    void PutThePlayersCarAway()
+    {
+        if (RaceWeekend.SessionLive) return;          // their hour: the car belongs in its box
+        if (!TryGetPlayerRig(out var rig) || rig == null) return;
+
+        var car = CarIdentity.FindPlayerCar();
+        if (car == null) return;
+
+        Vector3 home = rig.ParkedCarWorldPosition;
+        car.transform.SetPositionAndRotation(new Vector3(home.x, home.y, car.transform.position.z),
+                                             rig.transform.rotation);
+
+        // Whatever was following the car — the crew chief's anchor, the pit box marker — is reading a
+        // transform, so moving it is the whole job. Nothing else in the scene owns its position while it is
+        // parked.
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null) body.position = car.transform.position;
+    }
+
     // The player's own garage: the rig carrying the number on the paint they are racing, read the same way
     // the motorhome lot and the timing tower read it. This is where the team's weekend actually happens —
     // the plan meeting is had here, not out on pit road.
@@ -181,6 +210,8 @@ public class PopupGarageLot : MonoBehaviour
                 if (room != null) room.buildRange = interiorBuildRange;
             }
         }
+
+        PutThePlayersCarAway();
 
         if (area != null) area.InstallWalkablePocket(transform);
         else ExtendWalkableArea(line.axis, line.front);

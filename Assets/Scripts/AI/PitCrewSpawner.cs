@@ -89,7 +89,39 @@ public class PitCrewSpawner : MonoBehaviour
     Material _unlit;
     Sprite _stopFallback, _goFallback;
 
-    void Start() => StartCoroutine(SpawnWhenReady());
+    Transform _boxes;
+    int _builtFor = -1;
+
+    void Start()
+    {
+        PitLane.Changed += OnPitLaneChanged;
+        StartCoroutine(SpawnWhenReady());
+    }
+
+    void OnDestroy() => PitLane.Changed -= OnPitLaneChanged;
+
+    // The ladder changed under us: a championship came out, or the one that was out has gone away.
+    //
+    // A weekend hands pit road over several times inside one scene load — the Trucks practise, the paddock
+    // goes quiet, the National cars come out — and the crews are per box, per car. Built once at Start they
+    // were the wrong count for every field but the first, and dressed in the colours of whoever happened to
+    // be in the box when the ten-second window ran out.
+    void OnPitLaneChanged()
+    {
+        if (!isActiveAndEnabled) return;
+        int want = boxCount > 0 ? boxCount : (PitLane.Configured ? PitLane.BoxCount : 0);
+        if (want == _builtFor) return;
+
+        Clear();
+        if (want > 0) StartCoroutine(SpawnWhenReady());
+    }
+
+    void Clear()
+    {
+        if (_boxes != null) Destroy(_boxes.gameObject);
+        _boxes = null;
+        _builtFor = -1;
+    }
 
     IEnumerator SpawnWhenReady()
     {
@@ -112,9 +144,15 @@ public class PitCrewSpawner : MonoBehaviour
         float pitLength = pit[pit.Count - 1].distance;
         if (pitLength <= 0f) yield break;
 
+        // No field, no crews. Pit road between sessions is empty tarmac; the crews arrive with the cars.
+        if (boxCount <= 0 && !PitLane.Configured) yield break;
+
         int count = boxCount > 0 ? boxCount : PitLane.BoxCount;
+        Clear();
         var root = new GameObject("PitCrews").transform;
         root.SetParent(transform, false);
+        _boxes = root;
+        _builtFor = count;
 
         // Unconfigured fallback spreads the boxes inside the grey box-lane strip (not the full lane —
         // that would drop boxes on the entry/exit ramps outside the grey surface).
