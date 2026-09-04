@@ -22,9 +22,10 @@ using UnityEngine;
 // Sorting: everything this makes sits below 0, which is the title canvas's order, so the scrim, the
 // wordmark and the menu always draw over the crash however far the cars slide.
 //
-// Time: driven entirely off Time.unscaledDeltaTime and a local clock. Time.timeScale is deliberately never
-// touched — it survives a scene load, and a title screen that freezes the race you load out of it would be
-// a very quiet bug.
+// Time: driven entirely off Time.unscaledDeltaTime and a local clock (TitleCrash.Tempo) — the cars slam in
+// over half a second while time brakes to a crawl, creep for another half second, then stop. Time.timeScale
+// is deliberately never touched — it survives a scene load, and a title screen that freezes the race you
+// load out of it would be a very quiet bug.
 [DisallowMultipleComponent]
 public class TitleCrashScene : MonoBehaviour
 {
@@ -40,12 +41,28 @@ public class TitleCrashScene : MonoBehaviour
     [Header("Timing")]
     [Tooltip("Seconds of empty screen before the first car arrives.")]
     public float startDelay = 0.35f;
-    [Tooltip("Seconds from the first car entering frame to the tableau standing still.")]
-    public float duration = 3f;
-    [Tooltip("How much faster than the run's average pace the cars enter, before time decelerates to a " +
-             "stop. 2 is a flat slow-down the whole way; higher makes the entry a burst and the last few " +
-             "pixels a longer settle.")]
-    [Range(1f, 4f)] public float entrySpeed = TitleCrash.DefaultEntrySpeed;
+    [Tooltip("Beat one, in seconds: the cars are thrown into shot and time brakes hard, from far too fast " +
+             "to follow down to a crawl. Nearly the whole sequence happens in here.")]
+    public float slamSeconds = TitleCrash.Tempo.Default.slamSeconds;
+    [Tooltip("Beat two, in seconds: what's left of the sequence played out in super slow motion, then " +
+             "everything stops.")]
+    public float crawlSeconds = TitleCrash.Tempo.Default.crawlSeconds;
+    [Tooltip("How much of the sequence is saved for the crawl. Small on purpose — the slam is meant to do " +
+             "almost all of it, or the slow beat isn't slow.")]
+    [Range(0.01f, 0.4f)] public float crawlShare = TitleCrash.Tempo.Default.crawlShare;
+    [Tooltip("How sharply the slam sheds speed. 0 is a flat-out entry with no brake at all; higher throws " +
+             "the cars in and starts stopping time immediately.")]
+    [Range(0f, 6f)] public float slamDecay = TitleCrash.Tempo.Default.slamDecay;
+
+    // The clock the whole screen runs on, assembled from the fields above so the inspector is the only place
+    // it's tuned.
+    TitleCrash.Tempo Tempo => new TitleCrash.Tempo
+    {
+        slamSeconds = slamSeconds,
+        crawlSeconds = crawlSeconds,
+        crawlShare = crawlShare,
+        slamDecay = slamDecay,
+    };
 
     [Header("Damage")]
     [Tooltip("Dents the two cars in the accident arrive already carrying. The racing pair stay clean.")]
@@ -133,16 +150,18 @@ public class TitleCrashScene : MonoBehaviour
         }
 
         _elapsed += Time.unscaledDeltaTime;
-        float s = duration <= 0f ? 1f : Mathf.Clamp01(_elapsed / duration);
-        _u = TitleCrash.Freeze(s, entrySpeed);
+
+        var tempo = Tempo;
+        _u = tempo.Clock(_elapsed);
 
         PoseCars();
         Collide();
         Smoulder();
 
         // The particle systems run on the same decelerating clock, so the sparks hang in the air mid-streak
-        // instead of burning out while the cars stand still.
-        float rate = TitleCrash.FreezeRate(s, entrySpeed);
+        // instead of burning out while the cars stand still. Rate is in choreography per second, where 1 is
+        // the pace the bursts below are authored at — so the crawl runs them at a few percent of normal.
+        float rate = tempo.Rate(_elapsed);
         SetSimulationSpeed(_sparks, rate);
         SetSimulationSpeed(_smoke, rate);
     }

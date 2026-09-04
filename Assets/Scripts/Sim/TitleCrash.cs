@@ -11,16 +11,18 @@ namespace Draftmaster.Sim
     // judged in Play Mode, but "does every car finish inside the right-hand third", "does the clock actually
     // reach zero" and "is the hero car the front-most one" are all answerable in EditMode.
     //
-    // Two clocks. `s` is wall clock, 0..1 across the whole run. `u` is choreography time, also 0..1, and it
-    // is what every pose is a function of. Freeze() maps one to the other: u opens several times faster than
-    // real time and sheds speed from the very first frame, reaching 1 at exactly the moment it reaches zero
-    // speed. Nothing eases its own motion — the cars fly at a constant rate in u — so the slowdown is time
-    // slowing, not four objects slowing down.
+    // Two clocks. Wall clock is real seconds since the first car was due. `u` is choreography time, 0..1, and
+    // it is what every pose is a function of. Tempo maps one to the other. Nothing eases its own motion — the
+    // cars fly at a constant rate in u — so the slowdown is time slowing, not four objects slowing down.
     //
     // Positions are in the 640x360 reference canvas the Iron Oval screens are laid out on, measured from the
     // bottom-left, so they line up with the menu column (which occupies x < 326) without knowing anything
-    // about the screen's real aspect. Rotations are degrees, and start rotations carry whole extra turns so a
-    // car spins into its resting angle rather than swinging to it.
+    // about the screen's real aspect.
+    //
+    // Rotations are the SPRITE's z angle, not the car's heading. The carset liveries are drawn nose-left, so
+    // a car pointing along heading h is drawn at h + 180 — the same convention SplineDriver and
+    // PlayerVehicleController run on (spriteFacesUp = false, angleOffsetDeg = 180). Get this wrong and the
+    // whole field drives in backwards, which is exactly what it used to do.
     public static class TitleCrash
     {
         // The reference canvas the poses below are authored against (PixelUITheme's ReferenceWidth/Height).
@@ -70,30 +72,83 @@ namespace Draftmaster.Sim
             public float severity;          // 0..1 from the closing speed, straight into VehicleDamage.OnImpact
         }
 
-        // Wall clock -> choreography time: u = 1 - (1-s)^n, which opens at n times real time and decelerates
-        // continuously, hitting exactly 1 with exactly zero speed. `entrySpeed` IS that n, so it reads as
-        // "the cars enter n times faster than the run averages": n = 2 is a flat, constant deceleration all
-        // the way in, and above that the entry is a burst and the last few pixels are a long settle. There is
-        // no cruising phase on purpose — the old constant-then-brake shape spent most of the run at one slow
-        // speed, which read as four cars sliding in rather than four cars arriving too fast to stop.
-        public static float Freeze(float s, float entrySpeed)
+        // Wall clock (real seconds) -> choreography time. Three beats, and every one of them is the CLOCK,
+        // not the cars: nothing in Field() eases itself, so what the eye reads as four cars braking is time
+        // braking underneath them.
+        //
+        //   SLAM   the cars are thrown into shot far too fast to follow, and time sheds speed from the first
+        //          frame. Half a second, and by the end of it the clock is barely moving. Nearly the whole
+        //          choreography happens in here.
+        //   CRAWL  the last sliver — the hit, the sparks, the last of the slide — played out at a
+        //          near-constant creep. Another half second.
+        //   STOP   nothing moves. The tableau is the title screen's art from here on.
+        //
+        // The two moving beats are joined at the RATE rather than at the position, so there is no kink where
+        // one hands over to the other: the slam decays down onto exactly the crawl's speed, and the crawl
+        // carries that speed to the end. The stop at the end IS abrupt, on purpose — but it cuts from the
+        // crawl rate, which is a couple of percent of the entry, so what it reads as is a pause.
+        public struct Tempo
         {
-            float n = Mathf.Max(1f, entrySpeed);
-            return Mathf.Clamp01(1f - Mathf.Pow(1f - Mathf.Clamp01(s), n));
-        }
+            public float slamSeconds;    // beat one: very fast -> very, very slow
+            public float crawlSeconds;   // beat two: super slow motion
+            public float crawlShare;     // how much of the choreography is saved for the crawl, 0..1
+            public float slamDecay;      // how sharply the slam sheds speed. 0 = no brake at all; higher = a slam
 
-        // How fast choreography time is running, relative to its opening rate: (1-s)^(n-1), the derivative of
-        // Freeze normalised to 1 at the entry. 0 once time has stopped — which is what the particle systems'
-        // simulation speed rides on, so the sparks slow with the cars instead of burning out over a still pile.
-        public static float FreezeRate(float s, float entrySpeed)
-        {
-            float n = Mathf.Max(1f, entrySpeed);
-            return Mathf.Clamp01(Mathf.Pow(1f - Mathf.Clamp01(s), n - 1f));
-        }
+            // What the tableau is authored around: half a second of slam, half a second of crawl, and only a
+            // few percent of the movement left for the crawl to spend — which is what makes it a crawl.
+            public static Tempo Default => new Tempo
+            {
+                slamSeconds = 0.5f,
+                crawlSeconds = 0.5f,
+                crawlShare = 0.06f,
+                slamDecay = 3f,
+            };
 
-        // Opening rate the tableau is authored around: a shade over the flat-deceleration 2, so the entry has
-        // some snap without the tail turning into a crawl.
-        public const float DefaultEntrySpeed = 2.4f;
+            public float Slam => Mathf.Max(1e-4f, slamSeconds);
+            public float Crawl => Mathf.Max(0f, crawlSeconds);
+            public float Decay => Mathf.Max(0f, slamDecay);
+
+            // Nothing is held back for a crawl that has no time to happen in, or the clock would never reach 1.
+            public float Share => Crawl <= 0f ? 0f : Mathf.Clamp(crawlShare, 0f, 0.9f);
+
+            public float RunSeconds => Slam + Crawl;
+
+            // Choreography per second during the crawl.
+            public float CrawlRate => Crawl <= 0f ? 0f : Share / Crawl;
+
+            // Choreography per second on the very first frame. Solved rather than authored: it is whatever
+            // makes the slam cover everything the crawl isn't spending, given how fast it decays.
+            public float EntryRate =>
+                CrawlRate + (Decay + 1f) * Mathf.Max(0f, (1f - Share) - CrawlRate * Slam) / Slam;
+
+            // Choreography time at `seconds` of wall clock. The slam is the integral of its own rate curve,
+            // so it lands on exactly (1 - Share) at the handover and the crawl walks the rest to 1.
+            public float Clock(float seconds)
+            {
+                if (seconds <= 0f) return 0f;
+                if (seconds >= RunSeconds) return 1f;
+
+                if (seconds < Slam)
+                {
+                    float ramp = (EntryRate - CrawlRate) * Slam / (Decay + 1f);
+                    return Mathf.Clamp01(CrawlRate * seconds
+                                         + ramp * (1f - Mathf.Pow(1f - seconds / Slam, Decay + 1f)));
+                }
+
+                return Mathf.Clamp01((1f - Share) + CrawlRate * (seconds - Slam));
+            }
+
+            // How fast choreography time is running at `seconds`, in choreography per second — so 1 means
+            // "the whole shot in a second", which is the pace the particle bursts are authored at and what
+            // their simulation speed rides on. Zero once the clock has stopped, which is what leaves the
+            // sparks hanging mid-flight over a still pile instead of burning out above it.
+            public float Rate(float seconds)
+            {
+                if (seconds < 0f || seconds >= RunSeconds) return 0f;
+                if (seconds >= Slam) return CrawlRate;
+                return CrawlRate + (EntryRate - CrawlRate) * Mathf.Pow(1f - seconds / Slam, Decay);
+            }
+        }
 
         // The two cars that are only racing, and the two that are having the accident. Index order is draw
         // order, rear-most first; the crash pair is 2 (turned) and 3 (turner, the hero).
@@ -104,7 +159,15 @@ namespace Draftmaster.Sim
 
         // The four cars, rear of the shot first. Every one drops in from above the top edge (y > CanvasHeight,
         // clear of its own rotated height) and travels downwards, so nothing is ever on screen when the
-        // sequence opens, nothing crosses the copy column on the way, and every one has landed by u = 1.
+        // sequence opens and nothing crosses the copy column on the way.
+        //
+        // Every car lands at exactly u = 1 rather than parking early. The clock spends its last half second
+        // creeping through the last few percent of u (see Tempo), so a car that finished at u = 0.85 would be
+        // standing still through the whole slow-motion beat — the one part of the shot anybody can actually
+        // watch. Landing on 1 means all four are still moving, by inches, right up to the pause.
+        //
+        // Rotations are sprite angles: heading + 180, because the liveries are drawn nose-left. Straight down
+        // the screen is a heading of -90, so a car driving down the shot is drawn at 90.
         //
         // THIS IS A TABLEAU, NOT A PILE-UP. It used to be four cars thrown at the same spot and separated by
         // Settle every frame, which is a solver running at speed on four bodies — and it looked like one:
@@ -128,15 +191,15 @@ namespace Draftmaster.Sim
                 new CarPlan
                 {
                     startPos = new Vector2(372f, 882f), endPos = new Vector2(372f, 252f),
-                    startRotation = -90f,               endRotation = -90f,
-                    arcPx = 0f, delay = 0f, travel = 0.86f, depth = 0,
+                    startRotation = 90f,                endRotation = 90f,
+                    arcPx = 0f, delay = 0f, travel = 1f, depth = 0,
                 },
                 // Racing, leading car. Nose-down and dead straight — no spin, nothing to settle.
                 new CarPlan
                 {
                     startPos = new Vector2(372f, 720f), endPos = new Vector2(372f, 90f),
-                    startRotation = -90f,               endRotation = -90f,
-                    arcPx = 0f, delay = 0f, travel = 0.86f, depth = 1,
+                    startRotation = 90f,                endRotation = 90f,
+                    arcPx = 0f, delay = 0f, travel = 1f, depth = 1,
                 },
                 // The car that gets turned: comes down the road square, leaves at 60 degrees to it. The
                 // rotation is the whole story, so it is a straight sweep with no extra turns — a car snapped
@@ -144,8 +207,8 @@ namespace Draftmaster.Sim
                 new CarPlan
                 {
                     startPos = new Vector2(520f, 640f), endPos = new Vector2(589f, 149f),
-                    startRotation = -90f,               endRotation = -30f,
-                    arcPx = 0f, delay = 0f, travel = 0.84f, depth = TurnedIndex,
+                    startRotation = 90f,                endRotation = 150f,
+                    arcPx = 0f, delay = 0f, travel = 1f, depth = TurnedIndex,
                 },
                 // The hero, and the one that did it: still pointing where it was going, carrying on into the
                 // space the other car has just left. Enters late so it is visibly arriving on the back of a
@@ -153,8 +216,8 @@ namespace Draftmaster.Sim
                 new CarPlan
                 {
                     startPos = new Vector2(470f, 690f), endPos = new Vector2(487f, 276f),
-                    startRotation = -80f,               endRotation = -80f,
-                    arcPx = -30f, delay = 0.06f, travel = 0.88f, depth = TurnerIndex,
+                    startRotation = 100f,               endRotation = 100f,
+                    arcPx = -30f, delay = 0.06f, travel = 0.94f, depth = TurnerIndex,
                 },
             };
         }
@@ -176,9 +239,11 @@ namespace Draftmaster.Sim
             public float severity;     // 0..1, straight into VehicleDamage.OnImpact
         }
 
-        // Late enough that the cars are visibly together, early enough that the sparks are still travelling
-        // when the clock runs out — a shower frozen mid-flight rather than one that has already landed.
-        public const float ImpactU = 0.90f;
+        // Inside the crawl, not the slam. Tempo saves the last `crawlShare` of the choreography for the slow
+        // half-second, so anything before u = 0.94 goes off while time is still a blur and nobody sees it.
+        // Early enough in the crawl that the sparks are still travelling when the clock runs out — a shower
+        // frozen mid-flight rather than one that has already landed.
+        public const float ImpactU = 0.955f;
 
         public static ImpactPlan[] Impacts()
         {
@@ -187,24 +252,28 @@ namespace Draftmaster.Sim
                 new ImpactPlan
                 {
                     striker = TurnerIndex, struck = TurnedIndex, atU = ImpactU,
-                    // Between the hero's nose and the other car's left rear quarter, which is where a car
-                    // gets turned from and where both dents therefore belong.
-                    pointPx = new Vector2(512f, 194f),
-                    normal = new Vector2(0.42f, -0.91f),
+                    // On the hero's nose at the moment the hit lands, aimed at the rear quarter of the car it
+                    // is turning — which is where a car gets turned from and where both dents therefore
+                    // belong. Struck off the poses at ImpactU rather than eyeballed, so retiming the shot and
+                    // leaving the flash behind is a test failure rather than a thing somebody notices later.
+                    pointPx = new Vector2(497f, 209f),
+                    normal = new Vector2(0.18f, -0.98f),
                     severity = 0.95f,
                 },
             };
         }
 
-        // Where on a car's bodywork the hit is written, in normalised body-local coordinates: x is along the
-        // car (+1 nose, -1 tail), y is across it. A panel is a spread of points rather than one, because a
-        // single dent on a 5m car is a dimple — a caved-in nose is the whole end of the car moving.
+        // Where on a car's bodywork the hit is written, in normalised SPRITE-local coordinates: x is along
+        // the car, y across it. The liveries are drawn nose-left, so the nose is at x = -1 and the tail at
+        // +1 — the same reason every rotation here is a heading plus 180. A panel is a spread of points
+        // rather than one, because a single dent on a 5m car is a dimple; a caved-in nose is the whole end
+        // of the car moving.
         //
         // `front` picks which end. The spread is deliberately uneven so the damage does not read as a
         // symmetrical stamp: a real hit folds one corner harder than the other.
         public static Vector2[] Panel(bool front)
         {
-            float x = front ? 0.94f : -0.94f;
+            float x = front ? -0.94f : 0.94f;
             return new[]
             {
                 new Vector2(x, front ? 0.55f : -0.62f),
@@ -213,7 +282,7 @@ namespace Draftmaster.Sim
             };
         }
 
-        // Where a car is at choreography time u. Linear in u on purpose (see Freeze), with a sine bow across
+        // Where a car is at choreography time u. Linear in u on purpose (see Tempo), with a sine bow across
         // the line of travel — sideways to a car coming down the screen — so it swings into the pile rather
         // than running in on a ruler. The bow is zero at both ends, so start and end poses are exactly as
         // authored; a negative arcPx bows the other way.

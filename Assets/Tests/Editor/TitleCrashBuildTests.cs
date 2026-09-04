@@ -123,8 +123,8 @@ public class TitleCrashBuildTests
     [Test]
     public void CarsArriveAlreadyDentedAndThePileAddsMoreOnImpact()
     {
-        // One Update builds the field and poses it at u = 0: pre-damage is on, but the first scripted
-        // impact isn't until u = 0.55, so this is the bodywork the cars turned up with.
+        // One Update builds the field and poses it at u = 0: pre-damage is on, but the scripted impact
+        // isn't until TitleCrash.ImpactU, so this is the bodywork the cars turned up with.
         var crash = Play(out var component, steps: 0);
         var cars = Cars(crash);
 
@@ -301,7 +301,6 @@ public class TitleCrashBuildTests
 
         type.GetField("layoutCanvas").SetValue(component, _canvas);
         type.GetField("startDelay").SetValue(component, 0f);
-        type.GetField("duration").SetValue(component, 1f);
 
         Step(component);                                   // builds, then poses at u = 0
         if (steps > 0) Drive(component, 0f, 1f, steps);
@@ -309,7 +308,8 @@ public class TitleCrashBuildTests
     }
 
     // Walks the sequence by writing the component's own clock, so it plays out the same way every run
-    // instead of depending on how long the editor took between Update calls.
+    // instead of depending on how long the editor took between Update calls. `from`/`to` are seconds, and
+    // the default tempo's whole run is one of them (half a second of slam, half a second of crawl).
     void Drive(Component component, float from, float to, int steps)
     {
         var elapsed = component.GetType().GetField("_elapsed", BindingFlags.Instance | BindingFlags.NonPublic);

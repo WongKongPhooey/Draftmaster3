@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Draftmaster.Sim;
 using NUnit.Framework;
 using UnityEditor;
@@ -18,68 +17,108 @@ public class TitleCrashTests
 {
     const string TitleScenePath = "Assets/Scenes/TitleScreen.unity";
 
-    // The opening pace the tableau is authored around, read off the choreography rather than restated here.
-    const float Entry = TitleCrash.DefaultEntrySpeed;
+    // The clock the tableau is authored around, read off the choreography rather than restated here.
+    static readonly TitleCrash.Tempo Beat = TitleCrash.Tempo.Default;
 
     // ------------------------------------------------------------------ the clock
 
     [Test]
     public void TheClockStartsAtZeroAndReachesExactlyOne()
     {
-        Assert.AreEqual(0f, TitleCrash.Freeze(0f, Entry), 1e-5f);
-        Assert.AreEqual(1f, TitleCrash.Freeze(1f, Entry), 1e-4f,
+        Assert.AreEqual(0f, Beat.Clock(0f), 1e-5f);
+        Assert.AreEqual(1f, Beat.Clock(Beat.RunSeconds), 1e-4f,
                         "The sequence has to be complete at the moment time stops, or the pile freezes half-built.");
+        Assert.AreEqual(1f, Beat.Clock(Beat.RunSeconds * 4f), 1e-4f,
+                        "The clock runs on past the end — the tableau has to hold, not carry on.");
     }
 
     [Test]
     public void TheClockOnlyEverRunsForwards()
     {
         float previous = -1f;
-        for (int i = 0; i <= 200; i++)
+        for (int i = 0; i <= 400; i++)
         {
-            float u = TitleCrash.Freeze(i / 200f, Entry);
+            float u = Beat.Clock(Beat.RunSeconds * i / 400f);
             Assert.GreaterOrEqual(u, previous, "Choreography time went backwards — the cars would rewind.");
             previous = u;
         }
     }
 
     [Test]
-    public void TimeComesToAStandstillRatherThanBeingCutOff()
+    public void TheRunIsHalfASecondOfSlamAndHalfASecondOfCrawl()
     {
-        // The last slice of wall clock should move the choreography almost not at all: that glide to nothing
-        // IS the effect. A hard stop would read as a dropped frame.
-        float lastStep = TitleCrash.Freeze(1f, Entry) - TitleCrash.Freeze(0.99f, Entry);
-        float firstStep = TitleCrash.Freeze(0.01f, Entry) - TitleCrash.Freeze(0f, Entry);
-        Assert.Less(lastStep, firstStep * 0.05f,
-                    "Time should be crawling by the end, not still running at anything like its opening rate.");
+        // The shape of the whole thing, in the terms it was asked for: a very fast entry that brakes to
+        // almost nothing inside half a second, then half a second of super slow motion, then a pause.
+        Assert.AreEqual(0.5f, Beat.slamSeconds, 0.05f);
+        Assert.AreEqual(0.5f, Beat.crawlSeconds, 0.05f);
+        Assert.AreEqual(1f, Beat.RunSeconds, 0.1f,
+                        "The whole sequence should be over in about a second.");
 
-        Assert.AreEqual(1f, TitleCrash.FreezeRate(0f, Entry), 1e-5f);
-        Assert.AreEqual(0f, TitleCrash.FreezeRate(1f, Entry), 1e-5f,
-                        "The particles ride this rate — anything above zero and the sparks keep burning after the freeze.");
+        // The slam does nearly all the work, which is the only way the crawl can be a crawl.
+        Assert.Greater(Beat.Clock(Beat.slamSeconds), 0.85f,
+                       "The cars still have a long way to go when the slow-motion beat starts — it would be a slide, not a crawl.");
+        Assert.Less(Beat.Clock(Beat.slamSeconds), 0.99f,
+                    "Nothing at all is left for the slow-motion beat — it would be half a second of a still image.");
     }
 
     [Test]
-    public void TheEntryIsQuickAndTheSlowdownNeverLetsUp()
+    public void TheEntryIsViolentAndTheBrakeNeverLetsUp()
     {
-        // What the shot needs is cars that arrive too fast to stop and then bleed that speed off the whole way
-        // in — not a slow constant slide with a brake tacked on the end.
-        const float step = 1f / 400f;
+        // What the shot needs is cars thrown in far too fast to follow, shedding that speed from the first
+        // frame — not a slow constant slide with a brake tacked on the end.
+        Assert.Greater(Beat.EntryRate, 20f * Beat.CrawlRate,
+                       "The cars enter at nothing like a multiple of the crawl — the slow-motion beat wouldn't read as slow.");
+        Assert.Greater(Beat.EntryRate, 4f,
+                       "The whole sequence would take longer than a quarter second even at the opening pace — that isn't a slam.");
 
-        float opening = TitleCrash.Freeze(step, Entry) / step;
-        Assert.Greater(opening, 1.8f,
-                       "The cars enter at barely more than the average pace — they slide in instead of being thrown in.");
+        // Half of everything is done in the first fifth of a second.
+        Assert.Greater(Beat.Clock(0.1f), 0.5f, "The entry isn't fast enough to read as a car being thrown in.");
 
         float previous = float.MaxValue;
-        for (int i = 0; i < 400; i++)
+        for (int i = 0; i <= 400; i++)
         {
-            float s = i / 400f;
-            float rate = (TitleCrash.Freeze(s + step, Entry) - TitleCrash.Freeze(s, Entry)) / step;
+            float t = Beat.RunSeconds * i / 400f;
+            float rate = Beat.Rate(t);
             Assert.LessOrEqual(rate, previous + 1e-3f,
-                               $"Choreography time speeds back up around s={s:0.00} — the slow-down has to be one continuous brake.");
+                               $"Choreography time speeds back up around t={t:0.000}s — the slow-down has to be one continuous brake.");
             previous = rate;
         }
+    }
 
-        Assert.Less(previous, 0.05f, "Time is still moving at the end — the pile wouldn't come to rest.");
+    [Test]
+    public void TheSlamHandsOverToTheCrawlWithoutAKink()
+    {
+        // The two beats are joined at the rate, so the seam is invisible: whatever speed the slam decays to
+        // is exactly the speed the crawl carries on at.
+        Assert.AreEqual(Beat.CrawlRate, Beat.Rate(Beat.slamSeconds - 1e-4f), Beat.CrawlRate * 0.05f,
+                        "The slam doesn't decay onto the crawl's speed — there'd be a visible step at the handover.");
+        Assert.AreEqual(1f - Beat.Share, Beat.Clock(Beat.slamSeconds), 1e-3f);
+    }
+
+    [Test]
+    public void TimeCrawlsThroughTheSlowBeatAndThenStopsDead()
+    {
+        float crawl = Beat.Rate(Beat.slamSeconds + Beat.crawlSeconds * 0.5f);
+        Assert.Greater(crawl, 0f, "Nothing moves during the slow-motion beat — it's a freeze, not a crawl.");
+        Assert.Less(crawl, Beat.EntryRate * 0.05f,
+                    "The 'slow motion' beat is still running at a serious fraction of the entry pace.");
+
+        Assert.AreEqual(0f, Beat.Rate(Beat.RunSeconds), 1e-5f,
+                        "The particles ride this rate — anything above zero and the sparks keep burning after the pause.");
+        Assert.AreEqual(0f, Beat.Rate(Beat.RunSeconds * 2f), 1e-5f);
+    }
+
+    [Test]
+    public void ATempoWithNoCrawlStillFinishesTheSequence()
+    {
+        // The crawl is tunable down to nothing in the inspector; a shot that then never reached u = 1 would
+        // freeze half-built.
+        var noCrawl = new TitleCrash.Tempo
+        {
+            slamSeconds = 0.5f, crawlSeconds = 0f, crawlShare = 0.06f, slamDecay = 3f,
+        };
+        Assert.AreEqual(1f, noCrawl.Clock(noCrawl.RunSeconds), 1e-4f);
+        Assert.AreEqual(0f, noCrawl.Rate(noCrawl.RunSeconds), 1e-5f);
     }
 
     // ------------------------------------------------------------------ the tableau
@@ -157,23 +196,94 @@ public class TitleCrashTests
     }
 
     [Test]
-    public void EveryCarHasLandedByTheTimeTheClockStops()
+    public void EveryCarLandsExactlyAsTheClockStopsAndNotBefore()
     {
+        // Landing early isn't just untidy: the clock spends its whole last half-second creeping through the
+        // last few percent of u, so a car that finished at u = 0.85 would stand perfectly still through the
+        // entire slow-motion beat — the one part of the shot anybody can actually watch.
         foreach (var plan in TitleCrash.Field())
         {
             Assert.Greater(plan.travel, 0f);
             Assert.LessOrEqual(plan.delay + plan.travel, 1f,
                                "A car is still in the air when time stops — it would freeze halfway across the screen.");
+            Assert.AreEqual(1f, plan.delay + plan.travel, 1e-3f,
+                            "A car parks before the clock does, so it's a still image through the slow-motion beat.");
             Assert.AreEqual(1f, TitleCrash.Evaluate(plan, 1f).progress, 1e-4f);
+            Assert.Less(TitleCrash.Evaluate(plan, 1f - Beat.Share).progress, 1f,
+                        "A car has already stopped when the crawl starts — nothing of it is left to watch in slow motion.");
         }
     }
 
     [Test]
-    public void CarsSpinIntoPlaceRatherThanSwingingToIt()
+    public void EveryCarDrivesInNoseFirstRatherThanBackwards()
     {
+        // The liveries are drawn nose-left, so a sprite at angle r is a car pointing along r + 180. Miss that
+        // and the whole field reverses down the screen at speed, which is precisely what it used to do.
         foreach (var plan in TitleCrash.Field())
-            Assert.Greater(Mathf.Abs(plan.startRotation - plan.endRotation), 180f,
-                           "A car turns less than half a rotation on its way in — it should tumble, not lean over.");
+        {
+            Vector2 travel = (plan.endPos - plan.startPos).normalized;
+            Assert.Greater(Vector2.Dot(Nose(plan.startRotation), travel), 0.9f,
+                           "A car enters pointing somewhere other than where it's going — it's driving in backwards.");
+        }
+    }
+
+    [Test]
+    public void OnlyTheCarThatGotTurnedEndsUpPointingOffItsLineOfTravel()
+    {
+        var field = TitleCrash.Field();
+        for (int i = 0; i < field.Length; i++)
+        {
+            Vector2 travel = (field[i].endPos - field[i].startPos).normalized;
+            float alignment = Vector2.Dot(Nose(field[i].endRotation), travel);
+
+            if (i == TitleCrash.TurnedIndex)
+                Assert.Less(alignment, 0.75f,
+                            "The car that's meant to have been turned finishes pointing straight down the road — nothing happened to it.");
+            else
+                Assert.Greater(alignment, 0.9f,
+                               $"Car {i} finishes sideways; only the turned car is supposed to be out of shape.");
+        }
+
+        Assert.Greater(Mathf.Abs(field[TitleCrash.TurnedIndex].endRotation -
+                                 field[TitleCrash.TurnedIndex].startRotation), 30f,
+                       "The turned car barely rotates on its way in — the hit reads as a nudge.");
+    }
+
+    // Which way a car is actually pointing, given the sprite angle it's drawn at.
+    static Vector2 Nose(float spriteRotationDeg)
+    {
+        float rad = (spriteRotationDeg + 180f) * Mathf.Deg2Rad;
+        return new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+    }
+
+    // How much daylight there is between two car bodies, in reference px. Separating-axis: the widest gap on
+    // any of the four body axes, which is 0 or less once they are touching.
+    static float Gap(TitleCrash.CarPose a, TitleCrash.CarPose b)
+    {
+        Vector2 between = b.position - a.position;
+        float widest = float.MinValue;
+
+        for (int i = 0; i < 4; i++)
+        {
+            float rad = (i < 2 ? a.rotation : b.rotation) * Mathf.Deg2Rad;
+            var axis = (i % 2 == 0)
+                ? new Vector2(Mathf.Cos(rad), Mathf.Sin(rad))
+                : new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
+
+            float reach = Mathf.Abs(Vector2.Dot(between, axis));
+            widest = Mathf.Max(widest, reach - Reach(a.rotation, axis) - Reach(b.rotation, axis));
+        }
+        return widest;
+    }
+
+    // Half the body's extent projected onto an axis: the same projection TitleCrash.Overlap works in.
+    static float Reach(float rotationDeg, Vector2 axis)
+    {
+        float rad = rotationDeg * Mathf.Deg2Rad;
+        var along = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+        var across = new Vector2(-along.y, along.x);
+        return TitleCrash.CarLengthPx * 0.5f * Mathf.Abs(Vector2.Dot(along, axis))
+             + TitleCrash.CarWidthPx * 0.5f * Mathf.Abs(Vector2.Dot(across, axis));
     }
 
     [Test]
@@ -226,57 +336,73 @@ public class TitleCrashTests
     }
 
     [Test]
-    public void ThePileEndsUpLeaningOnItselfRatherThanParkedApart()
+    public void TheCrashPairFinishOnTopOfEachOtherAndTheRacingPairKeepStation()
     {
-        var poses = TitleCrash.Tableau(TitleCrash.Field(), 1f);
+        // This is a tableau, not a pile-up (see Field): the only two cars that ever come near each other are
+        // the crash pair, and even they close up rather than interpenetrate. So "is it a crash" is measured
+        // as how much closer the crash pair get than anybody else, not as an overlap count.
+        var field = TitleCrash.Field();
+        var poses = TitleCrash.Tableau(field, 1f);
 
-        int touching = 0;
+        // Measured between the BODIES, not the centres: two cars side by side in adjacent lanes have their
+        // centres closer together than two cars nose-to-tail, so centre distance says nothing about whether
+        // anything is touching.
+        float crashPair = Gap(poses[TitleCrash.TurnerIndex], poses[TitleCrash.TurnedIndex]);
+        Assert.Less(crashPair, 1f,
+                    "The two cars in the accident finish apart from each other — nothing happened between them.");
+
         for (int a = 0; a < poses.Length; a++)
             for (int b = a + 1; b < poses.Length; b++)
-                if (TitleCrash.Overlap(poses[a].position, poses[a].rotation,
-                                       poses[b].position, poses[b].rotation, out _, out _))
-                    touching++;
+                if (!(TitleCrash.IsInTheCrash(a) && TitleCrash.IsInTheCrash(b)))
+                    Assert.Greater(Gap(poses[a], poses[b]), 5f,
+                                   $"Cars {a} and {b} are on top of each other, and only the crash pair should be.");
 
-        Assert.GreaterOrEqual(touching, 2,
-                              "Nothing in the frozen shot is touching anything else — that's four parked cars, not a crash.");
+        // The racing pair are running in company, and two cars that keep station cannot touch.
+        for (int step = 0; step <= 200; step++)
+        {
+            var walk = TitleCrash.Tableau(field, step / 200f);
+            Assert.IsFalse(TitleCrash.Overlap(walk[0].position, walk[0].rotation,
+                                              walk[1].position, walk[1].rotation, out _, out _),
+                           "The two cars that are only racing ran into each other — they're the clean half of the shot.");
+        }
     }
 
     [Test]
-    public void TheCarsConnectSeveralTimesWhileTheCrashIsPlaying()
+    public void TheOneAuthoredHitIsTheHeroTurningTheCarAheadInSlowMotion()
     {
-        var field = TitleCrash.Field();
-        var contacts = new List<TitleCrash.Contact>();
-        var open = new HashSet<int>();
-        var hits = new List<(float u, int a, int b, float severity)>();
+        var impacts = TitleCrash.Impacts();
+        Assert.AreEqual(1, impacts.Length,
+                        "The shot is built around one hit; more than that and the damage is a solver's opinion again.");
 
-        for (int step = 0; step <= 400; step++)
-        {
-            float u = step / 400f;
-            TitleCrash.Tableau(field, u, contacts);
+        var hit = impacts[0];
+        Assert.AreEqual(TitleCrash.HeroIndex, hit.striker,
+                        "The player's car isn't the one doing it, so the car you're meant to watch isn't in the crash.");
+        Assert.AreEqual(TitleCrash.TurnedIndex, hit.struck);
+        Assert.Greater(hit.severity, 0.6f, "The one hit in the shot is a love tap.");
+        Assert.That(hit.normal.magnitude, Is.EqualTo(1f).Within(0.05f),
+                    "The push direction has to be a unit vector — the sparks spray along it.");
 
-            var now = new HashSet<int>();
-            foreach (var hit in contacts)
-            {
-                int key = hit.a * field.Length + hit.b;
-                now.Add(key);
-                if (!open.Contains(key)) hits.Add((u, hit.a, hit.b, hit.severity));
-            }
-            open = now;
-        }
+        // It has to land inside the slow-motion beat, or it goes off while time is still a blur.
+        Assert.Greater(hit.atU, 1f - Beat.Share,
+                       "The hit fires during the slam — the sparks would be over before anyone could see them.");
+        Assert.Less(hit.atU, 1f - Beat.Share * 0.25f,
+                    "The hit fires so late there's no crawl left to watch the sparks travel through.");
 
-        Assert.GreaterOrEqual(hits.Count, 4, "The pile barely connects — there's nothing to spark off.");
+        // And it has to land where the two cars actually are at that moment: on the striker's nose, aimed at
+        // the car it is turning.
+        var poses = TitleCrash.Tableau(TitleCrash.Field(), hit.atU);
+        Vector2 nose = poses[hit.striker].position
+                       + Nose(poses[hit.striker].rotation) * (TitleCrash.CarLengthPx * 0.5f);
 
-        foreach (var hit in hits)
-        {
-            Assert.Greater(hit.u, 0f, "A hit lands before the sequence has started — the cars are stacked off screen there.");
-            Assert.That(hit.severity, Is.InRange(0.2f, 1f));
-            Assert.AreNotEqual(hit.a, hit.b);
-        }
-
-        Assert.Greater(hits.Max(h => h.severity), 0.6f,
-                       "Every contact is a love tap — the shot needs at least one proper hit in it.");
-        Assert.Greater(hits.Count(h => h.a == TitleCrash.HeroIndex || h.b == TitleCrash.HeroIndex), 0,
-                       "The hero car never touches anything, so the car you're meant to watch isn't in the crash.");
+        Assert.Less(Vector2.Distance(hit.pointPx, nose), 25f,
+                    "The flash goes off somewhere other than the front of the car that did it.");
+        Assert.Less(Gap(poses[hit.striker], poses[hit.struck]), 5f,
+                    "The two cars aren't together when the hit fires — the sparks would go off in mid-air.");
+        Assert.Greater(Vector2.Dot(hit.normal.normalized,
+                                   (poses[hit.struck].position - poses[hit.striker].position).normalized), 0f,
+                       "The push points away from the car being hit — the sparks would spray backwards.");
+        Assert.GreaterOrEqual(hit.pointPx.x, TitleCrash.ColumnRightPx,
+                              "The hit is over the copy column, so the flash would go off on the wordmark.");
     }
 
     [Test]
