@@ -2,8 +2,8 @@ namespace Draftmaster.Weekend
 {
     // Where in the world a booking actually happens.
     //
-    // A race weekend is a place, not a menu. The plan meeting is at the pit box with the car in bits behind
-    // you; the debrief is in your own motorhome; the drivers meeting and the press conference are in the
+    // A race weekend is a place, not a menu. The plan meeting is at the team's garage with the car in bits
+    // behind you; the debrief is in your own motorhome; the drivers meeting and the press conference are in the
     // room every circuit has, with a chair for every driver entered; signing is done through the fence at
     // the edge of the paddock with the fans on the other side of it; and watching somebody else's session
     // means sitting in a grandstand while the cars go past. The timetable says when. This says where — and
@@ -14,7 +14,7 @@ namespace Draftmaster.Weekend
     public enum WeekendVenue
     {
         None = 0,      // nothing to walk to — the player's own sessions hand off to the race scene
-        PitBox,        // the team's box on pit road: plan meetings, and where a broadcaster grabs you
+        PitBox,        // the team's garage in the paddock: plan meetings, and where a broadcaster grabs you
         Motorhome,     // the player's own RV in the drivers' lot: debriefs, and where you take an hour off
         MeetingRoom,   // the drivers' room: a top table and a seat for every driver at the circuit
         SigningFence,  // the fan barrier along the paddock boundary — you sign from the inside of it
@@ -41,13 +41,13 @@ namespace Draftmaster.Weekend
                 case ActivityKind.Debrief:      return WeekendVenue.Motorhome;
 
                 // Being shown how the phone works happens where a new driver is stood about anyway: at the
-                // box, with the crew chief who is going to be sending them half of what is on it.
+                // team's garage, with the crew chief who is going to be sending them half of what is on it.
                 case ActivityKind.Orientation:  return WeekendVenue.PitBox;
 
                 case ActivityKind.DriversMeeting: return WeekendVenue.MeetingRoom;
                 case ActivityKind.DriverIntros:   return WeekendVenue.IntroStage;
 
-                // A press conference is the room; a media hit is a camera crew catching you at the box.
+                // A press conference is the room; a media hit is a camera crew catching you at the garage.
                 case ActivityKind.PressConference: return WeekendVenue.MeetingRoom;
                 case ActivityKind.MediaHit:        return WeekendVenue.PitBox;
 
@@ -76,7 +76,7 @@ namespace Draftmaster.Weekend
         {
             switch (venue)
             {
-                case WeekendVenue.PitBox:       return "the pit box";
+                case WeekendVenue.PitBox:       return "your team's garage";
                 case WeekendVenue.Motorhome:    return "your motorhome";
                 case WeekendVenue.MeetingRoom:  return "the drivers' room";
                 case WeekendVenue.SigningFence: return "the fan fence";
@@ -93,7 +93,7 @@ namespace Draftmaster.Weekend
         {
             switch (venue)
             {
-                case WeekendVenue.PitBox:       return "Pit box";
+                case WeekendVenue.PitBox:       return "Team garage";
                 case WeekendVenue.Motorhome:    return "Motorhome";
                 case WeekendVenue.MeetingRoom:  return "Drivers' room";
                 case WeekendVenue.SigningFence: return "Fan fence";
@@ -109,7 +109,7 @@ namespace Draftmaster.Weekend
         {
             switch (venue)
             {
-                case WeekendVenue.PitBox:       return "Head to the pit box";
+                case WeekendVenue.PitBox:       return "Head to your team's garage";
                 case WeekendVenue.Motorhome:    return "Head back to your motorhome";
                 case WeekendVenue.MeetingRoom:  return "Head to the drivers' room";
                 case WeekendVenue.SigningFence: return "Head to the fan fence";

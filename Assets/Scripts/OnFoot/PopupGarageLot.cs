@@ -74,6 +74,18 @@ public class PopupGarageLot : MonoBehaviour
     readonly List<PopupGarageRig> _rigs = new();
     public IReadOnlyList<PopupGarageRig> Rigs => _rigs;
 
+    // The player's own garage: the rig carrying the number on the paint they are racing, read the same way
+    // the motorhome lot and the timing tower read it. This is where the team's weekend actually happens —
+    // the plan meeting is had here, not out on pit road.
+    public bool TryGetPlayerRig(out PopupGarageRig rig)
+    {
+        int number = CarIdentity.NumberOf(CarIdentity.FindPlayerCar());
+        if (number > 0 && TryGetRig(number, out rig)) return true;
+
+        rig = null;
+        return false;
+    }
+
     public bool TryGetRig(int carNumber, out PopupGarageRig rig)
     {
         for (int i = 0; i < _rigs.Count; i++)

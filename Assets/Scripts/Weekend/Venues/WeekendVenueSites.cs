@@ -104,6 +104,15 @@ public class WeekendVenueSites : MonoBehaviour
         // what it did. Eight seconds, then build anyway off whatever is there.
         float wait = 8f;
         while (GameObject.Find("MotorhomeLotBoundary") == null && wait > 0f) { wait -= Time.deltaTime; yield return null; }
+
+        // And for the garages, which the motorhome lot puts up once its own row exists. The plan meeting is
+        // held at the player's own rig, so building before they are parked would fall back to pit road.
+        float garageWait = 5f;
+        while (garageWait > 0f && (PopupGarageLot.Instance == null || PopupGarageLot.Instance.Rigs.Count == 0))
+        {
+            garageWait -= Time.deltaTime;
+            yield return null;
+        }
         if (PlayerMotorhome() == Vector3.zero)
             Debug.LogWarning("WeekendVenueSites: no motorhome parked yet — venues are placed off the paddock " +
                              "alone and the debrief has no venue.");
@@ -266,17 +275,47 @@ public class WeekendVenueSites : MonoBehaviour
 
     // ------------------------------------------------------------------ venues found on what exists
 
-    // The plan meeting happens at the car. The box marker is already drawn on pit road for the player's
-    // stall, so stand the meeting a couple of metres behind it, out of the way of a car coming in.
+    // The plan meeting happens at the team's garage — the rig in the paddock carrying the number on the
+    // player's car, with the car under its canopy and the room behind its door.
+    //
+    // It used to be held at the pit box marker, which is a stall painted on the racing surface of pit road.
+    // Constrained to the walkable area, that put the crew chief on the pit lane at the entrance to it:
+    // somewhere no team meets, and somewhere the player is standing in the way of a car coming in. The
+    // garage is where the team is, and it is the first place the demo sends anybody.
+    //
+    // Pit road is still the fallback, for a track with no garage lot in it.
     void PlacePitBox()
     {
         if (WeekendVenueAnchor.Exists(WeekendVenue.PitBox)) return;
 
+        if (TryPlayerGarage(out Vector3 garage))
+        {
+            PaddockProps.Anchor(_root, WeekendVenue.PitBox, garage, garage, arriveRange: 4f);
+            return;
+        }
+
         var box = FindFirstObjectByType<PlayerPitBoxMarker>();
         if (box == null) return;
 
+        Debug.LogWarning("WeekendVenueSites: no garage for the player's car, so the plan meeting is at the " +
+                         "pit box on pit road instead.");
         Vector3 at = Walkable(box.transform.position);
         PaddockProps.Anchor(_root, WeekendVenue.PitBox, at, at, arriveRange: 5f);
+    }
+
+    // Standing room at the player's garage: out of the door, on the canopy side, which is the side the
+    // walkway runs down and the side the car is parked under. Far enough out not to be inside the doorway
+    // the player walks through to reach the meeting room behind it.
+    static bool TryPlayerGarage(out Vector3 at)
+    {
+        at = Vector3.zero;
+
+        var lot = PopupGarageLot.Instance;
+        if (lot == null || !lot.TryGetPlayerRig(out var rig) || rig == null) return false;
+
+        Vector3 outside = rig.DoorWorldPosition + (Vector3)(rig.DoorWorldDirection * 2.5f);
+        at = Walkable(outside);
+        return true;
     }
 
     // The debrief is had sitting down in your own motorhome — the anchor is its door, and the conversation
