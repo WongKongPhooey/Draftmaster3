@@ -17,24 +17,45 @@ A trace does not have that problem. It says where the road actually goes.
 
 ```
 trackId          the id used everywhere else (Resources/Tracks/<id>.asset, the calendar, the packages)
-osmWayId         the OSM way it came from, so it can be looked up or re-fetched
-osmName          the name the mapper gave it — how the right ring was identified
+osmName          the venue name the ring was identified against
+foundBy          which query turned it up, so a hand-fixed trace can say so
 publishedMiles   the lap length from TrackDimensions
 tracedMetres     the length of the trace as measured, for comparison
-geometry         the centreline, lat/lon, closed (first node == last node)
+namedShare       how much of the ring runs on way a mapper actually named
+geometry         the centreline, lat/lon, first node == last node
 ```
 
 ## How they were made
 
-An Overpass query for `highway=raceway` ways near the venue, then, of the closed rings it returns, the one a
-mapper actually named — a venue usually has several similar rings (the racing surface, edges traced
-separately, an infield road course) and length alone cannot tell them apart. Whatever is chosen is then
-**checked against the published lap length** and refused if it is more than 12% out, which is what stops a
-kart track or a drag strip in the same infield being imported as the speedway.
+An Overpass query for `highway=raceway` ways near the venue, then a ring is found among them:
+
+- a circuit mapped as **one closed way** is taken as it stands;
+- one mapped as **several open ways** — most of the big ones — is walked: follow the road and, at every
+  junction, carry straight on. That is what a lap does; the pit road and the infield roads leave at an
+  angle. Small gaps in the mapping are hopped if the road carries on straight the other side.
+
+Every ring is then **checked against the published lap length** and refused if it is more than 12% out,
+which is what stops a kart track or a drag strip in the same infield being imported as the speedway. A ring
+that **crosses itself** is refused outright: that is the signature of infield service roads chained into a
+loop of roughly the right size, which is exactly what Daytona offers if you let it.
 
 Re-fetching is a manual step on purpose. These are committed so an import is reproducible and needs no
 network, and so that a change to a track's shape shows up as a reviewable diff rather than appearing one day
 because somebody edited a map.
+
+## Which venues have one, and which do not
+
+Twenty-one venues have a trace. Thirteen of those import: the rest are refused by the importer itself,
+because the shape it reads does not close to within 3% of its own lap, and a reading that far out is worse
+than the generated or hand-authored geometry it would replace. Refused today: Atlanta, Kansas, Mexico City,
+Mid-Ohio, Milwaukee, Portland, Rockingham, Sonoma. Watkins Glen is skipped on purpose — it is hand-measured
+off satellite imagery and a trace does not improve on it.
+
+The twelve venues with no trace at all — Martinsville, North Wilkesboro, Nashville, Homestead, Charlotte,
+Daytona, Talladega, Indianapolis, COTA, Road America, Lime Rock and Watkins Glen — are not a bug in the
+fetch. **OSM's raceway mapping is incomplete at those venues**: Talladega has 3,345m of its 4,281m lap drawn
+and Daytona 3,368m of 4,023m, with the rest simply not there. A venue with no usable trace keeps its
+generated geometry, which is why the generator stays.
 
 ## What a trace cannot tell you
 

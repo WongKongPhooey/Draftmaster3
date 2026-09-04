@@ -87,7 +87,12 @@ public class OsmTrackGeometryTests
         // The whole point. A 41 degree kink is the difference between Phoenix and a generic oval, and it is
         // shallow enough that a careless threshold reads it as more straight.
         var found = OsmTrackGeometry.Segment(Trace(RoundedTriangle()));
-        var turns = found.FindAll(p => p.isTurn);
+
+        // Corners, not every piece that bends: a run that reads as straight keeps a couple of degrees of
+        // its own, because a straight that bows is a real thing (a D-shaped oval is mostly bow) and
+        // throwing that heading away is what leaves a lap hundreds of metres open. Those shallow pieces
+        // come back as turns of a few degrees and the importer treats them as straights.
+        var turns = found.FindAll(p => p.isTurn && Mathf.Abs(p.angle) > 10f);
 
         Assert.AreEqual(3, turns.Count, "The rounded triangle didn't come back with three corners: " + Describe(found));
 
@@ -120,6 +125,28 @@ public class OsmTrackGeometryTests
         var ends = found.FindAll(p => p.isTurn && Mathf.Abs(p.angle) > 120f);
         Assert.GreaterOrEqual(ends.Count, 2, "Both big ends should survive any plausible trace: " + Describe(found));
         Assert.AreEqual(1640f, LapGeometry.TotalLength(found), 60f, "The lap came back the wrong length.");
+    }
+
+    [Test]
+    public void ABullringKeepsItsShortStraights()
+    {
+        // A bullring corners several times faster than a superspeedway — 0.7 degrees per metre against 0.3
+        // — so a threshold picked to catch the big place's gentle D reads most of the small one's lap as
+        // cornering. Bristol, traced, came back with 14m straights on an 858m lap: the corners had eaten
+        // them. The lap here is smaller than Bristol's and its straights shorter, which is the harder case.
+        var lap = new List<LapGeometry.Piece>
+        {
+            new LapGeometry.Piece(false, 60f, 0f),
+            new LapGeometry.Piece(true, 235f, 180f),
+            new LapGeometry.Piece(false, 60f, 0f),
+            new LapGeometry.Piece(true, 235f, 180f),
+        };
+        var found = OsmTrackGeometry.Segment(Trace(lap));
+
+        Assert.AreEqual(4, found.Count, "A bullring didn't come back as two straights and two ends: " + Describe(found));
+        foreach (var piece in found)
+            if (!piece.isTurn)
+                Assert.Greater(piece.length, 35f, "A 60m straight was eaten by the corners: " + Describe(found));
     }
 
     [Test]

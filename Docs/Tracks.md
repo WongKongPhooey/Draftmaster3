@@ -151,6 +151,69 @@ its lap length:
 It is a **starting point, not a finished track.** Real ovals have unequal radii and progressive banking.
 Generate, then tune the numbers in the inspector with `TrackBuilder`'s racing-line gizmo on.
 
+## Traced geometry, which beats any formula
+
+A published lap length describes a **distance, not a shape**. "A 1,551 ft back stretch on a 1.022 mile lap"
+is equally true of a long thin oval and of a rounded triangle — and Phoenix is the second one, but was
+generated as the first: its corners came out 34 m tighter than the real ones and its straights 92 m too
+long. No amount of tuning `turnShareOfLap` fixes that, because the input never carried the shape.
+
+A traced centreline does. `Assets/TrackTraces/<id>.json` holds a circuit as OpenStreetMap draws it, and
+`Draftmaster > Tracks > Import Traced Geometry For Every Trace` reads the shape back out of it:
+
+1. **Project** lat/lon to metres (longitude scaled by the cosine of the latitude, or every circuit comes
+   out stretched along one axis).
+2. **Resample** to an even spacing. Mappers click densely round corners and sparsely down straights, so raw
+   node spacing measures the tracing rather than the road, and curvature computed off it is nonsense.
+3. **Smooth**, then **segment** on degrees-per-metre: a run above the threshold is a corner, below it a
+   straight. Slivers are merged, so a wobble in somebody's tracing does not come back as a corner.
+4. **Close the lap.** Corner angles fix every heading, so each corner contributes a fixed displacement and
+   each straight contributes its length along a fixed direction — closure is linear in the lengths, and
+   `LapGeometry` takes the least-norm answer, which disturbs the measured numbers least.
+5. **Rescale** to the published lap length. Uniform, so a closed lap stays closed.
+
+**Only the plan view comes from the trace.** Banking is not in OSM at all and width almost never is for
+raceways, so those, the pit lane, the speed limits and the lap counts still come from `TrackDimensions`;
+the import replaces a track asset's main line and nothing else.
+
+### Closing an oval is not the same problem as closing a road course
+
+Prefer to move **only the straights** — on a hand-measured lap the corners are the part that was actually
+surveyed. That works for a rounded triangle or a road course, whose straights point in several directions.
+
+It cannot work for a plain oval. Its two straights are **antiparallel**, so between them they can only move
+the far end of the lap along one axis; the perpendicular error has nowhere to go and the solve either fails
+or asks for a straight of negative length. On an oval that error *is* the corner radius, so the fallback
+lets every segment give a little — for a corner, its arc length and therefore its radius. Both paths are in
+`LapGeometry.Close`, and both are tested.
+
+### Getting the traces
+
+`Assets/TrackTraces/README.md` covers provenance and the ODbL, which is worth settling deliberately before
+this ships. The fetch is a manual step on purpose: traces are committed so an import is reproducible,
+needs no network, and shows a change to a track's shape as a reviewable diff rather than one appearing
+because somebody edited a map.
+
+What identifies a circuit is not its coordinates but a **check against the published lap length** — a
+venue has several similar rings near each other (the racing surface, edges traced separately, an infield
+road course, a kart track) and only the length test tells them apart.
+
+### The import refuses its own bad readings
+
+How much the closure solve had to move is the honest measure of whether a reading describes the circuit.
+A good one is a few metres out. A bad one is hundreds, and the solve then buys closure by moving corner
+radii and straight lengths that were measured off the real thing — so past **3% of the lap** the import is
+refused and the asset left alone. That is what keeps a poor trace of a road course from replacing a layout
+someone authored corner by corner.
+
+Twenty-one venues have a trace and thirteen of them import: Bristol, Bowman Gray, Darlington, Dover, Fort
+Worth, Gateway, Iowa, Las Vegas, Michigan, New Hampshire, Phoenix, Pocono and Richmond. The rest are
+refused for now. Watkins Glen is skipped by name — it is hand-measured off satellite imagery.
+
+The other twelve venues have **no usable trace at all**, and that is a hole in OSM rather than in the
+fetch: Talladega has 3,345m of its 4,281m lap drawn as raceway and Daytona 3,368m of 4,023m, the rest
+simply absent. Those keep their generated geometry, which is why the generator stays.
+
 ## Road courses, and the one oval no formula fits
 
 An oval is a formula. A road course is not - so the ten road and street circuits are **authored corner by
@@ -242,6 +305,11 @@ that way round means the numbers can be argued about in one file rather than hun
 | `Assets/Scripts/Tracks/Core/TrackDimensions.cs` | Published length, width and banking for every venue on the three calendars. |
 | `Assets/Scripts/Tracks/Core/RoadCourseGeometry.cs` | The road-course solver: residual curvature onto the links, exact closure by least-norm. |
 | `Assets/Scripts/Tracks/Core/RoadCourseLayouts.cs` | The authored corner sequences, circuit by circuit (plus Pocono). |
+| `Assets/Scripts/Tracks/Core/LapGeometry.cs` | A lap as straights and corners: does it close, and make it. Used by both hand-measured and traced geometry. |
+| `Assets/Scripts/Tracks/Core/OsmTrackGeometry.cs` | Reading a shape out of a traced centreline: project, resample, smooth, segment. |
+| `Assets/Editor/OsmTrackImporter.cs` | Trace JSON → a track asset's main line. Banking and width still come from `TrackDimensions`. |
+| `Assets/Editor/LegacyTrackPort.cs` | The other way in: a legacy `TrackInfo` (Phoenix, hand-measured) ported to the spline system. |
+| `Assets/TrackTraces/` | The committed traces, one JSON per venue, plus their provenance and licence. |
 | `Assets/Scripts/Tracks/RoadCourseFactory.cs` | Adapter: solved road course -> `TrackInfoV2` asset. |
 | `Assets/Scripts/Tracks/TrackCatalog.cs` | id → catalogue row, geometry asset, package prefab. DB first, seed list fallback. |
 | `Assets/Scripts/Tracks/TrackSelection.cs` | Which track the next race scene builds. |
@@ -256,6 +324,7 @@ that way round means the numbers can be argued about in one file rather than hun
 | `Assets/Tests/Editor/OvalGeometryTests.cs` | Lap length, closure, tri-oval, paperclip, racing line, pit lane, tuning. |
 | `Assets/Tests/Editor/TrackDimensionsTests.cs` | Every venue solves: closure, length, width, corner count, no self-intersection. |
 | `Assets/Tests/Editor/BuiltTrackAssetTests.cs` | The built assets on disk measure what they claim, and every package is wired. |
+| `Assets/Tests/Editor/OsmTrackGeometryTests.cs` | A lap walked into points comes back as the lap that went in, noise and all; closure on both paths. |
 
 ## The shared race scene
 

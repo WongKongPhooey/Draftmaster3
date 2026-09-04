@@ -25,6 +25,10 @@ namespace Draftmaster.Tracks
     // heading by a few degrees. LapGeometry finishes the job.
     public static class OsmTrackGeometry
     {
+        // Below this a run that reads as straight really is straight, and its leftover heading is a
+        // mapper's hand rather than the road.
+        const float StraightWobbleDegrees = 2f;
+
         public struct LatLon
         {
             public double lat, lon;
@@ -49,6 +53,18 @@ namespace Draftmaster.Tracks
             [Tooltip("Pieces shorter than this (m) are folded into their neighbour rather than kept as a " +
                      "segment of their own.")]
             public float minPieceMetres = 25f;
+            [Tooltip("Pick the cornering threshold from the trace itself rather than using the fixed one. " +
+                     "A bullring and a superspeedway do not corner at the same rate, and a single number " +
+                     "that suits one eats the other's straights.")]
+            public bool adaptiveThreshold = true;
+            [Tooltip("Multiplies whichever threshold is in force. Below 1 finds gentler bends — the bow in " +
+                     "a D-shaped oval's back straight — at the cost of cutting the lap into more pieces.")]
+            public float thresholdScale = 1f;
+            [Tooltip("Longest corner, in degrees, before it is cut into several arcs. 0 keeps every corner " +
+                     "as one arc of constant radius. A real corner opens and tightens down its length, and " +
+                     "one arc cannot say so — Michigan's ends, read as single arcs, leave the lap 353m " +
+                     "open. The importer tries several values and keeps whichever describes the trace best.")]
+            public float maxTurnDegrees = 0f;
         }
 
         // Lat/lon onto a local metric plane, centred on the track. Equirectangular: at the size of a
@@ -124,34 +140,116 @@ namespace Draftmaster.Tracks
             Smooth(curvature, Mathf.Max(1, settings.smoothWindow));
 
             // Cut into runs of "turning" and "not turning".
-            for (int i = 0; i < curvature.Length; i++)
-            {
-                bool turning = Mathf.Abs(curvature[i]) > settings.turnThresholdDegPerMetre;
-                float len = step[i + 1];
-                float ang = heading[i + 1] - heading[i];
+            float lapMetres = 0f;
+            for (int i = 0; i < n; i++) lapMetres += step[i];
+            float threshold = (settings.adaptiveThreshold
+                               ? ChooseThreshold(lapMetres, settings.turnThresholdDegPerMetre)
+                               : settings.turnThresholdDegPerMetre)
+                            * Mathf.Max(0.05f, settings.thresholdScale);
 
-                if (lap.Count > 0 && lap[lap.Count - 1].isTurn == turning)
-                {
-                    var last = lap[lap.Count - 1];
-                    last.length += len;
-                    last.angle += ang;
-                    lap[lap.Count - 1] = last;
-                }
-                else
-                {
-                    lap.Add(new LapGeometry.Piece(turning, len, ang));
-                }
+            int runStart = 0;
+            bool runTurning = Mathf.Abs(curvature[0]) > threshold;
+            for (int i = 1; i <= curvature.Length; i++)
+            {
+                bool turning = i < curvature.Length && Mathf.Abs(curvature[i]) > threshold;
+                if (i < curvature.Length && turning == runTurning) continue;
+
+                AddRun(lap, runStart, i - 1, runTurning, step, heading, settings);
+                runStart = i;
+                runTurning = turning;
             }
 
             MergeSlivers(lap, settings.minPieceMetres);
             JoinTheSeam(lap);
+            // What to do with the heading a "straight" accumulated.
+            //
+            // A metre or two of it is a mapper's hand and belongs to nobody, so it is dropped. Several
+            // degrees is not noise — it is a straight that BOWS, which is most of what makes a D-shaped
+            // oval a D. Michigan's back stretch bends about five degrees, and throwing that away leaves the
+            // lap 353m open, an error the closure solve then has to take out of the corner radii. So a run
+            // that bends that much is handed back as the shallow turn it is; the importer gives a corner of
+            // a few degrees the top speed of a straight anyway.
             for (int i = 0; i < lap.Count; i++)
             {
                 var piece = lap[i];
-                if (!piece.isTurn) piece.angle = 0f;    // a straight's leftover wobble belongs to nobody
+                if (!piece.isTurn)
+                {
+                    if (Mathf.Abs(piece.angle) >= StraightWobbleDegrees) piece.isTurn = true;
+                    else piece.angle = 0f;
+                }
                 lap[i] = piece;
             }
             return lap;
+        }
+
+        // One run of samples, turning or not, becomes one piece — or, for a long corner, several.
+        //
+        // A real corner is rarely one radius. Michigan's ends open out, and described as single arcs the
+        // lap misses its own start by 353m: the model cannot say what the road does, and the closure solve
+        // then spreads that error over every segment. Cutting a long corner into shorter arcs lets each one
+        // fit the radius it actually has — which is also how a circuit is numbered, since a NASCAR oval has
+        // four turns rather than two.
+        //
+        // Off by default, because a corner that IS one radius should stay one piece. The importer decides,
+        // by reading the trace several ways and keeping whichever joins up.
+        static void AddRun(List<LapGeometry.Piece> lap, int from, int to, bool turning,
+                           float[] step, float[] heading, Settings settings)
+        {
+            if (to < from) return;
+
+            float length = 0f;
+            for (int i = from; i <= to; i++) length += step[i + 1];
+            float angle = heading[to + 1] - heading[from];
+
+            int chunks = 1;
+            if (turning && settings.maxTurnDegrees > 1f)
+                chunks = Mathf.Clamp(Mathf.CeilToInt(Mathf.Abs(angle) / settings.maxTurnDegrees), 1, 12);
+
+            if (chunks == 1 || length < settings.minPieceMetres * chunks)
+            {
+                lap.Add(new LapGeometry.Piece(turning, length, angle));
+                return;
+            }
+
+            // Cut by ANGLE rather than by distance, so each arc covers the same amount of turning and a
+            // tightening corner gives a short arc where it is tight and a long one where it is open.
+            float per = angle / chunks;
+            int cutFrom = from;
+            for (int c = 1; c <= chunks; c++)
+            {
+                float wanted = per * c;
+                int cutTo = to;
+                for (int i = cutFrom; i <= to; i++)
+                {
+                    if (Mathf.Abs(heading[i + 1] - heading[from]) >= Mathf.Abs(wanted)) { cutTo = i; break; }
+                }
+                if (c == chunks) cutTo = to;
+
+                float chunkLength = 0f;
+                for (int i = cutFrom; i <= cutTo; i++) chunkLength += step[i + 1];
+                lap.Add(new LapGeometry.Piece(true, chunkLength, heading[cutTo + 1] - heading[cutFrom]));
+
+                cutFrom = cutTo + 1;
+                if (cutFrom > to) break;
+            }
+        }
+
+        // Where cornering starts, taken from the circuit rather than assumed.
+        //
+        // One fixed figure cannot serve every venue, because cornering rate scales with the size of the
+        // place. Bristol's ends turn at 0.7 degrees per metre and Michigan's D at 0.3, so a threshold low
+        // enough to catch Michigan reads most of Bristol's lap as corner: its 61m straights came back as
+        // 14m of themselves.
+        //
+        // What every closed lap has in common is that it turns through 360 degrees, so 360/lap is the rate
+        // an average metre of THIS circuit turns at, whatever its size. Half of that separates the two
+        // populations well: a corner turns several times faster than the lap average and a straight far
+        // slower. It stays inside a band around the authored figure so that a trace which is all noise, or
+        // a circuit with no straights in it, cannot produce a meaningless threshold.
+        static float ChooseThreshold(float lapMetres, float fallback)
+        {
+            if (lapMetres < 50f) return fallback;
+            return Mathf.Clamp(0.5f * 360f / lapMetres, fallback * 0.5f, fallback * 6f);
         }
 
         // A trace has short bursts of noise in it — a couple of metres reading as a corner in the middle of a
