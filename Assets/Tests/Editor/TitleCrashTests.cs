@@ -215,20 +215,33 @@ public class TitleCrashTests
     }
 
     [Test]
-    public void EveryCarDrivesInNoseFirstRatherThanBackwards()
+    public void EveryCarDrivesInNoseFirstExceptTheOneThatIsAlreadySliding()
     {
         // The liveries are drawn nose-left, so a sprite at angle r is a car pointing along r + 180. Miss that
         // and the whole field reverses down the screen at speed, which is precisely what it used to do.
-        foreach (var plan in TitleCrash.Field())
+        //
+        // The exception is the car that gets T-boned, and it is the exception on purpose: it lost it before
+        // the shot opened and slides in ACROSS its own line of travel. That is the only reason there is a
+        // flank pointing up the road for anything to hit — a field where every car is nose-first has no
+        // T-bone in it, only a rear-ender.
+        var field = TitleCrash.Field();
+        for (int i = 0; i < field.Length; i++)
         {
-            Vector2 travel = (plan.endPos - plan.startPos).normalized;
-            Assert.Greater(Vector2.Dot(Nose(plan.startRotation), travel), 0.9f,
-                           "A car enters pointing somewhere other than where it's going — it's driving in backwards.");
+            Vector2 travel = (field[i].endPos - field[i].startPos).normalized;
+            float alignment = Vector2.Dot(Nose(field[i].startRotation), travel);
+
+            if (i == TitleCrash.TurnedIndex)
+                Assert.Less(Mathf.Abs(alignment), 0.6f,
+                            "The car that's supposed to slide in sideways enters pointing down the road — " +
+                            "there's no flank presented to hit, so the crash isn't a T-bone.");
+            else
+                Assert.Greater(alignment, 0.9f,
+                               $"Car {i} enters pointing somewhere other than where it's going — it's driving in backwards.");
         }
     }
 
     [Test]
-    public void OnlyTheCarThatGotTurnedEndsUpPointingOffItsLineOfTravel()
+    public void OnlyTheSlidingCarEndsUpBroadsideToItsLineOfTravel()
     {
         var field = TitleCrash.Field();
         for (int i = 0; i < field.Length; i++)
@@ -237,16 +250,20 @@ public class TitleCrashTests
             float alignment = Vector2.Dot(Nose(field[i].endRotation), travel);
 
             if (i == TitleCrash.TurnedIndex)
-                Assert.Less(alignment, 0.75f,
-                            "The car that's meant to have been turned finishes pointing straight down the road — nothing happened to it.");
+                // Not merely "off its line" — square across it, or the hero arrives at a corner rather than
+                // a door and the two dents come out the same shape as each other.
+                Assert.Less(Mathf.Abs(alignment), 0.35f,
+                            "The car being T-boned isn't broadside when it's hit — it's a glancing blow, " +
+                            "and the whole point of the shot is that the two panels deform differently.");
             else
                 Assert.Greater(alignment, 0.9f,
-                               $"Car {i} finishes sideways; only the turned car is supposed to be out of shape.");
+                               $"Car {i} finishes sideways; only the sliding car is supposed to be out of shape.");
         }
 
         Assert.Greater(Mathf.Abs(field[TitleCrash.TurnedIndex].endRotation -
                                  field[TitleCrash.TurnedIndex].startRotation), 30f,
-                       "The turned car barely rotates on its way in — the hit reads as a nudge.");
+                       "The sliding car barely rotates on its way in — it reads as parked at an angle rather " +
+                       "than as a car that has lost it and is still coming round.");
     }
 
     // Which way a car is actually pointing, given the sprite angle it's drawn at.
@@ -327,9 +344,18 @@ public class TitleCrashTests
                     bool through = TitleCrash.Overlap(poses[a].position, poses[a].rotation,
                                                       poses[b].position, poses[b].rotation,
                                                       out _, out float depth);
-                    Assert.IsFalse(through && depth > 1f,
-                                   $"Cars {a} and {b} are {depth:0.0}px inside each other at u={u:0.00} — " +
-                                   "they're drawn through each other rather than crashing.");
+
+                    // The crash pair are allowed to bury into each other, and have to be: opaque liveries
+                    // held at a hard zero draw as two rectangles meeting along a line, which reads as two
+                    // cars parked together rather than one buried in the other. Everybody else still gets
+                    // no allowance at all.
+                    float allowed = TitleCrash.IsInTheCrash(a) && TitleCrash.IsInTheCrash(b)
+                        ? TitleCrash.Bite(u) + 1f
+                        : 1f;
+
+                    Assert.IsFalse(through && depth > allowed,
+                                   $"Cars {a} and {b} are {depth:0.0}px inside each other at u={u:0.00} " +
+                                   $"(allowed {allowed:0.0}) — they're drawn through each other rather than crashing.");
                 }
             }
         }
@@ -368,7 +394,7 @@ public class TitleCrashTests
     }
 
     [Test]
-    public void TheOneAuthoredHitIsTheHeroTurningTheCarAheadInSlowMotion()
+    public void TheOneAuthoredHitIsTheHeroTBoningTheSliderInSlowMotion()
     {
         var impacts = TitleCrash.Impacts();
         Assert.AreEqual(1, impacts.Length,
@@ -384,12 +410,12 @@ public class TitleCrashTests
 
         // It has to land inside the slow-motion beat, or it goes off while time is still a blur.
         Assert.Greater(hit.atU, 1f - Beat.Share,
-                       "The hit fires during the slam — the sparks would be over before anyone could see them.");
+                       "The hit fires during the slam — the crush would be over before anyone could see it.");
         Assert.Less(hit.atU, 1f - Beat.Share * 0.25f,
-                    "The hit fires so late there's no crawl left to watch the sparks travel through.");
+                    "The hit fires so late there's no crawl left to watch the bodywork fold through.");
 
         // And it has to land where the two cars actually are at that moment: on the striker's nose, aimed at
-        // the car it is turning.
+        // the car it is about to fold up.
         var poses = TitleCrash.Tableau(TitleCrash.Field(), hit.atU);
         Vector2 nose = poses[hit.striker].position
                        + Nose(poses[hit.striker].rotation) * (TitleCrash.CarLengthPx * 0.5f);
@@ -403,6 +429,155 @@ public class TitleCrashTests
                        "The push points away from the car being hit — the sparks would spray backwards.");
         Assert.GreaterOrEqual(hit.pointPx.x, TitleCrash.ColumnRightPx,
                               "The hit is over the copy column, so the flash would go off on the wordmark.");
+    }
+
+    [Test]
+    public void TheHitLandsSquareInTheSlidersDoorRatherThanOnACorner()
+    {
+        // This is what makes the shot worth staging: one contact where the two panels either side of it have
+        // to deform completely differently. A narrow nose driven into a long flat flank gouges deep and
+        // local; that same flank pressed back into the nose creases it right across. Let the hero arrive at
+        // an angle, or on a corner, and both dents come out the same shape — which is exactly the failure
+        // the old crater model had, reintroduced through the choreography instead of through the maths.
+        var hit = TitleCrash.Impacts()[0];
+        var poses = TitleCrash.Tableau(TitleCrash.Field(), hit.atU);
+
+        Vector2 heading = Nose(poses[hit.striker].rotation);
+        float rad = poses[hit.struck].rotation * Mathf.Deg2Rad;
+        Vector2 flank = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));   // the struck car's long axis
+
+        Assert.Less(Mathf.Abs(Vector2.Dot(heading, flank)), 0.35f,
+                    "The hero arrives more than 20 degrees off square to the car it's hitting — that's a " +
+                    "sideswipe down the side, not a T-bone into the door.");
+
+        // Where along the struck car the nose lands: 0 is the middle of the door, ±half a car is a corner.
+        Vector2 noseAt = poses[hit.striker].position + heading * (TitleCrash.CarLengthPx * 0.5f);
+        float along = Vector2.Dot(noseAt - poses[hit.struck].position, flank);
+
+        Assert.Less(Mathf.Abs(along), TitleCrash.CarLengthPx * 0.25f,
+                    $"The nose lands {along:0}px along the struck car — it's clipping a corner rather than " +
+                    "going into the middle of the flank, so the deep local gouge never happens.");
+    }
+
+    [Test]
+    public void TheCrushDevelopsAcrossTheWholeSlowMotionBeatRatherThanInOneFrame()
+    {
+        // A dent that appears fully formed between two frames is a decal. The bodywork model can be pressed
+        // deeper a slice at a time, so the fold is spent across the crawl and the last thing the tableau does
+        // before it freezes is give way.
+        var hit = TitleCrash.Impacts()[0];
+
+        Assert.AreEqual(1f, hit.throughU, 1e-4f,
+                        "The crush finishes before the clock does, so the shot has a dead beat on the end of it.");
+        Assert.Greater(hit.throughU - hit.atU, Beat.Share * 0.5f,
+                       "The fold is spent over a blink — it may as well be the single-frame stamp it replaced.");
+
+        Assert.AreEqual(0f, TitleCrash.Crush(hit, hit.atU), 1e-4f, "The bodywork is already dented on contact.");
+        Assert.AreEqual(1f, TitleCrash.Crush(hit, hit.throughU), 1e-4f, "The fold never reaches full depth.");
+        Assert.AreEqual(0f, TitleCrash.Crush(hit, hit.atU - 0.05f), 1e-4f, "The car dents before it is hit.");
+        Assert.AreEqual(1f, TitleCrash.Crush(hit, 2f), 1e-4f, "The crush runs past the end of the clock.");
+
+        // Monotonic, and front-loaded: metal collapses first and resists after, so half the depth is gone
+        // well before half the time is.
+        float previous = -1f;
+        for (int step = 0; step <= 100; step++)
+        {
+            float u = Mathf.Lerp(hit.atU, hit.throughU, step / 100f);
+            float crush = TitleCrash.Crush(hit, u);
+            Assert.GreaterOrEqual(crush, previous, "The fold un-dents partway through the crush.");
+            previous = crush;
+        }
+        Assert.Greater(TitleCrash.Crush(hit, Mathf.Lerp(hit.atU, hit.throughU, 0.5f)), 0.6f,
+                       "The crush is linear or back-loaded — a real one collapses hard and then resists.");
+    }
+
+    [Test]
+    public void TheHeroKeepsDrivingIntoTheSliderRightUpToTheFreeze()
+    {
+        // The crush is only worth spending over half a second if the two cars are still closing through it.
+        // The hero is authored to finish well INSIDE the other car — past the bite allowance, so Settle has
+        // something left to push with, and what the screen shows is the struck car being shoved down the road
+        // rather than two bodies parked together while a dent quietly deepens.
+        var field = TitleCrash.Field();
+        var hit = TitleCrash.Impacts()[0];
+
+        var atContact = TitleCrash.Tableau(field, hit.atU);
+        var atFreeze = TitleCrash.Tableau(field, 1f);
+
+        Assert.Less(Gap(atContact[hit.striker], atContact[hit.struck]), 5f, "They aren't touching at contact.");
+        Assert.Less(Gap(atFreeze[hit.striker], atFreeze[hit.struck]), 1f, "They came apart before the freeze.");
+
+        float shove = Vector2.Distance(atContact[hit.struck].position, atFreeze[hit.struck].position);
+        Assert.Greater(shove, 15f,
+                       $"The struck car only moves {shove:0}px between the hit and the freeze — nothing is " +
+                       "being shunted, so the crush plays out over two parked cars.");
+
+        // Raw choreography, before Settle gets anywhere near it: the hero really is still coming, and by more
+        // than the bite allowance, or there would be nothing left over to shove with.
+        var heroEnd = TitleCrash.Evaluate(field[hit.striker], 1f);
+        var struckEnd = TitleCrash.Evaluate(field[hit.struck], 1f);
+        Assert.IsTrue(TitleCrash.Overlap(heroEnd.position, heroEnd.rotation,
+                                         struckEnd.position, struckEnd.rotation, out _, out float drive),
+                      "The hero's authored finish stops short of the car it hit, so there's no shunt to resolve.");
+        Assert.Greater(drive, TitleCrash.MaxBitePx,
+                       "The hero drives in by less than the bite allowance, so Settle never pushes and the " +
+                       "struck car is never shunted.");
+    }
+
+    [Test]
+    public void TheTwoCarsInTheCrashActuallyBuryIntoEachOther()
+    {
+        // The complaint this exists to catch: at a hard zero separation, two opaque liveries draw as two
+        // rectangles meeting along a line. Nothing about that reads as contact — it reads as two cars parked
+        // very close together. Cars in a wreck share space, because the metal between them has folded and the
+        // sprite outline is no longer where the bodywork is.
+        var field = TitleCrash.Field();
+        var hit = TitleCrash.Impacts()[0];
+
+        Assert.AreEqual(0f, TitleCrash.Bite(hit.atU), 1e-4f, "The cars are already inside each other on contact.");
+        Assert.AreEqual(0f, TitleCrash.Bite(hit.atU - 0.1f), 1e-4f, "They bury into each other before the hit.");
+        Assert.AreEqual(TitleCrash.MaxBitePx, TitleCrash.Bite(1f), 1e-3f, "The burial never reaches full depth.");
+        Assert.Greater(TitleCrash.MaxBitePx, TitleCrash.CarLengthPx * 0.1f,
+                       "The allowance is too small to see — the contact will still draw as a seam.");
+        Assert.Less(TitleCrash.MaxBitePx, TitleCrash.CarLengthPx * 0.3f,
+                    "The cars swallow each other rather than crumpling.");
+
+        // And it has to actually happen in the settled tableau, deepening as the fold does.
+        var atFreeze = TitleCrash.Tableau(field, 1f);
+        Assert.IsTrue(TitleCrash.Overlap(atFreeze[hit.striker].position, atFreeze[hit.striker].rotation,
+                                         atFreeze[hit.struck].position, atFreeze[hit.struck].rotation,
+                                         out _, out float buried),
+                      "The crash pair finish merely touching — the hit doesn't read as a hit.");
+        Assert.Greater(buried, TitleCrash.MaxBitePx * 0.75f,
+                       $"The hero only ends up {buried:0.0}px into the car it hit, well short of the {TitleCrash.MaxBitePx:0}px " +
+                       "allowance — Settle is pushing them apart again.");
+
+        // Nobody else gets the allowance: the clean half of the shot stays clean.
+        for (int a = 0; a < atFreeze.Length; a++)
+            for (int b = a + 1; b < atFreeze.Length; b++)
+                if (!(TitleCrash.IsInTheCrash(a) && TitleCrash.IsInTheCrash(b)))
+                    Assert.IsFalse(TitleCrash.Overlap(atFreeze[a].position, atFreeze[a].rotation,
+                                                      atFreeze[b].position, atFreeze[b].rotation, out _, out _),
+                                   $"Cars {a} and {b} are inside each other, and only the crash pair may be.");
+    }
+
+    [Test]
+    public void TheSliderIsThereToBeCaughtRatherThanToKeepUp()
+    {
+        // Everything in the field lands at u = 1, so how hard one car arrives at another is decided entirely
+        // by how much further it had to come. The slider is slow on purpose: it is the difference between the
+        // two speeds that is the severity of the hit, and a slider running away from the hero would turn the
+        // T-bone into a tap however hard the impact plan claims it is.
+        var field = TitleCrash.Field();
+        float sliderRun = (field[TitleCrash.TurnedIndex].endPos - field[TitleCrash.TurnedIndex].startPos).magnitude;
+        float heroRun = (field[TitleCrash.TurnerIndex].endPos - field[TitleCrash.TurnerIndex].startPos).magnitude;
+
+        Assert.Greater(heroRun / sliderRun, 2f,
+                       $"The hero covers {heroRun:0}px to the slider's {sliderRun:0} — it barely catches it, " +
+                       "so there's no closing speed in the hit.");
+
+        Assert.AreEqual(1f, TitleCrash.Impacts()[0].severity, 1e-4f,
+                        "The one hit in a shot with no other damage in it isn't at full severity.");
     }
 
     [Test]

@@ -151,7 +151,8 @@ namespace Draftmaster.Sim
         }
 
         // The two cars that are only racing, and the two that are having the accident. Index order is draw
-        // order, rear-most first; the crash pair is 2 (turned) and 3 (turner, the hero).
+        // order, rear-most first; the crash pair is 2 (the car already sideways, which gets T-boned) and 3
+        // (the hero, which does the T-boning).
         public const int TurnedIndex = 2;
         public const int TurnerIndex = 3;
 
@@ -178,10 +179,24 @@ namespace Draftmaster.Sim
         // left to jitter.
         //
         // What the shot shows: two cars racing straight down the left of the slot in close company and never
-        // touching, and to the right of them a corner being settled the way they actually get settled — the
-        // hero has put its nose in the back of the car ahead and turned it, so one is spearing off at an
-        // angle with its rear end caved in and the other is still pointing down the road with a folded nose.
-        // Which is the damage model doing two different things at once, side by side, on purpose.
+        // touching, and to the right of them a T-BONE, staged to show the damage model off.
+        //
+        // A car that lost it somewhere off the top of the screen slides in broadside — travelling down the
+        // shot with its body lying across its own line, still slewing round as it goes. The hero arrives from
+        // much further back, running square down the road nose-first, and puts its nose into the middle of
+        // that car's door at the exact moment the clock drops into slow motion. Then it keeps coming: the
+        // last half-second is the two of them locked together, the hero still driving in, and the fold
+        // deepening while you watch.
+        //
+        // That pairing is the point. The same one contact deforms two panels two completely different ways —
+        // a flank takes the hero's narrow nose and gets a deep local gouge, while the hero's nose takes the
+        // whole length of a flank and gets a wide shallow crease across it. A crater model cannot tell those
+        // apart; it puts the same round dish on both. See BodyDeform.
+        //
+        // The T-bone geometry is authored, not hoped for: at the moment of contact the hero's heading is
+        // within about ten degrees of square to the struck car's body, and its nose lands within a few pixels
+        // of the middle of that car's side rather than on a corner. Both are asserted in EditMode, so
+        // retiming the shot and quietly turning the T-bone into a glancing blow is a test failure.
         public static CarPlan[] Field()
         {
             return new[]
@@ -201,23 +216,40 @@ namespace Draftmaster.Sim
                     startRotation = 90f,                endRotation = 90f,
                     arcPx = 0f, delay = 0f, travel = 1f, depth = 1,
                 },
-                // The car that gets turned: comes down the road square, leaves at 60 degrees to it. The
-                // rotation is the whole story, so it is a straight sweep with no extra turns — a car snapped
-                // sideways by a hit, not a car spinning like a coin.
+                // The one that gets T-boned. It arrives already sideways — it lost it before the shot opened —
+                // so it slides down the screen with its body lying ACROSS its line of travel, presenting a
+                // flank to anything coming down the road behind it. It is still slewing round as it slides
+                // (-14 to 18 degrees), which is what stops it reading as a car parked at an angle; the bow
+                // across its travel is the back end coming round. It is the only car in the field that is not
+                // pointing where it is going, and that is the whole reason there is something to hit.
+                //
+                // It is also SLOW: 320px of travel against the hero's 762, so it is barely creeping by the
+                // time the hero reaches it. That gap in speed is the whole severity of the hit — everything
+                // in the field lands at u = 1, so how hard one car arrives at another is decided entirely by
+                // how much further it had to come. It enters frame early (u = 0.20) and slides the length of
+                // the shot, which also gives the eye something to follow through the slam.
                 new CarPlan
                 {
-                    startPos = new Vector2(520f, 640f), endPos = new Vector2(589f, 149f),
-                    startRotation = 90f,                endRotation = 150f,
-                    arcPx = 0f, delay = 0f, travel = 1f, depth = TurnedIndex,
+                    startPos = new Vector2(466f, 470f), endPos = new Vector2(516f, 150f),
+                    startRotation = -14f,               endRotation = 18f,
+                    arcPx = 14f, delay = 0f, travel = 1f, depth = TurnedIndex,
                 },
-                // The hero, and the one that did it: still pointing where it was going, carrying on into the
-                // space the other car has just left. Enters late so it is visibly arriving on the back of a
-                // car that is already there.
+                // The hero, and the one that does it: dead square down the road, nose-first, from far further
+                // back than anything else in the shot — it enters frame at u = 0.75, long after the other
+                // car, so it is visibly arriving on a wreck already in progress rather than being part of
+                // one. Coming from 1000px up means it is travelling roughly two and a half times the slider's
+                // speed when it gets there.
+                //
+                // It is authored to end 30px INSIDE the other car, which is more than the bite allowance, and
+                // both halves of that matter. Up to the allowance the two bodies simply sink into each other
+                // (which is what makes the contact read as contact); past it, Settle pushes, and the push has
+                // nowhere to go but into shoving the struck car down the road. So the slow-motion beat is the
+                // hero burying its nose AND driving the car it hit along in front of it.
                 new CarPlan
                 {
-                    startPos = new Vector2(470f, 690f), endPos = new Vector2(487f, 276f),
-                    startRotation = 100f,               endRotation = 100f,
-                    arcPx = -30f, delay = 0.06f, travel = 0.94f, depth = TurnerIndex,
+                    startPos = new Vector2(496f, 1000f), endPos = new Vector2(500f, 238f),
+                    startRotation = 96f,                endRotation = 96f,
+                    arcPx = -22f, delay = 0.06f, travel = 0.94f, depth = TurnerIndex,
                 },
             };
         }
@@ -226,24 +258,73 @@ namespace Draftmaster.Sim
 
         // The contact is authored rather than discovered. Settle can tell you THAT two boxes met, but not
         // which panel of which car — so it dented both cars at the midpoint between their centres, and the
-        // damage landed wherever that happened to fall. This says it outright: the turner is damaged across
-        // its nose, the car it turned is damaged across its tail, and both are struck at the moment the shot
-        // is built around.
+        // damage landed wherever that happened to fall. This says it outright: the hero is damaged across its
+        // nose, the car it T-bones is damaged across the door, and it happens over a window rather than in a
+        // frame.
+        //
+        // A window, because a crush is not an event. It used to be one instant: a single OnImpact, one frame,
+        // full severity, and the dent simply WAS there on the next frame like a decal. The bodywork model can
+        // do better than that — press it a little harder each frame and the fold deepens a little more — so
+        // the hit is spread across the whole slow-motion beat and what the shot actually shows is metal
+        // giving way over half a second.
         public struct ImpactPlan
         {
-            public int striker;        // the car doing the hitting — damaged across its FRONT
-            public int struck;         // the car being turned — damaged across its REAR
-            public float atU;          // choreography time the hit lands
+            public int striker;        // the car doing the hitting — damaged across its NOSE
+            public int struck;         // the car being T-boned — damaged across the DOOR
+            public float atU;          // choreography time the two bodies meet and the fold starts
+            public float throughU;     // choreography time the fold reaches full depth
             public Vector2 pointPx;    // where the flash and the smoke go
             public Vector2 normal;     // the push, striker -> struck; sparks spray along it
-            public float severity;     // 0..1, straight into VehicleDamage.OnImpact
+            public float severity;     // 0..1 at full crush, into VehicleDamage.OnImpact
         }
 
-        // Inside the crawl, not the slam. Tempo saves the last `crawlShare` of the choreography for the slow
-        // half-second, so anything before u = 0.94 goes off while time is still a blur and nobody sees it.
-        // Early enough in the crawl that the sparks are still travelling when the clock runs out — a shower
-        // frozen mid-flight rather than one that has already landed.
-        public const float ImpactU = 0.955f;
+        // Contact lands just inside the crawl, and the crush then runs all the way to the end of the clock.
+        // Tempo saves the last `crawlShare` (0.06) of the choreography for the slow half-second, so u = 0.942
+        // is about two percent into the slow motion — the earliest the fold can start while still being
+        // watchable, and the moment the two bodies actually touch. Everything before that is the slam, where
+        // time is a blur and nobody would see a panel move.
+        public const float ImpactU = 0.942f;
+
+        // ...and it finishes exactly as time stops, so the last thing the tableau does before freezing is
+        // fold. Stop the crush early and the shot has a dead beat at the end of it.
+        public const float CrushEndU = 1f;
+
+        // How far the two cars in the accident are allowed to bury into each other, in reference px.
+        //
+        // Settle used to hold every pair at a hard zero — no two bodies ever sharing a pixel — and the crash
+        // pair came out looking like two cars parked next to each other rather than one buried in the other.
+        // The liveries are opaque edge to edge, so "touching" drew as two rectangles meeting along a line,
+        // which is not what a crash looks like from any angle.
+        //
+        // Cars in a wreck DO occupy the same space: the metal between them has folded, and the outline the
+        // sprite is drawn at is no longer where the bodywork is. So the crash pair get an allowance and
+        // everybody else still gets none — the racing pair can no more overlap than they could before.
+        //
+        // 26px is about a sixth of a car. It is also the ONE number that sets how hard the crash looks: the
+        // two cars' fold depths are derived from it (TitleCrashScene sizes dentStrength off this, and the
+        // pair split it half each), so the metal that caves in is exactly the metal the two bodies are
+        // occupying in common. Raise this and the burial and both folds grow together; there is no way to
+        // set it such that the panels retreat past each other and leave a void down the middle of the crash.
+        public const float MaxBitePx = 26f;
+
+        // The allowance at choreography time u: nothing before contact, opening on the same eased ramp as the
+        // fold itself, so the two cars sink into each other exactly as fast as their panels give way.
+        public static float Bite(float u)
+        {
+            float span = Mathf.Max(1e-4f, CrushEndU - ImpactU);
+            float x = Mathf.Clamp01((u - ImpactU) / span);
+            return MaxBitePx * (1f - (1f - x) * (1f - x));
+        }
+
+        // How far through the fold we are at choreography time u. Eased out, because that is how a crush
+        // goes: the panel collapses in the first moments and then resists, so most of the depth is spent
+        // early and the last of it creeps in as the clock dies.
+        public static float Crush(in ImpactPlan hit, float u)
+        {
+            float span = Mathf.Max(1e-4f, hit.throughU - hit.atU);
+            float x = Mathf.Clamp01((u - hit.atU) / span);
+            return 1f - (1f - x) * (1f - x);
+        }
 
         public static ImpactPlan[] Impacts()
         {
@@ -251,34 +332,20 @@ namespace Draftmaster.Sim
             {
                 new ImpactPlan
                 {
-                    striker = TurnerIndex, struck = TurnedIndex, atU = ImpactU,
-                    // On the hero's nose at the moment the hit lands, aimed at the rear quarter of the car it
-                    // is turning — which is where a car gets turned from and where both dents therefore
-                    // belong. Struck off the poses at ImpactU rather than eyeballed, so retiming the shot and
-                    // leaving the flash behind is a test failure rather than a thing somebody notices later.
-                    pointPx = new Vector2(497f, 209f),
-                    normal = new Vector2(0.18f, -0.98f),
-                    severity = 0.95f,
+                    striker = TurnerIndex, struck = TurnedIndex,
+                    atU = ImpactU, throughU = CrushEndU,
+                    // On the hero's nose at the moment the two bodies meet, which at that moment is within a
+                    // few pixels of the middle of the other car's side. Struck off the poses at ImpactU
+                    // rather than eyeballed, so retiming the shot and leaving the flash behind — or turning
+                    // the T-bone into a glancing blow down the side — is a test failure rather than a thing
+                    // somebody notices later.
+                    pointPx = new Vector2(503f, 211f),
+                    normal = new Vector2(0.171f, -0.985f),
+                    // Flat out. The cars arrive at each other about two and a half to one and there is no
+                    // pre-existing damage on either of them any more, so this one contact is the only thing
+                    // the screen has to show — it may as well be everything the bodywork model has.
+                    severity = 1f,
                 },
-            };
-        }
-
-        // Where on a car's bodywork the hit is written, in normalised SPRITE-local coordinates: x is along
-        // the car, y across it. The liveries are drawn nose-left, so the nose is at x = -1 and the tail at
-        // +1 — the same reason every rotation here is a heading plus 180. A panel is a spread of points
-        // rather than one, because a single dent on a 5m car is a dimple; a caved-in nose is the whole end
-        // of the car moving.
-        //
-        // `front` picks which end. The spread is deliberately uneven so the damage does not read as a
-        // symmetrical stamp: a real hit folds one corner harder than the other.
-        public static Vector2[] Panel(bool front)
-        {
-            float x = front ? -0.94f : 0.94f;
-            return new[]
-            {
-                new Vector2(x, front ? 0.55f : -0.62f),
-                new Vector2(x, front ? 0.10f : -0.18f),
-                new Vector2(x * 0.86f, front ? -0.42f : 0.34f),
             };
         }
 
@@ -452,12 +519,20 @@ namespace Draftmaster.Sim
                             });
                         }
 
+                        // The crash pair are allowed to bury into each other (see MaxBitePx); everyone else
+                        // is still held at a hard zero. Only the excess beyond the allowance is pushed out,
+                        // so the hero can sink its nose into the door AND still shove the car down the road
+                        // once it has sunk as far as it is allowed to.
+                        float allowed = (IsInTheCrash(a) && IsInTheCrash(b)) ? Bite(u) : 0f;
+                        float push = depth - allowed;
+                        if (push <= 0f) continue;
+
                         float yieldA = Yield(poses[a]);
                         float yieldB = Yield(poses[b]);
                         float total = Mathf.Max(0.001f, yieldA + yieldB);
 
-                        poses[a].position -= normal * (depth * yieldA / total);
-                        poses[b].position += normal * (depth * yieldB / total);
+                        poses[a].position -= normal * (push * yieldA / total);
+                        poses[b].position += normal * (push * yieldB / total);
                     }
                 }
 

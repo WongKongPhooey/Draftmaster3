@@ -121,34 +121,117 @@ public class TitleCrashBuildTests
     // ------------------------------------------------------------------ the damage model is on show
 
     [Test]
-    public void CarsArriveAlreadyDentedAndThePileAddsMoreOnImpact()
+    public void CarsArriveUndamagedAndEveryDentComesFromTheOneHit()
     {
-        // One Update builds the field and poses it at u = 0: pre-damage is on, but the scripted impact
-        // isn't until TitleCrash.ImpactU, so this is the bodywork the cars turned up with.
+        // The cars used to turn up carrying a scatter of authored pre-damage, which meant the dents on screen
+        // were part simulation and part decoration and you could not tell which was which. They arrive clean
+        // now: everything the frozen tableau shows has to have been folded in by the contact itself.
+        //
+        // One Update builds the field and poses it at u = 0, long before TitleCrash.ImpactU, so this is the
+        // bodywork the cars turned up with.
         var crash = Play(out var component, steps: 0);
         var cars = Cars(crash);
 
-        Assert.Greater(cars.Sum(Deformation), 0.05f,
-                       "The cars are showroom-fresh — the pre-damage never reached the mesh.");
+        foreach (var car in cars)
+            Assert.Less(Deformation(car), 1e-3f,
+                        $"{car.name} is already dented before anything has hit it — the shot is showing " +
+                        "damage the simulation didn't do.");
 
-        // The bodywork as the cars turned up, kept vertex by vertex so the crash can be compared against it
-        // directly. Two easier measurements both lie here:
-        //
-        //   "the deepest dent got deeper" — a dent is a vector ADDED to whatever a vertex already carried,
-        //   so a second hit from another angle can leave it nearer the flat grid than it was.
-        //   "more vertices are bent"      — the pile connects where the cars overlap, which is inside the
-        //   area the pre-damage already covered, so the count can be saturated before the crash starts.
-        //
-        // What is unambiguous is whether the crash MOVED any metal, so that is what is asserted.
         var onArrival = cars.Select(Vertices).ToArray();
 
         Drive(component, from: 0f, to: 1f, steps: 240);
 
-        int moved = 0;
-        for (int i = 0; i < cars.Length; i++) moved += VerticesMovedSince(onArrival[i], cars[i]);
+        // The crash pair have to come out of it visibly folded, and the racing pair have to come out of it
+        // untouched — that contrast is what makes the wrecked pair read as wrecked.
+        for (int i = 0; i < cars.Length; i++)
+        {
+            bool inTheCrash = TitleCrash.IsInTheCrash(i);
+            int moved = VerticesMovedSince(onArrival[i], cars[i]);
 
-        Assert.Greater(moved, 0,
-                       "Not one vertex on any car moved across the whole crash — the contacts are denting nothing.");
+            if (inTheCrash)
+            {
+                Assert.Greater(moved, 0, $"{cars[i].name} is in the accident and not one vertex on it moved.");
+                Assert.Greater(Deformation(cars[i]), 0.05f,
+                               $"{cars[i].name} came through the T-bone with barely a mark on it.");
+            }
+            else
+            {
+                Assert.AreEqual(0, moved, $"{cars[i].name} is only racing past, and something dented it.");
+            }
+        }
+    }
+
+    [Test]
+    public void TheCrashCarsFoldOutOfARealOverlapAndNeverOutOfAVirtualPress()
+    {
+        // The rule that keeps the crash welded together, checked where it is actually set.
+        //
+        // dentStrength drives the striker a further `dentStrength * severity` into the panel ON TOP of
+        // wherever the two bodies already are. In a race that is the only source of fold, because the
+        // collision solver ejects the cars every step and leaves no real overlap to read. Here the opposite
+        // holds: Settle keeps this pair MaxBitePx inside each other on purpose, so there is a real intrusion
+        // for both of them to fold out of — and a press on top of it would open a void exactly as wide as
+        // the press, whatever the shares are set to (see BodyDeformTests).
+        var cars = Cars(Play(out _));
+
+        foreach (int i in new[] { TitleCrash.TurnerIndex, TitleCrash.TurnedIndex })
+        {
+            var damage = cars[i].GetComponent(FindRuntimeType("VehicleDamage"));
+            Assert.IsNotNull(damage, $"{cars[i].name} has no VehicleDamage to read a fold depth off.");
+
+            Assert.AreEqual(0f, Field<float>(damage, "dentStrength"), 1e-5f,
+                            $"{cars[i].name} carries a virtual press. The two cars are already buried in " +
+                            "each other, so this folds metal nothing is occupying and opens a hole down the " +
+                            "middle of the crash exactly this wide.");
+        }
+    }
+
+    [Test]
+    public void TheDeformedPanelsActuallyMeetWithNoVoidBetweenThem()
+    {
+        // The one that measures the thing you can see. Everything else about the crush is arithmetic on
+        // depths and burials; this drives the whole shot and then looks at where the two BODYWORK MESHES
+        // actually ended up, because a void down the middle of the crash is a fact about vertices, not
+        // about the numbers that were supposed to place them.
+        var crash = Play(out var component);
+        Drive(component, from: 0f, to: 1f, steps: 240);
+
+        var cars = Cars(crash);
+        var hit = TitleCrash.Impacts()[0];
+
+        Vector2 n = hit.normal.normalized;              // striker -> struck
+        Vector2 across = new Vector2(-n.y, n.x);
+
+        // How far each car's metal reaches along the contact normal, measured only across the width of the
+        // contact — otherwise the hero's tail and the slider's far end decide the answer instead of the
+        // panels that touched.
+        float heroReach = float.MinValue;               // furthest the striker's metal gets toward the struck car
+        float sliderReach = float.MaxValue;             // nearest the struck car's metal comes back toward it
+
+        foreach (var v in MeshPointsPx(cars[hit.striker]))
+            if (Mathf.Abs(Vector2.Dot(v - hit.pointPx, across)) < 30f)
+                heroReach = Mathf.Max(heroReach, Vector2.Dot(v, n));
+
+        foreach (var v in MeshPointsPx(cars[hit.struck]))
+            if (Mathf.Abs(Vector2.Dot(v - hit.pointPx, across)) < 30f)
+                sliderReach = Mathf.Min(sliderReach, Vector2.Dot(v, n));
+
+        float gap = sliderReach - heroReach;
+        Assert.Less(gap, 2f,
+                    $"There is a {gap:0.0}px void between the two cars' bodywork at the freeze. They both " +
+                    $"folded away from the contact and left a hole where the crash is supposed to be. " +
+                    $"(burial {TitleCrash.MaxBitePx:0}px, so each panel may give up at most half of it.)");
+        Assert.Greater(gap, -TitleCrash.MaxBitePx - 4f,
+                    $"The two cars' bodywork is {-gap:0.0}px through each other — past the burial, so the " +
+                    "metal is drawn overlapping rather than crushed together.");
+    }
+
+    // A car's bodywork vertices, in reference-canvas pixels: the mesh as it currently stands, through the
+    // car's transform and back out into the space the choreography is authored in.
+    Vector2[] MeshPointsPx(GameObject car)
+    {
+        var mesh = car.GetComponent<MeshFilter>().sharedMesh;
+        return mesh.vertices.Select(v => ToCanvasPx(car.transform.TransformPoint(v))).ToArray();
     }
 
     [Test]
@@ -209,14 +292,14 @@ public class TitleCrashBuildTests
     }
 
     [Test]
-    public void TheFrozenPileIsCarsLeaningOnEachOtherRatherThanDrawnThroughEachOther()
+    public void TheFrozenPileIsTwoCarsBuriedInEachOtherAndNobodyElseTouching()
     {
         var cars = Cars(Play(out _));
 
         var field = TitleCrash.Field();
         var poses = TitleCrash.Tableau(field, 1f);
 
-        // What the maths settled has to be what the transforms got, or the overlap was resolved on paper only.
+        // What the maths settled has to be what the transforms got, or the pile was resolved on paper only.
         for (int i = 0; i < cars.Length && i < poses.Length; i++)
         {
             Vector2 drawn = ToCanvasPx(cars[i].transform.position);
@@ -225,10 +308,33 @@ public class TitleCrashBuildTests
         }
 
         for (int a = 0; a < poses.Length; a++)
+        {
             for (int b = a + 1; b < poses.Length; b++)
-                if (TitleCrash.Overlap(poses[a].position, poses[a].rotation,
-                                       poses[b].position, poses[b].rotation, out _, out float depth))
-                    Assert.Less(depth, 1f, $"Cars {a} and {b} are still inside each other in the frozen shot.");
+            {
+                bool crashPair = TitleCrash.IsInTheCrash(a) && TitleCrash.IsInTheCrash(b);
+                bool through = TitleCrash.Overlap(poses[a].position, poses[a].rotation,
+                                                  poses[b].position, poses[b].rotation, out _, out float depth);
+
+                if (crashPair)
+                {
+                    // These two are SUPPOSED to be inside each other by the freeze. Held at a hard zero they
+                    // draw as two opaque rectangles meeting along a line, which reads as two cars parked
+                    // together rather than one buried in the other.
+                    Assert.IsTrue(through, "The crash pair finish merely touching — the hit doesn't read as a hit.");
+                    Assert.Greater(depth, TitleCrash.MaxBitePx * 0.75f,
+                                   $"They're only {depth:0.0}px into each other, well short of the " +
+                                   $"{TitleCrash.MaxBitePx:0}px allowance.");
+                    Assert.Less(depth, TitleCrash.MaxBitePx + 1f,
+                                $"They're {depth:0.0}px into each other — past the allowance, so they're " +
+                                "drawn through each other rather than crashing.");
+                }
+                else
+                {
+                    Assert.IsFalse(through && depth > 1f,
+                                   $"Cars {a} and {b} are inside each other, and only the crash pair may be.");
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------------ the player's car
@@ -329,7 +435,7 @@ public class TitleCrashBuildTests
     static T Field<T>(Component component, string name)
     {
         var field = component.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public);
-        Assert.IsNotNull(field, $"TitleCrashScene has no '{name}' field any more.");
+        Assert.IsNotNull(field, $"{component.GetType().Name} has no '{name}' field any more.");
         return (T)field.GetValue(component);
     }
 

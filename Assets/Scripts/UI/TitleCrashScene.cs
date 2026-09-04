@@ -4,15 +4,21 @@ using UnityEngine;
 
 // The title screen's hero art: four cars coming down from above the top edge across the empty half of the
 // screen, and time easing to a dead stop so the moment stays there. Two of them are racing in company and
-// never touch; the other two are a corner being settled, one having put its nose in the back of the other
-// and turned it.
+// never touch; the other two are a T-bone — one already sideways and sliding, the other arriving square into
+// its door exactly as the clock drops into slow motion.
 //
 // The hit is scripted rather than solved. It used to be four cars thrown at the same spot with
 // TitleCrash.Settle pushing the overlaps apart every frame, which is a physics solver running at speed on
 // four bodies and looked like one — jitter, and sparks on frames where nothing had really happened. Now the
 // choreography guarantees the only two cars that ever come near each other are the crash pair, and the one
-// impact fires on a time rather than on an overlap. Settle still runs underneath as a backstop and has
-// nothing left to push.
+// impact fires on a time rather than on an overlap. Settle still runs underneath, holding the two of them
+// apart while the hero keeps driving in, which is what makes the shunt visible.
+//
+// The shot exists to show the bodywork model off. It is staged as a T-bone because that is the case a
+// crater model cannot fake: one contact, and the two panels either side of it have to deform completely
+// differently — a narrow nose gouging deep into a flank, and that flank's long flat side creasing the nose
+// right across. And it is crushed in over the whole slow-motion beat rather than stamped on in a frame, so
+// what the screen shows is metal giving way rather than a dent that was suddenly there.
 //
 // This is the runtime half of TitleCrash — that holds the choreography (who goes where, when, and how the
 // clock decelerates), this builds the cars out of it and paints them. Nothing here is authored in the
@@ -64,21 +70,18 @@ public class TitleCrashScene : MonoBehaviour
         slamDecay = slamDecay,
     };
 
-    [Header("Damage")]
-    [Tooltip("Dents the two cars in the accident arrive already carrying. The racing pair stay clean.")]
-    [Range(0, 12)] public int dentsPerCar = 3;
-    [Tooltip("Severity of that pre-existing damage, 0..1.")]
-    [Range(0f, 1f)] public float preDamageSeverity = 0.75f;
-    [Tooltip("Seed for the pre-damage, so the same screen comes up the same way every boot.")]
-    public int seed = 1987;
-
     [Header("Bodywork")]
     [Tooltip("Deformable mesh resolution across the car. Higher = smoother crumple, at this size it's cheap.")]
     public int gridX = 18;
     public int gridY = 12;
     public float dentRadius = 0.9f;
-    public float dentStrength = 0.5f;
-    public float maxDent = 0.8f;
+    public float maxDent = 1.4f;
+    [Tooltip("How much the metal beside a fold comes with it. 0 leaves a clean stamp of the striker with a " +
+             "sheared edge; higher buckles the surrounding panel.")]
+    [Range(0f, 1f)] public float crumpleSpread = 0.35f;
+    [Tooltip("Smoothing passes per press. The crush presses every frame, so keep this low or the fold " +
+             "rounds off into a dish over the half-second it takes.")]
+    [Range(0, 4)] public int crumplePasses = 1;
 
     [Header("Particles")]
     public Color sparkColorA = new Color(1f, 0.95f, 0.65f);
@@ -136,6 +139,9 @@ public class TitleCrashScene : MonoBehaviour
     // needs now that a bang is keyed to a moment rather than to two boxes still being inside each other.
     TitleCrash.ImpactPlan[] _impacts = System.Array.Empty<TitleCrash.ImpactPlan>();
     bool[] _impactsFired = System.Array.Empty<bool>();
+    // How deep each fold has been pressed so far, 0..1 of its authored severity. The crush only ever
+    // deepens, so a frame that has not moved the ramp on has nothing to do.
+    float[] _impactCrush = System.Array.Empty<float>();
 
     float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
     Vector2 _plumeAt;            // where the plume rises from: the middle of what has been hit so far
@@ -185,10 +191,10 @@ public class TitleCrashScene : MonoBehaviour
         _poses = new TitleCrash.CarPose[plans.Length];
         _impacts = TitleCrash.Impacts();
         _impactsFired = new bool[_impacts.Length];
+        _impactCrush = new float[_impacts.Length];
         _plumeAt = TitleCrash.PileCentrePx;
 
         var liveries = PickLiveries(plans.Length);
-        var rng = new System.Random(seed);
 
         _cars = new Car[plans.Length];
         int built = 0;
@@ -198,9 +204,6 @@ public class TitleCrashScene : MonoBehaviour
             if (sprite == null) continue;
 
             _cars[i] = BuildCar(i, plans[i], sprite);
-            // Only the two cars in the accident wear any. The racing pair are meant to read as clean cars
-            // going by at speed — which is what makes the wrecked pair beside them read as wrecked.
-            if (TitleCrash.IsInTheCrash(i)) ApplyPreDamage(_cars[i], rng);
             built++;
         }
 
@@ -329,8 +332,25 @@ public class TitleCrashScene : MonoBehaviour
         damage.gridX = Mathf.Clamp(gridX, 2, 32);
         damage.gridY = Mathf.Clamp(gridY, 2, 32);
         damage.dentRadius = dentRadius;
-        damage.dentStrength = dentStrength;
         damage.maxDent = maxDent;
+
+        // No virtual press, and this is load-bearing rather than a way of turning damage off.
+        //
+        // dentStrength drives the striker's body a further `dentStrength * severity` into the panel on top of
+        // wherever it already is. That exists for a race, where the collision solver ejects the two cars every
+        // step and there is no real overlap left to read, so closing speed has to buy the fold instead. Here
+        // the opposite is true: Settle holds these two buried in each other by MaxBitePx on purpose, so there
+        // is a real intrusion to fold out of the way and each car takes its half of it.
+        //
+        // Adding a press on top of that would open a void between the two cars exactly as wide as the press
+        // — both panels retreat past each other by half of it — which is precisely the hole this shot used to
+        // have down the middle of it. See BodyDeform.Share.
+        damage.dentStrength = 0f;
+        damage.crumpleSpread = crumpleSpread;
+        damage.crumplePasses = crumplePasses;
+        // The crush is spent a slice at a time across the slow-motion beat, so the early slices are far
+        // below the threshold that keeps race scrapes from squashing cars. Nothing here is a scrape.
+        damage.minSeverity = 0f;
         damage.sortingOrder = baseSortingOrder + plan.depth * 2;
         damage.Build();
 
@@ -341,40 +361,6 @@ public class TitleCrashScene : MonoBehaviour
         go.transform.localScale = new Vector3(scale, scale, 1f);
 
         return new Car { t = go.transform, damage = damage, plan = plan };
-    }
-
-    // Bodywork the car turned up with. Hits are struck on the outline and pushed inward, which is the same
-    // call a barrier makes during a race — so what the title screen shows is genuinely the damage model.
-    void ApplyPreDamage(Car car, System.Random rng)
-    {
-        if (dentsPerCar <= 0 || car.damage.sourceSprite == null) return;
-        Vector3 extents = car.damage.sourceSprite.bounds.extents;
-
-        for (int i = 0; i < dentsPerCar; i++)
-        {
-            float angle = (float)(rng.NextDouble() * Mathf.PI * 2.0);
-            var edge = new Vector3(Mathf.Cos(angle) * extents.x, Mathf.Sin(angle) * extents.y, 0f);
-            float severity = preDamageSeverity * (0.6f + 0.4f * (float)rng.NextDouble());
-            Dent(car, car.t.TransformPoint(edge), severity);
-        }
-    }
-
-    // Dent the car at whatever point of its bodywork is nearest `worldPoint`, pushing toward its centre.
-    // Clamping onto the body first means a flash struck between two cars still lands on both of them
-    // rather than falling outside the dent radius and doing nothing.
-    void Dent(Car car, Vector3 worldPoint, float severity)
-    {
-        if (car.damage.sourceSprite == null) return;
-        Vector3 extents = car.damage.sourceSprite.bounds.extents;
-
-        Vector3 local = car.t.InverseTransformPoint(worldPoint);
-        local.x = Mathf.Clamp(local.x, -extents.x, extents.x);
-        local.y = Mathf.Clamp(local.y, -extents.y, extents.y);
-
-        Vector3 inward = new Vector3(-local.x, -local.y, 0f);
-        if (inward.sqrMagnitude < 1e-6f) inward = Vector3.down;
-
-        car.damage.OnImpact(car.t.TransformPoint(local), car.t.TransformVector(inward), severity);
     }
 
     // ------------------------------------------------------------------ playback
@@ -396,31 +382,47 @@ public class TitleCrashScene : MonoBehaviour
         }
     }
 
-    // The hit, once, when the choreography says so.
+    // The T-bone, folded in over the whole slow-motion beat rather than stamped on in a frame.
     //
-    // This used to fire off whatever TitleCrash.Settle reported, which meant the shot's damage was decided
-    // by a solver: it dented both cars at the midpoint between their centres, so which panel got hit was
+    // This used to fire off whatever TitleCrash.Settle reported, which meant the shot's damage was decided by
+    // a solver: it dented both cars at the midpoint between their centres, so which panel got hit was
     // whatever the geometry happened to hand over, and any frame where the resolver failed to fully separate
-    // four bodies banged again. One authored impact instead — the striker takes it across the nose, the car
-    // it turned takes it across the tail, and it happens on exactly one frame because it is keyed to a time
-    // rather than to an overlap.
+    // four bodies banged again. Then it became one authored impact on one frame, which fixed the panel but
+    // left the dent simply APPEARING, fully formed, between two frames — a decal with a spark shower over it.
+    //
+    // Now the striker is driven in progressively: every frame from atU onwards it presses a little deeper
+    // than the frame before, and because the bodywork model pushes vertices out of the striker's body rather
+    // than blasting a hole at a point, a deeper press means a deeper fold in the same shape. So the door
+    // caves in while you watch it, over the half-second the clock has slowed down to show you. The sparks
+    // still go off once, on contact, because sparks are an event even when the crush is not.
     void Collide()
     {
         for (int i = 0; i < _impacts.Length; i++)
         {
-            if (_impactsFired[i] || _u < _impacts[i].atU) continue;
-            _impactsFired[i] = true;
-
             var hit = _impacts[i];
-            Vector3 at = PxToWorld(hit.pointPx);
+            if (_u < hit.atU) continue;
 
-            // Front of the one that did it, back of the one it did it to. Both ends are worked across a
-            // spread of points so the panel folds rather than picking up a single dimple.
-            DentPanel(hit.striker, front: true, severity: hit.severity);
-            DentPanel(hit.struck, front: false, severity: hit.severity);
+            // How far into the fold the clock is. VehicleDamage accumulates and self-limits — pressing twice
+            // at the same depth moves nothing the second time — so it is the RAMP that deepens the dent, and
+            // a frame that repeats its predecessor's depth simply does nothing.
+            float crush = TitleCrash.Crush(hit, _u);
+            if (crush > _impactCrush[i])
+            {
+                _impactCrush[i] = crush;
+
+                // Both bodies pressed into each other at the depth the ramp has reached. Each car's dent is
+                // the shape of the OTHER car, which is the whole point of staging a T-bone: the hero's narrow
+                // nose gouges the flank, and that flank's long flat side creases the hero's nose right
+                // across. One contact, two completely different dents.
+                PressTogether(hit.striker, hit.struck, hit.normal, hit.severity * crush);
+            }
+
+            if (_impactsFired[i]) continue;
+            _impactsFired[i] = true;
 
             // Sparks fly off the line the two cars are pushing along, which is the way a real scrape throws
             // them; the smoke just puffs up out of the same point.
+            Vector3 at = PxToWorld(hit.pointPx);
             Vector2 spray = hit.normal.sqrMagnitude > 1e-6f ? hit.normal.normalized : Vector2.up;
             Burst(_sparks, at, spray, 150f, Mathf.RoundToInt(sparksPerImpact * hit.severity),
                   120f, 430f, sparkColorA, sparkColorB, 2.5f, 4.5f, 0.55f);
@@ -432,21 +434,53 @@ public class TitleCrashScene : MonoBehaviour
         }
     }
 
-    // Cave in one end of a car: several dents spread across the panel, each struck on the outline and pushed
-    // inward, which is the same call a barrier makes during a race.
-    void DentPanel(int index, bool front, float severity)
+    // Two cars deforming each other. Each one is handed the other's actual body — where it is, which way it
+    // is pointing, how big it is — and presses it into its own panels, which is the same call VehicleCollision
+    // makes when two cars touch during a race.
+    //
+    // This used to cave in one END of each car with a spread of point-dents authored in TitleCrash.Panel,
+    // because the damage model could only be told where a hit landed, not what landed. It could not tell a
+    // nose from a flank, so every dent came out the same round crater and the shot read as a small explosion
+    // between the two cars. Now the geometry decides: the hero is nose-on, so its dent is narrow and deep;
+    // the car it turned is caught across its rear quarter, so its dent is a long crease.
+    void PressTogether(int strikerIndex, int struckIndex, Vector2 normalPx, float severity)
     {
-        if (index < 0 || index >= _cars.Length || _cars[index] == null) return;
+        var striker = CarAt(strikerIndex);
+        var struck = CarAt(struckIndex);
+        if (striker == null || struck == null) return;
 
-        var car = _cars[index];
-        if (car.damage.sourceSprite == null) return;
-        Vector3 extents = car.damage.sourceSprite.bounds.extents;
+        // Half each, because it is one contact and not two. The two bodies are buried MaxBitePx into each
+        // other and both of them fold out of that same overlap — so a full share on each retreats both panels
+        // by the whole burial, in opposite directions, and opens a hole between two cars that are meant to be
+        // welded together. Half each puts both surfaces on the same plane. Both cars here are the same
+        // machine, so the split is even. See BodyDeform.Share.
+        Vector2 push = normalPx.sqrMagnitude > 1e-6f ? normalPx.normalized : Vector2.up;
+        float share = BodyDeform.Share(1f, 1f);
 
-        foreach (var local in TitleCrash.Panel(front))
+        struck.damage.OnImpact(BodyOf(striker), severity, share);
+        striker.damage.OnImpact(BodyOf(struck), severity, share);
+
+        // Local functions so the two calls above read as the one mutual event they are.
+        BodyDeform.Striker BodyOf(Car car)
         {
-            Vector3 on = new Vector3(local.x * extents.x, local.y * extents.y, 0f);
-            Dent(car, car.t.TransformPoint(on), severity);
+            // Toward the car being dented, so `push` for the struck one and back the other way for the striker.
+            Vector2 inward = car == striker ? push : -push;
+            return BodyDeform.Striker.Box(car.t.position, car.t.right, HalfBody(), inward);
         }
+    }
+
+    // Half-extents of a car body in world units. Every car in the shot is the same machine, and the liveries
+    // are drawn nose-left, so the length runs along the transform's local +x.
+    Vector2 HalfBody()
+    {
+        return new Vector2(TitleCrash.CarLengthPx * 0.5f * _unit, TitleCrash.CarWidthPx * 0.5f * _unit);
+    }
+
+    Car CarAt(int index)
+    {
+        if (index < 0 || index >= _cars.Length) return null;
+        var car = _cars[index];
+        return car != null && car.damage != null && car.damage.sourceSprite != null ? car : null;
     }
 
     // The pile keeps smoking after the first proper contact, so there's a plume hanging over the cars by the

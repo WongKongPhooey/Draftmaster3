@@ -163,9 +163,23 @@ public class VehicleCollision : MonoBehaviour
             float closingSpeed = Mathf.Max(0f, Vector2.Dot(_vel - otherVel, d.normal));
             float severity = Mathf.Clamp01(closingSpeed / Mathf.Max(damageSpeedFull, 0.1f));
 
-            // Dent bodywork at the contact point — only for genuine impacts above the threshold.
-            if (closingSpeed >= damageMinSpeed)
-                _damage?.OnImpact(d.pointB, -d.normal, severity);
+            // Fold the bodywork around whatever hit it — only for genuine impacts above the threshold.
+            // The striker is handed over as a BODY, not as a point: a car presses its own oriented box into
+            // our panels and leaves a dent shaped like its nose or its flank, and a wall presses a flat face
+            // and leaves the panel flat against it. See BodyDeform for why a point and a radius was wrong.
+            //
+            // And only OUR share of it. Both cars in a contact run this same line against each other, so
+            // handing each of them the full severity folds one impact's worth of metal twice — both panels
+            // retreat from the contact and leave a void between two cars that are supposed to be touching.
+            // A barrier is not a body and gives nothing, so a car that hits one takes the whole thing.
+            if (closingSpeed >= damageMinSpeed && _damage != null)
+            {
+                float share = otherResponder != null
+                    ? Draftmaster.Sim.BodyDeform.Share(_responder != null ? _responder.Mass : 1500f,
+                                                       otherResponder.Mass)
+                    : Draftmaster.Sim.BodyDeform.RigidPartner;
+                _damage.OnImpact(StrikerFor(other, d.pointB, -d.normal), severity, share);
+            }
 
             if (otherResponder != null)
             {
@@ -227,6 +241,25 @@ public class VehicleCollision : MonoBehaviour
             }
             processed++;
         }
+    }
+
+    // The body that hit us, in world space, for the deformation model to press into our panels.
+    //
+    // A car is a BoxCollider2D, so it goes over as the oriented rectangle it actually is: hit side-on by a
+    // flank and the dent is a long shallow crease down the door; hit by a corner and it is a narrow gouge.
+    // Anything else — barriers, scenery, an EdgeCollider2D wall — is an infinite face through the contact
+    // point, which is what puts a car's nose flat against a wall instead of putting a hole in it.
+    static Draftmaster.Sim.BodyDeform.Striker StrikerFor(Collider2D other, Vector2 contactPoint, Vector2 inward)
+    {
+        var box = other as BoxCollider2D;
+        if (box == null) return Draftmaster.Sim.BodyDeform.Striker.Plane(contactPoint, inward);
+
+        Transform t = other.transform;
+        Vector3 scale = t.lossyScale;
+        Vector2 centre = t.TransformPoint(box.offset);
+        Vector2 half = new Vector2(box.size.x * 0.5f * Mathf.Abs(scale.x),
+                                   box.size.y * 0.5f * Mathf.Abs(scale.y));
+        return Draftmaster.Sim.BodyDeform.Striker.Box(centre, t.right, half, inward);
     }
 
     void OnValidate()
