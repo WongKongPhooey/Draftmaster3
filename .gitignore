@@ -73,3 +73,7 @@ crashlytics-build.properties
 
 FullGame281220.zip
 Recordings/
+
+# Python bytecode from Tools/
+__pycache__/
+*.pyc
