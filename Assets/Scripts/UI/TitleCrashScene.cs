@@ -43,6 +43,10 @@ public class TitleCrashScene : MonoBehaviour
     public int[] fillerCarNumbers = { 24, 11, 5, 22, 9, 19, 12, 48, 3, 2, 20, 1 };
     [Tooltip("Number the hero car wears when there's no career save to read one from.")]
     public int fallbackHeroNumber = 8;
+    [Tooltip("Seed for the whole staging — who is in the accident, where it happens, how hard, and which " +
+             "cars are wearing which paint. Left at 0 a fresh one is drawn every time the title screen " +
+             "opens; set it to anything else to pin one shot and get it back every time.")]
+    public int seed = 0;
 
     [Header("Timing")]
     [Tooltip("Seconds of empty screen before the first car arrives.")]
@@ -116,7 +120,19 @@ public class TitleCrashScene : MonoBehaviour
     // Indexed by plan, with a hole where a livery failed to load, so an impact always dents the car the
     // choreography named rather than whichever one happened to fill that slot.
     Car[] _cars = System.Array.Empty<Car>();
-    ParticleSystem _sparks, _smoke;
+
+    // One of these per impact, because a shot can have two or three of them going off at different points
+    // along the same car. Everything an impact throws off hangs on its own `at` transform, which is moved to
+    // wherever those two cars are meeting on the frame it is moved; the particle systems simulate in ITS
+    // space rather than the world's, so the whole shower — the sparks already in the air as well as the ones
+    // still to come — travels with the crash instead of being left behind by it as the pile slides on.
+    class Flash
+    {
+        public Transform at;
+        public ParticleSystem sparks;
+        public ParticleSystem smoke;
+    }
+    Flash[] _flashes = System.Array.Empty<Flash>();
 
     RectTransform _canvasRt;
     Camera _camera;
@@ -131,6 +147,8 @@ public class TitleCrashScene : MonoBehaviour
 
     // Working state. Poses are rebuilt from the choreography every frame and settled against each other, so
     // these are buffers rather than memory: the tableau stays a pure function of the clock.
+    Shot _shot;
+    int _seed;
     TitleCrash.CarPlan[] _plans = System.Array.Empty<TitleCrash.CarPlan>();
     TitleCrash.CarPose[] _poses = System.Array.Empty<TitleCrash.CarPose>();
     readonly List<TitleCrash.Contact> _contacts = new List<TitleCrash.Contact>();
@@ -144,8 +162,7 @@ public class TitleCrashScene : MonoBehaviour
     float[] _impactCrush = System.Array.Empty<float>();
 
     float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
-    Vector2 _plumeAt;            // where the plume rises from: the middle of what has been hit so far
-    int _plumeHits;
+    int _plumeNext;              // which impact the next puff rises from
 
     void Update()
     {
@@ -161,6 +178,7 @@ public class TitleCrashScene : MonoBehaviour
         _u = tempo.Clock(_elapsed);
 
         PoseCars();
+        TrackContact();
         Collide();
         Smoulder();
 
@@ -168,8 +186,11 @@ public class TitleCrashScene : MonoBehaviour
         // instead of burning out while the cars stand still. Rate is in choreography per second, where 1 is
         // the pace the bursts below are authored at — so the crawl runs them at a few percent of normal.
         float rate = tempo.Rate(_elapsed);
-        SetSimulationSpeed(_sparks, rate);
-        SetSimulationSpeed(_smoke, rate);
+        for (int i = 0; i < _flashes.Length; i++)
+        {
+            SetSimulationSpeed(_flashes[i].sparks, rate);
+            SetSimulationSpeed(_flashes[i].smoke, rate);
+        }
     }
 
     // ------------------------------------------------------------------ build
@@ -186,15 +207,20 @@ public class TitleCrashScene : MonoBehaviour
             return false;
         }
 
-        var plans = TitleCrash.Field();
+        // A different accident every time the screen opens, unless a seed has been pinned in the inspector.
+        // Everything downstream — who is in it, where, how hard, and which paint is on which car — is a
+        // function of this one number, so a shot somebody liked can always be got back.
+        _seed = seed != 0 ? seed : Random.Range(1, int.MaxValue);
+        _shot = TitleCrashComposer.Compose(_seed);
+
+        var plans = _shot.cars;
         _plans = plans;
         _poses = new TitleCrash.CarPose[plans.Length];
-        _impacts = TitleCrash.Impacts();
+        _impacts = _shot.impacts;
         _impactsFired = new bool[_impacts.Length];
         _impactCrush = new float[_impacts.Length];
-        _plumeAt = TitleCrash.PileCentrePx;
 
-        var liveries = PickLiveries(plans.Length);
+        var liveries = PickLiveries(plans.Length, _seed);
 
         _cars = new Car[plans.Length];
         int built = 0;
@@ -214,8 +240,13 @@ public class TitleCrashScene : MonoBehaviour
             return false;
         }
 
-        _sparks = BuildSparks();
-        _smoke = BuildSmoke();
+        _flashes = new Flash[_impacts.Length];
+        for (int i = 0; i < _flashes.Length; i++)
+        {
+            var at = new GameObject($"Contact_{i}").transform;
+            at.SetParent(transform, false);
+            _flashes[i] = new Flash { at = at, sparks = BuildSparks(at, i), smoke = BuildSmoke(at, i) };
+        }
 
         // Pose once before the first frame is drawn, or every car flashes at the origin for a frame.
         _elapsed = -Mathf.Max(0f, startDelay);
@@ -274,37 +305,61 @@ public class TitleCrashScene : MonoBehaviour
     }
 
     // The paint. The hero wears the player's number once there's a career behind it — same number the
-    // garage and the timing tower resolve a driver from — and the rest of the pile takes whatever else the
-    // carset has, skipping the hero's own number so the shot never contains two of the same car.
-    Sprite[] PickLiveries(int count)
+    // garage and the timing tower resolve a driver from — and the rest of the field is dealt off a SHUFFLE
+    // of everything else the carset has, so the cars in the shot are different every time rather than the
+    // same four numbers in the same order. Shuffled off the shot's seed, so a pinned seed is a pinned cast.
+    Sprite[] PickLiveries(int count, int seed)
     {
         var chosen = new Sprite[count];
+        int heroIndex = Mathf.Clamp(_shot.heroIndex, 0, count - 1);
         int heroNumber = HeroCarNumber();
 
         var hero = Livery(heroNumber);
         if (hero == null) { heroNumber = fallbackHeroNumber; hero = Livery(heroNumber); }
-        chosen[Mathf.Clamp(TitleCrash.HeroIndex, 0, count - 1)] = hero;
+        chosen[heroIndex] = hero;
+
+        var pool = LiveryPool(heroNumber);
+        var rng = new System.Random(seed);
+        for (int i = pool.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
 
         int at = 0;
         for (int i = 0; i < count; i++)
         {
             if (chosen[i] != null) continue;
-            while (at < (fillerCarNumbers?.Length ?? 0))
-            {
-                int number = fillerCarNumbers[at++];
-                if (number == heroNumber) continue;
-                var sprite = Livery(number);
-                if (sprite != null) { chosen[i] = sprite; break; }
-            }
+            if (at < pool.Count) chosen[i] = pool[at++];
         }
 
-        // Nothing resolved for the hero slot either: let it borrow a filler rather than leave a hole in the
+        // Nothing resolved for the hero slot either: let it borrow one rather than leave a hole in the
         // middle of the shot.
-        if (chosen[TitleCrash.HeroIndex] == null)
+        if (chosen[heroIndex] == null)
             for (int i = 0; i < count; i++)
-                if (chosen[i] != null) { chosen[TitleCrash.HeroIndex] = chosen[i]; break; }
+                if (chosen[i] != null) { chosen[heroIndex] = chosen[i]; break; }
 
         return chosen;
+    }
+
+    // Every livery the carset actually has, minus the one the hero is wearing so no number turns up twice.
+    // `fillerCarNumbers` is tried first and in order, then the carset is swept for anything else — a carset
+    // with thirty cars in it should be able to put thirty different cars on the title screen.
+    List<Sprite> LiveryPool(int heroNumber)
+    {
+        var pool = new List<Sprite>();
+        var seen = new HashSet<int>();
+
+        void Take(int number)
+        {
+            if (number == heroNumber || !seen.Add(number)) return;
+            var sprite = Livery(number);
+            if (sprite != null) pool.Add(sprite);
+        }
+
+        if (fillerCarNumbers != null) foreach (int number in fillerCarNumbers) Take(number);
+        for (int number = 0; number <= 99; number++) Take(number);
+        return pool;
     }
 
     Sprite Livery(int number)
@@ -372,7 +427,7 @@ public class TitleCrashScene : MonoBehaviour
         if (_poses.Length != _plans.Length) _poses = new TitleCrash.CarPose[_plans.Length];
 
         for (int i = 0; i < _plans.Length; i++) _poses[i] = TitleCrash.Evaluate(_plans[i], _u);
-        TitleCrash.Settle(_plans, _poses, _u, _contacts);
+        TitleCrash.Settle(_shot, _poses, _u, _contacts);
 
         for (int i = 0; i < _cars.Length && i < _poses.Length; i++)
         {
@@ -421,16 +476,15 @@ public class TitleCrashScene : MonoBehaviour
             _impactsFired[i] = true;
 
             // Sparks fly off the line the two cars are pushing along, which is the way a real scrape throws
-            // them; the smoke just puffs up out of the same point.
-            Vector3 at = PxToWorld(hit.pointPx);
+            // them; the smoke just puffs up out of the same point. Both are emitted AT the contact — the
+            // origin, in its own space — so they ride with it rather than marking where it used to be.
             Vector2 spray = hit.normal.sqrMagnitude > 1e-6f ? hit.normal.normalized : Vector2.up;
-            Burst(_sparks, at, spray, 150f, Mathf.RoundToInt(sparksPerImpact * hit.severity),
+            Burst(_flashes[i].sparks, Vector3.zero, spray, 150f, Mathf.RoundToInt(sparksPerImpact * hit.severity),
                   120f, 430f, sparkColorA, sparkColorB, 2.5f, 4.5f, 0.55f);
-            Burst(_smoke, at, spray, 180f, Mathf.RoundToInt(smokePerImpact * hit.severity),
+            Burst(_flashes[i].smoke, Vector3.zero, spray, 180f, Mathf.RoundToInt(smokePerImpact * hit.severity),
                   14f, 60f, smokeColorA, smokeColorB, 26f, 62f, 4f);
 
-            if (_plumeFrom < 0f) { _plumeFrom = _u; _plumeAt = hit.pointPx; _plumeHits = 1; }
-            else { _plumeHits++; _plumeAt += (hit.pointPx - _plumeAt) / _plumeHits; }
+            if (_plumeFrom < 0f) _plumeFrom = _u;
         }
     }
 
@@ -483,12 +537,25 @@ public class TitleCrashScene : MonoBehaviour
         return car != null && car.damage != null && car.damage.sourceSprite != null ? car : null;
     }
 
+    // Put the effects where the two cars are meeting on THIS frame.
+    //
+    // The pair are still closing through the whole slow-motion beat — the hero drives another thirty-odd
+    // pixels into the car it hit between contact and the freeze — so a flash fired once at the point they
+    // first touched ends up hanging in clear air behind them. Because the particle systems simulate in this
+    // transform's space, moving it carries the sparks already in flight along too, and the frozen tableau
+    // keeps its shower centred on the crash that threw it.
+    void TrackContact()
+    {
+        for (int i = 0; i < _flashes.Length && i < _impacts.Length; i++)
+            _flashes[i].at.position = PxToWorld(TitleCrash.ContactPointPx(_shot, _impacts[i], _poses, _u));
+    }
+
     // The pile keeps smoking after the first proper contact, so there's a plume hanging over the cars by the
     // time everything stops. Puffs are spent against choreography time, not wall clock, so the smoke thins
     // out and stops as the clock does.
     void Smoulder()
     {
-        if (_plumeFrom < 0f || _smoke == null) return;
+        if (_plumeFrom < 0f || _flashes.Length == 0) return;
 
         // Puffs are spent against choreography time, so the whole `plumePuffs` budget is issued across the
         // plume's window however many frames that takes — and issues none once the clock has stopped.
@@ -500,17 +567,19 @@ public class TitleCrashScene : MonoBehaviour
         while (_plumeCarry >= 1f)
         {
             _plumeCarry -= 1f;
-            Vector2 jitter = Random.insideUnitCircle * 34f;
-            Vector3 at = PxToWorld(_plumeAt + jitter);
-            Burst(_smoke, at, Vector2.up, 60f, 1, 8f, 34f, smokeColorA, smokeColorB, 30f, 74f, 5f);
+            // Round-robin across the impacts, so a three-car pile smokes from all three places it was hit
+            // rather than three times as hard from one of them.
+            var from = _flashes[_plumeNext++ % _flashes.Length];
+            Vector3 jitter = (Vector3)(Random.insideUnitCircle * 34f) * _unit;
+            Burst(from.smoke, jitter, Vector2.up, 60f, 1, 8f, 34f, smokeColorA, smokeColorB, 30f, 74f, 5f);
         }
     }
 
     // ------------------------------------------------------------------ particles
 
-    ParticleSystem BuildSparks()
+    ParticleSystem BuildSparks(Transform parent, int index)
     {
-        var ps = MakeSystem("CrashSparks", baseSortingOrder + 8);
+        var ps = MakeSystem(index == 0 ? "CrashSparks" : $"CrashSparks_{index}", baseSortingOrder + 8, parent);
         var renderer = ps.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Stretch;
         renderer.velocityScale = 0.03f;
@@ -529,9 +598,9 @@ public class TitleCrashScene : MonoBehaviour
         return ps;
     }
 
-    ParticleSystem BuildSmoke()
+    ParticleSystem BuildSmoke(Transform parent, int index)
     {
-        var ps = MakeSystem("CrashSmoke", baseSortingOrder + 7);
+        var ps = MakeSystem(index == 0 ? "CrashSmoke" : $"CrashSmoke_{index}", baseSortingOrder + 7, parent);
         var main = ps.main;
         main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
 
@@ -553,15 +622,18 @@ public class TitleCrashScene : MonoBehaviour
         return ps;
     }
 
-    ParticleSystem MakeSystem(string name, int sortingOrder)
+    ParticleSystem MakeSystem(string name, int sortingOrder, Transform parent)
     {
         var go = new GameObject(name);
-        go.transform.SetParent(transform, false);
+        go.transform.SetParent(parent != null ? parent : transform, false);
         var ps = go.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         var main = ps.main;
-        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        // Local, not World: the parent is the contact point, so moving it carries every particle already in
+        // flight along with it. In world space the shower stayed exactly where it was fired while the cars
+        // slid another thirty pixels on, and the frozen tableau ended up with its sparks behind the crash.
+        main.simulationSpace = ParticleSystemSimulationSpace.Local;
         main.startSpeed = 0f;          // every particle's velocity is supplied per-emit
         main.gravityModifier = 0f;     // top-down view
         main.maxParticles = 600;
@@ -606,6 +678,9 @@ public class TitleCrashScene : MonoBehaviour
 
     // Speeds and sizes come in as reference pixels (per second, and across) so a burst reads the same on any
     // screen; `_unit` is the only place they turn into world units.
+    //
+    // `at` is an OFFSET from the contact point, not a world position: these systems simulate in the contact's
+    // own space so that everything they throw travels with the crash. Vector3.zero is the contact itself.
     void Burst(ParticleSystem ps, Vector3 at, Vector2 direction, float spreadDeg, int count,
                float speedMinPx, float speedMaxPx, Color colorA, Color colorB,
                float sizeMinPx, float sizeMaxPx, float lifetime)

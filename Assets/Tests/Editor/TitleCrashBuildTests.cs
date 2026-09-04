@@ -84,7 +84,7 @@ public class TitleCrashBuildTests
         var crash = Play(out var component);
         var cars = Cars(crash);
 
-        Assert.AreEqual(TitleCrash.Field().Length, cars.Length,
+        Assert.AreEqual(Shot(component).CarCount, cars.Length,
                         "The tableau didn't build every car — a livery failed to load, or the layout wasn't measured.");
 
         int gridX = Field<int>(component, "gridX");
@@ -106,13 +106,13 @@ public class TitleCrashBuildTests
     [Test]
     public void EveryCarDrawsBelowTheTitleCanvasWithTheHeroInFront()
     {
-        var cars = Cars(Play(out _));
+        var cars = Cars(Play(out var component));
         var orders = cars.Select(c => c.GetComponent<MeshRenderer>().sortingOrder).ToArray();
 
         foreach (var order in orders)
             Assert.Less(order, 0, "A car sorts at or above the title canvas — it would draw over the wordmark.");
 
-        Assert.AreEqual(orders.Max(), orders[TitleCrash.HeroIndex],
+        Assert.AreEqual(orders.Max(), orders[Shot(component).heroIndex],
                         "The player's car isn't the front-most thing in the pile.");
         Assert.AreEqual(orders.Length, orders.Distinct().Count(),
                         "Two cars share a sorting order, so which one is in front is undefined.");
@@ -145,7 +145,7 @@ public class TitleCrashBuildTests
         // untouched — that contrast is what makes the wrecked pair read as wrecked.
         for (int i = 0; i < cars.Length; i++)
         {
-            bool inTheCrash = TitleCrash.IsInTheCrash(i);
+            bool inTheCrash = Shot(component).IsInTheCrash(i);
             int moved = VerticesMovedSince(onArrival[i], cars[i]);
 
             if (inTheCrash)
@@ -172,10 +172,12 @@ public class TitleCrashBuildTests
         // holds: Settle keeps this pair MaxBitePx inside each other on purpose, so there is a real intrusion
         // for both of them to fold out of — and a press on top of it would open a void exactly as wide as
         // the press, whatever the shares are set to (see BodyDeformTests).
-        var cars = Cars(Play(out _));
+        var cars = Cars(Play(out var component));
+        var shot = Shot(component);
 
-        foreach (int i in new[] { TitleCrash.TurnerIndex, TitleCrash.TurnedIndex })
+        for (int i = 0; i < cars.Length; i++)
         {
+            if (!shot.IsInTheCrash(i)) continue;
             var damage = cars[i].GetComponent(FindRuntimeType("VehicleDamage"));
             Assert.IsNotNull(damage, $"{cars[i].name} has no VehicleDamage to read a fold depth off.");
 
@@ -197,7 +199,13 @@ public class TitleCrashBuildTests
         Drive(component, from: 0f, to: 1f, steps: 240);
 
         var cars = Cars(crash);
-        var hit = TitleCrash.Impacts()[0];
+        var shot = Shot(component);
+        var hit = shot.impacts[0];
+
+        // Where the two of them are meeting at the freeze, not where they first touched — the pair slide on
+        // through the whole slow-motion beat, so the first is a good way behind the second.
+        var frozen = TitleCrash.Tableau(shot, 1f);
+        Vector2 where = TitleCrash.ContactPointPx(shot, hit, frozen, 1f);
 
         Vector2 n = hit.normal.normalized;              // striker -> struck
         Vector2 across = new Vector2(-n.y, n.x);
@@ -209,19 +217,19 @@ public class TitleCrashBuildTests
         float sliderReach = float.MaxValue;             // nearest the struck car's metal comes back toward it
 
         foreach (var v in MeshPointsPx(cars[hit.striker]))
-            if (Mathf.Abs(Vector2.Dot(v - hit.pointPx, across)) < 30f)
+            if (Mathf.Abs(Vector2.Dot(v - where, across)) < 30f)
                 heroReach = Mathf.Max(heroReach, Vector2.Dot(v, n));
 
         foreach (var v in MeshPointsPx(cars[hit.struck]))
-            if (Mathf.Abs(Vector2.Dot(v - hit.pointPx, across)) < 30f)
+            if (Mathf.Abs(Vector2.Dot(v - where, across)) < 30f)
                 sliderReach = Mathf.Min(sliderReach, Vector2.Dot(v, n));
 
         float gap = sliderReach - heroReach;
         Assert.Less(gap, 2f,
                     $"There is a {gap:0.0}px void between the two cars' bodywork at the freeze. They both " +
                     $"folded away from the contact and left a hole where the crash is supposed to be. " +
-                    $"(burial {TitleCrash.MaxBitePx:0}px, so each panel may give up at most half of it.)");
-        Assert.Greater(gap, -TitleCrash.MaxBitePx - 4f,
+                    $"(burial {shot.bitePx:0}px, so each panel may give up at most half of it.)");
+        Assert.Greater(gap, -shot.bitePx - 4f,
                     $"The two cars' bodywork is {-gap:0.0}px through each other — past the burial, so the " +
                     "metal is drawn overlapping rather than crushed together.");
     }
@@ -294,10 +302,10 @@ public class TitleCrashBuildTests
     [Test]
     public void TheFrozenPileIsTwoCarsBuriedInEachOtherAndNobodyElseTouching()
     {
-        var cars = Cars(Play(out _));
+        var cars = Cars(Play(out var component));
 
-        var field = TitleCrash.Field();
-        var poses = TitleCrash.Tableau(field, 1f);
+        var shot = Shot(component);
+        var poses = TitleCrash.Tableau(shot, 1f);
 
         // What the maths settled has to be what the transforms got, or the pile was resolved on paper only.
         for (int i = 0; i < cars.Length && i < poses.Length; i++)
@@ -311,7 +319,7 @@ public class TitleCrashBuildTests
         {
             for (int b = a + 1; b < poses.Length; b++)
             {
-                bool crashPair = TitleCrash.IsInTheCrash(a) && TitleCrash.IsInTheCrash(b);
+                bool crashPair = shot.AllowedBite(a, b, 1f) > 0f;
                 bool through = TitleCrash.Overlap(poses[a].position, poses[a].rotation,
                                                   poses[b].position, poses[b].rotation, out _, out float depth);
 
@@ -321,10 +329,10 @@ public class TitleCrashBuildTests
                     // draw as two opaque rectangles meeting along a line, which reads as two cars parked
                     // together rather than one buried in the other.
                     Assert.IsTrue(through, "The crash pair finish merely touching — the hit doesn't read as a hit.");
-                    Assert.Greater(depth, TitleCrash.MaxBitePx * 0.75f,
+                    Assert.Greater(depth, shot.bitePx * 0.75f,
                                    $"They're only {depth:0.0}px into each other, well short of the " +
-                                   $"{TitleCrash.MaxBitePx:0}px allowance.");
-                    Assert.Less(depth, TitleCrash.MaxBitePx + 1f,
+                                   $"{shot.bitePx:0}px allowance.");
+                    Assert.Less(depth, shot.bitePx + 1f,
                                 $"They're {depth:0.0}px into each other — past the allowance, so they're " +
                                 "drawn through each other rather than crashing.");
                 }
@@ -344,12 +352,13 @@ public class TitleCrashBuildTests
     {
         PlayerPrefs.SetInt(PlayerDriverNumberKey, CareerNumber);
 
-        var cars = Cars(Play(out _));
-        StringAssert.EndsWith($"livery{CareerNumber}", cars[TitleCrash.HeroIndex].name,
+        var cars = Cars(Play(out var component));
+        int heroIndex = Shot(component).heroIndex;
+        StringAssert.EndsWith($"livery{CareerNumber}", cars[heroIndex].name,
                               "A career save is set but the hero car isn't wearing the player's number.");
 
         for (int i = 0; i < cars.Length; i++)
-            if (i != TitleCrash.HeroIndex)
+            if (i != heroIndex)
                 StringAssert.DoesNotEndWith($"livery{CareerNumber}", cars[i].name,
                                             "The player's number turns up twice in the same shot.");
     }
@@ -362,7 +371,7 @@ public class TitleCrashBuildTests
         var cars = Cars(Play(out var component));
         int fallback = Field<int>(component, "fallbackHeroNumber");
 
-        StringAssert.EndsWith($"livery{fallback}", cars[TitleCrash.HeroIndex].name,
+        StringAssert.EndsWith($"livery{fallback}", cars[Shot(component).heroIndex].name,
                               "With no save behind it the hero slot should still be dressed, not left empty.");
     }
 
@@ -375,12 +384,22 @@ public class TitleCrashBuildTests
 
         foreach (var name in new[] { "CrashSparks", "CrashSmoke" })
         {
-            var ps = crash.transform.Find(name)?.GetComponent<ParticleSystem>();
+            // Searched rather than looked up by path: these hang off the contact point, which moves, so
+            // where they sit in the hierarchy is the fix rather than an implementation detail to pin.
+            var ps = crash.GetComponentsInChildren<ParticleSystem>(true).FirstOrDefault(p => p.name == name);
             Assert.IsNotNull(ps, $"There is no {name} — the crash has no {(name.EndsWith("Smoke") ? "smoke" : "sparks")}.");
 
             var main = ps.main;
             Assert.IsTrue(main.useUnscaledTime,
                           $"{name} rides Time.timeScale, so anything that touches it would drag the title screen with it.");
+
+            // The mechanism that keeps the shower on the crash. In world space the particles already in
+            // flight stay where they were fired while the cars slide another thirty pixels on, and the
+            // frozen tableau ends up with its sparks hanging in clear air behind the impact.
+            Assert.AreEqual(ParticleSystemSimulationSpace.Local, main.simulationSpace,
+                            $"{name} simulates in world space, so it can't travel with the contact.");
+            Assert.AreNotEqual(crash.transform, ps.transform.parent,
+                               $"{name} hangs off the tableau root rather than the moving contact point.");
             Assert.AreEqual(0f, main.simulationSpeed, 1e-4f,
                             $"{name} is still running after the freeze — the sparks would burn out over a still pile.");
             Assert.IsFalse(ps.emission.enabled,
@@ -437,6 +456,14 @@ public class TitleCrashBuildTests
         var field = component.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public);
         Assert.IsNotNull(field, $"{component.GetType().Name} has no '{name}' field any more.");
         return (T)field.GetValue(component);
+    }
+
+    // The shot the component composed for itself this run — reached by reflection, like everything else here.
+    static Shot Shot(Component component)
+    {
+        var field = component.GetType().GetField("_shot", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(field, "TitleCrashScene has no composed shot any more.");
+        return (Shot)field.GetValue(component);
     }
 
     static void Step(Component component)
