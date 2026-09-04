@@ -49,6 +49,7 @@ public class WeekendMarkerGate : NPCInteractable
         // blinking and finding themselves somewhere else.
         var player = WeekendVenueAnchor.OnFootPlayer();
         Vector3 to = destination.position;
+        Vector3 back = transform.position;      // the gate: where the walk out there started
 
         ScreenFade.Cut(() =>
         {
@@ -59,6 +60,12 @@ public class WeekendMarkerGate : NPCInteractable
             var body = player.GetComponent<Rigidbody2D>();
             if (body != null) body.position = to;
             player.position = to;
+
+            // Somewhere to watch a session from is not a panel to sit through: the obligation was to be
+            // there, so arriving completes it, and what is left is a seat and a way back. GrandstandVisit
+            // owns both. Done inside the wipe so the booking is settled before the screen comes back and
+            // the result card is not read over the paddock the player has just left.
+            if (pending.IsSpectate) GrandstandVisit.Begin(pending, back);
         });
 
         return false;
