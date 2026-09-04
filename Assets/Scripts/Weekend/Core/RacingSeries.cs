@@ -25,6 +25,11 @@ namespace Draftmaster.Weekend
 
         const string PlayerSeriesKey = "weekend.series";
 
+        // Has anybody actually chosen? An unanswered entry falls back to the bottom of the ladder below, and
+        // the runtime uses this to tell "the player picked Trucks" from "nobody has said yet" — the second
+        // of which is answered by the car they are sat in (PlayerEntry).
+        public static bool HasEntry => PlayerPrefs.HasKey(PlayerSeriesKey);
+
         // Which championship the player is entered in. Everything else at the venue is somebody else's race.
         public static RacingSeries PlayerSeries
         {

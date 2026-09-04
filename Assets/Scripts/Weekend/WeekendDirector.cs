@@ -49,6 +49,11 @@ public class WeekendDirector : MonoBehaviour
     {
         get
         {
+            // Before anything is built on it: a career that has never chosen a championship is entered in
+            // the one its car races in, rather than in the bottom rung of the ladder by default. The sheet
+            // is built per series, so getting this wrong makes somebody else's session look like yours.
+            PlayerEntry.EnsureFromTheCar();
+
             int id = RaceWeekend.WeekendId;
             var series = SeriesCatalog.PlayerSeries;
             if (_timetable == null || _builtForWeekend != id || _builtForSeries != series)
