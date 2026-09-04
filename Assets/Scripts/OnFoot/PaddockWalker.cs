@@ -21,6 +21,10 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
     public float spriteFacingOffsetDeg = 90f;
     [Tooltip("Walk-cycle playback rate (frames/sec) while moving.")]
     public float frameRate = 8f;
+    [Tooltip("Seconds this walker stands still after the player walks into it, looking at whoever bumped " +
+             "them before carrying on. Also what stops the pair grinding against each other: a kinematic " +
+             "walker that keeps stepping into a dynamic player can never be pushed out of the way.")]
+    public float bumpPauseSeconds = 1.4f;
     [Tooltip("Conversation this walker owns. While it's running the walker stands still and turns to face whoever stopped it — otherwise it would wander off mid-sentence, dragging its speech bubble along. Auto-found on the same object if left null.")]
     public NPCInteractable conversation;
     [Tooltip("Ambient one-liners this walker mutters at a passing player. Handled the same as a conversation: stand still and look at them while speaking. Auto-found on the same object if left null.")]
@@ -35,6 +39,8 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
     readonly List<Vector3> _path = new();
     int _idx;
     float _pauseTimer;
+    Transform _bumpedBy;           // whoever last walked into us, for as long as _bumpTimer runs
+    float _bumpTimer;
     float _frameTimer;
     int _frame;
 
@@ -55,7 +61,22 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         GeneratePath();
         _idx = 0;
         _pauseTimer = 0f;
+        _bumpTimer = 0f;
+        _bumpedBy = null;
         Idle();
+    }
+
+    // Somebody has walked into us. Stand still and look at them for a moment, then carry on.
+    //
+    // This is the same courtesy the walker already extends to anyone who talks to it, and it is also what
+    // unsticks the pair. The walker is a KINEMATIC body stepping along a fixed path with MovePosition, and
+    // the player is a dynamic one: a kinematic body shoves a dynamic body and is never shoved back, so a
+    // walker that keeps marching into the player pins them and neither can get past. Stopping hands the
+    // ground back — and the player's own contact slide (OnFootController) does the rest.
+    public void Bumped(Transform by)
+    {
+        _bumpedBy = by;
+        _bumpTimer = Mathf.Max(_bumpTimer, bumpPauseSeconds);
     }
 
     void Awake()
@@ -107,6 +128,15 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
             Idle();
             if (chatter.Listener != null)
                 Face((Vector2)(chatter.Listener.position - transform.position));
+            return;
+        }
+
+        // Bumped: stand still, look at them, and let the moment pass before walking on.
+        if (_bumpTimer > 0f)
+        {
+            _bumpTimer -= Time.deltaTime;
+            Idle();
+            if (_bumpedBy != null) Face((Vector2)(_bumpedBy.position - transform.position));
             return;
         }
 

@@ -47,6 +47,13 @@ public class OnFootController : MonoBehaviour
     [Tooltip("Input actions asset (PlayerControl). Movement is read from the OnFoot/Movement action each frame. A private runtime copy is used so it can't clash with the car's InputManager.")]
     public InputActionAsset controlsAsset;
 
+    [Header("Bumping into people")]
+    [Tooltip("How firmly the player is eased back out of somebody they are standing in, in units/sec. " +
+             "Only the part of the walk pushing INTO them is removed, so walking at an NPC slides you " +
+             "around them instead of pinning you against them; this is the gentle shove that separates a " +
+             "pair who are already overlapping.")]
+    public float bumpSeparateSpeed = 0.6f;
+
     // Scripted sequences (cutscenes) set this to freeze the player in place: movement zeroes, the
     // walk animation idles, prompts hide, and interact presses are swallowed. Facing is left alone
     // so the sequence can orient the player itself. Not serialized — runtime control only.
@@ -64,6 +71,10 @@ public class OnFootController : MonoBehaviour
     float _prevMoveMag;            // last frame's input magnitude, for re-engage detection
     float _peakMag;                // highest magnitude since the current push began
     bool _stickReleased;           // latched true while the stick springs back
+
+    // People we are standing in this step, as unit vectors pointing from them to us. Collected by the
+    // collision callbacks (which run after the physics step) and spent by the next FixedUpdate.
+    readonly List<Vector2> _bumpAway = new();
 
     void Awake()
     {
@@ -145,6 +156,24 @@ public class OnFootController : MonoBehaviour
                 _rb.linearVelocity = (clamped - _rb.position) / Time.fixedDeltaTime;
         }
 
+        // Walking into somebody should take you around them, not wedge you against them.
+        //
+        // The player is a dynamic body and the paddock walkers are kinematic ones, which is a one-way
+        // relationship: they push us and we can never push them. Pressing the stick toward a walker used to
+        // just hold both of them in place, grinding, until one of them wandered off. So the part of the walk
+        // that points INTO them is thrown away and only the part along them is kept — the same trick the
+        // paddock boundary above uses to slide along a wall — and a small shove along the contact eases a
+        // pair who are already overlapping back apart. The walker meanwhile stops and looks at us
+        // (PaddockWalker.Bumped), which is what actually hands the ground back.
+        for (int i = 0; i < _bumpAway.Count; i++)
+        {
+            Vector2 away = _bumpAway[i];
+            float into = Vector2.Dot(_rb.linearVelocity, -away);
+            if (into > 0f) _rb.linearVelocity += away * into;   // keep only what runs along them
+            _rb.linearVelocity += away * bumpSeparateSpeed;
+        }
+        _bumpAway.Clear();
+
         if (faceMoveDirection && move.sqrMagnitude > 0.01f)
         {
             float ang = Mathf.Atan2(move.y, move.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
@@ -219,6 +248,32 @@ public class OnFootController : MonoBehaviour
         FaceEachOther(npc);
         _activeNpc = npc;
         npc.Interact();
+    }
+
+    // Standing in somebody. Collision callbacks run after the physics step, so what these record is spent
+    // by the next FixedUpdate — one step of lag, which at walking pace is invisible.
+    void OnCollisionStay2D(Collision2D collision) => NoteBump(collision);
+    void OnCollisionEnter2D(Collision2D collision) => NoteBump(collision);
+
+    void NoteBump(Collision2D collision)
+    {
+        if (collision == null || collision.transform == null) return;
+
+        // Only people. Walls, cars and scenery are the physics engine's business and already behave.
+        var them = collision.transform;
+        var walker = them.GetComponentInParent<PaddockWalker>();
+        var talker = them.GetComponentInParent<NPCInteractable>();
+        if (walker == null && talker == null && them.GetComponentInParent<NPCLayeredAppearance>() == null) return;
+
+        Vector2 away = (Vector2)(transform.position - them.position);
+        if (away.sqrMagnitude < 1e-6f) away = Vector2.up;       // exactly co-located: pick a way out
+        _bumpAway.Add(away.normalized);
+
+        // Stop them and turn them to look at us. A walker has somewhere to be and its own way of pausing;
+        // anything else that is willing to be turned just gets turned.
+        if (walker != null) walker.Bumped(transform);
+        else if (talker != null && talker.turnsToFace && !talker.IsTalking)
+            ApplyFacing(them, them.GetComponent<Rigidbody2D>(), -away, spriteFacingOffsetDeg);
     }
 
     // Turn the player to look at a world point and hold that facing while locked/talking.
