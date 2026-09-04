@@ -18,7 +18,7 @@ namespace Draftmaster.Weekend
         Motorhome,     // the player's own RV in the drivers' lot: debriefs, and where you take an hour off
         MeetingRoom,   // the drivers' room: a top table and a seat for every driver at the circuit
         SigningFence,  // the fan barrier along the paddock boundary — you sign from the inside of it
-        SponsorSuite,  // the hospitality awning out in the middle of the paddock
+        SponsorSuite,  // the winner's circle out in the middle of the paddock: chequers, barriers, boards
         IntroStage,    // the stage at the end of pit road, where the field is announced before the race
         Grandstand,    // a seat in the crowd for somebody else's session
     }
@@ -80,7 +80,7 @@ namespace Draftmaster.Weekend
                 case WeekendVenue.Motorhome:    return "your motorhome";
                 case WeekendVenue.MeetingRoom:  return "the drivers' room";
                 case WeekendVenue.SigningFence: return "the fan fence";
-                case WeekendVenue.SponsorSuite: return "the hospitality tent";
+                case WeekendVenue.SponsorSuite: return "the winner's circle";
                 case WeekendVenue.IntroStage:   return "the intro stage";
                 case WeekendVenue.Grandstand:   return "the grandstand";
                 default:                        return "the track";
@@ -97,7 +97,7 @@ namespace Draftmaster.Weekend
                 case WeekendVenue.Motorhome:    return "Motorhome";
                 case WeekendVenue.MeetingRoom:  return "Drivers' room";
                 case WeekendVenue.SigningFence: return "Fan fence";
-                case WeekendVenue.SponsorSuite: return "Hospitality";
+                case WeekendVenue.SponsorSuite: return "Winner's circle";
                 case WeekendVenue.IntroStage:   return "Intro stage";
                 case WeekendVenue.Grandstand:   return "Grandstand";
                 default:                        return "Track";
@@ -113,7 +113,7 @@ namespace Draftmaster.Weekend
                 case WeekendVenue.Motorhome:    return "Head back to your motorhome";
                 case WeekendVenue.MeetingRoom:  return "Head to the drivers' room";
                 case WeekendVenue.SigningFence: return "Head to the fan fence";
-                case WeekendVenue.SponsorSuite: return "Head to the hospitality tent";
+                case WeekendVenue.SponsorSuite: return "Head to the winner's circle";
                 case WeekendVenue.IntroStage:   return "Head to the intro stage";
                 case WeekendVenue.Grandstand:   return "Find a seat in the grandstand";
                 default:                        return "Head to the track";

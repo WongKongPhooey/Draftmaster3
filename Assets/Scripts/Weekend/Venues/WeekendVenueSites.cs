@@ -44,8 +44,15 @@ public class WeekendVenueSites : MonoBehaviour
     const float StageWidth = 12f;
     const float StageDepth = 5f;
 
-    const float TentWidth = 10f;
-    const float TentDepth = 8f;
+    // The winner's circle: a chequered square to be photographed standing in, fenced off with crowd
+    // barriers, with the sponsors' boards round the outside of it.
+    const float CircleSize = 9f;          // the chequered square itself
+    const int CircleSquares = 6;          // squares across it
+    const float BarrierRing = 12.5f;      // where the barriers stand, measured across
+    const float BarrierLength = 2.4f;     // one barrier section
+    const float BarrierThickness = 0.3f;
+    const float BoardWidth = 4.5f;
+    const float BoardDepth = 0.9f;
 
     Transform _root;
     readonly List<Material> _materials = new();
@@ -156,7 +163,7 @@ public class WeekendVenueSites : MonoBehaviour
         else
         {
             Debug.LogWarning("WeekendVenueSites: no paddock rectangle at this track — the drivers' room, the " +
-                             "fan fence, the hospitality tent and the intro stage were not placed. Bake a " +
+                             "fan fence, the winner's circle and the intro stage were not placed. Bake a " +
                              "paddock for it (Draftmaster > Tracks) or author the anchors in the package.");
         }
 
@@ -550,15 +557,18 @@ public class WeekendVenueSites : MonoBehaviour
     void PlaceFanFence(Vector3 centre, Vector3 along, Vector3 outward, float halfLen, float halfDepth,
                        float alongOffset)
     {
-        if (WeekendVenueAnchor.Exists(WeekendVenue.SigningFence)) return;
-
-        Vector3 fenceCentre = centre + along * AlongOffset(alongOffset, halfLen, FenceLength * 0.5f)
-                                     + outward * (halfDepth - 1.5f);
+        bool authored = AuthoredSpot(WeekendVenue.SigningFence, out Vector3 at, out Quaternion facing);
+        if (!authored)
+        {
+            at = Walkable(centre + along * AlongOffset(alongOffset, halfLen, FenceLength * 0.5f)
+                                 + outward * (halfDepth - 1.5f));
+            facing = FrameRotation(outward);
+        }
 
         var fence = new GameObject("FanFence");
         fence.transform.SetParent(_root, false);
-        fence.transform.position = Walkable(fenceCentre);
-        fence.transform.rotation = FrameRotation(outward);
+        fence.transform.position = at;
+        fence.transform.rotation = facing;
 
         var railMat = Mat(new Color(0.72f, 0.74f, 0.78f));
         var postMat = Mat(new Color(0.35f, 0.36f, 0.40f));
@@ -592,35 +602,115 @@ public class WeekendVenueSites : MonoBehaviour
             body.transform.localPosition = new Vector3(x, y, PaddockProps.PropZ - 0.1f);
         }
 
-        // Stand the driver on the paddock side of the rail; the fans queue up on the other one.
+        // Stand the driver on the paddock side of the rail; the fans queue up on the other one. With an
+        // authored marker the anchor is already there, and the rail was built around it.
+        if (authored) return;
         Vector3 inside = Walkable(fence.transform.TransformPoint(new Vector3(0f, -1.1f, 0f)));
         PaddockProps.Anchor(_root, WeekendVenue.SigningFence, inside, inside, arriveRange: 4.5f);
     }
 
-    // Hospitality: an awning out in the middle of the paddock with the sponsor's people under it.
+    // The winner's circle: where a driver is stood to be photographed.
+    //
+    // This was a hospitality awning, and it did not work for the one reason a place in this game has to:
+    // you could not see the player in it. The canopy was a nine-by-eight slab of prop laid over the exact
+    // ground the player had to stand on, so walking to the mark meant walking under a lid and disappearing.
+    //
+    // So it is built the other way round now. The middle is FLOOR — a chequered square, drawn behind
+    // everybody — and every solid thing is outside it: crowd barriers ringing the square with a gap to walk
+    // in through, the sponsors' boards behind them, a billboard across the back. The player stands on the
+    // chequers with nothing over them, which is the whole point of a photograph.
+    //
+    // Placeholder art, deliberately: flat colour blocked out to be walked around now and repainted later,
+    // the same way the drivers' room and the intro stage were.
     void PlaceHospitality(Vector3 centre, Vector3 along, Vector3 outward, float halfLen, float halfDepth,
                           float alongOffset)
     {
-        if (WeekendVenueAnchor.Exists(WeekendVenue.SponsorSuite)) return;
+        bool authored = AuthoredSpot(WeekendVenue.SponsorSuite, out Vector3 at, out Quaternion facing);
+        if (!authored)
+        {
+            at = Walkable(centre + along * AlongOffset(alongOffset, halfLen, BarrierRing * 0.5f)
+                                 - outward * Mathf.Min(halfDepth * 0.25f, halfDepth - BarrierRing * 0.5f));
+            facing = FrameRotation(outward);
+        }
 
-        Vector3 tentCentre = centre + along * AlongOffset(alongOffset, halfLen, TentWidth * 0.5f)
-                                    - outward * Mathf.Min(halfDepth * 0.25f, halfDepth - TentDepth * 0.5f);
+        var circle = new GameObject("WinnersCircle");
+        circle.transform.SetParent(_root, false);
+        circle.transform.position = at;
+        circle.transform.rotation = facing;
 
-        var tent = new GameObject("HospitalityTent");
-        tent.transform.SetParent(_root, false);
-        tent.transform.position = Walkable(tentCentre);
-        tent.transform.rotation = FrameRotation(outward);
+        PaddockProps.Chequers(circle.transform, "Chequers", Vector2.zero, CircleSize, CircleSquares,
+                              Mat(new Color(0.90f, 0.90f, 0.88f)), Mat(new Color(0.13f, 0.13f, 0.14f)));
 
-        PaddockProps.Quad(tent.transform, "Canopy", Vector2.zero, new Vector2(TentWidth, TentDepth),
-                          PaddockProps.FloorZ, Mat(new Color(0.86f, 0.84f, 0.80f)));
-        PaddockProps.Quad(tent.transform, "CanopyTrim", new Vector2(0f, TentDepth * 0.5f - 0.4f),
-                          new Vector2(TentWidth, 0.8f), PaddockProps.PropZ, Mat(new Color(0.80f, 0.24f, 0.22f)));
-        PaddockProps.Quad(tent.transform, "Counter", new Vector2(0f, -TentDepth * 0.5f + 1.2f),
-                          new Vector2(TentWidth - 3f, 0.9f), PaddockProps.PropZ, Mat(new Color(0.36f, 0.30f, 0.26f)));
-        LocationTitle.Attach(tent, "HOSPITALITY", TentWidth, "Sponsor duty");
+        BarrierRingAround(circle.transform);
 
-        Vector3 stand = Walkable(tent.transform.TransformPoint(new Vector3(0f, -TentDepth * 0.5f + 2.6f, 0f)));
-        PaddockProps.Anchor(_root, WeekendVenue.SponsorSuite, stand, stand, arriveRange: 4.5f);
+        // The sponsors' furniture: two boards at the back corners and a billboard across the back, all
+        // outside the barriers so none of them can be stood in front of the player.
+        var boardFace = Mat(new Color(0.82f, 0.80f, 0.76f));
+        float back = BarrierRing * 0.5f + 1.2f;
+        float side = BarrierRing * 0.5f - BoardWidth * 0.35f;
+
+        // Behind everybody, like the chequers: these stand at the BACK of the shot, and a board that draws
+        // over the person being photographed is the bug this whole place was rebuilt to fix.
+        const int BehindPeople = -10;
+
+        PaddockProps.Quad(circle.transform, "Billboard", new Vector2(0f, back + 1.4f),
+                          new Vector2(BoardWidth * 2f, BoardDepth * 1.6f), PaddockProps.WallZ, boardFace,
+                          sortingOrder: BehindPeople);
+        PaddockProps.Sign(circle.transform, "SPONSOR BOARD", new Vector2(0f, back + 1.4f), BoardWidth * 1.8f,
+                          new Color(0.16f, 0.16f, 0.18f));
+
+        PaddockProps.Quad(circle.transform, "SponsorBoardLeft", new Vector2(-side, back),
+                          new Vector2(BoardWidth, BoardDepth), PaddockProps.PropZ, boardFace,
+                          sortingOrder: BehindPeople);
+        PaddockProps.Sign(circle.transform, "SPONSOR", new Vector2(-side, back), BoardWidth * 0.8f,
+                          new Color(0.16f, 0.16f, 0.18f));
+
+        PaddockProps.Quad(circle.transform, "SponsorBoardRight", new Vector2(side, back),
+                          new Vector2(BoardWidth, BoardDepth), PaddockProps.PropZ, boardFace,
+                          sortingOrder: BehindPeople);
+        PaddockProps.Sign(circle.transform, "SPONSOR", new Vector2(side, back), BoardWidth * 0.8f,
+                          new Color(0.16f, 0.16f, 0.18f));
+
+        LocationTitle.Attach(circle, "WINNER'S CIRCLE", BarrierRing, "Sponsor duty");
+
+        // The mark is the middle of the chequers: stand there and the boards are behind you. An authored
+        // marker already put an anchor here — this is the same spot, so there is nothing to add.
+        if (authored) return;
+        Vector3 mark = Walkable(circle.transform.TransformPoint(Vector3.zero));
+        PaddockProps.Anchor(_root, WeekendVenue.SponsorSuite, mark, mark, arriveRange: 4f);
+    }
+
+    // Crowd barriers round the square, with the front left open to walk in through.
+    //
+    // Solid, so they read as barriers rather than as paint — the player has to go round to the gap, which
+    // is what makes the middle of it feel like somewhere you were put rather than somewhere you wandered.
+    void BarrierRingAround(Transform circle)
+    {
+        var metal = Mat(new Color(0.62f, 0.64f, 0.67f));
+        float half = BarrierRing * 0.5f;
+        int perSide = Mathf.Max(2, Mathf.RoundToInt(BarrierRing / BarrierLength));
+        float step = BarrierRing / perSide;
+        float first = -half + step * 0.5f;
+
+        for (int i = 0; i < perSide; i++)
+        {
+            float at = first + i * step;
+            var run = new Vector2(step - 0.25f, BarrierThickness);
+            var stand = new Vector2(BarrierThickness, step - 0.25f);
+
+            PaddockProps.Quad(circle, $"Barrier_Back_{i}", new Vector2(at, half), run,
+                              PaddockProps.PropZ, metal, solid: true);
+            PaddockProps.Quad(circle, $"Barrier_Left_{i}", new Vector2(-half, at), stand,
+                              PaddockProps.PropZ, metal, solid: true);
+            PaddockProps.Quad(circle, $"Barrier_Right_{i}", new Vector2(half, at), stand,
+                              PaddockProps.PropZ, metal, solid: true);
+
+            // The front rail is the way in: leave the middle two sections out of it.
+            bool gap = i == perSide / 2 || i == (perSide - 1) / 2;
+            if (!gap)
+                PaddockProps.Quad(circle, $"Barrier_Front_{i}", new Vector2(at, -half), run,
+                                  PaddockProps.PropZ, metal, solid: true);
+        }
     }
 
     // The intro stage: a platform at the pit-road end of the paddock, where the field is announced.
@@ -645,6 +735,33 @@ public class WeekendVenueSites : MonoBehaviour
 
         Vector3 mark = Walkable(stage.transform.TransformPoint(new Vector3(0f, -StageDepth * 0.25f, 0f)));
         PaddockProps.Anchor(_root, WeekendVenue.IntroStage, mark, mark, arriveRange: 4.5f);
+    }
+
+    // Where a venue the track authored for itself actually sits.
+    //
+    // A marker used to mean "this venue is placed, build nothing" — which is right for a place that is a
+    // real object in the package (a grandstand gate) and wrong for one whose whole appearance is generated
+    // (the winner's circle, the fan fence). Those two are a pile of props with an anchor in the middle, so
+    // an authored marker moves the props rather than suppressing them: the track says where and which way
+    // round, and the builder puts the same thing there.
+    //
+    // The position is taken as authored, NOT clamped into the walkable area. Somebody who drags a marker
+    // has decided where it goes, and the fan fence in particular belongs ON the paddock edge with the
+    // crowd outside it.
+    static bool AuthoredSpot(WeekendVenue venue, out Vector3 position, out Quaternion rotation)
+    {
+        var marker = WeekendMarker.Find(venue);
+        if (marker == null)
+        {
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+            return false;
+        }
+
+        Vector3 at = marker.MarkerPosition;
+        position = new Vector3(at.x, at.y, 0f);
+        rotation = marker.transform.rotation;
+        return true;
     }
 
     // ------------------------------------------------------------------ helpers

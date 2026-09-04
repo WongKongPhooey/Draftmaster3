@@ -48,6 +48,8 @@ namespace Draftmaster.Weekend
                 case "autographs":       return WeekendVenue.SigningFence;
 
                 case "sponsorsuite":
+                case "winnerscircle":
+                case "winnercircle":
                 case "hospitality":
                 case "sponsor":
                 case "suite":

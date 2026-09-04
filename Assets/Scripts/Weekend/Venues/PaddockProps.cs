@@ -30,7 +30,7 @@ public static class PaddockProps
     // Axis-aligned quad in the parent's local space. `solid` gives it a collider, which is what makes a
     // wall a wall — the on-foot player is a Rigidbody2D and walks into it.
     public static GameObject Quad(Transform parent, string name, Vector2 centreLocal, Vector2 size,
-                                  float localZ, Material mat, bool solid = false)
+                                  float localZ, Material mat, bool solid = false, int sortingOrder = 0)
     {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
@@ -42,6 +42,9 @@ public static class PaddockProps
         mr.sharedMaterial = mat;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
+        // Depth alone does not settle a mesh against a sprite, and the people in this paddock are sprites.
+        // Anything meant to be stood ON says so here rather than hoping the z ordering holds.
+        mr.sortingOrder = sortingOrder;
 
         float hx = size.x * 0.5f, hy = size.y * 0.5f;
         var mesh = new Mesh { name = name };
@@ -90,6 +93,65 @@ public static class PaddockProps
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.receiveShadows = false;
             mr.sortingOrder = 25;
+        }
+        return go;
+    }
+
+    // A chequered slab: the floor of somewhere you are photographed standing.
+    //
+    // Two meshes rather than one per square — a nine-by-nine board is eighty-one objects otherwise, and
+    // this is scenery. Both are drawn BEHIND everybody (a negative sorting order), because the whole point
+    // of the thing is that a person is visible standing on it.
+    public static GameObject Chequers(Transform parent, string name, Vector2 centreLocal, float size,
+                                      int squares, Material light, Material dark, float localZ = FloorZ)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = new Vector3(centreLocal.x, centreLocal.y, localZ);
+
+        squares = Mathf.Clamp(squares, 2, 24);
+        float step = size / squares;
+        float half = size * 0.5f;
+
+        for (int pass = 0; pass < 2; pass++)
+        {
+            var verts = new List<Vector3>();
+            var tris = new List<int>();
+            var uvs = new List<Vector2>();
+
+            for (int row = 0; row < squares; row++)
+            for (int col = 0; col < squares; col++)
+            {
+                if ((row + col) % 2 != pass) continue;
+
+                float x0 = -half + col * step, y0 = -half + row * step;
+                int b = verts.Count;
+                verts.Add(new Vector3(x0, y0, 0f));
+                verts.Add(new Vector3(x0 + step, y0, 0f));
+                verts.Add(new Vector3(x0 + step, y0 + step, 0f));
+                verts.Add(new Vector3(x0, y0 + step, 0f));
+                uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(1, 0));
+                uvs.Add(new Vector2(1, 1)); uvs.Add(new Vector2(0, 1));
+                tris.AddRange(new[] { b, b + 2, b + 1, b, b + 3, b + 2 });
+            }
+            if (verts.Count == 0) continue;
+
+            var tile = new GameObject(pass == 0 ? "Light" : "Dark");
+            tile.transform.SetParent(go.transform, false);
+
+            var mesh = new Mesh { name = tile.name };
+            mesh.SetVertices(verts);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            tile.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = tile.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = pass == 0 ? light : dark;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            mr.sortingOrder = -20;
         }
         return go;
     }
