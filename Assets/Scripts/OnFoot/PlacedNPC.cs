@@ -76,6 +76,9 @@ public class PlacedNPC : MonoBehaviour
     public float anchorLateral = 0f;
     [Tooltip("Keep re-deriving the position every frame instead of placing once. Needed for anything anchored to the player's car — GridSpawner re-parks it into its fitted pit box several frames after the scene opens.")]
     public bool followAnchor = false;
+    [Tooltip("Keep an anchored NPC somewhere the player can walk to. Off = stand exactly where the anchor " +
+             "says, even if that is across a pit wall. Ignored by 'Here', which is always taken literally.")]
+    public bool keepWithinReach = true;
     [Tooltip("Turn the body to this heading (degrees) when it spawns. Off = keep the prefab's default facing.")]
     public bool applyFacing = false;
     public float facingDeg = 0f;
@@ -243,8 +246,17 @@ public class PlacedNPC : MonoBehaviour
     public NPCInteractable Interactable => _npc;
     public bool Built => _built;
 
-    void OnEnable() { All.Add(this); }
-    void OnDisable() { All.Remove(this); }
+    void OnEnable()
+    {
+        All.Add(this);
+        PaddockBoundary.Changed += ReplaceIfStranded;
+    }
+
+    void OnDisable()
+    {
+        All.Remove(this);
+        PaddockBoundary.Changed -= ReplaceIfStranded;
+    }
 
     // Look up one of the named beats. Returns only NPCs that actually got built this session.
     public static PlacedNPC Find(Role role)
@@ -415,6 +427,19 @@ public class PlacedNPC : MonoBehaviour
         if (_walkUp != null) _walkUp.Play();
     }
 
+    // The walkable area is generated too, and some of it turns up after the cast does — the motorhome lot
+    // brings its own boundary. An NPC placed before that has already been judged against a paddock that has
+    // since changed shape, so re-place anyone who is now out of reach.
+    void ReplaceIfStranded()
+    {
+        if (!_built || _npc == null || anchor == Anchor.Here || !keepWithinReach) return;
+        if (_npc.IsTalking || PaddockBoundary.Inside(_npc.transform.position)) return;
+
+        Vector3 p = ResolveStandPoint();
+        if (_npcRb != null && _npcRb.bodyType != RigidbodyType2D.Dynamic) _npcRb.position = p;
+        _npc.transform.position = p;
+    }
+
     void LateUpdate()
     {
         // Anything anchored to the car keeps up with it until somebody engages them — the car moves under
@@ -437,12 +462,113 @@ public class PlacedNPC : MonoBehaviour
 
     // World position this NPC stands at, for the anchor they're set to. Public so the editor gizmo draws
     // the resolved spot rather than the marker's own position.
-    public Vector3 ResolveStandPoint() => ResolveOffset(anchorAlong, anchorLateral);
+    public Vector3 ResolveStandPoint()
+    {
+        Vector3 p = ResolveOffset(anchorAlong, anchorLateral);
+        return keepWithinReach ? SpacedFromNeighbours(p) : p;
+    }
+
+    // Nobody stands inside anybody else.
+    //
+    // Two anchors that were metres apart out in the pit lane can arrive at the same spot once both have
+    // been pushed onto the walkable side of it — the crew chief and the strategist ended up 30cm apart at
+    // Watkins Glen, which reads as one person. Step along the anchor line until the spot is clear, near
+    // side first, so the pair spread out along the fence in the order they were placed rather than piling
+    // up at whichever point happened to be closest.
+    Vector3 SpacedFromNeighbours(Vector3 p)
+    {
+        if (!Crowded(p)) return p;
+
+        for (int step = 1; step <= 8; step++)
+        {
+            float shift = step * 1.6f;
+            Vector3 back = ResolveOffset(anchorAlong - shift, anchorLateral);
+            if (!Crowded(back)) return back;
+
+            Vector3 forward = ResolveOffset(anchorAlong + shift, anchorLateral);
+            if (!Crowded(forward)) return forward;
+        }
+        return p;
+    }
+
+    bool Crowded(Vector3 p)
+    {
+        const float elbowRoom = 1.4f;
+        for (int i = 0; i < All.Count; i++)
+        {
+            var other = All[i];
+            if (other == null || other == this || other._npc == null) continue;
+            if ((other._npc.transform.position - p).sqrMagnitude < elbowRoom * elbowRoom) return true;
+        }
+        return false;
+    }
 
     public Vector3 ResolveTriggerPoint() => ResolveOffset(triggerOffset.x, triggerOffset.y);
 
-    // Turn an (along, lateral) pair into a world point in the anchor's own frame.
+    // Turn an (along, lateral) pair into a world point in the anchor's own frame — and make sure the
+    // player can actually get to it.
+    //
+    // The anchored offsets were written when the pit lane was walkable, so the pit cast is placed "out into
+    // the lane, away from the wall". Since then the on-foot layer has had a walkable boundary and the
+    // player is clamped to it, which left the greeter, the crew chief and the strategist standing in the
+    // fast lane at Watkins Glen: visible, and impossible to reach or talk to.
+    //
+    // Rather than hard-code which side of the pit road the paddock is on — it differs by circuit, and the
+    // sign of a lane normal is not a fact about the world — the body steps SIDEWAYS off the lane until it
+    // is somewhere the player can stand, far side first. That keeps "a metre behind the car" exactly as
+    // asked and lets the geometry decide how far off the lane that has to be, so two people anchored a few
+    // metres apart along the road stay a few metres apart. Clamping to the nearest edge instead put the
+    // crew chief and the strategist on the same square metre of fence.
     public Vector3 ResolveOffset(float along, float lateral)
+    {
+        Vector3 wanted = ResolveRaw(along, lateral);
+        if (anchor == Anchor.Here || !keepWithinReach || !PaddockBoundary.AnyActive) return wanted;
+        if (PaddockBoundary.Inside(wanted)) return wanted;
+
+        // Whatever worked last frame is overwhelmingly likely to work this one: an NPC anchored to the car
+        // re-resolves every frame while the car is being parked, and sweeping from scratch each time is
+        // work for nothing.
+        if (_walkableLateral.HasValue)
+        {
+            Vector3 remembered = ResolveRaw(along, _walkableLateral.Value);
+            if (PaddockBoundary.Inside(remembered)) return remembered;
+            _walkableLateral = null;
+        }
+
+        float sign = lateral >= 0f ? 1f : -1f;
+        for (float d = Mathf.Abs(lateral); d <= WalkableSearchMetres; d += 0.5f)
+        {
+            Vector3 far = ResolveRaw(along, -sign * d);       // the far side of the lane: the paddock
+            if (PaddockBoundary.Inside(far)) return Settle(along, -sign * d, far);
+
+            Vector3 near = ResolveRaw(along, sign * d);
+            if (PaddockBoundary.Inside(near)) return Settle(along, sign * d, near);
+        }
+
+        Vector2 pulled = PaddockBoundary.ConstrainInside(wanted);
+        return new Vector3(pulled.x, pulled.y, wanted.z);
+    }
+
+    // The first standable metre is the fence line itself, and a body put there is half in the fence and
+    // reachable only from one angle. Step a bit further in when there is room.
+    Vector3 Settle(float along, float lateral, Vector3 found)
+    {
+        float inward = lateral >= 0f ? 1f : -1f;
+        Vector3 deeper = ResolveRaw(along, lateral + inward * StandBackFromTheFence);
+        if (PaddockBoundary.Inside(deeper)) { _walkableLateral = lateral + inward * StandBackFromTheFence; return deeper; }
+
+        _walkableLateral = lateral;
+        return found;
+    }
+
+    const float StandBackFromTheFence = 1.5f;
+
+    // How far off the anchor line to look for standable ground before giving up. The paddock sits about
+    // forty-five metres back from the pit road on a generated track.
+    const float WalkableSearchMetres = 60f;
+    float? _walkableLateral;
+
+    Vector3 ResolveRaw(float along, float lateral)
     {
         switch (anchor)
         {
