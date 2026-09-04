@@ -266,6 +266,8 @@ public class WeekendVenueSites : MonoBehaviour
             // A marker that stands in for somewhere unreachable gets the door that leads there.
             if (marker.HasTeleport)
             {
+                MakeSomewhereToStand(marker);
+
                 var gate = anchor.gameObject.AddComponent<WeekendMarkerGate>();
                 gate.destination = marker.teleportTo;
                 gate.venue = marker.venue;
@@ -278,6 +280,25 @@ public class WeekendVenueSites : MonoBehaviour
 
         if (adopted > 0)
             Debug.Log($"WeekendVenues: {adopted} authored marker(s) in this track — those venues are not generated.");
+    }
+
+    // Somewhere to stand at the far end of a teleport.
+    //
+    // The on-foot player is clamped to the walkable area, and a gate's destination is by definition outside
+    // it — that is why the gate exists. Arriving there, the clamp read the player as somebody who had been
+    // pushed through a fence and hauled them back to the nearest paddock edge: at Watkins Glen the seat is
+    // across the circuit, so the walk to the stands ended just past the end of pit road.
+    //
+    // So the destination gets a walkable pocket of its own. Boundaries are already additive — inside any of
+    // them counts — which is exactly the disjoint "paddock plus a viewing area" case they were built for.
+    void MakeSomewhereToStand(WeekendMarker marker)
+    {
+        Vector3 seat = marker.TeleportPosition;
+        if (PaddockBoundary.IsInside(seat)) return;
+
+        PaddockBoundary.Pocket(_root, "ViewingPocket_" + marker.name, seat, new Vector2(14f, 10f));
+        Debug.Log($"WeekendVenues: '{marker.name}' sends the player outside the paddock, so a walkable " +
+                  $"pocket was put around where it lands ({seat.x:0}, {seat.y:0}).");
     }
 
     // ------------------------------------------------------------------ venues found on what exists

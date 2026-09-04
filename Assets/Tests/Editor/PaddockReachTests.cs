@@ -51,7 +51,7 @@ public class PaddockReachTests
     }
 
     static bool Inside(Vector2 p) =>
-        (bool)BoundaryType.GetMethod("Inside", BindingFlags.Public | BindingFlags.Static)
+        (bool)BoundaryType.GetMethod("IsInside", BindingFlags.Public | BindingFlags.Static)
                           .Invoke(null, new object[] { p });
 
     static Vector2 ConstrainInside(Vector2 p, float inset = 1.5f) =>

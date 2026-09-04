@@ -433,7 +433,7 @@ public class PlacedNPC : MonoBehaviour
     void ReplaceIfStranded()
     {
         if (!_built || _npc == null || anchor == Anchor.Here || !keepWithinReach) return;
-        if (_npc.IsTalking || PaddockBoundary.Inside(_npc.transform.position)) return;
+        if (_npc.IsTalking || PaddockBoundary.IsInside(_npc.transform.position)) return;
 
         Vector3 p = ResolveStandPoint();
         if (_npcRb != null && _npcRb.bodyType != RigidbodyType2D.Dynamic) _npcRb.position = p;
@@ -523,7 +523,7 @@ public class PlacedNPC : MonoBehaviour
     {
         Vector3 wanted = ResolveRaw(along, lateral);
         if (anchor == Anchor.Here || !keepWithinReach || !PaddockBoundary.AnyActive) return wanted;
-        if (PaddockBoundary.Inside(wanted)) return wanted;
+        if (PaddockBoundary.IsInside(wanted)) return wanted;
 
         // Whatever worked last frame is overwhelmingly likely to work this one: an NPC anchored to the car
         // re-resolves every frame while the car is being parked, and sweeping from scratch each time is
@@ -531,7 +531,7 @@ public class PlacedNPC : MonoBehaviour
         if (_walkableLateral.HasValue)
         {
             Vector3 remembered = ResolveRaw(along, _walkableLateral.Value);
-            if (PaddockBoundary.Inside(remembered)) return remembered;
+            if (PaddockBoundary.IsInside(remembered)) return remembered;
             _walkableLateral = null;
         }
 
@@ -539,10 +539,10 @@ public class PlacedNPC : MonoBehaviour
         for (float d = Mathf.Abs(lateral); d <= WalkableSearchMetres; d += 0.5f)
         {
             Vector3 far = ResolveRaw(along, -sign * d);       // the far side of the lane: the paddock
-            if (PaddockBoundary.Inside(far)) return Settle(along, -sign * d, far);
+            if (PaddockBoundary.IsInside(far)) return Settle(along, -sign * d, far);
 
             Vector3 near = ResolveRaw(along, sign * d);
-            if (PaddockBoundary.Inside(near)) return Settle(along, sign * d, near);
+            if (PaddockBoundary.IsInside(near)) return Settle(along, sign * d, near);
         }
 
         Vector2 pulled = PaddockBoundary.ConstrainInside(wanted);
@@ -555,7 +555,7 @@ public class PlacedNPC : MonoBehaviour
     {
         float inward = lateral >= 0f ? 1f : -1f;
         Vector3 deeper = ResolveRaw(along, lateral + inward * StandBackFromTheFence);
-        if (PaddockBoundary.Inside(deeper)) { _walkableLateral = lateral + inward * StandBackFromTheFence; return deeper; }
+        if (PaddockBoundary.IsInside(deeper)) { _walkableLateral = lateral + inward * StandBackFromTheFence; return deeper; }
 
         _walkableLateral = lateral;
         return found;

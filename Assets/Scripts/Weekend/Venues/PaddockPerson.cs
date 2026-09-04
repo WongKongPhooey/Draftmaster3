@@ -21,6 +21,15 @@ public static class PaddockPerson
     // Somebody sitting down. Same person, folded up — the seated head sits lower than the standing one.
     public const float SeatedHeightM = HeightM * 0.85f;
     public const float GroundZ = -0.4f;      // in front of the tarmac, behind the on-foot player
+
+    // Where the player themselves stands, in front of every prop laid on the ground and of everybody else.
+    //
+    // This scene draws through the 3D URP renderer, where the DEPTH BUFFER decides what covers what — a
+    // sorting order on a mesh does not order it against a sprite. Props sit just in front of the tarmac
+    // (PaddockProps.FloorZ / PropZ), so a player left at tarmac depth is behind every one of them: walking
+    // onto the hospitality tent's canopy, or onto the chequered floor that replaced it, buried the player
+    // under it. Every other body in the paddock was already in front, which is why only the player vanished.
+    public const float PlayerZ = -0.5f;
     public const string SortingLayer = "Default";
     public const int SortingOrder = 20;
 

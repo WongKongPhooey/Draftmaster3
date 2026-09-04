@@ -55,17 +55,6 @@ public class PaddockBoundary : MonoBehaviour
         return _poly.OverlapPoint(worldPos);
     }
 
-    public static bool Inside(Vector2 worldPos)
-    {
-        if (Active.Count == 0) return true;      // no boundary authored = everywhere is walkable
-        for (int i = 0; i < Active.Count; i++)
-        {
-            var b = Active[i];
-            if (b != null && b.Contains(worldPos)) return true;
-        }
-        return false;
-    }
-
     // Like Constrain, but properly inside rather than exactly on the line.
     //
     // A body clamped to the edge is standing in the fence, and half of it is on the side the player can
@@ -73,7 +62,7 @@ public class PaddockBoundary : MonoBehaviour
     // somewhere else. So step in off the boundary, toward the middle of whichever pocket caught it.
     public static Vector2 ConstrainInside(Vector2 worldPos, float inset = 1.5f)
     {
-        if (Active.Count == 0 || Inside(worldPos)) return worldPos;
+        if (Active.Count == 0 || IsInside(worldPos)) return worldPos;
 
         Vector2 edge = Constrain(worldPos);
         PaddockBoundary owner = null;
@@ -93,6 +82,29 @@ public class PaddockBoundary : MonoBehaviour
 
         Vector2 pulled = edge + toward.normalized * inset;
         return owner.Contains(pulled) ? pulled : edge;
+    }
+
+    // A walkable pocket somewhere the paddock does not reach — a seat in a grandstand across the track, a
+    // viewing area, anywhere the player is PUT rather than walks to.
+    //
+    // Being inside ANY boundary counts as inside, so a pocket is simply another one. Without it the on-foot
+    // clamp treats an arrival outside the paddock as somebody who has been shoved through a fence and drags
+    // them back to the nearest edge of it: the grandstand gate at Watkins Glen dropped the player past the
+    // end of pit road, several hundred metres short of the seat they had just been sent to.
+    public static PaddockBoundary Pocket(Transform parent, string name, Vector2 centre, Vector2 size)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.position = new Vector3(centre.x, centre.y, 0f);
+
+        float hx = Mathf.Max(1f, size.x) * 0.5f, hy = Mathf.Max(1f, size.y) * 0.5f;
+        var poly = go.AddComponent<PolygonCollider2D>();
+        poly.isTrigger = true;
+        poly.points = new[]
+        {
+            new Vector2(-hx, -hy), new Vector2(hx, -hy), new Vector2(hx, hy), new Vector2(-hx, hy)
+        };
+        return go.AddComponent<PaddockBoundary>();
     }
 
     // Clamp a world position to the walkable area. Inside any active boundary = unchanged;

@@ -356,6 +356,12 @@ public class PitLaneStart : MonoBehaviour
 
     void SpawnPlayer(Vector3 pos)
     {
+        // In front of the ground and of everything laid on it. The paddock is drawn through the 3D URP
+        // renderer, so depth is what covers what, and a player spawned at tarmac depth is BEHIND every prop
+        // in the place — which is what made the player disappear on the winner's circle floor and, before
+        // it, under the hospitality canopy. Everyone else was already forward of them.
+        pos.z = Mathf.Min(pos.z, PaddockPerson.PlayerZ);
+
         _player = Instantiate(onFootPrefab, pos, Quaternion.identity);
         _player.name = "OnFootPlayer";
 
