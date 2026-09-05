@@ -33,6 +33,10 @@ public class PaddockSpawner : MonoBehaviour
     [Tooltip("Sorting order for the paddock surface mesh. Keep below NPC sorting (20) so NPCs draw on top.")]
     public int surfaceSortingOrder = 1;
 
+    // Clear ground (m) an NPC needs where it is first put down — roughly its own footprint plus a step.
+    // Matches the margin the crowd's own router works to (PaddockWalker.obstacleRadius).
+    const float SpawnClearance = 0.6f;
+
     [Header("NPCs")]
     [Tooltip("Paddock headcount at a full house (race day). Most of these are frozen at any moment (see " +
              "governCrowd), so the number that costs per frame is only the handful within 25m of an on-foot " +
@@ -271,6 +275,30 @@ public class PaddockSpawner : MonoBehaviour
     }
 #endif
 
+    // Somewhere in the paddock rectangle with nothing standing on it.
+    //
+    // The rectangle is derived from the pit lane and takes no notice of what is inside it, so a plain roll
+    // of the dice puts people inside motorhomes and — where a narrow infield lets the paddock reach the far
+    // side of the circuit — up in the seating of a grandstand. A wanderer walks itself out of that within
+    // half a second (PaddockWalker's escape check); one of the ten conversational NPCs has no walker on it
+    // at all and simply stands there for the rest of the weekend.
+    //
+    // Rejection-sampled the same way a walker picks its waypoints, with the raw point as the last resort so
+    // a crowded paddock still gets its full headcount.
+    Vector3 ClearSpawnPoint(Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
+    {
+        Vector3 pos = center;
+        for (int attempt = 0; attempt < 12; attempt++)
+        {
+            float l = Random.Range(-halfLen * 0.9f, halfLen * 0.9f);
+            float dd = Random.Range(-halfDepth * 0.9f, halfDepth * 0.9f);
+            pos = center + along * l + outward * dd;
+            pos.z = -0.1f; // toward the camera so sprites draw in front of the tarmac surface
+            if (!PaddockObstacles.IsBlocked(pos, SpawnClearance)) return pos;
+        }
+        return pos;
+    }
+
     void SpawnNpcs(Transform root, Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
     {
         // totalNpcs is the full-house figure. A weekend fills up as it goes on — a quiet Friday morning
@@ -291,12 +319,14 @@ public class PaddockSpawner : MonoBehaviour
         // handed to the crowd module so it never has to know what a pit lane is.
         var recycleArea = new Draftmaster.Crowd.CrowdRect(center, along, outward, halfLen, halfDepth);
 
+        // Queries run against the physics world, not the serialised transforms, and nothing has stepped it
+        // yet this frame — the track package and its scenery were instantiated moments ago in Awake. Without
+        // this the ground reads as clear everywhere and everybody lands wherever the dice said.
+        Physics2D.SyncTransforms();
+
         for (int i = 0; i < total; i++)
         {
-            float l = Random.Range(-halfLen * 0.9f, halfLen * 0.9f);
-            float dd = Random.Range(-halfDepth * 0.9f, halfDepth * 0.9f);
-            Vector3 pos = center + along * l + outward * dd;
-            pos.z = -0.1f; // toward the camera so sprites draw in front of the tarmac surface
+            Vector3 pos = ClearSpawnPoint(center, along, outward, halfLen, halfDepth);
 
             bool talking = i < talkers;
             var npc = BuildNpc(root, pos, talking);

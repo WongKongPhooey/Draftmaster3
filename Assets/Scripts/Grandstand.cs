@@ -26,6 +26,13 @@ public class Grandstand : MonoBehaviour
     public bool flipFacing;
     [Tooltip("Above the grass (0) but below track furniture like marker boards (3).")]
     public int sortingOrder = 2;
+    [Tooltip("Keep wandering NPCs off the seating. The crowd in a stand is drawn INTO the texture, so a " +
+             "paddock walker strolling across it reads as somebody stood on top of the painted crowd. Turn " +
+             "off only for a stand people are meant to walk on — a ground-level viewing bank.")]
+    public bool keepCrowdOff = true;
+
+    // What the keep-out volume is called, so a rebuild finds the one it made last time.
+    public const string KeepOutName = "CrowdKeepOut";
 
     Mesh _mesh;
     Material _mat;
@@ -91,5 +98,50 @@ public class Grandstand : MonoBehaviour
         mr.sortingOrder = sortingOrder;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
+
+        // Runtime only. The crowd's router is the only thing that reads the keep-out and it only runs in
+        // play, whereas laying one at edit time would write a collider into all 38 track packages the next
+        // time each was opened and saved. Tests call BuildKeepOut directly.
+        if (Application.isPlaying) BuildKeepOut();
+    }
+
+    // Lay (or take away) the volume that keeps wandering NPCs off the seating.
+    //
+    // Nothing about a stand is solid: it is one flat quad with a crowd painted on it, so the ground it
+    // covers reads as clear tarmac to the physics world. The paddock crowd routes around what physics can
+    // see (PaddockObstacles), and so wherever a paddock reaches a stand — a short oval's infield is narrow
+    // enough that the rectangle behind pit road runs across to the back straight — people wandered up the
+    // seating and stood about in the middle of the painted crowd.
+    //
+    // Filling it in with a solid collider would shut the PLAYER out too, and watching a session means
+    // walking into a stand and moving about in it (GrandstandSeat, GrandstandVisit). So the keep-out is
+    // STATED instead: a PaddockNoGo trigger reads as a wall to the crowd's routing and to nothing else,
+    // and a trigger never stops the player's dynamic Rigidbody2D.
+    public PaddockNoGo BuildKeepOut()
+    {
+        Transform existing = transform.Find(KeepOutName);
+
+        if (!keepCrowdOff)
+        {
+            if (existing != null) DestroyVolume(existing.gameObject);
+            return null;
+        }
+
+        // The stand's whole footprint in its own frame: length along local +X, depth along local +Y.
+        var size = new Vector2(Mathf.Max(0.01f, length), Mathf.Max(0.01f, depth));
+        if (existing == null) return PaddockNoGo.Box(transform, KeepOutName, Vector2.zero, size);
+
+        var box = existing.GetComponent<BoxCollider2D>();
+        if (box != null && box.size != size) box.size = size;
+
+        var noGo = existing.GetComponent<PaddockNoGo>();
+        if (noGo == null) noGo = existing.gameObject.AddComponent<PaddockNoGo>();
+        return noGo;
+    }
+
+    static void DestroyVolume(GameObject go)
+    {
+        if (Application.isPlaying) Destroy(go);
+        else DestroyImmediate(go);
     }
 }

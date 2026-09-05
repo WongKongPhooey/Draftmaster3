@@ -25,6 +25,12 @@ public class CrowdDirector : MonoBehaviour
              "back just out of shot, and how many are allowed around the player at once.")]
     public CrowdRecycleTuning recycling = CrowdRecycleTuning.Default;
 
+    [Tooltip("Clear ground (m) a recycled NPC needs where it is put back down. Somewhere covered by solid " +
+             "scenery — inside a motorhome, on the seating of a grandstand — is rejected and another spot " +
+             "is rolled, so nobody is dropped into something and then has to walk out of it. 0 skips the " +
+             "check and restores the old behaviour of landing wherever the boundary allows.")]
+    public float recycleClearance = 0.6f;
+
     [Tooltip("Freeze the entire crowd whenever there is no on-foot player in the scene (i.e. while driving).")]
     public bool freezeWhenNotOnFoot = true;
 
@@ -143,9 +149,9 @@ public class CrowdDirector : MonoBehaviour
     }
 
     // Roll respawn points until one lands inside both the NPC's own paddock rectangle and any authored
-    // PaddockBoundary. Giving up is the right answer, not a fallback: a player stood out on the racetrack
-    // or off the end of the paddock has nowhere legal nearby, and leaving the NPC where it is costs
-    // nothing — it is frozen out there anyway.
+    // PaddockBoundary, on ground nothing solid is standing on. Giving up is the right answer, not a
+    // fallback: a player stood out on the racetrack or off the end of the paddock has nowhere legal
+    // nearby, and leaving the NPC where it is costs nothing — it is frozen out there anyway.
     bool TryRecycle(CrowdActor actor, Vector2 player, in CrowdRecycleTuning recycle)
     {
         var area = actor.RecycleArea;
@@ -155,6 +161,14 @@ public class CrowdDirector : MonoBehaviour
             if (!CrowdRecyclePolicy.TryCandidate(player, area, recycle,
                                                  Random.value, Random.value, out Vector2 point)) continue;
             if (!PaddockBoundary.IsInside(point)) continue;
+
+            // Walkable is not the same as empty. The boundary is a polygon drawn round the paddock, and
+            // what stands inside it — a motorhome, a team's rig, a grandstand's seating — is scenery the
+            // crowd routes around rather than through. Dropping somebody into it left them standing in a
+            // caravan or halfway up a stand until their own escape check walked them back out, which is a
+            // person visibly climbing out of the bodywork. Put them somewhere clear in the first place.
+            if (recycleClearance > 0f && PaddockObstacles.IsBlocked(point, recycleClearance)) continue;
+
             actor.RecycleTo(point);
             return true;
         }
