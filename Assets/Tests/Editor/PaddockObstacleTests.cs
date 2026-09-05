@@ -21,6 +21,7 @@ public class PaddockObstacleTests
     static readonly System.Type ObstaclesType = System.Type.GetType("PaddockObstacles, Assembly-CSharp");
     static readonly System.Type WalkerType = System.Type.GetType("PaddockWalker, Assembly-CSharp");
     static readonly System.Type AppearanceType = System.Type.GetType("NPCLayeredAppearance, Assembly-CSharp");
+    static readonly System.Type NoGoType = System.Type.GetType("PaddockNoGo, Assembly-CSharp");
 
     readonly List<GameObject> _spawned = new();
 
@@ -54,6 +55,24 @@ public class PaddockObstacleTests
 
         // Edit mode never steps the physics world on its own, and the overlap queries ask that world
         // rather than the collider's serialised numbers. Without this nothing is ever in the way.
+        Physics2D.SyncTransforms();
+        return go;
+    }
+
+    // A popup garage's floor: a trigger over the footprint, marked keep-out. Open to physics — the player
+    // walks in through the notch in the shell — and closed to anybody who wanders.
+    GameObject KeepOut(Vector2 centre, Vector2 size)
+    {
+        Assert.NotNull(NoGoType, "PaddockNoGo is missing from Assembly-CSharp.");
+
+        var go = new GameObject("NoWandering_Test");
+        go.transform.position = centre;
+        var box = go.AddComponent<BoxCollider2D>();
+        box.size = size;
+        box.isTrigger = true;
+        go.AddComponent(NoGoType);
+        _spawned.Add(go);
+
         Physics2D.SyncTransforms();
         return go;
     }
@@ -133,6 +152,21 @@ public class PaddockObstacleTests
         Physics2D.SyncTransforms();
 
         Assert.IsFalse(IsBlocked(Vector2.zero, 0.45f), "A trigger volume was treated as solid.");
+    }
+
+    // The exception, and the only one: ground that states it is keep-out. A popup garage's shell is a ring
+    // of walls with the doorway cut out of it — the player has to be able to walk in — so the floor inside
+    // is open ground as far as the physics world knows, and the crowd wandered in and stood about in it.
+    // Nothing solid can say that without shutting the player out, so a PaddockNoGo trigger says it instead.
+    [Test]
+    public void GroundMarkedKeepOutIsAWallToTheCrowd()
+    {
+        KeepOut(new Vector2(0f, 0f), new Vector2(4f, 10f));
+
+        Assert.IsTrue(IsBlocked(Vector2.zero, 0.45f),
+                      "A keep-out volume let the crowd stand in it — that is the floor of somebody's garage.");
+        Assert.IsFalse(IsBlocked(new Vector2(6f, 0f), 0.45f),
+                       "The ground beside it was closed off too; the crowd can't walk the row.");
     }
 
     [Test]

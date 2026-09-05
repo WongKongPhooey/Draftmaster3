@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -96,6 +97,37 @@ public class PopupGarageTests
         return room;
     }
 
+    // --- what a paddock walker sees ---------------------------------------------------------------
+
+    static readonly System.Type ObstaclesType = System.Type.GetType("PaddockObstacles, Assembly-CSharp");
+
+    static MethodInfo ObstacleMethod(string name)
+    {
+        Assert.IsNotNull(ObstaclesType, "PaddockObstacles is missing from Assembly-CSharp.");
+        var m = ObstaclesType.GetMethod(name, BindingFlags.Public | BindingFlags.Static);
+        Assert.IsNotNull(m, $"PaddockObstacles.{name}() is gone; the crowd's routing reads the paddock with it.");
+        return m;
+    }
+
+    static bool IsBlocked(Vector2 point, float radius) =>
+        (bool)ObstacleMethod("IsBlocked").Invoke(null, new object[] { point, radius });
+
+    static Vector2 PushOut(Vector2 point, float radius) =>
+        (Vector2)ObstacleMethod("PushOut").Invoke(null, new object[] { point, radius, 12f });
+
+    // Verdicts are cached per collider instance id, and edit mode recycles those between fixtures.
+    static void ForgetObstacleCache() => ObstacleMethod("ForgetCache").Invoke(null, null);
+
+    // The rig's solid boxes — its shell and the parked car. Everything a body walks into; NOT the
+    // keep-out trigger laid over the footprint, which only the wandering crowd reads.
+    static BoxCollider2D[] Solid(GameObject go)
+    {
+        var solid = new List<BoxCollider2D>();
+        foreach (var box in go.GetComponentsInChildren<BoxCollider2D>())
+            if (!box.isTrigger) solid.Add(box);
+        return solid.ToArray();
+    }
+
     static bool RectHolds(Vector2 point, Vector2 centre, Vector2 size, float shrink)
     {
         Vector2 half = size * 0.5f - new Vector2(shrink, shrink);
@@ -164,7 +196,10 @@ public class PopupGarageTests
             var rig = Rig(go, 1, carAtHome: true);
             var door = (Vector2)Prop(rig, "DoorLocalPosition");
 
-            var boxes = go.GetComponentsInChildren<BoxCollider2D>();
+            // Solid boxes only. The rig also lays a trigger over its footprint (PaddockNoGo) to keep the
+            // wandering crowd out of the meeting room, and a trigger stops nobody — least of all the
+            // player, who is the one this test is about.
+            var boxes = Solid(go);
             Assert.Greater(boxes.Length, 3, "the rig has no shell to walk around.");
 
             // Measured in the middle of the wall's thickness rather than on the body's outer edge: a point
@@ -272,6 +307,116 @@ public class PopupGarageTests
             }
             finally { Object.DestroyImmediate(go); }
         }
+    }
+
+    // ---------------------------------------------------------------- keeping the crowd out of it
+
+    // A garage's shell is a RING of walls with the doorway cut out of it, because the player has to be
+    // able to walk in. That left the floor inside reading as open tarmac to everything that asks the
+    // physics world where it may walk — so the wandering crowd generated waypoints down the middle of
+    // every garage, walked in through the door, and was never noticed to be standing in one when the
+    // crowd director recycled somebody on top of a rig. A walk down the row had a stranger stood in the
+    // middle of half the team's garages, on the floor of a room only the player belongs in.
+    [Test]
+    public void TheGarageFloorIsKeptOffTheCrowdsRoute()
+    {
+        const float WalkerRadius = 0.45f;   // PaddockWalker.obstacleRadius
+
+        var go = new GameObject("Garage");
+        try
+        {
+            ForgetObstacleCache();
+            Rig(go, 1, carAtHome: false);   // empty canopy: nothing but the shell can be doing the blocking
+            Physics2D.SyncTransforms();
+
+            Assert.IsTrue(IsBlocked(Vector2.zero, WalkerRadius),
+                          "the middle of a garage reads as open ground — the crowd stands about in it.");
+            Assert.IsTrue(IsBlocked(new Vector2(0f, BodyLength * 0.25f), WalkerRadius),
+                          "the far end of the garage floor is open to walkers.");
+
+            // The way in from outside, and the walkway under the canopy, both stay walkable: the crowd
+            // strolling past the garages is the paddock, and an empty canopy is somewhere to walk.
+            Assert.IsFalse(IsBlocked(new Vector2((BodyWidth + CanopyWidth) * 0.5f, 0f), WalkerRadius),
+                           "the canopy walkway was closed off — the crowd can no longer walk the row.");
+        }
+        finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
+    }
+
+    // ...and the player walks in exactly as before. The keep-out is a TRIGGER, which stops no body at all;
+    // it is read by PaddockObstacles and by nothing else. Fill the shell in instead and the meeting room
+    // behind the door becomes unreachable, which is the one thing that must not happen here.
+    [Test]
+    public void ThePlayerStillWalksInThroughTheDoor()
+    {
+        var go = new GameObject("Garage");
+        try
+        {
+            var rig = Rig(go, 1, carAtHome: false);
+            Physics2D.SyncTransforms();
+
+            var door = (Vector2)Prop(rig, "DoorLocalPosition");
+            var filter = new ContactFilter2D();
+            filter.NoFilter();
+            filter.useTriggers = false;     // what a dynamic Rigidbody2D — the player — actually collides with
+
+            var hits = new List<Collider2D>();
+            float inward = -Mathf.Sign(door.x) * (float)Field(rig, "wallThickness") * 0.5f;
+
+            // Straight through the notch, and on into the middle of the room.
+            foreach (var p in new[] { new Vector2(door.x + inward, door.y), new Vector2(0f, door.y), Vector2.zero })
+            {
+                Physics2D.OverlapPoint(p, filter, hits);
+                Assert.AreEqual(0, hits.Count,
+                                $"something solid stands at {p} — the player cannot get into their own garage.");
+            }
+        }
+        finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
+    }
+
+    // Somebody who is already in there — put down on the rig by the crowd director, or stood where one was
+    // assembled around them — has to be able to get out. The escape walks them to clear ground.
+    [Test]
+    public void AWalkerStoodInAGarageIsPutBackOutside()
+    {
+        const float WalkerRadius = 0.45f;
+
+        var go = new GameObject("Garage");
+        try
+        {
+            ForgetObstacleCache();
+            Rig(go, 1, carAtHome: false);
+            Physics2D.SyncTransforms();
+
+            Vector2 freed = PushOut(Vector2.zero, WalkerRadius);
+            Assert.AreNotEqual(Vector2.zero, freed, "a walker stood in a garage was left standing in it.");
+            Assert.IsFalse(IsBlocked(freed, WalkerRadius), "they were pushed out of one garage into another.");
+        }
+        finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
+    }
+
+    // The interior switches the shell off while the player is stood in the room — those walls overlap its
+    // floor. The keep-out is not one of them: it never blocked the player, and switching it off would open
+    // the one garage with somebody in it to the whole crowd.
+    [Test]
+    public void TheKeepOutHoldsWhileThePlayerIsInTheRoom()
+    {
+        const float WalkerRadius = 0.45f;
+
+        var go = new GameObject("Garage");
+        try
+        {
+            ForgetObstacleCache();
+            var rig = Rig(go, 1, carAtHome: false);
+            Call(rig, "SetCollidersEnabled", false);
+            Physics2D.SyncTransforms();
+
+            foreach (var box in Solid(go))
+                Assert.IsFalse(box.enabled, $"'{box.name}' is still solid while the player is inside the room.");
+
+            Assert.IsTrue(IsBlocked(Vector2.zero, WalkerRadius),
+                          "the crowd can wander into the garage the player is stood in.");
+        }
+        finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
     }
 
     [Test]

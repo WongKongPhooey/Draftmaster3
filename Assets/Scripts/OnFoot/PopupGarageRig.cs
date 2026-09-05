@@ -15,7 +15,9 @@ using UnityEngine;
 // parked car, so walking in never means walking through the bodywork. PopupGarageInterior reads the
 // doorway back off this component to line its masked room up with the shell, exactly as RVInterior does
 // with RVExterior. Solid colliders outline the body with a notch at the door; the interior switches them
-// off while the player is inside (they overlap its floor) and back on when they step out.
+// off while the player is inside (they overlap its floor) and back on when they step out. The floor they
+// ring is open ground on purpose, so a PaddockNoGo volume over the footprint keeps the wandering crowd out
+// of a room only the player belongs in.
 //
 // Everything here is a SpriteRenderer, never a mesh quad: the on-foot player is a sprite too, and an
 // opaque quad drawn at the rig's negative z would depth-occlude them the moment they walked onto the
@@ -107,7 +109,13 @@ public class PopupGarageRig : MonoBehaviour
     {
         if (_colliders == null) _colliders = GetComponentsInChildren<Collider2D>(true);
         foreach (var c in _colliders)
-            if (c != null) c.enabled = value;
+        {
+            // The keep-out volume is not part of the shell. It never blocked the player — it is a trigger,
+            // and only the wandering crowd reads it — so there is nothing to switch off for somebody stood
+            // in the room, and switching it off would open the garage they are stood in to the crowd.
+            if (c == null || c.GetComponent<PaddockNoGo>() != null) continue;
+            c.enabled = value;
+        }
     }
 
     // Stand an empty rig up at a place in a line. Set the fields that differ (identity, colours, whether
@@ -314,6 +322,14 @@ public class PopupGarageRig : MonoBehaviour
         if (cabSide > 0.05f) Wall("WallDoorCab", new Vector2(doorX, (halfL + doorTop) * 0.5f), new Vector2(t, cabSide));
         float tailSide = doorBottom + halfL;
         if (tailSide > 0.05f) Wall("WallDoorTail", new Vector2(doorX, (doorBottom - halfL) * 0.5f), new Vector2(t, tailSide));
+
+        // The floor those walls enclose is open ground to the physics world — that is the whole point of
+        // the notch — and the wandering crowd read it as exactly that: a walker put down on a rig by the
+        // crowd director was never noticed to be standing in one, waypoints were generated down the middle
+        // of every garage, and anybody who found the doorway walked in. So the row had somebody stood
+        // inside half the team's garages, on the floor of the meeting room. This says the footprint is
+        // keep-out for people who wander; it is a trigger, so the player still walks in through the door.
+        PaddockNoGo.Box(transform, "NoWandering", Vector2.zero, new Vector2(bodyWidth, bodyLength));
 
         _colliders = GetComponentsInChildren<Collider2D>(true);
     }

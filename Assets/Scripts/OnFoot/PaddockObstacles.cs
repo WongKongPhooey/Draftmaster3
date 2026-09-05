@@ -12,9 +12,14 @@ using UnityEngine.SceneManagement;
 // collider means not at all. So the crowd walked straight through the side of every motorhome in the lot.
 //
 // Rather than have every builder register what it put down, the question is asked of the physics world
-// itself: what solid, non-trigger collider is standing on this patch of ground? That catches hand-authored
-// scenery in a track package as well as the generated lot, and it uses Box2D's own broadphase, so a
-// crowd of hundreds costs one cheap overlap query each per frame.
+// itself: what solid collider is standing on this patch of ground? That catches hand-authored scenery in a
+// track package as well as the generated lot, and it uses Box2D's own broadphase, so a crowd of hundreds
+// costs one cheap overlap query each per frame.
+//
+// The one thing the physics world cannot answer on its own is a hole that is open ON PURPOSE: a popup
+// garage's shell is a ring of walls with the doorway cut out, because the player walks into the meeting
+// room behind it, so the floor inside reads as clear tarmac. A PaddockNoGo volume states that keep-out
+// where nothing solid can, and is the only trigger this treats as a wall.
 //
 // The one thing that must NOT count is people. NPCs and the player are solid too, and treating each other
 // as walls would seize the crowd solid the moment it packed together — bumping into somebody is already
@@ -35,8 +40,12 @@ public static class PaddockObstacles
     static ContactFilter2D _filter;
     static bool _filterBuilt;
 
-    // Triggers are never walls: the paddock boundary, the lot areas and every interaction range are all
-    // triggers, and honouring them would pin the crowd inside its own bookkeeping.
+    // Triggers come back from the query but are thrown out by Classify, with one exception: a volume that
+    // says outright it is keep-out ground (PaddockNoGo). That is how a popup garage's floor is kept clear —
+    // its shell is a ring of walls with the doorway cut out of it, so the room inside is open ground to the
+    // physics world and has to be closed off some other way. Everything else with isTrigger set — the
+    // paddock boundary, the lot areas, every interaction range — is bookkeeping, and honouring it would pin
+    // the crowd inside its own paperwork.
     static ContactFilter2D Filter
     {
         get
@@ -45,7 +54,7 @@ public static class PaddockObstacles
             {
                 _filter = new ContactFilter2D();
                 _filter.NoFilter();
-                _filter.useTriggers = false;
+                _filter.useTriggers = true;
                 _filterBuilt = true;
             }
             return _filter;
@@ -173,6 +182,12 @@ public static class PaddockObstacles
     static bool Classify(Collider2D c)
     {
         Transform t = c.transform;
+
+        // A trigger is bookkeeping and never a wall — unless it is one of the few volumes put down to say
+        // "keep the crowd off this ground", which is a popup garage's floor and nothing else so far. The
+        // marker sits on the same object as its collider, so this is a component lookup rather than a walk.
+        if (c.isTrigger) return c.GetComponent<PaddockNoGo>() != null;
+
         if (t.GetComponentInParent<NPCLayeredAppearance>(true) != null) return false;
         if (t.GetComponentInParent<PaddockWalker>(true) != null) return false;
         if (t.GetComponentInParent<NPCInteractable>(true) != null) return false;
