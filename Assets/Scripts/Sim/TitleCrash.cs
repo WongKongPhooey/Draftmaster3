@@ -3,9 +3,13 @@ using UnityEngine;
 
 namespace Draftmaster.Sim
 {
-    // The choreography behind the title screen's crash: four cars coming down from above the top edge, and
-    // time easing to a dead stop, leaving the moment frozen where the art slot used to be. Two of them are
-    // only racing; the other two are the accident. See Field() for what the shot is and why.
+    // The choreography behind the title screen's crash: a field going past at racing speed, then four cars
+    // coming down from above the top edge and time easing to a dead stop, leaving the moment frozen where the
+    // art slot used to be. Two of the four are only racing; the other two are the accident.
+    //
+    // The cars that go past first (PassPlan, below) are the beat everything else is measured against. They
+    // cross the frame at a constant rate on their own clock and are gone before the accident is due — slow
+    // motion with nothing to be slow against reads as a sluggish animation rather than as time stopping.
     //
     // Pure maths, no MonoBehaviour state, for the same reason CameraFeel is: the tableau itself can only be
     // judged in Play Mode, but "does every car finish inside the right-hand third", "does the clock actually
@@ -196,7 +200,40 @@ namespace Draftmaster.Sim
 
             float bite = shot.AllowedBite(hit.striker, hit.struck, u);
             Vector2 heading = Heading(poses[hit.striker].rotation);
-            return poses[hit.striker].position + heading * (CarLengthPx * 0.5f - bite * 0.5f);
+            Vector2 point = poses[hit.striker].position + heading * (CarLengthPx * 0.5f - bite * 0.5f);
+
+            // ...and then walked onto both bodies at once.
+            //
+            // The nose alone is right for a hit in the middle of a door and wrong everywhere else: a striker
+            // that lands up by a wheel has its own centreline past the end of the flank, so the point comes
+            // out in clear air off the corner and the sparks go off beside the crash rather than in it.
+            // Clamping onto the struck car alone only moves the problem — the corner of one car is off the
+            // side of the other — so the point is dropped onto each body in turn and split between them,
+            // which converges on the bit of metal they share (or, at the instant they first touch, on the
+            // one point they have in common).
+            if (hit.struck < 0 || hit.struck >= poses.Length) return point;
+
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 onStruck = OnBody(poses[hit.struck], point);
+                Vector2 onStriker = OnBody(poses[hit.striker], onStruck);
+                point = (onStruck + onStriker) * 0.5f;
+            }
+            return point;
+        }
+
+        // The nearest point on a car's bodywork to `point`, in reference px — the point itself when it is
+        // already inside the body.
+        public static Vector2 OnBody(CarPose pose, Vector2 point)
+        {
+            float rad = pose.rotation * Mathf.Deg2Rad;
+            var along = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+            var across = new Vector2(-along.y, along.x);
+            Vector2 offset = point - pose.position;
+
+            return pose.position
+                 + along * Mathf.Clamp(Vector2.Dot(offset, along), -CarLengthPx * 0.5f, CarLengthPx * 0.5f)
+                 + across * Mathf.Clamp(Vector2.Dot(offset, across), -CarWidthPx * 0.5f, CarWidthPx * 0.5f);
         }
 
         // Contact lands just inside the crawl, and the crush then runs all the way to the end of the clock.
@@ -245,6 +282,53 @@ namespace Draftmaster.Sim
                 progress = p,
             };
         }
+
+        // ------------------------------------------------------------------ the field going past
+
+        // A car that is only passing through, before any of the above happens.
+        //
+        // The accident is the second half of the shot. The first half is what the accident interrupts: the
+        // field streaming down the slot at racing speed, in clean air, on a clock that has not started
+        // slowing down yet. Without it the screen opens on a wreck, and slow motion with nothing to be slow
+        // against reads as a sluggish animation rather than as time being stopped.
+        //
+        // These are deliberately not CarPlans. A plan in the tableau flies in, stops, and stays there in the
+        // frozen picture: it is posed against choreography time and settled against every other body. A pass
+        // crosses the frame and leaves it, posed against the lead-in beat's own clock, touching nothing and
+        // gone before the first car of the accident is due. The two share the canvas and nothing else.
+        public struct PassPlan
+        {
+            public Vector2 startPos;    // above the top edge, reference px
+            public Vector2 endPos;      // below the bottom edge
+            public float rotation;      // sprite angle; constant, the car is only driving
+            public float atLead;        // fraction of the lead-in beat it sets off at, 0..1
+            public float lead;          // fraction of the beat it spends crossing
+            public int depth;           // 0 = rear-most
+        }
+
+        public struct PassPose
+        {
+            public Vector2 position;
+            public float rotation;
+            public bool inFlight;       // false before it sets off, and once it has gone
+        }
+
+        // Where a passing car is at `lead`, the lead-in beat's own 0..1 clock. Straight and constant: the
+        // point of the beat is that nothing has slowed down yet, so nothing in here eases either.
+        public static PassPose PassAt(PassPlan plan, float lead)
+        {
+            float p = plan.lead <= 1e-5f ? 1f : (lead - plan.atLead) / plan.lead;
+            return new PassPose
+            {
+                position = Vector2.Lerp(plan.startPos, plan.endPos, Mathf.Clamp01(p)),
+                rotation = plan.rotation,
+                inFlight = p >= 0f && p <= 1f,
+            };
+        }
+
+        // How far past the top and bottom edges a passing car sits at either end of its run, so it is fully
+        // out of frame before it sets off and after it has gone rather than winking out mid-screen.
+        public const float PassMarginPx = 120f;
 
         // ------------------------------------------------------------------ bodies
 

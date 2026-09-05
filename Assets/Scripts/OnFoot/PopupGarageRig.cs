@@ -97,6 +97,13 @@ public class PopupGarageRig : MonoBehaviour
     public Vector3 CanopyWorldCentre => transform.TransformPoint(new Vector3(CanopyLocalCentre.x, CanopyLocalCentre.y, 0f));
     public Vector3 ParkedCarWorldPosition => transform.TransformPoint(new Vector3(CanopyLocalCentre.x, CanopyLocalCentre.y + carAlong, 0f));
 
+    // Which way a car parks under the canopy: nose along the body's LENGTH, toward the cab — the quarter
+    // turn BuildParkedCar gives the art below. The rig's own rotation is not that direction, because the
+    // rig's frame runs its length along +Y while a car is a heading, so PopupGarageLot reads the player's
+    // real car home off here rather than handing it the rig's transform and parking it across the garage.
+    public Vector3 ParkedCarNoseDirection => transform.up;
+    public float ParkedCarHeadingDeg => Mathf.Atan2(transform.up.y, transform.up.x) * Mathf.Rad2Deg;
+
     // The car standing under the canopy, or null when the real one is out on track / in its pit box.
     public Transform ParkedCar { get; private set; }
 

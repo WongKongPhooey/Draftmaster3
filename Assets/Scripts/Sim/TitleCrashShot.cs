@@ -17,10 +17,12 @@ namespace Draftmaster.Sim
     // off System.Random rather than UnityEngine.Random, so a seed is a shot: the same number always composes
     // the same crash, which is what makes any of it testable.
     //
-    // What varies: how many cars are in it (two, three or four), which of them the accident is, where on the
-    // screen it happens, how fast the cars arrive, how hard they hit — and therefore how far they bury into
-    // each other and how deep the bodywork folds — what angle they come in at, and where along the struck
-    // car's flank each one lands. Liveries are drawn separately, by TitleCrashScene, from the carset.
+    // What varies: how many cars go past before any of it happens and in which lanes, how many cars are in
+    // the accident (two, three or four), which of them it is, where on the screen it happens, how fast the
+    // cars arrive, how hard they hit — and therefore how far they bury into each other and how deep the
+    // bodywork folds — which way the wrecked car is spinning and how far past square it lies when everything
+    // stops, what angle the strikers come in at, and where along the struck car's flank each one lands: the
+    // door, a quarter panel, or right up by the wheel. Liveries are drawn separately, by TitleCrashScene.
     //
     // The shape of an accident is always the same, because it is the shape that shows the damage model off:
     // ONE car that has already lost it and is sliding broadside, presenting a flank, and one to three cars
@@ -36,7 +38,13 @@ namespace Draftmaster.Sim
         public int heroIndex;         // the player's car: front-most, and always the last one to arrive
         public float bitePx;          // how far the cars bury into each other by the freeze — the severity you see
 
+        // The field going past before any of it happens. Not part of the tableau: these cross the frame on
+        // the lead-in beat's own clock and are gone before the first car of the accident is due, so nothing
+        // here is settled against anything, dented, or in the frozen picture at the end.
+        public TitleCrash.PassPlan[] traffic;
+
         public int CarCount => cars != null ? cars.Length : 0;
+        public int TrafficCount => traffic != null ? traffic.Length : 0;
         public bool IsInTheCrash(int index) => inCrash != null && index >= 0 && index < inCrash.Length && inCrash[index];
         public bool IsSlider(int index) => isSlider != null && index >= 0 && index < isSlider.Length && isSlider[index];
 
@@ -138,16 +146,30 @@ namespace Draftmaster.Sim
             // --- the one or two that lost it. Broadside, slow, and in shot long before anything hits them.
             // A pair lie end to end along the same line, which is what a spun car and the one it collected
             // look like, and is also the only way two of them fit across the slot at once.
-            float drift = Range(rng, -0.24f, 0.24f);                 // sideways per unit of downward travel
+            float drift = Range(rng, -0.22f, 0.22f);                 // sideways per unit of downward travel
             Vector2 travel = new Vector2(drift, -1f).normalized;
 
-            // Broadside is the body lying square across its own line of travel. The sweep is hung around it
+            // Broadside is the body lying square across its own line of travel. The turn is hung around it
             // rather than ending on it, so the car is still coming round as it slides and is never pointing
             // anywhere near where it is going.
             float broadside = Mathf.Atan2(travel.y, travel.x) * Mathf.Rad2Deg + 90f;
             if (rng.Next(2) == 0) broadside += 180f;                 // which end is the nose
-            float sweep = Range(rng, 32f, 46f);
-            float restRotation = broadside + sweep * 0.4f;
+
+            // Which WAY it is spinning, and how far past square it has got by the time everything stops.
+            //
+            // Both of these used to be constants — every slider turned the same way and came to rest the
+            // same fraction of the same sweep past broadside — so every shot froze with the wrecked car
+            // lying at very nearly the same angle whatever else the seed changed. The two halves of the
+            // turn are drawn separately now: `restOff` is how far round it still is at the freeze, `entryOff`
+            // is how far the other side of broadside it arrived at, and the turn it makes on the way in is
+            // whatever joins them. The floor on entryOff keeps that turn past the point where a slider reads
+            // as parked at an angle rather than as a car that has lost it.
+            float spin = rng.Next(2) == 0 ? 1f : -1f;
+            float restOff = Range(rng, 4f, 24f);
+            float entryOff = Range(rng, Mathf.Max(16f, 33f - restOff), 33f);
+
+            float restRotation = broadside + spin * restOff;
+            float startRotation = broadside - spin * entryOff;
 
             float rad = restRotation * Mathf.Deg2Rad;
             Vector2 along = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
@@ -155,8 +177,8 @@ namespace Draftmaster.Sim
             Vector2 across = new Vector2(-along.y, along.x);
             if (across.y < 0f) across = -across;                     // the flank facing up the screen
 
-            Vector2 pile = new Vector2(Range(rng, sliders > 1 ? 506f : 498f, sliders > 1 ? 522f : 540f),
-                                       Range(rng, 142f, 172f));
+            Vector2 pile = new Vector2(Range(rng, sliders > 1 ? 498f : 474f, sliders > 1 ? 534f : 552f),
+                                       Range(rng, 128f, 190f));
             float apart = Range(rng, 158f, 176f);                    // end to end, and clear of each other
 
             var sliderEnds = new Vector2[sliders];
@@ -173,7 +195,7 @@ namespace Draftmaster.Sim
                 {
                     startPos = end - travel * Range(rng, 300f, 380f),   // short run = slow = there to be caught
                     endPos = end,
-                    startRotation = broadside - sweep * 0.6f,
+                    startRotation = startRotation,
                     endRotation = restRotation,
                     arcPx = Range(rng, -16f, 16f),
                     delay = 0f, travel = 1f, depth = index,
@@ -195,13 +217,20 @@ namespace Draftmaster.Sim
 
                 // Where along the flank this one lands. On its own it goes near the middle of the door; two
                 // abreast fan out either side of that, far enough apart not to arrive on top of each other.
+                // A lone striker used to land within six pixels of the middle of a hundred-and-fifty pixel
+                // car, every time, which is the same hit at the same place in every shot the composer could
+                // ever draw. It picks a spot down the whole flank now — door, quarter panel, or right up by
+                // the wheel — and a draw that ends up clipping the corner rather than biting into the body
+                // is thrown out by IsSound rather than prevented from ever happening.
                 float centred = perSlider > 1 ? (nth - (perSlider - 1) * 0.5f) : 0f;
-                float at = centred * spread + Range(rng, -6f, 6f);
+                float at = perSlider > 1
+                    ? centred * spread + Range(rng, -8f, 8f)
+                    : Range(rng, -42f, 42f);
                 Vector2 point = sliderEnds[target] + along * at + across * (TitleCrash.CarWidthPx * 0.5f);
 
                 // Coming in square to the flank, give or take — that squareness is what makes it a T-bone
                 // rather than a sideswipe, and the jitter is what stops a pair of them looking like a comb.
-                float lean = Range(rng, -9f, 9f) + centred * Range(rng, 0f, 6f);
+                float lean = Range(rng, -12f, 12f) + centred * Range(rng, 0f, 6f);
                 Vector2 heading = Rotate(-across, lean);
 
                 // Authored to finish past the bite allowance, so Settle still has something to push with and
@@ -250,9 +279,74 @@ namespace Draftmaster.Sim
                 isSlider = isSlider,
                 heroIndex = 3,
                 bitePx = bitePx,
+                traffic = DrawTraffic(rng),
             };
 
             return shot;
+        }
+
+        // ------------------------------------------------------------------ the field going past first
+
+        // The cars that are only passing through: three to five of them, in two or three lanes, crossing the
+        // slot at racing speed and clear of it before the first car of the accident is due.
+        //
+        // They are drawn against the lead-in beat's own 0..1 clock rather than choreography time, because
+        // they are the one beat that is NOT slowed down — the whole reason they are there is to be the speed
+        // the crash is about to be slow against. Lanes are dealt round-robin, so two cars in the same lane
+        // are always a couple of stagger steps apart and a pack can never run into its own back marker;
+        // cars in different lanes are free to go past side by side, which is what makes it a pack.
+        static TitleCrash.PassPlan[] DrawTraffic(System.Random rng)
+        {
+            int n = 3 + rng.Next(3);
+            int lanes = n >= 4 ? 3 : 2;
+
+            // How long one car takes to cross, as a fraction of the beat. Near enough the same for all of
+            // them, because a field at speed is a field: what varies is which lane and when, not the pace.
+            float span = Range(rng, 0.20f, 0.28f);
+            float step = n > 1 ? (1f - span) / (n - 1) : 0f;
+
+            float laneLeft = TitleCrash.ColumnRightPx + TitleCrash.CarWidthPx * 0.5f + 22f;
+            float laneRight = TitleCrash.CanvasWidth - TitleCrash.CarWidthPx * 0.5f - 22f;
+
+            var passes = new TitleCrash.PassPlan[n];
+            for (int i = 0; i < n; i++)
+            {
+                int lane = i % lanes;
+                float x = Mathf.Lerp(laneLeft, laneRight, lanes > 1 ? lane / (float)(lanes - 1) : 0.5f)
+                          + Range(rng, -9f, 9f);
+
+                // Not on rails: it moves across its lane on the way down, which is what stops a field going
+                // past reading as columns scrolling.
+                float across = Range(rng, -26f, 26f);
+                var start = new Vector2(x, TitleCrash.CanvasHeight + TitleCrash.PassMarginPx);
+                var end = new Vector2(Mathf.Clamp(x + across, laneLeft, laneRight), -TitleCrash.PassMarginPx);
+
+                float lead = span * Range(rng, 0.94f, 1.06f);
+                passes[i] = new TitleCrash.PassPlan
+                {
+                    startPos = start,
+                    endPos = end,
+                    rotation = SpriteAngle((end - start).normalized),
+                    atLead = Mathf.Clamp(i * step + Range(rng, -0.035f, 0.035f), 0f, 1f - lead),
+                    lead = lead,
+                    depth = i,
+                };
+            }
+            return passes;
+        }
+
+        // One hand-placed pass, for the solved shot: in at the top of the slot, out at the bottom.
+        static TitleCrash.PassPlan Pass(float fromX, float toX, float atLead, float lead, int depth)
+        {
+            var start = new Vector2(fromX, TitleCrash.CanvasHeight + TitleCrash.PassMarginPx);
+            var end = new Vector2(toX, -TitleCrash.PassMarginPx);
+            return new TitleCrash.PassPlan
+            {
+                startPos = start,
+                endPos = end,
+                rotation = SpriteAngle((end - start).normalized),
+                atLead = atLead, lead = lead, depth = depth,
+            };
         }
 
         // The run that makes a striker arrive at `wantU`, found by halving.
@@ -336,7 +430,11 @@ namespace Draftmaster.Sim
 
                 if (shot.IsSlider(i))
                 {
-                    if (Mathf.Abs(entry) >= 0.6f || Mathf.Abs(rest) >= 0.35f) return No(out why, $"slider {i} not broadside");
+                    // Broadside enough that there is a flank to hit, and no more than that. The rest
+                    // limit is what decides how much the wrecked car's angle is allowed to vary between
+                    // shots, so it is as loose as the T-bone will bear: 0.5 is thirty degrees off square,
+                    // and a striker still arrives inside twenty degrees of the flank's normal at that.
+                    if (Mathf.Abs(entry) >= 0.6f || Mathf.Abs(rest) >= 0.5f) return No(out why, $"slider {i} not broadside");
                     if (Mathf.Abs(plan.endRotation - plan.startRotation) <= 30f) return No(out why, $"slider {i} barely rotates");
                 }
                 else if (entry <= 0.9f || rest <= 0.9f) return No(out why, $"car {i} not nose-first");
@@ -399,6 +497,51 @@ namespace Draftmaster.Sim
                 }
             }
 
+            // The field going past first: fully out of frame at both ends of its run, never over the copy
+            // column or off the right edge, gone before the accident is due — and never into each other,
+            // because they are racing rather than crashing.
+            if (shot.traffic == null || shot.traffic.Length < 2) return No(out why, "nothing goes past before the crash");
+
+            for (int i = 0; i < shot.traffic.Length; i++)
+            {
+                var pass = shot.traffic[i];
+                float halfW = TitleCrash.HalfSpan(pass.rotation, horizontal: true);
+                float halfH = TitleCrash.HalfSpan(pass.rotation, horizontal: false);
+
+                if (pass.lead <= 0f) return No(out why, $"pass {i} crosses in no time at all");
+                if (pass.atLead < 0f || pass.atLead + pass.lead > 1f + 1e-4f)
+                    return No(out why, $"pass {i} is still in frame when the crash starts");
+                if (pass.startPos.y - halfH <= TitleCrash.CanvasHeight) return No(out why, $"pass {i} starts on screen");
+                if (pass.endPos.y + halfH >= 0f) return No(out why, $"pass {i} stops on screen");
+                if (Mathf.Abs(pass.endPos.y - pass.startPos.y) <= Mathf.Abs(pass.endPos.x - pass.startPos.x))
+                    return No(out why, $"pass {i} more sideways than down");
+                if (Vector2.Dot(TitleCrash.Heading(pass.rotation), (pass.endPos - pass.startPos).normalized) <= 0.9f)
+                    return No(out why, $"pass {i} goes past backwards");
+                if (Mathf.Min(pass.startPos.x, pass.endPos.x) - halfW < TitleCrash.ColumnRightPx)
+                    return No(out why, $"pass {i} crosses the copy column");
+                if (Mathf.Max(pass.startPos.x, pass.endPos.x) + halfW > TitleCrash.CanvasWidth)
+                    return No(out why, $"pass {i} runs off the right edge");
+            }
+
+            for (int step = 0; step <= SoundnessSteps; step++)
+            {
+                float lead = step / (float)SoundnessSteps;
+                for (int a = 0; a < shot.traffic.Length; a++)
+                {
+                    var poseA = TitleCrash.PassAt(shot.traffic[a], lead);
+                    if (!poseA.inFlight) continue;
+
+                    for (int b = a + 1; b < shot.traffic.Length; b++)
+                    {
+                        var poseB = TitleCrash.PassAt(shot.traffic[b], lead);
+                        if (!poseB.inFlight) continue;
+
+                        if (TitleCrash.Gap(AsCar(poseA), AsCar(poseB)) < 10f)
+                            return No(out why, $"passing cars {a},{b} are on top of each other at lead={lead:0.00}");
+                    }
+                }
+            }
+
             // Where everything comes to rest.
             var final = TitleCrash.Tableau(shot, 1f);
             for (int i = 0; i < final.Length; i++)
@@ -424,6 +567,13 @@ namespace Draftmaster.Sim
                         return No(out why, $"cars {a},{b} rest too close and are not in an accident together");
 
             return true;
+        }
+
+        // A passing car measured as a body, so the same separating-axis maths the pile is held to can say
+        // whether two of them are running into each other.
+        static TitleCrash.CarPose AsCar(TitleCrash.PassPose pose)
+        {
+            return new TitleCrash.CarPose { position = pose.position, rotation = pose.rotation, progress = 1f };
         }
 
         static bool No(out string why, string reason)
@@ -474,6 +624,13 @@ namespace Draftmaster.Sim
                 isSlider = new[] { false, false, true, false },
                 heroIndex = 3,
                 bitePx = 26f,
+                traffic = new[]
+                {
+                    Pass(372f, 366f, 0.00f, 0.24f, 0),
+                    Pass(486f, 494f, 0.21f, 0.24f, 1),
+                    Pass(598f, 590f, 0.41f, 0.24f, 2),
+                    Pass(540f, 532f, 0.63f, 0.24f, 3),
+                },
                 impacts = new[]
                 {
                     new TitleCrash.ImpactPlan

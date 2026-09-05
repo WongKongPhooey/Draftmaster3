@@ -279,6 +279,39 @@ public class TitleScreenWiringTests
                         "The RESTART DEMO row does not run the restart command.");
     }
 
+    // The CONTINUE row's subtitle says where the career is sat and when it was last written. TitleScreenUI
+    // fills it at runtime by looking for a child of the row called "Chapter" — by name, so that the builder
+    // does not have to know about a line the design added by hand. Rename or delete that child and the
+    // subtitle silently keeps whatever placeholder copy the scene was saved with, which is exactly the bug
+    // it replaced, so the name is checked here rather than trusted.
+    [Test]
+    public void TheContinueRowCarriesTheSubtitleTheMenuFillsIn()
+    {
+        var rows = Menu().FindProperty("rows");
+
+        for (int i = 0; i < rows.arraySize; i++)
+        {
+            var row = rows.GetArrayElementAtIndex(i);
+            if (row.FindPropertyRelative("command").enumValueIndex != Continue) continue;
+
+            var rect = row.FindPropertyRelative("rect").objectReferenceValue as RectTransform;
+            Assert.IsNotNull(rect, "The CONTINUE row has no rect, so there is nothing to hang a subtitle on.");
+
+            var subtitle = rect.Find(SubtitleName);
+            Assert.IsNotNull(subtitle,
+                             $"The CONTINUE row has no '{SubtitleName}' child — the menu has nowhere to write " +
+                             "which track the career is at and when it was last saved.");
+            Assert.IsNotNull(subtitle.GetComponent<TMPro.TextMeshProUGUI>(),
+                             $"'{SubtitleName}' under the CONTINUE row is not a text object.");
+            return;
+        }
+
+        Assert.Fail("The menu has no CONTINUE row to carry a subtitle.");
+    }
+
+    // TitleScreenUI.SubtitleName.
+    const string SubtitleName = "Chapter";
+
     // A row that is drawn but missing from the list can never be selected — the cursor steps over a
     // visible line and Enter on it does nothing.
     [Test]

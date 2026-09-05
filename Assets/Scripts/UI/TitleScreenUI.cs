@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -79,10 +80,13 @@ public class TitleScreenUI : MonoBehaviour
     float _statusUntil;
     bool _loading;
 
-    // RESTART DEMO throws the save away, so it asks twice: the first press arms it and says what it does,
-    // and the arming expires with the status line that announced it.
-    float _restartArmedUntil;
+    // How long a line of status copy stays up before it clears itself.
     const float StatusSeconds = 2.5f;
+
+    // The line of copy under CONTINUE, authored in the scene as a child of the row. Found by name rather
+    // than wired through the inspector, so the builder does not have to know about it and a scene that
+    // hasn't got one simply draws no subtitle.
+    const string SubtitleName = "Chapter";
 
     // Row indices sorted top-to-bottom by where the row actually sits on screen. The list is the wiring
     // and the column is the layout, and the two drift apart the moment a row is dragged up the menu in
@@ -109,6 +113,7 @@ public class TitleScreenUI : MonoBehaviour
         }
 
         CompactRows();
+        DrawContinueSubtitle();
         _index = FirstShownFrom(startIndex);
         SetStatus("");
         Redraw();
@@ -213,7 +218,6 @@ public class TitleScreenUI : MonoBehaviour
         int at = System.Array.IndexOf(_order, _index);
         if (at < 0) at = 0;
         _index = _order[(at + by + _order.Length) % _order.Length];
-        _restartArmedUntil = 0f;    // moving off a primed RESTART DEMO disarms it
         Redraw();
     }
 
@@ -249,7 +253,6 @@ public class TitleScreenUI : MonoBehaviour
         if (index == _index || index < 0 || index >= rows.Count) return;
         if (!rows[index].shown) return;
         _index = index;
-        _restartArmedUntil = 0f;
         Redraw();
     }
 
@@ -300,14 +303,6 @@ public class TitleScreenUI : MonoBehaviour
             // The demo's start-again row: the same fresh career NEW SEASON opens, on a save wiped back to
             // the first day — no money, no stats, no championship, no quests, nobody met.
             case Command.RestartDemo:
-                if (Time.unscaledTime > _restartArmedUntil)
-                {
-                    _restartArmedUntil = Time.unscaledTime + StatusSeconds;
-                    SetStatus("Erases all progress. Press again to restart.");
-                    return;
-                }
-                _restartArmedUntil = 0f;
-
                 string restartAt = OpeningTrack();
                 if (string.IsNullOrEmpty(restartAt)) { SetStatus("No track has a layout yet."); return; }
 
@@ -376,6 +371,43 @@ public class TitleScreenUI : MonoBehaviour
         foreach (var row in TrackCatalog.All)
             if (row != null && TrackCatalog.HasGeometry(row.Name)) return row.Name;
         return null;
+    }
+
+    // ------------------------------------------------------------------ where the career stands
+
+    // The line under CONTINUE. It was placeholder copy from the design file — "CHAPTER 3 - 20/08/26" — and
+    // said the same thing whatever the save held; it is the row's subtitle, so it says what the row will
+    // actually do: the track the career is sat at, and the real-world date it was last written down.
+    void DrawContinueSubtitle()
+    {
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            if (row == null || row.command != Command.Continue || row.rect == null) continue;
+
+            var child = row.rect.Find(SubtitleName);
+            var label = child != null ? child.GetComponent<TextMeshProUGUI>() : null;
+            if (label != null) label.text = ContinueSubtitle();
+        }
+    }
+
+    // "WATKINS GLEN - 05/09/26", in the shape the design authored: the venue, then the date, uppercase.
+    //
+    // The short name rather than the catalogue's full one, because "WATKINS GLEN INTERNATIONAL - 05/09/26"
+    // does not fit the row and the player thinks of the place by its short name anyway. The date is dropped
+    // entirely when there has never been a save point — a fresh install still has a track to continue at
+    // (see TrackSelection.CurrentId), and a made-up date under it would be a lie about a career that has
+    // not started.
+    public static string ContinueSubtitle()
+    {
+        string venue = TrackCatalog.Nicify(TrackSelection.CurrentId);
+        if (string.IsNullOrEmpty(venue)) return "";
+        venue = venue.ToUpperInvariant();
+
+        var saved = CareerSave.At;
+        return saved.HasValue
+            ? $"{venue} - {saved.Value.ToString("dd/MM/yy", CultureInfo.InvariantCulture)}"
+            : venue;
     }
 
     // ------------------------------------------------------------------ drawing

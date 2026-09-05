@@ -25,6 +25,54 @@ public class RVExterior : MonoBehaviour
     public Vector2 DoorWorldDirection => ((Vector2)transform.TransformDirection(doorLocalDirection)).normalized;
     public Vector3 DoorWorldPosition => transform.TransformPoint(new Vector3(doorLocalPosition.x, doorLocalPosition.y, 0f));
 
+    // The player's parked motorhome, and only ever that.
+    //
+    // The masked interior room carries an RVExterior of its own at its root (the prefab
+    // RVInteriorPrefabBuilder generates), and that room is in the scene from the moment the player spawns
+    // inside it — so a plain FindObjectOfType can hand back a doorway in a pocket dimension instead of the
+    // rig parked in the paddock. Everything that places itself against "the RV" goes through here.
+    public static RVExterior Player
+    {
+        get
+        {
+            var all = FindObjectsByType<RVExterior>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            RVExterior room = null;
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] == null) continue;
+                if (all[i].GetComponentInParent<RVInterior>() != null) { room ??= all[i]; continue; }
+                return all[i];
+            }
+
+            // Nothing but the room: better than nothing for anything that only needs a doorway to face.
+            return room;
+        }
+    }
+
+    // Raised when the rig is moved after the scene has opened, with the shift it made.
+    //
+    // Everything around a motorhome is placed against its doorway once, when the scene opens: the NPC
+    // waiting outside, the walk-over trigger that starts their beat, the masked interior room, the career
+    // -path NPC stood off the far corner. The driver motorhome lot then parks the rig into its place in the
+    // field several seconds later, once the field has finished spawning — and without this they all stay
+    // behind in an empty stretch of paddock, with a trigger the player never walks through again.
+    //
+    // A shift rather than a re-derive, so whatever each of them solved for spacing or walkability survives.
+    public static event System.Action<Vector3> Moved;
+
+    // Park the rig somewhere else in the ground plane. Rotation and z are kept: the doorway still faces the
+    // way it was placed, so nothing listening has to do more than translate.
+    public void MoveTo(Vector3 worldPoint)
+    {
+        Vector3 at = transform.position;
+        var delta = new Vector3(worldPoint.x - at.x, worldPoint.y - at.y, 0f);
+        if (delta.sqrMagnitude < 0.0001f) return;
+
+        transform.position = at + delta;
+        Moved?.Invoke(delta);
+    }
+
     Collider2D[] _colliders;
 
     public void SetCollidersEnabled(bool value)

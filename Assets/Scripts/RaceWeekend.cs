@@ -55,6 +55,9 @@ public static class RaceWeekend
         {
             UnityEngine.PlayerPrefs.SetInt(SessionLiveKey, value ? 1 : 0);
             UnityEngine.PlayerPrefs.Save();
+            // Taking the car out and handing it back are both progress: date them, so CONTINUE knows when
+            // the player was last actually racing rather than only when they last picked a track.
+            CareerSave.Stamp();
         }
     }
 
@@ -65,6 +68,6 @@ public static class RaceWeekend
         UnityEngine.PlayerPrefs.Save();
         Current = Session.Practice;
         GridOrder = null;
-        SessionLive = false;
+        SessionLive = false;      // stamps the save point
     }
 }

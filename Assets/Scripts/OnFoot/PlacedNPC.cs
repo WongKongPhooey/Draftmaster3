@@ -250,12 +250,14 @@ public class PlacedNPC : MonoBehaviour
     {
         All.Add(this);
         PaddockBoundary.Changed += ReplaceIfStranded;
+        RVExterior.Moved += FollowRV;
     }
 
     void OnDisable()
     {
         All.Remove(this);
         PaddockBoundary.Changed -= ReplaceIfStranded;
+        RVExterior.Moved -= FollowRV;
     }
 
     // Look up one of the named beats. Returns only NPCs that actually got built this session.
@@ -425,6 +427,39 @@ public class PlacedNPC : MonoBehaviour
     {
         yield return null;
         if (_walkUp != null) _walkUp.Play();
+    }
+
+    // The rig this NPC is stood outside has been parked somewhere else — the driver motorhome lot moves it
+    // into the field several seconds after the scene opens. Everything placed against its doorway goes with
+    // it: the body, and the walk-over trigger that has not fired yet.
+    //
+    // The trigger is the half that actually breaks. An NPC left behind is merely stood in the wrong place;
+    // a trigger left behind is a beat that never plays, because the player now walks out of a doorway that
+    // is nowhere near it.
+    void FollowRV(Vector3 shift)
+    {
+        if (!_built) return;
+
+        // Anchored to the doorway, or to a spawn point that IS that doorway — an interior room in the scene
+        // is what says the player started inside the RV rather than out in the pit lane.
+        bool onTheRig = anchor == Anchor.RVDoor
+                     || (anchor == Anchor.PlayerSpawn && _ctx.rvInterior != null);
+        if (!onTheRig) return;
+
+        // Kept in step so anything re-derived later — a stranded NPC re-placed when the lot brings its own
+        // boundary — resolves against where the rig is now rather than snapping back to where it was.
+        _ctx.playerSpawnPos += shift;
+
+        if (_npc != null && !_npc.IsTalking)
+        {
+            Vector3 p = _npc.transform.position + shift;
+            if (_npcRb != null && _npcRb.bodyType != RigidbodyType2D.Dynamic) _npcRb.position = p;
+            _npc.transform.position = p;
+        }
+
+        // The trigger and the cutscene share one object, so this carries both — but only while the beat is
+        // still waiting. Once it is playing, the cutscene owns where these two are stood.
+        if (_walkUp != null && _walkUp.Idle) _walkUp.transform.position += shift;
     }
 
     // The walkable area is generated too, and some of it turns up after the cast does — the motorhome lot

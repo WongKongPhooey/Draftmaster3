@@ -46,8 +46,17 @@ public class RVInterior : MonoBehaviour
         }
     }
 
-    void OnEnable() { if (!All.Contains(this)) All.Add(this); }
-    void OnDisable() => All.Remove(this);
+    void OnEnable()
+    {
+        if (!All.Contains(this)) All.Add(this);
+        RVExterior.Moved += Relocate;   // the rig this room belongs to can be parked elsewhere mid-scene
+    }
+
+    void OnDisable()
+    {
+        All.Remove(this);
+        RVExterior.Moved -= Relocate;
+    }
 
     [Header("Room size (metres, local to the doorway)")]
     [Tooltip("Interior width across the doorway. With the RV's side door this is the RV's LENGTH (the long axis runs across the door).")]
@@ -307,6 +316,30 @@ public class RVInterior : MonoBehaviour
         BuildQuad(interior, "Counter", new Vector2(halfW - 1.3f, -roomBack + 0.55f), new Vector2(2.4f, 0.9f), kPropZ, MakeUnlit(new Color(0.70f, 0.71f, 0.74f)));
         BuildQuad(interior, "Table", tablePos, new Vector2(1.4f, 1.0f), kPropZ, MakeUnlit(new Color(0.48f, 0.34f, 0.22f)));
         BuildQuad(interior, "Doormat", new Vector2(0f, roomFront - 0.4f), new Vector2(doorWidth, 0.5f), kPropZ, MakeUnlit(new Color(0.35f, 0.30f, 0.24f)));
+    }
+
+    // Shift the room by the same amount the motorhome it belongs to has just moved.
+    //
+    // The room is a separate root object anchored on the RV's spawn marker, so a rig that is parked into
+    // the driver lot after the scene has opened would leave its own interior behind — and the player with
+    // it, since they are stood in that room rather than in the shell. Translation only: the doorway
+    // direction and the room's local frame are untouched, so nothing has to be rebuilt, only the anchor
+    // every inside/outside test is measured from.
+    public void Relocate(Vector3 delta)
+    {
+        var shift = new Vector3(delta.x, delta.y, 0f);
+        if (shift.sqrMagnitude < 1e-6f) return;
+
+        _anchorXY += new Vector2(shift.x, shift.y);
+        transform.position += shift;
+
+        if (!_inside || _player == null) return;
+
+        _player.position += shift;
+        // Rigidbody2D interpolation would smear the jump across the next frame, dragging the player
+        // visibly across the paddock instead of moving with the room.
+        var body = _player.GetComponent<Rigidbody2D>();
+        if (body != null) body.position = _player.position;
     }
 
     void Update()

@@ -8,8 +8,14 @@ using UnityEngine.SceneManagement;
 // long lines (rowCount, default 2) stacked one in front of the other in the pit area, each with a name
 // board over the cab. The lot is anchored on the player's own RV — the scene-placed RVExterior prefab
 // instance that PitLaneStart spawns them inside — so it grows out of a motorhome the player already
-// knows and inherits its rotation and door convention for free. The player's rig never moves:
-// playerLineIndex decides which place it occupies, and the lot's start slides the other way to suit.
+// knows and inherits its rotation and door convention for free. playerLineIndex decides which place the
+// player's rig occupies, and the lot's start slides the other way to suit, so on an unauthored track it
+// never has to move at all.
+//
+// Where it does have to move — a track whose lot is an authored rectangle (PaddockLotArea) with the
+// player's motorhome parked outside it — the rig is driven into its place rather than left standing on
+// its own across the paddock. It takes its spawn marker (a child of the prefab) and its masked interior
+// room with it, and the player too when they are stood in that room. See ParkPlayersRig.
 //
 // This component also owns the FIELD ROSTER (who is racing, under what number, for which team).
 // DriverPresenceDirector reads the slots back to put each of those drivers somewhere in the world.
@@ -380,9 +386,6 @@ public class DriverMotorhomeLot : MonoBehaviour
 
     // The authored path. Returns false when no motorhome area was drawn for this track, so the caller falls
     // back to growing the lot off the player's RV.
-    //
-    // Places are solved for the whole slot list even when the player's RV stands outside the rectangle — at
-    // worst that leaves one place spare, which is cheaper than solving the layout twice to save a gap.
     bool BuildRowInArea()
     {
         var area = PaddockLotArea.Find(PaddockLotKind.Motorhomes);
@@ -391,12 +394,16 @@ public class DriverMotorhomeLot : MonoBehaviour
         if (!area.Solve(_slots.Count, rvWidth, rvLength, rvZ, out var line, out int rows, out bool tight))
             return false;
 
-        // The player's rig never moves. It only holds a PLACE in the lot when it is stood inside the
-        // rectangle; parked elsewhere, the field simply fills every place around it.
-        var playerRv = FindObjectOfType<RVExterior>();
-        int playerPlace = playerRv != null && area.Contains(playerRv.transform.position)
-            ? PaddockLotArea.NearestPlace(line, rows * line.perRow, playerRv.transform.position)
-            : -1;
+        // The player's rig always holds a place. Standing inside the rectangle it keeps the one it is
+        // nearest to, so a motorhome somebody parked deliberately stays where they put it; parked outside
+        // it takes its authored place in the line and is driven in — the player is in the field, so their
+        // motorhome is in the lot, rather than alone across the paddock from every driver they race.
+        var playerRv = RVExterior.Player;
+        int places = Mathf.Max(1, rows * line.perRow);
+        int playerPlace = playerRv == null ? -1
+            : area.Contains(playerRv.transform.position)
+                ? PaddockLotArea.NearestPlace(line, places, playerRv.transform.position)
+                : Mathf.Clamp(playerLineIndex, 0, places - 1);
 
         if (tight)
             Debug.LogWarning($"DriverMotorhomeLot: {_slots.Count} motorhomes do not fit '{area.name}' at its " +
@@ -408,7 +415,7 @@ public class DriverMotorhomeLot : MonoBehaviour
 
         Debug.Log($"DriverMotorhomeLot: packed into '{area.name}' — {rows} line(s) of {line.perRow}, " +
                   $"{line.pitch:0.0}m apart" +
-                  (playerPlace >= 0 ? $", player's RV holding place {playerPlace}." : ", player's RV outside the lot."), area);
+                  (playerPlace >= 0 ? $", player's RV in place {playerPlace}." : ", no player RV to park."), area);
         return true;
     }
 
@@ -435,7 +442,10 @@ public class DriverMotorhomeLot : MonoBehaviour
 
             if (i == 0 && playerRv != null)
             {
-                // The player's own RV is already standing there, doors and colliders and all.
+                // The player's own RV is parked into its place rather than rebuilt: it is the authored
+                // prefab, with its doors, its colliders, its spawn marker and its interior on it.
+                if (playerPlace >= 0) ParkPlayersRig(playerRv, line.PlaceAt(playerPlace));
+
                 slot.rv = playerRv.transform;
                 slot.position = playerRv.transform.position;
                 slot.doorPosition = playerRv.DoorWorldPosition;
@@ -504,12 +514,33 @@ public class DriverMotorhomeLot : MonoBehaviour
         go.AddComponent<PaddockBoundary>();
     }
 
+    // Park the player's own motorhome on the place the lot gave it, and bring everything that belongs to
+    // it along: the SpawnPoint_RV marker is a child of the prefab so it follows for free, and the masked
+    // interior room is a separate root that has to be told (RVInterior.Relocate), which also carries the
+    // player when they are stood in it — the demo opens inside this motorhome, and the lot is not built
+    // until the field has finished spawning several seconds later.
+    //
+    // A translation across the ground only. The rig keeps its authored rotation, so the whole line still
+    // shares its body frame and the doorway faces the way it was placed, and it keeps its own z rather
+    // than dropping to the lot's, so nothing about how it sorts against the interior mask changes.
+    static void ParkPlayersRig(RVExterior rig, Vector3 place)
+    {
+        if (rig == null) return;
+
+        // Keep its own z rather than dropping to the lot's, so nothing about how the shell sorts against
+        // the interior mask changes. RVExterior.MoveTo does the rest, and tells everything placed against
+        // the doorway to come along — the room, the player stood in it, the cast waiting outside.
+        Vector3 to = place;
+        to.z = rig.transform.position.z;
+        rig.MoveTo(to);
+    }
+
     // Where the line is anchored and which way the bodies face. The player's placed RV wins — the lot
     // then reads as "the paddock the player woke up in". Without one, fall back to the middle of the pit
     // lane, set back behind the paddock, so the feature still works on an unauthored track.
     bool ResolveAnchor(out Vector3 origin, out Quaternion rot, out RVExterior playerRv)
     {
-        playerRv = FindObjectOfType<RVExterior>();
+        playerRv = RVExterior.Player;
         if (playerRv != null)
         {
             origin = playerRv.transform.position;

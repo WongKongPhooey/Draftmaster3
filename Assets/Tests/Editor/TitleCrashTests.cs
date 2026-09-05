@@ -219,6 +219,160 @@ public class TitleCrashTests
         Assert.Greater(bites.Count, 3, "Every crash is exactly as hard as every other one.");
     }
 
+    [Test]
+    public void TheWreckedCarDoesNotLieAtTheSameAngleInEveryShot()
+    {
+        // The complaint this exists to catch. The composer randomised the cast, the bite, the size of the
+        // accident and where on the screen it happened — but the car being T-boned turned the same way and
+        // came to rest the same fraction of the same sweep past square every single time, so every crash
+        // read as the same crash in different paint.
+        var tilts = new HashSet<int>();
+        int oneWay = 0;
+
+        foreach (var shot in Shots())
+        {
+            var slider = shot.cars[SliderOf(shot)];
+            Vector2 line = (slider.endPos - slider.startPos).normalized;
+
+            // Signed degrees past square: the dot with its own line of travel is the sine of how far round
+            // from broadside it has got, and the sign is which way it was spinning.
+            float tilt = Mathf.Asin(Mathf.Clamp(Vector2.Dot(Nose(slider.endRotation), line), -1f, 1f)) * Mathf.Rad2Deg;
+            tilts.Add(Mathf.RoundToInt(tilt / 4f));
+            if (tilt > 0f) oneWay++;
+        }
+
+        Assert.Greater(tilts.Count, 6,
+                       $"The wrecked car only ever lies at {tilts.Count} distinct angles across {Seeds} shots — " +
+                       "it reads as the same crash every time the game opens.");
+        Assert.Greater(oneWay, Seeds / 5, "The wrecked car always spins the same way.");
+        Assert.Less(oneWay, Seeds * 4 / 5, "The wrecked car almost always spins the same way.");
+    }
+
+    [Test]
+    public void TheStrikersDoNotAllArriveInTheMiddleOfTheSameDoor()
+    {
+        // The other half of the same complaint: a car arriving on its own used to be aimed within six pixels
+        // of the middle of a hundred-and-fifty pixel flank, so it hit the same door in the same place in
+        // every shot. It picks a spot down the whole side now — and because the nose and the flank fold out
+        // of each other's actual geometry, a hit up by the wheel is a visibly different wreck to a hit in
+        // the middle of the door rather than the same dent moved along.
+        var spots = new HashSet<int>();
+        int offCentre = 0, hits = 0;
+
+        foreach (var shot in Shots())
+        {
+            foreach (var hit in shot.impacts)
+            {
+                var poses = TitleCrash.Tableau(shot, hit.atU);
+                Vector2 heading = Nose(poses[hit.striker].rotation);
+                float rad = poses[hit.struck].rotation * Mathf.Deg2Rad;
+                Vector2 flank = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+
+                Vector2 noseAt = poses[hit.striker].position + heading * (TitleCrash.CarLengthPx * 0.5f);
+                float along = Vector2.Dot(noseAt - poses[hit.struck].position, flank);
+
+                spots.Add(Mathf.RoundToInt(along / 8f));
+                if (Mathf.Abs(along) > 20f) offCentre++;
+                hits++;
+            }
+        }
+
+        Assert.Greater(spots.Count, 8,
+                       $"Only {spots.Count} distinct places along the flank ever get hit across {Seeds} shots.");
+        Assert.Greater(offCentre, hits / 5,
+                       $"Only {offCentre} of {hits} hits land off the middle of the door — the quarter panels " +
+                       "and the wheels never get collected.");
+    }
+
+    // ------------------------------------------------------------------ the field going past
+
+    [Test]
+    public void TheFieldGoesPastAtSpeedBeforeTheAccidentArrives()
+    {
+        // Slow motion only reads as slow against something that was fast, so the screen opens on the field
+        // streaming through the slot on its own clock with nothing slowed down. Every one of them has to be
+        // out of the bottom of the frame before the first car of the accident is due — a passing car still
+        // on screen when the clock starts braking would hang there, parked, through a wreck it is not in.
+        foreach (var shot in Shots())
+        {
+            Assert.GreaterOrEqual(shot.TrafficCount, 3,
+                                  "Nothing goes past before the crash — the shot opens on the wreck.");
+
+            for (int i = 0; i < shot.TrafficCount; i++)
+            {
+                var pass = shot.traffic[i];
+                float halfWidth = TitleCrash.HalfSpan(pass.rotation, horizontal: true);
+                float halfHeight = TitleCrash.HalfSpan(pass.rotation, horizontal: false);
+
+                Assert.Greater(pass.startPos.y - halfHeight, TitleCrash.CanvasHeight,
+                               $"Passing car {i} pops into existence on screen instead of arriving from off it.");
+                Assert.Less(pass.endPos.y + halfHeight, 0f,
+                            $"Passing car {i} winks out mid-screen instead of leaving the bottom of the frame.");
+                Assert.LessOrEqual(pass.atLead + pass.lead, 1f + 1e-4f,
+                                   $"Passing car {i} is still in frame when the crash starts.");
+                Assert.Less(pass.lead, 0.36f,
+                            $"Passing car {i} takes a third of the whole beat to cross — it is cruising, and " +
+                            "the crash has nothing fast to be slow against.");
+                Assert.Greater(Vector2.Dot(Nose(pass.rotation), (pass.endPos - pass.startPos).normalized), 0.9f,
+                               $"Passing car {i} goes down the screen backwards.");
+                Assert.GreaterOrEqual(Mathf.Min(pass.startPos.x, pass.endPos.x) - halfWidth,
+                                      TitleCrash.ColumnRightPx,
+                                      $"Passing car {i} runs over the copy column.");
+                Assert.LessOrEqual(Mathf.Max(pass.startPos.x, pass.endPos.x) + halfWidth, TitleCrash.CanvasWidth,
+                                   $"Passing car {i} runs half off the right edge of the screen.");
+            }
+        }
+    }
+
+    [Test]
+    public void TheFieldGoingPastIsAPackAndNeverRunsIntoItself()
+    {
+        // They are racing, not crashing: the accident is the second beat and it is supposed to be a surprise.
+        // Two cars in the same lane are staggered far enough apart never to meet; two in different lanes are
+        // free to go past side by side, which is what makes it read as a field rather than as one car on a
+        // loop.
+        const int Steps = 240;
+        var counts = new HashSet<int>();
+
+        foreach (var shot in Shots())
+        {
+            counts.Add(shot.TrafficCount);
+
+            var lanes = new HashSet<int>();
+            foreach (var pass in shot.traffic) lanes.Add(Mathf.RoundToInt(pass.startPos.x / 40f));
+            Assert.Greater(lanes.Count, 1,
+                           "Every car goes past in the same lane — it reads as one car played over and over.");
+
+            for (int step = 0; step <= Steps; step++)
+            {
+                float lead = step / (float)Steps;
+
+                for (int a = 0; a < shot.TrafficCount; a++)
+                {
+                    var poseA = TitleCrash.PassAt(shot.traffic[a], lead);
+                    if (!poseA.inFlight) continue;
+
+                    for (int b = a + 1; b < shot.TrafficCount; b++)
+                    {
+                        var poseB = TitleCrash.PassAt(shot.traffic[b], lead);
+                        if (!poseB.inFlight) continue;
+
+                        Assert.Greater(Gap(AsCar(poseA), AsCar(poseB)), 6f,
+                                       $"Passing cars {a} and {b} are on top of each other at lead={lead:0.00} — " +
+                                       "the accident is supposed to be the only contact in the shot.");
+                    }
+                }
+            }
+        }
+
+        Assert.Greater(counts.Count, 1, "Exactly the same number of cars goes past in every shot.");
+    }
+
+    static TitleCrash.CarPose AsCar(TitleCrash.PassPose pose)
+    {
+        return new TitleCrash.CarPose { position = pose.position, rotation = pose.rotation, progress = 1f };
+    }
+
     // The first car in the shot that had already lost it. A four-car accident has two of them, lying end to
     // end; everything below that only needs one takes the first.
     static int SliderOf(Shot shot)
@@ -376,8 +530,11 @@ public class TitleCrashTests
                 if (shot.IsSlider(i))
                 {
                     // Not merely "off its line" — square across it, or the strikers arrive at a corner rather
-                    // than a door and every dent comes out the same shape as every other.
-                    Assert.Less(Mathf.Abs(alignment), 0.35f,
+                    // than a door and every dent comes out the same shape as every other. Thirty degrees of
+                    // slack rather than twenty, because that slack is what stops the wrecked car lying at
+                    // the same angle in every shot; a striker still arrives well inside the T-bone limit
+                    // checked below at the far end of it.
+                    Assert.Less(Mathf.Abs(alignment), 0.5f,
                                 "The car being T-boned isn't broadside when it's hit — it's a glancing blow, " +
                                 "and the whole point of the shot is that the two panels deform differently.");
                     Assert.Greater(Mathf.Abs(shot.cars[i].endRotation - shot.cars[i].startRotation), 30f,

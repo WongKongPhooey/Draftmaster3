@@ -373,7 +373,8 @@ public class WeekendVenueSites : MonoBehaviour
             foreach (var slot in lot.Slots)
                 if (slot != null && slot.isPlayer) return slot.doorPosition;
 
-        var rv = FindFirstObjectByType<RVExterior>();
+        // RVExterior.Player, not the first one found: the masked interior room carries one of its own.
+        var rv = RVExterior.Player;
         if (rv != null) return rv.DoorWorldPosition;
 
         return Vector3.zero;

@@ -70,6 +70,31 @@ public class WeekendTimetableTests
         Assert.IsNotNull(t.PlayerSession(ActivityKind.Race));
     }
 
+    // Three championships share one circuit, so no two sessions may run over the same minute - a practice
+    // moved onto a busier day has to land in a gap, not on top of somebody else's track time.
+    [Test]
+    public void NoTwoSessions_RunAtOnce()
+    {
+        foreach (var mine in SeriesCatalog.All)
+        {
+            var t = WeekendTimetable.Build(mine, 6, "Kansas");
+            var sessions = new List<WeekendActivity>();
+            foreach (var a in t.Activities)
+                if (WeekendTrackSessions.IsTrackSession(a.kind)) sessions.Add(a);
+
+            for (int i = 0; i < sessions.Count; i++)
+                for (int j = i + 1; j < sessions.Count; j++)
+                {
+                    var a = sessions[i];
+                    var b = sessions[j];
+                    if (a.slot != b.slot) continue;
+                    bool overlaps = a.startMinute < b.EndMinute && b.startMinute < a.EndMinute;
+                    Assert.IsFalse(overlaps,
+                        $"{mine}: {a.title} and {b.title} are on the circuit at the same time");
+                }
+        }
+    }
+
     [Test]
     public void SessionOrder_IsPracticeThenQualifyingThenRace()
     {
@@ -81,6 +106,24 @@ public class WeekendTimetableTests
 
             Assert.Less(Absolute(p), Absolute(q), $"{s}: qualifying is not after practice");
             Assert.Less(Absolute(q), Absolute(r), $"{s}: the race is not after qualifying");
+        }
+    }
+
+    // Whoever the player drives for, Friday puts them in the car. Cup practice used to open Saturday
+    // morning, which left a Cup driver's whole first day as hospitality with nothing to drive.
+    [Test]
+    public void EverySeries_HasADrivableSession_OnFriday()
+    {
+        foreach (var mine in SeriesCatalog.All)
+        {
+            var t = WeekendTimetable.Build(mine, 4, "Darlington");
+
+            bool driving = false;
+            foreach (var a in t.Activities)
+                if (a.IsOnTrack && (a.slot == WeekendSlot.FridayAM || a.slot == WeekendSlot.FridayPM))
+                    driving = true;
+
+            Assert.IsTrue(driving, $"{mine}: nothing to drive on the first day of the weekend");
         }
     }
 

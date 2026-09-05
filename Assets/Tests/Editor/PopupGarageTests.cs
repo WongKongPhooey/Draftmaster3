@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -64,14 +64,14 @@ public class PopupGarageTests
     }
 
     // A rig configured the way PopupGarageLot configures one, parked at `position` facing `rotation`.
-    static Component Rig(GameObject go, int canopySide, bool carAtHome, bool teamSign = false)
+    static Component Rig(GameObject go, int canopySide, bool carAtHome, bool teamSign = false, string carset = "")
     {
         Assert.IsNotNull(RigType, "PopupGarageRig is missing from Assembly-CSharp.");
         var rig = go.AddComponent(RigType);
 
         SetField(rig, "carNumber", 20);
         SetField(rig, "teamName", "Test Motorsports");
-        SetField(rig, "carset", "");            // no livery for this number: the block fallback, deterministically
+        SetField(rig, "carset", carset);        // "" = no livery for this number: the block fallback, deterministically
         SetField(rig, "canopySide", canopySide);
         SetField(rig, "carAtHome", carAtHome);
         SetField(rig, "showTeamName", teamSign);
@@ -722,5 +722,141 @@ public class PopupGarageTests
         var first = (Vector3)placeAt.Invoke(layout, new object[] { 0 });
         var second = (Vector3)placeAt.Invoke(layout, new object[] { 1 });
         Assert.AreEqual(pitch, Vector3.Distance(first, second), 0.001f, "the line's places don't match its own pitch.");
+    }
+
+    // ---------------------------------------------------------------- which way the car points
+
+    static readonly System.Type GarageLotType = System.Type.GetType("PopupGarageLot, Assembly-CSharp");
+
+    // How PopupGarageLot turns a rig into the rotation the REAL car parks at, for a car running the given
+    // sprite convention. Reached by its heading overload so the test doesn't need a live car component.
+    static Quaternion ParkedCarRotation(Component rig, bool spriteFacesUp, float angleOffsetDeg)
+    {
+        Assert.IsNotNull(GarageLotType, "PopupGarageLot is missing from Assembly-CSharp.");
+        var m = GarageLotType.GetMethod("ParkedCarRotation", BindingFlags.Public | BindingFlags.Static,
+                                        null, new[] { typeof(float), typeof(bool), typeof(float) }, null);
+        Assert.IsNotNull(m, "PopupGarageLot.ParkedCarRotation(heading, spriteFacesUp, angleOffsetDeg) is gone; " +
+                            "the player's car is parked home with it.");
+        float heading = (float)Prop(rig, "ParkedCarHeadingDeg");
+        return (Quaternion)m.Invoke(null, new object[] { heading, spriteFacesUp, angleOffsetDeg });
+    }
+
+    // The way a car object is read everywhere else in the game: heading = euler.z + (facesUp ? 90 : 0) - offset.
+    static float HeadingOf(Quaternion rotation, bool spriteFacesUp, float angleOffsetDeg)
+        => rotation.eulerAngles.z + (spriteFacesUp ? 90f : 0f) - angleOffsetDeg;
+
+    static void AssertSameDirection(float aDeg, float bDeg, string message)
+    {
+        float delta = Mathf.Abs(Mathf.DeltaAngle(aDeg, bDeg));
+        Assert.Less(delta, 0.01f, $"{message} (out by {delta:0.0} degrees)");
+    }
+
+    // The longest side of the parked art, in world space — the direction the car is lying in, whether the
+    // rig painted a livery (turned a quarter turn) or fell back to a coloured block (not turned at all).
+    static Vector3 LengthAxisOf(Transform art)
+    {
+        var sr = art.GetComponent<SpriteRenderer>();
+        Assert.IsNotNull(sr, "the parked car has no sprite on it at all.");
+        Vector2 size = sr.sprite.bounds.size;
+        Vector3 x = art.TransformVector(Vector3.right) * size.x;
+        Vector3 y = art.TransformVector(Vector3.up) * size.y;
+        return (x.magnitude >= y.magnitude ? x : y);
+    }
+
+    // Every generated car under a canopy lies ALONG its garage — nose down the body toward the cab, not
+    // across the awning. This is the shape the player's own car has to match.
+    [Test]
+    public void TheGeneratedCarLiesAlongItsGarage()
+    {
+        foreach (float rigZ in new[] { 0f, 37f, 90f, -128f })
+            foreach (int side in new[] { 1, -1 })
+            {
+                var go = new GameObject("Garage");
+                try
+                {
+                    go.transform.rotation = Quaternion.Euler(0f, 0f, rigZ);
+                    var rig = Rig(go, side, carAtHome: true);
+                    var art = (Transform)Prop(rig, "ParkedCar");
+                    Assert.IsNotNull(art, "nothing is parked under the canopy.");
+
+                    Vector3 length = LengthAxisOf(art);
+                    Assert.AreEqual(CarLength, length.magnitude, 0.01f,
+                                    $"rig {rigZ}, side {side}: the parked art is not as long as the car.");
+                    Assert.AreEqual(1f, Mathf.Abs(Vector3.Dot(length.normalized, go.transform.up)), 0.001f,
+                                    $"rig {rigZ}, side {side}: the parked car is lying across the garage, not along it.");
+                }
+                finally { Object.DestroyImmediate(go); }
+            }
+
+        // And the same again on real paint, which is the branch the paddock actually takes: the livery art
+        // runs its length along the sprite's +X and is turned a quarter turn to lie down the body.
+        if (Resources.Load<Sprite>("cup26livery20") == null) return;
+
+        var painted = new GameObject("Garage");
+        try
+        {
+            painted.transform.rotation = Quaternion.Euler(0f, 0f, 37f);
+            var rig = Rig(painted, 1, carAtHome: true, teamSign: false, carset: "cup26");
+            Vector3 length = LengthAxisOf((Transform)Prop(rig, "ParkedCar"));
+
+            Assert.AreEqual(CarLength, length.magnitude, 0.01f, "the painted car is not as long as the car.");
+            Assert.AreEqual(1f, Mathf.Abs(Vector3.Dot(length.normalized, painted.transform.up)), 0.001f,
+                            "the painted car is lying across the garage, not along it.");
+
+            // And which END it points at: livery art carries its nose on the sprite's -X (the stock
+            // spriteFacesUp/angleOffsetDeg pair reads it that way), so the quarter turn aims it at the cab —
+            // the same end the player's real car is parked toward.
+            Vector3 nose = ((Transform)Prop(rig, "ParkedCar")).TransformDirection(Vector3.left).normalized;
+            Assert.AreEqual(1f, Vector3.Dot(nose, painted.transform.up), 0.001f,
+                            "the painted car is parked the other way up its garage from the player's own.");
+        }
+        finally { Object.DestroyImmediate(painted); }
+    }
+
+    // The player's REAL car goes home to its own garage between sessions, and it used to be handed the
+    // rig's own rotation — which parked it side-on in a row where every other car pointed down the body,
+    // because a rig's frame runs its length along +Y while a car's frame is a heading read through the
+    // sprite convention. Same direction as the art next door, whatever way the rig is parked.
+    [Test]
+    public void ThePlayersRealCarParksTheSameWayRoundAsTheRest()
+    {
+        foreach (float rigZ in new[] { 0f, 37f, 90f, -128f })
+        {
+            var go = new GameObject("Garage");
+            try
+            {
+                go.transform.rotation = Quaternion.Euler(0f, 0f, rigZ);
+                var rig = Rig(go, 1, carAtHome: true);
+
+                float noseDeg = Mathf.Atan2(go.transform.up.y, go.transform.up.x) * Mathf.Rad2Deg;
+
+                // Whatever convention the car happens to be running, it ends up pointing down the garage.
+                foreach (var convention in new[] { (facesUp: false, offset: 180f),   // PlayerVehicleController's own
+                                                   (facesUp: true,  offset: 0f) })   // SplineDriver's
+                {
+                    Quaternion parked = ParkedCarRotation(rig, convention.facesUp, convention.offset);
+                    AssertSameDirection(noseDeg, HeadingOf(parked, convention.facesUp, convention.offset),
+                                        $"rig {rigZ}, facesUp {convention.facesUp}: the parked car is not pointing " +
+                                        "down its own garage");
+                }
+
+                // And in the shape the row reads as: length along the body, matching the art either side.
+                Quaternion stock = ParkedCarRotation(rig, false, 180f);
+                Vector3 carAxis = stock * Vector3.right;        // the car sprite's long axis at facesUp = false
+                Assert.AreEqual(1f, Mathf.Abs(Vector3.Dot(carAxis, go.transform.up)), 0.001f,
+                                $"rig {rigZ}: the player's car is lying across the garage.");
+                Assert.AreEqual(0f, Mathf.Abs(Vector3.Dot(carAxis, go.transform.right)), 0.001f,
+                                $"rig {rigZ}: the player's car is lying along the garage's width — side-on.");
+
+                var art = (Transform)Prop(rig, "ParkedCar");
+                Assert.AreEqual(1f, Mathf.Abs(Vector3.Dot(carAxis, LengthAxisOf(art).normalized)), 0.001f,
+                                $"rig {rigZ}: the player's car and the generated cars are parked at different angles.");
+
+                // The old behaviour, stated so it can't come back: the rig's rotation is a quarter turn off.
+                Assert.AreEqual(90f, Quaternion.Angle(stock, go.transform.rotation), 0.01f,
+                                $"rig {rigZ}: the player's car is being handed the rig's own rotation again.");
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
     }
 }

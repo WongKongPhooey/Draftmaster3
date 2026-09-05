@@ -108,7 +108,7 @@ public class NPCInteractable : MonoBehaviour
         if (playerLine && _interactor != null)
         {
             if (_playerBubble == null) _playerBubble = SpeechBubble.Attach(_interactor);
-            _npcBubble?.Hide();
+            Dismiss(ref _npcBubble);
             _activeBubble = _playerBubble;
         }
         else
@@ -118,7 +118,7 @@ public class NPCInteractable : MonoBehaviour
                 _npcBubble = SpeechBubble.Attach(transform);
                 if (bubbleHeadHeight > 0f) _npcBubble.headHeight = bubbleHeadHeight;
             }
-            _playerBubble?.Hide();
+            Dismiss(ref _playerBubble);
             _activeBubble = _npcBubble;
         }
         // Both halves of the conversation are owned by this NPC, so the player's reply is never queued
@@ -127,12 +127,25 @@ public class NPCInteractable : MonoBehaviour
                             Draftmaster.Sim.SpeechPriority.Conversation, owner: this);
     }
 
+    // Put a bubble away, and forget it when it has been destroyed under us.
+    //
+    // Unity's null is not C#'s. A destroyed object fails `== null` (the engine overloads it) but is still a
+    // live C# reference, so `bubble?.Hide()` sails straight past the null-conditional and throws the moment
+    // Hide touches its gameObject. These bubbles do get destroyed out from under this script: SpeechBubble
+    // tears itself down when the actor it floats over goes away, and a driver fight swaps the player's body
+    // for a fighter and back — so talking to the same driver again went through here holding a corpse.
+    static void Dismiss(ref SpeechBubble bubble)
+    {
+        if (bubble == null) { bubble = null; return; }   // Unity's ==: a destroyed bubble counts as null
+        bubble.Hide();
+    }
+
     public void EndConversation()
     {
         _talking = false;
         if (!repeatable) _index = Mathf.Max(0, lines.Length - 1);
-        _npcBubble?.Hide();
-        _playerBubble?.Hide();
+        Dismiss(ref _npcBubble);
+        Dismiss(ref _playerBubble);
         _activeBubble = null;
     }
 

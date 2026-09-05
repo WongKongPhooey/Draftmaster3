@@ -94,7 +94,7 @@ public class PopupGarageLot : MonoBehaviour
 
         Vector3 home = rig.ParkedCarWorldPosition;
         car.transform.SetPositionAndRotation(new Vector3(home.x, home.y, car.transform.position.z),
-                                             rig.transform.rotation);
+                                             ParkedCarRotation(rig, car.GetComponent<PlayerVehicleController>()));
 
         // Whatever was following the car — the crew chief's anchor, the pit box marker — is reading a
         // transform, so moving it is the whole job. Nothing else in the scene owns its position while it is
@@ -102,6 +102,28 @@ public class PopupGarageLot : MonoBehaviour
         var body = car.GetComponent<Rigidbody2D>();
         if (body != null) body.position = car.transform.position;
     }
+
+    // The rotation the real car parks at under a canopy.
+    //
+    // NOT the rig's own rotation, which is what this used to hand it: a rig's frame runs its LENGTH along
+    // local +Y, while a car object's frame is a HEADING dressed up through the sprite convention on
+    // PlayerVehicleController (nose along local -X at the stock spriteFacesUp/angleOffsetDeg). Giving the
+    // car the rig's rotation therefore laid it across the garage — the player's car sat side-on in a row
+    // where every AI car, drawn as art with the same quarter turn baked in, pointed down the body.
+    //
+    // So it is built the way PitLaneStart and GridSpawner build a parked heading: take the direction the
+    // rig parks a car in, then convert it through whatever convention this car is running.
+    public static Quaternion ParkedCarRotation(PopupGarageRig rig, PlayerVehicleController car)
+    {
+        if (rig == null) return Quaternion.identity;
+        bool facesUp = car != null && car.spriteFacesUp;
+        float angleOffset = car != null ? car.angleOffsetDeg : 180f;   // PlayerVehicleController's own default
+        return ParkedCarRotation(rig.ParkedCarHeadingDeg, facesUp, angleOffset);
+    }
+
+    // heading = euler.z + (spriteFacesUp ? 90 : 0) - angleOffsetDeg, turned back to front.
+    public static Quaternion ParkedCarRotation(float headingDeg, bool spriteFacesUp, float angleOffsetDeg)
+        => Quaternion.Euler(0f, 0f, headingDeg - ((spriteFacesUp ? 90f : 0f) - angleOffsetDeg));
 
     // The player's own garage: the rig carrying the number on the paint they are racing, read the same way
     // the motorhome lot and the timing tower read it. This is where the team's weekend actually happens —

@@ -52,15 +52,17 @@ everything left unattended in it is swept up as a no-show first.
 
 ## 2. The session schedule
 
-This is the shape of a modern compressed stock-car weekend: the trucks run and race Friday, the second-tier
-cars qualify Saturday morning and race Saturday afternoon, and the top series gets practice and qualifying
-back-to-back on Saturday before racing Sunday.
+This is the shape of a modern compressed stock-car weekend: all three championships practise on Friday and
+the trucks race that night, the second-tier cars qualify Saturday morning and race Saturday afternoon, and
+the top series qualifies Saturday afternoon before racing Sunday. **Every series practises on Friday**, so
+whichever one you are entered in, the first day of the weekend always has a session in it - Cup practice
+slots between the truck qualifying that ends at 14:00 and the National practice that picks up at 15:00.
 
 | | Practice | Qualifying | Race |
 |---|---|---|---|
 | **Trucks** | Fri 10:00 | Fri 13:00 | **Fri 19:00** |
 | **National** | Fri 15:00 | Sat 09:00 | **Sat 16:30** |
-| **Cup** | Sat 10:30 | Sat 14:00 | **Sun 14:00** |
+| **Cup** | Fri 14:00 | Sat 14:00 | **Sun 14:00** |
 
 Whichever row is yours becomes drivable and the other two become `WATCH`. The two mandatory race-day beats
 are placed **relative to your own race**, not to Sunday: the drivers meeting is two hours before your green

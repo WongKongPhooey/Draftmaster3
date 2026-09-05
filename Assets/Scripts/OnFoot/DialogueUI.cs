@@ -11,6 +11,8 @@ public class DialogueUI : MonoBehaviour
     public Color speakerColor = new Color(1f, 0.8f, 0.2f);
 
     GameObject _panel;
+    Canvas _canvas;
+    RectTransform _panelRect;
     Text _speakerText;
     Text _bodyText;
     Text _hintText;
@@ -45,6 +47,7 @@ public class DialogueUI : MonoBehaviour
         var canvasGO = new GameObject("DialogueCanvas");
         canvasGO.transform.SetParent(transform, false);
         var canvas = canvasGO.AddComponent<Canvas>();
+        _canvas = canvas;
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 200;
         canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -57,6 +60,7 @@ public class DialogueUI : MonoBehaviour
         prt.anchorMin = new Vector2(0.1f, 0.04f);
         prt.anchorMax = new Vector2(0.9f, 0.26f);
         prt.offsetMin = Vector2.zero; prt.offsetMax = Vector2.zero;
+        _panelRect = prt;
         var pimg = _panel.AddComponent<Image>();
         pimg.color = panelColor;
 
@@ -67,6 +71,18 @@ public class DialogueUI : MonoBehaviour
         _hintText = MakeText("Hint", _panel.transform, new Color(1,1,1,0.5f), 20, FontStyle.Italic,
             new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.16f), TextAnchor.LowerRight);
         _hintText.text = "Interact to continue";
+    }
+
+    // Talking pulls the cinematic letterbox in, and the panel's home along the bottom of the screen is
+    // exactly where the bottom bar lands — the hint line, and on a short screen the body text with it,
+    // ends up behind the bar. Ride up on top of whatever the bar is covering.
+    void LateUpdate()
+    {
+        if (_panelRect == null || !IsOpen) return;
+        float scale = _canvas != null && _canvas.scaleFactor > 0.0001f ? _canvas.scaleFactor : 1f;
+        float lift = CinematicBars.BarCoverPixels / scale;
+        _panelRect.offsetMin = new Vector2(0f, lift);
+        _panelRect.offsetMax = new Vector2(0f, lift);
     }
 
     static Text MakeText(string name, Transform parent, Color color, int size, FontStyle style,

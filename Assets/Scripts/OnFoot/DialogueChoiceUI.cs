@@ -201,7 +201,9 @@ public class DialogueChoiceUI : MonoBehaviour
             : PixelGUI.Heading.CalcHeight(new GUIContent(_question), w - pad * 2f) + PixelGUI.Px(10f);
         float footerH = PixelGUI.Px(24f);
         float h = headerH + _options.Length * scaledRow + footerH + PixelGUI.Px(28f);
-        float y = Screen.height - PixelGUI.Px(bottomMargin) - h;
+        // A choice is only ever asked mid-conversation, which means the letterbox is in. Sit the panel on
+        // top of the bottom bar rather than half behind it.
+        float y = Screen.height - CinematicBars.BarCoverPixels - PixelGUI.Px(bottomMargin) - h;
 
         // The shared 9-sliced window plate, so a dialogue choice is framed exactly like a menu.
         GUI.Box(new Rect(x, y, w, h), GUIContent.none, PixelGUI.Window);

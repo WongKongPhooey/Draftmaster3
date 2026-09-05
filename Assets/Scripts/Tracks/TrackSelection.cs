@@ -48,6 +48,11 @@ public static class TrackSelection
         }
         PlayerPrefs.SetString(Key, trackId);
         PlayerPrefs.Save();
+
+        // This is the write the title screen reads back as "where you were", so it is also the moment worth
+        // dating: the two are the same fact, and stamping here keeps the track and the date on the CONTINUE
+        // row from ever disagreeing.
+        CareerSave.Stamp();
         return true;
     }
 

@@ -159,9 +159,9 @@ public static class PlacedNPCDefaults
                 fridayAM = true, fridayPM = true,
                 lines = new[]
                 {
-                    "Two things today: the fan fence at some point, and don't say anything interesting about the car.",
-                    "What if the car IS interesting? #player",
-                    "Then say it's a work in progress and smile. That's the job.",
+                    "Two things today: the fan fence at some point, and don't give anything away about the car.",
+                    "Does this mean we have something to give away? #player",
+                    "Just smile and small talk. We'll get you up to speed when we're confident.",
                 },
             },
             new PlacedNPC.ScheduledLines
@@ -170,9 +170,9 @@ public static class PlacedNPCDefaults
                 saturdayAM = true, saturdayPM = true,
                 lines = new[]
                 {
-                    "The room's fuller than yesterday, so give them one line they can print.",
-                    "Any line? #player",
-                    "One about the team. Not one about the last restart.",
+                    "The room's fuller than yesterday, so watch what you say. Keep it clean please.",
+                    "How clean is clean? #player",
+                    "Clean enough to be printed next to a picture of your face.",
                 },
             },
             new PlacedNPC.ScheduledLines
@@ -181,9 +181,9 @@ public static class PlacedNPCDefaults
                 sundayAM = true, sundayPM = true,
                 lines = new[]
                 {
-                    "Intros, then you're mine for ninety seconds with the broadcast, then you're the crew chief's.",
-                    "Ninety seconds. #player",
-                    "Ninety. And the sponsor's name in the first sentence, please.",
+                    "Intros, then you're mine for ninety seconds with the broadcast.",
+                    "I can do ninety seconds. #player",
+                    "I know. And the sponsor's name in the first sentence, please.",
                 },
             },
         };
@@ -248,8 +248,8 @@ public static class PlacedNPCDefaults
             $"There you are. {clock}, and you're already wanted.",
             $"You're down for {Draftmaster.Weekend.WeekendSchedulePlan.Describe(next)}.",
             "Do I have time for a coffee first? #player",
-            "You have time to walk. I've put it on your map — follow the marker and don't be late, they " +
-            "start without you.",
+            "Only if you walk as fast as you drive. Follow the marker and don't be late, they " +
+            "don't like delays.",
         };
     }
 
@@ -287,31 +287,31 @@ public static class PlacedNPCDefaults
                 {
                     "Belts tight? Good. Nobody's run here yet today, so the track's green and it'll come to you.",
                     "How long are we running? #player",
-                    "Short one. Bring it back in one piece and tell me what the middle of the corner does.",
+                    "Short one. Bring it back in one piece and tell me if it's loose or tight.",
                     "Okay — how do you want the car set up?",
                 },
             },
             new PlacedNPC.ScheduledLines
             {
-                label = "Saturday — qualifying trim",
+                label = "Saturday — Qualifying trim",
                 saturdayAM = true, saturdayPM = true,
                 lines = new[]
                 {
-                    "Two laps and it's over, so I've trimmed it out. It'll be nervous. That's on purpose.",
-                    "How nervous? #player",
-                    "Enough that you'll know about it in turn one. Don't chase it, just drive it.",
+                    "Two laps and it's over, so I've trimmed it out. It'll be pointy. That's on purpose.",
+                    "How pointy? #player",
+                    "Be direct and it will stick. Don't chase the time, just drive it with purpose.",
                     "Okay — how do you want the car set up?",
                 },
             },
             new PlacedNPC.ScheduledLines
             {
-                label = "Sunday — race day",
+                label = "Sunday — Race day",
                 sundayAM = true, sundayPM = true,
                 lines = new[]
                 {
                     "Long day. The car you qualified is not the car you're racing — I've put the balance back in it.",
                     "What do you need from me? #player",
-                    "First twenty laps, tell me nothing but tyres. After that we'll talk about winning it.",
+                    "First stage, just tell me how it beds in as the track evolves. After that we'll talk about winning it.",
                     "Okay — how do you want the car set up?",
                 },
             },

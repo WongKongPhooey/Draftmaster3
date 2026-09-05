@@ -17,9 +17,31 @@ public class CinematicBars : MonoBehaviour
     public float slideSpeed = 6f;
 
     RectTransform _topBar, _bottomBar;
+    Canvas _canvas;
     float _barPx;
     float _t;        // 0 = hidden, 1 = fully in
     float _target;
+
+    // How much of the view's HEIGHT one bar covers right now, as a 0-1 fraction — what anything that
+    // places itself against the screen edge has to keep clear of, or it gets drawn under the letterbox.
+    // Counts the bars as fully in the moment they start sliding, so a speech bubble lands where it is
+    // going to stay rather than creeping down the screen while the line types in; on the way back out it
+    // follows the bars so the space is handed back smoothly.
+    public static float BarCoverFraction
+    {
+        get
+        {
+            var inst = Instance;
+            if (inst == null || Screen.height <= 0) return 0f;
+            float f = Mathf.Max(inst._t, inst._target);
+            if (f <= 0f) return 0f;
+            float scale = inst._canvas != null ? inst._canvas.scaleFactor : 1f;
+            return Mathf.Clamp01(inst._barPx * scale * f / Screen.height);
+        }
+    }
+
+    // The same figure in screen pixels, for the IMGUI panels that measure in them.
+    public static float BarCoverPixels => BarCoverFraction * Screen.height;
 
     // Scripted cutscenes can hold the bars in before any dialogue is up (e.g. while an NPC walks over
     // to the player). Counted, so overlapping holders can't release each other's bars early.
@@ -66,6 +88,7 @@ public class CinematicBars : MonoBehaviour
         var canvasGO = new GameObject("CinematicBarsCanvas");
         canvasGO.transform.SetParent(transform, false);
         var canvas = canvasGO.AddComponent<Canvas>();
+        _canvas = canvas;
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 190;   // under the dialogue panels (200) but over the game
         var scaler = canvasGO.AddComponent<CanvasScaler>();

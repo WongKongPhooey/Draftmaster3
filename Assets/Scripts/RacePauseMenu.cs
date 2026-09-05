@@ -103,6 +103,9 @@ public class RacePauseMenu : MonoBehaviour
     void QuitToTitle()
     {
         Resume();
+        // Walking out of a race is the closest thing this game has to closing a save file, so it is dated:
+        // the title screen the player lands on says where they were and when, under CONTINUE.
+        CareerSave.Stamp();
         if (Application.CanStreamedLevelBeLoaded(titleSceneName)) SceneManager.LoadScene(titleSceneName);
         else SceneManager.LoadScene(0);   // the title is the first scene in the build list
     }

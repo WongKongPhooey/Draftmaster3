@@ -76,6 +76,62 @@ public class TitleCrashBuildTests
         else PlayerPrefs.DeleteKey(PlayerDriverNumberKey);
     }
 
+    // ------------------------------------------------------------------ the field going past
+
+    [Test]
+    public void TheFieldGoesPastAtTheStartAndIsGoneByTheFreeze()
+    {
+        // The first beat, stood up for real: every car the composer sent past is built, every one of them
+        // actually appears at some point during the lead-in, and every one of them has switched itself off
+        // by the time the crash starts. A passing car left on screen would be parked in the middle of the
+        // frozen tableau, undented, in an accident it had nothing to do with.
+        var crash = Play(out var component, steps: 0);
+        var passes = Passes(crash);
+
+        Assert.AreEqual(Shot(component).TrafficCount, passes.Length,
+                        "The field going past wasn't built — the shot opens straight on the wreck.");
+        Assert.Greater(passes.Length, 2, "Barely anything goes past before the crash.");
+
+        var elapsed = component.GetType().GetField("_elapsed", BindingFlags.Instance | BindingFlags.NonPublic);
+        float leadIn = Field<float>(component, "leadInSeconds");
+        Assert.Greater(leadIn, 0.5f, "The lead-in is too short to read as anything at all.");
+
+        // Walk the lead-in the same way Drive walks the crash, and watch who turns up. It starts a whole
+        // beat early because Update adds its own unscaled delta on top of whatever is written here, which
+        // shifts every sample forward by however long the editor took between two calls — enough, on a slow
+        // frame, to step straight over the first car's entire run.
+        var seen = new bool[passes.Length];
+        const int Steps = 260;
+        for (int step = 0; step <= Steps; step++)
+        {
+            elapsed.SetValue(component, Mathf.Lerp(-leadIn * 2f, 0f, step / (float)Steps));
+            Step(component);
+
+            for (int i = 0; i < passes.Length; i++)
+            {
+                if (!passes[i].activeSelf) continue;
+                seen[i] = true;
+
+                // On screen and clear of the copy column while it is being drawn.
+                var drawn = ToCanvasPx(passes[i].transform.position);
+                float halfWidth = TitleCrash.HalfSpan(passes[i].transform.eulerAngles.z, horizontal: true);
+                Assert.GreaterOrEqual(drawn.x - halfWidth, TitleCrash.ColumnRightPx - 1f,
+                                      $"{passes[i].name} is being drawn over the copy column.");
+            }
+        }
+
+        for (int i = 0; i < passes.Length; i++)
+            Assert.IsTrue(seen[i], $"{passes[i].name} never appeared during the lead-in at all.");
+
+        // And now the crash itself, after which nothing from the first beat may still be on screen.
+        Drive(component, 0f, 1f, 60);
+        foreach (var pass in passes)
+        {
+            Assert.IsFalse(pass.activeSelf, $"{pass.name} is still on screen in the frozen tableau.");
+            Assert.Less(Deformation(pass), 1e-3f, $"{pass.name} only drove past, and something dented it.");
+        }
+    }
+
     // ------------------------------------------------------------------ the cars exist
 
     [Test]
@@ -471,6 +527,16 @@ public class TitleCrashBuildTests
         component.GetType()
                  .GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic)
                  .Invoke(component, null);
+    }
+
+    // The cars that only went past, in the order they were sent.
+    static GameObject[] Passes(GameObject crash)
+    {
+        return crash.transform.Cast<Transform>()
+                    .Where(t => t.name.StartsWith("PassCar_"))
+                    .OrderBy(t => int.Parse(t.name.Split('_')[1]))
+                    .Select(t => t.gameObject)
+                    .ToArray();
     }
 
     // The cars the tableau built, in choreography order (the index is baked into the object's name).

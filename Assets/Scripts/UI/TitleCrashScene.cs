@@ -2,10 +2,15 @@ using System.Collections.Generic;
 using Draftmaster.Sim;
 using UnityEngine;
 
-// The title screen's hero art: four cars coming down from above the top edge across the empty half of the
-// screen, and time easing to a dead stop so the moment stays there. Two of them are racing in company and
-// never touch; the other two are a T-bone — one already sideways and sliding, the other arriving square into
-// its door exactly as the clock drops into slow motion.
+// The title screen's hero art, in two beats. First the field goes past at racing speed, down the empty half
+// of the screen and out of the bottom of it, on a clock that has not started slowing down. Then four cars
+// come down from above the top edge and time eases to a dead stop, so the moment stays there: two of them
+// racing in company and never touching, the other two a T-bone — one already sideways and sliding, the other
+// arriving square into its door exactly as the clock drops into slow motion.
+//
+// The first beat is there to be the speed of the second one. Opening straight on the slam gives the eye
+// nothing to measure it against, and half a second of blur followed by a second and a half of crawl reads as
+// a slow animation rather than as time being stopped.
 //
 // The hit is scripted rather than solved. It used to be four cars thrown at the same spot with
 // TitleCrash.Settle pushing the overlaps apart every frame, which is a physics solver running at speed on
@@ -49,7 +54,10 @@ public class TitleCrashScene : MonoBehaviour
     public int seed = 0;
 
     [Header("Timing")]
-    [Tooltip("Seconds of empty screen before the first car arrives.")]
+    [Tooltip("Beat zero, in seconds: the field streaming past at racing speed, before the accident arrives " +
+             "and before anything has slowed down. Zero skips it and opens on the crash.")]
+    public float leadInSeconds = 1.6f;
+    [Tooltip("Seconds of empty screen between the last car going past and the first car of the crash.")]
     public float startDelay = 0.35f;
     [Tooltip("Beat one, in seconds: the cars are thrown into shot and time brakes hard, from far too fast " +
              "to follow down to a crawl. Nearly the whole sequence happens in here.")]
@@ -121,6 +129,17 @@ public class TitleCrashScene : MonoBehaviour
     // choreography named rather than whichever one happened to fill that slot.
     Car[] _cars = System.Array.Empty<Car>();
 
+    // A car that is only passing through, before any of the above. Same body as everything else in the shot
+    // — same size, same material, same draw path — but it is never posed against choreography time, never
+    // settled against another body and never dented: it crosses the frame, leaves, and switches itself off.
+    class Pass
+    {
+        public GameObject go;
+        public Transform t;
+        public TitleCrash.PassPlan plan;
+    }
+    Pass[] _traffic = System.Array.Empty<Pass>();
+
     // One of these per impact, because a shot can have two or three of them going off at different points
     // along the same car. Everything an impact throws off hangs on its own `at` transform, which is moved to
     // wherever those two cars are meeting on the frame it is moved; the particle systems simulate in ITS
@@ -133,6 +152,10 @@ public class TitleCrashScene : MonoBehaviour
         public ParticleSystem smoke;
     }
     Flash[] _flashes = System.Array.Empty<Flash>();
+
+    // The most of the sequence any single frame is allowed to spend. A twentieth of a second, so anything
+    // running at a sane rate is unaffected and only a hitch gets clipped.
+    const float MaxFrameSeconds = 0.05f;
 
     RectTransform _canvasRt;
     Camera _camera;
@@ -172,11 +195,20 @@ public class TitleCrashScene : MonoBehaviour
             _built = true;
         }
 
-        _elapsed += Time.unscaledDeltaTime;
+        // A frame's worth of clock, with the loading hitch taken out of it.
+        //
+        // The title scene finishes standing itself up on the frame this builds on — managers, the database,
+        // the carset, the canvas — so the delta that arrives on the next one is a whole second of setup on a
+        // cold boot rather than a frame. Spent straight into the clock, as it used to be, that second came
+        // out of the sequence: the field going past was over before it drew once, and on a bad boot the slam
+        // was too. Capped, a stuttering machine takes longer in wall time and still sees the whole thing,
+        // which for a title flourish is the trade to make.
+        _elapsed += Mathf.Min(Time.unscaledDeltaTime, MaxFrameSeconds);
 
         var tempo = Tempo;
         _u = tempo.Clock(_elapsed);
 
+        PoseTraffic();
         PoseCars();
         TrackContact();
         Collide();
@@ -220,7 +252,11 @@ public class TitleCrashScene : MonoBehaviour
         _impactsFired = new bool[_impacts.Length];
         _impactCrush = new float[_impacts.Length];
 
-        var liveries = PickLiveries(plans.Length, _seed);
+        var traffic = _shot.traffic ?? System.Array.Empty<TitleCrash.PassPlan>();
+
+        // One cast for the whole screen, dealt in one go: the pile first, then the field that went past
+        // before it, so no number turns up twice across the two beats.
+        var liveries = PickLiveries(plans.Length + traffic.Length, _seed);
 
         _cars = new Car[plans.Length];
         int built = 0;
@@ -231,6 +267,19 @@ public class TitleCrashScene : MonoBehaviour
 
             _cars[i] = BuildCar(i, plans[i], sprite);
             built++;
+        }
+
+        // Behind the pile in the draw order, because a car still leaving the bottom of the frame as the
+        // accident arrives should pass under it rather than over it.
+        _traffic = new Pass[traffic.Length];
+        for (int i = 0; i < traffic.Length; i++)
+        {
+            var sprite = liveries[plans.Length + i];
+            if (sprite == null) continue;
+
+            var body = BuildBody($"PassCar_{i}_{sprite.name}", sprite, baseSortingOrder - 2 - traffic[i].depth * 2);
+            body.t.gameObject.SetActive(false);
+            _traffic[i] = new Pass { go = body.t.gameObject, t = body.t, plan = traffic[i] };
         }
 
         if (built == 0)
@@ -248,8 +297,12 @@ public class TitleCrashScene : MonoBehaviour
             _flashes[i] = new Flash { at = at, sparks = BuildSparks(at, i), smoke = BuildSmoke(at, i) };
         }
 
-        // Pose once before the first frame is drawn, or every car flashes at the origin for a frame.
-        _elapsed = -Mathf.Max(0f, startDelay);
+        // Pose once before the first frame is drawn, or every car flashes at the origin for a frame. The
+        // clock starts far enough back to cover the whole lead-in AND the gap after it: the crash's own
+        // zero is still the moment its first car is due, so nothing in the choreography has to know the
+        // beat in front of it exists.
+        _elapsed = -(Mathf.Max(0f, startDelay) + Mathf.Max(0f, leadInSeconds));
+        PoseTraffic();
         PoseCars();
         return true;
     }
@@ -379,7 +432,18 @@ public class TitleCrashScene : MonoBehaviour
 
     Car BuildCar(int index, TitleCrash.CarPlan plan, Sprite livery)
     {
-        var go = new GameObject($"CrashCar_{index}_{livery.name}");
+        var car = BuildBody($"CrashCar_{index}_{livery.name}", livery, baseSortingOrder + plan.depth * 2);
+        car.plan = plan;
+        return car;
+    }
+
+    // The body itself. Shared by the pile and by the field going past, so a car that is only passing through
+    // is the same machine as the ones that end up in the wreck — same bodywork mesh, same material, same
+    // size on the screen — rather than a cheaper sprite that reads as a different game for a second and a
+    // half. Nothing built here is dented unless an impact names it.
+    Car BuildBody(string name, Sprite livery, int sortingOrder)
+    {
+        var go = new GameObject(name);
         go.transform.SetParent(transform, false);
 
         var damage = go.AddComponent<VehicleDamage>();
@@ -406,7 +470,7 @@ public class TitleCrashScene : MonoBehaviour
         // The crush is spent a slice at a time across the slow-motion beat, so the early slices are far
         // below the threshold that keeps race scrapes from squashing cars. Nothing here is a scrape.
         damage.minSeverity = 0f;
-        damage.sortingOrder = baseSortingOrder + plan.depth * 2;
+        damage.sortingOrder = sortingOrder;
         damage.Build();
 
         // The plans are drawn in reference pixels; the sprite is 5 world units of car. Scale bridges the two
@@ -415,7 +479,7 @@ public class TitleCrashScene : MonoBehaviour
         float scale = (TitleCrash.CarLengthPx * _unit) / spriteLength;
         go.transform.localScale = new Vector3(scale, scale, 1f);
 
-        return new Car { t = go.transform, damage = damage, plan = plan };
+        return new Car { t = go.transform, damage = damage };
     }
 
     // ------------------------------------------------------------------ playback
@@ -434,6 +498,42 @@ public class TitleCrashScene : MonoBehaviour
             if (_cars[i] == null) continue;
             _cars[i].t.position = PxToWorld(_poses[i].position);
             _cars[i].t.rotation = Quaternion.Euler(0f, 0f, _poses[i].rotation);
+        }
+    }
+
+    // The field going past, on the lead-in beat's own clock.
+    //
+    // This is the half of the screen the crash is measured against. Nothing here is settled, dented or
+    // frozen: a passing car crosses the frame at a constant rate, leaves the bottom of it, and switches
+    // itself off for the rest of the sequence — so by the time the accident is due there is nothing left of
+    // this beat but the memory of how fast it was going.
+    void PoseTraffic()
+    {
+        float lead = LeadTime;
+
+        for (int i = 0; i < _traffic.Length; i++)
+        {
+            var pass = _traffic[i];
+            if (pass == null) continue;
+
+            var pose = TitleCrash.PassAt(pass.plan, lead);
+            if (pass.go.activeSelf != pose.inFlight) pass.go.SetActive(pose.inFlight);
+            if (!pose.inFlight) continue;
+
+            pass.t.position = PxToWorld(pose.position);
+            pass.t.rotation = Quaternion.Euler(0f, 0f, pose.rotation);
+        }
+    }
+
+    // The lead-in's own clock: 0 as the first car goes past, 1 once the last one has cleared the frame. The
+    // crash's `startDelay` sits between that and the first pose of the tableau, so the two beats never
+    // overlap and the choreography's zero is still the moment its own first car is due.
+    float LeadTime
+    {
+        get
+        {
+            float beat = Mathf.Max(1e-4f, leadInSeconds);
+            return (_elapsed + Mathf.Max(0f, startDelay) + beat) / beat;
         }
     }
 

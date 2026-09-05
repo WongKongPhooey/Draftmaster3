@@ -34,6 +34,11 @@ public class NPCWalkUpCutscene : MonoBehaviour
     Animator _npcAnim;
     bool _hasDirectionalAnim;
 
+    // Still waiting to be set off. Anything moving the scene around underneath a beat that has not run
+    // yet (the RV being parked into the driver lot) may carry it along; once it is playing it is driving
+    // the pair itself and must be left alone.
+    public bool Idle => _phase == Phase.Idle;
+
     // Kick the cutscene off. Safe to call repeatedly — only the first call while idle does anything.
     public void Play()
     {

@@ -1,7 +1,7 @@
 {
     "track": "WatkinsGlen",
     "series": "Cup",
-    "notes": "Watkins Glen, Cup entry. Hand-authored: this file IS the weekend, empty half-days included. Friday is a spectator day with the sponsor work stacked into it; Saturday is practice, qualifying and the National race; Sunday is race day. Edit in Draftmaster > Weekend > Plan Editor (Ctrl+Shift+E).",
+    "notes": "Watkins Glen, Cup entry. Hand-authored: this file IS the weekend, empty half-days included. Friday afternoon is practice with the sponsor work stacked around it; Saturday is the track walk, qualifying and the National race; Sunday is race day. Edit in Draftmaster > Weekend > Plan Editor (Ctrl+Shift+E).",
     "slots": [
         {
             "slot": "FridayAM",
@@ -45,6 +45,11 @@
                     "skipReason": "The guest list turned up to a pit stall with nobody in it."
                 },
                 {
+                    "event": "session-practice",
+                    "start": "14:00",
+                    "minutes": 60
+                },
+                {
                     "event": "media-press_conference",
                     "start": "14:15",
                     "title": "MEDIA AVAILABILITY",
@@ -54,6 +59,11 @@
                     "event": "watch-practice",
                     "start": "15:00",
                     "series": "National"
+                },
+                {
+                    "event": "team-debrief",
+                    "start": "15:15",
+                    "requires": "session-practice"
                 },
                 {
                     "event": "fan_event-autographs",
@@ -71,6 +81,13 @@
             "slot": "SaturdayAM",
             "events": [
                 {
+                    "event": "team-debrief",
+                    "start": "08:15",
+                    "minutes": 30,
+                    "title": "OVERNIGHT DEBRIEF",
+                    "subtitle": "What the engineers found in Friday's data while you slept, and what it means for one lap."
+                },
+                {
                     "event": "watch-qualifying",
                     "start": "09:00",
                     "series": "National"
@@ -86,14 +103,21 @@
                     "skipReason": "The dealer network got a cardboard cut-out."
                 },
                 {
-                    "event": "session-practice",
-                    "start": "10:30",
-                    "minutes": 60
+                    "event": "team-briefing",
+                    "start": "10:00",
+                    "minutes": 60,
+                    "title": "TRACK WALK",
+                    "subtitle": "Walk the Esses and the Inner Loop kerbs with your engineer. Where the bumps are is worth a tenth this afternoon.",
+                    "mandatory": 2,
+                    "skipReason": "The engineer walked the Esses alone and you qualify on somebody else's notes."
                 },
                 {
-                    "event": "team-debrief",
-                    "start": "11:15",
-                    "requires": "session-practice"
+                    "event": "fan_event-autographs",
+                    "start": "11:00",
+                    "minutes": 60,
+                    "title": "FAN ZONE STAGE",
+                    "subtitle": "On stage in front of the fan zone, taking questions and signing whatever gets handed up.",
+                    "fee": 900
                 }
             ]
         },

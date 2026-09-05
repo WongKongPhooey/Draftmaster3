@@ -309,8 +309,12 @@ public class SpeechBubble : MonoBehaviour
         float halfX = Mathf.Abs(edge.x - view.x);
         float halfY = Mathf.Abs(edge.y - view.y);
 
-        float top = 1f - EdgeMarginTop - halfY;
-        float bottom = EdgeMarginBottom + halfY;
+        // Talking pulls the cinematic letterbox in, and a bar sits exactly where a bubble likes to: over
+        // the head of a speaker high in the frame, or under one down at the bottom. Fold the bars' current
+        // coverage into the margins so the box is framed between them rather than typed behind one.
+        float bars = CinematicBars.BarCoverFraction;
+        float top = 1f - EdgeMarginTop - bars - halfY;
+        float bottom = EdgeMarginBottom + bars + halfY;
 
         // No room above the speaker? Put it under them instead, which reads as the same speaker rather
         // than as a box that has drifted off on its own.

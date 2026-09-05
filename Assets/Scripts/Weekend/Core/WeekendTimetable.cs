@@ -4,9 +4,9 @@ using UnityEngine;
 namespace Draftmaster.Weekend
 {
     // The printed schedule for one race weekend at one track, built from the shape a real modern stock-car
-    // weekend has: the trucks run and race on Friday, the second-tier cars qualify Saturday morning and race
-    // Saturday afternoon, and the top series gets a compressed practice-then-qualifying block on Saturday
-    // before racing Sunday afternoon. Everything else in the three days is the obligations that fill a
+    // weekend has: all three championships practise on Friday and the trucks race that night, the
+    // second-tier cars qualify Saturday morning and race Saturday afternoon, and the top series qualifies
+    // Saturday afternoon before racing Sunday. Everything else in the three days is the obligations that fill a
     // driver's time around their own two hours in the car - the pre-weekend strategy meeting, hauler parade,
     // media availability, signing sessions, sponsor hospitality, and on race day the mandatory drivers
     // meeting two hours before green followed by driver intros on stage.
@@ -44,11 +44,16 @@ namespace Draftmaster.Weekend
             public SessionTime(WeekendSlot s, int start, int mins) { slot = s; startMinute = start; minutes = mins; }
         }
 
+        // Every championship practises on Friday, whoever the player is entered with. Cup's session used to
+        // open Saturday morning, which left a Cup driver's whole first day with nothing to drive — three
+        // half-days of hospitality before the car was ever started. It now slots in between the truck
+        // qualifying that ends at 14:00 and the National practice that picks up at 15:00, so the circuit
+        // runs continuously through Friday afternoon and the first day always has a session in it.
         public static SessionTime PracticeTime(RacingSeries s) => s switch
         {
             RacingSeries.Trucks => new SessionTime(WeekendSlot.FridayAM, 10 * 60, 75),
             RacingSeries.National => new SessionTime(WeekendSlot.FridayPM, 15 * 60, 75),
-            _ => new SessionTime(WeekendSlot.SaturdayAM, 10 * 60 + 30, 60),
+            _ => new SessionTime(WeekendSlot.FridayPM, 14 * 60, 60),
         };
 
         public static SessionTime QualifyingTime(RacingSeries s) => s switch

@@ -110,7 +110,7 @@ public class CareerPathNPCSpawner : MonoBehaviour
     Vector3 Place(OnFootController player)
     {
         Vector3 pos;
-        var rv = FindObjectOfType<RVExterior>();
+        var rv = RVExterior.Player;
         if (rv != null)
         {
             Vector2 doorDir = rv.DoorWorldDirection;
@@ -131,6 +131,21 @@ public class CareerPathNPCSpawner : MonoBehaviour
             pos = new Vector3(clamped.x, clamped.y, pos.z);
         }
         return pos;
+    }
+
+    void OnEnable() => RVExterior.Moved += FollowRV;
+    void OnDisable() => RVExterior.Moved -= FollowRV;
+
+    // He is placed off the RV's far corner, so he goes where the RV goes. Only while nobody is talking to
+    // him — moving a man mid-sentence is worse than leaving him behind.
+    void FollowRV(Vector3 shift)
+    {
+        if (Instance == null || Instance.IsTalking) return;
+
+        var body = Instance.GetComponent<Rigidbody2D>();
+        Vector3 p = Instance.transform.position + new Vector3(shift.x, shift.y, 0f);
+        if (body != null && body.bodyType != RigidbodyType2D.Dynamic) body.position = p;
+        Instance.transform.position = p;
     }
 
     void Build(Vector3 pos)
