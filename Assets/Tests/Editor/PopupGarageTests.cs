@@ -28,6 +28,12 @@ public class PopupGarageTests
     const float DoorAlong = 3.1f;
     const float LineGap = 2.5f;
 
+    // The car under the canopy. Same reasoning: these decide whether the walk to the door still fits, so
+    // they are stated here and pushed onto the rig rather than read back off it.
+    const float CarLength = 4.8f;
+    const float CarWidth = 2f;
+    const float CarAlong = -0.7f;
+
     static object Field(object o, string name)
     {
         var f = o.GetType().GetField(name, BindingFlags.Public | BindingFlags.Instance);
@@ -73,6 +79,9 @@ public class PopupGarageTests
         SetField(rig, "canopyWidth", CanopyWidth);
         SetField(rig, "doorWidth", DoorWidth);
         SetField(rig, "doorAlong", DoorAlong);
+        SetField(rig, "carLength", CarLength);
+        SetField(rig, "carWidth", CarWidth);
+        SetField(rig, "carAlong", CarAlong);
 
         Call(rig, "Assemble");
         return rig;
@@ -177,6 +186,92 @@ public class PopupGarageTests
             Assert.IsTrue(covered, "the door side of the body is open along its whole length, not just at the door.");
         }
         finally { Object.DestroyImmediate(go); }
+    }
+
+    // A stroll down the garage row used to go straight over the roof of every car that was at home, while
+    // the cars that are really in the world — out on track, sat in a pit box — stopped you dead, because
+    // those carry their own collider. A parked car is a parked car whichever one it is.
+    [Test]
+    public void TheParkedCarIsSolid()
+    {
+        foreach (int side in new[] { 1, -1 })
+        {
+            var go = new GameObject("Garage");
+            try
+            {
+                var rig = Rig(go, side, carAtHome: true);
+                var car = (Transform)Prop(rig, "ParkedCar");
+                var spot = new Vector2(car.localPosition.x, car.localPosition.y);
+
+                BoxCollider2D over = null;
+                foreach (var box in go.GetComponentsInChildren<BoxCollider2D>())
+                    if (RectHolds(spot, box.transform.localPosition, box.size, 0.001f)) { over = box; break; }
+
+                Assert.IsNotNull(over, $"canopySide {side}: nothing solid stands where the car is parked — " +
+                                       "the player walks over its roof.");
+                Assert.IsFalse(over.isTrigger, $"canopySide {side}: the car's collider is a trigger, so it stops nobody.");
+
+                // The footprint is the car, not a rectangle that happens to cover its middle.
+                Assert.AreEqual(CarWidth, over.size.x * over.transform.lossyScale.x, 0.01f,
+                                $"canopySide {side}: the car's footprint is not as wide as the car.");
+                Assert.AreEqual(CarLength, over.size.y * over.transform.lossyScale.y, 0.01f,
+                                $"canopySide {side}: the car's footprint is not as long as the car.");
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+    }
+
+    [Test]
+    public void TheEmptyCanopyIsNotSolid()
+    {
+        var go = new GameObject("Garage");
+        try
+        {
+            Rig(go, 1, carAtHome: false);
+            var spot = new Vector2((BodyWidth + CanopyWidth) * 0.5f, CarAlong);
+
+            foreach (var box in go.GetComponentsInChildren<BoxCollider2D>())
+                Assert.IsFalse(RectHolds(spot, box.transform.localPosition, box.size, 0.001f),
+                               $"'{box.name}' is standing under an empty canopy — that car is out on track.");
+        }
+        finally { Object.DestroyImmediate(go); }
+    }
+
+    // Solid bodywork must not seal the garage: the way to the door runs up the strip between the body and
+    // the car's side, and there is the same strip again on the canopy's outer side. Measured with a
+    // walker's own radius, so passing means a person fits through rather than that a point missed a box.
+    [Test]
+    public void TheWayPastTheParkedCarStaysOpen()
+    {
+        const float WalkerRadius = 0.45f;   // PaddockWalker.obstacleRadius
+
+        foreach (int side in new[] { 1, -1 })
+        {
+            var go = new GameObject("Garage");
+            try
+            {
+                Rig(go, side, carAtHome: true);
+                var boxes = go.GetComponentsInChildren<BoxCollider2D>();
+
+                float canopyCentre = (BodyWidth + CanopyWidth) * 0.5f;
+                float[] lanes =
+                {
+                    (BodyWidth * 0.5f + canopyCentre - CarWidth * 0.5f) * 0.5f,          // body side to car side
+                    (canopyCentre + CarWidth * 0.5f + BodyWidth * 0.5f + CanopyWidth) * 0.5f, // car side to canopy edge
+                };
+
+                for (float y = CarAlong - CarLength * 0.5f; y <= DoorAlong + 0.001f; y += 0.5f)
+                    foreach (float lane in lanes)
+                    {
+                        var p = new Vector2(side * lane, y);
+                        foreach (var box in boxes)
+                            Assert.IsFalse(RectHolds(p, box.transform.localPosition, box.size, -WalkerRadius),
+                                           $"canopySide {side}: '{box.name}' blocks the walk up the canopy at " +
+                                           $"{p} — there is no way past the car to the door.");
+                    }
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
     }
 
     [Test]

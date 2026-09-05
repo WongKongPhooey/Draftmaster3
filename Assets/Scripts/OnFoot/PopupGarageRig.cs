@@ -178,9 +178,18 @@ public class PopupGarageRig : MonoBehaviour
         }
     }
 
-    // The car itself, in its own paint. Deliberately NOT solid: seen from above, a collider here would pin
-    // the player between the bodywork and the rig on the way to the door, and every other paddock prop
-    // (the pit box stand, the tyre stacks) is walk-through for the same reason.
+    // The car itself, in its own paint, and solid: seen from above, walking over the roof of a race car is
+    // the one prop nobody reads as flat, and the REAL cars are already immovable on foot (VehicleCollision
+    // hands a person straight to Unity's solver, which pushes the walker out and never the car). A garage
+    // whose car happens to be at home behaved the opposite way to the one next door whose driver is out on
+    // track, which is the giveaway. The small props — the pit box stand, the tyre stacks — stay
+    // walk-through; a 4.8m car is not one of those.
+    //
+    // Nothing is pinched by it: the car is parked in the middle of the canopy, which leaves 2.25m of open
+    // ground between its side and the body's door wall at the stock sizes, and the doorway sits a further
+    // 1.4m past the car's nose (doorAlong is kept clear of carAlong for exactly this reason). The footprint
+    // is a plain child of the rig rather than a collider on the art, because the art is turned a quarter
+    // turn and scaled by whatever the livery's pixels-per-unit happens to be.
     void BuildParkedCar()
     {
         var go = new GameObject("ParkedCar");
@@ -216,6 +225,13 @@ public class PopupGarageRig : MonoBehaviour
         }
 
         ParkedCar = go.transform;
+
+        // The footprint, in the body's own frame: carWidth across the canopy, carLength along it, on the
+        // spot the art is drawn. Built with the same helper as the shell walls so it is picked up by the
+        // collider sweep at the end of Assemble() — and so the interior switches it off with the rest of
+        // them while the player is stood in the masked room.
+        Wall("CarBody", new Vector2(CanopyLocalCentre.x, CanopyLocalCentre.y + carAlong),
+             new Vector2(Mathf.Max(0.1f, carWidth), Mathf.Max(0.1f, carLength)));
     }
 
     // The rig body, plus the car number painted on its roof so a walk down the row tells you whose garage
