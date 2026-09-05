@@ -123,6 +123,36 @@ The NPC Director's footer shows both pools with their line counts and Create/Edi
 **Not yet pooled:** `DriverPresenceDirector`'s rival-driver flavour lines (they're keyed on driver
 personality rather than on the track). `ConversationKind.DriverFlavour` is reserved for wiring them up.
 
+### The random crowd — who arrives with whom
+
+Four hundred people each walking their own errand reads as four hundred strangers, so **some of the
+wanderers turn up in company**: a pair, a three or a four who travel together and close into a ring facing
+each other whenever they stop. Roughly 45% of the crowd by default, on the `PaddockSpawner` in
+`RaceScene`:
+
+| Field | Does |
+|---|---|
+| `clusterIntoGroups` | off = the old paddock of individuals |
+| `grouping.groupedFraction` | share of the wanderers who have company (0.45) |
+| `grouping.minSize` / `maxSize` | 2 and 4 — past four a huddle reads as a queue |
+| `grouping.spacing` | metres between neighbours stood in the huddle (0.85) |
+
+Member 0 leads: it wanders the paddock exactly as a lone walker always did, dawdles longer at each
+waypoint (`PaddockWalker.groupChatSeconds`) and stops to wait for anyone more than `groupLeash` behind.
+The rest keep the slot it holds for them — strung out behind it while it walks, on the ring once it stops.
+`Draftmaster.Crowd.CrowdGrouping` owns both shapes, and the walking pack *is* the standing ring stretched,
+so halting is a shuffle rather than everybody crossing the group.
+
+Two things worth knowing if you touch it:
+
+- **Only the leader is recyclable.** The crowd director moves filler from the far end of the paddock to
+  just out of shot near the player; a leader gathers its company on the way (`PaddockWalker.OnRecycled`),
+  and its `CrowdActor.clusterWeight` is the whole group so the cluster cap still counts heads.
+- **A follower walled off from its slot gives up** after `groupGiveUpSeconds` and goes back to wandering
+  alone, so one person stuck behind a motorhome can never freeze their group in place.
+
+Talkers are never grouped — a quest that says "the tyre tech is by the haulers" needs him to stay there.
+
 ---
 
 ## 1. Paper-Doll Character System

@@ -65,6 +65,13 @@ public class PaddockSpawner : MonoBehaviour
              "back with distance and switch off entirely while the player is driving, leaving the crowd " +
              "visible but inert. Untick to run the whole paddock at full cost all the time.")]
     public bool governCrowd = true;
+    [Tooltip("Some of the wandering crowd arrive in twos, threes and fours instead of each walking their " +
+             "own errand: they travel together in a loose pack and close up into a ring facing each other " +
+             "whenever they stop. Untick for the old paddock of individuals.")]
+    public bool clusterIntoGroups = true;
+    [Tooltip("Grouping tuning: what share of the wanderers keep company, how big a group gets, and how " +
+             "far apart they stand in a huddle.")]
+    public Draftmaster.Crowd.CrowdGroupTuning grouping = Draftmaster.Crowd.CrowdGroupTuning.Default;
     [Tooltip("Keep the wandering crowd clustered around the player: a walker that drifts past the " +
              "CrowdDirector's recycle radius (100m) is taken out of the paddock and put back just out of " +
              "shot with a new outfit, so the paddock reads as busy wherever the player walks instead of " +
@@ -324,41 +331,106 @@ public class PaddockSpawner : MonoBehaviour
         // this the ground reads as clear everywhere and everybody lands wherever the dice said.
         Physics2D.SyncTransforms();
 
-        for (int i = 0; i < total; i++)
+        // The conversational NPCs first, each on their own. They are people the player may be sent to
+        // find, so they stand where they were put and keep no company.
+        for (int i = 0; i < talkers; i++)
         {
             Vector3 pos = ClearSpawnPoint(center, along, outward, halfLen, halfDepth);
+            var npc = BuildNpc(root, pos, true);
 
-            bool talking = i < talkers;
-            var npc = BuildNpc(root, pos, talking);
+            // Dialogue comes from the library, not straight from kDialogue: a track's own DialoguePool
+            // asset adds to (or replaces) the house style, so the paddock can sound like this circuit.
+            var conversations = DialogueLibrary.Conversations(Draftmaster.Chatter.ConversationKind.PaddockCrew, kDialogue);
+            var lines = conversations[i % conversations.Length];
 
-            if (talking)
+            var inter = npc.AddComponent<NPCInteractable>();
+            inter.lines = lines;
+            inter.speakerName = DialogueLibrary.SpeakerNameFor(
+                Draftmaster.Chatter.ConversationKind.PaddockCrew, lines, kNames, i);
+
+            // Added last so it collects every behaviour above. From here the CrowdDirector owns whether
+            // this NPC is thinking: fully awake near the player on foot, silent further out, and
+            // completely switched off (visuals only) the moment the player is in the car.
+            //
+            // Never recyclable, though. Only the wanderers are filler: a talker is somebody the player was
+            // sent to find, and a quest that says "the tyre tech is by the haulers" stops working the
+            // moment he can be teleported across the paddock with a new face on.
+            if (governCrowd) npc.AddComponent<CrowdActor>();
+        }
+
+        // Then the wanderers. A paddock of four hundred people each on their own errand reads as four
+        // hundred strangers, so some of them turn up together: the plan says how the headcount splits
+        // into pairs, threes and fours, and each group is put down as a huddle at one spot.
+        int wanderers = Mathf.Max(0, total - talkers);
+        var plan = clusterIntoGroups
+            ? Draftmaster.Crowd.CrowdGrouping.Plan(wanderers, grouping)
+            : null;
+
+        if (plan == null)
+        {
+            for (int i = 0; i < wanderers; i++)
+                SpawnWalkerGroup(root, 1, center, along, outward, halfLen, halfDepth, recycleArea);
+        }
+        else
+        {
+            for (int g = 0; g < plan.Count; g++)
+                SpawnWalkerGroup(root, plan[g], center, along, outward, halfLen, halfDepth, recycleArea);
+        }
+    }
+
+    // One group of wandering NPCs — usually of one, sometimes of two to four — put down together.
+    //
+    // The whole group is placed around a single huddle centre facing a random way, in exactly the ring
+    // PaddockWalker will hold them in once they stop, so nobody has to walk into formation at scene load.
+    // Member 0 leads: it wanders the paddock as a lone walker always did, and the rest keep its slots.
+    void SpawnWalkerGroup(Transform root, int size, Vector3 center, Vector3 along, Vector3 outward,
+                          float halfLen, float halfDepth, in Draftmaster.Crowd.CrowdRect recycleArea)
+    {
+        size = Mathf.Clamp(size, 1, Draftmaster.Crowd.CrowdGrouping.MaxGroupSize);
+
+        Vector3 anchor = ClearSpawnPoint(center, along, outward, halfLen, halfDepth);
+        float spacing = Mathf.Max(0.1f, grouping.spacing);
+
+        // One pace for the whole group — people walking together walk together — and a shade slower than
+        // a lone walker, because they are talking while they do it.
+        float pace = walkSpeed * Random.Range(0.8f, 1.25f) * (size > 1 ? 0.85f : 1f);
+        float facingDeg = Random.Range(0f, 360f);
+        Vector2 facing = new(Mathf.Cos(facingDeg * Mathf.Deg2Rad), Mathf.Sin(facingDeg * Mathf.Deg2Rad));
+
+        PaddockWalker leader = null;
+        for (int i = 0; i < size; i++)
+        {
+            Vector3 pos = anchor;
+            if (size > 1)
             {
-                // Dialogue comes from the library, not straight from kDialogue: a track's own DialoguePool
-                // asset adds to (or replaces) the house style, so the paddock can sound like this circuit.
-                var conversations = DialogueLibrary.Conversations(Draftmaster.Chatter.ConversationKind.PaddockCrew, kDialogue);
-                var lines = conversations[i % conversations.Length];
-
-                var inter = npc.AddComponent<NPCInteractable>();
-                inter.lines = lines;
-                inter.speakerName = DialogueLibrary.SpeakerNameFor(
-                    Draftmaster.Chatter.ConversationKind.PaddockCrew, lines, kNames, i);
+                Vector2 slot = (Vector2)anchor
+                             + Draftmaster.Crowd.CrowdGrouping.Rotate(
+                                   Draftmaster.Crowd.CrowdGrouping.HuddleSlot(i, size, spacing), facing);
+                if (PaddockObstacles.IsBlocked(slot, SpawnClearance))
+                    slot = PaddockObstacles.PushOut(slot, SpawnClearance);
+                pos = new Vector3(slot.x, slot.y, anchor.z);
             }
-            else
+
+            var npc = BuildNpc(root, pos, false);
+
+            // Walkers are the crowd. They carry no interact prompt, but they do mutter at a passing
+            // player — that's what stops a bigger paddock reading as a bigger set of props. Stagger
+            // the first bark per NPC so the crowd doesn't all fire the moment the player walks in.
+            if (ambientChatter)
             {
-                // Walkers are the crowd. They carry no interact prompt, but they do mutter at a passing
-                // player — that's what stops a bigger paddock reading as a bigger set of props. Stagger
-                // the first bark per NPC so the crowd doesn't all fire the moment the player walks in.
-                if (ambientChatter)
-                {
-                    var chat = npc.AddComponent<NPCAmbientChatter>();
-                    chat.area = Draftmaster.Chatter.ChatterArea.Paddock;
-                    chat.minRepeatSeconds = Random.Range(18f, 40f);
-                }
-
-                var walker = npc.AddComponent<PaddockWalker>();
-                walker.speed = walkSpeed * Random.Range(0.8f, 1.25f); // a crowd doesn't march in step
-                walker.Configure(center, along, outward, halfLen, halfDepth);
+                var chat = npc.AddComponent<NPCAmbientChatter>();
+                chat.area = Draftmaster.Chatter.ChatterArea.Paddock;
+                chat.minRepeatSeconds = Random.Range(18f, 40f);
             }
+
+            var walker = npc.AddComponent<PaddockWalker>();
+            walker.speed = pace;                                  // a crowd doesn't march in step, a group does
+            walker.groupSpacing = spacing;
+            walker.Configure(center, along, outward, halfLen, halfDepth);
+            walker.FaceInstantly(facing);
+
+            if (i == 0) leader = walker;
+            else leader.AddFollower(walker);
 
             // Added last so it collects every behaviour above. From here the CrowdDirector owns whether
             // this NPC is thinking: fully awake near the player on foot, silent further out, and
@@ -367,12 +439,14 @@ public class PaddockSpawner : MonoBehaviour
             {
                 var actor = npc.AddComponent<CrowdActor>();
 
-                // Only the wanderers are filler. A talker is somebody the player was sent to find, and a
-                // quest that says "the tyre tech is by the haulers" stops working the moment he can be
-                // teleported across the paddock with a new face on.
-                if (!talking && recycleWalkers)
+                // Only the leader is recycled, and it brings its company with it (PaddockWalker.OnRecycled
+                // gathers them). Letting the director pick followers up one at a time would scatter a
+                // group across the paddock and leave the leader waiting on its leash for people who are
+                // now two hundred metres away.
+                if (i == 0 && recycleWalkers)
                 {
                     actor.recyclable = true;
+                    actor.clusterWeight = size;   // the cluster cap counts heads, not leaders
                     actor.SetRecycleArea(recycleArea);
                 }
             }

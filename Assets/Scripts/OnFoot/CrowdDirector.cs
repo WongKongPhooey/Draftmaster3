@@ -138,7 +138,7 @@ public class CrowdDirector : MonoBehaviour
                 recycleBudget--;
                 if (TryRecycle(actor, p, recycle))
                 {
-                    _nearCount++;
+                    _nearCount += actor.Heads;   // a group leader brings its company with it
                     d = actor.DistanceTo(p);
                 }
             }
@@ -175,8 +175,11 @@ public class CrowdDirector : MonoBehaviour
         return false;
     }
 
-    // How many recyclable NPCs are currently inside the recycle radius — the number the cap is applied
-    // to. Squared compare, so it is one multiply-add per crowd member and no square roots.
+    // How many recyclable heads are currently inside the recycle radius — the number the cap is applied
+    // to. Squared compare, so it is one multiply-add per crowd member and no square roots. A leader with
+    // company counts for its whole group: its followers are not recyclable in their own right (they are
+    // moved by the leader) so they are never visited here, and counting one for the four of them would
+    // let the recycler pack the paddock far denser than the cap says.
     void RecountCluster(System.Collections.Generic.List<CrowdActor> crowd, Vector2 player, float radius)
     {
         float r2 = Mathf.Max(0f, radius); r2 *= r2;
@@ -187,7 +190,7 @@ public class CrowdDirector : MonoBehaviour
             if (a == null || !a.recyclable) continue;
             Vector3 t = a.transform.position;
             float dx = t.x - player.x, dy = t.y - player.y;
-            if (dx * dx + dy * dy <= r2) count++;
+            if (dx * dx + dy * dy <= r2) count += a.Heads;
         }
         _nearCount = count;
     }

@@ -34,6 +34,15 @@ public class CrowdActor : MonoBehaviour
              "a different person rather than the same one teleported.")]
     public bool rerollOnRecycle = true;
 
+    [Tooltip("How many people this NPC brings with it when it moves — itself plus anyone travelling in " +
+             "its company who is not separately recyclable. The cluster cap counts heads, so a group of " +
+             "four moved by its leader has to count as four or the recycler quietly packs four times as " +
+             "many bodies around the player as the cap allows.")]
+    public int clusterWeight = 1;
+
+    // Heads this actor accounts for in the cluster tally. Never less than the one it is.
+    public int Heads => Mathf.Max(1, clusterWeight);
+
     // The subset of `managed` that only matters with the player within a couple of metres (ambient
     // chatter, conversations). Off at Reduced as well as Frozen.
     readonly List<Behaviour> _proximity = new();
