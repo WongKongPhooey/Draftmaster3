@@ -131,7 +131,11 @@ the build container, from the root `VERSION` file (`MAJOR.MINOR`) plus the workf
 
 Authoring guides live in `Docs/`. **`Docs/Editor-Handbook.md` is the index**: task-by-task click order for building content (add a track, place an NPC, author a quest, sponsors, art/UI passes), plus the full Draftmaster menu reference, the play-mode key map and the standing gotchas — start there and follow its links. `Docs/NPCs-and-Quests.md` covers the paper-doll character system (sprite specs, greyscale/tint rules, editor NPC designer), dialogue (NPCInteractable), and the side-quest system (QuestInfo assets, QuestGiverNPC, stats ledger, inventory, pause-menu mission board). `Docs/Rivalry-and-TeamSwitch.md` covers the driver-relationship/payback system (DriverRelationships, contact blame, AIRacingBehaviour payback, RivalryFeed) and mid-race team car switching (TeamSwitchController, GridSpawner teams). `Docs/Sponsorship.md` covers sponsor contracts (pit-lane reps, haggling, the PlayerPrefs deal book) and the car decal pipeline (panel layout assets, livery baking, placeholder art tools).
 
-**Build hazard**: Several runtime scripts have `using UnityEditor` imports (RaceManager, VehicleLogic, EnvironmentObjectV2). These will cause build failures for standalone builds. Wrap any editor-only code in `#if UNITY_EDITOR` directives.
+**Build hazard (standing rule, currently clear)**: a `using UnityEditor` import in a runtime script fails
+the standalone build. It must live in an `Editor/` folder or sit inside `#if UNITY_EDITOR`. As of
+2026-09-05 the tree is clean — RaceManager, VehicleLogic and EnvironmentObjectV2 no longer import it, and
+the only runtime file that does (`OnFoot/PaddockAuthoringStage.cs`) is properly guarded. CI builds the
+Windows standalone on every `master` push, so a regression here now shows up as a red build.
 
 ## External Services
 
