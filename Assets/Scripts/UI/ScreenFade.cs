@@ -54,6 +54,35 @@ public class ScreenFade : MonoBehaviour
         fade._busy = true;
     }
 
+    // Fade down and stay there.
+    //
+    // The other half of FromBlack, for a wipe whose middle is a job of work rather than a single statement:
+    // the caller does what it came to do while the screen is black, over as many frames as that takes, and
+    // asks for FromBlack when it is finished. `atBlack` runs on the first fully black frame. Cut is still
+    // the one to use when the middle happens in one go.
+    public static void ToBlack(float outSeconds = 0.28f, Action atBlack = null)
+    {
+        var fade = Ensure();
+        fade.StopAllCoroutines();
+        fade.StartCoroutine(fade.Sink(outSeconds, atBlack));
+    }
+
+    IEnumerator Sink(float outSeconds, Action atBlack)
+    {
+        _busy = true;
+
+        for (float t = 0f; t < outSeconds; t += Time.unscaledDeltaTime)
+        {
+            _alpha = Mathf.Clamp01(t / Mathf.Max(0.01f, outSeconds));
+            yield return null;
+        }
+        _alpha = 1f;
+        yield return null;          // one frame fully black before the world changes under it
+
+        // Stays black, and stays busy: whoever asked for this owns the way back up.
+        atBlack?.Invoke();
+    }
+
     // The other half of HoldBlack: sit in the dark, then come up. `atLight` runs when the screen is clear.
     public static void FromBlack(float holdSeconds, float inSeconds, Action atLight = null)
     {

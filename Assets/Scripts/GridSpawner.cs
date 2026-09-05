@@ -101,6 +101,9 @@ public class GridSpawner : MonoBehaviour
     // The other championship's cars, while they are out. Null the rest of the weekend.
     Transform _ambientField;
     string _ambientFor = "";
+    // Bumped on every claimed handover. A handover now waits for the screen to go black before it touches
+    // anything, so two of them can be stood at that gate at once; the highest token is the live one.
+    int _syncToken;
     // The player's own session spawned its field: this spawner is done, and the weekend clock must never
     // reach in and clear a grid the player is sat on.
     bool _playerField;
@@ -665,10 +668,26 @@ public class GridSpawner : MonoBehaviour
         if (want == _ambientFor) yield break;
 
         // Claimed here rather than inside the spawn, and before the first yield: StartCoroutine runs this
-        // far synchronously, so a second Changed in the same frame sees the booking already taken.
+        // far synchronously, so a second Changed in the same frame sees the booking already taken. The
+        // token is the same claim held across the wait below, where a second asker CAN get in front of us:
+        // whoever claimed last owns the handover and everybody earlier stands down at the gate.
+        _ambientFor = want;
+        int token = ++_syncToken;
+
+        // Hand the circuit over off camera. A field being cleared off the lap while another stands up
+        // around it, the box ladder refitted and a crew rebuilt on every box is a lot of things moving at
+        // once, and the player is stood in the paddock watching it happen. The changeover puts the screen
+        // down, drops HoldingOff when it is black, and takes it back up on Done() — and waves the whole
+        // thing straight through when there is nobody on foot to see it, which is every other case.
+        WeekendTrackChangeover.Begin();
+        while (WeekendTrackChangeover.HoldingOff) yield return null;
+        if (token != _syncToken) yield break;
+
         ClearAmbientField();
         _ambientFor = want;
         if (live.any) yield return SpawnAmbientField(live);
+
+        if (token == _syncToken) WeekendTrackChangeover.Done();
     }
 
     void ClearAmbientField()

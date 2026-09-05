@@ -132,6 +132,12 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // to walk to, and the weekend's bookings are exactly that.
     void SyncMarker()
     {
+        // The circuit is changing hands behind a blackout. The booking that comes with it — go to your Cup
+        // practice — is the last beat of that, not the first: it goes up with the screen, over a pit lane
+        // that already has the cars and the crews in it, rather than being pulsed at a black rectangle
+        // while they are still being stood up behind it.
+        if (WeekendTrackChangeover.Staging) return;
+
         var intro = SpawnIntroUI.Instance;
         if (intro == null) { _markedId = ""; _marked = null; return; }
 
@@ -165,6 +171,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     void PumpBanner()
     {
         if (_bannerTitle == null) return;
+        if (WeekendTrackChangeover.Staging) return;   // it would play out its whole two seconds behind black
 
         var intro = SpawnIntroUI.Instance;
         if (intro == null || intro.TitleBusy) return;
@@ -195,6 +202,10 @@ public class WeekendObjectiveHUD : MonoBehaviour
         {
             if (WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return false;
             if (NPCInteractable.AnyConversationActive || DialogueChoiceUI.IsOpen) return false;
+
+            // Mid-handover: the strip is behind the blackout anyway, and T out of it would move the player
+            // while the circuit they are being pointed at is still being stood up.
+            if (WeekendTrackChangeover.Staging) return false;
 
             // Sat in a grandstand watching a session. The strip would be drawn over the shot, and the
             // booking behind it is not one the player can walk to from a seat across the circuit — T here

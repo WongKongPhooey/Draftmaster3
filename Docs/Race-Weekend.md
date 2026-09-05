@@ -96,6 +96,24 @@ moment the session it belongs to is over. Somebody else's field is deliberately 
 player's — `ambientCount` cars (16 by default, against a 43-car race) on the kinematic `SplineDriver`
 brain rather than the full dynamic model, in that series' own carset (`cts25` / `xfi25` / `cup26`).
 
+**The handover happens behind a blackout.** Giving pit road from one championship to the next is a lot of
+things moving at once — a field cleared off the lap, another one stood up around it, the box ladder
+refitted, and a crew and a pit stand rebuilt in the new colours on every box — and watched from the paddock
+it read as the world glitching rather than as a session starting. So `GridSpawner` now calls
+`WeekendTrackChangeover.Begin()` the moment it has claimed a handover and waits at `HoldingOff` until the
+screen is black; it clears, spawns and refits behind that, then `Done()` fades back up. The objective for
+the session that just took the circuit (`WeekendObjectiveHUD`'s marker, strip and banner) is held for the
+same window, so **"head to your Cup practice" goes up over a pit lane that already has the cars and the
+crews in it**, rather than being pulsed at a black rectangle while they are still being stood up behind it.
+
+The decisions are pure and tested in `WeekendHandover` (core assembly, `WeekendHandoverTests`): it only
+wipes for a player **on foot in the paddock** — never in multiplayer, never from a grandstand seat (that
+owns the camera and runs its own wipes), and never over a fade something else already started. It also
+waits for the player to be free — a result card up, a panel open, mid-conversation — before taking the
+lights off them, and gives up after `WaitLimitSeconds` (15 s), at which point the handover just happens in
+the open, exactly as it did before. Sitting black is capped at `StageLimitSeconds` (6 s), so a spawner
+destroyed mid-handover cannot leave the screen dark.
+
 ## 3. What you can do with the rest of the time
 
 **Every obligation is a place you walk to.** Committing to something on the sheet does not run it — it
