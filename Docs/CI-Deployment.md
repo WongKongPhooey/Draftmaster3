@@ -26,11 +26,32 @@ push to master
 ```
 
 Both builds run on `ubuntu-latest`. GameCI's `windows-mono` image cross-compiles the Windows
-player from Linux, so neither platform needs a Windows runner (which bills at 2× the minutes).
+player from Linux, so neither platform needs a Windows runner.
 
 **The tests do not gate the builds.** A red suite is reported in the run summary and its results
 uploaded as an artifact, but `master` still produces binaries. To make it a hard gate instead,
 set `continue-on-error: false` on the `tests` job and add `tests` to the `build` job's `needs:`.
+
+---
+
+## What this costs
+
+**Nothing.** `WongKongPhooey/Draftmaster3` is a public repository, and GitHub Actions on standard
+GitHub-hosted runners is free with unlimited minutes for public repos — artifact and cache storage
+included. Unity Personal is free as well.
+
+Two things would change that, neither of which this workflow does:
+
+* **Making the repository private.** Free-plan private repos get 2,000 minutes a month, and the
+  per-minute cost is multiplied by runner OS — Linux 1×, Windows 2×, macOS 10×. A cold Unity build
+  is 30–60 minutes, so three jobs a push would eat that allowance in a fortnight. If the repo ever
+  goes private, that is the moment to care about which runner each job uses.
+* **Asking for a larger runner.** Bigger GitHub-hosted runners (more cores, more RAM) are billed
+  even on public repos. Everything here uses plain `ubuntu-latest`.
+
+So the reason both builds run on Linux is not cost — it is that GameCI's images are Linux-native and
+provision faster. See the IL2CPP note under Troubleshooting for when a Windows runner is worth the
+wall-clock time anyway.
 
 ---
 
@@ -191,7 +212,7 @@ more time than it saves. Try it; turn it off if the cache step is slow or keeps 
 
 **Windows builds use the Mono backend**, because that is what cross-compiling from Linux supports.
 If you need IL2CPP for the Windows player, that matrix entry has to move to a `windows-2022`
-runner (billed at 2× minutes) with `unityci/editor:windows-...-windows-il2cpp` — the rest of the
+runner with `unityci/editor:windows-...-windows-il2cpp` — the rest of the
 workflow is unchanged.
 
 **Activation fails with "License is not active".** Personal licences hold a machine seat. Return

@@ -188,7 +188,8 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # The builds. Both run on Ubuntu: GameCI's windows-mono image cross-builds the
-  # Windows standalone, so neither platform needs a (pricier) Windows runner.
+  # Windows standalone, so neither platform needs a Windows runner. On a public
+  # repo that costs nothing either way; Linux is simply the faster, native path.
   # Add a platform by adding a matrix entry.
   # ---------------------------------------------------------------------------
   build:
