@@ -1,0 +1,374 @@
+name: Build & Release
+
+# Every push to master produces a Windows standalone and an Android package,
+# both stamped with a version that increments on every run.
+# Setup guide (secrets, signing, versioning): Docs/CI-Deployment.md
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      android_export_type:
+        description: Android package format for this run
+        type: choice
+        default: androidAppBundle
+        options:
+          - androidAppBundle
+          - androidPackage
+      publish_release:
+        description: Attach the builds to a tagged GitHub Release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Queue master builds rather than cancelling them: a cancelled run burns a
+# version number, and a half-finished release is worse than a slow one.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUILD_NAME: Draftmaster3
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Work out the version for this run, and fail fast (with a readable message)
+  # if the Unity licence secrets have not been set up yet.
+  # ---------------------------------------------------------------------------
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+      android_version_code: ${{ steps.compute.outputs.android_version_code }}
+      android_export_type: ${{ steps.compute.outputs.android_export_type }}
+      tag: ${{ steps.compute.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Unity activation secrets
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        run: |
+          missing=()
+          [ -n "$UNITY_EMAIL" ]    || missing+=("UNITY_EMAIL")
+          [ -n "$UNITY_PASSWORD" ] || missing+=("UNITY_PASSWORD")
+          if [ -z "$UNITY_LICENSE" ] && [ -z "$UNITY_SERIAL" ]; then
+            missing+=("UNITY_LICENSE (Personal licence) **or** UNITY_SERIAL (Pro/Plus)")
+          fi
+          if [ "${#missing[@]}" -ne 0 ]; then
+            {
+              echo "## Unity activation is not configured"
+              echo
+              echo "This pipeline cannot open the editor until these repository secrets exist:"
+              echo
+              for s in "${missing[@]}"; do echo "- \`$s\`"; done
+              echo
+              echo "Settings → Secrets and variables → Actions → New repository secret."
+              echo "Step-by-step instructions are in \`Docs/CI-Deployment.md\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Unity activation secrets are missing — see the run summary."
+            exit 1
+          fi
+          echo "Unity activation secrets are present."
+
+      - name: Compute version
+        id: compute
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          CODE_OFFSET: ${{ vars.ANDROID_VERSION_CODE_OFFSET || 0 }}
+          EXPORT_INPUT: ${{ inputs.android_export_type }}
+          EXPORT_VAR: ${{ vars.ANDROID_EXPORT_TYPE }}
+        run: |
+          # VERSION holds the hand-managed MAJOR.MINOR. The patch is the run
+          # number, so it climbs by one on every build and never repeats.
+          base="$(tr -d '[:space:]' < VERSION)"
+          if ! [[ "$base" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=VERSION::VERSION must hold MAJOR.MINOR (for example 3.0); found '${base}'"
+            exit 1
+          fi
+
+          if ! [[ "$CODE_OFFSET" =~ ^[0-9]+$ ]]; then
+            echo "::error::ANDROID_VERSION_CODE_OFFSET must be a whole number; found '${CODE_OFFSET}'"
+            exit 1
+          fi
+
+          version="${base}.${RUN_NUMBER}"
+          android_version_code=$(( RUN_NUMBER + CODE_OFFSET ))
+
+          # Google Play rejects anything at or above 2100000000.
+          if [ "$android_version_code" -ge 2100000000 ]; then
+            echo "::error::androidVersionCode ${android_version_code} exceeds the Play Store maximum."
+            exit 1
+          fi
+
+          # Precedence: manual dispatch choice, then repo variable, then AAB.
+          export_type="${EXPORT_INPUT:-${EXPORT_VAR:-androidAppBundle}}"
+          case "$export_type" in
+            androidAppBundle|androidPackage) ;;
+            *)
+              echo "::error::ANDROID_EXPORT_TYPE must be androidAppBundle or androidPackage; found '${export_type}'"
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "version=${version}"
+            echo "android_version_code=${android_version_code}"
+            echo "android_export_type=${export_type}"
+            echo "tag=v${version}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Draftmaster3 ${version}"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Version name | \`${version}\` |"
+            echo "| Android versionCode | \`${android_version_code}\` |"
+            echo "| Android format | \`${export_type}\` |"
+            echo "| Commit | \`${GITHUB_SHA:0:8}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # EditMode tests. Reported, never blocking: a red test must not stop master
+  # from producing binaries. Flip `continue-on-error` to false to make it a gate.
+  # ---------------------------------------------------------------------------
+  tests:
+    name: EditMode tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          # The Unity editor images are ~7 GB; the stock runner does not have
+          # room for one alongside its preinstalled toolchains.
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "${AGENT_TOOLSDIRECTORY:-}" || true
+          df -h /
+
+      - uses: game-ci/unity-test-runner@v4
+        id: unity-tests
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          testMode: editmode
+          artifactsPath: test-results
+          # PlayMode tests need a scene load per case and are much slower;
+          # add `playmode` here once they are reliable in CI.
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editmode-test-results
+          path: ${{ steps.unity-tests.outputs.artifactsPath || 'test-results' }}
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Summarise
+        if: always()
+        run: |
+          if [ "${{ steps.unity-tests.outcome }}" = "success" ]; then
+            echo "EditMode tests passed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**EditMode tests failed** — the build was not blocked. Results are in the \`editmode-test-results\` artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # The builds. Both run on Ubuntu: GameCI's windows-mono image cross-builds the
+  # Windows standalone, so neither platform needs a (pricier) Windows runner.
+  # Add a platform by adding a matrix entry.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build ${{ matrix.label }}
+    needs: version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - targetPlatform: StandaloneWindows64
+            label: Windows x64
+            slug: Windows-x64
+          - targetPlatform: Android
+            label: Android
+            slug: Android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "${AGENT_TOOLSDIRECTORY:-}" || true
+          sudo docker image prune -af || true
+          df -h /
+
+      # Opt-in: the Library folder for a project this size can approach the
+      # 10 GB per-repository cache budget, and uploading it every run costs more
+      # time than it saves. Set the CACHE_UNITY_LIBRARY variable to 'true' to try it.
+      - name: Restore Library cache
+        if: vars.CACHE_UNITY_LIBRARY == 'true'
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.targetPlatform }}-${{ github.sha }}
+          restore-keys: |
+            Library-${{ matrix.targetPlatform }}-
+            Library-
+
+      - name: Build
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          targetPlatform: ${{ matrix.targetPlatform }}
+          buildName: ${{ env.BUILD_NAME }}
+          allowDirtyBuild: true
+
+          # ProjectSettings.asset is binary-serialised in this project, so the
+          # version cannot be patched as text. `Custom` makes the builder set
+          # PlayerSettings.bundleVersion and bundleVersionCode through the Unity
+          # API inside the container, which works whatever the serialisation mode.
+          versioning: Custom
+          version: ${{ needs.version.outputs.version }}
+          androidVersionCode: ${{ needs.version.outputs.android_version_code }}
+          androidExportType: ${{ needs.version.outputs.android_export_type }}
+
+          # All optional. With no keystore secrets the builder turns off the
+          # custom keystore and Android output is debug-signed — fine for
+          # sideloading, not accepted by the Play Store.
+          androidKeystoreName: ${{ secrets.ANDROID_KEYSTORE_BASE64 && 'draftmaster.keystore' || '' }}
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+
+      - name: Take ownership of build output
+        # Unity runs as root inside the container. Without this, zipping the
+        # player and saving the Library cache both fail on permissions.
+        run: sudo chown -R "$(id -u):$(id -g)" build Library || true
+
+      - name: Package
+        id: package
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PLATFORM: ${{ matrix.targetPlatform }}
+          SLUG: ${{ matrix.slug }}
+        run: |
+          mkdir -p dist
+          out="build/${PLATFORM}"
+          if [ ! -d "$out" ]; then
+            echo "::error::Unity produced no output at ${out}"
+            exit 1
+          fi
+          echo "Build output:"
+          ls -lah "$out"
+
+          if [ "$PLATFORM" = "Android" ]; then
+            # A single .aab or .apk sitting in the output folder.
+            pkg="$(find "$out" -maxdepth 1 -type f \( -name '*.aab' -o -name '*.apk' \) | head -n 1)"
+            if [ -z "$pkg" ]; then
+              echo "::error::No .aab or .apk found in ${out}"
+              exit 1
+            fi
+            cp "$pkg" "dist/${BUILD_NAME}-${VERSION}-${SLUG}.${pkg##*.}"
+          else
+            # The standalone player is a folder; ship it as one zip.
+            ( cd "$out" && zip -qr "${GITHUB_WORKSPACE}/dist/${BUILD_NAME}-${VERSION}-${SLUG}.zip" . )
+          fi
+
+          ls -lah dist
+          {
+            echo "### ${SLUG} ${VERSION}"
+            echo
+            for f in dist/*; do
+              echo "- \`$(basename "$f")\` ($(du -h "$f" | cut -f1))"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BUILD_NAME }}-${{ needs.version.outputs.version }}-${{ matrix.slug }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 90
+
+  # ---------------------------------------------------------------------------
+  # Tag the commit and publish the binaries, so builds outlive the 90-day
+  # artifact expiry and every version has a permanent home.
+  # ---------------------------------------------------------------------------
+  release:
+    name: Release ${{ needs.version.outputs.tag }}
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || inputs.publish_release)
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download builds
+        uses: actions/download-artifact@v4
+        with:
+          # Only the build artifacts — without this the test-results artifact
+          # gets swept up and attached to the release too.
+          pattern: ${{ env.BUILD_NAME }}-${{ needs.version.outputs.version }}-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          EXPORT_TYPE: ${{ needs.version.outputs.android_export_type }}
+          CODE: ${{ needs.version.outputs.android_version_code }}
+        run: |
+          ls -lah dist
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Release ${TAG} already exists; replacing its assets."
+            gh release upload "$TAG" dist/* --clobber
+            exit 0
+          fi
+
+          cat > notes.md <<EOF
+          Automated build of \`${GITHUB_SHA:0:8}\` on \`master\`.
+
+          | | |
+          |---|---|
+          | Version name | \`${VERSION}\` |
+          | Android versionCode | \`${CODE}\` |
+          | Android format | \`${EXPORT_TYPE}\` |
+          EOF
+
+          # --generate-notes appends GitHub's commit/PR summary to ours. If the
+          # runner's gh is too old to combine the two, publish without it rather
+          # than losing the build.
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "Draftmaster3 ${VERSION}" \
+            --notes-file notes.md \
+            --generate-notes \
+          || gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "Draftmaster3 ${VERSION}" \
+            --notes-file notes.md
+
+          echo "Published [\`${TAG}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG})." >> "$GITHUB_STEP_SUMMARY"

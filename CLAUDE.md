@@ -115,7 +115,19 @@ A track is one string id (`Daytona`), shared by the `Tracks` table, the calendar
 
 ## Development
 
-This is a Unity 6 (6000.4.3f1) project — open in the Unity Editor, not built from CLI. There is no automated test suite or CI pipeline. Testing is done by entering Play Mode in the editor.
+This is a Unity 6 (6000.4.3f1) project — open in the Unity Editor for day-to-day work. Most testing is
+done by entering Play Mode, but there **is** a test suite: `Assets/Tests/Editor` (46 EditMode files,
+asmdef `Draftmaster.Tests.Editor`) and `Assets/Tests/PlayMode`. Run them from `Window > General > Test Runner`.
+
+**CI**: `.github/workflows/build.yml` builds a Windows standalone and an Android package on every push to
+`master` (not `develop`), version-stamped and published to a tagged GitHub Release. EditMode tests run
+alongside and are reported but never block a build. Setup, secrets and the versioning scheme are in
+`Docs/CI-Deployment.md`.
+
+**Versioning is CI-side.** `ProjectSettings.asset` is binary-serialised, so the version cannot be patched
+as text — the pipeline sets `PlayerSettings.bundleVersion`/`bundleVersionCode` through the Unity API inside
+the build container, from the root `VERSION` file (`MAJOR.MINOR`) plus the workflow run number. Edit
+`VERSION` for a feature bump; never hand-edit the version for a build.
 
 Authoring guides live in `Docs/`. **`Docs/Editor-Handbook.md` is the index**: task-by-task click order for building content (add a track, place an NPC, author a quest, sponsors, art/UI passes), plus the full Draftmaster menu reference, the play-mode key map and the standing gotchas — start there and follow its links. `Docs/NPCs-and-Quests.md` covers the paper-doll character system (sprite specs, greyscale/tint rules, editor NPC designer), dialogue (NPCInteractable), and the side-quest system (QuestInfo assets, QuestGiverNPC, stats ledger, inventory, pause-menu mission board). `Docs/Rivalry-and-TeamSwitch.md` covers the driver-relationship/payback system (DriverRelationships, contact blame, AIRacingBehaviour payback, RivalryFeed) and mid-race team car switching (TeamSwitchController, GridSpawner teams). `Docs/Sponsorship.md` covers sponsor contracts (pit-lane reps, haggling, the PlayerPrefs deal book) and the car decal pipeline (panel layout assets, livery baking, placeholder art tools).
 

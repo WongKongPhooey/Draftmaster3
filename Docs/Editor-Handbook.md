@@ -114,6 +114,7 @@ Package` moves one from the scene to the package when you get it the wrong way r
 | RV interior / speech box | `Assets/Resources/OnFoot/` |
 | Vehicles | `Assets/Resources/Vehicles/` |
 | Driver database | `draftmaster.db` in `Application.persistentDataPath` |
+| Build pipeline | `.github/workflows/build.yml`, version base in the root `VERSION` |
 
 ---
 
@@ -567,6 +568,27 @@ chair per driver, and booking → objective → walk → talk actually connects)
 | `L` | Pit limiter |
 
 Free: `F12`.
+
+---
+
+## 19. Ship a build
+
+You do not have to build by hand. **Pushing to `master` builds a Windows standalone and an Android
+package automatically**, stamps both with a version one higher than the last, and attaches them to a
+tagged GitHub Release. `develop` is not built — merge to `master` when you want binaries.
+
+1. Bump the root `VERSION` file (`MAJOR.MINOR`) if this is a feature release. The patch number is added
+   by CI and always increments, so you never touch it.
+2. Merge to `master` and push.
+3. **Actions** tab for progress; the finished builds are on the run and on the release.
+
+To build without releasing — or to get an `.apk` instead of a Play Store `.aab` for one run — use
+**Actions → Build & Release → Run workflow**.
+
+First run needs Unity licence secrets or it stops immediately with an explanation in the run summary.
+Setup, Android signing, the versioning rules and troubleshooting: **`Docs/CI-Deployment.md`**.
+
+Building locally from the editor still works exactly as it always did.
 
 ---
 
