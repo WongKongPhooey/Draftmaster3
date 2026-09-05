@@ -13,6 +13,10 @@ namespace Draftmaster.Chatter
     // player. Line choice is pure and seeded so it can be unit-tested without entering Play Mode.
     //
     // The component that speaks these is NPCAmbientChatter.
+    //
+    // A line may name the two people the paddock actually knows — {playerfirst} for the driver, {chieffirst}
+    // for their crew chief — and Pick fills those in before handing the line over. Used sparingly on
+    // purpose: a crowd that says your name every time reads as a crowd that has been told to.
     public static class AmbientChatter
     {
         // Fan-appeal thresholds (FanAppeal runs 0..100) at which the crowd's tone changes.
@@ -36,6 +40,8 @@ namespace Draftmaster.Chatter
             "Weather radar says we're fine 'til five.",
             "That's a lovely bit of bodywork, that.",
             "Mind your back — cart coming through.",
+            "Morning, {playerfirst}. Mind the cables.",
+            "{chieffirst} was after you, {playerfirst}. Something about the run plan.",
         };
 
         static readonly string[] PaddockImpressed =
@@ -45,6 +51,8 @@ namespace Draftmaster.Chatter
             "Reckon they've got a shot this weekend.",
             "Told you they'd be quick here.",
             "Ask for a photo. Go on, ask.",
+            "That's {playerfirst}. Told you they'd be here.",
+            "Go on, {playerfirst} — give us a wave!",
         };
 
         static readonly string[] PaddockDismissive =
@@ -53,6 +61,7 @@ namespace Draftmaster.Chatter
             "Bit early to be walking about, isn't it?",
             "Another hopeful. We get a few.",
             "Don't recognise the number.",
+            "Some driver called {playerfirst}. Never heard of them.",
         };
 
         static readonly string[] PitLaneNeutral =
@@ -63,6 +72,9 @@ namespace Draftmaster.Chatter
             "Right rear's the slow one today.",
             "Limiter's on from the blend line.",
             "Wall's live. Eyes up.",
+            "{chieffirst} wants the right rear checked before we roll.",
+            "{chieffirst} needs a fuel number before the stop.",
+            "Box is yours whenever you're ready, {playerfirst}.",
         };
 
         static readonly string[] PitLaneImpressed =
@@ -70,6 +82,8 @@ namespace Draftmaster.Chatter
             "Fastest stop of the day was theirs.",
             "Crew's buzzing about that last lap.",
             "Give 'em room, that's the one to watch.",
+            "{chieffirst} says that was the lap of the day.",
+            "Nice one, {playerfirst}. Whole wall was watching.",
         };
 
         static readonly string[] PitLaneDismissive =
@@ -77,6 +91,7 @@ namespace Draftmaster.Chatter
             "Mind the airlines, whoever you are.",
             "You're stood in the fast lane, mate.",
             "Credentials, please. Anyone check those?",
+            "{chieffirst} didn't say anything about visitors.",
         };
 
         static readonly string[] GarageNeutral =
@@ -85,18 +100,22 @@ namespace Draftmaster.Chatter
             "That gearbox is coming out again.",
             "Sponsors want the car spotless by four.",
             "We're two tenths off on the sim.",
+            "{chieffirst} wants the ride heights before lunch.",
+            "Ask {chieffirst}. It's their call, not mine.",
         };
 
         static readonly string[] GarageImpressed =
         {
             "Setup notes from that run were gold.",
             "Whole shop's talking about the weekend.",
+            "{chieffirst} reckons we've finally built a car under {playerfirst}.",
         };
 
         static readonly string[] GarageDismissive =
         {
             "Don't touch anything, please.",
             "Tools stay in the shop. Every time.",
+            "{chieffirst} said nobody touches the car. That includes you.",
         };
 
         // Authored lines, layered over the built-in tables. DialogueLibrary installs this at runtime so a
@@ -144,12 +163,14 @@ namespace Draftmaster.Chatter
         {
             var pool = Lines(area, mood);
             if (pool == null || pool.Length == 0) return string.Empty;
-            if (pool.Length == 1) return pool[0];
+            if (pool.Length == 1) return SpeakerIdentity.Fill(pool[0]);
 
             // Non-negative index from an arbitrary (possibly negative) seed.
             int i = (int)((uint)Hash(seed) % (uint)pool.Length);
-            if (pool[i] == lastLine) i = (i + 1) % pool.Length;
-            return pool[i];
+            // Compared filled, because that is what the caller kept: a pool line reading "Morning,
+            // {playerfirst}" and the bark that was actually spoken are not the same string.
+            if (SpeakerIdentity.Fill(pool[i]) == lastLine) i = (i + 1) % pool.Length;
+            return SpeakerIdentity.Fill(pool[i]);
         }
 
         // Small integer avalanche so consecutive seeds (e.g. frame counts) don't walk the pool in order.

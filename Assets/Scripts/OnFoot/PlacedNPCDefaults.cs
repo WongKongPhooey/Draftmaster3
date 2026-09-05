@@ -61,9 +61,9 @@ public static class PlacedNPCDefaults
         npc.interaction = PlacedNPC.Interaction.TalkOnInteract;
         npc.lines = new[]
         {
-            "Morning! Car's prepped and fuelled, ready when you are.",
+            "Morning, {playerfirst}! Car's prepped and fuelled, ready when you are.",
             "Thanks. Anything I should know? #player",
-            "Track's still cold, so take the first lap easy.",
+            "Track's still cold, so take the first lap easy. {chieffirst}'s words, not mine.",
             "Will do. #player",
             "Right then — hop in whenever you're set. Good luck out there!"
         };
@@ -109,7 +109,7 @@ public static class PlacedNPCDefaults
                 {
                     "Long run first, short run after. I want to know what the tyre does after fifteen.",
                     "And if it falls off a cliff? #player",
-                    "Then we build a car that survives it and we pass people at the end.",
+                    "Then we build a car that survives it and we pass people at the end. {chieffirst} agrees with me, for once.",
                 },
             },
             new PlacedNPC.ScheduledLines
@@ -120,7 +120,7 @@ public static class PlacedNPCDefaults
                 {
                     "Two laps on the sticker set, that's all you get. Don't spend it on the out lap.",
                     "Where do we stand on strategy? #player",
-                    "Depends where you put it. Front half, we race it. Back half, we go long and wait for the caution.",
+                    "Depends where you put it, {playerfirst}. Front half, we race it. Back half, we go long and wait for the caution.",
                 },
             },
             new PlacedNPC.ScheduledLines
@@ -161,7 +161,7 @@ public static class PlacedNPCDefaults
                 {
                     "Two things today: the fan fence at some point, and don't give anything away about the car.",
                     "Does this mean we have something to give away? #player",
-                    "Just smile and small talk. We'll get you up to speed when we're confident.",
+                    "Just smile and small talk, {playerfirst}. We'll get you up to speed when we're confident.",
                 },
             },
             new PlacedNPC.ScheduledLines
@@ -183,7 +183,7 @@ public static class PlacedNPCDefaults
                 {
                     "Intros, then you're mine for ninety seconds with the broadcast.",
                     "I can do ninety seconds. #player",
-                    "I know. And the sponsor's name in the first sentence, please.",
+                    "I know, {playerfirst}. And the sponsor's name in the first sentence, please.",
                 },
             },
         };
@@ -237,7 +237,7 @@ public static class PlacedNPCDefaults
         {
             return new[]
             {
-                "Morning. You're clear for now — nothing on the sheet until later.",
+                "Morning, {playerfirst}. You're clear for now — nothing on the sheet until later.",
                 "I'll come and find you when you're needed. #player",
                 "That's the idea. Enjoy the quiet, it doesn't last.",
             };
@@ -245,7 +245,9 @@ public static class PlacedNPCDefaults
 
         return new[]
         {
-            $"There you are. {clock}, and you're already wanted.",
+            // Not interpolated across the name token: the fill happens when the line is spoken, and a
+            // {playerfirst} inside a $"" would be read as a C# hole rather than a dialogue one.
+            "There you are, {playerfirst}. " + clock + ", and you're already wanted.",
             $"You're down for {Draftmaster.Weekend.WeekendSchedulePlan.Describe(next)}.",
             "Do I have time for a coffee first? #player",
             "Only if you walk as fast as you drive. Follow the marker and don't be late, they " +
@@ -269,7 +271,7 @@ public static class PlacedNPCDefaults
         npc.appear.saveKey = "car.setup.briefing";
         npc.lines = new[]
         {
-            "Belts tight? Good. Weather's holding, so it's your call on rubber.",
+            "Belts tight, {playerfirst}? Good. Weather's holding, so it's your call on rubber.",
             "How long are we running? #player",
             "Short one. Take what you need and no more — every litre is weight.",
             "Okay — how do you want the car set up?"
@@ -285,7 +287,7 @@ public static class PlacedNPCDefaults
                 fridayAM = true, fridayPM = true,
                 lines = new[]
                 {
-                    "Belts tight? Good. Nobody's run here yet today, so the track's green and it'll come to you.",
+                    "Belts tight, {playerfirst}? Nobody's run here yet today, so the track's green and it'll come to you.",
                     "How long are we running? #player",
                     "Short one. Bring it back in one piece and tell me if it's loose or tight.",
                     "Okay — how do you want the car set up?",
@@ -297,7 +299,7 @@ public static class PlacedNPCDefaults
                 saturdayAM = true, saturdayPM = true,
                 lines = new[]
                 {
-                    "Two laps and it's over, so I've trimmed it out. It'll be pointy. That's on purpose.",
+                    "Two laps and it's over, {playerfirst}, so I've trimmed it out. It'll be pointy. That's on purpose.",
                     "How pointy? #player",
                     "Be direct and it will stick. Don't chase the time, just drive it with purpose.",
                     "Okay — how do you want the car set up?",
@@ -309,7 +311,7 @@ public static class PlacedNPCDefaults
                 sundayAM = true, sundayPM = true,
                 lines = new[]
                 {
-                    "Long day. The car you qualified is not the car you're racing — I've put the balance back in it.",
+                    "Long day, {playerfirst}. The car you qualified is not the car you're racing — I've put the balance back in it.",
                     "What do you need from me? #player",
                     "First stage, just tell me how it beds in as the track evolves. After that we'll talk about winning it.",
                     "Okay — how do you want the car set up?",

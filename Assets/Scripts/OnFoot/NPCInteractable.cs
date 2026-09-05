@@ -123,7 +123,13 @@ public class NPCInteractable : MonoBehaviour
         }
         // Both halves of the conversation are owned by this NPC, so the player's reply is never queued
         // behind the line it is answering.
-        _activeBubble.Speak(raw, playerLine ? PlayerSpeakerName : speakerName,
+        //
+        // Filled on the way out rather than when the lines were authored: a line may name the driver or the
+        // crew chief ({playerfirst}, {chieffirst}) and those are only known at runtime. Tokens this doesn't
+        // own are left alone, so {team}/{num}/{path} still belong to whoever set them.
+        _activeBubble.Speak(Draftmaster.Chatter.SpeakerIdentity.Fill(raw),
+                            playerLine ? PlayerSpeakerName
+                                       : Draftmaster.Chatter.SpeakerIdentity.Fill(speakerName),
                             Draftmaster.Sim.SpeechPriority.Conversation, owner: this);
     }
 

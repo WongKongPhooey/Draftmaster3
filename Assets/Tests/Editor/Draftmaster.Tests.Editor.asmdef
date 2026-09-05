@@ -2,6 +2,7 @@
     "name": "Draftmaster.Tests.Editor",
     "rootNamespace": "",
     "references": [
+        "Draftmaster.Chatter",
         "Draftmaster.Crowd",
         "Draftmaster.Fans",
         "Draftmaster.Fights",

@@ -340,6 +340,11 @@ public class PlacedNPC : MonoBehaviour
             scheduled.marker = this;
             scheduled.speaker = _npc;
         }
+        // The crew chief is a person, not a job title: a marker still labelled "Crew Chief" gets whoever
+        // actually runs this car put over their head, full name, so the briefing reads as a conversation
+        // with somebody. A marker that was given its own name keeps it.
+        if (role == Role.CrewChief) _npc.speakerName = DialogueNames.ResolveSpeaker(_npc.speakerName);
+
         _npc.interactRange = interactRange;
         _npc.repeatable = repeatable;
         _npcRb = _npc.GetComponent<Rigidbody2D>();

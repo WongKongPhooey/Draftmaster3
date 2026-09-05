@@ -228,7 +228,8 @@ public class WeekendVenueSites : MonoBehaviour
         }
 
         var host = PaddockPerson.SpawnTalker<WeekendVenueHost>(
-            _root, at, "Host_" + venue, speaker.GetHashCode(), speaker, idle, interactRange: 2.6f);
+            _root, at, "Host_" + venue, speaker.GetHashCode(), DialogueNames.ResolveSpeaker(speaker), idle,
+            interactRange: 2.6f);
         host.venue = venue;
         host.idleLines = idle;
     }

@@ -258,6 +258,34 @@ each other; typewriter speech bubbles handle display.
 For branching dialogue there is `InkNPCInteractable` (compiled Ink .json + DialogueHandler
 canvases from the Phoenix era), but the SpeechBubble path above is the proven one in spline scenes.
 
+### Calling people by their name
+
+A line — or a `speakerName` — may name the two people the paddock actually knows, and it is filled in
+when the line is spoken:
+
+| Token | Becomes | If nobody is named |
+|---|---|---|
+| `{playerfirst}` | the driver's first name, e.g. `Kyle` | `mate` |
+| `{player}` | the driver's full name | `the driver` |
+| `{chieffirst}` | the crew chief's first name, e.g. `Dale` | `Chief` |
+| `{chief}` | the crew chief's full name | `Crew Chief` |
+
+Write them anywhere a dialogue string is authored: `PlacedNPC.lines` and its per-half-day `schedule`,
+a track's `DialoguePool` asset, `AmbientChatter`'s built-in tables, a `WeekendConversation`'s beats.
+Use them **sparingly** — a paddock that says your name every time reads as one that has been told to.
+
+- `Draftmaster.Chatter.SpeakerIdentity` owns the syntax (pure, unit-tested in `DialogueNameTests`).
+- `DialogueNames` answers who those two people are and installs itself at start-up. The player comes
+  from `PlayerDriver` (or the position tracker mid-race); the crew chief comes from `career.crewchief`
+  if anything ever writes it, else the `Staff` row for the player's team, else a stable invented name
+  seeded off the team so the same career always has the same chief.
+- Unknown braces are left alone, so `{team}`/`{num}` (`DriverPresenceDirector`) and `{path}`
+  (`CareerPathNPC`) still belong to the systems that substitute them.
+- A `PlacedNPC` whose `role` is `CrewChief` and whose `speakerName` is still the generic "Crew Chief"
+  gets the chief's **full name** over the bubble instead — likewise the pit-box host in the weekend
+  venue cast, which keeps its shouty casing (`DALE MASON`).
+- Names are re-resolved on every scene load. Call `DialogueNames.Refresh()` after a career name changes.
+
 ### Player choices mid-conversation
 
 **`DialogueChoiceUI`** is a modal "pick one line" panel for a conversation that needs an answer:

@@ -97,6 +97,9 @@ public class PaddockSpawner : MonoBehaviour
         new[] { "Kid over by the fence has had your poster since Friday.", "I'll go and sign it. #player", "Good lad. That's how you get a fanbase." },
         new[] { "Fuel's on the limit if we run the whole stint flat.", "So I lift and coast down the back? #player", "Two corners' worth. I'll call it on the radio." },
         new[] { "Our neighbours in the next bay are protesting something.", "Us? #player", "Everyone. They protest the weather, that lot." },
+        new[] { "Morning, {playerfirst}. {chieffirst} was asking after you.", "What have I done now? #player", "Nothing yet. They're down at the box, head in the data as usual." },
+        new[] { "{chieffirst} says we're changing the springs before the next run.", "Did they say why? #player", "Something about the rear stepping out. Your words, apparently, {playerfirst}." },
+        new[] { "You're the one they've all come to see, {playerfirst}.", "Steady on. #player", "I'm only repeating what's on the tannoy." },
     };
 
     static readonly string[] kNames =

@@ -25,13 +25,13 @@ namespace Draftmaster.Weekend
             {
                 greeting = new[]
                 {
-                    "Before you go anywhere near that car - has anybody set your phone up?",
+                    "Before you go anywhere near that car, {playerfirst} - has anybody set your phone up?",
                     "Thought not. Two minutes, and then I'll leave you alone about it.",
                 },
                 farewell = new[]
                 {
                     "That's it. That's the whole briefing.",
-                    "Anything I need you for this weekend turns up on there. Go and be somewhere.",
+                    "Anything I need you for this weekend turns up on there, {playerfirst}. Go and be somewhere.",
                 },
             };
 

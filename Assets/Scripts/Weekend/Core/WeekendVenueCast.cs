@@ -2,6 +2,10 @@ namespace Draftmaster.Weekend
 {
     // Who is stood at each venue, and what they say when there is nothing booked.
     //
+    // An idle line may name the driver with {playerfirst}; it is filled in when the host speaks it, not
+    // here (this assembly has no idea who is driving). The editor's cast window shows the raw token, which
+    // is the honest thing for it to show.
+    //
     // The runtime builder stands these people up (WeekendVenueSites.StaffTheVenues) and the editor's weekend
     // cast window lists them without entering play mode. Both read this, so "who runs the drivers' room" is
     // one answer rather than a literal in a builder somebody has to go and read.
@@ -23,7 +27,7 @@ namespace Draftmaster.Weekend
             new Host
             {
                 venue = WeekendVenue.PitBox, speaker = "CREW CHIEF", offsetAlong = 0.4f,
-                idleLine = "Car's on the setup pad. Shout if you want anything changed.",
+                idleLine = "Car's on the setup pad, {playerfirst}. Shout if you want anything changed.",
             },
             new Host
             {

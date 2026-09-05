@@ -317,6 +317,8 @@ public class DriverPresenceDirector : MonoBehaviour
         var chosen = pool[rng.Next(pool.Length)];
         var lines = new string[chosen.Length];
         for (int i = 0; i < chosen.Length; i++)
+            // {team} and {num} are this director's own; {playerfirst} belongs to SpeakerIdentity and is
+            // filled when the line is actually spoken, so it is deliberately left standing here.
             lines[i] = chosen[i].Replace("{team}", team).Replace("{num}", num);
         return lines;
     }
@@ -338,12 +340,12 @@ public class DriverPresenceDirector : MonoBehaviour
     {
         new[] { "You're stood in my mirror.", "Sorry — just walking through. #player", "Then walk. I'm working." },
         new[] { "Whatever you're about to ask, the answer's I'll see you out there.", "Wasn't going to ask anything. #player", "Good. Keep it that way and we'll get on fine." },
-        new[] { "Heard you were quick in the last one. We'll find out.", "That's the idea. #player", "Just leave me room in three. Or don't — your call." },
+        new[] { "Heard you were quick in the last one, {playerfirst}. We'll find out.", "That's the idea. #player", "Just leave me room in three. Or don't — your call." },
     };
 
     static readonly string[][] kAtRvNeutral =
     {
-        new[] { "Morning. Coffee's on if {team} haven't drunk it all.", "I'd better get to the car. #player", "Go on then. Have a good one out there." },
+        new[] { "Morning, {playerfirst}. Coffee's on if {team} haven't drunk it all.", "I'd better get to the car. #player", "Go on then. Have a good one out there." },
         new[] { "Never sleep well the night before. You?", "Slept fine, actually. #player", "Must be nice. See you in the pit lane." },
         new[] { "Motorhome's the only quiet place at this circuit.", "Beats the hauler. #player", "Beats everything. Right — see you out there." },
     };
@@ -351,7 +353,7 @@ public class DriverPresenceDirector : MonoBehaviour
     static readonly string[][] kAtRvVeteran =
     {
         new[] { "Same patch of grass every year, this. Feels like home by now.", "How many have you done here? #player", "Enough to know turn one lies to you. Watch it." },
-        new[] { "Take the advice or don't, but nobody wins this on Friday.", "Noted. #player", "Good. Now go earn Sunday." },
+        new[] { "Take the advice or don't, {playerfirst}, but nobody wins this on Friday.", "Noted. #player", "Good. Now go earn Sunday." },
     };
 
     static readonly string[][] kAtRvSpiky =
@@ -375,7 +377,7 @@ public class DriverPresenceDirector : MonoBehaviour
 
     static readonly string[][] kWalkingSpiky =
     {
-        new[] { "There you are. We're not done from last time.", "I gave you the room. #player", "You gave me the wall. I'll remember it." },
+        new[] { "There you are, {playerfirst}. We're not done from last time.", "I gave you the room. #player", "You gave me the wall. I'll remember it." },
         new[] { "Nice paint. Shame about the driving.", "Big words in a car park. #player", "They'll be bigger on the track. Go on, off you go." },
     };
 }

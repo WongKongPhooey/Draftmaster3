@@ -34,7 +34,7 @@ namespace Draftmaster.Weekend
             {
                 statKey = "teammeetings",
                 greeting = ran
-                    ? new[] { "Come in, shut the door. I've got the tyre traces up." }
+                    ? new[] { "Come in, shut the door, {playerfirst}. I've got the tyre traces up." }
                     : new[] { "Come in. Not much to look at — we didn't run, so this is all sim." },
                 farewell = new[] { "Right. I'll take it to the boys and we'll have it under you in the morning." },
             };
@@ -79,7 +79,7 @@ namespace Draftmaster.Weekend
                 statKey = "teammeetings",
                 greeting = new[]
                 {
-                    "There you are. Mind the jack.",
+                    "There you are, {playerfirst}. Mind the jack.",
                     "Three days, one race. Let's agree what we're doing with them.",
                 },
                 farewell = new[] { "That'll do me. Go and get some air before the truck series roll out." },
@@ -88,7 +88,7 @@ namespace Draftmaster.Weekend
             c.Add(new WeekendBeat
             {
                 speaker = "CREW CHIEF",
-                line = "Sim says this place is all about the middle of the corner. How are we running it?",
+                line = "Sim says this place is all about the middle of the corner. How are we running it, {playerfirst}?",
                 question = "How are we running the weekend?",
                 choices =
                 {

@@ -29,6 +29,16 @@ namespace Draftmaster.Data
             StaffRole.PitCrew,
         };
 
+        // The name this seed always produces. Public because the crew chief is now spoken to by name in
+        // the paddock (see DialogueNames), and a save whose Staff table has nothing matching this team
+        // still needs to call them the same thing every session — which is what "deterministic" buys.
+        public static string NameFor(int seed)
+        {
+            int a = seed % First.Length; if (a < 0) a += First.Length;
+            int b = (seed / 3) % Last.Length; if (b < 0) b += Last.Length;
+            return First[a] + " " + Last[b];
+        }
+
         // Deterministic name + rating per (team, slot) so a reseed reproduces the same roster.
         public static List<Staff> ForTeam(Team team)
         {
@@ -36,7 +46,7 @@ namespace Draftmaster.Data
             for (int i = 0; i < Roster.Length; i++)
             {
                 int seed = team.Id * 31 + i * 7;
-                string name = First[seed % First.Length] + " " + Last[(seed / 3) % Last.Length];
+                string name = NameFor(seed);
 
                 // Centre ratings on the team's car rating, with a small per-slot spread; clamp 35-99.
                 int spread = ((seed % 13) - 6);          // -6..+6
