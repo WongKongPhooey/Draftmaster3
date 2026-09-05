@@ -132,7 +132,7 @@ it is only replaced when the clock has moved past it.
 | **Signing session** / **hauler parade** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. Sign it and move (5 min), sign it and ask their name (10 min), pose for the photo (12 min), or wave and keep walking (2 min). The fence holds exactly as many people as signing-and-moving would clear, so speed is the whole decision: work it flat out and you reach every one of them and the sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support; stop to talk and the people you did reach are worth far more while the back of the queue never gets to the front. | Fan appeal, sponsor mood, `autographs` counter |
 | **Sponsor photo shoot** | The photographer wants hero or human, and the brand's rep wants the cap in every frame. | Sponsor mood, fans, crew morale |
 | **Hospitality Q&A / suite meet & greet** | A guest asks something and one of the answers is the line the brand paid for. The funny one is not it. | Sponsor mood — the off-message answers buy fans and press instead |
-| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x — `F11` for live timing, `T` to walk back. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
+| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x — `F11` for live timing, `E` to walk back. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
 | **Drivers meeting** | Mandatory, in the drivers' room with the field sat around you. Officials read four notes; one of them will catch somebody out at this track today. Say which. | Setup knowledge, morale |
 | **Driver introductions** | Mandatory, on the stage. Your name over the PA — decide what to give the crowd. | Fan appeal, sponsor mood |
 
@@ -241,7 +241,7 @@ Assets/Scripts/Weekend/
     WeekendMarkerGate.cs           the door at the end of a teleport
     PaddockProps.cs / PaddockPerson.cs   flat blocked-out props, and people to stand in them
   Activities/GrandstandSpectate.cs the simulated session, played beside the live world
-  Activities/GrandstandVisit.cs    the in-world seat: holds the session open at 10x, F11 timing, T back
+  Activities/GrandstandVisit.cs    the in-world seat: holds the session open at 10x, F11 timing, E back
   Activities/GrandstandCamera.cs   the pan out onto the marker's vantage, and giving the camera back
 Assets/Scripts/UI/Phone/PhoneScheduleApp.cs      read-only glance at today
 Assets/Scripts/UI/Phone/PhoneChampionshipApp.cs  the three championships and what has come in

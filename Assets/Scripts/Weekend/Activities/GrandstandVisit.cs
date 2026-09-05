@@ -34,8 +34,26 @@ public class GrandstandVisit : MonoBehaviour
     // panel with a button on it — and because F11 was the last function key nothing else had taken.
     const Key TimingKey = Key.F11;
 
+    // The way out. E is the button the player already uses for everything they do in the world — get in the
+    // car, talk to somebody, open the gate that sent them here — so getting up out of the seat is the same
+    // press. It used to be T, which is the schedule's TRAVEL THERE key: one press then did both, and the
+    // travel's wipe made this one drop its own request on the floor and leave the prompt on screen forever.
+    const Key LeaveKey = Key.E;
+
+    // How far out of the seat counts as no longer being in the stand. The viewing pocket a gate builds
+    // around its destination is 14x10 m, so anything past this is not somebody stretching their legs: it is
+    // a player who has been PUT somewhere else — travelled to the next booking, pulled into a cutscene —
+    // and a prompt about a grandstand they are not in would sit on the screen for the rest of the weekend.
+    const float LeftTheStandMetres = 25f;
+
     Vector3 _returnTo;
     float _startedAt;
+
+    // Where the player sat down, so the visit can tell when they are no longer there.
+    Vector3 _seat;
+
+    // A leave asked for but not yet taken, because the screen was mid-wipe when it was asked for.
+    bool _leaving;
 
     // The session being watched, its compressed length, and whether it has run out.
     WeekendActivity _activity;
@@ -83,7 +101,7 @@ public class GrandstandVisit : MonoBehaviour
 
         visit.OpenTheView(marker);
 
-        ControlHints.ShowSticky(HintId, "T", "Y", "Return to the pits. F11 for live timing.");
+        ControlHints.ShowSticky(HintId, "E", "Y", "Return to the pits. F11 for live timing.");
         return visit;
     }
 
@@ -130,6 +148,8 @@ public class GrandstandVisit : MonoBehaviour
                      : marker != null ? marker.TeleportPosition
                      : _returnTo;
 
+        _seat = seat;
+
         bool authored = marker != null && marker.HasCameraView;
         Vector3 view = authored ? marker.CameraViewPosition : seat;
         float zoom = marker != null ? marker.cameraZoom : 0f;
@@ -151,17 +171,48 @@ public class GrandstandVisit : MonoBehaviour
         // A moment's grace: the key that got you here should not also take you straight back out.
         if (Time.unscaledTime - _startedAt < 0.4f) return;
 
+        // Gone from the stand by some other road than the way out — travelled to the next booking, moved by
+        // a cutscene, put down somewhere else by another gate. The seat is empty either way, so stand down
+        // rather than leaving a prompt about a grandstand over the top of the paddock.
+        if (LeftTheStand()) { Close(); return; }
+
+        // A leave that arrived mid-wipe, taken as soon as the screen is free. Dropping it instead was the
+        // whole bug: the player ended up back in the pits with the stand's prompt still on screen.
+        if (_leaving)
+        {
+            if (!ScreenFade.Busy) GoBack();
+            return;
+        }
+
         TickSession();
 
         var kb = Keyboard.current;
         if (kb != null && kb[TimingKey].wasPressedThisFrame) TimingScreenUI.Ensure().Toggle();
 
-        bool leave = kb != null && kb.tKey.wasPressedThisFrame;
+        // E is the world's do-something button, so it belongs to whatever is in front of the player first:
+        // a conversation or a panel gets the press, not the seat.
+        if (NPCInteractable.AnyConversationActive || DialogueChoiceUI.IsOpen ||
+            WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return;
+
+        bool leave = kb != null && kb[LeaveKey].wasPressedThisFrame;
 
         var pad = Gamepad.current;
         if (!leave && pad != null) leave = pad.buttonNorth.wasPressedThisFrame;
 
         if (leave) Leave();
+    }
+
+    // Is the player still in the stand? Measured off where they sat down, because that is the one thing the
+    // visit knows about the place; a missing player is not an answer, so it counts as still there and the
+    // ordinary teardown handles it.
+    bool LeftTheStand()
+    {
+        var player = WeekendVenueAnchor.OnFootPlayer();
+        if (player == null) return false;
+
+        Vector3 a = player.position, b = _seat;
+        a.z = b.z = 0f;
+        return (a - b).sqrMagnitude > LeftTheStandMetres * LeftTheStandMetres;
     }
 
     // The compressed hour, counted on scaled time: the cars circulating out there run on it too, so a
@@ -180,7 +231,7 @@ public class GrandstandVisit : MonoBehaviour
             _sessionOver = true;
             ReleaseSession();
             ControlHints.Hide(HintId);
-            ControlHints.ShowSticky(OverHintId, "T", "Y", ChequeredLine());
+            ControlHints.ShowSticky(OverHintId, "E", "Y", ChequeredLine());
         }
 
         if (timing == null) return;
@@ -199,16 +250,26 @@ public class GrandstandVisit : MonoBehaviour
     }
 
     // Back through the fence, behind a wipe, exactly as the walk out here was.
+    //
+    // The prompt comes down on the press, not on the wipe: a leave asked for while another wipe is already
+    // running has to wait its turn (Update takes it when the screen is free), and the player who pressed the
+    // button should not be looking at the prompt for it in the meantime.
     public void Leave()
     {
-        if (ScreenFade.Busy) return;
-
-        var player = WeekendVenueAnchor.OnFootPlayer();
-        Vector3 to = _returnTo;
+        if (_leaving) return;
+        _leaving = true;
 
         ControlHints.Hide(HintId);
         ControlHints.Hide(OverHintId);
         if (_shot != null) { _shot.End(); _shot = null; }
+
+        if (!ScreenFade.Busy) GoBack();
+    }
+
+    void GoBack()
+    {
+        var player = WeekendVenueAnchor.OnFootPlayer();
+        Vector3 to = _returnTo;
 
         ScreenFade.Cut(() =>
         {
