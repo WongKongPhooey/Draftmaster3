@@ -331,6 +331,82 @@ public class TitleScreenWiringTests
         Assert.AreEqual(DrawnRowLabels().Count, wired.Count, "TitleScreenUI.rows holds rows the menu does not draw.");
     }
 
+    // The arrow on the selected row flashes, and it flashes because of a component on the cursor itself
+    // (IronOvalBlink). The scene cannot hold onto one — the reference does not survive a save, which is
+    // why TitleScreenUI.EnsureBlink puts one back at load — so what is checked here is the two halves the
+    // menu needs for that to land: every row has a cursor to blink, and the binder still installs the
+    // blink on it. Either half missing gives the same bug, a selection that sits there solid, and it is
+    // only visible by watching the menu in play mode.
+    [Test]
+    public void EveryMenuRowGetsAFlashingCursor()
+    {
+        var menu = Menu();
+        var installed = new List<Object>();
+        try
+        {
+            // Both builds: a row the other one draws still has to flash when it is that build's turn, and
+            // between them the two cover every row in the column.
+            foreach (bool demo in new[] { false, true })
+            {
+                ForceBuild(demo);
+
+                var drawn = new List<(string label, GameObject cursor, bool had)>();
+                var rows = menu.FindProperty("rows");
+                for (int i = 0; i < rows.arraySize; i++)
+                {
+                    var row = rows.GetArrayElementAtIndex(i);
+                    string label = row.FindPropertyRelative("label").stringValue;
+
+                    var cursor = row.FindPropertyRelative("cursor").objectReferenceValue as GameObject;
+                    Assert.IsNotNull(cursor, $"Row '{label}' has no cursor wired, so selecting it draws no arrow at all.");
+
+                    int appearsIn = row.FindPropertyRelative("appearsIn").enumValueIndex;
+                    if (appearsIn != Both && (appearsIn == DemoOnly) != demo) continue;   // the other build's row
+
+                    drawn.Add((label, cursor, cursor.GetComponent(BlinkType) != null));
+                }
+                Assert.IsNotEmpty(drawn, $"The {(demo ? "demo" : "full")} build draws no menu rows at all.");
+
+                InstallCursorBlinks(menu);
+
+                foreach (var (label, cursor, had) in drawn)
+                {
+                    var blink = cursor.GetComponent(BlinkType);
+                    Assert.IsNotNull(blink, $"The menu left the '{label}' cursor without a blink, so that row's arrow " +
+                                            "sits there solid instead of flashing.");
+                    Assert.Greater(new SerializedObject(blink).FindProperty("interval").floatValue, 0f,
+                                   $"The '{label}' cursor's blink has no interval, so it never toggles.");
+                    if (!had) installed.Add(blink);
+                }
+            }
+        }
+        finally
+        {
+            ForceBuild(demo: false);
+            foreach (var component in installed) Object.DestroyImmediate(component);
+        }
+    }
+
+    // IronOvalBlink, named rather than referenced: this assembly cannot see Assembly-CSharp.
+    const string BlinkType = "IronOvalBlink";
+
+    // What Start() does about the blink, driven the way WalkOrder drives RebuildOrder — through the binder
+    // itself, so the test fails when the menu stops installing them rather than when the scene stops
+    // carrying them, which it cannot (see TitleScreenUI.InstallCursorBlinks).
+    static void InstallCursorBlinks(SerializedObject menu)
+    {
+        var binder = menu.targetObject;
+
+        var rebuild = binder.GetType().GetMethod("RebuildOrder", Flags);
+        Assert.IsNotNull(rebuild, "TitleScreenUI.RebuildOrder is gone; nothing decides which rows this build draws.");
+        rebuild.Invoke(binder, null);
+
+        var install = binder.GetType().GetMethod("InstallCursorBlinks", Flags);
+        Assert.IsNotNull(install, "TitleScreenUI.InstallCursorBlinks is gone — nothing puts the flash on the " +
+                                  "selection arrow, so the menu opens on a still arrow whatever the scene holds.");
+        install.Invoke(binder, null);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;

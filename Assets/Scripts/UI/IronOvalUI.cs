@@ -672,6 +672,12 @@ public class IronOvalPressOffset : MonoBehaviour, IPointerDownHandler, IPointerU
 
 // Hard on/off blink for the cursor and the advance caret. Steps, never a fade — a pixel cursor that
 // cross-dissolves reads as a bug.
+//
+// ADD IT AT RUNTIME, don't rely on a saved one. This class lives inside IronOvalUI.cs rather than a file
+// of its own, and a reference to it saved into a scene does not resolve when that scene is next opened:
+// the component writes out, and on the way back in it is quietly not there. That is how the title menu
+// ended up with five solid arrows and two flashing ones. Every caller here builds it in code
+// (IronOvalUI.Cursor, the dialogue caret) and TitleScreenUI.InstallCursorBlinks puts one back at load.
 public class IronOvalBlink : MonoBehaviour
 {
     [Tooltip("Seconds on, then the same off. The sheet asks for 0.45s for the selection cursor.")]
@@ -681,6 +687,12 @@ public class IronOvalBlink : MonoBehaviour
     float _t;
 
     void Awake() { _graphic = GetComponent<Graphic>(); }
+
+    // A cursor that is shown starts its beat over, visible. Without this it picks up whatever phase the
+    // last row left behind, so moving the selection can land the arrow on the dark half of the blink and
+    // the row reads as unselected for a moment.
+    void OnEnable() { _t = 0f; if (_graphic != null) _graphic.enabled = true; }
+
     void OnDisable() { if (_graphic != null) _graphic.enabled = true; }
 
     void Update()

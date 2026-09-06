@@ -112,11 +112,34 @@ public class TitleScreenUI : MonoBehaviour
             if (row.shown) HookPointer(row, i);
         }
 
+        InstallCursorBlinks();
+
         CompactRows();
         DrawContinueSubtitle();
         _index = FirstShownFrom(startIndex);
         SetStatus("");
         Redraw();
+    }
+
+    // The selected row's arrow flashes; a solid one reads as a screenshot of a menu rather than a menu.
+    //
+    // The flash is a component on the cursor itself (IronOvalBlink), and TitleScreen.unity had it on two
+    // rows out of seven — so the menu opened on a still arrow and only started blinking once the arrow
+    // keys walked the selection down onto one of the two rows that still had one. Putting it back in the
+    // scene does not stick: IronOvalBlink is a second class inside IronOvalUI.cs, and a reference to one
+    // of those written into a scene does not resolve when the scene is next opened, so the component
+    // saves and then is simply not there (the same trap that leaves a missing script behind a cloned
+    // row — see TitleScreenDemoRows).
+    //
+    // So the cursor is given its blink at load rather than trusted to have kept one. Which row shows a
+    // cursor is still Redraw's business; this only makes sure that whichever one does, flashes.
+    void InstallCursorBlinks()
+    {
+        foreach (var row in rows)
+        {
+            if (row == null || !row.shown || row.cursor == null) continue;
+            if (row.cursor.GetComponent<IronOvalBlink>() == null) row.cursor.AddComponent<IronOvalBlink>();
+        }
     }
 
     bool ShownInThisBuild(Row row)
