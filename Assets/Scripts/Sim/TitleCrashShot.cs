@@ -287,48 +287,71 @@ namespace Draftmaster.Sim
 
         // ------------------------------------------------------------------ the field going past first
 
-        // The cars that are only passing through: three to five of them, in two or three lanes, crossing the
-        // slot at racing speed and clear of it before the first car of the accident is due.
+        // The cars that are only passing through: six to ten of them, three abreast, crossing the slot at
+        // racing speed and clear of it before the first car of the accident is due.
         //
         // They are drawn against the lead-in beat's own 0..1 clock rather than choreography time, because
         // they are the one beat that is NOT slowed down — the whole reason they are there is to be the speed
         // the crash is about to be slow against. Lanes are dealt round-robin, so two cars in the same lane
-        // are always a couple of stagger steps apart and a pack can never run into its own back marker;
-        // cars in different lanes are free to go past side by side, which is what makes it a pack.
+        // are always three stagger steps apart and a pack can never run into its own back marker; cars in
+        // different lanes are free to go past side by side, which is what makes it a pack.
+        //
+        // It is ONE pack, not a queue. The stagger used to be spread across the whole beat, which put a
+        // single car in the slot at a time and read as light traffic rather than as a field — so the gap is
+        // authored in PIXELS now: `PackGapPx` is how far apart two cars in the same lane are nose to tail,
+        // and the stagger is whatever fraction of the beat covers that distance at the pace the pack is
+        // running. Everything runs at one pace for the same reason: a lone car six per cent quicker than the
+        // one in front of it closes the whole gap in half a screen, and nothing here is allowed to touch.
+        //
+        // The pack is hung off the END of the beat rather than the start, so the last car of it leaves the
+        // bottom of the frame at the same moment it always did and the crash still follows straight on its
+        // heels. What used to be a car every third of a beat is now an empty slot, then the field.
         static TitleCrash.PassPlan[] DrawTraffic(System.Random rng)
         {
-            int n = 3 + rng.Next(3);
-            int lanes = n >= 4 ? 3 : 2;
+            int n = 6 + rng.Next(5);
+            const int Lanes = 3;
 
-            // How long one car takes to cross, as a fraction of the beat. Near enough the same for all of
-            // them, because a field at speed is a field: what varies is which lane and when, not the pace.
+            // How long one car takes to cross, as a fraction of the beat — one pace for the whole pack.
             float span = Range(rng, 0.20f, 0.28f);
-            float step = n > 1 ? (1f - span) / (n - 1) : 0f;
 
-            float laneLeft = TitleCrash.ColumnRightPx + TitleCrash.CarWidthPx * 0.5f + 22f;
-            float laneRight = TitleCrash.CanvasWidth - TitleCrash.CarWidthPx * 0.5f - 22f;
+            // Nose-to-tail distance between two cars in the same lane, and the stagger that produces it. A
+            // car crosses `Run` px in `span` of the beat, so `Lanes` stagger steps have to cover the gap.
+            const float Run = TitleCrash.CanvasHeight + TitleCrash.PassMarginPx * 2f;
+            float gapPx = Range(rng, 205f, 245f);
+            float step = gapPx * span / (Run * Lanes);
+
+            // How ragged the ranks are. A quarter of a step either way is enough that the pack isn't drawn
+            // on graph paper and small enough that it can never close a same-lane gap to a contact.
+            float wobble = step * 0.25f;
+
+            float laneLeft = TitleCrash.ColumnRightPx + TitleCrash.CarWidthPx * 0.5f + 20f;
+            float laneRight = TitleCrash.CanvasWidth - TitleCrash.CarWidthPx * 0.5f - 20f;
+
+            // Not on rails: the pack moves across the slot on the way down, which is what stops a field going
+            // past reading as columns scrolling. One weave for all of them — packed this tightly, cars in
+            // neighbouring lanes are alongside each other, and weaving individually would put them into each
+            // other's doors.
+            float weave = Range(rng, -10f, 10f);
+
+            // The back marker sets off here; everything else is dealt forwards from it.
+            float tail = 1f - span - wobble;
 
             var passes = new TitleCrash.PassPlan[n];
             for (int i = 0; i < n; i++)
             {
-                int lane = i % lanes;
-                float x = Mathf.Lerp(laneLeft, laneRight, lanes > 1 ? lane / (float)(lanes - 1) : 0.5f)
-                          + Range(rng, -9f, 9f);
+                int lane = i % Lanes;
+                float x = Mathf.Lerp(laneLeft, laneRight, lane / (float)(Lanes - 1)) + Range(rng, -3f, 3f);
 
-                // Not on rails: it moves across its lane on the way down, which is what stops a field going
-                // past reading as columns scrolling.
-                float across = Range(rng, -26f, 26f);
                 var start = new Vector2(x, TitleCrash.CanvasHeight + TitleCrash.PassMarginPx);
-                var end = new Vector2(Mathf.Clamp(x + across, laneLeft, laneRight), -TitleCrash.PassMarginPx);
+                var end = new Vector2(x + weave, -TitleCrash.PassMarginPx);
 
-                float lead = span * Range(rng, 0.94f, 1.06f);
                 passes[i] = new TitleCrash.PassPlan
                 {
                     startPos = start,
                     endPos = end,
                     rotation = SpriteAngle((end - start).normalized),
-                    atLead = Mathf.Clamp(i * step + Range(rng, -0.035f, 0.035f), 0f, 1f - lead),
-                    lead = lead,
+                    atLead = Mathf.Clamp(tail - (n - 1 - i) * step + Range(rng, -wobble, wobble), 0f, 1f - span),
+                    lead = span,
                     depth = i,
                 };
             }
@@ -624,12 +647,19 @@ namespace Draftmaster.Sim
                 isSlider = new[] { false, false, true, false },
                 heroIndex = 3,
                 bitePx = 26f,
+                // Eight cars, three abreast, the same tight pack DrawTraffic deals: 0.03 of the beat between
+                // one car and the next, so the three in a lane are 225px nose to tail, and the back marker
+                // still leaves the frame as the beat ends.
                 traffic = new[]
                 {
-                    Pass(372f, 366f, 0.00f, 0.24f, 0),
-                    Pass(486f, 494f, 0.21f, 0.24f, 1),
-                    Pass(598f, 590f, 0.41f, 0.24f, 2),
-                    Pass(540f, 532f, 0.63f, 0.24f, 3),
+                    Pass(384f, 392f, 0.55f, 0.24f, 0),
+                    Pass(483f, 491f, 0.58f, 0.24f, 1),
+                    Pass(582f, 590f, 0.61f, 0.24f, 2),
+                    Pass(384f, 392f, 0.64f, 0.24f, 3),
+                    Pass(483f, 491f, 0.67f, 0.24f, 4),
+                    Pass(582f, 590f, 0.70f, 0.24f, 5),
+                    Pass(384f, 392f, 0.73f, 0.24f, 6),
+                    Pass(483f, 491f, 0.76f, 0.24f, 7),
                 },
                 impacts = new[]
                 {

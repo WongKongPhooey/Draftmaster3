@@ -368,6 +368,48 @@ public class TitleCrashTests
         Assert.Greater(counts.Count, 1, "Exactly the same number of cars goes past in every shot.");
     }
 
+    [Test]
+    public void TheFieldGoesPastAsOnePackRatherThanAQueue()
+    {
+        // The lead-in is supposed to be a FIELD going past, which means the cars have to be in the slot
+        // together. Dealt evenly across the whole beat they arrive one at a time with clean air between them
+        // — light traffic, not a pack — so this pins both halves of what makes it one: enough cars, and all
+        // of them close enough together to share the frame. The gaps themselves are held open by the
+        // no-contact test above; this one stops them being opened any further.
+        const int Steps = 240;
+
+        foreach (var shot in Shots())
+        {
+            Assert.GreaterOrEqual(shot.TrafficCount, 6,
+                                  "Too few cars go past for the lead-in to read as a field.");
+
+            float first = float.MaxValue;
+            float last = float.MinValue;
+            for (int i = 0; i < shot.TrafficCount; i++)
+            {
+                first = Mathf.Min(first, shot.traffic[i].atLead);
+                last = Mathf.Max(last, shot.traffic[i].atLead + shot.traffic[i].lead);
+            }
+
+            Assert.LessOrEqual(last - first, 0.7f,
+                               $"The field is strung out over {last - first:0.00} of the lead-in beat — that " +
+                               "is a queue of cars arriving one at a time, not a pack going past.");
+
+            int busiest = 0;
+            for (int step = 0; step <= Steps; step++)
+            {
+                float lead = step / (float)Steps;
+                int inFlight = 0;
+                for (int i = 0; i < shot.TrafficCount; i++)
+                    if (TitleCrash.PassAt(shot.traffic[i], lead).inFlight) inFlight++;
+                busiest = Mathf.Max(busiest, inFlight);
+            }
+
+            Assert.GreaterOrEqual(busiest, 5,
+                                  $"Only {busiest} cars are ever in the slot at once — the field never packs up.");
+        }
+    }
+
     static TitleCrash.CarPose AsCar(TitleCrash.PassPose pose)
     {
         return new TitleCrash.CarPose { position = pose.position, rotation = pose.rotation, progress = 1f };
