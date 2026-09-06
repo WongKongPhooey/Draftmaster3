@@ -28,7 +28,7 @@ public class PopupGarageRig : MonoBehaviour
     [Header("Identity")]
     [Tooltip("Car number this garage belongs to. Drives the number decal and the colours.")]
     public int carNumber;
-    [Tooltip("Team name lettered on the canopy edge.")]
+    [Tooltip("Team this garage belongs to. Identity only — nothing is lettered on the awning.")]
     public string teamName = "";
     [Tooltip("Driver in this garage — used for the object name and by anything looking the rig up.")]
     public string driverName = "";
@@ -79,8 +79,6 @@ public class PopupGarageRig : MonoBehaviour
     public string numberSpritePrefix = "cup20num";
     [Tooltip("Height (m) of the painted number. 16x16 art at 12.8 px/m, so multiples of 1.25m keep its pixels square.")]
     public float numberSize = 2.5f;
-    [Tooltip("Letter the team's name across the canopy edge. Off = an unmarked awning.")]
-    public bool showTeamName = true;
 
     // Which way the canopy (and so the door) faces, as a clean +1 / -1.
     public int Side => canopySide < 0 ? -1 : 1;
@@ -175,22 +173,6 @@ public class PopupGarageRig : MonoBehaviour
         Block(canopy.transform, "PostB", new Vector2(outPost, -py), postSize, -0.1f, postColour, sortingOrder + 5);
         Block(canopy.transform, "PostC", new Vector2(inPost, py), postSize, -0.1f, postColour, sortingOrder + 5);
         Block(canopy.transform, "PostD", new Vector2(inPost, -py), postSize, -0.1f, postColour, sortingOrder + 5);
-
-        if (!showTeamName || string.IsNullOrEmpty(teamName)) return;
-
-        // Lettered along the outer edge and — like every other sign in the paddock — kept the right way
-        // up in the world rather than inheriting whatever rotation the rig parked at.
-        string label = PlayerDriver.ShortTeamName(teamName);
-        if (string.IsNullOrEmpty(label)) return;
-
-        var sign = PaddockProps.Sign(canopy.transform, label, new Vector2(outerX, 0f),
-                                     Mathf.Min(canopyLength * 0.8f, 5f), Color.white, -0.15f);
-        var signRenderer = sign.GetComponent<MeshRenderer>();
-        if (signRenderer != null)
-        {
-            signRenderer.sortingLayerName = sortingLayerName;
-            signRenderer.sortingOrder = sortingOrder + 6;
-        }
     }
 
     // The car itself, in its own paint, and solid: seen from above, walking over the roof of a race car is

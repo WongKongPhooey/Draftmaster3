@@ -64,7 +64,7 @@ public class PopupGarageTests
     }
 
     // A rig configured the way PopupGarageLot configures one, parked at `position` facing `rotation`.
-    static Component Rig(GameObject go, int canopySide, bool carAtHome, bool teamSign = false, string carset = "")
+    static Component Rig(GameObject go, int canopySide, bool carAtHome, string carset = "")
     {
         Assert.IsNotNull(RigType, "PopupGarageRig is missing from Assembly-CSharp.");
         var rig = go.AddComponent(RigType);
@@ -74,7 +74,6 @@ public class PopupGarageTests
         SetField(rig, "carset", carset);        // "" = no livery for this number: the block fallback, deterministically
         SetField(rig, "canopySide", canopySide);
         SetField(rig, "carAtHome", carAtHome);
-        SetField(rig, "showTeamName", teamSign);
         SetField(rig, "bodyWidth", BodyWidth);
         SetField(rig, "bodyLength", BodyLength);
         SetField(rig, "canopyWidth", CanopyWidth);
@@ -419,16 +418,19 @@ public class PopupGarageTests
         finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
     }
 
+    // The canopies used to carry the team's name as a world-space TextMesh stood over the awning. Read
+    // from overhead it never sat on the fabric — it hung in the air above a row of otherwise solid props,
+    // and a garage row full of them was a wall of floating text. The colours and the roof number say whose
+    // garage it is; the lettering is gone and must not come back.
     [Test]
-    public void TheTeamNameIsLetteredOnTheCanopy()
+    public void TheCanopyCarriesNoFloatingLabel()
     {
         var go = new GameObject("Garage");
         try
         {
-            Rig(go, 1, carAtHome: true, teamSign: true);
+            Rig(go, 1, carAtHome: true);
             var sign = go.GetComponentInChildren<TextMesh>(true);
-            Assert.IsNotNull(sign, "the canopy carries no team name, so a row of garages says nothing about whose it is.");
-            StringAssert.Contains("Test", sign.text);
+            Assert.IsNull(sign, "a garage is lettered again — the floating team name is back over the canopy.");
         }
         finally { Object.DestroyImmediate(go); }
     }
@@ -796,7 +798,7 @@ public class PopupGarageTests
         try
         {
             painted.transform.rotation = Quaternion.Euler(0f, 0f, 37f);
-            var rig = Rig(painted, 1, carAtHome: true, teamSign: false, carset: "cup26");
+            var rig = Rig(painted, 1, carAtHome: true, carset: "cup26");
             Vector3 length = LengthAxisOf((Transform)Prop(rig, "ParkedCar"));
 
             Assert.AreEqual(CarLength, length.magnitude, 0.01f, "the painted car is not as long as the car.");

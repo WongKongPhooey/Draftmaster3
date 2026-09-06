@@ -68,8 +68,6 @@ public class PopupGarageLot : MonoBehaviour
     public string numberSpritePrefix = "cup20num";
     [Tooltip("Height (m) of the painted number.")]
     public float numberSize = 2.5f;
-    [Tooltip("Letter each team's name along its canopy edge.")]
-    public bool showTeamNames = true;
 
     readonly List<PopupGarageRig> _rigs = new();
     public IReadOnlyList<PopupGarageRig> Rigs => _rigs;
@@ -272,7 +270,6 @@ public class PopupGarageLot : MonoBehaviour
         rig.sortingOrder = sortingOrder;
         rig.numberSpritePrefix = numberSpritePrefix;
         rig.numberSize = numberSize;
-        rig.showTeamName = showTeamNames;
         CarColours.For(carsetPrefix, slot.carNumber, slot.teamName, out var primary, out var secondary);
         rig.primary = primary;
         rig.secondary = secondary;
