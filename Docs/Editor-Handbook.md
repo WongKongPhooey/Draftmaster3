@@ -20,15 +20,23 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
      │                                                    ├─ pause (Esc) ▸ QUIT TO TITLE ──▶ TitleScreen
      │                                                    └─ RV interior ▸ laptop ──┐
      │                                                                              ▼
-     └──TEAM FACTORY──▶  TeamGarage  ─ laptop ─────────────────────────────▶  GarageScreen
-                             │                                                    │
-                             └─ EXIT door ──▶ TitleScreen        BACK ◀───────────┘
-                                                            (returns to whichever scene opened it)
+     ├──TEAM FACTORY──▶  TeamGarage  ─ laptop ─────────────────────────────▶  GarageScreen
+     │                       │                                                    │
+     │                       └─ EXIT door ──▶ TitleScreen        BACK ◀───────────┘
+     │                                                   (returns to whichever scene opened it)
+     │
+     └──OPTIONS──▶  Options   (the player's name)  ── BACK / Esc ──▶  TitleScreen
 ```
 
 * **NEW SEASON** starts a fresh weekend at `TitleScreenUI.newSeasonTrackId` (WatkinsGlen).
   **CONTINUE** resumes the saved `TrackSelection`; **EXHIBITION** skips practice and qualifying. Both
   fall back to a track that actually has a layout, so neither can load a race scene with no road.
+* **OPTIONS** opens `Assets/Scenes/Options.unity` (`OptionsUI`), which is where the player sets their
+  first and last name. Both halves are saved, and so is the joined name in `career.drivername` — the one
+  key the garage plate, the timing tower and every `{playerfirst}` an NPC speaks already read, so nothing
+  else had to learn about the screen. The screen draws itself at runtime, like SINGLE RACE; rebuild the
+  scene with `Draftmaster > UI > Build Options Scene` and re-wire the title row with
+  `Draftmaster > UI > Wire OPTIONS Row To Options Screen`. Add a setting by adding a `MenuRow`.
 * **The garage sheet is not on the menu.** It is opened from a `LaptopInteractable` — one on the dinette
   table in the RV, one on the desk in the team factory. `GarageScreenLoader` remembers which scene
   opened it so BACK returns there; opened cold it falls back to the title.
@@ -52,7 +60,8 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
   subsystem adds one. Settings, HUD toggles and the signed-in account survive; a new subsystem's keys are
   cleared without anyone remembering to add them.
 * Build list order is load-bearing: `TitleScreen`, `RaceScene`, `GarageScreen`, `TeamGarage`, `DemoMenu`
-  (multiplayer lobby). A destination missing from that list makes its title row draw disabled.
+  (multiplayer lobby), `SingleRace`, `Options`. A destination missing from that list makes its title row
+  draw disabled.
   `Assets/Tests/Editor/TitleScreenWiringTests.cs` checks the whole chain.
 * **`DemoMenu` is currently unreachable** — nothing routes to the multiplayer lobby since the title screen
   became the boot scene. Either give it a title row or uncheck it in the build settings; until then it is
@@ -84,6 +93,7 @@ running your coroutine — the run does not fail, it hangs in play mode forever.
 | One track's road, scenery, paddock, its own NPCs | that track's package prefab, `Resources/TrackPackages/<id>.prefab` — open `RaceScene`, then `Draftmaster > Tracks > Edit Selected Package In Context (Race Scene)` |
 | Team garage on-foot hub ("Team Factory") | `Assets/Menus/TeamGarage.unity` (built by `Tools > Draftmaster > Build Team Garage Scene`) |
 | The title menu | `Assets/Scenes/TitleScreen.unity` (built by `Draftmaster > Art > Build Title Screen Scene`) |
+| The options screen (the player's name) | nothing to open — it is all code, `Assets/Scripts/UI/OptionsUI.cs`. The scene is a camera and one component (`Draftmaster > UI > Build Options Scene`). |
 | The car / driver sheet | `Assets/Scenes/GarageScreen.unity` (built by `Draftmaster > Art > Build Garage Screen Scene`) |
 | Judging UI widgets | `Assets/Scenes/IronOvalShowcase.unity` (`Draftmaster > Art > Build Iron Oval Showcase Scene`) |
 
@@ -606,7 +616,10 @@ Preview / Clear Dialogue Bubble.
 
 ### `Draftmaster > UI`
 Build Demo UI Prefabs · Build Car Setup Panel Prefab · Build Control Hint Prefab ·
-Add Pit Limiter Chip To Speedometer · Build Speech Box Texture (+ Force Rebuild).
+Add Pit Limiter Chip To Speedometer · Build Speech Box Texture (+ Force Rebuild) ·
+Build Single Race Scene · Build Options Scene · Add SINGLE RACE Row To Title Screen ·
+Wire MULTIPLAYER Row To Co-op Join · Wire OPTIONS Row To Options Screen ·
+Rename CONTINUE Row To CAREER · Set Up Demo Rows On Title Screen.
 
 ### `Draftmaster > UI`
 Retarget Fonts In Prefabs (points every authored TMP/legacy label at the theme's faces and snaps its size

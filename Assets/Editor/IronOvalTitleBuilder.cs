@@ -194,7 +194,9 @@ public static class IronOvalTitleBuilder
             ("SINGLE RACE",  TitleScreenUI.Command.LoadScene,  "SingleRace"),
             ("EXHIBITION",   TitleScreenUI.Command.Exhibition, ""),
             ("TEAM FACTORY", TitleScreenUI.Command.LoadScene,  "TeamGarage"),
-            ("OPTIONS",      TitleScreenUI.Command.NotWired,   ""),
+            // OPTIONS opens a screen of its own (Options.unity / OptionsUI), which is where the player's
+            // name is set — the one thing the whole game calls them by.
+            ("OPTIONS",      TitleScreenUI.Command.LoadScene,  "Options"),
         };
 
         float rowY = 0f;

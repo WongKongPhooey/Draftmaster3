@@ -15,6 +15,20 @@ public static class PlayerDriver
     public const string NameKey = "career.drivername";
     public const string NumberKey = "career.carnumber";
 
+    // The same name, kept in halves as well as whole.
+    //
+    // `career.drivername` stays the one thing every reader looks at — the garage sheet, the timing screen,
+    // the dialogue tokens — because splitting a full name is a guess and re-joining two halves is not. The
+    // two keys below are only there so the options screen can hand back exactly what was typed into its two
+    // boxes: "Van Der Berg" is a surname, and a save that only remembers "Josh Van Der Berg" cannot know
+    // that. They are a cache of the split, never the truth.
+    public const string FirstNameKey = "career.driverfirst";
+    public const string LastNameKey = "career.driverlast";
+
+    // The longest either half may be. The name is drawn in bitmap faces into fixed columns (the garage
+    // plate, the timing tower), and a name that overruns is cut mid-word rather than wrapped.
+    public const int MaxNameHalfLength = 16;
+
     // The number the demo car wears when a save has never picked one.
     public const int DefaultCarNumber = 8;
 
@@ -42,6 +56,83 @@ public static class PlayerDriver
             return string.IsNullOrWhiteSpace(name) || name == TeamSwitchController.kPlaceholderName ? "" : name.Trim();
         }
     }
+
+    // The player's first and last name, "" when they have never been named.
+    public static string FirstName { get { SplitCareerName(out var first, out _); return first; } }
+    public static string LastName { get { SplitCareerName(out _, out var last); return last; } }
+
+    // How CareerName divides in two. The cached halves are used only when they still add back up to the
+    // full name — SINGLE RACE writes a chosen driver's name straight into NameKey and knows nothing about
+    // the halves, so anything else would show the previous player's first name against the new full one.
+    public static void SplitCareerName(out string first, out string last)
+    {
+        string full = CareerName;
+        string cachedFirst = PlayerPrefs.GetString(FirstNameKey, "").Trim();
+        string cachedLast = PlayerPrefs.GetString(LastNameKey, "").Trim();
+
+        if (Join(cachedFirst, cachedLast) == full && full.Length > 0)
+        {
+            first = cachedFirst;
+            last = cachedLast;
+            return;
+        }
+
+        SplitFullName(full, out first, out last);
+    }
+
+    // "Kyle Larson" -> "Kyle" + "Larson"; "Ricky Stenhouse Jr" -> "Ricky" + "Stenhouse Jr". The first word
+    // is the first name and everything after it is the surname, which is the only split a single string
+    // supports — the halves above exist so a name the player typed does not have to survive this.
+    public static void SplitFullName(string full, out string first, out string last)
+    {
+        first = last = "";
+        if (string.IsNullOrWhiteSpace(full)) return;
+
+        string trimmed = full.Trim();
+        int space = trimmed.IndexOf(' ');
+        if (space < 0) { first = trimmed; return; }
+
+        first = trimmed.Substring(0, space);
+        last = trimmed.Substring(space + 1).Trim();
+    }
+
+    // Name the player. Writes the halves AND the full name, so every existing reader — which all read the
+    // full name — sees the change without knowing this screen exists. Clearing both halves un-names them
+    // rather than leaving an empty string behind that reads as a name nobody typed.
+    public static void SetCareerName(string first, string last)
+    {
+        first = CleanNameHalf(first);
+        last = CleanNameHalf(last);
+        string full = Join(first, last);
+
+        PlayerPrefs.SetString(FirstNameKey, first);
+        PlayerPrefs.SetString(LastNameKey, last);
+        if (full.Length > 0) PlayerPrefs.SetString(NameKey, full);
+        else PlayerPrefs.DeleteKey(NameKey);
+        PlayerPrefs.Save();
+    }
+
+    // Trim, collapse runs of whitespace, and cut to the column width. Nothing here rejects a name: a
+    // player who wants to be called "X" is called "X".
+    public static string CleanNameHalf(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "";
+
+        var sb = new System.Text.StringBuilder(value.Length);
+        bool lastWasSpace = true;                       // leading whitespace is dropped
+        foreach (char c in value.Trim())
+        {
+            bool space = char.IsWhiteSpace(c);
+            if (space && lastWasSpace) continue;
+            sb.Append(space ? ' ' : c);
+            lastWasSpace = space;
+        }
+
+        string cleaned = sb.ToString().Trim();
+        return cleaned.Length > MaxNameHalfLength ? cleaned.Substring(0, MaxNameHalfLength).Trim() : cleaned;
+    }
+
+    static string Join(string first, string last) => ((first ?? "") + " " + (last ?? "")).Trim();
 
     // The Drivers row behind the player's ride. Prefers the number (the roster pins one driver per
     // number, and RosterLookup answers from the code roster when the database hasn't opened yet — which
