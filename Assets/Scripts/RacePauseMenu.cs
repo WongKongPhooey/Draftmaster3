@@ -106,6 +106,14 @@ public class RacePauseMenu : MonoBehaviour
         // Walking out of a race is the closest thing this game has to closing a save file, so it is dated:
         // the title screen the player lands on says where they were and when, under CONTINUE.
         CareerSave.Stamp();
+
+        // Quitting a career ends the co-op session it was being played in. The launcher and its
+        // NetworkManager are DontDestroyOnLoad, so without this the host walks out of the weekend and
+        // arrives at the title screen STILL hosting: GameSession.CurrentMode is CoopCareer, the old join
+        // code is still live, and pressing MULTIPLAYER cannot join anyone because NGO refuses to start a
+        // client on a NetworkManager that is already a server. Leave() tears all of that down before the
+        // scene load, and is harmless when there was never a session.
+        if (NetworkLauncher.Instance != null) NetworkLauncher.Instance.Leave();
         if (Application.CanStreamedLevelBeLoaded(titleSceneName)) SceneManager.LoadScene(titleSceneName);
         else SceneManager.LoadScene(0);   // the title is the first scene in the build list
     }

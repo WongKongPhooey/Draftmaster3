@@ -18,6 +18,11 @@ public class CoopJoinPanel : MonoBehaviour
     string _status = "";
     bool _joining;
 
+    // The frame this panel appeared on. The keypress that opened it — ENTER, or E on the menu's own
+    // confirm — is still down when the panel's first Update runs, so without this the panel opens and
+    // immediately joins on an empty code, or types that E as the first character of the code.
+    int _openedFrame = -1;
+
     public static void Open()
     {
         if (IsOpen) return;
@@ -35,6 +40,7 @@ public class CoopJoinPanel : MonoBehaviour
     void OnEnable()
     {
         IsOpen = true;
+        _openedFrame = Time.frameCount;
         if (Keyboard.current != null) Keyboard.current.onTextInput += OnTextInput;
     }
 
@@ -68,6 +74,8 @@ public class CoopJoinPanel : MonoBehaviour
     void OnTextInput(char c)
     {
         if (_joining) return;
+        if (Time.frameCount == _openedFrame) return;   // the keypress that opened us is not code
+
         if (!char.IsLetterOrDigit(c)) return;      // join codes are alphanumeric
         if (_code.Length >= 8) return;
         _code += char.ToUpperInvariant(c);
@@ -77,6 +85,7 @@ public class CoopJoinPanel : MonoBehaviour
     {
         var kb = Keyboard.current;
         if (kb == null) return;
+        if (Time.frameCount == _openedFrame) return;
 
         if (kb.escapeKey.wasPressedThisFrame) { Destroy(gameObject); return; }
         if (kb.backspaceKey.wasPressedThisFrame && _code.Length > 0 && !_joining)

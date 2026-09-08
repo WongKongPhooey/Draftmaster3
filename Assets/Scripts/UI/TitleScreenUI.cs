@@ -207,9 +207,17 @@ public class TitleScreenUI : MonoBehaviour
         return _order != null && _order.Length > 0 ? _order[0] : index;
     }
 
+    // The menu is not the only thing on screen. CoopJoinPanel opens OVER the title screen and takes a
+    // typed join code, and this menu walks on W/S and confirms on E/SPACE/ENTER — so a code with an S in
+    // it moved the selection off MULTIPLAYER and the next E confirmed whatever it had landed on, which is
+    // how typing a join code started a career of your own. The panel draws in IMGUI, which does not block
+    // uGUI raycasts either, so the hover and click listeners have to stand down as well.
+    static bool MenuInputBlocked => CoopJoinPanel.IsOpen;
+
     void Update()
     {
         if (_loading) return;
+        if (MenuInputBlocked) return;
 
         var kb = Keyboard.current;
         if (kb != null)
@@ -274,6 +282,7 @@ public class TitleScreenUI : MonoBehaviour
 
     void Select(int index)
     {
+        if (MenuInputBlocked) return;
         if (index == _index || index < 0 || index >= rows.Count) return;
         if (!rows[index].shown) return;
         _index = index;
@@ -282,6 +291,7 @@ public class TitleScreenUI : MonoBehaviour
 
     void Confirm()
     {
+        if (MenuInputBlocked) return;
         if (_index < 0 || _index >= rows.Count) return;
         var row = rows[_index];
         if (!row.shown) return;

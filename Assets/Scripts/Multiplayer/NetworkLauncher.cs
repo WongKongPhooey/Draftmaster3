@@ -205,6 +205,15 @@ public class NetworkLauncher : MonoBehaviour
         Busy = true;
         try
         {
+            // Your own session has to go first. Hosting and joining are the same NetworkManager, and NGO
+            // will not start a client on one that is already a server — so a player who opened their career
+            // to a friend and then went looking for someone else's could never actually get in.
+            if (InSession)
+            {
+                SetStatus("Closing your own session…");
+                await LeaveSessionAsync();
+            }
+
             await EnsureServicesAsync();
             SetStatus("Joining session…");
             GameSession.CurrentMode = GameSession.Mode.Multiplayer;
@@ -313,16 +322,35 @@ public class NetworkLauncher : MonoBehaviour
         RegisterPrefab(nm, coopFieldPrefab);
     }
 
-    public async void Leave()
+    public async void Leave() => await LeaveSessionAsync();
+
+    // Stop being a host or a client, and stop calling ourselves co-op.
+    //
+    // The order matters. Everything a caller can observe — the session mode, NGO listening, Coop's state —
+    // is torn down SYNCHRONOUSLY, before the first await; only the Relay-side goodbye is allowed to finish
+    // in its own time. Leaving it the other way round meant a caller that walked out of a career and loaded
+    // the next scene on the following line arrived with GameSession.CurrentMode still CoopCareer and the
+    // NetworkManager still hosting, so the title screen was, in the game's own terms, a co-op career hosted
+    // by the player — and nothing there could join anybody, because NGO will not start a client on a
+    // NetworkManager that is already a server.
+    async Task LeaveSessionAsync()
     {
-        try { if (Session != null) await Session.LeaveAsync(); }
-        catch (Exception e) { Debug.LogException(e); }
+        var leaving = Session;
         Session = null;
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             NetworkManager.Singleton.Shutdown();
         Coop.Reset();
         GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
+
+        try { if (leaving != null) await leaving.LeaveAsync(); }
+        catch (Exception e) { Debug.LogException(e); }
     }
+
+    // Is there a session of our own still up? Either half counts: the UGS session object, or NGO still
+    // listening after one.
+    public bool InSession => Session != null
+                             || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening);
 
 #if UNITY_EDITOR
     // Auto-wire the authored overlay prefab so the scene/build carries the reference with no manual dragging.
