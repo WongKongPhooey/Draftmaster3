@@ -26,6 +26,15 @@ public class RacePauseMenu : MonoBehaviour
     Vector2 _missionScroll;
     GUIStyle _title, _toggle;
 
+    // The co-op row's memory of the attempt it is watching: whether the launcher was busy last frame, and
+    // until when the row should be reporting that the last attempt failed.
+    bool _coopWasBusy;
+    float _coopFailedUntil;
+
+    // How long "COULDN'T OPEN" stays on the row before it goes back to offering. Long enough to be read
+    // on the way back from a several-second wait, short enough not to outlive the player's next try.
+    const float FailureSeconds = 8f;
+
     // What the board was told to do this frame, settled once every layout scope has closed.
     //
     // Accepting or turning in from the board changes what the board draws — a ReadyToTurnIn row carries a
@@ -60,6 +69,8 @@ public class RacePauseMenu : MonoBehaviour
 
     void Update()
     {
+        TrackCoopAttempt();
+
         _pollTimer -= Time.unscaledDeltaTime;
         if (_pollTimer <= 0f)
         {
@@ -188,45 +199,101 @@ public class RacePauseMenu : MonoBehaviour
         if (_showMissions) DrawMissions(x + w + PixelGUI.Px(6f), y);
     }
 
-    // One row, three states: not hosting, waiting for someone, someone here. The join code is the whole
-    // point of the middle state — it is what the host reads out to their friend.
+    // What the co-op row says, given the state around it. Split out of the drawing so the order of the
+    // states is a rule that can be asserted rather than a shape buried in an IMGUI pass.
+    //
+    // `busy` comes first deliberately: it is the only one of these that is true the instant the player
+    // clicks, and the click is the thing the row has to answer.
+    public enum CoopRow { Offer, Retry, Opening, Guest, GuestConnected, Code }
+
+    public static CoopRow CoopRowState(bool busy, bool active, bool isGuest, bool guestPresent,
+                                       bool hasCode, bool failed)
+    {
+        if (busy) return CoopRow.Opening;
+        if (!active) return failed ? CoopRow.Retry : CoopRow.Offer;
+        if (isGuest) return CoopRow.Guest;
+        if (guestPresent) return CoopRow.GuestConnected;
+        return hasCode ? CoopRow.Code : CoopRow.Opening;
+    }
+
+    // Working dots that count 1-2-3. A static "Opening…" and a hung game look identical, and opening a
+    // session is long enough (UGS sign-in, then a Relay allocation) for the difference to matter.
+    static string WorkingDots()
+    {
+        int n = 1 + Mathf.FloorToInt(Time.unscaledTime * 2.5f) % 3;
+        return new string('.', n);
+    }
+
+    // One row, and every state it can be in. The join code is the point of the waiting state — it is what
+    // the host reads out to their friend.
+    //
+    // Opening a session is several seconds of UGS sign-in and Relay allocation before one thing about the
+    // game changes, and none of that used to reach this row: the tab still read PLAY WITH A FRIEND, so a
+    // press that had in fact registered looked like a press that had missed, and the row only admitted to
+    // working once the mode flipped at the far end of sign-in. The launcher's Busy flag is set
+    // synchronously inside the click, so the very next repaint can say the work is under way — and a
+    // failure puts the tab back with the reason on it rather than silently reverting to the offer.
     void DrawCoopRow(Rect r)
     {
-        if (!Coop.Active)
-        {
-            if (PixelGUI.Tab(r, "PLAY WITH A FRIEND", false))
-            {
-                var launcher = NetworkLauncher.Instance != null
-                    ? NetworkLauncher.Instance
-                    : new GameObject("NetworkLauncher").AddComponent<NetworkLauncher>();
-                launcher.HostCoop();
-            }
-            return;
-        }
+        var launcher = NetworkLauncher.Instance;
+        string code = launcher != null ? launcher.JoinCode : null;
 
-        if (Coop.IsGuest)
+        switch (CoopRowState(launcher != null && launcher.Busy, Coop.Active, Coop.IsGuest, Coop.GuestPresent,
+                             !string.IsNullOrEmpty(code), Time.unscaledTime < _coopFailedUntil))
         {
-            GUI.Label(r, "  In your friend's weekend", PixelGUI.LabelDim);
-            return;
-        }
+            case CoopRow.Offer:
+                if (PixelGUI.Tab(r, "PLAY WITH A FRIEND", false)) HostCoop();
+                break;
 
-        string code = NetworkLauncher.Instance != null ? NetworkLauncher.Instance.JoinCode : null;
-        if (Coop.GuestPresent)
-        {
-            GUI.Label(r, "  Friend connected", PixelGUI.Label);
+            case CoopRow.Retry:
+                // Still a tab, still clickable: the player's next move after a failed open is to try it
+                // again, and a label they cannot press is a dead end.
+                if (PixelGUI.Tab(r, "COULDN'T OPEN — RETRY", false)) HostCoop();
+                break;
+
+            case CoopRow.Opening:
+                GUI.Label(r, "  Opening" + WorkingDots(), PixelGUI.Label);
+                break;
+
+            case CoopRow.Guest:
+                GUI.Label(r, "  In your friend's weekend", PixelGUI.LabelDim);
+                break;
+
+            case CoopRow.GuestConnected:
+                GUI.Label(r, "  Friend connected", PixelGUI.Label);
+                break;
+
+            case CoopRow.Code:
+                // Gold, because this is the one thing on the panel the player has to read out loud.
+                var was = GUI.color;
+                GUI.color = PixelGUI.Gold;
+                GUI.Label(r, $"  CODE  {code}", PixelGUI.Label);
+                GUI.color = was;
+                break;
         }
-        else if (!string.IsNullOrEmpty(code))
-        {
-            // Gold, because this is the one thing on the panel the player has to read out loud.
-            var was = GUI.color;
-            GUI.color = PixelGUI.Gold;
-            GUI.Label(r, $"  CODE  {code}", PixelGUI.Label);
-            GUI.color = was;
-        }
-        else
-        {
-            GUI.Label(r, "  Opening…", PixelGUI.LabelDim);
-        }
+    }
+
+    // Race scenes carry no NetworkLauncher — hosting co-op happens from inside a career, so make one.
+    void HostCoop()
+    {
+        _coopFailedUntil = 0f;      // a fresh attempt, not the last one's result
+        var launcher = NetworkLauncher.Instance != null
+            ? NetworkLauncher.Instance
+            : new GameObject("NetworkLauncher").AddComponent<NetworkLauncher>();
+        launcher.HostCoop();
+    }
+
+    // Did the attempt we were watching end without a session? The launcher drops Busy either way and puts
+    // the mode back to single player when it throws, so "was busy, isn't now, and co-op is not on" is the
+    // failure — and the row says so for a few seconds instead of quietly offering the same tab again.
+    //
+    // Watched here rather than in OnGUI because IMGUI runs several event passes per frame and none of them
+    // is a good place to keep a clock.
+    void TrackCoopAttempt()
+    {
+        bool busy = NetworkLauncher.Instance != null && NetworkLauncher.Instance.Busy;
+        if (_coopWasBusy && !busy && !Coop.Active) _coopFailedUntil = Time.unscaledTime + FailureSeconds;
+        _coopWasBusy = busy;
     }
 
     // Mission board: every QuestInfo asset with its state, progress text, and the state-appropriate
