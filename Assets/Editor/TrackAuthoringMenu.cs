@@ -299,9 +299,9 @@ public static class TrackAuthoringMenu
         sb.AppendLine("  Prefs live under company/product: " +
                       $"{Application.companyName} / {Application.productName}");
         sb.AppendLine();
-        sb.AppendLine("  On the title screen: CONTINUE and EXHIBITION race the selection above.");
-        sb.AppendLine("  NEW SEASON deliberately restarts the calendar at its opening round, which");
-        sb.AppendLine("  OVERWRITES the selection - that is the usual reason a picked track is ignored.");
+        sb.AppendLine("  On the title screen: CAREER and EXHIBITION race the selection above.");
+        sb.AppendLine("  RESTART DEMO restarts the calendar at its opening round, which OVERWRITES the");
+        sb.AppendLine("  selection - that is the usual reason a picked track is ignored.");
         Debug.Log(sb.ToString());
     }
 
@@ -432,8 +432,8 @@ public class TrackBuilderWindow : EditorWindow
                     // build X" and the race then loaded somewhere else with no clue why.
                     if (TrackSelection.Select(row.Name))
                         Debug.Log($"Tracks: next race scene will build {row.DisplayName}. " +
-                                  "Load RaceScene, or press Play and pick CONTINUE / EXHIBITION on the " +
-                                  "title screen — NEW SEASON deliberately restarts at the season opener.");
+                                  "Load RaceScene, or press Play and pick CAREER / EXHIBITION on the " +
+                                  "title screen — RESTART DEMO restarts at the season opener.");
                     else
                         Debug.LogError($"Tracks: could not select {row.DisplayName} — see the warning above.");
                 }

@@ -93,14 +93,20 @@ public class TitleScreenWiringTests
     public void SeasonRowsHaveSomewhereToRace()
     {
         var menu = Menu();
-        Assert.AreEqual(NewSeason, CommandOf(menu, "NEW SEASON"), "NEW SEASON should start a fresh weekend.");
         Assert.AreEqual(Continue, CommandOf(menu, "CAREER"), "CAREER should resume the selected track.");
         Assert.AreEqual(Exhibition, CommandOf(menu, "EXHIBITION"), "EXHIBITION should skip to the race.");
 
-        // The race scene builds its road from the selected track, so the season's opener needs both halves
-        // of a track: the spline asset and the package of scenery bound to it.
+        // There is deliberately no NEW SEASON row: CAREER is the only door into the career, and a second
+        // row that also opened one was picked by mistake more often than it was picked on purpose.
+        Assert.IsFalse(HasRow(menu, "NEW SEASON"),
+                       "NEW SEASON is back on the title menu; CAREER is the career door.");
+
+        // newSeasonTrackId is still the opening round: RESTART DEMO starts there, and both rows that resume
+        // a selection fall back to it when the saved track has no layout (OpeningTrack). The race scene
+        // builds its road from that id, so it needs both halves of a track — the spline asset and the
+        // package of scenery bound to it.
         string trackId = menu.FindProperty("newSeasonTrackId").stringValue;
-        Assert.IsNotEmpty(trackId, "NEW SEASON has no opening track; it would fall back to whatever the calendar starts with.");
+        Assert.IsNotEmpty(trackId, "No opening track; the career would fall back to whatever the calendar starts with.");
         Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<Object>($"Assets/Resources/Tracks/{trackId}.asset"),
                          $"'{trackId}' has no geometry at Assets/Resources/Tracks/{trackId}.asset.");
         Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Resources/TrackPackages/{trackId}.prefab"),
@@ -515,6 +521,16 @@ public class TitleScreenWiringTests
     {
         foreach (var behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
             if (behaviour != null && behaviour.GetType().Name == typeName) return true;
+        return false;
+    }
+
+    // Is the row on the menu at all? CommandOf fails the test when it is missing, which is right when a row
+    // is expected and wrong when its absence is the thing being asserted.
+    static bool HasRow(SerializedObject menu, string label)
+    {
+        var rows = menu.FindProperty("rows");
+        for (int i = 0; i < rows.arraySize; i++)
+            if (rows.GetArrayElementAtIndex(i).FindPropertyRelative("label").stringValue == label) return true;
         return false;
     }
 

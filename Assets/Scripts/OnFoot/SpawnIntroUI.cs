@@ -42,6 +42,12 @@ public class SpawnIntroUI : MonoBehaviour
         // objective outranks which when more than one is registered.
         public string label;
         public int priority;
+
+        // A companion is not an objective — it is a person, and it is drawn ALONGSIDE whatever the player
+        // is due at rather than competing with it for the one slot. Only while they are off screen: a
+        // pointer to someone you can already see is clutter.
+        public bool companion;
+        public Color tint;
     }
 
     // The one on screen. The weekend's objectives hang their markers on it rather than drawing a second
@@ -103,6 +109,36 @@ public class SpawnIntroUI : MonoBehaviour
             hideWithinMetres = hideWithinMetres,
             label = label,
             priority = priority,
+        });
+    }
+
+    // Someone to keep track of, rather than somewhere to be.
+    //
+    // The objective slot is deliberately single — two identical pips read as a guess about which one you
+    // are due at — but the other player in a co-op career is a different question from "where am I due
+    // next", and both answers are wanted at once. So companions live outside that contest: drawn in their
+    // own tint, captioned with who they are, and only while they are off screen.
+    public void AddCompanionMarker(Transform target, Sprite icon, string label, Color tint)
+    {
+        if (target == null) return;
+
+        for (int i = 0; i < _markers.Count; i++)
+        {
+            if (_markers[i].target != target) continue;
+            _markers[i].icon = icon;
+            _markers[i].label = label;
+            _markers[i].tint = tint;
+            _markers[i].companion = true;
+            return;
+        }
+
+        _markers.Add(new Marker
+        {
+            target = target,
+            icon = icon,
+            label = label,
+            tint = tint,
+            companion = true,
         });
     }
 
@@ -220,9 +256,20 @@ public class SpawnIntroUI : MonoBehaviour
         var cam = Camera.main;
         if (cam == null || _player == null) return;
 
-        var m = Live();
-        if (m == null) return;
+        var live = Live();
+        if (live != null) DrawMarker(live, cam, offScreenOnly: false);
 
+        // Companions on top of the objective, not instead of it.
+        for (int i = 0; i < _markers.Count; i++)
+        {
+            var c = _markers[i];
+            if (!c.companion || c.target == null) continue;
+            DrawMarker(c, cam, offScreenOnly: true);
+        }
+    }
+
+    void DrawMarker(Marker m, Camera cam, bool offScreenOnly)
+    {
         float dist = Vector2.Distance(_player.position, m.target.position);
 
         Vector3 sp = cam.WorldToScreenPoint(m.target.position);
@@ -231,6 +278,9 @@ public class SpawnIntroUI : MonoBehaviour
         bool onScreen = sp.z > 0f &&
                         gui.x >= edgeMargin && gui.x <= Screen.width - edgeMargin &&
                         gui.y >= edgeMargin && gui.y <= Screen.height - edgeMargin;
+
+        // You can see them; you do not need an arrow telling you where they are.
+        if (offScreenOnly && onScreen) return;
 
         // Where the marker lives once it has settled, plus the direction it points when edge-clamped.
         Vector2 rest;
@@ -266,12 +316,12 @@ public class SpawnIntroUI : MonoBehaviour
             Vector2 arrowPos = pos + dir.normalized * (iconSize * 0.5f + 12f);
             var mtx = GUI.matrix;
             GUIUtility.RotateAroundPivot(ang, arrowPos);
-            GUI.color = Color.white;
+            GUI.color = Tint(m);
             GUI.DrawTexture(new Rect(arrowPos.x - 11f, arrowPos.y - 11f, 22f, 22f), _arrow);
             GUI.matrix = mtx;
         }
 
-        DrawIcon(pos, m.icon, scale);
+        DrawIcon(pos, m.icon, scale, Tint(m));
 
         if (settled)
         {
@@ -300,7 +350,7 @@ public class SpawnIntroUI : MonoBehaviour
         for (int i = 0; i < _markers.Count; i++)
         {
             var m = _markers[i];
-            if (m.target == null) continue;
+            if (m.target == null || m.companion) continue;   // companions draw themselves, see DrawMarkers
             if (best == null || m.priority >= best.priority) best = m;
         }
 
@@ -327,7 +377,11 @@ public class SpawnIntroUI : MonoBehaviour
     }
 
     // Icon centred on pos, aspect kept, over a soft dark backing plate. `sizeMul` drives the fly-in.
-    void DrawIcon(Vector2 pos, Sprite icon, float sizeMul = 1f)
+    // A marker's colour. Objectives are left exactly as they were; only a companion carries a tint, and a
+    // companion added before anyone set one still reads as white rather than invisible.
+    static Color Tint(Marker m) => m.companion && m.tint.a > 0f ? m.tint : Color.white;
+
+    void DrawIcon(Vector2 pos, Sprite icon, float sizeMul = 1f, Color? tint = null)
     {
         float size = iconSize * sizeMul;
         float plate = size + 10f * sizeMul;
@@ -338,7 +392,7 @@ public class SpawnIntroUI : MonoBehaviour
         PixelGUI.Fill(new Rect(plateRect.x - b, plateRect.y - b, plateRect.width + b * 2f, plateRect.height + b * 2f),
                       PixelGUI.Text);
         PixelGUI.Fill(plateRect, PixelGUI.PlateDeep);
-        GUI.color = Color.white;
+        GUI.color = tint ?? Color.white;
 
         if (icon == null) return;
         Rect tr = icon.textureRect;

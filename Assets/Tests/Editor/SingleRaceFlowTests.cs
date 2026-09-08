@@ -10,7 +10,8 @@ using UnityEngine.SceneManagement;
 // The SINGLE RACE route: TitleScreen -> SingleRace -> RaceScene.
 //
 // This flow exists because there was no way in the game to race anything but the reference track: the
-// only selector was an editor window, and the title screen's NEW SEASON row overwrote its choice. So the
+// only selector was an editor window, and the title screen's since-removed NEW SEASON row overwrote its
+// choice. So the
 // things worth pinning down are that the row exists and points somewhere real, that the scene it points
 // at is in the build settings and actually carries the screen, and that the screen has something to
 // offer — a track list that is not one track long.

@@ -66,13 +66,50 @@ public class CareerMirror : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(this); return; }
         Instance = this;
         SceneManager.sceneLoaded += OnSceneLoaded;
+        Coop.GuestJoined += OnGuestJoined;
     }
 
     void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        Coop.GuestJoined -= OnGuestJoined;
         Unregister();
         if (Instance == this) Instance = null;
+    }
+
+    // The one arrival nothing else covers.
+    //
+    // Every other way the two of you end up apart is already handled: a scene change recalls on
+    // OnSceneLoaded, and a teleport within a scene is caught by WatchForHostJump. But a JOIN moves neither
+    // — HostCoop deliberately loads no scene, because the host stays where it is and the guest comes to
+    // them — so the guest arrived, ran its own PitLaneStart, picked its own spawn marker and stood there.
+    // The two markers need not agree: Pick() resolves a preferred name through FindObjectsByType order,
+    // which is not stable across processes, and falls back to a weighted random roll when nothing matches.
+    // The result was two players in the same paddock, tens of metres apart, each seeing an empty scene.
+    void OnGuestJoined()
+    {
+        var nm = NetworkManager.Singleton;
+        if (nm == null || !nm.IsServer) return;   // the guest does not recall anybody
+        StartCoroutine(RecallWhenGuestArrives());
+    }
+
+    // GuestJoined fires when the connection lands, which is before NGO has pulled the guest into our scene
+    // and well before it has a body there. Recalling then would move nobody, so wait until we can actually
+    // see them — a puppet only exists once a pose with a body in it has arrived — and then close the gap.
+    IEnumerator RecallWhenGuestArrives()
+    {
+        for (float t = 0f; t < 30f && CoopBodies.PuppetCount == 0; t += Time.unscaledDeltaTime)
+            yield return null;
+
+        if (CoopBodies.PuppetCount == 0)
+        {
+            Debug.LogWarning("CareerMirror: the guest connected but never showed a body in this scene, so " +
+                             "they have not been recalled. See the CoopBodies warnings for which half is missing.");
+            yield break;
+        }
+
+        yield return new WaitForSecondsRealtime(0.25f);
+        Coop.RecallGuest();   // already a no-op if they happened to land next to us
     }
 
     // A scene change carries the guest with it (CoopScene.Load), but it drops them at that scene's own

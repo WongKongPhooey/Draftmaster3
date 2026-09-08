@@ -45,7 +45,7 @@ public class TitleScreenUI : MonoBehaviour
     [Serializable]
     public class Row
     {
-        public string label = "NEW SEASON";
+        public string label = "CAREER";
         public Command command = Command.NotWired;
         [Tooltip("Scene loaded by the LoadScene command. Must be in the build settings.")]
         public string sceneName = "";
@@ -71,10 +71,11 @@ public class TitleScreenUI : MonoBehaviour
     public TextMeshProUGUI statusLabel;
 
     [Header("Feel")]
-    [Tooltip("Race scene loaded by the season / continue / exhibition rows.")]
+    [Tooltip("Race scene loaded by the career / exhibition rows.")]
     public string raceSceneName = "RaceScene";
-    [Tooltip("Track the NEW SEASON row opens the calendar at. Empty = the first calendar track that has " +
-             "geometry, which is wherever the season's schedule happens to start.")]
+    [Tooltip("Opening round of the calendar: where RESTART DEMO starts, and the fallback when the " +
+             "saved track has no layout. Empty = the first calendar track that has geometry, which is " +
+             "wherever the season's schedule happens to start.")]
     public string newSeasonTrackId = TrackCatalog.DefaultTrackId;
 
     int _index;
@@ -100,8 +101,7 @@ public class TitleScreenUI : MonoBehaviour
         // Nothing else in a menu scene installs these, and the design puts the TV line over everything.
         IronOvalScanlines.Ensure();
 
-        if (EventSystem.current == null)
-            new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        EnsureEventSystem();
 
         RebuildOrder();     // decides which rows this build draws, and in which order
 
@@ -114,6 +114,7 @@ public class TitleScreenUI : MonoBehaviour
         }
 
         InstallCursorBlinks();
+        MatchLabelsToRows();
 
         CompactRows();
         DrawContinueSubtitle();
@@ -140,6 +141,52 @@ public class TitleScreenUI : MonoBehaviour
         {
             if (row == null || !row.shown || row.cursor == null) continue;
             if (row.cursor.GetComponent<IronOvalBlink>() == null) row.cursor.AddComponent<IronOvalBlink>();
+        }
+    }
+
+    // The menu is clickable as well as walkable, and no menu scene authors an EventSystem — so this makes
+    // one. Two things beyond "does it exist" have to be true or the mouse silently does nothing while the
+    // keyboard keeps working, which reads as "clicking the row runs the wrong row": whatever EventSystem we
+    // find has to be ENABLED (a carried-over one from a previous scene may not be), and its module has to
+    // have actions bound.
+    static void EnsureEventSystem()
+    {
+        var es = EventSystem.current;
+        if (es == null) es = FindFirstObjectByType<EventSystem>();
+        if (es == null)
+            es = new GameObject("EventSystem", typeof(EventSystem)).GetComponent<EventSystem>();
+
+        es.gameObject.SetActive(true);
+        es.enabled = true;
+
+        var module = es.GetComponent<InputSystemUIInputModule>();
+        if (module == null) module = es.gameObject.AddComponent<InputSystemUIInputModule>();
+        module.enabled = true;
+        // A module added from script starts with no actions. Recent Input System versions bind the defaults
+        // in OnEnable, older ones do not — asking for them outright costs nothing and covers both.
+        if (module.actionsAsset == null) module.AssignDefaultActions();
+    }
+
+    // What a row DOES is its command; what the player reads is a TextMeshPro child authored in the scene.
+    // Nothing kept the two in step, and they drifted: Row_NEW_SEASON was drawing the word "MULTIPLAYER"
+    // while still running NewSeason, so the demo menu showed that word twice and the first one — the one
+    // you reach first coming down the column — quietly started a career. Row_EXHIBITION was still drawing
+    // "MASTER DRAFT" from the design file.
+    //
+    // The label field is the row's identity (the wiring tests match on it, and RenameRow moves label, text
+    // and object name together), so it wins and the text is brought back to it. A drift is a scene bug
+    // rather than something to route around silently, so it is also reported.
+    void MatchLabelsToRows()
+    {
+        foreach (var row in rows)
+        {
+            if (row == null || row.labelText == null || string.IsNullOrEmpty(row.label)) continue;
+            if (row.labelText.text == row.label) continue;
+
+            Debug.LogWarning($"TitleScreenUI: the {row.command} row is labelled \"{row.label}\" but draws " +
+                             $"\"{row.labelText.text}\" — showing the label. Fix {row.labelText.name} in " +
+                             "TitleScreen.unity so the menu reads what it does.");
+            row.labelText.text = row.label;
         }
     }
 
@@ -339,8 +386,9 @@ public class TitleScreenUI : MonoBehaviour
                 CoopJoinPanel.Open();
                 break;
 
-            // The demo's start-again row: the same fresh career NEW SEASON opens, on a save wiped back to
-            // the first day — no money, no stats, no championship, no quests, nobody met.
+            // The demo's start-again row, and now the only one that opens a FRESH career rather than
+            // resuming: the save is wiped back to the first day — no money, no stats, no championship,
+            // no quests, nobody met — and the calendar restarts at its opening round.
             case Command.RestartDemo:
                 string restartAt = OpeningTrack();
                 if (string.IsNullOrEmpty(restartAt)) { SetStatus("No track has a layout yet."); return; }

@@ -12,8 +12,9 @@ using UnityEngine.UI;
 // SINGLE RACE: pick a track, a championship and a driver, then go racing. Three steps in one scene.
 //
 // WHY THIS EXISTS. Until now the only way to race a track other than the reference one was to press Race
-// in an editor window and hope nothing overwrote the selection — and something did: NEW SEASON restarts
-// the calendar at its opening round, which silently replaced whatever had been picked. There was no way
+// in an editor window and hope nothing overwrote the selection — and something did: the title screen had
+// a NEW SEASON row that restarted the calendar at its opening round, silently replacing whatever had
+// been picked (that row is gone; RESTART DEMO is the one that resets now). There was no way
 // in the game itself to say "that track, that series, that driver". With 38 venues built, that is the
 // difference between a test build and a game.
 //

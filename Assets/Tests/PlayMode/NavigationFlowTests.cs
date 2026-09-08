@@ -167,17 +167,18 @@ public class NavigationFlowTests
         }
     }
 
-    // NEW SEASON is the demo's front door: it should end with a road under a car, not just a scene change.
+    // CAREER is the demo's front door — the only one, now that NEW SEASON has gone — and it should end
+    // with a road under a car, not just a scene change.
     [UnityTest]
-    public IEnumerator NewSeasonPutsAPlayerOnATrack()
+    public IEnumerator CareerPutsAPlayerOnATrack()
     {
         Go(Title);
         yield return WaitForScene(Title);
         yield return null;
 
-        var row = RowWithLabel("NEW SEASON");
+        var row = RowWithLabel("CAREER");
         Press(row.index);
-        yield return WaitForScene(Race, "NEW SEASON");
+        yield return WaitForScene(Race, "CAREER");
 
         yield return WaitForObject("TrackBuilder", "the race scene never built a road");
         yield return WaitForObject("SplineInputDriver", "the race scene put no cars on the track");

@@ -49,6 +49,9 @@ public class CoopBodies : MonoBehaviour
     [Tooltip("Tint applied to the other player's body so the two of you are told apart at a glance.")]
     public Color remoteTint = new Color(0.62f, 0.85f, 1f);
 
+    [Tooltip("Point an edge-of-screen marker at the other player whenever they are off screen, with their name and how far away they are. The paddock is hundreds of metres across and two people who spawn at opposite ends of it have no way of finding each other otherwise.")]
+    public bool showOffScreenMarker = true;
+
     class Puppet
     {
         public GameObject go;
@@ -71,6 +74,17 @@ public class CoopBodies : MonoBehaviour
     float _nextSend;
     float _nextNameSend;
     bool _registered;
+    float _nextComplaint;
+
+    // What this layer currently believes, for the F12 panel and for the complaint below. Both silent
+    // failures live here: a peer with no on-foot body sends hasBody=false and simply is not drawn, and a
+    // scene with no PitLaneStart has no prefab to build a puppet out of. Neither said anything, so "I can't
+    // see the other player" had no reading to go on.
+    public static bool LocalHasBody { get; private set; }
+    public static bool CanBuildPuppets { get; private set; }
+    public static int PuppetCount { get; private set; }
+    public static float LastPoseAt { get; private set; }   // unscaled time a pose last arrived from a peer
+    public static Vector3 LastPosePos { get; private set; }
 
     void OnDestroy() => Unregister();
 
@@ -94,6 +108,32 @@ public class CoopBodies : MonoBehaviour
         }
 
         DrivePuppets();
+        SyncMarkers();
+        Complain(nm);
+    }
+
+    // Say why nobody is visible, at most once every few seconds. Connected with poses arriving and still no
+    // puppet is a different fault from no poses at all, and neither is worth guessing at twice.
+    void Complain(NetworkManager nm)
+    {
+        if (Time.unscaledTime < _nextComplaint) return;
+        // Nobody else is here yet — that is not a fault, and the panel already says so.
+        if (nm.ConnectedClientsIds.Count < 2 && !Coop.IsGuest) return;
+        if (PuppetCount > 0) return;
+
+        _nextComplaint = Time.unscaledTime + 5f;
+
+        if (!LocalHasBody)
+            Debug.LogWarning("CoopBodies: no local on-foot body (OnFootController.Current is null), so the " +
+                             "other player is being told hasBody=false and cannot draw you. In a car or a " +
+                             "menu this is expected; stood in the paddock it is not.");
+        else if (!CanBuildPuppets)
+            Debug.LogWarning("CoopBodies: this scene has no PitLaneStart with an onFootPrefab, so there is " +
+                             "nothing to build the other player's body out of. Expected in menus and the " +
+                             "garage sheet; in the race scene it means the paddock never started.");
+        else if (Time.unscaledTime - LastPoseAt > 5f)
+            Debug.LogWarning("CoopBodies: connected, but no pose has arrived from the other peer in the last " +
+                             "5s. Their CoopBodies is not sending — check both peers are in the same scene.");
     }
 
     // ------------------------------------------------------------------ wiring
@@ -130,9 +170,14 @@ public class CoopBodies : MonoBehaviour
         foreach (var p in _puppets.Values)
         {
             if (p.nameTag != null) p.nameTag.Detach();
-            if (p.go != null) Destroy(p.go);
+            if (p.go != null)
+            {
+                if (SpawnIntroUI.Instance != null) SpawnIntroUI.Instance.RemoveMarker(p.go.transform);
+                Destroy(p.go);
+            }
         }
         _puppets.Clear();
+        PuppetCount = 0;
     }
 
     // ------------------------------------------------------------------ sending
@@ -144,6 +189,7 @@ public class CoopBodies : MonoBehaviour
 
         var me = OnFootController.Current;     // never a puppet — that is what the flag is for
         bool hasBody = me != null;
+        LocalHasBody = hasBody;
 
         Vector3 pos = hasBody ? me.transform.position : Vector3.zero;
         float facing = hasBody ? me.transform.eulerAngles.z : 0f;
@@ -233,6 +279,9 @@ public class CoopBodies : MonoBehaviour
 
         if (owner == nm.LocalClientId) return;   // our own pose coming back off the relay
 
+        LastPoseAt = Time.unscaledTime;
+        LastPosePos = pos;
+
         if (!hasBody) { RetirePuppet(owner); return; }   // they are in the car or in a menu
 
         var puppet = EnsurePuppet(owner, pos, facing);
@@ -281,6 +330,37 @@ public class CoopBodies : MonoBehaviour
     {
         _names.TryGetValue(owner, out string sent);
         return CoopNameTag.LabelFor(sent, owner == NetworkManager.ServerClientId);
+    }
+
+    // Keep the other player's marker pointed at their puppet.
+    //
+    // Re-asserted every frame rather than registered once, because neither end of it is stable: the puppet
+    // is rebuilt from scratch on every scene load, and SpawnIntroUI is created by PitLaneStart, so in the
+    // scene where a guest arrives the puppet frequently exists before there is any UI to register it with.
+    // AddCompanionMarker is idempotent per transform, so re-stating it costs a dictionary walk.
+    void SyncMarkers()
+    {
+        var ui = SpawnIntroUI.Instance;
+        if (ui == null) return;
+
+        foreach (var kv in _puppets)
+        {
+            var p = kv.Value;
+            if (p.go == null) continue;
+            if (!showOffScreenMarker) { ui.RemoveMarker(p.go.transform); continue; }
+
+            // The same tint their body wears, so the pip at the edge of the screen and the person you find
+            // when you get there are obviously the same player.
+            ui.AddCompanionMarker(p.go.transform, PuppetIcon(p), NameFor(kv.Key), remoteTint);
+        }
+    }
+
+    // What to draw in the marker: their own body's sprite, so it reads as a person rather than a pip.
+    static Sprite PuppetIcon(Puppet p)
+    {
+        if (p.go == null) return null;
+        var sr = p.go.GetComponentInChildren<SpriteRenderer>();
+        return sr != null ? sr.sprite : null;
     }
 
     // ------------------------------------------------------------------ puppets
@@ -378,6 +458,7 @@ public class CoopBodies : MonoBehaviour
         if (showNameTags) puppet.nameTag = CoopNameTag.Attach(go.transform, NameFor(owner));
 
         _puppets[owner] = puppet;
+        PuppetCount = _puppets.Count;
         return puppet;
     }
 
@@ -385,8 +466,13 @@ public class CoopBodies : MonoBehaviour
     {
         if (!_puppets.TryGetValue(owner, out var p)) return;
         if (p.nameTag != null) p.nameTag.Detach();
-        if (p.go != null) Destroy(p.go);
+        if (p.go != null)
+        {
+            if (SpawnIntroUI.Instance != null) SpawnIntroUI.Instance.RemoveMarker(p.go.transform);
+            Destroy(p.go);
+        }
         _puppets.Remove(owner);
+        PuppetCount = _puppets.Count;
     }
 
     // The body prefab this scene spawns its player from. PitLaneStart holds it for the paddock; if there is
@@ -394,6 +480,8 @@ public class CoopBodies : MonoBehaviour
     GameObject FindBodyPrefab()
     {
         var start = FindFirstObjectByType<PitLaneStart>();
-        return start != null ? start.onFootPrefab : null;
+        var prefab = start != null ? start.onFootPrefab : null;
+        CanBuildPuppets = prefab != null;
+        return prefab;
     }
 }

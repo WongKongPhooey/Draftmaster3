@@ -185,7 +185,9 @@ public static class IronOvalTitleBuilder
             // No GARAGE row: the car sheet is reached from the laptop in the RV or in the factory
             // (LaptopInteractable / GarageScreenLoader), not from a menu the player never stands in.
             // TEAM FACTORY is the walk-in half of that — the shop, with the other laptop in it.
-            ("NEW SEASON",   TitleScreenUI.Command.NewSeason,  ""),
+            // No NEW SEASON row: CAREER is the door into the career, and a second row that also opens one
+            // is a coin toss the player loses. Command.NewSeason stays in the enum — the values are stored
+            // in the scene by number, so removing one would move every row onto the wrong command.
             ("CONTINUE",     TitleScreenUI.Command.Continue,   ""),
             // SINGLE RACE is the "race anything now" row: pick a track, a series and a driver, then go.
             // It is a plain LoadScene row because the choosing happens in SingleRace.unity, not here.

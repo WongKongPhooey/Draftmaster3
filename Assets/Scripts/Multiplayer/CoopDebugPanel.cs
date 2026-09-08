@@ -71,6 +71,17 @@ public class CoopDebugPanel : MonoBehaviour
         GUILayout.Label($"field     {NetworkedAICar.All.Count} networked cars");
         GUILayout.Label($"driving   {(CoopPossession.GuestCar != null ? CoopPossession.GuestCar.name : "-")}");
 
+        // The bodies layer, which is what "I can't see the other player" is actually about. myBody says
+        // whether the other peer is being told to draw you at all; prefab says whether this scene can build
+        // them; pose is how long ago they last said where they were, and where that was.
+        float age = CoopBodies.LastPoseAt > 0f ? Time.unscaledTime - CoopBodies.LastPoseAt : -1f;
+        GUILayout.Label($"bodies    myBody {(CoopBodies.LocalHasBody ? "yes" : "NO")}   " +
+                        $"prefab {(CoopBodies.CanBuildPuppets ? "yes" : "NO")}   " +
+                        $"puppets {CoopBodies.PuppetCount}");
+        GUILayout.Label($"pose      {(age < 0f ? "never received" : $"{age:0.0}s ago at {CoopBodies.LastPosePos}")}");
+        if (OnFootController.Current != null)
+            GUILayout.Label($"me        {OnFootController.Current.transform.position}");
+
         string code = NetworkLauncher.Instance != null ? NetworkLauncher.Instance.JoinCode : null;
         if (!string.IsNullOrEmpty(code)) GUILayout.Label($"CODE      {code}");
         if (!string.IsNullOrEmpty(_status)) GUILayout.Label($"status    {_status}");

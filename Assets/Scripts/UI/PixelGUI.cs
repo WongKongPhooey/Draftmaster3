@@ -42,17 +42,28 @@ public static class PixelGUI
 
     public static PixelUITheme Theme => PixelUITheme.Instance;
 
-    // IMGUI draws in raw screen pixels, unlike the Canvas UI which is authored on a 640x360 grid and
-    // scaled up. Left unscaled, a 16px row that reads fine on a 720p monitor is tiny on a 4K one. This
-    // steps the whole panel up in whole numbers, so glyphs stay on the pixel grid rather than being
-    // resampled to a fractional size.
+    // The 640x360 grid the whole UI is authored on. The Canvas half of it says so itself — every kit canvas
+    // carries a CanvasScaler with this reference resolution, matching on height — and the IMGUI half has to
+    // agree or the two drift apart on the way up.
+    public const float DesignHeight = 360f;
+
+    // IMGUI draws in raw screen pixels, unlike the Canvas UI which is authored on the grid above and scaled
+    // up. Left unscaled, a 16px row that reads fine on a 720p monitor is tiny on a 4K one. This steps the
+    // whole panel up in whole numbers, so glyphs stay on the pixel grid rather than being resampled to a
+    // fractional size.
+    //
+    // Divided by the DESIGN HEIGHT, not by some number of its own. This used to read Screen.height / 540,
+    // which is a grid one and a half times the authored one, so every IMGUI panel came out two thirds the
+    // size of the Canvas UI around it — and the gap widened with the display, because the two rounded to
+    // whole numbers at different rates: at 1080p the canvas ran at 3x against IMGUI's 2x, at 1440p 4x
+    // against 2x, at 4K 6x against 4x. The pause menu on a big monitor was the visible end of that.
     public static int Scale
     {
         get
         {
             var t = Theme;
             if (t != null && t.imguiScaleOverride > 0) return t.imguiScaleOverride;
-            return Mathf.Max(1, Mathf.FloorToInt(Screen.height / 540f));
+            return Mathf.Max(1, Mathf.FloorToInt(Screen.height / DesignHeight));
         }
     }
 
