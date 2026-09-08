@@ -304,38 +304,94 @@ symmetrically, where a quick lap sacrifices entry to straighten the exit, brakes
 gets on the power early — so the old line was both slower and, more visibly, *wrong-looking*: every car
 tracing the same geometric arc.
 
-So the line is now driven rather than asserted. `Draftmaster > AI > Train Racing Lines (Missing Only)`
-walks every track asset and, for each one, hands `RacingLineTrainer` a lap:
+So the line is now driven rather than asserted. `Draftmaster > AI > Train Racing Lines (Another Session)`
+works through the track assets and, for each one, hands `RacingLineTrainer` a lap:
 
 1. **Simulate.** The driven line's real curvature (Menger, on centreline + lateral) sets a cornering speed
    at every point, `v = √(r·a_lat)`. Friction-circle-limited acceleration and braking passes then relax
    that into speeds the car can actually reach and leave. This is the same model `SplineDriver` bakes for
    its speed profile — so a line that is quicker here is quicker in the game.
-2. **Train.** Drive that lap over and over. Each trial nudges one stretch of road a little wider or a
-   little tighter (a raised-cosine bump, so the result stays steerable) and keeps the change only if the lap
-   came out faster. A track takes 1,000–9,000 simulated laps and a few seconds.
-3. **Store.** The winner is resampled to an even 3 m grid and written to
-   `Assets/Resources/RacingLines/<id>.json` with the lap times either side of training.
+2. **Train.** Drive that lap over and over. Each trial nudges one stretch of road and keeps the change only
+   if the lap came out faster. A road course takes 40,000–90,000 simulated laps and a couple of minutes; a
+   short oval converges in a second.
+3. **Store.** The winner is resampled to an even 2 m grid, read straight back out again, and *that* line is
+   measured and written to `Assets/Resources/RacingLines/<id>.json` — see *What the storage grid costs*
+   below for why measuring the stored line rather than the driven one is not a formality.
 
-The search is **coarse-to-fine**, and that is the part that matters. A trial that moves 20 m of road cannot
-discover the shape of a corner: widening the entry on its own lengthens the lap and slows it down, and only
-pays once the apex has come in to meet it. Early rounds move a whole corner's worth of road at once and
-find the in-apex-out shape; later rounds shrink down to polish where the apex sits. Fixed-width bumps found
-about a third of the available time.
+Three things decide how much time it finds.
+
+**Coarse-to-fine.** A trial that moves 20 m of road cannot discover the shape of a corner: widening the
+entry on its own lengthens the lap and slows it down, and only pays once the apex has come in to meet it.
+Early rounds move a whole corner's worth of road at once and find the in-apex-out shape; later rounds shrink
+down to polish where the apex sits. Fixed-width bumps found about a third of the available time.
+
+**Two trial shapes, not one.** *Widen* is a raised-cosine bump: it pushes a stretch of road out or pulls it
+in. On its own it can only make a corner rounder or tighter where the seed already put it — it can never
+**move** an apex, and where the apex sits is the whole difference between a geometric arc and a driver's
+line. *Shift* is the same window with its sign flipped either side of the centre, zero value and zero slope
+at the centre and at both ends: it slides the line along the road, giving away entry to straighten the exit,
+in one move. Each shape is tried at its full amplitude and at 40% of it, so a stretch that is nearly right
+is not thrown away for an overshoot.
+
+**Practice is cumulative.** Every session starts from the line the last one found, not from the authored
+ideal, so clicking *Another Session* again is another practice session rather than a repeat of the first.
+Later sessions skip the coarse end of the anneal (those corner shapes were found on session one) and stagger
+their control points somewhere new, so the laps go where a settled line still has time in it. `refinePasses`
+in each JSON is how many sessions that line has had; `baselineLapTime` is the authored line it started from,
+so the gain quoted in the report is always cumulative and never resets. It is deterministic per session: the
+same track, the same seed and the same session number always produce the same line, so a retrain is
+reviewable and a test can assert on it.
 
 `SplineDriver` picks the trained line up automatically as its **ideal**, and skips the minimum-curvature
 relaxation when it does (relaxing a trained line would drag the late apexes straight back into the arc they
 beat). `lineFactor` still blends off it toward the leftmost/rightmost lines, so the field still spreads
 across the road. The guard is lap length: a line whose stored length no longer matches the sampled
 geometry is rejected outright, because a line trained against an older shape of the road is worse than
-none. **Retrain after regenerating geometry** — `Draftmaster > AI > Retrain Every Racing Line`.
+none. **Retrain after regenerating geometry** — `Draftmaster > AI > Train Racing Lines (Another Session)`
+puts missing and mismatched tracks at the front of its queue, so it is the same click either way.
 
-`Draftmaster > AI > Report Trained Racing Lines` prints what is on disk and what it found.
+Each file also carries a `trainerVersion`. That is the optimiser, not the file format: bump
+`TrainedRacingLine.CurrentTrainerVersion` after changing how the search works and every stored line goes to
+the front of the queue for a session under the new search, keeping the line it already has as its starting
+point. Old files still load and still drive — they have just had less practice.
+
+`Draftmaster > AI > Report Trained Racing Lines` prints what is on disk: the authored baseline, where each
+line is now, the gain in seconds and percent, how many sessions it has had and how many laps are behind it.
+
+### What the storage grid costs
+
+The line the game drives is not the line the optimiser drove. It is stored on an even grid and read back
+with a lerp, and that round trip is not free — not because the line moves (it does not; a few centimetres at
+most) but because **curvature is a second derivative, and a second derivative does not care how close two
+curves are, it cares how smooth they are.** The resampling error is a ripple one grid step long, and the
+three-point curvature estimate works over a window *shorter* than that step, so it reads the ripple as
+corners and the speed profile brakes for them.
+
+The size of the effect depends entirely on how the track is sampled relative to the grid:
+
+- **Generated tracks** — ovals and the road-course solver — come out sampled at roughly the grid spacing.
+  The stored line lands on the samples it was written from and the round trip costs nothing measurable.
+- **Watkins Glen**, hand-measured off satellite imagery, is sampled far finer. On a 3 m grid the round trip
+  cost it **1.1 s a lap** — most of what training had found — off a 9 cm difference in where the line sat.
+
+Refining the grid does not fix this on its own (the ripple gets shorter as fast as it gets shallower, so its
+second derivative stays put) and neither does a smarter interpolant. What would fix it properly is
+estimating curvature over a window comfortably wider than the grid — a change to `StepDistinct` in both
+`RacingLineTrainer` and `SplineDriver.BuildCurvatureProfile`, affecting how every car reads every line,
+trained or not. **That is worth doing and has not been done**; it wants a play-test, because it will raise
+corner speeds slightly everywhere.
+
+What *is* done: the grid is 2 m rather than 3 m, and the tool measures the line **as stored** and quotes
+that. Where a session's find does not survive the round trip, the previous line is kept instead — so the
+numbers in each file are what the game actually gets, and practice can never hand the AI something slower
+than they already had.
 
 ### What it is worth, and what limits it
 
-Road courses gain the most (COTA 3.7%, the Roval 3.4%, Chicago 3.7%), short tracks a useful amount
-(IRP 5.3%, Iowa 4.6%), and the big ovals almost nothing (Gateway 0.3%, Pocono 0.8%). That ordering is
+Across all 38 venues, training has found **71.6 s** of lap time over the authored line — a mean of 2.4%,
+from about 2.2 million simulated laps. Road courses gain the most (Watkins Glen 7.3%, San Diego 4.9%,
+Indianapolis road 4.7%, COTA 4.4%), short tracks a useful amount (IRP 4.9%, Richmond 4.7%), and the big
+ovals almost nothing (Gateway 0.2%, Michigan 0.5%, Pocono 0.8%). That ordering is
 correct and worth remembering: **on an oval the AI are not limited by the line.** They are up against
 `VehicleInfo.topSpeed` and the per-segment `maxSpeed` the oval generator writes into each turn
 (`OvalGeometry.CornerSpeedMph`). No line can beat a cap. If ovals need more pace, raise those — or
@@ -352,10 +408,10 @@ whatever grip actually exists.
 
 | File | Role |
 | --- | --- |
-| `Assets/Scripts/Tracks/Core/RacingLineTrainer.cs` | The lap simulator and the coarse-to-fine optimiser that drives it. Pure maths, unit tested. |
-| `Assets/Scripts/Tracks/Core/TrainedRacingLine.cs` | The stored line: resample, lookup, and the length guard. Plus the runtime cache. |
-| `Assets/Editor/RacingLineTrainingMenu.cs` | `TrackInfoV2` + `VehicleInfo` → a lap the trainer can drive; writes the JSON. |
-| `Assets/Resources/RacingLines/<id>.json` | One trained line per track, with the lap times either side of training. Generated. |
+| `Assets/Scripts/Tracks/Core/RacingLineTrainer.cs` | The lap simulator and the coarse-to-fine optimiser that drives it: widen/shift trials, an amplitude ladder, and practice sessions. Pure maths, unit tested. |
+| `Assets/Scripts/Tracks/Core/TrainedRacingLine.cs` | The stored line: resample, lookup, the length guard and the trainer-version guard. Plus the runtime cache. |
+| `Assets/Editor/RacingLineTrainingMenu.cs` | `TrackInfoV2` + `VehicleInfo` → a lap the trainer can drive; measures what it is about to store and writes the JSON. |
+| `Assets/Resources/RacingLines/<id>.json` | One trained line per track: the authored baseline, where the line is now, how many sessions and how many laps. Generated. |
 | `Assets/Scripts/Tracks/Core/OvalGeometry.cs` | The solver: spec → segments, pit lane, corner speeds, closure check. Own asmdef, unit tested. |
 | `Assets/Scripts/Tracks/Core/TrackTuning.cs` | Per-type feel numbers plus per-track exceptions. |
 | `Assets/Scripts/Tracks/Core/TrackDimensions.cs` | Published length, width and banking for every venue on the three calendars. |
@@ -381,7 +437,7 @@ whatever grip actually exists.
 | `Assets/Tests/Editor/TrackDimensionsTests.cs` | Every venue solves: closure, length, width, corner count, no self-intersection. |
 | `Assets/Tests/Editor/BuiltTrackAssetTests.cs` | The built assets on disk measure what they claim, and every package is wired. |
 | `Assets/Tests/Editor/OsmTrackGeometryTests.cs` | A lap walked into points comes back as the lap that went in, noise and all; closure on both paths. |
-| `Assets/Tests/Editor/RacingLineTrainerTests.cs` | The lap physics against a circle you can do on paper, and the optimiser's contract: never slower, never off the road, never a kink, same answer twice. |
+| `Assets/Tests/Editor/RacingLineTrainerTests.cs` | The lap physics against a circle you can do on paper, and the optimiser's contract: never slower, never off the road, never a kink, same answer twice, and a session on top of a session still finds time. |
 
 ## The shared race scene
 

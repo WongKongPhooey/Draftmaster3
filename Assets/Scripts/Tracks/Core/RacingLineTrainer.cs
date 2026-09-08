@@ -16,10 +16,15 @@ namespace Draftmaster.Tracks
     // cornering speed at every point, then friction-circle-limited acceleration and braking passes relax that
     // into speeds the car can actually reach and leave. That is the same model SplineDriver bakes for its
     // speed profile, so a line that is quicker here is quicker in the game. Train() then drives that lap over
-    // and over, each pass nudging one stretch of the line a little wider or a little tighter and keeping the
-    // change only when the lap came out faster. A few hundred laps later the line has found its own late
-    // apexes and straight-line braking zones — nobody authored them, and they are quick because they were
-    // measured, not guessed.
+    // and over, each trial either pushing one stretch of the line out and in (Widen) or sliding it along the
+    // road (Shift), keeping the change only when the lap came out faster. Tens of thousands of laps later the
+    // line has found its own late apexes and straight-line braking zones — nobody authored them, and they are
+    // quick because they were measured, not guessed.
+    //
+    // And it is practice, not a one-off: Settings.refinePass says which session this is, so handing Train()
+    // the line it found last time and a higher pass number sends it out again, starting further into the
+    // anneal and working the corners from different points. Deterministic either way — same course, same
+    // seed, same session number, same line.
     //
     // Pure maths: no scene, no components, no assets. The editor tool feeds it geometry and car limits and
     // writes the winning line out; EditMode tests drive it directly.
@@ -114,12 +119,20 @@ namespace Draftmaster.Tracks
             public float minGainSeconds;      // a trial must beat the current lap by this much to be kept
             public float edgeMargin;          // metres held back from the corridor edge
 
+            // Which practice session this is. 0 is a car that has never seen the track: start coarse and find
+            // the shape of every corner. Higher means the line already went through all that, so the coarse
+            // rounds have nothing left to give — those passes start further into the anneal and spend their
+            // laps where a settled line still has time in it, and the control points land in different places
+            // so the same corner gets worked from somewhere new. Stays deterministic: pass N always produces
+            // the same line, it is just not the same line pass N-1 produced.
+            public int refinePass;
+
             public static Settings Default => new Settings
             {
-                rounds = 6,
-                maxPassesPerRound = 4,
+                rounds = 8,
+                maxPassesPerRound = 5,
                 startAmplitude = 2.5f,
-                endAmplitude = 0.1f,
+                endAmplitude = 0.08f,
                 startHalfWidth = 70f,
                 endHalfWidth = 14f,
                 controlSpacingFactor = 0.4f,
@@ -127,14 +140,22 @@ namespace Draftmaster.Tracks
                 edgeMargin = 0.3f
             };
 
+            // Where in the coarse-to-fine anneal a run begins. A first run starts at the top; each further
+            // pass skips a little more of it, bottoming out at 0.6 so even a well-practised line still gets
+            // a mid-scale sweep and can move an apex, not only polish one.
+            public float StartT01 => Mathf.Clamp(refinePass * 0.15f, 0f, 0.6f);
+
             // Bristol is 858m and Talladega is 4281m; one absolute span cannot serve both — on the short
             // track the coarse pass would swallow the whole lap, on the superspeedway it would be a ripple.
             // Scaling with the lap keeps "a corner's worth of road" meaning the same thing everywhere.
-            public static Settings For(float trackLengthMetres)
+            public static Settings For(float trackLengthMetres) => For(trackLengthMetres, 0);
+
+            public static Settings For(float trackLengthMetres, int refinePass)
             {
                 var s = Default;
                 s.startHalfWidth = Mathf.Clamp(trackLengthMetres / 12f, 35f, 220f);
                 s.endHalfWidth = Mathf.Clamp(trackLengthMetres / 70f, 6f, 30f);
+                s.refinePass = Mathf.Max(0, refinePass);
                 return s;
             }
 
@@ -417,9 +438,11 @@ namespace Draftmaster.Tracks
             int rounds = Mathf.Max(1, settings.rounds);
             int maxPasses = Mathf.Max(1, settings.maxPassesPerRound);
 
+            float startT01 = settings.StartT01;
             for (int round = 0; round < rounds; round++)
             {
-                float t01 = rounds > 1 ? round / (float)(rounds - 1) : 1f;
+                float through = rounds > 1 ? round / (float)(rounds - 1) : 1f;
+                float t01 = Mathf.Lerp(startT01, 1f, through);
                 float amp = settings.AmplitudeAt(t01);
                 float halfWidth = settings.HalfWidthAt(t01);
                 if (amp <= 0.0001f) continue;
@@ -428,33 +451,21 @@ namespace Draftmaster.Tracks
 
                 for (int pass = 0; pass < maxPasses; pass++)
                 {
-                    // Half a spacing of stagger on alternate passes, so a corner never gets worked from the
-                    // same handful of points twice running and the sweep can slide an apex between them.
-                    float offset = (pass % 2 == 0) ? 0f : spacing * 0.5f;
+                    // Stagger the control points every pass, so a corner never gets worked from the same
+                    // handful of points twice running and the sweep can slide an apex between them. The
+                    // refine pass is folded in as well: run the same track again and the points land
+                    // somewhere new, which is most of why a second session finds anything at all.
+                    float phase = pass * 0.5f + settings.refinePass * 0.37f;
+                    float offset = spacing * (phase - Mathf.Floor(phase));
                     int[] controls = ControlIndices(arc, totalArc, spacing, offset);
                     if (controls.Length == 0) break;
 
                     int keptThisPass = 0;
                     for (int c = 0; c < controls.Length; c++)
                     {
-                        for (int s = 0; s < 2; s++)
-                        {
-                            float signed = s == 0 ? amp : -amp;
-                            Array.Copy(current, ws.candidate, n);
-                            if (!ApplyBump(course, ws.candidate, arc, totalArc, controls[c], halfWidth, signed, settings.edgeMargin))
-                                continue;
-
-                            float t = LapTime(course, ws.candidate, limits, ws);
-                            report.lapsSimulated++;
-                            if (t < best - settings.minGainSeconds)
-                            {
-                                best = t;
-                                keptThisPass++;
-                                report.improvements++;
-                                var swap = current; current = ws.candidate; ws.candidate = swap;
-                                break; // this stretch moved the right way; on to the next one
-                            }
-                        }
+                        if (TryStretch(course, limits, settings, ws, arc, totalArc,
+                                       controls[c], halfWidth, amp, ref current, ref best, ref report))
+                            keptThisPass++;
                     }
 
                     // A pass that found nothing at this scale will not find anything on a repeat either.
@@ -468,11 +479,60 @@ namespace Draftmaster.Tracks
             return report;
         }
 
+        // Amplitudes a trial may ask for, as fractions of the round's amplitude. The full move goes first
+        // because when it works it works on the first lap; the short one catches a stretch that is already
+        // nearly right, where the full move overshoots and gets thrown away for nothing — which is most of
+        // what a greedy search wastes its laps on once the coarse shape has been found.
+        static readonly float[] AmplitudeLadder = { 1f, 0.4f };
+
+        enum NudgeShape
+        {
+            Widen,   // push this stretch of road out, or pull it in
+            Shift,   // slide it along the road: out before the control point, in after it
+        }
+
+        // Everything the optimiser may try at one point on the road, likeliest first, stopping the moment
+        // something sticks.
+        //
+        // Widen on its own can only make a corner rounder or tighter where the seed already put it. It can
+        // never MOVE an apex, and where the apex sits is the whole difference between a geometric arc and a
+        // driver's line — so Shift is the trial that actually finds a late apex, in one move, instead of
+        // waiting for two neighbouring bumps to happen to cancel into one.
+        static bool TryStretch(Course course, CarLimits limits, Settings settings, Workspace ws,
+                               float[] arc, float totalArc, int centreIdx, float halfWidth, float amp,
+                               ref float[] current, ref float best, ref Report report)
+        {
+            int n = current.Length;
+            for (int shape = 0; shape < 2; shape++)
+                for (int rung = 0; rung < AmplitudeLadder.Length; rung++)
+                    for (int sign = 0; sign < 2; sign++)
+                    {
+                        float signed = (sign == 0 ? amp : -amp) * AmplitudeLadder[rung];
+                        Array.Copy(current, ws.candidate, n);
+                        if (!ApplyNudge(course, ws.candidate, arc, totalArc, centreIdx, halfWidth, signed,
+                                        settings.edgeMargin, (NudgeShape)shape))
+                            continue;
+
+                        float t = LapTime(course, ws.candidate, limits, ws);
+                        report.lapsSimulated++;
+                        if (t >= best - settings.minGainSeconds) continue;
+
+                        best = t;
+                        report.improvements++;
+                        var swap = current; current = ws.candidate; ws.candidate = swap;
+                        return true;   // this stretch moved the right way; on to the next one
+                    }
+            return false;
+        }
+
         // A raised-cosine nudge centred on one sample. Smooth to its first derivative, so however many of
         // these stack up over a training run the line never develops a kink — the car still has to be able to
         // drive what the optimiser finds.
-        static bool ApplyBump(Course course, float[] lat, float[] arc, float totalArc, int centreIdx,
-                              float halfWidth, float amplitude, float margin)
+        //
+        // Shift is the same window with its sign flipped either side of the centre: zero value AND zero slope
+        // at the centre and at both ends, so it translates the line along the road without pinching it.
+        static bool ApplyNudge(Course course, float[] lat, float[] arc, float totalArc, int centreIdx,
+                               float halfWidth, float amplitude, float margin, NudgeShape shape)
         {
             int n = lat.Length;
             bool moved = false;
@@ -488,8 +548,12 @@ namespace Draftmaster.Tracks
                     float gap = ArcGap(arc, totalArc, centreIdx, i, course.loop);
                     if (gap > halfWidth) break;
 
-                    float w = 0.5f * (1f + Mathf.Cos(Mathf.PI * Mathf.Clamp01(gap / halfWidth)));
-                    float clamped = ClampSample(course, i, lat[i] + amplitude * w, margin);
+                    float u = Mathf.Clamp01(gap / halfWidth);
+                    float delta = shape == NudgeShape.Widen
+                        ? amplitude * 0.5f * (1f + Mathf.Cos(Mathf.PI * u))
+                        : amplitude * dir * 0.5f * (1f - Mathf.Cos(2f * Mathf.PI * u));
+
+                    float clamped = ClampSample(course, i, lat[i] + delta, margin);
                     if (Mathf.Abs(clamped - lat[i]) > 1e-5f) moved = true;
                     lat[i] = clamped;
                 }
@@ -515,6 +579,21 @@ namespace Draftmaster.Tracks
         public static void ClampToCorridor(Course course, float[] lat, float margin)
         {
             for (int i = 0; i < lat.Length; i++) lat[i] = ClampSample(course, i, lat[i], margin);
+        }
+
+        // Whichever of two lines is quicker round here, ties going to the first.
+        //
+        // The tool needs this because the line the GAME drives is not the line the optimiser drove: it is the
+        // line as STORED, resampled onto an even grid and read back with a lerp. On a track sampled finer than
+        // that grid the round trip smooths the apexes, and curvature is a second derivative — it feels a
+        // smoothing far more than the positions do. So the tool measures the line it is about to write, and
+        // where that has cost more than the session found, it keeps the line the session started from.
+        // Practice must never hand the AI something slower than they already had.
+        public static float[] PickFaster(Course course, CarLimits limits, float[] a, float[] b)
+        {
+            if (a == null) return b;
+            if (b == null) return a;
+            return LapTime(course, a, limits) <= LapTime(course, b, limits) ? a : b;
         }
 
         // Cumulative centreline distance. The bump width is measured along the road rather than in samples so

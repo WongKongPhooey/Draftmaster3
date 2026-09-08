@@ -23,9 +23,11 @@ public static class RacingLineTrainingMenu
     const string DefaultVehicleResource = "Vehicles/Cup24";
     const float MphToMps = 1f / 2.237f;
 
-    // Metres between stored lateral samples. Fine enough that the resample is invisible next to a 12m road,
-    // coarse enough that 38 tracks of JSON stay a sensible size.
-    const float StorageSpacing = 3f;
+    // Metres between stored lateral samples. This is not just a file-size knob: the game drives the line as
+    // STORED, so every metre of grid is lap time given away at the apexes, and curvature — a second
+    // derivative — feels a coarse grid far more than the positions do. 3 m cost Watkins Glen over a second of
+    // the time training had found. 2 m brings that back for about 150 KB across all 38 tracks.
+    const float StorageSpacing = 2f;
 
     // What the AI's line looks like TODAY: the authored ideal, relaxed toward minimum curvature. Matches
     // SplineDriver's serialized defaults, so the "seed" lap time in each file is the pace we started from.
@@ -34,6 +36,19 @@ public static class RacingLineTrainingMenu
 
     // SplineDriver.cornerSpeedScale's default — the margin the AI keeps off the grip limit.
     const float CornerSpeedScale = 0.95f;
+
+    // Roughly how long one click of "Another Session" spends driving before it stops and writes up. Short
+    // on purpose: the point of the budget is that the run is resumable, so clicking three times is the same
+    // as one long run, and nothing is lost if a tool call gives up waiting. A short oval is a second or two;
+    // a road course is a couple of minutes, and the budget is only checked BETWEEN tracks, so one click can
+    // overrun by one track's worth. The whole 38-track calendar is about six clicks.
+    const float SessionBudgetSeconds = 180f;
+
+    static readonly string NewLine = System.Environment.NewLine;
+
+    // Laps a stored line has behind it, tolerating files written before totalLapsSimulated existed.
+    static int LapsBehind(TrainedRacingLine line)
+        => Mathf.Max(line.totalLapsSimulated, line.lapsSimulated);
 
     [MenuItem("Draftmaster/AI/Train Racing Line (Selected Track)", priority = 300)]
     public static void TrainSelected()
@@ -54,32 +69,52 @@ public static class RacingLineTrainingMenu
     [MenuItem("Draftmaster/AI/Train Racing Lines (Missing Only)", priority = 301)]
     public static void TrainMissing() => TrainAll(false);
 
-    [MenuItem("Draftmaster/AI/Retrain Every Racing Line", priority = 302)]
+    // The one to keep clicking. Brings anything missing or trained by an older optimiser up to date first,
+    // then hands whichever line has had the LEAST practice another session on top of what it already knows —
+    // so running it again always spends its laps where there is most left to find, and running it ten times
+    // is ten sessions of practice rather than the same session ten times.
+    //
+    // Budgeted and resumable on purpose. A field of 38 tracks is far more than one menu click's worth of
+    // driving, and a tool call that runs for twenty minutes is a tool call that times out halfway and loses
+    // the lot. Each click does about SessionBudgetSeconds of work and always stops on a written file.
+    [MenuItem("Draftmaster/AI/Train Racing Lines (Another Session)", priority = 302)]
+    public static void TrainAnotherSession() => RunSession(SessionBudgetSeconds);
+
+    [MenuItem("Draftmaster/AI/Retrain Every Racing Line (From Scratch)", priority = 303)]
     public static void RetrainAll() => TrainAll(true);
 
     [MenuItem("Draftmaster/AI/Report Trained Racing Lines", priority = 310)]
     public static void Report()
     {
-        var sb = new StringBuilder("[RacingLineTrainer] trained lines on disk:\n");
-        int found = 0;
+        var sb = new StringBuilder("[RacingLineTrainer] trained lines on disk:" + NewLine);
+        int found = 0, stale = 0;
         float totalGain = 0f;
+        long totalLaps = 0;
         foreach (var track in AllTrackGeometry())
         {
             var line = LoadFromDisk(track.name);
             if (line == null) { sb.AppendLine($"  {track.name,-18} —"); continue; }
             found++;
             totalGain += line.GainSeconds;
-            sb.AppendLine($"  {track.name,-18} seed {line.seedLapTime,7:F2}s  trained {line.trainedLapTime,7:F2}s" +
-                          $"  gain {line.GainSeconds,6:F2}s  ({line.lapsSimulated} laps, {line.lateral.Length} samples)");
+            totalLaps += LapsBehind(line);
+            bool old = line.trainerVersion < TrainedRacingLine.CurrentTrainerVersion;
+            if (old) stale++;
+            sb.AppendLine($"  {track.name,-18} base {line.Baseline,7:F2}s -> {line.trainedLapTime,7:F2}s" +
+                          $"  gain {line.GainSeconds,6:F2}s ({100f * line.GainSeconds / Mathf.Max(0.01f, line.Baseline),4:F1}%)" +
+                          $"  {line.refinePasses + 1} session(s), {LapsBehind(line)} laps" +
+                          (old ? "  [older trainer]" : ""));
         }
-        sb.AppendLine($"  {found} trained, {totalGain:F1}s of lap time found in total.");
+        sb.AppendLine($"  {found} trained ({stale} from an older trainer), {totalLaps} laps driven, " +
+                      $"{totalGain:F1}s of lap time found in total.");
         Debug.Log(sb.ToString());
     }
 
     // --- The batch ---------------------------------------------------------------------------------------
 
-    // Resumable on purpose: `force` off skips any track whose stored line still matches its geometry, so a
-    // run that gets interrupted (or a tool call that times out) can simply be run again.
+    // Resumable on purpose: `force` off skips any track whose stored line is already up to date, so a run
+    // that gets interrupted (or a tool call that times out) can simply be run again. `force` on throws away
+    // whatever is on disk and starts each track from the authored line — the only way to find out what a
+    // change to the optimiser is worth from a standing start.
     static void TrainAll(bool force)
     {
         var car = DefaultVehicle();
@@ -101,10 +136,10 @@ public static class RacingLineTrainingMenu
                 if (!force)
                 {
                     var existing = LoadFromDisk(track.name);
-                    if (existing != null && existing.MatchesLength(SampledLength(track))) { skipped++; continue; }
+                    if (existing != null && existing.IsCurrent(SampledLength(track))) { skipped++; continue; }
                 }
 
-                var line = TrainTrack(track, car, out string summary);
+                var line = TrainTrack(track, car, !force, out string summary);
                 if (line == null) { failed++; sb.AppendLine("  " + summary); continue; }
                 trained++;
                 totalGain += line.GainSeconds;
@@ -122,9 +157,83 @@ public static class RacingLineTrainingMenu
                   $"{totalGain:F1}s of lap time found.\n{sb}");
     }
 
+    // --- A practice session ------------------------------------------------------------------------------
+
+    // One budgeted, resumable slice of training. Order of business:
+    //
+    //   1. tracks with no line at all, or a line that no longer fits the road,
+    //   2. tracks whose line came from an older, weaker optimiser,
+    //   3. everything else, least-practised first.
+    //
+    // Each track picks up from the line already on disk rather than starting over, so the laps are spent
+    // improving what is there instead of rediscovering it. Stops as soon as the budget is gone — always
+    // between tracks, never mid-track, so what is on disk is always a complete line.
+    public static void RunSession(float budgetSeconds)
+    {
+        var car = DefaultVehicle();
+        if (car == null) return;
+
+        var tracks = AllTrackGeometry();
+        var queue = new List<(TrackInfoV2 track, float length, TrainedRacingLine line, int rank)>(tracks.Count);
+        foreach (var track in tracks)
+        {
+            float length = SampledLength(track);
+            var line = LoadFromDisk(track.name);
+            if (line != null && !line.MatchesLength(length)) line = null;    // road moved: start over
+            int rank = line == null ? -2
+                     : line.trainerVersion < TrainedRacingLine.CurrentTrainerVersion ? -1
+                     : line.refinePasses;
+            queue.Add((track, length, line, rank));
+        }
+        // Stable and deterministic: same rank, alphabetical.
+        queue.Sort((a, b) => a.rank != b.rank ? a.rank.CompareTo(b.rank)
+                                              : string.CompareOrdinal(a.track.name, b.track.name));
+
+        int outstanding = 0;
+        foreach (var entry in queue) if (entry.rank < 0) outstanding++;
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        int done = 0, failed = 0;
+        float gained = 0f;
+        var sb = new StringBuilder();
+
+        try
+        {
+            foreach (var entry in queue)
+            {
+                if (done > 0 && clock.Elapsed.TotalSeconds >= budgetSeconds) break;
+                EditorUtility.DisplayProgressBar("Racing line practice",
+                    $"{entry.track.name} ({done + 1})",
+                    Mathf.Clamp01((float)clock.Elapsed.TotalSeconds / Mathf.Max(1f, budgetSeconds)));
+
+                float before = entry.line != null ? entry.line.trainedLapTime : 0f;
+                var trained = TrainTrack(entry.track, car, out string summary);
+                if (trained == null) { failed++; sb.AppendLine("  " + summary); continue; }
+                done++;
+                if (entry.rank < 0) outstanding--;
+                if (before > 0.01f) gained += Mathf.Max(0f, before - trained.trainedLapTime);
+                sb.AppendLine("  " + summary);
+            }
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+
+        AssetDatabase.Refresh();
+        TrainedRacingLines.Invalidate();
+        Debug.Log($"[RacingLineTrainer] session over: {done} track(s) practised, {failed} failed, " +
+                  $"{gained:F2}s found on top of what they already had, {clock.Elapsed.TotalSeconds:F0}s spent. " +
+                  $"{outstanding} still waiting on a first pass from this trainer." + NewLine + sb);
+    }
+
     // --- One track ---------------------------------------------------------------------------------------
 
     public static TrainedRacingLine TrainTrack(TrackInfoV2 track, VehicleInfo car, out string summary)
+        => TrainTrack(track, car, true, out summary);
+
+    public static TrainedRacingLine TrainTrack(TrackInfoV2 track, VehicleInfo car, bool continueFromStored,
+                                               out string summary)
     {
         summary = null;
         if (track == null || track.segments == null || track.segments.Length == 0)
@@ -163,9 +272,43 @@ public static class RacingLineTrainingMenu
             return null;
         }
 
-        float[] seed = BuildSeedLine(track, samples, anchors, length, course);
         var limits = BuildLimits(car);
-        var settings = RacingLineTrainer.Settings.For(length);
+
+        // Where this session starts from. A track that has been out before picks up its own line and goes
+        // again — that is the difference between practising and starting over every time, and it is the only
+        // reason a second session finds anything. The authored line is still measured either way, because it
+        // is the baseline every stored gain is quoted against: what the AI used to drive.
+        var stored = continueFromStored ? LoadFromDisk(track.name) : null;
+        if (stored != null && !stored.MatchesLength(length)) stored = null;
+
+        float[] authored = BuildSeedLine(track, samples, anchors, length, course);
+        float baseline = stored != null && stored.baselineLapTime > 0.01f
+            ? stored.baselineLapTime
+            : RacingLineTrainer.LapTime(course, authored, limits);
+
+        float[] seed = authored;
+        int refinePass = 0;
+        if (stored != null)
+        {
+            var carried = new float[samples.Count];
+            for (int i = 0; i < samples.Count; i++) carried[i] = stored.LateralAt(samples[i].distance);
+            RacingLineTrainer.ClampToCorridor(course, carried, 0f);
+            // Only build on it if it really is the quicker line — a stored line from a different car or a
+            // different grip setting could be slower here, and practice should never make the AI worse.
+            if (RacingLineTrainer.LapTime(course, carried, limits) <
+                RacingLineTrainer.LapTime(course, authored, limits))
+            {
+                seed = carried;
+                // A line found by an older optimiser keeps its lap time but starts the schedule over: the
+                // new search has trials the old one never had, and they earn their keep at corner scale.
+                // Only a line this trainer already practised gets to skip the coarse rounds.
+                refinePass = stored.trainerVersion >= TrainedRacingLine.CurrentTrainerVersion
+                    ? stored.refinePasses + 1
+                    : 0;
+            }
+        }
+
+        var settings = RacingLineTrainer.Settings.For(length, refinePass);
 
         var report = RacingLineTrainer.Train(course, seed, limits, settings);
         if (report.lateral == null || report.trainedLapTime >= float.MaxValue)
@@ -174,18 +317,20 @@ public static class RacingLineTrainingMenu
             return null;
         }
 
-        // One extra entry at the loop end, carrying the line's own start value, so the even-grid resample
-        // interpolates ACROSS start/finish instead of holding the last sample flat up to it.
-        int last = samples.Count;
-        var distances = new float[last + 1];
-        var trainedLateral = new float[last + 1];
-        for (int i = 0; i < last; i++)
-        {
-            distances[i] = samples[i].distance;
-            trainedLateral[i] = report.lateral[i];
-        }
-        distances[last] = length;
-        trainedLateral[last] = report.lateral[0];
+        // Store the line the session found — but store the one the session STARTED from if that turns out to
+        // be the quicker of the two once both are on the storage grid. The optimiser measures the line at the
+        // track's own sample spacing; the game reads it back off an even grid with a lerp, and on a track
+        // sampled finer than that grid the round trip smooths apexes that curvature (a second derivative) is
+        // very sensitive to. Measuring what is about to be written is the only honest number, and picking
+        // between the two candidates is what makes practice monotonic instead of a random walk.
+        var trainedGrid = OnStorageGrid(samples, length, report.lateral);
+        var seedGrid = OnStorageGrid(samples, length, seed);
+        var trainedAsStored = ReadBack(course, samples, length, trainedGrid);
+        var seedAsStored = ReadBack(course, samples, length, seedGrid);
+
+        var chosen = RacingLineTrainer.PickFaster(course, limits, trainedAsStored, seedAsStored);
+        bool keptTheSeed = ReferenceEquals(chosen, seedAsStored);
+        var telemetry = RacingLineTrainer.Analyse(course, chosen, limits);
 
         var line = new TrainedRacingLine
         {
@@ -193,21 +338,63 @@ public static class RacingLineTrainingMenu
             trackId = track.name,
             vehicle = car.name,
             trainedUtc = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            trainerVersion = TrainedRacingLine.CurrentTrainerVersion,
             trackLength = length,
             spacing = StorageSpacing,
+            baselineLapTime = baseline,
             seedLapTime = report.seedLapTime,
-            trainedLapTime = report.trainedLapTime,
+            trainedLapTime = telemetry.lapTimeSeconds,
             lateralAccelMps2 = limits.lateralAccelMps2,
-            drivenLength = report.drivenLength,
+            drivenLength = telemetry.drivenLength,
             lapsSimulated = report.lapsSimulated,
-            lateral = TrainedRacingLine.Resample(distances, trainedLateral, length, StorageSpacing, out _)
+            totalLapsSimulated = (stored != null ? LapsBehind(stored) : 0) + report.lapsSimulated,
+            refinePasses = refinePass,
+            lateral = keptTheSeed ? seedGrid : trainedGrid
         };
-        line.RoundForStorage();
 
         Write(line);
-        summary = $"{track.name,-18} seed {report.seedLapTime,7:F2}s -> {report.trainedLapTime,7:F2}s " +
-                  $"({report.GainSeconds,5:F2}s over {report.lapsSimulated} laps, {report.improvements} kept)";
+        summary = $"{track.name,-18} session {refinePass + 1}: {report.seedLapTime,7:F2}s -> {line.trainedLapTime,7:F2}s " +
+                  $"({report.lapsSimulated} laps, {report.improvements} kept" +
+                  (keptTheSeed ? ", storage round trip cost more than the session found — kept the old line" : "") +
+                  $")  |  {line.GainSeconds,5:F2}s off the authored line";
         return line;
+    }
+
+    // A lateral profile put onto the even storage grid, rounded the way it will be written out. One extra
+    // entry at the loop end carries the line's own start value, so the resample interpolates ACROSS
+    // start/finish instead of holding the last sample flat up to it.
+    static float[] OnStorageGrid(List<TrackBuilder.Sample> samples, float length, float[] lateral)
+    {
+        int last = samples.Count;
+        var distances = new float[last + 1];
+        var values = new float[last + 1];
+        for (int i = 0; i < last; i++)
+        {
+            distances[i] = samples[i].distance;
+            values[i] = lateral[i];
+        }
+        distances[last] = length;
+        values[last] = lateral[0];
+
+        var grid = new TrainedRacingLine
+        {
+            trackLength = length,
+            spacing = StorageSpacing,
+            lateral = TrainedRacingLine.Resample(distances, values, length, StorageSpacing, out _)
+        };
+        grid.RoundForStorage();
+        return grid.lateral;
+    }
+
+    // ...and read straight back out again, exactly the way SplineDriver will.
+    static float[] ReadBack(RacingLineTrainer.Course course, List<TrackBuilder.Sample> samples, float length,
+                            float[] grid)
+    {
+        var reader = new TrainedRacingLine { trackLength = length, spacing = StorageSpacing, lateral = grid };
+        var lat = new float[samples.Count];
+        for (int i = 0; i < samples.Count; i++) lat[i] = reader.LateralAt(samples[i].distance);
+        RacingLineTrainer.ClampToCorridor(course, lat, 0f);
+        return lat;
     }
 
     // --- Geometry ----------------------------------------------------------------------------------------

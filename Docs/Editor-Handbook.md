@@ -601,15 +601,20 @@ Free: `F12`.
 ### `Draftmaster > AI`
 | Item | Does |
 | --- | --- |
-| Train Racing Line (Selected Track) | Trains the selected `TrackInfoV2` and writes `Resources/RacingLines/<id>.json` |
-| Train Racing Lines (Missing Only) | Every track that has no line, or whose line no longer matches its geometry. Resumable — safe to re-run |
-| Retrain Every Racing Line | Throws the stored lines away and trains all of them again. **Do this after regenerating geometry or changing grip/pace** |
-| Report Trained Racing Lines | Seed lap, trained lap and the time found, per track |
+| Train Racing Line (Selected Track) | One more session for the selected `TrackInfoV2`, picking up its stored line. Writes `Resources/RacingLines/<id>.json` |
+| **Train Racing Lines (Another Session)** | **The one to keep clicking.** Anything missing or trained by an older optimiser first, then whichever line has had the least practice. About 3 minutes a click; six clicks covers the calendar |
+| Train Racing Lines (Missing Only) | Only tracks with no line, a line that no longer matches its geometry, or one from an older trainer. Resumable |
+| Retrain Every Racing Line (From Scratch) | Throws the stored lines away and starts every track from the authored line. Slow, and only needed to measure what a change to the optimiser is worth |
+| Report Trained Racing Lines | Per track: the authored baseline, where the line is now, the gain, how many sessions and how many laps |
 
-> The AI's ideal line is trained, not authored: `RacingLineTrainer` drives a simulated lap a few thousand
-> times and keeps whatever came out quicker. `SplineDriver` picks the result up automatically and skips its
-> minimum-curvature relaxation when it does. A line whose stored lap length no longer matches the geometry
-> is ignored, so a regenerated track quietly falls back to the authored line until you retrain. Full
+> The AI's ideal line is trained, not authored: `RacingLineTrainer` drives a simulated lap tens of thousands
+> of times and keeps whatever came out quicker. `SplineDriver` picks the result up automatically and skips
+> its minimum-curvature relaxation when it does. A line whose stored lap length no longer matches the
+> geometry is ignored, so a regenerated track quietly falls back to the authored line until you retrain.
+>
+> Training is cumulative — each session starts from the line the last one found, so *Another Session* really
+> is another practice session and not a repeat of the first. Clicking it during a lull is always safe: it
+> can only keep a change that made the lap quicker, and it always stops on a completed track. Full
 > explanation in `Docs/Tracks.md` → *Training the racing line*.
 
 ### `Draftmaster > NPCs`

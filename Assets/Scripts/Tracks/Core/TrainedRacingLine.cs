@@ -19,22 +19,38 @@ namespace Draftmaster.Tracks
     {
         public const int CurrentVersion = 1;
 
+        // Bumped whenever RacingLineTrainer's search changes, so the batch tool can tell a line that was
+        // found by an older, weaker optimiser from one that is up to date. Separate from `version`, which is
+        // the FILE format: an old file still reads fine, it has just had less practice.
+        public const int CurrentTrainerVersion = 3;
+
         public int version = CurrentVersion;
         public string trackId;
         public string vehicle;
         public string trainedUtc;
+        public int trainerVersion;
 
         public float trackLength;         // sampled centreline length the line was trained against (m)
         public float spacing;             // metres between stored lateral samples
-        public float seedLapTime;         // the min-curvature line it started from (s)
+        public float baselineLapTime;     // the authored line the very FIRST session started from (s)
+        public float seedLapTime;         // what THIS session started from (s) — the previous line, on a refine
         public float trainedLapTime;      // what it got down to (s)
         public float lateralAccelMps2;    // the grip it was trained against
         public float drivenLength;        // length of the trained line itself (m)
-        public int lapsSimulated;
+        public int lapsSimulated;         // laps driven in this session
+        public int totalLapsSimulated;    // laps driven across every session that went into this line
+        public int refinePasses;          // sessions THIS trainer has run on top of its first one
 
         public float[] lateral;
 
-        public float GainSeconds => seedLapTime - trainedLapTime;
+        // What the AI gained over the line it used to drive — measured from the authored ideal, not from
+        // whatever the last session happened to start on, so it stays the cumulative number after a refine.
+        public float Baseline => baselineLapTime > 0.01f ? baselineLapTime : seedLapTime;
+        public float GainSeconds => Baseline - trainedLapTime;
+
+        // Up to date AND still fits the road: what the batch tool skips.
+        public bool IsCurrent(float sampledLength)
+            => MatchesLength(sampledLength) && trainerVersion >= CurrentTrainerVersion;
 
         // Usable against a track of this sampled length? Geometry gets regenerated; a line trained against an
         // older shape of the road is worse than no line at all, so a length that has moved is a hard reject.
@@ -44,6 +60,21 @@ namespace Draftmaster.Tracks
             return Mathf.Abs(sampledLength - trackLength) <= Mathf.Max(2f, trackLength * 0.01f);
         }
 
+        // Read the line back where the road is.
+        //
+        // Worth knowing what this costs, because it is not what it looks like. Corner speed comes from the
+        // CURVATURE of the driven line at both ends — the trainer sets v = sqrt(r * a_lat) and so does
+        // SplineDriver's speed profile — and curvature is a second derivative. A second derivative does not
+        // care how CLOSE two curves are, it cares how SMOOTH they are. Resampling puts the line back within a
+        // few centimetres of where training left it and can still cost real lap time, because the resampling
+        // error is a ripple one grid step long and differentiating a ripple twice is not a small number.
+        // Refining the grid does not help (the ripple gets shorter as fast as it gets shallower) and neither
+        // does a smarter interpolant — what would fix it is estimating curvature over a window comfortably
+        // wider than the grid, which is a change to how every car reads every line, trained or not.
+        //
+        // So the tool measures the line THROUGH THIS FUNCTION before writing it, quotes that lap time, and
+        // keeps the previous line where the round trip cost more than the session found. See Docs/Tracks.md,
+        // "What the storage grid costs".
         public float LateralAt(float distance)
         {
             if (lateral == null || lateral.Length == 0 || spacing <= 0.01f) return 0f;
@@ -106,13 +137,17 @@ namespace Draftmaster.Tracks
             Field(sb, "trackId", trackId);
             Field(sb, "vehicle", vehicle);
             Field(sb, "trainedUtc", trainedUtc);
+            sb.Append(",\"trainerVersion\":").Append(trainerVersion);
             Field(sb, "trackLength", trackLength);
             Field(sb, "spacing", spacing);
+            Field(sb, "baselineLapTime", baselineLapTime);
             Field(sb, "seedLapTime", seedLapTime);
             Field(sb, "trainedLapTime", trainedLapTime);
             Field(sb, "lateralAccelMps2", lateralAccelMps2);
             Field(sb, "drivenLength", drivenLength);
             sb.Append(",\"lapsSimulated\":").Append(lapsSimulated);
+            sb.Append(",\"totalLapsSimulated\":").Append(totalLapsSimulated);
+            sb.Append(",\"refinePasses\":").Append(refinePasses);
             sb.Append(",\"lateral\":[");
             if (lateral != null)
                 for (int i = 0; i < lateral.Length; i++)
