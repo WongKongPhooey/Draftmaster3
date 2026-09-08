@@ -262,8 +262,35 @@ and the guest's copy of it is scene content, not a second entry.
 
 ## Phase 4 — polish
 
-Guest name plates, a join/leave toast, clean drop-out (possessed car reverts to AI at its current pose),
-host migration explicitly **not** supported — the guest returns to the title screen if the host leaves.
+A join/leave toast, clean drop-out (possessed car reverts to AI at its current pose), host migration
+explicitly **not** supported — the guest returns to the title screen if the host leaves.
+
+### Name tags *(implemented)*
+
+`Assets/Scripts/Multiplayer/CoopNameTag.cs` — the other player's name on a small plate over their head.
+Built the way `SpeechBubble` and `FightHealthBar` are (a world-space `SpriteRenderer` plus a `TextMeshPro`
+in the pixel kit's face, not a Canvas): the spline scenes render through the 3D URP renderer, where a
+world-space Canvas needs wiring and a font asset before it draws at all. The tag is a **free-standing
+object**, not a child of the body — the puppet rotates to face where it is walking, so a parented tag
+would turn upside down with it.
+
+The name is whatever that player typed on the **OPTIONS** screen: `PlayerDriver.FirstName` +
+`PlayerDriver.LastName`, joined by `CoopBodies.LocalDisplayName()`. Each peer sends **its own** name, so
+the host sees the guest's and the guest sees the host's. A player who has never been through OPTIONS is
+labelled `PLAYER 1` / `PLAYER 2` rather than getting a blank plate.
+
+It travels on `coop.body.name`, a **reliable** named message of its own rather than riding the 15Hz pose:
+poses are unreliable by design and losing the one that carried the name would leave the other player
+labelled `PLAYER 2` for the session. Re-sent every `nameSendInterval` (2s), which makes a mid-weekend join,
+a scene load and a rename in OPTIONS all self-healing — the same reason the puppets themselves are rebuilt
+from the next pose that arrives. The server relays a guest's name on, exactly as it relays poses.
+
+Only the *other* player is tagged. No plate is drawn over your own head: you know who you are, and in a
+paddock this dense it is one more thing between the camera and the person you are walking to.
+
+`Assets/Tests/Editor/CoopNameTagTests.cs` covers the label (sent name, rename, trimming, the unnamed
+fallback), where the tag sits (above the head, pulled toward the camera, never parented, never inheriting
+the body's facing spin) and that the name on the wire is the one the OPTIONS boxes save.
 
 ---
 
@@ -272,6 +299,6 @@ host migration explicitly **not** supported — the guest returns to the title s
 1. ~~**Phase 1** — mode model, ledger export/import, `CareerMirror`, `CoopScene`, launcher entry points.~~ done
 2. ~~**Phase 2** — guest avatar, paddock gates, recall.~~ done
 3. ~~**Phase 3** — networked career field, possession.~~ done
-4. **Phase 4** — polish.
+4. **Phase 4** — polish. Name tags done; join/leave toast and clean drop-out outstanding.
 
 Flip the seventeen `GameSession` gates one at a time, paddock last.

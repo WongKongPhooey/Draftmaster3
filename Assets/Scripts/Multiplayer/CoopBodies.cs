@@ -20,12 +20,25 @@ using UnityEngine;
 //
 // Interpolated rather than snapped: at walking pace a 15Hz feed lerped over the gap is indistinguishable
 // from local movement, and it costs about forty lines.
+//
+// Each peer also broadcasts the name it set on the OPTIONS screen, on its own slow reliable message rather
+// than riding the pose, and the puppet wears it on a CoopNameTag above its head. A name is a string and a
+// pose is dropped freely; losing the one packet that carried the name would leave the other player labelled
+// PLAYER 2 for the rest of the session. Re-sent on a loop so a join, a scene load or a rename all fix
+// themselves without anything having to notice them.
 public class CoopBodies : MonoBehaviour
 {
     const string PoseMessage = "coop.body.pose";
+    const string NameMessage = "coop.body.name";
 
     [Tooltip("Pose sends per second. Walking pace does not need more; the receiver interpolates between them.")]
     public float sendRate = 15f;
+
+    [Tooltip("Float the other player's name on a tag above their head — whatever they typed on the OPTIONS screen.")]
+    public bool showNameTags = true;
+
+    [Tooltip("Seconds between name broadcasts. The name rides its own reliable message rather than the 15Hz pose, and is re-sent on a slow loop so a join, a scene load or a rename in OPTIONS all fix themselves without anything having to notice them.")]
+    public float nameSendInterval = 2f;
 
     [Tooltip("How quickly a puppet closes on the last pose received. Higher = tighter tracking, more visible stepping if the connection is lumpy.")]
     public float followLerp = 12f;
@@ -41,6 +54,7 @@ public class CoopBodies : MonoBehaviour
         public GameObject go;
         public OnFootController ofc;
         public Animator animator;
+        public CoopNameTag nameTag;
         public Vector3 targetPos;
         public float targetFacing;
         public Vector2 moveDir;
@@ -48,7 +62,14 @@ public class CoopBodies : MonoBehaviour
     }
 
     readonly Dictionary<ulong, Puppet> _puppets = new();
+
+    // The name each peer last told us they go by. Kept apart from the puppets because the two arrive
+    // independently — a name can land before that peer has a body in this scene, and a puppet is rebuilt
+    // from scratch on every scene load while the name is not.
+    readonly Dictionary<ulong, string> _names = new();
+
     float _nextSend;
+    float _nextNameSend;
     bool _registered;
 
     void OnDestroy() => Unregister();
@@ -66,6 +87,12 @@ public class CoopBodies : MonoBehaviour
             SendMyPose(nm);
         }
 
+        if (showNameTags && Time.unscaledTime >= _nextNameSend)
+        {
+            _nextNameSend = Time.unscaledTime + Mathf.Max(0.5f, nameSendInterval);
+            SendMyName(nm);
+        }
+
         DrivePuppets();
     }
 
@@ -77,7 +104,9 @@ public class CoopBodies : MonoBehaviour
         var msg = nm.CustomMessagingManager;
         if (msg == null) return;
         msg.RegisterNamedMessageHandler(PoseMessage, OnPose);
+        msg.RegisterNamedMessageHandler(NameMessage, OnName);
         _registered = true;
+        _nextNameSend = 0f;   // say who we are on the very next frame, not two seconds into the session
     }
 
     void Unregister()
@@ -85,16 +114,24 @@ public class CoopBodies : MonoBehaviour
         if (_registered)
         {
             var msg = NetworkManager.Singleton != null ? NetworkManager.Singleton.CustomMessagingManager : null;
-            if (msg != null) msg.UnregisterNamedMessageHandler(PoseMessage);
+            if (msg != null)
+            {
+                msg.UnregisterNamedMessageHandler(PoseMessage);
+                msg.UnregisterNamedMessageHandler(NameMessage);
+            }
             _registered = false;
         }
         ClearPuppets();
+        _names.Clear();
     }
 
     void ClearPuppets()
     {
         foreach (var p in _puppets.Values)
+        {
+            if (p.nameTag != null) p.nameTag.Detach();
             if (p.go != null) Destroy(p.go);
+        }
         _puppets.Clear();
     }
 
@@ -130,6 +167,36 @@ public class CoopBodies : MonoBehaviour
     {
         var rb = ofc.GetComponent<Rigidbody2D>();
         return rb != null ? rb.linearVelocity : Vector2.zero;
+    }
+
+    // Who this machine's player is, for the tag over their head on the other machine.
+    //
+    // Reliable and on its own slow loop rather than riding the pose: a name is a string, the pose is sent
+    // fifteen times a second and dropped freely, and losing the one frame that carried the name would leave
+    // the other player labelled PLAYER 2 for the rest of the session.
+    void SendMyName(NetworkManager nm)
+    {
+        var msg = nm.CustomMessagingManager;
+        if (msg == null) return;
+
+        string label = LocalDisplayName();
+
+        using var writer = new FastBufferWriter(128, Allocator.Temp, 512);
+        writer.WriteValueSafe(nm.LocalClientId);
+        writer.WriteValueSafe(label);
+
+        if (nm.IsServer) msg.SendNamedMessageToAll(NameMessage, writer, NetworkDelivery.Reliable);
+        else msg.SendNamedMessage(NameMessage, NetworkManager.ServerClientId, writer, NetworkDelivery.Reliable);
+    }
+
+    // The name this player set on the OPTIONS screen, in the two halves that screen writes. Empty when they
+    // have never named themselves — the receiver turns that into a PLAYER 1 / PLAYER 2 placeholder rather
+    // than leaving a blank tag hanging over them.
+    public static string LocalDisplayName()
+    {
+        string first = PlayerDriver.FirstName;
+        string last = PlayerDriver.LastName;
+        return (first + " " + last).Trim();
     }
 
     // ------------------------------------------------------------------ receiving
@@ -175,6 +242,45 @@ public class CoopBodies : MonoBehaviour
         puppet.targetFacing = facing;
         puppet.moveDir = move;
         puppet.lastSeen = Time.unscaledTime;
+    }
+
+    void OnName(ulong sender, FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out ulong owner);
+        reader.ReadValueSafe(out string label);
+
+        var nm = NetworkManager.Singleton;
+        if (nm == null) return;
+
+        // Server relays, exactly as it does for poses — named messages are client↔server only.
+        if (nm.IsServer && owner != NetworkManager.ServerClientId)
+        {
+            var msg = nm.CustomMessagingManager;
+            if (msg != null)
+            {
+                using var relay = new FastBufferWriter(128, Allocator.Temp, 512);
+                relay.WriteValueSafe(owner);
+                relay.WriteValueSafe(label);
+
+                foreach (var id in nm.ConnectedClientsIds)
+                    if (id != owner && id != NetworkManager.ServerClientId)
+                        msg.SendNamedMessage(NameMessage, id, relay, NetworkDelivery.Reliable);
+            }
+        }
+
+        if (owner == nm.LocalClientId) return;   // our own name coming back off the relay
+
+        _names[owner] = label ?? "";
+        if (_puppets.TryGetValue(owner, out var p) && p.nameTag != null)
+            p.nameTag.SetName(NameFor(owner));
+    }
+
+    // What the tag over a given peer reads. Their OPTIONS name when they have sent one, and which player
+    // they are when they have not.
+    string NameFor(ulong owner)
+    {
+        _names.TryGetValue(owner, out string sent);
+        return CoopNameTag.LabelFor(sent, owner == NetworkManager.ServerClientId);
     }
 
     // ------------------------------------------------------------------ puppets
@@ -266,6 +372,11 @@ public class CoopBodies : MonoBehaviour
             targetFacing = facing,
             lastSeen = Time.unscaledTime,
         };
+
+        // Who they are, above their head. The tag is an independent object rather than a child: the puppet
+        // rotates to face where it is walking, and a parented tag would turn upside down with it.
+        if (showNameTags) puppet.nameTag = CoopNameTag.Attach(go.transform, NameFor(owner));
+
         _puppets[owner] = puppet;
         return puppet;
     }
@@ -273,6 +384,7 @@ public class CoopBodies : MonoBehaviour
     void RetirePuppet(ulong owner)
     {
         if (!_puppets.TryGetValue(owner, out var p)) return;
+        if (p.nameTag != null) p.nameTag.Detach();
         if (p.go != null) Destroy(p.go);
         _puppets.Remove(owner);
     }
