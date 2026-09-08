@@ -654,6 +654,34 @@ public class TrackBuilder : MonoBehaviour
         return false;
     }
 
+    // Pull a world point `metres` back TOWARD the main centreline. Track limits are judged on the car, not
+    // on a dot: the last things to leave the road are the wheels nearest the middle of it, so a rule that
+    // means "all four wheels off" asks about a point half a car width inboard of the car's centre. The
+    // shift is clamped at the centreline (it can never push a point out the far side of the track) and a
+    // point already on the centreline comes back unchanged.
+    public Vector3 InboardOf(Vector3 worldPos, float metres)
+    {
+        if (track == null || metres <= 0f) return worldPos;
+        if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
+        if (_surfaceCache.Count < 2) return worldPos;
+
+        Vector2 local = transform.InverseTransformPoint(worldPos);
+        float best = float.MaxValue;
+        int bi = 0;
+        for (int i = 0; i < _surfaceCache.Count; i++)
+        {
+            float d = ((Vector2)_surfaceCache[i].position - local).sqrMagnitude;
+            if (d < best) { best = d; bi = i; }
+        }
+        var s = _surfaceCache[bi];
+        float lat = Vector2.Dot(local - s.position, s.normal);
+        if (Mathf.Abs(lat) < 1e-4f) return worldPos;
+
+        Vector2 shifted = local - s.normal * (Mathf.Sign(lat) * Mathf.Min(metres, Mathf.Abs(lat)));
+        Vector3 world = transform.TransformPoint(new Vector3(shifted.x, shifted.y, 0f));
+        return new Vector3(world.x, world.y, worldPos.z);
+    }
+
     // Signed band test against the pit centerline: [-width/2, width/2 + extraPlus] along +normal.
     static bool OnPitBand(List<Sample> samples, Vector2 local, float extraPlus, out float lateralAbs)
     {

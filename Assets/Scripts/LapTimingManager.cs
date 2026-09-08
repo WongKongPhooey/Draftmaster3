@@ -3,7 +3,8 @@ using UnityEngine;
 
 // Times every car's laps off the RacePositionTracker's lap counter. A lap only counts if the car
 // stayed on legal surface and never hit a wall: going fully off onto grass/gravel or a barrier
-// contact invalidates the lap in progress (paved tarmac runoff is legal). Driving the
+// contact invalidates the lap in progress (paved tarmac runoff and painted kerbs are legal, and
+// "fully off" means all four wheels — see OnLegalSurface). Driving the
 // pit lane voids the lap outright — timing re-arms at the next start/finish crossing.
 // The crew-chief timing screen (TimingScreenUI) reads Rows; a small HUD shows the player's
 // last/best lap and flashes when their current lap is invalidated.
@@ -16,6 +17,9 @@ public class LapTimingManager : MonoBehaviour
     float _trackSearchTimer;   // seconds until the next look for an authored TrackBuilder
     [Tooltip("Barrier closing speed (m/s) below which a wall brush does NOT invalidate the lap.")]
     public float wallHitMinClosingSpeed = 1.5f;
+    [Tooltip("Half a car width (m). Track limits are judged at the car's inside wheels, not at its centre, " +
+             "so a lap survives while any part of the car is still on the road or its kerb.")]
+    public float carHalfWidth = 1f;
     [Tooltip("Draw the player's last/best lap readout.")]
     public bool showPlayerHud = true;
     [Tooltip("Key toggling the lap readout (iRacing-style F1).")]
@@ -131,16 +135,9 @@ public class LapTimingManager : MonoBehaviour
                 continue;
             }
 
-            // Fully off the track surface (grass/gravel) invalidates the running lap. Paved (tarmac)
-            // runoff is legal — running wide onto it costs time but keeps the lap — and so is a kerb,
-            // which sits outboard of the road ribbon but is track as far as the rules are concerned.
-            if (c.lapStarted && c.valid && !track.IsOnSurface(e.tf.position, out _))
-            {
-                bool onPaved = SurfaceField.TryGetSurface(e.tf.position, out var surf)
-                               && (surf == TrackEnvironment.SurfaceType.TarmacRunoff
-                                   || surf == TrackEnvironment.SurfaceType.Kerb);
-                if (!onPaved) Invalidate(c);
-            }
+            // Fully off the track surface (grass/gravel) invalidates the running lap.
+            if (c.lapStarted && c.valid && !OnLegalSurface(track, e.tf.position, carHalfWidth))
+                Invalidate(c);
 
             if (e.lap > c.prevLap)
             {
@@ -188,6 +185,29 @@ public class LapTimingManager : MonoBehaviour
         foreach (var kv in _cars) if (kv.Key == null) dead.Add(kv.Key);
         for (int i = 0; i < dead.Count; i++) _cars.Remove(dead[i]);
     }
+
+    // Is a car sitting here still within track limits?
+    //
+    // Paved (tarmac) runoff is legal — running wide onto it costs time but keeps the lap — and so is a
+    // kerb, which sits outboard of the road ribbon but is track as far as the rules are concerned.
+    //
+    // The test is taken at the car's INSIDE wheels rather than at its centre, because a painted kerb is
+    // only a metre or two wide: put the car on one and its centre is already past the kerb's outer edge
+    // and over whatever is behind it, while three of its wheels are still on tarmac. Judging the centre
+    // point threw away a lap for riding a kerb, which is the one thing kerbs are painted there for.
+    public static bool OnLegalSurface(TrackBuilder track, Vector3 carCentre, float carHalfWidth)
+    {
+        if (track == null) return true;
+        if (track.IsOnSurface(carCentre, out _) || IsPaved(carCentre)) return true;
+
+        Vector3 insideWheels = track.InboardOf(carCentre, Mathf.Max(0f, carHalfWidth));
+        return track.IsOnSurface(insideWheels, out _) || IsPaved(insideWheels);
+    }
+
+    static bool IsPaved(Vector3 worldPos) =>
+        SurfaceField.TryGetSurface(worldPos, out var surf)
+        && (surf == TrackEnvironment.SurfaceType.TarmacRunoff
+            || surf == TrackEnvironment.SurfaceType.Kerb);
 
     void Invalidate(CarTimes c)
     {
