@@ -598,6 +598,20 @@ Free: `F12`.
 | Clear Package Previews From Scene | **Run this before saving any scene you previewed a track in.** A package left in `RaceScene` overrides every selection |
 | Report Calendar Coverage | What's built vs catalogue-only |
 
+### `Draftmaster > AI`
+| Item | Does |
+| --- | --- |
+| Train Racing Line (Selected Track) | Trains the selected `TrackInfoV2` and writes `Resources/RacingLines/<id>.json` |
+| Train Racing Lines (Missing Only) | Every track that has no line, or whose line no longer matches its geometry. Resumable — safe to re-run |
+| Retrain Every Racing Line | Throws the stored lines away and trains all of them again. **Do this after regenerating geometry or changing grip/pace** |
+| Report Trained Racing Lines | Seed lap, trained lap and the time found, per track |
+
+> The AI's ideal line is trained, not authored: `RacingLineTrainer` drives a simulated lap a few thousand
+> times and keeps whatever came out quicker. `SplineDriver` picks the result up automatically and skips its
+> minimum-curvature relaxation when it does. A line whose stored lap length no longer matches the geometry
+> is ignored, so a regenerated track quietly falls back to the authored line until you retrain. Full
+> explanation in `Docs/Tracks.md` → *Training the racing line*.
+
 ### `Draftmaster > NPCs`
 Director (**Ctrl+Shift+N**) · Add Placed NPC · Install Default Pit Cast (greeter + chief) ·
 Move Selected NPC Into Track Package · Dialogue Pool (Global) ·

@@ -157,6 +157,11 @@ public class RacingLineDisplay : MonoBehaviour
         var anchors = track.BuildRacingLineAnchors();
         bool loop = track.closedLoop;
 
+        // Draw the trained line where there is one, so the ribbon shows the line the AI are actually on
+        // rather than the authored ideal they left behind.
+        var trained = Draftmaster.Tracks.TrainedRacingLines.For(track.name);
+        if (trained != null && !trained.MatchesLength(loopLen)) trained = null;
+
         float[] profile = BuildSpeedProfile(vi, track, samples, loop);
         PedalState[] states = ClassifySamples(vi, samples, profile, loop, loopLen);
 
@@ -178,7 +183,7 @@ public class RacingLineDisplay : MonoBehaviour
             var state = states[i % n];
             float dist = i < n ? s.distance : 0f;
 
-            float lateral = track.GetLateralAt(dist, 0f, anchors, loopLen);
+            float lateral = trained != null ? trained.LateralAt(dist) : track.GetLateralAt(dist, 0f, anchors, loopLen);
             Vector2 right = s.normal;
             Vector2 center = s.position + right * lateral;
 

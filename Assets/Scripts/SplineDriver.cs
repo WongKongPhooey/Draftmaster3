@@ -44,6 +44,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("Racing-line variant: -1 = leftmost line, 0 = ideal, +1 = rightmost line. Anything in between blends. Used as seed for the smoothed line.")]
     [Range(-1f, 1f)]
     public float lineFactor = 0f;
+    [Tooltip("Use this track's TRAINED racing line as the ideal, when one exists (Resources/RacingLines/<track>.json, written by Draftmaster > AI > Train Racing Lines). That line is what a few hundred simulated laps settled on: late apexes, straight-line braking, the exit opened up — quicker AND more natural than the authored arc. lineFactor still blends off it toward the leftmost/rightmost lines. Off falls back to the authored ideal plus minimum-curvature relaxation.")]
+    public bool useTrainedLine = true;
+
+    /// True when Rebuild found a trained line for this track and is driving it.
+    public bool TrainedLineInUse { get; private set; }
 
     [Header("Racing Line Smoothing")]
     [Tooltip("How many Gauss-Seidel passes to relax the line toward minimum curvature. 0 = follow authored ideal exactly (rigid). 30-80 = realistic smoothed line.")]
@@ -336,17 +341,45 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _leftBoundProfile = new float[n];
         _rightBoundProfile = new float[n];
 
+        // A trained line, if this track has one, stands in for the authored ideal. It was found by driving
+        // the lap a few hundred times and keeping whatever was quicker (RacingLineTrainer), so it already
+        // sacrifices entry for exit the way a driver does. The length check is the guard: geometry gets
+        // regenerated, and a line trained against an older shape of the road is worse than none.
+        var trained = useTrainedLine && track.track != null
+            ? Draftmaster.Tracks.TrainedRacingLines.For(track.track.name)
+            : null;
+        if (trained != null && !trained.MatchesLength(_mainLength)) trained = null;
+        TrainedLineInUse = trained != null;
+
         for (int i = 0; i < n; i++)
         {
             float d = _mainSamples[i].distance;
-            _lateralProfile[i] = track.track.GetLateralAt(d, lineFactor, _anchors, _mainLength);
             _leftBoundProfile[i] = track.track.GetLateralAt(d, -1f, _anchors, _mainLength);
             _rightBoundProfile[i] = track.track.GetLateralAt(d, +1f, _anchors, _mainLength);
+
+            if (trained != null)
+            {
+                // Same blend TrackInfoV2 does between ideal and the outer lines, just off the trained ideal,
+                // so per-driver lineFactor spread still spreads the field across the road.
+                float ideal = Mathf.Clamp(trained.LateralAt(d),
+                    Mathf.Min(_leftBoundProfile[i], _rightBoundProfile[i]),
+                    Mathf.Max(_leftBoundProfile[i], _rightBoundProfile[i]));
+                _lateralProfile[i] = lineFactor >= 0f
+                    ? Mathf.Lerp(ideal, _rightBoundProfile[i], lineFactor)
+                    : Mathf.Lerp(ideal, _leftBoundProfile[i], -lineFactor);
+            }
+            else
+            {
+                _lateralProfile[i] = track.track.GetLateralAt(d, lineFactor, _anchors, _mainLength);
+            }
         }
 
         // Min-curvature relaxation: each pass nudges every point toward the average of its neighbours, clamped to bounds.
+        // Skipped on a trained line — it is already smooth (the trainer only ever moves it in raised-cosine
+        // bumps), and relaxing it would drag the late apexes back into the geometric arc it beat.
+        int relaxPasses = trained != null ? 0 : smoothingIterations;
         var tmp = new float[n];
-        for (int p = 0; p < smoothingIterations; p++)
+        for (int p = 0; p < relaxPasses; p++)
         {
             for (int i = 0; i < n; i++)
             {

@@ -296,10 +296,66 @@ Daytona; Bristol eats tyres faster than Martinsville). Read it through `TrackPro
 next job, and it's a one-line change at each site (`* TrackProfile.Current.draftScale` and so on). Doing it
 that way round means the numbers can be argued about in one file rather than hunted across the codebase.
 
+## Training the racing line
+
+The AI's line used to be asserted: the authored ideal (entry / apex / exit offsets on each segment),
+relaxed toward minimum curvature. Minimum curvature is not minimum lap time. It rounds every corner
+symmetrically, where a quick lap sacrifices entry to straighten the exit, brakes in a straight line and
+gets on the power early — so the old line was both slower and, more visibly, *wrong-looking*: every car
+tracing the same geometric arc.
+
+So the line is now driven rather than asserted. `Draftmaster > AI > Train Racing Lines (Missing Only)`
+walks every track asset and, for each one, hands `RacingLineTrainer` a lap:
+
+1. **Simulate.** The driven line's real curvature (Menger, on centreline + lateral) sets a cornering speed
+   at every point, `v = √(r·a_lat)`. Friction-circle-limited acceleration and braking passes then relax
+   that into speeds the car can actually reach and leave. This is the same model `SplineDriver` bakes for
+   its speed profile — so a line that is quicker here is quicker in the game.
+2. **Train.** Drive that lap over and over. Each trial nudges one stretch of road a little wider or a
+   little tighter (a raised-cosine bump, so the result stays steerable) and keeps the change only if the lap
+   came out faster. A track takes 1,000–9,000 simulated laps and a few seconds.
+3. **Store.** The winner is resampled to an even 3 m grid and written to
+   `Assets/Resources/RacingLines/<id>.json` with the lap times either side of training.
+
+The search is **coarse-to-fine**, and that is the part that matters. A trial that moves 20 m of road cannot
+discover the shape of a corner: widening the entry on its own lengthens the lap and slows it down, and only
+pays once the apex has come in to meet it. Early rounds move a whole corner's worth of road at once and
+find the in-apex-out shape; later rounds shrink down to polish where the apex sits. Fixed-width bumps found
+about a third of the available time.
+
+`SplineDriver` picks the trained line up automatically as its **ideal**, and skips the minimum-curvature
+relaxation when it does (relaxing a trained line would drag the late apexes straight back into the arc they
+beat). `lineFactor` still blends off it toward the leftmost/rightmost lines, so the field still spreads
+across the road. The guard is lap length: a line whose stored length no longer matches the sampled
+geometry is rejected outright, because a line trained against an older shape of the road is worse than
+none. **Retrain after regenerating geometry** — `Draftmaster > AI > Retrain Every Racing Line`.
+
+`Draftmaster > AI > Report Trained Racing Lines` prints what is on disk and what it found.
+
+### What it is worth, and what limits it
+
+Road courses gain the most (COTA 3.7%, the Roval 3.4%, Chicago 3.7%), short tracks a useful amount
+(IRP 5.3%, Iowa 4.6%), and the big ovals almost nothing (Gateway 0.3%, Pocono 0.8%). That ordering is
+correct and worth remembering: **on an oval the AI are not limited by the line.** They are up against
+`VehicleInfo.topSpeed` and the per-segment `maxSpeed` the oval generator writes into each turn
+(`OvalGeometry.CornerSpeedMph`). No line can beat a cap. If ovals need more pace, raise those — or
+`TrackConditions.AiPaceMultiplier`, which stretches the whole longitudinal envelope rather than only corner
+targets.
+
+Training reads the **live** `TrackConditions` (`AiEffective` grip) and `VehicleInfo` off `Cup24`, so the
+line reflects whatever the sliders are set to when the run happens. Dialling the field back down afterwards
+with `AiGripMultiplier` / `AiPaceMultiplier` does not invalidate the line: it is still the quickest way
+round, just driven slower, and `SplineInputDriver`'s live grip governor caps commanded speed against
+whatever grip actually exists.
+
 ## Files
 
 | File | Role |
 | --- | --- |
+| `Assets/Scripts/Tracks/Core/RacingLineTrainer.cs` | The lap simulator and the coarse-to-fine optimiser that drives it. Pure maths, unit tested. |
+| `Assets/Scripts/Tracks/Core/TrainedRacingLine.cs` | The stored line: resample, lookup, and the length guard. Plus the runtime cache. |
+| `Assets/Editor/RacingLineTrainingMenu.cs` | `TrackInfoV2` + `VehicleInfo` → a lap the trainer can drive; writes the JSON. |
+| `Assets/Resources/RacingLines/<id>.json` | One trained line per track, with the lap times either side of training. Generated. |
 | `Assets/Scripts/Tracks/Core/OvalGeometry.cs` | The solver: spec → segments, pit lane, corner speeds, closure check. Own asmdef, unit tested. |
 | `Assets/Scripts/Tracks/Core/TrackTuning.cs` | Per-type feel numbers plus per-track exceptions. |
 | `Assets/Scripts/Tracks/Core/TrackDimensions.cs` | Published length, width and banking for every venue on the three calendars. |
@@ -325,6 +381,7 @@ that way round means the numbers can be argued about in one file rather than hun
 | `Assets/Tests/Editor/TrackDimensionsTests.cs` | Every venue solves: closure, length, width, corner count, no self-intersection. |
 | `Assets/Tests/Editor/BuiltTrackAssetTests.cs` | The built assets on disk measure what they claim, and every package is wired. |
 | `Assets/Tests/Editor/OsmTrackGeometryTests.cs` | A lap walked into points comes back as the lap that went in, noise and all; closure on both paths. |
+| `Assets/Tests/Editor/RacingLineTrainerTests.cs` | The lap physics against a circle you can do on paper, and the optimiser's contract: never slower, never off the road, never a kink, same answer twice. |
 
 ## The shared race scene
 
