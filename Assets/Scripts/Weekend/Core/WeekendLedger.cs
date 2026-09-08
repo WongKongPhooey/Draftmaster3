@@ -60,8 +60,16 @@ namespace Draftmaster.Weekend
             }
         }
 
+        // Set by the co-op layer on a guest. The host owns the weekend outright, so nothing on the guest may
+        // persist to it: the book is held in memory (ImportJson) and replaced by the host's next push. A
+        // plain flag rather than a Coop reference because this assembly cannot see Assembly-CSharp — same
+        // reason the money/stat hooks below are installed from outside.
+        public static bool ReadOnly;
+
         static void Save()
         {
+            if (ReadOnly) { Changed?.Invoke(); return; }
+
             PlayerPrefs.SetString(Key, JsonUtility.ToJson(Data));
             PlayerPrefs.Save();
             Changed?.Invoke();
@@ -69,6 +77,37 @@ namespace Draftmaster.Weekend
 
         // Fired whenever anything here moves, so an open schedule screen can redraw.
         public static event Action Changed;
+
+        // ------------------------------------------------------------------ co-op mirroring
+        //
+        // The whole weekend is one Book — slot, clock, done/missed, the four meters, earnings, headlines —
+        // so a co-op guest is kept in step by shipping the book rather than by mirroring a dozen fields
+        // separately. CareerMirror calls Export on the host and Import on the guest.
+
+        // The host's book, as it would be written to prefs.
+        public static string ExportJson() => JsonUtility.ToJson(Data);
+
+        // Overwrite the whole book from the host's copy.
+        //
+        // Deliberately does NOT go through Save(): the guest must not leave a foreign career sitting in its
+        // own PlayerPrefs, where its next solo session would pick the weekend up as its own. The guest holds
+        // the host's weekend in memory for as long as it is connected and no longer.
+        public static void ImportJson(string json)
+        {
+            if (string.IsNullOrEmpty(json)) return;
+
+            Book incoming = null;
+            try { incoming = JsonUtility.FromJson<Book>(json); }
+            catch (Exception e) { UnityEngine.Debug.LogWarning($"WeekendLedger.ImportJson: {e.Message}"); }
+            if (incoming == null) return;
+
+            incoming.done ??= new List<string>();
+            incoming.missed ??= new List<string>();
+            incoming.headlines ??= new List<string>();
+
+            _cache = incoming;
+            Changed?.Invoke();
+        }
 
         // ------------------------------------------------------------------ settle hooks
         //

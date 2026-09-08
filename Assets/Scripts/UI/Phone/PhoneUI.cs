@@ -107,6 +107,10 @@ public class PhoneUI : MonoBehaviour
 
     void Update()
     {
+        // The phone is the career's own device — contacts, deals, tasks, all of it the host's. A co-op guest
+        // is a driver in the host's weekend, not the owner of that career, so they do not carry it.
+        if (Coop.IsGuest) return;
+
         _pollTimer -= Time.unscaledDeltaTime;
         if (_pollTimer <= 0f)
         {

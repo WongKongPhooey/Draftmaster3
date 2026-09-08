@@ -43,7 +43,10 @@ public class FightTestRivals : MonoBehaviour
     {
         if (!Enabled) return;
         if (FindObjectOfType<FightTestRivals>() != null) return;
-        if (!GameSession.IsSinglePlayer) return;
+        // The paddock exists in co-op — it is the career, and the career is what co-op rides. Only the
+        // HOST stands it up though: the guest receives the cast rather than spawning a second one of
+        // its own on top, which is the whole rule for content in a co-op session.
+        if (!GameSession.CareerActive || Coop.IsGuest) return;
         if (FindObjectOfType<PitLaneStart>() == null) return;      // no on-foot paddock, nobody to fall out with
         new GameObject("FightTestRivals").AddComponent<FightTestRivals>();
     }

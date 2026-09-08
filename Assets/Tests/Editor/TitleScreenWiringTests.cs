@@ -94,7 +94,7 @@ public class TitleScreenWiringTests
     {
         var menu = Menu();
         Assert.AreEqual(NewSeason, CommandOf(menu, "NEW SEASON"), "NEW SEASON should start a fresh weekend.");
-        Assert.AreEqual(Continue, CommandOf(menu, "CONTINUE"), "CONTINUE should resume the selected track.");
+        Assert.AreEqual(Continue, CommandOf(menu, "CAREER"), "CAREER should resume the selected track.");
         Assert.AreEqual(Exhibition, CommandOf(menu, "EXHIBITION"), "EXHIBITION should skip to the race.");
 
         // The race scene builds its road from the selected track, so the season's opener needs both halves
@@ -279,7 +279,7 @@ public class TitleScreenWiringTests
                         "The RESTART DEMO row does not run the restart command.");
     }
 
-    // The CONTINUE row's subtitle says where the career is sat and when it was last written. TitleScreenUI
+    // The CAREER row's subtitle says where the career is sat and when it was last written. TitleScreenUI
     // fills it at runtime by looking for a child of the row called "Chapter" — by name, so that the builder
     // does not have to know about a line the design added by hand. Rename or delete that child and the
     // subtitle silently keeps whatever placeholder copy the scene was saved with, which is exactly the bug
@@ -295,18 +295,18 @@ public class TitleScreenWiringTests
             if (row.FindPropertyRelative("command").enumValueIndex != Continue) continue;
 
             var rect = row.FindPropertyRelative("rect").objectReferenceValue as RectTransform;
-            Assert.IsNotNull(rect, "The CONTINUE row has no rect, so there is nothing to hang a subtitle on.");
+            Assert.IsNotNull(rect, "The CAREER row has no rect, so there is nothing to hang a subtitle on.");
 
             var subtitle = rect.Find(SubtitleName);
             Assert.IsNotNull(subtitle,
-                             $"The CONTINUE row has no '{SubtitleName}' child — the menu has nowhere to write " +
+                             $"The CAREER row has no '{SubtitleName}' child — the menu has nowhere to write " +
                              "which track the career is at and when it was last saved.");
             Assert.IsNotNull(subtitle.GetComponent<TMPro.TextMeshProUGUI>(),
-                             $"'{SubtitleName}' under the CONTINUE row is not a text object.");
+                             $"'{SubtitleName}' under the CAREER row is not a text object.");
             return;
         }
 
-        Assert.Fail("The menu has no CONTINUE row to carry a subtitle.");
+        Assert.Fail("The menu has no CAREER row to carry a subtitle.");
     }
 
     // TitleScreenUI.SubtitleName.

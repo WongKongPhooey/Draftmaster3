@@ -44,6 +44,10 @@ public class NPCWalkUpCutscene : MonoBehaviour
     {
         if (_phase != Phase.Idle || player == null || npc == null) return;
 
+        // Never on a co-op guest: this locks the player and hands off to a conversation, and the guest has
+        // no business playing out the host's scripted beat on its own machine.
+        if (Coop.IsGuest) { Abort(); return; }
+
         player.MovementLocked = true;
         CinematicBars.PushForced();
 

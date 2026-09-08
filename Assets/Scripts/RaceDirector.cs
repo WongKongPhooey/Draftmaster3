@@ -67,7 +67,10 @@ public class RaceDirector : MonoBehaviour
 
     void Awake()
     {
-        if (!RaceWeekend.IsRaceSession || !GameSession.IsSinglePlayer)
+        // Co-op runs the race director, because co-op runs the career — but only on the host. Two peers
+        // each deciding independently that the race has finished, who won and what the payout was is a
+        // race result that disagrees with itself; the guest is told, via CareerMirror.
+        if (!RaceWeekend.IsRaceSession || !GameSession.CareerActive || Coop.IsGuest)
         {
             enabled = false;
             return;

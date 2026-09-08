@@ -423,6 +423,6 @@ public class TravelMapScreen : MonoBehaviour
         // Load the circuit's scene when it's in the build; otherwise re-run the current (dev) scene —
         // the travel position still advances, so the map keeps working before every track is wired up.
         string scene = Application.CanStreamedLevelBeLoaded(circuit.id) ? circuit.id : SceneManager.GetActiveScene().name;
-        SceneManager.LoadScene(scene);
+        CoopScene.Load(scene);   // fast travel takes a co-op guest with it
     }
 }

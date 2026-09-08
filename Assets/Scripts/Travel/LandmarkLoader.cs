@@ -25,7 +25,7 @@ public static class LandmarkLoader
         }
         PlayerPrefs.SetString(ReturnKey, SceneManager.GetActiveScene().name);
         PlayerPrefs.Save();
-        SceneManager.LoadScene(SceneName);
+        CoopScene.Load(SceneName);
     }
 
     // Back in the car: return to the scene the map was floating over and reopen it so the trip continues.
@@ -34,9 +34,9 @@ public static class LandmarkLoader
         _reopenMap = true;
         string back = PlayerPrefs.GetString(ReturnKey, "");
         if (!string.IsNullOrEmpty(back) && Application.CanStreamedLevelBeLoaded(back))
-            SceneManager.LoadScene(back);
+            CoopScene.Load(back);
         else
-            SceneManager.LoadScene(0); // return scene lost (cleared prefs?) — main menu beats a landmark loop
+            CoopScene.Load(0); // return scene lost (cleared prefs?) — main menu beats a landmark loop
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

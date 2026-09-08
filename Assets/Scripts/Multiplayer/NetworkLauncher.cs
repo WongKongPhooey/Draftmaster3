@@ -26,12 +26,16 @@ public class NetworkLauncher : MonoBehaviour
     [SerializeField] string raceSceneName = "RaceScene";
     [Tooltip("Maximum players per session, including the host.")]
     [SerializeField] int maxPlayers = 8;
+    [Tooltip("Maximum players in a CO-OP CAREER session. Two: the host's career, plus one guest riding it.")]
+    [SerializeField] int coopMaxPlayers = 2;
     [Tooltip("Networked player car spawned per client once that prefab exists (Phase 2). Null = no auto spawn.")]
     [SerializeField] GameObject playerPrefab;
     [Tooltip("Extra prefabs spawned at runtime (e.g. networked AI cars). Registered as network prefabs on every peer so host-spawned objects resolve on clients.")]
     [SerializeField] GameObject[] networkPrefabs;
     [Tooltip("Authored join-code overlay spawned (DontDestroyOnLoad) so the host can read/copy the code from the menu through into the race. Auto-filled in the editor.")]
     [SerializeField] GameObject statusOverlayPrefab;
+    [Tooltip("Networked AI car the CO-OP career field is spawned from (GridSpawner, host side). Registered on every peer so the guest can resolve the host's spawns. Auto-filled in the editor.")]
+    [SerializeField] GameObject coopFieldPrefab;
 
     public bool Busy { get; private set; }
     public ISession Session { get; private set; }
@@ -92,6 +96,7 @@ public class NetworkLauncher : MonoBehaviour
     async void HandleTransportFailure()
     {
         bool wasHost = Session != null && Session.IsHost;
+        bool wasCoop = GameSession.IsCoop;
         SetStatus(wasHost
             ? "Network transport failed — recreating session…"
             : "Network transport failed — connection lost.");
@@ -104,11 +109,28 @@ public class NetworkLauncher : MonoBehaviour
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             NetworkManager.Singleton.Shutdown();
 
+        Coop.Reset();
         GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
 
         // Host: spin up a fresh allocation and restart NGO as host. This yields a NEW join code, so any
         // previously connected players must re-join with it. Clients just report the lost connection.
-        if (wasHost) HostGame();
+        //
+        // A co-op host reopens as co-op, not as a competitive race: their career is still running underneath
+        // and dropping it into the lobby mode would switch the whole weekend off. A co-op GUEST is not
+        // reconnected at all — the career being played belongs to the host's save, so there is no host
+        // migration to attempt and CareerMirror hands this player their own career back on the way out.
+        if (!wasHost) return;
+        if (wasCoop) HostCoop(); else HostGame();
+    }
+
+    // Add a prefab to the network prefab list if it is not already there. NGO resolves a spawn by prefab
+    // hash, so an unregistered prefab is a spawn the client simply cannot build.
+    static void RegisterPrefab(NetworkManager nm, GameObject prefab)
+    {
+        if (prefab == null || nm.NetworkConfig == null) return;
+        foreach (var p in nm.NetworkConfig.Prefabs.Prefabs)
+            if (p != null && p.Prefab == prefab) return;
+        nm.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = prefab });
     }
 
     void SetStatus(string s)
@@ -200,6 +222,97 @@ public class NetworkLauncher : MonoBehaviour
         finally { Busy = false; }
     }
 
+    // ------------------------------------------------------------------ co-op career
+    //
+    // Co-op is not a lobby. The host keeps playing its own career exactly where it is — no lobby scene, no
+    // ready-up, no starting state to agree on — and a guest joining is pulled into whatever scene the host
+    // is stood in, at whatever hour of the weekend the host has reached. That is the whole premise: a
+    // second player drops in at any moment, so there is nothing to wait for.
+
+    public async void HostCoop()
+    {
+        if (Busy) return;
+        Busy = true;
+        try
+        {
+            await EnsureServicesAsync();
+            SetStatus("Opening your career to a friend…");
+            GameSession.CurrentMode = GameSession.Mode.CoopCareer;
+            PrepareCoopSession();
+
+            var options = new SessionOptions { MaxPlayers = coopMaxPlayers }.WithRelayNetwork();
+            Session = await MultiplayerService.Instance.CreateSessionAsync(options);
+
+            Coop.Hook();
+            SetStatus($"Co-op open — share code: {Session.Code}");
+            // Deliberately NO scene load: the host stays where it is and the guest comes to them.
+        }
+        catch (Exception e)
+        {
+            GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
+            SetStatus($"Could not open co-op: {e.Message}");
+            Debug.LogException(e);
+        }
+        finally { Busy = false; }
+    }
+
+    public async void JoinCoop(string code)
+    {
+        if (Busy) return;
+        if (string.IsNullOrWhiteSpace(code)) { SetStatus("Enter a join code first."); return; }
+        Busy = true;
+        try
+        {
+            await EnsureServicesAsync();
+            SetStatus("Joining their weekend…");
+            GameSession.CurrentMode = GameSession.Mode.CoopCareer;
+            PrepareCoopSession();
+
+            Session = await MultiplayerService.Instance.JoinSessionByCodeAsync(code.Trim().ToUpperInvariant());
+
+            Coop.Hook();
+            SetStatus("Joined — following the host…");
+            // NGO scene management pulls us into the host's current scene; CareerMirror then hands us the
+            // host's weekend the moment the connection lands.
+        }
+        catch (Exception e)
+        {
+            GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
+            SetStatus($"Could not join: {e.Message}");
+            Debug.LogException(e);
+        }
+        finally { Busy = false; }
+    }
+
+    // Shape the NetworkManager for co-op and make sure the career mirror is running before the transport
+    // comes up, so a fast connect cannot land before there is anything to receive it.
+    void PrepareCoopSession()
+    {
+        EnsureNetworkManager();
+        var nm = NetworkManager.Singleton;
+        if (nm == null) return;
+
+        // Co-op players are not handed a car at connect — the guest takes over a driver already entered in
+        // the weekend. An auto-spawned player prefab would put a second, unentered car in the world.
+        if (nm.NetworkConfig != null) nm.NetworkConfig.PlayerPrefab = null;
+
+        if (nm.GetComponent<CareerMirror>() == null) nm.gameObject.AddComponent<CareerMirror>();
+        if (nm.GetComponent<CoopBodies>() == null) nm.gameObject.AddComponent<CoopBodies>();
+        if (nm.GetComponent<CoopPossession>() == null) nm.gameObject.AddComponent<CoopPossession>();
+
+        // The career field is spawned from this prefab by GridSpawner on the host. Both peers must have it
+        // registered or the guest cannot resolve the spawns and receives an empty track.
+        //
+        // A launcher created at runtime (no scene instance to carry serialized references) has none, so fall
+        // back to the one the scene's own spawner is going to use — that is the prefab by definition.
+        if (coopFieldPrefab == null)
+        {
+            var spawner = FindFirstObjectByType<GridSpawner>();
+            if (spawner != null) coopFieldPrefab = spawner.networkedAiPrefab;
+        }
+        RegisterPrefab(nm, coopFieldPrefab);
+    }
+
     public async void Leave()
     {
         try { if (Session != null) await Session.LeaveAsync(); }
@@ -207,6 +320,7 @@ public class NetworkLauncher : MonoBehaviour
         Session = null;
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             NetworkManager.Singleton.Shutdown();
+        Coop.Reset();
         GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
     }
 
@@ -217,6 +331,9 @@ public class NetworkLauncher : MonoBehaviour
         if (statusOverlayPrefab == null)
             statusOverlayPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/Prefabs/UI/NetworkStatusOverlay.prefab");
+        if (coopFieldPrefab == null)
+            coopFieldPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Prefabs/Multiplayer/NetworkedAICar.prefab");
     }
 #endif
 }

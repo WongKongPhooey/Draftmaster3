@@ -26,6 +26,9 @@ public class CutsceneTrigger : MonoBehaviour
     void Update()
     {
         if (_fired || target == null || Triggered == null) return;
+        // Story beats belong to the career's owner. A co-op guest walking through the same zone would play
+        // the host's cutscene a second time on its own machine, against its own copy of the cast.
+        if (Coop.IsGuest) return;
         if (Gate != null && !Gate()) return;
         if (Vector2.Distance(target.position, transform.position) > radius) return;
 

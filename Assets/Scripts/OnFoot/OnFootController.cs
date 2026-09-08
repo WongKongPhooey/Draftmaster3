@@ -16,17 +16,26 @@ public class OnFootController : MonoBehaviour
     // here turns all of it into a list read.
     public static readonly List<OnFootController> All = new();
 
-    // The walking body, or null while the player is in the car / in a menu. First one still alive,
+    // THIS player's walking body, or null while they are in the car / in a menu. First one still alive,
     // matching the scene order FindFirstObjectByType used to hand back.
+    //
+    // Skips remote puppets. In co-op the other player's body is a walking OnFootController too, and every
+    // caller of Current means "me" — the objective marker, the phone, the crowd director, the fan spawner.
+    // Handing any of them the other player's body would point this player's HUD at somebody else.
     public static OnFootController Current
     {
         get
         {
             for (int i = 0; i < All.Count; i++)
-                if (All[i] != null) return All[i];   // Unity null: destroyed this frame, OnDisable pending
+                if (All[i] != null && !All[i].RemotePuppet) return All[i];   // Unity null: destroyed this frame, OnDisable pending
             return null;
         }
     }
+
+    // The other player's body in a co-op session: present in All so anything scanning for people finds it,
+    // but never Current, never reading input, and never interacting. Its pose is written by CoopBodies from
+    // the network. Not serialized — runtime only.
+    [System.NonSerialized] public bool RemotePuppet;
 
     [Tooltip("Walk speed in units/sec.")]
     public float moveSpeed = 3.5f;
@@ -135,6 +144,10 @@ public class OnFootController : MonoBehaviour
 
     void FixedUpdate()
     {
+        // A remote puppet is driven entirely by CoopBodies writing its transform — it must not read this
+        // machine's input, or the other player's body would walk around under our own controls.
+        if (RemotePuppet) return;
+
         EnsureMoveAction();
         Vector2 move = ReadMove();
 
@@ -197,6 +210,27 @@ public class OnFootController : MonoBehaviour
 
     void Update()
     {
+        // No prompts and no interactions on somebody else's body: the interact key belongs to the player
+        // stood in front of the NPC, not to whoever their puppet happens to be near on this screen.
+        if (RemotePuppet) { HidePrompt(); return; }
+
+        // Co-op guest: you walk, the host talks. Conversations, the schedule sheet and everything they
+        // settle belong to the player whose career it is — two peers each opening their own dialogue with
+        // the same NPC is a conversation that disagrees with itself.
+        //
+        // A guest starts no conversations, but it MUST still be able to end one it was put into. A cutscene
+        // that calls BeginConversation plants the player until the talk finishes (FixedUpdate zeroes
+        // movement while _activeNpc is talking), and advancing the lines is the only way out — so a blanket
+        // early return here locks the guest in place permanently the first time anything talks to them.
+        if (Coop.IsGuest)
+        {
+            HidePrompt();
+            bool pressed = ReadInteractPressed();
+            if (pressed && _activeNpc != null && _activeNpc.IsTalking && !_activeNpc.Interact())
+                _activeNpc = null;
+            return;
+        }
+
         // Mid-fight: the fight owns the action keys (DriverFight reads them directly) and nobody is
         // talkable while it's going on — but walking still works, so the player can circle and back off.
         if (DriverFight.IsActive)

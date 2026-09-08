@@ -20,6 +20,8 @@ public class MultiplayerMenuUI : MonoBehaviour
     [SerializeField] Button singlePlayerButton;
     [SerializeField] Button hostButton;
     [SerializeField] Button joinButton;
+    [Tooltip("Optional. CO-OP CAREER join — the guest side, which is the half of co-op that does belong on this menu.")]
+    [SerializeField] Button coopJoinButton;
     [SerializeField] Text statusText;
     [SerializeField] Text codeDisplay;
     [SerializeField] Text codeText;         // typed join code
@@ -33,6 +35,7 @@ public class MultiplayerMenuUI : MonoBehaviour
         if (singlePlayerButton != null) singlePlayerButton.onClick.AddListener(OnSinglePlayer);
         if (hostButton != null) hostButton.onClick.AddListener(OnHost);
         if (joinButton != null) joinButton.onClick.AddListener(OnJoin);
+        if (coopJoinButton != null) coopJoinButton.onClick.AddListener(JoinCoopCareer);
     }
 
     void Start()
@@ -115,6 +118,27 @@ public class MultiplayerMenuUI : MonoBehaviour
         NetworkLauncher.Instance.JoinGame(_code);
     }
 
+    // ---- co-op career ----
+    //
+    // Public so any authored button can call them, because the two halves belong in different places.
+    // JOINING is a title-side action and fits this menu: the guest arrives with a code and is pulled into
+    // whatever scene the host is stood in. HOSTING is not a menu action at all — "open my career to a
+    // friend" only means anything once you are IN a career, so that button belongs on the pause menu or the
+    // phone, in the paddock. Hosting from here would open a session sat in the menu scene and drag the guest
+    // into it.
+
+    public void HostCoopCareer()
+    {
+        if (NetworkLauncher.Instance == null) { SetStatus("No NetworkLauncher in scene."); return; }
+        NetworkLauncher.Instance.HostCoop();
+    }
+
+    public void JoinCoopCareer()
+    {
+        if (NetworkLauncher.Instance == null) { SetStatus("No NetworkLauncher in scene."); return; }
+        NetworkLauncher.Instance.JoinCoop(_code);
+    }
+
     void SetStatus(string s) { if (statusText != null) statusText.text = s; }
 
     // Locate the authored children by name. Used as a runtime fallback and to bake references in the editor.
@@ -123,6 +147,7 @@ public class MultiplayerMenuUI : MonoBehaviour
         if (singlePlayerButton == null) singlePlayerButton = FindButton("SinglePlayerButton");
         if (hostButton == null) hostButton = FindButton("HostButton");
         if (joinButton == null) joinButton = FindButton("JoinButton");
+        if (coopJoinButton == null) coopJoinButton = FindButton("CoopJoinButton");
         if (statusText == null) statusText = FindText("Status");
         if (codeDisplay == null) codeDisplay = FindText("CodeDisplay");
         if (codeText == null) codeText = FindText("CodeInput/Text");

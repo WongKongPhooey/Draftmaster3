@@ -39,6 +39,9 @@ public static class TrackSelection
     public static bool Select(string trackId)
     {
         if (string.IsNullOrEmpty(trackId)) return false;
+        // A co-op guest is at whatever track the host is at. CareerMirror writes the id straight into prefs
+        // from the host's copy; a local Select here would fight it and stamp the guest's own save.
+        if (Coop.IsGuest) return false;
         if (!TrackCatalog.HasGeometry(trackId))
         {
             Debug.LogWarning($"TrackSelection: '{trackId}' has no geometry asset at " +

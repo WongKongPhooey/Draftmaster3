@@ -123,7 +123,7 @@ public class RacePauseMenu : MonoBehaviour
         float rowH = PixelGUI.LineH, gapH = PixelGUI.Px(4f);
         float w = PixelGUI.Px(200f);
         float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 5f + rowH * 2f
-                  + rowH * 2f + gapH + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f);
+                  + rowH * 3f + gapH * 2f + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Round((Screen.height - h) * 0.5f);
 
@@ -161,6 +161,12 @@ public class RacePauseMenu : MonoBehaviour
         }
         cy += row + gap;
 
+        // Co-op lives here rather than on the title screen because "open my career to a friend" only means
+        // anything once there IS a career to open — the host keeps playing exactly where they are and the
+        // guest is pulled to them. The join half is on the title screen, where an arriving guest starts.
+        DrawCoopRow(new Rect(content.x, cy, content.width, row));
+        cy += row + gap;
+
         float footer = PixelGUI.LineH;
         float buttonH = PixelGUI.LineH + PixelGUI.Px(6f);
         float resumeY = content.yMax - buttonH - footer;
@@ -172,6 +178,47 @@ public class RacePauseMenu : MonoBehaviour
         GUI.Label(new Rect(content.x, content.yMax - footer, content.width, footer), "ESC TO RESUME", PixelGUI.Footer);
 
         if (_showMissions) DrawMissions(x + w + PixelGUI.Px(6f), y);
+    }
+
+    // One row, three states: not hosting, waiting for someone, someone here. The join code is the whole
+    // point of the middle state — it is what the host reads out to their friend.
+    void DrawCoopRow(Rect r)
+    {
+        if (!Coop.Active)
+        {
+            if (PixelGUI.Tab(r, "PLAY WITH A FRIEND", false))
+            {
+                var launcher = NetworkLauncher.Instance != null
+                    ? NetworkLauncher.Instance
+                    : new GameObject("NetworkLauncher").AddComponent<NetworkLauncher>();
+                launcher.HostCoop();
+            }
+            return;
+        }
+
+        if (Coop.IsGuest)
+        {
+            GUI.Label(r, "  In your friend's weekend", PixelGUI.LabelDim);
+            return;
+        }
+
+        string code = NetworkLauncher.Instance != null ? NetworkLauncher.Instance.JoinCode : null;
+        if (Coop.GuestPresent)
+        {
+            GUI.Label(r, "  Friend connected", PixelGUI.Label);
+        }
+        else if (!string.IsNullOrEmpty(code))
+        {
+            // Gold, because this is the one thing on the panel the player has to read out loud.
+            var was = GUI.color;
+            GUI.color = PixelGUI.Gold;
+            GUI.Label(r, $"  CODE  {code}", PixelGUI.Label);
+            GUI.color = was;
+        }
+        else
+        {
+            GUI.Label(r, "  Opening…", PixelGUI.LabelDim);
+        }
     }
 
     // Mission board: every QuestInfo asset with its state, progress text, and the state-appropriate

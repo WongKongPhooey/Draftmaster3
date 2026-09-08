@@ -19,6 +19,10 @@ public class NetworkedAICar : NetworkBehaviour
     [HideInInspector] public string carsetSeed = "";
     // Kinematic field: drive via SplineDriver only (no dynamic bicycle model). Set by GridSpawner before Spawn().
     [HideInInspector] public bool kinematicSeed;
+    // Resources name of the VehicleInfo this car runs (e.g. "Cup24"). A ScriptableObject cannot travel over
+    // the wire, but its name can, and every one of them lives in Resources/Vehicles — so the guest loads the
+    // same asset rather than being handed a car with no accel/decel curves the moment it possesses one.
+    [HideInInspector] public string vehicleInfoSeed = "";
 
     // Peer-wide registry of every networked AI (present on host AND clients, where they're puppets). Lets the
     // local player's PaceLapAssist find cars by transform without needing the host-only spline/RaceField.
@@ -29,6 +33,7 @@ public class NetworkedAICar : NetworkBehaviour
     public NetworkVariable<int> CarNumber = new(writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<FixedString64Bytes> DriverName = new(writePerm: NetworkVariableWritePermission.Server);
     public NetworkVariable<FixedString32Bytes> Carset = new(writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<FixedString32Bytes> VehicleInfoName = new(writePerm: NetworkVariableWritePermission.Server);
 
     public override void OnNetworkSpawn()
     {
@@ -48,6 +53,7 @@ public class NetworkedAICar : NetworkBehaviour
             CarNumber.Value = carNumberSeed;
             DriverName.Value = driverNameSeed ?? "";
             Carset.Value = carsetSeed ?? "";
+            VehicleInfoName.Value = vehicleInfoSeed ?? "";
 
             // The host runs the whole AI field. The prefab ships its brains DISABLED so they don't tick on a
             // client before the else-branch below switches them off — but that means the server has to switch
@@ -85,9 +91,31 @@ public class NetworkedAICar : NetworkBehaviour
             CarNumber.OnValueChanged += (_, __) => ApplyIdentity();
             DriverName.OnValueChanged += (_, __) => ApplyIdentity();
             Carset.OnValueChanged += (_, __) => ApplyIdentity();
+            VehicleInfoName.OnValueChanged += (_, __) => ApplyVehicleInfo();
         }
 
         ApplyIdentity();
+        ApplyVehicleInfo();
+    }
+
+    // Load the car's VehicleInfo from its synced name so a client copy has the same accel/decel/cornering
+    // curves the host is driving it with. Only matters once a guest possesses this car — until then the
+    // client's copy is a puppet with every brain off — but wiring it on spawn means possession is an
+    // ownership change and nothing else.
+    void ApplyVehicleInfo()
+    {
+        string n = VehicleInfoName.Value.ToString();
+        if (string.IsNullOrEmpty(n)) return;
+
+        var info = Resources.Load<VehicleInfo>($"Vehicles/{n}");
+        if (info == null) { Debug.LogWarning($"NetworkedAICar: no VehicleInfo at Resources/Vehicles/{n}."); return; }
+
+        var spline = GetComponent<SplineDriver>();
+        if (spline != null && spline.vehicleInfo == null) spline.vehicleInfo = info;
+        var pvc = GetComponent<PlayerVehicleController>();
+        if (pvc != null && pvc.vehicleInfo == null) pvc.vehicleInfo = info;
+        var binding = GetComponent<AIDriverBinding>();
+        if (binding != null && binding.vehicleInfo == null) binding.vehicleInfo = info;
     }
 
     // Paint + label the car from the synced identity. Rebuilds the deformable bodywork mesh from the livery
@@ -114,6 +142,28 @@ public class NetworkedAICar : NetworkBehaviour
             label.carNumber = number;
             label.driverName = DriverName.Value.ToString();
         }
+    }
+
+    // ------------------------------------------------------------------ co-op possession
+    //
+    // The host hands this car to the guest with ChangeOwnership; NGO raises these on each peer's own copy.
+    // Doing the swap here rather than off a broadcast message removes the race entirely — a message can
+    // arrive before this client has spawned the object, an ownership callback cannot.
+
+    public override void OnGainedOwnership()
+    {
+        base.OnGainedOwnership();
+        // The server owns every car it spawns, so it "gains" them all at spawn; only a client gaining one
+        // means a human has been put in it.
+        if (IsServer || !Coop.Active) return;
+        CoopPossession.GuestTakeOver(gameObject);
+    }
+
+    public override void OnLostOwnership()
+    {
+        base.OnLostOwnership();
+        if (IsServer || !Coop.Active) return;
+        CoopPossession.GuestHandBack(gameObject);
     }
 
     public override void OnNetworkDespawn() => _all.Remove(this);

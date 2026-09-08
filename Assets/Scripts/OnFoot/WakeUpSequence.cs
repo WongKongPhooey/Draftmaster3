@@ -55,6 +55,8 @@ public class WakeUpSequence : MonoBehaviour
     public static WakeUpSequence Play(OnFootController player, Settings settings)
     {
         if (player == null) return null;
+        // A co-op guest joins a weekend already underway — they do not wake up into the host's morning.
+        if (Coop.IsGuest) return null;
 
         var go = new GameObject("WakeUpSequence");
         var seq = go.AddComponent<WakeUpSequence>();

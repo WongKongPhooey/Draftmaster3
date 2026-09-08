@@ -30,6 +30,7 @@ public class TitleScreenUI : MonoBehaviour
         // APPEND new commands, never insert: the scene file stores a row's command as the number above it,
         // so inserting one moves every row in TitleScreen.unity onto the wrong command.
         RestartDemo,  // wipe the save, then open a fresh career — the demo build's "start again"
+        JoinCoop,     // open the join panel: drop into a friend's career as a second driver
     }
 
     // Which build a row belongs to. The demo menu is a different menu, not the same one with things
@@ -323,6 +324,11 @@ public class TitleScreenUI : MonoBehaviour
                 Load(row.sceneName);
                 break;
 
+            // A code has to be typed, which a menu row cannot take — so the row opens the panel that can.
+            case Command.JoinCoop:
+                CoopJoinPanel.Open();
+                break;
+
             // The demo's start-again row: the same fresh career NEW SEASON opens, on a save wiped back to
             // the first day — no money, no stats, no championship, no quests, nobody met.
             case Command.RestartDemo:
@@ -360,6 +366,8 @@ public class TitleScreenUI : MonoBehaviour
             case Command.NotWired: return false;
             case Command.LoadScene: return !string.IsNullOrEmpty(row.sceneName)
                                         && Application.CanStreamedLevelBeLoaded(row.sceneName);
+            // Joining loads no scene of its own — the host pulls us into theirs, whichever it is.
+            case Command.JoinCoop: return true;
             default: return Application.CanStreamedLevelBeLoaded(raceSceneName);
         }
     }

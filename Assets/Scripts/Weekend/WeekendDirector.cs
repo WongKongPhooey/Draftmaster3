@@ -371,6 +371,9 @@ public class WeekendDirector : MonoBehaviour
 
         var kb = Keyboard.current;
         if (kb == null) return;
+        // The sheet books the host's weekend, and a booking moves the clock for both players. Only the
+        // player whose career it is opens it; the guest is carried by whatever the host commits to.
+        if (Coop.IsGuest) return;
         // Not while an obligation is actually happening: mid-conversation with the crew chief, or sat in
         // the stand watching somebody else's race.
         if (kb[OpenKey].wasPressedThisFrame && !NPCInteractable.AnyConversationActive && !GrandstandSpectate.Watching)
@@ -443,7 +446,9 @@ public class WeekendDirector : MonoBehaviour
         bool inRaceScene = Object.FindFirstObjectByType<GridSpawner>() != null
                         || Object.FindFirstObjectByType<PitLaneStart>() != null;
         WeekendModal.Reset();
-        SceneManager.LoadScene(inRaceScene ? active.name : "RaceScene");
+        // Through CoopScene so a co-op guest is carried into the session with the host: every time skip
+        // the sheet makes ends here, and NGO scene management is what drags the guest along.
+        CoopScene.Load(inRaceScene ? active.name : "RaceScene");
     }
 
     // ------------------------------------------------------------------ finishing an activity

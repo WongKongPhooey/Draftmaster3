@@ -40,7 +40,7 @@ public static class GarageScreenLoader
 
         PlayerPrefs.SetString(ReturnKey, SceneManager.GetActiveScene().name);
         PlayerPrefs.Save();
-        SceneManager.LoadScene(SceneName);
+        CoopScene.Load(SceneName);
         return true;
     }
 
@@ -62,7 +62,7 @@ public static class GarageScreenLoader
         string exit = ResolveExit(fallbackScene);
         Clear();
         if (string.IsNullOrEmpty(exit)) return false;
-        SceneManager.LoadScene(exit);
+        CoopScene.Load(exit);
         return true;
     }
 

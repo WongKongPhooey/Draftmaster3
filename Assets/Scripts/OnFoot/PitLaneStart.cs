@@ -495,7 +495,10 @@ public class PitLaneStart : MonoBehaviour
 
         ShowPrompt(inRange);
 
-        if (inRange && InteractPressed()) EnterCar();
+        // A co-op guest never gets into the scene's player car: that car is the HOST's entry in the weekend,
+        // and the guest's copy of it is scene content, not a second entry. When a session starts, the guest
+        // is put into one of the cars already in the field instead (CoopPossession).
+        if (inRange && InteractPressed() && !Coop.IsGuest) EnterCar();
     }
 
     // Teach the two things the walk needs, as the player gets to them: sprint once they're actually walking,

@@ -1,17 +1,20 @@
 using System.Collections.Generic;
 
 // Which session of the race weekend the track scene is running, plus the qualifying result carried
-// across the scene reload into the race. Single-player scenes load into Friday practice first; the
+// across the scene reload into the race. Career scenes load into Friday practice first; the
 // session buttons (PracticeDirector) advance Practice → Qualifying → Race, reloading the scene each
-// time. Multiplayer is always a race.
+// time. The competitive lobby race is always a race; co-op runs the full career session flow, driven by
+// the host and mirrored to the guest by CareerMirror.
 public static class RaceWeekend
 {
     public enum Session { Practice, Qualifying, Race }
 
     public static Session Current = Session.Practice;
 
-    public static bool IsPractice => Current == Session.Practice && GameSession.IsSinglePlayer;
-    public static bool IsQualifying => Current == Session.Qualifying && GameSession.IsSinglePlayer;
+    // CareerActive, not IsSinglePlayer: the competitive lobby race has no weekend around it and is always
+    // a race, but co-op runs the full career and its practice and qualifying are real sessions.
+    public static bool IsPractice => Current == Session.Practice && GameSession.CareerActive;
+    public static bool IsQualifying => Current == Session.Qualifying && GameSession.CareerActive;
     // Practice-style sessions: no formation lap or safety car, AI run stints from their boxes.
     public static bool IsPracticeLike => IsPractice || IsQualifying;
     public static bool IsRaceSession => !IsPracticeLike;
@@ -49,10 +52,17 @@ public static class RaceWeekend
 
     public static bool SessionLive
     {
-        // Multiplayer has no weekend around it — a lobby that has loaded the track is a race.
-        get => !GameSession.IsSinglePlayer || UnityEngine.PlayerPrefs.GetInt(SessionLiveKey, 0) == 1;
+        // The competitive lobby race has no weekend around it — a lobby that has loaded the track is a race.
+        // Co-op does have one, so it reads the flag like any career session; on a guest that flag is written
+        // by CareerMirror from the host's copy rather than by anything local.
+        get => !GameSession.CareerActive || UnityEngine.PlayerPrefs.GetInt(SessionLiveKey, 0) == 1;
         set
         {
+            // A co-op guest never decides whether a session is live — the host does, and the mirror tells us.
+            // Letting a guest write here would fight the next push and date its own save with someone else's
+            // weekend (CareerSave.Stamp, below).
+            if (Coop.IsGuest) return;
+
             UnityEngine.PlayerPrefs.SetInt(SessionLiveKey, value ? 1 : 0);
             UnityEngine.PlayerPrefs.Save();
             // Taking the car out and handing it back are both progress: date them, so CONTINUE knows when
@@ -64,6 +74,8 @@ public static class RaceWeekend
     // Fresh weekend (call from menu flow before loading a track scene).
     public static void ResetWeekend()
     {
+        if (Coop.IsGuest) return;   // the host starts weekends; the guest is told about them
+
         UnityEngine.PlayerPrefs.SetInt(WeekendIdKey, WeekendId + 1);
         UnityEngine.PlayerPrefs.Save();
         Current = Session.Practice;

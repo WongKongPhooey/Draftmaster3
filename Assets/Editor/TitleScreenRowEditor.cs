@@ -28,6 +28,83 @@ public static class TitleScreenRowEditor
                          after: TitleScreenUI.Command.Continue));
     }
 
+    // Wire the MULTIPLAYER row the design already has. It sat as a NotWired placeholder — the house style
+    // for "the design has this and the game doesn't yet" — so this WIRES it rather than adding a second
+    // row: AddRow matches on the label and rewires in place, moving nothing.
+    //
+    // Joining loads no scene of its own (the host pulls the guest into whichever one they are stood in),
+    // so the row carries no scene name and opens CoopJoinPanel instead. The other half, hosting, is
+    // deliberately NOT on this menu: opening your career to a friend only means anything from inside a
+    // career, so it sits on the race-scene pause menu.
+    [MenuItem("Draftmaster/UI/Wire MULTIPLAYER Row To Co-op Join")]
+    public static void WireMultiplayerRow()
+    {
+        Debug.Log(AddRow("MULTIPLAYER", TitleScreenUI.Command.JoinCoop, "",
+                         after: TitleScreenUI.Command.LoadScene));
+    }
+
+    // CONTINUE -> CAREER. The row resumes the career you are in the middle of, and "continue" describes the
+    // button rather than the thing behind it — every other row on the menu names a mode.
+    //
+    // Surgical, like AddRow: the row keeps its command, its rect, its cursor and its "Chapter" subtitle
+    // child, and nothing else in the scene is touched. Idempotent.
+    [MenuItem("Draftmaster/UI/Rename CONTINUE Row To CAREER")]
+    public static void RenameContinueRow()
+    {
+        Debug.Log(RenameRow("CONTINUE", "CAREER"));
+    }
+
+    // Clear every null-script component under the menu column. Returns how many went.
+    static int StripMissingScripts(TitleScreenUI ui)
+    {
+        int removed = 0;
+        foreach (var row in ui.rows)
+        {
+            if (row == null || row.rect == null) continue;
+            foreach (var t in row.rect.GetComponentsInChildren<Transform>(true))
+                removed += GameObjectUtility.RemoveMonoBehavioursWithMissingScript(t.gameObject);
+        }
+        return removed;
+    }
+
+    // Relabel a row in place: both the serialized label the menu matches on and the TMP text the player
+    // reads. The two must move together — the label is what code and tests look the row up by, and the
+    // text is what is actually drawn.
+    public static string RenameRow(string from, string to)
+    {
+        var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+        var ui = Object.FindObjectsByType<TitleScreenUI>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                       .FirstOrDefault();
+        if (ui == null) return $"No TitleScreenUI in {ScenePath}.";
+
+        var row = ui.rows.FirstOrDefault(r => r != null && (r.label == from || r.label == to));
+        if (row == null) return $"No {from} row on the title screen.";
+
+        // THREE names have to move together, not two. The serialized label is what the menu code and the
+        // wiring tests match a row by; the TMP text is what the player reads; and the row GameObject is
+        // named Row_<LABEL>, which is where TitleScreenWiringTests reads the drawn column order from
+        // (RowLabel(rect.name)). Leave the object behind and the walk order and the column disagree, which
+        // is precisely the bug those tests exist to catch — so it fails, correctly, on a half-done rename.
+        string objectName = "Row_" + to.Replace(' ', '_');
+        bool already = row.label == to
+                       && (row.labelText == null || row.labelText.text == to)
+                       && (row.rect == null || row.rect.name == objectName);
+        if (already) return $"Title screen already has a {to} row — left alone.";
+
+        row.label = to;
+        if (row.labelText != null) { row.labelText.text = to; EditorUtility.SetDirty(row.labelText); }
+        if (row.rect != null) { row.rect.name = objectName; EditorUtility.SetDirty(row.rect.gameObject); }
+
+        EditorUtility.SetDirty(ui);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene, ScenePath);
+        AssetDatabase.Refresh();
+
+        return $"Title screen: {from} row relabelled to {to} (label, text and object name). " +
+               "Command, position and subtitle untouched.";
+    }
+
     // Insert a row directly after the first row carrying `after`. Returns what happened.
     public static string AddRow(string label, TitleScreenUI.Command command, string sceneName,
                                 TitleScreenUI.Command after)
@@ -38,6 +115,17 @@ public static class TitleScreenRowEditor
                        .FirstOrDefault();
         if (ui == null) return $"No TitleScreenUI in {ScenePath}.";
 
+        // Always, before anything else — including the early return below, so re-running this cleans up
+        // after an earlier run.
+        //
+        // Cloning a row brings its gold cursor with it, and the cursor's blink (IronOvalBlink) does NOT
+        // survive the save: it is a second class declared inside IronOvalUI.cs, and Unity cannot resolve a
+        // MonoBehaviour whose type is not in a file of its own. What lands in the scene is a component with
+        // a null script, which SceneNavigationTests correctly reports as a broken object. TitleScreenUI
+        // puts the blink back at runtime (InstallCursorBlinks), so the empty shell is pure debris.
+        int stripped = StripMissingScripts(ui);
+        if (stripped > 0) Debug.Log($"Title screen: cleared {stripped} missing script(s) left by a cloned row.");
+
         // The row may already be on the menu as a placeholder. The design had SINGLE RACE drawn disabled
         // (Command.NotWired) long before there was a scene behind it, which is the house style for "the
         // design has this and the game doesn't yet" — so the job is to WIRE it, not to add a second one.
@@ -45,7 +133,18 @@ public static class TitleScreenRowEditor
         if (placeholder != null)
         {
             if (placeholder.command == command && placeholder.sceneName == sceneName)
-                return $"Title screen already has {label} wired to {sceneName} — left alone.";
+            {
+                // Nothing to wire, but the strip above may still have cleaned debris out — and this path
+                // used to return without saving, which quietly threw that away.
+                if (stripped > 0)
+                {
+                    EditorSceneManager.MarkSceneDirty(scene);
+                    EditorSceneManager.SaveScene(scene, ScenePath);
+                    AssetDatabase.Refresh();
+                    return $"Title screen: {label} was already wired; cleared {stripped} missing script(s).";
+                }
+                return $"Title screen already has {label} wired — left alone.";
+            }
 
             var was = placeholder.command;
             placeholder.command = command;

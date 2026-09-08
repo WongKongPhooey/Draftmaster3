@@ -60,7 +60,10 @@ public class SponsorRepSpawner : MonoBehaviour
     static void TryInstall()
     {
         if (FindObjectOfType<SponsorRepSpawner>() != null) return;
-        if (!GameSession.IsSinglePlayer) return;
+        // The paddock exists in co-op — it is the career, and the career is what co-op rides. Only the
+        // HOST stands it up though: the guest receives the cast rather than spawning a second one of
+        // its own on top, which is the whole rule for content in a co-op session.
+        if (!GameSession.CareerActive || Coop.IsGuest) return;
         if (FindObjectOfType<PitLaneStart>() == null) return;
         var tb = FindObjectOfType<TrackBuilder>();
         if (tb == null || tb.track == null || !tb.track.hasPitLane) return;

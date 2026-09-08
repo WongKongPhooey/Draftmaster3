@@ -133,6 +133,18 @@ public class GridSpawner : MonoBehaviour
         StartCoroutine(SyncAmbientField());
     }
 
+#if UNITY_EDITOR
+    // Bake the networked AI prefab reference in the editor, the same way NetworkLauncher fills its overlay
+    // prefab. Co-op spawns the career field from this, and a scene that had never been opened since co-op
+    // landed would otherwise have a null here and quietly fall back to a field the guest cannot see.
+    void OnValidate()
+    {
+        if (networkedAiPrefab == null)
+            networkedAiPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Prefabs/Multiplayer/NetworkedAICar.prefab");
+    }
+#endif
+
     IEnumerator Start()
     {
         // Multiplayer: only the host spawns AI, as networked objects replicated to clients (SpawnNetworkedField).
@@ -144,6 +156,10 @@ public class GridSpawner : MonoBehaviour
                 yield return SpawnNetworkedField();
             yield break;
         }
+
+        // Co-op guest: the field is the HOST's, spawned from the host's weekend and replicated here. Spawning
+        // a second one locally would double the grid and disagree with the host about who is in it.
+        if (Coop.IsGuest) yield break;
 
         if (track == null || carPrefab == null) yield break;
 
@@ -333,9 +349,25 @@ public class GridSpawner : MonoBehaviour
             }
         }
 
+        // Co-op: the same career field, but spawned through NGO so the guest sees it and can be handed one
+        // of the cars. Everything below is unchanged — the weekend clock decided there is a session, the
+        // roster decides who is in it, qualifying decides the order. Only the prefab and the parenting
+        // differ: the networked prefab already carries every component this loop would otherwise add, and a
+        // spawned NetworkObject cannot live under a plain GameObject (NGO re-roots it on the client), so
+        // networked cars stay at the scene root.
+        bool coopField = Coop.Active && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening
+                         && NetworkManager.Singleton.IsServer;
+        if (coopField && networkedAiPrefab == null)
+        {
+            Debug.LogError("GridSpawner: co-op needs 'networkedAiPrefab' assigned — falling back to the local " +
+                           "prefab, which the guest will not see.");
+            coopField = false;
+        }
+        var spawnPrefab = coopField ? networkedAiPrefab : carPrefab;
+
         for (int i = 0; i < count; i++)
         {
-            var go = Instantiate(carPrefab, parent);
+            var go = coopField ? Instantiate(spawnPrefab) : Instantiate(spawnPrefab, parent);
             go.name = $"AI_{i + 1:D2}";
             go.transform.localScale = new Vector3(carScale.x, carScale.y, 1f);
 
@@ -526,6 +558,25 @@ public class GridSpawner : MonoBehaviour
             // formation field never runs here (the phase is already Green), so without this a
             // dynamic-AI car's motion model can latch a stale origin pose on its first physics step.
             if (practice) splineDriver.PlaceAtStartDistance();
+
+            // Co-op: hand the finished car to the network. The identity seeds have to be written BEFORE
+            // Spawn — NetworkedAICar copies them into its NetworkVariables in OnNetworkSpawn, and writing a
+            // NetworkVariable before the object is spawned is not allowed. The guest's copy is built from
+            // the bare prefab, so these three fields are the only thing telling it what car this is.
+            if (coopField)
+            {
+                var netAi = go.GetComponent<NetworkedAICar>();
+                if (netAi != null)
+                {
+                    netAi.carNumberSeed = carNumber;
+                    netAi.driverNameSeed = label.driverName;
+                    netAi.carsetSeed = carsetPrefix;
+                    netAi.kinematicSeed = false;   // a career field is the full dynamic model, same as solo
+                    netAi.vehicleInfoSeed = vehicleInfo != null ? vehicleInfo.name : "";
+                }
+                var netObj = go.GetComponent<NetworkObject>();
+                if (netObj != null) netObj.Spawn();
+            }
         }
     }
 
