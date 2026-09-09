@@ -117,9 +117,19 @@ public class DriverMotorhomeLot : MonoBehaviour
     public int LineRows { get; private set; }
     public bool HasLine { get; private set; }
 
+    // The rest of what the layout took, kept so it can be handed to the co-op guest verbatim
+    // (CoopPaddockMirror). Everything downstream of the lot — the garages, the walkable pocket, the weekend
+    // venue cluster — is measured off the parked block, so the guest has to reproduce it exactly rather
+    // than solve it again from its own roster.
+    public int PlayerPlace { get; private set; } = -1;
+    public float AisleRowGap { get; private set; }
+
     // Raised once the row exists and every slot is filled in. DriverPresenceDirector waits on this.
     public bool Built { get; private set; }
     public event System.Action<DriverMotorhomeLot> Ready;
+
+    // True on the co-op guest: this lot builds nothing of its own and stands by for the host's layout.
+    public bool AwaitingHostLayout { get; private set; }
 
     public bool TryGetSlot(int carNumber, out Slot slot)
     {
@@ -145,9 +155,14 @@ public class DriverMotorhomeLot : MonoBehaviour
     {
         if (FindObjectOfType<DriverMotorhomeLot>() != null) return;      // authored or already installed
         // The paddock exists in co-op — it is the career, and the career is what co-op rides. Only the
-        // HOST stands it up though: the guest receives the cast rather than spawning a second one of
-        // its own on top, which is the whole rule for content in a co-op session.
-        if (!GameSession.CareerActive || Coop.IsGuest) return;
+        // HOST decides what it looks like: the guest installs the same component but builds nothing of its
+        // own, standing by for the host's layout (CoopPaddockMirror) and then running the same placement
+        // code over it. It has to be HERE rather than skipped entirely, because everything else in the
+        // paddock is measured off the parked block — the garages, the walkable pocket, the parked position
+        // of the player's own motorhome and the weekend venue cluster. A guest with no lot solved all four
+        // from an empty paddock and stood them tens of metres from where the host had them, which is what
+        // put one player inside the drivers' room and the other watching them stand in open ground.
+        if (!GameSession.CareerActive) return;
         if (FindObjectOfType<PitLaneStart>() == null) return;             // no on-foot flow, no paddock
         var tb = FindObjectOfType<TrackBuilder>();
         if (tb == null || tb.track == null || !tb.track.hasPitLane) return;
@@ -158,7 +173,19 @@ public class DriverMotorhomeLot : MonoBehaviour
     void Awake() => Instance = this;
     void OnDestroy() { if (Instance == this) Instance = null; }
 
-    void Start() => StartCoroutine(BuildWhenFieldReady());
+    void Start()
+    {
+        // The guest's row is the host's row. Solving it locally would use this machine's own player car
+        // number and its own driver database, and two rows that differ by one rig put every venue laid out
+        // beside them in a different place.
+        if (Coop.IsGuest)
+        {
+            AwaitingHostLayout = true;
+            return;
+        }
+
+        StartCoroutine(BuildWhenFieldReady());
+    }
 
     IEnumerator BuildWhenFieldReady()
     {
@@ -191,10 +218,18 @@ public class DriverMotorhomeLot : MonoBehaviour
         CollectField();
         BuildRow();
 
-        Built = true;
-        Ready?.Invoke(this);
         Debug.Log($"DriverMotorhomeLot: {_slots.Count} motorhomes in {Mathf.Max(1, rowCount)} line(s) " +
                   $"({(_slots.Count > 0 && _slots[0].isPlayer ? $"player at place {Mathf.Clamp(playerLineIndex, 0, _slots.Count - 1)}" : "no player RV found")}).", this);
+
+        FinishBuild();
+    }
+
+    // Everything that hangs off a parked row, whichever way the row was arrived at: the local solve above,
+    // or the host's layout applied verbatim on a co-op guest.
+    void FinishBuild()
+    {
+        Built = true;
+        Ready?.Invoke(this);
 
         // Now that every driver has an address, put each of them somewhere: in their car, at their
         // motorhome, or walking the lot.
@@ -205,6 +240,81 @@ public class DriverMotorhomeLot : MonoBehaviour
         // long as it isn't out on track or sat in its pit box.
         if (buildPopupGarages && FindObjectOfType<PopupGarageLot>() == null)
             PopupGarageLot.Create(this);
+    }
+
+    // ---------------------------------------------------------------- co-op
+
+    // One slot as it travels between peers: who is parked there, not where. The where is the line, which
+    // hands out the same places on both machines once they agree on it.
+    public struct SlotInfo
+    {
+        public int carNumber;
+        public string fullName;
+        public string shortName;
+        public string teamName;
+    }
+
+    // Take the host's row wholesale (CoopPaddockMirror).
+    //
+    // The guest runs the same PlaceSlots the host does, over the host's line, place count and roster, so
+    // every rig, the walkable pocket cut round them, the garages parked behind them and the weekend venues
+    // laid out beside them land on the same coordinates on both machines. Idempotent: a re-sent layout for
+    // a row that is already up is ignored, because the mirror re-sends on a loop so a scene load or a late
+    // join heals itself.
+    public void ApplyRemoteLayout(LineLayout line, int rows, int playerPlace, float aisleRowGap,
+                                  IList<SlotInfo> slots)
+    {
+        if (Built || slots == null || slots.Count == 0) return;
+
+        // The host held a place open for the player's own motorhome, so this machine's copy of that rig has
+        // to exist before the row is laid out — otherwise the place is filled by a driver and every rig
+        // behind it slides one along. PitLaneStart spawns it a frame or two into the scene; the mirror
+        // re-sends on a loop, so refusing here simply means trying again on the next one.
+        var playerRig = RVExterior.Player;
+        if (playerPlace >= 0 && playerRig == null) return;
+
+        _slots.Clear();
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var info = slots[i];
+            _slots.Add(new Slot
+            {
+                carNumber = info.carNumber,
+                fullName = info.fullName,
+                shortName = info.shortName,
+                teamName = info.teamName,
+                isPlayer = i == 0,
+                // Resolved locally: the field is replicated, so the car wearing this number is already in
+                // the scene under its own object. It only decides whether a driver is sat in it and whether
+                // their garage canopy is empty — never where anything is parked.
+                car = FindCarByNumber(info.carNumber),
+            });
+        }
+
+        AwaitingHostLayout = false;
+        PlaceSlots(line, rows, playerPlace, playerRig, aisleRowGap);
+
+        // The same walkable pocket the host cut, by the same rule: the authored rectangle when the track
+        // has one, otherwise a band grown round the rigs themselves. Without this the guest is clamped out
+        // of ground the host can walk on, which is its own invisible wall.
+        var area = PaddockLotArea.Find(PaddockLotKind.Motorhomes);
+        if (area != null) area.InstallWalkablePocket(transform);
+        else ExtendWalkableArea(line.axis, line.front);
+
+        Debug.Log($"DriverMotorhomeLot: took the host's layout — {_slots.Count} motorhomes in " +
+                  $"{Mathf.Max(1, rows)} line(s), player's rig in place {playerPlace}.", this);
+
+        FinishBuild();
+    }
+
+    // The replicated car wearing a given number, if it is in this scene at all.
+    static GameObject FindCarByNumber(int carNumber)
+    {
+        if (carNumber < 0) return null;
+        var labels = FindObjectsByType<DriverLabel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < labels.Length; i++)
+            if (labels[i] != null && labels[i].carNumber == carNumber) return labels[i].gameObject;
+        return null;
     }
 
     // ---------------------------------------------------------------- roster
@@ -431,6 +541,8 @@ public class DriverMotorhomeLot : MonoBehaviour
         Line = line;
         LineRows = rows;
         HasLine = true;
+        PlayerPlace = playerPlace;
+        AisleRowGap = aisleRowGap;
 
         var root = new GameObject("Motorhomes").transform;
         root.SetParent(transform, false);

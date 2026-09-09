@@ -79,6 +79,27 @@ public class CoopDebugPanel : MonoBehaviour
                         $"prefab {(CoopBodies.CanBuildPuppets ? "yes" : "NO")}   " +
                         $"puppets {CoopBodies.PuppetCount}");
         GUILayout.Label($"pose      {(age < 0f ? "never received" : $"{age:0.0}s ago at {CoopBodies.LastPosePos}")}");
+
+        // The paddock layer: whether both peers are standing in the same paddock. A guest that never took
+        // the host's row solves the whole block for itself, and every venue laid out beside it lands
+        // somewhere else — which reads in game as the other player standing outside the room you are in.
+        var lot = DriverMotorhomeLot.Instance;
+        string lotState = lot == null ? "none in scene"
+                        : lot.Built ? $"{lot.Slots.Count} rigs, player place {lot.PlayerPlace}"
+                        : lot.AwaitingHostLayout ? "waiting for the host's layout"
+                        : "building";
+        GUILayout.Label($"paddock   {lotState}");
+        if (Coop.IsGuest)
+        {
+            float layoutAge = CoopPaddockMirror.LastLayoutAt > 0f
+                ? Time.unscaledTime - CoopPaddockMirror.LastLayoutAt : -1f;
+            GUILayout.Label($"layout    {(layoutAge < 0f ? "never received" : $"{layoutAge:0.0}s ago")}" +
+                            $"   applied {(CoopPaddockMirror.GuestApplied ? "yes" : "NO")}");
+        }
+        else if (Coop.Active)
+        {
+            GUILayout.Label($"layout    sent {CoopPaddockMirror.LastSentSlots} slots");
+        }
         if (OnFootController.Current != null)
             GUILayout.Label($"me        {OnFootController.Current.transform.position}");
 

@@ -308,6 +308,7 @@ public class NetworkLauncher : MonoBehaviour
         if (nm.GetComponent<CareerMirror>() == null) nm.gameObject.AddComponent<CareerMirror>();
         if (nm.GetComponent<CoopBodies>() == null) nm.gameObject.AddComponent<CoopBodies>();
         if (nm.GetComponent<CoopPossession>() == null) nm.gameObject.AddComponent<CoopPossession>();
+        if (nm.GetComponent<CoopPaddockMirror>() == null) nm.gameObject.AddComponent<CoopPaddockMirror>();
 
         // The career field is spawned from this prefab by GridSpawner on the host. Both peers must have it
         // registered or the guest cannot resolve the spawns and receives an empty track.

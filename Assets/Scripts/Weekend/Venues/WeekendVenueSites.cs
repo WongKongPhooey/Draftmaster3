@@ -109,7 +109,13 @@ public class WeekendVenueSites : MonoBehaviour
         // it waits on the database first, and every venue is placed relative to the end of that row. Build
         // before it lands and the drivers' room goes up around the player's own motorhome, which is exactly
         // what it did. Eight seconds, then build anyway off whatever is there.
-        float wait = 8f;
+        //
+        // The co-op guest waits far longer, because its row does not come from its own database — it comes
+        // over the wire from the host (CoopPaddockMirror), which cannot start sending until the host's own
+        // lot has finished parking. Giving up early there is worse than waiting: the cluster is laid out
+        // past the end of the parked block, so an empty paddock puts these four rooms tens of metres from
+        // where the host has them and each player walks into walls the other cannot see.
+        float wait = Coop.IsGuest ? 30f : 8f;
         while (!LotIsParked() && wait > 0f) { wait -= Time.deltaTime; yield return null; }
 
         // And for the garages, which the motorhome lot puts up once its own row exists. The plan meeting is
