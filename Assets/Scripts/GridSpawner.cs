@@ -145,8 +145,20 @@ public class GridSpawner : MonoBehaviour
     }
 #endif
 
+    // The player's field is up and parked. Co-op waits on this before handing a car to the guest: a car
+    // handed over mid-spawn is handed over before it has been put in its box, and an owner-authoritative
+    // transform means the guest's copy — still sat wherever it was instantiated — becomes the truth for
+    // everybody. That is a car starting the race facing the wrong way in the middle of nowhere.
+    public static bool FieldReady { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetFieldReady() => FieldReady = false;
+
+    void OnDisable() => FieldReady = false;
+
     IEnumerator Start()
     {
+        FieldReady = false;
         // Multiplayer: only the host spawns AI, as networked objects replicated to clients (SpawnNetworkedField).
         // Clients receive the field from the host and spawn nothing locally.
         if (GameSession.IsMultiplayer)
@@ -578,6 +590,10 @@ public class GridSpawner : MonoBehaviour
                 if (netObj != null) netObj.Spawn();
             }
         }
+
+        // Every car is instantiated, placed and (in co-op) spawned. Anything waiting for a field that is
+        // actually stood on its start spots can go.
+        FieldReady = true;
     }
 
     // Host-only multiplayer field spawn. Mirrors the single-player grid setup but instantiates the networked
@@ -703,6 +719,8 @@ public class GridSpawner : MonoBehaviour
             // NetworkObjects stay at the scene root — NGO forbids parenting them under a plain GameObject.
             go.GetComponent<NetworkObject>().Spawn();
         }
+
+        FieldReady = true;
     }
 
     // ------------------------------------------------------------------ somebody else's session

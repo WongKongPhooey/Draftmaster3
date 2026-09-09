@@ -148,8 +148,12 @@ public class IronOvalRaceHUD : MonoBehaviour
     // the tow. Sits on the right, under where the track map lives.
     void DrawMeters()
     {
-        float w = PixelGUI.Px(92f);
-        float h = PixelGUI.Px(12f) + 2f * (PixelGUI.LineH + PixelGUI.CellsHeight + PixelGUI.Px(4f));
+        // Sized from what goes in it rather than from a round number: a ten-cell row is CellsWidth(10)
+        // across and the plate's frame and margin take Px(10) off each side, so a Px(92) plate was always
+        // narrower than the rows drawn inside it.
+        float inset = PixelGUI.Px(4f) + PixelGUI.Px(6f);
+        float w = PixelGUI.CellsWidth(10) + inset * 2f;
+        float h = inset * 2f + 2f * PixelGUI.LineH + 2f * PixelGUI.CellsHeight + PixelGUI.Px(6f);
         float x = Screen.width - w - PixelGUI.Px(8f);
         float y = PixelGUI.Px(96f);
 

@@ -92,6 +92,8 @@ public class NetworkedAICar : NetworkBehaviour
             DriverName.OnValueChanged += (_, __) => ApplyIdentity();
             Carset.OnValueChanged += (_, __) => ApplyIdentity();
             VehicleInfoName.OnValueChanged += (_, __) => ApplyVehicleInfo();
+
+            ParkPhysics();
         }
 
         ApplyIdentity();
@@ -156,6 +158,7 @@ public class NetworkedAICar : NetworkBehaviour
         // The server owns every car it spawns, so it "gains" them all at spawn; only a client gaining one
         // means a human has been put in it.
         if (IsServer || !Coop.Active) return;
+        DrivePhysics();
         CoopPossession.GuestTakeOver(gameObject);
     }
 
@@ -163,7 +166,43 @@ public class NetworkedAICar : NetworkBehaviour
     {
         base.OnLostOwnership();
         if (IsServer || !Coop.Active) return;
+        ParkPhysics();
         CoopPossession.GuestHandBack(gameObject);
+    }
+
+    // A car this machine does not own is moved entirely by NetworkTransform, so its body has no business
+    // being simulated: a dynamic Rigidbody2D that is teleported every tick still runs the solver, still
+    // resolves contacts against the forty-two other cars around it, and still fights the pose it is being
+    // handed. Forty-three of those on the guest is a physics scene's worth of work for a field the guest is
+    // only watching. Kinematic keeps the collider — the guest's own car can still hit these — while taking
+    // the body out of the solver.
+    RigidbodyType2D _drivenBodyType = RigidbodyType2D.Dynamic;
+    bool _bodyTypeCaptured;
+
+    void ParkPhysics()
+    {
+        var rb = GetComponent<Rigidbody2D>();
+        if (rb != null)
+        {
+            if (!_bodyTypeCaptured) { _drivenBodyType = rb.bodyType; _bodyTypeCaptured = true; }
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+            rb.bodyType = RigidbodyType2D.Kinematic;
+        }
+
+        var cf = GetComponent<ConstantForce2D>();
+        if (cf != null) cf.enabled = false;
+    }
+
+    // Handed back to this machine to drive: the body has to simulate again, in whatever mode the prefab
+    // was authored with.
+    void DrivePhysics()
+    {
+        var rb = GetComponent<Rigidbody2D>();
+        if (rb != null) rb.bodyType = _bodyTypeCaptured ? _drivenBodyType : RigidbodyType2D.Dynamic;
+
+        var cf = GetComponent<ConstantForce2D>();
+        if (cf != null) cf.enabled = true;
     }
 
     public override void OnNetworkDespawn() => _all.Remove(this);

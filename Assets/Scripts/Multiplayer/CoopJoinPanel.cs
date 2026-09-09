@@ -113,6 +113,21 @@ public class CoopJoinPanel : MonoBehaviour
         return new GameObject("NetworkLauncher").AddComponent<NetworkLauncher>();
     }
 
+    // The kit's Display face, centred in the field. Cached because a GUIStyle per frame is waste, and
+    // rebuilt when the kit rescales (a window resize changes the point size under us).
+    static GUIStyle _codeStyle;
+    static int _codeStyleSize;
+    static GUIStyle CodeStyle()
+    {
+        var baseStyle = PixelGUI.Display;
+        if (_codeStyle == null || _codeStyleSize != baseStyle.fontSize)
+        {
+            _codeStyle = new GUIStyle(baseStyle) { alignment = TextAnchor.MiddleCenter };
+            _codeStyleSize = baseStyle.fontSize;
+        }
+        return _codeStyle;
+    }
+
     void OnGUI()
     {
         PixelGUI.Scrim();
@@ -121,8 +136,9 @@ public class CoopJoinPanel : MonoBehaviour
         float gap = PixelGUI.Px(4f);
         float buttonH = row + PixelGUI.Px(6f);
         float w = PixelGUI.Px(220f);
+        float fieldH = PixelGUI.Display.fontSize + PixelGUI.Px(8f);
         float h = PixelGUI.Px(20f) + PixelGUI.Heading.fontSize + gap * 6f
-                  + row * 4f + buttonH * 2f + PixelGUI.LineH;
+                  + row * 3f + fieldH + buttonH * 2f + PixelGUI.LineH;
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Round((Screen.height - h) * 0.5f);
 
@@ -142,10 +158,15 @@ public class CoopJoinPanel : MonoBehaviour
         GUI.Label(new Rect(c.x, cy, c.width, row), "to a friend, then type their code.", PixelGUI.LabelDim);
         cy += row + gap;
 
-        // The typed code, drawn big enough to check against what they read out to you.
-        string shown = string.IsNullOrEmpty(_code) ? "______" : _code;
-        GUI.Label(new Rect(c.x, cy, c.width, row), shown, PixelGUI.Display);
-        cy += row + gap;
+        // The typed code. A bare line of text does not read as somewhere you can type, so it sits on a
+        // sunk plate inside a gold border — the same yellow as the heading — and the empty slots are shown
+        // as underscores so the six characters are countable before any are typed.
+        var field = new Rect(c.x, cy, c.width, fieldH);
+        PixelGUI.Fill(field, PixelGUI.Ink);
+        PixelGUI.Frame(field, PixelGUI.Gold);
+        string shown = _code.PadRight(6, '_');
+        GUI.Label(field, shown, CodeStyle());
+        cy += fieldH + gap;
 
         if (!string.IsNullOrEmpty(_status))
         {

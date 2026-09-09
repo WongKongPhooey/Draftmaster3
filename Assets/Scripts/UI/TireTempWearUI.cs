@@ -17,10 +17,22 @@ public class TireTempWearUI : MonoBehaviour
     public bool visible = true;
 
     [Header("Layout (UI pixels, before PixelGUI.Scale)")]
+    [Tooltip("Width of one corner's block. The life row is drawn to fit inside it.")]
     public float cellW = 62f;
+    [Tooltip("Minimum height of one corner's block. The real height is whatever the label, the temperature bar and the life cells need, so a bigger type cell grows the board instead of spilling out of it.")]
     public float cellH = 34f;
     public float gap = 4f;
     public Vector2 margin = new Vector2(10f, 14f);
+
+    // Life is shown in five cells per corner, not ten. Four corners at ten cells each is a board wider than
+    // the speed block, and the number a driver reads off a corner is "most of it", "half of it" or "it's
+    // gone" — the ten-cell row on the main HUD is the one they count.
+    const int LifeCells = 5;
+
+    // What one corner actually needs: a line of label, the temperature bar under it, then the life cells.
+    static float BlockHeight(float authoredMin) =>
+        Mathf.Max(PixelGUI.Px(authoredMin),
+                  PixelGUI.LineH + PixelGUI.Px(7f) + PixelGUI.CellsHeight + PixelGUI.Px(2f));
 
     void Update()
     {
@@ -40,7 +52,9 @@ public class TireTempWearUI : MonoBehaviour
     {
         if (!visible || tires == null) return;
 
-        float cw = PixelGUI.Px(cellW), ch = PixelGUI.Px(cellH), g = PixelGUI.Px(gap);
+        float cw = Mathf.Max(PixelGUI.Px(cellW), PixelGUI.CellsWidth(LifeCells));
+        float ch = BlockHeight(cellH);
+        float g = PixelGUI.Px(gap);
         float pad = PixelGUI.Px(6f);
         float boardW = cw * 2f + g, boardH = ch * 2f + g;
         float x0 = PixelGUI.Px(margin.x) + pad;
@@ -71,11 +85,12 @@ public class TireTempWearUI : MonoBehaviour
 
         PixelGUI.Bar(new Rect(x, y + line, w, PixelGUI.Px(5f)), TempFill(t), TempColour(t));
 
-        // Ten cells of life, red once a third of the tyre is gone — the point at which the lap time is
+        // Life in five cells, red once a third of the tyre is gone — the point at which the lap time is
         // already going away, rather than the point at which the tyre is finished.
-        int cells = Mathf.CeilToInt(life * 10f);
+        int cells = Mathf.CeilToInt(life * LifeCells);
         var wearColour = life > 0.66f ? PixelGUI.Confirm : life > 0.33f ? PixelGUI.Gold : PixelGUI.Danger;
-        PixelGUI.Cells(new Rect(x, y + line + PixelGUI.Px(7f), w, PixelGUI.CellsHeight), cells, 10, wearColour);
+        PixelGUI.Cells(new Rect(x, y + line + PixelGUI.Px(7f), Mathf.Min(w, PixelGUI.CellsWidth(LifeCells)),
+                                PixelGUI.CellsHeight), cells, LifeCells, wearColour);
     }
 
     // How full the temperature bar reads: empty at cold, full at the overheat threshold.

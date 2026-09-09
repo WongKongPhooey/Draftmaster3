@@ -87,6 +87,16 @@ public static class WeekendAppointment
             return anchor != null ? anchor.transform : null;
         }
 
+        // Their hour, already running: the car is on pit road and that is where they are due.
+        if (RaceWeekend.SessionLive) return PlayerCar();
+
+        // Before it starts, the car is not on pit road at all — it is at the back of the team's garage,
+        // where PopupGarageLot puts it between sessions. Walking a driver to a garage to climb into a car
+        // that has to be in a pit box is walking them to the wrong place, so the hour begins where a
+        // driver's hour actually begins: at their own motorhome. Entering it turns the paddock over.
+        var rv = RVExterior.Player;
+        if (rv != null) return rv.transform;
+
         return PlayerCar();
     }
 
@@ -113,7 +123,7 @@ public static class WeekendAppointment
     {
         var a = Pending;
         if (a == null) return "";
-        if (a.IsOnTrack) return "your car";
+        if (a.IsOnTrack) return RaceWeekend.SessionLive ? "your car" : "your motorhome";
 
         var anchor = Where();
         return anchor != null ? anchor.Label : WeekendVenues.Label(PendingVenue);
@@ -137,6 +147,14 @@ public static class WeekendAppointment
         {
             var anchor = Where();
             return anchor != null && anchor.PlayerIsHere();
+        }
+
+        // Before the session, arriving means being INSIDE the motorhome — the doorway is the trigger, and
+        // standing next to the rig is not the same as walking in.
+        if (!RaceWeekend.SessionLive)
+        {
+            var room = RVInterior.Current;
+            if (room != null && room.IsInside) return true;
         }
 
         // A session counts as arrived at when the player is close enough to climb in; PitLaneStart owns

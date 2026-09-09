@@ -24,12 +24,16 @@ using UnityEngine;
 // The guest then runs the SAME placement code over it, so both machines build the identical block out of
 // their own local prefabs. Nothing is spawned across the wire and nothing has to survive a scene load.
 //
-// Re-sent on a slow loop rather than once, for the same reason CoopBodies re-sends the player's name: the
-// guest's row is rebuilt from nothing on every scene load, and the career reloads the scene constantly.
-// A layout that arrives before the guest's own RV has spawned is refused and simply comes round again.
+// The guest's row is rebuilt from nothing on every scene load and the career reloads the scene constantly,
+// so one send at connect is not enough. It used to be re-broadcast every two seconds regardless, which on a
+// full entry list is several kilobytes of RELIABLE traffic the guest already has, forever — enough, next to
+// the spawn burst, to hold the host's transport queue at its ceiling. Instead the host sends when the layout
+// it solved actually changes, and a guest that finds itself without one ASKS. Nothing is on a timer that
+// does not need to be.
 public class CoopPaddockMirror : MonoBehaviour
 {
     const string LayoutMessage = "coop.paddock.layout";
+    const string RequestMessage = "coop.paddock.request";
 
     // Bumped whenever the fields below change, so a peer on an older build is refused rather than reading
     // one field's bytes as another's and parking the whole paddock somewhere plausible but wrong.
@@ -44,10 +48,15 @@ public class CoopPaddockMirror : MonoBehaviour
     // enough to end the process. Three series' entry lists over would still fit.
     const int MaxSlots = 256;
 
-    [Tooltip("Seconds between layout broadcasts while a guest is connected. The layout only changes on a scene load, so this is a heal loop rather than a feed — it exists so a guest that reloaded, or joined late, does not have to be noticed by anything.")]
-    public float sendInterval = 2f;
+    [Tooltip("Seconds between checks of the host's own layout for a change worth sending. Cheap: a few numbers, and nothing goes on the wire unless one of them moved.")]
+    public float checkInterval = 1f;
 
-    float _nextSend;
+    [Tooltip("Seconds a guest waits between asking the host for the layout again, while it has a paddock and no layout for it.")]
+    public float requestInterval = 1f;
+
+    float _nextCheck;
+    float _nextRequest;
+    int _sentSignature;      // host: the layout the guest has already been sent
     bool _registered;
 
     // What this layer last did, for the co-op debug panel.
@@ -64,12 +73,54 @@ public class CoopPaddockMirror : MonoBehaviour
 
         Register(nm);
 
-        if (!nm.IsServer) return;
-        if (!Coop.GuestPresent) return;
-        if (Time.unscaledTime < _nextSend) return;
+        if (!nm.IsServer) { AskIfMissing(nm); return; }
+        if (!Coop.GuestPresent) { _sentSignature = 0; return; }
+        if (Time.unscaledTime < _nextCheck) return;
 
-        _nextSend = Time.unscaledTime + Mathf.Max(0.5f, sendInterval);
-        SendLayout(nm);
+        _nextCheck = Time.unscaledTime + Mathf.Max(0.25f, checkInterval);
+
+        int signature = LayoutSignature();
+        if (signature == 0 || signature == _sentSignature) return;
+
+        if (SendLayout(nm, Coop.NoGuest)) _sentSignature = signature;
+    }
+
+    // Guest side: a scene load throws the row away, so a guest holding a paddock with no layout for it asks
+    // rather than waiting to be noticed. One small message a second, and only while something is missing.
+    void AskIfMissing(NetworkManager nm)
+    {
+        var lot = DriverMotorhomeLot.Instance;
+        if (lot == null || lot.Built) return;
+        if (Time.unscaledTime < _nextRequest) return;
+        _nextRequest = Time.unscaledTime + Mathf.Max(0.5f, requestInterval);
+
+        var msg = nm.CustomMessagingManager;
+        if (msg == null) return;
+
+        using var writer = new FastBufferWriter(8, Allocator.Temp);
+        writer.WriteValueSafe(LayoutVersion);
+        msg.SendNamedMessage(RequestMessage, NetworkManager.ServerClientId, writer, NetworkDelivery.Reliable);
+    }
+
+    // What the host has solved, in the few numbers that move when it changes. Names are not hashed: a row
+    // whose occupants changed changed its count, its place or its line as well, and hashing forty strings
+    // once a second to catch a case that cannot happen is work for nothing.
+    int LayoutSignature()
+    {
+        var lot = DriverMotorhomeLot.Instance;
+        if (lot == null || !lot.Built || !lot.HasLine || lot.Slots.Count == 0) return 0;
+
+        unchecked
+        {
+            int h = 17;
+            h = h * 31 + lot.Slots.Count;
+            h = h * 31 + lot.PlayerPlace;
+            h = h * 31 + lot.LineRows;
+            h = h * 31 + lot.Line.origin.GetHashCode();
+            h = h * 31 + lot.Line.rotation.GetHashCode();
+            h = h * 31 + lot.Line.perRow;
+            return h == 0 ? 1 : h;   // 0 means "nothing to send"
+        }
     }
 
     // ------------------------------------------------------------------ wiring
@@ -80,12 +131,16 @@ public class CoopPaddockMirror : MonoBehaviour
         var msg = nm.CustomMessagingManager;
         if (msg == null) return;
 
-        // Only the guest listens: the host is the one answer, and a relay would be a peer telling the
-        // owner of the career what its own paddock looks like.
-        if (!nm.IsServer) msg.RegisterNamedMessageHandler(LayoutMessage, OnLayout);
+        // Only the guest listens for a layout: the host is the one answer, and a relay would be a peer
+        // telling the owner of the career what its own paddock looks like. Only the host listens for a
+        // request, for the same reason.
+        if (nm.IsServer) msg.RegisterNamedMessageHandler(RequestMessage, OnRequest);
+        else msg.RegisterNamedMessageHandler(LayoutMessage, OnLayout);
 
         _registered = true;
-        _nextSend = 0f;   // a guest already connected gets the layout on the very next frame
+        _nextCheck = 0f;      // the host checks its own layout on the very next frame
+        _nextRequest = 0f;
+        _sentSignature = 0;
     }
 
     void Unregister()
@@ -96,18 +151,29 @@ public class CoopPaddockMirror : MonoBehaviour
 
         var nm = NetworkManager.Singleton;
         var msg = nm != null ? nm.CustomMessagingManager : null;
-        if (msg != null) msg.UnregisterNamedMessageHandler(LayoutMessage);
+        if (msg == null) return;
+        msg.UnregisterNamedMessageHandler(LayoutMessage);
+        msg.UnregisterNamedMessageHandler(RequestMessage);
+    }
+
+    // A guest that has a paddock and no layout for it. Answered straight to that peer rather than
+    // broadcast: anybody else connected already has one.
+    void OnRequest(ulong sender, FastBufferReader reader)
+    {
+        var nm = NetworkManager.Singleton;
+        if (nm == null || !nm.IsServer) return;
+        SendLayout(nm, sender);
     }
 
     // ------------------------------------------------------------------ host side
 
-    void SendLayout(NetworkManager nm)
+    bool SendLayout(NetworkManager nm, ulong onlyTo)
     {
         var msg = nm.CustomMessagingManager;
-        if (msg == null) return;
+        if (msg == null) return false;
 
         var lot = DriverMotorhomeLot.Instance;
-        if (lot == null || !lot.Built || !lot.HasLine || lot.Slots.Count == 0) return;
+        if (lot == null || !lot.Built || !lot.HasLine || lot.Slots.Count == 0) return false;
 
         var line = lot.Line;
         var slots = lot.Slots;
@@ -143,8 +209,13 @@ public class CoopPaddockMirror : MonoBehaviour
 
         writer.WriteValueSafe(EndMarker);
 
-        msg.SendNamedMessageToAll(LayoutMessage, writer, NetworkDelivery.ReliableFragmentedSequenced);
+        if (onlyTo == Coop.NoGuest)
+            msg.SendNamedMessageToAll(LayoutMessage, writer, NetworkDelivery.ReliableFragmentedSequenced);
+        else
+            msg.SendNamedMessage(LayoutMessage, onlyTo, writer, NetworkDelivery.ReliableFragmentedSequenced);
+
         LastSentSlots = slots.Count;
+        return true;
     }
 
     // ------------------------------------------------------------------ guest side

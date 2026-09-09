@@ -431,6 +431,18 @@ public static class PixelGUI
     public static void Rule(float x, float y, float width, Color? colour = null) =>
         Fill(new Rect(x, y, width, Px(1f)), colour ?? PlateLight);
 
+    // A hollow rectangle, one scaled pixel thick. Used to outline a control — a typed-into field, a
+    // selected cell — so it reads as an edge rather than as text sitting on the plate.
+    public static void Frame(Rect r, Color? colour = null, float thickness = 1f)
+    {
+        var c = colour ?? PlateLight;
+        float t = Px(thickness);
+        Fill(new Rect(r.x, r.y, r.width, t), c);                 // top
+        Fill(new Rect(r.x, r.yMax - t, r.width, t), c);          // bottom
+        Fill(new Rect(r.x, r.y, t, r.height), c);                // left
+        Fill(new Rect(r.xMax - t, r.y, t, r.height), c);         // right
+    }
+
     // Hatched placeholder for art that is not drawn yet — reads as pending rather than broken.
     public static void Hatch(Rect r)
     {
@@ -450,12 +462,24 @@ public static class PixelGUI
     // another hue, so the HUD's red tyre and blue draft bars are flat colour, as the kit draws them.
     public static void Cells(Rect r, int value, int max, Color? fillTint = null)
     {
+        if (max <= 0) return;
+
         var t = Theme;
-        float cell = Px(8f), gap = Px(2f);
+        float gap = Px(2f);
+        float pitch = Px(10f);
+
+        // The rect is the room the caller has, not a suggestion. Ten cells at full pitch are CellsWidth(10)
+        // across, which is wider than several of the HUD plates they are drawn on — and a row that ignored
+        // its rect simply carried on past the panel edge. Closing the pitch up keeps the row inside the box
+        // it was given; a row with room to spare is drawn at the authored pitch as before.
+        float natural = max * pitch - gap;
+        if (r.width > 0f && r.width < natural) pitch = (r.width + gap) / max;
+
+        float cell = Mathf.Max(1f, pitch - gap);
         float h = r.height > 0f ? Mathf.Min(r.height, CellsHeight) : CellsHeight;
         for (int i = 0; i < max; i++)
         {
-            var cr = new Rect(r.x + i * (cell + gap), r.y, cell, h);
+            var cr = new Rect(r.x + i * pitch, r.y, cell, h);
             bool on = i < value;
             if (!on)
             {

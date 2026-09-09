@@ -41,6 +41,9 @@ public class SafetyCar : MonoBehaviour
     float _travelled;
     float _prevDist;
     bool _hasPrev;
+    // How far it is from where this car actually joined the lap round to the pit entry. The floor below is
+    // held under this, so the first arrival at the entry is the one it takes.
+    float _firstPassDistance = -1f;
     bool _pitting;
     float _pitEntryDistance;
     float _despawnTimer;
@@ -99,6 +102,17 @@ public class SafetyCar : MonoBehaviour
             else if (delta > lap * 0.5f) delta -= lap;
             if (delta > 0f) _travelled += delta;
         }
+        if (!_hasPrev && lap > 0f && _pitEntryDistance >= 0f)
+        {
+            // Where it starts is not the start/finish line: FormationDirector puts it out at the pit exit
+            // plus an offset, which is already some way round. The lap it has to cover before it may pit is
+            // therefore the arc from HERE to the pit entry, and a flat fraction of a full lap can be longer
+            // than that arc — at which point the car sails past the entry it was aiming for and paces a
+            // second lap to come back to it. That is the extra formation lap.
+            _firstPassDistance = _pitEntryDistance - cur;
+            if (_firstPassDistance < 0f) _firstPassDistance += lap;
+        }
+
         _prevDist = cur;
         _hasPrev = true;
 
@@ -118,9 +132,15 @@ public class SafetyCar : MonoBehaviour
             }
         }
 
-        // Dive in as the car reaches the entry node, once it's covered enough of the lap. If the floor isn't
-        // met at the first pass the car simply paces another lap and pits next time round — never a wall shot.
-        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= lap * minLapFractionBeforePit)
+        // Dive in as the car reaches the entry node, once it's covered enough of the lap. The floor is the
+        // authored fraction OR the arc from where this car joined to the entry, whichever is shorter, so it
+        // always fires on the first pass. It is still a floor — a car that spawned yards short of the entry
+        // does not pit off the line — it just cannot be set past the point it is guarding any more.
+        float pitFloor = lap * minLapFractionBeforePit;
+        if (_firstPassDistance > 0f)
+            pitFloor = Mathf.Min(pitFloor, Mathf.Max(0f, _firstPassDistance - pitEntryWindow));
+
+        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= pitFloor)
         {
             float gap = _pitEntryDistance - cur;
             if (gap < 0f) gap += lap;

@@ -118,9 +118,15 @@ public class WeekendObjectiveHUD : MonoBehaviour
         {
             _here = here;
             _metresLeft = metres;
+            // An on-track session that has not started yet is walked to at the motorhome, not the car: the
+            // car is in the team's garage until the paddock turns over for the session, and the turnover is
+            // walking in. So it reads as a door rather than as a press.
+            bool intoTheRV = activity.IsOnTrack && !RaceWeekend.SessionLive;
+
             _detailText = here
-                ? "You're here — press E to " + Verb(activity)
-                : $"{Capitalise(WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
+                ? (intoTheRV ? "You're here — walk in and they'll roll the car out"
+                             : "You're here — press E to " + Verb(activity))
+                : $"{Capitalise(intoTheRV ? WeekendVenues.Directions(WeekendVenue.Motorhome) : WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
             _footerText = here
                 ? activity.Clock + "  ·  " + WeekendAppointment.TargetLabel()
                 : $"{activity.Clock}  ·  [T] TRAVEL THERE";

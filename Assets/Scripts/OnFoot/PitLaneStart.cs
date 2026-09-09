@@ -487,9 +487,18 @@ public class PitLaneStart : MonoBehaviour
         if (!RaceWeekend.SessionLive)
         {
             var due = BookedSession;
-            ShowPrompt(inRange && due != null);
-            if (due == null) ControlHints.Hide("entercar");
-            if (inRange && due != null && InteractPressed()) WeekendDirector.Begin(due);
+            StepSessionEntryFromRV(due);
+
+            // With a motorhome in the paddock the session is started by walking into it, and the car is not
+            // a way in: it is parked at the back of the team's garage, and letting E there start the hour
+            // put the player in a scene that reloaded around them and stood them somewhere else. A track
+            // with no motorhome keeps the old route, so nothing is left with no way to start.
+            bool rvRoute = RVExterior.Player != null;
+            bool carRoute = due != null && !rvRoute;
+
+            ShowPrompt(inRange && carRoute);
+            if (!carRoute) ControlHints.Hide("entercar");
+            if (inRange && carRoute && InteractPressed()) WeekendDirector.Begin(due);
             return;
         }
 
@@ -499,6 +508,33 @@ public class PitLaneStart : MonoBehaviour
         // and the guest's copy of it is scene content, not a second entry. When a session starts, the guest
         // is put into one of the cars already in the field instead (CoopPossession).
         if (inRange && InteractPressed() && !Coop.IsGuest) EnterCar();
+    }
+
+    // Armed once the player has been seen OUTSIDE the motorhome. The scene opens with them stood inside it,
+    // and a load that lands them back in there — coming out of the garage sheet, say — must not read as
+    // walking in and start the session under them.
+    bool _rvEntryArmed;
+
+    // Between sessions the player's car is not on pit road: PopupGarageLot takes it home to the team's
+    // garage, because a car sat in a box through somebody else's practice is a car in everybody's way. So an
+    // hour in the car cannot begin at the car. It begins where a driver's hour begins — at their own
+    // motorhome. Walk in with a session booked and the paddock turns over for it: the field comes out of
+    // the garages and into the boxes, the player's own car with it, and they step back out into a pit lane
+    // that is ready for them.
+    //
+    // The turnover itself is the scene reload WeekendDirector.Begin already does. The spawn it lands on is
+    // the motorhome, which is exactly where this player is standing, so the world changes around them
+    // rather than teleporting them across the paddock.
+    void StepSessionEntryFromRV(Draftmaster.Weekend.WeekendActivity due)
+    {
+        var room = RVInterior.Current;
+        bool inside = room != null && room.IsInside;
+
+        if (!inside) { _rvEntryArmed = true; return; }
+        if (!_rvEntryArmed || due == null) return;
+
+        _rvEntryArmed = false;   // one turnover per walk-in
+        WeekendDirector.Begin(due);
     }
 
     // Teach the two things the walk needs, as the player gets to them: sprint once they're actually walking,
@@ -514,7 +550,7 @@ public class PitLaneStart : MonoBehaviour
             _hintedRun = true;
         }
 
-        if (!_hintedEnter && (RaceWeekend.SessionLive || BookedSession != null)
+        if (!_hintedEnter && RaceWeekend.SessionLive
             && Vector2.Distance(_player.transform.position, car.transform.position) < enterHintRange)
         {
             ControlHints.Show("entercar", "E", "E", "Get in the car");

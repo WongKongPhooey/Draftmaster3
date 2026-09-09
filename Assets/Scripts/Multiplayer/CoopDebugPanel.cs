@@ -43,10 +43,31 @@ public class CoopDebugPanel : MonoBehaviour
             NetworkLauncher.Instance.StatusChanged += s => _status = s;
     }
 
+    // Smoothed frame time, so "it feels choppy" can be read as a number and told apart from the connection.
+    // A round trip of 60ms with the frame rate on the floor is a different fault from a steady 60fps with
+    // the round trip at 300ms, and until both are on screen at once the two are guesswork.
+    float _smoothedDt;
+
     void Update()
     {
         var kb = Keyboard.current;
         if (kb != null && ToggleKey != Key.None && kb[ToggleKey].wasPressedThisFrame) _open = !_open;
+
+        float dt = Mathf.Max(0.0001f, Time.unscaledDeltaTime);
+        _smoothedDt = _smoothedDt <= 0f ? dt : Mathf.Lerp(_smoothedDt, dt, 0.1f);
+    }
+
+    // Round trip to the other peer, in milliseconds, as the transport measures it. -1 when there is nobody
+    // to measure against.
+    static float RoundTripMs(NetworkManager nm)
+    {
+        if (nm == null || !nm.IsListening) return -1f;
+        var transport = nm.NetworkConfig != null ? nm.NetworkConfig.NetworkTransport : null;
+        if (transport == null) return -1f;
+
+        ulong peer = nm.IsServer ? Coop.GuestClientId : NetworkManager.ServerClientId;
+        if (nm.IsServer && !Coop.GuestPresent) return -1f;
+        return transport.GetCurrentRtt(peer);
     }
 
     void OnGUI()
@@ -70,6 +91,8 @@ public class CoopDebugPanel : MonoBehaviour
         GUILayout.Label($"track     {TrackSelection.CurrentId}   phase {RaceStart.Current}");
         GUILayout.Label($"field     {NetworkedAICar.All.Count} networked cars");
         GUILayout.Label($"driving   {(CoopPossession.GuestCar != null ? CoopPossession.GuestCar.name : "-")}");
+        GUILayout.Label($"guest is  {(CoopPossession.GuestCarNumber > 0 ? $"#{CoopPossession.GuestCarNumber} {CoopPossession.GuestDriverName}" : "nobody yet")}" +
+                        $"   field {(GridSpawner.FieldReady ? "ready" : "building")}");
 
         // The bodies layer, which is what "I can't see the other player" is actually about. myBody says
         // whether the other peer is being told to draw you at all; prefab says whether this scene can build
@@ -79,6 +102,12 @@ public class CoopDebugPanel : MonoBehaviour
                         $"prefab {(CoopBodies.CanBuildPuppets ? "yes" : "NO")}   " +
                         $"puppets {CoopBodies.PuppetCount}");
         GUILayout.Label($"pose      {(age < 0f ? "never received" : $"{age:0.0}s ago at {CoopBodies.LastPosePos}")}");
+
+        // Choppiness has two quite different causes and this line says which one is happening.
+        float rtt = RoundTripMs(nm);
+        float fps = _smoothedDt > 0f ? 1f / _smoothedDt : 0f;
+        GUILayout.Label($"net       rtt {(rtt < 0f ? "-" : $"{rtt:0}ms")}   " +
+                        $"local {fps:0} fps ({_smoothedDt * 1000f:0.0}ms)");
 
         // The paddock layer: whether both peers are standing in the same paddock. A guest that never took
         // the host's row solves the whole block for itself, and every venue laid out beside it lands

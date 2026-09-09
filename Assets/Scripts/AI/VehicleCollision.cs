@@ -15,6 +15,8 @@ public class VehicleCollision : MonoBehaviour
     public int maxContacts = 8;
 
     [Header("Damage")]
+    [Tooltip("No bodywork damage before the green flag. The field jostles on the way to the line and the AI are not clean enough about it yet, so a race could begin with half the grid already bent. Contact still pushes cars around — this is the metal, not the physics.")]
+    public bool noDamageBeforeGreen = true;
     [Tooltip("Closing speed (m/s) below which a contact does NO bodywork damage. Stops slow nudges from squashing a car.")]
     public float damageMinSpeed = 3f;
     [Tooltip("Closing speed (m/s) that produces a full-severity dent. Lower = harder-hitting damage at speed.")]
@@ -52,6 +54,11 @@ public class VehicleCollision : MonoBehaviour
         public bool otherIsCar;     // false = static barrier
     }
     public event System.Action<ContactEvent> Contacted;
+
+    // Everything before the green flag: parked on the grid, and the lap behind the pace car. Bodywork does
+    // not fold and nobody takes it personally — an AI field that shuffles into itself on the way round would
+    // otherwise start the race dented and already feuding.
+    bool DamageSuppressed => noDamageBeforeGreen && !RaceStart.IsGreen;
 
     void Awake()
     {
@@ -172,7 +179,7 @@ public class VehicleCollision : MonoBehaviour
             // handing each of them the full severity folds one impact's worth of metal twice — both panels
             // retreat from the contact and leave a void between two cars that are supposed to be touching.
             // A barrier is not a body and gives nothing, so a car that hits one takes the whole thing.
-            if (closingSpeed >= damageMinSpeed && _damage != null)
+            if (closingSpeed >= damageMinSpeed && _damage != null && !DamageSuppressed)
             {
                 float share = otherResponder != null
                     ? Draftmaster.Sim.BodyDeform.Share(_responder != null ? _responder.Mass : 1500f,
@@ -208,7 +215,7 @@ public class VehicleCollision : MonoBehaviour
                 // drivers' relationship. frontHit = the contact point lies ahead of us along our direction
                 // of travel, i.e. we drove into them — used to attribute blame. Both cars report the same
                 // impact; DriverRelationships dedupes per pair.
-                if (closingSpeed >= damageMinSpeed && otherVC != null)
+                if (closingSpeed >= damageMinSpeed && otherVC != null && !DamageSuppressed)
                 {
                     bool frontHit = _vel.sqrMagnitude > 1f
                         && Vector2.Dot(d.pointA - (Vector2)transform.position, _vel.normalized) > 0f;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -27,19 +28,66 @@ public class CoopPossession : MonoBehaviour
     // The car the guest is currently driving, on whichever peer is asking. Null when they are on foot.
     public static GameObject GuestCar { get; private set; }
 
+    const string PossessMessage = "coop.possess";
+
     ulong _possessedObjectId;
     bool _possessing;
     float _nextPoll;
+    bool _registered;
+
+    // The driver the guest stands in for. Chosen the moment they join — out of the entry list parked in
+    // the paddock, before any session exists — and kept for as long as they are here, so the person they
+    // replaced in the motorhome row is the same person whose car and pit box they take on race day. A car
+    // re-rolled at the start of every session would mean a different driver each time, which reads as the
+    // guest being teleported into somebody else's race.
+    public static int GuestCarNumber { get; private set; }
+    public static string GuestDriverName { get; private set; } = "";
 
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(this); return; }
         Instance = this;
+        Coop.GuestJoined += ChooseGuestDriver;
+        Coop.GuestLeft += ForgetGuestDriver;
     }
 
     void OnDestroy()
     {
+        Coop.GuestJoined -= ChooseGuestDriver;
+        Coop.GuestLeft -= ForgetGuestDriver;
+        Unregister();
         if (Instance == this) Instance = null;
+    }
+
+    // Host: pick the entry the guest takes over, off the row of motorhomes — that row IS the entry list,
+    // and it is standing in the paddock long before a field is spawned. The player's own number is not in
+    // the pool: the weekend cannot contain two of it.
+    static void ChooseGuestDriver()
+    {
+        if (!Coop.IsHost) return;
+        if (GuestCarNumber > 0) return;   // they have a driver already; joining twice does not re-roll it
+
+        var lot = DriverMotorhomeLot.Instance;
+        if (lot == null || !lot.Built || lot.Slots.Count == 0) return;   // resolved off the field instead
+
+        int playerNumber = CarIdentity.NumberOf(CarIdentity.FindPlayerCar());
+
+        var pool = new List<DriverMotorhomeLot.Slot>();
+        foreach (var slot in lot.Slots)
+            if (slot != null && slot.carNumber > 0 && slot.carNumber != playerNumber && !slot.isPlayer)
+                pool.Add(slot);
+        if (pool.Count == 0) return;
+
+        var picked = pool[Random.Range(0, pool.Count)];
+        GuestCarNumber = picked.carNumber;
+        GuestDriverName = !string.IsNullOrEmpty(picked.shortName) ? picked.shortName : picked.fullName;
+        Debug.Log($"[Coop] The guest is driving for #{GuestCarNumber} {GuestDriverName}.");
+    }
+
+    static void ForgetGuestDriver()
+    {
+        GuestCarNumber = 0;
+        GuestDriverName = "";
     }
 
     void Update()
@@ -52,10 +100,32 @@ public class CoopPossession : MonoBehaviour
             return;
         }
 
+        Register(nm);
+
         if (!nm.IsServer) return;
         if (Time.unscaledTime < _nextPoll) return;
         _nextPoll = Time.unscaledTime + pollInterval;
         HostPoll(nm);
+    }
+
+    // Only the guest listens: the pose that comes with a car is the host telling the new owner where the
+    // car it has just been handed actually is.
+    void Register(NetworkManager nm)
+    {
+        if (_registered || nm.IsServer) return;
+        var msg = nm.CustomMessagingManager;
+        if (msg == null) return;
+        msg.RegisterNamedMessageHandler(PossessMessage, OnPossessPose);
+        _registered = true;
+    }
+
+    void Unregister()
+    {
+        if (!_registered) return;
+        _registered = false;
+        var nm = NetworkManager.Singleton;
+        var msg = nm != null ? nm.CustomMessagingManager : null;
+        if (msg != null) msg.UnregisterNamedMessageHandler(PossessMessage);
     }
 
     // ------------------------------------------------------------------ host
@@ -65,7 +135,15 @@ public class CoopPossession : MonoBehaviour
         // "The host is out in a session" is the trigger. Not the scene, not the lobby — the weekend's own
         // flag, which is set when the sheet routes the player into practice, qualifying or the race and
         // cleared when it settles.
-        bool shouldDrive = Coop.GuestPresent && RaceWeekend.SessionLive;
+        // FieldReady is the third condition and it matters as much as the other two: a car handed over
+        // while the field is still being built is handed over before it has been parked in its box, and
+        // ownership is what decides whose copy of the pose is real.
+        // The row of motorhomes may not have been built when the guest arrived (they can land mid scene
+        // load), so the pick is retried until it takes. It costs a list walk at the poll rate and stops
+        // the moment they have a driver.
+        if (Coop.GuestPresent && GuestCarNumber <= 0) ChooseGuestDriver();
+
+        bool shouldDrive = Coop.GuestPresent && RaceWeekend.SessionLive && GridSpawner.FieldReady;
 
         if (shouldDrive && !_possessing) TryGrant(nm);
         else if (!shouldDrive && _possessing) Release(nm);
@@ -73,11 +151,18 @@ public class CoopPossession : MonoBehaviour
 
     void TryGrant(NetworkManager nm)
     {
-        var car = PickFreeCar();
+        var car = PickGuestCar();
         if (car == null) return;   // the field may not be up yet; poll again
 
         var netObj = car.GetComponent<NetworkObject>();
         if (netObj == null || !netObj.IsSpawned) return;
+
+        // Where the car is standing, read while the host's brain still owns it. This is what goes over with
+        // the handover: the guest's copy of a car it has never driven can be a tick or two behind, or —
+        // at a standing start, where a parked car sends nothing because nothing about it is changing —
+        // still sat where it was instantiated. Owner authority makes whatever the guest believes true for
+        // everybody, so the guest is told rather than left to guess.
+        var pose = ReadPose(car.gameObject);
 
         // The host stops driving this one. Brains off BEFORE ownership moves, so there is never a frame
         // where the host's AI and the guest's input are both writing the same car.
@@ -91,7 +176,101 @@ public class CoopPossession : MonoBehaviour
         _possessing = true;
         GuestCar = car.gameObject;
 
+        // The number is locked in here as well as at join: a guest who arrived somewhere with no motorhome
+        // row to read still keeps the same driver from this session on.
+        if (GuestCarNumber <= 0)
+        {
+            GuestCarNumber = car.CarNumber.Value;
+            GuestDriverName = car.DriverName.Value.ToString();
+        }
+
+        SendPose(nm, netObj.NetworkObjectId, pose);
+
         Debug.Log($"[Coop] Guest is now driving #{car.CarNumber.Value} ({car.DriverName.Value}).");
+    }
+
+    // ------------------------------------------------------------------ handing the pose over
+
+    struct Pose
+    {
+        public Vector3 position;
+        public float headingDeg;
+        public float mph;
+    }
+
+    // The car's pose as the machine that has been driving it understands it: the spline brain's heading
+    // while the AI is on it, the dynamic model's once a human has been.
+    static Pose ReadPose(GameObject car)
+    {
+        var pvc = car.GetComponent<PlayerVehicleController>();
+        var spline = car.GetComponent<SplineDriver>();
+
+        var pose = new Pose { position = car.transform.position };
+        if (spline != null && spline.enabled && !spline.externalMotionController)
+        {
+            pose.headingDeg = spline.CommandedHeadingDeg;
+            pose.mph = spline.CurrentMph;
+        }
+        else if (pvc != null)
+        {
+            pose.headingDeg = pvc.HeadingDeg;
+            pose.mph = pvc.SpeedMph;
+        }
+        return pose;
+    }
+
+    static void SendPose(NetworkManager nm, ulong objectId, Pose pose)
+    {
+        var msg = nm.CustomMessagingManager;
+        if (msg == null || !Coop.GuestPresent) return;
+
+        using var writer = new FastBufferWriter(40, Allocator.Temp);
+        writer.WriteValueSafe(objectId);
+        writer.WriteValueSafe(pose.position);
+        writer.WriteValueSafe(pose.headingDeg);
+        writer.WriteValueSafe(pose.mph);
+
+        // Reliable: a dropped pose is a car left wherever the guest happened to think it was, and nothing
+        // sends it again.
+        msg.SendNamedMessage(PossessMessage, Coop.GuestClientId, writer, NetworkDelivery.Reliable);
+    }
+
+    // Guest: put the car exactly where the host says it is. Ordering does not matter — this can land before
+    // or after OnGainedOwnership, and either way the car ends up on the host's spot with the local model
+    // seeded from it rather than from whatever it had drifted to.
+    void OnPossessPose(ulong sender, FastBufferReader reader)
+    {
+        reader.ReadValueSafe(out ulong objectId);
+        reader.ReadValueSafe(out Vector3 position);
+        reader.ReadValueSafe(out float headingDeg);
+        reader.ReadValueSafe(out float mph);
+
+        var nm = NetworkManager.Singleton;
+        if (nm == null || nm.SpawnManager == null) return;
+        if (!nm.SpawnManager.SpawnedObjects.TryGetValue(objectId, out var netObj) || netObj == null) return;
+
+        var car = netObj.gameObject;
+        var pvc = car.GetComponent<PlayerVehicleController>();
+
+        float z = car.transform.position.z;
+        bool facesUp = pvc != null && pvc.spriteFacesUp;
+        float angleOffset = pvc != null ? pvc.angleOffsetDeg : 180f;
+
+        car.transform.SetPositionAndRotation(
+            new Vector3(position.x, position.y, z),
+            Quaternion.Euler(0f, 0f, (facesUp ? headingDeg - 90f : headingDeg) + angleOffset));
+
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.position = car.transform.position;
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+        }
+
+        // Re-seed the dynamic model. TakeControl already seeded it, but from the pose the car was at when
+        // ownership landed, which is the pose this message exists to correct.
+        if (pvc != null && pvc.enabled) pvc.SeedPose(car.transform.position, headingDeg, mph / 2.237f);
     }
 
     void Release(NetworkManager nm)
@@ -110,10 +289,11 @@ public class CoopPossession : MonoBehaviour
         _possessedObjectId = 0;
     }
 
-    // A driver the guest can be. Random rather than "the slowest" or "the one at the back": the guest is
-    // dropped into the weekend as somebody already in it, and which somebody is not the host's to curate.
+    // The car the guest drives: the one carrying the number of the driver they replaced when they joined.
+    // Falling back to a free car at random only when that entry is not in this session's field at all —
+    // a guest who joined somewhere with no entry list to read, or a driver who is not running today.
     // Skips the host's own car (it has no NetworkedAICar) and anything already handed over.
-    NetworkedAICar PickFreeCar()
+    NetworkedAICar PickGuestCar()
     {
         var pool = new List<NetworkedAICar>();
         foreach (var c in NetworkedAICar.All)
@@ -122,6 +302,8 @@ public class CoopPossession : MonoBehaviour
             var no = c.GetComponent<NetworkObject>();
             if (no == null || !no.IsSpawned) continue;
             if (no.OwnerClientId != NetworkManager.ServerClientId) continue;   // already somebody's
+
+            if (GuestCarNumber > 0 && c.CarNumber.Value == GuestCarNumber) return c;
             pool.Add(c);
         }
         if (pool.Count == 0) return null;
