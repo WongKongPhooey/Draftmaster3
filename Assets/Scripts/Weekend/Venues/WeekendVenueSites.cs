@@ -110,7 +110,7 @@ public class WeekendVenueSites : MonoBehaviour
         // before it lands and the drivers' room goes up around the player's own motorhome, which is exactly
         // what it did. Eight seconds, then build anyway off whatever is there.
         float wait = 8f;
-        while (GameObject.Find("MotorhomeLotBoundary") == null && wait > 0f) { wait -= Time.deltaTime; yield return null; }
+        while (!LotIsParked() && wait > 0f) { wait -= Time.deltaTime; yield return null; }
 
         // And for the garages, which the motorhome lot puts up once its own row exists. The plan meeting is
         // held at the player's own rig, so building before they are parked would fall back to pit road.
@@ -125,6 +125,17 @@ public class WeekendVenueSites : MonoBehaviour
                              "alone and the debrief has no venue.");
 
         Build();
+    }
+
+    // The motorhome lot has actually laid its row out.
+    //
+    // Asked of the lot itself rather than by looking for its walkable pocket by name: a track that authors
+    // a Motorhomes PaddockLotArea calls that pocket "MotorhomesLotBoundary", so the old name match never
+    // hit and the wait below simply ran its eight seconds out and built anyway.
+    static bool LotIsParked()
+    {
+        var lot = DriverMotorhomeLot.Instance;
+        return lot != null && lot.HasLine && lot.Slots.Count > 0;
     }
 
     static bool IsPaddockScene() =>
@@ -153,12 +164,22 @@ public class WeekendVenueSites : MonoBehaviour
             // paddock. The lot is where the player is stood, and a drivers' room measured from the paddock's
             // own centre landed on top of their RV — four solid walls around the door they were trying to
             // walk out of.
-            float basis = FirstFreeSpaceBeside(centre, along, halfLen, out float step);
+            //
+            // BOTH parked blocks, not just the motorhomes. The garages are a second, wider block behind
+            // the RVs, and it is the one the venues kept being built inside.
+            var parked = ParkedSpans(centre, along, outward, halfDepth);
+            float basis = FirstFreeSpaceBeside(halfLen, parked, out float step);
 
-            PlaceDriversRoom(centre, along, outward, halfLen, halfDepth, basis + step * 0.6f);
-            PlaceHospitality(centre, along, outward, halfLen, halfDepth, basis + step * 1.5f);
-            PlaceFanFence(centre, along, outward, halfLen, halfDepth, basis + step * 2.3f);
-            PlaceIntroStage(centre, along, outward, halfLen, halfDepth, basis + step * 3.1f);
+            var wanted = new[] { basis + step * 0.6f, basis + step * 1.5f, basis + step * 2.3f, basis + step * 3.1f };
+            var halves = new[] { RoomWidth * 0.5f, BarrierRing * 0.5f, FenceLength * 0.5f, StageWidth * 0.5f };
+            float[] at = LayOutCluster(wanted, halves, step, halfLen, parked);
+
+            WarnIfStillParkedOn(at, halves, parked);
+
+            PlaceDriversRoom(centre, along, outward, halfLen, halfDepth, at[0]);
+            PlaceHospitality(centre, along, outward, halfLen, halfDepth, at[1]);
+            PlaceFanFence(centre, along, outward, halfLen, halfDepth, at[2]);
+            PlaceIntroStage(centre, along, outward, halfLen, halfDepth, at[3]);
         }
         else
         {
@@ -790,30 +811,28 @@ public class WeekendVenueSites : MonoBehaviour
 
     // ------------------------------------------------------------------ helpers
 
-    // Where the venue cluster starts: just past the end of the motorhome row, on whichever side of it has
-    // more paddock left, walking away from the RVs. `step` is how far apart consecutive venues are, and it
-    // carries the direction — negative when the cluster runs the other way.
+    // Where the venue cluster starts: just past the end of everything parked in the paddock, on whichever
+    // side of it has more paddock left, walking away from the rigs. `step` is how far apart consecutive
+    // venues are, and it carries the direction — negative when the cluster runs the other way.
     //
-    // Measured off the lot's own boundary (DriverMotorhomeLot builds a MotorhomeLotBoundary polygon around
-    // every RV it parks), because that is the one piece of the paddock that is definitely occupied.
-    static float FirstFreeSpaceBeside(Vector3 centre, Vector3 along, float halfLen, out float step)
+    // `parked` is both blocks (see ParkedSpans). It used to be the motorhome lot's walkable pocket, found
+    // by name, which was wrong twice over: it never saw the garages at all, and at any track that authors
+    // a Motorhomes PaddockLotArea the pocket is called MotorhomesLotBoundary, so nothing was found and the
+    // cluster was laid out from the middle of the paddock — straight through the lot.
+    static float FirstFreeSpaceBeside(float halfLen, IList<Vector2> parked, out float step)
     {
-        const float Gap = 14f;        // clear air between the last motorhome and the first venue
+        const float Gap = 14f;        // clear air between the last rig and the first venue
         const float Spacing = 26f;    // between venues: separate places, still a short walk
 
         float lotMin = 0f, lotMax = 0f;
-        var lot = GameObject.Find("MotorhomeLotBoundary");
-        var bounds = lot != null ? lot.GetComponent<Collider2D>() : null;
-        if (bounds != null)
+        if (parked != null && parked.Count > 0)
         {
-            var b = bounds.bounds;
-            // Project the lot's corners onto the paddock's long axis to find how much of it the RVs eat.
-            for (int i = 0; i < 4; i++)
+            lotMin = parked[0].x;
+            lotMax = parked[0].y;
+            for (int i = 1; i < parked.Count; i++)
             {
-                var corner = new Vector3(i < 2 ? b.min.x : b.max.x, (i % 2 == 0) ? b.min.y : b.max.y, 0f);
-                float t = Vector3.Dot(corner - centre, along);
-                lotMin = i == 0 ? t : Mathf.Min(lotMin, t);
-                lotMax = i == 0 ? t : Mathf.Max(lotMax, t);
+                lotMin = Mathf.Min(lotMin, parked[i].x);
+                lotMax = Mathf.Max(lotMax, parked[i].y);
             }
         }
 
@@ -823,6 +842,167 @@ public class WeekendVenueSites : MonoBehaviour
         if (roomAhead >= roomBehind) { step = Spacing; return lotMax + Gap; }
         step = -Spacing;
         return lotMin - Gap;
+    }
+
+    // ------------------------------------------------------------------ keeping off the parked lots
+
+    // Walkway (m) kept clear around every parked rig, so a venue is never built hard against one. Matches
+    // the padding the motorhome lot puts round its own walkable pocket.
+    const float LotClearance = 9f;
+
+    // The stretches of the paddock, measured along its own long axis, that the parked blocks stand on.
+    //
+    // TWO blocks, not one. DriverMotorhomeLot parks an RV per driver; PopupGarageLot parks a
+    // body-plus-canopy rig per entry behind them, and a garage rig is 10.5m across where a motorhome is
+    // 4m — so ten in a line run 116m against the RV row's 54m. Worse, the direction that block grows in
+    // comes from the player's own motorhome rather than from the paddock, so at plenty of tracks it
+    // reaches past the end of the RVs and across the exact ground the venue cluster is laid out on. That
+    // is how the drivers' meeting came to be held inside a team's garage: four walls, three rows of
+    // chairs and a top table straight through somebody's awning.
+    //
+    // Only rigs that reach the paddock rectangle count. A block parked well outside it is nothing any
+    // venue can collide with, and counting it would push the cluster off the end of the paddock for
+    // nothing.
+    static List<Vector2> ParkedSpans(Vector3 centre, Vector3 along, Vector3 outward, float halfDepth)
+    {
+        var spans = new List<Vector2>();
+        float band = halfDepth + LotClearance;
+
+        var lot = DriverMotorhomeLot.Instance;
+        if (lot != null)
+        {
+            var half = new Vector2(lot.rvWidth * 0.5f, lot.rvLength * 0.5f);
+            foreach (var slot in lot.Slots)
+            {
+                if (slot == null) continue;
+                AddSpan(spans, centre, along, outward, band, slot.position, slot.rotation, -half, half);
+            }
+        }
+
+        var garages = PopupGarageLot.Instance;
+        if (garages != null)
+        {
+            foreach (var rig in garages.Rigs)
+            {
+                if (rig == null) continue;
+
+                // The body, plus the canopy pitched off one side of it — the rig is not centred on its
+                // own transform, so its footprint is taken as a local min/max rather than a half-size.
+                float outer = rig.bodyWidth * 0.5f + rig.canopyWidth;
+                float half = rig.bodyLength * 0.5f;
+                var min = new Vector2(rig.Side > 0 ? -rig.bodyWidth * 0.5f : -outer, -half);
+                var max = new Vector2(rig.Side > 0 ? outer : rig.bodyWidth * 0.5f, half);
+                AddSpan(spans, centre, along, outward, band,
+                        rig.transform.position, rig.transform.rotation, min, max);
+            }
+        }
+
+        return MergeSpans(spans);
+    }
+
+    // Project one parked rectangle onto the paddock's axes and keep its along-extent, if it reaches the
+    // paddock at all. `localMin`/`localMax` are the rectangle in the rig's own frame.
+    static void AddSpan(List<Vector2> spans, Vector3 centre, Vector3 along, Vector3 outward, float band,
+                        Vector3 at, Quaternion rot, Vector2 localMin, Vector2 localMax)
+    {
+        float hx = (localMax.x - localMin.x) * 0.5f;
+        float hy = (localMax.y - localMin.y) * 0.5f;
+        Vector3 mid = at + rot * new Vector3((localMin.x + localMax.x) * 0.5f, (localMin.y + localMax.y) * 0.5f, 0f);
+        Vector3 right = rot * Vector3.right, up = rot * Vector3.up;
+
+        float outAt = Vector3.Dot(mid - centre, outward);
+        float outHalf = Mathf.Abs(Vector3.Dot(right, outward)) * hx + Mathf.Abs(Vector3.Dot(up, outward)) * hy;
+        if (outAt - outHalf > band || outAt + outHalf < -band) return;
+
+        float alongAt = Vector3.Dot(mid - centre, along);
+        float alongHalf = Mathf.Abs(Vector3.Dot(right, along)) * hx + Mathf.Abs(Vector3.Dot(up, along)) * hy;
+        spans.Add(new Vector2(alongAt - alongHalf - LotClearance, alongAt + alongHalf + LotClearance));
+    }
+
+    // Overlapping spans folded into one, sorted along the paddock. Public for the EditMode tests, which
+    // check the layout arithmetic without standing a paddock up.
+    public static List<Vector2> MergeSpans(List<Vector2> spans)
+    {
+        var merged = new List<Vector2>();
+        if (spans == null || spans.Count == 0) return merged;
+
+        spans.Sort((a, b) => a.x.CompareTo(b.x));
+        var run = spans[0];
+        for (int i = 1; i < spans.Count; i++)
+        {
+            if (spans[i].x <= run.y) { run.y = Mathf.Max(run.y, spans[i].y); continue; }
+            merged.Add(run);
+            run = spans[i];
+        }
+        merged.Add(run);
+        return merged;
+    }
+
+    // Where the cluster's venues actually go along the paddock: the offset each one wants, pushed off any
+    // ground a parked block is standing on and off the venue placed before it, always walking the way the
+    // cluster runs. `taken` is merged and sorted (MergeSpans); `halfWidths` are the venues' own half-widths
+    // measured along the paddock.
+    public static float[] LayOutCluster(float[] wanted, float[] halfWidths, float step, float halfLen,
+                                        IList<Vector2> taken)
+    {
+        int n = wanted == null ? 0 : wanted.Length;
+        var placed = new float[n];
+        float dir = step < 0f ? -1f : 1f;
+        float reached = 0f;
+        bool any = false;
+
+        for (int i = 0; i < n; i++)
+        {
+            float half = Mathf.Max(0f, halfWidths != null && i < halfWidths.Length ? halfWidths[i] : 0f);
+            float x = wanted[i];
+
+            // Never behind the venue before it: two venues pushed out of the same block would otherwise
+            // both land against its far edge, one on top of the other.
+            if (any) x = dir > 0f ? Mathf.Max(x, reached + half) : Mathf.Min(x, reached - half);
+
+            x = AlongOffset(PushPast(x, half, dir, taken), halfLen, half);
+
+            placed[i] = x;
+            reached = x + dir * half;
+            any = true;
+        }
+        return placed;
+    }
+
+    // Walk an offset past every span it lands on, in the direction of travel. The spans are merged and
+    // sorted, so taking them in that order is one pass: stepping clear of one meets the next.
+    static float PushPast(float x, float halfWidth, float dir, IList<Vector2> taken)
+    {
+        if (taken == null) return x;
+
+        for (int i = 0; i < taken.Count; i++)
+        {
+            Vector2 span = taken[dir > 0f ? i : taken.Count - 1 - i];
+            if (x + halfWidth <= span.x || x - halfWidth >= span.y) continue;
+            x = dir > 0f ? span.y + halfWidth : span.x - halfWidth;
+        }
+        return x;
+    }
+
+    // Says so out loud when the paddock simply has no room left: every venue was pushed as far as it could
+    // go and one of them is still standing on a lot. The alternative is the silent version of this, which
+    // is a drivers' meeting held inside a garage.
+    static void WarnIfStillParkedOn(float[] placed, float[] halfWidths, IList<Vector2> taken)
+    {
+        if (taken == null || taken.Count == 0) return;
+
+        for (int i = 0; i < placed.Length; i++)
+        {
+            float half = halfWidths[i];
+            foreach (var span in taken)
+            {
+                if (placed[i] + half <= span.x || placed[i] - half >= span.y) continue;
+                Debug.LogWarning("WeekendVenueSites: the motorhome and garage lots fill this paddock end to " +
+                                 "end, so a venue had to be placed on top of one. Draw the lots a smaller " +
+                                 "PaddockLotArea in the track package, or author the venue's own marker.");
+                return;
+            }
+        }
     }
 
     // Where along the paddock a venue sits: what we asked for, pulled back inside the paddock's own ends so
