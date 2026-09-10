@@ -122,6 +122,21 @@ public class PitLaneStart : MonoBehaviour
     public float PlayerPitDistance { get; private set; }
     public bool PlayerOnPit { get; private set; }
 
+    // The pose the car was parked in when the scene opened. A tow puts it back exactly here rather than
+    // guessing at a spot on the pit spline, so a car dragged in off the circuit sits in its own box the
+    // way it did before the session started.
+    Vector3 _boxPosition;
+    Quaternion _boxRotation;
+    bool _boxKnown;
+
+    // The player is in the car and has been handed the controls. The stranded-car tow asks this before it
+    // offers to bring them in: there is nothing to tow while they are still walking to it.
+    public bool IsDriving => _phase == EntryPhase.Driving;
+
+    // The chief has already had his say and the setup is already made. Getting back into the same car
+    // after a tow is not a fresh session, so it skips both and hands the controls straight over.
+    bool _briefed;
+
     // Camera-zoom arbiter. This component owns the ortho lerp for the whole scene, but other systems
     // retarget the camera (broadcast TV cuts, crew chief's pit-wall avatar) and need the zoom to follow:
     // without this the camera stays at whatever level the last on-foot/enter-car flow left it.
@@ -200,6 +215,12 @@ public class PitLaneStart : MonoBehaviour
         carT.position = new Vector3(carPos.x, carPos.y, carT.position.z);
         float zRot = carHeadingDeg - ((car.spriteFacesUp ? 90f : 0f) - car.angleOffsetDeg);
         carT.rotation = Quaternion.Euler(0f, 0f, zRot);
+
+        // The box, remembered. A car towed in off the circuit is put back on this exact pose rather than
+        // re-derived from the spline, so it lands square in its own box however the session went.
+        _boxPosition = carT.position;
+        _boxRotation = carT.rotation;
+        _boxKnown = true;
 
         // Make sure nothing drives the car until the player climbs in.
         car.enabled = false;
@@ -596,7 +617,7 @@ public class PitLaneStart : MonoBehaviour
         // heard out and the setup made before the car is live.
         if (_camFollow != null) _camFollow.target = car.transform;
 
-        if (_chief != null && _chief.lines != null && _chief.lines.Length > 0)
+        if (!_briefed && _chief != null && _chief.lines != null && _chief.lines.Length > 0)
         {
             // Hold the walking zoom through the briefing — the chief is stood beside the car and both
             // bubbles are on-foot scale. The pull-back to driving distance waits for his last line.
@@ -623,7 +644,7 @@ public class PitLaneStart : MonoBehaviour
     {
         ControlHints.Hide("advance");
         _orthoTarget = drivingOrthoSize; // the talking is over — now pull back to driving distance
-        if (!showSetupPanel) { StartDriving(null); return; }
+        if (!showSetupPanel || _briefed) { StartDriving(null); return; }
         _phase = EntryPhase.Setup;
         CarSetupPanelUI.Open(CarSetup.Load(), StartDriving);
     }
@@ -634,6 +655,7 @@ public class PitLaneStart : MonoBehaviour
         setup?.ApplyTo(car.gameObject);
 
         _phase = EntryPhase.Driving;
+        _briefed = true;
         car.enabled = true; // PlayerVehicleController.Start captures parked heading on first enable
         if (fitPitLimiter) EnsurePitLimiter();
 
@@ -644,6 +666,52 @@ public class PitLaneStart : MonoBehaviour
         }
 
         PlayerEnteredCar?.Invoke();
+    }
+
+    // Drag the car in off the circuit and put the driver out beside it, in their own box.
+    //
+    // This is the reverse of EnterCar and deliberately shares its moving parts: the controller goes off,
+    // the on-foot body comes back on, and the camera follows whoever the player currently is. What it does
+    // NOT do is repair anything — the car arrives as wrecked as it left, and the crew work on it from
+    // there (PitCrewRepair). A tow that handed back a straight car would make crashing free.
+    //
+    // Returns false when there is nothing to tow: not driving, or the scene never worked out where the
+    // car's box is.
+    public bool TowToPits()
+    {
+        if (!IsDriving || car == null || _player == null || !_boxKnown) return false;
+
+        // Controls off first. The body is about to be teleported and a live controller would spend the
+        // frame fighting the move.
+        car.enabled = false;
+
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+        }
+
+        car.transform.SetPositionAndRotation(_boxPosition, _boxRotation);
+
+        // Stood at the driver's door rather than inside the car, so walking away from it works the same as
+        // it did at the start of the session.
+        Vector3 beside = _boxPosition + _boxRotation * new Vector3(0f, -2.2f, 0f);
+        beside.z = _player.transform.position.z;
+        _player.transform.position = beside;
+        _player.SetActive(true);
+
+        if (_camFollow != null) _camFollow.target = _player.transform;
+        _orthoTarget = onFootOrthoSize;
+
+        // Back to the walk-up state, so E gets them into the car again once the crew are done with it.
+        _phase = EntryPhase.Walking;
+        _entered = false;
+        _hintedEnter = false;
+        SyncCarMarker();
+
+        PitCrewRepair.Begin(car);
+        return true;
     }
 
     void EnsurePitLimiter()

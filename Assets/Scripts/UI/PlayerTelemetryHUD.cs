@@ -43,6 +43,7 @@ public class PlayerTelemetryHUD : MonoBehaviour
                   + PixelGUI.Px(2f) + 2f * (PixelGUI.LineH + PixelGUI.CellsHeight + PixelGUI.Px(3f));
         float x = PixelGUI.Px(8f), y = Screen.height - h - PixelGUI.Px(14f);
         PixelGUI.Panel(new Rect(x, y, w, h));
+        PixelGUI.KeyTab(new Rect(x, y, w, h), toggleKey == KeyCode.None ? "" : toggleKey.ToString());
 
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 8f);
         float cy = c.y;

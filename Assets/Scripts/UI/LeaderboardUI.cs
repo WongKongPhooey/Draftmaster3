@@ -89,6 +89,8 @@ public class LeaderboardUI : MonoBehaviour
         bool playerOutsideWindow = !expanded && playerRow >= show;
         float h = (show + 1) * row + pad * 2f + (playerOutsideWindow ? row + pad : 0f);
         PixelGUI.Panel(new Rect(x, y, w + pad * 2f, h));
+        PixelGUI.KeyTab(new Rect(x, y, w + pad * 2f, h),
+                        toggleKey == KeyCode.None ? "" : toggleKey.ToString());
 
         float rx = x + pad, ry = y + pad;
         GUI.Label(new Rect(rx, ry, w, row), Header(broadcast, byLap, expanded, n), PixelGUI.HeadingSmall);

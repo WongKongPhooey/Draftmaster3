@@ -181,6 +181,7 @@ public class TitleScreenUI : MonoBehaviour
         foreach (var row in rows)
         {
             if (row == null || row.labelText == null || string.IsNullOrEmpty(row.label)) continue;
+            if (!row.shown) continue;   // a row this build does not draw cannot read wrong
             if (row.labelText.text == row.label) continue;
 
             Debug.LogWarning($"TitleScreenUI: the {row.command} row is labelled \"{row.label}\" but draws " +
@@ -193,6 +194,18 @@ public class TitleScreenUI : MonoBehaviour
     bool ShownInThisBuild(Row row)
     {
         if (row == null) return false;
+
+        // NEW SEASON is retired, wherever it still exists. CAREER is the only door into the career and
+        // RESTART DEMO is the only door into a fresh one, so a third row that also started a season was a
+        // coin toss the player lost — and Row_NEW_SEASON was the one drawing the word "MULTIPLAYER" over
+        // a career start. Draftmaster > UI > Remove NEW SEASON Row From Title Screen takes it out of
+        // TitleScreen.unity for good; this makes a scene that still has one draw the menu without it,
+        // rather than shipping the row to anyone who has not run that yet.
+        //
+        // Command.NewSeason stays in the enum: the scene stores a row's command by number, so removing a
+        // value would move every row onto the wrong command.
+        if (row.command == Command.NewSeason) return false;
+
         switch (row.appearsIn)
         {
             case Build.DemoOnly: return DemoMode.IsDemo;

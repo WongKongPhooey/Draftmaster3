@@ -141,8 +141,12 @@ public class RacePauseMenu : MonoBehaviour
         // literal 150 that was true while the face sat on an 8px cell.
         float rowH = PixelGUI.LineH, gapH = PixelGUI.Px(4f);
         float w = PixelGUI.Px(200f);
+        // One more row than before whenever a booked session is running, since END SESSION only appears
+        // then. Measured rather than budgeted, or the extra row pushes RESUME off the bottom of the plate.
+        int extraRows = PracticeDirector.PauseMenuExitLabel != null ? 1 : 0;
         float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 5f + rowH * 2f
-                  + rowH * 3f + gapH * 2f + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f);
+                  + rowH * 3f + gapH * 2f + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f)
+                  + extraRows * (rowH + gapH);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Round((Screen.height - h) * 0.5f);
 
@@ -179,6 +183,21 @@ public class RacePauseMenu : MonoBehaviour
             WeekendScheduleUI.Open();
         }
         cy += row + gap;
+
+        // Handing a booked practice or qualifying session back to the timetable. This used to be a red
+        // button parked over the corner of the windscreen for the whole session; here it is out of the
+        // way until the player actually wants it, and it is the only exit a routed session has.
+        string endLabel = PracticeDirector.PauseMenuExitLabel;
+        if (endLabel != null)
+        {
+            if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row), endLabel, false))
+            {
+                var director = PracticeDirector.Instance;
+                Resume();
+                if (director != null) director.StartRace();
+            }
+            cy += row + gap;
+        }
 
         // Co-op lives here rather than on the title screen because "open my career to a friend" only means
         // anything once there IS a career to open — the host keeps playing exactly where they are and the

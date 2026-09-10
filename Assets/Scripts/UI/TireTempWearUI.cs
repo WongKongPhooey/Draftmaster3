@@ -17,10 +17,11 @@ public class TireTempWearUI : MonoBehaviour
     public bool visible = true;
 
     [Header("Layout (UI pixels, before PixelGUI.Scale)")]
-    [Tooltip("Width of one corner's block. The life row is drawn to fit inside it.")]
-    public float cellW = 62f;
+    [Tooltip("Minimum width of one corner's block. The real width is the larger of this, the life row and " +
+             "the corner label plus its temperature, so the board never crops what it is asked to show.")]
+    public float cellW = 48f;
     [Tooltip("Minimum height of one corner's block. The real height is whatever the label, the temperature bar and the life cells need, so a bigger type cell grows the board instead of spilling out of it.")]
-    public float cellH = 34f;
+    public float cellH = 30f;
     public float gap = 4f;
     public Vector2 margin = new Vector2(10f, 14f);
 
@@ -29,10 +30,22 @@ public class TireTempWearUI : MonoBehaviour
     // gone" — the ten-cell row on the main HUD is the one they count.
     const int LifeCells = 5;
 
+    // The corner label and its temperature share one row, and they are set in different faces: the label
+    // in the kit's 8pt display face, the temperature in the 16pt data face. Sized on the label's line
+    // height alone, that row was half the height of the digits standing in it and the temperatures were
+    // clipped through the middle. The row is the taller of the two.
+    static float HeadRow => Mathf.Max(PixelGUI.LineH, PixelGUI.DataLineH);
+
+    // The same in the other direction: whatever a corner's label and a three-digit temperature need side
+    // by side, so a narrow board pushes the two apart rather than cutting the reading off.
+    static float HeadWidth =>
+        PixelGUI.Label.CalcSize(new GUIContent("RR")).x + PixelGUI.Px(6f) +
+        PixelGUI.Data.CalcSize(new GUIContent("888°")).x;
+
     // What one corner actually needs: a line of label, the temperature bar under it, then the life cells.
     static float BlockHeight(float authoredMin) =>
         Mathf.Max(PixelGUI.Px(authoredMin),
-                  PixelGUI.LineH + PixelGUI.Px(7f) + PixelGUI.CellsHeight + PixelGUI.Px(2f));
+                  HeadRow + PixelGUI.Px(7f) + PixelGUI.CellsHeight + PixelGUI.Px(2f));
 
     void Update()
     {
@@ -52,7 +65,7 @@ public class TireTempWearUI : MonoBehaviour
     {
         if (!visible || tires == null) return;
 
-        float cw = Mathf.Max(PixelGUI.Px(cellW), PixelGUI.CellsWidth(LifeCells));
+        float cw = Mathf.Max(Mathf.Max(PixelGUI.Px(cellW), PixelGUI.CellsWidth(LifeCells)), HeadWidth);
         float ch = BlockHeight(cellH);
         float g = PixelGUI.Px(gap);
         float pad = PixelGUI.Px(6f);
@@ -60,7 +73,9 @@ public class TireTempWearUI : MonoBehaviour
         float x0 = PixelGUI.Px(margin.x) + pad;
         float y0 = Screen.height - boardH - PixelGUI.Px(margin.y) - pad;
 
-        PixelGUI.Panel(new Rect(x0 - pad, y0 - pad, boardW + pad * 2f, boardH + pad * 2f));
+        var plate = new Rect(x0 - pad, y0 - pad, boardW + pad * 2f, boardH + pad * 2f);
+        PixelGUI.Panel(plate);
+        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString());
 
         DrawTyre("FL", TireModel.FL, x0, y0, cw, ch);
         DrawTyre("FR", TireModel.FR, x0 + cw + g, y0, cw, ch);
@@ -73,13 +88,14 @@ public class TireTempWearUI : MonoBehaviour
         float t = tires.tempC[i];
         float life = 1f - Mathf.Clamp01(tires.wear[i]);
 
-        float line = PixelGUI.LineH;
-        // Corner and temperature on one line of the label face, then the temperature bar, then the life
-        // cells. The line height comes from the face so a bigger cell moves the bar down with it.
+        float line = HeadRow;
+        // Corner and temperature on one row, then the temperature bar, then the life cells. The row height
+        // comes from the taller of the two faces, so a bigger cell moves the bar down with it instead of
+        // trimming the digits.
         GUI.Label(new Rect(x, y, w, line), label, PixelGUI.Label);
         var tempLabel = PixelGUI.Data;
         var prevAlign = tempLabel.alignment;
-        tempLabel.alignment = TextAnchor.UpperRight;
+        tempLabel.alignment = TextAnchor.MiddleRight;
         GUI.Label(new Rect(x, y, w, line), $"{t:F0}°", tempLabel);
         tempLabel.alignment = prevAlign;
 

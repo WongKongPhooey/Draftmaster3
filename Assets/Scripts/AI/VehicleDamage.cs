@@ -295,6 +295,31 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         DamageBiasX = Mathf.Clamp(_biasAccum, -1f, 1f);
     }
 
+    // Beat a fraction of the damage out of the panels. The crew working on a car between runs is not the
+    // same event as a pit stop: a stop hands the car back whole, and this hands it back a bit better than
+    // it was, so it can be called every frame with a small amount and the body straightens as you watch.
+    //
+    // Every vertex is pulled toward where it started by the same fraction, which is what makes the panel
+    // come back in one piece rather than in the order the dents landed. `amount01` of 1 is RepairFull.
+    public void Repair(float amount01)
+    {
+        if (_base == null || _mesh == null || _current == null) return;
+        float t = Mathf.Clamp01(amount01);
+        if (t <= 0f) return;
+        if (t >= 1f || DamageLevel <= 0.001f) { RepairFull(); return; }
+
+        for (int i = 0; i < _current.Length; i++)
+            _current[i] = Vector3.Lerp(_current[i], _base[i], t);
+
+        _mesh.vertices = _current;
+        _mesh.RecalculateBounds();
+
+        DamageLevel = Mathf.Max(0f, DamageLevel * (1f - t));
+        _biasAccum *= 1f - t;
+        DamageBiasX = Mathf.Clamp(_biasAccum, -1f, 1f);
+        if (DamageLevel <= 0.001f) RepairFull();
+    }
+
     public void RepairFull()
     {
         if (_base == null || _mesh == null) return;

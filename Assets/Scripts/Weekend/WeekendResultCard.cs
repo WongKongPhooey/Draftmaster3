@@ -33,6 +33,49 @@ public class WeekendResultCard : MonoBehaviour
     bool _pushed;
     bool _dismissed;
 
+    // The card is drawn one integer step below the kit's display scale.
+    //
+    // PixelGUI.Scale steps in whole numbers off the screen height, so a card authored against the 2x skin
+    // of a 720p window becomes half again as big the moment the window is 1080p: a 340-unit card is 680px
+    // there and 1020px here, over half the width of the screen, with the headline set in 48px type. That
+    // is the right size for a menu the player is sat reading and much too big for a notice that appears
+    // over someone's shoulder while they are stood in the paddock.
+    //
+    // Whole steps only, for the same reason PixelGUI floors its own scale: a pixel face resampled to a
+    // fraction of its cell loses its stems.
+    static int CardScale => Mathf.Max(1, PixelGUI.Scale - 1);
+
+    // A pixel measurement at the card's scale rather than the kit's.
+    static float Px(float baseline) => baseline * CardScale;
+
+    static GUIStyle _heading, _body, _data, _dataDim;
+    static int _stylesAtKitScale = -1, _stylesAtCardScale = -1;
+
+    // The kit's own styles with their type stepped down to match. Cloned rather than rebuilt from the
+    // theme, so the face, colour, alignment and wrapping all stay whatever the kit says they are and only
+    // the size moves. Kit sizes are always a whole multiple of PixelGUI.Scale, so the division is exact.
+    static void EnsureStyles()
+    {
+        int kit = Mathf.Max(1, PixelGUI.Scale), card = CardScale;
+        if (_heading != null && _stylesAtKitScale == kit && _stylesAtCardScale == card) return;
+        _stylesAtKitScale = kit;
+        _stylesAtCardScale = card;
+
+        GUIStyle Down(GUIStyle from) =>
+            new GUIStyle(from) { fontSize = Mathf.Max(8, from.fontSize * card / kit) };
+
+        _heading = Down(PixelGUI.Heading);
+        // The activity title is one line in a band, not a paragraph: centred in the band rather than
+        // hung from its top, and never wrapped. The kit's heading is set up for a section header with
+        // room under it, and left as it came the title sat high in the band with its descenders cut.
+        _heading.alignment = TextAnchor.MiddleLeft;
+        _heading.wordWrap = false;
+
+        _body = Down(PixelGUI.Body);
+        _data = Down(PixelGUI.Data);
+        _dataDim = Down(PixelGUI.DataDim);
+    }
+
     public static void Show(WeekendActivity a, WeekendOutcome o, bool inWorld = false)
     {
         if (Instance != null) Destroy(Instance.gameObject);
@@ -87,80 +130,86 @@ public class WeekendResultCard : MonoBehaviour
         if (_inWorld && Time.unscaledTime - _openedAt > InWorldSeconds) { Dismiss(); return; }
         if (!_inWorld) PixelGUI.Scrim(0.9f);
 
-        var lines = Deltas();
-        float w = Mathf.Min(PixelGUI.Px(340f), Screen.width - PixelGUI.Px(16f));
+        EnsureStyles();
 
-        // Measured, not budgeted. The meter rows are set in the data face — 32px at the current 2x skin —
-        // while the old height allowed Px(12), 24px, for each of them and a flat Px(74) for everything
-        // above; a card with three or more meters on it ran its last rows out through the GOT IT button.
-        // What follows is the same arithmetic the draw below does, in the same order.
-        float pad = PixelGUI.Px(4f) + PixelGUI.Px(8f);   // what PanelContent(outer, 8f) takes off each side
+        var lines = Deltas();
+        float w = Mathf.Min(Px(340f), Screen.width - Px(16f));
+
+        // Measured, not budgeted. The meter rows are set in the data face, while the old height allowed a
+        // flat Px(12) for each of them and a flat Px(74) for everything above; a card with three or more
+        // meters on it ran its last rows out through the GOT IT button. What follows is the same
+        // arithmetic the draw below does, in the same order.
+        //
+        // The frame is the one part still measured at the kit's scale: PixelGUI.Panel 9-slices it from the
+        // kit's own upscaled sprite whatever size the card inside is, so the inset that clears it has to be
+        // asked for in those pixels. Everything inboard of it is the card's.
+        float pad = PixelGUI.Px(4f) + Px(8f);
         float contentW = w - pad * 2f;
-        float bandH = PixelGUI.Px(18f);
-        float rowH = PixelGUI.Data.fontSize + PixelGUI.Px(3f);
-        float buttonH = PixelGUI.Px(18f);
+        // The band is whatever the title needs, so a theme on a bigger cell opens it up instead of
+        // trimming the type inside it.
+        float bandH = Mathf.Max(Px(18f), _heading.fontSize + Px(6f));
+        float rowH = _data.fontSize + Px(3f);
+        float buttonH = Px(18f);
         float headlineH = string.IsNullOrEmpty(_outcome.headline)
             ? 0f
-            : PixelGUI.Body.CalcHeight(new GUIContent(_outcome.headline), contentW) + PixelGUI.Px(5f);
+            : _body.CalcHeight(new GUIContent(_outcome.headline), contentW) + Px(5f);
 
         float h = pad * 2f
-                  + bandH + PixelGUI.Px(6f)                    // title band
+                  + bandH + Px(6f)                             // title band
                   + headlineH                                  // what the weekend will remember it by
-                  + PixelGUI.Px(4f)                            // the rule under it
+                  + Px(4f)                                     // the rule under it
                   + Mathf.Max(lines.Count, 1) * rowH           // one line per meter that moved
-                  + PixelGUI.Px(6f) + buttonH;                 // and the way out
+                  + Px(6f) + buttonH;                          // and the way out
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         // In the world it sits low, out of the way of whoever is stood in front of you; as a modal it sits
         // where a modal sits.
         float y = _inWorld
-            ? Mathf.Round(Screen.height - h - PixelGUI.Px(18f))
+            ? Mathf.Round(Screen.height - h - Px(18f))
             : Mathf.Round((Screen.height - h) * 0.4f);
         var outer = new Rect(x, y, w, h);
 
         PixelGUI.Panel(outer, focused: true);
-        var c = PixelGUI.PanelContent(outer, 8f);
+        var c = new Rect(x + pad, y + pad, contentW, h - pad * 2f);
 
         PixelGUI.Fill(new Rect(c.x, c.y, c.width, bandH), PixelGUI.PlateLight);
-        GUI.Label(new Rect(c.x + PixelGUI.Px(4f), c.y + PixelGUI.Px(4f), c.width, PixelGUI.Px(12f)),
-                  _activity.title, PixelGUI.Heading);
+        GUI.Label(new Rect(c.x + Px(4f), c.y, c.width - Px(8f), bandH), _activity.title, _heading);
 
-        var meta = PixelGUI.DataDim;
+        var meta = _dataDim;
         var prevAlign = meta.alignment;
         meta.alignment = TextAnchor.MiddleRight;
-        GUI.Label(new Rect(c.x, c.y, c.width - PixelGUI.Px(4f), bandH), Grade(_outcome.score), meta);
+        GUI.Label(new Rect(c.x, c.y, c.width - Px(4f), bandH), Grade(_outcome.score), meta);
         meta.alignment = prevAlign;
 
-        float cy = c.y + bandH + PixelGUI.Px(6f);
+        float cy = c.y + bandH + Px(6f);
 
         if (!string.IsNullOrEmpty(_outcome.headline))
         {
             var body = new GUIContent(_outcome.headline);
-            float bh = PixelGUI.Body.CalcHeight(body, c.width);
-            GUI.Label(new Rect(c.x, cy, c.width, bh), body, PixelGUI.Body);
-            cy += bh + PixelGUI.Px(5f);
+            float bh = _body.CalcHeight(body, c.width);
+            GUI.Label(new Rect(c.x, cy, c.width, bh), body, _body);
+            cy += bh + Px(5f);
         }
 
-        PixelGUI.Rule(c.x, cy, c.width);
-        cy += PixelGUI.Px(4f);
+        PixelGUI.Fill(new Rect(c.x, cy, c.width, Px(1f)), PixelGUI.PlateLight);
+        cy += Px(4f);
 
         if (lines.Count == 0)
         {
-            GUI.Label(new Rect(c.x, cy, c.width, rowH), "Nothing moved.", PixelGUI.DataDim);
+            GUI.Label(new Rect(c.x, cy, c.width, rowH), "Nothing moved.", _dataDim);
             cy += rowH;
         }
         else
         {
             foreach (var (label, value, colour) in lines)
             {
-                GUI.Label(new Rect(c.x, cy, c.width, rowH), label, PixelGUI.DataDim);
-                var s = PixelGUI.Data;
-                var pc = s.normal.textColor;
-                var pa = s.alignment;
-                s.normal.textColor = colour;
-                s.alignment = TextAnchor.MiddleRight;
-                GUI.Label(new Rect(c.x, cy, c.width, rowH), value, s);
-                s.normal.textColor = pc;
-                s.alignment = pa;
+                GUI.Label(new Rect(c.x, cy, c.width, rowH), label, _dataDim);
+                var prevColour = _data.normal.textColor;
+                var prevAlignment = _data.alignment;
+                _data.normal.textColor = colour;
+                _data.alignment = TextAnchor.MiddleRight;
+                GUI.Label(new Rect(c.x, cy, c.width, rowH), value, _data);
+                _data.normal.textColor = prevColour;
+                _data.alignment = prevAlignment;
                 cy += rowH;
             }
         }

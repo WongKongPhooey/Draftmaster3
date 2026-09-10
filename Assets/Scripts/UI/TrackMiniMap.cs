@@ -6,8 +6,9 @@ using UnityEngine;
 // live cars are plotted over it every frame: dim square pips for AI, a bigger gold one for the
 // player's car. World-aligned (no rotation), so it matches what the top-down camera shows.
 //
-// Iron Oval furniture: the map sits on the kit's framed plate, and the pips are hard-edged squares
-// rather than soft circles — an anti-aliased dot next to pixel art reads as a rendering error.
+// Iron Oval furniture: no plate and no frame — the line drawing lies straight over the race, held
+// legible by an ink halo baked around it — and the pips are hard-edged squares rather than soft
+// circles, since an anti-aliased dot next to pixel art reads as a rendering error.
 //
 // Self-bootstraps like HandlingTuner/RacingLineDisplay: builds only in scenes with a TrackBuilder,
 // no wiring needed. Toggled from the pause menu; state persists in PlayerPrefs.
@@ -132,8 +133,16 @@ public class TrackMiniMap : MonoBehaviour
             }
         }
 
+        // Each line is stamped twice: an ink pass one pixel fatter, then the line itself over it. That
+        // outline is what lets the map sit on the race with no plate under it — a cream line alone
+        // disappears the moment it crosses a concrete apron or a white wall.
+        Color32 ink = PixelGUI.Ink;
+        for (int i = 0; i < pit.Count; i++)
+            Stamp(_builder.transform.TransformPoint(pit[i].position), ink, 2);
         for (int i = 0; i < pit.Count; i++)
             Stamp(_builder.transform.TransformPoint(pit[i].position), Resolve(pitLaneColor, PixelGUI.TextDisabled), 1);
+        for (int i = 0; i < main.Count; i++)
+            Stamp(_builder.transform.TransformPoint(main[i].position), ink, 3);
         for (int i = 0; i < main.Count; i++)
             Stamp(_builder.transform.TransformPoint(main[i].position), Resolve(trackLineColor, PixelGUI.Text), 2);
         // Start/finish notch, slightly fatter than the line. Alarm red is the one place it is used here,
@@ -167,11 +176,10 @@ public class TrackMiniMap : MonoBehaviour
             Screen.height - size - PixelGUI.Px(cornerMargin.y) - speedoClearance * HudScale(),
             size, size);
 
-        // The baked map is transparent apart from its lines, and over a light piece of track it vanished.
-        // The kit's plate gives it a constant backing; the frame is what makes it read as an instrument
-        // rather than a decal.
-        float pad = PixelGUI.Px(4f);
-        PixelGUI.Panel(new Rect(rect.x - pad, rect.y - pad, rect.width + pad * 2f, rect.height + pad * 2f));
+        // No plate and no frame behind it: the map is a line drawing laid straight over the race, which
+        // keeps the corner of the screen looking out at the track rather than at a box. What used to be
+        // the plate's job — holding the line visible over a pale piece of tarmac — is done by the ink
+        // halo baked around the line in BakeMap, so the map still reads with nothing behind it.
         GUI.color = Color.white;
         GUI.DrawTexture(rect, _mapTex);
 

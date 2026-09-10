@@ -6,10 +6,11 @@ using UnityEngine.UI;
 // Practice/qualifying session director. Active when RaceWeekend.IsPracticeLike: the track goes green
 // immediately (no formation lap or safety car — FormationDirector disables itself), the AI field
 // waits parked in their pit boxes, and this component cycles a handful of them out for lap stints
-// so the track never holds more than maxOnTrack cars. Also owns lap timing (LapTimingManager) and
-// the session button that advances the weekend: Practice → "QUALIFYING" reloads into a timed
-// qualifying session; Qualifying → "START RACE" captures the best-lap order as the race grid
-// (RaceWeekend.GridOrder) and reloads into the race.
+// so the track never holds more than maxOnTrack cars. Also owns lap timing (LapTimingManager) and,
+// OUTSIDE a weekend, the session button that advances the standalone flow: Practice → "QUALIFYING"
+// reloads into a timed qualifying session; Qualifying → "START RACE" captures the best-lap order as
+// the race grid (RaceWeekend.GridOrder) and reloads into the race. A session booked off the weekend
+// timetable draws no button — it is ended from the pause menu, which calls StartRace() the same way.
 public class PracticeDirector : MonoBehaviour
 {
     public static PracticeDirector Instance { get; private set; }
@@ -111,6 +112,13 @@ public class PracticeDirector : MonoBehaviour
 
     void BuildRaceButton()
     {
+        // A session booked off the weekend timetable has no button. END SESSION was a red rectangle
+        // floating over the corner of the windscreen for the whole hour, and the only thing it did was
+        // hand back to a timetable the player can already open with F10 or from the pause menu — which is
+        // where the row lives now (RacePauseMenu). The standalone flow keeps its button: outside a
+        // weekend, START RACE and QUALIFYING are the only way to move the session on at all.
+        if (WeekendRouted) return;
+
         var canvasGO = new GameObject("PracticeCanvas");
         var canvas = canvasGO.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -141,10 +149,7 @@ public class PracticeDirector : MonoBehaviour
         label.fontSize = 20;
         label.fontStyle = FontStyle.Bold;
         label.font = BrandFonts.Body;
-        // Under the weekend schedule the button just ends the session - what happens next is the player's
-        // choice off the timetable, not this director's.
-        label.text = WeekendRouted ? "END SESSION"
-                                   : (_isQualifying ? "START RACE" : "QUALIFYING");
+        label.text = _isQualifying ? "START RACE" : "QUALIFYING";
     }
 
     // Advance the weekend: practice → qualifying; qualifying → capture the grid → race. Each step
@@ -168,7 +173,13 @@ public class PracticeDirector : MonoBehaviour
     }
 
     // True when this session is a booking off the weekend timetable rather than the standalone flow.
-    static bool WeekendRouted => !string.IsNullOrEmpty(WeekendDirector.PendingRouteId);
+    public static bool WeekendRouted => !string.IsNullOrEmpty(WeekendDirector.PendingRouteId);
+
+    // What the pause menu's END SESSION row should say, or null when there is nothing to end: outside a
+    // weekend the session advances on its own button, and off a practice-like session there is no session
+    // to hand back at all.
+    public static string PauseMenuExitLabel =>
+        Instance != null && Instance.enabled && WeekendRouted ? "END SESSION" : null;
 
     // What the session was worth to the weekend. Practice pays in setup knowledge - laps are data, and a
     // driver who ran the whole session gives the engineers something to work with. Qualifying pays in where

@@ -386,6 +386,45 @@ public static class PixelGUI
         if (inner.width > 0f && inner.height > 0f && t.panelFill != null) Tile(inner, t.panelFill);
     }
 
+    // The key that closes this panel, on a tab poking out of its top-left corner like the divider in a
+    // filofax. Every in-race panel is toggled by a function key and none of them said which, so a player
+    // who opened one had to guess their way back out of it.
+    //
+    // Out of the TOP-LEFT rather than the top-right: the right-hand corner is where a panel's own readout
+    // usually ends up (the tyre board's temperatures, the timing plate's best lap), and the left is dead
+    // space under every heading in the kit. The tab overlaps the frame by a pixel so it reads as part of
+    // the panel rather than a label floating beside it, and it tucks inside the panel when there is no
+    // room above — a panel at the top of the screen would otherwise hang its tab off the edge.
+    //
+    // Pass the key the way the player would say it: "F6", "ESC", "C".
+    public static void KeyTab(Rect panel, string key)
+    {
+        if (string.IsNullOrEmpty(key)) return;
+        Ensure();
+
+        var content = new GUIContent(key.ToUpperInvariant());
+        float w = Mathf.Ceil(_labelDim.CalcSize(content).x) + Px(8f);
+        float h = _labelDim.fontSize + Px(4f);
+        float x = panel.x + Px(6f);
+        float y = panel.y - h + Px(1f);          // overlapping the frame's top edge by one scaled pixel
+
+        // No room above: sit the tab inside the panel's top-left instead of off the top of the screen.
+        if (y < 0f) y = panel.y + Px(1f);
+
+        var r = new Rect(Mathf.Round(x), Mathf.Round(y), Mathf.Round(w), Mathf.Round(h));
+        float b = Px(1f);
+        Fill(new Rect(r.x - b, r.y - b, r.width + b * 2f, r.height + b * 2f), Ink);
+        Fill(r, PlateLight);
+
+        var prevAlign = _labelDim.alignment;
+        var prevColour = _labelDim.normal.textColor;
+        _labelDim.alignment = TextAnchor.MiddleCenter;
+        _labelDim.normal.textColor = Gold;
+        GUI.Label(r, content, _labelDim);
+        _labelDim.normal.textColor = prevColour;
+        _labelDim.alignment = prevAlign;
+    }
+
     // Inner rect of a Panel — where its content goes, one frame border plus the kit's 12px margin in.
     public static Rect PanelContent(Rect r, float margin = 12f)
     {

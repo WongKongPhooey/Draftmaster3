@@ -151,7 +151,8 @@ public class DriverInfoPanel : MonoBehaviour
     {
         if (!_show) return;
         EnsureStyles();
-        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow, "DRIVER INFO · F5", _window);
+        _win = GUILayout.Window(GetInstanceID(), _win, DrawWindow,
+                                "DRIVER INFO · " + toggleKey.ToString().ToUpperInvariant(), _window);
     }
 
     void DrawWindow(int id)

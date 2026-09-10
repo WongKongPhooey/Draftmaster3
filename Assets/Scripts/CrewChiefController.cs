@@ -277,6 +277,8 @@ public class CrewChiefController : MonoBehaviour
         float y = PixelGUI.Px(40f);
 
         PixelGUI.Panel(new Rect(x, y, w, h));
+        PixelGUI.KeyTab(new Rect(x, y, w, h),
+                        toggleKey == UnityEngine.InputSystem.Key.None ? "" : toggleKey.ToString());
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
         float cx = c.x, cy = c.y;
 

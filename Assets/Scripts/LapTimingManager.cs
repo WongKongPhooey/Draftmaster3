@@ -25,6 +25,17 @@ public class LapTimingManager : MonoBehaviour
     [Tooltip("Key toggling the lap readout (iRacing-style F1).")]
     public KeyCode toggleKey = KeyCode.F1;
 
+    [Header("Timing strip")]
+    [Tooltip("Steps the strip down from PixelGUI.Scale. The kit's display scale is sized for menus read " +
+             "at rest; a lap counter glanced at on the way into a corner wants to be smaller than that. " +
+             "0 draws it at full kit scale.")]
+    public int stripScaleStep = 1;
+    [Tooltip("Gap between the strip and the bottom edge of the screen, in strip pixels.")]
+    public float stripBottomMargin = 6f;
+
+    GUIStyle _stripStyle;
+    int _stripStyleScale = -1;
+
     public class CarTimes
     {
         public Transform tf;
@@ -239,33 +250,67 @@ public class LapTimingManager : MonoBehaviour
     {
         if (!showPlayerHud || _player == null) return;
 
-        // The timing strip, Iron Oval: framed plate, VT323 so the digits hold their columns as they run,
-        // and the invalidation notice in alarm red under it — the one thing here worth shouting.
-        float w = PixelGUI.Px(212f), h = PixelGUI.Px(16f);
-        float x = Mathf.Round((Screen.width - w) * 0.5f), y = PixelGUI.Px(6f);
+        // The timing strip, Iron Oval: framed plate, the data face so the digits hold their columns as
+        // they run, and the invalidation notice in alarm red under it — the one thing here worth shouting.
+        //
+        // Along the bottom edge rather than the top. Lap, last and best are read on a straight, not in a
+        // corner, so they belong under the action instead of across the road the driver is looking down.
+        // Drawn a step below the kit's display scale as well: at full scale on a 1440p screen the strip
+        // was a banner as wide as a third of the windscreen.
+        int s = StripScale;
+        var style = StripStyle(s);
         bool invalid = Time.time < _player.invalidFlashUntil;
-        float panelH = h + PixelGUI.Px(10f) + (invalid ? h : 0f);
-
-        PixelGUI.Panel(new Rect(x, y, w, panelH));
-        var c = PixelGUI.PanelContent(new Rect(x, y, w, panelH), 1f);
 
         string cur = _player.lapStarted
             ? Format(_player.CurrentLapTime(Time.time)) + (_player.valid ? "" : " ✕")
             : "--:--.---";
+        string strip = $"LAP {cur}   LAST {Format(_player.lastLap)}   BEST {Format(_player.bestLap)}";
 
-        var style = PixelGUI.Data;
-        var prevAlign = style.alignment;
-        style.alignment = TextAnchor.MiddleCenter;
-        GUI.Label(new Rect(c.x, c.y, c.width, h),
-                  $"LAP {cur}   LAST {Format(_player.lastLap)}   BEST {Format(_player.bestLap)}", style);
+        // The plate's frame is 9-sliced at the kit's own scale whatever size the text inside is set at,
+        // so the inset that clears it is measured there; only the margin inside it follows the strip.
+        // Width comes off the text rather than a literal, or a smaller face leaves a half-empty plate.
+        float pad = PixelGUI.Px(4f) + 6f * s;
+        float line = style.fontSize + 2f * s;
+        float w = Mathf.Ceil(style.CalcSize(new GUIContent(strip)).x) + pad * 2f;
+        float h = line + (invalid ? line : 0f) + pad * 2f;
+        float x = Mathf.Round((Screen.width - w) * 0.5f);
+        float y = Mathf.Round(Screen.height - h - stripBottomMargin * s);
+
+        var plate = new Rect(x, y, w, h);
+        PixelGUI.Panel(plate);
+        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString());
+        GUI.Label(new Rect(x + pad, y + pad, w - pad * 2f, line), strip, style);
 
         if (invalid)
         {
             var prev = style.normal.textColor;
             style.normal.textColor = PixelGUI.Danger;
-            GUI.Label(new Rect(c.x, c.y + h, c.width, h), "LAP INVALIDATED", style);
+            GUI.Label(new Rect(x + pad, y + pad + line, w - pad * 2f, line), "LAP INVALIDATED", style);
             style.normal.textColor = prev;
         }
-        style.alignment = prevAlign;
+    }
+
+    // Whole integer steps only. A pixel face resampled to a fraction of its own cell loses its stems,
+    // which is why PixelGUI.Scale is floored rather than continuous in the first place.
+    int StripScale => Mathf.Max(1, PixelGUI.Scale - Mathf.Max(0, stripScaleStep));
+
+    // The kit's data style at the strip's own scale. PixelGUI.Data is built at the display scale and
+    // shared, so it cannot be resized here without shrinking every other readout on the screen with it.
+    GUIStyle StripStyle(int scale)
+    {
+        if (_stripStyle != null && _stripStyleScale == scale) return _stripStyle;
+        var theme = PixelGUI.Theme;
+        var style = new GUIStyle
+        {
+            font = theme != null ? theme.imguiFont : null,
+            fontSize = 16 * scale,   // the data face's 16pt cell, the size the kit sets every readout at
+            alignment = TextAnchor.MiddleCenter,
+        };
+        style.normal.textColor = PixelGUI.Text;
+        _stripStyle = style;
+        // Only remembered once the face is really there. The theme loads out of Resources, and a style
+        // cached on the one frame it was still null would keep the fallback font for the whole session.
+        _stripStyleScale = style.font != null ? scale : -1;
+        return _stripStyle;
     }
 }
