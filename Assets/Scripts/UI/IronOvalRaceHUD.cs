@@ -163,19 +163,23 @@ public class IronOvalRaceHUD : MonoBehaviour
         float cy = c.y;
         var label = PixelGUI.HeadingSmall;
         var prev = label.normal.textColor;
+        // The rows are the authored ten-cell width or whatever the plate has room for, whichever is
+        // smaller — never simply the content box, which would stretch a row past its own boxes the day
+        // the plate is sized off anything but the row.
+        float rowW = Mathf.Min(c.width, PixelGUI.CellsWidth(10));
 
         label.normal.textColor = PixelGUI.Danger;
         GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "TIRE", label);
         cy += PixelGUI.LineH;
         float life = _tires != null ? 1f - Mathf.Clamp01(Mathf.Max(_tires.FrontWear, _tires.RearWear)) : 1f;
-        PixelGUI.Cells(new Rect(c.x, cy, c.width, PixelGUI.CellsHeight), Mathf.RoundToInt(life * 10f), 10,
+        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight), Mathf.RoundToInt(life * 10f), 10,
                        life > 0.66f ? PixelGUI.Confirm : life > 0.33f ? PixelGUI.Gold : PixelGUI.Danger);
         cy += PixelGUI.CellsHeight + PixelGUI.Px(4f);
 
         label.normal.textColor = PixelGUI.Info;
         GUI.Label(new Rect(c.x, cy, c.width, PixelGUI.LineH), "DRAFT", label);
         cy += PixelGUI.LineH;
-        PixelGUI.Cells(new Rect(c.x, cy, c.width, PixelGUI.CellsHeight),
+        PixelGUI.Cells(new Rect(c.x, cy, rowW, PixelGUI.CellsHeight),
                        Mathf.RoundToInt(Draft01() * 10f), 10, PixelGUI.Info);
 
         label.normal.textColor = prev;

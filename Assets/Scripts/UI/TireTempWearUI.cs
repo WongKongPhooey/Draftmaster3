@@ -44,8 +44,12 @@ public class TireTempWearUI : MonoBehaviour
 
     // What one corner actually needs: a line of label, the temperature bar under it, then the life cells.
     static float BlockHeight(float authoredMin) =>
-        Mathf.Max(PixelGUI.Px(authoredMin),
-                  HeadRow + PixelGUI.Px(7f) + PixelGUI.CellsHeight + PixelGUI.Px(2f));
+        PixelGUI.SnapUp(Mathf.Max(PixelGUI.Px(authoredMin),
+                                  HeadRow + PixelGUI.Px(7f) + PixelGUI.CellsHeight + PixelGUI.Px(2f)));
+
+    // The width of a corner's two meters. Both are drawn to this, so the temperature bar sits exactly
+    // over the life cells rather than reaching past them to the edge of the block.
+    static float MeterWidth(float block) => Mathf.Min(block, PixelGUI.CellsWidth(LifeCells));
 
     void Update()
     {
@@ -65,10 +69,16 @@ public class TireTempWearUI : MonoBehaviour
     {
         if (!visible || tires == null) return;
 
-        float cw = Mathf.Max(Mathf.Max(PixelGUI.Px(cellW), PixelGUI.CellsWidth(LifeCells)), HeadWidth);
+        // Snapped up to a whole UI pixel: the corner label and the temperature are measured text, so the
+        // width they ask for is fractional, and the plate built on it used to put its frame between screen
+        // pixels with the meters inside sitting a smeared pixel from the border.
+        float cw = PixelGUI.SnapUp(
+            Mathf.Max(Mathf.Max(PixelGUI.Px(cellW), PixelGUI.CellsWidth(LifeCells)), HeadWidth));
         float ch = BlockHeight(cellH);
         float g = PixelGUI.Px(gap);
-        float pad = PixelGUI.Px(6f);
+        // Eight rather than six, so the meters clear the frame's own four-pixel border by four rather
+        // than by two — at two they read as touching it.
+        float pad = PixelGUI.Px(8f);
         float boardW = cw * 2f + g, boardH = ch * 2f + g;
         float x0 = PixelGUI.Px(margin.x) + pad;
         float y0 = Screen.height - boardH - PixelGUI.Px(margin.y) - pad;
@@ -99,14 +109,18 @@ public class TireTempWearUI : MonoBehaviour
         GUI.Label(new Rect(x, y, w, line), $"{t:F0}°", tempLabel);
         tempLabel.alignment = prevAlign;
 
-        PixelGUI.Bar(new Rect(x, y + line, w, PixelGUI.Px(5f)), TempFill(t), TempColour(t));
+        // The two meters share a width. The bar used to run the whole width of the block — wider than the
+        // life cells under it and out to the edge of the plate — so the corner read as a coloured band
+        // that had overflowed the readout it belongs to.
+        float meterW = MeterWidth(w);
+        PixelGUI.Bar(new Rect(x, y + line, meterW, PixelGUI.Px(5f)), TempFill(t), TempColour(t));
 
         // Life in five cells, red once a third of the tyre is gone — the point at which the lap time is
         // already going away, rather than the point at which the tyre is finished.
         int cells = Mathf.CeilToInt(life * LifeCells);
         var wearColour = life > 0.66f ? PixelGUI.Confirm : life > 0.33f ? PixelGUI.Gold : PixelGUI.Danger;
-        PixelGUI.Cells(new Rect(x, y + line + PixelGUI.Px(7f), Mathf.Min(w, PixelGUI.CellsWidth(LifeCells)),
-                                PixelGUI.CellsHeight), cells, LifeCells, wearColour);
+        PixelGUI.Cells(new Rect(x, y + line + PixelGUI.Px(7f), meterW, PixelGUI.CellsHeight),
+                       cells, LifeCells, wearColour);
     }
 
     // How full the temperature bar reads: empty at cold, full at the overheat threshold.

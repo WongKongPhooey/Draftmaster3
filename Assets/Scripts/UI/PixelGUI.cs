@@ -70,6 +70,16 @@ public static class PixelGUI
     // Scales a pixel measurement authored at 1x.
     public static float Px(float baseline) => baseline * Scale;
 
+    // Rounds a measurement UP to a whole UI pixel. Sizes taken from measured text come back fractional
+    // (a two-letter Silkscreen label is 36.01 wide at 3x, not 36), and a plate sized off one lands its
+    // frame between screen pixels, where the border smears and the content inside it looks like it has
+    // burst the edge. Anything that becomes a box's width or height goes through this first.
+    public static float SnapUp(float pixels)
+    {
+        int s = Scale;
+        return Mathf.Ceil(pixels / s) * s;
+    }
+
     // One line of label/heading text at the current face and scale, plus its leading — the height a row
     // of text actually needs. Panels lay their rows out with this rather than a literal, so swapping the
     // theme onto a face drawn on a bigger cell (Silkscreen 8 -> VT323 16) pushes rows apart instead of
@@ -496,9 +506,10 @@ public static class PixelGUI
     public static float CellsWidth(int max) => Px(max * 10f - 2f);
     public static float CellsHeight => Px(10f);
 
-    // Segmented bar from the stat-cell sheet: `max` cells, the first `value` filled. A tint draws flat
-    // cells instead of the sheet's gold ones — tinting the drawn cell is a multiply and cannot reach
-    // another hue, so the HUD's red tyre and blue draft bars are flat colour, as the kit draws them.
+    // Segmented bar from the stat-cell sheet: `max` cells, the first `value` filled. A tint draws the
+    // cell by hand instead of using the sheet's gold one — tinting the drawn cell is a multiply and
+    // cannot reach another hue, so the HUD's red tyre and blue draft bars are flat colour, as the kit
+    // draws them.
     public static void Cells(Rect r, int value, int max, Color? fillTint = null)
     {
         if (max <= 0) return;
@@ -516,25 +527,57 @@ public static class PixelGUI
 
         float cell = Mathf.Max(1f, pitch - gap);
         float h = r.height > 0f ? Mathf.Min(r.height, CellsHeight) : CellsHeight;
+        float rim = Px(1f);
+        float bottom = Mathf.Round(r.y + h);
+        // Rounding a squeezed pitch outwards can put the last cell a pixel past the rect. The rect is the
+        // box, so the row stops there.
+        float right = r.width > 0f ? Mathf.Round(r.xMax) : float.MaxValue;
         for (int i = 0; i < max; i++)
         {
-            var cr = new Rect(r.x + i * pitch, r.y, cell, h);
+            // Whole screen pixels. A squeezed pitch is fractional, and a cell straddling half a pixel
+            // bleeds colour into the gap beside it — which is what made a part-full row read as one
+            // smeared block wider than the boxes it was drawn in.
+            float x0 = Mathf.Round(r.x + i * pitch);
+            float y0 = Mathf.Round(r.y);
+            float x1 = Mathf.Min(Mathf.Round(x0 + cell), right);
+            if (x1 <= x0) break;
+            var cr = new Rect(x0, y0, x1 - x0, bottom - y0);
             bool on = i < value;
             if (!on)
             {
                 if (t != null && t.statCellEmpty != null) DrawSprite(cr, t.statCellEmpty);
                 else Fill(cr, PlateLight);
             }
-            else if (fillTint.HasValue) Fill(cr, fillTint.Value);
+            else if (fillTint.HasValue) TintedCell(cr, fillTint.Value, rim);
             else if (t != null && t.statCellFilled != null) DrawSprite(cr, t.statCellFilled);
             else Fill(cr, Gold);
         }
+    }
+
+    // A hand-drawn cell in an arbitrary hue, built the way the sheet builds its gold one: a darker rim
+    // one pixel thick with the colour inside it.
+    //
+    // It used to be a flat fill of the whole cell. That is a pixel bigger in every direction than the
+    // empty cells it sits next to — those spend their outer pixel on the rim — so a coloured row looked
+    // swollen and its segments ran together where the sheet's cells would have shown a seam.
+    static void TintedCell(Rect r, Color colour, float rim)
+    {
+        var edge = new Color(colour.r * 0.6f, colour.g * 0.6f, colour.b * 0.6f, colour.a);
+        Fill(r, edge);
+        var inner = new Rect(r.x + rim, r.y + rim, r.width - rim * 2f, r.height - rim * 2f);
+        if (inner.width > 0f && inner.height > 0f) Fill(inner, colour);
     }
 
     // Continuous meter, for values that are not naturally segmented (fuel, a wear percentage). Trough in
     // the inner-shade colour, flat fill, 1px ink outline so it holds an edge over any backdrop.
     public static void Bar(Rect r, float fill01, Color fill)
     {
+        // Snapped to whole screen pixels first. A caller sizing a bar off measured text hands in a
+        // fractional rect, and the outline then lands on half-lit pixels either side of where it should
+        // be — which reads as the colour leaking out past its own frame rather than as a hard edge.
+        float x0 = Mathf.Round(r.x), y0 = Mathf.Round(r.y);
+        r = new Rect(x0, y0, Mathf.Round(r.xMax) - x0, Mathf.Round(r.yMax) - y0);
+
         Fill(r, Ink);
         float b = Px(1f);
         var inner = new Rect(r.x + b, r.y + b, r.width - b * 2f, r.height - b * 2f);
