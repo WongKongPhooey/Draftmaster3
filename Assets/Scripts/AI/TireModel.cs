@@ -1,4 +1,5 @@
 using UnityEngine;
+using Draftmaster.Sim;
 
 // Four-tyre wear + temperature model. Each tyre (FL, FR, RL, RR) tracks accumulated wear (0..1) and a working
 // temperature. Grip = wear-grip × temp-grip:
@@ -7,6 +8,12 @@ using UnityEngine;
 // Cornering load transfers to the OUTSIDE tyres, so they heat and wear faster (visible in the UI as one side
 // going red/worn first). Fed each physics step by PlayerVehicleController; read by it for per-axle grip and by
 // the AI (SplineDriver / AIRacingBehaviour) for pace.
+//
+// Temperatures move SLOWLY. Rubber has thermal mass: a tyre takes most of a lap to come in and most of another
+// to go cold, so the readout is something a driver manages over a stint rather than a needle that tracks the
+// steering. thermalInertia below is that knob, and it is deliberately separate from heatRate/coolRate so that
+// slowing the swing does not move the temperatures a hot lap settles at. The maths itself is in
+// Draftmaster.Sim.TyreThermal, where it can be unit-tested.
 public class TireModel : MonoBehaviour
 {
     // Index: 0 = FL, 1 = FR, 2 = RL, 3 = RR.
@@ -43,10 +50,20 @@ public class TireModel : MonoBehaviour
     [Range(0.5f, 1f)] public float hotGrip = 0.72f;
     [Tooltip("Heating per unit of tyre work per second.")]
     public float heatRate = 60f;
-    [Tooltip("Cooling toward ambient per second (scaled up by airflow at speed). Keep in ratio with heatRate: halving both keeps the same equilibrium temps but doubles how long tyres take to get there.")]
+    [Tooltip("Cooling toward ambient per second (scaled up by airflow at speed). Sets, with heatRate, WHERE a tyre settles for a given amount of work — the ratio of the two is the equilibrium temperature.")]
     public float coolRate = 0.225f;
     [Tooltip("Extra cooling per (m/s) of airflow.")]
     public float airCool = 0.015f;
+    [Tooltip("Thermal mass: divides heating AND cooling together, so the tyre takes longer to reach the SAME temperature. 1 = instant-feeling tyres that snap to temperature inside a corner; 8 = rubber that comes in over about a lap and goes cold about as slowly. Raise for lazier tyres; the settling temperatures don't move.")]
+    [Range(1f, 20f)] public float thermalInertia = 8f;
+
+    [Header("Scrub heat (steering)")]
+    [Tooltip("Extra front-tyre heating at full scrub lock, in the same units as tyre work. This is what makes weaving down a straight warm the fronts up — lateral load alone can't tell a car sawing at the wheel from one tracking straight.")]
+    public float scrubHeatFront = 0.35f;
+    [Tooltip("Front-wheel angle (°) counting as full scrub. Small on purpose: an oval is steered in fractions of a degree, so measuring against the car's full lock would read every amount of steering as none.")]
+    public float scrubFullLockDeg = 5f;
+    [Tooltip("Share of the scrub heat the rear tyres get. The fronts do the scrubbing, so keep this well under 1 — it is the gap between the axles that shows up as a weave warming the fronts first.")]
+    [Range(0f, 1f)] public float scrubHeatRearShare = 0.3f;
 
     [Header("Wear model")]
     [Tooltip("Grip floor at fully-worn tyre. Falls back to VehicleInfo.tireMinGrip.")]
@@ -82,7 +99,8 @@ public class TireModel : MonoBehaviour
 
     // frontWork / rearWork: 0..1 how hard each axle's tyres are working this step (slip force / grip ceiling).
     // latNorm: signed lateral load (+ = cornering loads the right-hand tyres). speedMps for friction heat + airflow.
-    public void Tick(float dt, float frontWork, float rearWork, float speedMps, float latNorm)
+    // steerDeg: front-wheel angle, for the scrub heat the fronts pick up from being turned.
+    public void Tick(float dt, float frontWork, float rearWork, float speedMps, float latNorm, float steerDeg = 0f)
     {
         if (dt <= 0f) return;
         latNorm = Mathf.Clamp(latNorm, -1f, 1f) * lateralTransfer;
@@ -95,21 +113,27 @@ public class TireModel : MonoBehaviour
         float wRL = rearWork * 2f * leftFrac;
         float wRR = rearWork * 2f * rightFrac;
 
-        StepTyre(FL, wFL, dt, speedMps);
-        StepTyre(FR, wFR, dt, speedMps);
-        StepTyre(RL, wRL, dt, speedMps);
-        StepTyre(RR, wRR, dt, speedMps);
+        // Scrub heat from steering, split L/R on the same load fractions so the loaded outside tyre takes the
+        // bigger share of it. Heat only — the wear numbers are tuned against lateral work and stay that way.
+        float scrub = TyreThermal.Scrub01(steerDeg, scrubFullLockDeg);
+        float scrubF = scrubHeatFront * scrub;
+        float scrubR = scrubF * scrubHeatRearShare;
+
+        StepTyre(FL, wFL, scrubF * 2f * leftFrac, dt, speedMps);
+        StepTyre(FR, wFR, scrubF * 2f * rightFrac, dt, speedMps);
+        StepTyre(RL, wRL, scrubR * 2f * leftFrac, dt, speedMps);
+        StepTyre(RR, wRR, scrubR * 2f * rightFrac, dt, speedMps);
     }
 
-    void StepTyre(int i, float work, float dt, float speedMps)
+    void StepTyre(int i, float work, float scrubWork, float dt, float speedMps)
     {
         work = Mathf.Max(0f, work);
 
-        // Heat: friction power ≈ work × speed. Cool toward ambient, faster with airflow.
-        float heat = heatRate * CompoundHeat * work * (0.25f + speedMps / 45f);
-        float cool = coolRate * (tempC[i] - ambientC) * (1f + speedMps * airCool);
-        tempC[i] += (heat - cool) * dt;
-        if (tempC[i] < ambientC) tempC[i] = ambientC;
+        // Heat: friction power ≈ (work + scrub) × speed, cooling toward ambient and faster with airflow, the
+        // whole exchange slowed by the tyre's thermal mass.
+        float heatWork = (work + Mathf.Max(0f, scrubWork)) * CompoundHeat;
+        tempC[i] = TyreThermal.Step(tempC[i], ambientC, heatWork, speedMps,
+                                    heatRate, coolRate, airCool, thermalInertia, dt);
 
         // Wear: scales with work and accelerates when the tyre runs hot.
         float overheat = 1f + Mathf.Max(0f, tempC[i] - overheatWearStartC) * overheatWearPerDeg;

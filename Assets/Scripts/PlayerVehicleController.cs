@@ -689,7 +689,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (enableWear && _tires != null && SpeedMph > 1f)
         {
             float latNorm = Mathf.Clamp(_lastAy / Mathf.Max(vehicleInfo.maxLateralG * G, 0.1f), -1f, 1f);
-            _tires.Tick(dt, (wearAccumF / subSteps) * wearRateScale, (wearAccumR / subSteps) * wearRateScale, SpeedMps, latNorm);
+            // The front-wheel angle goes in too: lateral load can't tell a car sawing at the wheel down a
+            // straight from one tracking dead straight, and scrubbing the fronts is how you warm tyres up.
+            float steerDeg = delta * Mathf.Rad2Deg;
+            _tires.Tick(dt, (wearAccumF / subSteps) * wearRateScale, (wearAccumR / subSteps) * wearRateScale, SpeedMps, latNorm, steerDeg);
             wearFront = _tires.FrontWear; // mirror for telemetry / existing readouts
             wearRear = _tires.RearWear;
         }
