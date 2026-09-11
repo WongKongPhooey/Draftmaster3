@@ -138,7 +138,16 @@ public class LapTimingManager : MonoBehaviour
             HookWallHits(c);
 
             // Pit lane voids the lap in progress; timing re-arms at the next line crossing.
-            bool onPit = e.spline != null && e.spline.enabled && e.spline.IsOnPit;
+            //
+            // An AI reports that off its own spline. The free-driven player has no spline running, so they
+            // are judged by the surface they are on instead — the same test RacePositionTracker locates a
+            // spline-less car with. Without it the one car whose clock is actually on screen was the one
+            // car the pit rule never applied to: the player's lap timer ran on down pit road, and on
+            // through a tow back to the box. Only the local player pays for the surface test; every other
+            // spline-less car in the scene is a network puppet whose timing is its own client's business.
+            bool onPit = (e.spline != null && e.spline.enabled)
+                ? e.spline.IsOnPit
+                : e.isPlayer && track.IsOnPitSurface(e.tf.position);
             if (onPit)
             {
                 c.lapStarted = false;
@@ -219,6 +228,18 @@ public class LapTimingManager : MonoBehaviour
         SurfaceField.TryGetSurface(worldPos, out var surf)
         && (surf == TrackEnvironment.SurfaceType.TarmacRunoff
             || surf == TrackEnvironment.SurfaceType.Kerb);
+
+    // Throw away the lap a car is on without scoring it. The tow calls this the moment the hook goes on:
+    // the lap ended in the wall, and a clock left running while the crew beat the panels out for two
+    // minutes would hand back a lap time measured in minutes. Timing re-arms at the next line crossing,
+    // exactly as it does for a car that came down the pit lane.
+    public void AbandonLap(Transform car)
+    {
+        if (car == null) return;
+        if (!_cars.TryGetValue(car, out var c)) return;
+        c.lapStarted = false;
+        c.valid = false;
+    }
 
     void Invalidate(CarTimes c)
     {

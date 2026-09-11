@@ -122,11 +122,12 @@ public class PitLaneStart : MonoBehaviour
     public float PlayerPitDistance { get; private set; }
     public bool PlayerOnPit { get; private set; }
 
-    // The pose the car was parked in when the scene opened. A tow puts it back exactly here rather than
-    // guessing at a spot on the pit spline, so a car dragged in off the circuit sits in its own box the
-    // way it did before the session started.
+    // The pose the car was parked in when the scene opened. This is only where it sits until the field
+    // arrives — GridSpawner then snaps it into its reserved pit box — so it is the tow's FALLBACK, for a
+    // session that never fitted any boxes. See CurrentBoxPose.
     Vector3 _boxPosition;
     Quaternion _boxRotation;
+    float _boxHeadingDeg;
     bool _boxKnown;
 
     // The player is in the car and has been handed the controls. The stranded-car tow asks this before it
@@ -216,10 +217,10 @@ public class PitLaneStart : MonoBehaviour
         float zRot = carHeadingDeg - ((car.spriteFacesUp ? 90f : 0f) - car.angleOffsetDeg);
         carT.rotation = Quaternion.Euler(0f, 0f, zRot);
 
-        // The box, remembered. A car towed in off the circuit is put back on this exact pose rather than
-        // re-derived from the spline, so it lands square in its own box however the session went.
+        // The opening pose, remembered, as the tow's fallback for a session with no pit boxes in it.
         _boxPosition = carT.position;
         _boxRotation = carT.rotation;
+        _boxHeadingDeg = carHeadingDeg;
         _boxKnown = true;
 
         // Make sure nothing drives the car until the player climbs in.
@@ -675,6 +676,11 @@ public class PitLaneStart : MonoBehaviour
     // NOT do is repair anything — the car arrives as wrecked as it left, and the crew work on it from
     // there (PitCrewRepair). A tow that handed back a straight car would make crashing free.
     //
+    // Both bodies are moved the way this project has learned to move things — through the model that owns
+    // the pose (SeedPose for the car) and with the Rigidbody2D written as well as the Transform — and the
+    // box is the one the player actually has this session (CurrentBoxPose), not the spot the car happened
+    // to be parked on when the scene opened.
+    //
     // Returns false when there is nothing to tow: not driving, or the scene never worked out where the
     // car's box is.
     public bool TowToPits()
@@ -685,21 +691,45 @@ public class PitLaneStart : MonoBehaviour
         // frame fighting the move.
         car.enabled = false;
 
+        CurrentBoxPose(out Vector3 boxPos, out float boxHeadingDeg);
+
+        // Parked through the dynamic model rather than by writing the transform: SeedPose puts the car on
+        // the pose AND clears the heading and speed it crashed with, so what the driver climbs back into is
+        // stopped and square instead of still carrying the moment it hit the wall.
+        car.SeedPose(boxPos, boxHeadingDeg);
+
+        // Then tell the BODY, or the move is only a suggestion — the pose physics holds is the one that
+        // wins, which is why every other place that teleports a car here writes it too (PopupGarageLot
+        // taking the car home to its garage, CoopPossession handing one over).
         var body = car.GetComponent<Rigidbody2D>();
         if (body != null)
         {
             body.linearVelocity = Vector2.zero;
             body.angularVelocity = 0f;
+            body.position = car.transform.position;
+            body.rotation = car.transform.eulerAngles.z;
         }
 
-        car.transform.SetPositionAndRotation(_boxPosition, _boxRotation);
+        // The lap they were on ended in the wall. Nothing else was going to end it: the pit-lane rule that
+        // voids a running lap is read off a car's spline, and the human car's is switched off, so the clock
+        // ran on through the crash, the tow and the whole repair.
+        if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
 
         // Stood at the driver's door rather than inside the car, so walking away from it works the same as
         // it did at the start of the session.
-        Vector3 beside = _boxPosition + _boxRotation * new Vector3(0f, -2.2f, 0f);
+        Vector3 beside = car.transform.position + car.transform.rotation * new Vector3(0f, -2.2f, 0f);
         beside.z = _player.transform.position.z;
         _player.transform.position = beside;
         _player.SetActive(true);
+
+        // Same again on foot. That body is dynamic with interpolation on, which rewrites the Transform from
+        // the body pose — the trap that used to leave a repositioned NPC stood at the world origin.
+        var walker = _player.GetComponent<Rigidbody2D>();
+        if (walker != null)
+        {
+            walker.linearVelocity = Vector2.zero;
+            walker.position = beside;
+        }
 
         if (_camFollow != null) _camFollow.target = _player.transform;
         _orthoTarget = onFootOrthoSize;
@@ -712,6 +742,39 @@ public class PitLaneStart : MonoBehaviour
 
         PitCrewRepair.Begin(car);
         return true;
+    }
+
+    // Where the player's box is NOW, which is not where the car was parked when the scene opened.
+    //
+    // This object parks the car a fraction of the way down pit road because at that point there is no
+    // ladder of boxes to park it in: the boxes are fitted to the entry list, and the entry list arrives
+    // with the field. GridSpawner then snaps the car into the box the player has earned — which, for a car
+    // starting at the back, is most of a pit lane from where it began the scene. A tow that read the
+    // opening snapshot therefore dropped the car out on pit road, with the driver stood beside it and their
+    // own box, their crew and the marker over it somewhere else entirely.
+    //
+    // So the box is re-derived from the same published geometry every other pit system reads (PitLane), and
+    // the opening pose is kept only for a session that fitted no boxes at all.
+    void CurrentBoxPose(out Vector3 pos, out float headingDeg)
+    {
+        pos = _boxPosition;
+        headingDeg = _boxHeadingDeg;
+
+        if (track == null || !_usedPit || _pitSamples == null || _pitSamples.Count < 2) return;
+        if (!PitLane.Configured || PitLane.PlayerBox < 0) return;
+
+        float pitLength = _pitSamples[_pitSamples.Count - 1].distance;
+        if (pitLength <= 0f) return;
+
+        // Single file on the pit centerline at the box lane's offset, nose down the lane — the same three
+        // lines GridSpawner parks the car with, and the same ones the AI park their own boxes on.
+        var s = track.SamplePitAt(PitLane.BoxDistance(PitLane.PlayerBox, pitLength), _pitSamples);
+        Vector2 parked = s.position + s.normal * PitLane.ParkLateral;
+        Vector3 world = track.transform.TransformPoint(new Vector3(parked.x, parked.y, 0f));
+        Vector3 tangent = track.transform.TransformDirection(new Vector3(s.tangent.x, s.tangent.y, 0f));
+
+        pos = new Vector3(world.x, world.y, _boxPosition.z);
+        headingDeg = Mathf.Atan2(tangent.y, tangent.x) * Mathf.Rad2Deg;
     }
 
     void EnsurePitLimiter()
