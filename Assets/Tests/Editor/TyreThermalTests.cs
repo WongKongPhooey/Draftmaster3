@@ -211,6 +211,102 @@ public class TyreThermalTests
         Assert.Greater(fast, slow, "sawing at the wheel in the pit lane isn't a warm-up lap");
     }
 
+    // ---- A lap, not a corner: the swing on an oval, at the work levels a car really makes ----
+
+    // A rough short-oval lap: two long corners at real cornering load, two straights where the tyre is barely
+    // worked and airflow is pulling heat out of it. The timing tests above hold the tyre's destination still so
+    // they can measure speed; this profile does the opposite. Corner and straight send the tyre at wildly
+    // different temperatures, and following THAT from one end of the track to the other is what "the readout
+    // tracks the steering" actually looked like.
+    static readonly float[] LapSeconds = { 6f, 6f, 6f, 6f };
+    static readonly float[] LapWork = { 0.85f, 0.06f, 0.85f, 0.06f };
+    static readonly float[] LapSpeeds = { 45f, 65f, 45f, 65f };
+    const float LapLengthSeconds = 24f;
+
+    // Drives `laps` of the profile from `from`, reporting where the tyre finished and the coldest/hottest it
+    // got on the LAST lap — i.e. the swing once it has stopped warming up.
+    static void DriveLaps(float from, int laps, out float end, out float lastLapLow, out float lastLapHigh)
+    {
+        float t = from;
+        lastLapLow = float.MaxValue;
+        lastLapHigh = float.MinValue;
+        for (int lap = 0; lap < laps; lap++)
+        {
+            bool last = lap == laps - 1;
+            for (int phase = 0; phase < LapSeconds.Length; phase++)
+            {
+                int steps = Mathf.RoundToInt(LapSeconds[phase] / Dt);
+                for (int i = 0; i < steps; i++)
+                {
+                    t = Step(t, LapWork[phase], LapSpeeds[phase]);
+                    if (!last) continue;
+                    if (t < lastLapLow) lastLapLow = t;
+                    if (t > lastLapHigh) lastLapHigh = t;
+                }
+            }
+        }
+        end = t;
+    }
+
+    // Seconds of the lap profile, from cold, before the tyre first touches `targetC`. Infinity if it never does.
+    static float SecondsToReach(float targetC, int maxLaps)
+    {
+        float t = Ambient, elapsed = 0f;
+        for (int lap = 0; lap < maxLaps; lap++)
+            for (int phase = 0; phase < LapSeconds.Length; phase++)
+            {
+                int steps = Mathf.RoundToInt(LapSeconds[phase] / Dt);
+                for (int i = 0; i < steps; i++)
+                {
+                    t = Step(t, LapWork[phase], LapSpeeds[phase]);
+                    elapsed += Dt;
+                    if (t >= targetC) return elapsed;
+                }
+            }
+        return float.PositiveInfinity;
+    }
+
+    [Test]
+    public void OneCornerOfRealLoadDoesNotBringTheTyreIn()
+    {
+        // Six seconds of proper cornering load, from cold. This is the case the old model failed: the tyre was
+        // heading somewhere far above its window, so it arrived there almost immediately.
+        float afterOneCorner = Soak(Ambient, LapWork[0], LapSeconds[0], LapSpeeds[0]);
+        Assert.Less(afterOneCorner, OptimalC, "a single corner must not switch the tyre on");
+        Assert.Greater(afterOneCorner, Ambient + 10f, "but it is still real heat going in, not nothing");
+    }
+
+    [Test]
+    public void TheTyreNeedsMostOfALapOfRealRunningToComeIn()
+    {
+        float seconds = SecondsToReach(OptimalC, maxLaps: 5);
+        Assert.Greater(seconds, 0.4f * LapLengthSeconds, "coming in inside half a lap is the snap we removed");
+        Assert.Less(seconds, 2f * LapLengthSeconds, "and a tyre that needs three laps would never be usable");
+    }
+
+    [Test]
+    public void OnceWarmTheLapToLapSwingStaysReadable()
+    {
+        float end, low, high;
+        DriveLaps(Ambient, 20, out end, out low, out high);
+
+        Assert.Less(high - low, 40f, "corner-to-straight must not swing the readout across its whole scale");
+        Assert.Greater(low, OptimalC - 25f, "the straights must not dump the tyre back out of its window");
+        Assert.Less(high, 135f, "and the corners must not cook it every lap either");
+        Assert.Greater(end, OptimalC, "a car running hard laps sits above its optimal, not below it");
+    }
+
+    [Test]
+    public void HeatComesOffOverSecondsNotInstantly()
+    {
+        // The load coming off at the end of a straight is the fastest cooling the tyre ever sees: no work at
+        // all, full airflow. Even then most of the heat has to still be there ten seconds later.
+        const float hot = 120f;
+        float after10s = Soak(hot, 0f, 10f, LapSpeeds[1]);
+        Assert.Greater(after10s - Ambient, 0.4f * (hot - Ambient), "ten seconds must not empty the tyre");
+        Assert.Less(after10s, hot, "it does have to be cooling, though");
+    }
+
     // The work level whose equilibrium is `targetC`, so a timing test can hold the tyre's destination fixed.
     static float WorkForEquilibrium(float targetC)
     {
