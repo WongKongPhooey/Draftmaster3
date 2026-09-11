@@ -1,13 +1,15 @@
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
-// UI toggle for Driving vs Broadcast.
+// Driving vs Broadcast, the hand-off itself.
 // - Driving ON  : the player drives their car normally (PlayerVehicleController).
 // - Driving OFF : the car is handed to the AI (kinematic SplineDriver) and the camera cycles through the AI
 //                 field TV-style, switching featured car every few seconds. Flip back to resume control.
+//
+// This has no button of its own. Handing the car over is what happens when the player steps out of it, so it
+// is driven by whoever they step into — the crew chief's headset in the HUD corner (CrewChiefController), the
+// TEAM panel, co-op possession — plus the keyboard shortcut below for testing.
 public class DriveModeController : MonoBehaviour
 {
     [Header("Refs (auto-found if empty)")]
@@ -26,7 +28,8 @@ public class DriveModeController : MonoBehaviour
     public bool startInBroadcast = false;
 
     [Header("Input")]
-    [Tooltip("Optional keyboard shortcut to toggle Driving.")]
+    [Tooltip("Keyboard shortcut to hand the car to the AI and back. The only control on this component " +
+             "since the DRIVING tab was folded into the crew chief's headset button.")]
     public Key toggleKey = Key.V;
 
     [Tooltip("When true, another system (e.g. CrewChiefController) owns the camera, so broadcast mode won't retarget it.")]
@@ -58,8 +61,6 @@ public class DriveModeController : MonoBehaviour
     float _pinnedTimer;
     readonly List<SplineDriver> _candidates = new();
 
-    TMP_Text _label;
-    Image _face;
     bool _keyPrev;
 
     void Start()
@@ -72,8 +73,6 @@ public class DriveModeController : MonoBehaviour
         }
         if (cameraFollow == null && Camera.main != null) cameraFollow = Camera.main.GetComponent<CameraFollow>();
         _zoom = FindFirstObjectByType<PitLaneStart>();
-        BuildUI();
-        UpdateLabel();
 
         if (startInBroadcast) SetDriving(false);
     }
@@ -108,7 +107,6 @@ public class DriveModeController : MonoBehaviour
         _driving = driving;
         if (_driving) ResumeDriving();
         else EnterBroadcast();
-        UpdateLabel();
     }
 
     void EnterBroadcast()
@@ -185,47 +183,5 @@ public class DriveModeController : MonoBehaviour
         _featured = _candidates[_featuredIndex];
         _cycleTimer = broadcastCycleSeconds;
         if (cameraFollow != null && !suppressBroadcastCamera) cameraFollow.target = _featured.transform;
-    }
-
-    void UpdateLabel()
-    {
-        if (_label != null)
-        {
-            _label.text = _driving ? "DRIVING: ON" : "BROADCAST";
-            _label.color = _driving ? PixelGUI.Text : PixelGUI.TextDim;
-        }
-        // Selected = the player is driving, which the kit shows by filling the tab with alarm red rather
-        // than by moving anything.
-        if (_face != null) _face.color = _driving ? PixelGUI.Danger : PixelGUI.PlateDeep;
-    }
-
-    void BuildUI()
-    {
-        EnsureEventSystem();
-
-        // Iron Oval nav tab rather than a grey rectangle: this is a mode switch, which is exactly what the
-        // kit's tab is for, and it now matches the TEAM/CHIEF controls sitting beside it.
-        var canvas = PixelUI.CreateCanvas("DriveModeCanvas", 110);
-
-        var tab = IronOvalUI.TabButton(canvas.transform, "DriveToggle", "DRIVING: ON",
-                                       new Vector2(96f, 18f), selected: true);
-        var shadow = (RectTransform)tab.transform.parent;   // TabButton returns the face; the root is its shadow
-        shadow.anchorMin = new Vector2(0f, 1f);
-        shadow.anchorMax = new Vector2(0f, 1f);
-        shadow.pivot = new Vector2(0f, 1f);
-        shadow.anchoredPosition = new Vector2(12f, -12f);
-
-        tab.onClick.AddListener(Toggle);
-        _face = tab.GetComponent<Image>();
-        _label = tab.GetComponentInChildren<TMP_Text>();
-        UpdateLabel();
-    }
-
-    static void EnsureEventSystem()
-    {
-        if (FindObjectOfType<UnityEngine.EventSystems.EventSystem>() != null) return;
-        var es = new GameObject("EventSystem");
-        es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
     }
 }

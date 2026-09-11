@@ -97,7 +97,7 @@ public class PixelUITheme : ScriptableObject
     [Header("Icons (16x16)")]
     public Sprite iconMoney, iconPart, iconFuel, iconTrophy, iconStar, iconQuest,
                   iconMap, iconSpeech, iconClock, iconFlag, iconTyre, iconHeart,
-                  iconWrenchSet, iconWarning;
+                  iconWrenchSet, iconWarning, iconHeadset;
 
     [Header("Fonts")]
     [Tooltip("Bitmap pixel font for body copy, dialogue and data. Rendered RASTER (not SDF) so glyphs " +
@@ -178,6 +178,7 @@ public class PixelUITheme : ScriptableObject
             case "heart": return iconHeart;
             case "wrench-set": return iconWrenchSet;
             case "warning": return iconWarning;
+            case "headset": return iconHeadset;
             default: return null;
         }
     }

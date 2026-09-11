@@ -572,8 +572,8 @@ chair per driver, and booking → objective → walk → talk actually connects)
 | `F9` | Handling tuner **and** travel-map dev hotkey (clash) |
 | `F10` | Race weekend schedule — the three-day timetable |
 | `F11` | Live timing for the session you are watching from a grandstand |
-| `C` | Crew chief mode |
-| `V` | Drive / Broadcast toggle |
+| `C` | Crew chief mode — same as the headset button in the bottom-right corner of the HUD |
+| `V` | Drive / Broadcast toggle — keyboard only; the car is handed over by stepping out of it |
 | `L` | Pit limiter |
 
 Free: `F12`.

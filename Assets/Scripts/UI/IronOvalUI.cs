@@ -278,6 +278,65 @@ public static class IronOvalUI
         return face.GetComponent<Button>();
     }
 
+    // The square icon tab: TabButton's plate and hard drop shadow carrying one of the kit's 16x16 icons
+    // instead of a caption. A HUD corner can only spare so many words, so the controls that stand for a
+    // person — the crew chief on his headset, whoever else the team gains — are a row of glyphs.
+    //
+    // The icon is drawn at a whole multiple of its own pixel size, never at whatever fraction of the
+    // plate would centre it: half a pixel of scale on a 16x16 bitmap is exactly the mush the ladder in
+    // Apply() exists to prevent. The icon Image is the child named "Icon", so a caller that tints it by
+    // state can find it without holding a second reference.
+    public static Button IconButton(Transform parent, string name, Sprite icon, float size,
+                                    bool selected = false)
+    {
+        var t = Theme;
+        var shadow = new GameObject(name, typeof(RectTransform), typeof(Image));
+        shadow.transform.SetParent(parent, false);
+        var srt = (RectTransform)shadow.transform;
+        srt.sizeDelta = new Vector2(size, size);
+        var simg = shadow.GetComponent<Image>();
+        simg.color = t == null ? Color.black : t.ink;
+        simg.raycastTarget = false;
+
+        var face = new GameObject("Face", typeof(RectTransform), typeof(Image), typeof(Button));
+        face.transform.SetParent(srt, false);
+        var frt = (RectTransform)face.transform;
+        frt.anchorMin = Vector2.zero;
+        frt.anchorMax = Vector2.one;
+        // Same 3px offset as TabButton: the shadow is the parent, the face sits back up-left over it.
+        frt.offsetMin = new Vector2(-3f, 3f);
+        frt.offsetMax = new Vector2(-3f, 3f);
+
+        var fimg = face.GetComponent<Image>();
+        fimg.color = selected ? (t == null ? Color.red : t.danger) : (t == null ? Color.grey : t.plateDeep);
+
+        var glyph = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        glyph.transform.SetParent(frt, false);
+        var grt = (RectTransform)glyph.transform;
+        grt.anchorMin = grt.anchorMax = new Vector2(0.5f, 0.5f);
+        grt.pivot = new Vector2(0.5f, 0.5f);
+        grt.anchoredPosition = Vector2.zero;
+        grt.sizeDelta = Vector2.one * IconDrawSize(icon, size);
+
+        var gimg = glyph.GetComponent<Image>();
+        gimg.sprite = icon;
+        gimg.color = t == null ? Color.white : t.text;
+        gimg.raycastTarget = false;
+        gimg.enabled = icon != null;
+
+        return face.GetComponent<Button>();
+    }
+
+    // The largest whole multiple of the icon's own pixels that still leaves a margin inside the plate.
+    static float IconDrawSize(Sprite icon, float plate, float margin = 4f)
+    {
+        float native = icon != null ? icon.rect.width : 16f;
+        if (native <= 0f) native = 16f;
+        float room = plate - margin * 2f;
+        float steps = Mathf.Floor(room / native);
+        return steps >= 1f ? native * steps : Mathf.Max(room, 1f);
+    }
+
     // The dropdown from the garage sheet's top bar: a plate carrying the current value and a gold caret,
     // with the list dropping out of the bottom of it and the kit's selection arrow marking the chosen row.
     //

@@ -2,9 +2,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
-// "Crew Chief" toggle that sits next to the Driving On/Off button (single player). Tapping it hands the player's
+// The crew chief's headset icon, bottom right of the HUD (single player). Tapping it hands the player's
 // car to the AI (via DriveModeController) and drops the player into an on-foot crew-chief character at the pit
-// wall. As crew chief the player sees pit-wall telemetry the driver doesn't: fuel load and last-pit lap for the
+// wall. It is the first of the team controls: one square glyph per person you can hand the car to, so the
+// corner grows a face rather than another caption when the team gains somebody.
+//
+// As crew chief the player sees pit-wall telemetry the driver doesn't: fuel load and last-pit lap for the
 // whole field. Tap again to climb back in and resume driving.
 //
 // Camera + car hand-off are reused from DriveModeController; this component just owns the on-foot avatar, the
@@ -34,11 +37,19 @@ public class CrewChiefController : MonoBehaviour
     [Header("HUD")]
     [Tooltip("Capacity (litres) assumed for the fuel % when a car has no FuelTank yet.")]
     public bool showHud = true;
+    [Tooltip("Side of the square icon button, in 640x360 UI pixels.")]
+    public float buttonSize = 32f;
+    [Tooltip("Gap from the bottom-right corner to the button, in 640x360 UI pixels. The x default clears " +
+             "the speedometer dial, which is anchored to the same corner on its own canvas.")]
+    public Vector2 buttonCorner = new Vector2(92f, 12f);
+    [Tooltip("Icon on the button. Defaults to the kit's headset glyph.")]
+    public Sprite buttonIcon;
 
     bool _active;
     GameObject _avatar;
     GameObject _playerCar;
-    Text _label;
+    Image _face;
+    Image _icon;
     GameObject _timingBtn;
     bool _keyPrev;
     Material _unlit;
@@ -49,7 +60,7 @@ public class CrewChiefController : MonoBehaviour
         if (cameraFollow == null && Camera.main != null) cameraFollow = Camera.main.GetComponent<CameraFollow>();
         _playerCar = GameObject.Find("PlayerCar");
         BuildButton();
-        UpdateLabel();
+        UpdateButton();
     }
 
     void Update()
@@ -89,7 +100,7 @@ public class CrewChiefController : MonoBehaviour
 
         _active = true;
         if (_timingBtn != null) _timingBtn.SetActive(true);
-        UpdateLabel();
+        UpdateButton();
     }
 
     void Exit()
@@ -110,7 +121,7 @@ public class CrewChiefController : MonoBehaviour
         _active = false;
         if (_timingBtn != null) _timingBtn.SetActive(false);
         if (TimingScreenUI.Instance != null) TimingScreenUI.Instance.Hide();
-        UpdateLabel();
+        UpdateButton();
     }
 
     void EnsureAvatar()
@@ -197,68 +208,55 @@ public class CrewChiefController : MonoBehaviour
 
     void BuildButton()
     {
-        var canvasGO = new GameObject("CrewChiefCanvas");
-        var canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 111;
-        canvasGO.AddComponent<CanvasScaler>();
-        canvasGO.AddComponent<GraphicRaycaster>();
+        EnsureEventSystem();
 
-        var btnGO = new GameObject("CrewChiefToggle", typeof(RectTransform), typeof(Image), typeof(Button));
-        btnGO.transform.SetParent(canvasGO.transform, false);
-        var rt = btnGO.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(0f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(250f, -20f);   // just right of the DriveToggle (20 + 220 + 10)
-        rt.sizeDelta = new Vector2(200f, 48f);
+        // The team controls sit in the bottom-right corner as square glyphs on the kit's 640x360 canvas.
+        // The speedometer dial owns the corner itself, so buttonCorner.x steps in far enough to clear it.
+        var canvas = PixelUI.CreateCanvas("TeamControlsCanvas", 111);
 
-        btnGO.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-        btnGO.GetComponent<Button>().onClick.AddListener(Toggle);
+        var theme = PixelUITheme.Instance;
+        Sprite icon = buttonIcon != null ? buttonIcon : (theme != null ? theme.iconHeadset : null);
+        var button = IronOvalUI.IconButton(canvas.transform, "CrewChiefButton", icon, buttonSize);
+        var shadow = (RectTransform)button.transform.parent;   // IconButton returns the face; its root is the shadow
+        Corner(shadow, buttonCorner);
+        button.onClick.AddListener(Toggle);
+        _face = button.GetComponent<Image>();
+        var glyph = button.transform.Find("Icon");
+        _icon = glyph != null ? glyph.GetComponent<Image>() : null;
 
-        var txtGO = new GameObject("Label", typeof(RectTransform));
-        txtGO.transform.SetParent(btnGO.transform, false);
-        var trt = txtGO.GetComponent<RectTransform>();
-        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-        trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-        _label = txtGO.AddComponent<Text>();
-        _label.alignment = TextAnchor.MiddleCenter;
-        _label.color = Color.white;
-        _label.fontSize = 18;
-        _label.fontStyle = FontStyle.Bold;
-        _label.font = BrandFonts.Body;
-
-        // "Timing" button under the toggle — only visible while acting as crew chief. Opens the
-        // full-field timing screen (lap times from LapTimingManager).
-        _timingBtn = new GameObject("TimingButton", typeof(RectTransform), typeof(Image), typeof(Button));
-        _timingBtn.transform.SetParent(canvasGO.transform, false);
-        var trt2 = _timingBtn.GetComponent<RectTransform>();
-        trt2.anchorMin = new Vector2(0f, 1f);
-        trt2.anchorMax = new Vector2(0f, 1f);
-        trt2.pivot = new Vector2(0f, 1f);
-        trt2.anchoredPosition = new Vector2(250f, -76f);   // directly below the crew chief toggle
-        trt2.sizeDelta = new Vector2(200f, 48f);
-        _timingBtn.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-        _timingBtn.GetComponent<Button>().onClick.AddListener(() => TimingScreenUI.Ensure().Toggle());
-
-        var ttxtGO = new GameObject("Label", typeof(RectTransform));
-        ttxtGO.transform.SetParent(_timingBtn.transform, false);
-        var ttrt = ttxtGO.GetComponent<RectTransform>();
-        ttrt.anchorMin = Vector2.zero; ttrt.anchorMax = Vector2.one;
-        ttrt.offsetMin = Vector2.zero; ttrt.offsetMax = Vector2.zero;
-        var tlabel = ttxtGO.AddComponent<Text>();
-        tlabel.alignment = TextAnchor.MiddleCenter;
-        tlabel.color = Color.white;
-        tlabel.fontSize = 18;
-        tlabel.fontStyle = FontStyle.Bold;
-        tlabel.font = BrandFonts.Body;
-        tlabel.text = "Timing";
+        // "Timing" sits above the headset — only while acting as crew chief. Opens the full-field timing
+        // screen (lap times from LapTimingManager).
+        var timing = IronOvalUI.TabButton(canvas.transform, "TimingButton", "TIMING", new Vector2(56f, 16f));
+        var timingRoot = (RectTransform)timing.transform.parent;
+        Corner(timingRoot, new Vector2(buttonCorner.x, buttonCorner.y + buttonSize + 6f));
+        timing.onClick.AddListener(() => TimingScreenUI.Ensure().Toggle());
+        _timingBtn = timingRoot.gameObject;
         _timingBtn.SetActive(false);
     }
 
-    void UpdateLabel()
+    // Pin a control to the bottom-right corner, `margin` UI pixels in from it.
+    static void Corner(RectTransform rt, Vector2 margin)
     {
-        if (_label != null) _label.text = _active ? "Crew Chief: ON" : "Crew Chief";
+        rt.anchorMin = new Vector2(1f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(1f, 0f);
+        rt.anchoredPosition = new Vector2(-margin.x, margin.y);
+    }
+
+    // On duty the plate goes alarm red, the same way the kit marks a selected tab; off duty it is the
+    // ordinary panel colour with the glyph dimmed.
+    void UpdateButton()
+    {
+        if (_face != null) _face.color = _active ? PixelGUI.Danger : PixelGUI.PlateDeep;
+        if (_icon != null) _icon.color = _active ? PixelGUI.Text : PixelGUI.TextDim;
+    }
+
+    static void EnsureEventSystem()
+    {
+        if (FindObjectOfType<UnityEngine.EventSystems.EventSystem>() != null) return;
+        var es = new GameObject("EventSystem");
+        es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
     }
 
     void OnGUI()

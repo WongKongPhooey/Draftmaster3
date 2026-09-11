@@ -358,6 +358,7 @@ public static class PixelUIKitSetup
         theme.iconHeart = I("heart");
         theme.iconWrenchSet = I("wrench-set");
         theme.iconWarning = I("warning");
+        theme.iconHeadset = I("headset");
 
         if (body != null) theme.body = body;
         if (theme.imguiFont == null)
