@@ -541,6 +541,11 @@ public class GridSpawner : MonoBehaviour
                     dmg.material = null;          // auto-build an unlit per-car material from the sprite
                     dmg.sortingLayer = "Default";
                     dmg.sortingOrder = carSortingOrder;
+                    // Built around the safety cell of the championship these cars are racing in, pinned at
+                    // spawn rather than read live. A truck with a stock car's tub in it folds in the wrong
+                    // places, and the player's entry can change between one session and the next.
+                    dmg.overrideSeries = true;
+                    dmg.series = SeriesCatalog.PlayerSeries;
                     dmg.Build();
                 }
             }

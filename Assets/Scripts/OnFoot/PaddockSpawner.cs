@@ -110,6 +110,10 @@ public class PaddockSpawner : MonoBehaviour
 
     void Start()
     {
+        // No crowd in a mode nobody walks through it. A single race is driven from the box to the chequer,
+        // so the paddock is scenery the player never reaches and its two hundred bodies are pure cost.
+        if (!GameSession.OnFootAllowed) { enabled = false; return; }
+
         if (track == null) track = FindObjectOfType<TrackBuilder>();
         if (track == null) { Debug.LogError("PaddockSpawner: no TrackBuilder found."); enabled = false; return; }
 

@@ -46,6 +46,7 @@ public class QuestHUD : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
+        if (!GameSession.CareerActive) return;   // career quests have no business in a single race
         if (QuestManager.Tracked().Count > 0) Ensure();
     }
 

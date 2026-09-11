@@ -65,6 +65,7 @@ public class AutographFanSpawner : MonoBehaviour
 
     static void TryInstall()
     {
+        if (!GameSession.OnFootAllowed) return;                        // nobody to sign for: single race is all car
         if (FindObjectOfType<AutographFanSpawner>() != null) return;   // already present (authored or installed)
         var tb = FindObjectOfType<TrackBuilder>();
         if (tb == null || tb.track == null || !tb.track.hasPitLane) return; // only spline tracks with a pit lane

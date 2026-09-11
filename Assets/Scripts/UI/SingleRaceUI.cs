@@ -269,6 +269,11 @@ public class SingleRaceUI : MonoBehaviour
 
         // A single race is one race: no practice, no qualifying, and the session is live the moment the
         // scene loads — the same shape the title screen's EXHIBITION row uses.
+        //
+        // And it is a race, not a race weekend. The mode switches the whole career layer off: no paddock,
+        // no motorhome lot, no weekend sheet, no money, and no walking — the player opens the scene sat in
+        // the car. Without this it went in as a solo CAREER and the scene built the lot of it around them.
+        GameSession.CurrentMode = GameSession.Mode.SingleRace;
         RaceWeekend.Current = RaceWeekend.Session.Race;
         RaceWeekend.SessionLive = true;
 

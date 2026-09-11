@@ -56,6 +56,10 @@ public class CrewChiefController : MonoBehaviour
 
     void Start()
     {
+        // Crew chief mode stands the player on the pit wall as a walking body. A single race is driven from
+        // inside the car start to finish, so neither the headset button nor its key exists there.
+        if (!GameSession.OnFootAllowed) { enabled = false; return; }
+
         if (driveMode == null) driveMode = FindFirstObjectByType<DriveModeController>();
         if (cameraFollow == null && Camera.main != null) cameraFollow = Camera.main.GetComponent<CameraFollow>();
         _playerCar = GameObject.Find("PlayerCar");

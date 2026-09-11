@@ -1,22 +1,21 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 // Practice/qualifying session director. Active when RaceWeekend.IsPracticeLike: the track goes green
 // immediately (no formation lap or safety car — FormationDirector disables itself), the AI field
 // waits parked in their pit boxes, and this component cycles a handful of them out for lap stints
 // so the track never holds more than maxOnTrack cars. Also owns lap timing (LapTimingManager) and,
-// OUTSIDE a weekend, the session button that advances the standalone flow: Practice → "QUALIFYING"
-// reloads into a timed qualifying session; Qualifying → "START RACE" captures the best-lap order as
-// the race grid (RaceWeekend.GridOrder) and reloads into the race. A session booked off the weekend
-// timetable draws no button — it is ended from the pause menu, which calls StartRace() the same way.
+// OUTSIDE a weekend, the standalone flow: Practice → QUALIFYING reloads into a timed qualifying session;
+// Qualifying → START RACE captures the best-lap order as the race grid (RaceWeekend.GridOrder) and reloads
+// into the race. Both steps are rows in the pause menu, alongside END SESSION for a session booked off the
+// weekend timetable — nothing is drawn over the windscreen.
 public class PracticeDirector : MonoBehaviour
 {
     public static PracticeDirector Instance { get; private set; }
 
     [Header("Qualifying")]
-    [Tooltip("Length (s) of the qualifying session. The countdown is advisory — the grid is captured when START RACE is pressed, so late laps still count.")]
+    [Tooltip("Length (s) of the qualifying session. The countdown is advisory — the grid is captured when START RACE is chosen in the pause menu, so late laps still count.")]
     public float qualifyingSeconds = 300f;
 
     [Header("Track activity")]
@@ -31,7 +30,6 @@ public class PracticeDirector : MonoBehaviour
 
     readonly List<PracticeAIStint> _stints = new();
     float _tick;
-    GameObject _raceBtn;
     bool _isQualifying;
     float _qualiEndTime;
 
@@ -64,7 +62,6 @@ public class PracticeDirector : MonoBehaviour
     void Start()
     {
         LapTimingManager.Ensure();
-        BuildRaceButton();
         if (_isQualifying) _qualiEndTime = Time.time + qualifyingSeconds;
     }
 
@@ -108,49 +105,7 @@ public class PracticeDirector : MonoBehaviour
         }
     }
 
-    // ---- Race button (temp) ----
-
-    void BuildRaceButton()
-    {
-        // A session booked off the weekend timetable has no button. END SESSION was a red rectangle
-        // floating over the corner of the windscreen for the whole hour, and the only thing it did was
-        // hand back to a timetable the player can already open with F10 or from the pause menu — which is
-        // where the row lives now (RacePauseMenu). The standalone flow keeps its button: outside a
-        // weekend, START RACE and QUALIFYING are the only way to move the session on at all.
-        if (WeekendRouted) return;
-
-        var canvasGO = new GameObject("PracticeCanvas");
-        var canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 111;
-        canvasGO.AddComponent<CanvasScaler>();
-        canvasGO.AddComponent<GraphicRaycaster>();
-
-        _raceBtn = new GameObject("RaceButton", typeof(RectTransform), typeof(Image), typeof(Button));
-        _raceBtn.transform.SetParent(canvasGO.transform, false);
-        var rt = _raceBtn.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(1f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(1f, 1f);
-        rt.anchoredPosition = new Vector2(-20f, -20f);
-        rt.sizeDelta = new Vector2(160f, 48f);
-
-        _raceBtn.GetComponent<Image>().color = new Color(0.55f, 0.08f, 0.08f, 0.9f);
-        _raceBtn.GetComponent<Button>().onClick.AddListener(StartRace);
-
-        var txtGO = new GameObject("Label", typeof(RectTransform));
-        txtGO.transform.SetParent(_raceBtn.transform, false);
-        var trt = txtGO.GetComponent<RectTransform>();
-        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-        trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-        var label = txtGO.AddComponent<Text>();
-        label.alignment = TextAnchor.MiddleCenter;
-        label.color = Color.white;
-        label.fontSize = 20;
-        label.fontStyle = FontStyle.Bold;
-        label.font = BrandFonts.Body;
-        label.text = _isQualifying ? "START RACE" : "QUALIFYING";
-    }
+    // ---- Advancing the session ----
 
     // Advance the weekend: practice → qualifying; qualifying → capture the grid → race. Each step
     // reloads the scene; the race then runs the normal pre-grid → formation → green flow.
@@ -178,8 +133,21 @@ public class PracticeDirector : MonoBehaviour
     // What the pause menu's END SESSION row should say, or null when there is nothing to end: outside a
     // weekend the session advances on its own button, and off a practice-like session there is no session
     // to hand back at all.
-    public static string PauseMenuExitLabel =>
-        Instance != null && Instance.enabled && WeekendRouted ? "END SESSION" : null;
+    // The row the pause menu offers for moving the session on. There used to be a red rectangle in the
+    // top-right corner of the windscreen saying QUALIFYING or START RACE for the whole hour; the pause
+    // menu is where every other way out of a session already lives, so this is the only one now.
+    //
+    // Routed sessions hand back to the timetable; the standalone flow walks practice -> qualifying ->
+    // race itself, and says which step it is offering.
+    public static string PauseMenuExitLabel
+    {
+        get
+        {
+            if (Instance == null || !Instance.enabled) return null;
+            if (WeekendRouted) return "END SESSION";
+            return Instance._isQualifying ? "START RACE" : "QUALIFYING";
+        }
+    }
 
     // What the session was worth to the weekend. Practice pays in setup knowledge - laps are data, and a
     // driver who ran the whole session gives the engineers something to work with. Qualifying pays in where
@@ -273,10 +241,12 @@ public class PracticeDirector : MonoBehaviour
         float remaining = _qualiEndTime - Time.time;
         string text = remaining > 0f
             ? $"QUALIFYING  {Mathf.FloorToInt(remaining / 60f)}:{Mathf.FloorToInt(remaining % 60f):00}"
-            : "QUALIFYING COMPLETE · PRESS START RACE";
+            : "QUALIFYING COMPLETE · ESC TO START THE RACE";
 
-        float w = PixelGUI.Px(200f), h = PixelGUI.Px(20f);
-        var box = new Rect(Screen.width - w - PixelGUI.Px(8f), PixelGUI.Px(38f), w, h);
+        // Up in the corner itself now. It used to be pushed down to clear the red session button that sat
+        // above it, and that button is gone.
+        float w = PixelGUI.Px(210f), h = PixelGUI.Px(20f);
+        var box = new Rect(Screen.width - w - PixelGUI.Px(8f), PixelGUI.Px(8f), w, h);
         PixelGUI.Panel(box);
 
         // Counting down is the accent; done and waiting on the player is the gain colour.

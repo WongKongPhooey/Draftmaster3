@@ -127,11 +127,14 @@ public class TitleScreenUI : MonoBehaviour
     //
     // The flash is a component on the cursor itself (IronOvalBlink), and TitleScreen.unity had it on two
     // rows out of seven — so the menu opened on a still arrow and only started blinking once the arrow
-    // keys walked the selection down onto one of the two rows that still had one. Putting it back in the
-    // scene does not stick: IronOvalBlink is a second class inside IronOvalUI.cs, and a reference to one
-    // of those written into a scene does not resolve when the scene is next opened, so the component
-    // saves and then is simply not there (the same trap that leaves a missing script behind a cloned
-    // row — see TitleScreenDemoRows).
+    // keys walked the selection down onto one of the two rows that still had one. The class used to be a
+    // second one inside IronOvalUI.cs, which gave it no MonoScript of its own: a reference written into a
+    // scene did not resolve on the way back in, and the component saved as a record with no field data
+    // behind it. The editor shrugs that off. A player build does not — it crashed the first Windows build
+    // on the title scene before a frame was drawn. It has its own file now (IronOvalBlink.cs).
+    //
+    // Building it at load stays the habit regardless: it costs nothing, and it is one less thing that has
+    // to have survived a scene save.
     //
     // So the cursor is given its blink at load rather than trusted to have kept one. Which row shows a
     // cursor is still Redraw's business; this only makes sure that whichever one does, flashes.
@@ -367,6 +370,7 @@ public class TitleScreenUI : MonoBehaviour
         switch (row.command)
         {
             case Command.NewSeason:
+                GameSession.CurrentMode = GameSession.Mode.SinglePlayer;   // career, after any single race
                 string opener = OpeningTrack();
                 if (string.IsNullOrEmpty(opener)) { SetStatus("No track has a layout yet."); return; }
                 TrackSelection.StartWeekendAt(opener);
@@ -377,12 +381,15 @@ public class TitleScreenUI : MonoBehaviour
                 break;
 
             case Command.Continue:
+                GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
                 if (!EnsureRaceableTrack()) return;
                 Load(raceSceneName);
                 break;
 
             case Command.Exhibition:
-                // One race: skip the practice/qualifying half of the weekend.
+                // One race: skip the practice/qualifying half of the weekend — and the career around it.
+                // Same mode the SINGLE RACE screen sets: driven start to finish, never on foot.
+                GameSession.CurrentMode = GameSession.Mode.SingleRace;
                 if (!EnsureRaceableTrack()) return;
                 RaceWeekend.Current = RaceWeekend.Session.Race;
                 // No weekend around an exhibition: the session is live the moment the scene loads.
@@ -403,6 +410,7 @@ public class TitleScreenUI : MonoBehaviour
             // resuming: the save is wiped back to the first day — no money, no stats, no championship,
             // no quests, nobody met — and the calendar restarts at its opening round.
             case Command.RestartDemo:
+                GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
                 string restartAt = OpeningTrack();
                 if (string.IsNullOrEmpty(restartAt)) { SetStatus("No track has a layout yet."); return; }
 

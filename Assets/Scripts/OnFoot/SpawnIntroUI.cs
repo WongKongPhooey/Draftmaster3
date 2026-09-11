@@ -35,6 +35,9 @@ public class SpawnIntroUI : MonoBehaviour
     class Marker
     {
         public Transform target;
+        // Where the icon was last drawn, in GUI space, so a tap on it can be recognised. Empty until the
+        // marker has settled — a marker mid-fly-out is not something anybody is aiming at.
+        public Rect hitRect;
         public Sprite icon;
         public float hideWithinMetres;
         public float introTimer;
@@ -53,6 +56,15 @@ public class SpawnIntroUI : MonoBehaviour
     // The one on screen. The weekend's objectives hang their markers on it rather than drawing a second
     // set of arrows over the top of these.
     public static SpawnIntroUI Instance { get; private set; }
+
+    // Somebody clicked or tapped a marker. The objective strip listens for this: the marker is the thing
+    // on screen that stands for "where you are due", so poking it is the natural way to ask what it is
+    // again once the strip that said so has timed out.
+    public static event System.Action<Transform> MarkerClicked;
+
+    [Tooltip("Minimum size (px) of a marker's tap target. A 44px icon is a small thing to hit on a phone, " +
+             "so the hit box is grown to this regardless of how the icon is drawn.")]
+    public float markerTapSize = 64f;
 
     // What the card said when the scene opened — the track, and the day and time the weekend is at. Kept
     // apart from the live title because that gets reused as an objective banner, and "where am I and when
@@ -212,6 +224,26 @@ public class SpawnIntroUI : MonoBehaviour
         EnsureAssets();
         DrawMarkers();
         DrawTitle();
+        StepMarkerClicks();
+    }
+
+    // A press inside a settled marker's box is a press ON that marker. Done after drawing because the
+    // boxes are worked out as each one is drawn, and read off the same IMGUI event stream the rest of the
+    // HUD uses — so a touch counts the same as a mouse click.
+    void StepMarkerClicks()
+    {
+        var e = Event.current;
+        if (e == null || e.type != EventType.MouseDown || e.button != 0) return;
+
+        for (int i = 0; i < _markers.Count; i++)
+        {
+            var m = _markers[i];
+            if (m.target == null || m.hitRect.width <= 0f) continue;
+            if (!m.hitRect.Contains(e.mousePosition)) continue;
+            MarkerClicked?.Invoke(m.target);
+            e.Use();
+            return;
+        }
     }
 
     void DrawTitle()
@@ -253,6 +285,10 @@ public class SpawnIntroUI : MonoBehaviour
 
     void DrawMarkers()
     {
+        // Every box is re-earned each pass. A marker that is not drawn this frame — off the live slot, or
+        // a companion the player can already see — must not leave a live tap target behind it.
+        for (int i = 0; i < _markers.Count; i++) _markers[i].hitRect = default;
+
         var cam = Camera.main;
         if (cam == null || _player == null) return;
 
@@ -322,6 +358,15 @@ public class SpawnIntroUI : MonoBehaviour
         }
 
         DrawIcon(pos, m.icon, scale, Tint(m));
+
+        // Only a settled marker is a target: one still flying out from the centre is moving under the
+        // finger, and its box would be over the middle of the screen where nobody is aiming.
+        if (settled)
+        {
+            float tap = Mathf.Max(iconSize, markerTapSize);
+            m.hitRect = new Rect(pos.x - tap * 0.5f, pos.y - tap * 0.5f, tap, tap);
+        }
+        else m.hitRect = default;
 
         if (settled)
         {

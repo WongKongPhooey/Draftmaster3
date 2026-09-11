@@ -44,15 +44,43 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     [Tooltip("Smoothing passes per impact. More = the fold carries further out across the bodywork.")]
     [Range(0, 6)] public int crumplePasses = 2;
 
-    [Header("Rigid Core")]
-    [Tooltip("Optional greyscale mask painted over the sprite: white = deforms fully, black = rigid (core shell). Must be Read/Write enabled. Overrides the core rect below.")]
+    [Header("Safety Cell")]
+    [Tooltip("The box in the middle of the car that never folds — the tub the driver sits in. Everything " +
+             "outside it is bodywork and crumples as before. Off makes the whole shell deformable.")]
+    public bool safetyCell = true;
+    [Tooltip("Greyscale mask painted over the sprite: white = deforms fully, black = rigid. Must be Read/Write " +
+             "enabled. Overrides the rectangle below. Left empty, the car uses its series' painted cell.")]
     public Texture2D deformMask;
-    [Tooltip("Width of the rigid core as a fraction of the sprite (0 = disabled). Vertices inside never deform.")]
-    [Range(0f, 1f)] public float coreWidthFrac = 0f;
-    [Tooltip("Height of the rigid core as a fraction of the sprite (0 = disabled).")]
-    [Range(0f, 1f)] public float coreHeightFrac = 0f;
-    [Tooltip("Falloff band (fraction of sprite) outside the core rect where deformation fades in from 0 to full.")]
-    [Range(0.01f, 0.5f)] public float coreFalloffFrac = 0.15f;
+    [Tooltip("With no mask assigned, use the painted cell for this car's series (Resources/Cars/SafetyCell_*). " +
+             "Off falls straight through to the rectangle.")]
+    public bool useSeriesMask = true;
+    [Tooltip("Which series' cell this car is built around. Off = whichever series the player is entered in, " +
+             "which is right for the player's own car and for the field they are racing against.")]
+    public bool overrideSeries = false;
+    public Draftmaster.Weekend.RacingSeries series = Draftmaster.Weekend.RacingSeries.Cup;
+    [Tooltip("Cell size ALONG the car (sprite X, nose to tail) as a fraction of the sprite. 0 = built-in default.")]
+    [Range(0f, 1f)] public float coreWidthFrac = DefaultCellLengthFrac;
+    [Tooltip("Cell size ACROSS the car (sprite Y, door to door) as a fraction of the sprite. 0 = built-in default.")]
+    [Range(0f, 1f)] public float coreHeightFrac = DefaultCellWidthFrac;
+    [Tooltip("Falloff band (fraction of sprite) outside the cell where deformation fades in from 0 to full.")]
+    [Range(0.01f, 0.5f)] public float coreFalloffFrac = 0.14f;
+
+    // Every car in the project was serialised with the cell fractions at zero, back when zero meant "no
+    // core at all". Zero now means "whatever the cell is", so the tub turns up on the cars already in the
+    // scenes and prefabs without every one of them having to be opened and re-entered.
+    const float DefaultCellLengthFrac = 0.34f;   // along the car
+    const float DefaultCellWidthFrac = 0.40f;    // across it
+
+    float CellLengthFrac => coreWidthFrac > 0f ? coreWidthFrac : DefaultCellLengthFrac;
+    float CellAcrossFrac => coreHeightFrac > 0f ? coreHeightFrac : DefaultCellWidthFrac;
+
+    [Header("Ends")]
+    [Tooltip("How much deeper the nose and tail fold than the flanks. A side impact presses across the " +
+             "narrow axis of the car and buries the striker; the same hit on the bonnet or the tail spreads " +
+             "along a blunt face and barely marked it. 1 = no difference.")]
+    [Range(1f, 4f)] public float endDentGain = 1.9f;
+    [Tooltip("How far in from each end that extra reaches, as a fraction of the car's length.")]
+    [Range(0.05f, 0.5f)] public float endZoneFrac = 0.28f;
 
     [Header("Damage Severity → Handling")]
     [Tooltip("Accumulated damage per unit impact severity. Higher = a few hits cripple the car.")]
@@ -67,6 +95,12 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     Vector3[] _base;
     Vector3[] _current;
     float[] _deformWeight;
+    // The mask actually in force: the authored one, else the series' painted cell. Resolved in Build so the
+    // inspector field keeps saying what a person put there rather than what the game loaded.
+    Texture2D _mask;
+    // How much deeper this vertex folds than the flanks do. Kept apart from _deformWeight because that one
+    // is a rigidity mask the crumple pass uses as a lerp factor, where anything over 1 overshoots.
+    float[] _dentGain;
     float _biasAccum;
 
     // Scratch for one press: the displacement field, which vertices the press reached, and the buffers
@@ -93,12 +127,15 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         var sr = GetComponent<SpriteRenderer>();
         if (sr != null) sr.enabled = false;
 
+        _mask = ResolveMask();
+
         Vector2 size = sourceSprite.bounds.size;
         Vector2 min = -size * 0.5f;
 
         int vx = gridX + 1, vy = gridY + 1;
         _base = new Vector3[vx * vy];
         _deformWeight = new float[vx * vy];
+        _dentGain = new float[vx * vy];
         var uvs = new Vector2[vx * vy];
         Rect uvRect = new Rect(
             sourceSprite.textureRect.x / sourceSprite.texture.width,
@@ -115,6 +152,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
                 _base[idx] = new Vector3(min.x + size.x * fx, min.y + size.y * fy, 0f);
                 uvs[idx] = new Vector2(uvRect.x + uvRect.width * fx, uvRect.y + uvRect.height * fy);
                 _deformWeight[idx] = ComputeDeformWeight(fx, fy);
+                _dentGain[idx] = ComputeDentGain(fx);
             }
         }
 
@@ -150,20 +188,52 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     // Per-vertex deform weight, 0 = rigid, 1 = fully deformable. fx/fy are sprite-normalized [0,1].
     float ComputeDeformWeight(float fx, float fy)
     {
-        if (deformMask != null)
+        if (!safetyCell) return 1f;
+
+        if (_mask != null)
         {
-            if (deformMask.isReadable)
-                return Mathf.Clamp01(deformMask.GetPixelBilinear(fx, fy).grayscale);
-            Debug.LogWarning($"VehicleDamage ({name}): deformMask '{deformMask.name}' is not Read/Write enabled — falling back to core rect.", this);
+            if (_mask.isReadable) return Mathf.Clamp01(_mask.GetPixelBilinear(fx, fy).grayscale);
+            Debug.LogWarning($"VehicleDamage ({name}): safety-cell mask '{_mask.name}' is not Read/Write " +
+                             "enabled — falling back to the shape it was painted from.", this);
+            return SeriesSafetyCells.DeformAt(SeriesSafetyCells.ShapeOf(CellSeries), fx, fy);
         }
 
-        if (coreWidthFrac <= 0f || coreHeightFrac <= 0f) return 1f;
+        // No mask painted yet: the same shape, worked out rather than read off a texture. So a series' cell
+        // is the right shape whether or not anybody has run the mask builder, and running it later changes
+        // the paint rather than switching the feature on.
+        if (useSeriesMask) return SeriesSafetyCells.DeformAt(SeriesSafetyCells.ShapeOf(CellSeries), fx, fy);
 
-        // Distance outside the centered core rect, per axis, in sprite fractions.
-        float dx = Mathf.Abs(fx - 0.5f) - coreWidthFrac * 0.5f;
-        float dy = Mathf.Abs(fy - 0.5f) - coreHeightFrac * 0.5f;
-        float outside = Mathf.Max(dx, dy); // <= 0 inside the core
+        // Distance outside the centred cell, per axis, in sprite fractions.
+        float dx = Mathf.Abs(fx - 0.5f) - CellLengthFrac * 0.5f;
+        float dy = Mathf.Abs(fy - 0.5f) - CellAcrossFrac * 0.5f;
+        float outside = Mathf.Max(dx, dy); // <= 0 inside the cell
         return Mathf.Clamp01(outside / coreFalloffFrac);
+    }
+
+    // Whose cell this car is built around: its own series when one is pinned on it (the spawner does that
+    // for a field of somebody else's cars), otherwise the championship the player is entered in.
+    Draftmaster.Weekend.RacingSeries CellSeries =>
+        overrideSeries ? series : Draftmaster.Weekend.SeriesCatalog.PlayerSeries;
+
+    Texture2D ResolveMask()
+    {
+        if (deformMask != null) return deformMask;
+        if (!safetyCell || !useSeriesMask) return null;
+        return SeriesSafetyCells.MaskFor(CellSeries);
+    }
+
+    // Extra fold depth toward the nose and the tail.
+    //
+    // `fx` is the length of the car, not `fy`: the liveries are 64x32, drawn lying along the texture's X
+    // axis with the nose at x=0 (which is why the cars carry angleOffsetDeg 180). Both ends are the same
+    // distance from the middle and get the same treatment — a shunt from behind creases the tail the way a
+    // shunt into the back of somebody creases the bonnet.
+    float ComputeDentGain(float fx)
+    {
+        if (endDentGain <= 1f || endZoneFrac <= 0f) return 1f;
+        float fromEnd = Mathf.Min(fx, 1f - fx);                        // 0 at a tip, 0.5 in the middle
+        float t = 1f - Mathf.Clamp01(fromEnd / endZoneFrac);           // 1 at a tip, 0 at the zone's edge
+        return Mathf.Lerp(1f, endDentGain, t);
     }
 
     static Material BuildSpriteMaterial(Sprite sprite)
@@ -256,7 +326,8 @@ public class VehicleDamage : MonoBehaviour, IDamageable
 
             // Our share of the intrusion, in local units. Anything an earlier hit already folded deeper
             // along this line stays — damage accumulates, it just doesn't accumulate against itself.
-            float target = t * share * weight * worldToLocal;
+            float gain = _dentGain != null ? _dentGain[i] : 1f;
+            float target = t * share * weight * gain * worldToLocal;
             float already = Vector3.Dot(_disp[i], foldDir);
             if (target <= already) continue;
 
@@ -280,8 +351,11 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         {
             if (!_region[i]) continue;
             float weight = _deformWeight != null ? _deformWeight[i] : 1f;
+            float gain = _dentGain != null ? _dentGain[i] : 1f;
             Vector3 fromBase = _disp[i];
-            float vertexMaxDent = maxDent * weight;
+            // The cell's zero here is what actually holds the tub square: a vertex with no weight has no
+            // room to move however hard the panel around it is dragged by the crumple pass.
+            float vertexMaxDent = maxDent * weight * gain;
             if (fromBase.magnitude > vertexMaxDent) fromBase = fromBase.normalized * vertexMaxDent;
             _current[i] = _base[i] + fromBase;
         }

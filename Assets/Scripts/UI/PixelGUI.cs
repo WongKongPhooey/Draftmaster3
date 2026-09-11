@@ -435,6 +435,66 @@ public static class PixelGUI
         _labelDim.alignment = prevAlign;
     }
 
+    // A prompt for the button that does the thing in front of you, sat at the bottom of the screen: the
+    // keycap, then the line. Same furniture as every other panel in the kit — gold frame, dithered plate —
+    // because a prompt drawn in a plainer style than the HUD around it reads as debug text rather than as
+    // part of the game.
+    //
+    // Sized to the text and drawn at the kit's own scale, so it grows with the rest of the UI instead of
+    // staying a small grey strip while everything else is twice the size.
+    //
+    // Returns the rect it drew into, for anything that wants to stack something above it.
+    public static Rect Prompt(string key, string text, float bottomMargin = 12f)
+    {
+        if (string.IsNullOrEmpty(text)) return default;
+        Ensure();
+
+        var keyContent = new GUIContent((key ?? "").ToUpperInvariant());
+        var body = Body;
+
+        float capW = string.IsNullOrEmpty(key) ? 0f : Mathf.Ceil(_label.CalcSize(keyContent).x) + Px(10f);
+        float capH = _label.fontSize + Px(6f);
+        float textW = Mathf.Ceil(body.CalcSize(new GUIContent(text)).x);
+        float rowH = Mathf.Max(capH, body.fontSize + Px(4f));
+        float gap = string.IsNullOrEmpty(key) ? 0f : Px(8f);
+
+        float inset = Px(8f);
+        float w = Mathf.Min(capW + gap + textW + inset * 2f + Px(8f), Screen.width - Px(16f));
+        float h = rowH + inset * 2f;
+        var box = new Rect(Mathf.Round((Screen.width - w) * 0.5f),
+                           Mathf.Round(Screen.height - h - Px(bottomMargin)), w, h);
+
+        Panel(box, focused: true);
+        var c = PanelContent(box, 4f);
+
+        float x = c.x;
+        if (capW > 0f)
+        {
+            var cap = new Rect(Mathf.Round(x), Mathf.Round(c.y + (c.height - capH) * 0.5f), capW, capH);
+            float b = Px(1f);
+            Fill(new Rect(cap.x - b, cap.y - b, cap.width + b * 2f, cap.height + b * 2f), Ink);
+            Fill(cap, PlateLight);
+
+            var prevAlign = _label.alignment;
+            var prevColour = _label.normal.textColor;
+            _label.alignment = TextAnchor.MiddleCenter;
+            _label.normal.textColor = Gold;
+            GUI.Label(cap, keyContent, _label);
+            _label.normal.textColor = prevColour;
+            _label.alignment = prevAlign;
+
+            x += capW + gap;
+        }
+
+        var line = new Rect(x, c.y, c.xMax - x, c.height);
+        var wasAlign = body.alignment;
+        body.alignment = TextAnchor.MiddleLeft;
+        GUI.Label(line, text, body);
+        body.alignment = wasAlign;
+
+        return box;
+    }
+
     // Inner rect of a Panel — where its content goes, one frame border plus the kit's 12px margin in.
     public static Rect PanelContent(Rect r, float margin = 12f)
     {

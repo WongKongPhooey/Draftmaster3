@@ -23,7 +23,7 @@ public class SponsorBoardPanel : MonoBehaviour
     // Which deal the player is currently placing, 0 = none. Two clicks: pick a deal, then pick a panel.
     int _picking;
 
-    [Tooltip("Debug key that opens the board anywhere, so placement can be checked at the track without walking to the garage. F1 tuner, F2 leaderboard, F3 telemetry, F4 rivalries, F5 dossier, F6 here.")]
+    [Tooltip("Debug key that opens the board anywhere on foot, so placement can be checked at the track without walking to the garage. Deaf while the player is driving, where F6 belongs to the tyre readout. F1 tuner, F2 leaderboard, F3 telemetry, F4 rivalries, F5 dossier, F6 here.")]
     public Key toggleKey = Key.F6;
 
     public static SponsorBoardPanel Ensure()
@@ -33,7 +33,7 @@ public class SponsorBoardPanel : MonoBehaviour
         return go.AddComponent<SponsorBoardPanel>();
     }
 
-    // The garage station opens this properly; the F-key is the dev route in from anywhere else.
+    // The garage station opens this properly; the F-key is the dev route in from anywhere else on foot.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
@@ -45,9 +45,16 @@ public class SponsorBoardPanel : MonoBehaviour
 
     void Update()
     {
+        // F6 is shared with the in-car tyre readout, and this board is a walking-around thing — its deals
+        // are signed on foot in the pit lane and placed at the garage. So the key only answers here while
+        // the player has a body, and the board closes itself if they get back in the car with it open.
+        bool onFoot = OnFootController.Current != null;
+        if (IsOpen && !onFoot) { Hide(); return; }
+
         var kb = Keyboard.current;
         if (kb == null || !kb[toggleKey].wasPressedThisFrame) return;
-        if (IsOpen) Hide(); else Show();
+        if (IsOpen) Hide();
+        else if (onFoot) Show();
     }
 
     void Awake()

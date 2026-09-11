@@ -24,15 +24,14 @@ public class GrandstandVisit : MonoBehaviour
     public static GrandstandVisit Active { get; private set; }
     public static bool Watching => Active != null;
 
-    const string HintId = "grandstand.return";
-
-    // A second id, not a rewrite of the first: re-showing a live hint under the same id only refreshes its
-    // timer (ControlHintUI.Push), so the chequered-flag line would never reach the screen.
-    const string OverHintId = "grandstand.sessionover";
-
     // Live timings for whatever is on track. F11 because it is a screen you put up and leave up, not a
     // panel with a button on it — and because F11 was the last function key nothing else had taken.
     const Key TimingKey = Key.F11;
+
+    // The way out is drawn here rather than pushed at the shared control-hint strip. That strip is a
+    // teaching aid — small, faint, and gone after a few seconds — and this is a standing instruction on a
+    // screen that has nothing else on it. So it gets the kit's own furniture: gold frame, dithered plate,
+    // a keycap, at the size every other panel in the game is drawn at.
 
     // The way out. E is the button the player already uses for everything they do in the world — get in the
     // car, talk to somebody, open the gate that sent them here — so getting up out of the seat is the same
@@ -100,8 +99,6 @@ public class GrandstandVisit : MonoBehaviour
         }
 
         visit.OpenTheView(marker);
-
-        ControlHints.ShowSticky(HintId, "E", "Y", "Return to the pits. F11 for live timing.");
         return visit;
     }
 
@@ -126,8 +123,6 @@ public class GrandstandVisit : MonoBehaviour
         if (_closed) return;
         _closed = true;
 
-        ControlHints.Hide(HintId);
-        ControlHints.Hide(OverHintId);
         ReleaseSession();
 
         if (_shot != null) { _shot.End(); _shot = null; }
@@ -156,6 +151,15 @@ public class GrandstandVisit : MonoBehaviour
         float pan = marker != null ? marker.cameraPanSeconds : 2.2f;
 
         _shot = GrandstandCamera.Begin(seat, view, authored, zoom, pan);
+
+        // Sit them facing the way the stand faces. The player arrives here still pointing whichever way
+        // they walked into the gate, which is across the seats as often as not. The shot's own vantage is
+        // the answer: it is out over the circuit, which is the only direction a grandstand looks.
+        if (player != null && _shot != null)
+        {
+            var walker = player.GetComponent<OnFootController>();
+            if (walker != null) walker.FaceToward(_shot.ViewPoint);
+        }
 
         // Nothing else times an ambient session — there is no practice or race director out here, because
         // none of it is the player's — so the stand brings its own lap timing. It reads the same field the
@@ -202,6 +206,23 @@ public class GrandstandVisit : MonoBehaviour
         if (leave) Leave();
     }
 
+    // The standing instruction, at the bottom of the screen, in the kit everything else is drawn in.
+    //
+    // Silent behind anything the player is actually reading — a conversation, the schedule, a panel — and
+    // during the wipe out, because by then the button has already been pressed.
+    void OnGUI()
+    {
+        if (_leaving || _closed) return;
+        if (RacePauseMenu.IsPaused) return;
+        if (NPCInteractable.AnyConversationActive || DialogueChoiceUI.IsOpen ||
+            WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return;
+        if (ScreenFade.Busy) return;
+
+        string key = Gamepad.current != null ? "Y" : "E";
+        PixelGUI.Prompt(key, _sessionOver ? ChequeredLine()
+                                          : "Return to the pits.  F11 for live timing.");
+    }
+
     // Is the player still in the stand? Measured off where they sat down, because that is the one thing the
     // visit knows about the place; a missing player is not an answer, so it counts as still there and the
     // ordinary teardown handles it.
@@ -230,8 +251,6 @@ public class GrandstandVisit : MonoBehaviour
         {
             _sessionOver = true;
             ReleaseSession();
-            ControlHints.Hide(HintId);
-            ControlHints.ShowSticky(OverHintId, "E", "Y", ChequeredLine());
         }
 
         if (timing == null) return;
@@ -259,8 +278,6 @@ public class GrandstandVisit : MonoBehaviour
         if (_leaving) return;
         _leaving = true;
 
-        ControlHints.Hide(HintId);
-        ControlHints.Hide(OverHintId);
         if (_shot != null) { _shot.End(); _shot = null; }
 
         if (!ScreenFade.Busy) GoBack();

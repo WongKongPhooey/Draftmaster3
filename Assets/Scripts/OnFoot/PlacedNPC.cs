@@ -308,6 +308,11 @@ public class PlacedNPC : MonoBehaviour
         _claimed = true;
         _ctx = ctx;
 
+        // Nobody stands up in a mode the player never walks around in. A single race is driven from the
+        // pit box to the chequer, so the greeter, the chief and every marker in the track package stay
+        // where they are — markers, not people.
+        if (!GameSession.OnFootAllowed) { _skipped = true; return false; }
+
         if (!appear.IsMet()) { _skipped = true; return false; }
 
         // Somebody whose job is to tell you the schedule has to be reading today's, not the one that was on

@@ -78,7 +78,10 @@ public class WeekendDirector : MonoBehaviour
     static void Install()
     {
         InstallHooks();
-        Ensure();
+        // The hooks are cheap and harmless anywhere; the director itself runs the three days — it books
+        // appointments, moves the clock on and owns F10. A single race has no weekend around it, so it
+        // gets none of that.
+        if (GameSession.CareerActive) Ensure();
     }
 
     // Money, career counters and driver relationships live in this assembly; the ledger cannot reach them,

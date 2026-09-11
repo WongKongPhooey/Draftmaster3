@@ -70,7 +70,9 @@ public class RaceDirector : MonoBehaviour
         // Co-op runs the race director, because co-op runs the career — but only on the host. Two peers
         // each deciding independently that the race has finished, who won and what the payout was is a
         // race result that disagrees with itself; the guest is told, via CareerMirror.
-        if (!RaceWeekend.IsRaceSession || !GameSession.CareerActive || Coop.IsGuest)
+        // A single race still needs a director — somebody has to count the laps, throw the chequer and put
+        // the classification up. What it does not get is the career underneath it (see RecordCareerResult).
+        if (!RaceWeekend.IsRaceSession || GameSession.IsMultiplayer || Coop.IsGuest)
         {
             enabled = false;
             return;
@@ -215,6 +217,12 @@ public class RaceDirector : MonoBehaviour
     {
         int playerPos = 0;
         for (int i = 0; i < _results.Count; i++) if (_results[i].isPlayer) { playerPos = i + 1; break; }
+
+        // A single race is worth nothing to a career it is not part of: no purse, no sponsor money, no
+        // stats, no quest progress and no drift in anybody's grudges. The classification above is the
+        // whole result.
+        if (!GameSession.CareerActive) return;
+
         if (playerPos > 0)
         {
             PlayerStatsLedger.Increment("races");
@@ -408,8 +416,11 @@ public class RaceDirector : MonoBehaviour
         var meta = PixelGUI.DataDim;
         var metaAlign = meta.alignment;
         meta.alignment = TextAnchor.MiddleRight;
+        // A single race is not a round of anything, so it is named by the track alone.
         GUI.Label(new Rect(c.x, c.y, c.width - PixelGUI.Px(4f), bandH),
-                  TrackSelection.CurrentDisplayName + "  ROUND " + (RaceWeekend.WeekendId + 1), meta);
+                  GameSession.CareerActive
+                      ? TrackSelection.CurrentDisplayName + "  ROUND " + (RaceWeekend.WeekendId + 1)
+                      : TrackSelection.CurrentDisplayName, meta);
         meta.alignment = metaAlign;
 
         float top = c.y + bandH + PixelGUI.Px(6f);
@@ -482,6 +493,25 @@ public class RaceDirector : MonoBehaviour
             GUI.Label(new Rect(rx, ry, railW, PixelGUI.Px(14f)), "YOU FINISHED P" + playerPos, pos);
             pos.normal.textColor = posPrev;
             ry += PixelGUI.Px(18f);
+        }
+
+        // A single race pays nothing and leads nowhere, so the rewards column and the weekend buttons come
+        // off and the panel ends with the two things that still mean something: run it again, or leave.
+        if (!GameSession.CareerActive)
+        {
+            float sbh = PixelGUI.Px(18f);
+            if (PixelGUI.Button(new Rect(rx, ry, railW, sbh), "RACE AGAIN"))
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            ry += sbh + PixelGUI.Px(4f);
+            if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "QUIT TO TITLE", false))
+            {
+                RaceWeekend.SessionLive = false;
+                if (Application.CanStreamedLevelBeLoaded("TitleScreen")) SceneManager.LoadScene("TitleScreen");
+                else SceneManager.LoadScene(0);   // the title is the first scene in the build list
+            }
+            ry += sbh + PixelGUI.Px(4f);
+            if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "CLOSE", false)) _panelHidden = true;
+            return;
         }
 
         PixelGUI.Fill(new Rect(rx, ry, railW, PixelGUI.Px(76f)), PixelGUI.Plate);

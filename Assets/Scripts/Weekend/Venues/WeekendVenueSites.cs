@@ -77,6 +77,7 @@ public class WeekendVenueSites : MonoBehaviour
 
     static void TryInstall()
     {
+        if (!GameSession.CareerActive) return;   // no weekend around a single race, so no venues in it
         if (Instance != null) return;
         var go = new GameObject("WeekendVenueSites");
         Instance = go.AddComponent<WeekendVenueSites>();

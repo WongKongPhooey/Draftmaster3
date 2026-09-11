@@ -30,9 +30,22 @@ public class WeekendObjectiveHUD : MonoBehaviour
     string _markedId = "";
     Transform _marked;
 
-    // The banner waits its turn behind the spawn card, so arriving at a track reads "Watkins Glen — Friday,
-    // 9:30 AM" and only then "TEAM PLAN MEETING".
-    string _bannerTitle, _bannerSubtitle;
+    // The strip is an announcement, not furniture. It slides down from the top when the booking changes
+    // (so a scene load reads "here is what you are due"), holds long enough to be read at a glance, then
+    // slides back out and leaves the screen to the game. The marker it put on the objective is what stays.
+    public float showSeconds = 6f;
+    public float slideSeconds = 0.35f;
+
+    // Which booking the strip has already announced, so it does not re-announce the same one every frame.
+    string _announcedId = "";
+    // Unscaled time the strip starts sliding away. 0 = already away.
+    float _hideAt;
+    // 0 = fully off the top, 1 = fully down. Lerped, so showing and hiding are the same movement.
+    float _slide;
+
+    // Asking for it back. Every F key in the game is taken (F1-F12 all answer something), so the recall is
+    // Q — the other way in is clicking or tapping the marker itself.
+    public const Key RecallKey = Key.Q;
 
     // What the strip is drawing, worked out once a frame in Update.
     //
@@ -50,6 +63,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
     {
+        if (!GameSession.CareerActive) return;   // nothing is booked in a single race, so nothing to point at
         if (Instance != null) return;
         var go = new GameObject("WeekendObjectiveHUD");
         DontDestroyOnLoad(go);
@@ -62,8 +76,33 @@ public class WeekendObjectiveHUD : MonoBehaviour
         Instance = this;
     }
 
-    void OnEnable() { PlacedNPC.CutsceneFinished += OnCutsceneFinished; }
-    void OnDisable() { PlacedNPC.CutsceneFinished -= OnCutsceneFinished; }
+    void OnEnable()
+    {
+        PlacedNPC.CutsceneFinished += OnCutsceneFinished;
+        SpawnIntroUI.MarkerClicked += OnMarkerClicked;
+    }
+
+    void OnDisable()
+    {
+        PlacedNPC.CutsceneFinished -= OnCutsceneFinished;
+        SpawnIntroUI.MarkerClicked -= OnMarkerClicked;
+    }
+
+    // Poking the objective marker asks what it is. Only that marker: the pit-lane spawn hangs its own pip
+    // on the player's car, and clicking that is not a question about the weekend.
+    void OnMarkerClicked(Transform target)
+    {
+        if (target != null && target == _marked) Reveal();
+    }
+
+    // Slide the strip back in and restart its clock. Public because the opening beats end by pointing the
+    // player somewhere and this is now the only surface that says where.
+    public static void Reveal()
+    {
+        if (Instance != null) Instance.RevealNow();
+    }
+
+    void RevealNow() => _hideAt = Time.unscaledTime + Mathf.Max(0.5f, showSeconds);
 
     void OnDestroy() { if (Instance == this) Instance = null; }
 
@@ -75,18 +114,45 @@ public class WeekendObjectiveHUD : MonoBehaviour
         if (who == null || !(who.givesTheDaysObjective || who.role == PlacedNPC.Role.TeamLiaison)) return;
 
         WeekendDirector.BookNextUp(replaceExisting: true);
-        _markedId = "";   // force the marker to be rebuilt and pulsed on the next tick
+
+        // Deliberately NOT rebuilding the marker here. It was flown in when the booking was made, and
+        // throwing the fly-in a second time reads as a second marker arriving rather than as emphasis on
+        // the one already sat at the edge of the screen. If BookNextUp actually changed the booking,
+        // SyncMarker rebuilds it on the next tick anyway, because the id it is keyed on has changed.
+        Reveal();
     }
 
     void Update()
     {
         SyncMarker();
-        PumpBanner();
         Refresh();
+        StepSlide();
 
-        if (!Showing) return;
+        if (!Available) return;
         var kb = Keyboard.current;
-        if (kb != null && kb[TravelKey].wasPressedThisFrame) TravelThere();
+        if (kb == null) return;
+        // T walks you there whether or not the strip happens to be on screen — the booking is live either
+        // way, and hiding the prompt is not the same as taking the shortcut away.
+        if (kb[TravelKey].wasPressedThisFrame) TravelThere();
+        if (kb[RecallKey].wasPressedThisFrame) RevealNow();
+    }
+
+    // Announce a new booking, and move the strip toward wherever it should be.
+    void StepSlide()
+    {
+        // A booking the player has not been told about yet. This is what makes the strip appear on a scene
+        // load: the appointment is already on the sheet, and the first frame that resolves it announces it.
+        string id = _shown != null ? _shown.id : "";
+        if (_shown != null && id != _announcedId && !WeekendTrackChangeover.Staging)
+        {
+            _announcedId = id;
+            RevealNow();
+        }
+        if (_shown == null) _announcedId = "";
+
+        float target = (Available && Time.unscaledTime < _hideAt) ? 1f : 0f;
+        float step = Time.unscaledDeltaTime / Mathf.Max(0.01f, slideSeconds);
+        _slide = Mathf.MoveTowards(_slide, target, step);
     }
 
     // The once-a-frame resolve. Everything that costs something — the booking, where it is, how far off
@@ -129,7 +195,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
                 : $"{Capitalise(intoTheRV ? WeekendVenues.Directions(WeekendVenue.Motorhome) : WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
             _footerText = here
                 ? activity.Clock + "  ·  " + WeekendAppointment.TargetLabel()
-                : $"{activity.Clock}  ·  [T] TRAVEL THERE";
+                : $"{activity.Clock}  ·  [T] TRAVEL THERE  ·  [Q] AGAIN";
         }
     }
 
@@ -166,26 +232,6 @@ public class WeekendObjectiveHUD : MonoBehaviour
         intro.AddMarker(target, MarkerIcon(target), hideWithinMetres: 3f,
                         label: activity.title, priority: 10);
         intro.PulseMarker(target);
-
-        // The banner says what it is; the line under it says where and when, in the same shape the spawn
-        // card uses. Together they are the whole instruction: this thing, over there, at that time.
-        _bannerTitle = activity.title;
-        _bannerSubtitle = $"{Capitalise(WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {activity.Clock}";
-    }
-
-    // Put the pending banner up as soon as the card in front of it has finished.
-    void PumpBanner()
-    {
-        if (_bannerTitle == null) return;
-        if (WeekendTrackChangeover.Staging) return;   // it would play out its whole two seconds behind black
-
-        var intro = SpawnIntroUI.Instance;
-        if (intro == null || intro.TitleBusy) return;
-
-        intro.ShowTitle(_bannerTitle, _bannerSubtitle);
-        if (_marked != null) intro.PulseMarker(_marked);
-        _bannerTitle = null;
-        _bannerSubtitle = null;
     }
 
     // Whatever the target already draws with — the car's paint scheme, a host's sprite — so the marker is a
@@ -202,7 +248,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // The panel/conversation gates stay live rather than cached: they are static reads, and a conversation
     // that opens after this component's Update has already run would otherwise get one frame of strip
     // drawn over it. The costly half comes from Refresh.
-    bool Showing
+    bool Available
     {
         get
         {
@@ -251,7 +297,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
     void OnGUI()
     {
-        if (!Showing) return;
+        if (!Available || _slide <= 0.001f) return;
         EnsureStyles();
 
         var activity = _shown;
@@ -272,7 +318,13 @@ public class WeekendObjectiveHUD : MonoBehaviour
         float w = Mathf.Clamp(textW + inset * 2f + PixelGUI.Px(8f),
                               PixelGUI.Px(180f), Screen.width - PixelGUI.Px(16f));
         float h = titleH + detailH + footerH + inset * 2f;
-        var box = new Rect(Mathf.Round((Screen.width - w) * 0.5f), PixelGUI.Px(6f), w, h);
+
+        // Slid in from off the top rather than switched on. Eased so it arrives quickly and settles, and
+        // the same curve run backwards takes it away again once its time is up.
+        float margin = PixelGUI.Px(6f);
+        float ease = _slide * _slide * (3f - 2f * _slide);
+        float top = Mathf.Round(Mathf.Lerp(-h - margin, margin, ease));
+        var box = new Rect(Mathf.Round((Screen.width - w) * 0.5f), top, w, h);
 
         PixelGUI.Panel(box, focused: false);
         var c = PixelGUI.PanelContent(box, 4f);

@@ -23,6 +23,12 @@ public class GrandstandCamera : MonoBehaviour
     // How far the player can get out of their seat before the camera goes back to following them.
     const float ReleaseDistance = 3.5f;
 
+    // The shortest the pull-back is allowed to be, whatever a marker asks for. Sitting down in a stand is
+    // the one moment in the weekend with nothing to do in it, and a two-second pan reads as the camera
+    // being yanked off the player rather than as the view opening up. Authored markers can still take
+    // LONGER than this; they cannot take less.
+    const float MinPanSeconds = 4f;
+
     Camera _cam;
     CameraFollow _follow;
     OnFootCameraFollow _walkFollow;   // the other follow some scenes fit; parked while the shot is up
@@ -36,6 +42,11 @@ public class GrandstandCamera : MonoBehaviour
     float _zoomFrom, _zoomTo;
     Vector3 _seat;
     bool _done;
+
+    // Where the shot settles, once the vantage has been resolved — authored, or worked out off the
+    // circuit. The visit faces the player at it: the direction the camera opens onto is the direction the
+    // stand looks, so it is also the way somebody sat in it would be looking.
+    public Vector3 ViewPoint => _to;
 
     // Pull back from `seat` to `view`, ending at `zoom` metres of half-height. `hasView` false means nobody
     // authored a vantage and one is worked out from the circuit; `zoom` <= 0 means the same about the zoom.
@@ -97,7 +108,7 @@ public class GrandstandCamera : MonoBehaviour
 
         _from = new Vector3(seat.x, seat.y, 0f);
         _to = new Vector3(view.x, view.y, 0f);
-        _panSeconds = Mathf.Max(0.2f, panSeconds);
+        _panSeconds = Mathf.Max(MinPanSeconds, panSeconds);
 
         _zoomFrom = cam.orthographic ? cam.orthographicSize
                   : _zoomOwner != null ? _zoomOwner.OnFootZoom : 3.5f;
@@ -122,7 +133,12 @@ public class GrandstandCamera : MonoBehaviour
         if (_done) return;
 
         _elapsed += Time.deltaTime;
-        float u = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_elapsed / _panSeconds));
+
+        // Eased OUT, not in and out. SmoothStep starts at a standstill, so the first half-second after
+        // sitting down was a still frame and the move looked like it began late; this leaves on the frame
+        // the player lands in the seat and slows into the vantage instead.
+        float t = Mathf.Clamp01(_elapsed / _panSeconds);
+        float u = t * (2f - t);
 
         if (_rig != null) _rig.position = Vector3.Lerp(_from, _to, u);
 

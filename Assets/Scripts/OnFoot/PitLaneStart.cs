@@ -39,6 +39,11 @@ public class PitLaneStart : MonoBehaviour
     // the safety-car formation lap.
     public event System.Action PlayerEnteredCar;
 
+    [Tooltip("Single race only: how long to wait for GridSpawner to finish parking the field before handing " +
+             "the car over anyway. The player starts the race by getting in, so getting in before the field " +
+             "is in its boxes starts the formation lap with nothing to form up behind.")]
+    public float fieldWaitTimeout = 20f;
+
     [Header("Cast")]
     [Tooltip("The pit greeter, race engineer and crew chief are PlacedNPC markers now — place, edit and gate " +
              "them in the NPC Director (Draftmaster > NPCs > Director). With this on, a scene that has no " +
@@ -199,7 +204,7 @@ public class PitLaneStart : MonoBehaviour
         // Lights out before anything is drawn. The demo opens on a black screen with an alarm clock going
         // off, so the first frame of the paddock must not be visible underneath it — the decision is made
         // here, at the top of the scene open, and the beat itself plays once there is a player to wake up.
-        bool waking = ShouldWakeUp(marker);
+        bool waking = GameSession.OnFootAllowed && ShouldWakeUp(marker);
         if (waking) ScreenFade.HoldBlack();
 
         // If a walkable boundary is authored, never spawn the player outside it.
@@ -227,6 +232,32 @@ public class PitLaneStart : MonoBehaviour
         car.enabled = false;
         var spline = car.GetComponent<SplineDriver>();
         if (spline != null) spline.enabled = false;
+
+        // A single race never puts a body on the ground. No walk up pit road, no motorhome, no cast and no
+        // title card: the driver is already strapped in when the scene opens, at driving zoom, and what is
+        // left of this object is the pit geometry it just published and the tow. Everything below this
+        // point builds the on-foot opening, so a single race stops here.
+        if (!GameSession.OnFootAllowed)
+        {
+            _pitSamples = samples;
+            _usedPit = usedPit;
+
+            _cam = Camera.main;
+            if (_cam != null)
+            {
+                _camFollow = _cam.GetComponent<CameraFollow>();
+                if (_camFollow == null) _camFollow = _cam.gameObject.AddComponent<CameraFollow>();
+                _camFollow.target = car.transform;
+                _cam.orthographicSize = drivingOrthoSize;
+            }
+            _orthoTarget = drivingOrthoSize;
+
+            _entered = true;
+            _briefed = true;   // nobody to brief and no setup panel: this is a race, not a race weekend
+            AmbienceLoop.Play(ambienceClip, ambienceVolume);
+            StartCoroutine(DriveOnceTheFieldIsUp());
+            return;
+        }
 
         SpawnPlayer(playerPos);
         AmbienceLoop.Play(ambienceClip, ambienceVolume);
@@ -306,6 +337,35 @@ public class PitLaneStart : MonoBehaviour
             _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform, when);
             SyncCarMarker();
         }
+    }
+
+    // Hand the car over once the rest of the scene is standing, not on the frame it is built.
+    //
+    // Climbing into the car is what starts the race (PlayerEnteredCar -> FormationDirector.BeginFormation),
+    // and that only works if the people listening for it exist and the field it forms up is parked. In a
+    // career the walk up pit road buys all of that: several seconds in which FormationDirector.Start
+    // subscribes, the safety car is spawned and GridSpawner finishes putting every AI in its box. A single
+    // race has no walk, so firing the hand-over from inside this object's own Start ran the formation lap
+    // before there was a field or a safety car to run it behind, and the AI drove off at racing pace,
+    // leaving the player parked.
+    //
+    // So: one frame for everyone else's Start, then the field's own signal, then over it goes. The timeout
+    // covers a scene with no GridSpawner in it at all rather than leaving the player sat in a dead car.
+    IEnumerator DriveOnceTheFieldIsUp()
+    {
+        yield return null;   // every other Start() has now run, subscriptions included
+
+        if (FindFirstObjectByType<GridSpawner>() != null)
+        {
+            float deadline = Time.time + fieldWaitTimeout;
+            while (!GridSpawner.FieldReady && Time.time < deadline) yield return null;
+        }
+
+        // One more frame so the cars that were just parked have had a physics step to settle on their
+        // boxes before the phase moves off PreGrid and releases them.
+        yield return new WaitForFixedUpdate();
+
+        StartDriving(CarSetup.Load());
     }
 
     // ------------------------------------------------------------------ waking up
@@ -463,9 +523,12 @@ public class PitLaneStart : MonoBehaviour
         PlacedNPC.CutsceneFinished -= OnPlacedCutsceneFinished;
     }
 
-    // An opening beat has finished: put its objective on screen, fly the car marker out from the centre so
-    // the eye follows it to the edge, and only now teach the run control (the player has just got movement
-    // back, and the hint would otherwise have landed under the dialogue).
+    // An opening beat has finished: put the objective back on screen and only now teach the run control
+    // (the player has just got movement back, and the hint would otherwise have landed under the dialogue).
+    //
+    // What it no longer does is throw the car marker's fly-in again. That marker flew in when it was added,
+    // and a second fly-in out of the middle of the screen does not read as emphasis — it reads as a second
+    // marker turning up.
     void OnPlacedCutsceneFinished(PlacedNPC npc)
     {
         _hintsHeldForCutscene = false;
@@ -473,8 +536,14 @@ public class PitLaneStart : MonoBehaviour
 
         if (_intro != null)
         {
-            if (npc != null && !string.IsNullOrEmpty(npc.objectiveOnFinish)) _intro.ShowTitle(npc.objectiveOnFinish);
-            _intro.PulseMarker(car.transform);
+            // The centre card says where you are, not what you are due — that belongs on the strip at the
+            // top, which is the one place the objective is written. So the beat's closing line slides that
+            // strip back in; the card is only used when there is no strip to use (a booking-less scene),
+            // where it is the only surface there is.
+            bool toldByTheStrip = WeekendAppointment.Pending != null && WeekendObjectiveHUD.Instance != null;
+            if (toldByTheStrip) WeekendObjectiveHUD.Reveal();
+            else if (npc != null && !string.IsNullOrEmpty(npc.objectiveOnFinish))
+                _intro.ShowTitle(npc.objectiveOnFinish);
         }
         if (showControlHints && !_hintedRun)
         {
@@ -685,7 +754,10 @@ public class PitLaneStart : MonoBehaviour
     // car's box is.
     public bool TowToPits()
     {
-        if (!IsDriving || car == null || _player == null || !_boxKnown) return false;
+        if (!IsDriving || car == null || !_boxKnown) return false;
+        // A single race has no body to stand beside the car, but the tow itself still has to work: the car
+        // is dragged to its box and repaired with the driver left sat in it.
+        if (_player == null && GameSession.OnFootAllowed) return false;
 
         // Controls off first. The body is about to be teleported and a live controller would spend the
         // frame fighting the move.
@@ -714,6 +786,16 @@ public class PitLaneStart : MonoBehaviour
         // voids a running lap is read off a car's spline, and the human car's is switched off, so the clock
         // ran on through the crash, the tow and the whole repair.
         if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
+
+        // No on-foot body in this mode: the car is back in its box, the crew go to work on it, and the
+        // driver never gets out. Controls come back on the far side of the repair, the same as the car
+        // they would have climbed back into.
+        if (_player == null)
+        {
+            car.enabled = true;
+            PitCrewRepair.Begin(car);
+            return true;
+        }
 
         // Stood at the driver's door rather than inside the car, so walking away from it works the same as
         // it did at the start of the session.

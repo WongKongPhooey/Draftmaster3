@@ -37,20 +37,39 @@ public class SpeedometerUI : MonoBehaviour
     float _displayedMph;
     float _findTimer;      // seconds until the next look for the player's car
     PitLimiter _limiter;
+    Canvas _canvas;
 
-    void Awake() => ResolveRefs();
+    void Awake()
+    {
+        ResolveRefs();
+        _canvas = GetComponentInParent<Canvas>();
+    }
 
     void Update()
     {
+        // A car that has been switched off is not a car to read: the scene's PlayerCar sits in its box with
+        // its controller disabled for the whole walk up pit road, and a target latched onto it would hold
+        // the gauge open over the paddock.
+        if (target != null && !target.isActiveAndEnabled) target = null;
+
         // Retry on a timer, not every frame: the named-object half of the search is a GameObject.Find,
         // which walks the scene, and it finds nothing at all while the player is on foot.
         if (target == null)
         {
             _findTimer -= Time.unscaledDeltaTime;
-            if (_findTimer > 0f) return;
-            _findTimer = 0.5f;
-            target = FindPlayer();
+            if (_findTimer <= 0f)
+            {
+                _findTimer = 0.5f;
+                target = FindPlayer();
+            }
         }
+
+        // The dial is a driving instrument. With nobody in a car it is a needle parked at zero over the
+        // paddock — furniture from another screen — so the gauge shows itself only while there is a car to
+        // read. In the car the Iron Oval HUD usually stands this whole canvas down and draws the speed its
+        // own way; this is what covers the walk, before that ever happens.
+        ShowGauge(target != null);
+
         if (target == null || needle == null) return;
         var readout = target as IVehicleSpeedReadout;
         if (readout == null) return;
@@ -63,6 +82,14 @@ public class SpeedometerUI : MonoBehaviour
         if (speedText != null) speedText.text = Mathf.RoundToInt(_displayedMph).ToString();
 
         UpdateLimiterChip();
+    }
+
+    // Hide by switching the Canvas off rather than the GameObject: this component has to keep ticking to
+    // notice the player getting into a car, and a deactivated object never runs again.
+    void ShowGauge(bool visible)
+    {
+        if (_canvas == null) _canvas = GetComponentInParent<Canvas>();
+        if (_canvas != null && _canvas.enabled != visible) _canvas.enabled = visible;
     }
 
     // Pit-limiter state, on the dial where the driver is already looking. Blank outside the pit lane.
