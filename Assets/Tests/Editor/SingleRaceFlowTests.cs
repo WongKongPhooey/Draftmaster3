@@ -103,6 +103,34 @@ public class SingleRaceFlowTests
         finally { EditorSceneManager.CloseScene(scene, true); }
     }
 
+    // The end of the flow: GO drops the player into the race scene sat in the car, in a pit box, in a
+    // slot drawn out of the hat (GridSpawner + Draftmaster.Sim.StartingGrid). The draw only exists on a
+    // PIT start — it is a pit box index — and it only means anything with a field to be drawn into, so
+    // those two scene settings are what this pins. The rule itself is covered by StartingGridTests.
+    [Test]
+    public void TheRaceSceneStartsItsFieldFromThePitBoxes()
+    {
+        var scene = EditorSceneManager.OpenScene(RaceScenePath, OpenSceneMode.Additive);
+        try
+        {
+            var grid = FindComponent(scene, "GridSpawner");
+            Assert.IsNotNull(grid, "RaceScene has no GridSpawner, so nothing puts a field out.");
+
+            Assert.IsTrue(grid.FindProperty("formationRace").boolValue,
+                          "formationRace is off, so the field lines up on the track instead of in the pit " +
+                          "boxes — a single race would not start in its box and has no box index to draw.");
+            Assert.Greater(grid.FindProperty("count").intValue, 1,
+                           "A field of one has no grid to be drawn a place on.");
+
+            var pls = FindComponent(scene, "PitLaneStart");
+            Assert.IsNotNull(pls, "RaceScene has no PitLaneStart — nothing parks the player's car or puts " +
+                                  "them in it when the field is up.");
+            Assert.IsNotNull(pls.FindProperty("car").objectReferenceValue,
+                             "PitLaneStart has no car wired, so a single race opens with nothing to drive.");
+        }
+        finally { EditorSceneManager.CloseScene(scene, true); }
+    }
+
     // The point of the screen. If this ever collapses back to one, the track pipeline has regressed and
     // the flow is pointless.
     [Test]

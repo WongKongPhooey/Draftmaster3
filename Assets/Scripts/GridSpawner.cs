@@ -259,12 +259,18 @@ public class GridSpawner : MonoBehaviour
         var director = practice ? PracticeDirector.Ensure() : null;
         if (!practice) RaceDirector.Ensure();   // race sessions get a finish + results screen
 
+        // A single race is one race on its own. There was no qualifying in front of it, so any GridOrder
+        // still sat in memory belongs to a career weekend this race has nothing to do with — reading it
+        // here would pin the field's identities to somebody else's session and hand the player a rank they
+        // earned at another track.
+        bool qualifyingCounts = !practice && !GameSession.IsSingleRace;
+
         // Race after qualifying: the captured grid fixes each car's identity and slot. GridOrder[g] is
         // grid slot g (pole = 0); the player's rank becomes their reserved pit box, and the AI keep the
         // name/livery they qualified with instead of re-shuffling on the reload.
         List<RaceWeekend.GridEntry> aiGrid = null;
         int playerRank = -1;
-        if (!practice && RaceWeekend.GridOrder != null && RaceWeekend.GridOrder.Count > 0)
+        if (qualifyingCounts && RaceWeekend.GridOrder != null && RaceWeekend.GridOrder.Count > 0)
         {
             aiGrid = new List<RaceWeekend.GridEntry>();
             for (int g = 0; g < RaceWeekend.GridOrder.Count; g++)
@@ -311,10 +317,15 @@ public class GridSpawner : MonoBehaviour
             // Qualified: the player's grid rank IS their box (box order = grid order); the snap below
             // physically parks the car there.
             if (playerRank >= 0) reservedBox = Mathf.Clamp(playerRank, 0, totalBoxes - 1);
-            // Race with no qualifying rank for the player (weekend skipped straight to race, or the
-            // player never made the timing rows): no time = no earned slot — start from the very back.
-            // Without this the physical fallback above maps the default pit parking spot to the front.
-            else if (!practice) reservedBox = totalBoxes - 1;
+            // Race with no qualifying rank for the player. A career weekend that skipped straight to the
+            // race, or a driver who never made the timing rows, starts from the very back: no time = no
+            // earned slot. A single race has no qualifying to have missed, so it draws its slot instead —
+            // the whole point of picking a track and a car is a different race each time, not the same
+            // climb from 44th. Either way this replaces the physical fallback above, which maps the
+            // default pit parking spot to the front.
+            else if (!practice)
+                reservedBox = Draftmaster.Sim.StartingGrid.UnqualifiedSlot(totalBoxes,
+                                                                           GameSession.IsSingleRace);
             // Tell the player car its reserved grid slot so the formation order holds the place open for it.
             if (pls.car != null) pls.car.SetFormationGrid(reservedBox);
             // Publish it so the player-facing pit systems (box marker, pit service) know which box is theirs.
