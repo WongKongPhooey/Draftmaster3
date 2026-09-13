@@ -135,6 +135,25 @@ namespace Draftmaster.Sponsors
             return total;
         }
 
+        // Bank the player's finish against every live deal's contract-long target, and return the money
+        // that just came due. Almost every race returns 0 — a target pays once, on the race it is met.
+        //
+        // Call this BEFORE TickRace, while the race just run still counts as one of the deal's races.
+        public static int SettleTargets(int position)
+        {
+            int paid = 0;
+            bool changed = false;
+            foreach (var d in Data.deals)
+            {
+                if (d == null) continue;
+                int before = d.targetProgress;
+                paid += d.RecordFinish(position);
+                if (d.targetProgress != before) changed = true;
+            }
+            if (changed) Save();
+            return paid;
+        }
+
         // Burn one race off every live deal and drop the ones that run out. Unplaced deals burn too: sitting
         // on a contract you never painted on the car wastes it, which is the pressure that makes panels scarce.
         // Returns the deals that just expired, for the results screen to report.

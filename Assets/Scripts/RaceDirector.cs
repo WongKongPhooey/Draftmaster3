@@ -240,6 +240,12 @@ public class RaceDirector : MonoBehaviour
             // pays a premium and a weekend of no-shows is docked (WeekendLedger.SponsorPayoutMultiplier).
             _sponsorPayout = SponsorBook.PayoutForFinish(playerPos);
             _sponsorPayout = Mathf.RoundToInt(_sponsorPayout * Draftmaster.Weekend.WeekendLedger.SponsorPayoutMultiplier);
+
+            // A contract-long target settles here too ("finish top 5 twice before this runs out"), and it
+            // is paid flat: the weekend's appearance multiplier is a retainer's business, not a lump the
+            // driver earned on the track. Settled BEFORE TickRace, while this race still belongs to the
+            // deal that counted it.
+            _sponsorPayout += SponsorBook.SettleTargets(playerPos);
             if (_sponsorPayout > 0) PlayerWallet.Add(_sponsorPayout);
 
             // The press ask about your last result, so the ledger keeps it.
