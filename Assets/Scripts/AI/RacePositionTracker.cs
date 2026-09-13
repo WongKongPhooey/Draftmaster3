@@ -58,6 +58,23 @@ public class RacePositionTracker : MonoBehaviour
         return 0;
     }
 
+    // A car was picked up and put down somewhere else — a tow back to the pits, a car handed over, a driver
+    // moved into another seat. It did not drive there, so the jump in its distance along the track is not
+    // progress and must not be scored as one.
+    //
+    // Laps are counted by watching a car's distance wrap: a big drop is the start/finish line going past,
+    // a big rise is a nudge back over it. A teleport is a bigger jump than either, so without this the tow
+    // handed the driver a free lap (or took one off them) purely for being dragged home — and the lap clock
+    // read that as a line crossing and started timing a lap the car was never on. Forgetting the previous
+    // distance skips exactly one wrap test, which is the one that would have been wrong.
+    public static void NoteTeleport(Transform tf) => Instance?.ForgetProgressHistory(tf);
+
+    public void ForgetProgressHistory(Transform tf)
+    {
+        if (tf == null) return;
+        if (_byTf.TryGetValue(tf, out var e)) e.hasPrev = false;
+    }
+
     // Current lap (0-based, as counted across the line) for a car by its transform. 0 if unknown.
     public int LapOf(Transform tf)
     {
@@ -231,7 +248,8 @@ public class RacePositionTracker : MonoBehaviour
             if (sf != 0f) dist = Mathf.Repeat(dist - sf, len);
         }
 
-        if (e.hasPrev)
+        bool hadPrev = e.hasPrev;
+        if (hadPrev)
         {
             if (e.prevDist - dist > len * 0.5f) e.lap++;          // forward wrap across the line
             else if (dist - e.prevDist > len * 0.5f) e.lap--;     // small backward nudge across the line
@@ -241,6 +259,10 @@ public class RacePositionTracker : MonoBehaviour
         e.progress = e.lap * len + dist;
 
         float dt = Time.deltaTime;
+        // Nothing to measure a speed against: a car that has only just joined the field, or one that was
+        // moved rather than driven (NoteTeleport). Dividing the whole jump by one frame is a speed it
+        // never did, and it is read as a real one — the lap clock pulls the line crossing back by it.
+        if (!hadPrev) e.prevProgress = e.progress;
         if (dt > 0f) e.speedMps = Mathf.Clamp((e.progress - e.prevProgress) / dt, 0f, 200f);
         e.prevProgress = e.progress;
     }

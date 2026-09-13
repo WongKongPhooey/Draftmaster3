@@ -55,6 +55,9 @@ public class LapTimingManager : MonoBehaviour
 
         public bool hooked;           // wall-hit event wired
         public float invalidFlashUntil;
+        // The car was moved rather than driven (a tow home). Whatever its lap counter did across the jump
+        // is not a lap: re-baseline against it on the next pass instead of reading it as a line crossing.
+        public bool resync;
 
         public float CurrentLapTime(float now) => lapStarted ? now - lapStartTime : -1f;
     }
@@ -136,6 +139,17 @@ public class LapTimingManager : MonoBehaviour
             c.isPlayer = e.isPlayer;
             if (c.isPlayer) _player = c;
             HookWallHits(c);
+
+            // Towed home. The car crossed no line to get here, so the lap counter's answer on this pass is
+            // taken as the new baseline and nothing is timed off it. Without this the clock the tow had just
+            // stopped was started again on the very next frame by the jump the tow itself caused.
+            if (c.resync)
+            {
+                c.resync = false;
+                c.lapStarted = false;
+                c.prevLap = e.lap;
+                continue;
+            }
 
             // Pit lane voids the lap in progress; timing re-arms at the next line crossing.
             //
@@ -239,6 +253,7 @@ public class LapTimingManager : MonoBehaviour
         if (!_cars.TryGetValue(car, out var c)) return;
         c.lapStarted = false;
         c.valid = false;
+        c.resync = true;
     }
 
     void Invalidate(CarTimes c)

@@ -726,6 +726,7 @@ public class PitLaneStart : MonoBehaviour
 
         _phase = EntryPhase.Driving;
         _briefed = true;
+        ParkedCarPin.Release(car);   // it is being driven now, not parked (a tow pins it; see TowToPits)
         car.enabled = true; // PlayerVehicleController.Start captures parked heading on first enable
         if (fitPitLimiter) EnsurePitLimiter();
 
@@ -763,6 +764,17 @@ public class PitLaneStart : MonoBehaviour
         // frame fighting the move.
         car.enabled = false;
 
+        // And the AI brain with them. The player's own car keeps a SplineDriver it does not normally use,
+        // and the broadcast cut (V) and the crew chief's headset both switch it on to drive the car while
+        // the player is watching somebody else. A brain left running through a tow does not park the car in
+        // its box — it drives it back out onto the circuit, which is the driver stood in an empty box
+        // watching their lap clock carry on. The same two lines the scene open parks it with.
+        var brain = car.GetComponent<SplineDriver>();
+        if (brain != null) brain.enabled = false;
+        var aiInput = car.GetComponent<SplineInputDriver>();
+        if (aiInput != null) aiInput.enabled = false;
+        car.externalInput = false;
+
         CurrentBoxPose(out Vector3 boxPos, out float boxHeadingDeg);
 
         // Parked through the dynamic model rather than by writing the transform: SeedPose puts the car on
@@ -782,6 +794,12 @@ public class PitLaneStart : MonoBehaviour
             body.rotation = car.transform.eulerAngles.z;
         }
 
+        // The running order is kept by watching each car's distance along the track tick past, so a car that
+        // is picked up and put down somewhere else has to say so — otherwise the jump reads as a lap. Half a
+        // lap's worth of it, at the wrong moment, and the tow hands the driver a free lap on the scoreboard
+        // and re-arms the clock it is about to stop.
+        RacePositionTracker.NoteTeleport(car.transform);
+
         // The lap they were on ended in the wall. Nothing else was going to end it: the pit-lane rule that
         // voids a running lap is read off a car's spline, and the human car's is switched off, so the clock
         // ran on through the crash, the tow and the whole repair.
@@ -796,6 +814,11 @@ public class PitLaneStart : MonoBehaviour
             PitCrewRepair.Begin(car);
             return true;
         }
+
+        // Nothing owns a parked car's pose: the controller that was writing it is off, and the crew are
+        // going to be working on it for minutes. Pin it to the box so it is still there when the driver
+        // walks back to it. See ParkedCarPin — it takes itself off the moment the car is driven again.
+        ParkedCarPin.Hold(car);
 
         // Stood at the driver's door rather than inside the car, so walking away from it works the same as
         // it did at the start of the session.

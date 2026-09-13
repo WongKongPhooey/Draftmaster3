@@ -61,7 +61,10 @@ public class TowToPitsTests
             object s = Activator.CreateInstance(sampleType);
             sampleType.GetField("position").SetValue(s, new Vector2(d, 0f));
             sampleType.GetField("tangent").SetValue(s, new Vector2(1f, 0f));
-            sampleType.GetField("normal").SetValue(s, new Vector2(0f, 1f));
+            // TrackBuilder re-derives a sample's normal from its tangent when it interpolates between two of
+            // them (normal = (tangent.y, -tangent.x)), so an authored normal that disagrees is thrown away.
+            // Authoring the one it is going to compute anyway keeps the arithmetic below honest.
+            sampleType.GetField("normal").SetValue(s, new Vector2(0f, -1f));
             sampleType.GetField("width").SetValue(s, 12f);
             sampleType.GetField("distance").SetValue(s, d);
             list.Add(s);
@@ -142,8 +145,9 @@ public class TowToPitsTests
         {
             Assert.IsTrue(rig.Tow(), "a driving player with a known box can be towed");
 
-            // Box 5 on a 200 m lane: 20 m of exit gap, then five boxes back, parked out on the box lane.
-            var expected = new Vector2(PitLength - ExitGap - PlayerBox * Spacing, ParkLateral);
+            // Box 5 on a 200 m lane: 20 m of exit gap, then five boxes back, parked out on the box lane —
+            // which sits along the pit lane's normal, and on this straight that points at -Y.
+            var expected = new Vector2(PitLength - ExitGap - PlayerBox * Spacing, -ParkLateral);
             Vector3 landed = rig.CarGo.transform.position;
 
             Assert.AreEqual(expected.x, landed.x, 0.01f, "parked at its own box along the lane");
@@ -202,6 +206,118 @@ public class TowToPitsTests
             Assert.IsTrue(rig.Tow());
             Assert.Less(Vector2.Distance(rig.CarGo.transform.position, OpeningPose), 0.01f);
         }
+    }
+
+    [Test]
+    public void TheTowedCarIsPinnedOnItsBox()
+    {
+        // Placing a car is not the same as keeping it there. Nothing owns a parked car's pose — its
+        // controller is switched off and the crew are about to spend minutes on it — so anything that
+        // touches it in the meantime (a depenetration push off the next box, a body that kept a little of
+        // the speed it hit the wall with) walks it out of the box over the following seconds, and the
+        // driver comes back to an empty patch of tarmac.
+        ConfigurePitBoxes();
+        using (var rig = new Rig())
+        {
+            rig.Tow();
+            Vector3 box = rig.CarGo.transform.position;
+
+            var pin = rig.CarGo.GetComponent(Runtime("ParkedCarPin"));
+            Assert.IsNotNull(pin, "a towed car is pinned on its box until somebody drives it");
+
+            // Shoved out of the box by something else in the scene, then the pin gets its frame.
+            rig.CarGo.transform.position = box + new Vector3(4f, 3f, 0f);
+            rig.CarGo.GetComponent<Rigidbody2D>().linearVelocity = new Vector2(6f, 0f);
+            Reassert(pin);
+
+            Assert.Less(Vector2.Distance(rig.CarGo.transform.position, box), 0.01f,
+                        "the car is put back on the box it was towed to");
+            Assert.AreEqual(Vector2.zero, rig.CarGo.GetComponent<Rigidbody2D>().linearVelocity,
+                            "and it is not still trying to drive off");
+        }
+    }
+
+    [Test]
+    public void ThePinComesOffTheMomentTheCarIsDrivenAgain()
+    {
+        ConfigurePitBoxes();
+        using (var rig = new Rig())
+        {
+            rig.Tow();
+            var pin = rig.CarGo.GetComponent(Runtime("ParkedCarPin"));
+
+            // The driver is back in it: the controller owns the pose again and the pin must let go rather
+            // than fight it back onto the box every frame.
+            ((Behaviour)rig.Car).enabled = true;
+            Reassert(pin);
+
+            Assert.IsTrue(pin == null, "the pin takes itself off when the car is being driven");
+        }
+    }
+
+    [Test]
+    public void TheTowSwitchesOffAnyAiBrainDrivingThePlayersCar()
+    {
+        // The broadcast cut and the crew chief's headset both hand the player's own car to the AI. A brain
+        // left running through a tow does not park the car in its box, it drives it back out of the pit lane.
+        ConfigurePitBoxes();
+        using (var rig = new Rig())
+        {
+            var spline = (Behaviour)rig.CarGo.AddComponent(Runtime("SplineDriver"));
+            var aiInput = (Behaviour)rig.CarGo.AddComponent(Runtime("SplineInputDriver"));
+            spline.enabled = true;
+            aiInput.enabled = true;
+
+            rig.Tow();
+
+            Assert.IsFalse(spline.enabled, "the spline brain is off");
+            Assert.IsFalse(aiInput.enabled, "and so is the thing feeding it to the car");
+            Assert.IsFalse((bool)GetField(rig.Car, "externalInput"), "the car is taking nobody's inputs");
+        }
+    }
+
+    [Test]
+    public void TheTowTellsTheRunningOrderTheCarWasMovedNotDriven()
+    {
+        // Laps are counted by watching a car's distance along the track wrap. A tow is a bigger jump than a
+        // line crossing, so unless the history is dropped the drive home is scored as a lap.
+        var trackerGo = new GameObject("RacePositionTracker");
+        var carTf = new GameObject("Car").transform;
+        try
+        {
+            var tracker = trackerGo.AddComponent(Runtime("RacePositionTracker"));
+            Type entryType = Runtime("RacePositionTracker+Entry");
+
+            object entry = Activator.CreateInstance(entryType);
+            entryType.GetField("tf").SetValue(entry, carTf);
+            entryType.GetField("hasPrev").SetValue(entry, true);
+            entryType.GetField("prevDist").SetValue(entry, 2500f);
+
+            var byTf = (IDictionary)GetField(tracker, "_byTf");
+            byTf[carTf] = entry;
+
+            // The static NoteTeleport goes through the singleton, which is set in Awake — and EditMode never
+            // runs one. Drive the instance it would have found.
+            Assert.IsNotNull(tracker.GetType().GetMethod("NoteTeleport", BindingFlags.Static | BindingFlags.Public),
+                             "the tow calls this without having to find the tracker itself");
+            tracker.GetType().GetMethod("ForgetProgressHistory").Invoke(tracker, new object[] { carTf });
+
+            Assert.IsFalse((bool)entryType.GetField("hasPrev").GetValue(entry),
+                           "the next distance sample starts a new history rather than being compared to the old one");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(carTf.gameObject);
+            UnityEngine.Object.DestroyImmediate(trackerGo);
+        }
+    }
+
+    // Give a pin the frame it would get from FixedUpdate/LateUpdate. EditMode runs no game loop, so the
+    // component's own callbacks never fire and the re-assert has to be asked for by hand.
+    static void Reassert(Component pin)
+    {
+        pin.GetType().GetMethod("Reassert", BindingFlags.Instance | BindingFlags.NonPublic)
+           .Invoke(pin, null);
     }
 
     [Test]
