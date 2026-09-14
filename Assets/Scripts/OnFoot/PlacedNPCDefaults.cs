@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // The pit-lane opening cast, as PlacedNPC markers: the greeter and the crew chief.
 //
@@ -327,12 +328,20 @@ public static class PlacedNPCDefaults
 
     public static Transform Root()
     {
-        var existing = GameObject.Find(RootName);
-        if (existing != null) return existing.transform;
+        // A ROOT object of the active scene, not "the first thing called NPCs anywhere". Every track
+        // package carries its own Paddock/NPCs holding that venue's own cast, and GameObject.Find would
+        // happily hand one of those back — which installed the every-track cast INTO the open track
+        // package, where it belongs at one circuit and nowhere else.
+        var scene = SceneManager.GetActiveScene();
+        if (scene.IsValid())
+        {
+            foreach (var go in scene.GetRootGameObjects())
+                if (go.name == RootName) return go.transform;
+        }
 
-        var go = new GameObject(RootName);
-        go.transform.position = Vector3.zero;
-        return go.transform;
+        var created = new GameObject(RootName);
+        created.transform.position = Vector3.zero;
+        return created.transform;
     }
 
     static PlacedNPC New(string name, Transform parent)
