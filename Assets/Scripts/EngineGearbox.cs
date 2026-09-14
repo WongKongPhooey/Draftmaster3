@@ -34,6 +34,10 @@ public class EngineGearbox : MonoBehaviour
     public float AccelMultiplier { get; private set; } = 1f;
     /// <summary>+1 just upshifted, -1 just downshifted, 0 otherwise. Cleared after one frame — poll for SFX.</summary>
     public int ShiftEvent { get; private set; }
+    /// <summary>Is anything actually driving this car right now. False for a parked car — nobody is in it,
+    /// the engine is off, and EngineAudio holds its voice rather than idling at whatever speed a switched-off
+    /// brain still reports.</summary>
+    public bool Running { get; private set; }
 
     bool HasGears => vehicleInfo != null && vehicleInfo.gearRatios != null && vehicleInfo.gearRatios.Length > 0;
 
@@ -41,6 +45,7 @@ public class EngineGearbox : MonoBehaviour
     float _shiftTimer;
     float _prevSpeedMps;
     float _rpmTarget;
+    float _resolveCooldown;
 
     void Awake()
     {
@@ -58,41 +63,65 @@ public class EngineGearbox : MonoBehaviour
         _rpmTarget = Rpm;
         AccelMultiplier = 1f;
         Load01 = 0f;
+        Running = false;
     }
 
     // Pick the speed source that's actually driving the car: the ENABLED IVehicleSpeedReadout. A player car carries
     // both a PlayerVehicleController and a SplineDriver (its broadcast/AI brain) — only one is enabled at a time.
     // A disabled SplineDriver still reports its constant cruise speed, which would pin the engine note at full RPM.
+    //
+    // NOTHING enabled means nobody is driving this car, and that is answered with null rather than with a
+    // disabled component's stale readout. A parked car is parked: the scene opens with the player's car sat
+    // in its box with both brains switched off, and taking the switched-off one's cruise speed as gospel is
+    // what had a career load open on a car screaming at full revs in an empty pit lane.
     IVehicleSpeedReadout ResolveSpeedSource()
     {
         var comps = GetComponents<MonoBehaviour>();
-        IVehicleSpeedReadout fallback = null;
         for (int i = 0; i < comps.Length; i++)
-        {
-            if (comps[i] is IVehicleSpeedReadout r)
-            {
-                fallback ??= r;
-                if (comps[i].isActiveAndEnabled) return r;
-            }
-        }
-        return fallback;
+            if (comps[i] is IVehicleSpeedReadout r && comps[i].isActiveAndEnabled) return r;
+        return null;
     }
 
     void FixedUpdate()
     {
         ShiftEvent = 0;
 
+        float dt = Time.fixedDeltaTime;
+
         // Re-resolve when the live driver changes (driving ↔ broadcast/crew-chief swaps which readout is enabled).
+        // A car nobody is driving asks again on a timer rather than every physics step: GetComponents allocates,
+        // and a paddock full of parked cars would pay for that 50 times a second each to be told "still parked".
         if (_speedSource is MonoBehaviour mb && !mb.isActiveAndEnabled) _speedSource = ResolveSpeedSource();
-        else if (_speedSource == null) _speedSource = ResolveSpeedSource();
+        else if (_speedSource == null)
+        {
+            _resolveCooldown -= dt;
+            if (_resolveCooldown <= 0f)
+            {
+                _resolveCooldown = 0.25f;
+                _speedSource = ResolveSpeedSource();
+            }
+        }
+
+        Running = _speedSource != null;
 
         if (!HasGears || _speedSource == null)
         {
             AccelMultiplier = 1f;
+            // Parked: let the revs fall away so whoever climbs in next starts from a cold engine rather than
+            // from the note this car was making when its driver got out.
+            if (_speedSource == null)
+            {
+                Load01 = 0f;
+                _prevSpeedMps = 0f;
+                if (vehicleInfo != null)
+                {
+                    Rpm = Mathf.Lerp(Rpm, vehicleInfo.idleRpm, 1f - Mathf.Exp(-dt / 0.3f));
+                    Rpm01 = Mathf.InverseLerp(vehicleInfo.idleRpm, vehicleInfo.maxRpm, Rpm);
+                }
+            }
             return;
         }
 
-        float dt = Time.fixedDeltaTime;
         float speedMps = Mathf.Max(0f, _speedSource.SpeedMps);
 
         // Engine load: are we gaining speed (on power) or coasting/braking? Drives audio + lets a closed

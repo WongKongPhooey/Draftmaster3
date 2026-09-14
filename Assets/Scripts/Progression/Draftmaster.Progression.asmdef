@@ -2,7 +2,8 @@
     "name": "Draftmaster.Progression",
     "rootNamespace": "Draftmaster.Progression",
     "references": [
-        "Draftmaster.Fans"
+        "Draftmaster.Fans",
+        "Draftmaster.Weekend"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

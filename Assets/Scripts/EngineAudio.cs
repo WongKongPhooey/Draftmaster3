@@ -50,16 +50,28 @@ public class EngineAudio : MonoBehaviour
     [Range(0f, 1f)] public float spatialBlend = 0f;
     [Tooltip("3D doppler amount. 0 disables the pitch-shift-on-pass effect.")]
     [Range(0f, 5f)] public float dopplerLevel = 0.4f;
+    [Tooltip("Distance (m) inside which a 3D engine is at full volume. Logarithmic rolloff halves the level on every doubling of this.")]
+    public float minDistance = 8f;
     [Tooltip("Distance (m) beyond which a 3D engine is at its quietest.")]
-    public float maxDistance = 120f;
+    public float maxDistance = 400f;
+    [Tooltip("Custom is the house curve: a 1/d swell as a car comes past, faded out to actual silence by maxDistance. Logarithmic never reaches silence — a full field then sits under everything as a floor of distant hum. Linear fades evenly and sounds flat.")]
+    public AudioRolloffMode rolloff = AudioRolloffMode.Custom;
+    [Tooltip("Stereo spread (degrees) of the 3D source. A little stops a car hard-panning into one ear as it goes by.")]
+    [Range(0f, 360f)] public float spread = 35f;
 
     [Header("One-shots")]
     [Tooltip("Optional samples played on each gear change. One is picked at random.")]
     public AudioClip[] shiftClips;
     [Range(0f, 1f)] public float shiftVolume = 0.8f;
-    [Tooltip("Optional engine-start/crank sample played once when the component wakes.")]
+    [Tooltip("Optional engine-start/crank sample played when the engine is fired up (the driver climbs in), not when the component wakes.")]
     public AudioClip startClip;
     [Range(0f, 1f)] public float startVolume = 0.9f;
+
+    [Header("Ignition")]
+    [Tooltip("Silence the engine unless something is actually driving this car (EngineGearbox.Running). A parked car has its engine off.")]
+    public bool silentWhenParked = true;
+    [Tooltip("Seconds to fade the engine in when it fires and out when it's switched off.")]
+    public float ignitionFadeSeconds = 0.35f;
 
     // A single RPM-banked set of looping sources.
     class Bank
@@ -114,6 +126,20 @@ public class EngineAudio : MonoBehaviour
             }
         }
 
+        // A parked car's loops are stopped outright rather than turned down to zero: a field of 40 cars is
+        // 40 x N looping voices, and Unity mixes silence at the same cost as noise.
+        public void SetPlaying(bool play)
+        {
+            if (_src == null) return;
+            for (int i = 0; i < _src.Length; i++)
+            {
+                var s = _src[i];
+                if (s == null || s.clip == null) continue;
+                if (play && !s.isPlaying) s.Play();
+                else if (!play && s.isPlaying) { s.Stop(); _vol[i] = 0f; s.volume = 0f; }
+            }
+        }
+
         // Triangular crossfade between the two layers bracketing the current RPM.
         float Weight(int i, float rpm, int n)
         {
@@ -133,6 +159,8 @@ public class EngineAudio : MonoBehaviour
     Bank _onBank;
     Bank _offBank;
     AudioSource _oneShot; // shift + start bus
+    bool _running;        // is the engine turning — mirrors EngineGearbox.Running
+    float _gate;          // 0 = engine off and silent, 1 = fully voiced
 
     void Awake()
     {
@@ -155,15 +183,56 @@ public class EngineAudio : MonoBehaviour
         _oneShot.loop = false;
         ConfigureSpatial(_oneShot);
 
-        if (startClip != null) _oneShot.PlayOneShot(startClip, startVolume);
+        // The banks start stopped: a car is silent until something drives it. StepIgnition fires them up.
+        _gate = 0f;
+        _running = false;
+        _onBank.SetPlaying(false);
+        _offBank.SetPlaying(false);
     }
 
     void ConfigureSpatial(AudioSource s)
     {
         s.spatialBlend = spatialBlend;
         s.dopplerLevel = dopplerLevel;
-        s.rolloffMode = AudioRolloffMode.Linear;
-        s.maxDistance = maxDistance;
+        s.minDistance = Mathf.Max(0.1f, minDistance);
+        s.maxDistance = Mathf.Max(s.minDistance + 1f, maxDistance);
+        s.spread = spread;
+        s.rolloffMode = rolloff;
+        if (rolloff == AudioRolloffMode.Custom) s.SetCustomCurve(AudioSourceCurveType.CustomRolloff, RolloffCurve());
+    }
+
+    // 1/d out to maxDistance, then taken the rest of the way to silence.
+    //
+    // Unity's own Logarithmic mode clamps at maxDistance rather than reaching zero, so every car in a
+    // 40-car field keeps a small permanent voice no matter how far away it is and the whole grid piles up
+    // as a hum under the mix. This is the same near-field shape — a car swelling as it comes past the pit
+    // wall and falling away behind — with the tail actually taken to nothing, so what you hear is the cars
+    // near you rather than all of them at once.
+    AnimationCurve _rolloffCurve;
+
+    AnimationCurve RolloffCurve()
+    {
+        if (_rolloffCurve != null) return _rolloffCurve;
+
+        float min = Mathf.Max(0.1f, minDistance);
+        float max = Mathf.Max(min + 1f, maxDistance);
+
+        const int n = 18;
+        var keys = new Keyframe[n];
+        for (int i = 0; i < n; i++)
+        {
+            // Squared spacing: the near field, where a pass-by actually happens, gets most of the keys.
+            float x = Mathf.Pow(i / (float)(n - 1), 2f);
+            float d = Mathf.Max(min, x * max);
+            float v = min / d;                                    // inverse-distance law
+            float tail = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.6f, 1f, x));
+            keys[i] = new Keyframe(x, Mathf.Clamp01(v * tail));
+        }
+        keys[n - 1].value = 0f;
+
+        _rolloffCurve = new AnimationCurve(keys);
+        for (int i = 0; i < n; i++) _rolloffCurve.SmoothTangents(i, 0f);
+        return _rolloffCurve;
     }
 
     void Update()
@@ -173,10 +242,14 @@ public class EngineAudio : MonoBehaviour
         if (_gearbox == null || _onBank == null || _offBank == null) return;
         if (!_onBank.Valid && !_offBank.Valid) return;
 
+        float dt = Time.deltaTime;
+
+        StepIgnition(dt);
+        if (_gate <= 0.0001f) return;   // engine off: the loops are stopped, there is nothing to mix
+
         float rpm = _gearbox.Rpm;
         float load = _gearbox.Load01;                       // 1 = on power, 0 = coasting
-        float master = masterVolume * Mathf.Lerp(coastVolume, 1f, load);
-        float dt = Time.deltaTime;
+        float master = masterVolume * Mathf.Lerp(coastVolume, 1f, load) * _gate;
 
         // If there's no off bank, the on bank carries the whole signal regardless of load.
         float onMix = _offBank.Valid ? load : 1f;
@@ -186,6 +259,35 @@ public class EngineAudio : MonoBehaviour
         _offBank.Apply(this, rpm, offMix * master, dt);
 
         if (_gearbox.ShiftEvent != 0) PlayShift();
+    }
+
+    // Engine off / engine on. An engine is only making noise while something is driving the car, so a pit
+    // lane of parked cars — and a career that loads with no session on track at all — is quiet.
+    void StepIgnition(float dt)
+    {
+        bool running = !silentWhenParked || _gearbox.Running;
+
+        if (running != _running)
+        {
+            _running = running;
+            if (running)
+            {
+                _onBank.SetPlaying(true);
+                _offBank.SetPlaying(true);
+                // The crank belongs to the moment the key is turned, not to the moment the component woke up.
+                if (startClip != null && _oneShot != null) _oneShot.PlayOneShot(startClip, startVolume);
+            }
+        }
+
+        float step = ignitionFadeSeconds > 0f ? dt / ignitionFadeSeconds : 1f;
+        _gate = Mathf.MoveTowards(_gate, running ? 1f : 0f, step);
+
+        // Only stop the loops once the fade has actually reached silence, or switching off would cut.
+        if (!running && _gate <= 0.0001f)
+        {
+            _onBank.SetPlaying(false);
+            _offBank.SetPlaying(false);
+        }
     }
 
     void PlayShift()

@@ -64,9 +64,13 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Shared engine sound set applied to every spawned AI car (3D/positional). Leave null for silent AI.")]
     public EngineSoundSet aiEngineSound;
     [Tooltip("Max audible distance (m) for an AI car's engine. Beyond this it attenuates to silence.")]
-    public float aiEngineMaxDistance = 120f;
+    public float aiEngineMaxDistance = 400f;
+    [Tooltip("Distance (m) inside which an AI engine is at full volume. Roughly the width of pit road, so a car going past the wall swells and drops away again.")]
+    public float aiEngineMinDistance = 8f;
     [Tooltip("Overall AI engine volume. Keep below the player's so the field doesn't drown the player's own car.")]
     [Range(0f, 1f)] public float aiEngineVolume = 0.7f;
+    [Tooltip("Doppler amount on a passing AI car. 0 is off; around 1 is life-sized for these speeds.")]
+    [Range(0f, 5f)] public float aiEngineDoppler = 1f;
 
     [Header("Collision")]
     [Tooltip("Add VehicleCollision to each spawned car for barrier + car-car contact.")]
@@ -570,7 +574,9 @@ public class GridSpawner : MonoBehaviour
                 ea.soundSet = aiEngineSound;
                 ea.spatialBlend = 1f;
                 ea.masterVolume = aiEngineVolume;
+                ea.minDistance = aiEngineMinDistance;
                 ea.maxDistance = aiEngineMaxDistance;
+                ea.dopplerLevel = aiEngineDoppler;
             }
 
             if (addCollision)
@@ -939,7 +945,9 @@ public class GridSpawner : MonoBehaviour
                 ea.soundSet = aiEngineSound;
                 ea.spatialBlend = 1f;
                 ea.masterVolume = aiEngineVolume;
+                ea.minDistance = aiEngineMinDistance;
                 ea.maxDistance = aiEngineMaxDistance;
+                ea.dopplerLevel = aiEngineDoppler;
             }
 
             if (addCollision)

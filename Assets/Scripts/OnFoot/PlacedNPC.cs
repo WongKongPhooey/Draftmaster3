@@ -201,6 +201,8 @@ public class PlacedNPC : MonoBehaviour
     [Header("Look")]
     [Tooltip("Body to clone. Empty = the scene's on-foot prefab (PitLaneStart.onFootPrefab).")]
     public GameObject prefabOverride;
+    [Tooltip("Height (m) of a dressed body. 0 = the standard on-foot person height, the same as the crowd and the pit crew. Ignored unless this marker carries an NPCLayeredAppearance to dress it with.")]
+    public float dressedHeightM = 0f;
 
     // ---------------------------------------------------------------- runtime
 
@@ -334,6 +336,18 @@ public class PlacedNPC : MonoBehaviour
 
         Vector3 pos = ResolveStandPoint();
         var body = NPCFactory.SpawnBody(prefab, pos, GameObjectName);
+
+        // Dressed, if this marker carries a wardrobe. An NPCLayeredAppearance sitting next to a PlacedNPC
+        // is not a character — it is the outfit this NPC wears, authored where the designer can see it in
+        // the scene view (Preview / Rebuild) and copied onto the body at spawn. Without one the body is a
+        // clone of the on-foot prefab and looks exactly like the player, which is fine for a face in the
+        // crowd and wrong for anyone with a name.
+        var wardrobe = GetComponent<NPCLayeredAppearance>();
+        if (wardrobe != null)
+        {
+            NPCFactory.Dress(body, wardrobe, dressedHeightM);
+            wardrobe.Clear();   // the marker's editor preview; the body is the real one now
+        }
         _npc = quest != null ? BuildQuestGiver(body) : NPCFactory.AddTalker<NPCInteractable>(body, speakerName, lines);
 
         // A marker with a per-half-day script keeps its lines in step with the weekend's clock, which moves

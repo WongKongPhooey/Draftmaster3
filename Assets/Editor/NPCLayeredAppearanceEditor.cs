@@ -184,7 +184,27 @@ public class NPCLayeredAppearanceEditor : Editor
         Undo.RegisterFullObjectHierarchyUndo(app.gameObject, "Rebuild NPC Preview");
         if (!app.Build())
             Debug.LogWarning("NPCLayeredAppearance: nothing to build — check the library has sheets assigned.", app);
+        ScalePreviewToPersonHeight(app);
         SceneView.RepaintAll();
+    }
+
+    // A layer is built from an 8px frame at 100 pixels per unit — 8cm tall, a speck you cannot see and
+    // certainly cannot judge an outfit by. At run time the body scales it up; in the scene view nothing
+    // does, so the preview is scaled here to the same person height the crowd and the pit crew stand at.
+    //
+    // Only for a wardrobe on a PlacedNPC marker. A scene-authored layered NPC owns its own transform scale
+    // and this would fight whatever the designer set.
+    static void ScalePreviewToPersonHeight(NPCLayeredAppearance app)
+    {
+        var marker = app.GetComponent<PlacedNPC>();
+        if (marker == null || app.library == null) return;
+
+        float frameWorldH = Mathf.Max(0.01f, app.library.frameHeight / Mathf.Max(1f, app.library.pixelsPerUnit));
+        float target = marker.dressedHeightM > 0f ? marker.dressedHeightM : PitCrewSpawner.OnFootPersonHeight;
+        float scale = target / frameWorldH;
+
+        foreach (var tag in app.GetComponentsInChildren<NPCLayerTag>(true))
+            tag.transform.localScale = Vector3.one * scale;
     }
 
     static bool HasPreview(NPCLayeredAppearance app)

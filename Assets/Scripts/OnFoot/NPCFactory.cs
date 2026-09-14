@@ -77,6 +77,96 @@ public static class NPCFactory
         return npc;
     }
 
+    // Dress a cloned body in an authored paper-doll outfit.
+    //
+    // A body clone comes out of the on-foot prefab looking exactly like the player, which is fine for a
+    // face in the crowd and wrong for anyone the player is meant to recognise — the liaison, the crew
+    // chief, a promoter. `wardrobe` is an NPCLayeredAppearance authored somewhere else (on the PlacedNPC
+    // marker, where the designer can see it in the scene view) and used here as a template: its library,
+    // sorting and outfit choices are copied onto the body, which then builds its own layers.
+    //
+    // The clone's own art goes in the process — its SpriteRenderer and its Animator — because a paper doll
+    // draws itself out of child renderers and the prefab's walk sprite would otherwise stand inside it.
+    //
+    // heightM 0 = the standard on-foot person height, the same figure the crowd, the pit crew and the
+    // paddock drivers are all built to.
+    public const string LookChild = "Look";   // where a dressed body's paper-doll layers live
+
+    public static bool Dress(GameObject body, NPCLayeredAppearance wardrobe, float heightM = 0f)
+    {
+        if (body == null || wardrobe == null || wardrobe.library == null) return false;
+
+        // The doll is built on a CHILD, not on the body itself. A paper doll is drawn from an 8px frame and
+        // has to be scaled up by about 8x to stand person-high; doing that to the body would take its
+        // collider and its speech-bubble canvas up with it — a liaison with a ten-metre collider blocking
+        // the paddock and a billboard over her head.
+        var look = body.transform.Find(LookChild);
+        if (look == null)
+        {
+            var go = new GameObject(LookChild);
+            look = go.transform;
+            look.SetParent(body.transform, false);
+        }
+
+        var doll = look.GetComponent<NPCLayeredAppearance>();
+        if (doll == null) doll = look.gameObject.AddComponent<NPCLayeredAppearance>();
+
+        doll.library = wardrobe.library;
+        doll.sortingLayerName = wardrobe.sortingLayerName;
+        doll.baseSortingOrder = wardrobe.baseSortingOrder;
+        doll.layerMaterial = wardrobe.layerMaterial != null ? wardrobe.layerMaterial : UnlitSpriteMaterial;
+        doll.useAuthoredOutfit = wardrobe.useAuthoredOutfit;
+        doll.authoredOutfit = CopyOutfit(wardrobe.authoredOutfit);
+
+        if (!doll.Build())
+        {
+            // No options in the library yet: leave the prefab's own art alone rather than deleting it and
+            // standing an invisible person in the pit lane.
+            Destroy(doll);
+            return false;
+        }
+
+        // The prefab's own body, now that the doll is drawing this character.
+        var sr = body.GetComponent<SpriteRenderer>();
+        if (sr != null) Destroy(sr);
+        var anim = body.GetComponent<Animator>();
+        if (anim != null) Destroy(anim);
+
+        var lib = doll.library;
+        float frameWorldH = Mathf.Max(0.01f, lib.frameHeight / Mathf.Max(1f, lib.pixelsPerUnit));
+        float target = heightM > 0f ? heightM : PitCrewSpawner.OnFootPersonHeight;
+        look.localScale = Vector3.one * (target / frameWorldH);
+        look.localRotation = Quaternion.identity;
+        look.localPosition = Vector3.zero;
+        return true;
+    }
+
+    static NPCLayeredAppearance.LayerChoice[] CopyOutfit(NPCLayeredAppearance.LayerChoice[] src)
+    {
+        if (src == null) return null;
+        var copy = new NPCLayeredAppearance.LayerChoice[src.Length];
+        for (int i = 0; i < src.Length; i++)
+        {
+            var c = src[i];
+            copy[i] = c == null ? null : new NPCLayeredAppearance.LayerChoice
+            {
+                category = c.category,
+                include = c.include,
+                styleIndex = c.styleIndex,
+                tint = c.tint,
+            };
+        }
+        return copy;
+    }
+
+    // Editor tools build bodies outside play mode, where Destroy() is a no-op that logs.
+    static void Destroy(Object o)
+    {
+        if (o == null) return;
+        if (Application.isPlaying) Object.Destroy(o);
+        else Object.DestroyImmediate(o);
+    }
+
     // Body + plain conversation. The common case.
     public static NPCInteractable SpawnTalkable(GameObject prefab, Vector3 pos, string goName,
                                                 string speaker, string[] lines)

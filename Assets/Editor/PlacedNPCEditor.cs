@@ -35,7 +35,63 @@ public class PlacedNPCEditor : Editor
                 MessageType.Info);
         }
 
+        DrawWardrobeButton(npc);
+
         if (GUILayout.Button("Open NPC Director")) NPCDirectorWindow.Open();
+    }
+
+    // Dressing this NPC. Without a wardrobe their body is a clone of the on-foot prefab — they look exactly
+    // like the player. The wardrobe is an ordinary NPCLayeredAppearance sat on the marker: authored here
+    // with the paper-doll inspector (style + colour per layer, Preview / Rebuild to see it), copied onto the
+    // body at spawn by PlacedNPC. Everything the button does can be done by hand with Add Component.
+    const string WardrobeLibraryPath = "NPC/NPCPartLibrary";
+
+    void DrawWardrobeButton(PlacedNPC npc)
+    {
+        var wardrobe = npc.GetComponent<NPCLayeredAppearance>();
+        if (wardrobe != null)
+        {
+            string where = npc.anchor == PlacedNPC.Anchor.Here
+                ? "on this marker, where they will actually stand"
+                : $"ON THIS MARKER at {npc.transform.position} — NOT where they stand. This NPC is " +
+                  $"anchored to {npc.anchor}, so the body is placed from track geometry at run time " +
+                  "(the green scene-view gizmo shows where). The preview is the outfit, not the position.";
+
+            EditorGUILayout.HelpBox(
+                "Dressed. Pick a style and colour per layer below, then Preview / Rebuild.  " +
+                "The preview is drawn " + where,
+                MessageType.None);
+            return;
+        }
+
+        EditorGUILayout.HelpBox(
+            "Undressed: this NPC's body is a clone of the on-foot player prefab, so they look like the player. " +
+            "Add a wardrobe to give them their own clothes.",
+            MessageType.Info);
+
+        if (!GUILayout.Button("Dress This NPC (add wardrobe)")) return;
+
+        foreach (var t in targets)
+        {
+            var marker = t as PlacedNPC;
+            if (marker == null || marker.GetComponent<NPCLayeredAppearance>() != null) continue;
+
+            var added = Undo.AddComponent<NPCLayeredAppearance>(marker.gameObject);
+            if (added == null) continue;
+
+            // Set up here rather than trusting the component's Reset(): Undo.AddComponent does not run it,
+            // so a wardrobe added by this button arrived with no library and Use Authored Outfit off, and
+            // the first thing the button was supposed to save you was doing both by hand.
+            if (added.library == null) added.library = Resources.Load<NPCPartLibrary>(WardrobeLibraryPath);
+            added.useAuthoredOutfit = true;
+
+            if (added.library == null)
+                Debug.LogWarning($"PlacedNPC '{marker.name}': no part library at " +
+                                 $"Resources/{WardrobeLibraryPath} — assign one on the wardrobe by hand.", marker);
+
+            EditorUtility.SetDirty(added);
+            EditorUtility.SetDirty(marker.gameObject);
+        }
     }
 
     // Everything you need to know about this person, before the raw fields underneath: which half-days

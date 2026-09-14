@@ -27,6 +27,9 @@ public static class PixelGUI
     static GUIStyle _window, _focusedWindow, _heading, _headingSmall, _row, _rowSelected, _footer,
                     _cursor, _body, _data, _dataDim, _button, _tab, _tabSelected, _label, _labelDim;
     static Texture2D _flat;
+    static int _promptFrame = -1;          // prompt stacking, reset per OnGUI event pass
+    static EventType _promptEvent = EventType.Ignore;
+    static float _promptStack;
     static readonly Dictionary<SpriteScale, Texture2D> _upscaled = new Dictionary<SpriteScale, Texture2D>();
     static readonly Dictionary<Color, Texture2D> _solids = new Dictionary<Color, Texture2D>();
     static readonly HashSet<Sprite> _warnedUnreadable = new HashSet<Sprite>();
@@ -444,7 +447,12 @@ public static class PixelGUI
     // staying a small grey strip while everything else is twice the size.
     //
     // Returns the rect it drew into, for anything that wants to stack something above it.
-    public static Rect Prompt(string key, string text, float bottomMargin = 12f)
+    // Where every on-screen prompt sits: one strip above the bottom edge, whatever is prompting. Control
+    // hints, the seat in the grandstand and anything else that teaches a button all come through here, so
+    // they are the same box in the same place rather than each screen inventing its own.
+    public const float PromptBottomMargin = 12f;
+
+    public static Rect Prompt(string key, string text, float bottomMargin = PromptBottomMargin)
     {
         if (string.IsNullOrEmpty(text)) return default;
         Ensure();
@@ -461,8 +469,21 @@ public static class PixelGUI
         float inset = Px(8f);
         float w = Mathf.Min(capW + gap + textW + inset * 2f + Px(8f), Screen.width - Px(16f));
         float h = rowH + inset * 2f;
+
+        // Two prompts up at once (a control hint while the grandstand seat is still telling you how to
+        // leave) stack instead of drawing on top of each other. The stack is cleared per event pass, not
+        // per frame: OnGUI runs Layout and Repaint separately and both draw every prompt.
+        var ev = Event.current != null ? Event.current.type : EventType.Ignore;
+        if (Time.frameCount != _promptFrame || ev != _promptEvent)
+        {
+            _promptFrame = Time.frameCount;
+            _promptEvent = ev;
+            _promptStack = 0f;
+        }
+
         var box = new Rect(Mathf.Round((Screen.width - w) * 0.5f),
-                           Mathf.Round(Screen.height - h - Px(bottomMargin)), w, h);
+                           Mathf.Round(Screen.height - h - Px(bottomMargin) - _promptStack), w, h);
+        _promptStack += h + Px(4f);
 
         Panel(box, focused: true);
         var c = PanelContent(box, 4f);

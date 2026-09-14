@@ -45,10 +45,25 @@ public class NPCLayeredAppearance : MonoBehaviour
     public int FrameCount => _frameCount;
     public bool Built => _renderers.Count > 0;
 
+    // Added in the inspector: fill in the library and, on a PlacedNPC marker, switch straight to authored
+    // mode — a wardrobe is by definition a chosen outfit, not a random one.
+    void Reset()
+    {
+        if (library == null) library = Resources.Load<NPCPartLibrary>("NPC/NPCPartLibrary");
+        if (GetComponent<PlacedNPC>() != null) useAuthoredOutfit = true;
+    }
+
     // Scene-authored NPCs build themselves. Spawner-built NPCs call Build() right after AddComponent,
     // so Built is already true (or the component is being destroyed) by the time Start runs.
+    //
+    // One exception: this component sat on a PlacedNPC marker is a WARDROBE, not a character. The marker
+    // is an invisible pin — often at the world origin, with the body it describes stood somewhere else
+    // entirely — so building a person on it would leave one stood in mid-air at 0,0. PlacedNPC copies the
+    // outfit onto the body it spawns and clears the preview; this is the belt and braces for a marker that
+    // never gets to build (its appearance conditions failed) leaving its editor preview on screen.
     void Start()
     {
+        if (GetComponent<PlacedNPC>() != null) { Clear(); return; }
         if (!Built) Build();
     }
 

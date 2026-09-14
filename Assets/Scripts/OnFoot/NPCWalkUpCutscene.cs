@@ -32,6 +32,9 @@ public class NPCWalkUpCutscene : MonoBehaviour
     Phase _phase = Phase.Idle;
     Rigidbody2D _npcRb;
     Animator _npcAnim;
+    NPCLayeredAppearance _npcDoll;   // set when the NPC is a paper doll rather than an Animator rig
+    float _frameTimer;
+    int _frame;
     bool _hasDirectionalAnim;
 
     // Still waiting to be set off. Anything moving the scene around underneath a beat that has not run
@@ -53,6 +56,9 @@ public class NPCWalkUpCutscene : MonoBehaviour
 
         _npcRb = npc.GetComponent<Rigidbody2D>();
         _npcAnim = npc.GetComponent<Animator>();
+        // A dressed NPC has no Animator — its walk is a row of frames stepped by hand, the same way the
+        // paddock crowd, the fans and the drivers in a fight walk.
+        _npcDoll = npc.GetComponentInChildren<NPCLayeredAppearance>();
         if (_npcAnim != null)
         {
             foreach (var p in _npcAnim.parameters)
@@ -120,6 +126,8 @@ public class NPCWalkUpCutscene : MonoBehaviour
                 else if (p.name == "Speed") _npcAnim.SetFloat("Speed", 1f);
             }
         }
+        FightMotion.StepFrames(_npcDoll, ref _frameTimer, ref _frame, 8f);
+
         if (!_hasDirectionalAnim)
         {
             float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
@@ -144,6 +152,7 @@ public class NPCWalkUpCutscene : MonoBehaviour
 
     void FreezeNpcAnim()
     {
+        FightMotion.IdleFrame(_npcDoll, ref _frameTimer, ref _frame);
         if (_npcAnim == null) return;
         foreach (var p in _npcAnim.parameters)
             if (p.name == "Speed") _npcAnim.SetFloat("Speed", 0f);

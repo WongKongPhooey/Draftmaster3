@@ -242,6 +242,47 @@ Preview layers are ordinary child objects; at runtime `Build()` sweeps and rebui
 never double up. Scene-placed NPCs build themselves on Start — no spawner needed. Spawner-built
 crowd NPCs (PaddockSpawner, PitCrewSpawner) keep `Use Authored Outfit` off and randomise.
 
+### Dressing a named NPC (the liaison, the crew chief, a promoter)
+
+A `PlacedNPC`'s body is **cloned from the on-foot player prefab**, so an undressed one looks exactly
+like the player. Fine for a face in the crowd; wrong for anyone with a name. To give them their own
+clothes, put a **wardrobe** on the marker:
+
+1. Select the marker — `NPC_TeamLiaison` under the `NPCs` root in `RaceScene`
+   (`Draftmaster > NPCs > Director`, or Ctrl+Shift+N, finds it and any other).
+2. In the inspector press **Dress This NPC (add wardrobe)**. That adds an `NPCLayeredAppearance`,
+   assigns `Resources/NPC/NPCPartLibrary` and ticks **Use Authored Outfit**. (Add Component does the
+   same thing by hand.)
+3. Dress her in the paper-doll rows that appear — per layer a **style** (which sheet), a **colour**
+   picker and the category's **swatches**, and an **include** toggle to leave a layer off entirely.
+   Base = skin tone, Bottoms, Shoes, Top, Hair, Hat.
+4. **Preview / Rebuild** draws her **on the marker's own transform**, scaled to person height;
+   **Preview Frame** scrubs the walk cycle to check the layers line up. **Randomize** rolls one if you
+   want a starting point. For an anchored NPC the marker usually sits at the world origin, so that is
+   where the preview stands — select the marker and press **F** in the scene view to jump to it. The
+   preview shows the outfit, not the position: the green scene-view gizmo is where they actually stand.
+5. Save the scene. Nothing else to wire.
+
+At run time `PlacedNPC` copies the wardrobe onto the body it spawns (`NPCFactory.Dress`) and clears the
+marker's preview. The outfit is built on a child called **`Look`**, scaled up to person height there
+rather than on the body — scaling the body would take its collider and its speech-bubble canvas with it.
+The prefab's own SpriteRenderer and Animator are removed from a dressed body, and the walk-up cutscene
+steps the paper-doll frames instead of driving an Animator, so she walks over properly.
+
+**The preview only ever appears on the marker.** For an anchored NPC (the liaison is `RVDoor`) the
+marker itself sits at the origin and the body is placed from geometry, so the preview stands at 0,0
+in the scene view — that is the outfit, not the position. To see her where she will really stand,
+preview the track package (`Draftmaster > Tracks > Preview Selected Package In Scene`) and play.
+The preview is cleared when the scene runs, so a marker whose conditions fail never leaves a spare
+body at the origin.
+
+**Height** comes from `Dressed Height M` on the marker: 0 = the standard on-foot person height
+(`PitCrewSpawner.OnFootPersonHeight`), the same figure the crowd, the pit crew and the paddock drivers
+are built to. Only set it for someone who should be visibly taller or shorter.
+
+Same recipe for every other named NPC — the crew chief at the pit box, the pit greeter, a track's own
+promoter. The only per-NPC decisions are the clothes.
+
 ---
 
 ## 2. Dialogue

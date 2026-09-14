@@ -182,5 +182,30 @@ namespace Draftmaster.Crowd
             if (fullHousePopulation <= 0) return 0;
             return Mathf.Max(1, Mathf.RoundToInt(fullHousePopulation * BusynessForHalfDay(halfDayIndex)));
         }
+
+        // ---------------------------------------------------------------- how loud they are
+
+        // What the circuit is doing, as a plain int so this module keeps no dependency on the weekend
+        // rules. Mapped from WeekendTrackState.Live by the caller.
+        public const int TrackIdle = 0;         // nothing running — meetings, media, signings
+        public const int TrackPractice = 1;
+        public const int TrackQualifying = 2;
+        public const int TrackRace = 3;
+
+        // A crowd makes noise in proportion to how many of them are in and what they are watching, and the
+        // second of those swings much harder than the first. Friday practice in front of a half-empty
+        // grandstand is a murmur — people talking, a tannoy, the odd cheer — and it is the same people who
+        // are on their feet screaming on Sunday afternoon. One number, 0..1, against a full-house race.
+        public static float NoiseForSession(int halfDayIndex, int trackActivity)
+        {
+            float watching = trackActivity switch
+            {
+                TrackRace => 1.00f,
+                TrackQualifying => 0.62f,
+                TrackPractice => 0.45f,
+                _ => 0.22f,          // an empty circuit: the place is still populated, just not watching
+            };
+            return Mathf.Clamp01(watching * BusynessForHalfDay(halfDayIndex));
+        }
     }
 }

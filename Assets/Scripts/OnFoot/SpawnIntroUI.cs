@@ -25,6 +25,8 @@ public class SpawnIntroUI : MonoBehaviour
     public float iconSize = 44f;
     [Tooltip("Don't show a marker's distance label when the target is closer than this (m).")]
     public float distanceLabelMinMetres = 15f;
+    [Tooltip("Distance (px) a marker's name and distance labels keep from the screen border. They are pulled in off the edge rather than clipped.")]
+    public float labelScreenPad = 12f;
 
     [Header("Marker Fly-In")]
     [Tooltip("A marker starts oversized in the middle of the screen and flies out to its resting spot, to pull the eye toward the objective. Seconds that move takes.")]
@@ -370,14 +372,11 @@ public class SpawnIntroUI : MonoBehaviour
 
         if (settled)
         {
-            // Under the icon: what it is, then how far away. An unlabelled pip is a guess.
-            float below = pos.y + iconSize * 0.72f;
-            if (!string.IsNullOrEmpty(m.label))
-            {
-                DrawCaption(new Vector2(pos.x, below), m.label);
-                below += PixelGUI.LineH;
-            }
-            if (!onScreen || dist >= distanceLabelMinMetres) DrawDistance(new Vector2(pos.x, below), dist);
+            // What it is, then how far away. An unlabelled pip is a guess.
+            string distanceText = (!onScreen || dist >= distanceLabelMinMetres)
+                ? $"{Mathf.RoundToInt(dist)}m"
+                : null;
+            DrawLabels(pos, dir, m.label, distanceText);
         }
 
         GUI.color = Color.white;
@@ -408,11 +407,64 @@ public class SpawnIntroUI : MonoBehaviour
         return best;
     }
 
+    // The marker's name and distance, placed so both are always fully on screen.
+    //
+    // A marker clamped to the BOTTOM edge has no room under it, and the two lines that used to be drawn
+    // there went off the bottom of the screen — the one place a label is guaranteed to be needed, because
+    // an edge-clamped marker is by definition pointing at something you cannot see. So the block flips: it
+    // sits above the icon in the bottom half of the screen and below it in the top half, always toward the
+    // middle. Then it is clamped into the frame on both axes, and the caption's box is measured rather
+    // than assumed 320px wide, so a long name near the left or right edge is pulled in instead of running
+    // off the side.
+    void DrawLabels(Vector2 iconPos, Vector2 arrowDir, string caption, string distance)
+    {
+        bool hasCaption = !string.IsNullOrEmpty(caption);
+        bool hasDistance = !string.IsNullOrEmpty(distance);
+        if (!hasCaption && !hasDistance) return;
+
+        float captionH = hasCaption ? PixelGUI.LineH : 0f;
+        float distanceH = hasDistance ? DistanceLineH : 0f;
+        float blockH = captionH + distanceH;
+
+        bool above = iconPos.y > Screen.height * 0.5f;
+        float gap = iconSize * 0.72f;
+
+        // The arrow sits on the side the target is on. When the labels want that same side, they go out
+        // past it rather than through it.
+        bool arrowUp = arrowDir.y < 0f, arrowDown = arrowDir.y > 0f;
+        if (arrowDir != Vector2.zero && ((above && arrowUp) || (!above && arrowDown))) gap += 26f;
+
+        float top = above ? iconPos.y - gap - blockH : iconPos.y + gap;
+        top = Mathf.Clamp(top, labelScreenPad, Mathf.Max(labelScreenPad, Screen.height - labelScreenPad - blockH));
+
+        if (hasCaption)
+        {
+            DrawCaption(new Vector2(iconPos.x, top), caption);
+            top += captionH;
+        }
+        if (hasDistance) DrawDistance(new Vector2(iconPos.x, top), distance);
+    }
+
+    // One line of the distance readout, in the face it is actually set in.
+    float DistanceLineH => _distStyle != null ? _distStyle.fontSize + PixelGUI.Px(4f) : PixelGUI.DataLineH;
+
+    // Pull a label's box in off the screen edge. Measured on the box, not the text's anchor point: a name
+    // centred on a marker 20px from the right edge is half off screen however the marker is clamped. One
+    // wider than the whole screen is centred and lets both ends run, which is the least bad answer.
+    float ClampLabelCentre(float centreX, float width)
+    {
+        float half = width * 0.5f;
+        float min = labelScreenPad + half;
+        float max = Screen.width - labelScreenPad - half;
+        return max < min ? Screen.width * 0.5f : Mathf.Clamp(centreX, min, max);
+    }
+
     // The marker's name, sat under its icon. Overflows its box rather than wrapping: a caption is one short
     // line by construction, and a wrapped one would collide with the distance readout under it.
     void DrawCaption(Vector2 pos, string text)
     {
-        var r = new Rect(pos.x - 160f, pos.y, 320f, PixelGUI.LineH);
+        float w = Mathf.Ceil(_captionStyle.CalcSize(new GUIContent(text)).x) + PixelGUI.Px(4f);
+        var r = new Rect(ClampLabelCentre(pos.x, w) - w * 0.5f, pos.y, w, PixelGUI.LineH);
         var shadow = r; shadow.x += PixelGUI.Px(1f); shadow.y += PixelGUI.Px(1f);
         var prev = _captionStyle.normal.textColor;
         _captionStyle.normal.textColor = PixelGUI.Ink;
@@ -448,10 +500,10 @@ public class SpawnIntroUI : MonoBehaviour
         GUI.DrawTextureWithTexCoords(new Rect(pos.x - w * 0.5f, pos.y - h * 0.5f, w, h), icon.texture, uv);
     }
 
-    void DrawDistance(Vector2 pos, float metres)
+    void DrawDistance(Vector2 pos, string text)
     {
-        string text = $"{Mathf.RoundToInt(metres)}m";
-        var r = new Rect(pos.x - 40f, pos.y, 80f, 20f);
+        float w = Mathf.Max(PixelGUI.Px(24f), Mathf.Ceil(_distStyle.CalcSize(new GUIContent(text)).x) + PixelGUI.Px(4f));
+        var r = new Rect(ClampLabelCentre(pos.x, w) - w * 0.5f, pos.y, w, DistanceLineH);
         var shadow = r; shadow.x += PixelGUI.Px(1f); shadow.y += PixelGUI.Px(1f);
         var prev = _distStyle.normal.textColor;
         _distStyle.normal.textColor = PixelGUI.Ink;
