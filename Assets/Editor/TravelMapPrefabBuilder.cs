@@ -287,6 +287,9 @@ public static class TravelMapPrefabBuilder
         if (prefab == null) { Debug.LogError($"No TravelMap prefab at {PrefabPath}."); return; }
 
         var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        // Unpacked so the preview can rebuild the highway lines: destroying a child of a prefab instance
+        // is refused, and BuildEdges clears the old lines before it lays new ones.
+        PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         var camGo = new GameObject("TravelMapPreviewCam", typeof(Camera));
         var rt = new RenderTexture(W, H, 24);
         try
@@ -378,6 +381,11 @@ public static class TravelMapPrefabBuilder
             else if (dest) m.halo.color = new Color32(0xe5, 0x48, 0x4d, 0xff);
             else if (near) m.halo.color = new Color32(0xf2, 0xc1, 0x4e, 0x8c);
         }
+
+        // The pins and the road tints are the runtime's own code, not a hand-made copy of it, so the
+        // PNG shows what the player will see.
+        screen.BuildEdges();
+        screen.PreviewState("team_factory", "Daytona");
     }
 
     // ---------------- Iron Oval skin ----------------
@@ -394,7 +402,15 @@ public static class TravelMapPrefabBuilder
     static readonly Color TextDim = new Color32(0x9a, 0xa3, 0xb8, 0xff);
     static readonly Color Ink = new Color32(0x0a, 0x0b, 0x10, 0xfa);
     static readonly Color PlateNavy = new Color32(0x18, 0x24, 0x42, 0xff);
-    static readonly Color Teal = new Color32(0x4e, 0xc9, 0xb0, 0xff);
+    static readonly Color MapField = new Color32(0x1f, 0x33, 0x5c, 0xff);    // the country itself
+    // The dot palette is shared with TravelMapScreen, which recolours the same images every Refresh —
+    // keep the two in step (that file wins, since it is what the player actually sees).
+    static readonly Color Teal = new Color32(0x5f, 0xe8, 0xc8, 0xff);        // your factory's name
+    static readonly Color FactoryIcon = new Color32(0xc6, 0xf7, 0xea, 0xff);  // its wrench, pale on the plate
+    static readonly Color DeepTeal = new Color32(0x14, 0x45, 0x3d, 0xff);    // the plate under its wrench
+    static readonly Color ShopBlue = new Color32(0x53, 0xa8, 0xff, 0xff);    // somebody's parts counter
+    static readonly Color Rust = new Color32(0xe0, 0x91, 0x3a, 0xff);        // a yard full of salvage
+    static readonly Color Red = new Color32(0xe5, 0x48, 0x4d, 0xff);         // this week's race
 
     static Font Silkscreen => AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Silkscreen-Regular.ttf");
     static Font VT323 => AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/VT323-Regular.ttf");
@@ -448,15 +464,26 @@ public static class TravelMapPrefabBuilder
         var plot = Find<Image>(root, "MapPlot");
         if (plot != null)
         {
-            plot.sprite = PanelFill;
-            plot.type = Image.Type.Tiled;
-            plot.color = Color.white;
+            // A solid blue field with the kit's dither laid over it, rather than the dither alone: an
+            // Image tint can only darken (it multiplies), and the bare plate sat within a shade of the
+            // Ink backdrop, so the country had no edge to it. Now it is a blue table the gold dots and
+            // cream frame sit on, which is the look the rest of the kit has.
+            plot.sprite = null;
+            plot.type = Image.Type.Simple;
+            plot.color = MapField;
+            var grain = EnsureImage(plot.transform, "Grain", PanelFill, new Color(1f, 1f, 1f, 0.45f));
+            grain.type = Image.Type.Tiled;
+            Stretch(grain.rectTransform);
+            grain.transform.SetAsFirstSibling();
             var frame = EnsureImage(plot.transform, "Frame", FrameCream, Cream);
             frame.type = Image.Type.Sliced;
             frame.pixelsPerUnitMultiplier = Slice2x;
             frame.fillCenter = false;   // the dithered plate shows through; only the border is drawn
             Stretch(frame.rectTransform);
-            frame.transform.SetAsFirstSibling(); // behind the roads and the nodes
+            frame.transform.SetSiblingIndex(1); // over the grain, still behind the roads and the nodes
+
+            EnsureLegend(plot.transform);
+            EnsurePins(screen);
         }
 
         // ----- side panel -----
@@ -531,46 +558,169 @@ public static class TravelMapPrefabBuilder
         Debug.Log("TravelMap: side panel was missing its WalkButton - rebuilt and re-wired.");
     }
 
-    // One dot per node, sized by what it is. The team factory is deliberately the odd one out: twice the
-    // size of a circuit, teal where everything else is gold or grey, and wearing the wrench icon — it is
-    // the one place on the map you own, and the parts your shop builds are only collectable there.
+    // One dot per node, sized and coloured by what it is, so the board reads by colour before it reads
+    // by label: a big gold square is a racetrack, a small blue one is a parts shop, a rust one is a
+    // salvage yard, and the key in the corner says so. The team factory is deliberately the odd one out
+    // — a pale wrench on a deep teal plate in a gold frame, twice the size of anything else — because it
+    // is the one place you own, and the parts your shop builds are only collectable in person.
+    // The dots are flat squares rather than little icons on purpose: the kit's icons are 16px art with
+    // their own colours in them, and at map scale a tinted one is a smudge (a tyre reads as a hole).
+    // Icons are used where there is room for them: the factory, the two pins, the header.
     static void SkinMarker(TravelNodeMarker marker)
     {
         var n = TravelGraph.Get(marker.nodeId);
         if (n == null || marker.dot == null || marker.halo == null || marker.label == null) return;
 
         bool factory = n.locationType == TravelLocationType.TeamFactory;
-        float s = factory ? 32f : (n.isCircuit ? 12f : 9f);
+        float s = factory ? 32f : (n.isCircuit ? 16f : 12f);
+        float ring = factory ? 50f : s + 10f;
 
         var rt = (RectTransform)marker.transform;
-        rt.sizeDelta = new Vector2(Mathf.Max(28f, s + 6f), Mathf.Max(28f, s + 6f));
+        rt.sizeDelta = new Vector2(Mathf.Max(28f, ring), Mathf.Max(28f, ring));
+        // Circuits and roadside businesses are hand-placeable and keep wherever they were dragged to.
+        // The factory is not one of those: it is a hub the code positions (TravelGraph.FactoryHub), so a
+        // restyle puts it back on the spot the graph names.
+        if (factory) rt.anchoredPosition = new Vector2(n.pos.x * MapW, -n.pos.y * MapH);
 
-        marker.dot.sprite = factory ? Icon("wrench-set") : null;
+        marker.dot.sprite = DotIcon(n);
         marker.dot.type = Image.Type.Simple;
-        if (factory) marker.dot.color = Teal;
+        marker.dot.color = DotTint(n);
         Place(marker.dot.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(s, s));
+
+        // Your own shop gets a plate under its wrench. Everything else on the board is a mark on a map;
+        // this is a building, and it should look like somewhere you can walk into.
+        if (factory)
+        {
+            var plate = EnsureImage(marker.transform, "Plate", null, DeepTeal);
+            Place(plate.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(s + 8f, s + 8f));
+            plate.transform.SetAsFirstSibling(); // behind the wrench; the ring is a border, so it does not care
+
+            // Its own gold edge, which stays whether or not the state ring is lit: the halo below is
+            // turned off by TravelMapScreen for any node you cannot drive to this turn, and your own
+            // shop should never look shut.
+            var plateFrame = EnsureImage(marker.transform, "PlateFrame", FrameGold, Gold);
+            plateFrame.type = Image.Type.Sliced;
+            plateFrame.pixelsPerUnitMultiplier = 1f;
+            plateFrame.fillCenter = false;
+            Place(plateFrame.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(s + 8f, s + 8f));
+        }
 
         // The ring is a real 9-slice frame rather than a white blob: gold for a node you can drive to,
         // cream for where you are, red for the race you are heading to (tinted by TravelMapScreen).
-        marker.halo.sprite = factory ? FrameGold : FrameCream;
+        marker.halo.sprite = FrameCream;
         marker.halo.type = Image.Type.Sliced;
         marker.halo.pixelsPerUnitMultiplier = 1f;
         marker.halo.fillCenter = false;
-        Place(marker.halo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(s + 10f, s + 10f));
+        Place(marker.halo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(ring, ring));
 
         // Baked text so the prefab reads like the running map in Prefab Mode. TravelMapScreen rewrites
         // it every Refresh anyway - minor locations go back to "?" until you have pulled in once.
         marker.label.text = n.isCircuit || factory ? n.name.ToUpperInvariant() : "?";
-        // Names hang under their dot, except the factory's: it sits in the busiest part of the map and
-        // its bigger name would run straight into Indianapolis Raceway Park's, so it goes above instead,
-        // into the empty country between Chicagoland and Springfield.
-        Style(marker.label, Silkscreen, factory ? 16 : 8, Cream, factory ? TextAnchor.LowerCenter : TextAnchor.UpperCenter);
+        // Names hang under their dot, except the factory's: it stands in the middle of the country with
+        // Indiana packed in around it, and its bigger name below would land on Indianapolis's, so it
+        // goes above, into the gap between Indianapolis and DuQuoin.
+        // Labels carry their dot's colour, matching what TravelMapScreen paints at runtime.
+        Style(marker.label, Silkscreen, factory ? 16 : 8, LabelTint(n), factory ? TextAnchor.LowerCenter : TextAnchor.UpperCenter);
         var lrt = marker.label.rectTransform;
         lrt.anchorMin = lrt.anchorMax = new Vector2(0.5f, 0.5f);
         lrt.pivot = new Vector2(0.5f, factory ? 0f : 1f);
         lrt.anchoredPosition = new Vector2(0f, (s * 0.5f + 8f) * (factory ? 1f : -1f));
         lrt.sizeDelta = new Vector2(180f, 18f);
         marker.label.horizontalOverflow = HorizontalWrapMode.Overflow;
+    }
+
+    // Only the factory wears an icon; everything else is a flat square in its own colour (see SkinMarker).
+    static Sprite DotIcon(TravelNode n) =>
+        n.locationType == TravelLocationType.TeamFactory ? Icon("wrench-set") : null;
+
+    // Matches TravelMapScreen.DotColor / LabelColor. The factory's wrench is pale so it reads on its
+    // plate, but its NAME is the teal the node is known by, so the two split.
+    static Color DotTint(TravelNode n)
+    {
+        if (n.locationType == TravelLocationType.TeamFactory) return FactoryIcon;
+        if (n.isCircuit) return Gold;
+        return n.locationType == TravelLocationType.Junkyard ? Rust : ShopBlue;
+    }
+
+    static Color LabelTint(TravelNode n) =>
+        n.locationType == TravelLocationType.TeamFactory ? Teal : DotTint(n);
+
+    // The key, in the empty country north of the lakes — measured as the largest node-free gap on the
+    // board, so it covers nothing. Seventy-five dots in five colours need saying out loud once.
+    static void EnsureLegend(Transform plot)
+    {
+        var box = EnsureImage(plot, "Legend", FrameCream, Cream);
+        box.type = Image.Type.Sliced;
+        box.pixelsPerUnitMultiplier = Slice2x;
+        box.fillCenter = false;
+        Place(box.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(910f, -8f), new Vector2(300f, 152f));
+
+        // Its own dark plate, or the highways run under the text.
+        var fill = EnsureImage(box.transform, "Fill", PanelFillDeep, Ink);
+        fill.type = Image.Type.Tiled;
+        Stretch(fill.rectTransform);
+        fill.transform.SetAsFirstSibling();
+
+        // The chips are the dots themselves, at the size the map draws them, so the key is a sample of
+        // the board rather than a second set of symbols to learn.
+        LegendRow(box.transform, 0, "RACETRACK", Gold, 16f);
+        LegendRow(box.transform, 1, "PARTS SHOP", ShopBlue, 12f);
+        LegendRow(box.transform, 2, "SALVAGE YARD", Rust, 12f);
+        LegendRow(box.transform, 3, "YOUR FACTORY", Teal, 16f, chipFill: DeepTeal, ring: Gold);
+        LegendRow(box.transform, 4, "THIS WEEK'S RACE", Red, 10f, chipFill: Gold, ring: Red);
+
+        var note = EnsureText(box.transform, "Note", "FREE UPGRADED PARTS WAIT AT THE FACTORY");
+        Style(note, Silkscreen, 8, TextDim, TextAnchor.MiddleLeft);
+        Place(note.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(14f, -130f), new Vector2(276f, 16f));
+    }
+
+    // One key row: the dot as the map draws it (optionally on a plate and inside a ring, which is how
+    // the factory and this week's race are marked), then its name in the same colour.
+    static void LegendRow(Transform box, int index, string label, Color colour, float chipSize,
+                          Color? chipFill = null, Color? ring = null)
+    {
+        const float RowH = 24f, Slot = 20f;
+        float y = -10f - index * RowH;
+        float cy = y - Slot * 0.5f;   // centre of the row's chip slot
+
+        var chip = EnsureImage(box, $"Chip{index}", null, chipFill ?? colour);
+        chip.type = Image.Type.Simple;
+        Place(chip.rectTransform, new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(chipSize, chipSize));
+        // Pivot before position: anchoredPosition is measured from the pivot, so setting it the other
+        // way round moves the chip by half its own size.
+        chip.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        chip.rectTransform.anchoredPosition = new Vector2(14f + Slot * 0.5f, cy);
+
+        var ringImg = EnsureImage(box, $"Ring{index}", ring.HasValue ? FrameCream : null, ring ?? Color.clear);
+        ringImg.enabled = ring.HasValue;
+        ringImg.type = Image.Type.Sliced;
+        ringImg.pixelsPerUnitMultiplier = 1f;
+        ringImg.fillCenter = false;
+        Place(ringImg.rectTransform, new Vector2(0, 1), new Vector2(0, 1), Vector2.zero, new Vector2(Slot, Slot));
+        ringImg.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        ringImg.rectTransform.anchoredPosition = new Vector2(14f + Slot * 0.5f, cy);
+
+        var text = EnsureText(box, $"Row{index}", label);
+        Style(text, Silkscreen, 16, colour, TextAnchor.MiddleLeft);
+        Place(text.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(42f, y), new Vector2(244f, Slot));
+    }
+
+    // Two pins that hop about rather than a badge on every node: where you are, and the race you are
+    // driving to. Parented to the nodes root so TravelMapScreen can park one on a marker by copying its
+    // localPosition. Not raycast targets — a pin must not eat the click on the dot underneath it.
+    static void EnsurePins(TravelMapScreen screen)
+    {
+        screen.herePin = EnsurePin(screen.nodesRoot, "HerePin", Icon("map"), Cream);
+        screen.destPin = EnsurePin(screen.nodesRoot, "DestPin", Icon("flag"), Red);
+    }
+
+    static RectTransform EnsurePin(RectTransform parent, string name, Sprite sprite, Color colour)
+    {
+        var img = EnsureImage(parent, name, sprite, colour);
+        img.type = Image.Type.Simple;
+        Place(img.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(32f, 32f));
+        img.transform.SetAsLastSibling();
+        return img.rectTransform;
     }
 
     // ---------------- skin helpers ----------------
@@ -629,6 +779,25 @@ public static class TravelMapPrefabBuilder
         img.color = colour;
         img.raycastTarget = false;
         return img;
+    }
+
+    // Same contract as EnsureImage: run the restyle twice and you get one label, not two.
+    static Text EnsureText(Transform parent, string name, string content)
+    {
+        var existing = parent.Find(name);
+        var t = existing != null ? existing.GetComponent<Text>() : null;
+        if (t == null)
+        {
+            var go = existing != null ? existing.gameObject : new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            t = go.GetComponent<Text>();
+            if (t == null) t = go.AddComponent<Text>();
+        }
+        t.text = content;
+        t.raycastTarget = false;
+        t.verticalOverflow = VerticalWrapMode.Overflow;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        return t;
     }
 
     static void CreateMarker(RectTransform nodesRoot, TravelNode n)

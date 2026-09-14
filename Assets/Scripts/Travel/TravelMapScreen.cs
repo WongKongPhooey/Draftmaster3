@@ -32,15 +32,26 @@ public class TravelMapScreen : MonoBehaviour
 
     // Iron Oval palette (PixelUITheme): gold on navy, red for alarm, one colour per kind of place so the
     // map reads by colour before it reads by label. The factory is the only teal dot on the board.
+    // These are the same hexes the prefab builder bakes with (TravelMapPrefabBuilder.ApplyIronOvalSkin) —
+    // the runtime is what the player sees, so if the two ever disagree, this file wins.
     static readonly Color CircuitColor = new Color32(0xf2, 0xc1, 0x4e, 0xff);    // gold - a racetrack
-    static readonly Color JunkyardColor = new Color32(0xc4, 0x8a, 0x45, 0xff);   // rust - a yard full of it
-    static readonly Color EngineShopColor = new Color32(0x4a, 0x8f, 0xe0, 0xff); // blue - somebody's business
-    static readonly Color FactoryColor = new Color32(0x4e, 0xc9, 0xb0, 0xff);    // teal - the one place you own
+    static readonly Color JunkyardColor = new Color32(0xe0, 0x91, 0x3a, 0xff);   // rust - a yard full of it
+    static readonly Color EngineShopColor = new Color32(0x53, 0xa8, 0xff, 0xff); // blue - somebody's business
+    // The factory's colour is carried by the plate the builder puts under its wrench; the wrench itself
+    // is drawn pale, or a steel spanner tinted teal on a teal plate is one dark blob.
+    static readonly Color FactoryColor = new Color32(0xc6, 0xf7, 0xea, 0xff);    // the wrench on the plate
+    static readonly Color FactoryLabel = new Color32(0x5f, 0xe8, 0xc8, 0xff);    // teal - the one place you own
     static readonly Color MysteryColor = new Color32(0x6b, 0x72, 0x8c, 0xff);    // not been there yet
     static readonly Color CurrentHalo = new Color32(0xf4, 0xea, 0xd7, 0xff);     // cream frame - you are here
     static readonly Color DestHalo = new Color32(0xe5, 0x48, 0x4d, 0xff);        // red - this week's race
     static readonly Color ReachableHalo = new Color32(0xf2, 0xc1, 0x4e, 0x8c);   // gold, dimmed - one stop away
-    static readonly Color EdgeColor = new Color32(0x4a, 0x55, 0x74, 0xc0);       // highway
+
+    // Roads read in three states, brightest first: the ones you can take from here (gold), your own
+    // factory's slip roads (teal, always), and the rest of the country (steel blue).
+    static readonly Color EdgeColor = new Color32(0x39, 0x5a, 0x94, 0xd8);       // highway
+    static readonly Color EdgeLiveColor = new Color32(0xf2, 0xc1, 0x4e, 0xff);   // a road out of where you stand
+    static readonly Color EdgeFactoryColor = new Color32(0x3f, 0x9d, 0x8b, 0xff);// the slip roads to your shop
+    const float EdgeWidth = 3f, EdgeWidthLive = 5f;
 
     [Header("Header")]
     public Text titleLabel;
@@ -51,6 +62,8 @@ public class TravelMapScreen : MonoBehaviour
     [Header("Map")]
     public RectTransform nodesRoot;   // TravelNodeMarker children — authored, draggable
     public RectTransform edgesRoot;   // highway lines — regenerated from marker positions
+    public RectTransform herePin;     // cream pin that hops to wherever you are (optional)
+    public RectTransform destPin;     // red chequered flag over this week's race (optional)
 
     [Header("Side panel")]
     public Text carRowsLabel;
@@ -66,7 +79,16 @@ public class TravelMapScreen : MonoBehaviour
     public Text noticeLabel;
 
     readonly Dictionary<string, TravelNodeMarker> _markers = new();
+    readonly List<EdgeLine> _edges = new();
     float _noticeUntil;
+
+    // One baked highway line, remembered so Refresh can recolour it without rebuilding the whole map.
+    class EdgeLine
+    {
+        public Image image;
+        public RectTransform rect;
+        public string a, b;
+    }
 
     // ---------------- lifecycle ----------------
 
@@ -166,6 +188,7 @@ public class TravelMapScreen : MonoBehaviour
     {
         if (_markers.Count == 0) CacheMarkers();
 
+        _edges.Clear();
         for (int i = edgesRoot.childCount - 1; i >= 0; i--)
         {
             var child = edgesRoot.GetChild(i).gameObject;
@@ -186,12 +209,51 @@ public class TravelMapScreen : MonoBehaviour
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0f, 0.5f);
             rt.localPosition = pa;
-            rt.sizeDelta = new Vector2(len, 2f);
+            rt.sizeDelta = new Vector2(len, EdgeWidth);
             rt.localEulerAngles = new Vector3(0f, 0f, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
             var img = go.GetComponent<Image>();
             img.color = EdgeColor;
             img.raycastTarget = false;
+            _edges.Add(new EdgeLine { image = img, rect = rt, a = a, b = b });
         }
+
+        // Baked look (also what Prefab Mode shows): plain highways, teal slip roads to your own shop.
+        TintEdges(null);
+    }
+
+    // Recolours the baked highways for where the player is standing. Public because the editor's
+    // Preview PNG dresses the map by hand — the canvas is Screen Space Overlay, so a PNG render is the
+    // only way to look at a restyle without Play Mode, and it has to show the live colour rules.
+    public void TintEdges(string currentId)
+    {
+        foreach (var e in _edges)
+        {
+            bool live = currentId != null && (e.a == currentId || e.b == currentId);
+            bool factory = IsFactory(e.a) || IsFactory(e.b);
+
+            e.image.color = live ? EdgeLiveColor : (factory ? EdgeFactoryColor : EdgeColor);
+            e.rect.sizeDelta = new Vector2(e.rect.sizeDelta.x, live ? EdgeWidthLive : EdgeWidth);
+            // Draw order carries the same ranking, or a gold road disappears under the fifty grey ones
+            // that cross it.
+            if (live || factory) e.rect.SetAsLastSibling();
+        }
+    }
+
+    // Editor preview hook (Draftmaster > Travel Map > Preview PNG): park the pins and tint the roads as
+    // if the player were standing at `currentId` on the way to `destId`. Same code the live map runs, so
+    // the PNG is not a hand-made approximation of the look.
+    public void PreviewState(string currentId, string destId)
+    {
+        if (_markers.Count == 0) CacheMarkers();
+        PlacePin(herePin, TravelGraph.Get(currentId));
+        PlacePin(destPin, TravelGraph.Get(destId));
+        TintEdges(currentId);
+    }
+
+    static bool IsFactory(string nodeId)
+    {
+        var n = TravelGraph.Get(nodeId);
+        return n != null && n.locationType == TravelLocationType.TeamFactory;
     }
 
     void OnNodeClicked(TravelNodeMarker marker)
@@ -257,16 +319,34 @@ public class TravelMapScreen : MonoBehaviour
             else if (reachable || (choosing && n.isCircuit)) { marker.halo.enabled = true; marker.halo.color = ReachableHalo; }
             else marker.halo.enabled = false;
 
-            var tint = DotColor(n);
-            marker.dot.color = tint;
+            marker.dot.color = DotColor(n);
 
             marker.label.text = LabelFor(n);
             // The nodes that matter right now get the bigger type; the other fifty stay small so the
             // middle of the country does not turn into a wall of overlapping names.
             bool shout = isCurrent || isDest || n.locationType == TravelLocationType.TeamFactory;
             marker.label.fontSize = shout ? 16 : 8;
-            marker.label.color = isCurrent ? CurrentHalo : (isDest ? DestHalo : tint);
+            marker.label.color = isCurrent ? CurrentHalo : (isDest ? DestHalo : LabelColor(n));
         }
+
+        // The two pins are single objects that hop about rather than one per node: where you are, and
+        // the race you are driving to. They are what the eye should find first on a board of 75 dots.
+        PlacePin(herePin, current);
+        PlacePin(destPin, dest);
+        TintEdges(current != null ? current.id : null);
+    }
+
+    // Parks a pin just above a node's dot, or hides it when there is nothing to point at.
+    void PlacePin(RectTransform pin, TravelNode node)
+    {
+        if (pin == null) return;
+        if (node == null || !_markers.TryGetValue(node.id, out var marker)) { pin.gameObject.SetActive(false); return; }
+        pin.gameObject.SetActive(true);
+        // Above the dot, except at the factory, whose own name is already up there (the builder puts it
+        // there because a name under that dot runs straight into Indianapolis Raceway Park's).
+        float dy = node.locationType == TravelLocationType.TeamFactory ? -38f : 26f;
+        pin.localPosition = marker.transform.localPosition + new Vector3(0f, dy, 0f);
+        pin.SetAsLastSibling();
     }
 
     // One colour per kind of place. Minor locations stay grey until you have actually pulled in - that
@@ -278,6 +358,11 @@ public class TravelMapScreen : MonoBehaviour
         if (!TravelState.IsVisited(n.id)) return MysteryColor;
         return n.locationType == TravelLocationType.Junkyard ? JunkyardColor : EngineShopColor;
     }
+
+    // Names are painted in their dot's colour so a glance down the map matches a glance at the key —
+    // except the factory, whose wrench is pale and whose name is the teal the node is known by.
+    static Color LabelColor(TravelNode n) =>
+        n.locationType == TravelLocationType.TeamFactory ? FactoryLabel : DotColor(n);
 
     static string LabelFor(TravelNode n)
     {

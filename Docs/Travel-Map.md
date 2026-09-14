@@ -42,15 +42,42 @@ The map is a **Canvas prefab** you edit in Prefab Mode (`Assets/Resources/UI/Tra
     (never moves existing ones); position the new markers by hand.
   - **Force Rebuild Prefab** — regenerate from `TravelGraph` coords, **losing hand edits**.
   - **Restyle (Iron Oval)** — re-skins the prefab in place from the pixel kit (frames, palette, the
-    three pixel faces, header icons, per-node marker sizes) and re-bakes the highways. **Node
-    positions are not touched**, so a hand-dragged layout survives it. Idempotent — run it whenever
-    the kit or the marker rules change. It also repairs a side panel missing its `WalkButton`.
+    three pixel faces, header icons, per-node marker sizes, the key, the two pins) and re-bakes the
+    highways. **Node positions are not touched** apart from the Team Factory's, so a hand-dragged
+    layout survives it. Idempotent — run it whenever the kit or the marker rules change. It also
+    repairs a side panel missing its `WalkButton`.
   - **Preview PNG** — renders the map to `Assets/Screenshots/travelmap_preview.png` with a sample
     week dressed into it. The canvas is Screen Space - Overlay, which never shows up in an ordinary
     editor screenshot, so this is how you look at a restyle without entering Play Mode.
   - **Open (Play Mode)** — opens the map without the F9 key (automation convenience).
 - `TravelGraph` remains the source of truth for **topology** (edges, BFS routing, shop stock);
-  `TravelGraph.pos` is only used to seed marker positions at build/sync time.
+  `TravelGraph.pos` is only used to seed marker positions at build/sync time — except the Team
+  Factory, whose marker `Restyle` re-seats from the graph every run.
+
+### How the board reads
+
+The map is a blue field (solid `MapField` navy with the kit's dither tiled over it — an `Image` tint
+multiplies, so the bare dither could only ever be darker than the backdrop) inside a cream frame:
+
+- **Dots are flat coloured squares**, sized by importance: racetrack 16px gold, parts shop 12px blue,
+  salvage yard 12px rust, grey while a minor location is still a "?". Names are drawn in their dot's
+  colour. **Do not put a kit icon on a map dot**: the icons are 16px art with their own colours baked
+  in, so a saturated tint at that size is a smudge (a tyre reads as a hole). Icons are used where
+  there is room — the factory badge, the two pins, the header.
+- **The Team Factory** is a 32px pale wrench on a deep-teal plate inside its own gold frame, which
+  stays lit whether or not the state ring is (your shop is never shut).
+- **Two pins hop about** instead of a badge per node: `herePin` (the map pin, where you stand) and
+  `destPin` (the chequered flag, this week's race), both children of `MapPlot/Nodes` so
+  `TravelMapScreen` can park one on a marker by copying its `localPosition`. Neither is a raycast
+  target, so they never eat the click on the dot underneath.
+- **Roads read in three states** (`TravelMapScreen.TintEdges`): gold and 5px for a road out of where
+  you are standing, teal for the factory's four slip roads, steel blue 3px for the rest of the
+  country. Lit roads are pushed to the front of the sibling list or the fifty that cross them win.
+- **The key** sits at plot-local `(910, -8)` — the largest node-free rectangle on the board, measured
+  against every dot and label. Its chips are the dots themselves at map size, so it is a sample of
+  the board rather than a second set of symbols.
+- `Preview PNG` drives the real `TintEdges` / pin code via `TravelMapScreen.PreviewState`, so the PNG
+  shows the live rules rather than a hand-made approximation.
 
 ## Systems
 
@@ -59,12 +86,17 @@ The map is a **Canvas prefab** you edit in Prefab Mode (`Assets/Resources/UI/Tra
   Engine Builders* (a dead-end Maine detour with the premium motors) or *Mojave Boneyard*, plus the
   **Team Factory**. Normalized coords, x west→east, y north→south. `ShortestHops` = BFS, every edge
   costs 1 stop.
-- **The Team Factory** (`team_factory`) — your own shop, near the middle of the map at lattice cell
-  (4, 3). Unlike the shops and yards it is not mounted on one highway: `FactoryHub` gives it its own
-  slip roads to the four nearest circuits, so it is one stop off a route through the middle of the
-  country rather than a dead end. On the map it is the only teal dot, twice the size of a circuit
-  and wearing the wrench icon, and it is never a grey "?" — it is yours, so you always know where it
-  is. **Collect, don't buy:** `PartCatalog.FactoryStock(week)` is the bench — the shop finishes one
+- **The Team Factory** (`team_factory`) — your own shop, in the middle of the map at normalized
+  `(0.463, 0.574)`. That is not a lattice cell on purpose: the central cells are all taken
+  (Indianapolis sits on the dead centre of the board), so the spot is the most central one that still
+  has ~95px of clear air round it at the authored 1470x950, labels included. Unlike the shops and
+  yards it is not mounted on one highway: `FactoryHub` gives it its own slip roads to the four
+  nearest circuits (Indianapolis, Salem, DuQuoin, Nashville Superspeedway), so it is one stop off a
+  route through the middle of the country rather than a dead end, and those four roads are drawn in
+  its own teal. On the map it is the only teal thing on the board — a wrench on a gold-edged plate,
+  twice the size of a circuit — and it is never a grey "?": it is yours, so you always know where it
+  is. Move it in code and `Restyle` re-seats the marker (the one node whose position the graph owns
+  rather than the prefab). **Collect, don't buy:** `PartCatalog.FactoryStock(week)` is the bench — the shop finishes one
   `factoryOnly` part every `FactoryWeeksPerPart` (2) weeks, in catalogue order (engine, gearbox,
   tyres, chassis), each one better than what the same slot costs on the road. They are free and the
   COLLECT button installs them like any other part. Taken parts are gone for good

@@ -168,7 +168,11 @@ public static class TravelGraph
         BuildRoads();
 
         // --- Your own shop, in the middle of the country ---
-        FactoryHub("team_factory", "Team Factory", Cell(4, 3),
+        // Not on a lattice cell: the middle cells are all taken (Indianapolis sits on the dead centre of
+        // the board), so this is the most central spot on the map that still leaves ~95px of clear air
+        // around it at the authored 1470x950 — measured against every circuit, shop and yard, labels
+        // included. Moving it re-picks its slip roads below, and Restyle re-seats the marker.
+        FactoryHub("team_factory", "Team Factory", new Vector2(0.463f, 0.574f),
             "Your own shop. The fabricators keep building while you are away, and nothing gets posted " +
             "out — whatever they have finished is on the rack, waiting for you to come and get it.");
 
