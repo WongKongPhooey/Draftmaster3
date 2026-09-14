@@ -725,6 +725,14 @@ public class WeekendVenueSites : MonoBehaviour
 
         LocationTitle.Attach(circle, "WINNER'S CIRCLE", BarrierRing, "Sponsor duty");
 
+        // Somebody waiting on the way out of it: a rival brand's rep who has watched the driver work the
+        // room and wants them off whoever is on the car. The gap in the front rail is the one doorway
+        // this place has, so it is the one patch of ground the player is certain to cross.
+        //
+        // Before the authored-marker return below, so a track that places its own winner's circle gets
+        // the beat too.
+        SponsorPoachBeat.Install(circle.transform, BarrierRing);
+
         // The mark is the middle of the chequers: stand there and the boards are behind you. An authored
         // marker already put an anchor here — this is the same spot, so there is nothing to add.
         if (authored) return;
