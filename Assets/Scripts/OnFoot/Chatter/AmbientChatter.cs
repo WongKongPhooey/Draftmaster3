@@ -8,6 +8,18 @@ namespace Draftmaster.Chatter
     // What the crowd makes of the player right now, derived from fan appeal.
     public enum ChatterMood { Dismissive, Neutral, Impressed }
 
+    // What the circuit is doing while the line is spoken.
+    //
+    // A paddock that says the same things during Friday setup as it does ten minutes before the Cup race
+    // is a paddock nobody lives in. Fan appeal already decides the crowd's TONE; this decides its SUBJECT,
+    // so the same people sound like they know what day it is.
+    //
+    // Kept as its own enum, with values matching the plain ints CrowdPolicy uses to size the crowd's
+    // noise, so this module still knows nothing about the weekend rules. The caller does the mapping.
+    // `None` is the no-topic case a caller with nothing to say about the session passes, and is what the
+    // topic-less Pick overload uses.
+    public enum ChatterTopic { None = -1, Idle = 0, Practice = 1, Qualifying = 2, Race = 3 }
+
     // One-liners background NPCs mutter as the player walks past — the half of a crowd that makes it feel
     // populated rather than decorated. Deliberately NOT a conversation: no prompt, no input, no state on the
     // player. Line choice is pure and seeded so it can be unit-tested without entering Play Mode.
@@ -117,6 +129,118 @@ namespace Draftmaster.Chatter
             "{chieffirst} said nobody touches the car. That includes you.",
         };
 
+        // ---------------------------------------------------------------- what the session is
+
+        // Session pools. These sit ALONGSIDE the mood pools rather than replacing them: roughly half the
+        // barks in an area that has them are drawn from here and the rest still react to fan appeal, so
+        // the crowd talks about the session without every single person doing so.
+        //
+        // Only the paddock and the pit lane get them. ChatterArea.Garage is the team's own shop, which is
+        // somewhere else entirely and has no session running — it falls through to its mood pools.
+
+        static readonly string[] PaddockIdle =
+        {
+            "Track's cold. Good hour to get the trolleys shifted.",
+            "Nothing running till later. Cup of tea, then.",
+            "Half this lot are queued up at the signing tent.",
+            "Media pen's over by the tower if they're after you.",
+            "Quiet, isn't it. Won't last.",
+            "Nobody's on track, {playerfirst}. Go and get some lunch.",
+        };
+
+        static readonly string[] PaddockPractice =
+        {
+            "They're out. Hear that?",
+            "Long-run pace is what matters today, not one lap.",
+            "Half the field's still circulating on old rubber.",
+            "Garage two's had the covers off since first thing.",
+            "Everyone finds a second before qualifying. Everyone.",
+            "You not out yet, {playerfirst}? Session's half gone.",
+        };
+
+        static readonly string[] PaddockQualifying =
+        {
+            "Quali's live. Nobody's watching hospitality now.",
+            "One lap. That's all any of them get.",
+            "Whoever's quickest today picks their own air tomorrow.",
+            "Screens are up by the hauler if you want the times.",
+            "Three tenths covering the top ten, apparently.",
+            "One clean lap, {playerfirst}. That's the job.",
+        };
+
+        static readonly string[] PaddockRace =
+        {
+            "Grid's forming up. You can feel it from here.",
+            "Everyone's gone trackside. Place is emptying out.",
+            "Whole weekend comes down to the next couple of hours.",
+            "Anthem's done. Won't be long now.",
+            "Best part of the job, this bit. Right before.",
+            "Go on then, {playerfirst}. Go and win it.",
+        };
+
+        static readonly string[] PitLaneIdle =
+        {
+            "Lane's closed. Nobody's coming in.",
+            "Good time to put the guns back on charge.",
+            "Get the rig packed down before the next one.",
+            "Nothing running. Don't stand about looking busy.",
+            "{chieffirst} wants the board rewritten before anyone rolls out.",
+        };
+
+        static readonly string[] PitLanePractice =
+        {
+            "Practice stops on the board. Look alive.",
+            "Two runs, then we're changing the bar.",
+            "Screen's got the whole field inside three tenths.",
+            "Bring it in after this one.",
+            "Dry run, everybody. Same as the real thing.",
+        };
+
+        static readonly string[] PitLaneQualifying =
+        {
+            "Out lap, hot lap, in. That's the whole plan.",
+            "Clean air or nothing. Don't follow anybody out.",
+            "Get some temperature in them before the line.",
+            "Two sets left and we're spending one of them now.",
+            "{chieffirst} says the gap closes at the end of the lap.",
+        };
+
+        static readonly string[] PitLaneRace =
+        {
+            "Race stops. Everyone on their marks.",
+            "Long afternoon, this. Get your fluids in now.",
+            "Box on lap twenty-eight unless it changes.",
+            "Wall's live from the green. Heads up, all of you.",
+            "Whatever happens out there, we do our bit in here.",
+        };
+
+        // The session pool for an area, or an empty array where the area has none. Never null.
+        public static string[] Topical(ChatterArea area, ChatterTopic topic)
+        {
+            switch (area)
+            {
+                case ChatterArea.Paddock:
+                    switch (topic)
+                    {
+                        case ChatterTopic.Idle: return PaddockIdle;
+                        case ChatterTopic.Practice: return PaddockPractice;
+                        case ChatterTopic.Qualifying: return PaddockQualifying;
+                        case ChatterTopic.Race: return PaddockRace;
+                    }
+                    break;
+                case ChatterArea.PitLane:
+                    switch (topic)
+                    {
+                        case ChatterTopic.Idle: return PitLaneIdle;
+                        case ChatterTopic.Practice: return PitLanePractice;
+                        case ChatterTopic.Qualifying: return PitLaneQualifying;
+                        case ChatterTopic.Race: return PitLaneRace;
+                    }
+                    break;
+            }
+            return System.Array.Empty<string>();
+        }
+
         // Authored lines, layered over the built-in tables. DialogueLibrary installs this at runtime so a
         // track's own DialoguePool asset can add to (or replace) what the crowd says here; left null this
         // class stays exactly what it was — pure, seeded, testable, no Resources, no track lookup.
@@ -159,8 +283,28 @@ namespace Draftmaster.Chatter
         // Pick a line, avoiding an immediate repeat of `lastLine` whenever the pool has an alternative.
         // Seeded rather than Random.value so the same walk-past can be reproduced in a test.
         public static string Pick(ChatterArea area, ChatterMood mood, int seed, string lastLine = null)
+            => PickFrom(Lines(area, mood), seed, lastLine);
+
+        // As above, but the speaker also knows what the circuit is doing. Roughly half the barks come from
+        // the session pool and the rest from the mood pool, so the crowd sounds like it knows what day it
+        // is without turning into a public-address system. Which half a given bark falls in is decided by
+        // the seed, so this stays as reproducible as the line choice itself.
+        //
+        // An area with no session lines (the team's own garage) or a caller with no session to report
+        // (ChatterTopic.None) is exactly the topic-less call above.
+        public static string Pick(ChatterArea area, ChatterMood mood, ChatterTopic topic,
+                                  int seed, string lastLine = null)
         {
-            var pool = Lines(area, mood);
+            var topical = Topical(area, topic);
+            bool useTopic = topical.Length > 0 && (Hash(seed ^ TopicSalt) & 1) == 0;
+            return PickFrom(useTopic ? topical : Lines(area, mood), seed, lastLine);
+        }
+
+        // Arbitrary constant, so the topic/mood coin flip is independent of the index the same seed picks.
+        const int TopicSalt = unchecked((int)0x9E3779B9);
+
+        static string PickFrom(string[] pool, int seed, string lastLine)
+        {
             if (pool == null || pool.Length == 0) return string.Empty;
             if (pool.Length == 1) return SpeakerIdentity.Fill(pool[0]);
 

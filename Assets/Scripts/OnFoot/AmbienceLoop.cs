@@ -117,31 +117,11 @@ public class AmbienceLoop : MonoBehaviour
     // grandstands are half empty, the cars on track are somebody's installation laps, and what you should
     // hear is a murmur. The rule itself lives in CrowdPolicy next to the headcount the same half-day
     // spawns, so the place sounds as full as it looks.
+    // SessionMood owns the mapping, because the crowd's one-liners are drawn off the same answer and the
+    // two must never disagree — a murmur that says Friday practice under people talking about the grid
+    // forming up is worse than getting both wrong the same way.
     static float SessionNoise()
-    {
-        var live = WeekendTrackState.Now();
-        int activity = Draftmaster.Crowd.CrowdPolicy.TrackIdle;
-        if (live.any)
-        {
-            activity = live.kind switch
-            {
-                Draftmaster.Weekend.ActivityKind.Race => Draftmaster.Crowd.CrowdPolicy.TrackRace,
-                Draftmaster.Weekend.ActivityKind.Qualifying => Draftmaster.Crowd.CrowdPolicy.TrackQualifying,
-                _ => Draftmaster.Crowd.CrowdPolicy.TrackPractice,
-            };
-        }
-
-        // The PLAYER'S race outranks the sheet, the same test the paddock headcount makes: an exhibition
-        // race, a single race and a multiplayer lobby carry no weekend ledger at all and would otherwise
-        // read as Friday morning and play a practice-day crowd through a race. A weekend race that is not
-        // the player's — the truck race on Friday night, the National race on Saturday — keeps its own
-        // half-day, because those houses genuinely are smaller than Sunday's.
-        bool playerRace = AppearanceConditions.CurrentSession == RaceWeekend.Session.Race;
-        if (playerRace) activity = Draftmaster.Crowd.CrowdPolicy.TrackRace;
-        int slot = playerRace ? 5 : (int)Draftmaster.Weekend.WeekendLedger.CurrentSlot;
-
-        return Draftmaster.Crowd.CrowdPolicy.NoiseForSession(slot, activity);
-    }
+        => Draftmaster.Crowd.CrowdPolicy.NoiseForSession(SessionMood.HalfDaySlot(), SessionMood.TrackActivity());
 
     // Is the player stood in any masked room. Both kinds count — to the player, stepping into the motorhome
     // and stepping into the team's garage are the same move, and both put a wall between them and the crowd.

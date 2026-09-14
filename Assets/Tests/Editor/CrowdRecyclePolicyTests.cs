@@ -6,7 +6,7 @@ using UnityEngine;
 // so the crowd stays clustered around the player. All pure — no scene, no play mode.
 public class CrowdRecyclePolicyTests
 {
-    static CrowdRecycleTuning Tuning => CrowdRecycleTuning.Default;   // 100m out, 14-45m back, cap 280
+    static CrowdRecycleTuning Tuning => CrowdRecycleTuning.Default;   // 60m out, 14-34m back, cap 280
 
     // A paddock the shape PaddockSpawner builds: a long strip alongside the pit lane. Axis-aligned here
     // so the expected answers are readable; the rotated case gets its own test.
@@ -412,5 +412,71 @@ public class CrowdRecyclePolicyTests
         // which is close enough for the player to notice something appearing at the edge of the screen.
         Assert.GreaterOrEqual(Tuning.respawnMinRadius, CrowdTuning.Default.fullRadius);
         Assert.Less(Tuning.respawnMaxRadius, Tuning.despawnRadius, "respawns must not land on the despawn line");
+    }
+
+    [Test]
+    public void SomebodyPutBackHasRoomToWanderBeforeBeingPickedUpAgain()
+    {
+        // A respawn band pressed right up against the despawn radius means an NPC is one errand away from
+        // being recycled again, and a crowd that churns is a crowd whose faces keep changing in the corner
+        // of the frame. Leave a decent share of the radius to walk about in.
+        var t = CrowdRecyclePolicy.Sanitised(Tuning);
+        Assert.Less(t.respawnMaxRadius, t.despawnRadius * 0.7f,
+                    "somebody put back at the far edge of the band is about to be recycled again");
+    }
+
+    // ---------------------------------------------------------------- what the player actually sees
+
+    // The on-foot camera is a 3.5 orthographic size at 16:9 — about 12.4m by 7m of world.
+    const float OnFootFrameArea = (2f * 3.5f * (16f / 9f)) * (2f * 3.5f);
+
+    [Test]
+    public void ClusteringPutsAPaddockWorthOfPeopleOnScreenRatherThanAHandful()
+    {
+        // Headcount is not the thing the player perceives — density is, and the only density that counts
+        // is the one inside the ~87 m² the on-foot camera frames. A full house of 400 spread evenly over
+        // a 400m x 30m paddock is one person per 30 m²: barely three on screen, which reads as a car park
+        // rather than a race paddock. Packing the cap into the despawn radius is what fixes that, and this
+        // is the number that says whether it did.
+        var t = CrowdRecyclePolicy.Sanitised(Tuning);
+        const float paddockLength = 400f, paddockDepth = 30f;
+
+        float openDensity = CrowdPolicy.ComfortableMaxPopulation / (paddockLength * paddockDepth);
+        float clustered = Mathf.Min(2f * t.despawnRadius, paddockLength) * paddockDepth;
+        float clusterDensity = t.targetNearPlayer / clustered;
+
+        float onScreenOpen = openDensity * OnFootFrameArea;
+        float onScreenClustered = clusterDensity * OnFootFrameArea;
+
+        Assert.Less(onScreenOpen, 3.5f, "the unclustered paddock really is that empty");
+        Assert.Greater(onScreenClustered, 5f,
+                       $"only {onScreenClustered:0.0} people on screen — the paddock still reads as empty");
+        // And not a crush: shoulder-to-shoulder would be a metre or two each, which is a queue, not a
+        // paddock you can walk through.
+        Assert.Greater(1f / clusterDensity, 8f, "several square metres of elbow room per person");
+    }
+
+    [Test]
+    public void TheAwakeCrowdStaysInsideTheBenchmarkedBudget()
+    {
+        // Tightening the cluster is only free because everyone outside CrowdTuning.reducedRadius is
+        // frozen. What it does cost is the people inside it, so check the awake headcount against the
+        // benchmark's own ceiling (CrowdBenchmarkTests measured ~4.5us each; a 60fps frame is 16.67ms and
+        // the crowd's share of it should stay around a tenth).
+        var t = CrowdRecyclePolicy.Sanitised(Tuning);
+        const float paddockDepth = 30f;
+
+        float clustered = 2f * t.despawnRadius * paddockDepth;
+        float clusterDensity = t.targetNearPlayer / clustered;
+
+        var lod = CrowdTuning.Default;
+        float awakeArea = (2f * lod.reducedRadius) * paddockDepth;
+        float awake = clusterDensity * awakeArea;
+
+        const float msPerAwakeNpc = 0.0045f;   // CrowdBenchmarkTests
+        float msPerFrame = awake * msPerAwakeNpc;
+
+        Assert.Less(msPerFrame, 16.67f * 0.12f,
+                    $"{awake:0} awake NPCs is {msPerFrame:0.00} ms/frame — re-run CrowdBenchmarkTests");
     }
 }

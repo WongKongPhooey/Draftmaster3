@@ -19,9 +19,12 @@ namespace Draftmaster.Chatter
     // filling a token this class does not own would eat theirs.
     public static class SpeakerIdentity
     {
-        // The four tokens a line may use. Case is ignored, so {PlayerFirst} works too.
+        // The tokens a line may use. Case is ignored, so {PlayerFirst} works too.
         public const string PlayerToken      = "{player}";
         public const string PlayerFirstToken = "{playerfirst}";
+        // Surname on its own, for the register a crowd actually uses about a driver they don't know:
+        // "my money's on Larson today". Without it that line went out with the braces still in it.
+        public const string PlayerLastToken  = "{playerlast}";
         public const string ChiefToken       = "{chief}";
         public const string ChiefFirstToken  = "{chieffirst}";
 
@@ -30,6 +33,7 @@ namespace Draftmaster.Chatter
         // cannot be filled is still going to be spoken.
         public const string PlayerFallback      = "the driver";
         public const string PlayerFirstFallback = "mate";
+        public const string PlayerLastFallback  = "the driver";
         public const string ChiefFallback       = "Crew Chief";
         public const string ChiefFirstFallback  = "Chief";
 
@@ -51,6 +55,7 @@ namespace Draftmaster.Chatter
 
         public static string PlayerFullName => Or(PlayerName, PlayerFallback);
         public static string PlayerFirstName => Or(FirstNameOf(PlayerName), PlayerFirstFallback);
+        public static string PlayerLastName => Or(LastNameOf(PlayerName), PlayerLastFallback);
         public static string CrewChiefFullName => Or(CrewChiefName, ChiefFallback);
         public static string CrewChiefFirstName => Or(FirstNameOf(CrewChiefName), ChiefFirstFallback);
 
@@ -61,6 +66,18 @@ namespace Draftmaster.Chatter
             string trimmed = fullName.Trim();
             int space = trimmed.IndexOfAny(new[] { ' ', '\t' });
             return space < 0 ? trimmed : trimmed.Substring(0, space);
+        }
+
+        // "Kyle Larson" -> "Larson", and "Ricky Stenhouse Jr" -> "Stenhouse Jr": everything after the
+        // first name, so a suffix travels with the surname rather than being dropped. A one-word name is
+        // its own surname too, which is what a mononym driver should answer to.
+        public static string LastNameOf(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return "";
+            string trimmed = fullName.Trim();
+            int space = trimmed.IndexOfAny(new[] { ' ', '\t' });
+            if (space < 0) return trimmed;
+            return trimmed.Substring(space + 1).TrimStart();
         }
 
         // Cheap gate so the common case — a line with no braces in it — never allocates.
@@ -115,6 +132,7 @@ namespace Draftmaster.Chatter
             {
                 case "player":      return PlayerFullName;
                 case "playerfirst": return PlayerFirstName;
+                case "playerlast":  return PlayerLastName;
                 case "chief":       return CrewChiefFullName;
                 case "chieffirst":  return CrewChiefFirstName;
                 default:            return null;

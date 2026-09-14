@@ -35,6 +35,34 @@ public class DialogueNameTests
         SpeakerIdentity.CrewChiefNameProvider = () => chief;
     }
 
+    // ---------------------------------------------------------------- surnames
+
+    [Test]
+    public void LastName_IsEverythingAfterTheFirstName()
+    {
+        Assert.AreEqual("Larson", SpeakerIdentity.LastNameOf("Kyle Larson"));
+        Assert.AreEqual("Larson", SpeakerIdentity.LastNameOf("  Kyle Larson  "));
+        // A suffix belongs to the surname. "My money's on Stenhouse today" would be the wrong driver.
+        Assert.AreEqual("Stenhouse Jr", SpeakerIdentity.LastNameOf("Ricky Stenhouse Jr"));
+        Assert.AreEqual("Prost", SpeakerIdentity.LastNameOf("Prost"), "a mononym is its own surname");
+        Assert.AreEqual("", SpeakerIdentity.LastNameOf("   "));
+        Assert.AreEqual("", SpeakerIdentity.LastNameOf(null));
+    }
+
+    [Test]
+    public void TheCrowdCanBetOnADriverBySurname()
+    {
+        // The register a crowd actually uses about a driver they have never met. Before this token
+        // existed the line went out with its braces still in it.
+        NameThem("Kyle Larson", "Ron Doyle");
+        Assert.AreEqual("My money's on Larson today.",
+                        SpeakerIdentity.Fill("My money's on {playerlast} today."));
+
+        SpeakerIdentity.Reset();
+        Assert.AreEqual("My money's on the driver today.",
+                        SpeakerIdentity.Fill("My money's on {playerlast} today."));
+    }
+
     // ---------------------------------------------------------------- first names
 
     [Test]

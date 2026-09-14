@@ -87,16 +87,31 @@ namespace Draftmaster.Crowd
         // PaddockSpawner builds: a few hundred metres of pit straight by thirty deep.
         //
         // targetNearPlayer has to sit ABOVE the headcount that would naturally be nearby, or the cap
-        // fires before the recycler has added anybody. A full house of 400 over a 400m x 30m paddock puts
-        // about 200 inside a 100m radius already, so 280 tops that up by half again in the middle of the
-        // paddock and nearly triples it at the ends — where the illusion is worth the most — while
-        // leaving a hundred-odd frozen out in the paddock as headroom.
+        // fires before the recycler has added anybody. A full house of 400 over a 400m x 30m paddock is
+        // one person per 30 m², so 120 of them fall inside a 60m radius on their own and the cap tops
+        // that up to 280.
+        //
+        // The radius is what sets the density the player actually sees, and that is the number worth
+        // arguing about. The on-foot camera frames about 12m x 7m, so on-screen headcount is
+        // (84 m² x cluster density). A 100m radius spread the cap's 280 over 200m x 30m -- one person
+        // per 21 m², about FOUR people on screen, which is not what a race paddock looks like on a
+        // Sunday. Packing the same 280 into a 60m radius is one per 13 m² and six or seven on screen,
+        // and still several square metres of elbow room each, which is a paddock rather than a crush.
+        //
+        // It costs what it looks like: awake is everyone inside CrowdTuning.reducedRadius (25m), so a
+        // 50m x 30m band of the cluster -- about 115 NPCs rather than 70. At the ~4.5us per awake NPC
+        // the crowd benchmark measured that is ~0.5 ms/frame on foot and still nothing at all while
+        // driving, comfortably inside the 1.85 ms the benchmark calls the ceiling. Re-run
+        // CrowdBenchmarkTests before tightening it further.
         public static CrowdRecycleTuning Default => new CrowdRecycleTuning
         {
             enabled = true,
-            despawnRadius = 100f,
+            despawnRadius = 60f,
             respawnMinRadius = 14f,
-            respawnMaxRadius = 45f,
+            // Comfortably inside the despawn radius rather than pressed against it: somebody put back at
+            // 45m of a 60m radius is one errand away from being picked up again, and a crowd that churns
+            // is a crowd whose faces keep changing in the corner of the frame.
+            respawnMaxRadius = 34f,
             targetNearPlayer = 280,
             recyclesPerFrame = 2,
             samplesPerRecycle = 12,

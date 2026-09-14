@@ -124,6 +124,7 @@ public class AIRacingBehaviour : MonoBehaviour
     float _mistakeTimer;
     float _mistakeWobbleDir;
     float _basePaceMultiplier = 1f;
+    float _phaseAggression = 0.5f;
     float _stallTimer;
     float _recoveryTimer;
     float _recoveryDir;
@@ -157,6 +158,18 @@ public class AIRacingBehaviour : MonoBehaviour
         if (!RaceStart.IsGreen) return;
 
         float dt = Time.fixedDeltaTime;
+
+        // Race phase. A field that races lap 1 exactly the way it races the last lap reads as a machine, so
+        // the drivers settle in over the opening laps - wider gaps, fewer lunges - and throw everything at
+        // it over the closing ones. RaceDirector reports -1 wherever the race distance isn't known
+        // (practice, qualifying, multiplayer); RaceCraft turns that into the neutral mid-race envelope
+        // rather than an eternal opening lap. Everything downstream reads _phaseAggression, not the
+        // driver's flat aggression stat.
+        float raceProgress = phaseAwareRacecraft
+            ? RaceCraft.NormaliseProgress(RaceDirector.Progress01)
+            : RaceCraft.NeutralProgress;
+        _phaseAggression = RaceCraft.PhaseAggression(aggression01, raceProgress);
+        float followMargin = RaceCraft.PhaseFollowMargin(raceProgress);
 
         // The grid-row stagger (lateralOffset) is only a parked-field look. Once racing, ease it off so cars
         // settle onto their real racing line instead of holding a permanent ±2 m offset for the whole race.
@@ -210,7 +223,7 @@ public class AIRacingBehaviour : MonoBehaviour
             float mySpeed = _spline.CurrentMph;
             float aheadLat = ahead.LateralOnTrack;
 
-            float closingRange = Mathf.Lerp(overtakeClosingRange * 0.7f, overtakeClosingRange * 1.4f, aggression01);
+            float closingRange = Mathf.Lerp(overtakeClosingRange * 0.7f, overtakeClosingRange * 1.4f, _phaseAggression);
             // Compare against what we COULD do (profile pace), not current speed — once we've matched the
             // leader's speed the current-speed delta is zero and a train forms that never breaks.
             float myPotential = Mathf.Max(mySpeed, _spline.DesiredMph);
@@ -238,7 +251,7 @@ public class AIRacingBehaviour : MonoBehaviour
             float closingMps = Mathf.Max(0f, mySpeedMps - blockerMph * MphToMps);
             float brakeDist = (closingMps * closingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
             float reqGap = (minFollowDistance + mySpeedMps * followHeadwaySeconds + brakeDist)
-                           * Mathf.Lerp(1.15f, 0.85f, aggression01);
+                           * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
             if (blockGap < reqGap)
             {
                 // Ease from the blocker's speed (at reqGap) down to a touch under it (at hardFollowGap).
@@ -275,7 +288,7 @@ public class AIRacingBehaviour : MonoBehaviour
             float pClosingMps = Mathf.Max(0f, myMpsNow - pSpeedMph * MphToMps);
             float pBrakeDist = (pClosingMps * pClosingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
             float pReqGap = (minFollowDistance + myMpsNow * followHeadwaySeconds + pBrakeDist)
-                            * Mathf.Lerp(1.15f, 0.85f, aggression01);
+                            * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
             if (pg < pReqGap && pOverlap > 0f)
             {
                 float close01 = Mathf.InverseLerp(pReqGap, hardFollowGap, pg);
@@ -348,6 +361,23 @@ public class AIRacingBehaviour : MonoBehaviour
                     }
                 }
             }
+        }
+
+        // Blue flags. A car a lap down that races the leaders is the single most immersion-breaking thing
+        // an AI field does, so lapped traffic gets out of the way instead: ease off the line the lapper is
+        // already using and lift just enough that the pass actually completes. This outranks whatever
+        // overtake or defence we were about to make - you don't defend against a car that isn't racing you
+        // - while stuck recovery and a payback lunge below still override it, and the side-by-side
+        // repulsion beneath still applies, so yielding never steers into somebody.
+        float blueFlagLiftFactor = 1f;
+        if (respectBlueFlags && !_spline.IsOnPit
+            && TryGetLapperBehind(out float lapperLat, out float lapperGap))
+        {
+            float yieldStrength = RaceCraft.YieldStrength01(lapperGap, blueFlagRange);
+            desiredTactical = RaceCraft.YieldDirection(_spline.LateralOnTrack, lapperLat)
+                              * blueFlagOffset * yieldStrength;
+            blueFlagLiftFactor = RaceCraft.YieldSpeedFactor(yieldStrength, blueFlagLift);
+            _commitTimer = 0f;   // don't let an overtake commitment resume the moment we're past
         }
 
         // Side-by-side repulsion + contact response.
@@ -445,7 +475,14 @@ public class AIRacingBehaviour : MonoBehaviour
         }
         if (_cooldownTimer > 0f) _cooldownTimer -= dt;
 
-        // Mistake roll: probability scales with (1 - consistency). Active mistake adds wobble + pace dip.
+        // Tyre grip decides two things - the pace the car can carry and how likely its driver is to drop
+        // it - so it is looked up once and used for both.
+        float grip = CurrentGrip();
+
+        // Mistake roll. No longer a flat per-second dice throw: a driver with a rival filling the mirrors on
+        // worn tyres is far likelier to make an error than the same driver alone on fresh rubber, and even a
+        // metronome cracks eventually. The weighting lives in RaceCraft so it can be unit-tested in EditMode.
+        // An active mistake adds wobble + a pace dip, as before.
         if (_mistakeTimer > 0f)
         {
             _mistakeTimer -= dt;
@@ -453,19 +490,17 @@ public class AIRacingBehaviour : MonoBehaviour
         }
         else if (mistakeProbabilityPerSecond > 0f)
         {
-            float perTickP = mistakeProbabilityPerSecond * (1f - consistency01) * dt;
-            if (Random.value < perTickP)
+            float perSecond = RaceCraft.MistakeChancePerSecond(
+                mistakeProbabilityPerSecond, consistency01, PressureFromBehind(), 1f - grip);
+            if (Random.value < perSecond * dt)
             {
                 _mistakeTimer = mistakeDurationSeconds;
                 _mistakeWobbleDir = Random.value < 0.5f ? -1f : 1f;
             }
         }
 
-        float effectivePace = _basePaceMultiplier * TrackConditions.AiPaceMultiplier;
+        float effectivePace = _basePaceMultiplier * TrackConditions.AiPaceMultiplier * grip * blueFlagLiftFactor;
         if (_mistakeTimer > 0f) effectivePace *= mistakePaceFactor;
-        var tireModel = GetComponent<TireModel>();
-        if (tireModel != null) effectivePace *= tireModel.OverallGrip;
-        else { var tire = GetComponent<TireState>(); if (tire != null) effectivePace *= tire.GripMultiplier; }
         _spline.paceMultiplier = effectivePace;
 
         _spline.tacticalLateralOffset = _smoothedTactical;
@@ -483,7 +518,7 @@ public class AIRacingBehaviour : MonoBehaviour
         {
             float outsideDir = turnSign;   // outside of the turn — more room, better exit
             float insideDir = -outsideDir; // the dive
-            pick = aggression01 > 0.75f ? insideDir : outsideDir;
+            pick = _phaseAggression > 0.75f ? insideDir : outsideDir;
         }
         else
         {
@@ -554,6 +589,89 @@ public class AIRacingBehaviour : MonoBehaviour
             overlap01 = ov;
         }
         return blocker != null;
+    }
+
+    // ---- Race phase, pressure and blue flags ----
+
+    // Overall tyre grip as a multiplier on pace. TireModel is the full thermal/wear model, TireState the
+    // older simple one; a car carrying neither is on fresh rubber.
+    float CurrentGrip()
+    {
+        var tireModel = GetComponent<TireModel>();
+        if (tireModel != null) return tireModel.OverallGrip;
+        var tire = GetComponent<TireState>();
+        return tire != null ? tire.GripMultiplier : 1f;
+    }
+
+    // How hard somebody is leaning on us, 0..1 - the nearest car behind within pressureRange, whoever it
+    // is. A human on the bumper has to count for as much as an AI one, so the free-driven player cars are
+    // scanned too; they are obstacles rather than RaceField entries.
+    float PressureFromBehind()
+    {
+        if (pressureRange <= 0f || _spline.IsOnPit) return 0f;
+
+        float nearest = float.MaxValue;
+        if (RaceField.TryGetBehind(_spline, pressureRange, out _, out float aiGap)) nearest = aiGap;
+
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            float gap = -SignedGapTo(p.TrackDistance);   // + = behind us
+            if (gap > 0f && gap < nearest) nearest = gap;
+        }
+
+        return nearest == float.MaxValue ? 0f : RaceCraft.Pressure01(nearest, pressureRange);
+    }
+
+    // The nearest car behind that is genuinely further round the race than we are and close enough to be
+    // let past. Laps come from RacePositionTracker, which counts line crossings for every car tagged
+    // Vehicle - AI and human alike - so being lapped by the player waves the same flag as being lapped by
+    // an AI. No tracker (practice, qualifying, a scene without one) means nobody is a lap down: we simply
+    // never yield, which is the right answer for a session that isn't scored on laps.
+    bool TryGetLapperBehind(out float lapperLat, out float gapBehind)
+    {
+        lapperLat = 0f;
+        gapBehind = 0f;
+        if (blueFlagRange <= 0f) return false;
+
+        var rt = RacePositionTracker.Instance;
+        if (rt == null) return false;
+        int myLap = rt.LapOf(transform);
+
+        float best = float.MaxValue;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float gap = -LongitudinalGap(_spline, other);   // + = behind us
+            if (gap >= best) continue;
+            // Range first, so the lap lookup below only runs for the handful of cars close enough to
+            // matter. ShouldYield re-tests it; this is only here to keep the common case a compare.
+            if (gap <= 0f || gap > blueFlagRange) continue;
+            if (!RaceCraft.ShouldYield(myLap, rt.LapOf(other.transform), gap, blueFlagRange)) continue;
+            best = gap;
+            lapperLat = other.LateralOnTrack;
+            gapBehind = gap;
+        }
+
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            float gap = -SignedGapTo(p.TrackDistance);
+            if (gap >= best || gap <= 0f || gap > blueFlagRange) continue;
+            if (!RaceCraft.ShouldYield(myLap, rt.LapOf(p.transform), gap, blueFlagRange)) continue;
+            best = gap;
+            lapperLat = p.TrackLateral;
+            gapBehind = gap;
+        }
+
+        return best < float.MaxValue;
     }
 
     // ---- Rivalry / payback ----
@@ -630,7 +748,7 @@ public class AIRacingBehaviour : MonoBehaviour
         // Right at the threshold a cautious driver almost never snaps; deep in the red an aggressive one
         // lunges most scans.
         float depth01 = Mathf.Clamp01((DriverRelationships.PaybackThreshold - rel) / 40f);
-        float chance = paybackBaseChance * (0.5f + aggression01) * (0.6f + 0.8f * depth01);
+        float chance = paybackBaseChance * (0.5f + _phaseAggression) * (0.6f + 0.8f * depth01);
         if (Random.value > chance) return false;
 
         _paybackNextAllowed[otherName] = Time.time + paybackCooldownSeconds;

@@ -18,6 +18,10 @@ public class NPCAmbientChatter : MonoBehaviour
 {
     [Tooltip("Which line pool this speaker draws from.")]
     public ChatterArea area = ChatterArea.Paddock;
+    [Tooltip("Draw about half this speaker's lines from a pool matching whatever the circuit is doing — " +
+             "setup, practice, qualifying, the race. Untick for a speaker who should sound the same all " +
+             "weekend (or one standing somewhere with no session, like the team's own shop).")]
+    public bool speakToTheSession = true;
     [Tooltip("The player has to come within this many metres to be noticed.")]
     public float noticeRange = 6.5f;
     [Tooltip("Minimum seconds between this NPC's own barks, on top of re-arming.")]
@@ -75,10 +79,13 @@ public class NPCAmbientChatter : MonoBehaviour
     void Speak(Transform listener)
     {
         var mood = AmbientChatter.MoodFor(FanAppeal.Value);
+        // Fan appeal sets the TONE, the running session sets the SUBJECT. A paddock that says the same
+        // things during Friday setup as it does on the grid on Sunday is a paddock nobody lives in.
+        var topic = speakToTheSession ? SessionMood.Topic() : ChatterTopic.None;
         // Seed off our own identity plus the clock so two NPCs noticing the player in the same second
         // don't pick the same line, and the same NPC doesn't repeat itself.
         int seed = GetInstanceID() ^ Mathf.RoundToInt(Time.time * 977f);
-        string line = AmbientChatter.Pick(area, mood, seed, _lastLine);
+        string line = AmbientChatter.Pick(area, mood, topic, seed, _lastLine);
         if (string.IsNullOrEmpty(line)) return;
 
         if (_bubble == null) _bubble = SpeechBubble.Attach(transform);
