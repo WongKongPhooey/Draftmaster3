@@ -152,16 +152,78 @@ public class GrandstandVisit : MonoBehaviour
 
         _shot = GrandstandCamera.Begin(seat, view, authored, zoom, pan);
 
-        // Sit them facing the way the stand faces. The player arrives here still pointing whichever way
-        // they walked into the gate, which is across the seats as often as not. The shot's own vantage is
-        // the answer: it is out over the circuit, which is the only direction a grandstand looks.
+        // Sit them square in the stand. The player arrives still pointing whichever way they walked into
+        // the gate, which is across the seats as often as not.
+        //
+        // The stand itself is the answer, not the vantage: a grandstand is a block of seating with one
+        // angle, every row in it faces the same way, and somebody sat in it is lined up with the structure
+        // rather than aimed at a point. Pointing them at the camera's vantage was close at a stand square
+        // to the road and visibly crooked at one on a curve, where the nearest piece of circuit is off to
+        // one side of where the seats look.
         if (player != null && _shot != null)
         {
             var walker = player.GetComponent<OnFootController>();
-            if (walker != null) walker.FaceToward(_shot.ViewPoint);
+            if (walker != null)
+            {
+                Vector2 look = StandFacing(seat, _shot.ViewPoint);
+                walker.FaceToward(seat + new Vector3(look.x, look.y, 0f));
+            }
         }
 
-        // Nothing else times an ambient session — there is no practice or race director out here, because
+        // Which way the seats in this stand look, as a unit vector.
+    //
+    // The ANGLE comes from the stand — the structure the player is sat in — and only the SENSE of it comes
+    // from the view, because a stand's rows are an axis and which side of it the road is on is the one
+    // thing the geometry does not say. (The `flipFacing` flag says so for the artwork, but only for the
+    // artwork, and a track is free to have rotated the whole object instead.) Taking the direction this
+    // way is right whichever of those a package did.
+    //
+    // No stand near the seat — the gate's destination is somewhere else, or the track has none — and the
+    // vantage stands in for it, which is what this used to do in every case.
+    static Vector2 StandFacing(Vector3 seat, Vector3 view)
+    {
+        Vector2 toView = view - seat;
+        Vector2 fallback = toView.sqrMagnitude > 0.0001f ? toView.normalized : Vector2.down;
+
+        var stands = FindObjectsByType<Grandstand>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        if (stands == null || stands.Length == 0) return fallback;
+
+        Grandstand nearest = null;
+        float best = float.MaxValue;
+        foreach (var stand in stands)
+        {
+            if (stand == null) continue;
+            float d = DistanceToStand(stand, seat);
+            if (d >= best) continue;
+            best = d;
+            nearest = stand;
+        }
+
+        // Sat in it, not merely nearest to it. A seat further away than this is not in a stand at all and
+        // borrowing that stand's angle would point the player at nothing in particular.
+        const float SatInItMetres = 12f;
+        if (nearest == null || best > SatInItMetres) return fallback;
+
+        // Local +Y is the stand's depth, so the rows look along its Y axis; the road decides which end.
+        Vector2 axis = nearest.transform.up;
+        if (Vector2.Dot(axis, toView) < 0f) axis = -axis;
+        return axis.sqrMagnitude > 0.0001f ? axis.normalized : fallback;
+    }
+
+    // How far the seat is from the stand's own footprint, rather than from its centre. A stand is up to
+    // 120 m long, so the middle of it can be most of a straight away from somebody sitting at one end.
+    static float DistanceToStand(Grandstand stand, Vector3 seat)
+    {
+        Vector3 local = stand.transform.InverseTransformPoint(seat);
+        float halfLength = Mathf.Max(0.1f, stand.length * 0.5f);
+        float halfDepth = Mathf.Max(0.1f, stand.depth * 0.5f);
+
+        float x = Mathf.Abs(local.x) - halfLength;
+        float y = Mathf.Abs(local.y) - halfDepth;
+        return new Vector2(Mathf.Max(0f, x), Mathf.Max(0f, y)).magnitude;
+    }
+
+    // Nothing else times an ambient session — there is no practice or race director out here, because
         // none of it is the player's — so the stand brings its own lap timing. It reads the same field the
         // player would be timed against if they were in it.
         LapTimingManager.Ensure();

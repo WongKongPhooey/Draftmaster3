@@ -27,7 +27,13 @@ public class GrandstandCamera : MonoBehaviour
     // the one moment in the weekend with nothing to do in it, and a two-second pan reads as the camera
     // being yanked off the player rather than as the view opening up. Authored markers can still take
     // LONGER than this; they cannot take less.
-    const float MinPanSeconds = 4f;
+    //
+    // This is the knob for the whole shot now, the zoom included. It used to govern only the camera's
+    // TRAVEL: the zoom was handed to the scene's size lerp as a single target on the first frame, and that
+    // lerp runs at its own rate — about a second to settle — so the view snapped open in the first second
+    // and then the camera crept across the rest of the pan behind it. The two are driven off one curve
+    // below, so the picture opens at the speed the camera moves.
+    const float MinPanSeconds = 5f;
 
     Camera _cam;
     CameraFollow _follow;
@@ -125,7 +131,10 @@ public class GrandstandCamera : MonoBehaviour
             _follow.target = _rig;
         }
 
-        if (_zoomOwner != null) _zoomOwner.SetZoomTarget(_zoomTo);
+        // Note NOT _zoomTo: the zoom is walked out over the pan in LateUpdate. Starting it where the
+        // picture already is means the size lerp has nothing to catch up on and the first frame of the
+        // shot does not jump.
+        if (_zoomOwner != null) _zoomOwner.SetZoomTarget(_zoomFrom);
     }
 
     void LateUpdate()
@@ -142,10 +151,14 @@ public class GrandstandCamera : MonoBehaviour
 
         if (_rig != null) _rig.position = Vector3.Lerp(_from, _to, u);
 
-        // Only when nothing else owns the zoom. PitLaneStart lerps toward its own target every frame and
-        // writing the size here as well would be two hands on the same dial.
-        if (_zoomOwner == null && _cam != null && _cam.orthographic)
-            _cam.orthographicSize = Mathf.Lerp(_zoomFrom, _zoomTo, u);
+        float zoom = Mathf.Lerp(_zoomFrom, _zoomTo, u);
+
+        // Hand the arbiter a MOVING target rather than the final one. PitLaneStart lerps toward whatever
+        // it was last given, so feeding it the curve keeps one hand on the dial and still opens the view
+        // over the length of the pan instead of in the first second of it. It trails the curve slightly,
+        // which is the right way round: the picture settles just after the camera stops.
+        if (_zoomOwner != null) _zoomOwner.SetZoomTarget(zoom);
+        else if (_cam != null && _cam.orthographic) _cam.orthographicSize = zoom;
 
         // Out of the seat: the shot is over.
         if (_player == null) _player = WeekendVenueAnchor.OnFootPlayer();

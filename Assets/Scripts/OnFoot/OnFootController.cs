@@ -73,7 +73,12 @@ public class OnFootController : MonoBehaviour
     NPCInteractable _activeNpc;
     bool _interactHeldPrev;
     bool _hasHorizontal, _hasVertical, _hasSpeed;
-    Vector2 _talkFacing;          // direction the player faces while mid-conversation
+    // The way the body is facing when it is not being driven by the stick. Set by every walk step and by
+    // anything that turns the player deliberately — a conversation, a cutscene, sitting down in a stand —
+    // and held while they stand still, because a directional rig asked to face (0,0) faces nothing and
+    // snaps to whatever its blend tree calls the middle. That snap was undoing every deliberate turn on
+    // the frame after it was made.
+    Vector2 _heldFacing = Vector2.down;
     InputActionAsset _controls;   // private clone of controlsAsset
     InputAction _moveAction;       // OnFoot/Movement on the clone
     bool _warnedNoAsset;
@@ -194,11 +199,14 @@ public class OnFootController : MonoBehaviour
             _rb.MoveRotation(z);
         }
 
+        // Walking is itself a facing: remember it, so letting go of the stick leaves the body pointing the
+        // way it was going rather than resetting it.
+        if (move.sqrMagnitude > 0.0001f) _heldFacing = move.normalized;
+
         if (_animator != null)
         {
-            // While talking (or held by a cutscene), hold the facing direction so directional idle
-            // rigs keep looking at the NPC instead of snapping to the zeroed move vector.
-            Vector2 face = (MovementLocked || (_activeNpc != null && _activeNpc.IsTalking)) ? _talkFacing : move;
+            // Standing still (talking, held by a cutscene, or simply not moving) keeps the last facing.
+            Vector2 face = move.sqrMagnitude > 0.0001f ? move : _heldFacing;
             if (_hasHorizontal) _animator.SetFloat("Horizontal", face.x);
             if (_hasVertical) _animator.SetFloat("Vertical", face.y);
             if (_hasSpeed) _animator.SetFloat("Speed", move.sqrMagnitude);
@@ -316,7 +324,7 @@ public class OnFootController : MonoBehaviour
     {
         Vector2 dir = (Vector2)(worldPoint - transform.position);
         if (dir.sqrMagnitude < 0.0001f) return;
-        _talkFacing = dir.normalized;
+        _heldFacing = dir.normalized;
         ApplyFacing(transform, _rb, dir, spriteFacingOffsetDeg);
     }
 
@@ -326,7 +334,7 @@ public class OnFootController : MonoBehaviour
     {
         Transform other = npc.transform;
         Vector2 toNpc = (Vector2)(other.position - transform.position);
-        _talkFacing = toNpc.sqrMagnitude > 0.0001f ? toNpc.normalized : Vector2.down;
+        _heldFacing = toNpc.sqrMagnitude > 0.0001f ? toNpc.normalized : Vector2.down;
         ApplyFacing(transform, _rb, toNpc, spriteFacingOffsetDeg);
         if (npc.turnsToFace)
             ApplyFacing(other, other.GetComponent<Rigidbody2D>(), -toNpc, spriteFacingOffsetDeg);

@@ -29,10 +29,15 @@ namespace Draftmaster.Weekend
                 venue = WeekendVenue.PitBox, speaker = "CREW CHIEF", offsetAlong = 0.4f,
                 idleLine = "Car's on the setup pad, {playerfirst}. Shout if you want anything changed.",
             },
+            // The one host who is not stood at his venue all weekend. The motorhome is the driver's own
+            // room, not a place of work, so he comes in for the debrief that is booked there and is not
+            // sat across the dinette the rest of the three days (WeekendVenueHostPresence). This line is
+            // the fallback for being in the chair with nothing to run — rare, but it should read like a
+            // man who has just sat down rather than one who lives there.
             new Host
             {
                 venue = WeekendVenue.Motorhome, speaker = "ENGINEER", offsetAlong = 0f,
-                idleLine = "Kettle's on. Nothing to go through until the sheet says so.",
+                idleLine = "Give me a minute, {playerfirst}, the run's still loading.",
             },
             new Host
             {

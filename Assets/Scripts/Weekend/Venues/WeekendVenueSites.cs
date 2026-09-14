@@ -49,6 +49,11 @@ public class WeekendVenueSites : MonoBehaviour
     const float CircleSize = 9f;          // the chequered square itself
     const int CircleSquares = 6;          // squares across it
     const float BarrierRing = 12.5f;      // where the barriers stand, measured across
+    // The sponsor's guests, gathered on the margin between the chequers and the barriers. The hospitality
+    // conversation opens on "twenty of their best customers", so there are twenty of them.
+    const int GuestCount = 20;
+    const float GuestRing = 5.4f;         // from the middle: off the chequers, inside the rail
+    const float GuestGapHalfWidth = 2.6f; // the mouth they leave open at the front, so you can walk in
     const float BarrierLength = 2.4f;     // one barrier section
     const float BarrierThickness = 0.3f;
     const float BoardWidth = 4.5f;
@@ -230,6 +235,11 @@ public class WeekendVenueSites : MonoBehaviour
         // The debrief is had sitting down in your own motorhome, so the engineer is INSIDE it — parented
         // into the interior's masked frame at the dinette, across the table from the laptop. Anywhere else
         // in that scene-within-a-scene and he would draw over the blackout with the rest of the world.
+        //
+        // He is also the one host who is not there all weekend. The motorhome is the driver's own room
+        // rather than a place of work, so he comes in for the debrief that is booked there and the rest of
+        // the time the RV is empty — WeekendVenueHostPresence switches him in and out. A track package that
+        // authors its own motorhome host has already returned above and keeps whoever it put there.
         if (venue == WeekendVenue.Motorhome)
         {
             var rv = FindFirstObjectByType<RVInterior>();
@@ -243,6 +253,10 @@ public class WeekendVenueSites : MonoBehaviour
                                                             RVInterior.InteriorPropZ - 0.05f);
                 seated.venue = venue;
                 seated.idleLines = idle;
+
+                var presence = rv.InteriorRoot.gameObject.AddComponent<WeekendVenueHostPresence>();
+                presence.host = seated;
+                presence.venue = venue;
                 return;
             }
         }
@@ -694,6 +708,7 @@ public class WeekendVenueSites : MonoBehaviour
                               Mat(new Color(0.90f, 0.90f, 0.88f)), Mat(new Color(0.13f, 0.13f, 0.14f)));
 
         BarrierRingAround(circle.transform);
+        GuestsAround(circle.transform);
 
         // The sponsors' furniture: two boards at the back corners and a billboard across the back, all
         // outside the barriers so none of them can be stood in front of the player.
@@ -739,6 +754,74 @@ public class WeekendVenueSites : MonoBehaviour
         Vector3 mark = Walkable(circle.transform.TransformPoint(Vector3.zero));
         PaddockProps.Anchor(_root, WeekendVenue.SponsorSuite, mark, mark, arriveRange: 4f);
     }
+
+    // The people you are actually talking to: the sponsor's guests, stood round the edge of the chequers.
+    //
+    // The hospitality hour is written as a room — a guest asks a question with the brand next to them, the
+    // regional manager chips in, the room laughs or it doesn't — and it was being played to an empty square.
+    // The answers move sponsor mood, fan appeal and press, and none of that reads as anything without
+    // somebody there to have heard it.
+    //
+    // They stand on the margin between the chequers and the barriers, so the middle of the square stays
+    // clear: the mark the player is sent to is the centre, and the whole point of this place being rebuilt
+    // was that the driver can be seen stood in it. The front keeps its mouth open in line with the gap in
+    // the rail, so the walk in is still a walk into the middle of them rather than through them.
+    //
+    // Nobody here is solid (a paddock body has no collider), so a guest can never be stood in the doorway.
+    void GuestsAround(Transform circle)
+    {
+        var guests = new GameObject("SponsorGuests");
+        guests.transform.SetParent(circle, false);
+
+        // Fixed seed: the same twenty people, in the same places, every time the scene is built.
+        var rng = new System.Random(4821);
+
+        for (int i = 0; i < GuestCount; i++)
+        {
+            Vector2 spot = GuestSpot(i, rng);
+            var body = PaddockPerson.Spawn(guests.transform, Vector3.zero, $"Guest_{i}", 8400 + i,
+                                           heightM: PaddockPerson.HeightM);
+            body.transform.localPosition = new Vector3(spot.x, spot.y, PaddockProps.PropZ - 0.1f);
+        }
+    }
+
+    // Where the twenty of them stand, as four runs round the square.
+    //
+    // Weighted rather than five a side: the front edge is mostly the way in, so it takes a pair on each
+    // shoulder of the gate and the back takes the crowd. The back is also the side worth filling — it is
+    // the one behind the player when they are stood on the mark facing out, which is the shot the sponsor
+    // boards are framing.
+    static Vector2 GuestSpot(int index, System.Random rng)
+    {
+        const int Back = 8, Side = 4;          // 8 across the back, 4 down each side, 4 flanking the gate
+        float shoulder = GuestGapHalfWidth + 0.8f;
+
+        Vector2 spot;
+        if (index < Back)
+            spot = new Vector2(Spread(index, Back, GuestRing - 0.6f), GuestRing);
+        else if (index < Back + Side)
+            spot = new Vector2(-GuestRing, Spread(index - Back, Side, GuestRing - 1.2f));
+        else if (index < Back + Side * 2)
+            spot = new Vector2(GuestRing, Spread(index - Back - Side, Side, GuestRing - 1.2f));
+        else
+        {
+            // Two either side of the mouth, standing along the front rail rather than across it.
+            int i = index - Back - Side * 2;
+            float sign = i < 2 ? -1f : 1f;
+            float fromMiddle = (i % 2 == 0) ? shoulder : GuestRing - 0.6f;
+            spot = new Vector2(sign * fromMiddle, -GuestRing);
+        }
+
+        // Stood in a loose huddle rather than on a surveyed line. Small enough that the gaps above survive
+        // it: the tightest run is the back at ~1.4 m between people.
+        spot.x += (float)(rng.NextDouble() - 0.5) * 0.6f;
+        spot.y += (float)(rng.NextDouble() - 0.5) * 0.6f;
+        return spot;
+    }
+
+    // n bodies laid evenly across a run of 2*half, centred.
+    static float Spread(int index, int count, float half) =>
+        count <= 1 ? 0f : Mathf.Lerp(-half, half, index / (float)(count - 1));
 
     // Crowd barriers round the square, with the front left open to walk in through.
     //

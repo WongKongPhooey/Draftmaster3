@@ -94,6 +94,10 @@ public class PitLaneStart : MonoBehaviour
     [Header("Camera")]
     [Tooltip("Orthographic size while walking.")]
     public float onFootOrthoSize = 3.5f;
+    [Tooltip("Orthographic size while stood inside a room — the motorhome, a team's popup garage. These " +
+             "interiors are only a few metres across, so at walking distance the walls sit out past the " +
+             "edges of the frame and the room reads as a patch of floor rather than somewhere you are.")]
+    public float indoorOrthoSize = 2.5f;
     [Tooltip("Orthographic size while driving.")]
     public float drivingOrthoSize = 20f;
     public float orthoLerpSpeed = 3f;
@@ -148,7 +152,12 @@ public class PitLaneStart : MonoBehaviour
     // without this the camera stays at whatever level the last on-foot/enter-car flow left it.
     public float DrivingZoom => drivingOrthoSize;
     public float OnFootZoom => onFootOrthoSize;
+    public float IndoorZoom => indoorOrthoSize;
     public void SetZoomTarget(float orthoSize) => _orthoTarget = orthoSize;
+
+    // Whether the player was in a room last frame, so walking through a doorway can be spotted as the event
+    // it is rather than re-asserted every frame. See StepIndoorZoom.
+    bool _indoors;
 
     void Start()
     {
@@ -558,6 +567,8 @@ public class PitLaneStart : MonoBehaviour
         if (_cam != null && _cam.orthographic)
             _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, _orthoTarget, 1f - Mathf.Exp(-orthoLerpSpeed * Time.deltaTime));
 
+        StepIndoorZoom();
+
         if (_player == null) return;
 
         if (_phase == EntryPhase.Briefing) { StepBriefing(); return; }
@@ -626,6 +637,36 @@ public class PitLaneStart : MonoBehaviour
 
         _rvEntryArmed = false;   // one turnover per walk-in
         WeekendDirector.Begin(due);
+    }
+
+    // Walking through a doorway pulls the camera in; walking back out pushes it to walking distance again.
+    //
+    // Written on the TRANSITION, not asserted every frame. This component is the scene's zoom arbiter and
+    // several things borrow it for a moment — the broadcast cut pulling back to the field, the crew chief's
+    // pit wall, a fight in the paddock, a seat in the grandstand. Re-stating a zoom every frame would
+    // overrule each of them the frame after they asked. Crossing a threshold is an event, so it is handled
+    // like one, and whoever asks next still wins until the player walks through another door.
+    //
+    // Both kinds of room count, because to the player they are the same move: the motorhome and the team's
+    // popup garage are each a masked room you step into off the paddock.
+    void StepIndoorZoom()
+    {
+        bool indoors = PlayerIsIndoors();
+        if (indoors == _indoors) return;
+
+        _indoors = indoors;
+        _orthoTarget = indoors ? indoorOrthoSize : onFootOrthoSize;
+    }
+
+    // Is the player stood in any masked room right now. A list read, not a scene walk: both interiors keep
+    // the same register everybody else on foot keeps.
+    static bool PlayerIsIndoors()
+    {
+        var rooms = RVInterior.All;
+        for (int i = 0; i < rooms.Count; i++)
+            if (rooms[i] != null && rooms[i].IsInside) return true;
+
+        return PopupGarageInterior.Occupied != null;
     }
 
     // Teach the two things the walk needs, as the player gets to them: sprint once they're actually walking,

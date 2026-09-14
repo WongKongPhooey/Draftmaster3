@@ -32,33 +32,32 @@ namespace Draftmaster.Chatter
 
         static readonly string[] PaddockNeutral =
         {
-            "Long old day. Third coffee already.",
-            "Hauler's blocking the whole lane again.",
-            "Track temp's climbing. Watch the rears.",
-            "Anyone seen the tyre sheets?",
-            "Grid walk's in twenty. Look busy.",
-            "Weather radar says we're fine 'til five.",
-            "That's a lovely bit of bodywork, that.",
-            "Mind your back — cart coming through.",
-            "Morning, {playerfirst}. Mind the cables.",
-            "{chieffirst} was after you, {playerfirst}. Something about the run plan.",
+            "Long day, third coffee already.",
+            "Don't these people have places to be?.",
+            "Track temp's climbing. Should mix it up.",
+            "Anyone seen our tyre sheets?",
+            "Just pick up a tyre and look busy.",
+            "Weather radar says clear skies.",
+            "My money's on {playerlast} today.",
+            "Mind out, trucks coming through.",
+            "Morning, {playerfirst}!",
+            "{chieffirst} was after you, {playerfirst}.",
         };
 
         static readonly string[] PaddockImpressed =
         {
             "That's the one everybody's talking about.",
-            "Saw your last stint. Proper drive, that.",
+            "Saw your last stint. What a drive.",
             "Reckon they've got a shot this weekend.",
             "Told you they'd be quick here.",
             "Ask for a photo. Go on, ask.",
-            "That's {playerfirst}. Told you they'd be here.",
-            "Go on, {playerfirst} — give us a wave!",
+            "That's {playerfirst}. Told you they'd be around.",
+            "{playerfirst}! quick photo?",
         };
 
         static readonly string[] PaddockDismissive =
         {
             "Who's that, then? No idea.",
-            "Bit early to be walking about, isn't it?",
             "Another hopeful. We get a few.",
             "Don't recognise the number.",
             "Some driver called {playerfirst}. Never heard of them.",

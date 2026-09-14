@@ -2,13 +2,23 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
-// The crew chief's headset icon, bottom right of the HUD (single player). Tapping it hands the player's
-// car to the AI (via DriveModeController) and drops the player into an on-foot crew-chief character at the pit
-// wall. It is the first of the team controls: one square glyph per person you can hand the car to, so the
-// corner grows a face rather than another caption when the team gains somebody.
+// The crew chief's headset icon, bottom right of the HUD (single player). Tapping it drops the player into
+// an on-foot crew-chief character at the pit wall. It is the first of the team controls: one square glyph per
+// person you can hand the car to, so the corner grows a face rather than another caption when the team gains
+// somebody.
+//
+// Only during the player's own session. Standing on the pit wall calling a race is a job that only exists
+// while there is a session to call: outside their hour the paddock is walkable but the car is not theirs to
+// take out, so the headset is not on the HUD at all (RaceWeekend.SessionLive, the same gate the TEAM panel
+// uses). If the session settles while the player is acting as chief, they are put back the way they came.
+//
+// Whether the car changes hands depends on where the player was standing. Stepping OUT of the car hands it to
+// the AI (via DriveModeController) and climbing back in resumes driving; but a player who was already on foot
+// — walking up pit road, stood beside the car after a tow — never got in it, so the car is left exactly as it
+// was and their walking body is simply parked until they stop being the chief.
 //
 // As crew chief the player sees pit-wall telemetry the driver doesn't: fuel load and last-pit lap for the
-// whole field. Tap again to climb back in and resume driving.
+// whole field. Tap again to go back to whoever they were.
 //
 // Camera + car hand-off are reused from DriveModeController; this component just owns the on-foot avatar, the
 // camera target while on foot, and the data panel.
@@ -50,9 +60,16 @@ public class CrewChiefController : MonoBehaviour
     GameObject _playerCar;
     Image _face;
     Image _icon;
+    GameObject _buttonRoot;
     GameObject _timingBtn;
     bool _keyPrev;
     Material _unlit;
+
+    // Captured the moment the headset is tapped, because taking the job changes both answers: the crew
+    // chief avatar is itself a walking body, so "was the player on foot" cannot be asked again afterwards.
+    bool _wasInCar;          // they were sat in the car rather than walking the paddock
+    bool _wasDriving;        // ...and had the controls, rather than watching their own car on the TV cycle
+    GameObject _parkedBody;  // their walking body, hidden for the duration when they were already on foot
 
     void Start()
     {
@@ -69,6 +86,20 @@ public class CrewChiefController : MonoBehaviour
 
     void Update()
     {
+        // The job only exists while the player's own session is running. Read every frame rather than at
+        // Start: the session ends inside the scene (RaceDirector settles the race) and the paddock stays
+        // walkable afterwards, so the headset has to come off the HUD without a reload.
+        bool available = Available;
+        if (_buttonRoot != null && _buttonRoot.activeSelf != available) _buttonRoot.SetActive(available);
+        if (!available)
+        {
+            // Chequered flag while stood on the pit wall: put them back in the car (or back on their feet)
+            // rather than stranding them as a chief with no session to call.
+            if (_active) Exit();
+            _keyPrev = Keyboard.current != null && toggleKey != Key.None && Keyboard.current[toggleKey].isPressed;
+            return;
+        }
+
         if (Keyboard.current != null && toggleKey != Key.None)
         {
             bool held = Keyboard.current[toggleKey].isPressed;
@@ -81,17 +112,41 @@ public class CrewChiefController : MonoBehaviour
             cameraFollow.target = _avatar.transform;
     }
 
+    // Practice, qualifying and the race all count — the timing screen is most of the point of a practice
+    // session. What does not count is the rest of the weekend, when no series of the player's is on track.
+    public bool Available => RaceWeekend.SessionLive;
+
     public void Toggle() { if (_active) Exit(); else Enter(); }
 
     void Enter()
     {
         if (_playerCar == null) _playerCar = GameObject.Find("PlayerCar");
 
-        // Hand the car to the AI and tell broadcast mode not to fight us for the camera.
+        // Where the player is standing, asked BEFORE the chief's body exists — that body is an
+        // OnFootController too, and would answer for them a frame later. No walking body means they are sat
+        // in the car; PitLaneStart deactivates it when they climb in and hands it back after a tow.
+        var body = OnFootController.Current;
+        _wasInCar = body == null;
+        // Driving is not the same as being in the car: the TV cycle (V) already gave the AI the wheel, and
+        // exiting must not hand it back to a player who chose to watch.
+        _wasDriving = _wasInCar && driveMode != null && driveMode.IsDriving;
+
         if (driveMode != null)
         {
+            // Tell broadcast mode not to fight us for the camera either way.
             driveMode.suppressBroadcastCamera = true;
-            if (driveMode.IsDriving) driveMode.SetDriving(false);
+            // The car only changes hands if there was a driver in it to get out. A player still walking up
+            // pit road never started it, so handing their parked car to the AI would drive it away from
+            // under them.
+            if (_wasDriving) driveMode.SetDriving(false);
+        }
+
+        // Their walking body stays exactly where it was standing, switched off for the duration, so coming
+        // off the headset puts them back on the same patch of tarmac rather than beside the car.
+        if (!_wasInCar)
+        {
+            _parkedBody = body.gameObject;
+            _parkedBody.SetActive(false);
         }
 
         // The driver tracks fuel only as crew chief — make sure their own car has a tank to report.
@@ -111,18 +166,30 @@ public class CrewChiefController : MonoBehaviour
     {
         if (_avatar != null) _avatar.SetActive(false);
 
-        // Resume driving — DriveModeController retargets the camera back to the car.
-        if (driveMode != null)
+        // They come off the pit wall as whoever they were when they got on it.
+        if (_parkedBody != null)
         {
-            if (!driveMode.IsDriving) driveMode.SetDriving(true);
-            driveMode.suppressBroadcastCamera = false;
+            _parkedBody.SetActive(true);
+            if (cameraFollow != null) cameraFollow.target = _parkedBody.transform;
+            _parkedBody = null;
+        }
+        else if (driveMode != null)
+        {
+            // Climb back in only if they got out of a car they were driving — DriveModeController retargets
+            // the camera back to it. Someone who handed the wheel to the AI first is left watching.
+            if (_wasDriving && !driveMode.IsDriving) driveMode.SetDriving(true);
+            else if (cameraFollow != null && _playerCar != null) cameraFollow.target = _playerCar.transform;
         }
         else if (cameraFollow != null && _playerCar != null)
         {
             cameraFollow.target = _playerCar.transform;
         }
 
+        if (driveMode != null) driveMode.suppressBroadcastCamera = false;
+
         _active = false;
+        _wasInCar = false;
+        _wasDriving = false;
         if (_timingBtn != null) _timingBtn.SetActive(false);
         if (TimingScreenUI.Instance != null) TimingScreenUI.Instance.Hide();
         UpdateButton();
@@ -224,6 +291,8 @@ public class CrewChiefController : MonoBehaviour
         var shadow = (RectTransform)button.transform.parent;   // IconButton returns the face; its root is the shadow
         Corner(shadow, buttonCorner);
         button.onClick.AddListener(Toggle);
+        _buttonRoot = shadow.gameObject;
+        _buttonRoot.SetActive(Available);
         _face = button.GetComponent<Image>();
         var glyph = button.transform.Find("Icon");
         _icon = glyph != null ? glyph.GetComponent<Image>() : null;
