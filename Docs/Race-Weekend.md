@@ -156,6 +156,24 @@ it is only replaced when the clock has moved past it.
 | **Drivers meeting** | Mandatory, in the drivers' room with the field sat around you. Officials read four notes; one of them will catch somebody out at this track today. Say which. | Setup knowledge, morale |
 | **Driver introductions** | Mandatory, on the stage. Your name over the PA — decide what to give the crowd. | Fan appeal, sponsor mood |
 
+### The drinks machine
+
+Not an obligation — a thing in the paddock. A vending machine stands at the side of the grandstand
+(`VendingMachineSpawner` puts it off the end of the stand nearest you, or beside the grandstand seat where
+the stands are outside the paddock). Walk up, press the action button, and a popup lists what is in it.
+
+The machine is restocked every race weekend: four cans off a longer rack, each one pairing a random career
+attribute it raises with a random one it takes the same amount off, somewhere between **+1 and +3**. It is a
+trade, never a freebie — the can that buys you Driving costs you Business. **One can per weekend**, and the
+swing lasts until the weekend id moves on (`RaceWeekend.ResetWeekend`), at which point it is simply gone.
+
+The rules are `Draftmaster.Progression.WeekendDrinks`, rolled deterministically from the weekend id
+(`WeekendRandom`) so the machine still has Friday's cans in it after the scene reloads for qualifying and
+the race. The swing is held as an **overlay**, not written into the `stat.` ledger CareerPath pays its
+starting grants into: read an attribute with `WeekendDrinks.EffectiveStat(key, weekendId)` to get the career
+value plus whatever is in the player's hand. That is on purpose — a ledger write needs a revert, and a
+missed revert dents a career permanently over a can of pop. Covered by `WeekendDrinksTests`.
+
 ## 4. What it is all worth
 
 Five meters run across the weekend, shown on the schedule rail and on the phone.

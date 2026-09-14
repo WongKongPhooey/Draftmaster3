@@ -23,9 +23,9 @@ public class VendingMachineSpawner : MonoBehaviour
     [Tooltip("Metres to the side of the grandstand seat, for tracks whose stands are outside the paddock and " +
              "the seat is the way out towards them.")]
     public float seatOffset = 4f;
-    [Tooltip("How far a spot may be dragged by the walkable-area clamp before it stops counting as \"beside " +
-             "the grandstand\" and the next candidate is tried.")]
-    public float maxStray = 10f;
+    [Tooltip("How far the walkable-area clamp may drag the chosen spot before it is worth saying so in the " +
+             "log — past this the machine is at the paddock edge nearest the stands rather than beside them.")]
+    public float strayWarning = 10f;
 
     [Header("Who it is")]
     [Tooltip("Name over the machine's own speech bubble.")]
@@ -103,9 +103,10 @@ public class VendingMachineSpawner : MonoBehaviour
 
     // ---------------------------------------------------------------- placement
 
-    // Candidates in order of preference: both ends of the nearest stand, then either side of the grandstand
-    // seat. The first one the walkable-area clamp barely moves wins; if the paddock drags every one of them
-    // a long way, the least-dragged is used anyway so the machine still exists.
+    // Four candidate spots — both ends of the nearest stand, then either side of the grandstand seat — and
+    // the one the walkable-area clamp moves LEAST wins, ties going to the earlier (more stand-like) one. At
+    // a track whose stands are inside the paddock that is the end of the stand; where they are across the
+    // track it is beside the seat, which is the way out towards them.
     bool TryFindSpot(out Vector3 at, out Quaternion facing)
     {
         at = Vector3.zero;
@@ -150,17 +151,20 @@ public class VendingMachineSpawner : MonoBehaviour
         {
             Vector3 walkable = Walkable(point);
             float stray = Vector2.Distance(walkable, point);
+            if (stray >= bestStray) continue;
 
-            if (stray <= maxStray)
-            {
-                at = walkable;
-                facing = rot;
-                return true;
-            }
-            if (stray < bestStray) { bestStray = stray; at = walkable; facing = rot; }
+            bestStray = stray;
+            at = walkable;
+            facing = rot;
         }
 
-        return bestStray < float.MaxValue;
+        if (bestStray == float.MaxValue) return false;
+
+        if (bestStray > strayWarning)
+            Debug.LogWarning($"VendingMachineSpawner: the nearest grandstand is {bestStray:0.#}m outside the " +
+                             "walkable paddock, so the drinks machine stands at the edge nearest it rather " +
+                             "than beside it.", this);
+        return true;
     }
 
     static Vector3 ReferencePoint()
@@ -214,10 +218,11 @@ public class VendingMachineSpawner : MonoBehaviour
 
     void Build(Vector3 at, Quaternion facing)
     {
+        // Left at the root of the scene and filed by RuntimeHierarchy rather than parented to the spawner:
+        // Adopt only moves objects that have no parent, so hanging it off this object would leave it loose
+        // in the hierarchy instead of under Environment with the rest of the paddock furniture.
         var root = new GameObject("VendingMachine");
-        root.transform.SetParent(transform, false);
-        root.transform.position = at;
-        root.transform.rotation = facing;
+        root.transform.SetPositionAndRotation(at, facing);
         RuntimeHierarchy.Adopt(root, HierarchyGroup.Environment);
 
         // Placeholder art, same recipe as the rest of the paddock furniture: flat unlit quads, drawn just
