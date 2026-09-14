@@ -31,24 +31,47 @@ The map is a **Canvas prefab** you edit in Prefab Mode (`Assets/Resources/UI/Tra
   map**. The marker's `nodeId` must match a `TravelGraph` node id; its RectTransform position is the
   node's position. Highway lines are rebuilt from marker positions at runtime, so they follow.
   For an in-editor preview, right-click the `TravelMapScreen` component → **Rebuild Edges**.
-- Styling (fonts, colors, panel layout, dot/halo/label sizes) is all ordinary uGUI — edit freely.
+- Styling (fonts, colors, panel layout, dot/halo/label sizes) is all ordinary uGUI — edit freely,
+  but note that **Restyle (Iron Oval) overwrites it**: that pass is the source of truth for the look.
+  The canvas is authored at 1920x1080 (scale factor 1 at 1080p), so every type size is a whole
+  multiple of its face's pixel cell — Silkscreen 8/16/24, VT323 16/32, Pixelify Sans 20 — and every
+  9-slice runs at 2x via `pixelsPerUnitMultiplier = 0.5`. Off-ladder sizes resample into mush.
 - Menu items (`Draftmaster > Travel Map`):
   - **Build Prefab** — one-shot generator (refuses to overwrite an existing prefab).
   - **Sync Node Markers** — after adding nodes to `TravelGraph` in code, adds markers for them
     (never moves existing ones); position the new markers by hand.
   - **Force Rebuild Prefab** — regenerate from `TravelGraph` coords, **losing hand edits**.
+  - **Restyle (Iron Oval)** — re-skins the prefab in place from the pixel kit (frames, palette, the
+    three pixel faces, header icons, per-node marker sizes) and re-bakes the highways. **Node
+    positions are not touched**, so a hand-dragged layout survives it. Idempotent — run it whenever
+    the kit or the marker rules change. It also repairs a side panel missing its `WalkButton`.
+  - **Preview PNG** — renders the map to `Assets/Screenshots/travelmap_preview.png` with a sample
+    week dressed into it. The canvas is Screen Space - Overlay, which never shows up in an ordinary
+    editor screenshot, so this is how you look at a restyle without entering Play Mode.
   - **Open (Play Mode)** — opens the map without the F9 key (automation convenience).
 - `TravelGraph` remains the source of truth for **topology** (edges, BFS routing, shop stock);
   `TravelGraph.pos` is only used to seed marker positions at build/sync time.
 
 ## Systems
 
-- **`TravelGraph`** — code-defined map (DummyDrivers pattern; MCP can't grow SO arrays): 26 circuit
-  nodes (id = scene name) + 13 made-up locations on the highways between them, e.g. *Pitt Brothers
-  Engine Builders* (a dead-end Maine detour with the premium motors) or *Mojave Boneyard*.
-  Normalized coords, x west→east, y north→south. `ShortestHops` = BFS, every edge costs 1 stop.
+- **`TravelGraph`** — code-defined map (DummyDrivers pattern; MCP can't grow SO arrays): 54 circuit
+  nodes (id = scene name) + 20 made-up locations on the highways between them, e.g. *Pitt Brothers
+  Engine Builders* (a dead-end Maine detour with the premium motors) or *Mojave Boneyard*, plus the
+  **Team Factory**. Normalized coords, x west→east, y north→south. `ShortestHops` = BFS, every edge
+  costs 1 stop.
+- **The Team Factory** (`team_factory`) — your own shop, near the middle of the map at lattice cell
+  (4, 3). Unlike the shops and yards it is not mounted on one highway: `FactoryHub` gives it its own
+  slip roads to the four nearest circuits, so it is one stop off a route through the middle of the
+  country rather than a dead end. On the map it is the only teal dot, twice the size of a circuit
+  and wearing the wrench icon, and it is never a grey "?" — it is yours, so you always know where it
+  is. **Collect, don't buy:** `PartCatalog.FactoryStock(week)` is the bench — the shop finishes one
+  `factoryOnly` part every `FactoryWeeksPerPart` (2) weeks, in catalogue order (engine, gearbox,
+  tyres, chassis), each one better than what the same slot costs on the road. They are free and the
+  COLLECT button installs them like any other part. Taken parts are gone for good
+  (`TravelState.WasCollected`, keyed by part id, *not* by week like the junkyard shelves), so parts
+  pile up on the rack until somebody drives out there — which is the point of the node.
 - **`TravelState`** — PlayerPrefs: `travel.node`, `travel.dest`, `travel.stops`, `travel.week`,
-  `travel.visited` (CSV), `travel.bought.<week>.<loc>.<part>`. Week ticks when a destination is
+  `travel.visited` (CSV), `travel.bought.<week>.<loc>.<part>`, `travel.collected.<part>`. Week ticks when a destination is
   chosen, so junkyard shelves are stable across one leg. Movement feeds `PlayerStatsLedger`
   (`travelstops`, `locations`, `visit.<locationId>`) — locations are immediately quest-able via the
   existing StatThreshold objective, no new quest code.

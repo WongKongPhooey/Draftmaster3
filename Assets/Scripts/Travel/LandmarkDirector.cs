@@ -26,9 +26,11 @@ public class LandmarkDirector : MonoBehaviour
         if (node != null)
         {
             prefab = Resources.Load<GameObject>("Landmarks/" + node.id);
+            // No hand-built home yet: fall back to the generic lot for the kind of place it is. The team
+            // factory borrows the engine-shop lot rather than the junkyard one - it is a working shop.
             if (prefab == null && node.locationType != TravelLocationType.None)
-                prefab = Resources.Load<GameObject>(node.locationType == TravelLocationType.EngineShop
-                    ? "Landmarks/_engineshop" : "Landmarks/_junkyard");
+                prefab = Resources.Load<GameObject>(node.locationType == TravelLocationType.Junkyard
+                    ? "Landmarks/_junkyard" : "Landmarks/_engineshop");
         }
 
         if (prefab != null) Instantiate(prefab, contentRoot != null ? contentRoot : transform);
@@ -48,6 +50,7 @@ public class LandmarkDirector : MonoBehaviour
     {
         TravelLocationType.EngineShop => "Engine shop",
         TravelLocationType.Junkyard => "Junkyard",
+        TravelLocationType.TeamFactory => "Your team's factory",
         _ => "",
     };
 }

@@ -21,6 +21,7 @@ public class PartDef
     public float gripAdd;        // lateral g
     public float wearScale = 1f;
     public bool junkyardOnly;    // never in fixed shop stock; only turns up in salvage rolls
+    public bool factoryOnly;     // your own team built it — never for sale anywhere, collected at the factory
 
     // One-line effect summary for shop rows, e.g. "+6 mph top speed, +10% accel".
     public string EffectSummary()
@@ -98,6 +99,22 @@ public static class PartCatalog
             new PartDef { id = "chassis_junk", name = "Bent-but-True Frame Rails", slot = PartSlot.Chassis, price = 900,
                 gripAdd = 0.01f, junkyardOnly = true,
                 blurb = "Straighter than they look. Mostly." },
+
+            // --- Team factory R&D: built by your own people, collected free at the factory ---
+            // Order matters: this is the order the shop finishes them in (see FactoryStock). Each one
+            // beats what the same money buys on the road, which is what makes the detour worth a stop.
+            new PartDef { id = "engine_team", name = "Team-Built Spec Engine", slot = PartSlot.Engine, price = 0,
+                topSpeedAdd = 7f, accelScale = 1.12f, factoryOnly = true,
+                blurb = "Your engine shop's own build. They know which corners you keep losing time in." },
+            new PartDef { id = "gearbox_team", name = "Shop-Cut Gearset", slot = PartSlot.Gearbox, price = 0,
+                topSpeedAdd = 2f, accelScale = 1.10f, factoryOnly = true,
+                blurb = "Cut on the factory's own mill to ratios nobody sells over a counter." },
+            new PartDef { id = "tires_team", name = "Test-Team Compound", slot = PartSlot.Tires, price = 0,
+                gripAdd = 0.07f, wearScale = 0.85f, factoryOnly = true,
+                blurb = "Left over from a tyre test. Technically nobody is supposed to have these." },
+            new PartDef { id = "chassis_team", name = "R&D Chassis Update", slot = PartSlot.Chassis, price = 0,
+                accelScale = 1.08f, gripAdd = 0.05f, factoryOnly = true,
+                blurb = "A winter's worth of wind-tunnel time, finally bolted to something." },
         };
         _byId = new Dictionary<string, PartDef>();
         foreach (var p in _all) _byId[p.id] = p;
@@ -110,7 +127,8 @@ public static class PartCatalog
     {
         EnsureBuilt();
         var rng = new System.Random((locationId ?? "yard").GetHashCode() * 486187739 + week * 7919);
-        var pool = new List<PartDef>(_all); // everything can wash up in a junkyard, including the good stuff
+        var pool = new List<PartDef>();     // everything can wash up in a junkyard, including the good stuff
+        foreach (var p in _all) if (!p.factoryOnly) pool.Add(p); // except your own team's parts
         var stock = new List<(PartDef, int)>();
         for (int i = 0; i < count && pool.Count > 0; i++)
         {
@@ -121,5 +139,25 @@ public static class PartCatalog
             stock.Add((pick, price));
         }
         return stock;
+    }
+
+    // The team factory's bench. Your shop finishes one upgraded part every FactoryWeeksPerPart weeks and
+    // leaves it on the rack — nothing is posted out, so the parts pile up until somebody detours past the
+    // factory to fetch them. Free: you already paid for them. Collected parts never come back (unlike the
+    // weekly junkyard reroll), which is tracked by TravelState.WasCollected.
+    public const int FactoryWeeksPerPart = 2;
+
+    public static List<(PartDef part, int price)> FactoryStock(int week)
+    {
+        EnsureBuilt();
+        int built = Mathf.Max(1, 1 + (Mathf.Max(1, week) - 1) / FactoryWeeksPerPart);
+        var bench = new List<(PartDef, int)>();
+        foreach (var p in _all)
+        {
+            if (!p.factoryOnly) continue;
+            if (bench.Count >= built) break;
+            bench.Add((p, 0));
+        }
+        return bench;
     }
 }

@@ -24,7 +24,10 @@ using UnityEngine;
 // trade is the point of the detour allowance.
 //
 // Coordinates are normalized map space: x 0=west..1=east, y 0=north..1=south (GUI y-down).
-public enum TravelLocationType { None, EngineShop, Junkyard }
+
+// TeamFactory is your own shop rather than somebody else's business — one node, near the middle of the
+// map, where the fabricators leave the parts they have built since the last time you called in.
+public enum TravelLocationType { None, EngineShop, Junkyard, TeamFactory }
 
 public class TravelNode
 {
@@ -164,6 +167,11 @@ public static class TravelGraph
         // --- Roads: generated from the layout, so moving a circuit re-routes the map around it ---
         BuildRoads();
 
+        // --- Your own shop, in the middle of the country ---
+        FactoryHub("team_factory", "Team Factory", Cell(4, 3),
+            "Your own shop. The fabricators keep building while you are away, and nothing gets posted " +
+            "out — whatever they have finished is on the rack, waiting for you to come and get it.");
+
         // --- Minor locations: each one sits ON a road, splitting it into two hops ---
         YardOn("Portland", "Evergreen", "cascade_wrecking", "Cascade Auto Wrecking",
             "Moss on the roofs, rain in the wiring loom. The engines have all been kept indoors.");
@@ -236,6 +244,21 @@ public static class TravelGraph
         float jx = ((h & 0xFFFF) / 65535f * 2f - 1f) * Jitter;
         float jy = (((h >> 16) & 0xFFFF) / 65535f * 2f - 1f) * Jitter;
         return new Vector2(jx * StepX, jy * StepY);
+    }
+
+    // The team factory is not somebody's roadside business like the shops and yards, so it is not mounted
+    // on one highway: it gets its own slip roads onto the nearest few circuits. Central and never far off
+    // a route through the middle of the country, which is the point — you are meant to call in.
+    const int FactoryRoads = 4;
+
+    static void FactoryHub(string id, string name, Vector2 pos, string flavor)
+    {
+        AddNode(new TravelNode { id = id, name = name, pos = pos, locationType = TravelLocationType.TeamFactory, flavor = flavor });
+
+        var circuits = new List<TravelNode>();
+        foreach (var n in _nodes) if (n.isCircuit) circuits.Add(n);
+        circuits.Sort((a, b) => Sq(a.pos, pos).CompareTo(Sq(b.pos, pos)));
+        for (int i = 0; i < FactoryRoads && i < circuits.Count; i++) Edge(id, circuits[i].id);
     }
 
     static void Circuit(string id, string name, int col, int row) =>

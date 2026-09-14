@@ -15,6 +15,8 @@ using UnityEngine.UI;
 //   1. Choose the next race venue (any circuit node). Stop budget = direct route + DetourAllowance.
 //   2. Drive node to node (click an adjacent node, 1 stop each). Minor locations show a side panel —
 //      junkyards sell a weekly random salvage roll, engine shops a fixed catalog. Buying installs.
+//      Your own Team Factory sits in the middle of the map (the teal wrench): the parts your shop has
+//      built since your last visit are free there, and they only leave the rack if you drive out.
 //   3. At the destination: START RACE WEEKEND resets the weekend and loads the circuit's scene (falls
 //      back to reloading the current scene when the circuit isn't in the build).
 // Out of stops away from the destination -> tow (costs money). State persists in TravelState, so closing
@@ -28,14 +30,17 @@ public class TravelMapScreen : MonoBehaviour
     const int TowCost = 2000;
     const string PrefabResourcePath = "UI/TravelMap";
 
-    static readonly Color CircuitColor = new Color(1f, 0.85f, 0.3f);
-    static readonly Color JunkyardColor = new Color(0.75f, 0.55f, 0.35f);
-    static readonly Color EngineShopColor = new Color(0.45f, 0.75f, 1f);
-    static readonly Color MysteryColor = new Color(0.6f, 0.6f, 0.6f);
-    static readonly Color CurrentHalo = new Color(0.4f, 1f, 0.5f, 0.9f);
-    static readonly Color DestHalo = new Color(1f, 0.35f, 0.3f, 0.9f);
-    static readonly Color ReachableHalo = new Color(1f, 1f, 1f, 0.35f);
-    static readonly Color EdgeColor = new Color(1f, 1f, 1f, 0.22f);
+    // Iron Oval palette (PixelUITheme): gold on navy, red for alarm, one colour per kind of place so the
+    // map reads by colour before it reads by label. The factory is the only teal dot on the board.
+    static readonly Color CircuitColor = new Color32(0xf2, 0xc1, 0x4e, 0xff);    // gold - a racetrack
+    static readonly Color JunkyardColor = new Color32(0xc4, 0x8a, 0x45, 0xff);   // rust - a yard full of it
+    static readonly Color EngineShopColor = new Color32(0x4a, 0x8f, 0xe0, 0xff); // blue - somebody's business
+    static readonly Color FactoryColor = new Color32(0x4e, 0xc9, 0xb0, 0xff);    // teal - the one place you own
+    static readonly Color MysteryColor = new Color32(0x6b, 0x72, 0x8c, 0xff);    // not been there yet
+    static readonly Color CurrentHalo = new Color32(0xf4, 0xea, 0xd7, 0xff);     // cream frame - you are here
+    static readonly Color DestHalo = new Color32(0xe5, 0x48, 0x4d, 0xff);        // red - this week's race
+    static readonly Color ReachableHalo = new Color32(0xf2, 0xc1, 0x4e, 0x8c);   // gold, dimmed - one stop away
+    static readonly Color EdgeColor = new Color32(0x4a, 0x55, 0x74, 0xc0);       // highway
 
     [Header("Header")]
     public Text titleLabel;
@@ -252,16 +257,33 @@ public class TravelMapScreen : MonoBehaviour
             else if (reachable || (choosing && n.isCircuit)) { marker.halo.enabled = true; marker.halo.color = ReachableHalo; }
             else marker.halo.enabled = false;
 
-            marker.dot.color = n.isCircuit
-                ? CircuitColor
-                : (TravelState.IsVisited(n.id)
-                    ? (n.locationType == TravelLocationType.Junkyard ? JunkyardColor : EngineShopColor)
-                    : MysteryColor);
+            var tint = DotColor(n);
+            marker.dot.color = tint;
 
-            if (n.isCircuit) marker.label.text = n.name;
-            else if (TravelState.IsVisited(n.id)) marker.label.text = (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name;
-            else marker.label.text = "?";
+            marker.label.text = LabelFor(n);
+            // The nodes that matter right now get the bigger type; the other fifty stay small so the
+            // middle of the country does not turn into a wall of overlapping names.
+            bool shout = isCurrent || isDest || n.locationType == TravelLocationType.TeamFactory;
+            marker.label.fontSize = shout ? 16 : 8;
+            marker.label.color = isCurrent ? CurrentHalo : (isDest ? DestHalo : tint);
         }
+    }
+
+    // One colour per kind of place. Minor locations stay grey until you have actually pulled in - that
+    // discovery is the point - but your own factory is never a mystery.
+    static Color DotColor(TravelNode n)
+    {
+        if (n.isCircuit) return CircuitColor;
+        if (n.locationType == TravelLocationType.TeamFactory) return FactoryColor;
+        if (!TravelState.IsVisited(n.id)) return MysteryColor;
+        return n.locationType == TravelLocationType.Junkyard ? JunkyardColor : EngineShopColor;
+    }
+
+    static string LabelFor(TravelNode n)
+    {
+        if (n.isCircuit || n.locationType == TravelLocationType.TeamFactory) return n.name.ToUpperInvariant();
+        if (!TravelState.IsVisited(n.id)) return "?";
+        return (n.locationType == TravelLocationType.Junkyard ? "[J] " : "[E] ") + n.name.ToUpperInvariant();
     }
 
     // ---------------- side panel ----------------
@@ -276,7 +298,9 @@ public class TravelMapScreen : MonoBehaviour
 
         ClearShopRows();
         actionButton.gameObject.SetActive(false);
-        walkButton.gameObject.SetActive(false);
+        // Optional: an older prefab may have no walk button at all (Draftmaster > Travel Map > Restyle
+        // rebuilds it). Missing it should cost you the button, not the whole side panel.
+        if (walkButton != null) walkButton.gameObject.SetActive(false);
         shopHeader.gameObject.SetActive(false);
 
         if (choosing)
@@ -304,19 +328,23 @@ public class TravelMapScreen : MonoBehaviour
             BuildShopRows(current);
 
             // Park up and walk the place on foot (shared Landmark scene; costs nothing).
-            walkButton.gameObject.SetActive(true);
-            walkButton.GetComponentInChildren<Text>().text = "STOP & LOOK AROUND";
-            walkButton.onClick.RemoveAllListeners();
-            walkButton.onClick.AddListener(() =>
+            if (walkButton != null)
             {
-                if (!LandmarkLoader.SceneInBuild)
+                walkButton.gameObject.SetActive(true);
+                walkButton.GetComponentInChildren<Text>().text =
+                    current.locationType == TravelLocationType.TeamFactory ? "WALK THE SHOP FLOOR" : "STOP & LOOK AROUND";
+                walkButton.onClick.RemoveAllListeners();
+                walkButton.onClick.AddListener(() =>
                 {
-                    Notice("Landmark scene missing from Build Settings — run Draftmaster > Travel Map > Build Landmark Scene.");
-                    return;
-                }
-                Close();
-                LandmarkLoader.Visit(TravelState.CurrentNodeId);
-            });
+                    if (!LandmarkLoader.SceneInBuild)
+                    {
+                        Notice("Landmark scene missing from Build Settings — run Draftmaster > Travel Map > Build Landmark Scene.");
+                        return;
+                    }
+                    Close();
+                    LandmarkLoader.Visit(TravelState.CurrentNodeId);
+                });
+            }
         }
 
         // Stranded? Tow covers the rest of the way, for a price. Never a softlock.
@@ -369,6 +397,19 @@ public class TravelMapScreen : MonoBehaviour
                 count++;
             }
         }
+        else if (loc.locationType == TravelLocationType.TeamFactory)
+        {
+            // Everything your own shop has finished and nobody has driven out to fetch yet. Free, and
+            // gone from the rack once taken - unlike a junkyard shelf, it does not reroll next week.
+            shopHeader.text = "ON THE RACK - YOURS TO TAKE";
+            foreach (var (part, _) in PartCatalog.FactoryStock(TravelState.Week))
+            {
+                if (TravelState.WasCollected(part.id)) continue;
+                AddStockRow(part, 0, () => TravelState.MarkCollected(part.id), free: true);
+                count++;
+            }
+            if (count == 0) shopHeader.text = "NOTHING ON THE RACK - THEY ARE STILL BUILDING";
+        }
         else // EngineShop
         {
             shopHeader.text = "FOR SALE";
@@ -387,7 +428,7 @@ public class TravelMapScreen : MonoBehaviour
         shopRowsRoot.sizeDelta = new Vector2(shopRowsRoot.sizeDelta.x, count * rowH);
     }
 
-    void AddStockRow(PartDef part, int price, System.Action onBought)
+    void AddStockRow(PartDef part, int price, System.Action onBought, bool free = false)
     {
         var row = Instantiate(stockRowTemplate, shopRowsRoot);
         row.SetActive(true);
@@ -400,15 +441,17 @@ public class TravelMapScreen : MonoBehaviour
         if (installed) buy.gameObject.SetActive(false);
         else
         {
-            buy.GetComponentInChildren<Text>().text = PlayerWallet.Format(price);
+            buy.GetComponentInChildren<Text>().text = free ? "COLLECT" : PlayerWallet.Format(price);
             buy.onClick.AddListener(() =>
             {
-                if (PlayerWallet.TrySpend(price))
+                if (free || PlayerWallet.TrySpend(price))
                 {
                     PlayerCarBuild.Install(part);
-                    PlayerStatsLedger.Increment("partsbought");
+                    PlayerStatsLedger.Increment(free ? "partscollected" : "partsbought");
                     onBought?.Invoke();
-                    Notice($"{part.name} installed. Old {part.slot.ToString().ToLowerInvariant()} scrapped.");
+                    Notice(free
+                        ? $"{part.name} collected and fitted. The shop already knew it would fit."
+                        : $"{part.name} installed. Old {part.slot.ToString().ToLowerInvariant()} scrapped.");
                 }
                 else Notice("Not enough cash.");
                 Refresh();

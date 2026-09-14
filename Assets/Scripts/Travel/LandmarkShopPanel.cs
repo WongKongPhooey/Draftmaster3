@@ -78,6 +78,20 @@ public class LandmarkShopPanel : MonoBehaviour
             }
             if (!any) y = AddHeading("Shelf's bare. Come back next week.", y);
         }
+        else if (loc.locationType == TravelLocationType.TeamFactory)
+        {
+            // Your own shop's rack: whatever the fabricators have finished since you last called in.
+            // Free, and gone for good once taken (TravelState.WasCollected, not the weekly bought key).
+            y = AddHeading("ON THE RACK - YOURS TO TAKE", y);
+            bool any = false;
+            foreach (var (part, _) in PartCatalog.FactoryStock(TravelState.Week))
+            {
+                if (TravelState.WasCollected(part.id)) continue;
+                y = AddStockRow(part, 0, y, () => TravelState.MarkCollected(part.id), free: true);
+                any = true;
+            }
+            if (!any) y = AddHeading("Nothing finished yet. They build one between races.", y);
+        }
         else if (loc.locationType == TravelLocationType.EngineShop)
         {
             y = AddHeading("FOR SALE", y);
@@ -101,7 +115,7 @@ public class LandmarkShopPanel : MonoBehaviour
         return y + 36;
     }
 
-    float AddStockRow(PartDef part, int price, float y, System.Action onBought)
+    float AddStockRow(PartDef part, int price, float y, System.Action onBought, bool free = false)
     {
         var row = new GameObject("Row", typeof(RectTransform));
         row.transform.SetParent(_rows, false);
@@ -137,19 +151,21 @@ public class LandmarkShopPanel : MonoBehaviour
             btnGo.GetComponent<Image>().color = new Color(0.18f, 0.42f, 0.80f);
 
             var label = MakeText("Label", btnGo.transform, 22, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
-            label.text = PlayerWallet.Format(price);
+            label.text = free ? "COLLECT" : PlayerWallet.Format(price);
             var lrt = label.rectTransform;
             lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
             lrt.offsetMin = lrt.offsetMax = Vector2.zero;
 
             btnGo.GetComponent<Button>().onClick.AddListener(() =>
             {
-                if (PlayerWallet.TrySpend(price))
+                if (free || PlayerWallet.TrySpend(price))
                 {
                     PlayerCarBuild.Install(part);
-                    PlayerStatsLedger.Increment("partsbought");
+                    PlayerStatsLedger.Increment(free ? "partscollected" : "partsbought");
                     onBought?.Invoke();
-                    _status.text = $"{part.name} installed. Old {part.slot.ToString().ToLowerInvariant()} scrapped.";
+                    _status.text = free
+                        ? $"{part.name} collected and fitted."
+                        : $"{part.name} installed. Old {part.slot.ToString().ToLowerInvariant()} scrapped.";
                 }
                 else _status.text = "Not enough cash.";
                 Refresh();

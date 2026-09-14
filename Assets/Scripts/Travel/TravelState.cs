@@ -12,6 +12,7 @@ public static class TravelState
     const string WeekKey = "travel.week";
     const string VisitedKey = "travel.visited";
     const string BoughtKeyPrefix = "travel.bought."; // + week.locationId.partId -> junkyard item taken
+    const string CollectedKeyPrefix = "travel.collected."; // + partId -> taken off the factory bench, for good
 
     public static string CurrentNodeId
     {
@@ -108,6 +109,17 @@ public static class TravelState
     public static void MarkBought(string locationId, string partId)
     {
         PlayerPrefs.SetInt(BoughtKeyPrefix + Week + "." + locationId + "." + partId, 1);
+        PlayerPrefs.Save();
+    }
+
+    // The factory bench is not a weekly shelf: a part your own shop built is collected once and is gone
+    // from the rack for the rest of the career, so this is deliberately NOT keyed by week.
+    public static bool WasCollected(string partId) =>
+        PlayerPrefs.GetInt(CollectedKeyPrefix + partId, 0) == 1;
+
+    public static void MarkCollected(string partId)
+    {
+        PlayerPrefs.SetInt(CollectedKeyPrefix + partId, 1);
         PlayerPrefs.Save();
     }
 
