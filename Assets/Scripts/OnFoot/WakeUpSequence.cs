@@ -9,7 +9,15 @@ using UnityEngine.InputSystem;
 //   1. the screen is black before the first frame is drawn (ScreenFade.HoldBlack from PitLaneStart.Start),
 //   2. the alarm rings, and the player is lying down and cannot move,
 //   3. the picture fades up (or the player slaps the clock — any key — and it fades up early),
-//   4. the driver gets up, and control is handed over.
+//   4. the driver gets up, turned toward the way out, and control is handed over.
+//
+// Getting up is a turn as well as a stand: a body left in the pose it was instantiated with faces whatever
+// the prefab was drawn facing (south, for these rigs), which reads as waking up and staring at the back of
+// the motorhome. `Settings.facing` is the world direction they are on their feet facing — north by default,
+// up the screen and out of the rig. It is a screen direction, not the RV's own doorway (RVExterior puts that
+// wherever the rig was placed and it need not be north); PitLaneStart.wakeFacing retunes it. And it is held
+// rather than merely applied, because OnFootController writes the standing facing back into the rig from the
+// direction it remembers on every physics step.
 //
 // Art placeholders: with no lying-down sprite assigned the body is simply laid on its side and stood back
 // up by rotation, and with no Animator trigger the same rotation is the "getting up animation". Assign
@@ -31,6 +39,7 @@ public class WakeUpSequence : MonoBehaviour
         public Sprite lyingDownSprite;      // null = lay the standing sprite on its side
         public string getUpTrigger;         // Animator trigger, if the rig has one
         public float lyingRotationDeg;      // which way the body falls when there is no sprite for it
+        public Vector2 facing;              // world direction they stand up facing; zero = keep the spawn pose
 
         public static Settings Default => new Settings
         {
@@ -39,6 +48,7 @@ public class WakeUpSequence : MonoBehaviour
             fadeInSeconds = 1.8f,
             getUpSeconds = 0.8f,
             lyingRotationDeg = 90f,
+            facing = Vector2.up,            // north: out of the motorhome rather than into the back of it
         };
     }
 
@@ -80,7 +90,9 @@ public class WakeUpSequence : MonoBehaviour
         var animator = _player.GetComponent<Animator>();
 
         Sprite standing = sprite != null ? sprite.sprite : null;
-        Quaternion upright = body.rotation;
+        // Where this ends: on their feet, facing the way out. Solved first because the lying-down
+        // placeholder below is that pose tipped on its side, so the body falls the way it will stand.
+        Quaternion upright = UprightFacing(_s.facing, _player.spriteFacingOffsetDeg, body.rotation);
 
         // Down you go. A dedicated sprite if there is one, otherwise the standing one on its side —
         // which is the placeholder, and reads correctly from directly overhead.
@@ -124,11 +136,28 @@ public class WakeUpSequence : MonoBehaviour
             if (!played) body.rotation = Quaternion.Slerp(down, upright, k);
             yield return null;
         }
+
+        // Up, and turned. FaceToward is what makes the turn survive the hand-over: the
+        // controller rewrites the rig's facing from the direction it remembers on every FixedUpdate, and
+        // that direction is still whatever the prefab was built with until something tells it otherwise.
+        if (_s.facing.sqrMagnitude > 0.0001f)
+            _player.FaceToward(body.position + (Vector3)_s.facing.normalized);
         body.rotation = upright;
 
         _player.MovementLocked = false;
         Running = false;
         Destroy(gameObject);
+    }
+
+    // The rotation that stands a body up facing `facing`, a world direction. `spriteFacingOffsetDeg` is the
+    // angle between the sprite's drawn facing and +X — the same convention OnFootController turns everybody
+    // else by, so waking up and walking off agree about which way "north" points. Asked for no direction at
+    // all (a zero vector), the body keeps the pose it was spawned with.
+    public static Quaternion UprightFacing(Vector2 facing, float spriteFacingOffsetDeg, Quaternion spawned)
+    {
+        if (facing.sqrMagnitude < 0.0001f) return spawned;
+        float ang = Mathf.Atan2(facing.y, facing.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
+        return Quaternion.Euler(0f, 0f, ang);
     }
 
     // Any key, any face button: hitting the clock.

@@ -81,6 +81,10 @@ public class PitLaneStart : MonoBehaviour
     [Tooltip("Animator trigger for the getting-up animation, if the player rig has one. Empty (or missing " +
              "from the rig) = the body rotates upright instead, which is the placeholder.")]
     public string getUpTrigger = "GetUp";
+    [Tooltip("World direction the driver is facing once they are on their feet: (0,1) is north, up the " +
+             "screen, and out of the motorhome. A screen direction, not the rig's own doorway — an RV " +
+             "parked with its door on another side wants this turned to match. Zero = keep the spawn pose.")]
+    public Vector2 wakeFacing = Vector2.up;
 
     [Header("Atmosphere")]
     [Tooltip("Looping crowd/paddock bed started when the scene opens. Ducks while the player is inside the RV. Empty = silence.")]
@@ -435,6 +439,7 @@ public class PitLaneStart : MonoBehaviour
         settings.getUpSeconds = wakeGetUpSeconds;
         settings.lyingDownSprite = lyingDownSprite;
         settings.getUpTrigger = getUpTrigger;
+        settings.facing = wakeFacing;
 
         // No walker to wake up (a prefab with no controller): bring the lights up rather than leaving the
         // player staring at the black screen this method just committed to.
