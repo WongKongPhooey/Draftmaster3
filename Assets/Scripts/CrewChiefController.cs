@@ -55,6 +55,10 @@ public class CrewChiefController : MonoBehaviour
     [Tooltip("Icon on the button. Defaults to the kit's headset glyph.")]
     public Sprite buttonIcon;
 
+    // "Is the player on the pit wall right now?", asked from outside. Field-wide HUD notices that belong to
+    // the chief rather than the driver (RivalryFeed's rivalry toasts) read this.
+    public static bool IsCrewChief { get; private set; }
+
     bool _active;
     GameObject _avatar;
     GameObject _playerCar;
@@ -82,6 +86,13 @@ public class CrewChiefController : MonoBehaviour
         _playerCar = GameObject.Find("PlayerCar");
         BuildButton();
         UpdateButton();
+    }
+
+    // Static state has to die with the scene (and with a component switched off), or the next race starts
+    // believing the player is still stood on the pit wall.
+    void OnDisable()
+    {
+        IsCrewChief = false;
     }
 
     void Update()
@@ -158,6 +169,7 @@ public class CrewChiefController : MonoBehaviour
         if (cameraFollow != null) cameraFollow.target = _avatar.transform;
 
         _active = true;
+        IsCrewChief = true;
         if (_timingBtn != null) _timingBtn.SetActive(true);
         UpdateButton();
     }
@@ -188,6 +200,7 @@ public class CrewChiefController : MonoBehaviour
         if (driveMode != null) driveMode.suppressBroadcastCamera = false;
 
         _active = false;
+        IsCrewChief = false;
         _wasInCar = false;
         _wasDriving = false;
         if (_timingBtn != null) _timingBtn.SetActive(false);

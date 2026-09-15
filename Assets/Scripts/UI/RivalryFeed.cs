@@ -1,10 +1,16 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Draftmaster.Sim;
 
 // On-screen feed for the driver-relationship system: contact toasts, standing changes ("X and Y are
 // now RIVALS"), and payback declarations. Also holds a toggleable standings panel (default F4) listing
 // the player's relationships. Created on demand by DriverRelationships.Ensure() calls — scene-local,
 // so it dies with the race scene and never leaks into menus.
+//
+// Who sees which toast is RivalryFeedAudience's rule: driving, you only get the notices you are named
+// in — two other drivers falling out somewhere in the field is not something a driver in the car would
+// know about. Those field-wide notices are held back for the crew chief (CrewChiefController.IsCrewChief),
+// whose job is the whole race, and they come off screen again the moment the player leaves the pit wall.
 public class RivalryFeed : MonoBehaviour
 {
     public static RivalryFeed Instance { get; private set; }
@@ -13,7 +19,8 @@ public class RivalryFeed : MonoBehaviour
     public float toastSeconds = 4.5f;
     [Tooltip("Max toasts shown at once.")]
     public int maxToasts = 5;
-    [Tooltip("Show contact toasts only when the player is involved (standing changes and paybacks always show).")]
+    [Tooltip("Contact toasts obey the audience rule (the player's own contacts, plus the rest of the field " +
+             "while acting as crew chief). Turn off to show every contact in the field at all times.")]
     public bool playerContactsOnly = true;
     [Tooltip("Key toggling the relationship standings panel.")]
     public KeyCode standingsKey = KeyCode.F4;
@@ -23,6 +30,7 @@ public class RivalryFeed : MonoBehaviour
         public string text;
         public Color color;
         public float bornAt;
+        public bool chiefOnly;   // a notice about two other drivers, shown because the player is the chief
     }
 
     readonly List<Toast> _toasts = new();
@@ -60,20 +68,30 @@ public class RivalryFeed : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyDown(standingsKey)) _showStandings = !_showStandings;
+        bool chief = CrewChiefController.IsCrewChief;
         for (int i = _toasts.Count - 1; i >= 0; i--)
-            if (Time.time - _toasts[i].bornAt > toastSeconds) _toasts.RemoveAt(i);
+        {
+            // Stepping off the pit wall takes the field-wide notices with it, rather than leaving other
+            // people's arguments fading over the windscreen for the next few seconds.
+            if (Time.time - _toasts[i].bornAt > toastSeconds || (_toasts[i].chiefOnly && !chief))
+                _toasts.RemoveAt(i);
+        }
     }
 
     void OnContact(string striker, string victim, float severity)
     {
         bool playerInvolved = DriverRelationships.IsPlayerName(striker) || DriverRelationships.IsPlayerName(victim);
-        if (playerContactsOnly && !playerInvolved) return;
+        if (playerContactsOnly && !Announces(playerInvolved)) return;
         string verb = severity > 0.55f ? "slams into" : "trades paint with";
-        Push($"{striker} {verb} {victim}", playerInvolved ? PixelGUI.Gold : PixelGUI.TextDim);
+        Push($"{striker} {verb} {victim}", playerInvolved ? PixelGUI.Gold : PixelGUI.TextDim,
+             chiefOnly: playerContactsOnly && !playerInvolved);
     }
 
     void OnChanged(string a, string b, float value, float delta)
     {
+        bool playerInvolved = DriverRelationships.IsPlayerName(a) || DriverRelationships.IsPlayerName(b);
+        if (!Announces(playerInvolved)) return;
+
         // Announce only threshold crossings, not every nudge.
         float prev = value - delta;
         var was = DriverRelationships.StandingOf(prev);
@@ -83,16 +101,16 @@ public class RivalryFeed : MonoBehaviour
         switch (now)
         {
             case DriverRelationships.Standing.Furious:
-                Push($"{a} is FURIOUS with {b}!", PixelGUI.Danger);
+                Push($"{a} is FURIOUS with {b}!", PixelGUI.Danger, chiefOnly: !playerInvolved);
                 break;
             case DriverRelationships.Standing.Rival:
                 if (was == DriverRelationships.Standing.Furious)
-                    Push($"{a} and {b} are cooling off", PixelGUI.Info);
+                    Push($"{a} and {b} are cooling off", PixelGUI.Info, chiefOnly: !playerInvolved);
                 else
-                    Push($"{a} and {b} are now RIVALS", PixelGUI.Gold);
+                    Push($"{a} and {b} are now RIVALS", PixelGUI.Gold, chiefOnly: !playerInvolved);
                 break;
             case DriverRelationships.Standing.Ally:
-                Push($"{a} and {b} are working together", PixelGUI.Confirm);
+                Push($"{a} and {b} are working together", PixelGUI.Confirm, chiefOnly: !playerInvolved);
                 break;
             case DriverRelationships.Standing.Neutral:
                 break;
@@ -101,12 +119,18 @@ public class RivalryFeed : MonoBehaviour
 
     void OnPayback(string attacker, string target)
     {
-        Push($"{attacker} wants PAYBACK on {target}!", PixelGUI.Danger);
+        bool playerInvolved = DriverRelationships.IsPlayerName(attacker) || DriverRelationships.IsPlayerName(target);
+        if (!Announces(playerInvolved)) return;
+        Push($"{attacker} wants PAYBACK on {target}!", PixelGUI.Danger, chiefOnly: !playerInvolved);
     }
 
-    void Push(string text, Color color)
+    // The audience rule, asked with the live crew-chief state.
+    static bool Announces(bool playerInvolved)
+        => RivalryFeedAudience.ShouldAnnounce(playerInvolved, CrewChiefController.IsCrewChief);
+
+    void Push(string text, Color color, bool chiefOnly)
     {
-        _toasts.Add(new Toast { text = text, color = color, bornAt = Time.time });
+        _toasts.Add(new Toast { text = text, color = color, bornAt = Time.time, chiefOnly = chiefOnly });
         while (_toasts.Count > maxToasts) _toasts.RemoveAt(0);
     }
 
