@@ -70,8 +70,9 @@ public class PitLaneStart : MonoBehaviour
     [Tooltip("Alarm clock sound. Empty = a synthesised placeholder (four square-wave beeps on a loop).")]
     public AudioClip alarmClip;
     [Range(0f, 1f)] public float alarmVolume = 0.55f;
-    [Tooltip("Seconds the alarm rings in the dark before the picture comes up. Any key hits the clock early.")]
-    public float wakeDarkSeconds = 2.2f;
+    [Tooltip("Seconds the alarm rings in the dark before the picture comes up. Any key hits the clock early. " +
+             "The where-and-when card is on screen over the black for all of it.")]
+    public float wakeDarkSeconds = 3.4f;
     [Tooltip("Seconds the fade from black takes.")]
     public float wakeFadeInSeconds = 1.8f;
     [Tooltip("Seconds the getting-up beat takes.")]
@@ -343,7 +344,8 @@ public class PitLaneStart : MonoBehaviour
         _carIcon = carSprite != null ? carSprite.sprite : null;
 
         // Woken up rather than dropped in: the alarm and the fade come first, and the card that says where
-        // and when you are waits until the driver's eyes are open. Both paths end in the same title card.
+        // and when you are is read off the black screen while the clock is still going. Both paths end in
+        // the same title card.
         if (waking) StartCoroutine(WakeUpThenIntroduce($"{trackTitle} - {spawnLabel}", when));
         else
         {
@@ -441,12 +443,25 @@ public class PitLaneStart : MonoBehaviour
         settings.getUpTrigger = getUpTrigger;
         settings.facing = wakeFacing;
 
+        // Up before the alarm is, and drawn over the top of the black rather than under it: a black screen
+        // with a buzzer on it says nothing about where the weekend has taken you, and this is the one beat
+        // in the game with no scene to read that off. Held long enough to span the dark AND the fade, so it
+        // is still there as the motorhome comes up and then bows out on its own.
+        _intro = SpawnIntroUI.Create(title, _player.transform, when);
+        _intro.overFade = true;
+        _intro.titleHold = Mathf.Max(_intro.titleHold, wakeDarkSeconds + wakeFadeInSeconds);
+
         // No walker to wake up (a prefab with no controller): bring the lights up rather than leaving the
         // player staring at the black screen this method just committed to.
-        if (WakeUpSequence.Play(walker, settings) == null) ScreenFade.FromBlack(0f, 0.25f);
+        if (WakeUpSequence.Play(walker, settings) == null)
+        {
+            ScreenFade.FromBlack(0f, 0.25f);
+            yield return new WaitForSecondsRealtime(0.25f);   // the card still has to outlast the wipe
+        }
         while (WakeUpSequence.Running) yield return null;
 
-        _intro = SpawnIntroUI.Create(title, _player.transform, when);
+        // Lights on: the card goes back into the ordinary stack and the objective markers come with it.
+        _intro.overFade = false;
         SyncCarMarker();
     }
 

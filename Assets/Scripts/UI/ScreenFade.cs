@@ -12,6 +12,12 @@ public class ScreenFade : MonoBehaviour
     public static ScreenFade Instance { get; private set; }
     public static bool Busy => Instance != null && Instance._busy;
 
+    // Where the wipe sits in the IMGUI stack. Lower depth draws in FRONT, so this number is what every
+    // other panel is behind — and what anything deliberately drawn over the black (the arrival card during
+    // the career's first morning) has to get under. Named rather than a literal because it is now a
+    // contract between two scripts.
+    public const int WipeDepth = -100;
+
     float _alpha;
     bool _busy;
     Texture2D _px;
@@ -145,7 +151,7 @@ public class ScreenFade : MonoBehaviour
             _px.Apply();
         }
 
-        GUI.depth = -100;   // lower depth draws in front: the wipe covers the HUD, not the other way round
+        GUI.depth = WipeDepth;   // lower depth draws in front: the wipe covers the HUD, not the reverse
         var prev = GUI.color;
         GUI.color = new Color(0f, 0f, 0f, _alpha);
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), _px);

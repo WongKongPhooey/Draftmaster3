@@ -44,7 +44,11 @@ public class WakeUpSequence : MonoBehaviour
         public static Settings Default => new Settings
         {
             alarmVolume = 0.55f,
-            darkSeconds = 2.2f,
+            // Long enough for three full bursts of the placeholder clock — a dozen beeps — and it runs out
+            // in the gap after the third rather than mid-chirp, so the picture comes up out of a silence
+            // instead of cutting the buzzer off. Two seconds read as a scene transition with a noise over
+            // it; this reads as a clock somebody is ignoring.
+            darkSeconds = 3.4f,
             fadeInSeconds = 1.8f,
             getUpSeconds = 0.8f,
             lyingRotationDeg = 90f,

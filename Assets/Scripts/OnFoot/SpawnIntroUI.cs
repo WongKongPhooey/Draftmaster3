@@ -68,6 +68,21 @@ public class SpawnIntroUI : MonoBehaviour
              "so the hit box is grown to this regardless of how the icon is drawn.")]
     public float markerTapSize = 64f;
 
+    // Draw the card in FRONT of the screen wipe instead of under it, and drop the markers while doing so.
+    //
+    // For the one moment the game opens on a black screen with an alarm going off: where you are and what
+    // day it is is the first thing the player should be reading, and under a full-alpha ScreenFade it is
+    // simply not on screen. Objective arrows are left out of that — a pointer to a car nobody can see yet
+    // is furniture floating in the dark. Off for everything else, because a wipe that something draws
+    // through is not a wipe.
+    [HideInInspector] public bool overFade;
+
+    // The two places this UI can sit in the IMGUI stack. Lower draws in front, so the over-black card has
+    // to be UNDER ScreenFade's wipe depth to be read off a black screen; the ordinary card takes the
+    // default and lets the wipe cover it like everything else.
+    public const int FrontOfFadeDepth = ScreenFade.WipeDepth - 100;
+    public const int NormalDepth = 0;
+
     // What the card said when the scene opened — the track, and the day and time the weekend is at. Kept
     // apart from the live title because that gets reused as an objective banner, and "where am I and when
     // is it" is worth being able to ask for later.
@@ -224,6 +239,12 @@ public class SpawnIntroUI : MonoBehaviour
     {
         if (RacePauseMenu.IsPaused) return;
         EnsureAssets();
+
+        // Set explicitly both ways, because a depth set once sticks to this script for every frame after it.
+        GUI.depth = overFade ? FrontOfFadeDepth : NormalDepth;
+
+        if (overFade) { DrawTitle(); return; }
+
         DrawMarkers();
         DrawTitle();
         StepMarkerClicks();
