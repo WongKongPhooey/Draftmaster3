@@ -497,8 +497,14 @@ instead, set `anchor = Here` and author the marker **in that track's package**
 (`Draftmaster > Tracks > Edit Selected Package`, or `Draftmaster > NPCs > Move Selected NPC Into Track
 Package`) — a hand-placed position only means anything at one circuit.
 
-Re-arm both beats for another run with **`Draftmaster > Demo > Re-arm The Opening (alarm + liaison)`**
-(it also puts the three days back to Friday morning, since testing the opening walks the clock on). If the
+**The phone's first bleep.** Walking to the briefing, 200 m short of the pit box, the crew chief texts
+"where are you?" and a `P — Check your phone` hint stays up until the phone is opened (`ChiefCheckInBeat`,
+rule in `ChiefCheckIn`). To see it without the walk: **`Draftmaster > Demo > Send The Crew Chief's 'Where
+Are You' Text`** in play mode.
+
+Re-arm all three beats (alarm, liaison, the chief's text) for another run with **`Draftmaster > Demo >
+Re-arm The Opening (alarm + liaison)`** (it also puts the three days back to Friday morning, since testing
+the opening walks the clock on, and empties MESSAGES). If the
 liaison herself does not turn up, her appearance flag has been used: `Draftmaster > NPCs > Clear Appearance
 Flags`. `Draftmaster > Debug > RV Cutscene > Report State` prints which of the gates said no.
 
@@ -558,7 +564,7 @@ chair per driver, and booking → objective → walk → talk actually connects)
 | Key | Panel |
 | --- | --- |
 | `Esc` | Pause menu (closes the phone first if it's up) |
-| `P` | Phone — on foot only: Schedule, Tasks, Notes, SoBuzz, DrivR, Points |
+| `P` | Phone — on foot only: Schedule, Tasks, Notes, SoBuzz, Messages, Stats (Points + DrivR form guide; ←/→ swaps tab) |
 | `T` | Travel to whatever the weekend has you booked in for (only while an appointment is up) |
 | `Tab` (hold) | Expand the running-order board to the full field |
 | `F1` | Lap timing readout |

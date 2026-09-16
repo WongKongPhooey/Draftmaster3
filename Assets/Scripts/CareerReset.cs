@@ -66,6 +66,7 @@ public static class CareerReset
         Draftmaster.Sponsors.SponsorBook.InvalidateCache();
 
         PhoneNotes.Clear();
+        PhoneMessages.Clear();
         DriverRelationships.ResetAll();
         AppearanceConditions.ClearAllSeen();   // also empties the once-per-play-session set
 

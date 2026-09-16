@@ -1,43 +1,38 @@
+using System.Collections.Generic;
+using Draftmaster.Sim;
 using UnityEngine;
 
-// Drives an AI car during the FORMATION phase: tucks it into a single-file train behind the safety
-// car (or the car ahead) and weaves it gently to mimic warming the tyres. Also slows for and steers
-// around a stopped/crashed car ahead so the field doesn't pile in. Dormant in every other phase —
-// AIRacingBehaviour owns the car once the race goes green.
+// Drives an AI car during the FORMATION phase: tucks it into a two-wide train behind the safety car and weaves
+// it gently to mimic warming the tyres. Dormant in every other phase — AIRacingBehaviour owns the car once the
+// race goes green.
 //
-// Works purely through SplineDriver's public knobs (aiMaxSpeedMph / tacticalLateralOffset /
+// Works purely through SplineDriver's public knobs (aiMaxSpeedMph / aiMinDecelMphPerSec / tacticalLateralOffset /
 // paceMultiplier), so the car's path, corner speeds and dynamic motion are unchanged.
+//
+// Seeing and avoiding the cars around it is PackPlanner's job (Draftmaster.Sim, EditMode-tested): this component
+// only gathers what is around the car — AI, the safety car and the free-driven player, on the track or down the
+// pit lane — into that planner's track frame, and applies what it decides. The planner holds station off whatever
+// is genuinely in the car's lane (bumper to bumper, not nose to nose), never runs faster than it could stop from,
+// and drives round a stopped or suddenly slowed car when a side is open.
 [RequireComponent(typeof(SplineDriver))]
 public class FormationController : MonoBehaviour
 {
     [Tooltip("Cruise pace of the train (mph). Falls back to this when no FormationDirector is present.")]
     public float cruiseMph = 60f;
-    [Tooltip("How far behind the car ahead this car tries to sit (m).")]
+    [Tooltip("How far behind the car ahead this car tries to sit (m, centre to centre). The planner never sits closer than its safety clearance, whatever this says.")]
     public float targetGap = 9f;
     [Tooltip("How far behind the SAFETY CAR the leader tries to sit (m). Deliberately much larger than targetGap: " +
              "the pace car runs its own speed profile, so it sheds speed for corners on its own schedule and the " +
              "leader stationed a race-gap behind it has to stab the brakes to keep station. That stab is the " +
              "disturbance the whole train then amplifies. A long gap turns the same speed change into a slow " +
-             "gap-closure the ACC law can absorb without braking at all.")]
+             "gap-closure the follow law can absorb without braking at all.")]
     public float paceCarGap = 26f;
-    [Tooltip("Speed correction (mph) applied per metre of gap error. Higher = closes/opens gaps faster, but too high makes the train string-UNSTABLE (a wobble amplifies down the field into a pile-up).")]
-    public float gapGainMphPerMetre = 2.5f;
-    [Tooltip("Gap error (m) ignored before the car reacts — a deadband so a hair-trigger correction doesn't ripple back through the field as a phantom stop-and-go jam.")]
-    public float gapDeadbandM = 1.5f;
-    [Tooltip("Brake (mph) per mph of CLOSING speed on the car ahead. This relative-velocity damping is what makes the train string-STABLE: a car eases off the moment it's catching the car ahead (before the gap collapses), so a disturbance up front dies out down the line instead of amplifying into a pile-up. Must dominate gapGainMphPerMetre's contribution or each car overreacts to gap error and the wobble grows with field position — which reads as the MIDPACK crashing while the front looks fine.")]
-    public float relVelDampMph = 1.5f;
-    [Tooltip("Max rate (mph/sec) the formation speed cap may FALL. Braking is rate-limited so a touch or a slow car ahead produces a gentle, bounded slow-down instead of a hard stab that ripples back through the pack as a pile-up. Accelerating up is not limited. Too LOW is its own trap: the gentle correction can't land, the car sails on into the emergency branch, and the stab it was meant to prevent happens anyway.")]
-    public float maxBrakeMphPerSec = 20f;
-    [Tooltip("Escalate from gentle station-keeping to hard avoidance at this fraction of the station gap. Must stay below 1: at 1 the follow law is commanded to sit exactly on the panic trigger and every car brake-stabs on noise.")]
-    [Range(0.2f, 0.95f)] public float emergencyGapFraction = 0.6f;
-    [Tooltip("Hysteresis on the release: once avoiding, keep avoiding until the gap recovers past emergency threshold x this. >1 stops a car chattering in and out of panic braking frame to frame.")]
-    [Range(1f, 2f)] public float emergencyReleaseFactor = 1.3f;
     [Tooltip("Most this car may exceed cruise pace by while catching the train up (mph). Only used on straights. Kept low so the field doesn't string out far ahead of the pace.")]
     public float catchUpBonusMph = 9f;
-    [Tooltip("Lowest speed cap (mph) — a floor so a car never crawls to a halt mid-formation (lifted when blocked).")]
+    [Tooltip("Lowest speed cap (mph) the station-keeping asks for — a floor so a car never crawls to a halt mid-formation. The safety law ignores it: a car will stop behind a stopped car.")]
     public float minCapMph = 12f;
-    [Tooltip("How far ahead (m) to look for the car to follow.")]
-    public float lookAheadRange = 90f;
+    [Tooltip("Least distance ahead (m) scanned for cars. The planner scans further at speed — far enough to stop gently for a stopped car.")]
+    public float avoidScanRange = 26f;
     [Tooltip("Pace multiplier on the SplineDriver corner-speed profile during formation. <1 gives the dynamic model grip margin so it holds the line through turns. Barely affects straights (capped to cruise).")]
     [Range(0.6f, 1f)] public float formationPace = 0.9f;
 
@@ -52,23 +47,15 @@ public class FormationController : MonoBehaviour
     [Tooltip("Through a turn, scale the column offset by this (0..1) so the pair eases toward centre but STAYS paired — never collapses to single file (which is what made the field look single-file on a road course whose close-up zone contains corners).")]
     [Range(0f, 1f)] public float cornerColumnScale = 0.6f;
 
-    [Header("Collision avoidance")]
-    [Tooltip("Range ahead (m) scanned for the nearest car DIRECTLY IN MY PATH (lateral overlap) — the car I'd actually rear-end. Watched regardless of the formation reference; the real anti-collision net.")]
-    public float avoidScanRange = 26f;
-    [Tooltip("Lateral overlap (m) that counts as 'in my path' — roughly a car width plus margin, so a car drifting between the two columns is caught before it converges. Kept below the column separation (2*columnHalfOffset) so a clean two-wide partner isn't falsely braked for.")]
-    public float avoidLateralGate = 2.2f;
-    [Tooltip("Speed-dependent following cushion: keep at least currentSpeed * this (seconds) of gap. Inside it, the car avoids (slips alongside or slows).")]
-    public float avoidHeadwaySec = 0.55f;
-    [Tooltip("Absolute floor (m) the speed-dependent cushion never drops below, so cars keep a gap even at crawl.")]
-    public float avoidMinGap = 5f;
-    [Tooltip("Lateral offset (m) from a car-in-front to sit cleanly ALONGSIDE it when slipping out to pass — about one car width so the boxes clear.")]
-    public float alongsideClear = 2.4f;
-    [Tooltip("Braking authority (mph/sec) granted to a car actively avoiding a contact — overrides the (possibly weak) decel curve so a boxed-in car can actually slow in time. Firm but not instant.")]
+    [Header("Seeing and avoiding the cars around")]
+    [Tooltip("Station keeping, the never-hit safety law, lane widths and the swerve-alongside rules. Defaults are the values the pace-lap tests (PackAvoidanceTests) were run with.")]
+    public PackSettings pack = new PackSettings();
+    [Tooltip("Braking authority (mph/sec) granted when the safety law has to act — overrides the (possibly weak) decel curve so an emergency slow actually lands. Also what every AI car is assumed able to brake at, so it must be the same for the whole field.")]
     public float avoidHardDecelMphPerSec = 30f;
-    [Tooltip("Longitudinal window (m) within which another car counts as 'beside' me (so I won't slip into its side).")]
-    public float besideLongM = 5.5f;
-    [Tooltip("Lateral window (m) on a side within which a car counts as 'beside' me, blocking a slip to that side.")]
-    public float besideLatM = 2.6f;
+    [Tooltip("The human driver is assumed able to stop this many times harder than an AI car (a spin, a wall, a stamp on the brakes), so the AI leaves them more room.")]
+    public float humanBrakeFactor = 1.5f;
+    [Tooltip("A free car further than this (m) across from the pit centreline is on the track, not in the pit lane.")]
+    public float pitLaneHalfWidth = 7f;
 
     [Header("Corner caution")]
     [Tooltip("Distance ahead (m) scanned for a turn. Inside this, the car drops the catch-up boost and the weave so it can hold the racing line through the corner.")]
@@ -82,20 +69,6 @@ public class FormationController : MonoBehaviour
     [Tooltip("How fast (m/s of lateral) a car filing out for the formation lap pulls off the grey parked-box strip onto the pit lane's driving line. The grid spawn parks cars at the box-lane lateral; without this they ride that offset single-file down the wall for the whole lane.")]
     public float pitPullOutLateralRate = 1.5f;
 
-    [Header("Blockage avoidance (stopped/crashed car ahead)")]
-    [Tooltip("Range ahead (m) scanned for a slow/stopped car to avoid.")]
-    public float blockScanRange = 24f;
-    [Tooltip("A car ahead this much slower than us (mph), or below blockStoppedMph, counts as a blockage.")]
-    public float blockSpeedDeltaMph = 18f;
-    [Tooltip("A car ahead below this speed (mph) always counts as a blockage even if we're slow too.")]
-    public float blockStoppedMph = 14f;
-    [Tooltip("Gap (m) at which we should be fully stopped behind a blockage.")]
-    public float blockStopGap = 6f;
-    [Tooltip("Lateral offset (m) used to steer around a blockage.")]
-    public float avoidPush = 3.5f;
-    [Tooltip("How fast the avoidance offset moves (m/s). Higher than the weave slew so the car actually dodges.")]
-    public float avoidSlewPerSec = 4.5f;
-
     [Header("Tyre-warming weave")]
     [Tooltip("Lateral weave amplitude (m) on straights. Suppressed in/near turns and at pit-out. Layered on TOP of the two-wide column offset with a per-slot phase, so anti-phase neighbours close their pair gap by up to twice this — keep it well under columnHalfOffset minus a car width.")]
     public float weaveAmplitude = 0.45f;
@@ -107,41 +80,60 @@ public class FormationController : MonoBehaviour
     public float weaveSlewPerSec = 1.5f;
     [Tooltip("Seconds over which the weave fades back in after a pit-out settle or corner, so it never snaps on.")]
     public float weaveRampSeconds = 3f;
+    [Tooltip("Seconds over which the weave fades OUT for a corner, a swerve or the close-up. Quick on purpose: the columns pull in for a turn at the same moment, and anti-phase weave on narrowed columns closes a pair to a touch.")]
+    public float weaveFadeOutSeconds = 0.75f;
 
-    const float MphToMps = 1f / 2.237f;
+    const float DefaultHalfLength = 2.4f; // GridSpawner.collisionHalfExtents
+    const float DefaultHalfWidth = 1f;
+    const float PitLaneOpenCap = 200f;    // SplineDriver clamps a pit-lane car to the pit limit anyway
 
     SplineDriver _spline;
     PlayerVehicleController _pvc;
     SplineInputDriver _input;
+    readonly PackPlanner _planner = new PackPlanner();
+    readonly List<PackCar> _cars = new List<PackCar>();
     float _lateral;     // current applied tacticalLateralOffset (slew-limited)
     float _weaveEnv;    // 0..1 envelope so the weave ramps in gently
     bool _wasPit;
     float _pitOutTimer;
-    float _prevCap;     // last frame's speed cap, for rate-limiting how fast braking can ramp the cap down
-    bool _hasPrevCap;
-    bool _avoiding;     // latched hard-avoidance state, with hysteresis on release (see the speed law)
-
-    // --- Diagnostics (read by FormationDiagnostics, the F8 overlay). Last frame's view of the speed law, so a
-    //     pace lap can be watched car-by-car instead of inferred from the wreckage.
-    public static readonly System.Collections.Generic.List<FormationController> Active = new();
-    public SplineDriver Spline => _spline;
-    public float DbgGap { get; private set; }          // gap to the car being followed; -1 = nothing ahead
-    public float DbgStationGap { get; private set; }   // where the follow law is trying to sit
-    public float DbgPanicGap { get; private set; }     // below this it escalates to hard braking
-    public float DbgClosingMph { get; private set; }   // + = catching the car ahead
-    public float DbgCap { get; private set; }          // commanded speed cap after all limits
-    public bool DbgAvoiding { get; private set; }
-    public bool DbgSettling { get; private set; }
-    public bool DbgOnPit { get; private set; }
-    public bool DbgPaceCarAhead { get; private set; }
+    float _halfLength = DefaultHalfLength;
+    float _halfWidth = DefaultHalfWidth;
     float _savedLineFactor; // the car's own racing line, parked during formation and restored at green
     bool _lineFactorSaved;
 
-    void Awake() => _spline = GetComponent<SplineDriver>();
+    // Every formation car, and a lookup from its SplineDriver, so a car can read where its neighbours are
+    // heading across the track (a car sliding into my lane is in my lane before it gets there).
+    public static readonly List<FormationController> Active = new();
+    static readonly Dictionary<SplineDriver, FormationController> s_bySpline = new();
+    static readonly Dictionary<int, Vector2> s_extents = new(); // GameObject id → (half-length, half-width)
+
+    public SplineDriver Spline => _spline;
+    // Where this car is heading across the track (main-track lateral, m), and whether that is known yet.
+    public float PlannedTrackLateral { get; private set; }
+    public bool HasPlan { get; private set; }
+
+    // --- Diagnostics (read by FormationDiagnostics, the F8 overlay). Last frame's view of the planner, so a pace
+    //     lap can be watched car-by-car instead of inferred from the wreckage.
+    public float DbgGap { get; private set; }            // bumper-to-bumper clearance to the car followed; -1 = nothing
+    public float DbgSafeClearance { get; private set; }  // under this the safety law is braking
+    public float DbgStationGap { get; private set; }     // centre-to-centre gap the station keeping holds
+    public float DbgClosingMph { get; private set; }     // + = catching the car ahead
+    public float DbgCap { get; private set; }            // commanded speed cap after all limits
+    public PackMode DbgMode { get; private set; }
+    public bool DbgSettling { get; private set; }
+    public bool DbgOnPit { get; private set; }
+    public bool DbgPaceCarAhead { get; private set; }
+
+    void Awake()
+    {
+        _spline = GetComponent<SplineDriver>();
+        ResolveExtents(gameObject, out _halfLength, out _halfWidth);
+    }
 
     void OnEnable()
     {
         Active.Add(this);
+        if (_spline != null) s_bySpline[_spline] = this;
         RaceStart.PhaseChanged += OnPhaseChanged;
         OnPhaseChanged(RaceStart.Current);
     }
@@ -149,18 +141,23 @@ public class FormationController : MonoBehaviour
     void OnDisable()
     {
         Active.Remove(this);
+        if (_spline != null && s_bySpline.TryGetValue(_spline, out var fc) && fc == this) s_bySpline.Remove(_spline);
         RaceStart.PhaseChanged -= OnPhaseChanged;
+        HasPlan = false;
     }
 
     // The dynamic bicycle model + pure-pursuit steering is twitchy at parade speeds and spins cars off the
     // line. For the formation lap we drive KINEMATICALLY instead — SplineDriver glues the car to the racing
-    // line (exactly like the safety car), so it physically cannot crash. At green we hand back to the dynamic
-    // model for racing, re-seeding it with the car's current pose + speed for a smooth rolling start.
+    // line (exactly like the safety car). At green we hand back to the dynamic model for racing, re-seeding it
+    // with the car's current pose + speed for a smooth rolling start.
     void OnPhaseChanged(RaceStart.Phase phase)
     {
         // Lazy-fetch: GridSpawner may add this component before the dynamic-model components exist.
         if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
         if (_input == null) _input = GetComponent<SplineInputDriver>();
+
+        // The collider can be sized after this component was added, so read it again now.
+        ResolveExtents(gameObject, out _halfLength, out _halfWidth, refresh: true);
 
         // Kinematic while forming up; a kinematic car (no dynamic model) also stays kinematic for racing.
         bool driveKinematic = phase == RaceStart.Phase.Formation || kinematic;
@@ -196,11 +193,12 @@ public class FormationController : MonoBehaviour
         {
             _lateral = 0f;
             _weaveEnv = 0f;
-            _hasPrevCap = false; // drop the brake-rate-limit history so the green launch isn't held back by it
-            _avoiding = false;   // and the avoidance latch, so a car can't carry panic braking into the green
+            _planner.Reset(); // no brake-rate history or swerve latch carried into the green
+            HasPlan = false;
             if (_spline != null)
             {
                 _spline.tacticalLateralOffset = 0f;
+                _spline.aiMinDecelMphPerSec = 0f;
                 if (_lineFactorSaved)
                 {
                     // The dynamic model steers over to the restored line via pure pursuit — no lateral snap.
@@ -217,17 +215,24 @@ public class FormationController : MonoBehaviour
         if (RaceStart.Current != RaceStart.Phase.Formation) return;
 
         float dt = Time.fixedDeltaTime;
+        _planner.Settings = pack;
+        float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : cruiseMph;
+        bool closingUp = FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
 
-        // While still filing out of the pit lane, let SplineDriver's pit crawl handle pace — but pull the car
-        // off the parked box lane onto the pit CENTERLINE once it's rolling. Only the formation pull-out does
-        // this here: practice stints manage their own box-lane lateral in both directions (PracticeAIStint).
+        // Filing out of the pit lane: pull off the parked box strip onto the pit centreline once rolling, and keep
+        // station off whatever is in front down the lane — including the cars that have already rejoined the
+        // track just past the exit, which is exactly where the queue behind them used to pile in. Only the
+        // formation pull-out eases the box lateral here: practice stints manage their own box-lane lateral in
+        // both directions (PracticeAIStint).
         if (_spline.usePitLane)
         {
             _wasPit = true;
             DbgOnPit = true;
-            DbgGap = -1f;
+            DbgSettling = false;
+            HasPlan = false;
             if (_spline.CurrentMph > 3f)
                 _spline.lateralOffset = Mathf.MoveTowards(_spline.lateralOffset, 0f, pitPullOutLateralRate * dt);
+            if (_spline.IsOnPit) PitLaneStep(dt, cruise);
             return;
         }
         DbgOnPit = false;
@@ -236,260 +241,270 @@ public class FormationController : MonoBehaviour
         bool settling = _pitOutTimer > 0f;
         if (settling) _pitOutTimer -= dt;
 
-        float cruise = FormationDirector.Instance != null ? FormationDirector.Instance.cruiseMph : cruiseMph;
-        bool closingUp = FormationDirector.Instance != null && FormationDirector.Instance.FieldClosingUp;
-
         // Corner awareness: in or approaching a turn, hold the racing line — no catch-up overspeed, no weave.
         var phase = _spline.CurrentPhase;
         bool inTurn = phase == SplineDriver.CornerPhase.Entry || phase == SplineDriver.CornerPhase.Apex ||
                       phase == SplineDriver.CornerPhase.Exit || phase == SplineDriver.CornerPhase.Approach;
         bool corner = inTurn || _spline.NextTurnSign(cornerLookahead) != 0;
 
-        // --- Speed law: pace off the NEAREST car ahead in my corridor — any AI, the safety car, OR the free-driven
-        //     player — never off a grid bookkeeping reference past them. The old code stationed behind a fixed
-        //     grid-row-ahead, so a car would charge a far reference and rear-end the one ACTUALLY in front (and had
-        //     no idea what to do when the player got out of line). Qualifying order / columns are now cosmetic
-        //     LATERAL only; the gaps are held by following whoever is genuinely ahead of me.
-        float cap;
-        float floorMph = minCapMph;
-        float avoidTarget = float.NaN; // NaN = no lateral avoidance this frame
-        bool emergencyBrake = false;
+        // Base pace: gentle while settling after the pit merge (a ceiling — the planner still follows underneath
+        // it), otherwise free to close the train up on an open straight and held to cruise in a corner or the
+        // close-up bunch.
+        float baseCap = settling ? pitOutMph : ((corner || closingUp) ? cruise : cruise + catchUpBonusMph);
 
-        // Base pace: gentle while settling after the pit merge, otherwise free to close the train up on an open
-        // straight and held to cruise in a corner or the close-up bunch.
-        //
-        // The pit-out settle used to REPLACE the whole speed law with a flat pitOutMph for pitOutSettleSeconds.
-        // That left every car blind for ~3 seconds at 45mph immediately after joining the main track — no gap
-        // keeping, no avoidance, no matter what was in front of it. The leaders merge into empty track so they
-        // got away with it; the midpack merges into a train that has already formed, eats the gap at whatever
-        // the speed differential is, and rear-ends it. That's a hole in the logic, not a gain that needed
-        // trimming, which is why softening the ACC gains changed nothing. The settle is now a CEILING on pace
-        // (it still eases the car onto the racing line) with the follower running underneath it as normal.
-        cap = settling ? pitOutMph
-                       : ((corner || closingUp) ? cruise : cruise + catchUpBonusMph);
+        // Lateral intent: the two-wide column the WHOLE lap (double file), with a gentle tyre-warming weave on early
+        // straights that fades out near the line so the rows sit steady for the start. Through turns the column
+        // eases toward centre (cornerColumnScale) but never collapses to single file.
+        bool weaveOk = !settling && !corner && !closingUp && !_planner.Swerving;
+        _weaveEnv = FormationLanes.StepEnvelope(_weaveEnv, weaveOk, dt, weaveRampSeconds, weaveFadeOutSeconds);
+        int slot = _spline.qualifyingPosition;
+        float column = FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
+        float weave = FormationLanes.Weave(Time.time, slot, weaveAmplitude, weaveHz, weavePhasePerSlot, _weaveEnv);
 
+        float len = _spline.TrackLength;
+        float scanAhead = _planner.ScanAheadM(_spline.CurrentMph, Mathf.Max(avoidScanRange, paceCarGap + 12f));
+        GatherTrack(len, scanAhead, _planner.ScanBehindM);
+
+        float merge = _spline.MergeLateralBias;
+        var self = SelfState(merge);
+        _spline.GetLateralBounds(out self.TrackLo, out self.TrackHi);
+        var intent = new PackIntent
         {
-            // Scan far enough to still SEE the safety car at the long pace-car gap. Without this the leader
-            // loses sight of it just as it settles at station, reverts to catch-up pace, and sails back into
-            // range — a slow surge/back-off cycle that the field behind reads as the leader braking.
-            float scanRange = Mathf.Max(avoidScanRange, paceCarGap + 12f);
+            BaseCapMph = baseCap,
+            MaxCapMph = cruise + catchUpBonusMph,
+            FloorMph = minCapMph,
+            WantGap = closingUp ? rowGap : targetGap,
+            PaceCarGap = paceCarGap,
+            CruiseMph = cruise,
+            ColumnTactical = column + weave,
+            ColumnSlew = weaveSlewPerSec,
+            // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to prevent.
+            AllowSwerve = !settling,
+        };
+        var cmd = _planner.Step(self, intent, _cars, dt);
+        Apply(cmd, dt);
 
-            if (TryNearestAheadInPath(scanRange, avoidLateralGate,
-                    out float foeMph, out float foeLat, out float foeGap, out bool foeIsPaceCar))
-            {
-                float myMps = _spline.CurrentMph * MphToMps;
-                float safeGap = Mathf.Max(avoidMinGap, myMps * avoidHeadwaySec);
-
-                // Hang well back off the pace car; hold a normal race gap off another car. The leader is the
-                // only car that ever sees the pace car, so this lengthens the front of the train only.
-                float wantGap = foeIsPaceCar ? paceCarGap : (closingUp ? rowGap : targetGap);
-
-                // Station off the nearest car ahead EVERY frame (ACC: match its pace, trimmed by gap error + closing
-                // rate), so closing speed never builds in the first place. Held to at least the speed-dependent cushion.
-                float stationGap = Mathf.Max(wantGap, safeGap);
-                float follow = FollowCapRaw(foeMph, foeGap, stationGap);
-                if (foeIsPaceCar) follow = Mathf.Min(follow, cruise); // pace the safety car, but NEVER chase its peel-away
-                cap = Mathf.Min(cap, follow);
-
-                // Escalate to hard avoidance only WELL INSIDE the station gap, not AT it.
-                //
-                // These were the same number. The follow law above is commanded to sit at exactly stationGap, and
-                // the panic branch below fired at anything under stationGap — so every car in the field cruised
-                // parked on the trigger, and the slightest wobble (a corner, a weave, a metre of noise) dropped it
-                // inside and fired a hard stab that bypasses the brake rate-limit. The car behind then saw a sharp
-                // decel, stabbed harder, and so on down the line: the disturbance grows with field position, which
-                // is why it shows up in the midpack rather than at the front.
-                //
-                // Latched with hysteresis so a car sitting near the boundary can't chatter in and out of panic
-                // braking frame to frame — once triggered it stays in avoidance until the gap genuinely recovers.
-                float panicGap = stationGap * emergencyGapFraction;
-                bool closing = _spline.CurrentMph - foeMph > -1f;
-                if (_avoiding) _avoiding = foeGap < panicGap * emergencyReleaseFactor;
-                else _avoiding = foeGap < panicGap && closing;
-
-                DbgGap = foeGap;
-                DbgStationGap = stationGap;
-                DbgPanicGap = panicGap;
-                DbgClosingMph = _spline.CurrentMph - foeMph;
-                DbgPaceCarAhead = foeIsPaceCar;
-
-                if (_avoiding)
-                {
-                    // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to
-                    // prevent, so while settling the car brakes to hold station instead of slipping alongside.
-                    int side = (foeIsPaceCar || settling) ? 0 : ChooseAvoidSide();
-                    if (side != 0)
-                    {
-                        avoidTarget = foeLat + side * alongsideClear;
-                        cap = Mathf.Min(cap, foeMph + 1f); // match its pace while sliding out so we don't tag it mid-move
-                    }
-                    else
-                    {
-                        emergencyBrake = true;
-                        if (foeMph < blockStoppedMph) floorMph = 0f; // foe stopped and I can't pass → allow a full stop
-                    }
-                }
-            }
-            else
-            {
-                _avoiding = false; // nothing ahead in my corridor — drop the latch
-                DbgGap = -1f;
-                DbgPaceCarAhead = false;
-            }
-        }
-
-        cap = Mathf.Clamp(cap, floorMph, cruise + catchUpBonusMph);
-
-        // Rate-limit braking: the cap may rise freely but only FALL at maxBrakeMphPerSec, so normal station-keeping
-        // bleeds speed off gently (no stab-and-amplify pile-up wave). EXEMPT when actively avoiding a contact
-        // (emergencyBrake): there the firm slow MUST land. _hasPrevCap guards the first frame.
-        if (_hasPrevCap && !emergencyBrake) cap = Mathf.Max(cap, _prevCap - maxBrakeMphPerSec * dt);
-        _prevCap = cap;
-        _hasPrevCap = true;
-
-        DbgCap = cap;
-        DbgAvoiding = _avoiding;
+        // Where I'm heading across the track, for the cars around me — without the merge bias, which is easing out.
+        PlannedTrackLateral = _planner.PlannedLateral(self.Lateral - self.Tactical, self.Lateral) - merge;
+        HasPlan = true;
         DbgSettling = settling;
+    }
 
-        _spline.aiMaxSpeedMph = cap;
-        _spline.aiMinDecelMphPerSec = emergencyBrake ? avoidHardDecelMphPerSec : 0f; // brake authority for the avoidance
+    // Down the pit lane: station keeping and the safety law only. No swerving, no columns.
+    void PitLaneStep(float dt, float cruise)
+    {
+        float scanAhead = _planner.ScanAheadM(_spline.CurrentMph, Mathf.Max(avoidScanRange, targetGap + 12f));
+        GatherPitLane(scanAhead, _planner.ScanBehindM);
+
+        var self = SelfState(0f);
+        var intent = new PackIntent
+        {
+            BaseCapMph = PitLaneOpenCap,
+            MaxCapMph = PitLaneOpenCap,
+            FloorMph = 0f,
+            WantGap = targetGap,
+            PaceCarGap = paceCarGap,
+            CruiseMph = cruise,
+            ColumnTactical = _lateral,
+            ColumnSlew = weaveSlewPerSec,
+            AllowSwerve = false,
+        };
+        var cmd = _planner.Step(self, intent, _cars, dt);
+        Apply(cmd, dt);
+    }
+
+    PackSelf SelfState(float drift) => new PackSelf
+    {
+        SpeedMph = _spline.CurrentMph,
+        Lateral = _spline.LateralOnTrack,
+        Tactical = _lateral,
+        HalfLength = _halfLength,
+        HalfWidth = _halfWidth,
+        BrakeMphPerSec = BrakeAuthority(_spline),
+        TrackLo = float.NegativeInfinity,
+        TrackHi = float.PositiveInfinity,
+        Drift = drift,
+    };
+
+    void Apply(PackCommand cmd, float dt)
+    {
+        _spline.aiMaxSpeedMph = cmd.CapMph;
+        _spline.aiMinDecelMphPerSec = cmd.MinDecelMphPerSec; // brake authority only while the safety law acts
         _spline.paceMultiplier = formationPace;
         _spline.aiSpeedBoostMph = 0f;
-
-        // --- Lateral: avoidance wins; otherwise hold the two-wide column the WHOLE lap (double file), with a gentle
-        //     tyre-warming weave layered on early straights that fades out near the line so the rows sit steady for
-        //     the start. Through turns the column eases toward centre (cornerColumnScale) but never collapses to
-        //     single file — that collapse is what made the field look single-file approaching the green.
-        bool weaveOk = !settling && !corner && !closingUp && float.IsNaN(avoidTarget);
-        _weaveEnv = Mathf.MoveTowards(_weaveEnv, weaveOk ? 1f : 0f, dt / Mathf.Max(weaveRampSeconds, 0.01f));
-
-        float lateralTarget;
-        float slew;
-        if (!float.IsNaN(avoidTarget))
-        {
-            lateralTarget = avoidTarget;
-            slew = avoidSlewPerSec;
-        }
-        else
-        {
-            // Two columns by grid parity: even slots left, odd slots right.
-            int parity = ((_spline.qualifyingPosition % 2) + 2) % 2;
-            float column = (parity == 0 ? -columnHalfOffset : columnHalfOffset);
-            if (corner) column *= cornerColumnScale;
-            float ph = _spline.qualifyingPosition * weavePhasePerSlot;
-            float weave = Mathf.Sin(Time.time * (2f * Mathf.PI * weaveHz) + ph) * weaveAmplitude * _weaveEnv;
-            lateralTarget = column + weave;
-            slew = weaveSlewPerSec;
-        }
-        _lateral = Mathf.MoveTowards(_lateral, lateralTarget, slew * dt);
+        _lateral = Mathf.MoveTowards(_lateral, cmd.TacticalTarget, cmd.Slew * dt);
         _spline.tacticalLateralOffset = _lateral;
+
+        DbgGap = cmd.HasLeader ? cmd.Clearance : -1f;
+        DbgSafeClearance = cmd.SafeClearance;
+        DbgStationGap = cmd.StationGap;
+        DbgClosingMph = cmd.ClosingMph;
+        DbgPaceCarAhead = cmd.LeaderIsPaceCar;
+        DbgCap = cmd.CapMph;
+        DbgMode = cmd.Mode;
     }
 
-    // Linear ACC follower: target the car-ahead's speed, trimmed by gap error (with a deadband) and damped by the
-    // closing rate. The closing-rate term is what makes the train string-STABLE — a wobble up front dies out down
-    // the line instead of amplifying into a stop-and-go pile-up.
-    float FollowCapRaw(float aheadMph, float gap, float wantGap)
-    {
-        float gapErr = gap - wantGap;
-        if (Mathf.Abs(gapErr) <= gapDeadbandM) gapErr = 0f;
-        else gapErr -= Mathf.Sign(gapErr) * gapDeadbandM;
-        float closingMph = _spline.CurrentMph - aheadMph; // + = we're catching the car ahead
-        return aheadMph + gapGainMphPerMetre * gapErr - relVelDampMph * closingMph;
-    }
+    // The hardest an AI car can be expected to brake: its curve, or the emergency authority the safety law grants.
+    float BrakeAuthority(SplineDriver d) => Mathf.Max(avoidHardDecelMphPerSec, d.BrakingMphPerSecAt(d.CurrentMph));
 
-    // Nearest thing ahead within range that overlaps my path laterally (|lateral diff| <= latGate ≈ a car width) —
-    // the car I'd actually rear-end. Scans BOTH the AI field (RaceField) AND the free-driven player (RaceObstacles),
-    // so a player who drops back, stops, or gets sideways in front of me is paced off and avoided just like an AI.
-    // A thing level with me (gap ≈ 0) or further to the side is skipped. isPaceCar flags the safety car so the
-    // caller can pace it without chasing its close-up peel-away.
-    bool TryNearestAheadInPath(float range, float latGate,
-        out float aheadMph, out float aheadLat, out float gap, out bool isPaceCar)
+    // Every car near me on the main track, in my frame: AI and the safety car from RaceField, the free-driven
+    // player from RaceObstacles. Gaps are between car CENTRES — the planner takes the car lengths off.
+    void GatherTrack(float len, float ahead, float behind)
     {
-        aheadMph = 0f;
-        aheadLat = 0f;
-        gap = 0f;
-        isPaceCar = false;
-        float len = _spline.TrackLength;
-        if (len <= 0f) return false;
-        float myDist = _spline.DistanceOnTrack;
-        float myLat = _spline.LateralOnTrack;
-        float bestGap = float.MaxValue;
+        _cars.Clear();
+        float myC = _spline.CentreDistanceOnTrack;
 
         var drivers = RaceField.Drivers;
         for (int i = 0; i < drivers.Count; i++)
         {
             var d = drivers[i];
-            if (d == null || d == _spline || d.IsOnPit) continue;
+            if (d == null || d == _spline || d.IsOnPit || !d.isActiveAndEnabled) continue;
             if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
-            float g = d.DistanceOnTrack - myDist;
-            if (g <= 0f) g += len;
-            if (g <= 0.2f || g > range) continue;                         // level with me, or out of range
-            if (Mathf.Abs(d.LateralOnTrack - myLat) > latGate) continue;   // off to the side — not in my path
-            if (g < bestGap)
-            {
-                bestGap = g;
-                aheadMph = d.CurrentMph;
-                aheadLat = d.LateralOnTrack;
-                isPaceCar = d.qualifyingPosition == FormationOrder.SafetyCarGrid;
-            }
+            float gap = PackAvoidance.SignedGap(d.CentreDistanceOnTrack, myC, len);
+            if (gap > ahead || gap < -behind) continue;
+            _cars.Add(AiCar(d, gap, d.LateralOnTrack, PlannedLateralOf(d)));
         }
 
-        var obstacles = RaceObstacles.All;
-        for (int oi = 0; oi < obstacles.Count; oi++)
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
         {
-            var p = obstacles[oi];
-            if (p == null || p.ObstacleTrack != _spline.track) continue;
-            float g = p.TrackDistance - myDist;
-            if (g <= 0f) g += len;
-            if (g <= 0.2f || g > range) continue;
-            if (Mathf.Abs(p.TrackLateral - myLat) > latGate) continue;
-            if (g < bestGap)
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            float gap = PackAvoidance.SignedGap(p.TrackDistance, myC, len);
+            if (gap > ahead || gap < -behind) continue;
+
+            // A spun car blocks far more of the road than one pointing down it, and only its motion ALONG the
+            // road counts as pace.
+            ResolveExtents(p.gameObject, out float hl, out float hw);
+            float roadDeg = _spline.MainTangentWorldDeg(p.TrackDistance);
+            float yaw = Mathf.DeltaAngle(roadDeg, p.HeadingDeg);
+            PackAvoidance.Footprint(hl, hw, yaw, out float along, out float across);
+            float alongMph = p.SpeedMph * Mathf.Cos((yaw + p.SlipAngleDeg) * Mathf.Deg2Rad);
+            _cars.Add(new PackCar
             {
-                bestGap = g;
-                aheadMph = p.SpeedMph;
-                aheadLat = p.TrackLateral;
-                isPaceCar = false;
-            }
+                Id = p.GetInstanceID(),
+                Gap = gap,
+                Lateral = p.TrackLateral,
+                PlannedLateral = p.TrackLateral,
+                SpeedMph = Mathf.Max(0f, alongMph),
+                HalfLength = along,
+                HalfWidth = across,
+                BrakeMphPerSec = avoidHardDecelMphPerSec * Mathf.Max(1f, humanBrakeFactor),
+                IsPaceCar = false,
+            });
         }
-
-        if (bestGap == float.MaxValue) return false;
-        gap = bestGap;
-        return true;
     }
 
-    // Choose a side to slip alongside the car in front: +1 = right, -1 = left, 0 = boxed in. A side is open only if
-    // there's track room beyond me on it AND no car already sitting beside me there. Prefers the roomier side.
-    int ChooseAvoidSide()
+    // Down the pit lane: the cars in the lane with me, the cars that have just rejoined the track past the exit
+    // (placed on my path as if the lane carried straight on), and the player if they are in the lane.
+    void GatherPitLane(float ahead, float behind)
     {
-        bool hasRoom = _spline.GetLateralRoom(out float leftRoom, out float rightRoom);
-        bool leftOpen = (!hasRoom || leftRoom > alongsideClear) && !CarBeside(-1);
-        bool rightOpen = (!hasRoom || rightRoom > alongsideClear) && !CarBeside(1);
-        if (leftOpen && rightOpen) return rightRoom >= leftRoom ? 1 : -1;
-        if (rightOpen) return 1;
-        if (leftOpen) return -1;
-        return 0;
-    }
-
-    // Is another car alongside me on the given side (+1 right, -1 left)? Within a short longitudinal window and a
-    // lateral window on that side — so I don't slip sideways into a car that's already there.
-    bool CarBeside(int side)
-    {
-        float len = _spline.TrackLength;
-        if (len <= 0f) return false;
-        float myDist = _spline.DistanceOnTrack;
+        _cars.Clear();
+        float myC = _spline.CentreDistanceOnPit;
         float myLat = _spline.LateralOnTrack;
+        float len = _spline.TrackLength;
+        bool exitKnown = _spline.TryGetPitExit(out float exitMainPath, out float exitMainLat, out float exitPitPath);
+        float a = SplineDriver.PathPointAheadOfCentre;
+        float toExit = exitPitPath - (myC + a); // metres of lane left before I'm handed to the main spline
+        float exitCentreMain = exitMainPath - a;
+
         var drivers = RaceField.Drivers;
         for (int i = 0; i < drivers.Count; i++)
         {
             var d = drivers[i];
-            if (d == null || d == _spline || d.IsOnPit) continue;
-            if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
-            float g = d.DistanceOnTrack - myDist;
-            if (g > len * 0.5f) g -= len; else if (g < -len * 0.5f) g += len;
-            if (Mathf.Abs(g) > besideLongM) continue;                  // not alongside longitudinally
-            float dl = d.LateralOnTrack - myLat;
-            if (side * dl > 0f && Mathf.Abs(dl) < besideLatM) return true; // a car close on that side
+            if (d == null || d == _spline || !d.isActiveAndEnabled) continue;
+            if (d.IsOnPit)
+            {
+                if (Mathf.Abs(d.PitLength - _spline.PitLength) > 0.5f) continue;
+                float gap = d.CentreDistanceOnPit - myC;
+                if (gap > ahead || gap < -behind) continue;
+                _cars.Add(AiCar(d, gap, d.LateralOnTrack, d.LateralOnTrack));
+            }
+            else if (exitKnown && Mathf.Abs(d.TrackLength - len) <= 0.5f)
+            {
+                float past = PackAvoidance.SignedGap(d.CentreDistanceOnTrack, exitCentreMain, len);
+                if (past < 0f) continue;                    // not on the road out of this pit exit
+                float gap = toExit + past;
+                if (gap > ahead || gap < -behind) continue;
+                // It left along the same lane and eases onto its line at the merge rate, so near the exit it is
+                // still in my lane; further on only if it has not drifted far from where the lane comes out.
+                float drifted = Mathf.Abs(d.LateralOnTrack - exitMainLat);
+                float gate = _halfWidth + DefaultHalfWidth + pack.LaneMarginM + 1f + 0.15f * past;
+                if (drifted > gate) continue;
+                _cars.Add(AiCar(d, gap, myLat, myLat));
+            }
         }
-        return false;
+
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            float reach = ahead + 10f;
+            if ((p.transform.position - transform.position).sqrMagnitude > reach * reach) continue;
+            if (!_spline.ProjectOntoPit(p.transform.position, out float pd, out float plat)) continue;
+            if (Mathf.Abs(plat) > pitLaneHalfWidth) continue; // over the wall, on the track
+            float gap = pd - myC;
+            if (gap > ahead || gap < -behind) continue;
+            ResolveExtents(p.gameObject, out float hl, out float hw);
+            _cars.Add(new PackCar
+            {
+                Id = p.GetInstanceID(),
+                Gap = gap,
+                Lateral = plat,
+                PlannedLateral = plat,
+                SpeedMph = Mathf.Max(0f, p.SpeedMph),
+                HalfLength = hl,
+                HalfWidth = Mathf.Max(hw, hl * 0.5f), // no road tangent to judge its yaw against here: be generous
+                BrakeMphPerSec = avoidHardDecelMphPerSec * Mathf.Max(1f, humanBrakeFactor),
+                IsPaceCar = false,
+            });
+        }
+    }
+
+    PackCar AiCar(SplineDriver d, float gap, float lateral, float planned)
+    {
+        ResolveExtents(d.gameObject, out float hl, out float hw);
+        return new PackCar
+        {
+            Id = d.GetInstanceID(),
+            Gap = gap,
+            Lateral = lateral,
+            PlannedLateral = planned,
+            SpeedMph = d.CurrentMph,
+            HalfLength = hl,
+            HalfWidth = hw,
+            BrakeMphPerSec = BrakeAuthority(d),
+            IsPaceCar = d.qualifyingPosition == FormationOrder.SafetyCarGrid,
+        };
+    }
+
+    static float PlannedLateralOf(SplineDriver d)
+    {
+        if (s_bySpline.TryGetValue(d, out var fc) && fc != null && fc.isActiveAndEnabled && fc.HasPlan)
+            return fc.PlannedTrackLateral;
+        return d.LateralOnTrack;
+    }
+
+    // A car's collision box in metres (half-length, half-width), read once from its VehicleCollision.
+    static void ResolveExtents(GameObject go, out float halfLength, out float halfWidth, bool refresh = false)
+    {
+        int id = go.GetInstanceID();
+        if (!refresh && s_extents.TryGetValue(id, out var e))
+        {
+            halfLength = e.x;
+            halfWidth = e.y;
+            return;
+        }
+        halfLength = DefaultHalfLength;
+        halfWidth = DefaultHalfWidth;
+        var vc = go.GetComponent<VehicleCollision>();
+        if (vc != null)
+        {
+            Vector3 scale = go.transform.lossyScale;
+            halfLength = vc.halfExtents.y * Mathf.Abs(scale.x);
+            halfWidth = vc.halfExtents.x * Mathf.Abs(scale.y);
+        }
+        s_extents[id] = new Vector2(halfLength, halfWidth);
     }
 }

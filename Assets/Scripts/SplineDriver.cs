@@ -126,6 +126,91 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Range(0f, 1f)] public float contactSpeedScrub = 0.12f;
     const float rearAxleToCenter = -2.4f;
 
+    // The spline point _distance indexes sits this far AHEAD of the car's centre along its heading (Place builds
+    // the centre as that point + forward * rearAxleToCenter, which is negative). DistanceOnTrack is that point.
+    public static float PathPointAheadOfCentre => -rearAxleToCenter;
+
+    // Where the car's CENTRE physically is along the main spline, including any contact shove still easing out —
+    // what another car would actually run into. DistanceOnTrack is the path point ahead of the centre.
+    public float CentreDistanceOnTrack
+    {
+        get
+        {
+            float d = _distance + _collisionLongitudinal - PathPointAheadOfCentre;
+            return _mainLength > 0f ? ((d % _mainLength) + _mainLength) % _mainLength : d;
+        }
+    }
+
+    // The same, measured along the pit lane. Only meaningful while IsOnPit.
+    public float CentreDistanceOnPit => _distance + _collisionLongitudinal - PathPointAheadOfCentre;
+
+    // Lateral (m) the pit-exit merge is still carrying and easing out — part of LateralOnTrack, but temporary.
+    public float MergeLateralBias => _mergeLatBias;
+
+    // The braking this car's decel curve gives at a speed (mph/s), with the same pace stretch UpdateSpeedToward uses.
+    public float BrakingMphPerSecAt(float mph)
+    {
+        float stretch = Mathf.Max(1f, paceMultiplier);
+        return SampleDecel(mph / stretch) * stretch * MpsToMph;
+    }
+
+    // Leftmost / rightmost laterals the car may drive between here (the racing-line bounds Place clamps to).
+    public bool GetLateralBounds(out float lo, out float hi)
+    {
+        lo = float.NegativeInfinity;
+        hi = float.PositiveInfinity;
+        if (_onPit || _leftBoundProfile == null || _rightBoundProfile == null) return false;
+        BoundsAt(_distance, out lo, out hi);
+        return true;
+    }
+
+    // World heading (deg, 0 = +X) of the main spline at a distance — lets a free car's yaw be read against the road.
+    public float MainTangentWorldDeg(float distance)
+    {
+        if (track == null || _mainSamples == null || _mainSamples.Count < 2) return 0f;
+        var s = track.SampleAt(distance, _mainSamples);
+        Vector2 t = track.transform.TransformVector(new Vector3(s.tangent.x, s.tangent.y, 0f));
+        return Mathf.Atan2(t.y, t.x) * Mathf.Rad2Deg;
+    }
+
+    float _pitExitMainPath = -1f;
+    float _pitExitMainLateral;
+
+    // Where the pit lane hands a car back to the main spline: the main-spline path-point distance and the lateral
+    // (main frame) it arrives at. Computed once per build.
+    public bool TryGetPitExit(out float mainPathDistance, out float mainLateral, out float pitPathDistance)
+    {
+        mainPathDistance = mainLateral = pitPathDistance = 0f;
+        if (track == null || _pitSamples == null || _pitSamples.Count < 2 || _mainSamples == null
+            || _mainSamples.Count < 2 || _pitLength <= 0f)
+            return false;
+        pitPathDistance = _pitLength * pitExitThreshold;
+        if (_pitExitMainPath < 0f)
+        {
+            var ps = track.SamplePitAt(pitPathDistance, _pitSamples);
+            Vector3 world = track.transform.TransformPoint(new Vector3(ps.position.x, ps.position.y, 0f));
+            _pitExitMainPath = track.NearestCenterlineDistance(world);
+            var ms = track.SampleAt(_pitExitMainPath, _mainSamples);
+            Vector2 right = new Vector2(ms.tangent.y, -ms.tangent.x);
+            _pitExitMainLateral = Vector2.Dot(ps.position - ms.position, right);
+        }
+        mainPathDistance = _pitExitMainPath;
+        mainLateral = _pitExitMainLateral;
+        return true;
+    }
+
+    // A world position (a free-driven car) projected onto the pit lane: centre distance along it and lateral off it.
+    public bool ProjectOntoPit(Vector3 worldPos, out float distance, out float lateral)
+    {
+        distance = lateral = 0f;
+        if (track == null || _pitSamples == null || _pitSamples.Count < 2) return false;
+        distance = track.NearestPitDistance(worldPos);
+        var s = track.SamplePitAt(distance, _pitSamples);
+        Vector2 local = track.transform.InverseTransformPoint(worldPos);
+        lateral = Vector2.Dot(local - s.position, new Vector2(s.tangent.y, -s.tangent.x));
+        return true;
+    }
+
     public float CurrentMph => _currentMph;
     /// What the speed profile wants here, before AI follow-caps. Lets behaviours ask "could I be going faster?"
     public float DesiredMph { get; private set; }
@@ -313,6 +398,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public void Rebuild()
     {
         if (track == null) return;
+        _pitExitMainPath = -1f;
         _mainSamples = track.SampleCenterline();
         _mainLength = _mainSamples.Count > 0 ? _mainSamples[_mainSamples.Count - 1].distance : 0f;
         _pitSamples = track.SamplePitCenterline();

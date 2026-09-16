@@ -8,6 +8,8 @@ using UnityEngine;
 // them — the badge counts results that have come in since they last looked, which is how you learn that
 // the Cup race finished while you were signing hats at the fence.
 //
+// No longer a tile of its own: it is the POINTS tab of STATS (PhoneStatsApp), which lends it its badge.
+//
 // Read-only, like every app on the phone. Sunday's results are not visible on Friday: everything here goes
 // through SeasonChampionships.HasRun, which is gated on the weekend clock.
 public class PhoneChampionshipApp : PhoneApp

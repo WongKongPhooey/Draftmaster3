@@ -18,6 +18,16 @@ up. From then on the weekend leads itself: follow the marker, do the thing, and 
 live with its own marker before the result card has faded. `T` travels you there if you would rather not
 walk.
 
+**Your phone goes off on the way to the briefing.** The first booking is the crew chief's strategy briefing
+at the pit box. 200 m short of it (`ChiefCheckIn.TriggerMetres`; about a third of the way from the RV at
+Watkins Glen) the phone bleeps, the chief texts to ask where you are, and a control hint reads
+**`P` - Check your phone** until you do. The phone opens with MESSAGES highlighted, reading "1 unread
+message". Once per save; it holds off while a conversation, a wipe or a menu has the player, and it does not
+fire if `T` dropped you straight at the pit box (the beat stays armed for the next briefing walk). Rule and
+words: `Core/ChiefCheckIn.cs` (tested in `ChiefCheckInTests`); runtime: `ChiefCheckInBeat.cs`. Re-armed by
+**Draftmaster > Demo > Re-arm The Opening**; **Draftmaster > Demo > Send The Crew Chief's 'Where Are You'
+Text** fires it on the spot in play mode.
+
 Who hands the day over is a flag on the NPC (`givesTheDaysObjective`), not a hard-coded role — see
 `Docs/Editor-Handbook.md` §17b. With nobody claiming it, the weekend goes back to booking the next thing
 itself the moment the paddock's cast is up.
@@ -256,6 +266,7 @@ Assets/Scripts/Weekend/
     SeriesWeekendResult.cs         one championship's round, classified and priced - the player cut in
     ChampionshipPoints.cs          what a finishing position is worth
     SeasonChampionships.cs         the season: rounds run, three points tables, what has been read
+    ChiefCheckIn.cs                when the chief texts "where are you?" on the walk to the briefing
     PressConferenceContent.cs      the question bank and what each tone trades away
     WeekendRandom.cs               seeded xorshift so every rebuild is identical
     WeekendVenue.cs                which place each kind of booking happens in, and what it is called
@@ -282,7 +293,8 @@ Assets/Scripts/Weekend/
   Activities/GrandstandVisit.cs    the in-world seat: holds the session open at 10x, F11 timing, E back
   Activities/GrandstandCamera.cs   the pan out onto the marker's vantage, and giving the camera back
 Assets/Scripts/UI/Phone/PhoneScheduleApp.cs      read-only glance at today
-Assets/Scripts/UI/Phone/PhoneChampionshipApp.cs  the three championships and what has come in
+Assets/Scripts/UI/Phone/PhoneChampionshipApp.cs  the three championships and what has come in (POINTS tab of STATS)
+Assets/Scripts/Weekend/ChiefCheckInBeat.cs       the phone's first bleep: the chief's text and the P prompt
 ```
 
 The split is deliberate. `Core/` holds every rule and is covered by

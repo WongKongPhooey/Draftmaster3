@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Sim;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,21 +10,21 @@ using UnityEngine.InputSystem;
 //
 // Columns:
 //   #     grid slot (P = the pace car is what it's following)
-//   GAP   metres to the car it's following. "--" = it sees NOTHING ahead, which on a packed formation lap
-//         is itself the bug: a blind car runs at full cruise into whatever is actually there.
-//   WANT  gap the follow law is trying to hold. GAP well under WANT = it's being pushed from behind or it
-//         merged in too close.
+//   GAP   bumper-to-bumper metres to the car it's following in its lane. "--" = nothing in its lane ahead.
+//   SAFE  clearance the never-hit safety law needs at this closing speed. GAP under SAFE = it is braking hard.
+//   WANT  centre-to-centre gap the station keeping holds.
 //   CLS   closing speed (mph). Positive and rising while GAP falls is the run-up to a hit.
 //   CAP   commanded speed cap after every limit.
-//   STATE PIT (in the lane, no gap law at all) / SETTLE (pit-out merge) / AVOID (hard braking) / ok
+//   STATE PIT (in the lane) / SETTLE (pit-out merge) / FOLLOW / BRAKE (safety law acting) /
+//         SWERVE (moving out round a car) / BESIDE (alongside one) / HOLD (wants to move across, lane is busy)
 //
-// Rows turn amber inside the panic gap and red under 3m (about a car length — contact).
+// Rows turn amber inside the safety clearance and red under half a metre (contact).
 // Self-installs at load; costs nothing until opened.
 public class FormationDiagnostics : MonoBehaviour
 {
     public static bool Open;
 
-    const float ContactGapM = 3f;
+    const float ContactGapM = 0.5f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
@@ -61,10 +62,10 @@ public class FormationDiagnostics : MonoBehaviour
         _sorted.Sort((a, b) => b.Spline.DistanceOnTrack.CompareTo(a.Spline.DistanceOnTrack));
 
         float h = Mathf.Min(Screen.height - 40f, 34f + _sorted.Count * 14f);
-        GUI.Box(new Rect(8f, 8f, 430f, h), $"FORMATION  ({RaceStart.Current})   F8 closes");
+        GUI.Box(new Rect(8f, 8f, 490f, h), $"FORMATION  ({RaceStart.Current})   F8 closes");
 
         float y = 28f;
-        GUI.Label(new Rect(16f, y, 420f, 14f), "  #    GAP    WANT     CLS     CAP   STATE", _head);
+        GUI.Label(new Rect(16f, y, 480f, 14f), "  #    GAP    SAFE    WANT     CLS     CAP   STATE", _head);
         y += 14f;
 
         for (int i = 0; i < _sorted.Count; i++)
@@ -72,16 +73,29 @@ public class FormationDiagnostics : MonoBehaviour
             var fc = _sorted[i];
             bool blind = fc.DbgGap < 0f;
             bool contact = !blind && fc.DbgGap < ContactGapM;
-            bool panic = !blind && fc.DbgGap < fc.DbgPanicGap;
+            bool panic = !blind && fc.DbgGap < fc.DbgSafeClearance;
 
             string colour = contact ? "#ff5555" : panic ? "#ffbb44" : blind ? "#88ccff" : "#dddddd";
-            string state = fc.DbgOnPit ? "PIT" : fc.DbgSettling ? "SETTLE" : fc.DbgAvoiding ? "AVOID" : "ok";
+            string state = fc.DbgOnPit ? "PIT" : fc.DbgSettling ? "SETTLE" : StateName(fc.DbgMode);
             string slot = fc.DbgPaceCarAhead ? $"{fc.Spline.qualifyingPosition}P" : fc.Spline.qualifyingPosition.ToString();
             string gap = blind ? "  --" : $"{fc.DbgGap,6:0.0}";
 
-            GUI.Label(new Rect(16f, y, 420f, 14f),
-                $"<color={colour}>{slot,4}  {gap}  {fc.DbgStationGap,6:0.0}  {fc.DbgClosingMph,6:0.0}  {fc.DbgCap,6:0.0}   {state}</color>", _row);
+            GUI.Label(new Rect(16f, y, 480f, 14f),
+                $"<color={colour}>{slot,4}  {gap}  {fc.DbgSafeClearance,6:0.0}  {fc.DbgStationGap,6:0.0}  {fc.DbgClosingMph,6:0.0}  {fc.DbgCap,6:0.0}   {state}</color>", _row);
             y += 14f;
+        }
+    }
+
+    static string StateName(PackMode mode)
+    {
+        switch (mode)
+        {
+            case PackMode.Follow: return "FOLLOW";
+            case PackMode.Brake: return "BRAKE";
+            case PackMode.Swerve: return "SWERVE";
+            case PackMode.Alongside: return "BESIDE";
+            case PackMode.Hold: return "HOLD";
+            default: return "ok";
         }
     }
 }

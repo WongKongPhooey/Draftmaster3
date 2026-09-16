@@ -16,18 +16,23 @@ which is loud enough to notice.
 | **Notes** | Who asked for what. Every accepted side quest is logged with the person's name and their own words; finished ones drop to the bottom rather than disappearing | `PhoneNotes` (PlayerPrefs), `QuestManager` for progress |
 | **SoBuzz** | Fan appeal as a gauge and a follower count, plus a feed: which brands are watching, which are still out of reach and by how much, and what the crowd is saying | `FanAppeal`, `SponsorCatalog`, `SponsorTerms`, `SponsorBook`, `PlayerStatsLedger` |
 | **Schedule** | The weekend as a calendar page: a day a tab, an hour a cell, every booking a block at its own time and length, with the clock drawn across it as a red line. Under the page, the five meters | `WeekendDirector`, `WeekendLedger`, `FanAppeal` |
-| **Points** | The three championships. This weekend's races (who won, or when they are due), a results feed, and the tables with the player's own series first | `SeasonChampionships` |
-| **DrivR** | The form guide: every driver ranked by ability — the number down the right of the list is that rating out of 100, not points — tap for their season results, craft stats, track-type stats and off-track ratings | `Drivers` and `Results` tables via `DatabaseManager` |
+| **Messages** | Texts from the team, one thread per person, newest first. The tile reads "1 unread message" (with a badge); opening the app goes straight into the newest unread thread, with a NEW rule above what you hadn't seen | `PhoneMessages` (PlayerPrefs) |
+| **Stats** | Two tabs — ←/→ (or A/D, or a click) swaps them. **POINTS**: the three championships, this weekend's races (who won, or when they are due), a results feed, and the tables with the player's own series first. **DRIVERS**: the DrivR form guide — every driver ranked by ability (the number down the right is that rating out of 100, not points); tap for their season results, craft stats, track-type stats and off-track ratings. The tile's badge is POINTS' | `SeasonChampionships`; `Drivers` and `Results` tables via `DatabaseManager` |
 
 **SoBuzz is not flavour text.** A brand posting "we're watching" means `SponsorTerms.CanApproach` is true
 for the player's current standing, so that rep will deal when the player finds them in the pit lane. A
 locked brand shows exactly how much more appeal is needed. Posts are seeded on `RaceWeekend.WeekendId`, so
 the feed is stable within a weekend and different at the next one.
 
-**DrivR's stats are the ones the AI drives on** — `Qualifying` and `Consistency` set pace,
+**The form guide's stats are the ones the AI drives on** — `Qualifying` and `Consistency` set pace,
 `Aggression` skews the racing line (`AIDriverBinding`) — so a driver who reads aggressive races that way.
 
-**Where the player is told any of this.** Nothing else in the paddock mentions the phone, so the first
+**The first time it goes off.** On the walk to the Friday strategy briefing, 200 m short of the pit box, the
+crew chief texts to ask where the player is: a bleep (synthesised, `ChiefCheckInBeat.TextTone`), the message
+in MESSAGES, the home grid's highlight parked on that tile, and a `P — Check your phone` control hint that
+stays until the phone opens. Once per save. See `Docs/Race-Weekend.md` for the rule.
+
+**Where the player is told the rest.** Nothing else in the paddock explains the phone, so the first
 weekend of a career books fifteen minutes at the pit box for it: `ActivityKind.Orientation`, 09:30 Friday
 morning, weekend zero only. The crew chief names the key, TASKS (what is outstanding, and what the tile's
 badge counts) and NOTES (who asked for what), and finishing it leaves the same summary in NOTES as an
@@ -65,7 +70,7 @@ public class PhoneRadioApp : PhoneApp
     public override string TileName => "RADIO";
     public override string TileSubtitle => "Spotter chatter";
     public override Color Accent => PixelGUI.Gold;
-    public override int Badge => UnreadMessages;          // draws a red count on the tile
+    public override int Badge => UnreadCount;             // draws a red count on the tile
 
     public override float Draw(float x, float y, float w)
     {
@@ -79,7 +84,12 @@ public class PhoneRadioApp : PhoneApp
 ```
 
 Then register it in `PhoneUI.BuildApps()` (or call `PhoneUI.Register(new PhoneRadioApp())` from your own
-system's bootstrap). Past six it stays registered but unreachable from the grid.
+system's bootstrap). All six bays are taken, so a new app either replaces a tile or becomes a tab inside one
+— `PhoneStatsApp` holds `PhoneChampionshipApp` and `PhoneDrivRApp` as pages and draws its own tab strip.
+Past six a registered app is unreachable from the grid.
+
+`HandleKeys(Keyboard)` gets the keys the device doesn't use while the app is open (it keeps Esc/Backspace
+and the up/down arrows), and `ScrollToTop()` resets the device's scroll when an app swaps what it shows.
 
 `PhoneApp` gives every app the same drawing vocabulary — `Section`, `Row`, `Body`, `Meter`, `Plate`,
 `Empty` — each taking a top-left corner and a width and returning the height it used, so `Draw` is a
@@ -95,10 +105,16 @@ PhoneNotes.Record("id", "Title", "Marla Boyd", "What she wanted");   // a note t
 PhoneNotes.RecordQuest(quest, speakerName);                          // QuestGiverNPC does this on accept
 PhoneNotes.ResolveQuest(quest);                                      // QuestManager.Complete does this
 
-PhoneUI.Open("drivr");                                               // open straight into an app
+PhoneMessages.Receive("crew.chief", "Dale Mason", "Crew chief",     // a text; same message id twice = once
+                      "msg.id", "Where are you?");
+PhoneMessages.MarkRead("crew.chief");                                // the app does this on opening a thread
+
+PhoneUI.Open("stats");                                               // open straight into an app
+PhoneUI.SelectOnNextOpen("messages");                                // park the home-grid highlight there
 ```
 
-Both stores are PlayerPrefs-backed, so they survive the scene reloads between sessions.
+All three stores are PlayerPrefs-backed, so they survive the scene reloads between sessions, and
+`CareerReset` clears them.
 
 ## How it behaves
 
@@ -115,5 +131,6 @@ Both stores are PlayerPrefs-backed, so they survive the scene reloads between se
 ## Files
 
 `Assets/Scripts/UI/Phone/` — `PhoneUI` (device, slide, home grid, input), `PhoneApp` (base + drawing
-vocabulary), `PhoneTasksApp`, `PhoneNotesApp`, `PhoneNotes` (store), `PhoneSoBuzzApp`, `PhoneDrivRApp`,
-`PhoneScheduleApp`, `PhoneChampionshipApp`.
+vocabulary), `PhoneTasksApp`, `PhoneNotesApp`, `PhoneNotes` (store), `PhoneSoBuzzApp`, `PhoneMessagesApp`,
+`PhoneMessages` (store), `PhoneStatsApp` (tabs over `PhoneChampionshipApp` + `PhoneDrivRApp`),
+`PhoneScheduleApp`. The first text is sent by `Assets/Scripts/Weekend/ChiefCheckInBeat.cs`.

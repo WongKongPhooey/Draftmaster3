@@ -3,15 +3,15 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 // The player's phone. Slides up from the bottom of the screen while on foot and shows a home screen of
-// app tiles — Tasks, Notes, SoBuzz, DrivR — each of which draws its own content (PhoneApp).
+// app tiles — Schedule, Tasks, Notes, SoBuzz, Messages, Stats — each of which draws its own content (PhoneApp).
 //
 // Why a phone rather than another F-key panel: everything on it is stuff the driver would actually look
 // up between sessions, and it keeps the on-foot half of the game from needing a menu screen. It is not a
 // pause — the paddock keeps moving behind it — but the player stops walking while it's up.
 //
-// Six tiles, two by three. Four are filled; the spare bays are drawn as empty so the grid doesn't reflow
-// when the fifth and sixth arrive. Self-bootstraps like RacePauseMenu / DriverInfoPanel, arms itself only
-// in scenes that have an on-foot player, and draws with the Iron Oval kit (PixelGUI).
+// Six tiles, two by three, all filled; a spare bay would be drawn empty so the grid never reflows.
+// Self-bootstraps like RacePauseMenu / DriverInfoPanel, arms itself only in scenes that have an on-foot
+// player, and draws with the Iron Oval kit (PixelGUI).
 //
 // It sits over on the left of the screen and is held at a slight angle, drawn through one GUI.matrix
 // about the bottom of the device — so every rect inside is authored square and the tilt costs nothing.
@@ -41,6 +41,7 @@ public class PhoneUI : MonoBehaviour
     readonly List<PhoneApp> _apps = new();
     PhoneApp _current;                 // null = home screen
     int _homeIndex;                    // keyboard selection on the home grid
+    string _selectNext;                // app to highlight when the phone next opens (SelectOnNextOpen)
     Vector2 _scroll;
 
     bool _open;
@@ -81,8 +82,9 @@ public class PhoneUI : MonoBehaviour
         Register(new PhoneTasksApp());
         Register(new PhoneNotesApp());
         Register(new PhoneSoBuzzApp());
-        Register(new PhoneDrivRApp());
-        Register(new PhoneChampionshipApp());
+        // DrivR's old bay. The form guide itself moved in with POINTS, under STATS.
+        Register(new PhoneMessagesApp());
+        Register(new PhoneStatsApp());
     }
 
     // Later apps hook in here rather than editing the home screen. Extra apps past the six slots are
@@ -102,6 +104,19 @@ public class PhoneUI : MonoBehaviour
     }
 
     public static void Close() { if (Instance != null) Instance.CloseInternal(); }
+
+    // Put the home screen's highlight on this app the next time the phone comes up on its home screen —
+    // what a text arriving does, so the player who presses the key is already sat on MESSAGES.
+    public static void SelectOnNextOpen(string appId)
+    {
+        if (Instance != null) Instance._selectNext = appId;
+    }
+
+    // Scroll the open app back to its top. PhoneApp.ScrollToTop is the way in.
+    public static void ResetScroll()
+    {
+        if (Instance != null) Instance._scroll = Vector2.zero;
+    }
 
     // ------------------------------------------------------------------ state
 
@@ -147,9 +162,11 @@ public class PhoneUI : MonoBehaviour
             return;
         }
 
-        if (_current == null) HomeKeys(kb);
-        else if (kb.upArrowKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame)
+        if (_current == null) { HomeKeys(kb); return; }
+
+        if (kb.upArrowKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame)
             _scroll.y = Mathf.Max(0f, _scroll.y + (kb.downArrowKey.wasPressedThisFrame ? PixelGUI.Px(24f) : -PixelGUI.Px(24f)));
+        _current.HandleKeys(kb);
     }
 
     void HomeKeys(Keyboard kb)
@@ -174,6 +191,12 @@ public class PhoneUI : MonoBehaviour
         _open = true;
         _scroll = Vector2.zero;
         _current = null;
+        if (string.IsNullOrEmpty(appId) && !string.IsNullOrEmpty(_selectNext))
+        {
+            int slot = IndexOf(_selectNext);
+            if (slot >= 0 && slot < TileSlots) _homeIndex = slot;
+        }
+        _selectNext = null;
         if (!string.IsNullOrEmpty(appId))
         {
             for (int i = 0; i < _apps.Count; i++)
@@ -198,6 +221,13 @@ public class PhoneUI : MonoBehaviour
     {
         if (_lockedByPhone && _player != null) _player.MovementLocked = false;
         _lockedByPhone = false;
+    }
+
+    int IndexOf(string appId)
+    {
+        for (int i = 0; i < _apps.Count; i++)
+            if (_apps[i].Id == appId) return i;
+        return -1;
     }
 
     void OpenApp(int slot)

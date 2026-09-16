@@ -1,10 +1,12 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 // One app on the player's phone (PhoneUI). An app owns a tile on the home screen and draws its own
 // content into the phone's screen rect; the device handles the frame, the slide, scrolling and input.
 //
-// Adding an app is one subclass plus a line in PhoneUI.BuildApps — the home grid has six slots and
-// draws the spare ones as empty bays, so a fifth and sixth app need no layout work.
+// Adding an app is one subclass plus a line in PhoneUI.BuildApps — the home grid has six slots, all six
+// taken. An app can also be a page inside another tile (STATS holds POINTS and DRIVERS that way): the
+// subclass is the drawing vocabulary, and only BuildApps decides what gets a tile.
 //
 // Drawing vocabulary is the Iron Oval kit (PixelGUI). Every helper takes a top-left corner and a width
 // and returns the height it used, so an app's Draw() is a running `y += Something(...)` and the device
@@ -23,6 +25,14 @@ public abstract class PhoneApp
     public virtual int Badge => 0;
 
     public virtual void OnOpen() { }
+
+    // Keys while this app is open, after the device has taken Esc/Backspace (back) and the up/down arrows
+    // (scroll). Left/right, A/D and the rest are the app's — the STATS tabs use them.
+    public virtual void HandleKeys(Keyboard kb) { }
+
+    // Put the device's scroll back to the top: an app that swaps what it is showing (a tab, a thread) would
+    // otherwise open the new page part-way down, wherever the last one was left.
+    protected static void ScrollToTop() => PhoneUI.ResetScroll();
 
     // Draw into a column `width` wide starting at (x, y). Return the total height used.
     public abstract float Draw(float x, float y, float width);

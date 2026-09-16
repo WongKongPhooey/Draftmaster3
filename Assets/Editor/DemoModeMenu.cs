@@ -9,6 +9,8 @@ using UnityEngine;
 //   Build Is Demo       adds/removes the DRAFTMASTER_DEMO define on the active build target. THIS is what
 //                       ships: a built demo is a demo because it was compiled as one.
 //   Wipe Career Save    what RESTART DEMO does, from the editor.
+//   Send The Crew Chief's 'Where Are You' Text
+//                       the phone tutorial from the walk to the briefing, fired now (play mode only).
 //
 // Nothing here opens a modal that blocks the editor except the wipe's confirmation, which is the one place
 // a click deserves a second thought.
@@ -80,10 +82,29 @@ public static class DemoModeMenu
         // objective being broken when it is only over.
         Draftmaster.Weekend.WeekendLedger.ClearAll();
 
+        // And the crew chief's "where are you?" text on the walk to the briefing, with its P prompt.
+        ChiefCheckInBeat.Rearm();
+
         Debug.Log("Opening re-armed: fresh three days, and the next race scene wakes you up in the dark "
                   + "with nothing booked until the liaison says so. (Her beat has its own appearance flag — "
                   + "Draftmaster > NPCs > Clear Appearance Flags if she has already had her say.)");
     }
+
+    // The chief's text normally waits for the player to walk within 200 m of the briefing. This sends it
+    // now, to look at the bleep, the prompt and the MESSAGES tile without the walk.
+    const string ChiefTextItem = "Draftmaster/Demo/Send The Crew Chief's 'Where Are You' Text";
+
+    [MenuItem(ChiefTextItem, priority = 414)]
+    static void SendChiefText()
+    {
+        if (ChiefCheckInBeat.FireNow())
+            Debug.Log("Crew chief's text sent: bleep, P prompt, and 1 unread message on the phone.");
+        else
+            Debug.Log("Crew chief's text not sent — it has already gone this save. Re-arm The Opening puts it back.");
+    }
+
+    [MenuItem(ChiefTextItem, true)]
+    static bool ValidateSendChiefText() => Application.isPlaying;
 
     // Put the cars on the track without walking the weekend to a session. GridSpawner (and therefore the
     // pit boxes, the crews and the pit box stands) only builds a field when a session is live, which is

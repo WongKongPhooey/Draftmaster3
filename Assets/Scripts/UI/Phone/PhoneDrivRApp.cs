@@ -6,6 +6,9 @@ using Draftmaster.Data;
 // DrivR — the form guide. Every driver in the database, ranked by ability, with their season results and
 // the stats the AI actually drives on, so the player can look up who they're about to race.
 //
+// No longer a tile of its own: it is the DRIVERS tab of STATS (PhoneStatsApp), which calls OnOpen when the
+// tab comes up. Id/TileName are kept for anything that still names the page.
+//
 // The stat names here are the same ones AIDriverBinding reads (Qualifying and Consistency set pace,
 // Aggression skews the line), so a driver who reads aggressive on this screen races that way.
 //
@@ -13,7 +16,7 @@ using Draftmaster.Data;
 public class PhoneDrivRApp : PhoneApp
 {
     public override string Id => "drivr";
-    public override string TileName => "DrivR";
+    public override string TileName => "DRIVERS";
     public override string TileSubtitle => "The form guide";
     public override Color Accent => PixelGUI.Danger;
 
