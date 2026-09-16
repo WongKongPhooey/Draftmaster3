@@ -213,7 +213,12 @@ public class WeekendObjectiveHUD : MonoBehaviour
         var intro = SpawnIntroUI.Instance;
         if (intro == null) { _markedId = ""; _marked = null; return; }
 
-        var activity = WeekendAppointment.Pending;
+        // Sat in a stand, the booking is still open until the player gets up (GrandstandVisit settles it on
+        // the way out), but the thing it points at is the gate back in the paddock fence. An arrow at that
+        // over the shot of the circuit is an arrow at the exit, so the marker is down while they watch and
+        // comes back if they leave some other way with the booking still open.
+        bool watching = GrandstandVisit.Watching || GrandstandSpectate.Watching;
+        var activity = watching ? null : WeekendAppointment.Pending;
         string id = activity != null ? activity.id : "";
         if (id == _markedId && (_marked != null || id == "")) return;
 

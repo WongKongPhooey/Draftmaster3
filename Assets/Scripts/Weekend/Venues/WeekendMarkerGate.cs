@@ -65,11 +65,11 @@ public class WeekendMarkerGate : NPCInteractable
             if (body != null) body.position = to;
             player.position = to;
 
-            // Somewhere to watch a session from is not a panel to sit through: the obligation was to be
-            // there, so arriving completes it, and what is left is a seat and a way back. GrandstandVisit
-            // owns both — including the pull back onto the marker's vantage, which is why it is handed the
-            // marker rather than just the spot. Done inside the wipe so the booking is settled before the
-            // screen comes back and the result card is not read over the paddock the player has just left.
+            // Somewhere to watch a session from is not a panel to sit through: a seat, the session, and a way
+            // back. GrandstandVisit owns all of it — including the pull back onto the marker's vantage, which
+            // is why it is handed the marker rather than just the spot — and completes the booking when the
+            // player takes the way back, not on arrival. Done inside the wipe so the view is set up before
+            // the screen comes back.
             if (pending.IsSpectate) GrandstandVisit.Begin(pending, back, marker);
         });
 

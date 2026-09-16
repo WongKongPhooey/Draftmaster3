@@ -43,14 +43,16 @@ public static class WeekendTrackState
 
     // The stand holds the circuit open.
     //
-    // Arriving in the grandstand IS the booking done — the sheet moves on and the clock jumps to the end of
-    // the hour the moment the player sits down — so read off the ledger alone, the session they came to
-    // watch would end the instant they got there and the field would be cleared out from under them.
+    // The player reaches the stand whenever their walk gets them there, which is not necessarily inside the
+    // session's hour on the sheet, and getting up to leave completes the booking — which jumps the clock to
+    // the end of that hour. Read off the ledger alone, the field they came to watch might not be out yet
+    // when they sit down, and would be cleared the moment they finish.
     //
     // So the seat takes the session off the clock and holds it: for as long as the player is sat there the
     // circuit belongs to that championship, and GrandstandVisit plays the hour out at speed against its own
-    // timer. Released when the compressed session ends or the player gets up, and the track goes cold on
-    // whatever the sheet says next.
+    // timer. When that timer runs out the hold goes cold (HoldEmpty) rather than back to the clock, because
+    // the booking is not done until the player gets up; leaving releases it, and the track goes on whatever
+    // the sheet says next.
     static Live _held;
     static bool _holding;
 
@@ -63,6 +65,15 @@ public static class WeekendTrackState
     public static void Hold(RacingSeries series, ActivityKind kind, string activityId)
     {
         _held = new Live(series, kind, false, activityId);
+        _holding = true;
+        HoldChanged?.Invoke();
+    }
+
+    // The watched session is over but the player is still in the stand: nothing on track, whatever the
+    // clock says. Released the same way as a live hold.
+    public static void HoldEmpty()
+    {
+        _held = default;
         _holding = true;
         HoldChanged?.Invoke();
     }
@@ -90,8 +101,8 @@ public static class WeekendTrackState
             return new Live(SeriesCatalog.PlayerSeries, kind, true, WeekendDirector.PendingRouteId);
         }
 
-        // Somebody is sat in the stand watching. Their session outranks the clock, which has already been
-        // moved past it.
+        // Somebody is sat in the stand watching. Their session — or, once it has run, an empty circuit —
+        // outranks the clock.
         if (_holding) return _held;
 
         // Nobody has put the player in a car, so the only thing that can be on track is somebody else's

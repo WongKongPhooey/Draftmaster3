@@ -21,9 +21,14 @@ public class PhoneUI : MonoBehaviour
 {
     public static PhoneUI Instance { get; private set; }
     public static bool IsOpen => Instance != null && Instance._open;
+    // Going off in the player's pocket and holding them still until they take it out (Summon).
+    public static bool Summoned => Instance != null && Instance._summoned;
 
     [Tooltip("Opens and closes the phone while on foot.")]
     public Key toggleKey = Key.P;
+    [Tooltip("The pad's View / Create button (Gamepad.selectButton) opens and closes the phone too. Without " +
+             "it a pad player has no way to take the phone out — or to put it away again.")]
+    public bool padToggle = true;
     [Tooltip("Seconds the phone takes to slide in or out.")]
     public float slideSeconds = 0.22f;
     [Tooltip("Phone body size in UI pixels, before PixelGUI.Scale.")]
@@ -48,6 +53,7 @@ public class PhoneUI : MonoBehaviour
     float _slide;                      // 0 = off screen, 1 = resting
     OnFootController _player;
     bool _lockedByPhone;               // we set MovementLocked, so we're the one who clears it
+    bool _summoned;                    // that lock is a summons: the phone is going off and not out yet
     float _pollTimer;
 
     const string LastAppKey = "phone.lastapp";
@@ -112,6 +118,19 @@ public class PhoneUI : MonoBehaviour
         if (Instance != null) Instance._selectNext = appId;
     }
 
+    // The phone is going off: hold the player where they stand until they take it out. The phone owns that
+    // lock, which is what lets the toggle open it over the top — anything else holding MovementLocked keeps
+    // the phone shut. Opening it turns the summons into the ordinary open-phone lock; closing it lets them go.
+    // False when there is nobody on foot, or somebody else already has them.
+    public static bool Summon() => Instance != null && Instance.SummonInternal();
+
+    // Let a summoned player go without the phone ever coming out.
+    public static void CancelSummon()
+    {
+        if (Instance == null || !Instance._summoned) return;
+        Instance.ReleasePlayer();
+    }
+
     // Scroll the open app back to its top. PhoneApp.ScrollToTop is the way in.
     public static void ResetScroll()
     {
@@ -144,15 +163,16 @@ public class PhoneUI : MonoBehaviour
         _slide = Mathf.MoveTowards(_slide, _open ? 1f : 0f, step);
 
         var kb = Keyboard.current;
-        if (kb == null) return;
-
-        if (toggleKey != Key.None && kb[toggleKey].wasPressedThisFrame)
+        var pad = Gamepad.current;
+        bool toggle = (kb != null && toggleKey != Key.None && kb[toggleKey].wasPressedThisFrame)
+                   || (padToggle && pad != null && pad.selectButton.wasPressedThisFrame);
+        if (toggle)
         {
             if (_open) CloseInternal();
             else OpenInternal(null);
         }
 
-        if (!_open) return;
+        if (!_open || kb == null) return;
 
         // Esc backs out one level: app → home → away. RacePauseMenu stands down while the phone is up.
         if (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame)
@@ -186,9 +206,10 @@ public class PhoneUI : MonoBehaviour
     {
         if (_player == null) _player = OnFootController.Current;
         if (_player == null) return;                       // in the car, or a scene with no on-foot body
-        if (!_open && _player.MovementLocked) return;      // a conversation or cutscene has the player
+        if (!_open && _player.MovementLocked && !_summoned) return;   // a conversation or cutscene has the player
 
         _open = true;
+        _summoned = false;
         _scroll = Vector2.zero;
         _current = null;
         if (string.IsNullOrEmpty(appId) && !string.IsNullOrEmpty(_selectNext))
@@ -221,6 +242,24 @@ public class PhoneUI : MonoBehaviour
     {
         if (_lockedByPhone && _player != null) _player.MovementLocked = false;
         _lockedByPhone = false;
+        _summoned = false;
+    }
+
+    bool SummonInternal()
+    {
+        if (Coop.IsGuest) return false;
+        if (_open) return true;                            // already out; nothing to hold them for
+
+        // Asked fresh rather than trusted from the half-second poll: locking a body that has just been swapped
+        // out would hold nobody, and leave the lock behind on it.
+        var found = OnFootController.Current;
+        if (found != _player) { ReleasePlayer(); _player = found; }
+        if (_player == null || _player.MovementLocked) return false;
+
+        _player.MovementLocked = true;
+        _lockedByPhone = true;
+        _summoned = true;
+        return true;
     }
 
     int IndexOf(string appId)

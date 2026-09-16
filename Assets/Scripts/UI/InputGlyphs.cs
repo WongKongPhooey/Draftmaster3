@@ -39,6 +39,9 @@ public static class InputGlyphs
     // Advance dialogue / dismiss a prompt — E everywhere on keyboard, south face button on a pad.
     public static string Confirm => Label("E", "A", "CROSS");
 
+    // The phone — PhoneUI reads its toggleKey (P) / Gamepad.selectButton, the small button left of centre.
+    public static string PhonePad => UsingPlayStationPad ? "CREATE" : "VIEW";
+
     static bool IsPlayStation(Gamepad gp)
     {
         if (gp == null) return false;

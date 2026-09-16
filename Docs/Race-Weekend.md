@@ -20,10 +20,15 @@ walk.
 
 **Your phone goes off on the way to the briefing.** The first booking is the crew chief's strategy briefing
 at the pit box. 200 m short of it (`ChiefCheckIn.TriggerMetres`; about a third of the way from the RV at
-Watkins Glen) the phone bleeps, the chief texts to ask where you are, and a control hint reads
-**`P` - Check your phone** until you do. The phone opens with MESSAGES highlighted, reading "1 unread
-message". Once per save; it holds off while a conversation, a wipe or a menu has the player, and it does not
-fire if `T` dropped you straight at the pit box (the beat stays armed for the next briefing walk). Rule and
+Watkins Glen) the phone bleeps, the chief texts to ask where you are, **the driver stops where they
+stand**, and a control hint reads **`P` - Check your phone** (View / Create on a pad) until they take it out.
+The phone opens with MESSAGES highlighted, reading "1 unread message". **Hold to run is taught after that**,
+once the phone has been put away again — `PitLaneStart` holds the run hint while
+`ChiefCheckInBeat.HoldsRunHint` is true, which is the whole walk to the briefing until the lesson is over.
+The stop applies in every build (`ChiefCheckInBeat.HoldPlayerForPhone`), not only the demo. Once per save;
+it holds off while a conversation, a wipe or a menu has the player, and it does not fire if `T` dropped you
+straight at the pit box (the beat stays armed for the next briefing walk; the run hint is released as soon
+as the briefing stops being the booking). Rule and
 words: `Core/ChiefCheckIn.cs` (tested in `ChiefCheckInTests`); runtime: `ChiefCheckInBeat.cs`. Re-armed by
 **Draftmaster > Demo > Re-arm The Opening**; **Draftmaster > Demo > Send The Crew Chief's 'Where Are You'
 Text** fires it on the spot in play mode.
@@ -162,7 +167,7 @@ it is only replaced when the clock has moved past it.
 | **Signing session** / **hauler parade** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. Sign it and move (5 min), sign it and ask their name (10 min), pose for the photo (12 min), or wave and keep walking (2 min). The fence holds exactly as many people as signing-and-moving would clear, so speed is the whole decision: work it flat out and you reach every one of them and the sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support; stop to talk and the people you did reach are worth far more while the back of the queue never gets to the front. | Fan appeal, sponsor mood, `autographs` counter |
 | **Sponsor photo shoot** | The photographer wants hero or human, and the brand's rep wants the cap in every frame. | Sponsor mood, fans, crew morale |
 | **Hospitality Q&A / suite meet & greet** | A guest asks something and one of the answers is the line the brand paid for. The funny one is not it. | Sponsor mood — the off-message answers buy fans and press instead |
-| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x — `F11` for live timing, `E` to walk back. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
+| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x — `F11` for live timing, `E` to walk back — which is what completes the booking. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
 | **Drivers meeting** | Mandatory, in the drivers' room with the field sat around you. Officials read four notes; one of them will catch somebody out at this track today. Say which. | Setup knowledge, morale |
 | **Driver introductions** | Mandatory, on the stage. Your name over the PA — decide what to give the crowd. | Fan appeal, sponsor mood |
 
@@ -482,8 +487,13 @@ One *without* a teleport that sits outside the boundary is still reported as a f
 
 ### Sitting down to watch
 
-Arriving in the stand is the booking done — the sheet moves on and the clock jumps to the end of the hour —
-and what happens next is `GrandstandVisit`:
+Arriving in the stand does **not** complete the booking; getting up to leave does. The booking stays the
+appointment while the player sits there (the objective marker is taken down meanwhile — it would only point
+at the gate), and pressing **`E`** (pad `Y`) wipes them back to the gate and, at black, settles it: the clock
+jumps to the end of the hour, the result card and the next booking come up with the screen. Leaving any other
+way — a cutscene, another gate, walking 25 m out of the seat — leaves it undone. If the player committed to
+something else off `F10` while sat there, `E` does not settle the watch (it would book over their choice).
+The rest is `GrandstandVisit`:
 
 - **The camera pans out.** It comes back tight on the player where the wipe left them, then pulls back over
   `cameraPanSeconds` onto the marker's **vantage**: a child called **`View`** (also `Vantage`, `Camera`) at
@@ -495,15 +505,19 @@ and what happens next is `GrandstandVisit`:
   Get out of the seat and walk more than 3.5 m and the camera hands itself back to the ordinary on-foot
   follow — a fixed wide frame with the player walking out of the bottom of it is worse than no shot.
 - **`F11` is the timing screen** for whatever is on track: the same `TimingScreenUI` the crew chief opens,
-  timing the real ambient field off `LapTimingManager`, headed with the championship and session and with
-  the session clock in the corner.
+  timing the real ambient field off `LapTimingManager`. Three columns — position, driver, best lap — under
+  a `LIVE TIMING` heading and a line with the championship and session on the left and the session clock on
+  the right. Every size is measured off the face it is drawn in; a field longer than the screen shows the
+  front of the order plus the player's own row.
 - **The session runs at 10x.** The sheet's hour is played out against a compressed clock — ten weekend
   minutes a minute, floored at 20 s and capped at six minutes, so no session ever asks the player to sit
   through more than that (`GrandstandWatch`, tested by `GrandstandWatchTests`). The cars are never sped up;
   it is the session's *length* that is compressed. While it runs, the seat **holds the circuit**
-  (`WeekendTrackState.Hold`) — without that the field the player came to watch would be cleared the instant
-  the booking completed and moved the clock past it. When the compressed clock runs out the hold is given
-  back, the field comes in, and `T` walks back to the gate.
+  (`WeekendTrackState.Hold`) — the player may sit down before the session's hour on the sheet, and
+  completing the booking moves the clock past it. When the compressed clock runs out the hold goes **cold**
+  (`WeekendTrackState.HoldEmpty`), the field comes in, and the prompt says to head back; it is not handed
+  back to the clock until `E`, because the clock has not moved yet and would put the same field straight
+  back out.
 
 Authored markers are never moved by the boundary rule either: where you put it is where it stays, and a bad
 one is reported rather than quietly dragged inside.

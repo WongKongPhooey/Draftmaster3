@@ -57,14 +57,35 @@ public class ControlHintUI : MonoBehaviour
 
     void OnDestroy() { if (_instance == this) _instance = null; }
 
-    public void Push(string id, string keyboardLabel, string gamepadLabel, string text, float seconds)
+    // `urgent` goes to the front of the line: whatever is up fades out now and goes back in the queue with the
+    // time it had left. For a prompt the player cannot get past without — a sticky hint already on screen
+    // would otherwise hold it back for ever.
+    public void Push(string id, string keyboardLabel, string gamepadLabel, string text, float seconds, bool urgent = false)
     {
         // Re-showing a live hint just refreshes its timer rather than queueing a duplicate.
         if (_current != null && _current.id == id) { _current.secondsLeft = seconds; return; }
+
+        var hint = new Hint { id = id, keyboardLabel = keyboardLabel, gamepadLabel = gamepadLabel, text = text, secondsLeft = seconds };
+        if (urgent)
+        {
+            _queue.RemoveAll(h => h.id == id);
+            if (_current != null && _current.secondsLeft > 0f)
+            {
+                _queue.Insert(0, new Hint
+                {
+                    id = _current.id, keyboardLabel = _current.keyboardLabel, gamepadLabel = _current.gamepadLabel,
+                    text = _current.text, secondsLeft = _current.secondsLeft,
+                });
+                _current.secondsLeft = 0f;
+            }
+            _queue.Insert(0, hint);
+            return;
+        }
+
         for (int i = 0; i < _queue.Count; i++)
             if (_queue[i].id == id) { _queue[i].secondsLeft = seconds; return; }
 
-        _queue.Add(new Hint { id = id, keyboardLabel = keyboardLabel, gamepadLabel = gamepadLabel, text = text, secondsLeft = seconds });
+        _queue.Add(hint);
     }
 
     public void Dismiss(string id)
@@ -125,20 +146,24 @@ public static class ControlHints
 
     // Show a hint. `once` remembers it forever (per save) so a returning player isn't re-taught the basics.
     public static void Show(string id, string keyboardLabel, string gamepadLabel, string text,
-                            float seconds = 5f, bool once = true)
+                            float seconds = 5f, bool once = true, bool urgent = false)
     {
         if (once && AlreadyTaught(id)) return;
         var ui = ControlHintUI.Instance;
         if (ui == null) return;
-        ui.Push(id, keyboardLabel, gamepadLabel, text, seconds);
+        ui.Push(id, keyboardLabel, gamepadLabel, text, seconds, urgent);
         if (once) MarkTaught(id);
     }
 
     // Show for as long as it stays relevant; call Hide when it stops being true.
-    public static void ShowSticky(string id, string keyboardLabel, string gamepadLabel, string text, bool once = false)
-        => Show(id, keyboardLabel, gamepadLabel, text, Mathf.Infinity, once);
+    public static void ShowSticky(string id, string keyboardLabel, string gamepadLabel, string text,
+                                  bool once = false, bool urgent = false)
+        => Show(id, keyboardLabel, gamepadLabel, text, Mathf.Infinity, once, urgent);
 
     public static void Hide(string id) => ControlHintUI.Instance?.Dismiss(id);
+
+    // Teach it again: wipe a once-only hint's memory. Testing menus use this.
+    public static void Forget(string id) => Memory(id).Forget();
 
     static AppearanceConditions Memory(string id)
     {

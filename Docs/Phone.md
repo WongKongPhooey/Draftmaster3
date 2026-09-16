@@ -1,7 +1,9 @@
 # The phone
 
 The player's phone slides up from the bottom of the screen while they're on foot, over on the left and
-held at a slight angle. **P** opens and closes it; **Esc** backs out one level (app → home → away).
+held at a slight angle. **P** (or the pad's **View / Create** button, `PhoneUI.padToggle`) opens and closes
+it; **Esc** backs out one level (app → home → away). Inside the phone, navigation is keyboard and mouse only
+so far.
 
 It is not a pause. The paddock keeps moving behind it — the player just stops walking while it's up.
 
@@ -29,8 +31,15 @@ the feed is stable within a weekend and different at the next one.
 
 **The first time it goes off.** On the walk to the Friday strategy briefing, 200 m short of the pit box, the
 crew chief texts to ask where the player is: a bleep (synthesised, `ChiefCheckInBeat.TextTone`), the message
-in MESSAGES, the home grid's highlight parked on that tile, and a `P — Check your phone` control hint that
-stays until the phone opens. Once per save. See `Docs/Race-Weekend.md` for the rule.
+in MESSAGES, the home grid's highlight parked on that tile, the player stopped where they stand, and a
+`P — Check your phone` control hint (urgent: it jumps any hint already up) that stays until the phone
+opens. The run hint waits until the phone is put away again. Once per save. See `Docs/Race-Weekend.md`
+for the rule.
+
+**Summoning.** `PhoneUI.Summon()` is how the phone stops the player: it takes `MovementLocked` itself,
+so the toggle can still open it — anything else holding that lock keeps the phone shut. Opening turns the
+summons into the ordinary open-phone lock and closing lets the player go; `PhoneUI.CancelSummon()` lets
+them go without it. `PhoneUI.Summoned` reports it.
 
 **Where the player is told the rest.** Nothing else in the paddock explains the phone, so the first
 weekend of a career books fifteen minutes at the pit box for it: `ActivityKind.Orientation`, 09:30 Friday
@@ -121,7 +130,8 @@ All three stores are PlayerPrefs-backed, so they survive the scene reloads betwe
 - **Arms only on foot.** It polls for an `OnFootController` every half second; in the car there's nothing
   to open.
 - **Refuses to open while the player is held** by a conversation or a cutscene (`MovementLocked` already
-  set by someone else), and takes that lock itself while it's up — which is also what stops an interact
+  set by someone else — a summons is the phone's own, so it does open over that), and takes that lock
+  itself while it's up — which is also what stops an interact
   press from starting a conversation through the phone.
 - **Owns Escape while open.** `RacePauseMenu` stands down (`PhoneUI.IsOpen`), so the first press puts the
   phone away rather than pausing the game.

@@ -4,10 +4,12 @@ using UnityEngine.InputSystem;
 
 // Watching somebody else's session from the stand you walked to.
 //
-// The obligation was to be there, and the gate put you there, so the booking is DONE the moment you arrive:
-// the sheet moves on, the weekend carries on around you, and what is left is a seat with a good view of the
-// circuit. The camera pulls back off the player onto the vantage the track authored (GrandstandCamera) and
-// the session plays out in front of it.
+// The obligation is to watch, so the booking is done when the player gets up and goes back to the pits (E),
+// not when they sit down: arriving used to complete it on the spot, which read as the quest ticking off
+// before a single car had gone past. Until then the booking stays open — the sheet still has the player in
+// the stand — and walking off some other way (a cutscene, another gate) leaves it undone. The camera pulls
+// back off the player onto the vantage the track authored (GrandstandCamera) and the session plays out in
+// front of it.
 //
 // AT SPEED. An hour on the sheet is not an hour of the player's evening: the session is held open against
 // its own compressed clock — ten weekend minutes a minute, capped so nothing runs past six — and when that
@@ -62,6 +64,7 @@ public class GrandstandVisit : MonoBehaviour
     bool _sessionOver;
     bool _held;
     bool _closed;
+    bool _done;                 // the booking has been settled (on the way out through E)
 
     GrandstandCamera _shot;
 
@@ -79,9 +82,9 @@ public class GrandstandVisit : MonoBehaviour
         visit._startedAt = Time.unscaledTime;
         visit._activity = a;
 
-        // Take the circuit off the clock FIRST. Finishing the booking below shoves the weekend clock to the
-        // end of the session, and the field is spawned off that clock — so without a hold in place the cars
-        // the player came to watch are cleared out from under them on the frame they sit down.
+        // Take the circuit off the clock. The player may have arrived before the session's start time on the
+        // sheet, and finishing the booking on the way out shoves the clock to the end of it — the field is
+        // spawned off that clock, so it is the hold that keeps the cars the player came to watch on track.
         if (a != null && a.IsSpectate)
         {
             visit._sessionMinutes = Mathf.Max(1, a.minutes);
@@ -90,13 +93,8 @@ public class GrandstandVisit : MonoBehaviour
             visit._held = true;
         }
 
-        // Being here IS the booking. Completing it now rather than on the way out means the sheet is never
-        // holding an obligation the player has already met, and nothing is lost if they wander off.
-        if (a != null)
-        {
-            WeekendAppointment.Clear();
-            WeekendDirector.Finish(a, Homework(a), inWorld: true);
-        }
+        // NOT completed here. The booking stays the appointment while the player is sat in the stand
+        // (WeekendObjectiveHUD keeps its marker down meanwhile) and is settled by Leave — see GoBack.
 
         visit.OpenTheView(marker);
         return visit;
@@ -311,8 +309,11 @@ public class GrandstandVisit : MonoBehaviour
 
         if (!_sessionOver && elapsed >= _watchSeconds)
         {
+            // The field comes in, but the circuit is not handed back to the clock yet: the booking is still
+            // open until the player gets up, so the clock has not moved past this session, and releasing now
+            // would put the very same field straight back out. Held cold instead; GoBack releases it.
             _sessionOver = true;
-            ReleaseSession();
+            WeekendTrackState.HoldEmpty();
         }
 
         if (timing == null) return;
@@ -330,7 +331,8 @@ public class GrandstandVisit : MonoBehaviour
         WeekendTrackState.Release();
     }
 
-    // Back through the fence, behind a wipe, exactly as the walk out here was.
+    // Back through the fence, behind a wipe, exactly as the walk out here was — and this is what completes
+    // the booking.
     //
     // The prompt comes down on the press, not on the wipe: a leave asked for while another wipe is already
     // running has to wait its turn (Update takes it when the screen is free), and the player who pressed the
@@ -341,10 +343,16 @@ public class GrandstandVisit : MonoBehaviour
         _leaving = true;
 
         if (_shot != null) { _shot.End(); _shot = null; }
+        if (TimingScreenUI.Instance != null) TimingScreenUI.Instance.Hide();
 
         if (!ScreenFade.Busy) GoBack();
     }
 
+    // Everything happens at black, in this order: the player is put back at the gate, the booking is settled
+    // (the clock jumps to the end of the session and the next booking goes up), and only then is the circuit
+    // handed back — so the field clears and the result card arrives as the screen comes up on the paddock,
+    // not while the player is still looking at the stand. The visit stays alive until then; Update leaves it
+    // alone while `_leaving` and the wipe is running.
     void GoBack()
     {
         var player = WeekendVenueAnchor.OnFootPlayer();
@@ -352,15 +360,33 @@ public class GrandstandVisit : MonoBehaviour
 
         ScreenFade.Cut(() =>
         {
-            if (player == null) return;
-            to.z = player.position.z;
+            if (player != null)
+            {
+                to.z = player.position.z;
+                var body = player.GetComponent<Rigidbody2D>();
+                if (body != null) body.position = to;      // the body owns the pose; a transform write snaps back
+                player.position = to;
+            }
 
-            var body = player.GetComponent<Rigidbody2D>();
-            if (body != null) body.position = to;      // the body owns the pose; a transform write snaps back
-            player.position = to;
+            if (this == null) return;                      // torn down mid-wipe (a scene change)
+            Complete();
+            Close();
         });
+    }
 
-        Destroy(gameObject);
+    // Settle the booking the player came to watch. Only if it is still the appointment: a player who
+    // committed to something else off the sheet while sat here has walked away from this one, and finishing
+    // it now would also book over the thing they just chose.
+    void Complete()
+    {
+        if (_done || _activity == null) return;
+        _done = true;
+
+        var pending = WeekendAppointment.Pending;
+        if (pending == null || pending.id != _activity.id) return;
+
+        WeekendAppointment.Clear();
+        WeekendDirector.Finish(pending, Homework(pending), inWorld: true);
     }
 
     string SessionLabel()

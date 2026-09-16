@@ -125,6 +125,9 @@ public class PitLaneStart : MonoBehaviour
     PlacedNPC _chiefNpc;
     Vector3 _hintOrigin;
     bool _hintOriginSet, _hintedRun, _hintedEnter;
+    // A cutscene has just handed movement back: teach running now rather than a few steps later — unless the
+    // phone's lesson is still to come on this walk (ChiefCheckInBeat.HoldsRunHint), which goes first.
+    bool _runHintDue;
     // Set while an opening cutscene is armed/playing: control hints stay off until it's done, so the
     // run prompt lands as the player is handed control rather than under the engineer's dialogue.
     bool _hintsHeldForCutscene;
@@ -554,6 +557,9 @@ public class PitLaneStart : MonoBehaviour
 
     // An opening beat has finished: put the objective back on screen and only now teach the run control
     // (the player has just got movement back, and the hint would otherwise have landed under the dialogue).
+    // The run hint itself is shown from StepWalkHints next frame, not here: the liaison's beat books the
+    // briefing from its own Finished handler, and until that has run nobody can tell whether the phone's
+    // lesson has to go first.
     //
     // What it no longer does is throw the car marker's fly-in again. That marker flew in when it was added,
     // and a second fly-in out of the middle of the screen does not read as emphasis — it reads as a second
@@ -574,11 +580,7 @@ public class PitLaneStart : MonoBehaviour
             else if (npc != null && !string.IsNullOrEmpty(npc.objectiveOnFinish))
                 _intro.ShowTitle(npc.objectiveOnFinish);
         }
-        if (showControlHints && !_hintedRun)
-        {
-            ControlHints.Show("run", "LEFT SHIFT", "LB", "Hold to run");
-            _hintedRun = true;
-        }
+        if (showControlHints && !_hintedRun) _runHintDue = true;
     }
 
 
@@ -691,15 +693,18 @@ public class PitLaneStart : MonoBehaviour
 
     // Teach the two things the walk needs, as the player gets to them: sprint once they're actually walking,
     // and "get in" while the car is still a way off. Both are once-per-save (ControlHints owns that memory).
+    // On the walk to the first briefing, sprint waits until the phone has gone off and been put away again.
     void StepWalkHints()
     {
         if (_hintsHeldForCutscene) return; // released by the cutscene's Finished callback
         if (!_hintOriginSet) { _hintOrigin = _player.transform.position; _hintOriginSet = true; }
 
-        if (!_hintedRun && Vector2.Distance(_player.transform.position, _hintOrigin) > runHintAfterMetres)
+        if (!_hintedRun && !ChiefCheckInBeat.HoldsRunHint
+            && (_runHintDue || Vector2.Distance(_player.transform.position, _hintOrigin) > runHintAfterMetres))
         {
             ControlHints.Show("run", "LEFT SHIFT", "LB", "Hold to run");
             _hintedRun = true;
+            _runHintDue = false;
         }
 
         if (!_hintedEnter && RaceWeekend.SessionLive

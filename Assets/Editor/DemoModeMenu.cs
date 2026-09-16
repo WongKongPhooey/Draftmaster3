@@ -82,7 +82,8 @@ public static class DemoModeMenu
         // objective being broken when it is only over.
         Draftmaster.Weekend.WeekendLedger.ClearAll();
 
-        // And the crew chief's "where are you?" text on the walk to the briefing, with its P prompt.
+        // And the crew chief's "where are you?" text on the walk to the briefing, with its P prompt and the
+        // run hint it holds back until the phone has been put away.
         ChiefCheckInBeat.Rearm();
 
         Debug.Log("Opening re-armed: fresh three days, and the next race scene wakes you up in the dark "

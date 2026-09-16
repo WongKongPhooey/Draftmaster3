@@ -45,6 +45,17 @@ namespace Draftmaster.Weekend
             && !arrived
             && !busy;
 
+        // Should the "hold to run" hint wait? It comes AFTER the phone: the walk to the briefing teaches the
+        // phone first (the player is stopped until they take it out), and running is taught once they have
+        // put it away again. So the run hint holds while that lesson is still ahead on this walk, and while
+        // it is under way.
+        //
+        //   alreadyFired     the save has had the text, so no phone lesson is coming
+        //   briefingBooked   the objective is the walk the text happens on
+        //   phoneLessonLive  the phone has gone off and has not been opened and put away yet
+        public static bool HoldsRunHint(bool alreadyFired, bool briefingBooked, bool phoneLessonLive)
+            => phoneLessonLive || (!alreadyFired && briefingBooked);
+
         // The text. `startsAt` is the booking's own start as a person says it ("8:00 AM"). The name token is
         // filled by the runtime when the message lands, like every other line in the paddock, so it is
         // concatenated rather than interpolated - a {playerfirst} inside $"" would be a C# hole.

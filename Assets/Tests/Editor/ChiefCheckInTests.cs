@@ -74,6 +74,76 @@ public class ChiefCheckInTests
         Assert.IsFalse(Fires(busy: true));
     }
 
+    // ------------------------------------------------------------------ the run hint comes after the phone
+
+    [Test]
+    public void OnTheBriefingWalk_RunningWaitsForThePhone()
+    {
+        Assert.IsTrue(ChiefCheckIn.HoldsRunHint(alreadyFired: false, briefingBooked: true, phoneLessonLive: false),
+                      "'Hold to run' went up before the phone had gone off on the walk to the briefing.");
+    }
+
+    [Test]
+    public void WhileThePhoneIsOut_RunningStillWaits()
+    {
+        // Fired, so the save remembers it — but the player has not put the phone away yet.
+        Assert.IsTrue(ChiefCheckIn.HoldsRunHint(alreadyFired: true, briefingBooked: true, phoneLessonLive: true));
+        Assert.IsTrue(ChiefCheckIn.HoldsRunHint(alreadyFired: true, briefingBooked: false, phoneLessonLive: true));
+    }
+
+    [Test]
+    public void OnceThePhoneIsPutAway_RunningIsTaught()
+    {
+        Assert.IsFalse(ChiefCheckIn.HoldsRunHint(alreadyFired: true, briefingBooked: true, phoneLessonLive: false),
+                       "The phone lesson is over and the run hint is still being held back.");
+    }
+
+    [Test]
+    public void AnyOtherWalk_DoesNotHoldRunningBack()
+    {
+        // No briefing booked (a later weekend, a scene with no liaison): nothing is coming, so nothing waits.
+        Assert.IsFalse(ChiefCheckIn.HoldsRunHint(alreadyFired: false, briefingBooked: false, phoneLessonLive: false));
+    }
+
+    // An urgent prompt jumps the queue: the player is stood still until they read it, so a hint already on
+    // screen — possibly a sticky one that never expires — must not keep it waiting.
+    [Test]
+    public void AnUrgentPrompt_GoesStraightToTheFront_AndTheOneItBumpedComesBack()
+    {
+        var uiType = System.Type.GetType("ControlHintUI, Assembly-CSharp");
+        Assert.IsNotNull(uiType, "ControlHintUI not found in Assembly-CSharp.");
+        const BindingFlags Any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+        var go = new GameObject("ControlHintUI (test)");
+        try
+        {
+            var ui = go.AddComponent(uiType);
+            var push = uiType.GetMethod("Push", Any);
+            var update = uiType.GetMethod("Update", Any);
+            var currentField = uiType.GetField("_current", Any);
+            var queue = (IList)uiType.GetField("_queue", Any).GetValue(ui);
+            System.Type hintType = uiType.GetNestedType("Hint", BindingFlags.NonPublic);
+            string IdOf(object h) => (string)hintType.GetField("id").GetValue(h);
+            float LeftOf(object h) => (float)hintType.GetField("secondsLeft").GetValue(h);
+
+            push.Invoke(ui, new object[] { "tow", "Y", "Y", "Call a tow", Mathf.Infinity, false });
+            update.Invoke(ui, null);                      // the sticky one is now on screen
+            Assert.AreEqual("tow", IdOf(currentField.GetValue(ui)));
+
+            push.Invoke(ui, new object[] { "phone", "P", "VIEW", "Check your phone", Mathf.Infinity, true });
+
+            Assert.AreEqual(0f, LeftOf(currentField.GetValue(ui)), "The hint on screen should be fading out.");
+            Assert.AreEqual(2, queue.Count);
+            Assert.AreEqual("phone", IdOf(queue[0]), "The urgent prompt should be next up.");
+            Assert.AreEqual("tow", IdOf(queue[1]), "The bumped hint should go back in line, not be lost.");
+            Assert.IsTrue(float.IsInfinity(LeftOf(queue[1])), "The bumped hint should keep the time it had left.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(go);
+        }
+    }
+
     // ------------------------------------------------------------------ what it says
 
     [Test]
