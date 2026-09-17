@@ -173,6 +173,16 @@ public class RacePauseMenu : MonoBehaviour
         PixelGUI.DrawCursor(new Rect(r.x - PixelGUI.Px(9f), r.y, r.width, r.height), PixelGUI.Px(8f));
     }
 
+    // Pause or resume from something that isn't a key or a pad button: the touch controls' pause button.
+    // Same rules as Esc — only in a race scene, and not while the phone has the screen.
+    public static void TogglePause()
+    {
+        var menu = Instance;
+        if (menu == null || !menu._inRaceScene || PhoneUI.IsOpen) return;
+        if (IsPaused) menu.Resume();
+        else menu.Pause();
+    }
+
     void Pause()
     {
         if (IsPaused) return;

@@ -75,8 +75,11 @@ public static class PadInput
 
     // Something modal owns the pad's face buttons and d-pad right now, so a gameplay shortcut on the same
     // button must not answer as well.
-    public static bool MenuOpen =>
-        _consumedFrame == Time.frameCount ||
+    public static bool MenuOpen => _consumedFrame == Time.frameCount || ModalOpen;
+
+    // A modal screen is up — the pause menu, the phone, the weekend sheet, a conversation — regardless of
+    // what was pressed this frame. The touch controls stand down for these.
+    public static bool ModalOpen =>
         RacePauseMenu.IsPaused ||
         PhoneUI.IsOpen ||
         WeekendScheduleUI.IsOpen ||

@@ -278,7 +278,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     SplineDriver _brainSpline; // AI brain when present (enabled) — supplies the track pose for draft maths
 
     public enum ControlScheme { Auto, Keyboard, Gamepad }
-    [Tooltip("Which device this car reads when driven locally. Auto = keyboard + gamepad. Set to split devices between players for local / Multiplayer Play Mode testing (e.g. keyboard for P1, gamepad for P2).")]
+    [Tooltip("Which device this car reads when driven locally. Auto = keyboard + gamepad (+ on-screen touch on a phone). Set to split devices between players for local / Multiplayer Play Mode testing (e.g. keyboard for P1, gamepad for P2).")]
     public ControlScheme controlScheme = ControlScheme.Auto;
 
     [HideInInspector] public bool externalInput; // true when an AI controller feeds inputs via SetInput
@@ -457,7 +457,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         if (_isObstacle) UpdateTrackProjection();
         float dt = Time.fixedDeltaTime;
 
-        // --- Inputs: external (AI) when driven, otherwise gamepad first, keyboard overrides if pressed.
+        // --- Inputs: external (AI) when driven, otherwise gamepad and on-screen touch, keyboard overrides if pressed.
         float steerIn, throttleIn, brakeIn;
         if (externalInput)
         {
@@ -475,6 +475,14 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                     throttleIn = gp.rightTrigger.ReadValue();
                     brakeIn = gp.leftTrigger.ReadValue();
                 }
+            }
+            // Thumbs on a phone's screen. Only up while the pad isn't the device in use, but an idle pad still
+            // reads zero above, so the touch values are laid over it rather than replaced by it.
+            if (controlScheme == ControlScheme.Auto && TouchDriveControls.Active)
+            {
+                if (TouchDriveControls.Steer != 0f) steerIn = TouchDriveControls.Steer;
+                throttleIn = Mathf.Max(throttleIn, TouchDriveControls.Throttle);
+                brakeIn = Mathf.Max(brakeIn, TouchDriveControls.Brake);
             }
             if (controlScheme != ControlScheme.Gamepad)
             {
