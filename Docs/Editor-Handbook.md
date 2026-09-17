@@ -599,6 +599,27 @@ the bottom-of-screen hint plate and every panel's key tab swap to the pad's butt
 
 Free: `F12`.
 
+## On a phone or tablet (Android)
+
+**On-screen driving** (`TouchDriveControls`, rules in `Draftmaster.Controls.TouchDrive`): a steering strip
+under the left thumb, brake and gas under the right, and a pause button at the top centre. Steering is
+relative to where the thumb lands, so there is no centre to find. Drag past full lock and the centre moves
+with the thumb. A thumb that lands on the left side, below the top quarter, steers; anywhere else it presses
+whichever pedal it is over. The controls show only when all of these hold: on a touch device, in your own car,
+nothing modal open, and the pad not the last device touched. Picking up a pad hides them; touching the screen
+brings them back. The crew chief headset button moves up above the pedals while they show. The phone's back
+gesture arrives as `Esc`, so it pauses. The pause menu's rows can be tapped. Everything else in the car
+(panels, limiter, tow, crew chief key) needs a pad. On foot there are no touch controls. To try it without a
+phone, use Window > General > Device Simulator and click with the mouse.
+
+**A pad paired with the phone** drives exactly as on a PC: an Xbox pad comes up as `XboxOneGamepadAndroid`,
+a PlayStation pad as `DualShock4GamepadAndroid` (PlayStation icons), and anything else as a generic
+`AndroidGamepad`. All of them feed `Gamepad.current`, and the table above applies unchanged. Android turns
+an unclaimed B press into a Back key, which would arrive as a second `Esc`. `PadKeyEchoFilter`, switched on
+by `InputDeviceWatcher` on Android only, drops any keyboard press within 0.2 s of a pad button press. Without
+it, B would close the pause menu and open it again, and in the car it would pause the game. Covered by
+`AndroidPadTests` / `TouchDriveTests`.
+
 ---
 
 # Menu reference

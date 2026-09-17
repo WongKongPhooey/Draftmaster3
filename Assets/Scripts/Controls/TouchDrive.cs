@@ -64,13 +64,15 @@ namespace Draftmaster.Controls
         public readonly TouchRect brakeHit, throttleHit;    // pressed: the drawn pedal plus slop, split at the gap
         public readonly TouchRect pause;
 
-        // The size of one design pixel on a screen this big: whole numbers, so the controls land on the same
-        // pixel grid as the rest of the UI. Taken from the short side so a portrait screen isn't given pedals
-        // wider than itself.
+        // The size of one design pixel on a screen this big: whole numbers, so the controls land on a clean
+        // pixel grid. Taken from the short side so a portrait screen isn't given pedals wider than itself.
+        // Rounded up, where the HUD's scale rounds down: a pedal is a thumb target first, and on a screen
+        // between steps (480 or 800 lines) rounding down would shrink it to a fifth of the height or less.
+        // Up, the pedals stay between about a quarter and two fifths of the height on any screen.
         public static float UnitFor(float screenWidth, float screenHeight)
         {
             float shortSide = screenWidth < screenHeight ? screenWidth : screenHeight;
-            float u = (float)System.Math.Floor(shortSide / 360f);
+            float u = (float)System.Math.Ceiling(shortSide / 360f - 0.001f);
             return u < 1f ? 1f : u;
         }
 
@@ -127,6 +129,7 @@ namespace Draftmaster.Controls
         readonly HashSet<int> _present = new HashSet<int>();
         readonly List<int> _lifted = new List<int>();
         bool _steering;
+        bool _returning;   // the first update since Reset: fingers already down did not land just now
 
         public float Steer { get; private set; }        // -1 full left .. +1 full right
         public float Throttle { get; private set; }     // 0 or 1
@@ -141,8 +144,22 @@ namespace Draftmaster.Controls
         public void Update(IReadOnlyList<TouchPoint> touches, in TouchLayout layout)
         {
             Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false;
-            _present.Clear();
 
+            // Let go of the fingers that have lifted before placing the ones that have landed: a thumb taken
+            // off the wheel and put straight back down inside one frame is a new steering thumb, not a second
+            // one to ignore.
+            _present.Clear();
+            for (int i = 0; i < touches.Count; i++) _present.Add(touches[i].id);
+            _lifted.Clear();
+            foreach (var id in _roles.Keys)
+                if (!_present.Contains(id)) _lifted.Add(id);
+            for (int i = 0; i < _lifted.Count; i++)
+            {
+                if (_roles[_lifted[i]] == Role.Steer) _steering = false;
+                _roles.Remove(_lifted[i]);
+            }
+
+            _present.Clear();
             float slop = TouchLayout.Slop * layout.unit;
             for (int i = 0; i < touches.Count; i++)
             {
@@ -177,29 +194,24 @@ namespace Draftmaster.Controls
                         break;
                 }
             }
-
-            _lifted.Clear();
-            foreach (var id in _roles.Keys)
-                if (!_present.Contains(id)) _lifted.Add(id);
-            for (int i = 0; i < _lifted.Count; i++)
-            {
-                if (_roles[_lifted[i]] == Role.Steer) _steering = false;
-                _roles.Remove(_lifted[i]);
-            }
+            _returning = false;
         }
 
-        // Forget every finger: the controls were put away, and whatever was held when they went is not a
-        // press when they come back.
+        // Forget every finger: the controls were put away. A thumb still down when they come back is placed
+        // afresh, as if it had just landed — a thumb resting on the wheel takes it from where it is, with no
+        // jump — except on the pause button: the finger that tapped it to open the pause menu is not a second
+        // tap once the menu has gone.
         public void Reset()
         {
             _roles.Clear();
             _steering = false;
+            _returning = true;
             Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false;
         }
 
         Role Classify(TouchPoint t, in TouchLayout layout, float slop)
         {
-            if (layout.pause.Inflate(slop).Contains(t.x, t.y)) return Role.Pause;
+            if (layout.pause.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Pause;
             if (layout.steerZone.Contains(t.x, t.y)) return _steering ? Role.Ignored : Role.Steer;
             return Role.Pedal;
         }

@@ -1,0 +1,17 @@
+{
+    "name": "Draftmaster.Controls.Input",
+    "rootNamespace": "Draftmaster.Controls",
+    "references": [
+        "Draftmaster.Controls",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

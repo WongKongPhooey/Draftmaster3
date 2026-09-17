@@ -123,8 +123,9 @@ public static class InputGlyphs
     // ---------------------------------------------------------------- which device
 
     // Called once a frame by InputDeviceWatcher. A pad counts as used on a fresh press (or a stick/trigger
-    // pushed past half way), the keyboard on any key and the mouse on a click or a scroll — edges only, so
-    // a pedal resting at full travel or a key held down cannot pin the answer.
+    // pushed past half way), the keyboard on any key, the mouse on a click or a scroll and a touchscreen on a
+    // finger landing — edges only, so a pedal resting at full travel or a key held down cannot pin the answer.
+    // Touching the screen is putting the pad down: on a phone it brings the on-screen driving controls back.
     internal static void Poll()
     {
         var gp = Gamepad.current;
@@ -150,7 +151,7 @@ public static class InputGlyphs
             bool padUsed = (mask & ~_padPrevMask) != 0;
             _padPrevMask = mask;
 
-            bool kbUsed = KeyboardOrMouseUsed();
+            bool kbUsed = KeyboardMouseOrTouchUsed();
             if (padUsed && !kbUsed) pad = true;
             else if (kbUsed && !padUsed) pad = false;
         }
@@ -190,10 +191,12 @@ public static class InputGlyphs
         return m;
     }
 
-    static bool KeyboardOrMouseUsed()
+    static bool KeyboardMouseOrTouchUsed()
     {
         var kb = Keyboard.current;
         if (kb != null && kb.anyKey.wasPressedThisFrame) return true;
+        var screen = Touchscreen.current;
+        if (screen != null && screen.primaryTouch.press.wasPressedThisFrame) return true;
         var mouse = Mouse.current;
         if (mouse == null) return false;
         return mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame ||

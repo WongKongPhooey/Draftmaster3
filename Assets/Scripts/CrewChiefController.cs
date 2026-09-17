@@ -67,6 +67,8 @@ public class CrewChiefController : MonoBehaviour
     Image _icon;
     GameObject _buttonRoot;
     GameObject _timingBtn;
+    Canvas _canvas;
+    float _lift;             // UI pixels the corner controls are raised by, to stand clear of the touch pedals
     bool _keyPrev;
     Material _unlit;
 
@@ -103,6 +105,7 @@ public class CrewChiefController : MonoBehaviour
         // walkable afterwards, so the headset has to come off the HUD without a reload.
         bool available = Available;
         if (_buttonRoot != null && _buttonRoot.activeSelf != available) _buttonRoot.SetActive(available);
+        KeepClearOfTouchPedals();
         if (!available)
         {
             // Chequered flag while stood on the pit wall: put them back in the car (or back on their feet)
@@ -301,6 +304,7 @@ public class CrewChiefController : MonoBehaviour
         // The team controls sit in the bottom-right corner as square glyphs on the kit's 640x360 canvas.
         // The speedometer dial owns the corner itself, so buttonCorner.x steps in far enough to clear it.
         var canvas = PixelUI.CreateCanvas("TeamControlsCanvas", 111);
+        _canvas = canvas;
 
         var theme = PixelUITheme.Instance;
         Sprite icon = buttonIcon != null ? buttonIcon : (theme != null ? theme.iconHeadset : null);
@@ -322,6 +326,22 @@ public class CrewChiefController : MonoBehaviour
         timing.onClick.AddListener(() => TimingScreenUI.Ensure().Toggle());
         _timingBtn = timingRoot.gameObject;
         _timingBtn.SetActive(false);
+    }
+
+    // On a phone the on-screen pedals sit in this corner while the player drives; the headset (and TIMING
+    // above it) step up to stand on top of them, and drop back when the pedals are put away.
+    void KeepClearOfTouchPedals()
+    {
+        if (_buttonRoot == null || _canvas == null) return;
+        float scale = _canvas.scaleFactor > 0f ? _canvas.scaleFactor : 1f;
+        float lift = Mathf.Ceil(TouchDriveControls.PedalsTopFromBottom / scale);
+        if (lift == _lift) return;
+        _lift = lift;
+
+        var corner = new Vector2(buttonCorner.x, buttonCorner.y + lift);
+        Corner((RectTransform)_buttonRoot.transform, corner);
+        if (_timingBtn != null)
+            Corner((RectTransform)_timingBtn.transform, new Vector2(corner.x, corner.y + buttonSize + 6f));
     }
 
     // Pin a control to the bottom-right corner, `margin` UI pixels in from it.

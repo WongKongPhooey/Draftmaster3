@@ -35,10 +35,11 @@ public class TouchDriveControls : MonoBehaviour
     public static float Throttle => Active ? _state.Throttle : 0f;
     public static float Brake => Active ? _state.Brake : 0f;
 
-    // How far up from the bottom of the screen, and in from its right edge, the pedals reach, in screen
-    // pixels. The crew chief's headset button lives in that corner and steps up above them while they show.
-    public static float PedalsTopFromBottom => Screen.height - (_layout.brake.y - TouchLayout.Slop * _layout.unit);
-    public static float PedalsRightInset => Screen.width - _layout.throttle.xMax;
+    // How far up from the bottom of the screen the pedals reach, in screen pixels; 0 while the controls are
+    // put away. The crew chief's headset button shares that corner and stands on top of the pedals while
+    // they show.
+    public static float PedalsTopFromBottom =>
+        Active ? UnityEngine.Device.Screen.height - (_layout.brake.y - TouchLayout.Slop * _layout.unit) : 0f;
 
     // A device the player drives with their thumbs: a phone or tablet, or the editor's Device Simulator
     // pretending to be one.
@@ -58,6 +59,7 @@ public class TouchDriveControls : MonoBehaviour
     {
         if (_instance != null && _instance != this) { Destroy(gameObject); return; }
         _instance = this;
+        useGUILayout = false;   // every control is placed by hand, and this runs on every platform
     }
 
     void OnDestroy()

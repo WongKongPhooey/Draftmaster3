@@ -4,6 +4,7 @@
     "references": [
         "Draftmaster.Chatter",
         "Draftmaster.Controls",
+        "Draftmaster.Controls.Input",
         "Draftmaster.Crowd",
         "Draftmaster.Fans",
         "Draftmaster.Fights",
@@ -12,6 +13,8 @@
         "Draftmaster.Sponsors",
         "Draftmaster.Tracks",
         "Draftmaster.Weekend",
+        "Unity.InputSystem",
+        "Unity.InputSystem.TestFramework",
         "Unity.TextMeshPro",
         "UnityEditor.TestRunner",
         "UnityEngine.TestRunner",
