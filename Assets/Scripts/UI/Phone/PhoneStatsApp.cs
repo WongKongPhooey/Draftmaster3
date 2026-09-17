@@ -49,6 +49,15 @@ public class PhoneStatsApp : PhoneApp
         if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Tab = _tab + 1;
     }
 
+    // D-pad / stick left and right, or the shoulder buttons.
+    public override void HandlePad(Gamepad pad)
+    {
+        int step = PadInput.HorizontalStep();
+        if (pad.leftShoulder.wasPressedThisFrame) step = -1;
+        if (pad.rightShoulder.wasPressedThisFrame) step = 1;
+        if (step != 0) Tab = _tab + step;
+    }
+
     public override float Draw(float x, float y, float w)
     {
         float y0 = y;

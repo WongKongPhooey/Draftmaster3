@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Draftmaster.Controls;
 
 // Top-down Hotline-Miami-style walking player. Gamepad + keyboard. Interact with nearby NPCs.
 [RequireComponent(typeof(Rigidbody2D))]
@@ -268,7 +269,9 @@ public class OnFootController : MonoBehaviour
             }
             else
             {
-                var npc = NearestInRange();
+                // The weekend sheet or a result card is up over the paddock and owns the confirm button (the
+                // pad's A books a session there); the press is theirs, not the nearest NPC's.
+                var npc = WeekendModal.AnyOpen ? null : NearestInRange();
                 if (npc != null)
                 {
                     npc.SetInteractor(transform);
@@ -439,7 +442,7 @@ public class OnFootController : MonoBehaviour
     bool ReadRunHeld()
     {
         var gp = Gamepad.current;
-        if (gp != null && gp.leftShoulder.isPressed) return true;
+        if (gp != null && PadInput.Control(gp, PadBindings.Run).isPressed) return true;
         var kb = Keyboard.current;
         if (kb != null && kb.leftShiftKey.isPressed) return true;
         return false;
@@ -449,7 +452,7 @@ public class OnFootController : MonoBehaviour
     {
         bool held = false;
         var gp = Gamepad.current;
-        if (gp != null) held |= gp.buttonSouth.isPressed;
+        if (gp != null) held |= PadInput.Control(gp, PadBindings.Interact).isPressed;
         var kb = Keyboard.current;
         if (kb != null) held |= kb.eKey.isPressed || kb.spaceKey.isPressed;
 

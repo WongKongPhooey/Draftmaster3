@@ -562,26 +562,40 @@ chair per driver, and booking → objective → walk → talk actually connects)
 
 # Play-mode keys
 
-| Key | Panel |
-| --- | --- |
-| `Esc` | Pause menu (closes the phone first if it's up) |
-| `P` | Phone (pad: View / Create) — on foot only: Schedule, Tasks, Notes, SoBuzz, Messages, Stats (Points + DrivR form guide; ←/→ swaps tab) |
-| `T` | Travel to whatever the weekend has you booked in for (only while an appointment is up) |
-| `Tab` (hold) | Expand the running-order board to the full field |
-| `F1` | Lap timing readout |
-| `F2` | Running-order board (in practice/qualifying it ranks on best lap) |
-| `F3` | TEAM box — mid-race car switch |
-| `F4` | Rivalry standings |
-| `F5` | Driver dossier |
-| `F6` | Tyre temp/wear **and** sponsor board **and** the UI-kit showcase (clash) |
-| `F7` | Player telemetry |
-| `F8` | Formation-lap diagnostics — gap / closing speed / state per car |
-| `F9` | Handling tuner **and** travel-map dev hotkey (clash) |
-| `F10` | Race weekend schedule — the three-day timetable |
-| `F11` | Live timing for the session you are watching from a grandstand |
-| `C` | Crew chief mode — same as the headset button in the bottom-right corner of the HUD |
-| `V` | Drive / Broadcast toggle — keyboard only; the car is handed over by stepping out of it |
-| `L` | Pit limiter |
+Pad column uses Xbox names; a PlayStation pad gets its own (A = Cross, B = Circle, X = Square, Y = Triangle,
+LB/RB = L1/R1, View = Create, Menu = Options). The pad buttons live in `Draftmaster.Controls.PadBindings`,
+and `PadBindingsTests` fails if two shortcuts land on one button in the same context without saying why.
+"Car" / "foot" is which context the pad button answers in — the d-pad means different things in each.
+
+| Key | Pad | Panel |
+| --- | --- | --- |
+| `Esc` | Menu (B closes) | Pause menu (closes the phone first if it's up). On a pad the d-pad moves a cursor and A presses the row |
+| `E` / `Space` | A | Interact / talk / advance a line (foot) |
+| `Left Shift` | LB (hold) | Run (foot) |
+| `P` | View | Phone — on foot only: Schedule, Tasks, Notes, SoBuzz, Messages, Stats (Points + DrivR form guide; ←/→ or LB/RB swaps tab). B backs out |
+| `P` | Y | Call a tow when stranded on track (car) |
+| `T` | Y | Travel to whatever the weekend has you booked in for (foot, only while an appointment is up) |
+| `Q` | D-pad up | Bring the objective strip back (foot) |
+| `Tab` (hold) | RB (hold) | Expand the running-order board to the full field |
+| `F1` | D-pad down | Lap timing readout (car) |
+| `F2` | D-pad up | Running-order board (car; in practice/qualifying it ranks on best lap) |
+| `F3` | LB | TEAM box — mid-race car switch (car) |
+| `F4` | D-pad right | Rivalry standings (car) |
+| `F5` | — | Driver dossier (dev) |
+| `F6` | D-pad left | Tyre temp/wear (car) **and** sponsor board **and** the UI-kit showcase (clash; the last two are dev, keyboard only) |
+| `F7` | — | Player telemetry (dev) |
+| `F8` | — | Formation-lap diagnostics — gap / closing speed / state per car (dev) |
+| `F9` | — | Handling tuner **and** travel-map dev hotkey (clash, dev) |
+| `F10` | D-pad down | Race weekend schedule — the three-day timetable (pad opens it on foot; inside it the d-pad selects, A books, B closes) |
+| `F11` | X | Live timing for the session you are watching from a grandstand |
+| `E` | Y | Get up out of a grandstand seat |
+| `C` | X | Crew chief mode — same as the headset button in the bottom-right corner of the HUD |
+| `V` | B | Drive / Broadcast toggle (pad: from the seat only) |
+| `L` | Y | Pit limiter (car) |
+
+Prompts follow the device touched last, not the one plugged in: world-space keycaps (`InputPromptGlyph`),
+the bottom-of-screen hint plate and every panel's key tab swap to the pad's button icon
+(`Assets/Resources/UI/Prompts/pad_{xbox|ps}_*.png`, Kenney input prompts) and back again.
 
 Free: `F12`.
 

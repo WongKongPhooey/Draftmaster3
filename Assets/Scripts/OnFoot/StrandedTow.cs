@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Draftmaster.Controls;
 
 // The way out of a car that is no longer going anywhere.
 //
@@ -10,7 +11,9 @@ using UnityEngine.InputSystem;
 // crew start on it there (PitCrewRepair), which is the part that makes the crash cost something.
 //
 // The key is P, which is also the phone's. They never overlap: the phone is an on-foot thing and this is
-// only ever offered from the driving seat, so at any moment exactly one of them is listening.
+// only ever offered from the driving seat, so at any moment exactly one of them is listening. On a pad it
+// is the pit limiter's button (PadBindings.Tow), which only arms inside the pit lane — and a car in the pit
+// lane is never offered a tow.
 //
 // Self-installing like the rest of the in-race furniture: it finds the PitLaneStart that owns the
 // on-foot/car handover and needs no wiring.
@@ -68,7 +71,8 @@ public class StrandedTow : MonoBehaviour
         Offer(true);
 
         var kb = Keyboard.current;
-        if (kb != null && towKey != Key.None && kb[towKey].wasPressedThisFrame) Tow();
+        if ((kb != null && towKey != Key.None && kb[towKey].wasPressedThisFrame) ||
+            PadInput.PressedDriving(PadBindings.Tow)) Tow();
     }
 
     // The scene's handover owner and the car it owns. Both die on a scene load, so this re-looks now and
@@ -110,7 +114,7 @@ public class StrandedTow : MonoBehaviour
         _offering = show;
 
         if (show)
-            ControlHints.ShowSticky("tow", towKey.ToString().ToUpperInvariant(), "Y",
+            ControlHints.ShowSticky("tow", towKey.ToString().ToUpperInvariant(), InputGlyphs.Pad(PadBindings.Tow),
                                     "Call a tow back to the pits");
         else
             ControlHints.Hide("tow");

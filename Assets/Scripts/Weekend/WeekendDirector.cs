@@ -2,6 +2,7 @@ using Draftmaster.Weekend;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using Draftmaster.Controls;
 
 // Runs the race weekend: owns the timetable, opens the schedule screen, starts whichever activity the
 // player picks, and settles what it earned them.
@@ -372,15 +373,20 @@ public class WeekendDirector : MonoBehaviour
             BookNextUp();
         }
 
-        var kb = Keyboard.current;
-        if (kb == null) return;
         // The sheet books the host's weekend, and a booking moves the clock for both players. Only the
         // player whose career it is opens it; the guest is carried by whatever the host commits to.
         if (Coop.IsGuest) return;
         // Not while an obligation is actually happening: mid-conversation with the crew chief, or sat in
         // the stand watching somebody else's race.
-        if (kb[OpenKey].wasPressedThisFrame && !NPCInteractable.AnyConversationActive && !GrandstandSpectate.Watching)
+        if (NPCInteractable.AnyConversationActive || GrandstandSpectate.Watching) return;
+
+        var kb = Keyboard.current;
+        if (kb != null && kb[OpenKey].wasPressedThisFrame)
             WeekendScheduleUI.Toggle();
+        // The pad opens it from the paddock (in the car its d-pad belongs to the race panels). Open only: once
+        // it is up the d-pad moves its selection and the back button closes it.
+        else if (PadInput.PressedOnFoot(PadBindings.WeekendSheet))
+            WeekendScheduleUI.Open();
     }
 
     // ------------------------------------------------------------------ starting an activity
@@ -486,11 +492,17 @@ public class WeekendDirector : MonoBehaviour
     {
         string k = WeekendScripts.PhoneKeyName();
 
+        // A note is kept for good, and the player may pick either device up later, so it names both.
+        string pad = InputGlyphs.PadName(PadBindings.Phone);
+        string padOpen = InputGlyphs.PadName(PadBindings.Confirm);
+        string padBack = InputGlyphs.PadName(PadBindings.Back);
+
         PhoneNotes.Record(
             "phone.orientation",
             "How the phone works",
             "Crew chief",
             $"{k} opens it while you're on foot - arrows to move, E to open a tile, Esc to back out. " +
+            $"On a pad: {pad} opens it, the d-pad moves, {padOpen} opens a tile, {padBack} backs out. " +
             "SCHEDULE is what's on today. TASKS is everything outstanding, and the number on it counts the " +
             "jobs that are finished and want handing back to whoever asked. NOTES is this - every favour " +
             "you agree to in the paddock, with the name of who wanted it.");

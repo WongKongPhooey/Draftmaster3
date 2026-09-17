@@ -83,9 +83,12 @@ public class CoopJoinPanel : MonoBehaviour
 
     void Update()
     {
+        if (Time.frameCount == _openedFrame) return;
+        // Typing the code needs a keyboard; backing out does not.
+        if (PadInput.WasPressed(Draftmaster.Controls.PadBindings.Back)) { Destroy(gameObject); return; }
+
         var kb = Keyboard.current;
         if (kb == null) return;
-        if (Time.frameCount == _openedFrame) return;
 
         if (kb.escapeKey.wasPressedThisFrame) { Destroy(gameObject); return; }
         if (kb.backspaceKey.wasPressedThisFrame && _code.Length > 0 && !_joining)
@@ -181,6 +184,6 @@ public class CoopJoinPanel : MonoBehaviour
         if (PixelGUI.Button(new Rect(c.x, cy, c.width, buttonH), "BACK")) Destroy(gameObject);
 
         GUI.Label(new Rect(c.x, c.yMax - PixelGUI.LineH, c.width, PixelGUI.LineH),
-                  "TYPE THE CODE  ·  ENTER JOIN  ·  ESC BACK", PixelGUI.Footer);
+                  $"TYPE THE CODE  ·  ENTER JOIN  ·  {InputGlyphs.Back} BACK", PixelGUI.Footer);
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Draftmaster.Controls;
 
 // Times every car's laps off the RacePositionTracker's lap counter. A lap only counts if the car
 // stayed on legal surface and never hit a wall: going fully off onto grass/gravel or a barrier
@@ -102,7 +103,8 @@ public class LapTimingManager : MonoBehaviour
 
     void Update()
     {
-        if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) showPlayerHud = !showPlayerHud;
+        if ((toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) || PadInput.PressedDriving(PadBindings.LapTiming))
+            showPlayerHud = !showPlayerHud;
         // The loaded package knows its own builder; only an authored scene needs looking through, and
         // then on a timer — this used to be a whole-scene search on every frame of every session that
         // has no track in it at all (the paddock, the garage, a menu sat behind the HUD).
@@ -314,7 +316,7 @@ public class LapTimingManager : MonoBehaviour
 
         var plate = new Rect(x, y, w, h);
         PixelGUI.Panel(plate);
-        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString());
+        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.LapTiming);
         GUI.Label(new Rect(x + pad, y + pad, w - pad * 2f, line), strip, style);
 
         if (invalid)

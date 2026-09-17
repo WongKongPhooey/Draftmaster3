@@ -17,4 +17,5 @@
   <Project Path="Draftmaster.Fights.csproj" />
   <Project Path="PlayFabSDKEditor.csproj" />
   <Project Path="Draftmaster.Fans.csproj" />
+  <Project Path="Draftmaster.Controls.csproj" />
 </Solution>

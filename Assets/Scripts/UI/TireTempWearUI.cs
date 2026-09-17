@@ -1,4 +1,5 @@
 using UnityEngine;
+using Draftmaster.Controls;
 
 // On-screen 2×2 tyre readout for the player's car: each corner shows its temperature and the life left in
 // the tyre (100 fresh, counting down to 0).
@@ -53,7 +54,8 @@ public class TireTempWearUI : MonoBehaviour
 
     void Update()
     {
-        if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) visible = !visible;
+        if ((toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) || PadInput.PressedDriving(PadBindings.Tyres))
+            visible = !visible;
         if (tires == null && autoFindPlayer) tires = FindPlayerTires();
     }
 
@@ -85,7 +87,7 @@ public class TireTempWearUI : MonoBehaviour
 
         var plate = new Rect(x0 - pad, y0 - pad, boardW + pad * 2f, boardH + pad * 2f);
         PixelGUI.Panel(plate);
-        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString());
+        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.Tyres);
 
         DrawTyre("FL", TireModel.FL, x0, y0, cw, ch);
         DrawTyre("FR", TireModel.FR, x0 + cw + g, y0, cw, ch);

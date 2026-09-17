@@ -30,6 +30,9 @@ public abstract class PhoneApp
     // (scroll). Left/right, A/D and the rest are the app's — the STATS tabs use them.
     public virtual void HandleKeys(Keyboard kb) { }
 
+    // The pad's turn, after the device has taken its back button and the d-pad / stick up and down (scroll).
+    public virtual void HandlePad(Gamepad pad) { }
+
     // Put the device's scroll back to the top: an app that swaps what it is showing (a tab, a thread) would
     // otherwise open the new page part-way down, wherever the last one was left.
     protected static void ScrollToTop() => PhoneUI.ResetScroll();

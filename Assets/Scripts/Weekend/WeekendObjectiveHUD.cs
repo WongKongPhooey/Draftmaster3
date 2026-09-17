@@ -1,3 +1,4 @@
+using Draftmaster.Controls;
 using Draftmaster.Weekend;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,9 +9,9 @@ using UnityEngine.InputSystem;
 // walk there. This is the only thing on screen that says so: a strip at the top with the booking, the place
 // and the distance left, and an arrow at the edge of the screen pointing at it while it is off camera.
 //
-// T walks you there. The paddock is a big place and the schedule already charges you the hour; making
-// somebody cross it four times a day at 3 m/s is a tax on the second playthrough rather than a feature, so
-// the skip is always available and always visible.
+// T (the pad's north face button) walks you there. The paddock is a big place and the schedule already
+// charges you the hour; making somebody cross it four times a day at 3 m/s is a tax on the second
+// playthrough rather than a feature, so the skip is always available and always visible.
 //
 // Self-installing, drawn with PixelGUI like the rest of the race-side HUD, and silent whenever there is no
 // appointment.
@@ -44,7 +45,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
     float _slide;
 
     // Asking for it back. Every F key in the game is taken (F1-F12 all answer something), so the recall is
-    // Q — the other way in is clicking or tapping the marker itself.
+    // Q — the other way in is clicking or tapping the marker itself. On a pad it is d-pad up: the strip comes
+    // down from the top.
     public const Key RecallKey = Key.Q;
 
     // What the strip is drawing, worked out once a frame in Update.
@@ -59,6 +61,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
     bool _here;
     int _metresLeft = -1;
     string _detailText = "", _footerText = "";
+    // Which device the two lines were written for; picking the pad up rewrites them.
+    int _glyphVersion = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
@@ -130,11 +134,12 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
         if (!Available) return;
         var kb = Keyboard.current;
-        if (kb == null) return;
         // T walks you there whether or not the strip happens to be on screen — the booking is live either
         // way, and hiding the prompt is not the same as taking the shortcut away.
-        if (kb[TravelKey].wasPressedThisFrame) TravelThere();
-        if (kb[RecallKey].wasPressedThisFrame) RevealNow();
+        if ((kb != null && kb[TravelKey].wasPressedThisFrame) || PadInput.PressedOnFoot(PadBindings.TravelThere))
+            TravelThere();
+        if ((kb != null && kb[RecallKey].wasPressedThisFrame) || PadInput.PressedOnFoot(PadBindings.RecallObjective))
+            RevealNow();
     }
 
     // Announce a new booking, and move the strip toward wherever it should be.
@@ -180,10 +185,12 @@ public class WeekendObjectiveHUD : MonoBehaviour
         // The two lines only change on a whole metre, on arriving, or on the booking itself changing,
         // so they are rebuilt then rather than every frame — a walk across the paddock is otherwise a
         // few hundred dead strings.
-        if (activity != previous || here != _here || metres != _metresLeft || _detailText.Length == 0)
+        if (activity != previous || here != _here || metres != _metresLeft || _detailText.Length == 0 ||
+            _glyphVersion != InputGlyphs.Version)
         {
             _here = here;
             _metresLeft = metres;
+            _glyphVersion = InputGlyphs.Version;
             // An on-track session that has not started yet is walked to at the motorhome, not the car: the
             // car is in the team's garage until the paddock turns over for the session, and the turnover is
             // walking in. So it reads as a door rather than as a press.
@@ -191,11 +198,12 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
             _detailText = here
                 ? (intoTheRV ? "You're here — walk in and they'll roll the car out"
-                             : "You're here — press E to " + Verb(activity))
+                             : "You're here — press " + InputGlyphs.Label("E", PadBindings.Interact) + " to " + Verb(activity))
                 : $"{Capitalise(intoTheRV ? WeekendVenues.Directions(WeekendVenue.Motorhome) : WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
             _footerText = here
                 ? activity.Clock + "  ·  " + WeekendAppointment.TargetLabel()
-                : $"{activity.Clock}  ·  [T] TRAVEL THERE  ·  [Q] AGAIN";
+                : $"{activity.Clock}  ·  [{InputGlyphs.Label(TravelKey.ToString().ToUpperInvariant(), PadBindings.TravelThere)}] TRAVEL THERE" +
+                  $"  ·  [{InputGlyphs.Label(RecallKey.ToString().ToUpperInvariant(), PadBindings.RecallObjective)}] AGAIN";
         }
     }
 

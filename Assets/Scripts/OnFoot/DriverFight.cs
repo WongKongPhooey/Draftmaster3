@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Draftmaster.Fights;
+using Draftmaster.Controls;
 
 // Runs one paddock scrap between the player and a rival driver, from the moment the dialogue option is taken
 // to the moment the two of them are walked apart.
@@ -123,8 +124,8 @@ public class DriverFight : MonoBehaviour
         ControlHints.Show("fight", InputGlyphs.ShoveKeyboard, InputGlyphs.ShovePad, "Shove", 6f);
         if (enableHooks)
         {
-            ControlHints.Show("fightleft", "J", "LB", "Left hook", 6f);
-            ControlHints.Show("fightright", "K", "RB", "Right hook", 6f);
+            ControlHints.Show("fightleft", "J", InputGlyphs.Pad(PadBindings.LeftHook), "Left hook", 6f);
+            ControlHints.Show("fightright", "K", InputGlyphs.Pad(PadBindings.RightHook), "Right hook", 6f);
         }
 
         if (showTutorial) BeginTutorial();
@@ -225,16 +226,15 @@ public class DriverFight : MonoBehaviour
         if (RacePauseMenu.IsPaused) return;
 
         var kb = Keyboard.current;
-        var gp = Gamepad.current;
         var mouse = Mouse.current;
 
-        bool shove = (kb != null && kb.spaceKey.isPressed) || (gp != null && gp.buttonWest.isPressed);
+        bool shove = (kb != null && kb.spaceKey.isPressed) || PadInput.IsHeld(PadBindings.Shove);
         bool left = enableHooks && ((kb != null && kb.jKey.isPressed) ||
                                     (mouse != null && mouse.leftButton.isPressed) ||
-                                    (gp != null && gp.leftShoulder.isPressed));
+                                    PadInput.IsHeld(PadBindings.LeftHook));
         bool right = enableHooks && ((kb != null && kb.kKey.isPressed) ||
                                      (mouse != null && mouse.rightButton.isPressed) ||
-                                     (gp != null && gp.rightShoulder.isPressed));
+                                     PadInput.IsHeld(PadBindings.RightHook));
 
         if (shove && !_shoveHeldPrev) _player.TryThrow(FightMove.Shove);
         else if (left && !_leftHeldPrev) _player.TryThrow(FightMove.LeftHook);

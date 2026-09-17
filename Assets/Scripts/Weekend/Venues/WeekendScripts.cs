@@ -20,7 +20,7 @@ public static class WeekendScripts
                 return TeamMeetingContent.Build(a);
 
             case ActivityKind.Orientation:
-                return OrientationContent.Build(a, PhoneKeyName());
+                return OrientationContent.Build(a, PhoneButtonName(), PhoneWords());
 
             case ActivityKind.PressConference:
             case ActivityKind.MediaHit:
@@ -54,6 +54,24 @@ public static class WeekendScripts
         var key = phone != null ? phone.toggleKey : UnityEngine.InputSystem.Key.P;
         if (key == UnityEngine.InputSystem.Key.None) key = UnityEngine.InputSystem.Key.P;
         return key.ToString().ToUpperInvariant();
+    }
+
+    // What the briefing calls the phone button: the key, or the pad's button while a pad is in use. Kept
+    // apart from PhoneKeyName, which is the keyboard half of a two-device control hint.
+    static string PhoneButtonName() =>
+        InputGlyphs.Label(PhoneKeyName(), Draftmaster.Controls.PadBindings.Phone);
+
+    // The rest of the phone's controls, worded for the device in the player's hands.
+    static OrientationContent.PhoneWords PhoneWords()
+    {
+        if (!InputGlyphs.UsingGamepad) return new OrientationContent.PhoneWords();
+        return new OrientationContent.PhoneWords
+        {
+            move = "The d-pad",
+            open = InputGlyphs.PadName(Draftmaster.Controls.PadBindings.Confirm),
+            back = InputGlyphs.PadName(Draftmaster.Controls.PadBindings.Back),
+            sheet = "d-pad down",
+        };
     }
 
     // ------------------------------------------------------------------ the press

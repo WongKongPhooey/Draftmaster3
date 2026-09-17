@@ -1,3 +1,4 @@
+using Draftmaster.Controls;
 using UnityEngine;
 
 // World-space "press this key" button icon. Replaces the giant yellow TextMesh "E" that used to float over
@@ -10,6 +11,9 @@ using UnityEngine;
 //
 // Callers give a world height in metres and get the icon at that size whatever the sprite's import PPU is,
 // so re-importing the art at a different pixels-per-unit can't change how big the prompt looks in game.
+//
+// While a pad is the device in use the keycap is swapped for that pad's button (A / CROSS for interact) by an
+// InputPromptGlyph on the icon, and swapped back the moment the keyboard is touched again.
 public static class InputPromptIcon
 {
     public const string InteractKeyResource = "UI/Prompts/key_e";
@@ -36,8 +40,10 @@ public static class InputPromptIcon
 
     // Build the icon under `parent`, sized so it stands `worldHeight` metres tall. Returns null if the art
     // is missing. The renderer is left for the caller to position — this only handles art, size and sorting.
+    // `pad` is the button that does the same job on a pad — the interact button unless told otherwise.
     public static SpriteRenderer Create(Transform parent, string name, float worldHeight,
-                                        string sortingLayerName, int sortingOrder)
+                                        string sortingLayerName, int sortingOrder,
+                                        PadButton pad = PadBindings.Interact)
     {
         var sprite = InteractKey;
         if (sprite == null) return null;
@@ -54,6 +60,7 @@ public static class InputPromptIcon
         sr.sharedMaterial = UnlitMaterial();
 
         Fit(go.transform, sprite, worldHeight);
+        if (pad != PadButton.None) InputPromptGlyph.Attach(sr, sprite, pad, worldHeight);
         return sr;
     }
 

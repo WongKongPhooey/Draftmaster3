@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using Draftmaster.Controls;
 
 // Pause menu for the spline-based race scenes. Esc freezes time and opens a small centred panel
 // with the driving-aid toggles (racing line), a resume button and the way back to the title.
@@ -34,6 +35,12 @@ public class RacePauseMenu : MonoBehaviour
     // How long "COULDN'T OPEN" stays on the row before it goes back to offering. Long enough to be read
     // on the way back from a several-second wait, short enough not to outlive the player's next try.
     const float FailureSeconds = 8f;
+
+    // The pad's cursor: which row the confirm button presses. None while the menu is being driven by the mouse.
+    // Rows are steered in Update and pressed there too, never inside an IMGUI pass (see the note below).
+    enum PadRow { None, RacingLine, MiniMap, Missions, Schedule, EndSession, Coop, QuitToTitle, Resume }
+    PadRow _padFocus;
+    readonly System.Collections.Generic.List<PadRow> _padRows = new();
 
     // What the board was told to do this frame, settled once every layout scope has closed.
     //
@@ -90,12 +97,87 @@ public class RacePauseMenu : MonoBehaviour
             if (IsPaused) Resume();
             else Pause();
         }
+        // The pad's Menu / Options button does the same, and its back button closes the menu again. Not while
+        // the weekend sheet or a conversation is up: those are what the pad is talking to.
+        else if (!WeekendModal.AnyOpen && !NPCInteractable.AnyConversationActive && !DialogueChoiceUI.IsOpen)
+        {
+            if (PadInput.WasPressed(PadBindings.Pause))
+            {
+                if (IsPaused) Resume();
+                else Pause();
+                PadInput.Consume();
+            }
+            else if (IsPaused && PadInput.WasPressed(PadBindings.Back))
+            {
+                Resume();
+                PadInput.Consume();
+            }
+            else if (IsPaused) PadNavigate();
+        }
+    }
+
+    // The rows a pad can land on, in the order they are drawn. Mirrors OnGUI's own conditions.
+    void BuildPadRows()
+    {
+        _padRows.Clear();
+        _padRows.Add(PadRow.RacingLine);
+        _padRows.Add(PadRow.MiniMap);
+        _padRows.Add(PadRow.Missions);
+        _padRows.Add(PadRow.Schedule);
+        if (PracticeDirector.PauseMenuExitLabel != null) _padRows.Add(PadRow.EndSession);
+        var launcher = NetworkLauncher.Instance;
+        var coop = CoopRowState(launcher != null && launcher.Busy, Coop.Active, Coop.IsGuest, Coop.GuestPresent,
+                                launcher != null && !string.IsNullOrEmpty(launcher.JoinCode),
+                                Time.unscaledTime < _coopFailedUntil);
+        if (coop == CoopRow.Offer || coop == CoopRow.Retry) _padRows.Add(PadRow.Coop);
+        _padRows.Add(PadRow.QuitToTitle);
+        _padRows.Add(PadRow.Resume);
+    }
+
+    void PadNavigate()
+    {
+        BuildPadRows();
+        int step = PadInput.VerticalStep();
+        if (step != 0)
+        {
+            int i = _padRows.IndexOf(_padFocus);
+            // First push from a mouse-driven menu lands on RESUME, the row a pad player most likely wants.
+            i = i < 0 ? _padRows.IndexOf(PadRow.Resume) : (i + step + _padRows.Count) % _padRows.Count;
+            _padFocus = _padRows[i];
+        }
+        else if (!_padRows.Contains(_padFocus)) _padFocus = PadRow.None;
+
+        if (_padFocus == PadRow.None || !PadInput.WasPressed(PadBindings.Confirm)) return;
+        PadInput.Consume();
+        switch (_padFocus)
+        {
+            case PadRow.RacingLine: RacingLineDisplay.Visible = !RacingLineDisplay.Visible; break;
+            case PadRow.MiniMap: TrackMiniMap.Visible = !TrackMiniMap.Visible; break;
+            case PadRow.Missions: _showMissions = !_showMissions; break;
+            case PadRow.Schedule: Resume(); WeekendScheduleUI.Open(); break;
+            case PadRow.EndSession:
+                var director = PracticeDirector.Instance;
+                Resume();
+                if (director != null) director.StartRace();
+                break;
+            case PadRow.Coop: HostCoop(); break;
+            case PadRow.QuitToTitle: QuitToTitle(); break;
+            case PadRow.Resume: Resume(); break;
+        }
+    }
+
+    // The pad's cursor, just left of the row it would press.
+    void PadCursor(PadRow row, Rect r)
+    {
+        if (_padFocus != row || !InputGlyphs.UsingGamepad) return;
+        PixelGUI.DrawCursor(new Rect(r.x - PixelGUI.Px(9f), r.y, r.width, r.height), PixelGUI.Px(8f));
     }
 
     void Pause()
     {
         if (IsPaused) return;
         IsPaused = true;
+        _padFocus = InputGlyphs.UsingGamepad ? PadRow.Resume : PadRow.None;
         _prevTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
         Time.timeScale = 0f;
         AudioListener.pause = true;
@@ -162,21 +244,25 @@ public class RacePauseMenu : MonoBehaviour
         cy += gap * 2f;
 
         bool line = RacingLineDisplay.Visible;
+        PadCursor(PadRow.RacingLine, new Rect(content.x, cy, content.width, row));
         bool newLine = GUI.Toggle(new Rect(content.x, cy, content.width, row), line, "  Racing line", _toggle);
         if (newLine != line) RacingLineDisplay.Visible = newLine;
         cy += row;
 
         bool map = TrackMiniMap.Visible;
+        PadCursor(PadRow.MiniMap, new Rect(content.x, cy, content.width, row));
         bool newMap = GUI.Toggle(new Rect(content.x, cy, content.width, row), map, "  Mini-map", _toggle);
         if (newMap != map) TrackMiniMap.Visible = newMap;
         cy += row + gap;
 
+        PadCursor(PadRow.Missions, new Rect(content.x, cy, content.width, row));
         if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row),
                          _showMissions ? "MISSIONS ◂" : "MISSIONS ▸", _showMissions))
             _showMissions = !_showMissions;
         cy += row + gap;
 
         // The weekend timetable: what else is on today besides the session you are sat in.
+        PadCursor(PadRow.Schedule, new Rect(content.x, cy, content.width, row));
         if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row), "WEEKEND SCHEDULE", false))
         {
             Resume();
@@ -190,6 +276,7 @@ public class RacePauseMenu : MonoBehaviour
         string endLabel = PracticeDirector.PauseMenuExitLabel;
         if (endLabel != null)
         {
+            PadCursor(PadRow.EndSession, new Rect(content.x, cy, content.width, row));
             if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row), endLabel, false))
             {
                 var director = PracticeDirector.Instance;
@@ -202,6 +289,7 @@ public class RacePauseMenu : MonoBehaviour
         // Co-op lives here rather than on the title screen because "open my career to a friend" only means
         // anything once there IS a career to open — the host keeps playing exactly where they are and the
         // guest is pulled to them. The join half is on the title screen, where an arriving guest starts.
+        PadCursor(PadRow.Coop, new Rect(content.x, cy, content.width, row));
         DrawCoopRow(new Rect(content.x, cy, content.width, row));
         cy += row + gap;
 
@@ -210,10 +298,14 @@ public class RacePauseMenu : MonoBehaviour
         float resumeY = content.yMax - buttonH - footer;
         // The way back to the front of the game. Without it a race is a one-way trip and the only exit
         // from the demo is stopping play mode.
+        PadCursor(PadRow.QuitToTitle, new Rect(content.x, resumeY - buttonH - gap, content.width, buttonH));
+        PadCursor(PadRow.Resume, new Rect(content.x, resumeY, content.width, buttonH));
         if (PixelGUI.Button(new Rect(content.x, resumeY - buttonH - gap, content.width, buttonH), "QUIT TO TITLE"))
             QuitToTitle();
         if (PixelGUI.Button(new Rect(content.x, resumeY, content.width, buttonH), "RESUME")) Resume();
-        GUI.Label(new Rect(content.x, content.yMax - footer, content.width, footer), "ESC TO RESUME", PixelGUI.Footer);
+        GUI.Label(new Rect(content.x, content.yMax - footer, content.width, footer),
+                  InputGlyphs.Label(toggleKey.ToString().ToUpperInvariant(), PadBindings.Back) + " TO RESUME",
+                  PixelGUI.Footer);
 
         if (_showMissions) DrawMissions(x + w + PixelGUI.Px(6f), y);
     }

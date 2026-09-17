@@ -241,7 +241,7 @@ public class PracticeDirector : MonoBehaviour
         float remaining = _qualiEndTime - Time.time;
         string text = remaining > 0f
             ? $"QUALIFYING  {Mathf.FloorToInt(remaining / 60f)}:{Mathf.FloorToInt(remaining % 60f):00}"
-            : "QUALIFYING COMPLETE · ESC TO START THE RACE";
+            : $"QUALIFYING COMPLETE · {InputGlyphs.Label("ESC", Draftmaster.Controls.PadBindings.Pause)} TO START THE RACE";
 
         // Up in the corner itself now. It used to be pushed down to clear the red session button that sat
         // above it, and that button is gone.

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Controls;
 using Draftmaster.Weekend;
 using UnityEngine;
 
@@ -9,7 +10,9 @@ using UnityEngine;
 // right is the thing that makes it a schedule rather than a menu: doing something moves it, and anything
 // the clock has walked past is gone.
 //
-// Opened with F10, from the pause menu, from the phone, and on its own after every completed activity.
+// Opened with F10 (d-pad down on foot), from the pause menu, from the phone, and on its own after every
+// completed activity. On a pad the d-pad or stick moves the selection, the confirm button books it and the
+// back button closes the sheet.
 public class WeekendScheduleUI : MonoBehaviour
 {
     public static WeekendScheduleUI Instance { get; private set; }
@@ -22,6 +25,9 @@ public class WeekendScheduleUI : MonoBehaviour
 
     string _toast = "";
     float _toastUntil;
+
+    // The frame the sheet opened on. The d-pad press that opened it must not also move the selection.
+    int _openedFrame = -1;
 
     static WeekendScheduleUI Ensure()
     {
@@ -55,6 +61,7 @@ public class WeekendScheduleUI : MonoBehaviour
         ui._open = true;
         ui._viewing = WeekendLedger.WeekendOver ? WeekendSlot.SundayPM : WeekendLedger.CurrentSlot;
         ui._selected = 0;
+        ui._openedFrame = Time.frameCount;
         WeekendModal.Push();
     }
 
@@ -73,6 +80,43 @@ public class WeekendScheduleUI : MonoBehaviour
         var ui = Ensure();
         ui._toast = message ?? "";
         ui._toastUntil = Time.unscaledTime + 4f;
+    }
+
+    // ------------------------------------------------------------------ pad
+
+    // Once a frame, not in OnGUI: IMGUI runs several event passes a frame, and each would take the press
+    // again. Booking here also keeps the change out of the middle of an IMGUI pass.
+    void Update()
+    {
+        if (!_open || Time.frameCount == _openedFrame) return;
+        if (NPCInteractable.AnyConversationActive || GrandstandSpectate.Watching || WeekendResultCard.IsOpen) return;
+
+        if (PadInput.WasPressed(PadBindings.Back))
+        {
+            PadInput.Consume();
+            Close();
+            return;
+        }
+
+        int step = PadInput.VerticalStep();
+        bool confirm = PadInput.WasPressed(PadBindings.Confirm);
+        if (step == 0 && !confirm) return;
+
+        var timetable = WeekendDirector.Timetable;
+        if (timetable == null) return;
+        var rows = timetable.InSlot(_viewing);
+        if (rows.Count == 0) return;
+        rows.Sort((a, b) => a.startMinute.CompareTo(b.startMinute));
+
+        _selected = Mathf.Clamp(_selected + step, 0, rows.Count - 1);
+
+        // Begin re-checks the booking and says why when it cannot be done, which is the feedback the greyed-out
+        // button gives a mouse.
+        if (confirm)
+        {
+            PadInput.Consume();
+            WeekendDirector.Begin(rows[_selected]);
+        }
     }
 
     // ------------------------------------------------------------------ drawing
@@ -235,8 +279,12 @@ public class WeekendScheduleUI : MonoBehaviour
 
         GUI.EndScrollView();
 
-        int nudge = UpDownPressed();
-        if (nudge != 0) _selected = Mathf.Clamp(_selected + nudge, 0, rows.Count - 1);
+        // Once per frame: every IMGUI event pass would otherwise take the same key press again.
+        if (Event.current.type == EventType.Repaint)
+        {
+            int nudge = UpDownPressed();
+            if (nudge != 0) _selected = Mathf.Clamp(_selected + nudge, 0, rows.Count - 1);
+        }
     }
 
     static Color ColourFor(WeekendActivity a, WeekendLedger.State state) => state switch
@@ -474,7 +522,10 @@ public class WeekendScheduleUI : MonoBehaviour
         var foot = PixelGUI.Footer;
         var a = foot.alignment;
         foot.alignment = TextAnchor.MiddleCenter;
-        GUI.Label(new Rect(r.x + bw, r.y, switchX - r.x - bw, bh), "W/S SELECT  ·  F10 CLOSE", foot);
+        string keys = InputGlyphs.UsingGamepad
+            ? $"D-PAD SELECT  ·  {InputGlyphs.PadName(PadBindings.Confirm)} GO  ·  {InputGlyphs.PadName(PadBindings.Back)} CLOSE"
+            : "W/S SELECT  ·  F10 CLOSE";
+        GUI.Label(new Rect(r.x + bw, r.y, switchX - r.x - bw, bh), keys, foot);
         foot.alignment = a;
     }
 

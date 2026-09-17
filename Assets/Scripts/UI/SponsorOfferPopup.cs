@@ -264,8 +264,9 @@ public class SponsorOfferPopup : MonoBehaviour
             cy += row;
         }
 
-        bool hasPad = Gamepad.current != null;
-        string keys = hasPad ? "Left stick / D-pad to choose    E to answer" : "W / S to choose    E to answer";
+        string keys = InputGlyphs.UsingGamepad
+            ? $"Left stick / D-pad to choose    {InputGlyphs.Confirm} to answer"
+            : "W / S to choose    E to answer";
         GUI.Label(new Rect(x + pad, cy + PixelGUI.Px(2f), inner, footerH), keys, PixelGUI.Footer);
     }
 }

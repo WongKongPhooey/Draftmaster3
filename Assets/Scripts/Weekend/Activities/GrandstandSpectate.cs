@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Controls;
 using Draftmaster.Weekend;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -118,8 +119,10 @@ public class GrandstandSpectate : MonoBehaviour
         if (_session == null) return;
 
         var kb = Keyboard.current;
-        if (kb != null && kb.escapeKey.wasPressedThisFrame && Time.unscaledTime - _startedAt > 0.3f)
+        bool quit = (kb != null && kb.escapeKey.wasPressedThisFrame) || PadInput.WasPressed(PadBindings.Back);
+        if (quit && Time.unscaledTime - _startedAt > 0.3f)
         {
+            PadInput.Consume();
             FinishNow();
             return;
         }
@@ -228,7 +231,7 @@ public class GrandstandSpectate : MonoBehaviour
         }
 
         if (PixelGUI.Button(new Rect(content.x, content.yMax - bh, content.width, bh),
-                            _finished ? "THAT'S THE RESULT" : "SEEN ENOUGH (ESC)"))
+                            _finished ? "THAT'S THE RESULT" : $"SEEN ENOUGH ({InputGlyphs.Back})"))
             FinishNow();
     }
 

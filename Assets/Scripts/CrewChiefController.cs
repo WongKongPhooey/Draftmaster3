@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using Draftmaster.Controls;
 
 // The crew chief's headset icon, bottom right of the HUD (single player). Tapping it drops the player into
 // an on-foot crew-chief character at the pit wall. It is the first of the team controls: one square glyph per
@@ -117,6 +118,9 @@ public class CrewChiefController : MonoBehaviour
             if (held && !_keyPrev) Toggle();
             _keyPrev = held;
         }
+
+        // The pad's headset button is a fight's shove, so it stands down while one is on.
+        if (!DriverFight.IsActive && PadInput.Pressed(PadBindings.CrewChief)) Toggle();
 
         // Keep the camera glued to the avatar while on foot (DriveModeController is told to leave it alone).
         if (_active && _avatar != null && cameraFollow != null && cameraFollow.target != _avatar.transform)
@@ -362,7 +366,8 @@ public class CrewChiefController : MonoBehaviour
 
         PixelGUI.Panel(new Rect(x, y, w, h));
         PixelGUI.KeyTab(new Rect(x, y, w, h),
-                        toggleKey == UnityEngine.InputSystem.Key.None ? "" : toggleKey.ToString());
+                        toggleKey == UnityEngine.InputSystem.Key.None ? "" : toggleKey.ToString(),
+                        PadBindings.CrewChief);
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
         float cx = c.x, cy = c.y;
 

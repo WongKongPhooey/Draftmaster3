@@ -222,6 +222,7 @@ public class WeekendResultCard : MonoBehaviour
 
     static bool ConfirmPressed()
     {
+        if (PadInput.WasPressed(Draftmaster.Controls.PadBindings.Confirm)) return true;
         var kb = UnityEngine.InputSystem.Keyboard.current;
         if (kb == null) return false;
         return kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame;

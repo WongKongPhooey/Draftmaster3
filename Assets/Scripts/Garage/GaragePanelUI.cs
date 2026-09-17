@@ -11,6 +11,7 @@ public class GaragePanelUI : MonoBehaviour
     GameObject _root;
     Text _title;
     Text _body;
+    Text _hint;
 
     // Create the singleton if it doesn't exist yet.
     public static GaragePanelUI Ensure()
@@ -34,8 +35,12 @@ public class GaragePanelUI : MonoBehaviour
     {
         _title.text = title;
         _body.text = body;
+        _hint.text = CloseHint();
         _root.SetActive(true);
     }
+
+    // The panel closes on the interact button that opened it — E, or the pad's.
+    static string CloseHint() => $"Press {InputGlyphs.Confirm} to close";
 
     public void Hide()
     {
@@ -87,7 +92,8 @@ public class GaragePanelUI : MonoBehaviour
 
         var hint = MakeText("Hint", card.transform, font, 24, FontStyle.Italic, TextAnchor.LowerRight,
                             new Color(1f, 1f, 1f, 0.5f));
-        hint.text = "Press E to close";
+        hint.text = CloseHint();
+        _hint = hint;
         var hrt = hint.rectTransform;
         hrt.anchorMin = new Vector2(0, 0); hrt.anchorMax = new Vector2(1, 0);
         hrt.offsetMin = new Vector2(48, 24); hrt.offsetMax = new Vector2(-48, 60);

@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "Draftmaster.Chatter",
+        "Draftmaster.Controls",
         "Draftmaster.Crowd",
         "Draftmaster.Fans",
         "Draftmaster.Fights",

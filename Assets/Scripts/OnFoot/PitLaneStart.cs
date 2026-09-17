@@ -1,4 +1,5 @@
 using System.Collections;
+using Draftmaster.Controls;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -702,7 +703,7 @@ public class PitLaneStart : MonoBehaviour
         if (!_hintedRun && !ChiefCheckInBeat.HoldsRunHint
             && (_runHintDue || Vector2.Distance(_player.transform.position, _hintOrigin) > runHintAfterMetres))
         {
-            ControlHints.Show("run", "LEFT SHIFT", "LB", "Hold to run");
+            ControlHints.Show("run", "LEFT SHIFT", InputGlyphs.Pad(PadBindings.Run), "Hold to run");
             _hintedRun = true;
             _runHintDue = false;
         }
@@ -710,7 +711,7 @@ public class PitLaneStart : MonoBehaviour
         if (!_hintedEnter && RaceWeekend.SessionLive
             && Vector2.Distance(_player.transform.position, car.transform.position) < enterHintRange)
         {
-            ControlHints.Show("entercar", "E", "E", "Get in the car");
+            ControlHints.Show("entercar", "E", InputGlyphs.Pad(PadBindings.Interact), "Get in the car");
             _hintedEnter = true;
         }
     }
@@ -762,7 +763,7 @@ public class PitLaneStart : MonoBehaviour
             _chief.SetInteractor(car.transform); // "#player" lines bubble over the car, where the driver now is
             _chief.Interact();                   // opens the first line
             _interactHeldPrev = true;            // swallow the same press that got us in the car
-            if (showControlHints) ControlHints.Show("advance", "E", "E", "Continue");
+            if (showControlHints) ControlHints.Show("advance", "E", InputGlyphs.Pad(PadBindings.Interact), "Continue");
             return;
         }
 
@@ -798,8 +799,10 @@ public class PitLaneStart : MonoBehaviour
 
         if (showControlHints)
         {
-            ControlHints.Show("drive", "W / S", "RT / LT", "Throttle and brake", 6f);
-            if (fitPitLimiter) ControlHints.Show("limiter", "L", "Y", "Pit limiter — holds you to the pit speed limit", 7f);
+            ControlHints.Show("drive", "W / S", InputGlyphs.Pad(PadBindings.Throttle) + " / " + InputGlyphs.Pad(PadBindings.Brake),
+                              "Throttle and brake", 6f);
+            if (fitPitLimiter) ControlHints.Show("limiter", "L", InputGlyphs.Pad(PadBindings.PitLimiter),
+                                                 "Pit limiter — holds you to the pit speed limit", 7f);
         }
 
         PlayerEnteredCar?.Invoke();
@@ -960,7 +963,7 @@ public class PitLaneStart : MonoBehaviour
     {
         bool held = false;
         var gp = Gamepad.current;
-        if (gp != null) held |= gp.buttonSouth.isPressed;
+        if (gp != null) held |= PadInput.Control(gp, PadBindings.Interact).isPressed;
         var kb = Keyboard.current;
         if (kb != null) held |= kb.eKey.isPressed;
 
@@ -985,7 +988,7 @@ public class PitLaneStart : MonoBehaviour
                 if (InputPromptIcon.Create(_prompt.transform, "Icon", enterPromptIconHeight, "Vehicles", 50) == null)
                 {
                     var tm = _prompt.AddComponent<TextMesh>();
-                    tm.text = "E";
+                    tm.text = InputGlyphs.Label("E", PadBindings.Interact);
                     tm.characterSize = 0.5f;
                     tm.fontSize = 32;
                     tm.anchor = TextAnchor.MiddleCenter;

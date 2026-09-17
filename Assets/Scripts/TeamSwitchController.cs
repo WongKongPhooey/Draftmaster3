@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Draftmaster.Controls;
 
 // Mid-race team car switching (NASCAR Thunder-style): a button per team car lets the player jump into
 // any car on their team (DriverLabel.teamId == 0). The car they leave is handed to the AI seamlessly
@@ -68,7 +69,8 @@ public class TeamSwitchController : MonoBehaviour
 
     void Update()
     {
-        if (toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) _hidden = !_hidden;
+        if ((toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) || PadInput.PressedDriving(PadBindings.TeamBox))
+            _hidden = !_hidden;
 
         // No roster in practice/qualifying — team cars are parked stint props there. And none at all
         // outside the player's own session: another championship's cars going past while the player is on

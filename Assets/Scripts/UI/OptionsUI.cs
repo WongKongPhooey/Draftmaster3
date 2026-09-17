@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Draftmaster.Controls;
 
 // OPTIONS: the screen behind the title menu's last row.
 //
@@ -65,6 +66,7 @@ public class OptionsUI : MonoBehaviour
 
     TextMeshProUGUI _preview;
     TextMeshProUGUI _help;
+    int _helpVersion = -1;
     TextMeshProUGUI _status;
     float _statusUntil;
 
@@ -130,6 +132,9 @@ public class OptionsUI : MonoBehaviour
 
         var kb = Keyboard.current;
 
+        // The help line names the keys of whichever device was touched last.
+        if (_helpVersion != InputGlyphs.Version) { _helpVersion = InputGlyphs.Version; Redraw(); }
+
         if (_editing >= 0)
         {
             EditKeys(kb);
@@ -156,8 +161,8 @@ public class OptionsUI : MonoBehaviour
         {
             if (pad.dpad.down.wasPressedThisFrame) Move(1);
             if (pad.dpad.up.wasPressedThisFrame) Move(-1);
-            if (pad.buttonSouth.wasPressedThisFrame) { Confirm(); return; }
-            if (pad.buttonEast.wasPressedThisFrame) { Back(); return; }
+            if (PadInput.Control(pad, PadBindings.Confirm).wasPressedThisFrame) { Confirm(); return; }
+            if (PadInput.Control(pad, PadBindings.Back).wasPressedThisFrame) { Back(); return; }
         }
     }
 
@@ -165,6 +170,11 @@ public class OptionsUI : MonoBehaviour
     // the only three keys that mean anything are the two that close it and the one that rubs out.
     void EditKeys(Keyboard kb)
     {
+        // A pad cannot type, but it must be able to get back out of a name it opened: confirm keeps what is
+        // there, back puts it back.
+        if (PadInput.WasPressed(PadBindings.Back)) { CancelEdit(); return; }
+        if (PadInput.WasPressed(PadBindings.Confirm)) { CommitEdit(); return; }
+
         if (kb == null) return;
 
         if (kb.escapeKey.wasPressedThisFrame) { CancelEdit(); return; }
@@ -294,9 +304,15 @@ public class OptionsUI : MonoBehaviour
         }
 
         if (_help != null)
+        {
+            string ok = InputGlyphs.Label("ENTER", PadBindings.Confirm);
+            string back = InputGlyphs.Label("ESC", PadBindings.Back);
             _help.text = _editing >= 0
-                ? "TYPE A NAME     ENTER  SAVE     ESC  CANCEL"
-                : "W/S OR ARROWS  MOVE     ENTER  CHANGE     ESC  BACK";
+                ? $"TYPE A NAME     {ok}  SAVE     {back}  CANCEL"
+                : InputGlyphs.UsingGamepad
+                    ? $"D-PAD  MOVE     {ok}  CHANGE     {back}  BACK"
+                    : "W/S OR ARROWS  MOVE     ENTER  CHANGE     ESC  BACK";
+        }
     }
 
     void SetStatus(string message)

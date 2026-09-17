@@ -17,9 +17,21 @@ namespace Draftmaster.Weekend
         // What the lines say when nobody has told us otherwise. PhoneUI's default toggle.
         public const string DefaultPhoneKey = "P";
 
-        public static WeekendConversation Build(WeekendActivity a, string phoneKey = DefaultPhoneKey)
+        // The rest of the controls the briefing names, in the words of the device the player is holding. The
+        // defaults are the keyboard's; the runtime hands in a pad's when a pad is in use.
+        public sealed class PhoneWords
+        {
+            public string move = "Arrows";
+            public string open = "E";
+            public string back = "Esc";
+            public string sheet = "F10";
+        }
+
+        public static WeekendConversation Build(WeekendActivity a, string phoneKey = DefaultPhoneKey,
+                                                PhoneWords words = null)
         {
             string key = string.IsNullOrEmpty(phoneKey) ? DefaultPhoneKey : phoneKey.ToUpperInvariant();
+            var w = words ?? new PhoneWords();
 
             var c = new WeekendConversation
             {
@@ -42,19 +54,19 @@ namespace Draftmaster.Weekend
                 preamble = new[]
                 {
                     $"Phone's in your pocket. {key} brings it up, anywhere you're on foot.",
-                    "Arrows to move round the tiles, E to open one, Esc to back out.",
+                    $"{w.move} to move round the tiles, {w.open} to open one, {w.back} to back out.",
                 },
                 line = "Go on then. What have you got?",
                 question = $"Press {key} - what is on it?",
                 choices =
                 {
                     WeekendConversation.Say(
-                        $"Six tiles. {key} to open it, Esc to put it away.",
+                        $"Six tiles. {key} to open it, {w.back} to put it away.",
                         "That's the lot. You'd be amazed how many rookies never find it.",
                         morale: 5f, setup: 0.02f, score: 0.9f),
                     WeekendConversation.Say(
                         "SCHEDULE - that's the same sheet as the timetable, is it?",
-                        "Same three days, yes. The big one's still F10 if you want the whole weekend at once.",
+                        $"Same three days, yes. The big one's still {w.sheet} if you want the whole weekend at once.",
                         morale: 3f, setup: 0.03f, score: 0.8f),
                     WeekendConversation.Say(
                         "I'll have a look at it later.",

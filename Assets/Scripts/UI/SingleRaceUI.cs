@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Draftmaster.Controls;
 
 // SINGLE RACE: pick a track, a championship and a driver, then go racing. Three steps in one scene.
 //
@@ -61,6 +62,8 @@ public class SingleRaceUI : MonoBehaviour
     TextMeshProUGUI _title;
     TextMeshProUGUI _breadcrumb;
     TextMeshProUGUI _status;
+    TextMeshProUGUI _help;
+    int _helpVersion = -1;
     float _statusUntil;
 
     // Cached option sources so a step does not re-query the database every keypress.
@@ -77,6 +80,8 @@ public class SingleRaceUI : MonoBehaviour
         BuildChrome();
         EnterStep(Step.Track);
     }
+
+    const string HelpKeys = "W/S or ARROWS  MOVE     ENTER  SELECT     ESC  BACK";
 
     void Update()
     {
@@ -99,8 +104,20 @@ public class SingleRaceUI : MonoBehaviour
         {
             if (pad.dpad.down.wasPressedThisFrame) Move(1);
             if (pad.dpad.up.wasPressedThisFrame) Move(-1);
-            if (pad.buttonSouth.wasPressedThisFrame) Confirm();
-            if (pad.buttonEast.wasPressedThisFrame) Back();
+            if (pad.leftShoulder.wasPressedThisFrame) Move(-visibleRows);
+            if (pad.rightShoulder.wasPressedThisFrame) Move(visibleRows);
+            if (PadInput.Control(pad, PadBindings.Confirm).wasPressedThisFrame) Confirm();
+            if (PadInput.Control(pad, PadBindings.Back).wasPressedThisFrame) Back();
+        }
+
+        // The help line names the keys of whichever device was touched last.
+        if (_help != null && _helpVersion != InputGlyphs.Version)
+        {
+            _helpVersion = InputGlyphs.Version;
+            _help.text = InputGlyphs.UsingGamepad
+                ? $"D-PAD  MOVE     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  PAGE" +
+                  $"     {InputGlyphs.PadName(PadBindings.Confirm)}  SELECT     {InputGlyphs.PadName(PadBindings.Back)}  BACK"
+                : HelpKeys;
         }
 
         if (_statusUntil > 0f && Time.unscaledTime >= _statusUntil) SetStatus("");
@@ -391,9 +408,8 @@ public class SingleRaceUI : MonoBehaviour
             _rowDetails.Add(detail);
         }
 
-        var help = IronOvalUI.Label(root, "Help",
-                                    "W/S or ARROWS  MOVE     ENTER  SELECT     ESC  BACK",
-                                    IronOvalUI.Role.Body, theme.plateLight);
+        var help = IronOvalUI.Label(root, "Help", HelpKeys, IronOvalUI.Role.Body, theme.plateLight);
+        _help = help;
         Place((RectTransform)help.transform, new Vector2(0f, 0f), new Vector2(24f, 22f),
               new Vector2(560f, 18f), TextAlignmentOptions.BottomLeft);
 

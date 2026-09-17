@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 // Teach-as-you-play control prompts: a key cap and one line of text, low on the screen
 // ("LEFT SHIFT — Hold to run", "E — Get in the car").
@@ -11,8 +10,11 @@ using UnityEngine.InputSystem;
 // read at a glance and looked nothing like the rest of the kit. One prompt, one place, one look.
 //
 // Drive it through the ControlHints facade at the bottom of this file:
-//     ControlHints.Show("run", "LEFT SHIFT", "LB", "Hold to run", 5f);
+//     ControlHints.Show("run", "LEFT SHIFT", InputGlyphs.Pad(PadBindings.Run), "Hold to run", 5f);
 //     ControlHints.Hide("run");
+//
+// The pad label is a button name in Xbox naming ("LB", "RT / LT"); while a pad is in use it is drawn as that
+// button's icon for the pad actually in the player's hands.
 //
 // Hints marked `once` remember themselves through AppearanceConditions (OnceEver), so a returning player
 // isn't taught to walk every session. Clear them with Draftmaster > NPCs > Clear Appearance Flags.
@@ -118,15 +120,21 @@ public class ControlHintUI : MonoBehaviour
         if (Hidden) return;
 
         // The device is read at draw time, not when the hint was queued, so picking a pad up mid-hint
-        // re-labels it on the next frame.
-        bool pad = Gamepad.current != null;
-        string key = pad && !string.IsNullOrEmpty(_current.gamepadLabel) ? _current.gamepadLabel : _current.keyboardLabel;
+        // re-labels it on the next frame. A pad label that names buttons ("LB", "RT / LT") is drawn as
+        // those buttons' icons for whichever pad is in use; anything else stays text.
+        bool pad = InputGlyphs.UsingGamepad && !string.IsNullOrEmpty(_current.gamepadLabel);
+        string key = _current.keyboardLabel;
+        _icons.Clear();
+        if (pad && !InputGlyphs.TryIcons(_current.gamepadLabel, _icons))
+            key = InputGlyphs.PadLabel(_current.gamepadLabel);
 
         var prev = GUI.color;
         GUI.color = new Color(prev.r, prev.g, prev.b, prev.a * _alpha);
-        PixelGUI.Prompt(key, _current.text);
+        PixelGUI.Prompt(key, _current.text, _icons);
         GUI.color = prev;
     }
+
+    readonly List<Sprite> _icons = new();
 
     // Quiet behind anything the player is actually reading, and through a wipe — the same company the
     // grandstand's prompt keeps.

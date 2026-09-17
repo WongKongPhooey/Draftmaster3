@@ -167,6 +167,26 @@ public class WeekendOrientationTests
         Assert.IsFalse(Regex.IsMatch(said, @"\bP\b"), "The default key is still hard-coded into the lines.");
     }
 
+    // Somebody holding a pad is told the pad's buttons. The briefing used to name arrows, E and Esc whatever
+    // was in the player's hands.
+    [Test]
+    public void OnAPad_ItNamesThePadsButtons_AndNoKeys()
+    {
+        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var words = new OrientationContent.PhoneWords
+        {
+            move = "The d-pad", open = "A", back = "B", sheet = "d-pad down",
+        };
+        string said = Spoken(OrientationContent.Build(a, "VIEW", words));
+
+        StringAssert.Contains("VIEW", said, "The pad's phone button never reaches the lines.");
+        StringAssert.Contains("The d-pad to move", said);
+        StringAssert.Contains("A to open one", said);
+        StringAssert.Contains("still d-pad down", said);
+        foreach (var key in new[] { @"Esc", @"F10", @"Arrows", @"E to" })
+            Assert.IsFalse(Regex.IsMatch(said, key), $"A pad player is still told about '{key}'.");
+    }
+
     // The result card is the last thing said about it, and it is the line a player is most likely to
     // actually read, so it carries the summary too.
     [Test]

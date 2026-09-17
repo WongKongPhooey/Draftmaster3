@@ -255,7 +255,8 @@ public class GarageScreenUI : MonoBehaviour
     void Update()
     {
         var kb = Keyboard.current;
-        if (kb != null && (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame)) Back();
+        if ((kb != null && (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame)) ||
+            PadInput.WasPressed(Draftmaster.Controls.PadBindings.Back)) Back();
         if (_statusUntil > 0f && Time.unscaledTime >= _statusUntil) SetStatus("");
     }
 

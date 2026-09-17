@@ -202,9 +202,11 @@ public class NPCInteractable : MonoBehaviour
                     mr.sortingOrder = 61;
                 }
             }
-            // E is THE interact key, whatever is plugged in — a wheel or an idle pad used to flip every
-            // prompt to the gamepad face button while the player was still on the keyboard.
-            if (_promptLabel != null) _promptLabel.text = "E";
+            // E, or the pad's interact button while the pad is the device in use. "In use" is the last device
+            // touched, not the one plugged in — an idle pad used to flip every prompt to the face button while
+            // the player was still on the keyboard. The icon swaps itself (InputPromptGlyph).
+            if (_promptLabel != null)
+                _promptLabel.text = InputGlyphs.Label("E", Draftmaster.Controls.PadBindings.Interact);
             // Pin above the head in world space — never inherit the NPC's facing rotation.
             _prompt.transform.position = transform.position + Vector3.up * 0.7f;
             _prompt.transform.rotation = Quaternion.identity;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Draftmaster.Controls;
 
 // On-screen running order: P, car number, driver, gap to leader. Shows a compact top-N plus the player's
 // own row by default; hold Tab for the full field.
@@ -53,7 +54,7 @@ public class LeaderboardUI : MonoBehaviour
 
     void Update()
     {
-        if (!Input.GetKeyDown(toggleKey)) return;
+        if (!Input.GetKeyDown(toggleKey) && !PadInput.PressedDriving(PadBindings.Leaderboard)) return;
         _visible = !_visible;
         PlayerPrefs.SetInt(PrefKey, _visible ? 1 : 0);
     }
@@ -75,7 +76,9 @@ public class LeaderboardUI : MonoBehaviour
         bool broadcast = _drive != null && !_drive.IsDriving;
         Transform featured = broadcast ? _drive.FeaturedTransform : null;
 
-        bool expanded = Input.GetKey(expandKey);
+        // Held, so it can't clash with anything that acts on a press; a fight has the same button for a hook.
+        bool expanded = Input.GetKey(expandKey) ||
+                        (!DriverFight.IsActive && PadInput.IsHeld(PadBindings.LeaderboardExpand));
         int n = _rows.Count;
         int show = expanded ? n : Mathf.Min(compactRows, n);
 
@@ -90,7 +93,7 @@ public class LeaderboardUI : MonoBehaviour
         float h = (show + 1) * row + pad * 2f + (playerOutsideWindow ? row + pad : 0f);
         PixelGUI.Panel(new Rect(x, y, w + pad * 2f, h));
         PixelGUI.KeyTab(new Rect(x, y, w + pad * 2f, h),
-                        toggleKey == KeyCode.None ? "" : toggleKey.ToString());
+                        toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.Leaderboard);
 
         float rx = x + pad, ry = y + pad;
         GUI.Label(new Rect(rx, ry, w, row), Header(broadcast, byLap, expanded, n), PixelGUI.HeadingSmall);

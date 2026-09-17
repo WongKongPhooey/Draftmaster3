@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Controls;
 using UnityEngine;
 
 // The Iron Oval widget set for IMGUI, mirroring IronOvalUI (which does the same job for uGUI Canvases).
@@ -409,15 +410,18 @@ public static class PixelGUI
     // the panel rather than a label floating beside it, and it tucks inside the panel when there is no
     // room above — a panel at the top of the screen would otherwise hang its tab off the edge.
     //
-    // Pass the key the way the player would say it: "F6", "ESC", "C".
-    public static void KeyTab(Rect panel, string key)
+    // Pass the key the way the player would say it: "F6", "ESC", "C". `pad` is the button that does the same
+    // job on a pad; while the pad is the device in use the tab carries that button's icon instead.
+    public static void KeyTab(Rect panel, string key, PadButton pad = PadButton.None)
     {
-        if (string.IsNullOrEmpty(key)) return;
+        var icon = pad != PadButton.None && InputGlyphs.UsingGamepad ? InputGlyphs.Icon(pad) : null;
+        if (icon == null && string.IsNullOrEmpty(key)) return;
         Ensure();
 
-        var content = new GUIContent(key.ToUpperInvariant());
-        float w = Mathf.Ceil(_labelDim.CalcSize(content).x) + Px(8f);
+        var content = new GUIContent((key ?? "").ToUpperInvariant());
         float h = _labelDim.fontSize + Px(4f);
+        float iconSize = Mathf.Min(Px(IconPx), h);
+        float w = icon != null ? iconSize + Px(4f) : Mathf.Ceil(_labelDim.CalcSize(content).x) + Px(8f);
         float x = panel.x + Px(6f);
         float y = panel.y - h + Px(1f);          // overlapping the frame's top edge by one scaled pixel
 
@@ -428,6 +432,13 @@ public static class PixelGUI
         float b = Px(1f);
         Fill(new Rect(r.x - b, r.y - b, r.width + b * 2f, r.height + b * 2f), Ink);
         Fill(r, PlateLight);
+
+        if (icon != null)
+        {
+            DrawSprite(new Rect(Mathf.Round(r.x + (r.width - iconSize) * 0.5f),
+                                Mathf.Round(r.y + (r.height - iconSize) * 0.5f), iconSize, iconSize), icon);
+            return;
+        }
 
         var prevAlign = _labelDim.alignment;
         var prevColour = _labelDim.normal.textColor;
@@ -452,19 +463,46 @@ public static class PixelGUI
     // they are the same box in the same place rather than each screen inventing its own.
     public const float PromptBottomMargin = 12f;
 
+    // Button icons are 16x16 Kenney tiles, drawn pixel for pixel at the kit's scale.
+    const float IconPx = 16f;
+
+    static readonly List<Sprite> _promptIcons = new List<Sprite>();
+
     public static Rect Prompt(string key, string text, float bottomMargin = PromptBottomMargin)
+        => Prompt(key, text, null, bottomMargin);
+
+    // The prompt for a shortcut with a keyboard key and a pad button: the keycap while the player is on the
+    // keyboard, the button's icon while they are on a pad.
+    public static Rect Prompt(string key, PadButton pad, string text, float bottomMargin = PromptBottomMargin)
+    {
+        _promptIcons.Clear();
+        if (pad != PadButton.None && InputGlyphs.UsingGamepad)
+        {
+            var icon = InputGlyphs.Icon(pad);
+            if (icon != null) _promptIcons.Add(icon);
+            else key = InputGlyphs.PadName(pad);
+        }
+        return Prompt(key, text, _promptIcons, bottomMargin);
+    }
+
+    // `icons`, when there are any, are drawn in place of the keycap — one or more pad buttons side by side.
+    public static Rect Prompt(string key, string text, IList<Sprite> icons, float bottomMargin = PromptBottomMargin)
     {
         if (string.IsNullOrEmpty(text)) return default;
         Ensure();
 
+        bool pictures = icons != null && icons.Count > 0;
+        if (pictures) key = null;
         var keyContent = new GUIContent((key ?? "").ToUpperInvariant());
         var body = Body;
 
-        float capW = string.IsNullOrEmpty(key) ? 0f : Mathf.Ceil(_label.CalcSize(keyContent).x) + Px(10f);
-        float capH = _label.fontSize + Px(6f);
+        float iconSize = Px(IconPx), iconGap = Px(2f);
+        float capW = pictures ? icons.Count * iconSize + (icons.Count - 1) * iconGap
+                   : string.IsNullOrEmpty(key) ? 0f : Mathf.Ceil(_label.CalcSize(keyContent).x) + Px(10f);
+        float capH = pictures ? iconSize : _label.fontSize + Px(6f);
         float textW = Mathf.Ceil(body.CalcSize(new GUIContent(text)).x);
         float rowH = Mathf.Max(capH, body.fontSize + Px(4f));
-        float gap = string.IsNullOrEmpty(key) ? 0f : Px(8f);
+        float gap = capW > 0f ? Px(8f) : 0f;
 
         float inset = Px(8f);
         float w = Mathf.Min(capW + gap + textW + inset * 2f + Px(8f), Screen.width - Px(16f));
@@ -489,7 +527,14 @@ public static class PixelGUI
         var c = PanelContent(box, 4f);
 
         float x = c.x;
-        if (capW > 0f)
+        if (pictures)
+        {
+            float iy = Mathf.Round(c.y + (c.height - iconSize) * 0.5f);
+            for (int i = 0; i < icons.Count; i++)
+                DrawSprite(new Rect(Mathf.Round(x + i * (iconSize + iconGap)), iy, iconSize, iconSize), icons[i]);
+            x += capW + gap;
+        }
+        else if (capW > 0f)
         {
             var cap = new Rect(Mathf.Round(x), Mathf.Round(c.y + (c.height - capH) * 0.5f), capW, capH);
             float b = Px(1f);

@@ -245,9 +245,10 @@ public class DialogueChoiceUI : MonoBehaviour
             cy += scaledRow;
         }
 
-        // E answers on every device — it is the one interact key the game prompts for.
-        bool hasPad = Gamepad.current != null;
-        string keys = hasPad ? "Left stick / D-pad to choose    E to answer" : "W / S to choose    E to answer";
+        // Worded for the device in the player's hands: E on the keyboard, the confirm button on a pad.
+        string keys = InputGlyphs.UsingGamepad
+            ? $"Left stick / D-pad to choose    {InputGlyphs.Confirm} to answer"
+            : "W / S to choose    E to answer";
         GUI.Label(new Rect(x + pad, cy + PixelGUI.Px(2f), w - pad * 2f, footerH), keys, PixelGUI.Footer);
     }
 }

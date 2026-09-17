@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Draftmaster.Sim;
+using Draftmaster.Controls;
 
 // On-screen feed for the driver-relationship system: contact toasts, standing changes ("X and Y are
 // now RIVALS"), and payback declarations. Also holds a toggleable standings panel (default F4) listing
@@ -67,7 +68,8 @@ public class RivalryFeed : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(standingsKey)) _showStandings = !_showStandings;
+        if (Input.GetKeyDown(standingsKey) || PadInput.PressedDriving(PadBindings.Rivalries))
+            _showStandings = !_showStandings;
         bool chief = CrewChiefController.IsCrewChief;
         for (int i = _toasts.Count - 1; i >= 0; i--)
         {
@@ -193,7 +195,7 @@ public class RivalryFeed : MonoBehaviour
 
         PixelGUI.Panel(new Rect(x, y, w, h));
         PixelGUI.KeyTab(new Rect(x, y, w, h),
-                        standingsKey == KeyCode.None ? "" : standingsKey.ToString());
+                        standingsKey == KeyCode.None ? "" : standingsKey.ToString(), PadBindings.Rivalries);
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
 
         GUI.Label(new Rect(c.x, c.y, c.width, PixelGUI.Px(10f)), "RELATIONSHIPS", PixelGUI.HeadingSmall);

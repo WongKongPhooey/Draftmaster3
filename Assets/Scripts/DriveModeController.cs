@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Draftmaster.Controls;
 
 // Driving vs Broadcast, the hand-off itself.
 // - Driving ON  : the player drives their car normally (PlayerVehicleController).
@@ -85,6 +86,10 @@ public class DriveModeController : MonoBehaviour
             if (held && !_keyPrev) Toggle();
             _keyPrev = held;
         }
+
+        // On a pad it is a face button that means "back" everywhere else, so only from the seat and only
+        // with nothing open over the race.
+        if (PadInput.PressedDriving(PadBindings.DriveBroadcast)) Toggle();
 
         if (!_driving) UpdateBroadcastCamera();
     }

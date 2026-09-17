@@ -1,3 +1,4 @@
+using Draftmaster.Controls;
 using Draftmaster.Weekend;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -27,7 +28,8 @@ public class GrandstandVisit : MonoBehaviour
     public static bool Watching => Active != null;
 
     // Live timings for whatever is on track. F11 because it is a screen you put up and leave up, not a
-    // panel with a button on it — and because F11 was the last function key nothing else had taken.
+    // panel with a button on it — and because F11 was the last function key nothing else had taken. The pad's
+    // west face button (PadBindings.LiveTiming).
     const Key TimingKey = Key.F11;
 
     // The way out is drawn here rather than pushed at the shared control-hint strip. That strip is a
@@ -251,7 +253,9 @@ public class GrandstandVisit : MonoBehaviour
         TickSession();
 
         var kb = Keyboard.current;
-        if (kb != null && kb[TimingKey].wasPressedThisFrame) TimingScreenUI.Ensure().Toggle();
+        if ((kb != null && kb[TimingKey].wasPressedThisFrame) ||
+            (!DriverFight.IsActive && PadInput.Pressed(PadBindings.LiveTiming)))
+            TimingScreenUI.Ensure().Toggle();
 
         // E is the world's do-something button, so it belongs to whatever is in front of the player first:
         // a conversation or a panel gets the press, not the seat.
@@ -260,8 +264,7 @@ public class GrandstandVisit : MonoBehaviour
 
         bool leave = kb != null && kb[LeaveKey].wasPressedThisFrame;
 
-        var pad = Gamepad.current;
-        if (!leave && pad != null) leave = pad.buttonNorth.wasPressedThisFrame;
+        if (!leave) leave = PadInput.WasPressed(PadBindings.LeaveSeat);
 
         if (leave) Leave();
     }
@@ -278,9 +281,11 @@ public class GrandstandVisit : MonoBehaviour
             WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return;
         if (ScreenFade.Busy) return;
 
-        string key = Gamepad.current != null ? "Y" : "E";
-        PixelGUI.Prompt(key, _sessionOver ? ChequeredLine()
-                                          : "Return to the pits.  F11 for live timing.");
+        PixelGUI.Prompt(LeaveKey.ToString().ToUpperInvariant(), PadBindings.LeaveSeat,
+                        _sessionOver ? ChequeredLine()
+                                     : "Return to the pits.  " +
+                                       InputGlyphs.Label(TimingKey.ToString().ToUpperInvariant(), PadBindings.LiveTiming) +
+                                       " for live timing.");
     }
 
     // Is the player still in the stand? Measured off where they sat down, because that is the one thing the

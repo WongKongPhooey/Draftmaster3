@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Draftmaster.Controls;
 
 // Pit-lane speed limiter for the HUMAN-driven car. The AI already respect TrackInfoV2.pitSpeedLimit inside
 // SplineDriver; nothing held the player to it, so a player could blast down the pit lane at 180.
@@ -119,8 +120,9 @@ public class PitLimiter : MonoBehaviour
         bool held = false;
         var kb = Keyboard.current;
         if (kb != null && kb[toggleKey].isPressed) held = true;
+        // The pad's button is shared with the paddock's travel shortcut, so it only counts from the seat.
         var gp = Gamepad.current;
-        if (gp != null && gp.buttonNorth.isPressed) held = true;
+        if (gp != null && !PadInput.OnFoot && PadInput.Control(gp, PadBindings.PitLimiter).isPressed) held = true;
 
         if (held && !_togglePrev) SetArmed(!Armed);
         _togglePrev = held;

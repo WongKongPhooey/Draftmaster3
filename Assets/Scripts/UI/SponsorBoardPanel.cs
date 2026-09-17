@@ -16,7 +16,7 @@ public class SponsorBoardPanel : MonoBehaviour
     public static SponsorBoardPanel Instance { get; private set; }
 
     GameObject _root;
-    Text _title, _income, _status;
+    Text _title, _income, _status, _hint;
     RectTransform _rows;
     Font _font;
 
@@ -77,11 +77,15 @@ public class SponsorBoardPanel : MonoBehaviour
     {
         _picking = 0;
         _status.text = "";
+        if (_hint != null) _hint.text = HintText();
         Refresh();
         _root.SetActive(true);
     }
 
     public void Hide() { if (_root != null) _root.SetActive(false); }
+
+    static string HintText() =>
+        $"A sponsor pays nothing until its decal is on a panel  •  Press {InputGlyphs.Confirm} to close";
 
     // ---------------------------------------------------------------- content
 
@@ -289,7 +293,8 @@ public class SponsorBoardPanel : MonoBehaviour
 
         var hint = MakeText("Hint", card.GetComponent<RectTransform>(), _font, 22, FontStyle.Normal, TextAnchor.LowerRight,
                             PixelGUI.TextDisabled);
-        hint.text = "A sponsor pays nothing until its decal is on a panel  •  Press E to close";
+        hint.text = HintText();
+        _hint = hint;
         var hrt = hint.rectTransform;
         hrt.anchorMin = new Vector2(0, 0); hrt.anchorMax = new Vector2(1, 0);
         hrt.offsetMin = new Vector2(44, 20); hrt.offsetMax = new Vector2(-44, 56);

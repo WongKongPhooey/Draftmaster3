@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Controls;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -165,18 +166,22 @@ public class PhoneUI : MonoBehaviour
         var kb = Keyboard.current;
         var pad = Gamepad.current;
         bool toggle = (kb != null && toggleKey != Key.None && kb[toggleKey].wasPressedThisFrame)
-                   || (padToggle && pad != null && pad.selectButton.wasPressedThisFrame);
+                   || (padToggle && PadInput.WasPressed(PadBindings.Phone));
         if (toggle)
         {
             if (_open) CloseInternal();
             else OpenInternal(null);
         }
 
-        if (!_open || kb == null) return;
+        if (!_open) return;
 
-        // Esc backs out one level: app → home → away. RacePauseMenu stands down while the phone is up.
-        if (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame)
+        // Esc (the pad's back button) backs out one level: app → home → away. RacePauseMenu stands down while
+        // the phone is up.
+        bool back = (kb != null && (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame))
+                 || PadInput.WasPressed(PadBindings.Back);
+        if (back)
         {
+            PadInput.Consume();
             if (_current != null) { _current = null; _scroll = Vector2.zero; }
             else CloseInternal();
             return;
@@ -184,22 +189,35 @@ public class PhoneUI : MonoBehaviour
 
         if (_current == null) { HomeKeys(kb); return; }
 
-        if (kb.upArrowKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame)
+        if (kb != null && (kb.upArrowKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame))
             _scroll.y = Mathf.Max(0f, _scroll.y + (kb.downArrowKey.wasPressedThisFrame ? PixelGUI.Px(24f) : -PixelGUI.Px(24f)));
-        _current.HandleKeys(kb);
+        int padScroll = PadInput.VerticalStep();
+        if (padScroll != 0) _scroll.y = Mathf.Max(0f, _scroll.y + padScroll * PixelGUI.Px(24f));
+        if (kb != null) _current.HandleKeys(kb);
+        if (pad != null) _current.HandlePad(pad);
     }
 
     void HomeKeys(Keyboard kb)
     {
         int col = _homeIndex % 2, rowIdx = _homeIndex / 2;
-        if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) col = 1;
-        if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) col = 0;
-        if (kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame) rowIdx = Mathf.Min(2, rowIdx + 1);
-        if (kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame) rowIdx = Mathf.Max(0, rowIdx - 1);
+        int padX = PadInput.HorizontalStep(), padY = PadInput.VerticalStep();
+        bool right = padX > 0, left = padX < 0, down = padY > 0, up = padY < 0;
+        bool open = PadInput.WasPressed(PadBindings.Confirm);
+        if (kb != null)
+        {
+            right |= kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame;
+            left |= kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame;
+            down |= kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame;
+            up |= kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame;
+            open |= kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame;
+        }
+        if (right) col = 1;
+        if (left) col = 0;
+        if (down) rowIdx = Mathf.Min(2, rowIdx + 1);
+        if (up) rowIdx = Mathf.Max(0, rowIdx - 1);
         _homeIndex = Mathf.Clamp(rowIdx * 2 + col, 0, TileSlots - 1);
 
-        if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame)
-            OpenApp(_homeIndex);
+        if (open) OpenApp(_homeIndex);
     }
 
     void OpenInternal(string appId)
@@ -400,8 +418,10 @@ public class PhoneUI : MonoBehaviour
             else DrawEmptyBay(tile);
         }
 
-        PhoneStyles.Label(new Rect(r.x, r.yMax - hint, r.width, hint),
-                          toggleKey.ToString().ToUpperInvariant() + " CLOSE   ENTER OPEN",
+        string keys = InputGlyphs.UsingGamepad
+            ? InputGlyphs.PadName(PadBindings.Phone) + " CLOSE   " + InputGlyphs.PadName(PadBindings.Confirm) + " OPEN"
+            : toggleKey.ToString().ToUpperInvariant() + " CLOSE   ENTER OPEN";
+        PhoneStyles.Label(new Rect(r.x, r.yMax - hint, r.width, hint), keys,
                           PhoneStyles.Footer, null, TextAnchor.MiddleCenter);
     }
 
