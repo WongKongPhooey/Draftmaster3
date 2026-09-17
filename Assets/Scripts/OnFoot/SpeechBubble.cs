@@ -22,8 +22,13 @@ public class SpeechBubble : MonoBehaviour
     public Vector2 padding = new Vector2(0.18f, 0.12f); // box border around the text block, per side
     [Tooltip("Gap (world m) between the top of the box and the speaker's name sat above it.")]
     public float nameGap = 0.045f;
-    [Tooltip("Colour of the speaker-name line above the box.")]
+    [Tooltip("Colour of the speaker-name line above the box. Only a fallback — with a theme loaded the name is the kit's gold, like an objective marker's caption.")]
     public Color nameColor = new Color(1f, 0.83f, 0.42f, 1f);
+    [Tooltip("Speaker-name size as a fraction of the dialogue text. The marker captions this is matched to are set one cell smaller than body copy.")]
+    public float nameSizeFactor = 0.75f;
+    [Tooltip("Ink drop shadow under the speaker name, as a fraction of the name's own height. An objective " +
+             "marker's caption is offset one pixel of an eight-pixel cell, which is where 0.125 comes from. Zero = no shadow.")]
+    public float nameShadowOffset = 0.125f;
     [Tooltip("How far in front of the actor (negative z, toward the camera) the bubble sits. Must clear whatever the actor is standing on — the opaque z=0 ground depth-tests the box away without this.")]
     public float zLift = 0.6f;
     [Tooltip("Dialogue text size in world units. The bubble floats above a 0.625m-tall character, so it " +
@@ -32,7 +37,7 @@ public class SpeechBubble : MonoBehaviour
     public float textSize = 0.22f;
 
     Transform _actor;
-    TextMeshPro _label, _nameLabel;
+    TextMeshPro _label, _nameLabel, _nameShadow;
     MeshRenderer _labelRenderer;
     SpriteRenderer _bg;
     SpriteRenderer _caret;                          // blinking "press to continue" marker
@@ -112,17 +117,16 @@ public class SpeechBubble : MonoBehaviour
 
         // Who's talking, in a smaller face sat above the box — so a paddock full of named drivers
         // reads at a glance without a UI panel. Positioned in Speak, once the box is sized.
-        var nameGo = new GameObject("Name");
-        nameGo.transform.SetParent(transform, false);
-        _nameLabel = nameGo.AddComponent<TextMeshPro>();
-        ApplyFont(_nameLabel, theme != null ? theme.body : null);
-        _nameLabel.alignment = TextAlignmentOptions.TopLeft;
-        _nameLabel.enableWordWrapping = false;
-        _nameLabel.color = theme != null ? theme.gold : nameColor;
-        var nameRenderer = nameGo.GetComponent<MeshRenderer>();
-        nameRenderer.sortingLayerName = "Vehicles";
-        nameRenderer.sortingOrder = 61;
-        _nameScale = FitToMetres(_nameLabel, textSize * 0.75f);
+        //
+        // Set the way an objective marker's caption is (SpawnIntroUI.DrawCaption): the DISPLAY face
+        // (Silkscreen, the kit's heading font) in gold, over a one-pixel ink drop shadow — the pair is
+        // what makes those labels legible against paddock tarmac, grass and crowd alike, and a name
+        // floating over the same ground has the same job. The shadow is a second copy of the label, so
+        // it picks up whatever face and scale the name is set in.
+        _nameShadow = BuildNameLabel(theme, "NameShadow", theme != null ? theme.ink : Color.black, 61);
+        _nameLabel = BuildNameLabel(theme, "Name", theme != null ? theme.gold : nameColor, 62);
+        _nameScale = FitToMetres(_nameLabel, textSize * nameSizeFactor);
+        FitToMetres(_nameShadow, textSize * nameSizeFactor);
 
         // JRPG furniture: a marker in the box's bottom-right that appears once the line has finished
         // typing, so the player can tell "still talking" from "waiting on you".
@@ -139,6 +143,26 @@ public class SpeechBubble : MonoBehaviour
             SetUnlit(_caret);
             _caret.enabled = false;
         }
+    }
+
+    // One line of the speaker name: the display face, no wrap, drawn on the given sorting order. The
+    // shadow and the name itself are identical but for colour and depth, so they cannot drift apart.
+    TextMeshPro BuildNameLabel(PixelUITheme theme, string name, Color colour, int sortingOrder)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(transform, false);
+        var label = go.AddComponent<TextMeshPro>();
+        // Display first, body as the fallback — the same order PixelGUI resolves its heading face in,
+        // so a half-configured theme still reads rather than rendering nothing.
+        ApplyFont(label, theme != null && theme.display != null ? theme.display
+                                                                : (theme != null ? theme.body : null));
+        label.alignment = TextAlignmentOptions.TopLeft;
+        label.enableWordWrapping = false;
+        label.color = colour;
+        var r = go.GetComponent<MeshRenderer>();
+        r.sortingLayerName = "Vehicles";
+        r.sortingOrder = sortingOrder;
+        return label;
     }
 
     static void ApplyFont(TextMeshPro label, TMP_FontAsset font)
@@ -232,10 +256,21 @@ public class SpeechBubble : MonoBehaviour
             _nameLabel.rectTransform.sizeDelta = nameLocal;
             _nameLabel.ForceMeshUpdate();
             Vector2 nameSize = nameLocal * _nameScale;
-            _nameLabel.transform.localPosition = new Vector3(
+            var nameAt = new Vector3(
                 -_boxSize.x * 0.5f + nameSize.x * 0.5f + padding.x,
                 _boxSize.y * 0.5f + nameGap + nameSize.y * 0.5f,
                 -0.01f);
+            _nameLabel.transform.localPosition = nameAt;
+
+            // Down and to the right of the name, and a hair behind it, exactly as the marker captions
+            // lay their shadow. Offset off the name's drawn height so it holds at any text size.
+            if (_nameShadow != null && _nameShadow.gameObject.activeSelf)
+            {
+                _nameShadow.rectTransform.sizeDelta = nameLocal;
+                _nameShadow.ForceMeshUpdate();
+                float d = textSize * nameSizeFactor * nameShadowOffset;
+                _nameShadow.transform.localPosition = nameAt + new Vector3(d, -d, 0.005f);
+            }
         }
 
         if (_reveal != null) StopCoroutine(_reveal);
@@ -247,11 +282,14 @@ public class SpeechBubble : MonoBehaviour
         if (_nameLabel == null) return;
         bool show = !string.IsNullOrEmpty(speaker);
         _nameLabel.gameObject.SetActive(show);
+        if (_nameShadow != null) _nameShadow.gameObject.SetActive(show && nameShadowOffset > 0f);
         if (!show) return;
         _nameLabel.text = speaker;
+        if (_nameShadow != null) _nameShadow.text = speaker;
         // Keep the theme's gold set in Build — reassigning nameColor here would undo it.
         var theme = PixelUITheme.Instance;
         _nameLabel.color = theme != null ? theme.gold : nameColor;
+        if (_nameShadow != null) _nameShadow.color = theme != null ? theme.ink : Color.black;
     }
 
     // First press while typing fills the line instantly (instead of advancing the conversation).

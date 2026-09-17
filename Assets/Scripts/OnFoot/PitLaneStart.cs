@@ -29,6 +29,12 @@ public class PitLaneStart : MonoBehaviour
     public string forcedSpawnName = "SpawnPoint_RV";
     [Tooltip("When the player spawns at the RV marker (forcedSpawnName), give the RV a masked interior: the rest of the scene goes black and an interior room shows until the player walks back out the doorway. See RVInterior.")]
     public bool rvInterior = true;
+    [Tooltip("Where in the motorhome the driver starts, in the interior's own frame (metres): X toward " +
+             "the bed end (the room's local +X, the RV's tail), Y toward the doorway. The room itself is " +
+             "still anchored on the marker, so this moves the player relative to the FURNITURE — dragging " +
+             "SpawnPoint_RV cannot, because the room is built around wherever that marker lands. Zero = " +
+             "stood on the room's origin.")]
+    public Vector2 rvSpawnOffset = new Vector2(2.53f, 0f);
 
     [Header("Entering")]
     [Tooltip("Max distance from car centre to allow climbing in.")]
@@ -321,6 +327,10 @@ public class PitLaneStart : MonoBehaviour
             // a bare marker falls back to pointing the door at the parked car.
             var exterior = marker.GetComponentInParent<RVExterior>();
             rv.Initialize(_player.transform.position, _player.transform, car.transform, exterior);
+
+            // Where in the room they actually wake up. The anchor above is the marker, so the furniture
+            // stays put and only the driver moves — down the rig toward the bed end by default.
+            rv.PlaceOccupantLocal(rvSpawnOffset);
 
             rvExterior = exterior;
             rvRoom = rv;

@@ -209,8 +209,17 @@ public class RVInterior : MonoBehaviour
         // The authored prefab carries its own satnav; only generate one when it doesn't.
         if (interior.GetComponentInChildren<SatnavInteractable>(true) == null)
             BuildSatnav(interior);
-        if (interior.GetComponentInChildren<LaptopInteractable>(true) == null)
+
+        // The laptop is two things — a laptop to look at and the empty that carries the interactable —
+        // and a hand-authored room usually wants one without the other. An authored marker keeps its own
+        // spot (it is sat on whatever desk the drawn room has) but still has nothing on the desk to walk
+        // up to, so the art alone is generated onto it. Put a sprite under the marker and this leaves it
+        // be: the marker carrying its own renderer is the "I drew this one" signal.
+        var authoredLaptop = interior.GetComponentInChildren<LaptopInteractable>(true);
+        if (authoredLaptop == null)
             BuildLaptop(interior);
+        else if (authoredLaptop.GetComponentInChildren<SpriteRenderer>(true) == null)
+            BuildLaptopArt(interior, authoredLaptop.transform.localPosition);
     }
 
     // The laptop on the dinette table: the only way into the garage screen from a race weekend. Same
@@ -224,10 +233,7 @@ public class RVInterior : MonoBehaviour
         Transform table = interior.Find("Table");
         Vector2 at = table != null ? (Vector2)table.localPosition : kTablePos;
 
-        // Lid (with a lit screen on it) behind the keyboard slab, so the thing reads as open from above.
-        BuildQuad(interior, "LaptopLid", at + new Vector2(0f, 0.16f), new Vector2(0.52f, 0.30f), kPropZ - 0.02f, MakeUnlit(new Color(0.13f, 0.14f, 0.16f)));
-        BuildQuad(interior, "LaptopScreen", at + new Vector2(0f, 0.16f), new Vector2(0.44f, 0.22f), kPropZ - 0.04f, MakeUnlit(new Color(0.36f, 0.66f, 0.85f)));
-        BuildQuad(interior, "LaptopBase", at + new Vector2(0f, -0.06f), new Vector2(0.52f, 0.26f), kPropZ - 0.02f, MakeUnlit(new Color(0.22f, 0.23f, 0.26f)));
+        BuildLaptopArt(interior, at);
 
         var go = new GameObject("Laptop");
         go.transform.SetParent(interior, false);
@@ -236,6 +242,17 @@ public class RVInterior : MonoBehaviour
         laptop.interactRange = laptopRange;
         laptop.speakerName = "Laptop";  // the base default ("Crew Member") is nobody here
         laptop.turnsToFace = false;     // a laptop on a table doesn't swivel to look at you
+    }
+
+    // The three quads that read as an open laptop seen from above, centred on `at` in the interior's
+    // local frame. Split out so an authored marker can be given a laptop without also being given a
+    // second interactable.
+    void BuildLaptopArt(Transform interior, Vector2 at)
+    {
+        // Lid (with a lit screen on it) behind the keyboard slab, so the thing reads as open from above.
+        BuildQuad(interior, "LaptopLid", at + new Vector2(0f, 0.16f), new Vector2(0.52f, 0.30f), kPropZ - 0.02f, MakeUnlit(new Color(0.13f, 0.14f, 0.16f)));
+        BuildQuad(interior, "LaptopScreen", at + new Vector2(0f, 0.16f), new Vector2(0.44f, 0.22f), kPropZ - 0.04f, MakeUnlit(new Color(0.36f, 0.66f, 0.85f)));
+        BuildQuad(interior, "LaptopBase", at + new Vector2(0f, -0.06f), new Vector2(0.52f, 0.26f), kPropZ - 0.02f, MakeUnlit(new Color(0.22f, 0.23f, 0.26f)));
     }
 
     // A satnav at the RV's driver seat (front-left of the cab, beside the doorway). Its floating prompt +
@@ -316,6 +333,27 @@ public class RVInterior : MonoBehaviour
         BuildQuad(interior, "Counter", new Vector2(halfW - 1.3f, -roomBack + 0.55f), new Vector2(2.4f, 0.9f), kPropZ, MakeUnlit(new Color(0.70f, 0.71f, 0.74f)));
         BuildQuad(interior, "Table", tablePos, new Vector2(1.4f, 1.0f), kPropZ, MakeUnlit(new Color(0.48f, 0.34f, 0.22f)));
         BuildQuad(interior, "Doormat", new Vector2(0f, roomFront - 0.4f), new Vector2(doorWidth, 0.5f), kPropZ, MakeUnlit(new Color(0.35f, 0.30f, 0.24f)));
+    }
+
+    // Stand the occupant somewhere other than the room's origin, in the interior's own frame:
+    // +X toward the tail (the bed end), +Y toward the doorway — the same frame the room is authored in.
+    //
+    // This is the only way to move the driver relative to the FURNITURE. The room is built around
+    // whatever the spawn marker lands on, so dragging SpawnPoint_RV drags the room with it and the
+    // player still opens the scene stood on the rug in the middle of it.
+    public void PlaceOccupantLocal(Vector2 localOffset)
+    {
+        if (!_initialised || _player == null) return;
+        if (localOffset.sqrMagnitude < 1e-6f) return;
+
+        Vector2 right = new Vector2(_doorDir.y, -_doorDir.x);   // the interior's local +X
+        Vector2 xy = _anchorXY + right * localOffset.x + _doorDir * localOffset.y;
+
+        var p = _player.position;
+        _player.position = new Vector3(xy.x, xy.y, p.z);
+        // Rigidbody2D interpolation would smear the jump across the next frame (see Relocate).
+        var body = _player.GetComponent<Rigidbody2D>();
+        if (body != null) body.position = _player.position;
     }
 
     // Shift the room by the same amount the motorhome it belongs to has just moved.

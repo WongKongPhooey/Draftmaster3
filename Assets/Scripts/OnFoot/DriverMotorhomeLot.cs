@@ -53,9 +53,9 @@ public class DriverMotorhomeLot : MonoBehaviour
 
     [Header("Body")]
     [Tooltip("Motorhome width (m) across the door side. Matches the RV.prefab body.")]
-    public float rvWidth = 3.95f;
+    public float rvWidth = 3.75f;
     [Tooltip("Motorhome length (m), cab toward local +Y. Matches the RV.prefab body.")]
-    public float rvLength = 9.93f;
+    public float rvLength = 10f;
     [Tooltip("Z the bodies sit at. Negative draws in front of the z=0 ground plane, behind the player.")]
     public float rvZ = -0.5f;
 

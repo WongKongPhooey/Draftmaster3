@@ -24,16 +24,21 @@ public static class RVInteriorPrefabBuilder
     // sizing depends on. See GetOrCreateWhiteSprite.
     const float UnitSpritePPU = 4f;
 
-    // Exterior body footprint (RV-local): 3.95 wide x 9.93 long, centred on (0,-2), cab at +Y.
+    // Exterior body footprint (RV-local): 3.75 wide x 10.0 long, centred on (0,-2), cab at +Y.
     // The spawn marker sits at the body centre (0,-2), so in the interior frame the floor is
     // centred on the origin: RoomLength spans the RV's length, RoomWidth its width.
-    const float RoomLength = 9.93f;   // interior local X (RV long axis)
-    const float RoomWidth = 3.95f;    // interior local Y (across the RV, toward the door)
-    // Door gap in the front (+Y) wall, interior local X. Matches the exterior collider notch
-    // (RV-local y 0.51..1.90 on the +X edge) under the mapping localX = -(rvY - markerY).
-    const float DoorGapMin = -3.9f, DoorGapMax = -2.51f;
+    //
+    // The numbers come from the drawn room, Assets/Sprites/Locations/RV-interior.png: 128 x 48 px
+    // at 12.8 px/m = 10.0 x 3.75 m. The art is the truth and the shell is fitted to it, not the
+    // other way round.
+    const float RoomLength = 10.0f;   // interior local X (RV long axis)
+    const float RoomWidth = 3.75f;    // interior local Y (across the RV, toward the door)
+    // Door gap in the front (+Y) wall, interior local X — the gap painted at px 26..40 along the
+    // sprite's top edge. Matches the exterior collider notch (RV-local y -0.203..0.969 on the +X
+    // edge) under the mapping localX = -(rvY - markerY).
+    const float DoorGapMin = -2.969f, DoorGapMax = -1.797f;
     // Mirror RVInterior's serialized defaults (kept in sync with the exterior shape).
-    const float RoomFront = 2.3f, RoomBack = 1.85f, DoorWidth = 1.4f, RoomWidthParam = 9.6f;
+    const float RoomFront = 2.2f, RoomBack = 1.75f, DoorWidth = 1.172f, RoomWidthParam = 9.8f;
     const float FloorZ = -2.2f, WallZ = -2.25f, PropZ = -2.3f;
     const float WallThickness = 0.25f;
 
@@ -92,20 +97,21 @@ public static class RVInteriorPrefabBuilder
         var root = new GameObject("RV");
         try
         {
-            root.AddComponent<RVExterior>(); // door fields default to the side door (+X, centre (1.73, 1.21))
+            root.AddComponent<RVExterior>(); // door fields default to the side door (+X, centre (1.875, 0.383))
 
             // Placeholder body: sits in front of the z=0 ground but behind the walking player and the
             // interior's -2.0 mask. The cab stripe marks the front (+Y) so the facing reads at a glance.
-            Quad(white, mat, root.transform, "Body", new Vector2(0f, -2f), new Vector2(3.95f, 9.93f), -0.5f, new Color(0.80f, 0.80f, 0.84f));
-            Quad(white, mat, root.transform, "CabStripe", new Vector2(0f, 2.35f), new Vector2(3.82f, 0.7f), -0.52f, new Color(0.20f, 0.22f, 0.28f));
+            Quad(white, mat, root.transform, "Body", new Vector2(0f, -2f), new Vector2(RoomWidth, RoomLength), -0.5f, new Color(0.80f, 0.80f, 0.84f));
+            Quad(white, mat, root.transform, "CabStripe", new Vector2(0f, 2.385f), new Vector2(RoomWidth - 0.13f, 0.7f), -0.52f, new Color(0.20f, 0.22f, 0.28f));
 
             // Solid shell: everything left of the door wall as one box, plus the right edge split
-            // above/below the door notch (y 0.51..1.90). The notch reaches to x 1.5 so the player's
-            // collider can cross the interior's enter threshold (roomFront - hysteresis past the
-            // marker). RVInterior turns these off while the player is inside.
-            ColliderBox(root.transform, "ColliderBody", new Vector2(-0.25f, -2f), new Vector2(3.5f, 9.93f));
-            ColliderBox(root.transform, "ColliderFrontL", new Vector2(1.76f, 2.43f), new Vector2(0.43f, 1.06f));
-            ColliderBox(root.transform, "ColliderFrontR", new Vector2(1.72f, -3.23f), new Vector2(0.47f, 7.48f));
+            // above/below the door notch (RV-local y -0.203..0.969, where the doorway is drawn in
+            // RV-interior.png). The notch reaches to x 1.375 so the player's collider can cross the
+            // interior's enter threshold (roomFront - hysteresis past the marker). RVInterior turns
+            // these off while the player is inside.
+            ColliderBox(root.transform, "ColliderBody", new Vector2(-0.25f, -2f), new Vector2(3.25f, RoomLength));
+            ColliderBox(root.transform, "ColliderFrontL", new Vector2(1.64f, 1.9845f), new Vector2(0.47f, 2.031f));
+            ColliderBox(root.transform, "ColliderFrontR", new Vector2(1.64f, -3.6015f), new Vector2(0.47f, 6.797f));
 
             // Marker at the body centre: the interior room is centred on it, and RVInterior's
             // inside-box (symmetric about the marker) then matches the body footprint.

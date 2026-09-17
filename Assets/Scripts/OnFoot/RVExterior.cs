@@ -19,7 +19,7 @@ public class RVExterior : MonoBehaviour
     [Tooltip("Direction the door faces in the RV's local frame (must match the collider notch). The gizmo arrow shows it.")]
     public Vector2 doorLocalDirection = Vector2.right;
     [Tooltip("Centre of the doorway in the RV's local frame (middle of the collider notch, on the body edge).")]
-    public Vector2 doorLocalPosition = new Vector2(1.73f, 1.21f);
+    public Vector2 doorLocalPosition = new Vector2(1.875f, 0.383f);
 
     // World-space doorway, however the RV instance is rotated in the scene.
     public Vector2 DoorWorldDirection => ((Vector2)transform.TransformDirection(doorLocalDirection)).normalized;
