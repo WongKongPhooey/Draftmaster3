@@ -1,9 +1,9 @@
 ---
-name: cantonese
-description: Turn on ambient Cantonese learning for the rest of the session — swap a few words and short phrases in your English answers for Cantonese written in Jyutping, with the English in brackets right after. Use this whenever the user asks for Cantonese mode, Jyutping mode, "sprinkle Cantonese", "teach me Cantonese while we work", "Cantonese practice", "learn Cantonese", or asks to adjust how much Cantonese appears (more, less, off, characters on, drop the brackets). Also use it when the user asks what Cantonese they have seen so far, asks to be quizzed on it, or wants their vocabulary log read or updated.
+name: canton-claude
+description: Turn on ambient Cantonese learning for the rest of the session — swap a few words and short phrases in your English answers for Cantonese written in Jyutping, with the English in brackets right after. Use this whenever the user asks for Canton Claude, Cantonese mode, Jyutping mode, "sprinkle Cantonese", "teach me Cantonese while we work", "Cantonese practice", "learn Cantonese", or asks to adjust how much Cantonese appears (more, less, off, characters on, drop the brackets). Also use it when the user wants to hear a Cantonese word out loud, asks how something is pronounced, asks to check their pronunciation, asks what Cantonese they have seen so far, asks to be quizzed on it, or wants their vocabulary log read or updated.
 ---
 
-# Ambient Cantonese
+# Canton Claude
 
 The user wants to learn Cantonese by absorption, not by studying. They are here to
 get work done; the Cantonese rides along inside answers they were going to read
@@ -93,6 +93,43 @@ written Standard Chinese. Use the spoken forms — `hai6` (係) not `si6` (是) 
 "don't have", `ge3` (嘅) not `dik1` (的), `mat1 je5` (乜嘢) not `sam6 mo1` (什麼)
 for "what". `references/starter-vocab.md` lists more of these.
 
+## Hearing it
+
+`scripts/speak.sh` plays Cantonese through the machine's own speech engine, so the
+user can hear a word before trying to say it:
+
+```
+scripts/speak.sh 你好 多謝
+```
+
+Pass **characters, not Jyutping**. Speech engines read 好 correctly and read
+"hou2" as English nonsense, which would teach the exact opposite of the point.
+The vocabulary log and the starter vocab both store characters next to the
+Jyutping so this lookup is always available. If a word is not in either and you
+are not certain of its characters, say so rather than guessing — wrong characters
+produce a confidently wrong sound, which is worse than no sound.
+
+Run it when the user asks to hear something: "say that", "how do I pronounce it",
+"read it out", "let me check my pronunciation". Do not speak on every response
+unprompted — unrequested audio in the middle of work is an interruption, and this
+skill's whole premise is staying out of the way. If they do ask for audio on every
+new word, honour it, and speak only the new word rather than the whole response.
+
+`scripts/speak.sh --list` reports which voice is installed without speaking. When
+none is, the script prints that platform's setup steps and exits 3 — relay those
+steps instead of retrying. It deliberately refuses to fall back to a Mandarin or
+English voice, because those read the same characters as completely different
+sounds.
+
+### What the audio is worth
+
+Be straight with the user about this. Synthetic Cantonese gets the syllable right
+and the tone contour roughly right. That makes it genuinely useful for "wait, is
+that `si3` or `si6`" — checking you have the right tone on the right word. It is
+not good enough to copy for rhythm, stress or natural intonation, and it will
+sound flat next to a real speaker. For a model accent they want recordings of
+actual people, which the main Cantonese dictionaries — words.hk, Forvo — carry.
+
 ## The vocabulary log
 
 Keep a running log at `~/.claude/cantonese-vocab.md` — outside any repo, so it
@@ -121,11 +158,13 @@ lost a word.
 
 ## Things the user may ask for
 
+- **"Say that" / "how do I pronounce it?"** — look up the characters, run
+  `scripts/speak.sh`. See [Hearing it](#hearing-it).
 - **"What have I learned?"** — read the log and summarise: count, the words that
   are sticking, what is new this week.
 - **"Quiz me."** — pull from the log, weight toward `## Known` and words with
   mid-range counts. Jyutping → English, and English → Jyutping, which is harder
-  and worth more.
+  and worth more. Speaking a word and asking what it was is a good third form.
 - **"Show the characters."** — add hanzi before the Jyutping for the rest of the
   session: `好 hou2 (good)`. The log already stores them.
 - **"Off" / "less" / "no brackets"** — do it, no negotiation, and stay at the new
