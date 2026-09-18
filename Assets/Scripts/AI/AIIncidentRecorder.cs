@@ -266,7 +266,9 @@ public class AIIncidentRecorder : MonoBehaviour
         _summarised = true;
         foreach (var car in _cars) if (car.pendingId >= 0) Flush(car);
 
-        var sb = new StringBuilder($"[AIIncident] session summary: {_incidents} incidents (");
+        int trained = 0, total = 0;
+        foreach (var car in _cars) if (car.spline != null) { total++; if (car.spline.TrainedLineInUse) trained++; }
+        var sb = new StringBuilder($"[AIIncident] session summary: {_incidents} incidents, trained racing line in use on {trained}/{total} cars (");
         foreach (var kv in _byType) sb.Append($"{kv.Key} {kv.Value}  ");
         sb.Append(")\n  hotspots by track position:");
         var buckets = new List<KeyValuePair<int, int>>(_hotspots);

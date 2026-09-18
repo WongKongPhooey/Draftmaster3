@@ -54,6 +54,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Tooltip("How many Gauss-Seidel passes to relax the line toward minimum curvature. 0 = follow authored ideal exactly (rigid). 30-80 = realistic smoothed line.")]
     [Range(0, 200)]
     public int smoothingIterations = 60;
+    [Tooltip("Relaxation passes applied to a TRAINED racing line — just enough to round off a kink where the line is clamped to a road narrower than the one it was trained on, without flattening its apexes.")]
+    public int trainedLineSmoothingPasses = 30;
     [Tooltip("Per-pass relaxation factor. 0 = no movement, 1 = full averaging. ~0.3 is stable.")]
     [Range(0f, 1f)]
     public float smoothingRelaxation = 0.3f;
@@ -264,6 +266,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float[] _segmentTargetMph;
     float[] _segmentStartDistance;
     float[] _speedProfile;
+    // The fastest the car can take each point of the line at all (mph): the usable-grip corner speed with no
+    // cornerSpeedScale margin and no pace. Pace may bring a driver up to it, never past it. Straights hold
+    // MaxValue. See BuildSpeedProfile.
+    float[] _gripLimitProfile;
     float[] _curvatureProfile;  // |curvature| (1/m) of the DRIVEN line (centerline + smoothed lateral), per main sample
     float _bakedALatMaxMps2;    // lateral-accel ceiling (m/s²) the profile was baked against
     float[] _lateralProfile;
@@ -461,9 +467,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         // Min-curvature relaxation: each pass nudges every point toward the average of its neighbours, clamped to bounds.
-        // Skipped on a trained line — it is already smooth (the trainer only ever moves it in raised-cosine
-        // bumps), and relaxing it would drag the late apexes back into the geometric arc it beat.
-        int relaxPasses = trained != null ? 0 : smoothingIterations;
+        // Only a few passes on a trained line: it is already smooth (the trainer only ever moves it in raised-
+        // cosine bumps), and a full relax would drag the late apexes back into the geometric arc it beat. But
+        // not none. Where the road has been narrowed since the line was trained, the clamp above cuts the line
+        // off square at the new edge, and a corner a couple of samples long is a 20 m radius in the curvature
+        // profile — at Watkins Glen that put a phantom hairpin at 3,570 m, and the car braked for it mid-way
+        // through the esses at 2 g, lost the rear and went off. Thirty passes (swept in AILapSimTests) round off a kink that
+        // short and leaves a bump tens of metres wide as it was.
+        int relaxPasses = trained != null ? trainedLineSmoothingPasses : smoothingIterations;
         var tmp = new float[n];
         for (int p = 0; p < relaxPasses; p++)
         {
@@ -661,6 +672,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         int n = _mainSamples.Count;
         _speedProfile = new float[n];
+        _gripLimitProfile = new float[n];
         _bakedALatMaxMps2 = GripLateralAccelMps2();
         for (int i = 0; i < n; i++)
         {
@@ -668,9 +680,25 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             float kappa = _curvatureProfile != null ? _curvatureProfile[i] : 0f;
             // Curvature-true target where the line actually bends; the old segment target (top speed or the
             // authored cap) elsewhere and as the fallback when no curvature data exists.
-            _speedProfile[i] = kappa > 1e-4f
-                ? ComputeTargetSpeedForCurvature(kappa, segIdx) * _profilePace
-                : _segmentTargetMph[segIdx];
+            //
+            // Pace scales the corner target but is capped at the grip limit. It used to scale corners
+            // straight through: AIRacingBehaviour hands every car its driver pace x AiPaceMultiplier (1.2),
+            // so a quick driver planned every corner ~25% over what the tyres could hold and left the grip
+            // governor, which only looks 0.7 s ahead, to find out on turn-in. That is what filled Watkins
+            // Glen's run-off in practice. Pace still buys straight-line speed and takes a driver from the
+            // cornerSpeedScale margin right up to the limit — which is the difference between a good driver
+            // and a slow one — but no amount of it makes the car corner faster than it physically can.
+            if (kappa > 1e-4f)
+            {
+                float limit = ComputeTargetSpeedForCurvature(kappa, segIdx, atLimit: true);
+                _gripLimitProfile[i] = limit;
+                _speedProfile[i] = Mathf.Min(ComputeTargetSpeedForCurvature(kappa, segIdx) * _profilePace, limit);
+            }
+            else
+            {
+                _gripLimitProfile[i] = float.MaxValue;
+                _speedProfile[i] = _segmentTargetMph[segIdx];
+            }
         }
 
         // Two wrap-aware passes per direction so values settle across the loop seam.
@@ -690,7 +718,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     // Corner target from the driven line's real radius: v = √(r · a_lat). Same μ the physics friction circle
     // uses, so with cornerSpeedScale ≤ 1 the car is guaranteed lateral headroom instead of being commanded into
     // saturation (which is what strews understeering cars across the track when grip/speed tuning changes).
-    float ComputeTargetSpeedForCurvature(float kappa, int segIdx)
+    // `atLimit`: the most the car can take this curvature at — no cornerSpeedScale margin.
+    float ComputeTargetSpeedForCurvature(float kappa, int segIdx, bool atLimit = false)
     {
         float topMph = vehicleInfo != null ? vehicleInfo.topSpeed : 200f;
         float radius = 1f / kappa;
@@ -719,7 +748,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             if (vehicleInfo != null) bankingMph = seg.banking * vehicleInfo.bankingMphPerDegree;
             if (seg.maxSpeed > 0) capMph = Mathf.Min(capMph, seg.maxSpeed);
         }
-        return Mathf.Clamp((baseMph + bankingMph) * cornerSpeedScale, 5f, capMph);
+        return Mathf.Clamp((baseMph + bankingMph) * (atLimit ? 1f : cornerSpeedScale), 5f, capMph);
     }
 
     // Friction circle: longitudinal authority shrinks with the lateral load already spent at this point of the
@@ -759,11 +788,16 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (vMaxMph < _speedProfile[i]) _speedProfile[i] = vMaxMph;
     }
 
-    float ProfileAt(float distance)
+    float ProfileAt(float distance) => SampleAlongLine(_speedProfile, distance, 0f);
+
+    // The grip ceiling at this distance (mph); MaxValue on a straight or with no profile built.
+    float GripLimitAt(float distance) => SampleAlongLine(_gripLimitProfile, distance, float.MaxValue);
+
+    float SampleAlongLine(float[] profile, float distance, float empty)
     {
-        if (_speedProfile == null || _speedProfile.Length == 0 || _mainSamples == null) return 0f;
+        if (profile == null || profile.Length == 0 || _mainSamples == null) return empty;
         if (_mainLength > 0f) distance = ((distance % _mainLength) + _mainLength) % _mainLength;
-        int n = _speedProfile.Length;
+        int n = profile.Length;
         int lo = 0;
         for (int i = 0; i < n; i++)
         {
@@ -776,7 +810,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (hi <= lo) dHi += _mainLength;
         float denom = dHi - dLo;
         float t = denom > 0f ? Mathf.Clamp01((distance - dLo) / denom) : 0f;
-        return Mathf.Lerp(_speedProfile[lo], _speedProfile[hi], t);
+        // A straight's MaxValue next to a corner's ceiling would lerp to nonsense: take the tighter end.
+        if (profile[lo] >= float.MaxValue || profile[hi] >= float.MaxValue) return Mathf.Min(profile[lo], profile[hi]);
+        return Mathf.Lerp(profile[lo], profile[hi], t);
     }
 
     float ComputeTargetSpeedForSegment(TrackInfoV2.TrackSegment seg)
@@ -954,7 +990,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                     BuildSpeedProfile();
                     ratio = 1f;
                 }
-                targetMph = ProfileAt(_distance) * ratio + aiSpeedBoostMph;
+                // The live pace ratio and a draft boost both scale on top of the baked profile, so both are
+                // capped at the grip ceiling here too, or a pace change between rebuilds (or a tow into a
+                // corner) would put the car back over it.
+                targetMph = Mathf.Min(ProfileAt(_distance) * ratio + aiSpeedBoostMph, GripLimitAt(_distance));
                 DesiredMph = targetMph;
                 if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
             }

@@ -79,11 +79,41 @@ public class AILapSimTests
     [Explicit("Diagnostic: step-by-step trace through one stretch of track, car lateral against the line and the edge.")]
     public void Trace()
     {
-        var r = Drive(3, null, traceLap: 1, traceFrom: 3380f, traceTo: 3620f);
+        var r = Drive(3, null, traceLap: 0, traceFrom: 3420f, traceTo: 3540f, pace: TopAIPace, lineFactor: -0.05f);
         Debug.Log("[LapSim] trace 3380-3620 lap 1\n" + r.trace);
         Despawn(); SpawnTrack();
         r = Drive(3, null, traceLap: 2, traceFrom: 2100f, traceTo: 2360f);
         Debug.Log("[LapSim] trace 2100-2360 lap 2\n" + r.trace);
+    }
+
+    [Test]
+    [Explicit("Diagnostic: which track asset the package drives on, and the line's curvature through the 3,550 m kink.")]
+    public void Geometry()
+    {
+        var trackType = Runtime("TrackBuilder");
+        var track = _package.GetComponentInChildren(trackType, true);
+        var info = (UnityEngine.Object)trackType.GetField("track").GetValue(track);
+        var resource = Resources.Load("Tracks/WatkinsGlen");
+        var sb = new StringBuilder($"[LapSim] geometry: package track = {AssetDatabase.GetAssetPath(info)} (id {info.GetInstanceID()}), " +
+                                   $"Resources/Tracks/WatkinsGlen = {AssetDatabase.GetAssetPath(resource)} (id {(resource != null ? resource.GetInstanceID() : 0)})");
+
+        var go = new GameObject("GeoCar"); _cars.Add(go);
+        var splineType = Runtime("SplineDriver");
+        var spline = go.AddComponent(splineType);
+        Set(spline, "track", track);
+        Set(spline, "vehicleInfo", Resources.Load("Vehicles/Cup24"));
+        splineType.GetMethod("Rebuild").Invoke(spline, null);
+        var samples = (System.Collections.IList)splineType.GetField("_mainSamples", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(spline);
+        var lat = (float[])splineType.GetField("_lateralProfile", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(spline);
+        var kappa = (float[])splineType.GetField("_curvatureProfile", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(spline);
+        var prof = (float[])splineType.GetField("_speedProfile", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(spline);
+        for (int i = 0; i < samples.Count; i++)
+        {
+            float d = (float)samples[i].GetType().GetField("distance").GetValue(samples[i]);
+            if (d < 3500f || d > 3600f) continue;
+            sb.Append($"\n  d{d,7:0.0} lat{lat[i],6:0.00} R{(kappa[i] > 1e-5f ? 1f / kappa[i] : 99999f),8:0} prof{prof[i] / 2.237f,6:0.0} m/s");
+        }
+        Debug.Log(sb.ToString());
     }
 
     [Test]
@@ -92,6 +122,36 @@ public class AILapSimTests
     {
         var r = Drive(laps: 4);
         Debug.Log(Report("[LapSim] Watkins Glen", r));
+    }
+
+    [Test]
+    [Explicit("Diagnostic: the same laps on the authored (untrained) line, which is what a car without the trained line drives.")]
+    public void WatkinsGlenLapsUntrained()
+    {
+        var r = Drive(laps: 4, trainedLine: false);
+        Debug.Log(Report("[LapSim] Watkins Glen UNTRAINED line", r));
+    }
+
+    [Test]
+    [Explicit("Diagnostic: sweeps the trained-line smoothing passes across the field's pace and line spread.")]
+    public void SweepTrainedSmoothing()
+    {
+        var sb = new StringBuilder("[LapSim] trained smoothing sweep");
+        foreach (int passes in new[] { 8, 16, 30, 60 })
+        {
+            int incidents = 0; float total = 0f; int laps = 0;
+            foreach (float pace in new[] { 0.93f * 1.2f, TopAIPace })
+            foreach (float lf in new[] { -0.05f, 0f, 0.08f })
+            {
+                var r = Drive(3, pace: pace, lineFactor: lf,
+                              splineOverrides: new Dictionary<string, object> { { "trainedLineSmoothingPasses", passes } });
+                incidents += r.incidents.Count;
+                foreach (var t in r.lapTimes) { total += t; laps++; }
+                Despawn(); SpawnTrack();
+            }
+            sb.Append($"\n  passes {passes}: {incidents} incidents over {laps} laps, avg lap {(laps > 0 ? total / laps : 0f):0.00}");
+        }
+        Debug.Log(sb.ToString());
     }
 
     [Test]
@@ -115,14 +175,35 @@ public class AILapSimTests
         Debug.Log(sb.ToString());
     }
 
+    // The fastest pace a real AI car is handed: the best driver's 1.04 x TrackConditions.AiPaceMultiplier
+    // (1.2), which is what AIRacingBehaviour writes into SplineDriver.paceMultiplier every frame.
+    const float TopAIPace = 1.04f * 1.2f;
+
     [Test]
-    public void AnAICarLapsWatkinsGlenCleanly()
+    [Explicit("Diagnostic: laps at real AI pace, across the line-factor spread aggression gives the field.")]
+    public void WatkinsGlenLapsAtRacePace()
     {
-        // Practice on an empty track is the easiest thing the AI ever do. It is not allowed to leave the
-        // road, and it certainly is not allowed to spin.
-        var r = Drive(laps: 3);
+        var sb = new StringBuilder();
+        foreach (float lf in new[] { -0.05f, 0f, 0.08f })
+        {
+            var r = Drive(laps: 4, pace: TopAIPace, lineFactor: lf);
+            sb.AppendLine(Report($"[LapSim] pace {TopAIPace:0.00} lineFactor {lf:0.00}", r));
+            Despawn(); SpawnTrack();
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Test]
+    public void AnAICarLapsWatkinsGlenCleanly(
+        [Values(0.93f * 1.2f, 1.04f * 1.2f)] float pace,
+        [Values(-0.05f, 0.08f)] float lineFactor)
+    {
+        // Practice on an empty track is the easiest thing the AI ever do. At the pace the game actually
+        // hands them, and at either end of the line spread, they are not allowed to leave the road, and
+        // they are certainly not allowed to spin.
+        var r = Drive(laps: 3, pace: pace, lineFactor: lineFactor);
         Assert.AreEqual(3, r.lapTimes.Count, Report("The car didn't finish its laps", r));
-        Assert.IsEmpty(r.incidents, Report("The AI didn't lap Watkins Glen cleanly", r));
+        Assert.IsEmpty(r.incidents, Report($"The AI didn't lap Watkins Glen cleanly at pace {pace:0.00}, line {lineFactor:0.00}", r));
     }
 
     [Test]
@@ -204,7 +285,8 @@ public class AILapSimTests
 
     // One car, built like GridSpawner's practice cars, driven for `laps` flying laps after a run-up.
     Result Drive(int laps, Dictionary<string, object> inputOverrides = null,
-                 int traceLap = -99, float traceFrom = 0f, float traceTo = 0f)
+                 int traceLap = -99, float traceFrom = 0f, float traceTo = 0f, bool trainedLine = true,
+                 float pace = 1f, float lineFactor = 0f, Dictionary<string, object> splineOverrides = null)
     {
         var trackType = Runtime("TrackBuilder");
         var track = _package.GetComponentInChildren(trackType, true);
@@ -228,6 +310,10 @@ public class AILapSimTests
         Set(spline, "speed", 45f);
         Set(spline, "startDistance", 0f);
         Set(spline, "externalMotionController", true);
+        Set(spline, "useTrainedLine", trainedLine);
+        Set(spline, "paceMultiplier", pace);
+        Set(spline, "lineFactor", lineFactor);
+        if (splineOverrides != null) foreach (var kv in splineOverrides) Set(spline, kv.Key, kv.Value);
 
         var pvc = go.AddComponent(pvcType);
         Set(pvc, "vehicleInfo", vehicleInfo);
