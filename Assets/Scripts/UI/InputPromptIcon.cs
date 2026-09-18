@@ -59,19 +59,52 @@ public static class InputPromptIcon
         // and comes out black. Same forced-unlit swap every other world sprite in these scenes does.
         sr.sharedMaterial = UnlitMaterial();
 
-        Fit(go.transform, sprite, worldHeight);
-        if (pad != PadButton.None) InputPromptGlyph.Attach(sr, sprite, pad, worldHeight);
+        // Always attached, pad or not: it is also what holds the icon at one size on screen.
+        InputPromptGlyph.Attach(sr, sprite, pad, worldHeight);
         return sr;
     }
 
-    // Scale a transform so `sprite` renders `worldHeight` metres tall, cancelling out the sprite's PPU.
+    // Every key prompt is this fraction of the screen's height, wherever it is and whatever it hangs off.
+    // 0.3 m under the paddock's on-foot camera (3.5 m half-height), which is where prompts were tuned.
+    public const float ScreenHeightFraction = 0.043f;
+
+    // How tall, in world units at `worldPos`, a prompt should be so it covers ScreenHeightFraction of the
+    // screen — rounded to a whole number of screen pixels per art pixel so the pixel keycap stays crisp.
+    // Falls back to `fallbackWorldHeight` with no camera to measure against.
+    public static float ScreenHeightInWorld(Camera cam, Vector3 worldPos, Sprite sprite, float fallbackWorldHeight)
+    {
+        int screenH = Screen.height;
+        if (cam == null || screenH <= 0) return fallbackWorldHeight;
+
+        float worldPerScreenPx;
+        if (cam.orthographic)
+            worldPerScreenPx = 2f * cam.orthographicSize / screenH;
+        else
+        {
+            float depth = Mathf.Max(0.01f, Vector3.Dot(worldPos - cam.transform.position, cam.transform.forward));
+            worldPerScreenPx = 2f * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / screenH;
+        }
+        if (worldPerScreenPx <= 0f) return fallbackWorldHeight;
+
+        float targetPx = ScreenHeightFraction * screenH;
+        float artPx = sprite != null && sprite.rect.height > 0f ? sprite.rect.height : 16f;
+        float snappedPx = artPx * Mathf.Max(1f, Mathf.Round(targetPx / artPx));
+        return snappedPx * worldPerScreenPx;
+    }
+
+    // Scale a transform so `sprite` renders `worldHeight` metres tall in the WORLD, cancelling out the
+    // sprite's PPU and whatever scale the transform's parents carry.
     public static void Fit(Transform t, Sprite sprite, float worldHeight)
     {
         if (sprite == null || worldHeight <= 0f) return;
         float spriteH = sprite.bounds.size.y;
         if (spriteH < 1e-5f) return;
-        t.localScale = Vector3.one * (worldHeight / spriteH);
+        Vector3 parent = t.parent != null ? t.parent.lossyScale : Vector3.one;
+        float s = worldHeight / spriteH;
+        t.localScale = new Vector3(s / NonZero(parent.x), s / NonZero(parent.y), 1f);
     }
+
+    static float NonZero(float v) => Mathf.Abs(v) < 1e-5f ? 1f : Mathf.Abs(v);
 
     static Material UnlitMaterial()
     {

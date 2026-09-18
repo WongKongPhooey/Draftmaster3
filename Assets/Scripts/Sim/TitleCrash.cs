@@ -330,6 +330,23 @@ namespace Draftmaster.Sim
         // out of frame before it sets off and after it has gone rather than winking out mid-screen.
         public const float PassMarginPx = 120f;
 
+        // How long the field going past takes, in seconds, unless the scene says otherwise.
+        public const float DefaultLeadInSeconds = 1.6f;
+
+        // The closest a car in the accident may come to a car in the field going past, reference px. The two
+        // beats overlap now — the accident comes in right on the pack's tail — and the accident is supposed to
+        // be the only contact in the shot.
+        public const float FollowClearancePx = 14f;
+
+        // Where the lead-in beat is, on its own 0..1 clock, `seconds` after the accident's own zero. The beat
+        // ends (the pack's back marker leaves the bottom of the frame) `followSeconds` before the accident
+        // starts — so a NEGATIVE follow is the accident already dropping in while the pack is still on screen.
+        public static float LeadAt(float seconds, float followSeconds, float leadInSeconds)
+        {
+            float beat = Mathf.Max(1e-4f, leadInSeconds);
+            return (seconds + followSeconds + beat) / beat;
+        }
+
         // ------------------------------------------------------------------ bodies
 
         // Half the extent of a car along one screen axis at this rotation, in reference px. There is only one

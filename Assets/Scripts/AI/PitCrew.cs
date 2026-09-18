@@ -401,14 +401,12 @@ public class PitCrewBox : MonoBehaviour
         _sideTimer = 0f;
 
         // Measure both sides off the serviced car's ACTUAL pose, so the crew run to the car wherever it
-        // stopped in the box rather than to a fixed spot. Car forward is its local +X, so transform.right is
-        // the long axis and transform.up the side axis — and because up is a quarter turn anticlockwise of
-        // forward, +up is the car's LEFT-hand side and -up its RIGHT. With no car handed over, fall back to
-        // one parked square in the box: nose up the lane, right-hand side towards the box's own +X.
+        // stopped in the box rather than to a fixed spot. With no car handed over, fall back to one parked
+        // square in the box: nose up the lane, right-hand side towards the box's own +X.
         bool haveCar = car != null;
         Vector3 origin = haveCar ? car.position : transform.position;
-        Vector3 fwd = haveCar ? car.right : transform.up;
-        Vector3 side = haveCar ? -car.up : transform.right;   // out to the car's right-hand side
+        Vector3 fwd = transform.up, side = transform.right;
+        if (haveCar) CarAxes(car, out fwd, out side);
 
         Vector3 f = fwd * wheelLongitudinal;
         Vector3 r = side * wheelLateral;
@@ -443,8 +441,9 @@ public class PitCrewBox : MonoBehaviour
         // sits over the car that actually turned up rather than the one the box was drawn for.
         if (haveCar && _signMan != null)
         {
+            // Same lateral sense as the nominal station: + is the car's right-hand side (box +X).
             Vector3 signLocal = ToBoxLocal(
-                car.position + car.right * (wheelLongitudinal + signStandoff) + car.up * (wheelLateral * signLateralFrac));
+                car.position + fwd * (wheelLongitudinal + signStandoff) + side * (wheelLateral * signLateralFrac));
             _signMan.SetCarRect(carLocal, carHalf);
             _signMan.SetWorkTarget(signLocal);
         }
@@ -452,6 +451,27 @@ public class PitCrewBox : MonoBehaviour
         for (int i = 0; i < _members.Count; i++) _members[i]?.SetWorking(true);
         // A stop nobody announced (a car that crawled in without calling ahead) still gets its board down.
         _signMan?.Lower();
+    }
+
+    // Which way a car is actually pointing, and its right-hand side, in world space.
+    //
+    // NOT transform.right. The racing cars are drawn nose-left and carry angleOffsetDeg 180, so their local
+    // +X is the TAIL — reading it as forward sent the sign man to hold his board over the boot, and turned
+    // the whole crew round with him: wheel men starting on the left, the fueller at the right front. The
+    // heading is read back the same way the car's own controller writes it. A bare transform with neither
+    // controller on it (a test rig) is taken as nose along +X.
+    static void CarAxes(Transform car, out Vector3 forward, out Vector3 right)
+    {
+        bool facesUp = false;
+        float offset = 0f;
+        var pvc = car.GetComponent<PlayerVehicleController>();
+        var spline = car.GetComponent<SplineDriver>();
+        if (pvc != null && (pvc.enabled || spline == null)) { facesUp = pvc.spriteFacesUp; offset = pvc.angleOffsetDeg; }
+        else if (spline != null) { facesUp = spline.spriteFacesUp; offset = spline.angleOffsetDeg; }
+
+        float heading = (car.eulerAngles.z + (facesUp ? 90f : 0f) - offset) * Mathf.Deg2Rad;
+        forward = new Vector3(Mathf.Cos(heading), Mathf.Sin(heading), 0f);
+        right = new Vector3(forward.y, -forward.x, 0f);   // a quarter turn clockwise of forward
     }
 
     // The four wheel men on ONE side of the car, in member order: the front and rear changers on the wheels

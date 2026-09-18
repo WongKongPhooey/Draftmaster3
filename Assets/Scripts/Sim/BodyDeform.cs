@@ -125,6 +125,64 @@ namespace Draftmaster.Sim
             return theirs / (mine + theirs);
         }
 
+        // The same split, with how soft each panel is WHERE THE TWO MEET. A crumple zone gives way before a
+        // door does, so a nose buried in a flank takes more of the overlap than the flank — but the two
+        // shares still sum to 1, so the softer end folds deeper without the pair folding any more metal than
+        // the contact actually buries. That is the only way to make one end softer without a void: scale
+        // the split, never the total. `compliance` is VehicleDamage.ComplianceAt — 1 for a plain panel,
+        // more toward a crumpling end, 0 on the rigid tub. Two rigid points fall back to the mass split.
+        public static float Share(float myMass, float myCompliance, float otherMass, float otherCompliance)
+        {
+            float mine = Mathf.Max(0f, myCompliance) / Mathf.Max(1f, myMass);
+            float theirs = Mathf.Max(0f, otherCompliance) / Mathf.Max(1f, otherMass);
+            if (mine + theirs <= 1e-9f) return Share(myMass, otherMass);
+            return mine / (mine + theirs);
+        }
+
+        // How much of the ends' extra fold depth a hit of this severity unlocks, 0..1.
+        //
+        // A crumple zone is stiff until it is not: a tap on the bumper marks it no more than a tap on the door,
+        // and only a real shunt collapses the structure behind it. Below `yield` the nose and tail fold exactly
+        // like the flanks; from there to a full-severity hit the extra comes in on an S-curve, so a big hit can
+        // fold the bonnet right back to the screen while a medium one only creases the front of it.
+        //
+        // What the extra buys is a bigger SHARE of the contact (see the compliance Share), plus a deeper
+        // virtual press in a race where the solver has already pulled the cars apart. It never multiplies
+        // the fold itself: anything folded beyond the intrusion is a gap between the two cars.
+        public static float EndYield(float severity, float yield)
+        {
+            float y = Mathf.Clamp01(yield);
+            if (y <= 0f) return 1f;   // no yield point: the old always-soft ends
+            if (y >= 1f) return severity >= 1f ? 1f : 0f;
+            return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(y, 1f, severity));
+        }
+
+        // The collider span left once the nose and tail have folded back by `front` and `rear` (same units as
+        // `length`, positive = retreated). Returns the new length, and where its centre sits along the long
+        // axis relative to the undamaged centre (+ = toward the nose).
+        //
+        // The collider has to follow the metal. It is what the other car actually touches, so a bonnet folded
+        // back half a metre inside a full-length box leaves half a metre of air between the crushed nose and
+        // whatever it is pushing — the void, permanently, on every contact that end ever makes again.
+        // `minLengthFrac` keeps the tub: however bad the crash, the box never shrinks inside the safety cell.
+        public static float CrushedSpan(float length, float front, float rear, float minLengthFrac,
+                                        out float centreShift)
+        {
+            front = Mathf.Max(0f, front);
+            rear = Mathf.Max(0f, rear);
+            float lost = front + rear;
+            float maxLost = length * (1f - Mathf.Clamp01(minLengthFrac));
+            if (lost > maxLost && lost > 1e-6f)
+            {
+                float k = maxLost / lost;
+                front *= k;
+                rear *= k;
+                lost = maxLost;
+            }
+            centreShift = (rear - front) * 0.5f;
+            return length - lost;
+        }
+
         // How far `p` must travel along `striker.inward` to get back out of the striker, once the striker has
         // been driven a further `press` in. Zero if `p` was never inside it.
         //

@@ -415,8 +415,8 @@ public static class RacingLineTrainingMenu
         return (s == null || s.Count == 0) ? 0f : s[s.Count - 1].distance;
     }
 
-    // The corridor is the authored leftmost/rightmost AI lines — the same bounds SplineDriver already clamps
-    // its smoothed line to, so training cannot put a car anywhere the current code would not.
+    // The corridor is the authored leftmost/rightmost AI lines, pulled inside the road's built width — the same
+    // bounds SplineDriver clamps its line to, so training cannot put a car anywhere the current code would not.
     static RacingLineTrainer.Course BuildCourse(TrackInfoV2 track, VehicleInfo car,
         List<TrackBuilder.Sample> samples, List<TrackInfoV2.RacingLineAnchor> anchors, float length)
     {
@@ -443,8 +443,8 @@ public static class RacingLineTrainingMenu
             var s = samples[i];
             course.centre[i] = s.position;
             course.right[i] = s.normal;   // TrackBuilder emits normal = (tangent.y, -tangent.x) = right of travel
-            course.minLateral[i] = track.GetLateralAt(s.distance, -1f, anchors, length);
-            course.maxLateral[i] = track.GetLateralAt(s.distance, +1f, anchors, length);
+            course.minLateral[i] = SplineDriver.ClampToRoad(track.GetLateralAt(s.distance, -1f, anchors, length), s.width);
+            course.maxLateral[i] = SplineDriver.ClampToRoad(track.GetLateralAt(s.distance, +1f, anchors, length), s.width);
 
             int segIdx = SegmentIndexAt(segStart, s.distance, cum);
             var seg = track.segments[Mathf.Clamp(segIdx, 0, track.segments.Length - 1)];

@@ -60,6 +60,18 @@ public class SplineInputDriver : MonoBehaviour
     float _prevHeadingError;
     bool _hasPrevError;
 
+    // What the controller decided on its last physics step, for AIIncidentRecorder and anything else that
+    // wants to see WHY a car did what it did. Read-only telemetry; nothing drives off it.
+    public bool IsRecovering => _recovering;
+    public float LastNoseErrorDeg { get; private set; }
+    public float LastSlipDeg { get; private set; }
+    public float LastProfileMps { get; private set; }    // the brain's commanded speed, before the governor
+    public float LastGripCapMps { get; private set; }    // the grip governor's ceiling (MaxValue = no cap)
+    public float LastCommandedMps { get; private set; }  // what the throttle/brake actually chased
+    public float LastSteer { get; private set; }
+    public float LastThrottle { get; private set; }
+    public float LastBrake { get; private set; }
+
     void Awake()
     {
         _spline = GetComponent<SplineDriver>();
@@ -159,6 +171,8 @@ public class SplineInputDriver : MonoBehaviour
 
         // --- Speed: throttle when under the commanded speed, brake when over.
         float commandedMps = _spline.CommandedSpeedMps;
+        LastProfileMps = commandedMps;
+        LastGripCapMps = float.MaxValue;
 
         // Grip governor: never command more speed than the LIVE friction circle can hold on the tightest radius
         // coming up within the scan window. The baked profile used spawn-time grip — tyre wear, the grip slider,
@@ -170,7 +184,9 @@ public class SplineInputDriver : MonoBehaviour
             float gripRadius = _spline.CurvatureRadiusAhead(Mathf.Max(8f, speed * gripScanTime));
             if (aLatMax > 0.1f && gripRadius < float.MaxValue)
             {
-                float vGrip = Mathf.Sqrt(aLatMax * gripUtilization * gripRadius);
+                // What the car can hold on that radius, not what the tyre peaks at (AIGrip).
+                float vGrip = AIGrip.CornerSpeed(gripRadius, aLatMax * gripUtilization);
+                LastGripCapMps = vGrip;
                 if (commandedMps > vGrip) commandedMps = vGrip;
             }
         }
@@ -184,6 +200,13 @@ public class SplineInputDriver : MonoBehaviour
         float brake = Mathf.Clamp01(-speedError * speedGain) * (1f - 0.5f * slide01);
 
         _car.SetInput(steerInput, throttle, brake);
+
+        LastNoseErrorDeg = noseErrorDeg;
+        LastSlipDeg = slipDeg;
+        LastCommandedMps = commandedMps;
+        LastSteer = steerInput;
+        LastThrottle = throttle;
+        LastBrake = brake;
 
         // Feed actual speed back so the brain advances its path point with the real car (prevents the commanded
         // point running away when the car is slowed by contact/understeer).

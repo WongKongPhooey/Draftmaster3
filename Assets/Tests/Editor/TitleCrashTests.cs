@@ -167,6 +167,12 @@ public class TitleCrashTests
 
         var report = tally.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Value}x {kv.Key}");
         UnityEngine.Debug.Log($"{sound}/400 first draws sound. Rejections: {string.Join(" | ", report)}");
+
+        var follows = Shots().Select(shot => shot.followSeconds).OrderBy(f => f).ToArray();
+        var solved = TitleCrashComposer.Solved();
+        int fellBack = Shots().Count(shot => Same(shot, solved));
+        UnityEngine.Debug.Log($"Follow seconds: min {follows[0]:0.00}, median {follows[follows.Length / 2]:0.00}, " +
+                              $"max {follows[follows.Length - 1]:0.00}. {fellBack}/{Seeds} fell back.");
     }
 
     [Test]
@@ -226,24 +232,34 @@ public class TitleCrashTests
         // accident and where on the screen it happened — but the car being T-boned turned the same way and
         // came to rest the same fraction of the same sweep past square every single time, so every crash
         // read as the same crash in different paint.
+        //
+        // And then it was only ever allowed within thirty degrees of square, so every wrecked car still lay
+        // nearly straight across the screen. It rests anywhere from 70 to 210 degrees round from its line now.
         var tilts = new HashSet<int>();
-        int oneWay = 0;
+        int oneWay = 0, pastSquare = 0, wellPast = 0;
 
         foreach (var shot in Shots())
         {
             var slider = shot.cars[SliderOf(shot)];
             Vector2 line = (slider.endPos - slider.startPos).normalized;
 
-            // Signed degrees past square: the dot with its own line of travel is the sine of how far round
-            // from broadside it has got, and the sign is which way it was spinning.
-            float tilt = Mathf.Asin(Mathf.Clamp(Vector2.Dot(Nose(slider.endRotation), line), -1f, 1f)) * Mathf.Rad2Deg;
-            tilts.Add(Mathf.RoundToInt(tilt / 4f));
-            if (tilt > 0f) oneWay++;
+            // Signed degrees round from pointing down its own line; the sign is which way it was spinning.
+            float turn = Vector2.SignedAngle(line, Nose(slider.endRotation));
+            float unsigned = Mathf.Abs(turn);
+            Assert.GreaterOrEqual(unsigned, 68f,
+                                  $"The wrecked car only got {unsigned:0} degrees round — it is barely out of shape.");
+
+            tilts.Add(Mathf.RoundToInt(turn / 6f));
+            if (turn > 0f) oneWay++;
+            if (unsigned > 100f) pastSquare++;
+            if (unsigned > 140f) wellPast++;
         }
 
-        Assert.Greater(tilts.Count, 6,
+        Assert.Greater(tilts.Count, 12,
                        $"The wrecked car only ever lies at {tilts.Count} distinct angles across {Seeds} shots — " +
                        "it reads as the same crash every time the game opens.");
+        Assert.Greater(pastSquare, Seeds / 5, "The wrecked car almost never comes round past square.");
+        Assert.Greater(wellPast, Seeds / 12, "The wrecked car never ends up anywhere near facing backwards.");
         Assert.Greater(oneWay, Seeds / 5, "The wrecked car always spins the same way.");
         Assert.Less(oneWay, Seeds * 4 / 5, "The wrecked car almost always spins the same way.");
     }
@@ -410,6 +426,26 @@ public class TitleCrashTests
         }
     }
 
+    [Test]
+    public void TheAccidentComesInRightOnThePacksTailWithoutTouchingIt()
+    {
+        // It used to wait for the pack to clear the frame completely and then leave a third of a second of
+        // empty road, so the crash read as a separate scene rather than as the field it belonged to. It drops
+        // in on the back of the pack now — and the pack is racing, so nothing in the accident may touch it.
+        int tight = 0;
+        foreach (var shot in Shots())
+        {
+            Assert.IsTrue(TitleCrashComposer.ClearOfThePack(shot, out string why), why);
+            Assert.Greater(shot.followSeconds, -shot.leadInSeconds,
+                           "The accident starts before the field going past has even set off.");
+            if (shot.followSeconds < 0f) tight++;
+        }
+
+        Assert.Greater(tight, Seeds * 3 / 4,
+                       $"Only {tight} of {Seeds} accidents start before the pack has left — the rest still wait " +
+                       "for an empty screen.");
+    }
+
     static TitleCrash.CarPose AsCar(TitleCrash.PassPose pose)
     {
         return new TitleCrash.CarPose { position = pose.position, rotation = pose.rotation, progress = 1f };
@@ -549,9 +585,8 @@ public class TitleCrashTests
                 float alignment = Vector2.Dot(Nose(shot.cars[i].startRotation), travel);
 
                 if (shot.IsSlider(i))
-                    Assert.Less(Mathf.Abs(alignment), 0.6f,
-                                "The car that's supposed to slide in sideways enters pointing down the road — " +
-                                "there's no flank presented to hit, so the crash isn't a T-bone.");
+                    Assert.Less(alignment, 0.985f,
+                                "The car that's supposed to have lost it enters pointing straight down the road.");
                 else
                     Assert.Greater(alignment, 0.9f,
                                    $"Car {i} enters pointing somewhere other than where it's going — it's driving in backwards.");
@@ -560,7 +595,7 @@ public class TitleCrashTests
     }
 
     [Test]
-    public void OnlyTheSlidingCarEndsUpBroadsideToItsLineOfTravel()
+    public void OnlyTheSlidingCarEndsUpTurnedAwayFromItsLineOfTravel()
     {
         foreach (var shot in Shots())
         {
@@ -571,14 +606,11 @@ public class TitleCrashTests
 
                 if (shot.IsSlider(i))
                 {
-                    // Not merely "off its line" — square across it, or the strikers arrive at a corner rather
-                    // than a door and every dent comes out the same shape as every other. Thirty degrees of
-                    // slack rather than twenty, because that slack is what stops the wrecked car lying at
-                    // the same angle in every shot; a striker still arrives well inside the T-bone limit
-                    // checked below at the far end of it.
-                    Assert.Less(Mathf.Abs(alignment), 0.5f,
-                                "The car being T-boned isn't broadside when it's hit — it's a glancing blow, " +
-                                "and the whole point of the shot is that the two panels deform differently.");
+                    // At least 70 degrees round from its line, and anywhere from there to facing backwards —
+                    // a door, a quarter panel or the tail presented to whatever is coming.
+                    Assert.LessOrEqual(alignment, Mathf.Cos(68f * Mathf.Deg2Rad),
+                                       "The wrecked car is barely turned off its line when it's hit — there is " +
+                                       "nothing presented for the cars behind to pile into.");
                     Assert.Greater(Mathf.Abs(shot.cars[i].endRotation - shot.cars[i].startRotation), 30f,
                                    "The sliding car barely rotates on its way in — it reads as parked at an " +
                                    "angle rather than as a car that has lost it and is still coming round.");
@@ -686,7 +718,7 @@ public class TitleCrashTests
     }
 
     [Test]
-    public void EveryHitIsATBoneSquareIntoTheSlidersDoorInSlowMotion()
+    public void EveryHitComesStraightDownIntoTheSliderInSlowMotion()
     {
         // This is what makes the shot worth staging: one contact where the two panels either side of it have
         // to deform completely differently. A narrow nose driven into a long flat flank gouges deep and
@@ -721,24 +753,25 @@ public class TitleCrashTests
                 Assert.Less(Gap(poses[hit.striker], poses[hit.struck]), 5f,
                             "The two cars aren't together when the hit fires — the sparks would go off in mid-air.");
 
+                // Close to straight down the screen: the variety is in how the wrecked car is lying, not in
+                // the angle the rest of the field arrives at.
                 Vector2 heading = Nose(poses[hit.striker].rotation);
+                Assert.Greater(Vector2.Dot(heading, Vector2.down), Mathf.Cos(7f * Mathf.Deg2Rad),
+                               "A striker comes in at an angle rather than straight down the road.");
+
+                // On the body rather than off the edge of it: across the striker's own line, its centre is
+                // inside the struck car's silhouette by a good part of its nose, so it goes into metal
+                // rather than clipping a corner in passing.
+                Vector2 side = new Vector2(-heading.y, heading.x);
                 float rad = poses[hit.struck].rotation * Mathf.Deg2Rad;
-                Vector2 flank = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));   // the struck car's long axis
-
-                Assert.Less(Mathf.Abs(Vector2.Dot(heading, flank)), 0.35f,
-                            "A striker arrives more than 20 degrees off square to the car it's hitting — " +
-                            "that's a sideswipe down the side, not a T-bone into the door.");
-
-                // Where along the struck car the nose lands: 0 is the middle of the door, ±half a car a corner.
-                Vector2 noseAt = poses[hit.striker].position + heading * (TitleCrash.CarLengthPx * 0.5f);
-                float along = Vector2.Dot(noseAt - poses[hit.struck].position, flank);
-                // On the body rather than off the end of it. A car arriving on its own goes into the door;
-                // when two arrive abreast the outer one lands on a quarter panel, which is where a second
-                // car piling into the same flank SHOULD land — so the limit is the end of the car, not the
-                // middle of the door.
-                Assert.Less(Mathf.Abs(along), TitleCrash.CarLengthPx * 0.4f,
-                            $"The nose lands {along:0}px along the struck car — it's clipping a corner rather " +
-                            "than going into the flank, so the deep local gouge never happens.");
+                Vector2 a = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+                Vector2 b = new Vector2(-a.y, a.x);
+                float span = Mathf.Abs(Vector2.Dot(a, side)) * TitleCrash.CarLengthPx * 0.5f
+                           + Mathf.Abs(Vector2.Dot(b, side)) * TitleCrash.CarWidthPx * 0.5f;
+                float off = Vector2.Dot(poses[hit.striker].position - poses[hit.struck].position, side);
+                Assert.LessOrEqual(Mathf.Abs(off), span - TitleCrash.CarWidthPx * 0.25f + 1.5f,
+                                   $"The striker lands {off:0}px off the middle of a car {span * 2f:0}px wide — " +
+                                   "it's clipping a corner rather than going into the body.");
 
                 Assert.Greater(Vector2.Dot(hit.normal.normalized,
                                            (poses[hit.struck].position - poses[hit.striker].position).normalized), 0f,

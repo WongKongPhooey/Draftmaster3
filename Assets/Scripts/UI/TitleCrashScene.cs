@@ -57,8 +57,10 @@ public class TitleCrashScene : MonoBehaviour
     [Tooltip("Beat zero, in seconds: the field streaming past at racing speed, before the accident arrives " +
              "and before anything has slowed down. Zero skips it and opens on the crash.")]
     public float leadInSeconds = 1.6f;
-    [Tooltip("Seconds of empty screen between the last car going past and the first car of the crash.")]
-    public float startDelay = 0.35f;
+    [Tooltip("Extra seconds held back on top of the follow the composer solves. The accident normally drops " +
+             "in right on the pack's tail, as close behind it as it can get without touching it; this only " +
+             "ever opens that gap up. 0 = as tight as it goes.")]
+    public float extraFollowSeconds = 0f;
     [Tooltip("Beat one, in seconds: the cars are thrown into shot and time brakes hard, from far too fast " +
              "to follow down to a crawl. Nearly the whole sequence happens in here.")]
     public float slamSeconds = TitleCrash.Tempo.Default.slamSeconds;
@@ -243,7 +245,7 @@ public class TitleCrashScene : MonoBehaviour
         // Everything downstream — who is in it, where, how hard, and which paint is on which car — is a
         // function of this one number, so a shot somebody liked can always be got back.
         _seed = seed != 0 ? seed : Random.Range(1, int.MaxValue);
-        _shot = TitleCrashComposer.Compose(_seed);
+        _shot = TitleCrashComposer.Compose(_seed, leadInSeconds);
 
         var plans = _shot.cars;
         _plans = plans;
@@ -301,7 +303,7 @@ public class TitleCrashScene : MonoBehaviour
         // clock starts far enough back to cover the whole lead-in AND the gap after it: the crash's own
         // zero is still the moment its first car is due, so nothing in the choreography has to know the
         // beat in front of it exists.
-        _elapsed = -(Mathf.Max(0f, startDelay) + Mathf.Max(0f, leadInSeconds));
+        _elapsed = -(Follow + Mathf.Max(0f, leadInSeconds));
         PoseTraffic();
         PoseCars();
         return true;
@@ -526,14 +528,19 @@ public class TitleCrashScene : MonoBehaviour
     }
 
     // The lead-in's own clock: 0 as the first car goes past, 1 once the last one has cleared the frame. The
-    // crash's `startDelay` sits between that and the first pose of the tableau, so the two beats never
-    // overlap and the choreography's zero is still the moment its own first car is due.
-    float LeadTime
+    // choreography's zero is still the moment its own first car is due; the follow says where that falls
+    // against the pack, and it is normally negative — the accident is already dropping in on the pack's tail.
+    float LeadTime => TitleCrash.LeadAt(_elapsed, Follow, leadInSeconds);
+
+    // Seconds from the pack leaving the frame to the accident's zero. Never earlier than the lead-in itself
+    // starts, so the clock never opens partway into the crash.
+    float Follow
     {
         get
         {
-            float beat = Mathf.Max(1e-4f, leadInSeconds);
-            return (_elapsed + Mathf.Max(0f, startDelay) + beat) / beat;
+            float lead = Mathf.Max(0f, leadInSeconds);
+            if (lead <= 0f) return Mathf.Max(0f, extraFollowSeconds);
+            return Mathf.Max(-lead, _shot.followSeconds + Mathf.Max(0f, extraFollowSeconds));
         }
     }
 
@@ -569,7 +576,7 @@ public class TitleCrashScene : MonoBehaviour
                 // the shape of the OTHER car, which is the whole point of staging a T-bone: the hero's narrow
                 // nose gouges the flank, and that flank's long flat side creases the hero's nose right
                 // across. One contact, two completely different dents.
-                PressTogether(hit.striker, hit.struck, hit.normal, hit.severity * crush);
+                PressTogether(hit.striker, hit.struck, hit.normal, hit.severity * crush, hit.severity);
             }
 
             if (_impactsFired[i]) continue;
@@ -597,7 +604,7 @@ public class TitleCrashScene : MonoBehaviour
     // nose from a flank, so every dent came out the same round crater and the shot read as a small explosion
     // between the two cars. Now the geometry decides: the hero is nose-on, so its dent is narrow and deep;
     // the car it turned is caught across its rear quarter, so its dent is a long crease.
-    void PressTogether(int strikerIndex, int struckIndex, Vector2 normalPx, float severity)
+    void PressTogether(int strikerIndex, int struckIndex, Vector2 normalPx, float severity, float hardness)
     {
         var striker = CarAt(strikerIndex);
         var struck = CarAt(struckIndex);
@@ -608,11 +615,17 @@ public class TitleCrashScene : MonoBehaviour
         // by the whole burial, in opposite directions, and opens a hole between two cars that are meant to be
         // welded together. Half each puts both surfaces on the same plane. Both cars here are the same
         // machine, so the split is even. See BodyDeform.Share.
+        // Same machine, so the split is by how soft each is where they meet: the hero's nose is a crumple
+        // zone and gives way before the flank it hits. The two shares still sum to 1, so the surfaces meet.
+        // Read at the impact's own severity, not the ramp's: a split that drifted as the crush deepened would
+        // leave the early, even-split folds behind and the pair would come out folded past each other.
         Vector2 push = normalPx.sqrMagnitude > 1e-6f ? normalPx.normalized : Vector2.up;
-        float share = BodyDeform.Share(1f, 1f);
+        float struckC = struck.damage.ComplianceAt(striker.t.position, hardness);
+        float strikerC = striker.damage.ComplianceAt(struck.t.position, hardness);
+        float struckShare = BodyDeform.Share(1f, struckC, 1f, strikerC);
 
-        struck.damage.OnImpact(BodyOf(striker), severity, share);
-        striker.damage.OnImpact(BodyOf(struck), severity, share);
+        struck.damage.OnImpact(BodyOf(striker), severity, struckShare);
+        striker.damage.OnImpact(BodyOf(struck), severity, 1f - struckShare);
 
         // Local functions so the two calls above read as the one mutual event they are.
         BodyDeform.Striker BodyOf(Car car)

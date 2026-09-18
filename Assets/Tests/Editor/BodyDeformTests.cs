@@ -247,4 +247,49 @@ public class BodyDeformTests
         Assert.IsFalse(region[2 * n], "The ring spread further than one vertex.");
         Assert.IsFalse(region[n + 1], "Diagonals were included — the smoothing kernel is 4-neighbour.");
     }
+
+    [Test]
+    public void TheNoseIsAsStiffAsTheFlankUntilARealShunt()
+    {
+        Assert.AreEqual(0f, BodyDeform.EndYield(0.3f, 0.55f), 1e-6f, "A light tap unlocked the soft nose.");
+        Assert.AreEqual(0f, BodyDeform.EndYield(0.55f, 0.55f), 1e-6f, "The yield point itself folded extra.");
+        Assert.AreEqual(1f, BodyDeform.EndYield(1f, 0.55f), 1e-6f, "A full-severity hit did not get the full fold.");
+        float mid = BodyDeform.EndYield(0.75f, 0.55f);
+        Assert.That(mid, Is.GreaterThan(0f).And.LessThan(0.5f),
+                    "Between yield and full the extra should come in slowly, not all at once.");
+        Assert.AreEqual(1f, BodyDeform.EndYield(0.1f, 0f), 1e-6f, "Yield 0 should behave like the old soft nose.");
+    }
+
+    [Test]
+    public void TheColliderFollowsTheCrushedEndsAndNeverShrinksIntoTheTub()
+    {
+        float span = BodyDeform.CrushedSpan(5f, 1f, 0f, 0.6f, out float shift);
+        Assert.AreEqual(4f, span, 1e-5f, "The box kept length the bonnet no longer has.");
+        Assert.AreEqual(-0.5f, shift, 1e-5f, "A crushed nose should pull the box's centre back, keeping the tail where it was.");
+
+        span = BodyDeform.CrushedSpan(5f, 0f, 0.4f, 0.6f, out shift);
+        Assert.AreEqual(4.6f, span, 1e-5f);
+        Assert.AreEqual(0.2f, shift, 1e-5f, "A crushed tail should push the centre forward.");
+
+        span = BodyDeform.CrushedSpan(5f, 3f, 1f, 0.6f, out shift);
+        Assert.AreEqual(3f, span, 1e-5f, "The box shrank inside the safety cell.");
+        Assert.AreEqual(-0.5f, shift, 1e-5f, "Clamping should keep the two ends' proportions.");
+    }
+
+    [Test]
+    public void ASofterPanelTakesMoreOfTheContactButThePairNeverFoldMoreThanIsThere()
+    {
+        // A crumpling nose (1.9) into a plain door (1), same car.
+        float nose = BodyDeform.Share(1500f, 1.9f, 1500f, 1f);
+        float door = BodyDeform.Share(1500f, 1f, 1500f, 1.9f);
+        Assert.Greater(nose, 0.5f, "The crumple zone should give way before the door.");
+        Assert.AreEqual(1f, nose + door, 1e-5f, "The shares must sum to 1 or a void opens between the cars.");
+
+        // Equal softness is the plain mass split.
+        Assert.AreEqual(BodyDeform.Share(1200f, 1800f), BodyDeform.Share(1200f, 1f, 1800f, 1f), 1e-6f);
+
+        // A point on the rigid tub gives nothing; the other panel takes all of it.
+        Assert.AreEqual(0f, BodyDeform.Share(1500f, 0f, 1500f, 1f), 1e-6f);
+        Assert.AreEqual(0.5f, BodyDeform.Share(1500f, 0f, 1500f, 0f), 1e-6f, "Two rigid points fall back to mass.");
+    }
 }

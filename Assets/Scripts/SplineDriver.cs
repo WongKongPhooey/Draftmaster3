@@ -440,8 +440,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         for (int i = 0; i < n; i++)
         {
             float d = _mainSamples[i].distance;
-            _leftBoundProfile[i] = track.track.GetLateralAt(d, -1f, _anchors, _mainLength);
-            _rightBoundProfile[i] = track.track.GetLateralAt(d, +1f, _anchors, _mainLength);
+            _leftBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, -1f, _anchors, _mainLength), _mainSamples[i].width);
+            _rightBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, +1f, _anchors, _mainLength), _mainSamples[i].width);
 
             if (trained != null)
             {
@@ -456,7 +456,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             else
             {
-                _lateralProfile[i] = track.track.GetLateralAt(d, lineFactor, _anchors, _mainLength);
+                _lateralProfile[i] = ClampToRoad(track.track.GetLateralAt(d, lineFactor, _anchors, _mainLength), _mainSamples[i].width);
             }
         }
 
@@ -479,6 +479,21 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             (tmp, _lateralProfile) = (_lateralProfile, tmp);
         }
+    }
+
+    // Room a car's centre keeps from the painted edge: half a car plus a little. The authored leftmost and
+    // rightmost lines are anchored per segment and splined between anchors, and nothing ties them to the width
+    // the road is actually built at — on a hand-traced track like Watkins Glen they run metres past the edge
+    // through the esses, and a line (trained or not) clamped to them drove the car straight into the run-off.
+    public const float RoadEdgeMargin = 1.4f;
+
+    // A lateral offset (m, + right of travel) pulled back inside a road `roadWidth` wide. Shared with the
+    // racing-line trainer so it trains inside the same corridor the car drives.
+    public static float ClampToRoad(float lateral, float roadWidth)
+    {
+        float half = roadWidth * 0.5f - RoadEdgeMargin;
+        if (half <= 0.25f) return lateral; // no usable width data (or a lane barely wider than a car): leave it
+        return Mathf.Clamp(lateral, -half, half);
     }
 
     void BoundsAt(float distance, out float lo, out float hi)
@@ -686,10 +701,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // The curve encodes corner speed by radius at nominal (1.0) grip; corner speed scales with √μ.
             baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
                       * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective, 0.05f));
+            // The curve is a peak-grip speed too; the car only holds part of that in a corner (AIGrip).
+            baseMph *= Mathf.Sqrt(AIGrip.UsableFraction(baseMph / MpsToMph));
         }
         else
         {
-            baseMph = Mathf.Sqrt(radius * _bakedALatMaxMps2) * MpsToMph;
+            // Not the tyre's peak: the share of it the car actually holds at the speed it comes out at.
+            baseMph = AIGrip.CornerSpeed(radius, _bakedALatMaxMps2) * MpsToMph;
         }
 
         float bankingMph = 0f;
@@ -710,7 +728,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float FrictionCircleHeadroom(int idx, float vMps)
     {
         if (_curvatureProfile == null || idx >= _curvatureProfile.Length || _bakedALatMaxMps2 <= 0.01f) return 1f;
-        float frac = vMps * vMps * _curvatureProfile[idx] / _bakedALatMaxMps2;
+        float frac = vMps * vMps * _curvatureProfile[idx] / AIGrip.Usable(_bakedALatMaxMps2, vMps);
         // Floor keeps the relaxation passes progressing even where targets sit at the lateral limit.
         return Mathf.Max(0.15f, Mathf.Sqrt(Mathf.Clamp01(1f - frac * frac)));
     }
@@ -776,6 +794,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // speeds while the physics enjoy the multiplied grip and the targets undersell what the car can do.
             baseMph = vehicleInfo.corneringSpeedCurve.Evaluate(radius)
                       * Mathf.Sqrt(Mathf.Max(TrackConditions.AiEffective, 0.05f));
+            baseMph *= Mathf.Sqrt(AIGrip.UsableFraction(baseMph / MpsToMph));
         }
         else if (vehicleInfo != null && vehicleInfo.maxLateralG > 0.01f)
         {
@@ -785,7 +804,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             if (tireModel != null) gripMul *= tireModel.OverallGrip;
             else { var tire = GetComponent<TireState>(); if (tire != null) gripMul *= tire.GripMultiplier; }
             float aLatMps2 = vehicleInfo.maxLateralG * Mathf.Max(0.05f, gripMul) * 9.81f;
-            float vMps = Mathf.Sqrt(radius * aLatMps2);
+            float vMps = AIGrip.CornerSpeed(radius, aLatMps2);
             baseMph = vMps * MpsToMph;
         }
         else
@@ -955,6 +974,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // CommandedSpeedMps still carries the brain's DESIRED speed (set from `speed` in Place) for the provider.
         float advanceSpeed = externalMotionController ? externalActualSpeedMps : speed;
         _distance += advanceSpeed * Time.fixedDeltaTime;
+        if (externalMotionController && !_onPit) ResyncToCar();
 
         // Hard-park target on the pit lane (safety car parking near the entrance). Deterministic: pin the car the
         // instant it reaches the target distance, independent of braking distance or whether vehicleInfo exists —
@@ -1172,6 +1192,84 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _hasPrevLateral = false;
         _hasLineSmoothed = false; // reseed the line low-pass from the new lane's raw offset (no stale drag)
         _currentLean = 0f;
+    }
+
+    // Pull the brain's track distance back onto where the car physically is.
+    //
+    // Advancing by the car's own speed only keeps the two together if the car drives the centreline. It
+    // doesn't: the racing line cuts the inside of every corner (Watkins Glen's is 28 m a lap shorter than the
+    // centreline, COTA's 147 m), so a brain counting the car's speed falls behind a little in every turn and
+    // never catches up. A lap in, it is ten metres behind the car — braking points arrive late, the steering
+    // aim point that should sit 20 m ahead sits 10 m ahead and the car weaves, and the gap maths the rest of the
+    // field reads are wrong too. Dead-reckoning stays as the prediction; this corrects it against the car.
+    void ResyncToCar()
+    {
+        if (track == null || _mainSamples == null || _mainSamples.Count < 2 || _mainLength <= 0f) return;
+        Vector2 local = track.transform.InverseTransformPoint(transform.position);
+        // _distance indexes the point PathPointAheadOfCentre in front of the car's centre.
+        float guess = _distance + _collisionLongitudinal - PathPointAheadOfCentre;
+        if (!ProjectOntoMainNear(local, guess, resyncWindow, out float centre)) return;
+        float err = centre - guess;
+        if (loop)
+        {
+            if (err > _mainLength * 0.5f) err -= _mainLength;
+            else if (err < -_mainLength * 0.5f) err += _mainLength;
+        }
+        _distance += err;
+        BrainLagMeters = err;
+    }
+
+    [Tooltip("Metres either side of the brain's own estimate searched when re-locating the car on the centreline each step. Keeps the search local, so a hairpin or a parallel stretch of road can never capture the car.")]
+    public float resyncWindow = 40f;
+
+    // How far the car was ahead (+) of the brain's dead-reckoned distance on the last step, before correction.
+    public float BrainLagMeters { get; private set; }
+
+    // Nearest point on the main centreline to `local`, searched only within `window` metres of `guess`.
+    bool ProjectOntoMainNear(Vector2 local, float guess, float window, out float distance)
+    {
+        distance = guess;
+        int n = _mainSamples.Count;
+        if (n < 2 || _mainLength <= 0f) return false;
+        float g = loop ? ((guess % _mainLength) + _mainLength) % _mainLength : Mathf.Clamp(guess, 0f, _mainLength);
+
+        int lo = 0, hi = n - 1;
+        while (hi - lo > 1)
+        {
+            int mid = (lo + hi) >> 1;
+            if (_mainSamples[mid].distance <= g) lo = mid; else hi = mid;
+        }
+
+        int segCount = n - 1; // segment i joins sample i to sample i+1
+        float best = float.MaxValue;
+        bool found = false;
+        for (int dir = -1; dir <= 1; dir += 2)
+        {
+            for (int k = (dir < 0 ? 1 : 0); k < segCount; k++)
+            {
+                int i = lo + dir * k;
+                if (loop) i = ((i % segCount) + segCount) % segCount;
+                else if (i < 0 || i >= segCount) break;
+
+                var a = _mainSamples[i];
+                var b = _mainSamples[i + 1];
+                float off = dir < 0 ? g - b.distance : a.distance - g;
+                if (loop && off < -_mainLength * 0.5f) off += _mainLength;
+                if (off > window) break;
+
+                Vector2 ab = b.position - a.position;
+                float denom = ab.sqrMagnitude;
+                float t = denom > 1e-6f ? Mathf.Clamp01(Vector2.Dot(local - a.position, ab) / denom) : 0f;
+                float dist2 = (a.position + ab * t - local).sqrMagnitude;
+                if (dist2 < best)
+                {
+                    best = dist2;
+                    distance = Mathf.Lerp(a.distance, b.distance, t);
+                    found = true;
+                }
+            }
+        }
+        return found;
     }
 
     // Path point on the current spline a given distance AHEAD of the car, in track-local space. The AI input

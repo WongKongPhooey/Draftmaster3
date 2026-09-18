@@ -104,7 +104,9 @@ public class TitleCrashBuildTests
         const int Steps = 260;
         for (int step = 0; step <= Steps; step++)
         {
-            elapsed.SetValue(component, Mathf.Lerp(-leadIn * 2f, 0f, step / (float)Steps));
+            // Past zero as well: the accident drops in on the pack's tail now, so the back of the pack is
+            // still going past for the first part of the crash.
+            elapsed.SetValue(component, Mathf.Lerp(-leadIn * 2f, leadIn, step / (float)Steps));
             Step(component);
 
             for (int i = 0; i < passes.Length; i++)
@@ -124,7 +126,7 @@ public class TitleCrashBuildTests
             Assert.IsTrue(seen[i], $"{passes[i].name} never appeared during the lead-in at all.");
 
         // And now the crash itself, after which nothing from the first beat may still be on screen.
-        Drive(component, 0f, 1f, 60);
+        Drive(component, 0f, TitleCrash.Tempo.Default.RunSeconds, 60);
         foreach (var pass in passes)
         {
             Assert.IsFalse(pass.activeSelf, $"{pass.name} is still on screen in the frozen tableau.");
@@ -481,7 +483,7 @@ public class TitleCrashBuildTests
         component = _root.AddComponent(type);
 
         type.GetField("layoutCanvas").SetValue(component, _canvas);
-        type.GetField("startDelay").SetValue(component, 0f);
+        type.GetField("extraFollowSeconds").SetValue(component, 0f);
 
         Step(component);                                   // builds, then poses at u = 0
         if (steps > 0) Drive(component, 0f, 1f, steps);

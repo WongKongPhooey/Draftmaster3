@@ -81,6 +81,14 @@ public class VehicleDamage : MonoBehaviour, IDamageable
     [Range(1f, 4f)] public float endDentGain = 1.9f;
     [Tooltip("How far in from each end that extra reaches, as a fraction of the car's length.")]
     [Range(0.05f, 0.5f)] public float endZoneFrac = 0.28f;
+    [Tooltip("Severity (0..1) below which the nose and tail are as stiff as the flanks. The extra depth " +
+             "comes in between here and a full-severity hit, so only a real shunt folds the bonnet back to " +
+             "the screen. 0 = every hit gets the full extra (soft); 1 = only a full-severity hit does.")]
+    [Range(0f, 1f)] public float endYieldSeverity = 0.55f;
+
+    // Raised whenever the shape of the bodywork changes — a dent, a repair. VehicleCollision listens to keep
+    // its box the length of the metal that is actually left.
+    public event System.Action BodyChanged;
 
     [Header("Damage Severity → Handling")]
     [Tooltip("Accumulated damage per unit impact severity. Higher = a few hits cripple the car.")]
@@ -315,19 +323,27 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         Vector3 foldDir = localStep.normalized;
         float worldToLocal = localStep.magnitude;   // local units per world metre
 
+        // How much of the ends' extra depth this hit has earned. Light and medium hits fold the nose like a
+        // flank; only a heavy one collapses it. See BodyDeform.EndYield.
+        float endBoost = BodyDeform.EndYield(Mathf.Clamp01(severity), endYieldSeverity);
+
         for (int i = 0; i < _current.Length; i++)
         {
             float weight = _deformWeight != null ? _deformWeight[i] : 1f;
             if (weight <= 0f) continue; // rigid core shell — never bends
 
+            // A soft end is driven further by the VIRTUAL press only. The real burial is split by the
+            // caller's share, which already favours the softer panel — multiplying that as well would fold
+            // more metal than the two cars occupy, and the surplus is a gap between them.
+            float gain = Mathf.Lerp(1f, _dentGain != null ? _dentGain[i] : 1f, endBoost);
+
             Vector2 world = transform.TransformPoint(_base[i]);
-            float t = BodyDeform.Intrusion(striker, world, press);
+            float t = BodyDeform.Intrusion(striker, world, press * gain);
             if (t <= 0f) continue;
 
             // Our share of the intrusion, in local units. Anything an earlier hit already folded deeper
             // along this line stays — damage accumulates, it just doesn't accumulate against itself.
-            float gain = _dentGain != null ? _dentGain[i] : 1f;
-            float target = t * share * weight * gain * worldToLocal;
+            float target = t * share * weight * worldToLocal;
             float already = Vector3.Dot(_disp[i], foldDir);
             if (target <= already) continue;
 
@@ -362,6 +378,7 @@ public class VehicleDamage : MonoBehaviour, IDamageable
 
         _mesh.vertices = _current;
         _mesh.RecalculateBounds();
+        BodyChanged?.Invoke();
 
         // Accumulate a 0..1 damage level + a left/right bias (from where the fold landed) for handling effects.
         DamageLevel = Mathf.Clamp01(DamageLevel + Mathf.Clamp01(severity) * damageAccrual * TrackConditions.DamageMultiplier);
@@ -392,6 +409,58 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         _biasAccum *= 1f - t;
         DamageBiasX = Mathf.Clamp(_biasAccum, -1f, 1f);
         if (DamageLevel <= 0.001f) RepairFull();
+        else BodyChanged?.Invoke();
+    }
+
+    // How readily the bodywork nearest `worldPoint` gives way in a hit of this severity: 0 on the rigid tub,
+    // 1 on a plain panel, up to endDentGain at a crumpling end once the hit is hard enough to collapse it.
+    // Both cars in a contact read this so they can split the overlap by it — see BodyDeform.Share.
+    public float ComplianceAt(Vector2 worldPoint, float severity)
+    {
+        if (_base == null || _deformWeight == null) return 1f;
+        Vector3 local = transform.InverseTransformPoint(worldPoint);
+        int best = 0;
+        float bestD = float.PositiveInfinity;
+        for (int i = 0; i < _base.Length; i++)
+        {
+            float d = ((Vector2)(_base[i] - local)).sqrMagnitude;
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        float endBoost = BodyDeform.EndYield(Mathf.Clamp01(severity), endYieldSeverity);
+        float gain = Mathf.Lerp(1f, _dentGain != null ? _dentGain[best] : 1f, endBoost);
+        return _deformWeight[best] * gain;
+    }
+
+    // How far the nose and the tail have been folded back along `worldForward`, in world metres (0 = as
+    // built). Each end is the mean of its outermost column of vertices, so a corner clipped off one side
+    // counts for less than the whole front pushed in — the box that follows this is one straight edge, and
+    // a mean keeps it between the crushed corner and the one still standing.
+    public void EndCrush(Vector2 worldForward, out float front, out float rear)
+    {
+        front = rear = 0f;
+        if (_base == null || _current == null || worldForward.sqrMagnitude < 1e-8f) return;
+        Vector3 fwd = worldForward.normalized;
+
+        int vx = gridX + 1, vy = gridY + 1;
+        Vector3 moved0 = Vector3.zero, movedN = Vector3.zero, base0 = Vector3.zero, baseN = Vector3.zero;
+        for (int y = 0; y < vy; y++)
+        {
+            int i0 = y * vx, iN = y * vx + gridX;
+            moved0 += _current[i0] - _base[i0];
+            movedN += _current[iN] - _base[iN];
+            base0 += _base[i0];
+            baseN += _base[iN];
+        }
+
+        // Which column is the nose is read off the transform rather than assumed: the liveries lie nose at
+        // sprite x=0, but the car's own rotation offset is what decides where that ends up.
+        float along0 = Vector3.Dot(transform.TransformVector(base0 / vy), fwd);
+        float alongN = Vector3.Dot(transform.TransformVector(baseN / vy), fwd);
+        float d0 = Vector3.Dot(transform.TransformVector(moved0 / vy), fwd);
+        float dN = Vector3.Dot(transform.TransformVector(movedN / vy), fwd);
+
+        if (along0 >= alongN) { front = Mathf.Max(0f, -d0); rear = Mathf.Max(0f, dN); }
+        else                  { front = Mathf.Max(0f, -dN); rear = Mathf.Max(0f, d0); }
     }
 
     public void RepairFull()
@@ -403,5 +472,6 @@ public class VehicleDamage : MonoBehaviour, IDamageable
         DamageLevel = 0f;
         DamageBiasX = 0f;
         _biasAccum = 0f;
+        BodyChanged?.Invoke();
     }
 }

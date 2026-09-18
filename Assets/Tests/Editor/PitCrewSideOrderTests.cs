@@ -132,6 +132,26 @@ public class PitCrewSideOrderTests
     }
 
     [Test]
+    public void A_real_car_drawn_nose_left_is_worked_the_right_way_round()
+    {
+        // The test rig's car is a bare transform with its nose along +X. The racing cars are not: they are
+        // drawn nose-left with angleOffsetDeg 180, so their local +X is the TAIL, and a crew that read that as
+        // forward came out turned right round — wheel men opening on the left, the fueller at the right front.
+        using var rig = new Rig();
+        var pvc = rig.CarGo.AddComponent(Runtime("PlayerVehicleController"));
+        ((Behaviour)pvc).enabled = false;
+        rig.CarGo.transform.rotation = Quaternion.Euler(0f, 0f, 270f);   // heading 90: nose up the lane
+        rig.Begin();
+
+        for (int i = 0; i < 4; i++)
+            Assert.AreEqual(WheelLateral, rig.Station(i).x, Tolerance, $"Wheel man {i} opened on the car's left.");
+        Assert.Greater(rig.Station(0).y, 0f, "The front changer is at the back of the car.");
+        Assert.Less(rig.Station(1).y, 0f, "The rear changer is at the front of the car.");
+        Assert.Less(rig.Station(4).x, 0f, "The fueller is on the right; the filler is on the left.");
+        Assert.Less(rig.Station(4).y, 0f, "The fueller is at the front; the filler is at the rear.");
+    }
+
+    [Test]
     public void They_work_the_corners_in_pairs_a_changer_and_a_carrier()
     {
         using var rig = new Rig();

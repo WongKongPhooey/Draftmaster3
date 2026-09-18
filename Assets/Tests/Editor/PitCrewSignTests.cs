@@ -153,6 +153,37 @@ public class PitCrewSignTests
     }
 
     [Test]
+    public void He_holds_the_board_over_the_nose_of_a_real_car_not_the_tail()
+    {
+        // The racing cars are drawn nose-left and carry angleOffsetDeg 180, so their transform.right is the
+        // TAIL. Read as forward, it sent him running to the back of the car to hold the board over the boot.
+        using var rig = new Rig();
+        var boxGo = new GameObject("PitCrewBox");
+        var carGo = new GameObject("Car");
+        try
+        {
+            var box = boxGo.AddComponent(Runtime("PitCrewBox"));
+            Invoke(box, "SetSignMan", rig.SignMan);
+
+            // Nose up the lane (box +Y): heading 90 = euler.z - angleOffsetDeg, so euler.z is 270.
+            var pvc = carGo.AddComponent(Runtime("PlayerVehicleController"));
+            ((Behaviour)pvc).enabled = false;
+            Assert.AreEqual(180f, (float)pvc.GetType().GetField("angleOffsetDeg").GetValue(pvc), 1e-3f,
+                            "The stock car setup this test is written against has changed.");
+            carGo.transform.rotation = Quaternion.Euler(0f, 0f, 270f);
+
+            Invoke(box, "BeginService", carGo.transform);
+            var station = (Vector3)Property(rig.Member, "WorkStation");
+            Assert.Greater(station.y, 1f, $"The sign man stands at y={station.y:0.00} — behind the car, not off its nose.");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(carGo);
+            UnityEngine.Object.DestroyImmediate(boxGo);
+        }
+    }
+
+    [Test]
     public void A_stop_nobody_announced_still_gets_its_board_down()
     {
         using var rig = new Rig();

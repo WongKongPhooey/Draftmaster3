@@ -25,6 +25,12 @@ public class VehicleCollision : MonoBehaviour
     [Range(0f, 0.6f)] public float vehicleRestitution = 0.1f;
     [Tooltip("Fraction of penetration corrected per step. 1 = fully ejected each step (no pass-through). Below ~0.9 a fast car can sink through a thin barrier before the push balances. Bounce/flex feel lives in the responder's restitution instead.")]
     [Range(0.1f, 1f)] public float positionalSoftness = 1f;
+    [Tooltip("Shorten the collider as the nose and tail fold back, so the car is touched where its crushed " +
+             "metal is rather than where the undamaged bodywork used to be. Off leaves a gap in front of a " +
+             "crumpled bonnet on every contact it makes afterwards.")]
+    public bool colliderFollowsCrush = true;
+    [Tooltip("The shortest the collider can get, as a fraction of its undamaged length — the safety cell.")]
+    [Range(0.3f, 1f)] public float minCrushedLengthFrac = 0.6f;
     [Tooltip("Log overlap diagnostics each second.")]
     public bool debugLog = false;
 
@@ -32,6 +38,8 @@ public class VehicleCollision : MonoBehaviour
     Rigidbody2D _rb;
     ICollisionResponder _responder;
     IDamageable _damage;
+    VehicleDamage _bodywork;
+    Vector2 _baseOffset;
     readonly Collider2D[] _hits = new Collider2D[16];
 
     Vector2 _prevPos;
@@ -70,10 +78,34 @@ public class VehicleCollision : MonoBehaviour
         if (_box == null) _box = gameObject.AddComponent<BoxCollider2D>();
         // Car forward = local +X. halfExtents.x = half-width, halfExtents.y = half-length → length maps to X.
         _box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
+        _baseOffset = _box.offset;
 
         _responder = PickResponder();
         _damage = GetComponentInChildren<IDamageable>();
+        _bodywork = _damage as VehicleDamage;
         _prevPos = transform.position;
+    }
+
+    void OnEnable()  { if (_bodywork != null) _bodywork.BodyChanged += ApplyBoxShape; }
+    void OnDisable() { if (_bodywork != null) _bodywork.BodyChanged -= ApplyBoxShape; }
+
+    // The box is the undamaged car less however far each end has been folded back. See BodyDeform.CrushedSpan.
+    void ApplyBoxShape()
+    {
+        if (_box == null) return;
+        float length = halfExtents.y * 2f;
+        float front = 0f, rear = 0f;
+        if (colliderFollowsCrush && _bodywork != null)
+        {
+            _bodywork.EndCrush(transform.right, out front, out rear);
+            // EndCrush answers in world metres; the box is sized in this transform's local units.
+            float toLocal = 1f / Mathf.Max(1e-4f, Mathf.Abs(transform.lossyScale.x));
+            front *= toLocal;
+            rear *= toLocal;
+        }
+        float span = Draftmaster.Sim.BodyDeform.CrushedSpan(length, front, rear, minCrushedLengthFrac, out float shift);
+        _box.size = new Vector2(span, halfExtents.x * 2f);
+        _box.offset = _baseOffset + new Vector2(shift, 0f);
     }
 
     ICollisionResponder PickResponder()
@@ -104,7 +136,7 @@ public class VehicleCollision : MonoBehaviour
     {
         if (_box == null) _box = GetComponent<BoxCollider2D>();
         if (_box == null) _box = gameObject.AddComponent<BoxCollider2D>();
-        _box.size = new Vector2(halfExtents.y * 2f, halfExtents.x * 2f);
+        ApplyBoxShape();
     }
 
     void FixedUpdate()
@@ -181,10 +213,17 @@ public class VehicleCollision : MonoBehaviour
             // A barrier is not a body and gives nothing, so a car that hits one takes the whole thing.
             if (closingSpeed >= damageMinSpeed && _damage != null && !DamageSuppressed)
             {
-                float share = otherResponder != null
-                    ? Draftmaster.Sim.BodyDeform.Share(_responder != null ? _responder.Mass : 1500f,
-                                                       otherResponder.Mass)
-                    : Draftmaster.Sim.BodyDeform.RigidPartner;
+                // Split by mass AND by how soft each car is where they meet, so a nose buried in a door
+                // takes more of the overlap than the door does while the pair still fold only what is there.
+                float share = Draftmaster.Sim.BodyDeform.RigidPartner;
+                if (otherResponder != null)
+                {
+                    var otherBody = other.GetComponentInChildren<VehicleDamage>();
+                    float myC = _bodywork != null ? _bodywork.ComplianceAt(d.pointA, severity) : 1f;
+                    float theirC = otherBody != null ? otherBody.ComplianceAt(d.pointB, severity) : 1f;
+                    share = Draftmaster.Sim.BodyDeform.Share(_responder != null ? _responder.Mass : 1500f, myC,
+                                                             otherResponder.Mass, theirC);
+                }
                 _damage.OnImpact(StrikerFor(other, d.pointB, -d.normal), severity, share);
             }
 
