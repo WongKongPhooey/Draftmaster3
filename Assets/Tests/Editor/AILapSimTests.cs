@@ -263,6 +263,9 @@ public class AILapSimTests
         var thrProp = inputType.GetProperty("LastThrottle");
         var brkProp = inputType.GetProperty("LastBrake");
         var cmdProp = inputType.GetProperty("LastCommandedMps");
+        var profProp = inputType.GetProperty("LastProfileMps");
+        var capProp = inputType.GetProperty("LastGripCapMps");
+        var radiusAhead = splineType.GetMethod("CurvatureRadiusAhead");
         var inputStep = inputType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var pvcStep = pvcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var splineStep = splineType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -327,10 +330,12 @@ public class AILapSimTests
                 float width = (float)st.GetField("width").GetValue(sample);
                 Vector2 local = ((Component)track).transform.InverseTransformPoint(pos);
                 float carLat = Vector2.Dot(local - sp, new Vector2(tg.y, -tg.x));
-                result.trace.AppendFormat("d{0,6:0} v{1,5:0.0} cmd{2,5:0.0} carLat{3,6:0.0} lineLat{4,6:0.0} half{5,5:0.0} nose{6,6:0.0} slip{7,6:0.0} st{8,6:0.00} th{9,5:0.00} br{10,5:0.00}{11}\n",
+                result.trace.AppendFormat("d{0,6:0} v{1,5:0.0} cmd{2,5:0.0} carLat{3,6:0.0} lineLat{4,6:0.0} half{5,5:0.0} nose{6,6:0.0} slip{7,6:0.0} st{8,6:0.00} th{9,5:0.00} br{10,5:0.00} prof{12,5:0.0} cap{13,6:0.0} R{14,6:0}{11}\n",
                     d, v, (float)cmdProp.GetValue(input), carLat, (float)lateralOnTrack.GetValue(spline), width * 0.5f,
                     (float)noseErr.GetValue(input), slip, (float)steerProp.GetValue(input), (float)thrProp.GetValue(input),
-                    (float)brkProp.GetValue(input), on ? "" : "  OFF");
+                    (float)brkProp.GetValue(input), on ? "" : "  OFF",
+                    (float)profProp.GetValue(input), Mathf.Min(999f, (float)capProp.GetValue(input)),
+                    Mathf.Min(9999f, (float)radiusAhead.Invoke(spline, new object[] { Mathf.Max(8f, v * 0.7f) })));
             }
         }
         return result;
