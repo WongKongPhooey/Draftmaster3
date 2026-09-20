@@ -189,6 +189,19 @@ starting grants into: read an attribute with `WeekendDrinks.EffectiveStat(key, w
 value plus whatever is in the player's hand. That is on purpose — a ledger write needs a revert, and a
 missed revert dents a career permanently over a can of pop. Covered by `WeekendDrinksTests`.
 
+### The golf cart
+
+Also not an obligation. The team's golf cart is parked at the mouth of your own garage — straight out in
+front of the canopy, off the walkway end of the rig (`GolfCartSpawner.ParkingSpot`), which is on the way to
+the one place the weekend keeps sending you. Nothing in the game mentions it; it introduces itself with a
+title card when you walk near, and the ordinary action button gets you in and out of it.
+
+Riding it is the walking player moved faster (`GolfCart.rideSpeed`, 8 u/s against a 3.5 walk and a 7 run)
+with the cart drawn under them, not a second vehicle to steer — so the paddock boundary, bumping into
+people and co-op all carry over unchanged. The run modifier is switched off while you are sat in it, the
+cart is walk-through when parked, and stepping off leaves it standing at your left hand. It is painted in
+the team's own colours, read off the garage it was parked against. Covered by `GolfCartTests`.
+
 ## 4. What it is all worth
 
 Five meters run across the weekend, shown on the schedule rail and on the phone.
