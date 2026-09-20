@@ -347,9 +347,11 @@ named `Table`.
 ## 12. Edit the travel map
 
 `Draftmaster > Travel Map > Build Prefab` once, then edit `Resources/UI/TravelMap.prefab` by hand.
-`Sync Node Markers` adds markers for nodes added to `TravelGraph` later without moving existing ones;
-`Snap Markers To Graph Layout` re-snaps everything to the code positions; `Open (Play Mode)` opens the map
-without the F9 key. Geography is code-defined in `TravelGraph`. `Docs/Travel-Map.md`.
+`Sync Node Markers` adds markers for nodes added to `TravelGraph` later without moving existing ones.
+Drag the `Node_*` markers where you want them, then `Save And Rebuild Markers And Routes` — it writes the
+moved ones into `TravelMapLayout`, recompiles, and re-bakes markers and highways (it reads the open Prefab
+Mode stage, so unsaved drags count). `Open (Play Mode)` opens the map without the F9 key. Geography is
+real latitude/longitude in `TravelGraph`, projected onto the board. `Docs/Travel-Map.md`.
 
 ## 13. Add an app to the phone
 
@@ -598,6 +600,22 @@ the bottom-of-screen hint plate and every panel's key tab swap to the pad's butt
 (`Assets/Resources/UI/Prompts/pad_{xbox|ps}_*.png`, Kenney input prompts) and back again.
 
 Free: `F12`.
+
+## Which camera you drive from
+
+The pause menu's **Swing camera** row picks the view. Off (the default) is the fixed camera the game has
+always had: square with the world, north up the screen, the car turning underneath it. On is a chase
+camera — the whole picture rolls until the car's nose points up the screen, on a spring that trails the
+heading through a corner and swings a little past it on the way out, so it reads as being dragged round
+behind the car rather than bolted to it. Switching either way eases rather than snaps, so it can be tried
+mid-race, and the choice is a setting (`CameraMode` in PlayerPrefs, kept across a demo reset).
+
+Tuning lives on the race camera's `DrivingCameraFeel`, under *Swing camera*: `swingResponseHz` (how
+eagerly it chases), `swingDamping` (under 1 is what produces the overshoot), `swingMaxDegPerSecond` (caps
+how fast the world is allowed to turn in a spin) and `swingHoldBelowMph` (a crawling car's heading is
+noise, so the view holds). Those are new fields, so they read their code defaults until `RaceScene` is
+saved — after that the scene's values win, like the rest of the feel. The maths is
+`Draftmaster.Sim.CameraSwing`, covered by `Assets/Tests/Editor/CameraSwingTests.cs`.
 
 ## On a phone or tablet (Android)
 

@@ -109,12 +109,73 @@ public static class TravelMapPrefabBuilder
         finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
-    // Pushes TravelGraph's code-defined layout back onto the existing markers and re-bakes the highway
-    // lines. Use after moving nodes in code (the lattice); it DOES overwrite hand-dragged positions.
-    [MenuItem("Draftmaster/Travel Map/Snap Markers To Graph Layout")]
+    // Pushes TravelGraph's positions back onto the markers and re-bakes the highway lines. Second half of
+    // SaveAndRebuild, and not a menu item of its own: run on its own straight after a drag it would shove
+    // every dragged marker back to where it started, because the drag is not code yet.
+    // The prefab is usually open in Prefab Mode when any of this is run, with the drags that prompted it
+    // still unsaved in the stage. Loading a fresh copy off disk in that case reads the positions from
+    // BEFORE the drag and then saves over them — which from the outside looks exactly like "the map does
+    // not redraw". So the open stage wins whenever there is one, and only otherwise is a copy loaded.
+    static GameObject OpenStageRoot()
+    {
+        var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+        return stage != null && stage.assetPath == PrefabPath ? stage.prefabContentsRoot : null;
+    }
+
+    static GameObject BeginEdit(out bool inStage)
+    {
+        var stageRoot = OpenStageRoot();
+        inStage = stageRoot != null;
+        return inStage ? stageRoot : PrefabUtility.LoadPrefabContents(PrefabPath);
+    }
+
+    // Closes an edit. A loaded copy is written to disk and unloaded; an open stage is only marked dirty.
+    //
+    // The stage is deliberately NOT saved here. Writing the asset re-imports it under the editor's feet,
+    // the Inspector and the dock repaint mid-import, and EditorStyles is not up yet — which poisons
+    // PropertyEditor's static Styles for the rest of the domain and fills the console with "type
+    // initializer for 'Styles'" null references that have nothing to do with the map. Leaving the stage
+    // dirty is what Prefab Mode does for every other edit anyway: Ctrl+S keeps it.
+    static void EndEdit(GameObject root, bool inStage, bool save)
+    {
+        if (inStage)
+        {
+            if (save) UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(root.scene);
+            return;
+        }
+
+        if (save) SaveWithoutRebuildingTheInspector(root);
+        PrefabUtility.UnloadPrefabContents(root);
+    }
+
+    // The one save that has to hit disk: whatever has been dragged, before a recompile reloads the domain
+    // under it. Selection is parked over the write for the reason above — it is what the Inspector would
+    // rebuild for — and put back on the next tick, by which time the skin is up again.
+    static void SaveWithoutRebuildingTheInspector(GameObject root)
+
+    {
+        var selected = Selection.objects;
+        var active = Selection.activeObject;
+        Selection.objects = new Object[0];
+        try { PrefabUtility.SaveAsPrefabAsset(root, PrefabPath); }
+        finally
+        {
+            EditorApplication.delayCall += () =>
+            {
+                // The objects may not have survived the re-import (a marker inside the stage is the usual
+                // selection), so put back only what is still there.
+                var alive = new System.Collections.Generic.List<Object>();
+                foreach (var o in selected) if (o != null) alive.Add(o);
+                Selection.objects = alive.ToArray();
+                if (active != null) Selection.activeObject = active;
+            };
+        }
+    }
+
     public static void SnapMarkersToGraph()
     {
-        var root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        var root = BeginEdit(out bool inStage);
+        bool saved = false;
         try
         {
             var screen = root.GetComponent<TravelMapScreen>();
@@ -142,11 +203,203 @@ public static class TravelMapPrefabBuilder
 
             Canvas.ForceUpdateCanvases();
             screen.BuildEdges();
-            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            EndEdit(root, inStage, save: true);
+            saved = true;
             Debug.Log($"TravelMap: snapped {moved} marker(s) to the graph layout, {TravelGraph.Edges.Count} highways baked" +
-                      (unknown > 0 ? $" ({unknown} stale marker(s) left alone)" : "."));
+                      (unknown > 0 ? $" ({unknown} stale marker(s) left alone)" : ".") +
+                      (inStage ? " Done in the open Prefab Mode stage — Ctrl+S to keep it." : ""));
         }
-        finally { PrefabUtility.UnloadPrefabContents(root); }
+        finally { if (!saved) EndEdit(root, inStage, save: false); }
+    }
+
+    // The other half of the loop: whatever has been dragged in Prefab Mode becomes code, so the layout
+    // survives a Snap, a rebuild, and anybody else pulling the project.
+    //
+    // Only markers that have actually been MOVED are written: a marker still sitting where the projection
+    // put it stays out of the table, so the file reads as "these are the hand-placed ones" rather than a
+    // frozen copy of the whole map that no change to the coordinates could ever move again.
+    // Writes the hand-placed markers into TravelMapLayout. Returns false when it could not, and sets
+    // `changed` when the file on disk actually moved — which is what decides whether a recompile is needed
+    // before the markers can be snapped back.
+    static bool SaveMarkerPositions(out bool changed)
+    {
+        changed = false;
+        const string LayoutPath = "Assets/Scripts/Travel/TravelMapLayout.cs";
+        if (!File.Exists(LayoutPath)) { Debug.LogError($"TravelMap: no {LayoutPath} to write to."); return false; }
+
+        // Tolerance in board pixels: a marker within this of its projected spot has not been moved, it has
+        // been nudged by rounding. Smaller than a dot, so a real nudge still counts.
+        const float MovedBy = 1.5f;
+        // A shop is asking to change road, which is a bigger statement than a nudge, so it takes a real
+        // drag — about a dot and a half — before its mount is rewritten.
+        const float RemountedBy = 12f;
+
+        var root = BeginEdit(out bool inStage);
+        var lines = new System.Collections.Generic.List<string>();
+        var mounts = new System.Collections.Generic.List<string>();
+        int skipped = 0, unknown = 0;
+        try
+        {
+            var screen = root.GetComponent<TravelMapScreen>();
+            var markers = new System.Collections.Generic.List<TravelNodeMarker>(
+                screen.nodesRoot.GetComponentsInChildren<TravelNodeMarker>(true));
+            markers.Sort((a, b) => string.CompareOrdinal(a.nodeId, b.nodeId));
+
+            foreach (var m in markers)
+            {
+                var n = TravelGraph.Get(m.nodeId);
+                if (n == null)
+                {
+                    Debug.LogWarning($"TravelMap: marker '{m.name}' is not a TravelGraph node — not saved.");
+                    unknown++;
+                    continue;
+                }
+
+                var rt0 = (RectTransform)m.transform;
+                Vector2 dragged = new Vector2(rt0.anchoredPosition.x / MapW, -rt0.anchoredPosition.y / MapH);
+
+                // A shop or a yard has no position of its own: it is MOUNTED on a road, sits at the middle
+                // of it and splits it into two hops. So dragging one is not "put it here", it is "put it on
+                // that road" — the nearest one to where it was dropped — and what gets saved is the road.
+                // Its position goes on being the midpoint, which is why it visibly snaps onto the highway
+                // when the rebuild runs.
+                if (n.locationType == TravelLocationType.EngineShop ||
+                    n.locationType == TravelLocationType.Junkyard)
+                {
+                    Vector2 mountDrift = new Vector2((dragged.x - n.pos.x) * MapW, (dragged.y - n.pos.y) * MapH);
+                    if (mountDrift.magnitude < RemountedBy) { skipped++; continue; }
+
+                    if (!TravelGraph.NearestRoad(dragged, m.nodeId, out string ra, out string rb))
+                    {
+                        Debug.LogWarning($"TravelMap: nothing to mount '{m.nodeId}' on near where it was " +
+                                         "dropped — every road round there already carries one.");
+                        skipped++;
+                        continue;
+                    }
+
+                    // Back where the code already puts it: that is not an override, it is agreement.
+                    if (TravelGraph.TryAuthoredMount(m.nodeId, out string aa, out string ab) &&
+                        ((ra == aa && rb == ab) || (ra == ab && rb == aa))) { skipped++; continue; }
+
+                    mounts.Add($"        {{ \"{m.nodeId}\", (\"{ra}\", \"{rb}\") }},   // {n.name}");
+                    continue;
+                }
+
+                var rt = rt0;
+                Vector2 at = dragged;
+                // Against the PROJECTED spot, not the live one: the live one already is whatever was
+                // saved last time, so comparing with it would call every override "unmoved" and wipe them.
+                Vector2 from = TravelGraph.TryProjected(m.nodeId, out var proj) ? proj : n.pos;
+                Vector2 driftPx = new Vector2((at.x - from.x) * MapW, (at.y - from.y) * MapH);
+                if (driftPx.magnitude < MovedBy) { skipped++; continue; }
+
+                lines.Add($"        {{ \"{m.nodeId}\", new Vector2({at.x:0.0000}f, {at.y:0.0000}f) }},   // {n.name}");
+            }
+        }
+        finally { EndEdit(root, inStage, save: false); }
+
+        string file = File.ReadAllText(LayoutPath);
+        string rewritten = file;
+        if (!ReplaceRegion(ref rewritten, "PLACED", lines, LayoutPath)) return false;
+        if (!ReplaceRegion(ref rewritten, "MOUNTS", mounts, LayoutPath)) return false;
+
+        changed = rewritten != file;
+        if (changed)
+        {
+            File.WriteAllText(LayoutPath, rewritten);
+            AssetDatabase.ImportAsset(LayoutPath);
+        }
+
+        Debug.Log($"TravelMap: {lines.Count} hand-placed marker(s) and {mounts.Count} hand-mounted shop(s) " +
+                  $"in {LayoutPath} ({skipped} still where the code puts them" +
+                  (unknown > 0 ? $", {unknown} unknown" : "") +
+                  (changed ? "); the file changed." : "); nothing to write."));
+        return true;
+    }
+
+    // Swap everything between "// BEGIN <name>" and "// END <name>" for these lines, keeping both markers.
+    static bool ReplaceRegion(ref string file, string name, System.Collections.Generic.List<string> lines,
+                              string path)
+    {
+        string begin = "// BEGIN " + name, end = "// END " + name;
+        int b = file.IndexOf(begin, System.StringComparison.Ordinal);
+        int e = file.IndexOf(end, System.StringComparison.Ordinal);
+        if (b < 0 || e < 0 || e < b)
+        {
+            Debug.LogError($"TravelMap: {path} has lost its BEGIN/END {name} markers.");
+            return false;
+        }
+
+        var body = new System.Text.StringBuilder();
+        body.AppendLine(begin);
+        foreach (var line in lines) body.AppendLine(line);
+        body.Append("        ");
+
+        file = file.Substring(0, b) + body + file.Substring(e);
+        return true;
+    }
+
+    // One button for the whole loop: drag the Node_* markers about in Prefab Mode, run this, and the map
+    // is saved, recompiled and re-drawn — positions into TravelMapLayout, then markers and highways
+    // rebuilt from the graph that now reads them.
+    //
+    // It cannot do both halves in one go when something moved. The file it has just written is not the
+    // code that is running: TravelGraph is still holding the old positions until the domain reloads, and
+    // snapping against those would drag every marker straight back to where it was. So the rebuild is
+    // parked in SessionState and picked up on the other side of the reload.
+    const string ResnapKey = "Draftmaster.TravelMap.RebuildAfterReload";
+
+    [MenuItem("Draftmaster/Travel Map/Save And Rebuild Markers And Routes")]
+    public static void SaveAndRebuild()
+    {
+        // Whatever has been dragged goes to disk first. A domain reload with an unsaved prefab stage open
+        // either prompts or loses the drags, and the reload is what the next step asks for.
+        var stageRoot = OpenStageRoot();
+        if (stageRoot != null) SaveWithoutRebuildingTheInspector(stageRoot);
+
+        if (!SaveMarkerPositions(out bool changed)) return;
+
+        if (!changed)
+        {
+            // Nothing was dragged, so the running TravelGraph is already the truth: rebuild now. This is
+            // also the path that pushes a change made to the coordinates in code onto the prefab.
+            SnapMarkersToGraph();
+            return;
+        }
+
+        SessionState.SetBool(ResnapKey, true);
+        Debug.Log("TravelMap: positions saved — recompiling, then the markers and highways rebuild themselves.");
+        UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+    }
+
+    // Requesting a compile does not produce one domain reload, it produces two — "after finishing script
+    // compilation" and then "after forced synchronous recompile". The rebuild has to survive that, so:
+    //
+    //  - every domain load looks at the flag, not just the first (InitializeOnLoadMethod, which runs on
+    //    all of them, rather than DidReloadScripts);
+    //  - the work is queued onto the next editor tick, because loading prefab contents and forcing a
+    //    canvas update while the editor is still standing its windows back up is what fills the console
+    //    with EditorStyles null references;
+    //  - and the flag is only cleared inside that callback. Clearing it up front lost the whole rebuild
+    //    when the second reload threw away the queued call — which looked exactly like the routes never
+    //    updating.
+    [InitializeOnLoadMethod]
+    static void RebuildAfterReload()
+    {
+        if (!SessionState.GetBool(ResnapKey, false)) return;
+        EditorApplication.update += PumpRebuild;
+    }
+
+    // An editor tick, not delayCall: a delayCall registered while the domain is still loading is dropped
+    // before it is ever pumped, which is how the rebuild went missing without a word in the console.
+    // Unsubscribes itself, and clears the flag only once the work is actually under way, so the second
+    // reload cannot lose it either.
+    static void PumpRebuild()
+    {
+        EditorApplication.update -= PumpRebuild;
+        if (!SessionState.GetBool(ResnapKey, false)) return;
+        SessionState.SetBool(ResnapKey, false);
+        SnapMarkersToGraph();
     }
 
     static void BuildInternal()
@@ -378,7 +631,7 @@ public static class TravelMapPrefabBuilder
             bool near = TravelGraph.AreAdjacent("team_factory", m.nodeId);
             m.halo.enabled = here || dest || near;
             if (here) m.halo.color = new Color32(0xf4, 0xea, 0xd7, 0xff);
-            else if (dest) m.halo.color = new Color32(0xe5, 0x48, 0x4d, 0xff);
+            else if (dest) m.halo.color = NextRace;
             else if (near) m.halo.color = new Color32(0xf2, 0xc1, 0x4e, 0x8c);
         }
 
@@ -410,7 +663,10 @@ public static class TravelMapPrefabBuilder
     static readonly Color DeepTeal = new Color32(0x14, 0x45, 0x3d, 0xff);    // the plate under its wrench
     static readonly Color ShopBlue = new Color32(0x53, 0xa8, 0xff, 0xff);    // somebody's parts counter
     static readonly Color Rust = new Color32(0xe0, 0x91, 0x3a, 0xff);        // a yard full of salvage
-    static readonly Color Red = new Color32(0xe5, 0x48, 0x4d, 0xff);         // this week's race
+    static readonly Color Red = new Color32(0xe5, 0x48, 0x4d, 0xff);         // the kit's one alarm colour
+    // This week's race. Light blue, matching TravelMapScreen.DestHalo, which is what the live map paints
+    // the halo and the flag with — red on this board reads as a warning rather than a destination.
+    static readonly Color NextRace = new Color32(0x7f, 0xd4, 0xff, 0xff);
 
     static Font Silkscreen => AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/Silkscreen-Regular.ttf");
     static Font VT323 => AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/VT323-Regular.ttf");
@@ -667,7 +923,7 @@ public static class TravelMapPrefabBuilder
         LegendRow(box.transform, 1, "PARTS SHOP", ShopBlue, 12f);
         LegendRow(box.transform, 2, "SALVAGE YARD", Rust, 12f);
         LegendRow(box.transform, 3, "YOUR FACTORY", Teal, 16f, chipFill: DeepTeal, ring: Gold);
-        LegendRow(box.transform, 4, "THIS WEEK'S RACE", Red, 10f, chipFill: Gold, ring: Red);
+        LegendRow(box.transform, 4, "THIS WEEK'S RACE", NextRace, 10f, chipFill: Gold, ring: NextRace);
 
         var note = EnsureText(box.transform, "Note", "FREE UPGRADED PARTS WAIT AT THE FACTORY");
         Style(note, Silkscreen, 8, TextDim, TextAnchor.MiddleLeft);
@@ -711,7 +967,7 @@ public static class TravelMapPrefabBuilder
     static void EnsurePins(TravelMapScreen screen)
     {
         screen.herePin = EnsurePin(screen.nodesRoot, "HerePin", Icon("map"), Cream);
-        screen.destPin = EnsurePin(screen.nodesRoot, "DestPin", Icon("flag"), Red);
+        screen.destPin = EnsurePin(screen.nodesRoot, "DestPin", Icon("flag"), NextRace);
     }
 
     static RectTransform EnsurePin(RectTransform parent, string name, Sprite sprite, Color colour)

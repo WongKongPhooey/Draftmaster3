@@ -2,6 +2,7 @@ using System.Collections;
 using Draftmaster.Data;
 using Draftmaster.Fans;
 using Draftmaster.Sponsors;
+using Draftmaster.Weekend;
 using UnityEngine;
 
 // Somebody waiting for you on the way out of the winner's circle.
@@ -15,6 +16,12 @@ using UnityEngine;
 // The beat plays like the one outside the driver's own motorhome: a walk-over trigger, the player frozen,
 // the bars in, the rep walking over and opening the conversation (CutsceneTrigger + NPCWalkUpCutscene).
 // The difference is what it ends in — a term sheet rather than a goodbye (SponsorPoacherNPC).
+//
+// Two things decide when it plays, and both are the pitch: the rep says they watched the driver hold a
+// room, so nobody is put there until the sponsor photo shoot on the sheet is actually done, and the
+// trigger only fires on the way OUT of the pen. The gap in the front rail is the way in as well as the way
+// out, so a bare walk-over trigger on it met the player on their way TO the shoot — before the thing the
+// rep is supposedly impressed by had happened. Being inside the square once opens the gate.
 //
 // Built from code rather than placed, because the winner's circle itself is generated: there is no scene
 // object at any of the thirty-eight tracks to hang an editor marker off.
@@ -41,6 +48,12 @@ public class SponsorPoachBeat : MonoBehaviour
 
     Vector3 _triggerAt, _repAt, _facing;
 
+    // The square itself, and how far its rail stands off the middle: what "inside the pen" means.
+    Transform _circle;
+    float _insideRadius;
+    OnFootController _player;
+    bool _beenInside;
+
     // Stand the beat up beside a winner's circle. `circle` is the square's own transform (local +Y runs
     // away from the racetrack, so the gap in the rail is at local -Y); `barrierRing` is the rail's width.
     public static SponsorPoachBeat Install(Transform circle, float barrierRing)
@@ -61,6 +74,8 @@ public class SponsorPoachBeat : MonoBehaviour
             new Vector3(beat.repBesideGap, -(rail + beat.repBeyondRail), 0f)));
         // They are watching the square, so they face back toward it.
         beat._facing = circle.position - beat._repAt;
+        beat._circle = circle;
+        beat._insideRadius = rail;
         return beat;
     }
 
@@ -79,16 +94,6 @@ public class SponsorPoachBeat : MonoBehaviour
         if (!appear.IsMet())
         {
             Debug.Log($"SponsorPoachBeat: not this time — {appear.FirstUnmet()}.", this);
-            Destroy(gameObject);
-            yield break;
-        }
-
-        // The gate the brief is actually about: nobody comes looking for a driver nobody has heard of.
-        float standing = FanAppeal.Value;
-        if (!SponsorPoach.Qualifies(standing))
-        {
-            Debug.Log($"SponsorPoachBeat: appeal {Mathf.RoundToInt(standing)} is under " +
-                      $"{SponsorPoach.AppealRequired} — nobody is poaching this driver yet.", this);
             Destroy(gameObject);
             yield break;
         }
@@ -115,6 +120,35 @@ public class SponsorPoachBeat : MonoBehaviour
             yield break;
         }
 
+        _player = player;
+
+        // Nobody is stood there before the shoot. No timeout on this one: the shoot is an hour of Friday
+        // morning the player books themselves, and the paddock is walkable for three days around it.
+        while (true)
+        {
+            var state = Shoot();
+            if (state == ShootState.Done) break;
+            if (state == ShootState.NeverHappening)
+            {
+                Debug.Log("SponsorPoachBeat: the photo shoot was missed — nobody watched this driver work " +
+                          "a room, so nobody came looking. Beat skipped.", this);
+                Destroy(gameObject);
+                yield break;
+            }
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        // The gate the brief is actually about: nobody comes looking for a driver nobody has heard of.
+        // Read here rather than at scene build, because the shoot itself moves it.
+        float standing = FanAppeal.Value;
+        if (!SponsorPoach.Qualifies(standing))
+        {
+            Debug.Log($"SponsorPoachBeat: appeal {Mathf.RoundToInt(standing)} is under " +
+                      $"{SponsorPoach.AppealRequired} — nobody is poaching this driver yet.", this);
+            Destroy(gameObject);
+            yield break;
+        }
+
         var sponsor = PickBrand();
         if (sponsor == null)
         {
@@ -124,6 +158,36 @@ public class SponsorPoachBeat : MonoBehaviour
         }
 
         Build(sponsor, player, standing);
+    }
+
+    enum ShootState { Waiting, Done, NeverHappening }
+
+    // Where this weekend's sponsor photo shoot has got to. Any shoot on the sheet being done is the cue —
+    // Friday's stills or Saturday's dealer photos, whichever the player actually turned up to. A sheet with
+    // no shoot booked on it never waits; a sheet whose shoots have all gone by unattended never plays the
+    // beat at all, because the whole pitch is about a room the player was not in.
+    static ShootState Shoot()
+    {
+        var timetable = WeekendDirector.Timetable;
+        if (timetable == null) return ShootState.Done;
+
+        bool booked = false, pending = false;
+        foreach (var a in timetable.Activities)
+        {
+            if (a == null || a.kind != ActivityKind.PhotoShoot) continue;
+            booked = true;
+            if (WeekendLedger.IsDone(a.id)) return ShootState.Done;
+            if (!WeekendLedger.IsMissed(a.id)) pending = true;
+        }
+        if (!booked) return ShootState.Done;
+        return pending ? ShootState.Waiting : ShootState.NeverHappening;
+    }
+
+    // The way out, not the way in — see the header. Being inside the rail once opens the trigger's gate.
+    void Update()
+    {
+        if (_beenInside || _player == null || _circle == null) return;
+        if (Vector2.Distance(_player.transform.position, _circle.position) <= _insideRadius) _beenInside = true;
     }
 
     // Who comes looking. The biggest name the driver is not already carrying and who is not already stood
@@ -174,9 +238,15 @@ public class SponsorPoachBeat : MonoBehaviour
         walkUp.npc = rep;
         walkUp.stopDistance = 1.3f;
 
+        // A player who is already outside the pen when the rep turns up has nothing to walk out of, so the
+        // gate opens for them straight away; anyone stood on the chequers has to leave first.
+        _beenInside = _circle == null
+                   || Vector2.Distance(player.transform.position, _circle.position) > _insideRadius;
+
         var trigger = seq.AddComponent<CutsceneTrigger>();
         trigger.radius = triggerRadius;
         trigger.target = player.transform;
+        trigger.Gate = () => _beenInside;
         trigger.Triggered = () => { appear.MarkSeen(); walkUp.Play(); };
 
         Debug.Log($"SponsorPoachBeat: {sponsor.Name} waiting at the winner's circle exit " +

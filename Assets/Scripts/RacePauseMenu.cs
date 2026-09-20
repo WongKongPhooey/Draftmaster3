@@ -38,7 +38,7 @@ public class RacePauseMenu : MonoBehaviour
 
     // The pad's cursor: which row the confirm button presses. None while the menu is being driven by the mouse.
     // Rows are steered in Update and pressed there too, never inside an IMGUI pass (see the note below).
-    enum PadRow { None, RacingLine, MiniMap, Missions, Schedule, EndSession, Coop, QuitToTitle, Resume }
+    enum PadRow { None, RacingLine, MiniMap, SwingCamera, Missions, Schedule, EndSession, Coop, QuitToTitle, Resume }
     PadRow _padFocus;
     readonly System.Collections.Generic.List<PadRow> _padRows = new();
 
@@ -122,6 +122,7 @@ public class RacePauseMenu : MonoBehaviour
         _padRows.Clear();
         _padRows.Add(PadRow.RacingLine);
         _padRows.Add(PadRow.MiniMap);
+        _padRows.Add(PadRow.SwingCamera);
         _padRows.Add(PadRow.Missions);
         _padRows.Add(PadRow.Schedule);
         if (PracticeDirector.PauseMenuExitLabel != null) _padRows.Add(PadRow.EndSession);
@@ -153,6 +154,7 @@ public class RacePauseMenu : MonoBehaviour
         {
             case PadRow.RacingLine: RacingLineDisplay.Visible = !RacingLineDisplay.Visible; break;
             case PadRow.MiniMap: TrackMiniMap.Visible = !TrackMiniMap.Visible; break;
+            case PadRow.SwingCamera: CameraViewMode.Swinging = !CameraViewMode.Swinging; break;
             case PadRow.Missions: _showMissions = !_showMissions; break;
             case PadRow.Schedule: Resume(); WeekendScheduleUI.Open(); break;
             case PadRow.EndSession:
@@ -236,7 +238,7 @@ public class RacePauseMenu : MonoBehaviour
         // One more row than before whenever a booked session is running, since END SESSION only appears
         // then. Measured rather than budgeted, or the extra row pushes RESUME off the bottom of the plate.
         int extraRows = PracticeDirector.PauseMenuExitLabel != null ? 1 : 0;
-        float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 5f + rowH * 2f
+        float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 5f + rowH * 3f
                   + rowH * 3f + gapH * 2f + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f)
                   + extraRows * (rowH + gapH);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
@@ -263,6 +265,15 @@ public class RacePauseMenu : MonoBehaviour
         PadCursor(PadRow.MiniMap, new Rect(content.x, cy, content.width, row));
         bool newMap = GUI.Toggle(new Rect(content.x, cy, content.width, row), map, "  Mini-map", _toggle);
         if (newMap != map) TrackMiniMap.Visible = newMap;
+        cy += row;
+
+        // Which camera the race is watched from. Off is the fixed view the game has always had; on swings the
+        // whole picture round to sit behind the car. Switching either way is smooth, so it can be tried
+        // mid-race without the view snapping.
+        bool swing = CameraViewMode.Swinging;
+        PadCursor(PadRow.SwingCamera, new Rect(content.x, cy, content.width, row));
+        bool newSwing = GUI.Toggle(new Rect(content.x, cy, content.width, row), swing, "  Swing camera", _toggle);
+        if (newSwing != swing) CameraViewMode.Swinging = newSwing;
         cy += row + gap;
 
         PadCursor(PadRow.Missions, new Rect(content.x, cy, content.width, row));

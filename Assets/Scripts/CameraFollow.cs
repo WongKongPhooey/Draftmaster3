@@ -16,14 +16,32 @@ public class CameraFollow : MonoBehaviour
     void Awake()
     {
         _baseRotation = transform.rotation;
-        if (!cameraFeel) return;
+        EnsureFeel();
+    }
+
+    // The feel component is also what drives the swing camera, so a camera with the lean and shake switched
+    // off still needs one the moment the player asks for the swing — including mid-race, which is why this is
+    // checked every frame rather than once at Awake. A component installed purely for the swing gets the lean
+    // and the shake switched off, so turning the swing on never quietly hands back the feel its author
+    // deliberately declined.
+    void EnsureFeel()
+    {
+        if (_feel != null) return;
+        bool wanted = cameraFeel || CameraViewMode.Swinging;
+        if (!wanted) return;
+
         _feel = GetComponent<DrivingCameraFeel>();
-        if (_feel == null) _feel = gameObject.AddComponent<DrivingCameraFeel>();
+        if (_feel != null) return;
+        _feel = gameObject.AddComponent<DrivingCameraFeel>();
+        if (cameraFeel) return;
+        _feel.enableLean = false;
+        _feel.enableShake = false;
     }
 
     void LateUpdate()
     {
         if (target == null) return;
+        EnsureFeel();
 
         // Strip last frame's feel offset before following, or the smoothing lerp would chase its own shake.
         Vector3 basePos = transform.position - _appliedOffset;
@@ -38,7 +56,9 @@ public class CameraFollow : MonoBehaviour
         {
             _feel.Tick(target, Time.deltaTime);
             feelOffset = _feel.PositionOffset;
-            roll = _feel.RollDegrees;
+            // Both are rolls about the camera's own axis: the swing turns the view round behind the car, the
+            // feel's lean and shake wobble it, and they simply add.
+            roll = _feel.RollDegrees + _feel.SwingDegrees;
         }
 
         _appliedOffset = feelOffset;

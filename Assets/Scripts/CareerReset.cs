@@ -19,7 +19,7 @@ public static class CareerReset
     static readonly string[] KeptInts =
     {
         "AudioOn", "CommsOn", "Volume",         // sound
-        "CameraRotate", "CameraZoom",           // camera
+        "CameraRotate", "CameraZoom", "CameraMode",  // camera (CameraMode = fixed or swing)
         "FPSLimit", "SteeringType",             // performance + controls
         "Difficulty", "AIDifficulty",           // difficulty the player picked
         "ShowRacingLine", "ShowMiniMap", "hud.leaderboard",   // HUD toggles

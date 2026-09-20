@@ -15,6 +15,9 @@ using Draftmaster.Sim;
 //   Shake — contacts add to a 0..1 trauma budget that decays on its own; the camera rattles by trauma² and
 //           takes a directional kick away from whatever it hit. A wall scrape trickles trauma in, so grinding
 //           down the barrier rumbles without ever reaching full-shunt violence.
+//   Swing — only when the player has asked for the swing camera (CameraViewMode): the view rolls round until
+//           the car's nose points up the screen, on a spring that lags the heading and swings a little past
+//           it, so a corner feels like the camera being dragged round behind the car rather than a turntable.
 //
 // Only cars get the treatment: an on-foot target (the pit walk, the paddock) has none of these components and
 // is followed dead straight, as before.
@@ -73,9 +76,26 @@ public class DrivingCameraFeel : MonoBehaviour
     [Tooltip("How fast the directional punch springs back, in e-folds per second.")]
     public float kickDecay = 7f;
 
+    [Header("Swing camera")]
+    [Tooltip("How eagerly the swing chases the car's heading, in Hz. Higher = the view snaps round the moment "
+           + "the car turns; lower = it trails further behind through a corner.")]
+    public float swingResponseHz = 1f;
+    [Tooltip("Damping ratio of the swing. 1 arrives without overshoot, and below 1 it swings past the heading "
+           + "and settles back — which is what stops it feeling bolted to the car. Keep it under 1.")]
+    public float swingDamping = 0.6f;
+    [Tooltip("Fastest the view is ever allowed to turn, degrees per second. Caps a spin, where the heading "
+           + "goes round faster than anyone wants to watch. 0 = uncapped.")]
+    public float swingMaxDegPerSecond = 220f;
+    [Tooltip("Speed (mph) below which the swing holds the angle it already has. A crawling or parked car's "
+           + "heading is noise, and the view chasing it would spin on the spot.")]
+    public float swingHoldBelowMph = 8f;
+
     // What CameraFollow adds on top of its follow position / rotation this frame.
     public Vector3 PositionOffset { get; private set; }
     public float RollDegrees { get; private set; }
+    // Degrees the whole view is rolled to sit behind the car. Zero in fixed-camera mode, and eased rather
+    // than snapped back to zero when the player switches the swing off mid-race.
+    public float SwingDegrees { get; private set; }
     // 0..1 shake budget, exposed for debug readouts.
     public float Trauma => _trauma;
 
@@ -90,6 +110,11 @@ public class DrivingCameraFeel : MonoBehaviour
     Vector2 _kick;      // decaying directional punch, world space
     float _pendingImpact, _pendingScrape;
     int _seed;
+
+    float _swingAngle;      // where the hinge is, degrees
+    float _swingVelocity;   // and how fast it is turning, degrees per second
+    float _swingTarget;     // last heading worth chasing, held while the car crawls
+    bool _hasSwingTarget;
 
     // Kinematic-target fallback: differentiate the transform when there is no controller to ask.
     Vector2 _prevPos;
@@ -108,6 +133,7 @@ public class DrivingCameraFeel : MonoBehaviour
         if (_collision != null) _collision.Contacted -= OnContact;
         PositionOffset = Vector3.zero;
         RollDegrees = 0f;
+        SwingDegrees = 0f;
         ResetState();
     }
 
@@ -124,6 +150,9 @@ public class DrivingCameraFeel : MonoBehaviour
         {
             PositionOffset = Vector3.zero;
             RollDegrees = 0f;
+            // Nothing on foot ever swings, but a swing left over from the car it was following unwinds back
+            // to square rather than snapping there the frame the player gets out.
+            TickSwing(false, 0f, 0f, dt);
             return;
         }
 
@@ -173,6 +202,41 @@ public class DrivingCameraFeel : MonoBehaviour
 
         PositionOffset = new Vector3(world.x, world.y, 0f);
         RollDegrees = _roll + shakeRoll;
+
+        // --- Swing.
+        TickSwing(CameraViewMode.Swinging, speedMph, headingDeg, dt);
+    }
+
+    // Drag the hinge toward the car's heading, or back to square when the swing is off. Separate from the
+    // lean because it is a different kind of answer to the car: the lean is a small offset that dies in a
+    // dead band, while this one is the whole view being turned and has to survive the car being swapped,
+    // parked, or left behind entirely.
+    void TickSwing(bool swinging, float speedMph, float headingDeg, float dt)
+    {
+        // The heading is worth chasing once the car is actually going somewhere — and always on the first
+        // frame behind a new car, so a swing camera picked up at a standstill lines itself up straight away
+        // instead of sitting square until the car reaches walking pace.
+        if (swinging && (speedMph >= swingHoldBelowMph || !_hasSwingTarget))
+        {
+            _swingTarget = CameraSwing.TargetAngle(headingDeg);
+            _hasSwingTarget = true;
+        }
+
+        float target = swinging && _hasSwingTarget ? _swingTarget : 0f;
+        if (!swinging && CameraSwing.Settled(_swingAngle, _swingVelocity, 0f))
+        {
+            // Fully unwound: put it exactly on zero so a fixed camera is left where its author placed it,
+            // down to the last fraction of a degree.
+            _swingAngle = 0f;
+            _swingVelocity = 0f;
+            _hasSwingTarget = false;
+            SwingDegrees = 0f;
+            return;
+        }
+
+        CameraSwing.Step(ref _swingAngle, ref _swingVelocity, target,
+                         swingResponseHz, swingDamping, swingMaxDegPerSecond, dt);
+        SwingDegrees = _swingAngle;
     }
 
     // Hit something: worldNormal points from the car toward whatever it hit, severity is 0..1.
@@ -224,6 +288,11 @@ public class DrivingCameraFeel : MonoBehaviour
         _pendingScrape = 0f;
         _hasPrev = false;
         _fallbackAx = _fallbackAy = _fallbackSpeed = 0f;
+        // The hinge deliberately keeps the angle it is sat at: swapping car (broadcast, a team switch, a net
+        // puppet) should swing across to the new car's heading, not snap the world upright and back again.
+        // Its momentum and the heading it was chasing do go, since neither belongs to the new car.
+        _swingVelocity = 0f;
+        _hasSwingTarget = false;
     }
 
     void ReadMotion(float dt, out float speedMph, out float headingDeg, out float ax, out float ay)

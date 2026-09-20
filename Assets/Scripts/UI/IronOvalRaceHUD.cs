@@ -20,6 +20,14 @@ public class IronOvalRaceHUD : MonoBehaviour
     [Tooltip("Rebind to the player car / track this often (s).")]
     public float rebindSeconds = 1f;
 
+    [Header("Caution flag")]
+    [Tooltip("Side (design px) of the yellow flag box drawn in the top-right corner.")]
+    public float cautionFlagSize = 28f;
+    [Tooltip("Placeholder flag colour — swap for the flag sprite when it exists.")]
+    public Color cautionFlagColor = new Color(1f, 0.85f, 0.1f, 1f);
+    [Tooltip("Blink period (s) of the caution flag.")]
+    public float cautionBlinkSeconds = 0.6f;
+
     Transform _player;
     IVehicleSpeedReadout _speed;
     TireModel _tires;
@@ -97,6 +105,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         DrawPositionBlock();
         DrawSpeedBlock();
         DrawMeters();
+        DrawCautionFlag();
     }
 
     // ------------------------------------------------------------------ blocks
@@ -183,6 +192,28 @@ public class IronOvalRaceHUD : MonoBehaviour
                        Mathf.RoundToInt(Draft01() * 10f), 10, PixelGUI.Info);
 
         label.normal.textColor = prev;
+    }
+
+    // Yellow flag, top right: a stopped car on the road within CautionWatch's look-ahead. Placeholder
+    // art — a plain yellow box on the ink shadow the rest of the HUD uses — until the flag sprite exists.
+    // It blinks, because a static square in the corner reads as part of the furniture rather than as a
+    // warning that just came out.
+    void DrawCautionFlag()
+    {
+        var watch = CautionWatch.Instance;
+        if (watch == null || !watch.CautionAhead) return;
+
+        float size = PixelGUI.Px(cautionFlagSize);
+        float x = Screen.width - size - PixelGUI.Px(8f);
+        float y = PixelGUI.Px(8f);
+
+        float b = PixelGUI.Px(1f);
+        PixelGUI.Fill(new Rect(x - b, y - b, size + b * 2f, size + b * 2f), PixelGUI.Ink);
+
+        var c = cautionFlagColor;
+        // Two-thirds on, one-third off: an unmistakable blink that still leaves the flag up most of the time.
+        if (Mathf.Repeat(Time.unscaledTime, cautionBlinkSeconds) > cautionBlinkSeconds * 0.66f) c.a *= 0.25f;
+        PixelGUI.Fill(new Rect(x, y, size, size), c);
     }
 
     // ------------------------------------------------------------------ data

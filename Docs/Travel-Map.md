@@ -49,10 +49,30 @@ The map is a **Canvas prefab** you edit in Prefab Mode (`Assets/Resources/UI/Tra
   - **Preview PNG** — renders the map to `Assets/Screenshots/travelmap_preview.png` with a sample
     week dressed into it. The canvas is Screen Space - Overlay, which never shows up in an ordinary
     editor screenshot, so this is how you look at a restyle without entering Play Mode.
+  - **Save And Rebuild Markers And Routes** — the whole editing loop in one click. Reads the marker
+    positions (from the open Prefab Mode stage when there is one, so unsaved drags count), writes the
+    ones that have been moved off their projected spot into `TravelMapLayout`, recompiles, then re-seats
+    every marker and re-bakes the highways from the graph that now reads them. Run it with nothing
+    dragged and it is just the rebuild — which is also how a change to the coordinates in code reaches
+    the prefab. With the stage open it leaves the result dirty rather than writing the asset: **Ctrl+S
+    to keep it**. (Saving a prefab asset out from under an open stage re-imports it mid-repaint, which
+    poisons Unity's own `PropertyEditor.Styles` and fills the console with `EditorStyles` null
+    references — worth knowing before adding another menu item that touches this prefab.)
+    Shops and yards are not saved as positions: they are **mounted** on a road, sitting at its midpoint
+    and splitting it into two hops. So dragging one saves the ROAD it was dropped nearest (the `MOUNTS`
+    table) and it visibly snaps onto that highway when the rebuild runs — drop a junkyard anywhere near a
+    different route and it moves there. It takes a real drag (12 board px) to count, roads that already
+    carry a shop are skipped so two never land on one, and dropping it back on the road the code mounts
+    it on removes the override rather than restating it. The rebuild half runs itself after the recompile, off an
+    `EditorApplication.update` tick queued from `[InitializeOnLoadMethod]` — a `delayCall` queued during
+    a domain load is dropped before it is pumped, and `RequestScriptCompilation` produces *two* reloads,
+    so the pending flag is only cleared once the rebuild is actually running.
   - **Open (Play Mode)** — opens the map without the F9 key (automation convenience).
-- `TravelGraph` remains the source of truth for **topology** (edges, BFS routing, shop stock);
-  `TravelGraph.pos` is only used to seed marker positions at build/sync time — except the Team
-  Factory, whose marker `Restyle` re-seats from the graph every run.
+- `TravelGraph` remains the source of truth for **topology** (edges, BFS routing, shop stock) and now
+  for **geography**: every circuit carries its real latitude and longitude, `ProjectCircuits` fits them
+  to the board (equirectangular, longitude narrowed by cos of the mean latitude, one scale on both axes)
+  and `SpreadOut` pushes any pair closer than 34 board px apart so two tracks in one town stay clickable.
+  Hand placement overrides it per id through `TravelMapLayout`, which the menu item above writes.
 
 ### How the board reads
 
