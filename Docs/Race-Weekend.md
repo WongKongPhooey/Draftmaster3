@@ -202,6 +202,13 @@ people and co-op all carry over unchanged. The run modifier is switched off whil
 cart is walk-through when parked, and stepping off leaves it standing at your left hand. It is painted in
 the team's own colours, read off the garage it was parked against. Covered by `GolfCartTests`.
 
+A second, stock-painted **paddock golf cart** is left somewhere random every time the scene loads
+(`GolfCartSpawner.ParkPaddockCart` / `PickRandomSpot`): a point inside the walkable paddock boundaries
+(grandstand `ViewingPocket_*` boundaries excluded), on ground `PaddockObstacles` says is clear of motorhomes,
+garages and keep-out floors, and at least `paddockSeparation` (15 m) from the team cart. It rides exactly
+like the team cart. With no boundary drawn it scatters round the team garage; with no clear ground it is
+skipped. `parkPaddockCart` on the spawner switches it off.
+
 ## 4. What it is all worth
 
 Five meters run across the weekend, shown on the schedule rail and on the phone.

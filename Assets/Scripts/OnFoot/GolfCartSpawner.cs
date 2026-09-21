@@ -1,9 +1,12 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Draftmaster.Weekend;
 
-// Parks the team's golf cart at the mouth of the player's own garage.
+// Parks the team's golf cart at the mouth of the player's own garage, and a second, unmarked paddock cart
+// somewhere random in the walkable paddock.
 //
 // Where exactly: off the walkway end of the rig, straight out in front of the canopy — the spot a real
 // team leaves theirs, where it is in nobody's way and is the first thing you see walking up to your own
@@ -14,6 +17,10 @@ using Draftmaster.Weekend;
 // Falls back to the pit box venue anchor (WeekendVenue.PitBox is the team's garage in the paddock) at a
 // track or a session where the garage row was never built, and gives up quietly if there is no paddock at
 // all — a cart parked in the middle of nowhere is worse than no cart.
+//
+// The paddock cart is the one somebody left lying about: a different spot every time the scene loads, picked
+// from inside the walkable paddock (never a grandstand viewing pocket), on clear ground no motorhome, garage
+// or keep-out floor covers, and far enough from the team cart that the two read as separate finds.
 //
 // Self-installing, with the same gate as VendingMachineSpawner: a career (a single race has no team
 // garage to park outside of), not a co-op guest (career content rides the host), and a scene with the
@@ -44,6 +51,19 @@ public class GolfCartSpawner : MonoBehaviour
              "cart that is worth finding without being a car.")]
     public float rideSpeed = 8f;
 
+    [Header("The paddock cart")]
+    [Tooltip("Also park a second cart at a random spot in the paddock, different every load.")]
+    public bool parkPaddockCart = true;
+    [Tooltip("Name over the paddock cart's title card.")]
+    public string paddockCartName = "PADDOCK GOLF CART";
+    [Tooltip("Metres of clear ground the paddock cart needs around its centre — about half a cart length, " +
+             "so it is never drawn through the side of a motorhome or a garage.")]
+    public float paddockClearance = 1.6f;
+    [Tooltip("Least distance, metres, between the paddock cart and the team cart.")]
+    public float paddockSeparation = 15f;
+    [Tooltip("Random spots tried before giving up on the paddock cart.")]
+    public int paddockAttempts = 200;
+
     [Header("Timing")]
     [Tooltip("Seconds to wait for the on-foot player to exist (PitLaneStart spawns them in its own Start).")]
     public float playerTimeout = 10f;
@@ -52,6 +72,13 @@ public class GolfCartSpawner : MonoBehaviour
     public float garageTimeout = 25f;
 
     public static GolfCart Instance { get; private set; }
+
+    // The randomly parked paddock cart, or null when there was nowhere clear to put it.
+    public static GolfCart PaddockCart { get; private set; }
+
+    // Name prefix WeekendVenueSites gives the walkable pocket round a grandstand seat. Those are boundaries
+    // too, but across the circuit from the paddock — nowhere to leave a cart.
+    const string ViewingPocketPrefix = "ViewingPocket_";
 
     // ----- self-install -----
     static bool _hooked;
@@ -89,13 +116,17 @@ public class GolfCartSpawner : MonoBehaviour
         float garageWait = garageTimeout;
         while (garageWait > 0f && !PlayerRig(out _)) { garageWait -= Time.deltaTime; yield return null; }
 
-        if (!TryFindSpot(out Vector3 at, out Quaternion facing, out Color primary, out Color secondary))
+        if (TryFindSpot(out Vector3 at, out Quaternion facing, out Color primary, out Color secondary))
         {
-            Debug.Log("GolfCartSpawner: no team garage in this paddock — no cart parked.", this);
-            yield break;
+            Instance = Build(at, facing, primary, secondary, cartName);
+            Debug.Log($"GolfCartSpawner: golf cart parked at {at} by the team garage.", this);
+        }
+        else
+        {
+            Debug.Log("GolfCartSpawner: no team garage in this paddock — no team cart parked.", this);
         }
 
-        Build(at, facing, primary, secondary);
+        if (parkPaddockCart) ParkPaddockCart();
     }
 
     // ---------------------------------------------------------------- placement
@@ -164,9 +195,106 @@ public class GolfCartSpawner : MonoBehaviour
         return new Vector3(inside.x, inside.y, 0f);
     }
 
+    // ---------------------------------------------------------------- the paddock cart
+
+    // Somewhere random inside the walkable paddock, on clear ground, well away from the team cart.
+    void ParkPaddockCart()
+    {
+        var areas = new List<Rect>();
+        var owners = new List<PaddockBoundary>();
+        foreach (var b in PaddockBoundary.Active)
+        {
+            if (b == null || !b.isActiveAndEnabled) continue;
+            if (b.name.StartsWith(ViewingPocketPrefix, StringComparison.Ordinal)) continue;
+            var poly = b.GetComponent<PolygonCollider2D>();
+            if (poly == null) continue;
+            Bounds bb = poly.bounds;
+            areas.Add(new Rect(bb.min.x, bb.min.y, bb.size.x, bb.size.y));
+            owners.Add(b);
+        }
+
+        // A paddock with no drawn boundary: scatter it round the team's garage instead, the one place such
+        // a paddock is known to have.
+        if (areas.Count == 0)
+        {
+            Vector3 centre;
+            if (Instance != null) centre = Instance.transform.position;
+            else
+            {
+                var anchor = WeekendVenueAnchor.Find(WeekendVenue.PitBox);
+                if (anchor == null)
+                {
+                    Debug.Log("GolfCartSpawner: no paddock to leave a cart in — no paddock cart parked.", this);
+                    return;
+                }
+                centre = anchor.StandPosition;
+            }
+            float r = paddockSeparation * 2f;
+            areas.Add(new Rect(centre.x - r, centre.y - r, r * 2f, r * 2f));
+        }
+
+        Vector2? teamCart = Instance != null ? (Vector2?)Instance.transform.position : null;
+        var rng = new System.Random();
+
+        bool found = PickRandomSpot(rng, areas, p =>
+        {
+            if (owners.Count > 0)
+            {
+                bool inside = false;
+                for (int i = 0; i < owners.Count && !inside; i++) inside = owners[i].Contains(p);
+                if (!inside) return false;
+            }
+            if (teamCart.HasValue && Vector2.Distance(p, teamCart.Value) < paddockSeparation) return false;
+            return !PaddockObstacles.IsBlocked(p, paddockClearance);
+        }, paddockAttempts, out Vector2 spot);
+
+        if (!found)
+        {
+            Debug.Log("GolfCartSpawner: no clear ground found in the paddock — no paddock cart parked.", this);
+            return;
+        }
+
+        // Stock paint (the cart's own defaults): this one belongs to nobody in particular.
+        var facing = Quaternion.Euler(0f, 0f, (float)(rng.NextDouble() * 360.0));
+        PaddockCart = Build(new Vector3(spot.x, spot.y, 0f), facing,
+                            new Color(0.85f, 0.85f, 0.88f), new Color(0.20f, 0.22f, 0.26f), paddockCartName);
+        Debug.Log($"GolfCartSpawner: paddock golf cart parked at random at {spot}.", this);
+    }
+
+    // A random point, spread over the union of `areas` by area (a big paddock polygon gets proportionally
+    // more tries than a sliver of a lot pocket), that `accept` passes. False after `attempts` misses. Pure
+    // and seeded, so it can be measured without a paddock round it.
+    public static bool PickRandomSpot(System.Random rng, IList<Rect> areas, Func<Vector2, bool> accept,
+                                      int attempts, out Vector2 spot)
+    {
+        spot = Vector2.zero;
+        if (rng == null || areas == null || areas.Count == 0) return false;
+
+        double total = 0;
+        for (int i = 0; i < areas.Count; i++) total += Mathf.Max(0f, areas[i].width * areas[i].height);
+        if (total <= 0) return false;
+
+        for (int n = 0; n < attempts; n++)
+        {
+            double pick = rng.NextDouble() * total;
+            Rect r = areas[areas.Count - 1];
+            for (int i = 0; i < areas.Count; i++)
+            {
+                double a = Mathf.Max(0f, areas[i].width * areas[i].height);
+                if (pick < a) { r = areas[i]; break; }
+                pick -= a;
+            }
+
+            var p = new Vector2(r.xMin + (float)rng.NextDouble() * r.width,
+                                r.yMin + (float)rng.NextDouble() * r.height);
+            if (accept == null || accept(p)) { spot = p; return true; }
+        }
+        return false;
+    }
+
     // ---------------------------------------------------------------- the cart itself
 
-    void Build(Vector3 at, Quaternion facing, Color primary, Color secondary)
+    GolfCart Build(Vector3 at, Quaternion facing, Color primary, Color secondary, string title)
     {
         // Left at the root and filed by RuntimeHierarchy rather than parented to the spawner, the same
         // way the drinks machine is: Adopt only moves objects that have no parent.
@@ -175,7 +303,7 @@ public class GolfCartSpawner : MonoBehaviour
         cart.primary = primary;
         cart.secondary = secondary;
         cart.rideSpeed = rideSpeed;
-        cart.speakerName = cartName;
+        cart.speakerName = title;
         cart.interactRange = interactRange;
         cart.turnsToFace = false;                 // it is parked; it does not swivel to greet anybody
         cart.Assemble();
@@ -183,9 +311,7 @@ public class GolfCartSpawner : MonoBehaviour
 
         // Nothing in the game mentions the cart, so the paddock introduces it the way it introduces any
         // other place worth walking to — a title card the first time the player comes near it.
-        LocationTitle.Attach(cart.gameObject, cartName, titleRadius, cartSubtitle);
-
-        Instance = cart;
-        Debug.Log($"GolfCartSpawner: golf cart parked at {at} by the team garage.", this);
+        LocationTitle.Attach(cart.gameObject, title, titleRadius, cartSubtitle);
+        return cart;
     }
 }

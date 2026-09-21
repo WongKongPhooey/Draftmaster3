@@ -365,4 +365,75 @@ public class GolfCartTests
         Assert.IsNull(declared,
             "GolfCart declares OnDisable, which hides NPCInteractable's own. Do the cleanup in OnDestroy.");
     }
+
+    // ---------------------------------------------------------------- the randomly parked paddock cart
+
+    static bool PickRandomSpot(System.Random rng, IList<Rect> areas, System.Func<Vector2, bool> accept,
+                               int attempts, out Vector2 spot)
+    {
+        var m = SpawnerType.GetMethod("PickRandomSpot", BindingFlags.Public | BindingFlags.Static);
+        Assert.IsNotNull(m, "GolfCartSpawner.PickRandomSpot() is gone; it is where the paddock cart parks.");
+        var args = new object[] { rng, areas, accept, attempts, null };
+        bool ok = (bool)m.Invoke(null, args);
+        spot = (Vector2)args[4];
+        return ok;
+    }
+
+    [Test]
+    public void ThePaddockCartParksSomewhereAcceptedInsideTheAreas()
+    {
+        var areas = new List<Rect> { new Rect(0f, 0f, 40f, 20f), new Rect(100f, 100f, 10f, 10f) };
+        // A garage-shaped hole in the middle of the big area: the cart must never land in it.
+        var hole = new Rect(10f, 5f, 20f, 10f);
+        System.Func<Vector2, bool> clear = p => !hole.Contains(p);
+
+        for (int seed = 0; seed < 200; seed++)
+        {
+            Assert.IsTrue(PickRandomSpot(new System.Random(seed), areas, clear, 200, out var spot),
+                $"seed {seed}: found nowhere to park with most of the paddock clear.");
+            Assert.IsTrue(areas[0].Contains(spot) || areas[1].Contains(spot),
+                $"seed {seed}: cart parked at {spot}, outside every paddock area.");
+            Assert.IsFalse(hole.Contains(spot), $"seed {seed}: cart parked at {spot}, inside the blocked ground.");
+        }
+    }
+
+    [Test]
+    public void ThePaddockCartIsNotAlwaysInTheSamePlace()
+    {
+        var areas = new List<Rect> { new Rect(-50f, -30f, 100f, 60f) };
+        var spots = new HashSet<Vector2Int>();
+        for (int seed = 0; seed < 20; seed++)
+        {
+            PickRandomSpot(new System.Random(seed), areas, null, 10, out var spot);
+            spots.Add(Vector2Int.RoundToInt(spot));
+        }
+        Assert.Greater(spots.Count, 10, "twenty loads parked the paddock cart in barely any different spots.");
+    }
+
+    [Test]
+    public void ThePaddockCartSpreadsOverTheAreasByTheirSize()
+    {
+        // One area nine times the size of the other should catch roughly nine in ten carts.
+        var areas = new List<Rect> { new Rect(0f, 0f, 30f, 30f), new Rect(100f, 0f, 10f, 10f) };
+        var rng = new System.Random(1234);
+        int big = 0;
+        const int Loads = 2000;
+        for (int i = 0; i < Loads; i++)
+        {
+            PickRandomSpot(rng, areas, null, 1, out var spot);
+            if (areas[0].Contains(spot)) big++;
+        }
+        Assert.That(big / (float)Loads, Is.InRange(0.85f, 0.95f),
+            "carts are not spread over the paddock by area — a sliver of a lot gets as many as the paddock.");
+    }
+
+    [Test]
+    public void ThePaddockCartGivesUpWhenNothingIsClear()
+    {
+        var areas = new List<Rect> { new Rect(0f, 0f, 10f, 10f) };
+        Assert.IsFalse(PickRandomSpot(new System.Random(7), areas, _ => false, 50, out _),
+            "a paddock with no clear ground still got a cart parked in it.");
+        Assert.IsFalse(PickRandomSpot(new System.Random(7), new List<Rect>(), null, 50, out _),
+            "a paddock with no areas at all still got a cart parked in it.");
+    }
 }
