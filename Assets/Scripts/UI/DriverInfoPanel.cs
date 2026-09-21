@@ -72,6 +72,8 @@ public class DriverInfoPanel : MonoBehaviour
 
     void OnDestroy() { if (Instance == this) Instance = null; }
 
+    public bool Open { get => _show; set => _show = value; }
+
     void Update()
     {
         if (Keyboard.current != null && toggleKey != Key.None && Keyboard.current[toggleKey].wasPressedThisFrame)

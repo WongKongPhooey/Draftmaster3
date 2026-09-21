@@ -37,6 +37,8 @@ public class RivalryFeed : MonoBehaviour
     readonly List<Toast> _toasts = new();
     bool _showStandings;
 
+    public bool StandingsOpen { get => _showStandings; set => _showStandings = value; }
+
     public static void Ensure()
     {
         if (Instance != null) return;

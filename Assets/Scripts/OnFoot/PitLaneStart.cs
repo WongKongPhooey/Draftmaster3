@@ -161,6 +161,7 @@ public class PitLaneStart : MonoBehaviour
     // The chief has already had his say and the setup is already made. Getting back into the same car
     // after a tow is not a fresh session, so it skips both and hands the controls straight over.
     bool _briefed;
+    bool _headedOut;   // SessionHud has had its reset — once a session, not again after a tow
 
     // Camera-zoom arbiter. This component owns the ortho lerp for the whole scene, but other systems
     // retarget the camera (broadcast TV cuts, crew chief's pit-wall avatar) and need the zoom to follow:
@@ -814,6 +815,10 @@ public class PitLaneStart : MonoBehaviour
             if (fitPitLimiter) ControlHints.Show("limiter", "L", InputGlyphs.Pad(PadBindings.PitLimiter),
                                                  "Pit limiter — holds you to the pit speed limit", 7f);
         }
+
+        // The first time out this session, the screen starts from lap timing alone. Every scene load is a new
+        // session (practice, qualifying and the race each reload), so a flag on this object is enough.
+        if (!_headedOut) { _headedOut = true; SessionHud.HeadOut(); }
 
         PlayerEnteredCar?.Invoke();
     }

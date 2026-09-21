@@ -52,6 +52,9 @@ public class LeaderboardUI : MonoBehaviour
 
     void Awake() => _visible = PlayerPrefs.GetInt(PrefKey, 1) == 1;
 
+    // Set by SessionHud as the car heads out. Not written to the pref: that is the player's own F2 choice.
+    public bool Visible { get => _visible; set => _visible = value; }
+
     void Update()
     {
         if (!Input.GetKeyDown(toggleKey) && !PadInput.PressedDriving(PadBindings.Leaderboard)) return;

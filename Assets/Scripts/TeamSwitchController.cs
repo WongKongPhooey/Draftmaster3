@@ -54,6 +54,7 @@ public class TeamSwitchController : MonoBehaviour
     bool _hidden;                              // toggleKey; the panel also hides itself in practice/qualifying
 
     public GameObject CurrentCar => _current;
+    public bool Hidden { get => _hidden; set => _hidden = value; }   // toggleKey's state; SessionHud sets it too
 
     void Start()
     {
