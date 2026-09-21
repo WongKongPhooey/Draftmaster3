@@ -592,6 +592,7 @@ and `PadBindingsTests` fails if two shortcuts land on one button in the same con
 | `F11` | X | Live timing for the session you are watching from a grandstand |
 | `E` | Y | Get up out of a grandstand seat |
 | `C` | X | Crew chief mode — same as the headset button in the bottom-right corner of the HUD |
+| `,` / `.` | D-pad left / right | Crew chief only: point the camera at the previous / next car in the running order; past either end it comes back to the chief. Clicking a row on the pit-wall timing screen does the same (click again to come back). The chief stands still while the camera is away |
 | `V` | B | Drive / Broadcast toggle (pad: from the seat only) |
 | `L` | Y | Pit limiter (car) |
 

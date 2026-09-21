@@ -46,6 +46,8 @@ namespace Draftmaster.Controls
         public const PadButton TravelThere = PadButton.North;        // T
         public const PadButton RecallObjective = PadButton.DpadUp;   // Q
         public const PadButton WeekendSheet = PadButton.DpadDown;    // F10
+        public const PadButton WatchPrevCar = PadButton.DpadLeft;    // , (crew chief only)
+        public const PadButton WatchNextCar = PadButton.DpadRight;   // . (crew chief only)
 
         // ---- grandstand seat
         public const PadButton LeaveSeat = PadButton.North;          // E
@@ -109,6 +111,9 @@ namespace Draftmaster.Controls
             new Shortcut("Travel there", "T", TravelThere, Context.OnFoot, "Leave seat"),
             new Shortcut("Show objective", "Q", RecallObjective, Context.OnFoot),
             new Shortcut("Weekend sheet", "F10", WeekendSheet, Context.OnFoot),
+            // Only read while the player is the crew chief on the pit wall.
+            new Shortcut("Watch previous car", ",", WatchPrevCar, Context.OnFoot),
+            new Shortcut("Watch next car", ".", WatchNextCar, Context.OnFoot),
 
             new Shortcut("Leave seat", "E", LeaveSeat, Context.Seated, "Travel there"),
             new Shortcut("Live timing", "F11", LiveTiming, Context.Seated, "Crew chief", "Shove"),

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using Draftmaster.Controls;
+using Draftmaster.Sim;
 
 // The crew chief's headset icon, bottom right of the HUD (single player). Tapping it drops the player into
 // an on-foot crew-chief character at the pit wall. It is the first of the team controls: one square glyph per
@@ -20,6 +21,10 @@ using Draftmaster.Controls;
 //
 // As crew chief the player sees pit-wall telemetry the driver doesn't: fuel load and last-pit lap for the
 // whole field. Tap again to go back to whoever they were.
+//
+// The chief can also watch the cars rather than the pit wall: , and . (d-pad left/right on a pad) step the
+// camera through the field in running order and back round to the chief, and clicking a row on the timing
+// screen cuts straight to that car. The chief stands still while the camera is away from them.
 //
 // Camera + car hand-off are reused from DriveModeController; this component just owns the on-foot avatar, the
 // camera target while on foot, and the data panel.
@@ -44,6 +49,12 @@ public class CrewChiefController : MonoBehaviour
 
     [Header("Input")]
     public Key toggleKey = Key.C;
+    [Tooltip("While crew chief: point the camera at the car ahead of the watched one in the running order " +
+             "(or last place, from the pit wall). Past the leader it comes back to the chief.")]
+    public Key watchPrevKey = Key.Comma;
+    [Tooltip("While crew chief: point the camera at the next car down the running order (the leader, from " +
+             "the pit wall). Past last place it comes back to the chief.")]
+    public Key watchNextKey = Key.Period;
 
     [Header("HUD")]
     [Tooltip("Capacity (litres) assumed for the fuel % when a car has no FuelTank yet.")]
@@ -70,7 +81,14 @@ public class CrewChiefController : MonoBehaviour
     Canvas _canvas;
     float _lift;             // UI pixels the corner controls are raised by, to stand clear of the touch pedals
     bool _keyPrev;
+    bool _prevHeld, _nextHeld;
+    bool _watchLocked;       // this component froze the chief while the camera is away
+    Transform _watching;     // the car the camera is on; null = the chief at the pit wall
     Material _unlit;
+
+    // Shown on the timing screen and in the one-off hint, so both teach the same buttons.
+    string WatchKeys => $"{KeyName(watchPrevKey)} {KeyName(watchNextKey)}";
+    static string WatchPad => InputGlyphs.Pad(PadBindings.WatchPrevCar) + "/" + InputGlyphs.Pad(PadBindings.WatchNextCar);
 
     // Captured the moment the headset is tapped, because taking the job changes both answers: the crew
     // chief avatar is itself a walking body, so "was the player on foot" cannot be asked again afterwards.
@@ -125,9 +143,83 @@ public class CrewChiefController : MonoBehaviour
         // The pad's headset button is a fight's shove, so it stands down while one is on.
         if (!DriverFight.IsActive && PadInput.Pressed(PadBindings.CrewChief)) Toggle();
 
-        // Keep the camera glued to the avatar while on foot (DriveModeController is told to leave it alone).
-        if (_active && _avatar != null && cameraFollow != null && cameraFollow.target != _avatar.transform)
-            cameraFollow.target = _avatar.transform;
+        if (_active) UpdateWatchInput();
+
+        // Keep the camera glued to the avatar — or the car being watched — while on the pit wall
+        // (DriveModeController is told to leave it alone). A watched car that despawns hands it back.
+        if (_active && _watchLocked && _watching == null) Watch(null);
+        Transform camTarget = _watching != null ? _watching : (_avatar != null ? _avatar.transform : null);
+        if (_active && camTarget != null && cameraFollow != null && cameraFollow.target != camTarget)
+            cameraFollow.target = camTarget;
+    }
+
+    void UpdateWatchInput()
+    {
+        var kb = Keyboard.current;
+        bool prev = kb != null && watchPrevKey != Key.None && kb[watchPrevKey].isPressed;
+        bool next = kb != null && watchNextKey != Key.None && kb[watchNextKey].isPressed;
+        int dir = 0;
+        if (prev && !_prevHeld) dir = -1;
+        if (next && !_nextHeld) dir = +1;
+        _prevHeld = prev;
+        _nextHeld = next;
+        if (PadInput.PressedOnFoot(PadBindings.WatchPrevCar)) dir = -1;
+        if (PadInput.PressedOnFoot(PadBindings.WatchNextCar)) dir = +1;
+        if (dir != 0) StepWatch(dir);
+    }
+
+    // One press of , or . — next/previous car in the running order, round through the chief.
+    void StepWatch(int dir)
+    {
+        var rt = RacePositionTracker.Instance;
+        var order = rt != null ? rt.Order : null;
+        int count = order != null ? order.Count : 0;
+        int current = PitWallWatch.Self;
+        for (int i = 0; _watching != null && i < count; i++)
+            if (order[i] != null && order[i].tf == _watching) { current = i; break; }
+
+        // Skip any empty rows rather than stopping on them.
+        int next = current;
+        for (int tries = 0; tries <= count; tries++)
+        {
+            next = PitWallWatch.Step(next, count, dir);
+            if (next == PitWallWatch.Self || (order[next] != null && order[next].tf != null)) break;
+        }
+        Watch(next == PitWallWatch.Self ? null : order[next].tf);
+    }
+
+    // Point the pit-wall camera at a car, or back at the chief (null).
+    public void Watch(Transform car)
+    {
+        _watching = car;
+        SetLocked(car != null);
+        if (cameraFollow == null) return;
+        if (car != null) cameraFollow.target = car;
+        else if (_avatar != null) cameraFollow.target = _avatar.transform;
+    }
+
+    // The chief stays put while the camera is off watching somebody — walking a body nobody can see is how a
+    // player cuts back to find the chief stood in the pit lane.
+    // Only ever undoes its own lock, so a fight or cutscene that froze the chief is left in charge of that.
+    void SetLocked(bool locked)
+    {
+        if (locked == _watchLocked) return;
+        _watchLocked = locked;
+        var foot = _avatar != null ? _avatar.GetComponent<OnFootController>() : null;
+        if (foot != null) foot.MovementLocked = locked;
+    }
+
+    static string KeyName(Key k)
+    {
+        switch (k)
+        {
+            case Key.None: return "";
+            case Key.Comma: return ",";
+            case Key.Period: return ".";
+            case Key.LeftBracket: return "[";
+            case Key.RightBracket: return "]";
+            default: return k.ToString().ToUpperInvariant();
+        }
     }
 
     // Practice, qualifying and the race all count — the timing screen is most of the point of a practice
@@ -173,16 +265,20 @@ public class CrewChiefController : MonoBehaviour
 
         EnsureAvatar();
         _avatar.SetActive(true);
-        if (cameraFollow != null) cameraFollow.target = _avatar.transform;
+        Watch(null);
+        _prevHeld = _nextHeld = true;   // a key already down when the headset goes on is not a press
 
         _active = true;
         IsCrewChief = true;
         if (_timingBtn != null) _timingBtn.SetActive(true);
         UpdateButton();
+
+        ControlHints.Show("crewchiefwatch", WatchKeys, WatchPad, "Watch the cars on track");
     }
 
     void Exit()
     {
+        Watch(null);
         if (_avatar != null) _avatar.SetActive(false);
 
         // They come off the pit wall as whoever they were when they got on it.
@@ -380,7 +476,7 @@ public class CrewChiefController : MonoBehaviour
         var order = rt.Order;
         float row = PixelGUI.Px(11f);
         float w = PixelGUI.Px(212f);
-        float h = PixelGUI.Px(34f) + Mathf.Min(order.Count, 45) * row;
+        float h = PixelGUI.Px(36f) + (Mathf.Min(order.Count, 45) + 1) * row;
         float x = Screen.width - w - PixelGUI.Px(8f);
         float y = PixelGUI.Px(40f);
 
@@ -409,6 +505,14 @@ public class CrewChiefController : MonoBehaviour
             bool isPlayer = _playerCar != null && e.tf == _playerCar.transform;
             style.normal.textColor = isPlayer ? PixelGUI.Gold : PixelGUI.Text;
 
+            // The car on camera gets the leaderboard's featured-row fill. Each row is a button: click to cut
+            // to that car, click it again to come back to the pit wall.
+            var rowRect = new Rect(cx, cy, c.width, row);
+            if (e.tf == _watching)
+                PixelGUI.Fill(rowRect, new Color(PixelGUI.Info.r, PixelGUI.Info.g, PixelGUI.Info.b, 0.30f));
+            if (GUI.Button(rowRect, GUIContent.none, GUIStyle.none))
+                Watch(e.tf == _watching ? null : e.tf);
+
             var fuel = e.tf.GetComponent<FuelTank>();
             string fuelStr = fuel != null ? $"{Mathf.RoundToInt(fuel.Fraction * 100f)}%" : "--";
             // A car about to run dry is the whole reason this screen exists, so it gets the alarm colour
@@ -424,6 +528,16 @@ public class CrewChiefController : MonoBehaviour
             cy += row;
         }
         style.normal.textColor = prev;
+
+        // How to get at the cars: the only standing reminder, beyond the one-off hint.
+        cy += PixelGUI.Px(2f);
+        string keys = InputGlyphs.UsingGamepad
+            ? InputGlyphs.PadName(PadBindings.WatchPrevCar) + "/" +
+              InputGlyphs.PadName(PadBindings.WatchNextCar).Replace("D-PAD ", "")
+            : WatchKeys;
+        string footer = _watching != null ? $"{keys}  NEXT CAR · CLICK ROW = BACK"
+                                          : $"{keys}  WATCH CARS · CLICK A ROW";
+        GUI.Label(new Rect(cx, cy, c.width, row), footer, PixelGUI.LabelDim);
     }
 
     Material UnlitSprite()
