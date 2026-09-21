@@ -116,8 +116,9 @@ public class CoopJoinPanel : MonoBehaviour
         return new GameObject("NetworkLauncher").AddComponent<NetworkLauncher>();
     }
 
-    // The kit's Display face, centred in the field. Cached because a GUIStyle per frame is waste, and
-    // rebuilt when the kit rescales (a window resize changes the point size under us).
+    // The kit's Display face, centred in the field and in the heading's yellow, so the typed code reads as
+    // an input rather than as more panel copy. Cached because a GUIStyle per frame is waste, and rebuilt
+    // when the kit rescales (a window resize changes the point size under us).
     static GUIStyle _codeStyle;
     static int _codeStyleSize;
     static GUIStyle CodeStyle()
@@ -126,6 +127,7 @@ public class CoopJoinPanel : MonoBehaviour
         if (_codeStyle == null || _codeStyleSize != baseStyle.fontSize)
         {
             _codeStyle = new GUIStyle(baseStyle) { alignment = TextAnchor.MiddleCenter };
+            _codeStyle.normal.textColor = PixelGUI.Gold;
             _codeStyleSize = baseStyle.fontSize;
         }
         return _codeStyle;
@@ -162,11 +164,11 @@ public class CoopJoinPanel : MonoBehaviour
         cy += row + gap;
 
         // The typed code. A bare line of text does not read as somewhere you can type, so it sits on a
-        // sunk plate inside a gold border — the same yellow as the heading — and the empty slots are shown
-        // as underscores so the six characters are countable before any are typed.
+        // dark sunk plate inside a two-pixel gold border, in yellow type — the same yellow as the heading —
+        // and the empty slots are shown as underscores so the six characters are countable before any are typed.
         var field = new Rect(c.x, cy, c.width, fieldH);
         PixelGUI.Fill(field, PixelGUI.Ink);
-        PixelGUI.Frame(field, PixelGUI.Gold);
+        PixelGUI.Frame(field, PixelGUI.Gold, 2f);
         string shown = _code.PadRight(6, '_');
         GUI.Label(field, shown, CodeStyle());
         cy += fieldH + gap;
