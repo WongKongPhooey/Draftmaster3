@@ -1,4 +1,5 @@
 using System;
+using Draftmaster.Sim;
 using UnityEngine;
 
 // The pace/safety car. Leads the field around one formation lap at a fixed cruise pace, then dives
@@ -27,6 +28,12 @@ public class SafetyCar : MonoBehaviour
     // True while the pace car is in the close-up zone near the line: the field packs into tight two-wide rows
     // (read by FormationControllers via FormationDirector) while the pace car simultaneously peels away to the pit.
     public bool ClosingUp { get; private set; }
+
+    [Header("Traffic")]
+    [Tooltip("The pace car drives its own pace, but never faster than it could stop from behind a car in its lane — a car that got out ahead of it, spun in front of it, or the human. Braking (mph/s) it may call on to do that.")]
+    public float trafficBrakeMphPerSec = 30f;
+    [Tooltip("Metres ahead scanned for a car in the pace car's lane.")]
+    public float trafficScanM = 80f;
 
     [Header("Roof light")]
     public Color rooflightColor = new Color(1f, 0.55f, 0f, 1f);
@@ -82,6 +89,7 @@ public class SafetyCar : MonoBehaviour
 
         if (RaceStart.Current != RaceStart.Phase.Formation) return;
         _spline.aiMaxSpeedMph = cruiseMph;
+        _spline.aiMinDecelMphPerSec = 0f;
 
         if (_pitting)
         {
@@ -145,6 +153,52 @@ public class SafetyCar : MonoBehaviour
             float gap = _pitEntryDistance - cur;
             if (gap < 0f) gap += lap;
             if (gap <= pitEntryWindow) PitIn();
+        }
+
+        if (!_pitting) YieldToTraffic();
+    }
+
+    // Nothing is supposed to be in front of the pace car, but when something is it must not be driven into.
+    // Same safe-speed rule the formation field uses (PackAvoidance): the fastest speed it can still stop from
+    // behind whatever is in its lane, if that car braked as hard as it could.
+    void YieldToTraffic()
+    {
+        float len = _spline.TrackLength;
+        if (len <= 0f) return;
+        float myC = _spline.CentreDistanceOnTrack;
+        float myLat = _spline.LateralOnTrack;
+        const float halfLength = 2.4f, halfWidth = 1f, laneMargin = 0.35f, standstill = 1f, reaction = 0.12f;
+        float brake = trafficBrakeMphPerSec * PackAvoidance.MphToMps;
+        float safe = float.MaxValue;
+
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || d.IsOnPit || !d.isActiveAndEnabled) continue;
+            if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
+            Consider(PackAvoidance.SignedGap(d.CentreDistanceOnTrack, myC, len), d.LateralOnTrack, d.CurrentMph);
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            Consider(PackAvoidance.SignedGap(p.TrackDistance, myC, len), p.TrackLateral, p.SpeedMph);
+        }
+
+        if (safe >= _spline.aiMaxSpeedMph) return;
+        _spline.aiMaxSpeedMph = safe;
+        if (safe < _spline.CurrentMph) _spline.aiMinDecelMphPerSec = trafficBrakeMphPerSec;
+
+        void Consider(float gap, float lat, float mph)
+        {
+            if (gap <= 0f || gap > trafficScanM) return;
+            if (Mathf.Abs(lat - myLat) >= 2f * halfWidth + 2f * laneMargin) return;
+            float clear = gap - 2f * halfLength - standstill;
+            float v = PackAvoidance.SafeSpeedMps(clear, Mathf.Max(0f, mph) * PackAvoidance.MphToMps, brake, brake, reaction)
+                      * PackAvoidance.MpsToMph;
+            if (v < safe) safe = v;
         }
     }
 

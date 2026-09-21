@@ -128,6 +128,9 @@ public class DriveModeController : MonoBehaviour
             _spline.enabled = true;
             _spline.EngageFromCurrentPose(mph);
             _pvc.enabled = false;
+            // Before the green the car has to form up with the field, not drive its race pace into the back of
+            // it. No-op once racing.
+            FormationController.TakeOver(_spline, _pvc.GridPosition);
         }
         _cycleTimer = 0f;
         _featured = null;
@@ -145,6 +148,7 @@ public class DriveModeController : MonoBehaviour
             float mph = _spline.CurrentMph;
             float heading = _spline.CommandedHeadingDeg;
             Vector3 pos = playerCar.transform.position;
+            FormationController.HandBack(_spline);
             _spline.enabled = false;
             _pvc.enabled = true;
             _pvc.SeedPose(pos, heading, mph / 2.237f);

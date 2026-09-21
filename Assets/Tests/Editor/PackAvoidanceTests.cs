@@ -231,6 +231,24 @@ public class PackAvoidanceTests
     // ---------------------------------------------------------------- the maths
 
     [Test]
+    public void APairFittedIntoTheRoadKeepsItsSpacing()
+    {
+        // The racing line hugs the right edge at an apex. Offsetting each car from the line on its own put the
+        // right-hand car past the edge, SplineDriver clamped it back, and it landed on its partner.
+        const float lo = -4f, hi = 4f, line = 3.5f, column = 1.76f;
+        float right = line + FormationLanes.FitColumn(column, line, lo, hi);
+        float left = line + FormationLanes.FitColumn(-column, line, lo, hi);
+        Assert.AreEqual(2f * column, right - left, 1e-4f, "the pair lost its spacing");
+        Assert.LessOrEqual(right, hi + 1e-4f);
+        Assert.GreaterOrEqual(left, lo - 1e-4f);
+
+        // Plenty of road: the columns sit on the line exactly as before.
+        Assert.AreEqual(column, FormationLanes.FitColumn(column, 0f, lo, hi), 1e-4f);
+        // No bounds known (pit lane): untouched.
+        Assert.AreEqual(column, FormationLanes.FitColumn(column, 3.9f, float.NegativeInfinity, float.PositiveInfinity), 1e-4f);
+    }
+
+    [Test]
     public void SafeSpeedAndSafeClearanceAreInverses()
     {
         const float b = 13.4f;

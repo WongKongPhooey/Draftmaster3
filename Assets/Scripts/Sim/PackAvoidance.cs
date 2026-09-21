@@ -65,6 +65,8 @@ namespace Draftmaster.Sim
         public float ColumnTactical; // tactical offset for the car's column / weave
         public float ColumnSlew;     // m/s
         public bool AllowSwerve;     // off for the pit-out settle and the pit lane
+        public bool NoUrgentSwerve;  // brake, don't swerve, when the only reason is closing on a MOVING car (in and
+                                     // near corners, where the room alongside closes up under you)
     }
 
     public enum PackMode { Clear, Follow, Brake, Swerve, Alongside, Hold }
@@ -239,6 +241,18 @@ namespace Draftmaster.Sim
             return corner ? column * cornerScale : column;
         }
 
+        // The column as an offset from the car's own line, moved so the whole PAIR fits inside the corridor
+        // [lo, hi] (the car-centre limits SplineDriver clamps to). Offsetting each car from the line on its own let
+        // that clamp push the outside car of a pair back into its partner wherever the line runs near an edge —
+        // the apex of every road-course corner. Both cars of a row share the line, so they agree on the centre.
+        public static float FitColumn(float column, float line, float lo, float hi)
+        {
+            if (float.IsInfinity(lo) || float.IsInfinity(hi) || !(hi > lo)) return column;
+            float half = Mathf.Min(Mathf.Abs(column), 0.5f * (hi - lo));
+            float centre = Mathf.Clamp(line, lo + half, hi - half);
+            return centre + (column < 0f ? -half : half) - line;
+        }
+
         public static float Weave(float time, int gridSlot, float amplitude, float hz, float phasePerSlot, float envelope)
             => Mathf.Sin(time * (2f * Mathf.PI * hz) + gridSlot * phasePerSlot) * amplitude * envelope;
 
@@ -355,8 +369,17 @@ namespace Draftmaster.Sim
                         Mathf.Min(me.Lateral, colLat) - me.HalfWidth - s.LaneMarginM,
                         Mathf.Max(me.Lateral, colLat) + me.HalfWidth + s.LaneMarginM, f.LaneLo, f.LaneHi);
 
+                    // Beside it there is no longer room for me: the road narrowed, or it drifted across, and the spot
+                    // I was heading for is now clamped against the edge. Sitting there is a slow-motion side-swipe;
+                    // give up the move and let the brakes put me back behind it.
+                    float spot = Mathf.Clamp(SwerveTarget(me, f, _swerveSide), me.TrackLo, me.TrackHi);
+                    float daylight = 0.5f * s.SwerveClearM;
+                    bool squeezed = _swerveSide > 0 ? spot - me.HalfWidth < f.LaneHi + daylight
+                                                    : spot + me.HalfWidth > f.LaneLo - daylight;
+
                     if (f.Gap < -lengths) release = true; // passed it: the lane check below decides when to move back
                     else if (!inTheWayBack) release = true;
+                    else if (squeezed && f.Gap > 0f) release = true;
                     else if (!_swerveBlockage && f.Gap > 0f)
                     {
                         // It pulled away again: fall back in behind it once there's a proper gap.
@@ -512,7 +535,8 @@ namespace Draftmaster.Sim
                 float closingMps = Mathf.Max(0f, me.SpeedMph - L.SpeedMph) * PackAvoidance.MphToMps;
                 float comfortStop = PackAvoidance.StoppingDistance(closingMps,
                     s.ComfortDecelMphPerSec * PackAvoidance.MphToMps, s.ReactionSec);
-                bool urgent = safeMps * PackAvoidance.MpsToMph <= me.SpeedMph + 0.5f;
+                bool urgent = safeMps * PackAvoidance.MpsToMph <= me.SpeedMph + 0.5f
+                              && !(intent.NoUrgentSwerve && !blockage);
                 bool mustGoRound = blockage && clear < comfortStop + s.StandstillClearM + s.StationBufferM;
                 // Stopped dead ahead: go round when a side opens, however long I've been waiting behind it —
                 // but a car that is only queuing behind another stopped car is waited behind, or a stalled train

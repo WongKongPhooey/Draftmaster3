@@ -148,6 +148,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
     // Lateral (m) the pit-exit merge is still carrying and easing out — part of LateralOnTrack, but temporary.
     public float MergeLateralBias => _mergeLatBias;
+    // Where the car would sit across the track with no tactical offset: its racing line plus any fixed lateral
+    // offset (m, + right of travel). Before the road-bounds clamp, like the tactical offset laid on top of it.
+    public float UntacticalLateral => lateralOffset + _lineLatSmoothed;
 
     // The braking this car's decel curve gives at a speed (mph/s), with the same pace stretch UpdateSpeedToward uses.
     public float BrakingMphPerSecAt(float mph)

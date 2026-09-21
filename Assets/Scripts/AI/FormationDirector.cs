@@ -154,7 +154,7 @@ public class FormationDirector : MonoBehaviour
         spline.angleOffsetDeg = 180f;
         spline.externalMotionController = false; // kinematic: SplineDriver writes the transform itself
         spline.aiMaxSpeedMph = cruiseMph;
-        spline.startDistance = track.track.pitExitDistance + safetyCarStartOffset;
+        spline.startDistance = SafetyCarStartDistance(track, safetyCarStartOffset);
         spline.qualifyingPosition = FormationOrder.SafetyCarGrid; // leads the formation order (below every car)
 
         _safetyCar = go.GetComponent<SafetyCar>();
@@ -162,6 +162,28 @@ public class FormationDirector : MonoBehaviour
         _safetyCar.cruiseMph = cruiseMph;
         _safetyCar.rooflightColor = rooflightColor;
         _safetyCar.OnPitEntry += GoGreen;
+    }
+
+    // Where the safety car starts: `offset` metres past wherever the field actually comes onto the track. That
+    // is normally the authored pit-exit node, but the pit lane is authored separately and can run on well past
+    // it — at Bristol the lane rejoins 140 m after the node, so the first seven cars filed out AHEAD of the pace
+    // car and it drove into the back of them. Start past whichever of the two comes later.
+    public static float SafetyCarStartDistance(TrackBuilder track, float offset, float pitExitThreshold = 0.98f)
+    {
+        float node = track.track.pitExitDistance;
+        var main = track.SampleCenterline();
+        var pit = track.SamplePitCenterline();
+        if (main.Count < 2 || pit.Count < 2) return node + offset;
+        float lap = main[main.Count - 1].distance;
+        float pitLen = pit[pit.Count - 1].distance;
+        if (lap <= 0f || pitLen <= 0f) return node + offset;
+
+        // The same point SplineDriver hands a pit-lane car back to the main spline at (pitExitThreshold).
+        var exit = track.SamplePitAt(pitLen * pitExitThreshold, pit);
+        float rejoin = track.NearestCenterlineDistance(track.transform.TransformPoint(new Vector3(exit.position.x, exit.position.y, 0f)));
+        float past = Mathf.Repeat(rejoin - node + lap * 0.5f, lap) - lap * 0.5f; // + = rejoin is after the node
+        float from = past > 0f ? rejoin : node;
+        return Mathf.Repeat(from + offset, lap);
     }
 
     void BeginFormation()

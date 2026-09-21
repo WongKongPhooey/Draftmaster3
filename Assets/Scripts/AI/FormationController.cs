@@ -39,13 +39,22 @@ public class FormationController : MonoBehaviour
     [Tooltip("This car has no dynamic model (cheap kinematic AI): stay on the kinematic SplineDriver through the green flag instead of handing back to PlayerVehicleController. Set by the spawner for a kinematic field.")]
     public bool kinematic;
 
+    [Tooltip("Grid slot that picks this car's column (even = left, odd = right). -1 = the SplineDriver's qualifyingPosition. Set for the player's own car when the AI drives it, whose SplineDriver never had a grid slot.")]
+    public int columnSlot = -1;
+
+    // The player's own car, driven by the AI for a while (TakeOver). Only here to form it up: it lets go of the
+    // car at the green, or when the human takes the wheel back, and puts every knob it touched back as it was.
+    bool _takeover;
+    float _takeoverPace = 1f;
+    static bool s_addingTakeover;
+
     [Header("Two-wide formation")]
     [Tooltip("Pack into two columns this far (m) either side of centre — half the lateral gap between the two cars in a row. The field runs double-file the WHOLE formation lap, so it's paired up ready for the start. Must comfortably exceed weaveAmplitude + half a car width: the columns and the weave are ACTIVE AT THE SAME TIME, and anti-phase weave eats 2*weaveAmplitude of the pair gap.")]
     public float columnHalfOffset = 2.2f;
     [Tooltip("Longitudinal gap (m) each row holds behind the row ahead while closed up. Small = tight rows, but too small and a wobble closes it to a touch.")]
     public float rowGap = 8f;
-    [Tooltip("Through a turn, scale the column offset by this (0..1) so the pair eases toward centre but STAYS paired — never collapses to single file (which is what made the field look single-file on a road course whose close-up zone contains corners).")]
-    [Range(0f, 1f)] public float cornerColumnScale = 0.6f;
+    [Tooltip("Through a turn, scale the column offset by this (0..1) so the pair eases toward centre but STAYS paired — never collapses to single file (which is what made the field look single-file on a road course whose close-up zone contains corners). The pair sits 2 x columnHalfOffset x this apart in a turn: keep that over ~3.2 m. Two cars 2.6 m apart clip each other as soon as one draws half alongside with a few degrees of yaw, which a tight road-course corner always gives them. The pair is fitted inside the road (FormationLanes.FitColumn), so a wider spacing no longer pushes the outside car off it.")]
+    [Range(0f, 1f)] public float cornerColumnScale = 0.8f;
 
     [Header("Seeing and avoiding the cars around")]
     [Tooltip("Station keeping, the never-hit safety law, lane widths and the swerve-alongside rules. Defaults are the values the pace-lap tests (PackAvoidanceTests) were run with.")]
@@ -135,7 +144,9 @@ public class FormationController : MonoBehaviour
         Active.Add(this);
         if (_spline != null) s_bySpline[_spline] = this;
         RaceStart.PhaseChanged += OnPhaseChanged;
-        OnPhaseChanged(RaceStart.Current);
+        // TakeOver adds this component and only then marks it as the player's car; applying the phase in
+        // between would briefly wake the human's PlayerVehicleController under the AI.
+        if (!s_addingTakeover) OnPhaseChanged(RaceStart.Current);
     }
 
     void OnDisable()
@@ -144,6 +155,57 @@ public class FormationController : MonoBehaviour
         if (_spline != null && s_bySpline.TryGetValue(_spline, out var fc) && fc == this) s_bySpline.Remove(_spline);
         RaceStart.PhaseChanged -= OnPhaseChanged;
         HasPlan = false;
+        if (_takeover) ReleaseTakeover();
+    }
+
+    // The human's car handed to the AI (Drive/Broadcast toggle, crew chief) during the pre-race phases. A bare
+    // SplineDriver just drives its racing speed profile — no cap, no idea anything is in front of it — so on
+    // the formation lap it ran at race pace straight up the back of the train. Give it the same formation
+    // brain as every other car. Returns null once the race is green (the formation has nothing to do then).
+    public static FormationController TakeOver(SplineDriver spline, int gridSlot)
+    {
+        if (spline == null || RaceStart.IsGreen) return null;
+        var fc = spline.GetComponent<FormationController>();
+        if (fc == null)
+        {
+            s_addingTakeover = true;
+            try { fc = spline.gameObject.AddComponent<FormationController>(); }
+            finally { s_addingTakeover = false; }
+        }
+        fc.enabled = false; // re-enable below so OnEnable re-applies the current phase with the fields set
+        fc.kinematic = true; // the AI drives this car on its SplineDriver; never wake its PlayerVehicleController
+        fc.columnSlot = gridSlot;
+        fc._takeover = true;
+        fc._takeoverPace = spline.paceMultiplier;
+        fc.enabled = true;
+        return fc;
+    }
+
+    // The human takes the wheel back: stop steering the car and hand its SplineDriver back untouched.
+    public static void HandBack(SplineDriver spline)
+    {
+        if (spline == null) return;
+        var fc = spline.GetComponent<FormationController>();
+        if (fc != null && fc._takeover) fc.enabled = false;
+    }
+
+    void ReleaseTakeover()
+    {
+        _takeover = false;
+        _lateral = 0f;
+        _weaveEnv = 0f;
+        _planner.Reset();
+        if (_spline == null) return;
+        _spline.aiMaxSpeedMph = float.MaxValue;
+        _spline.aiMinDecelMphPerSec = 0f;
+        _spline.aiSpeedBoostMph = 0f;
+        _spline.tacticalLateralOffset = 0f;
+        _spline.paceMultiplier = _takeoverPace;
+        if (_lineFactorSaved)
+        {
+            _spline.lineFactor = _savedLineFactor;
+            _lineFactorSaved = false;
+        }
     }
 
     // The dynamic bicycle model + pure-pursuit steering is twitchy at parade speeds and spins cars off the
@@ -152,6 +214,14 @@ public class FormationController : MonoBehaviour
     // with the car's current pose + speed for a smooth rolling start.
     void OnPhaseChanged(RaceStart.Phase phase)
     {
+        // The player's car the AI was only minding for the formation: let go of it at the green, the same moment
+        // AIRacingBehaviour picks up every other car.
+        if (_takeover && phase == RaceStart.Phase.Green)
+        {
+            enabled = false; // OnDisable releases every knob
+            return;
+        }
+
         // Lazy-fetch: GridSpawner may add this component before the dynamic-model components exist.
         if (_pvc == null) _pvc = GetComponent<PlayerVehicleController>();
         if (_input == null) _input = GetComponent<SplineInputDriver>();
@@ -257,8 +327,11 @@ public class FormationController : MonoBehaviour
         // eases toward centre (cornerColumnScale) but never collapses to single file.
         bool weaveOk = !settling && !corner && !closingUp && !_planner.Swerving;
         _weaveEnv = FormationLanes.StepEnvelope(_weaveEnv, weaveOk, dt, weaveRampSeconds, weaveFadeOutSeconds);
-        int slot = _spline.qualifyingPosition;
+        int slot = columnSlot >= 0 ? columnSlot : _spline.qualifyingPosition;
         float column = FormationLanes.Column(slot, columnHalfOffset, corner, cornerColumnScale);
+        float boundLo = float.NegativeInfinity, boundHi = float.PositiveInfinity;
+        _spline.GetLateralBounds(out boundLo, out boundHi);
+        column = FormationLanes.FitColumn(column, _spline.UntacticalLateral, boundLo, boundHi);
         float weave = FormationLanes.Weave(Time.time, slot, weaveAmplitude, weaveHz, weavePhasePerSlot, _weaveEnv);
 
         float len = _spline.TrackLength;
@@ -267,7 +340,8 @@ public class FormationController : MonoBehaviour
 
         float merge = _spline.MergeLateralBias;
         var self = SelfState(merge);
-        _spline.GetLateralBounds(out self.TrackLo, out self.TrackHi);
+        self.TrackLo = boundLo;
+        self.TrackHi = boundHi;
         var intent = new PackIntent
         {
             BaseCapMph = baseCap,
@@ -280,6 +354,7 @@ public class FormationController : MonoBehaviour
             ColumnSlew = weaveSlewPerSec,
             // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to prevent.
             AllowSwerve = !settling,
+            NoUrgentSwerve = corner,
         };
         var cmd = _planner.Step(self, intent, _cars, dt);
         Apply(cmd, dt);
