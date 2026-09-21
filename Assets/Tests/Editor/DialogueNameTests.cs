@@ -86,6 +86,41 @@ public class DialogueNameTests
         Assert.AreEqual("", SpeakerIdentity.FirstNameOf("   "));
     }
 
+    // ---------------------------------------------------------------- full names
+
+    static readonly (string label, string fullName)[] Roster =
+    {
+        ("Busch", "Kyle Busch"),
+        ("T.Dillon", "Ty Dillon"),
+        ("Stenhouse", "Ricky Stenhouse Jr."),
+    };
+
+    [Test]
+    public void FullNameFor_ExpandsTheTimingTowerLabel()
+    {
+        // The player's own dialogue box read "Busch": the position tracker carries the competition label.
+        Assert.AreEqual("Kyle Busch", SpeakerIdentity.FullNameFor("Busch", Roster));
+        Assert.AreEqual("Kyle Busch", SpeakerIdentity.FullNameFor("  busch ", Roster), "case and padding ignored");
+        Assert.AreEqual("Ty Dillon", SpeakerIdentity.FullNameFor("T.Dillon", Roster));
+        Assert.AreEqual("Ricky Stenhouse Jr.", SpeakerIdentity.FullNameFor("Stenhouse", Roster));
+    }
+
+    [Test]
+    public void FullNameFor_LeavesAFullNameOrAnUnknownNameAlone()
+    {
+        Assert.AreEqual("Kyle Busch", SpeakerIdentity.FullNameFor("Kyle Busch", Roster));
+        Assert.AreEqual("Josh Van Der Berg", SpeakerIdentity.FullNameFor("Josh Van Der Berg", Roster));
+        Assert.AreEqual("Prost", SpeakerIdentity.FullNameFor("Prost", null));
+        Assert.AreEqual("", SpeakerIdentity.FullNameFor("  ", Roster));
+    }
+
+    [Test]
+    public void FullNameFor_TakesTheFirstMatch_SoThePlayersOwnRideWins()
+    {
+        var shared = new[] { ("Busch", "Kyle Busch"), ("Busch", "Kurt Busch") };
+        Assert.AreEqual("Kyle Busch", SpeakerIdentity.FullNameFor("Busch", shared));
+    }
+
     // ---------------------------------------------------------------- filling
 
     [Test]

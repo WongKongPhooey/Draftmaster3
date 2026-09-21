@@ -52,14 +52,16 @@ public class NPCInteractable : MonoBehaviour
     // stand still and turn toward whoever stopped it.
     public Transform Interactor => _interactor;
 
-    // Name shown over the driver's own bubble on "#player" lines. The position tracker holds the
-    // career name; before it exists (on foot, pre-race) fall back to a neutral label.
+    // Name shown over the driver's own bubble on "#player" lines: the player's FULL name ("Kyle Busch"),
+    // from the same resolver the {player} tokens use. Not the position tracker's name — that is the
+    // timing tower's short label ("Busch"), and reads "You" until the car has been labelled. The neutral
+    // label is only for a save and scene where nothing names the player at all.
     public static string PlayerSpeakerName
     {
         get
         {
-            var rt = RacePositionTracker.Instance;
-            return rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
+            string name = DialogueNames.PlayerName;
+            return string.IsNullOrEmpty(name) ? TeamSwitchController.kPlaceholderName : name;
         }
     }
 

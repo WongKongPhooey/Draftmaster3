@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace Draftmaster.Chatter
@@ -78,6 +79,27 @@ namespace Draftmaster.Chatter
             int space = trimmed.IndexOfAny(new[] { ' ', '\t' });
             if (space < 0) return trimmed;
             return trimmed.Substring(space + 1).TrimStart();
+        }
+
+        // Turn the name a driver competes under — "Busch", "T.Dillon", the label the timing tower and the
+        // position tracker carry — back into the whole name ("Kyle Busch") by finding it in a roster of
+        // (label, full name) pairs. A full name matches itself, so a career name passes straight through.
+        // Case is ignored. No match hands the name back as it came, since a surname beats no name at all.
+        public static string FullNameFor(string name, IEnumerable<(string label, string fullName)> roster)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return "";
+            string trimmed = name.Trim();
+            if (roster == null) return trimmed;
+
+            foreach (var (label, fullName) in roster)
+            {
+                if (string.IsNullOrWhiteSpace(fullName)) continue;
+                string full = fullName.Trim();
+                if (string.Equals(full, trimmed, StringComparison.OrdinalIgnoreCase)) return full;
+                if (!string.IsNullOrWhiteSpace(label) &&
+                    string.Equals(label.Trim(), trimmed, StringComparison.OrdinalIgnoreCase)) return full;
+            }
+            return trimmed;
         }
 
         // Cheap gate so the common case — a line with no braces in it — never allocates.

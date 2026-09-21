@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Draftmaster.Chatter;
 using Draftmaster.Data;
@@ -117,15 +118,23 @@ public static class DialogueNames
         _resolved = true;
     }
 
+    // Always the WHOLE name — it goes over the player's own dialogue box and is split for {playerfirst}, so
+    // "Busch" would be wrong twice (a surname for a name, and "Busch" as a first name).
     static string ResolvePlayerName()
     {
-        // During a race the tracker holds the identity the timing tower is using, which is the one the
-        // player answers to even after a mid-race car swap.
-        var tracker = RacePositionTracker.Instance;
-        if (tracker != null && IsRealName(tracker.playerName)) return tracker.playerName.Trim();
-
         try
         {
+            // A name the player chose is already whole, and is theirs whatever car they sit in.
+            string career = PlayerDriver.CareerName;
+            if (career.Length > 0) return career;
+
+            // During a race the tracker holds the identity the timing tower is using, which is the one the
+            // player answers to even after a mid-race car swap. It is the short competition label, though
+            // ("Busch"), so look the whole name up from the roster rather than repeating the label.
+            var tracker = RacePositionTracker.Instance;
+            if (tracker != null && IsRealName(tracker.playerName))
+                return SpeakerIdentity.FullNameFor(tracker.playerName, RosterNames());
+
             string name = PlayerDriver.DisplayName(PlayerDriver.Row());
             return IsRealName(name) ? name.Trim() : "";
         }
@@ -135,6 +144,31 @@ public static class DialogueNames
             return "";
         }
     }
+
+    // Every driver as (competition label, full name), the player's own ride first so a label two drivers
+    // share ("Busch", "Dillon") settles on the one the player is actually in. The database when it is open —
+    // it may have been edited — and the code roster when it is not.
+    static IEnumerable<(string label, string fullName)> RosterNames()
+    {
+        var own = PlayerDriver.Row();
+        if (own != null) yield return (RosterLookup.LabelName(own), FullName(own));
+
+        var dbm = DatabaseManager.Instance;
+        if (dbm != null && dbm.IsReady)
+        {
+            foreach (var d in dbm.Connection.Table<Driver>())
+                if (d != null) yield return (RosterLookup.LabelName(d), FullName(d));
+            yield break;
+        }
+
+        foreach (var e in CupRoster2026.Entries)
+        {
+            var d = CupRoster2026.BuildDriver(e);
+            yield return (RosterLookup.LabelName(d), FullName(d));
+        }
+    }
+
+    static string FullName(Driver d) => ((d.FirstName ?? "") + " " + (d.LastName ?? "")).Trim();
 
     static bool IsRealName(string name) =>
         !string.IsNullOrWhiteSpace(name) && name.Trim() != TeamSwitchController.kPlaceholderName;
