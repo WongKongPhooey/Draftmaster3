@@ -498,7 +498,7 @@ public class AllCars : MonoBehaviour {
 		
 		CommonGUI.TopBar();
 
-		if (Input.GetKeyDown(KeyCode.Escape)){
+		if (LegacyKeys.Down(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
 		}
 	}

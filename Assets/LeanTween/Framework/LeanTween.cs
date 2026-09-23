@@ -4075,10 +4075,14 @@ public class LTGUI {
     }
 
     public static Vector2 firstTouch(){
-        if(Input.touchCount>0){
-            return Input.touches[0].position;
-        }else if(Input.GetMouseButton(0)){
-            return Input.mousePosition;
+        // Draftmaster: read through the Input System — the project runs without the legacy Input class.
+        var touch = UnityEngine.InputSystem.Touchscreen.current;
+        if(touch != null && touch.primaryTouch.press.isPressed){
+            return touch.primaryTouch.position.ReadValue();
+        }
+        var mouse = UnityEngine.InputSystem.Mouse.current;
+        if(mouse != null && mouse.leftButton.isPressed){
+            return mouse.position.ReadValue();
         }
 
         return new Vector2(Mathf.NegativeInfinity,Mathf.NegativeInfinity);

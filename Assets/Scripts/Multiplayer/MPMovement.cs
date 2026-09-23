@@ -835,12 +835,12 @@ public class MPMovement : NetworkBehaviour
 		}
 		#else
 		// Old input backends are enabled.
-		if (Input.GetKey(KeyCode.A))
+		if (LegacyKeys.Held(KeyCode.A))
 		{
 			//Debug.Log("Going left!");
 			changeLaneLeft();
 		}
-		else if(Input.GetKey(KeyCode.D))
+		else if(LegacyKeys.Held(KeyCode.D))
 		{
 			//Debug.Log("Going right!");
 			changeLaneRight();

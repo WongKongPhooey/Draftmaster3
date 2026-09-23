@@ -219,6 +219,12 @@ public class WeekendVenueSites : MonoBehaviour
         // window can show the same people without entering play mode.
         foreach (var host in WeekendVenueCast.All)
             Host(host.venue, host.speaker, host.offsetAlong, new[] { host.idleLine });
+
+        // The strategy briefing is a team meeting, not a word with the chief: the crew gather round him for
+        // it. On whoever hosts the box — generated above or authored by the track package.
+        foreach (var host in FindObjectsByType<WeekendVenueHost>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (host.venue == WeekendVenue.PitBox && host.GetComponent<BriefingHuddle>() == null)
+                host.gameObject.AddComponent<BriefingHuddle>();
     }
 
     // Stand a host beside the venue's anchor, offset along the paddock so the player is not walking into

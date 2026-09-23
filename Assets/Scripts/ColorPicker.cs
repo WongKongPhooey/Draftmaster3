@@ -30,9 +30,14 @@ public class ColorPicker : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-		if(RectTransformUtility.RectangleContainsScreenPoint(Rect, Input.mousePosition)){
+		// Mouse or finger, through the Input System (the project runs without the legacy Input class).
+		var pointer = UnityEngine.InputSystem.Pointer.current;
+		if(pointer == null) return;
+		Vector2 at = pointer.position.ReadValue();
+
+		if(RectTransformUtility.RectangleContainsScreenPoint(Rect, at)){
 			Vector2 delta;
-			RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, Input.mousePosition, null, out delta);
+			RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, at, null, out delta);
 		
 			float width = Rect.rect.width;
 			float height = Rect.rect.height;
@@ -45,7 +50,7 @@ public class ColorPicker : MonoBehaviour
 			
 			Color color = ColorTexture.GetPixel(texX, texY);
 			
-			if(Input.GetMouseButtonDown(0)){
+			if(pointer.press.wasPressedThisFrame){
 				activeLayer.GetComponent<Image>().color = color;
 			}
 		}

@@ -196,11 +196,29 @@ front of the canopy, off the walkway end of the rig (`GolfCartSpawner.ParkingSpo
 the one place the weekend keeps sending you. Nothing in the game mentions it; it introduces itself with a
 title card when you walk near, and the ordinary action button gets you in and out of it.
 
-Riding it is the walking player moved faster (`GolfCart.rideSpeed`, 8 u/s against a 3.5 walk and a 7 run)
-with the cart drawn under them, not a second vehicle to steer — so the paddock boundary, bumping into
-people and co-op all carry over unchanged. The run modifier is switched off while you are sat in it, the
-cart is walk-through when parked, and stepping off leaves it standing at your left hand. It is painted in
-the team's own colours, read off the garage it was parked against. Covered by `GolfCartTests`.
+**It drives like the race car, on one stick.** Push forward to accelerate, back to brake (and, once
+stopped and held, to reverse), left and right to steer. The arithmetic is `CartDrive`: a top speed of
+8 u/s against a 3.5 walk, 5 m/s² on the throttle and 14 on the brake, a coast down rather than a dead
+stop off the pedals, 2.5 u/s backwards after `reverseDelay` (0.4 s) of held brake so that stopping is
+never an accidental lurch, and 200 deg/s of lock that only bites once the cart is rolling — a stopped cart
+cannot pivot on the spot, and a reversing one steers the other way. Every knob is on the `GolfCart`
+component and is re-read each step, so it can be tuned in play mode.
+
+The body is still `OnFootController`'s: the cart implements `IRiddenVehicle` and hands the walker a
+velocity each fixed step instead of moving a transform of its own, so the paddock boundary, bumping into
+people and co-op all carry over unchanged, and the walker tells the cart what it actually managed
+(`Moved`) so driving into a fence kills the speed there rather than storing it up. The run modifier is
+switched off while you are sat in it, the rider's legs stop (you are sitting), the cart is walk-through
+when parked, and stepping off leaves it standing at your left hand. It is painted in the team's own
+colours, read off the garage it was parked against.
+
+**People get out of the way.** Every step the cart is moving, `CartDodge.ScatterFrom` sweeps the stretch
+of ground it will cover in the next `dodgeLookahead` (0.45 s) and anybody within `dodgeClearance` (1 m) of
+that line jumps square across it, toward whichever side they are already nearer — through the paddock
+boundary and `PaddockObstacles`, so nobody dives through a fence or into a motorhome. They hold clear
+while the cart keeps threatening them, then carry on: a `PaddockWalker` is handed back where it now stands
+with a fresh route, and anybody posted somewhere (a marshal, a fan at the fence) walks back to their spot.
+Covered by `GolfCartTests` and `CartDriveTests`.
 
 A second, stock-painted **paddock golf cart** is left somewhere random every time the scene loads
 (`GolfCartSpawner.ParkPaddockCart` / `PickRandomSpot`): a point inside the walkable paddock boundaries

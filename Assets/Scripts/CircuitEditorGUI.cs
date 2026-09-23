@@ -239,7 +239,7 @@ public class CircuitEditorGUI : MonoBehaviour {
 
 		GUI.EndScrollView();
 
-		if (Input.GetKeyDown(KeyCode.Escape)){
+		if (LegacyKeys.Down(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
 		}
 	}

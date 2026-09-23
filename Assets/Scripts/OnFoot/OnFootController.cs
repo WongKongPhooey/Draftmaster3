@@ -38,6 +38,13 @@ public class OnFootController : MonoBehaviour
     // the network. Not serialized — runtime only.
     [System.NonSerialized] public bool RemotePuppet;
 
+    // The thing they are sat in, or null when they are on their own legs. While set, the stick is throttle,
+    // brake and steering rather than a direction to walk in, and the velocity for the step comes from the
+    // vehicle — everything after that (the boundary clamp, the shove out of people, the co-op puppet) is
+    // the same code that moves a walker, which is the whole reason driving is bolted on here rather than
+    // being its own controller. Runtime only; GolfCart sets and clears it.
+    [System.NonSerialized] public IRiddenVehicle Ridden;
+
     [Tooltip("Walk speed in units/sec.")]
     public float moveSpeed = 3.5f;
     [Tooltip("Speed multiplier while the run modifier is held (Left Shift / L1). Walk animation plays faster by the same factor.")]
@@ -160,8 +167,13 @@ public class OnFootController : MonoBehaviour
         // Lock movement while mid-conversation or while a cutscene holds the player.
         if (MovementLocked || (_activeNpc != null && _activeNpc.IsTalking)) move = Vector2.zero;
 
-        bool running = move != Vector2.zero && ReadRunHeld();
-        _rb.linearVelocity = move * moveSpeed * (running ? runMultiplier : 1f);
+        // Sat in something: the stick is pedals and lock, and where the body goes is the vehicle's business.
+        // There is no running in a cart.
+        bool riding = Ridden != null;
+        bool running = !riding && move != Vector2.zero && ReadRunHeld();
+        _rb.linearVelocity = riding
+            ? Ridden.Steer(move, Time.fixedDeltaTime)
+            : move * moveSpeed * (running ? runMultiplier : 1f);
 
         // Keep the walker inside any authored PaddockBoundary: clamp the predicted next position
         // and re-derive velocity from it, which naturally slides along the polygon edge.
@@ -193,27 +205,38 @@ public class OnFootController : MonoBehaviour
         }
         _bumpAway.Clear();
 
-        if (faceMoveDirection && move.sqrMagnitude > 0.01f)
+        // Driving into a fence or into somebody: tell the vehicle what it actually managed, so its speed
+        // dies against the obstruction instead of being stored up behind it.
+        if (riding) Ridden.Moved(_rb.linearVelocity);
+
+        // Sat in something, the body faces the way the NOSE points, not the way the stick is pushed —
+        // holding left in a cart is steering it, not turning round on the spot.
+        Vector2 facing = riding ? Ridden.Facing : move;
+
+        if (faceMoveDirection && facing.sqrMagnitude > 0.01f)
         {
-            float ang = Mathf.Atan2(move.y, move.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
+            float ang = Mathf.Atan2(facing.y, facing.x) * Mathf.Rad2Deg + spriteFacingOffsetDeg;
             float z = Mathf.MoveTowardsAngle(_rb.rotation, ang, turnRate * Time.fixedDeltaTime);
             _rb.MoveRotation(z);
         }
 
         // Walking is itself a facing: remember it, so letting go of the stick leaves the body pointing the
         // way it was going rather than resetting it.
-        if (move.sqrMagnitude > 0.0001f) _heldFacing = move.normalized;
+        if (facing.sqrMagnitude > 0.0001f) _heldFacing = facing.normalized;
 
         if (_animator != null)
         {
             // Standing still (talking, held by a cutscene, or simply not moving) keeps the last facing.
-            Vector2 face = move.sqrMagnitude > 0.0001f ? move : _heldFacing;
+            Vector2 face = facing.sqrMagnitude > 0.0001f ? facing : _heldFacing;
             if (_hasHorizontal) _animator.SetFloat("Horizontal", face.x);
             if (_hasVertical) _animator.SetFloat("Vertical", face.y);
-            if (_hasSpeed) _animator.SetFloat("Speed", move.sqrMagnitude);
+            // Riding is sitting: the legs hold still and only the facing moves, or the player pedals the
+            // cart along like Fred Flintstone.
+            float legs = riding ? 0f : move.sqrMagnitude;
+            if (_hasSpeed) _animator.SetFloat("Speed", legs);
             // Belt and braces: pause the rig while standing so the walk cycle can't treadmill in place.
             // Same walk clip while running, just played faster.
-            _animator.speed = move.sqrMagnitude > 0.0001f ? (running ? runMultiplier : 1f) : 0f;
+            _animator.speed = legs > 0.0001f ? (running ? runMultiplier : 1f) : 0f;
         }
     }
 
@@ -235,6 +258,8 @@ public class OnFootController : MonoBehaviour
         {
             HidePrompt();
             bool pressed = ReadInteractPressed();
+            // A guest on a phone has no key to press either, and is planted until the line is finished.
+            if (TouchWalkControls.TookTap(out _)) pressed = true;
             if (pressed && _activeNpc != null && _activeNpc.IsTalking && !_activeNpc.Interact())
                 _activeNpc = null;
             return;
@@ -261,6 +286,23 @@ public class OnFootController : MonoBehaviour
         UpdateNearestPrompt();
 
         bool interact = ReadInteractPressed();
+
+        // On a phone there is no interact key, so a tap does the job — but not the same job in both places.
+        // Mid-conversation a tap anywhere advances the line, the way tapping through dialogue works in every
+        // other phone game. Otherwise it has to land ON somebody: a tap is where the player is pointing, and
+        // "nearest NPC" would have a finger put down on an empty bit of paddock start a conversation with
+        // whoever happened to be behind the player.
+        NPCInteractable tapped = null;
+        if (!interact && TouchWalkControls.TookTap(out Vector2 tapPoint))
+        {
+            if (_activeNpc != null && _activeNpc.IsTalking) interact = true;
+            else
+            {
+                tapped = NpcUnderTap(tapPoint);
+                interact = tapped != null;
+            }
+        }
+
         if (interact)
         {
             if (_activeNpc != null && _activeNpc.IsTalking)
@@ -271,7 +313,7 @@ public class OnFootController : MonoBehaviour
             {
                 // The weekend sheet or a result card is up over the paddock and owns the confirm button (the
                 // pad's A books a session there); the press is theirs, not the nearest NPC's.
-                var npc = WeekendModal.AnyOpen ? null : NearestInRange();
+                var npc = WeekendModal.AnyOpen ? null : (tapped ?? NearestInRange());
                 if (npc != null)
                 {
                     npc.SetInteractor(transform);
@@ -410,8 +452,56 @@ public class OnFootController : MonoBehaviour
         return best;
     }
 
+    // Who a finger landed on: the talkable NPC nearest the tap on screen, within a thumb's width of it and
+    // close enough in the world to talk to anyway. The screen test is generous because a fingertip is, and
+    // the range test is the same one the E key obeys — tapping somebody across the paddock is a request to
+    // walk over, which is a bigger thing than this and not what a tap should quietly do.
+    NPCInteractable NpcUnderTap(Vector2 screenPoint)
+    {
+        var cam = Camera.main;
+        if (cam == null) return null;
+
+        // A thumb is about 9 mm; on the 640x360 design grid that is roughly 28 px, scaled to the screen.
+        float reach = 28f * TouchLayout.UnitFor(UnityEngine.Device.Screen.width, UnityEngine.Device.Screen.height);
+        float reachSq = reach * reach;
+
+        Vector2 pos = transform.position;
+        NPCInteractable best = null;
+        float bestD = float.MaxValue;
+        for (int i = 0; i < NPCInteractable.All.Count; i++)
+        {
+            var npc = NPCInteractable.All[i];
+            if (npc == null || npc.IsTalking || !npc.InRange(pos)) continue;
+
+            Vector3 at = cam.WorldToScreenPoint(npc.transform.position);
+            if (at.z < 0f) continue;                       // behind the camera
+            float d = ((Vector2)at - screenPoint).sqrMagnitude;
+            if (d > reachSq || d >= bestD) continue;
+            bestD = d;
+            best = npc;
+        }
+        return best;
+    }
+
     Vector2 ReadMove()
     {
+        // A thumb on the on-screen stick wins outright, and skips the crisp-stop machinery below: that
+        // exists for a physical stick whose axis crawls back to centre, and a virtual one is exactly zero
+        // the instant the thumb lifts. Running it through anyway would read the lift as a slow return and
+        // keep walking for a few frames. The tracking state is reset so picking a real pad back up starts
+        // clean rather than mid-release.
+        if (TouchWalkControls.Active)
+        {
+            Vector2 touch = TouchWalkControls.Move;
+            if (touch.sqrMagnitude > 0f)
+            {
+                _stickReleased = false;
+                _peakMag = 0f;
+                _prevMoveMag = 0f;
+                return Vector2.ClampMagnitude(touch, 1f);
+            }
+        }
+
         if (_moveAction == null) return Vector2.zero;
         Vector2 m = _moveAction.ReadValue<Vector2>();
         if (m.magnitude < stickDeadzone) m = Vector2.zero; // drift guard (stick already deadzoned; keyboard is digital)

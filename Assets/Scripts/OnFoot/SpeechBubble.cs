@@ -26,6 +26,10 @@ public class SpeechBubble : MonoBehaviour
     public Color nameColor = new Color(1f, 0.83f, 0.42f, 1f);
     [Tooltip("Speaker-name size as a fraction of the dialogue text. The marker captions this is matched to are set one cell smaller than body copy.")]
     public float nameSizeFactor = 0.75f;
+    [Tooltip("Border (world m) between the speaker's name and the edge of the plate behind it, per side. " +
+             "The plate is the dialogue box's own window sprite, so this is how much of its cream frame " +
+             "shows around the letters — too little and the name sits on the border rather than inside it.")]
+    public Vector2 namePlatePadding = new Vector2(0.11f, 0.05f);
     [Tooltip("Ink drop shadow under the speaker name, as a fraction of the name's own height. An objective " +
              "marker's caption is offset one pixel of an eight-pixel cell, which is where 0.125 comes from. Zero = no shadow.")]
     public float nameShadowOffset = 0.125f;
@@ -36,10 +40,32 @@ public class SpeechBubble : MonoBehaviour
              "not painted onto it.")]
     public float textSize = 0.22f;
 
+    [Header("Phones and tablets")]
+    [Tooltip("Dialogue text size on a mobile build, as a multiple of textSize. A phone is held at arm's " +
+             "length on a screen a fraction the size of a monitor, so the size that reads on a desk is " +
+             "unreadable in a hand. PC builds are left at 1x by taking this branch at runtime.")]
+    public float mobileTextFactor = 2f;
+    [Tooltip("Characters per line on a mobile build. The box is sized to the text, so doubling the face " +
+             "without shortening the line doubles the box's width too — and a box wider than the view has " +
+             "nowhere to be put (KeepOnScreen can only slide it, not shrink it). Fewer characters per line " +
+             "spends the extra size on height instead, where there is room.")]
+    public int mobileWrapChars = 22;
+
+    // Which numbers this build uses. Read at runtime rather than behind #if UNITY_ANDROID, so the editor's
+    // Device Simulator shows the real mobile sizing — the same call the on-screen controls decide by.
+    static bool Mobile => UnityEngine.Device.Application.isMobilePlatform;
+
+    float TextSize => textSize * (Mobile ? mobileTextFactor : 1f);
+    int WrapChars => Mobile ? mobileWrapChars : wrapChars;
+
     Transform _actor;
     TextMeshPro _label, _nameLabel, _nameShadow;
     MeshRenderer _labelRenderer;
     SpriteRenderer _bg;
+    SpriteRenderer _namePlate;                      // the same window plate, behind the speaker's name
+    Vector2 _namePlateSize;
+    Sprite _plateSprite;                            // what both plates are drawn from
+    bool _plateAuthored;                            // themed/hand-textured art, as opposed to the fallback
     SpriteRenderer _caret;                          // blinking "press to continue" marker
     Coroutine _reveal;
     string _full = "";
@@ -72,32 +98,14 @@ public class SpeechBubble : MonoBehaviour
     {
         var theme = PixelUITheme.Instance;
 
-        _bg = new GameObject("BG").AddComponent<SpriteRenderer>();
-        _bg.transform.SetParent(transform, false);
-        _bg.transform.localPosition = new Vector3(0f, 0f, 0.01f); // just behind the text
         // Prefer the shared pixel-UI window so a paddock conversation is framed in the same plate as
         // every menu, instead of a one-off bubble that only this system knows about.
         var themed = theme != null ? theme.window : null;
         var custom = themed != null ? themed : Resources.Load<Sprite>("OnFoot/SpeechBox");
-        _bg.sprite = custom != null ? custom : BubbleSprite();
-        // Sliced draw needs a 9-slice border on the sprite; without one the renderer ignores `size` and
-        // draws at the sprite's native world size, which for a 24px plate is a fingernail-sized box.
-        if (_bg.sprite != null && _bg.sprite.border.sqrMagnitude > 0f)
-        {
-            _bg.drawMode = SpriteDrawMode.Sliced;
-        }
-        else
-        {
-            _bg.drawMode = SpriteDrawMode.Simple;
-            Debug.LogWarning($"SpeechBubble: '{(_bg.sprite != null ? _bg.sprite.name : "null")}' has no " +
-                             "9-slice border, so the dialogue plate cannot stretch. Re-run " +
-                             "Draftmaster > Art > Set Up Pixel UI Kit.", this);
-        }
-        // A hand-textured box is shown as authored; the procedural fallback gets the dark tint.
-        _bg.color = custom != null ? Color.white : new Color(0.06f, 0.06f, 0.09f, 0.92f);
-        _bg.sortingLayerName = "Vehicles";
-        _bg.sortingOrder = 60;
-        SetUnlit(_bg);
+        _plateSprite = custom != null ? custom : BubbleSprite();
+        _plateAuthored = custom != null;
+
+        _bg = BuildPlate("BG", 60, warn: true);
 
         var labelGo = new GameObject("Text");
         labelGo.transform.SetParent(transform, false);
@@ -113,7 +121,7 @@ public class SpeechBubble : MonoBehaviour
         _labelRenderer = labelGo.GetComponent<MeshRenderer>();
         _labelRenderer.sortingLayerName = "Vehicles";
         _labelRenderer.sortingOrder = 61;
-        _labelScale = FitToMetres(_label, textSize);
+        _labelScale = FitToMetres(_label, TextSize);
 
         // Who's talking, in a smaller face sat above the box — so a paddock full of named drivers
         // reads at a glance without a UI panel. Positioned in Speak, once the box is sized.
@@ -123,10 +131,17 @@ public class SpeechBubble : MonoBehaviour
         // what makes those labels legible against paddock tarmac, grass and crowd alike, and a name
         // floating over the same ground has the same job. The shadow is a second copy of the label, so
         // it picks up whatever face and scale the name is set in.
+        // The name gets the same plate the box does — blue field, cream border — rather than being left
+        // as bare letters over the paddock. Gold on tarmac, on grass and on a crowd all at once is a
+        // colour the shadow alone could not carry, and reusing the window sprite ties the name to the box
+        // it is sat on instead of introducing a second piece of furniture.
+        _namePlate = BuildPlate("NamePlate", 60, warn: false);
+        _namePlate.gameObject.SetActive(false);   // no speaker, no plate
+
         _nameShadow = BuildNameLabel(theme, "NameShadow", theme != null ? theme.ink : Color.black, 61);
         _nameLabel = BuildNameLabel(theme, "Name", theme != null ? theme.gold : nameColor, 62);
-        _nameScale = FitToMetres(_nameLabel, textSize * nameSizeFactor);
-        FitToMetres(_nameShadow, textSize * nameSizeFactor);
+        _nameScale = FitToMetres(_nameLabel, TextSize * nameSizeFactor);
+        FitToMetres(_nameShadow, TextSize * nameSizeFactor);
 
         // JRPG furniture: a marker in the box's bottom-right that appears once the line has finished
         // typing, so the player can tell "still talking" from "waiting on you".
@@ -143,6 +158,51 @@ public class SpeechBubble : MonoBehaviour
             SetUnlit(_caret);
             _caret.enabled = false;
         }
+    }
+
+    // One plate of the dialogue furniture: the kit's window sprite, 9-sliced so it can be stretched to
+    // whatever it is framing. The box and the name plate are the same thing at two sizes, built here once
+    // so a restyle (or the procedural fallback) can never reach one of them and miss the other.
+    SpriteRenderer BuildPlate(string name, int sortingOrder, bool warn)
+    {
+        var sr = new GameObject(name).AddComponent<SpriteRenderer>();
+        sr.transform.SetParent(transform, false);
+        sr.transform.localPosition = new Vector3(0f, 0f, 0.01f);   // just behind the text
+        sr.sprite = _plateSprite;
+
+        // Sliced draw needs a 9-slice border on the sprite; without one the renderer ignores `size` and
+        // draws at the sprite's native world size, which for a 24px plate is a fingernail-sized box.
+        if (sr.sprite != null && sr.sprite.border.sqrMagnitude > 0f) sr.drawMode = SpriteDrawMode.Sliced;
+        else
+        {
+            sr.drawMode = SpriteDrawMode.Simple;
+            if (warn)
+                Debug.LogWarning($"SpeechBubble: '{(sr.sprite != null ? sr.sprite.name : "null")}' has no " +
+                                 "9-slice border, so the dialogue plate cannot stretch. Re-run " +
+                                 "Draftmaster > Art > Set Up Pixel UI Kit.", this);
+        }
+
+        // A hand-textured box is shown as authored; the procedural fallback gets the dark tint.
+        sr.color = _plateAuthored ? Color.white : new Color(0.06f, 0.06f, 0.09f, 0.92f);
+        sr.sortingLayerName = "Vehicles";
+        sr.sortingOrder = sortingOrder;
+        SetUnlit(sr);
+        return sr;
+    }
+
+    // Stretch a plate to a size in metres, whichever way it is able to be drawn.
+    static void SizePlate(SpriteRenderer plate, Vector2 size)
+    {
+        if (plate == null || plate.sprite == null) return;
+        if (plate.drawMode == SpriteDrawMode.Sliced) { plate.size = size; return; }
+
+        // Simple draw ignores `size`, so stretch the transform instead — ugly corners, but a readable
+        // box beats an unreadable one.
+        var s = plate.sprite;
+        float nw = s.rect.width / s.pixelsPerUnit;
+        float nh = s.rect.height / s.pixelsPerUnit;
+        plate.transform.localScale = new Vector3(
+            nw > 0.0001f ? size.x / nw : 1f, nh > 0.0001f ? size.y / nh : 1f, 1f);
     }
 
     // One line of the speaker name: the display face, no wrap, drawn on the given sorting order. The
@@ -221,7 +281,7 @@ public class SpeechBubble : MonoBehaviour
     {
         _holdsScreen = true;
         gameObject.SetActive(true);
-        _full = WordWrap(text, wrapChars);
+        _full = WordWrap(text, WrapChars);
         SetSpeaker(speaker);
 
         // Size the box to the finished line once, so it doesn't pulse while the text types in.
@@ -245,7 +305,7 @@ public class SpeechBubble : MonoBehaviour
             // The cursor sprite is authored in UI pixels, so scale it from its own native world size
             // rather than assuming one.
             float caretNative = _caret.sprite.rect.height / _caret.sprite.pixelsPerUnit;
-            float caretScale = caretNative > 0.0001f ? (textSize * 0.8f) / caretNative : 1f;
+            float caretScale = caretNative > 0.0001f ? (TextSize * 0.8f) / caretNative : 1f;
             _caret.transform.localScale = new Vector3(caretScale, caretScale, 1f);
         }
 
@@ -256,11 +316,22 @@ public class SpeechBubble : MonoBehaviour
             _nameLabel.rectTransform.sizeDelta = nameLocal;
             _nameLabel.ForceMeshUpdate();
             Vector2 nameSize = nameLocal * _nameScale;
-            var nameAt = new Vector3(
-                -_boxSize.x * 0.5f + nameSize.x * 0.5f + padding.x,
-                _boxSize.y * 0.5f + nameGap + nameSize.y * 0.5f,
-                -0.01f);
+
+            // The plate is sized to the name and hung off the box's own left edge, so the two line up
+            // down the side like a tab on a folder rather than stepping in and out; the name is then
+            // centred in it. Everything is derived from the measured name, so a long one simply grows
+            // the plate and no second layout pass is needed.
+            _namePlateSize = nameSize + namePlatePadding * 2f;
+            float nameX = -_boxSize.x * 0.5f + _namePlateSize.x * 0.5f;
+
+            var nameAt = new Vector3(nameX, _boxSize.y * 0.5f + nameGap + nameSize.y * 0.5f, -0.01f);
             _nameLabel.transform.localPosition = nameAt;
+
+            if (_namePlate != null && _namePlate.gameObject.activeSelf)
+            {
+                _namePlate.transform.localPosition = new Vector3(nameAt.x, nameAt.y, 0.01f);
+                SizePlate(_namePlate, _namePlateSize);
+            }
 
             // Down and to the right of the name, and a hair behind it, exactly as the marker captions
             // lay their shadow. Offset off the name's drawn height so it holds at any text size.
@@ -268,7 +339,7 @@ public class SpeechBubble : MonoBehaviour
             {
                 _nameShadow.rectTransform.sizeDelta = nameLocal;
                 _nameShadow.ForceMeshUpdate();
-                float d = textSize * nameSizeFactor * nameShadowOffset;
+                float d = TextSize * nameSizeFactor * nameShadowOffset;
                 _nameShadow.transform.localPosition = nameAt + new Vector3(d, -d, 0.005f);
             }
         }
@@ -282,6 +353,7 @@ public class SpeechBubble : MonoBehaviour
         if (_nameLabel == null) return;
         bool show = !string.IsNullOrEmpty(speaker);
         _nameLabel.gameObject.SetActive(show);
+        if (_namePlate != null) _namePlate.gameObject.SetActive(show);
         if (_nameShadow != null) _nameShadow.gameObject.SetActive(show && nameShadowOffset > 0f);
         if (!show) return;
         _nameLabel.text = speaker;
@@ -401,20 +473,8 @@ public class SpeechBubble : MonoBehaviour
         transform.rotation = Quaternion.identity;            // stay upright even if the actor turns to face
         transform.localScale = Vector3.one;
 
-        if (_bg != null)
-        {
-            if (_bg.drawMode == SpriteDrawMode.Sliced) _bg.size = _boxSize;
-            else
-            {
-                // Simple draw ignores `size`, so stretch the transform instead — ugly corners, but a
-                // readable box beats an unreadable one.
-                var s = _bg.sprite;
-                float nw = s != null ? s.rect.width / s.pixelsPerUnit : 1f;
-                float nh = s != null ? s.rect.height / s.pixelsPerUnit : 1f;
-                _bg.transform.localScale = new Vector3(
-                    nw > 0.0001f ? _boxSize.x / nw : 1f, nh > 0.0001f ? _boxSize.y / nh : 1f, 1f);
-            }
-        }
+        SizePlate(_bg, _boxSize);
+        if (_namePlate != null && _namePlate.gameObject.activeSelf) SizePlate(_namePlate, _namePlateSize);
 
         // Blink the continue marker so a finished line reads as "your move" at a glance.
         if (_caret != null && _caret.enabled)

@@ -18,8 +18,14 @@ public static class InputPromptIcon
 {
     public const string InteractKeyResource = "UI/Prompts/key_e";
 
+    // The same keycap with a question mark on it, for a player whose only input is a fingertip: there is no
+    // E to press, so the prompt says "there is something here" and the tap is the answer.
+    public const string TapPromptResource = "UI/Prompts/prompt_tap";
+
     static Sprite _interactKey;
     static bool _interactKeyLoaded;
+    static Sprite _tapPrompt;
+    static bool _tapPromptLoaded;
     static Material _unlit;
 
     // Null when the art is missing — callers fall back to their old text glyph rather than showing nothing.
@@ -35,6 +41,22 @@ public static class InputPromptIcon
                     Debug.LogWarning($"InputPromptIcon: no sprite at Resources/{InteractKeyResource} — prompts fall back to a text glyph.");
             }
             return _interactKey;
+        }
+    }
+
+    // Null when the art is missing — the prompt then keeps whatever it would have shown otherwise.
+    public static Sprite TapPrompt
+    {
+        get
+        {
+            if (!_tapPromptLoaded)
+            {
+                _tapPromptLoaded = true;
+                _tapPrompt = Resources.Load<Sprite>(TapPromptResource);
+                if (_tapPrompt == null)
+                    Debug.LogWarning($"InputPromptIcon: no sprite at Resources/{TapPromptResource} — touch prompts show the keycap.");
+            }
+            return _tapPrompt;
         }
     }
 

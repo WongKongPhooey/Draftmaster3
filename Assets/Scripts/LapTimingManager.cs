@@ -103,7 +103,7 @@ public class LapTimingManager : MonoBehaviour
 
     void Update()
     {
-        if ((toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) || PadInput.PressedDriving(PadBindings.LapTiming))
+        if ((toggleKey != KeyCode.None && LegacyKeys.Down(toggleKey)) || PadInput.PressedDriving(PadBindings.LapTiming))
             showPlayerHud = !showPlayerHud;
         // The loaded package knows its own builder; only an authored scene needs looking through, and
         // then on a timer — this used to be a whole-scene search on every frame of every session that

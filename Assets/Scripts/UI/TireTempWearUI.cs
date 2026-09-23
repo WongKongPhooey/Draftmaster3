@@ -54,7 +54,7 @@ public class TireTempWearUI : MonoBehaviour
 
     void Update()
     {
-        if ((toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) || PadInput.PressedDriving(PadBindings.Tyres))
+        if ((toggleKey != KeyCode.None && LegacyKeys.Down(toggleKey)) || PadInput.PressedDriving(PadBindings.Tyres))
             visible = !visible;
         if (tires == null && autoFindPlayer) tires = FindPlayerTires();
     }

@@ -161,6 +161,13 @@
         "com.unity.test-framework.performance": "3.0.3"
       }
     },
+    "com.unity.device-simulator.devices": {
+      "version": "1.0.1",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.entities": {
       "version": "6.4.0",
       "depth": 1,

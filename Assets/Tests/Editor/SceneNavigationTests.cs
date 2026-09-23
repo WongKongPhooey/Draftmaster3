@@ -28,7 +28,17 @@ public class SceneNavigationTests
     // scene, and it either gets a row on that menu or comes out of the build settings. Listing it here
     // makes the test fail in both directions: a NEW scene going unreachable fails, and wiring DemoMenu up
     // fails too, until the name is deleted from this list.
-    static readonly string[] KnownOrphans = { "DemoMenu" };
+    // Scenes that are in the build on purpose with no route to them the map can see. They have to stay in
+    // the build — LoadSceneAsync takes a name, and a scene missing from the settings fails at the moment
+    // the player opens the thing that loads it — but nothing in a scene file names them:
+    //
+    //   DemoMenu      left over; nothing opens it.
+    //   GarageScreen  opened by a LaptopInteractable, which arrives on a prefab loaded from Resources at
+    //                 runtime (the RV interior), so it is in no scene for the map to read.
+    //   TeamGarage    had a TEAM FACTORY row on the title menu until the menu became the demo's five
+    //                 rows. The factory itself is unchanged and its laptop still leads back out; what it
+    //                 no longer has is a door from the front of the game.
+    static readonly string[] KnownOrphans = { "DemoMenu", "GarageScreen", "TeamGarage" };
 
     // The map: scene name -> the scenes it can reach. Built once, from the scenes themselves.
     static Dictionary<string, HashSet<string>> _exits;

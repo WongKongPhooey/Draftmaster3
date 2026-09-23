@@ -25,7 +25,6 @@ public static class CareerReset
         "ShowRacingLine", "ShowMiniMap", "hud.leaderboard",   // HUD toggles
         "DbSchemaVersion",                      // wiping this would drop and reseed the Drivers table
         "NewUser",
-        DemoMode.OverrideKey,                   // a demo restart must not flip the build back to full
     };
 
     // Identity: the signed-in account. Clearing these logs the player out of PlayFab, which a "start the

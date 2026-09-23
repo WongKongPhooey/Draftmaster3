@@ -232,6 +232,14 @@ public class PitLaneStart : MonoBehaviour
         bool waking = GameSession.OnFootAllowed && ShouldWakeUp(marker);
         if (waking) ScreenFade.HoldBlack();
 
+        // Waking up in the motorhome: the rig is walkable wherever it was parked, so the clamp below leaves
+        // the spawn on the marker instead of dragging it (and the room built round it) to the old paddock.
+        if (rvInterior && marker != null && marker.gameObject.name == forcedSpawnName)
+        {
+            var shell = marker.GetComponentInParent<RVExterior>();
+            if (shell != null) shell.InstallWalkablePocket();
+        }
+
         // If a walkable boundary is authored, never spawn the player outside it.
         if (PaddockBoundary.AnyActive)
         {
@@ -592,7 +600,7 @@ public class PitLaneStart : MonoBehaviour
             else if (npc != null && !string.IsNullOrEmpty(npc.objectiveOnFinish))
                 _intro.ShowTitle(npc.objectiveOnFinish);
         }
-        if (showControlHints && !_hintedRun) _runHintDue = true;
+        if (showControlHints && !ControlHints.Taught("run")) _runHintDue = true;
     }
 
 
@@ -711,7 +719,9 @@ public class PitLaneStart : MonoBehaviour
         if (_hintsHeldForCutscene) return; // released by the cutscene's Finished callback
         if (!_hintOriginSet) { _hintOrigin = _player.transform.position; _hintOriginSet = true; }
 
-        if (!_hintedRun && !ChiefCheckInBeat.HoldsRunHint
+        // Asked of the hint's own memory, not a local flag: the phone lesson re-arms "run" when it fires, and
+        // a flag set by an earlier Show that did nothing (already taught) would swallow the re-armed one.
+        if (!ControlHints.Taught("run") && !ChiefCheckInBeat.HoldsRunHint
             && (_runHintDue || Vector2.Distance(_player.transform.position, _hintOrigin) > runHintAfterMetres))
         {
             ControlHints.Show("run", "LEFT SHIFT", InputGlyphs.Pad(PadBindings.Run), "Hold to run");

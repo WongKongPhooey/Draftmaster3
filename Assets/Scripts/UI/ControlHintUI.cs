@@ -170,6 +170,11 @@ public static class ControlHints
 
     public static void Hide(string id) => ControlHintUI.Instance?.Dismiss(id);
 
+    // Whether a once-only hint has been taught in this save. Callers that hold a hint back until its moment
+    // ask this rather than remembering that they called Show — Show on a taught hint does nothing, and a
+    // hint forgotten later (ChiefCheckInBeat re-arms "run") has to be teachable again.
+    public static bool Taught(string id) => AlreadyTaught(id);
+
     // Teach it again: wipe a once-only hint's memory. Testing menus use this.
     public static void Forget(string id) => Memory(id).Forget();
 

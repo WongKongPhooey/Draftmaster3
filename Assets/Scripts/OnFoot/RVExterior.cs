@@ -70,7 +70,66 @@ public class RVExterior : MonoBehaviour
         if (delta.sqrMagnitude < 0.0001f) return;
 
         transform.position = at + delta;
+        if (_pocket != null) _pocket.position += delta;
+
+        // Colliders only move with their transforms on the next simulation step. The player is shifted with
+        // the room this same frame, and the very next FixedUpdate asks the boundaries whether they are
+        // stood somewhere walkable — against the old pocket, that answer is no and they are clamped back.
+        Physics2D.SyncTransforms();
         Moved?.Invoke(delta);
+    }
+
+    [Tooltip("Walkable ground kept round the rig past its bodywork (metres), so the player can step out of the " +
+             "door wherever the rig is parked. Only built when the scene has a PaddockBoundary.")]
+    public float walkablePad = 4f;
+
+    Transform _pocket;
+
+    // Wherever the rig is parked, the player can stand in it and step out of its door.
+    //
+    // The player wakes up inside this motorhome, and an authored PaddockBoundary clamps them to it from the
+    // first frame. Park the rig out past that polygon — in the motorhome lot, where it belongs — and the
+    // spawn was clamped to the nearest edge of the old paddock, the masked room built there, and walking
+    // out of the door dropped them back where the RV used to be. The lot's own pocket fixes that, but only
+    // seconds later, once the field is up. So the rig carries a pocket of its own from the start: a
+    // separate object (not a child, or SetCollidersEnabled would switch it off while the player is inside)
+    // that MoveTo carries along. Only when a boundary is already active, or it would newly fence the player
+    // into one motorhome on a scene that has no boundary at all.
+    public void InstallWalkablePocket()
+    {
+        if (_pocket != null || !PaddockBoundary.AnyActive) return;
+
+        bool any = false;
+        var box = new Bounds(transform.position, Vector3.zero);
+        foreach (var c in GetComponentsInChildren<Collider2D>(true))
+        {
+            if (c == null || c.isTrigger) continue;
+            if (!any) { box = c.bounds; any = true; }
+            else box.Encapsulate(c.bounds);
+        }
+        if (!any) box = new Bounds(transform.position, new Vector3(10f, 10f, 0f));
+        box.Expand(new Vector3(walkablePad * 2f, walkablePad * 2f, 0f));
+
+        var go = new GameObject(name + "WalkablePocket");
+        go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);   // local space == world space
+        var poly = go.AddComponent<PolygonCollider2D>();
+        poly.points = new[]
+        {
+            new Vector2(box.min.x, box.min.y),
+            new Vector2(box.max.x, box.min.y),
+            new Vector2(box.max.x, box.max.y),
+            new Vector2(box.min.x, box.max.y),
+        };
+        go.AddComponent<PaddockBoundary>();
+        Physics2D.SyncTransforms();
+        _pocket = go.transform;
+    }
+
+    void OnDestroy()
+    {
+        if (_pocket == null) return;
+        if (Application.isPlaying) Destroy(_pocket.gameObject);
+        else DestroyImmediate(_pocket.gameObject);
     }
 
     Collider2D[] _colliders;

@@ -190,12 +190,14 @@ public static class IronOvalTitleBuilder
             // in the scene by number, so removing one would move every row onto the wrong command.
             ("CONTINUE",     TitleScreenUI.Command.Continue,   ""),
             // SINGLE RACE is the "race anything now" row: pick a track, a series and a driver, then go.
-            // It is a plain LoadScene row because the choosing happens in SingleRace.unity, not here.
-            // EXHIBITION above it races whatever is ALREADY selected, which is the quick repeat; this is
-            // the one that lets the player change their mind, and the only route to the other 37 tracks.
+            // It is a plain LoadScene row because the choosing happens in SingleRace.unity, not here, and
+            // it is the only route to the other 37 tracks.
+            //
+            // No EXHIBITION row either — it raced whatever was ALREADY selected, which SINGLE RACE does
+            // with the choosing put back in — and no TEAM FACTORY row: the factory is reached from a
+            // laptop, like the car sheet. Both commands stay in the enum for the same reason NewSeason
+            // does.
             ("SINGLE RACE",  TitleScreenUI.Command.LoadScene,  "SingleRace"),
-            ("EXHIBITION",   TitleScreenUI.Command.Exhibition, ""),
-            ("TEAM FACTORY", TitleScreenUI.Command.LoadScene,  "TeamGarage"),
             // OPTIONS opens a screen of its own (Options.unity / OptionsUI), which is where the player's
             // name is set — the one thing the whole game calls them by.
             ("OPTIONS",      TitleScreenUI.Command.LoadScene,  "Options"),

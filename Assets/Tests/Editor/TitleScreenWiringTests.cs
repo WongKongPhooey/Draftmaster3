@@ -32,40 +32,20 @@ public class TitleScreenWiringTests
     const int NotWired = 4;
     const int RestartDemo = 5;
 
-    // TitleScreenUI.Build, in declaration order.
-    const int Both = 0;
-    const int DemoOnly = 1;
-    const int FullOnly = 2;
-
-    // DemoMode.OverrideKey. Spelled out rather than referenced: this assembly can't see Assembly-CSharp.
-    const string DemoOverrideKey = "game.demo";
-
     Scene _title;
-    int _demoOverrideWas;
 
     // Additive: the editor keeps whatever scene it had open while these run.
     [SetUp]
     public void OpenTitle()
     {
         _title = EditorSceneManager.OpenScene(TitleScenePath, OpenSceneMode.Additive);
-
-        // The menu is two menus now, and which one it builds depends on a flag that a developer may have
-        // left flipped (Draftmaster > Demo > Preview Demo Menu). Pin it, so these tests read the full
-        // release unless one of them says otherwise, and put it back afterwards.
-        _demoOverrideWas = PlayerPrefs.GetInt(DemoOverrideKey, -1);
-        ForceBuild(demo: false);
     }
 
     [TearDown]
     public void CloseTitle()
     {
-        if (_demoOverrideWas < 0) PlayerPrefs.DeleteKey(DemoOverrideKey);
-        else PlayerPrefs.SetInt(DemoOverrideKey, _demoOverrideWas);
-
         if (_title.IsValid() && _title.isLoaded) EditorSceneManager.CloseScene(_title, true);
     }
-
-    static void ForceBuild(bool demo) => PlayerPrefs.SetInt(DemoOverrideKey, demo ? 1 : 0);
 
     [Test]
     public void EveryMenuDestinationIsInTheBuildSettings()
@@ -94,10 +74,11 @@ public class TitleScreenWiringTests
     {
         var menu = Menu();
         Assert.AreEqual(Continue, CommandOf(menu, "CAREER"), "CAREER should resume the selected track.");
-        Assert.AreEqual(Exhibition, CommandOf(menu, "EXHIBITION"), "EXHIBITION should skip to the race.");
 
         // There is deliberately no NEW SEASON row: CAREER is the only door into the career, and a second
-        // row that also opened one was picked by mistake more often than it was picked on purpose.
+        // row that also opened one was picked by mistake more often than it was picked on purpose. The
+        // one-race door is SINGLE RACE, which picks a track and a driver — EXHIBITION, which jumped
+        // straight in on whatever was selected, is off the menu for the same reason.
         Assert.IsFalse(HasRow(menu, "NEW SEASON"),
                        "NEW SEASON is back on the title menu; CAREER is the career door.");
 
@@ -145,22 +126,26 @@ public class TitleScreenWiringTests
         }
     }
 
+    // The factory used to have a row of its own on the title menu. It is reached from the laptop in the
+    // factory and in the RV now, like the car sheet next to it, so the row has gone — but the scene it
+    // opened is still a place the player walks into, and a scene missing from the build settings fails
+    // at the point of loading rather than here. So what is checked is the half that survived: TeamGarage
+    // is still in the build, and nothing on the title menu is a shortcut to it.
     [Test]
-    public void TeamFactoryRowOpensTheFactory()
+    public void TheFactoryIsReachedFromALaptopAndNotTheTitleMenu()
     {
-        var menu = Menu();
-        var rows = menu.FindProperty("rows");
+        Assert.IsTrue(InBuild(FactoryScenePath),
+                      "The factory is not in the build settings, so the laptop that opens it loads nothing.");
+
+        var rows = Menu().FindProperty("rows");
         for (int i = 0; i < rows.arraySize; i++)
         {
             var row = rows.GetArrayElementAtIndex(i);
-            if (row.FindPropertyRelative("label").stringValue != "TEAM FACTORY") continue;
-
-            Assert.AreEqual(LoadScene, row.FindPropertyRelative("command").enumValueIndex);
-            Assert.AreEqual(SceneName(FactoryScenePath), row.FindPropertyRelative("sceneName").stringValue);
-            Assert.IsTrue(InBuild(FactoryScenePath), "The factory is not in the build settings, so its row draws disabled.");
-            return;
+            if (row.FindPropertyRelative("command").enumValueIndex != LoadScene) continue;
+            Assert.AreNotEqual(SceneName(FactoryScenePath), row.FindPropertyRelative("sceneName").stringValue,
+                               $"The '{row.FindPropertyRelative("label").stringValue}' row opens the factory from the " +
+                               "menu; it belongs behind a laptop in the RV or the factory.");
         }
-        Assert.Fail("The title screen has no TEAM FACTORY row.");
     }
 
     // BACK now goes wherever GarageScreenLoader remembers; titleSceneName is the fallback for a cold
@@ -240,7 +225,7 @@ public class TitleScreenWiringTests
     public void ArrowKeysWalkTheMenuInTheOrderItIsDrawn()
     {
         var menu = Menu();
-        var drawn = DrawnRowLabels(menu, demo: false);
+        var drawn = DrawnRowLabels();
 
         CollectionAssert.AreEqual(drawn, WalkOrder(menu),
                                   "Pressing DOWN does not move down the menu: the walk order and the column disagree.");
@@ -260,27 +245,29 @@ public class TitleScreenWiringTests
         }
     }
 
-    // The demo ships a shorter menu than the full game: the same column with the full-release rows
-    // switched off and RESTART DEMO switched on. Which rows those are is a per-row flag in the scene, so
-    // it is checked the same way the walk order is — by building the menu both ways and reading it back.
+    // There used to be two menus — the full release's column, and a shorter demo one built from the same
+    // rows by a per-row build flag. The demo's is the menu now: the flag, the DemoMode class behind it and
+    // the code that hid rows are all gone, so the column in the scene is the column the player reads and
+    // nothing at runtime can change its membership.
+    //
+    // Which means the scene is the only thing left to check. The retired rows must not be in it — nothing
+    // would hide one that came back, it would simply be on the menu — and RESTART DEMO must be, wired to
+    // the command that wipes the save. Draftmaster > UI > Make The Demo Menu The Only Menu takes the
+    // retired ones out of a scene that still has them.
     [Test]
-    public void TheDemoBuildDrawsTheDemoMenu()
+    public void TheMenuIsTheDemoColumn()
     {
         var menu = Menu();
+        var drawn = WalkOrder(menu);
 
-        ForceBuild(demo: true);
-        var demo = WalkOrder(menu);
-        ForceBuild(demo: false);
-        var full = WalkOrder(menu);
+        CollectionAssert.AreEqual(DrawnRowLabels(), drawn,
+                                  "The menu the binder walks is not the column the scene draws.");
 
-        CollectionAssert.AreEqual(DrawnRowLabels(menu, demo: true), demo,
-                                  "The demo build's menu is not the demo rows in column order.");
-        CollectionAssert.Contains(demo, "RESTART DEMO", "The demo menu has no RESTART DEMO row.");
-        CollectionAssert.DoesNotContain(full, "RESTART DEMO",
-                                        "RESTART DEMO is drawn in the full release, which has no demo to restart.");
-        CollectionAssert.IsNotSubsetOf(full, demo,
-                                       "The demo menu offers everything the full game does; nothing is held back.");
+        foreach (string retired in new[] { "NEW SEASON", "EXHIBITION", "TEAM FACTORY" })
+            CollectionAssert.DoesNotContain(drawn, retired,
+                                            $"The title menu draws the retired {retired} row.");
 
+        CollectionAssert.Contains(drawn, "RESTART DEMO", "The title menu has no RESTART DEMO row.");
         Assert.AreEqual(RestartDemo, CommandOf(menu, "RESTART DEMO"),
                         "The RESTART DEMO row does not run the restart command.");
     }
@@ -350,45 +337,34 @@ public class TitleScreenWiringTests
         var installed = new List<Object>();
         try
         {
-            // Both builds: a row the other one draws still has to flash when it is that build's turn, and
-            // between them the two cover every row in the column.
-            foreach (bool demo in new[] { false, true })
+            var drawn = new List<(string label, GameObject cursor, bool had)>();
+            var rows = menu.FindProperty("rows");
+            for (int i = 0; i < rows.arraySize; i++)
             {
-                ForceBuild(demo);
+                var row = rows.GetArrayElementAtIndex(i);
+                string label = row.FindPropertyRelative("label").stringValue;
 
-                var drawn = new List<(string label, GameObject cursor, bool had)>();
-                var rows = menu.FindProperty("rows");
-                for (int i = 0; i < rows.arraySize; i++)
-                {
-                    var row = rows.GetArrayElementAtIndex(i);
-                    string label = row.FindPropertyRelative("label").stringValue;
+                var cursor = row.FindPropertyRelative("cursor").objectReferenceValue as GameObject;
+                Assert.IsNotNull(cursor, $"Row '{label}' has no cursor wired, so selecting it draws no arrow at all.");
 
-                    var cursor = row.FindPropertyRelative("cursor").objectReferenceValue as GameObject;
-                    Assert.IsNotNull(cursor, $"Row '{label}' has no cursor wired, so selecting it draws no arrow at all.");
+                drawn.Add((label, cursor, cursor.GetComponent(BlinkType) != null));
+            }
+            Assert.IsNotEmpty(drawn, "The menu draws no rows at all.");
 
-                    int appearsIn = row.FindPropertyRelative("appearsIn").enumValueIndex;
-                    if (appearsIn != Both && (appearsIn == DemoOnly) != demo) continue;   // the other build's row
+            InstallCursorBlinks(menu);
 
-                    drawn.Add((label, cursor, cursor.GetComponent(BlinkType) != null));
-                }
-                Assert.IsNotEmpty(drawn, $"The {(demo ? "demo" : "full")} build draws no menu rows at all.");
-
-                InstallCursorBlinks(menu);
-
-                foreach (var (label, cursor, had) in drawn)
-                {
-                    var blink = cursor.GetComponent(BlinkType);
-                    Assert.IsNotNull(blink, $"The menu left the '{label}' cursor without a blink, so that row's arrow " +
-                                            "sits there solid instead of flashing.");
-                    Assert.Greater(new SerializedObject(blink).FindProperty("interval").floatValue, 0f,
-                                   $"The '{label}' cursor's blink has no interval, so it never toggles.");
-                    if (!had) installed.Add(blink);
-                }
+            foreach (var (label, cursor, had) in drawn)
+            {
+                var blink = cursor.GetComponent(BlinkType);
+                Assert.IsNotNull(blink, $"The menu left the '{label}' cursor without a blink, so that row's arrow " +
+                                        "sits there solid instead of flashing.");
+                Assert.Greater(new SerializedObject(blink).FindProperty("interval").floatValue, 0f,
+                               $"The '{label}' cursor's blink has no interval, so it never toggles.");
+                if (!had) installed.Add(blink);
             }
         }
         finally
         {
-            ForceBuild(demo: false);
             foreach (var component in installed) Object.DestroyImmediate(component);
         }
     }
@@ -404,7 +380,7 @@ public class TitleScreenWiringTests
         var binder = menu.targetObject;
 
         var rebuild = binder.GetType().GetMethod("RebuildOrder", Flags);
-        Assert.IsNotNull(rebuild, "TitleScreenUI.RebuildOrder is gone; nothing decides which rows this build draws.");
+        Assert.IsNotNull(rebuild, "TitleScreenUI.RebuildOrder is gone; nothing sorts the rows into the order they are drawn.");
         rebuild.Invoke(binder, null);
 
         var install = binder.GetType().GetMethod("InstallCursorBlinks", Flags);
@@ -444,29 +420,6 @@ public class TitleScreenWiringTests
         var rows = menu.FindProperty("rows");
         for (int i = 0; i < rows.arraySize - 1; i++) rows.MoveArrayElement(rows.arraySize - 1, i);
         menu.ApplyModifiedPropertiesWithoutUndo();
-    }
-
-    // The labels the player reads down the column in a given build: the layout, minus the rows that build
-    // switches off. TitleScreenUI closes the column up over the gaps at runtime, so the order is the same
-    // either way — it is the membership that changes.
-    List<string> DrawnRowLabels(SerializedObject menu, bool demo)
-    {
-        var appearsIn = new Dictionary<string, int>();
-        var rows = menu.FindProperty("rows");
-        for (int i = 0; i < rows.arraySize; i++)
-        {
-            var row = rows.GetArrayElementAtIndex(i);
-            var rect = row.FindPropertyRelative("rect").objectReferenceValue;
-            if (rect != null) appearsIn[RowLabel(rect.name)] = row.FindPropertyRelative("appearsIn").enumValueIndex;
-        }
-
-        var shown = new List<string>();
-        foreach (string label in DrawnRowLabels())
-        {
-            int where = appearsIn.TryGetValue(label, out int v) ? v : Both;
-            if (where == Both || (where == DemoOnly) == demo) shown.Add(label);
-        }
-        return shown;
     }
 
     // Every row the column draws, top first, whatever build it belongs to.

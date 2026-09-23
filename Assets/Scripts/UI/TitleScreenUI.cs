@@ -33,15 +33,6 @@ public class TitleScreenUI : MonoBehaviour
         JoinCoop,     // open the join panel: drop into a friend's career as a second driver
     }
 
-    // Which build a row belongs to. The demo menu is a different menu, not the same one with things
-    // greyed out: no fresh-season row, no factory, and a RESTART DEMO row the full game has no use for.
-    public enum Build
-    {
-        Both,       // every build
-        DemoOnly,   // only when DemoMode.IsDemo
-        FullOnly,   // only in the full release
-    }
-
     [Serializable]
     public class Row
     {
@@ -49,8 +40,6 @@ public class TitleScreenUI : MonoBehaviour
         public Command command = Command.NotWired;
         [Tooltip("Scene loaded by the LoadScene command. Must be in the build settings.")]
         public string sceneName = "";
-        [Tooltip("Which build draws this row. A hidden row is switched off and the column closes up over it.")]
-        public Build appearsIn = Build.Both;
 
         [Header("Wired by the builder")]
         public TextMeshProUGUI labelText;
@@ -59,7 +48,6 @@ public class TitleScreenUI : MonoBehaviour
         public RectTransform rect;
 
         [NonSerialized] public bool available;
-        [NonSerialized] public bool shown;      // in THIS build — see appearsIn
     }
 
     [Header("Menu")]
@@ -103,22 +91,20 @@ public class TitleScreenUI : MonoBehaviour
 
         EnsureEventSystem();
 
-        RebuildOrder();     // decides which rows this build draws, and in which order
+        RebuildOrder();     // the order the arrow keys walk the column in
 
         for (int i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
-            if (row.rect != null) row.rect.gameObject.SetActive(row.shown);
-            row.available = row.shown && IsAvailable(row);
-            if (row.shown) HookPointer(row, i);
+            row.available = IsAvailable(row);
+            HookPointer(row, i);
         }
 
         InstallCursorBlinks();
         MatchLabelsToRows();
 
-        CompactRows();
         DrawContinueSubtitle();
-        _index = FirstShownFrom(startIndex);
+        _index = rows.Count == 0 ? 0 : Mathf.Clamp(startIndex, 0, rows.Count - 1);
         SetStatus("");
         Redraw();
     }
@@ -142,7 +128,7 @@ public class TitleScreenUI : MonoBehaviour
     {
         foreach (var row in rows)
         {
-            if (row == null || !row.shown || row.cursor == null) continue;
+            if (row == null || row.cursor == null) continue;
             if (row.cursor.GetComponent<IronOvalBlink>() == null) row.cursor.AddComponent<IronOvalBlink>();
         }
     }
@@ -184,7 +170,6 @@ public class TitleScreenUI : MonoBehaviour
         foreach (var row in rows)
         {
             if (row == null || row.labelText == null || string.IsNullOrEmpty(row.label)) continue;
-            if (!row.shown) continue;   // a row this build does not draw cannot read wrong
             if (row.labelText.text == row.label) continue;
 
             Debug.LogWarning($"TitleScreenUI: the {row.command} row is labelled \"{row.label}\" but draws " +
@@ -192,82 +177,6 @@ public class TitleScreenUI : MonoBehaviour
                              "TitleScreen.unity so the menu reads what it does.");
             row.labelText.text = row.label;
         }
-    }
-
-    bool ShownInThisBuild(Row row)
-    {
-        if (row == null) return false;
-
-        // NEW SEASON is retired, wherever it still exists. CAREER is the only door into the career and
-        // RESTART DEMO is the only door into a fresh one, so a third row that also started a season was a
-        // coin toss the player lost — and Row_NEW_SEASON was the one drawing the word "MULTIPLAYER" over
-        // a career start. Draftmaster > UI > Remove NEW SEASON Row From Title Screen takes it out of
-        // TitleScreen.unity for good; this makes a scene that still has one draw the menu without it,
-        // rather than shipping the row to anyone who has not run that yet.
-        //
-        // Command.NewSeason stays in the enum: the scene stores a row's command by number, so removing a
-        // value would move every row onto the wrong command.
-        if (row.command == Command.NewSeason) return false;
-
-        switch (row.appearsIn)
-        {
-            case Build.DemoOnly: return DemoMode.IsDemo;
-            case Build.FullOnly: return !DemoMode.IsDemo;
-            default: return true;
-        }
-    }
-
-    // Every row keeps the position it was given in the scene, so switching one off leaves a hole in the
-    // column. Close it: re-stack the visible rows from wherever the top of the block sits, at the spacing
-    // the menu already uses. Both are measured rather than assumed — the block has been moved by hand.
-    void CompactRows()
-    {
-        var all = new List<RectTransform>();
-        foreach (var row in rows)
-            if (row != null && row.rect != null) all.Add(row.rect);
-        if (all.Count == 0) return;
-
-        all.Sort((a, b) => b.anchoredPosition.y.CompareTo(a.anchoredPosition.y));
-        float top = all[0].anchoredPosition.y;
-        float wasBottom = all[all.Count - 1].anchoredPosition.y;
-
-        float spacing = 0f;
-        for (int i = 1; i < all.Count; i++)
-        {
-            float gap = all[i - 1].anchoredPosition.y - all[i].anchoredPosition.y;
-            if (gap > 0.01f && (spacing <= 0f || gap < spacing)) spacing = gap;
-        }
-        if (spacing <= 0f) spacing = 26f;      // the builder's row pitch
-
-        var shown = new List<RectTransform>();
-        foreach (var row in rows)
-            if (row != null && row.shown && row.rect != null) shown.Add(row.rect);
-        if (shown.Count == 0) return;
-
-        shown.Sort((a, b) => b.anchoredPosition.y.CompareTo(a.anchoredPosition.y));
-        for (int i = 0; i < shown.Count; i++)
-        {
-            var at = shown[i].anchoredPosition;
-            shown[i].anchoredPosition = new Vector2(at.x, top - i * spacing);
-        }
-
-        // The status line is authored under the menu block, in a different parent — but the move is a pure
-        // vertical shift, so the same delta lands it under the shortened column instead of floating in the
-        // gap the hidden rows left behind.
-        if (statusLabel != null)
-        {
-            float nowBottom = top - (shown.Count - 1) * spacing;
-            statusLabel.rectTransform.anchoredPosition += Vector2.up * (nowBottom - wasBottom);
-        }
-    }
-
-    // The opening selection, skipped past any row this build doesn't draw.
-    int FirstShownFrom(int index)
-    {
-        if (rows.Count == 0) return 0;
-        index = Mathf.Clamp(index, 0, rows.Count - 1);
-        if (rows[index] != null && rows[index].shown) return index;
-        return _order != null && _order.Length > 0 ? _order[0] : index;
     }
 
     // The menu is not the only thing on screen. CoopJoinPanel opens OVER the title screen and takes a
@@ -316,20 +225,18 @@ public class TitleScreenUI : MonoBehaviour
         Redraw();
     }
 
-    // Sort the rows the way the eye reads them: highest on screen first, and only the ones this build
-    // draws — a hidden row is not somewhere the cursor can land. Rows with no rect sort to the bottom,
-    // which is the only sensible place for a row that isn't drawn anywhere; ties keep list order.
-    //
-    // This is also where `shown` is decided, rather than in Start(), so that the walk order is a function
-    // of the rows alone — the wiring test calls it on a component that has never run.
+    // Sort the rows the way the eye reads them: highest on screen first. The list is the wiring and the
+    // column is the layout, and the two drift apart the moment a row is dragged up the menu in the scene
+    // without the list following it — so DOWN means the next row down the screen, not the next element of
+    // the list. Rows with no rect sort to the bottom, which is the only sensible place for a row that
+    // isn't drawn anywhere; ties keep list order.
     void RebuildOrder()
     {
         var order = new List<int>();
         for (int i = 0; i < rows.Count; i++)
         {
             if (rows[i] == null) continue;
-            rows[i].shown = ShownInThisBuild(rows[i]);
-            if (rows[i].shown) order.Add(i);
+            order.Add(i);
         }
 
         order.Sort((a, b) =>
@@ -347,7 +254,6 @@ public class TitleScreenUI : MonoBehaviour
     {
         if (MenuInputBlocked) return;
         if (index == _index || index < 0 || index >= rows.Count) return;
-        if (!rows[index].shown) return;
         _index = index;
         Redraw();
     }
@@ -357,7 +263,6 @@ public class TitleScreenUI : MonoBehaviour
         if (MenuInputBlocked) return;
         if (_index < 0 || _index >= rows.Count) return;
         var row = rows[_index];
-        if (!row.shown) return;
 
         if (!row.available)
         {
@@ -532,7 +437,6 @@ public class TitleScreenUI : MonoBehaviour
         for (int i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
-            if (!row.shown) continue;
             if (row.labelText != null)
                 row.labelText.color = !row.available ? dead : (i == _index ? on : off);
             if (row.cursor != null) row.cursor.SetActive(i == _index);

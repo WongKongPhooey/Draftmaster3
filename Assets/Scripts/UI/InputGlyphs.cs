@@ -23,6 +23,7 @@ using UnityEngine.InputSystem;
 public static class InputGlyphs
 {
     static bool _padActive;
+    static bool _touchActive;
     static PadFamily _family;
     static Gamepad _lastPad;
     static uint _padPrevMask;
@@ -30,6 +31,12 @@ public static class InputGlyphs
     // The pad is the device in the player's hands: touched more recently than the keyboard or mouse, and
     // still connected.
     public static bool UsingGamepad => _padActive && Gamepad.current != null;
+
+    // The player is driving this with their thumbs: a phone or tablet (or the editor's Device Simulator
+    // pretending to be one) with no pad in their hands. Prompts then show what to do with a finger rather
+    // than a key nobody has.
+    public static bool UsingTouch =>
+        !UsingGamepad && UnityEngine.Device.Application.isMobilePlatform && Touchscreen.current != null;
 
     public static PadFamily Family => UsingGamepad ? _family : PadFamily.Xbox;
 
@@ -156,10 +163,17 @@ public static class InputGlyphs
             else if (kbUsed && !padUsed) pad = false;
         }
 
-        if (pad != _padActive || family != _family)
+        // A touchscreen arriving or going away changes which art every prompt wants just as much as a pad
+        // does — in the editor that is switching the Device Simulator on, on a phone it is the only state
+        // there is. Computed after _padActive is settled, because thumbs only win when no pad is in use.
+        bool touch = !(pad && gp != null) &&
+                     UnityEngine.Device.Application.isMobilePlatform && Touchscreen.current != null;
+
+        if (pad != _padActive || family != _family || touch != _touchActive)
         {
             _padActive = pad;
             _family = family;
+            _touchActive = touch;
             Version++;
         }
     }

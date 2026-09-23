@@ -57,7 +57,7 @@ public class LeaderboardUI : MonoBehaviour
 
     void Update()
     {
-        if (!Input.GetKeyDown(toggleKey) && !PadInput.PressedDriving(PadBindings.Leaderboard)) return;
+        if (!LegacyKeys.Down(toggleKey) && !PadInput.PressedDriving(PadBindings.Leaderboard)) return;
         _visible = !_visible;
         PlayerPrefs.SetInt(PrefKey, _visible ? 1 : 0);
     }
@@ -80,7 +80,7 @@ public class LeaderboardUI : MonoBehaviour
         Transform featured = broadcast ? _drive.FeaturedTransform : null;
 
         // Held, so it can't clash with anything that acts on a press; a fight has the same button for a hook.
-        bool expanded = Input.GetKey(expandKey) ||
+        bool expanded = LegacyKeys.Held(expandKey) ||
                         (!DriverFight.IsActive && PadInput.IsHeld(PadBindings.LeaderboardExpand));
         int n = _rows.Count;
         int show = expanded ? n : Mathf.Min(compactRows, n);

@@ -64,6 +64,23 @@ public static class TitleScreenRowEditor
         Debug.Log(RemoveRow("NEW SEASON"));
     }
 
+    // The demo's menu is the menu now. It was the shorter of two columns — the same rows with the
+    // full-release ones switched off by a per-row flag and RESTART DEMO switched on — which meant the
+    // editor drew a menu nobody would ever see: every row at once, including the two the demo hid. The
+    // flag is gone from TitleScreenUI, so the two rows have to come out of the scene for the column in
+    // the editor to be the column in the game.
+    //
+    // EXHIBITION goes because SINGLE RACE does the same thing with a track and a driver to pick, and
+    // TEAM FACTORY because the factory is reached from the laptop in the RV, not from the title screen.
+    //
+    // Idempotent: RemoveRow says so and changes nothing when the row has already gone.
+    [MenuItem("Draftmaster/UI/Make The Demo Menu The Only Menu")]
+    public static void MakeDemoMenuPermanent()
+    {
+        Debug.Log(RemoveRow("EXHIBITION"));
+        Debug.Log(RemoveRow("TEAM FACTORY"));
+    }
+
     // Bring every row's drawn text back to its label. The label is the row's identity — the wiring tests
     // match on it and RenameRow moves label, text and object name together — so when the two disagree the
     // text is the one that has drifted, and a menu that reads one thing and does another is unusable.

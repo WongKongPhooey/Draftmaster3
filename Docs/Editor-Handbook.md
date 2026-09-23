@@ -765,6 +765,11 @@ Driver Database.
   cutscene outranks a conversation, and two conversations take turns. Pass the priority
   (`Draftmaster.Sim.SpeechPriority`) when adding a new speaker, and pass `owner` for a two-hander so the
   player's reply is not queued behind the line it answers. Rules: `Assets/Scripts/Sim/SpeechQueue.cs`.
+- **The speaker's name is on a plate of its own.** It is the dialogue box's own window sprite (the kit's
+  cream-bordered blue frame) stretched to the name, hung off the box's top-left corner so the two line up
+  down the side, with the gold display face and its ink shadow on top. Both plates come from
+  `SpeechBubble.BuildPlate`, so a restyle cannot reach one and miss the other; `namePlatePadding` is how
+  much frame shows around the letters.
 - **Bubbles clamp themselves into the view.** A speaker at the edge of the frame would otherwise put half
   its box off screen. `SpeechBubble.KeepOnScreen` prefers above the head, then below, then slides along the
   edge — so never assume the box is directly over the speaker.

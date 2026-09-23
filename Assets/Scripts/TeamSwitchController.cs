@@ -70,7 +70,7 @@ public class TeamSwitchController : MonoBehaviour
 
     void Update()
     {
-        if ((toggleKey != KeyCode.None && Input.GetKeyDown(toggleKey)) || PadInput.PressedDriving(PadBindings.TeamBox))
+        if ((toggleKey != KeyCode.None && LegacyKeys.Down(toggleKey)) || PadInput.PressedDriving(PadBindings.TeamBox))
             _hidden = !_hidden;
 
         // No roster in practice/qualifying — team cars are parked stint props there. And none at all

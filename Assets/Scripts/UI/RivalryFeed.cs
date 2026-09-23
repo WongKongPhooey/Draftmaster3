@@ -70,7 +70,7 @@ public class RivalryFeed : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(standingsKey) || PadInput.PressedDriving(PadBindings.Rivalries))
+        if (LegacyKeys.Down(standingsKey) || PadInput.PressedDriving(PadBindings.Rivalries))
             _showStandings = !_showStandings;
         bool chief = CrewChiefController.IsCrewChief;
         for (int i = _toasts.Count - 1; i >= 0; i--)

@@ -184,6 +184,12 @@ public class ChiefCheckInBeat : MonoBehaviour
         Memory.MarkSeen();
         _fired = true;
 
+        // Putting the phone away is when running is taught, and the lesson promises that order. The run
+        // hint is once per save, though, and any earlier walk in the same save spends it — a quick test
+        // walk, a teleport out of the RV — so the hand-off pointed at a prompt that would never show. The
+        // phone lesson is itself once per save, so re-arming the run hint here teaches it once more at most.
+        ControlHints.Forget("run");
+
         string chief = DialogueNames.CrewChiefName;
         string startsAt = booking != null ? WeekendSlots.ClockAmPm(booking.startMinute) : "";
         PhoneMessages.Receive(ChiefCheckIn.ThreadId,

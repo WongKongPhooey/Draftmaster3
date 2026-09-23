@@ -53,7 +53,7 @@ public class IAPStore : MonoBehaviour {
 		GUI.skin.label.alignment = TextAnchor.UpperLeft;
 		GUI.Label(new Rect(widthblock * 4, 20, widthblock * 5, heightblock * 2), "Premium Store");
 
-		if (Input.GetKeyDown(KeyCode.Escape)){
+		if (LegacyKeys.Down(KeyCode.Escape)){
 			SceneManager.LoadScene("Store");
 		}
 	}

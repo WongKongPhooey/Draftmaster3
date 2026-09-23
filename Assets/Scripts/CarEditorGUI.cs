@@ -70,7 +70,7 @@ public class CarEditorGUI : MonoBehaviour {
 			}
 		}
 
-		if (Input.GetKeyDown(KeyCode.Escape)){
+		if (LegacyKeys.Down(KeyCode.Escape)){
 			SceneManager.LoadScene("MainMenu");
 		}
 	}

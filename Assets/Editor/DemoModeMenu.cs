@@ -1,69 +1,22 @@
 using UnityEditor;
-using UnityEditor.Build;
 using UnityEngine;
 
-// Draftmaster > Demo — the two halves of the demo flag, plus the wipe it exists to drive.
+// Draftmaster > Demo — the wipe behind RESTART DEMO, and the two beats of the opening, from the editor.
 //
-//   Preview Demo Menu   flips DemoMode's PlayerPrefs override, so play mode draws the demo title menu
-//                       without recompiling. Editor and development builds only.
-//   Build Is Demo       adds/removes the DRAFTMASTER_DEMO define on the active build target. THIS is what
-//                       ships: a built demo is a demo because it was compiled as one.
 //   Wipe Career Save    what RESTART DEMO does, from the editor.
+//   Re-arm The Opening  puts the alarm and the liaison back so they can be watched again.
 //   Send The Crew Chief's 'Where Are You' Text
 //                       the phone tutorial from the walk to the briefing, fired now (play mode only).
+//
+// There used to be a demo/full build flag here as well — DemoMode, a DRAFTMASTER_DEMO define and a
+// PlayerPrefs override — because the title screen drew one of two menus depending on it. It draws one
+// menu now, the flag had nothing left to change, and all of it is gone.
 //
 // Nothing here opens a modal that blocks the editor except the wipe's confirmation, which is the one place
 // a click deserves a second thought.
 public static class DemoModeMenu
 {
-    const string PreviewItem = "Draftmaster/Demo/Preview Demo Menu";
-    const string BuildItem = "Draftmaster/Demo/Build Is Demo (DRAFTMASTER_DEMO)";
     const string WipeItem = "Draftmaster/Demo/Wipe Career Save";
-    const string Define = "DRAFTMASTER_DEMO";
-
-    [MenuItem(PreviewItem, priority = 400)]
-    static void TogglePreview()
-    {
-        bool on = DemoMode.IsOverridden && DemoMode.IsDemo;
-        // Off goes back to following the build rather than forcing "full", so the preview toggle never
-        // masks what a DRAFTMASTER_DEMO build would actually do.
-        DemoMode.SetOverride(on ? (bool?)null : true);
-        Debug.Log(on
-            ? "Demo preview off: the title menu follows the build again "
-              + $"(DRAFTMASTER_DEMO is {(DemoMode.BuildIsDemo ? "on" : "off")})."
-            : "Demo preview on: play mode draws the demo title menu.");
-    }
-
-    [MenuItem(PreviewItem, true)]
-    static bool ValidatePreview()
-    {
-        Menu.SetChecked(PreviewItem, DemoMode.IsOverridden && DemoMode.IsDemo);
-        return true;
-    }
-
-    [MenuItem(BuildItem, priority = 401)]
-    static void ToggleBuildDefine()
-    {
-        var target = NamedBuildTarget.FromBuildTargetGroup(
-            BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget));
-
-        PlayerSettings.GetScriptingDefineSymbols(target, out string[] defines);
-        var list = new System.Collections.Generic.List<string>(defines);
-
-        bool on = list.Contains(Define);
-        if (on) list.Remove(Define); else list.Add(Define);
-        PlayerSettings.SetScriptingDefineSymbols(target, list.ToArray());
-
-        Debug.Log($"{Define} {(on ? "removed from" : "added to")} {target.TargetName} — builds for this "
-                  + $"target are now the {(on ? "full release" : "demo")}. Recompiling.");
-    }
-
-    [MenuItem(BuildItem, true)]
-    static bool ValidateBuildDefine()
-    {
-        Menu.SetChecked(BuildItem, DemoMode.BuildIsDemo);
-        return true;
-    }
 
     // The two beats that only play on the first morning of a weekend, and therefore only play once unless
     // you can put them back. No dialog: it is a testing gesture, run over and over while authoring.

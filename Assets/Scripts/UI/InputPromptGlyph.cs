@@ -3,9 +3,10 @@ using UnityEngine;
 
 // Rides on every world-space prompt icon (InputPromptIcon) and keeps two things right about it.
 //
-// Which art: the keycap on the keyboard, the pad's own button once a pad is picked up. Checks
-// InputGlyphs.Version rather than re-resolving the sprite every frame, so a paddock full of prompts costs one
-// int compare each.
+// Which art: the keycap on the keyboard, the pad's own button once a pad is picked up, a question mark on a
+// phone — where there is no key to press and the prompt's job is only to say that this one is worth a finger.
+// Checks InputGlyphs.Version rather than re-resolving the sprite every frame, so a paddock full of prompts
+// costs one int compare each.
 //
 // How big: the same size ON SCREEN wherever it is. Prompts used to be sized in world metres under whatever
 // they were parented to, so the one on the parked car (a child of a transform scaled 6x) came out five metres
@@ -45,7 +46,9 @@ public class InputPromptGlyph : MonoBehaviour
         _version = InputGlyphs.Version;
         if (_renderer == null) return;
 
-        var sprite = _pad != PadButton.None && InputGlyphs.UsingGamepad ? InputGlyphs.Icon(_pad) : null;
+        Sprite sprite = null;
+        if (_pad != PadButton.None && InputGlyphs.UsingGamepad) sprite = InputGlyphs.Icon(_pad);
+        else if (InputGlyphs.UsingTouch) sprite = InputPromptIcon.TapPrompt;
         if (sprite == null) sprite = _keyboard;
         if (_renderer.sprite == sprite) return;
 

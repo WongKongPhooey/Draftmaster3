@@ -20,7 +20,7 @@ public class PlayerTelemetryHUD : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(toggleKey)) visible = !visible;
+        if (LegacyKeys.Down(toggleKey)) visible = !visible;
         // Registry read, not a scene search: on foot there is no car to find, so this runs every frame
         // for as long as the player is out of it. The human's car first, then whatever is on track — the
         // panel is a debug readout and used to take the first controller the scene handed back.

@@ -163,9 +163,21 @@ public class TrackMiniMap : MonoBehaviour
         return new Vector2(0.5f + centered.x / span, 0.5f + centered.y / span);
     }
 
+    // Up only while the player's own session is running — and then wherever they are, in the car or stood
+    // on pit road during a practice, because the map is for the session rather than for the seat.
+    //
+    // The paddock is walkable for three days and the map has nothing to say about most of it: no field is
+    // circulating, the player's car is parked, and a corner of the screen was being spent on a picture of an
+    // empty circuit. Watching another championship from the stand is the same — that is somebody else's
+    // session, read from a seat, and the timing screen (F11) is what belongs to it.
+    //
+    // RaceWeekend.SessionLive is the same gate the crew chief's headset uses. It covers a single race and a
+    // lobby race too, neither of which has a weekend around it to ask.
+    static bool DuringPlayersSession => RaceWeekend.SessionLive;
+
     void OnGUI()
     {
-        if (!Visible || _mapTex == null || RacePauseMenu.IsPaused) return;
+        if (!Visible || _mapTex == null || RacePauseMenu.IsPaused || !DuringPlayersSession) return;
 
         // Sat above the speedometer rather than on top of it. This is IMGUI in raw screen pixels while the
         // dial is on a scaled canvas, so the clearance is converted with the same factor CanvasScaler uses
