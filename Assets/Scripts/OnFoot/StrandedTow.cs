@@ -115,7 +115,7 @@ public class StrandedTow : MonoBehaviour
 
         if (show)
             ControlHints.ShowSticky("tow", towKey.ToString().ToUpperInvariant(), InputGlyphs.Pad(PadBindings.Tow),
-                                    "Call a tow back to the pits");
+                                    "Call a tow back to the pits", onPress: Tow, icon: PixelGUI.ActionIcon.Tow);
         else
             ControlHints.Hide("tow");
     }

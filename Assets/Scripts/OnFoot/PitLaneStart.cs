@@ -732,7 +732,8 @@ public class PitLaneStart : MonoBehaviour
         if (!_hintedEnter && RaceWeekend.SessionLive
             && Vector2.Distance(_player.transform.position, car.transform.position) < enterHintRange)
         {
-            ControlHints.Show("entercar", "E", InputGlyphs.Pad(PadBindings.Interact), "Get in the car");
+            ControlHints.Show("entercar", "E", InputGlyphs.Pad(PadBindings.Interact), "Get in the car",
+                              onPress: PressInteract, icon: PixelGUI.ActionIcon.Car);
             _hintedEnter = true;
         }
     }
@@ -784,7 +785,8 @@ public class PitLaneStart : MonoBehaviour
             _chief.SetInteractor(car.transform); // "#player" lines bubble over the car, where the driver now is
             _chief.Interact();                   // opens the first line
             _interactHeldPrev = true;            // swallow the same press that got us in the car
-            if (showControlHints) ControlHints.Show("advance", "E", InputGlyphs.Pad(PadBindings.Interact), "Continue");
+            if (showControlHints) ControlHints.Show("advance", "E", InputGlyphs.Pad(PadBindings.Interact), "Continue",
+                                                    onPress: PressInteract, icon: PixelGUI.ActionIcon.Next);
             return;
         }
 
@@ -823,7 +825,8 @@ public class PitLaneStart : MonoBehaviour
             ControlHints.Show("drive", "W / S", InputGlyphs.Pad(PadBindings.Throttle) + " / " + InputGlyphs.Pad(PadBindings.Brake),
                               "Throttle and brake", 6f);
             if (fitPitLimiter) ControlHints.Show("limiter", "L", InputGlyphs.Pad(PadBindings.PitLimiter),
-                                                 "Pit limiter — holds you to the pit speed limit", 7f);
+                                                 "Pit limiter — holds you to the pit speed limit", 7f,
+                                                 onPress: TogglePitLimiter, icon: PixelGUI.ActionIcon.Limiter);
         }
 
         // The first time out this session, the screen starts from lap timing alone. Every scene load is a new
@@ -984,8 +987,25 @@ public class PitLaneStart : MonoBehaviour
         limiter.track = track;
     }
 
+    // The prompt's button, pressed: counts as one press of E on the next InteractPressed, so tapping "Get in
+    // the car" or "Continue" runs exactly the path the key does.
+    bool _virtualInteract;
+    void PressInteract() => _virtualInteract = true;
+
+    void TogglePitLimiter()
+    {
+        var limiter = car != null ? car.GetComponent<PitLimiter>() : null;
+        if (limiter != null) limiter.SetArmed(!limiter.Armed);
+    }
+
     bool InteractPressed()
     {
+        if (_virtualInteract)
+        {
+            _virtualInteract = false;
+            return true;
+        }
+
         bool held = false;
         var gp = Gamepad.current;
         if (gp != null) held |= PadInput.Control(gp, PadBindings.Interact).isPressed;

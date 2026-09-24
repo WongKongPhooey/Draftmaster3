@@ -206,7 +206,8 @@ public class ChiefCheckInBeat : MonoBehaviour
         // Not once-only: the beat itself is, and a player held still must always be told why. Urgent, so a
         // hint already on screen cannot keep it waiting while they stand there.
         ControlHints.ShowSticky(HintId, WeekendScripts.PhoneKeyName(), InputGlyphs.PhonePad, "Check your phone",
-                                once: false, urgent: true);
+                                once: false, urgent: true,
+                                onPress: () => PhoneUI.Open(), icon: PixelGUI.ActionIcon.Phone);
         _stage = Stage.Ringing;
         _ringingFor = WeekendAppointment.PendingId;
     }

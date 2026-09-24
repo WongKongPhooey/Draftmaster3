@@ -29,6 +29,10 @@ public class ControlHintUI : MonoBehaviour
         public string id;
         public string keyboardLabel, gamepadLabel, text;
         public float secondsLeft;      // Infinity = until Hide(id)
+        // A hint for a one-press action is also the button for it: tapped or clicked, it does what the key
+        // does. Null for hints that teach a held or continuous control (run, throttle), which stay plain.
+        public System.Action onPress;
+        public PixelGUI.ActionIcon icon;
     }
 
     readonly List<Hint> _queue = new();
@@ -62,12 +66,22 @@ public class ControlHintUI : MonoBehaviour
     // `urgent` goes to the front of the line: whatever is up fades out now and goes back in the queue with the
     // time it had left. For a prompt the player cannot get past without — a sticky hint already on screen
     // would otherwise hold it back for ever.
-    public void Push(string id, string keyboardLabel, string gamepadLabel, string text, float seconds, bool urgent = false)
+    public void Push(string id, string keyboardLabel, string gamepadLabel, string text, float seconds, bool urgent = false,
+                     System.Action onPress = null, PixelGUI.ActionIcon icon = PixelGUI.ActionIcon.Next)
     {
         // Re-showing a live hint just refreshes its timer rather than queueing a duplicate.
-        if (_current != null && _current.id == id) { _current.secondsLeft = seconds; return; }
+        if (_current != null && _current.id == id)
+        {
+            _current.secondsLeft = seconds;
+            _current.onPress = onPress; _current.icon = icon;
+            return;
+        }
 
-        var hint = new Hint { id = id, keyboardLabel = keyboardLabel, gamepadLabel = gamepadLabel, text = text, secondsLeft = seconds };
+        var hint = new Hint
+        {
+            id = id, keyboardLabel = keyboardLabel, gamepadLabel = gamepadLabel, text = text, secondsLeft = seconds,
+            onPress = onPress, icon = icon,
+        };
         if (urgent)
         {
             _queue.RemoveAll(h => h.id == id);
@@ -77,6 +91,7 @@ public class ControlHintUI : MonoBehaviour
                 {
                     id = _current.id, keyboardLabel = _current.keyboardLabel, gamepadLabel = _current.gamepadLabel,
                     text = _current.text, secondsLeft = _current.secondsLeft,
+                    onPress = _current.onPress, icon = _current.icon,
                 });
                 _current.secondsLeft = 0f;
             }
@@ -98,6 +113,13 @@ public class ControlHintUI : MonoBehaviour
 
     void Update()
     {
+        if (_pressed != null)
+        {
+            var press = _pressed;
+            _pressed = null;
+            press.onPress?.Invoke();
+        }
+
         if (_current == null && _queue.Count > 0)
         {
             _current = _queue[0];
@@ -130,11 +152,22 @@ public class ControlHintUI : MonoBehaviour
 
         var prev = GUI.color;
         GUI.color = new Color(prev.r, prev.g, prev.b, prev.a * _alpha);
-        PixelGUI.Prompt(key, _current.text, _icons);
+        if (_current.onPress == null) PixelGUI.Prompt(key, _current.text, _icons);
+        else
+        {
+            // Pressable only while it is properly on screen, not in the tail of its fade.
+            var hint = _current;
+            if (PixelGUI.PromptButton(key, hint.text, _icons, hint.icon) && _alpha > 0.5f && hint.secondsLeft > 0f)
+                _pressed = hint;
+        }
         GUI.color = prev;
     }
 
     readonly List<Sprite> _icons = new();
+
+    // A press seen in OnGUI, acted on in Update: the action may load a scene, open a panel or move the player,
+    // none of which should happen halfway through the GUI pass.
+    Hint _pressed;
 
     // Quiet behind anything the player is actually reading, and through a wipe — the same company the
     // grandstand's prompt keeps.
@@ -153,20 +186,26 @@ public static class ControlHints
     static readonly Dictionary<string, AppearanceConditions> _once = new();
 
     // Show a hint. `once` remembers it forever (per save) so a returning player isn't re-taught the basics.
+    //
+    // `onPress` makes the hint a button as well (see ControlHintUI.Hint.onPress): give it whenever the hint says
+    // "press X to do Y" and Y is one press — a touch screen has no X, and that button is its only way to do Y.
+    // `icon` is the picture it wears on a touch screen.
     public static void Show(string id, string keyboardLabel, string gamepadLabel, string text,
-                            float seconds = 5f, bool once = true, bool urgent = false)
+                            float seconds = 5f, bool once = true, bool urgent = false,
+                            System.Action onPress = null, PixelGUI.ActionIcon icon = PixelGUI.ActionIcon.Next)
     {
         if (once && AlreadyTaught(id)) return;
         var ui = ControlHintUI.Instance;
         if (ui == null) return;
-        ui.Push(id, keyboardLabel, gamepadLabel, text, seconds, urgent);
+        ui.Push(id, keyboardLabel, gamepadLabel, text, seconds, urgent, onPress, icon);
         if (once) MarkTaught(id);
     }
 
     // Show for as long as it stays relevant; call Hide when it stops being true.
     public static void ShowSticky(string id, string keyboardLabel, string gamepadLabel, string text,
-                                  bool once = false, bool urgent = false)
-        => Show(id, keyboardLabel, gamepadLabel, text, Mathf.Infinity, once, urgent);
+                                  bool once = false, bool urgent = false,
+                                  System.Action onPress = null, PixelGUI.ActionIcon icon = PixelGUI.ActionIcon.Next)
+        => Show(id, keyboardLabel, gamepadLabel, text, Mathf.Infinity, once, urgent, onPress, icon);
 
     public static void Hide(string id) => ControlHintUI.Instance?.Dismiss(id);
 
