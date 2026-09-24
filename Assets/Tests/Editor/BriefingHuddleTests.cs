@@ -77,4 +77,37 @@ public class BriefingHuddleTests
         Assert.IsFalse(Wanted(null, "PitBox"), "Crew stood round the chief with nothing booked.");
         Assert.IsFalse(Wanted("TeamBriefing", "Motorhome"), "A huddle at a venue the briefing is not held at.");
     }
+
+    static Vector2 Step(Vector2 from, Vector2 to, float speed, float dt, float arrive, out bool arrived)
+    {
+        var args = new object[] { from, to, speed, dt, arrive, false };
+        var r = (Vector2)HuddleType.GetMethod("StepToward").Invoke(null, args);
+        arrived = (bool)args[5];
+        return r;
+    }
+
+    [Test]
+    public void AfterTheMeeting_TheCrewWalkBack_RatherThanVanish()
+    {
+        Assert.IsNotNull(HuddleType.GetMethod("StepToward"), "The crew have no walk back to the pit box.");
+
+        var from = Vector2.zero;
+        var to = new Vector2(10f, 0f);
+        var next = Step(from, to, 1.2f, 0.5f, 0.3f, out bool arrived);
+        Assert.IsFalse(arrived, "Somebody ten metres from the box counted as back already.");
+        Assert.AreEqual(0.6f, Vector2.Distance(from, next), 1e-4f, "A step is walking pace times the frame.");
+        Assert.Less(Vector2.Distance(next, to), Vector2.Distance(from, to), "The step led away from the box.");
+    }
+
+    [Test]
+    public void TheWalkBack_EndsOnTheBox_NeverPastIt()
+    {
+        var to = new Vector2(1f, 1f);
+        var next = Step(new Vector2(0.9f, 1f), to, 5f, 1f, 0f, out bool arrived);
+        Assert.IsTrue(arrived);
+        Assert.AreEqual(to, next, "Overshot the pit box.");
+
+        Step(new Vector2(1.1f, 1f), to, 1f, 0.02f, 0.3f, out arrived);
+        Assert.IsTrue(arrived, "Within arrival radius but still walking.");
+    }
 }
