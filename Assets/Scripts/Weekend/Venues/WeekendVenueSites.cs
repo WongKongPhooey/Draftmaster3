@@ -788,7 +788,19 @@ public class WeekendVenueSites : MonoBehaviour
             var body = PaddockPerson.Spawn(guests.transform, Vector3.zero, $"Guest_{i}", 8400 + i,
                                            heightM: PaddockPerson.HeightM);
             body.transform.localPosition = new Vector3(spot.x, spot.y, PaddockProps.PropZ - 0.1f);
+            body.transform.localRotation = GuestFacing(spot);
         }
+    }
+
+    // Turned to look in at the middle of the chequers, where the driver being photographed stands. Left
+    // unrotated they all faced down the screen, which read as a crowd waiting for something else.
+    // The paper-doll art faces -Y, hence the +90 (same offset PaddockWalker turns walkers by).
+    public static Quaternion GuestFacing(Vector2 spot)
+    {
+        Vector2 toCentre = -spot;
+        if (toCentre.sqrMagnitude < 1e-6f) return Quaternion.identity;
+        float ang = Mathf.Atan2(toCentre.y, toCentre.x) * Mathf.Rad2Deg + 90f;
+        return Quaternion.Euler(0f, 0f, ang);
     }
 
     // Where the twenty of them stand, as four runs round the square.
