@@ -527,10 +527,13 @@ public class OnFootController : MonoBehaviour
         return _stickReleased ? Vector2.zero : m;
     }
 
-    // Run modifier: Left Shift on keyboard, L1/left shoulder on gamepad. Direct device read,
-    // matching ReadInteractPressed — no action-map entry needed.
+    // Run: the on-screen stick's double-tap toggle, or the held modifier — Left Shift on keyboard, L1/left
+    // shoulder on gamepad. Direct device read, matching ReadInteractPressed — no action-map entry needed.
+    // Nothing runs on the opening walk until running has been taught (PitLaneStart.RunLocked).
     bool ReadRunHeld()
     {
+        if (PitLaneStart.RunLocked) return false;
+        if (TouchWalkControls.Active && TouchWalkControls.Running) return true;
         var gp = Gamepad.current;
         if (gp != null && PadInput.Control(gp, PadBindings.Run).isPressed) return true;
         var kb = Keyboard.current;

@@ -126,11 +126,11 @@ public class ChiefCheckInTests
             string IdOf(object h) => (string)hintType.GetField("id").GetValue(h);
             float LeftOf(object h) => (float)hintType.GetField("secondsLeft").GetValue(h);
 
-            push.Invoke(ui, new object[] { "tow", "Y", "Y", "Call a tow", Mathf.Infinity, false });
+            push.Invoke(ui, new object[] { "tow", "Y", "Y", "Call a tow", Mathf.Infinity, false, System.Type.Missing, System.Type.Missing, System.Type.Missing });
             update.Invoke(ui, null);                      // the sticky one is now on screen
             Assert.AreEqual("tow", IdOf(currentField.GetValue(ui)));
 
-            push.Invoke(ui, new object[] { "phone", "P", "VIEW", "Check your phone", Mathf.Infinity, true });
+            push.Invoke(ui, new object[] { "phone", "P", "VIEW", "Check your phone", Mathf.Infinity, true, System.Type.Missing, System.Type.Missing, System.Type.Missing });
 
             Assert.AreEqual(0f, LeftOf(currentField.GetValue(ui)), "The hint on screen should be fading out.");
             Assert.AreEqual(2, queue.Count);

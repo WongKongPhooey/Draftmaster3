@@ -65,6 +65,14 @@ public class TouchWalkControls : MonoBehaviour
 
     public static Vector2 Move => Active ? new Vector2(_state.MoveX, _state.MoveY) : Vector2.zero;
 
+    // Double-tap the stick to flip walk/run: thumb down-up-down, and the second landing is already running.
+    // The thumb on the glass is the "push" — a floating stick has no tilt until the thumb moves, and a tap
+    // is exactly a thumb that came down and went away again. A stick-zone touch is always the stick's, never
+    // a talk-tap, so the two never argue over a finger. Kept across the stick being put away (a
+    // conversation, a menu): the gait is the player's choice, not the screen's.
+    static readonly StickDoubleTap _gait = new StickDoubleTap();
+    public static bool Running => _gait.Running;
+
     // A tap is waiting, and taking it clears it. One caller gets each tap: the body that acts on it.
     public static bool TookTap(out Vector2 screenPoint)
     {
@@ -136,6 +144,12 @@ public class TouchWalkControls : MonoBehaviour
         // can be advanced and a cutscene can be tapped through wherever it hands control back.
         Active = StickShows;
 
+        // Until the opening has taught running there is nothing to toggle, and a double tap made early must
+        // not be waiting to turn into a run the moment the lock lifts.
+        if (PitLaneStart.RunLocked) _gait.Reset();
+        else if (Active) _gait.Update(_state.Walking ? 1f : 0f, Time.unscaledTime);
+        else _gait.Interrupt();
+
         if (_state.Tapped)
         {
             _tapPending = true;
@@ -145,6 +159,7 @@ public class TouchWalkControls : MonoBehaviour
 
     void Stand()
     {
+        _gait.Interrupt();
         if (!Active && !_tapPending) return;
         Active = false;
         _tapPending = false;
@@ -226,8 +241,10 @@ public class TouchWalkControls : MonoBehaviour
             PixelGUI.Frame(knobRect, Fade(PixelGUI.Ink, 0.8f * alpha));
         }
 
-        if (!_state.Walking)
-            Label(new Rect(ringRect.x, ringRect.y - PixelGUI.LineH, ringRect.width, PixelGUI.LineH), "WALK", 0.7f);
+        // Always up, held or not: the second half of a double tap is a held thumb, and the gait it just
+        // flipped to should read the moment it flips.
+        Label(new Rect(ringRect.x, ringRect.y - PixelGUI.LineH, ringRect.width, PixelGUI.LineH),
+                  _gait.Running ? "RUN" : "WALK", 0.7f);
     }
 
     void Label(Rect r, string text, float alpha)

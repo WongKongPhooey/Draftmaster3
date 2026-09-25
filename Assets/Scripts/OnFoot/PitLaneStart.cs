@@ -573,7 +573,15 @@ public class PitLaneStart : MonoBehaviour
     void OnDestroy()
     {
         PlacedNPC.CutsceneFinished -= OnPlacedCutsceneFinished;
+        RunLocked = false;
     }
+
+    // No running until the run hint has been shown. The hint itself waits on the phone lesson
+    // (ChiefCheckInBeat.HoldsRunHint), so on the opening walk that is: phone goes off, phone out, phone away,
+    // "run" taught — and only then do the legs work. Taught once per save, so a returning player never sees
+    // the lock; and only while this walk is still the one that will teach it, so a scene or phase that never
+    // shows the hint can't leave the player unable to run. OnFootController reads it.
+    public static bool RunLocked { get; private set; }
 
     // An opening beat has finished: put the objective back on screen and only now teach the run control
     // (the player has just got movement back, and the hint would otherwise have landed under the dialogue).
@@ -610,6 +618,9 @@ public class PitLaneStart : MonoBehaviour
             _cam.orthographicSize = Mathf.Lerp(_cam.orthographicSize, _orthoTarget, 1f - Mathf.Exp(-orthoLerpSpeed * Time.deltaTime));
 
         StepIndoorZoom();
+
+        RunLocked = showControlHints && _player != null && !_entered && _phase == EntryPhase.Walking
+                    && !ControlHints.Taught("run");
 
         if (_player == null) return;
 
@@ -724,7 +735,8 @@ public class PitLaneStart : MonoBehaviour
         if (!ControlHints.Taught("run") && !ChiefCheckInBeat.HoldsRunHint
             && (_runHintDue || Vector2.Distance(_player.transform.position, _hintOrigin) > runHintAfterMetres))
         {
-            ControlHints.Show("run", "LEFT SHIFT", InputGlyphs.Pad(PadBindings.Run), "Hold to run");
+            ControlHints.Show("run", "LEFT SHIFT", InputGlyphs.Pad(PadBindings.Run), "Hold to run",
+                              touchText: "Double-tap the left stick to run / walk");
             _hintedRun = true;
             _runHintDue = false;
         }

@@ -28,6 +28,9 @@ public class ControlHintUI : MonoBehaviour
     {
         public string id;
         public string keyboardLabel, gamepadLabel, text;
+        // What the hint says instead on a touch screen, with no keycap: a phone has no Left Shift, and the
+        // control it has instead is a gesture ("Double-tap the left stick to run / walk"). Null = same text.
+        public string touchText;
         public float secondsLeft;      // Infinity = until Hide(id)
         // A hint for a one-press action is also the button for it: tapped or clicked, it does what the key
         // does. Null for hints that teach a held or continuous control (run, throttle), which stay plain.
@@ -67,20 +70,21 @@ public class ControlHintUI : MonoBehaviour
     // time it had left. For a prompt the player cannot get past without — a sticky hint already on screen
     // would otherwise hold it back for ever.
     public void Push(string id, string keyboardLabel, string gamepadLabel, string text, float seconds, bool urgent = false,
-                     System.Action onPress = null, PixelGUI.ActionIcon icon = PixelGUI.ActionIcon.Next)
+                     System.Action onPress = null, PixelGUI.ActionIcon icon = PixelGUI.ActionIcon.Next,
+                     string touchText = null)
     {
         // Re-showing a live hint just refreshes its timer rather than queueing a duplicate.
         if (_current != null && _current.id == id)
         {
             _current.secondsLeft = seconds;
-            _current.onPress = onPress; _current.icon = icon;
+            _current.onPress = onPress; _current.icon = icon; _current.touchText = touchText;
             return;
         }
 
         var hint = new Hint
         {
             id = id, keyboardLabel = keyboardLabel, gamepadLabel = gamepadLabel, text = text, secondsLeft = seconds,
-            onPress = onPress, icon = icon,
+            onPress = onPress, icon = icon, touchText = touchText,
         };
         if (urgent)
         {
@@ -91,7 +95,7 @@ public class ControlHintUI : MonoBehaviour
                 {
                     id = _current.id, keyboardLabel = _current.keyboardLabel, gamepadLabel = _current.gamepadLabel,
                     text = _current.text, secondsLeft = _current.secondsLeft,
-                    onPress = _current.onPress, icon = _current.icon,
+                    onPress = _current.onPress, icon = _current.icon, touchText = _current.touchText,
                 });
                 _current.secondsLeft = 0f;
             }
@@ -149,15 +153,22 @@ public class ControlHintUI : MonoBehaviour
         _icons.Clear();
         if (pad && !InputGlyphs.TryIcons(_current.gamepadLabel, _icons))
             key = InputGlyphs.PadLabel(_current.gamepadLabel);
+        string text = _current.text;
+        if (InputGlyphs.UsingTouch && !string.IsNullOrEmpty(_current.touchText))
+        {
+            key = null;
+            _icons.Clear();
+            text = _current.touchText;
+        }
 
         var prev = GUI.color;
         GUI.color = new Color(prev.r, prev.g, prev.b, prev.a * _alpha);
-        if (_current.onPress == null) PixelGUI.Prompt(key, _current.text, _icons);
+        if (_current.onPress == null) PixelGUI.Prompt(key, text, _icons);
         else
         {
             // Pressable only while it is properly on screen, not in the tail of its fade.
             var hint = _current;
-            if (PixelGUI.PromptButton(key, hint.text, _icons, hint.icon) && _alpha > 0.5f && hint.secondsLeft > 0f)
+            if (PixelGUI.PromptButton(key, text, _icons, hint.icon) && _alpha > 0.5f && hint.secondsLeft > 0f)
                 _pressed = hint;
         }
         GUI.color = prev;
@@ -192,12 +203,13 @@ public static class ControlHints
     // `icon` is the picture it wears on a touch screen.
     public static void Show(string id, string keyboardLabel, string gamepadLabel, string text,
                             float seconds = 5f, bool once = true, bool urgent = false,
-                            System.Action onPress = null, PixelGUI.ActionIcon icon = PixelGUI.ActionIcon.Next)
+                            System.Action onPress = null, PixelGUI.ActionIcon icon = PixelGUI.ActionIcon.Next,
+                            string touchText = null)
     {
         if (once && AlreadyTaught(id)) return;
         var ui = ControlHintUI.Instance;
         if (ui == null) return;
-        ui.Push(id, keyboardLabel, gamepadLabel, text, seconds, urgent, onPress, icon);
+        ui.Push(id, keyboardLabel, gamepadLabel, text, seconds, urgent, onPress, icon, touchText);
         if (once) MarkTaught(id);
     }
 
