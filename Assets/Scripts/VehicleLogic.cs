@@ -147,7 +147,6 @@ public class VehicleLogic : MonoBehaviour
 
 		zeroToSixty = currentVehicleInfo.zeroToSixty;
 
-		//Debug.Log("Top Speed: " + currentVehicleInfo.topSpeed);
 		accelerationCurve = currentVehicleInfo.accelerationCurve;
 		//accelerationCurve.keys[2] = new Keyframe(15,currentTrackInfo.topSpeed);
 
@@ -177,7 +176,6 @@ public class VehicleLogic : MonoBehaviour
 		turnSpeeds = new AnimationCurve[currentTrackInfo.totalTurns];
 
 		for(int i=0;i<currentTrackInfo.totalTurns;i++){
-			//Debug.Log("Turn: " + i + " - Entry:" + (currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i]));
 			turnEntries[i] = currentTrackInfo.turnPositions[i] - currentTrackInfo.turnLeadIn[i];
 			turnExits[i] = currentTrackInfo.turnPositions[i] + currentTrackInfo.turnLengths[i] + currentTrackInfo.turnLeadOut[i];
 			steeringAngles[i] = currentTrackInfo.steeringAngles[i];
@@ -242,11 +240,9 @@ public class VehicleLogic : MonoBehaviour
 			
 			//Update the car's rotation based on steering input
 			worldDirection += direction.x * sensitivity * Time.deltaTime;
-			//Debug.Log("Player rotation: " + worldDirection);
 
 			//Compare the rotation of the car to the circuit, and convert to radians
 			diffToWorldRads = ((worldDirection - EnvironmentManager.circuitRotation) * 3.14159f) / 180f;
-        	//Debug.Log("Player rotation rads: " + diffToWorldRads);
 
 			//Manual steering control
 			if (onTurn == true){
@@ -271,7 +267,6 @@ public class VehicleLogic : MonoBehaviour
 
 		#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log("Distance opponent moved X: " + playerSpeedMetres + " - " + speedMetres);
 			}
 		#endif
 
@@ -406,7 +401,6 @@ public class VehicleLogic : MonoBehaviour
 
 	bool checkArcStatus(int turn, float location, bool isInArc, float yRatio){
 		//Are we in a turn (incl. the arc)?
-		Debug.Log(turn);
 		if(location > turnExits[turn]){
 			updateTurnCount(turn);
 			return false;
@@ -432,7 +426,6 @@ public class VehicleLogic : MonoBehaviour
 		
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log("High turn " + turn + " arc calculated: " + yRatio);
 			}
 			#endif
 
@@ -444,7 +437,6 @@ public class VehicleLogic : MonoBehaviour
 			
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log("Low turn " + turn + " arc calculated: " + yRatio);
 				}
 				#endif
 
@@ -454,7 +446,6 @@ public class VehicleLogic : MonoBehaviour
 			
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log("Mid turn " + turn + " arc calculated: " + yRatio);
 				}
 				#endif
 			}
@@ -536,7 +527,6 @@ public class VehicleLogic : MonoBehaviour
 
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log("High Line Speed: " + highLineSpeed + " - Low Line Speed: " + lowLineSpeed + " - Speed Ratio: " + speedRatio + " - Speed Spread: " + speedSpread + " - Arc Ratio: " + arcRatio + " - High Line Fast?: " + highLineFast);
 			}
 			#endif
 		}
@@ -574,7 +564,6 @@ public class VehicleLogic : MonoBehaviour
 
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log("Turn updated to: " + turn);
 		}
 		#endif
 	}
@@ -663,7 +652,6 @@ public class VehicleLogic : MonoBehaviour
 			if(hitLaneLeft == true){
 
 				#if UNITY_EDITOR
-				//Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car inside");
 				#endif
 
 				recalcTurnArc(turn, true, false);
@@ -671,7 +659,6 @@ public class VehicleLogic : MonoBehaviour
 				if(hitLaneRight == true){
 
 					#if UNITY_EDITOR
-					//Debug.Log("#" + this.gameObject.name + " - Adjusted arc to avoid car outside");
 					#endif
 
 					recalcTurnArc(turn, false, true);
@@ -687,7 +674,6 @@ public class VehicleLogic : MonoBehaviour
 		// One log per contact, and a race is thousands of them: the editor builds a stack trace, adds a
 		// console entry and writes the log file for each, which lands as a hitch exactly when cars are
 		// piling into each other. Left here commented, the way the rest of this file's tracing is.
-		//Debug.Log(this.gameObject.name + " collides with " + collision.gameObject.name + "");
 		startWreck();
 	}
 
@@ -697,7 +683,6 @@ public class VehicleLogic : MonoBehaviour
 		//Bailout
 		if (isWrecking == false)
 		{
-			//Debug.Log("Initial wrecking force: " + speedMetres);
 		} else {
 			return;
 		}
@@ -721,7 +706,6 @@ public class VehicleLogic : MonoBehaviour
 		sparksCooldown = 99999;
 		*/
 
-		Debug.Log("Max wall force: " + speedMetres + ", Actual: " + (speedMetres * (1 - Mathf.Sin(diffToWorldRads))));
 		if (rb == null) { rb = GetComponent<Rigidbody2D>(); }
 		if (rb != null)
 		{
@@ -801,7 +785,6 @@ public class VehicleLogic : MonoBehaviour
 			this.gameObject.transform.position = new Vector3(1.5f,pos.y,pos.z);
 		}
 
-		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + wreckDecel);
 		if (sparksEndSpeed < wreckDecel)
 		{
 			//Align particle system to global track direction

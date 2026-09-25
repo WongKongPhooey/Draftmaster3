@@ -47,7 +47,7 @@ public class TitleCrashScene : MonoBehaviour
              "resolve to a livery sprite get used.")]
     public int[] fillerCarNumbers = { 24, 11, 5, 22, 9, 19, 12, 48, 3, 2, 20, 1 };
     [Tooltip("Number the hero car wears when there's no career save to read one from.")]
-    public int fallbackHeroNumber = 8;
+    public int fallbackHeroNumber = PlayerDriver.DefaultCarNumber;
     [Tooltip("Seed for the whole staging — who is in the accident, where it happens, how hard, and which " +
              "cars are wearing which paint. Left at 0 a fresh one is drawn every time the title screen " +
              "opens; set it to anything else to pin one shot and get it back every time.")]

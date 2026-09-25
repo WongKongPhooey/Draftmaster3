@@ -22,6 +22,10 @@ public class WeekendVenueSites : MonoBehaviour
 {
     public static WeekendVenueSites Instance { get; private set; }
 
+    // The venues are standing. Anything else placed loose in the paddock (a driver mobbed by fans) waits for
+    // this, so it can keep out of their way rather than be built over.
+    public bool IsBuilt => _root != null;
+
     // Room sizes, metres. Blocked out at the scale of the RV interior: a person is ~0.5m across at this
     // project's pixel standard, so a 14m room with three rows of seats reads as a room, not a hangar.
     const float RoomWidth = 16f;
@@ -105,11 +109,9 @@ public class WeekendVenueSites : MonoBehaviour
 
         if (!IsPaddockScene())
         {
-            Debug.Log("WeekendVenues: not a paddock scene, nothing to place.");
             Destroy(gameObject);
             yield break;
         }
-        Debug.Log("WeekendVenues: building venues into " + gameObject.scene.name + ".");
 
         // Wait for the motorhome lot to have actually parked its RVs, not just for the component to exist:
         // it waits on the database first, and every venue is placed relative to the end of that row. Build
@@ -495,7 +497,6 @@ public class WeekendVenueSites : MonoBehaviour
             Debug.Log("WeekendVenues: the stands are outside the paddock — watching a session starts at the gate.");
         }
 
-        if (placed > 0) Debug.Log($"WeekendVenues: {placed} grandstand seat(s) to watch a session from.");
     }
 
     // ------------------------------------------------------------------ venues built into the paddock
@@ -552,7 +553,6 @@ public class WeekendVenueSites : MonoBehaviour
         Vector3 door = Walkable(room.transform.TransformPoint(new Vector3(0f, -hy + 0.9f, 0f)));
         PaddockProps.Anchor(_root, WeekendVenue.MeetingRoom, door, door, arriveRange: 4f);
 
-        Debug.Log($"WeekendVenues: drivers' room with {seats} seat(s) — one per driver entered.");
     }
 
     // A chair per driver at the circuit, laid out in rows facing the top table. Every entry in all three

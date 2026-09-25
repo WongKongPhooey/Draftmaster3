@@ -30,7 +30,6 @@ public class PlayerDialogue : MonoBehaviour
     }
 
     public void receiveDialogue(string dialogueLine, GameObject dialogueCanvas, TextAsset inkJSON) {
-        Debug.Log("Line received for player: " + dialogueLine);
         dialogueCanvasRenderer.enabled = true;
         dialogueOutput.text = "";
         dialogueReceiver = dialogueCanvas;
@@ -52,7 +51,6 @@ public class PlayerDialogue : MonoBehaviour
     }
 
     public void respondToDialogue(){
-        Debug.Log("Responding..");
         dialogueCanvasRenderer.enabled = false;
         dialogueReceiver.GetComponent<DialogueHandler>().AdvanceDialogue(receivedTextJSON);
     }

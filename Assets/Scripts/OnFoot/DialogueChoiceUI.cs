@@ -41,6 +41,7 @@ public class DialogueChoiceUI : MonoBehaviour
     MonoBehaviour _owner;          // conversation that opened it; the panel closes itself if this dies
     int _index;
     int _clicked = -1;             // set by OnGUI on a mouse click, dispatched in Update
+    float _openedAt;               // unscaled time the question went up; earlier fingers are not answers
     bool _confirmHeldPrev, _upHeldPrev, _downHeldPrev;
     Vector2 _lastMousePos;
     float _mouseMovedAt = -99f;    // in-game OnGUI gets no MouseMove events, so track the pointer ourselves
@@ -66,6 +67,7 @@ public class DialogueChoiceUI : MonoBehaviour
         ui._index = 0;
         ui._clicked = -1;
         ui._open = true;
+        ui._openedAt = Time.unscaledTime;
         // Whatever key opened this panel is probably still held — start latched so it can't instantly confirm.
         ui._confirmHeldPrev = true;
         ui._upHeldPrev = ui._downHeldPrev = true;
@@ -240,7 +242,10 @@ public class DialogueChoiceUI : MonoBehaviour
             }
 
             var textRect = new Rect(row.x + gutter, row.y, row.width - gutter, row.height);
-            if (GUI.Button(textRect, _options[i], selected ? PixelGUI.RowSelected : PixelGUI.Row))
+            // A finger that was already down when the question came up was tapping through the lines before it;
+            // only one put down on the panel itself answers it.
+            if (TouchTaps.Button(textRect, _options[i], selected ? PixelGUI.RowSelected : PixelGUI.Row) &&
+                (!TouchTaps.Driven || TouchTaps.TapDownAt > _openedAt))
                 _clicked = i;
             cy += scaledRow;
         }

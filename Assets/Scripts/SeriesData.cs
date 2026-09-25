@@ -825,7 +825,6 @@ public class SeriesData : MonoBehaviour{
 						for(int j=0;j<=99;j++){
 							if(DriverNames.getName(seriesPrefix,j) != null){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log(category + " Added: #" + i);
 							}
 						}
 					}
@@ -839,7 +838,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log("Rookie Added: #" + i);
 							}
 						}
 					}
@@ -852,7 +850,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 1){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log("1* Rarity Added: #" + i);
 							}
 						}
 					}
@@ -865,7 +862,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 2){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log("2* Rarity Added: #" + i);
 							}
 						}
 					}
@@ -878,7 +874,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 3){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log("3* Rarity Added: #" + i);
 							}
 						}
 					}
@@ -891,7 +886,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) >= 3){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log("4* Rarity Added: #" + i);
 							}
 						}
 					}
@@ -904,7 +898,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getRarity(seriesPrefix,j) == 4){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log("4* Rarity Added: #" + i);
 							}
 						}
 					}
@@ -923,7 +916,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getManufacturer(seriesPrefix,j) == category){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log(category + " Added: #" + i);
 							}
 						}
 					}
@@ -981,7 +973,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getTeam(seriesPrefix,j) == category){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log(category + " Added: #" + i);
 							}
 						}
 					}
@@ -1002,7 +993,6 @@ public class SeriesData : MonoBehaviour{
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == category){
 								validDriver.Add("" + seriesPrefix + j + "");
-								//Debug.Log(category + " Added: #" + i);
 							}
 						}
 					}
@@ -1014,7 +1004,6 @@ public class SeriesData : MonoBehaviour{
 					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							validDriver.Add("" + seriesPrefix + j + "");
-							//Debug.Log("Added: #" + i);
 						}
 					}
 				}

@@ -34,7 +34,6 @@ public class DialogueHandler : MonoBehaviour
 
     public void AdvanceDialogue(TextAsset inkJSON){
         
-        //Debug.Log("Advancing Dialogue: " + isOutputting);
 
         //Can't advance while it's typing out
         if(isOutputting == true){
@@ -44,7 +43,6 @@ public class DialogueHandler : MonoBehaviour
         dialogueOutput.text = "";
         if(currentDialogue.canContinue){
             dialogueText = currentDialogue.Continue();
-            //Debug.Log("Next line: " + dialogueText);
             currentTags = currentDialogue.currentTags;
             if((currentTags.Count > 0)&&(currentTags[0] == "player")){
                 isOutputting = false;
@@ -52,7 +50,6 @@ public class DialogueHandler : MonoBehaviour
                 playerDialogue.GetComponent<PlayerDialogue>().receiveDialogue(dialogueText, dialogueCanvas, inkJSON);
                 dialogueCanvasRenderer.enabled = false;
             } else {
-                //Debug.Log("Read out the dialogue");
                 dialogueCanvasRenderer.enabled = true;
                 isOutputting = true;
                 StartCoroutine(DialogueLine());
@@ -67,7 +64,6 @@ public class DialogueHandler : MonoBehaviour
         //Initialise a new dialogue
         if(dialogueCanvasRenderer.enabled == false){
             dialogueCanvasRenderer.enabled = true;
-            Debug.Log(dialogueCanvas + " - is now active");
             currentDialogue = new Story(inkJSON.text);
 
             AdvanceDialogue(inkJSON);

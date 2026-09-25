@@ -95,7 +95,6 @@ public class VendingMachine : NPCInteractable
             return;
         }
 
-        Debug.Log($"VendingMachine: took {drink.name} ({WeekendDrinks.Effect(drink)}) for weekend {weekend}.", this);
 
         var said = new System.Collections.Generic.List<string> { drink.flavour + " #player" };
         if (announceEffect)

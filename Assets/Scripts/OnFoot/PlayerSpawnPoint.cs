@@ -20,7 +20,7 @@ public class PlayerSpawnPoint : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(preferredName))
         {
-            var all = FindObjectsByType<PlayerSpawnPoint>();
+            var all = FindObjectsByType<PlayerSpawnPoint>(FindObjectsSortMode.None);
             for (int i = 0; i < all.Length; i++)
                 if (all[i].isActiveAndEnabled && all[i].gameObject.name == preferredName)
                     return all[i];
@@ -31,7 +31,7 @@ public class PlayerSpawnPoint : MonoBehaviour
     // Weighted-random pick over the enabled markers in the scene. Null if none are usable.
     public static PlayerSpawnPoint Pick()
     {
-        var all = FindObjectsByType<PlayerSpawnPoint>();
+        var all = FindObjectsByType<PlayerSpawnPoint>(FindObjectsSortMode.None);
         float total = 0f;
         for (int i = 0; i < all.Length; i++)
             if (all[i].isActiveAndEnabled && all[i].weight > 0f) total += all[i].weight;

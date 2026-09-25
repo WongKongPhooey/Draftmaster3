@@ -151,7 +151,6 @@ public class TrackMiniMap : MonoBehaviour
 
         _mapTex.SetPixels32(pxs);
         _mapTex.Apply();
-        Debug.Log($"[MiniMap] baked {_builder.name}: bounds {_worldRect.size.x:0}x{_worldRect.size.y:0}m");
     }
 
     Vector2 WorldToMap01(Vector2 world)

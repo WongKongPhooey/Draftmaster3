@@ -104,8 +104,6 @@ public class SponsorPoacherNPC : NPCInteractable
                 "Get them on the car, mind — a sponsor on a shelf pays nobody. " +
                 $"And I want that top {deal.targetPosition} twice before this runs out.",
             });
-            Debug.Log($"SponsorPoacherNPC: signed {sponsor.Name} at the winner's circle — " +
-                      $"${deal.perRace:N0}/race for {deal.racesTotal} races, {deal.TargetText}.", this);
         }
         else
         {

@@ -68,7 +68,6 @@ public class ColorPicker : MonoBehaviour
 	public void savePaint(){
 		foreach(GameObject layer in paintableLayers){
 			PlayerPrefs.SetString("PaintBooth" + layer.name,layer.GetComponent<Image>().color.ToString());
-			Debug.Log("Saved PaintBooth" + layer.name + ": " + layer.GetComponent<Image>().color.ToString());
 		}
 	}
 }

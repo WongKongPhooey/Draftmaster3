@@ -2,9 +2,9 @@ using System.Collections.Generic;
 
 namespace Draftmaster.Controls
 {
-    // Where the on-screen walking controls sit: a floating left stick, and nothing else. The paddock has no
-    // pedals and no wheel — it has a thumb that pushes a direction, and a finger that points at whoever the
-    // player wants to talk to.
+    // Where the on-screen walking controls sit: a floating left stick, and the phone button tucked in the
+    // bottom-left corner. The paddock has no pedals and no wheel — it has a thumb that pushes a direction, and
+    // a finger that points at whoever the player wants to talk to.
     //
     // The stick FLOATS: there is no fixed ring to find, the ring appears wherever the thumb lands in the left
     // half of the screen. A fixed one has to be hunted for on a screen the player is not looking at the edges
@@ -21,6 +21,7 @@ namespace Draftmaster.Controls
         public const float Travel = 26f;          // thumb travel from centre to a full push
         public const float Deadzone = 0.22f;      // of travel; below this the thumb is resting, not pushing
         public const float ZoneTop = 0.18f;       // the stick takes the left side below this much of the height
+        public const float PhoneButtonSize = 34f; // the phone's own button, in the bottom-left corner
 
         // A finger is a tap rather than a poke if it lifts soon enough and has not wandered.
         public const float TapSeconds = 0.45f;
@@ -31,6 +32,7 @@ namespace Draftmaster.Controls
 
         public readonly TouchRect stickZone;      // a thumb landing here takes the stick
         public readonly TouchRect stickRest;      // where the ring waits while nobody holds it
+        public readonly TouchRect phoneButton;    // takes the phone out / puts it away; never starts the stick
         public readonly float travel;
         public readonly float tapSlop;
 
@@ -49,7 +51,11 @@ namespace Draftmaster.Controls
             float zoneTop = safe.y + safe.height * ZoneTop;
             stickZone = new TouchRect(safe.x, zoneTop, safe.width * 0.5f, safe.yMax - zoneTop);
 
-            stickRest = new TouchRect(safe.x + m, safe.yMax - m - ring, ring, ring);
+            // The phone owns the very corner, so the resting ring steps right to clear it. The ring is only a
+            // hint of where a thumb goes — the stick still floats to wherever the thumb actually lands.
+            float phone = PhoneButtonSize * u;
+            phoneButton = new TouchRect(safe.x + m, safe.yMax - m - phone, phone, phone);
+            stickRest = new TouchRect(phoneButton.xMax + m, safe.yMax - m - ring, ring, ring);
         }
     }
 
@@ -128,7 +134,10 @@ namespace Draftmaster.Controls
                 {
                     f = new Finger
                     {
-                        role = layout.stickZone.Contains(t.x, t.y)
+                        // A finger on the phone button is the button's (IMGUI reads it); it neither walks nor
+                        // taps whoever is stood behind the icon.
+                        role = layout.phoneButton.Contains(t.x, t.y) ? Role.Ignored
+                             : layout.stickZone.Contains(t.x, t.y)
                                    ? (_walking ? Role.Ignored : Role.Stick)
                                    : Role.Tap,
                         downX = t.x,

@@ -70,13 +70,11 @@ public class CollectRewardsUI : MonoBehaviour
 		moneyCount = 0;
 		playerMoney = PlayerPrefs.GetInt("PrizeMoney");
         prizeType=PlayerPrefs.GetString("PrizeType");
-        Debug.Log(prizeType);
 
         List<string> validRewards = new List<string>();
         switch(prizeType){
             case "MysteryGarage":
                 validRewards = getValidRewards("");
-				Debug.Log("Valid Rewards: " + validRewards.Count);
                 AssignPrizes(validRewards[Random.Range(0,validRewards.Count)], randCarPartsAmt(25));
                 break;
             case "FreeDaily":
@@ -143,7 +141,6 @@ public class CollectRewardsUI : MonoBehaviour
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
                                     rewardsList.Add("" + seriesPrefix + j + "");
                                 }
-								//Debug.Log(category + " Added: #" + i);
 							}
 						}
 					}
@@ -310,15 +307,11 @@ public class CollectRewardsUI : MonoBehaviour
 				}
 			    break;			
 			default:
-				//Debug.Log("Looping through possible rewards");
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					//Debug.Log("Looping through " + seriesPrefix);
 					for(int j=0;j<99;j++){
-						//Debug.Log("Looping through " + seriesPrefix + " #" + j);
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-								//Debug.Log("Adding " + seriesPrefix + j + "");
                                 rewardsList.Add("" + seriesPrefix + j + "");
                             }    
 						}

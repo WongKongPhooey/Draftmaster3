@@ -166,7 +166,10 @@ public class SplineInputDriver : MonoBehaviour
             _hasPrevError = true;
             float steerAngleDeg = Mathf.Clamp(headingError * steerGain + errorRate * steerDamping, -maxSteer, maxSteer) * authority;
             // PlayerVehicleController maps desiredSteer = -steerIn * maxSteeringAngle, so invert to request this angle.
-            steerInput = Mathf.Clamp(-steerAngleDeg / maxSteer, -1f, 1f);
+            steerInput = -steerAngleDeg / maxSteer;
+            // Hold against bent bodywork's pull (feed-forward), rather than letting the heading loop find it by
+            // running a standing error — which on a heavily damaged car was metres off the line and then off.
+            steerInput = Mathf.Clamp(steerInput + _car.DamagePullSteerInput, -1f, 1f);
         }
 
         // --- Speed: throttle when under the commanded speed, brake when over.
@@ -222,6 +225,10 @@ public class SplineInputDriver : MonoBehaviour
         float grip = TrackConditions.AiEffective;
         if (_tireModel != null) grip *= _tireModel.OverallGrip;
         else if (_tireState != null) grip *= _tireState.GripMultiplier;
+        // Bent bodywork costs grip in the car's friction circle; without it here a car carrying heavy damage
+        // was still commanded its undamaged corner speed and ran wide (incident log 2026-09-24: 0.85-0.90
+        // damage cars going off in the R133 right-hander at 40 m/s, well under the undamaged cap of 57).
+        if (_car != null) grip *= _car.DamageGripFactor;
         return vi.maxLateralG * Mathf.Max(0.05f, grip) * 9.81f;
     }
 }

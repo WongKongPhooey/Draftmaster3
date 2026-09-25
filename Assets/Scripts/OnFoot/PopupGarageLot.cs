@@ -236,10 +236,6 @@ public class PopupGarageLot : MonoBehaviour
         if (area != null) area.InstallWalkablePocket(transform);
         else ExtendWalkableArea(line.axis, line.front);
 
-        Debug.Log($"PopupGarageLot: {count} team garages in {rows} line(s) of {line.perRow}, {line.pitch:0.0}m apart, " +
-                  $"{parked} with the car at home" +
-                  (area != null ? $", packed into '{area.name}'" : "") +
-                  ". Rooms build as the player walks up to them.", this);
     }
 
     PopupGarageRig BuildRig(Transform root, Vector3 position, Quaternion rotation, DriverMotorhomeLot.Slot slot)

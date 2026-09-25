@@ -77,7 +77,6 @@ public class StoreUI : MonoBehaviour
 		}
 		
 		string customStoreWeeklyPicks = PlayerPrefs.GetString("StoreDailySelects");
-		Debug.Log("Online store: " + customStoreWeeklyPicks);
 		
 		if(customStoreWeeklyPicks != ""){
 			weeklyPicks.Clear();
@@ -85,7 +84,6 @@ public class StoreUI : MonoBehaviour
 			foreach(string item in onlineSelects){
 				weeklyPicks.Add(item);
 			}
-			Debug.Log("Total shop items added: " + weeklyPicks.Count);
 		} else {
 			weeklyPicksMessage.SetActive(true);
 		}
@@ -122,7 +120,6 @@ public class StoreUI : MonoBehaviour
 				//Extract series from front
 				carSeries = carNum.Substring(0, 5);
 				carNum = carNum.Remove(0, 5);
-				//Debug.Log("Series " + carSeries);
 				
 				//Extract alt from end
 				carAlt = carNum.Substring(carNum.Length-1);
@@ -200,7 +197,6 @@ public class StoreUI : MonoBehaviour
 					dailyRandomsList += "" + randSeries + "" + rand + ",";
 				}
 			}
-			//Debug.Log("Daily Picks: " + dailyRandomsList);
 			PlayerPrefs.SetString("DailyRandoms",dailyRandomsList);
 		} else {
 			//Retrieve Daily Random Picks
@@ -208,7 +204,6 @@ public class StoreUI : MonoBehaviour
 			dailyRandoms.Clear();
 			foreach(string dailyRand in dailyRandomsList){
 				dailyRandoms.Add(dailyRand);
-				//Debug.Log(dailyRand);
 			}
 		}
 		
@@ -257,7 +252,6 @@ public class StoreUI : MonoBehaviour
 				carAlt = carNum.Substring(carNum.Length-1);
 				carAltInt = int.Parse(carAlt);
 				carNum = carNum.Remove(carNum.Length-1);
-				//Debug.Log("Alt " + carAlt);
 				
 				//Remove the remaining chars (livery/alt)
 				carNum = Regex.Replace(carNum, "[A-Za-z ]", "");
@@ -349,14 +343,11 @@ public class StoreUI : MonoBehaviour
 				//Extract series from front
 				carSeries = carNum.Substring(0, 5);
 				carNum = carNum.Remove(0, 5);
-				Debug.Log("Series " + carSeries);
 				
 				//Extract alt from end
 				carAlt = carNum.Substring(carNum.Length-1);
-				Debug.Log("Alt " + carAlt);
 				carAltInt = int.Parse(carAlt);
 				carNum = carNum.Remove(carNum.Length-1);
-				Debug.Log("Alt " + carAlt);
 				
 				//Remove the remaining chars (livery/alt)
 				carNum = Regex.Replace(carNum, "[A-Za-z ]", "");
@@ -413,56 +404,47 @@ public class StoreUI : MonoBehaviour
 		
 		switch(product.definition.id){
 			case gears60:
-				Debug.Log("Added 150 gears");
 				gears+=150;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","150 Gears have been added!","dm2logo");
 				break;
 			case gears125:
-				Debug.Log("Added 450 gears");
 				gears+=450;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","450 Gears have been added!","dm2logo");
 				break;
 			case gears200:
-				Debug.Log("Added 1100 gears");
 				gears+=1100;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","1100 Gears have been added!","dm2logo");
 				break;
 			case gears500:
-				Debug.Log("Added 2500 gears");
 				gears+=2500;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","2500 Gears have been added!","dm2logo");
 				break;
 			case smallgears:
-				Debug.Log("Added 80 gears");
 				gears+=80;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","80 Gears have been added!","dm2logo");
 				break;
 			case mediumgears:
-				Debug.Log("Added 250 gears");
 				gears+=250;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","250 Gears have been added!","dm2logo");
 				break;
 			case largegears:
-				Debug.Log("Added 600 gears");
 				gears+=600;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","600 Gears have been added!","dm2logo");
 				break;
 			case extralargegears:
-				Debug.Log("Added 1500 gears");
 				gears+=1500;
 				PlayerPrefs.SetInt("Gears",gears);
 				alertPopup.GetComponent<AlertManager>().showPopup("Purchase Successful","1500 Gears have been added!","dm2logo");
 				break;
 			case negotiator:
 			case negotiatorios:
-				Debug.Log("Added 999 contracts");
 				transfersMax=999;
 				transfersLeft=999;
 				PlayerPrefs.SetInt("TransferTokens",transfersMax);

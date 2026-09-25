@@ -38,7 +38,6 @@ public class AlertManager : MonoBehaviour
 
 	public void showPopup(string title, string content, string image, bool progress = false, int progressCurrent = 0, int progressTarget = 999, Texture2D rawImage = null){
 		
-		Debug.Log("Show Popup");
 		
 		alertTitle.GetComponent<TMPro.TMP_Text>().text = title;
 		alertText.GetComponent<TMPro.TMP_Text>().text = content;

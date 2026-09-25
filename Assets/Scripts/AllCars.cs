@@ -75,7 +75,6 @@ public class AllCars : MonoBehaviour {
 				}
 			}
 		}
-		Debug.Log("Local Car Count: " + totalUnlocks);
 		
 		if(PlayerPrefs.HasKey("TotalUnlocks")){
 			//If you have more than just the starter car..
@@ -269,7 +268,6 @@ public class AllCars : MonoBehaviour {
 					
 					//Initialise (can be used for dev reset)
 					if(!PlayerPrefs.HasKey(seriesPrefix + carCount + "Gears")){
-						//Debug.Log("#" + carCount + " Not Initialised");
 						PlayerPrefs.SetInt(seriesPrefix + carCount + "Unlocked",0);
 						PlayerPrefs.SetInt(seriesPrefix + carCount + "Gears",0);
 						PlayerPrefs.SetInt(seriesPrefix + carCount + "Class",0);
@@ -530,7 +528,6 @@ public class AllCars : MonoBehaviour {
 			for(int paint=1;paint<10;paint++){
 				if(AltPaints.cup2020AltPaintNames[car,paint] != null){
 					if(PlayerPrefs.GetInt(seriesPrefix + car + "Alt" + paint + "Unlocked") == 1){
-						//Debug.Log("Saved alt: " + AltPaints.cup2020AltPaintNames[car,paint]);
 						JSONOutput += "," + paint + "";
 					}
 				}

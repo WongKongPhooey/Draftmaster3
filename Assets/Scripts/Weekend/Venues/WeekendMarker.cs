@@ -184,7 +184,6 @@ public class WeekendMarker : MonoBehaviour
             adopted++;
         }
 
-        if (adopted > 0) Debug.Log($"WeekendMarker: adopted {adopted} object(s) named '*{NameSuffix}'.");
         return adopted;
     }
 

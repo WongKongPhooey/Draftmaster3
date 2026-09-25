@@ -45,7 +45,6 @@ public class UIAnimate : MonoBehaviour
 	}
 	void resetCam(){
 		LeanTween.move(gameObject, shakeStartPos, 0.1f);
-		Debug.Log("Shake Strength: " + shakeStrength);
 	}
 	
 	public void setCardDown(){
@@ -70,6 +69,5 @@ public class UIAnimate : MonoBehaviour
 	
 	public void hide(){
 		LeanTween.scale(gameObject, new Vector3(0f,0f,0f), 0f);
-		//Debug.Log("Hide the popup");
 	}
 }

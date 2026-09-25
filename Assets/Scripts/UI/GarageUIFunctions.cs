@@ -43,7 +43,6 @@ public class GarageUIFunctions : MonoBehaviour
 	}
 
 	public void classUp(bool reloadFrame = true){
-		Debug.Log("Class Me Up Scotty!");
 		int carUnlocked = PlayerPrefs.GetInt(seriesPrefix + carNum + "Unlocked");
 		int carClass = PlayerPrefs.GetInt(seriesPrefix + carNum + "Class");
 		int carGears = PlayerPrefs.GetInt(seriesPrefix + carNum + "Gears");
@@ -59,7 +58,6 @@ public class GarageUIFunctions : MonoBehaviour
 				PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears",carGears);
 				PlayerPrefs.SetInt(seriesPrefix + carNum + "Class",carClass);
 			} else {
-				Debug.Log("Not Enough To Unlock! Need " + unlockGears + " But Have " + carGears);
 			}
 		} else {
 			int classMax = getClassMax(carClass);
@@ -69,7 +67,6 @@ public class GarageUIFunctions : MonoBehaviour
 				PlayerPrefs.SetInt(seriesPrefix + carNum + "Gears",carGears);
 				PlayerPrefs.SetInt(seriesPrefix + carNum + "Class",carClass);
 			} else {
-				Debug.Log("Not Enough!");
 			}
 		}
 		if(reloadFrame == true){

@@ -40,9 +40,6 @@ public class PixelGUISkin : MonoBehaviour
         Apply(GUI.skin, theme, scale);
         // IMGUI cannot be captured through a camera, so this line is the only way to confirm from outside
         // the editor that the skin actually took.
-        Debug.Log($"[PixelGUISkin] applied at {scale}x — data font " +
-                  $"{(theme.imguiFont != null ? theme.imguiFont.name : "MISSING")}, display " +
-                  $"{(theme.imguiDisplayFont != null ? theme.imguiDisplayFont.name : "MISSING")}.");
     }
 
     static void Apply(GUISkin skin, PixelUITheme theme, int scale)

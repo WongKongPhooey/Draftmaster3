@@ -107,7 +107,6 @@ public class SpawnIntroUI : MonoBehaviour
         ui.SpawnSubtitle = subtitle;
         ui._player = player;
         Instance = ui;
-        Debug.Log($"[SpawnIntro] \"{title}\"" + (string.IsNullOrEmpty(subtitle) ? "" : $" / \"{subtitle}\""));
         return ui;
     }
 

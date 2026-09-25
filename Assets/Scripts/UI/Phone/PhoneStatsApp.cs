@@ -80,7 +80,7 @@ public class PhoneStatsApp : PhoneApp
             else Plate(r);
             PhoneStyles.Label(r, TabNames[i], PhoneStyles.Heading, on ? PixelGUI.Ink : PixelGUI.TextDim,
                               TextAnchor.MiddleCenter);
-            if (GUI.Button(r, GUIContent.none, GUIStyle.none)) Tab = i;
+            if (Pressed(r)) Tab = i;
         }
 
         return h + PixelGUI.Px(4f);

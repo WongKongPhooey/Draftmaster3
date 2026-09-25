@@ -47,10 +47,15 @@ public class CrowdActor : MonoBehaviour
     // chatter, conversations). Off at Reduced as well as Frozen.
     readonly List<Behaviour> _proximity = new();
     // Enabled state as authored, so waking an NPC never switches on something that was off by design.
-    readonly List<bool> _wasEnabled = new();
+    //
+    // Serialized (hidden) so they survive a script recompile in Play Mode. That reload keeps `managed` but
+    // wipes every plain private field and never runs Awake again, which left this list empty against a full
+    // `managed` and threw out of Apply on the next LOD change. Worse, re-reading "as authored" at that
+    // point would read the LOD's own switching as authoring and leave frozen behaviours off for good.
+    [SerializeField, HideInInspector] List<bool> _wasEnabled = new();
+    [SerializeField, HideInInspector] bool[] _colliderWasEnabled;
 
     Collider2D[] _colliders;
-    bool[] _colliderWasEnabled;
     Rigidbody2D _rb;
     NPCLayeredAppearance _appearance;
     NPCInteractable _talk;
@@ -163,8 +168,32 @@ public class CrowdActor : MonoBehaviour
             if (managed[i] is ICrowdRecyclable r) r.OnRecycled();
     }
 
+    // The references Awake took, taken again after a Play Mode recompile threw them away. The authored
+    // enabled states come back with the serializer; only if they genuinely don't line up (an NPC built
+    // before this field was serialized) are they re-read from what is on now.
+    void EnsureCaches()
+    {
+        if (_colliders == null)
+        {
+            _appearance = GetComponent<NPCLayeredAppearance>();
+            _talk = GetComponent<NPCInteractable>();
+            _rb = GetComponent<Rigidbody2D>();
+            _colliders = GetComponents<Collider2D>();
+        }
+        if (_colliderWasEnabled == null || _colliderWasEnabled.Length != _colliders.Length)
+        {
+            _colliderWasEnabled = new bool[_colliders.Length];
+            for (int i = 0; i < _colliders.Length; i++) _colliderWasEnabled[i] = true;
+        }
+        if (_wasEnabled.Count != managed.Count) CacheEnabledStates();
+        else if (_proximity.Count == 0)
+            for (int i = 0; i < managed.Count; i++)
+                if (managed[i] is NPCAmbientChatter || managed[i] is NPCInteractable) _proximity.Add(managed[i]);
+    }
+
     public void Apply(CrowdLod lod)
     {
+        EnsureCaches();
         if (IsBusy) lod = CrowdLod.Full;
         if (_applied && lod == _lod) return;
         _lod = lod;

@@ -97,8 +97,21 @@ public class DatabaseManager : MonoBehaviour
 
     static void SeedDriversIfEmpty(SQLiteConnection db)
     {
-        if (db.Table<Driver>().Count() > 0) return;
-        db.InsertAll(DummyDrivers.Build());
+        if (db.Table<Driver>().Count() == 0)
+        {
+            db.InsertAll(DummyDrivers.Build());
+            return;
+        }
+
+        // A save seeded before a car joined the roster (Ace Emerson's #89) would never meet it, because
+        // seeding only runs on an empty table. Add any roster car the table has no row for — additive only,
+        // so a driver edited in the Driver Database window keeps its edits.
+        var have = new System.Collections.Generic.HashSet<int>();
+        foreach (var d in db.Table<Driver>()) have.Add(d.CarNumber);
+        var missing = new System.Collections.Generic.List<Driver>();
+        foreach (var d in DummyDrivers.Build())
+            if (d.CarNumber > 0 && !have.Contains(d.CarNumber)) missing.Add(d);
+        if (missing.Count > 0) db.InsertAll(missing);
     }
 
     static void SeedSeriesIfEmpty(SQLiteConnection db)

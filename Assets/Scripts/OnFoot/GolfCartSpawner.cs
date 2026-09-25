@@ -119,7 +119,6 @@ public class GolfCartSpawner : MonoBehaviour
         if (TryFindSpot(out Vector3 at, out Quaternion facing, out Color primary, out Color secondary))
         {
             Instance = Build(at, facing, primary, secondary, cartName);
-            Debug.Log($"GolfCartSpawner: golf cart parked at {at} by the team garage.", this);
         }
         else
         {
@@ -258,7 +257,6 @@ public class GolfCartSpawner : MonoBehaviour
         var facing = Quaternion.Euler(0f, 0f, (float)(rng.NextDouble() * 360.0));
         PaddockCart = Build(new Vector3(spot.x, spot.y, 0f), facing,
                             new Color(0.85f, 0.85f, 0.88f), new Color(0.20f, 0.22f, 0.26f), paddockCartName);
-        Debug.Log($"GolfCartSpawner: paddock golf cart parked at random at {spot}.", this);
     }
 
     // A random point, spread over the union of `areas` by area (a big paddock polygon gets proportionally

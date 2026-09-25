@@ -487,19 +487,36 @@ public static class PixelGUI
 
     // `icons`, when there are any, are drawn in place of the keycap — one or more pad buttons side by side.
     public static Rect Prompt(string key, string text, IList<Sprite> icons, float bottomMargin = PromptBottomMargin)
+        => Prompt(key, text, icons, null, bottomMargin);
+
+    // The same prompt as a button. A prompt that says "press E to get in the car" is a button with the key
+    // printed on it, and on a touch screen — where there is no E — it has to be one: tapping it does what the
+    // key does. `touchIcon` is the picture drawn in the keycap's place on a touch screen; the keycap stays on
+    // a keyboard and the pad's button icon on a pad. True on the frame it is pressed.
+    public static bool PromptButton(string key, string text, IList<Sprite> icons, ActionIcon touchIcon,
+                                    float bottomMargin = PromptBottomMargin)
+    {
+        var box = Prompt(key, text, icons, touchIcon, bottomMargin);
+        return box.width > 0f && TouchTaps.Button(box, GUIContent.none, GUIStyle.none);
+    }
+
+    static Rect Prompt(string key, string text, IList<Sprite> icons, ActionIcon? touchIcon, float bottomMargin)
     {
         if (string.IsNullOrEmpty(text)) return default;
         Ensure();
 
         bool pictures = icons != null && icons.Count > 0;
         if (pictures) key = null;
+        bool drawn = !pictures && touchIcon.HasValue && InputGlyphs.UsingTouch;
+        if (drawn) key = null;
         var keyContent = new GUIContent((key ?? "").ToUpperInvariant());
         var body = Body;
 
         float iconSize = Px(IconPx), iconGap = Px(2f);
         float capW = pictures ? icons.Count * iconSize + (icons.Count - 1) * iconGap
+                   : drawn ? iconSize
                    : string.IsNullOrEmpty(key) ? 0f : Mathf.Ceil(_label.CalcSize(keyContent).x) + Px(10f);
-        float capH = pictures ? iconSize : _label.fontSize + Px(6f);
+        float capH = pictures || drawn ? iconSize : _label.fontSize + Px(6f);
         float textW = Mathf.Ceil(body.CalcSize(new GUIContent(text)).x);
         float rowH = Mathf.Max(capH, body.fontSize + Px(4f));
         float gap = capW > 0f ? Px(8f) : 0f;
@@ -534,6 +551,12 @@ public static class PixelGUI
                 DrawSprite(new Rect(Mathf.Round(x + i * (iconSize + iconGap)), iy, iconSize, iconSize), icons[i]);
             x += capW + gap;
         }
+        else if (drawn)
+        {
+            DrawActionIcon(new Rect(Mathf.Round(x), Mathf.Round(c.y + (c.height - iconSize) * 0.5f), iconSize, iconSize),
+                           touchIcon.Value);
+            x += capW + gap;
+        }
         else if (capW > 0f)
         {
             var cap = new Rect(Mathf.Round(x), Mathf.Round(c.y + (c.height - capH) * 0.5f), capW, capH);
@@ -559,6 +582,169 @@ public static class PixelGUI
         body.alignment = wasAlign;
 
         return box;
+    }
+
+    // ---- action buttons ------------------------------------------------------------------------------
+
+    // A shortcut that is also a button: the same thing on every device, so a phone player is not missing a
+    // control the keyboard has. The glyph on the left says how to press it on the device in hand — the key
+    // on a keyboard (E, F11), the button's icon on a pad, and a drawn picture on a touch screen, where there
+    // is no key to name. Tapping or clicking it works everywhere.
+    public enum ActionIcon { Cross, Clipboard, Next, Car, Limiter, Tow, Phone, Shove, HookLeft, HookRight }
+
+    const float ActionGlyphPx = 16f;
+
+    // How wide a button with this label is, so a caller can lay a row of them out before drawing any.
+    public static Vector2 ActionButtonSize(string key, string label)
+    {
+        Ensure();
+        float inset = Px(6f);
+        float glyph = Mathf.Max(Px(ActionGlyphPx), InputGlyphs.UsingTouch || InputGlyphs.UsingGamepad
+            ? 0f : Mathf.Ceil(_label.CalcSize(new GUIContent(key ?? "")).x) + Px(10f));
+        float text = Mathf.Ceil(Body.CalcSize(new GUIContent(label)).x);
+        float h = Mathf.Max(Px(ActionGlyphPx), Body.fontSize + Px(4f)) + inset * 2f + Px(8f);
+        return new Vector2(inset * 2f + Px(8f) + glyph + Px(6f) + text, h);
+    }
+
+    public static bool ActionButton(Rect r, ActionIcon icon, string key, PadButton pad, string label)
+    {
+        Ensure();
+        Panel(r, focused: true);
+        var c = PanelContent(r, 2f);
+
+        float size = Px(ActionGlyphPx);
+        float gy = Mathf.Round(c.y + (c.height - size) * 0.5f);
+        float x = c.x;
+
+        Sprite padIcon = pad != PadButton.None && InputGlyphs.UsingGamepad ? InputGlyphs.Icon(pad) : null;
+        if (padIcon != null)
+        {
+            DrawSprite(new Rect(Mathf.Round(x), gy, size, size), padIcon);
+            x += size;
+        }
+        else if (InputGlyphs.UsingTouch)
+        {
+            DrawActionIcon(new Rect(Mathf.Round(x), gy, size, size), icon);
+            x += size;
+        }
+        else
+        {
+            // The keycap, drawn exactly as the bottom-of-screen prompts draw theirs.
+            var content = new GUIContent((key ?? "").ToUpperInvariant());
+            float capW = Mathf.Max(size, Mathf.Ceil(_label.CalcSize(content).x) + Px(10f));
+            float capH = _label.fontSize + Px(6f);
+            var cap = new Rect(Mathf.Round(x), Mathf.Round(c.y + (c.height - capH) * 0.5f), capW, capH);
+            float b = Px(1f);
+            Fill(new Rect(cap.x - b, cap.y - b, cap.width + b * 2f, cap.height + b * 2f), Ink);
+            Fill(cap, PlateLight);
+            var prevAlign = _label.alignment;
+            var prevColour = _label.normal.textColor;
+            _label.alignment = TextAnchor.MiddleCenter;
+            _label.normal.textColor = Gold;
+            GUI.Label(cap, content, _label);
+            _label.normal.textColor = prevColour;
+            _label.alignment = prevAlign;
+            x += capW;
+        }
+
+        x += Px(6f);
+        var body = Body;
+        var wasAlign = body.alignment;
+        body.alignment = TextAnchor.MiddleLeft;
+        GUI.Label(new Rect(x, c.y, c.xMax - x, c.height), label, body);
+        body.alignment = wasAlign;
+
+        return TouchTaps.Button(r, GUIContent.none, GUIStyle.none);
+    }
+
+    // The touch pictures, drawn on a 16x16 pixel grid in the kit's colours rather than imported, so they sit
+    // at exactly the scale and palette of everything around them.
+    static void DrawActionIcon(Rect r, ActionIcon icon)
+    {
+        float p = r.width / 16f;
+        void Px16(int x, int y, int w, int h, Color col) =>
+            Fill(new Rect(r.x + x * p, r.y + y * p, w * p, h * p), col);
+
+        switch (icon)
+        {
+            case ActionIcon.Cross:
+                // Two 2px diagonals, with an ink shadow a pixel down-right so it reads on the gold frame.
+                for (int i = 0; i < 10; i++)
+                {
+                    Px16(3 + i + 1, 3 + i + 1, 2, 2, Ink);
+                    Px16(12 - i + 1, 3 + i + 1, 2, 2, Ink);
+                }
+                for (int i = 0; i < 10; i++)
+                {
+                    Px16(3 + i, 3 + i, 2, 2, Danger);
+                    Px16(12 - i, 3 + i, 2, 2, Danger);
+                }
+                break;
+
+            case ActionIcon.Clipboard:
+                Px16(3, 2, 10, 13, Ink);           // board edge
+                Px16(4, 3, 8, 11, PlateLight);     // the sheet
+                Px16(6, 1, 4, 3, Gold);            // the clip
+                Px16(7, 1, 2, 1, Ink);
+                for (int row = 0; row < 4; row++)  // timing lines
+                    Px16(5, 6 + row * 2, row % 2 == 0 ? 6 : 4, 1, Ink);
+                break;
+
+            case ActionIcon.Next:
+                // A solid play triangle: "carry on".
+                for (int i = 0; i < 6; i++) Px16(4 + i, 2 + i, 2, 12 - i * 2, Ink);
+                for (int i = 0; i < 6; i++) Px16(3 + i, 2 + i, 2, 12 - i * 2, Gold);
+                break;
+
+            case ActionIcon.Car:
+                // A steering wheel: rim, hub and three spokes.
+                Px16(4, 2, 8, 2, Gold); Px16(4, 12, 8, 2, Gold);
+                Px16(2, 4, 2, 8, Gold); Px16(12, 4, 2, 8, Gold);
+                Px16(3, 3, 2, 2, Gold); Px16(11, 3, 2, 2, Gold); Px16(3, 11, 2, 2, Gold); Px16(11, 11, 2, 2, Gold);
+                Px16(4, 7, 8, 2, Gold);             // cross spoke
+                Px16(7, 7, 2, 5, Gold);             // lower spoke
+                Px16(6, 6, 4, 4, Ink);              // hub
+                break;
+
+            case ActionIcon.Limiter:
+                // A gauge with its needle pinned low — the speed held back.
+                Px16(3, 4, 10, 2, Gold); Px16(2, 6, 2, 6, Gold); Px16(12, 6, 2, 6, Gold);
+                Px16(4, 12, 8, 1, Gold);
+                for (int i = 0; i < 4; i++) Px16(7 - i, 10 - i / 2, 2, 1, Danger);
+                Px16(7, 10, 2, 2, Ink);
+                break;
+
+            case ActionIcon.Tow:
+                // A hook on a line.
+                Px16(7, 1, 2, 7, Text);
+                Px16(5, 8, 6, 2, Gold); Px16(4, 10, 2, 3, Gold); Px16(10, 10, 2, 2, Gold);
+                Px16(5, 13, 5, 2, Gold); Px16(9, 12, 2, 2, Gold);
+                break;
+
+            case ActionIcon.Phone:
+                // The handset the phone button draws.
+                Px16(4, 1, 8, 14, Ink);
+                Px16(5, 3, 6, 9, Gold);
+                Px16(7, 13, 2, 1, PlateLight);
+                break;
+
+            case ActionIcon.Shove:
+                // Two flat palms pushing right.
+                Px16(3, 3, 5, 4, Gold); Px16(8, 4, 2, 2, Gold);
+                Px16(3, 9, 5, 4, Gold); Px16(8, 10, 2, 2, Gold);
+                Px16(11, 5, 2, 6, Danger); Px16(13, 7, 1, 2, Danger);
+                break;
+
+            case ActionIcon.HookLeft:
+            case ActionIcon.HookRight:
+                // A fist and the arc it swings on.
+                bool left = icon == ActionIcon.HookLeft;
+                int fx = left ? 2 : 9;
+                Px16(fx, 5, 5, 5, Gold); Px16(fx, 5, 5, 1, Ink);
+                int ax = left ? 8 : 3;
+                Px16(ax, 3, 5, 1, Danger); Px16(left ? 12 : 3, 4, 1, 6, Danger); Px16(ax, 10, 5, 1, Danger);
+                break;
+        }
     }
 
     // Inner rect of a Panel — where its content goes, one frame border plus the kit's 12px margin in.
@@ -721,7 +907,7 @@ public static class PixelGUI
         Ensure();
         bool held = GUI.enabled && Event.current != null && GUIUtility.hotControl != 0 &&
                     r.Contains(Event.current.mousePosition);
-        bool clicked = GUI.Button(r, GUIContent.none, _button);
+        bool clicked = TouchTaps.Button(r, GUIContent.none, _button);
         var labelRect = held ? new Rect(r.x, r.y + Px(2f), r.width, r.height) : r;
         var style = GUI.enabled ? _button : _footer;
         var prevAlign = style.alignment;
@@ -742,7 +928,7 @@ public static class PixelGUI
         float shadow = Px(3f);
         Fill(new Rect(r.x + shadow, r.y + shadow, r.width, r.height), Ink);
         Fill(r, selected ? Danger : PlateDeep);
-        bool clicked = GUI.Button(r, GUIContent.none, GUIStyle.none);
+        bool clicked = TouchTaps.Button(r, GUIContent.none, GUIStyle.none);
         GUI.Label(r, label, selected ? _tabSelected : _tab);
         return clicked;
     }

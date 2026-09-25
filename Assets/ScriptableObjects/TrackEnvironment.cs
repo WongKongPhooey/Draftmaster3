@@ -18,6 +18,11 @@ public class TrackEnvironment : ScriptableObject
     [Tooltip("Per-segment overrides for the inner/outer barrier offset. Any segment not listed uses the global values above.")]
     public BarrierOffsetOverride[] barrierOffsets;
     public float barrierWidth = 1f;
+    [Tooltip("Draw barriers as the previous game's SAFER barrier (inner wall, impact absorbers, outer wall, catch " +
+             "fence — Resources/Track/SaferBarrierStyle, built off Prefabs/SaferBarrier). Its track-side face sits " +
+             "where the plain barrier's did and the collider is unchanged; the extra depth goes outboard. Off = the " +
+             "plain barrierMaterial strip.")]
+    public bool saferBarrier = true;
     public Material barrierMaterial;
     public int barrierSortingOrder = 2;
     public float barrierUvLengthScale = 1f;

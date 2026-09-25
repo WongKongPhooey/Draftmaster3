@@ -71,7 +71,7 @@ public class MultiplayerLobbyUI : MonoBehaviour
 
             if (p.IsLocalPlayer)
             {
-                if (GUI.Button(new Rect(x + w - 116f, y + 2f, 110f, rowH - 4f), p.IsReadyFlag ? "Unready" : "READY", _btn))
+                if (TouchTaps.Button(new Rect(x + w - 116f, y + 2f, 110f, rowH - 4f), p.IsReadyFlag ? "Unready" : "READY", _btn))
                     p.ToggleReadyLocal();
             }
             else

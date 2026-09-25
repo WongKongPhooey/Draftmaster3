@@ -85,7 +85,6 @@ public class EnviroMovement : MonoBehaviour {
 				
 				#if UNITY_EDITOR
 				if(debugObject == true){
-					//Debug.Log("Name:" + this.gameObject.name + ", Synced Scroll:" + syncedScroll);
 				}
 				#endif
 				
@@ -96,7 +95,6 @@ public class EnviroMovement : MonoBehaviour {
 				scrollVX = ((((maxScrollSpeed + scrollCalc) / sizeMulti) * wreckOffsetMulti) * hackScaler) - minPacingSpeed;
 				#if UNITY_EDITOR
 				if(debugObject == true){
-					//Debug.Log("Name:" + this.gameObject.name + ", ScrollVX:" + scrollVX + " , Max Scroll:" + maxScrollSpeed + ", Scroll Calc:" + scrollCalc + ", Size Multi:" + sizeMulti + ", Hack Scaler:" + hackScaler + " , Wreck Offset Multi:" + wreckOffsetMulti + ", Min Pacing Speed:" + minPacingSpeed);
 				}
 				#endif
 				//Condenses to a decimal between 0 and 1
@@ -143,7 +141,6 @@ public class EnviroMovement : MonoBehaviour {
 
 			#if UNITY_EDITOR
 			if(debugObject == true){
-				//Debug.Log("Name:" + this.gameObject.name + ", SyncedScroll:" + syncedScroll + ", EnviroSpeedNewZ:" + enviroSpeedNewZ + ", EnviroSpeedCurrentZ:" + enviroSpeedCurrentZ + ", EnviroSpeed:" + enviroSpeed);
 			}
 			#endif
 
@@ -151,7 +148,6 @@ public class EnviroMovement : MonoBehaviour {
 			if(enviroSpeed >= 0){
 				EnviroObject.transform.Translate(0,0,-enviroSpeed);
 			} else {
-				//Debug.Log("Name:" + this.gameObject.name + ", EnviroSpeed < 0:" + enviroSpeed);
 			}
 			
 			if (EnviroObject.transform.position.z <= (playerZ-32)){

@@ -45,7 +45,6 @@ public class MovementOnFoot : MonoBehaviour {
             return;
         }
         lastKnownPos = this.gameObject.transform.position;
-        //Debug.Log("Playable NPC Location: " + lastKnownPos);
         //Read the device directly. The legacy InputManager.direction bus freezes at its last value on release
         //(PlayerInput is set to Invoke Unity Events, which doesn't deliver a clean (0,0)) — that caused the ice-slide.
         direction = ReadMoveInput();
@@ -53,7 +52,6 @@ public class MovementOnFoot : MonoBehaviour {
         body.linearVelocity = direction * playerSpeed * (running ? runMultiplier : 1f);
         //Same walk animation, played faster while running
         animator.speed = running ? runMultiplier : 1f;
-        //Debug.Log("Applying direction: x" + direction.x + ", y" + direction.y);
 
         Vector3 lookDir = (transform.position + new Vector3(direction.x,direction.y,0));
 
@@ -99,7 +97,6 @@ public class MovementOnFoot : MonoBehaviour {
 
     public void setAsPlayer(){
         this.transform.position = new Vector2(lastKnownPos.x, lastKnownPos.y);
-        //Debug.Log("Last Known Pos: " + lastKnownPos.x);
 		RaceManager.setPlayer(this.gameObject, 6f);
 		InputManager.ChangeInputMap("OnFoot");
 	}

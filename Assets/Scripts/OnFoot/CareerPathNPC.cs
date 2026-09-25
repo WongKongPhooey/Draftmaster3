@@ -204,7 +204,6 @@ public class CareerPathNPC : NPCInteractable
 
         // Career stats are ordinary ledger counters, so any quest watching one should re-check now.
         QuestManager.ReevaluateStatObjectives();
-        Debug.Log($"CareerPathNPC: career path set to {CareerPath.DisplayName(path)}. Starting stats: {StatSummary(path)}.", this);
     }
 
     // His answer to the chosen path, opening with the player's own words so the bubble reads as a reply.

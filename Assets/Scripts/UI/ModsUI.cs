@@ -21,7 +21,6 @@ public class ModsUI : MonoBehaviour {
 	
     // Start is called before the first frame update
 	void Start(){
-        //Debug.Log(Application.persistentDataPath);
 		TMPro.TMP_Text pathNameText = pathName.GetComponent<TMPro.TMP_Text>();
 		pathNameText.text = Application.persistentDataPath + "/Mods";
 		LoadMods();
@@ -44,7 +43,6 @@ public class ModsUI : MonoBehaviour {
 			
 			//A single car file waiting
 			if(pickedCarPNG != null){
-				Debug.Log("Picked car waiting: " + pickedCarPNG);
 				writeImageToFolder(pickedCarPNG);
 			}
 			fileQueued = false;
@@ -109,11 +107,9 @@ public class ModsUI : MonoBehaviour {
 					}
 					if(modJson.drivers.Any() != false){
 						modContent = modJson.drivers.Count + " Cars";
-						Debug.Log(modJson.series);
 					}
 					if(modJson.series.Any() != false){
 						modContent = modJson.drivers.Count + "C+" + modJson.series.Count + "S";
-						Debug.Log(modJson.series);
 					}
 					modJsonValid = "OK";
 					
@@ -166,7 +162,6 @@ public class ModsUI : MonoBehaviour {
 			string jsonValid = "Error";
 		}
 		
-		//Debug.Log(json);
 		return json;
 	}
 	
@@ -203,7 +198,6 @@ public class ModsUI : MonoBehaviour {
 	}
 	
 	public void deleteModFolder(string inputName){
-		Debug.Log("Deleting " + inputName);
 		DirectoryInfo d;
 		GameObject promptInputValue = GameObject.Find(inputName);
 		string folderName = promptInputValue.GetComponent<TMPro.TMP_Text>().text;
@@ -221,7 +215,6 @@ public class ModsUI : MonoBehaviour {
 			return;
 		}
 		if(folderName != null){
-			Debug.Log("Attempt Delete");
 			if(Directory.Exists(Application.persistentDataPath + "/Mods/" + folderName)){
 				Directory.Delete(Application.persistentDataPath + "/Mods/" + folderName,true);
 			} else {
@@ -237,16 +230,13 @@ public class ModsUI : MonoBehaviour {
 		pickedJSON = null;
 		
 		NativeFilePicker.Permission hasPermission = NativeFilePicker.CheckPermission();
-		//Debug.Log(hasPermission);
 		if(hasPermission != NativeFilePicker.Permission.Granted){
 			NativeFilePicker.Permission askedPermission = NativeFilePicker.RequestPermission();
-			//Debug.Log(askedPermission);
 		}
 		
 		NativeFilePicker.Permission permission = NativeFilePicker.PickFile((path) => {
 			if(path != null){
 				pickedJSON = path;
-				//Debug.Log("Picked file: " + path);
 			} else {
 				return;
 			}
@@ -275,7 +265,6 @@ public class ModsUI : MonoBehaviour {
 		NativeFilePicker.Permission permission = NativeFilePicker.PickFile((path) => {
 			if(path != null){
 				pickedCarPNG = path;
-				Debug.Log("Picked file: " + path);
 			}
 		}, new string[]{ fileType });
 	}
@@ -312,7 +301,6 @@ public class ModsUI : MonoBehaviour {
 	}
 	
 	public void writeImageToFolder(string pickedCar){
-		//Debug.Log("Attempting Write Car To Folder");
 		string[] pathDepths = pickedCar.Split("/");
 		string fileName = pathDepths[pathDepths.Length - 1];
 		int nameLength = fileName.Length;
@@ -333,7 +321,6 @@ public class ModsUI : MonoBehaviour {
 			carNum = altSplit[0].Substring(6);
 			altNum = altSplit[altSplit.Length - 1];
 			altNum = altNum.Split(".")[0];
-			//Debug.Log(altNum);
 			validAlt = int.TryParse(altNum,out altNumInt);
 			if(validAlt == false){
 				alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","File " + fileName + " is not in the correct alt paint format. Invalid alt paint number: " + altNum + ".\n\nExample: cup15-43alt1.png","dm2logo");
@@ -367,7 +354,6 @@ public class ModsUI : MonoBehaviour {
 			
 		string directoryPath = Application.persistentDataPath + "/Mods/" + modFolder;
 		if(!Directory.Exists(Application.persistentDataPath + "/Mods/" + modFolder)){
-			//Debug.Log("No mod folder " + modFolder + " was found.");
 			alertPopup.GetComponent<AlertManager>().showPopup("Car Upload Failed","Folder " + modFolder + " was not found. Is your image named correctly?\n\nExample: cup15-43.png","dm2logo");
 		} else {
 			System.IO.File.WriteAllBytes(directoryPath + "/" + fileName,bytes);

@@ -123,10 +123,12 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Range(0.1f, 1f)] public float grassGrip = 0.4f;
     [Tooltip("Engine traction multiplier on grass (wheels struggle to put power down).")]
     [Range(0.1f, 1f)] public float grassPower = 0.55f;
-    [Tooltip("Extra deceleration (m/s²) from rolling resistance on grass, at and above grassDragRampSpeed.")]
+    [Tooltip("Extra deceleration (m/s²) from rolling resistance on grass, at full strength above grassCrawlMph.")]
     public float grassDrag = 6f;
-    [Tooltip("Speed (m/s) over which grass rolling resistance reaches full strength. Below it, drag fades to 0 so the car can crawl off a standstill.")]
+    [Tooltip("Speed (m/s) over which GRAVEL rolling resistance reaches full strength. Below it, drag fades to 0 so the car can crawl off a standstill. (Grass works its ramp out from grassCrawlMph.)")]
     public float grassDragRampSpeed = 3f;
+    [Tooltip("Flat-out speed (mph) across grass from a standstill. The drag ramp is worked out from the car's own accel curve, grassPower and wheelspin so full throttle levels off here; grassDrag still applies in full above it, so running off at racing speed is punished as before.")]
+    public float grassCrawlMph = 8f;
 
     [Header("Runoff Surfaces")]
     [Tooltip("Lateral grip on a Gravel runoff. Low = slides; gravel mainly bogs the car down via drag.")]
@@ -275,6 +277,30 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     float _lastSteerIn, _lastThrottleIn, _lastBrakeIn; // resolved inputs this step, telemetry only
     TireModel _tires;       // 4-tyre wear+temperature model (when enableWear)
     VehicleDamage _bodywork; // accumulated bodywork damage → handling penalties
+
+    // The share of grip bent bodywork leaves the tyres (1 = undamaged) — the same factor the friction circle
+    // applies below. Public so the AI's grip governor corners a damaged car at what it can actually hold.
+    public float DamageGripFactor =>
+        damageImpairsHandling && _bodywork != null ? 1f - _bodywork.DamageLevel * damageGripLoss : 1f;
+
+    // The steering input that exactly cancels bent bodywork's pull at the current speed — what a driver holds
+    // against a damaged car to keep it straight. Mirrors the mapping in the update: wheel angle =
+    // -steerIn × maxSteeringAngle × speed authority, plus the pull. An AI adds this to its own command;
+    // otherwise its heading controller only fights the pull by holding a standing error, and a badly damaged
+    // car tracks metres off its line until it leaves the road.
+    public float DamagePullSteerInput
+    {
+        get
+        {
+            if (!damageImpairsHandling || _bodywork == null || vehicleInfo == null) return 0f;
+            float pullDeg = _bodywork.DamageBiasX * _bodywork.DamageLevel * damageSteerPull * Mathf.Rad2Deg;
+            if (Mathf.Abs(pullDeg) < 1e-4f) return 0f;
+            float speedFraction = Mathf.Clamp01(SpeedMph / Mathf.Max(steerDecaySpeedMph, 1f));
+            float authority = Mathf.Lerp(1f, highSpeedSteerScale, speedFraction);
+            float full = Mathf.Max(vehicleInfo.maxSteeringAngle * authority, 0.01f);
+            return pullDeg / full;
+        }
+    }
     SplineDriver _brainSpline; // AI brain when present (enabled) — supplies the track pose for draft maths
 
     public enum ControlScheme { Auto, Keyboard, Gamepad }
@@ -516,6 +542,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // slippery, gravel bogs the car down. Unclassified off-track terrain defaults to grass.
         bool onTrackSurface = track == null || track.IsOnSurface(transform.position, out _);
         float surfGrip = 1f, surfPower = 1f, surfDrag = 0f;
+        bool grassDragRamp = false;   // this step's drag is grass's, ramped to grassCrawlMph
         bool looseSurface = false;
         if (!onTrackSurface)
         {
@@ -535,6 +562,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                     break;
                 default: // Grass (and unclassified off-track)
                     surfGrip = grassGrip; surfPower = grassPower; surfDrag = grassDrag; looseSurface = true;
+                    grassDragRamp = true;
                     break;
             }
             CurrentSurface = surf; // tyre spray tints itself from this
@@ -590,7 +618,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         accel *= surfPower;
         reverseDrive *= surfPower;
         // Rolling resistance ramps in with speed — zero at a standstill so the car can always crawl back off.
-        if (surfDrag > 0f) decel += surfDrag * Mathf.Clamp01(speedNow / grassDragRampSpeed);
+        if (surfDrag > 0f)
+        {
+            float ramp = grassDragRamp ? GrassDragRamp(aiPower) : grassDragRampSpeed;
+            decel += surfDrag * Mathf.Clamp01(speedNow / Mathf.Max(0.1f, ramp));
+        }
         if (dmg > 0f) decel += dmg * damageDragAdd;                  // bent bodywork drags
         if (sideDraft > 0f) decel += vehicleInfo.sideDraftDrag * sideDraft; // air stolen off the spoiler drags
         accel *= (1f - wheelspinAccelLoss * wheelspin);              // spinning wheels put down less power
@@ -814,6 +846,23 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     }
 
     public void PitResetTyres() { wearFront = 0f; wearRear = 0f; if (_tires != null) _tires.PitReset(); }
+
+    // The grass drag ramp that makes full throttle level off at grassCrawlMph. At that speed the engine's push
+    // on grass — accel curve × grassPower, less what flat-out wheelspin throws away — has to equal the drag,
+    // and the drag is grassDrag × speed/ramp while still on the ramp. Solved for the ramp. Tuning grassDrag,
+    // grassPower or the wheelspin knobs therefore no longer moves the crawl speed as a side effect (with the
+    // old fixed 3 m/s ramp they balanced out at about 3 mph).
+    float GrassDragRamp(float aiPower)
+    {
+        float crawl = Mathf.Max(0.1f, grassCrawlMph / 2.237f);
+        float spin = enableWheelspin ? Mathf.Clamp01(1f - crawl / Mathf.Max(wheelspinSpeed, 0.01f)) : 0f;
+        float push = SampleAccel(crawl) * TrackConditions.EffectivePower * aiPower * grassPower
+                   * (1f - wheelspinAccelLoss * spin);
+        if (push <= 0.01f) return grassDragRampSpeed;
+        // If the engine out-pushes full drag at the crawl speed the car simply runs faster than it; the ramp
+        // then saturates at once and grassDrag alone sets the pace.
+        return grassDrag * crawl / push;
+    }
 
     float SampleAccel(float speedMps)
     {

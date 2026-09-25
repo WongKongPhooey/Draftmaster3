@@ -257,13 +257,13 @@ public class RacePauseMenu : MonoBehaviour
 
         bool line = RacingLineDisplay.Visible;
         PadCursor(PadRow.RacingLine, new Rect(content.x, cy, content.width, row));
-        bool newLine = GUI.Toggle(new Rect(content.x, cy, content.width, row), line, "  Racing line", _toggle);
+        bool newLine = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), line, "  Racing line", _toggle);
         if (newLine != line) RacingLineDisplay.Visible = newLine;
         cy += row;
 
         bool map = TrackMiniMap.Visible;
         PadCursor(PadRow.MiniMap, new Rect(content.x, cy, content.width, row));
-        bool newMap = GUI.Toggle(new Rect(content.x, cy, content.width, row), map, "  Mini-map", _toggle);
+        bool newMap = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), map, "  Mini-map", _toggle);
         if (newMap != map) TrackMiniMap.Visible = newMap;
         cy += row;
 
@@ -272,7 +272,7 @@ public class RacePauseMenu : MonoBehaviour
         // mid-race without the view snapping.
         bool swing = CameraViewMode.Swinging;
         PadCursor(PadRow.SwingCamera, new Rect(content.x, cy, content.width, row));
-        bool newSwing = GUI.Toggle(new Rect(content.x, cy, content.width, row), swing, "  Swing camera", _toggle);
+        bool newSwing = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), swing, "  Swing camera", _toggle);
         if (newSwing != swing) CameraViewMode.Swinging = newSwing;
         cy += row + gap;
 

@@ -68,7 +68,6 @@ public class EnvironmentObject : MonoBehaviour
 
 			#if UNITY_EDITOR
 			if(debugObject == true){
-				Debug.Log("Object: " + this.gameObject.name + " - Starts Visible: " + playerLocation + " - Centered Start Location: " + centeredStartLocation + " - Centered End Location: " + specificEndLocation);
 			}
 			#endif
 
@@ -86,7 +85,6 @@ public class EnvironmentObject : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugObject == true){
-			//Debug.Log("Object: " + this.gameObject.name + " - Player Location: " + playerLocation + " - Centered Start Location: " + centeredStartLocation + " - Camera Offset:" + CameraManager.cameraOffset);
 		}
 		#endif
 
@@ -178,7 +176,6 @@ public class EnvironmentObject : MonoBehaviour
 
 		#if UNITY_EDITOR
 		if(debugObject == true){
-			//Debug.Log("Object: " + this.gameObject.name + " - Toggle Visibility: " + isShowing + " - Location: " + playerLocation);
 		}
 		#endif
 
@@ -196,7 +193,6 @@ public class EnvironmentObject : MonoBehaviour
 
 		#if UNITY_EDITOR
 		if(debugObject == true){
-			//Debug.Log("Object: " + this.gameObject.name + " - Toggle Scroll: " + scrollMotion + " - Location: " + playerLocation);
 		}
 		#endif
 

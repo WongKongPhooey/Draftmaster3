@@ -29,8 +29,9 @@ public static class PlayerDriver
     // plate, the timing tower), and a name that overruns is cut mid-word rather than wrapped.
     public const int MaxNameHalfLength = 16;
 
-    // The number the demo car wears when a save has never picked one.
-    public const int DefaultCarNumber = 8;
+    // The number the demo car wears when a save has never picked one: Ace Emerson's #89, the demo's own
+    // driver (CupRoster2026). Matches the paint on RaceScene's PlayerCar.
+    public const int DefaultCarNumber = 89;
 
     // The persisted number, falling back to the car actually in the scene when there is one (so this
     // answers the same thing during a race as it does in the garage).

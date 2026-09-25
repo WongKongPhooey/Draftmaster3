@@ -215,8 +215,6 @@ public class SponsorRepNPC : NPCInteractable
             beat.Add("You'll be taking something else off to make room. Your problem, not mine.");
 
         StartBeat(Beat.Signed, beat.ToArray());
-        Debug.Log($"SponsorRepNPC: signed {sponsor.Name} — ${deal.perRace:N0}/race for {deal.racesTotal} races " +
-                  $"({deal.ClauseText}). Place it on a panel in the garage to start earning.", this);
     }
 
     void OpenChoice(string question, string[] answers, System.Action<int> picked)

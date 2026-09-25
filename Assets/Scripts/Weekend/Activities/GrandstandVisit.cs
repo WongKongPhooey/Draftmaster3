@@ -281,11 +281,31 @@ public class GrandstandVisit : MonoBehaviour
             WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return;
         if (ScreenFade.Busy) return;
 
-        PixelGUI.Prompt(LeaveKey.ToString().ToUpperInvariant(), PadBindings.LeaveSeat,
-                        _sessionOver ? ChequeredLine()
-                                     : "Return to the pits.  " +
-                                       InputGlyphs.Label(TimingKey.ToString().ToUpperInvariant(), PadBindings.LiveTiming) +
-                                       " for live timing.");
+        // Two buttons rather than a line naming two keys: a phone has neither key, and the stand used to
+        // be somewhere a touch player could sit down in and never get up from. Same two on every device —
+        // only the glyph changes (key, pad button, or a picture on a touch screen).
+        string leaveKey = LeaveKey.ToString().ToUpperInvariant();
+        string timingKey = TimingKey.ToString();
+        const string LeaveLabel = "RETURN TO THE PITS";
+        const string TimingLabel = "LIVE TIMING";
+
+        Vector2 a = PixelGUI.ActionButtonSize(leaveKey, LeaveLabel);
+        Vector2 b = PixelGUI.ActionButtonSize(timingKey, TimingLabel);
+        float gap = PixelGUI.Px(6f);
+        float h = Mathf.Max(a.y, b.y);
+        float x = Mathf.Round((Screen.width - (a.x + gap + b.x)) * 0.5f);
+        float y = Mathf.Round(Screen.height - h - PixelGUI.Px(PixelGUI.PromptBottomMargin));
+
+        if (PixelGUI.ActionButton(new Rect(x, y, a.x, h), PixelGUI.ActionIcon.Cross, leaveKey,
+                                  PadBindings.LeaveSeat, LeaveLabel))
+            Leave();
+        if (PixelGUI.ActionButton(new Rect(x + a.x + gap, y, b.x, h), PixelGUI.ActionIcon.Clipboard, timingKey,
+                                  PadBindings.LiveTiming, TimingLabel))
+            TimingScreenUI.Ensure().Toggle();
+
+        // The flag is news rather than a control, so it sits above the buttons as a plain line.
+        if (_sessionOver)
+            PixelGUI.Prompt(null, ChequeredLine(), PixelGUI.PromptBottomMargin + (h + PixelGUI.Px(4f)) / PixelGUI.Scale);
     }
 
     // Is the player still in the stand? Measured off where they sat down, because that is the one thing the

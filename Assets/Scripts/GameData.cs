@@ -44,7 +44,6 @@ public class GameData : MonoBehaviour {
 		if(PlayerPrefs.HasKey("GameDay")){
 			//Get the last known cycle day
 			day = PlayerPrefs.GetInt("GameDay");
-			//Debug.Log("Last known day: " + day);
 		} else {
 			//First login
 			day = 1;
@@ -53,7 +52,6 @@ public class GameData : MonoBehaviour {
 		if(PlayerPrefs.HasKey("GameWeek")){
 			//Get the last known cycle day
 			week = PlayerPrefs.GetInt("GameWeek");
-			//Debug.Log("Last known week: " + week);
 		} else {
 			//First login
 			week = 1;
@@ -119,7 +117,6 @@ public class GameData : MonoBehaviour {
 		//last saved timestamp
 		if(PlayerPrefs.HasKey("LastTimeCheck")){
 			lastTimeCheck = System.Convert.ToDouble(PlayerPrefs.GetString("LastTimeCheck"));
-			//Debug.Log("Last time check: " + lastTimeCheck);
 		} else {
 			lastTimeCheck = currentTimestamp;
 		}
@@ -139,7 +136,6 @@ public class GameData : MonoBehaviour {
 		dayInterval = 86400;
 		
 		timeSinceLast = currentTimestamp - lastTimeCheck;
-		//Debug.Log("Seconds since last check: " + timeSinceLast);
 		
 		fuelToAdd = timeSinceLast / System.Convert.ToDouble(fuelUpdate);
 		fuelToAdd+=spareFuel;
@@ -150,19 +146,15 @@ public class GameData : MonoBehaviour {
 			if(lastSpareTime < 0){
 				lastSpareTime = 0;
 			}
-			//Debug.Log("Previous spare time" + lastSpareTime);
 		} else {
 			lastSpareTime = 0;
 		}
 		
 		daysToAdd = ((timeSinceLast + lastSpareTime) / dayInterval);
-		//Debug.Log("Days to add: " + daysToAdd);
 		
 		daysToAddInt = (int)Mathf.Floor((float)daysToAdd);
-		//Debug.Log("Days added: " + daysToAddInt);
 		
 		spareTime = (float)timeSinceLast - (daysToAddInt * dayInterval);
-		//Debug.Log("Spare Time: " + spareTime);
 		
 		//Bugfix: Not sure why this happens?
 		if(spareTime < 0){
@@ -173,7 +165,6 @@ public class GameData : MonoBehaviour {
 		if(daysToAddInt == 0){
 			spareTime+=lastSpareTime;
 		}
-		//Debug.Log("Spare time: " + spareTime);
 		
 		//Save the new spare time
 		PlayerPrefs.SetInt("SpareTime",(int)Mathf.Floor(spareTime));
@@ -191,7 +182,6 @@ public class GameData : MonoBehaviour {
 		//Day of the week cycle
 		if(daysToAdd > 1){
 			resetDailies();
-			//Debug.Log("Reset the daily plays");
 		} else {
 			//For testing only
 			//resetDailies();
@@ -225,7 +215,6 @@ public class GameData : MonoBehaviour {
 				//Add it
 				gameFuel++;
 				fuelToAdd--;
-				//Debug.Log("Add Fuel +1");
 			} else {
 				//Break out if fuel is full already
 				fuelToAdd = 0;
@@ -238,7 +227,6 @@ public class GameData : MonoBehaviour {
 		//Save the spare fuel to carry over to next time
 		spareFuel = float.Parse(fuelToAdd.ToString());
 		PlayerPrefs.SetFloat("SpareFuel",spareFuel);
-		//Debug.Log("Spare Fuel: " + spareFuel);
 		
 		setRewards();
 	}
@@ -353,7 +341,6 @@ public class GameData : MonoBehaviour {
 	
 	public static string levelUpReward(int level){
 		string rewardType = levelUpRewards[level,0];
-		Debug.Log("Loaded level up: " + level);
 		int rewardValue = int.Parse(levelUpRewards[level,1]);
 		switch(rewardType){
 			case "Coins":

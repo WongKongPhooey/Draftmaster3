@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Draftmaster.Controls;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -23,7 +24,7 @@ using UnityEngine.UI;
 // read. So the plot is a window onto the map rather than the whole of it: it opens zoomed in on this
 // week's race (the destination, or wherever you are parked when there is no destination — during a race
 // weekend that is the circuit itself), scroll wheel zooms about the pointer, right or middle drag pans,
-// and it glides after the player as they hop from node to node. See OpenView / ApplyView.
+// a two-finger pinch zooms and pans on a phone, the pad's triggers zoom (RT in, LT out), and it glides after the player as they hop from node to node. See OpenView / ApplyView.
 // Out of stops away from the destination -> tow (costs money). State persists in TravelState, so closing
 // the panel or the game mid-trip loses nothing. F9 opens the map any time (dev convenience).
 // The prefab is generated once by Draftmaster > Travel Map > Build Prefab (see TravelMapPrefabBuilder).
@@ -106,6 +107,12 @@ public class TravelMapScreen : MonoBehaviour
     float _zoom = 1f, _zoomTarget = 1f;
     bool _panning;
     Vector2 _panFrom;
+    bool _pinching;
+    Vector2 _pinchMid;
+    float _pinchGap;
+    string _subBase;
+    int _hintVersion = -1;
+    bool _hintTouch;
     string _focusedOn;
     Vector2 _contentMin, _contentMax;
     bool _boundsKnown;
@@ -167,6 +174,9 @@ public class TravelMapScreen : MonoBehaviour
     {
         if (noticeLabel.text.Length > 0 && Time.unscaledTime >= _noticeUntil)
             noticeLabel.text = "";
+
+        if (_subBase != null && (_hintVersion != InputGlyphs.Version || _hintTouch != InputGlyphs.UsingTouch))
+            ApplySubLabel();
 
         UpdateView();
     }
@@ -281,6 +291,9 @@ public class TravelMapScreen : MonoBehaviour
             }
         }
 
+        UpdatePinch();
+        UpdatePadZoom();
+
         if (Mathf.Abs(_zoom - _zoomTarget) > 0.0005f || (_focus - _focusTarget).sqrMagnitude > 0.01f)
         {
             float k = 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime);   // frame-rate independent ease
@@ -289,6 +302,57 @@ public class TravelMapScreen : MonoBehaviour
         }
 
         ApplyView();
+    }
+
+    // Two fingers: the gap between them zooms about their midpoint, and the midpoint moving pans — the
+    // paper stays under the fingers. One finger is left alone: it is how a node is tapped, as left-click is.
+    void UpdatePinch()
+    {
+        var ts = Touchscreen.current;
+        int n = 0;
+        Vector2 a = default, b = default;
+        if (ts != null)
+            foreach (var t in ts.touches)
+            {
+                if (!t.press.isPressed) continue;
+                if (n == 0) a = t.position.ReadValue(); else if (n == 1) b = t.position.ReadValue();
+                if (++n == 2) break;
+            }
+
+        if (n < 2 || !PlotPoint(a, out Vector2 ra) || !PlotPoint(b, out Vector2 rb)) { _pinching = false; return; }
+        Vector2 mid = (ra + rb) * 0.5f - _plot.rect.center;
+        float gap = Vector2.Distance(ra, rb);
+
+        // A pinch only starts with both fingers down on the map, so one of them on the side panel's
+        // parts list is a scroll there, not a zoom here.
+        if (!_pinching)
+        {
+            if (!_plot.rect.Contains(ra) || !_plot.rect.Contains(rb)) return;
+            _pinching = true;
+        }
+        else
+        {
+            // Pan first so the midpoint the zoom holds still is the one the fingers are on now.
+            _focusTarget = ClampFocus(_focusTarget - (mid - _pinchMid) / Mathf.Max(_zoomTarget, 0.01f), _zoomTarget);
+            if (_pinchGap > 1f && gap > 1f) ZoomAt(gap / _pinchGap, mid);
+            // Fingers want the map glued to them, not easing along behind.
+            _zoom = _zoomTarget;
+            _focus = _focusTarget;
+        }
+        _pinchMid = mid;
+        _pinchGap = gap;
+    }
+
+    // Triggers zoom about the middle of the window: the right one in, the left one out, faster the harder
+    // they are squeezed — about one doubling a second held flat out.
+    void UpdatePadZoom()
+    {
+        var gp = Gamepad.current;
+        if (gp == null) return;
+        float push = PadInput.Control(gp, PadBindings.MapZoomIn).ReadValue()
+                   - PadInput.Control(gp, PadBindings.MapZoomOut).ReadValue();
+        if (Mathf.Abs(push) < 0.1f) return;   // a resting trigger is not quite zero on every pad
+        ZoomAt(Mathf.Pow(2f, push * Time.unscaledDeltaTime), Vector2.zero);
     }
 
     void ZoomAt(float factor, Vector2 plotLocal)
@@ -486,12 +550,10 @@ public class TravelMapScreen : MonoBehaviour
         titleLabel.text = choosing
             ? "THE ROAD    —    choose your next race (click a circuit)"
             : $"THE ROAD TO {dest.name.ToUpperInvariant()}";
-        // The hint rides on this line because the map no longer shows the whole country at once.
-        const string ViewHint = "   ·   wheel zooms, right-drag pans";
-        subLabel.text = (choosing
+        _subBase = choosing
             ? $"Week {TravelState.Week}   ·   You are at {current.name}"
-            : $"Week {TravelState.Week}   ·   At {current.name}   ·   STOPS LEFT: {TravelState.StopsLeft}")
-            + ViewHint;
+            : $"Week {TravelState.Week}   ·   At {current.name}   ·   STOPS LEFT: {TravelState.StopsLeft}";
+        ApplySubLabel();
         cashLabel.text = PlayerWallet.CashText;
 
         // The view rides along with the player as they hop, keeping whatever zoom they chose.
@@ -499,6 +561,20 @@ public class TravelMapScreen : MonoBehaviour
 
         RefreshMarkers(choosing, current, dest);
         RefreshSidePanel(choosing, current, dest);
+    }
+
+    // The hint rides on the sub line because the map no longer shows the whole country at once, and it
+    // names the controls of whatever is in the player's hands — so it is redrawn when that changes.
+    void ApplySubLabel()
+    {
+        _hintVersion = InputGlyphs.Version;
+        _hintTouch = InputGlyphs.UsingTouch;
+        string hint =
+            InputGlyphs.UsingGamepad
+                ? $"{InputGlyphs.PadName(PadBindings.MapZoomIn)} / {InputGlyphs.PadName(PadBindings.MapZoomOut)} zoom"
+            : _hintTouch ? "pinch zooms, two-finger drag pans"
+            : "wheel zooms, right-drag pans";
+        subLabel.text = _subBase + "   ·   " + hint;
     }
 
     void RefreshMarkers(bool choosing, TravelNode current, TravelNode dest)

@@ -97,7 +97,6 @@ public class GarageUI : MonoBehaviour
 				PlayFabManager.LoginFromPrefs();
 			}
 		} else {
-			Debug.Log("Not Logged In");
 		}
 		
 		//Testing - Unlock All
@@ -239,7 +238,6 @@ public class GarageUI : MonoBehaviour
 				if(carGears >= unlockGears){
 					tileInst.GetComponent<GarageUIFunctions>().classUp(false);
 					autoClassUps = true;
-					Debug.Log("Auto Unlock");
 				}
 			}
 			
@@ -331,7 +329,6 @@ public class GarageUI : MonoBehaviour
 			} else {
 				if(carUnlocked == 0){
 					carGearsLabelUI.text = carGears + "/" + unlockGears;
-					//Debug.Log("Car:" + i + " Gears:" + carGears + " Unlocks At:" + unlockGears);
 					gearsProgressUIWidth = Mathf.Round((110 / unlockGears) * carGears) + 1;
 				} else {
 					carGearsLabelUI.text = carGears + "/" + classMax;
@@ -381,7 +378,6 @@ public class GarageUI : MonoBehaviour
 
 			if(eligibleEntry.activeSelf == false){
 				RectTransform tileObj = child.GetComponent<RectTransform>();
-				//Debug.Log(child);
 				if(tileObj != null){
 					shuffleArray.Add(tileObj);
 				}
@@ -401,7 +397,6 @@ public class GarageUI : MonoBehaviour
 			} else {
 				alertPopup.GetComponent<AlertManager>().hidePopup();
 			}
-			//Debug.Log("Valid cars: " + validCars);
 		}
 	}
 
@@ -565,7 +560,6 @@ public class GarageUI : MonoBehaviour
 			if(validCars == 0){
 				alertPopup.GetComponent<AlertManager>().showPopup("No Eligible Car","No Car In This Set Meets The Entry Requirements. \n\n" + showRestrictions() + "","dm2logo");
 			}
-			//Debug.Log("Valid cars: " + validCars);
 		}
 	}
 
@@ -582,8 +576,6 @@ public class GarageUI : MonoBehaviour
 		
 		restrictionType = PlayerPrefs.GetString("RestrictionType");
 		restrictionValue = PlayerPrefs.GetString("RestrictionValue");
-		//Debug.Log("Restriction " + restrictionType);
-		//Debug.Log("Restricted to " + restrictionValue);
 			
 		seriesTeam = "";
 		seriesManu = "";
@@ -592,11 +584,9 @@ public class GarageUI : MonoBehaviour
 		seriesDriverType = "";
 		seriesRarity = 0;
 		
-		Debug.Log("Restriction Type: " + restrictionType + " - " + restrictionValue);
 		switch(restrictionType){
 			case "Team":
 				seriesTeam = restrictionValue;
-				//Debug.Log("Driver Type: " + seriesTeam);
 				break;
 			case "Manufacturer":
 				seriesManu = restrictionValue;
@@ -612,7 +602,6 @@ public class GarageUI : MonoBehaviour
 				break;
 			case "Type":
 				seriesDriverType = restrictionValue;
-				//Debug.Log("Driver Type: " + seriesDriverType);
 				break;
 			default:
 				break;
@@ -622,7 +611,6 @@ public class GarageUI : MonoBehaviour
 	public bool meetsRestrictions(string series, int car){
 
 		if((seriesTeam != "")&&(DriverNames.getTeam(series, car) != seriesTeam)){
-			//Debug.Log(seriesTeam + " is not " + DriverNames.getTeam(series, car) + " on #" + car);
 			return false;
 		}
 		if((seriesManu != "")&&(DriverNames.getManufacturer(series, car) != seriesManu)){
@@ -646,7 +634,6 @@ public class GarageUI : MonoBehaviour
 	public bool meetsModRestrictions(string series, int car){
 
 		if((seriesTeam != "")&&(ModData.getTeam(series, car) != seriesTeam)){
-			//Debug.Log(seriesTeam + " is not " + ModData.getTeam(series, car) + " on #" + car);
 			return false;
 		}
 		if((seriesManu != "")&&(ModData.getManufacturer(series, car) != seriesManu)){
@@ -693,11 +680,9 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void loadModCarsets(string modList){
-		//Debug.Log(modList);
 		
 		string[] modsArray = modList.Split(',');
 		foreach(string modSet in modsArray){
-			//Debug.Log(modSet);
 			string[] modData = modSet.Split('|');
 			
 			GameObject modCarsetInst = Instantiate(seriesDropdownRow, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
@@ -882,7 +867,6 @@ public class GarageUI : MonoBehaviour
 			dropOptionToPool();
 			switch(optionType){
 				case "Driver":
-					Debug.Log("Is this transfer allowed?");
 					if(optionAvailable(seriesPrefix, optionType, chosenOption) == false){
 						alertPopup.GetComponent<AlertManager>().showPopup("Driver Unavailable", chosenOption + " is already contracted to drive another car in the series. The driver needs to be made available first to be able to sign the new contract.","dm2logo");
 						return;
@@ -917,7 +901,6 @@ public class GarageUI : MonoBehaviour
 						return;
 					}
 					PlayerPrefs.SetInt("CustomNumber" + seriesPrefix + popupCarInd, int.Parse(chosenOption));
-					Debug.Log("Setting CustomNumber" + seriesPrefix + popupCarInd + " as " + chosenOption);
 					break;
 				default:
 					return;
@@ -926,7 +909,6 @@ public class GarageUI : MonoBehaviour
 			
 			transfersLeft--;
 			PlayerPrefs.SetInt("TransfersLeft", transfersLeft);
-			//Debug.Log("Transfer made! " + "Pref:" + ("CustomDriver" + seriesPrefix + popupCarInd) + " Val:" + chosenOption);
 			popupCarNum = popupCarInd;
 			if(DriverNames.isOfficialSeries(seriesPrefix) == false){
 				popupCarNum = ModData.getCarNum(seriesPrefix, popupCarInd);
@@ -989,15 +971,12 @@ public class GarageUI : MonoBehaviour
 						//Load each driver in the series in
 						if(PlayerPrefs.HasKey("CustomDriver" + seriesPrefix + i)){
 							carDriver = PlayerPrefs.GetString("CustomDriver" + seriesPrefix + i);
-							Debug.Log("Custom Driver: " + carDriver);
 						} else {
 							carDriver = ModData.getName(seriesPrefix,i);
-							Debug.Log("Driver: " + carDriver);
 						}
 					}
 					//Check they aren't already driving a car
 					if(chosenOption == carDriver){
-						Debug.Log("Oops! That's a dupe");
 						return false;
 					}
 				}
@@ -1017,12 +996,10 @@ public class GarageUI : MonoBehaviour
 					//Skip through the non-driver #s
 					if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 						if(DriverNames.getName(seriesPrefix, i) == null){
-							//Debug.Log("#" + i + " Skipped");
 							continue;
 						}
 					} else {
 						if(ModData.getName(seriesPrefix, i,false) == null){
-							//Debug.Log("#" + i + " Skipped");
 							continue;
 						}
 					}
@@ -1035,7 +1012,6 @@ public class GarageUI : MonoBehaviour
 							carNum = i;
 						} else {
 							carNum = ModData.getCarNum(seriesPrefix,i);
-							//Debug.Log("#" + i + " " + carNum);
 						}
 					}
 					//Check there isn't already a car using this number
@@ -1208,10 +1184,8 @@ public class GarageUI : MonoBehaviour
 	public void toggleDropdown(bool modSet = false){
 		if(seriesDropdown.activeSelf == true){
 			seriesDropdown.SetActive(false);
-			//Debug.Log("Deactivate Dropdown");
 		} else {
 			seriesDropdown.SetActive(true);
-			//Debug.Log("Activate Dropdown");
 		}
 		if(modSet == true){
 			currentSeries.GetComponent<TMPro.TMP_Text>().text = ModData.getSeriesNiceName(seriesPrefix);
@@ -1249,7 +1223,6 @@ public class GarageUI : MonoBehaviour
 	}
 
 	public void starterCars(){
-		//Debug.Log("Check starters");
 		bool carsAdded = false;
 		
 		//Give a free Hocevar for Cup '24
@@ -1459,7 +1432,6 @@ public class GarageUI : MonoBehaviour
 				}		
 			}
 		} else {
-			//Debug.Log("Get Texture #" + carInd);
 			currentNumber = ModData.getCarNum(seriesPrefix, carInd);
 			if(altPaint != 0){
 				carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true, "alt" + altPaint);
@@ -1579,7 +1551,6 @@ public class GarageUI : MonoBehaviour
 				}		
 			}
 		} else {
-			//Debug.Log("Get Texture #" + carInd);
 			if(altPaint != 0){
 				carPaint.texture = ModData.getTexture(seriesPrefix, carInd, true, "alt" + altPaint);
 			} else {

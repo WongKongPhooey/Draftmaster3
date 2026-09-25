@@ -43,6 +43,7 @@ public class SponsorOfferPopup : MonoBehaviour
     MonoBehaviour _owner;
     int _index;
     int _clicked = -1;
+    float _openedAt;               // unscaled time the offer went up; earlier fingers are not answers
     bool _confirmHeldPrev, _upHeldPrev, _downHeldPrev;
     Vector2 _lastMousePos;
     float _mouseMovedAt = -99f;
@@ -64,6 +65,7 @@ public class SponsorOfferPopup : MonoBehaviour
         ui._index = 0;
         ui._clicked = -1;
         ui._open = true;
+        ui._openedAt = Time.unscaledTime;
         // Whatever key ended the conversation is probably still held — start latched so it cannot
         // instantly answer the question it has only just opened.
         ui._confirmHeldPrev = true;
@@ -259,7 +261,9 @@ public class SponsorOfferPopup : MonoBehaviour
             }
 
             var textRect = new Rect(r.x + gutter, r.y, r.width - gutter, r.height);
-            if (GUI.Button(textRect, kAnswers[i], selected ? PixelGUI.RowSelected : PixelGUI.Row))
+            // Only a finger put down on the offer answers it — not the one still tapping through the rep's pitch.
+            if (TouchTaps.Button(textRect, kAnswers[i], selected ? PixelGUI.RowSelected : PixelGUI.Row) &&
+                (!TouchTaps.Driven || TouchTaps.TapDownAt > _openedAt))
                 _clicked = i;
             cy += row;
         }

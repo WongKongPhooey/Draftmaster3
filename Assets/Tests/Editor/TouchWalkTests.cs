@@ -51,6 +51,40 @@ public class TouchWalkTests
         Assert.IsTrue(l.stickZone.Contains(100f, 600f), "the bottom left is the stick");
     }
 
+    [Test]
+    public void OnEveryScreen_ThePhoneButtonIsInTheCorner_AndClearOfTheRestingRing()
+    {
+        foreach (var (w, h) in Screens)
+        {
+            var l = Layout(w, h);
+            var b = l.phoneButton;
+            Assert.IsTrue(b.x >= 0f && b.y >= 0f && b.xMax <= w && b.yMax <= h,
+                          $"{w}x{h}: the phone button is drawn off the screen.");
+            Assert.Less(b.centerX, w * 0.25f, $"{w}x{h}: the phone button is not bottom-left.");
+            Assert.Greater(b.centerY, h * 0.75f, $"{w}x{h}: the phone button is not bottom-left.");
+            Assert.LessOrEqual(b.xMax, l.stickRest.x,
+                               $"{w}x{h}: the resting ring is drawn over the phone button.");
+        }
+    }
+
+    [Test]
+    public void AFingerOnThePhoneButton_NeitherWalksNorTaps()
+    {
+        var l = Layout();
+        var s = new TouchWalkState();
+        float x = l.phoneButton.centerX, y = l.phoneButton.centerY;
+
+        s.Update(Fingers(new TouchPoint(1, x, y)), l, 0f);
+        Assert.IsFalse(s.Walking, "pressing the phone button took the stick");
+
+        s.Update(None(), l, 0.1f);
+        Assert.IsFalse(s.Tapped, "pressing the phone button also tapped whoever was stood behind it");
+
+        // ...and it doesn't hold the stick hostage: the next thumb in the zone still walks.
+        s.Update(Fingers(new TouchPoint(2, 300f, 600f)), l, 0.2f);
+        Assert.IsTrue(s.Walking, "the stick stopped working after the phone button was used");
+    }
+
     // ------------------------------------------------------------------ walking
 
     [Test]

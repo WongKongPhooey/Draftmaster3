@@ -225,7 +225,6 @@ public class Ticker : MonoBehaviour
 					continue;
 				}
 				
-				//Debug.Log("DNF'd Car " + d);
 				
 				GameObject tickerInst = Instantiate(tickerChild, new Vector3(transform.position.x,transform.position.y, transform.position.z) , Quaternion.identity);
 				tickerInst.transform.SetParent(tickerObj, false);
@@ -238,7 +237,6 @@ public class Ticker : MonoBehaviour
 				
 				tickerInst.transform.GetChild(0).GetComponent<TMPro.TMP_Text>().text = d.ToString();
 
-				//Debug.Log("DNF'd Car #" + customNumber + "");
 
 				//Show the correct number icon, or a fallback number
 				if(Resources.Load<Sprite>("cup20num" + customNumber) != null){
@@ -467,7 +465,6 @@ public class Ticker : MonoBehaviour
 				}
 				leaderDist = (entrantList[0].transform.position.z) - (entrantList[i].transform.position.z);
 				leaderDist = leaderDist / 25;
-				//Debug.Log("Player is in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = carNames[i].Remove(0,6);
@@ -487,10 +484,8 @@ public class Ticker : MonoBehaviour
 			if((RaceControl.isWrecking[carNum]==false)&&
 			  (RaceControl.hasWrecked[carNum]==false)&&
 			  (RaceControl.hasBlownEngine[carNum]==false)){
-				//Debug.Log("Car #" + carNumber[i] + " restarts P" + restartPosition);
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[i]));
 				if(entrantList[i].name == playerCar.name){
-					//Debug.Log("PLAYER WAS NOT DAMAGED");
 					PlayerPrefs.SetInt("PlayerCautionPosition", restartPosition);
 				}
 				restartPosition++;
@@ -507,16 +502,13 @@ public class Ticker : MonoBehaviour
 			if(((RaceControl.isWrecking[carNum]==true)||
 			  (RaceControl.hasWrecked[carNum]==true))&&
 			  (RaceControl.wreckDamage[carNum] < 50f)){
-				//Debug.Log("Car #" + carNumber[k] + " pits and restarts P" + restartPosition);
 				if(entrantList[k].name == playerCar.name){
-					//Debug.Log("PLAYER WAS DAMAGED");
 					PlayerPrefs.SetInt("PlayerCautionPosition", restartPosition);
 				}
 				PlayerPrefs.SetInt("CautionPosition" + restartPosition + "", int.Parse(carNumber[k]));
 				restartPosition++;
 			}
 		}
-		//Debug.Log("Total cars undamaged: " + restartPosition);
 		
 		//Loop #3 counts the DNFs
 		int DNFPosition = restartPosition;
@@ -529,10 +521,8 @@ public class Ticker : MonoBehaviour
 			  (RaceControl.wreckDamage[carNum] >= 50f)){
 				//Car is heavily damaged and retires.
 				if((RaceControl.wreckDamage[carNum] >= 50f)||((RaceControl.hasBlownEngine[carNum]==true))){
-					Debug.Log(entrantList[l].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
 					PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
 					PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
-					Debug.Log("Car #" + carNum + " - Retired on lap " + cautionLap);
 					DNFPosition++;
 				}
 			}
@@ -602,7 +592,6 @@ public class Ticker : MonoBehaviour
 				
 				//Adjust for array starting at index 0, not 1
 				PlayerPrefs.SetInt("PlayerFinishPosition", i+1);
-				//Debug.Log("Player finishes in P" + i);
 			} else {
 				carNames[i] = "" + entrantList[i].name;
 				carNumber[i] = carNames[i].Remove(0,6);	
@@ -640,7 +629,6 @@ public class Ticker : MonoBehaviour
 			if((RaceControl.isWrecking[carNum]==false)&&
 			  (RaceControl.hasWrecked[carNum]==false)&&
 			  (RaceControl.hasBlownEngine[carNum]==false)){
-				//Debug.Log("Car #" + carNumber[i] + " restarts P" + restartPosition);
 				PlayerPrefs.SetInt("FinishPosition" + unclassifiedPosition + "", int.Parse(carNumber[i]));
 				PlayerPrefs.SetInt("FinishTime" + i + "", (int)Mathf.Round(carDist[i] * 1000));
 				if(entrantList[i].name == playerCar.name){
@@ -686,7 +674,6 @@ public class Ticker : MonoBehaviour
 						PlayerPrefs.SetInt("FinishTime" + k + "", 99999);
 						unclassifiedPosition++;
 						if(entrantList[k].name == playerCar.name){
-							//Debug.Log("PLAYER WAS DAMAGED");
 							PlayerPrefs.SetInt("PlayerFinishPosition", unclassifiedPosition);
 						}
 					}
@@ -720,10 +707,8 @@ public class Ticker : MonoBehaviour
 			int carNum = int.Parse(carNumber[l]);
 			//Cars that are either blown up or heavily damaged
 			if((RaceControl.hasBlownEngine[carNum]==true)||(RaceControl.wreckDamage[carNum] >= 50f)){
-				//Debug.Log(entrantList[l].name + " has retired. Pos " + DNFPosition + " (" + RaceControl.wreckDamage[carNum] + " damage)");
 				PlayerPrefs.SetInt("DNFPosition" + DNFPosition + "", carNum);
 				PlayerPrefs.SetInt("DNFLap" + DNFPosition + "", cautionLap);
-				//Debug.Log("Car #" + carNum + " - Retired on lap " + cautionLap);
 				DNFPosition++;
 			}
 		}

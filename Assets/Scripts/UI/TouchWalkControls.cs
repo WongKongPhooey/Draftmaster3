@@ -79,6 +79,7 @@ public class TouchWalkControls : MonoBehaviour
         screenPoint = _tapAt;
         if (!_tapPending) return false;
         _tapPending = false;
+        TouchTaps.Consume();   // one lift, one tap: it is the body's now, not also a button's
         return true;
     }
 
@@ -115,7 +116,7 @@ public class TouchWalkControls : MonoBehaviour
     // which counts a conversation — see the note at the top.
     static bool ScreenOwnsTouches =>
         RacePauseMenu.IsPaused || PhoneUI.IsOpen || WeekendScheduleUI.IsOpen ||
-        WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen;
+        WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen || SponsorOfferPopup.IsOpen;
 
     static bool StickShows
     {
@@ -166,7 +167,8 @@ public class TouchWalkControls : MonoBehaviour
         _state.Reset();
     }
 
-    static TouchWalkLayout CurrentLayout()
+    // Public for the phone, which draws its own button into the corner this layout keeps clear for it.
+    public static TouchWalkLayout CurrentLayout()
     {
         float w = UnityEngine.Device.Screen.width, h = UnityEngine.Device.Screen.height;
         // Screen.safeArea has its origin bottom-left; the layout is in IMGUI's top-left space.
@@ -176,21 +178,61 @@ public class TouchWalkControls : MonoBehaviour
         return new TouchWalkLayout(safe, TouchLayout.UnitFor(w, h));
     }
 
+    // ------------------------------------------------------------------ on-screen buttons
+
+    // Buttons drawn over the paddock (the grandstand's RETURN TO THE PITS, anything through TouchTaps.Button)
+    // claim the ground they stand on. A finger that lands on one is the button's for as long as it is down:
+    // it never takes the stick — the bottom-left button was inside the stick zone — and never comes back as a
+    // tap on whoever is stood behind it, which used to spend the tap before the button could see it.
+    //
+    // Claimed during OnGUI and read by the next frame's Update, so the list is double-buffered.
+    static readonly List<Rect> _claimsDrawing = new List<Rect>();
+    static readonly List<Rect> _claims = new List<Rect>();
+    static int _claimsFrame = -1;
+    readonly HashSet<int> _claimedFingers = new HashSet<int>();
+    readonly HashSet<int> _seenFingers = new HashSet<int>();
+
+    // `screenRect` in IMGUI screen space (top-left origin) — GUIUtility.GUIToScreenRect of the button.
+    public static void Claim(Rect screenRect)
+    {
+        if (_claimsFrame != Time.frameCount) { _claimsDrawing.Clear(); _claimsFrame = Time.frameCount; }
+        _claimsDrawing.Add(screenRect);
+    }
+
+    static bool Claimed(float x, float y)
+    {
+        for (int i = 0; i < _claims.Count; i++)
+            if (_claims[i].Contains(new Vector2(x, y))) return true;
+        return false;
+    }
+
     void ReadTouches()
     {
+        // Last frame's buttons are this frame's claims.
+        _claims.Clear();
+        if (_claimsFrame == Time.frameCount - 1) _claims.AddRange(_claimsDrawing);
+
         _touches.Clear();
         var screen = Touchscreen.current;
-        if (screen == null) return;
+        if (screen == null) { _claimedFingers.Clear(); return; }
 
         float h = UnityEngine.Device.Screen.height;
         var touches = screen.touches;
+        _seenFingers.Clear();
         for (int i = 0; i < touches.Count; i++)
         {
             var t = touches[i];
             if (!t.isInProgress) continue;
+            int id = t.touchId.ReadValue();
             var p = t.position.ReadValue();
-            _touches.Add(new TouchPoint(t.touchId.ReadValue(), p.x, h - p.y));
+            float y = h - p.y;
+            _seenFingers.Add(id);
+
+            if (t.press.wasPressedThisFrame && Claimed(p.x, y)) _claimedFingers.Add(id);
+            if (_claimedFingers.Contains(id)) continue;
+            _touches.Add(new TouchPoint(id, p.x, y));
         }
+        _claimedFingers.IntersectWith(_seenFingers);
     }
 
     // ------------------------------------------------------------------ drawing

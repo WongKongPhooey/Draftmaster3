@@ -24,7 +24,6 @@ public class NavButton : MonoBehaviour
 	}
 	
 	public void endChampionship(){
-		Debug.Log("Championship Ended");
 		PlayerPrefs.SetInt("ChampionshipReward",1);
 		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		string seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
@@ -38,13 +37,11 @@ public class NavButton : MonoBehaviour
 			PlayerPrefs.SetInt("ChampionshipReward",0);
 			SceneManager.LoadScene("Menus/MainMenu");
 		} else {
-			Debug.Log("To Race Rewards");
 			SceneManager.LoadScene("Menus/RaceRewards");
 		}
 	}
 	
 	public void quitChampionship(){
-		Debug.Log("Championship Quit");
 		PlayerPrefs.SetInt("ChampionshipReward",1);
 		string currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 		string seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");

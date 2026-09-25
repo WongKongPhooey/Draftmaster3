@@ -510,7 +510,7 @@ public class CrewChiefController : MonoBehaviour
             var rowRect = new Rect(cx, cy, c.width, row);
             if (e.tf == _watching)
                 PixelGUI.Fill(rowRect, new Color(PixelGUI.Info.r, PixelGUI.Info.g, PixelGUI.Info.b, 0.30f));
-            if (GUI.Button(rowRect, GUIContent.none, GUIStyle.none))
+            if (TouchTaps.Button(rowRect, GUIContent.none, GUIStyle.none))
                 Watch(e.tf == _watching ? null : e.tf);
 
             var fuel = e.tf.GetComponent<FuelTank>();

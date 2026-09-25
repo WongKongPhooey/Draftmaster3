@@ -57,7 +57,6 @@ public class SpawnField : MonoBehaviour {
 			currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
 			seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentSeriesIndex + "CarSeries");
 		}
-		//Debug.Log("seriesPrefix on spawn is: " + seriesPrefix);
 
 		gridLanes = 1;
 		
@@ -83,19 +82,14 @@ public class SpawnField : MonoBehaviour {
 
 		if(PlayerPrefs.HasKey("CustomField")){
 			spawnCustomField(PlayerPrefs.GetString("CustomField"));
-			//Debug.Log("Spawn custom field");
 		} else {
-			//Debug.Log("Spawn standard field: " + seriesPrefix);
 			if(PlayerPrefs.GetString("RaceType") == "Championship"){
 				if(PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round") > 7){
-					//Debug.Log("Points Adjusted Field");
 					spawnCarsPointsAdjusted(seriesPrefix);
 				} else {
-					//Debug.Log("Too early in the season for points adjusting");
 					spawnCars(seriesPrefix);
 				}
 			} else {
-				//Debug.Log("Not a championship race");
 				spawnCars(seriesPrefix);
 			}
 			//spawnCup2020Scenario();
@@ -136,18 +130,14 @@ public class SpawnField : MonoBehaviour {
 
 		gridRows = Mathf.CeilToInt(gridRowsCalc);
 		
-		//Debug.Log("Field size: " + fieldSize + ", Grid rows: " + gridRows);
 		
 		if(gridRows > (AILevel+5)){
 			playerRow = Random.Range(AILevel,AILevel+5);
-			//Debug.Log("Full row selection: " + playerRow);
 		} else {
 			if(gridRows > AILevel){
 				playerRow = Random.Range(AILevel,gridRows);
-				//Debug.Log("Shortened row selection: " + playerRow);
 			} else {
 				playerRow = gridRows;
-				//Debug.Log("Back row: " + playerRow);
 			}
 		}
 		
@@ -165,13 +155,11 @@ public class SpawnField : MonoBehaviour {
 
 		//In-race restart, set field from caution order
 		if(PlayerPrefs.HasKey("SpawnFromCaution")){
-			//Debug.Log("Set Field From Caution");
 			int fieldIndex = 0;
 			
 			//Set field after caution
 			//Cars In Front
 			for (int i = playerRow - 1; i >= 1; i--) {
-				//Debug.Log("Field Row In Front: " + i);
 				for(int j=1;j<=gridLanes;j++){
 					//Skip whenever the player number appears in the field
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
@@ -269,7 +257,6 @@ public class SpawnField : MonoBehaviour {
 
 			//Cars Behind
 			for (int i = 1; i <= (gridRows - playerRow); i++) {
-				//Debug.Log("Field Row Behind: " + i);
 				for(int j=1;j<=gridLanes;j++){
 					//Skip whenever the player number appears in the field
 					if(PlayerPrefs.GetInt("CautionPosition" + fieldIndex + "") == int.Parse(carNumber)){
@@ -304,7 +291,6 @@ public class SpawnField : MonoBehaviour {
 							break;
 						}
 					}
-					//Debug.Log("Car in pos " + fieldIndex + " set as #" + carNum);
 					//We never found a suitable car to spawn, and ran out of cars to check
 					if((spawnedCars.Contains(carNumInt) == true)
 						&&(carTex != null)){
@@ -318,7 +304,6 @@ public class SpawnField : MonoBehaviour {
 					fieldIndex++;
 				}
 			}
-			//Debug.Log(fieldIndex + " Cars Positioned After Caution");
 			PlayerPrefs.DeleteKey("SpawnFromCaution");
 			
 		} else {
@@ -329,21 +314,16 @@ public class SpawnField : MonoBehaviour {
 				//If the Current Index is the Live Moments Event
 				string customFieldOrderStr = "";
 				if(PlayerPrefs.GetString("CurrentSeriesIndex") == "49EVENT"){
-					//Debug.Log("Live Moment Custom Field Set");
 					customFieldOrderStr = PlayerPrefs.GetString("LiveMomentCustomField");
 				} else {
-					//Debug.Log("Custom Field Order Set" + PlayerPrefs.GetString("CurrentSeriesIndex"));
 					customFieldOrderStr = PlayerPrefs.GetString("CustomFieldOrder");
-					//Debug.Log("Custom Field Order: " + customFieldOrderStr);
 				}
 				
 				string[] fieldOrderArr = customFieldOrderStr.Split(',');
 				customFieldOrder.Clear();
 				foreach(string pos in fieldOrderArr){
-					//Debug.Log("Field Added: " + pos);
 					customFieldOrder.Add(pos);
 				}
-				//Debug.Log("Field Size: " + customFieldOrder.Count);
 				gridRowsCalc = customFieldOrder.Count * 0.5f;
 				gridRows = Mathf.CeilToInt(gridRowsCalc);
 				int fieldInd = 0;
@@ -356,7 +336,6 @@ public class SpawnField : MonoBehaviour {
 						float playerRowCalc = playerPos / 2;
 						//If I don't add the +1, you get a dupe car spawn in 0_o
 						playerRow = Mathf.CeilToInt(playerRowCalc) + 1;
-						//Debug.Log("Player is in position " + playerPos + " , Row " + playerRow);
 					}
 				}
 				
@@ -365,7 +344,6 @@ public class SpawnField : MonoBehaviour {
 				for (int i = playerRow - 1; i >= 1; i--) {
 					for(int j=1;j<=gridLanes;j++){
 						if(int.TryParse((string)customFieldOrder[fieldInd],out int parsable)){
-							//Debug.Log("Spawn car: " + customFieldOrder[fieldInd]);
 							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * paceDistance), Quaternion.identity);
 							carNum = customFieldOrder[fieldInd].ToString();
 							AICarInstance.name = ("AICar0" + carNum);
@@ -395,13 +373,10 @@ public class SpawnField : MonoBehaviour {
 
 				//Cars Behind
 				for (int i = 1; i <= (gridRows - playerRow); i++) {
-					//Debug.Log("Row behind player, rows " + gridRows + " - row " + playerRow);
 					for(int j=1;j<=gridLanes;j++){
-						//Debug.Log("Field Index " + fieldInd);
 						if(int.TryParse((string)customFieldOrder[fieldInd],out int parsable)){
 							AICarInstance = Instantiate(AICarPrefab, new Vector3(0-(1.2f * (j-1)), 0.4f, i * -paceDistance), Quaternion.identity);
 							carNum = customFieldOrder[fieldInd].ToString();
-							Debug.Log("Spawn car #" + carNum);
 							AICarInstance.name = ("AICar0" + carNum);
 							GameObject.Find("AICar0" + carNum).GetComponent<AIMovement>().lane = j+1;
 							carsTotal++;
@@ -525,7 +500,6 @@ public class SpawnField : MonoBehaviour {
 						}
 					}
 				}
-				//Debug.Log("Unplaced cars: Fast " + fastCars.Count + ", Mid " + midCars.Count + ", Slow " + slowCars.Count);
 			}
 		}
 		Ticker.updateTicker();
@@ -560,7 +534,6 @@ public class SpawnField : MonoBehaviour {
 					case 4:
 					case 3:
 						tempCarNum = ModData.getCarNum(seriesPref, i);
-						//Debug.Log(tempCarNum + " returned from index " + i);
 						if(tempCarNum < 100){
 							fastCars.Add("" + tempCarNum + "");
 						}
@@ -618,7 +591,6 @@ public class SpawnField : MonoBehaviour {
 		foreach(var pointsRow in pointsTable){
 			if(pointsRow.Value > 0){
 				if(pointsTableInd < 5){
-					//Debug.Log("Added fast car: #" + pointsRow.Key);
 					fastCars.Add("" + pointsRow.Key + "");
 				} else {
 					if(pointsTableInd > 20){

@@ -610,12 +610,10 @@ public class DriverNames : MonoBehaviour {
 	public static void populateManufacturerPool(){
 		
 		foreach(KeyValuePair<string, string[]> seriesManus in allManufacturer){
-			//Debug.Log("Getting teams in " + seriesManus.Key);
 			// do something with entry.Value or entry.Key
 			foreach(string team in seriesManus.Value){
 				if((manufacturerPool.Contains(team) == false)&&(team != null)&&(team.Length == 3)){
 					manufacturerPool.Add(team);
-					//Debug.Log(team + " added to pool");
 				}
 			}
 		}
@@ -626,12 +624,10 @@ public class DriverNames : MonoBehaviour {
 	public static void populateTeamPool(){
 		
 		foreach(KeyValuePair<string, string[]> seriesTeams in allTeams){
-			//Debug.Log("Getting teams in " + seriesTeams.Key);
 			// do something with entry.Value or entry.Key
 			foreach(string team in seriesTeams.Value){
 				if((teamPool.Contains(team) == false)&&(team != null)&&(team.Length == 3)){
 					teamPool.Add(team);
-					//Debug.Log(team + " added to pool");
 				}
 			}
 		}
@@ -983,7 +979,6 @@ public class DriverNames : MonoBehaviour {
 		
 		for(int i=0;i<10;i++){
 			if(AltPaints.getAltPaintName(seriesPrefix,index,i) != null){
-				//Debug.Log("Alt found " + seriesPrefix + "livery" + index + "alt" + i);
 				randomAlts.Add("" + seriesPrefix + "livery" + index + "alt" + i);
 			}
 		}

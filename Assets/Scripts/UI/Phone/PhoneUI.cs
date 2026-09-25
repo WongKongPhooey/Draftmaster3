@@ -150,6 +150,7 @@ public class PhoneUI : MonoBehaviour
         if (_pollTimer <= 0f)
         {
             _pollTimer = 0.5f;
+            CountBadges();
             var found = OnFootController.Current;
             if (found != _player)
             {
@@ -163,10 +164,13 @@ public class PhoneUI : MonoBehaviour
         float step = Time.unscaledDeltaTime / Mathf.Max(0.01f, slideSeconds);
         _slide = Mathf.MoveTowards(_slide, _open ? 1f : 0f, step);
 
+        ReadTouches();
+
         var kb = Keyboard.current;
         var pad = Gamepad.current;
         bool toggle = (kb != null && toggleKey != Key.None && kb[toggleKey].wasPressedThisFrame)
-                   || (padToggle && PadInput.WasPressed(PadBindings.Phone));
+                   || (padToggle && PadInput.WasPressed(PadBindings.Phone))
+                   || TouchButtonPressed();
         if (toggle)
         {
             if (_open) CloseInternal();
@@ -193,8 +197,9 @@ public class PhoneUI : MonoBehaviour
             _scroll.y = Mathf.Max(0f, _scroll.y + (kb.downArrowKey.wasPressedThisFrame ? PixelGUI.Px(24f) : -PixelGUI.Px(24f)));
         int padScroll = PadInput.VerticalStep();
         if (padScroll != 0) _scroll.y = Mathf.Max(0f, _scroll.y + padScroll * PixelGUI.Px(24f));
+        // Either can close the phone (TASKS' travel), so re-check between them.
         if (kb != null) _current.HandleKeys(kb);
-        if (pad != null) _current.HandlePad(pad);
+        if (pad != null && _current != null) _current.HandlePad(pad);
     }
 
     void HomeKeys(Keyboard kb)
@@ -297,8 +302,126 @@ public class PhoneUI : MonoBehaviour
 
     // ------------------------------------------------------------------ drawing
 
+    // ------------------------------------------------------------------ touch button
+
+    // A phone player has no P key and no View button, so the phone gets a button of its own in the bottom-left
+    // corner — the spot TouchWalkLayout keeps clear of the stick. It is the way out as well as the way in.
+    static bool TouchButtonShows(OnFootController body)
+    {
+        if (!TouchDriveControls.TouchPlatform || InputGlyphs.UsingGamepad) return false;
+        if (body == null || body.RemotePuppet) return false;
+        if (IsOpen || Summoned) return true;
+        if (RacePauseMenu.IsPaused || WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen)
+            return false;
+        // Something else has the player (a conversation, a cutscene): the phone would refuse to open anyway.
+        return !body.MovementLocked && !NPCInteractable.AnyConversationActive;
+    }
+
+    void DrawTouchButton()
+    {
+        if (Coop.IsGuest) return;
+        var body = _player != null ? _player : OnFootController.Current;
+        if (!TouchButtonShows(body)) return;
+
+        var l = TouchWalkControls.CurrentLayout().phoneButton;
+        var r = new Rect(l.x, l.y, l.width, l.height);
+
+        // Summoned: the phone is going off in the pocket, so the button pulses gold until it comes out.
+        bool ringing = Summoned;
+        float pulse = ringing ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f) : 0f;
+        Color edge = IsOpen || ringing ? Color.Lerp(PixelGUI.Text, PixelGUI.Gold, IsOpen ? 1f : pulse) : PixelGUI.Text;
+
+        PixelGUI.Fill(r, new Color(PixelGUI.PlateDeep.r, PixelGUI.PlateDeep.g, PixelGUI.PlateDeep.b, 0.8f));
+        PixelGUI.Frame(r, edge);
+
+        // A little handset: case, lit glass, earpiece and home bar — the same marks the big one is drawn with.
+        float bw = r.width * 0.42f, bh = r.height * 0.7f;
+        var handset = new Rect(r.center.x - bw * 0.5f, r.center.y - bh * 0.5f, bw, bh);
+        PixelGUI.Fill(handset, edge);
+        float b = Mathf.Max(1f, PixelGUI.Px(1f));
+        var glass = new Rect(handset.x + b, handset.y + b * 3f, handset.width - b * 2f, handset.height - b * 6f);
+        PixelGUI.Fill(glass, IsOpen ? PixelGUI.Gold : PixelGUI.ScreenBase);
+        PixelGUI.Fill(new Rect(handset.center.x - handset.width * 0.2f, handset.y + b, handset.width * 0.4f, b), PixelGUI.PlateDeep);
+        PixelGUI.Fill(new Rect(handset.center.x - handset.width * 0.25f, handset.yMax - b * 2f, handset.width * 0.5f, b), PixelGUI.PlateDeep);
+
+        // Anything waiting: unread messages, a quest to hand in.
+        if (!IsOpen && _badgeTotal > 0)
+        {
+            float d = r.width * 0.34f;
+            var dot = new Rect(r.xMax - d * 0.75f, r.y - d * 0.25f, d, d);
+            PixelGUI.Fill(dot, PixelGUI.Danger);
+            PhoneStyles.Label(dot, _badgeTotal > 9 ? "9+" : _badgeTotal.ToString(), PhoneStyles.Footer,
+                              PixelGUI.Text, TextAnchor.MiddleCenter);
+        }
+
+        // The press itself is read in Update, straight off the Input System (TouchButtonPressed) — the same
+        // source the walk stick uses. IMGUI only gets a touch if the platform turns it into a mouse event,
+        // which the Device Simulator does not do, and a button that only works on some devices is no button.
+        // A mouse click landing here is still eaten, so nothing drawn underneath hears it as well.
+        var e = Event.current;
+        if (e != null && (e.type == EventType.MouseDown || e.type == EventType.MouseUp) && r.Contains(e.mousePosition))
+            e.Use();
+    }
+
+    // A finger or the mouse came down on the phone button this frame. Worked in IMGUI's space (top-left
+    // origin), the space TouchWalkLayout is measured in.
+    bool TouchButtonPressed()
+    {
+        if (Coop.IsGuest) return false;
+        var body = _player != null ? _player : OnFootController.Current;
+        if (!TouchButtonShows(body)) return false;
+
+        Vector2? at = null;
+        var touch = Touchscreen.current;
+        if (touch != null && touch.primaryTouch.press.wasPressedThisFrame)
+            at = touch.primaryTouch.position.ReadValue();
+        var mouse = Mouse.current;
+        if (at == null && mouse != null && mouse.leftButton.wasPressedThisFrame)
+            at = mouse.position.ReadValue();
+        if (at == null) return false;
+
+        var l = TouchWalkControls.CurrentLayout().phoneButton;
+        float y = UnityEngine.Device.Screen.height - at.Value.y;
+        return l.Contains(at.Value.x, y);
+    }
+
+    // ------------------------------------------------------------------ touches on the device
+
+    // Taps come from TouchTaps, like every other IMGUI screen's. The phone adds the one thing a phone has
+    // that a menu does not: dragging a finger up the glass scrolls the open app, and the content follows it.
+    void ReadTouches()
+    {
+        if (!_open || _current == null || !TouchTaps.Dragging) return;
+        _scroll.y = Mathf.Max(0f, _scroll.y + TouchTaps.DragDelta.y);   // DrawApp clamps the far end
+    }
+
+    // True once for a click or a tap on `r`, given in whatever GUI space is current — the device's tilted
+    // matrix and the app's scroll group included.
+    public static bool Pressed(Rect r)
+    {
+        var ui = Instance;
+        bool clicked = GUI.Button(r, GUIContent.none, GUIStyle.none);
+        if (!TouchTaps.Driven) return clicked;
+        // A row scrolled up under the title bar is still laid out there; only what is visible is tappable.
+        return TouchTaps.Hit(r, ui != null ? ui._clip : null);
+    }
+
+    Rect? _clip;                       // the app's visible window, in its scroll group's space, while drawing it
+
+    int _badgeTotal;
+
+    void CountBadges()
+    {
+        int n = 0;
+        foreach (var app in _apps) n += Mathf.Max(0, app.Badge);
+        _badgeTotal = n;
+    }
+
     void OnGUI()
     {
+        // First, so the open device is painted over it.
+        DrawTouchButton();
+
         if (_slide <= 0.001f) return;
 
         // Over every other IMGUI panel: the phone is held up in front of everything else.
@@ -420,6 +543,7 @@ public class PhoneUI : MonoBehaviour
 
         string keys = InputGlyphs.UsingGamepad
             ? InputGlyphs.PadName(PadBindings.Phone) + " CLOSE   " + InputGlyphs.PadName(PadBindings.Confirm) + " OPEN"
+            : InputGlyphs.UsingTouch ? "TAP AN APP"
             : toggleKey.ToString().ToUpperInvariant() + " CLOSE   ENTER OPEN";
         PhoneStyles.Label(new Rect(r.x, r.yMax - hint, r.width, hint), keys,
                           PhoneStyles.Footer, null, TextAnchor.MiddleCenter);
@@ -431,7 +555,7 @@ public class PhoneUI : MonoBehaviour
         PhoneApp.Plate(r, selected ? PixelGUI.Gold : app.Accent);
         PixelGUI.Fill(new Rect(r.x, r.y, r.width, PixelGUI.Px(2f)), app.Accent);
 
-        if (GUI.Button(r, GUIContent.none, GUIStyle.none)) { _homeIndex = index; OpenApp(index); }
+        if (Pressed(r)) { _homeIndex = index; OpenApp(index); }
         if (r.Contains(Event.current.mousePosition)) _homeIndex = index;
 
         float row = PhoneApp.RowH;
@@ -461,6 +585,11 @@ public class PhoneUI : MonoBehaviour
 
     void DrawApp(Rect r)
     {
+        // Held for the whole draw: a tap settles on the repaint pass, in the middle of this, and a button that
+        // closes the phone or backs out (TRAVEL THERE) clears _current before the rail and title bar are drawn.
+        var app = _current;
+        if (app == null) return;
+
         float barH = PhoneApp.RowH + PixelGUI.Px(2f);
         var bar = new Rect(r.x, r.y, r.width, barH);
         var view = new Rect(r.x, bar.yMax + PixelGUI.Px(2f), r.width, r.height - barH - PixelGUI.Px(2f));
@@ -478,7 +607,9 @@ public class PhoneUI : MonoBehaviour
         }
 
         GUI.BeginGroup(view);
-        _contentHeight = _current.Draw(0f, -_scroll.y, contentW);
+        _clip = new Rect(0f, 0f, view.width, view.height);
+        _contentHeight = app.Draw(0f, -_scroll.y, contentW);
+        _clip = null;
         GUI.EndGroup();
 
         if (max > 0f)
@@ -488,18 +619,18 @@ public class PhoneUI : MonoBehaviour
             PixelGUI.Fill(rail, new Color(0f, 0f, 0f, 0.35f));
             float thumbH = Mathf.Max(PixelGUI.Px(10f), view.height * (view.height / Mathf.Max(1f, _contentHeight)));
             PixelGUI.Fill(new Rect(rail.x, rail.y + (rail.height - thumbH) * (_scroll.y / max), railW, thumbH),
-                          _current.Accent);
+                          app.Accent);
         }
 
         // Title bar last, so a row scrolled up under it is covered rather than trusted to be clipped.
-        PixelGUI.Fill(bar, _current.Accent);
+        PixelGUI.Fill(bar, app.Accent);
         PhoneStyles.Label(new Rect(bar.x + PixelGUI.Px(11f), bar.y, bar.width, bar.height),
-                          _current.TileName, PhoneStyles.Heading, PixelGUI.Ink);
+                          app.TileName, PhoneStyles.Heading, PixelGUI.Ink);
 
         // Back chevron, left of the title, the whole strip clickable.
         var back = new Rect(bar.x, bar.y, PixelGUI.Px(11f), bar.height);
         PhoneStyles.Label(back, "<", PhoneStyles.Data, PixelGUI.Ink, TextAnchor.MiddleCenter);
-        if (GUI.Button(back, GUIContent.none, GUIStyle.none)) { _current = null; _scroll = Vector2.zero; }
+        if (Pressed(back)) { _current = null; _scroll = Vector2.zero; }
     }
 
     float _contentHeight;

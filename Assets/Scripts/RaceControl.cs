@@ -37,7 +37,6 @@ public class RaceControl : MonoBehaviour
 		if((isWrecking[carNum] == true)||
 		  (hasWrecked[carNum] == true)||
 		  (hasBlownEngine[carNum] == true)){
-			//Debug.Log("Car #" + carNum + " is damaged");
 			return true;
 		}
 		return false;
@@ -45,14 +44,12 @@ public class RaceControl : MonoBehaviour
 	
 	public static bool isCarTerminalDamaged(int carNum){
 		if(hasBlownEngine[carNum] == true){
-			//Debug.Log("Car #" + carNum + " is damaged");
 			return true;
 		}
 		return false;
 	}
 	
 	public static float getOpponentSpeed(int carNum){
-		//Debug.Log("Opponent #" + carNum + " - " + carSpeed[carNum] + " (Race Control)");
 		return carSpeed[carNum];
 	}
 }

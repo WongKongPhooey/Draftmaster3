@@ -214,7 +214,7 @@ public class AIIncidentRecorder : MonoBehaviour
     // Pick up cars as they spawn (grids build over several frames, practice cycles them out of the boxes).
     void Scan()
     {
-        var found = FindObjectsByType<SplineInputDriver>();
+        var found = FindObjectsByType<SplineInputDriver>(FindObjectsSortMode.None);
         foreach (var input in found)
         {
             bool known = false;

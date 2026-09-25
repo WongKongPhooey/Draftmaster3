@@ -89,9 +89,7 @@ public class RaceRewardsUI : MonoBehaviour
 		} else {
 			validDriver = ListPrizeOptions("");
 		}
-		//Debug.Log("Series Prize: " + seriesPrize);
 		finishPos = PlayerPrefs.GetInt("PlayerFinishPosition");
-		//Debug.Log("Finished: " + finishPos);
 		rewardMultiplier = 1;
 		
 		rewardsTitle = GameObject.Find("Title");
@@ -116,7 +114,6 @@ public class RaceRewardsUI : MonoBehaviour
 		
 		if(championshipReward == true){
 			rewardMultiplier = seriesLength;
-			Debug.Log("Multiplier Set as " + rewardMultiplier);
 			PlayerPrefs.DeleteKey("ChampionshipSubseries");
 			PlayerPrefs.DeleteKey("SeriesChampionship" + currentSeriesIndex + "Round");
 		}
@@ -131,9 +128,7 @@ public class RaceRewardsUI : MonoBehaviour
 		} else {
 			prizeMoney = PrizeMoney.getPrizeMoney(finishPos);
 		}
-		//Debug.Log("Won: " + prizeMoney);
 		playerMoney += prizeMoney * rewardMultiplier;
-		//Debug.Log("Multiplied Win: " + (prizeMoney * rewardMultiplier));
 		PlayerPrefs.SetInt("PrizeMoney", playerMoney);
 		
 		moneyTitle.GetComponent<TMPro.TMP_Text>().text = " +$" + (prizeMoney * rewardMultiplier) + "";
@@ -181,15 +176,12 @@ public class RaceRewardsUI : MonoBehaviour
 				//e.g. 16th -> 4 - 4 = 0
 				float scaledFinish = (finishPos + 1)/4;
 				rewardGears = maxRaceGears - Mathf.FloorToInt(scaledFinish);
-				Debug.Log("Gears Per Race: " + rewardGears + ", Max Gears Per Race: " + maxRaceGears + ", Championship Finish Pos: " + finishPos + ", Scaler (Pos/4)Floored: " + Mathf.FloorToInt((finishPos + 1)/4f) + "");
 
 				//Adjust based on size of field in the race
 				float scaledRewards = (rewardGears / 40f) * raceEntries;
 				rewardGears = Mathf.FloorToInt(scaledRewards);
 				
-				Debug.Log("Field Scaled Gears Per Race: " + rewardGears);
 				int minimumGears = Mathf.CeilToInt(rewardMultiplier/2f);
-				Debug.Log("Minimum Championship Reward Gears: " + minimumGears + ", Season Length Multiplier: " + rewardMultiplier);
 				
 				if(rewardGears >= 1){
 					//33 race series, 150% difficulty
@@ -209,12 +201,10 @@ public class RaceRewardsUI : MonoBehaviour
 					} else {
 						gears += rewardGears * rewardMultiplier;
 					}
-					Debug.Log("Total Rewarded Gears: " + (rewardGears * rewardMultiplier));
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
 					//e.g. 40th -> 17
 					gears+= minimumGears;
-					Debug.Log("Total Rewarded Gears (Minimum): " + minimumGears);
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + minimumGears + " Gears (" + gears + ")";
 				}
 			} else {
@@ -224,7 +214,6 @@ public class RaceRewardsUI : MonoBehaviour
 				float scaledRewards = (rewardGears / 40f) * raceEntries;
 				rewardGears = Mathf.FloorToInt(scaledRewards);
 
-				//Debug.Log("Single Race Gears Rewarded: " + rewardGears + "Max Race Gears: " + maxRaceGears + ", Finish Pos: " + finishPos + ", Pos/4(Ceil): " + Mathf.FloorToInt(finishPos/4) + ", Factor: " + raceEntries + "/40, Scaled Rewards: " + scaledRewards);
 				
 				if(raceType == "Event"){
 					rewardGears = 1;
@@ -232,11 +221,9 @@ public class RaceRewardsUI : MonoBehaviour
 				
 				if(rewardGears > 0){
 					gears += rewardGears * rewardMultiplier;
-					Debug.Log("You've got Gears");
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +" + (rewardGears * rewardMultiplier) + " Gears (" + gears + ")";
 				} else {
 					rewardGears = 0;
-					Debug.Log("No Gears");
 					gearsTitle.GetComponent<TMPro.TMP_Text>().text = " +0 Gears (" + gears + ")";
 				}
 			}
@@ -248,19 +235,15 @@ public class RaceRewardsUI : MonoBehaviour
 		gearsTitle.GetComponent<UIAnimate>().animOffset = 120;
 		gearsTitle.GetComponent<UIAnimate>().scaleIn();	
 		
-		//Debug.Log("Race Type: " + raceType);
 		switch(raceType){
 			case "Event":
-				Debug.Log("Checking Event Rewards");
 				//Int as bool
 				momentComplete = PlayerPrefs.GetInt("MomentComplete");
 				if((finishPos == 0)||(momentComplete == 1)){
 					if(seriesPrize == "AltPaint"){
-						Debug.Log("Unlocking Alt Paint: " + setPrize);
 						UnlockAltPaint(setPrize);
 					} else {
 						//Populate event reward pool
-						Debug.Log("Assign Event Prize");
 						AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, 1);
 					}
 				} else {
@@ -273,11 +256,9 @@ public class RaceRewardsUI : MonoBehaviour
 				//e.g. 33 race season / 150% / finished 1st = 99
 				float maxRewardFloat = SeriesData.offlineAILevel[raceMenu,raceSubMenu]/5f;
 				int maxRewardInt = Mathf.CeilToInt(maxRewardFloat);
-				Debug.Log("Reward Multi: " + Mathf.CeilToInt(rewardMultiplier/2) + ", Max Reward: " + maxRewardInt + ", CeilFinish Pos/2: " + Mathf.CeilToInt(((finishPos + 1f)/2f)));
 				int rewardRatio = Mathf.CeilToInt((Mathf.CeilToInt(rewardMultiplier/2f) * maxRewardInt) / Mathf.CeilToInt((finishPos + 1f)/2f));
 				if(rewardRatio >= 1){
 					rewardMultiplier = rewardRatio;
-					Debug.Log("New reward multiplier: " + rewardMultiplier);
 					AssignPrizes(validDriver[Random.Range(0,validDriver.Count)], setPrize, rewardMultiplier);
 				} else {
 					carReward = "";
@@ -334,7 +315,6 @@ public class RaceRewardsUI : MonoBehaviour
 	}
 
 	void AssignPrizes(string carId, string setPrize, int multiplier){
-		Debug.Log("Set Prize: " + setPrize);
 		if(!PlayerPrefs.HasKey(carId + "Gears")){
 			PlayerPrefs.SetInt(carId + "Gears", multiplier);
 		}
@@ -379,9 +359,6 @@ public class RaceRewardsUI : MonoBehaviour
 		int parsedNum = int.Parse(extractedCarNum);
 		int parsedAlt = int.Parse(extractedAltNum);
 		
-		Debug.Log("Extracted Alt: " + extractedCarSeries + " -> " + extractedCarNum + " -> " + extractedAltNum);
-		//Debug.Log("Extracted car number: #" + extractedCarNum);
-		//Debug.Log("Extracted alt number: #" + extractedAltNum);
 		
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
 		
@@ -393,7 +370,6 @@ public class RaceRewardsUI : MonoBehaviour
 	
 	List<string> ListPrizeOptions(string category){
 		List<string> prizeOptions = new List<string>();
-		Debug.Log("Looping through reward options.. Type: " + category);
 		switch(category){
 			//Team Rewards
 			case "cup20":
@@ -420,12 +396,10 @@ public class RaceRewardsUI : MonoBehaviour
 			case "Rookies":
 				for(int i=0;i<DriverNames.allWinnableCarsets.Length;i++){
 					string seriesPrefix = DriverNames.allWinnableCarsets[i];
-					Debug.Log("Searching " + seriesPrefix);
 					for(int j=0;j<=99;j++){
 						if(DriverNames.getName(seriesPrefix,j) != null){
 							if(DriverNames.getType(seriesPrefix,j) == "Rookie"){
 								if(PlayerPrefs.GetInt(seriesPrefix + j + "Class") < 6){
-									Debug.Log("Adding " + seriesPrefix + j + "");
 									prizeOptions.Add("" + seriesPrefix + j + "");
 								}
 							}
@@ -665,12 +639,10 @@ public class RaceRewardsUI : MonoBehaviour
 	}
 	
 	int getChampionshipPosition(){
-		//Debug.Log("LOOKING FOR CHAMPIONSHIP POSITION");
 		string playerCarNumber = PlayerPrefs.GetString("carTexture");
 		string splitAfter = "livery";
 		playerCarNumber = playerCarNumber.Substring(playerCarNumber.IndexOf(splitAfter) + splitAfter.Length);
 		int carNumber = int.Parse(playerCarNumber);
-		//Debug.Log("CAR NUMBER IS " + carNumber.ToString());
 		Dictionary<int, int> championshipPoints = new Dictionary<int, int>();
 		
 		championshipPoints.Clear();
@@ -697,7 +669,6 @@ public class RaceRewardsUI : MonoBehaviour
 		foreach(var pointsRow in pointsTable){
 			if(pointsRow.Key == carNumber){
 				champPosition = pointsTableInd;
-				//Debug.Log("CHAMPIONSHIP POSITION IS " + champPosition);
 			}
 			pointsTableInd++;
 		}

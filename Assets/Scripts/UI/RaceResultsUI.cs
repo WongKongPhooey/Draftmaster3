@@ -52,7 +52,6 @@ public class RaceResultsUI : MonoBehaviour
 		if(DriverNames.isOfficialSeries(seriesPrefix) == true){
 			officialSeries = true;
 		} else {
-			Debug.Log("Must be a mod.. " + seriesPrefix);
 		}
 
 		currentSeriesIndex = PlayerPrefs.GetString("CurrentSeriesIndex");
@@ -66,20 +65,16 @@ public class RaceResultsUI : MonoBehaviour
 		if(PlayerPrefs.GetInt("ExpAdded") == 0){
 			
 			int level = PlayerPrefs.GetInt("Level");
-			//Debug.Log("Level " + level);
 			int levelExp = levelUpExp(level);
 			
 			int AILevel = PlayerPrefs.GetInt("RaceAILevel");
 			
 			//Example 1st = 110, 5th = 30, 10th = 20, 30th = 13
 			raceExp = Mathf.Round(((90 / (Ticker.position + 1)) + 10) * (float)(1 + (float)(AILevel / 10f)));
-			//Debug.Log(Mathf.Round(((90 / (Ticker.position + 1)) + 10)));
-			//Debug.Log((float)(1 + (float)(AILevel / 10f)));
 			//Example 1st = 100, 10th = 70, 20th = 40, 30th = 10
 			//raceExp = ((30 - Ticker.position) * 3) + 10;
 			exp += Mathf.RoundToInt(raceExp);
 			PlayerPrefs.SetInt("Exp",exp);
-			//Debug.Log("Exp: " + exp);
 			
 			PlayerPrefs.SetString("ExpInfo","+" + raceExp + " (" + exp + "/" + levelExp + ")");
 
@@ -89,23 +84,19 @@ public class RaceResultsUI : MonoBehaviour
 			
 			//Is this a championship round?
 			if(PlayerPrefs.GetString("RaceType") == "Championship"){
-				//Debug.Log("Yeah.. this is a championship event");
 				//Re-route to avoid the Race Rewards mid-season
 				GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/ChampionshipHub";
 					
 				//Increment Championship Round
 				int championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round");
 				PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round",championshipRound+1);
-				Debug.Log("Next Round " + PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Round"));
 				
 				fieldSize = PlayerPrefs.GetInt("FieldSize");
 				
-				//Debug.Log("Add Championship Points. Next Round Is " + (championshipRound+1));
 				RacePoints.setCupPoints();
 				for( int i=0; i < fieldSize; i++){
 					if(Ticker.carNames[i] == null){
 						//Exit loop
-						Debug.Log("No name here, skip adding points #" + i);
 						continue;
 					}
 					if(i == (Ticker.position)){
@@ -113,7 +104,6 @@ public class RaceResultsUI : MonoBehaviour
 					} else {
 						carNumber = Ticker.carNames[i].Remove(0,6);
 					}
-					//Debug.Log("Add " + RacePoints.placePoints[i] + " points");
 					addChampionshipPoints(carNumber, RacePoints.placePoints[i]);
 				}
 			}
@@ -122,7 +112,6 @@ public class RaceResultsUI : MonoBehaviour
 		
 		//If Event Reward already collected, cannot claim again
 		if(PlayerPrefs.HasKey("EventReplay")){
-			//Debug.Log("Event replay, no dupe rewards");
 			GameObject.Find("NextButton").GetComponent<NavButton>().sceneName = "Menus/MainMenu";
 		}
 
@@ -131,7 +120,6 @@ public class RaceResultsUI : MonoBehaviour
 		string currentTrack = PlayerPrefs.GetString("CurrentTrack");
 
 		if(PlayerPrefs.GetString("RaceType") == "Event"){
-			Debug.Log("This is an Event Race (Challenge), set track index to 1");
 			currentTrack = "1";
 		}
 
@@ -140,12 +128,9 @@ public class RaceResultsUI : MonoBehaviour
 			//If better than previous (or 0 if it glitched a result)
 			if(((Ticker.position + 1) < bestFinishPos)||(bestFinishPos == 0)){
 				PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Ticker.position + 1);
-				//Debug.Log("New best finish: " + (Ticker.position + 1) + "Track: " + currentSeriesIndex + currentTrack);
 			}
-			//Debug.Log("Prev best finish: " + bestFinishPos + "Track: " + currentSeriesIndex + currentTrack);
 		} else {
 			PlayerPrefs.SetInt("BestFinishPosition" + currentSeriesIndex + currentTrack + "", Ticker.position + 1);
-			//Debug.Log("New best finish: " + Ticker.position + ". Track: " + currentSeriesIndex + currentTrack);
 		}
 
 		moneyCount = 0;
@@ -174,7 +159,6 @@ public class RaceResultsUI : MonoBehaviour
 		
 		if(PlayerPrefs.HasKey("FixedSeries")){
 			seriesPrefix = PlayerPrefs.GetString("FixedSeries");
-			Debug.Log("Series " + seriesPrefix);
 		} else {
 			seriesPrefix = PlayerPrefs.GetString("carSeries");
 		}
@@ -187,14 +171,11 @@ public class RaceResultsUI : MonoBehaviour
 			if(PlayerPrefs.HasKey("FinishPosition" + i + "")){
 				carNum = PlayerPrefs.GetInt("FinishPosition" + i + "");
 				carDist = PlayerPrefs.GetInt("FinishTime" + i + "");
-				//Debug.Log("Pos: " + i + " Num: " + carNum + " Dist: " + carDist);
 			} else {
 				if(PlayerPrefs.HasKey("DNFPosition" + i + "")){
 					carNum = PlayerPrefs.GetInt("DNFPosition" + i + "");
 					carDist = 99999.99f;
 					carLap = PlayerPrefs.GetInt("RaceLaps") - PlayerPrefs.GetInt("DNFLap" + i + "");
-					Debug.Log("DNF #" + carNum + " - Lap: " + carLap);
-					Debug.Log("DNF Pos: " + i + " Num: " + carNum);
 				} else {
 					continue;
 				}
@@ -272,7 +253,6 @@ public class RaceResultsUI : MonoBehaviour
 	void addChampionshipPoints(string carNumber, int points){
 		int currentPoints = PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber);
 		PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNumber, currentPoints + points);
-		//Debug.Log("Car #" + carNumber + " - Points:" + (currentPoints + " + " + points));
 	}
 
 	public static int levelUpExp(int level){

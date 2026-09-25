@@ -13,6 +13,7 @@ using UnityEngine.UI;
 //   Draftmaster > Art > Build Draftmaster Logo Prefab     → Assets/UI/Logo/DraftmasterLogo.prefab
 //   Draftmaster > Art > Put Draftmaster Logo On Title Screen
 //   Draftmaster > Art > Capture Title Screen (1280x720)    → Temp/title_capture.png, for checking by eye
+//   Draftmaster > Art > Capture Title Screen (Pixel 5 landscape) → Temp/title_capture_phone.png
 //
 // Laid out at 1x in design pixels, top-left origin, from the handoff's reference render. The words are split
 // DRAF | T  /  M | ASTER so the T sits over the M. Each text piece is placed by its first glyph's INK, not by
@@ -54,11 +55,16 @@ public static class DraftmasterLogoBuilder
     static readonly Vector2 ThreeAt = new Vector2(372f, 12f);
     static readonly Vector2 Shadow = new Vector2(4f, 4f);     // right and down
 
-    // Where it goes on the title screen, inside Column: the D's ink on the column's 26 px margin and the
-    // capitals where the old one-line wordmark's top was. The 3 hangs down past the menu's top, but to the
-    // right of it (menu rows stop at x 306, the 3 starts at 382).
-    static readonly Vector2 OnTitleAt = new Vector2(10f, -8f);
-    const float EyebrowY = -18f;   // was -40, under the old wordmark's slot
+    // Where it goes on the title screen, inside Column: the D's ink on the column's 26 px margin, the
+    // capitals just under the eyebrow, and the 3's right edge a little short of the middle of a landscape
+    // phone (a Pixel 5 is 780 canvas units wide; the 3 ends at ~362).
+    //
+    // Two thirds, not whatever lines the 3 up exactly: the canvas is height-matched to 360, so on a 1080-tall
+    // screen it is drawn at 3x and the logo at 2x — every art pixel two screen pixels, still hard-edged. An
+    // exact fit (~0.72) would draw the pixel art at 2.17 screen pixels per art pixel, i.e. unevenly.
+    const float OnTitleScale = 2f / 3f;
+    static readonly Vector2 OnTitleAt = new Vector2(16f, -40f);
+    const float EyebrowY = -40f;
 
     [MenuItem("Draftmaster/Art/Build Draftmaster Logo Prefab", priority = 127)]
     public static void BuildMenu() => Debug.Log(BuildPrefab());
@@ -128,6 +134,9 @@ public static class DraftmasterLogoBuilder
     // Edits the scene in place; nothing else in it is touched.
     public static string PlaceOnTitle()
     {
+        // A scene edited in Play Mode is thrown away when it stops, and cannot be saved while it runs.
+        if (EditorApplication.isPlayingOrWillChangePlaymode) return "Stop Play Mode first — the title scene can't be edited while it plays.";
+
         var scene = EditorSceneManager.GetActiveScene();
         if (scene.path != TitleScene) return $"Open {TitleScene} first.";
 
@@ -153,12 +162,13 @@ public static class DraftmasterLogoBuilder
         var rt = (RectTransform)logo.transform;
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
         rt.anchoredPosition = OnTitleAt;
+        rt.localScale = new Vector3(OnTitleScale, OnTitleScale, 1f);
         // Just after the eyebrow, where the wordmark was, so the menu and footer still draw over it if they meet.
         var eyebrow = column.Find("Eyebrow");
         logo.transform.SetSiblingIndex(eyebrow != null ? eyebrow.GetSiblingIndex() + 1 : 0);
 
-        // The logo is taller than the one-line wordmark it replaces, and everything under it (chapter line,
-        // menu) stays put, so the eyebrow moves up to give DRAFT its room.
+        // The eyebrow sits over DRAFT. At full size the logo needed it moved up to -18; at two thirds it
+        // fits back in its original place.
         if (eyebrow != null)
         {
             var ert = (RectTransform)eyebrow;
@@ -173,6 +183,11 @@ public static class DraftmasterLogoBuilder
 
     [MenuItem("Draftmaster/Art/Capture Title Screen (1280x720)", priority = 129)]
     public static void CaptureMenu() => Debug.Log(CaptureTitle(1280, 720, "Temp/title_capture.png"));
+
+    // The Device Simulator's phone, landscape: wider than 16:9, so it shows where the logo sits against the
+    // middle of the screen on the shape most players will see it.
+    [MenuItem("Draftmaster/Art/Capture Title Screen (Pixel 5 landscape)", priority = 130)]
+    public static void CapturePhoneMenu() => Debug.Log(CaptureTitle(2340, 1080, "Temp/title_capture_phone.png"));
 
     // Renders the open scene's TitleCamera, UI included, at a fixed 16:9 size rather than whatever shape the
     // Game view happens to be.

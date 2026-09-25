@@ -35,6 +35,12 @@ public class GrandstandCamera : MonoBehaviour
     // below, so the picture opens at the speed the camera moves.
     const float MinPanSeconds = 5f;
 
+    // A beat on the player in their seat before the view opens up — counted from when the arrival wipe has
+    // cleared, not from the cut, so it is a second the player actually sees. Straight into the pan read as
+    // the camera leaving before they had sat down.
+    const float HoldSeconds = 1f;
+    float _held;
+
     Camera _cam;
     CameraFollow _follow;
     OnFootCameraFollow _walkFollow;   // the other follow some scenes fit; parked while the shot is up
@@ -141,11 +147,16 @@ public class GrandstandCamera : MonoBehaviour
     {
         if (_done) return;
 
-        _elapsed += Time.deltaTime;
+        // Sat down: hold on them for a moment first (HoldSeconds), with the wipe out of the way.
+        if (_held < HoldSeconds)
+        {
+            if (!ScreenFade.Busy) _held += Time.deltaTime;
+        }
+        else _elapsed += Time.deltaTime;
 
-        // Eased OUT, not in and out. SmoothStep starts at a standstill, so the first half-second after
-        // sitting down was a still frame and the move looked like it began late; this leaves on the frame
-        // the player lands in the seat and slows into the vantage instead.
+        // Eased OUT, not in and out. SmoothStep starts at a standstill, which on top of the hold would read
+        // as the camera waiting twice; this sets off at speed once the hold is over and slows into the
+        // vantage instead.
         float t = Mathf.Clamp01(_elapsed / _panSeconds);
         float u = t * (2f - t);
 

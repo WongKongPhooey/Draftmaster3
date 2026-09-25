@@ -121,17 +121,19 @@ public class DriverFight : MonoBehaviour
         _pitScene = FindObjectOfType<PitLaneStart>();
         if (_pitScene != null) _pitScene.SetZoomTarget(fightZoom);
 
-        ControlHints.Show("fight", InputGlyphs.ShoveKeyboard, InputGlyphs.ShovePad, "Shove", 6f);
+        ControlHints.Show("fight", InputGlyphs.ShoveKeyboard, InputGlyphs.ShovePad, "Shove", 6f,
+                          onPress: () => Throw(FightMove.Shove), icon: PixelGUI.ActionIcon.Shove);
         if (enableHooks)
         {
-            ControlHints.Show("fightleft", "J", InputGlyphs.Pad(PadBindings.LeftHook), "Left hook", 6f);
-            ControlHints.Show("fightright", "K", InputGlyphs.Pad(PadBindings.RightHook), "Right hook", 6f);
+            ControlHints.Show("fightleft", "J", InputGlyphs.Pad(PadBindings.LeftHook), "Left hook", 6f,
+                              onPress: () => Throw(FightMove.LeftHook), icon: PixelGUI.ActionIcon.HookLeft);
+            ControlHints.Show("fightright", "K", InputGlyphs.Pad(PadBindings.RightHook), "Right hook", 6f,
+                              onPress: () => Throw(FightMove.RightHook), icon: PixelGUI.ActionIcon.HookRight);
         }
 
         if (showTutorial) BeginTutorial();
 
         PlayerStatsLedger.Increment("fights.started");
-        Debug.Log($"DriverFight: {_playerName} squares up to {_rivalName}.", this);
     }
 
     // ---------------------------------------------------------------- first-fight tutorial
@@ -218,6 +220,15 @@ public class DriverFight : MonoBehaviour
 
     // ---------------------------------------------------------------- player input
 
+    // A move thrown from its on-screen button (the fight's hints double as buttons — a phone has no Space, J
+    // or K). Held to the same gates as the keys.
+    void Throw(FightMove move)
+    {
+        if (_attacksLocked || _player == null || !IsActive || RacePauseMenu.IsPaused) return;
+        if (move != FightMove.Shove && !enableHooks) return;
+        _player.TryThrow(move);
+    }
+
     // Read directly from the devices, the same way DialogueChoiceUI does: the fight is a short modal beat
     // that borrows keys the on-foot map doesn't use, so it needs no new action-map entries.
     void ReadPlayerMoves()
@@ -272,7 +283,6 @@ public class DriverFight : MonoBehaviour
     void StartBreakup(BreakupReason reason)
     {
         _state = State.BreakingUp;
-        Debug.Log($"DriverFight: breaking it up ({reason}).", this);
 
         Vector3 centre = Centre();
         var bystanders = FindBystanders(centre, Mathf.Max(2, peacemakerCount));
@@ -537,8 +547,6 @@ public class DriverFight : MonoBehaviour
         else PlayerStatsLedger.Increment("fights.drawn");
 
         string result = outcome > 0 ? "came out on top" : outcome < 0 ? "came off worse" : "ended it even";
-        Debug.Log($"DriverFight: {_playerName} {result} against {_rivalName}. " +
-                  $"Composure {_player?.Health:0} v {_rival?.Health:0}.", this);
     }
 
     // The rival gets the last word as they're marched off — a bubble rather than a full conversation, so it

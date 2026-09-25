@@ -168,8 +168,6 @@ public class CareerPathNPCSpawner : MonoBehaviour
         npc.interactRange = interactRange;
         Instance = npc;
 
-        Debug.Log($"CareerPathNPCSpawner: {speakerName} stood at {pos} " +
-                  $"(career path so far: {CareerPath.DisplayName(CareerPath.Current)}).", this);
     }
 
     // Same paper-doll build as the paddock drivers and the autograph fans, with a fixed seed so he's the

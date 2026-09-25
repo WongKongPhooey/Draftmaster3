@@ -340,7 +340,6 @@ public class Movement : MonoBehaviour {
 			}
 		} else {
 			carRarity = 0;
-			//Debug.Log("Invalid Car #");
 		}
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
@@ -399,7 +398,6 @@ public class Movement : MonoBehaviour {
 			numberObj.GetComponent<Transform>().localScale = numScale;
 			numberObj.GetComponent<Transform>().localRotation = Quaternion.Euler(numRotation.x, numRotation.y, numRotation.z);
 		
-			//Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
 			numRend.enabled = true;
 		} else {
 			numRend.enabled = false;
@@ -622,7 +620,6 @@ public class Movement : MonoBehaviour {
 			}
 		}
 		
-		//Debug.Log("Hit " + carHit.gameObject.name);
 		if ((carHit.gameObject.tag == "AICar") || 
 			(carHit.gameObject.tag == "Barrier") || 
 			(carHit.gameObject.name == "OuterWall") ||
@@ -728,28 +725,23 @@ public class Movement : MonoBehaviour {
 		
 		if(gamePausedLate == true){
 			if(cautionSummaryMenu.activeSelf == true){
-				//Debug.Log("Time Paused (Movement)");
 				Time.timeScale = 0.0f;
 			}
 			try {
 				pauseMenu = GameObject.Find("PauseMenu");
 				if(pauseMenu.activeSelf == true){
-					//Debug.Log("Time Paused (Camera Rotate)");
 					Time.timeScale = 0.0f;
 				}
 			}
 			catch (Exception e){
-				//Debug.Log("Failed To Pause: " + e.Message);
 			}
 			try {
 				challengeLost = GameObject.Find("ChallengeLost");
 				if(challengeLost.activeSelf == true){
-					//Debug.Log("Time Paused (Moment Failed)");
 					Time.timeScale = 0.0f;
 				}
 			}
 			catch (Exception e){
-				//Debug.Log("Failed To End Moment Challenge: " + e.Message);
 			}
 		}
 		
@@ -761,8 +753,6 @@ public class Movement : MonoBehaviour {
 				tandemPosition = RaceControl.tandemPosition[carNum];
 				RaceControl.givenSpeed[carNum] = 0;
 				#if UNITY_EDITOR
-					//Debug.Log("The player has evened out at " + givenSpeed + " in the tandem.");
-					//Debug.Log("Player is in a tandem of " + tandemPosition);
 				#endif
 			} else {
 				//Helps to remove the 'stickiness' when lifting to detach from the tandem
@@ -847,7 +837,6 @@ public class Movement : MonoBehaviour {
 		
 		//Draft increases with track speed
 		draftFactor = (200 - carSpeedOffset)/200;
-		//Debug.Log("Draft Factor: " + draftFactor);
 		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
@@ -882,8 +871,6 @@ public class Movement : MonoBehaviour {
 				//e.g. dist 5 = strength 0.02
 				float draftStrength = (0.04f - (DraftCheck.distance / 750f)) + (carRarity / 750f) + (carClass / 2500f) - minDraftStrength - dragDecelMulti;
 				#if UNITY_EDITOR
-				//Debug.Log("Player draft strength: " + oldDraftStrength + " - " + (maxDraftDistance - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
-				//Debug.Log("New player draft strength: " + draftStrength + " - " + (0.02f / DraftCheck.distance) + " " + (carRarity / 750f) + (carClass / 2500f));
 				#endif
 				
 				float diffToMax = variTopSpeed - playerSpeed;
@@ -894,7 +881,6 @@ public class Movement : MonoBehaviour {
 						diffToMax = 0;
 					}
 					draftStrength *= (diffToMax / 2) + 0.01f;
-					//Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
 				}
 				playerSpeed += (draftStrength * draftFactor);
 				
@@ -1048,7 +1034,6 @@ public class Movement : MonoBehaviour {
 		updateMovement();
 
 		if(affectedPlayerSpeed != 0){
-			//Debug.Log("Player speed equalised to " + affectedPlayerSpeed + ". Was " + playerSpeed);
 			playerSpeed = affectedPlayerSpeed;
 			affectedPlayerSpeed = 0;
 		}
@@ -1076,7 +1061,6 @@ public class Movement : MonoBehaviour {
 		if(gamePausedLate == true){
 			if((cautionSummaryMenu.activeSelf == true)&&
 			   (Time.timeScale != 0.0f)){
-				Debug.Log("Time Paused (Movement)");
 				Time.timeScale = 0.0f;
 			}
 		}
@@ -1205,7 +1189,6 @@ public class Movement : MonoBehaviour {
 			if(laneticker == 0){
 				lane++;
 				laneticker = laneChangeDuration;
-				//Debug.Log("Goin' Left!");
 			}
 		}
 		if(steeringType == 1){
@@ -1219,7 +1202,6 @@ public class Movement : MonoBehaviour {
 			if(laneticker == 0){
 				lane--;
 				laneticker = -laneChangeDuration;
-				//Debug.Log("Goin' Right!");
 			}
 		}
 		if(steeringType == 1){
@@ -1481,7 +1463,6 @@ public class Movement : MonoBehaviour {
 		if(wreckHits > 1){
 			//Subsequent hits based on rotation angle
 			float spinAngle = this.transform.localRotation.eulerAngles.y;
-			//Debug.Log("Car rotation: " + spinAngle);
 			wreckTorque = Random.Range(-0.25f, 0.25f) * 10;
 		} else {
 			//First impact, car will start straight
@@ -1518,7 +1499,6 @@ public class Movement : MonoBehaviour {
 		RaceControl.hasWrecked[carNum] = true;
 		
 		hideHUD();
-		//Debug.Log("WRECK OVER");
 		wreckRigidbody.mass = 5;
 		wreckRigidbody.isKinematic = true;
 		wreckForce.force = new Vector3(0f, 0f,windForce);
@@ -1545,19 +1525,16 @@ public class Movement : MonoBehaviour {
 		
 		//No cautions on the last lap, race is over
 		if(CameraRotate.lap < CameraRotate.raceEnd){
-			//Debug.Log("Wreck Over (Movement)");
 			if(momentChecks == false){
 				//Open the caution menu
 				cautionSummaryMenu.SetActive(true);
 			}
 			if(fastestLapSaved == false){
-				//Debug.Log("Haven't saved fastest lap yet.. (Movement)");
 				CameraRotate.saveRaceFastestLap();
 				fastestLapSaved = true;
 			}
 		}
 		gamePausedLate = true;
-		//Debug.Log("Pause the game!");
 		mainCam.GetComponent<AudioListener>().enabled = false;
 		PlayerPrefs.SetInt("Volume",0);
 		
@@ -1587,27 +1564,21 @@ public class Movement : MonoBehaviour {
 		updateWindForce(wreckSine);
 		if(CameraRotate.onTurn == true){
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
-			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			if(wallrideMod == true){
 				baseDecel+=0.35f;
 				wreckForce.force = new Vector3(10f,0f,40f);
 			} else {
 				wreckForce.force = new Vector3(slideX,0f,windForce);
-				//Debug.Log("Windforce: " + windForce);
 			}
-			//Debug.Log("Apply side force to wreck on turn");
 		} else {
 			wreckForce.force = new Vector3(-3f, 0f,windForce);
-			//Debug.Log("Windforce: " + windForce);
 		}
 		playerWreckDecel = baseDecel - (60f * wreckSine);
-		//Debug.Log(playerWreckDecel);
 		
 		if(seriesSpeedDiff > 0){
 			seriesSpeedDiff -= 1;
 		}
 
-		//Debug.Log("Wreck Decel: " + playerWreckDecel);
 		if((playerSpeed - speedOffset - seriesSpeedDiff - CameraRotate.carSpeedOffset) + windForce <= 0){
 			endWreck();
 		}
@@ -1624,7 +1595,6 @@ public class Movement : MonoBehaviour {
 			this.gameObject.transform.position = new Vector3(1.5f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
 		}
 		
-		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + playerWreckDecel);
 		if(sparksEndSpeed < playerWreckDecel){
 			//Align particle system to global track direction
 			leftSparks.rotation = Quaternion.Euler(0,180,0);
@@ -1667,7 +1637,6 @@ public class Movement : MonoBehaviour {
 	}
 	
 	void updateWindForce(float angleSin){
-		//Debug.Log("Wreck Angle Sin: " + (forceSmoothing * (angleSin * 2)));
 		if(windForce < targetForce - (forceSmoothing * (angleSin * 2))){
 			windForce += forceSmoothing * (angleSin * 2);
 		}
@@ -1679,7 +1648,6 @@ public class Movement : MonoBehaviour {
 	public static void incrTotalWreckers(){
 		totalWreckers++;
 		if(totalWreckers == 20){
-			//Debug.Log("BIG CRASH");
 			GameObject theCamera = GameObject.Find("Main Camera");
 			theCamera.GetComponent<CommentaryManager>().commentate("BigCrash");
 		}

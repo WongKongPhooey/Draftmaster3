@@ -94,7 +94,6 @@ public class ChampionshipHubUI : MonoBehaviour
 		for(int i=0;i<100;i++){
 			if(PlayerPrefs.HasKey("RaceAltPaint" + i)){
 				PlayerPrefs.DeleteKey("RaceAltPaint" + i);
-				//Debug.Log("Reset Alt Paints");
 			}
 			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
 			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
@@ -107,7 +106,6 @@ public class ChampionshipHubUI : MonoBehaviour
 		if(PlayerPrefs.HasKey("CurrentModSeries")){
 			currentModSeries = PlayerPrefs.GetString("CurrentModSeries");
 		}
-		//Debug.Log("Index: " + currentSeriesIndex);
 		carNumber = PlayerPrefs.GetInt("CarChoice");
 		currentSeries = int.Parse(currentSeriesIndex.Substring(0,1));
 		currentSubseries = int.Parse(currentSeriesIndex.Substring(1));
@@ -116,14 +114,12 @@ public class ChampionshipHubUI : MonoBehaviour
 		//Testing Long Championships Fast
 		#if UNITY_EDITOR
 		//PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Round",4);
-		//Debug.Log("Championship Round hacked to R4.");
 		#endif
 		
 		championshipRound = PlayerPrefs.GetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "Round");
 		championshipLength = PlayerPrefs.GetInt("SeriesChampionship" + currentModSeries + currentSeriesIndex + "Length");
 		seriesPrefix = PlayerPrefs.GetString("SeriesChampionship" + currentModSeries + currentSeriesIndex + "CarSeries");
 		PlayerPrefs.SetString("carSeries",seriesPrefix);
-		//Debug.Log("Champ Carset: " + seriesPrefix);
 		PlayerPrefs.SetString("RaceType","Championship");
 		
 		modSeries = false;
@@ -140,7 +136,6 @@ public class ChampionshipHubUI : MonoBehaviour
 		nextRound = GameObject.Find("NextRound");
 		nextRound.GetComponent<TMPro.TMP_Text>().text = "Round " + (championshipRound + 1) + "/" + championshipLength;
 		
-		//Debug.Log("Tracklist: " + championshipTracklist);
 		tracksArray = championshipTracklist.Split(',').Select(int.Parse).ToArray();
 		
 		hubCarImage = GameObject.Find("NextCar");
@@ -194,10 +189,8 @@ public class ChampionshipHubUI : MonoBehaviour
 				}
 				int carNo = ModData.getCarNum(seriesPrefix,i);
 				if(!PlayerPrefs.HasKey("SeriesChampionship" + currentSeriesIndex + "Points"  + carNo)){
-					//Debug.Log("Set points for: " + carNo);
 					PlayerPrefs.SetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNo,0);
 				}
-				//Debug.Log("Index:" + i + " - Num:" + carNo);
 				championshipPoints.Add(carNo,PlayerPrefs.GetInt("SeriesChampionship" + currentSeriesIndex + "Points"  + carNo));
 			} else {
 				if(DriverNames.getName(seriesPrefix,i) == null){
@@ -261,7 +254,6 @@ public class ChampionshipHubUI : MonoBehaviour
 			champPos.text = (pointsInd+1).ToString();
 			
 			if(modSeries == true){
-				//Debug.Log("# " + pointsRow.Key + " has " + pointsRow.Value.ToString() + " points.");
 				int carNum = pointsRow.Key;
 				if(PlayerPrefs.HasKey("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,pointsRow.Key))){
 					carNum = PlayerPrefs.GetInt("CustomNumber" + seriesPrefix + ModData.getJsonIndexFromCarNum(seriesPrefix,pointsRow.Key));

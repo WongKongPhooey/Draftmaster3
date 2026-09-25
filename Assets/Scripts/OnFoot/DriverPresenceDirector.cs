@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using Draftmaster.Data;
+using Draftmaster.Weekend;
 using UnityEngine;
 
 // Puts every driver in the field somewhere the player can actually walk up to. Reads the roster and
@@ -9,6 +11,9 @@ using UnityEngine;
 //             bolted onto the car itself, so walking up and pressing E is a window-down chat.
 //   AtRV    — stood a couple of metres outside their own motorhome door, facing the aisle.
 //   Walking — wandering the open aisle in front of their row (PaddockWalker), stopping to talk.
+//   Mobbed  — stood somewhere in the open paddock with a crowd of fans round them wanting photos and
+//             autographs (FanMob). Only while the player's own championship is off the track: with no
+//             session to be in, a driver standing still anywhere public gets found.
 //
 // Which driver does what is seeded from their car number and the weekend id: stable across a
 // reload of the same session, reshuffled next weekend.
@@ -17,7 +22,7 @@ using UnityEngine;
 // built, so there is no scene wiring and no ordering problem.
 public class DriverPresenceDirector : MonoBehaviour
 {
-    public enum Presence { InCar, AtRV, Walking }
+    public enum Presence { InCar, AtRV, Walking, Mobbed }
 
     [Header("Mix")]
     [Tooltip("Relative weight of drivers sat in their cars.")]
@@ -26,6 +31,22 @@ public class DriverPresenceDirector : MonoBehaviour
     public float weightAtRV = 1f;
     [Tooltip("Relative weight of drivers wandering the lot.")]
     public float weightWalking = 1f;
+    [Tooltip("Relative weight of drivers caught in the open paddock by a crowd of fans. Only rolled while the player's championship has no session on track.")]
+    public float weightMobbed = 1.2f;
+
+    [Header("Fan mobs")]
+    [Tooltip("Most drivers mobbed at once. The rest of those rolls fall back to wandering the lot.")]
+    public int maxMobs = 5;
+    [Tooltip("Fans round the least-known driver in the field.")]
+    public int minFansPerMob = 4;
+    [Tooltip("Fans round the biggest name (Prestige 20).")]
+    public int maxFansPerMob = 11;
+    [Tooltip("Mobs keep at least this far apart (m).")]
+    public float mobSpacing = 14f;
+    [Tooltip("...and at least this far from any weekend venue — the drivers' room door, the fan fence, the stage (m).")]
+    public float mobVenueClearance = 12f;
+    [Tooltip("...and clear of walls, motorhomes and props by this radius (m).")]
+    public float mobClearRadius = 3.2f;
 
     [Header("Placement")]
     [Tooltip("How far out from their motorhome door a driver stands (m).")]
@@ -64,6 +85,9 @@ public class DriverPresenceDirector : MonoBehaviour
     readonly List<SeatedDriver> _seated = new();
     float _seatPoll;
 
+    readonly List<FanMob> _mobs = new();
+    float _mobPoll;
+
     // Built by DriverMotorhomeLot the moment its row exists.
     public static DriverPresenceDirector Create(DriverMotorhomeLot lot)
     {
@@ -83,12 +107,15 @@ public class DriverPresenceDirector : MonoBehaviour
 
         int weekend = RaceWeekend.WeekendId;
         int spawned = 0, inCar = 0, atRv = 0, walking = 0;
+        bool mobsAllowed = PlayersSeriesOffTrack();
+        var mobbed = new List<DriverMotorhomeLot.Slot>();
 
         foreach (var slot in lot.Slots)
         {
             if (slot.isPlayer) continue;      // the player is the player — they're not an NPC in their own paddock
 
-            var presence = Pick(slot.carNumber, weekend);
+            var presence = Pick(slot.carNumber, weekend, mobsAllowed);
+            if (presence == Presence.Mobbed && mobbed.Count >= Mathf.Max(0, maxMobs)) presence = Presence.Walking;
             bool budgetLeft = maxSpawnedDrivers <= 0 || spawned < maxSpawnedDrivers;
             // No car to sit in (a driver with no entry on track) forces them out into the paddock;
             // a spent budget forces the opposite.
@@ -101,26 +128,40 @@ public class DriverPresenceDirector : MonoBehaviour
                 case Presence.InCar: SeatInCar(slot); inCar++; break;
                 case Presence.AtRV: StandAtRV(slot); atRv++; spawned++; break;
                 case Presence.Walking: WalkTheLot(slot); walking++; spawned++; break;
+                case Presence.Mobbed: mobbed.Add(slot); spawned++; break;
             }
         }
 
-        Debug.Log($"DriverPresenceDirector: {inCar} in their cars, {atRv} at their motorhomes, {walking} walking the lot.", this);
+
+        if (mobbed.Count > 0) StartCoroutine(PlaceMobs(mobbed, weekend));
+    }
+
+    // The player's championship has nothing on track, and nobody has put the player in a car — so the
+    // drivers of that series are out in the paddock like everyone else, and fair game.
+    static bool PlayersSeriesOffTrack()
+    {
+        if (RaceWeekend.SessionLive) return false;
+        if (!GameSession.CareerActive) return false;   // single race / lobby: no weekend around it
+        var live = WeekendTrackState.Now();
+        return !(live.any && live.series == SeriesCatalog.PlayerSeries);
     }
 
     // Deterministic per driver per weekend, so the paddock doesn't reshuffle every time the scene reloads.
-    Presence Pick(int carNumber, int weekendId)
+    Presence Pick(int carNumber, int weekendId, bool mobsAllowed)
     {
         float a = Mathf.Max(0f, weightInCar);
         float b = Mathf.Max(0f, weightAtRV);
         float c = Mathf.Max(0f, weightWalking);
-        float total = a + b + c;
+        float m = mobsAllowed ? Mathf.Max(0f, weightMobbed) : 0f;
+        float total = a + b + c + m;
         if (total <= 0f) return Presence.InCar;
 
         var rng = new System.Random(carNumber * 92821 + weekendId * 7717 + 13);
         float roll = (float)rng.NextDouble() * total;
         if (roll < a) return Presence.InCar;
         if (roll < a + b) return Presence.AtRV;
-        return Presence.Walking;
+        if (roll < a + b + c) return Presence.Walking;
+        return Presence.Mobbed;
     }
 
     // ---------------------------------------------------------------- presences
@@ -195,6 +236,122 @@ public class DriverPresenceDirector : MonoBehaviour
         return talk;
     }
 
+    // Mobs go down loose in the open paddock, so they wait for the weekend's venues to be standing first
+    // (those are built off the motorhome row, a few frames after it) and then keep out of their way. A
+    // driver with nowhere clear to stand goes back to wandering their own aisle.
+    IEnumerator PlaceMobs(List<DriverMotorhomeLot.Slot> slots, int weekend)
+    {
+        float wait = 12f;
+        while (wait > 0f && WeekendVenueSites.Instance != null && !WeekendVenueSites.Instance.IsBuilt)
+        {
+            wait -= Time.deltaTime;
+            yield return null;
+        }
+        yield return null;   // one more frame for the venues' colliders to register
+
+        if (!PlayersSeriesOffTrack())
+        {
+            foreach (var slot in slots) WalkTheLot(slot);
+            yield break;
+        }
+
+        var taken = new List<Vector2>();
+        foreach (var slot in slots)
+        {
+            var rng = new System.Random(slot.carNumber * 4099 + weekend * 331 + 7);
+            if (!FindMobSpot(rng, taken, out Vector2 spot)) { WalkTheLot(slot); continue; }
+            taken.Add(spot);
+            MobDriver(slot, new Vector3(spot.x, spot.y, -0.6f), rng.Next());
+        }
+    }
+
+    bool FindMobSpot(System.Random rng, List<Vector2> taken, out Vector2 spot)
+    {
+        spot = default;
+        if (!PaddockSpawner.TryGetArea(out var centre, out var along, out var outward, out float halfLen, out float halfDepth))
+            return false;
+
+        var player = AutographFanSpawner.OnFootPlayer != null ? AutographFanSpawner.OnFootPlayer.transform : null;
+        var hits = new Collider2D[16];
+        var filter = new ContactFilter2D { useTriggers = false };
+
+        for (int attempt = 0; attempt < 80; attempt++)
+        {
+            float u = ((float)rng.NextDouble() * 2f - 1f) * halfLen * 0.9f;
+            float v = ((float)rng.NextDouble() * 2f - 1f) * halfDepth * 0.8f;
+            Vector2 p = centre + along * u + outward * v;
+            p = PaddockBoundary.ConstrainInside(p, 4f);
+            if (!PaddockBoundary.IsInside(p)) continue;
+
+            if (player != null && Vector2.Distance(p, player.position) < 10f) continue;
+
+            bool clear = true;
+            foreach (var t in taken)
+                if (Vector2.Distance(p, t) < mobSpacing) { clear = false; break; }
+            if (!clear) continue;
+
+            foreach (var anchor in WeekendVenueAnchor.All)
+                if (anchor != null && Vector2.Distance(p, anchor.transform.position) < mobVenueClearance) { clear = false; break; }
+            if (!clear) continue;
+
+            // Only solid scenery counts: walls, motorhomes, props. The paddock crowd walks on kinematic bodies
+            // and would reject every spot in a busy paddock — it just walks round the mob instead.
+            int n = Physics2D.OverlapCircle(p, mobClearRadius, filter, hits);
+            for (int i = 0; i < n; i++)
+            {
+                var body = hits[i].attachedRigidbody;
+                if (body == null || body.bodyType == RigidbodyType2D.Static) { clear = false; break; }
+            }
+            if (!clear) continue;
+
+            spot = p;
+            return true;
+        }
+        return false;
+    }
+
+    void MobDriver(DriverMotorhomeLot.Slot slot, Vector3 pos, int seed)
+    {
+        var go = BuildDriver(slot, pos, "Driver_Mobbed");
+        var talk = MakeTalkable(go, slot, Presence.Mobbed);
+        talk.interactRange = footTalkRange;
+
+        // The bigger the name, the bigger the crowd.
+        var d = RosterLookup.ByCarNumber(slot.carNumber);
+        float fame = Mathf.Clamp01((d != null ? d.Prestige : 8) / 20f);
+        int fans = Mathf.RoundToInt(Mathf.Lerp(minFansPerMob, Mathf.Max(minFansPerMob, maxFansPerMob), fame));
+
+        _mobs.Add(FanMob.Create(_root, pos, go, slot.fullName, fans, seed, BuildFan));
+    }
+
+    // A fan in a mob: the same paper doll as everyone else in the paddock, and no physics — they stand in a
+    // ring and the player walks straight through it to the driver.
+    GameObject BuildFan(int seed)
+    {
+        var go = new GameObject("MobFan");
+        var layered = go.AddComponent<NPCLayeredAppearance>();
+        layered.library = partLibrary;
+        layered.layerMaterial = UnlitSprite();
+        layered.sortingLayerName = sortingLayerName;
+        layered.baseSortingOrder = baseSortingOrder - 1;   // under the driver they're crowding
+
+        if (partLibrary != null && layered.Build(seed))
+        {
+            float frameWorldH = Mathf.Max(0.01f, partLibrary.frameHeight / Mathf.Max(1f, partLibrary.pixelsPerUnit));
+            go.transform.localScale = Vector3.one * (driverHeightM / frameWorldH);
+        }
+        else
+        {
+            Destroy(layered);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = Placeholder(new Color(0.95f, 0.75f, 0.25f), driverHeightM * 0.9f);   // gold blob = fan
+            sr.sharedMaterial = UnlitSprite();
+            sr.sortingLayerName = sortingLayerName;
+            sr.sortingOrder = baseSortingOrder - 1;
+        }
+        return go;
+    }
+
     // ---------------------------------------------------------------- construction
 
     GameObject BuildDriver(DriverMotorhomeLot.Slot slot, Vector3 pos, string prefix)
@@ -262,6 +419,7 @@ public class DriverPresenceDirector : MonoBehaviour
     // while the whole field is still parked.
     void Update()
     {
+        UpdateMobs();
         if (_seated.Count == 0) return;
 
         _seatPoll -= Time.deltaTime;
@@ -279,6 +437,21 @@ public class DriverPresenceDirector : MonoBehaviour
             Destroy(s.talk);
             _seated.RemoveAt(i);
         }
+    }
+
+    // The clock moved and the player's championship is on track now (or the player has been put in a car):
+    // the crowds break up and their drivers are wanted elsewhere.
+    void UpdateMobs()
+    {
+        if (_mobs.Count == 0) return;
+        _mobPoll -= Time.deltaTime;
+        if (_mobPoll > 0f) return;
+        _mobPoll = 1f;
+
+        _mobs.RemoveAll(m => m == null);
+        if (PlayersSeriesOffTrack()) return;
+        foreach (var m in _mobs) m.Disperse();
+        _mobs.Clear();
     }
 
     // ---------------------------------------------------------------- dialogue
@@ -308,6 +481,9 @@ public class DriverPresenceDirector : MonoBehaviour
                 break;
             case Presence.AtRV:
                 pool = spiky ? kAtRvSpiky : veteran ? kAtRvVeteran : kAtRvNeutral;
+                break;
+            case Presence.Mobbed:
+                pool = spiky ? kMobbedSpiky : veteran ? kMobbedVeteran : kMobbedNeutral;
                 break;
             default:
                 pool = spiky ? kWalkingSpiky : veteran ? kWalkingVeteran : kWalkingNeutral;
@@ -360,6 +536,25 @@ public class DriverPresenceDirector : MonoBehaviour
     {
         new[] { "You lost?", "Just passing. #player", "Then keep passing. Save it for the track." },
         new[] { "You've got a lot of front, knocking on my door.", "It's an open paddock. #player", "So it is. Enjoy it while it's quiet." },
+    };
+
+    static readonly string[][] kMobbedNeutral =
+    {
+        new[] { "Hey, {playerfirst}! Give me a minute — I promised these folks I'd do every hat.", "Popular today. #player", "Ask me again after I stuff it into the wall in turn one." },
+        new[] { "Don't tell {team}, but this is my favourite bit of the weekend.", "Better than driving? #player", "Nearly. The fans never tell me I'm tight in the centre." },
+        new[] { "Twenty minutes, I said. That was an hour ago.", "Want me to cause a distraction? #player", "Don't you dare. They'd only follow you instead." },
+    };
+
+    static readonly string[][] kMobbedVeteran =
+    {
+        new[] { "Twenty years of this and I still can't sign my name neatly.", "Nobody reads it anyway. #player", "That's the secret. Find a pen, {playerfirst} — they'll want you next." },
+        new[] { "Some of these people have been coming to see me since before you could drive.", "That's loyalty. #player", "That's the job. Look after them and they look after you." },
+    };
+
+    static readonly string[][] kMobbedSpiky =
+    {
+        new[] { "If you want an autograph, {playerfirst}, get in line.", "Just passing through. #player", "Good. These people came to see a winner." },
+        new[] { "Take a look. This is what a fanbase looks like.", "Mine are around somewhere. #player", "Sure they are." },
     };
 
     static readonly string[][] kWalkingNeutral =

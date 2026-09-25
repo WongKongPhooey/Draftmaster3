@@ -59,13 +59,11 @@ public class InputManager : MonoBehaviour
     public void OnMovement(InputValue value)
     {
         direction = value.Get<Vector2>();
-        //Debug.Log("Analog walking direction" + direction.x + ", " + direction.y);
     }
 
     public void OnSteering(InputValue value)
     {
         direction = value.Get<Vector2>();
-        //Debug.Log("Analog steering direction" + direction.x + ", " + direction.y);
     }
 
     public static void ChangeInputMap(string mapName){

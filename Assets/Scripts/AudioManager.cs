@@ -18,7 +18,6 @@ public class AudioManager : MonoBehaviour
 		
 		switch(phrase){
 			case "Skid":
-				//Debug.Log(sfxClips.skidClips.Length + " choices");
 				rand = Random.Range(0,sfxClips.skidClips.Length);
 				sfxClip = sfxClips.skidClips[rand];
 				break;

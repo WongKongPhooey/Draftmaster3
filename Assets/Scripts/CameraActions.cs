@@ -13,7 +13,6 @@ public class CameraActions : MonoBehaviour
     }
 
     public void triggerAction(string actionName, GameObject target, int actionParamInt){
-        Debug.Log("Camera Action Triggered");
 
         switch(actionName){
             case "FocusAwayForSeconds":
@@ -31,7 +30,6 @@ public class CameraActions : MonoBehaviour
     }
 
     public void triggerExitAction(string actionName, GameObject target, int actionParamInt){
-        Debug.Log("Exit Trigger Action");
 
         switch(actionName){
             case "ReturnFocusToPlayer":
@@ -49,14 +47,12 @@ public class CameraActions : MonoBehaviour
     }
 
     IEnumerator FocusAwayForSeconds(GameObject target, int newZoom){
-        Debug.Log("Camera Focus To Target");
         actionedCamera.Follow = target.transform;
         actionedCamera.Lens.OrthographicSize = newZoom;
         yield return new WaitForSeconds(0);
     }
 
     IEnumerator ReturnFocusToPlayer(GameObject target, int newZoom){
-        Debug.Log("Camera Focus To Player");
         yield return new WaitForSeconds(1f); 
         actionedCamera.Lens.OrthographicSize = CameraManager.playerZoom;
         actionedCamera.Follow = player.transform;

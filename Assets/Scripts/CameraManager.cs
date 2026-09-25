@@ -46,8 +46,6 @@ public class CameraManager : MonoBehaviour
     public static void setPlayer(GameObject playerVehicle, float zoom = 18f){
         thePlayer = playerVehicle;
 		cameraOffset = thePlayer.transform.position.x;
-		Debug.Log("New X offset: " + cameraOffset);
-		Debug.Log("" + thePlayer);
 		actionedCamera = GameObject.Find("FollowCamera").GetComponent<CinemachineCamera>();
         actionedCamera.Lens.OrthographicSize = zoom;
 		actionedCamera.Follow = thePlayer.transform;

@@ -68,7 +68,7 @@ public class PhoneMessagesApp : PhoneApp
             float h = RowH * 2f + pad * 2f;
             var plate = new Rect(x, y, w, h);
             Plate(plate, t.Unread > 0 ? Accent : PixelGUI.PlateLight);
-            if (GUI.Button(plate, GUIContent.none, GUIStyle.none)) OpenThread(t);
+            if (Pressed(plate)) OpenThread(t);
 
             float cy = y + pad;
             cy += Row(x + pad, cy, inner, Name(t), t.Unread > 0 ? t.Unread + " NEW" : (t.Last?.stamp ?? ""),
@@ -88,7 +88,7 @@ public class PhoneMessagesApp : PhoneApp
         // Back to the list — only worth offering when there is a list to go back to.
         if (PhoneMessages.Threads.Count > 1)
         {
-            if (GUI.Button(new Rect(x, y, w, RowH), GUIContent.none, GUIStyle.none)) { _threadId = null; ScrollToTop(); }
+            if (Pressed(new Rect(x, y, w, RowH))) { _threadId = null; ScrollToTop(); }
             y += Row(x, y, w, "< all messages", "", PixelGUI.Info);
             y += PixelGUI.Px(3f);
         }

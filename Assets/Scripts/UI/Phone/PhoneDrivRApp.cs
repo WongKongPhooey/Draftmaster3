@@ -129,7 +129,7 @@ public class PhoneDrivRApp : PhoneApp
             var r = new Rect(x, y, w, rowH);
 
             if (i % 2 == 0) PixelGUI.Fill(r, new Color(PixelGUI.Plate.r, PixelGUI.Plate.g, PixelGUI.Plate.b, 0.5f));
-            if (GUI.Button(r, GUIContent.none, GUIStyle.none)) { _selected = row; LoadResults(row); }
+            if (Pressed(r)) { _selected = row; LoadResults(row); }
 
             // Ability doubles as the rank colour: the quick ones stand out in a list this long.
             Color tint = d.CurrentAbility >= 85 ? PixelGUI.Gold
@@ -149,7 +149,7 @@ public class PhoneDrivRApp : PhoneApp
         float y0 = y;
         var d = row.driver;
 
-        if (GUI.Button(new Rect(x, y, w, RowH), GUIContent.none, GUIStyle.none)) _selected = null;
+        if (Pressed(new Rect(x, y, w, RowH))) _selected = null;
         y += Row(x, y, w, "< all drivers", "", PixelGUI.Info);
         y += PixelGUI.Px(3f);
 

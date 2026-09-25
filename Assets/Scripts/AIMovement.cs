@@ -330,7 +330,6 @@ public class AIMovement : MonoBehaviour
 		Renderer numRend = this.transform.Find("Number").GetComponent<Renderer>();
 		
 		string chosenAlt;
-		//Debug.Log("#" + carNumber + " checking for alt paints");
 		if(!PlayerPrefs.HasKey("RaceAltPaintsChosen")){
 			altPaints = new List<string>();
 			if(PlayerPrefs.GetString("CurrentCircuit") != "Darlington"){
@@ -342,17 +341,14 @@ public class AIMovement : MonoBehaviour
 				AltPaints.loadAlts();
 				for(int i=1;i<10;i++){
 					if(AltPaints.getAltPaintName(seriesPrefix,carNum,i) != null){
-						//Debug.Log("Alt Paint #" + carNum + " Alt " + i + " could spawn");
 						if(AltPaints.getAltPaintAISpawning(seriesPrefix,carNum,i) != true){
 							altPaints.Add(i.ToString());
-							//Debug.Log("Added #" + carNum + " Alt " + i + " to the spawn list");
 						}
 					}
 				}
 			} else {
 				for(int i=1;i<10;i++){
 					if(ModData.getAltTexture(seriesPrefix,carNum,i) != null){
-						//Debug.Log("Mod Alt Paint #" + carNum + " Alt " + i + " could spawn");
 						altPaints.Add(i.ToString());
 					}
 				}
@@ -362,14 +358,12 @@ public class AIMovement : MonoBehaviour
 				altPaints.Add("0");
 			}
 			int altIndex = Random.Range(0,altPaints.Count);
-			//Debug.Log("#" + carNumber + " - " + altPaints.Count + " possible paints. Chose " + altIndex);
 			chosenAlt = altPaints[altIndex];
 			PlayerPrefs.SetString("RaceAltPaint" + carNum,chosenAlt);
 		} else {
 			if(PlayerPrefs.HasKey("RaceAltPaint" + carNum)){
 				//Load the pre-picked alt paint
 				chosenAlt = PlayerPrefs.GetString("RaceAltPaint" + carNum);
-				//Debug.Log("Remembered to show the #" + carNumber + " Alt");
 			} else {
 				chosenAlt = "0";
 			}
@@ -413,28 +407,21 @@ public class AIMovement : MonoBehaviour
 			numberObj.GetComponent<Transform>().localScale = numScale;
 			numberObj.GetComponent<Transform>().localRotation = Quaternion.Euler(numRotation.x, numRotation.y, numRotation.z);
 				
-			//Debug.Log("Custom number #" + customNum + " applied to car " + carNum + "Var: " + seriesPrefix + "num" + customNum);
 		} else {
 			if(chosenAlt != "0"){
-				//Debug.Log("Custom alt spawned - Car #" + carNumber);
 				if(officialSeries == true){
-					//Debug.Log("Stock Series - Spawn car paint");
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber + "alt" + chosenAlt) as Texture;
 				} else {
-					//Debug.Log("Mod Series - Spawn car paint");
 					liveryRend.material.mainTexture = ModData.getAltTexture(seriesPrefix,int.Parse(carNumber),int.Parse(chosenAlt));
 				}
 			} else {
 				if(officialSeries == true){
-					//Debug.Log("Stock Series - Spawn car paint");
 					liveryRend.material.mainTexture = Resources.Load(seriesPrefix + "livery" + carNumber) as Texture;
 				} else {
-					//Debug.Log("Non official series, get mod texture");
 					liveryRend.material.mainTexture = ModData.getTexture(seriesPrefix,carNum);
 				}
 			}
 			numRend.enabled = false;
-			//Debug.Log("No custom number saved");
 		}
 		
 		circuitLanes = PlayerPrefs.GetInt("CircuitLanes");
@@ -504,12 +491,10 @@ public class AIMovement : MonoBehaviour
 			
 			//Delicate mod - Everybody wrecks
 			if((isWrecking == false)&&(Movement.delicateMod == true)){
-				//Debug.Log("Wreck: Delicate Mod");
 				startWreck();
 			}
 			
 			if((blownEngine == true)&&(isWrecking == false)){
-				Debug.Log("Contact - Blown Engine");
 				startWreck();
 			}
 			
@@ -524,7 +509,6 @@ public class AIMovement : MonoBehaviour
 				} else {
 					bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
 					if(joinWreck == true){
-						//Debug.Log("Wreck: Joining In");
 						startWreck();
 					}
 				}
@@ -536,7 +520,6 @@ public class AIMovement : MonoBehaviour
 				} else {
 					bool joinWreck = Movement.isWrecking;
 					if(joinWreck == true){
-						//Debug.Log("Wreck: Joining Player");
 						startWreck();
 					}
 				}
@@ -567,7 +550,6 @@ public class AIMovement : MonoBehaviour
 				if(carHit.gameObject.tag == "Player"){
 					hitByPlayer = true;
 					dooredStrength = Movement.dooredStrength;
-					//Debug.Log("Doored by the player! Strength of " + dooredStrength);
 				} else {
 					if(carHit.gameObject.tag == "AICar"){
 						dooredStrength = carHit.gameObject.GetComponent<AIMovement>().dooredStrength;
@@ -576,7 +558,6 @@ public class AIMovement : MonoBehaviour
 				if(doored("Left",dooredStrength) == true){
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " got doored! Moving right");
 					}
 					#endif
 					changeLane("Right");
@@ -584,7 +565,6 @@ public class AIMovement : MonoBehaviour
 				if(doored("Right",dooredStrength) == true){
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " got doored! Moving left");
 					}
 					#endif
 					changeLane("Left");
@@ -619,7 +599,6 @@ public class AIMovement : MonoBehaviour
 		}
 		
 		if((blownEngine == true)&&(isWrecking == false)){
-			Debug.Log("Continued Contact - Blown Engine");
 			startWreck();
 		}
 		
@@ -628,7 +607,6 @@ public class AIMovement : MonoBehaviour
 			bool joinWreck = carHit.gameObject.GetComponent<AIMovement>().isWrecking;
 			if(joinWreck == true){
 				if(isWrecking == false){
-					//Debug.Log("Wreck: Joining In");
 					startWreck();
 				} else {
 					//Share some wreck inertia
@@ -641,7 +619,6 @@ public class AIMovement : MonoBehaviour
 			bool joinWreck = Movement.isWrecking;
 			if(joinWreck == true){
 				if(isWrecking == false){
-					//Debug.Log("Wreck: Joining Player");
 					startWreck();
 				} else {
 					//Share some wreck inertia
@@ -656,7 +633,6 @@ public class AIMovement : MonoBehaviour
 		particleDisableDelay = 20;
 		
 		if((blownEngine == true)&&(isWrecking == false)){
-			Debug.Log("Contact End - Blown Engine");
 			startWreck();
 		}
     }
@@ -741,7 +717,6 @@ public class AIMovement : MonoBehaviour
 			if(initialContact == false){
 				float midSpeed = bumpSpeed - AISpeed;
 				if((midSpeed > (6f - wreckFreq))||(midSpeed < (-6f + wreckFreq))){
-					//Debug.Log("Wreck: Strong Push");
 					float rng = Random.Range(0,1000);
 					if(wreckProbability >= rng){
 						startWreck();
@@ -786,7 +761,6 @@ public class AIMovement : MonoBehaviour
 				
 				//Experimental, for CPU saves
 				if(carNum%logicCycle == tick){
-					//Debug.Log("Draft Logic cycle save, frame: " + carNum);
 					draftLogic();
 				}
 				carWobble();
@@ -839,7 +813,6 @@ public class AIMovement : MonoBehaviour
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					//Debug.Log("Total AI draft strength: " + draftStrength + " - " + (maxDraftDistance - DraftCheckForward.distance) + " " + draftStrengthRatio + " " + (AILevel / 2500f));
 				}
 				#endif
 				
@@ -883,7 +856,6 @@ public class AIMovement : MonoBehaviour
 
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				//Debug.Log("AI Engine Temp: " + engineTemp + " - Limit: " + tempLimit);
 			}
 			#endif
 
@@ -893,7 +865,6 @@ public class AIMovement : MonoBehaviour
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					//Debug.Log(AICar.name + " slowing down, no forward draft");
 				}
 				#endif
 				
@@ -903,7 +874,6 @@ public class AIMovement : MonoBehaviour
 					
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " dominator slowing down by " + (dragDecelMulti - (AILevel / 7500f)) + " , variTopSpeed " + AIVariTopSpeed);
 					}
 					#endif
 				} else {
@@ -916,7 +886,6 @@ public class AIMovement : MonoBehaviour
 						
 						#if UNITY_EDITOR
 						if(debugPlayer == true){
-							//Debug.Log(AICar.name + " close to max speed, slowing down by " + ((dragDecelMulti - (AILevel / 15000f)) * (2f - (diffToMax / 2f))) + ". Drag Decel x AI Level: " + (dragDecelMulti - (AILevel / 15000f)) + ", Diff to max: " + (2f - (diffToMax / 2f)));
 						}
 						#endif
 					} else {
@@ -924,7 +893,6 @@ public class AIMovement : MonoBehaviour
 						
 						#if UNITY_EDITOR
 						if(debugPlayer == true){
-							//Debug.Log(AICar.name + " slowing down by " + (dragDecelMulti - (AILevel / 15000f)));
 						}
 						#endif
 					}
@@ -942,7 +910,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " speedLogic front draft end - " + AISpeed);
 		}
 		#endif
 		
@@ -951,7 +918,6 @@ public class AIMovement : MonoBehaviour
 			
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				//Debug.Log(AICar.name + " has backdraft");
 			}
 			#endif
 			
@@ -962,7 +928,6 @@ public class AIMovement : MonoBehaviour
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					//Debug.Log(AICar.name + " backdraft speed up by " + (backdraftMulti + (AILevel / 1500f)) + " ( BD:" + backdraftMulti + " , AI:" + (AILevel / 1500f));
 				}
 				#endif
 			}
@@ -975,7 +940,6 @@ public class AIMovement : MonoBehaviour
 				tandemDraft = true;
 				if(Ticker.getRaceLeader() == AICar){
 					if (AISpeed > (AIVariTopSpeed - 3f)){
-						//Debug.Log("Leader is #" + carNum);
 						evadeDraft();
 					}
 				}
@@ -1017,7 +981,6 @@ public class AIMovement : MonoBehaviour
 				
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " is overheated and slowing by " + ((coolOffSpace - DraftCheckForward.distance)/coolOffInv));
 				}
 				#endif
 				
@@ -1165,7 +1128,6 @@ public class AIMovement : MonoBehaviour
 			}
 			if(overrideValue != 0){
 				laneChangeSpeedIndex+=overrideValue;
-				//Debug.Log("Faster lane change: " + laneChangeSpeedIndex);
 			}
 			switch(laneChangeSpeedIndex){
 				case 1:
@@ -1276,7 +1238,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log("Current turn: " + turn + " - Next turn trigger: " + turnTrigger + " - Next turn end: " + turnEnd);
 		}
 		#endif
 	}
@@ -1290,7 +1251,6 @@ public class AIMovement : MonoBehaviour
 
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			Debug.Log("Turn updated to: " + turn);
 		}
 		#endif
 
@@ -1311,7 +1271,6 @@ public class AIMovement : MonoBehaviour
 		if(lapLengthCounter > turnEnd){
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				Debug.Log("Current turn: " + currentTurn + " - Lap counter: " + lapLengthCounter + " - Turn end: " + turnEnd);
 			}
 			#endif
 
@@ -1351,16 +1310,13 @@ public class AIMovement : MonoBehaviour
         }
 		
 		if(pos.x >= 1.35f){
-			//Debug.Log("Wall!");
 			if (backingOut == false) {
 				backingOut = true;
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					//Debug.Log(AICar.name + " hit the wall! Moving back up ");
 				}
 				#endif
 				float rng = Random.Range(0,100);
-				//Debug.Log("Wall Wreck Rng: " + rng + " < " + wreckProbability);
 				if((wreckProbability >= rng)||
 				(Movement.delicateMod == true)||
 				((hitByPlayer == true)&&(CameraRotate.lap == CameraRotate.raceEnd))){
@@ -1381,7 +1337,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " draft logic start ");
 		}
 		#endif
 		
@@ -1391,22 +1346,18 @@ public class AIMovement : MonoBehaviour
 			bool tryTimedPass = timedPass(carDist, opponentSpeed);
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				//Debug.Log(AICar.name + " have the setup for a timed pass? " + tryTimedPass);
 			}
 			#endif
 			if(CameraRotate.cautionOut == true){
-				//Debug.Log("Caution Weighted Draft Logic");
 				GameObject oppCar = DraftCheckForwardZOffset.transform.gameObject;
 				if(oppCar.GetComponent<AIMovement>() != null){
 					if(oppCar.GetComponent<AIMovement>().isWrecking == true){
 						avoidWreck();
-						//Debug.Log(carName + " Avoids Wreck");
 					}
 				} else {
 					if(oppCar.GetComponent<Movement>() != null){
 						if(Movement.isWrecking == true){
 							avoidWreck();
-							//Debug.Log(carName + " Avoids Wrecking Player");
 						}
 					}
 				}
@@ -1416,7 +1367,6 @@ public class AIMovement : MonoBehaviour
 
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					//Debug.Log(AICar.name + " attempting a pass (lane rest exceeded) ");
 				}
 				#endif
 
@@ -1433,24 +1383,20 @@ public class AIMovement : MonoBehaviour
 		} else {
 			//Check further away
 			RaycastHit DraftCheckForwardLong = raycastHits[0];
-			//Debug.Log("Longer dist:" + DraftCheckForwardLong.distance);
 			bool HitForwardLong = DraftCheckForwardLong.distance > 0;
 			
 			if(HitForwardLong == true){
-				//Debug.Log("Something in front.. dist:" + DraftCheckForwardLong.distance);
 				//Caution is out or last lap
 				if((CameraRotate.cautionOut == true)||(CameraRotate.lap == CameraRotate.raceEnd)){
 					GameObject oppCar = DraftCheckForwardLong.transform.gameObject;
 					if(oppCar.GetComponent<AIMovement>() != null){
 						if(oppCar.GetComponent<AIMovement>().isWrecking == true){
 							avoidWreck();
-							//Debug.Log(carName + " Avoids Wrecking AI");
 						}
 					} else {
 						if(oppCar.GetComponent<Movement>() != null){
 							if(Movement.isWrecking == true){
 								avoidWreck();
-								//Debug.Log(carName + " Avoids Wrecking Player");
 							}
 						}
 					}
@@ -1474,7 +1420,6 @@ public class AIMovement : MonoBehaviour
 		} else {
 			AISpeed -= (5 - carDist)/50f;
 		}
-		//Debug.Log("BRAKE! #" + carNumber);
 	}
 	
 	void carWobble(){
@@ -1530,7 +1475,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " tryPass start");
 		}
 		#endif
 		
@@ -1539,7 +1483,6 @@ public class AIMovement : MonoBehaviour
 			
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				//Debug.Log(AICar.name + " tryPass attempted ");
 			}
 			#endif
 			
@@ -1551,7 +1494,6 @@ public class AIMovement : MonoBehaviour
 				} else {
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " try pass opportunity (right)");
 					}
 					#endif
 					direction = "Right";
@@ -1560,7 +1502,6 @@ public class AIMovement : MonoBehaviour
 			if(leftSideClr == true){
 				#if UNITY_EDITOR
 				if(debugPlayer == true){
-					//Debug.Log(AICar.name + " try pass opportunity (left)");
 				}
 				#endif
 				if(direction == "Right"){
@@ -1582,7 +1523,6 @@ public class AIMovement : MonoBehaviour
 				float rngDir = Random.Range(0,2);
 				#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " try pass opportunity (either). Random choose.." + rngDir + "/2");
 					}
 				#endif
 				if(rngDir >= 1f){
@@ -1606,7 +1546,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " might try a timed pass: dist - " + distance + " , opp Speed - " + opponentSpeed);
 		}
 		#endif
 		
@@ -1635,7 +1574,6 @@ public class AIMovement : MonoBehaviour
 		}
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " decided not to do a timed pass. " + distance);
 		}
 		#endif
 		return false;
@@ -1650,7 +1588,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log("Looking for a draft: Left - " + HitLaneLeft + " , Right - " + HitLaneRight);
 		}
 		#endif
 		
@@ -1674,7 +1611,6 @@ public class AIMovement : MonoBehaviour
 					//Only seek a close draft if faster than you
 					if((opponentSpeed >= (AISpeed + 0.1f))||(AISpeed < 201)){
 						direction = "Left";
-						//Debug.Log("Opponent Speed " + opponentSpeed + " ahead of AISpeed " + AISpeed);
 					}
 				}
 			}
@@ -1723,7 +1659,6 @@ public class AIMovement : MonoBehaviour
 			}
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				//Debug.Log(AICar.name + " found a better draft; moving " + direction);
 			}
 			#endif
 			changeLane(direction);
@@ -1795,7 +1730,6 @@ public class AIMovement : MonoBehaviour
 			if(direction == "Both"){
 				//Random choose one
 				float rng = Random.Range(0,2);
-				//Debug.Log("Rnd /2 = " + rng);
 				if(rng > 1f){
 					direction = "Right";
 				} else {
@@ -1804,7 +1738,6 @@ public class AIMovement : MonoBehaviour
 			}
 			#if UNITY_EDITOR
 			if(debugPlayer == true){
-				//Debug.Log(AICar.name + " found a clear lane; moving " + direction);
 			}
 			#endif
 			changeLane(direction);
@@ -1818,7 +1751,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " avoiding wreck.");
 		}
 		#endif
 			
@@ -1869,7 +1801,6 @@ public class AIMovement : MonoBehaviour
 					direction = "Right";
 				}
 			}
-			//Debug.Log(AICar.name + " avoids wreck in direction " + direction);
 			changeLane(direction);
 		}
 	}
@@ -1882,7 +1813,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " right side blocked? " + hitLaneLeft + " , dist to FQ " + checkFrontLeft.distance + " , dist to RQ " + checkRearLeft.distance);
 		}
 		#endif
 		
@@ -1902,7 +1832,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " right side blocked? " + hitLaneRight + " , dist to FQ " + checkFrontRight.distance + " , dist to RQ " + checkRearRight.distance);
 		}
 		#endif
 		
@@ -1920,7 +1849,6 @@ public class AIMovement : MonoBehaviour
 		
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " doored - Strength: " + chance + " - Rnd: " + randChance);
 		}
 		#endif
 		
@@ -1936,7 +1864,6 @@ public class AIMovement : MonoBehaviour
 					}
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " doored from the left");
 					}
 					#endif
 					break;
@@ -1946,7 +1873,6 @@ public class AIMovement : MonoBehaviour
 					}
 					#if UNITY_EDITOR
 					if(debugPlayer == true){
-						//Debug.Log(AICar.name + " doored from the right");
 					}
 					#endif
 					break;
@@ -1966,19 +1892,15 @@ public class AIMovement : MonoBehaviour
 
 		if(laneticker == 0){
 			if(direction == "Left"){
-				//Debug.Log("Go Left!");
 				laneticker = laneChangeDuration;
 				lane++;
 				if(debugPlayer == true){
-					Debug.Log(AICar.name + " moves lane to " + lane);
 				}
 			} else {
 				if(direction == "Right"){
-					//Debug.Log("Go Right!");
 					laneticker = -laneChangeDuration;
 					lane--;
 					if(debugPlayer == true){
-						Debug.Log(AICar.name + " moves lane to " + lane);
 					}
 				}
 			}
@@ -2033,7 +1955,6 @@ public class AIMovement : MonoBehaviour
 			return Movement.playerSpeed;
 		} else {
 			if(opponent.transform.gameObject.tag == "AICar"){
-				//Debug.Log(opponent.transform.gameObject.name);
 				int opponentNum = int.Parse(opponent.transform.gameObject.name.Substring(5));
 				return RaceControl.carSpeed[opponentNum];
 			}
@@ -2117,7 +2038,6 @@ public class AIMovement : MonoBehaviour
 				//Debug.DrawRay(pos + new Vector3(1f,0,-1f), Vector3.forward * 2, Color.red);
 				break;
 			default:
-				//Debug.Log("Invalid Raycast Direction");
 				rayHit = false;
 				break;
 		}
@@ -2148,7 +2068,6 @@ public class AIMovement : MonoBehaviour
 		}
 		sparksCooldown = 99999;
 
-		//Debug.Log(this.name + " is wrecking");
 		
 		//Make the car light, more affected by physics
 		wreckRigidbody.mass = 2 + wreckMassRand;
@@ -2181,7 +2100,6 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	public void endWreck(){
-		//Debug.Log(this.name + " WRECKED");
 		AISpeed = 0;
 		slideX = 0;
 		isWrecking = false;
@@ -2208,7 +2126,6 @@ public class AIMovement : MonoBehaviour
 		}
 		#if UNITY_EDITOR
 		if(debugPlayer == true){
-			//Debug.Log(AICar.name + " wreck angle: " + wreckAngle + " sine: " + wreckSine);
 		}
 		#endif
 		baseDecel-=(0.45f - randDecel);
@@ -2243,7 +2160,6 @@ public class AIMovement : MonoBehaviour
 			this.gameObject.transform.position = new Vector3(1.5f,pos.y,pos.z);
 		}
 		
-		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + wreckDecel);
 		if(sparksEndSpeed < wreckDecel){
 			//Align particle system to global track direction
 			leftSparks.rotation = Quaternion.Euler(0,180,0);
@@ -2282,7 +2198,6 @@ public class AIMovement : MonoBehaviour
 	}
 	
 	int calcWreckProb(int wreckFreq){
-		//Debug.Log("Wreck Frequency: " + wreckFreq);
 		int probability = 5;
 		switch(wreckFreq){
 			case 1:

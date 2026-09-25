@@ -112,6 +112,12 @@ namespace Draftmaster.Data
             E(62, "Anthony", "Alfredo",        "Alfredo",      "Beard Motorsports",        "CHV", 26, 54, 62, 10,  9,  9, 10, 14,  9), // part-time
             E(66, "Chad",    "Finchum",        "Finchum",      "Garage 66",                "FRD", 31, 46, 50,  9,  6,  8,  8, 11,  8), // part-time
             E(78, "Katherine","Legge",         "Legge",        "Live Fast Motorsports",    "CHV", 45, 52, 54,  9,  8,  9, 15, 10,  8), // part-time
+
+            // Fictional — the demo's own driver, the one the player is. A veteran in the last seasons of a
+            // championship-winning career, raced the Earnhardt Sr. way: maximum aggression, a master of the
+            // draft and the short tracks, still consistent, but the one-lap speed has gone and his ability
+            // has peaked (potential = current). Paint: Resources/cup26livery89.
+            E(89, "Ace",     "Emerson",        "Emerson",      "Emerson Motorsports",      "CHV", 48, 84, 84, 20, 13, 16, 12, 20, 18),
         };
 
         public static IReadOnlyList<Entry> Entries => Field;

@@ -66,48 +66,39 @@ public class IAPStore : MonoBehaviour {
 		
 		switch(product.definition.id){
 			case gears60:
-				Debug.Log("Added 80 gears");
 				gears+=80;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case gears125:
-				Debug.Log("Added 250 gears");
 				gears+=250;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case gears200:
-				Debug.Log("Added 600 gears");
 				gears+=600;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case gears500:
-				Debug.Log("Added 1500 gears");
 				gears+=1500;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case smallgears:
-				Debug.Log("Added 80 gears");
 				gears+=80;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case mediumgears:
-				Debug.Log("Added 250 gears");
 				gears+=250;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case largegears:
-				Debug.Log("Added 600 gears");
 				gears+=600;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case extralargegears:
-				Debug.Log("Added 1500 gears");
 				gears+=1500;
 				PlayerPrefs.SetInt("Gears",gears);
 				break;
 			case negotiator:
 			case negotiatorios:
-				Debug.Log("Added 999 contracts");
 				transfersMax=999;
 				transfersLeft=999;
 				PlayerPrefs.SetInt("TransferTokens",transfersMax);

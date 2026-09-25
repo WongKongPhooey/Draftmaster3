@@ -60,7 +60,6 @@ public class ModData : MonoBehaviour
 			string modFolderName = loadJson(loadedMod.Name);
 			try {
 				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
-				Debug.Log("Parsed json, found: " + modJson.modName);
 				seriesNiceName = modJson.modName;
 			} catch(Exception e){
 				seriesNiceName = "Error";
@@ -78,7 +77,6 @@ public class ModData : MonoBehaviour
 			string modFolderName = loadJson(loadedMod.Name);
 			try {
 				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
-				//Debug.Log("Parsed json, found: " + modJson.modName);
 				physicsModel = modJson.modPhysics.ToLower();
 			} catch(Exception e){
 				physicsModel = "Default";
@@ -96,7 +94,6 @@ public class ModData : MonoBehaviour
 			string modFolderName = loadJson(loadedMod.Name);
 			try {
 				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
-				//Debug.Log("Parsed json, found: " + modJson.modName);
 				numPos = int.Parse(modJson.modNumberPosition);
 			} catch(Exception e){
 				numPos = 0;
@@ -113,7 +110,6 @@ public class ModData : MonoBehaviour
 			string modFolderName = loadJson(loadedMod.Name);
 			try {
 				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
-				//Debug.Log("Parsed json, found: " + modJson.modName);
 				numScale = float.Parse(modJson.modNumberScale);
 			} catch(Exception e){
 				numScale = 1;
@@ -130,7 +126,6 @@ public class ModData : MonoBehaviour
 			string modFolderName = loadJson(loadedMod.Name);
 			try {
 				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
-				//Debug.Log("Parsed json, found: " + modJson.modName);
 				numRot = int.Parse(modJson.modNumberRotation);
 			} catch(Exception e){
 				numRot = 0;
@@ -153,7 +148,6 @@ public class ModData : MonoBehaviour
 				return 999;
 			}
 		}
-		//Debug.Log("Loaded car #" + carNum);
 		return carNum;
 	}
 	
@@ -278,7 +272,6 @@ public class ModData : MonoBehaviour
 			try {
 				modSet modJson = JsonUtility.FromJson<modSet>(modFolderName);
 				driverManufacturer = modJson.drivers[index].carManufacturer;
-				//Debug.Log(driverManufacturer);
 			} catch(Exception e){
 				driverManufacturer = "CHV";
 			}
@@ -378,7 +371,6 @@ public class ModData : MonoBehaviour
 		if((loadedMod == null)||(modName != seriesPrefix)){
 			loadedMod = loadMod(seriesPrefix);
 		}
-		//Debug.Log("Looking for a mod texture..");
 		Texture2D carTex = null;
 		if(loadedMod != null){
 			string modFolderName = loadJson(loadedMod.Name);
@@ -400,7 +392,6 @@ public class ModData : MonoBehaviour
 		if((loadedMod == null)||(modName != seriesPrefix)){
 			loadedMod = loadMod(seriesPrefix);
 		}
-		//Debug.Log("Looking for a mod texture..");
 		Texture2D carTex = null;
 		if(loadedMod != null){
 			string modFolderName = loadJson(loadedMod.Name);
@@ -424,7 +415,6 @@ public class ModData : MonoBehaviour
 			string modFolderName = loadJson(loadedMod.Name);
 			d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
 			if(System.IO.File.Exists(d + modName + "/" + seriesPrefix + "-" + manu + ".png")){
-				Debug.Log("Found a manufacturer!");
 				byte[] bytes = System.IO.File.ReadAllBytes(d + modName + "/" + seriesPrefix + "-" + manu + ".png");
 				manuTex = new Texture2D(16,16,TextureFormat.RGBA32, false);
 				manuTex.filterMode = FilterMode.Point;
@@ -443,7 +433,6 @@ public class ModData : MonoBehaviour
 			string modFolderName = loadJson(loadedMod.Name);
 			d = new DirectoryInfo(Application.persistentDataPath + "/Mods/");
 			if(System.IO.File.Exists(d + modName + "/" + seriesPrefix + "-" + manu + ".png")){
-				Debug.Log("Found a manufacturer!");
 				byte[] bytes = System.IO.File.ReadAllBytes(d + modName + "/" + seriesPrefix + "-" + manu + ".png");
 				Texture2D manuTex = new Texture2D(16,16,TextureFormat.RGBA32, false);
 				manuTex.filterMode = FilterMode.Point;
@@ -487,7 +476,6 @@ public class ModData : MonoBehaviour
 		} catch(Exception e){
 			string jsonValid = "Error";
 		}
-		//Debug.Log(json);
 		return json;
 	}
 	

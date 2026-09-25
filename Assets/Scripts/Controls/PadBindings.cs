@@ -61,6 +61,8 @@ namespace Draftmaster.Controls
         // ---- menus
         public const PadButton Confirm = PadButton.South;            // Enter / E
         public const PadButton Back = PadButton.East;                // Esc / Backspace
+        public const PadButton MapZoomIn = PadButton.RightTrigger;   // mouse wheel up, travel map
+        public const PadButton MapZoomOut = PadButton.LeftTrigger;   // mouse wheel down, travel map
 
         public readonly struct Shortcut
         {
@@ -124,6 +126,9 @@ namespace Draftmaster.Controls
 
             new Shortcut("Confirm", "ENTER", Confirm, Context.Menu),
             new Shortcut("Back", "ESC", Back, Context.Menu),
+            // Analogue: the further the trigger goes in, the faster the travel map zooms.
+            new Shortcut("Zoom map in", "WHEEL UP", MapZoomIn, Context.Menu),
+            new Shortcut("Zoom map out", "WHEEL DOWN", MapZoomOut, Context.Menu),
         };
 
         // Can the two contexts be live at the same moment? A seat and a fight are both on foot; a menu is modal

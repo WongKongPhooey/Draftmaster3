@@ -27,7 +27,6 @@ public class RaceModifiers : MonoBehaviour
 		
 		if(PlayerPrefs.HasKey("RaceModifier")){
 			modifier = PlayerPrefs.GetString("RaceModifier");
-			//Debug.Log("Modifier Active: " + modifier);
 		}
 		
 		//Live Modifier overwrites if necessary
@@ -35,9 +34,7 @@ public class RaceModifiers : MonoBehaviour
 			//If current event matches the Live Moment ID
 			if(PlayerPrefs.GetString("CurrentSeriesIndex") == "49EVENT"){
 				modifier = PlayerPrefs.GetString("LiveMomentMods");
-				//Debug.Log("Live Modifier Active: " + modifier);
 			}
-			//Debug.Log("Live Modifier Not A Match");
 		}
 		
         switch(modifier){

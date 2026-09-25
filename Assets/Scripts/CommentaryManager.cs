@@ -36,7 +36,6 @@ public class CommentaryManager : MonoBehaviour
     }
 	
 	public void commentate(string phrase){
-		//Debug.Log("Commentary Triggered.. " + phrase);
 		bool canSpeak = checkCommentaryCooldown(cooldown);
 		
 		//Muted?
@@ -53,7 +52,6 @@ public class CommentaryManager : MonoBehaviour
 			//return;
 		}
 		if(canSpeak == true){
-			//Debug.Log("Loading Phrase: " + phrase);
 			switch(phrase){
 				case "Start":
 					rand = Random.Range(0,commentaryLines.startClips.Length);
@@ -137,10 +135,8 @@ public class CommentaryManager : MonoBehaviour
 					break;
 			}
 			cooldown = ((int)phraseClip.length * 60) + commsFreqGap;
-			//Debug.Log("Cooldown: " + cooldown);
 			if (!audioSource.isPlaying){
 				if(phraseClip != null){
-					//Debug.Log("Play Commentary" + phraseClip.name);
 					audioSource.PlayOneShot(phraseClip);
 				}
 			}

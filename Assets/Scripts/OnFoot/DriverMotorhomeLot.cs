@@ -218,8 +218,6 @@ public class DriverMotorhomeLot : MonoBehaviour
         CollectField();
         BuildRow();
 
-        Debug.Log($"DriverMotorhomeLot: {_slots.Count} motorhomes in {Mathf.Max(1, rowCount)} line(s) " +
-                  $"({(_slots.Count > 0 && _slots[0].isPlayer ? $"player at place {Mathf.Clamp(playerLineIndex, 0, _slots.Count - 1)}" : "no player RV found")}).", this);
 
         FinishBuild();
     }
@@ -301,8 +299,6 @@ public class DriverMotorhomeLot : MonoBehaviour
         if (area != null) area.InstallWalkablePocket(transform);
         else ExtendWalkableArea(line.axis, line.front);
 
-        Debug.Log($"DriverMotorhomeLot: took the host's layout — {_slots.Count} motorhomes in " +
-                  $"{Mathf.Max(1, rows)} line(s), player's rig in place {playerPlace}.", this);
 
         FinishBuild();
     }
@@ -526,9 +522,6 @@ public class DriverMotorhomeLot : MonoBehaviour
         PlaceSlots(line, rows, playerPlace, playerRv, area.rowGap);
         area.InstallWalkablePocket(transform);
 
-        Debug.Log($"DriverMotorhomeLot: packed into '{area.name}' — {rows} line(s) of {line.perRow}, " +
-                  $"{line.pitch:0.0}m apart" +
-                  (playerPlace >= 0 ? $", player's RV in place {playerPlace}." : ", no player RV to park."), area);
         return true;
     }
 

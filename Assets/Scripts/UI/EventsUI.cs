@@ -40,7 +40,6 @@ public class EventsUI : MonoBehaviour
 		if(PlayerPrefs.HasKey("GameWeek")){
 			//Get the last known cycle day
 			week = PlayerPrefs.GetInt("GameWeek");
-			//Debug.Log("Last known week: " + week);
 		} else {
 			//First login
 			week = 1;
@@ -57,7 +56,6 @@ public class EventsUI : MonoBehaviour
 		for(int i=9;i>=0;i--){
 			//Skip through the non-driver #s
 			if(EventData.offlineEvent[i] == null){
-				//Debug.Log("No Event here: " + i);
 				continue;
 			}
 			
@@ -87,7 +85,6 @@ public class EventsUI : MonoBehaviour
 		}
 		int sortCounter=0;
 		foreach (Transform child in tileFrame){
-			//Debug.Log("Found one!" + sortCounter);
 			TMPro.TMP_Text eventWeek = child.GetChild(0).GetComponent<TMPro.TMP_Text>();
 			TMPro.TMP_Text eventName = child.GetChild(2).GetComponent<TMPro.TMP_Text>();
 			GameObject eventClickable = child.transform.GetChild(4).transform.gameObject;
@@ -96,16 +93,13 @@ public class EventsUI : MonoBehaviour
 			if((!eventWeek.text.Contains(week.ToString()))
 			&&(!eventWeek.text.Contains("Live!"))){
 				RectTransform tileObj = child.GetComponent<RectTransform>();
-				Debug.Log(child);
 				if(tileObj != null){
 					shuffleArray.Add(tileObj);
 				}
 				//tileObj.SetAsLastSibling();
 				eventCover.SetActive(true);
 				eventClickable.SetActive(false);
-				//Debug.Log("Sort to end: " + eventName.text);
 			} else {
-				//Debug.Log("Event is live: " + eventName.text);
 			}
 			sortCounter++;
 		}
@@ -161,7 +155,6 @@ public class EventsUI : MonoBehaviour
 	}
 
 	public void loadSubEvents(int subMenuId){
-		//Debug.Log("Loading sub events of event: " + subMenuId);
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
@@ -215,19 +208,15 @@ public class EventsUI : MonoBehaviour
 		}
 		if(EventData.offlineStartingLap[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("StartingLap", EventData.offlineStartingLap[subMenuId,subEventId]);
-			//Debug.Log("Starting Lap set: " + EventData.offlineStartingLap[subMenuId,subEventId]);
 		}
 		if(EventData.offlineRaceLaps[subMenuId,subEventId] != 0){
 			PlayerPrefs.SetInt("CustomRaceLaps", EventData.offlineRaceLaps[subMenuId,subEventId]);
-			Debug.Log("Event Race Laps set: " + EventData.offlineRaceLaps[subMenuId,subEventId]);
 		}
 		if(EventData.offlineModifier[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceModifier", EventData.offlineModifier[subMenuId,subEventId]);
-			//Debug.Log("Race Modifier set: " + EventData.offlineModifier[subMenuId,subEventId]);
 		}
 		if(EventData.offlineMoment[subMenuId,subEventId] != null){
 			PlayerPrefs.SetString("RaceMoment", EventData.offlineMoment[subMenuId,subEventId]);
-			//Debug.Log("Race Moment set: " + EventData.offlineMoment[subMenuId,subEventId]);
 		}
 		SceneManager.LoadScene("Menus/Garage");
 	}
@@ -347,7 +336,6 @@ public class EventsUI : MonoBehaviour
 		string rewardsCode = EventData.offlinePrizes[subMenu,subEvent];
 		if(EventData.offlinePrizes[subMenu,subEvent] != "AltPaint"){
 			//Generate the list of possible rewards
-			Debug.Log("Show Rewards for: " + rewardsCode);
 			rewardsList = EventData.ListRewards(rewardsCode);
 		} else {
 			//Throw the alt paint into the list instead
@@ -364,7 +352,6 @@ public class EventsUI : MonoBehaviour
 				rewardString = reward;
 			}
 			carPaint.texture = (Texture2D)Resources.Load(rewardString);
-			//Debug.Log("Reward loaded: " + rewardString);
 		}
 		rewardsPopup.SetActive(true);
 	}

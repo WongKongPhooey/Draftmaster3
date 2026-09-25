@@ -192,7 +192,7 @@ public class LeaderboardUI : MonoBehaviour
             PixelGUI.Fill(rowRect, new Color(PixelGUI.Info.r, PixelGUI.Info.g, PixelGUI.Info.b, 0.30f));
 
         // Invisible button under the label so the whole row is clickable without changing its look.
-        if (broadcast && e.tf != null && GUI.Button(rowRect, GUIContent.none, GUIStyle.none))
+        if (broadcast && e.tf != null && TouchTaps.Button(rowRect, GUIContent.none, GUIStyle.none))
             _drive.FeatureCar(e.tf);
 
         string num = e.carNumber > 0 ? $"#{e.carNumber}" : "";

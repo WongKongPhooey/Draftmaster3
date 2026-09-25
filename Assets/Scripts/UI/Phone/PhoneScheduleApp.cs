@@ -104,7 +104,7 @@ public class PhoneScheduleApp : PhoneApp
             var r = new Rect(x + d * tw, y, tw - PixelGUI.Px(1f), h);
             bool shown = d == Day;
             PixelGUI.Fill(r, shown ? PixelGUI.Gold : PixelGUI.Plate);
-            if (GUI.Button(r, GUIContent.none, GUIStyle.none)) _day = d;
+            if (Pressed(r)) _day = d;
 
             Color text = shown ? PixelGUI.Ink : d < today ? PixelGUI.TextDisabled : PixelGUI.Text;
             PhoneStyles.Label(r, WeekendSlots.DayShort((WeekendSlot)(d * 2)), PhoneStyles.Data, text,

@@ -135,7 +135,7 @@ public class RacingLineDisplay : MonoBehaviour
     // Prefer the human car's VehicleInfo; fall back to any AI's so the line still shows in broadcast mode.
     static VehicleInfo FindVehicleInfo()
     {
-        var pvcs = FindObjectsByType<PlayerVehicleController>();
+        var pvcs = FindObjectsByType<PlayerVehicleController>(FindObjectsSortMode.None);
         for (int i = 0; i < pvcs.Length; i++)
             if (pvcs[i].enabled && pvcs[i].vehicleInfo != null && pvcs[i].GetComponent<SplineInputDriver>() == null)
                 return pvcs[i].vehicleInfo;

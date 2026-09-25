@@ -24,14 +24,11 @@ public class CustomNumbers : MonoBehaviour
 			carNum = int.Parse(carNumber);
 			if(customNum == carNum){
 				PlayerPrefs.DeleteKey("CustomNumber");
-				//Debug.Log("No custom number applied");
 			} else {
 				Renderer numRend = this.GetComponent<Renderer>();
 				this.GetComponent<Renderer>().material.mainTexture = Resources.Load("cup20livery" + customNum) as Texture;
-				//Debug.Log("Custom number #" + customNum + " applied Var: " + seriesPrefix + "num" + carNum);
 			}
 		} else {
-			//Debug.Log("No custom number saved");
 		}*/
     }
 
@@ -49,14 +46,11 @@ public class CustomNumbers : MonoBehaviour
 			carNum = int.Parse(carNumber);
 			if(customNum == carNum){
 				PlayerPrefs.DeleteKey("CustomNumber");
-				//Debug.Log("No custom number applied");
 			} else {
 				Renderer numRend = this.GetComponent<Renderer>();
 				this.GetComponent<Renderer>().material.mainTexture = Resources.Load("cup20livery" + customNum) as Texture;
-				//Debug.Log("Custom number #" + customNum + " applied Var: " + seriesPrefix + "num" + carNum);
 			}
 		} else {
-			//Debug.Log("No custom number saved");
 		}*/
     }
 }

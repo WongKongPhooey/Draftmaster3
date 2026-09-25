@@ -10,34 +10,29 @@ public class SeriesUIFunctions : MonoBehaviour {
 	//public static int subMenuIdInst;
 
 	public void openSubMenu(){
-		//Debug.Log(subMenuId + " opened");
 		SeriesUI.seriesId = seriesId;
 		GameObject.Find("Main").GetComponent<SeriesUI>().loadSubSeries(seriesId);
 	}
 	
 	public void loadSeriesRequirements(){
-		//Debug.Log("Loading Event Rewards for Event " + EventData.offlineEventChapter[subMenuId, subEventId]);
 		SeriesUI.seriesId = seriesId;
 		SeriesUI.subSeriesId = subSeriesId;
 		GameObject.Find("Main").GetComponent<SeriesUI>().showEntryReqsPopup(seriesId, subSeriesId);
 	}
 	
 	public void loadEventRewards(){
-		//Debug.Log("Loading Event Rewards for Event " + EventData.offlineEventChapter[subMenuId, subEventId]);
 		SeriesUI.seriesId = seriesId;
 		SeriesUI.subSeriesId = subSeriesId;
 		GameObject.Find("Main").GetComponent<SeriesUI>().showRewardsPopup(seriesId, subSeriesId);
 	}
 	
 	public void loadLapsSlider(){
-		//Debug.Log("Loading Event Rewards for Event " + EventData.offlineEventChapter[subMenuId, subEventId]);
 		SeriesUI.seriesId = seriesId;
 		SeriesUI.subSeriesId = subSeriesId;
 		GameObject.Find("Main").GetComponent<SeriesUI>().showLapsPopup(seriesId, subSeriesId);
 	}
 	
 	public void loadDifficultySlider(){
-		//Debug.Log("Loading Event Rewards for Event " + EventData.offlineEventChapter[subMenuId, subEventId]);
 		SeriesUI.seriesId = seriesId;
 		SeriesUI.subSeriesId = subSeriesId;
 		GameObject.Find("Main").GetComponent<SeriesUI>().showDifficultyPopup(seriesId, subSeriesId);
@@ -49,7 +44,6 @@ public class SeriesUIFunctions : MonoBehaviour {
 		SeriesUI.modSeriesPrefix = modSeriesPrefix;
 		//The community mods category..
 		if(seriesId == 10){
-			Debug.Log("Load a mod series");
 			GameObject.Find("Main").GetComponent<SeriesUI>().loadModSeries();
 		} else {
 			GameObject.Find("Main").GetComponent<SeriesUI>().loadSeries();

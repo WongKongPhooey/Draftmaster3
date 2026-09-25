@@ -37,6 +37,10 @@ public abstract class PhoneApp
     // otherwise open the new page part-way down, wherever the last one was left.
     protected static void ScrollToTop() => PhoneUI.ResetScroll();
 
+    // A click or a tap on this rect. Use this, not GUI.Button: a touch only reaches IMGUI if the platform
+    // turns it into a mouse event, and PhoneUI.Pressed reads the finger itself.
+    protected static bool Pressed(Rect r) => PhoneUI.Pressed(r);
+
     // Draw into a column `width` wide starting at (x, y). Return the total height used.
     public abstract float Draw(float x, float y, float width);
 

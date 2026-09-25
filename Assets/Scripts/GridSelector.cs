@@ -65,7 +65,6 @@ public class GridSelector : MonoBehaviour{
 			PlayerPrefs.DeleteKey(seriesPrefix + carNum + "AltPaint");
 			PlayerPrefs.DeleteKey(seriesPrefix + carNum + "AltDriver");
 		}
-		//Debug.Log("Alt Paint Set: " + seriesPrefix + " " + carNum + " - #" + altNum);
 		GameObject mainUI = GameObject.Find("Main");
 		mainUI.GetComponent<GarageUI>().resetUI();
 		mainUI.GetComponent<GarageUI>().reloadGaragePopupPaint();

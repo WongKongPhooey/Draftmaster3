@@ -256,6 +256,5 @@ public class VendingMachineSpawner : MonoBehaviour
         machine.bubbleHeadHeight = 1.2f;
         Instance = machine;
 
-        Debug.Log($"VendingMachineSpawner: drinks machine stood at {at} (weekend {RaceWeekend.WeekendId}).", this);
     }
 }

@@ -161,7 +161,6 @@ public class RaceManager : MonoBehaviour
 
 		CameraManager.setPlayer(thePlayer, zoom);
 		float spawnRotation = getCumulativeTurnAngle(playerLocation);
-		Debug.Log("Spawn Rotation: " + spawnRotation);
 		CameraManager.setRotation(spawnRotation);
 		EnvironmentManager.circuitRotation = spawnRotation;
 		DialogueManager.setPlayerCanvas(thePlayer);

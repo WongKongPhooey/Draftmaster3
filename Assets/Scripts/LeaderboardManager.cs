@@ -18,7 +18,6 @@ public class LeaderboardManager : MonoBehaviour
 	   circuitName = PlayerPrefs.GetString("CurrentCircuit");
        leaderboardTitle.text = "Fastest Lap - " + circuitName; 
 	   
-	   Debug.Log("Get leaderboard: " + circuitName);
 	   PlayFabManager.GetLeaderboard(circuitName);
 	   PlayFabManager.GetLeaderboardAroundPlayer(circuitName);
     }

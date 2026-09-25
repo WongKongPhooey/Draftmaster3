@@ -206,6 +206,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
 
         var root = new GameObject("Barriers");
         root.transform.SetParent(transform, false);
+        _barrierSamples = mainSamples;
 
         var segs = track.track.segments;
         float spacing = Mathf.Max(0.25f, environment.stripSampleSpacing);
@@ -333,23 +334,35 @@ public class TrackEnvironmentBuilder : MonoBehaviour
 
         var go = new GameObject(name);
         go.transform.SetParent(root, false);
-        var mf = go.AddComponent<MeshFilter>();
-        var mr = go.AddComponent<MeshRenderer>();
-        mr.sortingOrder = environment.barrierSortingOrder;
-        if (environment.barrierMaterial != null) mr.sharedMaterial = environment.barrierMaterial;
+        var safer = environment.saferBarrier ? SaferBarrierStyle.Default : null;
+        if (safer != null && centerline.Count >= 2)
+        {
+            // The SAFER barrier's strips are children of the piece, which keeps the piece's name and collider.
+            // Its face goes where the plain strip's (and the collider's) track-side face is, half the collider's
+            // thickness in from the centerline, so what a car hits is exactly what it did before.
+            safer.Build(go.transform, centerline, TrackSideOf(centerline), BarrierColliderThickness * 0.5f,
+                        environment.barrierSortingOrder);
+        }
+        else
+        {
+            var mf = go.AddComponent<MeshFilter>();
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sortingOrder = environment.barrierSortingOrder;
+            if (environment.barrierMaterial != null) mr.sharedMaterial = environment.barrierMaterial;
 
-        // Barriers are directional strips like kerbs: U across the barrier's width, V along it in
-        // metres at the standard pixel density (a barrier's stripe pattern must repeat at a fixed
-        // physical spacing, not once per generated piece).
-        Vector2 barrierDensity = PixelArt.UvScale(environment.barrierMaterial);
-        mf.sharedMesh = BuildPolylineRibbon(centerline, Mathf.Max(0.05f, environment.barrierWidth),
-            (environment.barrierUvLengthScale > 0f ? environment.barrierUvLengthScale : 1f) * barrierDensity.y,
-            Mathf.Max(0.05f, environment.barrierWidth) * barrierDensity.x);
+            // Barriers are directional strips like kerbs: U across the barrier's width, V along it in
+            // metres at the standard pixel density (a barrier's stripe pattern must repeat at a fixed
+            // physical spacing, not once per generated piece).
+            Vector2 barrierDensity = PixelArt.UvScale(environment.barrierMaterial);
+            mf.sharedMesh = BuildPolylineRibbon(centerline, Mathf.Max(0.05f, environment.barrierWidth),
+                (environment.barrierUvLengthScale > 0f ? environment.barrierUvLengthScale : 1f) * barrierDensity.y,
+                Mathf.Max(0.05f, environment.barrierWidth) * barrierDensity.x);
+        }
 
         if (environment.barrierColliders)
         {
             var col = go.AddComponent<PolygonCollider2D>();
-            col.points = BuildBarrierColliderPath(centerline, 1f);
+            col.points = BuildBarrierColliderPath(centerline, BarrierColliderThickness);
             col.offset = Vector2.zero;
         }
     }
@@ -398,6 +411,32 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         var samples = track.SampleCenterline();
         if (samples == null || samples.Count < 2) return false;
         return TryGetManualAnchorPoints(environment.manualSections[sectionIndex], samples, out startLocal, out endLocal);
+    }
+
+    const float BarrierColliderThickness = 1f;
+
+    // The main-spline samples of the barrier build in progress, for TrackSideOf.
+    List<TrackBuilder.Sample> _barrierSamples;
+
+    // Which side of a barrier polyline the track is on: +1 right of travel (+normal), -1 left. Worked out from
+    // the geometry rather than the barrier's side, because a hand-drawn section's points run whichever way they
+    // were placed. The polyline's middle is compared with the nearest centerline sample.
+    int TrackSideOf(List<Vector2> line)
+    {
+        int mid = line.Count / 2;
+        Vector2 p = line[mid];
+        Vector2 tangent = line[Mathf.Min(mid + 1, line.Count - 1)] - line[Mathf.Max(mid - 1, 0)];
+        Vector2 normal = new Vector2(tangent.y, -tangent.x);
+        if (_barrierSamples == null || _barrierSamples.Count == 0 || normal.sqrMagnitude < 1e-8f) return 1;
+
+        Vector2 nearest = _barrierSamples[0].position;
+        float best = float.MaxValue;
+        for (int i = 0; i < _barrierSamples.Count; i++)
+        {
+            float dd = (_barrierSamples[i].position - p).sqrMagnitude;
+            if (dd < best) { best = dd; nearest = _barrierSamples[i].position; }
+        }
+        return Vector2.Dot(nearest - p, normal) >= 0f ? 1 : -1;
     }
 
     // Thin wall centred on the barrier centerline. Both faces offset ±thickness/2 along the PER-POINT normal,

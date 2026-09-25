@@ -13,8 +13,133 @@ public class PhoneTasksApp : PhoneApp
 {
     public override string Id => "tasks";
     public override string TileName => "TASKS";
-    public override string TileSubtitle => "What's next";
+    // The tile says what the player is due at right now, so a glance at the home screen answers "where am I
+    // meant to be?" without opening anything.
+    public override string TileSubtitle
+    {
+        get
+        {
+            var now = Current();
+            return now.title != null ? Trim(now.title, 18) : "What's next";
+        }
+    }
     public override Color Accent => PixelGUI.Gold;
+
+    // ------------------------------------------------------------------ the current objective
+
+    // What the player is working toward this minute: the weekend booking the objective marker points at, or —
+    // with nothing booked — the first side quest they are carrying. `travel` is false when there is nowhere
+    // to send them (a quest whose giver is not in this paddock, a booking with no venue standing yet).
+    struct Objective
+    {
+        public string title;
+        public string detail;
+        public string where;
+        public bool travel;
+        public QuestInfo quest;      // null = the weekend booking
+    }
+
+    // Worked out once a frame: the tile and the app both ask, and OnGUI runs several times a frame.
+    static Objective _now;
+    static int _nowFrame = -1;
+
+    static Objective Current()
+    {
+        if (_nowFrame == Time.frameCount) return _now;
+        _nowFrame = Time.frameCount;
+        _now = default;
+
+        var booking = WeekendAppointment.Any ? WeekendAppointment.Pending : null;
+        if (booking != null)
+        {
+            float metres = WeekendAppointment.DistanceRemaining();
+            bool intoTheRV = booking.IsOnTrack && !RaceWeekend.SessionLive;
+            string where = Draftmaster.Weekend.WeekendVenues.Directions(
+                intoTheRV ? Draftmaster.Weekend.WeekendVenue.Motorhome : Draftmaster.Weekend.WeekendVenues.For(booking.kind));
+            _now = new Objective
+            {
+                title = booking.title,
+                detail = booking.Clock,
+                where = metres >= 0f ? $"{where} · {Mathf.RoundToInt(metres)} m" : where,
+                travel = WeekendAppointment.Target() != null && (metres < 0f || metres > 4f),
+            };
+            return _now;
+        }
+
+        var tracked = QuestManager.Tracked();
+        if (tracked.Count > 0)
+        {
+            var q = tracked[0];
+            var giver = GiverOf(q);
+            _now = new Objective
+            {
+                title = q.title,
+                detail = QuestManager.DescribeProgress(q),
+                where = giver != null ? "Given by " + giver.speakerName : "",
+                // Only a finished quest is worth going back to its giver for; one still being worked on is
+                // done out on the track or around the paddock, not at their feet.
+                travel = giver != null && QuestManager.GetState(q) == QuestManager.State.ReadyToTurnIn,
+                quest = q,
+            };
+        }
+        return _now;
+    }
+
+    static QuestGiverNPC GiverOf(QuestInfo q)
+    {
+        foreach (var npc in NPCInteractable.All)
+            if (npc is QuestGiverNPC giver && giver.quest == q) return giver;
+        return null;
+    }
+
+    static void TravelToCurrent()
+    {
+        var now = Current();
+        if (!now.travel) return;
+        if (now.quest == null) { WeekendObjectiveHUD.TravelThere(); return; }
+
+        var giver = GiverOf(now.quest);
+        if (giver == null) return;
+        // A pace in front of them, not on top of them.
+        WeekendObjectiveHUD.TravelTo(giver.transform.position + new Vector3(0f, -1.5f, 0f));
+    }
+
+    public override void HandleKeys(UnityEngine.InputSystem.Keyboard kb)
+    {
+        if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame) TravelToCurrent();
+    }
+
+    public override void HandlePad(UnityEngine.InputSystem.Gamepad pad)
+    {
+        if (PadInput.WasPressed(Draftmaster.Controls.PadBindings.Confirm)) TravelToCurrent();
+    }
+
+    float DrawNow(float x, float y, float w)
+    {
+        var now = Current();
+        if (now.title == null) return 0f;
+
+        float y0 = y;
+        y += Section(x, y, w, now.quest != null ? "QUEST" : "NOW");
+        y += Row(x, y, w, now.title, "", PixelGUI.Gold);
+        if (!string.IsNullOrEmpty(now.detail)) y += Body(x, y, w, now.detail, PixelGUI.Text);
+        if (!string.IsNullOrEmpty(now.where)) y += Body(x, y, w, now.where, PixelGUI.TextDim);
+
+        if (now.travel)
+        {
+            y += PixelGUI.Px(2f);
+            float h = RowH + PixelGUI.Px(4f);
+            var button = new Rect(x, y, w, h);
+            PixelGUI.Fill(button, PixelGUI.Gold);
+            string prompt = InputGlyphs.UsingTouch ? "TRAVEL THERE"
+                          : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(Draftmaster.Controls.PadBindings.Confirm) + "  TRAVEL THERE"
+                          : "ENTER  TRAVEL THERE";
+            PhoneStyles.Label(button, prompt, PhoneStyles.Heading, PixelGUI.Ink, TextAnchor.MiddleCenter);
+            if (Pressed(button)) TravelToCurrent();
+            y += h;
+        }
+        return y - y0 + PixelGUI.Px(6f);
+    }
 
     struct Task
     {
@@ -75,6 +200,8 @@ public class PhoneTasksApp : PhoneApp
     public override float Draw(float x, float y, float w)
     {
         float y0 = y;
+
+        y += DrawNow(x, y, w);
 
         var weekend = new List<Task>();
         BuildWeekend(weekend);

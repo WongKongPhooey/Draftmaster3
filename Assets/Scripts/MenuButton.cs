@@ -32,12 +32,10 @@ public class MenuButton : MonoBehaviour
 	}
 	
 	public string checkLogic(string link){
-		//Debug.Log("Check button logic");
 		switch(link){
 			case "Menus/Mods":
 				if((PlayerPrefs.GetInt("FreeModding") != 1)
 				  &&(PlayerPrefs.GetInt("TransferTokens") < 999)){
-					//Debug.Log("You Don't Have Mod Access");
 					abortAction = true;
 					alertPopup.GetComponent<AlertManager>().showPopup("No Mods Access","The free beta for modding has now ended. You need to purchase the Editor pack in the Store to use mods.", "cup22livery1alt1");
 				}
@@ -62,7 +60,6 @@ public class MenuButton : MonoBehaviour
 			PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("ChampionshipCarChoice"));
 			PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("ChampionshipCarSeries"));
 			PlayerPrefs.SetString("ActivePath","ChampionshipRace");
-			//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 			SceneManager.LoadScene("Menus/ChampionshipHub");
 		} else {
 			SceneManager.LoadScene("Menus/SeriesSelect");

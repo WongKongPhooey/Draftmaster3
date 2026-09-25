@@ -44,7 +44,6 @@ public class PrizeCollection : MonoBehaviour
 		if(PlayerPrefs.HasKey("NewUser")){
 			PlayerPrefs.SetInt("NewUser",1);
 			prizeType=PlayerPrefs.GetString("PrizeType");
-			Debug.Log("Prize: " + prizeType);
 			switch(prizeType){
 				case "MysteryGarage":
 					ListPrizeOptions("");
@@ -56,11 +55,8 @@ public class PrizeCollection : MonoBehaviour
 				case "EventGarage":
 					ListPrizeOptions(eventPrizeset);
 					prizeCarString = validDriver[Random.Range(0,validDriver.Count)];
-					//Debug.Log(prizeCarString);
 					prizeCarSeries = prizeCarString.Substring(0,5);
-					//Debug.Log(prizeCarSeries);
 					prizeCarNumber = int.Parse(prizeCarString.Substring(5,prizeCarString.Length - 5));
-					Debug.Log(prizeCarNumber);
 					EventGarage(prizeCarSeries,prizeCarNumber);
 					break;
 				case "EventAlt":
@@ -146,7 +142,6 @@ public class PrizeCollection : MonoBehaviour
 	}
 	
 	void ListPrizeOptions(string category){
-		//Debug.Log("Prize Category: " + category);
 		switch(category){
 			case "Everyone":
 				for(int i=0;i<99;i++){
@@ -288,11 +283,9 @@ public class PrizeCollection : MonoBehaviour
 		string[] rewardsArray = eventRewards.Split(',');
 		foreach(string item in rewardsArray){
 			eventAlts.Add(item);
-			//Debug.Log(item + " added to store");
 		}
 
 		randAlt = eventAlts[Random.Range(0,eventAlts.Count)].ToString();
-		Debug.Log("Rand Alt Picked - " + randAlt);		
 		
 		//Extract the carNumber and carset series
 		int indexA = randAlt.IndexOf("livery") + "livery".Length;
@@ -329,7 +322,6 @@ public class PrizeCollection : MonoBehaviour
 		PlayerPrefs.SetInt(sanitisedAlt + "Unlocked",1);
 		
 		if(loopBailout > 0){
-			//Debug.Log("Reward Car/Alt: " + seriesPrefix + ", " + carNumber);
 			if(AltPaints.getAltPaintDriver(seriesPrefix,int.Parse(carNumber),carAltNumber) != null){
 				carReward = "New " + AltPaints.getAltPaintDriver(seriesPrefix,int.Parse(carNumber),carAltNumber) + " Alt Unlocked";
 			} else {

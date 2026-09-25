@@ -82,7 +82,6 @@ public class MomentsCriteria : MonoBehaviour
 						if(PlayerPrefs.GetString("MomentCriteria" + i) != ""){
 							string criteriaList = PlayerPrefs.GetString("MomentCriteria" + i);
 							string[] criteriaParts = criteriaList.Split(",");
-							//Debug.Log("Live Criteria Added: " + criteriaParts[0] + " - " + criteriaParts[1]);
 							momentsCriteria.Add(criteriaParts[0],criteriaParts[1]);
 						}
 					}
@@ -190,7 +189,6 @@ public class MomentsCriteria : MonoBehaviour
 				complete = checkCriteriaCompletion(criteriaSearchTerm, criteria.Value, criteriaCheckA ,criteriaCheckB, criteriaCheckC);
 			}
 		}
-		//Debug.Log("Checked criteria " + criteriaSearchTerm + " - " + complete);
 		return complete;
 	}
 	
@@ -203,11 +201,9 @@ public class MomentsCriteria : MonoBehaviour
 				momentComplete = true;
 				challengeWon.SetActive(true);
 				PlayerPrefs.SetInt("MomentComplete",1);
-				//Debug.Log("Criteria Complete! " + completeCriteria + "/" + totalCriteria);
 			} else {
 				momentComplete = false;
 				challengeLost.SetActive(true);
-				//Debug.Log("Almost.. " + completeCriteria + "/" + totalCriteria);
 				TMPro.TMP_Text challengeLostMessage = GameObject.Find("ChallengeEndMessage").GetComponent<TMPro.TMP_Text>();
 				challengeLostMessage.text = "Almost.. (" + completeCriteria + "/" + totalCriteria + ")";
 			}
@@ -257,7 +253,6 @@ public class MomentsCriteria : MonoBehaviour
 			case "WinningMargin":
 				//If finish gap to leader (A) is lower than the max, true
 				//This check only triggers on the 2nd place car
-				//Debug.Log("Win By Less Than: " + criteriaValue + "? " + criteriaCheckA);
 				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
 					complete = true;
 				}
@@ -265,7 +260,6 @@ public class MomentsCriteria : MonoBehaviour
 			case "WinToThirdLessThan":
 				//If finish gap to leader (A) is lower than the max, true
 				//This check only triggers on the 3rd place car
-				Debug.Log("Beat Third Place By Less Than: " + criteriaValue + "? " + criteriaCheckA);
 				if(float.Parse(criteriaValue) >= float.Parse(criteriaCheckA)){
 					complete = true;
 				}
@@ -274,9 +268,7 @@ public class MomentsCriteria : MonoBehaviour
 				//If more cars in wreck than the minimum, true
 				if(int.Parse(criteriaCheckA) >= int.Parse(criteriaValue)){
 					complete = true;
-					//Debug.Log(criteriaCheckA + " Cars In Wreck ,More Than " + criteriaValue);
 				}
-				//Debug.Log(criteriaCheckA + " Cars In Wreck. Needed " + criteriaValue);
 				break;
 			case "AIMustWin":
 				if((int.Parse(criteriaCheckA) == int.Parse(criteriaValue))&&
@@ -342,7 +334,6 @@ public class MomentsCriteria : MonoBehaviour
 		if(complete == true){
 			updateCriteriaCompletion(criteriaSearchTerm, complete);
 		} else {
-			//Debug.Log("Criteria failed: " + criteriaSearchTerm + " - " + criteriaValue + "(" + criteriaCheckA + "," + criteriaCheckB + "," + criteriaCheckC + ")");
 		}
 		return complete;
 	}

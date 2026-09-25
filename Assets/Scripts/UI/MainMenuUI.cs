@@ -110,7 +110,6 @@ public class MainMenuUI : MonoBehaviour {
 		exp = PlayerPrefs.GetInt("Exp");
 		//exp = 10000;
 		level = PlayerPrefs.GetInt("Level");
-		//Debug.Log("Level " + level);
 		levelExp = GameData.levelExp(level);
 		
 		day = PlayerPrefs.GetInt("GameDay");
@@ -180,7 +179,6 @@ public class MainMenuUI : MonoBehaviour {
 		for(int i=0;i<100;i++){
 			if(PlayerPrefs.HasKey("RaceAltPaint" + i)){
 				PlayerPrefs.DeleteKey("RaceAltPaint" + i);
-				//Debug.Log("Reset Alt Paints");
 			}
 			PlayerPrefs.DeleteKey("CautionPosition" + i + "");
 			PlayerPrefs.DeleteKey("DNFPosition" + i + "");
@@ -197,7 +195,6 @@ public class MainMenuUI : MonoBehaviour {
 			GameData.setRewards();
 			rewardString = GameData.levelUpReward(level);
 			
-			Debug.Log("Level Up -> " + level);
 			levelUpMenu = true;
 			alertPopup.GetComponent<AlertManager>().showPopup("Level Up","You've reached level " + level + ", and have been rewarded " + rewardString + "!","dm2logo");
 		}
@@ -209,7 +206,6 @@ public class MainMenuUI : MonoBehaviour {
 		
 		RectTransform carGearsProgressUI = GameObject.Find("LevelProgress").GetComponent<RectTransform>();
 		float gearsProgressUIWidth = Mathf.Round((100 / (float)levelExp) * (float)exp) + 1;
-		//Debug.Log(exp + " / " + levelExp);
 		carGearsProgressUI.sizeDelta = new Vector2(gearsProgressUIWidth, 12);
 		
 		weekDayLabel = GameObject.Find("WeekDayLabel");
@@ -295,14 +291,12 @@ public class MainMenuUI : MonoBehaviour {
 		if(!PlayerPrefs.HasKey("AudioOn")){
 			PlayerPrefs.SetInt("AudioOn",1);
 			audioOn = 1;
-			//Debug.Log("Audio bug caught: " + audioOn);
 		} else {
 			audioOn = PlayerPrefs.GetInt("AudioOn");
 			//Possible muted games fix
 			if((audioOn != 0)&&(audioOn != 1)){
 				PlayerPrefs.SetInt("AudioOn",1);
 				audioOn = 1;
-				//Debug.Log("Audio bug caught: " + audioOn);
 			}
 		}
 		if(audioOn == 1){
@@ -345,7 +339,6 @@ public class MainMenuUI : MonoBehaviour {
 			
 			latestVersion = PlayerPrefs.GetString("LatestVersion");
 			bool latestUpdate = PlayFabManager.isLatestVersion();
-			//Debug.Log("Checking for updated versions.. " + latestUpdate);
 			if(latestUpdate == false){
 				updateLabelUILabel.text = "Latest Is v" + latestVersion + "";
 			} else {
@@ -371,7 +364,6 @@ public class MainMenuUI : MonoBehaviour {
 	}
 
 	void firstTimeInit(){
-		Debug.Log("New User Setup");
 		PlayerPrefs.SetInt("AudioOn", 1);
 		PlayerPrefs.SetInt("CommsOn", 1);
 		PlayerPrefs.SetInt("CameraRotate", 1);
@@ -382,7 +374,6 @@ public class MainMenuUI : MonoBehaviour {
 		PlayerPrefs.SetInt("TransfersLeft", 1);
 		PlayerPrefs.SetString("LatestVersion", Application.version);
 		alertPopup.GetComponent<AlertManager>().showPopup("Hey Rookie! You Need A Ride?", "Some of the drivers have let you use their cars to get you started!", "cup22livery78");
-		Debug.Log("Open popup");
 		PlayerPrefs.SetInt("NewUser",1);
 	}
 	

@@ -121,8 +121,6 @@ public class SponsorRepSpawner : MonoBehaviour
         }
 
         appearance.MarkSeen();
-        Debug.Log($"SponsorRepSpawner: {reps.Count} sponsor rep(s) in the pit lane at " +
-                  $"{AppearanceConditions.CurrentTrackId} (standing {Mathf.RoundToInt(SponsorCatalog.PlayerStanding)}).", this);
     }
 
     void Build(Transform root, Sponsor sponsor, float dist, float lateral, List<TrackBuilder.Sample> pit)

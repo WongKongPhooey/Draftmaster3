@@ -64,19 +64,16 @@ public class TrackData : MonoBehaviour
 
 	public static string getTrackCodeName(int trackId){
 		loadTrackCodeNames();
-		//Debug.Log("Track Codename is " + trackCodeNames[trackId]);
 		return trackCodeNames[trackId];
 	}
 	
 	public static string getTrackName(int trackId){
 		loadTrackNames();
-		//Debug.Log("Track Codename is " + trackCodeNames[trackId]);
 		return trackNames[trackId];
 	}
 
 	public static int getTrackLaps(int trackId){
 		loadTrackLaps();
-		//Debug.Log("Track " + trackId + " defaults to " + trackLaps[trackId] + " laps");
 		return trackLaps[trackId];
 	}
 

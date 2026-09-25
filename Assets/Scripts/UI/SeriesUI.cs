@@ -89,7 +89,6 @@ public class SeriesUI : MonoBehaviour
 			SeriesData.loadSeries();
 			//Skip through the non-driver #s
 			if(SeriesData.offlineMenu[i] == null){
-				//Debug.Log("No Event here: " + i);
 				continue;
 			}
 			
@@ -124,7 +123,6 @@ public class SeriesUI : MonoBehaviour
 			return;
 		}
 		
-		//Debug.Log("Loading sub events of event: " + seriesId);
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
@@ -144,7 +142,6 @@ public class SeriesUI : MonoBehaviour
 			
 			//Skip through the non-driver #s
 			if(SeriesData.offlineSeries[seriesId,k] == null){
-				//Debug.Log("No Series here: " + i);
 				continue;
 			}
 			
@@ -214,7 +211,6 @@ public class SeriesUI : MonoBehaviour
 		PlayerPrefs.SetInt("SubseriesMinClass", SeriesData.offlineMinClass[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionType",SeriesData.offlineMinType[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("RestrictionValue",getRestrictionValue(seriesId,subSeriesId));
-		//Debug.Log("Series Restriction: " + SeriesData.offlineMinType[seriesId,subSeriesId] + " - " + getRestrictionValue(seriesId,subSeriesId));
 		PlayerPrefs.SetInt("AIDifficulty", SeriesData.offlineAILevel[seriesId,subSeriesId]);
 		PlayerPrefs.SetInt("SeriesFuel",SeriesData.offlineFuel[seriesId,subSeriesId]);
 		PlayerPrefs.SetString("SeriesPrize",SeriesData.offlinePrizes[seriesId,subSeriesId]);
@@ -226,7 +222,6 @@ public class SeriesUI : MonoBehaviour
 				PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("SeriesChampionship" + seriesId + subSeriesId + "CarChoice"));
 				PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("SeriesChampionship" + seriesId + subSeriesId + "CarSeries"));
 				PlayerPrefs.SetString("ActivePath","ChampionshipRace");
-				//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 				SceneManager.LoadScene("Menus/ChampionshipHub");
 			} else {
 				SceneManager.LoadScene("Menus/Garage");
@@ -251,7 +246,6 @@ public class SeriesUI : MonoBehaviour
 				PlayerPrefs.SetInt("CarChoice", PlayerPrefs.GetInt("SeriesChampionship" + modSeriesPrefix + seriesId +subSeriesId + "CarChoice"));
 				PlayerPrefs.SetString("carSeries", PlayerPrefs.GetString("SeriesChampionship" + modSeriesPrefix + seriesId + subSeriesId + "CarSeries"));
 				PlayerPrefs.SetString("ActivePath","ChampionshipRace");
-				//Debug.Log("Championship Car Series is " + PlayerPrefs.GetString("ChampionshipCarSeries"));
 				SceneManager.LoadScene("Menus/ChampionshipHub");
 			} else {
 				SceneManager.LoadScene("Menus/Garage");
@@ -263,7 +257,6 @@ public class SeriesUI : MonoBehaviour
 	
 	public void loadAllModSeries(){
 		
-		//Debug.Log("Loading sub events of event: " + seriesId);
 		foreach (Transform child in tileFrame){
 			Destroy(child.gameObject);
 		}
@@ -281,7 +274,6 @@ public class SeriesUI : MonoBehaviour
 		int totalModdedSeries=0;
 		
 		foreach(string modSet in modsArray){
-			//Debug.Log(modSet);
 			string[] modData = modSet.Split('|');
 			string modSeriesPrefix = modData[0];
 			
@@ -403,7 +395,6 @@ public class SeriesUI : MonoBehaviour
 		if(PlayerPrefs.HasKey("CustomLaps" + lapSeries + lapSubseries)){
 			lapsMulti = PlayerPrefs.GetInt("CustomLaps" + lapSeries + lapSubseries) * 2;
 		}
-		//Debug.Log("Laps Multi: " + lapsMulti);
 		lapsSlider.value = lapsMulti/2;
 		lapsPopup.SetActive(true);
 		lapsValue.GetComponent<TMPro.TMP_Text>().text = "Between " + (3 * (lapsMulti/2)) + " and " + (10 * (lapsMulti/2)) + " Laps";
@@ -412,7 +403,6 @@ public class SeriesUI : MonoBehaviour
 	public void SaveLapsSlider(){
 		int customLaps = (int)lapsSlider.value;
 		PlayerPrefs.SetInt("CustomLaps" + lapSeries + lapSubseries,customLaps);
-		//Debug.Log("CustomLaps" + lapSeries + lapSubseries + ": " + customLaps);
 		lapsValue.GetComponent<TMPro.TMP_Text>().text = "Between " + (3 * customLaps) + " and " + (10 * customLaps) + " Laps";
 	}
 	
@@ -423,11 +413,9 @@ public class SeriesUI : MonoBehaviour
 		diffMulti = defaultDiff;
 		int minDiffMulti = diffMulti;
 		difficultySlider.minValue = diffMulti;
-		//Debug.Log("Diff Min: " + diffMulti);
 		if(PlayerPrefs.HasKey("CustomDifficulty" + diffSeries + diffSubseries)){
 			diffMulti = PlayerPrefs.GetInt("CustomDifficulty" + diffSeries + diffSubseries);
 		}
-		//Debug.Log("Diff Multi: " + diffMulti);
 		difficultySlider.value = diffMulti;
 		difficultyPopup.SetActive(true);
 		minDiffValue.GetComponent<TMPro.TMP_Text>().text = ((minDiffMulti + 5) * 10) + "%";
@@ -438,7 +426,6 @@ public class SeriesUI : MonoBehaviour
 	public void SaveDifficultySlider(){
 		int customDiff = (int)difficultySlider.value;
 		PlayerPrefs.SetInt("CustomDifficulty" + diffSeries + diffSubseries,customDiff);
-		//Debug.Log("CustomDifficulty" + diffSeries + diffSubseries + ": " + customDiff);
 		diffValue.GetComponent<TMPro.TMP_Text>().text = ((customDiff + 5) * 10) + "% Difficulty";
 	}
 
@@ -469,7 +456,6 @@ public class SeriesUI : MonoBehaviour
 				rewardString = reward;
 			}
 			carPaint.texture = (Texture2D)Resources.Load(rewardString);
-			//Debug.Log("Reward loaded: " + rewardString);
 		}
 	}
 

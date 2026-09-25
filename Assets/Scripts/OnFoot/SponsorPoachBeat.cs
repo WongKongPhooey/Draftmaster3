@@ -184,11 +184,55 @@ public class SponsorPoachBeat : MonoBehaviour
     }
 
     // The way out, not the way in — see the header. Being inside the rail once opens the trigger's gate.
+    //
+    // The gap is not the only way out, though. TRAVEL THERE (the T key, the phone) lifts the player straight
+    // to their next booking, and a player who walks out briskly can be through the gap before the rep has
+    // even been stood up (the shoot is polled twice a second). Either way nobody ever crossed the trigger and
+    // the rep waited at an empty doorway for the rest of the weekend. So once the player is clearly clear of
+    // the pen without having tripped it, the rep catches them up wherever they are — "bumping into" them
+    // outside the next place rather than at this one.
     void Update()
     {
-        if (_beenInside || _player == null || _circle == null) return;
-        if (Vector2.Distance(_player.transform.position, _circle.position) <= _insideRadius) _beenInside = true;
+        if (_player == null || _circle == null) return;
+        float fromCircle = Vector2.Distance(_player.transform.position, _circle.position);
+        if (!_beenInside && fromCircle <= _insideRadius) _beenInside = true;
+
+        if (_walkUp == null || _played || !_beenInside) return;
+        if (fromCircle <= _insideRadius + triggerBeyondRail + triggerRadius + 2f) return;   // the trigger's job
+        if (ScreenFade.Busy || _player.MovementLocked || NPCInteractable.AnyConversationActive) return;
+        CatchUp();
     }
+
+    void CatchUp()
+    {
+        _played = true;
+        if (_trigger != null) Destroy(_trigger);
+
+        // A few metres off, on the side they came from, so the rep is seen walking up rather than appearing.
+        Vector3 at = _player.transform.position;
+        Vector3 back = _circle.position - at;
+        back.z = 0f;
+        if (back.sqrMagnitude < 0.01f) back = Vector3.up;
+        Vector3 from = Walkable(at + back.normalized * 5f);
+
+        var rep = _walkUp.npc;
+        if (rep != null)
+        {
+            // The on-foot body's Rigidbody2D owns the pose; moving only the transform snaps straight back.
+            var body = rep.GetComponent<Rigidbody2D>();
+            if (body != null) body.position = from;
+            rep.transform.position = new Vector3(from.x, from.y, rep.transform.position.z);
+        }
+
+        Debug.Log("SponsorPoachBeat: the player left the winner's circle without passing the rep — " +
+                  "catching them up where they are.", this);
+        appear.MarkSeen();
+        _walkUp.Play();
+    }
+
+    NPCWalkUpCutscene _walkUp;
+    CutsceneTrigger _trigger;
+    bool _played;
 
     // Who comes looking. The biggest name the driver is not already carrying and who is not already stood
     // in the pit lane this weekend — a poacher has to feel like a step up, and finding the same rep in two
@@ -247,7 +291,9 @@ public class SponsorPoachBeat : MonoBehaviour
         trigger.radius = triggerRadius;
         trigger.target = player.transform;
         trigger.Gate = () => _beenInside;
-        trigger.Triggered = () => { appear.MarkSeen(); walkUp.Play(); };
+        trigger.Triggered = () => { _played = true; appear.MarkSeen(); walkUp.Play(); };
+        _walkUp = walkUp;
+        _trigger = trigger;
 
         Debug.Log($"SponsorPoachBeat: {sponsor.Name} waiting at the winner's circle exit " +
                   $"(appeal {Mathf.RoundToInt(standing)}, offering ${offer.perRace:N0}/race for " +

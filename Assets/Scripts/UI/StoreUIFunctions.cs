@@ -51,10 +51,8 @@ public class StoreUIFunctions : MonoBehaviour
 					}
 					string alertContent = "" + DriverNames.getSeriesNiceName(itemSeries);
 						   alertContent += " " + DriverNames.getName(itemSeries, int.Parse(itemNum));
-						   //Debug.Log(itemSeries + " " + itemNum + " " + itemAlt);
 						   alertContent += "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt));
 						   alertContent += " Alt Paint Unlocked!";
-					//Debug.Log(alertContent);
 					string alertImage = itemSeries + "livery" + itemNum + "alt" + itemAlt + "";
 					
 					totalMoney -= itemPrice;
@@ -65,7 +63,6 @@ public class StoreUIFunctions : MonoBehaviour
 					PlayerPrefs.SetInt(itemSeries + itemNum + "AltPaint",int.Parse(itemAlt));
 					if(AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) != null){
 						PlayerPrefs.SetString(itemSeries + itemNum + "AltDriver", AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
-						//Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
 					}
 				
 				} else {
@@ -123,10 +120,8 @@ public class StoreUIFunctions : MonoBehaviour
 					}
 					string alertContent = "" + DriverNames.getSeriesNiceName(itemSeries);
 						   alertContent += " " + DriverNames.getName(itemSeries, int.Parse(itemNum));
-						   //Debug.Log(itemSeries + " " + itemNum + " " + itemAlt);
 						   alertContent += "\n" + AltPaints.getAltPaintName(itemSeries,int.Parse(itemNum),int.Parse(itemAlt));
 						   alertContent += " Alt Paint Unlocked!";
-					//Debug.Log(alertContent);
 					string alertImage = itemSeries + "livery" + itemNum + "alt" + itemAlt + "";
 					
 					gears -= itemPrice;
@@ -138,7 +133,6 @@ public class StoreUIFunctions : MonoBehaviour
 					
 					if(AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)) != null){
 						PlayerPrefs.SetString(itemSeries + itemNum + "AltDriver", AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
-						Debug.Log("Driver Name set: " + AltPaints.getAltPaintDriver(itemSeries,int.Parse(itemNum),int.Parse(itemAlt)));
 					}
 				
 				} else {
@@ -185,7 +179,6 @@ public class StoreUIFunctions : MonoBehaviour
 	}
 
 	public void classUp(int carGears, int targetGears){
-		Debug.Log("Class Me Up Scotty!");
 		int carUnlocked = PlayerPrefs.GetInt(itemSeries + itemNum + "Unlocked");
 		int carClass = PlayerPrefs.GetInt(itemSeries + itemNum + "Class");
 		

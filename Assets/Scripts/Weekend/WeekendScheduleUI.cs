@@ -259,7 +259,7 @@ public class WeekendScheduleUI : MonoBehaviour
             else if (a.IsOnTrack)
                 PixelGUI.Fill(rowRect, new Color(PixelGUI.Gold.r, PixelGUI.Gold.g, PixelGUI.Gold.b, 0.12f));
 
-            if (GUI.Button(rowRect, GUIContent.none, GUIStyle.none)) _selected = i;
+            if (TouchTaps.Button(rowRect, GUIContent.none, GUIStyle.none)) _selected = i;
 
             var style = PixelGUI.Data;
             var prevColour = style.normal.textColor;

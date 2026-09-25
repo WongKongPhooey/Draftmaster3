@@ -21,7 +21,7 @@ public static class PaddockWalkerDebug
     {
         if (!Application.isPlaying) { Debug.LogWarning("PaddockWalkerDebug: enter play mode first."); return; }
         _snapshot.Clear();
-        foreach (var w in Object.FindObjectsByType<PaddockWalker>())
+        foreach (var w in Object.FindObjectsByType<PaddockWalker>(FindObjectsSortMode.None))
             _snapshot[w.GetInstanceID()] = w.transform.position;
         _snapshotTime = Time.time;
         Debug.Log($"PaddockWalkerDebug: snapshot of {_snapshot.Count} walkers at t={_snapshotTime:F1}.");
@@ -32,7 +32,7 @@ public static class PaddockWalkerDebug
     {
         if (!Application.isPlaying) { Debug.LogWarning("PaddockWalkerDebug: enter play mode first."); return; }
         var sb = new StringBuilder();
-        var walkers = Object.FindObjectsByType<PaddockWalker>();
+        var walkers = Object.FindObjectsByType<PaddockWalker>(FindObjectsSortMode.None);
         int stuck = 0, moving = 0, total = 0;
 
         foreach (var w in walkers)

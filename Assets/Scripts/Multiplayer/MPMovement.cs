@@ -240,7 +240,6 @@ public class MPMovement : NetworkBehaviour
 			}
 		} else {
 			carRarity = 0;
-			//Debug.Log("Invalid Car #");
 		}
 		
 		Renderer liveryRend = this.transform.Find("Livery").GetComponent<Renderer>();
@@ -299,7 +298,6 @@ public class MPMovement : NetworkBehaviour
 			numberObj.GetComponent<Transform>().localScale = numScale;
 			numberObj.GetComponent<Transform>().localRotation = Quaternion.Euler(numRotation.x, numRotation.y, numRotation.z);
 		
-			//Debug.Log("Player #" + customNum + " applied Var: " + seriesPrefix + "num" + customNum);
 			numRend.enabled = true;
 		} else {
 			numRend.enabled = false;
@@ -517,8 +515,6 @@ public class MPMovement : NetworkBehaviour
 				tandemPosition = RaceControl.tandemPosition[carNum];
 				RaceControl.givenSpeed[carNum] = 0;
 				#if UNITY_EDITOR
-					//Debug.Log("The player has evened out at " + givenSpeed + " in the tandem.");
-					//Debug.Log("Player is in a tandem of " + tandemPosition);
 				#endif
 			} else {
 				//Helps to remove the 'stickiness' when lifting to detach from the tandem
@@ -601,7 +597,6 @@ public class MPMovement : NetworkBehaviour
 		
 		//Draft increases with track speed
 		draftFactor = (200 - carSpeedOffset)/200;
-		//Debug.Log("Draft Factor: " + draftFactor);
 		
 		RaycastHit DraftCheckForward;
         RaycastHit DraftCheckBackward;
@@ -636,8 +631,6 @@ public class MPMovement : NetworkBehaviour
 				//e.g. dist 5 = strength 0.02
 				float draftStrength = (0.04f - (DraftCheck.distance / 750f)) + (carRarity / 750f) + (carClass / 2500f) - minDraftStrength - dragDecelMulti;
 				#if UNITY_EDITOR
-				//Debug.Log("Player draft strength: " + oldDraftStrength + " - " + (maxDraftDistance - DraftCheck.distance) + " " + draftStrengthRatio + " " + (carRarity / 750f) + (carClass / 2500f));
-				//Debug.Log("New player draft strength: " + draftStrength + " - " + (0.02f / DraftCheck.distance) + " " + (carRarity / 750f) + (carClass / 2500f));
 				#endif
 				
 				float diffToMax = variTopSpeed - playerSpeed;
@@ -648,7 +641,6 @@ public class MPMovement : NetworkBehaviour
 						diffToMax = 0;
 					}
 					draftStrength *= (diffToMax / 2) + 0.01f;
-					//Debug.Log("Draft: " + draftStrength + " Multi: " + (diffToMax / 2));
 				}
 				playerSpeed += (draftStrength * draftFactor);
 				
@@ -798,7 +790,6 @@ public class MPMovement : NetworkBehaviour
 		//updateMovement();
 
 		if(affectedPlayerSpeed != 0){
-			//Debug.Log("Player speed equalised to " + affectedPlayerSpeed + ". Was " + playerSpeed);
 			playerSpeed = affectedPlayerSpeed;
 			affectedPlayerSpeed = 0;
 		}
@@ -822,7 +813,6 @@ public class MPMovement : NetworkBehaviour
 	}
 
 	void checkForInputs() {
-		//Debug.Log("Checking for inputs..");
 		#if ENABLE_INPUT_SYSTEM && NEW_INPUT_SYSTEM_INSTALLED
 		// New input system backends are enabled.
 		if (Keyboard.current.aKey.isPressed)
@@ -837,12 +827,10 @@ public class MPMovement : NetworkBehaviour
 		// Old input backends are enabled.
 		if (LegacyKeys.Held(KeyCode.A))
 		{
-			//Debug.Log("Going left!");
 			changeLaneLeft();
 		}
 		else if(LegacyKeys.Held(KeyCode.D))
 		{
-			//Debug.Log("Going right!");
 			changeLaneRight();
 		}
 		#endif
@@ -850,7 +838,6 @@ public class MPMovement : NetworkBehaviour
 
 	void updateMovement() {
 		
-		//Debug.Log("Update Movement..");
 		
 		float multiplier = 1 * Time.deltaTime;
 		
@@ -859,14 +846,12 @@ public class MPMovement : NetworkBehaviour
 			transform.position += new Vector3(-laneChangeSpeed, 0, 0);
 			//vehicle.transform.Translate(-laneChangeSpeed, 0, 0);
 			laneticker--;
-			Debug.Log("Position updated. Ticker: " + laneticker);
         }
 
         if (laneticker < 0){
 			transform.position += new Vector3(laneChangeSpeed, 0, 0);
 			//vehicle.transform.Translate(laneChangeSpeed, 0, 0);
 			laneticker++;
-			Debug.Log("Position updated. Ticker: " + laneticker);
         }
 
         if (laneticker == 0){
@@ -895,7 +880,6 @@ public class MPMovement : NetworkBehaviour
 			lane++;
 			laneticker = laneChangeDuration;
 		}
-		Debug.Log("Go Left");
 	}
 	
 	public void changeLaneRight(){
@@ -904,7 +888,6 @@ public class MPMovement : NetworkBehaviour
 			lane--;
 			laneticker = -laneChangeDuration;
 		}
-		Debug.Log("Go Right");
 	}
 	
 	public void holdBrake(){
@@ -939,7 +922,6 @@ public class MPMovement : NetworkBehaviour
 			}
 		}
 		
-		//Debug.Log("Hit " + carHit.gameObject.name);
 		if ((carHit.gameObject.tag == "AICar") || 
 			(carHit.gameObject.tag == "Barrier") || 
 			(carHit.gameObject.name == "OuterWall") ||
@@ -1083,7 +1065,6 @@ public class MPMovement : NetworkBehaviour
 		if(wreckHits > 1){
 			//Subsequent hits based on rotation angle
 			float spinAngle = this.transform.localRotation.eulerAngles.y;
-			//Debug.Log("Car rotation: " + spinAngle);
 			wreckTorque = Random.Range(-0.25f, 0.25f) * 10;
 		} else {
 			//First impact, car will start straight
@@ -1109,7 +1090,6 @@ public class MPMovement : NetworkBehaviour
 		RaceControl.isWrecking[carNum] = false;
 		RaceControl.hasWrecked[carNum] = true;
 		
-		//Debug.Log("WRECK OVER");
 		wreckRigidbody.mass = 5;
 		wreckRigidbody.isKinematic = true;
 		wreckForce.force = new Vector3(0f, 0f,windForce);
@@ -1125,12 +1105,10 @@ public class MPMovement : NetworkBehaviour
 		//No cautions on the last lap, race is over
 		if(CameraRotate.lap < CameraRotate.raceEnd){
 			if(fastestLapSaved == false){
-				//Debug.Log("Haven't saved fastest lap yet.. (Movement)");
 				CameraRotate.saveRaceFastestLap();
 				fastestLapSaved = true;
 			}
 		}
-		//Debug.Log("Pause the game!");
 		PlayerPrefs.SetInt("Volume",0);
 	}
 	
@@ -1153,20 +1131,16 @@ public class MPMovement : NetworkBehaviour
 		updateWindForce(wreckSine);
 		if(CameraRotate.onTurn == true){
 			//baseDecel-=0.02f * CameraRotate.currentTurnSharpness();
-			//Debug.Log("Extra decel: " + (0.02f * CameraRotate.currentTurnSharpness()));
 			wreckForce.force = new Vector3(slideX,0f,windForce);
 		} else {
 			wreckForce.force = new Vector3(-3f, 0f,windForce);
-			//Debug.Log("Windforce: " + windForce);
 		}
 		playerWreckDecel = baseDecel - (60f * wreckSine);
-		//Debug.Log(playerWreckDecel);
 		
 		if(seriesSpeedDiff > 0){
 			seriesSpeedDiff -= 1;
 		}
 
-		//Debug.Log("Wreck Decel: " + playerWreckDecel);
 		if((playerSpeed - speedOffset - seriesSpeedDiff - CameraRotate.carSpeedOffset) + windForce <= 0){
 			endWreck();
 		}
@@ -1179,7 +1153,6 @@ public class MPMovement : NetworkBehaviour
 			this.gameObject.transform.position = new Vector3(1.5f,this.gameObject.transform.position.y,this.gameObject.transform.position.z);
 		}
 		
-		//Debug.Log("Sparks End: " + sparksEndSpeed + " Wreck Decel: " + playerWreckDecel);
 		if(sparksEndSpeed < playerWreckDecel){
 			//Align particle system to global track direction
 			leftSparks.rotation = Quaternion.Euler(0,180,0);
@@ -1217,7 +1190,6 @@ public class MPMovement : NetworkBehaviour
 	}
 	
 	void updateWindForce(float angleSin){
-		//Debug.Log("Wreck Angle Sin: " + (forceSmoothing * (angleSin * 2)));
 		if(windForce < targetForce - (forceSmoothing * (angleSin * 2))){
 			windForce += forceSmoothing * (angleSin * 2);
 		}

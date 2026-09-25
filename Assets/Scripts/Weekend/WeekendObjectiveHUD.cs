@@ -287,12 +287,23 @@ public class WeekendObjectiveHUD : MonoBehaviour
     {
         var anchor = WeekendAppointment.Where();
         var target = WeekendAppointment.Target();
-        var player = WeekendVenueAnchor.OnFootPlayer();
-        if (target == null || player == null) return false;
-        if (ScreenFade.Busy) return false;
+        if (target == null) return false;
 
         // Stand on the venue's own mark where there is one; a session has no mark, so pull up beside the car.
         Vector3 to = anchor != null ? anchor.StandPosition : target.position + new Vector3(0f, -3f, 0f);
+        return TravelTo(to);
+    }
+
+    // The same wipe-and-move to any point in the paddock — the phone uses it to take the player to whoever
+    // is waiting on a side quest. Puts the phone away first: arriving with it still up would leave them
+    // stood at the venue unable to walk.
+    public static bool TravelTo(Vector3 to)
+    {
+        var player = WeekendVenueAnchor.OnFootPlayer();
+        if (player == null) return false;
+        if (ScreenFade.Busy) return false;
+
+        PhoneUI.Close();
         to.z = player.position.z;
 
         // Behind a wipe rather than a jump cut. The paddock is one continuous place, and a player who blinks
