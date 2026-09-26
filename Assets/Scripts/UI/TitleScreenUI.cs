@@ -58,6 +58,12 @@ public class TitleScreenUI : MonoBehaviour
     [Header("Wired by the builder")]
     public TextMeshProUGUI statusLabel;
 
+    [Header("Row colours")]
+    [Tooltip("The row under the cursor.")]
+    public Color selectedRowColour = Color.white;
+    [Tooltip("Every other row. White rather than the kit's dim grey: the menu sits over grass, not a dark plate.")]
+    public Color rowColour = Color.white;
+
     [Header("Feel")]
     [Tooltip("Race scene loaded by the career / exhibition rows.")]
     public string raceSceneName = "RaceScene";
@@ -430,8 +436,8 @@ public class TitleScreenUI : MonoBehaviour
     void Redraw()
     {
         var theme = PixelUITheme.Instance;
-        Color on = theme != null ? theme.text : Color.white;
-        Color off = theme != null ? theme.textDisabled : new Color(0.49f, 0.53f, 0.64f);
+        Color on = selectedRowColour;
+        Color off = rowColour;
         Color dead = theme != null ? theme.plateLight : new Color(0.17f, 0.19f, 0.27f);
 
         for (int i = 0; i < rows.Count; i++)

@@ -41,6 +41,12 @@ public class TitleTrackBackdrop : MonoBehaviour
     public int groundSortingOrder = -200;
     public int finishLineSortingOrder = -190;
     public int wallSortingOrder = -180;
+    [Tooltip("The SAFER barrier's catch fence, drawn over the crash cars (TitleCrashScene sorts from -24) " +
+             "rather than just over the wall, so a car thrown against it goes under the mesh.")]
+    public int fenceSortingOrder = 0;
+    [Tooltip("The catch fence's world z. In front of the crash's plane (0) so depth can't hide it behind a car, " +
+             "and behind the title canvas.")]
+    public float fenceDepthZ = -0.5f;
 
     Camera _camera;
     Vector2 _builtFor;              // (aspect, orthographic size) the quads were last laid out for
@@ -138,6 +144,14 @@ public class TitleTrackBackdrop : MonoBehaviour
             wallGo.transform.localScale = new Vector3(m, m, 1f);
             safer.Build(wallGo.transform, new[] { new Vector2(wallR, bottom), new Vector2(wallR, top) },
                         trackSign: 1, faceOffset: 0f, sortingOrder: wallSortingOrder);
+
+            // On a circuit the fence only has to clear the wall; here it has to clear the cars too.
+            var fence = wallGo.transform.Find("CatchFence");
+            if (fence != null)
+            {
+                fence.position = new Vector3(fence.position.x, fence.position.y, fenceDepthZ);
+                fence.GetComponent<MeshRenderer>().sortingOrder = fenceSortingOrder;
+            }
         }
         else Quad(3, "OuterWall", wall, wallSortingOrder, wallL, bottom, wallR, top, m, ribbon: true);
     }
