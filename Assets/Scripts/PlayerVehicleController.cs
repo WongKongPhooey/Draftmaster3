@@ -523,8 +523,16 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             }
         }
         steerIn = Mathf.Clamp(steerIn, -1f, 1f);
-        if (Mathf.Abs(steerIn) < steerDeadzone) steerIn = 0f;
-        steerIn = Mathf.Sign(steerIn) * Mathf.Pow(Mathf.Abs(steerIn), steerExpo);
+        // The deadzone and the expo curve are for a human's thumb: a stick that doesn't rest at exactly zero, and
+        // fine control near the centre. An AI controller's command is already exactly what it wants, and passing
+        // it through them threw away every correction under 12% — the car drove straight through gentle arcs,
+        // drifted metres off its line, then caught it late and hard with the tyres sliding (see
+        // AILineDiagnostics' corner trace). So the AI's steer goes to the wheels as commanded.
+        if (!externalInput)
+        {
+            if (Mathf.Abs(steerIn) < steerDeadzone) steerIn = 0f;
+            steerIn = Mathf.Sign(steerIn) * Mathf.Pow(Mathf.Abs(steerIn), steerExpo);
+        }
         _lastSteerIn = steerIn; _lastThrottleIn = throttleIn; _lastBrakeIn = brakeIn;
 
         // Steering → front-wheel angle, rate-limited and speed-scaled.

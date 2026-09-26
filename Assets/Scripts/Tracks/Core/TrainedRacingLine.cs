@@ -43,6 +43,28 @@ namespace Draftmaster.Tracks
 
         public float[] lateral;
 
+        // Optional: the legal corridor this line was taken in, per sample on the same grid (m, + right). A line
+        // copied from the player's lap uses tarmac run-off where they did, which is legal (LapTimingManager
+        // counts paved run-off and kerbs) but outside the painted road the AI is normally held inside. When
+        // these are present, SplineDriver keeps the car inside THEM instead of the road. Empty on trained lines.
+        public float[] minLateral;
+        public float[] maxLateral;
+        public bool HasCorridor => minLateral != null && maxLateral != null && lateral != null &&
+                                   minLateral.Length == lateral.Length && maxLateral.Length == lateral.Length;
+
+        // The corridor at a distance, as (min, max). Only valid when HasCorridor. The narrower of the two
+        // neighbouring samples, so interpolating never widens it past what was probed.
+        public Vector2 CorridorAt(float distance)
+        {
+            int n = lateral.Length;
+            if (trackLength > 0f) distance = ((distance % trackLength) + trackLength) % trackLength;
+            float f = distance / spacing;
+            int i0 = Mathf.FloorToInt(f);
+            i0 = ((i0 % n) + n) % n;
+            int i1 = (i0 + 1) % n;
+            return new Vector2(Mathf.Max(minLateral[i0], minLateral[i1]), Mathf.Min(maxLateral[i0], maxLateral[i1]));
+        }
+
         // What the AI gained over the line it used to drive — measured from the authored ideal, not from
         // whatever the last session happened to start on, so it stays the cumulative number after a refine.
         public float Baseline => baselineLapTime > 0.01f ? baselineLapTime : seedLapTime;
@@ -148,15 +170,26 @@ namespace Draftmaster.Tracks
             sb.Append(",\"lapsSimulated\":").Append(lapsSimulated);
             sb.Append(",\"totalLapsSimulated\":").Append(totalLapsSimulated);
             sb.Append(",\"refinePasses\":").Append(refinePasses);
-            sb.Append(",\"lateral\":[");
-            if (lateral != null)
-                for (int i = 0; i < lateral.Length; i++)
+            Array(sb, "lateral", lateral);
+            if (HasCorridor)
+            {
+                Array(sb, "minLateral", minLateral);
+                Array(sb, "maxLateral", maxLateral);
+            }
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        static void Array(StringBuilder sb, string name, float[] values)
+        {
+            sb.Append(",\"").Append(name).Append("\":[");
+            if (values != null)
+                for (int i = 0; i < values.Length; i++)
                 {
                     if (i > 0) sb.Append(',');
-                    sb.Append(lateral[i].ToString("0.###", CultureInfo.InvariantCulture));
+                    sb.Append(values[i].ToString("0.###", CultureInfo.InvariantCulture));
                 }
-            sb.Append("]}");
-            return sb.ToString();
+            sb.Append(']');
         }
 
         static void Field(StringBuilder sb, string name, string value)

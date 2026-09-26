@@ -67,6 +67,10 @@ public class TrackPackage : MonoBehaviour
     // deliberately wired to a different spline (an ExtraTrackSpline test rig) is left alone.
     public int BindSceneReferences()
     {
+        // The AI's strength is per track (Draftmaster > AI > Calibrate AI Pace). Set before anything that binds
+        // below can spawn a car and bake a speed profile off the old numbers.
+        if (Application.isPlaying) AIPaceCalibration.ApplyFor(trackId);
+
         var builder = Builder;
         if (builder == null)
         {

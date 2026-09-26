@@ -35,11 +35,15 @@ public static class TrackConditions
     [Tooltip("Scales crash damage accrual on every car. 1 nominal, 0 = invulnerable bodywork, 2 = fragile.")]
     public static float DamageMultiplier = 1f;
 
-    [Tooltip("Scales every racing AI's pace (their target speeds AND engine power under the shared dynamic model). 1 nominal, <1 slower field, >1 faster field. Does not touch formation/safety-car pacing.")]
-    public static float AiPaceMultiplier = 1.2f;
+    // The AI strength a track runs at when AIPaceCalibration has no entry for it.
+    public const float DefaultAiPace = 1.2f;
+    public const float DefaultAiGrip = 1.2f;
 
-    [Tooltip("AI-only grip multiplier layered on top of the global grip. >1 = AI corner faster than the player at equal tuning; player unaffected.")]
-    public static float AiGripMultiplier = 1.2f;
+    [Tooltip("Scales every racing AI's pace (their target speeds AND engine power under the shared dynamic model). 1 nominal, <1 slower field, >1 faster field. Does not touch formation/safety-car pacing. Set per track by AIPaceCalibration.")]
+    public static float AiPaceMultiplier = DefaultAiPace;
+
+    [Tooltip("AI-only grip multiplier layered on top of the global grip. >1 = AI corner faster than the player at equal tuning; player unaffected. Set per track by AIPaceCalibration.")]
+    public static float AiGripMultiplier = DefaultAiGrip;
 
     // Effective grip for AI-driven cars: global effective grip × AI-only bonus.
     public static float AiEffective => Effective * AiGripMultiplier;
@@ -51,7 +55,7 @@ public static class TrackConditions
         TireWearMultiplier = 0.02f;
         FuelUseMultiplier = 1f;
         DamageMultiplier = 1f;
-        AiPaceMultiplier = 1.2f;
-        AiGripMultiplier = 1.2f;
+        AiPaceMultiplier = DefaultAiPace;
+        AiGripMultiplier = DefaultAiGrip;
     }
 }

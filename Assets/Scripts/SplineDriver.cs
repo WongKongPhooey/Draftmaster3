@@ -276,6 +276,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float[] _curvatureProfile;  // |curvature| (1/m) of the DRIVEN line (centerline + smoothed lateral), per main sample
     float _bakedALatMaxMps2;    // lateral-accel ceiling (m/s²) the profile was baked against
     float[] _lateralProfile;
+    float[] _lineLo, _lineHi;   // where the smoothed line may go: the road, or a player line's legal corridor
     float[] _leftBoundProfile;
     float[] _rightBoundProfile;
     float _mainLength;
@@ -446,19 +447,33 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         if (trained != null && !trained.MatchesLength(_mainLength)) trained = null;
         TrainedLineInUse = trained != null;
 
+        // Where the LINE may go. Normally the road (the bound profiles below). A line copied from the player's
+        // lap carries the legal corridor it was driven in — road, kerb and tarmac run-off — and may use all of
+        // it, as they did. The bound profiles themselves stay on the road: they are what lineFactor spread and
+        // tactical moves read, and a car swerving onto the run-off to pass someone is not the idea.
+        bool corridor = trained != null && trained.HasCorridor;
+        _lineLo = new float[n];
+        _lineHi = new float[n];
+
         for (int i = 0; i < n; i++)
         {
             float d = _mainSamples[i].distance;
             _leftBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, -1f, _anchors, _mainLength), _mainSamples[i].width);
             _rightBoundProfile[i] = ClampToRoad(track.track.GetLateralAt(d, +1f, _anchors, _mainLength), _mainSamples[i].width);
+            _lineLo[i] = Mathf.Min(_leftBoundProfile[i], _rightBoundProfile[i]);
+            _lineHi[i] = Mathf.Max(_leftBoundProfile[i], _rightBoundProfile[i]);
+            if (corridor)
+            {
+                Vector2 c = trained.CorridorAt(d);
+                _lineLo[i] = Mathf.Min(_lineLo[i], c.x);
+                _lineHi[i] = Mathf.Max(_lineHi[i], c.y);
+            }
 
             if (trained != null)
             {
                 // Same blend TrackInfoV2 does between ideal and the outer lines, just off the trained ideal,
                 // so per-driver lineFactor spread still spreads the field across the road.
-                float ideal = Mathf.Clamp(trained.LateralAt(d),
-                    Mathf.Min(_leftBoundProfile[i], _rightBoundProfile[i]),
-                    Mathf.Max(_leftBoundProfile[i], _rightBoundProfile[i]));
+                float ideal = Mathf.Clamp(trained.LateralAt(d), _lineLo[i], _lineHi[i]);
                 _lateralProfile[i] = lineFactor >= 0f
                     ? Mathf.Lerp(ideal, _rightBoundProfile[i], lineFactor)
                     : Mathf.Lerp(ideal, _leftBoundProfile[i], -lineFactor);
@@ -477,6 +492,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         // profile — at Watkins Glen that put a phantom hairpin at 3,570 m, and the car braked for it mid-way
         // through the esses at 2 g, lost the rear and went off. Thirty passes (swept in AILapSimTests) round off a kink that
         // short and leaves a bump tens of metres wide as it was.
+        //
+        // Each point relaxes toward the straight line between its neighbours at ITS distance, not toward their
+        // plain average. The samples aren't evenly spaced everywhere — at Watkins Glen the centreline runs 9 m past
+        // the authored segments and that last stretch is sampled every 0.57 m instead of 2 m, with the closing
+        // sample sat on top of the first — and a by-index average treats a 0.57 m step like a 2 m one. Where the
+        // line was crossing the road there, that folded it into an 8 m "hairpin" on the run to the flag, and the
+        // car braked to 31 mph for it every lap. With even spacing the two are identical.
         int relaxPasses = trained != null ? trainedLineSmoothingPasses : smoothingIterations;
         var tmp = new float[n];
         for (int p = 0; p < relaxPasses; p++)
@@ -485,14 +507,24 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             {
                 int prev = i == 0 ? (loop ? n - 1 : 0) : i - 1;
                 int next = i == n - 1 ? (loop ? 0 : n - 1) : i + 1;
-                float avg = 0.5f * (_lateralProfile[prev] + _lateralProfile[next]);
+                float hPrev = SampleGap(prev, i), hNext = SampleGap(i, next);
+                float avg = hPrev + hNext > 1e-4f
+                    ? (_lateralProfile[prev] * hNext + _lateralProfile[next] * hPrev) / (hPrev + hNext)
+                    : _lateralProfile[i];
                 float relaxed = Mathf.Lerp(_lateralProfile[i], avg, smoothingRelaxation);
-                float lo = Mathf.Min(_leftBoundProfile[i], _rightBoundProfile[i]);
-                float hi = Mathf.Max(_leftBoundProfile[i], _rightBoundProfile[i]);
-                tmp[i] = Mathf.Clamp(relaxed, lo, hi);
+                tmp[i] = Mathf.Clamp(relaxed, _lineLo[i], _lineHi[i]);
             }
             (tmp, _lateralProfile) = (_lateralProfile, tmp);
         }
+    }
+
+    // Track distance from main sample a forward to main sample b, across the start/finish wrap on a loop.
+    float SampleGap(int a, int b)
+    {
+        if (a == b) return 0f;
+        float gap = _mainSamples[b].distance - _mainSamples[a].distance;
+        if (gap < 0f) gap += _mainLength;
+        return Mathf.Max(0f, gap);
     }
 
     // Room a car's centre keeps from the painted edge: half a car plus a little. The authored leftmost and
