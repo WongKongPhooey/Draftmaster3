@@ -139,11 +139,14 @@ public class TouchWalkControls : MonoBehaviour
 
         _layout = CurrentLayout();
         ReadTouches();
-        _state.Update(_touches, _layout, Time.unscaledTime);
 
         // The stick only drives a body that is free to walk; the tap is read either way, so a conversation
-        // can be advanced and a cutscene can be tapped through wherever it hands control back.
+        // can be advanced and a cutscene can be tapped through wherever it hands control back. A hidden stick
+        // (or phone button) claims no fingers, so mid-conversation a tap on a speech bubble in the lower left
+        // advances the line instead of silently becoming an invisible stick.
         Active = StickShows;
+        _state.Update(_touches, _layout, Time.unscaledTime, stickUp: Active,
+                      phoneButtonUp: PhoneUI.TouchButtonUp);
 
         // Until the opening has taught running there is nothing to toggle, and a double tap made early must
         // not be waiting to turn into a run the moment the lock lifts.

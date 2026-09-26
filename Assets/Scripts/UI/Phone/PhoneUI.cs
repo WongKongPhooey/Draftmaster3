@@ -306,6 +306,10 @@ public class PhoneUI : MonoBehaviour
 
     // A phone player has no P key and no View button, so the phone gets a button of its own in the bottom-left
     // corner — the spot TouchWalkLayout keeps clear of the stick. It is the way out as well as the way in.
+    // Whether the corner button is on screen now. TouchWalkControls reads it: a finger in that corner belongs
+    // to the button only while there is a button there.
+    public static bool TouchButtonUp => TouchButtonShows(OnFootController.Current);
+
     static bool TouchButtonShows(OnFootController body)
     {
         if (!TouchDriveControls.TouchPlatform || InputGlyphs.UsingGamepad) return false;
@@ -558,12 +562,19 @@ public class PhoneUI : MonoBehaviour
         if (Pressed(r)) { _homeIndex = index; OpenApp(index); }
         if (r.Contains(Event.current.mousePosition)) _homeIndex = index;
 
-        float row = PhoneApp.RowH;
+        // Rows grow with the tile type, which is bigger on a handheld (PhoneStyles.TileName / TileSubtitle).
+        // Measured off the face, not assumed from its point size: a face's line is taller than its size.
+        float row = Mathf.Max(PhoneApp.RowH,
+                              Mathf.Ceil(PhoneStyles.TileName.CalcSize(new GUIContent(app.TileName)).y) + PixelGUI.Px(2f));
         var name = new Rect(r.x + PixelGUI.Px(4f), r.y + PixelGUI.Px(4f), r.width - PixelGUI.Px(8f), row);
-        PhoneStyles.Label(name, app.TileName, PhoneStyles.Heading, selected ? PixelGUI.Gold : PixelGUI.Text);
+        PhoneStyles.Label(name, app.TileName, PhoneStyles.TileName, selected ? PixelGUI.Gold : PixelGUI.Text);
 
         if (!string.IsNullOrEmpty(app.TileSubtitle))
-            GUI.Label(new Rect(name.x, name.yMax, name.width, row), app.TileSubtitle, PhoneStyles.DataDim);
+        {
+            // On a handheld the subtitle wraps into whatever the tile has left; on a desktop it is one row.
+            float subH = PhoneStyles.Handheld ? r.yMax - name.yMax - PixelGUI.Px(3f) : PhoneApp.RowH;
+            GUI.Label(new Rect(name.x, name.yMax, name.width, subH), app.TileSubtitle, PhoneStyles.TileSubtitle);
+        }
 
         int badge = app.Badge;
         if (badge > 0)

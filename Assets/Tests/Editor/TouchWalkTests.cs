@@ -85,6 +85,35 @@ public class TouchWalkTests
         Assert.IsTrue(s.Walking, "the stick stopped working after the phone button was used");
     }
 
+    // Mid-conversation the stick is put away and the speech bubble can sit anywhere, the lower left included.
+    // A tap on it there has to advance the line, not quietly take a stick nobody can see.
+    [Test]
+    public void WithTheStickPutAway_ATapInTheStickZoneIsATap()
+    {
+        var l = Layout();
+        var s = new TouchWalkState();
+
+        s.Update(Fingers(new TouchPoint(1, 200f, 600f)), l, 0f, stickUp: false);
+        Assert.IsFalse(s.Walking, "a finger took the stick while the stick was put away");
+
+        s.Update(None(), l, 0.1f, stickUp: false);
+        Assert.IsTrue(s.Tapped, "a tap in the lower left was lost while the stick was hidden (mid-conversation)");
+        Assert.AreEqual(200f, s.TapX, 0.01f);
+        Assert.AreEqual(600f, s.TapY, 0.01f);
+    }
+
+    [Test]
+    public void WithThePhoneButtonHidden_ATapInItsCornerIsATap()
+    {
+        var l = Layout();
+        var s = new TouchWalkState();
+        float x = l.phoneButton.centerX, y = l.phoneButton.centerY;
+
+        s.Update(Fingers(new TouchPoint(1, x, y)), l, 0f, stickUp: false, phoneButtonUp: false);
+        s.Update(None(), l, 0.1f, stickUp: false, phoneButtonUp: false);
+        Assert.IsTrue(s.Tapped, "the empty corner where the phone button would be swallowed the tap");
+    }
+
     // ------------------------------------------------------------------ walking
 
     [Test]

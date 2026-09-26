@@ -590,7 +590,7 @@ public static class PixelGUI
     // control the keyboard has. The glyph on the left says how to press it on the device in hand — the key
     // on a keyboard (E, F11), the button's icon on a pad, and a drawn picture on a touch screen, where there
     // is no key to name. Tapping or clicking it works everywhere.
-    public enum ActionIcon { Cross, Clipboard, Next, Car, Limiter, Tow, Phone, Shove, HookLeft, HookRight }
+    public enum ActionIcon { Cross, Clipboard, Next, Car, Limiter, Tow, Phone, Shove, HookLeft, HookRight, Walk }
 
     const float ActionGlyphPx = 16f;
 
@@ -743,6 +743,27 @@ public static class PixelGUI
                 Px16(fx, 5, 5, 5, Gold); Px16(fx, 5, 5, 1, Ink);
                 int ax = left ? 8 : 3;
                 Px16(ax, 3, 5, 1, Danger); Px16(left ? 12 : 3, 4, 1, 6, Danger); Px16(ax, 10, 5, 1, Danger);
+                break;
+
+            case ActionIcon.Walk:
+                // A figure mid-stride, facing right: head, leaning body, one arm forward and one back, and
+                // the legs split. Ink first, a pixel down-right, so it reads on the gold frame like the Cross.
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    int o = pass == 0 ? 1 : 0;
+                    Color col = pass == 0 ? Ink : Gold;
+                    Px16(8 + o, 1 + o, 3, 3, col);      // head
+                    Px16(7 + o, 5 + o, 3, 5, col);      // body
+                    Px16(10 + o, 6 + o, 2, 1, col);     // front arm
+                    Px16(12 + o, 7 + o, 1, 2, col);
+                    Px16(5 + o, 6 + o, 2, 1, col);      // back arm
+                    Px16(4 + o, 7 + o, 1, 2, col);
+                    Px16(9 + o, 10 + o, 2, 2, col);     // front leg
+                    Px16(10 + o, 12 + o, 2, 3, col);
+                    Px16(6 + o, 10 + o, 2, 2, col);     // back leg
+                    Px16(5 + o, 12 + o, 2, 2, col);
+                    Px16(3 + o, 14 + o, 3, 1, col);
+                }
                 break;
         }
     }

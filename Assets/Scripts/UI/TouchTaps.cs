@@ -111,6 +111,18 @@ public class TouchTaps : MonoBehaviour
     // same frame that lands on whatever the conversation opened (a choice panel, picked before it was seen).
     public static void Consume() => _pending = false;
 
+    // This frame's tap, wherever it landed, for a screen where the whole glass means "carry on" — the chief's
+    // briefing once the player is sat in the car, where the walk controls (which do this on foot) have stood
+    // down. Read from Update. `downAfter` rejects a finger that came down before the caller was listening: the
+    // tap that got the player into the car must not also skip the first line. Taking it spends it, so no
+    // button drawn later in the frame sees it as well.
+    public static bool TakeTap(float downAfter = float.NegativeInfinity)
+    {
+        if (!Driven || !_pending || TapDownAt <= downAfter) return false;
+        _pending = false;
+        return true;
+    }
+
     // True once, on the repaint pass, for a tap inside `r` — given in whatever GUI space is current, since
     // ScreenToGUIPoint undoes the matrix and any groups the caller is inside. `visible`, when given, is the
     // part of that space actually on screen (a scroll window), so a row scrolled out of it cannot be hit.

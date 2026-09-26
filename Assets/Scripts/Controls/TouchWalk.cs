@@ -68,6 +68,10 @@ namespace Draftmaster.Controls
     //   - anywhere else: a tap candidate. If it lifts inside TapSeconds without wandering further than
     //     TapSlop, it is a tap at the point it went down, and the game gets one.
     //
+    // A control that isn't on screen claims nothing. Mid-conversation the stick is put away, and a speech
+    // bubble can sit anywhere — often in the lower left — so with `stickUp` false the stick zone is just more
+    // glass to tap the dialogue on with. Likewise the phone button's corner when the button isn't drawn.
+    //
     // `now` is a clock in seconds — Time.unscaledTime from the runtime, a plain number from the tests.
     public sealed class TouchWalkState
     {
@@ -100,7 +104,8 @@ namespace Draftmaster.Controls
         public float KnobX { get; private set; }
         public float KnobY { get; private set; }
 
-        public void Update(IReadOnlyList<TouchPoint> touches, in TouchWalkLayout layout, float now)
+        public void Update(IReadOnlyList<TouchPoint> touches, in TouchWalkLayout layout, float now,
+                           bool stickUp = true, bool phoneButtonUp = true)
         {
             MoveX = 0f; MoveY = 0f; Tapped = false;
 
@@ -136,8 +141,8 @@ namespace Draftmaster.Controls
                     {
                         // A finger on the phone button is the button's (IMGUI reads it); it neither walks nor
                         // taps whoever is stood behind the icon.
-                        role = layout.phoneButton.Contains(t.x, t.y) ? Role.Ignored
-                             : layout.stickZone.Contains(t.x, t.y)
+                        role = phoneButtonUp && layout.phoneButton.Contains(t.x, t.y) ? Role.Ignored
+                             : stickUp && layout.stickZone.Contains(t.x, t.y)
                                    ? (_walking ? Role.Ignored : Role.Stick)
                                    : Role.Tap,
                         downX = t.x,

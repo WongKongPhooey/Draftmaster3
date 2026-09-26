@@ -202,8 +202,11 @@ public class WeekendObjectiveHUD : MonoBehaviour
                 : $"{Capitalise(intoTheRV ? WeekendVenues.Directions(WeekendVenue.Motorhome) : WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
             _footerText = here
                 ? activity.Clock + "  ·  " + WeekendAppointment.TargetLabel()
-                : $"{activity.Clock}  ·  [{InputGlyphs.Label(TravelKey.ToString().ToUpperInvariant(), PadBindings.TravelThere)}] TRAVEL THERE" +
-                  $"  ·  [{InputGlyphs.Label(RecallKey.ToString().ToUpperInvariant(), PadBindings.RecallObjective)}] AGAIN";
+                // TRAVEL THERE is its own button under this line (DrawTravelButton). On touch there is no
+                // recall key to name — the tab at the top of the screen does that job — so AGAIN goes too.
+                : InputGlyphs.UsingTouch
+                    ? activity.Clock
+                    : $"{activity.Clock}  ·  [{InputGlyphs.Label(RecallKey.ToString().ToUpperInvariant(), PadBindings.RecallObjective)}] AGAIN";
         }
     }
 
@@ -321,7 +324,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
     void OnGUI()
     {
-        if (!Available || _slide <= 0.001f) return;
+        if (!Available) return;
+        if (_slide <= 0.001f) { DrawRecallTab(); return; }
         EnsureStyles();
 
         var activity = _shown;
@@ -335,13 +339,23 @@ public class WeekendObjectiveHUD : MonoBehaviour
         float footerH = RowH(_footer);
 
         float inset = PixelGUI.Px(8f);   // what PanelContent(box, 4f) takes off each side: Px(4) + Px(4)
+
+        // TRAVEL THERE, as a button whose glyph matches the device: the T keycap on a keyboard, the pad's
+        // button on a pad, a walking figure on a phone. Only while there is somewhere to travel to.
+        // Sat to the RIGHT of the text rather than under it: the strip is at the top of the screen over the
+        // game, and a fourth row made it tall enough to hide what the player is walking into. Wider is cheaper.
+        bool travel = !_here;
+        Vector2 travelSize = travel ? PixelGUI.ActionButtonSize(TravelKey.ToString(), TravelLabel) : Vector2.zero;
+        float travelGap = travel ? PixelGUI.Px(10f) : 0f;
+
         float textW = Mathf.Max(Width(_title, activity.title),
                                 Mathf.Max(Width(_detail, _detailText), Width(_footer, _footerText)));
+        float textH = titleH + detailH + footerH;
 
         // Sized to its longest line, so a wordy booking widens the strip instead of spilling out of it.
-        float w = Mathf.Clamp(textW + inset * 2f + PixelGUI.Px(8f),
+        float w = Mathf.Clamp(textW + travelGap + travelSize.x + inset * 2f + PixelGUI.Px(8f),
                               PixelGUI.Px(180f), Screen.width - PixelGUI.Px(16f));
-        float h = titleH + detailH + footerH + inset * 2f;
+        float h = Mathf.Max(textH, travelSize.y) + inset * 2f;
 
         // Slid in from off the top rather than switched on. Eased so it arrives quickly and settles, and
         // the same curve run backwards takes it away again once its time is up.
@@ -353,12 +367,57 @@ public class WeekendObjectiveHUD : MonoBehaviour
         PixelGUI.Panel(box, focused: false);
         var c = PixelGUI.PanelContent(box, 4f);
 
-        float y = c.y;
-        GUI.Label(new Rect(c.x, y, c.width, titleH), activity.title, _title);
+        // Text column on the left, centred vertically against the button; the button on the right.
+        float textRight = travel ? c.xMax - travelSize.x - travelGap : c.xMax;
+        var col = new Rect(c.x, Mathf.Round(c.y + (c.height - textH) * 0.5f), textRight - c.x, textH);
+        float y = col.y;
+        GUI.Label(new Rect(col.x, y, col.width, titleH), activity.title, _title);
         y += titleH;
-        GUI.Label(new Rect(c.x, y, c.width, detailH), _detailText, _detail);
+        GUI.Label(new Rect(col.x, y, col.width, detailH), _detailText, _detail);
         y += detailH;
-        GUI.Label(new Rect(c.x, y, c.width, footerH), _footerText, _footer);
+        GUI.Label(new Rect(col.x, y, col.width, footerH), _footerText, _footer);
+
+        if (travel)
+        {
+            var button = new Rect(c.xMax - travelSize.x, Mathf.Round(c.y + (c.height - travelSize.y) * 0.5f),
+                                  travelSize.x, travelSize.y);
+            if (PixelGUI.ActionButton(button, PixelGUI.ActionIcon.Walk, TravelKey.ToString(),
+                                      PadBindings.TravelThere, TravelLabel))
+                TravelThere();
+        }
+    }
+
+    const string TravelLabel = "TRAVEL THERE";
+
+    // A phone has no Q and no d-pad, and tapping the marker only works while the marker is on screen. So once
+    // the strip has gone back up it leaves a small tab at the top centre, where it went — a down arrow that
+    // pulls it back down. Touch only: keyboard and pad already have their recall key.
+    void DrawRecallTab()
+    {
+        if (!InputGlyphs.UsingTouch) return;
+        if (PhoneUI.IsOpen || RacePauseMenu.IsPaused || NPCInteractable.AnyConversationActive) return;
+
+        float w = PixelGUI.Px(28f), h = PixelGUI.Px(12f);
+        var tab = new Rect(Mathf.Round((Screen.width - w) * 0.5f), 0f, w, h);
+        PixelGUI.Fill(tab, PixelGUI.PlateDeep);
+        PixelGUI.Fill(new Rect(tab.x, tab.yMax - PixelGUI.Px(1f), tab.width, PixelGUI.Px(1f)), PixelGUI.Gold);
+        PixelGUI.Fill(new Rect(tab.x, tab.y, PixelGUI.Px(1f), tab.height), PixelGUI.Gold);
+        PixelGUI.Fill(new Rect(tab.xMax - PixelGUI.Px(1f), tab.y, PixelGUI.Px(1f), tab.height), PixelGUI.Gold);
+
+        // A down chevron in whole kit pixels: rows 7, 5, 3, 1 wide.
+        float cx = tab.center.x, y = tab.y + PixelGUI.Px(3f);
+        for (int row = 0; row < 4; row++)
+        {
+            float rw = PixelGUI.Px(7f - row * 2f);
+            PixelGUI.Fill(new Rect(Mathf.Round(cx - rw * 0.5f), y + PixelGUI.Px(row), rw, PixelGUI.Px(1f)),
+                          PixelGUI.Gold);
+        }
+
+        // The finger is bigger than the art: the hit area runs well past the tab on every side it can.
+        var hit = new Rect(tab.x - PixelGUI.Px(10f), 0f, tab.width + PixelGUI.Px(20f), tab.height + PixelGUI.Px(10f));
+        if (Event.current.type == EventType.Repaint)
+            TouchWalkControls.Claim(GUIUtility.GUIToScreenRect(hit));   // the stick and NPC taps leave it alone
+        if (TouchTaps.Hit(hit)) RevealNow();
     }
 
     // The height one line of a style actually occupies, leading included.
@@ -383,15 +442,16 @@ public class WeekendObjectiveHUD : MonoBehaviour
     {
         if (_title != null) return;
 
-        // Centred on the strip, and none of them wrapping: the panel sizes itself to the longest line, so a
-        // long booking title makes a wider strip rather than a second line drawn over the one beneath it.
+        // Left-aligned in a column beside the TRAVEL THERE button, and none of them wrapping: the panel sizes
+        // itself to the longest line, so a long booking title makes a wider strip rather than a second line
+        // drawn over the one beneath it.
         _title = new GUIStyle(PixelGUI.Heading)
         {
-            alignment = TextAnchor.UpperCenter,
+            alignment = TextAnchor.UpperLeft,
             wordWrap = false,
             clipping = TextClipping.Overflow,
         };
-        _detail = new GUIStyle(PixelGUI.Data) { alignment = TextAnchor.UpperCenter, wordWrap = false };
-        _footer = new GUIStyle(PixelGUI.Footer) { alignment = TextAnchor.UpperCenter, wordWrap = false };
+        _detail = new GUIStyle(PixelGUI.Data) { alignment = TextAnchor.UpperLeft, wordWrap = false };
+        _footer = new GUIStyle(PixelGUI.Footer) { alignment = TextAnchor.UpperLeft, wordWrap = false };
     }
 }

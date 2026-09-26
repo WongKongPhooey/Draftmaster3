@@ -16,12 +16,25 @@ public static class PhoneStyles
 {
     static Object _builtFor;
     static int _builtAtScale = -1;
+    static bool _builtHandheld;
 
     static GUIStyle _data, _dataDim, _body, _heading, _footer;
     static GUIStyle _inkData, _inkDim, _inkHeading;
+    static GUIStyle _tileName, _tileSub;
 
     // How many screen pixels one authored font pixel covers on the phone. Half the kit's, never below 1.
     public static int TypeScale => Mathf.Max(1, Mathf.RoundToInt(PixelGUI.Scale * 0.5f));
+
+    // Played on a real phone or tablet (or the Device Simulator). The home tiles are what you read at a glance,
+    // and at half the kit's scale their type is a couple of millimetres tall on a handset — so there they draw
+    // bigger. A pad plugged into a phone is still a phone-sized screen, so this ignores the input device.
+    public static bool Handheld => UnityEngine.Device.Application.isMobilePlatform;
+
+    // Home-screen tile type: the app name and the line under it. Same as Heading / DataDim on a desktop; on a
+    // handheld the name doubles and the subtitle goes up one whole step, both still whole multiples of their
+    // font's cell so the glyphs stay on the pixel grid. The subtitle wraps, since it now fits fewer characters.
+    public static GUIStyle TileName { get { Ensure(); return _tileName; } }
+    public static GUIStyle TileSubtitle { get { Ensure(); return _tileSub; } }
 
     public static GUIStyle Data { get { Ensure(); return _data; } }
     public static GUIStyle DataDim { get { Ensure(); return _dataDim; } }
@@ -41,9 +54,12 @@ public static class PhoneStyles
     {
         var t = PixelGUI.Theme;
         int scale = PixelGUI.Scale;
-        if (_data != null && (Object)_builtFor == (Object)t && _builtAtScale == scale) return;
+        bool handheld = Handheld;
+        if (_data != null && (Object)_builtFor == (Object)t && _builtAtScale == scale && _builtHandheld == handheld)
+            return;
         _builtFor = t;
         _builtAtScale = scale;
+        _builtHandheld = handheld;
 
         Font display = t != null && t.imguiDisplayFont != null ? t.imguiDisplayFont : (t != null ? t.imguiFont : null);
         Font data = t != null ? t.imguiFont : null;
@@ -63,6 +79,18 @@ public static class PhoneStyles
         _inkData = Style(data, dataPt, PixelGUI.Ink, TextAnchor.MiddleLeft);
         _inkDim = Style(data, dataPt, new Color(0.32f, 0.32f, 0.36f), TextAnchor.MiddleLeft);
         _inkHeading = Style(display, headPt, PixelGUI.Ink, TextAnchor.MiddleLeft);
+
+        int tileNamePt = handheld ? PixelGUI.FontCell(display, 8) * unit * 2 : headPt;
+        int tileSubPt = handheld ? PixelGUI.FontCell(data, 16) * (unit + 1) : dataPt;
+        _tileName = Style(display, tileNamePt, PixelGUI.Gold, TextAnchor.MiddleLeft);
+        _tileSub = Style(data, tileSubPt, PixelGUI.TextDim,
+                         handheld ? TextAnchor.UpperLeft : TextAnchor.MiddleLeft, wrap: handheld);
+        // Overflow, not Clip. Clipped IMGUI text is generated with vertical truncation, which drops any line
+        // that does not fit its rect entirely — a 32px name in a row a fraction of a pixel short of its line
+        // height drew NOTHING, and a wrapped subtitle lost every line past the first that fit. The tile's own
+        // rects keep the text inside, and the phone case is redrawn over anything past the screen's edge.
+        _tileName.clipping = TextClipping.Overflow;
+        _tileSub.clipping = TextClipping.Overflow;
     }
 
     static GUIStyle Style(Font font, int size, Color colour, TextAnchor anchor, bool wrap = false)

@@ -625,6 +625,7 @@ public class PitLaneStart : MonoBehaviour
         if (_player == null) return;
 
         if (_phase == EntryPhase.Briefing) { StepBriefing(); return; }
+        if (_phase == EntryPhase.Driving) { StepParkedExit(); return; }
         if (_entered) return;
 
         SyncCarMarker();
@@ -797,6 +798,7 @@ public class PitLaneStart : MonoBehaviour
             _chief.SetInteractor(car.transform); // "#player" lines bubble over the car, where the driver now is
             _chief.Interact();                   // opens the first line
             _interactHeldPrev = true;            // swallow the same press that got us in the car
+            _briefingFrom = Time.unscaledTime;   // ...and the same tap
             if (showControlHints) ControlHints.Show("advance", "E", InputGlyphs.Pad(PadBindings.Interact), "Continue",
                                                     onPress: PressInteract, icon: PixelGUI.ActionIcon.Next);
             return;
@@ -805,12 +807,18 @@ public class PitLaneStart : MonoBehaviour
         OpenSetupOrDrive();
     }
 
-    // Advance the chief's lines on interact; when he runs out, the setup panel takes over.
+    // Advance the chief's lines on interact; when he runs out, the setup panel takes over. On a phone a tap
+    // anywhere does it, as it does in every conversation on foot — the player is sat in the car now, so the
+    // walk controls that do that job there have stood down, and this reads the tap itself.
     void StepBriefing()
     {
         if (_chief == null) { OpenSetupOrDrive(); return; }
-        if (InteractPressed() && !_chief.Interact()) OpenSetupOrDrive();
+        bool pressed = InteractPressed();
+        if (TouchTaps.TakeTap(downAfter: _briefingFrom)) pressed = true;
+        if (pressed && !_chief.Interact()) OpenSetupOrDrive();
     }
+
+    float _briefingFrom;
 
     void OpenSetupOrDrive()
     {
@@ -924,9 +932,22 @@ public class PitLaneStart : MonoBehaviour
             return true;
         }
 
-        // Nothing owns a parked car's pose: the controller that was writing it is off, and the crew are
-        // going to be working on it for minutes. Pin it to the box so it is still there when the driver
-        // walks back to it. See ParkedCarPin — it takes itself off the moment the car is driven again.
+        PutDriverOutBesideCar();
+        PitCrewRepair.Begin(car);
+        return true;
+    }
+
+    // The driver steps out of a car that is already stopped where it should stay, and the player is on foot
+    // beside it: the second half of a tow, and the whole of climbing out in the box. The car's controls must
+    // already be off.
+    void PutDriverOutBesideCar()
+    {
+        ControlHints.Hide(ExitHintId);
+        _offeringExit = false;
+
+        // Nothing owns a parked car's pose: the controller that was writing it is off, and the crew may be
+        // working on it for minutes. Pin it to the box so it is still there when the driver walks back to
+        // it. See ParkedCarPin — it takes itself off the moment the car is driven again.
         ParkedCarPin.Hold(car);
 
         // Stood at the driver's door rather than inside the car, so walking away from it works the same as
@@ -953,9 +974,86 @@ public class PitLaneStart : MonoBehaviour
         _entered = false;
         _hintedEnter = false;
         SyncCarMarker();
+    }
 
-        PitCrewRepair.Begin(car);
-        return true;
+    // ------------------------------------------------------------------ getting out in the box
+
+    // Stopped in their own box, the driver can get out: E, the pad's interact button, or — on a phone, where
+    // there is no E — the prompt at the bottom of the screen, the same button the stranded-car tow offers.
+    const string ExitHintId = "exitcar";
+    [Header("Getting out")]
+    [Tooltip("How close (m) the car must be to the player's own box for the driver to get out.")]
+    public float exitBoxRadius = 4f;
+    [Tooltip("Stopped means below this (mph)...")]
+    public float exitBelowMph = 0.5f;
+    [Tooltip("...for at least this long (s), so rolling to a halt doesn't flash the prompt.")]
+    public float exitAfterSeconds = 0.4f;
+
+    bool _offeringExit;
+    float _stoppedInBoxSince = -1f;
+
+    void StepParkedExit()
+    {
+        bool pressed = InteractPressed();   // read every frame so a held E doesn't fire the moment the car stops
+        bool can = CanClimbOut();
+
+        if (can != _offeringExit)
+        {
+            _offeringExit = can;
+            if (can)
+                ControlHints.ShowSticky(ExitHintId, "E", InputGlyphs.Pad(PadBindings.Interact), "Get out of the car",
+                                        onPress: PressInteract, icon: PixelGUI.ActionIcon.Walk);
+            else
+                ControlHints.Hide(ExitHintId);
+        }
+
+        if (can && pressed) ClimbOut();
+    }
+
+    bool CanClimbOut()
+    {
+        if (!IsDriving || car == null || !_boxKnown || !GameSession.OnFootAllowed || Coop.IsGuest) return Idle();
+        if (RacePauseMenu.IsPaused || ScreenFade.Busy) return Idle();
+
+        // Somebody else is driving it: the broadcast cut or the crew chief's headset hands the car to the AI.
+        if (car.externalInput) return Idle();
+
+        // The crew are on it — a pit stop in progress, or a repair the driver is sat through.
+        var stop = car.GetComponent<PitStopController>();
+        if (stop != null && stop.IsPitting) return Idle();
+        if (PitCrewRepair.Active != null) return Idle();
+
+        CurrentBoxPose(out Vector3 boxPos, out _);
+        if (Vector2.Distance(car.transform.position, boxPos) > exitBoxRadius) return Idle();
+        if (car.SpeedMph > exitBelowMph) return Idle();
+
+        if (_stoppedInBoxSince < 0f) _stoppedInBoxSince = Time.time;
+        return Time.time - _stoppedInBoxSince >= exitAfterSeconds;
+
+        bool Idle() { _stoppedInBoxSince = -1f; return false; }
+    }
+
+    // The reverse of EnterCar, with the car left exactly where it stopped: controls off, the brain off with
+    // them (see TowToPits for why), the lap they were on closed, and the driver out beside the door. Nothing
+    // is repaired — that is what a tow or a pit stop is for.
+    void ClimbOut()
+    {
+        car.enabled = false;
+        var brain = car.GetComponent<SplineDriver>();
+        if (brain != null) brain.enabled = false;
+        var aiInput = car.GetComponent<SplineInputDriver>();
+        if (aiInput != null) aiInput.enabled = false;
+        car.externalInput = false;
+
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null) { body.linearVelocity = Vector2.zero; body.angularVelocity = 0f; }
+
+        // A lap that ends parked in the box isn't a lap. The pit-lane rule that voids one reads the car's
+        // spline, which the human car doesn't run, so it has to be closed here as the tow closes it.
+        if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
+
+        _stoppedInBoxSince = -1f;
+        PutDriverOutBesideCar();
     }
 
     // Where the player's box is NOW, which is not where the car was parked when the scene opened.

@@ -43,7 +43,13 @@ public class WeekendResultCard : MonoBehaviour
     //
     // Whole steps only, for the same reason PixelGUI floors its own scale: a pixel face resampled to a
     // fraction of its cell loses its stems.
-    static int CardScale => Mathf.Max(1, PixelGUI.Scale - 1);
+    //
+    // Not on a phone or tablet, though. The step down is about a card taking over a big monitor; a handset's
+    // 1080 lines are a few centimetres tall, and a step below the kit there leaves the headline and the lines
+    // that moved too small to read at arm's length. There the card is drawn at the kit's own scale.
+    static int CardScale => UnityEngine.Device.Application.isMobilePlatform
+        ? Mathf.Max(1, PixelGUI.Scale)
+        : Mathf.Max(1, PixelGUI.Scale - 1);
 
     // A pixel measurement at the card's scale rather than the kit's.
     static float Px(float baseline) => baseline * CardScale;
