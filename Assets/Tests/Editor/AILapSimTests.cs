@@ -341,7 +341,9 @@ public class AILapSimTests
         var speedMps = pvcType.GetProperty("SpeedMps");
         var slipDeg = pvcType.GetProperty("SlipAngleDeg");
         var recovering = inputType.GetProperty("IsRecovering");
-        var isOnSurface = trackType.GetMethod("IsOnSurface");
+        // "Off" by the lap timer's rule (inside wheels on road, kerb or tarmac run-off), not the painted width: a
+        // line taken from the player's lap uses legal run-off on purpose (Watkins Glen's Turn 10 exit).
+        var onLegal = Runtime("LapTimingManager").GetMethod("OnLegalSurface", BindingFlags.Public | BindingFlags.Static);
         var lateralOnTrack = splineType.GetProperty("LateralOnTrack");
         var nearest = trackType.GetMethod("NearestCenterlineDistance");
         var noseErr = inputType.GetProperty("LastNoseErrorDeg");
@@ -364,7 +366,6 @@ public class AILapSimTests
         float lapClock = 0f, lastDistance = 0f;
         int lap = -1;                         // the first crossing starts lap 0 — the run-up lap is not timed
         bool wasOn = true, wasRecovering = false;
-        var args = new object[] { Vector3.zero, 0f };
         int maxSteps = Mathf.RoundToInt((laps + 1.5f) * 180f / dt);   // generous: 3 minutes a lap
 
         for (int step = 0; step < maxSteps; step++)
@@ -395,8 +396,7 @@ public class AILapSimTests
                 result.maxBrainGap = Mathf.Max(result.maxBrainGap, gap);
             }
 
-            args[0] = go.transform.position;
-            bool on = (bool)isOnSurface.Invoke(track, args);
+            bool on = (bool)onLegal.Invoke(null, new object[] { track, go.transform.position, 1f });
             bool rec = (bool)recovering.GetValue(input);
             if (!on && wasOn) result.incidents.Add(new Incident { type = "off", lap = lap, distance = d, speed = v, slip = slip });
             if (rec && !wasRecovering) result.incidents.Add(new Incident { type = "spin", lap = lap, distance = d, speed = v, slip = slip });

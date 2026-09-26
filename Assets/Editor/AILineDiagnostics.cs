@@ -106,19 +106,28 @@ public static class AILineDiagnostics
     // Step-by-step through three corners where the car ran wide of the line it planned: what the controller
     // asked for, what the car could give, and where the tyres were. Temp/ai_corner_trace.txt.
     [MenuItem("Draftmaster/AI/Trace AI Corners (Watkins Glen)")]
-    static void TraceCorners()
-    {
-        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return; }
-        var corners = new (string name, float from, float to, bool left)[]
+    static void TraceCorners() => TraceCorners(new (string, float, float, bool)[]
         {
             ("Turn 9 - Long Right", 2440f, 2960f, false),
             ("Bus Stop", 2080f, 2440f, false),
             ("Turn 10 - 90L", 3360f, 3620f, true),
-        };
+        }, 0f);
+
+    // Turn 10 just past the calibrated strength, where the AI goes off the inside every lap.
+    [MenuItem("Draftmaster/AI/Trace Turn 10 Off (Watkins Glen, x1.32)")]
+    static void TraceTurn10Off() => TraceCorners(new (string, float, float, bool)[]
+        {
+            ("Turn 10 - 90L at x1.32", 3380f, 3560f, true),
+        }, 1.32f);
+
+    // k <= 0 = the strength this track is calibrated to.
+    static void TraceCorners((string name, float from, float to, bool left)[] corners, float kOverride)
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return; }
         // At the strength this track is calibrated to, so the trace is the AI as it races.
         var cal = Resources.Load<AIPaceCalibration>(AIPaceCalibration.ResourcePath);
         var entry = cal != null ? cal.Find("WatkinsGlen") : null;
-        float k = entry != null ? entry.aiGrip / TrackConditions.DefaultAiGrip : 1f;
+        float k = kOverride > 0f ? kOverride : entry != null ? entry.aiGrip / TrackConditions.DefaultAiGrip : 1f;
 
         var sb = new StringBuilder();
         var prevActive = SceneManager.GetActiveScene();
@@ -146,7 +155,7 @@ public static class AILineDiagnostics
             {
                 blocks[c] = new StringBuilder();
                 blocks[c].AppendLine($"\n== {corners[c].name} ({corners[c].from:0}-{corners[c].to:0} m) ==");
-                blocks[c].AppendLine("     d   mph  tgt  cap | plan   car   err | steer->in   wheel/max | slipF slipR | R car / plan | thr  brk");
+                blocks[c].AppendLine("     d   mph  tgt  cap | plan   car   err | steer->in   wheel/max | slipF slipR body | R car / plan | thr  brk");
             }
 
             int step = 0;
@@ -187,7 +196,7 @@ public static class AILineDiagnostics
                     blocks[c].AppendLine(
                         $"{cd,6:0} {mph,5:0} {s.input.LastCommandedMps * 2.237f,4:0} {(cap > 900f ? "  - " : (cap * 2.237f).ToString("0").PadLeft(4))} | " +
                         $"{plan,5:0.0} {car,5:0.0} {car - plan,5:0.0} | {s.input.LastSteer,5:0.00}->{s.car.SteerInput,5:0.00} " +
-                        $"{Mathf.Abs(wheel),5:0.0}/{maxWheel,4:0.0} | {Mathf.Abs(s.car.SlipFrontDeg),5:0.0} {Mathf.Abs(s.car.SlipRearDeg),5:0.0} | " +
+                        $"{Mathf.Abs(wheel),5:0.0}/{maxWheel,4:0.0} | {Mathf.Abs(s.car.SlipFrontDeg),5:0.0} {Mathf.Abs(s.car.SlipRearDeg),5:0.0} {s.car.SlipAngleDeg,5:0.0} | " +
                         $"{Mathf.Min(rCar, 9999f),6:0} / {Mathf.Min(rPlan, 9999f),5:0} | {s.input.LastThrottle,4:0.00} {s.input.LastBrake,4:0.00}" +
                         (s.onRoad ? "" : "  OFF"));
                 }
@@ -315,6 +324,236 @@ public static class AILineDiagnostics
             if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
             EditorSceneManager.CloseScene(scene, true);
             File.WriteAllText("Temp/ai_surface_map.txt", sb.ToString());
+        }
+    }
+
+    // Every time the AI's inside wheels leave legal surface (the lap timer's rule), at a few strengths just past
+    // the calibrated one: where, which turn, how fast against the plan, and how far the car was from the line it
+    // planned. Temp/ai_offs.txt.
+    [MenuItem("Draftmaster/AI/Find Where The AI Goes Off (Watkins Glen)")]
+    static void FindOffs()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return; }
+        var sb = new StringBuilder();
+        var prevActive = SceneManager.GetActiveScene();
+        float prevGrip = TrackConditions.AiGripMultiplier, prevPace = TrackConditions.AiPaceMultiplier;
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        try
+        {
+            SceneManager.SetActiveScene(scene);
+            var sim = AIPaceCalibratorWindow.LapSim.Build("WatkinsGlen", out string error);
+            if (sim == null) { sb.AppendLine(error); return; }
+            var track = sim.Track;
+            var info = track.track;
+
+            string TurnAt(float d)
+            {
+                float start = 0f;
+                string last = "start";
+                foreach (var seg in info.segments)
+                {
+                    if (d >= start && d < start + seg.length)
+                        return (string.IsNullOrEmpty(seg.label) ? seg.type.ToString() : seg.label) +
+                               $" ({(d - start) / Mathf.Max(1f, seg.length) * 100f:0}% through)";
+                    if (seg.type == TrackInfoV2.SegmentType.Turn && !string.IsNullOrEmpty(seg.label)) last = seg.label;
+                    start += seg.length;
+                }
+                return last;
+            }
+
+            foreach (float k in new[] { 1.23f, 1.26f, 1.32f })
+            {
+                var events = new List<string>();
+                bool wasLegal = true;
+                var r = sim.Drive(k, 1.04f, 2, true, s =>
+                {
+                    if (s.lap < 0) return;
+                    Vector3 pos = s.car.transform.position;
+                    bool legal = s.onRoad;
+                    if (!legal && wasLegal)
+                    {
+                        float cd = track.NearestCenterlineDistance(pos);
+                        var sample = track.SampleAt(cd);
+                        Vector2 local = track.transform.InverseTransformPoint(pos);
+                        float carLat = Vector2.Dot(local - sample.position, new Vector2(sample.tangent.y, -sample.tangent.x));
+                        float plan = s.brain.LateralOnTrack;
+                        events.Add($"  lap {s.lap} at {cd:0} m, {TurnAt(cd)}: {s.car.SpeedMph:0} mph (target " +
+                                   $"{s.input.LastCommandedMps * 2.237f:0}, profile {s.input.LastProfileMps * 2.237f:0}), " +
+                                   $"went off the {(carLat < 0f ? "LEFT" : "RIGHT")}; car {carLat:0.0} m vs plan {plan:0.0} m " +
+                                   $"(half width {sample.width * 0.5f:0.0}), slip F/R {Mathf.Abs(s.car.SlipFrontDeg):0}/" +
+                                   $"{Mathf.Abs(s.car.SlipRearDeg):0} deg, steer {s.input.LastSteer:0.00}, " +
+                                   $"thr {s.input.LastThrottle:0.00} brk {s.input.LastBrake:0.00}");
+                    }
+                    wasLegal = legal;
+                });
+                sb.AppendLine($"Strength x{k:0.00}: {r}");
+                foreach (var e in events) sb.AppendLine(e);
+                if (events.Count == 0) sb.AppendLine("  no offs");
+            }
+        }
+        catch (Exception e) { sb.AppendLine("Failed: " + e); }
+        finally
+        {
+            TrackConditions.AiGripMultiplier = prevGrip;
+            TrackConditions.AiPaceMultiplier = prevPace;
+            if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
+            EditorSceneManager.CloseScene(scene, true);
+            File.WriteAllText("Temp/ai_offs.txt", sb.ToString());
+        }
+    }
+
+    // SplineInputDriver.crossTrackGain swept against AI strength: lap, offs, spins, and how far the car strayed
+    // from its planned line (max and mean). Temp/ai_crosstrack_sweep.txt.
+    [MenuItem("Draftmaster/AI/Sweep Cross-Track Gain (Watkins Glen)")]
+    static void SweepCrossTrack()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return; }
+        var sb = new StringBuilder();
+        var prevActive = SceneManager.GetActiveScene();
+        float prevGrip = TrackConditions.AiGripMultiplier, prevPace = TrackConditions.AiPaceMultiplier;
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        try
+        {
+            SceneManager.SetActiveScene(scene);
+            var sim = AIPaceCalibratorWindow.LapSim.Build("WatkinsGlen", out string error);
+            if (sim == null) { sb.AppendLine(error); return; }
+            sb.AppendLine("gain  strength   lap (2 timed)                                   | max off-line  mean");
+            foreach (float gain in new[] { 0f, 0.5f, 1f, 2f })
+                foreach (float k in new[] { 1.21f, 1.32f, 1.44f })
+                {
+                    bool set = false;
+                    float maxOff = 0f, sumOff = 0f;
+                    int n = 0;
+                    var r = sim.Drive(k, 1.04f, 2, true, s =>
+                    {
+                        if (!set) { s.input.crossTrackGain = gain; set = true; }
+                        if (s.lap < 0) return;
+                        float off = Mathf.Abs(s.input.LastCrossTrackMetres);
+                        // With the term off it isn't computed, so measure it the same way here.
+                        if (gain <= 0f)
+                        {
+                            Vector2 p0 = s.brain.PathPointAhead(0f), p1 = s.brain.PathPointAhead(3f);
+                            Vector3 w0 = s.brain.track.transform.TransformPoint(new Vector3(p0.x, p0.y, 0f));
+                            Vector3 w1 = s.brain.track.transform.TransformPoint(new Vector3(p1.x, p1.y, 0f));
+                            Vector2 t = ((Vector2)(w1 - w0)).normalized;
+                            off = Mathf.Abs(Vector2.Dot((Vector2)s.car.transform.position - (Vector2)w0, new Vector2(-t.y, t.x)));
+                        }
+                        maxOff = Mathf.Max(maxOff, off);
+                        sumOff += off;
+                        n++;
+                    });
+                    sb.AppendLine($"{gain,4:0.0}  x{k:0.00}   {r,-60} | {maxOff,5:0.0} m  {(n > 0 ? sumOff / n : 0f),5:0.00} m");
+                }
+        }
+        catch (Exception e) { sb.AppendLine("Failed: " + e); }
+        finally
+        {
+            TrackConditions.AiGripMultiplier = prevGrip;
+            TrackConditions.AiPaceMultiplier = prevPace;
+            if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
+            EditorSceneManager.CloseScene(scene, true);
+            File.WriteAllText("Temp/ai_crosstrack_sweep.txt", sb.ToString());
+        }
+    }
+
+    // SplineInputDriver.slideBrakeCut x rearSlipBrakeRelease against AI strength: lap, offs, spins, worst body
+    // slip. Temp/ai_brake_sweep.txt.
+    [MenuItem("Draftmaster/AI/Sweep Braking Stability (Watkins Glen)")]
+    static void SweepBraking()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return; }
+        var sb = new StringBuilder();
+        var prevActive = SceneManager.GetActiveScene();
+        float prevGrip = TrackConditions.AiGripMultiplier, prevPace = TrackConditions.AiPaceMultiplier;
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        try
+        {
+            SceneManager.SetActiveScene(scene);
+            var sim = AIPaceCalibratorWindow.LapSim.Build("WatkinsGlen", out string error);
+            if (sim == null) { sb.AppendLine(error); return; }
+            sb.AppendLine("cut  release strength  lap (2 timed)                                                 | worst body slip");
+            foreach (float cut in new[] { 0.5f, 1f })
+                foreach (float release in new[] { 0f, 0.6f, 1f })
+                    foreach (float k in new[] { 1.21f, 1.32f, 1.44f })
+                    {
+                        bool set = false;
+                        float worstSlip = 0f;
+                        var r = sim.Drive(k, 1.04f, 2, true, s =>
+                        {
+                            if (!set) { s.input.slideBrakeCut = cut; s.input.rearSlipBrakeRelease = release; set = true; }
+                            if (s.lap >= 0) worstSlip = Mathf.Max(worstSlip, Mathf.Abs(s.car.SlipAngleDeg));
+                        });
+                        sb.AppendLine($"{cut,3:0.0}  {release,5:0.0}   x{k:0.00}   {r,-62} | {worstSlip,4:0} deg");
+                    }
+        }
+        catch (Exception e) { sb.AppendLine("Failed: " + e); }
+        finally
+        {
+            TrackConditions.AiGripMultiplier = prevGrip;
+            TrackConditions.AiPaceMultiplier = prevPace;
+            if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
+            EditorSceneManager.CloseScene(scene, true);
+            File.WriteAllText("Temp/ai_brake_sweep.txt", sb.ToString());
+        }
+    }
+
+    // The braking-stability change at every venue: old brake behaviour (half cut in a slide, no rear-slip release)
+    // against the new defaults, today's AI strength, best driver. Temp/ai_brake_every_track.txt.
+    [MenuItem("Draftmaster/AI/Braking Fix At Every Track")]
+    static void BrakeFixEveryTrack()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("Stop Play Mode first."); return; }
+        var sb = new StringBuilder("track                  old brakes                                          | new brakes\n");
+        float prevGrip = TrackConditions.AiGripMultiplier, prevPace = TrackConditions.AiPaceMultiplier;
+        var prevActive = SceneManager.GetActiveScene();
+        int better = 0, worse = 0, cleanOld = 0, cleanNew = 0, n = 0;
+        try
+        {
+            foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
+            {
+                string id = Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(guid));
+                var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+                try
+                {
+                    SceneManager.SetActiveScene(scene);
+                    EditorUtility.DisplayProgressBar("Braking fix, every track", id, n / 38f);
+                    var sim = AIPaceCalibratorWindow.LapSim.Build(id, out string error);
+                    if (sim == null) { sb.AppendLine($"{id,-22} {error}"); continue; }
+                    AIPaceCalibratorWindow.LapSim.Result Run(float cut, float release)
+                    {
+                        bool set = false;
+                        return sim.Drive(1f, 1.04f, 2, true, s =>
+                        {
+                            if (set) return;
+                            s.input.slideBrakeCut = cut;
+                            s.input.rearSlipBrakeRelease = release;
+                            set = true;
+                        });
+                    }
+                    var oldR = Run(0.5f, 0f);
+                    var newR = Run(1f, 1f);
+                    n++;
+                    if (oldR.Clean) cleanOld++;
+                    if (newR.Clean) cleanNew++;
+                    if (newR.Clean && !oldR.Clean) better++;
+                    if (oldR.Clean && !newR.Clean) worse++;
+                    sb.AppendLine($"{id,-22} {oldR,-50} | {newR}");
+                }
+                finally
+                {
+                    if (prevActive.IsValid()) SceneManager.SetActiveScene(prevActive);
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+            sb.AppendLine($"\n{n} tracks: clean {cleanOld} -> {cleanNew}; newly clean {better}, newly dirty {worse}.");
+        }
+        catch (Exception e) { sb.AppendLine("Failed: " + e); }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+            TrackConditions.AiGripMultiplier = prevGrip;
+            TrackConditions.AiPaceMultiplier = prevPace;
+            File.WriteAllText("Temp/ai_brake_every_track.txt", sb.ToString());
         }
     }
 

@@ -18,6 +18,32 @@ public class SplineInputDriver : MonoBehaviour
     public float lowSpeedCutoff = 6f;
     [Tooltip("Derivative damping (s) on the heading error: counters how fast the error is CHANGING, killing the high-frequency tail wiggle of the P-only chase (visible at pace-lap speeds where the weave caps the lookahead short). Acts on the error rate, not raw yaw rate, so steady-state cornering — constant error, constant yaw — is untouched.")]
     public float steerDamping = 0.08f;
+    [Tooltip("Cross-track correction: steering (as atan(gain × metres off the line / (speed + softening))) back " +
+             "toward the planned line in proportion to how far the car sits off it. Pure pursuit alone only aims " +
+             "AHEAD — in a long corner the aim point is always toward the inside, so a car already inside its line " +
+             "kept turning in: at Watkins Glen's Turn 10 it ran 3.6 m inside its plan and off the kerb. 0 = off. " +
+             "Off by default: a sweep (AILineDiagnostics) showed no gain there — that off is power oversteer, and " +
+             "the term fades out in a slide by design.")]
+    public float crossTrackGain = 0f;
+    [Tooltip("Speed softening (m/s) in the cross-track term, so it doesn't snap at a crawl.")]
+    public float crossTrackSoftening = 5f;
+    [Tooltip("Most the cross-track term may add to the wheel angle (deg).")]
+    public float crossTrackMaxDeg = 5f;
+
+    [Header("Braking stability")]
+    [Tooltip("How much of the brake a full slide takes away (0..1). Was a fixed 0.5: the car kept braking at half " +
+             "force 13° sideways, which is what spun it into Watkins Glen's Turn 10.")]
+    [Range(0f, 1f)] public float slideBrakeCut = 1f;
+    [Tooltip("Ease off the brake as the REAR tyres start to slip (0 = off, 1 = all the way). Braking unloads the " +
+             "rear; trail-braking into a fast corner is where the AI spun. Rear slip is the earliest warning — a " +
+             "driver feels the rear go light and comes off the pedal before the car is sideways.")]
+    [Range(0f, 1f)] public float rearSlipBrakeRelease = 1f;
+    [Tooltip("Rear slip (deg) where the release starts, and where it reaches full strength.")]
+    public float rearSlipBrakeStartDeg = 4f;
+    public float rearSlipBrakeFullDeg = 9f;
+
+    // Metres the car's centre sits off its planned line, + = left of it (for diagnostics).
+    public float LastCrossTrackMetres { get; private set; }
 
     [Header("Lookahead")]
     [Tooltip("Seconds of travel ahead to aim the steering at. The pure-pursuit target sits speed*this metres up the racing line; bigger = smoother but lazier turn-in.")]
@@ -164,7 +190,29 @@ public class SplineInputDriver : MonoBehaviour
                 errorRate = Mathf.Clamp(Mathf.DeltaAngle(_prevHeadingError, headingError) / Time.fixedDeltaTime, -180f, 180f);
             _prevHeadingError = headingError;
             _hasPrevError = true;
-            float steerAngleDeg = Mathf.Clamp(headingError * steerGain + errorRate * steerDamping, -maxSteer, maxSteer) * authority;
+            // Cross-track: how far the car's centre is off the planned line (the line through the brain's point,
+            // along its direction), steered back against. Faded out in a slide or recovery, where the job is
+            // catching the car, not placing it.
+            float crossDeg = 0f;
+            LastCrossTrackMetres = 0f;
+            if (crossTrackGain > 0f && !_recovering)
+            {
+                Vector2 p0 = _spline.PathPointAhead(0f), p1 = _spline.PathPointAhead(3f);
+                Vector3 w0 = _spline.track.transform.TransformPoint(new Vector3(p0.x, p0.y, 0f));
+                Vector3 w1 = _spline.track.transform.TransformPoint(new Vector3(p1.x, p1.y, 0f));
+                Vector2 t = (Vector2)(w1 - w0);
+                if (t.sqrMagnitude > 1e-4f)
+                {
+                    t.Normalize();
+                    Vector2 left = new Vector2(-t.y, t.x);
+                    float offset = Vector2.Dot((Vector2)transform.position - (Vector2)w0, left);
+                    LastCrossTrackMetres = offset;
+                    crossDeg = -Mathf.Atan(crossTrackGain * offset / (speed + crossTrackSoftening)) * Mathf.Rad2Deg;
+                    crossDeg = Mathf.Clamp(crossDeg, -crossTrackMaxDeg, crossTrackMaxDeg) * (1f - slide01);
+                }
+            }
+            float steerAngleDeg = Mathf.Clamp(headingError * steerGain + errorRate * steerDamping + crossDeg,
+                                              -maxSteer, maxSteer) * authority;
             // PlayerVehicleController maps desiredSteer = -steerIn * maxSteeringAngle, so invert to request this angle.
             steerInput = -steerAngleDeg / maxSteer;
             // Hold against bent bodywork's pull (feed-forward), rather than letting the heading loop find it by
@@ -200,7 +248,14 @@ public class SplineInputDriver : MonoBehaviour
         // A slide cuts throttle (power past saturated rears just rotates the car further) and softens the brake
         // (forward weight transfer unloads the rear mid-slide) — the tyres get their lateral budget back to catch it.
         float throttle = Mathf.Clamp01(speedError * speedGain) * (1f - slide01);
-        float brake = Mathf.Clamp01(-speedError * speedGain) * (1f - 0.5f * slide01);
+        float brake = Mathf.Clamp01(-speedError * speedGain) * (1f - slideBrakeCut * slide01);
+        if (rearSlipBrakeRelease > 0f)
+        {
+            float rearSlip = Mathf.Abs(_car.SlipRearDeg);
+            float release = Mathf.InverseLerp(rearSlipBrakeStartDeg,
+                                              Mathf.Max(rearSlipBrakeFullDeg, rearSlipBrakeStartDeg + 0.1f), rearSlip);
+            brake *= 1f - rearSlipBrakeRelease * release;
+        }
 
         _car.SetInput(steerInput, throttle, brake);
 
