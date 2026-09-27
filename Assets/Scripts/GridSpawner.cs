@@ -352,8 +352,24 @@ public class GridSpawner : MonoBehaviour
                 Vector3 wt = track.transform.TransformDirection(new Vector3(bs.tangent.x, bs.tangent.y, 0f));
                 float headingDeg = Mathf.Atan2(wt.y, wt.x) * Mathf.Rad2Deg;
                 carT.rotation = Quaternion.Euler(0f, 0f, headingDeg - ((pls.car.spriteFacesUp ? 90f : 0f) - pls.car.angleOffsetDeg));
+
+                // And the body, or the move is only a suggestion: the pose physics holds is the one that
+                // wins (see PitLaneStart.TowToPits).
+                var body = pls.car.GetComponent<Rigidbody2D>();
+                if (body != null)
+                {
+                    body.position = carT.position;
+                    body.rotation = carT.eulerAngles.z;
+                    body.linearVelocity = Vector2.zero;
+                    body.angularVelocity = 0f;
+                }
             }
         }
+        else if (pitStart)
+            // Nothing else says so, and a car left on its opening pose is a car the player may not be able
+            // to reach: say why in the log, where a device build can be read over adb.
+            Debug.LogWarning($"GridSpawner: player car not snapped into a pit box (PitLaneStart {(pls != null ? "found" : "missing")}, " +
+                             $"on pit {(pls != null && pls.PlayerOnPit)}, pit length {pitLen:0.0} m).");
 
         // Real-team grouping: cars share a teamId when they share a NASCAR team. The player's team is
         // playerTeamName when that names a real team, otherwise the team of the first car spawned —

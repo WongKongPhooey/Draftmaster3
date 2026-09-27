@@ -214,8 +214,14 @@ public class PitLaneStart : MonoBehaviour
         PlayerPitDistance = carDistance;
         PlayerOnPit = usedPit;
 
+        // The car goes on the box lane — the grey strip the whole field parks on — not on the walker's
+        // offset. GridSpawner moves it along that lane into the box it reserves once the field arrives, but
+        // if that never happens (a device that fails the spawn, a session with no field) a car parked on the
+        // walker's side of pit road sat on the track side of it, outside the paddock, where the player
+        // could not reach it and the session could not start.
+        float carLateral = usedPit && track.HasPitBoxLane ? track.PitBoxLaneCenterLateral : lateralOffsetMetres;
         Vector2 midOff = mid.position + mid.normal * lateralOffsetMetres;
-        Vector2 carOff = carSample.position + carSample.normal * lateralOffsetMetres;
+        Vector2 carOff = carSample.position + carSample.normal * carLateral;
         Vector3 playerPos = track.transform.TransformPoint(new Vector3(midOff.x, midOff.y, 0f));
         Vector3 carPos = track.transform.TransformPoint(new Vector3(carOff.x, carOff.y, 0f));
 
