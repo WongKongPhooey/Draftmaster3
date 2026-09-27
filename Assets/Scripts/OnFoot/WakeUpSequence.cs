@@ -169,6 +169,8 @@ public class WakeUpSequence : MonoBehaviour
     {
         var kb = Keyboard.current;
         if (kb != null && kb.anyKey.wasPressedThisFrame) return true;
+        var screen = Touchscreen.current;   // a phone: a finger on the glass, read raw — the walk controls may have spent the tap
+        if (screen != null && screen.primaryTouch.press.wasPressedThisFrame) return true;
 
         var pad = Gamepad.current;
         if (pad != null && (pad.buttonSouth.wasPressedThisFrame || pad.buttonEast.wasPressedThisFrame ||

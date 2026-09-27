@@ -263,4 +263,20 @@ public class TouchWalkTests
         Assert.IsFalse(s.Tapped, "a finger that was down when a menu opened tapped as the menu closed");
         Assert.IsFalse(s.Walking);
     }
+
+    [Test]
+    public void PauseButton_IsOnScreen_TopRight_ClearOfTheStickAndPhone()
+    {
+        foreach (var (w, h) in new[] { (800f, 360f), (1280f, 720f), (2400f, 1080f), (2048f, 1536f) })
+        {
+            var l = Layout(w, h);
+            var p = l.pauseButton;
+            string at = $"{w}x{h}";
+            Assert.IsTrue(p.x >= l.safe.x && p.y >= l.safe.y && p.xMax <= l.safe.xMax && p.yMax <= l.safe.yMax,
+                          $"{at}: pause {p} runs off the screen");
+            Assert.Greater(p.centerX, l.safe.centerX, $"{at}: pause is not on the right (the top centre is the objective strip)");
+            Assert.IsFalse(p.Overlaps(l.stickZone), $"{at}: pause sits in the stick zone");
+            Assert.IsFalse(p.Overlaps(l.phoneButton), $"{at}: pause sits on the phone button");
+        }
+    }
 }

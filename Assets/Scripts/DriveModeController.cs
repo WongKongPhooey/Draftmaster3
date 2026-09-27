@@ -64,6 +64,11 @@ public class DriveModeController : MonoBehaviour
 
     bool _keyPrev;
 
+    // The scene's one broadcast switch, for the touch controls' TV button (a phone has no V).
+    public static DriveModeController Current { get; private set; }
+    void OnEnable() => Current = this;
+    void OnDisable() { if (Current == this) Current = null; }
+
     void Start()
     {
         if (playerCar == null) playerCar = GameObject.Find(playerCarName);

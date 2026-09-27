@@ -116,7 +116,7 @@ public class TouchWalkControls : MonoBehaviour
     // which counts a conversation — see the note at the top.
     static bool ScreenOwnsTouches =>
         RacePauseMenu.IsPaused || PhoneUI.IsOpen || WeekendScheduleUI.IsOpen ||
-        WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen || SponsorOfferPopup.IsOpen;
+        WeekendModal.AnyOpen || DialogueChoiceUI.IsOpen || SponsorOfferPopup.IsOpen || TutorialPopup.IsOpen;
 
     static bool StickShows
     {
@@ -240,8 +240,33 @@ public class TouchWalkControls : MonoBehaviour
 
     // ------------------------------------------------------------------ drawing
 
+    // On foot there is no Esc either: a pause button in the top-right corner, whenever the paddock itself is
+    // what the thumbs are on (not under a screen that has its own buttons) and there is a pause menu to open.
+    static bool PauseShows => OnFootWithThumbs && !ScreenOwnsTouches && RacePauseMenu.CanPause;
+
+    void DrawPauseButton()
+    {
+        var p = _layout.pauseButton;
+        var rect = new Rect(p.x, p.y, p.width, p.height);
+        if (Event.current.type == EventType.Repaint)
+        {
+            float u = _layout.unit;
+            PixelGUI.Fill(rect, Fade(PixelGUI.PlateDeep, 0.55f));
+            PixelGUI.Frame(rect, Fade(PixelGUI.Text, 0.5f));
+            float barW = 3f * u, barH = rect.height - 10f * u, y = rect.y + 5f * u;
+            PixelGUI.Fill(new Rect(rect.center.x - barW - 1.5f * u, y, barW, barH), Fade(PixelGUI.Text, 0.85f));
+            PixelGUI.Fill(new Rect(rect.center.x + 1.5f * u, y, barW, barH), Fade(PixelGUI.Text, 0.85f));
+        }
+        if (TouchTaps.Button(rect, GUIContent.none, GUIStyle.none)) RacePauseMenu.TogglePause();
+    }
+
     void OnGUI()
     {
+        if (PauseShows)
+        {
+            GUI.depth = -10;
+            DrawPauseButton();
+        }
         if (!Active || Event.current.type != EventType.Repaint) return;
         GUI.depth = -10;
 

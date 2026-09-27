@@ -54,10 +54,30 @@ public class CoopJoinPanel : MonoBehaviour
     {
         var launcher = Launcher();
         if (launcher != null) launcher.StatusChanged += OnStatus;
+        _osk.Show(_code, 8);   // a phone has no keys to type the code on: raise its own keyboard straight away
+    }
+
+    readonly OnScreenKeyboard _osk = new();
+
+    // The OS keyboard's text is the code, cleaned the way typed keys are. Done joins; tapping the field opens
+    // it again after it has been put away.
+    void PollOnScreenKeyboard()
+    {
+        if (!_osk.Open || _joining) return;
+        string typed = _osk.Text;
+        if (typed != null)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in typed)
+                if (char.IsLetterOrDigit(c) && sb.Length < 8) sb.Append(char.ToUpperInvariant(c));
+            _code = sb.ToString();
+        }
+        if (_osk.Poll() == OnScreenKeyboard.Result.Done && _code.Length > 0) Join();
     }
 
     void OnDestroy()
     {
+        _osk.Hide();
         if (NetworkLauncher.Instance != null) NetworkLauncher.Instance.StatusChanged -= OnStatus;
     }
 
@@ -86,6 +106,7 @@ public class CoopJoinPanel : MonoBehaviour
         if (Time.frameCount == _openedFrame) return;
         // Typing the code needs a keyboard; backing out does not.
         if (PadInput.WasPressed(Draftmaster.Controls.PadBindings.Back)) { Destroy(gameObject); return; }
+        PollOnScreenKeyboard();
 
         var kb = Keyboard.current;
         if (kb == null) return;
@@ -171,6 +192,9 @@ public class CoopJoinPanel : MonoBehaviour
         PixelGUI.Frame(field, PixelGUI.Gold, 2f);
         string shown = _code.PadRight(6, '_');
         GUI.Label(field, shown, CodeStyle());
+        if (OnScreenKeyboard.Wanted && !_osk.Open && !_joining &&
+            TouchTaps.Button(field, GUIContent.none, GUIStyle.none))
+            _osk.Show(_code, 8);
         cy += fieldH + gap;
 
         if (!string.IsNullOrEmpty(_status))
@@ -186,6 +210,7 @@ public class CoopJoinPanel : MonoBehaviour
         if (PixelGUI.Button(new Rect(c.x, cy, c.width, buttonH), "BACK")) Destroy(gameObject);
 
         GUI.Label(new Rect(c.x, c.yMax - PixelGUI.LineH, c.width, PixelGUI.LineH),
-                  $"TYPE THE CODE  ·  ENTER JOIN  ·  {InputGlyphs.Back} BACK", PixelGUI.Footer);
+                  InputGlyphs.UsingTouch ? "TAP THE BOX TO TYPE THE CODE"
+                                         : $"TYPE THE CODE  ·  ENTER JOIN  ·  {InputGlyphs.Back} BACK", PixelGUI.Footer);
     }
 }

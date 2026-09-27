@@ -316,4 +316,60 @@ public class TouchDriveTests
         e.Reset();
         Assert.IsFalse(e.IsEcho(10.1));
     }
+
+    // ------------------------------------------------------------------ limiter and broadcast buttons
+
+    [Test]
+    public void TopButtons_OnEveryScreen_AreOnScreen_AndClearOfTheWheelAndPedals()
+    {
+        foreach (var (w, h) in Screens)
+        {
+            var l = Layout(w, h);
+            string at = $"{w}x{h}";
+            float slop = TouchLayout.Slop * l.unit;
+            foreach (var (name, r) in new[] { ("limiter", l.limiter), ("broadcast", l.broadcast) })
+            {
+                Assert.IsTrue(Inside(r, l.safe), $"{at}: {name} {r} runs off the screen");
+                Assert.IsFalse(r.Overlaps(l.pause), $"{at}: {name} sits on pause");
+                Assert.IsFalse(r.Inflate(slop).Overlaps(l.steerZone), $"{at}: a tap on {name} could take the wheel");
+                Assert.IsFalse(r.Overlaps(l.brakeHit) || r.Overlaps(l.throttleHit), $"{at}: {name} sits on a pedal");
+            }
+        }
+    }
+
+    [Test]
+    public void TopButtons_TakeATap_OnlyWhileShown()
+    {
+        var s = new TouchDriveState();
+        var at = F(1, L.limiter.centerX, L.limiter.centerY);
+
+        s.Update(Fingers(at), L);
+        Assert.IsFalse(s.LimiterTapped, "a hidden limiter button takes no finger");
+        s.Update(Fingers(), L);
+
+        s.LimiterShown = true;
+        s.Update(Fingers(F(2, L.limiter.centerX, L.limiter.centerY)), L);
+        Assert.IsTrue(s.LimiterTapped);
+        Assert.AreEqual(0f, s.Throttle + s.Brake, "a tap on the limiter presses no pedal");
+        s.Update(Fingers(F(2, L.limiter.centerX, L.limiter.centerY)), L);
+        Assert.IsFalse(s.LimiterTapped, "held is one tap, not one a frame");
+
+        s.BroadcastShown = true;
+        s.Update(Fingers(F(3, L.broadcast.centerX, L.broadcast.centerY)), L);
+        Assert.IsTrue(s.BroadcastTapped);
+    }
+
+    [Test]
+    public void ButtonsOnly_TheWheelAndPedalsTakeNoFinger()
+    {
+        var s = new TouchDriveState { ButtonsOnly = true, BroadcastShown = true };
+        s.Update(Fingers(F(1, SteerX, SteerY), F(2, L.throttle.centerX, L.throttle.centerY)), L);
+        Assert.AreEqual(0f, s.Steer);
+        Assert.AreEqual(0f, s.Throttle);
+        Assert.IsFalse(s.Steering);
+
+        s.Update(Fingers(F(1, SteerX, SteerY), F(2, L.throttle.centerX, L.throttle.centerY),
+                         F(3, L.broadcast.centerX, L.broadcast.centerY)), L);
+        Assert.IsTrue(s.BroadcastTapped, "the TV button still answers while watching");
+    }
 }

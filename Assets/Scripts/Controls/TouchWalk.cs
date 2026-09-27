@@ -33,6 +33,7 @@ namespace Draftmaster.Controls
         public readonly TouchRect stickZone;      // a thumb landing here takes the stick
         public readonly TouchRect stickRest;      // where the ring waits while nobody holds it
         public readonly TouchRect phoneButton;    // takes the phone out / puts it away; never starts the stick
+        public readonly TouchRect pauseButton;    // top right: the top centre is the objective strip's
         public readonly float travel;
         public readonly float tapSlop;
 
@@ -56,6 +57,9 @@ namespace Draftmaster.Controls
             float phone = PhoneButtonSize * u;
             phoneButton = new TouchRect(safe.x + m, safe.yMax - m - phone, phone, phone);
             stickRest = new TouchRect(phoneButton.xMax + m, safe.yMax - m - ring, ring, ring);
+
+            float p = TouchLayout.PauseSize * u;
+            pauseButton = new TouchRect(safe.xMax - m - p, safe.y + 6f * u, p, p);
         }
     }
 

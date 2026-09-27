@@ -82,6 +82,7 @@ public class SingleRaceUI : MonoBehaviour
     }
 
     const string HelpKeys = "W/S or ARROWS  MOVE     ENTER  SELECT     ESC  BACK";
+    const string HelpTouch = "TAP TO PICK     DRAG OR UP/DOWN TO SCROLL";
 
     void Update()
     {
@@ -117,7 +118,7 @@ public class SingleRaceUI : MonoBehaviour
             _help.text = InputGlyphs.UsingGamepad
                 ? $"D-PAD  MOVE     {InputGlyphs.PadName(PadButton.LeftShoulder)}/{InputGlyphs.PadName(PadButton.RightShoulder)}  PAGE" +
                   $"     {InputGlyphs.PadName(PadBindings.Confirm)}  SELECT     {InputGlyphs.PadName(PadBindings.Back)}  BACK"
-                : HelpKeys;
+                : InputGlyphs.UsingTouch ? HelpTouch : HelpKeys;
         }
 
         if (_statusUntil > 0f && Time.unscaledTime >= _statusUntil) SetStatus("");
@@ -212,6 +213,54 @@ public class SingleRaceUI : MonoBehaviour
         if (_labels.Count == 0) return;
         _index = Mathf.Clamp(_index + by, 0, _labels.Count - 1);
         Redraw();
+    }
+
+    // A tap (or a click) on a row picks that option outright — on a phone there is no Enter to press after
+    // moving the cursor, so the row itself is the button.
+    void TapRow(int row)
+    {
+        Deselect();
+        if (_loading) return;
+        int option = _scroll + row;
+        if (option < 0 || option >= _labels.Count) return;
+        _index = option;
+        Redraw();
+        Confirm();
+    }
+
+    // A drag scrolls the list rather than the cursor, the way a phone list moves under a finger. The cursor
+    // is kept on a visible row so Enter, a tap and Redraw all agree on what is selected.
+    void ScrollBy(int rows)
+    {
+        if (_labels.Count == 0 || rows == 0) return;
+        _scroll = Mathf.Clamp(_scroll + rows, 0, Mathf.Max(0, _labels.Count - visibleRows));
+        _index = Mathf.Clamp(_index, _scroll, Mathf.Min(_labels.Count, _scroll + visibleRows) - 1);
+        Redraw();
+    }
+
+    float _dragRows;
+    void BeginDrag() => _dragRows = 0f;
+
+    void Drag(PointerEventData e)
+    {
+        if (_loading) return;
+        var canvas = GetComponentInChildren<Canvas>();
+        float scale = canvas != null && canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
+        // Finger up = later options, 22 design pixels to a row (BuildChrome's pitch).
+        _dragRows += e.delta.y / scale / RowPitch;
+        int whole = (int)_dragRows;
+        if (whole == 0) return;
+        _dragRows -= whole;
+        ScrollBy(whole);
+    }
+
+    // Each row's hit area forwards its drag here. A Button takes clicks but not drags, and the EventSystem
+    // hands a drag to the pressed object, so the row needs its own handler for a swipe to reach the list.
+    class RowDrag : MonoBehaviour, IBeginDragHandler, IDragHandler
+    {
+        public SingleRaceUI owner;
+        public void OnBeginDrag(PointerEventData e) => owner.BeginDrag();
+        public void OnDrag(PointerEventData e) => owner.Drag(e);
     }
 
     void Confirm()
@@ -390,7 +439,21 @@ public class SingleRaceUI : MonoBehaviour
 
         for (int i = 0; i < visibleRows; i++)
         {
-            float y = -78f - i * 22f;
+            float y = -78f - i * RowPitch;
+
+            // The row's hit area, under its text: clear, but a raycast target, so a tap or click anywhere
+            // along the row lands on it. The text on top is told not to catch the ray, or it would.
+            var hit = new GameObject($"Hit_{i}", typeof(RectTransform), typeof(Image), typeof(Button));
+            hit.transform.SetParent(root, false);
+            hit.GetComponent<Image>().color = Color.clear;
+            Place((RectTransform)hit.transform, new Vector2(0f, 1f), new Vector2(20f, y + 1f),
+                  new Vector2(600f, RowPitch), TextAlignmentOptions.TopLeft);
+            var hitButton = hit.GetComponent<Button>();
+            hitButton.transition = Selectable.Transition.None;
+            hitButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            int row = i;
+            hitButton.onClick.AddListener(() => TapRow(row));
+            hit.AddComponent<RowDrag>().owner = this;
 
             var cursor = IronOvalUI.Cursor(root, $"Cursor_{i}");
             Place((RectTransform)cursor.transform, new Vector2(0f, 1f), new Vector2(26f, y - 4f),
@@ -406,7 +469,17 @@ public class SingleRaceUI : MonoBehaviour
             Place((RectTransform)detail.transform, new Vector2(0f, 1f), new Vector2(350f, y),
                   new Vector2(266f, 20f), TextAlignmentOptions.TopLeft);
             _rowDetails.Add(detail);
+
+            cursor.raycastTarget = false;
+            label.raycastTarget = false;
+            detail.raycastTarget = false;
         }
+
+        // Paging and BACK as buttons, top right beside the title: a phone has no Page Up or Esc to press.
+        // Built in code and wired here, at runtime, like the rows — nothing serialised to lose.
+        AddButton(root, "Back", "BACK", -24f, Back);
+        AddButton(root, "Down", "DOWN", -24f - (ButtonSize.x + 6f), () => Move(visibleRows));
+        AddButton(root, "Up", "UP", -24f - 2f * (ButtonSize.x + 6f), () => Move(-visibleRows));
 
         var help = IronOvalUI.Label(root, "Help", HelpKeys, IronOvalUI.Role.Body, theme.plateLight);
         _help = help;
@@ -416,6 +489,27 @@ public class SingleRaceUI : MonoBehaviour
         _status = IronOvalUI.Label(root, "Status", "", IronOvalUI.Role.Body, theme.text);
         Place((RectTransform)_status.transform, new Vector2(0f, 0f), new Vector2(24f, 42f),
               new Vector2(560f, 18f), TextAlignmentOptions.BottomLeft);
+    }
+
+    const float RowPitch = 22f;
+    static readonly Vector2 ButtonSize = new(56f, 24f);
+
+    void AddButton(RectTransform root, string name, string caption, float right, UnityEngine.Events.UnityAction onPress)
+    {
+        var button = IronOvalUI.Button(root, name, caption, ButtonSize);
+        var rect = (RectTransform)button.transform;
+        rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(1f, 1f);
+        rect.anchoredPosition = new Vector2(right, -18f);
+        button.navigation = new Navigation { mode = Navigation.Mode.None };   // keys/pad drive the list, not these
+        button.onClick.AddListener(() => { Deselect(); if (!_loading) onPress(); });
+    }
+
+    // A clicked Button stays the EventSystem's selection, and Enter would then press it again on top of this
+    // screen's own Enter. Nothing here is navigated by selection, so let it go.
+    static void Deselect()
+    {
+        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
     }
 
     static void Stretch(RectTransform rect)

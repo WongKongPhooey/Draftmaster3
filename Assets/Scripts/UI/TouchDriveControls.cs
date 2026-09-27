@@ -75,7 +75,22 @@ public class TouchDriveControls : MonoBehaviour
         !InputGlyphs.UsingGamepad &&
         !PadInput.OnFoot &&
         !PadInput.ModalOpen &&
-        PlayerVehicleController.Human != null;
+        (PlayerVehicleController.Human != null || Broadcasting);
+
+    // Watching the broadcast cut: the AI has the car, so there is no human car to steer, but the TV button has
+    // to stay up or a phone could never take the car back.
+    static bool Broadcasting => DriveModeController.Current != null && !DriveModeController.Current.IsDriving;
+
+    // The limiter button only while there is something to toggle: in the pit lane, with a hand toggle allowed.
+    static PitLimiter Limiter
+    {
+        get
+        {
+            var car = PlayerVehicleController.Human;
+            var limiter = car != null ? car.GetComponent<PitLimiter>() : null;
+            return limiter != null && limiter.driverCanToggle && limiter.InPitZone ? limiter : null;
+        }
+    }
 
     void Update()
     {
@@ -91,10 +106,16 @@ public class TouchDriveControls : MonoBehaviour
 
         _layout = CurrentLayout();
         ReadTouches();
+        var limiter = Limiter;
+        _state.ButtonsOnly = Broadcasting;
+        _state.LimiterShown = limiter != null && !Broadcasting;
+        _state.BroadcastShown = DriveModeController.Current != null;
         _state.Update(_touches, _layout);
         Active = true;
 
         if (_state.PauseTapped) RacePauseMenu.TogglePause();
+        if (_state.LimiterTapped && limiter != null) limiter.SetArmed(!limiter.Armed);
+        if (_state.BroadcastTapped && DriveModeController.Current != null) DriveModeController.Current.Toggle();
     }
 
     static TouchLayout CurrentLayout()
@@ -131,10 +152,28 @@ public class TouchDriveControls : MonoBehaviour
         if (!Active || Event.current.type != EventType.Repaint) return;
         GUI.depth = -10;   // over the race HUD's panels
 
-        DrawSteering();
-        DrawPedal(_layout.brake, "BRAKE", _state.Brake > 0f, PixelGUI.Danger);
-        DrawPedal(_layout.throttle, "GAS", _state.Throttle > 0f, PixelGUI.Confirm);
+        if (!_state.ButtonsOnly)
+        {
+            DrawSteering();
+            DrawPedal(_layout.brake, "BRAKE", _state.Brake > 0f, PixelGUI.Danger);
+            DrawPedal(_layout.throttle, "GAS", _state.Throttle > 0f, PixelGUI.Confirm);
+        }
         DrawPause();
+
+        if (_state.LimiterShown)
+        {
+            var limiter = Limiter;
+            DrawTopButton(_layout.limiter, "LIMIT", limiter != null && limiter.Armed, PixelGUI.Gold);
+        }
+        if (_state.BroadcastShown) DrawTopButton(_layout.broadcast, _state.ButtonsOnly ? "DRIVE" : "TV", false, PixelGUI.Confirm);
+    }
+
+    void DrawTopButton(TouchRect r, string text, bool on, Color tint)
+    {
+        var rect = ToRect(r);
+        PixelGUI.Fill(rect, on ? Fade(tint, 0.75f) : Fade(PixelGUI.PlateDeep, 0.55f));
+        PixelGUI.Frame(rect, on ? Fade(PixelGUI.Text, 0.9f) : Fade(PixelGUI.Text, 0.5f));
+        Label(rect, text, on ? 1f : 0.85f);
     }
 
     void DrawSteering()

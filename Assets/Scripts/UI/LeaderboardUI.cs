@@ -62,6 +62,8 @@ public class LeaderboardUI : MonoBehaviour
         PlayerPrefs.SetInt(PrefKey, _visible ? 1 : 0);
     }
 
+    bool _expandedByTap;
+
     void OnGUI()
     {
         if (!_visible) return;
@@ -80,7 +82,7 @@ public class LeaderboardUI : MonoBehaviour
         Transform featured = broadcast ? _drive.FeaturedTransform : null;
 
         // Held, so it can't clash with anything that acts on a press; a fight has the same button for a hook.
-        bool expanded = LegacyKeys.Held(expandKey) ||
+        bool expanded = _expandedByTap || LegacyKeys.Held(expandKey) ||
                         (!DriverFight.IsActive && PadInput.IsHeld(PadBindings.LeaderboardExpand));
         int n = _rows.Count;
         int show = expanded ? n : Mathf.Min(compactRows, n);
@@ -99,7 +101,10 @@ public class LeaderboardUI : MonoBehaviour
                         toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.Leaderboard);
 
         float rx = x + pad, ry = y + pad;
-        GUI.Label(new Rect(rx, ry, w, row), Header(broadcast, byLap, expanded, n), PixelGUI.HeadingSmall);
+        var headerRect = new Rect(rx, ry, w, row);
+        GUI.Label(headerRect, Header(broadcast, byLap, expanded, n), PixelGUI.HeadingSmall);
+        // A phone has no Tab to hold: a tap (or click) on the header opens the full field, another folds it.
+        if (TouchTaps.Button(headerRect, GUIContent.none, GUIStyle.none)) _expandedByTap = !_expandedByTap;
         ry += row;
 
         for (int i = 0; i < show; i++)
@@ -124,7 +129,7 @@ public class LeaderboardUI : MonoBehaviour
             string session = RaceWeekend.IsQualifying ? "QUALIFYING" : "PRACTICE";
             return expanded ? $"{session} · {n} CARS" : $"{session} · BEST LAP";
         }
-        return expanded ? $"ORDER · {n} CARS" : "ORDER · TAB = FULL";
+        return expanded ? $"ORDER · {n} CARS" : (InputGlyphs.UsingTouch ? "ORDER · TAP = FULL" : "ORDER · TAB = FULL");
     }
 
     // Practice/qualifying: rank on best lap, show the lap itself. False when timing isn't up yet, so the

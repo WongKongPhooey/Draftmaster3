@@ -103,6 +103,8 @@ public class TutorialPopupUI : MonoBehaviour
         bool held = DismissHeld();
         bool pressed = held && !_dismissHeldPrev;
         _dismissHeldPrev = held;
+        // A phone has no E: a tap anywhere, from a finger that came down after the card did.
+        if (TouchTaps.TakeTap(downAfter: _shownAt)) pressed = true;
 
         if (pressed && Time.unscaledTime - _shownAt >= minVisibleSeconds) Close(null);
     }
@@ -160,7 +162,7 @@ public class TutorialPopupUI : MonoBehaviour
         }
 
         GUI.Label(new Rect(x + pad, cy + PixelGUI.Px(8f), inner, footerH),
-                  $"{InputGlyphs.Confirm} to continue", PixelGUI.Footer);
+                  InputGlyphs.UsingTouch ? "Tap to continue" : $"{InputGlyphs.Confirm} to continue", PixelGUI.Footer);
     }
 
     // {KEY} → the live device label, highlighted so the button jumps out of the sentence.

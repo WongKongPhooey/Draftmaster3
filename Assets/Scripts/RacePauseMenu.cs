@@ -177,6 +177,8 @@ public class RacePauseMenu : MonoBehaviour
 
     // Pause or resume from something that isn't a key or a pad button: the touch controls' pause button.
     // Same rules as Esc — only in a race scene, and not while the phone has the screen.
+    public static bool CanPause => Instance != null && Instance._inRaceScene && !PhoneUI.IsOpen;
+
     public static void TogglePause()
     {
         var menu = Instance;

@@ -270,10 +270,11 @@ public class CrewChiefController : MonoBehaviour
 
         _active = true;
         IsCrewChief = true;
-        if (_timingBtn != null) _timingBtn.SetActive(true);
+        ShowDutyButtons(true);
         UpdateButton();
 
-        ControlHints.Show("crewchiefwatch", WatchKeys, WatchPad, "Watch the cars on track");
+        ControlHints.Show("crewchiefwatch", WatchKeys, WatchPad, "Watch the cars on track",
+                          touchText: "PREV CAR / NEXT CAR to watch the cars on track");
     }
 
     void Exit()
@@ -306,7 +307,7 @@ public class CrewChiefController : MonoBehaviour
         IsCrewChief = false;
         _wasInCar = false;
         _wasDriving = false;
-        if (_timingBtn != null) _timingBtn.SetActive(false);
+        ShowDutyButtons(false);
         if (TimingScreenUI.Instance != null) TimingScreenUI.Instance.Hide();
         UpdateButton();
     }
@@ -422,6 +423,39 @@ public class CrewChiefController : MonoBehaviour
         timing.onClick.AddListener(() => TimingScreenUI.Ensure().Toggle());
         _timingBtn = timingRoot.gameObject;
         _timingBtn.SetActive(false);
+
+        // PREV / NEXT CAR above TIMING: the , and . keys for a phone, which has neither. Same visibility.
+        _nextCarBtn = WatchButton(canvas, "NextCarButton", "NEXT CAR", +1);
+        _prevCarBtn = WatchButton(canvas, "PrevCarButton", "PREV CAR", -1);
+        PlaceTimingStack(buttonCorner);
+    }
+
+    GameObject _nextCarBtn, _prevCarBtn;
+
+    GameObject WatchButton(Canvas canvas, string name, string caption, int dir)
+    {
+        var b = IronOvalUI.TabButton(canvas.transform, name, caption, new Vector2(56f, 16f));
+        b.onClick.AddListener(() => { if (_active) StepWatch(dir); });
+        var root = b.transform.parent.gameObject;
+        root.SetActive(false);
+        return root;
+    }
+
+    // TIMING, then NEXT CAR, then PREV CAR, stacked up from the headset.
+    void PlaceTimingStack(Vector2 corner)
+    {
+        float step = 16f + 6f;
+        float y = corner.y + buttonSize + 6f;
+        if (_timingBtn != null) Corner((RectTransform)_timingBtn.transform, new Vector2(corner.x, y));
+        if (_nextCarBtn != null) Corner((RectTransform)_nextCarBtn.transform, new Vector2(corner.x, y + step));
+        if (_prevCarBtn != null) Corner((RectTransform)_prevCarBtn.transform, new Vector2(corner.x, y + step * 2f));
+    }
+
+    void ShowDutyButtons(bool on)
+    {
+        if (_timingBtn != null) _timingBtn.SetActive(on);
+        if (_nextCarBtn != null) _nextCarBtn.SetActive(on);
+        if (_prevCarBtn != null) _prevCarBtn.SetActive(on);
     }
 
     // On a phone the on-screen pedals sit in this corner while the player drives; the headset (and TIMING
@@ -436,8 +470,7 @@ public class CrewChiefController : MonoBehaviour
 
         var corner = new Vector2(buttonCorner.x, buttonCorner.y + lift);
         Corner((RectTransform)_buttonRoot.transform, corner);
-        if (_timingBtn != null)
-            Corner((RectTransform)_timingBtn.transform, new Vector2(corner.x, corner.y + buttonSize + 6f));
+        PlaceTimingStack(corner);
     }
 
     // Pin a control to the bottom-right corner, `margin` UI pixels in from it.

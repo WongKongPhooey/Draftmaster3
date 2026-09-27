@@ -138,6 +138,7 @@ public class OptionsUI : MonoBehaviour
         if (_editing >= 0)
         {
             EditKeys(kb);
+            if (_editing >= 0) PollOnScreenKeyboard();
             Redraw();       // the caret flashes, so this row is redrawn every frame while it is open
             return;
         }
@@ -183,6 +184,51 @@ public class OptionsUI : MonoBehaviour
             _buffer = _buffer.Substring(0, _buffer.Length - 1);
     }
 
+    // A phone types through the OS keyboard, opened when the field opens. Whatever it holds is the field,
+    // put through the same character rules as typed keys.
+    readonly OnScreenKeyboard _osk = new();
+
+    void PollOnScreenKeyboard()
+    {
+        if (!_osk.Open) return;
+        string typed = _osk.Text;
+        if (typed != null) _buffer = Filtered(typed, _rows[_editing].maxLength);
+        switch (_osk.Poll())
+        {
+            case OnScreenKeyboard.Result.Done: CommitEdit(); break;
+            case OnScreenKeyboard.Result.Cancelled: CancelEdit(); break;
+        }
+    }
+
+    static string Filtered(string typed, int maxLength)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (char c in typed)
+        {
+            if (!IsNameChar(c)) continue;
+            if (sb.Length == 0 && c == ' ') continue;
+            if (sb.Length >= maxLength) break;
+            sb.Append(c);
+        }
+        return sb.ToString();
+    }
+
+    // A tap or click on a row: a name field opens for typing (or, already open, is saved); BACK leaves.
+    void TapRow(int i)
+    {
+        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+        if (_loading || i < 0 || i >= _rows.Count) return;
+        if (_editing >= 0)
+        {
+            bool same = _editing == i;
+            if (_rows[i].kind == RowKind.Back) { CancelEdit(); Back(); return; }
+            CommitEdit();
+            if (same) return;
+        }
+        _index = i;
+        Confirm();
+    }
+
     void OnTextInput(char c)
     {
         if (_editing < 0 || _editing >= _rows.Count) return;
@@ -214,6 +260,7 @@ public class OptionsUI : MonoBehaviour
             case RowKind.Text:
                 _editing = _index;
                 _buffer = row.read != null ? row.read() : "";
+                _osk.Show(_buffer, row.maxLength);
                 SetStatus("");
                 Redraw();
                 break;
@@ -228,6 +275,7 @@ public class OptionsUI : MonoBehaviour
     {
         var row = _rows[_editing];
         _editing = -1;
+        _osk.Hide();
 
         string cleaned = PlayerDriver.CleanNameHalf(_buffer);
         _buffer = "";
@@ -246,6 +294,7 @@ public class OptionsUI : MonoBehaviour
     {
         _editing = -1;
         _buffer = "";
+        _osk.Hide();
         SetStatus("LEFT AS IT WAS.");
         Redraw();
     }
@@ -307,7 +356,9 @@ public class OptionsUI : MonoBehaviour
         {
             string ok = InputGlyphs.Label("ENTER", PadBindings.Confirm);
             string back = InputGlyphs.Label("ESC", PadBindings.Back);
-            _help.text = _editing >= 0
+            _help.text = InputGlyphs.UsingTouch
+                ? (_editing >= 0 ? "TYPE A NAME, THEN DONE     TAP THE ROW AGAIN  SAVE" : "TAP A ROW TO CHANGE IT")
+                : _editing >= 0
                 ? $"TYPE A NAME     {ok}  SAVE     {back}  CANCEL"
                 : InputGlyphs.UsingGamepad
                     ? $"D-PAD  MOVE     {ok}  CHANGE     {back}  BACK"
@@ -370,6 +421,19 @@ public class OptionsUI : MonoBehaviour
             // BACK sits a row clear of the fields — it is leaving the screen, not another thing to set.
             float y = -108f - i * 24f - (row.kind == RowKind.Back ? 16f : 0f);
 
+            // The row's hit area, under its text, so a tap or click anywhere along it works (a phone has no
+            // Enter). The text on top is told not to catch the ray.
+            var hit = new GameObject($"Hit_{i}", typeof(RectTransform), typeof(Image), typeof(Button));
+            hit.transform.SetParent(root, false);
+            hit.GetComponent<Image>().color = Color.clear;
+            Place((RectTransform)hit.transform, new Vector2(0f, 1f), new Vector2(20f, y + 2f),
+                  new Vector2(600f, 22f), TextAlignmentOptions.TopLeft);
+            var hitButton = hit.GetComponent<Button>();
+            hitButton.transition = Selectable.Transition.None;
+            hitButton.navigation = new Navigation { mode = Navigation.Mode.None };
+            int index = i;
+            hitButton.onClick.AddListener(() => TapRow(index));
+
             row.cursor = IronOvalUI.Cursor(root, $"Cursor_{i}");
             Place((RectTransform)row.cursor.transform, new Vector2(0f, 1f), new Vector2(26f, y - 4f),
                   new Vector2(10f, 12f), TextAlignmentOptions.Left);
@@ -378,12 +442,15 @@ public class OptionsUI : MonoBehaviour
                                              theme.textDisabled);
             Place((RectTransform)row.labelText.transform, new Vector2(0f, 1f), new Vector2(44f, y),
                   new Vector2(220f, 20f), TextAlignmentOptions.TopLeft);
+            row.cursor.raycastTarget = false;
+            row.labelText.raycastTarget = false;
 
             if (row.kind == RowKind.Back) continue;
 
             row.valueText = IronOvalUI.Label(root, $"Value_{i}", "", IronOvalUI.Role.Body, theme.textDim);
             Place((RectTransform)row.valueText.transform, new Vector2(0f, 1f), new Vector2(270f, y),
                   new Vector2(346f, 20f), TextAlignmentOptions.TopLeft);
+            row.valueText.raycastTarget = false;
         }
 
         _preview = IronOvalUI.Label(root, "Preview", "", IronOvalUI.Role.Body, theme.gold);

@@ -63,6 +63,9 @@ namespace Draftmaster.Controls
         public readonly TouchRect brake, throttle;          // drawn
         public readonly TouchRect brakeHit, throttleHit;    // pressed: the drawn pedal plus slop, split at the gap
         public readonly TouchRect pause;
+        // Either side of pause, same size: the pit limiter (only while it can be toggled) and the broadcast
+        // view. A keyboard has L and V for them; a phone has these.
+        public readonly TouchRect limiter, broadcast;
 
         // The size of one design pixel on a screen this big: whole numbers, so the controls land on a clean
         // pixel grid. Taken from the short side so a portrait screen isn't given pedals wider than itself.
@@ -99,6 +102,9 @@ namespace Draftmaster.Controls
 
             float p = PauseSize * u;
             pause = new TouchRect(safe.centerX - p * 0.5f, safe.y + 6f * u, p, p);
+            float side = p * 2f, sideGap = 8f * u;
+            limiter = new TouchRect(pause.x - sideGap - side, pause.y, side, p);
+            broadcast = new TouchRect(pause.xMax + sideGap, pause.y, side, p);
 
             // Steering has the left half, stopping short of the brake on a narrow screen, and leaves the top of
             // the screen alone so the pause button and the HUD up there are never mistaken for a steer.
@@ -123,7 +129,7 @@ namespace Draftmaster.Controls
     //     brake to the throttle works, and a steering thumb that strays over the pedals presses nothing.
     public sealed class TouchDriveState
     {
-        enum Role { Steer, Pedal, Pause, Ignored }
+        enum Role { Steer, Pedal, Pause, Limiter, Broadcast, Ignored }
 
         readonly Dictionary<int, Role> _roles = new Dictionary<int, Role>();
         readonly HashSet<int> _present = new HashSet<int>();
@@ -135,6 +141,17 @@ namespace Draftmaster.Controls
         public float Throttle { get; private set; }     // 0 or 1
         public float Brake { get; private set; }        // 0 or 1
         public bool PauseTapped { get; private set; }   // a finger came down on the pause button this update
+        public bool LimiterTapped { get; private set; }
+        public bool BroadcastTapped { get; private set; }
+
+        // Whether those two buttons are on screen. A button that is not drawn takes no finger: one landing
+        // where it would be is a pedal thumb, as it always was.
+        public bool LimiterShown { get; set; }
+        public bool BroadcastShown { get; set; }
+
+        // Broadcast view: the AI has the car, so the wheel and pedals are put away and only the buttons at the
+        // top stand. Fingers anywhere else do nothing.
+        public bool ButtonsOnly { get; set; }
 
         // For drawing: whether a thumb is on the wheel, where its centre is, and where it came down.
         public bool Steering => _steering;
@@ -143,7 +160,7 @@ namespace Draftmaster.Controls
 
         public void Update(IReadOnlyList<TouchPoint> touches, in TouchLayout layout)
         {
-            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false;
+            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; BroadcastTapped = false;
 
             // Let go of the fingers that have lifted before placing the ones that have landed: a thumb taken
             // off the wheel and put straight back down inside one frame is a new steering thumb, not a second
@@ -177,6 +194,8 @@ namespace Draftmaster.Controls
                         SteerCentreY = t.y;
                     }
                     else if (role == Role.Pause) PauseTapped = true;
+                    else if (role == Role.Limiter) LimiterTapped = true;
+                    else if (role == Role.Broadcast) BroadcastTapped = true;
                 }
 
                 switch (role)
@@ -206,12 +225,15 @@ namespace Draftmaster.Controls
             _roles.Clear();
             _steering = false;
             _returning = true;
-            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false;
+            Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; BroadcastTapped = false;
         }
 
         Role Classify(TouchPoint t, in TouchLayout layout, float slop)
         {
             if (layout.pause.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Pause;
+            if (LimiterShown && layout.limiter.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Limiter;
+            if (BroadcastShown && layout.broadcast.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Broadcast;
+            if (ButtonsOnly) return Role.Ignored;
             if (layout.steerZone.Contains(t.x, t.y)) return _steering ? Role.Ignored : Role.Steer;
             return Role.Pedal;
         }
