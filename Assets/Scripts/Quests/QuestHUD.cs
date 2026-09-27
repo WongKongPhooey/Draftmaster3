@@ -103,6 +103,7 @@ public class QuestHUD : MonoBehaviour
     void OnGUI()
     {
         if (!_gameplayScene || _rows.Count == 0) return;
+        if (PixelGUI.Handheld) { DrawHandheld(); return; }
 
         // Iron Oval card per tracked quest: gold Silkscreen title over the VT323 progress line, and a
         // gain-green line once the quest is ready to hand in — the only state the player has to act on.
@@ -125,6 +126,68 @@ public class QuestHUD : MonoBehaviour
             style.normal.textColor = row.ready ? PixelGUI.Confirm : PixelGUI.Text;
             GUI.Label(new Rect(c.x, c.y + PixelGUI.Px(10f), c.width, PixelGUI.Px(12f)), row.progress, style);
             style.normal.textColor = prev;
+
+            y += h + PixelGUI.Px(4f);
+        }
+    }
+
+    GUIStyle _handheldTitle, _handheldProgress;
+    int _handheldStylesAt;
+
+    // The same cards on a phone, set in the objective strip's two sizes (Draftmaster.Controls.HandheldType):
+    // the title in the display face at two cells — the strip's title — and the progress in the data face at
+    // one, its detail line. The desktop card's title is the kit's smallest label, which on a handset is a
+    // millimetre of capitals, so the tracker read as the one tiny thing on the screen.
+    //
+    // Laid out off the measured text rather than fixed rows, since the type no longer fits the desktop card:
+    // a card is as tall as its lines and as wide as its longest, within a share of the screen, and a long
+    // title or progress line wraps inside that rather than running out of the plate.
+    void DrawHandheld()
+    {
+        if (_handheldTitle == null || _handheldStylesAt != PixelGUI.Scale)
+        {
+            _handheldStylesAt = PixelGUI.Scale;
+            _handheldTitle = new GUIStyle(PixelGUI.Heading)
+            {
+                alignment = TextAnchor.UpperLeft,
+                wordWrap = true,
+                clipping = TextClipping.Overflow,
+            };
+            _handheldProgress = new GUIStyle(PixelGUI.Data)
+            {
+                alignment = TextAnchor.UpperLeft,
+                wordWrap = true,
+                clipping = TextClipping.Overflow,
+            };
+        }
+
+        float inset = PixelGUI.Px(8f);   // what PanelContent(box, 4f) takes off each side
+        float gap = PixelGUI.Px(2f);
+        float minW = PixelGUI.Px(150f);
+        float maxW = Mathf.Max(minW, Mathf.Floor(Screen.width * 0.4f));
+        float x0 = Screen.width - PixelGUI.Px(8f);
+        float y = PixelGUI.Px(60f);   // below the RESULTS/position widgets
+
+        for (int i = 0; i < _rows.Count; i++)
+        {
+            var row = _rows[i];
+            var title = new GUIContent(row.title);
+            var progress = new GUIContent(row.progress);
+
+            float textW = Mathf.Max(_handheldTitle.CalcSize(title).x, _handheldProgress.CalcSize(progress).x);
+            float w = PixelGUI.SnapUp(Mathf.Clamp(textW + inset * 2f, minW, maxW));
+            float colW = w - inset * 2f;
+            float titleH = Mathf.Ceil(_handheldTitle.CalcHeight(title, colW));
+            float progressH = Mathf.Ceil(_handheldProgress.CalcHeight(progress, colW));
+            float h = PixelGUI.SnapUp(titleH + gap + progressH + inset * 2f);
+
+            var box = new Rect(x0 - w, y, w, h);
+            PixelGUI.Panel(box, focused: row.ready);
+            var c = PixelGUI.PanelContent(box, 4f);
+
+            GUI.Label(new Rect(c.x, c.y, c.width, titleH), title, _handheldTitle);
+            _handheldProgress.normal.textColor = row.ready ? PixelGUI.Confirm : PixelGUI.Text;
+            GUI.Label(new Rect(c.x, c.y + titleH + gap, c.width, progressH), progress, _handheldProgress);
 
             y += h + PixelGUI.Px(4f);
         }

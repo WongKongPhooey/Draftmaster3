@@ -41,22 +41,35 @@ public class SpeechBubble : MonoBehaviour
     public float textSize = 0.22f;
 
     [Header("Phones and tablets")]
-    [Tooltip("Dialogue text size on a mobile build, as a multiple of textSize. A phone is held at arm's " +
-             "length on a screen a fraction the size of a monitor, so the size that reads on a desk is " +
-             "unreadable in a hand. PC builds are left at 1x by taking this branch at runtime.")]
-    public float mobileTextFactor = 2f;
-    [Tooltip("Characters per line on a mobile build. The box is sized to the text, so doubling the face " +
-             "without shortening the line doubles the box's width too — and a box wider than the view has " +
-             "nowhere to be put (KeepOnScreen can only slide it, not shrink it). Fewer characters per line " +
-             "spends the extra size on height instead, where there is room.")]
-    public int mobileWrapChars = 22;
+    [Tooltip("Characters per line on a mobile build. On a phone the text is sized to the screen rather " +
+             "than the world (see ScreenTextSize), so this is a fixed share of the screen's width whatever " +
+             "the camera's zoom. The box is sized to the text, and a box wider than the view has nowhere to " +
+             "be put (KeepOnScreen can only slide it, not shrink it).")]
+    public int mobileWrapChars = 28;
 
     // Which numbers this build uses. Read at runtime rather than behind #if UNITY_ANDROID, so the editor's
     // Device Simulator shows the real mobile sizing — the same call the on-screen controls decide by.
-    static bool Mobile => UnityEngine.Device.Application.isMobilePlatform;
+    static bool Mobile => PixelGUI.Handheld;
 
-    float TextSize => textSize * (Mobile ? mobileTextFactor : 1f);
+    // On a desktop, a fixed world size. On a phone, whatever size puts a line of dialogue on screen at the
+    // same height as the kit's body line — the objective strip's detail line, the button prompts, a quest's
+    // progress — so a conversation reads at the size of everything around it. A world size could not do that:
+    // it doubled on phones, and then grew again every time the camera zoomed in indoors.
+    float TextSize => Mobile ? ScreenTextSize() : textSize;
     int WrapChars => Mobile ? mobileWrapChars : wrapChars;
+
+    // The world height of one line of the kit's data face, seen through the camera the bubble is drawn for.
+    // Falls back to twice the desktop size (the old phone sizing) when there is no orthographic camera to
+    // measure through.
+    float ScreenTextSize()
+    {
+        float fallback = textSize * 2f;
+        var cam = Camera.main;
+        if (cam == null || !cam.orthographic) return fallback;
+        float metres = Draftmaster.Controls.HandheldType.WorldLineMetres(
+            PixelGUI.Data.lineHeight, Screen.height, cam.orthographicSize);
+        return metres > 0f ? metres : fallback;
+    }
 
     Transform _actor;
     TextMeshPro _label, _nameLabel, _nameShadow;
@@ -71,6 +84,7 @@ public class SpeechBubble : MonoBehaviour
     string _full = "";
     Vector2 _boxSize = new Vector2(0.55f, 0.4f);
     float _labelScale = 1f, _nameScale = 1f;        // TMP local units -> world metres, measured in Build
+    float _fittedSize;                              // the TextSize the labels were last fitted to
 
     public bool IsRevealing { get; private set; }
 
@@ -121,7 +135,8 @@ public class SpeechBubble : MonoBehaviour
         _labelRenderer = labelGo.GetComponent<MeshRenderer>();
         _labelRenderer.sortingLayerName = "Vehicles";
         _labelRenderer.sortingOrder = 61;
-        _labelScale = FitToMetres(_label, TextSize);
+        float size = TextSize;
+        _labelScale = FitToMetres(_label, size);
 
         // Who's talking, in a smaller face sat above the box — so a paddock full of named drivers
         // reads at a glance without a UI panel. Positioned in Speak, once the box is sized.
@@ -140,8 +155,9 @@ public class SpeechBubble : MonoBehaviour
 
         _nameShadow = BuildNameLabel(theme, "NameShadow", theme != null ? theme.ink : Color.black, 61);
         _nameLabel = BuildNameLabel(theme, "Name", theme != null ? theme.gold : nameColor, 62);
-        _nameScale = FitToMetres(_nameLabel, TextSize * nameSizeFactor);
-        FitToMetres(_nameShadow, TextSize * nameSizeFactor);
+        _nameScale = FitToMetres(_nameLabel, size * nameSizeFactor);
+        FitToMetres(_nameShadow, size * nameSizeFactor);
+        _fittedSize = size;
 
         // JRPG furniture: a marker in the box's bottom-right that appears once the line has finished
         // typing, so the player can tell "still talking" from "waiting on you".
@@ -262,6 +278,17 @@ public class SpeechBubble : MonoBehaviour
         return scale;
     }
 
+    // Re-measure all three labels for a new line height. Cheap enough per line, and skipped when nothing
+    // has changed.
+    void Refit(float size)
+    {
+        if (Mathf.Abs(size - _fittedSize) < 0.0001f) return;
+        _labelScale = FitToMetres(_label, size);
+        if (_nameLabel != null) _nameScale = FitToMetres(_nameLabel, size * nameSizeFactor);
+        if (_nameShadow != null) FitToMetres(_nameShadow, size * nameSizeFactor);
+        _fittedSize = size;
+    }
+
     // speaker names the actor talking; empty hides the name line entirely.
     //
     // Everything asks SpeechDirector first: one bubble is up at a time, and a line that cannot have the
@@ -281,6 +308,9 @@ public class SpeechBubble : MonoBehaviour
     {
         _holdsScreen = true;
         gameObject.SetActive(true);
+        // On a phone the size follows the camera, which may have zoomed since the last line (walking
+        // indoors pulls it in), so the labels are refitted per line rather than once in Build.
+        if (Mobile) Refit(TextSize);
         _full = WordWrap(text, WrapChars);
         SetSpeaker(speaker);
 
@@ -305,7 +335,7 @@ public class SpeechBubble : MonoBehaviour
             // The cursor sprite is authored in UI pixels, so scale it from its own native world size
             // rather than assuming one.
             float caretNative = _caret.sprite.rect.height / _caret.sprite.pixelsPerUnit;
-            float caretScale = caretNative > 0.0001f ? (TextSize * 0.8f) / caretNative : 1f;
+            float caretScale = caretNative > 0.0001f ? (_fittedSize * 0.8f) / caretNative : 1f;
             _caret.transform.localScale = new Vector3(caretScale, caretScale, 1f);
         }
 
@@ -339,7 +369,7 @@ public class SpeechBubble : MonoBehaviour
             {
                 _nameShadow.rectTransform.sizeDelta = nameLocal;
                 _nameShadow.ForceMeshUpdate();
-                float d = TextSize * nameSizeFactor * nameShadowOffset;
+                float d = _fittedSize * nameSizeFactor * nameShadowOffset;
                 _nameShadow.transform.localPosition = nameAt + new Vector3(d, -d, 0.005f);
             }
         }

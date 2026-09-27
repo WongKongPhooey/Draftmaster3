@@ -71,6 +71,12 @@ public static class PixelGUI
         }
     }
 
+    // Played on a phone or tablet (or the editor's Device Simulator), where every surface is held to the
+    // same two sizes of type — see Draftmaster.Controls.HandheldType. Read at runtime rather than behind
+    // #if UNITY_ANDROID so the simulator shows the real sizing, and deliberately blind to the input device:
+    // a pad plugged into a phone is still a phone-sized screen.
+    public static bool Handheld => UnityEngine.Device.Application.isMobilePlatform;
+
     // Scales a pixel measurement authored at 1x.
     public static float Px(float baseline) => baseline * Scale;
 
