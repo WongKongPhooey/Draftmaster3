@@ -171,6 +171,14 @@ public class PitLaneStart : MonoBehaviour
     public float IndoorZoom => indoorOrthoSize;
     public void SetZoomTarget(float orthoSize) => _orthoTarget = orthoSize;
 
+    // Straight to a zoom, no lerp — for cuts made at black. The lerp runs on scaled time, so a result card
+    // that pauses the game (WeekendModal) would otherwise hold the old zoom on screen until it is dismissed.
+    public void SnapZoom(float orthoSize)
+    {
+        _orthoTarget = orthoSize;
+        if (_cam != null && _cam.orthographic) _cam.orthographicSize = orthoSize;
+    }
+
     // Whether the player was in a room last frame, so walking through a doorway can be spotted as the event
     // it is rather than re-asserted every frame. See StepIndoorZoom.
     bool _indoors;

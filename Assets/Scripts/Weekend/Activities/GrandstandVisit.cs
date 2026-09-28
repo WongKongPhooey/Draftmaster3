@@ -393,6 +393,11 @@ public class GrandstandVisit : MonoBehaviour
                 player.position = to;
             }
 
+            // Back to walking distance while the screen is still black. Completing the booking can put up a
+            // result card that pauses the game, and the eased zoom would sit at the stand's wide shot behind it.
+            var zoomOwner = FindFirstObjectByType<PitLaneStart>();
+            if (zoomOwner != null) zoomOwner.SnapZoom(zoomOwner.OnFootZoom);
+
             if (this == null) return;                      // torn down mid-wipe (a scene change)
             Complete();
             Close();

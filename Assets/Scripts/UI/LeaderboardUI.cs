@@ -94,7 +94,8 @@ public class LeaderboardUI : MonoBehaviour
         float x = PixelGUI.Px(origin.x), y = PixelGUI.Px(origin.y);
 
         int playerRow = PlayerRowIndex();
-        bool playerOutsideWindow = !expanded && playerRow >= show;
+        // No row of their own when the player isn't in a car yet (still walking to it) — nothing to pin.
+        bool playerOutsideWindow = !expanded && playerRow >= 0 && playerRow >= show;
         float h = (show + 1) * row + pad * 2f + (playerOutsideWindow ? row + pad : 0f);
         PixelGUI.Panel(new Rect(x, y, w + pad * 2f, h));
         PixelGUI.KeyTab(new Rect(x, y, w + pad * 2f, h),
@@ -184,7 +185,7 @@ public class LeaderboardUI : MonoBehaviour
     int PlayerRowIndex()
     {
         for (int i = 0; i < _rows.Count; i++) if (_rows[i].isPlayer) return i;
-        return int.MaxValue;
+        return -1;
     }
 
     void DrawRow(float x, float y, float w, float h, Row e, bool broadcast, Transform featured)
