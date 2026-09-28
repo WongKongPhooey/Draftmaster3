@@ -300,6 +300,7 @@ public class OnFootController : MonoBehaviour
             {
                 tapped = NpcUnderTap(tapPoint);
                 interact = tapped != null;
+                if (tapped == null) { _unclaimedTapAt = tapPoint; _unclaimedTapFrame = Time.frameCount; }
             }
         }
 
@@ -456,6 +457,20 @@ public class OnFootController : MonoBehaviour
     // close enough in the world to talk to anyway. The screen test is generous because a fingertip is, and
     // the range test is the same one the E key obeys — tapping somebody across the paddock is a request to
     // walk over, which is a bigger thing than this and not what a tap should quietly do.
+    // A tap that landed on nobody, passed on for anything else in the world that answers a finger — the
+    // player's car, tapped to get in. Screen space, y up. Good for this frame and the next (Update order
+    // between the body and whoever asks is not fixed), and taking it spends it.
+    static Vector2 _unclaimedTapAt;
+    static int _unclaimedTapFrame = -10;
+
+    public static bool TakeUnclaimedTap(out Vector2 screenPoint)
+    {
+        screenPoint = _unclaimedTapAt;
+        if (Time.frameCount - _unclaimedTapFrame > 1) return false;
+        _unclaimedTapFrame = -10;
+        return true;
+    }
+
     NPCInteractable NpcUnderTap(Vector2 screenPoint)
     {
         var cam = Camera.main;

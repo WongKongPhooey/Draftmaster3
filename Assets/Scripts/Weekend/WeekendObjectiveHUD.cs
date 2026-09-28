@@ -198,7 +198,10 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
             _detailText = here
                 ? (intoTheRV ? "You're here — walk in and they'll roll the car out"
-                             : "You're here — press " + InputGlyphs.Label("E", PadBindings.Interact) + " to " + Verb(activity))
+                             : InputGlyphs.UsingTouch
+                                 // A phone has no E: the thing itself is tapped (the car, whoever is waiting).
+                                 ? "You're here — tap " + WeekendAppointment.TargetLabel() + " to " + Verb(activity)
+                                 : "You're here — press " + InputGlyphs.Label("E", PadBindings.Interact) + " to " + Verb(activity))
                 : $"{Capitalise(intoTheRV ? WeekendVenues.Directions(WeekendVenue.Motorhome) : WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
             _footerText = here
                 ? activity.Clock + "  ·  " + WeekendAppointment.TargetLabel()

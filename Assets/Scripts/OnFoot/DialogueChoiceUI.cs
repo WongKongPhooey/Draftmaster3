@@ -253,6 +253,7 @@ public class DialogueChoiceUI : MonoBehaviour
         // Worded for the device in the player's hands: E on the keyboard, the confirm button on a pad.
         string keys = InputGlyphs.UsingGamepad
             ? $"Left stick / D-pad to choose    {InputGlyphs.Confirm} to answer"
+            : InputGlyphs.UsingTouch ? "Tap an answer"
             : "W / S to choose    E to answer";
         GUI.Label(new Rect(x + pad, cy + PixelGUI.Px(2f), w - pad * 2f, footerH), keys, PixelGUI.Footer);
     }

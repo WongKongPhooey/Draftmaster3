@@ -760,7 +760,8 @@ public class PitLaneStart : MonoBehaviour
             && Vector2.Distance(_player.transform.position, car.transform.position) < enterHintRange)
         {
             ControlHints.Show("entercar", "E", InputGlyphs.Pad(PadBindings.Interact), "Get in the car",
-                              onPress: PressInteract, icon: PixelGUI.ActionIcon.Car);
+                              onPress: PressInteract, icon: PixelGUI.ActionIcon.Car,
+                              touchText: "Tap the car to get in");
             _hintedEnter = true;
         }
     }
@@ -1130,6 +1131,10 @@ public class PitLaneStart : MonoBehaviour
             return true;
         }
 
+        // On a phone the car is tapped, the way an NPC is: a finger on the bodywork is E. Only asked while the
+        // player is in range, so a tap on the car from across the paddock does nothing, as E would.
+        if (OnFootController.TakeUnclaimedTap(out Vector2 tap) && TapLandsOnCar(tap)) return true;
+
         bool held = false;
         var gp = Gamepad.current;
         if (gp != null) held |= PadInput.Control(gp, PadBindings.Interact).isPressed;
@@ -1139,6 +1144,19 @@ public class PitLaneStart : MonoBehaviour
         bool pressed = held && !_interactHeldPrev;
         _interactHeldPrev = held;
         return pressed;
+    }
+
+    // A tap (screen space, y up) on the car's bodywork, with a little slack round it for a thumb.
+    bool TapLandsOnCar(Vector2 screenPoint)
+    {
+        var cam = Camera.main;
+        if (cam == null || car == null) return false;
+
+        Vector3 w = cam.ScreenToWorldPoint(new Vector3(screenPoint.x, screenPoint.y, -cam.transform.position.z));
+        Vector2 p = new Vector2(w.x, w.y);
+        foreach (var c in car.GetComponentsInChildren<Collider2D>())
+            if (c != null && c.enabled && c.OverlapPoint(p)) return true;
+        return Vector2.Distance(p, car.transform.position) <= 3f;
     }
 
     void ShowPrompt(bool show)

@@ -492,7 +492,7 @@ public class WeekendDirector : MonoBehaviour
     {
         string k = WeekendScripts.PhoneKeyName();
 
-        // A note is kept for good, and the player may pick either device up later, so it names both.
+        // A note is kept for good, and the player may pick any device up later, so it names all three.
         string pad = InputGlyphs.PadName(PadBindings.Phone);
         string padOpen = InputGlyphs.PadName(PadBindings.Confirm);
         string padBack = InputGlyphs.PadName(PadBindings.Back);
@@ -503,6 +503,8 @@ public class WeekendDirector : MonoBehaviour
             "Crew chief",
             $"{k} opens it while you're on foot - arrows to move, E to open a tile, Esc to back out. " +
             $"On a pad: {pad} opens it, the d-pad moves, {padOpen} opens a tile, {padBack} backs out. " +
+            "On a touch screen: the phone button in the bottom-left corner opens it, tap a tile to open it, " +
+            "the arrow by the title backs out. " +
             "SCHEDULE is what's on today. TASKS is everything outstanding, and the number on it counts the " +
             "jobs that are finished and want handing back to whoever asked. NOTES is this - every favour " +
             "you agree to in the paddock, with the name of who wanted it.");

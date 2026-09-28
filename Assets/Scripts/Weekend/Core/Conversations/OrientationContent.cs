@@ -25,13 +25,21 @@ namespace Draftmaster.Weekend
             public string open = "E";
             public string back = "Esc";
             public string sheet = "F10";
+
+            // How the lines ask for the phone. Null = "Press <key>"; a touch screen has no key to press.
+            public string press;
         }
 
         public static WeekendConversation Build(WeekendActivity a, string phoneKey = DefaultPhoneKey,
                                                 PhoneWords words = null)
         {
-            string key = string.IsNullOrEmpty(phoneKey) ? DefaultPhoneKey : phoneKey.ToUpperInvariant();
+            // A key or button name reads in capitals; a phrase ("the phone button") is left as written.
+            string key = string.IsNullOrEmpty(phoneKey) ? DefaultPhoneKey
+                       : phoneKey.Contains(" ") ? phoneKey : phoneKey.ToUpperInvariant();
             var w = words ?? new PhoneWords();
+            string press = string.IsNullOrEmpty(w.press) ? $"Press {key}" : w.press;
+            // The key opens a sentence in places; a phone's "the phone button" needs its capital there.
+            string Key = key.Length > 0 ? char.ToUpperInvariant(key[0]) + key.Substring(1) : key;
 
             var c = new WeekendConversation
             {
@@ -53,15 +61,15 @@ namespace Draftmaster.Weekend
                 speaker = "CREW CHIEF",
                 preamble = new[]
                 {
-                    $"Phone's in your pocket. {key} brings it up, anywhere you're on foot.",
+                    $"Phone's in your pocket. {Key} brings it up, anywhere you're on foot.",
                     $"{w.move} to move round the tiles, {w.open} to open one, {w.back} to back out.",
                 },
                 line = "Go on then. What have you got?",
-                question = $"Press {key} - what is on it?",
+                question = $"{press} - what is on it?",
                 choices =
                 {
                     WeekendConversation.Say(
-                        $"Six tiles. {key} to open it, {w.back} to put it away.",
+                        $"Six tiles. {Key} to open it, {w.back} to put it away.",
                         "That's the lot. You'd be amazed how many rookies never find it.",
                         morale: 5f, setup: 0.02f, score: 0.9f),
                     WeekendConversation.Say(
@@ -70,7 +78,7 @@ namespace Draftmaster.Weekend
                         morale: 3f, setup: 0.03f, score: 0.8f),
                     WeekendConversation.Say(
                         "I'll have a look at it later.",
-                        $"You'll have a look at it Sunday morning with a sponsor's rep stood waiting. Press {key}.",
+                        $"You'll have a look at it Sunday morning with a sponsor's rep stood waiting. {press}.",
                         morale: -4f, score: 0.3f),
                 },
             });
@@ -132,7 +140,7 @@ namespace Draftmaster.Weekend
             });
 
             c.headline = o => o.score >= 0.7f
-                ? $"{key} opens the phone. TASKS is what is outstanding, NOTES is who asked for it."
+                ? $"{Key} opens the phone. TASKS is what is outstanding, NOTES is who asked for it."
                 : $"You have at least been shown the phone. {key} opens it - TASKS and NOTES are the two that matter.";
             return c;
         }

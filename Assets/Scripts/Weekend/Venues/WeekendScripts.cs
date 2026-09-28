@@ -59,11 +59,22 @@ public static class WeekendScripts
     // What the briefing calls the phone button: the key, or the pad's button while a pad is in use. Kept
     // apart from PhoneKeyName, which is the keyboard half of a two-device control hint.
     static string PhoneButtonName() =>
-        InputGlyphs.Label(PhoneKeyName(), Draftmaster.Controls.PadBindings.Phone);
+        InputGlyphs.UsingTouch ? "the phone button"
+                               : InputGlyphs.Label(PhoneKeyName(), Draftmaster.Controls.PadBindings.Phone);
 
     // The rest of the phone's controls, worded for the device in the player's hands.
     static OrientationContent.PhoneWords PhoneWords()
     {
+        // A phone: the button in the bottom-left corner, taps on the tiles, the arrow by the title to go back.
+        if (InputGlyphs.UsingTouch)
+            return new OrientationContent.PhoneWords
+            {
+                move = "Drag",
+                open = "a tap",
+                back = "the arrow",
+                sheet = "the full weekend sheet",
+                press = "Tap the phone button, bottom left",
+            };
         if (!InputGlyphs.UsingGamepad) return new OrientationContent.PhoneWords();
         return new OrientationContent.PhoneWords
         {

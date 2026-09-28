@@ -187,6 +187,25 @@ public class WeekendOrientationTests
             Assert.IsFalse(Regex.IsMatch(said, key), $"A pad player is still told about '{key}'.");
     }
 
+    // A phone has no keys at all: the lines ask for a tap on the phone button, and never say "press".
+    [Test]
+    public void OnATouchScreen_ItAsksForTaps_AndNamesNoKeys()
+    {
+        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var words = new OrientationContent.PhoneWords
+        {
+            move = "Drag", open = "a tap", back = "the arrow", sheet = "the full weekend sheet",
+            press = "Tap the phone button, bottom left",
+        };
+        string said = Spoken(OrientationContent.Build(a, "the phone button", words));
+
+        StringAssert.Contains("Tap the phone button, bottom left", said);
+        StringAssert.Contains("The phone button brings it up", said, "A sentence opening on the button lost its capital.");
+        StringAssert.Contains("a tap to open one", said);
+        foreach (var key in new[] { @"\bPress\b", @"\bEsc\b", @"\bF10\b", @"\bArrows\b", @"\bE to\b", @"THE PHONE BUTTON" })
+            Assert.IsFalse(Regex.IsMatch(said, key), $"A touch player is still told '{key}'.");
+    }
+
     // The result card is the last thing said about it, and it is the line a player is most likely to
     // actually read, so it carries the summary too.
     [Test]
