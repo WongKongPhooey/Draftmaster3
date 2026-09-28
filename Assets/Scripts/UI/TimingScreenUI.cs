@@ -49,6 +49,12 @@ public class TimingScreenUI : MonoBehaviour
     void OnGUI()
     {
         if (!visible) return;
+
+        // Only the two places that open it can close it again — the grandstand's LIVE TIMING button and the
+        // crew chief's Timing button. Left open as either of them ends, it was stuck on screen with nothing
+        // to toggle it, and a phone has no F11.
+        if (!GrandstandVisit.Watching && !CrewChiefController.IsCrewChief) { visible = false; return; }
+
         var lt = LapTimingManager.Instance;
         if (lt == null) return;
 
@@ -98,6 +104,11 @@ public class TimingScreenUI : MonoBehaviour
         float cx = c0.x, cy = c0.y, cw = c0.width;
 
         GUI.Label(new Rect(cx, cy, cw, headH), Title, head);
+        // A close on the title line, so a touch player can put it away without finding the button that opened it.
+        float closeW = Width(head, "X");
+        var closeRect = new Rect(cx + cw - closeW, cy, closeW, headH);
+        Draw(closeRect, "X", head, null, TextAnchor.MiddleRight);
+        if (TouchTaps.Button(closeRect, GUIContent.none, GUIStyle.none)) { Hide(); return; }
         cy += headH;
 
         // The session, and the clock opposite it — a compressed hour in a grandstand needs somewhere to say
