@@ -58,6 +58,7 @@ public class WeekendVenueSites : MonoBehaviour
     const int GuestCount = 20;
     const float GuestRing = 5.4f;         // from the middle: off the chequers, inside the rail
     const float GuestGapHalfWidth = 2.6f; // the mouth they leave open at the front, so you can walk in
+    const float GuestFacingJitter = 18f;  // degrees either side of dead-centre, so they are not a drilled squad
     const float BarrierLength = 2.4f;     // one barrier section
     const float BarrierThickness = 0.3f;
     const float BoardWidth = 4.5f;
@@ -779,27 +780,31 @@ public class WeekendVenueSites : MonoBehaviour
         var guests = new GameObject("SponsorGuests");
         guests.transform.SetParent(circle, false);
 
-        // Fixed seed: the same twenty people, in the same places, every time the scene is built.
+        // Fixed seed: the same twenty people, in the same places, every time the scene is built. The turn of
+        // their heads comes off its own seed so it cannot shift where anybody stands.
         var rng = new System.Random(4821);
+        var lookRng = new System.Random(4822);
 
         for (int i = 0; i < GuestCount; i++)
         {
             Vector2 spot = GuestSpot(i, rng);
+            float jitter = ((float)lookRng.NextDouble() * 2f - 1f) * GuestFacingJitter;
             var body = PaddockPerson.Spawn(guests.transform, Vector3.zero, $"Guest_{i}", 8400 + i,
                                            heightM: PaddockPerson.HeightM);
             body.transform.localPosition = new Vector3(spot.x, spot.y, PaddockProps.PropZ - 0.1f);
-            body.transform.localRotation = GuestFacing(spot);
+            body.transform.localRotation = GuestFacing(spot, jitter);
         }
     }
 
     // Turned to look in at the middle of the chequers, where the driver being photographed stands. Left
     // unrotated they all faced down the screen, which read as a crowd waiting for something else.
-    // The paper-doll art faces -Y, hence the +90 (same offset PaddockWalker turns walkers by).
-    public static Quaternion GuestFacing(Vector2 spot)
+    // The paper-doll art faces -Y, hence the +90 (same offset PaddockWalker turns walkers by). jitterDeg
+    // turns them a little off dead-centre, so twenty heads are not all locked on the same point.
+    public static Quaternion GuestFacing(Vector2 spot, float jitterDeg)
     {
         Vector2 toCentre = -spot;
         if (toCentre.sqrMagnitude < 1e-6f) return Quaternion.identity;
-        float ang = Mathf.Atan2(toCentre.y, toCentre.x) * Mathf.Rad2Deg + 90f;
+        float ang = Mathf.Atan2(toCentre.y, toCentre.x) * Mathf.Rad2Deg + 90f + jitterDeg;
         return Quaternion.Euler(0f, 0f, ang);
     }
 
