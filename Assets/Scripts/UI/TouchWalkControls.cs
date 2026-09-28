@@ -67,8 +67,8 @@ public class TouchWalkControls : MonoBehaviour
 
     // Double-tap the stick to flip walk/run: thumb down-up-down, and the second landing is already running.
     // The thumb on the glass is the "push" — a floating stick has no tilt until the thumb moves, and a tap
-    // is exactly a thumb that came down and went away again. A stick-zone touch is always the stick's, never
-    // a talk-tap, so the two never argue over a finger. Kept across the stick being put away (a
+    // is exactly a thumb that came down and went away again. A stick-zone tap is also reported as a talk-tap
+    // (see TouchWalkState), but the paddock only acts on one that lands on somebody. Kept across the stick being put away (a
     // conversation, a menu): the gait is the player's choice, not the screen's.
     static readonly StickDoubleTap _gait = new StickDoubleTap();
     public static bool Running => _gait.Running;

@@ -68,7 +68,11 @@ namespace Draftmaster.Controls
     // Each finger's job is decided when it lands and kept until it lifts:
     //   - in the stick zone: the stick. One at a time, and the centre is wherever it came down, so there is
     //     nothing to aim at. Push past full travel and the centre is dragged along, so pulling back the other
-    //     way turns around at once rather than crossing a dead patch.
+    //     way turns around at once rather than crossing a dead patch. A stick thumb that lifts as a tap would
+    //     (quick, not wandered) is ALSO a tap: the stick zone is the whole left half, and the player stands at
+    //     screen centre, so everybody just left of them is under it. The paddock only acts on a tap that
+    //     lands on somebody, so a prod at empty ground (or the first half of a run double-tap) still does
+    //     nothing.
     //   - anywhere else: a tap candidate. If it lifts inside TapSeconds without wandering further than
     //     TapSlop, it is a tap at the point it went down, and the game gets one.
     //
@@ -124,7 +128,7 @@ namespace Draftmaster.Controls
             {
                 var f = _fingers[_lifted[i]];
                 if (f.role == Role.Stick) _walking = false;
-                else if (f.role == Role.Tap && !f.wandered && now - f.downAt <= TouchWalkLayout.TapSeconds)
+                if (f.role != Role.Ignored && !f.wandered && now - f.downAt <= TouchWalkLayout.TapSeconds)
                 {
                     Tapped = true;
                     TapX = f.downX;
@@ -181,6 +185,16 @@ namespace Draftmaster.Controls
 
                     KnobX = CentreX + dx;
                     KnobY = CentreY + dy;
+
+                    if (!f.wandered)
+                    {
+                        float wx = t.x - f.downX, wy = t.y - f.downY;
+                        if (Sqrt(wx * wx + wy * wy) > layout.tapSlop)
+                        {
+                            f.wandered = true;
+                            _fingers[t.id] = f;
+                        }
+                    }
 
                     float mag = len / travel;
                     if (mag >= TouchWalkLayout.Deadzone)

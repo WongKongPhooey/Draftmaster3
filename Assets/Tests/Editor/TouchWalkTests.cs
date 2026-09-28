@@ -241,14 +241,44 @@ public class TouchWalkTests
         Assert.IsFalse(dragged.Tapped, "a finger dragged across the screen counted as a tap");
     }
 
+    // The stick zone is the whole left half and the player stands at screen centre, so an NPC just left of
+    // them sits under it. A still, quick finger there has to reach them — the paddock only acts on a tap
+    // that lands on somebody, so the same prod on empty ground stays harmless.
     [Test]
-    public void TakingTheStickIsNotATap()
+    public void AStillQuickFingerOnTheStickZone_IsStillATap()
     {
         var l = Layout();
         var s = new TouchWalkState();
-        s.Update(Fingers(new TouchPoint(1, 200f, 600f)), l, 0f);
+        float x = l.stickZone.xMax - 40f, y = 400f;   // just left of centre: where the nearest NPC stands
+        Assert.IsTrue(l.stickZone.Contains(x, y));
+
+        s.Update(Fingers(new TouchPoint(1, x, y)), l, 0f);
+        Assert.IsTrue(s.Walking, "the finger no longer took the stick");
+        Assert.IsFalse(s.Tapped, "a tap fired while the finger was still down");
+
         s.Update(None(), l, 0.1f);
-        Assert.IsFalse(s.Tapped, "a quick prod at the stick started a conversation");
+        Assert.IsTrue(s.Tapped, "a tap on an NPC just left of centre was eaten by the stick");
+        Assert.AreEqual(x, s.TapX, 0.01f);
+        Assert.AreEqual(y, s.TapY, 0.01f);
+        Assert.IsFalse(s.Walking);
+    }
+
+    [Test]
+    public void WalkingOnTheStickIsNotATap()
+    {
+        var l = Layout();
+
+        var pushed = new TouchWalkState();
+        pushed.Update(Fingers(new TouchPoint(1, 200f, 600f)), l, 0f);
+        pushed.Update(Fingers(new TouchPoint(1, 200f + l.travel, 600f)), l, 0.05f);
+        Assert.Greater(pushed.MoveX, 0f);
+        pushed.Update(None(), l, 0.1f);
+        Assert.IsFalse(pushed.Tapped, "a quick push on the stick started a conversation");
+
+        var held = new TouchWalkState();
+        held.Update(Fingers(new TouchPoint(1, 200f, 600f)), l, 0f);
+        held.Update(None(), l, TouchWalkLayout.TapSeconds + 0.1f);
+        Assert.IsFalse(held.Tapped, "a thumb rested on the stick counted as a tap when it came off");
     }
 
     [Test]
