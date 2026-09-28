@@ -107,6 +107,7 @@ public class PopupGarageRig : MonoBehaviour
 
     bool _assembled;
     Collider2D[] _colliders;
+    Collider2D _carBody;   // the parked car's footprint; stays solid whatever the room is doing
 
     // Shell colliders only block from OUTSIDE: they overlap the interior's floor, so the masked room
     // switches them off while the player is in it and its own walls take over. Same contract as RVExterior.
@@ -119,6 +120,10 @@ public class PopupGarageRig : MonoBehaviour
             // and only the wandering crowd reads it — so there is nothing to switch off for somebody stood
             // in the room, and switching it off would open the garage they are stood in to the crowd.
             if (c == null || c.GetComponent<PaddockNoGo>() != null) continue;
+            // Nor is the parked car. It stands under the canopy, clear of the room's floor, so it never
+            // overlapped anything the room needs open — and switching it off with the walls let the crowd
+            // stroll straight across its roof for as long as the player was sat in the meeting room.
+            if (c == _carBody) continue;
             c.enabled = value;
         }
     }
@@ -225,9 +230,8 @@ public class PopupGarageRig : MonoBehaviour
 
         // The footprint, in the body's own frame: carWidth across the canopy, carLength along it, on the
         // spot the art is drawn. Built with the same helper as the shell walls so it is picked up by the
-        // collider sweep at the end of Assemble() — and so the interior switches it off with the rest of
-        // them while the player is stood in the masked room.
-        Wall("CarBody", new Vector2(CanopyLocalCentre.x, CanopyLocalCentre.y + carAlong),
+        // collider sweep at the end of Assemble(); SetCollidersEnabled leaves it alone.
+        _carBody = Wall("CarBody", new Vector2(CanopyLocalCentre.x, CanopyLocalCentre.y + carAlong),
              new Vector2(Mathf.Max(0.1f, carWidth), Mathf.Max(0.1f, carLength)));
     }
 
@@ -323,12 +327,14 @@ public class PopupGarageRig : MonoBehaviour
         _colliders = GetComponentsInChildren<Collider2D>(true);
     }
 
-    void Wall(string name, Vector2 centre, Vector2 size)
+    BoxCollider2D Wall(string name, Vector2 centre, Vector2 size)
     {
         var go = new GameObject(name);
         go.transform.SetParent(transform, false);
         go.transform.localPosition = new Vector3(centre.x, centre.y, 0f);
-        go.AddComponent<BoxCollider2D>().size = size;
+        var box = go.AddComponent<BoxCollider2D>();
+        box.size = size;
+        return box;
     }
 
     // --- art helpers ------------------------------------------------------------------------------

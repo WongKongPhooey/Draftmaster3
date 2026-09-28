@@ -418,6 +418,67 @@ public class PopupGarageTests
         finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
     }
 
+    // The player is a dynamic body and bumps into the car's collider on their own; the wandering crowd is
+    // kinematic and only goes round what PaddockObstacles reports. So the parked car has to read as solid
+    // ground to that query too, or the crowd walks over the roof the player cannot.
+    [Test]
+    public void TheCrowdGoesRoundTheParkedCar()
+    {
+        const float WalkerRadius = 0.45f;   // PaddockWalker.obstacleRadius
+
+        foreach (int side in new[] { 1, -1 })
+        {
+            var go = new GameObject("Garage");
+            try
+            {
+                ForgetObstacleCache();
+                var rig = Rig(go, side, carAtHome: true);
+                Physics2D.SyncTransforms();
+
+                var car = (Transform)Prop(rig, "ParkedCar");
+                Assert.IsTrue(IsBlocked(car.position, WalkerRadius),
+                              $"canopySide {side}: the crowd reads the parked car as open ground and walks over it.");
+            }
+            finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
+        }
+    }
+
+    // The room switches the shell off while the player is in it, because those walls overlap its floor.
+    // The car does not — it is out under the canopy — so it stays solid, or the crowd strolls across its
+    // roof for as long as the player is sat in the meeting room.
+    [Test]
+    public void TheParkedCarStaysSolidWhileThePlayerIsInTheRoom()
+    {
+        const float WalkerRadius = 0.45f;
+
+        var go = new GameObject("Garage");
+        try
+        {
+            ForgetObstacleCache();
+            var rig = Rig(go, 1, carAtHome: true);
+            Call(rig, "SetCollidersEnabled", false);
+            Physics2D.SyncTransforms();
+
+            var car = (Transform)Prop(rig, "ParkedCar");
+            var carBody = go.transform.Find("CarBody");
+            Assert.IsNotNull(carBody, "the parked car has no footprint collider.");
+            Assert.IsTrue(carBody.GetComponent<BoxCollider2D>().enabled,
+                          "the parked car was switched off with the shell while the player is in the room.");
+            Assert.IsTrue(IsBlocked(car.position, WalkerRadius),
+                          "the crowd can walk over the parked car while the player is in the room.");
+
+            // ...and the shell itself still steps aside for the room, as before.
+            foreach (var box in Solid(go))
+                if (box.transform != carBody)
+                    Assert.IsFalse(box.enabled, $"'{box.name}' is still solid while the player is inside the room.");
+
+            Call(rig, "SetCollidersEnabled", true);
+            foreach (var box in Solid(go))
+                Assert.IsTrue(box.enabled, $"'{box.name}' did not come back when the player left the room.");
+        }
+        finally { Object.DestroyImmediate(go); ForgetObstacleCache(); }
+    }
+
     // The canopies used to carry the team's name as a world-space TextMesh stood over the awning. Read
     // from overhead it never sat on the fabric — it hung in the air above a row of otherwise solid props,
     // and a garage row full of them was a wall of floating text. The colours and the roof number say whose
