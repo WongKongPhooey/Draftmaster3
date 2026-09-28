@@ -51,6 +51,11 @@ namespace Draftmaster.Sim
             return incoming == SpeechPriority.Ambient ? SpeechVerdict.Drop : SpeechVerdict.Queue;
         }
 
+        // Whether a line has to be kept inside the view. A passer-by's one-liner is flavour — if the speaker is
+        // at the edge of the frame, letting the box run off with them is fine. A conversation or a cutscene is
+        // something the player has to read, so that box is slid back on screen whatever it takes.
+        public static bool KeepsOnScreen(SpeechPriority priority) => priority != SpeechPriority.Ambient;
+
         // A queue that never grows without bound. Dialogue that has been waiting a long time is dialogue
         // about a moment that has passed, so the oldest is dropped rather than the newest refused — the
         // last thing said to you is the one that still makes sense.

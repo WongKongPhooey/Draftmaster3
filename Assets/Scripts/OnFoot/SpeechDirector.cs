@@ -94,7 +94,7 @@ public static class SpeechDirector
             _current = next.bubble;
             _currentPriority = next.priority;
             _currentOwner = next.owner;
-            next.bubble.SpeakNow(next.text, next.speaker);
+            next.bubble.SpeakNow(next.text, next.speaker, next.priority);
             return;
         }
     }

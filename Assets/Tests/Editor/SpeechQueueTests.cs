@@ -77,4 +77,13 @@ public class SpeechQueueTests
                         "The newest line should still be in the queue.");
         Assert.IsFalse(waiting.Contains("line 0"), "The oldest line should have been dropped.");
     }
+
+    // A passer-by's line can slide off the edge with them; anything the player is part of must stay readable.
+    [Test]
+    public void OnlyAmbientChatterMayLeaveTheScreen()
+    {
+        Assert.IsFalse(SpeechQueue.KeepsOnScreen(SpeechPriority.Ambient));
+        Assert.IsTrue(SpeechQueue.KeepsOnScreen(SpeechPriority.Conversation));
+        Assert.IsTrue(SpeechQueue.KeepsOnScreen(SpeechPriority.Cutscene));
+    }
 }

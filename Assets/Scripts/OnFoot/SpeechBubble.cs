@@ -97,6 +97,9 @@ public class SpeechBubble : MonoBehaviour
     // Set while this bubble holds the screen, so Hide can hand it back.
     bool _holdsScreen;
 
+    // Whether the current line is clamped inside the view. Ambient chatter is not — see SpeechQueue.KeepsOnScreen.
+    bool _keepOnScreen = true;
+
     public static SpeechBubble Attach(Transform actor)
     {
         var go = new GameObject("SpeechBubble (" + actor.name + ")");
@@ -298,15 +301,17 @@ public class SpeechBubble : MonoBehaviour
                       SpeechPriority priority = SpeechPriority.Conversation, object owner = null)
     {
         if (!SpeechDirector.Request(this, text, speaker, priority, owner)) return false;
-        SpeakNow(text, speaker);
+        SpeakNow(text, speaker, priority);
         return true;
     }
 
     // Say it, having already been granted the screen. Only SpeechDirector calls this directly, when a
     // queued line's turn comes round.
-    public void SpeakNow(string text, string speaker = null)
+    public void SpeakNow(string text, string speaker = null,
+                         SpeechPriority priority = SpeechPriority.Conversation)
     {
         _holdsScreen = true;
+        _keepOnScreen = SpeechQueue.KeepsOnScreen(priority);
         gameObject.SetActive(true);
         // On a phone the size follows the camera, which may have zoomed since the last line (walking
         // indoors pulls it in), so the labels are refitted per line rather than once in Build.
@@ -499,7 +504,7 @@ public class SpeechBubble : MonoBehaviour
         Vector3 above = _actor.position
             + Vector3.up * (headHeight + _boxSize.y * 0.5f)
             + Vector3.back * zLift; // in front of the ground/actor so the box isn't depth-culled
-        transform.position = KeepOnScreen(above);
+        transform.position = _keepOnScreen ? KeepOnScreen(above) : above;
         transform.rotation = Quaternion.identity;            // stay upright even if the actor turns to face
         transform.localScale = Vector3.one;
 
