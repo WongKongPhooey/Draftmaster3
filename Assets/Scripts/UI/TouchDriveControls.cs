@@ -35,6 +35,19 @@ public class TouchDriveControls : MonoBehaviour
     public static float Throttle => Active ? _state.Throttle : 0f;
     public static float Brake => Active ? _state.Brake : 0f;
 
+    const string SteerButtonsPref = "TouchSteerButtons";
+
+    // Steer with a left and a right button instead of the slider. A pause-menu toggle, kept across runs.
+    public static bool SteerButtons
+    {
+        get => PlayerPrefs.GetInt(SteerButtonsPref, 0) == 1;
+        set
+        {
+            PlayerPrefs.SetInt(SteerButtonsPref, value ? 1 : 0);
+            _state.Reset();   // a thumb held across the switch is placed again under the new rules
+        }
+    }
+
     // How far up from the bottom of the screen the pedals reach, in screen pixels; 0 while the controls are
     // put away. The crew chief's headset button shares that corner and stands on top of the pedals while
     // they show.
@@ -110,6 +123,7 @@ public class TouchDriveControls : MonoBehaviour
         _state.ButtonsOnly = Broadcasting;
         _state.LimiterShown = limiter != null && !Broadcasting;
         _state.BroadcastShown = DriveModeController.Current != null;
+        _state.SteerMode = SteerButtons ? TouchSteerMode.Buttons : TouchSteerMode.Slider;
         _state.Update(_touches, _layout);
         Active = true;
 
@@ -154,7 +168,12 @@ public class TouchDriveControls : MonoBehaviour
 
         if (!_state.ButtonsOnly)
         {
-            DrawSteering();
+            if (_state.SteerMode == TouchSteerMode.Buttons)
+            {
+                DrawPedal(_layout.steerLeft, "<", _state.SteerLeftHeld, PixelGUI.Gold);
+                DrawPedal(_layout.steerRight, ">", _state.SteerRightHeld, PixelGUI.Gold);
+            }
+            else DrawSteering();
             DrawPedal(_layout.brake, "BRAKE", _state.Brake > 0f, PixelGUI.Danger);
             DrawPedal(_layout.throttle, "GAS", _state.Throttle > 0f, PixelGUI.Confirm);
         }
@@ -183,11 +202,8 @@ public class TouchDriveControls : MonoBehaviour
         float travel = _layout.steerTravel;
         float knob = TouchLayout.KnobSize * u;
 
-        // Held: the strip sits where the thumb came down and the knob follows it. Idle: it waits in the
-        // corner, showing where to put a thumb.
-        float cx, cy;
-        if (_state.Steering) { cx = _state.SteerCentreX; cy = _state.SteerCentreY; }
-        else { cx = rest.centerX; cy = rest.centerY; }
+        // Fixed in its corner, held or not: the knob shows where the thumb is along it.
+        float cx = rest.centerX, cy = rest.centerY;
 
         var strip = new Rect(cx - travel - knob * 0.5f, cy - knob * 0.5f, travel * 2f + knob, knob);
         PixelGUI.Fill(strip, Fade(PixelGUI.PlateDeep, 0.55f));

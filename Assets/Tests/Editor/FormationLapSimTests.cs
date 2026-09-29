@@ -23,6 +23,7 @@ public class FormationLapSimTests
     const int FieldSize = 43; // RaceScene's GridSpawner.count — the AI field the game really spawns
 
     GameObject _package;
+    List<Component> _lastCars;
     readonly List<GameObject> _spawned = new List<GameObject>();
     readonly List<Component> _enabled = new List<Component>(); // components whose OnDisable must run
 
@@ -73,6 +74,10 @@ public class FormationLapSimTests
         public string setup = "";
         public int parkedOverlaps;   // cars already touching in their pit boxes before anything moved
         public readonly StringBuilder trace = new StringBuilder();
+        // A car moving further in one step than its speed allows (a teleport), or leaving the road on the
+        // main track: one line per car, the first time it happens.
+        public readonly List<string> jumps = new List<string>();
+        public readonly List<string> offRoad = new List<string>();
     }
 
     [Explicit("Diagnostic: formation laps at every venue; prints contacts per track.")]
@@ -95,6 +100,7 @@ public class FormationLapSimTests
     [Explicit("Diagnostic: two cars' lateral state step by step through a window of the lap.")]
     [TestCase("Chicago", "AI_20", "AI_21", 70f, 76f)]
     [TestCase("SanDiego", "AI_12", "AI_13", 42f, 46.5f)]
+    [TestCase("WatkinsGlen", "AI_01", "AI_02", 5.1f, 5.6f)]
     public void TracePair(string trackId, string a, string b, float from, float to)
     {
         var r = Run(trackId, FieldSize, traceA: a, traceB: b, traceFrom: from, traceTo: to);
@@ -154,6 +160,94 @@ public class FormationLapSimTests
         Debug.Log(Report($"[FormationSim] {trackId} player in box {playerBox}, NO formation brain", r, 15));
     }
 
+    [Explicit("Diagnostic: how far each venue's pit lane is from the track over its last stretch.")]
+    [Test]
+    public void PitLaneEnds()
+    {
+        var trackType = Runtime("TrackBuilder");
+        var sb = new StringBuilder("[FormationSim] pit lane ends (lateral off the main centreline at % of the pit lane; nearest main distance)");
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            var pkg = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            try
+            {
+                var track = (Component)pkg.GetComponentInChildren(trackType, true);
+                if (track == null) continue;
+                var pit = (System.Collections.IList)trackType.GetMethod("SamplePitCenterline").Invoke(track, null);
+                var main = trackType.GetMethod("SampleCenterline").Invoke(track, null);
+                if (pit.Count < 2) { sb.Append($"\n  {System.IO.Path.GetFileNameWithoutExtension(path)}: no pit"); continue; }
+                var st = pit[0].GetType();
+                float pitLen = (float)st.GetField("distance").GetValue(pit[pit.Count - 1]);
+                sb.Append($"\n  {System.IO.Path.GetFileNameWithoutExtension(path)} pit {pitLen:0} m:");
+                MethodInfo sampleAt = null, samplePitAt = null;
+                foreach (var m in trackType.GetMethods())
+                {
+                    if (m.Name == "SampleAt" && m.GetParameters().Length == 2) sampleAt = m;
+                    if (m.Name == "SamplePitAt" && m.GetParameters().Length == 2) samplePitAt = m;
+                }
+                foreach (float f in new[] { 0f, 0.02f, 0.5f, 0.9f, 0.95f, 0.98f, 1f })
+                {
+                    var ps = samplePitAt.Invoke(track, new object[] { pitLen * f, pit });
+                    Vector2 pp = (Vector2)st.GetField("position").GetValue(ps);
+                    Vector3 world = track.transform.TransformPoint(new Vector3(pp.x, pp.y, 0f));
+                    float md = (float)trackType.GetMethod("NearestCenterlineDistance").Invoke(track, new object[] { world });
+                    var ms = sampleAt.Invoke(track, new object[] { md, main });
+                    Vector2 mp = (Vector2)st.GetField("position").GetValue(ms);
+                    Vector2 mt = (Vector2)st.GetField("tangent").GetValue(ms);
+                    float lat = Vector2.Dot(pp - mp, new Vector2(mt.y, -mt.x));
+                    float w = (float)st.GetField("width").GetValue(ms);
+                    sb.Append($" {f:P0} {lat:0.0}m@{md:0}(w{w:0})");
+                }
+            }
+            finally { UnityEngine.Object.DestroyImmediate(pkg); }
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: teleports and road exits at every venue, one line each.")]
+    [Test]
+    public void SeamsEveryTrack()
+    {
+        var sb = new StringBuilder("[FormationSim] seams every track");
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
+        {
+            string id = System.IO.Path.GetFileNameWithoutExtension(AssetDatabase.GUIDToAssetPath(guid));
+            Despawn();
+            var r = Run(id, FieldSize);
+            sb.Append($"\n  {id}: {r.jumps.Count} jumps, {r.offRoad.Count} off road, green {r.wentGreen} [{r.setup}]");
+            if (r.jumps.Count > 0) sb.Append("\n     ").Append(r.jumps[0]);
+            if (r.offRoad.Count > 0) sb.Append("\n     ").Append(r.offRoad[0]);
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: every car's teleports and road exits from the pit boxes to the green.")]
+    [TestCase("WatkinsGlen")]
+    [TestCase("Daytona")]
+    public void Seams(string trackId)
+    {
+        var r = Run(trackId, FieldSize);
+        var sb = new StringBuilder($"[FormationSim] seams {trackId} [{r.setup}]: {r.jumps.Count} jumps, {r.offRoad.Count} off road");
+        foreach (var j in r.jumps) sb.Append("\n  JUMP ").Append(j);
+        foreach (var o in r.offRoad) sb.Append("\n  OFF ").Append(o);
+        // The line and bounds either side of the pit rejoin, off the first AI car.
+        var car = _lastCars[1];
+        var t = car.GetType();
+        var latAt = t.GetMethod("LateralAt", BindingFlags.Instance | BindingFlags.NonPublic);
+        var boundsAt = t.GetMethod("BoundsAt", BindingFlags.Instance | BindingFlags.NonPublic);
+        var exitArgs = new object[] { 0f, 0f, 0f };
+        t.GetMethod("TryGetPitExit").Invoke(car, exitArgs);
+        for (float d = (float)exitArgs[0] - 60f; d <= (float)exitArgs[0] + 120f; d += 10f)
+        {
+            var b = new object[] { d, 0f, 0f };
+            boundsAt.Invoke(car, b);
+            sb.Append($"\n  d{d:0} line {(float)latAt.Invoke(car, new object[] { d }):0.00} bounds [{(float)b[1]:0.00}, {(float)b[2]:0.00}]");
+        }
+        Debug.Log(sb.ToString());
+    }
+
     static string Report(string title, Result r, int max)
     {
         var sb = new StringBuilder(title);
@@ -211,6 +305,7 @@ public class FormationLapSimTests
         pitLaneType.GetMethod("Configure").Invoke(null, new object[] { exitGap, spacing, boxes, parkLateral });
 
         var cars = new List<Component>();       // SplineDrivers, safety car first
+        _lastCars = cars;
         var fcs = new List<Component>();
         var names = new List<string>();
 
@@ -341,6 +436,11 @@ public class FormationLapSimTests
         var pos = new Vector2[n];
         var fwd = new Vector2[n];
         var touching = new HashSet<long>();
+        var prevPos = new Vector2[n];
+        var prevOnPit = new bool[n];
+        var jumped = new HashSet<int>();
+        var wentOff = new HashSet<int>();
+        for (int i = 0; i < n; i++) { prevPos[i] = (Vector2)posProp.GetValue(cars[i]); prevOnPit[i] = (bool)onPitProp.GetValue(cars[i]); }
 
         for (int step = 0; step < steps; step++)
         {
@@ -356,7 +456,7 @@ public class FormationLapSimTests
                 break;
             }
 
-            if (traceA != null && result.seconds >= traceFrom && result.seconds <= traceTo && step % 5 == 0)
+            if (traceA != null && result.seconds >= traceFrom && result.seconds <= traceTo && (traceTo - traceFrom < 1f || step % 5 == 0))
             {
                 result.trace.Append($"t{result.seconds:0.00}");
                 for (int i = 0; i < n; i++)
@@ -365,7 +465,7 @@ public class FormationLapSimTests
                     var sd = cars[i];
                     var b = new object[] { 0f, 0f };
                     splineType.GetMethod("GetLateralBounds").Invoke(sd, b);
-                    result.trace.Append($" | {names[i]} d{(float)distProp.GetValue(sd):0.0} lat{(float)latProp.GetValue(sd):0.00} " +
+                    result.trace.Append($" | {names[i]} {((bool)onPitProp.GetValue(sd) ? "PIT " : "")}p{(Vector2)posProp.GetValue(sd)} w{sd.transform.position} d{(float)distProp.GetValue(sd):0.0} lat{(float)latProp.GetValue(sd):0.00} " +
                         $"tac{(float)splineType.GetField("tacticalLateralOffset").GetValue(sd):0.00} " +
                         $"L{(float)splineType.GetProperty("UntacticalLateral").GetValue(sd):0.00} " +
                         $"b[{(float)b[0]:0.0},{(float)b[1]:0.0}] h{(float)headProp.GetValue(sd):0} {(float)mphProp.GetValue(sd):0.0}mph " +
@@ -379,6 +479,23 @@ public class FormationLapSimTests
                 pos[i] = (Vector2)posProp.GetValue(cars[i]);
                 float h = (float)headProp.GetValue(cars[i]) * Mathf.Deg2Rad;
                 fwd[i] = new Vector2(Mathf.Cos(h), Mathf.Sin(h));
+
+                bool onPit = (bool)onPitProp.GetValue(cars[i]);
+                float mps = (float)mphProp.GetValue(cars[i]) / 2.237f;
+                float moved = (pos[i] - prevPos[i]).magnitude;
+                if (moved > mps * dt * 1.5f + 0.25f && jumped.Add(i))
+                    result.jumps.Add($"t{result.seconds:0.00} {names[i]} moved {moved:0.00} m in one step at {mps * 2.237f:0} mph " +
+                                     $"({(prevOnPit[i] ? "pit" : "main")}->{(onPit ? "pit" : "main")}) from {prevPos[i]} to {pos[i]}: {Describe(cars[i])}");
+                if (!onPit)
+                {
+                    var lb = new object[] { 0f, 0f };
+                    float lat = (float)latProp.GetValue(cars[i]);
+                    if ((bool)splineType.GetMethod("GetLateralBounds").Invoke(cars[i], lb) &&
+                        (lat < (float)lb[0] - 1.5f || lat > (float)lb[1] + 1.5f) && wentOff.Add(i))
+                        result.offRoad.Add($"t{result.seconds:0.00} {names[i]}: {Describe(cars[i])}");
+                }
+                prevPos[i] = pos[i];
+                prevOnPit[i] = onPit;
             }
             for (int i = 0; i < n; i++)
             for (int j = i + 1; j < n; j++)

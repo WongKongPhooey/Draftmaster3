@@ -240,6 +240,7 @@ public class RacePauseMenu : MonoBehaviour
         // One more row than before whenever a booked session is running, since END SESSION only appears
         // then. Measured rather than budgeted, or the extra row pushes RESUME off the bottom of the plate.
         int extraRows = PracticeDirector.PauseMenuExitLabel != null ? 1 : 0;
+        if (TouchDriveControls.TouchPlatform) extraRows++;
         float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 5f + rowH * 3f
                   + rowH * 3f + gapH * 2f + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f)
                   + extraRows * (rowH + gapH);
@@ -276,7 +277,18 @@ public class RacePauseMenu : MonoBehaviour
         PadCursor(PadRow.SwingCamera, new Rect(content.x, cy, content.width, row));
         bool newSwing = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), swing, "  Swing camera", _toggle);
         if (newSwing != swing) CameraViewMode.Swinging = newSwing;
-        cy += row + gap;
+        cy += row;
+
+        // Phone only: steer with left/right buttons rather than the slider. No pad row — the touch controls
+        // are put away while a pad is in use, so there is nothing for a pad to switch.
+        if (TouchDriveControls.TouchPlatform)
+        {
+            bool buttons = TouchDriveControls.SteerButtons;
+            bool newButtons = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), buttons, "  Steer buttons", _toggle);
+            if (newButtons != buttons) TouchDriveControls.SteerButtons = newButtons;
+            cy += row;
+        }
+        cy += gap;
 
         PadCursor(PadRow.Missions, new Rect(content.x, cy, content.width, row));
         if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row),

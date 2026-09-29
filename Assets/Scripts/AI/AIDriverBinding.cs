@@ -7,6 +7,9 @@ public class AIDriverBinding : MonoBehaviour
     public Driver driver;
     public VehicleInfo vehicleInfo;
 
+    // Share of the grip limit the lowest-rated driver corners at (the best take all of it).
+    public const float MinCornerCommitment = 0.93f;
+
     SplineDriver _spline;
 
     void Awake()
@@ -42,6 +45,14 @@ public class AIDriverBinding : MonoBehaviour
             float basePace = pace * jitter;
             _spline.paceMultiplier = basePace;
             racing.SetBasePace(basePace);
+
+            // How close to the grip limit they corner. Pace can't do this: it is capped at the limit, and every
+            // car sits above it, so without it the whole field cornered identically, strung out ~5 lengths
+            // apart and never passed. The best drivers use all of it; the weakest rated give up ~4%, a second
+            // or two a lap at Watkins Glen. Consistency adds a little spread on top so equal-rated drivers differ.
+            float commitJitter = Random.Range(-(1f - consistency01) * 0.012f, (1f - consistency01) * 0.004f);
+            _spline.cornerCommitment = Mathf.Clamp(Mathf.Lerp(MinCornerCommitment, 1f, qualifying01) + commitJitter,
+                                                   MinCornerCommitment - 0.01f, 1f);
 
             gameObject.name = $"AI_{driver.LastName}_{driver.Id}";
         }

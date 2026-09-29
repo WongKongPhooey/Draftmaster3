@@ -249,6 +249,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float aiMaxSpeedMph = float.MaxValue;
     [Tooltip("Additive speed bonus (mph). Used for drafting/slipstream.")]
     public float aiSpeedBoostMph = 0f;
+    [Tooltip("Share of the grip limit this driver takes corners at (1 = right on the limit). Set per driver by AIDriverBinding from their skill, so the field differs in the corners and not just on the straights. Baked into the speed profile at Rebuild.")]
+    [Range(0.5f, 1f)] public float cornerCommitment = 1f;
     [Tooltip("When > 0, GUARANTEES at least this braking rate (mph/sec) regardless of the (possibly weak) decel curve. Set per-frame by the formation/avoidance AI so an emergency slow can actually land. 0 = use the curve.")]
     [HideInInspector] public float aiMinDecelMphPerSec = 0f;
     [Tooltip("Default deceleration used when the vehicle's decel curve is unauthored, in m/s².")]
@@ -725,7 +727,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // and a slow one — but no amount of it makes the car corner faster than it physically can.
             if (kappa > 1e-4f)
             {
-                float limit = ComputeTargetSpeedForCurvature(kappa, segIdx, atLimit: true);
+                // cornerCommitment is how much of the grip a driver dares to use. Pace can't separate drivers in
+                // the corners (it is capped at the grip limit, and a track's calibrated AI pace puts everyone
+                // well above it), so without this every car took every corner at the identical speed and the
+                // field only differed on the straights — it spread out and never passed.
+                float limit = ComputeTargetSpeedForCurvature(kappa, segIdx, atLimit: true) * Mathf.Clamp(cornerCommitment, 0.5f, 1f);
                 _gripLimitProfile[i] = limit;
                 _speedProfile[i] = Mathf.Min(ComputeTargetSpeedForCurvature(kappa, segIdx) * _profilePace, limit);
             }
@@ -1249,7 +1255,20 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         }
 
         float actualLat = Vector2.Dot(rearAxleLocal - s.position, s.normal);
-        float baseLat = lateralOffset + tacticalLateralOffset + (_onPit ? 0f : LateralAt(_distance));
+        // The base lateral exactly as Place() will build it on the new lane, bounds clamp included. The line may
+        // run outside the road bounds (a player-lap line uses its run-off corridor — Watkins Glen's sits 14 m
+        // off the road at the pit rejoin); Place clamps it back, and a bias measured against the unclamped value
+        // came out that much too big — every car rejoining at Watkins Glen landed 12 m right, past the barrier.
+        float baseLat = lateralOffset + tacticalLateralOffset + _collisionLateral;
+        if (!_onPit)
+        {
+            baseLat += LateralAt(_distance);
+            if (_leftBoundProfile != null && _rightBoundProfile != null)
+            {
+                BoundsAt(_distance, out float boundLo, out float boundHi);
+                baseLat = Mathf.Clamp(baseLat, boundLo, boundHi);
+            }
+        }
         _mergeLatBias = Mathf.Clamp(actualLat - baseLat, -20f, 20f);
 
         // Heading bias: the new lane's tangent vs the facing the car arrives with. CommandedHeadingDeg is in the

@@ -5,13 +5,15 @@ namespace Draftmaster.Sim
     // Racecraft maths shared by the AI brains, kept free of MonoBehaviour state so it can be unit-tested
     // in EditMode (the racing itself can only be judged in Play Mode, which isn't always available).
     //
-    // Three ideas live here:
+    // Four ideas live here:
     //   * Race phase — a field that races identically on lap 1 and on the last lap reads as robotic. Drivers
     //     settle in early (wider gaps, fewer lunges) and throw everything at it over the closing laps.
     //   * Pressure and wear — a mistake is far likelier with a rival filling the mirrors on worn tyres than
     //     it is in clean air, so the error roll keys off both instead of being a flat per-second dice throw.
     //   * Blue flags — a car a lap down that races the leader is the single most immersion-breaking thing an
     //     AI field does. Lapped traffic yields instead.
+    //   * Local yellows — a car stopped on the road waves a yellow over the stretch before it: the field lifts
+    //     through there and doesn't race each other past the scene.
     public static class RaceCraft
     {
         // ---- Race phase ----
@@ -112,5 +114,30 @@ namespace Draftmaster.Sim
         // liftFactor is the multiplier applied at full strength (e.g. 0.94 = 6% off the pace).
         public static float YieldSpeedFactor(float strength01, float liftFactor)
             => Mathf.Lerp(1f, Mathf.Clamp(liftFactor, 0.5f, 1f), Mathf.Clamp01(strength01));
+
+        // ---- Local yellows ----
+
+        // Is a car at myDist inside the yellow zone of an incident at incidentDist? The zone runs from
+        // `before` metres up the road of the incident to `after` metres past it, measured along the lap and
+        // wrapped across the start/finish line. gap = metres to the incident (+ still ahead, - already past).
+        public static bool InYellowZone(float myDist, float incidentDist, float lapLength, float before, float after,
+                                        out float gap)
+        {
+            gap = incidentDist - myDist;
+            if (lapLength > 0f)
+            {
+                gap = Mathf.Repeat(gap, lapLength);
+                if (gap >= lapLength * 0.5f) gap -= lapLength;
+            }
+            return gap <= before && gap >= -after;
+        }
+
+        // The speed to hold through a yellow zone: a clear lift off the pace the car would otherwise carry
+        // there, never above that pace and never below a crawl that would hold up the field for nothing.
+        public static float YellowSpeedCap(float desiredMph, float paceFactor, float floorMph)
+        {
+            float cap = Mathf.Max(floorMph, desiredMph * Mathf.Clamp(paceFactor, 0.2f, 1f));
+            return Mathf.Min(cap, desiredMph);
+        }
     }
 }

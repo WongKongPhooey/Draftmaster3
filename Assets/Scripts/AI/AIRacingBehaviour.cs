@@ -45,8 +45,8 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Rear-end Avoidance")]
     [Tooltip("Range (m) scanned for a slower/stopped car ahead to brake for. Must exceed the braking distance from racing speed, so keep it well above lookAheadRange.")]
     public float brakeScanRange = 130f;
-    [Tooltip("Time headway (s) to the car ahead — the gap held even at matched speed scales with our speed.")]
-    public float followHeadwaySeconds = 0.7f;
+    [Tooltip("Time headway (s) to the car ahead — the gap held even at matched speed scales with our speed. Short enough to sit in the car ahead's draft; the closing-speed braking term still keeps a car from running into a slower one.")]
+    public float followHeadwaySeconds = 0.3f;
     [Tooltip("Braking rate (m/s²) assumed when sizing the safe following gap. Lower = brake earlier / more margin.")]
     public float followDecelMps2 = 11f;
     [Tooltip("Gap (m) at which we back off BELOW the car ahead's speed so we don't tap it.")]
@@ -55,6 +55,29 @@ public class AIRacingBehaviour : MonoBehaviour
     public float corridorOverlapWidth = 2f;
     [Tooltip("Lateral separation (m) beyond which a car ahead no longer caps our speed at all — we're clear to drive past. The cap fades between the two widths. This is what lets a committed overtake actually PASS a slow or wrecked car instead of matching its speed until it fully stops.")]
     public float corridorClearWidth = 3.4f;
+
+    [Header("Local Yellows")]
+    [Tooltip("Lift through the yellow zone before a car stopped on the road (CautionWatch), and don't pass anyone there but the stopped car.")]
+    public bool respectYellows = true;
+    [Tooltip("The yellow zone starts this far (m) up the road from the stopped car — room to brake from full speed to the yellow pace before reaching it.")]
+    public float yellowZoneBeforeMetres = 200f;
+    [Tooltip("...and runs this far (m) past it, so nobody floors it alongside the scene.")]
+    public float yellowZoneAfterMetres = 40f;
+    [Tooltip("Share of the pace the car would carry at that point of the lap it holds through the zone.")]
+    [Range(0.3f, 1f)] public float yellowPaceFactor = 0.6f;
+    [Tooltip("Never slower than this (mph) through a yellow zone — a lift, not a crawl.")]
+    public float yellowFloorMph = 40f;
+    [Tooltip("Under yellow only a car slower than this (mph) — the stopped one — is driven round.")]
+    public float yellowPassBelowMph = 20f;
+    [Tooltip("Centre-to-centre lateral (m) kept from a stopped car while driving round it (a car is ~2 m wide).")]
+    public float stoppedPassClearance = 3.5f;
+    [Tooltip("Lateral speed (m/s) used to step out round a stopped car — quicker than a racing line change.")]
+    public float stoppedPassLateralSpeed = 3f;
+    [Tooltip("Inside the yellow zone, start lining up on the wide side of the stopped car this far (m) short of it — whatever cars are in between.")]
+    public float stoppedLineUpMetres = 150f;
+
+    // True while this car is inside a yellow zone (for HUDs, telemetry and tests).
+    public bool UnderYellow { get; private set; }
 
     [Header("Rolling Start")]
     [Tooltip("Seconds after the green flag during which the follow-distance speed cap is eased in, so the whole field launches together (a rolling start) instead of accordioning out from the leader. The hard nose-to-tail cap still applies, so cars can't pile in. 0 = off (cars hold full racing gaps from the instant of green).")]
@@ -121,6 +144,9 @@ public class AIRacingBehaviour : MonoBehaviour
     float _commitTimer;
     float _commitDir;
     float _cooldownTimer;
+    bool _wasManoeuvring;
+    bool _passAroundStopped;   // the committed pass is round a stopped car at _passTargetLat
+    float _passTargetLat;
     float _mistakeTimer;
     float _mistakeWobbleDir;
     float _basePaceMultiplier = 1f;
@@ -184,6 +210,16 @@ public class AIRacingBehaviour : MonoBehaviour
         float launchCapBlend = (launchWindowSeconds > 0f && sinceGreen >= 0f && sinceGreen < launchWindowSeconds)
             ? Mathf.Clamp01(sinceGreen / launchWindowSeconds) : 1f;
 
+        // Local yellow: a car stopped on the road up ahead (CautionWatch). Through its zone we lift well off the
+        // pace, take no tow and pass nobody — except the stopped car itself, which still has to be driven round.
+        var caution = CautionWatch.Instance;
+        float incidentGap = 0f;
+        Transform incidentCar = null;
+        bool underYellow = respectYellows && !_spline.IsOnPit && caution != null
+            && caution.YellowFor(transform, _spline.DistanceOnTrack, _spline.TrackLength,
+                                 yellowZoneBeforeMetres, yellowZoneAfterMetres, out incidentGap, out incidentCar);
+        UnderYellow = underYellow;
+
         // Rivalry: run down an active payback move; otherwise scan for a nearby hated rival on an interval.
         if (enablePayback && !_spline.IsOnPit)
         {
@@ -230,10 +266,28 @@ public class AIRacingBehaviour : MonoBehaviour
             // Closing-rate widening: catching a much-slower car fast → begin the move from further back.
             float closingMph = Mathf.Max(0f, myPotential - aheadSpeed);
             float initiateRange = closingRange + closingMph * ttcRangePerMph;
-            if (aheadGap < initiateRange && aheadSpeed < myPotential - 2f && _cooldownTimer <= 0f)
+            // Never shorter than the gap the follow cap below holds us at. It used to be: the cap parked a
+            // quicker car ~40 m back (a 0.7 s headway at Watkins Glen speeds) while a pass only started inside
+            // ~25 m, so it sat there all race — the pack sim counted zero passes in six laps.
+            initiateRange = Mathf.Max(initiateRange, (minFollowDistance + myMpsNow * followHeadwaySeconds) * 1.2f + 6f);
+            // Quicker than them means quicker than what THEY could do here too. Down a straight both cars want
+            // far more than either can reach, so "my target beats their speed" was true for every follower on
+            // every straight. Target against target is the fair comparison (the draft boost is part of ours, so a
+            // tow is what makes the difference on a straight) — plus a car crawling along, spun or wrecked, which
+            // is fair game whatever it could do.
+            bool crawling = aheadSpeed < Mathf.Max(mySpeed, _spline.DesiredMph) * 0.7f;
+            bool quicker = _spline.DesiredMph > ahead.DesiredMph + 1.5f || crawling;
+            // Under yellow everyone ahead is lifting too, so "crawling" alone would pass the whole queue. Only
+            // the car that is actually stopped, or nearly, gets driven round.
+            if (underYellow) quicker = aheadSpeed < yellowPassBelowMph;
+            if (aheadGap < initiateRange && quicker && _cooldownTimer <= 0f)
             {
-                overtakeDir = ChooseOvertakeSide(aheadLat);
+                bool stoppedCar = aheadSpeed < yellowPassBelowMph;
+                // A stopped car is driven round on the wide side of the road — the side away from where it sits —
+                // not on whichever side the next corner favours.
+                overtakeDir = stoppedCar ? AroundSide(aheadLat) : ChooseOvertakeSide(aheadLat);
                 wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
+                if (wantOvertake) SetPassTarget(stoppedCar, aheadLat);
             }
         }
 
@@ -302,11 +356,15 @@ public class AIRacingBehaviour : MonoBehaviour
 
             // Go around a much-slower / stopped player when a side is clear of other cars.
             float myPotential = Mathf.Max(_spline.CurrentMph, _spline.DesiredMph);
-            if (!wantOvertake && pSpeedMph < myPotential - 2f && _cooldownTimer <= 0f)
+            if (!wantOvertake && pSpeedMph < myPotential - 2f && _cooldownTimer <= 0f
+                && (!underYellow || pSpeedMph < yellowPassBelowMph))
             {
-                float side = p.TrackLateral >= _spline.LateralOnTrack ? -1f : 1f;
-                if (!SideOccupied(side)) { overtakeDir = side; wantOvertake = true; }
-                else if (!SideOccupied(-side)) { overtakeDir = -side; wantOvertake = true; }
+                bool stoppedCar = pSpeedMph < yellowPassBelowMph;
+                float side = stoppedCar ? AroundSide(p.TrackLateral)
+                                        : (p.TrackLateral >= _spline.LateralOnTrack ? -1f : 1f);
+                if (side != 0f && !SideOccupied(side)) { overtakeDir = side; wantOvertake = true; }
+                else if (!stoppedCar && !SideOccupied(-side)) { overtakeDir = -side; wantOvertake = true; }
+                if (wantOvertake) SetPassTarget(stoppedCar, p.TrackLateral);
             }
         }
 
@@ -326,6 +384,38 @@ public class AIRacingBehaviour : MonoBehaviour
             }
         }
 
+        // Under yellow we know exactly where the stopped car is, so we don't wait to see it. The avoidance above
+        // only ever looks at the nearest car ahead, and with another car between us and the wreck it was only
+        // spotted when that car swerved out of the way — at 80-100 mph, 15 m short of it: the pack sim had cars
+        // driving straight through it. So every car in the zone lines up early on the wide side of it, and if it
+        // still isn't clear of it in time, brakes to a stop short of it.
+        float incidentStopCap = float.MaxValue;
+        if (underYellow && incidentCar != null && incidentGap > 0f && incidentGap <= stoppedLineUpMetres
+            && TryIncidentLateral(incidentCar, out float incidentLat))
+        {
+            float side = incidentLat < 0f ? 1f : -1f;
+            wantOvertake = true;
+            overtakeDir = side;
+            SetPassTarget(true, incidentLat);
+
+            float clear = Mathf.Abs(_spline.LateralOnTrack - incidentLat);
+            if (clear < stoppedPassClearance - 0.8f)
+            {
+                // Not out of its way yet: never arrive faster than we could stop short of it — but keep a creep
+                // while there's room, or a car stopped behind it could never edge out round it (a car only
+                // moves sideways while it's rolling).
+                float room = Mathf.Max(0f, incidentGap - 6f);
+                incidentStopCap = room > 0f
+                    ? Mathf.Max(8f, Mathf.Sqrt(2f * followDecelMps2 * 0.6f * room) / MphToMps)
+                    : 0f;
+            }
+        }
+
+        // A pass already under way when the yellow comes out is abandoned: tuck back in behind. Not the way round
+        // the stopped car itself — once alongside it, it is no longer "ahead", and dropping the commitment there
+        // would swing us straight back into it.
+        if (underYellow && !wantOvertake && !_passAroundStopped) _commitTimer = 0f;
+
         // Commitment: once we pick a passing side, hold it. Prevents weave.
         if (wantOvertake)
         {
@@ -342,7 +432,19 @@ public class AIRacingBehaviour : MonoBehaviour
             }
         }
 
-        if (wantOvertake) desiredTactical = overtakeDir * overtakeLineOffset;
+        if (!wantOvertake) _passAroundStopped = false;
+        if (wantOvertake)
+        {
+            desiredTactical = overtakeDir * overtakeLineOffset;
+            // Round a stopped car, a fixed step off our own line isn't enough: our line often runs along the same
+            // edge it has stopped on, and 3 m off it left barely a car's width between the two — the pack sim had
+            // the field scraping past it. Aim for a lateral clear of the car itself.
+            if (_passAroundStopped)
+            {
+                float needed = _passTargetLat + overtakeDir * stoppedPassClearance - _spline.UntacticalLateral;
+                if (needed * overtakeDir > overtakeLineOffset) desiredTactical = needed;
+            }
+        }
 
         // Defending: if a faster pursuer is close behind during the approach to a turn, shift to the inside.
         if (_spline.CurrentPhase == SplineDriver.CornerPhase.Approach || _spline.CurrentPhase == SplineDriver.CornerPhase.Entry)
@@ -427,7 +529,14 @@ public class AIRacingBehaviour : MonoBehaviour
             _recoveryTimer = stallRecoverySeconds;
             // Pick the side away from whoever is blocking; fall back to drifting toward centerline.
             if (RaceField.TryGetAhead(_spline, minFollowDistance * 2f, out var stallBlocker, out _))
-                _recoveryDir = stallBlocker.LateralOnTrack >= _spline.LateralOnTrack ? -1f : 1f;
+            {
+                // Held up by a car that has stopped: out round it on the wide side, clear of it (see below).
+                bool stoppedAhead = stallBlocker.CurrentMph < yellowPassBelowMph;
+                _recoveryDir = stoppedAhead
+                    ? (stallBlocker.LateralOnTrack < 0f ? 1f : -1f)
+                    : (stallBlocker.LateralOnTrack >= _spline.LateralOnTrack ? -1f : 1f);
+                SetPassTarget(stoppedAhead, stallBlocker.LateralOnTrack);
+            }
             else
                 _recoveryDir = _spline.LateralOnTrack >= 0f ? -1f : 1f;
             _stallTimer = 0f;
@@ -437,6 +546,11 @@ public class AIRacingBehaviour : MonoBehaviour
             _recoveryTimer -= dt;
             speedCap = float.MaxValue;
             desiredTactical = _recoveryDir * overtakeLineOffset;
+            if (_passAroundStopped)
+            {
+                float needed = _passTargetLat + _recoveryDir * stoppedPassClearance - _spline.UntacticalLateral;
+                if (needed * _recoveryDir > overtakeLineOffset) desiredTactical = needed;
+            }
             _commitTimer = Mathf.Max(_commitTimer, commitHoldSeconds);
             _commitDir = _recoveryDir;
         }
@@ -465,14 +579,15 @@ public class AIRacingBehaviour : MonoBehaviour
         // Slew-rate-limited convergence toward desired offset. Dead-zone prevents twitching near target.
         float diff = desiredTactical - _smoothedTactical;
         if (Mathf.Abs(diff) < tacticalDeadzone) diff = 0f;
-        float step = maxLateralSpeed * dt;
+        float step = (_passAroundStopped ? Mathf.Max(maxLateralSpeed, stoppedPassLateralSpeed) : maxLateralSpeed) * dt;
         _smoothedTactical += Mathf.Clamp(diff, -step, step);
 
-        // Manoeuvre cooldown once we settle near zero.
-        if (Mathf.Abs(_smoothedTactical) < tacticalDeadzone && Mathf.Abs(desiredTactical) < tacticalDeadzone)
-        {
-            if (_cooldownTimer < manoeuvreCooldown) _cooldownTimer = manoeuvreCooldown;
-        }
+        // Manoeuvre cooldown, started once as we settle back to neutral after a move. It used to be re-armed on
+        // every neutral frame, so it sat at manoeuvreCooldown forever and no overtake could ever begin — the
+        // whole field ran nose to tail and nobody passed.
+        bool settled = Mathf.Abs(_smoothedTactical) < tacticalDeadzone && Mathf.Abs(desiredTactical) < tacticalDeadzone;
+        if (settled && _wasManoeuvring) _cooldownTimer = manoeuvreCooldown;
+        _wasManoeuvring = !settled;
         if (_cooldownTimer > 0f) _cooldownTimer -= dt;
 
         // Tyre grip decides two things - the pace the car can carry and how likely its driver is to drop
@@ -503,9 +618,47 @@ public class AIRacingBehaviour : MonoBehaviour
         if (_mistakeTimer > 0f) effectivePace *= mistakePaceFactor;
         _spline.paceMultiplier = effectivePace;
 
+        // Yellow zone: a clear lift off the pace we'd carry here, applied last so nothing above (a recovery, a
+        // payback lunge, a tow) can race through the scene. DesiredMph is the profile speed before any cap, so
+        // this never ratchets itself down; last step's tow is taken back out of it.
+        if (underYellow)
+        {
+            float cleanPace = Mathf.Max(0f, _spline.DesiredMph - _spline.aiSpeedBoostMph);
+            speedCap = Mathf.Min(speedCap, RaceCraft.YellowSpeedCap(cleanPace, yellowPaceFactor, yellowFloorMph));
+            speedCap = Mathf.Min(speedCap, incidentStopCap);
+            speedBoost = 0f;
+        }
+
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
         _spline.aiSpeedBoostMph = speedBoost;
+    }
+
+    // Which side to drive round a stopped car: the wide side of the road, away from where it sits. 0 when a car
+    // is already there — wait behind rather than squeeze through the narrow side.
+    float AroundSide(float obstacleLat)
+    {
+        float pick = obstacleLat < 0f ? 1f : -1f;
+        return SideOccupied(pick) ? 0f : pick;
+    }
+
+    // Where a stopped car sits across the road: an AI car's brain, or the human car's own projection.
+    bool TryIncidentLateral(Transform car, out float lateral)
+    {
+        lateral = 0f;
+        var sd = car.GetComponent<SplineDriver>();
+        if (sd != null && sd.enabled) { lateral = sd.LateralOnTrack; return true; }
+        var pvc = car.GetComponent<PlayerVehicleController>();
+        if (pvc != null && pvc.ObstacleTrack == _spline.track) { lateral = pvc.TrackLateral; return true; }
+        return false;
+    }
+
+    // Remember what the pass is round. A pass round a moving car keeps the usual fixed offset; round a stopped
+    // one the offset is sized off the car itself (see where desiredTactical is set).
+    void SetPassTarget(bool stoppedCar, float targetLat)
+    {
+        _passAroundStopped = stoppedCar;
+        if (stoppedCar) _passTargetLat = targetLat;
     }
 
     // Pick which side to pass on: outside of an upcoming turn (safer arc), else the roomier side away from the

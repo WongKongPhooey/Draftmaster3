@@ -194,4 +194,42 @@ public class RaceCraftTests
         // An inspector typo must not be able to park a lapped car in front of the leaders.
         Assert.GreaterOrEqual(RaceCraft.YieldSpeedFactor(1f, 0f), 0.5f);
     }
+
+    // ---------------------------------------------------------------- local yellows
+
+    [Test]
+    public void TheYellowZoneRunsFromBeforeTheIncidentToJustPastIt()
+    {
+        const float lap = 4000f;
+        Assert.IsTrue(RaceCraft.InYellowZone(1000f, 1150f, lap, 200f, 40f, out float gap));
+        Assert.AreEqual(150f, gap, Tol);
+        Assert.IsTrue(RaceCraft.InYellowZone(1180f, 1150f, lap, 200f, 40f, out gap), "just past the scene is still yellow");
+        Assert.AreEqual(-30f, gap, Tol);
+
+        Assert.IsFalse(RaceCraft.InYellowZone(900f, 1150f, lap, 200f, 40f, out _), "too far up the road");
+        Assert.IsFalse(RaceCraft.InYellowZone(1200f, 1150f, lap, 200f, 40f, out _), "well clear past it");
+    }
+
+    [Test]
+    public void TheYellowZoneWrapsAcrossTheStartFinishLine()
+    {
+        const float lap = 4000f;
+        // Incident just after the line, car just before it.
+        Assert.IsTrue(RaceCraft.InYellowZone(3950f, 50f, lap, 200f, 40f, out float gap));
+        Assert.AreEqual(100f, gap, Tol);
+        // Incident just before the line, car just across it.
+        Assert.IsTrue(RaceCraft.InYellowZone(20f, 3990f, lap, 200f, 40f, out gap));
+        Assert.AreEqual(-30f, gap, Tol);
+        // Half a lap away either side is never yellow.
+        Assert.IsFalse(RaceCraft.InYellowZone(0f, 2000f, lap, 200f, 40f, out _));
+    }
+
+    [Test]
+    public void TheYellowPaceIsAClearLiftButNeverACrawl()
+    {
+        Assert.AreEqual(96f, RaceCraft.YellowSpeedCap(160f, 0.6f, 40f), Tol, "down a straight: a big lift");
+        Assert.AreEqual(40f, RaceCraft.YellowSpeedCap(55f, 0.6f, 40f), Tol, "a slow corner holds the floor");
+        Assert.AreEqual(30f, RaceCraft.YellowSpeedCap(30f, 0.6f, 40f), Tol, "the floor never speeds a car up");
+        Assert.GreaterOrEqual(RaceCraft.YellowSpeedCap(160f, 0f, 0f), 32f, "a typo can't park the field");
+    }
 }

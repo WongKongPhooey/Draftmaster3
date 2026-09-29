@@ -63,15 +63,15 @@ public class VehicleInfo : ScriptableObject
 
     [Header("Drafting")]
     [Tooltip("Max speed bonus (mph) when fully in another car's slipstream.")]
-    public float draftingMaxBonus = 7f;
+    public float draftingMaxBonus = 12f;
     [Tooltip("Maximum gap (m) at which drafting effect applies. Falls off linearly to zero at this range.")]
-    public float draftingMaxGap = 18f;
-    [Tooltip("Drafting only kicks in above this speed (mph). Slow corners shouldn't benefit.")]
-    public float draftingMinSpeed = 130f;
+    public float draftingMaxGap = 35f;
+    [Tooltip("Drafting only kicks in above this speed (mph). Slow corners shouldn't benefit. Low enough that a road course's straights count, not only an oval's.")]
+    public float draftingMinSpeed = 70f;
     [Tooltip("Extra straight-line acceleration (m/s²) at full tow — the drag a slipstream frees up (dynamic-model cars).")]
-    public float draftingTowAccel = 1.6f;
+    public float draftingTowAccel = 2.8f;
     [Tooltip("Fraction of top speed unlocked at full tow, so the run can carry past the leader's flat-out speed.")]
-    public float draftingTopSpeedGain = 0.06f;
+    public float draftingTopSpeedGain = 0.1f;
 
     [Header("Side Draft")]
     [Tooltip("Extra drag (m/s²) at full side draft — a rival's nose beside the rear quarter stealing air off the spoiler.")]

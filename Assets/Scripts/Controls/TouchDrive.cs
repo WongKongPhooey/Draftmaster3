@@ -37,6 +37,9 @@ namespace Draftmaster.Controls
         public TouchPoint(int id, float x, float y) { this.id = id; this.x = x; this.y = y; }
     }
 
+    // How the left thumb steers: a fixed strip it slides along, or a left and a right button.
+    public enum TouchSteerMode { Slider, Buttons }
+
     // Where the on-screen driving controls sit: a steering strip under the left thumb, brake and throttle under
     // the right, and a small pause button at the top. Measured in the UI's design pixels (the 640x360 grid)
     // times `unit`, and kept inside the screen's safe area so a notch or a gesture bar never covers a pedal.
@@ -57,8 +60,12 @@ namespace Draftmaster.Controls
         public readonly float unit;
 
         public readonly TouchRect steerZone;      // a thumb landing here takes the wheel
-        public readonly TouchRect steerRest;      // where the steering strip is drawn while nobody holds it
+        public readonly TouchRect steerRest;      // where the steering strip is drawn; it never moves
         public readonly float steerTravel;        // pixels from centre to full lock
+
+        // Button steering: two pedal-sized buttons in the bottom-left corner, mirroring the pedals.
+        public readonly TouchRect steerLeft, steerRight;          // drawn
+        public readonly TouchRect steerLeftHit, steerRightHit;    // pressed: drawn plus slop, split at the gap
 
         public readonly TouchRect brake, throttle;          // drawn
         public readonly TouchRect brakeHit, throttleHit;    // pressed: the drawn pedal plus slop, split at the gap
@@ -115,6 +122,17 @@ namespace Draftmaster.Controls
 
             float k = KnobSize * u;
             steerRest = new TouchRect(safe.x + m, safe.yMax - m - k, steerTravel * 2f + k, k);
+
+            // The pedals mirrored: left button in the corner, right beside it. The hit areas meet in the middle
+            // of the gap and run out to the safe area's edge, but stay inside the steering zone.
+            steerLeft = new TouchRect(safe.x + m, safe.yMax - m - h, w, h);
+            steerRight = new TouchRect(steerLeft.xMax + gap, steerLeft.y, w, h);
+            float steerSplit = steerLeft.xMax + gap * 0.5f;
+            float steerTop = System.Math.Max(steerLeft.y - slop, steerZone.y);
+            float steerBottom = steerZone.yMax;
+            steerLeftHit = new TouchRect(steerZone.x, steerTop, steerSplit - steerZone.x, steerBottom - steerTop);
+            float rightEdge = System.Math.Min(steerRight.xMax + slop, steerZone.xMax);
+            steerRightHit = new TouchRect(steerSplit, steerTop, rightEdge - steerSplit, steerBottom - steerTop);
         }
     }
 
@@ -122,14 +140,16 @@ namespace Draftmaster.Controls
     //
     // Each finger's job is decided the moment it lands and kept until it lifts:
     //   - on the pause button: a pause, once;
-    //   - in the steering zone: the wheel. Steering is relative to where the thumb came down, so the player
-    //     never has to look for a centre; drag past full lock and the centre is dragged along, so reversing
-    //     the thumb starts turning the other way at once. One thumb steers at a time.
+    //   - in the steering zone, slider mode: the wheel. The strip is fixed in its corner and the thumb's
+    //     position along it is the lock — left of the strip's centre is left, past either end is full lock.
+    //     One thumb steers at a time.
+    //   - in the steering zone, button mode: a steering thumb that presses whichever button it is over right
+    //     now, like a pedal thumb. Left and right held together cancel.
     //   - anywhere else: a pedal thumb, which presses whichever pedal it is over right now. Sliding from the
     //     brake to the throttle works, and a steering thumb that strays over the pedals presses nothing.
     public sealed class TouchDriveState
     {
-        enum Role { Steer, Pedal, Pause, Limiter, Broadcast, Ignored }
+        enum Role { Steer, SteerButton, Pedal, Pause, Limiter, Broadcast, Ignored }
 
         readonly Dictionary<int, Role> _roles = new Dictionary<int, Role>();
         readonly HashSet<int> _present = new HashSet<int>();
@@ -153,14 +173,19 @@ namespace Draftmaster.Controls
         // top stand. Fingers anywhere else do nothing.
         public bool ButtonsOnly { get; set; }
 
-        // For drawing: whether a thumb is on the wheel, where its centre is, and where it came down.
+        public TouchSteerMode SteerMode { get; set; }
+
+        // Button mode, for drawing: which steering buttons are held.
+        public bool SteerLeftHeld { get; private set; }
+        public bool SteerRightHeld { get; private set; }
+
+        // For drawing: whether a thumb is on the slider.
         public bool Steering => _steering;
-        public float SteerCentreX { get; private set; }
-        public float SteerCentreY { get; private set; }
 
         public void Update(IReadOnlyList<TouchPoint> touches, in TouchLayout layout)
         {
             Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; BroadcastTapped = false;
+            SteerLeftHeld = false; SteerRightHeld = false;
 
             // Let go of the fingers that have lifted before placing the ones that have landed: a thumb taken
             // off the wheel and put straight back down inside one frame is a new steering thumb, not a second
@@ -187,12 +212,7 @@ namespace Draftmaster.Controls
                 {
                     role = Classify(t, layout, slop);
                     _roles[t.id] = role;
-                    if (role == Role.Steer)
-                    {
-                        _steering = true;
-                        SteerCentreX = t.x;
-                        SteerCentreY = t.y;
-                    }
+                    if (role == Role.Steer) _steering = true;
                     else if (role == Role.Pause) PauseTapped = true;
                     else if (role == Role.Limiter) LimiterTapped = true;
                     else if (role == Role.Broadcast) BroadcastTapped = true;
@@ -202,10 +222,12 @@ namespace Draftmaster.Controls
                 {
                     case Role.Steer:
                         float travel = layout.steerTravel > 1f ? layout.steerTravel : 1f;
-                        float off = t.x - SteerCentreX;
-                        if (off > travel) { SteerCentreX = t.x - travel; off = travel; }
-                        else if (off < -travel) { SteerCentreX = t.x + travel; off = -travel; }
-                        Steer = off / travel;
+                        float off = (t.x - layout.steerRest.centerX) / travel;
+                        Steer = off > 1f ? 1f : off < -1f ? -1f : off;
+                        break;
+                    case Role.SteerButton:
+                        if (layout.steerLeftHit.Contains(t.x, t.y)) SteerLeftHeld = true;
+                        else if (layout.steerRightHit.Contains(t.x, t.y)) SteerRightHeld = true;
                         break;
                     case Role.Pedal:
                         if (layout.throttleHit.Contains(t.x, t.y)) Throttle = 1f;
@@ -213,19 +235,21 @@ namespace Draftmaster.Controls
                         break;
                 }
             }
+            if (SteerMode == TouchSteerMode.Buttons) Steer = (SteerRightHeld ? 1f : 0f) - (SteerLeftHeld ? 1f : 0f);
             _returning = false;
         }
 
         // Forget every finger: the controls were put away. A thumb still down when they come back is placed
-        // afresh, as if it had just landed — a thumb resting on the wheel takes it from where it is, with no
-        // jump — except on the pause button: the finger that tapped it to open the pause menu is not a second
-        // tap once the menu has gone.
+        // afresh, as if it had just landed — a thumb resting on the wheel steers from where it is — except
+        // on the pause button: the finger that tapped it to open the pause menu is not a second tap once the
+        // menu has gone.
         public void Reset()
         {
             _roles.Clear();
             _steering = false;
             _returning = true;
             Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; BroadcastTapped = false;
+            SteerLeftHeld = false; SteerRightHeld = false;
         }
 
         Role Classify(TouchPoint t, in TouchLayout layout, float slop)
@@ -234,7 +258,11 @@ namespace Draftmaster.Controls
             if (LimiterShown && layout.limiter.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Limiter;
             if (BroadcastShown && layout.broadcast.Inflate(slop).Contains(t.x, t.y)) return _returning ? Role.Ignored : Role.Broadcast;
             if (ButtonsOnly) return Role.Ignored;
-            if (layout.steerZone.Contains(t.x, t.y)) return _steering ? Role.Ignored : Role.Steer;
+            if (layout.steerZone.Contains(t.x, t.y))
+            {
+                if (SteerMode == TouchSteerMode.Buttons) return Role.SteerButton;
+                return _steering ? Role.Ignored : Role.Steer;
+            }
             return Role.Pedal;
         }
     }
