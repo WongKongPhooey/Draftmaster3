@@ -14,9 +14,9 @@ namespace Draftmaster.Weekend
     public static class ChiefCheckIn
     {
         // How far from the briefing the text arrives. Watkins Glen's walk from the motorhome to the pit box
-        // is about 290 m, so this lands roughly a third of the way there - far enough out that the player is
-        // plainly on their way, close enough that they have not arrived.
-        public const float TriggerMetres = 200f;
+        // is about 290 m, so this lands soon after they set off - far enough out that the player is plainly
+        // on their way and has most of the walk left to try running, close enough that they have left the RV.
+        public const float TriggerMetres = 250f;
 
         public const string SaveKey = "phone.chief.whereareyou";
 

@@ -19,7 +19,7 @@ live with its own marker before the result card has faded. `T` travels you there
 walk.
 
 **Your phone goes off on the way to the briefing.** The first booking is the crew chief's strategy briefing
-at the pit box. 200 m short of it (`ChiefCheckIn.TriggerMetres`; about a third of the way from the RV at
+at the pit box. 250 m short of it (`ChiefCheckIn.TriggerMetres`; soon after setting off from the RV at
 Watkins Glen) the phone bleeps, the chief texts to ask where you are, **the driver stops where they
 stand**, and a control hint reads **`P` - Check your phone** (View / Create on a pad) until they take it out.
 The phone opens with MESSAGES highlighted, reading "1 unread message". **Hold to run is taught after that**,

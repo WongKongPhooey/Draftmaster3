@@ -499,7 +499,7 @@ instead, set `anchor = Here` and author the marker **in that track's package**
 (`Draftmaster > Tracks > Edit Selected Package`, or `Draftmaster > NPCs > Move Selected NPC Into Track
 Package`) — a hand-placed position only means anything at one circuit.
 
-**The phone's first bleep.** Walking to the briefing, 200 m short of the pit box, the crew chief texts
+**The phone's first bleep.** Walking to the briefing, 250 m short of the pit box, the crew chief texts
 "where are you?", the driver is stopped, and a `P — Check your phone` hint stays up until the phone is
 opened; `LEFT SHIFT — Hold to run` follows once it is put away (`ChiefCheckInBeat`, rules in
 `ChiefCheckIn`). The phone owns that stop (`PhoneUI.Summon`), which is why P still opens it. To see it without the walk: **`Draftmaster > Demo > Send The Crew Chief's 'Where

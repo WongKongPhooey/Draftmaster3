@@ -29,7 +29,7 @@ the feed is stable within a weekend and different at the next one.
 **The form guide's stats are the ones the AI drives on** — `Qualifying` and `Consistency` set pace,
 `Aggression` skews the racing line (`AIDriverBinding`) — so a driver who reads aggressive races that way.
 
-**The first time it goes off.** On the walk to the Friday strategy briefing, 200 m short of the pit box, the
+**The first time it goes off.** On the walk to the Friday strategy briefing, 250 m short of the pit box, the
 crew chief texts to ask where the player is: a bleep (synthesised, `ChiefCheckInBeat.TextTone`), the message
 in MESSAGES, the home grid's highlight parked on that tile, the player stopped where they stand, and a
 `P — Check your phone` control hint (urgent: it jumps any hint already up) that stays until the phone
