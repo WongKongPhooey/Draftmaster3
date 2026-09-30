@@ -42,6 +42,7 @@ public class EngineGearbox : MonoBehaviour
     bool HasGears => vehicleInfo != null && vehicleInfo.gearRatios != null && vehicleInfo.gearRatios.Length > 0;
 
     IVehicleSpeedReadout _speedSource;
+    PlayerVehicleController _pvc;   // wheelspin source: spinning tyres rev the engine past what road speed says
     float _shiftTimer;
     float _prevSpeedMps;
     float _rpmTarget;
@@ -58,6 +59,7 @@ public class EngineGearbox : MonoBehaviour
             var pvc = GetComponent<PlayerVehicleController>();
             if (vehicleInfo == null && pvc != null) vehicleInfo = pvc.vehicleInfo;
         }
+        _pvc = GetComponent<PlayerVehicleController>();
         Gear = 0;
         Rpm = vehicleInfo != null ? vehicleInfo.idleRpm : 1000f;
         _rpmTarget = Rpm;
@@ -131,6 +133,11 @@ public class EngineGearbox : MonoBehaviour
         // 1 = on power, 0 = coasting/braking. Steady cruise (accel~0) sits mid as a light-throttle blend;
         // gaining speed pushes to the on bank, losing it to the off bank.
         float loadTarget = Mathf.Clamp01(0.5f + accelMps2 * 1.2f);
+        // Lit-up rears: the wheels are turning far faster than the car is moving, so the engine is flat out
+        // on the limiter side of first gear however slowly the car creeps. Road speed alone read a donut
+        // as a crawl and idled through it.
+        float spin = _pvc != null && _pvc.enabled ? _pvc.Wheelspin : 0f;
+        loadTarget = Mathf.Max(loadTarget, spin);
         Load01 = Mathf.Lerp(Load01, loadTarget, 1f - Mathf.Exp(-dt / 0.12f));
 
         // Tick down any in-progress shift before evaluating a new one.
@@ -160,6 +167,7 @@ public class EngineGearbox : MonoBehaviour
 
         // Target RPM for the (possibly new) gear, floored at idle.
         _rpmTarget = Mathf.Max(vehicleInfo.idleRpm, rpmInGear(Gear));
+        if (spin > 0f) _rpmTarget = Mathf.Max(_rpmTarget, Mathf.Lerp(vehicleInfo.idleRpm, vehicleInfo.shiftUpRpm, spin));
         // During a shift the clutch is out — let revs fall toward idle for the audible blip/drop.
         if (IsShifting) _rpmTarget = Mathf.Lerp(_rpmTarget, vehicleInfo.idleRpm, 0.6f);
 

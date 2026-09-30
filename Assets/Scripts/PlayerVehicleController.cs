@@ -181,6 +181,10 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     [Range(0f, 0.95f)] public float wheelspinAccelLoss = 0.6f;
     [Tooltip("Rear lateral grip multiplier while spinning (lower = looser, easier to rotate).")]
     [Range(0.1f, 1f)] public float wheelspinRearGrip = 0.45f;
+    [Tooltip("How hard the front tyres hold their line in a crawl-speed donut (m/s² of lateral correction). High = the car pivots tightly about its front wheels; low = the whole car drifts.")]
+    public float donutFrontGrip = 30f;
+    [Tooltip("Lay tyre smoke from the rear wheels while they're spinning (TyreSmoke).")]
+    public bool tyreSmoke = true;
 
     [Header("Tyre Trails")]
     [Tooltip("Leave faint tyre trails while on grass.")]
@@ -228,6 +232,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // Surface state this step, for tyre FX. CurrentSurface is only meaningful while OnLooseSurface — on
     // the track it keeps whatever was last driven over.
     public bool OnLooseSurface => _onGrass;
+    // 0..1 how lit up the rear tyres are this step (donuts, a hot launch). Tyre smoke and the engine's
+    // flare read it; the car itself already acted on it.
+    public float Wheelspin { get; private set; }
     public TrackEnvironment.SurfaceType CurrentSurface { get; private set; } = TrackEnvironment.SurfaceType.Grass;
     // World centre of the rear axle — where tyre trails and surface spray come from.
     public Vector2 RearAxleWorld
@@ -399,6 +406,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
         // FX components install themselves onto every car (player and AI) so no prefab wiring is needed.
         if (surfaceSpray && GetComponent<TyreSurfaceParticles>() == null) gameObject.AddComponent<TyreSurfaceParticles>();
+        if (tyreSmoke && GetComponent<TyreSmoke>() == null) gameObject.AddComponent<TyreSmoke>();
         if (impactDebris && GetComponent<ImpactParticles>() == null) gameObject.AddComponent<ImpactParticles>();
 
         if (enableWear)
@@ -586,6 +594,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             wheelspin = Mathf.Clamp01(
                 ((throttleIn - wheelspinThrottle) / Mathf.Max(1f - wheelspinThrottle, 0.01f))
                 * (1f - speedNow / Mathf.Max(wheelspinSpeed, 0.01f)));
+        Wheelspin = wheelspin;
 
         // --- Aero draft. Tow: tucked behind a car, the hole in the air frees up drag → extra accel + a raised
         // top-speed ceiling (the slingshot run). Side draft: a rival's nose beside OUR rear quarter steals air
@@ -705,12 +714,19 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                     float lockFrac = Mathf.Clamp(_steerDeg / Mathf.Max(vehicleInfo.maxSteeringAngle, 1f), -1f, 1f);
                     float targetR = rKin + lockFrac * wheelspinYawRate * Mathf.Deg2Rad * wheelspin;
                     _r = Mathf.MoveTowards(_r, targetR, wheelspinYawAccel * Mathf.Deg2Rad * h);
-                    _vy = Mathf.MoveTowards(_vy, 0f, 4f * h); // looser so the tail steps out
+                    // The fronts still grip and roll where they point, so the rotation is about the FRONT axle
+                    // and the lit-up rears swing wide around it. Front-axle lateral velocity is _vy + _a*_r; the
+                    // car's centre has to slide the other way for that to match the steered wheels. Leaving
+                    // _vy at zero (as this once did) spun the body about its centre, like a turntable.
+                    float frontPinnedVy = _vx * Mathf.Tan(delta) - _a * _r;
+                    _vy = Mathf.MoveTowards(_vy, frontPinnedVy, donutFrontGrip * h);
                 }
                 else
                 {
+                    // Crawling on grip: the rear axle doesn't slide sideways, so the centre carries _b*_r of
+                    // lateral velocity — a parking-speed turn swings about the rear wheels, as a real car does.
                     _r = Mathf.MoveTowards(_r, rKin, 8f * h);
-                    _vy = Mathf.MoveTowards(_vy, 0f, 12f * h);
+                    _vy = Mathf.MoveTowards(_vy, _b * _r, 12f * h);
                 }
                 _alphaF = 0f; _alphaR = 0f;
             }
