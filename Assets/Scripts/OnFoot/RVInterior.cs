@@ -69,6 +69,11 @@ public class RVInterior : MonoBehaviour
     public float doorWidth = 1.4f;
     [Tooltip("Dead-band around the doorway so the view doesn't flicker while standing in the threshold.")]
     public float hysteresis = 0.4f;
+    [Tooltip("Where stepping OUT of the door happens, metres past Room Front (negative = short of it). Stepping in " +
+             "happens at Room Front - Hysteresis, so keep this above -Hysteresis or the doorway flickers. The full " +
+             "hysteresis here put the exit most of a metre past the wall, with the player stood on black before " +
+             "the paddock came back.")]
+    public float doorExitPad = -0.2f;
 
     [Header("Art (optional)")]
     [Tooltip("If set, the interior floor is this sprite instead of the procedural placeholder room. Sized to roomWidth x (roomBack+roomFront).")]
@@ -132,10 +137,14 @@ public class RVInterior : MonoBehaviour
     // not past backDistance behind — so approaching the RV from a side or the back never re-masks; only
     // the doorway does. Hysteresis grows the box while inside and shrinks it while outside, keeping each
     // pair of switch points apart so hovering on an edge can't rapidly toggle the view.
-    public static bool EvaluateInside(bool wasInside, float localForward, float localRight, float doorDistance, float backDistance, float halfWidth, float hysteresis)
+    //
+    // `doorExitPad`, when given, replaces the hysteresis on the doorway edge while inside: how far past the
+    // door line the player has to get before they are outside. The box's other edges keep the hysteresis.
+    public static bool EvaluateInside(bool wasInside, float localForward, float localRight, float doorDistance, float backDistance, float halfWidth, float hysteresis, float? doorExitPad = null)
     {
         float h = wasInside ? hysteresis : -hysteresis;
-        return localForward < doorDistance + h
+        float door = wasInside && doorExitPad.HasValue ? doorExitPad.Value : h;
+        return localForward < doorDistance + door
             && localForward > -backDistance - h
             && Mathf.Abs(localRight) < halfWidth + h;
     }
@@ -416,7 +425,8 @@ public class RVInterior : MonoBehaviour
         Vector2 rel = (Vector2)_player.position - _anchorXY;
         float localForward = Vector2.Dot(rel, _doorDir);
         float localRight = Vector2.Dot(rel, new Vector2(_doorDir.y, -_doorDir.x));
-        bool nowInside = EvaluateInside(_inside, localForward, localRight, roomFront, roomBack, roomWidth * 0.5f, hysteresis);
+        bool nowInside = EvaluateInside(_inside, localForward, localRight, roomFront, roomBack, roomWidth * 0.5f, hysteresis,
+                                       Mathf.Max(doorExitPad, -hysteresis + 0.1f));
         if (nowInside != _inside) SetInside(nowInside);
 
         // Keep the player pulled in front of the mask every frame while inside, in case anything else
