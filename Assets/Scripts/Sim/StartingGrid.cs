@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Draftmaster.Sim
 {
     // Where a driver who has not qualified lines up.
@@ -32,5 +35,40 @@ namespace Draftmaster.Sim
         }
 
         public static int BackOfTheField(int fieldSize) => fieldSize <= 1 ? 0 : fieldSize - 1;
+
+        // A qualifying lap counts only if one was set. Timing rows use -1 for "no time".
+        public static bool HasTime(float bestLap) => bestLap > 0f;
+
+        // Put a qualifying field in grid order (index 0 = pole): timed cars by best lap, untimed cars behind
+        // them by laps run, and a player who set no time behind all of them.
+        //
+        // The player goes last deliberately. Untimed cars used to share one tie on laps run — nearly always
+        // nought for everyone — and List.Sort is not stable, so a player who ended qualifying without a lap
+        // could come out of the tie on pole and start the race from the front. No time is no earned slot.
+        // The sort here is stable (original order breaks ties), so the same session always gives the same grid.
+        public static List<T> OrderForGrid<T>(IList<T> cars, Func<T, float> bestLap, Func<T, int> laps,
+                                              Func<T, bool> isPlayer)
+        {
+            var ordered = new List<T>(cars.Count);
+            if (cars.Count == 0) return ordered;
+
+            var keyed = new List<(T car, int i)>(cars.Count);
+            for (int i = 0; i < cars.Count; i++) keyed.Add((cars[i], i));
+
+            keyed.Sort((a, b) =>
+            {
+                bool aOut = isPlayer(a.car) && !HasTime(bestLap(a.car));
+                bool bOut = isPlayer(b.car) && !HasTime(bestLap(b.car));
+                if (aOut != bOut) return aOut ? 1 : -1;
+
+                bool aHas = HasTime(bestLap(a.car)), bHas = HasTime(bestLap(b.car));
+                if (aHas != bHas) return aHas ? -1 : 1;
+                int c = aHas ? bestLap(a.car).CompareTo(bestLap(b.car)) : laps(b.car).CompareTo(laps(a.car));
+                return c != 0 ? c : a.i.CompareTo(b.i);
+            });
+
+            for (int i = 0; i < keyed.Count; i++) ordered.Add(keyed[i].car);
+            return ordered;
+        }
     }
 }

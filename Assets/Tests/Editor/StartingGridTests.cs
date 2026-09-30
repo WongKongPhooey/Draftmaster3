@@ -77,4 +77,60 @@ public class StartingGridTests
             Assert.Less(slot, FullField);
         }
     }
+
+    // ---- Qualifying order → race grid ----
+
+    class Car
+    {
+        public string name; public float best; public int laps; public bool player;
+        public Car(string n, float b, int l, bool p = false) { name = n; best = b; laps = l; player = p; }
+    }
+
+    static System.Collections.Generic.List<Car> Grid(params Car[] cars) =>
+        StartingGrid.OrderForGrid(cars, c => c.best, c => c.laps, c => c.player);
+
+    // The bug: a player who ended qualifying without a lap started the race on pole, because every untimed
+    // car tied on nought laps and an unstable sort could pull the player out of the tie first.
+    [Test]
+    public void APlayerWithNoTimeLinesUpLastEvenWhenNobodyElseSetOne()
+    {
+        var cars = new System.Collections.Generic.List<Car> { new Car("You", -1f, 0, true) };
+        for (int i = 0; i < FullField - 1; i++) cars.Add(new Car("AI" + i, -1f, 0));
+
+        var grid = Grid(cars.ToArray());
+        Assert.AreEqual(FullField, grid.Count);
+        Assert.IsTrue(grid[FullField - 1].player, "No time set, so no earned slot: the player starts last.");
+    }
+
+    [Test]
+    public void APlayerWithNoTimeStartsBehindUntimedCarsThatRanLaps()
+    {
+        var grid = Grid(new Car("You", -1f, 0, true), new Car("A", 50f, 2), new Car("B", -1f, 3),
+                        new Car("C", 49f, 1), new Car("D", -1f, 0));
+        CollectionAssert.AreEqual(new[] { "C", "A", "B", "D", "You" }, grid.ConvertAll(c => c.name));
+    }
+
+    [Test]
+    public void APlayerWithATimeKeepsTheSlotItEarned()
+    {
+        var grid = Grid(new Car("A", 50f, 2), new Car("You", 48f, 1, true), new Car("B", -1f, 0));
+        CollectionAssert.AreEqual(new[] { "You", "A", "B" }, grid.ConvertAll(c => c.name));
+    }
+
+    [Test]
+    public void TiesKeepTheirOriginalOrder()
+    {
+        var cars = new Car[30];
+        for (int i = 0; i < cars.Length; i++) cars[i] = new Car("AI" + i, -1f, 0);
+        var grid = Grid(cars);
+        for (int i = 0; i < cars.Length; i++) Assert.AreSame(cars[i], grid[i]);
+    }
+
+    [Test]
+    public void OnlyARealLapCountsAsATime()
+    {
+        Assert.IsFalse(StartingGrid.HasTime(-1f));
+        Assert.IsFalse(StartingGrid.HasTime(0f));
+        Assert.IsTrue(StartingGrid.HasTime(47.3f));
+    }
 }

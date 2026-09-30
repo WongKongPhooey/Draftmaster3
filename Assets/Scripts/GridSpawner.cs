@@ -280,7 +280,9 @@ public class GridSpawner : MonoBehaviour
             for (int g = 0; g < RaceWeekend.GridOrder.Count; g++)
             {
                 var entry = RaceWeekend.GridOrder[g];
-                if (entry.isPlayer) playerRank = g;
+                // A player with no qualifying time has no rank to keep, wherever the grid put them: they
+                // take the unqualified slot below (the back of the field) like a driver who never went out.
+                if (entry.isPlayer) { if (Draftmaster.Sim.StartingGrid.HasTime(entry.bestLap)) playerRank = g; }
                 else aiGrid.Add(entry);
             }
         }

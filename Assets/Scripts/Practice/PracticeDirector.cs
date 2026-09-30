@@ -210,15 +210,18 @@ public class PracticeDirector : MonoBehaviour
         return o;
     }
 
-    // Rank the field by best qualifying lap (no-time cars go to the back, ordered by laps run) and
-    // publish it as the race grid. Identity comes from the timing rows (name/number/isPlayer).
+    // Rank the field by best qualifying lap (no-time cars go to the back, ordered by laps run; a player
+    // with no time behind all of them) and publish it as the race grid. Identity comes from the timing
+    // rows (name/number/isPlayer).
     void CaptureGrid()
     {
         var lt = LapTimingManager.Instance;
         if (lt == null || lt.Rows.Count == 0) { RaceWeekend.GridOrder = null; return; }
 
-        var ranked = new List<LapTimingManager.CarTimes>();
-        lt.RankByBest(ranked);
+        var rows = new List<LapTimingManager.CarTimes>();
+        lt.RankByBest(rows);
+        var ranked = Draftmaster.Sim.StartingGrid.OrderForGrid(rows, c => c.bestLap, c => c.lapsCompleted,
+                                                               c => c.isPlayer);
 
         var grid = new List<RaceWeekend.GridEntry>(ranked.Count);
         for (int i = 0; i < ranked.Count; i++)
