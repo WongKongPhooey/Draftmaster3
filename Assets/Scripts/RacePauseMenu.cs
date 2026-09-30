@@ -233,62 +233,76 @@ public class RacePauseMenu : MonoBehaviour
         // The frozen race sits under the kit's scrim, not a flat black wash: still legible, clearly halted.
         PixelGUI.Scrim();
 
-        // Rows are a line of the label face tall, so the panel is sized from them rather than a
-        // literal 150 that was true while the face sat on an 8px cell.
-        float rowH = PixelGUI.LineH, gapH = PixelGUI.Px(4f);
+        // Every row is sized from the face it is drawn in, and the plate from the rows. The toggles are set
+        // in the data face (16px cell) with the skin's check-box padding around it, while LineH is a line
+        // of the display face (Silkscreen, 8px cell) — laying the toggles out on LineH packed a 16px face
+        // plus padding into a 10px row, so the top of the menu came out clipped and piled onto itself.
         float w = PixelGUI.Px(200f);
-        // One more row than before whenever a booked session is running, since END SESSION only appears
-        // then. Measured rather than budgeted, or the extra row pushes RESUME off the bottom of the plate.
-        int extraRows = PracticeDirector.PauseMenuExitLabel != null ? 1 : 0;
-        if (TouchDriveControls.TouchPlatform) extraRows++;
-        float h = PixelGUI.Px(24f) + PixelGUI.Heading.fontSize + gapH * 5f + rowH * 3f
-                  + rowH * 3f + gapH * 2f + (rowH + PixelGUI.Px(6f)) * 2f + gapH + PixelGUI.LineH + PixelGUI.Px(8f)
-                  + extraRows * (rowH + gapH);
+        const float margin = 10f;
+        float inset = PixelGUI.Px(4f) + PixelGUI.Px(margin);   // PanelContent's frame + margin, per side
+        float gap = PixelGUI.Px(4f);
+        float headingH = PixelGUI.Heading.fontSize;
+        float toggleH = Mathf.Max(PixelGUI.LineH,
+                                  PixelGUI.SnapUp(_toggle.CalcHeight(new GUIContent("  Racing line"), w - inset * 2f)));
+        float tabH = PixelGUI.LineH + PixelGUI.Px(6f);          // same plate height as the buttons below
+        float buttonH = PixelGUI.LineH + PixelGUI.Px(6f);
+        float footer = PixelGUI.LineH;
+
+        // What is on the panel right now. END SESSION only appears while a booked session is running, and the
+        // steer-buttons toggle only on a phone; counted here from the same conditions the drawing below uses.
+        int toggles = TouchDriveControls.TouchPlatform ? 4 : 3;
+        int tabs = PracticeDirector.PauseMenuExitLabel != null ? 4 : 3;   // missions, schedule, [end], co-op
+        float contentH = headingH + gap * 3f                                // title, rule
+                         + toggles * toggleH + gap * 2f                     // toggles, then a breather
+                         + tabs * (tabH + gap)
+                         + gap                                              // clear of the last tab's shadow
+                         + buttonH * 2f + gap + footer;
+        float h = contentH + inset * 2f;
         float x = Mathf.Round((Screen.width - w) * 0.5f);
-        float y = Mathf.Round((Screen.height - h) * 0.5f);
+        float y = Mathf.Max(0f, Mathf.Round((Screen.height - h) * 0.5f));
 
         PixelGUI.Panel(new Rect(x, y, w, h), focused: true);
 
-        var content = PixelGUI.PanelContent(new Rect(x, y, w, h), 10f);
-        float row = rowH, gap = gapH;
+        var content = PixelGUI.PanelContent(new Rect(x, y, w, h), margin);
+        float row = tabH;
         float cy = content.y;
 
-        GUI.Label(new Rect(content.x, cy, content.width, PixelGUI.Heading.fontSize), "PAUSED", _title);
-        cy += PixelGUI.Heading.fontSize + gap;
+        GUI.Label(new Rect(content.x, cy, content.width, headingH), "PAUSED", _title);
+        cy += headingH + gap;
         PixelGUI.Rule(content.x, cy, content.width);
         cy += gap * 2f;
 
         bool line = RacingLineDisplay.Visible;
-        PadCursor(PadRow.RacingLine, new Rect(content.x, cy, content.width, row));
-        bool newLine = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), line, "  Racing line", _toggle);
+        PadCursor(PadRow.RacingLine, new Rect(content.x, cy, content.width, toggleH));
+        bool newLine = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), line, "  Racing line", _toggle);
         if (newLine != line) RacingLineDisplay.Visible = newLine;
-        cy += row;
+        cy += toggleH;
 
         bool map = TrackMiniMap.Visible;
-        PadCursor(PadRow.MiniMap, new Rect(content.x, cy, content.width, row));
-        bool newMap = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), map, "  Mini-map", _toggle);
+        PadCursor(PadRow.MiniMap, new Rect(content.x, cy, content.width, toggleH));
+        bool newMap = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), map, "  Mini-map", _toggle);
         if (newMap != map) TrackMiniMap.Visible = newMap;
-        cy += row;
+        cy += toggleH;
 
         // Which camera the race is watched from. Off is the fixed view the game has always had; on swings the
         // whole picture round to sit behind the car. Switching either way is smooth, so it can be tried
         // mid-race without the view snapping.
         bool swing = CameraViewMode.Swinging;
-        PadCursor(PadRow.SwingCamera, new Rect(content.x, cy, content.width, row));
-        bool newSwing = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), swing, "  Swing camera", _toggle);
+        PadCursor(PadRow.SwingCamera, new Rect(content.x, cy, content.width, toggleH));
+        bool newSwing = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), swing, "  Swing camera", _toggle);
         if (newSwing != swing) CameraViewMode.Swinging = newSwing;
-        cy += row;
+        cy += toggleH;
 
         // Phone only: steer with left/right buttons rather than the slider. No pad row — the touch controls
         // are put away while a pad is in use, so there is nothing for a pad to switch.
         if (TouchDriveControls.TouchPlatform)
         {
             bool buttons = TouchDriveControls.SteerButtons;
-            bool newButtons = TouchTaps.Toggle(new Rect(content.x, cy, content.width, row), buttons, "  Steer buttons", _toggle);
+            bool newButtons = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), buttons, "  Steer buttons", _toggle);
             if (newButtons != buttons) TouchDriveControls.SteerButtons = newButtons;
-            cy += row;
+            cy += toggleH;
         }
-        cy += gap;
+        cy += gap * 2f;
 
         PadCursor(PadRow.Missions, new Rect(content.x, cy, content.width, row));
         if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row),
@@ -328,8 +342,6 @@ public class RacePauseMenu : MonoBehaviour
         DrawCoopRow(new Rect(content.x, cy, content.width, row));
         cy += row + gap;
 
-        float footer = PixelGUI.LineH;
-        float buttonH = PixelGUI.LineH + PixelGUI.Px(6f);
         float resumeY = content.yMax - buttonH - footer;
         // The way back to the front of the game. Without it a race is a one-way trip and the only exit
         // from the demo is stopping play mode.
