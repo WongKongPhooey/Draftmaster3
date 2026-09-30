@@ -122,7 +122,8 @@ public class TrackEnvironmentBuilderEditor : Editor
 
         EditorGUILayout.HelpBox(
             "Editing the active barrier (▶) in the Scene view:\n" +
-            "• Click empty space = add a point (between the anchors)\n" +
+            "• Click a line = insert a point there (later points renumber up)\n" +
+            "• Click empty space = add a point after the last one\n" +
             "• Drag a point = move • Shift+Click a point = delete\n" +
             "Green spheres are the fixed start/end anchors.",
             MessageType.None);
@@ -190,7 +191,8 @@ public class TrackEnvironmentBuilderEditor : Editor
 
         EditorGUILayout.HelpBox(
             "Editing the active runoff (▶) in the Scene view:\n" +
-            "• Click empty space = add a polygon point (in order)\n" +
+            "• Click an edge = insert a point there (later points renumber up)\n" +
+            "• Click empty space = add a point after the last one\n" +
             "• Drag a point = move • Shift+Click a point = delete\n" +
             "The polygon auto-closes from the last point back to the first.",
             MessageType.None);
@@ -328,7 +330,9 @@ public class TrackEnvironmentBuilderEditor : Editor
             Handles.Label(endWorld, " end");
         }
 
-        bool changed = EditPoints(pts, tf, env);
+        bool changed = haveAnchors
+            ? EditPoints(pts, tf, env, closed: false, startAnchor: startLocal, endAnchor: endLocal)
+            : EditPoints(pts, tf, env, closed: false);
 
         // Open polyline: startAnchor → points → endAnchor.
         Handles.color = Color.yellow;
@@ -359,7 +363,7 @@ public class TrackEnvironmentBuilderEditor : Editor
         var pts = area.points != null ? new List<Vector2>(area.points) : new List<Vector2>();
         Transform tf = _builder.track.transform;
 
-        bool changed = EditPoints(pts, tf, env);
+        bool changed = EditPoints(pts, tf, env, closed: true);
 
         // Closed polygon outline.
         Handles.color = new Color(1f, 0.6f, 0.1f, 1f);
@@ -379,8 +383,19 @@ public class TrackEnvironmentBuilderEditor : Editor
         }
     }
 
-    // Move (drag) / delete (shift-click) existing points and add a new one on a plain click in empty space.
-    static bool EditPoints(List<Vector2> pts, Transform tf, Object undoTarget)
+    // How close (screen pixels) the cursor has to be to an edge for a click to insert on it rather than
+    // append a point after the last one.
+    const float EdgePickPixels = 8f;
+
+    // Move (drag) / delete (shift-click) existing points. A plain click on an edge inserts a point there, at
+    // its place in the order: between points 3 and 4 it becomes the new 4, and the old 4 onwards move up
+    // one. A plain click in empty space appends after the last point, as before.
+    //
+    // `closed` = the polygon wraps from the last point back to the first (runoff areas), so that edge is
+    // clickable too and inserts after the last point. An open polyline (barrier sections) may be pinned to
+    // anchors at either end: the start-anchor edge inserts at 0, the end-anchor edge appends.
+    static bool EditPoints(List<Vector2> pts, Transform tf, Object undoTarget, bool closed,
+                           Vector2? startAnchor = null, Vector2? endAnchor = null)
     {
         Event e = Event.current;
         bool changed = false;
@@ -414,21 +429,98 @@ public class TrackEnvironmentBuilderEditor : Editor
             Handles.Label(world, $" {i}");
         }
 
-        if (!e.shift && !e.alt && e.type == EventType.MouseDown && e.button == 0 && !onExisting)
+        if (e.shift || e.alt || onExisting) return changed;
+
+        // Which edge (if any) the cursor is on, as the index a point added there would take.
+        int insertAt = NearestEdge(pts, tf, closed, startAnchor, endAnchor, e.mousePosition,
+                                   out Vector2 edgeA, out Vector2 edgeB);
+        bool onEdge = insertAt >= 0;
+
+        // The cursor sliding along an edge has to redraw the preview; the Scene view doesn't on its own.
+        if (e.type == EventType.MouseMove) SceneView.RepaintAll();
+
+        if (!RayToLocal(tf, e.mousePosition, out Vector2 cursor)) return changed;
+        Vector2 onLine = onEdge ? ClosestOnSegment(edgeA, edgeB, cursor) : cursor;
+
+        if (onEdge && e.type == EventType.Repaint)
         {
-            Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-            Plane plane = new Plane(Vector3.forward, Vector3.zero);
-            if (plane.Raycast(ray, out float dist))
+            // Preview: the edge lit up and a ghost of the point it would add, labelled with its new number.
+            Vector3 aw = tf.TransformPoint(new Vector3(edgeA.x, edgeA.y, 0f));
+            Vector3 bw = tf.TransformPoint(new Vector3(edgeB.x, edgeB.y, 0f));
+            Vector3 pw = tf.TransformPoint(new Vector3(onLine.x, onLine.y, 0f));
+            Handles.color = Color.white;
+            Handles.DrawAAPolyLine(4f, aw, bw);
+            Handles.color = new Color(1f, 1f, 1f, 0.8f);
+            Handles.SphereHandleCap(0, pw, Quaternion.identity, HandleUtility.GetHandleSize(pw) * 0.12f, EventType.Repaint);
+            Handles.Label(pw, $" +{insertAt}");
+        }
+
+        if (e.type == EventType.MouseDown && e.button == 0)
+        {
+            if (onEdge)
             {
-                Vector3 hit = ray.GetPoint(dist);
-                Vector3 local = tf.InverseTransformPoint(hit);
-                Undo.RecordObject(undoTarget, "Add Point");
-                pts.Add(new Vector2(local.x, local.y));
-                changed = true;
-                e.Use();
+                Undo.RecordObject(undoTarget, "Insert Point");
+                pts.Insert(insertAt, onLine);
             }
+            else
+            {
+                Undo.RecordObject(undoTarget, "Add Point");
+                pts.Add(cursor);
+            }
+            changed = true;
+            e.Use();
         }
 
         return changed;
+    }
+
+    // The edge under the cursor, as the index a point inserted on it would take; -1 if no edge is within
+    // EdgePickPixels. `a`/`b` are that edge's ends, in the track's local space.
+    static int NearestEdge(List<Vector2> pts, Transform tf, bool closed, Vector2? startAnchor, Vector2? endAnchor,
+                           Vector2 mouse, out Vector2 a, out Vector2 b)
+    {
+        Vector2 bestA = Vector2.zero, bestB = Vector2.zero;
+        int best = -1;
+        float bestPx = EdgePickPixels;
+
+        void Try(Vector2 from, Vector2 to, int insertIndex)
+        {
+            Vector2 fs = HandleUtility.WorldToGUIPoint(tf.TransformPoint(new Vector3(from.x, from.y, 0f)));
+            Vector2 ts = HandleUtility.WorldToGUIPoint(tf.TransformPoint(new Vector3(to.x, to.y, 0f)));
+            float px = HandleUtility.DistancePointLine(mouse, fs, ts);
+            if (px < bestPx) { bestPx = px; best = insertIndex; bestA = from; bestB = to; }
+        }
+
+        if (startAnchor.HasValue && endAnchor.HasValue && pts.Count == 0) Try(startAnchor.Value, endAnchor.Value, 0);
+        if (startAnchor.HasValue && pts.Count > 0) Try(startAnchor.Value, pts[0], 0);
+        for (int i = 0; i + 1 < pts.Count; i++) Try(pts[i], pts[i + 1], i + 1);
+        if (closed && pts.Count >= 3) Try(pts[pts.Count - 1], pts[0], pts.Count);
+        if (endAnchor.HasValue && pts.Count > 0) Try(pts[pts.Count - 1], endAnchor.Value, pts.Count);
+
+        a = bestA;
+        b = bestB;
+        return best;
+    }
+
+    static bool RayToLocal(Transform tf, Vector2 mouse, out Vector2 local)
+    {
+        Ray ray = HandleUtility.GUIPointToWorldRay(mouse);
+        Plane plane = new Plane(Vector3.forward, Vector3.zero);
+        if (plane.Raycast(ray, out float dist))
+        {
+            Vector3 l = tf.InverseTransformPoint(ray.GetPoint(dist));
+            local = new Vector2(l.x, l.y);
+            return true;
+        }
+        local = Vector2.zero;
+        return false;
+    }
+
+    static Vector2 ClosestOnSegment(Vector2 a, Vector2 b, Vector2 p)
+    {
+        Vector2 ab = b - a;
+        float len2 = ab.sqrMagnitude;
+        if (len2 < 1e-8f) return a;
+        return a + ab * Mathf.Clamp01(Vector2.Dot(p - a, ab) / len2);
     }
 }

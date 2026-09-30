@@ -40,10 +40,26 @@ public class NPCLayeredAppearance : MonoBehaviour
     readonly List<SpriteRenderer> _renderers = new();
     readonly List<Sprite[]> _frames = new();
     readonly List<string> _categories = new();   // library category each layer came from, same order
+    readonly List<LayerChoice> _worn = new();     // every category's outcome from the last Build, rolled or not
     int _frameCount;
 
     public int FrameCount => _frameCount;
     public bool Built => _renderers.Count > 0;
+
+    // What the last Build actually put on — every category, including the ones left off — as an authored
+    // outfit. Built from a seed, a person can't otherwise be copied: hand this to another body
+    // (NPCFactory.Dress) and it is the same person, not a lookalike rolled from different dice.
+    public LayerChoice[] WornOutfit()
+    {
+        var copy = new LayerChoice[_worn.Count];
+        for (int i = 0; i < _worn.Count; i++)
+            copy[i] = new LayerChoice
+            {
+                category = _worn[i].category, include = _worn[i].include,
+                styleIndex = _worn[i].styleIndex, tint = _worn[i].tint,
+            };
+        return copy;
+    }
 
     // Added in the inspector: fill in the library and, on a PlacedNPC marker, switch straight to authored
     // mode — a wardrobe is by definition a chosen outfit, not a random one.
@@ -83,16 +99,21 @@ public class NPCLayeredAppearance : MonoBehaviour
             if (cat.options == null || cat.options.Length == 0) continue;
 
             LayerChoice choice = useAuthoredOutfit ? FindChoice(cat.name) : null;
-            if (choice != null && !choice.include) continue;
-            if (choice == null && cat.optional && rng.NextDouble() > cat.presentChance) continue;
+            if ((choice != null && !choice.include) ||
+                (choice == null && cat.optional && rng.NextDouble() > cat.presentChance))
+            {
+                _worn.Add(new LayerChoice { category = cat.name, include = false });
+                continue;
+            }
 
-            Texture2D sheet = (choice != null && choice.styleIndex >= 0)
-                ? cat.options[Mathf.Clamp(choice.styleIndex, 0, cat.options.Length - 1)]
-                : cat.options[rng.Next(cat.options.Length)];
-            if (sheet == null) continue;
+            int style = (choice != null && choice.styleIndex >= 0)
+                ? Mathf.Clamp(choice.styleIndex, 0, cat.options.Length - 1)
+                : rng.Next(cat.options.Length);
+            Texture2D sheet = cat.options[style];
+            if (sheet == null) { _worn.Add(new LayerChoice { category = cat.name, include = false }); continue; }
 
             var frames = Slice(sheet);
-            if (frames.Length == 0) continue;
+            if (frames.Length == 0) { _worn.Add(new LayerChoice { category = cat.name, include = false }); continue; }
 
             var go = new GameObject(string.IsNullOrEmpty(cat.name) ? "Layer" : cat.name);
             var t = go.transform;
@@ -109,6 +130,7 @@ public class NPCLayeredAppearance : MonoBehaviour
             if (layerMaterial != null) sr.sharedMaterial = layerMaterial;
             sr.color = choice != null ? choice.tint : PickTint(cat, rng);
             sr.sprite = frames[0];
+            _worn.Add(new LayerChoice { category = cat.name, include = true, styleIndex = style, tint = sr.color });
 
             _renderers.Add(sr);
             _frames.Add(frames);
@@ -182,6 +204,7 @@ public class NPCLayeredAppearance : MonoBehaviour
         _renderers.Clear();
         _frames.Clear();
         _categories.Clear();
+        _worn.Clear();
         _frameCount = 0;
 
         var stale = GetComponentsInChildren<NPCLayerTag>(true);

@@ -92,7 +92,18 @@ public static class NPCFactory
     // paddock drivers are all built to.
     public const string LookChild = "Look";   // where a dressed body's paper-doll layers live
 
-    public static bool Dress(GameObject body, NPCLayeredAppearance wardrobe, float heightM = 0f)
+    public static bool Dress(GameObject body, NPCLayeredAppearance wardrobe, float heightM = 0f) =>
+        wardrobe != null &&
+        Dress(body, wardrobe, wardrobe.useAuthoredOutfit, wardrobe.authoredOutfit, heightM);
+
+    // Dress `body` as the same person `source` already is: whatever `source` actually built — rolled from a
+    // seed or authored — worn outright, so the two are one character rather than two draws from the dice.
+    public static bool DressAs(GameObject body, NPCLayeredAppearance source, float heightM = 0f) =>
+        source != null && source.Built &&
+        Dress(body, source, true, source.WornOutfit(), heightM);
+
+    static bool Dress(GameObject body, NPCLayeredAppearance wardrobe, bool authored,
+                      NPCLayeredAppearance.LayerChoice[] outfit, float heightM)
     {
         if (body == null || wardrobe == null || wardrobe.library == null) return false;
 
@@ -115,8 +126,8 @@ public static class NPCFactory
         doll.sortingLayerName = wardrobe.sortingLayerName;
         doll.baseSortingOrder = wardrobe.baseSortingOrder;
         doll.layerMaterial = wardrobe.layerMaterial != null ? wardrobe.layerMaterial : UnlitSpriteMaterial;
-        doll.useAuthoredOutfit = wardrobe.useAuthoredOutfit;
-        doll.authoredOutfit = CopyOutfit(wardrobe.authoredOutfit);
+        doll.useAuthoredOutfit = authored;
+        doll.authoredOutfit = CopyOutfit(outfit);
 
         if (!doll.Build())
         {

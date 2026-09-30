@@ -240,7 +240,7 @@ public class TouchWalkControls : MonoBehaviour
 
     // ------------------------------------------------------------------ drawing
 
-    // On foot there is no Esc either: a pause button in the top-right corner, whenever the paddock itself is
+    // On foot there is no Esc either: a pause button in the top-left corner, whenever the paddock itself is
     // what the thumbs are on (not under a screen that has its own buttons) and there is a pause menu to open.
     static bool PauseShows => OnFootWithThumbs && !ScreenOwnsTouches && RacePauseMenu.CanPause;
 

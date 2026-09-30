@@ -295,7 +295,7 @@ public class TouchWalkTests
     }
 
     [Test]
-    public void PauseButton_IsOnScreen_TopRight_ClearOfTheStickAndPhone()
+    public void PauseButton_IsOnScreen_TopLeft_ClearOfTheStickAndPhone()
     {
         foreach (var (w, h) in new[] { (800f, 360f), (1280f, 720f), (2400f, 1080f), (2048f, 1536f) })
         {
@@ -304,7 +304,7 @@ public class TouchWalkTests
             string at = $"{w}x{h}";
             Assert.IsTrue(p.x >= l.safe.x && p.y >= l.safe.y && p.xMax <= l.safe.xMax && p.yMax <= l.safe.yMax,
                           $"{at}: pause {p} runs off the screen");
-            Assert.Greater(p.centerX, l.safe.centerX, $"{at}: pause is not on the right (the top centre is the objective strip)");
+            Assert.Less(p.centerX, l.safe.centerX, $"{at}: pause is not on the left (the top centre is the objective strip)");
             Assert.IsFalse(p.Overlaps(l.stickZone), $"{at}: pause sits in the stick zone");
             Assert.IsFalse(p.Overlaps(l.phoneButton), $"{at}: pause sits on the phone button");
         }

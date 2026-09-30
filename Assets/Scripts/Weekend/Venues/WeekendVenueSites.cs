@@ -35,6 +35,7 @@ public class WeekendVenueSites : MonoBehaviour
     const float SeatSize = 0.55f;
     const float SeatPitch = 1.0f;
     const float RowPitch = 1.3f;
+    const int MaxSeatRows = 4;            // rows of chairs in the drivers' room
 
     const float FenceLength = 26f;
     const float FencePostGap = 1.6f;
@@ -235,6 +236,9 @@ public class WeekendVenueSites : MonoBehaviour
         foreach (var host in FindObjectsByType<WeekendVenueHost>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             if (host.venue == WeekendVenue.PitBox && host.GetComponent<BriefingHuddle>() == null)
                 host.gameObject.AddComponent<BriefingHuddle>();
+
+        // The chief at the box and the chief by the car are one man: whichever of them the weekend wants.
+        if (GetComponent<CrewChiefPresence>() == null) gameObject.AddComponent<CrewChiefPresence>();
     }
 
     // Stand a host beside the venue's anchor, offset along the paddock so the player is not walking into
@@ -511,19 +515,25 @@ public class WeekendVenueSites : MonoBehaviour
 
     // The drivers' room: four walls with a door in the pit-side face, a top table across the back, and a
     // seat for every driver entered at this circuit. Parked at the far end of the paddock so it is a walk
-    // rather than a step, and inset from the boundary so the player can get round it.
+    // rather than a step, and inset from the boundary so the player can get round it — unless the track
+    // authors a MeetingRoom_Marker, in which case the room is built centred on it, turned the way it is
+    // turned (door on its local -Y), as the fan fence and the winner's circle are.
     void PlaceDriversRoom(Vector3 centre, Vector3 along, Vector3 outward, float halfLen, float halfDepth,
                           float alongOffset)
     {
-        if (WeekendVenueAnchor.Exists(WeekendVenue.MeetingRoom)) return;
-
-        Vector3 roomCentre = centre + along * AlongOffset(alongOffset, halfLen, RoomWidth * 0.5f)
-                                    + outward * Mathf.Max(0f, halfDepth - RoomDepth * 0.75f);
+        bool authored = AuthoredSpot(WeekendVenue.MeetingRoom, out Vector3 at, out Quaternion facing);
+        if (!authored)
+        {
+            if (WeekendVenueAnchor.Exists(WeekendVenue.MeetingRoom)) return;
+            at = Walkable(centre + along * AlongOffset(alongOffset, halfLen, RoomWidth * 0.5f)
+                                 + outward * Mathf.Max(0f, halfDepth - RoomDepth * 0.75f));
+            facing = FrameRotation(outward);
+        }
 
         var room = new GameObject("DriversRoom");
         room.transform.SetParent(_root, false);
-        room.transform.position = Walkable(roomCentre);
-        room.transform.rotation = FrameRotation(outward);
+        room.transform.position = at;
+        room.transform.rotation = facing;
 
         var floorMat = Mat(new Color(0.30f, 0.31f, 0.34f));
         var wallMat = Mat(new Color(0.17f, 0.18f, 0.21f));
@@ -557,7 +567,8 @@ public class WeekendVenueSites : MonoBehaviour
         int seats = BuildSeats(room.transform, seatMat, hy);
         SeatTheDrivers(room.transform, hy, seats);
 
-        // Stand the player just inside the door, facing the table.
+        // Stand the player just inside the door, facing the table. An authored marker is its own anchor.
+        if (authored) return;
         Vector3 door = Walkable(room.transform.TransformPoint(new Vector3(0f, -hy + 0.9f, 0f)));
         PaddockProps.Anchor(_root, WeekendVenue.MeetingRoom, door, door, arriveRange: 4f);
 
@@ -571,7 +582,9 @@ public class WeekendVenueSites : MonoBehaviour
         if (drivers <= 0) return 0;
 
         int perRow = Mathf.Max(6, Mathf.FloorToInt((RoomWidth - 3f) / SeatPitch));
-        int rows = Mathf.CeilToInt(drivers / (float)perRow);
+        // Four rows at most. A chair for every entry in all three championships filled the room to the door,
+        // and a drivers meeting reads the same with the front of the room full and the back left to imagine.
+        int rows = Mathf.Min(MaxSeatRows, Mathf.CeilToInt(drivers / (float)perRow));
 
         var seatsRoot = new GameObject("Seats");
         seatsRoot.transform.SetParent(room, false);

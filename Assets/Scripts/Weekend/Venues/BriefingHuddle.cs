@@ -6,9 +6,10 @@ using UnityEngine;
 //
 // The briefing is where the weekend's plan is set, and a plan is set with the people who are going to carry
 // it out. With only the chief at the box the player walked up to one man stood on his own, which read as a
-// chat rather than a meeting. So while the briefing is booked the crew are there too: stood in an arc round
-// him, facing in, in the car's colours, with the open side of the ring towards where the driver walks up —
-// the player steps into the gap and the circle is complete.
+// chat rather than a meeting. So while the briefing is booked the crew are there too: in the car's colours,
+// stood in a loose arc in front of him on the side the driver walks up from, all facing him — an audience
+// with the driver at the front of it, rather than a ring he has to step into. Nobody stands on an exact mark
+// or square to him: each of them is a little nearer or further, a little along the arc, a little turned.
 //
 // They come for the booking and go when it is done, like the engineer in the motorhome
 // (WeekendVenueHostPresence): the rest of the weekend the crew are on pit road with the car, and a second
@@ -27,11 +28,21 @@ public class BriefingHuddle : MonoBehaviour
     [Tooltip("How many crew stand round the chief.")]
     [Range(1, 8)] public int crewCount = 5;
 
-    [Tooltip("Distance from the chief to each of the crew, metres.")]
-    public float radius = 1.5f;
+    [Tooltip("Distance from the chief to each of the crew, metres. Further than the venue's mark, so the " +
+             "driver talking to him stands between him and the crew.")]
+    public float radius = 2.1f;
 
-    [Tooltip("Degrees of the ring left open, centred on the side the player walks up from.")]
-    [Range(0f, 270f)] public float gapDegrees = 110f;
+    [Tooltip("Width of the arc the crew stand along, degrees, centred on the side the player walks up from.")]
+    [Range(10f, 180f)] public float arcDegrees = 70f;
+
+    [Tooltip("How far each of the crew may stand off their exact place: metres nearer or further.")]
+    public float radiusJitter = 0.2f;
+
+    [Tooltip("...degrees along the arc.")]
+    public float angleJitterDeg = 3f;
+
+    [Tooltip("...and degrees their facing is turned off looking straight at the chief.")]
+    public float facingJitterDeg = 12f;
 
     [Tooltip("Rotation added to the facing angle so the sprite's drawn facing lines up, as PaddockWalker's.")]
     public float spriteFacingOffsetDeg = 90f;
@@ -66,30 +77,50 @@ public class BriefingHuddle : MonoBehaviour
     bool _present;                          // stood in the ring for a meeting
     bool _leaving;                          // meeting over, walking back to the box
 
-    // Where each of the crew stands, round a chief at `centre` with the player arriving from `towardPlayer`.
-    // Pure, so the layout is testable without a scene: every place is `radius` from the chief, and none of
-    // them is inside the gap left for the driver.
-    public static Vector2[] Places(Vector2 centre, Vector2 towardPlayer, int count, float radius, float gapDegrees)
+    // Where each of the crew stands in front of a chief at `centre`, with the player arriving from
+    // `towardPlayer`: spread along an arc `arcDegrees` wide centred on that direction, `radius` out. Pure, so
+    // the layout is testable without a scene. With a `seed` every place is nudged — up to `radiusJitter`
+    // nearer or further and `angleJitterDeg` along the arc — the same nudge for the same seed, so the crew do
+    // not shuffle about each time they come back for a meeting.
+    public static Vector2[] Places(Vector2 centre, Vector2 towardPlayer, int count, float radius, float arcDegrees,
+                                   int seed = 0, float radiusJitter = 0f, float angleJitterDeg = 0f)
     {
         var places = new Vector2[Mathf.Max(0, count)];
         if (places.Length == 0) return places;
 
-        Vector2 open = towardPlayer.sqrMagnitude > 1e-6f ? towardPlayer.normalized : Vector2.down;
-        float openDeg = Mathf.Atan2(open.y, open.x) * Mathf.Rad2Deg;
+        Vector2 front = towardPlayer.sqrMagnitude > 1e-6f ? towardPlayer.normalized : Vector2.down;
+        float frontDeg = Mathf.Atan2(front.y, front.x) * Mathf.Rad2Deg;
 
-        // The arc is everything but the gap. Crew sit at the middle of equal shares of it, so the two at the
-        // ends stand half a share in from the gap's edges rather than on them.
-        float arc = 360f - Mathf.Clamp(gapDegrees, 0f, 359f);
+        // Crew sit at the middle of equal shares of the arc, so the two at the ends stand half a share in
+        // from its edges rather than on them. Never jittered past half a share, so nobody swaps places.
+        float arc = Mathf.Clamp(arcDegrees, 0f, 359f);
         float share = arc / places.Length;
-        float start = openDeg + (360f - arc) * 0.5f;
+        float start = frontDeg - arc * 0.5f;
+        float angleJitter = Mathf.Min(Mathf.Max(0f, angleJitterDeg), share * 0.45f);
+        float radiusSpread = Mathf.Clamp(radiusJitter, 0f, radius * 0.5f);
 
+        var rng = new System.Random(seed);
         for (int i = 0; i < places.Length; i++)
         {
-            float a = (start + share * (i + 0.5f)) * Mathf.Deg2Rad;
-            places[i] = centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius;
+            float a = start + share * (i + 0.5f) + Spread(rng) * angleJitter;
+            float r = radius + Spread(rng) * radiusSpread;
+            float rad = a * Mathf.Deg2Rad;
+            places[i] = centre + new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * r;
         }
         return places;
     }
+
+    // How far each of the crew is turned off looking straight at the chief, degrees, in [-jitter, jitter].
+    // Seeded like Places, and from its own stream so changing the one does not move the other.
+    public static float[] FacingOffsets(int count, int seed, float jitterDeg)
+    {
+        var offsets = new float[Mathf.Max(0, count)];
+        var rng = new System.Random(seed ^ 0x5f3759df);
+        for (int i = 0; i < offsets.Length; i++) offsets[i] = Spread(rng) * Mathf.Max(0f, jitterDeg);
+        return offsets;
+    }
+
+    static float Spread(System.Random rng) => (float)(rng.NextDouble() * 2.0 - 1.0);
 
     // One step of the walk back from `from` towards `to`: `speed * dt` along the line, never past the end.
     // Pure, so the walk is testable without a scene.
@@ -246,7 +277,7 @@ public class BriefingHuddle : MonoBehaviour
         _root = new GameObject("BriefingCrew").transform;
         _root.SetParent(transform.parent, false);
 
-        int seedBase = ("BriefingCrew" + chief.venue).GetHashCode();
+        int seedBase = SeedBase;
         for (int i = 0; i < crewCount; i++)
         {
             var body = PaddockPerson.Spawn(_root, chief.transform.position, "Crew_" + (i + 1), seedBase + i * 7919);
@@ -255,6 +286,8 @@ public class BriefingHuddle : MonoBehaviour
         }
         Place();
     }
+
+    int SeedBase => ("BriefingCrew" + chief.venue).GetHashCode();
 
     void Place()
     {
@@ -265,7 +298,8 @@ public class BriefingHuddle : MonoBehaviour
         var anchor = WeekendVenueAnchor.Find(chief.venue);
         Vector2 toward = anchor != null ? (Vector2)anchor.transform.position - centre : Vector2.down;
 
-        var places = Places(centre, toward, _crew.Count, radius, gapDegrees);
+        var places = Places(centre, toward, _crew.Count, radius, arcDegrees, SeedBase, radiusJitter, angleJitterDeg);
+        var turn = FacingOffsets(_crew.Count, SeedBase, facingJitterDeg);
         for (int i = 0; i < _crew.Count; i++)
         {
             var body = _crew[i];
@@ -279,10 +313,17 @@ public class BriefingHuddle : MonoBehaviour
             var rb = body.GetComponent<Rigidbody2D>();
             if (rb != null) rb.position = at;
 
+            // All of them looking his way, none of them squared up to him on a protractor.
             Vector2 face = centre - at;
             if (face.sqrMagnitude > 1e-6f)
-                OnFootController.ApplyFacing(body.transform, rb, face.normalized, spriteFacingOffsetDeg);
+                OnFootController.ApplyFacing(body.transform, rb, Rotate(face.normalized, turn[i]), spriteFacingOffsetDeg);
         }
+    }
+
+    static Vector2 Rotate(Vector2 v, float deg)
+    {
+        float r = deg * Mathf.Deg2Rad, c = Mathf.Cos(r), sn = Mathf.Sin(r);
+        return new Vector2(v.x * c - v.y * sn, v.x * sn + v.y * c);
     }
 
     // The car's colours, as the crew on pit road wear them. The player's car may not have claimed its box

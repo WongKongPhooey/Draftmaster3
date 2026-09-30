@@ -400,7 +400,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         if (!InputGlyphs.UsingTouch) return;
         if (PhoneUI.IsOpen || RacePauseMenu.IsPaused || NPCInteractable.AnyConversationActive) return;
 
-        float w = PixelGUI.Px(28f), h = PixelGUI.Px(12f);
+        float w = PixelGUI.Px(28f), h = PixelGUI.Px(24f);
         var tab = new Rect(Mathf.Round((Screen.width - w) * 0.5f), 0f, w, h);
         PixelGUI.Fill(tab, PixelGUI.PlateDeep);
         PixelGUI.Fill(new Rect(tab.x, tab.yMax - PixelGUI.Px(1f), tab.width, PixelGUI.Px(1f)), PixelGUI.Gold);
@@ -408,7 +408,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         PixelGUI.Fill(new Rect(tab.xMax - PixelGUI.Px(1f), tab.y, PixelGUI.Px(1f), tab.height), PixelGUI.Gold);
 
         // A down chevron in whole kit pixels: rows 7, 5, 3, 1 wide.
-        float cx = tab.center.x, y = tab.y + PixelGUI.Px(3f);
+        float cx = tab.center.x, y = tab.y + PixelGUI.Px(10f);   // centred in the tab, above its gold rim
         for (int row = 0; row < 4; row++)
         {
             float rw = PixelGUI.Px(7f - row * 2f);
