@@ -61,6 +61,14 @@ namespace Draftmaster.Weekend
                 "I write every one of your races down. Ask me about Bristol. Go on."),
         };
 
+        // Who is at the front of the queue, as the bubble over them names them. Everyone in the line is just
+        // a fan: what they are holding and what they say is who they are.
+        public const string FanSpeaker = "A FAN";
+
+        // The longest queue a session can bring — the whole cast. The fence builds this many places along
+        // the rail, so every beat has somebody stood there to say it.
+        public static int MaxQueue => Queue.Length;
+
         public static WeekendConversation Build(WeekendActivity a)
         {
             bool parade = a != null && a.kind == ActivityKind.HaulerParade;
@@ -109,10 +117,10 @@ namespace Draftmaster.Weekend
                 var fan = order[i];
                 c.Add(new WeekendBeat
                 {
-                    speaker = fan.who,
+                    speaker = FanSpeaker,
                     preamble = Preamble(i, queueLength),
                     line = fan.line,
-                    question = $"They're holding {fan.holding}.",
+                    question = $"{Describe(fan.who)}, holding {fan.holding}.",
                     choices =
                     {
                         WeekendConversation.Say(
@@ -180,6 +188,15 @@ namespace Draftmaster.Weekend
                 return $"{o.statCount} served at the fence. {left} were still stood there when time ran out.";
             };
             return c;
+        }
+
+        // "KID IN A TEAM SHIRT" -> "Kid in a team shirt": the description reads as the start of a sentence
+        // over the choices now that the bubble just says it is a fan.
+        static string Describe(string who)
+        {
+            if (string.IsNullOrEmpty(who)) return "A fan";
+            string lower = who.ToLowerInvariant();
+            return char.ToUpperInvariant(lower[0]) + lower.Substring(1);
         }
 
         // The fence talking to itself while the queue moves. Nothing here is an answer — it is the pressure

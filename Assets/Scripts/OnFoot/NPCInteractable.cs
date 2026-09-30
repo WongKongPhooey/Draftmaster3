@@ -28,6 +28,14 @@ public class NPCInteractable : MonoBehaviour
     Transform _interactor;                              // the player currently talking to this NPC
     SpeechBubble _npcBubble, _playerBubble, _activeBubble;
 
+    // Somebody else speaking lines of this NPC's conversation: the fan at the front of the queue the fence
+    // host is running. Lines ending "#voice" come out of a bubble over `voice`, labelled `voiceName`; with no
+    // voice set they fall back to this NPC's own bubble.
+    protected Transform voice;
+    protected string voiceName;
+    SpeechBubble _voiceBubble;
+    Transform _voiceBubbleOn;
+
     void OnEnable() { All.Add(this); }
     void OnDisable() { All.Remove(this); BuildFloatingPrompt(false); CleanupBubbles(); }
 
@@ -96,22 +104,46 @@ public class NPCInteractable : MonoBehaviour
     }
 
     // Lines ending with "#player" are spoken by the player (in their own bubble); the marker is stripped.
+    // Lines ending with "#voice" are spoken by whoever `voice` is (see above).
     void SpeakCurrent()
     {
         string raw = lines[_index];
-        bool playerLine = false;
+        bool playerLine = false, voiceLine = false;
         string trimmed = raw.TrimEnd();
         if (trimmed.EndsWith("#player"))
         {
             playerLine = true;
             raw = trimmed.Substring(0, trimmed.Length - "#player".Length).TrimEnd();
         }
+        else if (trimmed.EndsWith("#voice"))
+        {
+            voiceLine = voice != null;
+            raw = trimmed.Substring(0, trimmed.Length - "#voice".Length).TrimEnd();
+        }
 
         if (playerLine && _interactor != null)
         {
             if (_playerBubble == null) _playerBubble = SpeechBubble.Attach(_interactor);
             Dismiss(ref _npcBubble);
+            Dismiss(ref _voiceBubble);
             _activeBubble = _playerBubble;
+        }
+        else if (voiceLine)
+        {
+            // A new speaker gets a new bubble: the old one floats over somebody who has had their turn.
+            if (_voiceBubble != null && _voiceBubbleOn != voice)
+            {
+                Destroy(_voiceBubble.gameObject);
+                _voiceBubble = null;
+            }
+            if (_voiceBubble == null)
+            {
+                _voiceBubble = SpeechBubble.Attach(voice);
+                _voiceBubbleOn = voice;
+            }
+            Dismiss(ref _npcBubble);
+            Dismiss(ref _playerBubble);
+            _activeBubble = _voiceBubble;
         }
         else
         {
@@ -121,6 +153,7 @@ public class NPCInteractable : MonoBehaviour
                 if (bubbleHeadHeight > 0f) _npcBubble.headHeight = bubbleHeadHeight;
             }
             Dismiss(ref _playerBubble);
+            Dismiss(ref _voiceBubble);
             _activeBubble = _npcBubble;
         }
         // Both halves of the conversation are owned by this NPC, so the player's reply is never queued
@@ -131,7 +164,8 @@ public class NPCInteractable : MonoBehaviour
         // own are left alone, so {team}/{num}/{path} still belong to whoever set them.
         _activeBubble.Speak(Draftmaster.Chatter.SpeakerIdentity.Fill(raw),
                             playerLine ? PlayerSpeakerName
-                                       : Draftmaster.Chatter.SpeakerIdentity.Fill(speakerName),
+                            : voiceLine ? voiceName
+                                        : Draftmaster.Chatter.SpeakerIdentity.Fill(speakerName),
                             Draftmaster.Sim.SpeechPriority.Conversation, owner: this);
     }
 
@@ -154,6 +188,7 @@ public class NPCInteractable : MonoBehaviour
         if (!repeatable) _index = Mathf.Max(0, lines.Length - 1);
         Dismiss(ref _npcBubble);
         Dismiss(ref _playerBubble);
+        Dismiss(ref _voiceBubble);
         _activeBubble = null;
     }
 
@@ -161,6 +196,7 @@ public class NPCInteractable : MonoBehaviour
     {
         if (_npcBubble != null) Destroy(_npcBubble.gameObject);
         if (_playerBubble != null) Destroy(_playerBubble.gameObject);
+        if (_voiceBubble != null) Destroy(_voiceBubble.gameObject);
     }
 
     public virtual bool IsTalking => _talking;

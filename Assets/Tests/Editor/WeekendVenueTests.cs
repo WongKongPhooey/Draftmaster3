@@ -192,8 +192,23 @@ public class WeekendVenueTests
 
         Assert.AreEqual(first.beats.Count, second.beats.Count);
         for (int i = 0; i < first.beats.Count; i++)
-            Assert.AreEqual(first.beats[i].speaker, second.beats[i].speaker,
+            Assert.AreEqual(first.beats[i].line, second.beats[i].line,
                             "The queue re-rolled — the same booking must bring the same faces.");
+    }
+
+    // The queue is walked along a line of fans at the rail, and each beat is said by whoever is stood there:
+    // the fence must build a place for the longest queue, and the bubble over each of them just says "A FAN".
+    [Test]
+    public void EverySigningBeatIsSaidByAFanWithAPlaceAtTheRail()
+    {
+        var longest = SigningContent.Build(SigningBooking(24 * 60));
+        Assert.AreEqual(SigningContent.MaxQueue, longest.beats.Count,
+                        "A window longer than the cast should bring the whole cast to the fence.");
+        foreach (var beat in longest.beats)
+        {
+            Assert.AreEqual(SigningContent.FanSpeaker, beat.speaker);
+            StringAssert.Contains("holding", beat.Question);
+        }
     }
 
     // ------------------------------------------------------------------ the signing queue and the clock

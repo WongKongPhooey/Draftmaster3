@@ -31,7 +31,15 @@ public class WeekendVenueHost : NPCInteractable
     int _answered;
     bool _finished;
 
-    public override bool IsTalking => base.IsTalking || _choiceOpen;
+    // The signing session is worked along a line (SigningQueue): between fans the player is walked to the
+    // next place at the rail and turned to face whoever is stood there, and that fan speaks their beat.
+    SigningQueue _queue;
+    bool _walkNext;           // the lines now playing end with a walk to the next fan
+    bool _walking;            // the player is being walked there
+    float _walkGiveUpAt;      // somebody in the way: stop trying and sign from where they got to
+    OnFootController _walker;
+
+    public override bool IsTalking => base.IsTalking || _choiceOpen || _walking;
 
     // Whether this host has something to run right now: an appointment, made for this venue, whose window
     // the weekend has reached.
@@ -47,7 +55,7 @@ public class WeekendVenueHost : NPCInteractable
     public override bool Interact()
     {
         if (Time.frameCount < _swallowUntilFrame) return true;
-        if (_choiceOpen) return true;
+        if (_choiceOpen || _walking) return true;
 
         if (!base.IsTalking)
         {
@@ -64,6 +72,7 @@ public class WeekendVenueHost : NPCInteractable
     // of the conversation. Never leave them planted in front of a question that is not there.
     void Update()
     {
+        if (_walking) { UpdateWalk(); return; }
         if (!_choiceOpen) return;
         if (DialogueChoiceUI.IsOpen && DialogueChoiceUI.Owner == this) return;
 
@@ -87,9 +96,16 @@ public class WeekendVenueHost : NPCInteractable
         _finished = false;
         _running = WeekendOutcome.Nothing;
         _running.score = 0f;
+        voice = null;
 
-        // The greeting runs as ordinary spoken lines; the first question follows when they are done.
-        lines = Lines(_script.greeting, BeatLines(_script.beats[0]));
+        // A queue at the fence is walked: the greeting is the liaison's, then the player goes to the first
+        // fan in the line. Anywhere else, the greeting runs straight into the first question.
+        _queue = venue == WeekendVenue.SigningFence ? SigningQueue.Current : null;
+        if (_queue != null && _queue.Count == 0) _queue = null;
+        _walkNext = _queue != null;
+        _walking = false;
+
+        lines = _walkNext ? Lines(_script.greeting) : Lines(_script.greeting, BeatLines(_script.beats[0]));
         repeatable = false;
         return true;
     }
@@ -99,6 +115,7 @@ public class WeekendVenueHost : NPCInteractable
     {
         if (_activity == null || _script == null) return false;   // idle chat: nothing to continue
         if (_finished) { EndBusiness(); return false; }
+        if (_walkNext) { _walkNext = false; WalkToFan(); return true; }
 
         var beat = _script.beats[Mathf.Clamp(_beat, 0, _script.beats.Count - 1)];
         if (beat.choices == null || beat.choices.Count == 0) { Advance(); return true; }
@@ -133,7 +150,7 @@ public class WeekendVenueHost : NPCInteractable
         // What the player said, then what they said back to it, then either the next question or the
         // goodbye. "#player" is the base class's marker for a line spoken out of the player's own bubble.
         var said = new List<string> { choice.text + " #player" };
-        if (!string.IsNullOrEmpty(choice.response)) said.Add(choice.response);
+        if (!string.IsNullOrEmpty(choice.response)) said.Add(Voiced(choice.response));
 
         if (last)
         {
@@ -143,6 +160,11 @@ public class WeekendVenueHost : NPCInteractable
                 : _script.farewell;
             said.AddRange(Lines(goodbye));
         }
+        else if (_queue != null)
+        {
+            // Their reply lands, then the player moves up the line to whoever is next.
+            _walkNext = true;
+        }
         else
         {
             said.AddRange(BeatLines(_script.beats[_beat]));
@@ -151,6 +173,57 @@ public class WeekendVenueHost : NPCInteractable
         lines = said.ToArray();
         RestartLines();
     }
+
+    // ------------------------------------------------------------------ walking the queue
+
+    // Send the player to the rail in front of the fan whose turn it is.
+    void WalkToFan()
+    {
+        _walker = OnFootController.Current;
+        Transform fan = _queue != null ? _queue.Fan(_beat) : null;
+        if (_walker == null || fan == null || _walker.Ridden != null) { FaceFan(); return; }
+
+        Vector2 stand = _queue.Stand(_beat);
+        float distance = Vector2.Distance(_walker.transform.position, stand);
+        _walkGiveUpAt = Time.time + distance / Mathf.Max(0.5f, _walker.moveSpeed) * 2f + 1.5f;
+        _walker.WalkTo(stand);
+        _walking = true;
+    }
+
+    void UpdateWalk()
+    {
+        // The body went away under the walk — into the car, a scene change. Nothing left to sign with.
+        if (_walker == null) { AbandonConversation(); return; }
+        if (_walker.ScriptedWalking && Time.time < _walkGiveUpAt) return;
+        FaceFan();
+    }
+
+    // Arrived (or got as close as the paddock let them): turn to the fan, turn the fan to the player, and
+    // hand the fan the beat.
+    void FaceFan()
+    {
+        _walking = false;
+        if (_walker != null) _walker.StopWalking();
+
+        Transform fan = _queue != null ? _queue.Fan(_beat) : null;
+        var player = WeekendVenueAnchor.OnFootPlayer();
+        if (fan != null && player != null)
+        {
+            var body = player.GetComponent<OnFootController>();
+            if (body != null) body.FaceToward(fan.position);
+            float offset = body != null ? body.spriteFacingOffsetDeg : 90f;
+            OnFootController.ApplyFacing(fan, fan.GetComponent<Rigidbody2D>(),
+                                         player.position - fan.position, offset);
+        }
+
+        voice = fan;
+        voiceName = SigningContent.FanSpeaker;
+        lines = BeatLines(_script.beats[Mathf.Clamp(_beat, 0, _script.beats.Count - 1)], fan != null);
+        RestartLines();
+    }
+
+    // A line said by the fan at the front, when there is one; otherwise by the host as before.
+    string Voiced(string line) => voice != null ? line + " #voice" : line;
 
     void Advance()
     {
@@ -168,6 +241,8 @@ public class WeekendVenueHost : NPCInteractable
         var script = _script;
         _activity = null;
         _script = null;
+        _queue = null;
+        voice = null;
 
         if (a == null || script == null) return;
 
@@ -181,7 +256,12 @@ public class WeekendVenueHost : NPCInteractable
         _activity = null;
         _script = null;
         _finished = false;
+        _walkNext = false;
+        if (_walking && _walker != null) _walker.StopWalking();
+        _walking = false;
+        _queue = null;
         EndConversation();
+        voice = null;
     }
 
     // ------------------------------------------------------------------ line plumbing
@@ -195,11 +275,13 @@ public class WeekendVenueHost : NPCInteractable
         base.Interact();
     }
 
-    static string[] BeatLines(WeekendBeat beat)
+    // `voiced`: the beat's line is said by the fan stood in front of the player rather than by the host. The
+    // preamble stays the host's — it is the fence talking about the queue, not anybody in it.
+    static string[] BeatLines(WeekendBeat beat, bool voiced = false)
     {
         var said = new List<string>();
         if (beat.preamble != null) said.AddRange(beat.preamble);
-        if (!string.IsNullOrEmpty(beat.line)) said.Add(beat.line);
+        if (!string.IsNullOrEmpty(beat.line)) said.Add(voiced ? beat.line + " #voice" : beat.line);
         if (said.Count == 0) said.Add("...");
         return said.ToArray();
     }

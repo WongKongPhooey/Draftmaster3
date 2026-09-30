@@ -41,6 +41,13 @@ public class WeekendVenueSites : MonoBehaviour
     // Enough to read as a crowd without competing with the paddock's own 120 walkers for frame time —
     // CrowdBenchmarkTests is the thing to re-run before pushing any of these up.
     const int FanCount = 15;
+    // The front of the queue: one fan per place along the rail, worked in turn by the signing session. As
+    // many places as the longest queue SigningContent can bring (its whole cast), so a short session leaves
+    // the far end of the line stood there.
+    static int QueuePlaces => SigningContent.MaxQueue;
+    const float QueueSpacing = 1.2f;
+    const float QueueFanY = 0.5f;      // right up against the rail, public side
+    const float QueueStandY = -0.65f;  // where the driver stands to sign for them, paddock side
     // A chair for every driver entered, but a body in only the first few rows: the room reads as full from
     // the door, and a hundred paper dolls in one place is a frame-rate problem, not a fidelity one.
     const int SeatedDrivers = 24;
@@ -669,10 +676,25 @@ public class WeekendVenueSites : MonoBehaviour
         {
             float t = FanCount == 1 ? 0.5f : i / (float)(FanCount - 1);
             float x = Mathf.Lerp(-FenceLength * 0.45f, FenceLength * 0.45f, t);
-            float y = 0.9f + (i % 3) * 0.75f;     // three deep, like a real fence on a Friday
+            float y = 1.3f + (i % 3) * 0.75f;     // three deep behind the queue, like a real fence on a Friday
             var body = PaddockPerson.Spawn(crowd.transform, Vector3.zero, $"Fan_{i}", 9100 + i,
                                            heightM: PaddockPerson.HeightM);
             body.transform.localPosition = new Vector3(x, y, PaddockProps.PropZ - 0.1f);
+        }
+
+        // The queue itself: a single line along the rail in front of the crowd, worked from one end to the
+        // other. Each place remembers where the driver stands to face it, so the session can walk them along.
+        var queue = new GameObject("SigningQueue");
+        queue.transform.SetParent(fence.transform, false);
+        var line = queue.AddComponent<SigningQueue>();
+        float first = -(QueuePlaces - 1) * QueueSpacing * 0.5f;
+        for (int i = 0; i < QueuePlaces; i++)
+        {
+            float x = first + i * QueueSpacing;
+            var body = PaddockPerson.Spawn(queue.transform, Vector3.zero, $"QueueFan_{i}", 9300 + i,
+                                           heightM: PaddockPerson.HeightM);
+            body.transform.localPosition = new Vector3(x, QueueFanY, PaddockProps.PropZ - 0.1f);
+            line.Add(body.transform, Walkable(fence.transform.TransformPoint(new Vector3(x, QueueStandY, 0f))));
         }
 
         // Stand the driver on the paddock side of the rail; the fans queue up on the other one. With an

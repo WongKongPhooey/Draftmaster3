@@ -76,6 +76,19 @@ public class OnFootController : MonoBehaviour
     // so the sequence can orient the player itself. Not serialized — runtime control only.
     [System.NonSerialized] public bool MovementLocked;
 
+    // A scripted walk: something else is steering the body to a point — the signing session taking the
+    // driver along the queue at the fence. Walks at the ordinary pace with the ordinary animation, over the
+    // top of MovementLocked and of an open conversation (both of which exist to stop the STICK moving the
+    // body, not to stop a sequence moving it). Clears itself on arrival.
+    Vector2? _walkTarget;
+    const float WalkArriveDistance = 0.05f;
+
+    public bool ScriptedWalking => _walkTarget.HasValue;
+
+    public void WalkTo(Vector2 point) => _walkTarget = point;
+
+    public void StopWalking() => _walkTarget = null;
+
     Rigidbody2D _rb;
     Animator _animator;
     NPCInteractable _activeNpc;
@@ -167,10 +180,25 @@ public class OnFootController : MonoBehaviour
         // Lock movement while mid-conversation or while a cutscene holds the player.
         if (MovementLocked || (_activeNpc != null && _activeNpc.IsTalking)) move = Vector2.zero;
 
+        bool scripted = false;
+        if (_walkTarget.HasValue)
+        {
+            Vector2 to = _walkTarget.Value - _rb.position;
+            float dist = to.magnitude;
+            float step = moveSpeed * Time.fixedDeltaTime;
+            if (dist <= WalkArriveDistance) { _walkTarget = null; move = Vector2.zero; }
+            else
+            {
+                // Full pace until the last step, which is shortened so the body lands on the point.
+                move = to / dist * (dist < step ? dist / step : 1f);
+                scripted = true;
+            }
+        }
+
         // Sat in something: the stick is pedals and lock, and where the body goes is the vehicle's business.
         // There is no running in a cart.
         bool riding = Ridden != null;
-        bool running = !riding && move != Vector2.zero && ReadRunHeld();
+        bool running = !riding && !scripted && move != Vector2.zero && ReadRunHeld();
         _rb.linearVelocity = riding
             ? Ridden.Steer(move, Time.fixedDeltaTime)
             : move * moveSpeed * (running ? runMultiplier : 1f);
