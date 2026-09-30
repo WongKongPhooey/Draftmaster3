@@ -396,7 +396,8 @@ public class PhoneUI : MonoBehaviour
     void ReadTouches()
     {
         if (!_open || _current == null || !TouchTaps.Dragging) return;
-        _scroll.y = Mathf.Max(0f, _scroll.y + TouchTaps.DragDelta.y);   // DrawApp clamps the far end
+        // Drag is in screen pixels, the scroll in the device's magnified space: divide so content tracks the finger.
+        _scroll.y = Mathf.Max(0f, _scroll.y + TouchTaps.DragDelta.y / _zoom);   // DrawApp clamps the far end
     }
 
     // True once for a click or a tap on `r`, given in whatever GUI space is current — the device's tilted
@@ -435,18 +436,45 @@ public class PhoneUI : MonoBehaviour
 
         float w = PixelGUI.Px(bodySize.x), h = PixelGUI.Px(bodySize.y);
 
+        // The kit scale is floor(height / 360), which on a 1060px-tall phone rounds 2.94 down to 2 and left
+        // the device at ~64% of the screen — too small to read in the hand — while a 1080p editor view got
+        // 3 and ~94%. The phone is the one thing that should fill the height, so it takes the largest WHOLE
+        // scale that fits and is magnified to it through the matrix. Whole, so every kit pixel still lands
+        // on an exact block of screen pixels; the art is drawn at the kit scale underneath, unchanged.
+        int kit = PixelGUI.Scale;
+        int fit = Mathf.Max(kit, Mathf.FloorToInt(Screen.height / Mathf.Max(bodySize.y + restGap, 1f)));
+        _zoom = (float)fit / kit;
+        if (_zoom > 1f) CrispFonts();
+
         // The pivot is the bottom centre of the device — the hand. Sliding moves it, the tilt turns about
         // it, and the body is then just a rect hanging above the origin.
-        float rest = Screen.height - PixelGUI.Px(restGap);
-        float pivotY = Mathf.Round(Mathf.Lerp(Screen.height + h, rest, Ease(_slide)));
-        float pivotX = Mathf.Round(Screen.width * Mathf.Clamp01(screenAnchorX) + w * 0.5f);
+        float rest = Screen.height - restGap * fit;
+        float pivotY = Mathf.Round(Mathf.Lerp(Screen.height + h * _zoom, rest, Ease(_slide)));
+        float pivotX = Mathf.Round(Screen.width * Mathf.Clamp01(screenAnchorX) + w * _zoom * 0.5f);
 
         GUI.matrix = Matrix4x4.TRS(new Vector3(pivotX, pivotY, 0f),
-                                   Quaternion.Euler(0f, 0f, tiltDegrees), Vector3.one);
+                                   Quaternion.Euler(0f, 0f, tiltDegrees), Vector3.one * _zoom);
         DrawBody(new Rect(-w * 0.5f, -h, w, h));
 
         GUI.matrix = prevMatrix;
         GUI.depth = prevDepth;
+    }
+
+    float _zoom = 1f;                  // device magnification over the kit scale (see OnGUI)
+
+    // Magnified text has to be point-sampled or each glyph's pixel edges smear across the screen pixels
+    // they now straddle. At 1:1 the filter makes no difference, so this is harmless to leave set.
+    static void CrispFonts()
+    {
+        var t = PixelGUI.Theme;
+        if (t == null) return;
+        Crisp(t.imguiFont); Crisp(t.imguiBodyFont); Crisp(t.imguiDisplayFont);
+
+        static void Crisp(Font f)
+        {
+            var tex = f != null && f.material != null ? f.material.mainTexture : null;
+            if (tex != null && tex.filterMode != FilterMode.Point) tex.filterMode = FilterMode.Point;
+        }
     }
 
     // Ease-out: the phone arrives fast and settles, rather than sliding linearly like a menu.
