@@ -1,7 +1,7 @@
 {
   "buildFiles": [
-    "C:\\Users\\Josh\\Documents\\Draftmaster3\\Library\\Bee\\Android\\Prj\\IL2CPP\\Gradle\\unityLibrary\\src\\main\\cpp\\CMakeLists.txt",
-    "C:\\Users\\Josh\\Documents\\Draftmaster3\\Library\\Bee\\Android\\Prj\\IL2CPP\\Gradle\\unityLibrary\\src\\main\\cpp\\FramePacing\\CMakeLists.txt"
+    "C:\\Users\\Josh\\Documents\\Draftmaster3\\Library\\PramData\\AndroidApplicationController\\Cache\\com.phooey.draftmaster3\\gradle-project\\unityLibrary\\src\\main\\cpp\\CMakeLists.txt",
+    "C:\\Users\\Josh\\Documents\\Draftmaster3\\Library\\PramData\\AndroidApplicationController\\Cache\\com.phooey.draftmaster3\\gradle-project\\unityLibrary\\src\\main\\cpp\\FramePacing\\CMakeLists.txt"
   ],
   "cleanCommandsComponents": [
     [
@@ -22,7 +22,7 @@
       "toolchain": "toolchain",
       "abi": "arm64-v8a",
       "artifactName": "swappywrapper",
-      "output": "C:\\Users\\Josh\\Documents\\Draftmaster3\\Library\\Bee\\Android\\Prj\\IL2CPP\\Gradle\\unityLibrary\\build\\intermediates\\cxx\\Debug\\1m3lu6l1\\obj\\arm64-v8a\\libswappywrapper.so",
+      "output": "C:\\Users\\Josh\\Documents\\Draftmaster3\\Library\\PramData\\AndroidApplicationController\\Cache\\com.phooey.draftmaster3\\gradle-project\\unityLibrary\\build\\intermediates\\cxx\\Debug\\1m3lu6l1\\obj\\arm64-v8a\\libswappywrapper.so",
       "runtimeFiles": []
     }
   },

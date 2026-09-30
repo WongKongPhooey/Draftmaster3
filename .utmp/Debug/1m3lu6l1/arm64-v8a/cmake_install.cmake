@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/Josh/Documents/Draftmaster3/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/src/main/cpp
+# Install script for directory: C:/Users/Josh/Documents/Draftmaster3/Library/PramData/AndroidApplicationController/Cache/com.phooey.draftmaster3/gradle-project/unityLibrary/src/main/cpp
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
