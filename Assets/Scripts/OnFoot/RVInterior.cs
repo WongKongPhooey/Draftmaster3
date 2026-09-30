@@ -81,6 +81,8 @@ public class RVInterior : MonoBehaviour
     [Header("Laptop")]
     [Tooltip("Interaction range (m) for the laptop on the table that opens the garage screen. Walk within this to see the prompt.")]
     public float laptopRange = 1.6f;
+    [Tooltip("How close (m) to the middle of the bed the player must be to go to sleep, at the end of a Friday or Saturday.")]
+    public float bedRange = 2f;
 
     // World z-planes. More negative = closer to the camera (which sits at player.z - 100 looking +z), so
     // each layer draws in front of the one below it. The player is pulled to insidePlayerZ while inside.
@@ -220,6 +222,33 @@ public class RVInterior : MonoBehaviour
             BuildLaptop(interior);
         else if (authoredLaptop.GetComponentInChildren<SpriteRenderer>(true) == null)
             BuildLaptopArt(interior, authoredLaptop.transform.localPosition);
+
+        // Somewhere to end Friday and Saturday. Every room already has a "Bed" (the drawn one in the prefab,
+        // a quad in the procedural room), so only the interactable is added, on an empty sat on top of it.
+        Bed = interior.GetComponentInChildren<BedInteractable>(true);
+        if (Bed == null) Bed = BuildBed(interior);
+    }
+
+    // The motorhome's bed, as something to walk up to. Off until PitLaneStart says it is bedtime.
+    public BedInteractable Bed { get; private set; }
+
+    // Where the bed is when the room has none to find — the drawn room's bed end, in the interior's frame.
+    static readonly Vector2 kBedPos = new(3.85f, 0.2f);
+
+    BedInteractable BuildBed(Transform interior)
+    {
+        Transform art = interior.Find("Bed");
+        Vector2 at = art != null ? (Vector2)art.localPosition : kBedPos;
+
+        var go = new GameObject("BedInteractable");
+        go.transform.SetParent(interior, false);
+        go.transform.localPosition = new Vector3(at.x, at.y, kPropZ);
+        var bed = go.AddComponent<BedInteractable>();
+        bed.interactRange = bedRange;
+        bed.speakerName = "Bed";   // the base default ("Crew Member") is nobody here
+        bed.turnsToFace = false;   // a bed doesn't turn to look at you
+        bed.enabled = false;       // furniture until the day is done
+        return bed;
     }
 
     // The laptop on the dinette table: the only way into the garage screen from a race weekend. Same

@@ -18,6 +18,15 @@ up. From then on the weekend leads itself: follow the marker, do the thing, and 
 live with its own marker before the result card has faded. `T` travels you there if you would rather not
 walk.
 
+**Friday and Saturday end in bed.** When the last thing on a Friday or Saturday afternoon is done, the sheet
+does not roll itself over to the next morning (it still does at lunchtime). A toast says the day is done,
+the marker points at your motorhome and then at the bed inside it, and the bed gets a prompt — `E` / pad
+interact, or tap it on a phone. Sleeping fades to black, moves the clock to the next morning, puts you
+beside the bed and plays the same alarm-and-card wake-up the career opens on; then the day's first booking
+goes up. Rule: `Core/WeekendBedtime.cs` (tested in `WeekendBedtimeTests`), checked in
+`WeekendDirector.BookNextUp`; runtime: `PitLaneStart.GoToSleep` / `StepBedtime`, `BedInteractable` (built
+on the room's `Bed` by `RVInterior`). The F10 sheet's SKIP button still jumps the night without sleeping.
+
 **Your phone goes off on the way to the briefing.** The first booking is the crew chief's strategy briefing
 at the pit box. 250 m short of it (`ChiefCheckIn.TriggerMetres`; soon after setting off from the RV at
 Watkins Glen) the phone bleeps, the chief texts to ask where you are, **the driver stops where they

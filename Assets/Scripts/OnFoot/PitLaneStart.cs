@@ -357,6 +357,7 @@ public class PitLaneStart : MonoBehaviour
 
             rvExterior = exterior;
             rvRoom = rv;
+            _rvRoom = rv;
         }
 
         // Everyone on foot in this scene — the greeter, the engineer's opening beat, the crew chief, and any
@@ -383,10 +384,11 @@ public class PitLaneStart : MonoBehaviour
         // Woken up rather than dropped in: the alarm and the fade come first, and the card that says where
         // and when you are is read off the black screen while the clock is still going. Both paths end in
         // the same title card.
-        if (waking) StartCoroutine(WakeUpThenIntroduce($"{trackTitle} - {spawnLabel}", when));
+        _introTitle = $"{trackTitle} - {spawnLabel}";
+        if (waking) StartCoroutine(WakeUpThenIntroduce(_introTitle, when));
         else
         {
-            _intro = SpawnIntroUI.Create($"{trackTitle} - {spawnLabel}", _player.transform, when);
+            _intro = SpawnIntroUI.Create(_introTitle, _player.transform, when);
             SyncCarMarker();
         }
     }
@@ -484,7 +486,16 @@ public class PitLaneStart : MonoBehaviour
         // with a buzzer on it says nothing about where the weekend has taken you, and this is the one beat
         // in the game with no scene to read that off. Held long enough to span the dark AND the fade, so it
         // is still there as the motorhome comes up and then bows out on its own.
-        _intro = SpawnIntroUI.Create(title, _player.transform, when);
+        //
+        // A morning after a night's sleep reuses the card already on screen: it is carrying the scene's
+        // markers, and a second one stood up beside it would leave the first drawing them forever.
+        float restoreHold = -1f;
+        if (_intro == null) _intro = SpawnIntroUI.Create(title, _player.transform, when);
+        else
+        {
+            restoreHold = _intro.titleHold;
+            _intro.ShowTitle(title, when);
+        }
         _intro.overFade = true;
         _intro.titleHold = Mathf.Max(_intro.titleHold, wakeDarkSeconds + wakeFadeInSeconds);
 
@@ -500,6 +511,141 @@ public class PitLaneStart : MonoBehaviour
         // Lights on: the card goes back into the ordinary stack and the objective markers come with it.
         _intro.overFade = false;
         SyncCarMarker();
+
+        // The stretched hold was for this card; later banners keep their own rhythm. Put back once the card
+        // has had its time rather than now, or it would be cut short mid-fade — and off to one side, so the
+        // morning carries on while it does.
+        if (restoreHold >= 0f) StartCoroutine(RestoreTitleHold(restoreHold));
+    }
+
+    IEnumerator RestoreTitleHold(float hold)
+    {
+        while (_intro != null && _intro.TitleBusy) yield return null;
+        if (_intro != null) _intro.titleHold = hold;
+    }
+
+    // ------------------------------------------------------------------ going to bed
+
+    // Friday and Saturday end in bed. Once the evening's last obligation is done the weekend stops booking
+    // (WeekendDirector.BookNextUp waits on Draftmaster.Weekend.WeekendBedtime), the objective marker points
+    // at the motorhome and then the bed in it, and tapping the bed (BedInteractable) puts the driver to
+    // sleep: black, the clock moves to the next morning, and they wake up to the alarm exactly as the first
+    // morning of the weekend opened.
+
+    [Header("Going To Bed")]
+    [Tooltip("Seconds the screen takes to go dark when the driver lies down.")]
+    public float sleepFadeSeconds = 1.2f;
+    [Tooltip("Seconds of silent black between lying down and the alarm going off - the night.")]
+    public float nightSeconds = 1.5f;
+
+    string _introTitle = "";
+    RVInterior _rvRoom;
+    bool _sleeping;
+    bool _bedtimeDue;
+    float _bedtimePoll;
+    Transform _bedHome;      // the player's motorhome shell, looked up at the poll rather than every frame
+    Transform _bedMarked;    // what the bedtime marker is currently hung on
+
+    // True from the moment the driver lies down until they are back on their feet the next morning.
+    public bool Sleeping => _sleeping;
+
+    // Put the driver to bed and wake them the next morning. False (and nothing happens) unless it is
+    // actually bedtime and there is a driver on foot to do it with.
+    public bool GoToSleep()
+    {
+        if (_sleeping || _player == null || !_player.activeInHierarchy) return false;
+        if (!GameSession.CareerActive || Coop.IsGuest) return false;   // the host's weekend; the host sleeps
+        if (ScreenFade.Busy || !Draftmaster.Weekend.WeekendBedtime.Due()) return false;
+
+        StartCoroutine(SleepThroughTheNight());
+        return true;
+    }
+
+    IEnumerator SleepThroughTheNight()
+    {
+        _sleeping = true;
+        ClearBedtimeMarker();
+        if (_rvRoom != null && _rvRoom.Bed != null) _rvRoom.Bed.enabled = false;
+
+        var walker = _player.GetComponent<OnFootController>();
+        if (walker != null) walker.MovementLocked = true;
+
+        // Lights out.
+        bool dark = false;
+        ScreenFade.ToBlack(Mathf.Max(0.05f, sleepFadeSeconds), () => dark = true);
+        while (!dark) yield return null;
+
+        // The night. The rest of the evening is given up (there is nothing left in it - that is what made it
+        // bedtime) and the clock opens on the next morning. Whatever was booked belonged to yesterday.
+        Draftmaster.Weekend.WeekendBedtime.Sleep();
+        WeekendAppointment.Clear();
+
+        // Back where the first morning woke them, beside the bed, whichever corner of the motorhome they
+        // lay down from.
+        if (_rvRoom != null) _rvRoom.PlaceOccupantLocal(rvSpawnOffset);
+
+        for (float t = 0f; t < nightSeconds; t += Time.unscaledDeltaTime) yield return null;
+
+        // Morning: the alarm, the where-and-when card over the black, the fade, getting up. The same beat
+        // the career opens on.
+        string when = Draftmaster.Weekend.WeekendSlots.Day(Draftmaster.Weekend.WeekendLedger.CurrentSlot) + " - " +
+                      Draftmaster.Weekend.WeekendSlots.ClockAmPm(Draftmaster.Weekend.WeekendLedger.ClockMinute);
+        if (walker != null) walker.MovementLocked = false;   // WakeUpSequence takes the lock itself
+        yield return WakeUpThenIntroduce(_introTitle, when);
+
+        // ...and the game carries on: the new day's first obligation goes on the map.
+        _sleeping = false;
+        _bedtimeDue = false;
+        _bedtimePoll = 0f;
+        WeekendDirector.BookNextUp(replaceExisting: true);
+    }
+
+    // Keep the bed and the marker in step with whether it is bedtime. The rule itself is a sheet walk, so it
+    // is asked twice a second rather than every frame; the marker is re-stated every frame because it can
+    // share its target (the motorhome) with the weekend's own marker, and that one takes its entry with it
+    // when its booking clears.
+    void StepBedtime()
+    {
+        if (Time.unscaledTime >= _bedtimePoll)
+        {
+            _bedtimePoll = Time.unscaledTime + 0.5f;
+            _bedtimeDue = !_sleeping && GameSession.CareerActive && !Coop.IsGuest
+                          && Draftmaster.Weekend.WeekendBedtime.Due();
+            var shell = _bedtimeDue ? RVExterior.Player : null;
+            _bedHome = shell != null ? shell.transform : null;
+        }
+
+        var bed = _rvRoom != null ? _rvRoom.Bed : null;
+        bool live = _bedtimeDue && !_sleeping && _player.activeInHierarchy;
+        if (bed != null && bed.enabled != live) bed.enabled = live;
+
+        Transform target = null;
+        string label = "";
+        if (live && bed != null && _rvRoom.IsInside) { target = bed.transform; label = "Bed"; }
+        else if (live && _bedHome != null) { target = _bedHome; label = "Your motorhome - bed"; }
+        else if (live && bed != null) { target = bed.transform; label = "Bed"; }
+
+        if (target != _bedMarked) ClearBedtimeMarker();
+        if (target == null || _intro == null) return;
+
+        bool fresh = _bedMarked == null;
+        _bedMarked = target;
+        _intro.AddMarker(target, BedIcon(), hideWithinMetres: 1.5f, label: label, priority: 10);
+        if (fresh) _intro.PulseMarker(target);
+    }
+
+    void ClearBedtimeMarker()
+    {
+        if (_bedMarked != null && _intro != null) _intro.RemoveMarker(_bedMarked);
+        _bedMarked = null;
+    }
+
+    // The bed's own art, if the room has it, so the marker is a picture of where to go.
+    Sprite BedIcon()
+    {
+        var art = _rvRoom != null && _rvRoom.InteriorRoot != null ? _rvRoom.InteriorRoot.Find("Bed") : null;
+        var sr = art != null ? art.GetComponentInChildren<SpriteRenderer>(true) : null;
+        return sr != null ? sr.sprite : null;
     }
 
     void SpawnPlayer(Vector3 pos)
@@ -637,6 +783,9 @@ public class PitLaneStart : MonoBehaviour
                     && !ControlHints.Taught("run");
 
         if (_player == null) return;
+
+        StepBedtime();
+        if (_sleeping) return;
 
         if (_phase == EntryPhase.Briefing) { StepBriefing(); return; }
         if (_phase == EntryPhase.Driving) { StepParkedExit(); return; }

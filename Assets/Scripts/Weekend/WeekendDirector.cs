@@ -310,9 +310,14 @@ public class WeekendDirector : MonoBehaviour
         // could still do, and no way to tell that the answer was "the morning is over". Only reachable when
         // the slot is genuinely exhausted (everything in it done, missed, or behind the clock), so the sweep
         // AdvanceSlot runs on the way out has nothing left to take.
+        //
+        // Except at night. A Friday or Saturday evening that has run out ends in bed, not with the sheet
+        // turning over under the player: the weekend waits there until they sleep in their motorhome
+        // (WeekendBedtime, PitLaneStart.GoToSleep), and waking up is what opens the next morning.
         bool rolled = false;
         for (int guard = WeekendSlots.Count; next == null && guard > 0 && !WeekendLedger.WeekendOver; guard--)
         {
+            if (WeekendBedtime.Due()) break;
             WeekendLedger.AdvanceSlot();
             rolled = true;
             next = WeekendSchedulePlan.NextWorthDoing();
@@ -323,6 +328,8 @@ public class WeekendDirector : MonoBehaviour
             WeekendAppointment.Clear();
             if (WeekendLedger.WeekendOver)
                 WeekendScheduleUI.Toast("That is the weekend done.");
+            else if (WeekendBedtime.Due())
+                WeekendScheduleUI.Toast("That's the day done. Head back to your motorhome and get some sleep.");
             return null;
         }
 
