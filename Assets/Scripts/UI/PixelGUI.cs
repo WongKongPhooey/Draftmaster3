@@ -67,7 +67,10 @@ public static class PixelGUI
         {
             var t = Theme;
             if (t != null && t.imguiScaleOverride > 0) return t.imguiScaleOverride;
-            return Mathf.Max(1, Mathf.FloorToInt(Screen.height / DesignHeight));
+            // From the short side, which is the height on any landscape screen: a phone turned upright for
+            // the swing camera (Draftmaster.Controls.DriveOrientation) keeps its panels the same size in the
+            // hand, rather than doubling them on a screen half as wide.
+            return Draftmaster.Controls.DriveOrientation.KitScale(Screen.width, Screen.height, DesignHeight);
         }
     }
 

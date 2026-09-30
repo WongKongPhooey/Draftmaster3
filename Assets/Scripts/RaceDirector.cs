@@ -26,6 +26,11 @@ public class RaceDirector : MonoBehaviour
     enum Phase { Waiting, Racing, Checkered, Results }
     Phase _phase = Phase.Waiting;
 
+    // The race is over and the results table owns the screen (shown or folded away). Read by
+    // DriveOrientationController: the table is laid out for a landscape screen, so a phone turned upright
+    // for the swing camera turns back for it.
+    public static bool InResults => Instance != null && Instance._phase == Phase.Results;
+
     // How far through the race the leader is, 0 at the green and 1 at the checkered, counted in whole
     // laps plus the leader's fraction of the current one. The AI reads this to settle in early and charge
     // over the closing laps (Draftmaster.Sim.RaceCraft).

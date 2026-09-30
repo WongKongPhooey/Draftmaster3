@@ -247,6 +247,13 @@ public class PracticeDirector : MonoBehaviour
         // above it, and that button is gone.
         float w = PixelGUI.Px(210f), h = PixelGUI.Px(20f);
         var box = new Rect(Screen.width - w - PixelGUI.Px(8f), PixelGUI.Px(8f), w, h);
+        // A phone turned upright for the swing camera: the corner is under the pause and TV buttons and
+        // the running order, so the clock sits centred on top of the timing strip (or the pedals) instead.
+        if (DriveOrientationController.Portrait)
+        {
+            float bottom = LapTimingManager.StripTop ?? (Screen.height - TouchDriveControls.PedalsTopFromBottom);
+            box = new Rect(Mathf.Round((Screen.width - w) * 0.5f), bottom - h - PixelGUI.Px(4f), w, h);
+        }
         PixelGUI.Panel(box);
 
         // Counting down is the accent; done and waiting on the player is the gain colour.

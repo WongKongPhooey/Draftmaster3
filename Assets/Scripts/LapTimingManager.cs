@@ -284,6 +284,13 @@ public class LapTimingManager : MonoBehaviour
         return $"{mins}:{t - mins * 60f:00.000}";
     }
 
+    // Where the top of the timing strip was last drawn, in GUI pixels, or null when it is not on screen. The
+    // qualifying clock stacks on it when a phone is upright and the top of the screen has no room left.
+    public static float? StripTop =>
+        Instance != null && Time.frameCount - Instance._stripDrawnFrame <= 1 ? StripTopY : (float?)null;
+    static float StripTopY;
+    int _stripDrawnFrame = -10;
+
     void OnGUI()
     {
         if (!showPlayerHud || _player == null) return;
@@ -313,6 +320,12 @@ public class LapTimingManager : MonoBehaviour
         float h = line + (invalid ? line : 0f) + pad * 2f;
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Round(Screen.height - h - stripBottomMargin * s);
+        // A phone turned upright for the swing camera has the pedals and the wheel along the bottom edge
+        // with no gap between them for the strip, so it stands on top of them instead.
+        if (DriveOrientationController.Portrait && TouchDriveControls.Active)
+            y = Mathf.Round(Screen.height - TouchDriveControls.PedalsTopFromBottom - h - stripBottomMargin * s);
+        StripTopY = y;
+        _stripDrawnFrame = Time.frameCount;
 
         var plate = new Rect(x, y, w, h);
         PixelGUI.Panel(plate);
