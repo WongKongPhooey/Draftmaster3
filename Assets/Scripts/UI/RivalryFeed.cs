@@ -42,7 +42,7 @@ public class RivalryFeed : MonoBehaviour
     public static void Ensure()
     {
         if (Instance != null) return;
-        // Only bootstrap inside a race scene (same gate QuestHUD uses for gameplay scenes).
+        // Only bootstrap inside a race scene (a race in progress).
         if (RacePositionTracker.Instance == null) return;
         var go = new GameObject("RivalryFeed");
         Instance = go.AddComponent<RivalryFeed>();

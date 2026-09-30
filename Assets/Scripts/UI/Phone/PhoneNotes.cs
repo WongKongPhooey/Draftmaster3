@@ -89,6 +89,27 @@ public static class PhoneNotes
                from, quest.description, quest.id);
     }
 
+    // A note for a quest that was taken up without anybody to credit (the pause menu's mission board), so
+    // every live quest can be found in Notes. Leaves an existing note alone: RecordQuest owns the name.
+    public static void EnsureQuestNote(QuestInfo quest)
+    {
+        if (quest == null || Find("quest." + quest.id) != null) return;
+        Record("quest." + quest.id, string.IsNullOrEmpty(quest.title) ? quest.id : quest.title,
+               "Mission board", quest.description, quest.id);
+    }
+
+    // Saves from before every accept wrote a note can hold live quests with none; give them one.
+    public static void BackfillLiveQuests()
+    {
+        foreach (var q in QuestManager.All)
+        {
+            if (q == null || string.IsNullOrEmpty(q.id)) continue;
+            var state = QuestManager.GetState(q);
+            if (state == QuestManager.State.Active || state == QuestManager.State.ReadyToTurnIn)
+                EnsureQuestNote(q);
+        }
+    }
+
     public static void ResolveQuest(QuestInfo quest)
     {
         if (quest != null) Resolve("quest." + quest.id);

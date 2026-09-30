@@ -181,7 +181,7 @@ public class TravelMapScreen : MonoBehaviour
         UpdateView();
     }
 
-    // --- Dev hotkey: F9 toggles the map in any scene (mirrors QuestHUD's self-bootstrap pattern). ---
+    // --- Dev hotkey: F9 toggles the map in any scene (self-bootstraps like RacePauseMenu). ---
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void BootstrapHotkey()
     {

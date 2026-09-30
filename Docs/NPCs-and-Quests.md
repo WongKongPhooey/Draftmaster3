@@ -474,11 +474,13 @@ having a manufacturer; the hook point is commented in RaceDirector.
 `PlayerInventory` — persistent item-id list in PlayerPrefs (`inventory.items`). Plain string ids
 (`lucky_charm`); duplicates allowed. `Has` / `Add` / `Remove`.
 
-### HUD
+### Where active quests show
 
-`QuestHUD` shows tracked quests (Active / ReadyToTurnIn) top-right: title + progress line, green
-when ready to turn in. It appears on first accept, survives scene loads, only draws in gameplay
-scenes (race or on-foot), and revives itself on launch when a save has tracked quests.
+There is no on-screen quest tracker (the old top-right `QuestHUD` was removed — it could not be
+hidden). Active quests live in two places: the pause menu's **MISSIONS** panel (below) and the
+phone's **NOTES** app. Every `QuestManager.Accept` writes a note (`PhoneNotes.EnsureQuestNote`), so
+quests taken from the mission board appear in Notes too; a QuestGiverNPC then fills in who asked.
+Opening Notes backfills notes for live quests in older saves.
 
 ### The mission board (no NPC required)
 

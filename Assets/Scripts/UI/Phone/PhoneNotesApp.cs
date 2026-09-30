@@ -11,7 +11,11 @@ public class PhoneNotesApp : PhoneApp
     public override Color Accent => PixelGUI.Confirm;
     public override int Badge => PhoneNotes.Unread;
 
-    public override void OnOpen() => PhoneNotes.MarkAllRead();
+    public override void OnOpen()
+    {
+        PhoneNotes.BackfillLiveQuests();
+        PhoneNotes.MarkAllRead();
+    }
 
     public override float Draw(float x, float y, float w)
     {

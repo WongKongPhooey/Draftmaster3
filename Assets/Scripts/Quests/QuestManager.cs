@@ -46,7 +46,7 @@ public static class QuestManager
         SetState(q, State.Active);
         ReevaluateStatObjectives();          // an already-met threshold turns in immediately
         ReevaluateRelationshipObjective(q);  // ditto for an already-poisoned (or -friendly) relationship
-        QuestHUD.Ensure();
+        PhoneNotes.EnsureQuestNote(q);       // board-accepted quests land in Notes too; a giver NPC fills in its name after
     }
 
     public static void Complete(QuestInfo q)

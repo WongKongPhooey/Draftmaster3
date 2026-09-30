@@ -21,7 +21,7 @@ the game); junkyard **stock rerolls weekly**. All code in `Assets/Scripts/Travel
    (falls back to reloading the current scene when the circuit's scene isn't in the build).
 6. Out of stops away from the destination → **tow** ($2,000, clamped at $0 — never a softlock).
 
-`F9` toggles the map in any scene (dev hotkey, self-bootstrapped like QuestHUD).
+`F9` toggles the map in any scene (dev hotkey, self-bootstrapped like RacePauseMenu).
 
 ## Editing the map layout
 
