@@ -132,6 +132,12 @@ namespace Draftmaster.Sim
             return gap <= before && gap >= -after;
         }
 
+        // Does a car that hit the wall `secondsSinceHit` ago, `gapAhead` metres up the road (wrapped, 0..lap),
+        // still put a yellow out for the player? Yes from the instant of the hit, for `flagSeconds`, while it is
+        // ahead within `lookAhead` — the warning has to come before the wreck stops, not after.
+        public static bool WallHitFlagsYellow(float gapAhead, float lookAhead, float secondsSinceHit, float flagSeconds)
+            => gapAhead > 0f && gapAhead <= lookAhead && secondsSinceHit >= 0f && secondsSinceHit <= flagSeconds;
+
         // The speed to hold through a yellow zone: a clear lift off the pace the car would otherwise carry
         // there, never above that pace and never below a crawl that would hold up the field for nothing.
         public static float YellowSpeedCap(float desiredMph, float paceFactor, float floorMph)

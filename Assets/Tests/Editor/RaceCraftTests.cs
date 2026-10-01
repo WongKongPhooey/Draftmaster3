@@ -225,6 +225,16 @@ public class RaceCraftTests
     }
 
     [Test]
+    public void AWallHitUpTheRoadFlagsAYellowAtOnce()
+    {
+        Assert.IsTrue(RaceCraft.WallHitFlagsYellow(250f, 400f, 0f, 4f), "the instant of the hit, not once it stops");
+        Assert.IsTrue(RaceCraft.WallHitFlagsYellow(250f, 400f, 3.9f, 4f));
+        Assert.IsFalse(RaceCraft.WallHitFlagsYellow(250f, 400f, 4.5f, 4f), "a car that drove on drops the flag");
+        Assert.IsFalse(RaceCraft.WallHitFlagsYellow(450f, 400f, 0f, 4f), "beyond the look-ahead");
+        Assert.IsFalse(RaceCraft.WallHitFlagsYellow(0f, 400f, 0f, 4f), "the player's own hit is no flag");
+    }
+
+    [Test]
     public void TheYellowPaceIsAClearLiftButNeverACrawl()
     {
         Assert.AreEqual(96f, RaceCraft.YellowSpeedCap(160f, 0.6f, 40f), Tol, "down a straight: a big lift");

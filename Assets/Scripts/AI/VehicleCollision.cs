@@ -49,6 +49,9 @@ public class VehicleCollision : MonoBehaviour
     // Fired when this car contacts a static barrier, with the closing speed (m/s). Lap timing
     // listens to invalidate the current lap on a wall hit.
     public event System.Action<float> BarrierHit;
+    // The same, for every car at once: (car, closing speed m/s). CautionWatch listens to put a yellow out the
+    // moment a car up the road finds the wall, without having to subscribe car by car.
+    public static event System.Action<Transform, float> AnyBarrierHit;
 
     // One resolved contact, in world space. Fired for barriers AND cars every step the overlap persists,
     // so listeners that shouldn't repeat (bursts, sounds) must rate-limit themselves. ImpactParticles reads this.
@@ -266,6 +269,7 @@ public class VehicleCollision : MonoBehaviour
                 // Barrier (static): full correction on us. d.pointA is the contact on our body → lever arm for spin.
                 _responder?.ApplyContact(pushWorld, d.pointA, severity);
                 BarrierHit?.Invoke(closingSpeed);
+                AnyBarrierHit?.Invoke(transform, closingSpeed);
             }
 
             // Broadcast the resolved contact for FX (sparks, bodywork debris). Scrape speed is the

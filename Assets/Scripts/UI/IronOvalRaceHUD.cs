@@ -194,7 +194,7 @@ public class IronOvalRaceHUD : MonoBehaviour
         label.normal.textColor = prev;
     }
 
-    // Yellow flag, top right: a stopped car on the road within CautionWatch's look-ahead. Placeholder
+    // Yellow flag, top right: a stopped car, or one that just hit the wall, within CautionWatch's look-ahead. Placeholder
     // art — a plain yellow box on the ink shadow the rest of the HUD uses — until the flag sprite exists.
     // It blinks, because a static square in the corner reads as part of the furniture rather than as a
     // warning that just came out.

@@ -5,6 +5,10 @@ using UnityEngine;
 // Local yellow flags: watches the whole circuit for a car that has stopped — a spin that never got going
 // again, a wreck, anything parked on the racing surface — and flags the stretch of road before it.
 //
+// The player's flag also goes out the instant a car up the road hits a barrier (VehicleCollision.AnyBarrierHit),
+// for wallHitFlagSeconds after the hit. Waiting for the wreck to come to rest left the flag showing only once
+// the player was already on top of it.
+//
 // Two readers. The HUD's yellow flag asks whether there is an incident just up the road from the player
 // (CautionAhead). The AI ask whether they are inside any incident's yellow zone (YellowFor), and lift and hold
 // station through it (AIRacingBehaviour).
@@ -21,14 +25,18 @@ public class CautionWatch : MonoBehaviour
 {
     public static CautionWatch Instance { get; private set; }
 
-    [Tooltip("Look this far (m) up the road from the player for a stopped car (the HUD flag).")]
-    public float lookAheadMetres = 100f;
+    [Tooltip("Look this far (m) up the road from the player for a stopped car or a wall hit (the HUD flag). Several seconds at racing speed, so the flag is up before the scene is.")]
+    public float lookAheadMetres = 400f;
     [Tooltip("At or below this speed (mph) a car counts as stopped.")]
     public float stoppedMph = 8f;
     [Tooltip("A car must be that slow for this long (s) before it raises a flag — a car being passed at the exit of a slow hairpin is not an incident.")]
     public float stoppedForSeconds = 0.75f;
     [Tooltip("Once raised, hold the flag at least this long (s), so it doesn't strobe as the player drives past the stopped car.")]
     public float holdSeconds = 1.5f;
+    [Tooltip("A car up the road that hits a barrier at least this hard (closing speed, m/s) flags a yellow for the player at once. Below it is a brush along the wall.")]
+    public float wallHitMinClosingMps = 3f;
+    [Tooltip("How long (s) after its last barrier hit a car keeps the player's flag out. If it stops, the stopped-car rule has taken over by then; if it drives on, the flag drops.")]
+    public float wallHitFlagSeconds = 4f;
 
     public struct Incident
     {
@@ -38,6 +46,9 @@ public class CautionWatch : MonoBehaviour
 
     // Every stopped car on the road right now.
     public IReadOnlyList<Incident> Incidents => _incidents;
+    // Every car that hit a barrier within wallHitFlagSeconds and is still out on the road. HUD flag only —
+    // the AI lift for stopped cars, not for every car that glances off the wall.
+    public IReadOnlyList<Incident> WallHits => _wallHits;
 
     // True while there is a stopped car within lookAheadMetres up the road from the player.
     public bool CautionAhead { get; private set; }
@@ -46,6 +57,9 @@ public class CautionWatch : MonoBehaviour
 
     readonly Dictionary<Transform, float> _slowSince = new();
     readonly List<Incident> _incidents = new();
+    readonly Dictionary<Transform, float> _wallHitAt = new();
+    readonly List<Incident> _wallHits = new();
+    float _now;
     float _holdUntil;
     float _lapLength;
 
@@ -65,6 +79,18 @@ public class CautionWatch : MonoBehaviour
     }
 
     void OnDestroy() { if (Instance == this) Instance = null; }
+
+    void OnEnable() => VehicleCollision.AnyBarrierHit += OnBarrierHit;
+    void OnDisable() => VehicleCollision.AnyBarrierHit -= OnBarrierHit;
+
+    void OnBarrierHit(Transform car, float closingMps) => ReportBarrierHit(car, closingMps, Time.time);
+
+    // A car touched a barrier. `now` is on the same clock as Tick.
+    public void ReportBarrierHit(Transform car, float closingMps, float now)
+    {
+        if (car == null || closingMps < wallHitMinClosingMps) return;
+        _wallHitAt[car] = now;
+    }
 
     void Update() => Tick(Time.time);
 
@@ -99,6 +125,8 @@ public class CautionWatch : MonoBehaviour
     public void Tick(float now)
     {
         _incidents.Clear();
+        _wallHits.Clear();
+        _now = now;
         var tracker = RacePositionTracker.Instance;
         if (tracker != null && tracker.TrackLength > 0f) ScanTracker(tracker, now);
         else ScanRaceField(now);
@@ -119,6 +147,9 @@ public class CautionWatch : MonoBehaviour
             bool stopped = e.speedMps <= stoppedMps && !InPits(tracker, e);
             if (StoppedLongEnough(e.tf, stopped, now))
                 _incidents.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.progress, len) });
+            if (_wallHitAt.TryGetValue(e.tf, out float hitAt) && now - hitAt <= wallHitFlagSeconds
+                && !InPits(tracker, e))
+                _wallHits.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.progress, len) });
         }
     }
 
@@ -163,6 +194,14 @@ public class CautionWatch : MonoBehaviour
                     float gap = Mathf.Repeat(_incidents[i].distance - myDist, _lapLength);
                     if (gap > 0f && gap <= lookAheadMetres && gap < nearest) nearest = gap;
                 }
+                for (int i = 0; i < _wallHits.Count; i++)
+                {
+                    var hit = _wallHits[i];
+                    if (hit.car == me.tf || !_wallHitAt.TryGetValue(hit.car, out float hitAt)) continue;
+                    float gap = Mathf.Repeat(hit.distance - myDist, _lapLength);
+                    if (RaceCraft.WallHitFlagsYellow(gap, lookAheadMetres, now - hitAt, wallHitFlagSeconds) && gap < nearest)
+                        nearest = gap;
+                }
             }
         }
 
@@ -186,13 +225,17 @@ public class CautionWatch : MonoBehaviour
     }
 
     // Destroyed transforms compare == null but still hash as keys.
+    // Wall hits older than the flag window go too.
     void PruneDead()
     {
-        if (_slowSince.Count == 0) return;
         List<Transform> dead = null;
         foreach (var kv in _slowSince)
             if (kv.Key == null) (dead ??= new List<Transform>()).Add(kv.Key);
-        if (dead == null) return;
-        for (int i = 0; i < dead.Count; i++) _slowSince.Remove(dead[i]);
+        if (dead != null) for (int i = 0; i < dead.Count; i++) _slowSince.Remove(dead[i]);
+
+        dead?.Clear();
+        foreach (var kv in _wallHitAt)
+            if (kv.Key == null || _now - kv.Value > wallHitFlagSeconds) (dead ??= new List<Transform>()).Add(kv.Key);
+        if (dead != null) for (int i = 0; i < dead.Count; i++) _wallHitAt.Remove(dead[i]);
     }
 }
