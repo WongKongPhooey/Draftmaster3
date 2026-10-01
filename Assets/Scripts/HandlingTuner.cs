@@ -117,6 +117,10 @@ public class HandlingTuner : MonoBehaviour
 
     void DrawWindow(int id)
     {
+        // A phone has no F-key to shut this with; the X sits on the title bar.
+        if (InputGlyphs.UsingTouch &&
+            TouchTaps.Button(new Rect(_win.width - 30f, 2f, 26f, 18f), "X", GUI.skin.button)) _show = false;
+
         // --- Live telemetry: the readout that tells understeer from oversteer. ---
         float bal = _pvc.HandlingBalanceDeg;          // + = front sliding more = understeer
         string verdict = bal > 2f ? "UNDERSTEER (front wide)"

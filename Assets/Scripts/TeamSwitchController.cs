@@ -49,6 +49,7 @@ public class TeamSwitchController : MonoBehaviour
     readonly List<TMP_Text> _buttonLabels = new();
     Canvas _canvas;
     RectTransform _window;
+    Button _close;                             // touch only: a phone has no F3 to put the box away
     RectTransform _panel;
     float _rosterTimer, _labelTimer;
     bool _hidden;                              // toggleKey; the panel also hides itself in practice/qualifying
@@ -81,6 +82,9 @@ public class TeamSwitchController : MonoBehaviour
         if (_window != null && _window.gameObject.activeSelf != available)
             _window.gameObject.SetActive(available);
         if (!available) return;
+
+        bool touch = InputGlyphs.UsingTouch;
+        if (_close != null && _close.gameObject.activeSelf != touch) _close.gameObject.SetActive(touch);
 
         _rosterTimer -= Time.deltaTime;
         if (_rosterTimer <= 0f) { _rosterTimer = rosterRefreshSeconds; RefreshRoster(); }
@@ -317,6 +321,14 @@ public class TeamSwitchController : MonoBehaviour
         tle.preferredWidth = 108f;
         tle.preferredHeight = 10f;
         _window = window;
+
+        // On the window, not in the layout column, so it sits in the corner opposite the title.
+        _close = IronOvalUI.Button(window, "Close", "X", new Vector2(14f, 12f));
+        var xrt = (RectTransform)_close.transform;
+        xrt.anchorMin = xrt.anchorMax = xrt.pivot = new Vector2(1f, 1f);
+        xrt.anchoredPosition = new Vector2(-4f, -4f);
+        _close.onClick.AddListener(() => _hidden = true);
+        _close.gameObject.SetActive(InputGlyphs.UsingTouch);
     }
 
     void RebuildButtons()

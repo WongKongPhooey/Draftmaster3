@@ -36,7 +36,7 @@ namespace Draftmaster.Weekend
                 greeting = ran
                     ? new[] { "Come in, shut the door, {playerfirst}. I've got the tyre traces up." }
                     : new[] { "Come in. Not much to look at — we didn't run, so this is all sim." },
-                farewell = new[] { "Right. I'll take it to the boys and we'll have it under you in the morning." },
+                farewell = new[] { "Right. I'll take it to the crew and we'll have it ready in the morning." },
             };
 
             c.Add(new WeekendBeat
@@ -53,7 +53,7 @@ namespace Draftmaster.Weekend
                         "Good. That's the car I wanted to build anyway.",
                         setup: 0.14f * weight, morale: 8f, score: 0.8f),
                     WeekendConversation.Say(
-                        "Give me one lap. I'll take track position and defend it.",
+                        "Give me a few good laps. I'll take track position and defend it.",
                         "Then it'll be a handful at lap forty. Your call — you're driving it.",
                         setup: 0.10f * weight, morale: 2f, appeal: 0.8f, score: 0.6f),
                     WeekendConversation.Say(
@@ -79,16 +79,16 @@ namespace Draftmaster.Weekend
                 statKey = "teammeetings",
                 greeting = new[]
                 {
-                    "There you are, {playerfirst}. Mind the jack.",
+                    "There you are, {playerfirst}. Better late them never.",
                     "Three days, one race. Let's agree what we're doing with them.",
                 },
-                farewell = new[] { "That'll do me. Go and get some air before the truck series roll out." },
+                farewell = new[] { "That'll do me. Go and find some peace before the support series roll out." },
             };
 
             c.Add(new WeekendBeat
             {
                 speaker = "CREW CHIEF",
-                line = "Sim says this place is all about the middle of the corner. How are we running it, {playerfirst}?",
+                line = "Sim says this place is all about tyre management. How are we running it, {playerfirst}?",
                 question = "How are we running the weekend?",
                 choices =
                 {

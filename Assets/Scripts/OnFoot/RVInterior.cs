@@ -89,9 +89,18 @@ public class RVInterior : MonoBehaviour
     [Tooltip("How close (m) to the middle of the bed the player must be to go to sleep, at the end of a Friday or Saturday.")]
     public float bedRange = 2f;
 
+    [Header("Light through the door")]
+    [Tooltip("How far the daylight spills out of the doorway across the blacked-out world, in metres.")]
+    public float doorLightLength = 2.6f;
+    [Tooltip("How much wider the spill gets per metre out from the door, each side.")]
+    public float doorLightSpread = 0.3f;
+    [Tooltip("Brightness at the doorway (alpha of the white). Fades to nothing at doorLightLength.")]
+    [Range(0f, 1f)] public float doorLightIntensity = 0.85f;
+
     // World z-planes. More negative = closer to the camera (which sits at player.z - 100 looking +z), so
     // each layer draws in front of the one below it. The player is pulled to insidePlayerZ while inside.
     const float kMaskZ = -2.0f;
+    const float kDoorLightZ = -2.1f;   // over the mask, under the floor art, so the room's own edge cuts it off
     const float kFloorZ = -2.2f;
     const float kWallZ = -2.25f;
     const float kPropZ = -2.3f;
@@ -130,6 +139,7 @@ public class RVInterior : MonoBehaviour
     public bool IsInside => _inside;
 
     readonly List<Material> _mats = new(); // owned runtime materials, released on destroy
+    readonly List<Texture2D> _texs = new(); // likewise textures
 
     // Pure room-bounds test, split out so the state logic can be reasoned about on its own.
     // localForward = how far the player is past the spawn toward the door; localRight = lateral offset.
@@ -236,6 +246,62 @@ public class RVInterior : MonoBehaviour
         // a quad in the procedural room), so only the interactable is added, on an empty sat on top of it.
         Bed = interior.GetComponentInChildren<BedInteractable>(true);
         if (Bed == null) Bed = BuildBed(interior);
+
+        // An authored "DoorLight" in the prefab wins; otherwise the spill is generated off the doorway.
+        if (interior.Find("DoorLight") == null) BuildDoorLight(interior);
+    }
+
+    // Daylight falling through the open side door onto the ground outside: white at the threshold, fading to
+    // black across the mask and widening as it goes, so from inside the doorway reads as a way out with the
+    // day on the other side of it rather than as a gap in the wall. Lives in the interior frame, so it is
+    // only ever there while the world is blacked out.
+    void BuildDoorLight(Transform interior)
+    {
+        // The door sits on the shell's side, not on the room's centre line; without a shell, the front wall.
+        Vector2 door = _exterior != null
+            ? (Vector2)interior.InverseTransformPoint(_exterior.DoorWorldPosition)
+            : new Vector2(0f, roomFront);
+
+        float len = Mathf.Max(0.1f, doorLightLength);
+        float nearW = doorWidth;
+        float farW = doorWidth + 2f * doorLightSpread * len;
+        var tex = DoorLightTexture(nearW, farW, len, doorLightIntensity);
+        _texs.Add(tex);
+
+        BuildQuad(interior, "DoorLight", new Vector2(door.x, door.y + len * 0.5f),
+                  new Vector2(farW, len), kDoorLightZ, MakeSpriteUnlit(tex));
+    }
+
+    // Drawn on the game's pixel grid (12.8 px/m, point-filtered) so the falloff steps like the rest of the
+    // art instead of being the one smooth thing on screen. Row 0 is the doorway.
+    static Texture2D DoorLightTexture(float nearW, float farW, float len, float intensity)
+    {
+        const float ppm = 12.8f;
+        int w = Mathf.Max(2, Mathf.CeilToInt(farW * ppm));
+        int h = Mathf.Max(2, Mathf.CeilToInt(len * ppm));
+        var px = new Color32[w * h];
+        for (int y = 0; y < h; y++)
+        {
+            float t = (y + 0.5f) / h;                                    // 0 at the door, 1 at the far end
+            float halfW = Mathf.Lerp(nearW, farW, t) * 0.5f * ppm;       // the spill's half-width in pixels
+            float fall = (1f - t) * (1f - t);                            // quick off the threshold, long tail
+            for (int x = 0; x < w; x++)
+            {
+                float fromCentre = Mathf.Abs(x + 0.5f - w * 0.5f);
+                float edge = Mathf.Clamp01(halfW - fromCentre);          // one soft pixel at the sides
+                byte a = (byte)Mathf.RoundToInt(255f * intensity * fall * edge);
+                px[y * w + x] = new Color32(255, 255, 255, a);
+            }
+        }
+        var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+        {
+            name = "RVDoorLight",
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        tex.SetPixels32(px);
+        tex.Apply(false, true);
+        return tex;
     }
 
     // The motorhome's bed, as something to walk up to. Off until PitLaneStart says it is bedtime.
@@ -511,5 +577,7 @@ public class RVInterior : MonoBehaviour
     {
         foreach (var m in _mats) if (m != null) Destroy(m);
         _mats.Clear();
+        foreach (var t in _texs) if (t != null) Destroy(t);
+        _texs.Clear();
     }
 }

@@ -230,6 +230,7 @@ public class CrewChiefController : MonoBehaviour
 
     void Enter()
     {
+        showHud = true;
         if (_playerCar == null) _playerCar = GameObject.Find("PlayerCar");
 
         // Where the player is standing, asked BEFORE the chief's body exists — that body is an
@@ -514,9 +515,14 @@ public class CrewChiefController : MonoBehaviour
         float y = PixelGUI.Px(40f);
 
         PixelGUI.Panel(new Rect(x, y, w, h));
-        PixelGUI.KeyTab(new Rect(x, y, w, h),
-                        toggleKey == UnityEngine.InputSystem.Key.None ? "" : toggleKey.ToString(),
-                        PadBindings.CrewChief);
+        // Closing it on a phone hides the board, not the pit wall; the next visit brings it back.
+        if (PixelGUI.KeyTab(new Rect(x, y, w, h),
+                            toggleKey == UnityEngine.InputSystem.Key.None ? "" : toggleKey.ToString(),
+                            PadBindings.CrewChief))
+        {
+            showHud = false;
+            return;
+        }
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
         float cx = c.x, cy = c.y;
 

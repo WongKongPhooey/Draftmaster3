@@ -295,6 +295,24 @@ public class SponsorBoardPanel : MonoBehaviour
                             PixelGUI.TextDisabled);
         hint.text = HintText();
         _hint = hint;
+
+        // A phone has no F6. The X is there for every device: it costs nothing next to a key hint.
+        var closeGo = new GameObject("Close", typeof(RectTransform));
+        closeGo.transform.SetParent(card.transform, false);
+        var closeImg = closeGo.AddComponent<Image>();
+        closeImg.color = PixelGUI.PlateLight;
+        var xrt = closeGo.GetComponent<RectTransform>();
+        xrt.anchorMin = xrt.anchorMax = xrt.pivot = new Vector2(1f, 1f);
+        xrt.sizeDelta = new Vector2(64f, 64f);
+        xrt.anchoredPosition = new Vector2(-24f, -24f);
+        var closeBtn = closeGo.AddComponent<Button>();
+        closeBtn.targetGraphic = closeImg;
+        closeBtn.onClick.AddListener(Hide);
+        var closeText = MakeText("Text", xrt, BrandFonts.Display, 32, FontStyle.Normal, TextAnchor.MiddleCenter, PixelGUI.Gold);
+        closeText.text = "X";
+        var ctr = closeText.rectTransform;
+        ctr.anchorMin = Vector2.zero; ctr.anchorMax = Vector2.one;
+        ctr.offsetMin = Vector2.zero; ctr.offsetMax = Vector2.zero;
         var hrt = hint.rectTransform;
         hrt.anchorMin = new Vector2(0, 0); hrt.anchorMax = new Vector2(1, 0);
         hrt.offsetMin = new Vector2(44, 20); hrt.offsetMax = new Vector2(-44, 56);

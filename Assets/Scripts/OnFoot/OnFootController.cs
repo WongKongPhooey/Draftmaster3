@@ -117,6 +117,7 @@ public class OnFootController : MonoBehaviour
         _rb.gravityScale = 0f;
         _rb.freezeRotation = true;
         _animator = GetComponent<Animator>();
+        if (GetComponent<Footsteps>() == null) gameObject.AddComponent<Footsteps>();
         if (_animator != null)
         {
             foreach (var p in _animator.parameters)

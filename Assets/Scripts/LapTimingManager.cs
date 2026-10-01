@@ -329,7 +329,11 @@ public class LapTimingManager : MonoBehaviour
 
         var plate = new Rect(x, y, w, h);
         PixelGUI.Panel(plate);
-        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.LapTiming);
+        if (PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.LapTiming))
+        {
+            showPlayerHud = false;
+            return;
+        }
         GUI.Label(new Rect(x + pad, y + pad, w - pad * 2f, line), strip, style);
 
         if (invalid)

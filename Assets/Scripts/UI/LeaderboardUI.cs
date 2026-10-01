@@ -98,8 +98,13 @@ public class LeaderboardUI : MonoBehaviour
         bool playerOutsideWindow = !expanded && playerRow >= 0 && playerRow >= show;
         float h = (show + 1) * row + pad * 2f + (playerOutsideWindow ? row + pad : 0f);
         PixelGUI.Panel(new Rect(x, y, w + pad * 2f, h));
-        PixelGUI.KeyTab(new Rect(x, y, w + pad * 2f, h),
-                        toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.Leaderboard);
+        // Not written to the pref: a phone has no F2 to bring it back, so it returns with the next session.
+        if (PixelGUI.KeyTab(new Rect(x, y, w + pad * 2f, h),
+                            toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.Leaderboard))
+        {
+            _visible = false;
+            return;
+        }
 
         float rx = x + pad, ry = y + pad;
         var headerRect = new Rect(rx, ry, w, row);

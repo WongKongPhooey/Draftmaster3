@@ -87,7 +87,11 @@ public class TireTempWearUI : MonoBehaviour
 
         var plate = new Rect(x0 - pad, y0 - pad, boardW + pad * 2f, boardH + pad * 2f);
         PixelGUI.Panel(plate);
-        PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.Tyres);
+        if (PixelGUI.KeyTab(plate, toggleKey == KeyCode.None ? "" : toggleKey.ToString(), PadBindings.Tyres))
+        {
+            visible = false;
+            return;
+        }
 
         DrawTyre("FL", TireModel.FL, x0, y0, cw, ch);
         DrawTyre("FR", TireModel.FR, x0 + cw + g, y0, cw, ch);

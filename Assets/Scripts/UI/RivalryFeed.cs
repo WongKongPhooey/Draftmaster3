@@ -196,8 +196,12 @@ public class RivalryFeed : MonoBehaviour
         float y = PixelGUI.Px(56f);
 
         PixelGUI.Panel(new Rect(x, y, w, h));
-        PixelGUI.KeyTab(new Rect(x, y, w, h),
-                        standingsKey == KeyCode.None ? "" : standingsKey.ToString(), PadBindings.Rivalries);
+        if (PixelGUI.KeyTab(new Rect(x, y, w, h),
+                            standingsKey == KeyCode.None ? "" : standingsKey.ToString(), PadBindings.Rivalries))
+        {
+            _showStandings = false;
+            return;
+        }
         var c = PixelGUI.PanelContent(new Rect(x, y, w, h), 6f);
 
         GUI.Label(new Rect(c.x, c.y, c.width, PixelGUI.Px(10f)), "RELATIONSHIPS", PixelGUI.HeadingSmall);

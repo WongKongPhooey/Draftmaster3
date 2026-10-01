@@ -116,14 +116,6 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     [Header("Cornering Feel")]
     [Tooltip("Generous temporal smoothing (0..0.97) applied to the racing-line lateral AND the turn-in yaw, so the car flows through corner entry/exit instead of the rear axle snapping at segment boundaries. Higher = smoother but slightly rounds/lags the authored line. Per-FixedUpdate Lerp weight on the OLD value.")]
     [Range(0f, 0.97f)] public float cornerSmoothing = 0.88f;
-    [Tooltip("Lean angle (deg) per metre/sec of lateral motion. Positive offset rate = moving right = leans right. Negate to flip.")]
-    public float leanIntoTurns = 4f;
-    [Tooltip("Smoothing for the lean angle. Lower = snappier, higher = floatier. 0 disables smoothing.")]
-    [Range(0f, 0.95f)]
-    public float leanSmoothing = 0.8f;
-    [Tooltip("Hard cap on the lean angle (deg). Without it, a fast lateral move (chicane, weave, line change) blows the lean up to 20°+ and the car renders crabbed — pointing diagonally instead of along its direction of travel. Keep small (a few degrees) so cornering still reads as a subtle lean.")]
-    [Range(0f, 20f)]
-    public float maxLeanDeg = 5f;
     [Tooltip("Fraction of speed bled off on a perfectly square contact (scaled by severity and how head-on the hit is). Keep small for the parade — a hard scrub on a nose-to-tail tap makes the field concertina into a pile-up.")]
     [Range(0f, 1f)] public float contactSpeedScrub = 0.12f;
     const float rearAxleToCenter = -2.4f;
@@ -287,7 +279,6 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     bool _onPit;
     float _prevLateral;
     bool _hasPrevLateral;
-    float _currentLean;
     float _currentMph;
     float _lineLatSmoothed;   // low-passed racing-line lateral, so the rear axle doesn't snap at segment boundaries
     bool _hasLineSmoothed;    // false until the first smoothed sample / after a lane change, so it seeds from raw
@@ -1284,7 +1275,6 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
 
         _hasPrevLateral = false;
         _hasLineSmoothed = false; // reseed the line low-pass from the new lane's raw offset (no stale drag)
-        _currentLean = 0f;
     }
 
     // Pull the brain's track distance back onto where the car physically is.
@@ -1453,23 +1443,20 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         float lateralRate = (_hasPrevLateral && Time.fixedDeltaTime > 0f) ? (totalLateral - _prevLateral) / Time.fixedDeltaTime : 0f;
         // Geometric turn-in: on an offset racing line the car's true direction of travel is the centreline tangent
         // rotated by atan2(lateral velocity, forward velocity). Through a chicane the offset swings hard, so this
-        // yaw is large and MUST come from the real kinematics. The old code faked turn-in with `lean` alone, which
-        // is clamped to a few degrees (maxLeanDeg) — so the car under-rotated and rendered crabbed (pointing down
-        // the centreline, not down its actual path). Speed-normalised so the angle is right at any pace; the floor
+        // yaw is large and MUST come from the real kinematics, or the car renders crabbed (pointing down the
+        // centreline, not down its actual path). Speed-normalised so the angle is right at any pace; the floor
         // on forward speed guards against an atan2 blow-up at a standstill (where lateralRate is ~0 anyway).
         float forwardMps = Mathf.Max(Mathf.Abs(speed), 0.5f);
         float pathYawRaw = Mathf.Atan2(-lateralRate, forwardMps) * Mathf.Rad2Deg;
         // Smooth the turn-in yaw too (same generous filter), so the body doesn't snap as the car points onto its
         // path at corner entry/exit. Cold first frame takes the raw angle so there's no start-up swing.
         _pathYawSmoothed = _hasPrevLateral ? Mathf.Lerp(pathYawRaw, _pathYawSmoothed, cornerSmoothing) : pathYawRaw;
-        // `lean` is now only a SMALL cosmetic bank layered on top of the correct heading (subtle lean into the
-        // turn), clamped tight — the big turn-in comes from the smoothed path yaw above, not from this.
-        float leanTarget = -lateralRate * leanIntoTurns;
-        _currentLean = Mathf.Lerp(leanTarget, _currentLean, leanSmoothing);
-        _currentLean = Mathf.Clamp(_currentLean, -maxLeanDeg, maxLeanDeg);
+        // No cosmetic lean on top: a top-down car shows body roll as nothing at all, so extra yaw for "leaning
+        // into the turn" only pointed the car off its own path — up to 5° on a weave, more than twice the real
+        // turn-in, and it read as the car rocking side to side through every line change.
         _prevLateral = totalLateral;
         _hasPrevLateral = true;
-        float carHeadingDeg = angleDeg + _pathYawSmoothed + _currentLean + _mergeHeadingBias;
+        float carHeadingDeg = angleDeg + _pathYawSmoothed + _mergeHeadingBias;
         float carHeadingRad = carHeadingDeg * Mathf.Deg2Rad;
         Vector2 carForward = new Vector2(Mathf.Cos(carHeadingRad), Mathf.Sin(carHeadingRad));
         Vector2 finalPos = rearAxle + carForward * rearAxleToCenter;

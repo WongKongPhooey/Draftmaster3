@@ -31,7 +31,8 @@ It links the rest: `Docs/Tracks.md` (track pipeline), `Docs/Race-Weekend.md`,
   centerline, green ideal, blue leftmost, red rightmost.
 - **SplineDriver** — AI/test driver walking the spline on a VehicleInfo's accel/decel/cornering
   curves. Looks ahead `brakingLookahead` metres to brake for slower segments, applies racing-line
-  offset via `lineFactor` (-1 leftmost, 0 ideal, +1 rightmost), leans by heading-change rate.
+  offset via `lineFactor` (-1 leftmost, 0 ideal, +1 rightmost), heading follows its actual path (no
+  cosmetic lean).
 - **AIDriverBinding** — binds a `Draftmaster.Data.Driver` row to a SplineDriver: Aggression skews
   `lineFactor`; Qualifying/Consistency set `paceMultiplier`.
 - **GridSpawner** — instantiates N AI cars, waits on `DatabaseManager.IsReady`, pulls a shuffled

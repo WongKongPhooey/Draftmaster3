@@ -421,10 +421,16 @@ public static class PixelGUI
     //
     // Pass the key the way the player would say it: "F6", "ESC", "C". `pad` is the button that does the same
     // job on a pad; while the pad is the device in use the tab carries that button's icon instead.
-    public static void KeyTab(Rect panel, string key, PadButton pad = PadButton.None)
+    //
+    // A phone has no F-keys, so on touch the tab is a close: it reads X and returns true when tapped, and
+    // the caller hides the panel. Otherwise a panel something else opened (the crew chief's timing board)
+    // stayed on screen with nothing a thumb could do about it.
+    public static bool KeyTab(Rect panel, string key, PadButton pad = PadButton.None)
     {
-        var icon = pad != PadButton.None && InputGlyphs.UsingGamepad ? InputGlyphs.Icon(pad) : null;
-        if (icon == null && string.IsNullOrEmpty(key)) return;
+        bool touch = InputGlyphs.UsingTouch;
+        if (touch) key = "X";
+        var icon = !touch && pad != PadButton.None && InputGlyphs.UsingGamepad ? InputGlyphs.Icon(pad) : null;
+        if (icon == null && string.IsNullOrEmpty(key)) return false;
         Ensure();
 
         var content = new GUIContent((key ?? "").ToUpperInvariant());
@@ -446,7 +452,7 @@ public static class PixelGUI
         {
             DrawSprite(new Rect(Mathf.Round(r.x + (r.width - iconSize) * 0.5f),
                                 Mathf.Round(r.y + (r.height - iconSize) * 0.5f), iconSize, iconSize), icon);
-            return;
+            return false;
         }
 
         var prevAlign = _labelDim.alignment;
@@ -456,6 +462,12 @@ public static class PixelGUI
         GUI.Label(r, content, _labelDim);
         _labelDim.normal.textColor = prevColour;
         _labelDim.alignment = prevAlign;
+
+        // The tab is a few scaled pixels across; the hit area is padded so a fingertip finds it.
+        if (!touch) return false;
+        float slop = Px(6f);
+        return TouchTaps.Button(new Rect(r.x - slop, r.y - slop, r.width + slop * 2f, r.height + slop * 2f),
+                                GUIContent.none, GUIStyle.none);
     }
 
     // A prompt for the button that does the thing in front of you, sat at the bottom of the screen: the

@@ -159,6 +159,10 @@ public class DriverInfoPanel : MonoBehaviour
 
     void DrawWindow(int id)
     {
+        // A phone has no F-key to shut this with; the X sits on the title bar.
+        if (InputGlyphs.UsingTouch &&
+            TouchTaps.Button(new Rect(_win.width - 30f, 2f, 26f, 18f), "X", GUI.skin.button)) _show = false;
+
         _scroll = GUILayout.BeginScrollView(_scroll, GUILayout.Width(390), GUILayout.Height(540));
 
         // --- Identity ---

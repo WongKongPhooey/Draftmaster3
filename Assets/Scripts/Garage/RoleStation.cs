@@ -15,7 +15,11 @@ public class RoleStation : NPCInteractable
     bool _open;
 
     // OnFootController locks movement / hides the prompt while this is true.
-    public override bool IsTalking => _open;
+    // The sponsor board can be shut from its own X (or by SessionHud), not just by walking back up to the
+    // station, so for that one the board is asked rather than trusting _open — or a closed board leaves the
+    // player frozen in a conversation with nobody.
+    public override bool IsTalking => _open &&
+        (role != Role.SponsorshipManager || (SponsorBoardPanel.Instance != null && SponsorBoardPanel.Instance.IsOpen));
 
     public override bool Interact()
     {
@@ -25,7 +29,7 @@ public class RoleStation : NPCInteractable
         if (role == Role.SponsorshipManager)
         {
             var board = SponsorBoardPanel.Ensure();
-            if (!_open) { _open = true; board.Show(); return true; }
+            if (!_open || !board.IsOpen) { _open = true; board.Show(); return true; }
             _open = false;
             board.Hide();
             return false;
