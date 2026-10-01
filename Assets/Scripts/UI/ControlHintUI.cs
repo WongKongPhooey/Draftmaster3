@@ -52,7 +52,10 @@ public class ControlHintUI : MonoBehaviour
         {
             if (_instance != null) return _instance;
             var go = new GameObject("ControlHintUI");
-            DontDestroyOnLoad(go);
+            // EditMode tests reach this too, where DontDestroyOnLoad throws — and where the object must not
+            // be saved into whatever scene is open.
+            if (Application.isPlaying) DontDestroyOnLoad(go);
+            else go.hideFlags = HideFlags.HideAndDontSave;
             _instance = go.AddComponent<ControlHintUI>();
             return _instance;
         }

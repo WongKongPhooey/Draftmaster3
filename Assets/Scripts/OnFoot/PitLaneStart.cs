@@ -1114,9 +1114,9 @@ public class PitLaneStart : MonoBehaviour
         // it. See ParkedCarPin — it takes itself off the moment the car is driven again.
         ParkedCarPin.Hold(car);
 
-        // Stood at the driver's door rather than inside the car, so walking away from it works the same as
-        // it did at the start of the session.
-        Vector3 beside = car.transform.position + car.transform.rotation * new Vector3(0f, -2.2f, 0f);
+        // Stood beside the car rather than inside it, so walking away from it works the same as it did at
+        // the start of the session — and on the garage side of it, not out on pit road. See BesideCarPosition.
+        Vector3 beside = BesideCarPosition();
         beside.z = _player.transform.position.z;
         _player.transform.position = beside;
         _player.SetActive(true);
@@ -1138,6 +1138,45 @@ public class PitLaneStart : MonoBehaviour
         _entered = false;
         _hintedEnter = false;
         SyncCarMarker();
+    }
+
+    // How far (m) from the car's centre the driver stands once out of it: clear of a car's half-width.
+    const float StepOutMetres = 2.2f;
+
+    // Where a driver stands beside the parked car: a step off its side on the GARAGE side of the box, away
+    // from the pit lane cars drive down. A tow, climbing out and the fast travel to a session all land here.
+    //
+    // Read off the pit lane, not off the car. It used to be a step along the car's own local -Y, which on
+    // the player's car (sprite facing down its local -X, angleOffsetDeg 180) is the driver's left — the
+    // pit-lane side of a car parked nose down the lane — so the driver was stood in the path of the field.
+    public Vector3 BesideCarPosition()
+    {
+        if (car == null) return transform.position;
+
+        // Not run through PaddockBoundary: the walkable area can be drawn as the paddock alone, and clamping
+        // to it threw the driver a hundred metres from the car they had just climbed out of.
+        CurrentBoxPose(out _, out float laneHeadingDeg);
+        return BesideCar(car.transform.position, laneHeadingDeg, GarageSideSign());
+    }
+
+    // A step of StepOutMetres across the lane from the car: along the pit lane's normal (right of travel,
+    // TrackBuilder's convention), signed toward the garages.
+    static Vector3 BesideCar(Vector3 carPos, float laneHeadingDeg, float garageSign)
+    {
+        float r = laneHeadingDeg * Mathf.Deg2Rad;
+        var normal = new Vector3(Mathf.Sin(r), -Mathf.Cos(r), 0f);
+        return carPos + normal * (garageSign * StepOutMetres);
+    }
+
+    // Which side of the pit centreline the garages are on, along its normal: the side the box lane is on,
+    // since the parked file sits between pit road and the garages. +1 when nothing says otherwise — that is
+    // where TrackBuilder lays every box lane.
+    float GarageSideSign()
+    {
+        float lateral = PitLane.Configured ? PitLane.ParkLateral : 0f;
+        if (Mathf.Approximately(lateral, 0f) && track != null && track.HasPitBoxLane)
+            lateral = track.PitBoxLaneCenterLateral;
+        return lateral < 0f ? -1f : 1f;
     }
 
     // ------------------------------------------------------------------ getting out in the box

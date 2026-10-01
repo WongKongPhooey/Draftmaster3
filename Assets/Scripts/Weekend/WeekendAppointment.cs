@@ -110,12 +110,28 @@ public static class WeekendAppointment
 
     static Transform PlayerCar()
     {
+        var pits = PitLaneFlow();
+        return pits != null && pits.car != null ? pits.car.transform : null;
+    }
+
+    static PitLaneStart PitLaneFlow()
+    {
         if (_pitLane == null && _pitLaneSearchedFrame != Time.frameCount)
         {
             _pitLaneSearchedFrame = Time.frameCount;
             _pitLane = Object.FindFirstObjectByType<PitLaneStart>();
         }
-        return _pitLane != null && _pitLane.car != null ? _pitLane.car.transform : null;
+        return _pitLane;
+    }
+
+    // Where a player travelled to Target() is put down when it has no venue mark of its own. The car is
+    // parked in its pit box, so that is beside it on the garage side — a fixed step "down the screen" landed
+    // on whichever side of the box the track happened to run, often out on pit road.
+    public static Vector3 StandBeside(Transform target)
+    {
+        var car = PlayerCar();
+        if (target != null && target == car) return PitLaneFlow().BesideCarPosition();
+        return target.position + new Vector3(0f, -3f, 0f);
     }
 
     // What the marker calls the place.

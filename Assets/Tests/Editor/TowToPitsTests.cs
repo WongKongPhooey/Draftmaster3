@@ -182,6 +182,42 @@ public class TowToPitsTests
     }
 
     [Test]
+    public void TheDriverIsPutOutOnTheGarageSideNotOnPitRoad()
+    {
+        // The box lane sits out along the pit lane's normal (-Y on this straight) with the garages beyond it,
+        // and pit road — where the field drives — is the centreline at y = 0. The driver used to be stood a
+        // step along the car's local -Y, which on the player's car is the pit-road side of the box.
+        ConfigurePitBoxes();
+        using (var rig = new Rig())
+        {
+            rig.Tow();
+
+            float carY = rig.CarGo.transform.position.y;
+            float driverY = rig.PlayerGo.transform.position.y;
+            Assert.Less(driverY, carY - 1.5f, "stood off the car's garage side, clear of its body");
+            Assert.AreEqual(rig.CarGo.transform.position.x, rig.PlayerGo.transform.position.x, 0.01f,
+                            "level with the car, not ahead of or behind it");
+        }
+    }
+
+    [Test]
+    public void TheGarageSideHoldsWhicheverWayThePitLaneRuns()
+    {
+        // Same answer on a lane heading -X: the normal flips to +Y, and so does the garage side.
+        ConfigurePitBoxes();
+        using (var rig = new Rig())
+        {
+            SetField(rig.Start, "_usedPit", false);   // CurrentBoxPose falls back to the opening heading
+            SetField(rig.Start, "_boxHeadingDeg", 180f);
+            rig.CarGo.transform.position = new Vector3(50f, 6f, 0f);
+
+            var at = (Vector3)rig.Start.GetType().GetMethod("BesideCarPosition").Invoke(rig.Start, null);
+            Assert.Greater(at.y, 6f + 1.5f, "out on the box lane's far side, away from pit road");
+            Assert.AreEqual(50f, at.x, 0.01f);
+        }
+    }
+
+    [Test]
     public void ACarTowedInIsStoppedAndSquareInItsBox()
     {
         ConfigurePitBoxes();

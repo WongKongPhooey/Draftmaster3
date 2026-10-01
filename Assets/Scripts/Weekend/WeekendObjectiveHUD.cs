@@ -296,7 +296,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         if (target == null) return false;
 
         // Stand on the venue's own mark where there is one; a session has no mark, so pull up beside the car.
-        Vector3 to = anchor != null ? anchor.StandPosition : target.position + new Vector3(0f, -3f, 0f);
+        Vector3 to = anchor != null ? anchor.StandPosition : WeekendAppointment.StandBeside(target);
         return TravelTo(to);
     }
 
