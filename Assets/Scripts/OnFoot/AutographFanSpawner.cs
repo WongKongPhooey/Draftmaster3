@@ -29,8 +29,10 @@ public class AutographFanSpawner : MonoBehaviour
     [Header("Placement")]
     [Tooltip("Sign of the pit-wall side the fans stand on. Flip to -1 if they end up on the racing side.")]
     public float wallSide = 1f;
-    [Tooltip("Lateral distance (m) from the pit centerline to the fans. Clamped clear of any parked box lane.")]
+    [Tooltip("Lateral distance (m) from the pit centerline to the fans. Clamped clear of the pit lane and its box lane — fans never stand on tarmac.")]
     public float lateralFromCenter = 4.0f;
+    [Tooltip("How far (m) beyond the outer edge of the box lane (or the pit lane, if it has none) the fans stand, at the least.")]
+    public float clearOfLane = 1.2f;
     [Tooltip("World height a paper-doll fan is normalised to, whatever the library's pixel size. Defaults to the same figure the on-foot player renders at, so fans don't tower over whoever they're asking for a signature.")]
     public float fanHeightM = PitCrewSpawner.OnFootPersonHeight;
 
@@ -129,10 +131,6 @@ public class AutographFanSpawner : MonoBehaviour
             float from = track.HasPitBoxLane ? track.PitBoxLaneFrom(pitLength) : pitLength * 0.15f;
             float to = track.HasPitBoxLane ? track.PitBoxLaneTo(pitLength) : pitLength * 0.85f;
 
-            // Keep fans clear of any parked box lane so they don't stand inside the cars.
-            float lateral = lateralFromCenter;
-            if (PitLane.Configured) lateral = Mathf.Max(lateral, Mathf.Abs(PitLane.ParkLateral) + 1.5f);
-
             if (_root == null)
             {
                 _root = new GameObject("AutographFans").transform;
@@ -144,25 +142,37 @@ public class AutographFanSpawner : MonoBehaviour
                 float d = count == 1 ? Mathf.Lerp(from, to, 0.5f)
                                      : Mathf.Lerp(from, to, (i + 0.5f) / count) + Random.Range(-1.5f, 1.5f);
                 d = Mathf.Clamp(d, from, to);
-                BuildFan(_root, d, lateral, pit, i);
+                BuildFan(_root, d, pit, i);
             }
         }
         finally { _waveRunning = false; }
     }
 
-    void BuildFan(Transform root, float dist, float lateral, List<TrackBuilder.Sample> pit, int seed)
+    void BuildFan(Transform root, float dist, List<TrackBuilder.Sample> pit, int seed)
     {
         var s = track.SamplePitAt(dist, pit);
         Vector3 basePos = track.transform.TransformPoint(new Vector3(s.position.x, s.position.y, 0f));
         Vector3 normalW = track.transform.TransformDirection(new Vector3(s.normal.x, s.normal.y, 0f)).normalized;
         Vector3 tangentW = track.transform.TransformDirection(new Vector3(s.tangent.x, s.tangent.y, 0f)).normalized;
 
-        // A little lateral scatter so they don't stand in a perfect line along the wall.
-        float lat = lateral + Random.Range(-0.4f, 0.4f);
+        // Off the tarmac: beyond the pit lane's own edge (its width here, segments can override it) and the
+        // grey box lane the cars park in. The old 4 m / park-lateral figure put fans on the pit lane itself
+        // whenever GridSpawner hadn't configured the boxes, and inside the box lane when it had.
+        float boxLane = track.HasPitBoxLane ? track.pitBoxLaneWidth : 0f;
+        float lateral = FanFooting.StandLateral(s.width * 0.5f, boxLane, lateralFromCenter, clearOfLane);
+
+        // A little lateral scatter so they don't stand in a perfect line along the wall — outward only, so
+        // the scatter can't undo the clearance.
+        float lat = lateral + Random.Range(0f, 0.8f);
         Vector3 pos = basePos + normalW * (wallSide * lat);
-        pos.z = -0.1f; // toward the camera so the sprite draws in front of the pit tarmac
         // Nudge along the lane too, for a looser cluster.
         pos += tangentW * Random.Range(-0.5f, 0.5f);
+
+        // Belt and braces: wherever that landed, if it is still tarmac (the main track running close by, an
+        // escape road, a pit mouth blend) step further out; if there is no dry ground nearby, no fan here.
+        for (int tries = 0; tries < 20 && FanOnTrack(pos); tries++) pos += normalW * (wallSide * 0.5f);
+        if (FanOnTrack(pos)) return;
+        pos.z = -0.1f; // toward the camera so the sprite draws in front of the pit tarmac
 
         var go = new GameObject("AutographFan");
         go.transform.SetParent(root, false);
@@ -180,10 +190,13 @@ public class AutographFanSpawner : MonoBehaviour
         var lines = conversations[seed % conversations.Length];
 
         var fan = go.AddComponent<AutographFan>();
+        fan.track = track;
         fan.lines = lines;
         fan.speakerName = DialogueLibrary.SpeakerNameFor(
             Draftmaster.Chatter.ConversationKind.AutographFan, lines, new[] { "Fan" }, seed, usePoolNames: false);
     }
+
+    bool FanOnTrack(Vector3 pos) => AutographFan.OnTrack(track, pos);
 
     void BuildAppearance(GameObject go, int seed)
     {

@@ -29,6 +29,8 @@ public class AutographFan : NPCInteractable
     public float walkSpeed = 1.7f;
     [Tooltip("Paper-doll walk-cycle frames per second while moving.")]
     public float walkFrameRate = 6f;
+    [Tooltip("Track the fan keeps off — main track, pit lane and box lane. Set by AutographFanSpawner; auto-found if null.")]
+    public TrackBuilder track;
 
     bool _resolved;        // signed OR gave up — either way it stops counting and leaves
     float _ignoredTime;    // seconds the fan has been asking (player noticed) without signing
@@ -44,6 +46,17 @@ public class AutographFan : NPCInteractable
         // Jitter kept under interactRange (2.2m) so every fan still ends up close enough to talk to.
         _personalSpace = stopDistance + Random.value * 0.6f;
     }
+
+    // Start, not Awake: the spawner hands the track over straight after AddComponent.
+    void Start()
+    {
+        if (track == null) track = FindFirstObjectByType<TrackBuilder>();
+    }
+
+    // True if a fan standing at worldPos would be on the track — main road, pit lane, box lane or any extra
+    // ribbon. No usable track = nothing to keep off.
+    public static bool OnTrack(TrackBuilder track, Vector3 worldPos)
+        => track != null && track.track != null && track.IsOnSurface(worldPos, out _);
 
     // Wrap the base conversation: when it transitions from talking to finished, the exchange is done —
     // sign the autograph exactly once.
@@ -72,10 +85,22 @@ public class AutographFan : NPCInteractable
         // Spotted: walk up, stop just short, then stand there asking until signed or out of patience.
         if (dist > _personalSpace)
         {
+            // Never follow the player onto the track: a step that would land on tarmac slides along the
+            // edge instead, and if there is nowhere dry to go the fan waits at the edge for them.
             Vector3 dir = to / dist;
-            transform.position += dir * (walkSpeed * Time.deltaTime);
-            Face(dir);
-            Animate();
+            Vector3 here = transform.position;
+            Vector2 next = FanFooting.Step(here, dir, walkSpeed * Time.deltaTime, p => OnTrack(track, p));
+            if ((next - (Vector2)here).sqrMagnitude > 1e-10f)
+            {
+                transform.position = new Vector3(next.x, next.y, here.z);
+                Face(dir);
+                Animate();
+            }
+            else
+            {
+                Face(to);
+                Idle();
+            }
         }
         else
         {
