@@ -1,5 +1,0 @@
-C:/Users/Josh/Documents/Draftmaster3/.utmp/Debug/1m3lu6l1/armeabi-v7a/CMakeFiles/edit_cache.dir
-C:/Users/Josh/Documents/Draftmaster3/.utmp/Debug/1m3lu6l1/armeabi-v7a/CMakeFiles/rebuild_cache.dir
-C:/Users/Josh/Documents/Draftmaster3/.utmp/Debug/1m3lu6l1/armeabi-v7a/FramePacing/CMakeFiles/swappywrapper.dir
-C:/Users/Josh/Documents/Draftmaster3/.utmp/Debug/1m3lu6l1/armeabi-v7a/FramePacing/CMakeFiles/edit_cache.dir
-C:/Users/Josh/Documents/Draftmaster3/.utmp/Debug/1m3lu6l1/armeabi-v7a/FramePacing/CMakeFiles/rebuild_cache.dir

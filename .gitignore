@@ -77,3 +77,6 @@ Recordings/
 # Python bytecode from Tools/
 __pycache__/
 *.pyc
+
+# Unity Android build cache (CMake/ninja intermediates)
+/.utmp/
