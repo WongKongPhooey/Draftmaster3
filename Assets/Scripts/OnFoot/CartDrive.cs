@@ -1,9 +1,9 @@
 using UnityEngine;
 
-// The golf cart's driving model: throttle, brake, reverse and steering lock, with no Unity in it beyond
-// the vectors. Plain class rather than a component so the whole of it can be stepped in an EditMode test
-// — "does holding left at a standstill spin the cart on the spot" is a question about arithmetic, not
-// about a scene.
+// The paddock e-scooter's driving model (the name is left over from the golf cart it replaced): throttle,
+// brake, reverse and steering lock, with no Unity in it beyond the vectors. Plain class rather than a
+// component so the whole of it can be stepped in an EditMode test — "does holding left at a standstill
+// spin the cart on the spot" is a question about arithmetic, not about a scene.
 //
 // The controls are the race car's, on one stick: push the stick forward to accelerate, pull it back to
 // brake (and, once stopped, to back up), and push it left or right to steer. They are read the way a

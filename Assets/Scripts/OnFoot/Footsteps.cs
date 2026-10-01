@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // Footsteps for a walking body. Installed by OnFootController on every body it drives — the player, the crew
-// chief's pit-wall avatar, a co-op partner's puppet — and silent while that body is sat in a golf cart.
+// chief's pit-wall avatar, a co-op partner's puppet — and silent while that body is stood on an e-scooter.
 //
 // Paced by distance covered rather than by a timer or the walk animation: a step lands every stride, so a
 // scripted walk, a shove out of somebody and a co-op puppet whose transform is written from the network all

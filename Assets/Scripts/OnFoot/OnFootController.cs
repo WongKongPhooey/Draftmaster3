@@ -42,7 +42,7 @@ public class OnFootController : MonoBehaviour
     // brake and steering rather than a direction to walk in, and the velocity for the step comes from the
     // vehicle — everything after that (the boundary clamp, the shove out of people, the co-op puppet) is
     // the same code that moves a walker, which is the whole reason driving is bolted on here rather than
-    // being its own controller. Runtime only; GolfCart sets and clears it.
+    // being its own controller. Runtime only; EScooter sets and clears it.
     [System.NonSerialized] public IRiddenVehicle Ridden;
 
     [Tooltip("Walk speed in units/sec.")]
@@ -197,7 +197,7 @@ public class OnFootController : MonoBehaviour
         }
 
         // Sat in something: the stick is pedals and lock, and where the body goes is the vehicle's business.
-        // There is no running in a cart.
+        // There is no running on a scooter.
         bool riding = Ridden != null;
         bool running = !riding && !scripted && move != Vector2.zero && ReadRunHeld();
         _rb.linearVelocity = riding
@@ -239,7 +239,7 @@ public class OnFootController : MonoBehaviour
         if (riding) Ridden.Moved(_rb.linearVelocity);
 
         // Sat in something, the body faces the way the NOSE points, not the way the stick is pushed —
-        // holding left in a cart is steering it, not turning round on the spot.
+        // holding left on a scooter is steering it, not turning round on the spot.
         Vector2 facing = riding ? Ridden.Facing : move;
 
         if (faceMoveDirection && facing.sqrMagnitude > 0.01f)
@@ -259,8 +259,8 @@ public class OnFootController : MonoBehaviour
             Vector2 face = facing.sqrMagnitude > 0.0001f ? facing : _heldFacing;
             if (_hasHorizontal) _animator.SetFloat("Horizontal", face.x);
             if (_hasVertical) _animator.SetFloat("Vertical", face.y);
-            // Riding is sitting: the legs hold still and only the facing moves, or the player pedals the
-            // cart along like Fred Flintstone.
+            // Riding is standing on the deck: the legs hold still and only the facing moves, or the player
+            // walks the scooter along like Fred Flintstone.
             float legs = riding ? 0f : move.sqrMagnitude;
             if (_hasSpeed) _animator.SetFloat("Speed", legs);
             // Belt and braces: pause the rig while standing so the walk cycle can't treadmill in place.

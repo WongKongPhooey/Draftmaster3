@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Something the on-foot player is sat in that STEERS rather than walks — the paddock golf cart today.
+// Something the on-foot player is sat in that STEERS rather than walks — the paddock e-scooter today.
 //
 // Walking is "the stick is the direction you go". Driving is not: the stick is throttle, brake and lock,
 // and where the body ends up is whatever the vehicle's own speed and heading say. OnFootController still

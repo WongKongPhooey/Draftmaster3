@@ -1,166 +1,173 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// The team's golf cart: the paddock runabout parked at the mouth of the player's own garage. Walk up,
-// press the action button, and the player rides it — same controls, several times walking pace — until
+// The team's e-scooter: the paddock runabout parked at the mouth of the player's own garage. Walk up,
+// press the action button, and the player rides it — same controls, about twice walking pace — until
 // they press it again and step off.
 //
 // Why it is an NPCInteractable and not a vehicle: the paddock already has one way of saying "you can use
 // this" (the floating keycap over anything in NPCInteractable.All) and one thing that reads the action
-// button (OnFootController). A cart with its own prompt and its own key would be a second, quieter set of
-// rules for the player to learn. So this subclasses the talker and overrides Interact to mount instead of
-// speak — the same trick RoleStation and VendingMachine use to open a panel instead of a conversation.
+// button (OnFootController). A scooter with its own prompt and its own key would be a second, quieter set
+// of rules for the player to learn. So this subclasses the talker and overrides Interact to mount instead
+// of speak — the same trick RoleStation and VendingMachine use to open a panel instead of a conversation.
 //
 // The one thing it must NOT do is report IsTalking while it is being ridden: OnFootController zeroes
-// movement for as long as the thing it is engaged with says it is talking, so a cart that claimed to be
-// mid-conversation would be a cart nailed to the tarmac.
+// movement for as long as the thing it is engaged with says it is talking, so a scooter that claimed to be
+// mid-conversation would be a scooter nailed to the tarmac.
 //
-// Riding is the walker's body carried along by the cart's own driving model, not a walk with a cart drawn
-// under it. The body stays OnFootController's: a second set of movement rules would need its own boundary
-// clamp, its own bump handling and its own co-op puppet, and all three come for free by handing the walker
-// a velocity each step (IRiddenVehicle) instead of moving the transform ourselves.
+// Riding is the walker's body carried along by the scooter's own driving model, not a walk with a scooter
+// drawn under it. The body stays OnFootController's: a second set of movement rules would need its own
+// boundary clamp, its own bump handling and its own co-op puppet, and all three come for free by handing
+// the walker a velocity each step (IRiddenVehicle) instead of moving the transform ourselves.
 //
-// What is driven is a cart, not a person. The stick is the race car's controls — forward accelerates, back
-// brakes and then reverses, left and right steer — so it points where it is going, it cannot pivot on the
-// spot, and it carries its speed through a corner. See CartDrive for the arithmetic and CartDodge for what
-// the people in front of it do about it.
+// What is ridden is a vehicle, not a person. The stick is the race car's controls — forward accelerates,
+// back brakes and then paddles backwards, left and right steer — so it points where it is going and it
+// cannot pivot on the spot. Next to the golf cart it replaced it is a little slower flat out but much
+// nimbler: it gets up to speed quicker, stops shorter, and the bars bite almost from walking pace with a
+// much faster lock, so it threads between people and round motorhomes rather than carving wide arcs.
+// See CartDrive for the arithmetic and CartDodge for what the people in front of it do about it.
 //
 // Everything it is made of is a SpriteRenderer, never a mesh quad — same rule as PopupGarageRig. The
 // on-foot player is a transparent sprite, and an opaque mesh drawn nearer the camera hides them.
-public class GolfCart : NPCInteractable, IRiddenVehicle
+public class EScooter : NPCInteractable, IRiddenVehicle
 {
-    // The cart the player is currently sat in, or null. One at a time: mounting is only reachable through
-    // the action button, and the button goes to the nearest interactable, which while riding is always
-    // the cart sat at the player's own feet.
-    public static GolfCart Ridden { get; private set; }
+    // The scooter the player is currently stood on, or null. One at a time: mounting is only reachable
+    // through the action button, and the button goes to the nearest interactable, which while riding is
+    // always the scooter under the player's own feet.
+    public static EScooter Ridden { get; private set; }
 
     [Header("Riding")]
-    [Tooltip("Top speed (units/sec) on full throttle. OnFootController.moveSpeed is 3.5 on foot.")]
-    public float rideSpeed = 8f;
-    [Tooltip("Metres to the player's left the cart is left standing when they step off. Far enough that " +
-             "they are not stood in the middle of it, near enough that it is obviously the thing they " +
-             "just got out of.")]
-    public float stepOffGap = 1.1f;
-    [Tooltip("How fast the cart swings round to the way it is being driven, deg/sec. Only used to settle " +
+    [Tooltip("Top speed (units/sec) on full throttle. OnFootController.moveSpeed is 3.5 on foot; the golf " +
+             "cart this replaced did 8, and a scooter is a little slower than that.")]
+    public float rideSpeed = 7f;
+    [Tooltip("Metres to the player's left the scooter is left standing when they step off. Far enough that " +
+             "they are not stood on the deck, near enough that it is obviously the thing they just got " +
+             "off.")]
+    public float stepOffGap = 0.8f;
+    [Tooltip("How fast the scooter swings round to the way it is being ridden, deg/sec. Only used to settle " +
              "the art onto the heading; the heading itself turns at CartDrive.steerRate.")]
-    public float turnRate = 540f;
+    public float turnRate = 900f;
 
     [Header("Driving")]
-    [Tooltip("Metres/sec² on the throttle.")]
-    public float accelRate = 5f;
+    [Tooltip("Metres/sec² on the throttle. Quicker off the line than a cart: an electric hub motor and " +
+             "nothing much to carry.")]
+    public float accelRate = 7.5f;
     [Tooltip("Metres/sec² on the brake — firmer than the throttle, so a stab of back-stick stops it short.")]
-    public float brakeRate = 14f;
-    [Tooltip("Metres/sec² with neither pedal: the cart rolls to a stop rather than dropping dead.")]
-    public float coastRate = 3.5f;
-    [Tooltip("Top speed backwards (units/sec), holding the brake once already stopped.")]
-    public float reverseSpeed = 2.5f;
+    public float brakeRate = 16f;
+    [Tooltip("Metres/sec² with neither pedal: the scooter rolls to a stop rather than dropping dead.")]
+    public float coastRate = 3f;
+    [Tooltip("Top speed backwards (units/sec), holding the brake once already stopped — the rider paddling " +
+             "it back with a foot, so barely a shuffle.")]
+    public float reverseSpeed = 1.5f;
     [Tooltip("Seconds the brake must be held at a standstill before reverse engages, so that braking to " +
              "a halt is never an accidental lurch backwards.")]
     public float reverseDelay = 0.4f;
-    [Tooltip("Degrees/sec the nose swings at full lock, once there is enough speed for the steering to bite.")]
-    public float steerRate = 200f;
+    [Tooltip("Degrees/sec the nose swings at full lock, once there is enough speed for the steering to " +
+             "bite. Much faster than a cart's 200: this is what makes it nimble.")]
+    public float steerRate = 320f;
     [Tooltip("Speed (units/sec) at which the steering has full authority. Below it the lock scales down, " +
-             "so a stopped cart cannot pivot on the spot.")]
-    public float steerBiteSpeed = 2f;
+             "so a stopped scooter cannot pivot on the spot — but it bites almost from walking pace.")]
+    public float steerBiteSpeed = 1f;
 
     [Header("Getting people out of the way")]
-    [Tooltip("How close the cart has to come to somebody before they scramble clear, metres. Measured " +
-             "against the stretch of ground the cart is about to cover, not just where it is now.")]
-    public float dodgeClearance = 1f;
-    [Tooltip("Seconds of the cart's travel looked ahead when deciding who is in the way. At cart pace a " +
-             "person needs telling before the cart is on top of them.")]
-    public float dodgeLookahead = 0.45f;
+    [Tooltip("How close the scooter has to come to somebody before they step clear, metres. Measured " +
+             "against the stretch of ground it is about to cover, not just where it is now. Tighter than " +
+             "the cart's: a scooter is narrow and slips past people.")]
+    public float dodgeClearance = 0.7f;
+    [Tooltip("Seconds of the scooter's travel looked ahead when deciding who is in the way.")]
+    public float dodgeLookahead = 0.4f;
 
     [Header("Look")]
-    [Tooltip("Cart width across the seats, metres. A real one is about 1.2m.")]
-    public float cartWidth = 1.25f;
-    [Tooltip("Cart length nose to tail, metres.")]
-    public float cartLength = 2.4f;
-    [Tooltip("Body paint. The spawner fills these in from the team's own colours.")]
+    [Tooltip("Handlebar width, metres — the widest part of the scooter. A real one is about 0.5m.")]
+    public float scooterWidth = 0.55f;
+    [Tooltip("Scooter length front wheel to back wheel, metres.")]
+    public float scooterLength = 1.2f;
+    [Tooltip("Deck and stem paint. The spawner fills these in from the team's own colours.")]
     public Color primary = new Color(0.85f, 0.85f, 0.88f);
     public Color secondary = new Color(0.20f, 0.22f, 0.26f);
-    [Tooltip("Sorting layer the parked cart draws on. Matches the popup garages it is parked beside.")]
+    [Tooltip("Sorting layer the parked scooter draws on. Matches the popup garages it is parked beside.")]
     public string sortingLayerName = "Default";
-    [Tooltip("Sorting order of the parked cart's lowest part. Its roof and wheels stack just above it.")]
+    [Tooltip("Sorting order of the parked scooter's lowest part. Its deck and bars stack just above it.")]
     public int sortingOrder = 2;
-    [Tooltip("Z the parked cart sits at. Negative draws in front of the ground plane, in line with the " +
+    [Tooltip("Z the parked scooter sits at. Negative draws in front of the ground plane, in line with the " +
              "garages (PopupGarageLot.garageZ).")]
     public float parkZ = -0.45f;
 
-    // The walker currently sat in it. Unity-null-safe: the on-foot body is destroyed outright when the
+    // The walker currently stood on it. Unity-null-safe: the on-foot body is destroyed outright when the
     // player gets into the race car, and this has to notice that rather than follow a corpse.
     OnFootController _rider;
     float _riderWalkSpeed, _riderRunMultiplier;
     bool _assembled;
     Vector2 _heading = Vector2.up;                       // the way the nose points, held while stationary
 
-    // Throttle, brake and lock. Owned by the cart, stepped by the walker's FixedUpdate through
-    // IRiddenVehicle, and reset to the parked heading every time somebody gets in.
+    // Throttle, brake and lock. Owned by the scooter, stepped by the walker's FixedUpdate through
+    // IRiddenVehicle, and reset to the parked heading every time somebody gets on.
     readonly CartDrive _drive = new();
 
-    // Every painted part, with the sorting order it was built with, so riding can drop the whole cart
+    // Every painted part, with the sorting order it was built with, so riding can drop the whole scooter
     // behind whatever sorting layer the player's own sprite is on and parking can put it back.
     readonly List<SpriteRenderer> _parts = new();
     readonly List<int> _partOrders = new();
 
     public bool Riding => _rider != null;
 
-    // Nose direction in world space. The cart is built pointing along its own +Y, matching the rigs.
+    // Nose direction in world space. The scooter is built pointing along its own +Y, matching the rigs.
     public Vector3 NoseDirection => transform.up;
 
-    // ---------------------------------------------------------------- the cart itself
+    // ---------------------------------------------------------------- the scooter itself
 
-    // Stand an unpainted cart up at a spot. Set the colours and sizes, then call Assemble() — nothing is
-    // built until then, so the spawner can configure one in a single pass.
-    public static GolfCart Create(Transform parent, string name, Vector3 position, Quaternion rotation)
+    // Stand an unpainted scooter up at a spot. Set the colours and sizes, then call Assemble() — nothing
+    // is built until then, so the spawner can configure one in a single pass.
+    public static EScooter Create(Transform parent, string name, Vector3 position, Quaternion rotation)
     {
         var go = new GameObject(name);
         if (parent != null) go.transform.SetParent(parent, false);
         go.transform.SetPositionAndRotation(position, rotation);
-        return go.AddComponent<GolfCart>();
+        return go.AddComponent<EScooter>();
     }
 
-    // Build the art. Safe to call twice; later calls do nothing, so a cart can't grow a second roof.
+    // Build the art, seen from above. Safe to call twice; later calls do nothing, so a scooter can't grow
+    // a second set of handlebars.
     public void Assemble()
     {
         if (_assembled) return;
         _assembled = true;
 
-        float halfW = cartWidth * 0.5f;
-        float halfL = cartLength * 0.5f;
-
-        // Wheels first and widest, so the body is drawn sat on them.
+        float halfL = scooterLength * 0.5f;
+        float deckWidth = scooterWidth * 0.32f;
         var tyre = new Color(0.10f, 0.10f, 0.12f);
-        var wheelSize = new Vector2(cartWidth * 0.18f, cartLength * 0.2f);
-        float wheelX = halfW + wheelSize.x * 0.25f;
-        float wheelY = halfL * 0.62f;
-        Block("WheelFrontLeft", new Vector2(-wheelX, wheelY), wheelSize, tyre, 0);
-        Block("WheelFrontRight", new Vector2(wheelX, wheelY), wheelSize, tyre, 0);
-        Block("WheelRearLeft", new Vector2(-wheelX, -wheelY), wheelSize, tyre, 0);
-        Block("WheelRearRight", new Vector2(wheelX, -wheelY), wheelSize, tyre, 0);
+        var trimDark = new Color(secondary.r * 0.7f, secondary.g * 0.7f, secondary.b * 0.7f, 1f);
 
-        // The floor pan, in the team's paint.
-        Block("Body", Vector2.zero, new Vector2(cartWidth, cartLength), primary, 1);
+        // Two wheels in line, poking out past each end of the deck — from above, the thing that says
+        // "scooter" rather than "skateboard".
+        var wheelSize = new Vector2(deckWidth * 0.7f, scooterLength * 0.2f);
+        Block("WheelFront", new Vector2(0f, halfL - wheelSize.y * 0.5f), wheelSize, tyre, 0);
+        Block("WheelRear", new Vector2(0f, -halfL + wheelSize.y * 0.5f), wheelSize, tyre, 0);
 
-        // Bench seat and backrest, in the trim colour — what says "cart" rather than "crate" from above.
-        Block("Seat", new Vector2(0f, -cartLength * 0.12f), new Vector2(cartWidth * 0.86f, cartLength * 0.26f),
-              secondary, 2);
-        Block("Backrest", new Vector2(0f, -cartLength * 0.32f), new Vector2(cartWidth * 0.86f, cartLength * 0.1f),
-              new Color(secondary.r * 0.7f, secondary.g * 0.7f, secondary.b * 0.7f, 1f), 2);
+        // The deck the rider stands on, in the team's paint, with a grip-tape strip down the middle.
+        Block("Deck", new Vector2(0f, -scooterLength * 0.06f), new Vector2(deckWidth, scooterLength * 0.66f),
+              primary, 1);
+        Block("GripTape", new Vector2(0f, -scooterLength * 0.08f),
+              new Vector2(deckWidth * 0.6f, scooterLength * 0.5f), trimDark, 2);
 
-        // Nose panel: the bit in front of the driver's knees, so the cart reads as pointing somewhere.
-        Block("Nose", new Vector2(0f, halfL * 0.62f), new Vector2(cartWidth * 0.9f, cartLength * 0.24f),
-              secondary, 2);
+        // Rear mudguard over the back wheel, in the trim colour.
+        Block("Mudguard", new Vector2(0f, -halfL + wheelSize.y * 0.45f),
+              new Vector2(deckWidth * 0.85f, scooterLength * 0.12f), secondary, 2);
 
-        // The canopy over the top, held off the paint so the seat still reads under it. Drawn last and
-        // highest: from above, a cart is mostly roof.
-        var roof = new Color(0.94f, 0.94f, 0.96f);
-        Block("Roof", new Vector2(0f, cartLength * 0.02f), new Vector2(cartWidth * 0.94f, cartLength * 0.72f),
-              roof, 4);
+        // The stem rising off the front of the deck, then the T of the handlebars across the top of it and
+        // the grips on the ends. Drawn highest: from above, the bars are what stick out past the rider.
+        float barY = halfL * 0.72f;
+        Block("Stem", new Vector2(0f, halfL * 0.6f), new Vector2(deckWidth * 0.4f, scooterLength * 0.18f),
+              primary, 3);
+        Block("Handlebar", new Vector2(0f, barY), new Vector2(scooterWidth, scooterLength * 0.04f),
+              secondary, 4);
+        var gripSize = new Vector2(scooterWidth * 0.18f, scooterLength * 0.06f);
+        Block("GripLeft", new Vector2(-(scooterWidth - gripSize.x) * 0.5f, barY), gripSize, tyre, 5);
+        Block("GripRight", new Vector2((scooterWidth - gripSize.x) * 0.5f, barY), gripSize, tyre, 5);
 
-        // No collider on purpose. The cart is walk-through, like the pit box stands and the tyre stacks —
-        // a solid cart parked at the garage mouth is something to get wedged against on the one walkway
-        // into the row, and the player steps off INTO its footprint every time they dismount.
+        // No collider on purpose. The scooter is walk-through, like the pit box stands and the tyre stacks
+        // — something solid parked at the garage mouth is something to get wedged against on the one
+        // walkway into the row, and the player steps off INTO its footprint every time they dismount.
     }
 
     GameObject Block(string name, Vector2 centre, Vector2 size, Color colour, int orderAbove)
@@ -184,9 +191,9 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
 
     // ---------------------------------------------------------------- riding
 
-    // The action button. Mount if they are stood next to it, step off if they are sat in it. Returns false
+    // The action button. Mount if they are stood next to it, step off if they are stood on it. Returns false
     // either way: nothing here is a conversation, and returning true would leave OnFootController holding
-    // the cart as an open piece of dialogue.
+    // the scooter as an open piece of dialogue.
     public override bool Interact()
     {
         if (Riding) { Dismount(); return false; }
@@ -199,28 +206,28 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
     }
 
     // Never report a conversation. OnFootController freezes the player while the thing they are engaged
-    // with is talking; a cart that said yes here could not be driven anywhere.
+    // with is talking; a scooter that said yes here could not be ridden anywhere.
     public override bool IsTalking => false;
 
     public bool Mount(OnFootController rider)
     {
         if (rider == null || _rider != null) return false;
-        if (Ridden != null && Ridden != this) return false;      // somebody is already in a cart
+        if (Ridden != null && Ridden != this) return false;      // somebody is already on one
 
         _rider = rider;
         Ridden = this;
 
         // The walker keeps its own rules — boundary clamp, bumping, co-op — and takes its velocity from
-        // the cart instead of from the stick. moveSpeed is still swapped so that anything else asking the
-        // walker how fast it is going gets the cart's pace, and gets its legs back on the way out.
+        // the scooter instead of from the stick. moveSpeed is still swapped so that anything else asking the
+        // walker how fast it is going gets the scooter's pace, and gets its legs back on the way out.
         _riderWalkSpeed = rider.moveSpeed;
         _riderRunMultiplier = rider.runMultiplier;
         rider.moveSpeed = rideSpeed;
-        rider.runMultiplier = 1f;                                // a cart has one pedal; sprinting in it is not a thing
+        rider.runMultiplier = 1f;                                // one throttle; sprinting on a scooter is not a thing
         rider.Ridden = this;
 
         // Pull away pointing the way it was parked, from a standstill. Getting in and finding yourself
-        // already rolling, or facing the way you happened to walk up, is neither of them a cart.
+        // already rolling, or facing the way you happened to walk up, is neither of them a vehicle.
         _heading = ((Vector2)transform.up).sqrMagnitude > 1e-6f ? ((Vector2)transform.up).normalized : _heading;
         ApplyTuning();
         _drive.Reset(_heading);
@@ -264,7 +271,7 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
         _heading = _drive.Heading;
 
         // Anybody about to be run over gets out of the way. Measured from the RIDER, not from this
-        // transform: the cart is drawn at the player's feet a frame behind, and the people in front of it
+        // transform: the scooter is drawn at the player's feet a frame behind, and the people in front of it
         // need warning off where it is actually going to be.
         if (_rider != null && velocity.sqrMagnitude > 0.25f)
             CartDodge.ScatterFrom(_rider.transform.position, velocity, _rider.transform,
@@ -274,15 +281,15 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
     }
 
     // What the walker really managed — the boundary clamp and the shove out of people both have a say
-    // after us, and a cart pressed against a fence has to lose its speed against it.
+    // after us, and a scooter pressed against a fence has to lose its speed against it.
     public void Moved(Vector2 actualVelocity) => _drive.Blocked(actualVelocity);
 
     public Vector2 Facing => _heading;
 
-    // Speed along the nose, m/s. Negative is reversing. For anything wanting to read the cart's pace.
+    // Speed along the nose, m/s. Negative is reversing. For anything wanting to read the scooter's pace.
     public float Speed => _drive.Speed;
 
-    // Inspector values are the cart's; CartDrive is the arithmetic. Copied over each step so a knob
+    // Inspector values are the scooter's; CartDrive is the arithmetic. Copied over each step so a knob
     // dragged in play mode takes effect immediately, which is how the whole thing gets tuned.
     void ApplyTuning()
     {
@@ -296,14 +303,14 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
         _drive.steerBiteSpeed = steerBiteSpeed;
     }
 
-    // Carried on the walker rather than driven: the cart is put where the player is, after they have
+    // Carried on the walker rather than driven: the scooter is put where the player is, after they have
     // moved, and turned to the way they are going.
     void LateUpdate()
     {
         if (_rider == null) return;
 
         // The on-foot body is destroyed outright when the player gets into the race car or the scene
-        // swaps under us. Leave the cart standing where they last were rather than following a dead
+        // swaps under us. Leave the scooter standing where they last were rather than following a dead
         // transform — there is no speed to hand back to a body that no longer exists.
         if (!_rider)
         {
@@ -321,7 +328,7 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
     {
         Vector3 p = _rider.transform.position;
 
-        // The nose is the driving model's, not the direction of travel: a cart being reversed still points
+        // The nose is the driving model's, not the direction of travel: a scooter being backed up still points
         // the way it is aimed, and one stopped at the pit box holds its last heading rather than snapping.
         // The art is built nose-along-+Y, so the heading angle is measured off +Y.
         float want = Mathf.Atan2(_heading.y, _heading.x) * Mathf.Rad2Deg - 90f;
@@ -333,8 +340,8 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
         transform.position = new Vector3(p.x, p.y, p.z + 0.02f);
     }
 
-    // Put every part of the cart on the rider's own sorting layer, below their sprite, so the player is
-    // drawn sat IN it. A parked cart lives on the paddock's layer with the garages; a ridden one has to
+    // Put every part of the scooter on the rider's own sorting layer, below their sprite, so the player is
+    // drawn stood ON it. A parked scooter lives on the paddock's layer with the garages; a ridden one has to
     // share a layer with the person on top of it or the order means nothing.
     void DrawBehindRider(OnFootController rider)
     {
@@ -352,7 +359,7 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
             if (_parts[i] == null) continue;
             _parts[i].sortingLayerID = layer;
             // Ten clear of the lowest thing the player is drawn from: a paper-doll rig is a stack of parts
-            // (boots, legs, body, head) and the cart has to sit under all of them, roof included.
+            // (boots, legs, body, head) and the scooter has to sit under all of them, handlebars included.
             _parts[i].sortingOrder = lowest - 10 + _partOrders[i];
         }
     }
@@ -373,7 +380,7 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
     // then OnDestroy on the way out, so the base still gets its turn.
     void OnDestroy()
     {
-        // Never leave the player stuck at cart speed because the cart went away underneath them.
+        // Never leave the player stuck at scooter speed because the scooter went away underneath them.
         if (_rider != null) Dismount();
         else if (Ridden == this) Ridden = null;
     }
@@ -401,7 +408,7 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
         if (_spriteMat != null) return _spriteMat;
         Shader sh = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
         if (sh == null) sh = Shader.Find("Sprites/Default");
-        _spriteMat = new Material(sh) { name = "GolfCartUnlit" };
+        _spriteMat = new Material(sh) { name = "EScooterUnlit" };
         return _spriteMat;
     }
 
@@ -410,7 +417,7 @@ public class GolfCart : NPCInteractable, IRiddenVehicle
     {
         Gizmos.matrix = transform.localToWorldMatrix;
         Gizmos.color = new Color(0.4f, 0.9f, 0.5f, 0.9f);
-        Gizmos.DrawWireCube(Vector3.zero, new Vector3(cartWidth, cartLength, 0.01f));
+        Gizmos.DrawWireCube(Vector3.zero, new Vector3(scooterWidth, scooterLength, 0.01f));
         Gizmos.matrix = Matrix4x4.identity;
         Gizmos.DrawLine(transform.position, transform.position + NoseDirection * 1.5f);
     }

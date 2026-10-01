@@ -5,63 +5,63 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Draftmaster.Weekend;
 
-// Parks the team's golf cart at the mouth of the player's own garage, and a second, unmarked paddock cart
+// Parks the team's e-scooter at the mouth of the player's own garage, and a second, unmarked paddock scooter
 // somewhere random in the walkable paddock.
 //
 // Where exactly: off the walkway end of the rig, straight out in front of the canopy — the spot a real
 // team leaves theirs, where it is in nobody's way and is the first thing you see walking up to your own
-// garage. That is also the point of it being there at all: the cart is not on any menu and nothing tells
+// garage. That is also the point of it being there at all: the scooter is not on any menu and nothing tells
 // the player it exists, so it has to be parked somewhere they walk past on their way to the one place the
 // weekend keeps sending them.
 //
 // Falls back to the pit box venue anchor (WeekendVenue.PitBox is the team's garage in the paddock) at a
 // track or a session where the garage row was never built, and gives up quietly if there is no paddock at
-// all — a cart parked in the middle of nowhere is worse than no cart.
+// all — a scooter parked in the middle of nowhere is worse than no scooter.
 //
-// The paddock cart is the one somebody left lying about: a different spot every time the scene loads, picked
+// The paddock scooter is the one somebody left lying about: a different spot every time the scene loads, picked
 // from inside the walkable paddock (never a grandstand viewing pocket), on clear ground no motorhome, garage
-// or keep-out floor covers, and far enough from the team cart that the two read as separate finds.
+// or keep-out floor covers, and far enough from the team scooter that the two read as separate finds.
 //
 // Self-installing, with the same gate as VendingMachineSpawner: a career (a single race has no team
 // garage to park outside of), not a co-op guest (career content rides the host), and a scene with the
 // on-foot paddock flow in it.
-public class GolfCartSpawner : MonoBehaviour
+public class EScooterSpawner : MonoBehaviour
 {
     [Header("Where it parks")]
-    [Tooltip("Metres past the walkway end of the garage rig. Small: the cart is parked at the mouth of " +
+    [Tooltip("Metres past the walkway end of the garage rig. Small: the scooter is parked at the mouth of " +
              "the garage, not out in the middle of the road between the rows.")]
-    public float noseGap = 1.6f;
+    public float noseGap = 1f;
     [Tooltip("Metres to the side of the pit box anchor, for a paddock with no garage row in it.")]
     public float anchorOffset = 3f;
     [Tooltip("How far the walkable-area clamp may drag the chosen spot before it is worth saying so in " +
-             "the log — past this the cart is at the paddock edge rather than at the garage.")]
+             "the log — past this the scooter is at the paddock edge rather than at the garage.")]
     public float strayWarning = 8f;
 
-    [Header("The cart")]
-    [Tooltip("Name over the cart's title card.")]
-    public string cartName = "TEAM GOLF CART";
+    [Header("The scooter")]
+    [Tooltip("Name over the scooter's title card.")]
+    public string scooterName = "TEAM E-SCOOTER";
     [Tooltip("Second line of the title card — the nudge that says it can be used.")]
-    public string cartSubtitle = "Keys are in it";
-    [Tooltip("How close the player has to be to climb in, metres.")]
-    public float interactRange = 2.4f;
-    [Tooltip("Metres from the cart the title card introduces it. Generously wide: this is the thing " +
+    public string scooterSubtitle = "Charged and ready";
+    [Tooltip("How close the player has to be to step on, metres.")]
+    public float interactRange = 2f;
+    [Tooltip("Metres from the scooter the title card introduces it. Generously wide: this is the thing " +
              "meant to catch the eye on the walk up to the garage.")]
     public float titleRadius = 9f;
-    [Tooltip("Riding speed, units/sec. Walking is 3.5 and running 7, so this is a shade past a run — a " +
-             "cart that is worth finding without being a car.")]
-    public float rideSpeed = 8f;
+    [Tooltip("Riding speed, units/sec. Walking is 3.5 and running 7; the golf cart this replaced did 8. A " +
+             "scooter is a little slower than the cart and wins on nimbleness instead — see EScooter.")]
+    public float rideSpeed = 7f;
 
-    [Header("The paddock cart")]
-    [Tooltip("Also park a second cart at a random spot in the paddock, different every load.")]
-    public bool parkPaddockCart = true;
-    [Tooltip("Name over the paddock cart's title card.")]
-    public string paddockCartName = "PADDOCK GOLF CART";
-    [Tooltip("Metres of clear ground the paddock cart needs around its centre — about half a cart length, " +
-             "so it is never drawn through the side of a motorhome or a garage.")]
-    public float paddockClearance = 1.6f;
-    [Tooltip("Least distance, metres, between the paddock cart and the team cart.")]
+    [Header("The paddock scooter")]
+    [Tooltip("Also park a second scooter at a random spot in the paddock, different every load.")]
+    public bool parkPaddockScooter = true;
+    [Tooltip("Name over the paddock scooter's title card.")]
+    public string paddockScooterName = "PADDOCK E-SCOOTER";
+    [Tooltip("Metres of clear ground the paddock scooter needs around its centre — a bit under a scooter " +
+             "length, so it is never drawn through the side of a motorhome or a garage.")]
+    public float paddockClearance = 1f;
+    [Tooltip("Least distance, metres, between the paddock scooter and the team scooter.")]
     public float paddockSeparation = 15f;
-    [Tooltip("Random spots tried before giving up on the paddock cart.")]
+    [Tooltip("Random spots tried before giving up on the paddock scooter.")]
     public int paddockAttempts = 200;
 
     [Header("Timing")]
@@ -71,13 +71,13 @@ public class GolfCartSpawner : MonoBehaviour
              "built by the motorhome lot, so this has to outlast that.")]
     public float garageTimeout = 25f;
 
-    public static GolfCart Instance { get; private set; }
+    public static EScooter Instance { get; private set; }
 
-    // The randomly parked paddock cart, or null when there was nowhere clear to put it.
-    public static GolfCart PaddockCart { get; private set; }
+    // The randomly parked paddock scooter, or null when there was nowhere clear to put it.
+    public static EScooter PaddockScooter { get; private set; }
 
     // Name prefix WeekendVenueSites gives the walkable pocket round a grandstand seat. Those are boundaries
-    // too, but across the circuit from the paddock — nowhere to leave a cart.
+    // too, but across the circuit from the paddock — nowhere to leave a scooter.
     const string ViewingPocketPrefix = "ViewingPocket_";
 
     // ----- self-install -----
@@ -94,19 +94,19 @@ public class GolfCartSpawner : MonoBehaviour
 
     static void TryInstall()
     {
-        if (FindFirstObjectByType<GolfCartSpawner>() != null) return;     // authored or already installed
+        if (FindFirstObjectByType<EScooterSpawner>() != null) return;     // authored or already installed
         if (!GameSession.CareerActive || Coop.IsGuest) return;
         if (FindFirstObjectByType<PitLaneStart>() == null) return;        // no on-foot paddock here
-        var go = new GameObject("GolfCartSpawner");
-        go.AddComponent<GolfCartSpawner>();
+        var go = new GameObject("EScooterSpawner");
+        go.AddComponent<EScooterSpawner>();
     }
 
     void Start() => StartCoroutine(SpawnWhenReady());
 
     IEnumerator SpawnWhenReady()
     {
-        // Somebody may have parked one by hand in the track package; that one is the cart.
-        if (FindFirstObjectByType<GolfCart>() != null) yield break;
+        // Somebody may have parked one by hand in the track package; that one is the scooter.
+        if (FindFirstObjectByType<EScooter>() != null) yield break;
 
         float timeout = playerTimeout;
         while (timeout > 0f && OnFootController.Current == null) { timeout -= Time.deltaTime; yield return null; }
@@ -118,14 +118,14 @@ public class GolfCartSpawner : MonoBehaviour
 
         if (TryFindSpot(out Vector3 at, out Quaternion facing, out Color primary, out Color secondary))
         {
-            Instance = Build(at, facing, primary, secondary, cartName);
+            Instance = Build(at, facing, primary, secondary, scooterName);
         }
         else
         {
-            Debug.Log("GolfCartSpawner: no team garage in this paddock — no team cart parked.", this);
+            Debug.Log("EScooterSpawner: no team garage in this paddock — no team scooter parked.", this);
         }
 
-        if (parkPaddockCart) ParkPaddockCart();
+        if (parkPaddockScooter) ParkPaddockScooter();
     }
 
     // ---------------------------------------------------------------- placement
@@ -159,8 +159,8 @@ public class GolfCartSpawner : MonoBehaviour
 
             float stray = Vector2.Distance(at, spot);
             if (stray > strayWarning)
-                Debug.LogWarning($"GolfCartSpawner: the team garage is {stray:0.#}m outside the walkable " +
-                                 "paddock, so the cart is parked at the edge nearest it rather than at " +
+                Debug.LogWarning($"EScooterSpawner: the team garage is {stray:0.#}m outside the walkable " +
+                                 "paddock, so the scooter is parked at the edge nearest it rather than at " +
                                  "the garage mouth.", this);
             return true;
         }
@@ -174,10 +174,10 @@ public class GolfCartSpawner : MonoBehaviour
         return true;
     }
 
-    // Where a cart parks against a given garage, in world space. Pulled out as a pure function of the rig
+    // Where a scooter parks against a given garage, in world space. Pulled out as a pure function of the rig
     // so it can be measured without a paddock around it: the thing that matters is that the spot is clear
-    // of the shed and of the canopy (a cart drawn over either reads as parked inside the garage) and that
-    // a full cart length fits between the rig's end and the row behind it.
+    // of the shed and of the canopy (a scooter drawn over either reads as parked inside the garage) and that
+    // a full scooter length fits between the rig's end and the row behind it.
     public static Vector3 ParkingSpot(PopupGarageRig rig, float noseGap)
     {
         if (rig == null) return Vector3.zero;
@@ -194,10 +194,10 @@ public class GolfCartSpawner : MonoBehaviour
         return new Vector3(inside.x, inside.y, 0f);
     }
 
-    // ---------------------------------------------------------------- the paddock cart
+    // ---------------------------------------------------------------- the paddock scooter
 
-    // Somewhere random inside the walkable paddock, on clear ground, well away from the team cart.
-    void ParkPaddockCart()
+    // Somewhere random inside the walkable paddock, on clear ground, well away from the team scooter.
+    void ParkPaddockScooter()
     {
         var areas = new List<Rect>();
         var owners = new List<PaddockBoundary>();
@@ -223,7 +223,7 @@ public class GolfCartSpawner : MonoBehaviour
                 var anchor = WeekendVenueAnchor.Find(WeekendVenue.PitBox);
                 if (anchor == null)
                 {
-                    Debug.Log("GolfCartSpawner: no paddock to leave a cart in — no paddock cart parked.", this);
+                    Debug.Log("EScooterSpawner: no paddock to leave a scooter in — no paddock scooter parked.", this);
                     return;
                 }
                 centre = anchor.StandPosition;
@@ -232,7 +232,7 @@ public class GolfCartSpawner : MonoBehaviour
             areas.Add(new Rect(centre.x - r, centre.y - r, r * 2f, r * 2f));
         }
 
-        Vector2? teamCart = Instance != null ? (Vector2?)Instance.transform.position : null;
+        Vector2? teamScooter = Instance != null ? (Vector2?)Instance.transform.position : null;
         var rng = new System.Random();
 
         bool found = PickRandomSpot(rng, areas, p =>
@@ -243,20 +243,20 @@ public class GolfCartSpawner : MonoBehaviour
                 for (int i = 0; i < owners.Count && !inside; i++) inside = owners[i].Contains(p);
                 if (!inside) return false;
             }
-            if (teamCart.HasValue && Vector2.Distance(p, teamCart.Value) < paddockSeparation) return false;
+            if (teamScooter.HasValue && Vector2.Distance(p, teamScooter.Value) < paddockSeparation) return false;
             return !PaddockObstacles.IsBlocked(p, paddockClearance);
         }, paddockAttempts, out Vector2 spot);
 
         if (!found)
         {
-            Debug.Log("GolfCartSpawner: no clear ground found in the paddock — no paddock cart parked.", this);
+            Debug.Log("EScooterSpawner: no clear ground found in the paddock — no paddock scooter parked.", this);
             return;
         }
 
-        // Stock paint (the cart's own defaults): this one belongs to nobody in particular.
+        // Stock paint (the scooter's own defaults): this one belongs to nobody in particular.
         var facing = Quaternion.Euler(0f, 0f, (float)(rng.NextDouble() * 360.0));
-        PaddockCart = Build(new Vector3(spot.x, spot.y, 0f), facing,
-                            new Color(0.85f, 0.85f, 0.88f), new Color(0.20f, 0.22f, 0.26f), paddockCartName);
+        PaddockScooter = Build(new Vector3(spot.x, spot.y, 0f), facing,
+                            new Color(0.85f, 0.85f, 0.88f), new Color(0.20f, 0.22f, 0.26f), paddockScooterName);
     }
 
     // A random point, spread over the union of `areas` by area (a big paddock polygon gets proportionally
@@ -290,26 +290,26 @@ public class GolfCartSpawner : MonoBehaviour
         return false;
     }
 
-    // ---------------------------------------------------------------- the cart itself
+    // ---------------------------------------------------------------- the scooter itself
 
-    GolfCart Build(Vector3 at, Quaternion facing, Color primary, Color secondary, string title)
+    EScooter Build(Vector3 at, Quaternion facing, Color primary, Color secondary, string title)
     {
         // Left at the root and filed by RuntimeHierarchy rather than parented to the spawner, the same
         // way the drinks machine is: Adopt only moves objects that have no parent.
-        var cart = GolfCart.Create(null, "GolfCart", at, facing);
-        cart.transform.position = new Vector3(at.x, at.y, cart.parkZ);
-        cart.primary = primary;
-        cart.secondary = secondary;
-        cart.rideSpeed = rideSpeed;
-        cart.speakerName = title;
-        cart.interactRange = interactRange;
-        cart.turnsToFace = false;                 // it is parked; it does not swivel to greet anybody
-        cart.Assemble();
-        RuntimeHierarchy.Adopt(cart.gameObject, HierarchyGroup.Vehicles);
+        var scooter = EScooter.Create(null, "EScooter", at, facing);
+        scooter.transform.position = new Vector3(at.x, at.y, scooter.parkZ);
+        scooter.primary = primary;
+        scooter.secondary = secondary;
+        scooter.rideSpeed = rideSpeed;
+        scooter.speakerName = title;
+        scooter.interactRange = interactRange;
+        scooter.turnsToFace = false;                 // it is parked; it does not swivel to greet anybody
+        scooter.Assemble();
+        RuntimeHierarchy.Adopt(scooter.gameObject, HierarchyGroup.Vehicles);
 
-        // Nothing in the game mentions the cart, so the paddock introduces it the way it introduces any
+        // Nothing in the game mentions the scooter, so the paddock introduces it the way it introduces any
         // other place worth walking to — a title card the first time the player comes near it.
-        LocationTitle.Attach(cart.gameObject, title, titleRadius, cartSubtitle);
-        return cart;
+        LocationTitle.Attach(scooter.gameObject, title, titleRadius, scooterSubtitle);
+        return scooter;
     }
 }

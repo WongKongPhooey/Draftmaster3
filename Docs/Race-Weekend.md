@@ -198,43 +198,45 @@ starting grants into: read an attribute with `WeekendDrinks.EffectiveStat(key, w
 value plus whatever is in the player's hand. That is on purpose — a ledger write needs a revert, and a
 missed revert dents a career permanently over a can of pop. Covered by `WeekendDrinksTests`.
 
-### The golf cart
+### The e-scooter
 
-Also not an obligation. The team's golf cart is parked at the mouth of your own garage — straight out in
-front of the canopy, off the walkway end of the rig (`GolfCartSpawner.ParkingSpot`), which is on the way to
+Also not an obligation. The team's e-scooter is parked at the mouth of your own garage — straight out in
+front of the canopy, off the walkway end of the rig (`EScooterSpawner.ParkingSpot`), which is on the way to
 the one place the weekend keeps sending you. Nothing in the game mentions it; it introduces itself with a
-title card when you walk near, and the ordinary action button gets you in and out of it.
+title card when you walk near, and the ordinary action button gets you on and off it. (It replaced the
+golf cart of 2026-09; the driving model and the dodge logic kept their `CartDrive` / `CartDodge` names.)
 
-**It drives like the race car, on one stick.** Push forward to accelerate, back to brake (and, once
-stopped and held, to reverse), left and right to steer. The arithmetic is `CartDrive`: a top speed of
-8 u/s against a 3.5 walk, 5 m/s² on the throttle and 14 on the brake, a coast down rather than a dead
-stop off the pedals, 2.5 u/s backwards after `reverseDelay` (0.4 s) of held brake so that stopping is
-never an accidental lurch, and 200 deg/s of lock that only bites once the cart is rolling — a stopped cart
-cannot pivot on the spot, and a reversing one steers the other way. Every knob is on the `GolfCart`
-component and is re-read each step, so it can be tuned in play mode.
+**It rides like the race car, on one stick.** Push forward to accelerate, back to brake (and, once
+stopped and held, to paddle backwards), left and right to steer. The arithmetic is `CartDrive`: a top speed
+of 7 u/s against a 3.5 walk (the cart did 8 — the scooter is a little slower), 7.5 m/s² on the throttle and
+16 on the brake, a coast down rather than a dead stop off the pedals, 1.5 u/s backwards after
+`reverseDelay` (0.4 s) of held brake so that stopping is never an accidental lurch, and 320 deg/s of lock
+that has full bite from 1 u/s — nimble enough to thread between people, but a stopped scooter still cannot
+pivot on the spot, and a reversing one steers the other way. Every knob is on the `EScooter` component and
+is re-read each step, so it can be tuned in play mode.
 
-The body is still `OnFootController`'s: the cart implements `IRiddenVehicle` and hands the walker a
+The body is still `OnFootController`'s: the scooter implements `IRiddenVehicle` and hands the walker a
 velocity each fixed step instead of moving a transform of its own, so the paddock boundary, bumping into
-people and co-op all carry over unchanged, and the walker tells the cart what it actually managed
-(`Moved`) so driving into a fence kills the speed there rather than storing it up. The run modifier is
-switched off while you are sat in it, the rider's legs stop (you are sitting), the cart is walk-through
-when parked, and stepping off leaves it standing at your left hand. It is painted in the team's own
-colours, read off the garage it was parked against.
+people and co-op all carry over unchanged, and the walker tells the scooter what it actually managed
+(`Moved`) so riding into a fence kills the speed there rather than storing it up. The run modifier is
+switched off while you are on it, the rider's legs stop (you are stood on the deck), the scooter is
+walk-through when parked, and stepping off leaves it standing at your left hand. Its deck and stem are
+painted in the team's own colours, read off the garage it was parked against.
 
-**People get out of the way.** Every step the cart is moving, `CartDodge.ScatterFrom` sweeps the stretch
-of ground it will cover in the next `dodgeLookahead` (0.45 s) and anybody within `dodgeClearance` (1 m) of
+**People get out of the way.** Every step the scooter is moving, `CartDodge.ScatterFrom` sweeps the stretch
+of ground it will cover in the next `dodgeLookahead` (0.4 s) and anybody within `dodgeClearance` (0.7 m) of
 that line jumps square across it, toward whichever side they are already nearer — through the paddock
 boundary and `PaddockObstacles`, so nobody dives through a fence or into a motorhome. They hold clear
-while the cart keeps threatening them, then carry on: a `PaddockWalker` is handed back where it now stands
-with a fresh route, and anybody posted somewhere (a marshal, a fan at the fence) walks back to their spot.
-Covered by `GolfCartTests` and `CartDriveTests`.
+while the scooter keeps threatening them, then carry on: a `PaddockWalker` is handed back where it now
+stands with a fresh route, and anybody posted somewhere (a marshal, a fan at the fence) walks back to their
+spot. Covered by `EScooterTests` and `CartDriveTests`.
 
-A second, stock-painted **paddock golf cart** is left somewhere random every time the scene loads
-(`GolfCartSpawner.ParkPaddockCart` / `PickRandomSpot`): a point inside the walkable paddock boundaries
+A second, stock-painted **paddock e-scooter** is left somewhere random every time the scene loads
+(`EScooterSpawner.ParkPaddockScooter` / `PickRandomSpot`): a point inside the walkable paddock boundaries
 (grandstand `ViewingPocket_*` boundaries excluded), on ground `PaddockObstacles` says is clear of motorhomes,
-garages and keep-out floors, and at least `paddockSeparation` (15 m) from the team cart. It rides exactly
-like the team cart. With no boundary drawn it scatters round the team garage; with no clear ground it is
-skipped. `parkPaddockCart` on the spawner switches it off.
+garages and keep-out floors, and at least `paddockSeparation` (15 m) from the team scooter. It rides exactly
+like the team scooter. With no boundary drawn it scatters round the team garage; with no clear ground it is
+skipped. `parkPaddockScooter` on the spawner switches it off.
 
 ## 4. What it is all worth
 

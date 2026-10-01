@@ -3,7 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 
-// EditMode coverage for driving the paddock golf cart and for the people who get out of its way.
+// EditMode coverage for driving the paddock e-scooter (né golf cart) and for the people who get out of its way.
 //
 // Both halves are deliberately arithmetic with no scene in them — CartDrive is throttle, brake and lock,
 // and CartDodge's two rules ("is this person in the way" and "which way do they jump") are geometry — so
@@ -15,7 +15,7 @@ using UnityEngine;
 //   * a cart stopped against a fence loses its speed there instead of storing it up.
 //
 // Both live in Assembly-CSharp, which an asmdef can't reference, so they're reached by reflection — the
-// same way GolfCartTests reaches the cart itself.
+// same way EScooterTests reaches the cart itself.
 public class CartDriveTests
 {
     static readonly Type DriveType = Type.GetType("CartDrive, Assembly-CSharp");

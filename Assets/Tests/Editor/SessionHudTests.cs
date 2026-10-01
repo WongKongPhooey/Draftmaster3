@@ -11,7 +11,7 @@ using UnityEngine;
 // start-up — only on what HeadOut writes.
 //
 // SessionHud and the panels live in Assembly-CSharp, which an asmdef can't reference, so they're reached
-// by reflection — the same way GolfCartTests reaches the cart.
+// by reflection — the same way EScooterTests reaches the cart.
 public class SessionHudTests
 {
     static System.Type T(string name) => System.Type.GetType(name + ", Assembly-CSharp");

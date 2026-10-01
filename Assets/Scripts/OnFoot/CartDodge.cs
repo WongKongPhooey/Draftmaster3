@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Getting out of the way of the golf cart.
+// Getting out of the way of the paddock e-scooter (the name is left over from the golf cart it replaced;
+// "cart" below means whatever is being ridden).
 //
 // The paddock is full of people who walk a fixed route and never look up, and the cart now moves at twice
 // walking pace. Driving through a crowd used to be driving THROUGH it — the walkers are kinematic bodies
@@ -89,7 +90,7 @@ public class CartDodge : MonoBehaviour
     static ContactFilter2D _filter;
     static bool _filterReady;
 
-    // Tell everybody in front of the cart to move. Called by GolfCart every fixed step it is being driven.
+    // Tell everybody in front of the cart to move. Called by EScooter every fixed step it is being driven.
     // `exclude` is the rider's own body — the person sat in the cart is not somebody it is about to run over.
     public static int ScatterFrom(Vector2 cartPos, Vector2 cartVelocity, Transform exclude,
                                   float clearance = 1.0f, float lookahead = 0.45f)
@@ -127,7 +128,7 @@ public class CartDodge : MonoBehaviour
             if (walker == null && talker == null && look == null) continue;
 
             // The cart itself is an NPCInteractable, and so is anything else parked about the place.
-            if (talker is GolfCart) continue;
+            if (talker is EScooter) continue;
             // Mid-conversation: leave them be. The player is in the cart, so this is two NPCs talking to
             // each other, and the pair sliding apart mid-line looks worse than a near miss.
             if (talker != null && talker.IsTalking) continue;
