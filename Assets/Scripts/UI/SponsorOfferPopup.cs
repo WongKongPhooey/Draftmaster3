@@ -48,6 +48,10 @@ public class SponsorOfferPopup : MonoBehaviour
     Vector2 _lastMousePos;
     float _mouseMovedAt = -99f;
 
+    // The kit's Data and LabelDim faces are single-line, but a clause or a rep's footnote can run wider
+    // than the paper. Wrapping copies, rebuilt whenever PixelGUI rebuilds its styles (display scale change).
+    GUIStyle _termsSrc, _termsStyle, _dimSrc, _dimStyle;
+
     // Put a term sheet up. `terms` is one line per clause — the popup does no formatting of its own, so
     // the money and the wording stay with whoever knows the deal.
     public static void Show(MonoBehaviour owner, string brand, string subtitle, string[] terms,
@@ -180,11 +184,23 @@ public class SponsorOfferPopup : MonoBehaviour
         return pressed;
     }
 
+    static GUIStyle Wrapped(GUIStyle src, ref GUIStyle cachedSrc, ref GUIStyle cached)
+    {
+        if (cached == null || cachedSrc != src)
+        {
+            cachedSrc = src;
+            cached = new GUIStyle(src) { wordWrap = true, alignment = TextAnchor.UpperLeft };
+        }
+        return cached;
+    }
+
     void OnGUI()
     {
         if (!_open || RacePauseMenu.IsPaused) return;
 
         var theme = PixelGUI.Theme;
+        var termsStyle = Wrapped(PixelGUI.Data, ref _termsSrc, ref _termsStyle);
+        var dimStyle = Wrapped(PixelGUI.LabelDim, ref _dimSrc, ref _dimStyle);
         float pad = PixelGUI.Px(20f);
         float w = Mathf.Min(PixelGUI.Px(panelWidth), Screen.width - PixelGUI.Px(40f));
         float x = (Screen.width - w) * 0.5f;
@@ -193,12 +209,12 @@ public class SponsorOfferPopup : MonoBehaviour
 
         float titleH = PixelGUI.Heading.CalcHeight(new GUIContent(_brand), inner);
         float subH = string.IsNullOrEmpty(_subtitle) ? 0f
-                   : PixelGUI.LabelDim.CalcHeight(new GUIContent(_subtitle), inner);
+                   : dimStyle.CalcHeight(new GUIContent(_subtitle), inner);
         float termsH = 0f;
         for (int i = 0; i < _terms.Length; i++)
-            termsH += PixelGUI.Data.CalcHeight(new GUIContent(_terms[i]), inner) + PixelGUI.Px(3f);
+            termsH += termsStyle.CalcHeight(new GUIContent(_terms[i]), inner) + PixelGUI.Px(3f);
         float noteH = string.IsNullOrEmpty(_footnote) ? 0f
-                    : PixelGUI.LabelDim.CalcHeight(new GUIContent(_footnote), inner) + PixelGUI.Px(6f);
+                    : dimStyle.CalcHeight(new GUIContent(_footnote), inner) + PixelGUI.Px(6f);
         float footerH = PixelGUI.Px(24f);
 
         float h = PixelGUI.Px(14f) + titleH + subH + PixelGUI.Px(12f) + termsH + noteH
@@ -214,7 +230,7 @@ public class SponsorOfferPopup : MonoBehaviour
         cy += titleH;
         if (subH > 0f)
         {
-            GUI.Label(new Rect(x + pad, cy, inner, subH), _subtitle, PixelGUI.LabelDim);
+            GUI.Label(new Rect(x + pad, cy, inner, subH), _subtitle, dimStyle);
             cy += subH;
         }
         cy += PixelGUI.Px(6f);
@@ -223,15 +239,15 @@ public class SponsorOfferPopup : MonoBehaviour
 
         for (int i = 0; i < _terms.Length; i++)
         {
-            float th = PixelGUI.Data.CalcHeight(new GUIContent(_terms[i]), inner);
-            GUI.Label(new Rect(x + pad, cy, inner, th), _terms[i], PixelGUI.Data);
+            float th = termsStyle.CalcHeight(new GUIContent(_terms[i]), inner);
+            GUI.Label(new Rect(x + pad, cy, inner, th), _terms[i], termsStyle);
             cy += th + PixelGUI.Px(3f);
         }
 
         if (noteH > 0f)
         {
             cy += PixelGUI.Px(6f);
-            GUI.Label(new Rect(x + pad, cy, inner, noteH), _footnote, PixelGUI.LabelDim);
+            GUI.Label(new Rect(x + pad, cy, inner, noteH), _footnote, dimStyle);
             cy += noteH - PixelGUI.Px(6f);
         }
 
