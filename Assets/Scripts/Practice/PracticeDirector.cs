@@ -124,6 +124,13 @@ public class PracticeDirector : MonoBehaviour
         }
 
         RaceWeekend.Current = _isQualifying ? RaceWeekend.Session.Race : RaceWeekend.Session.Qualifying;
+        ReloadScene();
+    }
+
+    // A phone turned upright for the swing camera turns back to landscape before the scene goes.
+    static void ReloadScene()
+    {
+        if (DriveOrientationController.HoldSceneChangeForLandscape(ReloadScene)) return;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 

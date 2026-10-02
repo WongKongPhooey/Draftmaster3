@@ -129,4 +129,27 @@ public class DriveOrientationTests
 
         Assert.That(uprightPxPerM, Is.EqualTo(landscapePxPerM).Within(0.0001f));
     }
+
+    // --- leaving the scene ---------------------------------------------------------------------------------
+
+    [Test]
+    public void ASceneChangeWaitsWhileTheScreenIsStillUpright()
+    {
+        Assert.IsFalse(DriveOrientation.ReadyToLeave(1080f, 2400f, 0f));
+        Assert.IsFalse(DriveOrientation.ReadyToLeave(1080f, 2400f, DriveOrientation.TurnBackTimeout * 0.5f));
+    }
+
+    [Test]
+    public void ASceneChangeGoesOnceTheScreenIsBackToLandscape()
+    {
+        Assert.IsTrue(DriveOrientation.ReadyToLeave(2400f, 1080f, 0f));
+        Assert.IsTrue(DriveOrientation.ReadyToLeave(1000f, 1000f, 0f), "square is not upright");
+    }
+
+    [Test]
+    public void ASceneChangeIsNeverHeldForever()
+    {
+        Assert.IsTrue(DriveOrientation.ReadyToLeave(1080f, 2400f, DriveOrientation.TurnBackTimeout),
+            "a phone with rotation locked must still let the player out");
+    }
 }

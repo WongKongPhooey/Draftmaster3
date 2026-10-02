@@ -1,6 +1,9 @@
+using System;
+using System.Collections;
 using Draftmaster.Controls;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 // Turns a phone to portrait while the player drives with the swing camera, and back to landscape when they
 // stop. Why, and the rules for when, are Draftmaster.Controls.DriveOrientation.
@@ -58,12 +61,14 @@ public class DriveOrientationController : MonoBehaviour
     {
         RenderPipelineManager.beginCameraRendering += BeginCamera;
         RenderPipelineManager.endCameraRendering += EndCamera;
+        SceneManager.sceneLoaded += SceneLoaded;
     }
 
     void OnDisable()
     {
         RenderPipelineManager.beginCameraRendering -= BeginCamera;
         RenderPipelineManager.endCameraRendering -= EndCamera;
+        SceneManager.sceneLoaded -= SceneLoaded;
     }
 
     void OnDestroy()
@@ -106,8 +111,76 @@ public class DriveOrientationController : MonoBehaviour
         (PlayerVehicleController.Human != null ||
          (DriveModeController.Current != null && !DriveModeController.Current.IsDriving));
 
+    // ------------------------------------------------------------------ leaving the scene
+
+    bool _leaving;   // a scene change is waiting on the screen to turn back; nothing turns it upright meanwhile
+    int _leaveId;    // which hold the fallback release below belongs to, so a stale one cannot end a newer hold
+    bool _goingNow;  // the held change is being run: its own call back in here must go straight through
+
+    // Holds a scene change until an upright screen has turned back to landscape. The next scene was built
+    // for landscape and lays itself out on its first frames, so loading it mid-turn — or upright, with the
+    // turn still to come — leaves it measured for the wrong screen (quitting to the title from the pause
+    // menu was the case that showed it).
+    //
+    // Returns false when there is nothing to wait for (desktop, landscape, the fixed camera): the caller loads
+    // straight away as it always did. Returns true when the screen is upright: it is sent back to landscape,
+    // `then` runs once it has got there, and the caller must stop. A second call while one is already waiting
+    // is dropped, so a button pressed twice during the turn does not load twice. `then` is free to come back
+    // in here: by then the screen is landscape and it is told to go ahead.
+    public static bool HoldSceneChangeForLandscape(Action then)
+    {
+        if (_instance == null || _instance._goingNow) return false;
+        if (_instance._leaving) return true;
+        if (!_instance._applied) return false;
+
+        _instance.StartCoroutine(_instance.TurnBackThen(then));
+        return true;
+    }
+
+    IEnumerator TurnBackThen(Action then)
+    {
+        _leaving = true;
+        int id = ++_leaveId;
+        _latch.Reset();
+        _applied = false;
+        UnityEngine.Device.Screen.orientation = _home;
+
+        // Real time: the pause menu has the race stopped while it waits.
+        float waited = 0f;
+        while (!DriveOrientation.ReadyToLeave(UnityEngine.Device.Screen.width, UnityEngine.Device.Screen.height, waited))
+        {
+            yield return null;
+            waited += Time.unscaledDeltaTime;
+        }
+        yield return null;   // one landscape frame, so anything reading the screen's size this frame sees it
+
+        _goingNow = true;
+        try { then?.Invoke(); }
+        finally
+        {
+            _goingNow = false;
+
+            // Normally the load lands and SceneLoaded lets go; if `then` changed its mind and loaded nothing,
+            // the drive picks back up rather than staying landscape for good.
+            StartCoroutine(StopLeavingAfter(id, 1f));
+        }
+    }
+
+    IEnumerator StopLeavingAfter(int id, float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        if (id == _leaveId) _leaving = false;
+    }
+
+    void SceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (mode == LoadSceneMode.Single) _leaving = false;
+    }
+
     void Update()
     {
+        if (_leaving) return;
+
         bool handheld = PixelGUI.Handheld;
         if (!handheld && !_applied) return;
 

@@ -209,6 +209,10 @@ public class RacePauseMenu : MonoBehaviour
     // frozen leaves the next one frozen too, since nothing there knows a pause was ever on.
     void QuitToTitle()
     {
+        // A phone turned upright for the swing camera turns back first, with the menu still up; the title is
+        // a landscape scene and must not be built mid-turn.
+        if (DriveOrientationController.HoldSceneChangeForLandscape(QuitToTitle)) return;
+
         Resume();
         // Walking out of a race is the closest thing this game has to closing a save file, so it is dated:
         // the title screen the player lands on says where they were and when, under CONTINUE.

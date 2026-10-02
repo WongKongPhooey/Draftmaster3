@@ -36,6 +36,16 @@ namespace Draftmaster.Controls
         // height, so upright it grows by the height over the width; a landscape or square screen is left alone.
         public static float PortraitZoom(float screenWidth, float screenHeight)
             => screenWidth > 0f && screenHeight > screenWidth ? screenHeight / screenWidth : 1f;
+
+        // How long a scene change waits for the screen to come back round before going anyway. The OS animates
+        // the turn over about half a second; a phone with rotation locked, or one that never reports the new
+        // size, must not strand the player on the old scene.
+        public const float TurnBackTimeout = 2f;
+
+        // Whether a scene change held for the screen to turn back to landscape may now go: the screen is the
+        // right way round again (not taller than it is wide), or it has been waited on long enough.
+        public static bool ReadyToLeave(float screenWidth, float screenHeight, float waited)
+            => screenHeight <= screenWidth || waited >= TurnBackTimeout;
     }
 
     // Turns to portrait at once and back only after the reason has been gone for a moment. The in-car test

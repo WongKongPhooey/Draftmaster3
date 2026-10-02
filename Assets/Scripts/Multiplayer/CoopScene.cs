@@ -20,6 +20,9 @@ public static class CoopScene
     {
         if (string.IsNullOrEmpty(sceneName)) return;
 
+        // A phone turned upright for the swing camera is put back to landscape before the scene goes.
+        if (DriveOrientationController.HoldSceneChangeForLandscape(() => Load(sceneName))) return;
+
         var nm = NetworkManager.Singleton;
 
         // Hosting co-op with the transport up: the server owns scene changes and replicates them.
@@ -56,6 +59,8 @@ public static class CoopScene
     // Same, for the callers that already hold a build index rather than a name.
     public static void Load(int buildIndex)
     {
+        if (DriveOrientationController.HoldSceneChangeForLandscape(() => Load(buildIndex))) return;
+
         if (Coop.Active && NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             string path = SceneUtility.GetScenePathByBuildIndex(buildIndex);

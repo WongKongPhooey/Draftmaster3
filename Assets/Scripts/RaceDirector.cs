@@ -325,9 +325,27 @@ public class RaceDirector : MonoBehaviour
 
     public void NextWeekend()
     {
+        if (DriveOrientationController.HoldSceneChangeForLandscape(NextWeekend)) return;
+
         WeekendDirector.NextWeekend();
         WeekendDirector.OpenAfterLoad();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    // The single-race exits. Each waits for a phone turned upright for the swing camera to come back round
+    // first: the results table already asks for landscape, but a tap inside the turn would beat it.
+    void RaceAgain()
+    {
+        if (DriveOrientationController.HoldSceneChangeForLandscape(RaceAgain)) return;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    void QuitToTitle()
+    {
+        if (DriveOrientationController.HoldSceneChangeForLandscape(QuitToTitle)) return;
+        RaceWeekend.SessionLive = false;
+        if (Application.CanStreamedLevelBeLoaded("TitleScreen")) SceneManager.LoadScene("TitleScreen");
+        else SceneManager.LoadScene(0);   // the title is the first scene in the build list
     }
 
     // ---- HUD ----
@@ -512,14 +530,10 @@ public class RaceDirector : MonoBehaviour
         {
             float sbh = PixelGUI.Px(18f);
             if (PixelGUI.Button(new Rect(rx, ry, railW, sbh), "RACE AGAIN"))
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                RaceAgain();
             ry += sbh + PixelGUI.Px(4f);
             if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "QUIT TO TITLE", false))
-            {
-                RaceWeekend.SessionLive = false;
-                if (Application.CanStreamedLevelBeLoaded("TitleScreen")) SceneManager.LoadScene("TitleScreen");
-                else SceneManager.LoadScene(0);   // the title is the first scene in the build list
-            }
+                QuitToTitle();
             ry += sbh + PixelGUI.Px(4f);
             if (PixelGUI.Tab(new Rect(rx, ry, railW, sbh), "CLOSE", false)) _panelHidden = true;
             return;
