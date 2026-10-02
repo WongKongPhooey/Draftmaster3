@@ -16,7 +16,7 @@ public class PracticeDirector : MonoBehaviour
 
     [Header("Qualifying")]
     [Tooltip("Length (s) of the qualifying session. The countdown is advisory — the grid is captured when START RACE is chosen in the pause menu, so late laps still count.")]
-    public float qualifyingSeconds = 300f;
+    public float qualifyingSeconds = 600f;
 
     [Header("Track activity")]
     [Tooltip("Most AI cars allowed on track (out of their boxes) at once.")]
@@ -63,6 +63,22 @@ public class PracticeDirector : MonoBehaviour
     {
         LapTimingManager.Ensure();
         if (_isQualifying) _qualiEndTime = Time.time + qualifyingSeconds;
+    }
+
+    // ---- The session clock ----
+
+    // True while a session with a running clock is live: qualifying, before its time is up.
+    public static bool TimedSessionRunning =>
+        Instance != null && Instance.enabled && Instance._isQualifying && Instance._qualiEndTime > Time.time;
+
+    // Take time off the session clock: the fast travel is free on the weekend's clock but not on this one,
+    // which the player is racing against. Returns the seconds actually taken (never more than were left).
+    public static float SpendSessionTime(float seconds)
+    {
+        if (!TimedSessionRunning || seconds <= 0f) return 0f;
+        float taken = Mathf.Min(seconds, Instance._qualiEndTime - Time.time);
+        Instance._qualiEndTime -= taken;
+        return taken;
     }
 
     // GridSpawner registers each practice AI here after spawning it.

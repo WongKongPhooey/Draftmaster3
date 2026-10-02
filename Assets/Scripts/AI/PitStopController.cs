@@ -14,6 +14,10 @@ public class PitStopController : MonoBehaviour
     [Range(0.1f, 0.9f)] public float serviceFrac = 0.5f;
     [Tooltip("Commit to the pit lane when within this distance (m) of the pit-entry node.")]
     public float pitEntryWindow = 25f;
+    [Tooltip("Braking rate (m/s^2) for the run-in to pit road: the car is capped at the speed it can still slow to the pit limit from by the entry node.")]
+    public float pitApproachDecel = 7f;
+    [Tooltip("How far (m) before the entry node the car starts drifting across to the pit lane's side of the track.")]
+    public float pitApproachLeadM = 200f;
     [Tooltip("Lateral speed (m/s) for moving between the pit-lane centerline (the driving line) and the wall-side box lane. Cars drive the centerline and only cut across at their own box, so a car being serviced never blocks the lane.")]
     public float laneChangeRate = 3f;
     [Tooltip("Braking rate (m/s^2) used to size the approach to the box. The car is capped at the speed it can still stop from, so it arrives AT its own box instead of sailing through it into the next car's.")]
@@ -99,6 +103,7 @@ public class PitStopController : MonoBehaviour
                     float gap = tb.track.PitEntryDistanceOnLap - d;
                     if (gap < 0f) gap += _spline.TrackLength;
                     if (gap < pitEntryWindow) _spline.usePitLane = true;
+                    _spline.ApproachPitEntry(pitApproachDecel, pitApproachLeadM);
                 }
                 else
                 {

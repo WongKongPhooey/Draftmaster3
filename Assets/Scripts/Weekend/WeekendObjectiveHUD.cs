@@ -287,8 +287,11 @@ public class WeekendObjectiveHUD : MonoBehaviour
         }
     }
 
-    // Put the player at the venue's standing mark. Not a cheat on the clock — the weekend's cost is the
-    // hour the booking takes, which is charged when it is done, not the walk.
+    // Put the player at the venue's standing mark. Not a cheat on the weekend's clock — its cost is the
+    // hour the booking takes, which is charged when it is done, not the walk. A session that is running its
+    // own clock (qualifying) is different: see TravelTo.
+    const float SessionSecondsPerMetre = 1f;
+
     public static bool TravelThere()
     {
         var anchor = WeekendAppointment.Where();
@@ -312,6 +315,10 @@ public class WeekendObjectiveHUD : MonoBehaviour
         PhoneUI.Close();
         to.z = player.position.z;
 
+        // During a timed session the trip costs session time: a second for every metre skipped, charged on
+        // arrival. Otherwise T to the pit box would be a free walk back to the car with the clock running.
+        float metres = Vector2.Distance(player.position, to);
+
         // Behind a wipe rather than a jump cut. The paddock is one continuous place, and a player who blinks
         // and finds themselves two hundred metres away has to work out where they are looking from scratch;
         // a fade is the shorthand every game uses for "time and distance happened here".
@@ -321,6 +328,10 @@ public class WeekendObjectiveHUD : MonoBehaviour
             var body = player.GetComponent<Rigidbody2D>();
             if (body != null) body.position = to;       // the body owns the pose; moving only the transform snaps back
             player.position = new Vector3(to.x, to.y, player.position.z);
+
+            float lost = PracticeDirector.SpendSessionTime(metres * SessionSecondsPerMetre);
+            if (lost >= 1f)
+                WeekendScheduleUI.Toast($"Fast travel cost {Mathf.FloorToInt(lost / 60f)}:{Mathf.FloorToInt(lost % 60f):00} of the session.");
         });
         return true;
     }

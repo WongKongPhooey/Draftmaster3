@@ -9,6 +9,10 @@ public class PracticeAIStint : MonoBehaviour
 {
     [Tooltip("Commit to the pit lane when within this distance (m) of the pit-entry node.")]
     public float pitEntryWindow = 25f;
+    [Tooltip("Braking rate (m/s^2) for the run-in to pit road: the car is capped at the speed it can still slow to the pit limit from by the entry node.")]
+    public float pitApproachDecel = 7f;
+    [Tooltip("How far (m) before the entry node the car starts drifting across to the pit lane's side of the track.")]
+    public float pitApproachLeadM = 200f;
     [Tooltip("Lateral speed (m/s) for moving between the parked box lane (PitLane.ParkLateral, wall side) and the pit-lane centerline. Cars DRIVE the centerline so they clear the parked file; they only cut to the box lane at their own box.")]
     public float laneChangeRate = 3f;
     [Tooltip("Braking rate (m/s^2) used to size the approach to the box, so the car arrives AT its box instead of sailing through it.")]
@@ -111,6 +115,7 @@ public class PracticeAIStint : MonoBehaviour
                         float gap = tb.track.PitEntryDistanceOnLap - _spline.DistanceOnTrack;
                         if (gap < 0f) gap += _spline.TrackLength;
                         if (gap < pitEntryWindow) _spline.usePitLane = true;
+                        _spline.ApproachPitEntry(pitApproachDecel, pitApproachLeadM);
                     }
                 }
                 else

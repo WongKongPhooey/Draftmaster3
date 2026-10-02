@@ -113,6 +113,52 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float PitProgress01 => (_onPit && _pitLength > 0f) ? Mathf.Clamp01(_distance / _pitLength) : 0f;
     public float PitLength => _pitLength;
 
+    // Called every tick by a controller that has called this car in, until it is on the lane. The car brakes so it
+    // reaches the entry node at the pit limit (the cap only bites once the node is inside its braking distance),
+    // and over the last `lateralLeadM` eases across toward the side the lane peels off to. Without it the car ran the racing line flat out off
+    // the last corner, committed 25 m from the node, and then had to shed 130 mph and dive across the track on
+    // the lane itself — they were barely making the entry.
+    public void ApproachPitEntry(float decelMps2, float lateralLeadM)
+    {
+        if (_onPit || track == null || track.track == null || _mainLength <= 0f) { ClearPitApproach(); return; }
+
+        float gap = track.track.PitEntryDistanceOnLap - DistanceOnTrack;
+        if (gap < 0f) gap += _mainLength;
+        if (gap > _mainLength * 0.5f) { ClearPitApproach(); return; }
+
+        // v² = v_pit² + 2·a·d: the fastest the car can be going here and still be at the limit at the node.
+        float pitMps = (track.track.pitSpeedLimit > 0f ? track.track.pitSpeedLimit : 50f) * MphToMps;
+        float capMps = Mathf.Sqrt(pitMps * pitMps + 2f * Mathf.Max(0.5f, decelMps2) * gap);
+        _pitApproachCapMph = capMps / MphToMps;
+
+        if (gap > lateralLeadM) { _pitApproachBlend = 0f; return; }
+        if (_pitSide == 0f) _pitSide = MeasurePitSide();
+        // Half-way to the pit-side edge (the bounds clamp keeps it on the tarmac): enough to be on the lane's
+        // side of the track at the node, not so far that the car overshoots a lane that starts mid-track.
+        var at = track.SampleAt(DistanceOnTrack, _mainSamples);
+        _pitApproachLateral = _pitSide * at.width * 0.3f;
+        float t = 1f - gap / Mathf.Max(1f, lateralLeadM);
+        _pitApproachBlend = t * t * (3f - 2f * t);
+    }
+
+    public void ClearPitApproach()
+    {
+        _pitApproachCapMph = float.MaxValue;
+        _pitApproachBlend = 0f;
+    }
+
+    // Which side of the main centreline the pit lane is on, 30 m down it. Same right-hand convention as Place.
+    float MeasurePitSide()
+    {
+        if (_pitSamples == null || _pitSamples.Count < 2 || _mainSamples == null) return 0f;
+        const float probe = 30f;
+        var pit = track.SamplePitAt(Mathf.Min(probe, _pitLength), _pitSamples);
+        var main = track.SampleAt(track.track.PitEntryDistanceOnLap + probe, _mainSamples);
+        Vector2 right = new Vector2(main.tangent.y, -main.tangent.x);
+        float side = Vector2.Dot(pit.position - main.position, right);
+        return Mathf.Abs(side) < 0.1f ? 0f : Mathf.Sign(side);
+    }
+
     [Header("Cornering Feel")]
     [Tooltip("Generous temporal smoothing (0..0.97) applied to the racing-line lateral AND the turn-in yaw, so the car flows through corner entry/exit instead of the rear axle snapping at segment boundaries. Higher = smoother but slightly rounds/lags the authored line. Per-FixedUpdate Lerp weight on the OLD value.")]
     [Range(0f, 0.97f)] public float cornerSmoothing = 0.88f;
@@ -241,6 +287,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float aiMaxSpeedMph = float.MaxValue;
     [Tooltip("Additive speed bonus (mph). Used for drafting/slipstream.")]
     public float aiSpeedBoostMph = 0f;
+
+    // The run-in to pit road, set each tick by whoever has called the car in (ApproachPitEntry) and cleared once
+    // it is on the lane. Kept apart from aiMaxSpeedMph / tacticalLateralOffset because the racing brain rewrites
+    // both every tick until the car is on the lane — which is exactly the stretch this has to cover.
+    float _pitApproachCapMph = float.MaxValue;
+    float _pitApproachBlend;
+    float _pitApproachLateral;
+    float _pitSide;   // +1 / -1: which side of the track the pit lane peels off to. 0 = not measured yet.
     [Tooltip("Share of the grip limit this driver takes corners at (1 = right on the limit). Set per driver by AIDriverBinding from their skill, so the field differs in the corners and not just on the straights. Baked into the speed profile at Rebuild.")]
     [Range(0.5f, 1f)] public float cornerCommitment = 1f;
     [Tooltip("When > 0, GUARANTEES at least this braking rate (mph/sec) regardless of the (possibly weak) decel curve. Set per-frame by the formation/avoidance AI so an emergency slow can actually land. 0 = use the curve.")]
@@ -402,6 +456,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     {
         if (track == null) return;
         _pitExitMainPath = -1f;
+        _pitSide = 0f;
         _mainSamples = track.SampleCenterline();
         _mainLength = _mainSamples.Count > 0 ? _mainSamples[_mainSamples.Count - 1].distance : 0f;
         _pitSamples = track.SamplePitCenterline();
@@ -991,6 +1046,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 if (tire != null) tire.PitReset();
             }
             _onPit = usePitLane;
+            ClearPitApproach();
             // Land on the new lane at the point nearest the car's current position (no teleport to lane start),
             // carrying its current lateral as a bias that eases out — same continuous merge as the pit exit.
             RejoinSplineContinuous(transform.position);
@@ -1028,6 +1084,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 targetMph = Mathf.Min(ProfileAt(_distance) * ratio + aiSpeedBoostMph, GripLimitAt(_distance));
                 DesiredMph = targetMph;
                 if (aiMaxSpeedMph < targetMph) targetMph = aiMaxSpeedMph;
+                if (_pitApproachCapMph < targetMph) targetMph = _pitApproachCapMph;
             }
             else
             {
@@ -1421,6 +1478,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         _hasLineSmoothed = true;
         float lineLateral = _lineLatSmoothed;
         float baseLateral = lateralOffset + tacticalLateralOffset + lineLateral + _collisionLateral;
+        if (!_onPit && _pitApproachBlend > 0f)
+            baseLateral = Mathf.Lerp(baseLateral, _pitApproachLateral, _pitApproachBlend);
         if (!_onPit && _leftBoundProfile != null && _rightBoundProfile != null)
         {
             BoundsAt(placeDistance, out float boundLo, out float boundHi);

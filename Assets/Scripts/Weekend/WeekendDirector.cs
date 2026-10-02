@@ -250,8 +250,27 @@ public class WeekendDirector : MonoBehaviour
     }
 
     // Is this scene a race meeting? Same test the arrival greeting uses.
-    static bool AtTheVenue() =>
-        Object.FindFirstObjectByType<GridSpawner>() != null || Object.FindFirstObjectByType<PitLaneStart>() != null;
+    //
+    // Asked several times a frame (WaitingToBeTold sits in Update), and FindFirstObjectByType walks and sorts
+    // every object in the scene — on the phone, with the paddock crowd up, that was a quarter of the main
+    // thread. A venue stays a venue until the scene changes, so a yes is kept for the scene; a no is
+    // re-asked twice a second in case the spawner turns up late.
+    static int _venueScene = -1;
+    static bool _venueAnswer;
+    static float _venueAskedAt = float.NegativeInfinity;
+
+    static bool AtTheVenue()
+    {
+        int scene = SceneManager.GetActiveScene().handle;
+        if (scene == _venueScene && (_venueAnswer || Time.unscaledTime - _venueAskedAt < 0.5f))
+            return _venueAnswer;
+
+        _venueScene = scene;
+        _venueAskedAt = Time.unscaledTime;
+        _venueAnswer = Object.FindFirstObjectByType<GridSpawner>() != null
+                    || Object.FindFirstObjectByType<PitLaneStart>() != null;
+        return _venueAnswer;
+    }
 
     // Arriving at the track for a weekend nothing has happened in yet puts the timetable up once, because
     // that is the moment a driver is handed their schedule for the three days. It is suppressed when the

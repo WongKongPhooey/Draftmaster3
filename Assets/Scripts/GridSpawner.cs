@@ -595,6 +595,7 @@ public class GridSpawner : MonoBehaviour
                 ea.minDistance = aiEngineMinDistance;
                 ea.maxDistance = aiEngineMaxDistance;
                 ea.dopplerLevel = aiEngineDoppler;
+                ea.Rebuild();   // Awake already ran inside AddComponent, before any of the above was set
             }
 
             if (addCollision)
@@ -966,6 +967,7 @@ public class GridSpawner : MonoBehaviour
                 ea.minDistance = aiEngineMinDistance;
                 ea.maxDistance = aiEngineMaxDistance;
                 ea.dopplerLevel = aiEngineDoppler;
+                ea.Rebuild();   // Awake already ran inside AddComponent, before any of the above was set
             }
 
             if (addCollision)

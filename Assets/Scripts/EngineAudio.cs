@@ -126,6 +126,14 @@ public class EngineAudio : MonoBehaviour
             }
         }
 
+        // Take this bank's sources off the car, so a rebuild doesn't leave a second set looping underneath.
+        public void Destroy()
+        {
+            if (_src == null) return;
+            for (int i = 0; i < _src.Length; i++) if (_src[i] != null) UnityEngine.Object.Destroy(_src[i]);
+            _src = null;
+        }
+
         // A parked car's loops are stopped outright rather than turned down to zero: a field of 40 cars is
         // 40 x N looping voices, and Unity mixes silence at the same cost as noise.
         public void SetPlaying(bool play)
@@ -162,9 +170,22 @@ public class EngineAudio : MonoBehaviour
     bool _running;        // is the engine turning — mirrors EngineGearbox.Running
     float _gate;          // 0 = engine off and silent, 1 = fully voiced
 
-    void Awake()
+    void Awake() => Build();
+
+    // Re-read the sound set and the spatial settings. A car assembled at runtime (GridSpawner) has to call this
+    // after filling the fields in: AddComponent runs Awake on the spot, before the caller has set a single one,
+    // so the banks were built from an empty sound set as 2D sources — and every AI engine was silent.
+    public void Rebuild()
+    {
+        _rolloffCurve = null;
+        Build();
+    }
+
+    void Build()
     {
         _gearbox = GetComponent<EngineGearbox>();
+        _onBank?.Destroy();
+        _offBank?.Destroy();
 
         // A shared sound set fills in anything not set inline, so all cars can share one asset.
         if (soundSet != null)
@@ -178,7 +199,7 @@ public class EngineAudio : MonoBehaviour
         _onBank = new Bank(this, layers);
         _offBank = new Bank(this, offLayers);
 
-        _oneShot = gameObject.AddComponent<AudioSource>();
+        if (_oneShot == null) _oneShot = gameObject.AddComponent<AudioSource>();
         _oneShot.playOnAwake = false;
         _oneShot.loop = false;
         ConfigureSpatial(_oneShot);

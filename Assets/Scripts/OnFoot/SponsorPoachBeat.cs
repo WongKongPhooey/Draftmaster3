@@ -166,8 +166,13 @@ public class SponsorPoachBeat : MonoBehaviour
     // Friday's stills or Saturday's dealer photos, whichever the player actually turned up to. A sheet with
     // no shoot booked on it never waits; a sheet whose shoots have all gone by unattended never plays the
     // beat at all, because the whole pitch is about a room the player was not in.
+    //
+    // Turning the shoots down at the team meeting takes them off the sheet entirely (WaiveSponsorExtras), so
+    // that has to be read first — otherwise an empty sheet looks like a weekend that never had a shoot and
+    // the rep turns up straight after the meeting, impressed by a room the player refused to walk into.
     static ShootState Shoot()
     {
+        if (WeekendLedger.SponsorExtrasWaived) return ShootState.NeverHappening;
         var timetable = WeekendDirector.Timetable;
         if (timetable == null) return ShootState.Done;
 
