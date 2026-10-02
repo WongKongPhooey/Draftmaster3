@@ -72,7 +72,12 @@ Row markers:
 | `[-]` | missed |
 
 Gold rows are your own sessions. `SKIP TO <next>` gives up the rest of the half-day and moves the day on;
-everything left unattended in it is swept up as a no-show first.
+everything left unattended in it is swept up as a no-show first. Optional bookings it walks past are no
+longer free: each takes a small toll from the meter it belongs to (`WeekendSkip.TollFor` — team morale for
+your own sessions and team meetings, press for media, fan appeal for signings, sponsor mood for sponsor
+duties; somebody else's session and an hour off cost nothing). At the circuit the skip then fast travels you
+back to your motorhome — `WeekendDirector.SkipAhead` reloads the race scene with nothing routed, which always
+opens in the RV — and a summary card lists what was skipped and what every meter lost.
 
 ## 2. The session schedule
 

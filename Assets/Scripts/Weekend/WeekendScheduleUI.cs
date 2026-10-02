@@ -485,14 +485,12 @@ public class WeekendScheduleUI : MonoBehaviour
             string label = next < WeekendSlots.Count
                 ? "SKIP TO " + WeekendSlots.ShortLabel((WeekendSlot)next)
                 : "END THE WEEKEND";
+            // Skipping ahead takes the player back to their motorhome and tells them what it cost there.
             if (PixelGUI.Button(new Rect(r.x, r.y, bw, bh), label))
             {
-                WeekendLedger.AdvanceSlot();
-                _viewing = WeekendLedger.WeekendOver ? WeekendSlot.SundayPM : WeekendLedger.CurrentSlot;
+                _viewing = (WeekendSlot)Mathf.Min(next, WeekendSlots.Count - 1);
                 _selected = 0;
-                Toast(WeekendLedger.WeekendOver
-                    ? "That is the weekend."
-                    : "Now " + WeekendSlots.Label(WeekendLedger.CurrentSlot).ToLowerInvariant() + ".");
+                WeekendDirector.SkipAhead();
             }
         }
 

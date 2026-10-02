@@ -27,6 +27,15 @@ public class WeekendResultCard : MonoBehaviour
     // the weekend carries on around them.
     bool _inWorld;
 
+    // The skip summary rather than one activity's result: what skipping ahead walked past, listed above
+    // the meters it moved, with no grade (nothing was attempted) and no jump back to the sheet afterwards —
+    // the skip has just taken the player back to their motorhome, and that is where the card leaves them.
+    bool _summary;
+    List<(string label, string value, Color colour)> _skippedRows;
+
+    // Past this many, the skipped list folds its tail into one "+N MORE" row so the card stays on screen.
+    const int MaxSkippedRows = 8;
+
     // This card's own entry on the modal stack, and whether it has already handed over. Both are tracked
     // per card rather than inferred from Instance: Destroy() is deferred to the end of the frame, so a card
     // is still alive — and still drawing — after the next one has taken Instance off it.
@@ -94,6 +103,38 @@ public class WeekendResultCard : MonoBehaviour
         card._inWorld = inWorld;
     }
 
+    // What a skip ahead off the sheet cost. Modal, like a result read at the sheet, but dismissed into the
+    // world rather than back onto the schedule.
+    public static void ShowSkipSummary(WeekendSkip.Report report)
+    {
+        if (report == null) return;
+
+        string to = report.endedWeekend ? "the end of the weekend" : WeekendSlots.Label(report.to).ToLowerInvariant();
+        string headline = "Gave up the rest of " + WeekendSlots.Label(report.from).ToLowerInvariant() +
+                          " and went back to the motorhome. Now " + to + ".";
+        if (!report.SkippedAnything) headline += " Nothing on the sheet was missed.";
+
+        var rows = new List<(string, string, Color)>();
+        for (int i = 0; i < report.skipped.Count; i++)
+        {
+            if (i == MaxSkippedRows - 1 && report.skipped.Count > MaxSkippedRows)
+            {
+                rows.Add(("+" + (report.skipped.Count - i) + " MORE", "SKIPPED", PixelGUI.TextDim));
+                break;
+            }
+            var a = report.skipped[i];
+            string title = a.title.Length > 26 ? a.title.Substring(0, 26) : a.title;
+            rows.Add((title.ToUpperInvariant(), a.mandatory ? "NO-SHOW" : "SKIPPED",
+                      a.mandatory ? PixelGUI.Danger : PixelGUI.TextDim));
+        }
+
+        var outcome = report.cost;
+        outcome.headline = headline;
+        Show(new WeekendActivity { title = "SKIPPED " + WeekendSlots.ShortLabel(report.from) }, outcome);
+        Instance._summary = true;
+        Instance._skippedRows = rows;
+    }
+
     void OnEnable()
     {
         Instance = this;
@@ -124,7 +165,7 @@ public class WeekendResultCard : MonoBehaviour
         // the sheet silently never came back.
         if (Instance == this) Instance = null;
         Destroy(gameObject);
-        if (!wasInWorld) WeekendScheduleUI.Open();
+        if (!wasInWorld && !_summary) WeekendScheduleUI.Open();
     }
 
     void OnGUI()
@@ -183,7 +224,7 @@ public class WeekendResultCard : MonoBehaviour
         var meta = _dataDim;
         var prevAlign = meta.alignment;
         meta.alignment = TextAnchor.MiddleRight;
-        GUI.Label(new Rect(c.x, c.y, c.width - Px(4f), bandH), Grade(_outcome.score), meta);
+        GUI.Label(new Rect(c.x, c.y, c.width - Px(4f), bandH), _summary ? "" : Grade(_outcome.score), meta);
         meta.alignment = prevAlign;
 
         float cy = c.y + bandH + Px(6f);
@@ -221,7 +262,7 @@ public class WeekendResultCard : MonoBehaviour
         }
 
         if (PixelGUI.Button(new Rect(c.x, c.yMax - buttonH, c.width, buttonH),
-                            _inWorld ? "GOT IT" : "BACK TO THE SCHEDULE") ||
+                            _inWorld || _summary ? "GOT IT" : "BACK TO THE SCHEDULE") ||
             (Time.unscaledTime - _openedAt > 0.4f && ConfirmPressed()))
             Dismiss();
     }
@@ -238,6 +279,8 @@ public class WeekendResultCard : MonoBehaviour
     {
         var lines = new List<(string, string, Color)>();
         var o = _outcome;
+
+        if (_skippedRows != null) lines.AddRange(_skippedRows);
 
         if (o.money != 0)
             lines.Add((o.money > 0 ? "EARNED" : "COST",

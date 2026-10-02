@@ -164,6 +164,16 @@ public class WeekendDirector : MonoBehaviour
         WeekendScheduleUI.Close();
         WeekendModal.Reset();
 
+        // Arriving back at the motorhome from a skip ahead: lights up and say what the skip cost. After the
+        // modal reset, which would otherwise take the card's freeze with it.
+        if (_skipReport != null)
+        {
+            var report = _skipReport;
+            _skipReport = null;
+            ScreenFade.FromBlack(0.15f, 0.45f);
+            WeekendResultCard.ShowSkipSummary(report);
+        }
+
         // A scene load in the middle of a weekend rebuilds the sheet against whatever weekend id is now on
         // file, so the ledger and the timetable never drift apart.
         Invalidate();
@@ -570,6 +580,45 @@ public class WeekendDirector : MonoBehaviour
     {
         PlayerPrefs.SetInt(OpenOnLoadKey, 1);
         PlayerPrefs.Save();
+    }
+
+    // ------------------------------------------------------------------ skipping ahead
+
+    // The skip waiting to be reported once the fast travel has landed. A static rather than a pref: it only
+    // has to survive the one scene load the skip itself makes.
+    static WeekendSkip.Report _skipReport;
+
+    // The sheet's SKIP TO button. Gives up the rest of the half-day (WeekendSkip charges for what that walks
+    // past), and fast travels the player back to their motorhome: the race scene is reloaded with nothing
+    // routed and the track dark, and every load of it opens with the driver stood in the RV
+    // (PitLaneStart.forcedSpawnName). Wherever they were — the far end of the paddock, a grandstand seat,
+    // sat in the car mid-practice — the skip leaves them at home with the summary of what it cost.
+    //
+    // Away from the circuit (the title screen, the garage) there is no motorhome to go back to, so the
+    // summary is shown where they are.
+    public static void SkipAhead()
+    {
+        if (WeekendLedger.WeekendOver) return;
+        MarkBriefed();
+
+        var report = WeekendSkip.SkipHalfDay();
+        if (report == null) return;
+
+        // Whatever was booked or being driven belonged to the half-day just given up.
+        WeekendAppointment.Clear();
+        ClearRoute();
+        RaceWeekend.SessionLive = false;
+        WeekendScheduleUI.Close();
+
+        if (!AtTheVenue() || Coop.IsGuest)
+        {
+            WeekendResultCard.ShowSkipSummary(report);
+            return;
+        }
+
+        _skipReport = report;
+        string scene = SceneManager.GetActiveScene().name;
+        ScreenFade.ToBlack(0.35f, () => CoopScene.Load(scene));
     }
 
     // ------------------------------------------------------------------ weekend end
