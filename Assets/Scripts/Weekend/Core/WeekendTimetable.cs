@@ -119,6 +119,7 @@ namespace Draftmaster.Weekend
                 location = WeekendVenues.For(kind) == WeekendVenue.None
                     ? "Track"
                     : WeekendVenues.ShortLabel(WeekendVenues.For(kind)),
+                sponsorExtra = kind == ActivityKind.PhotoShoot,
             };
             a.id = MakeId(a);
             _activities.Add(a);
@@ -264,7 +265,8 @@ namespace Draftmaster.Weekend
                 "Fans with garage passes, walking the stalls. Less structured, more of them.", "Garage stalls", 600);
             Sponsor(WeekendSlot.SaturdayPM, 17 * 60, 60, ActivityKind.SponsorDuty, "SUITE MEET & GREET",
                 "The people who pay for the hood want an hour of your evening, and the race is on the TV behind them.",
-                "Sponsor suite", 2000, "The suite watched the race without the driver whose name is on the door.");
+                "Sponsor suite", 2000, "The suite watched the race without the driver whose name is on the door.")
+                .sponsorExtra = true;
 
             // ---- Sunday morning: race-morning appearances ----
             Sponsor(WeekendSlot.SundayAM, 9 * 60, 45, ActivityKind.SponsorDuty, "RACE MORNING APPEARANCE",
@@ -403,6 +405,9 @@ namespace Draftmaster.Weekend
                 location = WeekendVenues.For(kind) == WeekendVenue.None
                     ? location
                     : WeekendVenues.ShortLabel(WeekendVenues.For(kind)),
+                // Every photo shoot is an extra; the one SponsorDuty that is (the suite meet-and-greet) says
+                // so where it is booked.
+                sponsorExtra = kind == ActivityKind.PhotoShoot,
             };
             a.id = MakeId(a);
             _activities.Add(a);
@@ -448,6 +453,16 @@ namespace Draftmaster.Weekend
         // what has been done survives the scene reloads the weekend does between sessions.
         static string MakeId(WeekendActivity a) =>
             ((int)a.slot) + "." + a.startMinute + "." + ((int)a.kind);
+
+        // ---------------------------------------------------------------- sponsor extras
+
+        // The player told the team manager at the strategy briefing that they want none of the sponsor's
+        // weekend: the extras (photo shoots, the suite meet-and-greet) come off the sheet, so there is
+        // nothing to walk to and nothing to be marked a no-show for. Anything already attended or already
+        // missed stays where it is — that part of the weekend has happened. Idempotent, and re-applied by the
+        // runtime every time the sheet is rebuilt, because the build itself knows nothing about the ledger.
+        public int WaiveSponsorExtras() =>
+            _activities.RemoveAll(a => a.sponsorExtra && !WeekendLedger.IsDone(a.id) && !WeekendLedger.IsMissed(a.id));
 
         // ---------------------------------------------------------------- queries
 

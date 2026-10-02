@@ -46,6 +46,10 @@ namespace Draftmaster.Weekend
         // in it rather than a fixed set of questions. Not a meter — it is what closes the signing fence.
         public float minutesSpent;
 
+        // The player told the team to cancel the sponsor extras (photo shoots, the suite meet-and-greet). The
+        // ledger records it for the rest of the weekend and the timetable drops them from the sheet.
+        public bool waivesSponsorExtras;
+
         public static WeekendOutcome Nothing => new WeekendOutcome { score = 0f };
 
         public WeekendOutcome WithHeadline(string line) { headline = line; return this; }

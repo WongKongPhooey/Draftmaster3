@@ -123,10 +123,12 @@ namespace Draftmaster.Weekend
                         "Keep the ones I have to do and lose the rest.",
                         "Fair. I'll thin it out.",
                         sponsor: 2f, setup: 0.04f, score: 0.6f),
+                    // Cancels the photo shoots and the suite meet-and-greet outright — they come off the sheet
+                    // — and the brand takes it personally, which is a far bigger hit than any one no-show.
                     WeekendConversation.Say(
                         "All of it. I'm here to drive the car.",
-                        "I'll tell them you're focused. They'll hear something else.",
-                        sponsor: -10f, setup: 0.08f, morale: 3f, score: 0.4f),
+                        "I'll cancel the photo shoots and the suite. I'll tell them you're focused. They'll hear something else.",
+                        sponsor: -35f, setup: 0.08f, morale: 3f, score: 0.4f, waivesSponsorExtras: true),
                 },
             });
 

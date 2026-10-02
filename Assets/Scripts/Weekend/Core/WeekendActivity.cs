@@ -117,6 +117,11 @@ namespace Draftmaster.Weekend
         // The sport, the team or the contract says you are there. Skipping applies the penalty below.
         public bool mandatory;
 
+        // A sponsor extra rather than a contracted appearance — the photo shoots and the suite meet-and-greet.
+        // These are what the team manager can take off the player's plate at the strategy briefing; the
+        // timetable drops them for the rest of the weekend once the player has said they want none of it.
+        public bool sponsorExtra;
+
         // What missing it costs, applied when the weekend moves past this activity's window unattended.
         public int skipMoneyPenalty;
         public float skipAppealPenalty;

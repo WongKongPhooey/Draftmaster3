@@ -44,6 +44,9 @@ namespace Draftmaster.Weekend
 
         // Set when picking this ends the conversation early — walking off, or a fan you waved away.
         public bool ends;
+
+        // Set when this answer tells the team to cancel the sponsor extras for the rest of the weekend.
+        public bool waivesSponsorExtras;
     }
 
     // One exchange: who is speaking, what they said, and what can be said back. Lines before the question
@@ -131,6 +134,7 @@ namespace Draftmaster.Weekend
             outcome.score += choice.score;
             outcome.statCount += choice.statCount;
             outcome.minutesSpent += choice.minutes;
+            outcome.waivesSponsorExtras |= choice.waivesSponsorExtras;
 
             // Last answer to name a driver wins: an obligation that keeps mentioning one person is about
             // that person, and two half-strength deltas at different drivers would read as neither.
@@ -171,13 +175,14 @@ namespace Draftmaster.Weekend
                                         float media = 0f, float sponsor = 0f, float appeal = 0f,
                                         int money = 0, float score = 0.5f, int statCount = 0,
                                         string rivalName = null, float rivalDelta = 0f, bool ends = false,
-                                        float minutes = 0f)
+                                        float minutes = 0f, bool waivesSponsorExtras = false)
             => new WeekendChoice
             {
                 text = text, response = response,
                 setup = setup, morale = morale, media = media, sponsor = sponsor, appeal = appeal,
                 money = money, score = score, statCount = statCount,
                 rivalName = rivalName, rivalDelta = rivalDelta, ends = ends, minutes = minutes,
+                waivesSponsorExtras = waivesSponsorExtras,
             };
     }
 }

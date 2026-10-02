@@ -63,6 +63,8 @@ public class WeekendDirector : MonoBehaviour
                 _builtForWeekend = id;
                 _builtForSeries = series;
                 WeekendLedger.EnsureWeekend(id, series);
+                // After EnsureWeekend, which is what clears the flag when this is a new weekend.
+                if (WeekendLedger.SponsorExtrasWaived) _timetable.WaiveSponsorExtras();
                 WeekendLedger.Timetable = _timetable;
             }
             return _timetable;

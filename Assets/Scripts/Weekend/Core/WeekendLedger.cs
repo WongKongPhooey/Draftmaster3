@@ -37,6 +37,8 @@ namespace Draftmaster.Weekend
             public float mediaStanding;        // -100..100
             public float setupGain;            // 0..1
 
+            public bool sponsorExtrasWaived;   // told the team manager to cancel the photo shoots and the suite
+
             public List<string> headlines = new();
         }
 
@@ -106,6 +108,7 @@ namespace Draftmaster.Weekend
             incoming.headlines ??= new List<string>();
 
             _cache = incoming;
+            if (incoming.sponsorExtrasWaived) Timetable?.WaiveSponsorExtras();
             Changed?.Invoke();
         }
 
@@ -141,6 +144,7 @@ namespace Draftmaster.Weekend
             d.teamMorale = 0f;
             d.mediaStanding = 0f;
             d.setupGain = 0f;
+            d.sponsorExtrasWaived = false;
             Save();
         }
 
@@ -329,6 +333,13 @@ namespace Draftmaster.Weekend
                 RelationshipHook?.Invoke(o.rivalName, o.rivalDelta);
             if (!string.IsNullOrEmpty(o.headline)) Note(o.headline);
 
+            if (o.waivesSponsorExtras && !d.sponsorExtrasWaived)
+            {
+                d.sponsorExtrasWaived = true;
+                if (Timetable != null && Timetable.WaiveSponsorExtras() > 0)
+                    Note("The team cancelled the photo shoots and the suite meet-and-greet. The sponsor noticed.");
+            }
+
             if (save) Save();
         }
 
@@ -340,6 +351,7 @@ namespace Draftmaster.Weekend
         public static float TeamMorale => Data.teamMorale;
         public static float MediaStanding => Data.mediaStanding;
         public static float SetupGain => Data.setupGain;
+        public static bool SponsorExtrasWaived => Data.sponsorExtrasWaived;
         public static int Earnings => Data.earnings;
         public static int Fines => Data.fines;
         public static int NetEarnings => Data.earnings - Data.fines;
