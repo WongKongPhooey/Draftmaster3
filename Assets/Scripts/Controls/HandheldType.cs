@@ -27,5 +27,17 @@ namespace Draftmaster.Controls
             if (linePx <= 0f || screenHeightPx <= 0f || orthoSize <= 0f) return 0f;
             return linePx / screenHeightPx * 2f * orthoSize;
         }
+
+        // How tall a button has to be. On a handheld a button's label is set in the same body face as the
+        // dialogue and quest text, so its plate is grown to hold one line of that (`linePx`) with `padPx`
+        // above and below, rounded up to a whole UI pixel of `scale` so the 9-slice frame stays on the grid.
+        // Never shorter than the height the caller laid out for the desktop, and on a desktop exactly that.
+        public static float ButtonHeight(bool handheld, float desktopPx, float linePx, float padPx, int scale)
+        {
+            if (!handheld) return desktopPx;
+            if (scale < 1) scale = 1;
+            float fit = System.MathF.Ceiling((linePx + padPx * 2f) / scale) * scale;
+            return fit > desktopPx ? fit : desktopPx;
+        }
     }
 }

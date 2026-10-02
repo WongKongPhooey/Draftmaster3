@@ -141,11 +141,13 @@ public class WeekendScheduleUI : MonoBehaviour
         var c = PixelGUI.PanelContent(outer, 8f);
 
         float cy = DrawHeader(c, timetable);
-        cy += DrawDayStrip(new Rect(c.x, cy, c.width, PixelGUI.Px(18f))) + PixelGUI.Px(6f);
+        // Day tabs and footer buttons grow on a phone, where their labels are set in the dialogue face.
+        float buttonH = PixelGUI.ButtonH(PixelGUI.Px(18f));
+        cy += DrawDayStrip(new Rect(c.x, cy, c.width, buttonH)) + PixelGUI.Px(6f);
 
         float railW = PixelGUI.Px(196f);
         float listW = c.width - railW - PixelGUI.Px(6f);
-        float bodyH = c.yMax - cy - PixelGUI.Px(22f);
+        float bodyH = c.yMax - cy - buttonH - PixelGUI.Px(4f);
 
         var rows = timetable.InSlot(_viewing);
         rows.Sort((a, b) => a.startMinute.CompareTo(b.startMinute));
@@ -155,7 +157,7 @@ public class WeekendScheduleUI : MonoBehaviour
         DrawRail(new Rect(c.x + listW + PixelGUI.Px(6f), cy, railW, bodyH),
                  rows.Count > 0 ? rows[_selected] : null, timetable);
 
-        DrawFooter(new Rect(c.x, c.yMax - PixelGUI.Px(18f), c.width, PixelGUI.Px(18f)));
+        DrawFooter(new Rect(c.x, c.yMax - buttonH, c.width, buttonH));
     }
 
     float DrawHeader(Rect c, WeekendTimetable t)
@@ -357,7 +359,7 @@ public class WeekendScheduleUI : MonoBehaviour
                 warn.normal.textColor = wc;
             }
 
-            float bh = PixelGUI.Px(18f);
+            float bh = PixelGUI.ButtonH(PixelGUI.Px(18f));
             float by = Mathf.Min(iy + PixelGUI.Px(2f), r.yMax - PixelGUI.Px(72f) - bh);
             bool can = WeekendLedger.CanDo(a, out string why);
             if (can)
@@ -467,7 +469,10 @@ public class WeekendScheduleUI : MonoBehaviour
 
     void DrawFooter(Rect r)
     {
-        float bw = PixelGUI.Px(150f), bh = r.height;
+        // Wide enough for the longest label, which only outgrows 150 in the phone's bigger button face.
+        float bw = Mathf.Max(PixelGUI.Px(150f), PixelGUI.SnapUp(
+            PixelGUI.ButtonStyle.CalcSize(new GUIContent("START NEXT WEEKEND")).x));
+        float bh = r.height;
 
         if (WeekendLedger.WeekendOver)
         {

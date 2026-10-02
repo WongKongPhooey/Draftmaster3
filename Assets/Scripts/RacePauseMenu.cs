@@ -241,15 +241,18 @@ public class RacePauseMenu : MonoBehaviour
         // in the data face (16px cell) with the skin's check-box padding around it, while LineH is a line
         // of the display face (Silkscreen, 8px cell) — laying the toggles out on LineH packed a 16px face
         // plus padding into a 10px row, so the top of the menu came out clipped and piled onto itself.
-        float w = PixelGUI.Px(200f);
         const float margin = 10f;
         float inset = PixelGUI.Px(4f) + PixelGUI.Px(margin);   // PanelContent's frame + margin, per side
+        // Wide enough for the longest tab label — which only bites on a phone, where buttons are set in the
+        // bigger dialogue face.
+        float w = Mathf.Max(PixelGUI.Px(200f), PixelGUI.SnapUp(
+            PixelGUI.TabStyle.CalcSize(new GUIContent("COULDN'T OPEN — RETRY")).x + PixelGUI.Px(8f) + inset * 2f));
         float gap = PixelGUI.Px(4f);
         float headingH = PixelGUI.Heading.fontSize;
         float toggleH = Mathf.Max(PixelGUI.LineH,
                                   PixelGUI.SnapUp(_toggle.CalcHeight(new GUIContent("  Racing line"), w - inset * 2f)));
-        float tabH = PixelGUI.LineH + PixelGUI.Px(6f);          // same plate height as the buttons below
-        float buttonH = PixelGUI.LineH + PixelGUI.Px(6f);
+        float tabH = PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f));   // same plate height as the buttons below
+        float buttonH = PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f));
         float footer = PixelGUI.LineH;
 
         // What is on the panel right now. END SESSION only appears while a booked session is running, and the
@@ -491,7 +494,7 @@ public class RacePauseMenu : MonoBehaviour
             {
                 case QuestManager.State.NotStarted:
                     GUILayout.Label(q.description, PixelGUI.Body);
-                    if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.LineH + PixelGUI.Px(6f)), "ACCEPT"))
+                    if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f))), "ACCEPT"))
                         _pendingAccept = q;
                     break;
                 case QuestManager.State.Active:
@@ -500,7 +503,7 @@ public class RacePauseMenu : MonoBehaviour
                 case QuestManager.State.ReadyToTurnIn:
                     if (q.objective == QuestInfo.ObjectiveType.DeliverItem)
                         GUILayout.Label("Deliver it in person.", PixelGUI.Row);
-                    else if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.LineH + PixelGUI.Px(6f)), "TURN IN"))
+                    else if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f))), "TURN IN"))
                         _pendingTurnIn = q;
                     break;
                 case QuestManager.State.Completed:

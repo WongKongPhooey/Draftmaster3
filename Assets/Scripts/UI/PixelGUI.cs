@@ -24,9 +24,11 @@ public static class PixelGUI
 {
     static PixelUITheme _builtFor;
     static int _builtAtScale;
+    static bool _builtHandheld;
+    static float _buttonLineH;
     static GUIStyle _display;
     static GUIStyle _window, _focusedWindow, _heading, _headingSmall, _row, _rowSelected, _footer,
-                    _cursor, _body, _data, _dataDim, _button, _tab, _tabSelected, _label, _labelDim;
+                    _cursor, _body, _data, _dataDim, _button, _buttonDisabled, _tab, _tabSelected, _label, _labelDim;
     static Texture2D _flat;
     static int _promptFrame = -1;          // prompt stacking, reset per OnGUI event pass
     static EventType _promptEvent = EventType.Ignore;
@@ -102,6 +104,15 @@ public static class PixelGUI
     // The same for the fixed-advance data face, which is what rows, columns and readouts are set in.
     public static float DataLineH { get { Ensure(); return _data.fontSize + Px(2f); } }
 
+    // The height of a Button or Tab. Pass the height the panel was laid out with on a desktop; on a handheld
+    // the label is the dialogue/quest face (see Ensure), so the plate grows to fit one line of it with the
+    // button's own padding above and below. Desktop gets `desktopPx` back untouched.
+    public static float ButtonH(float desktopPx)
+    {
+        Ensure();
+        return HandheldType.ButtonHeight(Handheld, desktopPx, _buttonLineH, _button.padding.top, Scale);
+    }
+
     // ---- palette ------------------------------------------------------------------------------------
     // Shortcuts, so a panel does not have to null-check the theme on every colour it draws.
     public static Color Text => Theme != null ? Theme.text : Color.white;
@@ -164,9 +175,11 @@ public static class PixelGUI
     {
         var t = Theme;
         int scale = Scale;
-        if (_window != null && _builtFor == t && _builtAtScale == scale) return;
+        bool handheld = Handheld;
+        if (_window != null && _builtFor == t && _builtAtScale == scale && _builtHandheld == handheld) return;
         _builtFor = t;
         _builtAtScale = scale;
+        _builtHandheld = handheld;
         _focusedWindow = null;
 
         // Faces fall back to the one guaranteed IMGUI font, so a half-configured theme still reads.
@@ -214,7 +227,13 @@ public static class PixelGUI
         // The confirm plate. Its highlight and shade are baked into the sprite, so there is no second
         // drawing for hover or press — the kit asks for the pressed state to come from a 2px offset,
         // which Button() below applies to the label.
-        _button = Style(display, labelPt, Text, TextAnchor.MiddleCenter);
+        // On a phone the 8pt display face is too small to read on a button, so buttons and tabs are set in
+        // the same face and size as the dialogue and quest descriptions (the data face at one cell — the
+        // objective strip's detail line, see HandheldType). ButtonH() then sizes the plate around it.
+        Font buttonFace = handheld ? data : display;
+        int buttonPt = handheld ? vt : labelPt;
+
+        _button = Style(buttonFace, buttonPt, Text, TextAnchor.MiddleCenter);
         var plate = t != null ? t.buttonRed : null;
         if (plate != null)
         {
@@ -227,10 +246,15 @@ public static class PixelGUI
             _button.border = new RectOffset(3 * scale, 3 * scale, 3 * scale, 3 * scale);
         }
         _button.padding = new RectOffset(6 * scale, 6 * scale, 4 * scale, 4 * scale);
+        _buttonDisabled = handheld ? Style(buttonFace, buttonPt, TextDisabled, TextAnchor.MiddleCenter) : _footer;
 
         // Flat nav tab: solid plate, no 9-slice — Tab() draws the plate and its hard shadow itself.
-        _tab = Style(display, labelPt, TextDim, TextAnchor.MiddleCenter);
-        _tabSelected = Style(display, labelPt, Text, TextAnchor.MiddleCenter);
+        _tab = Style(buttonFace, buttonPt, TextDim, TextAnchor.MiddleCenter);
+        _tabSelected = Style(buttonFace, buttonPt, Text, TextAnchor.MiddleCenter);
+
+        // Measured, not fontSize: clipped IMGUI text drops any line that does not fit its rect whole, and a
+        // line needs ~1.28x its font size.
+        _buttonLineH = Mathf.Ceil(_tab.CalcSize(new GUIContent("Ag")).y);
     }
 
     // The pixel cell a bitmap face is drawn for, exposed so a panel that wants a *smaller* face than the
@@ -951,7 +975,7 @@ public static class PixelGUI
                     r.Contains(Event.current.mousePosition);
         bool clicked = TouchTaps.Button(r, GUIContent.none, _button);
         var labelRect = held ? new Rect(r.x, r.y + Px(2f), r.width, r.height) : r;
-        var style = GUI.enabled ? _button : _footer;
+        var style = GUI.enabled ? _button : _buttonDisabled;
         var prevAlign = style.alignment;
         var prevBg = style.normal.background;
         style.alignment = TextAnchor.MiddleCenter;

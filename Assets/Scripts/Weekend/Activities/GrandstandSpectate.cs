@@ -204,7 +204,9 @@ public class GrandstandSpectate : MonoBehaviour
                      _finished ? PixelGUI.Confirm : PixelGUI.Gold);
         y += PixelGUI.Px(9f);
 
-        float controlsH = PixelGUI.Px(40f);
+        // Two rows of buttons under the feed; taller on a phone, where the buttons carry the dialogue face.
+        float bh = PixelGUI.ButtonH(PixelGUI.Px(16f));
+        float controlsH = bh * 2f + PixelGUI.Px(8f);
         float towerH = (content.yMax - y - controlsH) * 0.62f;
         var tower = new Rect(content.x, y, content.width, towerH);
         PixelGUI.Fill(tower, PixelGUI.Plate);
@@ -215,7 +217,6 @@ public class GrandstandSpectate : MonoBehaviour
         PixelGUI.Fill(feed, PixelGUI.Plate);
         DrawFeed(feed);
 
-        float bh = PixelGUI.Px(16f);
         float by = content.yMax - bh * 2f - PixelGUI.Px(4f);
         float half = (content.width - PixelGUI.Px(4f)) * 0.5f;
 

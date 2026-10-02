@@ -267,13 +267,22 @@ public static class IronOvalUI
         var fimg = face.GetComponent<Image>();
         fimg.color = selected ? (t == null ? Color.red : t.danger) : (t == null ? Color.grey : t.plateDeep);
 
-        var label = Label(frt, "Label", content, Role.HeaderSmall,
+        // On a phone the 8px caption face is too small to read, so the caption takes the data face that
+        // dialogue and quest text are set in, and the plate grows to hold it with 4px above and below.
+        bool handheld = PixelGUI.Handheld;
+        var label = Label(frt, "Label", content, handheld ? Role.Data : Role.HeaderSmall,
                           selected ? (t == null ? Color.white : t.text) : (t == null ? Color.grey : t.textDim));
         var lrt = label.rectTransform;
         lrt.anchorMin = Vector2.zero;
         lrt.anchorMax = Vector2.one;
         lrt.offsetMin = lrt.offsetMax = Vector2.zero;
         label.alignment = TextAlignmentOptions.Center;
+        if (handheld)
+        {
+            var fit = label.GetPreferredValues(content);
+            srt.sizeDelta = new Vector2(Mathf.Max(size.x, Mathf.Ceil(fit.x) + 12f),
+                                        Mathf.Max(size.y, Mathf.Ceil(fit.y) + 8f));
+        }
 
         return face.GetComponent<Button>();
     }

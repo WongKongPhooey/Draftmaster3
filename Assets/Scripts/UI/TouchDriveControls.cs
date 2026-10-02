@@ -248,8 +248,9 @@ public class TouchDriveControls : MonoBehaviour
 
     void Label(Rect r, string text, float alpha)
     {
-        // A centred copy of the kit's label face, remade whenever the kit rebuilds its styles (scale change).
-        var from = PixelGUI.Label;
+        // A centred copy of the kit's data face — the size dialogue and quest text are set in, which every
+        // button on a phone matches — remade whenever the kit rebuilds its styles (scale change).
+        var from = PixelGUI.Data;
         if (_label == null || _labelFrom != from)
         {
             _label = new GUIStyle(from) { alignment = TextAnchor.MiddleCenter, clipping = TextClipping.Overflow };

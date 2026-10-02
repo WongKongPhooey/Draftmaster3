@@ -363,7 +363,7 @@ public class RaceDirector : MonoBehaviour
             if (_panelHidden)
             {
                 if (PixelGUI.Button(new Rect(Screen.width - PixelGUI.Px(96f), PixelGUI.Px(38f),
-                                             PixelGUI.Px(88f), PixelGUI.Px(20f)), "RESULTS"))
+                                             PixelGUI.Px(88f), PixelGUI.ButtonH(PixelGUI.Px(20f))), "RESULTS"))
                     _panelHidden = false;
             }
             else
@@ -430,7 +430,16 @@ public class RaceDirector : MonoBehaviour
         float railW = PixelGUI.Px(150f);          // the design's right-hand column
         float w = PixelGUI.Px(420f);
         float bandH = PixelGUI.Px(18f);
-        float h = bandH + PixelGUI.Px(30f) + Mathf.Max(_results.Count * row, PixelGUI.Px(174f));
+        // Buttons on a phone carry the dialogue-sized face and grow to fit it; the rail they stack in can then
+        // outgrow the classification, so the panel is made tall enough for whichever is longer.
+        float bh = PixelGUI.ButtonH(PixelGUI.Px(18f));
+        float halfW = (railW - PixelGUI.Px(4f)) * 0.5f;
+        bool stackSkip = PixelGUI.TabStyle.CalcSize(new GUIContent("SKIP TRAVEL")).x > halfW;
+        float railH = PixelGUI.Px(20f) + (GameSession.CareerActive
+            ? PixelGUI.Px(94f) + (stackSkip ? 4 : 3) * (bh + PixelGUI.Px(4f))
+            : 3f * (bh + PixelGUI.Px(4f)));
+        float h = bandH + PixelGUI.Px(30f) + Mathf.Max(_results.Count * row, PixelGUI.Px(174f),
+                                                      PixelGUI.Handheld ? railH : 0f);
         float x = Mathf.Round((Screen.width - w) * 0.5f);
         float y = Mathf.Max(PixelGUI.Px(12f), Mathf.Round((Screen.height - h) * 0.35f));
 
@@ -528,7 +537,7 @@ public class RaceDirector : MonoBehaviour
         // off and the panel ends with the two things that still mean something: run it again, or leave.
         if (!GameSession.CareerActive)
         {
-            float sbh = PixelGUI.Px(18f);
+            float sbh = bh;
             if (PixelGUI.Button(new Rect(rx, ry, railW, sbh), "RACE AGAIN"))
                 RaceAgain();
             ry += sbh + PixelGUI.Px(4f);
@@ -578,7 +587,6 @@ public class RaceDirector : MonoBehaviour
 
         // The road trip is the main loop: pick the next venue on the map, spend stops on detours, race
         // there. SKIP TRAVEL keeps the instant weekend loop for quick testing.
-        float bh = PixelGUI.Px(18f);
         if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "HIT THE ROAD")) { _panelHidden = true; TravelMapScreen.Open(); }
         ry += bh + PixelGUI.Px(4f);
         // The weekend is not necessarily over when your race is: a truck driver still has two days of it.
@@ -588,7 +596,14 @@ public class RaceDirector : MonoBehaviour
             WeekendScheduleUI.Open();
         }
         ry += bh + PixelGUI.Px(4f);
-        float halfW = (railW - PixelGUI.Px(4f)) * 0.5f;
+        // Side by side when the labels fit; the phone's bigger button face does not, so they stack.
+        if (stackSkip)
+        {
+            if (PixelGUI.Tab(new Rect(rx, ry, railW, bh), "SKIP TRAVEL", false)) NextWeekend();
+            ry += bh + PixelGUI.Px(4f);
+            if (PixelGUI.Tab(new Rect(rx, ry, railW, bh), "CLOSE", false)) _panelHidden = true;
+            return;
+        }
         if (PixelGUI.Tab(new Rect(rx, ry, halfW, bh), "SKIP TRAVEL", false)) NextWeekend();
         if (PixelGUI.Tab(new Rect(rx + halfW + PixelGUI.Px(4f), ry, halfW, bh), "CLOSE", false))
             _panelHidden = true;

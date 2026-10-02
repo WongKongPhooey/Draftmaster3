@@ -196,7 +196,7 @@ public class WeekendResultCard : MonoBehaviour
         // trimming the type inside it.
         float bandH = Mathf.Max(Px(18f), _heading.fontSize + Px(6f));
         float rowH = _data.fontSize + Px(3f);
-        float buttonH = Px(18f);
+        float buttonH = PixelGUI.ButtonH(Px(18f));
         float headlineH = string.IsNullOrEmpty(_outcome.headline)
             ? 0f
             : _body.CalcHeight(new GUIContent(_outcome.headline), contentW) + Px(5f);

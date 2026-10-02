@@ -160,7 +160,7 @@ public class CoopJoinPanel : MonoBehaviour
 
         float row = PixelGUI.LineH;
         float gap = PixelGUI.Px(4f);
-        float buttonH = row + PixelGUI.Px(6f);
+        float buttonH = PixelGUI.ButtonH(row + PixelGUI.Px(6f));
         float w = PixelGUI.Px(220f);
         float fieldH = PixelGUI.Display.fontSize + PixelGUI.Px(8f);
         float h = PixelGUI.Px(20f) + PixelGUI.Heading.fontSize + gap * 6f

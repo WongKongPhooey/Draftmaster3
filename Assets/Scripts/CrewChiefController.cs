@@ -445,11 +445,15 @@ public class CrewChiefController : MonoBehaviour
     // TIMING, then NEXT CAR, then PREV CAR, stacked up from the headset.
     void PlaceTimingStack(Vector2 corner)
     {
-        float step = 16f + 6f;
+        // Stepped by the buttons' own height: a phone grows them to fit its bigger caption face.
         float y = corner.y + buttonSize + 6f;
-        if (_timingBtn != null) Corner((RectTransform)_timingBtn.transform, new Vector2(corner.x, y));
-        if (_nextCarBtn != null) Corner((RectTransform)_nextCarBtn.transform, new Vector2(corner.x, y + step));
-        if (_prevCarBtn != null) Corner((RectTransform)_prevCarBtn.transform, new Vector2(corner.x, y + step * 2f));
+        foreach (var btn in new[] { _timingBtn, _nextCarBtn, _prevCarBtn })
+        {
+            if (btn == null) continue;
+            var rt = (RectTransform)btn.transform;
+            Corner(rt, new Vector2(corner.x, y));
+            y += rt.sizeDelta.y + 6f;
+        }
     }
 
     void ShowDutyButtons(bool on)
