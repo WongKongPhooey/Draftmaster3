@@ -180,8 +180,8 @@ public class PhoneScheduleApp : PhoneApp
         PixelGUI.Fill(new Rect(r.x, r.y, PixelGUI.Px(2f), r.height), kind);
 
         var text = new Rect(r.x + PixelGUI.Px(4f), r.y, r.width - PixelGUI.Px(5f), RowH);
-        string title = Trim(a.title, p.cols > 1 ? 11 : 22);
-        if (state == WeekendLedger.State.Done) title = "· " + title;
+        string title = Fit((state == WeekendLedger.State.Done ? "· " : "") + a.title,
+                           PhoneStyles.InkData, text.width);
         PhoneStyles.Label(text, title, PhoneStyles.InkData,
                           state == WeekendLedger.State.Missed || state == WeekendLedger.State.Past
                               ? new Color(0.45f, 0.42f, 0.42f) : PixelGUI.Ink);
@@ -195,6 +195,22 @@ public class PhoneScheduleApp : PhoneApp
 
         if (a.mandatory && state == WeekendLedger.State.Available)
             PixelGUI.Fill(new Rect(r.xMax - PixelGUI.Px(3f), r.y, PixelGUI.Px(2f), PixelGUI.Px(2f)), PixelGUI.Danger);
+    }
+
+    // As much of the title as the block is actually wide enough for, measured in the font it is drawn in,
+    // so a two-up clash cell shows sixteen-odd letters instead of a fixed character count's eleven.
+    static string Fit(string s, GUIStyle style, float width)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        if (style.CalcSize(new GUIContent(s)).x <= width) return s;
+        int lo = 0, hi = s.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) / 2;
+            if (style.CalcSize(new GUIContent(s.Substring(0, mid))).x <= width) lo = mid;
+            else hi = mid - 1;
+        }
+        return s.Substring(0, lo).TrimEnd();
     }
 
     // ------------------------------------------------------------------ overlap packing
