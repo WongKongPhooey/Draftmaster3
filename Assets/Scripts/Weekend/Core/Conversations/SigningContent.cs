@@ -5,26 +5,31 @@ namespace Draftmaster.Weekend
     //
     // A queue, one person at a time, each of them holding something and wanting thirty seconds. What they
     // are worth is not a timing bar — it is what you give them, and the window is the whole decision. The
-    // fence holds exactly as many people as a driver working flat out could get through, so:
+    // fence holds at least ten people, and the window is one plain signature short of all of them, so:
     //
-    //   * Sign it, next. Five minutes a head, and you reach every one of them. The rep counts heads, the
-    //     sponsor is delighted, and a queue that got a signature and a shoulder goes home telling the other
-    //     story — the hour is worth almost nothing in fan support and can go backwards.
-    //   * Ask their name, pose for the photo. Ten or twelve minutes each, worth far more to the person in
-    //     front of you, and the people behind them never reach the front at all. Fan support up, sponsor
-    //     mood down, and the ones left standing cost you something on the way out.
+    //   * Sign it, next. One slot of the window each. Sign every one plainly and the last fan is still stood
+    //     there when the barrier closes — reaching the whole fence takes waving past at least one of them.
+    //   * Ask their name, pose for the photo. Two slots each, worth far more to the person in front of you,
+    //     and every one of them puts you a fan behind: it takes a wave past somebody to catch up again. Stop
+    //     for every fan in a queue of ten and you meet five.
+    //   * Wave, and keep moving. Costs no time at all — it is how you catch up — but the fan feels it.
+    //
+    // So a queue of ten is all reached by, say, three photos, four waves and three plain signatures.
     //
     // Seeded off the booking so the same session always brings the same faces — the ledger records against
     // this activity, and a queue that re-rolled every time the player walked away and back would be a way
     // of shopping for a better hour.
     public static class SigningContent
     {
-        // What each answer takes out of the window, in minutes. Fast is the yardstick: the queue is built
-        // to be exactly as long as a driver signing and moving could clear.
-        const float FastMinutes = 5f;
-        const float NameMinutes = 10f;
-        const float PhotoMinutes = 12f;
-        const float WaveMinutes = 2f;
+        // A queue is a fan per this many minutes of the window, never fewer than MinQueue. The window is
+        // then cut into one slot fewer than there are fans: a plain signature takes a slot, a name or a
+        // photo takes two, and a wave takes none.
+        const float MinutesPerFan = 5f;
+        const int MinQueue = 10;
+        const float FastSlots = 1f;
+        const float NameSlots = 2f;
+        const float PhotoSlots = 2f;
+        const float WaveSlots = 0f;
 
         // One fan in the queue: who they are and what they are holding.
         struct Fan
@@ -78,19 +83,21 @@ namespace Draftmaster.Weekend
             System.Array.Copy(Queue, order, Queue.Length);
             rng.Shuffle(order);
 
-            // The window the booking blocks out, and the queue that fits inside it. The fence is as long as
-            // signing-and-moving would clear, so getting to the end of it is only possible flat out.
+            // The window the booking blocks out, and the queue stood at the fence for it. The window holds
+            // one plain signature fewer than the queue has fans, so reaching the end means waving past
+            // somebody — and one more wave for every fan you stopped to talk to.
             float window = a != null && a.minutes > 0 ? a.minutes : 30f;
-            int queueLength = (int)(window / FastMinutes);
-            if (queueLength < 3) queueLength = 3;
+            int queueLength = (int)(window / MinutesPerFan);
+            if (queueLength < MinQueue) queueLength = MinQueue;
             if (queueLength > order.Length) queueLength = order.Length;
+            float slot = window / (queueLength - 1);
 
             var c = new WeekendConversation
             {
                 statKey = "autographs",
                 statCount = 0,
                 minuteBudget = window,
-                minuteStep = FastMinutes,
+                minuteStep = FastSlots * slot,
                 greeting = parade
                     ? new[]
                     {
@@ -102,7 +109,7 @@ namespace Draftmaster.Weekend
                     {
                         "Table's set up on the inside of the fence. Marker's there.",
                         "You have got the hour, and the hour is the whole job.",
-                        "Sign and move and you will get to the end of them. Stop and talk and you will not.",
+                        "Sign and move and you will nearly get to the end of them. Stop and talk and you will not — not without walking past somebody.",
                     },
                 farewell = new[] { "That is the lot of them — every single one. Nobody went home empty-handed." },
                 timeUpFarewell = new[]
@@ -126,19 +133,19 @@ namespace Draftmaster.Weekend
                         WeekendConversation.Say(
                             "Sign it, and ask them their name.",
                             "They tell you, twice, and read it back off the card the whole way to the car park.",
-                            appeal: 1.6f, sponsor: 0.1f, score: 1f, statCount: 1, minutes: NameMinutes),
+                            appeal: 1.6f, sponsor: 0.1f, score: 1f, statCount: 1, minutes: NameSlots * slot),
                         WeekendConversation.Say(
                             "Sign it and get a photo with them.",
                             "It is on the internet before you have put the lid back on the marker.",
-                            appeal: 1.9f, sponsor: 0f, media: 1.5f, score: 1f, statCount: 1, minutes: PhotoMinutes),
+                            appeal: 1.9f, sponsor: 0f, media: 1.5f, score: 1f, statCount: 1, minutes: PhotoSlots * slot),
                         WeekendConversation.Say(
                             "Sign it. Next.",
                             "Signed, handed back, and the queue moves a place.",
-                            appeal: 0.25f, sponsor: 0.8f, score: 0.55f, statCount: 1, minutes: FastMinutes),
+                            appeal: 0.25f, sponsor: 0.8f, score: 0.55f, statCount: 1, minutes: FastSlots * slot),
                         WeekendConversation.Say(
                             "Wave, and keep moving.",
                             "They put their arm down slowly.",
-                            appeal: -0.6f, sponsor: -0.2f, score: 0.2f, minutes: WaveMinutes),
+                            appeal: -0.6f, sponsor: -0.2f, score: 0.2f, minutes: WaveSlots * slot),
                     },
                 });
             }

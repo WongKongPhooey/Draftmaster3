@@ -92,7 +92,7 @@ namespace Draftmaster.Weekend
         // and the conversation closes itself when there is no time left to bring the next person forward.
 
         public float minuteBudget;   // 0 = untimed: the conversation runs to its last beat
-        public float minuteStep;     // the cheapest answer, i.e. the least time the next person could take
+        public float minuteStep;     // the least time stopping for the next person takes; a free answer (a wave) still needs it left to reach them
 
         // Applied to the settled outcome before the headline is written, given how many beats were actually
         // answered. This is where a timed obligation prices the whole hour rather than each answer — the
@@ -100,8 +100,9 @@ namespace Draftmaster.Weekend
         public Func<WeekendOutcome, int, WeekendOutcome> epilogue;
 
         // Is there room in the window for one more person at the front?
+        // A hair of slack so a window cut into fractional-minute slots is not closed early by float rounding.
         public bool OutOfTime(float minutesSpent) =>
-            minuteBudget > 0f && minutesSpent + minuteStep > minuteBudget;
+            minuteBudget > 0f && minutesSpent + minuteStep > minuteBudget + 0.001f;
 
         // Was answering `choice` at beat `index` the last thing this conversation had in it — because the
         // answer ended it, because the beats ran out, or because the window did. Kept here so the venue host

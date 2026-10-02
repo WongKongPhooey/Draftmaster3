@@ -260,8 +260,71 @@ public class WeekendVenueTests
 
         Assert.Greater(fast, photos, "Signing and moving should get through more of the queue than posing with all of them.");
         Assert.GreaterOrEqual(names, photos, "A name takes less of the hour than a photo does.");
-        Assert.AreEqual(SigningContent.Build(booking).beats.Count, fast,
-                        "Flat out, the hour should be exactly long enough to clear the fence.");
+        Assert.AreEqual(SigningContent.Build(booking).beats.Count - 1, fast,
+                        "Signing every one plainly should leave exactly one fan at the fence when time runs out.");
+    }
+
+    // Play the fence with a different answer per fan, in order, the way the venue host does.
+    static int Reach(WeekendConversation c, params string[] answers)
+    {
+        var running = WeekendOutcome.Nothing;
+        int served = 0;
+        for (int i = 0; i < c.beats.Count; i++)
+        {
+            var choice = c.beats[i].choices[Answer(c.beats[i], answers[i])];
+            WeekendConversation.Accumulate(ref running, choice);
+            served++;
+            if (c.Ends(i, choice, running.minutesSpent)) break;
+        }
+        return served;
+    }
+
+    static string[] Repeat(string answer, int count)
+    {
+        var all = new string[count];
+        for (int i = 0; i < count; i++) all[i] = answer;
+        return all;
+    }
+
+    const string Plain = "Sign it. Next.", Photo = "Sign it and get a photo", Name = "Sign it, and ask them their name",
+                 Skip = "Wave, and keep moving.";
+
+    // The arithmetic of the fence: at least ten fans; plain signatures alone fall one short; every name or
+    // photo needs a wave past somebody to catch up; a photo with every fan meets half of them.
+    [Test]
+    public void ReachingTheWholeFenceTakesASkipForEveryFanYouStopFor()
+    {
+        foreach (int minutes in new[] { 30, 45, 60 })
+        {
+            var booking = SigningBooking(minutes);
+            int n = SigningContent.Build(booking).beats.Count;
+            Assert.GreaterOrEqual(n, 10, $"A {minutes}-minute session should bring at least ten fans to the fence.");
+
+            Assert.AreEqual(n - 1, Reach(SigningContent.Build(booking), Repeat(Plain, n)),
+                            "Plain signatures alone should leave the last fan unreached.");
+
+            var oneSkip = Repeat(Plain, n);
+            oneSkip[0] = Skip;
+            Assert.AreEqual(n, Reach(SigningContent.Build(booking), oneSkip), "One wave should be enough to reach them all.");
+
+            Assert.AreEqual((n + 1) / 2, Reach(SigningContent.Build(booking), Repeat(Photo, n)),
+                            "A photo with every fan should meet about half the fence.");
+            Assert.AreEqual((n + 1) / 2, Reach(SigningContent.Build(booking), Repeat(Name, n)),
+                            "Asking every name should cost the same as a photo.");
+
+            // Each fan stopped for, plus the one plain signatures already fall short, is a wave owed.
+            var tooFew = Repeat(Plain, n);
+            tooFew[0] = Photo; tooFew[1] = Name; tooFew[2] = Skip; tooFew[3] = Skip;
+            Assert.AreEqual(n - 1, Reach(SigningContent.Build(booking), tooFew), "Two stops need three waves, not two.");
+            tooFew[4] = Skip;
+            Assert.AreEqual(n, Reach(SigningContent.Build(booking), tooFew));
+        }
+
+        // The worked example: ten fans, three photos, four waves, three plain signatures.
+        var ten = SigningBooking(30);
+        Assert.AreEqual(10, SigningContent.Build(ten).beats.Count);
+        Assert.AreEqual(10, Reach(SigningContent.Build(ten),
+                                  Photo, Photo, Photo, Skip, Skip, Skip, Skip, Plain, Plain, Plain));
     }
 
     // ...and what the two ways of spending it are worth. Fast is the sponsor's hour; slow is the fans'.
@@ -301,8 +364,8 @@ public class WeekendVenueTests
         var hour = SigningContent.Build(SigningBooking(60));
         var walk = SigningContent.Build(parade);
 
-        Assert.Less(walk.beats.Count, hour.beats.Count, "Half the window should hold half the fence.");
-        Assert.GreaterOrEqual(walk.beats.Count, 3, "A parade with fewer than three people at the fence is not a queue.");
+        Assert.Less(walk.beats.Count, hour.beats.Count, "Half the window should hold a shorter fence.");
+        Assert.GreaterOrEqual(walk.beats.Count, 10, "Even a short session should bring at least ten fans to the fence.");
 
         var fast = Work(SigningContent.Build(parade), "Sign it. Next.", out _);
         var photos = Work(SigningContent.Build(parade), "Sign it and get a photo", out _);
