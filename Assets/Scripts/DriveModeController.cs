@@ -99,7 +99,12 @@ public class DriveModeController : MonoBehaviour
         if (!_driving) UpdateBroadcastCamera();
     }
 
-    public void Toggle() => SetDriving(!_driving);
+    public void Toggle()
+    {
+        // The session is over and the AI is bringing the player's car home: it is not theirs to take back.
+        if (PracticeDirector.BringingPlayerIn) return;
+        SetDriving(!_driving);
+    }
 
     // Team switching moved the human into a different chassis: broadcast/resume must now operate on THAT
     // car, or toggling V would disable the AI-driven old car and leave the new one uncontrolled.

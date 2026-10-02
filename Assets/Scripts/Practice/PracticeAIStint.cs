@@ -57,6 +57,30 @@ public class PracticeAIStint : MonoBehaviour
 
     public void Bind(PracticeDirector director) { _director = director; }
 
+    // Which pit box this car parks in. The field parks in the box its grid slot owns; the player's car, brought
+    // in by the AI at the end of a session (SessionEndPitIn), parks in the box the player was given.
+    [HideInInspector] public int boxOverride = -1;
+    int BoxIndex => boxOverride >= 0 ? boxOverride : _spline.qualifyingPosition;
+
+    // The session clock has run out: whatever lap this car is on is its last. A car still leaving its box runs
+    // one lap and comes in.
+    public void EndAfterThisLap()
+    {
+        if (_state == State.Leaving || _state == State.OnTrack)
+            _lapsToRun = Mathf.Min(_lapsToRun, _lapsDone + 1);
+    }
+
+    // Bring this car straight in from wherever it is: on track it heads for pit entry, on pit road it rolls on
+    // to its box. Used for the player's car at the end of a session, handed to the AI at the line.
+    public void DriveIn()
+    {
+        _lapsToRun = 0;
+        _spline.parkedHold = false;
+        _spline.pitStopHold = false;
+        _spline.pitParkDistance = -1f;
+        _state = _spline.IsOnPit ? State.PittingIn : State.HeadingToPit;
+    }
+
     public void Release(int laps)
     {
         if (_state != State.Parked) return;
@@ -135,7 +159,7 @@ public class PracticeAIStint : MonoBehaviour
                 float boxDist = _spline.PitLength * 0.5f;
                 if (PitLane.Configured && _spline.PitLength > 0f)
                 {
-                    boxDist = PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength);
+                    boxDist = PitLane.BoxDistance(BoxIndex, _spline.PitLength);
                     targetFrac = boxDist / _spline.PitLength;
                 }
                 float remaining = boxDist - _spline.PitProgress01 * _spline.PitLength;

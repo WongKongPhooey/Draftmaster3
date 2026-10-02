@@ -1210,7 +1210,34 @@ public class PitLaneStart : MonoBehaviour
                 ControlHints.Hide(ExitHintId);
         }
 
-        if (can && pressed) ClimbOut();
+        // Once a practice or qualifying session is over, stopping in the box is the end of it: the driver gets
+        // out without being asked, and the session closes behind them (SessionEndPitIn).
+        if (can && (pressed || PracticeDirector.SessionOver)) ClimbOut();
+    }
+
+    // Whether this scene worked out where the player's box is. Without it there is no climbing out in the box.
+    public bool BoxKnown => _boxKnown;
+
+    // The session is over and the AI has brought the car into its box for the driver: out they get. The car
+    // is parked on the pose the AI stopped it on — written through the dynamic model and the body, the way a
+    // tow parks it, so the controller does not resume from wherever it was when the AI took over if the
+    // driver gets back in later. False when there is nobody to put out (not driving, or no on-foot body).
+    public bool ClimbOutAtSessionEnd()
+    {
+        if (!IsDriving || car == null || _player == null) return false;
+
+        var brain = car.GetComponent<SplineDriver>();
+        float heading = brain != null && brain.enabled ? brain.CommandedHeadingDeg : car.HeadingDeg;
+        car.SeedPose(car.transform.position, heading);
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.position = car.transform.position;
+            body.rotation = car.transform.eulerAngles.z;
+        }
+
+        ClimbOut();
+        return true;
     }
 
     bool CanClimbOut()
@@ -1220,6 +1247,10 @@ public class PitLaneStart : MonoBehaviour
 
         // Somebody else is driving it: the broadcast cut or the crew chief's headset hands the car to the AI.
         if (car.externalInput) return Idle();
+        // ...or the kinematic hand-off, where the AI's spline drives the car with the controller switched off
+        // (and its speed reading frozen at whatever it was when the AI took over).
+        var brain = car.GetComponent<SplineDriver>();
+        if (brain != null && brain.enabled) return Idle();
 
         // The crew are on it — a pit stop in progress, or a repair the driver is sat through.
         var stop = car.GetComponent<PitStopController>();

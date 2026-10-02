@@ -10,12 +10,18 @@ using UnityEngine.SceneManagement;
 // Qualifying → START RACE captures the best-lap order as the race grid (RaceWeekend.GridOrder) and reloads
 // into the race. Both steps are rows in the pause menu, alongside END SESSION for a session booked off the
 // weekend timetable — nothing is drawn over the windscreen.
+//
+// Both sessions run on a clock. When it runs out the field runs its last lap and comes in, and the player's
+// car is brought home by SessionEndPitIn: finish the lap and the AI drives it into the box, or pit yourself.
+// The session ends as the driver climbs out in the box.
 public class PracticeDirector : MonoBehaviour
 {
     public static PracticeDirector Instance { get; private set; }
 
-    [Header("Qualifying")]
-    [Tooltip("Length (s) of the qualifying session. The countdown is advisory — the grid is captured when START RACE is chosen in the pause menu, so late laps still count.")]
+    [Header("Session clock")]
+    [Tooltip("Length (s) of a practice session. When it runs out a driver on track finishes their lap and is brought into their box (SessionEndPitIn); the session ends as they climb out.")]
+    public float practiceSeconds = 1200f;
+    [Tooltip("Length (s) of the qualifying session. The lap a driver is on when it runs out still counts; the grid is captured as the session ends — when the driver climbs out in their box, or START RACE is chosen in the pause menu.")]
     public float qualifyingSeconds = 600f;
 
     [Header("Track activity")]
@@ -31,7 +37,10 @@ public class PracticeDirector : MonoBehaviour
     readonly List<PracticeAIStint> _stints = new();
     float _tick;
     bool _isQualifying;
-    float _qualiEndTime;
+    float _sessionEndTime;
+    bool _sessionOver;
+    bool _ended;
+    SessionEndPitIn _wrapUp;
 
     public static PracticeDirector Ensure()
     {
@@ -62,22 +71,30 @@ public class PracticeDirector : MonoBehaviour
     void Start()
     {
         LapTimingManager.Ensure();
-        if (_isQualifying) _qualiEndTime = Time.time + qualifyingSeconds;
+        _sessionEndTime = Time.time + (_isQualifying ? qualifyingSeconds : practiceSeconds);
     }
 
     // ---- The session clock ----
 
-    // True while a session with a running clock is live: qualifying, before its time is up.
+    // True while the session clock is running: practice or qualifying, before its time is up.
     public static bool TimedSessionRunning =>
-        Instance != null && Instance.enabled && Instance._isQualifying && Instance._qualiEndTime > Time.time;
+        Instance != null && Instance.enabled && !Instance._sessionOver && Instance._sessionEndTime > Time.time;
+
+    // The clock has run out. The session is not over until the player's car is back in its box and they are
+    // out of it (SessionEndPitIn); until then this is the chequered flag, and stopping in the box gets the
+    // driver out of the car without being asked (PitLaneStart).
+    public static bool SessionOver => Instance != null && Instance.enabled && Instance._sessionOver;
+
+    // The AI has the player's car and is driving it home: the broadcast toggle must not hand it back mid in-lap.
+    public static bool BringingPlayerIn => SessionOver && Instance._wrapUp != null && Instance._wrapUp.AIDriving;
 
     // Take time off the session clock: the fast travel is free on the weekend's clock but not on this one,
     // which the player is racing against. Returns the seconds actually taken (never more than were left).
     public static float SpendSessionTime(float seconds)
     {
         if (!TimedSessionRunning || seconds <= 0f) return 0f;
-        float taken = Mathf.Min(seconds, Instance._qualiEndTime - Time.time);
-        Instance._qualiEndTime -= taken;
+        float taken = Mathf.Min(seconds, Instance._sessionEndTime - Time.time);
+        Instance._sessionEndTime -= taken;
         return taken;
     }
 
@@ -98,9 +115,13 @@ public class PracticeDirector : MonoBehaviour
 
     void Update()
     {
+        if (!_sessionOver && !_ended && Time.time >= _sessionEndTime) FlagSession();
+
         _tick -= Time.deltaTime;
         if (_tick > 0f) return;
         _tick = 1f;
+        // Nobody new goes out under the chequered flag.
+        if (_sessionOver) return;
 
         int onTrack = 0;
         for (int i = _stints.Count - 1; i >= 0; i--)
@@ -121,12 +142,28 @@ public class PracticeDirector : MonoBehaviour
         }
     }
 
+    // The clock has run out. Every car on track runs the lap it is on and comes in; the player's car is
+    // brought home by SessionEndPitIn, which ends the session once the driver is out of it.
+    void FlagSession()
+    {
+        _sessionOver = true;
+        for (int i = 0; i < _stints.Count; i++)
+            if (_stints[i] != null) _stints[i].EndAfterThisLap();
+        _wrapUp = SessionEndPitIn.Begin(this);
+    }
+
     // ---- Advancing the session ----
 
     // Advance the weekend: practice → qualifying; qualifying → capture the grid → race. Each step
     // reloads the scene; the race then runs the normal pre-grid → formation → green flow.
     public void StartRace()
     {
+        // Once only: the clock's wrap-up and the pause menu can both end the session, and a second go would
+        // walk a routed session on into the standalone flow's next step.
+        if (_ended) return;
+        _ended = true;
+        if (_wrapUp != null) _wrapUp.MarkClosed();
+
         // Qualifying always publishes its grid, however the session was reached.
         if (_isQualifying) CaptureGrid();
 
@@ -166,7 +203,7 @@ public class PracticeDirector : MonoBehaviour
     {
         get
         {
-            if (Instance == null || !Instance.enabled) return null;
+            if (Instance == null || !Instance.enabled || Instance._ended) return null;
             if (WeekendRouted) return "END SESSION";
             return Instance._isQualifying ? "START RACE" : "QUALIFYING";
         }
@@ -262,12 +299,14 @@ public class PracticeDirector : MonoBehaviour
 
     void OnGUI()
     {
-        if (!_isQualifying) return;
+        if (_ended) return;
 
-        float remaining = _qualiEndTime - Time.time;
-        string text = remaining > 0f
-            ? $"QUALIFYING  {Mathf.FloorToInt(remaining / 60f)}:{Mathf.FloorToInt(remaining % 60f):00}"
-            : $"QUALIFYING COMPLETE · {InputGlyphs.Label("ESC", Draftmaster.Controls.PadBindings.Pause)} TO START THE RACE";
+        float remaining = _sessionEndTime - Time.time;
+        string text = !_sessionOver
+            ? $"{(_isQualifying ? "QUALIFYING" : "PRACTICE")}  {Mathf.FloorToInt(Mathf.Max(0f, remaining) / 60f)}:{Mathf.FloorToInt(Mathf.Max(0f, remaining) % 60f):00}"
+            : _wrapUp != null && _wrapUp.AIDriving ? "CHEQUERED FLAG · BRINGING YOU IN"
+            : _wrapUp != null && _wrapUp.OnPitRoad ? "CHEQUERED FLAG · STOP IN YOUR BOX"
+            : "CHEQUERED FLAG · FINISH THE LAP OR PIT";
 
         // Up in the corner itself now. It used to be pushed down to clear the red session button that sat
         // above it, and that button is gone.
@@ -287,7 +326,7 @@ public class PracticeDirector : MonoBehaviour
         var prevAlign = style.alignment;
         var prevColour = style.normal.textColor;
         style.alignment = TextAnchor.MiddleCenter;
-        style.normal.textColor = remaining > 0f ? PixelGUI.Gold : PixelGUI.Confirm;
+        style.normal.textColor = !_sessionOver ? PixelGUI.Gold : PixelGUI.Confirm;
         GUI.Label(box, text, style);
         style.alignment = prevAlign;
         style.normal.textColor = prevColour;
