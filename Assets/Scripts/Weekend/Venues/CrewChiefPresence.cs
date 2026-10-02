@@ -16,6 +16,8 @@ using UnityEngine;
 // They are also the same person to look at. The venue host is the one the player meets first and most, so
 // his look is the man's look, and the pit-box body is dressed as him. If the chief's PlacedNPC marker carries
 // an authored wardrobe, that was somebody choosing what the chief looks like, so the host wears it first.
+// Over the top of it, both of him wear the team's kit — the colours of the player's car, like the crew he
+// runs (TeamUniform: shirt, trousers, cap; his face and hair stay his).
 //
 // Self-installing from WeekendVenueSites, on its own object rather than either body: switching a body off
 // would stop anything living on it.
@@ -26,6 +28,7 @@ public class CrewChiefPresence : MonoBehaviour
     WeekendVenueHost _host;
     NPCInteractable _pitBox;
     bool _dressed;
+    bool _kitted;
     float _timer;
 
     // Which of the two should be standing, given whether the player's session is running. Pure, so the rule
@@ -46,9 +49,10 @@ public class CrewChiefPresence : MonoBehaviour
         if (_host == null) return;   // no venue host: the pit-box chief is the only one anyway
 
         var marker = PlacedNPC.Find(PlacedNPC.Role.CrewChief);
-        if (_pitBox == null && marker != null) { _pitBox = marker.Interactable; _dressed = false; }
+        if (_pitBox == null && marker != null) { _pitBox = marker.Interactable; _dressed = false; _kitted = false; }
 
         if (_pitBox != null && !_dressed) _dressed = DressAlike(marker);
+        if (!_kitted && (_pitBox == null || _dressed)) _kitted = WearTeamKit();
 
         bool atPitBox = PitBoxOnDuty(RaceWeekend.SessionLive, _pitBox != null);
 
@@ -70,6 +74,22 @@ public class CrewChiefPresence : MonoBehaviour
         foreach (var host in FindObjectsByType<WeekendVenueHost>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             if (host.venue == WeekendVenue.PitBox) return host;
         return null;
+    }
+
+    // Both bodies in the colours of the player's car. Runs after DressAlike, which rebuilds the outfits it
+    // copies. True once done; false while the player's car cannot be found yet.
+    bool WearTeamKit()
+    {
+        var human = PlayerVehicleController.Human;
+        var car = human != null ? human.gameObject : CarIdentity.FindPlayerCar();
+        if (car == null) return false;
+
+        CarColours.For(car, out Color primary, out Color secondary);
+        var hostLook = _host.GetComponent<NPCLayeredAppearance>();
+        if (hostLook != null) hostLook.WearTeamColours(primary, secondary);
+        var pitLook = _pitBox != null ? _pitBox.GetComponentInChildren<NPCLayeredAppearance>(true) : null;
+        if (pitLook != null) pitLook.WearTeamColours(primary, secondary);
+        return true;
     }
 
     // The venue host's body is a paper doll on its own root (PaddockPerson); copy what it is wearing onto the

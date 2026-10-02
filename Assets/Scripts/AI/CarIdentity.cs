@@ -47,6 +47,31 @@ public static class CarIdentity
         return -1;
     }
 
+    // "cup26livery8" -> "cup26". Null when the name isn't a livery.
+    public static string CarsetFromSpriteName(string spriteName)
+    {
+        if (string.IsNullOrEmpty(spriteName)) return null;
+        int at = spriteName.IndexOf("livery", System.StringComparison.OrdinalIgnoreCase);
+        return at > 0 ? spriteName.Substring(0, at) : null;
+    }
+
+    // The carset this GameObject is painted from, read the same way as NumberOf. Null when it wears no
+    // carset livery.
+    public static string CarsetOf(GameObject car)
+    {
+        if (car == null) return null;
+
+        var damage = car.GetComponentInChildren<VehicleDamage>();
+        if (damage != null && damage.sourceSprite != null)
+        {
+            string c = CarsetFromSpriteName(damage.sourceSprite.name);
+            if (c != null) return c;
+        }
+
+        var sr = car.GetComponentInChildren<SpriteRenderer>();
+        return sr != null && sr.sprite != null ? CarsetFromSpriteName(sr.sprite.name) : null;
+    }
+
     // The human's car: the one running the dynamic model without an AI input driver bolted on.
     // Call before the AI field spawns and it's the only candidate in the scene. Inactive objects are
     // included because the controller is disabled whenever the player is parked or on foot.

@@ -17,15 +17,23 @@ public static class PitBoxCars
     // up with anything that changes while still costing nothing when forty boxes all ask at once.
     const float RescanInterval = 0.25f;
 
-    static readonly Dictionary<int, DriverLabel> _byBox = new();
+    static readonly Dictionary<int, GameObject> _byBox = new();
     static float _scannedAt = float.NegativeInfinity;
 
     // The car assigned to a box, or null while nothing has claimed it yet.
-    public static DriverLabel Label(int boxIndex)
+    public static GameObject Car(int boxIndex)
     {
         if (boxIndex < 0) return null;
         Rescan();
-        return _byBox.TryGetValue(boxIndex, out var label) && label != null ? label : null;
+        return _byBox.TryGetValue(boxIndex, out var car) && car != null ? car : null;
+    }
+
+    // The label of the car assigned to a box, or null while nothing has claimed it (or the car has no
+    // label — the player's car only gets one when TeamSwitchController is in the scene).
+    public static DriverLabel Label(int boxIndex)
+    {
+        var car = Car(boxIndex);
+        return car != null ? car.GetComponent<DriverLabel>() : null;
     }
 
     static void Rescan()
@@ -37,14 +45,15 @@ public static class PitBoxCars
         foreach (var driver in Object.FindObjectsByType<SplineDriver>(FindObjectsSortMode.None))
         {
             if (driver == null || driver.qualifyingPosition < 0) continue;
-            var label = driver.GetComponent<DriverLabel>();
-            if (label != null) _byBox[driver.qualifyingPosition] = label;
+            if (driver.GetComponent<DriverLabel>() != null) _byBox[driver.qualifyingPosition] = driver.gameObject;
         }
 
+        // Not "the first PlayerVehicleController in the scene": the dynamic AI drive one too, so that handed
+        // the player's box to whichever AI car Unity happened to list first, and its crew wore that car.
         if (PitLane.PlayerBox >= 0)
         {
-            var player = Object.FindFirstObjectByType<PlayerVehicleController>();
-            var own = player != null ? player.GetComponent<DriverLabel>() : null;
+            var human = PlayerVehicleController.Human;
+            var own = human != null ? human.gameObject : CarIdentity.FindPlayerCar();
             if (own != null) _byBox[PitLane.PlayerBox] = own;
         }
     }

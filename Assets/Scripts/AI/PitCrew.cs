@@ -290,8 +290,8 @@ public class PitCrewBox : MonoBehaviour
     [Tooltip("Send the crew round for the left side after this long (s) even if a wheel man never got his wheel on, so one member who cannot reach his corner can't strand the stop on one side.")]
     public float sideChangeTimeout = 4f;
 
-    [Tooltip("How long (s) to keep looking for the car assigned to this box before leaving the crew in their own clothes. The grid spawns over several frames and is re-parked afterwards, so a box is usually built before its car exists.")]
-    public float resolveWindow = 8f;
+    [Tooltip("How often (s) the crew check who is racing out of their box once they are dressed, and change kit when the box changes hands — the next championship's field taking over pit road.")]
+    public float redressInterval = 0.5f;
     [Tooltip("Give up on an announced arrival after this long (s) and put the board back up. A car that called the box and then wrecked, pitted through, or ran out of race must not leave a man standing in the lane holding a sign forever.")]
     public float approachTimeout = 30f;
 
@@ -343,24 +343,32 @@ public class PitCrewBox : MonoBehaviour
     // what says whose stop this is when the field is all in the lane at once. The car is not there yet when
     // the box is built, so keep asking until it is (PitBoxCars answers everyone from one shared scan).
     //
+    // And keep asking after that. A weekend hands pit road from one championship to the next inside one
+    // scene, and when the next field needs the same number of boxes the crews are not rebuilt — so a box
+    // that dressed once and stopped looking stood the Cup car's crew in the trucks' colours. Whoever is in
+    // the box now is who they wear.
+    //
     // If nothing ever claims the box, the crew keep the outfit they rolled — a paddock face in their own
     // clothes reads better than five people washed the fallback grey.
     IEnumerator DressCrew()
     {
-        float giveUpAt = Time.time + Mathf.Max(0f, resolveWindow);
-        while (Time.time <= giveUpAt)
+        GameObject dressedFor = null;
+        var wait = new WaitForSeconds(Mathf.Max(0.05f, redressInterval));
+        while (true)
         {
-            var label = PitBoxCars.Label(_boxIndex);
-            if (label != null)
+            var car = PitBoxCars.Car(_boxIndex);
+            if (car != null && car != dressedFor)
             {
-                CarColours.For(label, out _primary, out _secondary);
+                dressedFor = car;
+                CarColours.For(car, out _primary, out _secondary);
                 _dressed = true;
                 for (int i = 0; i < _members.Count; i++)
                     if (_members[i] != null) _members[i].WearTeamColours(_primary, _secondary);
                 if (_signMan != null) _signMan.WearTeamColours(_primary, _secondary);
-                yield break;
             }
-            yield return null;
+            // Fast until the first car turns up, so the crew are in kit by the time anyone looks at them.
+            if (dressedFor == null) yield return null;
+            else yield return wait;
         }
     }
 

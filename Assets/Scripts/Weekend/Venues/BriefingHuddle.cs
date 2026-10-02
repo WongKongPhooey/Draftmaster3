@@ -326,14 +326,17 @@ public class BriefingHuddle : MonoBehaviour
         return new Vector2(v.x * c - v.y * sn, v.x * sn + v.y * c);
     }
 
-    // The car's colours, as the crew on pit road wear them. The player's car may not have claimed its box
-    // yet when the briefing starts, so keep asking until it has; until then they wear what they rolled.
+    // The car's colours, as the crew on pit road wear them. Read off the player's car itself, not off their
+    // pit box: the briefing is a meeting, and nothing is on pit road during one, so PitLane has no player
+    // box to ask about and the crew stood round the chief in whatever they had rolled. Keep asking until
+    // the car is found; until then they wear what they rolled.
     void Dress()
     {
-        var label = PitBoxCars.Label(PitLane.PlayerBox);
-        if (label == null) return;
+        var car = PlayerVehicleController.Human;
+        var playerCar = car != null ? car.gameObject : CarIdentity.FindPlayerCar();
+        if (playerCar == null) return;
 
-        CarColours.For(label, out Color primary, out Color secondary);
+        CarColours.For(playerCar, out Color primary, out Color secondary);
         foreach (var body in _crew)
         {
             var look = body != null ? body.GetComponent<NPCLayeredAppearance>() : null;

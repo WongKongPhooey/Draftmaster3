@@ -86,7 +86,24 @@ public class CarColours : ScriptableObject
     public static void For(DriverLabel label, out Color primary, out Color secondary)
     {
         if (label == null) For("", -1, "", out primary, out secondary);
-        else For(label.carset, label.carNumber, label.teamName, out primary, out secondary);
+        else For(label.gameObject, out primary, out secondary);
+    }
+
+    // The colours of the paint a car is actually wearing. The paint wins over its label: the player's label
+    // is filled in from GridSpawner's default carset, not from what they are driving, so a player in a
+    // truck or a re-painted single-race car read as some other team's Cup car. The label is the fallback for
+    // a car with no carset livery, and is where the team name comes from either way.
+    public static void For(GameObject car, out Color primary, out Color secondary)
+    {
+        var label = car != null ? car.GetComponent<DriverLabel>() : null;
+        string carset = CarIdentity.CarsetOf(car);
+        int number = CarIdentity.NumberOf(car);
+        if (carset == null || number < 0)
+        {
+            carset = label != null ? label.carset : "";
+            number = label != null ? label.carNumber : -1;
+        }
+        For(carset, number, label != null ? label.teamName : "", out primary, out secondary);
     }
 
     public Entry Find(string carset, int carNumber, string teamName)

@@ -130,11 +130,114 @@ public class PitCrewUniformTests
     public void A_crew_box_paints_itself_from_the_car_in_it()
     {
         string source = Source("Scripts/AI/PitCrew.cs");
-        StringAssert.Contains("PitBoxCars.Label", source,
+        StringAssert.Contains("PitBoxCars.Car", source,
                               "The crew have to find the car assigned to their box before they can wear it.");
         StringAssert.Contains("CarColours.For", source,
                               "The colours are the car's, from CarColours — the same table the pit box stand reads.");
         StringAssert.Contains("WearTeamColours", source, "...and then the crew have to actually be dressed in them.");
+    }
+
+    [Test]
+    public void The_players_box_is_found_by_the_human_car_not_by_the_first_controller_in_the_scene()
+    {
+        // The dynamic AI drive a PlayerVehicleController too, so "the first one Unity lists" is usually an AI
+        // car — and the player's crew wore its colours.
+        string source = Source("Scripts/AI/PitBoxCars.cs");
+        StringAssert.DoesNotContain("FindFirstObjectByType<PlayerVehicleController>", source);
+        StringAssert.Contains("PlayerVehicleController.Human", source);
+    }
+
+    [Test]
+    public void The_player_crew_off_pit_road_wear_the_players_car()
+    {
+        // The briefing is a meeting: no field is out, so there is no player pit box to ask about. The crew
+        // round the chief, and the chief himself, read the car.
+        string huddle = Source("Scripts/Weekend/Venues/BriefingHuddle.cs");
+        StringAssert.DoesNotContain("PitBoxCars.Label(PitLane.PlayerBox)", huddle);
+        StringAssert.Contains("CarColours.For(playerCar", huddle);
+
+        string chief = Source("Scripts/Weekend/Venues/CrewChiefPresence.cs");
+        StringAssert.Contains("WearTeamColours", chief, "The crew chief is crew: he wears the car too.");
+    }
+
+    [Test]
+    public void A_carset_is_read_off_a_livery_name()
+    {
+        var read = Runtime("CarIdentity").GetMethod("CarsetFromSpriteName");
+        Assert.AreEqual("cup26", read.Invoke(null, new object[] { "cup26livery8" }));
+        Assert.AreEqual("cts25", read.Invoke(null, new object[] { "cts25livery21alt1" }));
+        Assert.IsNull(read.Invoke(null, new object[] { "PlayerCarSprite" }));
+        Assert.IsNull(read.Invoke(null, new object[] { "livery8" }), "No carset in front of the token.");
+    }
+
+    [Test]
+    public void A_cars_colours_come_from_the_paint_it_is_wearing_before_its_label()
+    {
+        // The player's label is filled from GridSpawner's default carset, not from what they drive. The
+        // paintwork is what the player sees, so that is what the crew wear.
+        Type coloursType = Runtime("CarColours");
+        Type entryType = coloursType.GetNestedType("Entry");
+        var table = ScriptableObject.CreateInstance(coloursType);
+        var entries = (System.Collections.IList)coloursType.GetField("entries").GetValue(table);
+        entries.Add(Entry(entryType, "zz99", 7, Primary, Secondary));
+        entries.Add(Entry(entryType, "cup26", 3, Color.green, Color.yellow));
+
+        var car = new GameObject("Car");
+        var tex = Sheet("paint");
+        var sprite = Sprite.Create(tex, new Rect(0, 0, 8, 8), new Vector2(0.5f, 0.5f));
+        sprite.name = "zz99livery7";
+        try
+        {
+            car.AddComponent<SpriteRenderer>().sprite = sprite;
+            Type labelType = Runtime("DriverLabel");
+            var label = car.AddComponent(labelType);
+            labelType.GetField("carset").SetValue(label, "cup26");
+            labelType.GetField("carNumber").SetValue(label, 3);
+
+            SetTable(coloursType, table);
+            var forCar = coloursType.GetMethod("For", new[] { typeof(GameObject), typeof(Color).MakeByRefType(), typeof(Color).MakeByRefType() });
+            Assert.IsNotNull(forCar, "CarColours.For(GameObject, out, out) reads a car's colours off its paint.");
+            var args = new object[] { car, null, null };
+            forCar.Invoke(null, args);
+            Assert.AreEqual(Primary, (Color)args[1], "The paint says zz99 #7; the label's cup26 #3 is stale.");
+            Assert.AreEqual(Secondary, (Color)args[2]);
+
+            // No livery on the car: the label is all there is to go on.
+            car.GetComponent<SpriteRenderer>().sprite = null;
+            args = new object[] { car, null, null };
+            forCar.Invoke(null, args);
+            Assert.AreEqual(Color.green, (Color)args[1]);
+        }
+        finally
+        {
+            coloursType.GetMethod("Forget").Invoke(null, null);
+            UnityEngine.Object.DestroyImmediate(car);
+            UnityEngine.Object.DestroyImmediate(sprite);
+            UnityEngine.Object.DestroyImmediate(tex);
+            UnityEngine.Object.DestroyImmediate(table);
+        }
+    }
+
+    static object Entry(Type entryType, string carset, int number, Color primary, Color secondary)
+    {
+        var e = Activator.CreateInstance(entryType);
+        entryType.GetField("carset").SetValue(e, carset);
+        entryType.GetField("carNumber").SetValue(e, number);
+        entryType.GetField("primary").SetValue(e, primary);
+        entryType.GetField("secondary").SetValue(e, secondary);
+        return e;
+    }
+
+    // CarColours loads its table from Resources; point it at a test table instead.
+    static void SetTable(Type coloursType, ScriptableObject table)
+    {
+        const BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic;
+        var instance = coloursType.GetField("_instance", flags);
+        var looked = coloursType.GetField("_looked", flags);
+        Assert.IsNotNull(instance, "CarColours._instance has been renamed; this test is written against it.");
+        Assert.IsNotNull(looked, "CarColours._looked has been renamed; this test is written against it.");
+        instance.SetValue(null, table);
+        looked.SetValue(null, true);
     }
 
     static string Source(string relative)
