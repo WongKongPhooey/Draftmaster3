@@ -71,6 +71,9 @@ public class PackRaceSimTests
         public float stopCarAt = -1f;           // >= 0: car 0 stops dead once it reaches this distance on lap 2
         public bool respectYellows = true;
         public int traceYellowLines;            // > 0: log cars closing on the stopped car
+        public Dictionary<string, object> input; // SplineInputDriver field overrides
+        public int seed = 7;                     // roster shuffle and ratings
+        public bool traceOffs;                   // log each off's last two seconds, step by step
     }
 
     static float Get(Component c, string prop) => (float)c.GetType().GetProperty(prop).GetValue(c);
@@ -96,6 +99,28 @@ public class PackRaceSimTests
     [Explicit("Diagnostic: a pack of AI racing at Watkins Glen as the game now sets it up.")]
     [Test]
     public void WatkinsGlen() => Log("current", Run("WatkinsGlen", new Settings()));
+
+    [Explicit("Diagnostic: step-by-step lead-up to each off in the pack, yaw damping on.")]
+    [Test]
+    public void WatkinsGlenTraceOffs() => Log("trace offs", Run("WatkinsGlen", new Settings { seed = 2, traceOffs = true }));
+
+    [Explicit("Diagnostic: the pack with the steering's yaw damping off and on, across rosters.")]
+    [TestCase(false, 1)] [TestCase(true, 1)]
+    [TestCase(false, 2)] [TestCase(true, 2)]
+    [TestCase(false, 3)] [TestCase(true, 3)]
+    [TestCase(false, 7)] [TestCase(true, 7)]
+    [TestCase(false, 11)] [TestCase(true, 11)]
+    [TestCase(false, 12)] [TestCase(true, 12)]
+    [TestCase(false, 13)] [TestCase(true, 13)]
+    [TestCase(false, 14)] [TestCase(true, 14)]
+    [TestCase(false, 15)] [TestCase(true, 15)]
+    [TestCase(false, 16)] [TestCase(true, 16)]
+    public void WatkinsGlenYawDamping(bool damping, int seed) =>
+        Log($"yaw damping {(damping ? "on" : "off")} seed {seed}", Run("WatkinsGlen", new Settings
+        {
+            input = damping ? null : new Dictionary<string, object> { { "yawRateGain", 0f } },
+            seed = seed,
+        }));
 
     [Explicit("Diagnostic: the pack with a candidate draft, before writing it to the vehicle asset.")]
     [TestCase(30f, 80f, 10f, 2.2f, 0.08f)]
@@ -185,7 +210,7 @@ public class PackRaceSimTests
         var bindingType = Runtime("AIDriverBinding");
         float minCommit = (float)bindingType.GetField("MinCornerCommitment").GetValue(null);
 
-        UnityEngine.Random.InitState(7);
+        UnityEngine.Random.InitState(set.seed);
         int n = set.cars;
         var splines = new Component[n];
         var pvcs = new Component[n];
@@ -227,6 +252,7 @@ public class PackRaceSimTests
             Set(pvc, "impactDebris", false);
 
             var input = go.AddComponent(inputType);
+            if (set.input != null) foreach (var kv in set.input) Set(input, kv.Key, kv.Value);
             var racing = go.AddComponent(racingType);
 
             // What AIDriverBinding.Apply does with a driver's ratings.
@@ -273,6 +299,9 @@ public class PackRaceSimTests
         var lapStart = new float[n];
         var best = new float[n];
         var wasOn = new bool[n];
+        var history = new Queue<string>[n];
+        for (int i = 0; i < n; i++) history[i] = new Queue<string>();
+        var pathAhead = splineType.GetMethod("PathPointAhead");
         for (int i = 0; i < n; i++) { lastD[i] = (float)distProp.GetValue(splines[i]); lapStart[i] = -1f; best[i] = float.MaxValue; wasOn[i] = true; }
         var progress = new float[n];
         var order = new int[n];
@@ -358,7 +387,34 @@ public class PackRaceSimTests
                 leaderLaps = Mathf.Max(leaderLaps, lapsDone[i]);
 
                 bool on = (bool)onLegal.Invoke(null, new object[] { track, _cars[i].transform.position, 1f });
-                if (!on && wasOn[i] && lapsDone[i] >= 1) r.offs++;
+                if (set.traceOffs && step % 3 == 0)
+                {
+                    // Where the car sits against its own planned line (m, + = left of it).
+                    var tr = ((Component)track).transform;
+                    Vector2 p0 = (Vector2)pathAhead.Invoke(splines[i], new object[] { 0f });
+                    Vector2 p1 = (Vector2)pathAhead.Invoke(splines[i], new object[] { 3f });
+                    Vector2 w0 = tr.TransformPoint(p0), w1 = tr.TransformPoint(p1);
+                    Vector2 tg = (w1 - w0).normalized;
+                    float off = Vector2.Dot((Vector2)_cars[i].transform.position - w0, new Vector2(-tg.y, tg.x));
+                    history[i].Enqueue($"    t{t:0.00} d{d:0.0} {Get(splines[i], "CurrentMph"):0.0} mph lat {Get(splines[i], "LateralOnTrack"):0.0} " +
+                        $"tac {(float)splineType.GetField("tacticalLateralOffset").GetValue(splines[i]):0.00} carOff {off:0.00} " +
+                        $"st {Get(inputs[i], "LastSteer"):0.00} th {Get(inputs[i], "LastThrottle"):0.00} br {Get(inputs[i], "LastBrake"):0.00} " +
+                        $"yaw {Get(pvcs[i], "YawRateDeg"):0.0} slip {Get(pvcs[i], "SlipAngleDeg"):0.0} tow {(float)towProp.GetValue(pvcs[i]):0.00}{(on ? "" : " OFF")}");
+                    while (history[i].Count > 40) history[i].Dequeue();
+                }
+                if (!on && wasOn[i] && lapsDone[i] >= 1 && set.traceOffs && r.lines.Count < 400)
+                {
+                    r.lines.Add($"  Car{i:D2} off, lead-up:");
+                    r.lines.AddRange(history[i]);
+                }
+                if (!on && wasOn[i] && lapsDone[i] >= 1)
+                {
+                    r.offs++;
+                    if (set.traceLines == 0 && set.traceYellowLines == 0 && r.lines.Count < 60)
+                        r.lines.Add($"  off: t{t:0.0} Car{i:D2} lap {lapsDone[i]} d{d:0} lat {Get(splines[i], "LateralOnTrack"):0.0} " +
+                                    $"tac {(float)splineType.GetField("tacticalLateralOffset").GetValue(splines[i]):0.0} " +
+                                    $"slip {Get(pvcs[i], "SlipAngleDeg"):0.0} {Get(splines[i], "CurrentMph"):0} mph");
+                }
                 wasOn[i] = on;
             }
             if (leaderLaps > set.laps) break;

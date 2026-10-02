@@ -72,6 +72,10 @@ public class AILapSimTests
         public readonly List<Incident> incidents = new List<Incident>();
         public float maxSlip;
         public float maxBrainGap;   // metres between the brain's track distance and where the car really is
+        // How jerky the driving looks: the steering command's rate of change and the car's yaw acceleration,
+        // RMS and 99th percentile over the timed laps. A car snapping straight out of a corner shows up as
+        // yaw-acceleration spikes; a smooth driver unwinds the lock progressively.
+        public float steerRateRms, steerRateP99, yawAccelRms, yawAccelP99;
         public readonly StringBuilder trace = new StringBuilder();
     }
 
@@ -175,6 +179,16 @@ public class AILapSimTests
         Debug.Log(sb.ToString());
     }
 
+    [Test]
+    [Explicit("Diagnostic: writes one race-pace lap of Watkins Glen, every physics step, to Temp/AISmoothTrace.csv.")]
+    public void SmoothnessTrace()
+    {
+        var csv = new StringBuilder("d,v,steer,yawRate,plannedYawRate,noseErr,slip,radius\n");
+        var r = Drive(2, pace: TopAIPace, csvLap: 1, csv: csv);
+        System.IO.File.WriteAllText("Temp/AISmoothTrace.csv", csv.ToString());
+        Debug.Log(Report("[LapSim] smoothness trace written", r));
+    }
+
     // The fastest pace a real AI car is handed: the best driver's 1.04 x TrackConditions.AiPaceMultiplier
     // (1.2), which is what AIRacingBehaviour writes into SplineDriver.paceMultiplier every frame.
     const float TopAIPace = 1.04f * 1.2f;
@@ -220,6 +234,52 @@ public class AILapSimTests
             string report = Report(System.IO.Path.GetFileNameWithoutExtension(path), r);
             sb.AppendLine().Append("  ").Append(report.Replace('\n', '|'));
         }
+        Debug.Log(sb.ToString());
+    }
+
+    [Test]
+    [Explicit("Diagnostic: every venue at race pace with and without yaw damping; pace, incidents and jerk side by side.")]
+    public void EveryTrackYawDamping()
+    {
+        var sb = new StringBuilder("[LapSim] every track, yaw damping off | on");
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            sb.AppendLine().Append("  ").Append(System.IO.Path.GetFileNameWithoutExtension(path));
+            foreach (float yaw in new[] { 0f, 0.5f })
+            {
+                Despawn();
+                SpawnTrack(path);
+                var r = Drive(2, new Dictionary<string, object> { { "yawRateGain", yaw } }, pace: TopAIPace);
+                sb.AppendLine().Append("    ").Append(Report($"yaw {yaw:0.0}", r).Replace('\n', '|'));
+            }
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Test]
+    [Explicit("Diagnostic: Watkins Glen at its CALIBRATED AI grip and pace (what a session really runs), yaw damping swept.")]
+    public void CalibratedYawDamping()
+    {
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var sb = new StringBuilder("[LapSim] calibrated Watkins Glen, yaw damping");
+        try
+        {
+            calib.Invoke(null, new object[] { "WatkinsGlen" });
+            float aiPace = (float)Runtime("TrackConditions").GetField("AiPaceMultiplier").GetValue(null);
+            foreach (float tac in new[] { 0f, -2.8f, 2.8f })
+            foreach (float yaw in new[] { 0f, 0.5f })
+            foreach (float pace in new[] { 0.93f, 1.04f })
+            foreach (float lf in new[] { -0.05f, 0.08f })
+            {
+                // A held tactical offset is a car sitting on a passing line, which is where pack cars go off.
+                Despawn(); SpawnTrack();
+                var r = Drive(3, new Dictionary<string, object> { { "yawRateGain", yaw } }, pace: pace * aiPace, lineFactor: lf,
+                              splineOverrides: new Dictionary<string, object> { { "tacticalLateralOffset", tac } });
+                sb.Append("\n  ").Append(Report($"tac {tac:0.0} yaw {yaw:0.00} pace {pace * aiPace:0.00} line {lf:0.00}", r).Replace('\n', '|'));
+            }
+        }
+        finally { calib.Invoke(null, new object[] { "" }); }
         Debug.Log(sb.ToString());
     }
 
@@ -277,7 +337,8 @@ public class AILapSimTests
     static string Report(string title, Result r)
     {
         var sb = new StringBuilder(title);
-        sb.Append($": laps {string.Join(", ", r.lapTimes.ConvertAll(t => t.ToString("0.00")))} s, max slip {r.maxSlip:0.0}°, {r.incidents.Count} incidents");
+        sb.Append($": laps {string.Join(", ", r.lapTimes.ConvertAll(t => t.ToString("0.00")))} s, max slip {r.maxSlip:0.0}°, {r.incidents.Count} incidents, " +
+                  $"steer rate rms {r.steerRateRms:0.00}/s p99 {r.steerRateP99:0.00}/s, yaw accel rms {r.yawAccelRms:0}°/s² p99 {r.yawAccelP99:0}°/s²");
         foreach (var i in r.incidents)
             sb.Append($"\n  lap {i.lap}: {i.type} at {i.distance:0} m, {i.speed:0.0} m/s, slip {i.slip:0.0}°");
         return sb.ToString();
@@ -286,7 +347,8 @@ public class AILapSimTests
     // One car, built like GridSpawner's practice cars, driven for `laps` flying laps after a run-up.
     Result Drive(int laps, Dictionary<string, object> inputOverrides = null,
                  int traceLap = -99, float traceFrom = 0f, float traceTo = 0f, bool trainedLine = true,
-                 float pace = 1f, float lineFactor = 0f, Dictionary<string, object> splineOverrides = null)
+                 float pace = 1f, float lineFactor = 0f, Dictionary<string, object> splineOverrides = null,
+                 int csvLap = -99, StringBuilder csv = null)
     {
         var trackType = Runtime("TrackBuilder");
         var track = _package.GetComponentInChildren(trackType, true);
@@ -354,6 +416,11 @@ public class AILapSimTests
         var profProp = inputType.GetProperty("LastProfileMps");
         var capProp = inputType.GetProperty("LastGripCapMps");
         var radiusAhead = splineType.GetMethod("CurvatureRadiusAhead");
+        var yawRateProp = pvcType.GetProperty("YawRateDeg");
+        var steerRates = new List<float>();
+        var yawAccels = new List<float>();
+        float prevSteer = 0f, prevYawRate = 0f;
+        bool havePrev = false;
         var inputStep = inputType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var pvcStep = pvcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var splineStep = splineType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -388,6 +455,23 @@ public class AILapSimTests
             float v = (float)speedMps.GetValue(pvc);
             float slip = (float)slipDeg.GetValue(pvc);
             if (lap >= 0) result.maxSlip = Mathf.Max(result.maxSlip, Mathf.Abs(slip));
+            float steerNow = (float)steerProp.GetValue(input), yawRateNow = (float)yawRateProp.GetValue(pvc);
+            if (lap >= 0 && havePrev)
+            {
+                steerRates.Add(Mathf.Abs(steerNow - prevSteer) / dt);
+                yawAccels.Add(Mathf.Abs(yawRateNow - prevYawRate) / dt);
+            }
+            prevSteer = steerNow; prevYawRate = yawRateNow; havePrev = true;
+            if (csv != null && lap == csvLap)
+            {
+                // Planned yaw rate = speed / radius of the line right under the car; the car's own yaw rate
+                // against it shows where the car turns more or less sharply than the line asks.
+                float rHere = (float)radiusAhead.Invoke(spline, new object[] { 2f });
+                csv.AppendFormat(System.Globalization.CultureInfo.InvariantCulture,
+                    "{0:0.00},{1:0.00},{2:0.0000},{3:0.00},{4:0.00},{5:0.00},{6:0.00},{7:0.0}\n",
+                    d, v, steerNow, yawRateNow, rHere < 1e5f ? v / rHere * Mathf.Rad2Deg : 0f,
+                    (float)noseErr.GetValue(input), slip, Mathf.Min(99999f, rHere));
+            }
             if (lap >= 0 && step % 10 == 0)
             {
                 // The brain's point sits PathPointAheadOfCentre in front of the car's centre.
@@ -424,7 +508,20 @@ public class AILapSimTests
                     Mathf.Min(9999f, (float)radiusAhead.Invoke(spline, new object[] { Mathf.Max(8f, v * 0.7f) })));
             }
         }
+        Smoothness(steerRates, out result.steerRateRms, out result.steerRateP99);
+        Smoothness(yawAccels, out result.yawAccelRms, out result.yawAccelP99);
         return result;
+    }
+
+    static void Smoothness(List<float> samples, out float rms, out float p99)
+    {
+        rms = p99 = 0f;
+        if (samples.Count == 0) return;
+        double sum = 0;
+        foreach (var x in samples) sum += x * x;
+        rms = (float)Math.Sqrt(sum / samples.Count);
+        samples.Sort();
+        p99 = samples[Mathf.Min(samples.Count - 1, Mathf.FloorToInt(samples.Count * 0.99f))];
     }
 
     static void Set(object target, string field, object value)

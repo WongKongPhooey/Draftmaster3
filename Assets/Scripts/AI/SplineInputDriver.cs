@@ -18,6 +18,16 @@ public class SplineInputDriver : MonoBehaviour
     public float lowSpeedCutoff = 6f;
     [Tooltip("Derivative damping (s) on the heading error: counters how fast the error is CHANGING, killing the high-frequency tail wiggle of the P-only chase (visible at pace-lap speeds where the weave caps the lookahead short). Acts on the error rate, not raw yaw rate, so steady-state cornering — constant error, constant yaw — is untouched.")]
     public float steerDamping = 0.08f;
+    [Tooltip("Yaw damping (deg of wheel per deg/s): steers against the gap between how fast the car is actually " +
+             "rotating and how fast the pure-pursuit arc from its direction of travel to the aim point asks it to. " +
+             "The heading loop alone let a car at the limit fishtail through fast bends — body slip swinging ±13°, " +
+             "yaw rate +55 to -49°/s in a bend that wants 16 — and snap its nose straight out of a corner as the " +
+             "slide let go. This is the driver's hands catching the rotation before it builds. 0 = off.")]
+    public float yawRateGain = 0.5f;
+    [Tooltip("How much stiffer the heading loop runs while yaw damping is on (multiplies steerGain). Damping is " +
+             "what lets the loop stiffen without weaving; without it a damped car tracked its line more loosely " +
+             "and brushed the edge on passing lines at Watkins Glen (PackRaceSimTests.WatkinsGlenYawDamping).")]
+    public float dampedSteerGainScale = 1.33f;
     [Tooltip("Cross-track correction: steering (as atan(gain × metres off the line / (speed + softening))) back " +
              "toward the planned line in proportion to how far the car sits off it. Pure pursuit alone only aims " +
              "AHEAD — in a long corner the aim point is always toward the inside, so a car already inside its line " +
@@ -211,7 +221,19 @@ public class SplineInputDriver : MonoBehaviour
                     crossDeg = Mathf.Clamp(crossDeg, -crossTrackMaxDeg, crossTrackMaxDeg) * (1f - slide01);
                 }
             }
-            float steerAngleDeg = Mathf.Clamp(headingError * steerGain + errorRate * steerDamping + crossDeg,
+            // Yaw damping. The arc that carries the car to the aim point wants yaw rate 2·v·sin(α)/L, with α
+            // measured from the direction of TRAVEL (nose + body slip): from the nose, a car cornering at 6-9° of
+            // slip reads its aim point as nearly dead ahead, so the damping asked for too little rotation, held
+            // the car a metre wide of its line, and put it off at Watkins Glen's bus stop.
+            float yawDeg = 0f;
+            if (yawRateGain > 0f && !_recovering)
+            {
+                float courseErrorDeg = Mathf.DeltaAngle(_car.HeadingDeg + slipDeg, bearingDeg);
+                float wantYaw = 2f * speed * Mathf.Sin(courseErrorDeg * Mathf.Deg2Rad) / Mathf.Max(toTarget.magnitude, 1f) * Mathf.Rad2Deg;
+                yawDeg = yawRateGain * (wantYaw - _car.YawRateDeg);
+            }
+            float headingGain = yawRateGain > 0f ? steerGain * dampedSteerGainScale : steerGain;
+            float steerAngleDeg = Mathf.Clamp(headingError * headingGain + errorRate * steerDamping + crossDeg + yawDeg,
                                               -maxSteer, maxSteer) * authority;
             // PlayerVehicleController maps desiredSteer = -steerIn * maxSteeringAngle, so invert to request this angle.
             steerInput = -steerAngleDeg / maxSteer;
