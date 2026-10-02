@@ -122,6 +122,24 @@ public class PackRaceSimTests
             seed = seed,
         }));
 
+    [Explicit("Diagnostic: the pack with the slip-limit countersteer and wide-of-line lift off and on, across rosters.")]
+    [TestCase(false, 1)] [TestCase(true, 1)]
+    [TestCase(false, 2)] [TestCase(true, 2)]
+    [TestCase(false, 3)] [TestCase(true, 3)]
+    [TestCase(false, 7)] [TestCase(true, 7)]
+    [TestCase(false, 11)] [TestCase(true, 11)]
+    [TestCase(false, 12)] [TestCase(true, 12)]
+    [TestCase(false, 13)] [TestCase(true, 13)]
+    [TestCase(false, 14)] [TestCase(true, 14)]
+    [TestCase(false, 15)] [TestCase(true, 15)]
+    [TestCase(false, 16)] [TestCase(true, 16)]
+    public void WatkinsGlenSlipLimit(bool on, int seed) =>
+        Log($"slip limit {(on ? "on" : "off")} seed {seed}", Run("WatkinsGlen", new Settings
+        {
+            input = on ? null : new Dictionary<string, object> { { "slipLimitGain", 0f }, { "wideLiftEndMetres", 0f } },
+            seed = seed,
+        }));
+
     [Explicit("Diagnostic: the pack with a candidate draft, before writing it to the vehicle asset.")]
     [TestCase(30f, 80f, 10f, 2.2f, 0.08f)]
     [TestCase(35f, 70f, 12f, 2.8f, 0.10f)]

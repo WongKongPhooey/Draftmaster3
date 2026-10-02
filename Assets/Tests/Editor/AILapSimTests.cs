@@ -76,6 +76,9 @@ public class AILapSimTests
         // RMS and 99th percentile over the timed laps. A car snapping straight out of a corner shows up as
         // yaw-acceleration spikes; a smooth driver unwinds the lock progressively.
         public float steerRateRms, steerRateP99, yawAccelRms, yawAccelP99;
+        // How fast the body slip angle swings: a car fishtailing or snapping its nose back in line with its
+        // direction of travel shows here even where the yaw rate itself looks tame.
+        public float slipRateRms, slipRateP99;
         public readonly StringBuilder trace = new StringBuilder();
     }
 
@@ -258,6 +261,27 @@ public class AILapSimTests
     }
 
     [Test]
+    [Explicit("Diagnostic: every venue at race pace with the slip-limit countersteer and wide lift off and on; pace, incidents and jerk side by side.")]
+    public void EveryTrackSlipLimit()
+    {
+        var sb = new StringBuilder("[LapSim] every track, slip limit off | on");
+        foreach (var guid in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/Resources/TrackPackages" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            sb.AppendLine().Append("  ").Append(System.IO.Path.GetFileNameWithoutExtension(path));
+            foreach (bool on in new[] { false, true })
+            {
+                Despawn();
+                SpawnTrack(path);
+                var r = Drive(2, on ? null : new Dictionary<string, object> { { "slipLimitGain", 0f }, { "wideLiftEndMetres", 0f } },
+                              pace: TopAIPace);
+                sb.AppendLine().Append("    ").Append(Report(on ? "slip gain on" : "slip gain off", r).Replace('\n', '|'));
+            }
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Test]
     [Explicit("Diagnostic: Watkins Glen at its CALIBRATED AI grip and pace (what a session really runs), yaw damping swept.")]
     public void CalibratedYawDamping()
     {
@@ -277,6 +301,54 @@ public class AILapSimTests
                 var r = Drive(3, new Dictionary<string, object> { { "yawRateGain", yaw } }, pace: pace * aiPace, lineFactor: lf,
                               splineOverrides: new Dictionary<string, object> { { "tacticalLateralOffset", tac } });
                 sb.Append("\n  ").Append(Report($"tac {tac:0.0} yaw {yaw:0.00} pace {pace * aiPace:0.00} line {lf:0.00}", r).Replace('\n', '|'));
+            }
+        }
+        finally { calib.Invoke(null, new object[] { "" }); }
+        Debug.Log(sb.ToString());
+    }
+
+    // Candidate SplineInputDriver settings for SmoothingSweep, each a name plus field overrides.
+    static readonly (string name, Dictionary<string, object> o)[] SmoothingCandidates =
+    {
+        ("before: no countersteer, no lift", new Dictionary<string, object> { { "slipLimitGain", 0f }, { "wideLiftEndMetres", 0f } }),
+        ("current", new Dictionary<string, object>()),
+        ("countersteer only", new Dictionary<string, object> { { "wideLiftEndMetres", 0f } }),
+        ("lift only", new Dictionary<string, object> { { "slipLimitGain", 0f } }),
+    };
+
+    [Test]
+    [Explicit("Diagnostic: calibrated Watkins Glen across the field's pace, line and passing-line spread, for each smoothing candidate.")]
+    public void SmoothingSweep()
+    {
+        var calib = Runtime("AIPaceCalibration").GetMethod("ApplyFor");
+        var sb = new StringBuilder("[LapSim] smoothing sweep, calibrated Watkins Glen");
+        try
+        {
+            calib.Invoke(null, new object[] { "WatkinsGlen" });
+            float aiPace = (float)Runtime("TrackConditions").GetField("AiPaceMultiplier").GetValue(null);
+            foreach (var (name, o) in SmoothingCandidates)
+            {
+                int incidents = 0, runs = 0, laps = 0;
+                float lapSum = 0f, yawRms = 0f, yawP99 = 0f, slipRms = 0f, slipP99 = 0f, steerRms = 0f, maxSlip = 0f;
+                var where = new StringBuilder();
+                foreach (float tac in new[] { 0f, -2.8f, 2.8f })
+                foreach (float pace in new[] { 0.93f, 1.04f })
+                foreach (float lf in new[] { -0.05f, 0.08f })
+                {
+                    Despawn(); SpawnTrack();
+                    var r = Drive(3, o, pace: pace * aiPace, lineFactor: lf,
+                                  splineOverrides: new Dictionary<string, object> { { "tacticalLateralOffset", tac } });
+                    runs++;
+                    incidents += r.incidents.Count;
+                    foreach (var i in r.incidents) where.Append($" {i.type}@{i.distance:0}");
+                    foreach (var t in r.lapTimes) { lapSum += t; laps++; }
+                    yawRms += r.yawAccelRms; yawP99 += r.yawAccelP99; slipRms += r.slipRateRms; slipP99 += r.slipRateP99;
+                    steerRms += r.steerRateRms;
+                    maxSlip = Mathf.Max(maxSlip, r.maxSlip);
+                }
+                sb.Append($"\n  {name}:{incidents} incidents{where}, {laps} laps avg {(laps > 0 ? lapSum / laps : 0f):0.00} s, " +
+                          $"yaw accel rms {yawRms / runs:0} p99 {yawP99 / runs:0}, slip rate rms {slipRms / runs:0.0} p99 {slipP99 / runs:0.0}, " +
+                          $"steer rate rms {steerRms / runs:0.00}, max slip {maxSlip:0.0}");
             }
         }
         finally { calib.Invoke(null, new object[] { "" }); }
@@ -338,7 +410,8 @@ public class AILapSimTests
     {
         var sb = new StringBuilder(title);
         sb.Append($": laps {string.Join(", ", r.lapTimes.ConvertAll(t => t.ToString("0.00")))} s, max slip {r.maxSlip:0.0}°, {r.incidents.Count} incidents, " +
-                  $"steer rate rms {r.steerRateRms:0.00}/s p99 {r.steerRateP99:0.00}/s, yaw accel rms {r.yawAccelRms:0}°/s² p99 {r.yawAccelP99:0}°/s²");
+                  $"steer rate rms {r.steerRateRms:0.00}/s p99 {r.steerRateP99:0.00}/s, yaw accel rms {r.yawAccelRms:0}°/s² p99 {r.yawAccelP99:0}°/s², " +
+                  $"slip rate rms {r.slipRateRms:0.0}°/s p99 {r.slipRateP99:0.0}°/s");
         foreach (var i in r.incidents)
             sb.Append($"\n  lap {i.lap}: {i.type} at {i.distance:0} m, {i.speed:0.0} m/s, slip {i.slip:0.0}°");
         return sb.ToString();
@@ -419,7 +492,8 @@ public class AILapSimTests
         var yawRateProp = pvcType.GetProperty("YawRateDeg");
         var steerRates = new List<float>();
         var yawAccels = new List<float>();
-        float prevSteer = 0f, prevYawRate = 0f;
+        var slipRates = new List<float>();
+        float prevSteer = 0f, prevYawRate = 0f, prevSlip = 0f;
         bool havePrev = false;
         var inputStep = inputType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
         var pvcStep = pvcType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -460,8 +534,9 @@ public class AILapSimTests
             {
                 steerRates.Add(Mathf.Abs(steerNow - prevSteer) / dt);
                 yawAccels.Add(Mathf.Abs(yawRateNow - prevYawRate) / dt);
+                slipRates.Add(Mathf.Abs(slip - prevSlip) / dt);
             }
-            prevSteer = steerNow; prevYawRate = yawRateNow; havePrev = true;
+            prevSteer = steerNow; prevYawRate = yawRateNow; prevSlip = slip; havePrev = true;
             if (csv != null && lap == csvLap)
             {
                 // Planned yaw rate = speed / radius of the line right under the car; the car's own yaw rate
@@ -510,6 +585,7 @@ public class AILapSimTests
         }
         Smoothness(steerRates, out result.steerRateRms, out result.steerRateP99);
         Smoothness(yawAccels, out result.yawAccelRms, out result.yawAccelP99);
+        Smoothness(slipRates, out result.slipRateRms, out result.slipRateP99);
         return result;
     }
 

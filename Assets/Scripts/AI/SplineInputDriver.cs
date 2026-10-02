@@ -28,6 +28,22 @@ public class SplineInputDriver : MonoBehaviour
              "what lets the loop stiffen without weaving; without it a damped car tracked its line more loosely " +
              "and brushed the edge on passing lines at Watkins Glen (PackRaceSimTests.WatkinsGlenYawDamping).")]
     public float dampedSteerGainScale = 1.33f;
+    [Tooltip("Body slip (deg) the driver lets the car carry before countersteering against more of it. Steady " +
+             "cornering at the limit runs ~6°.")]
+    public float slipLimitDeg = 7f;
+    [Tooltip("Countersteer (deg of wheel per deg of body slip past slipLimitDeg), wheels toward the direction of " +
+             "travel. The steering aims the car's direction of travel at the line, so as a car at the limit slid " +
+             "wide it kept winding on lock: the body over-rotated to 10-12° of slip, then snapped straight as the " +
+             "nose passed its aim point — the yaw rate swinging from twice what the bend wanted to zero inside one " +
+             "second, which reads as the car straightening up sharply out of a corner. Holding slip near the limit " +
+             "keeps the rotation progressive. 0 = off.")]
+    public float slipLimitGain = 3f;
+    [Tooltip("Metres wide of the planned line, toward the outside of a slide, where the throttle starts to lift, " +
+             "and where it is fully closed. A car that has slid wide is already past what the corner holds; " +
+             "driving on out of it at full lock under power is how a car in a tow left Watkins Glen's last corner " +
+             "(PackRaceSimTests.WatkinsGlenSlipLimit). 0/0 = off.")]
+    public float wideLiftStartMetres = 1f;
+    public float wideLiftEndMetres = 2.5f;
     [Tooltip("Cross-track correction: steering (as atan(gain × metres off the line / (speed + softening))) back " +
              "toward the planned line in proportion to how far the car sits off it. Pure pursuit alone only aims " +
              "AHEAD — in a long corner the aim point is always toward the inside, so a car already inside its line " +
@@ -173,6 +189,7 @@ public class SplineInputDriver : MonoBehaviour
         Vector2 toTarget = (Vector2)targetWorld - (Vector2)transform.position;
         float steerInput = 0f;
         float noseErrorDeg = 0f;
+        float wideLift01 = 0f;
         if (toTarget.sqrMagnitude > 1e-4f)
         {
             float bearingDeg = Mathf.Atan2(toTarget.y, toTarget.x) * Mathf.Rad2Deg;
@@ -184,8 +201,8 @@ public class SplineInputDriver : MonoBehaviour
             else if (_recovering && Mathf.Abs(noseErrorDeg) < recoveryExitDeg) _recovering = false;
 
             // Steering reference blends from the nose to the COURSE (nose + slip) as a slide builds: at full
-            // slide the controller aims the velocity vector at the path — natural countersteer — rather than
-            // adding lock to a nose the tyres have already let go of.
+            // slide the controller aims the velocity vector at the path rather than the nose. Note this ADDS lock
+            // when a car slides wide (velocity outside the nose); slipCatchDeg below is the actual countersteer.
             float refHeadingDeg = _car.HeadingDeg + slipDeg * slide01;
             float headingError = Mathf.DeltaAngle(refHeadingDeg, bearingDeg);
             float authority = Mathf.Clamp01(speed / Mathf.Max(lowSpeedCutoff, 0.1f));
@@ -205,7 +222,8 @@ public class SplineInputDriver : MonoBehaviour
             // catching the car, not placing it.
             float crossDeg = 0f;
             LastCrossTrackMetres = 0f;
-            if (crossTrackGain > 0f && !_recovering)
+            bool haveOffset = false;
+            if ((crossTrackGain > 0f || wideLiftEndMetres > 0f) && !_recovering)
             {
                 Vector2 p0 = _spline.PathPointAhead(0f), p1 = _spline.PathPointAhead(3f);
                 Vector3 w0 = _spline.track.transform.TransformPoint(new Vector3(p0.x, p0.y, 0f));
@@ -217,7 +235,9 @@ public class SplineInputDriver : MonoBehaviour
                     Vector2 left = new Vector2(-t.y, t.x);
                     float offset = Vector2.Dot((Vector2)transform.position - (Vector2)w0, left);
                     LastCrossTrackMetres = offset;
-                    crossDeg = -Mathf.Atan(crossTrackGain * offset / (speed + crossTrackSoftening)) * Mathf.Rad2Deg;
+                    haveOffset = true;
+                    if (crossTrackGain > 0f)
+                        crossDeg = -Mathf.Atan(crossTrackGain * offset / (speed + crossTrackSoftening)) * Mathf.Rad2Deg;
                     crossDeg = Mathf.Clamp(crossDeg, -crossTrackMaxDeg, crossTrackMaxDeg) * (1f - slide01);
                 }
             }
@@ -232,8 +252,18 @@ public class SplineInputDriver : MonoBehaviour
                 float wantYaw = 2f * speed * Mathf.Sin(courseErrorDeg * Mathf.Deg2Rad) / Mathf.Max(toTarget.magnitude, 1f) * Mathf.Rad2Deg;
                 yawDeg = yawRateGain * (wantYaw - _car.YawRateDeg);
             }
+            // Countersteer past the slip limit: wheels toward the velocity, against the extra lock the
+            // course-referenced terms above ask for as the car slides.
+            float slipCatchDeg = 0f;
+            if (slipLimitGain > 0f && !_recovering)
+                slipCatchDeg = Mathf.Sign(slipDeg) * Mathf.Max(0f, Mathf.Abs(slipDeg) - slipLimitDeg) * slipLimitGain;
+            // How far the car has slid wide of its line (the outside of a slide is the side the velocity points).
+            if (haveOffset && wideLiftEndMetres > 0f)
+                wideLift01 = Mathf.InverseLerp(wideLiftStartMetres, Mathf.Max(wideLiftEndMetres, wideLiftStartMetres + 0.01f),
+                                               LastCrossTrackMetres * Mathf.Sign(slipDeg))
+                             * Mathf.InverseLerp(3f, Mathf.Max(slideStartDeg, 3.1f), Mathf.Abs(slipDeg));   // sliding, not just off-line
             float headingGain = yawRateGain > 0f ? steerGain * dampedSteerGainScale : steerGain;
-            float steerAngleDeg = Mathf.Clamp(headingError * headingGain + errorRate * steerDamping + crossDeg + yawDeg,
+            float steerAngleDeg = Mathf.Clamp(headingError * headingGain + errorRate * steerDamping + crossDeg + yawDeg + slipCatchDeg,
                                               -maxSteer, maxSteer) * authority;
             // PlayerVehicleController maps desiredSteer = -steerIn * maxSteeringAngle, so invert to request this angle.
             steerInput = -steerAngleDeg / maxSteer;
@@ -269,7 +299,7 @@ public class SplineInputDriver : MonoBehaviour
         float speedError = commandedMps - speed;
         // A slide cuts throttle (power past saturated rears just rotates the car further) and softens the brake
         // (forward weight transfer unloads the rear mid-slide) — the tyres get their lateral budget back to catch it.
-        float throttle = Mathf.Clamp01(speedError * speedGain) * (1f - slide01);
+        float throttle = Mathf.Clamp01(speedError * speedGain) * (1f - slide01) * (1f - wideLift01);
         float brake = Mathf.Clamp01(-speedError * speedGain) * (1f - slideBrakeCut * slide01);
         if (rearSlipBrakeRelease > 0f)
         {
