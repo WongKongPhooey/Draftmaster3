@@ -173,17 +173,17 @@ public class PracticeDirector : MonoBehaviour
 
         if (!_isQualifying)
         {
-            // Twelve clean laps is a full run sheet; past that the engineers have what they need.
-            float run01 = Mathf.Clamp01(laps / 12f);
-            o.setupGain = run01 * 0.28f;
-            o.teamMorale = Mathf.Lerp(-4f, 8f, run01);
-            o.score = run01;
-            o.statKey = "practicesessions";
-            o.statCount = 1;
-            o.headline = laps == 0
-                ? "Sat in the car and never turned a lap. The engineers have nothing."
-                : $"{laps} laps in the book and a run sheet worth reading.";
-            return o;
+            // Laps buy setup knowledge; laps and where the best one left you on the timesheet together set
+            // the crew's mood. The rules live in PracticeVerdict.
+            int practicePos = 0, practiceField = 0;
+            if (lt != null && player != null && player.bestLap > 0f)
+            {
+                var order = new List<LapTimingManager.CarTimes>();
+                lt.RankByBest(order);
+                practiceField = order.Count;
+                practicePos = order.IndexOf(player) + 1;
+            }
+            return Draftmaster.Weekend.PracticeVerdict.Evaluate(laps, practicePos, practiceField);
         }
 
         // Qualifying: find where the captured grid put the player.
