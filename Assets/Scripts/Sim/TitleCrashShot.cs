@@ -391,7 +391,7 @@ namespace Draftmaster.Sim
 
         // ------------------------------------------------------------------ the field going past first
 
-        // The cars that are only passing through: six to ten of them, three abreast, crossing the slot at
+        // The cars that are only passing through: twelve to twenty of them, three abreast, crossing the slot at
         // racing speed and clear of it before the first car of the accident is due.
         //
         // They are drawn against the lead-in beat's own 0..1 clock rather than choreography time, because
@@ -412,7 +412,7 @@ namespace Draftmaster.Sim
         // heels. What used to be a car every third of a beat is now an empty slot, then the field.
         static TitleCrash.PassPlan[] DrawTraffic(System.Random rng)
         {
-            int n = 6 + rng.Next(5);
+            int n = 12 + rng.Next(9);
             const int Lanes = 3;
 
             // How long one car takes to cross, as a fraction of the beat — one pace for the whole pack.
@@ -421,12 +421,15 @@ namespace Draftmaster.Sim
             // Nose-to-tail distance between two cars in the same lane, and the stagger that produces it. A
             // car crosses `Run` px in `span` of the beat, so `Lanes` stagger steps have to cover the gap.
             const float Run = TitleCrash.CanvasHeight + TitleCrash.PassMarginPx * 2f;
-            float gapPx = Range(rng, 205f, 245f);
+            // Tight enough that twenty of them still go past as one pack (a 3-lane field strings out in
+            // proportion to its size), and wide enough that the wobble below can never close two same-lane cars
+            // to a contact: at worst 190 x (1 - 2 x 0.2/3) = 165 px between centres, 15 px clear of a 150 px car.
+            float gapPx = Range(rng, 190f, 215f);
             float step = gapPx * span / (Run * Lanes);
 
-            // How ragged the ranks are. A quarter of a step either way is enough that the pack isn't drawn
+            // How ragged the ranks are. A fifth of a step either way is enough that the pack isn't drawn
             // on graph paper and small enough that it can never close a same-lane gap to a contact.
-            float wobble = step * 0.25f;
+            float wobble = step * 0.2f;
 
             float laneLeft = TitleCrash.ColumnRightPx + TitleCrash.CarWidthPx * 0.5f + 20f;
             float laneRight = TitleCrash.CanvasWidth - TitleCrash.CarWidthPx * 0.5f - 20f;

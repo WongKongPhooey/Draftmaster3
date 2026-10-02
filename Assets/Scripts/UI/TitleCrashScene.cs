@@ -57,6 +57,10 @@ public class TitleCrashScene : MonoBehaviour
     [Tooltip("Beat zero, in seconds: the field streaming past at racing speed, before the accident arrives " +
              "and before anything has slowed down. Zero skips it and opens on the crash.")]
     public float leadInSeconds = 1.6f;
+    [Tooltip("Seconds of empty track before anything comes into shot, so the logo has started arriving first. " +
+             "The pack is hung off the end of the lead-in, so a bigger pack already starts earlier in it; this " +
+             "is on top of that.")]
+    public float startDelaySeconds = 0.9f;
     [Tooltip("Extra seconds held back on top of the follow the composer solves. The accident normally drops " +
              "in right on the pack's tail, as close behind it as it can get without touching it; this only " +
              "ever opens that gap up. 0 = as tight as it goes.")]
@@ -115,6 +119,13 @@ public class TitleCrashScene : MonoBehaviour
     public int baseSortingOrder = -24;
     [Tooltip("Z the tableau sits at. Behind the canvas plane, in front of the camera's clear colour.")]
     public float depthZ = 0f;
+
+    [Header("Camera shake")]
+    [Tooltip("How far (reference px) the camera is thrown about as the pack goes past, at its peak. The title " +
+             "UI does not move with it: only the track, the cars and everything else in the world shakes.")]
+    public float packShakePx = 3.5f;
+    [Tooltip("How fast the shake jitters (Hz).")]
+    public float packShakeHz = 26f;
 
     [Header("Wiring")]
     [Tooltip("Canvas the reference layout is measured against. Left empty, the title menu's own canvas is used.")]
@@ -185,6 +196,16 @@ public class TitleCrashScene : MonoBehaviour
     // How deep each fold has been pressed so far, 0..1 of its authored severity. The crush only ever
     // deepens, so a frame that has not moved the ramp on has nothing to do.
     float[] _impactCrush = System.Array.Empty<float>();
+
+    // The pack's rumble, 0..1 (strongest with a car crossing the middle of the frame), and the shake currently
+    // on the camera. The canvas rides on the camera (ScreenSpace-Camera), so every car placed off it would ride
+    // the shake too and cancel it out; PxToWorld takes the applied shake back off so the world holds still and
+    // only the view moves.
+    float _rumble;
+    Camera _shakeCam;
+    Vector3 _shakeBase;
+    Vector3 _shakeApplied;
+    float _shakeClock;
 
     float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
     int _plumeNext;              // which impact the next puff rises from
@@ -303,7 +324,7 @@ public class TitleCrashScene : MonoBehaviour
         // clock starts far enough back to cover the whole lead-in AND the gap after it: the crash's own
         // zero is still the moment its first car is due, so nothing in the choreography has to know the
         // beat in front of it exists.
-        _elapsed = -(Follow + Mathf.Max(0f, leadInSeconds));
+        _elapsed = -(Follow + Mathf.Max(0f, leadInSeconds) + Mathf.Max(0f, startDelaySeconds));
         PoseTraffic();
         PoseCars();
         return true;
@@ -348,11 +369,11 @@ public class TitleCrashScene : MonoBehaviour
             var r = _canvasRt.rect;
             var local = new Vector3(r.xMin + (px.x / TitleCrash.CanvasWidth) * r.width,
                                     r.yMin + (px.y / TitleCrash.CanvasHeight) * r.height, 0f);
-            var world = _canvasRt.TransformPoint(local);
+            var world = _canvasRt.TransformPoint(local) - _shakeApplied;
             return new Vector3(world.x, world.y, depthZ);
         }
 
-        var centre = _camera != null ? _camera.transform.position : Vector3.zero;
+        var centre = _camera != null ? _camera.transform.position - _shakeApplied : Vector3.zero;
         float halfW = _camera != null ? _camera.orthographicSize * _camera.aspect : TitleCrash.CanvasWidth * _unit * 0.5f;
         float halfH = _camera != null ? _camera.orthographicSize : TitleCrash.CanvasHeight * _unit * 0.5f;
         return new Vector3(centre.x - halfW + (px.x / TitleCrash.CanvasWidth) * halfW * 2f,
@@ -512,6 +533,7 @@ public class TitleCrashScene : MonoBehaviour
     void PoseTraffic()
     {
         float lead = LeadTime;
+        float rumble = 0f;
 
         for (int i = 0; i < _traffic.Length; i++)
         {
@@ -522,9 +544,44 @@ public class TitleCrashScene : MonoBehaviour
             if (pass.go.activeSelf != pose.inFlight) pass.go.SetActive(pose.inFlight);
             if (!pose.inFlight) continue;
 
+            // Loudest as a car crosses the middle of the frame, nothing as it enters or leaves.
+            float half = TitleCrash.CanvasHeight * 0.5f;
+            rumble = Mathf.Max(rumble, 1f - Mathf.Clamp01(Mathf.Abs(pose.position.y - half) / half));
+
             pass.t.position = PxToWorld(pose.position);
             pass.t.rotation = Quaternion.Euler(0f, 0f, pose.rotation);
         }
+        _rumble = rumble;
+    }
+
+    void LateUpdate()
+    {
+        if (!_built) return;
+        if (_shakeCam == null)
+        {
+            var canvas = _canvasRt != null ? _canvasRt.GetComponentInParent<Canvas>() : null;
+            _shakeCam = canvas != null && canvas.rootCanvas.worldCamera != null ? canvas.rootCanvas.worldCamera : _camera;
+            if (_shakeCam == null) return;
+            _shakeBase = _shakeCam.transform.position;
+        }
+
+        _shakeClock += Time.unscaledDeltaTime * packShakeHz;
+        Vector3 offset = Vector3.zero;
+        if (_rumble > 0f && packShakePx > 0f)
+        {
+            float amp = packShakePx * _unit * _rumble;
+            offset = new Vector3((Mathf.PerlinNoise(_shakeClock, 0.37f) * 2f - 1f) * amp,
+                                 (Mathf.PerlinNoise(0.71f, _shakeClock) * 2f - 1f) * amp, 0f);
+        }
+
+        _shakeCam.transform.position = _shakeBase + offset;
+        _shakeApplied = offset;
+    }
+
+    void OnDisable()
+    {
+        if (_shakeCam != null) _shakeCam.transform.position = _shakeBase;
+        _shakeApplied = Vector3.zero;
     }
 
     // The lead-in's own clock: 0 as the first car goes past, 1 once the last one has cleared the frame. The

@@ -118,6 +118,12 @@ public class TitleTrackBackdrop : MonoBehaviour
         float finishMid = Mathf.Lerp(top, bottom, finishLineAt);
         float finishB = finishMid - finishLineMetres * 0.5f, finishT = finishMid + finishLineMetres * 0.5f;
 
+        // Run every strip a little past the screen's edges, so the title's camera shake (TitleCrashScene, as the
+        // pack goes past) never pulls the clear colour in at a side. Placed after the wall and the finish line
+        // are laid out off the true screen, so neither moves.
+        const float overscanMetres = 1f;
+        left -= overscanMetres; right += overscanMetres; bottom -= overscanMetres; top += overscanMetres;
+
         // Grass and asphalt: world-anchored, UV = metres x density, like the circuits' road and runoff. The tarmac
         // runs on under the barrier to its back face, as it did in the old game: the absorbers are cut-out blocks,
         // and what shows between them should be the track's surface, not a strip of lawn.

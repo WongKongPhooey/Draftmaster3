@@ -110,6 +110,7 @@ public class TitleScreenUI : MonoBehaviour
         MatchLabelsToRows();
 
         DrawContinueSubtitle();
+        DrawVersion();
         _index = rows.Count == 0 ? 0 : Mathf.Clamp(startIndex, 0, rows.Count - 1);
         SetStatus("");
         Redraw();
@@ -391,6 +392,34 @@ public class TitleScreenUI : MonoBehaviour
     {
         foreach (var row in TrackCatalog.All)
             if (row != null && TrackCatalog.HasGeometry(row.Name)) return row.Name;
+        return null;
+    }
+
+    // ------------------------------------------------------------------ the build
+
+    // The line over the logo says which build this is (the Player Settings version), not a fixed "EARLY ALPHA"
+    // that never changed between them — so a screenshot or a bug report carries the version with it.
+    const string VersionLabelName = "Eyebrow";
+
+    void DrawVersion()
+    {
+        foreach (var root in gameObject.scene.GetRootGameObjects())
+        {
+            var label = FindLabel(root.transform, VersionLabelName);
+            if (label == null) continue;
+            label.text = "v" + Application.version;
+            return;
+        }
+    }
+
+    static TextMeshProUGUI FindLabel(Transform t, string name)
+    {
+        if (t.name == name) return t.GetComponent<TextMeshProUGUI>();
+        for (int i = 0; i < t.childCount; i++)
+        {
+            var hit = FindLabel(t.GetChild(i), name);
+            if (hit != null) return hit;
+        }
         return null;
     }
 

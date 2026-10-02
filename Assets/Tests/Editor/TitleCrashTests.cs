@@ -399,17 +399,23 @@ public class TitleCrashTests
             Assert.GreaterOrEqual(shot.TrafficCount, 6,
                                   "Too few cars go past for the lead-in to read as a field.");
 
+            // How close together the cars arrive, not how long the whole field takes: a bigger field is a
+            // longer pack, not a sparser one. Dealt across the whole beat, the cars used to set off about a
+            // tenth of it apart; packed, they are a few hundredths apart.
             float first = float.MaxValue;
             float last = float.MinValue;
             for (int i = 0; i < shot.TrafficCount; i++)
             {
                 first = Mathf.Min(first, shot.traffic[i].atLead);
-                last = Mathf.Max(last, shot.traffic[i].atLead + shot.traffic[i].lead);
+                last = Mathf.Max(last, shot.traffic[i].atLead);
             }
+            float spacing = (last - first) / Mathf.Max(1, shot.TrafficCount - 1);
 
-            Assert.LessOrEqual(last - first, 0.7f,
-                               $"The field is strung out over {last - first:0.00} of the lead-in beat — that " +
-                               "is a queue of cars arriving one at a time, not a pack going past.");
+            Assert.LessOrEqual(spacing, 0.045f,
+                               $"The cars set off {spacing:0.000} of the lead-in beat apart — that is a queue " +
+                               "of cars arriving one at a time, not a pack going past.");
+            Assert.LessOrEqual(last, 1f, "The pack runs past the end of the lead-in.");
+            Assert.GreaterOrEqual(first, 0f, "The pack starts before the lead-in does.");
 
             int busiest = 0;
             for (int step = 0; step <= Steps; step++)
