@@ -35,6 +35,14 @@ public static class RaceStart
     public static float GreenTime { get; private set; } = -1f;
     public static float SecondsSinceGreen => (_current == Phase.Green && GreenTime >= 0f) ? Time.time - GreenTime : -1f;
 
+    // Wave the green now, even if the phase already reads Green — a race started from the grid in the middle
+    // of a weekend (the one watched from a grandstand) still wants its rolling-start launch window.
+    public static void GreenFlagNow()
+    {
+        if (_current != Phase.Green) Current = Phase.Green;
+        else GreenTime = Time.time;
+    }
+
     public static bool IsGreen => _current == Phase.Green;
     public static bool IsFormation => _current == Phase.Formation;
     public static bool IsPreGrid => _current == Phase.PreGrid;

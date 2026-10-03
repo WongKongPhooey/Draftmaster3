@@ -102,6 +102,12 @@ public class GridSpawner : MonoBehaviour
     [Tooltip("Carset prefix used when the Premier Cup Series has the circuit.")]
     public string cupCarsetPrefix = "cup26";
 
+    [Header("A race watched from the grandstand")]
+    [Tooltip("Field size for another championship's race when the player sits in a grandstand to watch it. That race is run for real — grid, green, chequered flag — so it gets a full field rather than the ambient traffic count. 0 = the race field size ('count' above).")]
+    public int watchedRaceCount = 0;
+    [Tooltip("Speed (m/s) the watched race's field is rolling at when the green flag waves. NASCAR starts are rolling starts; 0 = a standing start from the grid.")]
+    public float watchedRaceStartMps = 22f;
+
     // The other championship's cars, while they are out. Null the rest of the weekend.
     Transform _ambientField;
     string _ambientFor = "";
@@ -774,7 +780,7 @@ public class GridSpawner : MonoBehaviour
         // The player's own session is a scene load away and brings its own field; nothing to do from here.
         if (live.any && live.playerDriving) yield break;
 
-        string want = live.any ? live.activityId : "";
+        string want = live.FieldKey;
         if (want == _ambientFor) yield break;
 
         // Claimed here rather than inside the spawn, and before the first yield: StartCoroutine runs this
@@ -822,7 +828,7 @@ public class GridSpawner : MonoBehaviour
     // crew ends up in the colours of the car that pits in front of them.
     IEnumerator SpawnAmbientField(WeekendTrackState.Live live)
     {
-        _ambientFor = live.activityId;
+        _ambientFor = live.FieldKey;
 
         // No geometry, no field. The race scene holds no road — TrackSceneLoader binds the selected
         // package's TrackBuilder — so this is null until the track is in. Unclaim the booking on the way
@@ -833,12 +839,17 @@ public class GridSpawner : MonoBehaviour
             while (!DatabaseManager.Instance.IsReady) yield return null;
 
         // The clock can have moved on while the database opened.
-        if (_ambientFor != live.activityId) yield break;
+        if (_ambientFor != live.FieldKey) yield break;
 
         // The session is under way — there is no starter and no grid, so the field is racing from the
         // moment it appears. (FormationDirector stands itself down outside the player's own session, so
         // nothing else is going to write this.)
-        RaceStart.Current = RaceStart.Phase.Green;
+        //
+        // A race the player has sat down in the stand to watch is the exception: that one starts now, from
+        // the grid, so the green is waved now too (the AI's rolling-start launch window runs off it).
+        bool watchedRace = live.WatchedRace;
+        if (watchedRace) RaceStart.GreenFlagNow();
+        else RaceStart.Current = RaceStart.Phase.Green;
 
         string carset = CarsetFor(live.series);
         var liveries = LoadLiveries(carset);
@@ -881,6 +892,13 @@ public class GridSpawner : MonoBehaviour
         _ambientField = parent;
 
         int n = Mathf.Max(1, ambientCount > 0 ? ambientCount : count);
+        if (watchedRace)
+        {
+            // The whole field — but never more cars than the championship has paint for, or the grid would
+            // have two of the same number on it.
+            n = Mathf.Max(1, watchedRaceCount > 0 ? watchedRaceCount : count);
+            if (liveries.Count > 0) n = Mathf.Min(n, liveries.Count);
+        }
         LayOutBoxesFor(n);
         // Off the sampled centerline, not the sum of the segment lengths: this is the length SplineDriver
         // itself measures, so a start distance wrapped against it lands where the car expects to be.
@@ -890,6 +908,12 @@ public class GridSpawner : MonoBehaviour
         // Spread around the whole lap. A session already running has nobody on a grid, and an even spread
         // is also what stops a field with no starter arriving at turn one as a single heap.
         float gap = lapLength > 0f ? lapLength / n : Mathf.Max(spacing, 1f);
+
+        // A watched race lines up two by two behind the line instead, and the grandstand's race director
+        // scores it from there.
+        var raceCars = watchedRace ? new List<SplineDriver>(n) : null;
+        var raceNames = watchedRace ? new List<string>(n) : null;
+        var raceStarts = watchedRace ? new List<float>(n) : null;
 
         for (int i = 0; i < n; i++)
         {
@@ -931,6 +955,16 @@ public class GridSpawner : MonoBehaviour
             splineDriver.qualifyingPosition = i;
             splineDriver.lateralOffset = 0f;
             splineDriver.speed = speed;
+            if (watchedRace)
+            {
+                // Grid slot i: same staggered two-wide layout as the player's own race grid, the pole sitter
+                // on the inside of the front row. AIRacingBehaviour eases the stagger off once they are racing.
+                float fromLine = Draftmaster.Weekend.GrandstandRace.GridProgress(i, gridStartDistance, spacing);
+                splineDriver.startDistance = Wrap(sfAnchor + fromLine, lapLength);
+                splineDriver.lateralOffset = (i % 2 == 0) ? rowStagger * 0.5f : -rowStagger * 0.5f;
+                splineDriver.speed = Mathf.Max(0f, watchedRaceStartMps);
+                raceStarts.Add(fromLine);
+            }
             splineDriver.spriteFacesUp = false;
             splineDriver.angleOffsetDeg = 180f;
 
@@ -983,7 +1017,16 @@ public class GridSpawner : MonoBehaviour
             // first-physics-step latch that piles a spawned field up at the origin applies to the
             // kinematic brain too.
             splineDriver.PlaceAtStartDistance();
+
+            if (watchedRace)
+            {
+                raceCars.Add(splineDriver);
+                raceNames.Add(string.IsNullOrEmpty(label.driverName) ? "#" + carNumber : label.driverName);
+            }
         }
+
+        if (watchedRace && lapLength > 0f)
+            GrandstandRaceDirector.Begin(raceCars, raceNames, raceStarts, lapLength);
     }
 
     // Pit road, set up for whichever championship is out. Same fit the player's own field gets — the boxes

@@ -29,14 +29,29 @@ public static class WeekendTrackState
         // the next hour wants. Empty for an exhibition race started outside a weekend.
         public readonly string activityId;
 
-        public Live(RacingSeries series, ActivityKind kind, bool playerDriving, string activityId)
+        // Somebody is sat in a grandstand watching this session (WeekendTrackState.Hold). A race watched
+        // from the stand is run for real — full field, grid, green flag, chequered flag — rather than the
+        // traffic that circulates past the paddock the rest of the time.
+        public readonly bool watched;
+
+        public Live(RacingSeries series, ActivityKind kind, bool playerDriving, string activityId,
+                    bool watched = false)
         {
             any = true;
             this.series = series;
             this.kind = kind;
             this.playerDriving = playerDriving;
             this.activityId = activityId ?? "";
+            this.watched = watched;
         }
+
+        // A race somebody sat down in the stand to watch: GridSpawner puts out a grid and runs it.
+        public bool WatchedRace => any && watched && !playerDriving && kind == ActivityKind.Race;
+
+        // What GridSpawner keys the field it has out on. A watched race is a different field from the same
+        // booking's traffic — sitting down starts the race from the grid even if that championship's cars
+        // were already going round when the player got there.
+        public string FieldKey => !any ? "" : WatchedRace ? activityId + "#grandstand-race" : activityId;
     }
 
     // ------------------------------------------------------------------ a session somebody is watching
@@ -64,7 +79,7 @@ public static class WeekendTrackState
 
     public static void Hold(RacingSeries series, ActivityKind kind, string activityId)
     {
-        _held = new Live(series, kind, false, activityId);
+        _held = new Live(series, kind, false, activityId, watched: true);
         _holding = true;
         HoldChanged?.Invoke();
     }

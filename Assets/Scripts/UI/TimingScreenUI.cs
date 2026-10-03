@@ -9,6 +9,10 @@ using UnityEngine;
 // third that wide, in rows shorter than the glyphs, so it spilled out of the frame on every side. Every
 // size here is now measured off the face it is drawn in, the panel is exactly as wide as its widest line,
 // and a field too long for the screen shows the top of the order plus the player's own row.
+//
+// A race watched from a grandstand (GrandstandRaceDirector) is ranked by the race instead — laps, then road
+// position, then the order the flag was taken in — and the third column is the gap to the leader rather than
+// a best lap, because in a race that is the number that matters. The result stays up after the field comes in.
 public class TimingScreenUI : MonoBehaviour
 {
     public static TimingScreenUI Instance { get; private set; }
@@ -27,7 +31,17 @@ public class TimingScreenUI : MonoBehaviour
     const int NameChars = 16;
     const string Title = "LIVE TIMING";
 
+    // One line of the table, whichever session it came from.
+    struct Row
+    {
+        public string name;
+        public string value;     // best lap, or the gap to the leader in a race
+        public bool isPlayer;
+        public bool highlight;   // the session's best lap, or the race leader
+    }
+
     readonly List<LapTimingManager.CarTimes> _sorted = new();
+    readonly List<Row> _rows = new();
     readonly List<int> _shown = new();
 
     public static TimingScreenUI Ensure()
@@ -55,10 +69,16 @@ public class TimingScreenUI : MonoBehaviour
         // to toggle it, and a phone has no F11.
         if (!GrandstandVisit.Watching && !CrewChiefController.IsCrewChief) { visible = false; return; }
 
-        var lt = LapTimingManager.Instance;
-        if (lt == null) return;
-
-        lt.RankByBest(_sorted);
+        var race = GrandstandVisit.Watching ? GrandstandRaceDirector.Current : null;
+        bool raceOrder = race != null && race.Race != null;
+        if (raceOrder) FillFromRace(race);
+        else
+        {
+            var lt = LapTimingManager.Instance;
+            if (lt == null) return;
+            FillFromBestLaps(lt);
+        }
+        string valueHead = raceOrder ? "GAP" : "BEST";
 
         var head = PixelGUI.Heading;
         var dim = PixelGUI.LabelDim;
@@ -70,9 +90,9 @@ public class TimingScreenUI : MonoBehaviour
         float gap = PixelGUI.Px(8f);
 
         // Columns as wide as the widest thing that goes in them, header included.
-        float posW = Mathf.Max(Width(data, "P" + Mathf.Max(10, _sorted.Count)), Width(dim, "POS"));
+        float posW = Mathf.Max(Width(data, "P" + Mathf.Max(10, _rows.Count)), Width(dim, "POS"));
         float nameW = Mathf.Max(Width(data, new string('M', NameChars)), Width(dim, "DRIVER"));
-        float bestW = Mathf.Max(Width(data, LapTimingManager.Format(-1f)), Width(dim, "BEST"));
+        float bestW = Mathf.Max(Width(data, LapTimingManager.Format(-1f)), Width(dim, valueHead));
         float tableW = posW + gap + nameW + gap + bestW;
 
         string session = !string.IsNullOrEmpty(sessionLabel)
@@ -121,7 +141,7 @@ public class TimingScreenUI : MonoBehaviour
         float nameX = cx + posW + gap;
         Draw(new Rect(cx, cy, posW, dimH), "POS", dim, null, TextAnchor.MiddleLeft);
         Draw(new Rect(nameX, cy, nameW, dimH), "DRIVER", dim, null, TextAnchor.MiddleLeft);
-        Draw(new Rect(cx, cy, cw, dimH), "BEST", dim, null, TextAnchor.MiddleRight);
+        Draw(new Rect(cx, cy, cw, dimH), valueHead, dim, null, TextAnchor.MiddleRight);
         cy += dimH;
         PixelGUI.Rule(cx, cy + PixelGUI.Px(1f), cw);
         cy += PixelGUI.Px(4f);
@@ -129,11 +149,12 @@ public class TimingScreenUI : MonoBehaviour
         for (int k = 0; k < _shown.Count; k++)
         {
             int i = _shown[k];
-            var c = _sorted[i];
+            var c = _rows[i];
 
             // Purple-for-fastest is a broadcast idiom this palette has no room for, so the session's best
-            // lap takes the one accent and the player's own row is the only other marked line.
-            Color colour = i == 0 && c.bestLap > 0f ? PixelGUI.Gold
+            // lap (or the race leader) takes the one accent and the player's own row is the only other
+            // marked line.
+            Color colour = c.highlight ? PixelGUI.Gold
                          : c.isPlayer ? PixelGUI.Confirm
                          : PixelGUI.Text;
 
@@ -142,17 +163,53 @@ public class TimingScreenUI : MonoBehaviour
 
             Draw(new Rect(cx, cy, posW, rowH), "P" + (i + 1), data, colour, TextAnchor.MiddleLeft);
             Draw(new Rect(nameX, cy, nameW, rowH), name, data, colour, TextAnchor.MiddleLeft);
-            Draw(new Rect(cx, cy, cw, rowH), LapTimingManager.Format(c.bestLap), data, colour, TextAnchor.MiddleRight);
+            Draw(new Rect(cx, cy, cw, rowH), c.value, data, colour, TextAnchor.MiddleRight);
             cy += rowH;
         }
     }
 
     // Which rows to draw: everybody if they fit, otherwise the front of the order with the player's own line
     // taking the last slot when they would have been cut off.
+    void FillFromBestLaps(LapTimingManager lt)
+    {
+        lt.RankByBest(_sorted);
+        _rows.Clear();
+        for (int i = 0; i < _sorted.Count; i++)
+        {
+            var c = _sorted[i];
+            _rows.Add(new Row
+            {
+                name = c.name,
+                value = LapTimingManager.Format(c.bestLap),
+                isPlayer = c.isPlayer,
+                highlight = i == 0 && c.bestLap > 0f,
+            });
+        }
+    }
+
+    void FillFromRace(GrandstandRaceDirector race)
+    {
+        _rows.Clear();
+        var order = race.Order;
+        if (order.Count == 0) return;
+        int leader = order[0];
+        for (int i = 0; i < order.Count; i++)
+        {
+            int car = order[i];
+            _rows.Add(new Row
+            {
+                name = race.NameOf(car),
+                value = race.Race.GapText(leader, car),
+                isPlayer = false,
+                highlight = i == 0,
+            });
+        }
+    }
+
     void PickRows(int fit)
     {
         _shown.Clear();
-        int n = _sorted.Count;
+        int n = _rows.Count;
         if (n <= fit)
         {
             for (int i = 0; i < n; i++) _shown.Add(i);
@@ -161,7 +218,7 @@ public class TimingScreenUI : MonoBehaviour
 
         int player = -1;
         for (int i = 0; i < n; i++)
-            if (_sorted[i].isPlayer) { player = i; break; }
+            if (_rows[i].isPlayer) { player = i; break; }
 
         bool playerCut = player >= fit;
         int front = playerCut ? fit - 1 : fit;

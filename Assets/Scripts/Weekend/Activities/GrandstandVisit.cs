@@ -17,6 +17,11 @@ using UnityEngine.InputSystem;
 // clock runs out the field comes in and the circuit goes cold. The cars themselves are never sped up; it is
 // the LENGTH of the session that is compressed. Rules and numbers in GrandstandWatch.
 //
+// A RACE is the exception: sitting down to watch one starts it. GridSpawner lines the whole field up on the
+// grid behind the line, the green waves as the player arrives, and GrandstandRaceDirector runs it to the
+// chequered flag about five minutes later (GrandstandRace) — the clock here then follows the race, not the
+// compressed hour, and the field comes in once everybody has taken the flag.
+//
 // This is the in-world half of spectating, and deliberately not GrandstandSpectate — that one is the
 // broadcast: it plants the player, simulates the session and draws a timing tower down the side of the
 // screen. Here the cars going past are the real field the weekend put on track (GridSpawner's ambient
@@ -67,6 +72,7 @@ public class GrandstandVisit : MonoBehaviour
     bool _held;
     bool _closed;
     bool _done;                 // the booking has been settled (on the way out through E)
+    bool _raceCalled;           // a watched race has been run to the flag and the field sent in
 
     GrandstandCamera _shot;
 
@@ -124,6 +130,7 @@ public class GrandstandVisit : MonoBehaviour
         _closed = true;
 
         ReleaseSession();
+        GrandstandRaceDirector.EndCurrent();
 
         if (_shot != null) { _shot.End(); _shot = null; }
 
@@ -328,6 +335,15 @@ public class GrandstandVisit : MonoBehaviour
     {
         if (_activity == null || !_held) return;
 
+        // A race is not a compressed hour: sitting down started a real one (GridSpawner put the field on the
+        // grid and handed it to GrandstandRaceDirector), and it is over when the field has taken the flag.
+        var race = IsRace ? GrandstandRaceDirector.Current : null;
+        if (race != null && race.Race != null)
+        {
+            TickRace(race);
+            return;
+        }
+
         _watched += Time.deltaTime;
         float elapsed = _watched;
         var timing = TimingScreenUI.Instance;
@@ -346,6 +362,25 @@ public class GrandstandVisit : MonoBehaviour
             ? "SESSION OVER"
             : $"{GrandstandWatch.SessionMinuteAt(elapsed, _sessionMinutes)}/{_sessionMinutes} MIN";
     }
+
+    // The race in front of the stand. The chequered-flag line goes up as the winner crosses the line; the
+    // field comes in once everybody has taken the flag, and the result stays on the timing screen.
+    void TickRace(GrandstandRaceDirector race)
+    {
+        if (!_sessionOver && race.Race.WinnerIn) _sessionOver = true;
+
+        if (!_raceCalled && race.Race.Over)
+        {
+            _raceCalled = true;
+            _sessionOver = true;
+            WeekendTrackState.HoldEmpty();
+        }
+
+        var timing = TimingScreenUI.Instance;
+        if (timing != null) timing.statusLine = race.StatusLine();
+    }
+
+    bool IsRace => _activity != null && WeekendTrackSessions.SessionKind(_activity.kind) == ActivityKind.Race;
 
     // Give the circuit back to the clock. The sheet already believes this hour is spent, so what the track
     // does next is whatever the weekend says — which, mid-morning, is nothing.
@@ -432,10 +467,14 @@ public class GrandstandVisit : MonoBehaviour
         return SeriesCatalog.Name(_activity.series).ToUpperInvariant() + " · " + what;
     }
 
-    string ChequeredLine() =>
-        _activity != null && WeekendTrackSessions.SessionKind(_activity.kind) == ActivityKind.Race
+    string ChequeredLine()
+    {
+        if (!IsRace) return "Session over — they're coming in. Head back to the pits.";
+        string winner = GrandstandRaceDirector.Current != null ? GrandstandRaceDirector.Current.Winner : "";
+        return string.IsNullOrEmpty(winner)
             ? "That's the chequered flag. Head back to the pits."
-            : "Session over — they're coming in. Head back to the pits.";
+            : $"Chequered flag — {winner} wins it! Head back to the pits.";
+    }
 
     // What an hour in the stand is worth. The same homework GrandstandSpectate settles up, taken as watched
     // in full: a driver who stands there for a session learns where the track is going, and a race teaches

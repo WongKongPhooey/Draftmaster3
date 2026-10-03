@@ -181,7 +181,7 @@ it is only replaced when the clock has moved past it.
 | **Signing session** / **hauler parade** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. At least ten fans (one per 5 min of window, capped at the cast of 12), and the window is cut into one slot fewer than there are fans. Sign it and move (1 slot), sign it and ask their name or pose for the photo (2 slots), or wave and keep walking (free). Plain signatures alone leave the last fan unreached, so reaching the whole fence takes at least one wave, plus another wave for every name or photo — a photo with every fan meets half of them; 3 photos, 4 waves and 3 plain signatures clears a fence of ten. The sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support, and waving past costs a little with every fan; stop to talk and the people you did reach are worth far more. | Fan appeal, sponsor mood, `autographs` counter |
 | **Sponsor photo shoot** | The photographer wants hero or human, and the brand's rep wants the cap in every frame. | Sponsor mood, fans, crew morale |
 | **Hospitality Q&A / suite meet & greet** | A guest asks something and one of the answers is the line the brand paid for. The funny one is not it. | Sponsor mood — the off-message answers buy fans and press instead |
-| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x — `F11` for live timing, `E` to walk back — which is what completes the booking. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
+| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x (a **race** is run for real instead: sitting down puts the whole field on a two-wide grid, the green waves as you arrive and the chequered flag comes out five minutes later — `GrandstandRace` / `GrandstandRaceDirector`, live timing ranked by race order with gaps) — `F11` for live timing, `E` to walk back — which is what completes the booking. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
 | **Drivers meeting** | Mandatory, in the drivers' room with the field sat around you. Officials read four notes; one of them will catch somebody out at this track today. Say which. | Setup knowledge, morale |
 | **Driver introductions** | Mandatory, on the stage. Your name over the PA — decide what to give the crowd. | Fan appeal, sponsor mood |
 
@@ -322,6 +322,7 @@ Assets/Scripts/Weekend/
     SeriesSimulator.cs             the other two championships' sessions: results + broadcast timeline
     WeekendTrackSessions.cs        which championship has cars on the circuit at a given slot + minute
     GrandstandWatch.cs             how long a watched session takes at 10x, and where the camera frames it
+    GrandstandRace.cs              a watched race's rules: 5-minute clock, laps, flag, classification, gaps
     SeriesWeekendResult.cs         one championship's round, classified and priced - the player cut in
     ChampionshipPoints.cs          what a finishing position is worth
     SeasonChampionships.cs         the season: rounds run, three points tables, what has been read
@@ -350,6 +351,7 @@ Assets/Scripts/Weekend/
     PaddockProps.cs / PaddockPerson.cs   flat blocked-out props, and people to stand in them
   Activities/GrandstandSpectate.cs the simulated session, played beside the live world
   Activities/GrandstandVisit.cs    the in-world seat: holds the session open at 10x, F11 timing, E back
+  Activities/GrandstandRaceDirector.cs  a watched race: scores the grid-started field to the flag
   Activities/GrandstandCamera.cs   the pan out onto the marker's vantage, and giving the camera back
 Assets/Scripts/UI/Phone/PhoneScheduleApp.cs      read-only glance at today
 Assets/Scripts/UI/Phone/PhoneChampionshipApp.cs  the three championships and what has come in (POINTS tab of STATS)

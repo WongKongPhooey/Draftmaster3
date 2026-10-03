@@ -10,7 +10,7 @@ using UnityEngine;
 public class TimingScreenRowsTests
 {
     static readonly System.Type ScreenType = System.Type.GetType("TimingScreenUI, Assembly-CSharp");
-    static readonly System.Type CarType = System.Type.GetType("LapTimingManager+CarTimes, Assembly-CSharp");
+    static readonly System.Type RowType = System.Type.GetType("TimingScreenUI+Row, Assembly-CSharp");
     const BindingFlags Any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
     // Rank a field of `cars` with the player at `playerAt` (-1 = no player), ask for `fit` rows, and return
@@ -18,18 +18,18 @@ public class TimingScreenRowsTests
     static List<int> Pick(int cars, int playerAt, int fit)
     {
         Assert.IsNotNull(ScreenType, "TimingScreenUI not found in Assembly-CSharp.");
-        Assert.IsNotNull(CarType, "LapTimingManager.CarTimes not found in Assembly-CSharp.");
+        Assert.IsNotNull(RowType, "TimingScreenUI.Row not found in Assembly-CSharp.");
 
         var go = new GameObject("TimingScreenUI (test)");
         try
         {
             var screen = go.AddComponent(ScreenType);
-            var sorted = (IList)ScreenType.GetField("_sorted", Any).GetValue(screen);
+            var rows = (IList)ScreenType.GetField("_rows", Any).GetValue(screen);
             for (int i = 0; i < cars; i++)
             {
-                var car = System.Activator.CreateInstance(CarType);
-                CarType.GetField("isPlayer").SetValue(car, i == playerAt);
-                sorted.Add(car);
+                var row = System.Activator.CreateInstance(RowType);   // boxed: the field write lands in the box
+                RowType.GetField("isPlayer", Any).SetValue(row, i == playerAt);
+                rows.Add(row);
             }
 
             ScreenType.GetMethod("PickRows", Any).Invoke(screen, new object[] { fit });
