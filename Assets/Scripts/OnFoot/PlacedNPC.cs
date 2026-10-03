@@ -504,13 +504,31 @@ public class PlacedNPC : MonoBehaviour
         // Anything anchored to the car keeps up with it until somebody engages them — the car moves under
         // them for the first few frames of the scene, and again if it's re-parked.
         if (!_built || !followAnchor || _npc == null) return;
-        if (_npc.IsTalking) return;
+        if (!KeepsUpWithCar(_npc.IsTalking, CarBeingDriven())) return;
 
         Vector3 p = ResolveStandPoint();
         // Teleport the physics pose as well as the transform. A kinematic body that only had its transform
         // written keeps its own idea of where it is, and anything that syncs from the body wins.
         if (_npcRb != null && _npcRb.bodyType != RigidbodyType2D.Dynamic) _npcRb.position = p;
         _npc.transform.position = p;
+    }
+
+    // Following the car is for while it is PARKED — GridSpawner fitting it into its box, a tow or an in-lap
+    // putting it back there. Once somebody is driving it, the person stood beside it stays where they are:
+    // following then meant the crew chief walking alongside the car down pit road until the paddock fence
+    // stopped him, stuck against it for the rest of the session. When the car is parked again (controls
+    // off), he catches up with it. Pure, so the rule is testable without a scene.
+    public static bool KeepsUpWithCar(bool talking, bool carBeingDriven) => !talking && !carBeingDriven;
+
+    PlayerVehicleController _carController;
+
+    // The player's car is driven while its controller is on — by the player, or by the AI on a broadcast cut
+    // or the chief's headset, which drive it through the same controller. Off = parked.
+    bool CarBeingDriven()
+    {
+        if (_ctx.car == null) return false;
+        if (_carController == null) _carController = _ctx.car.GetComponent<PlayerVehicleController>();
+        return _carController != null && _carController.enabled;
     }
 
     // ---------------------------------------------------------------- anchors
