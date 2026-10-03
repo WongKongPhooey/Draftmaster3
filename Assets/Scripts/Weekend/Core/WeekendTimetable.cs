@@ -249,7 +249,7 @@ namespace Draftmaster.Weekend
                 "Sponsor suite", 1500, "Forty guests ate dinner without the driver they were promised.");
 
             // ---- Saturday morning ----
-            Team(WeekendSlot.SaturdayAM, 8 * 60 + 15, 30, ActivityKind.Debrief, "OVERNIGHT DEBRIEF",
+            Team(WeekendSlot.SaturdayAM, 8 * 60 + 15, 30, ActivityKind.Debrief, "BREAKFAST DEBRIEF",
                 "What the engineers found in Friday's data while you slept.", "Engineering truck");
             Sponsor(WeekendSlot.SaturdayAM, 9 * 60 + 15, 45, ActivityKind.PhotoShoot, "DEALER GROUP PHOTOS",
                 "Two hundred handshake photos with the regional dealer network. Smile on every one.",
