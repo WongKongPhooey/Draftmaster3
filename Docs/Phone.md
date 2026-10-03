@@ -41,13 +41,13 @@ so the toggle can still open it — anything else holding that lock keeps the ph
 summons into the ordinary open-phone lock and closing lets the player go; `PhoneUI.CancelSummon()` lets
 them go without it. `PhoneUI.Summoned` reports it.
 
-**Where the player is told the rest.** Nothing else in the paddock explains the phone, so the first
-weekend of a career books fifteen minutes at the pit box for it: `ActivityKind.Orientation`, 09:30 Friday
-morning, weekend zero only. The crew chief names the key, TASKS (what is outstanding, and what the tile's
-badge counts) and NOTES (who asked for what), and finishing it leaves the same summary in NOTES as an
-unread note — `WeekendDirector.LeavePhoneCribSheet`. The key in those lines is read off `PhoneUI.toggleKey`
-at build time (`WeekendScripts.PhoneKeyName`), so rebinding the toggle cannot leave the one conversation
-that explains the phone naming a dead key. Content: `Weekend/Core/Conversations/OrientationContent.cs`.
+**Where the player is told the rest.** Nowhere, at the moment. The first weekend used to book a fifteen-minute
+rookie orientation at the pit box (`ActivityKind.Orientation`); it was taken off the generated schedule on
+2026-10-03. The booking kind and its conversation are still there for a hand-authored plan to use
+(`"event": "team-orientation"`): the crew chief names the key, TASKS and NOTES, and finishing it leaves the
+same summary in NOTES — `WeekendDirector.LeavePhoneCribSheet`. The key in those lines is read off
+`PhoneUI.toggleKey` at build time (`WeekendScripts.PhoneKeyName`). Content:
+`Weekend/Core/Conversations/OrientationContent.cs`.
 
 ## How it is drawn
 

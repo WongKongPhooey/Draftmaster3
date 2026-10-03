@@ -164,6 +164,11 @@ public class WeekendDirector : MonoBehaviour
         WeekendScheduleUI.Close();
         WeekendModal.Reset();
 
+        // A single race or a lobby race has no weekend. Building the timetable here would build it for the
+        // one-off race's series, and the ledger wipes the career's sheet back to Friday morning when the
+        // series it is asked for is not the one on file.
+        if (!GameSession.CareerActive) return;
+
         // Arriving back at the motorhome from a skip ahead: lights up and say what the skip cost. After the
         // modal reset, which would otherwise take the card's freeze with it.
         if (_skipReport != null)
@@ -380,6 +385,10 @@ public class WeekendDirector : MonoBehaviour
 
     void Update()
     {
+        // Created at boot and kept across loads, so it is still here during a single race — which has no
+        // weekend for it to enter as a round, book against, or open a sheet for.
+        if (!GameSession.CareerActive) return;
+
         // The scene the editor was left in when Play was pressed never raised sceneLoaded for this object,
         // so the venue check gets one poll a second until it finds a paddock. Once the round is on the
         // calendar this costs nothing.
@@ -478,12 +487,7 @@ public class WeekendDirector : MonoBehaviour
         PendingRouteId = a.id;
         // The sheet has put the player in the car for this hour: the track goes live with them.
         RaceWeekend.SessionLive = true;
-        RaceWeekend.Current = a.kind switch
-        {
-            ActivityKind.Qualifying => RaceWeekend.Session.Qualifying,
-            ActivityKind.Race => RaceWeekend.Session.Race,
-            _ => RaceWeekend.Session.Practice,
-        };
+        RaceWeekend.Current = SessionFor(a.kind);
 
         WeekendScheduleUI.Close();
 
@@ -496,6 +500,36 @@ public class WeekendDirector : MonoBehaviour
         // Through CoopScene so a co-op guest is carried into the session with the host: every time skip
         // the sheet makes ends here, and NGO scene management is what drags the guest along.
         CoopScene.Load(inRaceScene ? active.name : "RaceScene");
+    }
+
+    static RaceWeekend.Session SessionFor(ActivityKind kind) => kind switch
+    {
+        ActivityKind.Qualifying => RaceWeekend.Session.Qualifying,
+        ActivityKind.Race => RaceWeekend.Session.Race,
+        _ => RaceWeekend.Session.Practice,
+    };
+
+    // CAREER from the title screen. The booked session survives a quit (PendingRouteId and SessionLive are
+    // prefs) but which KIND of session it was is a static, and a fresh launch starts it at Practice — so a
+    // player who quit during qualifying was put back out for a practice run that then got credited as their
+    // qualifying. Re-read it from the booking.
+    public static void ResumeRoutedSession()
+    {
+        string id = PendingRouteId;
+        if (string.IsNullOrEmpty(id)) return;
+
+        // A route with the track dark is left over, not live: BeginOnTrack sets the two together and every
+        // ending clears them together. Older saves can hold one (a weekend reset used to keep the route).
+        var a = RaceWeekend.SessionLive ? Timetable.ById(id) : null;
+        if (a == null)
+        {
+            // A booking from a weekend that no longer exists: nothing to resume, and leaving the track live
+            // would put the player in a car for a session nobody scheduled.
+            ClearRoute();
+            RaceWeekend.SessionLive = false;
+            return;
+        }
+        RaceWeekend.Current = SessionFor(a.kind);
     }
 
     // ------------------------------------------------------------------ finishing an activity

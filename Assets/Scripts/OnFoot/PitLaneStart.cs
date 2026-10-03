@@ -158,6 +158,19 @@ public class PitLaneStart : MonoBehaviour
     // offers to bring them in: there is nothing to tow while they are still walking to it.
     public bool IsDriving => _phase == EntryPhase.Driving;
 
+    // Sat in the car but not yet handed it: the chief's briefing, then the setup panel. Both are laid out
+    // for a landscape screen, so the phone's swing-camera turn to portrait waits for this to clear
+    // (DriveOrientationController) — the screen turns when the drive buttons come up, not when the door shuts.
+    public static bool GettingIn => _gettingIn != null;
+    static PitLaneStart _gettingIn;
+
+    void SetPhase(EntryPhase phase)
+    {
+        _phase = phase;
+        if (phase == EntryPhase.Briefing || phase == EntryPhase.Setup) _gettingIn = this;
+        else if (_gettingIn == this) _gettingIn = null;
+    }
+
     // The chief has already had his say and the setup is already made. Getting back into the same car
     // after a tow is not a fresh session, so it skips both and hands the controls straight over.
     bool _briefed;
@@ -734,6 +747,7 @@ public class PitLaneStart : MonoBehaviour
     {
         PlacedNPC.CutsceneFinished -= OnPlacedCutsceneFinished;
         RunLocked = false;
+        if (_gettingIn == this) _gettingIn = null;
     }
 
     // No running until the run hint has been shown. The hint itself waits on the phone lesson
@@ -957,7 +971,7 @@ public class PitLaneStart : MonoBehaviour
         {
             // Hold the walking zoom through the briefing — the chief is stood beside the car and both
             // bubbles are on-foot scale. The pull-back to driving distance waits for his last line.
-            _phase = EntryPhase.Briefing;
+            SetPhase(EntryPhase.Briefing);
             if (_chiefNpc != null) _chiefNpc.MarkPlayed(); // the briefing has actually started, not just been staged
             _chief.SetInteractor(car.transform); // "#player" lines bubble over the car, where the driver now is
             _chief.Interact();                   // opens the first line
@@ -989,7 +1003,7 @@ public class PitLaneStart : MonoBehaviour
         ControlHints.Hide("advance");
         _orthoTarget = drivingOrthoSize; // the talking is over — now pull back to driving distance
         if (!showSetupPanel || _briefed) { StartDriving(null); return; }
-        _phase = EntryPhase.Setup;
+        SetPhase(EntryPhase.Setup);
         CarSetupPanelUI.Open(CarSetup.Load(), StartDriving);
     }
 
@@ -998,7 +1012,7 @@ public class PitLaneStart : MonoBehaviour
     {
         setup?.ApplyTo(car.gameObject);
 
-        _phase = EntryPhase.Driving;
+        SetPhase(EntryPhase.Driving);
         _briefed = true;
         ParkedCarPin.Release(car);   // it is being driven now, not parked (a tow pins it; see TowToPits)
         car.enabled = true; // PlayerVehicleController.Start captures parked heading on first enable
@@ -1134,7 +1148,7 @@ public class PitLaneStart : MonoBehaviour
         _orthoTarget = onFootOrthoSize;
 
         // Back to the walk-up state, so E gets them into the car again once the crew are done with it.
-        _phase = EntryPhase.Walking;
+        SetPhase(EntryPhase.Walking);
         _entered = false;
         _hintedEnter = false;
         SyncCarMarker();

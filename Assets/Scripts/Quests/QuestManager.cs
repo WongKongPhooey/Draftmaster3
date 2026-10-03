@@ -49,11 +49,17 @@ public static class QuestManager
         PhoneNotes.EnsureQuestNote(q);       // board-accepted quests land in Notes too; a giver NPC fills in its name after
     }
 
+    // Finishing a quest is a save point. The state and the reward are written before either is flushed, so a
+    // crash cannot keep one without the other (Completed with no reward, or the reward with the quest still
+    // open to hand in again); Stamp's Save flushes whatever the steps above have not already.
     public static void Complete(QuestInfo q)
     {
-        SetState(q, State.Completed);
+        PlayerPrefs.SetInt(StateKey(q), (int)State.Completed);
         if (!string.IsNullOrEmpty(q.rewardItemId)) PlayerInventory.Add(q.rewardItemId);
         PhoneNotes.ResolveQuest(q);   // the phone's Notes app keeps it, struck through, rather than dropping it
+
+        if (Coop.IsGuest) PlayerPrefs.Save();   // a guest's save point is the host's to date (see RaceWeekend.SessionLive)
+        else CareerSave.Stamp();
     }
 
     // DeliverItem turn-in: consumes the item. False if the player doesn't actually have it.

@@ -69,6 +69,7 @@ public static class CoopGuestPrefs
 
         PlayerPrefs.SetInt(StashFlag, 0);
         PlayerPrefs.Save();
+        Draftmaster.Weekend.FramePrefs.Invalidate();
 
         // The in-memory ledger still holds the host's book. Drop it so the next read rebuilds from the
         // guest's own prefs rather than serving a weekend that has gone home with somebody else.

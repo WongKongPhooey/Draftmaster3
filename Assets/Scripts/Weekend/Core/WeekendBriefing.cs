@@ -18,13 +18,14 @@ namespace Draftmaster.Weekend
         // in the dark again.
         const string Key = "weekend.briefed";
 
-        public static bool Briefed(int weekendId) => PlayerPrefs.GetInt(Key, -1) == weekendId;
+        public static bool Briefed(int weekendId) => FramePrefs.GetInt(Key, -1) == weekendId;   // asked every frame
 
         public static void MarkBriefed(int weekendId)
         {
             if (Briefed(weekendId)) return;
             PlayerPrefs.SetInt(Key, weekendId);
             PlayerPrefs.Save();
+            FramePrefs.Invalidate();
         }
 
         // Tests, and a career wiped back to its first morning.
@@ -32,6 +33,7 @@ namespace Draftmaster.Weekend
         {
             PlayerPrefs.DeleteKey(Key);
             PlayerPrefs.Save();
+            FramePrefs.Invalidate();
         }
 
         // Should the weekend keep its hands off the objective for now?

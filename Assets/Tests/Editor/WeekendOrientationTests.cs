@@ -3,99 +3,39 @@ using System.Text.RegularExpressions;
 using Draftmaster.Weekend;
 using NUnit.Framework;
 
-// The first weekend of a career books one thing no later weekend does: fifteen minutes at the pit box being
-// shown the phone. Everything the on-foot half of the game asks the player to keep track of - what is on
-// today, the jobs they have taken on around the paddock, and which of those are finished and waiting to be
-// handed back - lives on that phone, and this is the only place in the game that says so out loud.
+// The rookie orientation — fifteen minutes at the pit box being shown the phone — is no longer booked by the
+// generated schedule; it was taken off the first weekend on purpose. The booking kind and its conversation
+// are kept so a hand-authored plan can still use "team-orientation".
 //
-// So these tests are about the two ways that can quietly break: the booking disappearing off the first
-// morning (or turning up on every morning after it), and the conversation drifting until it no longer names
-// the key or the lists it exists to point at.
+// So these tests pin that the generator stays clean of it, and that the conversation, if a plan does book
+// it, still names the key and the lists it exists to point at.
 public class WeekendOrientationTests
 {
     const string Track = "Watkins Glen";
 
-    static WeekendActivity OrientationIn(WeekendTimetable t)
+    // What a plan file's "team-orientation" booking produces: the catalogue's defaults on Friday morning.
+    static WeekendActivity Orientation() => new WeekendActivity
     {
-        WeekendActivity found = null;
-        foreach (var a in t.Activities)
-            if (a.kind == ActivityKind.Orientation)
-            {
-                Assert.IsNull(found, "The orientation is booked twice on one weekend.");
-                found = a;
-            }
-        return found;
-    }
+        id = "team-orientation",
+        kind = ActivityKind.Orientation,
+        slot = WeekendSlot.FridayAM,
+        series = RacingSeries.Cup,
+        title = "ROOKIE ORIENTATION",
+        location = "Pit box",
+        startMinute = 9 * 60 + 30,
+        minutes = 15,
+    };
 
-    // ------------------------------------------------------------------ where it sits on the sheet
+    // ------------------------------------------------------------------ the sheet
 
     [Test]
-    public void TheFirstWeekend_BooksThePhoneOrientation_WhicheverSeriesYouAreIn()
+    public void NoGeneratedWeekend_BooksTheOrientation()
     {
-        foreach (var series in SeriesCatalog.All)
-        {
-            var t = WeekendTimetable.Build(series, 0, Track);
-            var a = OrientationIn(t);
-
-            Assert.IsNotNull(a, $"{series}: a new career's first weekend never explains the phone.");
-            Assert.AreEqual(WeekendSlot.FridayAM, a.slot,
-                            $"{series}: the orientation has to be on the first morning to be of any use.");
-        }
-    }
-
-    [Test]
-    public void LaterWeekends_DoNotShowYouThePhoneAgain()
-    {
-        for (int weekend = 1; weekend < 12; weekend++)
+        for (int weekend = 0; weekend < 12; weekend++)
             foreach (var series in SeriesCatalog.All)
-                Assert.IsNull(OrientationIn(WeekendTimetable.Build(series, weekend, Track)),
-                              $"{series}: weekend {weekend} is still running the rookie orientation.");
-    }
-
-    // The one window on the first morning that costs nothing to take. If something moves into it, the
-    // tutorial starts trading against a paid appearance, which is not a choice a new player can make.
-    [Test]
-    public void ItTakesTheGapNothingElseWants()
-    {
-        foreach (var series in SeriesCatalog.All)
-        {
-            var t = WeekendTimetable.Build(series, 0, Track);
-            var a = OrientationIn(t);
-
-            CollectionAssert.IsEmpty(t.ClashesFor(a),
-                                     $"{series}: the orientation now overlaps something else on Friday morning.");
-            Assert.GreaterOrEqual(a.startMinute, WeekendSlots.OpensAt(a.slot));
-            Assert.LessOrEqual(a.EndMinute, WeekendSlots.ClosesAt(a.slot));
-
-            // Finishing a booking walks the clock to its end and sweeps up anything it stepped over, so
-            // nothing may start inside the orientation's window either.
-            foreach (var other in t.InSlot(a.slot))
-                if (!ReferenceEquals(other, a))
-                    Assert.IsFalse(other.startMinute > a.startMinute && other.startMinute < a.EndMinute,
-                                   $"{series}: '{other.title}' starts inside the orientation and would be " +
-                                   "marked missed by doing it.");
-        }
-    }
-
-    [Test]
-    public void MissingIt_CostsNothing()
-    {
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
-
-        Assert.IsFalse(a.mandatory, "Nobody should be fined for skipping the thing that explains the game.");
-        Assert.AreEqual(0, a.skipMoneyPenalty);
-        Assert.AreEqual(0f, a.skipAppealPenalty);
-    }
-
-    [Test]
-    public void ItIsSomewhereThePlayerWalksTo()
-    {
-        var venue = WeekendVenues.For(ActivityKind.Orientation);
-        Assert.AreNotEqual(WeekendVenue.None, venue, "The orientation has nowhere to happen.");
-
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.National, 0, Track));
-        Assert.AreEqual(WeekendVenues.ShortLabel(venue), a.location,
-                        "The sheet names a different place from the one the marker sends the player to.");
+                foreach (var a in WeekendTimetable.Build(series, weekend, Track).Activities)
+                    Assert.AreNotEqual(ActivityKind.Orientation, a.kind,
+                                       $"{series}: weekend {weekend} is running the rookie orientation again.");
     }
 
     // ------------------------------------------------------------------ what is actually said
@@ -118,7 +58,7 @@ public class WeekendOrientationTests
     [Test]
     public void ItIsAConversationSomebodyCanActuallyHave()
     {
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var a = Orientation();
         var c = OrientationContent.Build(a);
 
         Assert.IsNotEmpty(c.beats);
@@ -146,7 +86,7 @@ public class WeekendOrientationTests
     [Test]
     public void ItNamesTheKey_AndTheListsWorthOpening()
     {
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var a = Orientation();
         string said = Spoken(OrientationContent.Build(a));
 
         Assert.IsTrue(Regex.IsMatch(said, @"\bP\b"),
@@ -160,7 +100,7 @@ public class WeekendOrientationTests
     [Test]
     public void ItSaysWhicheverKeyThePhoneIsActuallyBoundTo()
     {
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var a = Orientation();
         string said = Spoken(OrientationContent.Build(a, "K"));
 
         Assert.IsTrue(Regex.IsMatch(said, @"\bK\b"), "A rebound phone key never reaches the lines.");
@@ -172,7 +112,7 @@ public class WeekendOrientationTests
     [Test]
     public void OnAPad_ItNamesThePadsButtons_AndNoKeys()
     {
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var a = Orientation();
         var words = new OrientationContent.PhoneWords
         {
             move = "The d-pad", open = "A", back = "B", sheet = "d-pad down",
@@ -191,7 +131,7 @@ public class WeekendOrientationTests
     [Test]
     public void OnATouchScreen_ItAsksForTaps_AndNamesNoKeys()
     {
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var a = Orientation();
         var words = new OrientationContent.PhoneWords
         {
             move = "Drag", open = "a tap", back = "the arrow", sheet = "the full weekend sheet",
@@ -211,7 +151,7 @@ public class WeekendOrientationTests
     [Test]
     public void TheWrapUpRepeatsTheKey()
     {
-        var a = OrientationIn(WeekendTimetable.Build(RacingSeries.Cup, 0, Track));
+        var a = Orientation();
         var c = OrientationContent.Build(a);
 
         var outcome = WeekendOutcome.Nothing;

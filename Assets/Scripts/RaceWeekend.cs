@@ -22,6 +22,7 @@ public static class RaceWeekend
     // One car's qualifying result. GridOrder[0] = pole. Captured by PracticeDirector at the end of
     // qualifying; GridSpawner reads it in the race to fix each AI's identity/livery to its grid slot
     // (and the player's reserved pit box to their rank) instead of shuffling.
+    [System.Serializable]
     public class GridEntry
     {
         public string driverName;
@@ -31,12 +32,69 @@ public static class RaceWeekend
     }
 
     // null = no qualifying ran this weekend; the race grid falls back to random order.
-    public static List<GridEntry> GridOrder;
+    //
+    // Persisted, because qualifying is Saturday and the race is Sunday: a player who quits in between and
+    // comes back through CAREER has to start where they qualified, not from a shuffled grid. Stored with
+    // the weekend it belongs to, so a grid can never carry into a different weekend — whatever reset that
+    // weekend did or did not clear it.
+    public static List<GridEntry> GridOrder
+    {
+        get
+        {
+            if (_gridWeekend != WeekendId) LoadGrid();
+            return _grid;
+        }
+        set
+        {
+            _grid = value;
+            _gridWeekend = WeekendId;
+
+            // A co-op guest is in the host's weekend; its own prefs keep its own career (CoopGuestPrefs).
+            if (Coop.IsGuest) return;
+
+            if (value == null || value.Count == 0) UnityEngine.PlayerPrefs.DeleteKey(GridKey);
+            else UnityEngine.PlayerPrefs.SetString(GridKey, UnityEngine.JsonUtility.ToJson(
+                     new SavedGrid { weekendId = WeekendId, entries = value }));
+            UnityEngine.PlayerPrefs.Save();
+        }
+    }
+
+    const string GridKey = "raceweekend.grid";
+
+    [System.Serializable]
+    class SavedGrid
+    {
+        public int weekendId;
+        public List<GridEntry> entries;
+    }
+
+    static List<GridEntry> _grid;
+    static int _gridWeekend = int.MinValue;   // the weekend _grid was read for; MinValue = not read yet
+
+    static void LoadGrid()
+    {
+        _gridWeekend = WeekendId;
+        _grid = null;
+
+        // The guest's prefs hold the guest's own career, and the weekend id in them is the host's (written
+        // by CareerMirror) — the two can collide, so a guest never reads a grid off disk.
+        if (Coop.IsGuest) return;
+
+        string json = UnityEngine.PlayerPrefs.GetString(GridKey, "");
+        if (string.IsNullOrEmpty(json)) return;
+
+        SavedGrid saved = null;
+        try { saved = UnityEngine.JsonUtility.FromJson<SavedGrid>(json); }
+        catch (System.Exception e) { UnityEngine.Debug.LogWarning($"RaceWeekend: unreadable saved grid ({e.Message})."); }
+
+        if (saved != null && saved.weekendId == WeekendId && saved.entries != null && saved.entries.Count > 0)
+            _grid = saved.entries;
+    }
 
     // Monotonic id for "which race weekend is this", bumped by ResetWeekend and persisted so it
     // survives scene loads and quits. AppearanceConditions scopes its once-per-weekend memory to it.
     const string WeekendIdKey = "raceweekend.id";
-    public static int WeekendId => UnityEngine.PlayerPrefs.GetInt(WeekendIdKey, 0);
+    public static int WeekendId => Draftmaster.Weekend.FramePrefs.GetInt(WeekendIdKey, 0);   // asked every frame
 
     // True while one of the player's own on-track sessions is actually running.
     //
@@ -55,7 +113,7 @@ public static class RaceWeekend
         // The competitive lobby race has no weekend around it — a lobby that has loaded the track is a race.
         // Co-op does have one, so it reads the flag like any career session; on a guest that flag is written
         // by CareerMirror from the host's copy rather than by anything local.
-        get => !GameSession.CareerActive || UnityEngine.PlayerPrefs.GetInt(SessionLiveKey, 0) == 1;
+        get => !GameSession.CareerActive || Draftmaster.Weekend.FramePrefs.GetInt(SessionLiveKey, 0) == 1;
         set
         {
             // A co-op guest never decides whether a session is live — the host does, and the mirror tells us.
@@ -65,6 +123,7 @@ public static class RaceWeekend
 
             UnityEngine.PlayerPrefs.SetInt(SessionLiveKey, value ? 1 : 0);
             UnityEngine.PlayerPrefs.Save();
+            Draftmaster.Weekend.FramePrefs.Invalidate();
             // Taking the car out and handing it back are both progress: date them, so CONTINUE knows when
             // the player was last actually racing rather than only when they last picked a track.
             CareerSave.Stamp();
@@ -78,8 +137,12 @@ public static class RaceWeekend
 
         UnityEngine.PlayerPrefs.SetInt(WeekendIdKey, WeekendId + 1);
         UnityEngine.PlayerPrefs.Save();
+        Draftmaster.Weekend.FramePrefs.Invalidate();
         Current = Session.Practice;
         GridOrder = null;
+        // Whatever the last weekend had the player out driving belongs to that weekend. Booking ids are only
+        // half-day + time + kind, so a route left behind matches the same session on every weekend after it.
+        WeekendDirector.ClearRoute();
         SessionLive = false;      // stamps the save point
     }
 }

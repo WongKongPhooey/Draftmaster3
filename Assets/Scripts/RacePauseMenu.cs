@@ -38,7 +38,7 @@ public class RacePauseMenu : MonoBehaviour
 
     // The pad's cursor: which row the confirm button presses. None while the menu is being driven by the mouse.
     // Rows are steered in Update and pressed there too, never inside an IMGUI pass (see the note below).
-    enum PadRow { None, RacingLine, MiniMap, SwingCamera, Missions, Schedule, EndSession, Coop, QuitToTitle, Resume }
+    enum PadRow { None, RacingLine, MiniMap, SwingCamera, DebugStats, Missions, Schedule, EndSession, Coop, QuitToTitle, Resume }
     PadRow _padFocus;
     readonly System.Collections.Generic.List<PadRow> _padRows = new();
 
@@ -123,6 +123,7 @@ public class RacePauseMenu : MonoBehaviour
         _padRows.Add(PadRow.RacingLine);
         _padRows.Add(PadRow.MiniMap);
         _padRows.Add(PadRow.SwingCamera);
+        _padRows.Add(PadRow.DebugStats);
         _padRows.Add(PadRow.Missions);
         _padRows.Add(PadRow.Schedule);
         if (PracticeDirector.PauseMenuExitLabel != null) _padRows.Add(PadRow.EndSession);
@@ -155,6 +156,7 @@ public class RacePauseMenu : MonoBehaviour
             case PadRow.RacingLine: RacingLineDisplay.Visible = !RacingLineDisplay.Visible; break;
             case PadRow.MiniMap: TrackMiniMap.Visible = !TrackMiniMap.Visible; break;
             case PadRow.SwingCamera: CameraViewMode.Swinging = !CameraViewMode.Swinging; break;
+            case PadRow.DebugStats: DebugStatsOverlay.Visible = !DebugStatsOverlay.Visible; break;
             case PadRow.Missions: _showMissions = !_showMissions; break;
             case PadRow.Schedule: Resume(); WeekendScheduleUI.Open(); break;
             case PadRow.EndSession:
@@ -257,7 +259,7 @@ public class RacePauseMenu : MonoBehaviour
 
         // What is on the panel right now. END SESSION only appears while a booked session is running, and the
         // steer-buttons toggle only on a phone; counted here from the same conditions the drawing below uses.
-        int toggles = TouchDriveControls.TouchPlatform ? 4 : 3;
+        int toggles = TouchDriveControls.TouchPlatform ? 5 : 4;
         int tabs = PracticeDirector.PauseMenuExitLabel != null ? 4 : 3;   // missions, schedule, [end], co-op
         float contentH = headingH + gap * 3f                                // title, rule
                          + toggles * toggleH + gap * 2f                     // toggles, then a breather
@@ -298,6 +300,13 @@ public class RacePauseMenu : MonoBehaviour
         PadCursor(PadRow.SwingCamera, new Rect(content.x, cy, content.width, toggleH));
         bool newSwing = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), swing, "  Swing camera", _toggle);
         if (newSwing != swing) CameraViewMode.Swinging = newSwing;
+        cy += toggleH;
+
+        // FPS, frame time and the 1% / 10% lows in a corner of the screen (DebugStatsOverlay).
+        bool stats = DebugStatsOverlay.Visible;
+        PadCursor(PadRow.DebugStats, new Rect(content.x, cy, content.width, toggleH));
+        bool newStats = TouchTaps.Toggle(new Rect(content.x, cy, content.width, toggleH), stats, "  Debug stats", _toggle);
+        if (newStats != stats) DebugStatsOverlay.Visible = newStats;
         cy += toggleH;
 
         // Phone only: steer with left/right buttons rather than the slider. No pad row — the touch controls

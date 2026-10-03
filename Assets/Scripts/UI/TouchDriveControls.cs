@@ -40,10 +40,11 @@ public class TouchDriveControls : MonoBehaviour
     // Steer with a left and a right button instead of the slider. A pause-menu toggle, kept across runs.
     public static bool SteerButtons
     {
-        get => PlayerPrefs.GetInt(SteerButtonsPref, 0) == 1;
+        get => Draftmaster.Weekend.FramePrefs.GetInt(SteerButtonsPref, 0) == 1;   // read every frame
         set
         {
             PlayerPrefs.SetInt(SteerButtonsPref, value ? 1 : 0);
+            Draftmaster.Weekend.FramePrefs.Invalidate();
             _state.Reset();   // a thumb held across the switch is placed again under the new rules
         }
     }

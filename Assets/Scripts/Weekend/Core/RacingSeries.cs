@@ -35,13 +35,14 @@ namespace Draftmaster.Weekend
         {
             get
             {
-                int v = PlayerPrefs.GetInt(PlayerSeriesKey, (int)RacingSeries.Trucks);
+                int v = FramePrefs.GetInt(PlayerSeriesKey, (int)RacingSeries.Trucks);   // asked every frame
                 return (RacingSeries)Mathf.Clamp(v, 0, 2);
             }
             set
             {
                 PlayerPrefs.SetInt(PlayerSeriesKey, (int)value);
                 PlayerPrefs.Save();
+                FramePrefs.Invalidate();
             }
         }
 

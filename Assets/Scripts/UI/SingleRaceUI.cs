@@ -310,11 +310,16 @@ public class SingleRaceUI : MonoBehaviour
     // The only place this screen writes anything. Everything above is a choice held in a field.
     void Go()
     {
-        if (!TrackSelection.Select(_trackId))
+        if (!TrackCatalog.HasGeometry(_trackId))
         {
             SetStatus("That track has no layout built.");
             return;
         }
+
+        // Everything below writes keys the career keeps its place in. Park them first; the title screen
+        // puts them back (OneOffRacePrefs).
+        OneOffRacePrefs.Capture();
+        TrackSelection.Select(_trackId);
 
         // Keep the weekend's idea of which championship the player is in aligned with the pick, when the
         // chosen series is one of the three that share a race weekend. The other championships in the

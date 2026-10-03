@@ -50,8 +50,8 @@ public class TrackMiniMap : MonoBehaviour
 
     public static bool Visible
     {
-        get => PlayerPrefs.GetInt(PrefKey, 1) == 1;
-        set => PlayerPrefs.SetInt(PrefKey, value ? 1 : 0);
+        get => Draftmaster.Weekend.FramePrefs.GetInt(PrefKey, 1) == 1;   // read from OnGUI, several times a frame
+        set { PlayerPrefs.SetInt(PrefKey, value ? 1 : 0); Draftmaster.Weekend.FramePrefs.Invalidate(); }
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

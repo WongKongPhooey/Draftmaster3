@@ -56,7 +56,15 @@ public class FanMob : MonoBehaviour
     Vector2 _mouth;                      // world direction the mouth of the ring opens toward
 
     System.Func<int, GameObject> _makeFan;
-    System.Random _rng;
+
+    // Re-seeded on demand: System.Random is not serializable, so a script recompile in Play Mode hands the
+    // mob back with this null while _driver (a Transform) survives — and Update then threw every frame.
+    System.Random _rngState;
+    System.Random _rng
+    {
+        get => _rngState ??= new System.Random(GetInstanceID());
+        set => _rngState = value;
+    }
     int _fanSeed;
 
     // The fan whose turn it is, and what they are doing with it.

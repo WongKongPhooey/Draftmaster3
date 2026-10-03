@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -108,6 +107,10 @@ public class TitleScreenUI : MonoBehaviour
 
         InstallCursorBlinks();
         MatchLabelsToRows();
+
+        // Back from a single race or an exhibition: the career's track, series and driver go back where
+        // they were before the subtitle reads them or CAREER loads them.
+        OneOffRacePrefs.Restore();
 
         DrawContinueSubtitle();
         DrawVersion();
@@ -295,6 +298,9 @@ public class TitleScreenUI : MonoBehaviour
             case Command.Continue:
                 GameSession.CurrentMode = GameSession.Mode.SinglePlayer;
                 if (!EnsureRaceableTrack()) return;
+                // Quit mid-session last run: back into the car for the session the sheet had booked, not
+                // whichever one the static happens to default to.
+                WeekendDirector.ResumeRoutedSession();
                 Load(raceSceneName);
                 break;
 
@@ -302,6 +308,7 @@ public class TitleScreenUI : MonoBehaviour
                 // One race: skip the practice/qualifying half of the weekend — and the career around it.
                 // Same mode the SINGLE RACE screen sets: driven start to finish, never on foot.
                 GameSession.CurrentMode = GameSession.Mode.SingleRace;
+                OneOffRacePrefs.Capture();   // SessionLive and (maybe) the track below are the career's keys
                 if (!EnsureRaceableTrack()) return;
                 RaceWeekend.Current = RaceWeekend.Session.Race;
                 // No weekend around an exhibition: the session is live the moment the scene loads.
@@ -427,7 +434,7 @@ public class TitleScreenUI : MonoBehaviour
 
     // The line under CONTINUE. It was placeholder copy from the design file — "CHAPTER 3 - 20/08/26" — and
     // said the same thing whatever the save held; it is the row's subtitle, so it says what the row will
-    // actually do: the track the career is sat at, and the real-world date it was last written down.
+    // actually do: the track the career is sat at, and which half-day of the weekend it picks up in.
     void DrawContinueSubtitle()
     {
         for (int i = 0; i < rows.Count; i++)
@@ -441,12 +448,13 @@ public class TitleScreenUI : MonoBehaviour
         }
     }
 
-    // "WATKINS GLEN - 05/09/26", in the shape the design authored: the venue, then the date, uppercase.
+    // "WATKINS GLEN - SAT AM": the venue, then the half-day the weekend sheet is on, uppercase like the
+    // rest of the menu.
     //
-    // The short name rather than the catalogue's full one, because "WATKINS GLEN INTERNATIONAL - 05/09/26"
-    // does not fit the row and the player thinks of the place by its short name anyway. The date is dropped
-    // entirely when there has never been a save point — a fresh install still has a track to continue at
-    // (see TrackSelection.CurrentId), and a made-up date under it would be a lie about a career that has
+    // The short name rather than the catalogue's full one, because "WATKINS GLEN INTERNATIONAL - SAT AM"
+    // does not fit the row and the player thinks of the place by its short name anyway. The half-day is
+    // dropped entirely when there has never been a save point — a fresh install still has a track to
+    // continue at (see TrackSelection.CurrentId), and a day under it would be a lie about a career that has
     // not started.
     public static string ContinueSubtitle()
     {
@@ -454,10 +462,19 @@ public class TitleScreenUI : MonoBehaviour
         if (string.IsNullOrEmpty(venue)) return "";
         venue = venue.ToUpperInvariant();
 
-        var saved = CareerSave.At;
-        return saved.HasValue
-            ? $"{venue} - {saved.Value.ToString("dd/MM/yy", CultureInfo.InvariantCulture)}"
-            : venue;
+        if (!CareerSave.Exists) return venue;
+        return $"{venue} - {Draftmaster.Weekend.WeekendSlots.ShortLabel(ResumeSlot())}";
+    }
+
+    // The half-day CAREER will open in. The ledger only describes the weekend it was last pointed at; one
+    // that has been reset since (NEXT WEEKEND, the travel map) has not been built yet and opens on Friday
+    // morning, which is what WeekendLedger.EnsureWeekend will make it the moment the race scene loads.
+    static Draftmaster.Weekend.WeekendSlot ResumeSlot()
+    {
+        return Draftmaster.Weekend.WeekendLedger.WeekendId == RaceWeekend.WeekendId
+               && Draftmaster.Weekend.WeekendLedger.Series == Draftmaster.Weekend.SeriesCatalog.PlayerSeries
+            ? Draftmaster.Weekend.WeekendLedger.CurrentSlot
+            : Draftmaster.Weekend.WeekendSlot.FridayAM;
     }
 
     // ------------------------------------------------------------------ drawing

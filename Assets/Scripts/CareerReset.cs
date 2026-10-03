@@ -51,6 +51,7 @@ public static class CareerReset
         foreach (var kv in ints) PlayerPrefs.SetInt(kv.Key, kv.Value);
         foreach (var kv in strings) PlayerPrefs.SetString(kv.Key, kv.Value);
         PlayerPrefs.Save();
+        Draftmaster.Weekend.FramePrefs.Invalidate();
 
         DropCaches();
     }

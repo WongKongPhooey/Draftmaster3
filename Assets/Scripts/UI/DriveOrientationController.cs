@@ -106,8 +106,15 @@ public class DriveOrientationController : MonoBehaviour
 
     // Sat in the car: driving it, or watching the broadcast cut while the AI has it (the TV button must not
     // spin the screen round). Not on foot, and not the crew chief's pit-wall view.
+    //
+    // And actually handed the car: not while the chief's briefing and the setup panel are still between the
+    // driver and the controls (PitLaneStart.GettingIn). Both are landscape screens, and turning upright at
+    // the door left the setup panel drawn sideways on a portrait phone. Nor while the setup panel is up for
+    // any other reason.
     static bool InCar =>
         !PadInput.OnFoot &&
+        !PitLaneStart.GettingIn &&
+        !CarSetupPanelUI.IsOpen &&
         (PlayerVehicleController.Human != null ||
          (DriveModeController.Current != null && !DriveModeController.Current.IsDriving));
 

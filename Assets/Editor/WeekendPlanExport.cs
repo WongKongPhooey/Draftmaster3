@@ -16,8 +16,8 @@ public static class WeekendPlanExport
         var plan = WeekendPlan.Empty(track, series);
         plan.notes = "Exported from the generated schedule. Edit freely — this file now IS the weekend.";
 
-        // weekendId 1 rather than 0 deliberately: weekend zero carries the one-off rookie orientation, and
-        // exporting that into every track's plan would hand the phone tutorial out at all thirty-five rounds.
+        // weekendId 1: an ordinary mid-season weekend, so nothing a career only gets once is exported into
+        // every track's plan.
         var timetable = WeekendTimetable.Build(series, weekendId: 1, trackName: "");
 
         foreach (var a in timetable.Activities)
