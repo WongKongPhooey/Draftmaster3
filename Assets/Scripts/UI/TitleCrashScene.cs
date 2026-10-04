@@ -127,6 +127,16 @@ public class TitleCrashScene : MonoBehaviour
     [Tooltip("How fast the shake jitters (Hz).")]
     public float packShakeHz = 26f;
 
+    [Header("Engines")]
+    [Tooltip("Loudness of the field going past, at its peak as a car crosses the middle of the frame.")]
+    [Range(0f, 1f)] public float flybyVolume = 0.75f;
+    [Tooltip("Pitch the fly-by rises to while a car is coming at the camera and falls to once it is past.")]
+    public float flybyPitchApproach = 1.15f;
+    public float flybyPitchAway = 0.82f;
+    [Tooltip("Loudness of the accident's cars while they are in shot. Their pitch falls with the clock, so the " +
+             "slow motion is heard as well as seen, and they go silent as time stops.")]
+    [Range(0f, 1f)] public float crashEngineVolume = 0.6f;
+
     [Header("Wiring")]
     [Tooltip("Canvas the reference layout is measured against. Left empty, the title menu's own canvas is used.")]
     public Canvas layoutCanvas;
@@ -207,6 +217,11 @@ public class TitleCrashScene : MonoBehaviour
     Vector3 _shakeApplied;
     float _shakeClock;
 
+    // The engines: one voice for the field going past, one for the accident's cars (Resources/Audio/TitleFlyby).
+    const string EngineClip = "Audio/TitleFlyby";
+    AudioSource _passEngine, _crashEngine;
+    float _passDist = -1f, _prevPassDist = -1f, _passPitch = 1f;
+
     float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
     int _plumeNext;              // which impact the next puff rises from
 
@@ -236,6 +251,7 @@ public class TitleCrashScene : MonoBehaviour
         TrackContact();
         Collide();
         Smoulder();
+        DriveEngines(tempo);
 
         // The particle systems run on the same decelerating clock, so the sparks hang in the air mid-streak
         // instead of burning out while the cars stand still. Rate is in choreography per second, where 1 is
@@ -327,6 +343,11 @@ public class TitleCrashScene : MonoBehaviour
         _elapsed = -(Follow + Mathf.Max(0f, leadInSeconds) + Mathf.Max(0f, startDelaySeconds));
         PoseTraffic();
         PoseCars();
+
+        var engine = Resources.Load<AudioClip>(EngineClip);
+        _passEngine = TitleAudio.Loop(gameObject, engine);
+        _crashEngine = TitleAudio.Loop(gameObject, engine);
+        TitleAudio.EnsureListener();
         return true;
     }
 
@@ -534,6 +555,7 @@ public class TitleCrashScene : MonoBehaviour
     {
         float lead = LeadTime;
         float rumble = 0f;
+        float nearest = -1f;
 
         for (int i = 0; i < _traffic.Length; i++)
         {
@@ -546,12 +568,54 @@ public class TitleCrashScene : MonoBehaviour
 
             // Loudest as a car crosses the middle of the frame, nothing as it enters or leaves.
             float half = TitleCrash.CanvasHeight * 0.5f;
-            rumble = Mathf.Max(rumble, 1f - Mathf.Clamp01(Mathf.Abs(pose.position.y - half) / half));
+            float off = Mathf.Abs(pose.position.y - half);
+            rumble = Mathf.Max(rumble, 1f - Mathf.Clamp01(off / half));
+            if (nearest < 0f || off < nearest) nearest = off;
 
             pass.t.position = PxToWorld(pose.position);
             pass.t.rotation = Quaternion.Euler(0f, 0f, pose.rotation);
         }
         _rumble = rumble;
+        _passDist = nearest;
+    }
+
+    // The sound of it. The field's engine swells with the same rumble that shakes the camera, and its pitch
+    // slides from high to low as the nearest car crosses the middle of the frame — coming at you, then gone —
+    // which is all a Doppler shift is to the ear. The accident's cars are heard only while one of them is in
+    // shot, at a pitch that falls with the slowing clock, so they go down to a growl and then silence as time
+    // stops.
+    void DriveEngines(TitleCrash.Tempo tempo)
+    {
+        float dt = Mathf.Min(Time.unscaledDeltaTime, MaxFrameSeconds);
+
+        if (_passEngine != null)
+        {
+            bool passing = _passDist >= 0f && _rumble > 0f;
+            bool approaching = !passing || _prevPassDist < 0f || _passDist <= _prevPassDist;
+            float pitch = passing ? (approaching ? flybyPitchApproach : flybyPitchAway) : _passPitch;
+            _passPitch = Mathf.MoveTowards(_passPitch, pitch, dt * 2.5f);
+            _passEngine.pitch = _passPitch;
+            float vol = passing ? flybyVolume * Mathf.Pow(_rumble, 0.6f) : 0f;
+            _passEngine.volume = Mathf.MoveTowards(_passEngine.volume, vol, dt * 6f);
+            _prevPassDist = passing ? _passDist : -1f;
+        }
+
+        if (_crashEngine != null)
+        {
+            bool inShot = false;
+            const float Margin = 40f;
+            for (int i = 0; i < _poses.Length && !inShot; i++)
+            {
+                var p = _poses[i].position;
+                inShot = p.x > -Margin && p.x < TitleCrash.CanvasWidth + Margin &&
+                         p.y > -Margin && p.y < TitleCrash.CanvasHeight + Margin;
+            }
+            float entry = Mathf.Max(0.0001f, tempo.Rate(0f));
+            float rel = Mathf.Clamp01(tempo.Rate(_elapsed) / entry);
+            _crashEngine.pitch = Mathf.Lerp(0.3f, 1.1f, rel);
+            float vol = inShot && _elapsed >= 0f ? crashEngineVolume * Mathf.Clamp01(rel * 2f) : 0f;
+            _crashEngine.volume = Mathf.MoveTowards(_crashEngine.volume, vol, dt * 8f);
+        }
     }
 
     void LateUpdate()

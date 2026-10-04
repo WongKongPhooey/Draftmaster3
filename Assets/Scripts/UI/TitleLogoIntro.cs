@@ -11,6 +11,9 @@ using UnityEngine.SceneManagement;
 // The pieces are found by those names and moved by their own anchored positions, so the prefab and the title
 // scene stay exactly as authored.
 //
+// Each word lands with a metal crunch (Resources/Audio/metal-crunch), timed to the moment it visibly hits its
+// mark rather than the end of the slide: the ease puts it there about halfway through. The 3 hits lowest.
+//
 // Self-installing on whichever scene carries a DraftmasterLogo, so it needs no scene edit.
 public class TitleLogoIntro : MonoBehaviour
 {
@@ -22,6 +25,20 @@ public class TitleLogoIntro : MonoBehaviour
     public float stagger = 0.33f;
     [Tooltip("Seconds the tagline takes to fade up after the 3 lands.")]
     public float taglineFadeSeconds = 0.25f;
+    [Tooltip("How far through its slide a word is when it reads as locked in place, 0..1. The quintic ease has " +
+             "covered ~98% of the distance by 0.55, so the crunch lands on the visible stop, not the tail.")]
+    [Range(0f, 1f)] public float lockAt = 0.55f;
+    [Tooltip("Volume of the crunch as each word locks in.")]
+    [Range(0f, 1f)] public float crunchVolume = 0.9f;
+
+    const string CrunchClip = "Audio/metal-crunch";
+    // DRAFT, MASTER, then the 3 a little heavier.
+    static readonly float[] CrunchPitch = { 1.05f, 0.97f, 0.86f };
+    // One source per word: a one-shot follows its source's pitch while it plays, and the words land a third
+    // of a second apart, so a shared source would bend the last crunch's tail.
+    readonly AudioSource[] _audio = new AudioSource[3];
+    AudioClip _crunch;
+    readonly bool[] _crunched = new bool[3];
 
     // The longest any one frame may advance the intro. The first frame after a cold boot carries the whole
     // scene's setup as its delta, which would otherwise spend the entire entrance before it drew once.
@@ -84,6 +101,18 @@ public class TitleLogoIntro : MonoBehaviour
             if (_tagline == null) _tagline = tag.gameObject.AddComponent<CanvasGroup>();
         }
 
+        _crunch = Resources.Load<AudioClip>(CrunchClip);
+        if (_crunch != null)
+            for (int i = 0; i < _audio.Length; i++)
+            {
+                var a = gameObject.AddComponent<AudioSource>();
+                a.playOnAwake = false;
+                a.spatialBlend = 0f;    // a title sting, not a sound in the world
+                a.pitch = CrunchPitch[i];
+                _audio[i] = a;
+            }
+        TitleAudio.EnsureListener();
+
         Apply();
     }
 
@@ -120,6 +149,10 @@ public class TitleLogoIntro : MonoBehaviour
         Slide(_master, masterAt);
         Slide(_three, threeAt);
 
+        Crunch(0, draftAt, _draft);
+        Crunch(1, masterAt, _master);
+        Crunch(2, threeAt, _three);
+
         float tag = taglineFadeSeconds > 0f ? Mathf.Clamp01((_t - tagAt) / taglineFadeSeconds) : (_t >= tagAt ? 1f : 0f);
         if (_tagline != null) _tagline.alpha = tag;
 
@@ -136,6 +169,16 @@ public class TitleLogoIntro : MonoBehaviour
             var p = pieces[i];
             if (p.rt != null) p.rt.anchoredPosition = Vector2.LerpUnclamped(p.from, p.home, e);
         }
+    }
+
+    // The word has hit its mark: one crunch, once.
+    void Crunch(int i, float at, List<Piece> pieces)
+    {
+        if (_crunched[i] || pieces.Count == 0) return;
+        if (_t < at + slideSeconds * lockAt) return;
+        _crunched[i] = true;
+        if (_audio[i] == null || _crunch == null) return;
+        _audio[i].PlayOneShot(_crunch, crunchVolume);
     }
 
     // Leaving early (a scene change mid-entrance) puts everything back where the prefab has it.
