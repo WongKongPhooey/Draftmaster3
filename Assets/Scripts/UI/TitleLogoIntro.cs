@@ -30,13 +30,18 @@ public class TitleLogoIntro : MonoBehaviour
     [Range(0f, 1f)] public float lockAt = 0.55f;
     [Tooltip("Volume of the crunch as each word locks in.")]
     [Range(0f, 1f)] public float crunchVolume = 0.9f;
+    [Tooltip("A second copy of the crunch an octave down under each hit — the weight of it.")]
+    [Range(0f, 1f)] public float subVolume = 0.7f;
+    [Tooltip("Seconds the metal rings on after each hit (the reverb tail).")]
+    [Range(0.1f, 4f)] public float reverbSeconds = 1.3f;
 
     const string CrunchClip = "Audio/metal-crunch";
-    // DRAFT, MASTER, then the 3 a little heavier.
-    static readonly float[] CrunchPitch = { 1.05f, 0.97f, 0.86f };
+    // DRAFT, MASTER, then the 3 heaviest. Pitched down from the recording for weight.
+    static readonly float[] CrunchPitch = { 0.82f, 0.76f, 0.64f };
     // One source per word: a one-shot follows its source's pitch while it plays, and the words land a third
     // of a second apart, so a shared source would bend the last crunch's tail.
     readonly AudioSource[] _audio = new AudioSource[3];
+    readonly AudioSource[] _sub = new AudioSource[3];
     AudioClip _crunch;
     readonly bool[] _crunched = new bool[3];
 
@@ -103,14 +108,30 @@ public class TitleLogoIntro : MonoBehaviour
 
         _crunch = Resources.Load<AudioClip>(CrunchClip);
         if (_crunch != null)
+        {
             for (int i = 0; i < _audio.Length; i++)
             {
-                var a = gameObject.AddComponent<AudioSource>();
-                a.playOnAwake = false;
-                a.spatialBlend = 0f;    // a title sting, not a sound in the world
-                a.pitch = CrunchPitch[i];
-                _audio[i] = a;
+                _audio[i] = Voice(CrunchPitch[i]);
+                _sub[i] = Voice(CrunchPitch[i] * 0.5f);
             }
+
+            // A short, bright, metallic room on every hit (the filter treats every source on this object): the
+            // tail is what makes a slam sound like it happened somewhere big rather than in a box.
+            var verb = gameObject.AddComponent<AudioReverbFilter>();
+            verb.reverbPreset = AudioReverbPreset.User;
+            verb.dryLevel = 0f;
+            verb.room = -400f;
+            verb.roomHF = -300f;
+            verb.roomLF = 0f;
+            verb.decayTime = reverbSeconds;
+            verb.decayHFRatio = 0.7f;
+            verb.reflectionsLevel = -200f;
+            verb.reflectionsDelay = 0.012f;
+            verb.reverbLevel = 0f;
+            verb.reverbDelay = 0.02f;
+            verb.diffusion = 100f;
+            verb.density = 100f;
+        }
         TitleAudio.EnsureListener();
 
         Apply();
@@ -171,6 +192,15 @@ public class TitleLogoIntro : MonoBehaviour
         }
     }
 
+    AudioSource Voice(float pitch)
+    {
+        var a = gameObject.AddComponent<AudioSource>();
+        a.playOnAwake = false;
+        a.spatialBlend = 0f;    // a title sting, not a sound in the world
+        a.pitch = pitch;
+        return a;
+    }
+
     // The word has hit its mark: one crunch, once.
     void Crunch(int i, float at, List<Piece> pieces)
     {
@@ -179,6 +209,7 @@ public class TitleLogoIntro : MonoBehaviour
         _crunched[i] = true;
         if (_audio[i] == null || _crunch == null) return;
         _audio[i].PlayOneShot(_crunch, crunchVolume);
+        if (_sub[i] != null && subVolume > 0f) _sub[i].PlayOneShot(_crunch, subVolume);
     }
 
     // Leaving early (a scene change mid-entrance) puts everything back where the prefab has it.
