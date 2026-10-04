@@ -232,4 +232,78 @@ public class OvalGeometryTests
         Assert.AreEqual(TrackTuning.For(TrackKind.Speedway).draftScale,
                         TrackTuning.ForTrack("Kansas", TrackKind.Speedway).draftScale, 1e-4f);
     }
+
+    // ------------------------------------------------------------ Daytona's pit road across the tri-oval
+
+    // Walk the lane from where it leaves the lap and say where it ends, in the lap's own frame.
+    static void WalkChord(OvalSpec spec, out System.Collections.Generic.List<OvalSegment> lap,
+                          out OvalGeometry.ChordPitRoad road, out Vector2 laneEnd, out float laneEndHeading,
+                          out float lapMetres, out float exitDistance)
+    {
+        lap = OvalGeometry.Build(spec);
+        Assert.IsTrue(OvalGeometry.TryBuildChordPitLane(spec, lap, out road), $"{spec.trackId} should get a chord pit road");
+
+        lapMetres = 0f;
+        foreach (var seg in lap) lapMetres += seg.length;
+        int frontLast = OvalGeometry.FrontStretchLastIndex(lap);
+        float front = 0f;
+        for (int i = 0; i <= frontLast; i++) front += lap[i].length;
+        exitDistance = front + road.exitAfterFrontStretch;
+
+        OvalGeometry.PointAt(lap, lapMetres - road.entryBeforeLapEnd, out laneEnd, out laneEndHeading);
+        foreach (var seg in road.lane) OvalGeometry.Advance(seg, ref laneEnd, ref laneEndHeading);
+    }
+
+    [Test]
+    public void DaytonaPitRoadLeavesAndRejoinsTheTrackExactly()
+    {
+        WalkChord(Superspeedway(), out var lap, out var road, out var end, out float heading, out _, out float exit);
+        OvalGeometry.PointAt(lap, exit, out var onTrack, out float trackHeading);
+
+        Assert.AreEqual(3, road.lane.Count, "entry arc, the chord, exit arc");
+        Assert.Less(Vector2.Distance(end, onTrack), 0.05f, "the lane ends on the centreline where it says it rejoins");
+        Assert.Less(Mathf.Abs(Mathf.DeltaAngle(heading, trackHeading)), 0.05f, "and joins it tangentially");
+    }
+
+    [Test]
+    public void DaytonaPitRoadIsAStraightChordInsideTheTriOval()
+    {
+        var spec = Superspeedway();
+        WalkChord(spec, out var lap, out var road, out _, out _, out float lapMetres, out _);
+
+        // Sample the racing surface densely, then measure the chord against it.
+        var track = new System.Collections.Generic.List<Vector2>();
+        for (float d = 0f; d < lapMetres; d += 2f)
+        {
+            OvalGeometry.PointAt(lap, d, out var p, out _);
+            track.Add(p);
+        }
+
+        float nearest = float.MaxValue, farthest = 0f;
+        for (float x = road.chordStartX; x <= road.chordEndX; x += 5f)
+        {
+            var p = new Vector2(x, spec.pitChordInset);   // left-handed: the infield is +y
+            float best = float.MaxValue;
+            foreach (var t in track) best = Mathf.Min(best, Vector2.Distance(p, t));
+            nearest = Mathf.Min(nearest, best);
+            farthest = Mathf.Max(farthest, best);
+        }
+
+        float clear = spec.roadWidth * 0.5f + OvalGeometry.PitWidth(spec) * 0.5f;
+        Assert.Greater(nearest, clear + 5f, "pit road never touches the racing surface along the chord");
+        Assert.Greater(farthest - nearest, 40f,
+                       "the tri-oval bows away from pit road - the two are NOT parallel");
+        Assert.Greater(road.straightLength, 900f, "the chord spans the whole front stretch");
+    }
+
+    [Test]
+    public void OnlyTracksThatAskForItGetAChordPitRoad()
+    {
+        var kansas = Intermediate();
+        Assert.IsFalse(OvalGeometry.TryBuildChordPitLane(kansas, OvalGeometry.Build(kansas), out _));
+
+        var noPits = Superspeedway();
+        noPits.pitLane = false;
+        Assert.IsFalse(OvalGeometry.TryBuildChordPitLane(noPits, OvalGeometry.Build(noPits), out _));
+    }
 }

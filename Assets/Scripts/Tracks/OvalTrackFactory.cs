@@ -102,6 +102,12 @@ public static class OvalTrackFactory
             return;
         }
 
+        if (OvalGeometry.TryBuildChordPitLane(spec, solved, out var chord))
+        {
+            BuildChordPitLane(track, spec, solved, chord);
+            return;
+        }
+
         float frontLength = 0f;
         int frontLast = OvalGeometry.FrontStretchLastIndex(solved);
         for (int i = 0; i <= frontLast && i < solved.Count; i++) frontLength += solved[i].length;
@@ -120,6 +126,29 @@ public static class OvalTrackFactory
         track.pitExitOffset = 0f;
         track.pitExitLineDistance = OvalGeometry.PitExitLineDistance(spec, frontLength);
         track.RebakePitDistances();   // OnValidate doesn't fire on an asset built in code
+    }
+
+    // Daytona: pit road cut straight across the tri-oval infield (OvalGeometry.TryBuildChordPitLane). It leaves
+    // partway round the final corner and rejoins partway round the first, so both ends are pinned by offsets
+    // back from / on from a segment end rather than at the segment ends themselves.
+    static void BuildChordPitLane(TrackInfoV2 track, OvalSpec spec, List<OvalSegment> solved,
+                                  OvalGeometry.ChordPitRoad chord)
+    {
+        var pitSegments = new TrackInfoV2.TrackSegment[chord.lane.Count];
+        for (int i = 0; i < chord.lane.Count; i++) pitSegments[i] = ToAssetSegment(chord.lane[i]);
+
+        int frontLast = OvalGeometry.FrontStretchLastIndex(solved);
+        track.pitSegments = pitSegments;
+        track.pitDefaultWidth = OvalGeometry.PitWidth(spec);
+        track.pitSpeedLimit = spec.pitSpeedLimitMph;
+        track.pitStartHeadingOffset = 0f;
+        track.pitEntrySegmentIndex = solved.Count - 1;                // back into the final corner
+        track.pitEntryOffset = -chord.entryBeforeLapEnd;
+        track.pitExitSegmentIndex = frontLast;                        // on into the first corner
+        track.pitExitOffset = chord.exitAfterFrontStretch;
+        // The limit ends where the chord does: the exit arc is the run back up onto the banking.
+        track.pitExitLineDistance = chord.straightStart + chord.straightLength;
+        track.RebakePitDistances();
     }
 
     // Sanity report for a built asset, in the same terms OvalGeometry checks a solve.

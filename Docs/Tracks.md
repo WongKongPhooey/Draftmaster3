@@ -258,6 +258,41 @@ the corners. What they do not get right is the exact position of each apex. To i
 correct the angles and arc lengths in place, and rebuild - the solver re-closes the lap for you, so a
 partial correction is always safe to commit.
 
+## Daytona: the tri-oval pit road, the catch fence and a Watkins Glen paddock
+
+Daytona is the second track authored rather than only generated, with Watkins Glen as the blueprint.
+
+**Pit road is a chord, not a parallel lane.** At Daytona the front stretch bows out toward the grandstands
+through the tri-oval while pit road runs dead straight across the infield behind it. `TrackDimensions`
+gives Daytona a `pitChordInsetMetres` (40 m), and `OvalGeometry.TryBuildChordPitLane` builds the lane as
+an arc leaving Turn 4 on the inside, the straight chord, and an arc rejoining Turn 1. Each arc turns through
+the same angle as the stretch of corner it replaces at half the corner's radius, so it is inside the racing
+surface by construction and meets it tangentially. The angle is solved in closed form
+(`a = acos(1 - inset / (R - r))`), so the lane ends **exactly** on the centreline - the generated parallel
+lanes at the other ovals miss by tens of metres. Pit road to racing surface runs roughly
+2 → 17 → 40 → 86 m (start/finish) → 40 → 14 m along its 1.5 km. The main lap is unchanged, so the trained
+racing line still fits. `OvalGeometryTests` covers the exact rejoin, the clearance along the chord and the
+non-parallel spread; `FormationLapSimTests` runs a full field through it with no contacts or seams.
+
+**The catch fence goes all the way round.** Every wall is drawn as the SAFER barrier with its catch fence.
+Pit road used to leave across the outside wall, which cut the fence at both ends. Now that pit road is in
+the infield, the outside wall has no gaps; only the infield wall opens, where pit road crosses it.
+`TrackDressingFactory.PitGaps` now measures each opening (anywhere the wall would stand on pit road or its
+box lane) instead of cutting a fixed 35 m window, which a lane peeling gradually off a corner would overrun.
+
+**The paddock is Watkins Glen's, re-laid in the infield.** `Draftmaster > Tracks > Daytona > Author Daytona
+(Watkins Glen Blueprint)` (`Assets/Editor/DaytonaPackageAuthoring.cs`) regenerates the geometry, re-cuts the
+walls, and lays the paddock out. It reads Watkins Glen's package and places each key area at the same
+distance along and back from pit road: the RV (`SpawnPoint_RV`), `Grandstand_Marker` (gate in the paddock,
+seat across the track in the front-stretch stand nearest the start/finish), `SponsorSuite_Marker`,
+`SigningFence_Marker`, `MeetingRoom_Marker`, `IntroStage_Marker`, `SpawnPoint_VictoryLane` and
+`SpawnPoint_PitLaneCenter`. The paddock runs the length of the box lane and is as deep as Watkins Glen's.
+One deliberate difference: at Daytona the pit stalls sit against the pit wall, on the *track* side of pit
+road, so the walkable pocket includes pit road and the stalls - the player has to be able to walk to the car.
+
+Re-run the menu item after regenerating Daytona. Do not follow it with an overwriting `Dress Selected
+Package`, which regenerates the paddock pocket from the pit lane.
+
 ## Building the whole calendar
 
 `Draftmaster > Tracks > Build All Calendar Tracks` does layout, package and dressing for all 37 generated

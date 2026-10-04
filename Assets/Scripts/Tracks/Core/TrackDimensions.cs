@@ -59,6 +59,9 @@ namespace Draftmaster.Tracks
         public int corners;                // 4 = conventional oval, 2 = paperclip, 3 = Pocono's triangle
         public float turnShareOfLap;       // fraction of the lap spent turning
         public float frontKinkDeg;         // tri-oval / quad-oval dog-leg on the front stretch; 0 = straight
+        // Tri-ovals whose pit road is a straight chord across the infield rather than a lane alongside the
+        // racing surface: how far inside the ends of the front stretch the pit road runs (m). 0 = alongside.
+        public float pitChordInsetMetres;
         public int cornerCount;            // road courses: numbered corners on the circuit map
 
         public int pitSpeedLimitMph;
@@ -114,7 +117,7 @@ namespace Draftmaster.Tracks
             float turnBank, float straightBank, int corners, float turnShare, float kink,
             int pitMph, int cupLaps, SeriesVisits series,
             DimensionConfidence confidence = DimensionConfidence.Published, string note = null,
-            float pitWidthFeet = 0f, string country = "USA")
+            float pitWidthFeet = 0f, string country = "USA", float pitChordInsetMetres = 0f)
         {
             return new TrackDimensionRow
             {
@@ -122,6 +125,7 @@ namespace Draftmaster.Tracks
                 lapMiles = miles,
                 widthMetres = Feet(widthFeet),
                 pitWidthMetres = pitWidthFeet > 0f ? Feet(pitWidthFeet) : 0f,
+                pitChordInsetMetres = pitChordInsetMetres,
                 turnBankingDeg = turnBank, straightBankingDeg = straightBank,
                 corners = corners, turnShareOfLap = turnShare, frontKinkDeg = kink,
                 pitSpeedLimitMph = pitMph, cupLaps = cupLaps, series = series,
@@ -156,7 +160,9 @@ namespace Draftmaster.Tracks
             // and eight feet wider, which is why its packs are bigger - that difference reaches the mesh now.
             Oval("Daytona", "Daytona International Speedway", TrackKind.Superspeedway,
                  2.5f, 40f, 31f, 3f, 4, 0.47f, 6f, 55, 200, SeriesVisits.All,
-                 note: "Tri-oval banked 18 deg, back stretch 3 deg. 40 ft wide throughout."),
+                 note: "Tri-oval banked 18 deg, back stretch 3 deg. 40 ft wide throughout. Pit road is a "
+                     + "straight chord across the tri-oval infield, not a lane alongside the front stretch.",
+                 pitChordInsetMetres: 40f),
 
             Oval("Talladega", "Talladega Superspeedway", TrackKind.Superspeedway,
                  2.66f, 48f, 33f, 2f, 4, 0.5f, 5f, 55, 188, SeriesVisits.All,

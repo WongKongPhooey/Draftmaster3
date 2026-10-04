@@ -68,6 +68,9 @@ namespace Draftmaster.Tracks
         public bool pitLane = true;
         public int pitSpeedLimitMph = 45;
         [Range(0.3f, 0.95f)] public float pitLengthShare = 0.75f;
+        [Tooltip("Tri-oval pit road as a straight chord across the infield, this many metres inside the ends of " +
+                 "the front stretch (Daytona). 0 = a lane alongside the front stretch.")]
+        public float pitChordInset = 0f;
 
         public int defaultLaps = 200;
         [Tooltip("Left-hand (counter-clockwise), like every oval in the series. Off mirrors the layout.")]
@@ -171,6 +174,7 @@ namespace Draftmaster.Tracks
             if (dim.corners >= 2) spec.corners = dim.corners;
             if (dim.turnShareOfLap > 0.01f) spec.turnShareOfLap = dim.turnShareOfLap;
             spec.frontKinkDegrees = dim.frontKinkDeg;
+            spec.pitChordInset = dim.pitChordInsetMetres;
 
             // The AI lines are pinned a fixed distance in from the wall, so on a 40 ft track the default
             // 1.5 m margin leaves almost nothing between them. Scale it with the road instead.
@@ -338,6 +342,134 @@ namespace Draftmaster.Tracks
             return lane;
         }
 
+        // ------------------------------------------------------------ the tri-oval chord
+
+        // Daytona's pit road does not follow the racing surface. The front stretch bows out toward the
+        // grandstands through the tri-oval while pit road runs dead straight across the infield behind it, so
+        // the two are a few car-widths apart at either end and the best part of a hundred metres apart at the
+        // start/finish line.
+        //
+        // Built as: an arc leaving the final corner on the inside, the straight chord, and an arc rejoining the
+        // first corner. Each arc turns through the same angle as the stretch of corner it replaces, at half
+        // the corner's radius, so it runs inside the racing surface by construction and meets it tangentially
+        // at both ends. The angle is solved so the chord sits exactly `pitChordInset` inside the line through
+        // the ends of the front stretch:
+        //
+        //     the corner (radius R) and the arc (radius r) through angle a part laterally by (R - r)(1 - cos a)
+        //
+        // so a = acos(1 - inset / (R - r)). Nothing is searched for and the lane meets the track exactly.
+        public const float ChordArcRadiusShare = 0.5f;
+
+        public struct ChordPitRoad
+        {
+            public List<OvalSegment> lane;        // entry arc, the chord, exit arc
+            public float entryBeforeLapEnd;       // how far back into the final corner the lane leaves (m)
+            public float exitAfterFrontStretch;   // how far into the first corner it rejoins (m)
+            public float straightStart;           // distance along the lane where the chord begins
+            public float straightLength;
+            public float chordStartX, chordEndX;  // the chord's ends, measured along the front stretch from the line
+        }
+
+        // False when the spec asks for no chord, or the lap is not a shape it fits (the front stretch must start
+        // and end square on one line, between two corners) — the caller then lays the ordinary lane.
+        public static bool TryBuildChordPitLane(OvalSpec spec, IList<OvalSegment> lap, out ChordPitRoad road)
+        {
+            road = default;
+            if (spec == null || !spec.pitLane || spec.pitChordInset < 1f || lap == null || lap.Count < 3) return false;
+
+            int frontLast = FrontStretchLastIndex(lap);
+            if (frontLast + 1 >= lap.Count - 1) return false;
+            var before = lap[lap.Count - 1];
+            var after = lap[frontLast + 1];
+            if (!before.isTurn || !after.isTurn) return false;
+
+            Vector2 frontEnd = Vector2.zero;
+            float frontHeading = 0f;
+            for (int i = 0; i <= frontLast; i++) Advance(lap[i], ref frontEnd, ref frontHeading);
+            if (Mathf.Abs(frontEnd.y) > 0.5f || Mathf.Abs(Mathf.DeltaAngle(frontHeading, 0f)) > 0.1f) return false;
+
+            float inset = spec.pitChordInset;
+            if (!ChordLeg(before, inset, out float aIn, out float rIn, out float bigIn)) return false;
+            if (!ChordLeg(after, inset, out float aOut, out float rOut, out float bigOut)) return false;
+
+            float chordStart = -(bigIn - rIn) * Mathf.Sin(aIn);
+            float chordEnd = frontEnd.x + (bigOut - rOut) * Mathf.Sin(aOut);
+            float straight = chordEnd - chordStart;
+            if (straight < 50f) return false;
+
+            float sign = spec.leftHanded ? 1f : -1f;
+            float width = PitWidth(spec);
+            var lane = new List<OvalSegment>
+            {
+                new OvalSegment
+                {
+                    label = "Pit Entry", isTurn = true, length = rIn * aIn, angle = sign * aIn * Mathf.Rad2Deg,
+                    maxSpeedMph = spec.pitSpeedLimitMph, width = width,
+                },
+                new OvalSegment
+                {
+                    label = "Pit Road", isTurn = false, length = straight,
+                    maxSpeedMph = spec.pitSpeedLimitMph, width = width,
+                },
+                new OvalSegment
+                {
+                    label = "Pit Exit", isTurn = true, length = rOut * aOut, angle = sign * aOut * Mathf.Rad2Deg,
+                    maxSpeedMph = spec.pitSpeedLimitMph, width = width,
+                },
+            };
+
+            road = new ChordPitRoad
+            {
+                lane = lane,
+                entryBeforeLapEnd = bigIn * aIn,
+                exitAfterFrontStretch = bigOut * aOut,
+                straightStart = lane[0].length,
+                straightLength = straight,
+                chordStartX = chordStart,
+                chordEndX = chordEnd,
+            };
+            return true;
+        }
+
+        // One end of the chord: the angle a through which an arc of half the corner's radius leaves (or meets)
+        // the corner and ends `inset` inside it, square to the front stretch.
+        static bool ChordLeg(OvalSegment corner, float inset, out float angleRad, out float arcRadius, out float cornerRadius)
+        {
+            float cornerRad = Mathf.Abs(corner.angle) * Mathf.Deg2Rad;
+            cornerRadius = corner.length / Mathf.Max(1e-4f, cornerRad);
+            arcRadius = cornerRadius * ChordArcRadiusShare;
+            float c = 1f - inset / Mathf.Max(1e-3f, cornerRadius - arcRadius);
+            angleRad = Mathf.Acos(Mathf.Clamp(c, -1f, 1f));
+            return c > -1f && angleRad > 0.01f && angleRad <= cornerRad;
+        }
+
+        // Where a lap is, `distance` metres round it from the start line (heading 0 at the origin), for checks.
+        public static void PointAt(IList<OvalSegment> lap, float distance, out Vector2 pos, out float headingDeg)
+        {
+            pos = Vector2.zero;
+            headingDeg = 0f;
+            if (lap == null) return;
+            float remaining = distance;
+            for (int i = 0; i < lap.Count; i++)
+            {
+                var seg = lap[i];
+                if (remaining >= seg.length && i < lap.Count - 1)
+                {
+                    Advance(seg, ref pos, ref headingDeg);
+                    remaining -= seg.length;
+                    continue;
+                }
+                float part = Mathf.Clamp(remaining, 0f, seg.length);
+                if (seg.length > 1e-4f)
+                {
+                    seg.angle *= part / seg.length;
+                    seg.length = part;
+                }
+                Advance(seg, ref pos, ref headingDeg);
+                return;
+            }
+        }
+
         // Pit road is its own width where the venue publishes one (Indianapolis' pit road is narrow
         // relative to its 50 ft straights), otherwise a fraction of the racing surface.
         public static float PitWidth(OvalSpec spec)
@@ -500,7 +632,7 @@ namespace Draftmaster.Tracks
 
         // Same integration TrackInfoV2 does when it samples its authored spline, so a check here means the
         // same thing the built mesh will show.
-        static void Advance(OvalSegment seg, ref Vector2 pos, ref float headingDeg)
+        public static void Advance(OvalSegment seg, ref Vector2 pos, ref float headingDeg)
         {
             if (!seg.isTurn || Mathf.Approximately(seg.angle, 0f))
             {

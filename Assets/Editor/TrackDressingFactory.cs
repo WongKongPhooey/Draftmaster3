@@ -171,7 +171,12 @@ public static class TrackDressingFactory
     // Openings in the wall where the pit lane leaves and rejoins the track. Which enum side that is depends
     // on which way the pit road sits from the racing surface, so measure it rather than assume: the builder's
     // "Inner" is simply the right of travel, which is the outside wall on an anticlockwise oval.
-    static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder)
+    //
+    // How long each opening is is measured too. A pit lane peels away gradually — Daytona's leaves the final
+    // corner on an arc and is still crossing the wall line a hundred metres later — so the wall is cut
+    // wherever it would stand on the pit road (plus its box lane), with a fixed window round the entry and exit
+    // nodes as the minimum.
+    public static TrackEnvironment.BarrierGap[] PitGaps(TrackBuilder builder, float wallOffset = 1f)
     {
         var track = builder.track;
         if (track == null || !track.hasPitLane) return new TrackEnvironment.BarrierGap[0];
@@ -181,27 +186,101 @@ public static class TrackDressingFactory
 
         var entrySample = builder.SampleAt(track.pitEntryDistance);
         float side = Vector2.Dot(pit[0].position - entrySample.position, entrySample.normal);
+        // A pit lane that leaves dead on the centreline says nothing at its first sample; ask a bit further on.
+        if (Mathf.Abs(side) < 0.5f)
+        {
+            var on = pit[Mathf.Min(pit.Count - 1, pit.Count / 8)];
+            side = Vector2.Dot(on.position - builder.SampleAt(track.pitEntryDistance + on.distance).position, entrySample.normal);
+        }
         var pitSide = side >= 0f
             ? TrackEnvironment.BarrierSide.Inner    // pit road sits to the right of travel
             : TrackEnvironment.BarrierSide.Outer;
+        float sign = side >= 0f ? 1f : -1f;
+
+        const float halfWindow = 35f;   // the minimum, either side of each node
+        const float clearance = 3f;     // wall to pit-road edge, below which the wall is cut
+        const float pad = 10f;          // run-out either side of a measured cut
+        var ranges = new List<Vector2>
+        {
+            new Vector2(track.pitEntryDistance - halfWindow, track.pitEntryDistance + halfWindow),
+            new Vector2(track.pitExitDistance - halfWindow, track.pitExitDistance + halfWindow),
+        };
+
+        float boxLane = builder.HasPitBoxLane ? builder.pitBoxLaneWidth : 0f;
+        var main = builder.SampleCenterline();
+        float lap = track.TotalLength();
+        float runStart = -1f, runEnd = -1f;
+        for (int i = 0; i < main.Count; i++)
+        {
+            var s = main[i];
+            if (s.distance > lap) break;
+            Vector2 wall = s.position + s.normal * sign * (s.width * 0.5f + wallOffset);
+            bool cut = false;
+            for (int k = 0; k < pit.Count && !cut; k++)
+            {
+                Vector2 rel = wall - pit[k].position;
+                if (rel.sqrMagnitude > 900f) continue;
+                float lat = Vector2.Dot(rel, pit[k].normal);
+                float half = pit[k].width * 0.5f;
+                float reach = lat >= 0f ? half + boxLane : half;   // the box lane is on the pit's +normal side
+                cut = Mathf.Abs(Vector2.Dot(rel, pit[k].tangent)) < 3f && Mathf.Abs(lat) < reach + clearance;
+            }
+            if (cut)
+            {
+                if (runStart < 0f) runStart = s.distance;
+                runEnd = s.distance;
+            }
+            else if (runStart >= 0f)
+            {
+                ranges.Add(new Vector2(runStart - pad, runEnd + pad));
+                runStart = -1f;
+            }
+        }
+        if (runStart >= 0f) ranges.Add(new Vector2(runStart - pad, runEnd + pad));
 
         var gaps = new List<TrackEnvironment.BarrierGap>();
-        AddGap(gaps, track, pitSide, track.pitEntryDistance, "pit entry");
-        AddGap(gaps, track, pitSide, track.pitExitDistance, "pit exit");
+        float OnLapGap(float a, float b) { float g = Mathf.Abs(Mathf.Repeat(a - b, lap)); return Mathf.Min(g, lap - g); }
+        foreach (var r in MergeOnLap(ranges, lap))
+        {
+            float mid = (r.x + r.y) * 0.5f;
+            bool entry = OnLapGap(mid, track.pitEntryDistance) <= OnLapGap(mid, track.pitExitDistance);
+            AddGap(gaps, track, pitSide, r.x, r.y, entry ? "pit entry" : "pit exit");
+        }
         return gaps.ToArray();
+    }
+
+    // Lap-distance windows folded onto [0, lap) (a window across the line is split in two) and merged where
+    // they overlap.
+    static List<Vector2> MergeOnLap(List<Vector2> ranges, float lap)
+    {
+        var folded = new List<Vector2>();
+        foreach (var r in ranges)
+        {
+            float a = r.x, b = r.y;
+            if (lap <= 1f) { folded.Add(r); continue; }
+            float shift = Mathf.Floor(a / lap) * lap;
+            a -= shift; b -= shift;
+            if (b <= lap) folded.Add(new Vector2(a, b));
+            else { folded.Add(new Vector2(a, lap)); folded.Add(new Vector2(0f, Mathf.Min(b - lap, lap))); }
+        }
+        folded.Sort((p, q) => p.x.CompareTo(q.x));
+        var merged = new List<Vector2>();
+        foreach (var r in folded)
+        {
+            if (merged.Count > 0 && r.x <= merged[merged.Count - 1].y)
+                merged[merged.Count - 1] = new Vector2(merged[merged.Count - 1].x, Mathf.Max(merged[merged.Count - 1].y, r.y));
+            else merged.Add(r);
+        }
+        return merged;
     }
 
     // Barrier gaps are per segment with distances local to that segment, so a window that straddles a segment
     // boundary has to be cut into one gap per segment it touches.
     static void AddGap(List<TrackEnvironment.BarrierGap> gaps, TrackInfoV2 track,
-                       TrackEnvironment.BarrierSide side, float lapDistance, string label)
+                       TrackEnvironment.BarrierSide side, float from, float to, string label)
     {
-        const float halfWindow = 35f;
         var segs = track.segments;
         if (segs == null || segs.Length == 0) return;
-
-        float from = lapDistance - halfWindow;
-        float to = lapDistance + halfWindow;
 
         float cum = 0f;
         for (int i = 0; i < segs.Length; i++)

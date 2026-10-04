@@ -160,6 +160,12 @@ Re-dressing (`Dress Selected Package`) only ever replaces pieces **it** generate
 `Environment` / `Paddock` roots, or carrying its names. Hand-made pieces are kept and reported. Kerbs,
 garages, signage and camera towers are hand work by design.
 
+**Daytona is authored, not just dressed.** Its paddock (infield, behind the chord pit road) and Watkins
+Glen's key areas in it come from `Draftmaster > Tracks > Daytona > Author Daytona (Watkins Glen Blueprint)`.
+Re-run that after regenerating Daytona; do **not** run an overwriting `Dress Selected Package` on it — that
+regenerates the paddock pocket and throws the layout away. `... > Daytona > Report Packages` writes
+`Temp/track_package_report.txt` comparing the two paddocks. Detail: `Docs/Tracks.md` § Daytona.
+
 ## 4. Paint the start/finish line or pit exit line
 
 Strip arrays can't be grown through the MCP property API, so these are menu items:
