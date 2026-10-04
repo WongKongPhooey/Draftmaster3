@@ -51,8 +51,14 @@ public static class TravelState
         if (node == null || !node.isCircuit) return false;
         int direct = TravelGraph.ShortestHops(CurrentNodeId, circuitId);
         if (direct < 0) return false;
+        // The demo's first leg is the map's tutorial: one destination, and a budget that covers the detour
+        // through Team HQ and the garage rather than the direct run.
+        if (!TravelTutorial.CanChoose(circuitId)) return false;
+        bool tutorial = TravelTutorial.Active;
+        if (tutorial) TravelTutorial.BookLeg();   // first: it wipes any half-done leg the budget would count
+        int budget = tutorial ? TravelTutorial.BudgetFrom(CurrentNodeId) : direct + TravelGraph.DetourAllowance;
         DestinationId = circuitId;
-        StopsLeft = direct + TravelGraph.DetourAllowance;
+        StopsLeft = budget;
         Week = Week + 1;
         return true;
     }
@@ -62,8 +68,10 @@ public static class TravelState
     public static bool MoveTo(string nodeId)
     {
         if (StopsLeft <= 0 || !TravelGraph.AreAdjacent(CurrentNodeId, nodeId)) return false;
+        if (!TravelTutorial.CanMoveTo(nodeId)) return false;
         CurrentNodeId = nodeId;
         StopsLeft = StopsLeft - 1;
+        TravelTutorial.OnArrived(nodeId);
         bool firstVisit = MarkVisited(nodeId);
         PlayerStatsLedger.Increment("travelstops");
         if (firstVisit)

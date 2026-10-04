@@ -81,6 +81,7 @@ namespace Draftmaster.Weekend
             {
                 t.authored = true;
                 WeekendPlanLibrary.Apply(plan, t, playerSeries);
+                t.ApplyHouseRules();
                 t._activities.Sort(Chronological);
                 return t;
             }
@@ -90,8 +91,33 @@ namespace Draftmaster.Weekend
             t.BuildTeamMeetings();
             t.BuildObligations(ref rng);
             t.BuildRaceDayCeremony();
+            t.ApplyHouseRules();
             t._activities.Sort(Chronological);
             return t;
+        }
+
+        // What every weekend obeys whoever wrote it, the generator or a plan file: retired kinds come off (the
+        // hauler parade — one fan walk too many in a weekend already full of them), and somebody else's
+        // practice and qualifying are free to skip. Run after the build, not inside it, so the generator's
+        // random draws and every booking id stay exactly what they were.
+        void ApplyHouseRules()
+        {
+            var removed = new HashSet<string>();
+            _activities.RemoveAll(a =>
+            {
+                if (!ActivityKinds.IsRetired(a.kind)) return false;
+                removed.Add(a.id);
+                return true;
+            });
+            foreach (var a in _activities)
+            {
+                if (!string.IsNullOrEmpty(a.requiresId) && removed.Contains(a.requiresId)) a.requiresId = "";
+                if (!ActivityKinds.IsOptional(a.kind)) continue;
+                a.mandatory = false;
+                a.skipMoneyPenalty = 0;
+                a.skipAppealPenalty = 0f;
+                a.skipReason = "";
+            }
         }
 
         // Built from a plan file rather than generated. The schedule screen says so, and the editor tooling
@@ -161,13 +187,13 @@ namespace Draftmaster.Weekend
                 Add(PracticeTime(s), mine ? ActivityKind.Practice : ActivityKind.SpectatePractice, s,
                     code + " PRACTICE",
                     mine ? "Run the R&D list: long runs, tyre falloff, and a mock qualifying lap at the end."
-                         : "Stand on the wall and watch what the " + nick + " field is doing with the track.",
+                         : "Optional. Watch the " + nick + " field from the wall and scout their drivers.",
                     mine ? "Your pit box" : "Pit wall");
 
                 Add(QualifyingTime(s), mine ? ActivityKind.Qualifying : ActivityKind.SpectateQualifying, s,
                     code + " QUALIFYING",
                     mine ? "One lap that decides where you start. Miss it and you go to the back."
-                         : "Watch the " + nick + " grid get set.",
+                         : "Optional. Watch the " + nick + " grid get set and scout their drivers.",
                     mine ? "Your pit box" : "Timing stand");
 
                 Add(RaceTime(s), mine ? ActivityKind.Race : ActivityKind.SpectateRace, s,
@@ -441,6 +467,29 @@ namespace Draftmaster.Weekend
         // runtime every time the sheet is rebuilt, because the build itself knows nothing about the ledger.
         public int WaiveSponsorExtras() =>
             _activities.RemoveAll(a => a.sponsorExtra && !WeekendLedger.IsDone(a.id) && !WeekendLedger.IsMissed(a.id));
+
+        // ---------------------------------------------------------------- career mode
+
+        // Take off the sheet everything the chosen career mode leaves out (CareerModes.Keeps). Like the waiver
+        // above, anything already attended or already missed stays — that part of the weekend has happened —
+        // and it is re-applied on every rebuild. A booking left behind that named a removed one as its
+        // prerequisite is freed of it, so nothing on the sheet waits for a meeting that is no longer there.
+        public int ApplyCareerMode(CareerMode mode)
+        {
+            if (mode == CareerMode.Full) return 0;
+
+            var removed = new HashSet<string>();
+            int n = _activities.RemoveAll(a =>
+            {
+                if (CareerModes.Keeps(mode, a.kind) || WeekendLedger.IsDone(a.id) || WeekendLedger.IsMissed(a.id))
+                    return false;
+                removed.Add(a.id);
+                return true;
+            });
+            foreach (var a in _activities)
+                if (!string.IsNullOrEmpty(a.requiresId) && removed.Contains(a.requiresId)) a.requiresId = "";
+            return n;
+        }
 
         // ---------------------------------------------------------------- queries
 

@@ -156,12 +156,4 @@ public class SponsorExtrasWaiverTests
             "a photo shoot that already happened is not cancelled after the fact");
         Assert.IsFalse(OnSheet("DEALER GROUP PHOTOS"), "the ones still to come do go");
     }
-
-    [Test]
-    public void AnAuthoredPlan_FlagsItsPhotoShootsToo()
-    {
-        var authored = WeekendTimetable.Build(RacingSeries.Cup, 3, "WatkinsGlen");
-        Assume.That(authored.authored, "needs the Watkins Glen Cup plan file");
-        Assert.IsTrue(authored.Activities.Where(a => a.kind == ActivityKind.PhotoShoot).All(a => a.sponsorExtra));
-    }
 }

@@ -3,6 +3,7 @@
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Draftmaster.Tests.Editor.csproj" />
   <Project Path="PlayFabEditorExtensions.csproj" />
+  <Project Path="Draftmaster.Tracks.csproj" />
   <Project Path="Draftmaster.Controls.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="PlayFab.csproj" />
@@ -12,7 +13,6 @@
   <Project Path="Draftmaster.Weekend.csproj" />
   <Project Path="Draftmaster.Tests.PlayMode.csproj" />
   <Project Path="Draftmaster.Chatter.csproj" />
-  <Project Path="Draftmaster.Tracks.csproj" />
   <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Crowd.csproj" />
   <Project Path="Draftmaster.Controls.Input.csproj" />

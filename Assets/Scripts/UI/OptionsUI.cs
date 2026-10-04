@@ -22,6 +22,10 @@ using Draftmaster.Controls;
 // until now the only things that ever wrote it were SINGLE RACE (which copies whichever roster driver you
 // picked) and the demo's opening. There was no way to simply be called your own name.
 //
+// And CAREER MODE: how much of the race weekend a career plays — FULL, MINIMAL (your sessions plus the team
+// meetings that shape the car) or DRIVING ONLY. The rules are Draftmaster.Weekend.CareerModes; this row only
+// cycles the setting.
+//
 // WHY THE UI IS BUILT IN CODE. Same reason as SingleRaceUI: a generated scene's serialised listeners do
 // not survive a save in this project, so a menu that wires itself in Start is the durable half of the
 // authored-canvas pattern. It uses the same kit helpers the authored screens do, so it matches them.
@@ -37,6 +41,7 @@ public class OptionsUI : MonoBehaviour
     enum RowKind
     {
         Text,   // opens for typing: ENTER edits, ENTER again saves, ESC puts it back
+        Choice, // one of a fixed set: ENTER / tap / right steps forward, left steps back
         Back,   // leaves the screen
     }
 
@@ -48,6 +53,12 @@ public class OptionsUI : MonoBehaviour
         public Func<string> read;           // what is saved now, "" when nothing is
         public Action<string> write;        // called once, on save
         public string emptyHint = "";       // drawn instead of a blank value
+        public Action<int> step;            // Choice rows: move the setting by +1 / -1
+        public Func<string> describe;       // Choice rows: one line under the row about the current value
+        public string heading;              // a section title drawn above this row
+        public float gapBefore;             // extra design pixels above the row
+
+        public TextMeshProUGUI describeText;
 
         public TextMeshProUGUI labelText;
         public TextMeshProUGUI valueText;
@@ -121,7 +132,27 @@ public class OptionsUI : MonoBehaviour
             write = value => PlayerDriver.SetCareerName(PlayerDriver.FirstName, value),
         });
 
-        _rows.Add(new MenuRow { label = "BACK", kind = RowKind.Back });
+        _rows.Add(new MenuRow
+        {
+            label = "CAREER MODE",
+            kind = RowKind.Choice,
+            heading = "CAREER",
+            gapBefore = 22f,
+            read = () => Draftmaster.Weekend.CareerModes.Label(Draftmaster.Weekend.CareerModes.Current),
+            describe = () => Draftmaster.Weekend.CareerModes.Describe(Draftmaster.Weekend.CareerModes.Current),
+            step = dir =>
+            {
+                var now = Draftmaster.Weekend.CareerModes.Current;
+                Draftmaster.Weekend.CareerModes.Current = dir >= 0
+                    ? Draftmaster.Weekend.CareerModes.Next(now)
+                    : Draftmaster.Weekend.CareerModes.Previous(now);
+                // The weekend's sheet is cached across scene loads; the next one built must use the new mode.
+                WeekendDirector.Invalidate();
+            },
+        });
+
+        // BACK sits clear of the fields — it is leaving the screen, not another thing to set.
+        _rows.Add(new MenuRow { label = "BACK", kind = RowKind.Back, gapBefore = 26f });
     }
 
     // ------------------------------------------------------------------ input
@@ -156,6 +187,8 @@ public class OptionsUI : MonoBehaviour
             if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame
                 || kb.spaceKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame) { Confirm(); return; }
             if (kb.escapeKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame) { Back(); return; }
+            if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Step(1);
+            if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Step(-1);
         }
 
         if (pad != null)
@@ -164,7 +197,20 @@ public class OptionsUI : MonoBehaviour
             if (pad.dpad.up.wasPressedThisFrame) Move(-1);
             if (PadInput.Control(pad, PadBindings.Confirm).wasPressedThisFrame) { Confirm(); return; }
             if (PadInput.Control(pad, PadBindings.Back).wasPressedThisFrame) { Back(); return; }
+            if (pad.dpad.right.wasPressedThisFrame) Step(1);
+            if (pad.dpad.left.wasPressedThisFrame) Step(-1);
         }
+    }
+
+    // Left / right on a Choice row. Anything else ignores them.
+    void Step(int dir)
+    {
+        if (_index < 0 || _index >= _rows.Count) return;
+        var row = _rows[_index];
+        if (row.kind != RowKind.Choice || row.step == null) return;
+        row.step(dir);
+        SetStatus($"{row.label}: {(row.read != null ? row.read() : "")}");
+        Redraw();
     }
 
     // While a name is open, the keyboard belongs to the name: no row moves, nothing loads a scene, and
@@ -265,6 +311,10 @@ public class OptionsUI : MonoBehaviour
                 Redraw();
                 break;
 
+            case RowKind.Choice:
+                Step(1);
+                break;
+
             case RowKind.Back:
                 Back();
                 break;
@@ -338,10 +388,14 @@ public class OptionsUI : MonoBehaviour
             {
                 string value = row.read != null ? row.read() : "";
                 bool empty = string.IsNullOrEmpty(value);
-                row.valueText.text = empty ? row.emptyHint : value;
+                row.valueText.text = empty ? row.emptyHint
+                                   : row.kind == RowKind.Choice && selected ? $"<  {value}  >" : value;
                 row.valueText.color = empty ? theme.plateLight : selected ? theme.text : theme.textDim;
             }
         }
+
+        foreach (var row in _rows)
+            if (row.describeText != null && row.describe != null) row.describeText.text = row.describe();
 
         if (_preview != null)
         {
@@ -361,8 +415,8 @@ public class OptionsUI : MonoBehaviour
                 : _editing >= 0
                 ? $"TYPE A NAME     {ok}  SAVE     {back}  CANCEL"
                 : InputGlyphs.UsingGamepad
-                    ? $"D-PAD  MOVE     {ok}  CHANGE     {back}  BACK"
-                    : "W/S OR ARROWS  MOVE     ENTER  CHANGE     ESC  BACK";
+                    ? $"D-PAD  MOVE / CHANGE     {ok}  CHANGE     {back}  BACK"
+                    : "ARROWS  MOVE / CHANGE     ENTER  CHANGE     ESC  BACK";
         }
     }
 
@@ -415,11 +469,21 @@ public class OptionsUI : MonoBehaviour
         Place((RectTransform)blurb.transform, new Vector2(0f, 1f), new Vector2(24f, -74f),
               new Vector2(560f, 18f), TextAlignmentOptions.TopLeft);
 
+        float gap = 0f;
         for (int i = 0; i < _rows.Count; i++)
         {
             var row = _rows[i];
-            // BACK sits a row clear of the fields — it is leaving the screen, not another thing to set.
-            float y = -108f - i * 24f - (row.kind == RowKind.Back ? 16f : 0f);
+            gap += row.gapBefore;
+            float y = -108f - i * 24f - gap;
+
+            if (!string.IsNullOrEmpty(row.heading))
+            {
+                var head = IronOvalUI.Label(root, $"Heading_{i}", row.heading, IronOvalUI.Role.HeaderSmall, theme.gold);
+                head.characterSpacing = 4f;
+                head.raycastTarget = false;
+                Place((RectTransform)head.transform, new Vector2(0f, 1f), new Vector2(24f, y + 16f),
+                      new Vector2(560f, 12f), TextAlignmentOptions.TopLeft);
+            }
 
             // The row's hit area, under its text, so a tap or click anywhere along it works (a phone has no
             // Enter). The text on top is told not to catch the ray.
@@ -451,6 +515,14 @@ public class OptionsUI : MonoBehaviour
             Place((RectTransform)row.valueText.transform, new Vector2(0f, 1f), new Vector2(270f, y),
                   new Vector2(346f, 20f), TextAlignmentOptions.TopLeft);
             row.valueText.raycastTarget = false;
+
+            if (row.describe == null) continue;
+            // The line under a choice saying what the current value means. It takes the space the next row's
+            // gap leaves for it.
+            row.describeText = IronOvalUI.Label(root, $"Describe_{i}", "", IronOvalUI.Role.Body, theme.plateLight);
+            Place((RectTransform)row.describeText.transform, new Vector2(0f, 1f), new Vector2(44f, y - 18f),
+                  new Vector2(572f, 16f), TextAlignmentOptions.TopLeft);
+            row.describeText.raycastTarget = false;
         }
 
         _preview = IronOvalUI.Label(root, "Preview", "", IronOvalUI.Role.Body, theme.gold);

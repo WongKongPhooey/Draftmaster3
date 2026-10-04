@@ -8,7 +8,15 @@ the game); junkyard **stock rerolls weekly**. All code in `Assets/Scripts/Travel
 
 1. Race results → **HIT THE ROAD** opens the fullscreen map — an authored Canvas prefab
    (`Assets/Resources/UI/TravelMap.prefab`) with the `TravelMapScreen` binder on its root.
-   **SKIP TRAVEL** keeps the old instant weekend loop for testing.
+   **SKIP TRAVEL** (and the sheet's START NEXT WEEKEND) jumps straight to the next round of the demo
+   calendar — `Draftmaster.Tracks.DemoCalendar`: Watkins Glen → Daytona → Martinsville, then back round.
+   Arriving at a circuit on the map selects that circuit (`TrackSelection.Select`) instead.
+   **Tutorial leg** (Watkins Glen → Daytona, once per save): a sticky control-hint prompt says to stop at
+   Team HQ (`team_factory`) and the Garage (`moonshine_garage`) on the way. Daytona is the only
+   destination offered, the budget is the shortest route through both + `DetourAllowance`, a hop that
+   would leave either out of reach is refused, and START RACE WEEKEND waits for both. Rules in
+   `Draftmaster.Tracks.TravelTutorialRoute` (pure, tested); progress in `TravelTutorial` (`travel.tutorial.*`
+   prefs). Change the waypoints by editing the two ids there.
 2. **Choose the next race**: click any circuit node. Stop budget = BFS direct route +
    `TravelGraph.DetourAllowance` (2) — enough for a small detour, per the design intent.
 3. **Drive**: click an adjacent node, 1 stop each. Arriving anywhere opens the side panel. Minor

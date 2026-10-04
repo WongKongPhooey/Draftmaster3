@@ -296,7 +296,7 @@ public class GarageScreenUI : MonoBehaviour
 
         FillCareer(mine, starts, wins, top10s);
         FillAccolades(theme, mine, starts, wins, top5s, top10s);
-        FillDriverStats(theme, row);
+        FillDriverStats(theme, row, mine);
         FillCarStats(mine);
         FillParts(theme, mine);
 
@@ -392,19 +392,34 @@ public class GarageScreenUI : MonoBehaviour
     // Every attribute the Drivers table rates this driver on, in DriverAttributeSheet order — the same
     // order the builder laid the rows out in. A save with no row at all reads as unrated rather than
     // drawing eighteen empty bars.
-    void FillDriverStats(PixelUITheme theme, Driver row)
+    //
+    // A rival's stats are only on show once scouted (ScoutingLedger): racing their series or watching it
+    // uncovers a few a session. The rest read "??" with an empty bar, and the status line says how far the
+    // scouting has got.
+    void FillDriverStats(PixelUITheme theme, Driver row, bool mine)
     {
         var sheet = DriverAttributeSheet.All;
         for (int i = 0; i < driverStats.Count && i < sheet.Length; i++)
         {
             var attribute = sheet[i];
-            int value = row != null ? attribute.Read(row) : -1;
+            bool known = row == null || ScoutingLedger.IsKnown(row, i, mine);
+            int value = row != null && known ? attribute.Read(row) : -1;
             SetStat(driverStats, i, attribute.Label,
                     value >= 0 ? value / (float)Mathf.Max(1, attribute.Max) : 0f,
-                    value >= 0 ? value.ToString() : "—");
+                    value >= 0 ? value.ToString() : known ? "—" : "??");
             if (theme != null && driverStats[i].value != null)
                 driverStats[i].value.color = value >= 0 ? theme.text : theme.textDisabled;
         }
+
+        if (row != null && !mine)
+        {
+            int seen = ScoutingLedger.KnownCount(row, false);
+            int total = ScoutingLedger.Total;
+            SetStatus(seen >= total
+                ? "FULLY SCOUTED."
+                : $"SCOUTED {seen} OF {total}. RACE THEIR SERIES OR WATCH IT TO LEARN MORE.", hold: true);
+        }
+        else SetStatus("");
     }
 
     // What the car will actually race with: the base VehicleInfo plus every installed part. Parts are the
@@ -508,10 +523,11 @@ public class GarageScreenUI : MonoBehaviour
             SetStatus(titleSceneName + " isn't in the build settings yet.");
     }
 
-    void SetStatus(string text)
+    // `hold` keeps the line up until something replaces it (what the sheet is showing, not a passing toast).
+    void SetStatus(string text, bool hold = false)
     {
         if (statusLabel == null) return;
         statusLabel.text = text ?? "";
-        _statusUntil = string.IsNullOrEmpty(text) ? 0f : Time.unscaledTime + 2.5f;
+        _statusUntil = string.IsNullOrEmpty(text) || hold ? 0f : Time.unscaledTime + 2.5f;
     }
 }

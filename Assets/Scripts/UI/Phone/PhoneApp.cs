@@ -44,6 +44,15 @@ public abstract class PhoneApp
     // Draw into a column `width` wide starting at (x, y). Return the total height used.
     public abstract float Draw(float x, float y, float width);
 
+    // Something open over the app's page — a detail card, a confirm. Drawn after Draw, over the visible
+    // window and not scrolled with it; `view` is that window in the same space Draw draws in. While one is up
+    // the app should stop its page taking taps, because the page is drawn (and so asked) first.
+    public virtual void DrawOverlay(Rect view) { }
+
+    // Back was pressed (Esc, the pad's back button, the title bar's chevron) with this app open. Return true
+    // when the app used it — closing its own overlay — so the device does not also leave the app.
+    public virtual bool Back() => false;
+
     // ------------------------------------------------------------------ shared drawing
 
     // Small gold section rule with a Silkscreen label above it.

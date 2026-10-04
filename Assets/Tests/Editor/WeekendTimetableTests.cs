@@ -210,9 +210,12 @@ public class WeekendTimetableTests
                 Assert.Greater(a.skipMoneyPenalty, 0, $"{a.title}: no-showing a paid appearance should cost money");
                 sawPaidObligation = true;
             }
-            if (a.kind == ActivityKind.HaulerParade)
+            // The hauler parade used to be the free one; it is gone, and watching another series' practice
+            // or qualifying is what is free to skip now.
+            if (ActivityKinds.IsOptional(a.kind))
             {
-                Assert.IsFalse(a.mandatory, $"{a.title}: goodwill is not contractual");
+                Assert.IsFalse(a.mandatory, $"{a.title}: watching somebody else is the player's choice");
+                Assert.AreEqual(0, a.skipMoneyPenalty, $"{a.title}: skipping a watch should cost nothing");
                 sawOptional = true;
             }
         }

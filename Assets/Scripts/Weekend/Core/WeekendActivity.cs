@@ -44,6 +44,16 @@ namespace Draftmaster.Weekend
         public static bool IsOnTrack(ActivityKind k) =>
             k == ActivityKind.Practice || k == ActivityKind.Qualifying || k == ActivityKind.Race;
 
+        // Somebody else's practice or qualifying. On the sheet to book from F10, but never where the weekend
+        // sends you on its own and never a no-show when you don't go: the reason to watch is scouting the
+        // other series' drivers (DriverScouting), and that is the player's call to make.
+        public static bool IsOptional(ActivityKind k) =>
+            k == ActivityKind.SpectatePractice || k == ActivityKind.SpectateQualifying;
+
+        // Kinds the weekend no longer schedules. Kept in the enum because ledger ids and plan files name them
+        // by number; WeekendTimetable.Build drops any booking of these, generated or authored.
+        public static bool IsRetired(ActivityKind k) => k == ActivityKind.HaulerParade;
+
         public static bool IsSpectate(ActivityKind k) =>
             k == ActivityKind.SpectatePractice || k == ActivityKind.SpectateQualifying || k == ActivityKind.SpectateRace;
 

@@ -478,7 +478,16 @@ public class WeekendScheduleUI : MonoBehaviour
         {
             if (PixelGUI.Button(new Rect(r.x, r.y, bw, bh), "START NEXT WEEKEND"))
             {
-                WeekendDirector.NextWeekend();
+                bool moved = WeekendDirector.NextWeekend();
+                // The next round is somewhere else: the race scene standing here has the old track in it.
+                if (moved && Object.FindFirstObjectByType<GridSpawner>() != null)
+                {
+                    Close();
+                    WeekendDirector.OpenAfterLoad();
+                    string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                    ScreenFade.ToBlack(0.35f, () => CoopScene.Load(scene));
+                    return;
+                }
                 _viewing = WeekendSlot.FridayAM;
                 _selected = 0;
                 Toast("New weekend. Friday morning, 08:00.");

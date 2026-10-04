@@ -15,9 +15,12 @@ It links the rest: `Docs/Tracks.md` (track pipeline), `Docs/Race-Weekend.md`,
   breaks standalone builds. Wrap editor-only code in `#if UNITY_EDITOR`.
 - **Scenes, prefabs and ScriptableObjects are binary-serialised.** grep cannot find GUIDs and a
   text edit corrupts them. Go through the Unity MCP tools.
-- **A track package saved into `RaceScene` silently overrides every track selection.**
-  `RaceSceneSplitter` now prevents this automatically: editing in context removes its own instance
-  when the prefab stage closes, and saving the race scene strips any package still in it.
+- **Saving `RaceScene` puts track edits into the package and takes the track out of the scene.**
+  `RaceSceneSplitter` applies whatever was hand-edited on a track instance (moved, changed, added
+  objects/components) to `Resources/TrackPackages/<id>.prefab`, then removes it; closing an Edit In
+  Context stage does the same. Nothing is kept back, so there is no apply-then-clear step. Builder output
+  (meshes, children of TrackBuilder/TrackGround/Grandstand…) is not carried over. As a backstop,
+  `TrackSceneLoader` swaps out a baked track that doesn't match the selection at runtime.
 - **Never re-run a full scene builder for a small change** — builders overwrite hand edits.
 - **`WatkinsGlen` is hand-measured off satellite imagery and is never regenerated.**
 

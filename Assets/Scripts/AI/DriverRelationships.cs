@@ -174,19 +174,36 @@ public static class DriverRelationships
     // The position tracker is only the fallback, and it is not reliable on its own: it starts life holding
     // the "You" placeholder and is only renamed once the car has been labelled, so a paddock conversation
     // that read it early keyed a different person than the racing did.
+    //
+    // Worked out once per frame: drafting partners call Modify -> QuestManager -> IsPlayerName for every car on
+    // every physics step, and a scene-wide find each time was a measurable slice of a 40-car race start on a
+    // phone (simpleperf, 0.4.1). Several physics steps share a frame, so they share the answer too.
     public static string PlayerName
     {
         get
         {
-            var car = UnityEngine.Object.FindObjectOfType<PlayerVehicleController>();
-            if (car != null)
-            {
-                var label = car.GetComponent<DriverLabel>();
-                if (label != null && !string.IsNullOrEmpty(label.driverName)) return label.driverName;
-            }
-            var rt = RacePositionTracker.Instance;
-            return rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
+            // Straight read outside Play Mode, where the frame never advances and a test renames the car.
+            if (!Application.isPlaying) return ResolvePlayerName();
+            int frame = Time.frameCount;
+            if (_playerNameFrame == frame && _playerName != null) return _playerName;
+            _playerNameFrame = frame;
+            _playerName = ResolvePlayerName();
+            return _playerName;
         }
+    }
+    static string _playerName;
+    static int _playerNameFrame = -1;
+
+    static string ResolvePlayerName()
+    {
+        var car = UnityEngine.Object.FindObjectOfType<PlayerVehicleController>();
+        if (car != null)
+        {
+            var label = car.GetComponent<DriverLabel>();
+            if (label != null && !string.IsNullOrEmpty(label.driverName)) return label.driverName;
+        }
+        var rt = RacePositionTracker.Instance;
+        return rt != null && !string.IsNullOrEmpty(rt.playerName) ? rt.playerName : "You";
     }
 
     public static bool IsPlayerName(string name)

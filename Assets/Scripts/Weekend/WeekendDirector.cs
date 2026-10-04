@@ -65,6 +65,9 @@ public class WeekendDirector : MonoBehaviour
                 WeekendLedger.EnsureWeekend(id, series);
                 // After EnsureWeekend, which is what clears the flag when this is a new weekend.
                 if (WeekendLedger.SponsorExtrasWaived) _timetable.WaiveSponsorExtras();
+                // OPTIONS > CAREER MODE: Minimal and Driving Only trim the sheet to the sessions (and, for
+                // Minimal, the team meetings that change the car).
+                _timetable.ApplyCareerMode(CareerModes.Current);
                 WeekendLedger.Timetable = _timetable;
             }
             return _timetable;
@@ -545,6 +548,7 @@ public class WeekendDirector : MonoBehaviour
 
         // Turning up is worth the appearance fee whatever the score was.
         if (a.appearanceFee > 0) outcome.money += a.appearanceFee;
+        Scout(a, ref outcome);
 
         WeekendLedger.Complete(a, outcome);
         WeekendResultCard.Show(a, outcome, inWorld);
@@ -603,7 +607,22 @@ public class WeekendDirector : MonoBehaviour
         if (showCard) { Finish(a, outcome); return; }
 
         if (a.appearanceFee > 0) outcome.money += a.appearanceFee;
+        Scout(a, ref outcome);
         WeekendLedger.Complete(a, outcome);
+    }
+
+    // A session driven or watched uncovers some of that field's stats on the RV laptop (DriverScouting).
+    // The card says how many, so the player learns the reason to go and watch.
+    static void Scout(WeekendActivity a, ref WeekendOutcome outcome)
+    {
+        if (a == null || (!a.IsOnTrack && !a.IsSpectate) || Coop.IsGuest) return;
+        var series = a.IsOnTrack ? SeriesCatalog.PlayerSeries : a.series;
+        int uncovered = ScoutingLedger.RecordSession(a.kind, series);
+        if (uncovered <= 0) return;
+
+        string line = $"Scouted {uncovered} new stat{(uncovered == 1 ? "" : "s")} on the " +
+                      $"{SeriesCatalog.Nickname(series)} field - on your laptop.";
+        outcome.headline = string.IsNullOrEmpty(outcome.headline) ? line : outcome.headline + " " + line;
     }
 
     // Ask for the schedule to be up as soon as the next scene finishes loading. The weekend crosses scene
@@ -640,9 +659,34 @@ public class WeekendDirector : MonoBehaviour
 
         // Whatever was booked or being driven belonged to the half-day just given up.
         WeekendAppointment.Clear();
+        LandAfterSkip(report);
+    }
+
+    // The phone's SKIP TO HERE: move the clock straight to `target` (WeekendSkip.SkipToActivity charges for
+    // everything in between and refuses to pass a driving session the player has not run), make it the
+    // objective, and fast travel to the motorhome with the summary — the same landing as SkipAhead. Returns
+    // false, with the reason, when the skip is not allowed.
+    public static bool SkipTo(WeekendActivity target, out string reason)
+    {
+        if (!WeekendSkip.CanSkipTo(target, out reason)) return false;
+        MarkBriefed();
+
+        var report = WeekendSkip.SkipToActivity(target);
+        if (report == null) { reason = "Couldn't skip there."; return false; }
+
+        // The thing skipped to is what the player is now on their way to — including optional watching, which
+        // the router would never pick for them on its own.
+        WeekendAppointment.Make(target);
+        LandAfterSkip(report);
+        return true;
+    }
+
+    static void LandAfterSkip(WeekendSkip.Report report)
+    {
         ClearRoute();
         RaceWeekend.SessionLive = false;
         WeekendScheduleUI.Close();
+        PhoneUI.Close();
 
         if (!AtTheVenue() || Coop.IsGuest)
         {
@@ -660,13 +704,26 @@ public class WeekendDirector : MonoBehaviour
     // Every half-day spent. Called by the schedule screen when the player advances past Sunday afternoon.
     public static bool WeekendComplete => WeekendLedger.WeekendOver;
 
-    // Start the next weekend: bump the weekend id (which resets AppearanceConditions' once-per-weekend
-    // memory too), wipe the sheet, and rebuild.
-    public static void NextWeekend()
+    // Start the next weekend: move on to the next round of the demo calendar, bump the weekend id (which
+    // resets AppearanceConditions' once-per-weekend memory too), wipe the sheet, and rebuild. True when the
+    // venue changed — the scene the caller is standing in is the old track's, so it has to reload.
+    public static bool NextWeekend()
     {
+        string from = TrackSelection.CurrentId;
+        string to = Draftmaster.Tracks.DemoCalendar.After(from);
+        // Skipping the drive still puts the car there: the travel map picks up from the new venue, not the
+        // old one (where it would offer the old leg's tutorial again).
+        if (TrackSelection.Select(to) && TravelGraph.Get(to) != null)
+        {
+            if (TravelTutorial.LegBooked) TravelTutorial.Complete();   // skipped, not stuck half-done
+            TravelState.DestinationId = to;
+            TravelState.ArriveAndClearDestination();
+        }
+
         RaceWeekend.ResetWeekend();
         Invalidate();
         WeekendLedger.EnsureWeekend(RaceWeekend.WeekendId, SeriesCatalog.PlayerSeries);
         WeekendLedger.Timetable = Timetable;
+        return TrackSelection.CurrentId != from;
     }
 }

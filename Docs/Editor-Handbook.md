@@ -289,8 +289,8 @@ The motorhome door belongs to the **team liaison**, who is stood up from the wee
 (`PlacedNPCDefaults.CreateLiaison`) rather than placed by hand.
 
 **Geometry anchors only resolve with a track loaded.** In the race scene run
-`Draftmaster > Tracks > Preview Selected Package In Scene` first, then `Clear Package Previews From Scene`
-when done — otherwise the gizmo is lying to you.
+`Draftmaster > Tracks > Preview Selected Package In Scene` first — otherwise the gizmo is lying to you.
+Edit away; saving the scene puts your edits into the package and takes the track back out.
 
 Check the cast with `Draftmaster > NPCs > Director` (**Ctrl+Shift+N**): flip between Practice / Qualifying /
 Race and everyone greys out or lights up, with a reason per row ("not in Race", "wins is 0, needs 5..∞").
@@ -657,7 +657,7 @@ it, B would close the pause menu and open it again, and in the car it would paus
 | Rebuild All Calendar Tracks (replace packages) | As above, but throws the package prefabs away first |
 | Report Track Dimensions | Published length, width, banking and confidence for all 38 venues |
 | Report Current Selection | Which track the next race builds, and why — prefs, travel-map fallback, resolved id |
-| Clear Package Previews From Scene | **Run this before saving any scene you previewed a track in.** A package left in `RaceScene` overrides every selection |
+| Clear Package Previews From Scene | Optional now — saving `RaceScene` does the same. Applies hand edits on any track in the scene to its package, then removes the track |
 | Report Calendar Coverage | What's built vs catalogue-only |
 
 ### `Draftmaster > AI`

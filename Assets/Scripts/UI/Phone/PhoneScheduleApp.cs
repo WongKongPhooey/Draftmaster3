@@ -1,13 +1,19 @@
 using System.Collections.Generic;
+using Draftmaster.Controls;
 using Draftmaster.Weekend;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 // The weekend timetable on the phone, drawn as a calendar: a white page, one cell an hour down the day,
 // and every booking laid on it as a block at its own time and length. Two things booked over the same
 // hour sit side by side in that hour, which is the clash the schedule screen makes you choose between.
 //
-// Read-only on purpose. The phone is what a driver glances at walking across the paddock; committing to a
-// booking is the schedule screen (F10), which is a room with a door you close behind you.
+// Tap a booking (or pick it with left/right and confirm) for a card over the page: what it is, where and
+// when, what it pays or costs, and SKIP TO HERE — the clock jumps to it, with everything in between left
+// unattended and charged the way the half-day skip charges it (WeekendDirector.SkipTo). You cannot skip past
+// one of your own driving sessions you have not run; the card says so instead of offering the button.
+//
+// This is the weekend's one schedule screen in play: the pause menu's WEEKEND SCHEDULE row was folded into it.
 public class PhoneScheduleApp : PhoneApp
 {
     public override string Id => "schedule";
@@ -23,6 +29,10 @@ public class PhoneScheduleApp : PhoneApp
 
     int _day = -1;             // 0 Friday, 1 Saturday, 2 Sunday. -1 = follow the clock.
 
+    WeekendActivity _selected;  // the booking whose card is open, null when none is
+    string _note = "";          // why the last SKIP TO HERE did not go
+    string _highlightId;        // keyboard / pad cursor on the calendar, by activity id
+
     // The badge is the count of obligations still ahead of the clock today that would cost you something.
     public override int Badge
     {
@@ -37,7 +47,21 @@ public class PhoneScheduleApp : PhoneApp
         }
     }
 
-    public override void OnOpen() => _day = -1;
+    public override void OnOpen()
+    {
+        _day = -1;
+        _selected = null;
+        _highlightId = null;
+        _note = "";
+    }
+
+    // Back closes the card before it closes the app.
+    public override bool Back()
+    {
+        if (_selected == null) return false;
+        _selected = null;
+        return true;
+    }
 
     int Day => _day >= 0 ? _day : Mathf.Clamp((int)WeekendLedger.CurrentSlot / 2, 0, 2);
     WeekendSlot Morning => (WeekendSlot)(Day * 2);
@@ -87,7 +111,9 @@ public class PhoneScheduleApp : PhoneApp
                 y += Body(x, y, w, "· " + lines[i], PixelGUI.TextDim);
         }
 
-        y += Body(x, y, w, "F10 opens the full schedule.", PixelGUI.TextDisabled);
+        y += Body(x, y, w, InputGlyphs.UsingTouch ? "Tap a booking for details and to skip to it."
+                                                   : "Click a booking, or use left/right and confirm, for details.",
+                  PixelGUI.TextDisabled);
         return y - y0 + PixelGUI.Px(6f);
     }
 
@@ -104,7 +130,7 @@ public class PhoneScheduleApp : PhoneApp
             var r = new Rect(x + d * tw, y, tw - PixelGUI.Px(1f), h);
             bool shown = d == Day;
             PixelGUI.Fill(r, shown ? PixelGUI.Gold : PixelGUI.Plate);
-            if (Pressed(r)) _day = d;
+            if (_selected == null && Pressed(r)) _day = d;
 
             Color text = shown ? PixelGUI.Ink : d < today ? PixelGUI.TextDisabled : PixelGUI.Text;
             PhoneStyles.Label(r, WeekendSlots.DayShort((WeekendSlot)(d * 2)), PhoneStyles.Data, text,
@@ -178,6 +204,10 @@ public class PhoneScheduleApp : PhoneApp
 
         PixelGUI.Fill(r, new Color(kind.r, kind.g, kind.b, 0.22f));
         PixelGUI.Fill(new Rect(r.x, r.y, PixelGUI.Px(2f), r.height), kind);
+        if (a.id == _highlightId && !InputGlyphs.UsingTouch) Outline(r, PixelGUI.Ink);
+
+        // The page is drawn before the card, so it would take the card's taps; while a card is open it takes none.
+        if (_selected == null && Pressed(r)) Open(a);
 
         var text = new Rect(r.x + PixelGUI.Px(4f), r.y, r.width - PixelGUI.Px(5f), RowH);
         string title = Fit((state == WeekendLedger.State.Done ? "· " : "") + a.title,
@@ -211,6 +241,193 @@ public class PhoneScheduleApp : PhoneApp
             else hi = mid - 1;
         }
         return s.Substring(0, lo).TrimEnd();
+    }
+
+    // ------------------------------------------------------------------ the card
+
+    void Open(WeekendActivity a)
+    {
+        _selected = a;
+        _highlightId = a.id;
+        _note = "";
+    }
+
+    void TrySkip()
+    {
+        if (_selected == null) return;
+        if (WeekendDirector.SkipTo(_selected, out string reason)) { _selected = null; return; }
+        _note = reason;
+    }
+
+    public override void DrawOverlay(Rect view)
+    {
+        var a = _selected;
+        if (a == null) return;
+
+        // The page dims behind the card; the card sits in the middle of whatever is on screen.
+        PixelGUI.Fill(view, new Color(0f, 0f, 0f, 0.55f));
+
+        float pad = PixelGUI.Px(5f);
+        float cw = view.width - PixelGUI.Px(6f);
+        float iw = cw - pad * 2f;
+
+        // Laid out once to measure, then for real — the card is as tall as what it says.
+        float h = CardBody(0f, 0f, iw, a, measure: true) + pad * 2f;
+        var card = new Rect(view.x + PixelGUI.Px(3f), view.y + Mathf.Max(PixelGUI.Px(3f), (view.height - h) * 0.5f), cw, h);
+        Plate(card, KindColour(a.kind));
+        CardBody(card.x + pad, card.y + pad, iw, a, measure: false);
+    }
+
+    float CardBody(float x, float y, float w, WeekendActivity a, bool measure)
+    {
+        float y0 = y;
+        var state = WeekendLedger.Status(a);
+
+        if (measure) GUI.enabled = false;   // the measuring pass must not take a tap
+        y += Row(x, y, w, a.title, ActivityKinds.Tag(a.kind), KindColour(a.kind));
+        y += Row(x, y, w, WeekendSlots.DayShort(a.slot) + " " + a.Clock, a.location ?? "", null, dim: true);
+        y += PixelGUI.Px(2f);
+        y += Body(x, y, w, a.subtitle, PixelGUI.Text);
+
+        // What it is worth, and what not going costs.
+        if (a.appearanceFee > 0) y += Body(x, y, w, "Pays " + PlayerWallet.Format(a.appearanceFee) + " for turning up.", PixelGUI.Gold);
+        if (ActivityKinds.IsOptional(a.kind))
+            y += Body(x, y, w, "Optional. Watching scouts the " + SeriesCatalog.Nickname(a.series) +
+                               " field's stats for your laptop.", PixelGUI.Info);
+        else if (a.mandatory)
+        {
+            string cost = a.skipMoneyPenalty > 0 ? "Missing it costs " + PlayerWallet.Format(a.skipMoneyPenalty) + "."
+                                                 : "Missing it counts against you.";
+            y += Body(x, y, w, "Obligation. " + cost + (string.IsNullOrEmpty(a.skipReason) ? "" : " " + a.skipReason),
+                      PixelGUI.Danger);
+        }
+
+        string status = state switch
+        {
+            WeekendLedger.State.Done => "DONE",
+            WeekendLedger.State.Missed => "MISSED",
+            WeekendLedger.State.Past => "GONE BY",
+            _ => WeekendAppointment.IsPending(a) ? "BOOKED - YOUR NEXT STOP" : "",
+        };
+        if (status.Length > 0) y += Row(x, y, w, status, "", state == WeekendLedger.State.Missed ? PixelGUI.Danger : PixelGUI.Confirm);
+        y += PixelGUI.Px(3f);
+
+        // SKIP TO HERE, or why not.
+        float bh = RowH + PixelGUI.Px(4f);
+        if (WeekendSkip.CanSkipTo(a, out string why))
+        {
+            int leaving = LeftBehind(a);
+            if (leaving > 0)
+                y += Body(x, y, w, $"Skipping leaves {leaving} booking{(leaving == 1 ? "" : "s")} before it unattended.",
+                          PixelGUI.TextDim);
+            var button = new Rect(x, y, w, bh);
+            PixelGUI.Fill(button, PixelGUI.Gold);
+            string label = InputGlyphs.UsingTouch ? "SKIP TO HERE"
+                         : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(PadBindings.Confirm) + "  SKIP TO HERE"
+                         : "ENTER  SKIP TO HERE";
+            PhoneStyles.Label(button, label, PhoneStyles.Heading, PixelGUI.Ink, TextAnchor.MiddleCenter);
+            if (!measure && Pressed(button)) TrySkip();
+            y += bh + PixelGUI.Px(2f);
+        }
+        else if (StillAhead(a))
+            y += Body(x, y, w, why, PixelGUI.TextDisabled);
+
+        if (_note.Length > 0) y += Body(x, y, w, _note, PixelGUI.Danger);
+
+        var close = new Rect(x, y, w, bh);
+        PixelGUI.Fill(close, PixelGUI.Plate);
+        PhoneStyles.Label(close, "CLOSE", PhoneStyles.Data, PixelGUI.Text, TextAnchor.MiddleCenter);
+        if (!measure && Pressed(close)) _selected = null;
+        y += bh;
+
+        if (measure) GUI.enabled = true;
+        return y - y0;
+    }
+
+    // How many bookings between now and `target` the skip would leave behind.
+    static int LeftBehind(WeekendActivity target)
+    {
+        var t = WeekendDirector.Timetable;
+        if (t == null) return 0;
+        int at = (int)target.slot * 1440 + target.startMinute;
+        int n = 0;
+        foreach (var a in t.Activities)
+        {
+            if (a == target || a.kind == ActivityKind.Rest || !StillAhead(a)) continue;
+            if ((int)a.slot * 1440 + a.startMinute < at) n++;
+        }
+        return n;
+    }
+
+    // Not done, not missed, and today-later or a later half-day: something the clock can still reach.
+    static bool StillAhead(WeekendActivity a)
+    {
+        var st = WeekendLedger.Status(a);
+        return st == WeekendLedger.State.Available || st == WeekendLedger.State.Later;
+    }
+
+    static void Outline(Rect r, Color c)
+    {
+        float t = PixelGUI.Px(1f);
+        PixelGUI.Fill(new Rect(r.x, r.y, r.width, t), c);
+        PixelGUI.Fill(new Rect(r.x, r.yMax - t, r.width, t), c);
+        PixelGUI.Fill(new Rect(r.x, r.y, t, r.height), c);
+        PixelGUI.Fill(new Rect(r.xMax - t, r.y, t, r.height), c);
+    }
+
+    // ------------------------------------------------------------------ keys and pad
+
+    public override void HandleKeys(Keyboard kb)
+    {
+        bool confirm = kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.eKey.wasPressedThisFrame;
+        if (_selected != null) { if (confirm) TrySkip(); return; }
+        if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) Step(1);
+        if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) Step(-1);
+        if (confirm) OpenHighlighted();
+    }
+
+    public override void HandlePad(Gamepad pad)
+    {
+        bool confirm = PadInput.Control(pad, PadBindings.Confirm).wasPressedThisFrame;
+        if (_selected != null) { if (confirm) TrySkip(); return; }
+        if (pad.dpad.right.wasPressedThisFrame) Step(1);
+        if (pad.dpad.left.wasPressedThisFrame) Step(-1);
+        if (confirm) OpenHighlighted();
+    }
+
+    // Every booking of the weekend in time order; the cursor walks it and the day tab follows.
+    List<WeekendActivity> Ordered()
+    {
+        var list = new List<WeekendActivity>();
+        var t = WeekendDirector.Timetable;
+        if (t == null) return list;
+        foreach (var a in t.Activities) if (a.kind != ActivityKind.Rest) list.Add(a);
+        list.Sort((a, b) => a.slot != b.slot ? a.slot.CompareTo(b.slot) : a.startMinute.CompareTo(b.startMinute));
+        return list;
+    }
+
+    void Step(int dir)
+    {
+        var list = Ordered();
+        if (list.Count == 0) return;
+        int i = list.FindIndex(a => a.id == _highlightId);
+        if (i < 0)
+        {
+            // Start from the next thing still to come rather than Friday 08:00.
+            i = list.FindIndex(StillAhead);
+            if (i < 0) i = 0;
+        }
+        else i = Mathf.Clamp(i + dir, 0, list.Count - 1);
+        _highlightId = list[i].id;
+        _day = Mathf.Clamp((int)list[i].slot / 2, 0, 2);
+    }
+
+    void OpenHighlighted()
+    {
+        if (_highlightId == null) { Step(0); return; }
+        var t = WeekendDirector.Timetable;
+        var a = t != null ? t.ById(_highlightId) : null;
+        if (a != null) Open(a);
     }
 
     // ------------------------------------------------------------------ overlap packing

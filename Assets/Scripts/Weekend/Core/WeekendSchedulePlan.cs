@@ -31,9 +31,9 @@ namespace Draftmaster.Weekend
             return best;
         }
 
-        // The next booking that is worth walking to — the same list, minus the hour off. "Rest" is what is
-        // left when there is nothing on, and pointing a marker at it would be telling the player to go and
-        // do nothing.
+        // The next booking that is worth walking to — the same list, minus the hour off and minus optional
+        // watching. "Rest" is what is left when there is nothing on, and pointing a marker at it would be
+        // telling the player to go and do nothing.
         public static WeekendActivity NextWorthDoing()
         {
             var timetable = WeekendLedger.Timetable;
@@ -43,6 +43,9 @@ namespace Draftmaster.Weekend
             foreach (var a in timetable.Activities)
             {
                 if (a == null || a.kind == ActivityKind.Rest) continue;
+                // Optional watching is booked from the sheet by choice, never handed to the player as the
+                // next thing to do.
+                if (ActivityKinds.IsOptional(a.kind)) continue;
                 if (WeekendLedger.IsDone(a.id) || WeekendLedger.IsMissed(a.id)) continue;
                 if (!WeekendLedger.CanDo(a, out _)) continue;
 

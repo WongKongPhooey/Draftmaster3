@@ -50,28 +50,44 @@ public static class TrackSceneLoader
         // whole baked WatkinsGlen committed into it, 1.4 MB of it, and every race loaded Watkins Glen no
         // matter what the Track Builder window said.
         //
-        // So say so. The scene still wins — it may be deliberate — but a mismatch is now one console line
-        // instead of a mystery.
+        // It used to say so and still race the baked track. That was for WatkinsGlen.unity, a scene that was
+        // the track; it is gone, and in the shared race scene a baked package is never what the player chose —
+        // it sent a career that had driven to Daytona back to Watkins Glen (0.4.1, device). So a mismatch now
+        // swaps: the baked track is switched off and destroyed, and the selected package is loaded in its
+        // place. A baked package that matches the selection is still used as it is, hand edits and all.
+        TrackBuilder displaced = null;
         var existing = Object.FindFirstObjectByType<TrackPackage>();
         if (existing != null)
         {
             string wanted = TrackSelection.CurrentId;
-            if (!string.IsNullOrEmpty(wanted) && !string.IsNullOrEmpty(existing.trackId) &&
-                !string.Equals(existing.trackId, wanted, System.StringComparison.OrdinalIgnoreCase))
+            bool mismatch = !string.IsNullOrEmpty(wanted) && !string.IsNullOrEmpty(existing.trackId) &&
+                            !string.Equals(existing.trackId, wanted, System.StringComparison.OrdinalIgnoreCase);
+            if (!mismatch || TrackCatalog.Package(wanted) == null)
             {
-                Debug.LogWarning(
-                    $"TrackSceneLoader: '{SceneManager.GetActiveScene().name}' already contains the " +
-                    $"{TrackCatalog.DisplayName(existing.trackId)} track, so it is racing that and IGNORING " +
-                    $"the selected {TrackCatalog.DisplayName(wanted)}. If that track was left there by " +
-                    "Preview Selected Package In Scene, clear it with Draftmaster > Tracks > Clear Package " +
-                    "Previews From Scene and save the scene.");
+                if (mismatch)
+                    Debug.LogWarning(
+                        $"TrackSceneLoader: '{SceneManager.GetActiveScene().name}' already contains the " +
+                        $"{TrackCatalog.DisplayName(existing.trackId)} track and the selected " +
+                        $"{TrackCatalog.DisplayName(wanted)} has no package to swap in, so it is racing the " +
+                        "baked one.");
+                existing.BindSceneReferences();
+                return existing;
             }
-            existing.BindSceneReferences();
-            return existing;
+
+            Debug.LogWarning(
+                $"TrackSceneLoader: '{SceneManager.GetActiveScene().name}' has the " +
+                $"{TrackCatalog.DisplayName(existing.trackId)} track saved into it; swapping it for the selected " +
+                $"{TrackCatalog.DisplayName(wanted)}. Clear it from the scene with Draftmaster > Tracks > Clear " +
+                "Package Previews From Scene (apply any unapplied edits to the package first) and save.");
+            displaced = existing.Builder;
+            // Off before anything below looks for a road: the finds skip inactive objects, and Destroy waits
+            // for the end of the frame.
+            existing.gameObject.SetActive(false);
+            Object.Destroy(existing.gameObject);
         }
 
         var sceneBuilder = Object.FindFirstObjectByType<TrackBuilder>();
-        if (sceneBuilder != null)
+        if (sceneBuilder != null && displaced == null)
         {
             // A hand-built scene with no package component — adopt it so the rest of the game can still ask
             // TrackPackage.ActiveTrack rather than hunting for a TrackBuilder.
@@ -99,7 +115,7 @@ public static class TrackSceneLoader
         if (package == null) package = go.AddComponent<TrackPackage>();
         if (string.IsNullOrEmpty(package.trackId)) package.trackId = id;
 
-        int bound = package.BindSceneReferences();
+        int bound = package.BindSceneReferences(displaced);
         Debug.Log($"TrackSceneLoader: loaded {TrackCatalog.DisplayName(id)} " +
                   $"({TrackCatalog.TypeOf(id)}, {TrackCatalog.LengthMiles(id):0.###} mi) and bound {bound} references.");
         return package;

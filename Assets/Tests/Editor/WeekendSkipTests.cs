@@ -172,4 +172,68 @@ public class WeekendSkipTests
             Assert.AreEqual(0f, o.teamMorale + o.sponsorMood + o.mediaStanding + o.fanAppeal, 0.001f, free.ToString());
         }
     }
+
+    // ------------------------------------------------------------------ the phone's SKIP TO HERE
+
+    static int Pos(WeekendActivity a) => (int)a.slot * 1440 + a.startMinute;
+    static int Clock => (int)WeekendLedger.CurrentSlot * 1440 + WeekendLedger.ClockMinute;
+
+    static WeekendActivity Mine(ActivityKind k) => WeekendLedger.Timetable.PlayerSession(k);
+
+    [Test]
+    public void SkipTo_WillNotGoPastYourOwnPractice()
+    {
+        var practice = Mine(ActivityKind.Practice);
+        var race = Mine(ActivityKind.Race);
+        Assert.IsFalse(WeekendSkip.CanSkipTo(race, out string why));
+        StringAssert.Contains(practice.title, why);
+        Assert.IsNull(WeekendSkip.SkipToActivity(race), "a refused skip must not move the clock");
+        Assert.AreEqual(WeekendSlot.FridayAM, WeekendLedger.CurrentSlot);
+    }
+
+    [Test]
+    public void SkipTo_YourOwnSession_LandsOnItsStart_AndLeavesWhatCameBefore()
+    {
+        var practice = Mine(ActivityKind.Practice);
+        Assume.That(Pos(practice) > Clock, "practice opens the weekend, so there is nothing to skip to");
+
+        Assert.IsTrue(WeekendSkip.CanSkipTo(practice, out string why), why);
+        var report = WeekendSkip.SkipToActivity(practice);
+
+        Assert.IsNotNull(report);
+        Assert.AreEqual(practice.slot, WeekendLedger.CurrentSlot);
+        Assert.AreEqual(practice.startMinute, WeekendLedger.ClockMinute);
+        Assert.AreEqual(WeekendLedger.State.Available, WeekendLedger.Status(practice), "the session skipped to is still there to drive");
+
+        foreach (var a in WeekendLedger.Timetable.Activities)
+            if (Pos(a) < Pos(practice) && a.kind != ActivityKind.Rest)
+                Assert.IsTrue(WeekendLedger.IsMissed(a.id), $"{a} was walked past and should be missed");
+    }
+
+    [Test]
+    public void SkipTo_PastASessionYouHaveDriven_IsAllowed_AndNeverBackwards()
+    {
+        var practice = Mine(ActivityKind.Practice);
+        var qualifying = Mine(ActivityKind.Qualifying);
+        if (Pos(practice) > Clock) WeekendSkip.SkipToActivity(practice);
+        Assert.IsTrue(WeekendLedger.Complete(practice, WeekendOutcome.Nothing));
+
+        Assert.IsTrue(WeekendSkip.CanSkipTo(qualifying, out string why), why);
+        Assert.IsNotNull(WeekendSkip.SkipToActivity(qualifying));
+
+        Assert.IsFalse(WeekendSkip.CanSkipTo(practice, out _), "practice is done and behind the clock");
+        foreach (var a in WeekendLedger.Timetable.Activities)
+            if (Pos(a) < Pos(qualifying)) Assert.IsFalse(WeekendSkip.CanSkipTo(a, out _), $"{a} is behind the clock");
+    }
+
+    [Test]
+    public void SkipTo_WhatIsOnNow_IsRefused()
+    {
+        WeekendActivity now = null;
+        foreach (var a in WeekendLedger.Timetable.Activities)
+            if (Pos(a) == Clock) { now = a; break; }
+        Assume.That(now != null, "nothing starts on the opening minute");
+        Assert.IsFalse(WeekendSkip.CanSkipTo(now, out string why));
+        StringAssert.Contains("on now", why);
+    }
 }

@@ -330,7 +330,7 @@ namespace Draftmaster.Weekend
         // one takes its own residue mod 3, so no number is ever entered in two of them on the same day. That
         // matters because the timing towers sit next to each other in the paddock and the player reads the
         // field by car number, not by name.
-        static int NumberFor(RacingSeries series, int index) => series switch
+        public static int NumberFor(RacingSeries series, int index) => series switch
         {
             RacingSeries.Cup => 1 + index * 3,
             RacingSeries.National => 2 + index * 3,

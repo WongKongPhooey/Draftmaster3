@@ -186,7 +186,7 @@ public class PhoneUI : MonoBehaviour
         if (back)
         {
             PadInput.Consume();
-            if (_current != null) { _current = null; _scroll = Vector2.zero; }
+            if (_current != null) { if (!_current.Back()) { _current = null; _scroll = Vector2.zero; } }
             else CloseInternal();
             return;
         }
@@ -648,6 +648,7 @@ public class PhoneUI : MonoBehaviour
         GUI.BeginGroup(view);
         _clip = new Rect(0f, 0f, view.width, view.height);
         _contentHeight = app.Draw(0f, -_scroll.y, contentW);
+        app.DrawOverlay(new Rect(0f, 0f, contentW, view.height));
         _clip = null;
         GUI.EndGroup();
 
@@ -669,7 +670,7 @@ public class PhoneUI : MonoBehaviour
         // Back chevron, left of the title, the whole strip clickable.
         var back = new Rect(bar.x, bar.y, PixelGUI.Px(11f), bar.height);
         PhoneStyles.Label(back, "<", PhoneStyles.Data, PixelGUI.Ink, TextAnchor.MiddleCenter);
-        if (Pressed(back)) { _current = null; _scroll = Vector2.zero; }
+        if (Pressed(back) && !app.Back()) { _current = null; _scroll = Vector2.zero; }
     }
 
     float _contentHeight;

@@ -161,8 +161,23 @@ public class PitLaneStart : MonoBehaviour
     // Sat in the car but not yet handed it: the chief's briefing, then the setup panel. Both are laid out
     // for a landscape screen, so the phone's swing-camera turn to portrait waits for this to clear
     // (DriveOrientationController) — the screen turns when the drive buttons come up, not when the door shuts.
-    public static bool GettingIn => _gettingIn != null;
+    //
+    // Also asked positively of the scene's walk-up: until it has actually handed the car over (Driving), the
+    // answer is "not yet" whatever else looks like a driven car — plus the chief mid-line, which is the
+    // briefing whatever the phase says. The flag alone still let the briefing turn the phone upright on
+    // device (0.4.1), so the screen is held landscape on any of the three.
+    public static bool GettingIn =>
+        _gettingIn != null ||
+        // A co-op guest never gets into this car — they are put in one of the field's — so not for them.
+        (_current != null && _current._phase != EntryPhase.Driving && !Coop.IsGuest) ||
+        (_current != null && _current._chief != null && _current._chief.IsTalking);
     static PitLaneStart _gettingIn;
+    static PitLaneStart _current;   // the scene's on-foot walk-up, when it has one
+
+    // What the orientation log prints when the screen turns.
+    public static string DescribeEntry() =>
+        _current == null ? "no walk-up" :
+        $"phase={_current._phase} entered={_current._entered} chiefTalking={(_current._chief != null && _current._chief.IsTalking)} flag={_gettingIn != null}";
 
     void SetPhase(EntryPhase phase)
     {
@@ -319,6 +334,7 @@ public class PitLaneStart : MonoBehaviour
             return;
         }
 
+        _current = this;
         SpawnPlayer(playerPos);
         AmbienceLoop.Play(ambienceClip, ambienceVolume);
 
@@ -748,6 +764,7 @@ public class PitLaneStart : MonoBehaviour
         PlacedNPC.CutsceneFinished -= OnPlacedCutsceneFinished;
         RunLocked = false;
         if (_gettingIn == this) _gettingIn = null;
+        if (_current == this) _current = null;
     }
 
     // No running until the run hint has been shown. The hint itself waits on the phone lesson

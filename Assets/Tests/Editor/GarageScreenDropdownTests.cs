@@ -85,8 +85,34 @@ public class GarageScreenDropdownTests
         foreach (var row in series)
         {
             if ((bool)Call("IsSeededField", row)) continue;
+            // The National and Truck fields that share the weekend have their own list (SimulatedField).
+            string code = (string)row.GetType().GetProperty("ShortName").GetValue(row);
+            if (code == "NSS" || code == "TRK") continue;
             Assert.IsEmpty(Drivers(row),
                            $"'{Label(row)}' has no entry list yet, so it must not show another series' drivers.");
+        }
+    }
+
+    // The two championships that share every weekend list their own drivers — the names the simulator races —
+    // not the seeded Cup field.
+    [Test]
+    public void TheNationalAndTruckFieldsAreTheirOwnDrivers()
+    {
+        foreach (var row in AllSeries())
+        {
+            string code = (string)row.GetType().GetProperty("ShortName").GetValue(row);
+            if (code != "NSS" && code != "TRK") continue;
+
+            var series = code == "NSS" ? Draftmaster.Weekend.RacingSeries.National : Draftmaster.Weekend.RacingSeries.Trucks;
+            var names = new HashSet<string>(Draftmaster.Weekend.SeriesSimulator.RosterFor(series));
+            var field = Drivers(row);
+            Assert.AreEqual(names.Count, field.Count, $"{code} field size");
+            foreach (var d in field)
+            {
+                string first = (string)d.GetType().GetProperty("FirstName").GetValue(d);
+                string last = (string)d.GetType().GetProperty("LastName").GetValue(d);
+                Assert.IsTrue(names.Contains((first + " " + last).Trim()), $"{code}: '{first} {last}' is not in its roster");
+            }
         }
     }
 

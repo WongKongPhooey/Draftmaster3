@@ -25,16 +25,21 @@ public static class RaceSceneSplitter
 
     // ---------------------------------------------------------------- the scene stays track-free
 
-    // A package instance saved into the race scene pins it to that one track for good (TrackSceneLoader
-    // adopts a road it finds in the scene, and the selection is then ignored). This used to be guarded by
-    // asking the author to run Clear Package Previews afterwards — a manual step that silently costs you a
-    // debugging session the one time it is forgotten, which is exactly the kind of guard that should not
-    // exist. Two automatic ones instead:
+    // A package instance saved into the race scene pins it to that one track (TrackSceneLoader now swaps a
+    // mismatched one out at runtime, but the scene should still never carry one). The rule is one line:
     //
-    //   1. Editing in context takes its own instance away again when the prefab stage closes.
-    //   2. Saving the race scene strips any package still in it, whoever put it there.
+    //   SAVING THE RACE SCENE PUTS YOUR TRACK EDITS IN THE PACKAGE AND TAKES THE TRACK OUT OF THE SCENE.
     //
-    // Clear Package Previews From Scene is still on the menu as a broom for a scene already in that state.
+    // Whatever you changed on a track in the race scene — dragged a marker, added a component, dropped in a new
+    // object — is applied to Resources/TrackPackages/<id>.prefab, then the instance is removed. Closing an
+    // Edit In Context stage does the same. There is no "apply first, then clear" to remember, and nothing is
+    // ever kept back in the scene: keeping an instance with unapplied edits was the old safety net, and it is
+    // what pinned the race scene to Watkins Glen and sent a Daytona weekend there (0.4.1).
+    //
+    // What is NOT carried over is what the track builders regenerate on every enable anyway (meshes, and the
+    // objects they spawn under a TrackBuilder / TrackGround / grandstand) — see IsGeneratedObject.
+    //
+    // Clear Package Previews From Scene does the same apply-then-remove, as a broom for a scene already in a mess.
     static RaceSceneSplitter()
     {
         EditorSceneManager.sceneSaving -= StripPackagesBeforeSave;
@@ -51,39 +56,117 @@ public static class RaceSceneSplitter
         if (PrefabStageUtility.GetCurrentPrefabStage() != null) return;
 
         int removed = 0, kept = 0;
+        var report = new System.Text.StringBuilder();
         foreach (var package in Object.FindObjectsByType<TrackPackage>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (package == null) continue;
-            string id = package.trackId;
-
-            // Never destroy work. An instance carrying edits that are not in the package yet is somebody's
-            // authoring session, and stripping it throws that away with no warning and nothing to undo —
-            // which is exactly how a marker placed against the scene instance disappears overnight.
-            string unapplied = UnappliedEdits(package.gameObject);
-            if (unapplied != null)
-            {
-                kept++;
-                Debug.LogError($"RaceScene: KEPT the '{id}' package rather than stripping it — it is carrying " +
-                               $"{CountLines(unapplied)} edit(s) that are not in the package yet:\n{unapplied}\n" +
-                               "Removing it would have thrown those away. Apply them (right-click the instance " +
-                               "> Prefab > Apply All), or make the edit inside Draftmaster > Tracks > Edit " +
-                               "Selected Package In Context so it lands in the package to begin with — then " +
-                               "save again and it will strip as usual. Until then this scene holds a road, so " +
-                               "TrackSceneLoader will adopt it and ignore the track selection.",
-                               package.gameObject);
-                continue;
-            }
-
-            Object.DestroyImmediate(package.gameObject);
-            removed++;
-            Debug.Log($"RaceScene: removed the '{id}' package before saving — the race scene holds no road, " +
-                      "so it stays free to build whichever track is selected. Edits you made inside the " +
-                      "package itself are unaffected.");
+            if (FoldIntoPackageAndRemove(package.gameObject, report, undoable: false)) removed++;
+            else kept++;
         }
 
         if (removed > 0 || kept > 0)
-            WriteReport($"Save: stripped {removed} package instance(s) from the race scene" +
-                        (kept > 0 ? $", kept {kept} carrying unapplied edits." : "."));
+            WriteReport($"Save: took {removed} track(s) out of the race scene" +
+                        (kept > 0 ? $", could NOT take {kept} out (see the console)" : "") + ".\n" + report);
+    }
+
+    // Apply whatever was authored on this track instance to its package, then remove the instance. False (and
+    // the instance left where it is) only when an apply failed — then the edits exist nowhere else and
+    // removing it would lose them; the console says which.
+    static bool FoldIntoPackageAndRemove(GameObject instance, System.Text.StringBuilder report, bool undoable)
+    {
+        var package = instance.GetComponent<TrackPackage>();
+        string id = package != null ? package.trackId : instance.name;
+
+        if (!PrefabUtility.IsPartOfPrefabInstance(instance))
+        {
+            Debug.LogError($"RaceScene: '{instance.name}' is a track that is not a package instance, so there is no " +
+                           "package to put it in. Left in the scene — make it a package (Draftmaster > Tracks > " +
+                           "Build Package For Track) or delete it by hand.", instance);
+            report.AppendLine($"  {id}: left in — not a package instance");
+            return false;
+        }
+
+        var applied = new System.Collections.Generic.List<string>();
+        var failed = new System.Collections.Generic.List<string>();
+        ApplyAuthoredEdits(instance, applied, failed);
+
+        if (failed.Count > 0)
+        {
+            Debug.LogError($"RaceScene: could not put {failed.Count} edit(s) on '{id}' into its package, so the " +
+                           $"track was left in the scene rather than lose them:\n  {string.Join("\n  ", failed)}", instance);
+            report.AppendLine($"  {id}: left in — {failed.Count} edit(s) would not apply");
+            return false;
+        }
+
+        if (undoable) Undo.DestroyObjectImmediate(instance);
+        else Object.DestroyImmediate(instance);
+
+        string what = applied.Count == 0
+            ? "no edits on it"
+            : $"{applied.Count} edit(s) saved into the package:\n    " + string.Join("\n    ", applied);
+        Debug.Log($"RaceScene: took the '{id}' track out of the scene — {what}");
+        report.AppendLine($"  {id}: removed, {what}");
+        return true;
+    }
+
+    // Push the authored overrides on a package instance into the package asset. Same classification as
+    // UnappliedEdits: the root's own transform and anything a builder regenerates are left behind.
+    static void ApplyAuthoredEdits(GameObject instance, System.Collections.Generic.List<string> applied,
+                                   System.Collections.Generic.List<string> failed)
+    {
+        string assetPath = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(instance);
+        const InteractionMode mode = InteractionMode.AutomatedAction;
+
+        foreach (var added in PrefabUtility.GetAddedGameObjects(instance))
+        {
+            if (added?.instanceGameObject == null || IsGeneratedObject(added.instanceGameObject)) continue;
+            string where = PathInside(instance, added.instanceGameObject.transform);
+            try { added.Apply(assetPath, mode); applied.Add("added object " + where); }
+            catch (System.Exception e) { failed.Add($"added object {where}: {e.Message}"); }
+        }
+
+        foreach (var added in PrefabUtility.GetAddedComponents(instance))
+        {
+            if (added?.instanceComponent == null) continue;
+            if (!PrefabUtility.IsPartOfPrefabInstance(added.instanceComponent.gameObject)) continue;
+            if (IsGenerated(added.instanceComponent)) continue;
+            string where = $"{added.instanceComponent.GetType().Name} on {PathInside(instance, added.instanceComponent.transform)}";
+            try { added.Apply(assetPath, mode); applied.Add("added " + where); }
+            catch (System.Exception e) { failed.Add($"added {where}: {e.Message}"); }
+        }
+
+        foreach (var gone in PrefabUtility.GetRemovedComponents(instance))
+        {
+            if (gone?.assetComponent == null) continue;
+            string where = gone.assetComponent.GetType().Name;
+            try { gone.Apply(assetPath, mode); applied.Add("removed " + where); }
+            catch (System.Exception e) { failed.Add($"removed {where}: {e.Message}"); }
+        }
+
+        var rootTransform = instance.transform;
+        foreach (var over in PrefabUtility.GetObjectOverrides(instance, includeDefaultOverrides: false))
+        {
+            if (over?.instanceObject == null) continue;
+            if (over.instanceObject == rootTransform || over.instanceObject == instance) continue;
+            if (IsGenerated(over.instanceObject)) continue;
+            string where = PathInside(instance, over.instanceObject);
+            string label = over.instanceObject is Transform ? "moved " + where
+                                                            : $"changed {over.instanceObject.GetType().Name} on {where}";
+            try { over.Apply(assetPath, mode); applied.Add(label); }
+            catch (System.Exception e) { failed.Add($"{label}: {e.Message}"); }
+        }
+    }
+
+    // An object a track builder spawned and will spawn again on its next enable: it sits somewhere under one
+    // of the [ExecuteAlways] builders. Applying those would bake a second copy of the road into the package.
+    static bool IsGeneratedObject(GameObject go)
+    {
+        for (var t = go.transform.parent; t != null; t = t.parent)
+            if (t.GetComponent<TrackBuilder>() != null || t.GetComponent<TrackGround>() != null ||
+                t.GetComponent<TrackOverpass>() != null || t.GetComponent<Grandstand>() != null ||
+                t.GetComponent<TrackEnvironmentBuilder>() != null || t.GetComponent<ExtraTrackSpline>() != null)
+                return true;
+        return false;
     }
 
     // The instance Edit In Context put in the race scene, so the stage can take it away again on close.
@@ -102,25 +185,14 @@ public static class RaceSceneSplitter
         _contextTrackId = null;
         if (instance == null) return;
 
-        // Same rule as the save-time strip: edits made against the INSTANCE while the stage was open never
-        // reached the package, and taking the instance away would be the last anybody saw of them.
-        string unapplied = UnappliedEdits(instance);
-        if (unapplied != null)
-        {
-            Debug.LogError("RaceScene: kept the context instance rather than removing it on stage close — it " +
-                           $"is carrying {CountLines(unapplied)} edit(s) that are not in the package yet:\n{unapplied}\n" +
-                           "Those were made against the instance in the scene rather than inside the stage, " +
-                           "so the package never saw them. Apply them (right-click > Prefab > Apply All) or " +
-                           "discard them, then run Draftmaster > Tracks > Clear Package Previews From Scene.",
-                           instance);
-            WriteReport("Edit: closed the stage but KEPT the context instance — it had unapplied edits on it.");
-            return;
-        }
-
+        // Same rule as the save: whatever was changed on the instance in the scene (rather than inside the
+        // stage) goes into the package, and then the instance goes.
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-        Undo.DestroyObjectImmediate(instance);
-        EditorSceneManager.MarkSceneDirty(scene);
-        WriteReport("Edit: closed the stage and removed the context instance — the race scene is track-free again.");
+        var report = new System.Text.StringBuilder();
+        bool removed = FoldIntoPackageAndRemove(instance, report, undoable: true);
+        if (removed) EditorSceneManager.MarkSceneDirty(scene);
+        WriteReport((removed ? "Edit: closed the stage and took the track out of the race scene.\n"
+                             : "Edit: closed the stage but could NOT take the track out (see the console).\n") + report);
     }
 
     // ---------------------------------------------------------------- selection + preview
@@ -251,18 +323,21 @@ public static class RaceSceneSplitter
     [MenuItem("Draftmaster/Tracks/Clear Package Previews From Scene")]
     public static void ClearPreviews()
     {
-        int removed = 0;
+        int removed = 0, kept = 0;
+        var report = new System.Text.StringBuilder();
         foreach (var package in Object.FindObjectsByType<TrackPackage>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (package == null) continue;
-            Undo.DestroyObjectImmediate(package.gameObject);
-            removed++;
+            if (FoldIntoPackageAndRemove(package.gameObject, report, undoable: true)) removed++;
+            else kept++;
         }
 
         if (removed > 0) EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
-        WriteReport(removed == 0
-            ? "Clear: no package instances in the scene."
-            : $"Clear: removed {removed} package instance(s). Scene is dirty — save it to keep it track-free.");
+        WriteReport(removed == 0 && kept == 0
+            ? "Clear: no tracks in the scene."
+            : $"Clear: took {removed} track(s) out (edits saved into their packages)" +
+              (kept > 0 ? $", could NOT take {kept} out (see the console)" : "") +
+              ". Scene is dirty — save it.\n" + report);
     }
 
     static GameObject FindPreviewInstance(string id)

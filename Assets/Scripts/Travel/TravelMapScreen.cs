@@ -168,7 +168,11 @@ public class TravelMapScreen : MonoBehaviour
         OpenView();
     }
 
-    void OnDestroy() { if (Instance == this) Instance = null; }
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+        if (_tutorialPrompt != null) ControlHints.Hide(_tutorialPrompt);
+    }
 
     void Update()
     {
@@ -526,9 +530,23 @@ public class TravelMapScreen : MonoBehaviour
         if (isCurrent) { Refresh(); return; }
         if (choosing)
         {
+            if (n.isCircuit && !TravelTutorial.CanChoose(n.id))
+            {
+                Notice($"Not this week. {TravelGraph.Get(Draftmaster.Tracks.TravelTutorialRoute.To).name} is next on the calendar.");
+                return;
+            }
             if (n.isCircuit && TravelState.ChooseDestination(n.id))
-                Notice($"Destination set: {n.name}. {TravelState.StopsLeft} stops for a {TravelGraph.ShortestHops(TravelState.CurrentNodeId, n.id)}-stop direct run.");
+                Notice(TravelTutorial.LegBooked
+                    ? $"Destination set: {n.name}. {TravelState.StopsLeft} stops - enough for Team HQ and the Garage on the way."
+                    : $"Destination set: {n.name}. {TravelState.StopsLeft} stops for a {TravelGraph.ShortestHops(TravelState.CurrentNodeId, n.id)}-stop direct run.");
             Refresh();
+            return;
+        }
+        if (reachable && !TravelTutorial.CanMoveTo(n.id))
+        {
+            Notice(n.id == Draftmaster.Tracks.TravelTutorialRoute.To
+                ? "Not yet - Team HQ and the Garage first."
+                : "That road won't leave enough stops for Team HQ and the Garage.");
             return;
         }
         if (reachable && TravelState.MoveTo(n.id))
@@ -561,6 +579,22 @@ public class TravelMapScreen : MonoBehaviour
 
         RefreshMarkers(choosing, current, dest);
         RefreshSidePanel(choosing, current, dest);
+        RefreshTutorialPrompt();
+    }
+
+    // The tutorial leg's instruction, in the strip the control hints use. Each wording is its own hint id:
+    // re-pushing a live id only refreshes its timer, so a changed line has to replace the old one.
+    string _tutorialPrompt;
+
+    void RefreshTutorialPrompt()
+    {
+        string text = TravelTutorial.PromptText();
+        string id = text == null ? null : TravelTutorial.PromptId + ":" + text;
+        if (id == _tutorialPrompt) return;
+
+        if (_tutorialPrompt != null) ControlHints.Hide(_tutorialPrompt);
+        _tutorialPrompt = id;
+        if (id != null) ControlHints.ShowSticky(id, null, null, text, once: false, urgent: true);
     }
 
     // The hint rides on the sub line because the map no longer shows the whole country at once, and it
@@ -585,24 +619,30 @@ public class TravelMapScreen : MonoBehaviour
             bool isCurrent = n == current;
             bool isDest = n == dest;
             bool adjacent = TravelGraph.AreAdjacent(current.id, n.id);
-            bool reachable = !choosing && adjacent && TravelState.StopsLeft > 0;
-            bool clickable = (choosing && n.isCircuit && !isCurrent) || reachable || isCurrent;
+            bool reachable = !choosing && adjacent && TravelState.StopsLeft > 0 && TravelTutorial.CanMoveTo(n.id);
+            bool choosable = choosing && n.isCircuit && !isCurrent && TravelTutorial.CanChoose(n.id);
+            bool waypoint = TravelTutorial.IsPendingWaypoint(n.id);
+            // A road or a race the tutorial rules out stays clickable, so the click can say why not.
+            bool ruledOut = (choosing && n.isCircuit && !isCurrent)
+                         || (!choosing && adjacent && TravelState.StopsLeft > 0);
+            bool clickable = choosable || reachable || ruledOut || isCurrent;
 
             marker.button.interactable = clickable;
 
             if (isCurrent) { marker.halo.enabled = true; marker.halo.color = CurrentHalo; }
             else if (isDest) { marker.halo.enabled = true; marker.halo.color = DestHalo; }
-            else if (reachable || (choosing && n.isCircuit)) { marker.halo.enabled = true; marker.halo.color = ReachableHalo; }
+            else if (waypoint) { marker.halo.enabled = true; marker.halo.color = DestHalo; }
+            else if (reachable || choosable) { marker.halo.enabled = true; marker.halo.color = ReachableHalo; }
             else marker.halo.enabled = false;
 
             marker.dot.color = DotColor(n);
 
-            marker.label.text = LabelFor(n);
+            marker.label.text = (waypoint ? TravelTutorial.WaypointLabel(n.id) : null) ?? LabelFor(n);
             // The nodes that matter right now get the bigger type; the other fifty stay small so the
             // middle of the country does not turn into a wall of overlapping names.
-            bool shout = isCurrent || isDest || n.locationType == TravelLocationType.TeamFactory;
+            bool shout = isCurrent || isDest || waypoint || n.locationType == TravelLocationType.TeamFactory;
             marker.label.fontSize = shout ? 16 : 8;
-            marker.label.color = isCurrent ? CurrentHalo : (isDest ? DestHalo : LabelColor(n));
+            marker.label.color = isCurrent ? CurrentHalo : (isDest || waypoint ? DestHalo : LabelColor(n));
         }
 
         // The two pins are single objects that hop about rather than one per node: where you are, and
@@ -683,7 +723,9 @@ public class TravelMapScreen : MonoBehaviour
 
         if (current.isCircuit)
         {
-            if (current == dest)
+            if (current == dest && !TravelTutorial.CanStartWeekend)
+                flavor = "You're early. Team HQ and the Garage first.";
+            else if (current == dest)
             {
                 flavor = "This is the place. Time to go racing.";
                 ShowAction("START RACE WEEKEND", () => StartRaceWeekend(current));
@@ -829,7 +871,11 @@ public class TravelMapScreen : MonoBehaviour
 
     void StartRaceWeekend(TravelNode circuit)
     {
+        if (TravelTutorial.LegBooked) TravelTutorial.Complete();
         TravelState.ArriveAndClearDestination();
+        // The race scene builds whatever TrackSelection names, and a saved selection beats the travel
+        // position — so arriving has to say so, or the weekend reloads the venue just left.
+        TrackSelection.Select(circuit.id);
         RaceWeekend.ResetWeekend();
         // Load the circuit's scene when it's in the build; otherwise re-run the current (dev) scene —
         // the travel position still advances, so the map keeps working before every track is wired up.

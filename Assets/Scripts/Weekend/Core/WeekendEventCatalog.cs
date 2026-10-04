@@ -67,13 +67,13 @@ namespace Draftmaster.Weekend
             {
                 id = "watch-practice", kind = ActivityKind.SpectatePractice, minutes = 75, needsSeries = true,
                 title = "PRACTICE",
-                subtitle = "Stand on the wall and watch what the field is doing with the track.",
+                subtitle = "Optional. Watch the field from the wall and scout their drivers.",
             },
             new EventType
             {
                 id = "watch-qualifying", kind = ActivityKind.SpectateQualifying, minutes = 60, needsSeries = true,
                 title = "QUALIFYING",
-                subtitle = "Watch the grid get set.",
+                subtitle = "Optional. Watch the grid get set and scout their drivers.",
             },
             new EventType
             {

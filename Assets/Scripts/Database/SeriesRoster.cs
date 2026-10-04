@@ -11,8 +11,9 @@ using Draftmaster.Data;
 //      entry says they are.
 //   2. Nothing has generated a season yet on most saves, and no menu scene has even opened the database
 //      (DatabaseManager lives in the race scene), so the fallback is the seeded field: the Drivers table
-//      is CupRoster2026, which IS the top stock-car championship's entry list. Every other series is
-//      honestly empty rather than being filled with borrowed drivers.
+//      is CupRoster2026, which IS the top stock-car championship's entry list. The National and Truck
+//      fields that share every weekend come from SimulatedField (their simulator names, given stat lines);
+//      every other series is honestly empty rather than being filled with borrowed drivers.
 //
 // Series come from the Series table when it is open and DummySeries — the same rows the table is seeded
 // from — when it is not, so the dropdown reads the same in a menu scene as it does mid-career.
@@ -70,6 +71,10 @@ public static class SeriesRoster
             }
             catch { /* fall through */ }
         }
+
+        // The two championships that share the player's weekend but only exist as names: their field, with
+        // a stat line each, so it can be browsed and scouted (SimulatedField).
+        if (SimulatedField.TryRacingSeries(series, out var simulated)) return SimulatedField.Drivers(simulated);
 
         if (!IsSeededField(series)) return new List<Driver>();
 

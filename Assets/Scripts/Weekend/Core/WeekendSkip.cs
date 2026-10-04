@@ -79,7 +79,72 @@ namespace Draftmaster.Weekend
         public static Report SkipHalfDay()
         {
             if (WeekendLedger.WeekendOver) return null;
+            var from = WeekendLedger.CurrentSlot;
+            return Run(() =>
+            {
+                WeekendLedger.AdvanceSlot();
+                // AdvanceSlot sweeps while the clock is still in the half-day being left, where the player's own
+                // sessions are exempt, so those would only be marked missed by whatever swept next. Sweep again
+                // from the new half-day (SkipTo the clock's own minute moves nothing) so they land in this report.
+                WeekendLedger.SkipTo(WeekendLedger.ClockMinute);
+            }, "Skipped " + WeekendSlots.Label(from).ToLowerInvariant());
+        }
 
+        // ------------------------------------------------------------------ skip to a booking
+
+        // Can the clock be moved straight to `target` (the phone's SKIP TO HERE)? Only forwards, only to
+        // something still to come, and never past one of the player's own driving sessions that has not been
+        // run: practice, qualifying and the race are what the weekend is for, so the way past one is to drive
+        // it. Skipping TO a session is fine — that is just arriving for it. `reason` says why not, in a line
+        // the phone can show.
+        public static bool CanSkipTo(WeekendActivity target, out string reason)
+        {
+            reason = "";
+            var t = WeekendLedger.Timetable;
+            if (target == null || t == null) { reason = "Nothing to skip to."; return false; }
+            if (WeekendLedger.WeekendOver) { reason = "The weekend is over."; return false; }
+            if (WeekendLedger.IsDone(target.id)) { reason = "Already done."; return false; }
+            if (WeekendLedger.IsMissed(target.id)) { reason = "Already missed."; return false; }
+
+            int clock = Position(WeekendLedger.CurrentSlot, WeekendLedger.ClockMinute);
+            int at = Position(target.slot, target.startMinute);
+            if (at < clock) { reason = "That has already started."; return false; }
+            if (at == clock) { reason = "That's on now."; return false; }
+
+            foreach (var a in t.Activities)
+            {
+                if (a == null || a == target || !a.IsOnTrack) continue;
+                if (WeekendLedger.IsDone(a.id) || WeekendLedger.IsMissed(a.id)) continue;
+                if (Position(a.slot, a.startMinute) >= at) continue;
+                reason = $"You can't skip past {a.title}. Drive it first.";
+                return false;
+            }
+            return true;
+        }
+
+        // Move the clock to `target`'s start: every half-day in between is given up and everything the clock
+        // walks past is left unattended, charged exactly as SkipHalfDay charges it. Null when it is not allowed.
+        public static Report SkipToActivity(WeekendActivity target)
+        {
+            if (!CanSkipTo(target, out _)) return null;
+            return Run(() =>
+            {
+                for (int guard = WeekendSlots.Count; guard > 0 && !WeekendLedger.WeekendOver &&
+                     (int)WeekendLedger.CurrentSlot < (int)target.slot; guard--)
+                    WeekendLedger.AdvanceSlot();
+                WeekendLedger.SkipTo(target.startMinute);
+            }, "Skipped to " + target.title.ToLowerInvariant());
+        }
+
+        // Minutes since Friday morning opened, so two bookings on different days compare as one number.
+        static int Position(WeekendSlot slot, int minute) => (int)slot * 24 * 60 + minute;
+
+        // ------------------------------------------------------------------ the shared half
+
+        // Run a move of the clock and report what it left behind: everything open before it that is missed
+        // after it, the toll on the optional ones, and the net change to every meter.
+        static Report Run(System.Action move, string headlineLead)
+        {
             var report = new Report { from = WeekendLedger.CurrentSlot };
             var t = WeekendLedger.Timetable;
 
@@ -94,11 +159,7 @@ namespace Draftmaster.Weekend
             float appeal = Draftmaster.Fans.FanAppeal.Value;
             int net = WeekendLedger.NetEarnings;
 
-            WeekendLedger.AdvanceSlot();
-            // AdvanceSlot sweeps while the clock is still in the half-day being left, where the player's own
-            // sessions are exempt, so those would only be marked missed by whatever swept next. Sweep again
-            // from the new half-day (SkipTo the clock's own minute moves nothing) so they land in this report.
-            WeekendLedger.SkipTo(WeekendLedger.ClockMinute);
+            move();
 
             var toll = WeekendOutcome.Nothing;
             foreach (var a in open)
@@ -117,7 +178,7 @@ namespace Draftmaster.Weekend
 
             if (report.SkippedAnything)
             {
-                toll.headline = "Skipped " + WeekendSlots.Label(report.from).ToLowerInvariant() + ": " +
+                toll.headline = headlineLead + ": " +
                                 report.skipped.Count + (report.skipped.Count == 1 ? " booking" : " bookings") +
                                 " left unattended.";
                 WeekendLedger.Apply(toll);

@@ -65,7 +65,10 @@ public class TrackPackage : MonoBehaviour
     // In a per-track scene those are dragged in by hand; in the shared scene the road doesn't exist until
     // the package is instantiated, so they are bound here instead. Only null fields are filled, so anything
     // deliberately wired to a different spline (an ExtraTrackSpline test rig) is left alone.
-    public int BindSceneReferences()
+    // `replacing`: a track this package has just displaced (TrackSceneLoader swapping out one baked into the
+    // scene). Fields still pointing at its builder are re-pointed here too, rather than left on a road that is
+    // about to be destroyed.
+    public int BindSceneReferences(TrackBuilder replacing = null)
     {
         // The AI's strength is per track (Draftmaster > AI > Calibrate AI Pace). Set before anything that binds
         // below can spawn a car and bake a speed profile off the old numbers.
@@ -96,7 +99,8 @@ public class TrackPackage : MonoBehaviour
             {
                 if (field.FieldType != typeof(TrackBuilder)) continue;
                 if (field.IsInitOnly || field.IsLiteral) continue;
-                if (field.GetValue(mb) as TrackBuilder != null) continue;   // already wired — leave it
+                var current = field.GetValue(mb) as TrackBuilder;
+                if (current != null && (replacing == null || current != replacing)) continue;   // already wired — leave it
                 field.SetValue(mb, builder);
                 bound++;
             }

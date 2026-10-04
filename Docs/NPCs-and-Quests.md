@@ -90,8 +90,9 @@ green if they appear in the previewed session and grey-red if they don't, with t
 trigger ring, trigger radius, interact range, stop distance and facing all on drag handles.
 
 **Geometry anchors only resolve when a track is loaded in the open scene.** The race scene is
-deliberately roadless, so run `Draftmaster > Tracks > Preview Selected Package In Scene` (and
-`Clear Package Previews From Scene` when done) or author inside the package's own Prefab Mode stage.
+deliberately roadless, so run `Draftmaster > Tracks > Preview Selected Package In Scene` (saving the
+scene then folds your edits into the package and removes the track) or author inside the package's own
+Prefab Mode stage.
 
 ### The random crowd — per-track dialogue pools
 

@@ -271,8 +271,8 @@ public class WeekendPlanTests
     [Test]
     public void EveryShippedPlanIsValid()
     {
+        // None ship at the moment (the old Watkins Glen Cup plan was retired) — every one that does must parse.
         var files = Resources.LoadAll<TextAsset>(WeekendPlanLibrary.ResourceFolder);
-        Assert.IsNotEmpty(files, "No authored weekends at all — WatkinsGlen.Cup.json should be there.");
 
         foreach (var file in files)
         {
@@ -285,25 +285,6 @@ public class WeekendPlanTests
             CollectionAssert.IsEmpty(problems,
                                      $"{file.name}.json:\n  " + string.Join("\n  ", problems));
         }
-    }
-
-    [Test]
-    public void WatkinsGlenCupIsAuthoredAndDrivable()
-    {
-        var plan = WeekendPlanLibrary.For("WatkinsGlen", RacingSeries.Cup);
-        Assert.IsNotNull(plan, "WatkinsGlen/Cup has no plan file, so it still builds from the generated schedule.");
-
-        var timetable = WeekendTimetable.Build(RacingSeries.Cup, weekendId: 3, trackName: "WatkinsGlen");
-        Assert.IsTrue(timetable.authored, "The authored plan was not used — the round is still generating its own schedule.");
-
-        // The three things a weekend cannot be missing.
-        foreach (var kind in new[] { ActivityKind.Practice, ActivityKind.Qualifying, ActivityKind.Race })
-            Assert.IsNotNull(timetable.PlayerSession(kind),
-                             $"The authored Watkins Glen weekend has no {kind} for the player to drive.");
-
-        // ...and the thing that started all this: a truck session to go and watch.
-        Assert.IsTrue(timetable.Activities.Any(a => a.kind == ActivityKind.SpectateQualifying && a.series == RacingSeries.Trucks),
-                      "No TRK qualifying to spectate at Watkins Glen.");
     }
 
     [Test]

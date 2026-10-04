@@ -215,7 +215,12 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // Body-slip angle (overall slide), degrees.
     public float SlipAngleDeg => Mathf.Atan2(_vy, Mathf.Max(Mathf.Abs(_vx), 0.01f)) * Mathf.Rad2Deg;
     public float YawRateDeg => _r * Mathf.Rad2Deg;
-    public float HeadingDeg => _headingDeg; // world heading of the nose (0 = +X), for AI input providers
+    // World heading of the nose (0 = +X), for AI input providers and the camera. Read off the transform until
+    // Start has seeded the physics state: a parked player car sits disabled through the chief's briefing and
+    // the setup panel, and the 0 it held until then turned the swing camera to face the wrong way.
+    public float HeadingDeg => _started ? _headingDeg : PoseHeadingDeg;
+    float PoseHeadingDeg => transform.eulerAngles.z + (spriteFacesUp ? 90f : 0f) - angleOffsetDeg;
+    bool _started;
     // Commanded longitudinal accel (m/s², + = driving, - = braking/coasting) and lateral accel (m/s², + = left
     // in the body frame). Read by the camera for lean; below the kinematic threshold the stored lateral figure
     // is stale (the slip-angle branch doesn't run at a crawl), so report zero rather than a leftover corner.
@@ -398,7 +403,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             transform.position = startReference.position;
             transform.rotation = startReference.rotation;
         }
-        _headingDeg = transform.eulerAngles.z + (spriteFacesUp ? 90f : 0f) - angleOffsetDeg;
+        _headingDeg = PoseHeadingDeg;
+        _started = true;
         RecomputeGeometry();
 
         if (track == null) track = FindFirstObjectByType<TrackBuilder>();
@@ -451,6 +457,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     {
         transform.position = new Vector3(worldPos.x, worldPos.y, transform.position.z);
         _headingDeg = headingDeg;
+        _started = true;   // seeded: trust the state from here, even before Start
         _vx = forwardSpeedMps;
         _vy = _r = 0f;
         transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? _headingDeg - 90f : _headingDeg) + angleOffsetDeg);

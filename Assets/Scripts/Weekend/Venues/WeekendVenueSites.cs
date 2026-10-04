@@ -915,18 +915,28 @@ public class WeekendVenueSites : MonoBehaviour
     }
 
     // The intro stage: a platform at the pit-road end of the paddock, where the field is announced.
+    //
+    // Like the winner's circle, an authored IntroStage_Marker MOVES the stage rather than suppressing it: the
+    // stage is all generated props, so a marker that only stopped the builder left a venue with nothing to
+    // see. Left unauthored it is guessed off the paddock rectangle and clamped into the walkable area — which
+    // at Watkins Glen put it half off the paddock and half on pit road.
     void PlaceIntroStage(Vector3 centre, Vector3 along, Vector3 outward, float halfLen, float halfDepth,
                          float alongOffset)
     {
-        if (WeekendVenueAnchor.Exists(WeekendVenue.IntroStage)) return;
-
-        Vector3 stageCentre = centre + along * AlongOffset(alongOffset, halfLen, StageWidth * 0.5f)
-                                     - outward * Mathf.Max(0f, halfDepth - StageDepth * 0.6f);
+        bool authored = AuthoredSpot(WeekendVenue.IntroStage, out Vector3 at, out Quaternion facing);
+        if (!authored)
+        {
+            if (WeekendVenueAnchor.Exists(WeekendVenue.IntroStage)) return;
+            Vector3 stageCentre = centre + along * AlongOffset(alongOffset, halfLen, StageWidth * 0.5f)
+                                         - outward * Mathf.Max(0f, halfDepth - StageDepth * 0.6f);
+            at = Walkable(stageCentre);
+            facing = FrameRotation(outward);
+        }
 
         var stage = new GameObject("IntroStage");
         stage.transform.SetParent(_root, false);
-        stage.transform.position = Walkable(stageCentre);
-        stage.transform.rotation = FrameRotation(outward);
+        stage.transform.position = at;
+        stage.transform.rotation = facing;
 
         PaddockProps.Quad(stage.transform, "Deck", Vector2.zero, new Vector2(StageWidth, StageDepth),
                           PaddockProps.FloorZ, Mat(new Color(0.24f, 0.25f, 0.29f)));
@@ -934,6 +944,8 @@ public class WeekendVenueSites : MonoBehaviour
                           new Vector2(StageWidth, 1.0f), PaddockProps.PropZ, Mat(new Color(0.13f, 0.35f, 0.58f)));
         LocationTitle.Attach(stage, "DRIVER INTRODUCTIONS", StageWidth, "The stage at the end of pit road");
 
+        // An authored marker registered its own anchor, where the track put it.
+        if (authored) return;
         Vector3 mark = Walkable(stage.transform.TransformPoint(new Vector3(0f, -StageDepth * 0.25f, 0f)));
         PaddockProps.Anchor(_root, WeekendVenue.IntroStage, mark, mark, arriveRange: 4.5f);
     }

@@ -23,6 +23,7 @@ public static class CareerReset
         "FPSLimit", "SteeringType",             // performance + controls
         "Difficulty", "AIDifficulty",           // difficulty the player picked
         "ShowRacingLine", "ShowMiniMap", "hud.leaderboard",   // HUD toggles
+        Draftmaster.Weekend.CareerModes.PrefKey,  // OPTIONS > CAREER MODE: how much of the weekend to play
         "DbSchemaVersion",                      // wiping this would drop and reseed the Drivers table
         "NewUser",
     };

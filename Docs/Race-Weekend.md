@@ -79,6 +79,38 @@ duties; somebody else's session and an hour off cost nothing). At the circuit th
 back to your motorhome — `WeekendDirector.SkipAhead` reloads the race scene with nothing routed, which always
 opens in the RV — and a summary card lists what was skipped and what every meter lost.
 
+**Career mode** (title → OPTIONS → CAREER MODE) trims the sheet: **Full** is everything above;
+**Minimal** keeps your practice, qualifying and race plus the team meetings that change the car (strategy
+briefing, debrief, the first weekend's orientation); **Driving Only** keeps just the three sessions. Rules in
+`Draftmaster.Weekend.CareerModes`, applied by `WeekendTimetable.ApplyCareerMode` each time `WeekendDirector`
+builds the sheet. Removed bookings never route, pay or fine; anything already attended or missed stays. It
+trims the sheet, not the paddock — the walk to the car is still there. Tests: `CareerModeTests`.
+
+**Slimmed (2026-10-04).** The **hauler parade is gone** — `ActivityKinds.IsRetired`, dropped from every
+weekend generated or authored by `WeekendTimetable.ApplyHouseRules` (the enum value stays so old ledger ids and
+plan files still parse; the generator's "charity fun run" used the same kind and went with it). **Somebody
+else's practice and qualifying are optional** (`ActivityKinds.IsOptional`): still on the F10 sheet to book,
+but `WeekendSchedulePlan.NextWorthDoing` never routes you to one, and they carry no penalty for not going.
+Their race is still routed as before.
+
+**Scouting.** The reason to watch: every driver's stats on the RV laptop (garage sheet) read `??` until
+scouted. A session uncovers some for every driver in its field — your own practice 1, qualifying 1, race 2
+(4 a weekend, so your field is fully known on the 5th weekend); a watched session of another series 1. What
+it shows first is what it would show (qualifying → QUALIFYING, race → racecraft, practice → this track type's
+aptitude), then a fixed per-driver order. Rules `Draftmaster.Weekend.DriverScouting` (pure, tunable constants),
+save `ScoutingLedger` (`scout.<NAME>` bitmask per driver, wiped by CareerReset), hooked in
+`WeekendDirector.Finish`/`FinishRoutedSession` — the result card says how many stats were uncovered. The
+National and Truck fields, which only exist as simulator names, get stable generated stat lines
+(`SimulatedField`) so the laptop can list them. Tests: `DriverScoutingTests`.
+
+**SKIP TO HERE (phone SCHEDULE).** Tap a booking on the phone's calendar (or left/right + confirm) for a card:
+what it is, when/where, fee or no-show cost, and SKIP TO HERE. `WeekendSkip.CanSkipTo` allows only forward
+skips to something still to come and refuses to pass one of your own unrun driving sessions (skipping *to* one
+is fine); `SkipToActivity` moves the clock to the booking's start, charging everything in between exactly like
+the half-day skip. `WeekendDirector.SkipTo` books the target as the objective and fast travels to the RV with
+the summary card. The pause menu's WEEKEND SCHEDULE row was removed — the phone is the schedule (F10 and the
+results screen's button still open the full sheet). Tests in `WeekendSkipTests`.
+
 ## 2. The session schedule
 
 This is the shape of a modern compressed stock-car weekend: all three championships practise on Friday and
@@ -158,7 +190,7 @@ walk away mid-sentence, which counts as not having done it.
 | **The pit box** | The pre-weekend plan meeting with the crew chief, and where a broadcaster catches you for a media hit. |
 | **Your motorhome** | Session debriefs, sat at the dinette with the engineer across the table. |
 | **The drivers' room** | The drivers meeting and the press conference. A top table, and a chair for every driver entered in all three championships. |
-| **The fan fence** | Signing sessions and the hauler parade. A barrier along the public edge of the paddock with the crowd behind it — you sign from the inside. |
+| **The fan fence** | Signing sessions. A barrier along the public edge of the paddock with the crowd behind it — you sign from the inside. |
 | **The hospitality tent** | Sponsor appearances and photo shoots, under the awning in the middle of the paddock. |
 | **The intro stage** | Driver introductions, on the platform at the end of pit road. |
 | **A grandstand** | Watching somebody else's session, sat in the crowd with the cars going past. |
@@ -178,10 +210,10 @@ it is only replaced when the clock has moved past it.
 | **Team strategy briefing** / **race plan meeting** | The crew chief lays out the weekend and asks what you want the car to be. | Setup knowledge, team morale |
 | **Practice debrief** | The same question with data behind it. Worth far more if you actually ran the practice session. | Setup knowledge |
 | **Press conference** / **media availability** / **broadcast hit** | A reporter asks, three answers on the desk. | Press standing, fans, sponsor mood, rivalry |
-| **Signing session** / **hauler parade** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. At least ten fans (one per 5 min of window, capped at the cast of 12), and the window is cut into one slot fewer than there are fans. Sign it and move (1 slot), sign it and ask their name or pose for the photo (2 slots), or wave and keep walking (free). Plain signatures alone leave the last fan unreached, so reaching the whole fence takes at least one wave, plus another wave for every name or photo — a photo with every fan meets half of them; 3 photos, 4 waves and 3 plain signatures clears a fence of ten. The sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support, and waving past costs a little with every fan; stop to talk and the people you did reach are worth far more. | Fan appeal, sponsor mood, `autographs` counter |
+| **Signing session** | A queue at the fence, one person at a time, each holding something, and a window with a clock on it. At least ten fans (one per 5 min of window, capped at the cast of 12), and the window is cut into one slot fewer than there are fans. Sign it and move (1 slot), sign it and ask their name or pose for the photo (2 slots), or wave and keep walking (free). Plain signatures alone leave the last fan unreached, so reaching the whole fence takes at least one wave, plus another wave for every name or photo — a photo with every fan meets half of them; 3 photos, 4 waves and 3 plain signatures clears a fence of ten. The sponsor's rep counts the heads, but a queue that got a signature and nothing else costs you fan support, and waving past costs a little with every fan; stop to talk and the people you did reach are worth far more. | Fan appeal, sponsor mood, `autographs` counter |
 | **Sponsor photo shoot** | The photographer wants hero or human, and the brand's rep wants the cap in every frame. | Sponsor mood, fans, crew morale |
 | **Hospitality Q&A / suite meet & greet** | A guest asks something and one of the answers is the line the brand paid for. The funny one is not it. | Sponsor mood — the off-message answers buy fans and press instead |
-| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x (a **race** is run for real instead: sitting down puts the whole field on a two-wide grid, the green waves as you arrive and the chequered flag comes out five minutes later — `GrandstandRace` / `GrandstandRaceDirector`, live timing ranked by race order with gaps) — `F11` for live timing, `E` to walk back — which is what completes the booking. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale |
+| **Watch practice / qualifying / race** | Sit down in a grandstand and watch it. At a track whose grandstand marker is authored with a seat you are put in it, the camera pans out onto a view over the circuit, the real field circulates in front of you and the sheet's hour plays out at 10x (a **race** is run for real instead: sitting down puts the whole field on a two-wide grid, the green waves as you arrive and the chequered flag comes out five minutes later — `GrandstandRace` / `GrandstandRaceDirector`, live timing ranked by race order with gaps) — `F11` for live timing, `E` to walk back — which is what completes the booking. Where the stand is only a seat in the paddock it is the broadcast instead: the session simulated down the right-hand side of a screen that still shows the track, with `SPEED`, `SKIP` and `SEEN ENOUGH` (Esc). | Setup knowledge (homework), team morale, **scouting** (below) |
 | **Drivers meeting** | Mandatory, in the drivers' room with the field sat around you. Officials read four notes; one of them will catch somebody out at this track today. Say which. | Setup knowledge, morale |
 | **Driver introductions** | Mandatory, on the stage. Your name over the PA — decide what to give the crowd. | Fan appeal, sponsor mood |
 
@@ -353,7 +385,7 @@ Assets/Scripts/Weekend/
   Activities/GrandstandVisit.cs    the in-world seat: holds the session open at 10x, F11 timing, E back
   Activities/GrandstandRaceDirector.cs  a watched race: scores the grid-started field to the flag
   Activities/GrandstandCamera.cs   the pan out onto the marker's vantage, and giving the camera back
-Assets/Scripts/UI/Phone/PhoneScheduleApp.cs      read-only glance at today
+Assets/Scripts/UI/Phone/PhoneScheduleApp.cs      the in-play schedule: calendar, tap a booking for its card + SKIP TO HERE
 Assets/Scripts/UI/Phone/PhoneChampionshipApp.cs  the three championships and what has come in (POINTS tab of STATS)
 Assets/Scripts/Weekend/ChiefCheckInBeat.cs       the phone's first bleep: the chief's text and the P prompt
 ```

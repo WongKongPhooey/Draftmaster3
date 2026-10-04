@@ -197,5 +197,14 @@ public class DriveOrientationController : MonoBehaviour
 
         _applied = portrait;
         UnityEngine.Device.Screen.orientation = portrait ? ScreenOrientation.Portrait : _home;
+
+        // One line per turn, naming every input to the decision: the device log is the only witness when the
+        // phone turns at the wrong moment, and Unity logs nothing of its own for a scripted turn to portrait.
+        var human = PlayerVehicleController.Human;
+        var mode = DriveModeController.Current;
+        Debug.Log($"[Orientation] {(portrait ? "PORTRAIT" : "landscape")}: onFoot={PadInput.OnFoot} " +
+                  $"gettingIn={PitLaneStart.GettingIn} ({PitLaneStart.DescribeEntry()}) setupOpen={CarSetupPanelUI.IsOpen} " +
+                  $"human={(human != null ? human.name : "none")} broadcast={(mode != null && !mode.IsDriving)} " +
+                  $"results={RaceDirector.InResults}");
     }
 }

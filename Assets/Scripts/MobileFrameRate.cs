@@ -12,6 +12,13 @@ static class MobileFrameRate
 {
     public const int Target = 60;
 
+    // Most game time one rendered frame may catch up on, in seconds. The project's Maximum Allowed Timestep is
+    // 1.0 s — fifty 50 Hz physics steps in a single frame — so the moment FixedUpdate costs more than its own
+    // 20 ms (a 40-car field bunched at a race start on a phone), every slow frame queued more steps for the next
+    // one and the game sank to ~2 fps. 0.1 s is five steps: past that the race runs briefly in slow motion
+    // instead, and recovers as soon as the pack spreads out.
+    public const float MaxCatchUpSeconds = 0.1f;
+
 #if UNITY_ANDROID || UNITY_IOS
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Apply()
@@ -19,6 +26,7 @@ static class MobileFrameRate
         if (!Application.isMobilePlatform) return;   // editor with the Android target selected
         QualitySettings.vSyncCount = 0;              // vSync overrides targetFrameRate when on
         Application.targetFrameRate = Target;
+        Time.maximumDeltaTime = MaxCatchUpSeconds;
     }
 #endif
 }
