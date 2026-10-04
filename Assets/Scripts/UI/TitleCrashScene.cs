@@ -142,6 +142,10 @@ public class TitleCrashScene : MonoBehaviour
     [Tooltip("Loudness of the accident's cars while they are in shot. Their pitch falls with the clock, so the " +
              "slow motion is heard as well as seen, and they go silent as time stops.")]
     [Range(0f, 1f)] public float crashEngineVolume = 0.6f;
+    [Tooltip("A faint crowd under everything, so the engines and the crunch are not in a vacuum.")]
+    [Range(0f, 1f)] public float crowdVolume = 0.18f;
+    [Tooltip("Seconds the crowd takes to fade up when the title opens.")]
+    public float crowdFadeSeconds = 1.5f;
 
     [Header("Wiring")]
     [Tooltip("Canvas the reference layout is measured against. Left empty, the title menu's own canvas is used.")]
@@ -229,7 +233,8 @@ public class TitleCrashScene : MonoBehaviour
 
     // The engines: one voice for the field going past, one for the accident's cars (Resources/Audio/TitleFlyby).
     const string EngineClip = "Audio/TitleFlyby";
-    AudioSource _crashEngine;
+    const string CrowdClip = "Audio/TitleCrowd";
+    AudioSource _crashEngine, _crowd;
 
     float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
     int _plumeNext;              // which impact the next puff rises from
@@ -365,6 +370,7 @@ public class TitleCrashScene : MonoBehaviour
             if (engine != null) pass.engine.timeSamples = rng.Next(0, Mathf.Max(1, engine.samples));
         }
         _crashEngine = TitleAudio.Loop(gameObject, engine);
+        _crowd = TitleAudio.Loop(gameObject, Resources.Load<AudioClip>(CrowdClip));
         TitleAudio.EnsureListener();
         return true;
     }
@@ -630,6 +636,11 @@ public class TitleCrashScene : MonoBehaviour
     void DriveEngines(TitleCrash.Tempo tempo)
     {
         float dt = Mathf.Min(Time.unscaledDeltaTime, MaxFrameSeconds);
+
+        // The bed: fades up as the title opens and stays there, under everything.
+        if (_crowd != null)
+            _crowd.volume = Mathf.MoveTowards(_crowd.volume, crowdVolume,
+                                              dt * crowdVolume / Mathf.Max(0.05f, crowdFadeSeconds));
 
         if (_crashEngine != null)
         {

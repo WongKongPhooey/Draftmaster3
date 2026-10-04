@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 // scene stay exactly as authored.
 //
 // Each word lands with a metal crunch (Resources/Audio/metal-crunch), timed to the moment it visibly hits its
-// mark rather than the end of the slide: the ease puts it there about halfway through. The 3 hits lowest.
+// mark rather than the end of the slide: the ease puts it there about halfway through. All three at one pitch.
 //
 // Self-installing on whichever scene carries a DraftmasterLogo, so it needs no scene edit.
 public class TitleLogoIntro : MonoBehaviour
@@ -36,8 +36,8 @@ public class TitleLogoIntro : MonoBehaviour
     [Range(0.1f, 4f)] public float reverbSeconds = 1.3f;
 
     const string CrunchClip = "Audio/metal-crunch";
-    // DRAFT, MASTER, then the 3 heaviest. Pitched down from the recording for weight.
-    static readonly float[] CrunchPitch = { 0.82f, 0.76f, 0.64f };
+    [Tooltip("Pitch of every crunch, pitched down from the recording for weight. All three words hit the same.")]
+    [Range(0.3f, 1.5f)] public float crunchPitch = 0.74f;
     // One source per word: a one-shot follows its source's pitch while it plays, and the words land a third
     // of a second apart, so a shared source would bend the last crunch's tail.
     readonly AudioSource[] _audio = new AudioSource[3];
@@ -111,8 +111,8 @@ public class TitleLogoIntro : MonoBehaviour
         {
             for (int i = 0; i < _audio.Length; i++)
             {
-                _audio[i] = Voice(CrunchPitch[i]);
-                _sub[i] = Voice(CrunchPitch[i] * 0.5f);
+                _audio[i] = Voice(crunchPitch);
+                _sub[i] = Voice(crunchPitch * 0.5f);
             }
 
             // A short, bright, metallic room on every hit (the filter treats every source on this object): the
