@@ -23,8 +23,6 @@ public class RacePauseMenu : MonoBehaviour
     bool _inRaceScene;
     float _pollTimer;
     float _prevTimeScale = 1f;
-    bool _showMissions;
-    Vector2 _missionScroll;
     GUIStyle _title, _toggle;
 
     // The co-op row's memory of the attempt it is watching: whether the launcher was busy last frame, and
@@ -38,19 +36,9 @@ public class RacePauseMenu : MonoBehaviour
 
     // The pad's cursor: which row the confirm button presses. None while the menu is being driven by the mouse.
     // Rows are steered in Update and pressed there too, never inside an IMGUI pass (see the note below).
-    enum PadRow { None, RacingLine, MiniMap, SwingCamera, DebugStats, Missions, EndSession, Coop, QuitToTitle, Resume }
+    enum PadRow { None, RacingLine, MiniMap, SwingCamera, DebugStats, EndSession, Coop, QuitToTitle, Resume }
     PadRow _padFocus;
     readonly System.Collections.Generic.List<PadRow> _padRows = new();
-
-    // What the board was told to do this frame, settled once every layout scope has closed.
-    //
-    // Accepting or turning in from the board changes what the board draws — a ReadyToTurnIn row carries a
-    // button, a Completed row does not — and IMGUI caches the control list during the Layout event that
-    // precedes each real one. Doing it inline meant the pass after the click walked a different list than
-    // Layout had recorded: "Mismatched LayoutGroup", thrown from inside the scroll view, so EndScrollView
-    // and EndArea never ran and the clip stack was left unbalanced. Recording the press and settling it
-    // below keeps each event self-consistent; the next one lays the new state out from scratch.
-    QuestInfo _pendingAccept, _pendingTurnIn;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
@@ -124,7 +112,6 @@ public class RacePauseMenu : MonoBehaviour
         _padRows.Add(PadRow.MiniMap);
         _padRows.Add(PadRow.SwingCamera);
         _padRows.Add(PadRow.DebugStats);
-        _padRows.Add(PadRow.Missions);
         if (PracticeDirector.PauseMenuExitLabel != null) _padRows.Add(PadRow.EndSession);
         var launcher = NetworkLauncher.Instance;
         var coop = CoopRowState(launcher != null && launcher.Busy, Coop.Active, Coop.IsGuest, Coop.GuestPresent,
@@ -156,7 +143,6 @@ public class RacePauseMenu : MonoBehaviour
             case PadRow.MiniMap: TrackMiniMap.Visible = !TrackMiniMap.Visible; break;
             case PadRow.SwingCamera: CameraViewMode.Swinging = !CameraViewMode.Swinging; break;
             case PadRow.DebugStats: DebugStatsOverlay.Visible = !DebugStatsOverlay.Visible; break;
-            case PadRow.Missions: _showMissions = !_showMissions; break;
             case PadRow.EndSession:
                 var director = PracticeDirector.Instance;
                 Resume();
@@ -258,7 +244,7 @@ public class RacePauseMenu : MonoBehaviour
         // What is on the panel right now. END SESSION only appears while a booked session is running, and the
         // steer-buttons toggle only on a phone; counted here from the same conditions the drawing below uses.
         int toggles = TouchDriveControls.TouchPlatform ? 5 : 4;
-        int tabs = PracticeDirector.PauseMenuExitLabel != null ? 3 : 2;   // missions, [end], co-op
+        int tabs = PracticeDirector.PauseMenuExitLabel != null ? 2 : 1;   // [end], co-op
         float contentH = headingH + gap * 3f                                // title, rule
                          + toggles * toggleH + gap * 2f                     // toggles, then a breather
                          + tabs * (tabH + gap)
@@ -318,13 +304,8 @@ public class RacePauseMenu : MonoBehaviour
         }
         cy += gap * 2f;
 
-        PadCursor(PadRow.Missions, new Rect(content.x, cy, content.width, row));
-        if (PixelGUI.Tab(new Rect(content.x, cy, content.width, row),
-                         _showMissions ? "MISSIONS ◂" : "MISSIONS ▸", _showMissions))
-            _showMissions = !_showMissions;
-        cy += row + gap;
-
-        // The weekend timetable lives on the phone (SCHEDULE): one schedule screen, not two.
+        // The weekend timetable lives on the phone (SCHEDULE): one schedule screen, not two. Side quests are
+        // picked up from the people in the paddock (QuestGiverNPC), not from a board in this menu.
 
         // Handing a booked practice or qualifying session back to the timetable. This used to be a red
         // button parked over the corner of the windscreen for the whole session; here it is out of the
@@ -360,8 +341,6 @@ public class RacePauseMenu : MonoBehaviour
         GUI.Label(new Rect(content.x, content.yMax - footer, content.width, footer),
                   InputGlyphs.Label(toggleKey.ToString().ToUpperInvariant(), PadBindings.Back) + " TO RESUME",
                   PixelGUI.Footer);
-
-        if (_showMissions) DrawMissions(x + w + PixelGUI.Px(6f), y);
     }
 
     // What the co-op row says, given the state around it. Split out of the drawing so the order of the
@@ -459,68 +438,6 @@ public class RacePauseMenu : MonoBehaviour
         bool busy = NetworkLauncher.Instance != null && NetworkLauncher.Instance.Busy;
         if (_coopWasBusy && !busy && !Coop.Active) _coopFailedUntil = Time.unscaledTime + FailureSeconds;
         _coopWasBusy = busy;
-    }
-
-    // Mission board: every QuestInfo asset with its state, progress text, and the state-appropriate
-    // action. Accept/turn-in here mirrors what a QuestGiverNPC would do, so quests are fully playable
-    // in race scenes that have no walking NPCs. DeliverItem still hands over at its target NPC.
-    void DrawMissions(float x, float y)
-    {
-        float w = PixelGUI.Px(220f), h = PixelGUI.Px(220f);
-        if (x + w > Screen.width) x = Screen.width - w - PixelGUI.Px(6f);
-
-        PixelGUI.Panel(new Rect(x, y, w, h));
-        var content = PixelGUI.PanelContent(new Rect(x, y, w, h), 8f);
-
-        float row = Mathf.Max(PixelGUI.Px(16f), PixelGUI.LineH);
-        GUI.Label(new Rect(content.x, content.y, content.width, row), "MISSIONS", _title);
-
-        var listRect = new Rect(content.x, content.y + row, content.width, content.height - row);
-        GUILayout.BeginArea(listRect);
-        _missionScroll = GUILayout.BeginScrollView(_missionScroll);
-
-        var quests = QuestManager.All;
-        int shown = 0;
-        foreach (var q in quests)
-        {
-            if (q == null || string.IsNullOrEmpty(q.id)) continue;
-            var state = QuestManager.GetState(q);
-            bool locked = state == QuestManager.State.NotStarted && !QuestManager.PrerequisiteMet(q);
-            if (locked) continue;   // hidden until its prerequisite quest is done
-            shown++;
-
-            GUILayout.Label(q.title.ToUpperInvariant(), PixelGUI.HeadingSmall);
-            switch (state)
-            {
-                case QuestManager.State.NotStarted:
-                    GUILayout.Label(q.description, PixelGUI.Body);
-                    if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f))), "ACCEPT"))
-                        _pendingAccept = q;
-                    break;
-                case QuestManager.State.Active:
-                    GUILayout.Label(QuestManager.DescribeProgress(q), PixelGUI.Row);
-                    break;
-                case QuestManager.State.ReadyToTurnIn:
-                    if (q.objective == QuestInfo.ObjectiveType.DeliverItem)
-                        GUILayout.Label("Deliver it in person.", PixelGUI.Row);
-                    else if (PixelGUI.Button(GUILayoutUtility.GetRect(content.width, PixelGUI.ButtonH(PixelGUI.LineH + PixelGUI.Px(6f))), "TURN IN"))
-                        _pendingTurnIn = q;
-                    break;
-                case QuestManager.State.Completed:
-                    GUILayout.Label(string.IsNullOrEmpty(q.rewardText) ? "Done." : $"Done — {q.rewardText}",
-                                    PixelGUI.Footer);
-                    break;
-            }
-            GUILayout.Space(PixelGUI.Px(6f));
-        }
-        if (shown == 0) GUILayout.Label("No missions available.", PixelGUI.Row);
-
-        GUILayout.EndScrollView();
-        GUILayout.EndArea();
-
-        // Outside every layout group: safe to change what the board says about itself.
-        if (_pendingAccept != null) { QuestManager.Accept(_pendingAccept); _pendingAccept = null; }
-        if (_pendingTurnIn != null) { QuestManager.Complete(_pendingTurnIn); _pendingTurnIn = null; }
     }
 
     // Only the toggle needs building by hand: it is the one control here that draws Unity's own check box,

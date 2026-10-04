@@ -318,7 +318,7 @@ hardcoded lines. A pool is claimed by its `trackId` field.
    line sets — `offerLines`, `activeLines`, `turnInLines`, `completedLines`, `lockedLines`.
 4. A delivery target is the same component with `isDeliveryTarget` on and `offersQuest` off.
 
-Objective types, stat keys and the pause-menu mission board: `Docs/NPCs-and-Quests.md` §3.
+Objective types, stat keys and where quests show: `Docs/NPCs-and-Quests.md` §3.
 
 ## 10. Sponsors and car decals
 

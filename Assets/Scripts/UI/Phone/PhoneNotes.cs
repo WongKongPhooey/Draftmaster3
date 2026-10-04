@@ -89,7 +89,7 @@ public static class PhoneNotes
                from, quest.description, quest.id);
     }
 
-    // A note for a quest that was taken up without anybody to credit (the pause menu's mission board), so
+    // A note for a quest that was taken up without anybody to credit (e.g. the old pause-menu mission board), so
     // every live quest can be found in Notes. Leaves an existing note alone: RecordQuest owns the name.
     public static void EnsureQuestNote(QuestInfo quest)
     {

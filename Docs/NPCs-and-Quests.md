@@ -478,18 +478,13 @@ having a manufacturer; the hook point is commented in RaceDirector.
 ### Where active quests show
 
 There is no on-screen quest tracker (the old top-right `QuestHUD` was removed — it could not be
-hidden). Active quests live in two places: the pause menu's **MISSIONS** panel (below) and the
-phone's **NOTES** app. Every `QuestManager.Accept` writes a note (`PhoneNotes.EnsureQuestNote`), so
-quests taken from the mission board appear in Notes too; a QuestGiverNPC then fills in who asked.
-Opening Notes backfills notes for live quests in older saves.
+hidden). Active quests live in the phone's **NOTES** app. Every `QuestManager.Accept` writes a note
+(`PhoneNotes.EnsureQuestNote`); a QuestGiverNPC fills in who asked. Opening Notes backfills notes for
+live quests in older saves.
 
-### The mission board (no NPC required)
-
-The race pause menu (Esc) has a **MISSIONS** panel listing every QuestInfo asset: available quests
-can be accepted there, and non-delivery quests can be turned in there too. It mirrors what a
-QuestGiverNPC would do, so quests are fully playable in race scenes with no walking NPCs. Quests
-whose prerequisite is unmet are hidden from the board. DeliverItem still hands over at its target
-NPC.
+Side quests are picked up from people — NPCs, rival drivers, teammates — through `QuestGiverNPC`.
+There is no menu to accept or turn in quests from: the pause menu's old **MISSIONS** board was
+removed (2026-10-04). A quest asset with no giver placed anywhere cannot be started.
 
 ### Example quest assets (`Resources/Quests/`)
 
