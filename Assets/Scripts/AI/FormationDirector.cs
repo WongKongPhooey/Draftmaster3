@@ -3,8 +3,9 @@ using UnityEngine;
 
 // Orchestrates the pre-race formation lap:
 //   PreGrid   — AI parked in pit boxes, safety car parked at the pit exit (set up here in Awake/Start).
-//   Formation — fired when the player climbs into their car (PitLaneStart.PlayerEnteredCar). The safety
-//               car laps at cruise pace; the AI field forms a weaving train behind it (FormationController).
+//   Formation — fired when the player, sat in their car (PitLaneStart.PlayerEnteredCar), first touches the
+//               accelerator. The safety car laps at cruise pace; the AI field forms a weaving train behind it
+//               (FormationController).
 //   Green     — fired when the safety car commits to pit-in. AI race; the player is released.
 //
 // Also enforces the player's hold-station pace cap during the formation lap (toggle with
@@ -46,9 +47,16 @@ public class FormationDirector : MonoBehaviour
     [Header("Player")]
     [Tooltip("ON: hold the player in station during the formation lap — free to drive any speed, but speed-capped so they can't overtake the car directly ahead, with an on-screen prompt to line up (same as multiplayer). OFF: no restriction at all.")]
     public bool enforceHoldStation = true;
+    [Tooltip("ON: climbing into the car only readies the formation lap — the safety car and the field stay parked " +
+             "until the player first presses the accelerator, so nobody drives off while they are still settling in. " +
+             "OFF: the formation lap starts the moment the player gets in.")]
+    public bool waitForThrottle = true;
+    [Tooltip("Throttle (0..1) the player has to press to start the formation lap when waitForThrottle is on.")]
+    [Range(0.01f, 1f)] public float throttleToStart = 0.1f;
 
     SafetyCar _safetyCar;
     float _greenMsgTimer;
+    bool _awaitingThrottle; // player is in the car; the formation lap starts on their first press of the accelerator
 
     // True while the leader has slowed in the close-up zone before the line. FormationControllers read this to
     // pack the field into tight two-wide rows for the final run to the green.
@@ -192,7 +200,28 @@ public class FormationDirector : MonoBehaviour
         // flips the phase AND replicates it. Flipping it here as well would leave clients behind, so skip.
         if (GameSession.IsMultiplayer) return;
         if (RaceStart.Current != RaceStart.Phase.PreGrid) return;
+        if (waitForThrottle && PlayerCar != null) { _awaitingThrottle = true; return; }
+        StartFormation();
+    }
+
+    void StartFormation()
+    {
+        _awaitingThrottle = false;
+        if (RaceStart.Current != RaceStart.Phase.PreGrid) return;
         RaceStart.Current = RaceStart.Phase.Formation;
+    }
+
+    PlayerVehicleController PlayerCar =>
+        playerCar != null ? playerCar : (pitLaneStart != null ? pitLaneStart.car : null);
+
+    // Whether the parked field should now roll off on the formation lap. The car's own resolved throttle is the
+    // trigger. A car the AI is driving (V / crew-chief headset) goes at once: its controller sits pinned until the
+    // formation lap begins, so it would never press the pedal and the race would never start. So does a missing
+    // car, for the same reason.
+    public static bool ThrottleStartsFormation(PlayerVehicleController car, float threshold)
+    {
+        if (car == null || !car.enabled || !car.gameObject.activeInHierarchy || car.externalInput) return true;
+        return car.ThrottleInput >= threshold;
     }
 
     void GoGreen()
@@ -208,13 +237,19 @@ public class FormationDirector : MonoBehaviour
         if (debugAutoStartAfterSeconds > 0f && RaceStart.Current == RaceStart.Phase.PreGrid)
         {
             _debugTimer += Time.deltaTime;
-            if (_debugTimer >= debugAutoStartAfterSeconds) BeginFormation();
+            if (_debugTimer >= debugAutoStartAfterSeconds) StartFormation();
+        }
+        if (_awaitingThrottle)
+        {
+            if (RaceStart.Current != RaceStart.Phase.PreGrid) _awaitingThrottle = false;
+            else if (ThrottleStartsFormation(PlayerCar, throttleToStart)) StartFormation();
         }
         if (_greenMsgTimer > 0f) _greenMsgTimer -= Time.deltaTime;
     }
 
     void OnGUI()
     {
+        if (_awaitingThrottle) DrawThrottlePrompt();
         if (_greenMsgTimer <= 0f) return;
 
         // The green flag, in the kit's banner shape: kerb-edged plate across the screen with the call in
@@ -239,6 +274,23 @@ public class FormationDirector : MonoBehaviour
         style.alignment = prevAlign;
         style.normal.textColor = prevColour;
         GUI.color = prevGui;
+    }
+
+    // Nothing moves until the player does, so say so: a slim plate low on screen while the field waits.
+    void DrawThrottlePrompt()
+    {
+        float h = PixelGUI.Px(22f);
+        float y = Mathf.Round(Screen.height * 0.72f);
+        PixelGUI.Fill(new Rect(0f, y, Screen.width, h), PixelGUI.PlateDeep);
+
+        var style = PixelGUI.Heading;
+        var prevAlign = style.alignment;
+        var prevColour = style.normal.textColor;
+        style.alignment = TextAnchor.MiddleCenter;
+        style.normal.textColor = PixelGUI.Confirm;
+        GUI.Label(new Rect(0f, y, Screen.width, h), "ACCELERATE TO START THE PACE LAP", style);
+        style.alignment = prevAlign;
+        style.normal.textColor = prevColour;
     }
 
     static void DisableIfPresent<T>(GameObject go, string typeName) where T : Behaviour
