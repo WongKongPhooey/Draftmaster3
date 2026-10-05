@@ -146,6 +146,13 @@ public class TitleCrashScene : MonoBehaviour
     [Range(0f, 1f)] public float crowdVolume = 0.18f;
     [Tooltip("Seconds the crowd takes to fade up when the title opens.")]
     public float crowdFadeSeconds = 1.5f;
+    [Tooltip("Low-pass cutoff (Hz) on the crowd once time has stopped: the mids and treble roll away and what is " +
+             "left is a dull roar, as if heard through the moment. Follows the slowing clock down from fully open.")]
+    public float crowdStoppedCutoffHz = 320f;
+    [Tooltip("Low-pass cutoff (Hz) on the crowd at full speed — high enough to be no filter at all.")]
+    public float crowdOpenCutoffHz = 22000f;
+    [Tooltip("How fast (octaves per second) the crowd's cutoff may move, so the roll-off sweeps rather than steps.")]
+    public float crowdCutoffOctavesPerSecond = 6f;
 
     [Header("Wiring")]
     [Tooltip("Canvas the reference layout is measured against. Left empty, the title menu's own canvas is used.")]
@@ -235,6 +242,7 @@ public class TitleCrashScene : MonoBehaviour
     const string EngineClip = "Audio/TitleFlyby";
     const string CrowdClip = "Audio/TitleCrowd";
     AudioSource _crashEngine, _crowd;
+    AudioLowPassFilter _crowdFilter;
 
     float _plumeFrom = -1f;      // choreography time of the first contact; < 0 until something is hit
     int _plumeNext;              // which impact the next puff rises from
@@ -370,7 +378,15 @@ public class TitleCrashScene : MonoBehaviour
             if (engine != null) pass.engine.timeSamples = rng.Next(0, Mathf.Max(1, engine.samples));
         }
         _crashEngine = TitleAudio.Loop(gameObject, engine);
-        _crowd = TitleAudio.Loop(gameObject, Resources.Load<AudioClip>(CrowdClip));
+        // On its own object: a filter acts on every source on its GameObject, and the engines must stay bright.
+        var crowdHost = new GameObject("TitleCrowd");
+        crowdHost.transform.SetParent(transform, false);
+        _crowd = TitleAudio.Loop(crowdHost, Resources.Load<AudioClip>(CrowdClip));
+        if (_crowd != null)
+        {
+            _crowdFilter = crowdHost.AddComponent<AudioLowPassFilter>();
+            _crowdFilter.cutoffFrequency = crowdOpenCutoffHz;
+        }
         TitleAudio.EnsureListener();
         return true;
     }
@@ -641,6 +657,24 @@ public class TitleCrashScene : MonoBehaviour
         if (_crowd != null)
             _crowd.volume = Mathf.MoveTowards(_crowd.volume, crowdVolume,
                                               dt * crowdVolume / Mathf.Max(0.05f, crowdFadeSeconds));
+
+        // ...and goes dull as time stops: its cutoff falls with the clock's rate, so the mids and treble roll
+        // away through the slam and are gone once everything stands still. Open before the accident starts.
+        if (_crowdFilter != null)
+        {
+            float rel = 1f;
+            if (_elapsed >= 0f)
+            {
+                float entry = Mathf.Max(0.0001f, tempo.Rate(0f));
+                rel = Mathf.Clamp01(tempo.Rate(_elapsed) / entry);
+            }
+            float lo = Mathf.Log(Mathf.Max(20f, crowdStoppedCutoffHz), 2f);
+            float hi = Mathf.Log(Mathf.Max(crowdStoppedCutoffHz, crowdOpenCutoffHz), 2f);
+            float target = Mathf.Lerp(lo, hi, Mathf.Sqrt(rel));
+            float now = Mathf.Log(Mathf.Max(20f, _crowdFilter.cutoffFrequency), 2f);
+            now = Mathf.MoveTowards(now, target, dt * Mathf.Max(0.1f, crowdCutoffOctavesPerSecond));
+            _crowdFilter.cutoffFrequency = Mathf.Pow(2f, now);
+        }
 
         if (_crashEngine != null)
         {
