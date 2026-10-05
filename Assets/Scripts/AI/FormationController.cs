@@ -366,7 +366,10 @@ public class FormationController : MonoBehaviour
             FloorMph = minCapMph,
             WantGap = closingUp ? rowGap : targetGap,
             PaceCarGap = paceCarGap,
-            CruiseMph = cruise,
+            // Keeping station off the pace car is held to cruise so nobody chases its peel-away — but a car with
+            // the human out of its lane up ahead follows the pace car too, and held to cruise it could never close
+            // on a human already running cruise behind it. The far catch-up lifts that ceiling for that car only.
+            CruiseMph = cruise + farBonus,
             ColumnTactical = column + weave,
             ColumnSlew = weaveSlewPerSec,
             // Never slip sideways mid-merge — that lateral snap is exactly what the settle exists to prevent.

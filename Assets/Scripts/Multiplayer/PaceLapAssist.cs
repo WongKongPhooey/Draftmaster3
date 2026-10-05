@@ -151,6 +151,7 @@ public class PaceLapAssist : MonoBehaviour
         float playerDist = pvc.TrackDistance;
         Transform leaderT = null;
         bool leaderSafety = false;
+        SafetyCar leaderPaceCar = null;
         float leaderMph = 0f;
         float gap = float.MaxValue; // signed in grid-order mode (+ ahead, - behind); positive-only in fallback
 
@@ -164,7 +165,8 @@ public class PaceLapAssist : MonoBehaviour
             else if (g < -trackLen * 0.5f) g += trackLen;
             gap = g;
             leaderT = sdMember.transform;
-            leaderSafety = sdMember.GetComponent<SafetyCar>() != null;
+            leaderPaceCar = sdMember.GetComponent<SafetyCar>();
+            leaderSafety = leaderPaceCar != null;
             leaderMph = sdMember.CurrentMph;
         }
         else
@@ -184,7 +186,8 @@ public class PaceLapAssist : MonoBehaviour
             {
                 gap = best;
                 leaderT = leader.transform;
-                leaderSafety = leader.GetComponent<SafetyCar>() != null;
+                leaderPaceCar = leader.GetComponent<SafetyCar>();
+                leaderSafety = leaderPaceCar != null;
                 leaderMph = leader.CurrentMph;
             }
         }
@@ -195,6 +198,9 @@ public class PaceLapAssist : MonoBehaviour
             float aheadMps = leaderMph * MphToMps;
             if (gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
             else if (gap < holdGap) gov = aheadMps;      // close — match it, no overtaking
+            // The pace car peeling off for the pit in the close-up is not a car to chase: the leader holds formation
+            // pace to the line, as the AI does. Chasing it ran the human away from the field just before the green.
+            if (leaderPaceCar != null && leaderPaceCar.ClosingUp) gov = Mathf.Min(gov, leaderPaceCar.cruiseMph * MphToMps);
             _leader = leaderT;
             _leaderIsSafety = leaderSafety;
             _leaderNumber = leaderSafety ? -1 : CarNumberOf(leaderT);

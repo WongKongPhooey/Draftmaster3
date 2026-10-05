@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Draftmaster.Sim;
 using UnityEngine;
 
@@ -35,6 +36,23 @@ public class SafetyCar : MonoBehaviour
     [Tooltip("Metres ahead scanned for a car in the pace car's lane.")]
     public float trafficScanM = 80f;
 
+    [Header("Waiting for the field")]
+    [Tooltip("The pace car eases off when the field behind it has broken up — the widest gap between two consecutive " +
+             "cars behind the leader (m, centre to centre). Under this it runs its cruise pace. A human on pole drives " +
+             "off first and sits on the pace car's bumper; without this the train behind never got back to them.")]
+    public float waitGapStartM = 30f;
+    [Tooltip("Widest gap (m) in the field at which the pace car is down to waitMinMph.")]
+    public float waitGapFullM = 90f;
+    [Tooltip("Pace (mph) the pace car slows to while the field is badly strung out. Never stops: the lap still ends.")]
+    public float waitMinMph = 35f;
+    [Tooltip("How fast (mph/s) the pace car changes pace while waiting, so the leader behind it is never made to stab the brakes.")]
+    public float waitSlewMphPerSec = 4f;
+    [Tooltip("Gentlest braking (mph/s) a car closing on the pace car is assumed to manage. The pace car never waits " +
+             "slower than a car coming up behind could get down to at this rate before reaching it, and picks up pace " +
+             "to stay ahead of one that couldn't — a human on pole is often still flat out chasing it down when the " +
+             "field behind them breaks up.")]
+    public float waitFollowerBrakeMphPerSec = 8f;
+
     [Header("Roof light")]
     public Color rooflightColor = new Color(1f, 0.55f, 0f, 1f);
     public float blinkInterval = 0.35f;
@@ -54,6 +72,8 @@ public class SafetyCar : MonoBehaviour
     bool _pitting;
     float _pitEntryDistance;
     float _despawnTimer;
+    float _paceMph = -1f; // cruise, eased down while the field is strung out
+    static readonly List<float> s_behind = new List<float>();
 
     SpriteRenderer _light;
     float _blinkTimer;
@@ -140,6 +160,15 @@ public class SafetyCar : MonoBehaviour
             }
         }
 
+        // Before the close-up, wait for a field that has broken up behind the leader. In the close-up the pace
+        // car peels away whatever the field is doing.
+        if (_paceMph < 0f) _paceMph = cruiseMph;
+        float followerFloor = 0f;
+        float wantMph = ClosingUp ? cruiseMph : WaitingPace(out followerFloor);
+        _paceMph = Mathf.MoveTowards(_paceMph, wantMph, waitSlewMphPerSec * Time.fixedDeltaTime);
+        _paceMph = Mathf.Max(_paceMph, Mathf.Min(followerFloor, cruiseMph));
+        if (!ClosingUp) _spline.aiMaxSpeedMph = Mathf.Min(_spline.aiMaxSpeedMph, _paceMph);
+
         // Dive in as the car reaches the entry node, once it's covered enough of the lap. The floor is the
         // authored fraction OR the arc from where this car joined to the entry, whichever is shorter, so it
         // always fires on the first pass. It is still a floor — a car that spawned yards short of the entry
@@ -156,6 +185,59 @@ public class SafetyCar : MonoBehaviour
         }
 
         if (!_pitting) YieldToTraffic();
+    }
+
+    // Cruise, or slower while the field behind is strung out: eased from cruise at waitGapStartM down to waitMinMph
+    // at waitGapFullM of the widest gap between two consecutive cars on the track behind the leader. The leader's own
+    // gap to the pace car is not counted — it is meant to sit a long way back. Cars still filing down the pit lane
+    // are not counted until they are out. followerFloor: the slowest the pace car may go without a car closing on it
+    // from behind having to brake harder than waitFollowerBrakeMphPerSec to keep off it.
+    float WaitingPace(out float followerFloor)
+    {
+        float floorMps = 0f;
+        float len = _spline.TrackLength;
+        followerFloor = 0f;
+        if (len <= 0f) return cruiseMph;
+        float myC = _spline.CentreDistanceOnTrack;
+        float brake = Mathf.Max(1f, waitFollowerBrakeMphPerSec) * PackAvoidance.MphToMps;
+        s_behind.Clear();
+
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || d.IsOnPit || !d.isActiveAndEnabled) continue;
+            if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
+            AddBehind(Mathf.Repeat(myC - d.CentreDistanceOnTrack, len), d.CurrentMph);
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            AddBehind(Mathf.Repeat(myC - p.TrackDistance, len), p.SpeedMph);
+        }
+        followerFloor = floorMps * PackAvoidance.MpsToMph;
+        if (s_behind.Count < 2) return cruiseMph;
+
+        s_behind.Sort();
+        float widest = 0f;
+        for (int i = 1; i < s_behind.Count; i++) widest = Mathf.Max(widest, s_behind[i] - s_behind[i - 1]);
+        float t = Mathf.Clamp01((widest - waitGapStartM) / Mathf.Max(1f, waitGapFullM - waitGapStartM));
+        return Mathf.Lerp(cruiseMph, Mathf.Min(waitMinMph, cruiseMph), t);
+
+        // Only cars behind (a car out ahead of the pace car is YieldToTraffic's business, not part of the train).
+        void AddBehind(float back, float mph)
+        {
+            if (back <= 0f || back >= len * 0.5f) return;
+            s_behind.Add(back);
+            // v_me >= v_follower - sqrt(2·a·room): the follower sheds the difference before it runs out of room. A car
+            // holding station a few lengths back leaves the pace car room to keep easing off with it.
+            const float halfLength = 2.4f, standoff = 4f;
+            float clear = Mathf.Max(0f, back - 2f * halfLength - standoff);
+            float v = Mathf.Max(0f, mph) * PackAvoidance.MphToMps - Mathf.Sqrt(2f * brake * clear);
+            if (v > floorMps) floorMps = v;
+        }
     }
 
     // Nothing is supposed to be in front of the pace car, but when something is it must not be driven into.
