@@ -104,5 +104,47 @@ namespace Draftmaster.Fights
 
         // 0..1 for a health bar fill.
         public static float HealthFraction(float health) => Mathf.Clamp01(health / MaxHealth);
+
+        // How far behind the driver a peacemaker stands while walking them off: their two bodies touching,
+        // the peacemaker's front against the driver's back. Half-depths are measured along the way both are
+        // facing; gap > 0 leaves daylight, gap < 0 presses them together.
+        public static float EscortHoldDistance(float driverHalfDepth, float peacemakerHalfDepth, float gap = 0f)
+            => Mathf.Max(0.05f, Mathf.Max(0f, driverHalfDepth) + Mathf.Max(0f, peacemakerHalfDepth) + gap);
+
+        // Directions tried for an escort, as degrees off "straight away from the fight". Nothing past 120 —
+        // further round than that walks the driver back through the person they were fighting.
+        static readonly float[] EscortFanDeg = { 0f, 30f, -30f, 60f, -60f, 90f, -90f, 120f, -120f };
+
+        // Which way to walk a driver out of a fight. outward is straight away from the fight's centre;
+        // clearRun(dir) answers how far (m) the pair could walk that way before a wall, a motorhome or the
+        // paddock fence; wanted is the full separation. A direction with the whole run clear beats a
+        // blocked one, and among equally clear ones the least turned wins, so open ground keeps the old
+        // straight-out escort. avoid is the other escort's heading (zero if not chosen yet): the two
+        // drivers are steered apart rather than both down the one open alley.
+        public static Vector2 ChooseEscortHeading(Vector2 outward, System.Func<Vector2, float> clearRun,
+                                                  float wanted, Vector2 avoid)
+        {
+            if (outward.sqrMagnitude < 1e-6f) outward = Vector2.up;
+            outward.Normalize();
+            wanted = Mathf.Max(0.01f, wanted);
+            bool haveAvoid = avoid.sqrMagnitude > 1e-6f;
+            if (haveAvoid) avoid.Normalize();
+
+            Vector2 best = outward;
+            float bestScore = float.NegativeInfinity;
+            for (int i = 0; i < EscortFanDeg.Length; i++)
+            {
+                float deg = EscortFanDeg[i];
+                float rad = deg * Mathf.Deg2Rad;
+                float c = Mathf.Cos(rad), s = Mathf.Sin(rad);
+                Vector2 dir = new Vector2(outward.x * c - outward.y * s, outward.x * s + outward.y * c);
+
+                float run = clearRun != null ? Mathf.Clamp(clearRun(dir), 0f, wanted) : wanted;
+                float score = run / wanted - 0.1f * Mathf.Abs(deg) / 120f;
+                if (haveAvoid) score -= 0.3f * Mathf.Max(0f, Vector2.Dot(dir, avoid));
+                if (score > bestScore) { bestScore = score; best = dir; }
+            }
+            return best;
+        }
     }
 }

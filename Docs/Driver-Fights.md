@@ -103,7 +103,7 @@ overwrites a feud earned on track, and it logs the driver's name and distance fr
 | `Assets/Scripts/OnFoot/Fighter.cs` | One character in a fight: composure, throwing a move, taking one (stagger, knock-back, hit flash). |
 | `Assets/Scripts/OnFoot/RivalFightAI.cs` | The rival's brain — holds fighting distance, circles, swings on an aggression-driven timer. |
 | `Assets/Scripts/OnFoot/DriverFight.cs` | The director: starts the fight, reads the player's attack input, leashes them to the fight, calls the break-up, applies the fallout. |
-| `Assets/Scripts/OnFoot/FightPeacemaker.cs` | A bystander who runs in, wedges between the pair, and marches one of them away. |
+| `Assets/Scripts/OnFoot/FightPeacemaker.cs` | A bystander who runs in, wedges between the pair, and marches one of them away — body against their back, along whichever nearby direction has open ground (not into a motorhome or the fence), and away from the other escort's route. |
 | `Assets/Scripts/OnFoot/FightHealthBar.cs` | The world-space composure bar over each fighter's head. |
 | `Assets/Scripts/OnFoot/RivalDriverNPC.cs` | The dialogue: argument lines, the square-up choice, and the hand-off into `DriverFight`. |
 | `Assets/Scripts/OnFoot/FightMotion.cs` | Shared move/turn/animate helpers, so Animator rigs and paper-doll rigs are driven the same way. |
@@ -142,4 +142,4 @@ Everything is a field on the runtime-created components, so the quickest way to 
 - Reach, timing and knock-back: `Fighter` (`reach`, `windupSeconds`, `recoverySeconds`, `staggerSeconds`).
 - Damage and pacing: `FightRules` (`ShoveDamage`, `HookDamage`, aggression scale, `AiAttackInterval`).
 - Fight length, leash, camera zoom, fallout: `DriverFight`.
-- How the crews behave: `FightPeacemaker` (`runSpeed`, `wedgeSeconds`, `separationDistance`).
+- How the crews behave: `FightPeacemaker` (`runSpeed`, `wedgeSeconds`, `separationDistance`, `contactGap`, `escortClearance`).

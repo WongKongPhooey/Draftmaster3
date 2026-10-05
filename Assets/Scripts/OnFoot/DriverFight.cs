@@ -298,6 +298,13 @@ public class DriverFight : MonoBehaviour
             if (assigned != null) _escorts.Add(pm);   // only these two decide when the fight is over
         }
 
+        // The two escorts know about each other so they walk their drivers different ways.
+        if (_escorts.Count == 2)
+        {
+            _escorts[0].Partner = _escorts[1];
+            _escorts[1].Partner = _escorts[0];
+        }
+
         // Nobody available at all (an empty test scene): stop the fight rather than leaving it running.
         if (_peacemakers.Count == 0)
         {

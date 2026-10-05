@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEngine;
 using Draftmaster.Fights;
 
 // EditMode coverage for the paddock-fight decision maths. The fight itself is MonoBehaviours that need Play
@@ -120,5 +121,48 @@ public class FightRulesTests
         Assert.AreEqual(1f, FightRules.HealthFraction(FightRules.MaxHealth), 1e-4f);
         Assert.AreEqual(0.5f, FightRules.HealthFraction(FightRules.MaxHealth * 0.5f), 1e-4f);
         Assert.AreEqual(0f, FightRules.HealthFraction(-10f), 1e-4f);
+    }
+
+    [Test]
+    public void EscortHold_IsBodiesTouching()
+    {
+        Assert.AreEqual(0.3f, FightRules.EscortHoldDistance(0.15f, 0.15f), 1e-4f, "front against back, no gap");
+        Assert.AreEqual(0.25f, FightRules.EscortHoldDistance(0.15f, 0.15f, -0.05f), 1e-4f);
+        Assert.Less(FightRules.EscortHoldDistance(0.2f, 0.2f), 0.75f, "the old fixed 0.75 m left daylight");
+    }
+
+    [Test]
+    public void EscortHeading_OpenGroundGoesStraightOut()
+    {
+        Vector2 h = FightRules.ChooseEscortHeading(Vector2.right, _ => 99f, 6f, Vector2.zero);
+        Assert.Greater(Vector2.Dot(h, Vector2.right), 0.999f);
+    }
+
+    [Test]
+    public void EscortHeading_TurnsAwayFromABuilding()
+    {
+        // A motorhome straight ahead and up to 30 degrees either side: only 1 m of walk that way.
+        float Run(Vector2 d) => Vector2.Dot(d, Vector2.right) > 0.8f ? 1f : 99f;
+        Vector2 h = FightRules.ChooseEscortHeading(Vector2.right, Run, 6f, Vector2.zero);
+        Assert.Less(Vector2.Dot(h, Vector2.right), 0.8f, "should not walk into the building");
+        Assert.Greater(Vector2.Dot(h, Vector2.right), -0.6f, "should not walk back through the other driver");
+    }
+
+    [Test]
+    public void EscortHeading_BoxedInTakesTheLongestRun()
+    {
+        // Everything blocked, but down-ish has the most room.
+        float Run(Vector2 d) => Vector2.Dot(d, Vector2.down) > 0.8f ? 3f : 0.5f;
+        Vector2 h = FightRules.ChooseEscortHeading(Vector2.right, Run, 6f, Vector2.zero);
+        Assert.Greater(Vector2.Dot(h, Vector2.down), 0.8f);
+    }
+
+    [Test]
+    public void EscortHeading_SteersApartFromTheOtherEscort()
+    {
+        // Straight out is a dead end, both sides open: the side away from the partner's heading wins.
+        float Run(Vector2 d) => Vector2.Dot(d, Vector2.right) > 0.95f ? 0.5f : 99f;
+        Vector2 h = FightRules.ChooseEscortHeading(Vector2.right, Run, 6f, Vector2.up);
+        Assert.Less(h.y, 0f, "partner went up, so this one goes down");
     }
 }
