@@ -37,6 +37,10 @@ public class PracticeAIStint : MonoBehaviour
 
     public State CurrentState => _state;
     public bool IsParked => _state == State.Parked;
+    // Runs this car has been sent out on this session.
+    public int RunsStarted { get; private set; }
+    // Lap length (m) of the track this car runs, 0 before it is bound.
+    public float LapMetres => _spline != null ? _spline.TrackLength : 0f;
 
     // Set by the director: earliest time this car may be sent out again.
     [HideInInspector] public float nextReleaseTime;
@@ -86,6 +90,7 @@ public class PracticeAIStint : MonoBehaviour
         if (_state != State.Parked) return;
         _lapsToRun = Mathf.Max(1, laps);
         _lapsDone = 0;
+        RunsStarted++;
         _hasPrev = false;
         _spline.parkedHold = false;
         _spline.pitParkDistance = -1f;   // release the box stop line, else SplineDriver re-pins the car

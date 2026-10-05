@@ -25,17 +25,27 @@ public class PracticeDirector : MonoBehaviour
     public float qualifyingSeconds = 600f;
 
     [Header("Track activity")]
-    [Tooltip("Most AI cars allowed on track (out of their boxes) at once.")]
+    [Tooltip("Normal number of AI cars on track (out of their boxes) at once. Raised automatically, up to maxOnTrackCeiling, when the field is too big to all get a run in the session at this rate.")]
     public int maxOnTrack = 8;
-    [Tooltip("Laps per stint, picked per run (x = min, y = max inclusive).")]
+    [Tooltip("Hard ceiling on AI cars on track at once, however big the field or short the session.")]
+    public int maxOnTrackCeiling = 24;
+    [Tooltip("Laps per practice stint, picked per run (x = min, y = max inclusive). The first is the out-lap.")]
     public Vector2Int stintLaps = new Vector2Int(2, 4);
+    [Tooltip("Laps per qualifying run (x = min, y = max inclusive): the out-lap plus one or two flying laps.")]
+    public Vector2Int qualifyingStintLaps = new Vector2Int(2, 3);
+    [Tooltip("Average speed (m/s) assumed when sizing how long a run takes, for the on-track cap. Deliberately low: better a few cars too many than half the field without a lap.")]
+    public float runSizingSpeedMps = 45f;
+    [Tooltip("Seconds a run spends leaving and returning to the box, on top of its laps, for the on-track cap.")]
+    public float runPitOverheadSeconds = 45f;
     [Tooltip("Seconds a car rests in its box between stints (x = min, y = max).")]
     public Vector2 restSeconds = new Vector2(10f, 45f);
     [Tooltip("Seconds after load before the first cars head out (x = min, y = max, staggered per car).")]
     public Vector2 initialDelaySeconds = new Vector2(4f, 25f);
 
     readonly List<PracticeAIStint> _stints = new();
+    readonly HashSet<Transform> _timed = new();
     float _tick;
+    int _cap = -1;
     bool _isQualifying;
     float _sessionEndTime;
     bool _sessionOver;
@@ -129,16 +139,53 @@ public class PracticeDirector : MonoBehaviour
             if (_stints[i] == null) { _stints.RemoveAt(i); continue; }
             if (!_stints[i].IsParked) onTrack++;
         }
-        if (onTrack >= maxOnTrack) return;
+        int cap = OnTrackCap();
+        if (onTrack >= cap) return;
 
-        for (int i = 0; i < _stints.Count && onTrack < maxOnTrack; i++)
+        // Neediest first — no time on the board, then fewest runs, then longest waiting — not list order,
+        // which kept sending the same front half of the field out while the back half sat in the pits.
+        CollectTimedCars();
+        float now = Time.time;
+        var order = Draftmaster.Sim.PracticeRotation.ReleaseOrder(_stints,
+            s => s.IsParked && now >= s.nextReleaseTime,
+            s => _timed.Contains(s.transform),
+            s => s.RunsStarted,
+            s => s.nextReleaseTime);
+        var laps = _isQualifying ? qualifyingStintLaps : stintLaps;
+        for (int k = 0; k < order.Count && onTrack < cap; k++)
         {
-            var s = _stints[i];
-            if (s.IsParked && Time.time >= s.nextReleaseTime)
-            {
-                s.Release(Random.Range(stintLaps.x, stintLaps.y + 1));
-                onTrack++;
-            }
+            _stints[order[k]].Release(Random.Range(laps.x, laps.y + 1));
+            onTrack++;
+        }
+    }
+
+    // How many AI cars the track holds at once: maxOnTrack, raised when the field could not all get a run in
+    // this session at that rate. Sized once, from the first car that knows its lap length.
+    int OnTrackCap()
+    {
+        if (_cap > 0) return _cap;
+        float lap = 0f;
+        for (int i = 0; i < _stints.Count && lap <= 0f; i++) lap = _stints[i].LapMetres;
+        if (lap <= 0f) return maxOnTrack;
+        var laps = _isQualifying ? qualifyingStintLaps : stintLaps;
+        float rest = 0.5f * (restSeconds.x + restSeconds.y);
+        float run = Draftmaster.Sim.PracticeRotation.RunSeconds(lap, Mathf.Max(laps.x, laps.y), runSizingSpeedMps,
+                                                               runPitOverheadSeconds) + rest;
+        _cap = Draftmaster.Sim.PracticeRotation.OnTrackCap(_stints.Count,
+            _isQualifying ? qualifyingSeconds : practiceSeconds, run, maxOnTrack, Mathf.Max(maxOnTrack, maxOnTrackCeiling));
+        return _cap;
+    }
+
+    // Cars with a valid lap on the timing screen.
+    void CollectTimedCars()
+    {
+        _timed.Clear();
+        var lt = LapTimingManager.Instance;
+        if (lt == null) return;
+        for (int i = 0; i < lt.Rows.Count; i++)
+        {
+            var r = lt.Rows[i];
+            if (r != null && r.tf != null && r.bestLap > 0f) _timed.Add(r.tf);
         }
     }
 
