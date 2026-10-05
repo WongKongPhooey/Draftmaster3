@@ -98,6 +98,53 @@ window's **Dress** button re-does one (with the Overwrite toggle to replace what
 What is still hand work, deliberately: kerbs, the pit boxes' furniture, garages, signage, camera towers, and
 anything about a track that makes it *that* track.
 
+## Scenery: filling the empty grass
+
+The dressing above is the furniture every track needs. The grass beyond it was left bare; the scenery scatter
+fills it with the things that sit round a real track — fans' motorhomes in camps, people at the fence, and
+greenery once the art exists.
+
+`Draftmaster > Tracks > Scenery > Scatter Scenery (Open or Selected Package)` writes `SceneryPiece` objects under
+the package's `Environment/Scenery` (a `TrackScenery` object holding the settings). A package open on a prefab
+stage is scattered in place (and Prefab Mode auto-save writes it); otherwise the selected package is loaded,
+scattered and saved. `Scatter Scenery On Every Package` does all of them; `Clear Scenery` removes them.
+
+**What gets scattered** is one shared asset, `Resources/Tracks/SceneryPalette` (re-create the defaults with
+`Create Default Scenery Palette`). Each row is a kind: a sprite list, a prefab, or the built-in paper-doll
+spectator; its footprint; how many per km of lap and per hectare of allowed ground; its setback band from the
+road edge; whether it only goes in camps (a noise field, so pieces bunch with open grass between); how it turns
+(along the track, facing it, random, fixed); and an optional group of another row stood round each one. The
+defaults, in placement order:
+
+| Row | What |
+| --- | --- |
+| Spectators | Knots of 2-5 paper-doll fans 14-40 m from the road edge, facing the track. 12 groups per km |
+| Fan Motorhomes | The paddock lot's three motorhome sprites, pastel-tinted, 10 x 3.75 m, in camps 30-130 m out, parked along the track or nose-in per camp, 0-3 fans outside each. 18 per hectare of camp |
+| Greenery | **Empty — waiting on art.** Add sprites to its list (long side along +X, footprint 0 = the sprite's own size) and re-scatter. 4 per hectare, 20-140 m out |
+
+A row with nothing to draw is skipped and named in the report, so the greenery row can sit there until it's
+drawn. Rows are placed in order against one piece cap, so put the cheap or important ones first.
+
+**What it keeps clear of**, measured off the package (`TrackScenery` holds the distances): the racing surface
+(12 m from its edge), the pit lane and box lane (30 m), extra spline roads, non-grass run-off polygons, grandstands,
+paddock boundaries and lot areas (40 m), placed NPCs and `*_Marker` venues (25 m), anything else hand-placed
+(its drawn bounds + 4 m), and the player's RV / spawn points (**220 m** — the drivers' motorhome lot and team
+garages are laid out from the RV at play time, so the clearance covers where they will be). Nothing hangs off
+the ground plane.
+
+**The pieces are recipes, not renderers.** A `SceneryPiece` saves which sprite, size, tint and outfit seed it
+has; its art is built on enable (edit and play) on a `SceneryArt` child that is never saved — a spectator's
+paper-doll frames can't be stored in a prefab anyway, and 500 pieces cost ~300 KB of package. Move or delete
+pieces like anything else; tick **locked** to keep one through a re-scatter (the scatter plants round it).
+Same seed, same layout; change the seed for another arrangement, `density` to scale every row at that track.
+
+The layout itself is `SceneryLayout` (`Draftmaster.Tracks`, pure): a 2 m occupancy grid over the ground where
+every cell knows its distance to the nearest road edge, everything above stamped as blocked, and each kind
+taking seeded random cells inside its band. Unit tested in `SceneryLayoutTests` — budgets, setback bands, the
+pit lane / blocked shapes, no overlaps, nothing off the ground, spectators face the track, determinism, cap.
+
+No package has been scattered yet — it's a tool, run it where you want it.
+
 ## Where the numbers come from
 
 `Draftmaster.Tracks.TrackDimensions` is the one table of real-world measurements: every venue on the
@@ -467,6 +514,9 @@ whatever grip actually exists.
 | `Assets/Scripts/Tracks/TrackGround.cs` | The ground plane, sized from the spline's bounding box. |
 | `Assets/Editor/TrackAuthoringMenu.cs` | The `Draftmaster > Tracks` window and menu items. |
 | `Assets/Editor/TrackDressingFactory.cs` | Ground, walls, grandstands and paddock, derived from the geometry. |
+| `Assets/Editor/TrackSceneryGenerator.cs` | Scenery scatter: measures the package, runs the layout, writes `SceneryPiece`s; the `TrackScenery` inspector. |
+| `Assets/Scripts/Tracks/Core/SceneryLayout.cs` | The scatter's occupancy-grid layout. Pure, unit tested (`SceneryLayoutTests`). |
+| `Assets/Scripts/Tracks/SceneryPalette.cs` · `SceneryPiece.cs` · `TrackScenery.cs` | What to scatter; one self-drawing piece; a package's scenery root + settings. |
 | `Assets/Editor/RaceSceneSplitter.cs` | Select / preview / edit the track a race is run at. Named for the one-shot split it used to perform. |
 | `Assets/Tests/Editor/OvalGeometryTests.cs` | Lap length, closure, tri-oval, paperclip, racing line, pit lane, tuning. |
 | `Assets/Tests/Editor/TrackDimensionsTests.cs` | Every venue solves: closure, length, width, corner count, no self-intersection. |

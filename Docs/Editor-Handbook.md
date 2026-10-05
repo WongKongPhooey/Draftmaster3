@@ -160,6 +160,15 @@ Re-dressing (`Dress Selected Package`) only ever replaces pieces **it** generate
 `Environment` / `Paddock` roots, or carrying its names. Hand-made pieces are kept and reported. Kerbs,
 garages, signage and camera towers are hand work by design.
 
+**Filling the empty grass** — fans' motorhomes, spectators at the fence, and greenery once it's drawn — is
+`Draftmaster > Tracks > Scenery > Scatter Scenery (Open or Selected Package)`. With a package open in
+Prefab Mode / In Context it scatters into that (Prefab Mode auto-save will write it); otherwise it loads,
+scatters and saves the selected package. Pieces land under `Environment/Scenery`, keep clear of the road,
+pit lane, paddock, RV, stands, run-off and anything hand-placed, and draw themselves on enable. The
+`Scenery` object's inspector has the seed, density, clearances and Scatter/Clear buttons; tick `locked` on
+a piece to keep it through a re-scatter. What gets scattered is `Resources/Tracks/SceneryPalette` — add a
+sprite list to its empty **Greenery** row (or a new row) and re-scatter. Detail: `Docs/Tracks.md` § Scenery.
+
 **Daytona is authored, not just dressed.** Its paddock (infield, behind the chord pit road) and Watkins
 Glen's key areas in it come from `Draftmaster > Tracks > Daytona > Author Daytona (Watkins Glen Blueprint)`.
 Re-run that after regenerating Daytona; do **not** run an overwriting `Dress Selected Package` on it — that
@@ -656,6 +665,8 @@ it, B would close the pause menu and open it again, and in the car it would paus
 | Track Builder Window | The main authoring window: Generate Layout / Build Package / Dress / Race, per calendar row |
 | Create Starter Layouts (Daytona + Martinsville) | Seeds the two example tracks |
 | Dress Selected Package · Dress All Undressed Packages | Generate ground, walls, grandstands, paddock from the spline |
+| Scenery > Scatter Scenery (Open or Selected Package) · Clear Scenery · Scatter Scenery On Every Package | Fill the open grass with fans' RVs, spectators, greenery from `Resources/Tracks/SceneryPalette` |
+| Scenery > Create Default Scenery Palette | Writes the palette with its default rows if it's missing |
 | Edit Selected Package (Prefab Mode) · In Context (Race Scene) | Open a package for editing |
 | Preview Selected Package In Scene · Clear Package Previews From Scene | Drop a track into the race scene so geometry anchors resolve |
 | Select Track For Next Race... | Dropdown of every built track, grouped by type, ticked on the current one. Sets `TrackSelection` |

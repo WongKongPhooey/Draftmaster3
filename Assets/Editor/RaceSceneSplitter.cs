@@ -37,7 +37,7 @@ public static class RaceSceneSplitter
     // what pinned the race scene to Watkins Glen and sent a Daytona weekend there (0.4.1).
     //
     // What is NOT carried over is what the track builders regenerate on every enable anyway (meshes, and the
-    // objects they spawn under a TrackBuilder / TrackGround / grandstand) — see IsGeneratedObject.
+    // objects they spawn under a TrackBuilder / TrackGround / grandstand / scenery piece) — see IsGeneratedObject.
     //
     // Clear Package Previews From Scene does the same apply-then-remove, as a broom for a scene already in a mess.
     static RaceSceneSplitter()
@@ -164,7 +164,8 @@ public static class RaceSceneSplitter
         for (var t = go.transform.parent; t != null; t = t.parent)
             if (t.GetComponent<TrackBuilder>() != null || t.GetComponent<TrackGround>() != null ||
                 t.GetComponent<TrackOverpass>() != null || t.GetComponent<Grandstand>() != null ||
-                t.GetComponent<TrackEnvironmentBuilder>() != null || t.GetComponent<ExtraTrackSpline>() != null)
+                t.GetComponent<TrackEnvironmentBuilder>() != null || t.GetComponent<ExtraTrackSpline>() != null ||
+                t.GetComponent<SceneryPiece>() != null)
                 return true;
         return false;
     }

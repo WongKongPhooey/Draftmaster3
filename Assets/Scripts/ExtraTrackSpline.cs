@@ -225,6 +225,9 @@ public class ExtraTrackSpline : MonoBehaviour
         return tris;
     }
 
+    // The ribbon's centreline in this object's local space (the Transform places it in the world).
+    public List<TrackBuilder.Sample> SampleLocal() => Sample();
+
     List<TrackBuilder.Sample> Sample()
     {
         return TrackBuilder.SampleSegments(
