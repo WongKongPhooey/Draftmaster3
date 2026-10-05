@@ -78,6 +78,10 @@ public class FormationLapSimTests
         // main track: one line per car, the first time it happens.
         public readonly List<string> jumps = new List<string>();
         public readonly List<string> offRoad = new List<string>();
+        // Free-driven player only: how far (m, centre to centre) the nearest car behind the player was at the
+        // green, and the most it ever was once the whole field was out on the track.
+        public float playerLeadAtGreen = -1f;
+        public float playerLeadWorst = -1f;
     }
 
     [Explicit("Diagnostic: formation laps at every venue; prints contacts per track.")]
@@ -150,6 +154,31 @@ public class FormationLapSimTests
         Debug.Log(Report($"[FormationSim] {trackId} player in box {playerBox}", r, 15));
         Assert.IsTrue(r.wentGreen, Report($"{trackId}: the safety car never pitted", r, 10));
         Assert.IsEmpty(r.contacts, Report($"{trackId}: the handed-over player car touched the field", r, 15));
+    }
+
+    [TestCase("WatkinsGlen")]
+    [TestCase("Daytona")]
+    [TestCase("Martinsville")]
+    public void TheFieldStaysCloseBehindAPlayerOnPole(string trackId)
+    {
+        // The human on pole drives off first and runs up behind the safety car as hard as the pace-lap hold lets
+        // them. The train behind used to be capped a few mph over cruise on straights only, so it never caught
+        // the human back up and they took the green alone.
+        var r = Run(trackId, 30, playerBox: 0, playerFormsUp: false, playerDrivesFree: true);
+        Debug.Log(Report($"[FormationSim] {trackId} free player on pole", r, 15));
+        Assert.IsTrue(r.wentGreen, Report($"{trackId}: the safety car never pitted", r, 10));
+        Assert.IsEmpty(r.contacts, Report($"{trackId}: cars touched behind the player on pole", r, 15));
+        Assert.Less(r.playerLeadAtGreen, 30f, Report($"{trackId}: the field was strung out behind the player at the green", r, 5));
+    }
+
+    [Explicit("Diagnostic: the free player on pole and the car behind, step by step.")]
+    [TestCase("WatkinsGlen", "AI_01", 0f, 110f)]
+    [TestCase("Daytona", "AI_01", 0f, 90f)]
+    public void TracePlayerOnPole(string trackId, string other, float from, float to)
+    {
+        var r = Run(trackId, 30, playerBox: 0, playerFormsUp: false, playerDrivesFree: true,
+                    traceA: "Player", traceB: other, traceFrom: from, traceTo: to);
+        Debug.Log(Report($"[FormationSim] trace {trackId} free player on pole", r, 5));
     }
 
     [Explicit("Diagnostic: the player's car handed to the AI with no formation brain — what it did before TakeOver.")]
@@ -252,7 +281,9 @@ public class FormationLapSimTests
     {
         var sb = new StringBuilder(title);
         sb.Append($" [{r.setup}]: green {r.wentGreen} after {r.seconds:0.0}s, {r.contacts.Count} contacts, {r.parkedOverlaps} parked overlaps, " +
-                  $"{r.carsOnTrackAtGreen} cars on track at green, closest {(r.minClearance < 1f ? r.minClearance.ToString("0.00") + " m" : "over 1 m")}");
+                  $"{r.carsOnTrackAtGreen} cars on track at green, " +
+                  (r.playerLeadAtGreen >= 0f ? $"player {r.playerLeadAtGreen:0} m clear at green (worst {r.playerLeadWorst:0} m), " : "") +
+                  $"closest {(r.minClearance < 1f ? r.minClearance.ToString("0.00") + " m" : "over 1 m")}");
         for (int i = 0; i < Mathf.Min(max, r.contacts.Count); i++)
         {
             var c = r.contacts[i];
@@ -266,8 +297,10 @@ public class FormationLapSimTests
     // playerBox >= 0 puts the player's own car in that pit box, handed to the AI the way the Drive/Broadcast
     // toggle and the crew chief hand it over (a bare SplineDriver engaged on the car); playerFormsUp says whether
     // it is given the formation brain (FormationController.TakeOver) as the game now does.
+    // playerDrivesFree instead drives it like the human: no formation brain, flat out up to the pace-lap hold
+    // (PaceLapAssist) behind the car directly ahead in grid order.
     Result Run(string trackId, int count, float maxSeconds = 600f, int playerBox = -1, bool playerFormsUp = true,
-               string traceA = null, string traceB = null, float traceFrom = 0f, float traceTo = 0f)
+               bool playerDrivesFree = false, string traceA = null, string traceB = null, float traceFrom = 0f, float traceTo = 0f)
     {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Resources/TrackPackages/{trackId}.prefab");
         Assert.IsNotNull(prefab, $"no track package for {trackId}");
@@ -442,21 +475,26 @@ public class FormationLapSimTests
         var wentOff = new HashSet<int>();
         for (int i = 0; i < n; i++) { prevPos[i] = (Vector2)posProp.GetValue(cars[i]); prevOnPit[i] = (bool)onPitProp.GetValue(cars[i]); }
 
+        Component playerAhead = playerSpline != null && playerDrivesFree ? cars[playerBox == 0 ? 0 : playerBox] : null;
+        float lapLen = (float)splineType.GetProperty("TrackLength").GetValue(scSpline);
         for (int step = 0; step < steps; step++)
         {
+            if (playerAhead != null) DrivePlayerFree();
             foreach (var fc in fcs) fcStep.Invoke(fc, null);
             scStep.Invoke(sc, null);
             foreach (var c in cars) splineStep.Invoke(c, null);
             result.seconds = (step + 1) * dt;
 
+            if (playerAhead != null) MeasurePlayerLead();
             if ((bool)pittingField.GetValue(sc))
             {
                 result.wentGreen = true;
+                if (playerAhead != null) result.playerLeadAtGreen = PlayerLead(out _);
                 foreach (var c in cars) if (!(bool)onPitProp.GetValue(c)) result.carsOnTrackAtGreen++;
                 break;
             }
 
-            if (traceA != null && result.seconds >= traceFrom && result.seconds <= traceTo && (traceTo - traceFrom < 1f || step % 5 == 0))
+            if (traceA != null && result.seconds >= traceFrom && result.seconds <= traceTo && (traceTo - traceFrom < 1f || step % (traceTo - traceFrom > 30f ? 100 : 5) == 0))
             {
                 result.trace.Append($"t{result.seconds:0.00}");
                 for (int i = 0; i < n; i++)
@@ -469,7 +507,7 @@ public class FormationLapSimTests
                         $"tac{(float)splineType.GetField("tacticalLateralOffset").GetValue(sd):0.00} " +
                         $"L{(float)splineType.GetProperty("UntacticalLateral").GetValue(sd):0.00} " +
                         $"b[{(float)b[0]:0.0},{(float)b[1]:0.0}] h{(float)headProp.GetValue(sd):0} {(float)mphProp.GetValue(sd):0.0}mph " +
-                        $"{modeProp.GetValue(sd.GetComponent(fcType))}");
+                        $"{(sd.GetComponent(fcType) != null ? modeProp.GetValue(sd.GetComponent(fcType)) + " cap" + ((float)fcType.GetProperty("DbgCap").GetValue(sd.GetComponent(fcType))).ToString("0") : "free")}");
                 }
                 result.trace.Append('\n');
             }
@@ -519,6 +557,47 @@ public class FormationLapSimTests
             }
         }
         return result;
+
+        // A keen human under PaceLapAssist's hold: flat out (the corner profile still applies) to run the car ahead
+        // in grid order down, braking in time to arrive at the 13 m hold matched to its speed, and backing off under
+        // it inside 6 m. The pit limit clamps the lane.
+        void DrivePlayerFree()
+        {
+            float gap = Mathf.Repeat((float)distProp.GetValue(playerAhead) - (float)distProp.GetValue(playerSpline), lapLen);
+            float aheadMph = (float)mphProp.GetValue(playerAhead);
+            float cap = 120f;
+            if (!(bool)onPitProp.GetValue(playerSpline) && !(bool)onPitProp.GetValue(playerAhead))
+            {
+                if (gap <= 6f) cap = aheadMph * 0.8f;
+                else cap = Mathf.Min(cap, aheadMph + 2.5f * (gap - 13f));
+            }
+            Set(playerSpline, "aiMaxSpeedMph", Mathf.Max(0f, cap));
+            Set(playerSpline, "aiMinDecelMphPerSec", 30f);
+        }
+
+        // Centre-to-centre metres back to the nearest car behind the player on the main track; -1 = nobody yet.
+        float PlayerLead(out bool allOut)
+        {
+            allOut = true;
+            float best = -1f;
+            float me = (float)distProp.GetValue(playerSpline);
+            for (int i = 1; i < n; i++)
+            {
+                if (cars[i] == playerSpline) continue;
+                if ((bool)onPitProp.GetValue(cars[i])) { allOut = false; continue; }
+                float back = Mathf.Repeat(me - (float)distProp.GetValue(cars[i]), lapLen);
+                if (back > lapLen * 0.5f) continue; // ahead of the player, not behind
+                if (best < 0f || back < best) best = back;
+            }
+            return best;
+        }
+
+        void MeasurePlayerLead()
+        {
+            if ((bool)onPitProp.GetValue(playerSpline)) return;
+            float lead = PlayerLead(out bool allOut);
+            if (allOut && lead > result.playerLeadWorst) result.playerLeadWorst = lead;
+        }
 
         string Describe(Component s)
         {

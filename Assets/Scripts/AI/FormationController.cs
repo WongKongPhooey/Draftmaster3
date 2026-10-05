@@ -29,6 +29,17 @@ public class FormationController : MonoBehaviour
     public float paceCarGap = 26f;
     [Tooltip("Most this car may exceed cruise pace by while catching the train up (mph). Only used on straights. Kept low so the field doesn't string out far ahead of the pace.")]
     public float catchUpBonusMph = 9f;
+    [Tooltip("Most this car may exceed cruise pace by (mph) when the car ahead of it has got well away — reached at " +
+             "catchUpFarGap, eased in from catchUpNearGap. A human on pole drives off first and runs straight up to " +
+             "the safety car; held to the small catch-up bonus the train behind never got back to them. Never " +
+             "applies off the pace car itself, which the leader is meant to sit a long way back from.")]
+    public float farCatchUpBonusMph = 30f;
+    [Tooltip("Centre-to-centre gap (m) to the nearest car ahead at which the far catch-up starts to ease in.")]
+    public float catchUpNearGap = 25f;
+    [Tooltip("Centre-to-centre gap (m) to the nearest car ahead at which the full far catch-up applies.")]
+    public float catchUpFarGap = 100f;
+    [Tooltip("Share of the far catch-up a car may still use in or near a turn, or in the close-up. The corner speed profile still caps it.")]
+    [Range(0f, 1f)] public float cornerCatchUpScale = 0.5f;
     [Tooltip("Lowest speed cap (mph) the station-keeping asks for — a floor so a car never crawls to a halt mid-formation. The safety law ignores it: a car will stop behind a stopped car.")]
     public float minCapMph = 12f;
     [Tooltip("Least distance ahead (m) scanned for cars. The planner scans further at speed — far enough to stop gently for a stopped car.")]
@@ -320,7 +331,13 @@ public class FormationController : MonoBehaviour
         // Base pace: gentle while settling after the pit merge (a ceiling — the planner still follows underneath
         // it), otherwise free to close the train up on an open straight and held to cruise in a corner or the
         // close-up bunch.
-        float baseCap = settling ? pitOutMph : ((corner || closingUp) ? cruise : cruise + catchUpBonusMph);
+        // A car the train ahead has got away from (the human on pole, typically) may run harder to close back up:
+        // eased in by how far ahead the next car is, so a car already in the train is unaffected.
+        float far = FarCatchUp();
+        float farBonus = farCatchUpBonusMph * far;
+        float baseCap = settling ? pitOutMph
+            : ((corner || closingUp) ? cruise + farBonus * cornerCatchUpScale
+                                     : cruise + Mathf.Lerp(catchUpBonusMph, Mathf.Max(catchUpBonusMph, farCatchUpBonusMph), far));
 
         // Lateral intent: the two-wide column the WHOLE lap (double file), with a gentle tyre-warming weave on early
         // straights that fades out near the line so the rows sit steady for the start. Through turns the column
@@ -345,7 +362,7 @@ public class FormationController : MonoBehaviour
         var intent = new PackIntent
         {
             BaseCapMph = baseCap,
-            MaxCapMph = cruise + catchUpBonusMph,
+            MaxCapMph = cruise + Mathf.Max(catchUpBonusMph, farBonus),
             FloorMph = minCapMph,
             WantGap = closingUp ? rowGap : targetGap,
             PaceCarGap = paceCarGap,
@@ -363,6 +380,43 @@ public class FormationController : MonoBehaviour
         PlannedTrackLateral = _planner.PlannedLateral(self.Lateral - self.Tactical, self.Lateral) - merge;
         HasPlan = true;
         DbgSettling = settling;
+    }
+
+    // 0..1: how far away the nearest car ahead on the track is, from catchUpNearGap (0) to catchUpFarGap (1). Looks
+    // round the whole lap, not just the planner's scan, because a car that has got away is out of scan range by
+    // definition. 0 when the nearest car ahead is the pace car (the leader holds a long gap to it on purpose) or
+    // there is nobody ahead at all.
+    float FarCatchUp()
+    {
+        float len = _spline.TrackLength;
+        float myC = _spline.CentreDistanceOnTrack;
+        float best = float.MaxValue;
+        bool bestIsPace = false;
+
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d == _spline || d.IsOnPit || !d.isActiveAndEnabled) continue;
+            if (Mathf.Abs(d.TrackLength - len) > 0.5f) continue;
+            float gap = Mathf.Repeat(d.CentreDistanceOnTrack - myC, len);
+            if (gap <= 0f || gap >= best) continue;
+            best = gap;
+            bestIsPace = d.qualifyingPosition == FormationOrder.SafetyCarGrid;
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != _spline.track) continue;
+            float gap = Mathf.Repeat(p.TrackDistance - myC, len);
+            if (gap <= 0f || gap >= best) continue;
+            best = gap;
+            bestIsPace = false;
+        }
+
+        if (best == float.MaxValue || bestIsPace) return 0f;
+        return Mathf.Clamp01((best - catchUpNearGap) / Mathf.Max(1f, catchUpFarGap - catchUpNearGap));
     }
 
     // Down the pit lane: station keeping and the safety law only. No swerving, no columns.
