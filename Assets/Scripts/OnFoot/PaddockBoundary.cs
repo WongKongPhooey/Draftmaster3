@@ -127,6 +127,43 @@ public class PaddockBoundary : MonoBehaviour
         return best;
     }
 
+    // The polygon's world-space bounding box — somewhere to sample from when the caller's own idea of the
+    // paddock does not overlap the walkable area.
+    public Bounds WorldBounds
+    {
+        get
+        {
+            if (_poly == null) _poly = GetComponent<PolygonCollider2D>();
+            return _poly.bounds;
+        }
+    }
+
+    // True if one boundary holds both points — they are in the same walkable pocket, so somebody could
+    // walk from one to the other. With no boundary in the scene everywhere is one area.
+    public static bool SharedArea(Vector2 a, Vector2 b)
+    {
+        if (Active.Count == 0) return true;
+        for (int i = 0; i < Active.Count; i++)
+        {
+            var p = Active[i];
+            if (p != null && p.Contains(a) && p.Contains(b)) return true;
+        }
+        return false;
+    }
+
+    // True if every point along the segment (sampled every `spacing` metres, start excluded) is inside
+    // the walkable area — a straight walk from a to b never crosses the fence. The start is skipped
+    // because a body the step clamp has just left standing exactly on the line reads as outside it.
+    public static bool SegmentInside(Vector2 a, Vector2 b, float spacing = 1.5f)
+    {
+        if (Active.Count == 0) return true;
+        float len = (b - a).magnitude;
+        int steps = Mathf.Max(1, Mathf.CeilToInt(len / Mathf.Max(0.25f, spacing)));
+        for (int i = 1; i <= steps; i++)
+            if (!IsInside(Vector2.Lerp(a, b, i / (float)steps))) return false;
+        return true;
+    }
+
     // True if worldPos is inside any active boundary (or there are none).
     public static bool IsInside(Vector2 worldPos)
     {

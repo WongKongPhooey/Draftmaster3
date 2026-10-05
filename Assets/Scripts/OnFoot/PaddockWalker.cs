@@ -39,6 +39,20 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
     [Tooltip("How wide a berth this walker gives solid scenery (m) — roughly their own footprint. Their " +
              "centre stops this far from a motorhome's side or a garage wall.")]
     public float obstacleRadius = 0.45f;
+    [Tooltip("Furthest (m) a walker heads for in one go. Each waypoint is a short errand from the last, in " +
+             "plain sight of it, rather than a point anywhere in a paddock a few hundred metres long with " +
+             "half the motorhome lot in between.")]
+    public float wanderRadius = 22f;
+    [Tooltip("Nearest (m) a fresh waypoint may be, so a walker actually goes somewhere.")]
+    public float minHop = 4f;
+    [Tooltip("A spot with this many people already stood within crowdRadius is not somewhere to walk to. " +
+             "0 turns the spacing check off.")]
+    public int crowdLimit = 4;
+    [Tooltip("Radius (m) the crowdLimit is counted over.")]
+    public float crowdRadius = 2.5f;
+    [Tooltip("Seconds without getting any closer to the waypoint before giving up on it and choosing " +
+             "another from where they stand — what stops anybody grinding against a wall for ever.")]
+    public float stuckSeconds = 2.5f;
     [Tooltip("Conversation this walker owns. While it's running the walker stands still and turns to face whoever stopped it — otherwise it would wander off mid-sentence, dragging its speech bubble along. Auto-found on the same object if left null.")]
     public NPCInteractable conversation;
     [Tooltip("Ambient one-liners this walker mutters at a passing player. Handled the same as a conversation: stand still and look at them while speaking. Auto-found on the same object if left null.")]
@@ -90,6 +104,8 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
     float _frameTimer;
     int _frame;
     float _escapeTimer;            // throttles the "am I standing inside a motorhome?" check
+    float _bestDist = float.MaxValue;  // closest this walker has got to the current waypoint
+    float _stuckTimer;                 // how long since that last improved
 
     // along/outward are the rectangle's unit axes; halfLen spans along, halfDepth spans outward.
     public void Configure(Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
@@ -247,43 +263,122 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         if (chatter == null) chatter = GetComponent<NPCAmbientChatter>();
     }
 
+    // A chain of short errands starting from wherever this walker is stood: each waypoint in plain sight
+    // of the one before, so the walk between them never runs into the side of anything.
+    //
+    // This used to be six points rolled anywhere in the paddock, walked in a loop. With a few hundred
+    // metres of paddock and a lot of motorhomes in it, nearly every leg had bodywork across it, and all
+    // the walker could do was march into the panel and slide or stop.
     void GeneratePath()
     {
         _path.Clear();
+        ResetProgress();
+        Vector2 from = transform.position;
         int n = Mathf.Max(2, waypointCount);
         for (int i = 0; i < n; i++)
-            _path.Add(RandomPointInRect());
+        {
+            if (!TryPickWaypoint(from, out Vector2 next)) break;
+            _path.Add(new Vector3(next.x, next.y, transform.position.z));
+            from = next;
+        }
+
+        // Somewhere they cannot see a way out of — boxed in, or put down outside the walkable area. Aim
+        // across the paddock as the old router did and let the step-by-step avoidance and the stuck check
+        // do what they can, rather than stand on the spot for good.
+        if (_path.Count == 0)
+        {
+            if (TryRandomPointInArea(out Vector2 far)) _path.Add(new Vector3(far.x, far.y, transform.position.z));
+            else _path.Add(transform.position);   // nothing anywhere: stand, and try again after a pause
+        }
     }
 
-    Vector3 RandomPointInRect()
+    // Where this walker may be. An authored or generated PaddockBoundary is the paddock when there is one;
+    // the spawner's rectangle is only its guess, derived from the pit lane, and the two need not agree —
+    // where they didn't, everybody outside the overlap was clamped onto the boundary's edge and the crowd
+    // stood along it in a line fifty deep.
+    bool InWalkArea(Vector2 p)
     {
-        // Inset a touch so walkers don't clip the paddock edge. When a PaddockBoundary is authored,
-        // reject-sample so waypoints land inside it (clamping instead would pile them on the edge).
-        //
-        // Solid scenery is rejected the same way, and with a metre of margin: a waypoint sitting inside a
-        // motorhome can never be reached now that the walls are honoured, so the walker would spend its
-        // whole life pressed against the same panel. Better to aim somewhere it can actually stand.
-        Vector3 p = _center;
+        if (PaddockBoundary.AnyActive) return PaddockBoundary.IsInside(p);
+        Vector3 d = (Vector3)p - _center;
+        return Mathf.Abs(Vector3.Dot(d, _along)) <= _halfLen * 0.92f &&
+               Mathf.Abs(Vector3.Dot(d, _outward)) <= _halfDepth * 0.92f;
+    }
+
+    // Too many people already stood there. Counted only once a spot passes every cheaper test.
+    bool Crowded(Vector2 p) =>
+        crowdLimit > 0 && CrowdActor.CountWithin(p, crowdRadius, crowdLimit) >= crowdLimit;
+
+    // One short errand from `from`: somewhere inside the walkable area, clear of scenery with a metre to
+    // spare, reachable in a straight line without crossing a wall or the fence, and not already crowded.
+    bool TryPickWaypoint(Vector2 from, out Vector2 point)
+    {
+        float maxR = Mathf.Max(1f, wanderRadius);
+        float minR = Mathf.Clamp(minHop, 0.5f, maxR);
+        for (int attempt = 0; attempt < 16; attempt++)
+        {
+            float a = Random.Range(0f, Mathf.PI * 2f);
+            float r = Random.Range(minR, maxR);
+            point = from + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
+
+            if (!InWalkArea(point)) continue;
+            if (!PaddockBoundary.SegmentInside(from, point)) continue;
+            if (avoidObstacles)
+            {
+                if (PaddockObstacles.IsBlocked(point, obstacleRadius + 1f)) continue;
+                if (!PaddockObstacles.PathClear(from, point, obstacleRadius)) continue;
+            }
+            if (Crowded(point)) continue;
+            return true;
+        }
+        point = from;
+        return false;
+    }
+
+    // Anywhere in the walkable area that something solid isn't standing on. Rejection-sampled from the
+    // paddock rectangle; never clamped, which piled every failure on the same stretch of edge.
+    bool TryRandomPointInArea(out Vector2 point)
+    {
         for (int attempt = 0; attempt < 12; attempt++)
         {
             float l = Random.Range(-_halfLen * 0.92f, _halfLen * 0.92f);
             float d = Random.Range(-_halfDepth * 0.92f, _halfDepth * 0.92f);
-            p = _center + _along * l + _outward * d;
-            if (!PaddockBoundary.IsInside(p)) continue;
-            if (avoidObstacles && PaddockObstacles.IsBlocked(p, obstacleRadius + 1f)) continue;
-            return p;
+            point = _center + _along * l + _outward * d;
+            if (!InWalkArea(point)) continue;
+            if (avoidObstacles && PaddockObstacles.IsBlocked(point, obstacleRadius + 1f)) continue;
+            if (Crowded(point)) continue;
+            return true;
         }
-        Vector2 c = PaddockBoundary.Constrain(p);
-        return new Vector3(c.x, c.y, p.z);
+        point = transform.position;
+        return false;
     }
 
-    // Give up on the current waypoint and head for the next, pausing a beat. Used both on arriving and on
-    // finding the way there closed — a boundary edge or a wall of bodywork.
+    void ResetProgress()
+    {
+        _bestDist = float.MaxValue;
+        _stuckTimer = 0f;
+    }
+
+    // Head for the next waypoint, pausing a beat. The end of the chain plans a new one from here — the
+    // walk back to the first point was never checked for a clear line.
     void NextWaypoint()
     {
         _idx++;
-        if (_idx >= _path.Count) { _idx = 0; if (Random.value < 0.5f) GeneratePath(); }
+        ResetProgress();
+        if (_idx >= _path.Count) { _idx = 0; GeneratePath(); }
+        Dwell();
+    }
 
+    // The way on is closed — a wall across it, the fence, or no progress for a while. The rest of the
+    // chain was planned from somewhere else, so plan again from where they actually are.
+    void Replan()
+    {
+        GeneratePath();
+        _idx = 0;
+        Dwell();
+    }
+
+    void Dwell()
+    {
         // Somebody with company dawdles. A group that only ever pauses as long as a lone walker does
         // reads as a squad on the march; the standing-about is the half of it that looks like people.
         float dwell = maxPauseSeconds + (HasCompany ? Mathf.Max(0f, groupChatSeconds) : 0f);
@@ -380,10 +475,21 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         }
 
         Vector2 toTarget = (Vector2)(target - pos);
-        if (toTarget.magnitude <= arriveRadius)
+        float dist = toTarget.magnitude;
+        if (dist <= arriveRadius)
         {
-            // Reached: advance, occasionally regenerate the loop so the route varies over time.
+            // Reached: advance, and plan a fresh chain at the end of this one.
             NextWaypoint();
+            Idle();
+            return;
+        }
+
+        // Getting nowhere — sliding up and down the same flank, or held against somebody stood still.
+        // Give up on this waypoint and choose another from where they are.
+        if (dist < _bestDist - 0.2f) { _bestDist = dist; _stuckTimer = 0f; }
+        else if ((_stuckTimer += Time.deltaTime) > Mathf.Max(0.5f, stuckSeconds))
+        {
+            Replan();
             Idle();
             return;
         }
@@ -393,14 +499,14 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         Vector3 newPos = pos + step;
 
         // Never step outside an authored PaddockBoundary. A clamped step means the waypoint is
-        // unreachable through the polygon — skip to the next one rather than grinding on the edge.
+        // unreachable through the polygon — plan again from here rather than grinding on the edge.
         if (PaddockBoundary.AnyActive)
         {
             Vector2 c = PaddockBoundary.Constrain(newPos);
             if ((Vector2)newPos != c)
             {
                 newPos = new Vector3(c.x, c.y, newPos.z);
-                NextWaypoint();
+                Replan();
             }
         }
 
@@ -413,7 +519,7 @@ public class PaddockWalker : MonoBehaviour, ICrowdRecyclable
         {
             if (!PaddockObstacles.TryStep(pos, newPos, obstacleRadius, out Vector2 stepped))
             {
-                NextWaypoint();
+                Replan();
                 Idle();
                 return;
             }

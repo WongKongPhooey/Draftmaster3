@@ -90,6 +90,33 @@ public static class PaddockObstacles
         return null;
     }
 
+    // Reused per sweep, for the same reason as _hits.
+    static readonly List<RaycastHit2D> _sweep = new();
+
+    // True if a body of this radius could walk the straight line from `from` to `to` without touching
+    // solid scenery. Used to choose where to walk BEFORE setting off: a waypoint picked at random across
+    // the paddock usually has a motorhome or two between it and the walker, and TryStep can only slide
+    // along the first panel it meets — so the walker marched into the side of the rig, ground along it
+    // and stood there. Aiming only at ground in plain sight means the router rarely has anything to do.
+    //
+    // Anything already overlapping the start is ignored: a walker sliding down a flank is touching it,
+    // and that panel is not between them and where they are going.
+    public static bool PathClear(Vector2 from, Vector2 to, float radius)
+    {
+        Vector2 d = to - from;
+        float dist = d.magnitude;
+        if (dist < 1e-4f) return !IsBlocked(to, radius);
+
+        int n = Physics2D.CircleCast(from, Mathf.Max(0.01f, radius), d / dist, Filter, _sweep, dist);
+        for (int i = 0; i < n; i++)
+        {
+            var h = _sweep[i];
+            if (h.fraction <= 0f) continue;   // started inside it — PushOut's job, not this one's
+            if (IsScenery(h.collider)) return false;
+        }
+        return true;
+    }
+
     // Take a step from `from` toward `to`, going round anything solid in the way.
     //
     // Returns false only when there is no way forward at all — the caller should then give up on

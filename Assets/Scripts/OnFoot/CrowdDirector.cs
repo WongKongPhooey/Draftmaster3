@@ -31,6 +31,14 @@ public class CrowdDirector : MonoBehaviour
              "check and restores the old behaviour of landing wherever the boundary allows.")]
     public float recycleClearance = 0.6f;
 
+    [Tooltip("A recycled NPC is not put down where this many crowd members already stand within " +
+             "recycleSpacingRadius — so the recycle band never stacks dozens of people into whatever " +
+             "corner of the paddock it happens to overlap. 0 turns the check off.")]
+    public int recycleSpacingLimit = 3;
+
+    [Tooltip("Radius (m) recycleSpacingLimit is counted over.")]
+    public float recycleSpacingRadius = 4f;
+
     [Tooltip("Freeze the entire crowd whenever there is no on-foot player in the scene (i.e. while driving).")]
     public bool freezeWhenNotOnFoot = true;
 
@@ -148,8 +156,9 @@ public class CrowdDirector : MonoBehaviour
         _frame++;
     }
 
-    // Roll respawn points until one lands inside both the NPC's own paddock rectangle and any authored
-    // PaddockBoundary, on ground nothing solid is standing on. Giving up is the right answer, not a
+    // Roll respawn points until one lands in the walkable area (the player's PaddockBoundary pocket, or the
+    // NPC's own paddock rectangle where no boundary exists), on ground nothing solid is standing on and
+    // nobody much is already standing on. Giving up is the right answer, not a
     // fallback: a player stood out on the racetrack or off the end of the paddock has nowhere legal
     // nearby, and leaving the NPC where it is costs nothing — it is frozen out there anyway.
     bool TryRecycle(CrowdActor actor, Vector2 player, in CrowdRecycleTuning recycle)
@@ -158,9 +167,17 @@ public class CrowdDirector : MonoBehaviour
         int samples = Mathf.Max(1, recycle.samplesPerRecycle);
         for (int s = 0; s < samples; s++)
         {
-            if (!CrowdRecyclePolicy.TryCandidate(player, area, recycle,
-                                                 Random.value, Random.value, out Vector2 point)) continue;
-            if (!PaddockBoundary.IsInside(point)) continue;
+            Vector2 point = CrowdRecyclePolicy.Candidate(player, recycle, Random.value, Random.value);
+
+            // Where there is a PaddockBoundary it is the paddock, and the spawner's rectangle is only a
+            // guess made from the pit lane. Requiring both packed every recycle into whatever sliver the
+            // two shared. The point does have to be in the same pocket as the player, though, or it could
+            // land in a grandstand pocket across the racetrack.
+            if (PaddockBoundary.AnyActive)
+            {
+                if (!PaddockBoundary.SharedArea(player, point)) continue;
+            }
+            else if (!area.Contains(point, recycle.edgeInset)) continue;
 
             // Walkable is not the same as empty. The boundary is a polygon drawn round the paddock, and
             // what stands inside it — a motorhome, a team's rig, a grandstand's seating — is scenery the
@@ -168,6 +185,11 @@ public class CrowdDirector : MonoBehaviour
             // caravan or halfway up a stand until their own escape check walked them back out, which is a
             // person visibly climbing out of the bodywork. Put them somewhere clear in the first place.
             if (recycleClearance > 0f && PaddockObstacles.IsBlocked(point, recycleClearance)) continue;
+
+            // And not on top of somebody else. Counted last: it is a pass over the whole crowd.
+            if (recycleSpacingLimit > 0 &&
+                CrowdActor.CountWithin(point, recycleSpacingRadius, recycleSpacingLimit) >= recycleSpacingLimit)
+                continue;
 
             actor.RecycleTo(point);
             return true;

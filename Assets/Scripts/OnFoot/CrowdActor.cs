@@ -128,6 +128,28 @@ public class CrowdActor : MonoBehaviour
         return Mathf.Sqrt(dx * dx + dy * dy);
     }
 
+    // How many crowd members are stood within `radius` of a point, counting up to `stopAt` and no further.
+    // Frozen ones count: they are still there to be walked into. One squared compare each, so a few
+    // hundred cost next to nothing — callers only ask once a spot has passed every cheaper test.
+    //
+    // This is the spacing rule. Nothing else in the crowd looks at where anybody else is, so a recycle
+    // band squeezed into a corner of the paddock, or a run of waypoints rolled near one another, stacked
+    // dozens of people into a few square metres.
+    public static int CountWithin(Vector2 point, float radius, int stopAt = int.MaxValue)
+    {
+        float r2 = radius * radius;
+        int count = 0;
+        for (int i = 0; i < All.Count; i++)
+        {
+            var a = All[i];
+            if (a == null) continue;
+            Vector3 t = a.transform.position;
+            float dx = t.x - point.x, dy = t.y - point.y;
+            if (dx * dx + dy * dy <= r2 && ++count >= stopAt) return count;
+        }
+        return count;
+    }
+
     // Never drop an NPC below Full while it is mid-conversation: disabling NPCInteractable ends the
     // conversation and destroys the bubbles out from under the player. In practice a talker is within
     // interact range so it would be Full anyway, but a cutscene can walk one away mid-sentence.

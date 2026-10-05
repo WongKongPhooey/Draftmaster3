@@ -297,20 +297,59 @@ public class PaddockSpawner : MonoBehaviour
     // half a second (PaddockWalker's escape check); one of the ten conversational NPCs has no walker on it
     // at all and simply stands there for the rest of the weekend.
     //
+    // It must also be inside the walkable area. The rectangle is this spawner's guess at the paddock, made
+    // from the pit lane's longest straight; the PaddockBoundary a track package carries is the paddock as
+    // built, and the two need not line up. Anybody put down outside the boundary had their first step
+    // clamped onto its nearest edge, so whole stretches of the crowd ended up stood along one line of the
+    // fence fifty deep. Where the rectangle and the boundary barely overlap, the boundary is sampled
+    // directly instead.
+    //
     // Rejection-sampled the same way a walker picks its waypoints, with the raw point as the last resort so
     // a crowded paddock still gets its full headcount.
     Vector3 ClearSpawnPoint(Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)
     {
+        const float z = -0.1f; // toward the camera so sprites draw in front of the tarmac surface
         Vector3 pos = center;
-        for (int attempt = 0; attempt < 12; attempt++)
+        for (int attempt = 0; attempt < 24; attempt++)
         {
             float l = Random.Range(-halfLen * 0.9f, halfLen * 0.9f);
             float dd = Random.Range(-halfDepth * 0.9f, halfDepth * 0.9f);
             pos = center + along * l + outward * dd;
-            pos.z = -0.1f; // toward the camera so sprites draw in front of the tarmac surface
+            pos.z = z;
+            if (!PaddockBoundary.IsInside(pos)) continue;
             if (!PaddockObstacles.IsBlocked(pos, SpawnClearance)) return pos;
         }
+
+        var boundary = NearestBoundary(center);
+        if (boundary != null)
+        {
+            Bounds b = boundary.WorldBounds;
+            for (int attempt = 0; attempt < 24; attempt++)
+            {
+                var p = new Vector3(Random.Range(b.min.x, b.max.x), Random.Range(b.min.y, b.max.y), z);
+                if (!boundary.Contains(p)) continue;
+                if (!PaddockObstacles.IsBlocked(p, SpawnClearance)) return p;
+            }
+        }
         return pos;
+    }
+
+    // The walkable area this paddock belongs to: the boundary containing its middle, else the closest one.
+    static PaddockBoundary NearestBoundary(Vector3 center)
+    {
+        PaddockBoundary best = null;
+        float bestSqr = float.MaxValue;
+        var all = PaddockBoundary.Active;
+        for (int i = 0; i < all.Count; i++)
+        {
+            var b = all[i];
+            if (b == null) continue;
+            if (b.Contains(center)) return b;
+            Bounds wb = b.WorldBounds;
+            float d = wb.SqrDistance(new Vector3(center.x, center.y, wb.center.z));
+            if (d < bestSqr) { bestSqr = d; best = b; }
+        }
+        return best;
     }
 
     void SpawnNpcs(Transform root, Vector3 center, Vector3 along, Vector3 outward, float halfLen, float halfDepth)

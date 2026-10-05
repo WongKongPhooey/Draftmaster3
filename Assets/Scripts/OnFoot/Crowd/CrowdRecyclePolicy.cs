@@ -183,10 +183,17 @@ namespace Draftmaster.Crowd
         public static bool TryCandidate(Vector2 player, in CrowdRect area, in CrowdRecycleTuning tuning,
                                         float angle01, float radius01, out Vector2 point)
         {
+            point = Candidate(player, tuning, angle01, radius01);
+            return area.Contains(point, tuning.edgeInset);
+        }
+
+        // The point in the respawn band two 0..1 rolls pick, before anybody asks whether it is in the
+        // paddock. For a caller whose walkable area is not a rectangle.
+        public static Vector2 Candidate(Vector2 player, in CrowdRecycleTuning tuning, float angle01, float radius01)
+        {
             float r = RadiusFor(radius01, tuning);
             float a = Mathf.Clamp01(angle01) * Mathf.PI * 2f;
-            point = player + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
-            return area.Contains(point, tuning.edgeInset);
+            return player + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
         }
     }
 }
