@@ -127,11 +127,11 @@ public class SponsorPoachBeat : MonoBehaviour
         while (true)
         {
             var state = Shoot();
-            if (state == ShootState.Done) break;
-            if (state == ShootState.NeverHappening)
+            if (state == PhotoShootState.Done) break;
+            if (state == PhotoShootState.NeverHappening)
             {
-                Debug.Log("SponsorPoachBeat: the photo shoot was missed — nobody watched this driver work " +
-                          "a room, so nobody came looking. Beat skipped.", this);
+                Debug.Log("SponsorPoachBeat: the photo shoot was missed or is not on the sheet — nobody " +
+                          "watched this driver work a room, so nobody came looking. Beat skipped.", this);
                 Destroy(gameObject);
                 yield break;
             }
@@ -160,33 +160,10 @@ public class SponsorPoachBeat : MonoBehaviour
         Build(sponsor, player, standing);
     }
 
-    enum ShootState { Waiting, Done, NeverHappening }
-
-    // Where this weekend's sponsor photo shoot has got to. Any shoot on the sheet being done is the cue —
-    // Friday's stills or Saturday's dealer photos, whichever the player actually turned up to. A sheet with
-    // no shoot booked on it never waits; a sheet whose shoots have all gone by unattended never plays the
-    // beat at all, because the whole pitch is about a room the player was not in.
-    //
-    // Turning the shoots down at the team meeting takes them off the sheet entirely (WaiveSponsorExtras), so
-    // that has to be read first — otherwise an empty sheet looks like a weekend that never had a shoot and
-    // the rep turns up straight after the meeting, impressed by a room the player refused to walk into.
-    static ShootState Shoot()
-    {
-        if (WeekendLedger.SponsorExtrasWaived) return ShootState.NeverHappening;
-        var timetable = WeekendDirector.Timetable;
-        if (timetable == null) return ShootState.Done;
-
-        bool booked = false, pending = false;
-        foreach (var a in timetable.Activities)
-        {
-            if (a == null || a.kind != ActivityKind.PhotoShoot) continue;
-            booked = true;
-            if (WeekendLedger.IsDone(a.id)) return ShootState.Done;
-            if (!WeekendLedger.IsMissed(a.id)) pending = true;
-        }
-        if (!booked) return ShootState.Done;
-        return pending ? ShootState.Waiting : ShootState.NeverHappening;
-    }
+    // Where this weekend's sponsor photo shoot has got to — see PhotoShootProgress. A shoot turned down at the
+    // team meeting, or left off the sheet by the career mode, is one that never happens, so nobody comes.
+    static PhotoShootState Shoot() =>
+        PhotoShootProgress.Of(WeekendDirector.Timetable, WeekendLedger.SponsorExtrasWaived, CareerModes.Current);
 
     // The way out, not the way in — see the header. Being inside the rail once opens the trigger's gate.
     //
