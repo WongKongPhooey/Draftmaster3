@@ -103,6 +103,10 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float pitParkDistance = -1f;
     [Tooltip("Hard-park pin, independent of the race phase (practice cars waiting in their box). Zero speed, transform pinned to the commanded point until cleared.")]
     public bool parkedHold = false;
+    [Tooltip("Speed (m/s) a car that has just pulled up in its box settles onto its exact parked spot. The hold starts from wherever the car actually stopped and eases the last bit, rather than jumping onto the spot in one frame.")]
+    public float holdSettleSpeed = 1.2f;
+    [Tooltip("Rate (deg/s) a car that has just pulled up in its box straightens onto its parked heading.")]
+    public float holdSettleDegPerSec = 35f;
 
     // True whenever the car is being held stationary — either the pre-grid freeze or an explicit park
     // (practice cars in their box). SplineInputDriver keeps re-seeding the dynamic model while this holds,
@@ -1024,6 +1028,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             speed = 0f;
             _currentMph = 0f;
             Place();
+            SettleIntoHold();
             // Pin the body to the box even under a dynamic motion controller. The controller's one-shot
             // seed can latch the wrong pose (its FixedUpdate may run before this Start places the car), and
             // a frozen car has no speed to recover. Writing the transform here guarantees it sits on its box;
@@ -1036,6 +1041,8 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             }
             return;
         }
+        _wasHeld = false;
+        _droveSinceHold = true;
 
         if (usePitLane != _onPit)
         {
@@ -1438,6 +1445,48 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             lat = Mathf.Clamp(lat, lo, hi);
         }
         return s.position + right * lat;
+    }
+
+    bool _wasHeld;
+    bool _droveSinceHold;
+    bool _settling;
+    Vector2 _settlePos;
+    float _settleHeadingDeg;
+
+    // A car that drives into its box and is then held (practice: pulled up, parkedHold) stops wherever its
+    // brakes and physics left it — short of the spot, still half across the lane, nose angled in from the turn.
+    // Pinning it straight onto the box pose was a visible jump. Instead the hold starts from the car's actual
+    // pose and eases onto the spot. A car that has never driven (spawned into the hold) still pins at once, which
+    // is what the seed-latch guard needs. Runs after Place(), so it overrides the commanded pose the dynamic
+    // model is re-seeded from as well as a kinematic car's transform.
+    void SettleIntoHold()
+    {
+        if (!_wasHeld)
+        {
+            _wasHeld = true;
+            _settling = _droveSinceHold && track != null;
+            _droveSinceHold = false;
+            if (_settling)
+            {
+                _settlePos = track.transform.InverseTransformPoint(transform.position);
+                _settleHeadingDeg = transform.eulerAngles.z - angleOffsetDeg + (spriteFacesUp ? 90f : 0f);
+            }
+        }
+        if (!_settling) return;
+
+        Vector2 target = CommandedLocalPos;
+        float targetHeading = CommandedHeadingDeg;
+        _settlePos = Vector2.MoveTowards(_settlePos, target, holdSettleSpeed * Time.fixedDeltaTime);
+        _settleHeadingDeg = Mathf.MoveTowardsAngle(_settleHeadingDeg, targetHeading, holdSettleDegPerSec * Time.fixedDeltaTime);
+        if ((_settlePos - target).sqrMagnitude < 1e-6f && Mathf.Abs(Mathf.DeltaAngle(_settleHeadingDeg, targetHeading)) < 0.01f)
+            _settling = false;
+
+        CommandedLocalPos = _settlePos;
+        CommandedHeadingDeg = _settleHeadingDeg;
+        if (externalMotionController) return;   // the hold branch writes the transform from the commanded pose
+        Vector3 wp = track.transform.TransformPoint(new Vector3(_settlePos.x, _settlePos.y, 0f));
+        transform.position = new Vector3(wp.x, wp.y, transform.position.z);
+        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? _settleHeadingDeg - 90f : _settleHeadingDeg) + angleOffsetDeg);
     }
 
     void Place()
