@@ -91,12 +91,13 @@ Full guide: `Docs/Race-Weekend.md`.
 
 - **`Assets/Scenes/`** — the live scenes, and what is in the build: `TitleScreen` (boot),
   `RaceScene` (the shared race scene), `GarageScreen`, `SingleRace`, `DemoMenu`, `IronOvalShowcase`.
-- **`Assets/Menus/`** — UI scenes (MainMenu, Garage, TrackSelect, SeriesSelect, Store, Settings).
-- **`Assets/Levels/Racetracks/`** — legacy racetrack scenes (Phoenix, Daytona, Atlanta…), `Custom/`
-  holds template tracks. Not part of the spline system.
-- **`Assets/Levels/Legacy/`** — older tracks, still in the build, may use legacy scripts.
-- **`Assets/Levels/Scenarios/`** — special events (DaytonaDay, Halloween, Throwback, Pitlane).
-- **`Assets/Levels/`** — utility scenes (LoginRegister, MyAccount, DeleteAccount).
+- **`Assets/Menus/TeamGarage.unity`** — the on-foot team factory hub (in the build).
+- **`Assets/Tracks/`** — the pre-spline prototype scenes on the legacy scrolling system (Phoenix,
+  Phoenix2D, PhoenixInfield, an old WatkinsGlen). Not in the build, not part of the spline system.
+- The Draftmaster 2 scenes (`Assets/Levels/` racetracks, scenarios, account screens, and the old
+  `Assets/Menus/` UI flow) and their DM2-only scripts and UI prefabs were deleted 2026-10-05 — they
+  are in git history if ever needed. Only `Assets/Levels/Racetracks/Phoenix/` lighting data survives,
+  because `Assets/Tracks/Phoenix*.unity` still bakes against it.
 
 **`Assets/Scenes/RaceScene.unity` is the current development/test scene.** It holds no road — the
 track arrives as a package. To edit track content (scenery, paddock, per-track NPCs), open
@@ -123,9 +124,12 @@ the RV interior or the factory opens it, and `GarageScreenLoader` remembers whic
 The previous iteration: no 3D track geometry, the player car sits near screen centre and the
 environment scrolls past via shader texture offsets (`_MotionOffset`) and transform positioning.
 VehicleLogic + EnvironmentObjectV2 + RaceManager + EnvironmentManager + CameraManager, plus
-InputManager and MovementOnFoot. Still live in `Assets/Levels/Racetracks/` and
-`Assets/Levels/Legacy/`, and many scripts in `Assets/Scripts/` belong to it — check references
-before removing anything. Full detail, including the scroll-divisor formula, the object
+InputManager and MovementOnFoot. Still live in the `Assets/Tracks/` prototype scenes, and is
+still entangled with the live game (the TaylorEmerson on-foot prefab carries a disabled
+MovementOnFoot, RaceScene's network prefab list holds the old VehicleLogic car), so many scripts in
+`Assets/Scripts/` belong to it — check references before removing anything.
+`Draftmaster > Tools > Report Unused Scripts` lists runtime scripts no shipped asset reaches and
+dumps the asset reference graph to `Temp/AssetEdges.txt` (binary scenes can't be grepped for GUIDs). Full detail, including the scroll-divisor formula, the object
 lifecycle and player switching: **`Docs/Legacy-Scrolling.md`**.
 
 ## Conventions

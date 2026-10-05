@@ -30,8 +30,8 @@ objects. Roughly two thirds of them are the same in every race: the player car, 
 the ground, grandstands, the paddock boundary, spawn markers, the RV — belonged to Watkins Glen alone.
 
 With one scene per track, 35 rounds means 35 copies of those shared managers, and every change to the race
-flow has to be repeated 35 times. `Assets/Levels/Racetracks/` is that problem already frozen in place: a
-folder of scenes on the previous system that nothing can cheaply update.
+flow has to be repeated 35 times. The old `Assets/Levels/Racetracks/` (deleted 2026-10-05) was that problem
+already frozen in place: a folder of scenes on the previous system that nothing could cheaply update.
 
 So: **the race scene is authored once and the track is content.**
 
