@@ -218,31 +218,28 @@ public class RacePositionTracker : MonoBehaviour
     {
         if (e.tf == null) return;
 
+        // Every car is measured along the MAIN centerline, including on pit road: the pit lane runs beside
+        // the main straight, so projecting a pit-lane car onto it gives where it is in the lap, and a car
+        // crossing the line in the pit lane is counted at the line, as real timing does. Pit-lane distance
+        // is a different scale — swapping to it when a car strayed off the racing surface into the pit band
+        // (running wide at the pit mouth) read the jump from ~a full lap to ~0 as a line crossing, and the
+        // race finished on the exit of the last corner.
         float len, dist;
-        bool rebaseToLine = true;   // false for pit-space distances, which aren't on the main centerline
         if (e.spline != null && e.spline.enabled && e.spline.TrackLength > 0f)
         {
             len = e.spline.TrackLength;
-            dist = e.spline.DistanceOnTrack;
+            dist = e.spline.IsOnPit ? track.NearestCenterlineDistance(e.tf.position) : e.spline.DistanceOnTrack;
         }
         else
         {
             len = _len;
-            // A spline-less car in the pit lane (the player's parked car pre-race) is located by pit
-            // distance, matching what AI splines report while on pit. Projecting a pit box onto the MAIN
-            // centerline can land just short of the start/finish line — a near-full-lap progress that
-            // ranked the parked player car P1.
-            bool onPit = track.IsOnPitSurface(e.tf.position);
-            rebaseToLine = !onPit;
-            dist = onPit
-                ? track.NearestPitDistance(e.tf.position)
-                : track.NearestCenterlineDistance(e.tf.position);
+            dist = track.NearestCenterlineDistance(e.tf.position);
         }
 
         // Distances are measured from the start of segment[0], but the lap rolls at the painted
         // start/finish line — which sits partway down the main straight on most tracks. Rebase so the
         // wrap (and therefore the lap count, lap timing and the race finish) happens at the line.
-        if (rebaseToLine && len > 0f)
+        if (len > 0f)
         {
             float sf = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;
             if (sf != 0f) dist = Mathf.Repeat(dist - sf, len);

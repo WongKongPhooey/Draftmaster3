@@ -44,6 +44,8 @@ public class PitStopController : MonoBehaviour
     public float forcedPitDelay = 30f;
     [Tooltip("Extra random seconds added on top of the delay, per car, so the field doesn't pit together.")]
     public float forcedPitSpread = 25f;
+    [Tooltip("A race shorter than this many laps never forces a stop — on fresh tyres nobody pits in a sprint, and handing the lead to whoever stays out is no race.")]
+    public int forcedPitMinRaceLaps = 10;
 
     const float MphToMps = 1f / 2.237f;
 
@@ -266,8 +268,15 @@ public class PitStopController : MonoBehaviour
     {
         if (_spline.IsOnPit) return false;
 
-        // Demo guarantee: pit once a set time into the race even on fresh tyres, so stops are always visible.
-        if (forcedPit && !_forcedDone && _greenTime >= 0f && Time.time - _greenTime >= _forcedThreshold)
+        // A race with a known length: nobody comes in on the last lap — the stop costs more than it can win back.
+        var director = RaceDirector.Instance;
+        bool knownRace = director != null && director.isActiveAndEnabled && director.raceLaps > 0;
+        if (knownRace && RaceDirector.Progress01 >= 1f - 1f / director.raceLaps) return false;
+
+        // Demo guarantee: pit once a set time into the race even on fresh tyres, so stops are always visible —
+        // but not in a race too short for a stop to make sense.
+        bool forceAllowed = forcedPit && (!knownRace || director.raceLaps >= forcedPitMinRaceLaps);
+        if (forceAllowed && !_forcedDone && _greenTime >= 0f && Time.time - _greenTime >= _forcedThreshold)
             return true;
 
         // Strategy: pit when the tyres are worn past this car's threshold.

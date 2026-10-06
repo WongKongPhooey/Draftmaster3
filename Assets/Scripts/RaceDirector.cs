@@ -15,7 +15,7 @@ public class RaceDirector : MonoBehaviour
     public static RaceDirector Instance { get; private set; }
 
     [Tooltip("Race length in laps (counted from the green flag).")]
-    public int raceLaps = 3;
+    public int raceLaps = 5;
     [Tooltip("Seconds after the checkered flag before still-running cars are classified where they are.")]
     public float stragglerTimeout = 45f;
     [Tooltip("Seconds the CHECKERED FLAG banner stays up.")]
