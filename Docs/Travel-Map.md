@@ -11,15 +11,23 @@ the game); junkyard **stock rerolls weekly**. All code in `Assets/Scripts/Travel
    **SKIP TRAVEL** (and the sheet's START NEXT WEEKEND) jumps straight to the next round of the demo
    calendar — `Draftmaster.Tracks.DemoCalendar`: Watkins Glen → Daytona → Martinsville, then back round.
    Arriving at a circuit on the map selects that circuit (`TrackSelection.Select`) instead.
-   **Tutorial leg** (Watkins Glen → Daytona, once per save): a sticky control-hint prompt says to stop at
-   Team HQ (`team_factory`) and the Garage (`moonshine_garage`) on the way. Daytona is the only
-   destination offered, the budget is the shortest route through both + `DetourAllowance`, a hop that
-   would leave either out of reach is refused, and START RACE WEEKEND waits for both. Rules in
+   **Tutorial leg** (Watkins Glen → Daytona, once per save): the prompt "Stop off at Team HQ to apply new
+   parts and sponsors." comes up (notice line + sticky control hint). The car will not move until Team HQ
+   (`team_factory`) has been tapped onto the route, HQ cannot be taken off it again, Daytona is the only
+   destination offered, the budget is the shortest route through HQ + `DetourAllowance`, a hop that would
+   leave HQ out of reach is refused, and START RACE WEEKEND waits for it. Rules in
    `Draftmaster.Tracks.TravelTutorialRoute` (pure, tested); progress in `TravelTutorial` (`travel.tutorial.*`
-   prefs). Change the waypoints by editing the two ids there.
-2. **Choose the next race**: click any circuit node. Stop budget = BFS direct route +
-   `TravelGraph.DetourAllowance` (2) — enough for a small detour, per the design intent.
-3. **Drive**: click an adjacent node, 1 stop each. Arriving anywhere opens the side panel. Minor
+   prefs). Change the waypoints by editing the ids there.
+2. **The next race**: parked at a round of the demo calendar, the map books the next round the moment it
+   opens (`TravelState.BookNextCalendarRace`), so the route is already drawn. Off the calendar, click any
+   circuit node. Stop budget = BFS direct route + `TravelGraph.DetourAllowance` (2).
+3. **Route + drive**: the planned route is drawn in light blue from where the car is to the race
+   (`TravelRoute`, pure rules in `Draftmaster.Tracks.TravelRoutePlan`, tested). Tap any other place to add
+   it as a stop — it slots in wherever it lengthens the drive least and the route is recalculated; tap it
+   again to take it off; a stop the budget can't afford is refused. The route never passes through the
+   destination on the way to a stop. Tap the next node on the route (or **DRIVE TO** in the side panel) to
+   drive one stop along it. Stops are stored in `travel.route.stops` and cleared when a new leg is booked.
+   Arriving anywhere opens the side panel. Minor
    locations are grey "?" dots until first visited — after that they show name + type (`[E]` engine
    shop / `[J]` junkyard) forever. That's the discovery/learning mechanic.
 4. **Shop**: junkyards sell a 3-item salvage roll (deterministic per location+week, 45–70% of book

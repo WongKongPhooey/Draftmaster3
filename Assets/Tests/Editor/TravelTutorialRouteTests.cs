@@ -40,11 +40,12 @@ public class TravelTutorialRouteTests
     static readonly string[] Both = { "H", "C" };
 
     [Test]
-    public void Waypoints_AreTeamHQ_AndTheGarage_OnTheWayToDaytona()
+    public void Waypoint_IsTeamHQ_OnTheWayToDaytona()
     {
         Assert.AreEqual("WatkinsGlen", TravelTutorialRoute.From);
         Assert.AreEqual("Daytona", TravelTutorialRoute.To);
-        CollectionAssert.AreEqual(new[] { "team_factory", "moonshine_garage" }, TravelTutorialRoute.Waypoints);
+        CollectionAssert.AreEqual(new[] { "team_factory" }, TravelTutorialRoute.Waypoints);
+        Assert.AreEqual("Stop off at Team HQ to apply new parts and sponsors.", TravelTutorialRoute.Prompt);
     }
 
     [Test]

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Tracks;
 using UnityEngine;
 
 // Where the player is on the road map, where they're headed, and how many stops they have left.
@@ -60,7 +61,17 @@ public static class TravelState
         DestinationId = circuitId;
         StopsLeft = budget;
         Week = Week + 1;
+        TravelRoute.Clear();   // a new leg starts as the direct road; the player taps stops onto it
         return true;
+    }
+
+    // Between two rounds of the calendar the next race is not a choice: it is booked the moment the map
+    // opens, so the route to it is already drawn. Off the calendar the player still picks a circuit.
+    public static bool BookNextCalendarRace()
+    {
+        if (HasDestination || DemoCalendar.RoundOf(CurrentNodeId) < 0) return false;
+        string next = DemoCalendar.After(CurrentNodeId);
+        return next != CurrentNodeId && ChooseDestination(next);
     }
 
     // Drive to an adjacent node, spending one stop. Marks it visited (that's the discovery mechanic) and
@@ -72,6 +83,7 @@ public static class TravelState
         CurrentNodeId = nodeId;
         StopsLeft = StopsLeft - 1;
         TravelTutorial.OnArrived(nodeId);
+        TravelRoute.OnArrived(nodeId);
         bool firstVisit = MarkVisited(nodeId);
         PlayerStatsLedger.Increment("travelstops");
         if (firstVisit)
@@ -92,6 +104,7 @@ public static class TravelState
         if (HasDestination) CurrentNodeId = DestinationId;
         DestinationId = "";
         StopsLeft = 0;
+        TravelRoute.Clear();
     }
 
     public static bool IsVisited(string nodeId)

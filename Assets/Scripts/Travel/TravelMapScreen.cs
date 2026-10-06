@@ -12,9 +12,14 @@ using UnityEngine.UI;
 // thin binder on the root. Node layout is editable in Prefab Mode — each node is a TravelNodeMarker
 // child whose RectTransform position is the node's map position; highway lines are rebuilt from marker
 // positions at runtime (and via the "Rebuild Edges" context menu while editing). TravelGraph supplies
-// topology and shop data only. Flow (unchanged from the old IMGUI version):
-//   1. Choose the next race venue (any circuit node). Stop budget = direct route + DetourAllowance.
-//   2. Drive node to node (click an adjacent node, 1 stop each). Minor locations show a side panel —
+// topology and shop data only. Flow:
+//   1. The next race venue. Parked at a round of the calendar it is booked the moment the map opens;
+//      anywhere else, click any circuit. Stop budget = direct route + DetourAllowance.
+//   2. The route is drawn (light blue roads) from where you are to the race. Tap any other place to call in
+//      there on the way — it slots in wherever it lengthens the drive least and the route is redrawn
+//      (TravelRoute); tap it again to take it off. Tap the next node on the route, or DRIVE TO, to drive
+//      one stop along it. The first leg between two races is the tutorial: the car will not move until
+//      Team HQ is on the route (TravelTutorial). Minor locations show a side panel —
 //      junkyards sell a weekly random salvage roll, engine shops a fixed catalog. Buying installs.
 //      Your own Team Factory sits in the middle of the map (the teal wrench): the parts your shop has
 //      built since your last visit are free there, and they only leave the rack if you drive out.
@@ -59,7 +64,9 @@ public class TravelMapScreen : MonoBehaviour
     static readonly Color EdgeColor = new Color32(0x39, 0x5a, 0x94, 0xd8);       // highway
     static readonly Color EdgeLiveColor = new Color32(0xf2, 0xc1, 0x4e, 0xff);   // a road out of where you stand
     static readonly Color EdgeFactoryColor = new Color32(0x3f, 0x9d, 0x8b, 0xff);// the slip roads to your shop
-    const float EdgeWidth = 3f, EdgeWidthLive = 5f;
+    // The planned route outranks all three, in the race's light blue: it is the way to get there.
+    static readonly Color EdgeRouteColor = DestHalo;
+    const float EdgeWidth = 3f, EdgeWidthLive = 5f, EdgeWidthRoute = 7f;
 
     [Header("Header")]
     public Text titleLabel;
@@ -163,6 +170,11 @@ public class TravelMapScreen : MonoBehaviour
         }
 
         noticeLabel.text = "";
+        // Between two rounds the next race is already decided, so the route to it is drawn from the off.
+        if (TravelState.BookNextCalendarRace())
+            Notice(TravelTutorial.LegBooked
+                ? Draftmaster.Tracks.TravelTutorialRoute.Prompt
+                : $"Next race: {TravelGraph.Get(TravelState.DestinationId).name}. Tap a place to call in there on the way.");
         SetUpView();
         Refresh();
         OpenView();
@@ -483,23 +495,39 @@ public class TravelMapScreen : MonoBehaviour
         TintEdges(null);
     }
 
-    // Recolours the baked highways for where the player is standing. Public because the editor's
+    // Recolours the baked highways for where the player is standing and the route they are on (`route` =
+    // the nodes after `currentId`, as TravelRoute.Path gives them). Public because the editor's
     // Preview PNG dresses the map by hand — the canvas is Screen Space Overlay, so a PNG render is the
     // only way to look at a restyle without Play Mode, and it has to show the live colour rules.
-    public void TintEdges(string currentId)
+    public void TintEdges(string currentId, IReadOnlyList<string> route = null)
     {
+        var routed = new HashSet<(string, string)>();
+        if (currentId != null && route != null)
+        {
+            string prev = currentId;
+            foreach (var id in route) { routed.Add(EdgeKey(prev, id)); prev = id; }
+        }
+
+        var onTop = new List<RectTransform>();
         foreach (var e in _edges)
         {
+            bool onRoute = routed.Contains(EdgeKey(e.a, e.b));
             bool live = currentId != null && (e.a == currentId || e.b == currentId);
             bool factory = IsFactory(e.a) || IsFactory(e.b);
 
-            e.image.color = live ? EdgeLiveColor : (factory ? EdgeFactoryColor : EdgeColor);
-            e.rect.sizeDelta = new Vector2(e.rect.sizeDelta.x, live ? EdgeWidthLive : EdgeWidth);
+            e.image.color = onRoute ? EdgeRouteColor
+                          : live ? EdgeLiveColor : (factory ? EdgeFactoryColor : EdgeColor);
+            e.rect.sizeDelta = new Vector2(e.rect.sizeDelta.x,
+                                           onRoute ? EdgeWidthRoute : live ? EdgeWidthLive : EdgeWidth);
             // Draw order carries the same ranking, or a gold road disappears under the fifty grey ones
-            // that cross it.
-            if (live || factory) e.rect.SetAsLastSibling();
+            // that cross it — and the route goes over everything.
+            if (onRoute) onTop.Add(e.rect);
+            else if (live || factory) e.rect.SetAsLastSibling();
         }
+        foreach (var rt in onTop) rt.SetAsLastSibling();
     }
+
+    static (string, string) EdgeKey(string a, string b) => string.CompareOrdinal(a, b) < 0 ? (a, b) : (b, a);
 
     // Editor preview hook (Draftmaster > Travel Map > Preview PNG): park the pins and tint the roads as
     // if the player were standing at `currentId` on the way to `destId`. Same code the live map runs, so
@@ -509,7 +537,7 @@ public class TravelMapScreen : MonoBehaviour
         if (_markers.Count == 0) CacheMarkers();
         PlacePin(herePin, TravelGraph.Get(currentId));
         PlacePin(destPin, TravelGraph.Get(destId));
-        TintEdges(currentId);
+        TintEdges(currentId, Draftmaster.Tracks.TravelRoutePlan.Route(currentId, null, destId, id => TravelGraph.Neighbors(id)));
     }
 
     static bool IsFactory(string nodeId)
@@ -525,7 +553,6 @@ public class TravelMapScreen : MonoBehaviour
         var dest = TravelGraph.Get(TravelState.DestinationId);
         bool choosing = dest == null;
         bool isCurrent = n == current;
-        bool reachable = !choosing && TravelGraph.AreAdjacent(current.id, n.id) && TravelState.StopsLeft > 0;
 
         if (isCurrent) { Refresh(); return; }
         if (choosing)
@@ -537,23 +564,63 @@ public class TravelMapScreen : MonoBehaviour
             }
             if (n.isCircuit && TravelState.ChooseDestination(n.id))
                 Notice(TravelTutorial.LegBooked
-                    ? $"Destination set: {n.name}. {TravelState.StopsLeft} stops - enough for Team HQ and the Garage on the way."
+                    ? $"Destination set: {n.name}. {Draftmaster.Tracks.TravelTutorialRoute.Prompt}"
                     : $"Destination set: {n.name}. {TravelState.StopsLeft} stops for a {TravelGraph.ShortestHops(TravelState.CurrentNodeId, n.id)}-stop direct run.");
             Refresh();
             return;
         }
-        if (reachable && !TravelTutorial.CanMoveTo(n.id))
+
+        // On the road: the next node along the drawn route is where a tap drives. Anywhere else is a stop
+        // to add to the route — or, tapped again, to take off it — and the route is redrawn either way.
+        if (n.id == TravelRoute.NextHop()) { DriveTo(n); return; }
+        if (n == dest) { Notice($"The route already ends at {dest.name}."); return; }
+
+        if (TravelRoute.HasStop(n.id))
         {
-            Notice(n.id == Draftmaster.Tracks.TravelTutorialRoute.To
-                ? "Not yet - Team HQ and the Garage first."
-                : "That road won't leave enough stops for Team HQ and the Garage.");
+            if (!TravelTutorial.CanRemoveStop(n.id))
+            {
+                Notice("Team HQ stays on the route - the new parts and sponsors are waiting there.");
+                return;
+            }
+            TravelRoute.Remove(n.id);
+            Notice($"{MapName(n)} taken off the route. {RouteSummary()}");
+            Refresh();
             return;
         }
-        if (reachable && TravelState.MoveTo(n.id))
+
+        int need = TravelRoute.LengthWith(n.id);
+        if (need < 0) { Notice($"No road to {MapName(n)} from here."); return; }
+        if (need > TravelState.StopsLeft)
+        {
+            Notice($"Too far - via {MapName(n)} is {need} stops and you have {TravelState.StopsLeft}.");
+            return;
+        }
+        TravelRoute.Add(n.id);
+        Notice($"Rerouted via {MapName(n)}. {RouteSummary()}");
+        Refresh();
+    }
+
+    // One stop along the route. The tutorial can hold the car back (Team HQ not on the route yet).
+    void DriveTo(TravelNode n)
+    {
+        if (!TravelTutorial.CanMoveTo(n.id)) { Notice(TravelTutorial.BlockedReason(n.id)); return; }
+        if (TravelState.MoveTo(n.id))
         {
             if (!n.isCircuit) Notice($"Pulled in at {n.name}.");
             Refresh();
         }
+    }
+
+    // A place's name as the map shows it: somewhere never visited is still a "?".
+    static string MapName(TravelNode n) =>
+        n.isCircuit || n.locationType == TravelLocationType.TeamFactory || TravelState.IsVisited(n.id)
+            ? n.name : "somewhere new";
+
+    static string RouteSummary()
+    {
+        var path = TravelRoute.Path();
+        var dest = TravelGraph.Get(TravelState.DestinationId);
+        return path == null || dest == null ? "" : $"{path.Count} stops to {dest.name}.";
     }
 
     // ---------------- refresh (restyle everything from state) ----------------
@@ -568,17 +635,18 @@ public class TravelMapScreen : MonoBehaviour
         titleLabel.text = choosing
             ? "THE ROAD    —    choose your next race (click a circuit)"
             : $"THE ROAD TO {dest.name.ToUpperInvariant()}";
+        var path = choosing ? null : TravelRoute.Path();
         _subBase = choosing
             ? $"Week {TravelState.Week}   ·   You are at {current.name}"
-            : $"Week {TravelState.Week}   ·   At {current.name}   ·   STOPS LEFT: {TravelState.StopsLeft}";
+            : $"Week {TravelState.Week}   ·   At {current.name}   ·   ROUTE: {path?.Count ?? 0}   ·   STOPS LEFT: {TravelState.StopsLeft}";
         ApplySubLabel();
         cashLabel.text = PlayerWallet.CashText;
 
         // The view rides along with the player as they hop, keeping whatever zoom they chose.
         FollowFocus(current);
 
-        RefreshMarkers(choosing, current, dest);
-        RefreshSidePanel(choosing, current, dest);
+        RefreshMarkers(choosing, current, dest, path);
+        RefreshSidePanel(choosing, current, dest, path);
         RefreshTutorialPrompt();
     }
 
@@ -611,21 +679,22 @@ public class TravelMapScreen : MonoBehaviour
         subLabel.text = _subBase + "   ·   " + hint;
     }
 
-    void RefreshMarkers(bool choosing, TravelNode current, TravelNode dest)
+    void RefreshMarkers(bool choosing, TravelNode current, TravelNode dest, List<string> path)
     {
+        string next = path != null && path.Count > 0 ? path[0] : null;
+        var stops = choosing ? new List<string>() : TravelRoute.Stops();
         foreach (var marker in _markers.Values)
         {
             var n = marker.Node;
             bool isCurrent = n == current;
             bool isDest = n == dest;
-            bool adjacent = TravelGraph.AreAdjacent(current.id, n.id);
-            bool reachable = !choosing && adjacent && TravelState.StopsLeft > 0 && TravelTutorial.CanMoveTo(n.id);
+            bool reachable = n.id == next && TravelState.StopsLeft > 0 && TravelTutorial.CanMoveTo(n.id);
             bool choosable = choosing && n.isCircuit && !isCurrent && TravelTutorial.CanChoose(n.id);
-            bool waypoint = TravelTutorial.IsPendingWaypoint(n.id);
-            // A road or a race the tutorial rules out stays clickable, so the click can say why not.
-            bool ruledOut = (choosing && n.isCircuit && !isCurrent)
-                         || (!choosing && adjacent && TravelState.StopsLeft > 0);
-            bool clickable = choosable || reachable || ruledOut || isCurrent;
+            bool waypoint = TravelTutorial.IsPendingWaypoint(n.id) || stops.Contains(n.id);
+            // On the road every place is clickable — the next stop drives, the rest join the route. Choosing,
+            // a race the tutorial rules out stays clickable so the click can say why not.
+            bool ruledOut = choosing && n.isCircuit && !isCurrent;
+            bool clickable = !choosing || choosable || ruledOut || isCurrent;
 
             marker.button.interactable = clickable;
 
@@ -649,7 +718,7 @@ public class TravelMapScreen : MonoBehaviour
         // the race you are driving to. They are what the eye should find first on a board of 75 dots.
         PlacePin(herePin, current);
         PlacePin(destPin, dest);
-        TintEdges(current != null ? current.id : null);
+        TintEdges(current != null ? current.id : null, path);
     }
 
     // Parks a pin just above a node's dot, or hides it when there is nothing to point at.
@@ -696,7 +765,7 @@ public class TravelMapScreen : MonoBehaviour
 
     // ---------------- side panel ----------------
 
-    void RefreshSidePanel(bool choosing, TravelNode current, TravelNode dest)
+    void RefreshSidePanel(bool choosing, TravelNode current, TravelNode dest, List<string> path)
     {
         // Car build summary — what's installed, so shop comparisons are one glance.
         var sb = new StringBuilder();
@@ -724,7 +793,7 @@ public class TravelMapScreen : MonoBehaviour
         if (current.isCircuit)
         {
             if (current == dest && !TravelTutorial.CanStartWeekend)
-                flavor = "You're early. Team HQ and the Garage first.";
+                flavor = "You're early. Team HQ first.";
             else if (current == dest)
             {
                 flavor = "This is the place. Time to go racing.";
@@ -757,6 +826,18 @@ public class TravelMapScreen : MonoBehaviour
             }
         }
 
+        // The way on: the next stop along the route, unless the tutorial is still waiting on Team HQ.
+        string next = path != null && path.Count > 0 ? path[0] : null;
+        if (current != dest && next != null && TravelState.StopsLeft > 0)
+        {
+            var nextNode = TravelGraph.Get(next);
+            flavor += $"\n\nROUTE: {path.Count} stops to {dest.name}. Tap a place on the map to call in there on the way.";
+            if (!TravelTutorial.RouteReady)
+                flavor += "\n\n" + Draftmaster.Tracks.TravelTutorialRoute.Prompt + " Tap Team HQ to add it to your route.";
+            else if (TravelTutorial.CanMoveTo(next))
+                ShowAction($"DRIVE TO {MapName(nextNode).ToUpperInvariant()}", () => DriveTo(nextNode));
+        }
+
         // Stranded? Tow covers the rest of the way, for a price. Never a softlock.
         if (current != dest && TravelState.StopsLeft <= 0)
         {
@@ -765,6 +846,7 @@ public class TravelMapScreen : MonoBehaviour
             {
                 PlayerWallet.Add(-TowCost); // clamped at $0 — the tow always runs
                 TravelState.CurrentNodeId = dest.id;
+                TravelRoute.Clear();
                 Notice($"Towed to {dest.name}. The driver talked the whole way.");
                 Refresh();
             });

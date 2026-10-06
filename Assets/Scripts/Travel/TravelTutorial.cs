@@ -2,13 +2,14 @@ using System.Collections.Generic;
 using Draftmaster.Tracks;
 using UnityEngine;
 
-// Progress through the travel map's tutorial leg (Watkins Glen -> Daytona via Team HQ and the garage — see
+// Progress through the travel map's tutorial leg (Watkins Glen -> Daytona via Team HQ — see
 // TravelTutorialRoute for the rules). PlayerPrefs-backed under "travel." like the rest of TravelState, so a
 // mid-trip quit, a walk round a landmark or CareerReset all do the right thing.
 //
 // While the leg is on, the map only offers Daytona as the destination, budgets enough stops for the
-// detour, refuses any hop that would leave a waypoint out of reach, and holds START RACE WEEKEND back until
-// both have been visited.
+// detour, and tells the player to stop off at Team HQ. The car does not move until HQ has been tapped onto
+// the drawn route (TravelRoute), HQ cannot be taken off it again, any hop that would leave it out of reach
+// is refused, and START RACE WEEKEND is held back until it has been visited.
 public static class TravelTutorial
 {
     const string DoneKey = "travel.tutorial.done";
@@ -50,9 +51,33 @@ public static class TravelTutorial
         PlayerPrefs.Save();
     }
 
+    // Every waypoint still to visit is on the route the player has drawn. Until then the car stays put.
+    public static bool RouteReady
+    {
+        get
+        {
+            if (!Active || !LegBooked) return true;
+            foreach (var id in Remaining()) if (!TravelRoute.HasStop(id)) return false;
+            return true;
+        }
+    }
+
     public static bool CanMoveTo(string nodeId) =>
         !Active || !LegBooked ||
-        TravelTutorialRoute.CanStep(nodeId, Remaining(), TravelTutorialRoute.To, TravelState.StopsLeft, Hops);
+        (RouteReady &&
+         TravelTutorialRoute.CanStep(nodeId, Remaining(), TravelTutorialRoute.To, TravelState.StopsLeft, Hops));
+
+    // Why CanMoveTo said no, for the map's notice line.
+    public static string BlockedReason(string nodeId)
+    {
+        if (!RouteReady) return "Not without Team HQ - tap it on the map to add it to your route.";
+        return nodeId == TravelTutorialRoute.To
+            ? "Not yet - Team HQ first."
+            : "That road won't leave enough stops for Team HQ.";
+    }
+
+    // A waypoint the leg still needs stays on the route once it is there.
+    public static bool CanRemoveStop(string nodeId) => !IsPendingWaypoint(nodeId) || !LegBooked;
 
     public static void OnArrived(string nodeId)
     {
@@ -73,14 +98,9 @@ public static class TravelTutorial
 
     static string NameOf(string id) => TravelGraph.Get(id)?.name ?? id;
 
-    // What a waypoint is called on the map while the tutorial is pointing at it. The garage has never been
-    // visited, so the map would otherwise draw it as a "?" the player is meant to drive to.
-    public static string WaypointLabel(string nodeId)
-    {
-        if (nodeId == TravelTutorialRoute.TeamHQ) return "TEAM HQ";
-        if (nodeId == TravelTutorialRoute.Garage) return "GARAGE - " + NameOf(nodeId).ToUpperInvariant();
-        return null;
-    }
+    // What a waypoint is called on the map while the tutorial is pointing at it.
+    public static string WaypointLabel(string nodeId) =>
+        nodeId == TravelTutorialRoute.TeamHQ ? "TEAM HQ" : null;
 
     public static bool IsPendingWaypoint(string nodeId) => Active && Remaining().Contains(nodeId);
 
@@ -89,16 +109,14 @@ public static class TravelTutorial
     {
         if (!Active) return null;
         string to = NameOf(TravelTutorialRoute.To);
-        if (!LegBooked) return $"Pick {to} - on the way, stop at Team HQ and the Garage";
+        if (!LegBooked) return $"Pick {to}. {TravelTutorialRoute.Prompt}";
 
-        var left = Remaining();
-        if (left.Count == 2) return $"On the way to {to}, stop at Team HQ and the Garage";
-        if (left.Count == 1)
-            return left[0] == TravelTutorialRoute.TeamHQ
-                ? $"Garage done - now Team HQ, then {to}"
-                : $"Team HQ done - now the Garage, then {to}";
+        if (Remaining().Count > 0)
+            return RouteReady
+                ? $"Route set via Team HQ - follow it, then on to {to}"
+                : TravelTutorialRoute.Prompt;
         return TravelState.CurrentNodeId == TravelTutorialRoute.To
             ? "Made it - START RACE WEEKEND"
-            : $"Both stops made - head for {to}";
+            : $"Team HQ done - follow the route to {to}";
     }
 }

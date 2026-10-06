@@ -3,19 +3,21 @@ using System.Collections.Generic;
 
 namespace Draftmaster.Tracks
 {
-    // The demo's first road trip, Watkins Glen to Daytona, is the travel map's tutorial: on the way the player
-    // has to call in at the team's HQ and at a garage, so they learn that stops are places with things in
-    // them before they ever plan a leg of their own. This is the pure half — which places, and whether a
-    // route can still take them all in. TravelTutorial (runtime) holds the progress and asks these.
+    // The demo's first road trip, Watkins Glen to Daytona, is the travel map's tutorial: the route comes up
+    // drawn straight to Daytona, and the player is told to stop off at the team's HQ on the way — the car
+    // will not move until they have tapped HQ onto the route. This is the pure half — which places, and
+    // whether a route can still take them all in. TravelTutorial (runtime) holds the progress and asks these.
     public static class TravelTutorialRoute
     {
         public const string From = "WatkinsGlen";
         public const string To = "Daytona";
 
-        // Travel-graph node ids, in the order the prompt names them. Either order is allowed on the road.
+        // Travel-graph node ids the leg has to call in at.
         public const string TeamHQ = "team_factory";
-        public const string Garage = "moonshine_garage";
-        public static readonly IReadOnlyList<string> Waypoints = new[] { TeamHQ, Garage };
+        public static readonly IReadOnlyList<string> Waypoints = new[] { TeamHQ };
+
+        // What the player is told the first time they have to drive between two races.
+        public const string Prompt = "Stop off at Team HQ to apply new parts and sponsors.";
 
         // Fewest hops from `from` to `dest` passing through every one of `remaining`, in whichever order is
         // shortest. -1 when any leg is unreachable. `hops` is the graph's shortest-path count (-1 = none).
