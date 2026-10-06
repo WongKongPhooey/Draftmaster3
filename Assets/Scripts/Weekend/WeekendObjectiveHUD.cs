@@ -64,6 +64,18 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // Which device the two lines were written for; picking the pad up rewrites them.
     int _glyphVersion = -1;
 
+    // Once Sunday afternoon is spent nothing is ever booked again, but the weekend is not finished with the
+    // player: they still have to drive to the next round. The results screen's HIT THE ROAD opens the travel
+    // map straight away — quit before using it and the game came back to a paddock with no marker, no strip
+    // and no hint that the way on is the satnav in the RV's cab. So a spent weekend gets an objective of its
+    // own: the motorhome from outside, the satnav from inside. Arriving anywhere resets the weekend
+    // (TravelMapScreen -> RaceWeekend.ResetWeekend), which is what takes it down again.
+    static readonly WeekendActivity HitTheRoad = new WeekendActivity { id = "weekend.hit-the-road", title = "HIT THE ROAD" };
+    Transform _roadTarget;
+    bool _roadInside;
+    RVInterior _satnavRV;
+    Transform _satnav;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Install()
     {
@@ -165,6 +177,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
     void Refresh()
     {
         var activity = WeekendAppointment.Pending;
+        if (activity == null && RefreshHitTheRoad()) return;
+        _roadTarget = null;
         if (activity == null)
         {
             _shown = null;
@@ -213,6 +227,72 @@ public class WeekendObjectiveHUD : MonoBehaviour
         }
     }
 
+    // The spent-weekend objective. False (and nothing changed) unless the weekend is over and there is a
+    // motorhome in this scene to send the player to — the title screen and the garage have none.
+    bool RefreshHitTheRoad()
+    {
+        // The host drives the career; a co-op guest is carried along on the host's travel.
+        if (!WeekendLedger.WeekendOver || Coop.IsGuest) return false;
+
+        var rv = RVInterior.Current;
+        bool inside = rv != null && rv.IsInside;
+        if (rv != _satnavRV)
+        {
+            // The satnav sits under the interior root, which is switched off while outside — hence the
+            // inactive search. Looked up once per RV, not per frame.
+            _satnavRV = rv;
+            var nav = rv != null ? rv.GetComponentInChildren<SatnavInteractable>(true) : null;
+            _satnav = nav != null ? nav.transform : null;
+        }
+
+        Transform target = inside ? _satnav : null;
+        if (target == null)
+        {
+            var home = WeekendVenueAnchor.Find(WeekendVenue.Motorhome);
+            target = home != null ? home.transform : null;
+            inside = false;
+        }
+        if (target == null) return false;
+
+        var player = WeekendVenueAnchor.OnFootPlayer();
+        _onFoot = player != null;
+        float distance = player != null ? Vector2.Distance(player.position, target.position) : -1f;
+        // Inside, "here" is the satnav's own prompt range: that is where E starts doing something.
+        float hereRange = inside && _satnav != null ? Mathf.Max(HereMetres, rv.satnavRange) : HereMetres;
+        bool here = distance >= 0f && distance <= hereRange;
+        int metres = Mathf.RoundToInt(Mathf.Max(0f, distance));
+
+        bool changed = _shown != HitTheRoad || target != _roadTarget || inside != _roadInside;
+        _shown = HitTheRoad;
+        _roadTarget = target;
+        _roadInside = inside;
+        if (!changed && here == _here && metres == _metresLeft && _detailText.Length > 0 &&
+            _glyphVersion == InputGlyphs.Version)
+            return true;
+
+        _here = here;
+        _metresLeft = metres;
+        _glyphVersion = InputGlyphs.Version;
+
+        string next = TravelState.HasDestination
+            ? TravelState.DestinationId
+            : Draftmaster.Tracks.DemoCalendar.After(TrackSelection.CurrentId);
+        string nextName = string.IsNullOrEmpty(next) ? null : TrackCatalog.DisplayName(next);
+
+        _detailText = !inside
+            ? $"{Capitalise(WeekendVenues.Directions(WeekendVenue.Motorhome))}  ·  {metres} m"
+            : !here
+                ? $"The satnav is in the cab  ·  {metres} m"
+                : InputGlyphs.UsingTouch
+                    ? "You're here — tap the satnav to plan the drive"
+                    : "You're here — press " + InputGlyphs.Label("E", PadBindings.Interact) + " to plan the drive";
+        string footer = nextName != null ? "Next race: " + nextName : "The weekend is done";
+        _footerText = InputGlyphs.UsingTouch || here
+            ? footer
+            : $"{footer}  ·  [{InputGlyphs.Label(RecallKey.ToString().ToUpperInvariant(), PadBindings.RecallObjective)}] AGAIN";
+        return true;
+    }
+
     // Hang the objective on the game's own marker system rather than drawing a second set of arrows: the
     // spawn card already puts an edge-clamped icon, a distance and a fly-in on whatever the player is meant
     // to walk to, and the weekend's bookings are exactly that.
@@ -233,7 +313,10 @@ public class WeekendObjectiveHUD : MonoBehaviour
         // comes back if they leave some other way with the booking still open.
         bool watching = GrandstandVisit.Watching || GrandstandSpectate.Watching;
         var activity = watching ? null : WeekendAppointment.Pending;
-        string id = activity != null ? activity.id : "";
+        // Nothing booked and the weekend spent: the marker goes on the way out (motorhome, then satnav).
+        bool road = !watching && activity == null && _shown == HitTheRoad && _roadTarget != null;
+        if (road) activity = HitTheRoad;
+        string id = activity == null ? "" : road ? activity.id + (_roadInside ? ":cab" : ":rv") : activity.id;
         if (id == _markedId && (_marked != null || id == "")) return;
 
         if (_marked != null) intro.RemoveMarker(_marked);
@@ -242,7 +325,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
         if (activity == null) return;
 
-        var target = WeekendAppointment.Target();
+        var target = road ? _roadTarget : WeekendAppointment.Target();
         if (target == null) return;
 
         _marked = target;
@@ -271,7 +354,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     {
         get
         {
-            if (WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen) return false;
+            if (WeekendScheduleUI.IsOpen || WeekendModal.AnyOpen || TravelMapScreen.IsOpen) return false;
             if (NPCInteractable.AnyConversationActive || DialogueChoiceUI.IsOpen) return false;
 
             // Mid-handover: the strip is behind the blackout anyway, and T out of it would move the player
@@ -294,6 +377,14 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
     public static bool TravelThere()
     {
+        // The spent weekend: T takes you to your motorhome's door mark. Inside, the satnav is a step away.
+        if (WeekendAppointment.Pending == null && Instance != null && Instance._shown == HitTheRoad)
+        {
+            if (Instance._roadInside) return false;
+            var home = WeekendVenueAnchor.Find(WeekendVenue.Motorhome);
+            return home != null && TravelTo(home.StandPosition);
+        }
+
         var anchor = WeekendAppointment.Where();
         var target = WeekendAppointment.Target();
         if (target == null) return false;
@@ -358,7 +449,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
         // button on a pad, a walking figure on a phone. Only while there is somewhere to travel to.
         // Sat to the RIGHT of the text rather than under it: the strip is at the top of the screen over the
         // game, and a fourth row made it tall enough to hide what the player is walking into. Wider is cheaper.
-        bool travel = !_here;
+        // Inside the RV there is nowhere to fast travel to: the satnav is across the cab.
+        bool travel = !_here && !(activity == HitTheRoad && _roadInside);
         Vector2 travelSize = travel ? PixelGUI.ActionButtonSize(TravelKey.ToString(), TravelLabel) : Vector2.zero;
         float travelGap = travel ? PixelGUI.Px(10f) : 0f;
 
