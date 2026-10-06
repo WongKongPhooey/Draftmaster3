@@ -73,6 +73,8 @@ public class AIRacingBehaviour : MonoBehaviour
     public float stoppedPassClearance = 3.5f;
     [Tooltip("Lateral speed (m/s) used to step out round a stopped car — quicker than a racing line change.")]
     public float stoppedPassLateralSpeed = 3f;
+    [Tooltip("Right up against a stopped car and not yet out round it, still roll at this (mph) while steering out. A dead stop there never ends: a car only moves sideways while it is rolling, so it waited forever, became a stopped car itself, and the queue behind it grew all race.")]
+    public float stoppedCreepMph = 5f;
     [Tooltip("Inside the yellow zone, start lining up on the wide side of the stopped car this far (m) short of it — whatever cars are in between.")]
     public float stoppedLineUpMetres = 150f;
 
@@ -401,13 +403,12 @@ public class AIRacingBehaviour : MonoBehaviour
             float clear = Mathf.Abs(_spline.LateralOnTrack - incidentLat);
             if (clear < stoppedPassClearance - 0.8f)
             {
-                // Not out of its way yet: never arrive faster than we could stop short of it — but keep a creep
-                // while there's room, or a car stopped behind it could never edge out round it (a car only
-                // moves sideways while it's rolling).
+                // Not out of its way yet: never arrive faster than we could stop short of it — but always keep a
+                // creep, or a car stopped behind it could never edge out round it (a car only moves sideways while
+                // it's rolling). Holding 0 inside the last 6 m is what turned one wreck into a stopped queue.
                 float room = Mathf.Max(0f, incidentGap - 6f);
-                incidentStopCap = room > 0f
-                    ? Mathf.Max(8f, Mathf.Sqrt(2f * followDecelMps2 * 0.6f * room) / MphToMps)
-                    : 0f;
+                incidentStopCap = Mathf.Max(room > 0f ? 8f : stoppedCreepMph,
+                                            Mathf.Sqrt(2f * followDecelMps2 * 0.6f * room) / MphToMps);
             }
         }
 

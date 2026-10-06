@@ -144,12 +144,16 @@ public class CautionWatch : MonoBehaviour
         {
             var e = order[i];
             if (e == null || e.tf == null) continue;
+            // trackDistance, not progress: the AI test their own DistanceOnTrack (from segment[0]) against these,
+            // and progress is counted from the start/finish line. At Watkins Glen that put every wreck 250 m
+            // behind where it was — the field lifted for a yellow a quarter-kilometre short of the scene, then
+            // drove into it at racing speed.
             bool stopped = e.speedMps <= stoppedMps && !InPits(tracker, e);
             if (StoppedLongEnough(e.tf, stopped, now))
-                _incidents.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.progress, len) });
+                _incidents.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.trackDistance, len) });
             if (_wallHitAt.TryGetValue(e.tf, out float hitAt) && now - hitAt <= wallHitFlagSeconds
                 && !InPits(tracker, e))
-                _wallHits.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.progress, len) });
+                _wallHits.Add(new Incident { car = e.tf, distance = Mathf.Repeat(e.trackDistance, len) });
         }
     }
 
@@ -185,7 +189,7 @@ public class CautionWatch : MonoBehaviour
             for (int i = 0; i < order.Count; i++) if (order[i] != null && order[i].isPlayer) { me = order[i]; break; }
             if (me != null && me.tf != null)
             {
-                float myDist = Mathf.Repeat(me.progress, _lapLength);
+                float myDist = Mathf.Repeat(me.trackDistance, _lapLength);
                 for (int i = 0; i < _incidents.Count; i++)
                 {
                     if (_incidents[i].car == me.tf) continue;

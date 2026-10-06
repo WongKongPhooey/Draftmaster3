@@ -35,6 +35,10 @@ public class RacePositionTracker : MonoBehaviour
         public bool hasPrev;
         public float prevProgress;
         public float progress;
+        // Where the car is along the centerline measured from segment[0] — the scale every SplineDriver
+        // (DistanceOnTrack) works in. `progress` is measured from the start/finish line instead, which is
+        // startFinishDistance further on; anything compared against an AI brain's distance must use this.
+        public float trackDistance;
         public float speedMps;
         public float gapToLeaderSec;
         public int position;          // 1 = leader
@@ -239,6 +243,7 @@ public class RacePositionTracker : MonoBehaviour
         // Distances are measured from the start of segment[0], but the lap rolls at the painted
         // start/finish line — which sits partway down the main straight on most tracks. Rebase so the
         // wrap (and therefore the lap count, lap timing and the race finish) happens at the line.
+        e.trackDistance = dist;
         if (len > 0f)
         {
             float sf = (track != null && track.track != null) ? track.track.startFinishDistance : 0f;

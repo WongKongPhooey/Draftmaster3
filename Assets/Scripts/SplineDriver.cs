@@ -804,6 +804,34 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             for (int i = n - 2; i >= 0; i--) ApplyBrakeLimit(i, i + 1);
             if (loop) ApplyBrakeLimit(n - 1, 0);
         }
+
+        // The grip ceiling gets a braking zone of its own. It caps whatever is laid on top of the baked profile —
+        // the live pace ratio and, above all, the tow (+12 mph at Watkins Glen) — but only where the car already
+        // is. The profile's braking curve plus a flat boost is a braking curve 5 m/s too high: a car towed down
+        // the back straight braked from there, met the corner's ceiling as a sudden 5 m/s step at turn-in, and
+        // ran 6 m wide at the bus stop every lap of the race. Relaxed backward, the ceiling ends the tow where
+        // braking has to start.
+        for (int p = 0; p < passes; p++)
+        {
+            for (int i = n - 2; i >= 0; i--) ApplyGripLimitBraking(i, i + 1);
+            if (loop) ApplyGripLimitBraking(n - 1, 0);
+        }
+    }
+
+    void ApplyGripLimitBraking(int i, int next)
+    {
+        float vNextMph = _gripLimitProfile[next];
+        if (vNextMph >= float.MaxValue) return;   // a straight ahead: nothing to brake for
+        float d = _mainSamples[next].distance - _mainSamples[i].distance;
+        if (d < 0f) d += _mainLength;
+        if (d <= 0f) return;
+        float vNext = vNextMph * MphToMps;
+        // Sample the decel curve at roughly the speed the car brakes from here: its own profile speed.
+        float vHere = Mathf.Min(_gripLimitProfile[i], Mathf.Max(_speedProfile[i], vNextMph));
+        float decel = SampleDecel(vHere / ProfileStretch) * ProfileStretch;
+        decel *= FrictionCircleHeadroom(i, vHere * MphToMps);
+        float vMaxMph = Mathf.Sqrt(vNext * vNext + 2f * decel * d) * MpsToMph;
+        if (vMaxMph < _gripLimitProfile[i]) _gripLimitProfile[i] = vMaxMph;
     }
 
     // Corner target from the driven line's real radius: v = √(r · a_lat). Same μ the physics friction circle
