@@ -10,7 +10,7 @@ public class AIDriverBinding : MonoBehaviour
     public VehicleInfo vehicleInfo;
 
     // Share of the grip limit the lowest-rated driver corners at (the best take all of it).
-    public const float MinCornerCommitment = 0.93f;
+    public const float MinCornerCommitment = AIRatings.MinCornerCommitment;
 
     SplineDriver _spline;
 
@@ -71,29 +71,20 @@ public class AIDriverBinding : MonoBehaviour
             var ratings = AIRatings.ForEvent(driver.Qualifying, TrackAptitude(driver, TrackSelection.CurrentType),
                                              driver.Consistency, driver.Aggression, Driver.StatMax, rolls.x, rolls.y);
 
-            float aggression01 = ratings.aggression01;
-            // Everyone runs the ideal line; aggression only nudges them fractionally off it (-0.05 = a touch
-            // inside, +0.08 = a touch outside). Kept tight so the field visibly follows the ideal line.
-            _spline.lineFactor = Mathf.Lerp(-0.05f, 0.08f, aggression01);
-            racing.aggression01 = aggression01;
+            // The maths is AIRatings', shared with the headless pack sim so it races the same field.
+            _spline.lineFactor = AIRatings.LineFactor(ratings.aggression01);
+            racing.aggression01 = ratings.aggression01;
+            racing.consistency01 = ratings.consistency01;
 
-            float strength01 = ratings.strength01;
-            float consistency01 = ratings.consistency01;
-            racing.consistency01 = consistency01;
-
-            float pace = Mathf.Lerp(0.93f, 1.04f, strength01);
-            float jitter = Random.Range(1f - (1f - consistency01) * 0.04f, 1f);
-            float basePace = pace * jitter;
+            // Per-session noise on top of the event roll: a little day-to-day variation.
+            float basePace = AIRatings.BasePace(ratings.strength01, ratings.consistency01, Random.value);
             _spline.paceMultiplier = basePace;
             racing.SetBasePace(basePace);
 
             // How close to the grip limit they corner. Pace can't do this: it is capped at the limit, and every
             // car sits above it, so without it the whole field cornered identically, strung out ~5 lengths
-            // apart and never passed. The best drivers use all of it; the weakest rated give up ~4%, a second
-            // or two a lap at Watkins Glen. Consistency adds a little spread on top so equal-rated drivers differ.
-            float commitJitter = Random.Range(-(1f - consistency01) * 0.012f, (1f - consistency01) * 0.004f);
-            _spline.cornerCommitment = Mathf.Clamp(Mathf.Lerp(MinCornerCommitment, 1f, strength01) + commitJitter,
-                                                   MinCornerCommitment - 0.01f, 1f);
+            // apart and never passed.
+            _spline.cornerCommitment = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, Random.value);
 
             gameObject.name = $"AI_{driver.LastName}_{driver.Id}";
         }

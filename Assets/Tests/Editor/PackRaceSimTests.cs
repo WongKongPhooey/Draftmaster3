@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using Draftmaster.Sim;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -94,6 +95,11 @@ public class PackRaceSimTests
         // car there, and how they behaved passing it.
         public float stoppedAt = -1f, cleanMph, yellowMph;
         public int cleanSamples, yellowSamples, yellowPasses, stoppedHits;
+        // Pack shape. Car-time with one / two or more cars overlapping it alongside (2-wide / 3-wide+), how far a
+        // car with nobody near it strays from its own planned line, and how often a car's intended sideways
+        // offset reverses (a weave) per car per lap.
+        public float wide2Share, wide3Share, aloneLineRms, aloneLineMax, weavesPerCarLap;
+        public int laps;
     }
 
     [Explicit("Diagnostic: a pack of AI racing at Watkins Glen as the game now sets it up.")]
@@ -193,7 +199,45 @@ public class PackRaceSimTests
 
     static string Summary(string title, Result r) =>
         $"{title}: {r.passes} passes, {r.contacts} contacts, {r.offs} offs, median gap {r.medianGap:0.0} m, " +
-        $"{r.under20Share:P0} of the time within 20 m, {r.towShare:P0} in a tow, best laps {r.fastestLap:0.00}..{r.slowestBest:0.00} s\n";
+        $"{r.under20Share:P0} of the time within 20 m, {r.towShare:P0} in a tow, best laps {r.fastestLap:0.00}..{r.slowestBest:0.00} s, " +
+        $"2-wide {r.wide2Share:P1}, 3-wide+ {r.wide3Share:P1}, alone off-line rms {r.aloneLineRms:0.00} m (max {r.aloneLineMax:0.0}), " +
+        $"{r.weavesPerCarLap:0.00} weaves/car/lap\n";
+
+    // The superspeedway baseline: a full Cup field at Daytona across several rosters. One line per seed and the
+    // totals, so a change to the AI can be judged against it rather than against one lucky draw.
+    [Explicit("Diagnostic: a 40-car pack at Daytona, three rosters - the superspeedway baseline.")]
+    [Test, Timeout(1800000)]
+    public void DaytonaBaseline() => Baseline("Daytona", new[] { 1, 2, 3 }, 40, 6);
+
+    [Explicit("Diagnostic: the same baseline at Talladega.")]
+    [Test, Timeout(1800000)]
+    public void TalladegaBaseline() => Baseline("Talladega", new[] { 1, 2, 3 }, 40, 6);
+
+    [Explicit("Diagnostic: one Daytona roster with every off and the finishing order logged.")]
+    [Test, Timeout(1800000)]
+    public void Daytona() => Log("daytona seed 1", Run("Daytona", new Settings { cars = 40, laps = 6, seed = 1 }));
+
+    [Explicit("Diagnostic: one Daytona roster, the last two seconds before each off, step by step.")]
+    [Test, Timeout(1800000)]
+    public void DaytonaTraceOffs() => Log("daytona trace offs", Run("Daytona", new Settings { cars = 40, laps = 3, seed = 1, traceOffs = true }));
+
+    void Baseline(string trackId, int[] seeds, int cars, int laps)
+    {
+        var sb = new StringBuilder($"[PackSim] {trackId} baseline, {cars} cars, {laps} laps\n");
+        float passes = 0, contacts = 0, offs = 0, w2 = 0, w3 = 0, rms = 0, weaves = 0, tow = 0;
+        foreach (int seed in seeds)
+        {
+            var r = Run(trackId, new Settings { cars = cars, laps = laps, seed = seed });
+            sb.Append(Summary($"  seed {seed}", r));
+            passes += r.passes; contacts += r.contacts; offs += r.offs;
+            w2 += r.wide2Share; w3 += r.wide3Share; rms += r.aloneLineRms; weaves += r.weavesPerCarLap; tow += r.towShare;
+            Despawn();
+        }
+        int k = seeds.Length;
+        sb.Append($"  MEAN: {passes / k:0.0} passes, {contacts / k:0.0} contacts, {offs / k:0.0} offs, {tow / k:P0} in a tow, " +
+                  $"2-wide {w2 / k:P1}, 3-wide+ {w3 / k:P1}, alone off-line rms {rms / k:0.00} m, {weaves / k:0.00} weaves/car/lap\n");
+        Debug.Log(sb.ToString());
+    }
 
     Result Run(string trackId, Settings set)
     {
@@ -225,8 +269,6 @@ public class PackRaceSimTests
         var pvcType = Runtime("PlayerVehicleController");
         var inputType = Runtime("SplineInputDriver");
         var racingType = Runtime("AIRacingBehaviour");
-        var bindingType = Runtime("AIDriverBinding");
-        float minCommit = (float)bindingType.GetField("MinCornerCommitment").GetValue(null);
 
         UnityEngine.Random.InitState(set.seed);
         int n = set.cars;
@@ -273,15 +315,19 @@ public class PackRaceSimTests
             if (set.input != null) foreach (var kv in set.input) Set(input, kv.Key, kv.Value);
             var racing = go.AddComponent(racingType);
 
-            // What AIDriverBinding.Apply does with a driver's ratings.
-            Set(spline, "lineFactor", Mathf.Lerp(-0.05f, 0.08f, agg01));
-            Set(racing, "aggression01", agg01);
-            Set(racing, "consistency01", cons01);
-            float basePace = Mathf.Lerp(0.93f, 1.04f, q01) * UnityEngine.Random.Range(1f - (1f - cons01) * 0.04f, 1f);
+            // What AIDriverBinding.Apply does with a driver's ratings: the event roll (AIRatings.ForEvent, with the
+            // track-type aptitude equal to raw speed - no specialists in a test roster), then the same helpers.
+            const int statMax = 20;
+            var ratings = AIRatings.ForEvent(Mathf.RoundToInt(q01 * statMax), Mathf.RoundToInt(q01 * statMax),
+                                             Mathf.RoundToInt(cons01 * statMax), Mathf.RoundToInt(agg01 * statMax), statMax,
+                                             UnityEngine.Random.value, UnityEngine.Random.value);
+            Set(spline, "lineFactor", AIRatings.LineFactor(ratings.aggression01));
+            Set(racing, "aggression01", ratings.aggression01);
+            Set(racing, "consistency01", ratings.consistency01);
+            float basePace = AIRatings.BasePace(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
             Set(spline, "paceMultiplier", basePace);
-            float jitter = UnityEngine.Random.Range(-(1f - cons01) * 0.012f, (1f - cons01) * 0.004f);
-            Set(spline, "cornerCommitment", set.skillCornering
-                ? Mathf.Clamp(Mathf.Lerp(minCommit, 1f, q01) + jitter, minCommit - 0.01f, 1f) : 1f);
+            float commit = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
+            Set(spline, "cornerCommitment", set.skillCornering ? commit : 1f);
             if (set.followHeadway.HasValue) Set(racing, "followHeadwaySeconds", set.followHeadway.Value);
             Set(racing, "respectYellows", set.respectYellows);
 
@@ -344,6 +390,12 @@ public class PackRaceSimTests
         var mphProp = splineType.GetProperty("CurrentMph");
         var underYellowProp = racingType.GetProperty("UnderYellow");
         int maxSteps = Mathf.RoundToInt((set.laps + 1) * 150f / dt);
+        var tacField = splineType.GetField("tacticalLateralOffset");
+        int shapeSamples = 0, wide2 = 0, wide3 = 0;
+        double aloneSq = 0; int aloneSamples = 0; float aloneMax = 0f;
+        var prevTac = new float[n];
+        var tacTrend = new float[n];   // sign of the last real move of the intended offset
+        int weaves = 0;
         float t = 0f;
 
         for (int step = 0; step < maxSteps; step++)
@@ -494,6 +546,48 @@ public class PackRaceSimTests
                 }
             }
 
+            // Pack shape, ten times a second once racing.
+            if (leaderLaps >= 2 && step % 5 == 0)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    int alongside = 0;
+                    float nearest = float.MaxValue;
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (j == i) continue;
+                        float g = Mathf.Abs(progress[j] - progress[i]);
+                        if (g < 2f * HalfLength) alongside++;
+                        nearest = Mathf.Min(nearest, g);
+                    }
+                    shapeSamples++;
+                    if (alongside == 1) wide2++;
+                    else if (alongside >= 2) wide3++;
+
+                    // Alone: nobody within 30 m either way. How far off its own planned path the car is running.
+                    if (nearest > 30f)
+                    {
+                        var tr = ((Component)track).transform;
+                        Vector2 w0 = tr.TransformPoint((Vector2)pathAhead.Invoke(splines[i], new object[] { 0f }));
+                        Vector2 w1 = tr.TransformPoint((Vector2)pathAhead.Invoke(splines[i], new object[] { 3f }));
+                        Vector2 tg = (w1 - w0).normalized;
+                        float off = Mathf.Abs(Vector2.Dot((Vector2)_cars[i].transform.position - w0, new Vector2(-tg.y, tg.x)));
+                        aloneSq += off * off; aloneSamples++; aloneMax = Mathf.Max(aloneMax, off);
+                    }
+
+                    // A weave: the intended offset moving one way by more than 0.15 m, then the other.
+                    float tac = (float)tacField.GetValue(splines[i]);
+                    float move = tac - prevTac[i];
+                    if (Mathf.Abs(move) > 0.15f)
+                    {
+                        float dir = Mathf.Sign(move);
+                        if (tacTrend[i] != 0f && dir != tacTrend[i]) weaves++;
+                        tacTrend[i] = dir;
+                        prevTac[i] = tac;
+                    }
+                }
+            }
+
             // Contact: rectangles overlapping.
             if (lapsDone[0] >= 1)
             {
@@ -520,6 +614,15 @@ public class PackRaceSimTests
             if (r.cleanSamples > 0) r.cleanMph /= r.cleanSamples;
             if (r.yellowSamples > 0) r.yellowMph /= r.yellowSamples;
         }
+
+        r.laps = set.laps;
+        r.wide2Share = shapeSamples > 0 ? wide2 / (float)shapeSamples : 0f;
+        r.wide3Share = shapeSamples > 0 ? wide3 / (float)shapeSamples : 0f;
+        r.aloneLineRms = aloneSamples > 0 ? (float)System.Math.Sqrt(aloneSq / aloneSamples) : 0f;
+        r.aloneLineMax = aloneMax;
+        int racedLaps = 0;
+        for (int i = 0; i < n; i++) racedLaps += Mathf.Max(0, lapsDone[i] - 1);
+        r.weavesPerCarLap = racedLaps > 0 ? weaves / (float)racedLaps : 0f;
 
         gaps.Sort();
         r.medianGap = gaps.Count > 0 ? gaps[gaps.Count / 2] : 0f;

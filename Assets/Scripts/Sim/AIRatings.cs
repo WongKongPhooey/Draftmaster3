@@ -72,6 +72,30 @@ namespace Draftmaster.Sim
             };
         }
 
+        // ---- What the event ratings become on the car. AIDriverBinding applies these and PackRaceSimTests races
+        // with them, so the headless pack is always the field the game fields.
+
+        // Share of the grip limit the lowest-rated driver corners at (the best take all of it).
+        public const float MinCornerCommitment = 0.93f;
+
+        // Everyone runs the ideal line; aggression only nudges them fractionally off it (-0.05 = a touch inside,
+        // +0.08 = a touch outside). Kept tight so the field visibly follows the ideal line.
+        public static float LineFactor(float aggression01) => Mathf.Lerp(-0.05f, 0.08f, aggression01);
+
+        // Straight-line pace (0.93..1.04 of the profile) with a little day-to-day noise below it, wider for an
+        // inconsistent driver. jitterRoll01 is a uniform 0..1 draw.
+        public static float BasePace(float strength01, float consistency01, float jitterRoll01)
+            => Mathf.Lerp(0.93f, 1.04f, strength01)
+               * Mathf.Lerp(1f - (1f - consistency01) * 0.04f, 1f, Mathf.Clamp01(jitterRoll01));
+
+        // How close to the grip limit they corner. The best use all of it; the weakest give up ~4%. Consistency
+        // adds a little spread so equal-rated drivers differ. jitterRoll01 is a uniform 0..1 draw.
+        public static float CornerCommitment(float strength01, float consistency01, float jitterRoll01)
+        {
+            float jitter = Mathf.Lerp(-(1f - consistency01) * 0.012f, (1f - consistency01) * 0.004f, Mathf.Clamp01(jitterRoll01));
+            return Mathf.Clamp(Mathf.Lerp(MinCornerCommitment, 1f, strength01) + jitter, MinCornerCommitment - 0.01f, 1f);
+        }
+
         static float Norm(int stat, int statMax) => statMax > 0 ? Mathf.Clamp01(stat / (float)statMax) : 0f;
     }
 }
