@@ -51,10 +51,10 @@ public class AIRacingBehaviour : MonoBehaviour
     public float followDecelMps2 = 11f;
     [Tooltip("Gap (m) at which we back off BELOW the car ahead's speed so we don't tap it.")]
     public float hardFollowGap = 6f;
-    [Tooltip("Lateral separation (m) below which a car ahead fully blocks our corridor (≈ a car width) — the follow cap applies at full strength.")]
-    public float corridorOverlapWidth = 2f;
-    [Tooltip("Lateral separation (m) beyond which a car ahead no longer caps our speed at all — we're clear to drive past. The cap fades between the two widths. This is what lets a committed overtake actually PASS a slow or wrecked car instead of matching its speed until it fully stops.")]
-    public float corridorClearWidth = 3.4f;
+    [Tooltip("Lateral separation (m) below which a car ahead fully blocks our corridor — the follow cap applies at full strength. A car is ~2 m wide, so below this they would be bumper to bumper.")]
+    public float corridorOverlapWidth = 1.6f;
+    [Tooltip("Lateral separation (m) beyond which a car ahead no longer caps our speed at all — we're clear to drive past. The cap fades between the two widths. This is what lets a committed overtake actually PASS a slow or wrecked car instead of matching its speed until it fully stops, and what lets a car in the next lane run alongside instead of being held to the speed of the one beside it (it was 3.4 m - a whole lane on an 11 m superspeedway - which strung every pack out single file).")]
+    public float corridorClearWidth = 2.4f;
 
     [Header("Local Yellows")]
     [Tooltip("Lift through the yellow zone before a car stopped on the road (CautionWatch), and don't pass anyone there but the stopped car.")]
@@ -132,6 +132,10 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Smoothness")]
     [Tooltip("Max lateral speed (m/s) the AI uses when changing line. Lower = smoother, like a real steering rate limit.")]
     public float maxLateralSpeed = 1.6f;
+    [Tooltip("Lateral acceleration (m/s²) used to start and finish a line change. A move eases in, carries maxLateralSpeed, and eases out onto its target instead of starting and stopping dead - which is what read as twitchy, and what upset a car on the limit.")]
+    public float maxLateralAccel = 4f;
+    [Tooltip("Longitudinal window (m, centre to centre) inside which a car counts as ALONGSIDE: the side-by-side push and the contact response only act on a car this close. About a car length; a car further ahead or behind is a car to follow or pass, not one to steer away from.")]
+    public float alongsideLength = 5.2f;
     [Tooltip("Dead zone (m). Tactical changes smaller than this aren't acted on.")]
     public float tacticalDeadzone = 0.25f;
     [Tooltip("Once an overtake direction is committed, hold it for at least this many seconds before reconsidering. Prevents flip-flop.")]
@@ -143,6 +147,7 @@ public class AIRacingBehaviour : MonoBehaviour
 
     SplineDriver _spline;
     float _smoothedTactical;
+    float _tacticalVelocity;
     float _commitTimer;
     float _commitDir;
     float _cooldownTimer;
@@ -494,7 +499,10 @@ public class AIRacingBehaviour : MonoBehaviour
             if (PaybackActive && other == _paybackRivalSpline) continue; // no self-preservation vs the target
             if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
             float longGap = LongitudinalGap(_spline, other);
-            if (Mathf.Abs(longGap) > sidewaysRange) continue;
+            // Only a car actually alongside. This used to take anything within sidewaysRange (12 m) ahead or
+            // behind, so a car drafting nose to tail in the same lane was "in contact" with the one in front:
+            // pushed sideways and scrubbed of speed for being in the tow. The field could never pack up.
+            if (Mathf.Abs(longGap) > Mathf.Min(sidewaysRange, alongsideLength)) continue;
             float latGap = _spline.LateralOnTrack - other.LateralOnTrack;
             float absLat = Mathf.Abs(latGap);
             float dir = latGap >= 0f ? 1f : -1f;
@@ -577,11 +585,23 @@ public class AIRacingBehaviour : MonoBehaviour
             }
         }
 
-        // Slew-rate-limited convergence toward desired offset. Dead-zone prevents twitching near target.
+        // Converge on the desired offset like a driver turning the wheel: accelerate into the move, carry no more
+        // than maxLateralSpeed, and slow so as to arrive on the target rather than at full rate. Dead-zone
+        // prevents twitching near target. Driving round a stopped car is an avoidance move - quicker throughout.
         float diff = desiredTactical - _smoothedTactical;
         if (Mathf.Abs(diff) < tacticalDeadzone) diff = 0f;
-        float step = (_passAroundStopped ? Mathf.Max(maxLateralSpeed, stoppedPassLateralSpeed) : maxLateralSpeed) * dt;
-        _smoothedTactical += Mathf.Clamp(diff, -step, step);
+        float lateralSpeed = _passAroundStopped ? Mathf.Max(maxLateralSpeed, stoppedPassLateralSpeed) : maxLateralSpeed;
+        float lateralAccel = Mathf.Max(0.1f, _passAroundStopped ? maxLateralAccel * 3f : maxLateralAccel);
+        float wantVelocity = Mathf.Sign(diff) * Mathf.Min(lateralSpeed, Mathf.Sqrt(2f * lateralAccel * Mathf.Abs(diff)));
+        _tacticalVelocity = Mathf.MoveTowards(_tacticalVelocity, wantVelocity, lateralAccel * dt);
+        float move = _tacticalVelocity * dt;
+        // Never step past the target: arrive and stop.
+        if (diff != 0f && Mathf.Sign(move) == Mathf.Sign(diff) && Mathf.Abs(move) > Mathf.Abs(diff))
+        {
+            move = diff;
+            _tacticalVelocity = 0f;
+        }
+        _smoothedTactical += move;
 
         // Manoeuvre cooldown, started once as we settle back to neutral after a move. It used to be re-armed on
         // every neutral frame, so it sat at manoeuvreCooldown forever and no overtake could ever begin — the

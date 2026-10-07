@@ -27,6 +27,10 @@ public static class OsmTrackImporter
     // The most of its own lap a reading may be out by and still be believed.
     const float MaxClosureShareOfLap = 0.03f;
 
+    // A superspeedway's ideal lane, as a share of the half-width the AI may use, toward the inside: low-middle,
+    // leaving the bottom lane below it and the middle and top above.
+    const float SuperspeedwayLaneShare = 0.4f;
+
     // Below this a piece is a bend in a straight rather than a corner: it is banked like a straight, taken
     // flat, and given a straight's racing line. Two tests, because either alone gets a venue wrong — a
     // 6 degree kink is a bend however tight it is, and Michigan's front stretch bends 48 degrees over
@@ -564,7 +568,16 @@ public static class OsmTrackImporter
         }
 
         // Out-in-out across a corner, f = 0 at its start and 1 at its end: wide in, tight at the apex, wide out.
-        float Line(float f) => f < 0.5f ? Mathf.Lerp(outer * 0.80f, -outer * 0.65f, f / 0.5f)
+        //
+        // Not on a superspeedway. There the turns are flat out and the field races in lanes - bottom, middle,
+        // top - that it holds all the way round, so the ideal line is a lane: one lateral, low-middle, the whole
+        // lap. The out-in-out swing had every car at Daytona drift to the wall 90 m before Turn 3, snap back at
+        // turn-in and, with a car alongside or a tactical offset on top, slide off at the entry - every off in
+        // the 40-car pack sim was there.
+        bool holdLane = known && row.kind == TrackKind.Superspeedway;
+        float lane = -outer * SuperspeedwayLaneShare;
+        float Line(float f) => holdLane ? lane
+                             : f < 0.5f ? Mathf.Lerp(outer * 0.80f, -outer * 0.65f, f / 0.5f)
                                         : Mathf.Lerp(-outer * 0.65f, outer * 0.60f, (f - 0.5f) / 0.5f);
 
         // Corners numbered round the lap from the start/finish line; one the line falls in is the last.
@@ -635,6 +648,7 @@ public static class OsmTrackImporter
                 // otherwise be added with zero-width bounds, pinching the road shut at both ends of every bend.
                 seg.racingLine = new TrackInfoV2.SegmentRacingLine
                 {
+                    idealApex = holdLane ? lane : 0f,
                     leftApex = -outer, rightApex = outer, skipEntry = true, skipExit = true,
                 };
             }

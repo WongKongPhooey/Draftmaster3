@@ -221,6 +221,10 @@ public class PackRaceSimTests
     [Test, Timeout(1800000)]
     public void DaytonaTraceOffs() => Log("daytona trace offs", Run("Daytona", new Settings { cars = 40, laps = 3, seed = 1, traceOffs = true }));
 
+    [Explicit("Diagnostic: one Daytona roster, what each close-following car is deciding, twice a second.")]
+    [Test, Timeout(1800000)]
+    public void DaytonaTraceAttacks() => Log("daytona trace attacks", Run("Daytona", new Settings { cars = 40, laps = 3, seed = 1, traceLines = 120 }));
+
     void Baseline(string trackId, int[] seeds, int cars, int laps)
     {
         var sb = new StringBuilder($"[PackSim] {trackId} baseline, {cars} cars, {laps} laps\n");

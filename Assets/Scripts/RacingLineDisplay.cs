@@ -294,8 +294,9 @@ public class RacingLineDisplay : MonoBehaviour
         else
             baseMph = fallbackCornerMph;
 
-        float bankingMph = vi != null ? seg.banking * vi.bankingMphPerDegree : 0f;
-        return Mathf.Clamp((baseMph + bankingMph) * cornerSpeedScale, 5f, topMph);
+        if (vi != null && vi.maxLateralG > 0.01f && Mathf.Abs(seg.banking) > 0.01f)
+            baseMph *= Mathf.Sqrt(Draftmaster.Sim.BankedGrip.CapacityScale(vi.maxLateralG * grip * 9.81f, seg.banking));
+        return Mathf.Clamp(baseMph * cornerSpeedScale, 5f, topMph);
     }
 
     static void ApplyAccelLimit(VehicleInfo vi, float[] profile, List<TrackBuilder.Sample> samples, float loopLen, int i, int prev)

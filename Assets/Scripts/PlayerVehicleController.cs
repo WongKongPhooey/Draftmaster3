@@ -315,6 +315,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     }
     SplineDriver _brainSpline; // AI brain when present (enabled) — supplies the track pose for draft maths
 
+    [Tooltip("Banked turns grip harder and gravity pulls down the bank (BankedGrip). Off = every corner is level.")]
+    public bool applyBanking = true;
+    // The banking under the car this step (degrees, 0 off the main road) - for HUDs and diagnostics.
+    public float CurrentBankDeg { get; private set; }
+
     public enum ControlScheme { Auto, Keyboard, Gamepad }
     [Tooltip("Which device this car reads when driven locally. Auto = keyboard + gamepad (+ on-screen touch on a phone). Set to split devices between players for local / Multiplayer Play Mode testing (e.g. keyboard for P1, gamepad for P2).")]
     public ControlScheme controlScheme = ControlScheme.Auto;
@@ -666,6 +671,30 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         muF *= surfGrip;
         muR *= surfGrip * Mathf.Lerp(1f, wheelspinRearGrip, wheelspin);
 
+        // Banking. The tyres are loaded harder by cornering into the bank, and gravity pulls down it - toward the
+        // inside of an oval's turn - carrying part of the cornering for free (BankedGrip). Only on the main road:
+        // the apron, the grass and pit road are level.
+        float bankDeg = 0f;
+        Vector2 downhill = Vector2.zero;
+        if (applyBanking && track != null && onTrackSurface)
+        {
+            float bankDistance = -1f;
+            if (_brainSpline != null && _brainSpline.enabled && _brainSpline.TrackLength > 0f)
+            {
+                if (!_brainSpline.IsOnPit) bankDistance = _brainSpline.DistanceOnTrack;
+            }
+            else if (_isObstacle) bankDistance = TrackDistance;
+            else bankDistance = track.NearestCenterlineDistance(transform.position);
+            if (bankDistance >= 0f) track.BankAt(bankDistance, transform.position, out bankDeg, out downhill);
+        }
+        float downhillAccel = Draftmaster.Sim.BankedGrip.DownslopeAccel(bankDeg);
+        float headingRad = _headingDeg * Mathf.Deg2Rad;
+        Vector2 bodyFwd = new Vector2(Mathf.Cos(headingRad), Mathf.Sin(headingRad));
+        Vector2 bodyLeft = new Vector2(-bodyFwd.y, bodyFwd.x);
+        float downhillLat = Vector2.Dot(downhill, bodyLeft) * downhillAccel;
+        float downhillLon = Vector2.Dot(downhill, bodyFwd) * downhillAccel;
+        CurrentBankDeg = bankDeg;
+
         float m = Mass;
         float h = dt / Mathf.Max(subSteps, 1);
         float wearAccumF = 0f, wearAccumR = 0f;
@@ -678,6 +707,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             float dFz = m * axCmd * cgHeight / (_a + _b);
             float fzF = Mathf.Max(staticFzF - dFz, 0f);
             float fzR = Mathf.Max(staticFzR + dFz, 0f);
+            if (bankDeg != 0f && _vx > lowSpeedKinematic)
+            {
+                // Thrown into the bank: the tyres carry more than the car's weight (centripetal accel = vx * r).
+                float load = Draftmaster.Sim.BankedGrip.LoadFactor(bankDeg, _vx * _r);
+                fzF *= load;
+                fzR *= load;
+            }
 
             float fyF, fyR;
             if (_vx > lowSpeedKinematic)
@@ -698,7 +734,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 wearAccumR += Mathf.Abs(fyR) / Mathf.Max(peakR, 1f);
 
                 // Equations of motion (body frame).
-                float ay = (fyF + fyR) / m - _vx * _r;          // lateral accel (tyres + centripetal term)
+                float ay = (fyF + fyR) / m - _vx * _r + downhillLat; // lateral accel (tyres + centripetal term + bank)
                 _lastAy = ay;
                 // Yaw damper opposes rotation (stabilises oversteer); extra damping under braking kills spin-on-the-brakes.
                 float yawDamp = yawDamping + brakeYawDamping * brakeIn;
@@ -710,6 +746,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 // counter-term exists — doing it in the low-speed branch (where _vy is killed kinematically) pumped
                 // _vx and launched the car after a spin.
                 _vx += _vy * _r * h;
+                _vx += downhillLon * h;   // pointed up or down the bank, gravity helps or holds it back a touch
             }
             else
             {

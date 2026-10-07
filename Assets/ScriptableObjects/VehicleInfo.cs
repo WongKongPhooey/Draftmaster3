@@ -26,7 +26,7 @@ public class VehicleInfo : ScriptableObject
     [Tooltip("Max sustained lateral acceleration in g. Used when corneringSpeedCurve is empty. Cup-typical 1.4-1.6 with downforce.")]
     public float maxLateralG = 1.5f;
 
-    [Tooltip("Extra corner speed (mph) added per degree of banking. ~2.5 mph/deg.")]
+    [Tooltip("UNUSED - banking is physics now (Draftmaster.Sim.BankedGrip, applied by PlayerVehicleController and planned from by the AI). Kept so existing assets still load.")]
     public float bankingMphPerDegree = 2.5f;
 
     [Header("Gearbox")]

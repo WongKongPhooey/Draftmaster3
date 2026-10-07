@@ -226,6 +226,45 @@ public class TrackInfoV2 : ScriptableObject
         public float right;
     }
 
+    // Banking (degrees) at a distance round the main lap, eased across each segment join over blendMetres so a
+    // car running into a banked turn feels it build rather than step - BankedGrip turns it into grip.
+    public float BankingAt(float distance, float blendMetres = 40f)
+    {
+        if (segments == null || segments.Length == 0) return 0f;
+        float lap = TotalLength();
+        if (lap <= 0f) return 0f;
+        distance = ((distance % lap) + lap) % lap;
+        int n = segments.Length;
+        float start = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float len = segments[i].length;
+            if (distance < start + len || i == n - 1)
+            {
+                float into = distance - start, left = start + len - distance;
+                float here = segments[i].banking;
+                float half = Mathf.Max(0.01f, blendMetres * 0.5f);
+                if (into < half && into <= left)
+                    return Mathf.Lerp(segments[(i - 1 + n) % n].banking, here, 0.5f + 0.5f * into / half);
+                if (left < half)
+                    return Mathf.Lerp(segments[(i + 1) % n].banking, here, 0.5f + 0.5f * left / half);
+                return here;
+            }
+            start += len;
+        }
+        return 0f;
+    }
+
+    // True when the lap turns left overall (anticlockwise): the inside of the track, and the bottom of any banking,
+    // is on the left of travel.
+    public bool LapTurnsLeft()
+    {
+        if (segments == null) return true;
+        float total = 0f;
+        for (int i = 0; i < segments.Length; i++) total += segments[i].angle;
+        return total >= 0f;
+    }
+
     public float TotalLength()
     {
         if (segments == null) return 0f;

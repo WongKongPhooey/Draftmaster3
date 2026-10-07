@@ -858,16 +858,22 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             baseMph = AIGrip.CornerSpeed(radius, _bakedALatMaxMps2) * MpsToMph;
         }
 
-        float bankingMph = 0f;
+        // Banking: what the physics gives the car on this bank (BankedGrip), not a flat bonus. The old
+        // banking × bankingMphPerDegree added 77 mph at Daytona while the physics ignored banking entirely, so
+        // every AI car planned the turns faster than it could hold them and slid wide on the limit.
         float capMph = topMph;
         var segs = (track != null && track.track != null) ? track.track.segments : null;
         if (segs != null && segIdx >= 0 && segIdx < segs.Length)
         {
             var seg = segs[segIdx];
-            if (vehicleInfo != null) bankingMph = seg.banking * vehicleInfo.bankingMphPerDegree;
+            if (Mathf.Abs(seg.banking) > 0.01f)
+            {
+                float flat = Mathf.Max(_bakedALatMaxMps2, 0.1f);
+                baseMph *= Mathf.Sqrt(Draftmaster.Sim.BankedGrip.CapacityScale(flat, seg.banking));
+            }
             if (seg.maxSpeed > 0) capMph = Mathf.Min(capMph, seg.maxSpeed);
         }
-        return Mathf.Clamp((baseMph + bankingMph) * (atLimit ? 1f : cornerSpeedScale), 5f, capMph);
+        return Mathf.Clamp(baseMph * (atLimit ? 1f : cornerSpeedScale), 5f, capMph);
     }
 
     // Friction circle: longitudinal authority shrinks with the lateral load already spent at this point of the
@@ -959,15 +965,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             if (tireModel != null) gripMul *= tireModel.OverallGrip;
             else { var tire = GetComponent<TireState>(); if (tire != null) gripMul *= tire.GripMultiplier; }
             float aLatMps2 = vehicleInfo.maxLateralG * Mathf.Max(0.05f, gripMul) * 9.81f;
-            float vMps = AIGrip.CornerSpeed(radius, aLatMps2);
+            float vMps = AIGrip.CornerSpeed(radius, Draftmaster.Sim.BankedGrip.Capacity(aLatMps2, seg.banking));
             baseMph = vMps * MpsToMph;
         }
         else
         {
             baseMph = fallbackCornerMph;
         }
-        float bankingMph = (vehicleInfo != null) ? seg.banking * vehicleInfo.bankingMphPerDegree : 0f;
-        return Mathf.Clamp((baseMph + bankingMph) * cornerSpeedScale, 5f, topMph);
+        return Mathf.Clamp(baseMph * cornerSpeedScale, 5f, topMph);
     }
 
     void UpdateCornerPhase()

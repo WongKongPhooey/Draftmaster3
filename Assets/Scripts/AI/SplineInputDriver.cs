@@ -284,6 +284,9 @@ public class SplineInputDriver : MonoBehaviour
         if (!_spline.IsOnPit)
         {
             float aLatMax = LiveLateralAccelLimitMps2();
+            // On a banked turn the car holds more than its flat-ground grip (BankedGrip, as the physics applies it).
+            if (_car != null && Mathf.Abs(_car.CurrentBankDeg) > 0.01f)
+                aLatMax = Draftmaster.Sim.BankedGrip.Capacity(aLatMax, _car.CurrentBankDeg);
             float gripRadius = _spline.CurvatureRadiusAhead(Mathf.Max(8f, speed * gripScanTime));
             if (aLatMax > 0.1f && gripRadius < float.MaxValue)
             {

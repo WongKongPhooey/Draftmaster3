@@ -41,7 +41,7 @@ namespace Draftmaster.Tracks
             public float[] minLateral;        // one edge of the corridor the line may use
             public float[] maxLateral;        // the other edge
             public float[] speedCapMps;       // optional hard cap per sample (top speed / authored segment cap)
-            public float[] bankingBonusMps;   // optional cornering-speed bonus per sample (banking)
+            public float[] bankingGripScale;  // optional multiplier on lateral grip per sample (banking, as BankedGrip gives the physics)
             public bool loop = true;
 
             public int Count => centre != null ? centre.Length : 0;
@@ -55,7 +55,7 @@ namespace Draftmaster.Tracks
                 if (minLateral == null || minLateral.Length != n) { why = "minLateral[] length must match centre[]"; return false; }
                 if (maxLateral == null || maxLateral.Length != n) { why = "maxLateral[] length must match centre[]"; return false; }
                 if (speedCapMps != null && speedCapMps.Length != n) { why = "speedCapMps[] length must match centre[]"; return false; }
-                if (bankingBonusMps != null && bankingBonusMps.Length != n) { why = "bankingBonusMps[] length must match centre[]"; return false; }
+                if (bankingGripScale != null && bankingGripScale.Length != n) { why = "bankingGripScale[] length must match centre[]"; return false; }
                 return true;
             }
         }
@@ -320,8 +320,8 @@ namespace Draftmaster.Tracks
                 float corner = float.MaxValue;
                 if (k > 1e-5f)
                 {
-                    corner = Mathf.Sqrt(aLat / k);
-                    if (course.bankingBonusMps != null) corner += course.bankingBonusMps[i];
+                    float scale = course.bankingGripScale != null ? Mathf.Max(0.1f, course.bankingGripScale[i]) : 1f;
+                    corner = Mathf.Sqrt(aLat * scale / k);
                     corner *= cornerScale;
                 }
                 float cap = (course.speedCapMps != null && course.speedCapMps[i] > 0.1f)

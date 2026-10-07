@@ -726,6 +726,32 @@ public class TrackBuilder : MonoBehaviour
         return OnPitBand(_pitSurfaceCache, local, extra, out _);
     }
 
+    // The banking under a car and which way is downhill, in world space. `distance` is where the car is round the
+    // main lap (its AI brain's distance, or the player's projection). Nothing when the car is not on the main
+    // road: off it, on the apron or in the pit lane the ground is taken as level.
+    public bool BankAt(float distance, Vector3 worldPos, out float bankDeg, out Vector2 downhillWorld)
+    {
+        bankDeg = 0f;
+        downhillWorld = Vector2.zero;
+        if (track == null || track.segments == null) return false;
+        float bank = track.BankingAt(distance);
+        if (Mathf.Abs(bank) < 0.01f) return false;
+
+        // The cached centreline: SampleAt without a list rebuilds the whole thing, and this runs for every car
+        // every physics step.
+        if (_surfaceCache == null || _surfaceCache.Count < 2) _surfaceCache = SampleCenterline();
+        var s = SampleAt(distance, _surfaceCache);
+        Vector2 local = transform.InverseTransformPoint(worldPos);
+        float lateral = Vector2.Dot(local - s.position, s.normal);
+        if (Mathf.Abs(lateral) > s.width * 0.5f + 0.5f) return false;
+
+        // Sample normal is the right of travel; the bottom of the banking is the inside of the lap.
+        Vector2 downLocal = track.LapTurnsLeft() ? -s.normal : s.normal;
+        downhillWorld = ((Vector2)transform.TransformDirection(new Vector3(downLocal.x, downLocal.y, 0f))).normalized;
+        bankDeg = bank;
+        return true;
+    }
+
     // Project a WORLD position onto the main centerline and return its distance (m) along the spline.
     // Lets a free-driven car (the player) be located on the track for gap maths against the AI field.
     // Uses the cached centerline (invalidated on Build); cheap enough for one query per FixedUpdate.

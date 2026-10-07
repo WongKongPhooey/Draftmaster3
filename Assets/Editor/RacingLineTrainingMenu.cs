@@ -428,7 +428,7 @@ public static class RacingLineTrainingMenu
             minLateral = new float[n],
             maxLateral = new float[n],
             speedCapMps = new float[n],
-            bankingBonusMps = new float[n],
+            bankingGripScale = new float[n],
             loop = track.closedLoop
         };
 
@@ -449,7 +449,9 @@ public static class RacingLineTrainingMenu
             int segIdx = SegmentIndexAt(segStart, s.distance, cum);
             var seg = track.segments[Mathf.Clamp(segIdx, 0, track.segments.Length - 1)];
             course.speedCapMps[i] = seg.maxSpeed > 0 ? Mathf.Min(topMps, seg.maxSpeed * MphToMps) : topMps;
-            course.bankingBonusMps[i] = seg.banking * car.bankingMphPerDegree * MphToMps;
+            // The grip a bank adds, as the physics applies it (BankedGrip), at the AI's flat-ground grip.
+            float flat = car.maxLateralG * Mathf.Max(0.05f, TrackConditions.AiEffective) * 9.81f;
+            course.bankingGripScale[i] = Draftmaster.Sim.BankedGrip.CapacityScale(flat, seg.banking);
         }
         return course;
     }
