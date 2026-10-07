@@ -85,6 +85,19 @@ public class AIRacingBehaviour : MonoBehaviour
     [Tooltip("Seconds after the green flag during which the follow-distance speed cap is eased in, so the whole field launches together (a rolling start) instead of accordioning out from the leader. The hard nose-to-tail cap still applies, so cars can't pile in. 0 = off (cars hold full racing gaps from the instant of green).")]
     public float launchWindowSeconds = 3f;
 
+    [Header("Lanes")]
+    [Tooltip("Race in lanes: the road between the AI's bounds is split into lanes at least laneSpacing apart, a pass moves into the lane beside the car being passed (only when it is clear), a car alongside holds its lane, and a car only drops back to the ideal line when that lane is clear. NR2003's minrace/maxrace. Off = the old fixed overtakeLineOffset step.")]
+    public bool useLanes = true;
+    [Tooltip("Least distance (m) between lane centres: a car's width and the gap a driver leaves beside another.")]
+    public float laneSpacing = 2.4f;
+    [Tooltip("A lane counts as taken by a car this far (m) behind us or ahead of us, plus a second of closing speed ahead.")]
+    public float laneClearBehind = 7f;
+    public float laneClearAhead = 6f;
+    [Tooltip("A pass is held until the car being passed is this far (m) behind us - clear by a length - or abandoned once it pulls this far ahead, or after passMaxSeconds.")]
+    public float passClearMargin = 2.5f;
+    public float passAbandonGap = 45f;
+    public float passMaxSeconds = 10f;
+
     [Header("Manoeuvre Strength")]
     [Tooltip("Lateral offset (m) committed during an overtake.")]
     public float overtakeLineOffset = 3f;
@@ -148,6 +161,10 @@ public class AIRacingBehaviour : MonoBehaviour
     SplineDriver _spline;
     float _smoothedTactical;
     float _tacticalVelocity;
+    // The pass under way, in lanes: who is being passed, which lane we are passing in, and for how long.
+    SplineDriver _passCar;
+    int _passLane = -1;
+    float _passTimer;
     float _commitTimer;
     float _commitDir;
     float _cooldownTimer;
@@ -293,6 +310,14 @@ public class AIRacingBehaviour : MonoBehaviour
                 // A stopped car is driven round on the wide side of the road — the side away from where it sits —
                 // not on whichever side the next corner favours.
                 overtakeDir = stoppedCar ? AroundSide(aheadLat) : ChooseOvertakeSide(aheadLat);
+                // In lanes, a pass goes into the lane beside the car ahead - on the chosen side if it is clear,
+                // the other if not - and not at all if neither is: tuck in behind and take the tow instead.
+                if (!stoppedCar && useLanes && LaneGeometry(out _, out _, out _))
+                {
+                    int lane = ChoosePassLane(aheadLat, overtakeDir != 0f ? overtakeDir : (aheadLat >= _spline.LateralOnTrack ? -1f : 1f));
+                    overtakeDir = lane < 0 ? 0f : Mathf.Sign(LaneLateral(lane) - _spline.LateralOnTrack + 1e-3f);
+                    if (lane >= 0) { _passCar = ahead; _passLane = lane; _passTimer = 0f; }
+                }
                 wantOvertake = overtakeDir != 0f; // 0 = both sides blocked → don't dive into traffic, just tuck in
                 if (wantOvertake) SetPassTarget(stoppedCar, aheadLat);
             }
@@ -422,8 +447,30 @@ public class AIRacingBehaviour : MonoBehaviour
         // would swing us straight back into it.
         if (underYellow && !wantOvertake && !_passAroundStopped) _commitTimer = 0f;
 
+        // A pass in lanes is held for as long as the pass takes - until the car is behind us by a length, or has
+        // pulled away, or it has gone on too long - rather than for a fixed second and a half that could run out
+        // with the two cars door to door.
+        bool lanePass = false;
+        if (_passCar != null && _passLane >= 0 && !underYellow)
+        {
+            _passTimer += dt;
+            float g = LongitudinalGap(_spline, _passCar);   // + = they are still ahead
+            bool done = g < -(alongsideLength + passClearMargin) || g > passAbandonGap || _passTimer > passMaxSeconds
+                        || !_passCar.isActiveAndEnabled || _passCar.IsOnPit;
+            if (done) { _passCar = null; _passLane = -1; _commitTimer = 0f; }   // no fixed-offset tail after it
+            else lanePass = true;
+        }
+        else { _passCar = null; _passLane = -1; }
+
         // Commitment: once we pick a passing side, hold it. Prevents weave.
-        if (wantOvertake)
+        if (lanePass)
+        {
+            wantOvertake = true;
+            overtakeDir = Mathf.Sign(LaneLateral(_passLane) - _spline.LateralOnTrack + 1e-3f);
+            _commitTimer = commitHoldSeconds;
+            _commitDir = overtakeDir;
+        }
+        else if (wantOvertake)
         {
             _commitTimer = commitHoldSeconds;
             _commitDir = overtakeDir;
@@ -439,7 +486,12 @@ public class AIRacingBehaviour : MonoBehaviour
         }
 
         if (!wantOvertake) _passAroundStopped = false;
-        if (wantOvertake)
+        if (wantOvertake && lanePass && !_passAroundStopped)
+        {
+            // Into the passing lane, wherever it is across the road here.
+            desiredTactical = LaneLateral(_passLane) - _spline.UntacticalLateral;
+        }
+        else if (wantOvertake)
         {
             desiredTactical = overtakeDir * overtakeLineOffset;
             // Round a stopped car, a fixed step off our own line isn't enough: our line often runs along the same
@@ -450,6 +502,17 @@ public class AIRacingBehaviour : MonoBehaviour
                 float needed = _passTargetLat + overtakeDir * stoppedPassClearance - _spline.UntacticalLateral;
                 if (needed * overtakeDir > overtakeLineOffset) desiredTactical = needed;
             }
+        }
+
+        // Holding a lane. A car with another alongside stays in the lane it is in - it does not drift back to the
+        // ideal line across the other car - and a car only drops back to the ideal line once that lane is clear.
+        if (!wantOvertake && useLanes && !_spline.IsOnPit && LaneGeometry(out _, out _, out _))
+        {
+            float here = _spline.LateralOnTrack;
+            float ideal = _spline.UntacticalLateral;
+            bool alongside = AnyAlongside();
+            if (alongside || (Mathf.Abs(ideal - here) > laneSpacing * 0.5f && !LaneClear(ideal)))
+                desiredTactical = LaneLateral(NearestLane(here)) - ideal;
         }
 
         // Defending: if a faster pursuer is close behind during the approach to a turn, shift to the inside.
@@ -465,7 +528,9 @@ public class AIRacingBehaviour : MonoBehaviour
                     {
                         float insideDir = -turnSign; // inside of turn = opposite of outside
                         float strength = Mathf.Clamp01((defendDetectRange - behindGap) / defendDetectRange);
-                        desiredTactical += insideDir * defendLineOffset * strength;
+                        float block = insideDir * defendLineOffset * strength;
+                        // In lanes, only a block into a lane that's free - never across a car alongside.
+                        if (!useLanes || LaneClear(_spline.LateralOnTrack + block)) desiredTactical += block;
                     }
                 }
             }
@@ -706,6 +771,93 @@ public class AIRacingBehaviour : MonoBehaviour
         if (SideOccupied(pick)) pick = -pick;     // someone's there — try the other side
         if (SideOccupied(pick)) return 0f;        // boxed in both sides — abort the pass
         return pick;
+    }
+
+    // ---- Lanes ----
+
+    // The lanes across the road here: from the AI's left bound to its right, evenly spaced and at least laneSpacing
+    // apart. Daytona's 11 m (bounds ±3.9 m) is four lanes; a narrow road course is two or three.
+    bool LaneGeometry(out float lo, out float hi, out int count)
+    {
+        count = 0;
+        if (!_spline.GetLateralBounds(out lo, out hi) || hi - lo < laneSpacing) return false;
+        count = Mathf.FloorToInt((hi - lo) / Mathf.Max(0.5f, laneSpacing)) + 1;
+        return count >= 2;
+    }
+
+    float LaneLateral(int lane)
+    {
+        if (!LaneGeometry(out float lo, out float hi, out int count)) return _spline.LateralOnTrack;
+        lane = Mathf.Clamp(lane, 0, count - 1);
+        return Mathf.Lerp(lo, hi, lane / (float)(count - 1));
+    }
+
+    int NearestLane(float lateral)
+    {
+        if (!LaneGeometry(out float lo, out float hi, out int count)) return 0;
+        return Mathf.Clamp(Mathf.RoundToInt((lateral - lo) / (hi - lo) * (count - 1)), 0, count - 1);
+    }
+
+    // Is a lane free for us to drive into: nobody in it from laneClearBehind behind us to laneClearAhead (plus a
+    // second of closing speed) ahead? The human car counts too.
+    bool LaneClear(float laneLat)
+    {
+        float closing = Mathf.Max(0f, _spline.CurrentMph) * MphToMps * 0.1f;
+        float halfLane = laneSpacing * 0.75f;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float lg = LongitudinalGap(_spline, other);
+            if (lg < -laneClearBehind || lg > laneClearAhead + closing) continue;
+            if (Mathf.Abs(other.LateralOnTrack - laneLat) < halfLane) return false;
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            float lg = p.TrackDistance - _spline.DistanceOnTrack;
+            float len = _spline.TrackLength;
+            if (lg > len * 0.5f) lg -= len; else if (lg < -len * 0.5f) lg += len;
+            if (lg < -laneClearBehind || lg > laneClearAhead + closing) continue;
+            if (Mathf.Abs(p.TrackLateral - laneLat) < halfLane) return false;
+        }
+        return true;
+    }
+
+    // Anyone overlapping us alongside, either side?
+    bool AnyAlongside()
+    {
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            if (Mathf.Abs(LongitudinalGap(_spline, other)) < alongsideLength
+                && Mathf.Abs(other.LateralOnTrack - _spline.LateralOnTrack) < laneSpacing * 2f)
+                return true;
+        }
+        return false;
+    }
+
+    // The lane to pass in: next to the car ahead on the preferred side, else the other side; -1 if neither is
+    // clear (or exists). The lane we are already in counts only if it isn't the car ahead's.
+    int ChoosePassLane(float aheadLat, float preferDir)
+    {
+        if (!LaneGeometry(out _, out _, out int count)) return -1;
+        int theirs = NearestLane(aheadLat);
+        float dir = preferDir >= 0f ? 1f : -1f;
+        for (int attempt = 0; attempt < 2; attempt++, dir = -dir)
+        {
+            int lane = theirs + (int)dir;
+            if (lane < 0 || lane >= count) continue;
+            if (LaneClear(LaneLateral(lane))) return lane;
+        }
+        return -1;
     }
 
     // Is another car alongside or just ahead on the given side, so passing there would clip it?
