@@ -140,7 +140,7 @@ public class PlayerPitService : MonoBehaviour
         var s = track.SamplePitAt(d, pit);
         Vector2 local = track.transform.InverseTransformPoint(worldPos);
         // Cover the box lane too — the player's box sits on it, outside the pit ribbon proper.
-        float max = track.HasPitBoxLane ? Mathf.Max(pitLateralMax, track.PitBoxLaneOuterLateral + 0.5f) : pitLateralMax;
+        float max = track.HasPitBoxLane ? Mathf.Max(pitLateralMax, Mathf.Abs(track.PitBoxLaneOuterLateral) + 0.5f) : pitLateralMax;
         return Vector2.Distance(local, s.position) < max;
     }
 

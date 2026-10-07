@@ -223,7 +223,8 @@ public class PitCrewSpawner : MonoBehaviour
         boxGo.transform.position = worldPos;
         boxGo.transform.rotation = Quaternion.Euler(0f, 0f, tangAng - 90f); // up = tangent
 
-        float wallSideSign = Mathf.Sign(wallSide == 0f ? 1f : wallSide);
+        // wallSide is relative to the box lane (+1 = the boxes' side); the track says which side that is.
+        float wallSideSign = Mathf.Sign(wallSide == 0f ? 1f : wallSide) * (track != null ? track.PitBoxSide : 1f);
 
         var box = boxGo.AddComponent<PitCrewBox>();
         box.wheelLongitudinal = wheelLongitudinal;

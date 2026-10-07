@@ -164,13 +164,15 @@ public class AutographFanSpawner : MonoBehaviour
         // A little lateral scatter so they don't stand in a perfect line along the wall — outward only, so
         // the scatter can't undo the clearance.
         float lat = lateral + Random.Range(0f, 0.8f);
-        Vector3 pos = basePos + normalW * (wallSide * lat);
+        // wallSide is relative to the box lane (+1 = the boxes' side); the track says which side that is.
+        float side = wallSide * track.PitBoxSide;
+        Vector3 pos = basePos + normalW * (side * lat);
         // Nudge along the lane too, for a looser cluster.
         pos += tangentW * Random.Range(-0.5f, 0.5f);
 
         // Belt and braces: wherever that landed, if it is still tarmac (the main track running close by, an
         // escape road, a pit mouth blend) step further out; if there is no dry ground nearby, no fan here.
-        for (int tries = 0; tries < 20 && FanOnTrack(pos); tries++) pos += normalW * (wallSide * 0.5f);
+        for (int tries = 0; tries < 20 && FanOnTrack(pos); tries++) pos += normalW * (side * 0.5f);
         if (FanOnTrack(pos)) return;
         pos.z = -0.1f; // toward the camera so the sprite draws in front of the pit tarmac
 
@@ -179,7 +181,7 @@ public class AutographFanSpawner : MonoBehaviour
         go.transform.position = pos;
 
         // Face across the lane toward the racing side (where the player walks/drives past).
-        Vector3 face = -normalW * wallSide;
+        Vector3 face = -normalW * side;
         OnFootController.ApplyFacing(go.transform, null, new Vector2(face.x, face.y), 90f);
 
         BuildAppearance(go, seed);

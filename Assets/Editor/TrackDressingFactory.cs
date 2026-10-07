@@ -236,7 +236,7 @@ public static class TrackDressingFactory
                 if (rel.sqrMagnitude > 900f) continue;
                 float lat = Vector2.Dot(rel, pit[k].normal);
                 float half = pit[k].width * 0.5f;
-                float reach = lat >= 0f ? half + boxLane : half;   // the box lane is on the pit's +normal side
+                float reach = lat * builder.PitBoxSide >= 0f ? half + boxLane : half;   // the box lane's side
                 cut = Mathf.Abs(Vector2.Dot(rel, pit[k].tangent)) < 3f && Mathf.Abs(lat) < reach + clearance;
             }
             if (cut)

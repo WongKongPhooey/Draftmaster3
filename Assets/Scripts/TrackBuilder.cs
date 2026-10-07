@@ -12,8 +12,10 @@ public class TrackBuilder : MonoBehaviour
     public bool rebuildOnValidate = true;
 
     [Header("Pit Box Lane")]
-    [Tooltip("Build a second lane alongside the pit lane (wall side, +normal) where the pit boxes sit. Cars park on it; the pit lane proper stays clear for driving.")]
+    [Tooltip("Build a second lane alongside the pit lane where the pit boxes sit. Cars park on it; the pit lane proper stays clear for driving.")]
     public bool buildPitBoxLane = true;
+    [Tooltip("Put the box lane on the LEFT of pit-lane travel (-normal) instead of the right. The boxes belong on the paddock side, away from the racing surface: the right of travel on a clockwise lap like Watkins Glen, the left on an anticlockwise oval like Daytona.")]
+    public bool pitBoxLaneOnLeft = false;
     [Tooltip("Width (m) of the box lane strip.")]
     public float pitBoxLaneWidth = 6f;
     [Tooltip("Where the grey box-lane strip starts, metres from the pit lane's start. 0 = from the very start.")]
@@ -42,10 +44,14 @@ public class TrackBuilder : MonoBehaviour
     // field at the lane's centre lateral; the pit service/engage checks extend to its outer edge.
     public bool HasPitBoxLane => buildPitBoxLane && track != null && track.hasPitLane;
     float PitHalfWidth => track == null ? 0f : (track.pitDefaultWidth > 0f ? track.pitDefaultWidth : track.defaultWidth) * 0.5f;
-    public float PitBoxLaneCenterLateral => PitHalfWidth + pitBoxLaneWidth * 0.5f;
-    public float PitBoxLaneOuterLateral => PitHalfWidth + pitBoxLaneWidth;
+    // +1 when the box lane is on the right of pit-lane travel (+normal), -1 on the left. Every lateral below is
+    // signed with it, so a consumer that parks, draws or measures at these laterals follows the boxes to
+    // whichever side they are on; one that compares a distance against them wants Mathf.Abs.
+    public float PitBoxSide => pitBoxLaneOnLeft ? -1f : 1f;
+    public float PitBoxLaneCenterLateral => PitBoxSide * (PitHalfWidth + pitBoxLaneWidth * 0.5f);
+    public float PitBoxLaneOuterLateral => PitBoxSide * (PitHalfWidth + pitBoxLaneWidth);
     // Inner edge of the strip = the pit lane's own edge, where a box's dividing line starts.
-    public float PitBoxLaneInnerLateral => PitHalfWidth;
+    public float PitBoxLaneInnerLateral => PitBoxSide * PitHalfWidth;
     // Span of the grey strip along the pit lane (distances from the pit-lane start), matching the mesh
     // built in BuildPitLane. GridSpawner fits the pit boxes inside this span.
     public float PitBoxLaneFrom(float pitLen) => Mathf.Clamp(pitBoxLaneStartOffset, 0f, pitLen);
@@ -370,8 +376,12 @@ public class TrackBuilder : MonoBehaviour
                 var lmf = laneGo.AddComponent<MeshFilter>();
                 var lmr = laneGo.AddComponent<MeshRenderer>();
                 lmr.sharedMaterial = pitBoxLaneMaterial != null ? pitBoxLaneMaterial : BuildBoxLaneMaterial();
-                lmf.sharedMesh = BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth,
-                                               $"PitBoxLane_{track.name}", PixelArt.UvScale(lmr.sharedMaterial));
+                // Built from the lower lateral to the higher one whichever side it is on, so it winds the same way.
+                lmf.sharedMesh = pitBoxLaneOnLeft
+                    ? BuildBandMesh(bandSamples, s => -(s.width * 0.5f + pitBoxLaneWidth), s => -s.width * 0.5f,
+                                    $"PitBoxLane_{track.name}", PixelArt.UvScale(lmr.sharedMaterial))
+                    : BuildBandMesh(bandSamples, s => s.width * 0.5f, s => s.width * 0.5f + pitBoxLaneWidth,
+                                    $"PitBoxLane_{track.name}", PixelArt.UvScale(lmr.sharedMaterial));
             }
             BuildPitBoxLines(pitSamples, pitLen);
         }
@@ -388,8 +398,9 @@ public class TrackBuilder : MonoBehaviour
         var fit = PitLane.FitBoxes(this, pitLen, ResolvePitBoxCount());
         if (fit.spacing <= 0f) return;
 
-        float inner = PitBoxLaneInnerLateral;
-        float outer = PitBoxLaneOuterLateral;
+        // Lower lateral first whichever side the lane is on, so the quads keep facing the camera.
+        float inner = Mathf.Min(PitBoxLaneInnerLateral, PitBoxLaneOuterLateral);
+        float outer = Mathf.Max(PitBoxLaneInnerLateral, PitBoxLaneOuterLateral);
         float half = pitBoxLineWidth * 0.5f;
         float stripFrom = PitBoxLaneFrom(pitLen) + half;    // keep the paint on the grey, ends included
         float stripTo = Mathf.Max(stripFrom, PitBoxLaneTo(pitLen) - half);
@@ -633,8 +644,8 @@ public class TrackBuilder : MonoBehaviour
         if (track.hasPitLane)
         {
             if (_pitSurfaceCache == null || _pitSurfaceCache.Count < 2) _pitSurfaceCache = SamplePitCenterline();
-            float extraPlus = HasPitBoxLane ? pitBoxLaneWidth : 0f;
-            if (OnPitBand(_pitSurfaceCache, local, extraPlus, out float pitLat))
+            float extra = HasPitBoxLane ? pitBoxLaneWidth * PitBoxSide : 0f;
+            if (OnPitBand(_pitSurfaceCache, local, extra, out float pitLat))
             {
                 lateralAbs = pitLat;
                 return true;
@@ -683,7 +694,8 @@ public class TrackBuilder : MonoBehaviour
     }
 
     // Signed band test against the pit centerline: [-width/2, width/2 + extraPlus] along +normal.
-    static bool OnPitBand(List<Sample> samples, Vector2 local, float extraPlus, out float lateralAbs)
+    // `extra` widens the band on one side: positive past the +normal edge, negative past the -normal edge.
+    static bool OnPitBand(List<Sample> samples, Vector2 local, float extra, out float lateralAbs)
     {
         lateralAbs = 0f;
         if (samples == null || samples.Count < 2) return false;
@@ -697,7 +709,7 @@ public class TrackBuilder : MonoBehaviour
         var s = samples[bi];
         float lat = Vector2.Dot(local - s.position, s.normal);
         lateralAbs = Mathf.Abs(lat);
-        return lat >= -s.width * 0.5f && lat <= s.width * 0.5f + extraPlus;
+        return lat >= -s.width * 0.5f + Mathf.Min(0f, extra) && lat <= s.width * 0.5f + Mathf.Max(0f, extra);
     }
 
     // True if worldPos sits over the pit lane (ribbon or box lane) and NOT over the main track surface —
@@ -710,8 +722,8 @@ public class TrackBuilder : MonoBehaviour
         if (_pitSurfaceCache == null || _pitSurfaceCache.Count < 2) _pitSurfaceCache = SamplePitCenterline();
         Vector2 local = transform.InverseTransformPoint(worldPos);
         if (OnSampleSurface(_surfaceCache, local, out _)) return false;
-        float extraPlus = HasPitBoxLane ? pitBoxLaneWidth : 0f;
-        return OnPitBand(_pitSurfaceCache, local, extraPlus, out _);
+        float extra = HasPitBoxLane ? pitBoxLaneWidth * PitBoxSide : 0f;
+        return OnPitBand(_pitSurfaceCache, local, extra, out _);
     }
 
     // Project a WORLD position onto the main centerline and return its distance (m) along the spline.

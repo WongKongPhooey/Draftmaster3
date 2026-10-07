@@ -383,7 +383,7 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             Vector2 local = track.transform.InverseTransformPoint(transform.position);
             Vector2 pitPos = track.SamplePitAt(track.NearestPitDistance(transform.position), _pitSamples).position;
             // A car parked on the box lane (outside the pit ribbon) still counts as on the pit.
-            float engageMax = track.HasPitBoxLane ? Mathf.Max(pitEngageLateralMax, track.PitBoxLaneOuterLateral + 0.5f) : pitEngageLateralMax;
+            float engageMax = track.HasPitBoxLane ? Mathf.Max(pitEngageLateralMax, Mathf.Abs(track.PitBoxLaneOuterLateral) + 0.5f) : pitEngageLateralMax;
             onPit = Vector2.Distance(local, pitPos) < engageMax;
         }
         usePitLane = onPit;

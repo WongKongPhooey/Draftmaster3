@@ -44,8 +44,6 @@ public static class DaytonaPackageAuthoring
     const float PaddockDepth = 76f;
     // Box lane starts/stops this far inside the ends of the front stretch, so no box sits on a pit-road arc.
     const float BoxLaneMargin = 20f;
-    // The walkable pocket reaches this far past the box lane toward the track - room for the crews.
-    const float CrewApron = 3f;
 
     // The pieces copied from the blueprint, by name. Each lands at the same along/out offset at Daytona.
     static readonly string[] KeyAreas =
@@ -211,6 +209,9 @@ public static class DaytonaPackageAuthoring
         // Away from the racing surface: the side of pit road the lap start is NOT on.
         Vector2 outward = Vector2.Dot(lapStart.position - chordStart.position, chordStart.normal) > 0f
             ? -chordStart.normal : chordStart.normal;
+        // The boxes go on the paddock side of pit road, as at Watkins Glen: pit road, then the boxes, then the
+        // paddock behind them. On this anticlockwise lap that is the left of pit-lane travel.
+        builder.pitBoxLaneOnLeft = Vector2.Dot(outward, chordStart.normal) < 0f;
 
         // Ends of the front stretch, projected onto the chord. A traced lap has no "Front Stretch" pieces - it
         // starts on the start/finish line, mid tri-oval - so there the boxes run the length of the chord itself.
@@ -315,13 +316,9 @@ public static class DaytonaPackageAuthoring
     static void LayPaddock(GameObject contents, Transform paddockRoot, TrackBuilder builder, Frame frame,
                            Blueprint bp, List<string> notes)
     {
-        var track = builder.track;
-        float pitHalf = track.pitDefaultWidth * 0.5f;
-        float boxLane = builder.HasPitBoxLane ? builder.pitBoxLaneWidth : 0f;
-
-        // The pocket: the length of the box lane, from just track-side of the stalls back to Watkins Glen's depth
-        // behind pit road. Pit road and its stalls are on the TRACK side of the paddock here (the stalls sit
-        // against the pit wall), so unlike Watkins both have to be inside it - the player walks to their car.
+        // The pocket: the length of the box lane, from pit road's paddock-side edge back to Watkins Glen's depth -
+        // Watkins Glen's own boundary starts at the same edge, so the boxes behind pit road are inside it and the
+        // player walks straight from the paddock to their car.
         var boundary = paddockRoot.GetComponentInChildren<PaddockBoundary>(true);
         if (boundary == null)
         {
@@ -334,7 +331,7 @@ public static class DaytonaPackageAuthoring
         boundary.transform.localRotation = Quaternion.identity;
         var poly = boundary.GetComponent<PolygonCollider2D>();
         poly.isTrigger = true;
-        float near = -(pitHalf * 2f + boxLane + CrewApron);
+        const float near = 0f;
         poly.points = new[]
         {
             frame.At(new Vector2(0f, near)), frame.At(new Vector2(frame.length, near)),

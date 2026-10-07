@@ -372,8 +372,12 @@ distance along and back from pit road: the RV (`SpawnPoint_RV`), `Grandstand_Mar
 seat across the track in the front-stretch stand nearest the start/finish), `SponsorSuite_Marker`,
 `SigningFence_Marker`, `MeetingRoom_Marker`, `IntroStage_Marker`, `SpawnPoint_VictoryLane` and
 `SpawnPoint_PitLaneCenter`. The paddock runs the length of the box lane and is as deep as Watkins Glen's.
-One deliberate difference: at Daytona the pit stalls sit against the pit wall, on the *track* side of pit
-road, so the walkable pocket includes pit road and the stalls - the player has to be able to walk to the car.
+The order away from the track is the same as Watkins Glen's: pit road, then the boxes, then the paddock, whose
+boundary starts at pit road's paddock-side edge so the boxes are inside it. The boxes are on the LEFT of pit-lane
+travel here (`TrackBuilder.pitBoxLaneOnLeft`, set by the Author step from which side the paddock is on): the box
+lane used to be hard-wired to the right, which on an anticlockwise lap is the track side. Every lateral the
+builder publishes (`PitBoxLaneCenterLateral` / `Outer` / `Inner`) carries the sign (`PitBoxSide`), and the
+scene-wide `wallSide` on the crew, autograph-fan and sponsor-rep spawners is read relative to it.
 
 Re-run the menu item after regenerating Daytona. Do not follow it with an overwriting `Dress Selected
 Package`, which regenerates the paddock pocket from the pit lane.

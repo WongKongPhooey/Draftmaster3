@@ -129,7 +129,9 @@ public class SponsorRepSpawner : MonoBehaviour
         Vector3 basePos = track.transform.TransformPoint(new Vector3(s.position.x, s.position.y, 0f));
         Vector3 normalW = track.transform.TransformDirection(new Vector3(s.normal.x, s.normal.y, 0f)).normalized;
 
-        Vector3 pos = basePos + normalW * (wallSide * lateral);
+        // wallSide is relative to the box lane (+1 = the boxes' side); the track says which side that is.
+        float side = wallSide * track.PitBoxSide;
+        Vector3 pos = basePos + normalW * (side * lateral);
         pos.z = npcZ;
 
         var go = new GameObject($"SponsorRep_{sponsor.Name}");
@@ -141,7 +143,7 @@ public class SponsorRepSpawner : MonoBehaviour
         rb.gravityScale = 0f;
 
         // Face across the lane, toward where the player walks.
-        Vector3 face = -normalW * wallSide;
+        Vector3 face = -normalW * side;
         OnFootController.ApplyFacing(go.transform, null, new Vector2(face.x, face.y), 90f);
 
         BuildAppearance(go, sponsor.Id * 131 + 17);
