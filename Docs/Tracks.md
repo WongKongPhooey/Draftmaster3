@@ -223,6 +223,44 @@ A traced centreline does. `Assets/TrackTraces/<id>.json` holds a circuit as Open
 raceways, so those, the pit lane, the speed limits and the lap counts still come from `TrackDimensions`;
 the import replaces a track asset's main line and nothing else.
 
+### Tracing from the wall, and following the trace closely
+
+Where OSM's raceway lines are incomplete but the **outer wall** is mapped as one closed `barrier=wall` way,
+`Tools/trace_from_wall.py` offsets the wall inward by half the racing surface to get the centreline, checks it
+against USGS NAIP imagery (public domain; `--preview` draws it to `Temp/<id>_wall_trace.png`) and writes the trace
+with two extra fields:
+
+- `startFinish: "firstNode"` (with `--start=apex` or `--start=lat,lon`): the trace begins on the start/finish
+  line, so the importer keeps the lap starting there instead of rotating it to the longest straight.
+- `segmentation: "curvature"`: a precise trace is read by `OsmTrackGeometry.SegmentByCurvature` - curvature
+  smoothed over 120 m, cut into 20 m pieces, neighbours of the same curvature joined - instead of one arc per
+  corner. Daytona read the old way was 7 pieces that missed their own start by 40 m and strayed ~13 m off the
+  road; read this way it is 33 pieces within ~3 m of the trace (5.5 m worst). The 120 m window is a trade: at
+  40 m the wall's 16 m node spacing reads as 165 m spikes in 300 m turns and the AI lapped 7 s slower.
+
+The lap **seam** still goes on the longest straight (the back stretch at Daytona), with the start/finish line
+held by `startFinishDistance`: closed mid-corner, the sampled road read to the AI's grip governor as a hairpin.
+
+Because a corner is now several pieces, the importer judges corners **a run at a time** (`CornerMask`: same
+direction, cornering rate, more than 12 degrees together, wrapping the seam) and lays **one** out-in-out line
+over the whole run, each piece carrying its share; a one-arc corner gets exactly the line it always did. Turns
+are numbered from the start/finish line. A gentle "Bend" carries only its apex point - it used to add entry and
+exit points with zero-width bounds, pinching the road shut at both ends of every bend (on every traced track;
+fixed on re-import). Pit road comes from the map when it can: `--pit=<wayId>` stores OSM's
+mapped pit lane in the trace, the importer lays the trace over the built lap along the front stretch and fits pit
+road to it with `PitChordFit.TryFitToLine` - the straight ON the mapped lane, an arc of the largest radius that
+fits off the racing line onto it and another back. Daytona: way 352067003, 731 m (542 m straight), within 2.4 m.
+Without a mapped lane, a track whose row has `pitChordInsetMetres` gets a chord guessed by `PitChordFit.TryFit`
+(straight held that far from the racing line) - which at Daytona came out 240 m deep in the infield, where no
+pit road is. Grandstands are laid along runs of straight or gently curved road, not only Straight
+segments, so a tri-oval front stretch gets its main grandstand.
+
+Daytona is the first: 11 m wall to yellow line plus a 3.5 m apron strip (`Apron`, registered as tarmac
+run-off). `Author Daytona` imports the trace after generating and rebuilds its grandstands, so re-running it
+keeps the traced shape. **Retrain the racing line after any re-import** - a trained line is only rejected when
+the lap length changes, and a traced lap is rescaled to the published length, so a stale line would be
+accepted. Daytona's was removed.
+
 ### Closing an oval is not the same problem as closing a road course
 
 Prefer to move **only the straights** — on a hand-measured lap the corners are the part that was actually

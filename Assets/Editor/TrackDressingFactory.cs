@@ -31,6 +31,7 @@ public static class TrackDressingFactory
     // ---- placement numbers. Everything else is measured off the track. ----
     const float MinStraightForStands = 150f;   // shorter than this and a stand looks pasted on
     const float StandLength = 110f;
+    const float MaxStandBendDegPerMetre = 0.15f;   // a run bending faster than this (radius under ~380 m) is a corner
     const float StandDepth = 14f;
     const float StandGap = 14f;                // between adjacent stands on the same straight
     const float StandSetback = 12f;            // from the road edge to the front row
@@ -112,6 +113,19 @@ public static class TrackDressingFactory
         {
             PrefabUtility.UnloadPrefabContents(contents);
         }
+    }
+
+    // Throw away the generated grandstands and lay them again along the road as it is now - for a track whose
+    // shape has changed under them (DaytonaPackageAuthoring, after a traced import). Hand-placed stands, anywhere
+    // but the generated Grandstands root, are left alone. Returns how many were built.
+    public static int RebuildGrandstands(GameObject contents, TrackBuilder builder)
+    {
+        var environmentRoot = EnsureChild(contents.transform, "Environment");
+        var owned = environmentRoot.Find(GrandstandsName);
+        if (owned != null) Object.DestroyImmediate(owned.gameObject);
+        var samples = builder.SampleCenterline();
+        if (samples.Count < 2) return 0;
+        return BuildGrandstands(environmentRoot, builder, samples, Centroid(samples));
     }
 
     // ---------------------------------------------------------------- pieces
@@ -314,30 +328,50 @@ public static class TrackDressingFactory
         var standsRoot = new GameObject(GrandstandsName);
         standsRoot.transform.SetParent(root, false);
 
-        int built = 0;
-        float cum = 0f;
-        for (int i = 0; i < track.segments.Length; i++)
-        {
-            var seg = track.segments[i];
-            float segStart = cum;
-            cum += seg.length;
-            if (seg.type != TrackInfoV2.SegmentType.Straight || seg.length < MinStraightForStands) continue;
+        // Stands go along runs of road that are straight or bend gently - a traced lap is mostly long gentle
+        // pieces rather than Straight segments, and a front stretch like Daytona's tri-oval is a curve the main
+        // grandstand follows. Runs are found round the ring, so one the lap seam falls in is still one run.
+        var segs = track.segments;
+        int n = segs.Length;
+        var segStart = new float[n];
+        float lap = 0f;
+        for (int i = 0; i < n; i++) { segStart[i] = lap; lap += segs[i].length; }
+        bool StandAlong(int i) => segs[i].type == TrackInfoV2.SegmentType.Straight
+            || Mathf.Abs(segs[i].angle) / Mathf.Max(1f, segs[i].length) < MaxStandBendDegPerMetre;
 
-            // Leave the ends of the straight clear so stands don't run into the corner.
-            float usable = seg.length - 40f;
+        int from = -1;
+        for (int i = 0; i < n; i++) if (!StandAlong(i)) { from = (i + 1) % n; break; }
+        if (from < 0) from = 0;   // every piece qualifies: a near-circle; start anywhere
+
+        int built = 0;
+        int walked = 0;
+        while (walked < n)
+        {
+            int first = (from + walked) % n;
+            if (!StandAlong(first)) { walked++; continue; }
+            float runLength = 0f;
+            while (walked < n && StandAlong((from + walked) % n))
+            {
+                runLength += segs[(from + walked) % n].length;
+                walked++;
+            }
+            if (runLength < MinStraightForStands) continue;
+
+            // Leave the ends of the run clear so stands don't run into the corner.
+            float usable = runLength - 40f;
             int count = Mathf.Max(1, Mathf.FloorToInt((usable + StandGap) / (StandLength + StandGap)));
             float block = count * StandLength + (count - 1) * StandGap;
-            float cursor = segStart + 20f + (usable - block) * 0.5f;
+            float cursor = segStart[first] + 20f + (usable - block) * 0.5f;
 
             for (int k = 0; k < count; k++)
             {
                 float centre = cursor + StandLength * 0.5f;
                 cursor += StandLength + StandGap;
-                BuildStand(standsRoot.transform, builder, samples, centroid, centre, crowd, $"Grandstand_{i}_{k}");
+                BuildStand(standsRoot.transform, builder, samples, centroid, ((centre % lap) + lap) % lap, crowd,
+                           $"Grandstand_{first}_{k}");
                 built++;
             }
         }
-
         if (built == 0) Object.DestroyImmediate(standsRoot);
         return built;
     }

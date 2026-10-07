@@ -278,4 +278,32 @@ public class OsmTrackGeometryTests
             parts.Add(p.isTurn ? $"Turn {p.length:0}m/{p.angle:0}deg" : $"Straight {p.length:0}m");
         return string.Join(", ", parts);
     }
+
+    // A precise trace read as constant-curvature runs: a stadium oval of 800 m straights and 200 m radius ends,
+    // started mid front stretch, comes back as its straights plus corners, turning exactly 360 degrees and
+    // closing on itself.
+    [Test]
+    public void CurvatureRunsFollowAStadiumOval()
+    {
+        const float straight = 800f, radius = 200f;
+        var pts = new List<Vector2>();
+        float half = straight * 0.5f;
+        for (float x = 0f; x < half; x += 3f) pts.Add(new Vector2(x, 0f));
+        for (float a = 0f; a < Mathf.PI; a += 3f / radius) pts.Add(new Vector2(half + radius * Mathf.Sin(a), radius - radius * Mathf.Cos(a)));
+        for (float x = half; x > -half; x -= 3f) pts.Add(new Vector2(x, 2f * radius));
+        for (float a = 0f; a < Mathf.PI; a += 3f / radius) pts.Add(new Vector2(-half - radius * Mathf.Sin(a), radius + radius * Mathf.Cos(a)));
+        for (float x = -half; x < 0f; x += 3f) pts.Add(new Vector2(x, 0f));
+        pts.Add(pts[0]);
+
+        var lap = OsmTrackGeometry.SegmentByCurvature(pts);
+        float total = 0f, angle = 0f, straights = 0f;
+        foreach (var p in lap) { total += p.length; angle += p.angle; if (!p.isTurn) straights += p.length; }
+
+        float expected = 2f * straight + 2f * Mathf.PI * radius;
+        Assert.AreEqual(expected, total, expected * 0.01f, "lap length");
+        Assert.AreEqual(360f, angle, 0.5f, "a lap turns once");
+        Assert.Greater(straights, 2f * straight * 0.75f, "the straights come back as straights (less the smoothing window at each end). Got: " + Describe(lap));
+        Assert.Less(lap.Count, 30, "a constant radius is one run, not dozens. Got: " + Describe(lap));
+        Assert.Less(LapGeometry.ClosureGap(lap), 10f, "closes on itself before any solve");
+    }
 }

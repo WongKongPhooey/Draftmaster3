@@ -358,6 +358,8 @@ public class AILapSimTests
     [Explicit("Diagnostic: step-by-step trace through one stretch of any track.")]
     [TestCase("Michigan", 0, 60f, 260f)]
     [TestCase("Daytona", 0, 2850f, 3050f)]
+    [TestCase("Daytona", 1, 3880f, 4030f)]
+    [TestCase("Daytona", 1, 0f, 150f)]
     [TestCase("Talladega", -1, 1500f, 1750f)]
     public void TraceTrack(string trackId, int lap, float from, float to)
     {

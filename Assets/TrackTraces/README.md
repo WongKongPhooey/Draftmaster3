@@ -57,6 +57,16 @@ fetch. **OSM's raceway mapping is incomplete at those venues**: Talladega has 3,
 and Daytona 3,368m of 4,023m, with the rest simply not there. A venue with no usable trace keeps its
 generated geometry, which is why the generator stays.
 
+### Traced from the outer wall instead
+
+Daytona's raceway lines are incomplete, but its outer SAFER wall is mapped as one closed `barrier=wall` way.
+On an oval the racing surface is a fixed width inside that wall, so `Tools/trace_from_wall.py` offsets the
+wall inward by half the surface width and writes the centreline here in the same format (plus
+`surfaceWidthMetres` / `apronWidthMetres`). Daytona's trace (11 m surface, 3.5 m apron) was checked against
+USGS NAIP imagery: the inside-edge offset lands on the painted yellow line on the straights and in the banked
+turns, and the lap reads 4,011.5 m against a published 4,023 m. Talladega is the next candidate for the same
+treatment.
+
 ## What a trace cannot tell you
 
 **Banking** is not recorded in OSM at all, and **width** almost never is for raceways. Both still come from

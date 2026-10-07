@@ -595,6 +595,9 @@ public class TrackEnvironmentBuilder : MonoBehaviour
         return strip.material != null && strip.material.name.ToLowerInvariant().Contains("kerb");
     }
 
+    static bool IsApron(TrackEnvironment.Strip strip)
+        => !string.IsNullOrEmpty(strip.label) && strip.label.ToLowerInvariant().Contains("apron");
+
     void BuildStrips(List<TrackBuilder.Sample> mainSamples, List<TrackBuilder.Sample> pitSamples)
     {
         if (environment.strips == null || environment.strips.Length == 0) return;
@@ -651,6 +654,8 @@ public class TrackEnvironmentBuilder : MonoBehaviour
             // "unclassified off-track = grass" — which is what threw grass clods on the red-and-whites.
             // Registered after the runoff areas so the kerb wins wherever it overlaps one (last poly wins).
             if (outline != null && IsKerb(strip)) SurfaceField.Add(outline, TrackEnvironment.SurfaceType.Kerb);
+            // An oval's apron is paved: off the racing surface, but tarmac rather than grass.
+            else if (outline != null && IsApron(strip)) SurfaceField.Add(outline, TrackEnvironment.SurfaceType.TarmacRunoff);
         }
     }
 

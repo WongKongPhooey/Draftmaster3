@@ -203,50 +203,18 @@ public static class RaceSceneSplitter
     // This used to be three hard-coded menu items - Daytona, Martinsville, WatkinsGlen - from when those
     // were the only three tracks that existed. There are now 38, and a [MenuItem] is a compile-time
     // attribute, so the list cannot be one item per track without writing all 38 out by hand and
-    // re-writing them every time the calendar changes. A GenericMenu is built at the moment it opens, so
-    // it always shows exactly what is on disk.
+    // re-writing them every time the calendar changes. The picker is built when it opens, so it always
+    // shows exactly what is on disk.
     //
     // Grouped by track type, with a tick against the current selection. A track with no geometry is shown
     // greyed out rather than hidden, so "why is X not in the list" has a visible answer.
+    //
+    // A window, not a GenericMenu: ShowAsContext needs a GUI event in flight, and a main-menu item has none,
+    // so on Windows the dropdown silently never appeared.
     [MenuItem("Draftmaster/Tracks/Select Track For Next Race...")]
-    public static void SelectTrackForNextRace()
-    {
-        var menu = new GenericMenu();
-        string current = TrackSelection.CurrentId;
-        int playable = 0;
+    public static void SelectTrackForNextRace() => TrackPickerWindow.Open();
 
-        foreach (TrackType type in new[] { TrackType.Superspeedway, TrackType.Speedway,
-                                           TrackType.ShortTrack, TrackType.RoadCourse, TrackType.DirtCourse })
-        {
-            var rows = TrackCatalog.All.Where(r => r.Type == type)
-                                       .OrderBy(r => r.DisplayName)
-                                       .ToList();
-            if (rows.Count == 0) continue;
-
-            string group = ObjectNames.NicifyVariableName(type.ToString());
-            foreach (var row in rows)
-            {
-                string label = $"{group}/{row.DisplayName}  ({row.LengthMiles:0.###} mi)";
-                if (TrackCatalog.HasGeometry(row.Name))
-                {
-                    playable++;
-                    string id = row.Name;   // captured per iteration, not by reference to the loop
-                    menu.AddItem(new GUIContent(label), current == id, () => SelectTrack(id));
-                }
-                else
-                {
-                    menu.AddDisabledItem(new GUIContent(label + " - no layout"));
-                }
-            }
-        }
-
-        menu.AddSeparator("");
-        menu.AddItem(new GUIContent($"Open the Track Builder Window ({playable} built)"), false,
-                     TrackAuthoringMenu.OpenWindow);
-        menu.ShowAsContext();
-    }
-
-    static void SelectTrack(string id)
+    internal static void SelectTrack(string id)
     {
         bool ok = TrackSelection.Select(id);
         string summary = ok
@@ -480,5 +448,53 @@ public static class RaceSceneSplitter
             File.WriteAllText(Path.Combine(dir, "track-tools.txt"), text);
         }
         catch (IOException) { /* reporting is a convenience, never a failure */ }
+    }
+}
+
+// The list behind `Select Track For Next Race...`: every catalogue track grouped by type, the current one ticked,
+// unbuilt ones greyed out. Picking one sets TrackSelection and closes the window.
+public class TrackPickerWindow : EditorWindow
+{
+    Vector2 _scroll;
+
+    public static void Open()
+    {
+        var w = GetWindow<TrackPickerWindow>(true, "Select Track For Next Race", true);
+        w.minSize = new Vector2(320f, 420f);
+    }
+
+    void OnGUI()
+    {
+        string current = TrackSelection.CurrentId;
+        _scroll = EditorGUILayout.BeginScrollView(_scroll);
+
+        foreach (TrackType type in new[] { TrackType.Superspeedway, TrackType.Speedway,
+                                           TrackType.ShortTrack, TrackType.RoadCourse, TrackType.DirtCourse })
+        {
+            var rows = TrackCatalog.All.Where(r => r.Type == type).OrderBy(r => r.DisplayName).ToList();
+            if (rows.Count == 0) continue;
+
+            EditorGUILayout.LabelField(ObjectNames.NicifyVariableName(type.ToString()), EditorStyles.boldLabel);
+            foreach (var row in rows)
+            {
+                bool built = TrackCatalog.HasGeometry(row.Name);
+                string label = $"{(current == row.Name ? "\u2713 " : "   ")}{row.DisplayName}  ({row.LengthMiles:0.###} mi)"
+                               + (built ? "" : " - no layout");
+                using (new EditorGUI.DisabledScope(!built))
+                {
+                    if (GUILayout.Button(label, EditorStyles.miniButton))
+                    {
+                        RaceSceneSplitter.SelectTrack(row.Name);
+                        Close();
+                        GUIUtility.ExitGUI();
+                    }
+                }
+            }
+            EditorGUILayout.Space(4f);
+        }
+
+        EditorGUILayout.EndScrollView();
+        if (GUILayout.Button("Open the Track Builder Window"))
+            TrackAuthoringMenu.OpenWindow();
     }
 }

@@ -158,10 +158,13 @@ namespace Draftmaster.Tracks
             // ---------------------------------------------------------- superspeedways
             // Daytona and Talladega are the two the draft model was built for. Talladega is both longer
             // and eight feet wider, which is why its packs are bigger - that difference reaches the mesh now.
+            // Width is measured, not published: 11 m from the wall to the yellow line, off USGS imagery and the
+            // OSM outer wall (Tools/trace_from_wall.py), against the 40 ft usually quoted. The apron below the
+            // yellow line is another 3.5 m and is drawn by the package, not counted as racing surface.
             Oval("Daytona", "Daytona International Speedway", TrackKind.Superspeedway,
-                 2.5f, 40f, 31f, 3f, 4, 0.47f, 6f, 55, 200, SeriesVisits.All,
-                 note: "Tri-oval banked 18 deg, back stretch 3 deg. 40 ft wide throughout. Pit road is a "
-                     + "straight chord across the tri-oval infield, not a lane alongside the front stretch.",
+                 2.5f, 11f / 0.3048f, 31f, 3f, 4, 0.47f, 6f, 55, 200, SeriesVisits.All,
+                 note: "Tri-oval banked 18 deg, back stretch 3 deg. 11 m wall to yellow line, 3.5 m apron. "
+                     + "Pit road is a straight chord across the tri-oval infield, not a lane alongside the front stretch.",
                  pitChordInsetMetres: 40f),
 
             Oval("Talladega", "Talladega Superspeedway", TrackKind.Superspeedway,

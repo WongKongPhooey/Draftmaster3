@@ -56,7 +56,7 @@ public class TrackDimensionsTests
 
         // Both superspeedways; Talladega is the wider one, which is why its packs are bigger.
         Assert.Greater(talladega.widthMetres, daytona.widthMetres + 1.5f,
-                       "Talladega (48 ft) should be wider than Daytona (40 ft).");
+                       "Talladega (48 ft) should be wider than Daytona (11 m, 36 ft).");
     }
 
     // ---------------------------------------------------------------- ovals

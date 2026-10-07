@@ -31,6 +31,7 @@ public static class DaytonaPackageAuthoring
     const string PackageDir = "Assets/Resources/TrackPackages";
     const string ReportPath = "Temp/track_package_report.txt";
     const string TrackId = "Daytona";
+    const string TraceDir = "Assets/TrackTraces";
     const string BlueprintId = "WatkinsGlen";
 
     // Watkins Glen's paddock frame. Its pit road runs toward -x and its paddock lies behind it toward +y, so a
@@ -68,8 +69,21 @@ public static class DaytonaPackageAuthoring
         var row = TrackCatalog.Row(TrackId);
         if (row == null) return "Daytona is not in the catalogue.";
         var geometry = TrackAuthoringMenu.GenerateGeometry(row, overwrite: true);
+
+        // 1b. The real shape over the formula's: the centreline traced from the OSM outer wall
+        // (Tools/trace_from_wall.py). The import re-fits the chord pit road to it and puts the start/finish line
+        // on the tri-oval where the trace begins. With no trace, or one the importer refuses, the formula stands.
+        string traceNote = null;
+        if (geometry != null && File.Exists($"{TraceDir}/{TrackId}.json"))
+        {
+            traceNote = OsmTrackImporter.Import(TrackId, geometry).Trim();
+            EditorUtility.SetDirty(geometry);
+            AssetDatabase.SaveAssets();
+        }
+
         if (geometry == null || !geometry.hasPitLane || geometry.pitSegments == null || geometry.pitSegments.Length != 3)
-            return "Daytona geometry did not come out with a chord pit road - package left alone.";
+            return "Daytona geometry did not come out with a chord pit road - package left alone." +
+                   (traceNote != null ? $" Trace import: {traceNote}" : "");
 
         var blueprint = ReadBlueprint(out string blueprintError);
         if (blueprint == null) return blueprintError;
@@ -85,6 +99,7 @@ public static class DaytonaPackageAuthoring
             if (paddockRoot == null) return "Daytona package has no Paddock root.";
 
             var notes = new List<string>();
+            if (traceNote != null) notes.Add($"trace: {traceNote}");
             var frame = DaytonaFrame(builder, notes);
 
             // 2. Walls: gaps measured against the new pit road, on whichever side it actually is.
@@ -92,6 +107,7 @@ public static class DaytonaPackageAuthoring
             if (envBuilder != null && envBuilder.environment != null)
             {
                 var env = envBuilder.environment;
+                EnsureApron(env, geometry, notes);
                 env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.outerEdgeOffset);
                 EditorUtility.SetDirty(env);
                 AssetDatabase.SaveAssets();
@@ -102,6 +118,10 @@ public static class DaytonaPackageAuthoring
             }
             var ground = contents.GetComponentInChildren<TrackGround>(true);
             if (ground != null) ground.Build();
+
+            // Grandstands: laid along the road as it is now, so the shape changing (a traced import) doesn't leave
+            // them standing where the old front stretch was. Before the paddock, whose seat is picked from them.
+            notes.Add($"{TrackDressingFactory.RebuildGrandstands(contents, builder)} grandstands");
 
             // 3. The paddock.
             LayPaddock(contents, paddockRoot, builder, frame, blueprint, notes);
@@ -114,6 +134,42 @@ public static class DaytonaPackageAuthoring
             PrefabUtility.UnloadPrefabContents(contents);
             if (blueprint.root != null) PrefabUtility.UnloadPrefabContents(blueprint.root);
         }
+    }
+
+    // The apron: 3.5 m of paving below the yellow line, all the way round on the infield side. A strip anchored
+    // to the left (infield) edge, so it follows the road wherever the trace takes it; TrackEnvironmentBuilder
+    // registers it as tarmac run-off, so a car on it is off the racing surface but not on the grass.
+    const float ApronMetres = 3.5f;
+    const string ApronLabel = "Apron";
+    const string ApronFallbackMaterial = "Assets/Materials/TarmacLight.mat";
+
+    static void EnsureApron(TrackEnvironment env, TrackInfoV2 geometry, List<string> notes)
+    {
+        if (geometry.segments == null || geometry.segments.Length == 0) return;
+        var strips = new List<TrackEnvironment.Strip>(env.strips ?? new TrackEnvironment.Strip[0]);
+        strips.RemoveAll(s => s.label == ApronLabel);
+        int last = geometry.segments.Length - 1;
+        strips.Add(new TrackEnvironment.Strip
+        {
+            label = ApronLabel,
+            useSpline = TrackEnvironment.SplineRef.Main,
+            anchor = TrackEnvironment.LateralAnchor.LeftEdge,
+            startSegmentIndex = 0,
+            startDistance = 0f,
+            endSegmentIndex = last,
+            endDistance = geometry.segments[last].length,
+            lateralOffset = -ApronMetres * 0.5f,   // centred half its width outboard of the left edge
+            width = ApronMetres,
+            sortingOrder = env.runoffSortingOrder + 1,
+            // The environment's run-off tarmac if it has one, else a lighter tarmac than the racing surface - an
+            // apron reads paler than the groove from the air.
+            material = env.tarmacRunoffMaterial != null ? env.tarmacRunoffMaterial
+                     : AssetDatabase.LoadAssetAtPath<Material>(ApronFallbackMaterial),
+            uvLengthScale = 1f,
+        });
+        env.strips = strips.ToArray();
+        EditorUtility.SetDirty(env);
+        notes.Add($"{ApronMetres} m apron in {(strips[strips.Count - 1].material != null ? strips[strips.Count - 1].material.name : "NO MATERIAL")}");
     }
 
     // ------------------------------------------------------------------ frames
@@ -149,17 +205,28 @@ public static class DaytonaPackageAuthoring
         }
 
         var chordStart = builder.SamplePitAt(entryArc + 0.01f);
-        var lapStart = builder.SampleAt(0f);
+        // The start/finish line, on the front stretch: on a traced lap the lap itself starts on the back stretch.
+        var lapStart = builder.SampleAt(track.startFinishDistance);
         Vector2 along = chordStart.tangent.normalized;
         // Away from the racing surface: the side of pit road the lap start is NOT on.
         Vector2 outward = Vector2.Dot(lapStart.position - chordStart.position, chordStart.normal) > 0f
             ? -chordStart.normal : chordStart.normal;
 
-        // Ends of the front stretch, projected onto the chord.
-        float startAlong = Vector2.Dot(lapStart.position - chordStart.position, along);
-        float endAlong = Vector2.Dot(builder.SampleAt(frontLength).position - chordStart.position, along);
-        float boxFrom = entryArc + startAlong + BoxLaneMargin;
-        float boxTo = entryArc + endAlong - BoxLaneMargin;
+        // Ends of the front stretch, projected onto the chord. A traced lap has no "Front Stretch" pieces - it
+        // starts on the start/finish line, mid tri-oval - so there the boxes run the length of the chord itself.
+        float boxFrom, boxTo;
+        if (frontLength > 0f)
+        {
+            float startAlong = Vector2.Dot(lapStart.position - chordStart.position, along);
+            float endAlong = Vector2.Dot(builder.SampleAt(frontLength).position - chordStart.position, along);
+            boxFrom = entryArc + startAlong + BoxLaneMargin;
+            boxTo = entryArc + endAlong - BoxLaneMargin;
+        }
+        else
+        {
+            boxFrom = entryArc + BoxLaneMargin;
+            boxTo = entryArc + chord - BoxLaneMargin;
+        }
         builder.pitBoxLaneStartOffset = boxFrom;
         builder.pitBoxLaneEndOffset = pitLength - boxTo;
         builder.Build();
@@ -343,14 +410,17 @@ public static class DaytonaPackageAuthoring
     static bool TrySeatInStand(GameObject contents, TrackBuilder builder, out Vector2 seat)
     {
         seat = default;
+        // The start/finish line: the middle of the formula's "Tri-Oval" piece, or startFinishDistance on a traced
+        // lap, which has no such piece and puts the line there itself.
         var segs = builder.track.segments;
         float triOval = 0f;
+        bool labelled = false;
         for (int i = 0; i < segs.Length; i++)
         {
-            if (segs[i].label == "Tri-Oval") { triOval += segs[i].length * 0.5f; break; }
+            if (segs[i].label == "Tri-Oval") { triOval += segs[i].length * 0.5f; labelled = true; break; }
             triOval += segs[i].length;
         }
-        var line = builder.SampleAt(triOval);
+        var line = builder.SampleAt(labelled ? triOval : builder.track.startFinishDistance);
 
         Grandstand best = null;
         float bestDist = float.MaxValue;

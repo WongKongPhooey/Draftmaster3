@@ -199,10 +199,10 @@ public class OvalGeometryTests
         Assert.AreEqual(0f, martinsville.frontKinkDegrees, 1e-3f);
 
         // Width comes from TrackDimensions now, not from the track type — and the real figures do not
-        // line up with the intuition the old type defaults encoded. Martinsville and Daytona are BOTH
-        // 40 ft wide; the bullring is not the narrower road. The genuine contrast is Michigan, at 73 ft.
+        // line up with the intuition the old type defaults encoded. Martinsville is 40 ft and Daytona, measured
+        // wall to yellow line, 11 m; the bullring is not the narrower road. The genuine contrast is Michigan, at 73 ft.
         Assert.AreEqual(TrackDimensions.Feet(40f), martinsville.roadWidth, 0.01f, "Martinsville is 40 ft");
-        Assert.AreEqual(TrackDimensions.Feet(40f), daytona.roadWidth, 0.01f, "Daytona is 40 ft too");
+        Assert.AreEqual(11f, daytona.roadWidth, 0.01f, "Daytona is 11 m, wall to yellow line");
 
         var michigan = OvalGeometry.Preset(TrackKind.Speedway, "Michigan",
                                            "Michigan International Speedway", 2f, 18f, 200);

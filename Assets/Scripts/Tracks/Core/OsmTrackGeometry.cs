@@ -65,6 +65,9 @@ namespace Draftmaster.Tracks
                      "one arc cannot say so — Michigan's ends, read as single arcs, leave the lap 353m " +
                      "open. The importer tries several values and keeps whichever describes the trace best.")]
             public float maxTurnDegrees = 0f;
+            [Tooltip("The trace's first node is the start/finish line, so the lap must start there: the piece " +
+                     "the seam falls in is left as two pieces rather than joined into one that starts earlier.")]
+            public bool keepSeam = false;
         }
 
         // Lat/lon onto a local metric plane, centred on the track. Equirectangular: at the size of a
@@ -109,6 +112,102 @@ namespace Draftmaster.Tracks
                 carry = seg - (t - step);
             }
             return outPts;
+        }
+
+        // The lap as runs of near-constant curvature, for a trace good enough to be followed closely.
+        //
+        // Segment() reads a lap as corners and straights, one arc per corner. That suits a hand-drawn raceway
+        // way, whose detail is mostly the mapper's hand, but it throws away what a precise trace knows: a real
+        // corner tightens and opens down its length, and an arc of one radius cannot. Daytona read that way
+        // came back as seven pieces missing its own start by 40 m and wandering 13 m off the road. Here the
+        // curvature is measured all the way round, smoothed over `windowMetres`, cut into `chunkMetres` pieces,
+        // and neighbours whose curvature differs by less than `toleranceDegPerMetre` are joined - so a straight
+        // is one piece and a corner is as many as its changing radius needs.
+        //
+        // The window is a trade. A wall's map nodes sit ~16 m apart and curvature taken over a short window is
+        // mostly their noise: at 40 m Daytona's ~300 m turns read with 165 m spikes in them, and the AI brakes
+        // for the tightest spot on the lap - 7 s a lap slower than the generated oval. At 120 m the tightest
+        // spot is 237 m (most of the turn 270-300 m) for ~3 m of shape error, against 13 m one arc per corner.
+        //
+        // The lap starts at the first point, and the total turn is preserved exactly (the smoothing is a
+        // circular average), so the pieces close on themselves to within the resampling.
+        public static List<LapGeometry.Piece> SegmentByCurvature(IList<Vector2> points, float chunkMetres = 20f,
+            float windowMetres = 120f, float toleranceDegPerMetre = 0.023f, float resampleMetres = 2f)
+        {
+            var lap = new List<LapGeometry.Piece>();
+            var pts = Resample(points, resampleMetres);
+            if (pts.Count > 2 && Vector2.Distance(pts[0], pts[pts.Count - 1]) < resampleMetres * 0.25f)
+                pts.RemoveAt(pts.Count - 1);   // the trace's closing node, landed on the first
+            int n = pts.Count;
+            if (n < 16) return lap;
+            SmoothRing(pts, 2);
+
+            // Step lengths and headings round the ring, then degrees turned per metre at every point.
+            var step = new float[n];
+            var heading = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 d = pts[(i + 1) % n] - pts[i];
+                step[i] = d.magnitude;
+                heading[i] = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+            }
+            var turn = new float[n];   // degrees turned between step i and step i+1
+            for (int i = 0; i < n; i++) turn[i] = Mathf.DeltaAngle(heading[i], heading[(i + 1) % n]);
+
+            // Circular moving average of the turn per step: keeps the total, loses the node-to-node noise.
+            int w = Mathf.Max(1, Mathf.RoundToInt(windowMetres / resampleMetres));
+            var smooth = new float[n];
+            float sum = 0f;
+            for (int k = -(w / 2); k < w - w / 2; k++) sum += turn[((k % n) + n) % n];
+            for (int i = 0; i < n; i++)
+            {
+                smooth[i] = sum / w;
+                sum -= turn[(((i - w / 2) % n) + n) % n];
+                sum += turn[(((i + w - w / 2) % n) + n) % n];
+            }
+
+            // Chunk, then join neighbours that bend at the same rate.
+            float pieceLen = 0f, pieceAngle = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                pieceLen += step[i];
+                pieceAngle += smooth[i];
+                if (pieceLen < chunkMetres && i < n - 1) continue;
+
+                if (lap.Count > 0)
+                {
+                    var prev = lap[lap.Count - 1];
+                    if (Mathf.Abs(pieceAngle / pieceLen - prev.angle / prev.length) < toleranceDegPerMetre)
+                    {
+                        prev.length += pieceLen;
+                        prev.angle += pieceAngle;
+                        lap[lap.Count - 1] = prev;
+                        pieceLen = pieceAngle = 0f;
+                        continue;
+                    }
+                }
+                lap.Add(new LapGeometry.Piece(true, pieceLen, pieceAngle));
+                pieceLen = pieceAngle = 0f;
+            }
+
+            // A piece that barely turns is a straight. Its leftover heading goes to its neighbour so the lap still
+            // turns exactly 360 degrees.
+            for (int i = 0; i < lap.Count; i++)
+            {
+                var p = lap[i];
+                if (Mathf.Abs(p.angle) >= 0.5f) continue;
+                int into = i + 1 < lap.Count ? i + 1 : i - 1;
+                if (into >= 0 && into != i)
+                {
+                    var host = lap[into];
+                    host.angle += p.angle;
+                    lap[into] = host;
+                }
+                p.angle = 0f;
+                p.isTurn = false;
+                lap[i] = p;
+            }
+            return lap;
         }
 
         // The lap as straights and corners. `points` should be the closed traced ring, in metres.
@@ -160,7 +259,7 @@ namespace Draftmaster.Tracks
             }
 
             MergeSlivers(lap, settings.minPieceMetres);
-            JoinTheSeam(lap);
+            if (!settings.keepSeam) JoinTheSeam(lap);
             // What to do with the heading a "straight" accumulated.
             //
             // A metre or two of it is a mapper's hand and belongs to nobody, so it is dropped. Several
