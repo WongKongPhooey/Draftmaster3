@@ -9,7 +9,8 @@ namespace Draftmaster.Tracks
     // survive 35 rounds), they live here.
     //
     // Consumers pull from this; it never reaches into them. Intended pickup points:
-    //   DraftAero            — draftScale
+    //   DraftAero / PVC      — draftScale (through TrackConditions.DraftScale)
+    //   AIRacingBehaviour    — draftFollowScale (through TrackConditions.AiFollowScale)
     //   tyre / fuel models   — tyreWearScale, fuelBurnScale
     //   AIRacingBehaviour    — lineSpread, cautionProneness
     //   GridSpawner          — gridColumns
@@ -20,6 +21,8 @@ namespace Draftmaster.Tracks
         public TrackKind kind;
 
         public float draftScale;         // multiplier on the tow from the car ahead
+        public float draftFollowScale;   // multiplier on how close the AI follows (NR2003's ai_drafting_distance)
+        public bool raceInLanes;         // AI races in lanes (AIRacingBehaviour.useLanes): ovals, where packs run side by side
         public float tyreWearScale;      // multiplier on wear rate
         public float fuelBurnScale;      // multiplier on burn rate
 
@@ -44,7 +47,13 @@ namespace Draftmaster.Tracks
                     return new TrackTuningData
                     {
                         kind = kind,
-                        draftScale = 1.65f,        // the whole race is the draft
+                        // The whole race is the draft - but swept in the 40-car Daytona pack sim (PackRaceSimTests.
+                        // DaytonaDraftSweep), a tow worth 1.65x surged cars into the one ahead and strung the field
+                        // out, and following at 0.35x the headway ran them into each other. 1.3 / 0.6 packed it up
+                        // tightest with the fewest contacts: ~16 m median gap, 60% within 20 m, a quarter 2-wide.
+                        draftScale = 1.3f,
+                        draftFollowScale = 0.6f,
+                        raceInLanes = true,
                         tyreWearScale = 0.7f,
                         fuelBurnScale = 1.15f,
                         lineSpread = 1f,           // three wide as standard
@@ -61,6 +70,8 @@ namespace Draftmaster.Tracks
                     {
                         kind = kind,
                         draftScale = 1.15f,
+                        draftFollowScale = 0.8f,
+                        raceInLanes = true,
                         tyreWearScale = 1f,
                         fuelBurnScale = 1f,
                         lineSpread = 0.75f,
@@ -77,6 +88,8 @@ namespace Draftmaster.Tracks
                     {
                         kind = kind,
                         draftScale = 0.7f,
+                        draftFollowScale = 1f,
+                        raceInLanes = true,
                         tyreWearScale = 1.5f,      // brake, turn, throttle, repeat
                         fuelBurnScale = 0.85f,
                         lineSpread = 0.5f,         // barely room for two
@@ -92,7 +105,10 @@ namespace Draftmaster.Tracks
                     return new TrackTuningData
                     {
                         kind = kind,
-                        draftScale = 0.5f,
+                        // 1, not less: Watkins Glen's passing was tuned with the full Cup draft (it's how a car
+                        // gets alongside into the bus stop), and halving it took the pack sim from 4 passes to 1.
+                        draftScale = 1f,
+                        draftFollowScale = 1f,
                         tyreWearScale = 1.25f,
                         fuelBurnScale = 1f,
                         lineSpread = 0.55f,
@@ -109,6 +125,8 @@ namespace Draftmaster.Tracks
                     {
                         kind = kind,
                         draftScale = 0.6f,
+                        draftFollowScale = 1f,
+                        raceInLanes = true,
                         tyreWearScale = 1.35f,
                         fuelBurnScale = 0.85f,
                         lineSpread = 0.85f,        // everyone runs their own line in the slop
@@ -135,7 +153,7 @@ namespace Draftmaster.Tracks
             switch (trackId)
             {
                 case "Talladega":       // wider and faster than Daytona: bigger pack, bigger tow
-                    t.draftScale = 1.8f;
+                    t.draftScale = 1.45f;
                     t.cautionProneness = 0.85f;
                     break;
 

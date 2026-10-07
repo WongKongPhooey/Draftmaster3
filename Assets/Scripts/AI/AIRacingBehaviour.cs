@@ -55,6 +55,8 @@ public class AIRacingBehaviour : MonoBehaviour
     public float corridorOverlapWidth = 1.6f;
     [Tooltip("Lateral separation (m) beyond which a car ahead no longer caps our speed at all — we're clear to drive past. The cap fades between the two widths. This is what lets a committed overtake actually PASS a slow or wrecked car instead of matching its speed until it fully stops, and what lets a car in the next lane run alongside instead of being held to the speed of the one beside it (it was 3.4 m - a whole lane on an 11 m superspeedway - which strung every pack out single file).")]
     public float corridorClearWidth = 2.4f;
+    [Tooltip("The clear width where the AI is NOT racing in lanes (road courses): a pass there runs on an out-in-out line through corners, and 0.4 m to spare touched - Watkins Glen's pack sim went from 4 contacts to 20 at 2.4 m.")]
+    public float corridorClearWidthNoLanes = 3.4f;
 
     [Header("Local Yellows")]
     [Tooltip("Lift through the yellow zone before a car stopped on the road (CautionWatch), and don't pass anyone there but the stopped car.")]
@@ -88,6 +90,9 @@ public class AIRacingBehaviour : MonoBehaviour
     [Header("Lanes")]
     [Tooltip("Race in lanes: the road between the AI's bounds is split into lanes at least laneSpacing apart, a pass moves into the lane beside the car being passed (only when it is clear), a car alongside holds its lane, and a car only drops back to the ideal line when that lane is clear. NR2003's minrace/maxrace. Off = the old fixed overtakeLineOffset step.")]
     public bool useLanes = true;
+    // Lanes on for this car AND for this kind of track (TrackConditions.AiLanes: ovals, not road courses).
+    bool Lanes => useLanes && TrackConditions.AiLanes;
+
     [Tooltip("Least distance (m) between lane centres: a car's width and the gap a driver leaves beside another.")]
     public float laneSpacing = 2.4f;
     [Tooltip("A lane counts as taken by a car this far (m) behind us or ahead of us, plus a second of closing speed ahead.")]
@@ -273,7 +278,9 @@ public class AIRacingBehaviour : MonoBehaviour
         // car is spotted too late to avoid — a fixed brakeScanRange is far too short at racing speed (that's
         // what let the field plough into stationary cars).
         float myMpsNow = _spline.CurrentMph * MphToMps;
-        float dynStopDist = minFollowDistance + myMpsNow * followHeadwaySeconds
+        // How close this track's racing runs (TrackTuning.draftFollowScale): nose to tail on a superspeedway.
+        float headway = followHeadwaySeconds * TrackConditions.AiFollowScale;
+        float dynStopDist = minFollowDistance + myMpsNow * headway
                             + (myMpsNow * myMpsNow) / (2f * Mathf.Max(followDecelMps2, 1f)) + 20f;
         float scanDist = Mathf.Max(lookAheadRange, brakeScanRange, dynStopDist);
 
@@ -293,7 +300,7 @@ public class AIRacingBehaviour : MonoBehaviour
             // Never shorter than the gap the follow cap below holds us at. It used to be: the cap parked a
             // quicker car ~40 m back (a 0.7 s headway at Watkins Glen speeds) while a pass only started inside
             // ~25 m, so it sat there all race — the pack sim counted zero passes in six laps.
-            initiateRange = Mathf.Max(initiateRange, (minFollowDistance + myMpsNow * followHeadwaySeconds) * 1.2f + 6f);
+            initiateRange = Mathf.Max(initiateRange, (minFollowDistance + myMpsNow * headway) * 1.2f + 6f);
             // Quicker than them means quicker than what THEY could do here too. Down a straight both cars want
             // far more than either can reach, so "my target beats their speed" was true for every follower on
             // every straight. Target against target is the fair comparison (the draft boost is part of ours, so a
@@ -312,7 +319,7 @@ public class AIRacingBehaviour : MonoBehaviour
                 overtakeDir = stoppedCar ? AroundSide(aheadLat) : ChooseOvertakeSide(aheadLat);
                 // In lanes, a pass goes into the lane beside the car ahead - on the chosen side if it is clear,
                 // the other if not - and not at all if neither is: tuck in behind and take the tow instead.
-                if (!stoppedCar && useLanes && LaneGeometry(out _, out _, out _))
+                if (!stoppedCar && Lanes && LaneGeometry(out _, out _, out _))
                 {
                     int lane = ChoosePassLane(aheadLat, overtakeDir != 0f ? overtakeDir : (aheadLat >= _spline.LateralOnTrack ? -1f : 1f));
                     overtakeDir = lane < 0 ? 0f : Mathf.Sign(LaneLateral(lane) - _spline.LateralOnTrack + 1e-3f);
@@ -336,7 +343,7 @@ public class AIRacingBehaviour : MonoBehaviour
             float mySpeedMps = _spline.CurrentMph * MphToMps;
             float closingMps = Mathf.Max(0f, mySpeedMps - blockerMph * MphToMps);
             float brakeDist = (closingMps * closingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
-            float reqGap = (minFollowDistance + mySpeedMps * followHeadwaySeconds + brakeDist)
+            float reqGap = (minFollowDistance + mySpeedMps * headway + brakeDist)
                            * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
             if (blockGap < reqGap)
             {
@@ -373,7 +380,7 @@ public class AIRacingBehaviour : MonoBehaviour
             float pOverlap = CorridorOverlap01(Mathf.Abs(p.TrackLateral - _spline.LateralOnTrack));
             float pClosingMps = Mathf.Max(0f, myMpsNow - pSpeedMph * MphToMps);
             float pBrakeDist = (pClosingMps * pClosingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
-            float pReqGap = (minFollowDistance + myMpsNow * followHeadwaySeconds + pBrakeDist)
+            float pReqGap = (minFollowDistance + myMpsNow * headway + pBrakeDist)
                             * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
             if (pg < pReqGap && pOverlap > 0f)
             {
@@ -411,7 +418,7 @@ public class AIRacingBehaviour : MonoBehaviour
                 _spline.CurrentMph, gameObject, vinfo, out float towFactor, out var towSource, out _);
             if (towFactor > 0f)
             {
-                speedBoost = Mathf.Max(speedBoost, vinfo.draftingMaxBonus * towFactor);
+                speedBoost = Mathf.Max(speedBoost, vinfo.draftingMaxBonus * towFactor * TrackConditions.DraftScale);
                 if (towSource != null) AccumulateDraftBond(DriverRelationships.NameOf(towSource), dt);
             }
         }
@@ -506,7 +513,7 @@ public class AIRacingBehaviour : MonoBehaviour
 
         // Holding a lane. A car with another alongside stays in the lane it is in - it does not drift back to the
         // ideal line across the other car - and a car only drops back to the ideal line once that lane is clear.
-        if (!wantOvertake && useLanes && !_spline.IsOnPit && LaneGeometry(out _, out _, out _))
+        if (!wantOvertake && Lanes && !_spline.IsOnPit && LaneGeometry(out _, out _, out _))
         {
             float here = _spline.LateralOnTrack;
             float ideal = _spline.UntacticalLateral;
@@ -530,7 +537,7 @@ public class AIRacingBehaviour : MonoBehaviour
                         float strength = Mathf.Clamp01((defendDetectRange - behindGap) / defendDetectRange);
                         float block = insideDir * defendLineOffset * strength;
                         // In lanes, only a block into a lane that's free - never across a car alongside.
-                        if (!useLanes || LaneClear(_spline.LateralOnTrack + block)) desiredTactical += block;
+                        if (!Lanes || LaneClear(_spline.LateralOnTrack + block)) desiredTactical += block;
                     }
                 }
             }
@@ -567,7 +574,9 @@ public class AIRacingBehaviour : MonoBehaviour
             // Only a car actually alongside. This used to take anything within sidewaysRange (12 m) ahead or
             // behind, so a car drafting nose to tail in the same lane was "in contact" with the one in front:
             // pushed sideways and scrubbed of speed for being in the tow. The field could never pack up.
-            if (Mathf.Abs(longGap) > Mathf.Min(sidewaysRange, alongsideLength)) continue;
+            // Where the AI doesn't race in lanes (road courses) the wider window stays: through an out-in-out
+            // corner it is what keeps a car off the one diagonally ahead of it.
+            if (Mathf.Abs(longGap) > (Lanes ? Mathf.Min(sidewaysRange, alongsideLength) : sidewaysRange)) continue;
             float latGap = _spline.LateralOnTrack - other.LateralOnTrack;
             float absLat = Mathf.Abs(latGap);
             float dir = latGap >= 0f ? 1f : -1f;
@@ -888,8 +897,11 @@ public class AIRacingBehaviour : MonoBehaviour
 
     // 1 = the other car sits square in our lateral path, 0 = fully clear, fading in between.
     float CorridorOverlap01(float lateralSeparation)
-        => 1f - Mathf.Clamp01((lateralSeparation - corridorOverlapWidth)
-                              / Mathf.Max(corridorClearWidth - corridorOverlapWidth, 0.1f));
+    {
+        float overlap = Lanes ? corridorOverlapWidth : Mathf.Max(corridorOverlapWidth, 2f);
+        float clear = Lanes ? corridorClearWidth : corridorClearWidthNoLanes;
+        return 1f - Mathf.Clamp01((lateralSeparation - overlap) / Mathf.Max(clear - overlap, 0.1f));
+    }
 
     // Nearest car ahead that overlaps MY lateral corridor — the one we'd actually hit. RaceField.TryGetAhead
     // returns the nearest-ahead regardless of lateral, which is right for "who do I try to pass" but wrong

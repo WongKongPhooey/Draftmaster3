@@ -75,6 +75,7 @@ public class PackRaceSimTests
         public Dictionary<string, object> input; // SplineInputDriver field overrides
         public int seed = 7;                     // roster shuffle and ratings
         public bool traceOffs;                   // log each off's last two seconds, step by step
+        public float? draftScale, followScale;   // TrackConditions.DraftScale / AiFollowScale overrides
     }
 
     static float Get(Component c, string prop) => (float)c.GetType().GetProperty(prop).GetValue(c);
@@ -225,6 +226,25 @@ public class PackRaceSimTests
     [Test, Timeout(1800000)]
     public void DaytonaTraceAttacks() => Log("daytona trace attacks", Run("Daytona", new Settings { cars = 40, laps = 3, seed = 1, traceLines = 120 }));
 
+    // Draft strength x following distance at Daytona, two rosters each, four laps: which combination packs the
+    // field up without the field running into itself.
+    [Explicit("Diagnostic: Daytona draft-strength x follow-distance sweep.")]
+    [Test, Timeout(3600000)]
+    public void DaytonaDraftSweep()
+    {
+        var sb = new StringBuilder("[PackSim] Daytona draft sweep (draftScale, followScale)\n");
+        foreach (var combo in new[] { (1f, 1f), (1f, 0.35f), (1f, 0.6f), (1.65f, 1f), (1.3f, 0.6f) })
+        {
+            foreach (int seed in new[] { 1, 2 })
+            {
+                var r = Run("Daytona", new Settings { cars = 40, laps = 4, seed = seed, draftScale = combo.Item1, followScale = combo.Item2 });
+                sb.Append(Summary($"  draft {combo.Item1:0.00} follow {combo.Item2:0.00} seed {seed}", r));
+                Despawn();
+            }
+        }
+        Debug.Log(sb.ToString());
+    }
+
     void Baseline(string trackId, int[] seeds, int cars, int laps)
     {
         var sb = new StringBuilder($"[PackSim] {trackId} baseline, {cars} cars, {laps} laps\n");
@@ -258,6 +278,9 @@ public class PackRaceSimTests
 
         // The track's calibrated AI strength, as TrackPackage applies it on load.
         Runtime("AIPaceCalibration").GetMethod("ApplyFor").Invoke(null, new object[] { trackId });
+        var conditions = Runtime("TrackConditions");
+        if (set.draftScale.HasValue) conditions.GetField("DraftScale").SetValue(null, set.draftScale.Value);
+        if (set.followScale.HasValue) conditions.GetField("AiFollowScale").SetValue(null, set.followScale.Value);
         Runtime("RaceStart").GetMethod("ResetToDefault").Invoke(null, null);   // green
 
         var vehicleInfo = Resources.Load("Vehicles/Cup24");

@@ -63,6 +63,7 @@ public class AIPaceCalibration : ScriptableObject
     {
         TrackConditions.AiGripMultiplier = TrackConditions.DefaultAiGrip;
         TrackConditions.AiPaceMultiplier = TrackConditions.DefaultAiPace;
+        TrackConditions.ApplyTrackTuning(trackId);   // the track type's draft and following distance
 
         var entry = Load() != null ? _loaded.Find(trackId) : null;
         if (entry == null) return;

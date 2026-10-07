@@ -626,11 +626,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss) * aiStretch;
         // Draft moves the aero ceiling: a full tow carries the car past its stock flat-out speed, being
         // side-drafted pulls it down (the top-speed cut is what actually slows a car already at the clamp).
-        topMps *= (1f + vehicleInfo.draftingTopSpeedGain * tow) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
+        topMps *= (1f + vehicleInfo.draftingTopSpeedGain * tow * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
         float accel = SampleAccel(_vx / aiStretch) * TrackConditions.EffectivePower * aiPower * throttleIn;
         // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
         // so without this additive term the raised ceiling would never be reached).
-        if (tow > 0f) accel += vehicleInfo.draftingTowAccel * tow * throttleIn;
+        if (tow > 0f) accel += vehicleInfo.draftingTowAccel * tow * TrackConditions.DraftScale * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
         // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still

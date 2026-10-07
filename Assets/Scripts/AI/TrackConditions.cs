@@ -45,6 +45,28 @@ public static class TrackConditions
     [Tooltip("AI-only grip multiplier layered on top of the global grip. >1 = AI corner faster than the player at equal tuning; player unaffected. Set per track by AIPaceCalibration.")]
     public static float AiGripMultiplier = DefaultAiGrip;
 
+    [Tooltip("How much the tow is worth at this track (TrackTuning.draftScale): multiplies the draft's top-speed gain, its extra acceleration and the AI's tow boost. Set per track when it loads.")]
+    public static float DraftScale = 1f;
+
+    [Tooltip("How close the AI follows at this track (TrackTuning.draftFollowScale): multiplies their following headway. Set per track when it loads.")]
+    public static float AiFollowScale = 1f;
+
+    [Tooltip("Whether the AI races in lanes at this track (TrackTuning.raceInLanes): ovals yes, road courses no - a road course's width changes corner by corner and its lanes with it, so cars hopped between them. Set per track when it loads.")]
+    public static bool AiLanes = true;
+
+    // Per-track aero and following, from the track-type table. Empty id = the neutral defaults.
+    public static void ApplyTrackTuning(string trackId)
+    {
+        DraftScale = 1f;
+        AiFollowScale = 1f;
+        AiLanes = true;
+        if (string.IsNullOrEmpty(trackId)) return;
+        var tuning = TrackProfile.ForTrack(trackId);
+        if (tuning.draftScale > 0f) DraftScale = tuning.draftScale;
+        if (tuning.draftFollowScale > 0f) AiFollowScale = tuning.draftFollowScale;
+        AiLanes = tuning.raceInLanes;
+    }
+
     // Effective grip for AI-driven cars: global effective grip × AI-only bonus.
     public static float AiEffective => Effective * AiGripMultiplier;
 
@@ -57,5 +79,8 @@ public static class TrackConditions
         DamageMultiplier = 1f;
         AiPaceMultiplier = DefaultAiPace;
         AiGripMultiplier = DefaultAiGrip;
+        DraftScale = 1f;
+        AiFollowScale = 1f;
+        AiLanes = true;
     }
 }
