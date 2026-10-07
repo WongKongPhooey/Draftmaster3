@@ -7,7 +7,7 @@ Editor — it is not built from the CLI. There is no CI; testing is Play Mode pl
 full Draftmaster menu reference, the play-mode key map, and the standing gotchas. Start there.
 It links the rest: `Docs/Tracks.md` (track pipeline), `Docs/Race-Weekend.md`,
 `Docs/NPCs-and-Quests.md` (paper-doll characters, dialogue, quests),
-`Docs/Rivalry-and-TeamSwitch.md`, `Docs/Sponsorship.md`.
+`Docs/Rivalry-and-TeamSwitch.md`, `Docs/Sponsorship.md`, `Docs/AI-NR2003.md` (AI roadmap from NR2003).
 
 ## Hazards
 
