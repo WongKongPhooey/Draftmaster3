@@ -249,6 +249,7 @@ public class TrackEnvironmentBuilder : MonoBehaviour
     void BuildAutoBarrierSide(Transform root, int segIndex, TrackEnvironment.BarrierSide side,
         float dStart, float dEnd, List<TrackBuilder.Sample> mainSamples, float spacing)
     {
+        if (side == TrackEnvironment.BarrierSide.Inner ? !environment.innerSideBarrier : !environment.outerSideBarrier) return;
         var spans = SubtractGaps(segIndex, dStart, dEnd, side);
         spans = SubtractManualSpans(spans, side);
         for (int k = 0; k < spans.Count; k++)

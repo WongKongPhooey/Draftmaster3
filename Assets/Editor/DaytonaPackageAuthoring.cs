@@ -106,6 +106,9 @@ public static class DaytonaPackageAuthoring
             {
                 var env = envBuilder.environment;
                 EnsureApron(env, geometry, notes);
+                // No infield wall: the apron runs straight onto the grass, as at the real track. Left of travel on
+                // an anticlockwise oval is BarrierSide.Outer.
+                env.outerSideBarrier = false;
                 env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.outerEdgeOffset);
                 EditorUtility.SetDirty(env);
                 AssetDatabase.SaveAssets();

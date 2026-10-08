@@ -11,6 +11,10 @@ public class TrackEnvironment : ScriptableObject
 
     [Header("Barriers — auto-generated per segment, both sides")]
     public bool generateBarriers = true;
+    [Tooltip("Build the auto barrier on the RIGHT of travel (BarrierSide.Inner - the outside wall on an anticlockwise oval).")]
+    public bool innerSideBarrier = true;
+    [Tooltip("Build the auto barrier on the LEFT of travel (BarrierSide.Outer - the infield wall on an anticlockwise oval). Off where the infield is open: Daytona's apron runs onto grass. Hand-drawn manual sections are still built.")]
+    public bool outerSideBarrier = true;
     [Tooltip("Offset (m) from the RIGHT track edge for the inner barrier. Positive = further right (outboard).")]
     public float innerEdgeOffset = 0f;
     [Tooltip("Offset (m) from the LEFT track edge for the outer barrier. Positive = further left (outboard).")]
