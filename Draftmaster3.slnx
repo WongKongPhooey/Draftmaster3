@@ -1,4 +1,5 @@
 ﻿<Solution>
+  <Project Path="Draftmaster.Sim.csproj" />
   <Project Path="Draftmaster.Progression.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Draftmaster.Tracks.csproj" />
@@ -9,7 +10,6 @@
   <Project Path="PlayFab.csproj" />
   <Project Path="InkEditor.csproj" />
   <Project Path="Ink-Libraries.csproj" />
-  <Project Path="Draftmaster.Sim.csproj" />
   <Project Path="Draftmaster.Weekend.csproj" />
   <Project Path="Draftmaster.Tests.PlayMode.csproj" />
   <Project Path="Draftmaster.Chatter.csproj" />
