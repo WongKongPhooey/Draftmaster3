@@ -461,6 +461,17 @@ public class VehicleDamage : MonoBehaviour, IDamageable
 
         if (along0 >= alongN) { front = Mathf.Max(0f, -d0); rear = Mathf.Max(0f, dN); }
         else                  { front = Mathf.Max(0f, -dN); rear = Mathf.Max(0f, d0); }
+
+        // The roll cage doesn't fold, so neither end can come back past it - whatever the mesh's soft band let
+        // the end columns do. Column 0 is the nose of the livery.
+        if (safetyCell && deformMask == null && useSeriesMask)
+        {
+            SeriesSafetyCells.EndRoom(SeriesSafetyCells.ShapeOf(CellSeries), out float noseRoom, out float tailRoom);
+            float lengthWorld = Mathf.Abs(alongN - along0);
+            float roomCol0 = noseRoom * lengthWorld, roomColN = tailRoom * lengthWorld;
+            if (along0 >= alongN) { front = Mathf.Min(front, roomCol0); rear = Mathf.Min(rear, roomColN); }
+            else                  { front = Mathf.Min(front, roomColN); rear = Mathf.Min(rear, roomCol0); }
+        }
     }
 
     public void RepairFull()

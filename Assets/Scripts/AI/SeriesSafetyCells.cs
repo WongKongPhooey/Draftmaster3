@@ -43,7 +43,25 @@ public static class SeriesSafetyCells
         public float soft;
     }
 
-    public static Cell ShapeOf(RacingSeries series) => series switch
+    // The cell a series is built with: the box drawn for it in the Safety Cell Editor (SafetyCellShapes), or the
+    // built-in shape below if nobody has drawn one.
+    public static Cell ShapeOf(RacingSeries series)
+    {
+        var shapes = SafetyCellShapes.Load();
+        var e = shapes != null ? shapes.Find(series) : null;
+        if (e == null) return DefaultShapeOf(series);
+        return new Cell { centre = e.centre, half = e.half, corner = e.corner, soft = e.soft };
+    }
+
+    // The fraction of the car's length from each end to the cell (nose at sprite x 0, tail at x 1): how far the
+    // nose or the tail can fold back before it reaches the roll cage.
+    public static void EndRoom(in Cell cell, out float noseRoom, out float tailRoom)
+    {
+        noseRoom = Mathf.Clamp01(cell.centre.x - cell.half.x);
+        tailRoom = Mathf.Clamp01(1f - (cell.centre.x + cell.half.x));
+    }
+
+    public static Cell DefaultShapeOf(RacingSeries series) => series switch
     {
         // A stock car's tub: the driver sits behind the middle of the wheelbase, so the cell does too.
         RacingSeries.Cup => new Cell
@@ -122,5 +140,6 @@ public static class SeriesSafetyCells
     {
         _cache.Clear();
         _missingReported.Clear();
+        SafetyCellShapes.ForgetCache();
     }
 }

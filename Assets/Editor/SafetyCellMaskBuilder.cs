@@ -10,8 +10,9 @@ using UnityEngine;
 // builds a car's deformable mesh, so the cell is a shape somebody drew rather than a rectangle described by
 // two numbers — which is what a truck needs, its cab being forward of centre and squarer than a stock car's.
 //
-// The shapes themselves live in SeriesSafetyCells.ShapeOf, so the baked texture and the code fallback can
-// never disagree about where the tub is. Edit them there, run this again, and the paint follows.
+// The shapes are drawn in Draftmaster > Art > Safety Cell Editor (SafetyCellShapes, read through
+// SeriesSafetyCells.ShapeOf), which bakes the series' mask whenever it saves - so the baked texture and the
+// code fallback can never disagree about where the tub is.
 //
 // The files are ordinary PNGs. Open one in any paint program and push the shape around by hand — nothing
 // here reads them back, so a hand-edit survives everything except running this menu item again.
@@ -39,7 +40,7 @@ public static class SafetyCellMaskBuilder
                   "is built — re-enter play mode to see it.");
     }
 
-    static void BuildOne(RacingSeries series)
+    public static void BuildOne(RacingSeries series)
     {
         var cell = SeriesSafetyCells.ShapeOf(series);
         var tex = new Texture2D(Width, Height, TextureFormat.RGBA32, mipChain: false);
@@ -88,5 +89,13 @@ public static class SafetyCellMaskBuilder
         importer.alphaSource = TextureImporterAlphaSource.None;
 
         importer.SaveAndReimport();
+    }
+
+    // Folder for the masks, made if missing.
+    public static void EnsureFolder()
+    {
+        string folder = $"Assets/Resources/{SeriesSafetyCells.Folder}";
+        if (!AssetDatabase.IsValidFolder(folder))
+            AssetDatabase.CreateFolder("Assets/Resources", SeriesSafetyCells.Folder);
     }
 }
