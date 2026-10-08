@@ -255,6 +255,17 @@ public class AIRacingBehaviour : MonoBehaviour
 
     public void SetBasePace(float baseMul) { _basePaceMultiplier = baseMul; }
 
+    // Pick up a sideways offset someone else was holding (the formation's column at the green), so the car
+    // carries on from where it is instead of jumping to its line.
+    public void TakeLateral(float tactical)
+    {
+        _smoothedTactical = tactical;
+        _tacticalVelocity = 0f;
+        _packLane = -1;
+        _packMoving = false;
+        if (_spline != null) _spline.tacticalLateralOffset = tactical;
+    }
+
     void FixedUpdate()
     {
         if (_spline == null || _spline.TrackLength <= 0f) return;
@@ -846,7 +857,16 @@ public class AIRacingBehaviour : MonoBehaviour
         if (!LaneGeometry(out _, out _, out int count)) return false;
         float here = _spline.LateralOnTrack;
         int cur = NearestLane(here);
-        if (_packLane < 0 || _packLane >= count) { _packLane = cur; _packMoving = false; }
+        if (_packLane < 0 || _packLane >= count)
+        {
+            // First pick (the green, a restart): a car between grooves takes the one on its own side of the
+            // middle, not the nearest. Two pace-lap columns 1.5 m either side of the centre are both nearest the
+            // centre groove, and rounding sent both into it at once.
+            _packLane = FirstLane(here, count);
+            _packMoving = Mathf.Abs(LaneLateral(_packLane) - here) >= 0.35f;
+            lateral = LaneLateral(_packLane);
+            return true;
+        }
 
         if (_packMoving)
         {
@@ -905,6 +925,16 @@ public class AIRacingBehaviour : MonoBehaviour
 
         lateral = LaneLateral(_packLane);
         return true;
+    }
+
+    int FirstLane(float lateral, int count)
+    {
+        if (!LaneGeometry(out float lo, out float hi, out _)) return 0;
+        float idx = (lateral - lo) / Mathf.Max(hi - lo, 0.01f) * (count - 1);
+        int nearest = Mathf.Clamp(Mathf.RoundToInt(idx), 0, count - 1);
+        if (Mathf.Abs(LaneLateral(nearest) - lateral) < LaneSpacing * 0.3f) return nearest;   // already in one
+        float mid = 0.5f * (lo + hi);
+        return Mathf.Clamp(lateral < mid ? Mathf.FloorToInt(idx) : Mathf.CeilToInt(idx), 0, count - 1);
     }
 
     bool MoveTo(int lane, out float lateral)

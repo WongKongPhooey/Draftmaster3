@@ -278,7 +278,12 @@ public class FormationController : MonoBehaviour
             HasPlan = false;
             if (_spline != null)
             {
-                _spline.tacticalLateralOffset = 0f;
+                // At the green the column offset is handed to the racing brain, which eases it toward its own
+                // line. Zeroed here, the car was re-seeded onto its brain's pose in the same step - the whole
+                // double-file field jumped onto one line, on top of each other.
+                var racer = phase == RaceStart.Phase.Green ? GetComponent<AIRacingBehaviour>() : null;
+                if (racer != null && racer.enabled) racer.TakeLateral(_spline.tacticalLateralOffset);
+                else _spline.tacticalLateralOffset = 0f;
                 _spline.aiMinDecelMphPerSec = 0f;
                 if (_lineFactorSaved)
                 {

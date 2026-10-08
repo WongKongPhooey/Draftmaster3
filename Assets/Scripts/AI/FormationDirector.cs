@@ -98,9 +98,58 @@ public class FormationDirector : MonoBehaviour
     // RPC on a client): release the SP human and flash the banner so all players see GREEN together.
     void OnPhaseChanged(RaceStart.Phase phase)
     {
+        if (phase == RaceStart.Phase.Formation && logFieldAtGreen) StartCoroutine(LogPaceLap());
         if (phase != RaceStart.Phase.Green) return;
         if (playerCar != null) playerCar.speedGovernorMps = Mathf.Infinity;
         _greenMsgTimer = 3.5f;
+        if (logFieldAtGreen)
+        {
+            LogField("green");
+            StartCoroutine(LogFieldLater(3f, "green+3s"));
+        }
+    }
+
+    [Tooltip("Diagnostics: log every car's place, lane and speed every 5 s on the pace lap, at the green and 3 s after it ([GreenDiag] lines in the device log).")]
+    public bool logFieldAtGreen = true;
+
+    System.Collections.IEnumerator LogPaceLap()
+    {
+        while (RaceStart.Current == RaceStart.Phase.Formation)
+        {
+            LogField("pace");
+            yield return new WaitForSeconds(5f);
+        }
+    }
+
+    System.Collections.IEnumerator LogFieldLater(float seconds, string tag)
+    {
+        yield return new WaitForSeconds(seconds);
+        LogField(tag);
+    }
+
+    // One line per car, in running order: tracker position / lap / progress, brain distance and lateral, the
+    // tactical offset, speed - what the field actually looks like, to read against what the screen showed.
+    void LogField(string tag)
+    {
+        var sb = new System.Text.StringBuilder();
+        var rt = RacePositionTracker.Instance;
+        sb.Append($"[GreenDiag] {tag} t{Time.time:0.0} phase {RaceStart.Current} plate {TrackConditions.PlateMph:0} pack {TrackConditions.AiPackRacing}");
+        if (rt != null)
+        {
+            sb.Append($" tracker len {rt.TrackLength:0} player P{rt.PlayerPosition}/{rt.FieldSize}\n");
+            foreach (var e in rt.Order)
+            {
+                var sd = e.spline;
+                var rb = e.tf != null ? e.tf.GetComponent<AIRacingBehaviour>() : null;
+                sb.Append($"  P{e.position,2} {e.name}{(e.isPlayer ? " (YOU)" : "")} lap {e.lap} prog {e.progress:0} trackD {e.trackDistance:0} {e.speedMps * 2.237f:0} mph");
+                if (sd != null && sd.enabled)
+                    sb.Append($" | slot {sd.qualifyingPosition} brain d {sd.DistanceOnTrack:0} lat {sd.LateralOnTrack:0.0} tac {sd.tacticalLateralOffset:0.0} off {sd.lateralOffset:0.0} {sd.CurrentMph:0} mph ext {sd.externalMotionController}");
+                if (rb != null) sb.Append($" lane {rb.PackLane}{(rb.PackMoving ? "->" : "")}");
+                sb.Append('\n');
+            }
+        }
+        else sb.Append(" (no RacePositionTracker)\n");
+        Debug.Log(sb.ToString());
     }
 
     void Start()

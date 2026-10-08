@@ -144,6 +144,10 @@ public class SplineInputDriver : MonoBehaviour
         // Re-seed whenever re-enabled (e.g. handing back from a kinematic formation lap) so the car picks up
         // its current spline pose + speed instead of driving on from a stale internal state.
         _seeded = false;
+        // The brain reads the car's speed back from this. It was last written before the kinematic pace lap
+        // (0 on the grid), and a flat-out brain that synced to it on the green step seeded every car at a
+        // standstill - the whole field stopped dead on top of itself at the green.
+        if (_spline != null) _spline.externalActualSpeedMps = _spline.CommandedSpeedMps;
         _recovering = false;
         _hasPrevError = false;
     }
@@ -171,6 +175,7 @@ public class SplineInputDriver : MonoBehaviour
             if (_tireModel == null) _tireModel = GetComponent<TireModel>();
             if (_tireState == null) _tireState = GetComponent<TireState>();
             _car.SeedPose(new Vector2(seedWorld.x, seedWorld.y), _spline.CommandedHeadingDeg, _spline.CommandedSpeedMps);
+            _spline.externalActualSpeedMps = _spline.CommandedSpeedMps;
             _seeded = true;
             return;
         }
