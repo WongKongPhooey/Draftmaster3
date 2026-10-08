@@ -18,8 +18,12 @@ public static class TrackConditions
     [Tooltip("Driver-facing power slider. Default 0.8 (= 1.5 baked × 0.8 = 1.2x effective), <1 hot air / thin atmosphere. Multiplied by BasePower.")]
     public static float PowerMultiplier = 0.8f;
 
-    // Effective grip the dynamics actually consume: baked baseline × driver slider.
-    public static float Effective => BaseGrip * GripMultiplier;
+    // Effective grip the dynamics actually consume: baked baseline × driver slider × the track's own grip.
+    public static float Effective => BaseGrip * GripMultiplier * TrackGripScale;
+
+    // Grip the track itself adds - 1 everywhere but a plated superspeedway, where the turns are given exactly
+    // what they need to be taken flat out at the plate speed with a full tow (RestrictorPlate). Set when it loads.
+    public static float TrackGripScale = 1f;
 
     // Effective power the dynamics actually consume: baked baseline × driver slider.
     public static float EffectivePower => BasePower * PowerMultiplier;
@@ -54,17 +58,59 @@ public static class TrackConditions
     [Tooltip("Whether the AI races in lanes at this track (TrackTuning.raceInLanes): ovals yes, road courses no - a road course's width changes corner by corner and its lanes with it, so cars hopped between them. Set per track when it loads.")]
     public static bool AiLanes = true;
 
-    // Per-track aero and following, from the track-type table. Empty id = the neutral defaults.
+    [Tooltip("Restrictor plate: every car's solo top speed (mph) at this track, 0 = none. The draft and the push add to it. Set per track when it loads (RestrictorPlate).")]
+    public static float PlateMph = 0f;
+
+    [Tooltip("The AI holds the throttle wide open all lap - no lift for the turns. Superspeedways, where the plate keeps the speed inside what the banking holds.")]
+    public static bool AiFlatOut = false;
+
+    [Tooltip("The AI races as a pack: lines nose to tail, pull out only with a run, a line follows its leader, nobody backs out. Superspeedways.")]
+    public static bool AiPackRacing = false;
+
+    [Tooltip("How much a line of cars pushes the car at its head (bump drafting). 0 = none.")]
+    public static float PushScale = 0f;
+
+    [Tooltip("0-1: how hard the AI steers away from a car alongside. 1 = road-course caution, low = holds its lane three wide.")]
+    public static float AiSideAwareness = 1f;
+
+    [Tooltip("Metres between lane centres for the AI at this track (0 = AIRacingBehaviour's own).")]
+    public static float AiLaneSpacing = 0f;
+
+    [Tooltip("Pack racing: the number of fixed grooves, a lane spacing apart and centred on the centreline (0 = lanes fit between the AI's bounds wherever the car is).")]
+    public static int AiPackLanes = 0;
+
+    // Per-track aero, following, plate and racing temperament, from the track-type table. Empty id = the neutral
+    // defaults.
     public static void ApplyTrackTuning(string trackId)
     {
         DraftScale = 1f;
         AiFollowScale = 1f;
         AiLanes = true;
+        TrackGripScale = 1f;
+        PlateMph = 0f;
+        AiFlatOut = false;
+        AiPackRacing = false;
+        PushScale = 0f;
+        AiSideAwareness = 1f;
+        AiLaneSpacing = 0f;
+        AiPackLanes = 0;
         if (string.IsNullOrEmpty(trackId)) return;
         var tuning = TrackProfile.ForTrack(trackId);
         if (tuning.draftScale > 0f) DraftScale = tuning.draftScale;
         if (tuning.draftFollowScale > 0f) AiFollowScale = tuning.draftFollowScale;
         AiLanes = tuning.raceInLanes;
+        AiPackRacing = tuning.packRacing;
+        PushScale = Mathf.Max(0f, tuning.pushScale);
+        AiSideAwareness = tuning.sideAwareness > 0f ? Mathf.Clamp01(tuning.sideAwareness) : 1f;
+        AiLaneSpacing = tuning.laneSpacing;
+        AiPackLanes = tuning.packLanes;
+        float plate = 0f, gripScale = 1f;
+        if (tuning.plateMph > 0f && RestrictorPlate.Solve(trackId, tuning.plateMph, out plate, out gripScale))
+        {
+            PlateMph = plate;
+            TrackGripScale = gripScale;
+            AiFlatOut = tuning.flatOut;
+        }
     }
 
     // Effective grip for AI-driven cars: global effective grip × AI-only bonus.
@@ -82,5 +128,13 @@ public static class TrackConditions
         DraftScale = 1f;
         AiFollowScale = 1f;
         AiLanes = true;
+        TrackGripScale = 1f;
+        PlateMph = 0f;
+        AiFlatOut = false;
+        AiPackRacing = false;
+        PushScale = 0f;
+        AiSideAwareness = 1f;
+        AiLaneSpacing = 0f;
+        AiPackLanes = 0;
     }
 }

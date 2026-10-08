@@ -76,6 +76,12 @@ public class PackRaceSimTests
         public int seed = 7;                     // roster shuffle and ratings
         public bool traceOffs;                   // log each off's last two seconds, step by step
         public float? draftScale, followScale;   // TrackConditions.DraftScale / AiFollowScale overrides
+        public int columns = 1;                  // 2 = a double-file rolling start, as the race starts
+        public Dictionary<string, object> racing; // AIRacingBehaviour field overrides
+        public int traceCar = -1;                 // >= 0: log that car's controls every 0.2 s on its second lap
+        public int traceHard;                     // > 0: log up to that many hard contacts, both cars' state
+        public float? sideAwareness;              // TrackConditions.AiSideAwareness override
+        public float traceSlowMph;                // > 0: when a car first drops below this (after 25 s), log its last 2 s
     }
 
     static float Get(Component c, string prop) => (float)c.GetType().GetProperty(prop).GetValue(c);
@@ -101,6 +107,14 @@ public class PackRaceSimTests
         // offset reverses (a weave) per car per lap.
         public float wide2Share, wide3Share, aloneLineRms, aloneLineMax, weavesPerCarLap;
         public int laps;
+        // Throttle: share of car-time flat out (>= 0.98), lifts (flat -> under 0.9) per car per lap, share of
+        // car-time on the brake, and the share of following gaps that are nose to tail (< 7 m centre to centre,
+        // same lane) - bump-drafting distance.
+        public float fullThrottleShare, liftsPerCarLap, brakeShare, noseToTailShare;
+        public float minMph = float.MaxValue, meanMph;
+        // Contacts split by kind: nose to tail (same lane) vs side to side, and hard ones - closing faster than
+        // VehicleCollision's no-damage speed (3 m/s), the ones that bend metal and start wrecks.
+        public int rearContacts, sideContacts, hardContacts;
     }
 
     [Explicit("Diagnostic: a pack of AI racing at Watkins Glen as the game now sets it up.")]
@@ -202,7 +216,9 @@ public class PackRaceSimTests
         $"{title}: {r.passes} passes, {r.contacts} contacts, {r.offs} offs, median gap {r.medianGap:0.0} m, " +
         $"{r.under20Share:P0} of the time within 20 m, {r.towShare:P0} in a tow, best laps {r.fastestLap:0.00}..{r.slowestBest:0.00} s, " +
         $"2-wide {r.wide2Share:P1}, 3-wide+ {r.wide3Share:P1}, alone off-line rms {r.aloneLineRms:0.00} m (max {r.aloneLineMax:0.0}), " +
-        $"{r.weavesPerCarLap:0.00} weaves/car/lap\n";
+        $"{r.weavesPerCarLap:0.00} weaves/car/lap, flat out {r.fullThrottleShare:P1}, {r.liftsPerCarLap:0.00} lifts/car/lap, " +
+        $"braking {r.brakeShare:P1}, nose-to-tail {r.noseToTailShare:P0}, speed {r.minMph:0}..mean {r.meanMph:0} mph, " +
+        $"contacts rear {r.rearContacts} / side {r.sideContacts} / HARD {r.hardContacts}\n";
 
     // The superspeedway baseline: a full Cup field at Daytona across several rosters. One line per seed and the
     // totals, so a change to the AI can be judged against it rather than against one lucky draw.
@@ -213,6 +229,56 @@ public class PackRaceSimTests
     [Explicit("Diagnostic: the same baseline at Talladega.")]
     [Test, Timeout(1800000)]
     public void TalladegaBaseline() => Baseline("Talladega", new[] { 1, 2, 3 }, 40, 6);
+
+    [Explicit("Diagnostic: one car alone at Daytona, and a short 40-car run - is the lift into the turns the car or the pack?")]
+    [Test, Timeout(1800000)]
+    public void DaytonaThrottle()
+    {
+        var solo = Run("Daytona", new Settings { cars = 2, laps = 3, seed = 1 });
+        var conditions = Runtime("TrackConditions");
+        string a = $"plate {conditions.GetField("PlateMph").GetValue(null)} mph, track grip x{conditions.GetField("TrackGripScale").GetValue(null)}, " +
+                   $"flat out {conditions.GetField("AiFlatOut").GetValue(null)}, pack {conditions.GetField("AiPackRacing").GetValue(null)}\n" + Summary("pair", solo)
+                   + string.Join("\n", solo.lines) + "\n";
+        Despawn();
+        var pack = Run("Daytona", new Settings { cars = 40, laps = 3, seed = 1, columns = 2, traceHard = 40 });
+        Debug.Log("[PackSim] daytona throttle\n" + a + Summary("pack", pack) + string.Join("\n", pack.lines));
+    }
+
+    // One of each kind of track with its own racing setup, against the old one-size side-by-side caution (1) on the
+    // ovals that now race with less of it.
+    [Explicit("Diagnostic: a 20-car pack at one track of each kind - superspeedway, speedway, short track, road course.")]
+    [Test, Timeout(3600000)]
+    public void TrackKinds()
+    {
+        var sb = new StringBuilder("[PackSim] track kinds, 20 cars, 4 laps\n");
+        foreach (var (id, side) in new (string, float?)[] { ("Talladega", null), ("Charlotte", null), ("Charlotte", 1f),
+                                                            ("Martinsville", null), ("Martinsville", 1f), ("WatkinsGlen", null) })
+        {
+            var r = Run(id, new Settings { cars = 20, laps = 4, seed = 1, columns = 2, sideAwareness = side });
+            sb.Append(Summary($"  {id}{(side.HasValue ? $" (side awareness {side})" : "")}", r));
+            Despawn();
+        }
+        Debug.Log(sb.ToString());
+    }
+
+    [Explicit("Diagnostic: a short pack at a plate track with every hard contact traced, and the lane layout.")]
+    [TestCase("Talladega")]
+    [TestCase("Daytona")]
+    public void PlateTrack(string trackId)
+    {
+        var r = Run(trackId, new Settings { cars = 40, laps = 2, seed = 1, columns = 2, traceHard = 10, traceSlowMph = 150f });
+        var conditions = Runtime("TrackConditions");
+        Debug.Log($"[PackSim] plate track {trackId}: plate {conditions.GetField("PlateMph").GetValue(null)} mph, grip x{conditions.GetField("TrackGripScale").GetValue(null)}\n"
+                  + Summary("", r) + string.Join("\n", r.lines));
+    }
+
+    [Explicit("Diagnostic: two cars at Daytona, the second one's controls traced over a lap.")]
+    [Test, Timeout(1800000)]
+    public void DaytonaPair()
+    {
+        var r = Run("Daytona", new Settings { cars = 2, laps = 3, seed = 1, traceCar = 1 });
+        Debug.Log("[PackSim] daytona pair\n" + Summary("pair", r) + string.Join("\n", r.lines));
+    }
 
     [Explicit("Diagnostic: one Daytona roster with every off and the finishing order logged.")]
     [Test, Timeout(1800000)]
@@ -251,7 +317,7 @@ public class PackRaceSimTests
         float passes = 0, contacts = 0, offs = 0, w2 = 0, w3 = 0, rms = 0, weaves = 0, tow = 0;
         foreach (int seed in seeds)
         {
-            var r = Run(trackId, new Settings { cars = cars, laps = laps, seed = seed });
+            var r = Run(trackId, new Settings { cars = cars, laps = laps, seed = seed, columns = 2 });
             sb.Append(Summary($"  seed {seed}", r));
             passes += r.passes; contacts += r.contacts; offs += r.offs;
             w2 += r.wide2Share; w3 += r.wide3Share; rms += r.aloneLineRms; weaves += r.weavesPerCarLap; tow += r.towShare;
@@ -281,6 +347,7 @@ public class PackRaceSimTests
         var conditions = Runtime("TrackConditions");
         if (set.draftScale.HasValue) conditions.GetField("DraftScale").SetValue(null, set.draftScale.Value);
         if (set.followScale.HasValue) conditions.GetField("AiFollowScale").SetValue(null, set.followScale.Value);
+        if (set.sideAwareness.HasValue) conditions.GetField("AiSideAwareness").SetValue(null, set.sideAwareness.Value);
         Runtime("RaceStart").GetMethod("ResetToDefault").Invoke(null, null);   // green
 
         var vehicleInfo = Resources.Load("Vehicles/Cup24");
@@ -323,7 +390,15 @@ public class PackRaceSimTests
             Set(spline, "spriteFacesUp", false);
             Set(spline, "angleOffsetDeg", 180f);
             Set(spline, "speed", 35f);
-            Set(spline, "startDistance", 60f + (n - 1 - i) * 14f);   // single file, 14 m apart, car 0 at the back
+            if (set.columns >= 2)
+            {
+                // Double file: rows 10 m apart, the two columns a lane apart either side of the line.
+                int row = (n - 1 - i) / 2;
+                Set(spline, "startDistance", 60f + row * 10f);
+                Set(spline, "lateralOffset", (i % 2 == 0 ? -1f : 1f) * 1.35f);
+            }
+            else
+                Set(spline, "startDistance", 60f + (n - 1 - i) * 14f);   // single file, 14 m apart, car 0 at the back
             Set(spline, "externalMotionController", true);
 
             var pvc = go.AddComponent(pvcType);
@@ -356,6 +431,7 @@ public class PackRaceSimTests
             float commit = AIRatings.CornerCommitment(ratings.strength01, ratings.consistency01, UnityEngine.Random.value);
             Set(spline, "cornerCommitment", set.skillCornering ? commit : 1f);
             if (set.followHeadway.HasValue) Set(racing, "followHeadwaySeconds", set.followHeadway.Value);
+            if (set.racing != null) foreach (var kv in set.racing) Set(racing, kv.Key, kv.Value);
             Set(racing, "respectYellows", set.respectYellows);
 
             Call(spline, "Awake");
@@ -391,6 +467,7 @@ public class PackRaceSimTests
         var best = new float[n];
         var wasOn = new bool[n];
         var history = new Queue<string>[n];
+        var slowLogged = new bool[n];
         for (int i = 0; i < n; i++) history[i] = new Queue<string>();
         var pathAhead = splineType.GetMethod("PathPointAhead");
         for (int i = 0; i < n; i++) { lastD[i] = (float)distProp.GetValue(splines[i]); lapStart[i] = -1f; best[i] = float.MaxValue; wasOn[i] = true; }
@@ -424,6 +501,12 @@ public class PackRaceSimTests
         var tacTrend = new float[n];   // sign of the last real move of the intended offset
         int weaves = 0;
         float t = 0f;
+        var thrProp = inputType.GetProperty("LastThrottle");
+        var brkProp = inputType.GetProperty("LastBrake");
+        var latProp = splineType.GetProperty("LateralOnTrack");
+        var wasFlat = new bool[n];
+        int thrSamples = 0, flatSamples = 0, brakeSamples = 0, lifts = 0, followSamples = 0, n2t = 0;
+        double mphSum = 0;
 
         for (int step = 0; step < maxSteps; step++)
         {
@@ -469,6 +552,16 @@ public class PackRaceSimTests
                 }
             }
 
+            if (set.traceCar >= 0 && set.traceCar < n && lapsDone[set.traceCar] == 2 && step % 10 == 0)
+            {
+                int c = set.traceCar;
+                r.lines.Add($"  d{(float)distProp.GetValue(splines[c]):0} car {Get(pvcs[c], "SpeedMps") * 2.237f:0.0} brain {Get(splines[c], "CurrentMph"):0.0} " +
+                    $"target {Get(splines[c], "TargetMph"):0.0} desired {Get(splines[c], "DesiredMph"):0.0} cap {Mathf.Min(999f, (float)splineType.GetField("aiMaxSpeedMph").GetValue(splines[c])):0.0} " +
+                    $"cmd {Get(inputs[c], "LastCommandedMps") * 2.237f:0.0} gripcap {Mathf.Min(999f, Get(inputs[c], "LastGripCapMps") * 2.237f):0.0} " +
+                    $"th {Get(inputs[c], "LastThrottle"):0.00} br {Get(inputs[c], "LastBrake"):0.00} slip {Get(pvcs[c], "SlipAngleDeg"):0.0} " +
+                    $"lat {Get(splines[c], "LateralOnTrack"):0.0} tow {(float)towProp.GetValue(pvcs[c]):0.00} push {Get(pvcs[c], "PushFactor"):0.00} bank {Get(pvcs[c], "CurrentBankDeg"):0}");
+            }
+
             int leaderLaps = 0;
             for (int i = 0; i < n; i++)
             {
@@ -484,6 +577,23 @@ public class PackRaceSimTests
                 leaderLaps = Mathf.Max(leaderLaps, lapsDone[i]);
 
                 bool on = (bool)onLegal.Invoke(null, new object[] { track, _cars[i].transform.position, 1f });
+                if (set.traceSlowMph > 0f && step % 3 == 0)
+                {
+                    history[i].Enqueue($"    t{t:0.00} d{d:0.0} car {Get(pvcs[i], "SpeedMps") * 2.237f:0.0} brain {Get(splines[i], "CurrentMph"):0.0} " +
+                        $"target {Get(splines[i], "TargetMph"):0.0} cap {Mathf.Min(999f, (float)splineType.GetField("aiMaxSpeedMph").GetValue(splines[i])):0.0} " +
+                        $"lat {Get(splines[i], "LateralOnTrack"):0.00} tac {(float)tacField.GetValue(splines[i]):0.00} lane {racingType.GetProperty("PackLane").GetValue(racers[i])}{((bool)racingType.GetProperty("PackMoving").GetValue(racers[i]) ? "->" : "")} " +
+                        $"commit {(float)racingType.GetField("_commitTimer", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(racers[i]):0.0} rec {(float)racingType.GetField("_recoveryTimer", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(racers[i]):0.0} " +
+                        $"mist {(float)racingType.GetField("_mistakeTimer", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(racers[i]):0.0} " +
+                        $"th {Get(inputs[i], "LastThrottle"):0.00} br {Get(inputs[i], "LastBrake"):0.00} slip {Get(pvcs[i], "SlipAngleDeg"):0.0} nose {Get(inputs[i], "LastNoseErrorDeg"):0.0} tow {(float)towProp.GetValue(pvcs[i]):0.00}");
+                    while (history[i].Count > 25) history[i].Dequeue();
+                    float vSlow = Get(pvcs[i], "SpeedMps") * 2.237f;
+                    if (t > 25f && vSlow < set.traceSlowMph && !slowLogged[i] && r.lines.Count < 300)
+                    {
+                        slowLogged[i] = true;
+                        r.lines.Add($"  Car{i:D2} slow, lead-up:");
+                        r.lines.AddRange(history[i]);
+                    }
+                }
                 if (set.traceOffs && step % 3 == 0)
                 {
                     // Where the car sits against its own planned line (m, + = left of it).
@@ -602,6 +712,28 @@ public class PackRaceSimTests
                         aloneSq += off * off; aloneSamples++; aloneMax = Mathf.Max(aloneMax, off);
                     }
 
+                    float th = (float)thrProp.GetValue(inputs[i]);
+                    float br = (float)brkProp.GetValue(inputs[i]);
+                    float vNow = (float)mphProp.GetValue(splines[i]);
+                    thrSamples++;
+                    mphSum += vNow;
+                    r.minMph = Mathf.Min(r.minMph, vNow);
+                    if (th >= 0.98f) flatSamples++;
+                    if (br > 0.02f) brakeSamples++;
+                    if (wasFlat[i] && th < 0.9f) lifts++;
+                    if (th >= 0.98f) wasFlat[i] = true; else if (th < 0.9f) wasFlat[i] = false;
+                    // Nose to tail: the nearest car ahead in the same lane.
+                    float aheadSame = float.MaxValue;
+                    float myLat = (float)latProp.GetValue(splines[i]);
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (j == i) continue;
+                        float g = progress[j] - progress[i];
+                        if (g <= 0f || g >= aheadSame) continue;
+                        if (Mathf.Abs((float)latProp.GetValue(splines[j]) - myLat) < 1.4f) aheadSame = g;
+                    }
+                    if (aheadSame < 40f) { followSamples++; if (aheadSame < 7f) n2t++; }
+
                     // A weave: the intended offset moving one way by more than 0.15 m, then the other.
                     float tac = (float)tacField.GetValue(splines[i]);
                     float move = tac - prevTac[i];
@@ -628,7 +760,30 @@ public class PackRaceSimTests
                     int key = i * 1000 + j;
                     bool touch = Penetration(pa, new Vector2(Mathf.Cos(ha), Mathf.Sin(ha)), pb, new Vector2(Mathf.Cos(hb), Mathf.Sin(hb))) > 0f;
                     if (!touch) { touching.Remove(key); continue; }
-                    if (touching.Add(key)) { r.contacts++; if (stopD >= 0f && i == 0) r.stoppedHits++; }
+                    if (touching.Add(key))
+                    {
+                        r.contacts++;
+                        if (stopD >= 0f && i == 0) r.stoppedHits++;
+                        float latA = (float)latProp.GetValue(splines[i]), latB = (float)latProp.GetValue(splines[j]);
+                        if (Mathf.Abs(latA - latB) < 1.3f) r.rearContacts++; else r.sideContacts++;
+                        Vector2 va = Get(pvcs[i], "SpeedMps") * new Vector2(Mathf.Cos(Get(pvcs[i], "HeadingDeg") * Mathf.Deg2Rad), Mathf.Sin(Get(pvcs[i], "HeadingDeg") * Mathf.Deg2Rad));
+                        Vector2 vb = Get(pvcs[j], "SpeedMps") * new Vector2(Mathf.Cos(Get(pvcs[j], "HeadingDeg") * Mathf.Deg2Rad), Mathf.Sin(Get(pvcs[j], "HeadingDeg") * Mathf.Deg2Rad));
+                        Vector2 nrm = (pb - pa).normalized;
+                        float closingHit = Vector2.Dot(va - vb, nrm);
+                        if (closingHit > 3f)
+                        {
+                            r.hardContacts++;
+                            if (r.lines.Count < set.traceHard)
+                            {
+                                string State(int c) =>
+                                    $"Car{c:D2} {Get(pvcs[c], "SpeedMps") * 2.237f:0.0} mph lat {Get(splines[c], "LateralOnTrack"):0.00} tac {(float)tacField.GetValue(splines[c]):0.00} " +
+                                    $"lane {racingType.GetProperty("PackLane").GetValue(racers[c])}{((bool)racingType.GetProperty("PackMoving").GetValue(racers[c]) ? "->" : "")} " +
+                                    $"th {Get(inputs[c], "LastThrottle"):0.00} br {Get(inputs[c], "LastBrake"):0.00} cap {Mathf.Min(999f, (float)splineType.GetField("aiMaxSpeedMph").GetValue(splines[c])):0} " +
+                                    $"slip {Get(pvcs[c], "SlipAngleDeg"):0.0} tow {(float)towProp.GetValue(pvcs[c]):0.00}";
+                                r.lines.Add($"  HARD t{t:0.0} d{(float)distProp.GetValue(splines[i]):0} closing {closingHit:0.0} m/s, gap {progress[j] - progress[i]:0.0} m | {State(i)} | {State(j)}");
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -650,6 +805,11 @@ public class PackRaceSimTests
         int racedLaps = 0;
         for (int i = 0; i < n; i++) racedLaps += Mathf.Max(0, lapsDone[i] - 1);
         r.weavesPerCarLap = racedLaps > 0 ? weaves / (float)racedLaps : 0f;
+        r.fullThrottleShare = thrSamples > 0 ? flatSamples / (float)thrSamples : 0f;
+        r.brakeShare = thrSamples > 0 ? brakeSamples / (float)thrSamples : 0f;
+        r.liftsPerCarLap = racedLaps > 0 ? lifts / (float)racedLaps : 0f;
+        r.noseToTailShare = followSamples > 0 ? n2t / (float)followSamples : 0f;
+        r.meanMph = thrSamples > 0 ? (float)(mphSum / thrSamples) : 0f;
 
         gaps.Sort();
         r.medianGap = gaps.Count > 0 ? gaps[gaps.Count / 2] : 0f;

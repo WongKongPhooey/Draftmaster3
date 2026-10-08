@@ -407,18 +407,69 @@ Daytona; Bristol eats tyres faster than Martinsville). Read it through `TrackPro
 
 | | Superspeedway | Speedway | Short track | Road course |
 | --- | --- | --- | --- | --- |
-| Draft | 1.65 | 1.15 | 0.7 | 0.5 |
+| Restrictor plate (solo top speed) | 190 mph (Talladega 194) | none | none | none |
+| AI flat out all lap | yes | no | no | no |
+| AI pack racing (lines, push, no backing out) | yes | no | no | no |
+| Draft (tow) | 0.5 (Talladega 0.6) | 1.15 | 0.7 | 1.0 |
+| Push from a line behind | 1.0 | 0.3 | 0 | 0 |
+| AI side awareness (shying from a car alongside) | 0.15 | 0.6 | 0.45 | 1.0 |
+| AI lanes | 3 fixed grooves 3.6 m apart (Talladega 4) | fitted to the road | fitted to the road | off |
+| AI following (x headway) | 0.6 | 0.8 | 1.0 | 1.0 |
 | Tyre wear | 0.7 | 1.0 | 1.5 | 1.25 |
-| AI line spread | 1.0 | 0.75 | 0.5 | 0.55 |
 | Caution proneness | 0.8 | 0.45 | 0.9 | 0.35 |
-| Road width | 18 m | 16 m | 13 m | 12 m |
-| Pit limit | 55 mph | 45 | 35 | 45 |
 | Racing zoom | 26 | 22 | 16 | 20 |
 
-**These are not wired into the sim yet** — the table exists and is tested, but `DraftAero`, the tyre model,
-`AIRacingBehaviour`, `GridSpawner` and the camera still use their own constants. Connecting them is the
-next job, and it's a one-line change at each site (`* TrackProfile.Current.draftScale` and so on). Doing it
-that way round means the numbers can be argued about in one file rather than hunted across the codebase.
+Indianapolis is a superspeedway by type but races like an intermediate: no plate, no pack (`ForTrack`).
+
+`TrackConditions.ApplyTrackTuning` (called from `AIPaceCalibration.ApplyFor` when a package binds) copies the
+row into `TrackConditions`, which is what the physics and the AI read: `DraftScale`, `AiFollowScale`,
+`AiLanes`, `PlateMph`, `TrackGripScale`, `AiFlatOut`, `AiPackRacing`, `PushScale`, `AiSideAwareness`,
+`AiLaneSpacing`, `AiPackLanes`. Tyre wear, line spread, caution proneness, grid columns and zoom are still
+unread.
+
+### The plate
+
+At Daytona and Talladega the whole lap is flat out and the race is the draft. `RestrictorPlate.Solve` makes
+that true in the physics, for every car, AI and human:
+
+- **The plate** is a solo top speed (`TrackConditions.PlateMph`); `PlayerVehicleController` clamps to it. The
+  tow (`draftingTopSpeedGain x DraftScale`) and the push add to it.
+- **The turns are given the grip to take it.** `TrackConditions.TrackGripScale` is raised until the tightest
+  turn, in the lowest lane (5 m inside the authored radius), holds plate x (1 + full tow + full push) x 1.04,
+  using the same `BankedGrip` and `AIGrip` maths as the physics and the AI's planning, at the *player's* grip.
+  It scales both the tyre's peak and its cornering stiffness: with the peak alone a car flat out at Daytona ran
+  7-8 degrees of slip and the AI's slide catch lifted for it. Daytona comes out at x1.60, Talladega x1.28.
+- **The push.** `DraftAero.Push` counts the cars nose to tail behind a car in its lane (each within 9 m of the
+  one in front). The car at the head of a line gets less drag (`RestrictorPlate.PushTopSpeedGain` 3% and
+  `PushAccel` at a full push), so a long line runs faster than a short one and a car that pulls out alone
+  falls back - unless its pusher goes with it.
+
+### Pack racing (the AI)
+
+With `AiPackRacing` on, `AIRacingBehaviour` races in fixed grooves off the centreline (`AiPackLanes`,
+`AiLaneSpacing`) and `SplineDriver` lays its racing line on the centreline (an out-in-out line swung 7 m across
+Talladega into every turn and dragged whole lines through the lanes beside them):
+
+- **Flat out.** `SplineDriver` plans the turns at top speed and `SplineInputDriver` drives to the brain's
+  target with the throttle wide open (`TargetMph`, not the accel-curve ramp, which held it at 30-40%). Lifting
+  is proportional and gentle; full brakes only past `flatOutPanicMps` over target.
+- **Bump drafting.** A car closes to `packFollowGap` (6.2 m centre to centre - a bumper's width) on the car
+  ahead in its lane and sits there; inside it, it eases no more than 2.5 mph under it.
+- **Lanes are decided by flow** (`PackLanes`, every ~0.4 s): go with your leader when it moves (decided the
+  moment it commits, ~85% of the time); move to a lane that is running quicker if there's a hole; pull out
+  into an empty lane only with a run (or, on the bumper in the tow, on an aggression roll); tuck into a line if
+  yours is empty. Once moving, a car goes all the way (`packLateralSpeed` 3.2 m/s) - nobody backs out.
+- **A hole** (`PackLaneClear`) is judged on the speed the car will have once out of the tow, and counts cars
+  already committed to that lane. A car following another treats a car committed to merging into its lane as
+  already there.
+- **Fearless.** The side-by-side push, contact push and contact scrub are scaled by `AiSideAwareness` (0.15),
+  only a car really overlapping counts as alongside, and a driver's mistake wobble is a quarter size.
+
+Measure with `PackRaceSimTests` (explicit): `DaytonaBaseline` / `TalladegaBaseline` (40 cars, 6 laps, three
+rosters, double-file start), `PlateTrack` (one roster with hard contacts and slow-downs traced),
+`DaytonaPair` (one car's controls over a lap), `TrackKinds` (one track of each kind). The summary now reports
+throttle (flat-out share, lifts per lap, braking), nose-to-tail share, speed range, and contacts split into
+nose-to-tail, side and hard (closing faster than `VehicleCollision`'s 3 m/s no-damage speed).
 
 ## Training the racing line
 

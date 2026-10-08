@@ -361,6 +361,7 @@ public class AILapSimTests
     [TestCase("Daytona", 1, 3880f, 4030f)]
     [TestCase("Daytona", 1, 0f, 150f)]
     [TestCase("Talladega", -1, 1500f, 1750f)]
+    [TestCase("Daytona", 1, 0f, 4100f)]
     public void TraceTrack(string trackId, int lap, float from, float to)
     {
         SpawnTrack($"Assets/Resources/TrackPackages/{trackId}.prefab");

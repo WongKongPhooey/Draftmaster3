@@ -103,6 +103,27 @@ public class AIRacingBehaviour : MonoBehaviour
     public float passAbandonGap = 45f;
     public float passMaxSeconds = 10f;
 
+    [Header("Pack Racing (superspeedways - TrackConditions.AiPackRacing)")]
+    [Tooltip("Centre-to-centre gap (m) held behind the car ahead in a line: a car is 4.8 m long, so this is a bumper's width - bump-drafting distance.")]
+    public float packFollowGap = 6.2f;
+    [Tooltip("How hard (m/s²) a car is willing to shed closing speed on the car ahead in its line: the closing speed it carries is the speed it could lose at this rate over the room left. Gentle - nobody stands on the brakes in a pack.")]
+    public float packCloseDecel = 1.2f;
+    [Tooltip("Seconds between lane decisions. A pack changes shape over seconds, not frames.")]
+    public float packDecisionInterval = 0.4f;
+    [Tooltip("A neighbouring lane is worth moving into when the car that would be ahead of us in it is this much quicker (mph) than the car ahead of us in ours.")]
+    public float packLaneSwitchMph = 1.2f;
+    [Tooltip("Pulling out into an empty lane needs a run: closing on the car ahead by at least this (mph).")]
+    public float packRunMph = 2f;
+    [Tooltip("Chance per decision that a car right on the bumper of the car ahead, in its tow, pulls out to start a new lane anyway - at aggression 1. Scales down with aggression.")]
+    public float packPullOutChance = 0.08f;
+    [Tooltip("Chance a car on the bumper goes with the car ahead when it changes lane (the line follows its leader), at aggression 0. Aggressive drivers stay put and take the gap a little more often.")]
+    public float packFollowLeaderChance = 0.85f;
+    [Tooltip("A lane with nobody in it this far (m) ahead is empty: a car alone in it tucks into a line beside it if one is near.")]
+    public float packEmptyLaneMetres = 60f;
+    [Tooltip("Lateral speed (m/s) and acceleration (m/s²) of a lane change in a pack. A move takes about a second: drawn out over two and a half, the car pulling out spent all of it half across its pusher's nose, slowing as it left the draft.")]
+    public float packLateralSpeed = 3.2f;
+    public float packLateralAccel = 7f;
+
     [Header("Manoeuvre Strength")]
     [Tooltip("Lateral offset (m) committed during an overtake.")]
     public float overtakeLineOffset = 3f;
@@ -184,6 +205,20 @@ public class AIRacingBehaviour : MonoBehaviour
     float _recoveryTimer;
     float _recoveryDir;
     PracticeAIStint _stint;   // practice stints manage lateralOffset themselves — don't fight them
+    // Pack racing: the lane this car is in or committed to, whether it is still moving there, the decision clock.
+    int _packLane = -1;
+    bool _packMoving;
+    float _packDecisionTimer;
+    SplineDriver _leaderMoveSeen;   // the leader whose current lane change we have already decided about
+    int _leaderMoveLane = -1;
+    PlayerVehicleController _pvc;
+    public int PackLane => _packLane;
+    public bool PackMoving => _packMoving;
+    // Every racing brain by its SplineDriver, so a car can see where the others have committed to go.
+    static readonly System.Collections.Generic.Dictionary<SplineDriver, AIRacingBehaviour> _byDriver =
+        new System.Collections.Generic.Dictionary<SplineDriver, AIRacingBehaviour>();
+    // Pack racing on for this car: a superspeedway, in lanes.
+    bool Pack => TrackConditions.AiPackRacing && Lanes;
 
     // Payback state: the rival currently being lunged at (an AI spline OR the free-driven player),
     // the active-move timer, and per-rival cooldown gates keyed by driver name.
@@ -201,6 +236,21 @@ public class AIRacingBehaviour : MonoBehaviour
         _spline = GetComponent<SplineDriver>();
         if (_spline != null) _basePaceMultiplier = _spline.paceMultiplier;
         _stint = GetComponent<PracticeAIStint>();
+        _pvc = GetComponent<PlayerVehicleController>();
+        if (_spline != null) _byDriver[_spline] = this;
+    }
+
+    void OnDestroy()
+    {
+        if (_spline != null && _byDriver.TryGetValue(_spline, out var me) && me == this) _byDriver.Remove(_spline);
+    }
+
+    // Where another car is headed across the road: the lane it has committed to in a pack, else where it is.
+    float HeadedLateral(SplineDriver other)
+    {
+        if (Pack && _byDriver.TryGetValue(other, out var b) && b != null && b._packMoving && b._packLane >= 0)
+            return LaneLateral(b._packLane);
+        return other.LateralOnTrack;
     }
 
     public void SetBasePace(float baseMul) { _basePaceMultiplier = baseMul; }
@@ -307,11 +357,15 @@ public class AIRacingBehaviour : MonoBehaviour
             // tow is what makes the difference on a straight) — plus a car crawling along, spun or wrecked, which
             // is fair game whatever it could do.
             bool crawling = aheadSpeed < Mathf.Max(mySpeed, _spline.DesiredMph) * 0.7f;
+            // Flat out, DesiredMph is far above anything reachable, and off a rolling start every car ahead read as
+            // crawling against it - the whole pack tried to drive round itself. Crawling is against what we're doing.
+            if (Pack) crawling = aheadSpeed < mySpeed * 0.7f;
             bool quicker = _spline.DesiredMph > ahead.DesiredMph + 1.5f || crawling;
             // Under yellow everyone ahead is lifting too, so "crawling" alone would pass the whole queue. Only
             // the car that is actually stopped, or nearly, gets driven round.
             if (underYellow) quicker = aheadSpeed < yellowPassBelowMph;
-            if (aheadGap < initiateRange && quicker && _cooldownTimer <= 0f)
+            // In a pack, passing is lane flow (PackLanes below); this is only for driving round a crawling car.
+            if (aheadGap < initiateRange && quicker && _cooldownTimer <= 0f && (!Pack || crawling || underYellow))
             {
                 bool stoppedCar = aheadSpeed < yellowPassBelowMph;
                 // A stopped car is driven round on the wide side of the road — the side away from where it sits —
@@ -345,7 +399,14 @@ public class AIRacingBehaviour : MonoBehaviour
             float brakeDist = (closingMps * closingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
             float reqGap = (minFollowDistance + mySpeedMps * headway + brakeDist)
                            * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
-            if (blockGap < reqGap)
+            bool packFollow = Pack && !underYellow && blockerMph > _spline.CurrentMph * 0.75f;
+            if (packFollow)
+            {
+                // Bump drafting: close up to a bumper's width behind the car ahead and sit there.
+                float packCap = Mathf.Lerp(_spline.DesiredMph, PackFollowCap(blockerMph, blockGap), launchCapBlend);
+                speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, packCap, overlap01));
+            }
+            else if (blockGap < reqGap)
             {
                 // Ease from the blocker's speed (at reqGap) down to a touch under it (at hardFollowGap).
                 float close01 = Mathf.InverseLerp(reqGap, hardFollowGap, blockGap);
@@ -356,7 +417,7 @@ public class AIRacingBehaviour : MonoBehaviour
                 followCap = Mathf.Lerp(_spline.DesiredMph, followCap, overlap01);
                 speedCap = Mathf.Min(speedCap, followCap);
             }
-            if (blockGap < hardFollowGap)
+            if (blockGap < hardFollowGap && !packFollow)
                 speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, blockerMph * 0.6f, overlap01));
         }
 
@@ -382,7 +443,16 @@ public class AIRacingBehaviour : MonoBehaviour
             float pBrakeDist = (pClosingMps * pClosingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
             float pReqGap = (minFollowDistance + myMpsNow * headway + pBrakeDist)
                             * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
-            if (pg < pReqGap && pOverlap > 0f)
+            bool pPack = Pack && !underYellow && pSpeedMph > _spline.CurrentMph * 0.75f;
+            if (pPack)
+            {
+                if (pOverlap > 0f)
+                {
+                    float pCap = Mathf.Lerp(_spline.DesiredMph, PackFollowCap(pSpeedMph, pg), launchCapBlend);
+                    speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, pCap, pOverlap));
+                }
+            }
+            else if (pg < pReqGap && pOverlap > 0f)
             {
                 float close01 = Mathf.InverseLerp(pReqGap, hardFollowGap, pg);
                 float pCap = Mathf.Lerp(pSpeedMph, Mathf.Max(0f, pSpeedMph - 6f), close01);
@@ -390,7 +460,7 @@ public class AIRacingBehaviour : MonoBehaviour
                 pCap = Mathf.Lerp(_spline.DesiredMph, pCap, pOverlap);
                 speedCap = Mathf.Min(speedCap, pCap);
             }
-            if (pg < hardFollowGap && pOverlap > 0f)
+            if (pg < hardFollowGap && pOverlap > 0f && !pPack)
                 speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, pSpeedMph * 0.6f, pOverlap));
 
             // Go around a much-slower / stopped player when a side is clear of other cars.
@@ -511,9 +581,15 @@ public class AIRacingBehaviour : MonoBehaviour
             }
         }
 
+        // Pack racing: the lane is everything. Which lane to be in is decided by how the lanes are flowing (PackLanes);
+        // once a car moves it goes all the way - nobody backs out of a lane change in a pack.
+        if (Pack && !wantOvertake && !underYellow && !_spline.IsOnPit && PackLanes(dt, out float packLat))
+            desiredTactical = packLat - _spline.UntacticalLateral;
+        else if (Pack) { _packLane = -1; _packMoving = false; }
+
         // Holding a lane. A car with another alongside stays in the lane it is in - it does not drift back to the
         // ideal line across the other car - and a car only drops back to the ideal line once that lane is clear.
-        if (!wantOvertake && Lanes && !_spline.IsOnPit && LaneGeometry(out _, out _, out _))
+        if (!Pack && !wantOvertake && Lanes && !_spline.IsOnPit && LaneGeometry(out _, out _, out _))
         {
             float here = _spline.LateralOnTrack;
             float ideal = _spline.UntacticalLateral;
@@ -523,7 +599,7 @@ public class AIRacingBehaviour : MonoBehaviour
         }
 
         // Defending: if a faster pursuer is close behind during the approach to a turn, shift to the inside.
-        if (_spline.CurrentPhase == SplineDriver.CornerPhase.Approach || _spline.CurrentPhase == SplineDriver.CornerPhase.Entry)
+        if (!Pack && (_spline.CurrentPhase == SplineDriver.CornerPhase.Approach || _spline.CurrentPhase == SplineDriver.CornerPhase.Entry))
         {
             if (RaceField.TryGetBehind(_spline, defendDetectRange, out var pursuer, out float behindGap))
             {
@@ -563,6 +639,11 @@ public class AIRacingBehaviour : MonoBehaviour
         // Side-by-side repulsion + contact response.
         float repulse = 0f;
         float contactScrub = 0f;
+        // How much this track's racing shies away from a car alongside (TrackTuning.sideAwareness): fully on a road
+        // course, hardly at all in a superspeedway pack, where three wide is how it's done and holding your lane is
+        // the courtesy. In a pack contact is leaned on too, not backed out of.
+        float sideShy = TrackConditions.AiSideAwareness;
+        float contactShy = Pack ? sideShy : 1f;
         var drivers = RaceField.Drivers;
         for (int i = 0; i < drivers.Count; i++)
         {
@@ -576,7 +657,10 @@ public class AIRacingBehaviour : MonoBehaviour
             // pushed sideways and scrubbed of speed for being in the tow. The field could never pack up.
             // Where the AI doesn't race in lanes (road courses) the wider window stays: through an out-in-out
             // corner it is what keeps a car off the one diagonally ahead of it.
-            if (Mathf.Abs(longGap) > (Lanes ? Mathf.Min(sidewaysRange, alongsideLength) : sidewaysRange)) continue;
+            // In a pack, alongside means really overlapping: a car bump drafting 5 m behind is nose to tail, not door to
+            // door - counted as side contact it was scrubbed, and scrubbed the car ahead, from 190 to 150 mph in half a lap.
+            float window = Pack ? alongsideLength * 0.75f : Lanes ? Mathf.Min(sidewaysRange, alongsideLength) : sidewaysRange;
+            if (Mathf.Abs(longGap) > window) continue;
             float latGap = _spline.LateralOnTrack - other.LateralOnTrack;
             float absLat = Mathf.Abs(latGap);
             float dir = latGap >= 0f ? 1f : -1f;
@@ -584,15 +668,15 @@ public class AIRacingBehaviour : MonoBehaviour
             {
                 // Contact: stronger push + speed scrub.
                 float overlap = (contactLateralWidth - absLat) / contactLateralWidth;
-                repulse += dir * (sidewaysMaxPush + contactPush) * overlap;
-                contactScrub += contactSpeedScrub * overlap;
+                repulse += dir * (sidewaysMaxPush + contactPush) * overlap * contactShy;
+                contactScrub += contactSpeedScrub * overlap * contactShy;
             }
             else
             {
                 float threshold = sidewaysWidth * 0.6f;
                 if (absLat >= threshold) continue;
                 float push = (threshold - absLat) / threshold;
-                repulse += dir * push * sidewaysMaxPush;
+                repulse += dir * push * sidewaysMaxPush * sideShy;
             }
         }
         desiredTactical += Mathf.Clamp(repulse, -(sidewaysMaxPush + contactPush), sidewaysMaxPush + contactPush);
@@ -666,6 +750,11 @@ public class AIRacingBehaviour : MonoBehaviour
         if (Mathf.Abs(diff) < tacticalDeadzone) diff = 0f;
         float lateralSpeed = _passAroundStopped ? Mathf.Max(maxLateralSpeed, stoppedPassLateralSpeed) : maxLateralSpeed;
         float lateralAccel = Mathf.Max(0.1f, _passAroundStopped ? maxLateralAccel * 3f : maxLateralAccel);
+        if (Pack && _packMoving)
+        {
+            lateralSpeed = Mathf.Max(lateralSpeed, packLateralSpeed);
+            lateralAccel = Mathf.Max(lateralAccel, packLateralAccel);
+        }
         float wantVelocity = Mathf.Sign(diff) * Mathf.Min(lateralSpeed, Mathf.Sqrt(2f * lateralAccel * Mathf.Abs(diff)));
         _tacticalVelocity = Mathf.MoveTowards(_tacticalVelocity, wantVelocity, lateralAccel * dt);
         float move = _tacticalVelocity * dt;
@@ -696,7 +785,8 @@ public class AIRacingBehaviour : MonoBehaviour
         if (_mistakeTimer > 0f)
         {
             _mistakeTimer -= dt;
-            _smoothedTactical += _mistakeWobbleDir * mistakeWobble * dt;
+            // In a pack a slip is a twitch, not a lurch: three wide, a metre's wander is the wall or the car beside.
+            _smoothedTactical += _mistakeWobbleDir * mistakeWobble * (Pack ? 0.25f : 1f) * dt;
         }
         else if (mistakeProbabilityPerSecond > 0f)
         {
@@ -727,6 +817,164 @@ public class AIRacingBehaviour : MonoBehaviour
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
         _spline.aiSpeedBoostMph = speedBoost;
+    }
+
+    // ---- Pack racing ----
+
+    // The speed (mph) to hold behind a car in our line: close on it no faster than we could shed at packCloseDecel
+    // over the room left to a bumper's width behind it, then sit there - a touch under its speed if we're inside it.
+    float PackFollowCap(float aheadMph, float gap)
+    {
+        float room = gap - packFollowGap;
+        if (room > 0f) return aheadMph + Mathf.Sqrt(2f * packCloseDecel * room) / MphToMps;
+        // Inside a bumper's width: ease back a little, never far under it - asking for 5 mph under the car ahead
+        // turned into a brake stab the next car had to match, and so on down the line. Touching is bump drafting.
+        return Mathf.Max(0f, aheadMph + Mathf.Max(room * 0.6f, -2.5f));
+    }
+
+    // Which lane to race in, as a lateral. A car stays in its lane unless:
+    //   * the car ahead of it in the line moves to another lane - most follow it (that is how lines stay together,
+    //     and how a run takes its pusher with it);
+    //   * the lane beside is moving faster and there's a hole to drop into;
+    //   * it has a run on the car ahead (or, on the bumper in the tow, the nerve) and the lane beside is empty -
+    //     it pulls out to make a new lane;
+    //   * its own lane is empty ahead and a line runs beside it: tuck in and take the draft.
+    // Once it decides, it goes - the move is held until the car is in the lane.
+    bool PackLanes(float dt, out float lateral)
+    {
+        lateral = _spline.LateralOnTrack;
+        if (!LaneGeometry(out _, out _, out int count)) return false;
+        float here = _spline.LateralOnTrack;
+        int cur = NearestLane(here);
+        if (_packLane < 0 || _packLane >= count) { _packLane = cur; _packMoving = false; }
+
+        if (_packMoving)
+        {
+            if (Mathf.Abs(LaneLateral(_packLane) - here) < 0.35f) _packMoving = false;
+            lateral = LaneLateral(_packLane);
+            return true;
+        }
+        _packLane = cur;   // settled: whatever lane we are in is our lane
+
+        float myMph = _spline.CurrentMph;
+        var lead = AheadInLane(cur, packEmptyLaneMetres, out float leadGap);
+        float leadMph = lead != null ? lead.CurrentMph : float.MaxValue;
+
+        // 1. Our leader is changing lane: decide at once whether to go with it - every step, not on the decision
+        // clock, because a pusher that waited the better part of half a second was still on the bumper as the car
+        // pulled across its nose. One roll per lane change.
+        if (lead != null && leadGap < packFollowGap * 2.2f
+            && _byDriver.TryGetValue(lead, out var lb) && lb != null
+            && lb._packMoving && lb._packLane >= 0 && lb._packLane < count && lb._packLane != cur
+            && (lead != _leaderMoveSeen || lb._packLane != _leaderMoveLane))
+        {
+            _leaderMoveSeen = lead;
+            _leaderMoveLane = lb._packLane;
+            if (Random.value < Mathf.Lerp(packFollowLeaderChance, packFollowLeaderChance * 0.6f, _phaseAggression)
+                && PackLaneClear(lb._packLane))
+                return MoveTo(lb._packLane, out lateral);
+        }
+
+        _packDecisionTimer -= dt;
+        if (_packDecisionTimer > 0f) { lateral = LaneLateral(_packLane); return true; }
+        _packDecisionTimer = packDecisionInterval * Random.Range(0.75f, 1.25f);
+
+        // 2. A quicker lane beside, 3. a new lane with a run, or 4. tuck into a line.
+        int best = -1;
+        float bestScore = 0f;
+        float tow = _pvc != null ? _pvc.TowFactor : 0f;
+        bool haveRun = lead != null && leadGap < 30f && myMph - leadMph > packRunMph;
+        bool nerve = lead != null && leadGap < packFollowGap * 1.6f && tow > 0.5f
+                     && Random.value < packPullOutChance * _phaseAggression;
+        for (int dir = -1; dir <= 1; dir += 2)
+        {
+            int lane = cur + dir;
+            if (lane < 0 || lane >= count) continue;
+            var adj = AheadInLane(lane, packEmptyLaneMetres, out float adjGap);
+            float score;
+            if (adj != null)
+            {
+                if (lead == null) score = adjGap < 35f ? 1f : 0f;                                  // 4: join the line beside
+                else score = adj.CurrentMph - leadMph - packLaneSwitchMph;                          // 2: the faster lane
+                if (lead != null && adjGap < leadGap - 2f) score -= 0.5f;                           //    not to sit further back
+            }
+            else score = (haveRun || nerve) ? 0.5f + Mathf.Max(0f, myMph - leadMph) * 0.1f : 0f;    // 3: make a lane
+            if (score > bestScore && PackLaneClear(lane)) { best = lane; bestScore = score; }
+        }
+        if (best >= 0) return MoveTo(best, out lateral);
+
+        lateral = LaneLateral(_packLane);
+        return true;
+    }
+
+    bool MoveTo(int lane, out float lateral)
+    {
+        _packLane = lane;
+        _packMoving = true;
+        lateral = LaneLateral(lane);
+        return true;
+    }
+
+    // The nearest car ahead of us in this lane, within range.
+    SplineDriver AheadInLane(int lane, float range, out float gap)
+    {
+        gap = float.MaxValue;
+        SplineDriver best = null;
+        float laneLat = LaneLateral(lane);
+        float half = LaneSpacing * 0.5f;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            float lg = LongitudinalGap(_spline, other);
+            if (lg <= 0.5f || lg > range || lg >= gap) continue;
+            if (Mathf.Abs(other.LateralOnTrack - laneLat) > half) continue;
+            gap = lg;
+            best = other;
+        }
+        return best;
+    }
+
+    // Room to drop into a lane here: nobody in it from a length behind (more if they're closing) to a length ahead
+    // (more if we're closing). Tighter than LaneClear - a pack fills every hole - but it never cuts across a car.
+    bool PackLaneClear(int lane)
+    {
+        float laneLat = LaneLateral(lane);
+        float half = LaneSpacing * 0.8f;
+        // Pulling out of a tow costs the tow: judge the gap behind on the speed we'll have once out in the air, or
+        // we drop in front of a car that's still in a tow and quicker than we're about to be.
+        float tow = _pvc != null ? _pvc.TowFactor : 0f;
+        var vi = _spline.vehicleInfo;
+        float towLoss = vi != null ? vi.draftingTopSpeedGain * TrackConditions.DraftScale * tow : 0f;
+        float myMps = _spline.CurrentMph * MphToMps;
+        float myOutMps = myMps * (1f - towLoss);
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            // In the lane, or committed to moving into it (two cars diving for one hole from either side).
+            if (Mathf.Abs(other.LateralOnTrack - laneLat) >= half && Mathf.Abs(HeadedLateral(other) - laneLat) >= half) continue;
+            float otherMps = other.CurrentMph * MphToMps;
+            float lg = LongitudinalGap(_spline, other);
+            float closingBehind = otherMps - myOutMps;   // + = the car behind would close on us
+            float closingAhead = myMps - otherMps;      // + = we would close on the car ahead
+            if (lg > -(6f + Mathf.Max(0f, closingBehind) * 2f) && lg < 6f + Mathf.Max(0f, closingAhead) * 2f) return false;
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            if (Mathf.Abs(p.TrackLateral - laneLat) >= half) continue;
+            float closing = p.SpeedMph * MphToMps - myMps;
+            float lg = SignedGapTo(p.TrackDistance);
+            if (lg > -(6f + Mathf.Max(0f, closing) * 1.2f) && lg < 6f + Mathf.Max(0f, -closing) * 1.2f) return false;
+        }
+        return true;
     }
 
     // Which side to drive round a stopped car: the wide side of the road, away from where it sits. 0 when a car
@@ -786,11 +1034,25 @@ public class AIRacingBehaviour : MonoBehaviour
 
     // The lanes across the road here: from the AI's left bound to its right, evenly spaced and at least laneSpacing
     // apart. Daytona's 11 m (bounds ±3.9 m) is four lanes; a narrow road course is two or three.
+    float LaneSpacing => TrackConditions.AiLaneSpacing > 0f ? TrackConditions.AiLaneSpacing : laneSpacing;
+
     bool LaneGeometry(out float lo, out float hi, out int count)
     {
         count = 0;
-        if (!_spline.GetLateralBounds(out lo, out hi) || hi - lo < laneSpacing) return false;
-        count = Mathf.FloorToInt((hi - lo) / Mathf.Max(0.5f, laneSpacing)) + 1;
+        float spacing = LaneSpacing;
+        if (!_spline.GetLateralBounds(out lo, out hi) || hi - lo < spacing) return false;
+        // A superspeedway pack races in fixed grooves, the same distance off the centreline all the way round.
+        // Fitted between the bounds instead, the lanes moved with the road's shape through the tri-oval and every
+        // car in them was carried across the track without meaning to go anywhere (Talladega: five lanes, pile-ups
+        // against the outside one).
+        if (Pack && TrackConditions.AiPackLanes >= 2)
+        {
+            count = TrackConditions.AiPackLanes;
+            hi = (count - 1) * 0.5f * spacing;
+            lo = -hi;
+            return true;
+        }
+        count = Mathf.FloorToInt((hi - lo) / Mathf.Max(0.5f, spacing)) + 1;
         return count >= 2;
     }
 
@@ -798,7 +1060,11 @@ public class AIRacingBehaviour : MonoBehaviour
     {
         if (!LaneGeometry(out float lo, out float hi, out int count)) return _spline.LateralOnTrack;
         lane = Mathf.Clamp(lane, 0, count - 1);
-        return Mathf.Lerp(lo, hi, lane / (float)(count - 1));
+        float lat = Mathf.Lerp(lo, hi, lane / (float)(count - 1));
+        // A fixed groove still has to be on the road here.
+        if (Pack && TrackConditions.AiPackLanes >= 2 && _spline.GetLateralBounds(out float bLo, out float bHi))
+            lat = Mathf.Clamp(lat, bLo, bHi);
+        return lat;
     }
 
     int NearestLane(float lateral)
@@ -920,6 +1186,15 @@ public class AIRacingBehaviour : MonoBehaviour
             float lg = LongitudinalGap(_spline, other);
             if (lg <= 0f || lg > scanDist || lg >= best) continue;
             float ov = CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - myLat));
+            // In a pack, a car committed to moving into our lane is followed from the moment it commits - it will be
+            // there before we could shed the speed if we waited for it to arrive.
+            // And while we are moving lanes ourselves, the car ahead in the lane we're moving into is followed already.
+            if (Pack)
+            {
+                ov = Mathf.Max(ov, CorridorOverlap01(Mathf.Abs(HeadedLateral(other) - myLat)));
+                if (_packMoving && _packLane >= 0)
+                    ov = Mathf.Max(ov, CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - LaneLateral(_packLane))));
+            }
             if (ov <= 0f) continue;
             best = lg;
             blocker = other;

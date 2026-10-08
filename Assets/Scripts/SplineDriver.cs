@@ -261,6 +261,9 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float CurrentMph => _currentMph;
     /// What the speed profile wants here, before AI follow-caps. Lets behaviours ask "could I be going faster?"
     public float DesiredMph { get; private set; }
+    // The speed (mph) the brain is asking for this step after every cap - tactics, formation, pit approach - but
+    // before its own accel-curve ramp. A flat-out car (TrackConditions.AiFlatOut) drives to this, not to the ramp.
+    public float TargetMph { get; private set; }
     public float DistanceOnTrack => _mainLength > 0f ? ((_distance % _mainLength) + _mainLength) % _mainLength : _distance;
     public float LateralOnTrack => _prevLateral;
     public float TrackLength => _mainLength;
@@ -521,7 +524,15 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 _lineHi[i] = Mathf.Max(_lineHi[i], c.y);
             }
 
-            if (trained != null)
+            if (TrackConditions.AiPackRacing)
+            {
+                // A superspeedway pack races in fixed grooves (AIRacingBehaviour's pack lanes), laid off the
+                // centreline. The line under them has to be the centreline too: an out-in-out line swung 7 m across
+                // Talladega into every turn, faster than a car's lane offset could follow, and dragged whole lines of
+                // cars through the lanes beside them.
+                _lateralProfile[i] = Mathf.Clamp(0f, _lineLo[i], _lineHi[i]);
+            }
+            else if (trained != null)
             {
                 // Same blend TrackInfoV2 does between ideal and the outer lines, just off the trained ideal,
                 // so per-driver lineFactor spread still spreads the field across the road.
@@ -775,7 +786,14 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
             // Glen's run-off in practice. Pace still buys straight-line speed and takes a driver from the
             // cornerSpeedScale margin right up to the limit — which is the difference between a good driver
             // and a slow one — but no amount of it makes the car corner faster than it physically can.
-            if (kappa > 1e-4f)
+            if (kappa > 1e-4f && TrackConditions.AiFlatOut)
+            {
+                // Flat out (a plated superspeedway): the turns are taken at full throttle like the straights. The
+                // plate keeps the car under what the banking holds; the live grip governor stays as the backstop.
+                _gripLimitProfile[i] = float.MaxValue;
+                _speedProfile[i] = (vehicleInfo != null ? vehicleInfo.topSpeed : 200f) * _profilePace;
+            }
+            else if (kappa > 1e-4f)
             {
                 // cornerCommitment is how much of the grip a driver dares to use. Pace can't separate drivers in
                 // the corners (it is capped at the grip limit, and a track's calibrated AI pace puts everyone
@@ -1131,7 +1149,13 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
                 targetMph = 0f;
                 DesiredMph = 0f;
             }
+            TargetMph = targetMph;
             UpdateSpeedToward(targetMph);
+            // Flat out, the car is driven to TargetMph with the throttle wide open, not along this ramp - so the
+            // brain's speed IS the car's. Left to ramp on its own it ran 25 mph ahead of the car, and every closing
+            // speed the racing brain judged a pack by was fiction.
+            if (externalMotionController && TrackConditions.AiFlatOut && !_onPit && RaceStart.IsGreen)
+                _currentMph = externalActualSpeedMps * MpsToMph;
             speed = _currentMph * MphToMps;
         }
 

@@ -74,6 +74,60 @@ public static class DraftAero
         sideDraft = Mathf.Clamp01(sideDraft) * speed01;
     }
 
+    public const float PushLateral = 1.4f;     // |lateral delta| (m) for a car behind to count as in our line
+    public const float PushLinkGap = 9f;       // centre to centre (m): a car further back than this is not pushing
+    public const int PushMaxChain = 8;
+    static readonly System.Collections.Generic.List<float> _chain = new System.Collections.Generic.List<float>(16);
+
+    // The push a line of cars behind gives us (0..1): the cars nose to tail behind us in our lane, each within
+    // PushLinkGap of the one in front, counted down the line. One car on the bumper is worth a good part of it; a
+    // long line more, with diminishing returns. This is what makes a lane with more cars in it run faster, and a
+    // car that pulls out alone fall back - superspeedway racing in one number.
+    public static float Push(TrackBuilder track, float trackLen, float myDist, float myLat, float mySpeedMph,
+                             GameObject self, VehicleInfo vi)
+    {
+        if (track == null || trackLen <= 0f || vi == null) return 0f;
+        float speed01 = Mathf.Clamp01((mySpeedMph - (vi.draftingMinSpeed - SpeedRampMph)) / SpeedRampMph);
+        if (speed01 <= 0f) return 0f;
+        float window = PushLinkGap * PushMaxChain;
+        _chain.Clear();
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || !d.isActiveAndEnabled || d.gameObject == self || d.IsOnPit) continue;
+            if (d.track != track || d.TrackLength <= 0f) continue;
+            AddBehind(trackLen, myDist, myLat, d.DistanceOnTrack, d.LateralOnTrack, window);
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.gameObject == self || p.ObstacleTrack != track) continue;
+            AddBehind(trackLen, myDist, myLat, p.TrackDistance, p.TrackLateral, window);
+        }
+        if (_chain.Count == 0) return 0f;
+        _chain.Sort();
+        int count = 0;
+        float prev = 0f;
+        for (int i = 0; i < _chain.Count && count < PushMaxChain; i++)
+        {
+            if (_chain[i] - prev > PushLinkGap) break;
+            prev = _chain[i];
+            count++;
+        }
+        return (1f - Mathf.Pow(0.55f, count)) * speed01;
+    }
+
+    static void AddBehind(float trackLen, float myDist, float myLat, float otherDist, float otherLat, float window)
+    {
+        float g = myDist - otherDist;   // + = other car behind us
+        if (g > trackLen * 0.5f) g -= trackLen;
+        else if (g < -trackLen * 0.5f) g += trackLen;
+        if (g <= 0.5f || g > window || Mathf.Abs(otherLat - myLat) > PushLateral) return;
+        _chain.Add(g);
+    }
+
     static void Accumulate(float trackLen, float myDist, float myLat, float otherDist, float otherLat,
                            VehicleInfo vi, GameObject other,
                            ref float tow, ref GameObject towSource, ref float sideDraft)

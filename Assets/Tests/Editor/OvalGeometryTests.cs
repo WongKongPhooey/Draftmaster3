@@ -215,7 +215,15 @@ public class OvalGeometryTests
         var superspeedway = TrackTuning.For(TrackKind.Superspeedway);
         var shortTrack = TrackTuning.For(TrackKind.ShortTrack);
 
-        Assert.Greater(superspeedway.draftScale, shortTrack.draftScale, "the draft is the superspeedway race");
+        // The superspeedway race is the draft - flat out under a plate, in a pack, pushed along by the line behind.
+        // Its tow's top-speed gain is deliberately small (a big slingshot pulled cars out of line every lap); the
+        // push is what separates it.
+        Assert.Greater(superspeedway.plateMph, 0f, "superspeedways run a plate");
+        Assert.IsTrue(superspeedway.flatOut && superspeedway.packRacing, "superspeedways are flat out, in a pack");
+        Assert.IsFalse(shortTrack.flatOut || shortTrack.packRacing || shortTrack.plateMph > 0f);
+        Assert.Greater(superspeedway.pushScale, shortTrack.pushScale, "the push is the superspeedway race");
+        Assert.Less(superspeedway.sideAwareness, TrackTuning.For(TrackKind.RoadCourse).sideAwareness,
+                    "three wide in a pack, room on a road course");
         Assert.Greater(shortTrack.tyreWearScale, superspeedway.tyreWearScale, "bullrings eat tyres");
         Assert.Greater(superspeedway.roadWidth, shortTrack.roadWidth);
         Assert.Greater(superspeedway.racingZoom, shortTrack.racingZoom);

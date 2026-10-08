@@ -88,6 +88,12 @@ public class SplineInputDriver : MonoBehaviour
     [Range(0.5f, 1.2f)] public float gripUtilization = 0.95f;
     [Tooltip("Seconds of travel scanned ahead for the tightest radius feeding the grip governor — enough anticipation to lift before the corner, short enough not to crawl whole straights.")]
     public float gripScanTime = 0.7f;
+    [Tooltip("Flat out (TrackConditions.AiFlatOut): how far over its target (m/s) a car runs before it touches the brake - below it, it only lifts.")]
+    public float flatOutBrakeMargin = 1.5f;
+    [Tooltip("Flat out: brake per m/s over the margin (0.12 = half brake 4 m/s over).")]
+    public float flatOutBrakeGain = 0.12f;
+    [Tooltip("Flat out: this far over its target (m/s) the car brakes as hard as it can.")]
+    public float flatOutPanicMps = 12f;
 
     [Header("Slide Catch")]
     [Tooltip("Body slip angle (deg) where the slide response starts: throttle tapers and steering starts aiming the VELOCITY vector at the path (countersteer) instead of winding more lock onto a nose that's already pointing the wrong way.")]
@@ -274,6 +280,10 @@ public class SplineInputDriver : MonoBehaviour
 
         // --- Speed: throttle when under the commanded speed, brake when over.
         float commandedMps = _spline.CommandedSpeedMps;
+        // Flat out (plated superspeedway): drive to what the brain is asking for, not its accel-curve ramp up to
+        // it - chasing the ramp held the throttle at 30-40% all lap and the car never once ran wide open.
+        if (TrackConditions.AiFlatOut && !_spline.IsOnPit && RaceStart.IsGreen)
+            commandedMps = _spline.TargetMph / 2.237f;
         LastProfileMps = commandedMps;
         LastGripCapMps = float.MaxValue;
 
@@ -304,6 +314,19 @@ public class SplineInputDriver : MonoBehaviour
         // (forward weight transfer unloads the rear mid-slide) — the tyres get their lateral budget back to catch it.
         float throttle = Mathf.Clamp01(speedError * speedGain) * (1f - slide01) * (1f - wideLift01);
         float brake = Mathf.Clamp01(-speedError * speedGain) * (1f - slideBrakeCut * slide01);
+        if (TrackConditions.AiFlatOut && !_spline.IsOnPit && !_recovering)
+        {
+            // Flat out in a pack the car ahead is a bumper away: ease the throttle off over the last few tenths of a
+            // m/s rather than switching to the brake at the first one - that slammed between the two every second
+            // and read as the whole pack lifting. The brake is only for real closing speed.
+            throttle = Mathf.Clamp01(1f + speedError * speedGain * 2f) * (1f - slide01) * (1f - wideLift01);
+            // Proportional, and gentle: a car that stood on the brakes for a 14 mph gap made the car behind stand
+            // on them harder still, and a whole line went from 200 to 140 mph. Full brakes only past
+            // flatOutPanicMps over - something stopped or spinning ahead.
+            float over = -speedError;
+            brake = over >= flatOutPanicMps ? 1f : Mathf.Clamp01((over - flatOutBrakeMargin) * flatOutBrakeGain);
+            brake *= 1f - slideBrakeCut * slide01;
+        }
         if (rearSlipBrakeRelease > 0f)
         {
             float rearSlip = Mathf.Abs(_car.SlipRearDeg);

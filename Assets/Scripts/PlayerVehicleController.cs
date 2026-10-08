@@ -253,7 +253,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
 
     // Aero draft state this step (0..1), for HUD / telemetry / audio.
     public float TowFactor { get; private set; }        // slipstream caught from a car ahead
-    public float SideDraftFactor { get; private set; }  // side draft suffered from a rival's nose on our quarter
+    public float SideDraftFactor { get; private set; }
+    public float PushFactor { get; private set; }       // pushed along by a line of cars nose to tail behind us (DraftAero.Push)  // side draft suffered from a rival's nose on our quarter
 
     // --- Obstacle projection (so the racing AI can see this car as a slow/stopped obstacle ahead).
     // Only the active HUMAN car registers (an AI car keeps an enabled SplineDriver and is already in RaceField).
@@ -378,15 +379,19 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
     // Track-space pose for the draft field: an AI-driven car reads its (enabled) SplineDriver brain; the
     // free-driven player reads the obstacle projection it already maintains. The player's lap length comes
     // from the AI field — no AI on the track also means nobody to draft, so zero either way.
-    void ComputeDraft(out float tow, out float sideDraft)
+    void ComputeDraft(out float tow, out float sideDraft, out float push)
     {
-        tow = 0f; sideDraft = 0f;
+        tow = 0f; sideDraft = 0f; push = 0f;
         if (vehicleInfo == null) return;
+        bool pushing = TrackConditions.PushScale > 0f;
         if (_brainSpline != null && _brainSpline.enabled && _brainSpline.TrackLength > 0f)
         {
             if (_brainSpline.IsOnPit) return; // no aero games on the pit lane
             DraftAero.Compute(_brainSpline.track, _brainSpline.TrackLength, _brainSpline.DistanceOnTrack,
                 _brainSpline.LateralOnTrack, SpeedMph, gameObject, vehicleInfo, out tow, out _, out sideDraft);
+            if (pushing)
+                push = DraftAero.Push(_brainSpline.track, _brainSpline.TrackLength, _brainSpline.DistanceOnTrack,
+                    _brainSpline.LateralOnTrack, SpeedMph, gameObject, vehicleInfo);
         }
         else if (_isObstacle && track != null)
         {
@@ -394,6 +399,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             if (len <= 0f) return;
             DraftAero.Compute(track, len, TrackDistance, TrackLateral, SpeedMph, gameObject, vehicleInfo,
                 out tow, out _, out sideDraft);
+            if (pushing) push = DraftAero.Push(track, len, TrackDistance, TrackLateral, SpeedMph, gameObject, vehicleInfo);
         }
     }
 
@@ -611,9 +617,9 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // --- Aero draft. Tow: tucked behind a car, the hole in the air frees up drag → extra accel + a raised
         // top-speed ceiling (the slingshot run). Side draft: a rival's nose beside OUR rear quarter steals air
         // off the spoiler → extra drag + a top-speed cut. Both 0..1 from the shared DraftAero field geometry.
-        float tow = 0f, sideDraft = 0f;
-        if (enableDraft) ComputeDraft(out tow, out sideDraft);
-        TowFactor = tow; SideDraftFactor = sideDraft;
+        float tow = 0f, sideDraft = 0f, push = 0f;
+        if (enableDraft) ComputeDraft(out tow, out sideDraft, out push);
+        TowFactor = tow; SideDraftFactor = sideDraft; PushFactor = push;
 
         // --- Longitudinal command (engine/brake along the nose), evaluated from forward speed.
         // AI cars fold AiPaceMultiplier into engine power too: their commanded targets already scale with it,
@@ -624,6 +630,12 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float aiPower = externalInput ? TrackConditions.AiPaceMultiplier : 1f;
         float aiStretch = Mathf.Max(1f, aiPower);
         float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss) * aiStretch;
+        // Restrictor plate (superspeedways): the same solo top speed for every car, AI and human, under what the
+        // banking holds (RestrictorPlate) - so the turns are flat out and the draft decides everything.
+        if (TrackConditions.PlateMph > 0f)
+            topMps = Mathf.Min(topMps, TrackConditions.PlateMph / 2.237f * (1f - dmg * damageTopSpeedLoss));
+        // Pushed by a line of cars behind: a little less drag at the head of it (DraftAero.Push).
+        if (push > 0f) topMps *= 1f + RestrictorPlate.PushTopSpeedGain * push * TrackConditions.PushScale;
         // Draft moves the aero ceiling: a full tow carries the car past its stock flat-out speed, being
         // side-drafted pulls it down (the top-speed cut is what actually slows a car already at the clamp).
         topMps *= (1f + vehicleInfo.draftingTopSpeedGain * tow * TrackConditions.DraftScale) * (1f - vehicleInfo.sideDraftTopSpeedLoss * sideDraft);
@@ -631,6 +643,7 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Tow = less drag to push against: extra accel under throttle (the accel curve alone dies at vmax,
         // so without this additive term the raised ceiling would never be reached).
         if (tow > 0f) accel += vehicleInfo.draftingTowAccel * tow * TrackConditions.DraftScale * throttleIn;
+        if (push > 0f) accel += RestrictorPlate.PushAccel * push * TrackConditions.PushScale * throttleIn;
 
         // Reverse: with no throttle, holding the brake once nearly stopped drives the car slowly backward.
         // Only engages within (-reverseMaxSpeed, reverseEngageSpeed) so a fast backward slide from a spin still
@@ -726,8 +739,11 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
                 // Linear tyre with friction-circle clamp. The axle that hits its μ·Fz ceiling first lets go first.
                 float peakF = muF * fzF;
                 float peakR = muR * fzR;
-                fyF = Mathf.Clamp(-corneringStiffness * fzF * alphaF, -peakF, peakF);
-                fyR = Mathf.Clamp(-corneringStiffness * fzR * alphaR, -peakR, peakR);
+                // A grippier surface (a plated superspeedway's TrackGripScale) is a stiffer tyre as well as a higher
+                // peak: without it a car flat out round Daytona ran 7-8 degrees of slip, which the AI took for a slide.
+                float stiffness = corneringStiffness * TrackConditions.TrackGripScale;
+                fyF = Mathf.Clamp(-stiffness * fzF * alphaF, -peakF, peakF);
+                fyR = Mathf.Clamp(-stiffness * fzR * alphaR, -peakR, peakR);
 
                 // Tyre work for wear: how close each axle runs to its limit.
                 wearAccumF += Mathf.Abs(fyF) / Mathf.Max(peakF, 1f);

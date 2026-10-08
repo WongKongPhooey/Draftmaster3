@@ -23,6 +23,17 @@ namespace Draftmaster.Tracks
         public float draftScale;         // multiplier on the tow from the car ahead
         public float draftFollowScale;   // multiplier on how close the AI follows (NR2003's ai_drafting_distance)
         public bool raceInLanes;         // AI races in lanes (AIRacingBehaviour.useLanes): ovals, where packs run side by side
+
+        // How the racing itself works here - the physics and the AI's temperament, per kind of track.
+        public float plateMph;           // > 0: restrictor plate. Solo top speed for every car; the turns are given the grip
+                                         // to take it (and a full tow on top) flat out. Superspeedways only.
+        public bool flatOut;             // AI holds the throttle wide open all lap (no lift for the turns) - needs a plate
+        public bool packRacing;          // AI races as a pack: nose to tail in lines, pull out only with a run, followers
+                                         // go with their leader, nobody backs out of a move or shies from a car alongside
+        public float pushScale;          // multiplier on the bump-draft push a line of cars gives the car at its head
+        public float sideAwareness;      // 0-1: how hard the AI steers away from a car alongside (1 = road-course caution)
+        public float laneSpacing;        // m between lane centres when racing in lanes (0 = the AI's default)
+        public int packLanes;            // pack racing: how many fixed grooves, centred on the centreline (0 = fit the road)
         public float tyreWearScale;      // multiplier on wear rate
         public float fuelBurnScale;      // multiplier on burn rate
 
@@ -51,9 +62,18 @@ namespace Draftmaster.Tracks
                         // DaytonaDraftSweep), a tow worth 1.65x surged cars into the one ahead and strung the field
                         // out, and following at 0.35x the headway ran them into each other. 1.3 / 0.6 packed it up
                         // tightest with the fewest contacts: ~16 m median gap, 60% within 20 m, a quarter 2-wide.
-                        draftScale = 1.3f,
+                        // A pack: the draft's top-speed gain is a few mph (a 13% slingshot pulled cars out of line
+                        // every lap and the field never formed up), the push from a line behind you is what wins.
+                        draftScale = 0.5f,
                         draftFollowScale = 0.6f,
                         raceInLanes = true,
+                        plateMph = 190f,
+                        flatOut = true,
+                        packRacing = true,
+                        pushScale = 1f,
+                        sideAwareness = 0.15f,     // three wide is normal; you hold your lane and trust the others to
+                        laneSpacing = 3.6f,        // 40 ft of road, three grooves: a car's width and a metre and a half
+                        packLanes = 3,
                         tyreWearScale = 0.7f,
                         fuelBurnScale = 1.15f,
                         lineSpread = 1f,           // three wide as standard
@@ -72,6 +92,8 @@ namespace Draftmaster.Tracks
                         draftScale = 1.15f,
                         draftFollowScale = 0.8f,
                         raceInLanes = true,
+                        pushScale = 0.3f,
+                        sideAwareness = 0.6f,      // two wide off the corners, give a little room
                         tyreWearScale = 1f,
                         fuelBurnScale = 1f,
                         lineSpread = 0.75f,
@@ -90,6 +112,7 @@ namespace Draftmaster.Tracks
                         draftScale = 0.7f,
                         draftFollowScale = 1f,
                         raceInLanes = true,
+                        sideAwareness = 0.45f,     // leaning on each other is part of it
                         tyreWearScale = 1.5f,      // brake, turn, throttle, repeat
                         fuelBurnScale = 0.85f,
                         lineSpread = 0.5f,         // barely room for two
@@ -109,6 +132,7 @@ namespace Draftmaster.Tracks
                         // gets alongside into the bus stop), and halving it took the pack sim from 4 passes to 1.
                         draftScale = 1f,
                         draftFollowScale = 1f,
+                        sideAwareness = 1f,        // braking zones and run-off: leave room
                         tyreWearScale = 1.25f,
                         fuelBurnScale = 1f,
                         lineSpread = 0.55f,
@@ -127,6 +151,7 @@ namespace Draftmaster.Tracks
                         draftScale = 0.6f,
                         draftFollowScale = 1f,
                         raceInLanes = true,
+                        sideAwareness = 0.7f,
                         tyreWearScale = 1.35f,
                         fuelBurnScale = 0.85f,
                         lineSpread = 0.85f,        // everyone runs their own line in the slop
@@ -153,7 +178,9 @@ namespace Draftmaster.Tracks
             switch (trackId)
             {
                 case "Talladega":       // wider and faster than Daytona: bigger pack, bigger tow
-                    t.draftScale = 1.45f;
+                    t.draftScale = 0.6f;
+                    t.plateMph = 194f;
+                    t.packLanes = 4;           // room for four wide
                     t.cautionProneness = 0.85f;
                     break;
 
@@ -169,6 +196,14 @@ namespace Draftmaster.Tracks
 
                 case "Indianapolis":    // 2.5 miles but flat and narrow — nothing like Daytona despite the type
                     t.draftScale = 1.15f;
+                    // No plate, no pack: flat turns are braked for, and it races like an intermediate.
+                    t.plateMph = 0f;
+                    t.flatOut = false;
+                    t.packRacing = false;
+                    t.pushScale = 0.3f;
+                    t.sideAwareness = 0.6f;
+                    t.laneSpacing = 0f;
+                    t.draftFollowScale = 0.8f;
                     t.lineSpread = 0.6f;
                     t.turnShareOfLap = 0.3f;
                     break;
