@@ -21,7 +21,10 @@ public class SafetyCar : MonoBehaviour
     public float parkGapBeforeFirstBox = 4f;
 
     [Header("Close-up / peel-away")]
-    [Tooltip("When this far (m) or less before the start/finish line, the field bunches up into tight rows AND the pace car begins peeling away (true to life).")]
+    [Tooltip("When this far (m) or less before the start/finish line — or before the pit entry it is about to take, " +
+             "whichever comes first — the field bunches up into tight rows AND the pace car begins peeling away (true " +
+             "to life). Measured to the pit entry too because a track whose pit road opens well before the line had " +
+             "the pace car dive in before it ever reached the zone, and the field got no close-up at all.")]
     public float closeUpDistanceM = 500f;
     [Tooltip("Pace (mph) the pace car accelerates to through the close-up zone, pulling AWAY from the leader so it opens a clear gap and reaches the pit lane before the green. Must exceed cruiseMph or the field rear-ends it.")]
     public float peelAwayMph = 95f;
@@ -29,6 +32,9 @@ public class SafetyCar : MonoBehaviour
     // True while the pace car is in the close-up zone near the line: the field packs into tight two-wide rows
     // (read by FormationControllers via FormationDirector) while the pace car simultaneously peels away to the pit.
     public bool ClosingUp { get; private set; }
+    // True once the pace car has committed to the pit lane. The field still forms up behind the new leader until
+    // FormationDirector waves the green near the line.
+    public bool Pitted => _pitting;
 
     [Header("Traffic")]
     [Tooltip("The pace car drives its own pace, but never faster than it could stop from behind a car in its lane — a car that got out ahead of it, spun in front of it, or the human. Braking (mph/s) it may call on to do that.")]
@@ -59,7 +65,8 @@ public class SafetyCar : MonoBehaviour
     public Vector3 rooflightLocalOffset = new Vector3(0f, 0.6f, 0f);
     public float rooflightSize = 0.6f;
 
-    // Fired once, the instant the car commits to pit entry — the cue for the race to go green.
+    // Fired once, the instant the car commits to pit entry. The green itself waits for the leader to reach the line
+    // (FormationDirector).
     public event Action OnPitEntry;
 
     SplineDriver _spline;
@@ -144,16 +151,24 @@ public class SafetyCar : MonoBehaviour
         _prevDist = cur;
         _hasPrev = true;
 
-        // Close-up: within closeUpDistanceM of the start/finish line (distance 0), the field concertinas up tight
-        // (ClosingUp tells the FormationControllers to pack into rows and hold pace) while the pace car ACCELERATES
+        // Close-up: within closeUpDistanceM of the start/finish line, the field concertinas up tight
+        // (ClosingUp tells the FormationControllers to pack into rows behind a slowed front row) while the pace car ACCELERATES
         // to peelAwayMph and dives for the pit — opening a clear gap so it's off the racing surface before the green.
         // Slowing here (the old behaviour) just let the bunched field pile onto it. Guarded by _travelled so the car
-        // doesn't bolt off the line if it happens to spawn inside the zone.
+        // doesn't bolt off the line if it happens to spawn inside the zone (at most a quarter lap, so a short track
+        // whose whole lap is barely longer than the zone still gets one).
         ClosingUp = false;
-        if (lap > 0f && _travelled > closeUpDistanceM)
+        if (lap > 0f && _travelled > Mathf.Min(closeUpDistanceM, 0.25f * lap))
         {
-            float toLine = lap - cur; // cur in [0, lap); distance forward to the next start/finish crossing
-            if (toLine <= closeUpDistanceM)
+            float toLine = Mathf.Repeat(StartFinishDistance - cur, lap); // forward to the next start/finish crossing
+            // The pit entry counts only on the pass it will actually pit on (the floor below is met by then).
+            float toPit = float.MaxValue;
+            if (_pitEntryDistance >= 0f)
+            {
+                toPit = Mathf.Repeat(_pitEntryDistance - cur, lap);
+                if (_travelled + toPit < PitFloor(lap)) toPit = float.MaxValue;
+            }
+            if (Mathf.Min(toLine, toPit) <= closeUpDistanceM)
             {
                 ClosingUp = true;
                 _spline.aiMaxSpeedMph = Mathf.Max(peelAwayMph, cruiseMph);
@@ -173,11 +188,7 @@ public class SafetyCar : MonoBehaviour
         // authored fraction OR the arc from where this car joined to the entry, whichever is shorter, so it
         // always fires on the first pass. It is still a floor — a car that spawned yards short of the entry
         // does not pit off the line — it just cannot be set past the point it is guarding any more.
-        float pitFloor = lap * minLapFractionBeforePit;
-        if (_firstPassDistance > 0f)
-            pitFloor = Mathf.Min(pitFloor, Mathf.Max(0f, _firstPassDistance - pitEntryWindow));
-
-        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= pitFloor)
+        if (_pitEntryDistance >= 0f && lap > 0f && _travelled >= PitFloor(lap))
         {
             float gap = _pitEntryDistance - cur;
             if (gap < 0f) gap += lap;
@@ -185,6 +196,19 @@ public class SafetyCar : MonoBehaviour
         }
 
         if (!_pitting) YieldToTraffic();
+    }
+
+    // Where the painted start/finish line is along the main spline — not necessarily its distance 0.
+    float StartFinishDistance => _spline.track != null && _spline.track.track != null ? _spline.track.track.startFinishDistance : 0f;
+
+    // Distance the car must have travelled before it may pit: the authored fraction OR the arc from where this car
+    // joined to the entry, whichever is shorter.
+    float PitFloor(float lap)
+    {
+        float pitFloor = lap * minLapFractionBeforePit;
+        if (_firstPassDistance > 0f)
+            pitFloor = Mathf.Min(pitFloor, Mathf.Max(0f, _firstPassDistance - pitEntryWindow));
+        return pitFloor;
     }
 
     // Cruise, or slower while the field behind is strung out: eased from cruise at waitGapStartM down to waitMinMph
@@ -287,7 +311,7 @@ public class SafetyCar : MonoBehaviour
     void PitIn()
     {
         _pitting = true;
-        ClosingUp = false; // pace car is leaving the surface; the field launches at green, not row-packs any more
+        ClosingUp = false; // pace car is leaving the surface; the field keeps its rows via FormationDirector.FieldClosingUp
         _despawnTimer = despawnAfterPitSeconds;
 
         // Park in an "invisible box" one box pitch before the first real box at the pit ENTRANCE

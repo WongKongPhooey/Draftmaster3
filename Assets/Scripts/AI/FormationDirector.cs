@@ -6,7 +6,8 @@ using UnityEngine;
 //   Formation — fired when the player, sat in their car (PitLaneStart.PlayerEnteredCar), first touches the
 //               accelerator. The safety car laps at cruise pace; the AI field forms a weaving train behind it
 //               (FormationController).
-//   Green     — fired when the safety car commits to pit-in. AI race; the player is released.
+//   Green     — the safety car pits, the leader takes the field on to the line in close-up rows, and the green
+//               waves as the leader reaches greenBeforeLineM short of it. AI race; the player is released.
 //
 // Also enforces the player's hold-station pace cap during the formation lap (toggle with
 // enforceHoldStation — off = free-follow, where the player drives unrestricted).
@@ -38,6 +39,29 @@ public class FormationDirector : MonoBehaviour
     [Header("Pace")]
     [Tooltip("Formation cruise pace (mph). Shared with the AI FormationControllers via Instance.")]
     public float cruiseMph = 60f;
+    [Tooltip("Pace (mph) the front row eases down to from the moment the safety car speeds up to peel off, until the " +
+             "green — a real leader backs the field up into the restart zone. Everything behind runs faster than " +
+             "this (FormationController.closeUpBonusMph) until it is stacked up in rows. Never above cruise.")]
+    public float closeUpLeaderMph = 50f;
+    public float CloseUpLeaderMph => Mathf.Min(cruiseMph, closeUpLeaderMph);
+    [Tooltip("How far (m) before the pit entry or the line the safety car starts to peel away and the field starts " +
+             "closing up (handed to SafetyCar.closeUpDistanceM). Longer stacks the rows up tighter — the back of a " +
+             "strung-out train closes on the front at only FormationController.closeUpBonusMph — but brings more " +
+             "side-by-side pairs into corners: 700-900 m grazed pairs in Watkins Glen's last corner " +
+             "(FormationLapSimTests).")]
+    public float closeUpDistanceM = 500f;
+
+    [Header("Green flag")]
+    [Tooltip("The green waves when the leader is this far (m) short of the start/finish line, after the safety car " +
+             "has pitted. The leader holds formation pace until then, so the field has the run from the pit entry " +
+             "to the line to close up into tight two-wide rows.")]
+    public float greenBeforeLineM = 40f;
+    [Tooltip("If the leader is further than this (m) from the line when the safety car pits — or has already crossed " +
+             "it — the green waves at once rather than parading another long stretch. Also capped at half a lap.")]
+    public float maxHoldAfterPitInM = 1000f;
+    [Tooltip("Backstop (s): wave the green this long after the safety car pits whatever the leader is doing (a " +
+             "human leader who has stopped on the track).")]
+    public float maxHoldAfterPitInSeconds = 60f;
 
     [Header("Debug")]
     [Tooltip("If > 0, auto-start the formation lap this many seconds after load, without the on-foot enter step (for testing). 0 = off.")]
@@ -55,12 +79,14 @@ public class FormationDirector : MonoBehaviour
     [Range(0.01f, 1f)] public float throttleToStart = 0.1f;
 
     SafetyCar _safetyCar;
+    float _heldSincePitIn = -1f; // seconds the field has run on since the safety car pitted; -1 = not pitted yet
     float _greenMsgTimer;
     bool _awaitingThrottle; // player is in the car; the formation lap starts on their first press of the accelerator
 
     // True while the leader has slowed in the close-up zone before the line. FormationControllers read this to
     // pack the field into tight two-wide rows for the final run to the green.
-    public bool FieldClosingUp => _safetyCar != null && _safetyCar.ClosingUp;
+    // Stays true after the safety car has pitted, while the leader brings the field to the line.
+    public bool FieldClosingUp => _safetyCar != null && (_safetyCar.ClosingUp || (_safetyCar.Pitted && RaceStart.IsFormation));
 
     void Awake()
     {
@@ -217,8 +243,8 @@ public class FormationDirector : MonoBehaviour
         _safetyCar = go.GetComponent<SafetyCar>();
         if (_safetyCar == null) _safetyCar = go.AddComponent<SafetyCar>();
         _safetyCar.cruiseMph = cruiseMph;
+        _safetyCar.closeUpDistanceM = closeUpDistanceM;
         _safetyCar.rooflightColor = rooflightColor;
-        _safetyCar.OnPitEntry += GoGreen;
     }
 
     // Where the safety car starts: `offset` metres past wherever the field actually comes onto the track. That
@@ -275,10 +301,74 @@ public class FormationDirector : MonoBehaviour
 
     void GoGreen()
     {
-        // The MP host flips green here when its safety car pits; NetworkedCarBindings sees the change and
-        // replicates it. Clients don't write the phase off their local safety car — they wait for that RPC.
+        // The MP host flips green here; NetworkedCarBindings sees the change and replicates it. Clients don't
+        // write the phase off their local safety car — they wait for that RPC.
         if (!PhaseAuthority) return;
         RaceStart.Current = RaceStart.Phase.Green;
+    }
+
+    // After the safety car pits, the leader takes the field on to the line and the green waves as it gets there.
+    void FixedUpdate()
+    {
+        if (_safetyCar == null || !_safetyCar.Pitted || RaceStart.Current != RaceStart.Phase.Formation)
+            return;
+        bool first = _heldSincePitIn < 0f;
+        _heldSincePitIn = first ? 0f : _heldSincePitIn + Time.fixedDeltaTime;
+
+        var sc = _safetyCar.GetComponent<SplineDriver>();
+        float lap = sc != null ? sc.TrackLength : 0f;
+        float toLine = lap > 0f ? LeaderToLine(sc.track, lap) : -1f;
+        float maxHold = Mathf.Min(maxHoldAfterPitInM, lap * 0.5f);
+        bool green = toLine < 0f                                   // nobody out on the track to lead
+                     || toLine <= greenBeforeLineM
+                     || (first && toLine > maxHold)                // a long way off, or already over the line
+                     || _heldSincePitIn >= maxHoldAfterPitInSeconds;
+        if (green) GoGreen();
+    }
+
+    // Metres from the leader of the field to the painted start/finish line, or -1 with nobody on the track.
+    static readonly System.Collections.Generic.List<float> s_field = new System.Collections.Generic.List<float>();
+    static float LeaderToLine(TrackBuilder track, float lap)
+    {
+        s_field.Clear();
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var d = drivers[i];
+            if (d == null || d.IsOnPit || !d.isActiveAndEnabled) continue;
+            if (d.qualifyingPosition == FormationOrder.SafetyCarGrid) continue;
+            if (Mathf.Abs(d.TrackLength - lap) > 0.5f) continue;
+            s_field.Add(d.CentreDistanceOnTrack);
+        }
+        var humans = RaceObstacles.All;
+        for (int i = 0; i < humans.Count; i++)
+        {
+            var p = humans[i];
+            if (p == null || !p.isActiveAndEnabled || p.ObstacleTrack != track) continue;
+            s_field.Add(p.TrackDistance);
+        }
+        float lead = LeaderDistance(s_field, lap);
+        float sf = track != null && track.track != null ? track.track.startFinishDistance : 0f;
+        return lead < 0f ? -1f : Mathf.Repeat(sf - lead, lap);
+    }
+
+    // The front of a train of cars on a lap of length `lap`: the car with the widest stretch of empty track ahead
+    // of it. The field is one train, so that stretch is the road between its front and its back, wherever the
+    // start/finish line happens to cut it. Sorts `distances`. -1 when it is empty.
+    public static float LeaderDistance(System.Collections.Generic.List<float> distances, float lap)
+    {
+        int n = distances.Count;
+        if (n == 0 || lap <= 0f) return -1f;
+        for (int i = 0; i < n; i++) distances[i] = Mathf.Repeat(distances[i], lap);
+        distances.Sort();
+        int best = n - 1;
+        float widest = distances[0] + lap - distances[n - 1];
+        for (int i = 0; i < n - 1; i++)
+        {
+            float gap = distances[i + 1] - distances[i];
+            if (gap > widest) { widest = gap; best = i; }
+        }
+        return distances[best];
     }
 
     void Update()

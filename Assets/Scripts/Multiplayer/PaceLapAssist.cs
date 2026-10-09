@@ -196,11 +196,19 @@ public class PaceLapAssist : MonoBehaviour
         if (leaderT != null)
         {
             float aheadMps = leaderMph * MphToMps;
-            if (gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
-            else if (gap < holdGap) gov = aheadMps;      // close — match it, no overtaking
+            // A pace car down the pit lane is no longer on the road: its distance is a pit-lane value, not a gap.
+            bool scInPit = leaderPaceCar != null && leaderPaceCar.Pitted;
+            if (!scInPit && gap <= hardGap) gov = aheadMps * 0.8f;   // at/under buffer (incl. nosing ahead of our slot) — back off
+            else if (!scInPit && gap < holdGap) gov = aheadMps;      // close — match it, no overtaking
             // The pace car peeling off for the pit in the close-up is not a car to chase: the leader holds formation
             // pace to the line, as the AI does. Chasing it ran the human away from the field just before the green.
-            if (leaderPaceCar != null && leaderPaceCar.ClosingUp) gov = Mathf.Min(gov, leaderPaceCar.cruiseMph * MphToMps);
+            // Once it has pitted the human on pole leads the field to the line at that pace until the green waves.
+            // The AI front row eases to the director's close-up pace here; hold the human to the same.
+            if (leaderPaceCar != null && (leaderPaceCar.ClosingUp || scInPit))
+            {
+                float holdMph = FormationDirector.Instance != null ? FormationDirector.Instance.CloseUpLeaderMph : leaderPaceCar.cruiseMph;
+                gov = Mathf.Min(gov, holdMph * MphToMps);
+            }
             _leader = leaderT;
             _leaderIsSafety = leaderSafety;
             _leaderNumber = leaderSafety ? -1 : CarNumberOf(leaderT);

@@ -82,6 +82,15 @@ public class FormationLapSimTests
         // green, and the most it ever was once the whole field was out on the track.
         public float playerLeadAtGreen = -1f;
         public float playerLeadWorst = -1f;
+        // How the field is bunched at the green: how far the leader is from the start/finish line, how long the
+        // field is from the leader to the last car out on the track, the mean centre-to-centre gap between
+        // consecutive cars in the same column, and the mean fore/aft stagger between the two cars of a row
+        // (grid slots 2k and 2k+1). All metres; -1 = not measured.
+        public float leaderToLineAtGreen = -1f;
+        public float fieldLengthAtGreen = -1f;
+        public float meanRowGapAtGreen = -1f;
+        public float meanPairStaggerAtGreen = -1f;
+        public float secondsAfterPitIn = -1f;  // how long the field ran on after the safety car pitted
     }
 
     [Explicit("Diagnostic: formation laps at every venue; prints contacts per track.")]
@@ -141,6 +150,24 @@ public class FormationLapSimTests
         Assert.IsTrue(r.wentGreen, Report($"{trackId}: the safety car never pitted", r, 10));
         Assert.IsEmpty(r.contacts, Report($"{trackId}: cars touched on the formation lap", r, 15));
         Assert.AreEqual(0, r.parkedOverlaps, Report($"{trackId}: cars parked on top of each other in the pit boxes", r, 5));
+    }
+
+    // The run to the green: the pace car speeds up and pits, the front row eases off and the leader brings the field
+    // to the line; the green waves just short of it with the field two-wide, each row's pair level side by side.
+    // Before, the green waved the moment the pace car pitted (at Daytona 2.5 km from the line), the field held
+    // cruise in the close-up so nothing closed up, and each column kept its own gaps — pairs 13-16 m apart, rows
+    // ~30 m apart, the field 600 m long.
+    [TestCase("WatkinsGlen")]
+    [TestCase("Daytona")]
+    [TestCase("Darlington")]
+    public void TheFieldGoesGreenTwoWideNearTheLine(string trackId)
+    {
+        var r = Run(trackId, FieldSize);
+        Debug.Log(Report($"[FormationSim] {trackId} at the green", r, 5));
+        Assert.IsTrue(r.wentGreen, Report($"{trackId}: never went green", r, 5));
+        Assert.Less(r.leaderToLineAtGreen, 60f, Report($"{trackId}: the leader went well short of the line", r, 5));
+        Assert.Less(r.meanPairStaggerAtGreen, 3f, Report($"{trackId}: the rows are not side by side at the green", r, 5));
+        Assert.Less(r.meanRowGapAtGreen, 25f, Report($"{trackId}: the field is strung out at the green", r, 5));
     }
 
     [TestCase("WatkinsGlen", 0)]
@@ -296,6 +323,8 @@ public class FormationLapSimTests
         var sb = new StringBuilder(title);
         sb.Append($" [{r.setup}]: green {r.wentGreen} after {r.seconds:0.0}s, {r.contacts.Count} contacts, {r.parkedOverlaps} parked overlaps, " +
                   $"{r.carsOnTrackAtGreen} cars on track at green, " +
+                  $"leader {r.leaderToLineAtGreen:0} m from the line {r.secondsAfterPitIn:0.0}s after pit-in, field {r.fieldLengthAtGreen:0} m long, " +
+                  $"row gap {r.meanRowGapAtGreen:0.0} m, pair stagger {r.meanPairStaggerAtGreen:0.0} m, " +
                   (r.playerLeadAtGreen >= 0f ? $"player {r.playerLeadAtGreen:0} m clear at green (worst {r.playerLeadWorst:0} m), " : "") +
                   $"closest {(r.minClearance < 1f ? r.minClearance.ToString("0.00") + " m" : "over 1 m")}");
         for (int i = 0; i < Mathf.Min(max, r.contacts.Count); i++)
@@ -473,6 +502,9 @@ public class FormationLapSimTests
         var modeProp = fcType.GetProperty("DbgMode");
         var gapProp = fcType.GetProperty("DbgGap");
         var pittingField = scType.GetField("_pitting", BindingFlags.Instance | BindingFlags.NonPublic);
+        var directorStep = directorType.GetMethod("FixedUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        var greenPhase = Enum.Parse(phaseType, "Green");
+        float pitInAt = -1f;
 
         var result = new Result();
         result.setup = $"pit {pitLen:0} exitGap {exitGap:0.0} spacing {spacing:0.00} raw {(float)fit.GetType().GetField("rawSpacing").GetValue(fit):0.00}, " +
@@ -496,15 +528,20 @@ public class FormationLapSimTests
             if (playerAhead != null) DrivePlayerFree();
             foreach (var fc in fcs) fcStep.Invoke(fc, null);
             scStep.Invoke(sc, null);
+            directorStep?.Invoke(director, null);
             foreach (var c in cars) splineStep.Invoke(c, null);
             result.seconds = (step + 1) * dt;
 
             if (playerAhead != null) MeasurePlayerLead();
-            if ((bool)pittingField.GetValue(sc))
+            if (pitInAt < 0f && (bool)pittingField.GetValue(sc)) pitInAt = result.seconds;
+            // The race goes green when the director waves it (or, with no director step, as the safety car pits).
+            if (Equals(currentProp.GetValue(null), greenPhase) || (directorStep == null && pitInAt >= 0f))
             {
                 result.wentGreen = true;
+                result.secondsAfterPitIn = pitInAt >= 0f ? result.seconds - pitInAt : -1f;
                 if (playerAhead != null) result.playerLeadAtGreen = PlayerLead(out _);
                 foreach (var c in cars) if (!(bool)onPitProp.GetValue(c)) result.carsOnTrackAtGreen++;
+                MeasureBunching();
                 break;
             }
 
@@ -580,12 +617,13 @@ public class FormationLapSimTests
             float gap = Mathf.Repeat((float)distProp.GetValue(playerAhead) - (float)distProp.GetValue(playerSpline), lapLen);
             float aheadMph = (float)mphProp.GetValue(playerAhead);
             float cap = 120f;
-            if (!(bool)onPitProp.GetValue(playerSpline) && !(bool)onPitProp.GetValue(playerAhead))
+            // PaceLapAssist: from the pace car's peel-off to the green, lead the field at the close-up pace.
+            bool scGone = playerAhead == scSpline && ((bool)pittingField.GetValue(sc) || (bool)scType.GetProperty("ClosingUp").GetValue(sc));
+            if (scGone) cap = 50f;
+            else if (!(bool)onPitProp.GetValue(playerSpline) && !(bool)onPitProp.GetValue(playerAhead))
             {
                 if (gap <= 6f) cap = aheadMph * 0.8f;
                 else cap = Mathf.Min(cap, aheadMph + 2.5f * (gap - 13f));
-                // PaceLapAssist holds formation pace while the safety car peels off.
-                if (playerAhead == scSpline && (bool)scType.GetProperty("ClosingUp").GetValue(sc)) cap = Mathf.Min(cap, 60f);
             }
             Set(playerSpline, "aiMaxSpeedMph", Mathf.Max(0f, cap));
             Set(playerSpline, "aiMinDecelMphPerSec", 30f);
@@ -606,6 +644,43 @@ public class FormationLapSimTests
                 if (best < 0f || back < best) best = back;
             }
             return best;
+        }
+
+        // The field's shape at the green (see Result). Track distances are measured back from the leader, so the
+        // start/finish wrap never splits the field.
+        void MeasureBunching()
+        {
+            var onTrack = new List<float>();
+            for (int i = 1; i < n; i++)
+                if (!(bool)onPitProp.GetValue(cars[i])) onTrack.Add((float)distProp.GetValue(cars[i]));
+            float leaderD = (float)directorType.GetMethod("LeaderDistance").Invoke(null, new object[] { onTrack, lapLen });
+            if (leaderD < 0f) return;
+            float sf = (float)trackInfo.GetType().GetField("startFinishDistance").GetValue(trackInfo);
+            result.leaderToLineAtGreen = Mathf.Repeat(sf - leaderD, lapLen);
+
+            var back = new Dictionary<int, float>(); // grid slot -> metres behind the leader
+            float longest = 0f;
+            for (int i = 1; i < n; i++)
+            {
+                if ((bool)onPitProp.GetValue(cars[i])) continue;
+                float b = Mathf.Repeat(leaderD - (float)distProp.GetValue(cars[i]), lapLen);
+                if (b > lapLen * 0.5f) continue;
+                longest = Mathf.Max(longest, b);
+                int slot = (int)splineType.GetField("qualifyingPosition").GetValue(cars[i]);
+                if (cars[i] == playerSpline) slot = playerBox;
+                back[slot] = b;
+            }
+            result.fieldLengthAtGreen = longest;
+
+            float stagger = 0f; int pairs = 0;
+            float rowGap = 0f; int gaps = 0;
+            foreach (var kv in back)
+            {
+                if (kv.Key % 2 == 0 && back.TryGetValue(kv.Key + 1, out float partner)) { stagger += Mathf.Abs(kv.Value - partner); pairs++; }
+                if (back.TryGetValue(kv.Key + 2, out float next)) { rowGap += next - kv.Value; gaps++; }
+            }
+            result.meanPairStaggerAtGreen = pairs > 0 ? stagger / pairs : -1f;
+            result.meanRowGapAtGreen = gaps > 0 ? rowGap / gaps : -1f;
         }
 
         void MeasurePlayerLead()
