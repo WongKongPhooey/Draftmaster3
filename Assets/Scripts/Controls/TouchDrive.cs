@@ -73,6 +73,9 @@ namespace Draftmaster.Controls
         // Either side of pause, same size: the pit limiter (only while it can be toggled) and the broadcast
         // view. A keyboard has L and V for them; a phone has these.
         public readonly TouchRect limiter, broadcast;
+        // Right of the broadcast view, pause-sized: where the crew chief's headset goes while the phone is held
+        // upright (swing camera). Drawn by CrewChiefController, not here, so it takes no touch role.
+        public readonly TouchRect crewChief;
 
         // The size of one design pixel on a screen this big: whole numbers, so the controls land on a clean
         // pixel grid. Taken from the short side so a portrait screen isn't given pedals wider than itself.
@@ -112,6 +115,7 @@ namespace Draftmaster.Controls
             float side = p * 2f, sideGap = 8f * u;
             limiter = new TouchRect(pause.x - sideGap - side, pause.y, side, p);
             broadcast = new TouchRect(pause.xMax + sideGap, pause.y, side, p);
+            crewChief = new TouchRect(broadcast.xMax + sideGap, pause.y, p, p);
 
             // Steering has the left half, stopping short of the brake on a narrow screen, and leaves the top of
             // the screen alone so the pause button and the HUD up there are never mistaken for a steer.

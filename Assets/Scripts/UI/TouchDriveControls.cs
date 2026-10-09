@@ -55,6 +55,10 @@ public class TouchDriveControls : MonoBehaviour
     public static float PedalsTopFromBottom =>
         Active ? UnityEngine.Device.Screen.height - (_layout.brake.y - TouchLayout.Slop * _layout.unit) : 0f;
 
+    // Where the crew chief's headset sits while the phone is held upright: in the top row, right of the TV
+    // button and the size of pause. Screen pixels, top-left origin; only meaningful while Active.
+    public static Rect CrewChiefSlot => ToRect(_layout.crewChief);
+
     // A device the player drives with their thumbs: a phone or tablet, or the editor's Device Simulator
     // pretending to be one.
     public static bool TouchPlatform =>

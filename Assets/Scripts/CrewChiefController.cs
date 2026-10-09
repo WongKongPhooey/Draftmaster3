@@ -4,7 +4,8 @@ using UnityEngine.InputSystem;
 using Draftmaster.Controls;
 using Draftmaster.Sim;
 
-// The crew chief's headset icon, bottom right of the HUD (single player). Tapping it drops the player into
+// The crew chief's headset icon, bottom right of the HUD (single player) — or, on a phone held upright for the
+// swing camera, small in the top row beside the TV button. Tapping it drops the player into
 // an on-foot crew-chief character at the pit wall. It is the first of the team controls: one square glyph per
 // person you can hand the car to, so the corner grows a face rather than another caption when the team gains
 // somebody.
@@ -415,6 +416,7 @@ public class CrewChiefController : MonoBehaviour
         _face = button.GetComponent<Image>();
         var glyph = button.transform.Find("Icon");
         _icon = glyph != null ? glyph.GetComponent<Image>() : null;
+        if (_icon != null) _iconSize = _icon.rectTransform.sizeDelta;
 
         // "Timing" sits above the headset — only while acting as crew chief. Opens the full-field timing
         // screen (lap times from LapTimingManager).
@@ -465,17 +467,59 @@ public class CrewChiefController : MonoBehaviour
 
     // On a phone the on-screen pedals sit in this corner while the player drives; the headset (and TIMING
     // above it) step up to stand on top of them, and drop back when the pedals are put away.
+    //
+    // Held upright for the swing camera, though, the canvas scales off the screen's long side, so a corner
+    // button turns into a slab stood a third of the way in from the edge. There the headset goes up into the
+    // touch controls' top row instead, beside the TV button and the same size as pause.
     void KeepClearOfTouchPedals()
     {
         if (_buttonRoot == null || _canvas == null) return;
         float scale = _canvas.scaleFactor > 0f ? _canvas.scaleFactor : 1f;
+        var root = (RectTransform)_buttonRoot.transform;
+
+        if (TouchDriveControls.Active && UnityEngine.Device.Screen.height > UnityEngine.Device.Screen.width)
+        {
+            var slot = TouchDriveControls.CrewChiefSlot;
+            if (_onTopRow && slot == _topSlot && scale == _topScale) return;
+            _onTopRow = true;
+            _topSlot = slot;
+            _topScale = scale;
+            _lift = -1f;   // put back in the corner on the way out
+
+            root.anchorMin = root.anchorMax = new Vector2(0f, 1f);
+            root.pivot = new Vector2(0f, 1f);
+            root.anchoredPosition = new Vector2(slot.x / scale, -slot.y / scale);
+            SizeButton(slot.width / scale);
+            return;
+        }
+
         float lift = Mathf.Ceil(TouchDriveControls.PedalsTopFromBottom / scale);
-        if (lift == _lift) return;
+        if (!_onTopRow && lift == _lift) return;
+        _onTopRow = false;
         _lift = lift;
 
+        SizeButton(buttonSize);
         var corner = new Vector2(buttonCorner.x, buttonCorner.y + lift);
-        Corner((RectTransform)_buttonRoot.transform, corner);
+        Corner(root, corner);
         PlaceTimingStack(corner);
+    }
+
+    bool _onTopRow;
+    Rect _topSlot;
+    float _topScale;
+    Vector2 _iconSize;   // the glyph's size at buttonSize, as IconButton built it
+
+    // The plate, its 3px drop shadow and the glyph, all scaled together from the size they were built at.
+    void SizeButton(float size)
+    {
+        float k = buttonSize > 0f ? size / buttonSize : 1f;
+        ((RectTransform)_buttonRoot.transform).sizeDelta = new Vector2(size, size);
+        if (_face != null)
+        {
+            var face = _face.rectTransform;
+            face.offsetMin = face.offsetMax = new Vector2(-3f * k, 3f * k);
+        }
+        if (_icon != null) _icon.rectTransform.sizeDelta = _iconSize * k;
     }
 
     // Pin a control to the bottom-right corner, `margin` UI pixels in from it.

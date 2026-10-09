@@ -385,7 +385,8 @@ public class TouchDriveTests
             var l = Layout(w, h);
             string at = $"{w}x{h}";
             float slop = TouchLayout.Slop * l.unit;
-            foreach (var (name, r) in new[] { ("limiter", l.limiter), ("broadcast", l.broadcast) })
+            Assert.IsFalse(l.crewChief.Overlaps(l.broadcast), $"{at}: the headset sits on the TV button");
+            foreach (var (name, r) in new[] { ("limiter", l.limiter), ("broadcast", l.broadcast), ("crew chief", l.crewChief) })
             {
                 Assert.IsTrue(Inside(r, l.safe), $"{at}: {name} {r} runs off the screen");
                 Assert.IsFalse(r.Overlaps(l.pause), $"{at}: {name} sits on pause");
