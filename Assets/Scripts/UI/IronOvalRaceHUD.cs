@@ -79,6 +79,15 @@ public class IronOvalRaceHUD : MonoBehaviour
     // them now, so they're switched off once rather than fought with every frame.
     void StandDownOlderReadouts()
     {
+        // The tracker and director are re-told every rebind: GridSpawner creates the director after the
+        // player car exists, and this HUD outlives scene loads, so a one-shot stand-down missed both and
+        // left RaceDirector's lap box drawn under the position numerals.
+        var tracker = RacePositionTracker.Instance;
+        if (tracker != null) tracker.showHud = false;
+
+        var director = RaceDirector.Instance;
+        if (director != null) director.drawLapCounter = false;
+
         if (_standDownApplied) return;
         _standDownApplied = true;
 
@@ -89,13 +98,12 @@ public class IronOvalRaceHUD : MonoBehaviour
             if (canvas != null) canvas.gameObject.SetActive(false);
             else dial.gameObject.SetActive(false);
         }
-
-        var tracker = RacePositionTracker.Instance;
-        if (tracker != null) tracker.showHud = false;
-
-        var director = RaceDirector.Instance;
-        if (director != null) director.drawLapCounter = false;
     }
+
+    // True while this HUD is drawing its own lap count, so RaceDirector can hold its box back even in the
+    // frames before the next rebind reaches it.
+    public static bool DrawsLapCount =>
+        Instance != null && Instance.isActiveAndEnabled && Instance.show && Instance._player != null;
 
     void OnGUI()
     {

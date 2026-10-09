@@ -354,7 +354,7 @@ public class RaceDirector : MonoBehaviour
     {
         if (_phase == Phase.Racing || _phase == Phase.Checkered)
         {
-            if (drawLapCounter) DrawLapCounter();
+            if (drawLapCounter && !IronOvalRaceHUD.DrawsLapCount) DrawLapCounter();
             if (_phase == Phase.Checkered && Time.time - _checkeredTime < bannerSeconds)
                 DrawBanner("CHECKERED FLAG");
         }
