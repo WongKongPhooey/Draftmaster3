@@ -301,6 +301,9 @@ public class TitleScreenUI : MonoBehaviour
                 // Quit mid-session last run: back into the car for the session the sheet had booked, not
                 // whichever one the static happens to default to.
                 WeekendDirector.ResumeRoutedSession();
+                // Booked into a session but not yet out for it: the player wakes in the motorhome, which is
+                // where the session starts, so start it rather than asking them to walk out and back in.
+                PitLaneStart.ArriveFromTitle = !RaceWeekend.SessionLive;
                 Load(raceSceneName);
                 break;
 

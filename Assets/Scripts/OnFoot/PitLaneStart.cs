@@ -213,6 +213,11 @@ public class PitLaneStart : MonoBehaviour
 
     void Start()
     {
+        // Taken on the first scene to load after the title, whatever else this Start decides, so the flag
+        // can never outlive the load it was set for and arm a later one (the garage sheet's return, say).
+        _arrivedFromTitle = ArriveFromTitle;
+        ArriveFromTitle = false;
+
         // Multiplayer skips the on-foot pit-entry flow: networked cars spawn straight onto the grid
         // (see NetworkedCarBindings). Hide the single-player scene car so it doesn't double up with them.
         if (GameSession.IsMultiplayer)
@@ -865,6 +870,14 @@ public class PitLaneStart : MonoBehaviour
     // walking in and start the session under them.
     bool _rvEntryArmed;
 
+    // Set by the title screen's CAREER row just before it loads the race scene. A career resumed with the
+    // player's own session booked opens with them stood in the motorhome — exactly where walking in would
+    // have put them — so making them step out and back in to turn the paddock over is a chore, not a
+    // choice. A load from the title counts as the walk-in. Any other load (out of the garage sheet, the
+    // reload after a session) leaves it unset and still needs the real walk.
+    public static bool ArriveFromTitle;
+    bool _arrivedFromTitle;
+
     // Between sessions the player's car is not on pit road: PopupGarageLot takes it home to the team's
     // garage, because a car sat in a box through somebody else's practice is a car in everybody's way. So an
     // hour in the car cannot begin at the car. It begins where a driver's hour begins — at their own
@@ -880,10 +893,15 @@ public class PitLaneStart : MonoBehaviour
         var room = RVInterior.Current;
         bool inside = room != null && room.IsInside;
 
+        // Seen outside, the title's head start is spent: from here it is the ordinary walk-in.
+        // So is a load with nothing booked: a session booked later, stood in here, is not one the player
+        // arrived for.
+        if (!inside || due == null) _arrivedFromTitle = false;
         if (!inside) { _rvEntryArmed = true; return; }
-        if (!_rvEntryArmed || due == null) return;
+        if (!(_rvEntryArmed || _arrivedFromTitle) || due == null) return;
 
         _rvEntryArmed = false;   // one turnover per walk-in
+        _arrivedFromTitle = false;
         WeekendDirector.Begin(due);
     }
 
