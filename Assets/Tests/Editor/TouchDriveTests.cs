@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Draftmaster.Controls;
 using NUnit.Framework;
 
-// The on-screen driving controls for a phone: where the steering strip and pedals sit on real phone and
+// The on-screen driving controls for a phone: where the steering wheel and pedals sit on real phone and
 // tablet screens, and which finger is doing what. TouchDriveControls only reads the fingers and draws; the
 // rules are TouchLayout / TouchDriveState, and they are all here.
 public class TouchDriveTests
@@ -44,7 +44,9 @@ public class TouchDriveTests
             Assert.IsTrue(Inside(l.throttle, l.safe), $"{at}: throttle {l.throttle} runs off the screen");
             Assert.IsTrue(Inside(l.brake, l.safe), $"{at}: brake {l.brake} runs off the screen");
             Assert.IsTrue(Inside(l.pause, l.safe), $"{at}: pause {l.pause} runs off the screen");
-            Assert.IsTrue(Inside(l.steerRest, l.safe), $"{at}: steering strip {l.steerRest} runs off the screen");
+            Assert.IsTrue(Inside(l.wheelShown, l.safe), $"{at}: steering wheel {l.wheelShown} runs off the screen");
+            Assert.AreEqual(l.safe.yMax, l.wheelShown.yMax, 0.01f, $"{at}: the wheel isn't cut off at the bottom of the screen");
+            Assert.GreaterOrEqual(l.wheel.centerY, l.wheelShown.yMax - l.wheel.height * 0.15f, $"{at}: much more than the top of the wheel shows");
 
             Assert.IsFalse(l.brake.Overlaps(l.throttle), $"{at}: the pedals overlap");
             Assert.IsFalse(l.brakeHit.Overlaps(l.throttleHit), $"{at}: one thumb could press both pedals");
@@ -58,8 +60,8 @@ public class TouchDriveTests
             Assert.IsFalse(l.pause.Overlaps(l.brakeHit) || l.pause.Overlaps(l.throttleHit),
                            $"{at}: pause sits on a pedal");
 
-            // Where the strip waits is where a thumb has to land to steer.
-            Assert.IsTrue(Inside(l.steerRest, l.steerZone), $"{at}: the resting strip {l.steerRest} isn't in the steering zone {l.steerZone}");
+            // Where the wheel is drawn is where a thumb has to land to steer.
+            Assert.IsTrue(Inside(l.wheelShown, l.steerZone), $"{at}: the wheel {l.wheelShown} isn't in the steering zone {l.steerZone}");
 
             // The top of the screen is the HUD's (position, speed, lap): not a place a steer can start.
             Assert.GreaterOrEqual(l.steerZone.y, h * 0.2f, $"{at}: steering zone reaches up into the HUD");
@@ -92,7 +94,7 @@ public class TouchDriveTests
 
         Assert.IsTrue(Inside(l.throttle, safe), $"throttle {l.throttle} is under the notch");
         Assert.IsTrue(Inside(l.brake, safe), $"brake {l.brake} is under the notch");
-        Assert.IsTrue(Inside(l.steerRest, safe), $"steering strip {l.steerRest} is under the notch");
+        Assert.IsTrue(Inside(l.wheelShown, safe), $"steering wheel {l.wheelShown} is under the notch");
         Assert.GreaterOrEqual(l.steerZone.x, safe.x);
         Assert.AreEqual(safe.centerX, l.pause.centerX, 0.01f);
     }
@@ -104,64 +106,94 @@ public class TouchDriveTests
     static List<TouchPoint> Fingers(params TouchPoint[] p) => new List<TouchPoint>(p);
     static TouchPoint F(int id, float x, float y) => new TouchPoint(id, x, y);
 
-    // The centre of the fixed steering strip.
-    static float SteerX => L.steerRest.centerX;
-    static float SteerY => L.steerRest.centerY;
+    // A point on the wheel's rim, `deg` clockwise from straight up: where a thumb turning it sits.
+    static TouchPoint At(int id, float deg)
+    {
+        float rim = L.wheel.width * 0.4f;
+        double r = deg * System.Math.PI / 180.0;
+        return F(id, L.wheel.centerX + rim * (float)System.Math.Sin(r), L.wheel.centerY - rim * (float)System.Math.Cos(r));
+    }
+
+    // The top of the rim, where a thumb takes the wheel straight.
+    static float SteerX => At(0, 0f).x;
+    static float SteerY => At(0, 0f).y;
 
     [Test]
-    public void Steering_IsWhereTheThumbIsAlongTheFixedStrip()
+    public void Steering_TurnsTheWheelAboutItsHub_45DegreesIsFullLock()
     {
         var s = new TouchDriveState();
-        float t = L.steerTravel;
 
-        s.Update(Fingers(F(1, SteerX, SteerY)), L);
+        s.Update(Fingers(At(1, 0f)), L);
         Assert.IsTrue(s.Steering);
-        Assert.AreEqual(0f, s.Steer, "the strip's centre is straight ahead");
+        Assert.AreEqual(0f, s.Steer, "the wheel is straight until it is turned");
 
-        s.Update(Fingers(F(1, SteerX + t * 0.5f, SteerY)), L);
-        Assert.AreEqual(0.5f, s.Steer, 1e-4f);
+        s.Update(Fingers(At(1, 22.5f)), L);
+        Assert.AreEqual(0.5f, s.Steer, 1e-3f, "clockwise is right");
+        Assert.AreEqual(22.5f, s.WheelAngle, 0.05f);
 
-        s.Update(Fingers(F(1, SteerX - t, SteerY - 40f)), L);
-        Assert.AreEqual(-1f, s.Steer, 1e-4f, "vertical drift doesn't matter; full travel left is full lock");
+        s.Update(Fingers(At(1, -45f)), L);
+        Assert.AreEqual(-1f, s.Steer, 1e-3f, "45 degrees anticlockwise is full left");
+
+        s.Update(Fingers(At(1, -90f)), L);
+        Assert.AreEqual(-1f, s.Steer, 1e-3f, "past 45 is still full lock");
+        Assert.AreEqual(-45f, s.WheelAngle, 0.05f, "the wheel stops at 45");
+
+        s.Update(Fingers(At(1, -60f)), L);
+        Assert.AreEqual(-1f, s.Steer, 1e-3f, "coming back from past the stop holds full lock until inside it");
+
+        s.Update(Fingers(At(1, -22.5f)), L);
+        Assert.AreEqual(-0.5f, s.Steer, 1e-3f);
     }
 
     [Test]
-    public void Steering_TheStripNeverMoves()
+    public void Steering_TurnsFromWhereTheThumbLanded()
     {
         var s = new TouchDriveState();
-        float t = L.steerTravel;
 
-        // Landing off centre steers at once: the strip doesn't come to the thumb.
-        s.Update(Fingers(F(1, SteerX + t * 0.5f, SteerY)), L);
-        Assert.AreEqual(0.5f, s.Steer, 1e-4f);
+        // Landing on the side of the rim doesn't snap the wheel round: it is taken where it is.
+        s.Update(Fingers(At(1, -60f)), L);
+        Assert.AreEqual(0f, s.Steer);
 
-        s.Update(Fingers(F(1, SteerX + t * 2f, SteerY)), L);
-        Assert.AreEqual(1f, s.Steer, 1e-4f, "past the end is full lock");
-
-        // Coming back to half travel is half lock: the centre was not dragged along.
-        s.Update(Fingers(F(1, SteerX + t * 0.5f, SteerY)), L);
-        Assert.AreEqual(0.5f, s.Steer, 1e-4f);
+        s.Update(Fingers(At(1, -37.5f)), L);
+        Assert.AreEqual(0.5f, s.Steer, 1e-3f);
 
         s.Update(Fingers(), L);
-        s.Update(Fingers(F(2, SteerX - t * 0.25f, SteerY)), L);
-        Assert.AreEqual(-0.25f, s.Steer, 1e-4f, "a fresh thumb reads the same strip");
+        Assert.AreEqual(0f, s.Steer, "let go, the wheel centres");
+
+        s.Update(Fingers(At(2, 30f)), L);
+        Assert.AreEqual(0f, s.Steer, "a fresh thumb takes it straight");
+    }
+
+    [Test]
+    public void Steering_AThumbOnTheHubHoldsTheLock_AndCirclingKeepsCounting()
+    {
+        var s = new TouchDriveState();
+        s.Update(Fingers(At(1, 0f)), L);
+        s.Update(Fingers(At(1, 22.5f)), L);
+        s.Update(Fingers(F(1, L.wheel.centerX + 1f, L.wheel.centerY)), L);
+        Assert.AreEqual(0.5f, s.Steer, 1e-3f, "on the hub the angle means nothing; the lock holds");
+
+        // Round past the bottom of the hub: still more to the right, not a flip to full left.
+        var t = new TouchDriveState();
+        for (float a = 0f; a <= 200f; a += 20f) t.Update(Fingers(At(1, a)), L);
+        Assert.AreEqual(1f, t.Steer, 1e-3f);
     }
 
     [Test]
     public void OnlyOneThumbSteers()
     {
         var s = new TouchDriveState();
-        float t = L.steerTravel;
 
-        s.Update(Fingers(F(1, SteerX, SteerY)), L);
-        s.Update(Fingers(F(1, SteerX, SteerY), F(2, SteerX + t * 0.5f, SteerY - 50f)), L);
+        s.Update(Fingers(At(1, 0f)), L);
+        s.Update(Fingers(At(1, 0f), At(2, 30f)), L);
+        s.Update(Fingers(At(1, 0f), At(2, -30f)), L);
         Assert.AreEqual(0f, s.Steer, "a second thumb in the zone doesn't steer");
 
-        s.Update(Fingers(F(1, SteerX, SteerY), F(2, L.throttle.centerX, L.throttle.centerY)), L);
+        s.Update(Fingers(At(1, 0f), F(2, L.throttle.centerX, L.throttle.centerY)), L);
         Assert.AreEqual(0f, s.Throttle, "...nor press a pedal once it wanders over one");
 
-        s.Update(Fingers(F(1, SteerX - t * 0.25f, SteerY), F(2, SteerX + t, SteerY)), L);
-        Assert.AreEqual(-0.25f, s.Steer, 1e-4f);
+        s.Update(Fingers(At(1, -11.25f), At(2, 40f)), L);
+        Assert.AreEqual(-0.25f, s.Steer, 1e-3f);
     }
 
     [Test]
@@ -220,9 +252,8 @@ public class TouchDriveTests
     public void DrivingWithBothThumbs()
     {
         var s = new TouchDriveState();
-        float t = L.steerTravel;
-        s.Update(Fingers(F(1, SteerX, SteerY), F(2, L.throttle.centerX, L.throttle.centerY)), L);
-        s.Update(Fingers(F(1, SteerX + t, SteerY), F(2, L.throttle.centerX, L.throttle.centerY)), L);
+        s.Update(Fingers(At(1, 0f), F(2, L.throttle.centerX, L.throttle.centerY)), L);
+        s.Update(Fingers(At(1, 45f), F(2, L.throttle.centerX, L.throttle.centerY)), L);
         Assert.AreEqual(1f, s.Steer, 1e-4f);
         Assert.AreEqual(1f, s.Throttle);
         Assert.AreEqual(0f, s.Brake);
@@ -250,7 +281,7 @@ public class TouchDriveTests
     {
         var s = new TouchDriveState();
         s.Update(Fingers(F(1, SteerX, SteerY), F(2, L.throttle.centerX, L.throttle.centerY)), L);
-        s.Update(Fingers(F(1, SteerX + L.steerTravel, SteerY), F(2, L.throttle.centerX, L.throttle.centerY)), L);
+        s.Update(Fingers(At(1, 45f), F(2, L.throttle.centerX, L.throttle.centerY)), L);
         s.Update(Fingers(), L);
         Assert.IsFalse(s.Steering);
         Assert.AreEqual(0f, s.Steer);
@@ -263,10 +294,13 @@ public class TouchDriveTests
     public void AThumbReplantedInOneFrame_TakesTheWheel()
     {
         var s = new TouchDriveState();
-        s.Update(Fingers(F(1, SteerX, SteerY)), L);
-        s.Update(Fingers(F(2, SteerX + L.steerTravel * 0.5f, SteerY)), L);
+        s.Update(Fingers(At(1, 0f)), L);
+        s.Update(Fingers(At(1, 30f)), L);
+        s.Update(Fingers(At(2, 10f)), L);
         Assert.IsTrue(s.Steering);
-        Assert.AreEqual(0.5f, s.Steer, 1e-4f);
+        Assert.AreEqual(0f, s.Steer, "the new thumb takes the wheel where it lands");
+        s.Update(Fingers(At(2, 32.5f)), L);
+        Assert.AreEqual(0.5f, s.Steer, 1e-3f);
     }
 
     // The pause menu puts the controls away; when it closes, the fingers still down are placed again.
@@ -285,12 +319,15 @@ public class TouchDriveTests
         Assert.IsFalse(s.Steering);
         Assert.AreEqual(0f, s.Throttle);
 
-        var wheelMoved = F(1, SteerX + L.steerTravel * 0.5f, SteerY);
-        s.Update(Fingers(wheelMoved, gas, pause), L);
+        s.Update(Fingers(At(1, 22.5f), gas, pause), L);
         Assert.IsFalse(s.PauseTapped, "the finger that opened the menu is not a second tap");
         Assert.IsTrue(s.Steering);
-        Assert.AreEqual(0.5f, s.Steer, 1e-4f, "the wheel is taken from where the thumb is now");
+        Assert.AreEqual(0f, s.Steer, "the wheel is taken from where the thumb is now");
         Assert.AreEqual(1f, s.Throttle);
+
+        var wheelMoved = At(1, 45f);
+        s.Update(Fingers(wheelMoved, gas, pause), L);
+        Assert.AreEqual(0.5f, s.Steer, 1e-3f);
 
         s.Update(Fingers(wheelMoved, gas), L);
         s.Update(Fingers(wheelMoved, gas, F(4, L.pause.centerX, L.pause.centerY)), L);

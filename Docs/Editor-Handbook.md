@@ -635,11 +635,13 @@ saved — after that the scene's values win, like the rest of the feel. The math
 
 ## On a phone or tablet (Android)
 
-**On-screen driving** (`TouchDriveControls`, rules in `Draftmaster.Controls.TouchDrive`): a steering strip
-under the left thumb, brake and gas under the right, and a pause button at the top centre. The strip is fixed
-in the bottom-left corner: the thumb's position along it is the lock, and past either end is full lock. The
+**On-screen driving** (`TouchDriveControls`, rules in `Draftmaster.Controls.TouchDrive`): a steering wheel
+under the left thumb, brake and gas under the right, and a pause button at the top centre. The wheel
+(`Resources/UI/steering-wheel.png`) is fixed in the bottom-left corner with only its top ~60% on screen: the
+thumb turns it about its hub from wherever it landed, 45° either way is full lock, a thumb on the hub holds the
+lock, and letting go centres it. The
 pause menu's **Steer buttons** toggle (touch devices only, saved in PlayerPrefs `TouchSteerButtons`) swaps the
-strip for pedal-sized `<` and `>` buttons in the same corner; slide between them, both held cancel. A thumb that
+wheel for pedal-sized `<` and `>` buttons in the same corner; slide between them, both held cancel. A thumb that
 lands on the left side, below the top quarter, steers; anywhere else it presses whichever pedal it is over. The controls show only when all of these hold: on a touch device, in your own car,
 nothing modal open, and the pad not the last device touched. Picking up a pad hides them; touching the screen
 brings them back. The crew chief headset button moves up above the pedals while they show. The phone's back

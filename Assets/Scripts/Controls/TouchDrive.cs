@@ -37,10 +37,10 @@ namespace Draftmaster.Controls
         public TouchPoint(int id, float x, float y) { this.id = id; this.x = x; this.y = y; }
     }
 
-    // How the left thumb steers: a fixed strip it slides along, or a left and a right button.
-    public enum TouchSteerMode { Slider, Buttons }
+    // How the left thumb steers: a wheel it turns, or a left and a right button.
+    public enum TouchSteerMode { Wheel, Buttons }
 
-    // Where the on-screen driving controls sit: a steering strip under the left thumb, brake and throttle under
+    // Where the on-screen driving controls sit: a steering wheel under the left thumb, brake and throttle under
     // the right, and a small pause button at the top. Measured in the UI's design pixels (the 640x360 grid)
     // times `unit`, and kept inside the screen's safe area so a notch or a gesture bar never covers a pedal.
     public readonly struct TouchLayout
@@ -51,8 +51,10 @@ namespace Draftmaster.Controls
         public const float PedalHeight = 96f;
         public const float PedalGap = 8f;         // between brake and throttle
         public const float Slop = 8f;             // how far outside a pedal a thumb still presses it
-        public const float SteerTravel = 56f;     // thumb travel from centre to full lock
-        public const float KnobSize = 24f;
+        public const float WheelSize = 136f;      // the wheel's diameter: as wide as the old steering strip
+        public const float WheelShown = 0.6f;     // how much of the wheel, from the top, is on screen
+        public const float WheelLock = 45f;       // degrees either way from straight to full lock
+        public const float WheelHub = 0.2f;       // a thumb this close to the hub (fraction of the radius) can't turn it
         public const float PauseSize = 24f;
         public const float SteerZoneTop = 0.25f;  // steering takes the left side below this fraction of the height
 
@@ -60,8 +62,8 @@ namespace Draftmaster.Controls
         public readonly float unit;
 
         public readonly TouchRect steerZone;      // a thumb landing here takes the wheel
-        public readonly TouchRect steerRest;      // where the steering strip is drawn; it never moves
-        public readonly float steerTravel;        // pixels from centre to full lock
+        public readonly TouchRect wheel;          // the whole wheel, hub at its centre; it never moves
+        public readonly TouchRect wheelShown;     // the part of it drawn: the top, cut off at the safe area's bottom
 
         // Button steering: two pedal-sized buttons in the bottom-left corner, mirroring the pedals.
         public readonly TouchRect steerLeft, steerRight;          // drawn
@@ -119,13 +121,13 @@ namespace Draftmaster.Controls
 
             // Steering has the left half, stopping short of the brake on a narrow screen, and leaves the top of
             // the screen alone so the pause button and the HUD up there are never mistaken for a steer.
-            steerTravel = SteerTravel * u;
             float zoneTop = safe.y + safe.height * SteerZoneTop;
             float zoneRight = System.Math.Min(safe.x + safe.width * 0.5f, brakeHit.x - gap);
             steerZone = new TouchRect(safe.x, zoneTop, zoneRight - safe.x, safe.yMax - zoneTop);
 
-            float k = KnobSize * u;
-            steerRest = new TouchRect(safe.x + m, safe.yMax - m - k, steerTravel * 2f + k, k);
+            float d = WheelSize * u;
+            wheel = new TouchRect(safe.x + m, safe.yMax - d * WheelShown, d, d);
+            wheelShown = new TouchRect(wheel.x, wheel.y, d, d * WheelShown);
 
             // The pedals mirrored: left button in the corner, right beside it. The hit areas meet in the middle
             // of the gap and run out to the safe area's edge, but stay inside the steering zone.
@@ -144,8 +146,10 @@ namespace Draftmaster.Controls
     //
     // Each finger's job is decided the moment it lands and kept until it lifts:
     //   - on the pause button: a pause, once;
-    //   - in the steering zone, slider mode: the wheel. The strip is fixed in its corner and the thumb's
-    //     position along it is the lock — left of the strip's centre is left, past either end is full lock.
+    //   - in the steering zone, wheel mode: the wheel. It is fixed in its corner and the thumb turns it
+    //     about its hub, from wherever the thumb landed — the rim under the thumb stays under the thumb.
+    //     Anticlockwise is left; 45 degrees either way is full lock, and further holds full lock until the
+    //     thumb comes back inside it. A thumb on the hub can't turn it and holds the lock it has.
     //     One thumb steers at a time.
     //   - in the steering zone, button mode: a steering thumb that presses whichever button it is over right
     //     now, like a pedal thumb. Left and right held together cancel.
@@ -159,6 +163,10 @@ namespace Draftmaster.Controls
         readonly HashSet<int> _present = new HashSet<int>();
         readonly List<int> _lifted = new List<int>();
         bool _steering;
+        bool _gripped;        // the steering thumb has an angle about the hub to turn from
+        float _thumbAngle;    // where it was last update, degrees clockwise from straight up
+        float _turned;        // how far it has turned the wheel since it landed, unwrapped
+        float _wheelSteer;    // the lock that gives, kept while the thumb is on the hub
         bool _returning;   // the first update since Reset: fingers already down did not land just now
 
         public float Steer { get; private set; }        // -1 full left .. +1 full right
@@ -183,8 +191,9 @@ namespace Draftmaster.Controls
         public bool SteerLeftHeld { get; private set; }
         public bool SteerRightHeld { get; private set; }
 
-        // For drawing: whether a thumb is on the slider.
+        // For drawing: whether a thumb is on the wheel, and how far the wheel is turned (degrees, + is right).
         public bool Steering => _steering;
+        public float WheelAngle => Steer * TouchLayout.WheelLock;
 
         public void Update(IReadOnlyList<TouchPoint> touches, in TouchLayout layout)
         {
@@ -216,7 +225,7 @@ namespace Draftmaster.Controls
                 {
                     role = Classify(t, layout, slop);
                     _roles[t.id] = role;
-                    if (role == Role.Steer) _steering = true;
+                    if (role == Role.Steer) { _steering = true; _gripped = false; _turned = 0f; _wheelSteer = 0f; }
                     else if (role == Role.Pause) PauseTapped = true;
                     else if (role == Role.Limiter) LimiterTapped = true;
                     else if (role == Role.Broadcast) BroadcastTapped = true;
@@ -225,9 +234,7 @@ namespace Draftmaster.Controls
                 switch (role)
                 {
                     case Role.Steer:
-                        float travel = layout.steerTravel > 1f ? layout.steerTravel : 1f;
-                        float off = (t.x - layout.steerRest.centerX) / travel;
-                        Steer = off > 1f ? 1f : off < -1f ? -1f : off;
+                        Steer = TurnWheel(t, layout);
                         break;
                     case Role.SteerButton:
                         if (layout.steerLeftHit.Contains(t.x, t.y)) SteerLeftHeld = true;
@@ -254,6 +261,30 @@ namespace Draftmaster.Controls
             _returning = true;
             Steer = 0f; Throttle = 0f; Brake = 0f; PauseTapped = false; LimiterTapped = false; BroadcastTapped = false;
             SteerLeftHeld = false; SteerRightHeld = false;
+        }
+
+        // The wheel turns by however far the thumb has gone round the hub since last update. Each step is taken
+        // the short way round, so a thumb circling past the bottom keeps counting rather than flipping sides.
+        float TurnWheel(TouchPoint t, in TouchLayout layout)
+        {
+            float dx = t.x - layout.wheel.centerX, dy = t.y - layout.wheel.centerY;
+            float hub = layout.wheel.width * 0.5f * TouchLayout.WheelHub;
+            if (dx * dx + dy * dy < hub * hub) return _wheelSteer;
+
+            float angle = (float)(System.Math.Atan2(dx, -dy) * 180.0 / System.Math.PI);
+            if (_gripped)
+            {
+                float step = angle - _thumbAngle;
+                if (step > 180f) step -= 360f;
+                else if (step < -180f) step += 360f;
+                _turned += step;
+            }
+            _gripped = true;
+            _thumbAngle = angle;
+
+            float lockFrac = _turned / TouchLayout.WheelLock;
+            _wheelSteer = lockFrac > 1f ? 1f : lockFrac < -1f ? -1f : lockFrac;
+            return _wheelSteer;
         }
 
         Role Classify(TouchPoint t, in TouchLayout layout, float slop)

@@ -3,7 +3,7 @@ using Draftmaster.Controls;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// On-screen steering and pedals for a phone or tablet: a steering strip under the left thumb, brake and
+// On-screen steering and pedals for a phone or tablet: a steering wheel under the left thumb, brake and
 // throttle under the right, and a pause button at the top of the screen (a phone has no Esc, and its back
 // gesture is easy to miss mid-race).
 //
@@ -28,6 +28,23 @@ public class TouchDriveControls : MonoBehaviour
     GUIStyle _label;
     GUIStyle _labelFrom;
 
+    // The wheel: a round rim with a crossbar and a red top-centre stripe, so the lock reads at a glance. Only
+    // its top shows, the rest running off the bottom of the screen. Loaded from Resources because this
+    // component wires itself up and has no inspector to hold a sprite.
+    const string WheelResource = "UI/steering-wheel";
+    static Texture2D _wheelArt;
+    static bool _wheelLoaded;
+
+    // Null when the art is missing — the wheel then draws as a plain plate with a marker for the lock.
+    static void LoadWheel()
+    {
+        if (_wheelLoaded) return;
+        _wheelLoaded = true;
+        _wheelArt = Resources.Load<Texture2D>(WheelResource);
+        if (_wheelArt == null)
+            Debug.LogWarning($"TouchDriveControls: no art at Resources/{WheelResource} — the wheel draws as a plain plate.");
+    }
+
     // The controls are up and the player's car should read them.
     public static bool Active { get; private set; }
 
@@ -37,7 +54,7 @@ public class TouchDriveControls : MonoBehaviour
 
     const string SteerButtonsPref = "TouchSteerButtons";
 
-    // Steer with a left and a right button instead of the slider. A pause-menu toggle, kept across runs.
+    // Steer with a left and a right button instead of the wheel. A pause-menu toggle, kept across runs.
     public static bool SteerButtons
     {
         get => Draftmaster.Weekend.FramePrefs.GetInt(SteerButtonsPref, 0) == 1;   // read every frame
@@ -128,7 +145,7 @@ public class TouchDriveControls : MonoBehaviour
         _state.ButtonsOnly = Broadcasting;
         _state.LimiterShown = limiter != null && !Broadcasting;
         _state.BroadcastShown = DriveModeController.Current != null;
-        _state.SteerMode = SteerButtons ? TouchSteerMode.Buttons : TouchSteerMode.Slider;
+        _state.SteerMode = SteerButtons ? TouchSteerMode.Buttons : TouchSteerMode.Wheel;
         _state.Update(_touches, _layout);
         Active = true;
 
@@ -202,31 +219,34 @@ public class TouchDriveControls : MonoBehaviour
 
     void DrawSteering()
     {
-        float u = _layout.unit;
-        var rest = _layout.steerRest;
-        float travel = _layout.steerTravel;
-        float knob = TouchLayout.KnobSize * u;
+        LoadWheel();
+        var wheel = ToRect(_layout.wheel);
+        var shown = ToRect(_layout.wheelShown);
+        float alpha = _state.Steering ? 0.95f : 0.7f;
 
-        // Fixed in its corner, held or not: the knob shows where the thumb is along it.
-        float cx = rest.centerX, cy = rest.centerY;
-
-        var strip = new Rect(cx - travel - knob * 0.5f, cy - knob * 0.5f, travel * 2f + knob, knob);
-        PixelGUI.Fill(strip, Fade(PixelGUI.PlateDeep, 0.55f));
-        PixelGUI.Frame(strip, Fade(PixelGUI.Text, 0.45f));
-
-        // The centre notch, so a player can see how far off straight they are holding it.
-        PixelGUI.Fill(new Rect(cx - u * 0.5f, strip.y + 2f * u, u, strip.height - 4f * u), Fade(PixelGUI.TextDim, 0.6f));
-
-        Label(new Rect(strip.x, strip.y, knob, knob), "<", 0.7f);
-        Label(new Rect(strip.xMax - knob, strip.y, knob, knob), ">", 0.7f);
-
-        float kx = cx + _state.Steer * travel - knob * 0.5f;
-        var k = new Rect(kx, strip.y, knob, knob);
-        PixelGUI.Fill(k, Fade(PixelGUI.Gold, _state.Steering ? 0.9f : 0.5f));
-        PixelGUI.Frame(k, Fade(PixelGUI.Ink, 0.8f));
+        // Clipped to the part on screen; turned about the hub, which sits below the clip's bottom edge.
+        GUI.BeginGroup(shown);
+        var inGroup = new Rect(wheel.x - shown.x, wheel.y - shown.y, wheel.width, wheel.height);
+        var saved = GUI.matrix;
+        GUIUtility.RotateAroundPivot(_state.WheelAngle, inGroup.center);
+        var was = GUI.color;
+        if (_wheelArt != null)
+        {
+            GUI.color = new Color(1f, 1f, 1f, alpha);
+            GUI.DrawTexture(inGroup, _wheelArt, ScaleMode.ScaleToFit);
+        }
+        else
+        {
+            PixelGUI.Fill(inGroup, Fade(PixelGUI.PlateDeep, 0.55f));
+            float u = _layout.unit;
+            PixelGUI.Fill(new Rect(inGroup.center.x - 2f * u, inGroup.y, 4f * u, inGroup.height * 0.15f), Fade(PixelGUI.Gold, alpha));
+        }
+        GUI.color = was;
+        GUI.matrix = saved;
+        GUI.EndGroup();
 
         if (!_state.Steering)
-            Label(new Rect(strip.x, strip.y - PixelGUI.LineH, strip.width, PixelGUI.LineH), "STEER", 0.7f);
+            Label(new Rect(shown.x, shown.y - PixelGUI.LineH, shown.width, PixelGUI.LineH), "STEER", 0.7f);
     }
 
     void DrawPedal(TouchRect r, string text, bool pressed, Color tint)
