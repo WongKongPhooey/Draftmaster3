@@ -164,7 +164,7 @@ public class PracticeAIStint : MonoBehaviour
                 float boxDist = _spline.PitLength * 0.5f;
                 if (PitLane.Configured && _spline.PitLength > 0f)
                 {
-                    boxDist = PitLane.BoxDistance(BoxIndex, _spline.PitLength);
+                    boxDist = _spline.PitParkDistanceFor(PitLane.BoxDistance(BoxIndex, _spline.PitLength));
                     targetFrac = boxDist / _spline.PitLength;
                 }
                 float remaining = boxDist - _spline.PitProgress01 * _spline.PitLength;

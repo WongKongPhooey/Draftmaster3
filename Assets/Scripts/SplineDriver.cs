@@ -427,7 +427,17 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     float ComputePitBoxDistance(int idx)
     {
         float d = _pitLength - pitBoxExitGap - idx * pitBoxSpacing;
-        return Mathf.Max(0f, d);
+        return PitParkDistanceFor(d);
+    }
+
+    // Where the path point must stop for the car's BODY to sit centred on a box whose centre is `boxCentre` m down
+    // the pit lane. Place() puts the centre PathPointAheadOfCentre behind the path point, so stopping the path
+    // point on the box centre parked every AI car that far back in its box. PitLane.FitBoxes sets the ladder
+    // back by the same amount, so this lands on the stop the fit was made for.
+    public float PitParkDistanceFor(float boxCentre)
+    {
+        float stop = Mathf.Max(0f, boxCentre + PathPointAheadOfCentre);
+        return _pitLength > 0f ? Mathf.Min(_pitLength, stop) : stop;
     }
 
     // Place the car at startDistance immediately and write the transform, independent of Start() ordering.

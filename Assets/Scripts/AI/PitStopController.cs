@@ -117,7 +117,7 @@ public class PitStopController : MonoBehaviour
                     float boxDist = _spline.PitLength * serviceFrac;
                     if (PitLane.Configured && _spline.PitLength > 0f)
                     {
-                        boxDist = PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength);
+                        boxDist = _spline.PitParkDistanceFor(PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength));
                         targetFrac = boxDist / _spline.PitLength;
                     }
                     float remaining = boxDist - _spline.PitProgress01 * _spline.PitLength;

@@ -111,6 +111,11 @@ public static class PitLane
             fit.spanTo = Mathf.Max(fit.spanFrom, track.PitBoxLaneTo(pitLength) - BandMargin);
             fit.exitGap = pitLength - fit.spanTo;
         }
+        // An AI car stops with its path point on the stop line and its body centred PathPointAheadOfCentre
+        // behind it (SplineDriver.PitParkDistanceFor). Setting the whole ladder back by that much centres the
+        // car between its box lines while its stop stays exactly where the fit put it — the nearest box to the
+        // exit still stops short of the pit-exit hop.
+        fit.exitGap += SplineDriver.PathPointAheadOfCentre;
 
         fit.usable = Mathf.Max(0f, fit.spanTo - fit.spanFrom);
         fit.rawSpacing = fit.boxes > 1 ? fit.usable / (fit.boxes - 1) : 0f;
