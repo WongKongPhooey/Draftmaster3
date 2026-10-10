@@ -18,21 +18,47 @@ using UnityEngine;
 //      is unchanged, so the trained racing line still fits.
 //   2. Re-cuts the walls to the new pit road. Pit road is in the infield now, so the outside wall - and the
 //      catch fence on it - runs unbroken all the way round; only the infield wall opens where pit road crosses it.
-//   3. Lays the paddock out in the infield behind pit road with Watkins Glen's key areas in it, each at the same
-//      distance along and back from pit road as it is at Watkins Glen (read off the Watkins package, not typed
-//      in), so the two paddocks walk the same way.
+//   3. Lays Watkins Glen's paddock down in the infield behind pit road, rotated to face it: boundary, RV, key
+//      areas, motorhome/garage lot boxes and paddock tarmac, all put through one rotation + shift (read off the
+//      Watkins package, not typed in), so the two paddocks are the same place.
 //
 // Safe to re-run: it replaces only the pieces it places (by name) and reshapes the paddock pocket, RV and
 // fallback start it finds; anything else in the package is left alone. Do NOT follow it with an overwriting
 // Dress Selected Package - that regenerates the paddock pocket from the pit lane and throws this layout away.
 // Report writes Temp/track_package_report.txt comparing the two packages.
+//
+// Martinsville goes through the same steps (Author Martinsville): traced geometry (its inside walls off OSM,
+// Tools/trace_from_wall.py --inner), pit road on the mapped front-stretch pit lane, Watkins Glen's paddock in the
+// infield. The difference is size: Watkins' paddock is 470 x 76 m and Martinsville's infield, between pit road
+// and the back stretch, is about 250 x 85. A squeezed copy of Watkins' lots holds a third of the field, so a
+// short-track infield is laid out instead: the garages in a band along pit road, the motorhomes in the band
+// behind, each box as long as the infield is clear of the racing surface at that depth, and the walkable
+// boundary is that clear infield. Watkins' key areas and RV are carried in proportionally (same share of the
+// way along pit road and back from it). Daytona has room and keeps the rigid copy.
 public static class DaytonaPackageAuthoring
 {
     const string PackageDir = "Assets/Resources/TrackPackages";
     const string ReportPath = "Temp/track_package_report.txt";
-    const string TrackId = "Daytona";
     const string TraceDir = "Assets/TrackTraces";
     const string BlueprintId = "WatkinsGlen";
+
+    // What differs between the venues this authors.
+    class Venue
+    {
+        public string id;
+        public bool infieldWall;      // Martinsville has a pit wall along its inside edge; Daytona runs onto grass
+        public bool apron;            // Daytona's 3.5 m paved strip below the yellow line
+        public bool infieldLayout;    // too small for Watkins' paddock: lay the lots out in the clear infield
+    }
+
+    static readonly Venue Daytona = new Venue { id = "Daytona", infieldWall = false, apron = true, infieldLayout = false };
+    static readonly Venue Martinsville = new Venue { id = "Martinsville", infieldWall = true, apron = false, infieldLayout = true };
+
+    // How far the infield paddock stays from the edge of the racing surface, and its bands' depths.
+    const float PaddockTrackClearance = 4f;
+    const float InfieldGarageDepth = 44f;         // Watkins' garage box
+    const float InfieldBandGap = 6f;              // the walkway between the garages and the motorhomes
+    const float InfieldMinMotorhomeDepth = 26f;   // two lines of motorhomes and the aisle between
 
     // Watkins Glen's paddock frame. Its pit road runs toward -x and its paddock lies behind it toward +y, so a
     // place is measured along -x from the paddock boundary's entry-end edge and out along +y from its pit-road
@@ -53,65 +79,93 @@ public static class DaytonaPackageAuthoring
     };
 
     [MenuItem("Draftmaster/Tracks/Daytona/Author Daytona (Watkins Glen Blueprint)")]
-    public static void Author()
+    public static void Author() => Author(Daytona);
+
+    [MenuItem("Draftmaster/Tracks/Martinsville/Author Martinsville (Watkins Glen Blueprint)")]
+    public static void AuthorMartinsville() => Author(Martinsville);
+
+    static void Author(Venue venue)
     {
-        string summary = AuthorDaytona();
-        Debug.Log($"[DaytonaAuthoring] {summary}");
-        File.WriteAllText("Temp/daytona_author_result.txt", summary);
-        Report();
+        string summary = AuthorVenue(venue);
+        Debug.Log($"[PackageAuthoring] {summary}");
+        File.WriteAllText($"Temp/{venue.id.ToLowerInvariant()}_author_result.txt", summary);
+        Report(venue.id);
     }
 
-    public static string AuthorDaytona()
+    public static string AuthorDaytona() => AuthorVenue(Daytona);
+
+    static string AuthorVenue(Venue venue)
     {
+        string trackId = venue.id;
         // 1. Geometry: refilled in place, so the asset's GUID - and the package's reference to it - survive.
-        var row = TrackCatalog.Row(TrackId);
-        if (row == null) return "Daytona is not in the catalogue.";
+        var row = TrackCatalog.Row(trackId);
+        if (row == null) return $"{trackId} is not in the catalogue.";
         var geometry = TrackAuthoringMenu.GenerateGeometry(row, overwrite: true);
 
         // 1b. The real shape over the formula's: the centreline traced from the OSM outer wall
         // (Tools/trace_from_wall.py). The import re-fits the chord pit road to it and puts the start/finish line
         // on the tri-oval where the trace begins. With no trace, or one the importer refuses, the formula stands.
         string traceNote = null;
-        if (geometry != null && File.Exists($"{TraceDir}/{TrackId}.json"))
+        if (geometry != null && File.Exists($"{TraceDir}/{trackId}.json"))
         {
-            traceNote = OsmTrackImporter.Import(TrackId, geometry).Trim();
+            traceNote = OsmTrackImporter.Import(trackId, geometry).Trim();
             EditorUtility.SetDirty(geometry);
             AssetDatabase.SaveAssets();
         }
 
         if (geometry == null || !geometry.hasPitLane || geometry.pitSegments == null || geometry.pitSegments.Length != 3)
-            return "Daytona geometry did not come out with a chord pit road - package left alone." +
+            return $"{trackId} geometry did not come out with a three-piece pit road - package left alone." +
                    (traceNote != null ? $" Trace import: {traceNote}" : "");
+
+        string moved = MoveSceneLotAreasIntoBlueprint();
 
         var blueprint = ReadBlueprint(out string blueprintError);
         if (blueprint == null) return blueprintError;
 
-        string path = $"{PackageDir}/{TrackId}.prefab";
+        string path = $"{PackageDir}/{trackId}.prefab";
         var contents = PrefabUtility.LoadPrefabContents(path);
         try
         {
             var package = contents.GetComponent<TrackPackage>();
             var builder = package != null ? package.Builder : null;
-            if (builder == null || builder.track != geometry) return "Daytona package has no TrackBuilder on its geometry.";
+            if (builder == null || builder.track != geometry) return $"{trackId} package has no TrackBuilder on its geometry.";
             var paddockRoot = package.paddockRoot != null ? package.paddockRoot : contents.transform.Find("Paddock");
-            if (paddockRoot == null) return "Daytona package has no Paddock root.";
+            if (paddockRoot == null) return $"{trackId} package has no Paddock root.";
 
             var notes = new List<string>();
+            if (moved != null) notes.Add(moved);
             if (traceNote != null) notes.Add($"trace: {traceNote}");
             var frame = DaytonaFrame(builder, notes);
+            var map = BlueprintToDaytona(blueprint.frame, frame);
+            Infield infield = null;
+            if (venue.infieldLayout)
+            {
+                // Watkins' key areas stand in a strip at its entry end, ahead of the lot boxes. That strip keeps its
+                // size; the lots stop short of it. Which end of this pit road it lands at is the rotation's call.
+                float zone = CivicZone(blueprint);
+                bool zoneAtEnd = Vector2.Dot(map.Point(blueprint.frame.origin) - frame.origin, frame.along) > frame.length * 0.5f;
+                infield = FitInfield(builder, frame, zoneAtEnd ? 0f : zone, zoneAtEnd ? zone : 0f, notes);
+                if (infield == null) return $"{trackId}: no clear infield behind pit road - package left alone.";
+                map = ProportionalMap(map, blueprint.frame, infield, zone);
+            }
 
             // 2. Walls: gaps measured against the new pit road, on whichever side it actually is.
             var envBuilder = contents.GetComponentInChildren<TrackEnvironmentBuilder>(true);
             if (envBuilder != null && envBuilder.environment != null)
             {
                 var env = envBuilder.environment;
-                EnsureApron(env, geometry, notes);
-                // No infield wall: the apron runs straight onto the grass, as at the real track. Left of travel on
-                // an anticlockwise oval is BarrierSide.Outer.
-                env.outerSideBarrier = false;
+                if (venue.apron) EnsureApron(env, geometry, notes);
+                // Daytona has no infield wall: the apron runs straight onto the grass, as at the real track. Left of
+                // travel on an anticlockwise oval is BarrierSide.Outer.
+                env.outerSideBarrier = venue.infieldWall;
                 env.barrierGaps = TrackDressingFactory.PitGaps(builder, env.outerEdgeOffset);
+                EnsurePaddockTarmac(env, blueprint, map, frame, infield?.outline, notes);
                 EditorUtility.SetDirty(env);
                 AssetDatabase.SaveAssets();
+                // Loading the contents already ran the builder's OnEnable build, whose clear doesn't take during a
+                // load - clear by hand or the new walls and run-off stack on the old.
+                for (int i = envBuilder.transform.childCount - 1; i >= 0; i--)
+                    Object.DestroyImmediate(envBuilder.transform.GetChild(i).gameObject, true);
                 envBuilder.Build();
                 int outside = 0;
                 foreach (var g in env.barrierGaps) if (g.side == TrackEnvironment.BarrierSide.Inner) outside++;
@@ -125,16 +179,68 @@ public static class DaytonaPackageAuthoring
             notes.Add($"{TrackDressingFactory.RebuildGrandstands(contents, builder)} grandstands");
 
             // 3. The paddock.
-            LayPaddock(contents, paddockRoot, builder, frame, blueprint, notes);
+            LayPaddock(contents, paddockRoot, builder, frame, blueprint, map, infield, notes);
 
             PrefabUtility.SaveAsPrefabAsset(contents, path);
-            return $"Daytona authored: {string.Join("; ", notes)}.";
+            return $"{trackId} authored: {string.Join("; ", notes)}.";
         }
         finally
         {
             PrefabUtility.UnloadPrefabContents(contents);
             if (blueprint.root != null) PrefabUtility.UnloadPrefabContents(blueprint.root);
         }
+    }
+
+    // The motorhome and garage lot boxes were drawn for Watkins Glen while it was the race scene's track, and
+    // were left at the root of RaceScene - so every venue packed its lots into Watkins Glen's paddock
+    // coordinates, which at Daytona is the racing surface by turn 1. They belong to Watkins Glen's package, like
+    // the rest of its paddock: moved there (same world pose, so Watkins is unchanged) and out of the scene.
+    static string MoveSceneLotAreasIntoBlueprint()
+    {
+        var found = new List<PaddockLotArea>();
+        for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+        {
+            var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+            if (!scene.isLoaded) continue;
+            foreach (var root in scene.GetRootGameObjects())
+                if (root.GetComponent<TrackPackage>() == null)
+                    found.AddRange(root.GetComponentsInChildren<PaddockLotArea>(true));
+        }
+        if (found.Count == 0) return null;
+
+        string path = $"{PackageDir}/{BlueprintId}.prefab";
+        var contents = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            var package = contents.GetComponent<TrackPackage>();
+            var paddock = package != null && package.paddockRoot != null ? package.paddockRoot : EnsureChild(contents.transform, "Paddock");
+            foreach (var old in contents.GetComponentsInChildren<PaddockLotArea>(true)) Object.DestroyImmediate(old.gameObject);
+            foreach (var area in found)
+            {
+                var copy = Object.Instantiate(area.gameObject, paddock);
+                copy.name = area.name;
+                copy.transform.SetPositionAndRotation(area.transform.position, area.transform.rotation);
+                copy.transform.localScale = area.transform.localScale;
+            }
+            PrefabUtility.SaveAsPrefabAsset(contents, path);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+
+        var scenes = new HashSet<UnityEngine.SceneManagement.Scene>();
+        foreach (var area in found)
+        {
+            scenes.Add(area.gameObject.scene);
+            Undo.DestroyObjectImmediate(area.gameObject);
+        }
+        foreach (var scene in scenes)
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+        }
+        return $"moved {found.Count} lot box(es) from the race scene into the Watkins Glen package";
     }
 
     // The apron: 3.5 m of paving below the yellow line, all the way round on the infield side. A strip anchored
@@ -252,9 +358,175 @@ public static class DaytonaPackageAuthoring
     {
         public Frame frame;
         public readonly Dictionary<string, GameObject> pieces = new Dictionary<string, GameObject>();
-        public Vector2 rvLocal;
-        public float rvTurn;      // RV's up axis relative to the frame's outward axis, degrees
+        public Transform rv;
+        public PaddockBoundary boundary;
+        public TrackEnvironment environment;
+        public readonly List<PaddockLotArea> lotAreas = new List<PaddockLotArea>();
         public GameObject root;   // loaded prefab contents; unloaded by the caller
+    }
+
+    // Watkins Glen's paddock picked up and set down at Daytona: a rotation that turns "away from pit road" at
+    // Watkins Glen onto "away from pit road" at Daytona, and a shift that puts the middle of Watkins' pit-road
+    // edge on the middle of Daytona's. Rotation only, no mirror, so every rig, sprite and lot box keeps its
+    // handedness and the paddock is the same place, just facing a different way. (Watkins runs clockwise and
+    // Daytona anticlockwise, so the paddock's entry end lands at Daytona's exit end - the price of not mirroring.)
+    //
+    // squeeze < 1 shortens it along pit road (blueprint 'along') about the middle of pit road, for a venue too
+    // short for it (Martinsville); 1 is the rigid copy. Depth from pit road is never squeezed.
+    struct Rigid
+    {
+        public Vector2 from, to, along, outward;
+        public float angle;
+        public float squeeze;        // along pit road
+        public float squeezeOut;     // away from it
+        public float maxOut;         // nothing lands further back than this (0 = no limit)
+        // With zone > 0 the first 'zone' metres from the blueprint's entry end keep their size and only the rest
+        // is squeezed; fromHalf / toHalf are the two pit roads' half lengths.
+        public float zone, fromHalf, toHalf;
+        public Quaternion Turn => Quaternion.Euler(0f, 0f, angle);
+        public Vector2 Point(Vector2 p)
+        {
+            Vector2 d = p - from;
+            float a = Vector2.Dot(d, along), o = Vector2.Dot(d, outward);
+            float a2 = a * squeeze, o2 = o * squeezeOut;
+            if (zone > 0f)
+            {
+                float u = a + fromHalf;
+                a2 = (u <= zone ? u : zone + (u - zone) * squeeze) - toHalf;
+            }
+            if (maxOut > 0f) o2 = Mathf.Min(o2, maxOut);
+            d += along * (a2 - a) + outward * (o2 - o);
+            return to + (Vector2)(Turn * d);
+        }
+        public Vector2 Dir(Vector2 d) => Turn * d;
+    }
+
+    static Rigid BlueprintToDaytona(Frame bp, Frame daytona) => new Rigid
+    {
+        from = bp.At(new Vector2(bp.length * 0.5f, 0f)),
+        to = daytona.At(new Vector2(daytona.length * 0.5f, 0f)),
+        along = bp.along,
+        outward = bp.outward,
+        angle = Vector2.SignedAngle(bp.outward, daytona.outward),
+        squeeze = 1f,
+        squeezeOut = 1f,
+    };
+
+    // ------------------------------------------------------------------ short-track infield
+
+    // The clear infield behind pit road, in the paddock frame (x along pit road from the box lane's start, y back
+    // from pit road's paddock-side edge), and the two lot boxes laid in it.
+    class Infield
+    {
+        public Frame frame;
+        public float depth;                  // how far back the infield is clear, at the middle of pit road
+        public List<Vector2> outline;        // walkable boundary, world
+        public Vector2 garageCentre, motorhomeCentre;   // world
+        public float garageLength, garageDepth, motorhomeLength, motorhomeDepth;
+    }
+
+    // reserveLo / reserveHi: metres kept free of lot boxes at either end of pit road, for the key areas.
+    static Infield FitInfield(TrackBuilder builder, Frame frame, float reserveLo, float reserveHi, List<string> notes)
+    {
+        var centreline = builder.SampleCenterline();
+        float keepOut = builder.track.defaultWidth * 0.5f + PaddockTrackClearance;
+        bool Clear(float a, float o)
+        {
+            Vector2 q = frame.At(new Vector2(a, o));
+            foreach (var s in centreline)
+                if ((s.position - q).sqrMagnitude < keepOut * keepOut) return false;
+            return true;
+        }
+
+        float mid = frame.length * 0.5f;
+        float depth = 0f;
+        while (depth < 300f && Clear(mid, depth + 1f)) depth += 1f;
+
+        // The run along pit road either side of the middle, held to the box lane, that is clear all the way
+        // across a band of depth.
+        void Span(float o1, float o2, out float lo, out float hi, float minA = 0f, float maxA = float.MaxValue)
+        {
+            minA = Mathf.Max(0f, minA);
+            maxA = Mathf.Min(frame.length, maxA);
+            bool BandClear(float a)
+            {
+                for (float o = o1; o < o2; o += 2f) if (!Clear(a, o)) return false;
+                return Clear(a, o2);
+            }
+            lo = mid;
+            hi = mid;
+            while (lo > minA && BandClear(lo - 1f)) lo -= 1f;
+            while (hi < maxA && BandClear(hi + 1f)) hi += 1f;
+        }
+
+        var f = new Infield { frame = frame, depth = depth };
+        f.garageDepth = Mathf.Min(InfieldGarageDepth, depth - InfieldBandGap - InfieldMinMotorhomeDepth);
+        f.motorhomeDepth = depth - f.garageDepth - InfieldBandGap;
+        if (f.garageDepth < 20f) return null;
+
+        float lotsFrom = reserveLo > 0f ? reserveLo + InfieldBandGap : 0f;
+        float lotsTo = reserveHi > 0f ? frame.length - reserveHi - InfieldBandGap : frame.length;
+        Span(0f, f.garageDepth, out float gLo, out float gHi, lotsFrom, lotsTo);
+        float m0 = f.garageDepth + InfieldBandGap;
+        Span(m0, depth, out float mLo, out float mHi, lotsFrom, lotsTo);
+        f.garageLength = gHi - gLo;
+        f.motorhomeLength = mHi - mLo;
+        f.garageCentre = frame.At(new Vector2((gLo + gHi) * 0.5f, f.garageDepth * 0.5f));
+        f.motorhomeCentre = frame.At(new Vector2((mLo + mHi) * 0.5f, m0 + f.motorhomeDepth * 0.5f));
+
+        // The walkable pocket: the clear run at every depth, down one side and back up the other.
+        var left = new List<Vector2>();
+        var right = new List<Vector2>();
+        for (float o = 0f; ; o = Mathf.Min(o + 4f, depth))
+        {
+            Span(o, o, out float lo, out float hi);
+            left.Add(frame.At(new Vector2(lo, o)));
+            right.Add(frame.At(new Vector2(hi, o)));
+            if (o >= depth) break;
+        }
+        right.Reverse();
+        f.outline = new List<Vector2>(left);
+        f.outline.AddRange(right);
+
+        notes.Add($"infield paddock {frame.length:0} m along pit road x {depth:0} m deep: garages {f.garageLength:0} x " +
+                  $"{f.garageDepth:0} m, motorhomes {f.motorhomeLength:0} x {f.motorhomeDepth:0} m");
+        return f;
+    }
+
+    // Watkins' key areas and RV: its entry-end strip carried at full size, the rest of the way along pit road
+    // squeezed into what is left, depth scaled to the infield's - and never further back than the infield goes.
+    static Rigid ProportionalMap(Rigid map, Frame bp, Infield infield, float zone)
+    {
+        map.zone = zone;
+        map.fromHalf = bp.length * 0.5f;
+        map.toHalf = infield.frame.length * 0.5f;
+        map.squeeze = Mathf.Min(1f, (infield.frame.length - zone) / Mathf.Max(1f, bp.length - zone));
+        map.squeezeOut = Mathf.Min(1f, infield.depth / PaddockDepth);
+        map.maxOut = infield.depth - 3f;
+        return map;
+    }
+
+    // How far Watkins' key-area strip runs from its entry end: up to where its first lot box starts.
+    static float CivicZone(Blueprint bp)
+    {
+        float zone = float.MaxValue;
+        foreach (var area in bp.lotAreas)
+        {
+            area.GetRect(out Vector3 c, out Quaternion r, out float w, out float d);
+            Vector2 x = r * Vector3.right * (w * 0.5f), y = r * Vector3.up * (d * 0.5f), cc = c;
+            foreach (var corner in new[] { cc - x - y, cc + x - y, cc + x + y, cc - x + y })
+                zone = Mathf.Min(zone, bp.frame.Local(corner).x);
+        }
+        return zone == float.MaxValue ? 0f : Mathf.Max(0f, zone);
+    }
+
+    // Puts a copy of the blueprint transform's pose (position, z kept, rotation) through the rigid map.
+    static void Place(Transform target, Transform source, Rigid map)
+    {
+        Vector2 p = map.Point(source.position);
+        target.position = new Vector3(p.x, p.y, source.position.z);
+        target.rotation = map.Turn * source.rotation;
+        target.localScale = source.localScale;
     }
 
     // Loads Watkins Glen and measures it. The contents stay loaded (pieces are copied from them) until
@@ -286,16 +558,15 @@ public static class DaytonaPackageAuthoring
             root = contents,
             // Along runs -x, so the entry-end edge is the boundary's largest x.
             frame = new Frame { origin = new Vector2(maxX, minY), along = BlueprintAlong, outward = BlueprintOut, length = maxX - minX },
+            boundary = boundary,
         };
         foreach (var t in contents.GetComponentsInChildren<Transform>(true))
             if (System.Array.IndexOf(KeyAreas, t.name) >= 0 && !bp.pieces.ContainsKey(t.name)) bp.pieces[t.name] = t.gameObject;
 
-        var rv = contents.transform.Find("RV");
-        if (rv != null)
-        {
-            bp.rvLocal = bp.frame.Local(rv.position);
-            bp.rvTurn = Vector2.SignedAngle(bp.frame.outward, rv.up);
-        }
+        bp.rv = contents.transform.Find("RV");
+        var env = contents.GetComponentInChildren<TrackEnvironmentBuilder>(true);
+        bp.environment = env != null ? env.environment : null;
+        bp.lotAreas.AddRange(contents.GetComponentsInChildren<PaddockLotArea>(true));
 
         foreach (var name in KeyAreas)
             if (!bp.pieces.ContainsKey(name))
@@ -307,21 +578,97 @@ public static class DaytonaPackageAuthoring
         return bp;
     }
 
-    // Map a direction from one paddock frame to the other. Watkins runs clockwise and Daytona anticlockwise, so
-    // this is a reflection as well as a rotation - which is what is wanted: "toward pit road" stays toward pit road.
-    static Vector2 MapDirection(Vector2 dir, Frame from, Frame to) =>
-        to.along * Vector2.Dot(dir, from.along) + to.outward * Vector2.Dot(dir, from.outward);
-
-    static float Heading(Vector2 dir) => Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-
     // ------------------------------------------------------------------ the paddock
 
-    static void LayPaddock(GameObject contents, Transform paddockRoot, TrackBuilder builder, Frame frame,
-                           Blueprint bp, List<string> notes)
+    // Watkins Glen's paddock tarmac: the run-off polygons of its environment that lie in its paddock (the big
+    // one under the boundary). Put through the rigid map, then trimmed to Daytona's straight stretch of pit
+    // road - Watkins' tarmac carries on along its pit wall past the paddock, and at Daytona that end would run
+    // out onto the pit-road arc and the track.
+    const string PaddockTarmacLabel = "Paddock (Watkins Glen)";
+
+    // An infield layout paves its own outline in Watkins' tarmac instead.
+    static void EnsurePaddockTarmac(TrackEnvironment env, Blueprint bp, Rigid map, Frame frame, List<Vector2> outline,
+                                    List<string> notes)
     {
-        // The pocket: the length of the box lane, from pit road's paddock-side edge back to Watkins Glen's depth -
-        // Watkins Glen's own boundary starts at the same edge, so the boxes behind pit road are inside it and the
-        // player walks straight from the paddock to their car.
+        var areas = new List<TrackEnvironment.RunoffArea>(env.runoffAreas ?? new TrackEnvironment.RunoffArea[0]);
+        areas.RemoveAll(a => a.label != null && a.label.StartsWith(PaddockTarmacLabel));
+        int added = 0;
+        if (bp.environment != null && bp.environment.runoffAreas != null)
+        {
+            foreach (var src in bp.environment.runoffAreas)
+            {
+                if (src.surface != TrackEnvironment.SurfaceType.TarmacRunoff || src.points == null || src.points.Length < 3) continue;
+                if (!InBlueprintPaddock(src.points, bp)) continue;
+
+                var pts = new List<Vector2>();
+                if (outline != null) pts.AddRange(outline);
+                else foreach (var p in src.points) pts.Add(map.Point(p));
+                // Keep only what lies between the two ends of the box lane.
+                pts = ClipHalfPlane(pts, frame.origin, frame.along);
+                pts = ClipHalfPlane(pts, frame.origin + frame.along * frame.length, -frame.along);
+                if (pts.Count < 3) continue;
+
+                areas.Add(new TrackEnvironment.RunoffArea
+                {
+                    label = added == 0 ? PaddockTarmacLabel : $"{PaddockTarmacLabel} {added}",
+                    surface = TrackEnvironment.SurfaceType.TarmacRunoff,
+                    points = pts.ToArray(),
+                    // Watkins' own tarmac, so it looks the same rather than taking Daytona's run-off grey.
+                    materialOverride = src.materialOverride != null ? src.materialOverride : bp.environment.tarmacRunoffMaterial,
+                });
+                added++;
+                if (outline != null) break;
+            }
+        }
+        env.runoffAreas = areas.ToArray();
+        EditorUtility.SetDirty(env);
+        notes.Add($"{added} paddock tarmac polygon(s) from Watkins Glen");
+    }
+
+    // A run-off polygon belongs to Watkins' paddock when the middle of its corners is inside the paddock
+    // boundary. Not the corners themselves: the paddock tarmac was traced off the boundary, so its corners sit
+    // on the boundary's edges, where an inside test is a coin toss.
+    static bool InBlueprintPaddock(Vector2[] pts, Blueprint bp)
+    {
+        var collider = bp.boundary.GetComponent<PolygonCollider2D>();
+        var poly = new Vector2[collider.points.Length];
+        for (int i = 0; i < poly.Length; i++) poly[i] = bp.boundary.transform.TransformPoint(collider.points[i]);
+        Vector2 mean = Vector2.zero;
+        foreach (var p in pts) mean += p;
+        return InPolygon(mean / pts.Length, poly);
+    }
+
+    // Even-odd ray cast. Not the collider's OverlapPoint: loaded prefab contents sit outside any physics scene
+    // that answers queries.
+    static bool InPolygon(Vector2 p, Vector2[] poly)
+    {
+        bool inside = false;
+        for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+            if ((poly[i].y > p.y) != (poly[j].y > p.y) &&
+                p.x < (poly[j].x - poly[i].x) * (p.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)
+                inside = !inside;
+        return inside;
+    }
+
+    // Sutherland-Hodgman against one half-plane: keeps the side the normal points into.
+    static List<Vector2> ClipHalfPlane(List<Vector2> pts, Vector2 point, Vector2 normal)
+    {
+        var result = new List<Vector2>();
+        for (int i = 0; i < pts.Count; i++)
+        {
+            Vector2 a = pts[i], b = pts[(i + 1) % pts.Count];
+            float da = Vector2.Dot(a - point, normal), db = Vector2.Dot(b - point, normal);
+            if (da >= 0f) result.Add(a);
+            if ((da >= 0f) != (db >= 0f)) result.Add(a + (b - a) * (da / (da - db)));
+        }
+        return result;
+    }
+
+    static void LayPaddock(GameObject contents, Transform paddockRoot, TrackBuilder builder, Frame frame,
+                           Blueprint bp, Rigid map, Infield infield, List<string> notes)
+    {
+        // The pocket: Watkins Glen's boundary polygon, corner for corner. It starts at pit road's paddock-side
+        // edge there too, so the boxes are inside it and the player walks straight from the paddock to their car.
         var boundary = paddockRoot.GetComponentInChildren<PaddockBoundary>(true);
         if (boundary == null)
         {
@@ -334,31 +681,37 @@ public static class DaytonaPackageAuthoring
         boundary.transform.localRotation = Quaternion.identity;
         var poly = boundary.GetComponent<PolygonCollider2D>();
         poly.isTrigger = true;
-        const float near = 0f;
-        poly.points = new[]
+        Vector2[] pts;
+        if (infield != null)
         {
-            frame.At(new Vector2(0f, near)), frame.At(new Vector2(frame.length, near)),
-            frame.At(new Vector2(frame.length, PaddockDepth)), frame.At(new Vector2(0f, PaddockDepth)),
-        };
+            pts = new Vector2[infield.outline.Count];
+            for (int i = 0; i < pts.Length; i++) pts[i] = boundary.transform.InverseTransformPoint(infield.outline[i]);
+            notes.Add($"paddock boundary: the clear infield, {pts.Length} corners");
+        }
+        else
+        {
+            var srcPoly = bp.boundary.GetComponent<PolygonCollider2D>();
+            pts = new Vector2[srcPoly.points.Length];
+            for (int i = 0; i < pts.Length; i++)
+                pts[i] = boundary.transform.InverseTransformPoint(map.Point(bp.boundary.transform.TransformPoint(srcPoly.points[i])));
+            notes.Add($"paddock boundary: Watkins Glen's {pts.Length}-corner polygon, turned {map.angle:0.0} deg");
+        }
+        poly.points = pts;
         EditorUtility.SetDirty(poly);
-        notes.Add($"paddock {frame.length:0} x {PaddockDepth - near:0} m in the infield");
 
-        // The RV, where the player wakes up: same offset from pit road, same way round, as at Watkins Glen.
+        // The RV, where the player wakes up: same place and same way round relative to pit road.
         var rv = paddockRoot.Find("RV");
-        if (rv != null)
+        if (rv != null && bp.rv != null)
         {
-            Vector2 rvPos = frame.At(bp.rvLocal);
-            Vector2 rvUp = (Vector2)(Quaternion.Euler(0f, 0f, bp.rvTurn) * frame.outward);
-            rv.localPosition = new Vector3(rvPos.x, rvPos.y, rv.localPosition.z);
-            rv.localRotation = Quaternion.Euler(0f, 0f, Heading(rvUp) - 90f);
-            notes.Add($"RV at {rvPos}");
+            Place(rv, bp.rv, map);
+            notes.Add($"RV at {(Vector2)rv.position}");
         }
 
         // The generated fallback start goes to the middle of the paddock rather than the old pocket.
         var fallback = paddockRoot.Find("SpawnPoint_Paddock");
         if (fallback != null)
         {
-            Vector2 mid = frame.At(new Vector2(frame.length * 0.5f, PaddockDepth * 0.5f));
+            Vector2 mid = frame.At(new Vector2(frame.length * 0.5f, (infield != null ? infield.depth : PaddockDepth) * 0.5f));
             fallback.localPosition = new Vector3(mid.x, mid.y, 0f);
         }
 
@@ -372,15 +725,44 @@ public static class DaytonaPackageAuthoring
             var parent = name.StartsWith("SpawnPoint_") ? EnsureChild(paddockRoot, "PlayerSpawnPoints") : paddockRoot;
             var copy = Object.Instantiate(source, parent);
             copy.name = name;
-
-            Vector2 pos = frame.At(bp.frame.Local(source.transform.position));
-            Vector2 right = MapDirection(source.transform.right, bp.frame, frame);
-            copy.transform.position = new Vector3(pos.x, pos.y, source.transform.position.z);
-            copy.transform.rotation = Quaternion.Euler(0f, 0f, Heading(right));
-            copy.transform.localScale = source.transform.localScale;
+            Place(copy.transform, source.transform, map);
             placed++;
         }
         notes.Add($"{placed} Watkins Glen key areas placed");
+
+        // The motorhome and garage lots: Watkins Glen's drawn boxes, turned with everything else. Without them
+        // the lots grow off the RV in world directions, which only line up at Watkins Glen.
+        foreach (var old in contents.GetComponentsInChildren<PaddockLotArea>(true)) Object.DestroyImmediate(old.gameObject);
+        foreach (var src in bp.lotAreas)
+        {
+            var copy = Object.Instantiate(src.gameObject, paddockRoot);
+            copy.name = src.name;
+            Place(copy.transform, src.transform, map);
+            // In an infield layout the box is the band the infield fit for it, whatever Watkins' was. The copy keeps
+            // Watkins' turned rotation, so its own x runs along pit road one way or the other.
+            var box = copy.GetComponent<BoxCollider2D>();
+            if (infield != null && box != null)
+            {
+                bool garages = src.kind == PaddockLotKind.Garages;
+                Vector2 centre = garages ? infield.garageCentre : infield.motorhomeCentre;
+                float length = garages ? infield.garageLength : infield.motorhomeLength;
+                float depth = garages ? infield.garageDepth : infield.motorhomeDepth;
+                bool xAlong = Mathf.Abs(Vector2.Dot(copy.transform.rotation * Vector3.right, frame.along)) > 0.7f;
+                Vector3 scale = copy.transform.lossyScale;
+                copy.transform.position = new Vector3(centre.x, centre.y, copy.transform.position.z);
+                box.offset = Vector2.zero;
+                box.size = xAlong ? new Vector2(length / Mathf.Abs(scale.x), depth / Mathf.Abs(scale.y))
+                                  : new Vector2(depth / Mathf.Abs(scale.x), length / Mathf.Abs(scale.y));
+                EditorUtility.SetDirty(box);
+            }
+            var lot = copy.GetComponent<PaddockLotArea>();
+            lot.GetRect(out _, out _, out float w, out float d);
+            string fit = "";
+            if (src.kind == PaddockLotKind.Motorhomes &&
+                lot.Solve(40, PaddockLotArea.DefaultRvWidth, PaddockLotArea.DefaultRvLength, 0f, out var line, out int rows, out bool tight))
+                fit = $", {rows * line.perRow} places for 40{(tight ? " (TIGHT)" : "")}";
+            notes.Add($"{src.kind} lot box {w:0} x {d:0} m at {(Vector2)copy.transform.position}{fit}");
+        }
 
         // The grandstand gate's seat is across the track: in the front-stretch stand nearest the start/finish.
         var gate = paddockRoot.Find("Grandstand_Marker");
@@ -463,13 +845,19 @@ public static class DaytonaPackageAuthoring
     // ------------------------------------------------------------------ report
 
     [MenuItem("Draftmaster/Tracks/Daytona/Report Packages (Watkins Glen vs Daytona)")]
-    public static void Report()
+    public static void Report() => Report(Daytona.id);
+
+    [MenuItem("Draftmaster/Tracks/Martinsville/Report Packages (Watkins Glen vs Martinsville)")]
+    public static void ReportMartinsville() => Report(Martinsville.id);
+
+    static void Report(string trackId)
     {
         var sb = new StringBuilder();
         DescribePackage(sb, BlueprintId);
-        DescribePackage(sb, TrackId);
+        DescribePackage(sb, trackId);
+        DescribeOpenScenes(sb);
         File.WriteAllText(ReportPath, sb.ToString());
-        Debug.Log($"[DaytonaAuthoring] wrote {ReportPath}");
+        Debug.Log($"[PackageAuthoring] wrote {ReportPath}");
     }
 
     static void DescribePackage(StringBuilder sb, string id)
@@ -499,6 +887,18 @@ public static class DaytonaPackageAuthoring
                               $"{(m.teleportTo != null ? m.teleportTo.position.ToString() : "-")} zoom {m.cameraZoom} " +
                               $"box {(box != null ? box.size + " off " + box.offset + " trig " + box.isTrigger : "-")}");
             }
+            foreach (var a in contents.GetComponentsInChildren<PaddockLotArea>(true))
+            {
+                a.GetRect(out Vector3 c, out Quaternion r, out float w, out float d);
+                Vector2 x = r * Vector3.right * (w * 0.5f), y = r * Vector3.up * (d * 0.5f);
+                Vector2 cc = c;
+                float clear = float.MaxValue;
+                foreach (var corner in new[] { cc - x - y, cc + x - y, cc + x + y, cc - x + y, cc })
+                    foreach (var s in builder != null ? builder.SampleCenterline() : new List<TrackBuilder.Sample>())
+                        clear = Mathf.Min(clear, Vector2.Distance(corner, s.position));
+                sb.AppendLine($"  lot {a.kind}: centre {cc} {w:0.0} x {d:0.0} rot {r.eulerAngles.z:0.0} corners {cc - x - y} {cc + x + y}, " +
+                              $"nearest track centreline {clear:0.0} m");
+            }
             foreach (var sp in contents.GetComponentsInChildren<PlayerSpawnPoint>(true))
                 sb.AppendLine($"  spawn {sp.name}: weight {sp.weight} label '{sp.label}' at {(Vector2)sp.transform.position}");
             var env = contents.GetComponentInChildren<TrackEnvironmentBuilder>(true);
@@ -509,11 +909,55 @@ public static class DaytonaPackageAuthoring
                 if (e.barrierGaps != null)
                     foreach (var g in e.barrierGaps)
                         sb.AppendLine($"    gap {g.label} {g.side} seg {g.segmentIndex} {g.startDistance:0.0}..{g.endDistance:0.0}");
+                if (e.strips != null)
+                    foreach (var s in e.strips)
+                        sb.AppendLine($"    strip {s.label} {s.useSpline} {s.anchor} seg {s.startSegmentIndex}+{s.startDistance:0.0}..{s.endSegmentIndex}+{s.endDistance:0.0} " +
+                                      $"lat {s.lateralOffset:0.0} w {s.width:0.0} order {s.sortingOrder} mat {(s.material != null ? s.material.name : "-")}");
+                if (e.runoffAreas != null)
+                    foreach (var a in e.runoffAreas)
+                    {
+                        sb.Append($"    runoff {a.label} {a.surface} mat {(a.materialOverride != null ? a.materialOverride.name : "-")}:");
+                        if (a.points != null) foreach (var p in a.points) sb.Append($" {p}");
+                        sb.AppendLine();
+                    }
             }
         }
         finally
         {
             PrefabUtility.UnloadPrefabContents(contents);
+        }
+    }
+
+    // The race scene's own paddock pieces - the ones every track shares, which the package has to agree with.
+    static void DescribeOpenScenes(StringBuilder sb)
+    {
+        for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+        {
+            var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+            if (!scene.isLoaded) continue;
+            sb.AppendLine($"===== scene {scene.path}");
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                sb.AppendLine($"  root {root.name} active {root.activeSelf}");
+                foreach (var rv in root.GetComponentsInChildren<RVExterior>(true))
+                    sb.AppendLine($"    RVExterior {rv.name} at {(Vector2)rv.transform.position} rot {rv.transform.eulerAngles.z:0.0}");
+                foreach (var sp in root.GetComponentsInChildren<PaddockSpawner>(true))
+                {
+                    sb.AppendLine($"    PaddockSpawner {sp.name} depth {sp.paddockDepth} gap {sp.pitGap} side {sp.side}");
+                    for (int c = 0; c < sp.transform.childCount; c++)
+                    {
+                        var ch = sp.transform.GetChild(c);
+                        var r = ch.GetComponent<Renderer>();
+                        sb.AppendLine($"      child {ch.name} at {(Vector2)ch.position} bounds {(r != null ? r.bounds.ToString() : "-")}");
+                    }
+                }
+                foreach (var lot in root.GetComponentsInChildren<DriverMotorhomeLot>(true))
+                    sb.AppendLine($"    DriverMotorhomeLot {lot.name} dir {lot.lineDirection} rows {lot.rowCount} perRow {lot.maxPerRow} player {lot.playerLineIndex}");
+                foreach (var b in root.GetComponentsInChildren<PaddockBoundary>(true))
+                    sb.AppendLine($"    PaddockBoundary {b.name}");
+                foreach (var a in root.GetComponentsInChildren<PaddockLotArea>(true))
+                    sb.AppendLine($"    PaddockLotArea {a.name}");
+            }
         }
     }
 

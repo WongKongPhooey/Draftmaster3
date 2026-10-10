@@ -8,6 +8,16 @@ offset lands on the painted yellow line on the straights and in the banked turns
 
     python -I Tools/trace_from_wall.py Daytona 407709771 11.0 2.5 --start=apex --pit=352067003 --preview [--osm=answer.json]
 
+<wayId> may be a comma list of open ways, joined end to end into one ring. With --centre the ways are taken
+as the CENTRELINE (a complete highway=raceway ring); with --inner as the INSIDE edge (pit wall / apron line),
+offset outward. Martinsville's raceway line balloons 10-18 m wide of the real turns, but its inside walls are
+mapped; the one gap (turn 3 exit) is filled by way -1, read off NAIP imagery, in Tools/osm/Martinsville.json:
+
+    python -I Tools/trace_from_wall.py Martinsville 448514914,-1,448514913 15.0 0.526 --inner --osm=Tools/osm/Martinsville.json "--pit=402168723[17:20]" --start=36.634234,-79.852234 --preview
+
+--osm may be given more than once. A --pit id written <id>[a:b] uses nodes a..b-1 of that way only (the game's
+pit road is one straight; Martinsville's wraps the whole infield, so only its front-stretch run is used).
+
 --start=apex puts the start/finish line at the tri-oval apex; --start=lat,lon puts it nearest that point.
 --pit=<wayId>[,<wayId>...] stores the mapped pit lane (joined end to end, turned to run the way the cars do);
 the importer lays pit road along it instead of guessing.
@@ -31,12 +41,11 @@ APRON_M = 3.5
 
 def fetch_way(way_id):
     # --osm=<file>: read the way from an Overpass answer already on disk (Overpass rate-limits repeat asks).
-    for a in sys.argv:
-        if a.startswith('--osm='):
-            for e in json.load(open(a[6:]))['elements']:
-                if e.get('id') == way_id:
-                    return e
-            sys.exit('way %d is not in %s' % (way_id, a[6:]))
+    els = cached_elements()
+    if els is not None:
+        if way_id in els:
+            return els[way_id]
+        sys.exit('way %d is not in the --osm file(s)' % way_id)
     query = '[out:json][timeout:60];way(%d);out tags geom;' % way_id
     for url in MIRRORS:
         p = subprocess.run(['curl', '-s', '--max-time', '90', '-G', url, '--data-urlencode', 'data=' + query],
@@ -118,13 +127,30 @@ def tri_oval_apex(pts):
     return max(range(n), key=lambda i: abs((pts[i][0] - p[0]) * dy - (pts[i][1] - p[1]) * dx) / l)
 
 
-def fetch_ways(ids):
-    """Ways from --osm=<file> if given, else from Overpass."""
+def cached_elements():
+    """Elements from every --osm=<file> given (merged; a later file wins), or None for none."""
+    els = None
     for a in sys.argv:
         if a.startswith('--osm='):
-            els = {e['id']: e for e in json.load(open(a[6:]))['elements']}
-            return [els[i] for i in ids]
-    return [fetch_way(i) for i in ids]
+            els = els or {}
+            els.update({e['id']: e for e in json.load(open(a[6:]))['elements']})
+    return els
+
+
+def fetch_ways(ids):
+    """Ways from --osm=<file> if given, else from Overpass. An id written <id>[a:b] keeps nodes a..b-1."""
+    out = []
+    for i in ids:
+        sl = None
+        if isinstance(i, str) and '[' in i:
+            i, sl = i.split('[')
+            lo, hi = sl.rstrip(']').split(':')
+            sl = slice(int(lo) if lo else None, int(hi) if hi else None)
+        w = dict(fetch_way(int(i)))
+        if sl:
+            w['geometry'] = w['geometry'][sl]
+        out.append(w)
+    return out
 
 
 def join_ways(ways):
@@ -150,10 +176,19 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     if len(args) < 4:
         sys.exit(__doc__)
-    track_id, way_id, width, miles = args[0], int(args[1]), float(args[2]), float(args[3])
+    track_id, width, miles = args[0], float(args[2]), float(args[3])
+    way_ids = [int(v) for v in args[1].split(',')]
+    way_id = way_ids[0]
+    centre_mode = '--centre' in sys.argv
+    inner_mode = '--inner' in sys.argv
 
-    way = fetch_way(way_id)
-    geom = way['geometry']
+    if len(way_ids) == 1:
+        way = fetch_way(way_id)
+        geom = way['geometry']
+    else:
+        ways = fetch_ways(way_ids)
+        way = ways[0]
+        geom = join_ways(ways)
     lat0 = sum(p['lat'] for p in geom) / len(geom)
     lon0 = sum(p['lon'] for p in geom) / len(geom)
     kx, ky = 111320 * math.cos(math.radians(lat0)), 110950
@@ -164,7 +199,18 @@ def main():
     wall = smooth_closed(resample_closed(wall, 2.0), 20)   # keeps straights straight, rounds node corners
     if signed_area(wall) < 0:
         wall.reverse()                                     # counter-clockwise: the way the cars run
-    centre = offset_closed(wall, width / 2)
+    if centre_mode:
+        # The ways ARE the centreline (a complete highway=raceway ring): the wall is half a surface outside.
+        centre = wall
+        wall = offset_closed(centre, -width / 2)
+    elif inner_mode:
+        # The ways are the INSIDE edge (pit wall / apron line): the centre is half a surface outside it, the
+        # outer wall a whole surface.
+        inner = wall
+        centre = offset_closed(inner, -width / 2)
+        wall = offset_closed(inner, -width)
+    else:
+        centre = offset_closed(wall, width / 2)
 
     # Start the trace on the start/finish line, so the importer can keep the lap starting there.
     start = None
@@ -192,7 +238,13 @@ def main():
         'trackId': track_id,
         'osmWayId': way_id,
         'osmName': way.get('tags', {}).get('name', '') or '%s outer wall' % track_id,
-        'foundBy': 'outer wall (closed barrier=wall way %d) offset %.2f m inward to the centre of a %.1f m '
+        'foundBy': ('inside edge (ways %s, joined) offset %.2f m outward to the centre of a %.1f m racing '
+                    'surface; checked against USGS NAIP imagery' % (','.join(str(i) for i in way_ids), width / 2, width))
+                   if inner_mode else
+                   ('highway=raceway ring (ways %s) taken as the centreline of a %.1f m racing surface; '
+                    'checked against USGS NAIP imagery' % (','.join(str(i) for i in way_ids), width))
+                   if centre_mode else
+                   'outer wall (closed barrier=wall way %d) offset %.2f m inward to the centre of a %.1f m '
                    'racing surface; checked against USGS NAIP imagery' % (way_id, width / 2, width),
         'publishedMiles': miles,
         'startFinish': 'firstNode' if start else '',
@@ -206,7 +258,7 @@ def main():
     pit_ids = None
     for a in sys.argv:
         if a.startswith('--pit='):
-            pit_ids = [int(v) for v in a[6:].split(',')]
+            pit_ids = [v if '[' in v else int(v) for v in a[6:].split(',')]
     if pit_ids:
         lane = join_ways(fetch_ways(pit_ids))
         pts = [((p['lon'] - lon0) * kx, (p['lat'] - lat0) * ky) for p in lane]

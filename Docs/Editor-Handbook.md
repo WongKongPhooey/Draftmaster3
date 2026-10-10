@@ -174,6 +174,8 @@ Glen's key areas in it come from `Draftmaster > Tracks > Daytona > Author Dayton
 Re-run that after regenerating Daytona; do **not** run an overwriting `Dress Selected Package` on it — that
 regenerates the paddock pocket and throws the layout away. `... > Daytona > Report Packages` writes
 `Temp/track_package_report.txt` comparing the two paddocks. Detail: `Docs/Tracks.md` § Daytona.
+**Martinsville likewise**: `Draftmaster > Tracks > Martinsville > Author Martinsville (Watkins Glen Blueprint)`
+(traced geometry, infield paddock sized to fit). Same rule. Detail: `Docs/Tracks.md` § Martinsville.
 
 ## 4. Paint the start/finish line or pit exit line
 

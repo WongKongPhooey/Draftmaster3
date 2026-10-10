@@ -67,6 +67,18 @@ USGS NAIP imagery: the inside-edge offset lands on the painted yellow line on th
 turns, and the lap reads 4,011.5 m against a published 4,023 m. Talladega is the next candidate for the same
 treatment.
 
+### Traced from the inside edge (Martinsville)
+
+Martinsville's `highway=raceway` ring does close (827 m), but checked against NAIP imagery it is centred on
+the straights and balloons 10-18 m wide at both turn apexes — a 16-node sketch of each half. Its inside edge is
+better mapped: two `barrier=wall` ways (448514914, 448514913) follow the pit wall and the yellow line round
+both turns, and the one gap (turn 3 exit onto the back stretch) is filled by way `-1` in
+`Tools/osm/Martinsville.json`, read off the yellow line's pixels in the imagery. `trace_from_wall.py --inner`
+joins them and offsets 7.5 m outward (15 m surface, measured wall to pit wall on both straights). The outer
+offset lands on the outside wall in both turns. The centreline is 787 m against a published 846 m; the
+importer scales it up to the published lap as it does every trace. Pit road is the front-stretch run of
+mapped way 402168723 (the real one wraps the whole infield; the game's pit road is one straight).
+
 ## What a trace cannot tell you
 
 **Banking** is not recorded in OSM at all, and **width** almost never is for raceways. Both still come from

@@ -174,7 +174,11 @@ public static class OsmTrackImporter
         List<LapGeometry.Piece> lap;
         if (trace.segmentation == "curvature")
         {
-            lap = OsmTrackGeometry.SegmentByCurvature(points);
+            // The smoothing window scales with the lap: 120 m suits Daytona's 4 km, but on Martinsville's 0.8 km
+            // it is half a turn and smeared both corners down the straights.
+            float traced = 0f;
+            for (int i = 0; i < points.Count; i++) traced += Vector2.Distance(points[i], points[(i + 1) % points.Count]);
+            lap = OsmTrackGeometry.SegmentByCurvature(points, windowMetres: Mathf.Min(120f, traced * 0.03f));
             LapGeometry.NormaliseTurnAngles(lap);
             readings.Append("constant-curvature runs");
         }
@@ -374,7 +378,7 @@ public static class OsmTrackImporter
             return best;
         }
 
-        var radii = new[] { 250f, 200f, 160f, 120f, 90f, 60f, 40f };
+        var radii = new[] { 250f, 200f, 160f, 120f, 90f, 60f, 40f, 30f, 25f };
         if (!PitChordFit.TryFitToLine(poseAt, lap, 1f, first, last - first, Nearest(first), Nearest(last), 400f,
                                       radii, out var road))
             return $"; mapped pit lane would not fit (trace laid over the lap to {misfit:0.#} m) - pit lane left alone";

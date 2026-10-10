@@ -382,6 +382,27 @@ scene-wide `wallSide` on the crew, autograph-fan and sponsor-rep spawners is rea
 Re-run the menu item after regenerating Daytona. Do not follow it with an overwriting `Dress Selected
 Package`, which regenerates the paddock pocket from the pit lane.
 
+## Martinsville
+
+Authored the same way: `Draftmaster > Tracks > Martinsville > Author Martinsville (Watkins Glen Blueprint)`.
+
+**Geometry is traced from the inside edge.** OSM's raceway ring at Martinsville closes but runs 10-18 m wide
+of both turn apexes; its two inside `barrier=wall` ways follow the pit wall and the yellow line, so
+`Tools/trace_from_wall.py --inner` offsets those outward by half the 15 m surface (the turn 3 exit gap is
+filled from NAIP imagery, way `-1` in `Tools/osm/Martinsville.json`). Detail in `Assets/TrackTraces/README.md`.
+The importer's curvature window now scales with the lap (3%, capped at Daytona's 120 m) — 120 m on an 850 m
+lap smeared both turns down the straights. Pit road is fitted to the mapped front-stretch pit lane (r30 arcs;
+25 and 30 m radii were added to the fit for short tracks), so it is in the infield and the outside wall is
+unbroken; the infield wall stays (Martinsville has one) with gaps where pit road crosses it.
+
+**The paddock is an infield layout, not a rigid copy.** Watkins' paddock is 470 x 76 m; Martinsville's infield
+behind pit road is ~254 x 83. So the garage lot box is a 44 m band along pit road, the motorhome box fills the
+band behind it to the back-stretch clearance (40 places for 40), both as long as the infield is clear at that
+depth, and the walkable boundary and paddock tarmac are that clear infield. Watkins' key-area strip (the 41 m
+ahead of its first lot box) keeps its size at the matching end of pit road, the lots stop short of it, and the
+rest of Watkins' along-pit-road offsets are squeezed into what is left. Same rule as Daytona: re-run the menu
+item after regenerating; never follow it with an overwriting `Dress Selected Package`.
+
 ## Building the whole calendar
 
 `Draftmaster > Tracks > Build All Calendar Tracks` does layout, package and dressing for all 37 generated
