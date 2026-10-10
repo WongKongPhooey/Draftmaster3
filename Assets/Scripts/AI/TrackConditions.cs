@@ -113,8 +113,18 @@ public static class TrackConditions
         }
     }
 
-    // Effective grip for AI-driven cars: global effective grip × AI-only bonus.
-    public static float AiEffective => Effective * AiGripMultiplier;
+    // A plated superspeedway is raced on equal cars: the plate gives every car the same top speed and the draft
+    // decides the race, so the AI's power and grip bonuses (which elsewhere make up for it not driving as well
+    // as a person) are nothing but a straight-line advantage there - they let it pull back up to the plate and
+    // into a tow faster than the player's car can. RestrictorPlate already solves the turns' grip for the
+    // player's car, so the AI still holds them flat out without its bonus.
+    public static bool AiParity => PlateMph > 0f;
+
+    // The AI's engine-power (and envelope-stretch) multiplier: AiPaceMultiplier, or 1 on a plated track.
+    public static float AiPowerScale => AiParity ? 1f : AiPaceMultiplier;
+
+    // Effective grip for AI-driven cars: global effective grip × AI-only bonus (none on a plated track).
+    public static float AiEffective => AiParity ? Effective : Effective * AiGripMultiplier;
 
     public static void Reset()
     {

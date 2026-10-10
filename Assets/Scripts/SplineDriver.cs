@@ -195,9 +195,11 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
     public float UntacticalLateral => lateralOffset + _lineLatSmoothed;
 
     // The braking this car's decel curve gives at a speed (mph/s), with the same pace stretch UpdateSpeedToward uses.
+    // On a plated track the car itself runs the stock envelope (TrackConditions.AiParity), so its braking is
+    // planned on the stock curve too.
     public float BrakingMphPerSecAt(float mph)
     {
-        float stretch = Mathf.Max(1f, paceMultiplier);
+        float stretch = TrackConditions.AiParity ? 1f : Mathf.Max(1f, paceMultiplier);
         return SampleDecel(mph / stretch) * stretch * MpsToMph;
     }
 

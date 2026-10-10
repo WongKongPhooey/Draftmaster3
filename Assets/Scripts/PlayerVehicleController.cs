@@ -627,7 +627,8 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         // Above 1 it also STRETCHES the envelope (top-speed clamp raised, accel/brake curves sampled at the
         // pace-normalised speed) — otherwise the hard _vx clamp pins AI to the authored top speed and the pace
         // knob never reaches the straights.
-        float aiPower = externalInput ? TrackConditions.AiPaceMultiplier : 1f;
+        // On a plated superspeedway this is 1 and the AI runs the player's exact envelope (TrackConditions.AiParity).
+        float aiPower = externalInput ? TrackConditions.AiPowerScale : 1f;
         float aiStretch = Mathf.Max(1f, aiPower);
         float topMps = (vehicleInfo.topSpeed / 2.237f) * (1f - dmg * damageTopSpeedLoss) * aiStretch;
         // Restrictor plate (superspeedways): the same solo top speed for every car, AI and human, under what the
