@@ -28,7 +28,7 @@ public static class PhoneStyles
     // Played on a real phone or tablet (or the Device Simulator). The home tiles are what you read at a glance,
     // and at half the kit's scale their type is a couple of millimetres tall on a handset — so there they draw
     // bigger. A pad plugged into a phone is still a phone-sized screen, so this ignores the input device.
-    public static bool Handheld => UnityEngine.Device.Application.isMobilePlatform;
+    public static bool Handheld => PixelGUI.Handheld;
 
     // Home-screen tile type: the app name and the line under it. Same as Heading / DataDim on a desktop; on a
     // handheld the name doubles and the subtitle goes up one whole step, both still whole multiples of their

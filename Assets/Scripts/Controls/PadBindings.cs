@@ -44,7 +44,7 @@ namespace Draftmaster.Controls
         public const PadButton Run = PadButton.LeftShoulder;         // Left Shift
         public const PadButton Phone = PadButton.Select;             // P
         public const PadButton TravelThere = PadButton.North;        // T
-        public const PadButton RecallObjective = PadButton.DpadUp;   // Q
+        public const PadButton RecallObjective = PadButton.DpadUp;   // Tab
         public const PadButton WeekendSheet = PadButton.DpadDown;    // F10
         public const PadButton WatchPrevCar = PadButton.DpadLeft;    // , (crew chief only)
         public const PadButton WatchNextCar = PadButton.DpadRight;   // . (crew chief only)
@@ -110,14 +110,15 @@ namespace Draftmaster.Controls
             new Shortcut("Run", "LEFT SHIFT", Run, Context.OnFoot, "Left hook"),
             new Shortcut("Phone", "P", Phone, Context.OnFoot),
             // Travel stands down while the player is sat in a stand.
-            new Shortcut("Travel there", "T", TravelThere, Context.OnFoot, "Leave seat"),
-            new Shortcut("Show objective", "Q", RecallObjective, Context.OnFoot),
+            new Shortcut("Fast travel", "T", TravelThere, Context.OnFoot, "Leave seat"),
+            // Tab is also the timing tower's hold; that is a hold and this a press, and both only show information.
+            new Shortcut("Show / hide objective", "TAB", RecallObjective, Context.OnFoot),
             new Shortcut("Weekend sheet", "F10", WeekendSheet, Context.OnFoot),
             // Only read while the player is the crew chief on the pit wall.
             new Shortcut("Watch previous car", ",", WatchPrevCar, Context.OnFoot),
             new Shortcut("Watch next car", ".", WatchNextCar, Context.OnFoot),
 
-            new Shortcut("Leave seat", "E", LeaveSeat, Context.Seated, "Travel there"),
+            new Shortcut("Leave seat", "E", LeaveSeat, Context.Seated, "Fast travel"),
             new Shortcut("Live timing", "F11", LiveTiming, Context.Seated, "Crew chief", "Shove"),
 
             new Shortcut("Shove", "SPACE", Shove, Context.Fight, "Crew chief", "Live timing"),

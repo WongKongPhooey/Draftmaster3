@@ -95,6 +95,7 @@ public class TitleScreenUI : MonoBehaviour
         IronOvalScanlines.Ensure();
 
         EnsureEventSystem();
+        if (Mouse.current != null) _lastMouse = Mouse.current.position.ReadValue();
 
         RebuildOrder();     // the order the arrow keys walk the column in
 
@@ -102,7 +103,7 @@ public class TitleScreenUI : MonoBehaviour
         {
             var row = rows[i];
             row.available = IsAvailable(row);
-            HookPointer(row, i);
+            ClearPointerTriggers(row);
         }
 
         InstallCursorBlinks();
@@ -200,6 +201,8 @@ public class TitleScreenUI : MonoBehaviour
     {
         if (_loading) return;
         if (MenuInputBlocked) return;
+
+        PollPointer();
 
         var kb = Keyboard.current;
         if (kb != null)
@@ -505,28 +508,79 @@ public class TitleScreenUI : MonoBehaviour
         _statusUntil = string.IsNullOrEmpty(text) ? 0f : Time.unscaledTime + StatusSeconds;
     }
 
-    // Mouse: hovering a row selects it, clicking confirms — the same two states the keyboard drives,
-    // so there is no separate pointer look to keep in sync.
-    void HookPointer(Row row, int index)
+    // Mouse: hovering a row selects it, clicking confirms — the same two states the keyboard drives, so there
+    // is no separate pointer look to keep in sync. A finger is the same click without the hover.
+    //
+    // Read straight off the devices and hit-tested against the rows here, rather than through uGUI's
+    // EventSystem. The EventTrigger route was wired correctly and still did nothing for a mouse in the
+    // editor's Game view once a Device Simulator tab had been open (it switches the real mouse off — see
+    // EditorPlayView, which now switches it back on), so a click on PC fell through while taps worked. A press and a
+    // release on the same row is a click, so dragging off a row cancels it, as a button would.
+    int _pressRow = -1;
+    int _clickedFrame = -1;
+    // Where the mouse was last seen: only a mouse that MOVES picks a row, so one resting over the menu when
+    // the scene loads doesn't override the starting row.
+    Vector2 _lastMouse;
+
+    void PollPointer()
+    {
+        var mouse = Mouse.current;
+        if (mouse != null)
+        {
+            Vector2 p = mouse.position.ReadValue();
+            if (p != _lastMouse)
+            {
+                _lastMouse = p;
+                int over = RowAt(p);
+                if (over >= 0) Select(over);
+            }
+            if (mouse.leftButton.wasPressedThisFrame) _pressRow = RowAt(p);
+            if (mouse.leftButton.wasReleasedThisFrame) Release(RowAt(p));
+        }
+
+        var touch = Touchscreen.current;
+        if (touch != null)
+        {
+            var finger = touch.primaryTouch;
+            Vector2 p = finger.position.ReadValue();
+            if (finger.press.wasPressedThisFrame) _pressRow = RowAt(p);
+            if (finger.press.wasReleasedThisFrame) Release(RowAt(p));
+        }
+    }
+
+    void Release(int row)
+    {
+        int pressed = _pressRow;
+        _pressRow = -1;
+        if (row < 0 || row != pressed) return;
+        // A click in the Device Simulator can arrive as both a mouse and a touch release in one frame.
+        if (_clickedFrame == Time.frameCount) return;
+        _clickedFrame = Time.frameCount;
+        Select(row);
+        Confirm();
+    }
+
+    // The row under a screen point, or -1.
+    int RowAt(Vector2 screen)
+    {
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            if (row == null || row.rect == null || !row.rect.gameObject.activeInHierarchy) continue;
+            var canvas = row.rect.GetComponentInParent<Canvas>();
+            Camera cam = canvas != null && canvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.rootCanvas.worldCamera : null;
+            if (RectTransformUtility.RectangleContainsScreenPoint(row.rect, screen, cam)) return i;
+        }
+        return -1;
+    }
+
+    // Scenes saved while the menu was hooked through EventTriggers still carry them. Emptied, so a click
+    // can't be answered twice (once there, once by PollPointer) on a setup where that route does work.
+    static void ClearPointerTriggers(Row row)
     {
         if (row.rect == null) return;
-
         var trigger = row.rect.GetComponent<EventTrigger>();
-        if (trigger == null) trigger = row.rect.gameObject.AddComponent<EventTrigger>();
-        trigger.triggers.Clear();
-
-        var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-        enter.callback.AddListener(_ => Select(index));
-        trigger.triggers.Add(enter);
-
-        var click = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-        click.callback.AddListener(_ => { Select(index); Confirm(); });
-        trigger.triggers.Add(click);
-
-        // The row needs something raycastable under it or the pointer never lands on it.
-        var hit = row.rect.GetComponent<Image>();
-        if (hit == null) hit = row.rect.gameObject.AddComponent<Image>();
-        hit.color = new Color(0f, 0f, 0f, 0f);
-        hit.raycastTarget = true;
+        if (trigger != null) trigger.triggers.Clear();
     }
 }

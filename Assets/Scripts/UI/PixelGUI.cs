@@ -80,7 +80,24 @@ public static class PixelGUI
     // same two sizes of type — see Draftmaster.Controls.HandheldType. Read at runtime rather than behind
     // #if UNITY_ANDROID so the simulator shows the real sizing, and deliberately blind to the input device:
     // a pad plugged into a phone is still a phone-sized screen.
-    public static bool Handheld => UnityEngine.Device.Application.isMobilePlatform;
+    //
+    // In the editor it is whichever view the game is played in (EditorPlayView): the Simulator tab is the
+    // phone and the Game tab the PC, whatever the build target — so the project can stay on Android for Patch
+    // And Run. UnityEngine.Device alone can't be trusted there: a Simulator tab left open keeps reporting a
+    // phone to the Game view. Everything that asks "is this a phone?" asks here, so the touch controls, the
+    // type sizes and the prompts can never disagree about it.
+    public static bool Handheld
+    {
+        get
+        {
+#if UNITY_EDITOR
+            return EditorPlayView.SimulatorShowing;
+#else
+            var p = Application.platform;
+            return p == RuntimePlatform.Android || p == RuntimePlatform.IPhonePlayer;
+#endif
+        }
+    }
 
     // Scales a pixel measurement authored at 1x.
     public static float Px(float baseline) => baseline * Scale;
@@ -639,6 +656,9 @@ public static class PixelGUI
 
     const float ActionGlyphPx = 16f;
 
+    // Clear space between the button's frame and the glyph, so the keycap's ink border doesn't sit on it.
+    static float ActionLeadPx() => Px(4f);
+
     // How wide a button with this label is, so a caller can lay a row of them out before drawing any.
     public static Vector2 ActionButtonSize(string key, string label)
     {
@@ -648,7 +668,7 @@ public static class PixelGUI
             ? 0f : Mathf.Ceil(_label.CalcSize(new GUIContent(key ?? "")).x) + Px(10f));
         float text = Mathf.Ceil(Body.CalcSize(new GUIContent(label)).x);
         float h = Mathf.Max(Px(ActionGlyphPx), Body.fontSize + Px(4f)) + inset * 2f + Px(8f);
-        return new Vector2(inset * 2f + Px(8f) + glyph + Px(6f) + text, h);
+        return new Vector2(inset * 2f + Px(8f) + ActionLeadPx() + glyph + Px(6f) + text, h);
     }
 
     public static bool ActionButton(Rect r, ActionIcon icon, string key, PadButton pad, string label)
@@ -659,7 +679,7 @@ public static class PixelGUI
 
         float size = Px(ActionGlyphPx);
         float gy = Mathf.Round(c.y + (c.height - size) * 0.5f);
-        float x = c.x;
+        float x = c.x + ActionLeadPx();
 
         Sprite padIcon = pad != PadButton.None && InputGlyphs.UsingGamepad ? InputGlyphs.Icon(pad) : null;
         if (padIcon != null)

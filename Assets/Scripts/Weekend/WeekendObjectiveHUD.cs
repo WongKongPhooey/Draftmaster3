@@ -44,10 +44,11 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // 0 = fully off the top, 1 = fully down. Lerped, so showing and hiding are the same movement.
     float _slide;
 
-    // Asking for it back. Every F key in the game is taken (F1-F12 all answer something), so the recall is
-    // Q — the other way in is clicking or tapping the marker itself. On a pad it is d-pad up: the strip comes
-    // down from the top.
-    public const Key RecallKey = Key.Q;
+    // Asking for it back: Tab, or d-pad up on a pad, toggles the strip down and back up (ToggleNow). The tab it leaves
+    // at the top of the screen (DrawRecallTab) says which, and clicking or tapping it, or the marker itself,
+    // works too. Tab also holds the timing tower open during a live session; both are "show me where I
+    // stand", and the tower's is a hold where this is a press.
+    public const Key RecallKey = Key.Tab;
 
     // What the strip is drawing, worked out once a frame in Update.
     //
@@ -118,7 +119,14 @@ public class WeekendObjectiveHUD : MonoBehaviour
         if (Instance != null) Instance.RevealNow();
     }
 
-    void RevealNow() => _hideAt = Time.unscaledTime + Mathf.Max(0.5f, showSeconds);
+    // Never shortens a strip the player has pinned open with the recall key.
+    void RevealNow() => _hideAt = Mathf.Max(_hideAt, Time.unscaledTime + Mathf.Max(0.5f, showSeconds));
+
+    bool Showing => Time.unscaledTime < _hideAt;
+
+    // Tab / d-pad up: down if it's away, up if it's down. Brought down this way it stays until pressed
+    // again rather than timing out — the player asked for it, so the player puts it away.
+    void ToggleNow() => _hideAt = Showing ? 0f : float.PositiveInfinity;
 
     void OnDestroy() { if (Instance == this) Instance = null; }
 
@@ -151,7 +159,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         if ((kb != null && kb[TravelKey].wasPressedThisFrame) || PadInput.PressedOnFoot(PadBindings.TravelThere))
             TravelThere();
         if ((kb != null && kb[RecallKey].wasPressedThisFrame) || PadInput.PressedOnFoot(PadBindings.RecallObjective))
-            RevealNow();
+            ToggleNow();
     }
 
     // Announce a new booking, and move the strip toward wherever it should be.
@@ -167,7 +175,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         }
         if (_shown == null) _announcedId = "";
 
-        float target = (Available && Time.unscaledTime < _hideAt) ? 1f : 0f;
+        float target = (Available && Showing) ? 1f : 0f;
         float step = Time.unscaledDeltaTime / Mathf.Max(0.01f, slideSeconds);
         _slide = Mathf.MoveTowards(_slide, target, step);
     }
@@ -217,13 +225,11 @@ public class WeekendObjectiveHUD : MonoBehaviour
                                  ? "You're here — tap " + WeekendAppointment.TargetLabel() + " to " + Verb(activity)
                                  : "You're here — press " + InputGlyphs.Label("E", PadBindings.Interact) + " to " + Verb(activity))
                 : $"{Capitalise(intoTheRV ? WeekendVenues.Directions(WeekendVenue.Motorhome) : WeekendVenues.Directions(WeekendVenues.For(activity.kind)))}  ·  {metres} m";
+            // TRAVEL THERE is its own button beside these lines, and the tab left at the top of the screen
+            // names the recall key, so the footer doesn't.
             _footerText = here
                 ? activity.Clock + "  ·  " + WeekendAppointment.TargetLabel()
-                // TRAVEL THERE is its own button under this line (DrawTravelButton). On touch there is no
-                // recall key to name — the tab at the top of the screen does that job — so AGAIN goes too.
-                : InputGlyphs.UsingTouch
-                    ? activity.Clock
-                    : $"{activity.Clock}  ·  [{InputGlyphs.Label(RecallKey.ToString().ToUpperInvariant(), PadBindings.RecallObjective)}] AGAIN";
+                : activity.Clock;
         }
     }
 
@@ -287,9 +293,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
                     ? "You're here — tap the satnav to plan the drive"
                     : "You're here — press " + InputGlyphs.Label("E", PadBindings.Interact) + " to plan the drive";
         string footer = nextName != null ? "Next race: " + nextName : "The weekend is done";
-        _footerText = InputGlyphs.UsingTouch || here
-            ? footer
-            : $"{footer}  ·  [{InputGlyphs.Label(RecallKey.ToString().ToUpperInvariant(), PadBindings.RecallObjective)}] AGAIN";
+        _footerText = footer;
         return true;
     }
 
@@ -493,37 +497,65 @@ public class WeekendObjectiveHUD : MonoBehaviour
         }
     }
 
-    const string TravelLabel = "TRAVEL THERE";
+    const string TravelLabel = "FAST TRAVEL";
 
-    // A phone has no Q and no d-pad, and tapping the marker only works while the marker is on screen. So once
-    // the strip has gone back up it leaves a small tab at the top centre, where it went — a down arrow that
-    // pulls it back down. Touch only: keyboard and pad already have their recall key.
+    // Once the strip has gone back up it leaves a small tab at the top centre, where it went, that pulls it
+    // back down. It says how on the device in hand: a down arrow on a phone (tap it — a phone has no key, and
+    // tapping the marker only works while the marker is on screen), the d-pad up icon on a pad, and TAB on a
+    // keyboard. Clicking it works on all three.
     void DrawRecallTab()
     {
-        if (!InputGlyphs.UsingTouch) return;
         if (PhoneUI.IsOpen || RacePauseMenu.IsPaused || NPCInteractable.AnyConversationActive) return;
+        EnsureStyles();
 
-        float w = PixelGUI.Px(28f), h = PixelGUI.Px(24f);
+        bool touch = InputGlyphs.UsingTouch;
+        Sprite padIcon = !touch && InputGlyphs.UsingGamepad ? InputGlyphs.Icon(PadBindings.RecallObjective) : null;
+        string text = touch || padIcon != null ? null
+            : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(PadBindings.RecallObjective)
+            : RecallKey.ToString().ToUpperInvariant();
+        var content = text != null ? new GUIContent(text) : null;
+
+        float h = PixelGUI.Px(24f);
+        float w = content != null ? Mathf.Max(PixelGUI.Px(28f), Mathf.Ceil(_footer.CalcSize(content).x) + PixelGUI.Px(12f))
+                                  : PixelGUI.Px(28f);
         var tab = new Rect(Mathf.Round((Screen.width - w) * 0.5f), 0f, w, h);
         PixelGUI.Fill(tab, PixelGUI.PlateDeep);
         PixelGUI.Fill(new Rect(tab.x, tab.yMax - PixelGUI.Px(1f), tab.width, PixelGUI.Px(1f)), PixelGUI.Gold);
         PixelGUI.Fill(new Rect(tab.x, tab.y, PixelGUI.Px(1f), tab.height), PixelGUI.Gold);
         PixelGUI.Fill(new Rect(tab.xMax - PixelGUI.Px(1f), tab.y, PixelGUI.Px(1f), tab.height), PixelGUI.Gold);
 
-        // A down chevron in whole kit pixels: rows 7, 5, 3, 1 wide.
-        float cx = tab.center.x, y = tab.y + PixelGUI.Px(10f);   // centred in the tab, above its gold rim
-        for (int row = 0; row < 4; row++)
+        if (padIcon != null)
         {
-            float rw = PixelGUI.Px(7f - row * 2f);
-            PixelGUI.Fill(new Rect(Mathf.Round(cx - rw * 0.5f), y + PixelGUI.Px(row), rw, PixelGUI.Px(1f)),
-                          PixelGUI.Gold);
+            float s = PixelGUI.Px(16f);
+            PixelGUI.DrawSprite(new Rect(Mathf.Round(tab.center.x - s * 0.5f), tab.y + PixelGUI.Px(3f), s, s), padIcon);
+        }
+        else if (content != null)
+        {
+            var wasAlign = _footer.alignment;
+            var wasColour = _footer.normal.textColor;
+            _footer.alignment = TextAnchor.MiddleCenter;
+            _footer.normal.textColor = PixelGUI.Gold;
+            GUI.Label(new Rect(tab.x, tab.y, tab.width, tab.height - PixelGUI.Px(1f)), content, _footer);
+            _footer.normal.textColor = wasColour;
+            _footer.alignment = wasAlign;
+        }
+        else
+        {
+            // A down chevron in whole kit pixels: rows 7, 5, 3, 1 wide.
+            float cx = tab.center.x, y = tab.y + PixelGUI.Px(10f);   // centred in the tab, above its gold rim
+            for (int row = 0; row < 4; row++)
+            {
+                float rw = PixelGUI.Px(7f - row * 2f);
+                PixelGUI.Fill(new Rect(Mathf.Round(cx - rw * 0.5f), y + PixelGUI.Px(row), rw, PixelGUI.Px(1f)),
+                              PixelGUI.Gold);
+            }
         }
 
-        // The finger is bigger than the art: the hit area runs well past the tab on every side it can.
+        // The finger is bigger than the art: the hit area runs well past the tab on every side it can. A
+        // button rather than a bare tap test so a mouse click counts too; it also keeps the stick and NPC
+        // taps off it.
         var hit = new Rect(tab.x - PixelGUI.Px(10f), 0f, tab.width + PixelGUI.Px(20f), tab.height + PixelGUI.Px(10f));
-        if (Event.current.type == EventType.Repaint)
-            TouchWalkControls.Claim(GUIUtility.GUIToScreenRect(hit));   // the stick and NPC taps leave it alone
-        if (TouchTaps.Hit(hit)) RevealNow();
+        if (TouchTaps.Button(hit, GUIContent.none, GUIStyle.none)) RevealNow();
     }
 
     // The height one line of a style actually occupies, leading included.

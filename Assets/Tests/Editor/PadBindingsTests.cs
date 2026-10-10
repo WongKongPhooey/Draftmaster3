@@ -43,7 +43,7 @@ public class PadBindingsTests
     {
         var keys = new HashSet<string>();
         foreach (var s in PadBindings.All) keys.Add(s.keyboard);
-        foreach (var k in new[] { "E", "P", "F1", "F2", "F3", "F4", "F6", "F10", "F11", "C", "V", "L", "T", "Q",
+        foreach (var k in new[] { "E", "P", "F1", "F2", "F3", "F4", "F6", "F10", "F11", "C", "V", "L", "T",
                                   "ESC", "TAB", "LEFT SHIFT" })
             Assert.IsTrue(keys.Contains(k), $"{k} has no pad alternative in PadBindings.");
     }

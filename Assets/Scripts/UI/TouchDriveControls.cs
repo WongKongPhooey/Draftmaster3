@@ -28,8 +28,8 @@ public class TouchDriveControls : MonoBehaviour
     GUIStyle _label;
     GUIStyle _labelFrom;
 
-    // The wheel: a round rim with a crossbar and a red top-centre stripe, so the lock reads at a glance. Only
-    // its top shows, the rest running off the bottom of the screen. Loaded from Resources because this
+    // The wheel: a round rim with a crossbar and a red top-centre stripe, so the lock reads at a glance. All of
+    // it shows, standing on the bottom margin beside the pedals. Loaded from Resources because this
     // component wires itself up and has no inspector to hold a sprite.
     const string WheelResource = "UI/steering-wheel";
     static Texture2D _wheelArt;
@@ -72,6 +72,13 @@ public class TouchDriveControls : MonoBehaviour
     public static float PedalsTopFromBottom =>
         Active ? UnityEngine.Device.Screen.height - (_layout.brake.y - TouchLayout.Slop * _layout.unit) : 0f;
 
+    // How far up from the bottom of the screen any of the controls reach — the pedals or, when it is the one
+    // steering, the wheel, which stands taller than them. What a strip centred along the bottom edge clears.
+    public static float ControlsTopFromBottom =>
+        Active && !SteerButtons
+            ? Mathf.Max(PedalsTopFromBottom, UnityEngine.Device.Screen.height - _layout.wheel.y)
+            : PedalsTopFromBottom;
+
     // Where the crew chief's headset sits while the phone is held upright: in the top row, right of the TV
     // button and the size of pause. Screen pixels, top-left origin; only meaningful while Active.
     public static Rect CrewChiefSlot => ToRect(_layout.crewChief);
@@ -79,7 +86,7 @@ public class TouchDriveControls : MonoBehaviour
     // A device the player drives with their thumbs: a phone or tablet, or the editor's Device Simulator
     // pretending to be one.
     public static bool TouchPlatform =>
-        UnityEngine.Device.Application.isMobilePlatform && Touchscreen.current != null;
+        PixelGUI.Handheld && Touchscreen.current != null;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Install()
@@ -221,32 +228,28 @@ public class TouchDriveControls : MonoBehaviour
     {
         LoadWheel();
         var wheel = ToRect(_layout.wheel);
-        var shown = ToRect(_layout.wheelShown);
         float alpha = _state.Steering ? 0.95f : 0.7f;
 
-        // Clipped to the part on screen; turned about the hub, which sits below the clip's bottom edge.
-        GUI.BeginGroup(shown);
-        var inGroup = new Rect(wheel.x - shown.x, wheel.y - shown.y, wheel.width, wheel.height);
+        // The whole wheel, turned about its hub.
         var saved = GUI.matrix;
-        GUIUtility.RotateAroundPivot(_state.WheelAngle, inGroup.center);
+        GUIUtility.RotateAroundPivot(_state.WheelAngle, wheel.center);
         var was = GUI.color;
         if (_wheelArt != null)
         {
             GUI.color = new Color(1f, 1f, 1f, alpha);
-            GUI.DrawTexture(inGroup, _wheelArt, ScaleMode.ScaleToFit);
+            GUI.DrawTexture(wheel, _wheelArt, ScaleMode.ScaleToFit);
         }
         else
         {
-            PixelGUI.Fill(inGroup, Fade(PixelGUI.PlateDeep, 0.55f));
+            PixelGUI.Fill(wheel, Fade(PixelGUI.PlateDeep, 0.55f));
             float u = _layout.unit;
-            PixelGUI.Fill(new Rect(inGroup.center.x - 2f * u, inGroup.y, 4f * u, inGroup.height * 0.15f), Fade(PixelGUI.Gold, alpha));
+            PixelGUI.Fill(new Rect(wheel.center.x - 2f * u, wheel.y, 4f * u, wheel.height * 0.15f), Fade(PixelGUI.Gold, alpha));
         }
         GUI.color = was;
         GUI.matrix = saved;
-        GUI.EndGroup();
 
         if (!_state.Steering)
-            Label(new Rect(shown.x, shown.y - PixelGUI.LineH, shown.width, PixelGUI.LineH), "STEER", 0.7f);
+            Label(new Rect(wheel.x, wheel.y - PixelGUI.LineH, wheel.width, PixelGUI.LineH), "STEER", 0.7f);
     }
 
     void DrawPedal(TouchRect r, string text, bool pressed, Color tint)

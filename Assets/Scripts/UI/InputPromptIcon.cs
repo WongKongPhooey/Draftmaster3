@@ -87,8 +87,9 @@ public static class InputPromptIcon
     }
 
     // Every key prompt is this fraction of the screen's height, wherever it is and whatever it hangs off.
-    // 0.3 m under the paddock's on-foot camera (3.5 m half-height), which is where prompts were tuned.
-    public const float ScreenHeightFraction = 0.043f;
+    // 0.6 m under the paddock's on-foot camera (3.5 m half-height). Was half that (0.3 m), which read as
+    // too small to notice from across the RV or the paddock.
+    public const float ScreenHeightFraction = 0.086f;
 
     // How tall, in world units at `worldPos`, a prompt should be so it covers ScreenHeightFraction of the
     // screen — rounded to a whole number of screen pixels per art pixel so the pixel keycap stays crisp.

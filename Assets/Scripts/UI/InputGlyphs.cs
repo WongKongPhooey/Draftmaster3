@@ -36,7 +36,7 @@ public static class InputGlyphs
     // pretending to be one) with no pad in their hands. Prompts then show what to do with a finger rather
     // than a key nobody has.
     public static bool UsingTouch =>
-        !UsingGamepad && UnityEngine.Device.Application.isMobilePlatform && Touchscreen.current != null;
+        !UsingGamepad && PixelGUI.Handheld && Touchscreen.current != null;
 
     public static PadFamily Family => UsingGamepad ? _family : PadFamily.Xbox;
 
@@ -167,7 +167,7 @@ public static class InputGlyphs
         // does — in the editor that is switching the Device Simulator on, on a phone it is the only state
         // there is. Computed after _padActive is settled, because thumbs only win when no pad is in use.
         bool touch = !(pad && gp != null) &&
-                     UnityEngine.Device.Application.isMobilePlatform && Touchscreen.current != null;
+                     PixelGUI.Handheld && Touchscreen.current != null;
 
         if (pad != _padActive || family != _family || touch != _touchActive)
         {
