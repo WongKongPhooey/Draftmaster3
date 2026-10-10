@@ -14,7 +14,9 @@ using Debug = UnityEngine.Debug;
 //   1. The version's last number goes up by one (0.3.8 -> 0.3.9), and the Android version code with it, saved
 //      straight into ProjectSettings so the title screen (Application.version) shows it.
 //   2. The Run Device in the Android build settings is read. Only when it is the HONOR (model FCP_N49) on a
-//      wireless adb connection, and adb can actually see it right now, does anything get built.
+//      wireless adb connection, and adb can actually see it right now, does anything get built. A Run Device
+//      left on the default (or anything not wireless) is pointed at the HONOR when adb can see it over
+//      wireless debugging, rather than skipping the build.
 //   3. Patch And Run when a patch will do; Build And Run when it will not (the caller asks for a full build when
 //      the change touched packages, project settings or native plugins; a patch also needs a development APK
 //      build, so an App Bundle or a non-development setup always gets the full one). A patch that fails is
@@ -34,6 +36,7 @@ public static class PhoneDeploy
     class Status
     {
         public string request;     // "patch" or "full", as asked
+        public bool bump = true;   // false: deploy the version as it stands
         public string state;       // "working", "deployed", "skipped", "failed"
         public string mode;        // what was actually built: "patch", "full" or ""
         public string version;
@@ -50,9 +53,13 @@ public static class PhoneDeploy
     [MenuItem("Draftmaster/Build/After Task: Bump Version + Build And Run On Phone", priority = 201)]
     static void AfterTaskFull() => Schedule("full");
 
-    static void Schedule(string request)
+    // For a deploy that has to be retried after the bump already happened (a phone that wasn't the Run Device).
+    [MenuItem("Draftmaster/Build/Patch And Run On Phone (No Version Bump)", priority = 202)]
+    static void PatchNoBump() => Schedule("patch", bump: false);
+
+    static void Schedule(string request, bool bump = true)
     {
-        var s = new Status { request = request, state = "working", startedAt = Now(), message = "queued" };
+        var s = new Status { request = request, bump = bump, state = "working", startedAt = Now(), message = "queued" };
         Write(s);
         // Out of the menu call, so the MCP request that fired it returns before the build blocks the editor.
         EditorApplication.delayCall += () => Run(s);
@@ -68,7 +75,12 @@ public static class PhoneDeploy
                 return;
             }
 
-            BumpVersion(s);
+            if (s.bump) BumpVersion(s);
+            else
+            {
+                s.version = PlayerSettings.bundleVersion;
+                s.versionCode = PlayerSettings.Android.bundleVersionCode;
+            }
 
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
             {
@@ -78,6 +90,16 @@ public static class PhoneDeploy
             }
 
             string device = RunDevice();
+            if (string.IsNullOrEmpty(device) || !IsWireless(device))
+            {
+                string phone = WirelessPhone();
+                if (phone != null)
+                {
+                    Debug.Log($"PhoneDeploy: Run Device was '{device}'; using the {PhoneModel} on {phone}.");
+                    SetRunDevice(phone);
+                    device = phone;
+                }
+            }
             s.device = device;
             if (string.IsNullOrEmpty(device) || !IsWireless(device))
             {
@@ -191,6 +213,48 @@ public static class PhoneDeploy
         var prop = typeof(EditorUserBuildSettings).GetProperty("androidCurrentDeploymentTargetId",
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         return prop != null ? prop.GetValue(null) as string : null;
+    }
+
+    // Point the Run Device dropdown at a device. Best effort: if this Unity has no setter, the build's own
+    // AutoRunPlayer still goes to the first connected device, which is the phone when it is the only one.
+    static void SetRunDevice(string id)
+    {
+        try
+        {
+            var prop = typeof(EditorUserBuildSettings).GetProperty("androidCurrentDeploymentTargetId",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop != null && prop.CanWrite) prop.SetValue(null, id);
+        }
+        catch (Exception e) { Debug.LogWarning("PhoneDeploy: could not set the Run Device: " + e.Message); }
+    }
+
+    // The HONOR as adb sees it over wireless debugging, or null.
+    static string WirelessPhone()
+    {
+        string output;
+        try
+        {
+            var psi = new ProcessStartInfo(AdbPath(), "devices -l")
+            {
+                UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            using (var p = Process.Start(psi))
+            {
+                output = p.StandardOutput.ReadToEnd();
+                if (!p.WaitForExit(20000)) return null;
+            }
+        }
+        catch { return null; }
+
+        foreach (var line in output.Split('\n'))
+        {
+            var cols = line.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (cols.Length < 2 || cols[1] != "device" || !IsWireless(cols[0])) continue;
+            if (cols.Any(c => string.Equals(c, "model:" + PhoneModel, StringComparison.OrdinalIgnoreCase)))
+                return cols[0];
+        }
+        return null;
     }
 
     // Wireless debugging shows up either as an mDNS name or as a raw ip:port.
