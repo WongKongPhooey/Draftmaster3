@@ -44,9 +44,11 @@ public class TouchDriveTests
             Assert.IsTrue(Inside(l.throttle, l.safe), $"{at}: throttle {l.throttle} runs off the screen");
             Assert.IsTrue(Inside(l.brake, l.safe), $"{at}: brake {l.brake} runs off the screen");
             Assert.IsTrue(Inside(l.pause, l.safe), $"{at}: pause {l.pause} runs off the screen");
-            Assert.IsTrue(Inside(l.wheelShown, l.safe), $"{at}: steering wheel {l.wheelShown} runs off the screen");
-            Assert.AreEqual(l.safe.yMax, l.wheelShown.yMax, 0.01f, $"{at}: the wheel isn't cut off at the bottom of the screen");
-            Assert.GreaterOrEqual(l.wheel.centerY, l.wheelShown.yMax - l.wheel.height * 0.15f, $"{at}: much more than the top of the wheel shows");
+            Assert.IsTrue(Inside(l.wheel, l.safe), $"{at}: steering wheel {l.wheel} runs off the screen");
+            Assert.AreEqual(l.wheel.width, l.wheel.height, 0.01f, $"{at}: the wheel isn't round");
+            Assert.AreEqual(l.safe.yMax - TouchLayout.Margin * l.unit, l.wheel.yMax, 0.01f,
+                            $"{at}: the wheel doesn't stand on the bottom margin like the pedals");
+            Assert.IsFalse(l.wheel.Overlaps(l.brakeHit) || l.wheel.Overlaps(l.throttleHit), $"{at}: the wheel sits on a pedal");
 
             Assert.IsFalse(l.brake.Overlaps(l.throttle), $"{at}: the pedals overlap");
             Assert.IsFalse(l.brakeHit.Overlaps(l.throttleHit), $"{at}: one thumb could press both pedals");
@@ -61,7 +63,7 @@ public class TouchDriveTests
                            $"{at}: pause sits on a pedal");
 
             // Where the wheel is drawn is where a thumb has to land to steer.
-            Assert.IsTrue(Inside(l.wheelShown, l.steerZone), $"{at}: the wheel {l.wheelShown} isn't in the steering zone {l.steerZone}");
+            Assert.IsTrue(Inside(l.wheel, l.steerZone), $"{at}: the wheel {l.wheel} isn't in the steering zone {l.steerZone}");
 
             // The top of the screen is the HUD's (position, speed, lap): not a place a steer can start.
             Assert.GreaterOrEqual(l.steerZone.y, h * 0.2f, $"{at}: steering zone reaches up into the HUD");
@@ -94,7 +96,7 @@ public class TouchDriveTests
 
         Assert.IsTrue(Inside(l.throttle, safe), $"throttle {l.throttle} is under the notch");
         Assert.IsTrue(Inside(l.brake, safe), $"brake {l.brake} is under the notch");
-        Assert.IsTrue(Inside(l.wheelShown, safe), $"steering wheel {l.wheelShown} is under the notch");
+        Assert.IsTrue(Inside(l.wheel, safe), $"steering wheel {l.wheel} is under the notch");
         Assert.GreaterOrEqual(l.steerZone.x, safe.x);
         Assert.AreEqual(safe.centerX, l.pause.centerX, 0.01f);
     }

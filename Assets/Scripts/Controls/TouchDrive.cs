@@ -52,7 +52,6 @@ namespace Draftmaster.Controls
         public const float PedalGap = 8f;         // between brake and throttle
         public const float Slop = 8f;             // how far outside a pedal a thumb still presses it
         public const float WheelSize = 136f;      // the wheel's diameter: as wide as the old steering strip
-        public const float WheelShown = 0.6f;     // how much of the wheel, from the top, is on screen
         public const float WheelLock = 45f;       // degrees either way from straight to full lock
         public const float WheelHub = 0.2f;       // a thumb this close to the hub (fraction of the radius) can't turn it
         public const float PauseSize = 24f;
@@ -62,8 +61,7 @@ namespace Draftmaster.Controls
         public readonly float unit;
 
         public readonly TouchRect steerZone;      // a thumb landing here takes the wheel
-        public readonly TouchRect wheel;          // the whole wheel, hub at its centre; it never moves
-        public readonly TouchRect wheelShown;     // the part of it drawn: the top, cut off at the safe area's bottom
+        public readonly TouchRect wheel;          // the whole wheel, hub at its centre, all of it on screen; it never moves
 
         // Button steering: two pedal-sized buttons in the bottom-left corner, mirroring the pedals.
         public readonly TouchRect steerLeft, steerRight;          // drawn
@@ -125,9 +123,10 @@ namespace Draftmaster.Controls
             float zoneRight = System.Math.Min(safe.x + safe.width * 0.5f, brakeHit.x - gap);
             steerZone = new TouchRect(safe.x, zoneTop, zoneRight - safe.x, safe.yMax - zoneTop);
 
-            float d = WheelSize * u;
-            wheel = new TouchRect(safe.x + m, safe.yMax - d * WheelShown, d, d);
-            wheelShown = new TouchRect(wheel.x, wheel.y, d, d * WheelShown);
+            // The whole wheel, standing on the bottom margin like the pedals. On a short screen it shrinks to
+            // fit under the top of the steering zone rather than reach up into the HUD.
+            float d = System.Math.Min(WheelSize * u, safe.yMax - m - zoneTop);
+            wheel = new TouchRect(safe.x + m, safe.yMax - m - d, d, d);
 
             // The pedals mirrored: left button in the corner, right beside it. The hit areas meet in the middle
             // of the gap and run out to the safe area's edge, but stay inside the steering zone.

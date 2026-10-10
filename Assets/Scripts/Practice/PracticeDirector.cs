@@ -363,7 +363,7 @@ public class PracticeDirector : MonoBehaviour
         // the running order, so the clock sits centred on top of the timing strip (or the pedals) instead.
         if (DriveOrientationController.Portrait)
         {
-            float bottom = LapTimingManager.StripTop ?? (Screen.height - TouchDriveControls.PedalsTopFromBottom);
+            float bottom = LapTimingManager.StripTop ?? (Screen.height - TouchDriveControls.ControlsTopFromBottom);
             box = new Rect(Mathf.Round((Screen.width - w) * 0.5f), bottom - h - PixelGUI.Px(4f), w, h);
         }
         PixelGUI.Panel(box);

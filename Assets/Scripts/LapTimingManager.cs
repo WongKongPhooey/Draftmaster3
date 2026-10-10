@@ -323,7 +323,7 @@ public class LapTimingManager : MonoBehaviour
         // A phone turned upright for the swing camera has the pedals and the wheel along the bottom edge
         // with no gap between them for the strip, so it stands on top of them instead.
         if (DriveOrientationController.Portrait && TouchDriveControls.Active)
-            y = Mathf.Round(Screen.height - TouchDriveControls.PedalsTopFromBottom - h - stripBottomMargin * s);
+            y = Mathf.Round(Screen.height - TouchDriveControls.ControlsTopFromBottom - h - stripBottomMargin * s);
         StripTopY = y;
         _stripDrawnFrame = Time.frameCount;
 
