@@ -36,6 +36,16 @@ public class CartDriveTests
     static Vector2 Step(object drive, Vector2 stick, float dt = Dt) =>
         (Vector2)DriveType.GetMethod("Step").Invoke(drive, new object[] { stick, dt });
 
+    static Vector2 StepToward(object drive, Vector2 stick, float dt = Dt) =>
+        (Vector2)DriveType.GetMethod("StepToward").Invoke(drive, new object[] { stick, dt });
+
+    static Vector2 HoldToward(object drive, Vector2 stick, float seconds)
+    {
+        Vector2 v = Vector2.zero;
+        for (int i = 0; i < Mathf.RoundToInt(seconds / Dt); i++) v = StepToward(drive, stick);
+        return v;
+    }
+
     // Hold a stick for `seconds` worth of fixed steps and hand back the last velocity.
     static Vector2 Hold(object drive, Vector2 stick, float seconds)
     {
@@ -64,6 +74,48 @@ public class CartDriveTests
     static Vector2 EscapeDirection(Vector2 cartPos, Vector2 cartHeading, Vector2 person) =>
         (Vector2)DodgeType.GetMethod("EscapeDirection", BindingFlags.Public | BindingFlags.Static)
             .Invoke(null, new object[] { cartPos, cartHeading, person });
+
+    // --- point to go (touch stick, pad stick) -------------------------------------------------------
+
+    [Test]
+    public void PointToGo_RidesWhereTheStickPoints()
+    {
+        // Parked facing north, stick pushed east: it ends up riding east.
+        var drive = NewDrive(Vector2.up);
+        Vector2 v = HoldToward(drive, Vector2.right, 3f);
+        Assert.Greater(v.x, 1f, "Pushing the stick east did not ride the scooter east.");
+        Assert.AreEqual(0f, v.y, 0.05f, "The scooter rode off somewhere other than where the stick points.");
+    }
+
+    [Test]
+    public void PointToGo_PointingBehindTurnsItRound_RatherThanReversing()
+    {
+        var drive = NewDrive(Vector2.up);
+        HoldToward(drive, Vector2.up, 2f);
+        Vector2 v = HoldToward(drive, Vector2.down, 4f);
+        Assert.GreaterOrEqual(Speed(drive), 0f, "Pointing behind reversed the scooter instead of turning it.");
+        Assert.Less(v.y, -1f, "Pointing the stick south never got the scooter riding south.");
+    }
+
+    [Test]
+    public void PointToGo_HowFarTheStickIsPushedIsHowFast()
+    {
+        var gentle = NewDrive(Vector2.up);
+        var full = NewDrive(Vector2.up);
+        HoldToward(gentle, Vector2.up * 0.4f, 4f);
+        HoldToward(full, Vector2.up, 4f);
+        Assert.Less(Speed(gentle), Speed(full) * 0.6f, "A light push rode as fast as a full one.");
+        Assert.AreEqual(Tunable(full, "topSpeed"), Speed(full), 0.01f, "Full stick never reached top speed.");
+    }
+
+    [Test]
+    public void PointToGo_LettingGoCoastsToAStop()
+    {
+        var drive = NewDrive(Vector2.up);
+        HoldToward(drive, Vector2.up, 2f);
+        HoldToward(drive, Vector2.zero, 5f);
+        Assert.AreEqual(0f, Speed(drive), 1e-3f, "Letting go of the stick never brought the scooter to a stop.");
+    }
 
     // --- the pedals ---------------------------------------------------------------------------------
 

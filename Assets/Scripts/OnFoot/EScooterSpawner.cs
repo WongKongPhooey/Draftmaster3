@@ -5,18 +5,18 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Draftmaster.Weekend;
 
-// Parks the team's e-scooter at the mouth of the player's own garage, and a second, unmarked paddock scooter
-// somewhere random in the walkable paddock.
+// Parks the team's e-scooter beside the player's own RV, and a second, unmarked paddock scooter somewhere
+// random in the walkable paddock.
 //
-// Where exactly: off the walkway end of the rig, straight out in front of the canopy — the spot a real
-// team leaves theirs, where it is in nobody's way and is the first thing you see walking up to your own
-// garage. That is also the point of it being there at all: the scooter is not on any menu and nothing tells
-// the player it exists, so it has to be parked somewhere they walk past on their way to the one place the
-// weekend keeps sending them.
+// Where exactly: just south of the RV's body, on clear ground and never more than SouthMaxMetres from it —
+// the first thing the player passes stepping out, which is where the weekend starts every walk from. The crew chief's first text is
+// followed by an optional errand to find it (ScooterErrand), the quick way across to the briefing, and that
+// only works if it is a short hop from the door rather than over at the garage the player is heading for.
 //
-// Falls back to the pit box venue anchor (WeekendVenue.PitBox is the team's garage in the paddock) at a
-// track or a session where the garage row was never built, and gives up quietly if there is no paddock at
-// all — a scooter parked in the middle of nowhere is worse than no scooter.
+// Falls back to the mouth of the player's own garage (off the walkway end of the rig, in front of the
+// canopy) where no motorhome is standing, then to the pit box venue anchor (WeekendVenue.PitBox) at a track
+// or a session where the garage row was never built, and gives up quietly if there is no paddock at all — a
+// scooter parked in the middle of nowhere is worse than no scooter.
 //
 // The paddock scooter is the one somebody left lying about: a different spot every time the scene loads, picked
 // from inside the walkable paddock (never a grandstand viewing pocket), on clear ground no motorhome, garage
@@ -28,6 +28,14 @@ using Draftmaster.Weekend;
 public class EScooterSpawner : MonoBehaviour
 {
     [Header("Where it parks")]
+    [Tooltip("Metres south of the RV's body the team scooter parks. Tried first; further out (never past " +
+             "10 m) and along the side only if something is in the way.")]
+    public float rvGap = 2.5f;
+    [Tooltip("Metres of clear ground the team scooter needs round it beside the RV.")]
+    public float rvClearance = 1f;
+
+    // The furthest south of the RV's body the team scooter may park.
+    public const float SouthMaxMetres = 10f;
     [Tooltip("Metres past the walkway end of the garage rig. Small: the scooter is parked at the mouth of " +
              "the garage, not out in the middle of the road between the rows.")]
     public float noseGap = 1f;
@@ -113,6 +121,9 @@ public class EScooterSpawner : MonoBehaviour
 
         // The garage row is what this is parked against, and it is built a second or two into the scene
         // (DriverMotorhomeLot stands its own line up first and then hands it over).
+        // Wait for the garage row even though the RV is the first choice: the lot stands its motorhomes up
+        // before it hands over to the garages, so a built row means the RVs (and the ground they cover,
+        // which TrySouthOfRV keeps clear of) are all there too.
         float garageWait = garageTimeout;
         while (garageWait > 0f && !PlayerRig(out _)) { garageWait -= Time.deltaTime; yield return null; }
 
@@ -148,6 +159,14 @@ public class EScooterSpawner : MonoBehaviour
         primary = new Color(0.85f, 0.85f, 0.88f);
         secondary = new Color(0.20f, 0.22f, 0.26f);
 
+        var rv = RVExterior.Player;
+        if (rv != null && rv.GetComponentInParent<RVInterior>() == null && TrySouthOfRV(rv, out at))
+        {
+            if (PlayerRig(out var team)) { primary = team.primary; secondary = team.secondary; }
+            _parkedBy = rv;
+            return true;
+        }
+
         if (PlayerRig(out var rig))
         {
             Vector3 spot = ParkingSpot(rig, noseGap);
@@ -172,6 +191,64 @@ public class EScooterSpawner : MonoBehaviour
         at = Walkable(anchor.StandPosition + Vector3.right * anchorOffset);
         facing = Quaternion.identity;
         return true;
+    }
+
+    // The RV the team scooter was parked against, so it can follow if the lot re-parks the rig.
+    RVExterior _parkedBy;
+
+    void OnEnable() => RVExterior.Moved += FollowRV;
+    void OnDisable() => RVExterior.Moved -= FollowRV;
+
+    void FollowRV(Vector3 delta)
+    {
+        if (Instance == null || _parkedBy == null || Instance.Riding) return;
+        Instance.transform.position += new Vector3(delta.x, delta.y, 0f);
+    }
+
+    // South of the RV's body (world -Y): under its middle first, then along the south side, then further
+    // out — never more than SouthMaxMetres from the body. Each candidate is pulled into the walkable paddock
+    // and kept only if the pull barely moved it and nothing (the RV itself, a neighbour's awning) covers it.
+    bool TrySouthOfRV(RVExterior rv, out Vector3 at)
+    {
+        at = Vector3.zero;
+        if (!BodyBounds(rv, out Bounds body)) return false;
+
+        float half = Mathf.Max(0.5f, body.extents.x - 1f);
+        float[] along = { 0f, -half * 0.5f, half * 0.5f, -half, half };
+        for (float gap = rvGap; gap <= SouthMaxMetres + 0.01f; gap += 2f)
+            foreach (float dx in along)
+            {
+                var want = new Vector3(body.center.x + dx, body.min.y - gap, 0f);
+                Vector3 p = Walkable(want);
+                if (Vector2.Distance(p, want) > 0.75f) continue;
+                if (body.min.y - p.y > SouthMaxMetres) continue;
+                if (PaddockObstacles.IsBlocked(p, rvClearance)) continue;
+                at = p;
+                return true;
+            }
+
+        Debug.LogWarning("EScooterSpawner: no clear ground within 10 m south of the player's RV — the team " +
+                         "scooter parks at the garage instead.", this);
+        return false;
+    }
+
+    // The rig's bodywork in world space: its drawn parts, or its solid colliders if it draws nothing.
+    static bool BodyBounds(RVExterior rv, out Bounds bounds)
+    {
+        bounds = default;
+        bool any = false;
+        foreach (var r in rv.GetComponentsInChildren<Renderer>())
+        {
+            if (!r.enabled) continue;
+            if (!any) { bounds = r.bounds; any = true; } else bounds.Encapsulate(r.bounds);
+        }
+        if (any) return true;
+        foreach (var c in rv.GetComponentsInChildren<Collider2D>())
+        {
+            if (c.isTrigger || c.GetComponent<PaddockBoundary>() != null) continue;
+            if (!any) { bounds = c.bounds; any = true; } else bounds.Encapsulate(c.bounds);
+        }
+        return any;
     }
 
     // Where a scooter parks against a given garage, in world space. Pulled out as a pure function of the rig

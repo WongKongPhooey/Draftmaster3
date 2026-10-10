@@ -263,11 +263,15 @@ public class EScooter : NPCInteractable, IRiddenVehicle
 
     // ---------------------------------------------------------------- driving (IRiddenVehicle)
 
-    // One step of pedals and lock, handed the raw on-foot stick. The walker moves at what comes back.
+    // Point-to-go rather than pedals: a thumb on the on-screen stick or a pad in hand. The keyboard keeps
+    // the pedals (W/S throttle and brake, A/D lock), which is how it reads on WASD.
+    static bool PointToGo => TouchWalkControls.Active || InputGlyphs.UsingGamepad;
+
+    // One step of driving, handed the raw on-foot stick. The walker moves at what comes back.
     public Vector2 Steer(Vector2 stick, float dt)
     {
         ApplyTuning();
-        Vector2 velocity = _drive.Step(stick, dt);
+        Vector2 velocity = PointToGo ? _drive.StepToward(stick, dt) : _drive.Step(stick, dt);
         _heading = _drive.Heading;
 
         // Anybody about to be run over gets out of the way. Measured from the RIDER, not from this

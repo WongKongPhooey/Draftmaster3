@@ -2,8 +2,8 @@ namespace Draftmaster.Weekend
 {
     // The first time the phone in the driver's pocket goes off.
     //
-    // The liaison sends a new driver across the paddock to the crew chief's strategy briefing, and a couple
-    // of hundred metres short of the pit box the chief texts to ask where they have got to. It is the
+    // The liaison sends a new driver across the paddock to the crew chief's strategy briefing, and soon after
+    // they set off the chief texts to ask where they have got to. It is the
     // phone's tutorial: a bleep, a "P - Check your phone" prompt, and one unread message on the MESSAGES
     // tile. Nothing in the paddock had ever made the player press the key before the orientation at 09:30,
     // and by then the briefing - the first thing they are asked to do - has already happened without it.
@@ -14,9 +14,9 @@ namespace Draftmaster.Weekend
     public static class ChiefCheckIn
     {
         // How far from the briefing the text arrives. Watkins Glen's walk from the motorhome to the pit box
-        // is about 290 m, so this lands soon after they set off - far enough out that the player is plainly
-        // on their way and has most of the walk left to try running, close enough that they have left the RV.
-        public const float TriggerMetres = 250f;
+        // is about 290 m, so this lands just after they set off: the whole walk is still ahead, which is when
+        // the team e-scooter that putting the phone away offers (ScooterErrand) is worth most.
+        public const float TriggerMetres = 280f;
 
         public const string SaveKey = "phone.chief.whereareyou";
 

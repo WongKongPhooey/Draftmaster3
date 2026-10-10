@@ -28,12 +28,17 @@ goes up. Rule: `Core/WeekendBedtime.cs` (tested in `WeekendBedtimeTests`), check
 on the room's `Bed` by `RVInterior`). The F10 sheet's SKIP button still jumps the night without sleeping.
 
 **Your phone goes off on the way to the briefing.** The first booking is the crew chief's strategy briefing
-at the pit box. 250 m short of it (`ChiefCheckIn.TriggerMetres`; soon after setting off from the RV at
+at the pit box. 280 m short of it (`ChiefCheckIn.TriggerMetres`; just after setting off from the RV at
 Watkins Glen) the phone bleeps, the chief texts to ask where you are, **the driver stops where they
 stand**, and a control hint reads **`P` - Check your phone** (View / Create on a pad) until they take it out.
 The phone opens with MESSAGES highlighted, reading "1 unread message". **Hold to run is taught after that**,
 once the phone has been put away again — `PitLaneStart` holds the run hint while
 `ChiefCheckInBeat.HoldsRunHint` is true, which is the whole walk to the briefing until the lesson is over.
+Putting the phone away also offers **Optional — Find the team e-scooter** (`ScooterErrand`): the team scooter
+is parked beside your RV (`EScooterSpawner`), and riding it is the quick way across. Optional objectives
+(`OptionalObjectives`) get their own light-blue marker at the screen edge alongside the booking's, and a line
+under OPTIONAL in the phone's Tasks app; the quest strip and Tab only ever show the booking. The errand ends
+when you step on the team scooter or the briefing stops being the booking.
 The stop applies in every build (`ChiefCheckInBeat.HoldPlayerForPhone`), not only the demo. Once per save;
 it holds off while a conversation, a wipe or a menu has the player, and it does not fire if `T` dropped you
 straight at the pit box (the beat stays armed for the next briefing walk; the run hint is released as soon

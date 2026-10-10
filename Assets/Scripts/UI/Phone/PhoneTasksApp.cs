@@ -131,9 +131,9 @@ public class PhoneTasksApp : PhoneApp
             float h = RowH + PixelGUI.Px(4f);
             var button = new Rect(x, y, w, h);
             PixelGUI.Fill(button, PixelGUI.Gold);
-            string prompt = InputGlyphs.UsingTouch ? "TRAVEL THERE"
-                          : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(Draftmaster.Controls.PadBindings.Confirm) + "  TRAVEL THERE"
-                          : "ENTER  TRAVEL THERE";
+            string prompt = InputGlyphs.UsingTouch ? "FAST TRAVEL"
+                          : InputGlyphs.UsingGamepad ? InputGlyphs.PadName(Draftmaster.Controls.PadBindings.Confirm) + "  FAST TRAVEL"
+                          : "ENTER  FAST TRAVEL";
             PhoneStyles.Label(button, prompt, PhoneStyles.Heading, PixelGUI.Ink, TextAnchor.MiddleCenter);
             if (Pressed(button)) TravelToCurrent();
             y += h;
@@ -203,6 +203,17 @@ public class PhoneTasksApp : PhoneApp
 
         y += DrawNow(x, y, w);
 
+        // Side errands (OptionalObjectives): only ever here and on their edge-of-screen markers — Tab and
+        // the quest strip stay on the booking.
+        var optional = new List<Task>();
+        BuildOptional(optional);
+        if (optional.Count > 0)
+        {
+            y += Section(x, y, w, "OPTIONAL");
+            y += DrawTasks(x, y, w, optional);
+            y += PixelGUI.Px(6f);
+        }
+
         var weekend = new List<Task>();
         BuildWeekend(weekend);
         y += Section(x, y, w, SessionHeading());
@@ -228,6 +239,20 @@ public class PhoneTasksApp : PhoneApp
         }
 
         return y - y0 + PixelGUI.Px(6f);
+    }
+
+    static void BuildOptional(List<Task> list)
+    {
+        var player = OnFootController.Current;
+        foreach (var o in OptionalObjectives.Active)
+        {
+            Transform target = null;
+            try { target = o.target?.Invoke(); } catch { }
+            string readout = target != null && player != null
+                ? $"{Mathf.RoundToInt(Vector2.Distance(player.transform.position, target.position))} m"
+                : "";
+            list.Add(new Task { text = o.title, readout = readout, done = false, hint = o.hint });
+        }
     }
 
     static string SessionHeading() =>

@@ -9,7 +9,8 @@ using UnityEngine;
 // ChiefCheckIn.TriggerMetres of it on foot, the phone bleeps, the chief's message lands in MESSAGES
 // (tile: "1 unread message"), the player is stopped where they stand (PhoneUI.Summon) and a control hint
 // says P - Check your phone. Taking the phone out lifts the prompt; putting it away again is when the run
-// hint gets its turn — PitLaneStart holds "hold to run" while HoldsRunHint says so. Once per save
+// hint gets its turn — PitLaneStart holds "hold to run" while HoldsRunHint says so — and the team e-scooter is
+// offered as an optional errand (ScooterErrand, via PhonePutAway). Once per save
 // (AppearanceConditions, OnceEver).
 //
 // Self-installing, like WeekendObjectiveHUD. The rules are ChiefCheckIn (Draftmaster.Weekend, EditMode-tested).
@@ -43,6 +44,9 @@ public class ChiefCheckInBeat : MonoBehaviour
     bool _fired;                   // AlreadyFired, re-read on the poll
     float _poll;
     AudioSource _audio;
+
+    // The phone went away at the end of the lesson. The scooter errand starts here.
+    public static event System.Action PhonePutAway;
 
     // PitLaneStart asks this before teaching the run control: running is taught after the phone, not before.
     // Live rather than polled — the liaison books the briefing the same frame she hands movement back, and a
@@ -125,7 +129,12 @@ public class ChiefCheckInBeat : MonoBehaviour
 
             case Stage.Reading:
                 // Put away. PitLaneStart sees HoldsRunHint drop and teaches running next.
-                if (!PhoneUI.IsOpen) { _stage = Stage.Idle; _held = false; }
+                if (!PhoneUI.IsOpen)
+                {
+                    _stage = Stage.Idle;
+                    _held = false;
+                    PhonePutAway?.Invoke();
+                }
                 break;
         }
     }
@@ -163,6 +172,7 @@ public class ChiefCheckInBeat : MonoBehaviour
         ControlHints.Forget(HintId);
         ControlHints.Forget("run");
         PhoneMessages.Clear();
+        ScooterErrand.Rearm();
         if (Instance != null)
         {
             Instance.EndLesson();

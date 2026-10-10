@@ -13,6 +13,12 @@ using UnityEngine;
 // Steering only works while the cart is rolling, which is the one rule that makes it feel like a vehicle
 // instead of a person: a stopped cart asked to turn does nothing until it is moving, and a reversing one
 // turns the other way, because the wheels are at the front.
+//
+// That is the keyboard's scooter (Step). A thumb on the on-screen stick, or a pad's stick, gets StepToward
+// instead: the stick IS the direction to ride in. The nose swings round to it at the steering rate, the
+// scooter pulls away at a pace set by how far the stick is pushed and how nearly the nose already points
+// that way, and pointing back past square brakes it so it can come round. No reverse — the stick never
+// asks for it. Pedals on a stick read fine on a keyboard and fight a thumb, which is what this is for.
 public class CartDrive
 {
     // Metres/sec the cart will pull to on full throttle. The walking player does 3.5.
@@ -36,6 +42,9 @@ public class CartDrive
     public float reverseDelay = 0.4f;
     // Stick tilt below this is nothing at all — a resting stick must not creep the cart across the paddock.
     public float deadzone = 0.15f;
+    // StepToward only: the share of the steering a stopped scooter still has. A rider can walk the bars
+    // round, so pointing the stick behind a parked scooter turns it rather than doing nothing — slowly.
+    public float pivotAuthority = 0.5f;
 
     // Metres/sec along the nose. Negative is reversing.
     public float Speed { get; private set; }
@@ -97,6 +106,40 @@ public class CartDrive
             float degrees = -steer * steerRate * bite * dt * Mathf.Sign(Speed);
             Heading = Rotate(Heading, degrees);
         }
+
+        return Heading * Speed;
+    }
+
+    // One step of point-to-go driving (touch stick and pad stick): `stick` is the direction to ride in, its
+    // length how fast. Hands back the velocity the body should move at.
+    public Vector2 StepToward(Vector2 stick, float dt)
+    {
+        if (dt <= 0f) return Heading * Speed;
+        _restingOnBrake = 0f;
+
+        float tilt = stick.magnitude;
+        if (tilt <= deadzone)
+        {
+            Speed = Mathf.MoveTowards(Speed, 0f, coastRate * dt);
+            return Heading * Speed;
+        }
+        Vector2 want = stick / tilt;
+        tilt = Mathf.Min(1f, tilt);
+
+        // Swing the nose toward the stick: full lock once rolling, a share of it at a standstill.
+        float bite = Mathf.Max(pivotAuthority, Mathf.Clamp01(Mathf.Abs(Speed) / Mathf.Max(0.01f, steerBiteSpeed)));
+        float off = Vector2.SignedAngle(Heading, want);
+        float turn = steerRate * bite * dt;
+        Heading = Rotate(Heading, Mathf.Clamp(off, -turn, turn));
+        off = Vector2.SignedAngle(Heading, want);
+
+        // Pace: as fast as the stick is pushed, scaled down while the nose is still coming round, nothing
+        // at all while it points more than square away. Past square at speed is the brake.
+        float aligned = Mathf.Clamp01(Mathf.Cos(off * Mathf.Deg2Rad));
+        float target = topSpeed * tilt * aligned;
+        if (Speed < 0f) Speed = Mathf.MoveTowards(Speed, 0f, brakeRate * dt);
+        else if (Speed < target) Speed = Mathf.Min(target, Speed + accelRate * dt);
+        else Speed = Mathf.Max(target, Speed - (Mathf.Abs(off) > 90f ? brakeRate : coastRate) * dt);
 
         return Heading * Speed;
     }

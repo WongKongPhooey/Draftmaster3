@@ -5,7 +5,7 @@ using Draftmaster.Weekend;
 using NUnit.Framework;
 using UnityEngine;
 
-// The walk to the Friday strategy briefing is where the phone first goes off: 250 m short of the pit box
+// The walk to the Friday strategy briefing is where the phone first goes off: 280 m short of the pit box
 // the crew chief texts to ask where the driver is, and a prompt says which key opens the phone.
 //
 // Pinned here: when that text is allowed to arrive (ChiefCheckIn, pure), what it says, and the phone it
@@ -24,17 +24,17 @@ public class ChiefCheckInTests
         => ChiefCheckIn.ShouldFire(fired, booked, metres, arrived, busy);
 
     [Test]
-    public void TheTrigger_IsTwoHundredAndFiftyMetres()
+    public void TheTrigger_IsTwoHundredAndEightyMetres()
     {
-        Assert.AreEqual(250f, ChiefCheckIn.TriggerMetres);
+        Assert.AreEqual(280f, ChiefCheckIn.TriggerMetres);
     }
 
     [Test]
     public void WalkingToTheBriefing_FiresInsideTheTrigger_AndNotBeforeIt()
     {
-        Assert.IsFalse(Fires(metres: Far), "The chief texted while the player was still over 250 m away.");
-        Assert.IsTrue(Fires(metres: Near), "Inside 250 m of the briefing and the phone never went off.");
-        Assert.IsTrue(Fires(metres: ChiefCheckIn.TriggerMetres), "Exactly 250 m out should count as inside.");
+        Assert.IsFalse(Fires(metres: Far), "The chief texted while the player was still over 280 m away.");
+        Assert.IsTrue(Fires(metres: Near), "Inside 280 m of the briefing and the phone never went off.");
+        Assert.IsTrue(Fires(metres: ChiefCheckIn.TriggerMetres), "Exactly 280 m out should count as inside.");
     }
 
     [Test]
