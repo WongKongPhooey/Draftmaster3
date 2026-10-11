@@ -3,6 +3,9 @@ using UnityEngine;
 // AI pit strategy: once the tyres are worn past a threshold, the car peels into the pit lane at the entry node,
 // drives to its box, holds for a service stop (fresh tyres + repaired bodywork), then rejoins. The racing brain
 // is parked while on pit road so it doesn't try to race down the lane.
+//
+// When the race is over (RaceDirector.TookChequer) the car runs its cool-down lap, then comes in the same way
+// and parks in its box for good — no service, no rejoin.
 [RequireComponent(typeof(SplineDriver))]
 public class PitStopController : MonoBehaviour
 {
@@ -47,9 +50,15 @@ public class PitStopController : MonoBehaviour
     [Tooltip("A race shorter than this many laps never forces a stop — on fresh tyres nobody pits in a sprint, and handing the lead to whoever stays out is no race.")]
     public int forcedPitMinRaceLaps = 10;
 
+    [Header("After the chequer")]
+    [Tooltip("Once this car has taken the chequered flag, run a cool-down lap and then park in its pit box.")]
+    public bool parkAfterRace = true;
+    [Tooltip("Share of a lap (0..1) the car must run after the chequer before it may take the pit entry, so a lane that opens just past the line costs a full cool-down lap rather than none.")]
+    [Range(0f, 1f)] public float coolDownLapFrac = 0.5f;
+
     const float MphToMps = 1f / 2.237f;
 
-    enum State { Racing, HeadingToPit, Servicing, Leaving }
+    enum State { Racing, HeadingToPit, Servicing, Leaving, Parked }
     State _state = State.Racing;
 
     SplineDriver _spline;
@@ -63,7 +72,20 @@ public class PitStopController : MonoBehaviour
     float _forcedThreshold;
     bool _forcedDone;
 
+    // Post-race: the flag has fallen for this car; metres run since; coming in to park rather than to service.
+    bool _raceOver;
+    float _coolDownMetres;
+    float _prevDist = -1f;
+    bool _parking;
+
+    // Which box this car stops in. The field uses the box its grid slot owns; the player's car, brought in by
+    // the AI after the race (RaceEndPitIn), uses the box the player was given.
+    [HideInInspector] public int boxOverride = -1;
+    int BoxIndex => boxOverride >= 0 ? boxOverride : _spline.qualifyingPosition;
+
     public bool IsPitting => _state != State.Racing;
+    // Stopped in its box after the race, and staying there.
+    public bool IsParkedAfterRace => _state == State.Parked;
 
     void Awake() { _spline = GetComponent<SplineDriver>(); _ai = GetComponent<AIRacingBehaviour>(); }
 
@@ -90,11 +112,21 @@ public class PitStopController : MonoBehaviour
 
         AcquireRefs();
         if (_greenTime < 0f) _greenTime = Time.time;   // first green frame this car saw
+        TrackCoolDown();
 
         switch (_state)
         {
             case State.Racing:
-                if (WantsPit()) { _state = State.HeadingToPit; _forcedDone = true; }
+                if (_raceOver)
+                {
+                    // The cool-down lap is the run to the pit entry; only a box to park in makes it worth taking.
+                    if (PitLane.Configured && _coolDownMetres >= coolDownLapFrac * _spline.TrackLength)
+                    {
+                        _parking = true;
+                        _state = State.HeadingToPit;
+                    }
+                }
+                else if (WantsPit()) { _state = State.HeadingToPit; _forcedDone = true; }
                 break;
 
             case State.HeadingToPit:
@@ -117,15 +149,16 @@ public class PitStopController : MonoBehaviour
                     float boxDist = _spline.PitLength * serviceFrac;
                     if (PitLane.Configured && _spline.PitLength > 0f)
                     {
-                        boxDist = _spline.PitParkDistanceFor(PitLane.BoxDistance(_spline.qualifyingPosition, _spline.PitLength));
+                        boxDist = _spline.PitParkDistanceFor(PitLane.BoxDistance(BoxIndex, _spline.PitLength));
                         targetFrac = boxDist / _spline.PitLength;
                     }
                     float remaining = boxDist - _spline.PitProgress01 * _spline.PitLength;
 
                     // Call the box before arriving: the sign man walks out and puts the board down over
                     // where the nose will stop, which he cannot do if he only hears about it on arrival.
-                    if (remaining < signCallM)
-                        PitCrewRegistry.ForBox(_spline.qualifyingPosition)?.SignalApproach(transform);
+                    // Not when coming in to park: there is no stop to board, and he'd stand there until it timed out.
+                    if (remaining < signCallM && !_parking)
+                        PitCrewRegistry.ForBox(BoxIndex)?.SignalApproach(transform);
 
                     // Drive the centerline down the lane (clear of cars being serviced on the strip) and cut
                     // across to the wall-side box lane only inside the last stretch before this car's own box —
@@ -157,8 +190,13 @@ public class PitStopController : MonoBehaviour
                     if (_spline.pitStopHold || remaining <= 0.5f || _spline.PitProgress01 >= targetFrac)
                     {
                         _spline.pitStopHold = true;
+                        if (_parking)
+                        {
+                            _state = State.Parked;
+                            break;
+                        }
                         _serviceTimer = serviceSeconds;
-                        PitCrewRegistry.ForBox(_spline.qualifyingPosition)?.BeginService(transform);
+                        PitCrewRegistry.ForBox(BoxIndex)?.BeginService(transform);
                         RecordPit();
                         _state = State.Servicing;
                     }
@@ -172,9 +210,18 @@ public class PitStopController : MonoBehaviour
                     if (_tires != null) _tires.PitReset();
                     if (repairDamage && _bodywork != null) _bodywork.RepairFull();
                     if (refuel && _fuel != null) _fuel.FillFull();
-                    PitCrewRegistry.ForBox(_spline.qualifyingPosition)?.EndService();
-                    _state = State.Leaving; // pitStopHold stays on until the lane behind is clear
+                    PitCrewRegistry.ForBox(BoxIndex)?.EndService();
+                    // The race ended while the car was in its box: it stays there.
+                    _state = _raceOver ? State.Parked : State.Leaving; // pitStopHold stays on until the lane behind is clear
                 }
+                break;
+
+            case State.Parked:
+                // Pinned on the stop line in the box. Once it has actually stopped, hard-park it as the practice
+                // field parks, so a dynamic-AI car's motion model is re-seeded and doesn't creep out of the box.
+                _spline.pitStopHold = true;
+                float stoppedMps = _spline.externalMotionController ? _spline.externalActualSpeedMps : _spline.speed;
+                if (!_spline.parkedHold && stoppedMps < 0.3f) _spline.parkedHold = true;
                 break;
 
             case State.Leaving:
@@ -204,6 +251,47 @@ public class PitStopController : MonoBehaviour
                 }
                 break;
         }
+    }
+
+    // Watch for this car taking the chequer, then count the metres it runs on the main track after it — the
+    // cool-down lap. Measured off the lap-distance wrap, so the line going past doesn't count as minus a lap.
+    void TrackCoolDown()
+    {
+        if (!parkAfterRace) return;
+        if (!_raceOver)
+        {
+            if (!RaceDirector.TookChequer(transform)) return;
+            _raceOver = true;
+            _coolDownMetres = 0f;
+            _prevDist = -1f;
+            // Already on the way in for a stop: make it the park.
+            if (_state == State.HeadingToPit) _parking = true;
+        }
+
+        if (_spline.IsOnPit) { _prevDist = -1f; return; }
+        float d = _spline.DistanceOnTrack;
+        if (_prevDist >= 0f)
+        {
+            float step = d - _prevDist;
+            float half = _spline.TrackLength * 0.5f;
+            if (step < -half) step += _spline.TrackLength;
+            else if (step > half) step -= _spline.TrackLength;
+            if (step > 0f) _coolDownMetres += step;
+        }
+        _prevDist = d;
+    }
+
+    // Bring this car straight in to park, with no cool-down lap of its own to run: the player's car, which the
+    // player drove round the cool-down lap before the AI took it (RaceEndPitIn).
+    public void ParkNow()
+    {
+        _raceOver = true;
+        _coolDownMetres = float.MaxValue;
+        _parking = true;
+        _spline.parkedHold = false;
+        _spline.pitStopHold = false;
+        _spline.pitParkDistance = -1f;
+        _state = State.HeadingToPit;   // on track it heads for the entry; on pit road it rolls on to the box
     }
 
     // Pit-lane ACC: nothing else paces a car down here (the racing brain is parked), so without this a car

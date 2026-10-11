@@ -9,7 +9,8 @@ using UnityEngine.SceneManagement;
 // shows a results screen. "NEXT WEEKEND" resets the weekend (back to Friday practice) and reloads.
 //
 // Runs alongside RacePositionTracker (positions/laps) and LapTimingManager (best laps for the results
-// table). Cars keep circulating behind the results panel — cosmetic cool-down, nothing is frozen.
+// table). Once a car has taken the chequer it runs a cool-down lap and comes in to park in its pit box
+// (PitStopController for the AI, RaceEndPitIn for the player's car); TookChequer is what they key off.
 public class RaceDirector : MonoBehaviour
 {
     public static RaceDirector Instance { get; private set; }
@@ -55,6 +56,7 @@ public class RaceDirector : MonoBehaviour
 
     readonly Dictionary<Transform, int> _lapBaseline = new();
     readonly Dictionary<Transform, Result> _finishedBy = new();
+    readonly Dictionary<Transform, int> _lapAtChequer = new();
     readonly List<Result> _results = new();
     float _greenTime = -1f;
     float _checkeredTime;
@@ -87,7 +89,11 @@ public class RaceDirector : MonoBehaviour
 
     void OnDestroy() { if (Instance == this) Instance = null; }
 
-    void Start() { LapTimingManager.Ensure(); }
+    void Start()
+    {
+        LapTimingManager.Ensure();
+        if (GetComponent<RaceEndPitIn>() == null) gameObject.AddComponent<RaceEndPitIn>();
+    }
 
     void Update()
     {
@@ -115,12 +121,14 @@ public class RaceDirector : MonoBehaviour
                 if (_results.Count > 0)     // leader took the flag
                 {
                     _checkeredTime = Time.time;
+                    SnapshotChequerLaps(rt);
                     _phase = Phase.Checkered;
                 }
                 break;
 
             case Phase.Checkered:
                 BaselineLaps(rt);
+                SnapshotChequerLaps(rt);
                 CheckFinishes(rt);
                 bool playerDone = true;
                 int running = 0;
@@ -164,6 +172,30 @@ public class RaceDirector : MonoBehaviour
         float len = rt.TrackLength;
         float frac = len > 0f ? Mathf.Clamp01((leader.progress - leader.lap * len) / len) : 0f;
         RaceProgress01 = Mathf.Clamp01((RacingLaps(leader) + frac) / raceLaps);
+    }
+
+    // The lap each car was on when the flag fell, so a lapped car is seen to take the chequer the next time it
+    // crosses the line, even though it never completes raceLaps. Cars appearing later start from their lap then.
+    void SnapshotChequerLaps(RacePositionTracker rt)
+    {
+        for (int i = 0; i < rt.Order.Count; i++)
+        {
+            var e = rt.Order[i];
+            if (e == null || e.tf == null || _lapAtChequer.ContainsKey(e.tf)) continue;
+            _lapAtChequer[e.tf] = e.lap;
+        }
+    }
+
+    // This car's race is over: it has crossed the line under the chequered flag — as a finisher, or a lapped car
+    // crossing behind the leader. A car still out on track when the stragglers are classified has not, and keeps
+    // going until it does. Everything after this is the cool-down lap.
+    public static bool TookChequer(Transform tf)
+    {
+        var d = Instance;
+        if (tf == null || d == null || !d.isActiveAndEnabled || d._phase < Phase.Checkered) return false;
+        if (d._finishedBy.TryGetValue(tf, out var r) && r.finished) return true;
+        var rt = RacePositionTracker.Instance;
+        return rt != null && d._lapAtChequer.TryGetValue(tf, out int lap) && rt.LapOf(tf) > lap;
     }
 
     int RacingLaps(RacePositionTracker.Entry e) =>
