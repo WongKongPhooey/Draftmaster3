@@ -6,9 +6,12 @@ the game); junkyard **stock rerolls weekly**. All code in `Assets/Scripts/Travel
 
 ## Player flow
 
-1. Race results → **HIT THE ROAD** opens the fullscreen map — an authored Canvas prefab
+1. Race results → **END RACE** (the screen's only button in a career) parks every car in its pit box, puts
+   the player on foot beside their car in their own box (`RaceDirector.EndRace` → `PitStopController.ParkInBoxNow`,
+   `PitLaneStart.EndRaceInBox`), and makes **HIT THE ROAD** the objective (`WeekendObjectiveHUD.CallTheRoad`):
+   walk to the motorhome, then the satnav in its cab opens the fullscreen map — an authored Canvas prefab
    (`Assets/Resources/UI/TravelMap.prefab`) with the `TravelMapScreen` binder on its root.
-   **SKIP TRAVEL** (and the sheet's START NEXT WEEKEND) jumps straight to the next round of the demo
+   The sheet's START NEXT WEEKEND jumps straight to the next round of the demo
    calendar — `Draftmaster.Tracks.DemoCalendar`: Watkins Glen → Daytona → Martinsville, then back round.
    Arriving at a circuit on the map selects that circuit (`TrackSelection.Select`) instead.
    **Tutorial leg** (Watkins Glen → Daytona, once per save): the prompt "Stop off at Team HQ to apply new

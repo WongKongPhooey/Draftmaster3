@@ -74,6 +74,28 @@ public class WeekendObjectiveHUD : MonoBehaviour
     static readonly WeekendActivity HitTheRoad = new WeekendActivity { id = "weekend.hit-the-road", title = "HIT THE ROAD" };
     Transform _roadTarget;
     bool _roadInside;
+
+    // The player's own race is over and they ended it from the results screen (RaceDirector.EndRace): the way
+    // on is the road, whatever else is left on the sheet, so HIT THE ROAD is the objective from then on. Kept
+    // in prefs against the weekend id, so it survives a scene load and lapses by itself when travelling starts
+    // the next weekend (RaceWeekend.ResetWeekend bumps the id).
+    const string RoadCalledKey = "weekend.roadcalled";
+
+    public static bool RoadCalled =>
+        FramePrefs.GetInt(RoadCalledKey, -1) == RaceWeekend.WeekendId;
+
+    public static void CallTheRoad()
+    {
+        // Whatever was booked next is given up with the rest of the weekend.
+        WeekendAppointment.Clear();
+        PlayerPrefs.SetInt(RoadCalledKey, RaceWeekend.WeekendId);
+        PlayerPrefs.Save();
+        FramePrefs.Invalidate();
+        Reveal();
+    }
+
+    // What is booked, as far as this strip is concerned: nothing, once the road has been called.
+    static WeekendActivity Booked => RoadCalled ? null : WeekendAppointment.Pending;
     RVInterior _satnavRV;
     Transform _satnav;
 
@@ -184,7 +206,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // it is and the lines that say so — lands in fields here so OnGUI is pure drawing.
     void Refresh()
     {
-        var activity = WeekendAppointment.Pending;
+        var activity = Booked;
         if (activity == null && RefreshHitTheRoad()) return;
         _roadTarget = null;
         if (activity == null)
@@ -233,12 +255,13 @@ public class WeekendObjectiveHUD : MonoBehaviour
         }
     }
 
-    // The spent-weekend objective. False (and nothing changed) unless the weekend is over and there is a
+    // The spent-weekend objective. False (and nothing changed) unless the weekend is over (or the road has
+    // been called from the results screen) and there is a
     // motorhome in this scene to send the player to — the title screen and the garage have none.
     bool RefreshHitTheRoad()
     {
         // The host drives the career; a co-op guest is carried along on the host's travel.
-        if (!WeekendLedger.WeekendOver || Coop.IsGuest) return false;
+        if (!(WeekendLedger.WeekendOver || RoadCalled) || Coop.IsGuest) return false;
 
         var rv = RVInterior.Current;
         bool inside = rv != null && rv.IsInside;
@@ -316,7 +339,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
         // over the shot of the circuit is an arrow at the exit, so the marker is down while they watch and
         // comes back if they leave some other way with the booking still open.
         bool watching = GrandstandVisit.Watching || GrandstandSpectate.Watching;
-        var activity = watching ? null : WeekendAppointment.Pending;
+        var activity = watching ? null : Booked;
         // Nothing booked and the weekend spent: the marker goes on the way out (motorhome, then satnav).
         bool road = !watching && activity == null && _shown == HitTheRoad && _roadTarget != null;
         if (road) activity = HitTheRoad;
@@ -382,7 +405,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     public static bool TravelThere()
     {
         // The spent weekend: T takes you to your motorhome's door mark. Inside, the satnav is a step away.
-        if (WeekendAppointment.Pending == null && Instance != null && Instance._shown == HitTheRoad)
+        if (Booked == null && Instance != null && Instance._shown == HitTheRoad)
         {
             if (Instance._roadInside) return false;
             var home = WeekendVenueAnchor.Find(WeekendVenue.Motorhome);

@@ -52,7 +52,7 @@ Who hands the day over is a flag on the NPC (`givesTheDaysObjective`), not a har
 itself the moment the paddock's cast is up.
 
 Press **F10** to open the timetable when you want to change what you are doing — it is also on the pause
-menu, on the phone (`SCHEDULE` tile) and on the race results screen. It no longer opens itself over your
+menu and on the phone (`SCHEDULE` tile). It no longer opens itself over your
 first steps.
 
 ---
@@ -113,8 +113,8 @@ what it is, when/where, fee or no-show cost, and SKIP TO HERE. `WeekendSkip.CanS
 skips to something still to come and refuses to pass one of your own unrun driving sessions (skipping *to* one
 is fine); `SkipToActivity` moves the clock to the booking's start, charging everything in between exactly like
 the half-day skip. `WeekendDirector.SkipTo` books the target as the objective and fast travels to the RV with
-the summary card. The pause menu's WEEKEND SCHEDULE row was removed — the phone is the schedule (F10 and the
-results screen's button still open the full sheet). Tests in `WeekendSkipTests`.
+the summary card. The pause menu's WEEKEND SCHEDULE row was removed — the phone is the schedule (F10 still
+opens the full sheet). Tests in `WeekendSkipTests`.
 
 ## 2. The session schedule
 

@@ -294,6 +294,20 @@ public class PitStopController : MonoBehaviour
         _state = State.HeadingToPit;   // on track it heads for the entry; on pit road it rolls on to the box
     }
 
+    // Put this car in its box this instant, parked for good: the race has been ended from the results screen
+    // and whoever was still running a cool-down lap or rolling down pit road is simply there. No-op without
+    // a box ladder to park in.
+    public void ParkInBoxNow()
+    {
+        if (_spline == null || !PitLane.Configured) return;
+        if (_state == State.Servicing) PitCrewRegistry.ForBox(BoxIndex)?.EndService();
+        if (_ai != null) _ai.enabled = false;
+        _raceOver = true;
+        _parking = true;
+        _state = State.Parked;
+        _spline.SnapToPitBox(PitLane.BoxDistance(BoxIndex, _spline.PitLength), PitLane.ParkLateral);
+    }
+
     // Pit-lane ACC: nothing else paces a car down here (the racing brain is parked), so without this a car
     // drives the lane's speed profile straight into whoever is stopped or queuing ahead. Owns aiMaxSpeedMph
     // while on the pit lane — AIRacingBehaviour is disabled here and re-takes it every frame once racing.

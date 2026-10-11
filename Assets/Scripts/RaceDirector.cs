@@ -24,7 +24,8 @@ public class RaceDirector : MonoBehaviour
     [Tooltip("Draw the small lap counter. Off when IronOvalRaceHUD is running — it draws its own.")]
     public bool drawLapCounter = true;
 
-    enum Phase { Waiting, Racing, Checkered, Results }
+    // Done: the player has ended the race from the results screen and is back on foot in the paddock.
+    enum Phase { Waiting, Racing, Checkered, Results, Done }
     Phase _phase = Phase.Waiting;
 
     // The race is over and the results table owns the screen (shown or folded away). Read by
@@ -364,6 +365,30 @@ public class RaceDirector : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    // END RACE: the race is put away. Every car still out on its cool-down lap or rolling down pit road is
+    // parked in its box on the spot, the player's car with them, and the driver is stood beside it on the
+    // garage side. The next objective is the road: walk to the motorhome and plan the drive on its satnav.
+    void EndRace()
+    {
+        _phase = Phase.Done;
+
+        var racePitIn = GetComponent<RaceEndPitIn>();
+        if (racePitIn != null) racePitIn.enabled = false;
+
+        var start = FindFirstObjectByType<PitLaneStart>();
+        var playerCar = start != null && start.car != null ? start.car.transform : null;
+        foreach (var pit in FindObjectsByType<PitStopController>(FindObjectsSortMode.None))
+        {
+            if (pit == null || pit.transform == playerCar) continue;
+            var spline = pit.GetComponent<SplineDriver>();
+            if (spline == null || !spline.isActiveAndEnabled) continue;   // the player's car, or not racing
+            pit.ParkInBoxNow();
+        }
+
+        if (start != null) start.EndRaceInBox();
+        WeekendObjectiveHUD.CallTheRoad();
+    }
+
     // The single-race exits. Each waits for a phone turned upright for the swing camera to come back round
     // first: the results table already asks for landscape, but a tap inside the turn would beat it.
     void RaceAgain()
@@ -468,10 +493,8 @@ public class RaceDirector : MonoBehaviour
         // Buttons on a phone carry the dialogue-sized face and grow to fit it; the rail they stack in can then
         // outgrow the classification, so the panel is made tall enough for whichever is longer.
         float bh = PixelGUI.ButtonH(PixelGUI.Px(18f));
-        float halfW = (railW - PixelGUI.Px(4f)) * 0.5f;
-        bool stackSkip = PixelGUI.TabStyle.CalcSize(new GUIContent("SKIP TRAVEL")).x > halfW;
         float railH = PixelGUI.Px(20f) + (GameSession.CareerActive
-            ? PixelGUI.Px(94f) + (stackSkip ? 4 : 3) * (bh + PixelGUI.Px(4f))
+            ? PixelGUI.Px(94f) + (bh + PixelGUI.Px(4f))
             : 3f * (bh + PixelGUI.Px(4f)));
         float h = bandH + PixelGUI.Px(30f) + Mathf.Max(_results.Count * row, PixelGUI.Px(174f),
                                                       PixelGUI.Handheld ? railH : 0f);
@@ -639,28 +662,8 @@ public class RaceDirector : MonoBehaviour
             ry += PixelGUI.Px(14f);
         }
 
-        // The road trip is the main loop: pick the next venue on the map, spend stops on detours, race
-        // there. SKIP TRAVEL keeps the instant weekend loop for quick testing.
-        if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "HIT THE ROAD")) { _panelHidden = true; TravelMapScreen.Open(); }
-        ry += bh + PixelGUI.Px(4f);
-        // The weekend is not necessarily over when your race is: a truck driver still has two days of it.
-        if (PixelGUI.Tab(new Rect(rx, ry, railW, bh), "WEEKEND SCHEDULE", false))
-        {
-            _panelHidden = true;
-            WeekendScheduleUI.Open();
-        }
-        ry += bh + PixelGUI.Px(4f);
-        // Side by side when the labels fit; the phone's bigger button face does not, so they stack.
-        if (stackSkip)
-        {
-            if (PixelGUI.Tab(new Rect(rx, ry, railW, bh), "SKIP TRAVEL", false)) NextWeekend();
-            ry += bh + PixelGUI.Px(4f);
-            if (PixelGUI.Tab(new Rect(rx, ry, railW, bh), "CLOSE", false)) _panelHidden = true;
-            return;
-        }
-        if (PixelGUI.Tab(new Rect(rx, ry, halfW, bh), "SKIP TRAVEL", false)) NextWeekend();
-        if (PixelGUI.Tab(new Rect(rx + halfW + PixelGUI.Px(4f), ry, halfW, bh), "CLOSE", false))
-            _panelHidden = true;
+        // The one way out: back on foot in the paddock, with the road trip (the RV's satnav) as what's next.
+        if (PixelGUI.Button(new Rect(rx, ry, railW, bh), "END RACE")) EndRace();
     }
 
     // One "label ... value" line in the rewards column.

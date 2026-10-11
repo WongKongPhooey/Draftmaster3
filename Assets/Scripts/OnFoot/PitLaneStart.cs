@@ -1289,6 +1289,64 @@ public class PitLaneStart : MonoBehaviour
         return true;
     }
 
+    // The race has been ended from the results screen (RaceDirector.EndRace). Wherever the car is — still on
+    // its cool-down lap, being brought down pit road by the AI, or parked with the driver already out — it goes
+    // into the player's box, stopped and square, and the driver is stood beside it on the garage side. Every
+    // brain that might have had the car (the player's controls, the broadcast cut, RaceEndPitIn's in-lap) is
+    // switched off first. False when this scene never worked out where the box is.
+    public bool EndRaceInBox()
+    {
+        if (car == null || !_boxKnown) return false;
+
+        // Watching the broadcast cut: the car comes back to the player before it is put away.
+        var drive = DriveModeController.Current;
+        if (drive != null && !drive.IsDriving) drive.SetDriving(true);
+
+        var pit = car.GetComponent<PitStopController>();
+        if (pit != null) pit.enabled = false;
+        car.enabled = false;
+        var brain = car.GetComponent<SplineDriver>();
+        if (brain != null)
+        {
+            brain.parkedHold = false;
+            brain.pitStopHold = false;
+            brain.pitParkDistance = -1f;
+            brain.enabled = false;
+        }
+        var aiInput = car.GetComponent<SplineInputDriver>();
+        if (aiInput != null) aiInput.enabled = false;
+        car.externalInput = false;
+
+        // Parked the way a tow parks it: through the dynamic model and the body, with the old pin let go so it
+        // does not drag the car back to wherever it was last held.
+        ParkedCarPin.Release(car);
+        CurrentBoxPose(out Vector3 boxPos, out float boxHeadingDeg);
+        car.SeedPose(boxPos, boxHeadingDeg);
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+            body.position = car.transform.position;
+            body.rotation = car.transform.eulerAngles.z;
+        }
+        RacePositionTracker.NoteTeleport(car.transform);
+        if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
+        _stoppedInBoxSince = -1f;
+
+        // No on-foot body (a single race), or already indoors in the motorhome: the car is put away, and the
+        // driver is left where they are.
+        var rv = RVInterior.Current;
+        if (_player == null || (!IsDriving && rv != null && rv.IsInside))
+        {
+            ParkedCarPin.Hold(car);
+            return true;
+        }
+
+        PutDriverOutBesideCar();
+        return true;
+    }
+
     bool CanClimbOut()
     {
         if (!IsDriving || car == null || !_boxKnown || !GameSession.OnFootAllowed || Coop.IsGuest) return Idle();

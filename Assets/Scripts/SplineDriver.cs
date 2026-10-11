@@ -442,6 +442,50 @@ public class SplineDriver : MonoBehaviour, IVehicleSpeedReadout, ICollisionRespo
         return _pitLength > 0f ? Mathf.Min(_pitLength, stop) : stop;
     }
 
+    // Put the car straight into a box `boxCentre` m down the pit lane, `lateral` m off its centerline, stopped
+    // and held there — a teleport, not a drive. The end of a race skipped to by the results screen (RaceDirector)
+    // uses it for every car still out on its cool-down lap. Pinned at once rather than eased in (SettleIntoHold),
+    // and the transform and body are written as well as the commanded pose, so a dynamic-AI car is re-seeded on
+    // the spot by SplineInputDriver's held-still branch instead of being driven there from wherever it was.
+    public void SnapToPitBox(float boxCentre, float lateral)
+    {
+        if (track == null) return;
+        if (_mainSamples == null || _mainSamples.Count < 2 || _pitSamples == null) Rebuild();
+        if (_pitSamples == null || _pitSamples.Count < 2 || _pitLength <= 0f) return;
+
+        usePitLane = true;
+        _onPit = true;
+        _distance = PitParkDistanceFor(boxCentre);
+        pitParkDistance = _distance;
+        lateralOffset = lateral;
+        tacticalLateralOffset = 0f;
+        _collisionLateral = _collisionLongitudinal = 0f;
+        _mergeLatBias = _mergeHeadingBias = 0f;
+        _pitApproachBlend = 0f;
+        _hasPrevLateral = false;
+        speed = 0f;
+        _currentMph = 0f;
+        pitStopHold = true;
+        parkedHold = true;
+        _wasHeld = true;          // already held: SettleIntoHold must not ease it in from the old pose
+        _settling = false;
+        _droveSinceHold = false;
+
+        Place();
+        Vector3 wp = track.transform.TransformPoint(new Vector3(CommandedLocalPos.x, CommandedLocalPos.y, 0f));
+        transform.position = new Vector3(wp.x, wp.y, transform.position.z);
+        transform.rotation = Quaternion.Euler(0, 0, (spriteFacesUp ? CommandedHeadingDeg - 90f : CommandedHeadingDeg) + angleOffsetDeg);
+        var body = GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+            body.position = transform.position;
+            body.rotation = transform.eulerAngles.z;
+        }
+        RacePositionTracker.NoteTeleport(transform);
+    }
+
     // Place the car at startDistance immediately and write the transform, independent of Start() ordering.
     // The networked spawner calls this before NetworkObject.Spawn() so the car captures a valid on-track pose:
     // otherwise the AI input driver's first physics step (which runs before Start) seeds it at the origin.
