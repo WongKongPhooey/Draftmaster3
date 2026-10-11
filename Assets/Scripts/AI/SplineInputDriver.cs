@@ -109,6 +109,28 @@ public class SplineInputDriver : MonoBehaviour
     [Tooltip("Speed cap (m/s) while recovering.")]
     public float recoverySpeedMps = 8f;
 
+    [Header("Impact Upset")]
+    [Tooltip("A hard hit from another car upsets the driver: for a reaction time they keep doing what they were " +
+             "doing, then their catch (yaw damping, countersteer, slide throttle cut, rear-slip brake release) " +
+             "comes back progressively. Without this the controller caught every hit on the very next physics " +
+             "step, so a car punted in the rear corner snapped straight back onto its line as if on elastic " +
+             "instead of spinning. Light taps barely register; hard ones are left to the physics.")]
+    public bool impactUpset = true;
+    [Tooltip("Yaw rate a hit adds (deg/s) where the upset starts, and where it is total.")]
+    public float upsetYawKickMinDeg = 20f;
+    public float upsetYawKickFullDeg = 90f;
+    [Tooltip("Sideways speed a hit adds (m/s) where the upset starts, and where it is total.")]
+    public float upsetLateralDvMin = 0.8f;
+    public float upsetLateralDvFull = 3f;
+    [Tooltip("Seconds over which hits on consecutive steps add up — a shove that keeps pushing counts as one hit.")]
+    public float upsetKickMemory = 0.25f;
+    [Tooltip("Seconds the driver holds the pre-hit steering and pedals, for a light and for a total upset.")]
+    public float upsetReactionMin = 0.1f;
+    public float upsetReactionMax = 0.45f;
+    [Tooltip("Seconds after reacting over which the catch returns to full strength, for a light and a total upset.")]
+    public float upsetRecoverMin = 0.4f;
+    public float upsetRecoverMax = 2f;
+
     SplineDriver _spline;
     PlayerVehicleController _car;
     TireModel _tireModel;
@@ -117,6 +139,10 @@ public class SplineInputDriver : MonoBehaviour
     bool _recovering;
     float _prevHeadingError;
     bool _hasPrevError;
+    float _kickYawDeg, _kickLatMps;   // recent hits, decaying over upsetKickMemory
+    float _upset;                     // 0..1 how badly the current hit has upset the driver; 0 = not upset
+    float _upsetAge;                  // seconds since the hit that set _upset
+    float _heldSteer, _heldThrottle, _heldBrake;   // what the driver was doing when it landed
 
     // What the controller decided on its last physics step, for AIIncidentRecorder and anything else that
     // wants to see WHY a car did what it did. Read-only telemetry; nothing drives off it.
@@ -129,6 +155,7 @@ public class SplineInputDriver : MonoBehaviour
     public float LastSteer { get; private set; }
     public float LastThrottle { get; private set; }
     public float LastBrake { get; private set; }
+    public float Upset => _upset;   // 0..1, see Impact Upset
 
     void Awake()
     {
@@ -150,7 +177,42 @@ public class SplineInputDriver : MonoBehaviour
         if (_spline != null) _spline.externalActualSpeedMps = _spline.CommandedSpeedMps;
         _recovering = false;
         _hasPrevError = false;
+        _kickYawDeg = _kickLatMps = _upset = 0f;
+        if (_car != null) { _car.CarImpactApplied -= OnCarImpact; _car.CarImpactApplied += OnCarImpact; }
     }
+
+    void OnDisable()
+    {
+        if (_car != null) _car.CarImpactApplied -= OnCarImpact;
+    }
+
+    // A car-vs-car hit landed this step (VehicleCollision runs after us, so LastSteer/Throttle/Brake are what the
+    // driver had just asked for). Hits on consecutive steps add up; a hit that upsets the driver more than the
+    // one they are already reacting to starts the reaction over.
+    void OnCarImpact(float yawKickDeg, float lateralDvMps)
+    {
+        if (!impactUpset || !_seeded || _spline == null || _spline.IsOnPit || _spline.IsHeldStill) return;
+        _kickYawDeg += Mathf.Abs(yawKickDeg);
+        _kickLatMps += Mathf.Abs(lateralDvMps);
+        float u = Mathf.Max(
+            Mathf.InverseLerp(upsetYawKickMinDeg, Mathf.Max(upsetYawKickFullDeg, upsetYawKickMinDeg + 0.1f), _kickYawDeg),
+            Mathf.InverseLerp(upsetLateralDvMin, Mathf.Max(upsetLateralDvFull, upsetLateralDvMin + 0.01f), _kickLatMps));
+        if (u <= 0f) return;
+        bool fresh = _upset <= 0f;
+        if (fresh || u > _upset + 0.1f)
+        {
+            if (fresh || _upsetAge >= UpsetReaction(_upset))
+            {
+                // Freeze what the driver was doing as the hit landed, not mid-hold.
+                _heldSteer = LastSteer; _heldThrottle = LastThrottle; _heldBrake = LastBrake;
+            }
+            _upset = u;
+            _upsetAge = 0f;
+        }
+    }
+
+    float UpsetReaction(float u) => Mathf.Lerp(upsetReactionMin, upsetReactionMax, u);
+    float UpsetRecover(float u) => Mathf.Lerp(upsetRecoverMin, upsetRecoverMax, u);
 
     void FixedUpdate()
     {
@@ -181,6 +243,28 @@ public class SplineInputDriver : MonoBehaviour
         }
 
         float speed = _car.SpeedMps;
+
+        // --- Impact upset: during the reaction time the inputs are held (applied at the end); after it, `catch`
+        // scales the stabilising terms from what the upset leaves (1 - upset) back up to full over the recovery.
+        float dtStep = Time.fixedDeltaTime;
+        float kickDecay = Mathf.Exp(-dtStep / Mathf.Max(upsetKickMemory, 0.01f));
+        _kickYawDeg *= kickDecay;
+        _kickLatMps *= kickDecay;
+        bool holding = false;
+        float catchScale = 1f;
+        if (_upset > 0f)
+        {
+            if (!impactUpset) _upset = 0f;
+            else
+            {
+                _upsetAge += dtStep;
+                float reaction = UpsetReaction(_upset), recover = UpsetRecover(_upset);
+                if (_upsetAge < reaction) { holding = true; catchScale = 1f - _upset; }
+                else if (_upsetAge < reaction + recover)
+                    catchScale = Mathf.Lerp(1f - _upset, 1f, (_upsetAge - reaction) / Mathf.Max(recover, 0.01f));
+                else _upset = 0f;
+            }
+        }
 
         // --- Slide state: body slip angle is how far the velocity vector points away from the nose. Past
         // slideStartDeg the car is sliding — winding on more lock or more throttle only makes it worse.
@@ -272,9 +356,10 @@ public class SplineInputDriver : MonoBehaviour
             if (haveOffset && wideLiftEndMetres > 0f)
                 wideLift01 = Mathf.InverseLerp(wideLiftStartMetres, Mathf.Max(wideLiftEndMetres, wideLiftStartMetres + 0.01f),
                                                LastCrossTrackMetres * Mathf.Sign(slipDeg))
-                             * Mathf.InverseLerp(3f, Mathf.Max(slideStartDeg, 3.1f), Mathf.Abs(slipDeg));   // sliding, not just off-line
+                             * Mathf.InverseLerp(3f, Mathf.Max(slideStartDeg, 3.1f), Mathf.Abs(slipDeg))    // sliding, not just off-line
+                             * catchScale;
             float headingGain = yawRateGain > 0f ? steerGain * dampedSteerGainScale : steerGain;
-            float steerAngleDeg = Mathf.Clamp(headingError * headingGain + errorRate * steerDamping + crossDeg + yawDeg + slipCatchDeg,
+            float steerAngleDeg = Mathf.Clamp(headingError * headingGain + (errorRate * steerDamping + yawDeg + slipCatchDeg) * catchScale + crossDeg,
                                               -maxSteer, maxSteer) * authority;
             // PlayerVehicleController maps desiredSteer = -steerIn * maxSteeringAngle, so invert to request this angle.
             steerInput = -steerAngleDeg / maxSteer;
@@ -317,28 +402,33 @@ public class SplineInputDriver : MonoBehaviour
         float speedError = commandedMps - speed;
         // A slide cuts throttle (power past saturated rears just rotates the car further) and softens the brake
         // (forward weight transfer unloads the rear mid-slide) — the tyres get their lateral budget back to catch it.
-        float throttle = Mathf.Clamp01(speedError * speedGain) * (1f - slide01) * (1f - wideLift01);
-        float brake = Mathf.Clamp01(-speedError * speedGain) * (1f - slideBrakeCut * slide01);
+        // An upset driver is slow to come off the power and the brake as well as to catch the steering.
+        float slideCut01 = slide01 * catchScale;
+        float throttle = Mathf.Clamp01(speedError * speedGain) * (1f - slideCut01) * (1f - wideLift01);
+        float brake = Mathf.Clamp01(-speedError * speedGain) * (1f - slideBrakeCut * slideCut01);
         if (TrackConditions.AiFlatOut && !_spline.IsOnPit && !_recovering)
         {
             // Flat out in a pack the car ahead is a bumper away: ease the throttle off over the last few tenths of a
             // m/s rather than switching to the brake at the first one - that slammed between the two every second
             // and read as the whole pack lifting. The brake is only for real closing speed.
-            throttle = Mathf.Clamp01(1f + speedError * speedGain * 2f) * (1f - slide01) * (1f - wideLift01);
+            throttle = Mathf.Clamp01(1f + speedError * speedGain * 2f) * (1f - slideCut01) * (1f - wideLift01);
             // Proportional, and gentle: a car that stood on the brakes for a 14 mph gap made the car behind stand
             // on them harder still, and a whole line went from 200 to 140 mph. Full brakes only past
             // flatOutPanicMps over - something stopped or spinning ahead.
             float over = -speedError;
             brake = over >= flatOutPanicMps ? 1f : Mathf.Clamp01((over - flatOutBrakeMargin) * flatOutBrakeGain);
-            brake *= 1f - slideBrakeCut * slide01;
+            brake *= 1f - slideBrakeCut * slideCut01;
         }
         if (rearSlipBrakeRelease > 0f)
         {
             float rearSlip = Mathf.Abs(_car.SlipRearDeg);
             float release = Mathf.InverseLerp(rearSlipBrakeStartDeg,
                                               Mathf.Max(rearSlipBrakeFullDeg, rearSlipBrakeStartDeg + 0.1f), rearSlip);
-            brake *= 1f - rearSlipBrakeRelease * release;
+            brake *= 1f - rearSlipBrakeRelease * release * catchScale;
         }
+
+        // Still reacting to a hit: the driver hasn't moved their hands or feet yet.
+        if (holding) { steerInput = _heldSteer; throttle = _heldThrottle; brake = _heldBrake; }
 
         _car.SetInput(steerInput, throttle, brake);
 

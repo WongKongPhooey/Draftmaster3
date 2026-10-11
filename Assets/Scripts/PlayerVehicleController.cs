@@ -914,11 +914,13 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
         float hr = _headingDeg * Mathf.Deg2Rad;
         float cos = Mathf.Cos(hr), sin = Mathf.Sin(hr);
         _vx += worldDeltaV.x * cos + worldDeltaV.y * sin;
-        _vy += -worldDeltaV.x * sin + worldDeltaV.y * cos;
+        float lateralDv = -worldDeltaV.x * sin + worldDeltaV.y * cos;
+        _vy += lateralDv;
 
         // Off-centre hit imparts yaw spin: lever arm × impulse (impulse = mass × Δv) / yaw inertia.
         Vector2 rArm = contactPoint - (Vector2)transform.position;
         float dvMag = worldDeltaV.magnitude;
+        float yawKick = 0f;
         if (dvMag > 1e-5f)
         {
             Vector2 n = worldDeltaV / dvMag;
@@ -926,9 +928,16 @@ public class PlayerVehicleController : MonoBehaviour, IVehicleSpeedReadout, ICol
             float crossZ = rArm.x * n.y - rArm.y * n.x;
             float deltaOmega = (crossZ * impulse / Mathf.Max(_iz, 1f)) * spinSensitivity;
             float cap = maxImpactSpinDeg * Mathf.Deg2Rad;
-            _r += Mathf.Clamp(deltaOmega, -cap, cap);
+            yawKick = Mathf.Clamp(deltaOmega, -cap, cap);
+            _r += yawKick;
         }
+        CarImpactApplied?.Invoke(yawKick * Mathf.Rad2Deg, lateralDv);
     }
+
+    // What a car-vs-car hit did to this car on one step: yaw rate added (deg/s) and sideways velocity added in
+    // the body frame (m/s, + = left). SplineInputDriver reads it so a hard hit actually upsets an AI driver
+    // instead of being caught on the very next step.
+    public event System.Action<float, float> CarImpactApplied;
 
     public void PitResetTyres() { wearFront = 0f; wearRear = 0f; if (_tires != null) _tires.PitReset(); }
 
