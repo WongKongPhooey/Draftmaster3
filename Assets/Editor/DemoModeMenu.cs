@@ -39,6 +39,9 @@ public static class DemoModeMenu
         // run hint it holds back until the phone has been put away.
         ChiefCheckInBeat.Rearm();
 
+        // And lock fast travel again until the briefing is over, with its prompt ready to teach it.
+        FastTravelTutorial.Relock();
+
         Debug.Log("Opening re-armed: fresh three days, and the next race scene wakes you up in the dark "
                   + "with nothing booked until the liaison says so. (Her beat has its own appearance flag — "
                   + "Draftmaster > NPCs > Clear Appearance Flags if she has already had her say.)");

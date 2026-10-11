@@ -287,8 +287,16 @@ public class WeekendVenuePresenceTests
         // Take the marker's own shortcut rather than simulating a walk across the paddock. The move happens
         // at the black of a wipe, a fraction of a second after the button, so wait the wipe out — checking on
         // the next frame only ever measures the walk the player hasn't taken yet.
+        // A fresh career has fast travel locked until its first team meeting (FastTravelTutorial). Unlock it
+        // for the shortcut, and lock it again afterwards so the test leaves the save as it found it.
+        var tutorial = PlayModeScenes.GameType("FastTravelTutorial");
+        bool wasLocked = (bool)tutorial.GetProperty("Locked", Any).GetValue(null);
+        if (wasLocked) tutorial.GetMethod("Unlock", Any).Invoke(null, null);
+
         var hud = PlayModeScenes.GameType("WeekendObjectiveHUD");
-        Assert.IsTrue((bool)hud.GetMethod("TravelThere", Any).Invoke(null, null), "TRAVEL THERE went nowhere.");
+        bool travelled = (bool)hud.GetMethod("TravelThere", Any).Invoke(null, null);
+        if (wasLocked) tutorial.GetMethod("Relock", Any).Invoke(null, null);
+        Assert.IsTrue(travelled, "TRAVEL THERE went nowhere.");
 
         var fade = PlayModeScenes.GameType("ScreenFade");
         var busy = fade.GetProperty("Busy", Any);

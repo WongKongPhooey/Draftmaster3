@@ -61,7 +61,7 @@ public class PhoneTasksApp : PhoneApp
                 title = booking.title,
                 detail = booking.Clock,
                 where = metres >= 0f ? $"{where} · {Mathf.RoundToInt(metres)} m" : where,
-                travel = WeekendAppointment.Target() != null && (metres < 0f || metres > 4f),
+                travel = !FastTravelTutorial.Locked && WeekendAppointment.Target() != null && (metres < 0f || metres > 4f),
             };
             return _now;
         }
@@ -78,7 +78,7 @@ public class PhoneTasksApp : PhoneApp
                 where = giver != null ? "Given by " + giver.speakerName : "",
                 // Only a finished quest is worth going back to its giver for; one still being worked on is
                 // done out on the track or around the paddock, not at their feet.
-                travel = giver != null && QuestManager.GetState(q) == QuestManager.State.ReadyToTurnIn,
+                travel = !FastTravelTutorial.Locked && giver != null && QuestManager.GetState(q) == QuestManager.State.ReadyToTurnIn,
                 quest = q,
             };
         }

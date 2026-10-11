@@ -11,7 +11,9 @@ using UnityEngine.InputSystem;
 //
 // T (the pad's north face button) walks you there. The paddock is a big place and the schedule already
 // charges you the hour; making somebody cross it four times a day at 3 m/s is a tax on the second
-// playthrough rather than a feature, so the skip is always available and always visible.
+// playthrough rather than a feature, so once it is unlocked the skip is always available and always
+// visible. It is locked until the career's first team meeting is over (FastTravelTutorial): that first walk
+// is where the phone and running are taught.
 //
 // Self-installing, drawn with PixelGUI like the rest of the race-side HUD, and silent whenever there is no
 // appointment.
@@ -178,7 +180,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
         var kb = Keyboard.current;
         // T walks you there whether or not the strip happens to be on screen — the booking is live either
         // way, and hiding the prompt is not the same as taking the shortcut away.
-        if ((kb != null && kb[TravelKey].wasPressedThisFrame) || PadInput.PressedOnFoot(PadBindings.TravelThere))
+        if (!FastTravelTutorial.Locked &&
+            ((kb != null && kb[TravelKey].wasPressedThisFrame) || PadInput.PressedOnFoot(PadBindings.TravelThere)))
             TravelThere();
         if ((kb != null && kb[RecallKey].wasPressedThisFrame) || PadInput.PressedOnFoot(PadBindings.RecallObjective))
             ToggleNow();
@@ -397,6 +400,20 @@ public class WeekendObjectiveHUD : MonoBehaviour
         }
     }
 
+    // Is the strip offering FAST TRAVEL right now? The same test OnGUI draws the button on, minus the lock —
+    // FastTravelTutorial asks it to know when the prompt that teaches the button has something to point at.
+    public static bool CanTravel
+    {
+        get
+        {
+            var hud = Instance;
+            return hud != null && hud.Available && hud.TravelOffered;
+        }
+    }
+
+    // Inside the RV there is nowhere to fast travel to: the satnav is across the cab.
+    bool TravelOffered => _shown != null && !_here && !(_shown == HitTheRoad && _roadInside);
+
     // Put the player at the venue's standing mark. Not a cheat on the weekend's clock — its cost is the
     // hour the booking takes, which is charged when it is done, not the walk. A session that is running its
     // own clock (qualifying) is different: see TravelTo.
@@ -404,6 +421,8 @@ public class WeekendObjectiveHUD : MonoBehaviour
 
     public static bool TravelThere()
     {
+        if (FastTravelTutorial.Locked) return false;
+
         // The spent weekend: T takes you to your motorhome's door mark. Inside, the satnav is a step away.
         if (Booked == null && Instance != null && Instance._shown == HitTheRoad)
         {
@@ -426,11 +445,13 @@ public class WeekendObjectiveHUD : MonoBehaviour
     // stood at the venue unable to walk.
     public static bool TravelTo(Vector3 to)
     {
+        if (FastTravelTutorial.Locked) return false;
         var player = WeekendVenueAnchor.OnFootPlayer();
         if (player == null) return false;
         if (ScreenFade.Busy) return false;
 
         PhoneUI.Close();
+        FastTravelTutorial.Travelled();
         to.z = player.position.z;
 
         // During a timed session the trip costs session time: a second for every metre skipped, charged on
@@ -473,11 +494,11 @@ public class WeekendObjectiveHUD : MonoBehaviour
         float inset = PixelGUI.Px(8f);   // what PanelContent(box, 4f) takes off each side: Px(4) + Px(4)
 
         // TRAVEL THERE, as a button whose glyph matches the device: the T keycap on a keyboard, the pad's
-        // button on a pad, a walking figure on a phone. Only while there is somewhere to travel to.
+        // button on a pad, a walking figure on a phone. Only while there is somewhere to travel to, and only
+        // once fast travel has been unlocked.
         // Sat to the RIGHT of the text rather than under it: the strip is at the top of the screen over the
         // game, and a fourth row made it tall enough to hide what the player is walking into. Wider is cheaper.
-        // Inside the RV there is nowhere to fast travel to: the satnav is across the cab.
-        bool travel = !_here && !(activity == HitTheRoad && _roadInside);
+        bool travel = TravelOffered && !FastTravelTutorial.Locked;
         Vector2 travelSize = travel ? PixelGUI.ActionButtonSize(TravelKey.ToString(), TravelLabel) : Vector2.zero;
         float travelGap = travel ? PixelGUI.Px(10f) : 0f;
 

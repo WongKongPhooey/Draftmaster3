@@ -375,6 +375,8 @@ Assets/Scripts/Weekend/
   WeekendScheduleUI.cs             the sheet (F10)
   WeekendAppointment.cs            the booking you have said yes to and not turned up for yet
   WeekendObjectiveHUD.cs           where you are due, how far, and T to travel there
+  FastTravelTutorial.cs            T is locked until the career's first team meeting is over, then taught
+                                   once with a prompt (rules: Core/FastTravelUnlock.cs)
   WeekendResultCard.cs             what that hour did (a corner card in the world; modal only after a session)
   WeekendModal.cs                  one owner of Time.timeScale across stacked panels
   Venues/

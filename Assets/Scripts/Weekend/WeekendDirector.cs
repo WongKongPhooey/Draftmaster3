@@ -557,6 +557,10 @@ public class WeekendDirector : MonoBehaviour
         // still there in three weekends' time when the card has long gone.
         if (a.kind == ActivityKind.Orientation) LeavePhoneCribSheet();
 
+        // The first team meeting is what unlocks fast travel; FastTravelTutorial teaches it once the player
+        // is free and there is somewhere to go.
+        if (FastTravelUnlock.Unlocks(a.kind)) FastTravelTutorial.Unlock();
+
         // One thing leads to the next: the moment this is settled, the following booking is the live
         // objective and its marker is already on screen.
         BookNextUp(replaceExisting: true);
