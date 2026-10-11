@@ -460,7 +460,10 @@ public class RaceDirector : MonoBehaviour
 
         float row = PixelGUI.Px(12f);
         float railW = PixelGUI.Px(150f);          // the design's right-hand column
-        float w = PixelGUI.Px(420f);
+        // As wide as the screen allows, less a margin, so the classification gets the room - capped so an
+        // ultrawide doesn't stretch the columns into separate islands. The rail keeps its width; the list takes
+        // the rest.
+        float w = Mathf.Round(Mathf.Min(Screen.width - PixelGUI.Px(24f), PixelGUI.Px(760f)));
         float bandH = PixelGUI.Px(18f);
         // Buttons on a phone carry the dialogue-sized face and grow to fit it; the rail they stack in can then
         // outgrow the classification, so the panel is made tall enough for whichever is longer.
@@ -501,14 +504,30 @@ public class RaceDirector : MonoBehaviour
         PixelGUI.Fill(new Rect(c.x, top, listW, listH), PixelGUI.Plate);
 
         float cx = c.x + PixelGUI.Px(4f), cy = top + PixelGUI.Px(3f);
-        GUI.Label(new Rect(cx, cy, listW, PixelGUI.Px(10f)),
-                  $"{"POS",-5}{"#",-5}{"DRIVER",-15}{"RESULT",-12}{"BEST",-10}", PixelGUI.HeadingSmall);
+        var rowStyle = PixelGUI.Data;
+
+        // Columns placed by measure rather than padded into one string: the header is the proportional display
+        // face and the rows the monospace data face, so padding never lined the two up. POS and # sit on the
+        // left, RESULT and BEST are pinned to the right edge, and DRIVER takes whatever the panel's width leaves.
+        float charW = Mathf.Max(1f, rowStyle.CalcSize(new GUIContent("0")).x);
+        float innerW = listW - PixelGUI.Px(8f);
+        float posX = cx, numX = posX + 5f * charW, nameX = numX + 5f * charW;
+        float bestX = cx + innerW - 10f * charW, resultX = bestX - 12f * charW;
+        float nameW = resultX - nameX;
+        int nameChars = Mathf.Max(8, Mathf.FloorToInt(nameW / charW) - 1);
+
+        var head = PixelGUI.HeadingSmall;
+        float headH = PixelGUI.Px(10f);
+        GUI.Label(new Rect(posX, cy, numX - posX, headH), "POS", head);
+        GUI.Label(new Rect(numX, cy, nameX - numX, headH), "#", head);
+        GUI.Label(new Rect(nameX, cy, nameW, headH), "DRIVER", head);
+        GUI.Label(new Rect(resultX, cy, bestX - resultX, headH), "RESULT", head);
+        GUI.Label(new Rect(bestX, cy, cx + innerW - bestX, headH), "BEST", head);
         cy += PixelGUI.Px(11f);
         PixelGUI.Rule(cx, cy, listW - PixelGUI.Px(8f));
         cy += PixelGUI.Px(3f);
 
         float winnerTime = _results.Count > 0 && _results[0].finished ? _results[0].raceTime : -1f;
-        var rowStyle = PixelGUI.Data;
         var prevRow = rowStyle.normal.textColor;
         for (int i = 0; i < _results.Count; i++)
         {
@@ -518,7 +537,7 @@ public class RaceDirector : MonoBehaviour
                 PixelGUI.Fill(rowRect, new Color(PixelGUI.Gold.r, PixelGUI.Gold.g, PixelGUI.Gold.b, 0.25f));
             rowStyle.normal.textColor = r.isPlayer ? PixelGUI.Gold : PixelGUI.Text;
 
-            string name = string.IsNullOrEmpty(r.name) ? "?" : (r.name.Length > 13 ? r.name.Substring(0, 13) : r.name);
+            string name = string.IsNullOrEmpty(r.name) ? "?" : (r.name.Length > nameChars ? r.name.Substring(0, nameChars) : r.name);
             string result;
             if (!r.finished) result = "+" + r.lapsDown + "L";
             else if (i == 0) result = "WINNER";
@@ -526,8 +545,11 @@ public class RaceDirector : MonoBehaviour
             else result = LapTimingManager.Format(r.raceTime);
 
             string bestStr = (r.tf != null && best.TryGetValue(r.tf, out float b)) ? LapTimingManager.Format(b) : "--:--.---";
-            GUI.Label(new Rect(cx, cy, listW, row),
-                      $"{("P" + (i + 1)),-5}{("#" + r.carNumber),-5}{name,-15}{result,-12}{bestStr,-10}", rowStyle);
+            GUI.Label(new Rect(posX, cy, numX - posX, row), "P" + (i + 1), rowStyle);
+            GUI.Label(new Rect(numX, cy, nameX - numX, row), "#" + r.carNumber, rowStyle);
+            GUI.Label(new Rect(nameX, cy, nameW, row), name, rowStyle);
+            GUI.Label(new Rect(resultX, cy, bestX - resultX, row), result, rowStyle);
+            GUI.Label(new Rect(bestX, cy, cx + innerW - bestX + PixelGUI.Px(4f), row), bestStr, rowStyle);
             cy += row;
         }
         rowStyle.normal.textColor = prevRow;
