@@ -128,8 +128,20 @@ public class DatabaseManager : MonoBehaviour
 
     static void SeedSponsorsIfEmpty(SQLiteConnection db)
     {
-        if (db.Table<Draftmaster.Data.Sponsor>().Count() > 0) return;
-        db.InsertAll(DummySponsors.Build());
+        if (db.Table<Draftmaster.Data.Sponsor>().Count() == 0)
+        {
+            db.InsertAll(DummySponsors.Build());
+            return;
+        }
+
+        // Same as drivers: a save seeded before a brand joined the list (Aces & Spades) would never meet it.
+        // Add any seeded brand the table has no row for, by name — additive only.
+        var have = new System.Collections.Generic.HashSet<string>();
+        foreach (var s in db.Table<Draftmaster.Data.Sponsor>()) have.Add(s.Name);
+        var missing = new System.Collections.Generic.List<Draftmaster.Data.Sponsor>();
+        foreach (var s in DummySponsors.Build())
+            if (!have.Contains(s.Name)) missing.Add(s);
+        if (missing.Count > 0) db.InsertAll(missing);
     }
 
     static void SeedTracksIfEmpty(SQLiteConnection db)

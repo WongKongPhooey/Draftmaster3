@@ -35,9 +35,9 @@ public class SceneNavigationTests
     //   DemoMenu      left over; nothing opens it.
     //   GarageScreen  opened by a LaptopInteractable, which arrives on a prefab loaded from Resources at
     //                 runtime (the RV interior), so it is in no scene for the map to read.
-    //   TeamGarage    had a TEAM FACTORY row on the title menu until the menu became the demo's five
-    //                 rows. The factory itself is unchanged and its laptop still leads back out; what it
-    //                 no longer has is a door from the front of the game.
+    //   TeamGarage    Team HQ: reached from the travel map (Team HQ > GO INSIDE TEAM HQ), which is the
+    //                 TravelMap prefab loaded from Resources at runtime, so no scene file names it. Its
+    //                 exit door goes back to the road (LandmarkLoader.ExitToRoad).
     static readonly string[] KnownOrphans = { "DemoMenu", "GarageScreen", "TeamGarage" };
 
     // The map: scene name -> the scenes it can reach. Built once, from the scenes themselves.

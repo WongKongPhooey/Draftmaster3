@@ -68,7 +68,13 @@ namespace Draftmaster.Sponsors
                     Debug.LogWarning($"SponsorLiveryBaker: decal '{d.art.name}' is not Read/Write enabled — skipped.");
                     continue;
                 }
-                Blit(baked, w, h, d.art, layout.Anchor(d.slot, d.art.width, d.art.height));
+                var decalPx = d.art.GetPixels32(0);
+                foreach (var panel in SponsorSlots.Panels(d.slot))      // Quarters paints both rear quarters
+                {
+                    var art = DecalTurns.Rotate(decalPx, d.art.width, d.art.height,
+                                                layout.TurnFor(panel), out int artW, out int artH);
+                    Blit(baked, w, h, art, artW, artH, layout.Anchor(panel, artW, artH));
+                }
             }
 
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
@@ -87,32 +93,32 @@ namespace Draftmaster.Sponsors
             return sprite;
         }
 
-        // Alpha-over one decal, clipped to the livery. Straight source-over: pixel art decals are hard-edged,
-        // so anything with alpha simply replaces what's under it, weighted for the odd soft edge.
-        static void Blit(Color32[] dst, int dstW, int dstH, Texture2D art, Vector2Int anchor)
+        // Alpha-over one decal, masked by the livery: a decal pixel only lands where the paint is opaque, so
+        // the car's silhouette crops anything that hangs off the bodywork (a quarter-panel logo wrapping off
+        // the rear corner) and the body's alpha — its shape — never changes.
+        static void Blit(Color32[] dst, int dstW, int dstH, Color32[] art, int artW, int artH, Vector2Int anchor)
         {
-            var srcPixels = art.GetPixels32(0);
-            for (int y = 0; y < art.height; y++)
+            for (int y = 0; y < artH; y++)
             {
                 int ty = anchor.y + y;
                 if (ty < 0 || ty >= dstH) continue;
-                for (int x = 0; x < art.width; x++)
+                for (int x = 0; x < artW; x++)
                 {
                     int tx = anchor.x + x;
                     if (tx < 0 || tx >= dstW) continue;
 
-                    Color32 s = srcPixels[y * art.width + x];
-                    if (s.a == 0) continue;
+                    Color32 s = art[y * artW + x];
                     int di = ty * dstW + tx;
-                    if (s.a == 255) { dst[di] = s; continue; }
-
                     Color32 d = dst[di];
-                    float a = s.a / 255f;
+                    if (s.a == 0 || d.a == 0) continue;
+                    if (s.a == 255 && d.a == 255) { dst[di] = s; continue; }
+
+                    float a = (s.a / 255f) * (d.a / 255f);
                     dst[di] = new Color32(
                         (byte)(s.r * a + d.r * (1f - a)),
                         (byte)(s.g * a + d.g * (1f - a)),
                         (byte)(s.b * a + d.b * (1f - a)),
-                        (byte)Mathf.Max(s.a, d.a));
+                        d.a);
                 }
             }
         }
@@ -123,6 +129,7 @@ namespace Draftmaster.Sponsors
             for (int i = 0; i < decals.Count; i++)
             {
                 sb.Append('|').Append((int)decals[i].slot).Append(':');
+                if (decals[i].art != null) sb.Append(decals[i].art.GetInstanceID()).Append(':');
                 sb.Append(decals[i].art != null ? decals[i].art.name : "-");
             }
             return sb.ToString();

@@ -31,6 +31,8 @@ namespace Draftmaster.Data
                 Sp("Hydro Spring Water","Beverage",  55, 50,  500000,  20000,  8000, 35),
                 Sp("Ironclad Tools",    "Auto",     65, 58,  850000,  35000, 14000, 50),
                 Sp("Skyline Airlines",  "Travel",   82, 78, 1700000,  60000, 24000, 70),
+                // The demo #89's own hood sponsor (StarterSponsor) — a small brand that backs an unknown.
+                Sp("Aces & Spades",     "Entertainment", 45, 40, 400000, 15000, 6000, 0),
             };
         }
     }

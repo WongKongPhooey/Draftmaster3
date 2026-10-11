@@ -83,7 +83,59 @@ public class SponsorTests
 
         Assert.IsNull(SponsorBook.InSlot(SponsorSlot.Hood));
         Assert.AreEqual(deal.id, SponsorBook.InSlot(SponsorSlot.Tail).id);
-        Assert.AreEqual(3, SponsorBook.FreeSlots());
+        Assert.AreEqual(SponsorSlots.All.Length - 1, SponsorBook.FreeSlots(), "Hood + quarters free, tail taken.");
+    }
+
+    [Test]
+    public void QuartersIsOneBrandOnBothRearQuarters()
+    {
+        var old = SponsorBook.Sign(Deal());
+        SponsorBook.Place(old.id, SponsorSlot.QuarterLeft);      // placed before Quarters existed
+        Assert.AreEqual(old.id, SponsorBook.InSlot(SponsorSlot.Quarters).id, "A single quarter still occupies the pair.");
+
+        var fresh = SponsorBook.Sign(Deal(perRace: 1000));
+        SponsorBook.Place(fresh.id, SponsorSlot.Quarters);
+        Assert.IsFalse(SponsorBook.ById(old.id).IsPlaced, "Taking both quarters bumps whoever had one.");
+        Assert.AreEqual(900, SponsorBook.PayoutForFinish(20), "Both quarters pay 90%.");
+    }
+
+    [Test]
+    public void ArrangeLaysTheWholeCarOutAtOnce()
+    {
+        var a = SponsorBook.Sign(Deal(perRace: 1000));
+        var b = SponsorBook.Sign(Deal(perRace: 1000));
+        var c = SponsorBook.Sign(Deal(perRace: 1000));
+        SponsorBook.Place(c.id, SponsorSlot.Hood);
+
+        SponsorBook.Arrange(new System.Collections.Generic.Dictionary<SponsorSlot, int>
+        {
+            { SponsorSlot.Hood, a.id }, { SponsorSlot.Quarters, b.id }, { SponsorSlot.Tail, 0 },
+        });
+
+        Assert.AreEqual(SponsorSlot.Hood, SponsorBook.ById(a.id).slot);
+        Assert.AreEqual(SponsorSlot.Quarters, SponsorBook.ById(b.id).slot);
+        Assert.IsFalse(SponsorBook.ById(c.id).IsPlaced, "Anything not named comes off the car.");
+    }
+
+    [Test]
+    public void CompositorPaintsOnlyTheMaskAndKeepsDetailOnTop()
+    {
+        var clear = new Color32(0, 0, 0, 0);
+        var mask = new[] { new Color32(255, 255, 255, 255), new Color32(128, 128, 128, 255), clear, new Color32(255, 255, 255, 255) };
+        var detail = new[] { clear, clear, clear, new Color32(1, 2, 3, 255) };
+        var pattern = new[] { new Color32(255, 255, 255, 255), clear, clear, clear };
+        var scheme = new PaintScheme
+        {
+            baseColour = new Color32(200, 100, 0, 255),
+            pattern = "stripe",
+            accentColour = new Color32(10, 20, 30, 255),
+        };
+
+        var px = LiveryCompositor.Compose(mask, detail, pattern, 4, 1, scheme);
+        Assert.AreEqual(new Color32(10, 20, 30, 255), px[0], "Pattern pixels take the accent.");
+        Assert.AreEqual(new Color32(100, 50, 0, 255), px[1], "Mask grey shades the base coat.");
+        Assert.AreEqual(0, px[2].a, "Off the mask stays transparent.");
+        Assert.AreEqual(new Color32(1, 2, 3, 255), px[3], "Detail sits on top of the paint.");
     }
 
     [Test]
@@ -201,6 +253,74 @@ public class SponsorTests
         Assert.AreEqual(new Vector2Int(10, 13), anchor, "A 12x6 decal sits centred in a 16x16 panel.");
 
         Object.DestroyImmediate(layout);
+    }
+
+    [Test]
+    public void TurnsMatchWhatAnImageViewerShows()
+    {
+        // 2 wide x 1 tall: A on the left, B on the right (rows bottom-up, one row).
+        var a = new Color32(1, 0, 0, 255);
+        var b = new Color32(2, 0, 0, 255);
+        var src = new[] { a, b };
+
+        // Clockwise: left end goes to the top -> 1 wide x 2 tall, A in the top row (index 1), B at the bottom.
+        var cw = DecalTurns.Rotate(src, 2, 1, DecalTurn.Clockwise, out int w, out int h);
+        Assert.AreEqual((1, 2), (w, h));
+        Assert.AreEqual(a, cw[1]);
+        Assert.AreEqual(b, cw[0]);
+
+        // Counter-clockwise: left end goes to the bottom.
+        var ccw = DecalTurns.Rotate(src, 2, 1, DecalTurn.CounterClockwise, out w, out h);
+        Assert.AreEqual((1, 2), (w, h));
+        Assert.AreEqual(a, ccw[0]);
+        Assert.AreEqual(b, ccw[1]);
+
+        var half = DecalTurns.Rotate(src, 2, 1, DecalTurn.Half, out w, out h);
+        Assert.AreEqual((2, 1), (w, h));
+        Assert.AreEqual(b, half[0]);
+        Assert.AreEqual(a, half[1]);
+    }
+
+    [Test]
+    public void SmallArtIsSizedForTheQuartersAndTurnedOntoTheTrunk()
+    {
+        var layout = ScriptableObject.CreateInstance<CarSponsorLayout>();
+        layout.tail = new RectInt(58, 8, 4, 16);
+        layout.tailTurn = DecalTurn.Clockwise;
+        layout.quarterRight = new RectInt(48, 2, 16, 4);
+        layout.quarterRightTurn = DecalTurn.None;
+
+        Assert.AreEqual(new Vector2Int(16, 4), layout.ArtSize(SponsorSlot.Tail),
+            "A 4x16 trunk strip turned a quarter takes the same 16x4 art as the quarter panels.");
+        Assert.AreEqual(layout.ArtSize(SponsorSlot.QuarterRight), layout.ArtSize(SponsorSlot.Tail));
+
+        Object.DestroyImmediate(layout);
+    }
+
+    [Test]
+    public void StarterDealIsGivenOncePerCareerOnItsPanel()
+    {
+        var deal = new SponsorDeal { sponsorId = 99, sponsorName = "Aces & Spades", perRace = 1500, racesTotal = 36 };
+        Assert.IsTrue(SponsorBook.GiveStarter(deal, SponsorSlot.Hood));
+        Assert.AreEqual(SponsorSlot.Hood, SponsorBook.InSlot(SponsorSlot.Hood)?.slot);
+        Assert.AreEqual(36, SponsorBook.ById(deal.id).racesRemaining);
+
+        var again = new SponsorDeal { sponsorId = 99, sponsorName = "Aces & Spades", perRace = 1500, racesTotal = 36 };
+        Assert.IsFalse(SponsorBook.GiveStarter(again, SponsorSlot.Hood), "Only once per career.");
+        Assert.AreEqual(1, SponsorBook.Count);
+
+        SponsorBook.ClearAll();
+        Assert.IsTrue(SponsorBook.GiveStarter(again, SponsorSlot.Hood), "A wiped book is a new career.");
+    }
+
+    [Test]
+    public void StarterDealNeverBumpsAPlacedSponsor()
+    {
+        var mine = SponsorBook.Sign(new SponsorDeal { sponsorId = 1, perRace = 2000, racesTotal = 5 });
+        SponsorBook.Place(mine.id, SponsorSlot.Hood);
+
+        SponsorBook.GiveStarter(new SponsorDeal { sponsorId = 99, perRace = 1500, racesTotal = 36 }, SponsorSlot.Hood);
+        Assert.AreEqual(mine.id, SponsorBook.InSlot(SponsorSlot.Hood).id, "An old save keeps the hood it already sold.");
     }
 
     [Test]

@@ -4,6 +4,10 @@ namespace Draftmaster.Sponsors
     // -X, so these read front-to-back: hood, then the two rear quarter panels, then the decklid.
     // None means "signed but not on the car" — a deal in that state earns nothing, which is the whole
     // point of making the player place them.
+    //
+    // The Paint Scheme Designer sells three of them: PRIMARY (hood), SECONDARY (Quarters — one brand on both
+    // rear quarters) and TRUNK (tail). QuarterLeft/QuarterRight are the two physical panels the Quarters slot
+    // paints; they stay valid on their own so deals placed before Quarters existed still render and pay.
     public enum SponsorSlot
     {
         None = 0,
@@ -11,6 +15,7 @@ namespace Draftmaster.Sponsors
         Tail = 2,
         QuarterLeft = 3,
         QuarterRight = 4,
+        Quarters = 5,
     }
 
     public static class SponsorSlots
@@ -18,7 +23,7 @@ namespace Draftmaster.Sponsors
         // Every slot a decal can actually go in (excludes None), in the order the UI lists them.
         public static readonly SponsorSlot[] All =
         {
-            SponsorSlot.Hood, SponsorSlot.Tail, SponsorSlot.QuarterLeft, SponsorSlot.QuarterRight,
+            SponsorSlot.Hood, SponsorSlot.Quarters, SponsorSlot.Tail,
         };
 
         // What a slot is worth as a fraction of the deal's per-race value. The hood is the money panel —
@@ -31,6 +36,7 @@ namespace Draftmaster.Sponsors
             SponsorSlot.Tail => 0.70f,
             SponsorSlot.QuarterLeft => 0.45f,
             SponsorSlot.QuarterRight => 0.45f,
+            SponsorSlot.Quarters => 0.90f,      // both rear quarters
             _ => 0f,
         };
 
@@ -40,7 +46,22 @@ namespace Draftmaster.Sponsors
             SponsorSlot.Tail => "TAIL",
             SponsorSlot.QuarterLeft => "LEFT QUARTER",
             SponsorSlot.QuarterRight => "RIGHT QUARTER",
+            SponsorSlot.Quarters => "QUARTERS",
             _ => "NOT ON THE CAR",
+        };
+
+        // The physical panels a slot paints: Quarters is both rear quarters, every other slot is itself.
+        public static SponsorSlot[] Panels(SponsorSlot slot) => slot == SponsorSlot.Quarters
+            ? new[] { SponsorSlot.QuarterLeft, SponsorSlot.QuarterRight }
+            : new[] { slot };
+
+        // The Paint Scheme Designer's names for the three slots it sells.
+        public static string DesignerName(SponsorSlot slot) => slot switch
+        {
+            SponsorSlot.Hood => "PRIMARY",
+            SponsorSlot.Quarters => "SECONDARY",
+            SponsorSlot.Tail => "TRUNK",
+            _ => DisplayName(slot),
         };
     }
 }

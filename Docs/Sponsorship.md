@@ -7,6 +7,52 @@ The one rule everything hangs off: **a signed deal earns nothing until it is pla
 panels, more brands than panels, and every deal burning races whether or not it is painted on — that is
 the whole decision the feature exists to create.
 
+## Team HQ paint shop
+
+The player repaints the car and chooses its sponsors at **Team HQ**. On the travel map, stop at Team HQ
+and press **GO INSIDE TEAM HQ**: that loads `TeamGarage` (`LandmarkLoader.VisitTeamHQ`), and its exit door
+takes you back on the road with the map open (`LandmarkLoader.CameFromRoad` → `ExitToRoad`).
+
+Talk to the **Paint Scheme Designer** (`PaintShopNPC`, under the `PaintShop` root in TeamGarage) to open
+`PaintShopPanel`:
+
+- **Base coat**: 16 swatches (`PaintShop.Palette`).
+- **Livery**: a pattern from `Resources/PaintShop/Patterns/` (plain, roof, stripe, viper), plus its colour.
+- **Sponsors**: PRIMARY (hood, 100%), SECONDARY (both rear quarters, 90%) and TRUNK (decklid, 70%),
+  cycled through your active deals. One brand takes one slot.
+- **Factory paint** puts back the livery exactly as drawn. Nothing changes until **SAVE**, which writes
+  `PaintBook` (`paint.scheme`) and calls `SponsorBook.Arrange`.
+
+`TeamCarDisplay` on the shop's `TeamCar` and `SponsorPaintDirector` on the race car both repaint
+whenever the paint or the sponsors change.
+
+**Repaintable liveries** are split into layers under `Resources/PaintShop/`:
+
+| File | What it holds |
+|---|---|
+| `<livery>_mask.png` | Paintable body. Alpha marks what can be painted; grey sets shading (255 = full colour, darker = shaded rim). |
+| `<livery>_detail.png` | Everything that isn't paint (glass, number, tyres, lights). Drawn on top. |
+
+Order: base coat × shading → pattern in the accent colour → detail → sponsor decals (`LiveryCompositor`,
+then `SponsorLiveryBaker`). A livery without layers keeps its drawn paint; only its sponsors can change.
+`cup26livery89`'s layers were split automatically from the drawn art: grey 175 is the body, the red rim
+tones (140/112) became shading at 200/160, everything else is detail. Hand-drawn layers can replace them
+at the same names.
+
+`Draftmaster > Team HQ > Install Paint Shop In Open Scene` adds the designer and `TeamCarDisplay` to an
+open TeamGarage scene. It only fills in what's missing and stays out of `TeamGarageBuilder`'s root.
+
+## Starting sponsor
+
+A new career starts with **Aces & Spades** already signed onto the hood of Ace Emerson's #89
+(`StarterSponsor`, 36 races at the brand's base value). It is handed out the first time the brand catalogue
+loads (`SponsorCatalog.All`), once per career: `SponsorBook.GiveStarter` keeps a `sponsors.starterGiven` flag,
+which `CareerReset` and `SponsorBook.ClearAll` both clear. It only takes the hood if the hood is free. Brands
+on the player's book never appear on AI cars or as pit-lane reps.
+
+`DummySponsors` is seeded additively by name, like drivers, so an existing database picks up a newly
+added brand on the next launch. `&` slugs to `and` (`Aces & Spades` → `aces-and-spades`).
+
 ## The loop
 
 1. **Meet a rep.** `SponsorRepSpawner` stands one or two sponsor reps in the pit lane on a race weekend.
@@ -22,30 +68,53 @@ the whole decision the feature exists to create.
 
 ## Panels
 
-| Slot | Pays | Where on the 64×32 livery (texture pixels, origin bottom-left) |
-|---|---|---|
-| Hood | 100% | `(8, 8, 16×16)` — the bonnet between the front arches |
-| Tail | 70% | `(46, 12, 12×9)` — the decklid |
-| Quarter left | 45% | `(44, 24, 12×7)` |
-| Quarter right | 45% | `(44, 1, 12×7)` |
+| Slot | Pays | Art | Rect on the 64×32 livery (texture px, origin bottom-left) | Turn |
+|---|---|---|---|---|
+| Hood (PRIMARY) | 100% | `hood.png` | `(5, 4, 14×24)` — bonnet between the front arches | none |
+| Quarters (SECONDARY) | 90% | `small.png` | both quarter rects below, one brand | — |
+| Tail (TRUNK) | 70% | `small.png` | `(58, 8, 4×16)` — decklid strip behind the rear window | clockwise |
+| ↳ Quarter left (+Y, far side) | 45% alone | `small.png` | `(48, 26, 16×4)` | half |
+| ↳ Quarter right (−Y, near side) | 45% alone | `small.png` | `(48, 2, 16×4)` | none |
 
-The cup26 art runs **nose at −X**: front bumper x0–6, hood x7–26, greenhouse x27–44 (the roof number),
-decklid x45–58, rear bumper x59–63. Rects live in `Assets/Resources/Sponsors/cup26Layout.asset`
+The three slots sold are Hood, Quarters and Tail (`SponsorSlots.All`). The two single quarters are only
+the panels that Quarters paints; a deal placed on just one of them before Quarters existed still renders,
+pays and occupies the pair.
+
+The cup26 art runs **nose at −X**: hood x5–19, windscreen x20–28, roof number x30–45, rear window x46–57,
+decklid strip x58–62. Rects and turns live in `Assets/Resources/Sponsors/cup26Layout.asset`
 (`CarSponsorLayout`); a carset with a different body shape gets its own `Resources/Sponsors/<carset>Layout`.
+
+**The car is the mask.** The baker only paints where the livery is opaque and never changes its alpha, so a
+rect can run off the bodywork (or the texture) on purpose — a quarter-panel logo wraps off the rear corner
+and the silhouette crops it. Each panel must still be mostly on the car (`EveryPanelLandsOnTheBodywork`).
+
+**Turns** are as seen in an image viewer. One `small.png` (16×4) serves the trunk and both quarters: the
+trunk turns it a quarter to read across the decklid, the far-side quarter turns it a half, so it crops
+differently on each side.
 
 **Draftmaster > Sponsors > Preview Slots On Livery** writes `Temp/SponsorSlotPreview.png` — the panels
 drawn over a real livery, magnified — so rects can be nudged without entering play mode.
 
-## Decal art
+## Sponsor art
 
-`Resources/Sponsors/Car/<key>.png`, where the key is the brand name slugged
-(`"Voltage Energy"` → `voltage-energy`, see `SponsorCatalog.LogoKey`). Size them to the smallest panel
-(12×7 today) and draw at the project pixel standard — decals are blitted **1:1 and never scaled**, because
-resampling takes them off the 12.8 px/m grid. Oversized art is centred and clipped.
+Three images per brand, keyed by the brand name slugged (`"Voltage Energy"` → `voltage-energy`, see
+`SponsorKeys.LogoKey`):
 
-**Draftmaster > Sponsors > Generate Placeholder Decals** writes a coloured plate with the brand's initials
-for every sponsor in the database. Overwrite any file with real art at the same name and nothing else
-changes. **Preview Sponsored Car** bakes a car through the real runtime path to `Temp/SponsorCarPreview.png`.
+| File | Used for | Size |
+|---|---|---|
+| `Resources/Sponsors/Full/<key>.png` | boards, billboards, sponsor + team UI (`SponsorArt.LoadFull`) | any |
+| `Resources/Sponsors/Hood/<key>.png` | the hood | 14×24 (the hood rect) |
+| `Resources/Sponsors/Small/<key>.png` | trunk and both rear quarters | 16×4 |
+
+`Resources/Sponsors/Car/<key>.png` is the original one-decal-per-brand folder, still read as a fallback.
+Decals are blitted **1:1 and never scaled** (resampling takes them off the 12.8 px/m grid); oversized art is
+centred and clipped. `SponsorDecalImport` imports anything in `Hood/`, `Small/` or `Car/` Read/Write,
+point-filtered and uncompressed, so dropped-in art works without touching import settings.
+
+**Draftmaster > Sponsors > Generate Placeholder Decals** fills in a hood and small plate for every database
+sponsor that has no art yet — it never overwrites an existing file. **Preview Sponsored Car** bakes
+`cup26livery89` through the real runtime path to `Temp/SponsorCarPreview.png`; select any of a brand's
+images in the Project first to see that brand on every panel.
 
 ## How the paint works
 
@@ -84,11 +153,12 @@ who tells them the number they need.
 
 | File | What it is |
 |---|---|
-| `Assets/Scripts/Sponsors/` (`Draftmaster.Sponsors` asmdef) | Pure, testable: `SponsorSlot`, `SponsorDeal`, `SponsorBook`, `SponsorTerms`, `CarSponsorLayout`, `SponsorLiveryBaker` |
+| `Assets/Scripts/Sponsors/` (`Draftmaster.Sponsors` asmdef) | Pure, testable: `SponsorSlot`, `SponsorDeal`, `SponsorBook`, `SponsorTerms`, `CarSponsorLayout`, `DecalTurn`, `SponsorLiveryBaker` |
 | `Assets/Scripts/Sponsorship/` | Game-coupled: `SponsorCatalog` (SQLite + weekend picks), `SponsorArt`, `SponsorPainter`, `SponsorPaintDirector` |
 | `Assets/Scripts/OnFoot/SponsorRepNPC.cs`, `SponsorRepSpawner.cs` | The pit-lane negotiation |
 | `Assets/Scripts/UI/SponsorBoardPanel.cs` | The garage board (and `F6`) |
 | `Assets/Editor/SponsorArtTools.cs` | Placeholder art, layout asset, both previews |
+| `Assets/Editor/SponsorDecalImport.cs` | Import settings for decal art |
 | `Assets/Tests/Editor/SponsorTests.cs` | Payout, placement and haggling rules |
 
 Signed deals persist in PlayerPrefs (`sponsors.book`) like the rest of the live career state

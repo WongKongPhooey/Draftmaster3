@@ -23,11 +23,17 @@ public static class SponsorCatalog
     public static IReadOnlyList<Sponsor> All()
     {
         if (_all != null) return _all;
-        _all = new List<Sponsor>();
         var db = DatabaseManager.Instance;
-        if (db == null || !db.IsReady || db.Connection == null) return _all;   // no DB yet — caller retries
+        if (db == null || !db.IsReady || db.Connection == null) return new List<Sponsor>();   // no DB yet — caller retries
         try { _all = new List<Sponsor>(db.Connection.Table<Sponsor>()); }
-        catch (System.Exception e) { Debug.LogWarning($"SponsorCatalog: could not read the Sponsors table — {e.Message}"); }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"SponsorCatalog: could not read the Sponsors table — {e.Message}");
+            return new List<Sponsor>();
+        }
+
+        // First moment the brands are known: hand a new career its starting sponsor.
+        StarterSponsor.EnsureGiven(_all);
         return _all;
     }
 

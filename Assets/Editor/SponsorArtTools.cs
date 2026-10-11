@@ -7,44 +7,56 @@ using UnityEditor;
 using UnityEngine;
 
 // Authoring tools for car sponsorship:
-//   • Generate Placeholder Decals — a car-scale logo per brand in the database, so the feature is playable
-//     before any real art exists. Overwrite the PNGs with real art later; nothing else changes.
+//   • Generate Placeholder Decals — a hood and a small decal per brand in the database, so the feature is
+//     playable before any real art exists. Only fills gaps: a file that already exists is real art and is
+//     left alone.
 //   • Create Car Sponsor Layout — the asset that says where the hood / tail / quarter panels are.
 //   • Preview Slots On Livery — writes a magnified PNG of the panels drawn over a real livery to
 //     Temp/SponsorSlotPreview.png, for eyeballing the rects without entering play mode.
+//   • Preview Sponsored Car — bakes the preview livery through the runtime path. Select a sponsor image
+//     (any of its Full/Hood/Small files) first to see that brand on every panel.
 //
-// Decals are drawn at the panel's own pixel size (12x6 by default): the baker never scales art, because
-// resampling would take it off the project's 12.8 px/m grid.
+// Decals are drawn at the panel's own pixel size: the baker never scales art, because resampling would
+// take it off the project's 12.8 px/m grid.
 public static class SponsorArtTools
 {
-    const string CarArtDir = "Assets/Resources/Sponsors/Car";
+    const string ResourcesDir = "Assets/Resources/";
     const string LayoutPath = "Assets/Resources/Sponsors/cup26Layout.asset";
-    const string PreviewLivery = "cup26livery8";
+    const string PreviewLivery = "cup26livery89";
 
     [MenuItem("Draftmaster/Sponsors/Generate Placeholder Decals", priority = 200)]
     public static void GenerateDecals()
     {
         var layout = LoadOrCreateLayout();
-        Vector2Int size = layout.SmallestPanel();
-
-        Directory.CreateDirectory(CarArtDir);
-        int written = 0;
-        foreach (var sponsor in DummySponsors.Build())
+        var sets = new (string folder, Vector2Int size)[]
         {
-            string key = SponsorCatalog.LogoKey(sponsor.Name);
-            string path = $"{CarArtDir}/{key}.png";
-            var tex = BuildDecal(sponsor, size.x, size.y);
-            File.WriteAllBytes(path, tex.EncodeToPNG());
-            Object.DestroyImmediate(tex);
-            written++;
+            (SponsorKeys.HoodArtFolder, layout.ArtSize(SponsorSlot.Hood)),
+            (SponsorKeys.SmallArtFolder, layout.ArtSize(SponsorSlot.QuarterRight)),
+        };
+
+        var written = new List<string>();
+        int kept = 0;
+        foreach (var (folder, size) in sets)
+        {
+            string dir = ResourcesDir + folder.TrimEnd('/');
+            Directory.CreateDirectory(dir);
+            foreach (var sponsor in DummySponsors.Build())
+            {
+                string path = $"{dir}/{SponsorCatalog.LogoKey(sponsor.Name)}.png";
+                if (File.Exists(path)) { kept++; continue; }
+                var tex = BuildDecal(sponsor, size.x, size.y);
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+                written.Add(path);
+            }
         }
 
         AssetDatabase.Refresh();
-        foreach (var sponsor in DummySponsors.Build())
-            ApplyDecalImport($"{CarArtDir}/{SponsorCatalog.LogoKey(sponsor.Name)}.png");
+        foreach (string path in written) ApplyDecalImport(path);
 
         AssetDatabase.SaveAssets();
-        Debug.Log($"[Sponsors] Wrote {written} placeholder decals ({size.x}x{size.y}px) to {CarArtDir}. " +
+        Debug.Log($"[Sponsors] Wrote {written.Count} placeholder decals (hood {sets[0].size.x}x{sets[0].size.y}, " +
+                  $"small {sets[1].size.x}x{sets[1].size.y}); kept {kept} existing file(s). " +
                   "Replace any file with real art at the same size and filename.");
     }
 
@@ -141,13 +153,19 @@ public static class SponsorArtTools
         var livery = Resources.Load<Sprite>(PreviewLivery);
         if (livery == null) { Debug.LogError($"[Sponsors] Preview needs Resources/{PreviewLivery}."); return; }
 
-        // Runs the real runtime baker, so what this shows is what a car wears in the scene.
+        // Runs the real runtime baker, so what this shows is what a car wears in the scene. A selected
+        // sponsor image puts that brand on every panel; otherwise the seeded brands spread one per panel.
+        string selectedKey = SelectedSponsorKey();
         var brands = DummySponsors.Build();
         var decals = new List<SponsorLiveryBaker.Decal>();
         var slots = SponsorSlots.All;
-        for (int i = 0; i < slots.Length && i < brands.Count; i++)
+        for (int i = 0; i < slots.Length; i++)
         {
-            var art = Resources.Load<Texture2D>(SponsorKeys.CarArtPath(brands[i].Name));
+            string key = selectedKey ?? (i < brands.Count ? SponsorKeys.LogoKey(brands[i].Name) : null);
+            if (key == null) continue;
+            Texture2D art = null;
+            foreach (string path in SponsorKeys.DecalArtPaths(slots[i], key))
+                if ((art = Resources.Load<Texture2D>(path)) != null) break;
             if (art != null) decals.Add(new SponsorLiveryBaker.Decal { slot = slots[i], art = art });
         }
         if (decals.Count == 0) { Debug.LogError("[Sponsors] No decal art — run Generate Placeholder Decals first."); return; }
@@ -159,6 +177,18 @@ public static class SponsorArtTools
         WriteZoomed(painted.texture, "SponsorCarPreview.png");
         Debug.Log($"[Sponsors] Sponsored-car preview written for {decals.Count} decal(s): " +
                   string.Join(", ", decals.ConvertAll(d => $"{d.slot}={d.art.name}")));
+    }
+
+    // "aces-and-spades" when a Sponsors/Full|Hood|Small|Car/aces-and-spades image is selected in the Project.
+    static string SelectedSponsorKey()
+    {
+        var obj = Selection.activeObject;
+        if (obj == null) return null;
+        string path = AssetDatabase.GetAssetPath(obj).Replace('\\', '/');
+        string[] folders = { SponsorKeys.FullArtFolder, SponsorKeys.HoodArtFolder, SponsorKeys.SmallArtFolder, SponsorKeys.CarArtFolder };
+        foreach (string folder in folders)
+            if (path.StartsWith(ResourcesDir + folder)) return Path.GetFileNameWithoutExtension(path);
+        return null;
     }
 
     // Magnified, flipped PNG of a 64x32 texture, written to Temp/ for eyeballing outside the editor.

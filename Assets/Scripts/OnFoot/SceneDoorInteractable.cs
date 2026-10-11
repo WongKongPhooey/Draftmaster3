@@ -19,6 +19,13 @@ public class SceneDoorInteractable : NPCInteractable
 
     public override bool Interact()
     {
+        // Walked in off the travel map (Team HQ): out the door is back on the road, map open.
+        if (LandmarkLoader.CameFromRoad)
+        {
+            LandmarkLoader.ExitToRoad();
+            return false;
+        }
+
         if (string.IsNullOrEmpty(sceneName) || !Application.CanStreamedLevelBeLoaded(sceneName))
         {
             Debug.LogError($"SceneDoorInteractable on '{name}': '{sceneName}' is not in the Build Settings — the door leads nowhere.");

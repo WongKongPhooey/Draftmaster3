@@ -65,6 +65,7 @@ public static class CareerReset
         Draftmaster.Weekend.WeekendLedger.InvalidateCache();
         Draftmaster.Weekend.SeasonChampionships.InvalidateCache();
         Draftmaster.Sponsors.SponsorBook.InvalidateCache();
+        Draftmaster.Sponsors.PaintBook.InvalidateCache();
 
         PhoneNotes.Clear();
         PhoneMessages.Clear();

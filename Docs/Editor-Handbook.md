@@ -20,9 +20,10 @@ TitleScreen  ──NEW SEASON / CONTINUE / EXHIBITION──▶  RaceScene   (bui
      │                                                    ├─ pause (Esc) ▸ QUIT TO TITLE ──▶ TitleScreen
      │                                                    └─ RV interior ▸ laptop ──┐
      │                                                                              ▼
-     ├──TEAM FACTORY──▶  TeamGarage  ─ laptop ─────────────────────────────▶  GarageScreen
-     │                       │                                                    │
-     │                       └─ EXIT door ──▶ TitleScreen        BACK ◀───────────┘
+     │   travel map ▸ Team HQ ▸ GO INSIDE
+     ├───────────────────▶  TeamGarage  ─ laptop ─────────────────────────────▶  GarageScreen
+     │                       │  └─ Paint Scheme Designer ▸ paint screen                │
+     │                       └─ EXIT door ──▶ back on the road  BACK ◀────────────┘
      │                                                   (returns to whichever scene opened it)
      │
      └──OPTIONS──▶  Options   (the player's name)  ── BACK / Esc ──▶  TitleScreen
@@ -345,6 +346,10 @@ Objective types, stat keys and where quests show: `Docs/NPCs-and-Quests.md` §3.
   before any real art. Overwrite the PNGs later; nothing else changes.
 - `Preview Slots On Livery` writes `Temp/SponsorSlotPreview.png`; `Preview Sponsored Car` shows the baked
   result.
+- Sponsor art: `Resources/Sponsors/Full|Hood|Small/<key>.png` (import settings are automatic).
+- Paint shop at Team HQ: repaintable liveries need `Resources/PaintShop/<livery>_mask.png` +
+  `_detail.png`; patterns live in `Resources/PaintShop/Patterns/`. `Draftmaster > Team HQ > Install Paint
+  Shop In Open Scene` puts the Paint Scheme Designer into TeamGarage.
 
 `Docs/Sponsorship.md`.
 
@@ -470,7 +475,9 @@ it drifts again.
     `interiorBuildRange` (25 m), so forty of them cost nothing until they're walked up to.
 - `Tools > Draftmaster > Build Team Garage Scene` — rebuilds `GarageContent` in the open TeamGarage scene:
   floor, team car, the three crew stations, the desk **laptop** (opens the garage sheet) and the **EXIT**
-  door back to the title. A re-run wipes hand edits under that root, so run it first, then tweak.
+  door (back on the road when you came from the travel map). A re-run wipes hand edits under that root,
+  so run it first, then tweak. The paint shop lives under its own `PaintShop` root, which a rebuild leaves
+  alone; `Draftmaster > Team HQ > Install Paint Shop In Open Scene` re-adds the TeamCarDisplay to the new car.
 
 ### Naming a place
 

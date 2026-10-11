@@ -14,6 +14,7 @@ namespace Draftmaster.Sponsors
     public static class SponsorBook
     {
         const string Key = "sponsors.book";
+        const string StarterKey = "sponsors.starterGiven";
 
         [Serializable]
         class Book
@@ -61,8 +62,20 @@ namespace Draftmaster.Sponsors
         public static SponsorDeal InSlot(SponsorSlot slot)
         {
             if (slot == SponsorSlot.None) return null;
-            foreach (var d in Data.deals) if (d.slot == slot) return d;
+            foreach (var d in Data.deals) if (Overlaps(d.slot, slot)) return d;
             return null;
+        }
+
+        // Two slots share bodywork: Quarters covers both single quarter panels (deals placed before the
+        // Paint Scheme Designer sold the pair as one slot still sit on just one of them).
+        static bool Overlaps(SponsorSlot a, SponsorSlot b)
+        {
+            if (a == SponsorSlot.None || b == SponsorSlot.None) return false;
+            if (a == b) return true;
+            foreach (var pa in SponsorSlots.Panels(a))
+                foreach (var pb in SponsorSlots.Panels(b))
+                    if (pa == pb) return true;
+            return false;
         }
 
         public static bool HasSponsor(int sponsorId)
@@ -100,14 +113,28 @@ namespace Draftmaster.Sponsors
 
             if (slot != SponsorSlot.None)
             {
-                var current = InSlot(slot);
-                if (current != null && current.id != dealId) current.slot = SponsorSlot.None;
+                foreach (var other in Data.deals)
+                    if (other.id != dealId && Overlaps(other.slot, slot)) other.slot = SponsorSlot.None;
             }
             deal.slot = slot;
             Save();
         }
 
         public static void Unplace(int dealId) => Place(dealId, SponsorSlot.None);
+
+        // Lay the whole car out at once (the Paint Scheme Designer's SAVE): every deal comes off, then each
+        // slot gets the deal named for it (0 = leave it empty). One save, one Changed, so the car repaints once.
+        public static void Arrange(IDictionary<SponsorSlot, int> dealForSlot)
+        {
+            foreach (var d in Data.deals) d.slot = SponsorSlot.None;
+            if (dealForSlot != null)
+                foreach (var kv in dealForSlot)
+                {
+                    var deal = kv.Value != 0 ? ById(kv.Value) : null;
+                    if (deal != null && kv.Key != SponsorSlot.None) deal.slot = kv.Key;
+                }
+            Save();
+        }
 
         public static void Remove(int dealId)
         {
@@ -171,10 +198,30 @@ namespace Draftmaster.Sponsors
             return expired;
         }
 
+        // The deal a new career starts with, already on the car. Given once per career: the flag lives in
+        // PlayerPrefs, so CareerReset (DeleteAll) and ClearAll both make the next career get it again.
+        // Placed on `slot` only if that panel is free, so an old save that never had it doesn't lose a deal.
+        public static bool GiveStarter(SponsorDeal deal, SponsorSlot slot)
+        {
+            if (deal == null || PlayerPrefs.GetInt(StarterKey, 0) == 1) return false;
+            PlayerPrefs.SetInt(StarterKey, 1);
+
+            if (deal.sponsorId == 0 || !HasSponsor(deal.sponsorId))
+            {
+                deal.id = Data.nextId++;
+                if (deal.racesRemaining <= 0) deal.racesRemaining = Mathf.Max(1, deal.racesTotal);
+                deal.slot = slot != SponsorSlot.None && InSlot(slot) == null ? slot : SponsorSlot.None;
+                Data.deals.Add(deal);
+            }
+            Save();
+            return true;
+        }
+
         public static void ClearAll()
         {
             _cache = new Book();
             PlayerPrefs.DeleteKey(Key);
+            PlayerPrefs.DeleteKey(StarterKey);
             PlayerPrefs.Save();
             Changed?.Invoke();
         }

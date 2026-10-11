@@ -13,7 +13,7 @@ namespace Draftmaster.Sponsors
         public int id;                 // unique within the book, assigned on signing
         public int sponsorId;          // Sponsors table row this came from (0 if unknown)
         public string sponsorName;     // "Voltage Energy"
-        public string logoKey;         // Resources/Sponsors/Car/<logoKey> decal art
+        public string logoKey;         // art key — see SponsorKeys for the Full/Hood/Small folders
 
         public int perRace;            // money per race at a full-value slot (the hood)
         public int racesTotal;         // length of the deal in races

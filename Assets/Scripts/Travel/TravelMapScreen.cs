@@ -811,10 +811,22 @@ public class TravelMapScreen : MonoBehaviour
             {
                 walkButton.gameObject.SetActive(true);
                 walkButton.GetComponentInChildren<Text>().text =
-                    current.locationType == TravelLocationType.TeamFactory ? "WALK THE SHOP FLOOR" : "STOP & LOOK AROUND";
+                    current.locationType == TravelLocationType.TeamFactory ? "GO INSIDE TEAM HQ" : "STOP & LOOK AROUND";
                 walkButton.onClick.RemoveAllListeners();
+                bool teamHQ = current.locationType == TravelLocationType.TeamFactory;
                 walkButton.onClick.AddListener(() =>
                 {
+                    if (teamHQ)
+                    {
+                        if (!LandmarkLoader.TeamHQInBuild)
+                        {
+                            Notice("TeamGarage scene missing from Build Settings.");
+                            return;
+                        }
+                        Close();
+                        LandmarkLoader.VisitTeamHQ();
+                        return;
+                    }
                     if (!LandmarkLoader.SceneInBuild)
                     {
                         Notice("Landmark scene missing from Build Settings — run Draftmaster > Travel Map > Build Landmark Scene.");

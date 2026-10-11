@@ -25,10 +25,10 @@ public static class SponsorPainter
         foreach (var deal in SponsorBook.Deals)
         {
             if (!deal.IsActive || !deal.IsPlaced) continue;
-            var art = SponsorArt.Load(deal.logoKey);
+            var art = SponsorArt.Load(deal.logoKey, deal.slot);
             if (art != null) decals.Add(new SponsorLiveryBaker.Decal { slot = deal.slot, art = art });
         }
-        return Apply(car, decals);
+        return Apply(car, decals, PaintBook.Current);   // the player's own paint job, from the Team HQ designer
     }
 
     // AI cars carry sponsors too, so the field doesn't look like a grid of blank test mules. Which brands
@@ -54,11 +54,12 @@ public static class SponsorPainter
             for (int attempt = 0; attempt < 6 && pick == null; attempt++)
             {
                 var candidate = catalogue[rng.Next(catalogue.Count)];
+                if (SponsorBook.HasSponsor(candidate.Id)) continue;  // the player's brands are exclusive to them
                 if (used.Add(candidate.Id)) pick = candidate;      // one brand per car
             }
             if (pick == null) continue;
 
-            var art = SponsorArt.Load(SponsorCatalog.LogoKey(pick.Name));
+            var art = SponsorArt.Load(SponsorCatalog.LogoKey(pick.Name), slots[i]);
             if (art != null) decals.Add(new SponsorLiveryBaker.Decal { slot = slots[i], art = art });
         }
         return Apply(car, decals);
@@ -66,9 +67,9 @@ public static class SponsorPainter
 
     // ---------------------------------------------------------------- paint
 
-    static bool Apply(GameObject car, List<SponsorLiveryBaker.Decal> decals)
+    static bool Apply(GameObject car, List<SponsorLiveryBaker.Decal> decals, PaintScheme scheme = null)
     {
-        string signature = Signature(decals);
+        string signature = (scheme != null ? scheme.Signature : "factory") + "/" + Signature(decals);
         int id = car.GetInstanceID();
         if (_painted.TryGetValue(id, out string worn) && worn == signature) return false;   // already wearing exactly this
 
@@ -92,7 +93,9 @@ public static class SponsorPainter
             return false;
         }
 
-        Sprite painted = decals.Count > 0 ? SponsorLiveryBaker.Bake(original, layout, decals) : original;
+        // Paint first (a livery with no PaintShop layers comes back unchanged), decals on top.
+        Sprite basePaint = PaintShop.Render(original, scheme);
+        Sprite painted = decals.Count > 0 ? SponsorLiveryBaker.Bake(basePaint, layout, decals) : basePaint;
         if (painted == null) return false;
 
         if (damage != null)
@@ -111,14 +114,12 @@ public static class SponsorPainter
         return true;
     }
 
-    const string BakedSuffix = "_sponsored";
-
-    // "cup26livery8_sponsored" -> the original cup26livery8 sprite from Resources.
+    // "cup26livery8_sponsored" / "cup26livery89_painted_..." -> the original sprite from Resources.
     static Sprite OriginalLivery(Sprite sprite)
     {
         if (sprite == null) return null;
-        if (!sprite.name.EndsWith(BakedSuffix)) return sprite;
-        string liveryName = sprite.name.Substring(0, sprite.name.Length - BakedSuffix.Length);
+        string liveryName = PaintShop.OriginalName(sprite.name);
+        if (liveryName == sprite.name) return sprite;
         return Resources.Load<Sprite>(liveryName);
     }
 

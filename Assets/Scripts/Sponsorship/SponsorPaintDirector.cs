@@ -41,8 +41,17 @@ public class SponsorPaintDirector : MonoBehaviour
         new GameObject("SponsorPaintDirector").AddComponent<SponsorPaintDirector>();
     }
 
-    void OnEnable() => SponsorBook.Changed += RepaintPlayer;
-    void OnDisable() => SponsorBook.Changed -= RepaintPlayer;
+    void OnEnable()
+    {
+        SponsorBook.Changed += RepaintPlayer;
+        PaintBook.Changed += RepaintPlayer;
+    }
+
+    void OnDisable()
+    {
+        SponsorBook.Changed -= RepaintPlayer;
+        PaintBook.Changed -= RepaintPlayer;
+    }
 
     void Start() => StartCoroutine(Watch());
 
@@ -59,6 +68,7 @@ public class SponsorPaintDirector : MonoBehaviour
 
     void Sweep()
     {
+        SponsorCatalog.All();      // loads the brands once the DB is up — which also hands out the starter deal
         var player = CarIdentity.FindPlayerCar();
         if (player != null) SponsorPainter.PaintPlayer(player);
 
