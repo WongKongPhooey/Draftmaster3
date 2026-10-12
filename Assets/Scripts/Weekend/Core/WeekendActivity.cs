@@ -25,10 +25,12 @@ namespace Draftmaster.Weekend
         // --- fans ---
         Autographs = 40,      // a scheduled signing session with a queue
         HaulerParade = 41,    // walking the haulers in as the gates open
+        GridWalk = 42,        // race morning: VIP pass holders come to you at your car for signatures and photos
 
         // --- sponsors ---
         SponsorDuty = 50,     // hospitality suite, meet-and-greet, pit-stop challenge
         PhotoShoot = 51,      // stills for the season's marketing
+        PitChallenge = 52,    // the sponsor's pit-stop challenge: one timed run down pit road with a tyre change
 
         // --- somebody else's race ---
         SpectatePractice = 60,
@@ -61,7 +63,7 @@ namespace Draftmaster.Weekend
             k == ActivityKind.PressConference || k == ActivityKind.MediaHit;
 
         public static bool IsFanDuty(ActivityKind k) =>
-            k == ActivityKind.Autographs || k == ActivityKind.HaulerParade;
+            k == ActivityKind.Autographs || k == ActivityKind.HaulerParade || k == ActivityKind.GridWalk;
 
         public static bool IsSponsorDuty(ActivityKind k) =>
             k == ActivityKind.SponsorDuty || k == ActivityKind.PhotoShoot;
@@ -80,7 +82,7 @@ namespace Draftmaster.Weekend
             if (IsSpectate(k)) return "WATCH";
             if (IsMedia(k)) return "MEDIA";
             if (IsFanDuty(k)) return "FANS";
-            if (IsSponsorDuty(k)) return "SPONSOR";
+            if (IsSponsorDuty(k) || k == ActivityKind.PitChallenge) return "SPONSOR";
             if (IsTeam(k)) return "TEAM";
             if (IsCeremony(k)) return "OFFICIAL";
             return "OPEN";

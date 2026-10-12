@@ -483,7 +483,7 @@ public class PhoneScheduleApp : PhoneApp
         if (ActivityKinds.IsSpectate(k)) return PixelGUI.Info;
         if (ActivityKinds.IsMedia(k)) return new Color(0.55f, 0.42f, 0.72f);
         if (ActivityKinds.IsFanDuty(k)) return PixelGUI.Confirm;
-        if (ActivityKinds.IsSponsorDuty(k)) return new Color(0.85f, 0.55f, 0.25f);
+        if (ActivityKinds.IsSponsorDuty(k) || k == ActivityKind.PitChallenge) return new Color(0.85f, 0.55f, 0.25f);
         if (ActivityKinds.IsTeam(k)) return new Color(0.30f, 0.55f, 0.62f);
         if (ActivityKinds.IsCeremony(k)) return PixelGUI.Danger;
         return new Color(0.45f, 0.45f, 0.48f);

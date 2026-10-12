@@ -58,20 +58,35 @@ public class WeekendVenueAnchor : MonoBehaviour
     void OnEnable()
     {
         if (!All.Contains(this)) All.Add(this);
-        PaddockBoundary.Changed += ConstrainToPaddock;
-        ConstrainToPaddock();
+        PaddockBoundary.Changed += ConstrainLater;
+        ConstrainLater();
     }
 
     void OnDisable()
     {
         All.Remove(this);
-        PaddockBoundary.Changed -= ConstrainToPaddock;
+        PaddockBoundary.Changed -= ConstrainLater;
     }
 
     // Anchors built in code get their position before this component is added but their stand point after,
     // and the paddock's own boundaries are generated a frame or two into the scene — so the rule is applied
     // again once the scene has finished assembling itself.
-    void Start() { ConstrainToPaddock(); }
+    void Start() { ConstrainToPaddock(); _constrainPending = false; }
+
+    // Not straight away. Boundaries come and go one at a time — a script recompile in play mode re-enables
+    // every one of them in turn — and clamping on the first one back pulled the pit box and the motorhome
+    // 140-440 m onto the grandstand's little viewing pocket, which was simply the first walkable area to
+    // reappear; fast travel then dropped the player inside it with no way out. Waiting for the end of the
+    // frame lets every boundary that is coming back be back.
+    bool _constrainPending;
+    void ConstrainLater() => _constrainPending = true;
+
+    void LateUpdate()
+    {
+        if (!_constrainPending) return;
+        _constrainPending = false;
+        ConstrainToPaddock();
+    }
 
     // The rule: this marker stands inside the walkable paddock, wherever it was asked to stand. A venue out
     // beyond the fence — a grandstand across the track, a tent placed off the paddock rectangle rather than

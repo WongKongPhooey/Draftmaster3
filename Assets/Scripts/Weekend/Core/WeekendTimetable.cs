@@ -249,6 +249,12 @@ namespace Draftmaster.Weekend
 
         // Media, fans and sponsors. Deliberately booked over the top of sessions in places - the sponsor
         // suite meet-and-greet really is at the same hour as somebody's race, and choosing is the point.
+        //
+        // Kept lean on purpose. The sheet used to carry a fan queue every half-day from Friday afternoon on and
+        // a trip out to the winner's circle in nearly every one, and by Sunday it was the same two walks on a
+        // loop. Now there is one signing at the fence on Friday, none on Saturday, and the race-day VIP grid
+        // walk at the player's own car (BuildGridWalk); and the sponsor gets three distinct appearances - the
+        // shoot, the pit-stop challenge and the suite - rather than seven variations on standing in the circle.
         void BuildObligations(ref WeekendRandom rng)
         {
             // ---- Friday morning: gates open, haulers roll in ----
@@ -260,56 +266,71 @@ namespace Draftmaster.Weekend
                 "Sponsor hospitality", 1200, "The photographer flew in for that hour and shot an empty backdrop.");
 
             // ---- Friday afternoon ----
-            Sponsor(WeekendSlot.FridayPM, 13 * 60 + 15, 45, ActivityKind.SponsorDuty, "PIT-STOP CHALLENGE",
-                "Sponsor guests against the clock on a wheel gun, and you are the one keeping score.",
-                "Display pit stall", 900, "The guest list turned up to a pit stall with nobody in it.");
             Media(WeekendSlot.FridayPM, 14 * 60 + 15, 45, ActivityKind.PressConference, "MEDIA AVAILABILITY",
                 "The written press get their twenty minutes. Whatever you say here is the quote of the weekend.",
                 "Media centre");
             Fan(WeekendSlot.FridayPM, 16 * 60 + 30, 60, ActivityKind.Autographs, "SIGNING SESSION",
                 "A queue down the midway with hero cards and sharpies. Sign as many as the hour allows.",
                 "Souvenir midway", 750);
-            Sponsor(WeekendSlot.FridayPM, 17 * 60 + 45, 45, ActivityKind.SponsorDuty, "HOSPITALITY Q&A",
-                "Forty guests, a microphone, and the brand's talking points to get through.",
-                "Sponsor suite", 1500, "Forty guests ate dinner without the driver they were promised.");
+            BuildPitChallenge();
 
             // ---- Saturday morning ----
             Team(WeekendSlot.SaturdayAM, 8 * 60 + 15, 30, ActivityKind.Debrief, "BREAKFAST DEBRIEF",
                 "What the engineers found in Friday's data while you slept.", "Engineering truck");
-            Sponsor(WeekendSlot.SaturdayAM, 9 * 60 + 15, 45, ActivityKind.PhotoShoot, "DEALER GROUP PHOTOS",
-                "Two hundred handshake photos with the regional dealer network. Smile on every one.",
-                "Sponsor hospitality", 1100, "The dealer network got a cardboard cut-out.");
-            Fan(WeekendSlot.SaturdayAM, 11 * 60, 60, ActivityKind.Autographs, "FAN ZONE STAGE",
-                "On stage in front of the fan zone, taking questions and signing whatever gets handed up.",
-                "Fan zone stage", 900);
 
             // ---- Saturday afternoon ----
             Media(WeekendSlot.SaturdayPM, 13 * 60, 45, ActivityKind.PressConference, "PRESS CONFERENCE",
                 "Top table, three microphones, and the story they already decided to write.", "Media centre");
-            Fan(WeekendSlot.SaturdayPM, 15 * 60 + 30, 45, ActivityKind.Autographs, "GARAGE WALK",
-                "Fans with garage passes, walking the stalls. Less structured, more of them.", "Garage stalls", 600);
             Sponsor(WeekendSlot.SaturdayPM, 17 * 60, 60, ActivityKind.SponsorDuty, "SUITE MEET & GREET",
                 "The people who pay for the hood want an hour of your evening, and the race is on the TV behind them.",
                 "Sponsor suite", 2000, "The suite watched the race without the driver whose name is on the door.")
                 .sponsorExtra = true;
 
-            // ---- Sunday morning: race-morning appearances ----
-            Sponsor(WeekendSlot.SundayAM, 9 * 60, 45, ActivityKind.SponsorDuty, "RACE MORNING APPEARANCE",
-                "Coffee, a stage, and the brand's guests before the crowd fills the place up.",
-                "Sponsor hospitality", 1400, "The brand's guests got an empty stage on race morning.");
-            Fan(WeekendSlot.SundayAM, 10 * 60, 60, ActivityKind.Autographs, "PIT ROAD WALK",
-                "Pit passes are the hottest ticket of the weekend and they all want a signature.", "Pit road", 1000);
+            // ---- Sunday ----
             Media(WeekendSlot.SundayAM, 11 * 60 + 30, 20, ActivityKind.MediaHit, "BROADCAST HIT",
                 "Ninety seconds live on the pre-race show. One question, no second take.", "TV compound");
-
-            // ---- Sunday afternoon ----
-            Sponsor(WeekendSlot.SundayPM, 12 * 60, 60, ActivityKind.SponsorDuty, "HOSPITALITY BRUNCH",
-                "The last obligation before the biggest race of the weekend starts without you in it.",
-                "Sponsor suite", 1600, "Brunch went ahead with an empty chair at the head table.");
             Media(WeekendSlot.SundayPM, 13 * 60 + 30, 20, ActivityKind.MediaHit, "GRID WALK INTERVIEW",
                 "Handed a microphone on the grid with the cars firing up behind you.", "Starting grid");
 
+            BuildGridWalk();
             AddFeature(ref rng);
+        }
+
+        // The sponsor's pit-stop challenge, driven: one run down pit road with the limiter off, a tyre change
+        // in the box, and the clock stopped when the car is clean out of it. Friday evening, after the signing
+        // and before the trucks race under the lights, because the circuit is empty then - nobody's practice
+        // or qualifying is running for it to be in the way of. A bit of fun: optional, no fine for skipping.
+        public static SessionTime PitChallengeTime => new SessionTime(WeekendSlot.FridayPM, 17 * 60 + 45, 30);
+
+        void BuildPitChallenge()
+        {
+            var a = Add(PitChallengeTime, ActivityKind.PitChallenge, playerSeries, "PIT-STOP CHALLENGE",
+                "One shot on the clock: flat out down pit road, four tyres in the box, and back out.",
+                "Pit road");
+            a.appearanceFee = 500;
+            a.skipReason = "";
+        }
+
+        // When the VIP grid walk is held for each championship: race morning, with the car out and the
+        // drivers meeting still ahead. Cup's is Sunday morning; a truck or National driver's race day is
+        // Friday or Saturday, so theirs falls in the gap before their own drivers meeting instead.
+        public static SessionTime GridWalkTime(RacingSeries s) => s switch
+        {
+            RacingSeries.Trucks => new SessionTime(WeekendSlot.FridayPM, 15 * 60 + 15, 40),
+            RacingSeries.National => new SessionTime(WeekendSlot.SaturdayPM, 12 * 60 + 15, 40),
+            _ => new SessionTime(WeekendSlot.SundayAM, 10 * 60, 45),
+        };
+
+        // The signing turned round. You stand with the car at your own garage and the pit-pass holders - the
+        // sponsor's guests among them - are walked over to you for a signature and a photo by the car. One
+        // per weekend, on the day of the player's own race.
+        void BuildGridWalk()
+        {
+            var when = GridWalkTime(playerSeries);
+            var a = Fan(when.slot, when.startMinute, when.minutes, ActivityKind.GridWalk, "VIP GRID WALK",
+                "Stand with the car. Pit-pass holders are walked over for a signature and a photo before the race.",
+                "Your car", 1200);
+            a.skipReason = "The VIP guests were walked down to a car with nobody stood next to it.";
         }
 
         // One rotating headline obligation per weekend, so the sheet is not the same six columns every round.
@@ -331,8 +352,9 @@ namespace Draftmaster.Weekend
                         "Display stage", 2500, "The car got unveiled by a marketing manager instead.");
                     break;
                 case 3:
-                    Fan(WeekendSlot.SundayAM, 8 * 60 + 15, 40, ActivityKind.Autographs, "JUNIOR FAN CLUB",
-                        "Forty kids, forty die-casts, and forty parents filming it.", "Fan zone stage", 500);
+                    Media(WeekendSlot.SaturdayAM, 10 * 60 + 15, 30, ActivityKind.MediaHit, "RADIO ROW",
+                        "Six stations in a row of folding tables, the same question asked six different ways.",
+                        "Radio row");
                     break;
                 default:
                     Media(WeekendSlot.FridayPM, 12 * 60 + 15, 30, ActivityKind.MediaHit, "PODCAST TAPING",
@@ -431,7 +453,7 @@ namespace Draftmaster.Weekend
         {
             var a = Add(new SessionTime(slot, start, mins), kind, playerSeries, title, subtitle, location);
             a.appearanceFee = fee;
-            a.skipAppealPenalty = kind == ActivityKind.Autographs ? 2f : 1f;
+            a.skipAppealPenalty = kind == ActivityKind.Autographs || kind == ActivityKind.GridWalk ? 2f : 1f;
             a.skipReason = "The queue waited and then went home.";
             return a;
         }

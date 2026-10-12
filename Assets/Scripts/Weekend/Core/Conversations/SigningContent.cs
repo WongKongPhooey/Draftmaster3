@@ -1,7 +1,10 @@
 namespace Draftmaster.Weekend
 {
     // The signing session, done through the fence at the edge of the paddock with the fans on the other
-    // side of it, and the hauler parade, which is the same thing walked rather than stood at.
+    // side of it, and the hauler parade, which is the same thing walked rather than stood at. Also the VIP
+    // grid walk on race morning: the same queue turned round, with the player stood at their own car and
+    // the pit-pass holders brought over to them one at a time - a different cast, and a photo with the car
+    // that the sponsor cares about as much as the fan does.
     //
     // A queue, one person at a time, each of them holding something and wanting thirty seconds. What they
     // are worth is not a timing bar — it is what you give them, and the window is the whole decision. The
@@ -66,21 +69,59 @@ namespace Draftmaster.Weekend
                 "I write every one of your races down. Ask me about Bristol. Go on."),
         };
 
+        // Race morning at the car. Pit passes are the dearest ticket at the track, so this crowd is a mix of
+        // proper fans who paid for one and the guests the sponsor handed them out to.
+        static readonly Fan[] VipQueue =
+        {
+            new("SPONSOR GUEST IN A LANYARD", "a hero card with the brand on it",
+                "Our regional manager says you're the reason we got the passes. No pressure."),
+            new("KID ON A PARENT'S SHOULDERS", "a die-cast of this exact car",
+                "It's the same! It's the SAME ONE. Can I touch the real one?"),
+            new("COUPLE IN MATCHING SHIRTS", "a phone held out at arm's length",
+                "Could you get in the middle? With the car behind? We've been married twenty years at this track."),
+            new("MAN WHO WON THE PASSES ON THE RADIO", "a printed-out email",
+                "I've never won anything in my life. Caller nine. Caller NINE."),
+            new("DEALERSHIP OWNER", "a business card and a pen",
+                "Sign the back of this for my service manager. He thinks I'm making it up."),
+            new("GRANDAD IN A VINTAGE JACKET", "a programme from the year this track opened",
+                "Drove down for the first race here. Wanted one more signature in it before the end."),
+            new("TEENAGER IN A KART SUIT", "a visor off their own helmet",
+                "I race juniors. Sign the visor and I'll wear it Saturday."),
+            new("SPONSOR'S MARKETING INTERN", "a camera on a gimbal",
+                "Could you say the brand name and point at the hood? Just once. Sorry. Just once."),
+            new("WOMAN WHO DROVE OVERNIGHT", "a scrapbook of your results",
+                "Eleven hours in the car. Every race you've started is in here."),
+            new("TWO MECHANICS FROM A LOCAL SHOP", "a shop rag each",
+                "We fix the cars the fans drive here in. Thought you'd sign a rag."),
+            new("VETERAN WITH A SERVICE CAP", "a challenge coin to sign the card of",
+                "The coin's for you. Carry it today. Just sign the card so I know you got it."),
+            new("KID WHO GOT LOST FROM THEIR GROUP", "a crumpled ticket stub",
+                "I'm meant to be with my class. Can you sign this before they find me?"),
+        };
+
         // Who is at the front of the queue, as the bubble over them names them. Everyone in the line is just
         // a fan: what they are holding and what they say is who they are.
         public const string FanSpeaker = "A FAN";
+        public const string VipSpeaker = "VIP GUEST";
+
+        // The bubble over a fan in this booking's queue.
+        public static string SpeakerFor(ActivityKind kind) => kind == ActivityKind.GridWalk ? VipSpeaker : FanSpeaker;
 
         // The longest queue a session can bring — the whole cast. The fence builds this many places along
         // the rail, so every beat has somebody stood there to say it.
         public static int MaxQueue => Queue.Length;
+        public static int MaxVipQueue => VipQueue.Length;
 
         public static WeekendConversation Build(WeekendActivity a)
         {
             bool parade = a != null && a.kind == ActivityKind.HaulerParade;
+            bool gridWalk = a != null && a.kind == ActivityKind.GridWalk;
+            var cast = gridWalk ? VipQueue : Queue;
+            string speaker = gridWalk ? VipSpeaker : FanSpeaker;
 
             var rng = WeekendRandom.For(WeekendLedger.WeekendId, a != null ? a.id.GetHashCode() : 0, 41);
-            var order = new Fan[Queue.Length];
-            System.Array.Copy(Queue, order, Queue.Length);
+            var order = new Fan[cast.Length];
+            System.Array.Copy(cast, order, cast.Length);
             rng.Shuffle(order);
 
             // The window the booking blocks out, and the queue stood at the fence for it. The window holds
@@ -98,7 +139,14 @@ namespace Draftmaster.Weekend
                 statCount = 0,
                 minuteBudget = window,
                 minuteStep = FastSlots * slot,
-                greeting = parade
+                greeting = gridWalk
+                    ? new[]
+                    {
+                        "Car's out and polished, and the pit passes are at the gate.",
+                        "Stay here with it - they'll walk them over to you, one at a time.",
+                        "Half of them are the sponsor's guests. A photo with the car goes a long way with them.",
+                    }
+                    : parade
                     ? new[]
                     {
                         "Gates opened twenty minutes ago and the haulers are still coming in.",
@@ -111,8 +159,16 @@ namespace Draftmaster.Weekend
                         "You have got the hour, and the hour is the whole job.",
                         "Sign and move and you will nearly get to the end of them. Stop and talk and you will not — not without walking past somebody.",
                     },
-                farewell = new[] { "That is the lot of them — every single one. Nobody went home empty-handed." },
-                timeUpFarewell = new[]
+                farewell = gridWalk
+                    ? new[] { "That's every pass holder. Go and get your head on - drivers meeting is next." }
+                    : new[] { "That is the lot of them — every single one. Nobody went home empty-handed." },
+                timeUpFarewell = gridWalk
+                    ? new[]
+                    {
+                        "That's time - officials are clearing the passes off before the meeting.",
+                        "The ones who didn't get to you are being walked back to the gate.",
+                    }
+                    : new[]
                 {
                     "That is your time. They are moving the rest of the queue along now.",
                     "Some of them had been stood there since the gates opened. They will tell people that.",
@@ -124,8 +180,8 @@ namespace Draftmaster.Weekend
                 var fan = order[i];
                 c.Add(new WeekendBeat
                 {
-                    speaker = FanSpeaker,
-                    preamble = Preamble(i, queueLength),
+                    speaker = speaker,
+                    preamble = gridWalk ? GridPreamble(i, queueLength) : Preamble(i, queueLength),
                     line = fan.line,
                     question = $"{Describe(fan.who)}, holding {fan.holding}.",
                     choices =
@@ -134,10 +190,15 @@ namespace Draftmaster.Weekend
                             "Sign it, and ask them their name.",
                             "They tell you, twice, and read it back off the card the whole way to the car park.",
                             appeal: 1.6f, sponsor: 0.1f, score: 1f, statCount: 1, minutes: NameSlots * slot),
-                        WeekendConversation.Say(
-                            "Sign it and get a photo with them.",
-                            "It is on the internet before you have put the lid back on the marker.",
-                            appeal: 1.9f, sponsor: 0f, media: 1.5f, score: 1f, statCount: 1, minutes: PhotoSlots * slot),
+                        gridWalk
+                            ? WeekendConversation.Say(
+                                "Sign it, and a photo with them by the car.",
+                                "Hood, number and sponsor all in the frame. It is posted before they are back at the gate.",
+                                appeal: 1.7f, sponsor: 1.2f, media: 1.5f, score: 1f, statCount: 1, minutes: PhotoSlots * slot)
+                            : WeekendConversation.Say(
+                                "Sign it and get a photo with them.",
+                                "It is on the internet before you have put the lid back on the marker.",
+                                appeal: 1.9f, sponsor: 0f, media: 1.5f, score: 1f, statCount: 1, minutes: PhotoSlots * slot),
                         WeekendConversation.Say(
                             "Sign it. Next.",
                             "Signed, handed back, and the queue moves a place.",
@@ -186,6 +247,12 @@ namespace Draftmaster.Weekend
             c.headline = o =>
             {
                 int left = queueLength - served;
+                if (gridWalk)
+                {
+                    if (o.statCount == 0) return "The VIPs were walked to your car and you did not sign a thing.";
+                    if (left <= 0) return $"Every pass holder got to the car - {o.statCount} signed before the meeting.";
+                    return $"{o.statCount} signed at the car. {left} were walked back to the gate without one.";
+                }
                 if (o.statCount == 0) return "You stood at the fence for an hour and did not sign a thing.";
                 if (left <= 0 && o.fanAppeal <= 1f)
                     return $"{o.statCount} signed, the whole queue cleared, and not one of them got a word out of you.";
@@ -204,6 +271,15 @@ namespace Draftmaster.Weekend
             if (string.IsNullOrEmpty(who)) return "A fan";
             string lower = who.ToLowerInvariant();
             return char.ToUpperInvariant(lower[0]) + lower.Substring(1);
+        }
+
+        // The pit-lane official bringing the next one over.
+        static string[] GridPreamble(int index, int queueLength)
+        {
+            if (index == 0) return null;
+            if (index == queueLength - 1) return new[] { "Last pass holder before they clear the lane." };
+            if (index == queueLength / 2) return new[] { "Somebody with a radio holds up five fingers. Five minutes." };
+            return new[] { "The official walks the next one over." };
         }
 
         // The fence talking to itself while the queue moves. Nothing here is an answer — it is the pressure

@@ -34,6 +34,9 @@ public class WeekendVenueHost : NPCInteractable
     // The signing session is worked along a line (SigningQueue): between fans the player is walked to the
     // next place at the rail and turned to face whoever is stood there, and that fan speaks their beat.
     SigningQueue _queue;
+    // The VIP grid walk is the same queue turned round: the player stays with the car and each pass holder is
+    // walked over to them (GridWalkCrowd).
+    GridWalkCrowd _crowd;
     bool _walkNext;           // the lines now playing end with a walk to the next fan
     bool _walking;            // the player is being walked there
     float _walkGiveUpAt;      // somebody in the way: stop trying and sign from where they got to
@@ -102,7 +105,9 @@ public class WeekendVenueHost : NPCInteractable
         // fan in the line. Anywhere else, the greeting runs straight into the first question.
         _queue = venue == WeekendVenue.SigningFence ? SigningQueue.Current : null;
         if (_queue != null && _queue.Count == 0) _queue = null;
-        _walkNext = _queue != null;
+        if (_crowd != null) _crowd.Dismiss();
+        _crowd = pending.kind == ActivityKind.GridWalk ? GatherCrowd() : null;
+        _walkNext = _queue != null || _crowd != null;
         _walking = false;
 
         lines = _walkNext ? Lines(_script.greeting) : Lines(_script.greeting, BeatLines(_script.beats[0]));
@@ -160,9 +165,10 @@ public class WeekendVenueHost : NPCInteractable
                 : _script.farewell;
             said.AddRange(Lines(goodbye));
         }
-        else if (_queue != null)
+        else if (_queue != null || _crowd != null)
         {
-            // Their reply lands, then the player moves up the line to whoever is next.
+            // Their reply lands, then the player moves up the line to whoever is next (or, at the car, the
+            // next pass holder is brought over).
             _walkNext = true;
         }
         else
@@ -176,9 +182,18 @@ public class WeekendVenueHost : NPCInteractable
 
     // ------------------------------------------------------------------ walking the queue
 
-    // Send the player to the rail in front of the fan whose turn it is.
+    // Send the player to the rail in front of the fan whose turn it is — or, on the grid walk, bring the next
+    // pass holder over to the player.
     void WalkToFan()
     {
+        if (_crowd != null)
+        {
+            _crowd.Call(_beat);
+            _walkGiveUpAt = Time.time + 8f;
+            _walking = true;
+            return;
+        }
+
         _walker = OnFootController.Current;
         Transform fan = _queue != null ? _queue.Fan(_beat) : null;
         if (_walker == null || fan == null || _walker.Ridden != null) { FaceFan(); return; }
@@ -192,6 +207,13 @@ public class WeekendVenueHost : NPCInteractable
 
     void UpdateWalk()
     {
+        // At the car it is the pass holder doing the walking: wait for them to arrive.
+        if (_crowd != null)
+        {
+            if (!_crowd.Arrived && Time.time < _walkGiveUpAt) return;
+            FaceFan();
+            return;
+        }
         // The body went away under the walk — into the car, a scene change. Nothing left to sign with.
         if (_walker == null) { AbandonConversation(); return; }
         if (_walker.ScriptedWalking && Time.time < _walkGiveUpAt) return;
@@ -205,7 +227,7 @@ public class WeekendVenueHost : NPCInteractable
         _walking = false;
         if (_walker != null) _walker.StopWalking();
 
-        Transform fan = _queue != null ? _queue.Fan(_beat) : null;
+        Transform fan = CurrentFan();
         var player = WeekendVenueAnchor.OnFootPlayer();
         if (fan != null && player != null)
         {
@@ -217,9 +239,23 @@ public class WeekendVenueHost : NPCInteractable
         }
 
         voice = fan;
-        voiceName = SigningContent.FanSpeaker;
+        voiceName = SigningContent.SpeakerFor(_activity != null ? _activity.kind : ActivityKind.Autographs);
         lines = BeatLines(_script.beats[Mathf.Clamp(_beat, 0, _script.beats.Count - 1)], fan != null);
         RestartLines();
+    }
+
+    Transform CurrentFan() =>
+        _queue != null ? _queue.Fan(_beat) : _crowd != null ? _crowd.Fan(_beat) : null;
+
+    // The pass holders, gathered a few metres off the driver on the far side from the host, so they walk up
+    // into the driver's view rather than through the crew chief.
+    GridWalkCrowd GatherCrowd()
+    {
+        var player = WeekendVenueAnchor.OnFootPlayer();
+        if (player == null || _script == null) return null;
+        Vector3 away = player.position - transform.position;
+        int seed = 9500 + (_activity != null ? Mathf.Abs(_activity.id.GetHashCode() % 1000) : 0);
+        return GridWalkCrowd.Gather(this, player.position, away, _script.beats.Count, seed);
     }
 
     // A line said by the fan at the front, when there is one; otherwise by the host as before.
@@ -242,11 +278,23 @@ public class WeekendVenueHost : NPCInteractable
         _activity = null;
         _script = null;
         _queue = null;
+        if (_crowd != null) { _crowd.Dismiss(); _crowd = null; }
         voice = null;
 
         if (a == null || script == null) return;
 
         WeekendAppointment.Clear();
+
+        // The pit-stop challenge is only introduced here: the run itself is driven, and it settles the
+        // booking when the clock stops (PitChallengeRun). No car to run it in, and it is settled as a no-show
+        // would be, without the fine — it is a bit of fun, not a contract.
+        if (a.kind == ActivityKind.PitChallenge)
+        {
+            if (!PitChallengeRun.Launch(a))
+                WeekendDirector.Finish(a, WeekendOutcome.Nothing.WithHeadline("No car to run the pit-stop challenge in."), inWorld: true);
+            return;
+        }
+
         WeekendDirector.Finish(a, script.Settle(_running, Mathf.Max(1, _answered)), inWorld: true);
     }
 
@@ -260,6 +308,7 @@ public class WeekendVenueHost : NPCInteractable
         if (_walking && _walker != null) _walker.StopWalking();
         _walking = false;
         _queue = null;
+        if (_crowd != null) { _crowd.Dismiss(); _crowd = null; }
         EndConversation();
         voice = null;
     }

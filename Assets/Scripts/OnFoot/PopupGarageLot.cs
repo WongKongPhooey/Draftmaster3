@@ -82,6 +82,9 @@ public class PopupGarageLot : MonoBehaviour
     // So it goes home to its own garage — the real car, moved under its own canopy, rather than a second
     // copy parked on top of it. It is already inert (PlayerVehicleController is disabled until somebody
     // climbs in) and the next scene load with a session live puts it back on pit road.
+    // The pit-stop challenge borrows the car between sessions and hands it back here.
+    public void PutPlayersCarAway() => PutThePlayersCarAway();
+
     void PutThePlayersCarAway()
     {
         if (RaceWeekend.SessionLive) return;          // their hour: the car belongs in its box

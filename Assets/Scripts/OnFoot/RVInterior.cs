@@ -159,6 +159,29 @@ public class RVInterior : MonoBehaviour
             && Mathf.Abs(localRight) < halfWidth + h;
     }
 
+    // Whether a point in the world is inside this room's box (no hysteresis). The walls are only drawn and
+    // solid from in here, so nothing outside them can be reached either: OnFootController asks this to keep
+    // the e-scooter parked by the door from offering a ride to somebody stood at the dinette.
+    public bool Contains(Vector2 point)
+    {
+        if (!_initialised) return false;
+        Vector2 rel = point - _anchorXY;
+        float localForward = Vector2.Dot(rel, _doorDir);
+        float localRight = Vector2.Dot(rel, new Vector2(_doorDir.y, -_doorDir.x));
+        return EvaluateInside(false, localForward, localRight, roomFront, roomBack, roomWidth * 0.5f, 0f);
+    }
+
+    // The room the player is stood in right now, if any.
+    public static RVInterior Occupied
+    {
+        get
+        {
+            for (int i = 0; i < All.Count; i++)
+                if (All[i] != null && All[i].IsInside) return All[i];
+            return null;
+        }
+    }
+
     // anchorWorld: the RV spawn point (player starts here, inside). player: the walking player transform.
     // exterior: the placed RV shell — its up orients the doorway, and its solid colliders are switched
     // off while inside (the interior's own wall colliders take over) and back on when stepping out.

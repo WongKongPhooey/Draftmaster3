@@ -62,6 +62,7 @@ namespace Draftmaster.Weekend
                     break;
                 case ActivityKind.Autographs:
                 case ActivityKind.HaulerParade:
+                case ActivityKind.GridWalk:
                     o.fanAppeal = -1.5f;
                     break;
                 case ActivityKind.SponsorDuty:

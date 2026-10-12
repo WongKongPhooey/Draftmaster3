@@ -76,6 +76,9 @@ public class OnFootController : MonoBehaviour
     // so the sequence can orient the player itself. Not serialized — runtime control only.
     [System.NonSerialized] public bool MovementLocked;
 
+    // Stood still: a cutscene's lock, or the travel map open over the player (the RV satnav, or F9).
+    bool Held => MovementLocked || TravelMapScreen.IsOpen;
+
     // A scripted walk: something else is steering the body to a point — the signing session taking the
     // driver along the queue at the fence. Walks at the ordinary pace with the ordinary animation, over the
     // top of MovementLocked and of an open conversation (both of which exist to stop the STICK moving the
@@ -178,8 +181,10 @@ public class OnFootController : MonoBehaviour
         EnsureMoveAction();
         Vector2 move = ReadMove();
 
-        // Lock movement while mid-conversation or while a cutscene holds the player.
-        if (MovementLocked || (_activeNpc != null && _activeNpc.IsTalking)) move = Vector2.zero;
+        // Lock movement while mid-conversation, while a cutscene holds the player, or while a full-screen
+        // panel is up over them (the satnav's travel map reads the same keys to pan, and the body walked
+        // about behind it).
+        if (Held || (_activeNpc != null && _activeNpc.IsTalking)) move = Vector2.zero;
 
         bool scripted = false;
         if (_walkTarget.HasValue)
@@ -303,9 +308,9 @@ public class OnFootController : MonoBehaviour
             return;
         }
 
-        // Frozen by a cutscene: no prompts, no interactions. Interact state still ticks so a held
-        // key doesn't fire the moment the lock lifts.
-        if (MovementLocked)
+        // Frozen by a cutscene or a panel: no prompts, no interactions. Interact state still ticks so a
+        // held key doesn't fire the moment the lock lifts.
+        if (Held)
         {
             HidePrompt();
             ReadInteractPressed();
@@ -472,10 +477,14 @@ public class OnFootController : MonoBehaviour
         Vector2 pos = transform.position;
         NPCInteractable best = null;
         float bestD = float.MaxValue;
+        // Indoors, only what is in the room with you: the walls stop the body, and range alone would offer
+        // the scooter parked outside the RV door through them.
+        var room = RVInterior.Occupied;
         for (int i = 0; i < NPCInteractable.All.Count; i++)
         {
             var npc = NPCInteractable.All[i];
             if (!npc.InRange(pos)) continue;
+            if (room != null && !room.Contains(npc.transform.position)) continue;
             float d = Vector2.Distance(pos, npc.transform.position);
             if (d < bestD) { bestD = d; best = npc; }
         }
@@ -512,10 +521,12 @@ public class OnFootController : MonoBehaviour
         Vector2 pos = transform.position;
         NPCInteractable best = null;
         float bestD = float.MaxValue;
+        var room = RVInterior.Occupied;   // indoors: only what is in the room (see NearestInRange)
         for (int i = 0; i < NPCInteractable.All.Count; i++)
         {
             var npc = NPCInteractable.All[i];
             if (npc == null || npc.IsTalking || !npc.InRange(pos)) continue;
+            if (room != null && !room.Contains(npc.transform.position)) continue;
 
             Vector3 at = cam.WorldToScreenPoint(npc.transform.position);
             if (at.z < 0f) continue;                       // behind the camera

@@ -96,10 +96,8 @@ public class SponsorExtrasWaiverTests
 
         Assert.IsTrue(WeekendLedger.SponsorExtrasWaived);
         Assert.IsFalse(OnSheet("SPONSOR PHOTO SHOOT"));
-        Assert.IsFalse(OnSheet("DEALER GROUP PHOTOS"));
         Assert.IsFalse(OnSheet("SUITE MEET & GREET"));
-        Assert.IsTrue(OnSheet("PIT-STOP CHALLENGE"), "the contracted appearances still stand");
-        Assert.IsTrue(OnSheet("HOSPITALITY Q&A"));
+        Assert.IsTrue(OnSheet("PIT-STOP CHALLENGE"), "the pit-stop challenge is not a sponsor extra");
         Assert.AreEqual(before - extras, WeekendLedger.Timetable.Activities.Count, "nothing else came off");
     }
 
@@ -154,6 +152,6 @@ public class SponsorExtrasWaiverTests
 
         Assert.IsTrue(WeekendLedger.Timetable.Activities.Contains(shoot),
             "a photo shoot that already happened is not cancelled after the fact");
-        Assert.IsFalse(OnSheet("DEALER GROUP PHOTOS"), "the ones still to come do go");
+        Assert.IsFalse(OnSheet("SUITE MEET & GREET"), "the ones still to come do go");
     }
 }

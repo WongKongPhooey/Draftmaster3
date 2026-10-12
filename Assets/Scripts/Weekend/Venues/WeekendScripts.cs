@@ -30,12 +30,16 @@ public static class WeekendScripts
             case ActivityKind.DriverIntros:
                 return CeremonyContent.Build(a);
 
+            case ActivityKind.PitChallenge:
+                return PitChallenge.Intro(a);
+
             case ActivityKind.SponsorDuty:
             case ActivityKind.PhotoShoot:
                 return SponsorContent.Build(a, LeadSponsor());
 
             case ActivityKind.Autographs:
             case ActivityKind.HaulerParade:
+            case ActivityKind.GridWalk:
                 return SigningContent.Build(a);
 
             default:

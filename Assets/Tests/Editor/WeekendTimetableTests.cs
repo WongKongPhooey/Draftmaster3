@@ -247,4 +247,66 @@ public class WeekendTimetableTests
         Assert.IsTrue(a.ClashesWith(overlapping));
         Assert.IsFalse(a.ClashesWith(otherDay));
     }
+    // ------------------------------------------------------------------ fans and sponsors, not on a loop
+
+    // One signing at the fence, on Friday, and none on Saturday: the weekend's fan time is that and the VIP
+    // grid walk at the player's own car on the day of their race.
+    [Test]
+    public void OneFridaySigning_AndAGridWalkOnRaceDay()
+    {
+        foreach (var mine in SeriesCatalog.All)
+        for (int weekend = 0; weekend < 12; weekend++)
+        {
+            var t = WeekendTimetable.Build(mine, weekend, "Charlotte");
+            var race = t.PlayerSession(ActivityKind.Race);
+            int signings = 0, gridWalks = 0;
+            foreach (var a in t.Activities)
+            {
+                if (a.kind == ActivityKind.Autographs)
+                {
+                    signings++;
+                    Assert.AreEqual(WeekendSlot.FridayPM, a.slot, $"{mine}/{weekend}: {a.title} is not the Friday signing");
+                }
+                if (a.kind == ActivityKind.GridWalk)
+                {
+                    gridWalks++;
+                    Assert.AreEqual(WeekendSlots.MorningOf(race.slot), WeekendSlots.MorningOf(a.slot),
+                                    $"{mine}: the grid walk is not on race day");
+                    Assert.LessOrEqual((int)a.slot * 1440 + a.EndMinute, (int)race.slot * 1440 + race.startMinute - 120,
+                                       $"{mine}: the grid walk runs into the drivers meeting");
+                    Assert.AreEqual(WeekendVenue.PitBox, WeekendVenues.For(a.kind), "the grid walk is held at the car");
+                }
+            }
+            Assert.AreEqual(1, signings, $"{mine}/{weekend}: expected exactly one signing session");
+            Assert.AreEqual(1, gridWalks, $"{mine}/{weekend}: expected exactly one VIP grid walk");
+        }
+    }
+
+    [Test]
+    public void TheCupGridWalk_IsSundayMorning()
+    {
+        var walk = WeekendTimetable.Build(RacingSeries.Cup, 3, "Daytona").FirstOfKind(ActivityKind.GridWalk);
+        Assert.IsNotNull(walk);
+        Assert.AreEqual(WeekendSlot.SundayAM, walk.slot);
+        Assert.AreEqual("VIP GRID WALK", walk.title);
+    }
+
+    // The winner's circle used to be the destination of nearly every half-day. A handful of distinct sponsor
+    // appearances, never the same title twice.
+    [Test]
+    public void SponsorTrips_AreFewAndDistinct()
+    {
+        foreach (var mine in SeriesCatalog.All)
+        for (int weekend = 0; weekend < 12; weekend++)
+        {
+            var t = WeekendTimetable.Build(mine, weekend, "Charlotte");
+            var titles = new HashSet<string>();
+            foreach (var a in t.Activities)
+            {
+                if (!ActivityKinds.IsSponsorDuty(a.kind)) continue;
+                Assert.IsTrue(titles.Add(a.title), $"{mine}/{weekend}: {a.title} booked twice");
+            }
+            Assert.LessOrEqual(titles.Count, 4, $"{mine}/{weekend}: too many trips to the winner's circle");
+        }
+    }
 }

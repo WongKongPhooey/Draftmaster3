@@ -155,8 +155,23 @@ namespace Draftmaster.Weekend
                 skipAppeal = 1f,
                 skipReason = "The queue waited and then went home.",
             },
+            new EventType
+            {
+                id = "fan_event-grid_walk", kind = ActivityKind.GridWalk, minutes = 45,
+                title = "VIP GRID WALK",
+                subtitle = "Stand with the car. Pit-pass holders are walked over for a signature and a photo before the race.",
+                appearanceFee = 1200, skipAppeal = 2f,
+                skipReason = "The VIP guests were walked down to a car with nobody stood next to it.",
+            },
 
             // ---- sponsors ----------------------------------------------------------------------
+            new EventType
+            {
+                id = "sponsor_event-pit_challenge", kind = ActivityKind.PitChallenge, minutes = 30,
+                title = "PIT-STOP CHALLENGE",
+                subtitle = "One shot on the clock: flat out down pit road, four tyres in the box, and back out.",
+                appearanceFee = 500,
+            },
             new EventType
             {
                 id = "sponsor_event-duty", kind = ActivityKind.SponsorDuty, minutes = 60,

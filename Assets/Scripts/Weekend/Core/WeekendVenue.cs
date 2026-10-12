@@ -55,6 +55,14 @@ namespace Draftmaster.Weekend
                 case ActivityKind.HaulerParade:
                     return WeekendVenue.SigningFence;
 
+                // The VIP grid walk is the signing turned round: you stay with the car at your own garage and
+                // the pass holders are walked over to you.
+                case ActivityKind.GridWalk: return WeekendVenue.PitBox;
+
+                // The pit-stop challenge starts where the car lives: the crew chief at the team's garage
+                // brings it round and the run itself is driven down pit road.
+                case ActivityKind.PitChallenge: return WeekendVenue.PitBox;
+
                 case ActivityKind.SponsorDuty:
                 case ActivityKind.PhotoShoot:
                     return WeekendVenue.SponsorSuite;

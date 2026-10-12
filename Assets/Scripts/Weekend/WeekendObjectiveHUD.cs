@@ -611,6 +611,7 @@ public class WeekendObjectiveHUD : MonoBehaviour
     static string Verb(WeekendActivity a)
     {
         if (a.IsOnTrack) return "get in";
+        if (a.kind == ActivityKind.PitChallenge) return "take the challenge";
         if (ActivityKinds.IsFanDuty(a.kind)) return "start signing";
         if (ActivityKinds.IsSpectate(a.kind)) return "sit down and watch";
         if (ActivityKinds.IsMedia(a.kind)) return "take their questions";

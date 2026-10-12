@@ -824,7 +824,9 @@ public class PitLaneStart : MonoBehaviour
         if (_sleeping) return;
 
         if (_phase == EntryPhase.Briefing) { StepBriefing(); return; }
-        if (_phase == EntryPhase.Driving) { StepParkedExit(); return; }
+        // The pit-stop challenge owns the car and the getting out (PitChallengeRun): stopping in the box
+        // mid-run is the tyre change, not the end of the drive.
+        if (_phase == EntryPhase.Driving) { if (!_challengeDrive) StepParkedExit(); return; }
         if (_entered) return;
 
         SyncCarMarker();
@@ -1396,6 +1398,98 @@ public class PitLaneStart : MonoBehaviour
         _stoppedInBoxSince = -1f;
         PutDriverOutBesideCar();
     }
+
+    // ------------------------------------------------------------------ the pit-stop challenge
+
+    // Lent out to the pit-stop challenge (PitChallengeRun), between sessions. The car comes from wherever it
+    // is parked — its garage, usually — onto the given pose, the driver goes into it and the camera with
+    // them, and the pit limiter is switched off for the run. The controls stay off until the run's
+    // countdown hands them over (SetChallengeControls). False when there is no car or body to do it with,
+    // or the player is already in a car.
+    public bool BeginChallengeDrive(Vector3 pos, float headingDeg)
+    {
+        if (car == null || _player == null || _phase != EntryPhase.Walking || _entered) return false;
+
+        _challengeDrive = true;
+        _entered = true;
+        ShowPrompt(false);
+        ControlHints.Hide("entercar");
+        if (_intro != null) _intro.RemoveMarker(car.transform);
+
+        ParkedCarPin.Release(car);
+        car.enabled = false;
+        car.externalInput = false;
+        var brain = car.GetComponent<SplineDriver>();
+        if (brain != null) brain.enabled = false;
+        PlaceCar(pos, headingDeg);
+
+        var limiter = car.GetComponent<PitLimiter>();
+        if (limiter != null) limiter.enabled = false;
+
+        _player.SetActive(false);
+        if (_camFollow != null) _camFollow.target = car.transform;
+        _orthoTarget = drivingOrthoSize;
+        SetPhase(EntryPhase.Driving);
+        return true;
+    }
+
+    public bool ChallengeDriving => _challengeDrive;
+
+    public void SetChallengeControls(bool on)
+    {
+        if (_challengeDrive && car != null) car.enabled = on;
+    }
+
+    // The run is over: controls off, the car taken home again, and the driver stood at `standAt`.
+    public void EndChallengeDrive(Vector3 standAt)
+    {
+        if (!_challengeDrive) return;
+        _challengeDrive = false;
+
+        car.enabled = false;
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null) { body.linearVelocity = Vector2.zero; body.angularVelocity = 0f; }
+        if (LapTimingManager.Instance != null) LapTimingManager.Instance.AbandonLap(car.transform);
+
+        var limiter = car.GetComponent<PitLimiter>();
+        if (limiter != null) limiter.enabled = true;
+
+        // Back under its canopy, where it lives between sessions; pinned there if there is no garage.
+        if (PopupGarageLot.Instance != null) PopupGarageLot.Instance.PutPlayersCarAway();
+        ParkedCarPin.Hold(car);
+
+        standAt.z = _player.transform.position.z;
+        _player.transform.position = standAt;
+        _player.SetActive(true);
+        var walker = _player.GetComponent<Rigidbody2D>();
+        if (walker != null) { walker.linearVelocity = Vector2.zero; walker.position = standAt; }
+
+        if (_camFollow != null) _camFollow.target = _player.transform;
+        _orthoTarget = onFootOrthoSize;
+        SetPhase(EntryPhase.Walking);
+        _entered = false;
+        _hintedEnter = false;
+    }
+
+    bool _challengeDrive;
+
+    // Teleport the parked car the way every other mover here does: through the dynamic model, then the body.
+    void PlaceCar(Vector3 pos, float headingDeg)
+    {
+        car.SeedPose(pos, headingDeg);
+        var body = car.GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+            body.position = car.transform.position;
+            body.rotation = car.transform.eulerAngles.z;
+        }
+    }
+
+    // The scene's pit geometry, for whoever needs to lay something out along pit road: the sampled pit
+    // centreline (null when the track has none) and where the player's car was parked on it at the open.
+    public System.Collections.Generic.List<TrackBuilder.Sample> PitSamples => _usedPit ? _pitSamples : null;
 
     // Where the player's box is NOW, which is not where the car was parked when the scene opened.
     //

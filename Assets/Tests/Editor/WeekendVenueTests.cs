@@ -211,6 +211,33 @@ public class WeekendVenueTests
         }
     }
 
+    // The VIP grid walk is the signing turned round: held at the player's own garage, with its own cast of
+    // pass holders, each of whom has somebody to be walked over to the car.
+    [Test]
+    public void TheGridWalkIsAtTheCar_WithItsOwnVipQueue()
+    {
+        Assert.AreEqual(WeekendVenue.PitBox, WeekendVenues.For(ActivityKind.GridWalk));
+        Assert.IsTrue(ActivityKinds.IsFanDuty(ActivityKind.GridWalk));
+
+        var walk = new WeekendActivity
+        {
+            id = "grid-walk@test", kind = ActivityKind.GridWalk, minutes = 45,
+            title = "VIP GRID WALK", slot = WeekendSlot.SundayAM, startMinute = 10 * 60,
+        };
+        var talk = SigningContent.Build(walk);
+        var fence = SigningContent.Build(SigningBooking(45));
+
+        Assert.LessOrEqual(talk.beats.Count, SigningContent.MaxVipQueue);
+        Assert.AreEqual(SigningContent.VipSpeaker, SigningContent.SpeakerFor(walk.kind));
+        foreach (var beat in talk.beats)
+        {
+            Assert.AreEqual(SigningContent.VipSpeaker, beat.speaker);
+            StringAssert.Contains("holding", beat.Question);
+            Assert.IsTrue(beat.choices.Exists(c => c.text.Contains("by the car")), "the photo is taken with the car");
+        }
+        Assert.AreNotEqual(fence.greeting[0], talk.greeting[0], "the grid walk is not the fence greeting again");
+    }
+
     // ------------------------------------------------------------------ the signing queue and the clock
 
     // A signing session is a window with a queue in it, and how the window is spent is the decision. These

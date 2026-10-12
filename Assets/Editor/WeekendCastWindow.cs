@@ -242,7 +242,8 @@ public class WeekendCastWindow : EditorWindow
             ActivityKind.Orientation => "OrientationContent",
             ActivityKind.DriversMeeting or ActivityKind.DriverIntros => "CeremonyContent",
             ActivityKind.SponsorDuty or ActivityKind.PhotoShoot => "SponsorContent",
-            ActivityKind.Autographs or ActivityKind.HaulerParade => "SigningContent",
+            ActivityKind.PitChallenge => "PitChallenge",
+            ActivityKind.Autographs or ActivityKind.HaulerParade or ActivityKind.GridWalk => "SigningContent",
             ActivityKind.PressConference or ActivityKind.MediaHit => "PressConferenceContent",
             _ => null,
         };
