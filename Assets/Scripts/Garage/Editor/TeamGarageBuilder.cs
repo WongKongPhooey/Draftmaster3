@@ -17,6 +17,9 @@ public static class TeamGarageBuilder
     const string DiscPath = ArtDir + "/GarageDisc.png";
     const string MatPath = ArtDir + "/GarageUnlit.mat";
     const string ControlsPath = "Assets/Input/PlayerControl.inputactions";
+    // The same walking driver the race-track paddocks spawn (TaylorEmerson prefab's sprite + animator).
+    const string PlayerSpritePath = "Assets/Sprites/Walking/walk.png";
+    const string PlayerAnimatorPath = "Assets/Animation/OnFoot/PlayerOnFoot.controller";
     const string RootName = "GarageContent";
 
     [MenuItem("Tools/Draftmaster/Build Team Garage Scene")]
@@ -50,15 +53,23 @@ public static class TeamGarageBuilder
         LocationTitle.Attach(car, "TEAM CAR", 5f, "This year's chassis");
 
         // --- player ---
-        var player = MakeDiscObject(root.transform, "OnFootPlayer", new Vector3(0f, -6f, 0f), disc, mat,
-                                    new Color(0.95f, 0.90f, 0.40f), 25);
+        var walkSprite = LoadFirstSprite(PlayerSpritePath);
+        var walkAnim = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(PlayerAnimatorPath);
+        if (walkSprite == null || walkAnim == null)
+            Debug.LogWarning($"Build Team Garage: player walk art missing ({PlayerSpritePath} / {PlayerAnimatorPath}) — falling back to the placeholder disc.");
+        var player = walkSprite != null
+            ? MakeDiscObject(root.transform, "OnFootPlayer", new Vector3(0f, -6f, 0f), walkSprite, mat, Color.white, 25)
+            : MakeDiscObject(root.transform, "OnFootPlayer", new Vector3(0f, -6f, 0f), disc, mat,
+                             new Color(0.95f, 0.90f, 0.40f), 25);
+        if (walkSprite != null && walkAnim != null)
+            player.AddComponent<Animator>().runtimeAnimatorController = walkAnim;
         var rb = player.AddComponent<Rigidbody2D>();
         rb.gravityScale = 0f;
         rb.freezeRotation = true;
         var pcol = player.AddComponent<CircleCollider2D>();
-        pcol.radius = 0.4f;
+        pcol.radius = walkSprite != null ? 0.25f : 0.4f;
         var ofc = player.AddComponent<OnFootController>();
-        ofc.faceMoveDirection = false; // placeholder disc has no facing to preserve
+        ofc.faceMoveDirection = walkSprite != null; // the walk art faces its travel; the disc has no facing
         var controls = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ControlsPath);
         if (controls == null) Debug.LogWarning($"Build Team Garage: PlayerControl not found at {ControlsPath} — assign OnFootController.controlsAsset by hand.");
         ofc.controlsAsset = controls;
@@ -103,6 +114,15 @@ public static class TeamGarageBuilder
     }
 
     // ---- object builders ----
+
+    // First slice of a multi-sprite sheet (walk_0), or the sprite itself for a single-sprite import.
+    static Sprite LoadFirstSprite(string path)
+    {
+        Sprite first = null;
+        foreach (var a in AssetDatabase.LoadAllAssetsAtPath(path))
+            if (a is Sprite sp && (first == null || string.CompareOrdinal(sp.name, first.name) < 0)) first = sp;
+        return first;
+    }
 
     static GameObject MakeQuad(Transform parent, string name, Vector3 pos, Vector3 scale,
                                Sprite sprite, Material mat, Color color, int order)
