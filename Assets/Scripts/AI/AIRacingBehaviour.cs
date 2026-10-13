@@ -399,37 +399,35 @@ public class AIRacingBehaviour : MonoBehaviour
         // into a slower / stopped car. reqGap = fixed buffer + time-headway + the distance to bleed our
         // closing speed at followDecelMps2. (The old fixed 6–14 m gap was far too short at racing speeds —
         // that's what caused the start-line pileups.) Aggressive drivers tuck in a touch tighter.
-        // The cap keys off the nearest car IN OUR LATERAL CORRIDOR and fades with lateral separation —
+        // The cap keys off cars IN OUR LATERAL CORRIDOR and fades with lateral separation —
         // capping off the nearest-ahead regardless of lateral froze the whole field behind any slow or
         // wrecked car (a committed overtake could never build the speed to actually drive past it).
-        if (TryGetAheadInCorridor(scanDist, out var blocker, out float blockGap, out float overlap01))
+        // Every car in our corridor counts, not only the nearest one. Keyed off the nearest, a car diagonally ahead
+        // that just clipped the corridor (a few per cent of overlap, so almost no cap) hid the car square in front of
+        // us behind it, and a start queue drove into the back of each other at full throttle. In a superspeedway pack
+        // the line ahead is followed as before - bump drafting off the nearest car in it.
+        if (Pack)
         {
-            float blockerMph = blocker.CurrentMph;
-            float mySpeedMps = _spline.CurrentMph * MphToMps;
-            float closingMps = Mathf.Max(0f, mySpeedMps - blockerMph * MphToMps);
-            float brakeDist = (closingMps * closingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
-            float reqGap = (minFollowDistance + mySpeedMps * headway + brakeDist)
-                           * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
-            bool packFollow = Pack && !underYellow && blockerMph > _spline.CurrentMph * 0.75f;
-            if (packFollow)
+            if (TryGetAheadInCorridor(scanDist, out var blocker, out float blockGap, out float overlap01))
+                speedCap = Mathf.Min(speedCap, FollowCap(blocker.CurrentMph, blockGap, overlap01, headway, followMargin,
+                                                         launchCapBlend, underYellow));
+        }
+        else
+        {
+            var field = RaceField.Drivers;
+            float myLat = _spline.LateralOnTrack;
+            for (int i = 0; i < field.Count; i++)
             {
-                // Bump drafting: close up to a bumper's width behind the car ahead and sit there.
-                float packCap = Mathf.Lerp(_spline.DesiredMph, PackFollowCap(blockerMph, blockGap), launchCapBlend);
-                speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, packCap, overlap01));
+                var other = field[i];
+                if (other == null || other == _spline || other.IsOnPit) continue;
+                if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+                float lg = LongitudinalGap(_spline, other);
+                if (lg <= 0f || lg > scanDist) continue;
+                float ov = CorridorOverlap01(Mathf.Abs(other.LateralOnTrack - myLat));
+                if (ov <= 0f) continue;
+                speedCap = Mathf.Min(speedCap, FollowCap(other.CurrentMph, lg, ov, headway, followMargin,
+                                                         launchCapBlend, underYellow));
             }
-            else if (blockGap < reqGap)
-            {
-                // Ease from the blocker's speed (at reqGap) down to a touch under it (at hardFollowGap).
-                float close01 = Mathf.InverseLerp(reqGap, hardFollowGap, blockGap);
-                float followCap = Mathf.Lerp(blockerMph, Mathf.Max(0f, blockerMph - 6f), close01);
-                // Rolling start: blend from our own race pace toward the follow cap over the launch window.
-                followCap = Mathf.Lerp(_spline.DesiredMph, followCap, launchCapBlend);
-                // Laterally clearing the blocker fades the cap back to race pace — drive past, don't shadow it.
-                followCap = Mathf.Lerp(_spline.DesiredMph, followCap, overlap01);
-                speedCap = Mathf.Min(speedCap, followCap);
-            }
-            if (blockGap < hardFollowGap && !packFollow)
-                speedCap = Mathf.Min(speedCap, Mathf.Lerp(_spline.DesiredMph, blockerMph * 0.6f, overlap01));
         }
 
         // Human player car(s) — driven free with SplineDriver off, so absent from RaceField and invisible to the
@@ -609,6 +607,12 @@ public class AIRacingBehaviour : MonoBehaviour
                 desiredTactical = LaneLateral(NearestLane(here)) - ideal;
         }
 
+        // The same on a road course, which has no lanes: a car off the racing line does not merge back onto it across
+        // a car alongside - it holds its side of the road until it is clear.
+        if (!Lanes && !wantOvertake && !_spline.IsOnPit && Mathf.Abs(_smoothedTactical) > tacticalDeadzone
+            && MergeBlockedAlongside())
+            desiredTactical = _smoothedTactical;
+
         // Defending: if a faster pursuer is close behind during the approach to a turn, shift to the inside.
         if (!Pack && (_spline.CurrentPhase == SplineDriver.CornerPhase.Approach || _spline.CurrentPhase == SplineDriver.CornerPhase.Entry))
         {
@@ -675,6 +679,10 @@ public class AIRacingBehaviour : MonoBehaviour
             float latGap = _spline.LateralOnTrack - other.LateralOnTrack;
             float absLat = Mathf.Abs(latGap);
             float dir = latGap >= 0f ? 1f : -1f;
+            // Square in line with us but not alongside is a car to follow, not one rubbing doors: the wide road-course
+            // window took the car a few metres ahead in the same column for side contact, scrubbed both of them and
+            // shoved them sideways, and down a start queue the scrub ratcheted car after car toward its floor.
+            if (absLat < contactLateralWidth && Mathf.Abs(longGap) > alongsideLength) continue;
             if (absLat < contactLateralWidth)
             {
                 // Contact: stronger push + speed scrub.
@@ -828,6 +836,40 @@ public class AIRacingBehaviour : MonoBehaviour
         _spline.tacticalLateralOffset = _smoothedTactical;
         _spline.aiMaxSpeedMph = speedCap;
         _spline.aiSpeedBoostMph = speedBoost;
+    }
+
+    // The speed (mph) a car in our corridor this far (m) ahead allows us, faded by how squarely it sits in our path.
+    // float.MaxValue when it allows anything.
+    float FollowCap(float blockerMph, float blockGap, float overlap01, float headway, float followMargin,
+                    float launchCapBlend, bool underYellow)
+    {
+        float cap = float.MaxValue;
+        float mySpeedMps = _spline.CurrentMph * MphToMps;
+        float closingMps = Mathf.Max(0f, mySpeedMps - blockerMph * MphToMps);
+        float brakeDist = (closingMps * closingMps) / (2f * Mathf.Max(followDecelMps2, 1f));
+        float reqGap = (minFollowDistance + mySpeedMps * headway + brakeDist)
+                       * Mathf.Lerp(1.15f, 0.85f, _phaseAggression) * followMargin;
+        bool packFollow = Pack && !underYellow && blockerMph > _spline.CurrentMph * 0.75f;
+        if (packFollow)
+        {
+            // Bump drafting: close up to a bumper's width behind the car ahead and sit there.
+            float packCap = Mathf.Lerp(_spline.DesiredMph, PackFollowCap(blockerMph, blockGap), launchCapBlend);
+            cap = Mathf.Min(cap, Mathf.Lerp(_spline.DesiredMph, packCap, overlap01));
+        }
+        else if (blockGap < reqGap)
+        {
+            // Ease from the blocker's speed (at reqGap) down to a touch under it (at hardFollowGap).
+            float close01 = Mathf.InverseLerp(reqGap, hardFollowGap, blockGap);
+            float followCap = Mathf.Lerp(blockerMph, Mathf.Max(0f, blockerMph - 6f), close01);
+            // Rolling start: blend from our own race pace toward the follow cap over the launch window.
+            followCap = Mathf.Lerp(_spline.DesiredMph, followCap, launchCapBlend);
+            // Laterally clearing the blocker fades the cap back to race pace — drive past, don't shadow it.
+            followCap = Mathf.Lerp(_spline.DesiredMph, followCap, overlap01);
+            cap = Mathf.Min(cap, followCap);
+        }
+        if (blockGap < hardFollowGap && !packFollow)
+            cap = Mathf.Min(cap, Mathf.Lerp(_spline.DesiredMph, blockerMph * 0.6f, overlap01));
+        return cap;
     }
 
     // ---- Pack racing ----
@@ -1034,30 +1076,73 @@ public class AIRacingBehaviour : MonoBehaviour
         if (stoppedCar) _passTargetLat = targetLat;
     }
 
-    // Pick which side to pass on: outside of an upcoming turn (safer arc), else the roomier side away from the
-    // car ahead. Never commit to a side another car already occupies — try the other, and bail if both are blocked.
+    // Pick which side to pass on: the side with road to spare past the car ahead and the fewest cars already on it.
+    // Never commit to a side another car already occupies — try the other, and bail if both are blocked.
+    // The upcoming turn (its outside, a safer arc) only breaks a tie: it used to decide outright, so before a
+    // right-hander every passer went left - the side the racing line already runs along - and a field braking for
+    // Watkins Glen's Turn 1 stacked up on the left with the right half of the road empty.
     float ChooseOvertakeSide(float aheadLat)
     {
+        float myLat = _spline.LateralOnTrack;
+        float leftRoom = 0f, rightRoom = 0f;
+        bool haveRoom = _spline.GetLateralRoom(out leftRoom, out rightRoom);
         int turnSign = _spline.NextTurnSign(cornerScanDistance);
-        float pick;
-        if (turnSign != 0)
-        {
-            float outsideDir = turnSign;   // outside of the turn — more room, better exit
-            float insideDir = -outsideDir; // the dive
-            pick = _phaseAggression > 0.75f ? insideDir : outsideDir;
-        }
-        else
-        {
-            float roomBias = 0f;
-            if (_spline.GetLateralRoom(out float leftRoom, out float rightRoom))
-                roomBias = rightRoom - leftRoom; // >0 → more room on the right (+lateral)
-            float awayFromAhead = aheadLat >= 0f ? -1f : 1f; // car ahead sits right → go left
-            pick = (roomBias * 0.4f + awayFromAhead) >= 0f ? 1f : -1f;
-        }
+        // Outside of the turn - more room, better exit - unless this driver goes for the dive.
+        float turnPref = turnSign == 0 ? 0f : (_phaseAggression > 0.75f ? -turnSign : turnSign);
 
-        if (SideOccupied(pick)) pick = -pick;     // someone's there — try the other side
-        if (SideOccupied(pick)) return 0f;        // boxed in both sides — abort the pass
-        return pick;
+        float bestScore = float.NegativeInfinity, pick = 0f;
+        for (int k = 0; k < 2; k++)
+        {
+            float dir = k == 0 ? 1f : -1f;
+            if (SideOccupied(dir)) continue;   // someone's there - not this side
+            float score = 0f;
+            if (haveRoom)
+            {
+                // Where the pass would put us, against how much road there is that way: a side the car ahead
+                // already fills to the edge scores lowest. It is not ruled out - committed to it, a car boxed against
+                // the edge holds the edge instead of drifting back across the road onto the line the queue is on, and
+                // ruling it out stacked the Watkins Glen start sim up worse (33 -> 77 contacts in 30 s).
+                float room = dir > 0f ? rightRoom : leftRoom;
+                float roomPast = room - Mathf.Max(0f, (aheadLat - myLat) * dir);
+                score += Mathf.Min(roomPast, 6f);
+            }
+            else score += (aheadLat >= myLat ? -dir : dir);   // no bounds: away from the car ahead
+            score -= 2.5f * SideTraffic(dir);
+            score += 1.5f * turnPref * dir;   // the corner only breaks a tie
+            if (score > bestScore) { bestScore = score; pick = dir; }
+        }
+        return pick;   // 0 = boxed in both sides - abort the pass
+    }
+
+    // How busy the road is on one side of us up ahead: cars (and the human) between half a car's width and a lane and a
+    // half that way, within cornerScanDistance, nearer ones counting for more.
+    float SideTraffic(float dir)
+    {
+        float myLat = _spline.LateralOnTrack;
+        float n = 0f;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            n += SideWeight(LongitudinalGap(_spline, other), (other.LateralOnTrack - myLat) * dir);
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            n += SideWeight(SignedGapTo(p.TrackDistance), (p.TrackLateral - myLat) * dir);
+        }
+        return n;
+    }
+
+    float SideWeight(float gap, float sideways)
+    {
+        if (gap < -alongsideLength || gap > cornerScanDistance) return 0f;
+        if (sideways < 1f || sideways > 6f) return 0f;
+        return 1f - Mathf.Clamp01(gap / cornerScanDistance) * 0.7f;
     }
 
     // ---- Lanes ----
@@ -1132,6 +1217,34 @@ public class AIRacingBehaviour : MonoBehaviour
         }
         return true;
     }
+
+    // Is a car alongside between us and our racing line, so drifting back onto it would put us into its door? The
+    // human car counts too.
+    bool MergeBlockedAlongside()
+    {
+        float here = _spline.LateralOnTrack;
+        float toLine = _spline.UntacticalLateral - here;
+        var drivers = RaceField.Drivers;
+        for (int i = 0; i < drivers.Count; i++)
+        {
+            var other = drivers[i];
+            if (other == null || other == _spline || other.IsOnPit) continue;
+            if (System.Math.Abs(other.TrackLength - _spline.TrackLength) > 0.5f) continue;
+            if (BlocksMerge(LongitudinalGap(_spline, other), other.LateralOnTrack - here, toLine)) return true;
+        }
+        var obstacles = RaceObstacles.All;
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            var p = obstacles[i];
+            if (p == null || p.ObstacleTrack == null || p.ObstacleTrack != _spline.track) continue;
+            if (BlocksMerge(SignedGapTo(p.TrackDistance), p.TrackLateral - here, toLine)) return true;
+        }
+        return false;
+    }
+
+    bool BlocksMerge(float gap, float fromMe, float toLine) =>
+        Mathf.Abs(gap) < alongsideLength && Mathf.Sign(fromMe) == Mathf.Sign(toLine)
+        && Mathf.Abs(fromMe) < Mathf.Abs(toLine) + corridorClearWidthNoLanes;
 
     // Anyone overlapping us alongside, either side?
     bool AnyAlongside()
