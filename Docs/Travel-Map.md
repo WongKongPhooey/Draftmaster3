@@ -55,6 +55,12 @@ The map is a **Canvas prefab** you edit in Prefab Mode (`Assets/Resources/UI/Tra
   The canvas is authored at 1920x1080 (scale factor 1 at 1080p), so every type size is a whole
   multiple of its face's pixel cell — Silkscreen 8/16/24, VT323 16/32, Pixelify Sans 20 — and every
   9-slice runs at 2x via `pixelsPerUnitMultiplier = 0.5`. Off-ladder sizes resample into mush.
+  Sizes come from the shared type scale (`Docs/Type-Scale.md`), asked for by role: title 72, cash and
+  place name 48 (Heading), status line, part list, shop rows and notice 48 (Data, VT323), blurb 40
+  (Body, Pixelify), captions, buttons and the key 24 (Label). The side panel is 640 wide and scrolls
+  (`SidePanel/Viewport/Content`, a layout group that sizes each row to its wrapped text) in the order place, blurb, buttons, shop, car, so the way on is always on the first screenful; the map window
+  is narrower than the 1470x950 board, which pans behind it, and `minZoom` is set so zooming out fits it.
+  The node names on the board are the one exception, set small on purpose and zoomed with the board.
 - Menu items (`Draftmaster > Travel Map`):
   - **Build Prefab** — one-shot generator (refuses to overwrite an existing prefab).
   - **Sync Node Markers** — after adding nodes to `TravelGraph` in code, adds markers for them
@@ -68,6 +74,7 @@ The map is a **Canvas prefab** you edit in Prefab Mode (`Assets/Resources/UI/Tra
   - **Preview PNG** — renders the map to `Assets/Screenshots/travelmap_preview.png` with a sample
     week dressed into it. The canvas is Screen Space - Overlay, which never shows up in an ordinary
     editor screenshot, so this is how you look at a restyle without entering Play Mode.
+    When the side panel overflows it also writes `Temp/travelmap_preview_scrolled.png`, scrolled to the bottom.
   - **Save And Rebuild Markers And Routes** — the whole editing loop in one click. Reads the marker
     positions (from the open Prefab Mode stage when there is one, so unsaved drags count), writes the
     ones that have been moved off their projected spot into `TravelMapLayout`, recompiles, then re-seats

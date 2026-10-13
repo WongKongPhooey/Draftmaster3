@@ -1,4 +1,5 @@
 using System.IO;
+using Draftmaster.Controls;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -569,7 +570,9 @@ public static class TravelMapPrefabBuilder
             // The layout group has to be rebuilt by hand: ForceRebuildLayoutImmediate only rebuilds the
             // rect it is handed, and nothing marks a freshly instantiated asset dirty outside Play Mode.
             // (At runtime LayoutGroup.OnEnable does this itself, so this is a preview-only concern.)
-            if (go.transform.Find("SidePanel") is RectTransform panel)
+            // The rebuild stops at the first rect with no layout component on it (the viewport), so the
+            // scrolling content is handed over directly.
+            if ((go.transform.Find("SidePanel/Viewport/Content") ?? go.transform.Find("SidePanel")) is RectTransform panel)
                 LayoutRebuilder.ForceRebuildLayoutImmediate(panel);
             cam.Render();
 
@@ -583,9 +586,29 @@ public static class TravelMapPrefabBuilder
             Directory.CreateDirectory("Assets/Screenshots");
             const string outPath = "Assets/Screenshots/travelmap_preview.png";
             File.WriteAllBytes(outPath, tex.EncodeToPNG());
-            Object.DestroyImmediate(tex);
             AssetDatabase.ImportAsset(outPath);
             Debug.Log($"TravelMap preview written to {outPath}.");
+
+            // The side panel scrolls, so a second shot from the bottom of it — kept out of the project
+            // (Temp/), since it is a check rather than an asset.
+            if (go.transform.Find("SidePanel")?.GetComponent<ScrollRect>() is ScrollRect scroll && scroll.content != null)
+            {
+                float overflow = scroll.content.rect.height - scroll.viewport.rect.height;
+                if (overflow > 0f)
+                {
+                    scroll.content.anchoredPosition = new Vector2(0f, overflow);
+                    Canvas.ForceUpdateCanvases();
+                    cam.Render();
+                    RenderTexture.active = rt;
+                    tex.ReadPixels(new Rect(0, 0, W, H), 0, 0);
+                    tex.Apply();
+                    RenderTexture.active = prev;
+                    File.WriteAllBytes("Temp/travelmap_preview_scrolled.png", tex.EncodeToPNG());
+                }
+                Debug.Log($"TravelMap preview: side panel content {scroll.content.rect.height:0}px in a " +
+                          $"{scroll.viewport.rect.height:0}px window" + (overflow > 0f ? " — scrolled shot in Temp/travelmap_preview_scrolled.png." : "."));
+            }
+            Object.DestroyImmediate(tex);
         }
         finally
         {
@@ -650,6 +673,15 @@ public static class TravelMapPrefabBuilder
     // pixelsPerUnitMultiplier 0.5. Anything off those ladders resamples and the pixels go soft.
     const float Slice2x = 0.5f; // effective PPU = sprite PPU * this, so 0.5 draws the border at 2x
 
+    // Screen geometry at the 1920x1080 reference. The header band holds a Title line over a Data line and
+    // the footer a Data-sized notice; the side panel is a third of the width, about 31 characters of the
+    // data face; the map window takes the rest.
+    const float RefHeight = 1080f;
+    const float Margin = 24f, PlotX = 30f, HeaderH = 150f, FooterH = 80f, PanelW = 640f;
+    const float PlotW = 1920f - PlotX - Margin - PanelW - Margin, PlotH = 1080f - HeaderH - FooterH;
+    const float PanelInset = 12f;   // the frame's 2x border, plus a little air
+    const float ButtonH = 64f;      // one Label line plus the plate's bevel and padding
+
     static readonly Color Gold = new Color32(0xf2, 0xc1, 0x4e, 0xff);
     static readonly Color Cream = new Color32(0xf4, 0xf1, 0xe8, 0xff);
     static readonly Color TextDim = new Color32(0x9a, 0xa3, 0xb8, 0xff);
@@ -698,28 +730,39 @@ public static class TravelMapPrefabBuilder
 
         // ----- header: icon, gold Silkscreen title, VT323 status line -----
         var titleIcon = EnsureImage(root, "TitleIcon", Icon("map"), Gold);
-        Place(titleIcon.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(24, -8), new Vector2(32, 32));
+        Place(titleIcon.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(Margin, -16), new Vector2(64, 64));
         titleIcon.transform.SetSiblingIndex(1); // straight after the backdrop, under everything else
 
-        Style(screen.titleLabel, Silkscreen, 24, Gold, TextAnchor.MiddleLeft);
-        Place(screen.titleLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(66, -6), new Vector2(1200, 32));
+        Style(screen.titleLabel, Silkscreen, TypeRole.Title, Gold, TextAnchor.MiddleLeft);
+        Place(screen.titleLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(104, -8), new Vector2(1100, 80));
 
-        Style(screen.subLabel, VT323, 32, TextDim, TextAnchor.MiddleLeft);
-        Place(screen.subLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(66, -40), new Vector2(1200, 34));
-
-        var cashIcon = EnsureImage(root, "CashIcon", Icon("money"), Gold);
-        Place(cashIcon.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-372, -8), new Vector2(32, 32));
-
-        Style(screen.cashLabel, Silkscreen, 24, Gold, TextAnchor.MiddleRight);
-        Place(screen.cashLabel.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-146, -6), new Vector2(220, 32));
+        // One line however long the route hint makes it: wrapped, its tail would land on the map.
+        Style(screen.subLabel, VT323, TypeRole.Data, TextDim, TextAnchor.MiddleLeft);
+        Place(screen.subLabel.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(104, -88), new Vector2(1790, 56));
+        screen.subLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
 
         SkinButton(screen.closeButton, ButtonNavy, Cream);
-        Place((RectTransform)screen.closeButton.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -6), new Vector2(106, 32));
+        Place((RectTransform)screen.closeButton.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-Margin, -16), new Vector2(160, 64));
+
+        Style(screen.cashLabel, Silkscreen, TypeRole.Heading, Gold, TextAnchor.MiddleRight);
+        screen.cashLabel.horizontalOverflow = HorizontalWrapMode.Overflow;   // a seven-figure balance runs left, not onto a second line
+        Place(screen.cashLabel.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-208, -16), new Vector2(320, 64));
+
+        var cashIcon = EnsureImage(root, "CashIcon", Icon("money"), Gold);
+        Place(cashIcon.rectTransform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-536, -16), new Vector2(64, 64));
 
         // ----- the map itself: a framed navy plate the roads are drawn on -----
         var plot = Find<Image>(root, "MapPlot");
         if (plot != null)
         {
+            // The window onto the board gives up the room the side panel's type needs. The board itself
+            // (MapW x MapH, where the markers are placed) is unchanged: it pans and zooms behind the window,
+            // and zooming right out still fits the whole of it.
+            Place((RectTransform)plot.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(PlotX, -HeaderH), new Vector2(PlotW, PlotH));
+            screen.minZoom = Mathf.Min(1f, Mathf.Floor(Mathf.Min(PlotW / MapW, PlotH / MapH) * 20f) / 20f);
+            // TravelMapScreen adds this at runtime anyway; baked in, the preview and Prefab Mode clip too.
+            if (plot.GetComponent<RectMask2D>() == null) plot.gameObject.AddComponent<RectMask2D>();
+
             // A solid blue field with the kit's dither laid over it, rather than the dither alone: an
             // Image tint can only darken (it multiplies), and the bare plate sat within a shade of the
             // Ink backdrop, so the country had no edge to it. Now it is a blue table the gold dots and
@@ -743,52 +786,199 @@ public static class TravelMapPrefabBuilder
         }
 
         // ----- side panel -----
+        // Set in the shared type scale (UIType): the place name at Heading, the part list and shop rows at
+        // Data, the blurb at Body, section captions and buttons at Label. At those sizes a busy stop (four
+        // car rows, a six-line blurb, two buttons, a rack of parts) is taller than the screen, so the panel
+        // scrolls rather than shrinking anything back under the floor.
         var panel = Find<Image>(root, "SidePanel");
+        RectTransform content = null;
         if (panel != null)
         {
             panel.sprite = FrameCream;
             panel.type = Image.Type.Sliced;
             panel.pixelsPerUnitMultiplier = Slice2x;
             panel.color = Color.white;
-            var vlg = panel.GetComponent<VerticalLayoutGroup>();
-            if (vlg != null) { vlg.padding = new RectOffset(18, 18, 14, 14); vlg.spacing = 8; }
+            panel.raycastTarget = true;   // what a drag on the panel lands on, so the scroll gets it
+            var prt = (RectTransform)panel.transform;
+            prt.anchorMin = new Vector2(1, 0); prt.anchorMax = new Vector2(1, 1); prt.pivot = new Vector2(1, 1);
+            prt.anchoredPosition = new Vector2(-Margin, -HeaderH);
+            prt.sizeDelta = new Vector2(PanelW, -(HeaderH + FooterH));
+            content = EnsureSideScroll(prt);
         }
 
-        StyleChild(root, "SidePanel/CarHeader", Silkscreen, 16, Gold);
-        Style(screen.carRowsLabel, VT323, 16, Cream, TextAnchor.UpperLeft);
-        Style(screen.locationHeader, Silkscreen, 16, Gold, TextAnchor.MiddleLeft);
-        Style(screen.flavorLabel, Pixelify != null ? Pixelify : VT323, 20, TextDim, TextAnchor.UpperLeft);
-        // Blurbs run to five or six lines at Pixelify's 20px grid and the built rect only held three, so
-        // the tail slid under the buttons. Given height rather than a ContentSizeFitter: the layout group
-        // does not control child height, so a fitter resizes the rect without re-running the layout and
-        // the text lands on top of the rows above it. A fixed box also keeps the buttons in one place.
-        screen.flavorLabel.rectTransform.sizeDelta = new Vector2(0, 200);
-        Style(screen.shopHeader, Silkscreen, 16, Gold, TextAnchor.MiddleLeft);
-        Style(screen.noticeLabel, Silkscreen, 16, Gold, TextAnchor.MiddleCenter);
+        StyleChild(content, "CarHeader", Silkscreen, TypeRole.Label, Gold);
+        Style(screen.carRowsLabel, VT323, TypeRole.Data, Cream, TextAnchor.UpperLeft);
+        Style(screen.locationHeader, Silkscreen, TypeRole.Heading, Gold, TextAnchor.MiddleLeft);
+        Style(screen.flavorLabel, Pixelify != null ? Pixelify : VT323, TypeRole.Body, TextDim, TextAnchor.UpperLeft);
+        Style(screen.shopHeader, Silkscreen, TypeRole.Label, Gold, TextAnchor.MiddleLeft);
+        // Every row is as tall as its wrapped text (the content's layout reads it), so none of them may
+        // run sideways out of the panel or hold a fixed box the text overflows.
+        if (content != null)
+            foreach (var t in content.GetComponentsInChildren<Text>(true))
+            {
+                if (t.GetComponentInParent<Button>(true) != null) continue;
+                t.horizontalOverflow = HorizontalWrapMode.Wrap;
+                t.verticalOverflow = VerticalWrapMode.Overflow;
+            }
+
+        // The notice is a sentence, so it is set in the data face: Silkscreen at a readable size runs a
+        // one-line notice off both ends of the screen.
+        Style(screen.noticeLabel, VT323, TypeRole.Data, Gold, TextAnchor.MiddleCenter);
+        var nrt = screen.noticeLabel.rectTransform;
+        nrt.anchorMin = new Vector2(0, 0); nrt.anchorMax = new Vector2(1, 0); nrt.pivot = new Vector2(0.5f, 0);
+        nrt.anchoredPosition = new Vector2(0, 10);
+        nrt.sizeDelta = new Vector2(-2 * Margin, FooterH - 20);
 
         // Red is the commit button and nothing else (the kit's one alarm colour); walking around is not
         // a commitment, so it gets the navy plate.
         SkinButton(screen.actionButton, ButtonRed, Cream);
         SkinButton(screen.walkButton, ButtonNavy, Cream);
+        FixHeight(screen.actionButton, ButtonH);
+        FixHeight(screen.walkButton, ButtonH);
 
         // ----- shop / bench row template -----
         if (screen.stockRowTemplate != null)
         {
             var row = screen.stockRowTemplate.transform;
-            StyleChild(row, "NameLabel", VT323, 16, Cream);
-            StyleChild(row, "EffectLabel", VT323, 16, TextDim);
+            StyleChild(row, "NameLabel", VT323, TypeRole.Data, Cream);
+            StyleChild(row, "EffectLabel", VT323, TypeRole.Data, TextDim);
             var buy = row.Find("BuyButton")?.GetComponent<Button>();
             SkinButton(buy, ButtonNavy, Gold);
+            LayOutStockRow(row);
         }
 
         // ----- markers -----
         foreach (var marker in screen.nodesRoot.GetComponentsInChildren<TravelNodeMarker>(true))
             SkinMarker(marker);
 
-        // The vertical layout group's child positions are BAKED into the prefab, and nothing recomputes
-        // them for an asset. Without this the panel keeps the positions it was saved with and the rows
-        // land on top of each other the moment any of their heights change.
-        if (panel != null) LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)panel.transform);
+        // Layout positions are BAKED into the prefab, and nothing recomputes them for an asset. Without
+        // this the panel keeps the positions it was saved with and the rows land on top of each other.
+        if (content != null) LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+    }
+
+    // The side panel's rows sit in SidePanel/Viewport/Content: the panel keeps its frame and becomes a
+    // vertical ScrollRect, the viewport clips inside the frame, and the content is a layout group that
+    // sizes every row to its text. Older prefabs had the rows straight under SidePanel in a fixed-height
+    // layout; they are moved across in order, and the binder's references point at the objects rather
+    // than their paths, so they all survive. Idempotent.
+    static RectTransform EnsureSideScroll(RectTransform panel)
+    {
+        var viewport = panel.Find("Viewport") as RectTransform;
+        if (viewport == null)
+        {
+            viewport = new GameObject("Viewport", typeof(RectTransform)).GetComponent<RectTransform>();
+            viewport.SetParent(panel, false);
+        }
+        viewport.anchorMin = Vector2.zero; viewport.anchorMax = Vector2.one;
+        viewport.offsetMin = new Vector2(PanelInset, PanelInset);
+        viewport.offsetMax = new Vector2(-PanelInset, -PanelInset);
+        if (viewport.GetComponent<RectMask2D>() == null) viewport.gameObject.AddComponent<RectMask2D>();
+
+        var content = viewport.Find("Content") as RectTransform;
+        if (content == null)
+        {
+            content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+            content.SetParent(viewport, false);
+        }
+        content.anchorMin = new Vector2(0, 1); content.anchorMax = new Vector2(1, 1); content.pivot = new Vector2(0.5f, 1);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = new Vector2(0, content.sizeDelta.y);
+
+        var rows = new System.Collections.Generic.List<Transform>();
+        foreach (Transform child in panel) if (child != viewport) rows.Add(child);
+        foreach (var child in rows) child.SetParent(content, false);
+
+        // The way on comes before anything you might scroll for: the place, its blurb, then the buttons, so
+        // DRIVE TO / START RACE WEEKEND is always in the first screenful. The car summary goes last — each
+        // shop row already names the part it would replace, which is the comparison the summary was for.
+        string[] order = { "LocationHeader", "FlavorLabel", "ActionButton", "WalkButton", "ShopHeader", "ShopRows", "CarHeader", "CarRows" };
+        int at = 0;
+        foreach (var name in order)
+        {
+            var child = content.Find(name);
+            if (child != null) child.SetSiblingIndex(at++);
+        }
+
+        var old = panel.GetComponent<VerticalLayoutGroup>();
+        if (old != null) Object.DestroyImmediate(old, true);
+
+        var vlg = content.GetComponent<VerticalLayoutGroup>();
+        if (vlg == null) vlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(10, 10, 6, 10);
+        vlg.spacing = 12;
+        vlg.childAlignment = TextAnchor.UpperLeft;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true; vlg.childForceExpandHeight = false;
+
+        var fit = content.GetComponent<ContentSizeFitter>();
+        if (fit == null) fit = content.gameObject.AddComponent<ContentSizeFitter>();
+        fit.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // The shop rows' own group: each row is as tall as its wrapped text says.
+        var shop = content.Find("ShopRows");
+        var rowsVlg = shop != null ? shop.GetComponent<VerticalLayoutGroup>() : null;
+        if (rowsVlg != null)
+        {
+            rowsVlg.spacing = 14;
+            rowsVlg.childControlWidth = true; rowsVlg.childControlHeight = true;
+            rowsVlg.childForceExpandWidth = true; rowsVlg.childForceExpandHeight = false;
+        }
+
+        var scroll = panel.GetComponent<ScrollRect>();
+        if (scroll == null) scroll = panel.gameObject.AddComponent<ScrollRect>();
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 48f;
+        return content;
+    }
+
+    // A shop row: the part's name and what it does, full width and wrapping, then the buy/collect
+    // button under them on the right.
+    static void LayOutStockRow(Transform row)
+    {
+        var vlg = row.GetComponent<VerticalLayoutGroup>();
+        if (vlg == null) vlg = row.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(0, 0, 0, 0);
+        vlg.spacing = 4;
+        vlg.childAlignment = TextAnchor.UpperRight;
+        vlg.childControlWidth = true; vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = false; vlg.childForceExpandHeight = false;
+
+        foreach (var name in new[] { "NameLabel", "EffectLabel" })
+        {
+            var t = Find<Text>(row, name);
+            if (t == null) continue;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.alignment = TextAnchor.UpperLeft;
+            var le = t.GetComponent<LayoutElement>();
+            if (le == null) le = t.gameObject.AddComponent<LayoutElement>();
+            le.flexibleWidth = 1f;
+        }
+        var buy = row.Find("BuyButton");
+        if (buy != null)
+        {
+            buy.SetAsLastSibling();
+            var le = buy.GetComponent<LayoutElement>();
+            if (le == null) le = buy.gameObject.AddComponent<LayoutElement>();
+            le.minWidth = le.preferredWidth = 220f;
+            le.minHeight = le.preferredHeight = ButtonH;
+            le.flexibleWidth = 0f;
+        }
+    }
+
+    // A button in a layout group that controls height takes its plate sprite's own (tiny) height unless
+    // it is told otherwise.
+    static void FixHeight(Button btn, float h)
+    {
+        if (btn == null) return;
+        var le = btn.GetComponent<LayoutElement>();
+        if (le == null) le = btn.gameObject.AddComponent<LayoutElement>();
+        le.minHeight = le.preferredHeight = h;
     }
 
     // The prefab predates STOP & LOOK AROUND: the binder grew a walkButton field that the built prefab
@@ -798,7 +988,7 @@ public static class TravelMapPrefabBuilder
     static void EnsureSidePanelParts(TravelMapScreen screen)
     {
         if (screen.walkButton != null) return;
-        var panel = screen.transform.Find("SidePanel");
+        var panel = screen.transform.Find("SidePanel/Viewport/Content") ?? screen.transform.Find("SidePanel");
         if (panel == null) { Debug.LogWarning("TravelMap: no SidePanel to repair."); return; }
 
         var existing = panel.Find("WalkButton");
@@ -901,15 +1091,19 @@ public static class TravelMapPrefabBuilder
     static Color LabelTint(TravelNode n) =>
         n.locationType == TravelLocationType.TeamFactory ? Teal : DotTint(n);
 
-    // The key, in the empty country north of the lakes — measured as the largest node-free gap on the
-    // board, so it covers nothing. Seventy-five dots in five colours need saying out loud once.
+    // The key, pinned to the window's bottom-right corner — the Atlantic, on a board centred on the USA.
+    // The board pans behind it, so no spot on the board stays clear of it; the corner is the one place a
+    // node is least likely to be under it. Seventy-five dots in five colours need saying out loud once.
+    // Rows are Label type, the floor of the shared scale (UIType).
+    const float LegendW = 380f, LegendRowH = 40f;
+
     static void EnsureLegend(Transform plot)
     {
         var box = EnsureImage(plot, "Legend", FrameCream, Cream);
         box.type = Image.Type.Sliced;
         box.pixelsPerUnitMultiplier = Slice2x;
         box.fillCenter = false;
-        Place(box.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(910f, -8f), new Vector2(300f, 152f));
+        Place(box.rectTransform, new Vector2(1, 0), new Vector2(1, 0), new Vector2(-12f, 12f), new Vector2(LegendW, 12f + 5 * LegendRowH + 76f));
 
         // Its own dark plate, or the highways run under the text.
         var fill = EnsureImage(box.transform, "Fill", PanelFillDeep, Ink);
@@ -926,8 +1120,9 @@ public static class TravelMapPrefabBuilder
         LegendRow(box.transform, 4, "THIS WEEK'S RACE", NextRace, 10f, chipFill: Gold, ring: NextRace);
 
         var note = EnsureText(box.transform, "Note", "FREE UPGRADED PARTS WAIT AT THE FACTORY");
-        Style(note, Silkscreen, 8, TextDim, TextAnchor.MiddleLeft);
-        Place(note.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(14f, -130f), new Vector2(276f, 16f));
+        Style(note, Silkscreen, TypeRole.Label, TextDim, TextAnchor.UpperLeft);
+        note.horizontalOverflow = HorizontalWrapMode.Wrap;   // two lines at Label size
+        Place(note.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(14f, -(14f + 5 * LegendRowH + 4f)), new Vector2(LegendW - 28f, 64f));
     }
 
     // One key row: the dot as the map draws it (optionally on a plate and inside a ring, which is how
@@ -935,8 +1130,8 @@ public static class TravelMapPrefabBuilder
     static void LegendRow(Transform box, int index, string label, Color colour, float chipSize,
                           Color? chipFill = null, Color? ring = null)
     {
-        const float RowH = 24f, Slot = 20f;
-        float y = -10f - index * RowH;
+        const float RowH = LegendRowH, Slot = 28f;
+        float y = -14f - index * RowH - (RowH - Slot) * 0.5f;
         float cy = y - Slot * 0.5f;   // centre of the row's chip slot
 
         var chip = EnsureImage(box, $"Chip{index}", null, chipFill ?? colour);
@@ -957,8 +1152,8 @@ public static class TravelMapPrefabBuilder
         ringImg.rectTransform.anchoredPosition = new Vector2(14f + Slot * 0.5f, cy);
 
         var text = EnsureText(box, $"Row{index}", label);
-        Style(text, Silkscreen, 16, colour, TextAnchor.MiddleLeft);
-        Place(text.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(42f, y), new Vector2(244f, Slot));
+        Style(text, Silkscreen, TypeRole.Label, colour, TextAnchor.MiddleLeft);
+        Place(text.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(54f, y), new Vector2(LegendW - 68f, Slot));
     }
 
     // Two pins that hop about rather than a badge on every node: where you are, and the race you are
@@ -1000,9 +1195,20 @@ public static class TravelMapPrefabBuilder
 
     static void StyleChild(Transform root, string path, Font font, int size, Color colour)
     {
+        if (root == null) return;
         var t = Find<Text>(root, path);
         if (t != null) Style(t, font, size, colour, t.alignment);
     }
+
+    // The shared type scale (Draftmaster.Controls.UIType) on this 1920x1080 canvas, snapped onto the
+    // face's cell. Text on this screen asks for a role, not a number.
+    static int Size(TypeRole role, Font face) => UIType.CanvasPx(role, RefHeight, PixelGUI.FontCell(face, 0));
+
+    static void Style(Text t, Font font, TypeRole role, Color colour, TextAnchor anchor) =>
+        Style(t, font, Size(role, font), colour, anchor);
+
+    static void StyleChild(Transform root, string path, Font font, TypeRole role, Color colour) =>
+        StyleChild(root, path, font, Size(role, font), colour);
 
     static void SkinButton(Button btn, Sprite plate, Color labelColour)
     {
@@ -1016,7 +1222,7 @@ public static class TravelMapPrefabBuilder
             img.color = Color.white;
         }
         var label = btn.GetComponentInChildren<Text>(true);
-        if (label != null) Style(label, Silkscreen, 16, labelColour, TextAnchor.MiddleCenter);
+        if (label != null) Style(label, Silkscreen, TypeRole.Label, labelColour, TextAnchor.MiddleCenter);
     }
 
     // Idempotent: a restyle run twice must not leave two icons stacked on each other.

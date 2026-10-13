@@ -1,3 +1,4 @@
+using Draftmaster.Controls;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -45,14 +46,17 @@ public static class IronOvalUI
             // Sizes are locked to each face's measured ladder (Docs/IronOvalKit.md). Pixelify Sans in
             // particular has a 20px design grid — 16 lands every glyph between pixels and the text
             // renders as overlapping mush, which is not obvious until you look at it at 1:1.
-            case Role.Header:      font = t.display; size = 16; defaultColour = t.gold; break;
-            case Role.HeaderSmall: font = t.display; size = 8;  defaultColour = t.gold; break;
+            // Header / HeaderSmall / Data / Body are the shared type scale (Draftmaster.Controls.UIType) —
+            // this canvas is the kit's own 640x360 grid, so its kit sizes go in as they are.
+            case Role.Header:      font = t.display; size = UIType.KitPx(TypeRole.Heading); defaultColour = t.gold; break;
+            case Role.HeaderSmall: font = t.display; size = UIType.KitPx(TypeRole.Label);   defaultColour = t.gold; break;
             case Role.BodyLarge:   font = t.body;    size = 40; defaultColour = t.text; break;
             // The title-screen voice. 60 is the top of Pixelify's 20-grid ladder — the sheet's 62px
             // wordmark rounded onto it, so the logo stays hard-edged.
             case Role.Display:     font = t.body;    size = 60; defaultColour = t.text; break;
-            case Role.Data:        font = t.data;    size = 16; defaultColour = t.textDim; break;
-            default:               font = t.body;    size = 20; defaultColour = t.text; break;
+            case Role.Data:        font = t.data;    size = UIType.KitPx(TypeRole.Data); defaultColour = t.textDim; break;
+            // Body's 16 lands on Pixelify's 20-grid as 20 (Snap, below), which is what it was authored at.
+            default:               font = t.body;    size = UIType.KitPx(TypeRole.Body); defaultColour = t.text; break;
         }
         if (font == null) font = t.body;
         if (font != null)

@@ -765,8 +765,20 @@ public class TravelMapScreen : MonoBehaviour
 
     // ---------------- side panel ----------------
 
+    // The panel scrolls (its type is the shared scale's, and a busy stop is taller than the screen), so
+    // arriving somewhere new starts it from the top rather than wherever the last place was scrolled to.
+    string _sidePanelShowing;
+
     void RefreshSidePanel(bool choosing, TravelNode current, TravelNode dest, List<string> path)
     {
+        string showing = choosing ? "" : current.id;
+        if (showing != _sidePanelShowing)
+        {
+            _sidePanelShowing = showing;
+            var scroll = locationHeader.GetComponentInParent<ScrollRect>();
+            if (scroll != null) scroll.verticalNormalizedPosition = 1f;
+        }
+
         // Car build summary — what's installed, so shop comparisons are one glance.
         var sb = new StringBuilder();
         foreach (PartSlot slot in System.Enum.GetValues(typeof(PartSlot)))

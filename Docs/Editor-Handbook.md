@@ -411,6 +411,9 @@ it drifts again.
 - Kit setup: `Draftmaster > Art > Set Up Iron Oval Kit`, then `Verify Iron Oval Kit` (writes
   `Docs/IronOvalKit.md`). Older kit: `Set Up / Verify Pixel UI Kit`.
 - Everything reads one asset: `Assets/Resources/UI/PixelUITheme.asset`.
+- **Type sizes come from one scale** — `Draftmaster.Controls.UIType`, roles Title / Heading / Body /
+  Dialogue / Data / Label; nothing under Label (24px at 1080p). `Docs/Type-Scale.md`. Find text that is
+  too small with `Draftmaster > UI > Audit Text Sizes` (writes `Docs/TextSizeAudit.md`).
 - Move authored Canvases onto the kit: `Restyle Scene Canvas UI` / `Restyle UI Prefabs`.
 - The IMGUI race panels are code (`PixelGUI`), not prefabs — `Docs/IronOvalKit.md`.
 - Screens from the design file: `Draftmaster > Art > Build Title Screen Scene` and
