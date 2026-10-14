@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Draftmaster.Chatter;
 using UnityEngine;
 
 // Getting out of the way of the paddock e-scooter (the name is left over from the golf cart it replaced;
@@ -33,6 +34,23 @@ public class CartDodge : MonoBehaviour
     public float spriteFacingOffsetDeg = 90f;
     [Tooltip("Radius used when checking the way out is clear of bodywork.")]
     public float obstacleRadius = 0.45f;
+
+    [Header("What they shout")]
+    [Tooltip("Chance (0..1) that jumping clear comes with a line — \"Hey, was that Emerson?\". Lines and " +
+             "the default live in Draftmaster.Chatter.DodgeChatter.")]
+    public float shoutChance = DodgeChatter.SpeakChance;
+    [Tooltip("Scene-wide gap (s) between any two dodge shouts, so a scooter through a crowd gets one voice, " +
+             "not a chorus.")]
+    public float shoutGapSeconds = 6f;
+    static float _nextSceneShout;
+    static string _lastShout;
+
+    // Time.time restarts with the scene; a throttle carried over with domain reload off would mute everyone.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetShoutThrottle() { _nextSceneShout = 0f; _lastShout = null; }
+
+    SpeechBubble _bubble;
+    float _hideBubbleAt = -1f;
 
     enum State { Idle, Diving, Waiting, Returning }
     State _state = State.Idle;
@@ -183,13 +201,51 @@ public class CartDodge : MonoBehaviour
             _home = here;
             _hasHome = _walker == null;
             TakeOverWalker();
+            MaybeShout();
         }
 
         _target = target;
         _state = State.Diving;
     }
 
-    void Update() => Tick(Time.deltaTime);
+    void Update()
+    {
+        Tick(Time.deltaTime);
+        if (_hideBubbleAt >= 0f && Time.time >= _hideBubbleAt) HideBubble();
+    }
+
+    // Now and then, a line on the way out of the scooter's path. Only once per near miss (from Idle), never
+    // over a real conversation, and one voice at a time across the scene. Background flavour: if the
+    // screen is busy, SpeechBubble refuses it and it simply was not said.
+    void MaybeShout()
+    {
+        if (Time.time < _nextSceneShout) return;
+        if (NPCInteractable.AnyConversationActive) return;
+
+        int seed = GetInstanceID() ^ Mathf.RoundToInt(Time.time * 977f);
+        if (!DodgeChatter.ShouldSpeak(seed, shoutChance)) return;
+
+        string line = DodgeChatter.Pick(seed, _lastShout);
+        if (string.IsNullOrEmpty(line)) return;
+
+        if (_bubble == null) _bubble = SpeechBubble.Attach(transform);
+        if (!_bubble.Speak(line, null, Draftmaster.Sim.SpeechPriority.Ambient)) return;
+
+        _lastShout = line;
+        _hideBubbleAt = Time.time + AmbientChatter.ReadSeconds(line);
+        _nextSceneShout = Time.time + Mathf.Max(0f, shoutGapSeconds);
+    }
+
+    void HideBubble()
+    {
+        _hideBubbleAt = -1f;
+        if (_bubble != null) _bubble.Hide();
+    }
+
+    void OnDestroy()
+    {
+        if (_bubble != null) Destroy(_bubble.gameObject);
+    }
 
     // One frame of the dodge, `dt` seconds long. Split out of Update so a test can run the jump to its end.
     public void Tick(float dt)
@@ -310,5 +366,6 @@ public class CartDodge : MonoBehaviour
     {
         // Frozen or recycled mid-jump: hand the walker back rather than leaving it switched off for good.
         if (_state != State.Idle) Release();
+        if (_hideBubbleAt >= 0f) HideBubble();
     }
 }
