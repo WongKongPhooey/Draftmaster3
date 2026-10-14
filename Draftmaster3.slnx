@@ -8,11 +8,11 @@
   <Project Path="Draftmaster.Controls.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="PlayFab.csproj" />
+  <Project Path="Draftmaster.Chatter.csproj" />
   <Project Path="InkEditor.csproj" />
   <Project Path="Ink-Libraries.csproj" />
   <Project Path="Draftmaster.Weekend.csproj" />
   <Project Path="Draftmaster.Tests.PlayMode.csproj" />
-  <Project Path="Draftmaster.Chatter.csproj" />
   <Project Path="Draftmaster.Sponsors.csproj" />
   <Project Path="Draftmaster.Crowd.csproj" />
   <Project Path="Draftmaster.Controls.Input.csproj" />
